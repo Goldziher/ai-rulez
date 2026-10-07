@@ -23,7 +23,7 @@ func TestIncludesProvideProfileDomains(t *testing.T) {
 	must(os.MkdirAll(filepath.Join(includeRoot, "domains", "react", "rules"), 0o755))
 	must(os.WriteFile(filepath.Join(includeRoot, "domains", "react", "rules", "react-standards.md"), []byte("# React Standards"), 0o644))
 
-	must(os.WriteFile(filepath.Join(includeRoot, "config.toml"), []byte(`version = "4.0"
+	must(os.WriteFile(filepath.Join(includeRoot, "config.toml"), []byte(`version = "5.0"
 name = "shared"
 presets = ["claude"]
 `), 0o644))
@@ -31,7 +31,7 @@ presets = ["claude"]
 	// Consumer project
 	localAIRulez := filepath.Join(baseDir, ".ai-rulez")
 	must(os.MkdirAll(localAIRulez, 0o755))
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "consumer"
 presets = ["claude"]
 default = "full"

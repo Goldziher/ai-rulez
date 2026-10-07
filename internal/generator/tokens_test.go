@@ -35,16 +35,27 @@ func tokensFixtureWith(t *testing.T, edit func(config string) string) *config.Co
 	t.Helper()
 	dir := t.TempDir()
 	copyFixture(t, filepath.Join("..", "..", "tests", "fixtures", "config", "tokens"), dir)
+	path := filepath.Join(dir, ".ai-rulez", "config.toml")
+	original, err := os.ReadFile(path)
+	require.NoError(t, err)
+	edited := string(original)
 	if edit != nil {
-		path := filepath.Join(dir, ".ai-rulez", "config.toml")
-		original, err := os.ReadFile(path)
-		require.NoError(t, err)
-		require.NoError(t, os.WriteFile(path, []byte(edit(string(original))), 0o600))
+		edited = edit(edited)
 	}
+	// The golden report counts the per-file and project-wide provenance hashes,
+	// so pin the "full" header mode the 4.x default rendered.
+	edited += "\n[header]\nhashes = \"full\"\n"
+	require.NoError(t, os.WriteFile(path, []byte(edited), 0o600))
 	cfg, err := config.LoadConfig(context.Background(), dir)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	return cfg
+}
+
+// withTopLevelKey inserts a top-level TOML key line ahead of the fixture's
+// first table, where appending would nest it under [profiles].
+func withTopLevelKey(config, line string) string {
+	return strings.Replace(config, "default = ", line+"default = ", 1)
 }
 
 // tokensReport builds a report for one profile with the deterministic offline
@@ -204,7 +215,7 @@ func TestTokenReport_DefaultSplitMovesRulesOutOfRootFile(t *testing.T) {
 // rules and context so its cost can be seen and decided about.
 func TestTokenReport_AgentsRosterIsItsOwnSection(t *testing.T) {
 	cfg := tokensFixtureWith(t, func(original string) string {
-		return strings.Replace(original, "\n[profiles]", "builtins = [\"agent-delegation\"]\n\n[profiles]", 1)
+		return withTopLevelKey(original, "builtins = [\"agent-delegation\"]\n")
 	})
 	report, err := NewGenerator(cfg).TokenReport(TokenReportOptions{
 		Profile: "backend",
@@ -252,7 +263,7 @@ func TestAgentsRosterExclusion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tokensFixtureWith(t, func(original string) string {
-				return strings.Replace(original, "\n[profiles]", tt.builtins+"\n[profiles]", 1)
+				return withTopLevelKey(original, tt.builtins)
 			})
 			outputs, _, err := NewGenerator(cfg).collectOutputs("backend")
 			require.NoError(t, err)

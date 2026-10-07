@@ -174,7 +174,7 @@ func TestHookTemplate_CodexCursorAndUnsupported(t *testing.T) {
 	require.NoError(t, json.Unmarshal(codex, &decoded))
 	entry := decoded["hooks"]["PreToolUse"][0]
 	assert.Equal(t, "Bash", entry.Matcher)
-	assert.Equal(t, `ai-rulez usage record --harness codex --role 'ops lead'`, entry.Hooks[0].Command)
+	assert.Equal(t, `ai-rulez telemetry record --harness codex --role 'ops lead'`, entry.Hooks[0].Command)
 	assert.Len(t, decoded["hooks"], 1, "only the documented PreToolUse event")
 
 	cursor, err := HookTemplate(HookTemplateOptions{Harness: HarnessCursor, LogPath: "/tmp/u.jsonl"})

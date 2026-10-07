@@ -1,7 +1,7 @@
 package usage
 
 // EvalSummary is a skill's recorded eval score, as the report shows it. The eval
-// package owns the full record; this is the slice `report usage` joins.
+// package owns the full record; this is the slice `telemetry report` joins.
 type EvalSummary struct {
 	PassRate         float64  `json:"pass_rate"`
 	TriggerPrecision *float64 `json:"trigger_precision"`

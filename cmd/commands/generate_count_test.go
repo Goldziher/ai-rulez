@@ -38,7 +38,7 @@ func TestProcessConfigFile_ReportsCountedFiles(t *testing.T) {
 	root := t.TempDir()
 	configDir := filepath.Join(root, ".ai-rulez")
 	writeFile(t, filepath.Join(configDir, "config.toml"),
-		"version = \"4.0\"\nname = \"counted\"\npresets = [\"claude\"]\ngitignore = false\n")
+		"version = \"5.0\"\nname = \"counted\"\npresets = [\"claude\"]\ngitignore = false\n")
 	writeFile(t, filepath.Join(configDir, "rules", "style.md"),
 		"---\npriority: high\n---\n# Style\n\nUse tabs.\n")
 	for _, skill := range []string{"alpha", "beta", "gamma"} {
@@ -73,7 +73,7 @@ func TestProcessConfigFile_ReportsCountedFiles(t *testing.T) {
 func TestProcessConfigFile_ReportsZeroOnFailure(t *testing.T) {
 	root := t.TempDir()
 	configPath := filepath.Join(root, ".ai-rulez", "config.toml")
-	writeFile(t, configPath, "version = \"4.0\"\nname = \"\"\npresets = [\"claude\"]\n")
+	writeFile(t, configPath, "version = \"5.0\"\nname = \"\"\npresets = [\"claude\"]\n")
 
 	t.Cleanup(func() { pluginMode, dryRun, profile = false, false, "" })
 	pluginMode, dryRun, profile = false, false, ""

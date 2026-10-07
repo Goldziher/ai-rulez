@@ -27,7 +27,7 @@ func TestPolicyCLISuite(t *testing.T) {
 
 func (s *PolicyCLITestSuite) TearDownSuite() { testutil.CleanupTestBinary() }
 
-const policyBaseConfig = `version = "4.0"
+const policyBaseConfig = `version = "5.0"
 name = "p"
 presets = ["claude"]
 gitignore = false
@@ -75,7 +75,7 @@ func (s *PolicyCLITestSuite) run(env map[string]string, args ...string) *testuti
 }
 
 func (s *PolicyCLITestSuite) strict(args ...string) (*testutil.CLIResult, []struct{ Code, Message string }) {
-	res := s.run(nil, append([]string{"validate", "--strict", "--format", "json", "--policy", s.policy}, args...)...)
+	res := s.run(nil, append([]string{"validate", "--format", "json", "--policy", s.policy}, args...)...)
 	var rep struct {
 		Findings []struct {
 			Code    string `json:"code"`
@@ -94,7 +94,7 @@ func (s *PolicyCLITestSuite) strict(args ...string) (*testutil.CLIResult, []stru
 
 func (s *PolicyCLITestSuite) TestWithoutAPolicyNothingChanges() {
 	s.config("[lint]\nignore = [\"AR001\"]\n[lint.severity]\nAR008 = \"off\"\n[lock]\nenforce = false\n")
-	res := s.run(nil, "validate", "--strict", "--format", "json")
+	res := s.run(nil, "validate", "--format", "json")
 	s.NotContains(res.Stdout, "AR74", res.Stdout)
 	s.Equal(0, res.ExitCode, res.Stdout+res.Stderr)
 	show := s.run(nil, "validate", "--show-policy")
@@ -104,6 +104,8 @@ func (s *PolicyCLITestSuite) TestWithoutAPolicyNothingChanges() {
 
 func (s *PolicyCLITestSuite) TestATighteningRepositoryPasses() {
 	s.config("[lint]\n[lint.severity]\nAR008 = \"error\"\n[lint.security]\nallowed_hosts = [\"git.example.org\"]\nscan_imports = \"error\"\n")
+	lock := s.run(nil, "lock") // the policy enforces the lock, and validate reports a missing one
+	s.Equal(0, lock.ExitCode, lock.Stdout+lock.Stderr)
 	res, found := s.strict()
 	s.Empty(found, res.Stdout)
 	s.Equal(0, res.ExitCode, res.Stdout+res.Stderr)

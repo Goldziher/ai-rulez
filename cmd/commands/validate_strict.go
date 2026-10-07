@@ -19,15 +19,23 @@ import (
 	"github.com/samber/oops"
 )
 
-// Exit codes of `validate --strict`. 1 keeps its existing meaning (the
-// configuration itself is invalid or could not be loaded).
+// Exit codes of the content checks of `validate`. 1 keeps its existing meaning
+// (the configuration itself is invalid or could not be loaded).
 const exitStrictFindings = 2
 
 var (
+	// validateStrict means "run the deep content checks". Historic name: in v5 it
+	// is true unless --config-only is given (see validatePreRun), and the
+	// --strict flag means validateWarnings.
 	validateStrict bool
-	validateFormat string
-	validateFailOn string
-	validateExtern bool
+	// validateConfigOnly is --config-only: skip the content checks.
+	validateConfigOnly bool
+	// validateWarnings is --strict: findings of severity warning fail the run,
+	// the same as --fail-on warning.
+	validateWarnings bool
+	validateFormat   string
+	validateFailOn   string
+	validateExtern   bool
 	// validateVerifiers is --verifiers: also report the verifiers as AR9H findings.
 	validateVerifiers bool
 	// validateApprovalsBase is --approvals-base: the git revision approvals are compared with (AR716).
@@ -60,7 +68,7 @@ func strictOnlyFlagSet() bool {
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
 	if !validateStrict && strictOnlyFlagSet() {
-		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers and the baseline flags require --strict")
+		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers and the baseline flags need the content checks: drop --config-only")
 	}
 	if len(validateAllowEgress) > 0 && !validateExtern {
 		return oops.Errorf("--allow-egress requires --external")
@@ -131,6 +139,9 @@ func checkBaselineFlags() error {
 	}
 	if validateUpdateBaseline && changedRev() != "" {
 		return oops.Errorf("--update-baseline needs every finding; it cannot be combined with --since or --changed")
+	}
+	if validateUpdateBaseline && (validateLintProfile != "" || len(validateAnalyzers) > 0) {
+		return oops.Errorf("--update-baseline needs the full configured rule set; it cannot be combined with --lint-profile or --analyzer")
 	}
 	if validateBaselineReason != "" && !validateUpdateBaseline {
 		return oops.Errorf("--baseline-reason only applies with --update-baseline")
@@ -296,7 +307,7 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 	}
 	combined := lint.Combine(reports)
 	for _, e := range excess {
-		combined.Budgets = append(combined.Budgets, e...)
+		combined.Ratchet = append(combined.Ratchet, e...)
 	}
 	if err := writeReport(combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
 		fmtError(err)
@@ -305,7 +316,7 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 	code = 0
 	for i, report := range reports {
 		cfg := cfgAt(cfgs, i)
-		if lint.FailedWithExcess(report.Findings, failOnFor(cfg), budgetsFor(cfg), excess[i]) {
+		if lint.FailedWithExcess(report.Findings, failOnFor(cfg), ratchetFor(cfg), excess[i]) {
 			code = exitStrictFindings
 		}
 	}
@@ -316,21 +327,16 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 }
 
 // prepareReports runs the steps between linting and printing, in the order that
-// keeps each one honest: fixes first (so fixed findings leave the report), then
-// the baseline against every finding of the analyzers that ran (so stale
-// entries are judged on the full set; entries of an analyzer that did not run
-// are left alone), budgets on the full set, and only then the view that narrows
-// the report (changed-only) and the risk score of what is shown. done is
-// true when the run ends here with code (--update-baseline, or an error).
-func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.BudgetExcess, code int, done bool) {
-	fail := func(err error) ([][]lint.BudgetExcess, int, bool) {
+// keeps each one honest: the baseline against every finding first (so stale
+// entries are judged on the full set and accepted findings are never fixed),
+// then fixes (scoped like the report, so fixed findings leave it), budgets on
+// the full set, and only then the views that narrow the report (analyzer
+// filter, changed-only) and the risk score of what is shown. done is true when
+// the run ends here with code (--update-baseline, or an error).
+func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, code int, done bool) {
+	fail := func(err error) ([][]lint.RatchetExcess, int, bool) {
 		fmtError(err)
 		return nil, 1, true
-	}
-	if fixRequested() {
-		if err := applyFixes(reports, cfgs); err != nil {
-			return fail(err)
-		}
 	}
 	if validateUpdateBaseline {
 		if err := updateBaselines(reports, cfgs); err != nil {
@@ -341,10 +347,15 @@ func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]l
 	if err := applyBaselines(reports, cfgs); err != nil {
 		return fail(err)
 	}
-	reportRefusedBudgets(reports, cfgs)
-	excess = make([][]lint.BudgetExcess, len(reports))
+	reportRefusedRatchet(reports, cfgs)
+	if fixRequested() {
+		if err := applyFixes(reports, cfgs); err != nil {
+			return fail(err)
+		}
+	}
+	excess = make([][]lint.RatchetExcess, len(reports))
 	for i, report := range reports {
-		excess[i] = budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)
+		excess[i] = ratchetFor(cfgAt(cfgs, i)).Excess(report.Findings)
 	}
 	if err := narrowToChanged(reports, cfgs); err != nil {
 		return fail(err)

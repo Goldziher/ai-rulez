@@ -77,7 +77,7 @@ func TestPluginVersionDrift_IgnoresMachineLocalInputs(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 	writeDomainsFile(t, filepath.Join(dir, ".ai-rulez", "config.toml"),
-		"version = \"4.0\"\nname = \"demo\"\npresets = [\"claude\"]\ngitignore = false\n\n"+
+		"version = \"5.0\"\nname = \"demo\"\npresets = [\"claude\"]\ngitignore = false\n\n"+
 			"[plugin]\nname = \"demo\"\nversion = \"1.0.0\"\ndescription = \"demo plugin\"\nruntimes = [\"claude\", \"opencode\"]\n")
 	writeDomainsFile(t, filepath.Join(dir, ".ai-rulez", "skills", "core-s", "SKILL.md"), "---\ndescription: core\n---\nbody\n")
 	shared, err := config.LoadConfig(context.Background(), dir, config.WithoutLocal())

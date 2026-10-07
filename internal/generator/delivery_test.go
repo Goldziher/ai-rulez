@@ -12,9 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const deliveryConfig = `version = "4.0"
+const deliveryConfig = `version = "5.0"
 name = "delivery"
 gitignore = false
+agents_md = false
 presets = ["claude", "cursor", "rovodev"]
 
 [skills]

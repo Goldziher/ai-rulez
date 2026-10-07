@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
-	"github.com/samber/oops"
 )
 
 // A baseline records findings a team has accepted. Entries are keyed by the
@@ -63,23 +62,23 @@ func LoadBaseline(path string) (*Baseline, error) {
 		return nil, nil //nolint:nilnil // absent is a normal state
 	}
 	if err != nil {
-		return nil, oops.Wrapf(err, "read baseline %s", path)
+		return nil, fmt.Errorf("read baseline %s: %w", path, err)
 	}
 	var b Baseline
 	if err := json.Unmarshal(data, &b); err != nil {
-		return nil, oops.Wrapf(err, "parse baseline %s", path)
+		return nil, fmt.Errorf("parse baseline %s: %w", path, err)
 	}
 	if b.Version != baselineVersion {
-		return nil, oops.Errorf("baseline %s: unsupported version %d (want %d)", path, b.Version, baselineVersion)
+		return nil, fmt.Errorf("baseline %s: unsupported version %d (want %d)", path, b.Version, baselineVersion)
 	}
 	for i := range b.Entries {
 		e := &b.Entries[i]
 		if e.Fingerprint == "" {
-			return nil, oops.Errorf("baseline %s: entry %d has no fingerprint", path, i)
+			return nil, fmt.Errorf("baseline %s: entry %d has no fingerprint", path, i)
 		}
 		if e.Expires != "" {
 			if _, perr := time.Parse(dateLayout, e.Expires); perr != nil {
-				return nil, oops.Errorf("baseline %s: entry %s: expires %q is not a YYYY-MM-DD date", path, e.Fingerprint, e.Expires)
+				return nil, fmt.Errorf("baseline %s: entry %s: expires %q is not a YYYY-MM-DD date", path, e.Fingerprint, e.Expires)
 			}
 		}
 	}
@@ -105,13 +104,13 @@ func (b *Baseline) Save(path string) error {
 		b.Entries = []BaselineEntry{}
 	}
 	if err := enc.Encode(b); err != nil {
-		return oops.Wrapf(err, "encode baseline")
+		return fmt.Errorf("encode baseline: %w", err)
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return oops.Wrapf(err, "create baseline directory")
+		return fmt.Errorf("create baseline directory: %w", err)
 	}
 	if err := gitutil.WriteFileAtomic(path, buf.Bytes(), 0o644); err != nil {
-		return oops.Wrapf(err, "write baseline")
+		return fmt.Errorf("write baseline: %w", err)
 	}
 	return nil
 }
@@ -136,6 +135,23 @@ func analyzerRan(selection []string, code string) bool {
 	return selection == nil || AnalyzerSelected(selection, AnalyzerFor(code).Name)
 }
 
+// Covers reports whether the run that produced r looked for code at all: the
+// analyzer of code must have run, and scanner findings and scanner failures
+// need --external. A baseline entry for a code the run did not look for says
+// nothing about this run, so it is neither stale nor replaced.
+func (r *Report) Covers(code string) bool {
+	if !analyzerRan(r.Analyzers, code) {
+		return false
+	}
+	if !r.External {
+		switch code {
+		case CodeExternalFinding, CodeScannerUnavailable, CodeScannerRunFailed:
+			return false
+		}
+	}
+	return true
+}
+
 // ApplyBaseline marks the findings of r that b accepts. today is a YYYY-MM-DD
 // date supplied by the caller, so the result is deterministic.
 func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
@@ -146,8 +162,7 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 	matched := map[string]bool{}
 	refused := map[string]bool{}
 	byFP := map[string]BaselineEntry{}
-	for i := range b.Entries {
-		e := b.Entries[i]
+	for _, e := range b.Entries {
 		byFP[e.Fingerprint] = e
 	}
 	for i := range r.Findings {
@@ -169,9 +184,8 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 		m.Accepted, m.AcceptReason = true, e.Reason
 		res.Accepted++
 	}
-	for i := range b.Entries {
-		e := b.Entries[i]
-		if !matched[e.Fingerprint] && analyzerRan(r.Analyzers, e.Code) {
+	for _, e := range b.Entries {
+		if !matched[e.Fingerprint] && r.Covers(e.Code) {
 			res.Stale = append(res.Stale, e)
 		}
 	}
@@ -189,8 +203,7 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error) {
 	old := map[string]BaselineEntry{}
 	if prev != nil {
-		for i := range prev.Entries {
-			e := prev.Entries[i]
+		for _, e := range prev.Entries {
 			old[e.Fingerprint] = e
 		}
 	}
@@ -198,9 +211,8 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 	seen := map[string]bool{}
 	var unexplained []string
 	if prev != nil {
-		for i := range prev.Entries {
-			e := prev.Entries[i]
-			if !analyzerRan(r.Analyzers, e.Code) {
+		for _, e := range prev.Entries {
+			if !r.Covers(e.Code) {
 				out.Entries = append(out.Entries, e) // its analyzer did not run: keep the entry as it is
 				seen[e.Fingerprint] = true
 			}
@@ -226,21 +238,28 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 			Fingerprint: fp, Code: f.Code, File: f.RepoPath(), Message: f.Message, Reason: strings.TrimSpace(reason),
 		})
 	}
+	if prev != nil {
+		for i := range prev.Entries {
+			if e := prev.Entries[i]; !r.Covers(e.Code) && !seen[e.Fingerprint] {
+				out.Entries = append(out.Entries, e)
+			}
+		}
+	}
 	if len(unexplained) > 0 {
-		return nil, oops.Errorf("accepting security findings needs a reason (--baseline-reason): %s", strings.Join(unexplained, ", "))
+		return nil, fmt.Errorf("accepting security findings needs a reason (--baseline-reason): %s", strings.Join(unexplained, ", "))
 	}
 	return out, nil
 }
 
-// Budgets is the [lint.tolerate] table: it caps how many findings of a rule are tolerated: up to max findings
+// Ratchet is the [lint.ratchet] table: it caps how many findings of a rule are tolerated: up to max findings
 // of a code that are not accepted by a baseline do not count toward the exit
 // code; one more and every finding of that code counts again. Lower the number
 // over time to ratchet a rule down.
-type Budgets map[string]int
+type Ratchet map[string]int
 
-// ResolveBudgets maps codes or names to canonical codes.
-func ResolveBudgets(raw map[string]int) Budgets {
-	out := Budgets{}
+// ResolveRatchet maps codes or names to canonical codes.
+func ResolveRatchet(raw map[string]int) Ratchet {
+	out := Ratchet{}
 	for key, limit := range raw {
 		if rule, ok := lookupRule(key); ok {
 			out[rule.Code] = limit
@@ -249,13 +268,13 @@ func ResolveBudgets(raw map[string]int) Budgets {
 	return out
 }
 
-// Without drops the budgets of the protected codes, which a policy never lets a
+// Without drops the ratchet entries of the protected codes, which a policy never lets a
 // repository tolerate, and lists the codes it dropped.
-func (b Budgets) Without(protected map[string]bool) (kept Budgets, droppedCodes []string) {
+func (b Ratchet) Without(protected map[string]bool) (kept Ratchet, refused []string) {
 	if len(protected) == 0 {
 		return b, nil
 	}
-	out := Budgets{}
+	out := Ratchet{}
 	dropped := map[string]bool{}
 	for code, limit := range b {
 		if protected[code] {
@@ -276,41 +295,41 @@ func sortedSet(set map[string]bool) []string {
 	return out
 }
 
-// BudgetExcess describes a rule over its tolerated finding count.
-type BudgetExcess struct {
+// RatchetExcess describes a rule over its tolerated finding count.
+type RatchetExcess struct {
 	Code  string `json:"code"`
 	Count int    `json:"count"`
 	Max   int    `json:"max"`
 }
 
-// Excess lists the budgeted rules whose unaccepted findings exceed the cap.
-func (b Budgets) Excess(findings []Finding) []BudgetExcess {
+// Excess lists the ratcheted rules whose unaccepted findings exceed the cap.
+func (b Ratchet) Excess(findings []Finding) []RatchetExcess {
 	counts := map[string]int{}
 	for i := range findings {
 		if !findings[i].IsAccepted() {
 			counts[findings[i].Code]++
 		}
 	}
-	var out []BudgetExcess
+	var out []RatchetExcess
 	for code, limit := range b {
 		if counts[code] > limit {
-			out = append(out, BudgetExcess{Code: code, Count: counts[code], Max: limit})
+			out = append(out, RatchetExcess{Code: code, Count: counts[code], Max: limit})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Code < out[j].Code })
 	return out
 }
 
-// FailedWith is Failed with the baseline and budgets applied: accepted
-// findings never fail, and a rule within its budget is tolerated.
-func FailedWith(findings []Finding, failOn string, budgets Budgets) bool {
-	return FailedWithExcess(findings, failOn, budgets, budgets.Excess(findings))
+// FailedWith is Failed with the baseline and ratchet applied: accepted
+// findings never fail, and a rule within its ratchet count is tolerated.
+func FailedWith(findings []Finding, failOn string, ratchet Ratchet) bool {
+	return FailedWithExcess(findings, failOn, ratchet, ratchet.Excess(findings))
 }
 
-// FailedWithExcess is FailedWith with the over-budget rules computed by the
-// caller, for a run that narrows findings (changed-only) after judging budgets
+// FailedWithExcess is FailedWith with the over-ratchet rules computed by the
+// caller, for a run that narrows findings (changed-only) after judging the ratchet
 // against the full set.
-func FailedWithExcess(findings []Finding, failOn string, budgets Budgets, excess []BudgetExcess) bool {
+func FailedWithExcess(findings []Finding, failOn string, ratchet Ratchet, excess []RatchetExcess) bool {
 	over := map[string]bool{}
 	for _, e := range excess {
 		over[e.Code] = true
@@ -318,7 +337,7 @@ func FailedWithExcess(findings []Finding, failOn string, budgets Budgets, excess
 	var counting []Finding
 	for i := range findings {
 		f := findings[i]
-		if _, budgeted := budgets[f.Code]; budgeted && !over[f.Code] {
+		if _, budgeted := ratchet[f.Code]; budgeted && !over[f.Code] {
 			continue
 		}
 		counting = append(counting, f)

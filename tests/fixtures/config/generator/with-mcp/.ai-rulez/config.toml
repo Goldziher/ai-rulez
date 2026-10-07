@@ -1,4 +1,4 @@
-version = "4.0"
+version = "5.0"
 name = "with-mcp-test"
 description = "Test with MCP servers (auto-generation without preset)"
 presets = ["claude"]

@@ -108,7 +108,7 @@ func TestMCPConfigPaths_ExplicitKindsOnly(t *testing.T) {
 	for _, kind := range []string{"claude_settings_json", "mcp_json", "amp_settings_json", "pi_mcp_json"} {
 		assert.True(t, providers.IsMCPSidecarKind(kind), kind)
 	}
-	for _, kind := range []string{"claude_plugins_json", "permissions", "hooks", "my_mcp_notes"} {
+	for _, kind := range []string{"permissions", "hooks", "my_mcp_notes"} {
 		assert.False(t, providers.IsMCPSidecarKind(kind), kind)
 	}
 }
@@ -120,7 +120,7 @@ func TestLoadProviderSpec_GlobalMCPPath(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "global_mcp_path")
 
-	_, err = providers.LoadProviderSpec([]byte("name = \"t\"\n[[sidecars]]\nkind = \"claude_plugins_json\"\npath = \"a.json\"\nglobal_mcp_path = \".x.json\""), "s.toml", providers.FormatAuto)
+	_, err = providers.LoadProviderSpec([]byte("name = \"t\"\n[[sidecars]]\nkind = \"permissions\"\npath = \"a.json\"\nglobal_mcp_path = \".x.json\""), "s.toml", providers.FormatAuto)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "only valid on a sidecar that holds MCP servers")
 }

@@ -20,7 +20,7 @@ ai-rulez improve run deploy --with 'python optimize.py' --max-cost 5 --yes
 # 4. review the run, then write it into the working tree...
 ai-rulez improve show <run-id>
 ai-rulez improve apply <run-id>
-ai-rulez lock && ai-rulez eval run deploy && ai-rulez validate --strict
+ai-rulez lock && ai-rulez eval run deploy && ai-rulez validate
 # ...or open a pull request from an isolated worktree
 ai-rulez improve pr <run-id>
 ```
@@ -242,7 +242,7 @@ reported and ignored (`AR9J6`). The same keys in the user config file are used w
 value is at least as strict as the default (gain >= 0.05, 0 regressions, held-out share >= 0.3, growth <= 1.25,
 runs >= 3, rounds <= 3, held-out evaluations <= 3); `require_ci_above_zero = true` and a higher
 `min_holdout_cases` always apply. A looser value is dropped with an `AR9J6` warning unless `--trust-repo-optimizer` is
-given. `validate --strict` reports the repository keys `improve run` will not honour (`AR9J6`, a warning). The user config file may set any value, and so may a flag. The consent summary prints the effective gate:
+given. `validate` reports the repository keys `improve run` will not honour (`AR9J6`, a warning). The user config file may set any value, and so may a flag. The consent summary prints the effective gate:
 minimum gain, regressions, held-out floor and share, growth limit and the interval requirement.
 
 What leaves the machine: the skill text and the train cases, to whatever the optimizer calls. The consent summary

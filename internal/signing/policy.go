@@ -406,7 +406,7 @@ func readInProject(base, rel string) ([]byte, error) {
 }
 
 // RequiredLockFindings verifies the lock attestation when [signing] require names
-// the lock, for `validate --strict`. It returns nil when nothing is required or
+// the lock, for `validate`. It returns nil when nothing is required or
 // the attestation is good, else one *Error per problem (a policy that cannot be
 // built is reported as AR720 with the reason). It reads the rollback state but
 // never writes it.

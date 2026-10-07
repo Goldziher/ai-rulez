@@ -12,7 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-const hooksProjectConfig = `version = "4.0"
+const hooksProjectConfig = `version = "5.0"
 name = "hooks"
 presets = ["claude", "codex", "cursor", "gemini", "copilot"]
 gitignore = false
@@ -105,7 +105,7 @@ func TestGenerate_DroppingAHookTakesItOutOfTheHandAuthoredFile(t *testing.T) {
 
 	// Removing [[hooks]] from the config removes exactly that hook.
 	configPath := filepath.Join(root, ".ai-rulez", "config.toml")
-	trimmed := `version = "4.0"
+	trimmed := `version = "5.0"
 name = "hooks"
 presets = ["claude"]
 gitignore = false
@@ -121,7 +121,7 @@ gitignore = false
 }
 
 func TestGenerate_NoSettingsBlocksLeavesSettingsUntouched(t *testing.T) {
-	root := writeProject(t, `version = "4.0"
+	root := writeProject(t, `version = "5.0"
 name = "plain"
 presets = ["claude", "codex", "cursor", "gemini", "copilot"]
 gitignore = false

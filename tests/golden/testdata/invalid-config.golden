@@ -10,7 +10,7 @@ Hint: Use a valid built-in preset name
 Available presets: [aiassistant amp antigravity augment baz bob claude cline codebuddy codebuff codewhale codex commandcode copilot copilot-cli cortex crush cursor deepagents devin dsh factory gemini gitlab-duo goose grok hermes junie kilo kimi kiro letta mcp mimocode muse okf omp openclaw opencode pi poolside qoder qwen reasonix replit rovodev takt trae vibe warp xum zcode zed zoocode]
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/config.toml file 0644 66 dedeba0cf3f55cd49b80411bf40845b6114ef9b83b7af2864d4587f6a35ca52c
+.ai-rulez/config.toml file 0644 84 7507201cfda77f1b215ff343a202cda8f2bda8d3b65ad784a0aac4901d775480
 --- home tree
 (no change)
 
@@ -49,6 +49,6 @@ Validation errors:
 Hint: Fix the keys above; a "did you mean" names the closest known key
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/config.toml file 0644 66 dedeba0cf3f55cd49b80411bf40845b6114ef9b83b7af2864d4587f6a35ca52c
+.ai-rulez/config.toml file 0644 84 7507201cfda77f1b215ff343a202cda8f2bda8d3b65ad784a0aac4901d775480
 --- home tree
 (no change)

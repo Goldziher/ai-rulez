@@ -53,7 +53,7 @@ func TestSBOMDoesNotTouchTheNetworkUnlessOnline(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			logPath := gitSpy(t)
-			cfg := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[[includes]]\nname = \"x\"\nsource = \"https://127.0.0.1:9/x/y.git\"\nref = \"main\"\n"
+			cfg := "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[[includes]]\nname = \"x\"\nsource = \"https://127.0.0.1:9/x/y.git\"\nref = \"main\"\n"
 			sbomProject(t, cfg, nil)
 
 			// Act
@@ -69,7 +69,7 @@ func TestSBOMDoesNotTouchTheNetworkUnlessOnline(t *testing.T) {
 	}
 }
 
-const sbomBaseConfig = "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
+const sbomBaseConfig = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
 
 // sbomProject writes a project, makes it the working directory and returns its root.
 func sbomProject(t *testing.T, cfg string, files map[string]string) string {

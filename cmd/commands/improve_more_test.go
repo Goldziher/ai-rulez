@@ -24,7 +24,7 @@ func improveChildSelf(t *testing.T) {
 
 func writeImproveConfig(t *testing.T, root, extra string) {
 	t.Helper()
-	body := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n" + extra
+	body := "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n" + extra
 	require.NoError(t, os.WriteFile(filepath.Join(root, ".ai-rulez", "config.toml"), []byte(body), 0o600))
 }
 

@@ -15,7 +15,7 @@ ai-rulez publish verify dist
 ## Pipeline
 
 1. Resolve: `[plugin] name` and `version` are required (set the version yourself; see AR961).
-2. Preflight, in-process, stopping before anything is written: `validate --strict` (same baseline and budget handling,
+2. Preflight, in-process, stopping before anything is written: `validate` (same baseline and budget handling,
    never looser than `error`), `lock --check`, `verify --plugin`, and a secret scan of every bundle file with the
    security scan's patterns. A symlink in the bundle is an error. The machine-local overlay is never loaded.
 3. Policy gates from [`[publish]`](#configuration): `require_approved` (AR9N8) and `require_signature` (AR9N7). They run

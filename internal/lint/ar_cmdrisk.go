@@ -18,7 +18,7 @@ func registerArCmdrisk(s *ruleSet) {
 	MarkExampleAware(CodeUnpinnedExec, CodeDestructive)
 	s.addRules(
 		RuleInfo{CodeUnpinnedExec, "unpinned-package-exec", SeverityWarning, "a command runs a package it does not pin: npx -y pkg, uvx pkg, pipx run pkg, pip install from a URL or an unpinned git requirement, go run pkg@latest"},
-		RuleInfo{CodeDestructive, "destructive-command", SeverityWarning, "a command wipes the root, home or working tree (rm -rf /, ~, $HOME/*, *), overwrites a disk (dd of=/dev/sdX, mkfs), force-pushes main, drops a database or forks a bomb"},
+		RuleInfo{CodeDestructive, "destructive-command", SeverityWarning, "a command wipes the root, home or working tree (rm -rf /, ~, $HOME/*, *), overwrites a disk (dd of=/dev/sdX, mkfs), force-pushes main (--force or a +main refspec), drops a database or schema or forks a bomb"},
 		RuleInfo{CodeStealthCommand, "stealth-command", SeverityError, "a command erases shell history or evidence (history -c, unset HISTFILE, HISTFILE=/dev/null, shred, chattr +i): no legitimate skill does this"},
 	)
 	s.addTextScan(scanUnpinnedExec, AnalyzerSecurity)
@@ -101,6 +101,8 @@ func forcePush(args []string) string {
 			force = true
 		case protectedBr[a]:
 			branch = a
+		case strings.HasPrefix(a, "+") && protectedBr[a[1:]]:
+			force, branch = true, a[1:] // a leading + forces that one ref
 		}
 	}
 	if force && branch != "" {
@@ -109,9 +111,18 @@ func forcePush(args []string) string {
 	return ""
 }
 
+// mayBeDestructive is the literal pre-check for scanDestructive: a line needs
+// one of the command names or markers of the shapes it looks for.
+func mayBeDestructive(text string) bool {
+	return hasCmdWord(text, "rm", "git", "dd") || strings.Contains(text, "mkfs") || strings.Contains(text, "DROP") || strings.Contains(text, ":()")
+}
+
 func scanDestructive(r *runner, t *scanText) {
 	for _, l := range t.lines {
 		if l.Front || l.Neg {
+			continue
+		}
+		if !mayBeDestructive(l.Text) {
 			continue
 		}
 		msg := ""
@@ -137,27 +148,44 @@ func scanDestructive(r *runner, t *scanText) {
 	}
 }
 
-var stealthRes = []*regexp.Regexp{
-	regexp.MustCompile(`(?:^|[\s;&|(])history\s+-[cdw]\b`),
-	regexp.MustCompile(`\bunset\s+(?:HISTFILE|HISTSIZE|HISTFILESIZE|SAVEHIST)\b`),
-	regexp.MustCompile(`\b(?:export\s+)?HISTFILE=/dev/null\b`),
-	regexp.MustCompile(`\b(?:export\s+)?(?:HISTSIZE|HISTFILESIZE|SAVEHIST)=0\b`),
-	regexp.MustCompile(`\bset\s+\+o\s+history\b`),
-	regexp.MustCompile(`(?:^|[\s;&|(])shred\s+(?:-\S+\s+)*(?:[-~/$.]|\S*[/.]\w)`),
-	regexp.MustCompile(`(?:^|[\s;&|(:])>\s*~?/?\S*\.(?:bash|zsh|sh|python|node)_history\b`),
-	regexp.MustCompile(`\brm\s+(?:-\S+\s+)*\S*\.(?:bash|zsh|sh|python|node|psql|mysql)_history\b`),
-	regexp.MustCompile(`\bchattr\s+\+i\b`),
-	regexp.MustCompile(`\btruncate\s+(?:-\S+\s+)*\S*(?:_history|/var/log/\S*)`),
+// stealthRule is one history- or evidence-erasing command shape. Rules whose
+// command has legitimate uses (secure-deleting a temp file, an immutable flag)
+// report at warning; wiping history is an error.
+type stealthRule struct {
+	re     *regexp.Regexp
+	reason string
+	sev    Severity
 }
+
+const stealthBoundary = "(?:^|[\\s;&|(`])"
+
+const stealthDisablesHistory = "disables shell history"
+
+var stealthRules = []stealthRule{
+	{regexp.MustCompile(stealthBoundary + `history\s+-[cdw]\b`), "erases the shell history", SeverityError},
+	{regexp.MustCompile(`\bunset\s+(?:HISTFILE|HISTSIZE|HISTFILESIZE|SAVEHIST)\b`), stealthDisablesHistory, SeverityError},
+	{regexp.MustCompile(`\b(?:export\s+)?HISTFILE=/dev/null\b`), stealthDisablesHistory, SeverityError},
+	{regexp.MustCompile(`\b(?:export\s+)?(?:HISTSIZE|HISTFILESIZE|SAVEHIST)=0\b`), stealthDisablesHistory, SeverityError},
+	{regexp.MustCompile(`\bset\s+\+o\s+history\b`), "turns shell history off", SeverityWarning},
+	{regexp.MustCompile(stealthBoundary + `shred\s+(?:-\S+\s+)*[^\s` + "`" + `]*_history\b[^\s` + "`" + `]*`), "securely erases a shell history file", SeverityError},
+	{regexp.MustCompile(stealthBoundary + `shred\s+(?:-\S+\s+)*(?:[-~/$.][^\s` + "`" + `]*|[^\s` + "`" + `]*[/.]\w[^\s` + "`" + `]*)`), "irrecoverably destroys a file, leaving no evidence of its content", SeverityWarning},
+	{regexp.MustCompile(stealthBoundary + `>\s*~?/?\S*\.(?:bash|zsh|sh|python|node)_history\b`), "truncates a shell history file", SeverityError},
+	{regexp.MustCompile(`\brm\s+(?:-\S+\s+)*\S*\.(?:bash|zsh|sh|python|node|psql|mysql)_history\b`), "deletes a shell history file", SeverityError},
+	{regexp.MustCompile(`\bchattr\s+\+i\b`), "makes a file immutable so it cannot be changed or removed", SeverityWarning},
+	{regexp.MustCompile(`\btruncate\s+(?:-\S+\s+)*\S*(?:_history|/var/log/\S*)`), "truncates a history or log file", SeverityError},
+}
+
+// stealthStems are literals that every stealthRules pattern contains.
+var stealthStems = []string{"istory", "HIST", "shred", "chattr", "truncate"}
 
 func scanStealth(r *runner, t *scanText) {
 	for _, l := range t.lines {
-		if l.Front {
+		if l.Front || !containsAnyStem(l.Text, false, stealthStems) {
 			continue
 		}
-		for _, re := range stealthRes {
-			if m := re.FindString(l.Text); m != "" {
-				r.add(CodeStealthCommand, t.abs, l.No, "%q erases history or evidence of what the agent ran; no skill has a legitimate reason to", strings.TrimSpace(m))
+		for _, rule := range stealthRules {
+			if m := rule.re.FindString(l.Text); m != "" {
+				r.addSev(rule.sev, CodeStealthCommand, t.abs, l.No, "%q %s; no skill has a legitimate reason to hide what the agent ran", strings.TrimSpace(strings.TrimLeft(m, "`")), rule.reason)
 				break
 			}
 		}

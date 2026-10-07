@@ -35,7 +35,7 @@ type tomlOutput struct {
 	Description     string                 `toml:"description,omitempty"`
 	Gitignore       *bool                  `toml:"gitignore,omitempty"`
 	Compact         *bool                  `toml:"compact,omitempty"`
-	AgentsMD        bool                   `toml:"agents_md,omitempty"`
+	AgentsMD        *bool                  `toml:"agents_md,omitempty"`
 	BundleExclude   []string               `toml:"bundle_exclude,omitempty"`
 	CodexSkillsDir  string                 `toml:"codex_skills_dir,omitempty"`
 	Default         string                 `toml:"default,omitempty"`
@@ -136,7 +136,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Description:     cfg.Description,
 		Gitignore:       cfg.Gitignore,
 		Compact:         cfg.Compact,
-		AgentsMD:        cfg.AgentsMD,
+		AgentsMD:        agentsMDForWrite(cfg),
 		BundleExclude:   cfg.BundleExclude,
 		CodexSkillsDir:  cfg.CodexSkillsDir,
 		Default:         cfg.Default,
@@ -182,4 +182,14 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Guard:           cfg.Guard,
 		Permissions:     cfg.Permissions,
 	}
+}
+
+// agentsMDForWrite returns the agents_md value to write: only an explicit
+// false, because an absent key means true.
+func agentsMDForWrite(cfg *Config) *bool {
+	if cfg.AgentsMD {
+		return nil
+	}
+	off := false
+	return &off
 }

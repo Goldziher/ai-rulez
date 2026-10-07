@@ -43,6 +43,9 @@ func shellWords(s string) []string {
 var (
 	versionPinRe = regexp.MustCompile(`^(?:==|=|@)?[v=]?[\^~]?\d`)
 	hexRefRe     = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
+	// versionRangeRe matches an npm version that selects a range, not a release:
+	// ^1.2.0, ~1.2, >=1, 1, 1.2, 1.x, *.
+	versionRangeRe = regexp.MustCompile(`^(?:(?:[\^~]|>=?|<=?)\s*v?\d.*|[*xX]|v?\d+(?:\.(?:\d+|[xX*]))?(?:\.[xX*])?)$`)
 )
 
 // pinOf splits "pkg@1.2.3" / "@scope/pkg@1.2.3" into name and version ("" when none).
@@ -53,15 +56,33 @@ func pinOf(spec string) (name, version string) {
 	return spec, ""
 }
 
+// gitShorthandProblem handles npm's github:owner/repo style specs: pinned only
+// with a #<commit or version> suffix.
+func gitShorthandProblem(spec string) (why string, isShorthand bool) {
+	host, rest, ok := strings.Cut(spec, ":")
+	if !ok || (host != FormatGitHub && host != "gitlab" && host != "bitbucket") {
+		return "", false
+	}
+	if _, ref, has := strings.Cut(rest, "#"); has && (hexRefRe.MatchString(ref) || versionPinRe.MatchString(ref)) {
+		return "", true
+	}
+	return "the " + host + " shorthand has no #<commit> pin, so it follows the default branch", true
+}
+
 // npmPinProblem reports why an npm package spec is not pinned ("" when pinned
 // or not a registry package).
 func npmPinProblem(spec string) string {
 	if spec == "" || strings.HasPrefix(spec, ".") || strings.HasPrefix(spec, "/") || strings.HasPrefix(spec, "~") ||
-		strings.Contains(spec, "://") || strings.HasPrefix(spec, "file:") || strings.HasPrefix(spec, "git+") || strings.HasPrefix(spec, "github:") {
+		strings.Contains(spec, "://") || strings.HasPrefix(spec, "file:") || strings.HasPrefix(spec, "git+") {
 		return ""
+	}
+	if why, isShorthand := gitShorthandProblem(spec); isShorthand {
+		return why
 	}
 	_, ver := pinOf(spec)
 	switch {
+	case versionRangeRe.MatchString(ver):
+		return "@" + ver + " is a moving version range"
 	case strings.ContainsAny(ver, "<>${}"):
 		return "" // a placeholder in documentation
 	case ver == "":

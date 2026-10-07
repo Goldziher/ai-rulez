@@ -68,13 +68,18 @@ type Config struct {
 	// field, or a provider/ prefix in model or embedding_model) came from a repository config rather
 	// than from user scope. Set only by Resolve; see RoutingFromRepo.
 	repoProvider, repoModelRoute, repoEmbedRoute bool
+	// priceBound and priceModel record which model the user-scope price override
+	// is for. Resolve and WithEnv set them; a Config built directly leaves
+	// priceBound false and the override then applies to Model. Not serialized.
+	priceBound bool
+	priceModel string
 }
-
-// schemeHTTP is the plain-http URL scheme, accepted for a key only on a loopback or opted-in host.
-const schemeHTTP = "http"
 
 // MaxRetriesLimit bounds max_retries so a typo cannot keep a run retrying for hours.
 const MaxRetriesLimit = 10
+
+// MaxTimeoutSeconds bounds timeout_seconds (one hour) so a huge value cannot overflow time.Duration and disable the timeout.
+const MaxTimeoutSeconds = 3600
 
 // Defaults.
 const (
@@ -90,7 +95,7 @@ func (c Config) CacheEnabled() bool { return c.Cache == nil || *c.Cache }
 // Timeout returns the per-call timeout.
 func (c Config) Timeout() time.Duration {
 	if c.TimeoutSeconds > 0 {
-		return time.Duration(c.TimeoutSeconds) * time.Second
+		return time.Duration(min(c.TimeoutSeconds, MaxTimeoutSeconds)) * time.Second
 	}
 	return DefaultTimeoutSeconds * time.Second
 }
@@ -115,93 +120,82 @@ func (c Config) FullModel() string {
 	return c.Model
 }
 
-// envReader reads AI_RULEZ_LLM_* variables and collects the ones that do not parse.
-type envReader struct {
-	getenv func(string) string
-	errs   []string
-}
-
-// value is the trimmed value of AI_RULEZ_LLM_<name>.
-func (r *envReader) value(name string) string {
-	return strings.TrimSpace(r.getenv("AI_RULEZ_LLM_" + name))
-}
-
-func (r *envReader) str(name string, dst *string) {
-	if v := r.value(name); v != "" {
-		*dst = v
-	}
-}
-
-func (r *envReader) flt(name string, dst *float64) {
-	v := r.value(name)
-	if v == "" {
-		return
-	}
-	f, err := strconv.ParseFloat(v, 64)
-	if err != nil {
-		r.errs = append(r.errs, "AI_RULEZ_LLM_"+name+" is not a number")
-		return
-	}
-	*dst = f
-}
-
-func (r *envReader) num(name string, dst *int) {
-	v := r.value(name)
-	if v == "" {
-		return
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil {
-		r.errs = append(r.errs, "AI_RULEZ_LLM_"+name+" is not an integer")
-		return
-	}
-	*dst = n
-}
-
-// boolean reports the variable's value and whether it is set and parses.
-func (r *envReader) boolean(name string) (val, ok bool) {
-	v := r.value(name)
-	if v == "" {
-		return false, false
-	}
-	b, err := strconv.ParseBool(v)
-	if err != nil {
-		r.errs = append(r.errs, "AI_RULEZ_LLM_"+name+" is not a boolean")
-		return false, false
-	}
-	return b, true
-}
-
 // WithEnv returns a copy with AI_RULEZ_LLM_* overrides applied. getenv may be nil (os.Getenv).
 func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 	if getenv == nil {
 		getenv = ambient.GetenvFunc(nil)
 	}
-	r := &envReader{getenv: getenv}
-	r.str("PROVIDER", &c.Provider)
-	r.str("MODEL", &c.Model)
-	// Routing the environment sets is user scope, never the repository's.
-	c.repoProvider = c.repoProvider && r.value("PROVIDER") == ""
-	c.repoModelRoute = c.repoModelRoute && r.value("MODEL") == ""
-	c.repoEmbedRoute = c.repoEmbedRoute && r.value("EMBEDDING_MODEL") == ""
-	r.str("BACKEND", &c.Backend)
-	r.str("BASE_URL", &c.BaseURL)
-	r.str("API_KEY_ENV", &c.APIKeyEnv)
-	r.str("EMBEDDING_MODEL", &c.EmbeddingModel)
-	r.flt("MAX_COST_USD", &c.MaxCostUSD)
-	r.num("MAX_TOKENS", &c.MaxTokens)
-	r.num("MAX_CALLS", &c.MaxCalls)
-	r.num("TIMEOUT_SECONDS", &c.TimeoutSeconds)
-	if b, ok := r.boolean("CACHE"); ok {
+	str := func(name string, dst *string) {
+		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
+			*dst = v
+		}
+	}
+	str("PROVIDER", &c.Provider)
+	if m := strings.TrimSpace(getenv("AI_RULEZ_LLM_MODEL")); m != "" {
+		// A model named in the environment is user scope, so the price override applies to it.
+		c.priceBound, c.priceModel = true, m
+	}
+	str("MODEL", &c.Model)
+	if strings.TrimSpace(getenv("AI_RULEZ_LLM_PROVIDER")) != "" {
+		c.repoProvider = false
+	}
+	if strings.TrimSpace(getenv("AI_RULEZ_LLM_MODEL")) != "" {
+		c.repoModelRoute = false
+	}
+	if strings.TrimSpace(getenv("AI_RULEZ_LLM_EMBEDDING_MODEL")) != "" {
+		c.repoEmbedRoute = false
+	}
+	str("BACKEND", &c.Backend)
+	str("BASE_URL", &c.BaseURL)
+	str("API_KEY_ENV", &c.APIKeyEnv)
+	str("EMBEDDING_MODEL", &c.EmbeddingModel)
+	var errs []string
+	flt := func(name string, dst *float64) {
+		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
+			f, err := strconv.ParseFloat(v, 64)
+			if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+				errs = append(errs, "AI_RULEZ_LLM_"+name+" is not a finite number")
+				return
+			}
+			*dst = f
+		}
+	}
+	num := func(name string, dst *int) {
+		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				errs = append(errs, "AI_RULEZ_LLM_"+name+" is not an integer")
+				return
+			}
+			*dst = n
+		}
+	}
+	boolean := func(name string) (bool, bool) {
+		v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name))
+		if v == "" {
+			return false, false
+		}
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			errs = append(errs, "AI_RULEZ_LLM_"+name+" is not a boolean")
+			return false, false
+		}
+		return b, true
+	}
+	flt("MAX_COST_USD", &c.MaxCostUSD)
+	num("MAX_TOKENS", &c.MaxTokens)
+	num("MAX_CALLS", &c.MaxCalls)
+	num("TIMEOUT_SECONDS", &c.TimeoutSeconds)
+	if b, ok := boolean("CACHE"); ok {
 		c.Cache = &b
 	}
-	if b, ok := r.boolean("ALLOW_NETWORK"); ok {
+	if b, ok := boolean("ALLOW_NETWORK"); ok {
 		c.AllowNetwork = b
 	}
-	if b, ok := r.boolean("ALLOW_PLAIN_HTTP"); ok {
+	if b, ok := boolean("ALLOW_PLAIN_HTTP"); ok {
 		c.AllowPlainHTTP = b
 	}
-	if v := r.value("PLAIN_HTTP_HOSTS"); v != "" {
+	if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_PLAIN_HTTP_HOSTS")); v != "" {
 		c.PlainHTTPHosts = nil
 		for _, h := range strings.Split(v, ",") {
 			if h = strings.TrimSpace(h); h != "" {
@@ -209,8 +203,8 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 			}
 		}
 	}
-	if len(r.errs) > 0 {
-		return c, newError(KindConfig, "%s: %s", CodeConfigInvalid, strings.Join(r.errs, "; "))
+	if len(errs) > 0 {
+		return c, newError(KindConfig, "%s: %s", CodeConfigInvalid, strings.Join(errs, "; "))
 	}
 	return c, nil
 }
@@ -281,13 +275,13 @@ func (c Config) validateBaseURL() []string {
 	}
 	u, err := url.Parse(c.BaseURL)
 	switch {
-	case err != nil || u.Host == "" || (u.Scheme != schemeHTTP && u.Scheme != "https"):
+	case err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https"):
 		return []string{"base_url must be an http(s) URL with a host"}
 	case u.User != nil:
 		return []string{"base_url must not embed credentials; put the key in the variable named by api_key_env"}
 	case u.RawQuery != "":
 		return []string{"base_url must not carry a query string (it may hold a key); configure headers at the gateway instead"}
-	case u.Scheme == schemeHTTP && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()) && !c.plainHTTPAllowed(u.Host):
+	case u.Scheme == "http" && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()) && !c.plainHTTPAllowed(u.Host):
 		return []string{"base_url must use https when an API key is sent (plain http is accepted only for a loopback host such as localhost, or a host listed in plain_http_hosts together with allow_plain_http = true in user scope)"}
 	}
 	return nil
@@ -310,7 +304,7 @@ func (c Config) plainHTTPAllowed(host string) bool {
 // to base_url, so doctor can surface it.
 func (c Config) UsesPlainHTTPOptIn() bool {
 	u, err := url.Parse(c.BaseURL)
-	return err == nil && u.Scheme == schemeHTTP && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()) && c.plainHTTPAllowed(u.Host)
+	return err == nil && u.Scheme == "http" && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()) && c.plainHTTPAllowed(u.Host)
 }
 
 func (c Config) validatePlainHTTP() []string {
@@ -340,12 +334,14 @@ func (c Config) validateNumbers() []string {
 	var out []string
 	for name, v := range map[string]float64{"max_cost_usd": c.MaxCostUSD, "price_input_per_mtok": c.PriceInputPerMTok, "price_output_per_mtok": c.PriceOutputPerMTok} {
 		switch {
-		case !Finite(v):
-			// TOML and strconv accept nan and inf; a NaN cap passes every comparison.
+		case math.IsNaN(v) || math.IsInf(v, 0):
 			out = append(out, name+" must be a finite number")
 		case v < 0:
 			out = append(out, name+" must not be negative")
 		}
+	}
+	if c.TimeoutSeconds > MaxTimeoutSeconds {
+		out = append(out, "timeout_seconds must not exceed "+strconv.Itoa(MaxTimeoutSeconds))
 	}
 	if c.MaxRetries > MaxRetriesLimit {
 		out = append(out, "max_retries must not exceed "+strconv.Itoa(MaxRetriesLimit))
@@ -358,9 +354,6 @@ func (c Config) validateNumbers() []string {
 	return out
 }
 
-// Finite reports whether v is neither NaN nor an infinity.
-func Finite(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }
-
 // Err returns Validate's problems as one AR9L0 error, or nil.
 func (c Config) Err() error {
 	if p := c.Validate(); len(p) > 0 {
@@ -368,3 +361,6 @@ func (c Config) Err() error {
 	}
 	return nil
 }
+
+// Finite reports whether v is neither NaN nor an infinity.
+func Finite(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }

@@ -17,7 +17,7 @@ func TestLoadConfigTOML_PluginAuthoring(t *testing.T) {
 	tempDir := t.TempDir()
 	configFile := filepath.Join(tempDir, "config.toml")
 	content := `
-version = "4.0"
+version = "5.0"
 name = "basemind"
 description = "Code-map MCP server."
 
@@ -232,7 +232,7 @@ func TestValidatePluginAuthoring_CodexRequiresCanonicalMetadata(t *testing.T) {
 // shared by the TOML decode test and the JSON-schema agreement test below so the
 // two can never drift.
 const hookHandlerTOML = `
-version = "4.0"
+version = "5.0"
 name = "basemind"
 description = "Code-map MCP server."
 
@@ -284,7 +284,7 @@ func TestLoadConfigTOML_HookHandlerFields(t *testing.T) {
 // without a matching schema property would be rejected for schema users.
 func TestHookHandlerFields_SchemaAcceptsEveryField(t *testing.T) {
 	yamlConfig := `
-version: "4.0"
+version: "5.0"
 name: basemind
 description: Code-map MCP server.
 plugin:

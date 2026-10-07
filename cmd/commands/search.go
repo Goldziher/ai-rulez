@@ -113,7 +113,6 @@ index build stopped early.`,
 func init() {
 	pf := SearchCmd.PersistentFlags()
 	addFormatFlag(pf, &searchFlags.format, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(pf)
 	pf.StringVar(&searchFlags.profile, "profile", "", "Profile whose skills to search (default: the configured default profile)")
 	pf.StringVar(&searchFlags.targets, "targets", "", "Preset whose rendering of the skills to search")
 	pf.StringSliceVar(&searchFlags.domains, flagServeDomain, nil, "Only search skills of these domains; 'root' selects skills in no domain")

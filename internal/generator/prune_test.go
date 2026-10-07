@@ -27,11 +27,10 @@ func narrowingProject(t *testing.T) string {
 	require.NoError(t, os.MkdirAll(filepath.Join(droppedSkill, "references"), 0o755))
 
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
-		"version = \"4.0\"\n"+
+		"version = \"5.0\"\n"+
 			"name = \"narrowing\"\n"+
 			"presets = [\"claude\"]\n"+
-			"default = \"full\"\n"+
-			"gitignore = false\n\n"+
+			"default = \"full\"\n\n"+
 			"[profiles]\n"+
 			"full = [\"keep\", \"drop\"]\n"+
 			"narrow = [\"keep\"]\n"), 0o644))
@@ -120,7 +119,7 @@ func TestGenerator_PruneStaysInsideProject(t *testing.T) {
 	skillDir := filepath.Join(configDir, "skills", "solo")
 	require.NoError(t, os.MkdirAll(skillDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
-		"version = \"4.0\"\nname = \"solo\"\npresets = [\"claude\"]\ngitignore = false\n"), 0o644))
+		"version = \"5.0\"\nname = \"solo\"\npresets = [\"claude\"]\n"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
 		[]byte("---\ndescription: solo\n---\nbody\n"), 0o644))
 

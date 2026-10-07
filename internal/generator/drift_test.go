@@ -19,6 +19,10 @@ func loadHashesProject(t *testing.T, dir string) *Generator {
 	return NewGenerator(cfg)
 }
 
+// v4Defaults pins the pre-v5 defaults these drift tests were written against:
+// CLAUDE.md carries the instructions itself instead of importing AGENTS.md.
+const v4Defaults = "agents_md = false\n"
+
 func TestCheckDrift(t *testing.T) {
 	skill := filepath.Join(".claude", "skills", "alpha", "SKILL.md")
 	tests := []struct {
@@ -54,7 +58,7 @@ func TestCheckDrift(t *testing.T) {
 		},
 		{
 			name:   "hashes content reports a hand edit as edited",
-			header: "[header]\nhashes = \"content\"\n",
+			header: v4Defaults + hdr("content"),
 			mutate: func(t *testing.T, dir string) {
 				appendTo(t, filepath.Join(dir, "CLAUDE.md"), "tamper\n")
 			},
@@ -62,7 +66,7 @@ func TestCheckDrift(t *testing.T) {
 		},
 		{
 			name:   "hashes none compares the whole file",
-			header: "[header]\nhashes = \"none\"\n",
+			header: v4Defaults + hdr("none"),
 			mutate: func(t *testing.T, dir string) {
 				appendTo(t, filepath.Join(dir, "CLAUDE.md"), "tamper\n")
 			},
@@ -79,7 +83,11 @@ func TestCheckDrift(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir := hashesProject(t, tt.header)
+			header := tt.header
+			if header == "" {
+				header = v4Defaults + hdr("full")
+			}
+			dir := hashesProject(t, header)
 			generateHashesProject(t, dir)
 			tt.mutate(t, dir)
 			mutated := snapshotTree(t, dir)
@@ -126,7 +134,7 @@ func TestVerifyGenerated_NoManifest(t *testing.T) {
 }
 
 func TestDryRun_ReportsUnchanged(t *testing.T) {
-	dir := hashesProject(t, "")
+	dir := hashesProject(t, v4Defaults+hdr("full"))
 	plan, err := loadHashesProject(t, dir).DryRun("default")
 	require.NoError(t, err)
 	assert.Contains(t, strings.Join(plan, "\n"), "write-file: CLAUDE.md")
@@ -149,13 +157,37 @@ func TestVerifyPlugin_NotGenerated(t *testing.T) {
 	configDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
-		"version = \"4.0\"\nname = \"demo\"\npresets = [\"claude\"]\ngitignore = false\n\n"+
+		"version = \"5.0\"\nname = \"demo\"\npresets = [\"claude\"]\ngitignore = false\n\n"+
 			"[plugin]\nname = \"demo\"\nversion = \"1.0.0\"\ndescription = \"d\"\nruntimes = [\"claude\"]\n"), 0o644))
 	cfg, err := config.LoadConfig(context.Background(), dir, config.WithoutLocal())
 	require.NoError(t, err)
 	err = NewGenerator(cfg).VerifyPlugin("")
 	require.ErrorIs(t, err, ErrPluginNotGenerated)
+	require.ErrorIs(t, err, ErrPluginDrift)
 	assert.Contains(t, err.Error(), "ai-rulez generate --plugin")
+}
+
+func TestVerifyPlugin_TamperedBundleIsDrift(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(configDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
+		"version = \"5.0\"\nname = \"demo\"\npresets = [\"claude\"]\ngitignore = false\n\n"+
+			"[plugin]\nname = \"demo\"\nversion = \"1.0.0\"\ndescription = \"d\"\nruntimes = [\"claude\"]\n"), 0o644))
+	load := func() *Generator {
+		cfg, err := config.LoadConfig(context.Background(), dir, config.WithoutLocal())
+		require.NoError(t, err)
+		return NewGenerator(cfg)
+	}
+	require.NoError(t, load().GeneratePlugin(""))
+	require.NoError(t, load().VerifyPlugin(""))
+
+	manifest := filepath.Join(dir, ".claude-plugin", "plugin.json")
+	appendTo(t, manifest, "\n")
+	err := load().VerifyPlugin("")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrPluginDrift, "a hand-edited bundle file is drift, not a failed run")
+	assert.NotErrorIs(t, err, ErrPluginNotGenerated)
 }
 
 func appendTo(t *testing.T, path, text string) {

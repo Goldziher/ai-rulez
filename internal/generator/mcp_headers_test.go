@@ -19,7 +19,7 @@ func writeHeadersProject(t *testing.T, presets string, gitignore bool, headers s
 	tempDir := t.TempDir()
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
-	body := "version = \"4.0\"\nname = \"mcp-headers\"\npresets = " + presets + "\n"
+	body := "version = \"5.0\"\nname = \"mcp-headers\"\npresets = " + presets + "\n"
 	if gitignore {
 		body += "gitignore = true\n"
 	} else {
@@ -123,7 +123,7 @@ func TestComputeSourceHash_RedactsSecretHeaders(t *testing.T) {
 
 	build := func(token string) *config.Config {
 		cfg := &config.Config{
-			Name: "x", Version: "4.0", BaseDir: t.TempDir(),
+			Name: "x", Version: "5.0", BaseDir: t.TempDir(),
 			Content: &config.ContentTree{},
 			MCPServers: map[string]*config.MCPServer{
 				"remote": {
@@ -169,7 +169,7 @@ headers = { Authorization = "Bearer ${PLUGIN_UNSET_HEADER_TOKEN}" }
 // sees the expanded value and must not forget that.
 func TestResolveMCPEnv_KeepsSecretKeysAcrossPasses(t *testing.T) {
 	cfg := &config.Config{
-		Name: "x", Version: "4.0", BaseDir: t.TempDir(),
+		Name: "x", Version: "5.0", BaseDir: t.TempDir(),
 		MCPEnvOverrides: map[string]string{"TENANT": "acme"},
 		MCPServers: map[string]*config.MCPServer{
 			"remote": {

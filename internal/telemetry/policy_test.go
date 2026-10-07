@@ -19,7 +19,7 @@ func (lockTelemetry) Locks(feature string) bool { return feature == "telemetry" 
 
 func TestPolicySwitchesExportOffWhateverTheUserScopeSays(t *testing.T) {
 	// Arrange
-	user := &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://collector.example.org"}
+	user := &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://collector.example.org"}
 	before := Resolve(Layers{User: user, Getenv: env()})
 	require.True(t, before.AllowNetwork, "without a policy the user scope enables export")
 	// Act

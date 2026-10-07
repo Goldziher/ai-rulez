@@ -17,7 +17,7 @@ func TestCatalogDiffRevisionValidatesProviderSpecs(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("HOME", t.TempDir())
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"),
-		"version = \"4.0\"\nname = \"p\"\npresets = [\"claude\", { name = \"demo\", provider = \".ai-rulez/providers/demo.toml\" }]\n")
+		"version = \"5.0\"\nname = \"p\"\npresets = [\"claude\", { name = \"demo\", provider = \".ai-rulez/providers/demo.toml\" }]\n")
 	writeFile(t, filepath.Join(root, ".ai-rulez", "providers", "demo.toml"), "name = \"other\"\n\n[root]\nfile = \"DEMO.md\"\nsections = [\"title\"]\n")
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "r.md"), "# R\nBody.\n")
 	gitIn(t, root, "init", "-q", "-b", "main")

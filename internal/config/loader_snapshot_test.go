@@ -15,7 +15,7 @@ import (
 )
 
 var snapshotProject = map[string]string{
-	".ai-rulez/config.toml":                     "version = \"4.0\"\nname = \"snap\"\npresets = [\"claude\"]\n",
+	".ai-rulez/config.toml":                     "version = \"5.0\"\nname = \"snap\"\npresets = [\"claude\"]\n",
 	".ai-rulez/rules/style.md":                  "---\npriority: high\n---\n# Style\nBe concise.\n",
 	".ai-rulez/context/arch.md":                 "# Architecture\n",
 	".ai-rulez/skills/review/SKILL.md":          "---\nname: review\ndescription: Review code\n---\nBody\n",

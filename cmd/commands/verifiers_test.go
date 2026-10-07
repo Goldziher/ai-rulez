@@ -13,12 +13,12 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
-const verifiersBase = "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+const verifiersBase = "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
 
 func resetVerifiersFlags(t *testing.T) {
 	t.Helper()
 	reset := func() {
-		verifiersStrict, verifiersJSON, verifiersNames, verifiersProfile, noLocal, configDir = false, false, nil, "", false, ""
+		verifiersStrict, verifiersNames, verifiersProfile, noLocal, configDir = false, nil, "", false, ""
 		verifiersSince, verifiersStaged, verifiersAll, verifiersRule, verifiersFormat = "", false, false, "", ""
 		verifiersFailOn, verifiersOut, verifiersDead, verifiersListJSON, verifiersExec, verifiersRole = "", "", false, false, false, ""
 		verifiersAllowLLM, verifiersMaxCost, verifiersEstimate = false, defaultVerifiersMaxCost, false
@@ -51,7 +51,10 @@ func TestRunVerifiers_ExitCodes(t *testing.T) {
 			root := t.TempDir()
 			writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), tt.config)
 			chdir(t, root)
-			verifiersStrict, verifiersJSON, verifiersNames = tt.strict, tt.json, tt.names
+			verifiersStrict, verifiersNames = tt.strict, tt.names
+			if tt.json {
+				verifiersFormat = "json"
+			}
 			var out bytes.Buffer
 
 			got := runVerifiers(context.Background(), nil, &out)
@@ -305,8 +308,11 @@ func TestListVerifiers_ShowsSpecsAndJSON(t *testing.T) {
 	if !strings.Contains(text.String(), "rule:database") {
 		t.Errorf("list should show the enforced rule:\n%s", text.String())
 	}
-	var rows []map[string]any
-	if err := json.Unmarshal(js.Bytes(), &rows); err != nil || len(rows) != 1 || rows[0]["target"] != "rule:database" {
+	var doc struct {
+		SchemaVersion int              `json:"schema_version"`
+		Items         []map[string]any `json:"items"`
+	}
+	if err := json.Unmarshal(js.Bytes(), &doc); err != nil || doc.SchemaVersion != 1 || len(doc.Items) != 1 || doc.Items[0]["target"] != "rule:database" {
 		t.Errorf("list --json = %s (%v)", js.String(), err)
 	}
 }
@@ -320,38 +326,6 @@ func TestRunVerifiers_JSONFollowsTheSchema(t *testing.T) {
 	runVerifiers(context.Background(), nil, &out)
 
 	validateAgainst(t, "../../schema/verifiers-report.schema.json", out.Bytes())
-}
-
-func TestVerifierRunOptionsJSONFlagConflict(t *testing.T) {
-	tests := []struct {
-		name       string
-		json       bool
-		format     string
-		wantFormat string
-		wantErr    bool
-	}{
-		{"json alone", true, "", "json", false},
-		{"json with json", true, "json", "json", false},
-		{"json with text", true, "text", "", true},
-		{"json with sarif", true, "sarif", "", true},
-		{"format alone", false, "junit", "junit", false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oldJ, oldF := verifiersJSON, verifiersFormat
-			t.Cleanup(func() { verifiersJSON, verifiersFormat = oldJ, oldF })
-			verifiersJSON, verifiersFormat = tt.json, tt.format
-
-			_, format, _, err := verifierRunOptions()
-
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
-			}
-			if format != tt.wantFormat {
-				t.Fatalf("format = %q, want %q", format, tt.wantFormat)
-			}
-		})
-	}
 }
 
 const verifiersCommandSpec = verifiersBase + "[[verifiers]]\nname = \"cmd\"\nrule = \"r\"\nseverity = \"error\"\nwhen_changed = [\"*.txt\"]\n" +

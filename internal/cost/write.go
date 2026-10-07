@@ -1,10 +1,11 @@
 package cost
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 )
 
 // Output formats of the cost report.
@@ -20,9 +21,7 @@ func Write(w io.Writer, r *Report, format string) error {
 	case "", FormatText:
 		return writeText(w, r)
 	case FormatJSON:
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		return enc.Encode(r) //nolint:wrapcheck // writer error
+		return jsondoc.Write(w, r)
 	case FormatMarkdown:
 		return writeMarkdown(w, r)
 	}

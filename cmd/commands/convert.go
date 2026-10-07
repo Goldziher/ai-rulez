@@ -3,13 +3,14 @@ package commands
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
@@ -129,7 +130,6 @@ func init() {
 	f.BoolVar(&convertForce, "force", false, "Overwrite existing content files that differ (config.toml is always merged, never replaced)")
 	f.StringVar(&convertReport, "report", "", "Also write the report (in --format) to this file")
 	addFormatFlag(f, &convertFormat, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(f)
 	f.StringSliceVar(&convertFailOn, "fail-on", nil, "Exit 2 when a finding has one of these statuses: approximated, dropped, needs-action, unsupported")
 	f.BoolVar(&convertBestEffort, "best-effort", false, "Import the known fields of an unrecognized format version")
 	f.BoolVar(&convertSplitHeadings, "split-headings", false, "Split root files such as CLAUDE.md into one context per H2 heading")
@@ -333,9 +333,7 @@ func listImporters(out io.Writer) int {
 }
 
 func writeJSONList(out io.Writer, detections []importer.Detection) int {
-	enc := json.NewEncoder(out)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(detections); err != nil {
+	if err := jsondoc.Write(out, detections); err != nil {
 		fmtError(err)
 		return exitConvertCannotRun
 	}

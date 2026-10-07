@@ -55,7 +55,7 @@ func TestSchemaURL(t *testing.T) {
 func TestValidateWithSchema(t *testing.T) {
 	t.Run("valid minimal config", func(t *testing.T) {
 		cfg := `
-version: "4.0"
+version: "5.0"
 name: "test-project"
 presets:
   - claude
@@ -66,7 +66,7 @@ presets:
 
 	t.Run("missing name fails", func(t *testing.T) {
 		cfg := `
-version: "4.0"
+version: "5.0"
 presets:
   - claude
 `
@@ -86,7 +86,7 @@ presets:
 
 	t.Run("valid config with inline mcp servers", func(t *testing.T) {
 		cfg := `
-version: "4.0"
+version: "5.0"
 name: "test-project"
 presets:
   - claude
@@ -112,7 +112,7 @@ mcp_servers:
 }
 
 func TestValidateWithSchema_Rules(t *testing.T) {
-	const head = "version: \"4.0\"\nname: \"test-project\"\npresets:\n  - claude\n"
+	const head = "version: \"5.0\"\nname: \"test-project\"\npresets:\n  - claude\n"
 
 	t.Run("valid rules mode and mode_by_preset", func(t *testing.T) {
 		cfg := head + "rules:\n  mode: split\n  mode_by_preset:\n    cursor: inline\n    my-custom: split\n"
@@ -139,7 +139,7 @@ func TestValidateWithSchema_Rules(t *testing.T) {
 
 func TestValidateFile_TOML(t *testing.T) {
 	t.Run("consumer plugins and marketplaces validate", func(t *testing.T) {
-		path := writeTOML(t, `version = "4.0"
+		path := writeTOML(t, `version = "5.0"
 name = "x"
 presets = ["claude"]
 schema = "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json"
@@ -159,7 +159,7 @@ type = "github"
 	})
 
 	t.Run("mcp self_server options validate", func(t *testing.T) {
-		path := writeTOML(t, `version = "4.0"
+		path := writeTOML(t, `version = "5.0"
 name = "x"
 presets = ["claude"]
 
@@ -171,7 +171,7 @@ self_server_version = "4.19.0"
 	})
 
 	t.Run("mcp server headers validate", func(t *testing.T) {
-		path := writeTOML(t, `version = "4.0"
+		path := writeTOML(t, `version = "5.0"
 name = "x"
 presets = ["claude"]
 
@@ -185,7 +185,7 @@ headers = { Authorization = "Bearer ${API_TOKEN}", X-Team = "core" }
 	})
 
 	t.Run("invalid mcp header name is rejected", func(t *testing.T) {
-		path := writeTOML(t, `version = "4.0"
+		path := writeTOML(t, `version = "5.0"
 name = "x"
 presets = ["claude"]
 
@@ -199,7 +199,7 @@ headers = { "Bad Header" = "v" }
 	})
 
 	t.Run("unknown mcp key is rejected", func(t *testing.T) {
-		path := writeTOML(t, `version = "4.0"
+		path := writeTOML(t, `version = "5.0"
 name = "x"
 presets = ["claude"]
 
@@ -210,7 +210,7 @@ self_servers = true
 	})
 
 	t.Run("unknown key is rejected", func(t *testing.T) {
-		path := writeTOML(t, `version = "4.0"
+		path := writeTOML(t, `version = "5.0"
 name = "x"
 presets = ["claude"]
 presetz = ["claude"]
@@ -221,7 +221,7 @@ presetz = ["claude"]
 	})
 
 	t.Run("bad include content type is rejected", func(t *testing.T) {
-		path := writeTOML(t, `version = "4.0"
+		path := writeTOML(t, `version = "5.0"
 name = "x"
 presets = ["claude"]
 
@@ -234,7 +234,7 @@ include = ["rules", "mcp"]
 	})
 
 	t.Run("valid include with commands and include-override", func(t *testing.T) {
-		path := writeTOML(t, `version = "4.0"
+		path := writeTOML(t, `version = "5.0"
 name = "x"
 presets = ["claude"]
 
@@ -248,7 +248,7 @@ merge_strategy = "include-override"
 	})
 
 	t.Run("all builtin names validate", func(t *testing.T) {
-		path := writeTOML(t, `version = "4.0"
+		path := writeTOML(t, `version = "5.0"
 name = "x"
 presets = ["claude"]
 builtins = ["docker", "cicd", "observability", "polyglot-bindings", "vite-plus", "!ai-governance"]
@@ -258,7 +258,7 @@ builtins = ["docker", "cicd", "observability", "polyglot-bindings", "vite-plus",
 }
 
 func TestLintSection(t *testing.T) {
-	const head = "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+	const head = "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
 	tests := []struct {
 		name    string
 		body    string
@@ -283,7 +283,7 @@ func TestLintSection(t *testing.T) {
 }
 
 func TestValidateFile_LintSecurityAndFollowups(t *testing.T) {
-	good := `version = "4.0"
+	good := `version = "5.0"
 name = "x"
 presets = ["claude"]
 
@@ -316,7 +316,7 @@ format = "sarif"
 		"external needs name":   "\n[[lint.external]]\ncommand = [\"x\"]\n",
 		"pattern needs a regex": "\n[lint.security]\nsecret_patterns = [{ name = \"n\" }]\n",
 	}
-	header := "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+	header := "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
 	dir := t.TempDir()
 	write := func(body string) string {
 		p := filepath.Join(dir, "config.toml")
@@ -331,8 +331,8 @@ format = "sarif"
 
 func TestValidateFile_UnknownKeyNamesTheKey(t *testing.T) {
 	for name, body := range map[string]string{
-		"one top-level key":  "version = \"4.0\"\nname = \"x\"\nbogus_key = 1\n",
-		"two top-level keys": "version = \"4.0\"\nname = \"x\"\nbogus_key = 1\nother_key = 2\n",
+		"one top-level key":  "version = \"5.0\"\nname = \"x\"\nbogus_key = 1\n",
+		"two top-level keys": "version = \"5.0\"\nname = \"x\"\nbogus_key = 1\nother_key = 2\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			err := schema.ValidateFile(writeTOML(t, body))
@@ -355,7 +355,7 @@ func toStrings(v any) []string {
 	return out
 }
 func TestVerifiersSection(t *testing.T) {
-	const head = "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+	const head = "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
 	tests := []struct {
 		name    string
 		body    string
@@ -385,8 +385,8 @@ func TestVerifiersSection(t *testing.T) {
 
 func TestValidateFileConcurrentUseOfTheCachedSchema(t *testing.T) {
 	// Arrange
-	good := writeTOML(t, "version = \"4.0\"\nname = \"x\"\n")
-	bad := writeTOML(t, "version = \"4.0\"\nname = \"x\"\nbogus_key = 1\n")
+	good := writeTOML(t, "version = \"5.0\"\nname = \"x\"\n")
+	bad := writeTOML(t, "version = \"5.0\"\nname = \"x\"\nbogus_key = 1\n")
 	var wg sync.WaitGroup
 	errs := make([]error, 16)
 

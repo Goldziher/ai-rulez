@@ -1,13 +1,13 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -53,7 +53,7 @@ var includeRemoveCmd = &cobra.Command{
 	Short: "Remove an include source",
 	Long: `Remove an include source from the configuration.
 
-Use --force to skip confirmation prompts.`,
+Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
 	Run:  runIncludeRemove,
 }
@@ -82,7 +82,7 @@ func init() {
 	includeAddCmd.Flags().StringVarP(&includeInstallTo, "install-to", "t", "", "Installation path (optional)")
 
 	// Add flags for include remove
-	includeRemoveCmd.Flags().BoolVarP(&includeForce, "force", "f", false, "Skip confirmation prompts")
+	includeRemoveCmd.Flags().BoolVarP(&includeForce, "yes", "y", false, "Skip confirmation prompts")
 
 	// Add flags for include list
 	addJSONFormat(includeListCmd.Flags(), &includeJSON, "j")
@@ -137,7 +137,7 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 func runIncludeRemove(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	// Confirm removal unless --force is specified
+	// Confirm removal unless --yes is specified
 	if !includeForce {
 		if !confirmRemoval("include", name) {
 			logger.Info("Operation canceled")
@@ -193,12 +193,12 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 				keyType:   inc.Type,
 			}
 		}
-		data, err := json.MarshalIndent(output, "", "  ")
+		data, err := jsondoc.Marshal(output)
 		if err != nil {
 			logger.Error("Failed to marshal JSON", "error", err)
 			os.Exit(1)
 		}
-		fmt.Println(string(data))
+		fmt.Print(string(data))
 	} else {
 		// Output as human-readable table
 		logger.Info("Includes:")

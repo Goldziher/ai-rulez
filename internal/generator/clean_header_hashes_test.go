@@ -10,7 +10,7 @@ import (
 )
 
 func TestClean_RestoresMergedDocumentWithHeaderComment(t *testing.T) {
-	const shared = `version = "4.0"
+	const shared = `version = "5.0"
 name = "poolside-clean"
 presets = ["poolside"]
 

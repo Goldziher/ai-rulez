@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
@@ -109,6 +110,10 @@ printed; all others show their key path with <redacted>. Pass --reveal to print 
 			os.Exit(1)
 		}
 		if overlay == nil {
+			if localShowJSON {
+				fmtError(jsondoc.Write(os.Stdout, map[string]any{"overlay": nil, "changes": []any{}}))
+				return
+			}
 			fmt.Println("No local overlay. Run 'ai-rulez local init' to create one.")
 			return
 		}
@@ -340,10 +345,7 @@ func printOverlayJSON(overlay *config.LocalOverlay, changes []config.OverlayChan
 		}
 		items = append(items, item)
 	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(map[string]any{keyPath: overlay.Path, "changes": items}); err != nil {
+	if err := jsondoc.Write(os.Stdout, map[string]any{keyPath: overlay.Path, "changes": items}); err != nil {
 		fmtError(err)
 		os.Exit(1)
 	}

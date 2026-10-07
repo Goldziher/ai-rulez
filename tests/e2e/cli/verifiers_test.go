@@ -28,7 +28,7 @@ func TestVerifiersCLI_ChangedOnlyRuleMappingAndFormats(t *testing.T) {
 	t.Cleanup(testutil.CleanupTestBinary)
 	dir := testutil.CreateTempDir(t)
 	cfg := filepath.Join(dir, ".ai-rulez")
-	putFile(t, cfg, "config.toml", "version = \"4.0\"\nname = \"v\"\npresets = [\"claude\"]\n")
+	putFile(t, cfg, "config.toml", "version = \"5.0\"\nname = \"v\"\npresets = [\"claude\"]\n")
 	putFile(t, filepath.Join(cfg, "rules"), "api-conventions.md", "# API\n\nEvery endpoint has a test.\n")
 	putFile(t, filepath.Join(cfg, "verifiers"), "api.toml", `[[verifiers]]
 id = "new-endpoints-have-tests"

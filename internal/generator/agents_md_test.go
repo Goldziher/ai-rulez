@@ -34,13 +34,26 @@ func agentsMDConfig(presets []string, flag string, extra string) string {
 	for i, p := range presets {
 		quoted[i] = strconv.Quote(p)
 	}
-	return "version = \"4.0\"\nname = \"shared\"\ngitignore = false\npresets = [" + strings.Join(quoted, ", ") + "]\n" +
+	return "version = \"5.0\"\nname = \"shared\"\ngitignore = false\npresets = [" + strings.Join(quoted, ", ") + "]\n" +
 		flag + extra
+}
+
+// pinLegacyDefaults pins the pre-v5 defaults. v5 defaults agents_md to true and
+// header hashes to "content"; these fixtures were written against the old
+// defaults, so they are pinned unless the config states its own value.
+func pinLegacyDefaults(cfgTOML string) string {
+	if !strings.Contains(cfgTOML, "agents_md") {
+		cfgTOML = "agents_md = false\n" + cfgTOML
+	}
+	if !strings.Contains(cfgTOML, "[header]") {
+		cfgTOML += "\n[header]\nhashes = \"full\"\n"
+	}
+	return cfgTOML
 }
 
 func writeAgentsMDProject(t *testing.T, root string, cfgTOML string) {
 	t.Helper()
-	files := map[string]string{"config.toml": cfgTOML}
+	files := map[string]string{"config.toml": pinLegacyDefaults(cfgTOML)}
 	for k, v := range agentsMDFixture {
 		files[k] = v
 	}

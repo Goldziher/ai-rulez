@@ -21,13 +21,18 @@ func hashesProject(t *testing.T, headerBlock string) string {
 	configDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
-		"version = \"4.0\"\nname = \"hashes\"\npresets = [\"claude\"]\ngitignore = false\n"+headerBlock), 0o644))
+		"version = \"5.0\"\nname = \"hashes\"\npresets = [\"claude\"]\n\n"+headerBlock), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "rules", "style.md"),
 		[]byte("---\npriority: high\n---\n# Style\n\nUse tabs.\n"), 0o644))
 	for _, name := range []string{"alpha", "beta"} {
 		writeHashesSkill(t, dir, name, "Body of "+name+".")
 	}
 	return dir
+}
+
+// hdr returns a TOML [header] block with the given hashes mode.
+func hdr(mode string) string {
+	return "[header]\nhashes = \"" + mode + "\"\n"
 }
 
 func writeHashesSkill(t *testing.T, dir, name, body string) {
@@ -82,10 +87,10 @@ func TestHeaderHashes_HeaderLinesPerMode(t *testing.T) {
 		wantSource   bool
 		wantFileHash bool
 	}{
-		{name: "default is full", header: "", wantContent: true, wantSource: true},
-		{name: "explicit full", header: "[header]\nhashes = \"full\"\n", wantContent: true, wantSource: true},
-		{name: "content drops Source-Hash", header: "[header]\nhashes = \"content\"\n", wantContent: true},
-		{name: "none drops both", header: "[header]\nhashes = \"none\"\n"},
+		{name: "default is content", header: "", wantContent: true},
+		{name: "explicit full", header: hdr("full"), wantContent: true, wantSource: true},
+		{name: "content drops Source-Hash", header: hdr("content"), wantContent: true},
+		{name: "none drops both", header: hdr("none")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -111,15 +116,15 @@ func TestHeaderHashes_EditingOneSkillChangesOnlyItsOutput(t *testing.T) {
 	}{
 		{
 			name:        "content",
-			header:      "[header]\nhashes = \"content\"\n",
+			header:      hdr("content"),
 			wantChanged: []string{filepath.Join(".claude", "skills", "alpha", "SKILL.md")},
 		},
 		{
 			name:        "none",
-			header:      "[header]\nhashes = \"none\"\n",
+			header:      hdr("none"),
 			wantChanged: []string{filepath.Join(".claude", "skills", "alpha", "SKILL.md")},
 		},
-		{name: "full keeps whole-tree Source-Hash churn", header: "", wantAll: true},
+		{name: "full keeps whole-tree Source-Hash churn", header: hdr("full"), wantAll: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -142,8 +147,8 @@ func TestHeaderHashes_EditingOneSkillChangesOnlyItsOutput(t *testing.T) {
 }
 
 func TestHeaderHashes_Idempotent(t *testing.T) {
-	for _, header := range []string{"", "[header]\nhashes = \"content\"\n", "[header]\nhashes = \"none\"\n",
-		"[header]\nhashes = \"content\"\ntimestamp = true\n", "[header]\nhashes = \"none\"\ntimestamp = true\n"} {
+	for _, header := range []string{"", hdr("content"), hdr("none"), hdr("full"),
+		hdr("content") + "timestamp = true\n", hdr("none") + "timestamp = true\n"} {
 		t.Run(strings.ReplaceAll(header, "\n", " "), func(t *testing.T) {
 			dir := hashesProject(t, header)
 			generateHashesProject(t, dir)
@@ -155,20 +160,20 @@ func TestHeaderHashes_Idempotent(t *testing.T) {
 }
 
 func TestHeaderHashes_ReRendersWhenHeaderStyleChanges(t *testing.T) {
-	dir := hashesProject(t, "[header]\nhashes = \"content\"\n")
+	dir := hashesProject(t, hdr("content"))
 	generateHashesProject(t, dir)
 	before := snapshotTree(t, dir)
 
 	// The body (and so the Content-Hash) is unchanged; only the banner differs,
 	// which no Source-Hash is around to flag.
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte(
-		"version = \"4.0\"\nname = \"hashes\"\npresets = [\"claude\"]\ngitignore = false\n[header]\nhashes = \"content\"\nstyle = \"detailed\"\n"), 0o644))
+		"version = \"5.0\"\nname = \"hashes\"\npresets = [\"claude\"]\n\n[header]\nhashes = \"content\"\nstyle = \"detailed\"\n"), 0o644))
 	generateHashesProject(t, dir)
 	assert.Contains(t, changedPaths(before, snapshotTree(t, dir)), "CLAUDE.md")
 }
 
 func TestHeaderHashes_InvalidModeFailsValidation(t *testing.T) {
-	dir := hashesProject(t, "[header]\nhashes = \"sometimes\"\n")
+	dir := hashesProject(t, hdr("sometimes"))
 	cfg, err := config.LoadConfig(context.Background(), dir)
 	require.NoError(t, err)
 	assert.ErrorContains(t, cfg.Validate(), "header.hashes")
@@ -177,7 +182,7 @@ func TestHeaderHashes_InvalidModeFailsValidation(t *testing.T) {
 func TestHeaderHashes_CleanRemovesOutputsInEveryMode(t *testing.T) {
 	for _, mode := range []string{"full", "content", "none"} {
 		t.Run(mode, func(t *testing.T) {
-			dir := hashesProject(t, "[header]\nhashes = \""+mode+"\"\n")
+			dir := hashesProject(t, hdr(mode))
 			cfg, err := config.LoadConfig(context.Background(), dir)
 			require.NoError(t, err)
 			gen := NewGenerator(cfg)
@@ -218,7 +223,7 @@ func TestHeaderHashes_VerifyPluginPassesInEveryMode(t *testing.T) {
 // rewrite, but only in the header: a body line that happens to start with
 // "Generated: " is real content and its edits must reach disk.
 func TestHeaderHashes_TimestampIgnoresOnlyTheHeaderStamp(t *testing.T) {
-	for _, header := range []string{"[header]\nhashes = \"content\"\ntimestamp = true\n", "[header]\nhashes = \"none\"\ntimestamp = true\n"} {
+	for _, header := range []string{hdr("content") + "timestamp = true\n", hdr("none") + "timestamp = true\n"} {
 		t.Run(strings.ReplaceAll(header, "\n", " "), func(t *testing.T) {
 			dir := hashesProject(t, header)
 			writeHashesSkill(t, dir, "alpha", "Generated: see docs/a.md")

@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/cost-report.schema.json",
+  "title": "ai-rulez cost report",
+  "description": "Output of `ai-rulez cost --format json`: the token cost of the always-loaded and on-demand content.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "profile",
+    "target",
+    "tokenizer",
+    "always",
+    "conditional",
+    "on_demand",
+    "items"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "profile": {
+      "type": "string"
+    },
+    "target": {
+      "type": "string"
+    },
+    "tokenizer": {
+      "type": "string"
+    },
+    "always": {
+      "type": "integer"
+    },
+    "conditional": {
+      "type": "integer"
+    },
+    "on_demand": {
+      "type": "integer"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "name"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "always": {
+            "type": "integer"
+          },
+          "conditional": {
+            "type": "integer"
+          },
+          "on_demand": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "top_always": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "top_on_demand": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

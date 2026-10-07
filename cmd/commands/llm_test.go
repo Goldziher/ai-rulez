@@ -15,7 +15,7 @@ func llmProject(t *testing.T, llmTable string) {
 	if err := os.MkdirAll(filepath.Join(dir, ".ai-rulez"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	body := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n" + llmTable
+	body := "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n" + llmTable
 	if err := os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}

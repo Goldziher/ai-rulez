@@ -232,6 +232,7 @@ func (b *Bundle) exists(p string) bool { return b.Files[p] || b.Dirs[p] }
 
 func (b *Bundle) checkIndexes() []Finding {
 	var out []Finding
+	conceptsByDir, subdirsByDir := b.conceptLayout()
 	for _, p := range sortedMapKeys(b.Indexes) {
 		idx := b.Indexes[p]
 		dir := dirOf(p)
@@ -254,12 +255,12 @@ func (b *Bundle) checkIndexes() []Finding {
 				listed[dirOf(target)] = true
 			}
 		}
-		for _, c := range b.ConceptPaths() {
-			if dirOf(c) == dir && !listed[c] {
+		for _, c := range conceptsByDir[dir] {
+			if !listed[c] {
 				out = append(out, NewFinding(CodeIndexMismatch, p, 1, "concept %s is not listed", path.Base(c)))
 			}
 		}
-		for _, sub := range b.subdirsWithConcepts(dir) {
+		for _, sub := range subdirsByDir[dir] {
 			if !listed[sub] {
 				out = append(out, NewFinding(CodeIndexMismatch, p, 1, "subdirectory %s/ is not listed", path.Base(sub)))
 			}
@@ -268,24 +269,28 @@ func (b *Bundle) checkIndexes() []Finding {
 	return out
 }
 
-// subdirsWithConcepts lists the direct subdirectories of dir that contain a
-// concept at any depth.
-func (b *Bundle) subdirsWithConcepts(dir string) []string {
-	seen := map[string]bool{}
-	for c := range b.Concepts {
-		rest := c
-		if dir != "" {
-			var found bool
-			rest, found = strings.CutPrefix(c, dir+"/")
-			if !found {
-				continue
+// conceptLayout groups the concepts by directory and lists, per directory, the
+// direct subdirectories that contain a concept at any depth. Computed once, so
+// checking many indexes stays linear in the number of concepts.
+func (b *Bundle) conceptLayout() (concepts map[string][]string, subdirs map[string][]string) {
+	concepts = map[string][]string{}
+	subSets := map[string]map[string]bool{}
+	for _, c := range b.ConceptPaths() {
+		dir := dirOf(c)
+		concepts[dir] = append(concepts[dir], c)
+		for d := dir; d != ""; d = dirOf(d) {
+			parent := dirOf(d)
+			if subSets[parent] == nil {
+				subSets[parent] = map[string]bool{}
 			}
-		}
-		if first, _, nested := strings.Cut(rest, "/"); nested {
-			seen[path.Join(dir, first)] = true
+			subSets[parent][d] = true
 		}
 	}
-	return sortedKeys(seen)
+	subdirs = make(map[string][]string, len(subSets))
+	for dir, set := range subSets {
+		subdirs[dir] = sortedKeys(set)
+	}
+	return concepts, subdirs
 }
 
 func (b *Bundle) checkLinksAndOrphans() []Finding {
