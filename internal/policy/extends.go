@@ -148,98 +148,131 @@ func wrapExtendsError(path string, err error) error {
 // child) is never weaker than parent on any key, whatever this reports; the
 // report is what lets an author learn that the value they wrote has no effect.
 func Loosens(parent, child Policy) []string {
-	var out []string
-	add := func(key, format string, args ...any) {
-		out = append(out, fmt.Sprintf("%s: %s", key, fmt.Sprintf(format, args...)))
-	}
-	listPatterns := func(key string, p, c List) {
-		if p.Set && c.Set {
-			for _, item := range c.Items {
-				if !anyCovers(p.Items, item) {
-					add(key, "%q is not covered by the parent's %s", item, quoteList(p.Items))
-				}
-			}
-		}
-	}
-	listExact := func(key string, p, c List) {
-		if p.Set && c.Set {
-			for _, item := range c.Items {
-				if !slices.Contains(p.Items, item) {
-					add(key, "%q is not in the parent's %s", item, quoteList(p.Items))
-				}
-			}
-		}
-	}
+	r := &loosenings{}
 	for _, key := range child.statedLoose {
 		if on := switchValues[key]; on != nil && on(parent) {
-			add(key, "is written as the weaker value, but the parent turns the restriction on")
+			r.add(key, "is written as the weaker value, but the parent turns the restriction on")
 		}
 	}
-	listPatterns("sources.allowed_hosts", parent.Sources.Allowed, child.Sources.Allowed)
-	listPatterns("lint.security.allowed_hosts", parent.Lint.Security.AllowedHosts, child.Lint.Security.AllowedHosts)
-	listExact("lint.security.trusted_orgs", parent.Lint.Security.TrustedOrgs, child.Lint.Security.TrustedOrgs)
-	listExact("governance.approvers", parent.Governance.Approvers, child.Governance.Approvers)
-	listExact("mcp.allowed_commands", parent.MCP.AllowedCommands, child.MCP.AllowedCommands)
-	listExact("signing.trust", parent.Signing.Trust, child.Signing.Trust)
-	listExact("lint.scanner_policy.allow_egress", parent.Lint.ScannerPolicy.AllowEgress, child.Lint.ScannerPolicy.AllowEgress)
+	r.lists(parent, child)
+	r.sources(parent, child)
+	r.lint(parent.Lint, child.Lint)
+	r.governance(parent.Governance, child.Governance)
+	r.signing(parent.Signing, child.Signing)
+	return r.out
+}
 
-	if c, p := child.Sources.MinReleaseAge, parent.Sources.MinReleaseAge; c > 0 && c < p {
-		add("sources.min_release_age", "%s is shorter than the parent's %s", formatAge(c), formatAge(p))
-	}
-	if c, p := child.Sources.MinReleaseAgeSource, parent.Sources.MinReleaseAgeSource; c != "" && ageSourceRank[c] < ageSourceRank[p] {
-		add("sources.min_release_age_source", "%q is weaker than the parent's %q", c, p)
-	}
-	for _, code := range sortedKeys(child.Lint.SeverityFloor) {
-		if p, ok := parent.Lint.SeverityFloor[code]; ok && severityRank[child.Lint.SeverityFloor[code]] < severityRank[p] {
-			add("lint.severity_floor."+code, "%q is below the parent's %q", child.Lint.SeverityFloor[code], p)
-		}
-	}
-	if c, p := child.Lint.Security.ScanImports, parent.Lint.Security.ScanImports; c != "" && policyScanRank[c] < policyScanRank[p] {
-		add("lint.security.scan_imports", "%q is weaker than the parent's %q", c, p)
-	}
-	if c, p := child.Lint.Capability.MaxNetworkCommands, parent.Lint.Capability.MaxNetworkCommands; c != nil && p != nil && *c > *p {
-		add("lint.capability.max_network_commands", "%d is above the parent's %d", *c, *p)
-	}
-	limits := func(prefix string, p, c map[string]int) {
-		for _, key := range sortedIntKeys(c) {
-			if pv, ok := p[key]; ok && c[key] > pv {
-				add(prefix+key, "%d is above the parent's %d", c[key], pv)
+// loosenings collects what Loosens reports, in the order the keys are checked.
+type loosenings struct{ out []string }
+
+func (r *loosenings) add(key, format string, args ...any) {
+	r.out = append(r.out, fmt.Sprintf("%s: %s", key, fmt.Sprintf(format, args...)))
+}
+
+// listPatterns reports child items no parent pattern covers.
+func (r *loosenings) listPatterns(key string, p, c List) {
+	if p.Set && c.Set {
+		for _, item := range c.Items {
+			if !anyCovers(p.Items, item) {
+				r.add(key, "%q is not covered by the parent's %s", item, quoteList(p.Items))
 			}
 		}
 	}
-	limits("lint.load_budgets.", parent.Lint.LoadBudgets, child.Lint.LoadBudgets)
-	limits("lint.max_findings.", parent.Lint.MaxFindings, child.Lint.MaxFindings)
-	for _, kind := range sortedBudgetKinds(child.Lint.SizeBudgets) {
-		pb, cb := parent.Lint.SizeBudgets[kind], child.Lint.SizeBudgets[kind]
+}
+
+// listExact reports child items the parent's list does not hold.
+func (r *loosenings) listExact(key string, p, c List) {
+	if p.Set && c.Set {
+		for _, item := range c.Items {
+			if !slices.Contains(p.Items, item) {
+				r.add(key, "%q is not in the parent's %s", item, quoteList(p.Items))
+			}
+		}
+	}
+}
+
+func (r *loosenings) lists(parent, child Policy) {
+	r.listPatterns("sources.allowed_hosts", parent.Sources.Allowed, child.Sources.Allowed)
+	r.listPatterns("lint.security.allowed_hosts", parent.Lint.Security.AllowedHosts, child.Lint.Security.AllowedHosts)
+	r.listExact("lint.security.trusted_orgs", parent.Lint.Security.TrustedOrgs, child.Lint.Security.TrustedOrgs)
+	r.listExact("governance.approvers", parent.Governance.Approvers, child.Governance.Approvers)
+	r.listExact("mcp.allowed_commands", parent.MCP.AllowedCommands, child.MCP.AllowedCommands)
+	r.listExact("signing.trust", parent.Signing.Trust, child.Signing.Trust)
+	r.listExact("lint.scanner_policy.allow_egress", parent.Lint.ScannerPolicy.AllowEgress, child.Lint.ScannerPolicy.AllowEgress)
+}
+
+func (r *loosenings) sources(parent, child Policy) {
+	if c, p := child.Sources.MinReleaseAge, parent.Sources.MinReleaseAge; c > 0 && c < p {
+		r.add("sources.min_release_age", "%s is shorter than the parent's %s", formatAge(c), formatAge(p))
+	}
+	if c, p := child.Sources.MinReleaseAgeSource, parent.Sources.MinReleaseAgeSource; c != "" && ageSourceRank[c] < ageSourceRank[p] {
+		r.add("sources.min_release_age_source", "%q is weaker than the parent's %q", c, p)
+	}
+}
+
+func (r *loosenings) lint(parent, child Lint) {
+	for _, code := range sortedKeys(child.SeverityFloor) {
+		if p, ok := parent.SeverityFloor[code]; ok && severityRank[child.SeverityFloor[code]] < severityRank[p] {
+			r.add("lint.severity_floor."+code, "%q is below the parent's %q", child.SeverityFloor[code], p)
+		}
+	}
+	if c, p := child.Security.ScanImports, parent.Security.ScanImports; c != "" && policyScanRank[c] < policyScanRank[p] {
+		r.add("lint.security.scan_imports", "%q is weaker than the parent's %q", c, p)
+	}
+	if c, p := child.Capability.MaxNetworkCommands, parent.Capability.MaxNetworkCommands; c != nil && p != nil && *c > *p {
+		r.add("lint.capability.max_network_commands", "%d is above the parent's %d", *c, *p)
+	}
+	r.limits("lint.load_budgets.", parent.LoadBudgets, child.LoadBudgets)
+	r.limits("lint.max_findings.", parent.MaxFindings, child.MaxFindings)
+	r.sizeBudgets(parent, child)
+	child.ScannerPolicy.loosens(parent.ScannerPolicy, r.add)
+}
+
+// limits reports child maxima above the parent's.
+func (r *loosenings) limits(prefix string, p, c map[string]int) {
+	for _, key := range sortedIntKeys(c) {
+		if pv, ok := p[key]; ok && c[key] > pv {
+			r.add(prefix+key, "%d is above the parent's %d", c[key], pv)
+		}
+	}
+}
+
+func (r *loosenings) sizeBudgets(parent, child Lint) {
+	for _, kind := range sortedBudgetKinds(child.SizeBudgets) {
+		pb, cb := parent.SizeBudgets[kind], child.SizeBudgets[kind]
 		if pb.MaxLines > 0 && cb.MaxLines > pb.MaxLines {
-			add("lint.budgets."+kind+".max_lines", "%d is above the parent's %d", cb.MaxLines, pb.MaxLines)
+			r.add("lint.budgets."+kind+".max_lines", "%d is above the parent's %d", cb.MaxLines, pb.MaxLines)
 		}
 		if pb.MaxTokens > 0 && cb.MaxTokens > pb.MaxTokens {
-			add("lint.budgets."+kind+".max_tokens", "%d is above the parent's %d", cb.MaxTokens, pb.MaxTokens)
+			r.add("lint.budgets."+kind+".max_tokens", "%d is above the parent's %d", cb.MaxTokens, pb.MaxTokens)
 		}
 	}
-	child.Lint.ScannerPolicy.loosens(parent.Lint.ScannerPolicy, add)
-	if c, p := child.Governance.MinApprovers, parent.Governance.MinApprovers; c > 0 && c < p {
-		add("governance.min_approvers", "%d is below the parent's %d", c, p)
+}
+
+func (r *loosenings) governance(parent, child Governance) {
+	if c, p := child.MinApprovers, parent.MinApprovers; c > 0 && c < p {
+		r.add("governance.min_approvers", "%d is below the parent's %d", c, p)
 	}
-	if c, p := child.Governance.MinAssurance, parent.Governance.MinAssurance; c != "" && lockfile.AssuranceRank(c) < lockfile.AssuranceRank(p) {
-		add("governance.min_assurance", "%q is weaker than the parent's %q", c, p)
+	if c, p := child.MinAssurance, parent.MinAssurance; c != "" && lockfile.AssuranceRank(c) < lockfile.AssuranceRank(p) {
+		r.add("governance.min_assurance", "%q is weaker than the parent's %q", c, p)
 	}
-	for _, key := range slices.Sorted(maps.Keys(parent.Signing.Thresholds)) {
-		if c, ok := child.Signing.Thresholds[key]; ok && c < parent.Signing.Thresholds[key] {
-			add("signing.thresholds."+key, "%d is below the parent's %d", c, parent.Signing.Thresholds[key])
+}
+
+func (r *loosenings) signing(parent, child Signing) {
+	for _, key := range slices.Sorted(maps.Keys(parent.Thresholds)) {
+		if c, ok := child.Thresholds[key]; ok && c < parent.Thresholds[key] {
+			r.add("signing.thresholds."+key, "%d is below the parent's %d", c, parent.Thresholds[key])
 		}
 	}
-	if c, p := child.Signing.TLog, parent.Signing.TLog; c != "" && tlogRank[c] < tlogRank[p] {
-		add("signing.tlog", "%q is weaker than the parent's %q", c, p)
+	if c, p := child.TLog, parent.TLog; c != "" && tlogRank[c] < tlogRank[p] {
+		r.add("signing.tlog", "%q is weaker than the parent's %q", c, p)
 	}
-	if c, p := child.Signing.MaxAge, parent.Signing.MaxAge; c > 0 && p > 0 && c > p {
-		add("signing.max_age", "%s accepts older signatures than the parent's %s", formatAge(c), formatAge(p))
+	if c, p := child.MaxAge, parent.MaxAge; c > 0 && p > 0 && c > p {
+		r.add("signing.max_age", "%s accepts older signatures than the parent's %s", formatAge(c), formatAge(p))
 	}
-	if c, p := child.Signing.MinHashVersion, parent.Signing.MinHashVersion; c > 0 && c < p {
-		add("signing.min_hash_version", "%d is below the parent's %d", c, p)
+	if c, p := child.MinHashVersion, parent.MinHashVersion; c > 0 && c < p {
+		r.add("signing.min_hash_version", "%d is below the parent's %d", c, p)
 	}
-	return out
 }
 
 // loosens reports the scanner-policy keys child states weaker than parent.
