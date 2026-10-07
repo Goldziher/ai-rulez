@@ -69,9 +69,14 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 				// A path the committed config must not name is an error, not a skipped include.
 				return nil, oops.Wrapf(err, "include %q", cfg.Includes[i].Name)
 			} else {
-				// ErrLockViolation also makes the config loader propagate it
-				// instead of continuing with local content only.
-				failures = append(failures, oops.Wrapf(errors.Join(config.ErrLockViolation, err), "include %q", cfg.Includes[i].Name))
+				// Both sentinels make the config loader propagate the error
+				// instead of continuing with local content only; a lock
+				// violation also exits as drift.
+				sentinel := config.ErrIncludeUnresolved
+				if strictLock(cfg) {
+					sentinel = config.ErrLockViolation
+				}
+				failures = append(failures, oops.Wrapf(errors.Join(sentinel, err), "include %q", cfg.Includes[i].Name))
 			}
 			cfg.Warn("Failed to process include", "name", cfg.Includes[i].Name, "error", err)
 			// Continue processing other includes despite errors
@@ -84,9 +89,12 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 	if len(violations) > 0 {
 		return nil, errors.Join(violations...)
 	}
-	// Under a strict lock a missing include is not a warning: generating without
-	// it would silently produce outputs the lock never saw.
-	if len(failures) > 0 && strictLock(cfg) {
+	// A missing include is not a warning: generating without it silently produces
+	// outputs the committed configuration never described, and a CI gate on
+	// `generate --check` would pass on a broken checkout. Only an explicit offline
+	// run (--no-fetch) keeps the warning, since it asked for cached content only,
+	// and `lock` (refresh), which collects the failures and reports them itself.
+	if len(failures) > 0 && ((!SkipFetch && Mode != LockRefresh) || strictLock(cfg)) {
 		return nil, errors.Join(failures...)
 	}
 	return mergedContent, nil
