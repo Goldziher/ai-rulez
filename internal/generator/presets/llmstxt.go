@@ -49,7 +49,11 @@ func (g *LLMsTxtPresetGenerator) Generate(content *config.ContentTree, baseDir s
 
 	doc := llmstxt.Doc{Title: title, Summary: summary}
 	for _, kind := range llmsTxtKindOrder {
-		section := llmstxt.Section{Name: kind.heading}
+		heading := kind.heading
+		if heading == "" {
+			heading = strings.ToUpper(kind.name[:1]) + kind.name[1:]
+		}
+		section := llmstxt.Section{Name: heading}
 		for i := range items {
 			if items[i].kind == kind.name {
 				section.Links = append(section.Links, items[i].link)
@@ -81,14 +85,24 @@ func (g *LLMsTxtPresetGenerator) Generate(content *config.ContentTree, baseDir s
 }
 
 // llmsTxtKindOrder is the order of the sections; agents and commands are the
-// secondary content and share the Optional section.
+// secondary content and share the Optional section. An empty heading means the
+// capitalized kind name.
 var llmsTxtKindOrder = []struct{ name, heading string }{
-	{"rules", "Rules"},
-	{"context", "Context"},
-	{"skills", "Skills"},
-	{"agents", llmstxt.OptionalSection},
-	{"commands", llmstxt.OptionalSection},
+	{llmsKindRules, ""},
+	{llmsKindContext, ""},
+	{llmsKindSkills, ""},
+	{llmsKindAgents, llmstxt.OptionalSection},
+	{llmsKindCommands, llmstxt.OptionalSection},
 }
+
+// Content kind names, as written in llms_txt.include.
+const (
+	llmsKindRules    = "rules"
+	llmsKindContext  = "context"
+	llmsKindSkills   = "skills"
+	llmsKindAgents   = "agents"
+	llmsKindCommands = "commands"
+)
 
 type llmsTxtItem struct {
 	kind string
@@ -107,15 +121,15 @@ func llmsTxtItems(content *config.ContentTree, include []string, baseDir, outDir
 		want[strings.ToLower(strings.TrimSpace(k))] = true
 	}
 	if len(want) == 0 {
-		want["rules"], want["context"], want["skills"] = true, true, true
+		want[llmsKindRules], want[llmsKindContext], want[llmsKindSkills] = true, true, true
 	}
 	type source struct {
 		domain string
 		files  map[string][]config.ContentFile
 	}
 	sources := []source{{files: map[string][]config.ContentFile{
-		"rules": content.Rules, "context": content.Context, "skills": content.Skills,
-		"agents": content.Agents, "commands": content.Commands,
+		llmsKindRules: content.Rules, llmsKindContext: content.Context, llmsKindSkills: content.Skills,
+		llmsKindAgents: content.Agents, llmsKindCommands: content.Commands,
 	}}}
 	names := make([]string, 0, len(content.Domains))
 	for name := range content.Domains {
@@ -125,7 +139,7 @@ func llmsTxtItems(content *config.ContentTree, include []string, baseDir, outDir
 	for _, name := range names {
 		if d := content.Domains[name]; d != nil {
 			sources = append(sources, source{domain: name, files: map[string][]config.ContentFile{
-				"rules": d.Rules, "context": d.Context, "skills": d.Skills, "agents": d.Agents, "commands": d.Commands,
+				llmsKindRules: d.Rules, llmsKindContext: d.Context, llmsKindSkills: d.Skills, llmsKindAgents: d.Agents, llmsKindCommands: d.Commands,
 			}})
 		}
 	}
