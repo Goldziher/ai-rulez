@@ -298,6 +298,28 @@ func writeAtomic(path string, data []byte) (err error) {
 	return oops.Wrapf(os.Rename(tmp.Name(), path), "write %s", filepath.Base(path))
 }
 
+// readVectors reads the vectors file and checks its size and digest against the manifest.
+func readVectors(dir string, m *Manifest, width int) ([]byte, error) {
+	want := len(m.Items) * m.Dims * width
+	vpath := filepath.Join(dir, VectorsFile)
+	vinfo, err := os.Stat(vpath)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrNoIndex, err)
+	}
+	if !vinfo.Mode().IsRegular() || vinfo.Size() != int64(want) || want > maxVectorsBytes {
+		return nil, fmt.Errorf("%w: %s is %d bytes, the manifest needs %d (limit %d)", ErrNoIndex, VectorsFile, vinfo.Size(), want, maxVectorsBytes)
+	}
+	data, err := os.ReadFile(vpath) //nolint:gosec // the index directory is project-controlled
+	if err != nil {
+		return nil, oops.Wrapf(err, "read the search vectors")
+	}
+	sum := sha256.Sum256(data)
+	if got := "sha256:" + hex.EncodeToString(sum[:]); got != m.VectorsDigest {
+		return nil, fmt.Errorf("%w: %s does not match the manifest digest", ErrNoIndex, VectorsFile)
+	}
+	return data, nil
+}
+
 // LoadIndex reads and validates an index. A missing directory or manifest is
 // ErrNoIndex; so is any file that does not validate (truncated vectors, a digest
 // mismatch, a NaN, a manifest over its caps): the ranking then falls back to
@@ -330,22 +352,9 @@ func LoadIndex(dir string) (*Index, error) {
 	if m.DType == DTypeFloat16 {
 		width = 2
 	}
-	want := len(m.Items) * m.Dims * width
-	vpath := filepath.Join(dir, VectorsFile)
-	vinfo, err := os.Stat(vpath)
+	data, err := readVectors(dir, &m, width)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrNoIndex, err)
-	}
-	if !vinfo.Mode().IsRegular() || vinfo.Size() != int64(want) || want > maxVectorsBytes {
-		return nil, fmt.Errorf("%w: %s is %d bytes, the manifest needs %d (limit %d)", ErrNoIndex, VectorsFile, vinfo.Size(), want, maxVectorsBytes)
-	}
-	data, err := os.ReadFile(vpath) //nolint:gosec // the index directory is project-controlled
-	if err != nil {
-		return nil, oops.Wrapf(err, "read the search vectors")
-	}
-	sum := sha256.Sum256(data)
-	if got := "sha256:" + hex.EncodeToString(sum[:]); got != m.VectorsDigest {
-		return nil, fmt.Errorf("%w: %s does not match the manifest digest", ErrNoIndex, VectorsFile)
+		return nil, err
 	}
 	x := &Index{Manifest: m, byKey: make(map[string]int, len(m.Items))}
 	x.vecs = make([][]float32, len(m.Items))
