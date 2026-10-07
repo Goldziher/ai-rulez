@@ -44,7 +44,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 893 e27e62e34b090469c935413c9c2b0cb5c9e2ad62ea87f50b26ba70c75bbf2346
+.ai-rulez/config.toml file 0644 911 04c8ff06d5f4db9f246e13787cf175414dc359efe94ffad7105a75917a7f867e
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -560,13 +560,14 @@ description: Ship a release
 ---
 Cut a release.
 <<<<
-.ai-rulez/config.toml file 0644 893 e27e62e34b090469c935413c9c2b0cb5c9e2ad62ea87f50b26ba70c75bbf2346
+.ai-rulez/config.toml file 0644 911 04c8ff06d5f4db9f246e13787cf175414dc359efe94ffad7105a75917a7f867e
 >>>>
-version = "4.0"
+version = "5.0"
 name = "golden"
 description = "Golden fixture project"
 presets = ["claude", "cursor", "codex"]
 gitignore = true
+agents_md = false
 
 [guard]
 generated = true

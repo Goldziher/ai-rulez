@@ -22,7 +22,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 dc0b4e312e4ecd40a88a6cec8bbc9c1f6a97faa3e5b980566e9c0fee261d32aa
+.ai-rulez/config.toml file 0644 843 9d137787fd602f36b82c6ec464d2dccc676855f4ec9a2ce74983aef6a8d0ae2b
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -44,29 +44,29 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .gitignore file 0644 358 6c30dc02f372af23f43378d7448ef3a45079b2d686718e4d1070bbbf840a6e06
 .kilo/ dir 0755
 .kilo/agents/ dir 0755
-.kilo/agents/architect.md file 0644 258 f288765e0370e85c20afb96e1f405cf635189de37b1a23658e8b26b491b5ac56
-.kilo/agents/tester.md file 0644 247 06c015ac132375b37e62a86af3b414b2204c5604c8c22aa9e38bd4ae3f255e7d
+.kilo/agents/architect.md file 0644 171 9f499ed05e385eabe95c1ab5dd938a3b426684117be8fd3e9e906ccec47c409c
+.kilo/agents/tester.md file 0644 160 504b5d937542036401aadba25e2515c53fa13bab2abc6ecc024c235368736439
 .kilo/commands/ dir 0755
-.kilo/commands/build.md file 0644 250 fcf64d7813afbd8a09ee5b9fef0419404402ffae9e3fd100a35481d3793c31c7
-.kilo/commands/ship.md file 0644 227 6175837133fa16bd9d2c64ff5dfd1fba95d2f8e1acabd21f16b721785a1086d6
+.kilo/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.kilo/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .kilo/plugins/ dir 0755
 .kilo/plugins/ai-rulez-hooks.js file 0644 8796 bb68fbfbf7ffa3c450175ddbb7968d668584e11f841be026454a06e40b29015c
 .kilo/rules/ dir 0755
-.kilo/rules/always.md file 0644 325 a9a45d6323aee6d242e3b12e205c7bc1cd629eda4bad6e8990a06c4b4ac432fd
-.kilo/rules/auto.md file 0644 302 725c7a5aca8f3bfbc294d07a4244a0c5378a9f78cfd7496f468baddd876b1e18
-.kilo/rules/manual.md file 0644 313 1ce5efcd0baec28e3257c3dd8a824f50705a85f4c62b95d5b50ad2d72ac83df1
-.kilo/rules/typescript.md file 0644 369 a6a29ad7d99e140f20400fed2c34ef5e6a0d0120e2e778673c47f3c144f9dab7
+.kilo/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.kilo/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.kilo/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.kilo/rules/typescript.md file 0644 284 c95977ee0abc9d97498a06f477d42bd8bef8cfe54fc539f01994aeac1757eeaf
 .kilo/skills/ dir 0755
 .kilo/skills/deployer/ dir 0755
-.kilo/skills/deployer/SKILL.md file 0644 259 c8017f7bdc526b5ba17b6ea14668c08ac5cb1e4a662c1a45faa0f682a4c10b27
+.kilo/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .kilo/skills/reviewer/ dir 0755
-.kilo/skills/reviewer/SKILL.md file 0644 506 0a004ae4202aa8e682f0a85de48acbdd263465fbb4d67c3654139eb97857a8db
+.kilo/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .kilo/skills/reviewer/references/ dir 0755
 .kilo/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .kilo/skills/reviewer/scripts/ dir 0755
 .kilo/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 575 bf8164011037f7e5439c24996d884b7a986cfa0a946ec875481c282f692da61d
+AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 REVIEW.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 kilo.jsonc file 0644 748 3c332bbb9f8168f9b622e6404d0145ddb3a24ea6874458d40c487921b0eeb7fa
 scripts/ dir 0755
@@ -110,7 +110,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -157,7 +157,7 @@ INFO  Removed generated files files=17 directories=10
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 dc0b4e312e4ecd40a88a6cec8bbc9c1f6a97faa3e5b980566e9c0fee261d32aa
+.ai-rulez/config.toml file 0644 843 9d137787fd602f36b82c6ec464d2dccc676855f4ec9a2ce74983aef6a8d0ae2b
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

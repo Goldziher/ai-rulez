@@ -22,7 +22,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 829 08ad7eb2f3b81c49af3934ece86af65a7bb369b707fefd00b7d996aef4c39568
+.ai-rulez/config.toml file 0644 847 2ffdf3f5b9e0f470d7344b6945dbffab6ba278e31882ffeedcc039ca8e9063a6
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -45,24 +45,24 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 .mimocode/ dir 0755
 .mimocode/agents/ dir 0755
-.mimocode/agents/architect.md file 0644 258 194cf35fdbd1d8b2fe74ded7e896f606bf361cad554e2ee14c6983412bc050e7
-.mimocode/agents/tester.md file 0644 247 f845afcaade3506d31995089dbbbd4687cefa6713ebf69613bc9d857e3dea4ab
+.mimocode/agents/architect.md file 0644 171 9f499ed05e385eabe95c1ab5dd938a3b426684117be8fd3e9e906ccec47c409c
+.mimocode/agents/tester.md file 0644 160 504b5d937542036401aadba25e2515c53fa13bab2abc6ecc024c235368736439
 .mimocode/commands/ dir 0755
-.mimocode/commands/build.md file 0644 250 e21b2743b9c11e20a71c01e5e96dfa73a70f254765d3793372b94485abf93d61
-.mimocode/commands/ship.md file 0644 227 94712696b1375e77002e4774446e43586a9ec2e87705e7ee9d40c83f4114723a
+.mimocode/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.mimocode/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .mimocode/mimocode.jsonc file 0600 702 be632d8084b899bace95e3c42d017d7eaa074d97dd2c5bb5f1ece2792c99edd0
 .mimocode/plugins/ dir 0755
 .mimocode/plugins/ai-rulez-hooks.js file 0644 8804 4912a8b1b93e2de10f4b91d404ffd4517dd2f68dc914e24d0f2b3e89478dce9c
 .mimocode/skills/ dir 0755
 .mimocode/skills/deployer/ dir 0755
-.mimocode/skills/deployer/SKILL.md file 0644 259 990d3e07ef855defaa366802dcea606b922eb72b7defb75a419a2dd9f3e3c57a
+.mimocode/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .mimocode/skills/reviewer/ dir 0755
-.mimocode/skills/reviewer/SKILL.md file 0644 506 cc1d11bebc4ed5cb3cb393fff8785e444c090613aabbf904077cdbfe0b5a7cb8
+.mimocode/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .mimocode/skills/reviewer/references/ dir 0755
 .mimocode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .mimocode/skills/reviewer/scripts/ dir 0755
 .mimocode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-AGENTS.md file 0644 874 30b9902dcd215cfb2210492e0b5a644be728b2d119ad859561e35845b927e9f0
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -104,7 +104,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -145,7 +145,7 @@ INFO  Removed generated files files=12 directories=9
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 829 08ad7eb2f3b81c49af3934ece86af65a7bb369b707fefd00b7d996aef4c39568
+.ai-rulez/config.toml file 0644 847 2ffdf3f5b9e0f470d7344b6945dbffab6ba278e31882ffeedcc039ca8e9063a6
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

@@ -23,7 +23,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 824 63ba52b33c51660ec03609ea4ac03145cffc6fe4ed7679808f6ba7bd6dc74caf
+.ai-rulez/config.toml file 0644 842 41bed9ffdc2a0300f4014eea4942c63a5478e64460a616168f8c8b0f3f683241
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -46,19 +46,19 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 .xum/ dir 0755
 .xum/agents/ dir 0755
-.xum/agents/architect.md file 0644 310 d2308831c4c417b2ae01a8e33b574ad379c9a544a4a1a250d8a754861d01ad99
-.xum/agents/tester.md file 0644 302 0c369df52153e5f48b18e56dea1bb6dd6eeea446c5009fb7449d399cd100933e
+.xum/agents/architect.md file 0644 223 d266198e5e1f60cb53f0332b2164bbbe91d95cbeb8ee1df88dcec487df5db029
+.xum/agents/tester.md file 0644 215 21931fb070413836dd869c7ed161217dc6206625da3d0470fb0c01a7c213a272
 .xum/mcp.jsonc file 0600 271 5d4bfda0a306dee364069bb0f9ec753c5d71bfdcf8044a0059d0ff3ab31ff41c
 .xum/skills/ dir 0755
 .xum/skills/deployer/ dir 0755
-.xum/skills/deployer/SKILL.md file 0644 261 06a4b2ac4a9cb2d59bd023a2a067ba7c34828961ed601067732cdd24a037407a
+.xum/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .xum/skills/reviewer/ dir 0755
-.xum/skills/reviewer/SKILL.md file 0644 508 e6bc4f354c10e932c39d2fb213d7222daf3697ab48ea9fa118399fdf1a9a161a
+.xum/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .xum/skills/reviewer/references/ dir 0755
 .xum/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .xum/skills/reviewer/scripts/ dir 0755
 .xum/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-AGENTS.md file 0644 874 aac32a7fe3935490a8458486297ce85556860a132d0fe6631953eeef43d20540
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -102,7 +102,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -138,7 +138,7 @@ INFO  Removed generated files files=9 directories=7
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 824 63ba52b33c51660ec03609ea4ac03145cffc6fe4ed7679808f6ba7bd6dc74caf
+.ai-rulez/config.toml file 0644 842 41bed9ffdc2a0300f4014eea4942c63a5478e64460a616168f8c8b0f3f683241
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

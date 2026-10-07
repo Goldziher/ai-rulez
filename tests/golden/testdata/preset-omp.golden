@@ -24,7 +24,7 @@ INFO  Generation complete files=16
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 824 6c5bdc9600bac77ef2c05f1fd7d78e3bba86ef32f2c8b65d2fb6d9ce7c182b4a
+.ai-rulez/config.toml file 0644 842 e4aa2cc6fc3acfd5874769e37ad1e3c217eed2398863b4de6de894fafa75a17a
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -47,28 +47,28 @@ INFO  Generation complete files=16
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 .omp/ dir 0755
 .omp/agents/ dir 0755
-.omp/agents/architect.md file 0644 259 f558f4e3ae72fdbb13649e114f9115557eb515cb47e237cd0dcb869cd8673a7f
-.omp/agents/tester.md file 0644 245 89032fa5fac055f3c3585f70d1a6795401fa68b137320a76cf06c3f83a7dab4e
+.omp/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.omp/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .omp/commands/ dir 0755
-.omp/commands/build.md file 0644 250 ac14b8b5e9fe2fff0d0cc9e85c05b79286c46bc166fe834af989d6862e5481a0
-.omp/commands/ship.md file 0644 227 4f8d2b1e3b72252617ee36d596b099a906d9420d54002887cdc3f7d9719833a6
+.omp/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.omp/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .omp/config.yml file 0644 292 371273510b1cdf74f59d02c72cc3149e01c734d8603ade068e57d84529aafe4e
 .omp/mcp.json file 0600 400 8c6daf79c1da0ec1f7989fce45109fddbf054dbba9dcee94c4036660f5cacaec
 .omp/rules/ dir 0755
-.omp/rules/always.md file 0644 351 f7ea847ff0caa1642fddbce12509b10df90af66dbf7dcfb1cbbee61a3a2fe191
-.omp/rules/auto.md file 0644 343 f7a4fb4cc8b38a198442e64637bdd9447f393f52ea06331cfcb2afb69d3aecd5
-.omp/rules/manual.md file 0644 341 30adc18ea055982c10bcc28ea034049ce297cff14f7e00f5a6d7722ed9f68bdd
-.omp/rules/typescript.md file 0644 427 944249cdd6cb9294b34e07c79f141ddf93e8ee87284a37d8b45e6920e792d6a0
+.omp/rules/always.md file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
+.omp/rules/auto.md file 0644 258 16f1609d8f4d4488de878badc3a9074bd5d6319e5d1f7eb4df07b85ec5de3cb2
+.omp/rules/manual.md file 0644 256 4b85a1afe78249ef8244fa78178d39121fa5c05b639cf10be97d621146d4fa3f
+.omp/rules/typescript.md file 0644 342 46bb6d6f93e22dad9fc90a4c8a4cfd19b33ada608f16cef191cb5b2bf62fd35f
 .omp/skills/ dir 0755
 .omp/skills/deployer/ dir 0755
-.omp/skills/deployer/SKILL.md file 0644 259 fbd5e41fea91c4ee275a7413ec4d517297135e289211e4d7bfa85de846f547c7
+.omp/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .omp/skills/reviewer/ dir 0755
-.omp/skills/reviewer/SKILL.md file 0644 506 1871c2cd9f7393ad27dcdffa6255811dfa72c273cd56068a56028c3b489b03f3
+.omp/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .omp/skills/reviewer/references/ dir 0755
 .omp/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .omp/skills/reviewer/scripts/ dir 0755
 .omp/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-AGENTS.md file 0644 575 6319e82e5646eca15333eea07c78187d07bf9637902a4808b3e2dea8b4cc9f7b
+AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -115,7 +115,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -160,7 +160,7 @@ INFO  Removed generated files files=16 directories=9
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 824 6c5bdc9600bac77ef2c05f1fd7d78e3bba86ef32f2c8b65d2fb6d9ce7c182b4a
+.ai-rulez/config.toml file 0644 842 e4aa2cc6fc3acfd5874769e37ad1e3c217eed2398863b4de6de894fafa75a17a
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
