@@ -439,8 +439,8 @@ so `git@host:org/repo.git` and `https://user@host/...` keep their user info. The
   symlink is refused, and a local source directory that is itself a symlink is resolved and digested through
   the link. A file over 2 MiB is dropped with a warning, a skill over 8 MiB is skipped with a warning. A source
   skill is served under its directory name (with `name_prefix`), whatever its `name:` says (SKILL.md is
-  rewritten), and a skill whose name collides with one already served is skipped (set `name_prefix`); the
-  project's skill wins.
+  rewritten), and a skill whose name collides with a project skill (served or static) or with an earlier
+  source's skill is skipped (set `name_prefix`); the project's skill wins.
 - **Symlinked skills.** A skill directory that is a symlink out of the project is dropped by the server with a
   warning, while `validate` fails on it: fix the link rather than relying on the warning.
 
@@ -530,18 +530,28 @@ or enable `[usage] skills_index = true`, which logs to `<config dir>/local/usage
 A `--usage-sink` receives exactly the line the log gets, salted session included. Without a `--usage-log` the salt
 lives in `<config dir>/local/usage.salt`. The sink command runs in the background: records wait in a queue of 256,
 so a slow or hanging sink never delays `load_skill`. A full queue drops the new record and logs a warning with the
-number dropped. Queued records are delivered at shutdown, waiting up to three seconds.
+number dropped. Queued records are delivered at shutdown (end of input, SIGTERM or Ctrl-C), waiting up to
+three seconds.
 
 ### Live reload
 
-The server checks the configuration directory (and local source directories) every two seconds. When a file
-changes it rebuilds the catalog and swaps it in. `notifications/resources/list_changed` is sent only when the
+The server checks the configuration directory, local include directories (and `local_override`), the local
+files of the organization policy, and local source directories every two seconds. A file counts as changed
+when its size, modification time or (up to 1 MiB) its bytes change, so `cp -p` and `rsync -t` are seen. When a
+file changes it rebuilds the catalog and swaps it in. `notifications/resources/list_changed` is sent only when the
 catalog changed (a skill added, removed or edited); an edit that leaves every served skill identical sends nothing. A rebuild that
 fails keeps the previous catalog serving and is retried with a growing pause (up to a minute) until it works or
-a new edit changes the files (a new edit ends the pause at once). The usage log and its salt file (`--usage-log`
+a new edit changes the files (a new edit ends the pause at once). A rebuild that finds the `SKILL.md` of a
+served skill newly empty or with an unclosed frontmatter (an editor's save in progress) counts as failed, so
+the previous version keeps serving until the save completes. The usage log and its salt file (`--usage-log`
 and `usage.salt` beside it, compared by absolute path) and any `.jsonl` file directly inside a `local/` directory,
 at any depth, do not count as changes. Polling keeps the dependency set unchanged; git sources are immutable
 per commit and are not re-fetched.
+
+Approval expiry and signing key validity depend on the clock, not on files: every minute (also with
+`--no-watch`) the server judges the current build again and stops serving a skill whose approval expired or
+whose signature no longer verifies. An organization policy whose `sources.deny_digests` names the pinned
+digest of a served skill refuses that skill (AR747); the server keeps serving the others.
 
 ### Strict validation
 
