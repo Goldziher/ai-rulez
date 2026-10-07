@@ -16,8 +16,10 @@ const (
 	maxCompatibilityLen = 500
 )
 
+const keyLicense = "license"
+
 // skillFields are the frontmatter fields the Agent Skills specification defines.
-var skillFields = []string{"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
+var skillFields = []string{"name", "description", keyLicense, "compatibility", "metadata", "allowed-tools"}
 
 // ValidSkillName reports whether name satisfies the Agent Skills name rules:
 // 1-64 lowercase letters, digits and hyphens, no leading, trailing or
@@ -85,7 +87,7 @@ func checkSkillFields(dir string, fm map[string]any) []skillIssue {
 			fatal("frontmatter compatibility must be a string of at most %d characters", maxCompatibilityLen)
 		}
 	}
-	for _, key := range []string{"license", "allowed-tools"} {
+	for _, key := range []string{keyLicense, "allowed-tools"} {
 		if v, ok := fm[key]; ok {
 			if _, isStr := v.(string); !isStr {
 				fatal("frontmatter %s must be a string", key)

@@ -1,11 +1,13 @@
 package agentplugins
 
 import (
+	"cmp"
 	"embed"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"regexp"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -47,6 +49,17 @@ func MCPSchemaID(spec string) string { return schemaBase + spec + "/mcp.schema.j
 // SupportedSpec reports whether spec is a supported specification version.
 func SupportedSpec(spec string) bool { return slices.Contains(Specs, spec) }
 
+// specFromID returns the specification version whose identifier, as built by
+// idFor (PluginSchemaID or MCPSchemaID), is id.
+func specFromID(id string, idFor func(string) string) (string, bool) {
+	for _, spec := range Specs {
+		if idFor(spec) == id {
+			return spec, true
+		}
+	}
+	return "", false
+}
+
 // upstreamNamePattern is the official manifest name pattern. Its lookahead is
 // not valid RE2, so the schema validator cannot compile it. re2NamePattern is
 // the equivalent regular expression without a lookahead: alphanumeric runs
@@ -60,6 +73,17 @@ const (
 type schemaSet struct {
 	plugin *jsonschema.Schema
 	mcp    *jsonschema.Schema
+	// variants are the mcp.json server variants ($defs) keyed by their type
+	// const. The server oneOf is a closed union discriminated by type, so an
+	// entry is valid exactly when it matches the variant its type names; the
+	// variant alone yields readable errors.
+	variants map[string]*jsonschema.Schema
+}
+
+var variantDefs = map[string]string{
+	typeStdio:          "stdioServer",
+	typeStreamableHTTP: "streamableHttpServer",
+	typeSSE:            "sseServer",
 }
 
 var (
@@ -78,20 +102,27 @@ func schemasFor(spec string) (*schemaSet, error) {
 	if set, ok := schemaCache[spec]; ok {
 		return set, nil
 	}
-	plugin, err := compileVendored(spec, "plugin")
+	compiler := jsonschema.NewCompiler()
+	plugin, err := compileVendored(compiler, spec, "plugin")
 	if err != nil {
 		return nil, err
 	}
-	mcp, err := compileVendored(spec, "mcp")
+	mcp, err := compileVendored(compiler, spec, "mcp")
 	if err != nil {
 		return nil, err
 	}
-	set := &schemaSet{plugin: plugin, mcp: mcp}
+	set := &schemaSet{plugin: plugin, mcp: mcp, variants: map[string]*jsonschema.Schema{}}
+	for typ, def := range variantDefs {
+		ref := fmt.Sprintf(`{"$ref":%q}`, MCPSchemaID(spec)+"#/$defs/"+def)
+		if set.variants[typ], err = compiler.Compile([]byte(ref)); err != nil {
+			return nil, oops.With("spec", spec, "def", def).Wrapf(err, "compile MCP server variant")
+		}
+	}
 	schemaCache[spec] = set
 	return set, nil
 }
 
-func compileVendored(spec, kind string) (*jsonschema.Schema, error) {
+func compileVendored(compiler *jsonschema.Compiler, spec, kind string) (*jsonschema.Schema, error) {
 	file := "schemas/" + spec + "/" + kind + ".schema.json"
 	data, err := schemaFS.ReadFile(file)
 	if err != nil {
@@ -102,7 +133,7 @@ func compileVendored(spec, kind string) (*jsonschema.Schema, error) {
 			return nil, oops.With("file", file).Wrap(err)
 		}
 	}
-	compiled, err := jsonschema.NewCompiler().Compile(data)
+	compiled, err := compiler.Compile(data)
 	if err != nil {
 		return nil, oops.With("file", file).Wrapf(err, "compile vendored schema")
 	}
@@ -133,24 +164,47 @@ func substituteNamePattern(data []byte) ([]byte, error) {
 	return out, nil
 }
 
-// schemaErrors validates doc (decoded JSON) and returns the violations as
-// sorted "location: message" strings; nil means valid.
+// wrapperKeywords report that a subschema failed without saying why; the
+// leaf errors below them carry the reason.
+var wrapperKeywords = []string{"$ref", "properties", "oneOf", "anyOf", "allOf", "not", "schema", "items"}
+
+var quotedList = regexp.MustCompile(`'[^']*'(?:, '[^']*')+`)
+
+// schemaErrors validates doc (decoded JSON) and returns the leaf violations as
+// sorted "location: message" strings; nil means valid. The validator lists
+// properties in map order, so quoted lists are sorted to keep messages
+// deterministic.
 func schemaErrors(s *jsonschema.Schema, doc any) []string {
 	res := s.Validate(doc)
 	if res.IsValid() {
 		return nil
 	}
-	detailed := res.DetailedErrors()
-	out := make([]string, 0, len(detailed))
-	for loc, msg := range detailed {
-		if loc == "" {
-			loc = "/"
-		}
-		out = append(out, fmt.Sprintf("%s: %s", loc, msg))
+	seen := map[string]bool{}
+	collectErrors(res, "", seen, true)
+	if len(seen) == 0 {
+		collectErrors(res, "", seen, false)
 	}
+	out := slices.Sorted(maps.Keys(seen))
 	if len(out) == 0 {
-		out = append(out, "/: does not match the schema")
+		out = []string{"/: does not match the schema"}
 	}
-	sort.Strings(out)
 	return out
+}
+
+func collectErrors(r *jsonschema.EvaluationResult, base string, into map[string]bool, leavesOnly bool) {
+	loc := base + r.InstanceLocation
+	for kw, e := range r.Errors {
+		if leavesOnly && slices.Contains(wrapperKeywords, kw) {
+			continue
+		}
+		msg := quotedList.ReplaceAllStringFunc(e.Error(), func(list string) string {
+			items := strings.Split(list, ", ")
+			slices.Sort(items)
+			return strings.Join(items, ", ")
+		})
+		into[cmp.Or(loc, "/")+": "+msg] = true
+	}
+	for _, d := range r.Details {
+		collectErrors(d, loc, into, leavesOnly)
+	}
 }
