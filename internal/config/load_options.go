@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
@@ -8,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
@@ -148,7 +150,7 @@ func WithWorkspace(ws workspace.Workspace) LoadOption {
 // an absolute path. Without WithWorkspace it is the real file system, rooted at
 // the repository that contains baseDir (see workspace.Around); a relative baseDir
 // then meets the process working directory here and nowhere else.
-func (lo loadOptions) baseView(baseDir string) (workspace.View, string, error) {
+func (lo loadOptions) baseView(ctx context.Context, baseDir string) (workspace.View, string, error) {
 	if lo.ws != nil {
 		abs := filepath.Clean(baseDir)
 		if !rooted(abs) {
@@ -163,7 +165,7 @@ func (lo loadOptions) baseView(baseDir string) (workspace.View, string, error) {
 			Hint("Check if the directory path is valid and accessible").
 			Wrapf(err, "resolve absolute path")
 	}
-	ws, err := workspace.AroundBelow(abs, lo.host.GetEnv("GIT_CEILING_DIRECTORIES"))
+	ws, err := workspace.AroundBelow(ctx, gitutil.New(loadHost(lo).Runner), abs, lo.host.GetEnv("GIT_CEILING_DIRECTORIES"))
 	if err != nil {
 		return workspace.View{}, "", err //nolint:wrapcheck // already contextual
 	}
@@ -186,11 +188,11 @@ func applyLoadOptions(opts []LoadOption) loadOptions {
 // fileView is baseView for a path that names a config file or directory: the
 // workspace has to contain both the config directory and the project directory
 // that owns it, which is found with one bootstrap read when no workspace is given.
-func (lo loadOptions) fileView(absPath string) (workspace.View, string, error) {
+func (lo loadOptions) fileView(ctx context.Context, absPath string) (workspace.View, string, error) {
 	if lo.ws != nil {
 		return workspace.NewView(lo.ws), absPath, nil
 	}
-	ws, err := workspace.AroundBelow(bootstrapBase(absPath), lo.host.GetEnv("GIT_CEILING_DIRECTORIES"))
+	ws, err := workspace.AroundBelow(ctx, gitutil.New(loadHost(lo).Runner), bootstrapBase(absPath), lo.host.GetEnv("GIT_CEILING_DIRECTORIES"))
 	if err != nil {
 		return workspace.View{}, "", err //nolint:wrapcheck // already contextual
 	}

@@ -36,7 +36,7 @@ type bundleFilter struct {
 
 // newBundleFilter builds the filter for one skill or command root. marker is the
 // item's entry file (SKILL.md, COMMAND.md).
-func newBundleFilter(git gitutil.Git, log logger.Logger, root, marker string, extra []string) *bundleFilter {
+func newBundleFilter(ctx context.Context, git gitutil.Git, log logger.Logger, root, marker string, extra []string) *bundleFilter {
 	patterns := make([]string, 0, len(DefaultBundleExcludes)+len(extra))
 	patterns = append(patterns, DefaultBundleExcludes...)
 	for _, p := range extra {
@@ -44,13 +44,12 @@ func newBundleFilter(git gitutil.Git, log logger.Logger, root, marker string, ex
 			patterns = append(patterns, p)
 		}
 	}
-	return &bundleFilter{patterns: patterns, log: logger.Or(log), visible: gitVisibleFiles(git, logger.Or(log), root, marker)}
+	return &bundleFilter{patterns: patterns, log: logger.Or(log), visible: gitVisibleFiles(ctx, git, logger.Or(log), root, marker)}
 }
 
 // gitVisibleFiles lists the files under root that git would not ignore, or nil
 // when that cannot be determined.
-func gitVisibleFiles(git gitutil.Git, log logger.Logger, root, marker string) map[string]bool {
-	ctx := context.Background()
+func gitVisibleFiles(ctx context.Context, git gitutil.Git, log logger.Logger, root, marker string) map[string]bool {
 	// Exit 0: the entry file is ignored, so the whole item is; 128: not a repo;
 	// an unavailable git is not an answer either (the ls-files call below fails).
 	if res := git.Exec(ctx, root, nil, "check-ignore", "-q", "--no-index", "--", marker); res.Status == runner.StatusOK {

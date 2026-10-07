@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
@@ -93,7 +94,7 @@ func TestAroundBelowResolvesSymlinksInCeilings(t *testing.T) {
 	require.NoError(t, err)
 
 	// Act
-	ws, err := workspace.AroundBelow(realProject, link)
+	ws, err := workspace.AroundBelow(t.Context(), gitutil.Git{}, realProject, link)
 
 	// Assert
 	require.NoError(t, err)

@@ -59,7 +59,7 @@ func LoadSkillResources(skillDir string) ([]SkillResource, error) {
 // ctx carries (logger.WithContext) and asking the VCS, to leave out ignored
 // files, through the runner ctx carries.
 func LoadSkillResourcesContext(ctx context.Context, skillDir string) ([]SkillResource, error) {
-	s := newIncludeScanner(osView(skillDir))
+	s := newIncludeScanner(ctx, osView(skillDir))
 	s.log = logger.FromContext(ctx)
 	s.git = gitutil.New(runner.FromContext(ctx))
 	return s.loadResources(skillDir, ItemKindSkill, nil)
@@ -94,7 +94,7 @@ func LoadResources(root, itemKind string) ([]SkillResource, error) {
 // itemKind is one of the ItemKind constants and selects the entry file name
 // (SKILL.md, COMMAND.md) and the diagnostics wording.
 func LoadResourcesWith(root, itemKind string, extraExcludes []string) ([]SkillResource, error) {
-	return newIncludeScanner(osView(root)).loadResources(root, itemKind, extraExcludes)
+	return newIncludeScanner(context.Background(), osView(root)).loadResources(root, itemKind, extraExcludes)
 }
 
 // loadResources is LoadResourcesWith under the scanner's symlink policy: with no
@@ -106,7 +106,7 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 	if itemKind == ItemKindCommand {
 		marker = commandMarkerFile
 	}
-	filter := newBundleFilter(s.git, s.logger(), root, marker, extraExcludes)
+	filter := newBundleFilter(s.ctx, s.git, s.logger(), root, marker, extraExcludes)
 	var resources []SkillResource
 
 	for _, kind := range skillResourceKinds {
