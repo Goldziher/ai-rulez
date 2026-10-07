@@ -108,8 +108,8 @@ func runFix(cmd *cobra.Command, args []string, out io.Writer) (int, error) {
 	if fixFlags.patch != "" {
 		return runFixFromPatch(cmd, out)
 	}
-	if reviewFlags.maxCost < 0 || reviewFlags.maxCalls < 0 || fixFlags.k < 0 {
-		return 0, oops.Errorf("--max-cost, --max-calls and --k must not be negative")
+	if err := checkCaps(reviewFlags.maxCost, reviewFlags.maxCalls, fixFlags.k); err != nil {
+		return 0, err
 	}
 	reviewFlags.semantic, reviewFlags.estimate, reviewFlags.content = true, false, fixFlags.content
 	rc, err := loadReview(cmd, args)

@@ -206,8 +206,8 @@ func validateReviewFlags(cmd *cobra.Command) error {
 	if reviewFlags.concurrency < 0 || reviewFlags.concurrency > maxConcurrency {
 		return oops.Errorf("--concurrency must be between 1 and %d", maxConcurrency)
 	}
-	if reviewFlags.maxCost < 0 || reviewFlags.maxCalls < 0 || reviewFlags.k < 0 {
-		return oops.Errorf("--max-cost, --max-calls and --k must not be negative")
+	if err := checkCaps(reviewFlags.maxCost, reviewFlags.maxCalls, reviewFlags.k); err != nil {
+		return err
 	}
 	for _, name := range []string{"model", "models", "max-cost", "max-calls"} {
 		if fl.Changed(name) && !judged {

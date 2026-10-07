@@ -30,7 +30,15 @@ var reviewClientFactory = func(lc llm.Config, opts llm.Options) (llm.Client, err
 // reviewNow is the clock of calibration ages (replaced in tests).
 var reviewNow = time.Now
 
+// tighterFloat is the lower positive cap of a and b; a non-finite value counts as unset, so a NaN
+// cannot win the min (min(x, NaN) is NaN) and switch the cap off.
 func tighterFloat(a, b float64) float64 {
+	if !llm.Finite(a) {
+		a = 0
+	}
+	if !llm.Finite(b) {
+		b = 0
+	}
 	switch {
 	case a <= 0:
 		return b
@@ -39,6 +47,15 @@ func tighterFloat(a, b float64) float64 {
 	default:
 		return min(a, b)
 	}
+}
+
+// checkCaps refuses a negative or non-finite --max-cost and a negative --max-calls or --k. A NaN
+// passes `< 0` and then compares false with every spend, which would lift the cap.
+func checkCaps(maxCost float64, maxCalls, k int) error {
+	if !llm.Finite(maxCost) || maxCost < 0 || maxCalls < 0 || k < 0 {
+		return oops.Errorf("--max-cost must be a finite number, and --max-cost, --max-calls and --k must not be negative")
+	}
+	return nil
 }
 
 func tighterInt(a, b int) int {

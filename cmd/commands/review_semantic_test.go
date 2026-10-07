@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -592,6 +593,8 @@ func TestReviewFlagValidation(t *testing.T) {
 		{"role and profile", func() { reviewFlags.role, reviewFlags.profile = "a", "b" }, "mutually exclusive"},
 		{"gate with estimate", func() { reviewFlags.estimate, reviewFlags.gate, reviewFlags.semantic = true, true, true }, "--gate needs a judged run"},
 		{"k without semantic", func() { reviewFlags.k = 2; ReviewCmd.Flags().Lookup("k").Changed = true }, "--k applies to --semantic only"},
+		{"nan max cost", func() { reviewFlags.semantic, reviewFlags.maxCost = true, math.NaN() }, "--max-cost must be a finite number"},
+		{"infinite max cost", func() { reviewFlags.semantic, reviewFlags.maxCost = true, math.Inf(1) }, "--max-cost must be a finite number"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -673,4 +676,33 @@ func TestReviewSelectionByProfileAndRole(t *testing.T) {
 	reviewFlags.role = "nope"
 	_, err := runReview(ReviewCmd, nil, &bytes.Buffer{})
 	require.Error(t, err)
+}
+
+// A NaN cap from a flag or config compares false with every spend; it must neither win the
+// min-merge nor pass the flag check (RV-LLM-2).
+func TestSpendCapsShouldTreatNonFiniteValuesAsUnsetOrInvalid(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b float64
+		want float64
+	}{
+		{"nan second keeps the first", 0.5, math.NaN(), 0.5},
+		{"nan first keeps the second", math.NaN(), 0.25, 0.25},
+		{"inf is unset", math.Inf(1), 0.25, 0.25},
+		{"both nan is unset", math.NaN(), math.NaN(), 0},
+		{"lower finite wins", 0.5, 0.25, 0.25},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Act
+			got := tighterFloat(tc.a, tc.b)
+
+			// Assert
+			assert.Equal(t, tc.want, got)
+		})
+	}
+	for _, c := range []float64{math.NaN(), math.Inf(1), -1} {
+		assert.Error(t, checkCaps(c, 0, 0), "--max-cost %v", c)
+	}
+	assert.NoError(t, checkCaps(0.5, 3, 1))
 }
