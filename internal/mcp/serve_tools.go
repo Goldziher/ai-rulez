@@ -86,7 +86,8 @@ func (s *Server) findSkillHandler(ctx context.Context, req *handlers.ToolRequest
 		session, _ := s.sessionInfo(req)
 		ids := make([]string, 0, len(results))
 		for _, r := range results {
-			ids = append(ids, r[keyName].(string))
+			name, _ := r[keyName].(string) //nolint:errcheck // every result carries its name
+			ids = append(ids, name)
 		}
 		rk.log.Query(session, task, rk.ranking, ids)
 	}
@@ -170,7 +171,7 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 	out["bytes"] = len(content)
 	out["truncated"] = truncated
 	out["file_digest"] = file.Digest
-	out["resources"] = resources
+	out[keyResources] = resources
 	if truncated {
 		out["total_bytes"] = file.Size
 	}
@@ -191,7 +192,7 @@ func (s *Server) listSkillResourcesHandler(_ context.Context, req *handlers.Tool
 		f := &skill.Files[i]
 		files = append(files, map[string]any{"path": f.RelPath, keyURI: f.URI, keySize: f.Size, "mime": f.MIME, keyDigest: f.Digest})
 	}
-	out := map[string]any{keyName: skill.Name, keyDigest: skill.Digest, "resources": files}
+	out := map[string]any{keyName: skill.Name, keyDigest: skill.Digest, keyResources: files}
 	s.addProvenance(out, skill)
 	return handlers.ToolSuccess(out)
 }
