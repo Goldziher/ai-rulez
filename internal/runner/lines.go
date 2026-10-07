@@ -79,7 +79,7 @@ func (Exec) RunLines(ctx context.Context, spec Spec, onLine LineFunc) Result { /
 		}
 	}
 	if stopped {
-		// The caller has what it wanted: end the whole process group now. No drain:
+		// The caller has what it wanted: end the whole process tree now. No drain:
 		// a child forked while the signal was sent can escape it and keep the pipe
 		// open; Wait closes the pipe once the command itself has exited, and the
 		// kill after Wait reaches the straggler, which is still in the group.
