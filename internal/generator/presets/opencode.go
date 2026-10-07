@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -15,7 +14,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/hookplugins"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
@@ -207,7 +205,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	if err != nil {
 		return nil, fmt.Errorf("render %s: %w", hookplugins.OpencodePath, err)
 	}
-	if pluginPath := filepath.Join(baseDir, filepath.FromSlash(hookplugins.OpencodePath)); ok && hookplugins.MayWriteModule(cfg.Diag, pluginPath) {
+	if pluginPath := filepath.Join(baseDir, filepath.FromSlash(hookplugins.OpencodePath)); ok && hookplugins.MayWriteModule(cfg.Diag, cfg.ReadExisting, pluginPath) {
 		outputs = append(outputs, config.OutputFile{Path: pluginPath, Content: plugin})
 	}
 
@@ -238,7 +236,7 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 	}
 	userEntries := false
 	if !rulefiles.InScope(cfg) {
-		entries, claimed, user, err := opencodeInstructions(cfg.Diag, mcpPath, g.LocalRootFile(), claimedInstructionsOwner(cfg, mcpPath))
+		entries, claimed, user, err := opencodeInstructions(cfg, mcpPath, g.LocalRootFile(), claimedInstructionsOwner(cfg, mcpPath))
 		if err != nil {
 			return jsonmerge.Result{}, err
 		}
@@ -256,7 +254,7 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 		return jsonmerge.Result{}, fmt.Errorf("render opencode permissions: %w", err)
 	}
 	owned = append(owned, perms...)
-	result, err = applyMergedDocument(mcpPath, owned)
+	result, err = applyMergedDocument(cfg, mcpPath, owned)
 	// An entry the user listed is theirs even when it is the only key left.
 	result.PartiallyOwned = result.PartiallyOwned || userEntries
 	return result, err
@@ -267,7 +265,7 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 // value ai-rulez wrote (the previous run recorded it, or generated the whole
 // file). A hand-authored document does not get one added.
 func (g *OpencodePresetGenerator) ownsSchema(path string, cfg *config.Config) bool {
-	data, err := os.ReadFile(path) //nolint:gosec // path is derived from the config base dir
+	data, err := cfg.ReadExisting(path)
 	if err != nil || strings.TrimSpace(string(data)) == "" {
 		return true
 	}
@@ -387,13 +385,13 @@ func claimedInstructionsOwner(cfg *config.Config, path string) func(any) bool {
 // in order, and an entry identical to a hand-written one is never claimed (see
 // jsonmerge.PlanElements). A nil result means the existing value is not an array,
 // which is the user's to fix: it is warned about and left alone.
-func opencodeInstructions(d *diag.Collector, path, entry string, owns func(any) bool) (entries, claimed []any, userEntries bool, err error) {
-	existing, isArray, err := readOpencodeInstructions(path)
+func opencodeInstructions(cfg *config.Config, path, entry string, owns func(any) bool) (entries, claimed []any, userEntries bool, err error) {
+	existing, isArray, err := readOpencodeInstructions(cfg, path)
 	if err != nil {
 		return nil, nil, false, err
 	}
 	if !isArray {
-		d.Warn("opencode.json instructions is not an array, so OpenCode cannot load "+entry+
+		cfg.Diag.Warn("opencode.json instructions is not an array, so OpenCode cannot load "+entry+
 			"; the value is yours and is left alone", "path", path)
 		return nil, nil, true, nil
 	}
@@ -414,9 +412,9 @@ func opencodeInstructions(d *diag.Collector, path, entry string, owns func(any) 
 // readOpencodeInstructions reads the instructions entries of the document at path.
 // A missing file, an unparseable one (the merge reports its syntax) and a missing
 // key all have none; isArray is false only for a value that is not an array.
-func readOpencodeInstructions(path string) (entries []any, isArray bool, err error) {
+func readOpencodeInstructions(cfg *config.Config, path string) (entries []any, isArray bool, err error) {
 	entries = []any{}
-	data, err := os.ReadFile(path) //nolint:gosec // path is derived from the config base dir
+	data, err := cfg.ReadExisting(path)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		return entries, true, nil

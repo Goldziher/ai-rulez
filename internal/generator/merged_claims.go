@@ -95,7 +95,7 @@ func (g *Generator) mergedDocDeletable(rel, abs string) bool {
 	if !ok {
 		return false
 	}
-	data, err := os.ReadFile(abs)
+	data, err := g.config.ReadExisting(abs)
 	return err == nil && fileDigest(data) == want
 }
 
@@ -161,7 +161,7 @@ func (g *Generator) markPreexistingDocuments(outputs []config.OutputFile) {
 			continue
 		}
 		abs := g.absOutputPath(output.Path)
-		if listed[filepath.ToSlash(g.convertToRelativePath(abs))] || !pathIsFile(abs) {
+		if listed[filepath.ToSlash(g.convertToRelativePath(abs))] || !g.pathIsFile(abs) {
 			continue
 		}
 		output.PartiallyOwned = true
@@ -183,7 +183,7 @@ func (g *Generator) carryClaimAnnotations(outputs []config.OutputFile) {
 		}
 		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		prev := previous[rel]
-		if len(prev) == 0 || !pathIsFile(g.absOutputPath(output.Path)) {
+		if len(prev) == 0 || !g.pathIsFile(g.absOutputPath(output.Path)) {
 			continue
 		}
 		noEOL := slices.ContainsFunc(prev, func(c jsonmerge.Claim) bool { return c.NoFinalNewline })
@@ -230,7 +230,7 @@ func (g *Generator) dropUserHeldClaims(outputs []config.OutputFile) {
 		}
 		abs := g.absOutputPath(output.Path)
 		rel := filepath.ToSlash(g.convertToRelativePath(abs))
-		data, err := os.ReadFile(abs)
+		data, err := g.config.ReadExisting(abs)
 		if err != nil {
 			continue
 		}
@@ -422,13 +422,13 @@ func (g *Generator) planUnmerge(outputs []config.OutputFile, clean bool) []merge
 			continue
 		}
 		abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(rel))
-		if !g.withinScope(abs) || !pathIsFile(abs) {
+		if !g.withinScope(abs) || !g.pathIsFile(abs) {
 			continue
 		}
 		if g.userMode && !g.userMayTouch(abs) {
 			continue
 		}
-		result, err := docmerge.Unmerge(abs, mergedDocFormat(rel), claims[rel])
+		result, err := docmerge.UnmergeWith(g.config.ReadExisting, abs, mergedDocFormat(rel), claims[rel])
 		if err != nil {
 			g.warnUnmerge(rel, err)
 			continue

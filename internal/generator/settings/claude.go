@@ -79,7 +79,7 @@ func permissionKeys(cfg *config.Config, docPath string) []jsonmerge.OwnedKey {
 // not take back a setting the consumer had before declaring it here.
 func ownedEntries(cfg *config.Config, docPath, key string, configured map[string]string) map[string]any {
 	var existing map[string]json.RawMessage
-	if raw := readPath(docPath, []string{key}); raw != nil {
+	if raw := readPath(cfg, docPath, []string{key}); raw != nil {
 		if json.Unmarshal(raw, &existing) != nil {
 			existing = nil
 		}
