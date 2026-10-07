@@ -91,10 +91,10 @@ func recordedViews(lock *lockfile.File) []string {
 	}
 	seen := map[string]bool{}
 	var out []string
-	for _, e := range lock.Served {
-		if e.View != "" && !seen[e.View] {
-			seen[e.View] = true
-			out = append(out, e.View)
+	for i := range lock.Served {
+		if view := lock.Served[i].View; view != "" && !seen[view] {
+			seen[view] = true
+			out = append(out, view)
 		}
 	}
 	sort.Strings(out)
