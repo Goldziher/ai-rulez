@@ -2444,7 +2444,7 @@ a markdown link in an OKF bundle does not resolve to a file in the bundle
 
 ### AR9B3 okf-version-invalid
 
-the root okf_version is not MAJOR.MINOR, names a version other than the one ai-rulez implements, or the root index uses the frontmatter style OKF 0.2 does not describe
+the root okf_version is not MAJOR.MINOR, names a version other than the one ai-rulez implements, or the root index uses the frontmatter style OKF 0.2 does not describe; okf validate also reports an error when there is no root index.md naming okf_version
 
 - Default severity: `warning`
 - Analyzer: `okf` (scope `item`)
