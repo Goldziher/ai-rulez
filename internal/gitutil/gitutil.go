@@ -433,7 +433,7 @@ func (g Git) ShowFile(dir, ref, repoRelPath string) (content []byte, ok bool) {
 	return out, true
 }
 
-// ChangedSince lists the files that differ between rev and the working tree
+// ChangedSince lists the files that differ between the merge-base of rev and HEAD and the working tree
 // (committed, staged and unstaged changes, including deletions) plus untracked
 // files that are not ignored, as slash paths relative to the repository root.
 // dir may be any directory inside the repository. An unknown rev, a directory
@@ -447,7 +447,14 @@ func (g Git) ChangedSince(dir, rev string) ([]string, error) {
 	if top == "" {
 		return nil, oops.Errorf("%s is not inside a git repository", dir)
 	}
-	diff, _, err := g.run(top, nil, "diff", "--name-only", "-z", "--no-renames", rev, "--")
+	// Diff against the merge-base so a base branch that moved on since the fork
+	// does not count its own changes; without a common ancestor (a shallow
+	// clone) the rev itself is used.
+	base := rev
+	if mb, _, mbErr := g.run(top, nil, "merge-base", rev, "HEAD"); mbErr == nil && strings.TrimSpace(string(mb)) != "" {
+		base = strings.TrimSpace(string(mb))
+	}
+	diff, _, err := g.run(top, nil, "diff", "--name-only", "-z", "--no-renames", base, "--")
 	if err != nil {
 		return nil, oops.Hint("Check that the revision exists (git rev-parse --verify "+rev+")").Wrapf(err, "list files changed since %s", rev)
 	}
