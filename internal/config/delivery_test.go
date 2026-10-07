@@ -186,7 +186,7 @@ func TestContentForPreset_ServeModeRendersEverything(t *testing.T) {
 func TestDecodeDynamicConfig(t *testing.T) {
 	t.Parallel()
 	cfg, err := decodeConfigTOML([]byte(`
-version = "3.0"
+version = "5.0"
 name = "x"
 presets = ["claude"]
 

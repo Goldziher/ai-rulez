@@ -20,8 +20,8 @@
     },
     "version": {
       "type": "string",
-      "enum": ["4.0"],
-      "description": "Configuration version (4.0)"
+      "enum": ["5.0"],
+      "description": "Configuration version (5.0). Older configs are converted by `ai-rulez migrate v5`"
     },
     "name": {
       "type": "string",
@@ -3218,7 +3218,7 @@
   "examples": [
     {
       "$schema": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json",
-      "version": "4.0",
+      "version": "5.0",
       "name": "my-project",
       "description": "Example configuration",
       "presets": [

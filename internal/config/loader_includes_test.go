@@ -132,7 +132,7 @@ func TestLoadConfigWithIncludes_MixedIncludes(t *testing.T) {
 		))
 
 		// Create config with multiple includes
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-mixed-includes"
 presets = ["claude"]
 
@@ -193,7 +193,7 @@ func TestLoadConfigWithIncludes_MergeStrategies(t *testing.T) {
 		))
 
 		// Config with explicit local-override strategy
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-local-override"
 presets = ["claude"]
 
@@ -257,7 +257,7 @@ merge_strategy = "local-override"
 		))
 
 		// Config with include-override strategy
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-include-override"
 presets = ["claude"]
 
@@ -316,7 +316,7 @@ func TestLoadConfigWithIncludes_DomainInstall(t *testing.T) {
 		))
 
 		// Config with install_to
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-domain-install"
 presets = ["claude"]
 
@@ -372,7 +372,7 @@ func TestLoadConfigWithIncludes_NoIncludesSpecified(t *testing.T) {
 		))
 
 		// Config without includes
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-no-includes"
 presets = ["claude"]
 `
@@ -409,7 +409,7 @@ func TestLoadConfigWithIncludes_NonexistentInclude(t *testing.T) {
 		))
 
 		// Config with nonexistent include
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-nonexistent-include"
 presets = ["claude"]
 

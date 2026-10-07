@@ -43,7 +43,7 @@ func TestValidateLocalFile_ErrorsNeverEchoTheSuppliedValue(t *testing.T) {
 }
 
 func TestValidateFile_MainConfigErrorsStayDetailed(t *testing.T) {
-	err := schema.ValidateFile(writeTOML(t, "version = \"4.0\"\nname = \"x\"\n[header]\nstyle = \"BADSTYLE\"\n"))
+	err := schema.ValidateFile(writeTOML(t, "version = \"5.0\"\nname = \"x\"\n[header]\nstyle = \"BADSTYLE\"\n"))
 
 	require.Error(t, err)
 	o, ok := oops.AsOops(err)

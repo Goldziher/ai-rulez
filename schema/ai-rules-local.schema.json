@@ -3680,8 +3680,8 @@
       "type": "object"
     },
     "version": {
-      "description": "Configuration version (4.0)",
-      "enum": ["4.0"],
+      "description": "Configuration version (5.0). Older configs are converted by `ai-rulez migrate v5`",
+      "enum": ["5.0"],
       "type": "string"
     }
   },
