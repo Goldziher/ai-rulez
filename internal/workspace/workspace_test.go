@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
@@ -176,7 +177,7 @@ func TestAroundRootsAtTheVCSTop(t *testing.T) {
 		t.Fatalf("Around root = %s, want %s", got, want)
 	}
 	bare := t.TempDir()
-	ws, err = workspace.AroundBelow(bare, filepath.Dir(bare)) // a repository enclosing the temporary directory is not this test's
+	ws, err = workspace.AroundBelow(t.Context(), gitutil.Git{}, bare, filepath.Dir(bare)) // a repository enclosing the temporary directory is not this test's
 	if err != nil {
 		t.Fatal(err)
 	}

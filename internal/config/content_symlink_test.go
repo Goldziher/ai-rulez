@@ -103,7 +103,7 @@ func TestProjectScanner_SymlinkPolicy(t *testing.T) {
 			}
 			tt.setup(t, project, outside)
 			warned := &testutil.LogRecorder{}
-			s := newProjectScanner(osView(project))
+			s := newProjectScanner(t.Context(), osView(project))
 			s.log = warned
 
 			// Act
