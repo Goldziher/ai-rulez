@@ -32,10 +32,14 @@ const (
 
 // keyDigest is the JSON key digests are reported under.
 const (
-	keyDigest = "digest"
-	keyURI    = "uri"
-	keyName   = "name"
-	keySize   = "size"
+	keyDigest     = "digest"
+	keyURI        = "uri"
+	keyName       = "name"
+	keySize       = "size"
+	keyResources  = "resources"
+	keyResultType = "resultType"
+	// domainRoot names the skills that belong to no domain.
+	domainRoot = "root"
 )
 
 const skillServerInstructions = "ai-rulez serves the skills of one profile read-only. " +
@@ -226,7 +230,7 @@ func (s *Server) readSkillFileHandler(_ context.Context, req *handlers.ToolReque
 
 func domainLabel(domain string) string {
 	if domain == "" {
-		return "root"
+		return domainRoot
 	}
 	return domain
 }
@@ -266,7 +270,7 @@ func skillEntry(s *CatalogSkill) map[string]any {
 	for i := range s.Files {
 		resources = append(resources, fileEntry(&s.Files[i]))
 	}
-	return map[string]any{keyURI: s.URI, "frontmatter": s.Frontmatter, "resources": resources}
+	return map[string]any{keyURI: s.URI, "frontmatter": s.Frontmatter, keyResources: resources}
 }
 
 // WrapTransport returns a transport that answers skills/list and skills/get
@@ -359,7 +363,7 @@ func (c *Catalog) handleSkillsMethod(method string, params json.RawMessage) (res
 		for _, s := range c.skills {
 			entries = append(entries, skillEntry(s))
 		}
-		return map[string]any{"resultType": resultTypeComplete, "skills": entries}, nil
+		return map[string]any{keyResultType: resultTypeComplete, "skills": entries}, nil
 	case methodSkillsGet:
 		var p struct {
 			URI string `json:"uri"`
@@ -373,7 +377,7 @@ func (c *Catalog) handleSkillsMethod(method string, params json.RawMessage) (res
 		if !ok {
 			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("not a served skill: %q", p.URI)}
 		}
-		return map[string]any{"resultType": resultTypeComplete, "skill": skillEntry(skill)}, nil
+		return map[string]any{keyResultType: resultTypeComplete, "skill": skillEntry(skill)}, nil
 	case methodDirectoryRead:
 		var p struct {
 			URI string `json:"uri"`
@@ -387,7 +391,7 @@ func (c *Catalog) handleSkillsMethod(method string, params json.RawMessage) (res
 		if !ok {
 			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("not a directory resource: %q", p.URI)}
 		}
-		return map[string]any{"resultType": resultTypeComplete, "resources": children}, nil
+		return map[string]any{keyResultType: resultTypeComplete, keyResources: children}, nil
 	}
 	return nil, &jsonrpc.Error{Code: jsonrpc.CodeMethodNotFound, Message: "method not found"}
 }

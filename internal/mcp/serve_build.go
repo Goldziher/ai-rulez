@@ -942,7 +942,7 @@ func (st *ServeSetup) ServedScanReports(ctx context.Context, extras ...ServeSetu
 func (st *ServeSetup) checkDomains(cfg *config.Config) error {
 	for _, d := range st.Filter.Domains {
 		d = strings.TrimSpace(d)
-		if d == "root" {
+		if d == domainRoot {
 			continue
 		}
 		if cfg.Content != nil {
