@@ -1,12 +1,12 @@
 package lint
 
 import (
-	"fmt"
 	"path/filepath"
 	"sort"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
+	"github.com/samber/oops"
 )
 
 // ScanRecord is what the result cache holds for one staged scanner over the
@@ -35,7 +35,7 @@ func ScanRecords(cfg *config.Config, tree *Tree, so Options, opts ...Option) ([]
 	ruleTables()
 	counter, err := tokens.New("")
 	if err != nil {
-		return nil, fmt.Errorf("token counter: %w", err)
+		return nil, oops.Wrapf(err, "token counter")
 	}
 	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so, cwd: so.Cwd,
 		deps: map[string]map[string]struct{}{}, names: map[string][]string{}}

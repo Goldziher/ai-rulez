@@ -3,7 +3,6 @@ package lint
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/samber/oops"
 )
 
 // externalFinding is the JSON shape an external scanner may print, and the
@@ -130,7 +131,7 @@ func parseExternal(format string, out []byte, exitCode int) ([]externalFinding, 
 // Suppressed, when keepSuppressed is set (--show-suppressed).
 func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed bool) ([]externalFinding, error) {
 	if len(bytes.TrimSpace(out)) == 0 {
-		return nil, fmt.Errorf("no output")
+		return nil, oops.Errorf("no output")
 	}
 	if name, ok := adapterName(format); ok {
 		return parseAdapter(name, out, exitCode, keepSuppressed)
@@ -138,25 +139,25 @@ func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed b
 	if strings.EqualFold(format, "json") {
 		var list []externalFinding
 		if err := json.Unmarshal(out, &list); err != nil {
-			return nil, fmt.Errorf("invalid JSON: %w", err)
+			return nil, oops.Wrapf(err, "invalid JSON")
 		}
 		if len(list) > maxScannerResults {
-			return nil, fmt.Errorf("more than %d results", maxScannerResults)
+			return nil, oops.Errorf("more than %d results", maxScannerResults)
 		}
 		if len(list) == 0 && exitCode != 0 {
-			return nil, fmt.Errorf("the scanner printed no results and exited with status %d", exitCode)
+			return nil, oops.Errorf("the scanner printed no results and exited with status %d", exitCode)
 		}
 		return list, nil
 	}
 	var log sarifLog
 	if err := json.Unmarshal(out, &log); err != nil {
-		return nil, fmt.Errorf("invalid SARIF: %w", err)
+		return nil, oops.Wrapf(err, "invalid SARIF")
 	}
 	if log.Version != "" && log.Version != sarifVersion {
-		return nil, fmt.Errorf("unsupported SARIF version %q (want %s)", log.Version, sarifVersion)
+		return nil, oops.Errorf("unsupported SARIF version %q (want %s)", log.Version, sarifVersion)
 	}
 	if len(log.Runs) == 0 && exitCode != 0 {
-		return nil, fmt.Errorf("SARIF has no runs and the scanner exited with status %d", exitCode)
+		return nil, oops.Errorf("SARIF has no runs and the scanner exited with status %d", exitCode)
 	}
 	var found []externalFinding
 	for _, run := range log.Runs {
@@ -169,7 +170,7 @@ func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed b
 				continue
 			}
 			if len(found) >= maxScannerResults {
-				return nil, fmt.Errorf("more than %d results", maxScannerResults)
+				return nil, oops.Errorf("more than %d results", maxScannerResults)
 			}
 			msg := res.Message.Text
 			if strings.TrimSpace(msg) == "" {
@@ -299,11 +300,11 @@ func sarifLocationPath(uri, baseID string, bases map[string]sarifBase, depth int
 func sarifRunError(run sarifRun) error {
 	for _, inv := range run.Invocations {
 		if inv.ExecutionSuccessful != nil && !*inv.ExecutionSuccessful {
-			return fmt.Errorf("the scanner reported executionSuccessful=false")
+			return oops.Errorf("the scanner reported executionSuccessful=false")
 		}
 		for _, n := range inv.Notifications {
 			if strings.EqualFold(n.Level, "error") {
-				return fmt.Errorf("the scanner reported an error: %s", sanitizeScannerText(n.Message.Text))
+				return oops.Errorf("the scanner reported an error: %s", sanitizeScannerText(n.Message.Text))
 			}
 		}
 	}
