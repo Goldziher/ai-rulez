@@ -127,8 +127,8 @@ func runCalibrate(cmd *cobra.Command, out io.Writer) (int, error) {
 	if calibrateFlags.workers < 0 || calibrateFlags.workers > maxConcurrency {
 		return 0, oops.Errorf("--concurrency must be between 1 and %d", maxConcurrency)
 	}
-	if calibrateFlags.maxCost < 0 || calibrateFlags.maxCalls < 0 || calibrateFlags.k < 0 {
-		return 0, oops.Errorf("--max-cost, --max-calls and --k must not be negative")
+	if err := checkCaps(calibrateFlags.maxCost, calibrateFlags.maxCalls, calibrateFlags.k); err != nil {
+		return 0, err
 	}
 	if calibrateFlags.models != "" && (calibrateFlags.compare != "" || cmd.Flags().Changed("model")) {
 		return 0, oops.Errorf("--models cannot be combined with --model or --compare")

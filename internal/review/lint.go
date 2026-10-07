@@ -254,19 +254,23 @@ func lintVotes(v Votes, add func(string, string, ...any)) {
 		add("[votes]", "votes.max must be between 0 and 5")
 	}
 	for name, t := range map[string]float64{"first_temperature": v.FirstTemperature, "extra_temperature": v.ExtraTemperature} {
-		if t < 0 || t > 2 {
+		if !inRange(t, 0, 2) {
 			add(name, "votes.%s must be between 0 and 2", name)
 		}
 	}
-	if v.InstabilityThreshold < 0 || v.InstabilityThreshold > 1 {
+	if !inRange(v.InstabilityThreshold, 0, 1) {
 		add("instability_threshold", "votes.instability_threshold must be between 0 and 1")
 	}
 }
 
+// inRange reports whether lo <= v <= hi. NaN is never in range: a plain `v < lo || v > hi`
+// check lets it through, and a NaN threshold then passes every comparison.
+func inRange(v, lo, hi float64) bool { return v >= lo && v <= hi }
+
 func lintCalibrationThresholds(r *Rubric, add func(string, string, ...any)) {
 	c := r.Calibration
 	for name, t := range map[string]float64{"min_weighted_kappa": c.MinWeightedKappa, "min_consistency": c.MinConsistency, "min_human_kappa": c.MinHumanKappa, "min_precision": c.MinPrecision, "min_probe": c.MinProbe} {
-		if t < 0 || t > 1 {
+		if !inRange(t, 0, 1) {
 			add(name, "calibration.%s must be between 0 and 1", name)
 		}
 	}
@@ -282,7 +286,7 @@ func lintCalibrationThresholds(r *Rubric, add func(string, string, ...any)) {
 		if _, ok := r.Dimension(id); !ok {
 			add(id, "calibration.min_recall names unknown dimension %q", id)
 		}
-		if t := c.MinRecall[id]; t < 0 || t > 1 {
+		if t := c.MinRecall[id]; !inRange(t, 0, 1) {
 			add(id, "calibration.min_recall.%s must be between 0 and 1", id)
 		}
 	}
