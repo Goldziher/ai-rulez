@@ -120,7 +120,7 @@ func (awsRegistry) Emit(in Input) ([]File, []Finding, error) {
 			tags["commit"] = in.Commit
 		}
 		summary, err := json.Marshal(map[string]any{
-			"name": p.Name, "version": p.Version, "description": p.Description, "runtimes": nonNil(p.Runtimes),
+			keyName: p.Name, keyVersion: p.Version, keyDescription: p.Description, "runtimes": nonNil(p.Runtimes),
 			"bundle": p.BundleFile, "bundle_digest": p.BundleDigest, "lock_tree": in.LockTree,
 		})
 		if err != nil {
