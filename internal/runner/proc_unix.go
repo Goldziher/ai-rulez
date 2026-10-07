@@ -3,8 +3,11 @@
 package runner
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -15,9 +18,10 @@ func isWindows() bool { return false }
 // procEntry is one row of the process table: enough to tell a process's
 // parent, group and session, and (with start) to tell it from a later process
 // that reuses its pid. sid is the session id where the platform reports one,
-// else 0.
+// else 0. uid is the real user id where the table reports it, else -1.
 type procEntry struct {
 	pid, ppid, pgid, sid int
+	uid                  int
 	start                int64
 }
 
@@ -34,8 +38,10 @@ const (
 // procTree owns the processes a command started: its process group, and every
 // descendant seen while the command ran. A helper that leaves the group with
 // setsid() or setpgid() is still a descendant, so it is tracked and killed
-// with the rest; one that detaches and loses its parent between two looks at
-// the process table can escape (a double fork faster than the poll).
+// with the rest. One that detaches and loses its parent between two looks at
+// the process table (a double fork faster than the poll) is found by the run
+// token every child inherits in its environment (RunTokenEnv); only one that
+// also starts with that variable removed escapes.
 type procTree struct {
 	mu        sync.Mutex
 	root      int
@@ -43,17 +49,25 @@ type procTree struct {
 	// rootReused is set once the root's pid belongs to another process.
 	rootReused bool
 	tracked    map[int]int64 // pid -> start time
-	stop       chan struct{}
-	done       chan struct{}
+	// token is this run's value of RunTokenEnv, "" when none could be made.
+	token string
+	// checked caches the processes already searched for the token (pid -> start).
+	checked map[int]int64
+	stop    chan struct{}
+	done    chan struct{}
 }
 
 // configure starts the child in a new session (which is also a new process
 // group) and makes cancellation kill the whole tree, so a scanner's helpers die
 // with it. The new session leaves the child without a controlling terminal: a
 // command run from an interactive shell cannot open /dev/tty and push input
-// into the user's terminal (TIOCSTI).
+// into the user's terminal (TIOCSTI). The child's environment carries a fresh
+// run token, so a helper that leaves the tree is still recognized as the run's.
 func configure(cmd *exec.Cmd) *procTree {
-	t := &procTree{tracked: map[int]int64{}}
+	t := &procTree{tracked: map[int]int64{}, checked: map[int]int64{}, token: newRunToken()}
+	if t.token != "" {
+		cmd.Env = withRunToken(cmd.Env, t.token)
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	cmd.Cancel = func() error {
 		t.kill(cmd)
@@ -199,6 +213,7 @@ func (t *procTree) kill(cmd *exec.Cmd) {
 		if err != nil {
 			break
 		}
+		t.adoptCarriers(table)
 		fresh := false
 		for _, p := range t.collect(table) {
 			if !stopped[p.pid] {
@@ -213,6 +228,78 @@ func (t *procTree) kill(cmd *exec.Cmd) {
 	for pid := range stopped {
 		_ = syscall.Kill(pid, syscall.SIGKILL) //nolint:errcheck // gone already is fine
 	}
+}
+
+// adoptCarriers adds to tracked every process of table that carries this run's
+// token in its environment: a helper that detached and was reparented before
+// the watcher saw it. Only the current user's processes started no earlier than
+// the root are searched, each once. The caller holds mu.
+func (t *procTree) adoptCarriers(table []procEntry) {
+	if t.token == "" {
+		return
+	}
+	self, uid := os.Getpid(), os.Getuid()
+	for _, p := range table {
+		if p.pid <= 1 || p.pid == self || (t.rootStart != 0 && p.start < t.rootStart) {
+			continue
+		}
+		if start, ok := t.tracked[p.pid]; ok && start == p.start {
+			continue
+		}
+		if start, ok := t.checked[p.pid]; ok && start == p.start {
+			continue
+		}
+		t.checked[p.pid] = p.start
+		if p.uid >= 0 && p.uid != uid {
+			continue
+		}
+		if env, err := processEnv(p.pid); err == nil && hasRunToken(env, t.token) {
+			t.tracked[p.pid] = p.start
+		}
+	}
+}
+
+// newRunToken returns a random token, or "" if the system has no randomness.
+func newRunToken() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b[:])
+}
+
+// withRunToken returns env (nil meaning the parent's environment) with token
+// appended to RunTokenEnv.
+func withRunToken(env []string, token string) []string {
+	if env == nil {
+		env = os.Environ()
+	}
+	out := make([]string, 0, len(env)+1)
+	value := token
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, RunTokenEnv+"="); ok {
+			if v != "" {
+				value = v + ":" + token
+			}
+			continue
+		}
+		out = append(out, kv)
+	}
+	return append(out, RunTokenEnv+"="+value)
+}
+
+// hasRunToken reports whether env (KEY=VALUE entries) tags its process with token.
+func hasRunToken(env []string, token string) bool {
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, RunTokenEnv+"="); ok {
+			for _, t := range strings.Split(v, ":") {
+				if t == token {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // close stops the watcher.

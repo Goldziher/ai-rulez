@@ -668,8 +668,12 @@ a shell.
 Every run is bounded: a `timeout` (default 2 minutes, at most 15, applied to each run), a 32 MiB cap on each of
 stdout and stderr, and a kill of the whole process tree at the timeout and again after the command exits. On Linux
 and macOS the tree is the command's session and process group plus every descendant seen while it ran (the process
-table is read at a backing-off interval up to 200 ms), so a helper that calls `setsid()` is killed too; a daemon that
-forks, detaches and loses its parent between two reads can still escape. On Windows the child is placed in a Job
+table is read at a backing-off interval up to 200 ms), so a helper that calls `setsid()` is killed too. Every child
+also starts with a random per-run token in `AI_RULEZ_RUN_TOKEN`, and the kill searches the environment of each of
+your processes started since the command (`KERN_PROCARGS2` on macOS, `/proc/<pid>/environ` on Linux) for it, so a
+daemon that forks, detaches and loses its parent between two reads is killed as well. A process that is started with
+the variable removed from its environment (`env -i`, or an exec with a fresh environment) and detaches between two
+reads can still escape. On Windows the child is placed in a Job
 Object that is terminated the same way; a grandchild spawned in the instant between process start and job
 assignment can escape it. Output
 past the cap is dropped without blocking the scanner: stdout past it is `AR9E3` (never ingested), while stderr
