@@ -280,7 +280,7 @@ func (r *runner) isolationKey() string {
 func (r *runner) cacheState(sc resolvedScanner, c *ScanCache, key string) string {
 	switch {
 	case c == nil || key == "":
-		return "off"
+		return levelOff
 	default:
 		if _, ok := r.cacheGet(sc, c, key); ok {
 			return "hit"
@@ -526,7 +526,7 @@ func (r *runner) plan(sc resolvedScanner, p planInfo) {
 	}
 	format := sc.Format
 	if format == "" {
-		format = "sarif"
+		format = FormatSARIF
 	}
 	fmt.Fprintf(&w, "scanner %s (egress = %s, format = %s)\n", sc.Name, egress, format)
 	binary := p.binary

@@ -95,7 +95,7 @@ func egressFlagViolationWith(argv, extra []string) string {
 
 func falseValue(v string) bool {
 	switch v {
-	case "false", "0", "no", "off":
+	case boolFalse, "0", "no", levelOff:
 		return true
 	}
 	return false
@@ -183,7 +183,7 @@ func (st *scannerStage) readOut() ([]byte, error) {
 var argvBudget = defaultArgvBudget()
 
 func defaultArgvBudget() int {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == osWindows {
 		return 24 << 10
 	}
 	return 128 << 10

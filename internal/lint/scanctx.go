@@ -38,7 +38,7 @@ var (
 	// instructing it.
 	negRe = regexp.MustCompile(`(?i)\b(?:never|don'?t|do\s+not|must\s+not|should\s+not|shouldn'?t|avoid|instead\s+of|rather\s+than|forbidden|prohibit\w*|disallow\w*|denied|dangerous|unsafe|insecure|malicious|attack\w*|exploit\w*|anti-?patterns?|bad|wrong|incorrect|harmful|destructive|risky|refuse\w*|reject\w*|vulnerab\w*|injection|threat|red\s+flags?)\b|❌|⛔|🚫|⚠`)
 
-	shellLangs = map[string]bool{"": true, "sh": true, "bash": true, "zsh": true, "shell": true, "console": true, "terminal": true, "shellsession": true, "shell-session": true, "fish": true}
+	shellLangs = map[string]bool{"": true, "sh": true, shellBash: true, shellZsh: true, "shell": true, "console": true, "terminal": true, "shellsession": true, "shell-session": true, "fish": true}
 )
 
 func isMarkdownPath(abs string) bool {

@@ -68,7 +68,7 @@ func (r *runner) presetNames() map[string]bool {
 // is configured, or no preset is (the default).
 func (r *runner) targetsClaude() bool {
 	names := r.presetNames()
-	return len(names) == 0 || names["claude"]
+	return len(names) == 0 || names[presetClaude]
 }
 
 // fileLines returns the lines of the file at abs, registering it for inline

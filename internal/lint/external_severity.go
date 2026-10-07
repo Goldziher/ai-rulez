@@ -23,8 +23,8 @@ const (
 var bandNames = map[string]int{
 	"info": bandInfo, "none": bandInfo,
 	"low": bandLow, "note": bandLow,
-	"medium": bandMedium, "warning": bandMedium,
-	"high": bandHigh, "error": bandHigh,
+	"medium": bandMedium, levelWarning: bandMedium,
+	"high": bandHigh, levelError: bandHigh,
 	"critical": bandCritical,
 }
 
