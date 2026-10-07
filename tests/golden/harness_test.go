@@ -34,9 +34,40 @@ import (
 var (
 	binaryPath    string
 	binaryVersion string
+	toolsDir      string // the stub executables every run sees on PATH
 	buildOnce     sync.Once
 	buildErr      error
 )
+
+// The CLI probes PATH (doctor's tool check, the AR601 MCP command check), so a
+// golden would otherwise depend on what the machine has installed. Every run
+// gets a PATH of stubs for the tools the goldens were recorded with, then only
+// the system directories git and sh live in. cursor and gemini stay absent.
+var (
+	stubTools  = []string{"claude", "codex", "copilot", "opencode", "npx"}
+	systemPath = []string{"/usr/bin", "/bin"}
+)
+
+// writeTools fills dir with the stub tools and a git that runs the real one.
+func writeTools(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	git, err := exec.LookPath("git")
+	if err != nil {
+		return fmt.Errorf("git is needed on PATH: %w", err)
+	}
+	scripts := map[string]string{"git": "#!/bin/sh\nexec '" + strings.ReplaceAll(git, "'", `'\''`) + "' \"$@\"\n"}
+	for _, name := range stubTools {
+		scripts[name] = "#!/bin/sh\nexit 0\n"
+	}
+	for name, body := range scripts {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o755); err != nil { //nolint:gosec // an executable stub
+			return err
+		}
+	}
+	return nil
+}
 
 // TestMain only builds lazily (see binary), so `go test -run Other` stays fast.
 func TestMain(m *testing.M) {
@@ -67,6 +98,11 @@ func binary(t *testing.T) string {
 			buildErr = fmt.Errorf("go build: %w\n%s", err, msg)
 			return
 		}
+		if err := writeTools(filepath.Join(dir, "path")); err != nil {
+			buildErr = fmt.Errorf("stub tools: %w", err)
+			return
+		}
+		toolsDir = filepath.Join(dir, "path")
 		binaryPath = out
 		ver := exec.Command(out, "version") //nolint:gosec // the binary was just built
 		raw, _ := ver.CombinedOutput()      //nolint:errcheck // an unreadable version only skips normalization
@@ -266,7 +302,7 @@ func writeTree(t *testing.T, root string, files map[string]string, exec map[stri
 // baseEnv is the complete environment of every run: nothing from the host leaks in.
 func baseEnv(home string, extra []string) []string {
 	env := []string{
-		"PATH=" + os.Getenv("PATH"),
+		"PATH=" + strings.Join(append([]string{toolsDir}, systemPath...), string(os.PathListSeparator)),
 		"HOME=" + home,
 		"USERPROFILE=" + home,
 		"TMPDIR=" + os.TempDir(),
