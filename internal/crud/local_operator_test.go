@@ -31,6 +31,9 @@ func setupLocalOpProject(t *testing.T) *localOpProject {
 	p.ext = filepath.Join(p.baseDir, "ext")
 	for _, d := range []string{"inc", "sk", "loc", "new"} {
 		require.NoError(t, os.MkdirAll(filepath.Join(p.ext, d, ".ai-rulez"), 0o755))
+		// Each can also be installed as a skill: an unresolvable one fails the load.
+		require.NoError(t, os.MkdirAll(filepath.Join(p.ext, d, "skills", d), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(p.ext, d, "skills", d, "SKILL.md"), []byte("---\nname: "+d+"\ndescription: Use when testing.\n---\nBody\n"), 0o600))
 	}
 	dir := filepath.Join(p.baseDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "domains", "backend", "rules"), 0o755))

@@ -187,7 +187,8 @@ The npm, PyPI and Homebrew distributions are unaffected.
 - **An include that cannot be resolved is an error, with or without a lock.** Before, an unreachable remote include
   (no network, a deleted repository, no cached copy) was a warning and `validate`, `doctor`, `generate` and
   `generate --check` exited `0` while rendering without it. They now exit `1` and name the include. `--no-fetch`
-  keeps the old behaviour (a warning, the include skipped).
+  keeps the old behaviour (a warning, the include skipped). An installed skill that cannot be resolved is an error
+  the same way: before, `generate` removed its outputs as stale and `generate --check` passed.
 - **`[lock] enforce = true` is strict.** It makes `validate --strict` report `AR981` (source drift) and `AR982`
   (output drift), makes `generate --locked` fail on drift, and makes the skills server refuse a served skill that
   the lock does not pin or whose digest differs. A corrupt lock, a lock of another `version` or a source that cannot be
