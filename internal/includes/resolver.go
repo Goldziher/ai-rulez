@@ -93,7 +93,7 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 	// A missing include is not a warning: generating without it silently produces
 	// outputs the committed configuration never described, and a CI gate on
 	// `generate --check` would pass on a broken checkout. Only an explicit offline
-	// run (--no-fetch) keeps the warning, since it asked for cached content only,
+	// run (--offline) keeps the warning, since it asked for cached content only,
 	// and `lock` (refresh), which collects the failures and reports them itself.
 	if len(failures) > 0 && ((!tolerated(ctx) && Mode != LockRefresh) || strictLock(cfg)) {
 		return nil, errors.Join(failures...)

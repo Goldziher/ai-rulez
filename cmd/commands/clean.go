@@ -28,7 +28,7 @@ and the ai-rulez managed block in .gitignore.
 The .ai-rulez/ source tree is never touched. Directories are only removed when
 they become empty, so files you authored inside a generated directory are kept.
 
-By default clean lists what it will delete and asks for confirmation; use --force
+By default clean lists what it will delete and asks for confirmation; use --yes
 to skip the prompt (required in non-interactive shells) or --dry-run to preview.`,
 	Aliases: []string{"clear"},
 	Args:    cobra.MaximumNArgs(1),
@@ -37,7 +37,7 @@ to skip the prompt (required in non-interactive shells) or --dry-run to preview.
 
 func init() {
 	CleanCmd.Flags().BoolVarP(&cleanDryRun, "dry-run", "d", false, "Show what would be removed without deleting anything")
-	CleanCmd.Flags().BoolVarP(&cleanForce, "force", "y", false, "Skip the confirmation prompt")
+	CleanCmd.Flags().BoolVarP(&cleanForce, "yes", "y", false, "Skip the confirmation prompt")
 	CleanCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile whose outputs to remove, or a comma-separated list to compose several (default: from config or 'default')")
 	CleanCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	CleanCmd.Flags().BoolVar(&userScope, "user", false, "Remove the files 'generate --user' wrote into the home directories, as recorded in the user manifest")
