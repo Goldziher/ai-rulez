@@ -385,8 +385,8 @@ func TestVerifiersSection(t *testing.T) {
 
 func TestValidateFileConcurrentUseOfTheCachedSchema(t *testing.T) {
 	// Arrange
-	good := writeTOML(t, "version = \"4.0\"\nname = \"x\"\n")
-	bad := writeTOML(t, "version = \"4.0\"\nname = \"x\"\nbogus_key = 1\n")
+	good := writeTOML(t, "version = \"5.0\"\nname = \"x\"\n")
+	bad := writeTOML(t, "version = \"5.0\"\nname = \"x\"\nbogus_key = 1\n")
 	var wg sync.WaitGroup
 	errs := make([]error, 16)
 

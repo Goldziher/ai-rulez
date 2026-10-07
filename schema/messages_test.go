@@ -41,7 +41,7 @@ func TestRefineMessages(t *testing.T) {
 				"- name: required field is missing",
 			},
 			want: []string{
-				`- version: the required key is missing; add version = "4.0" at the top of the file`,
+				`- version: the required key is missing; add version = "5.0" at the top of the file`,
 				"- name: required field is missing",
 			},
 		},
