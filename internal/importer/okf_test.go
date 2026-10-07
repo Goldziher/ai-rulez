@@ -162,3 +162,23 @@ func TestConvert_ScriptsKeepTheirExecBit(t *testing.T) {
 		})
 	}
 }
+
+func TestConvert_OnlyABundleScriptIsWrittenExecutable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not POSIX on windows")
+	}
+	// Arrange: a rule that happens to carry an execute bit in the bundle
+	dir := t.TempDir()
+	copyDir(t, okfBundleDir, filepath.Join(dir, "docs", "okf"))
+	require.NoError(t, os.Chmod(filepath.Join(dir, "docs", "okf", "rules", "plain.md"), 0o755))
+
+	// Act
+	report, err := Convert(context.Background(), ConvertOptions{Source: dir, From: []string{"okf"}, Write: true})
+
+	// Assert
+	require.NoError(t, err)
+	require.True(t, report.Written, "%+v", report.Security)
+	info, err := os.Stat(filepath.Join(dir, ".ai-rulez", "rules", "plain.md"))
+	require.NoError(t, err)
+	assert.Zero(t, info.Mode().Perm()&0o111, "mode %v", info.Mode())
+}

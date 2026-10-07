@@ -123,8 +123,9 @@ func planFromBridge(bundleDir, scratch string, res *okfbridge.ImportResult) (*Pl
 			src = bundleDir
 		}
 		exec := false
-		if info, serr := os.Stat(filepath.Join(scratch, filepath.FromSlash(rel))); serr == nil {
-			exec = info.Mode().Perm()&0o111 != 0
+		// Lstat, regular files only: a link or a device is never an executable script.
+		if info, serr := os.Lstat(filepath.Join(scratch, filepath.FromSlash(rel))); serr == nil {
+			exec = info.Mode().IsRegular() && info.Mode().Perm()&0o111 != 0
 		}
 		p.Raw = append(p.Raw, RawFile{Path: rel, Data: data, Sources: []string{src}, Exec: exec})
 		p.add(newFinding(StatusMapped, src, "concept", rel, ""))
