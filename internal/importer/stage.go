@@ -28,22 +28,42 @@ func checkStaged(ctx context.Context, report *Report, files map[string][]byte, c
 	}
 	defer removeScratch(tmp)
 
+	data, err := stageFiles(tmp, files, cfg)
+	if err != nil {
+		return err
+	}
+	loaded := validateStaged(ctx, tmp, report, cfg)
+	found, err := scanStaged(loaded, files, data, sc)
+	if err != nil {
+		return err
+	}
+	recordFindings(report, found, files, sc)
+	return nil
+}
+
+// stageFiles writes the planned files and the config (without installed skills)
+// below tmp and returns the rendered config.
+func stageFiles(tmp string, files map[string][]byte, cfg *config.Config) ([]byte, error) {
 	root := filepath.Join(tmp, DefaultConfigDir)
 	for rel, data := range files {
 		if err := writeFileAtomic(filepath.Join(root, filepath.FromSlash(rel)), data, 0o644); err != nil {
-			return oops.Wrapf(err, "stage %s", rel)
+			return nil, oops.Wrapf(err, "stage %s", rel)
 		}
 	}
 	staged := *cfg
 	staged.InstalledSkills = nil
 	data, err := config.MarshalTOML(&staged)
 	if err != nil {
-		return oops.Wrapf(err, "render staged config")
+		return nil, oops.Wrapf(err, "render staged config")
 	}
 	if err := writeFileAtomic(filepath.Join(root, configTOML), data, 0o644); err != nil {
-		return oops.Wrapf(err, "stage %s", configTOML)
+		return nil, oops.Wrapf(err, "stage %s", configTOML)
 	}
+	return data, nil
+}
 
+// validateStaged loads the staged project and counts validation errors in report.
+func validateStaged(ctx context.Context, tmp string, report *Report, cfg *config.Config) *config.Config {
 	invalid := func(err error) {
 		report.Validation.Errors++
 		report.Validation.Messages = append(report.Validation.Messages, firstLine(err.Error()))
@@ -58,17 +78,21 @@ func checkStaged(ctx context.Context, report *Report, files map[string][]byte, c
 	if err != nil {
 		invalid(err)
 	}
+	return loaded
+}
 
+// scanStaged runs the security scan over the staged project and every staged text.
+func scanStaged(loaded *config.Config, files map[string][]byte, data []byte, sc scanContext) ([]lint.Finding, error) {
 	var found []lint.Finding
 	if loaded != nil {
 		var loader lint.Loader
 		tree, lerr := loader.Load(loaded.BaseDir)
 		if lerr != nil {
-			return oops.Wrapf(lerr, "index scratch project")
+			return nil, oops.Wrapf(lerr, "index scratch project")
 		}
 		lr, rerr := lint.RunWith(loaded, tree, lint.Options{SecurityOnly: true})
 		if rerr != nil {
-			return oops.Wrapf(rerr, "security scan")
+			return nil, oops.Wrapf(rerr, "security scan")
 		}
 		found = append(found, lr.Findings...)
 	}
@@ -95,7 +119,11 @@ func checkStaged(ctx context.Context, report *Report, files map[string][]byte, c
 	for _, name := range names {
 		found = append(found, lint.ScanText(name, sc.fetched[name])...)
 	}
+	return found, nil
+}
 
+// recordFindings adds the scan findings to the report, deduplicated and sorted.
+func recordFindings(report *Report, found []lint.Finding, files map[string][]byte, sc scanContext) {
 	report.Security.Findings = []SecurityFinding{}
 	seen := map[string]bool{}
 	for _, f := range found {
@@ -125,7 +153,6 @@ func checkStaged(ctx context.Context, report *Report, files map[string][]byte, c
 	if report.Security.Blocked {
 		report.Security.Code = CodeBlockedScan
 	}
-	return nil
 }
 
 // scanContext carries what the scan needs to report where a finding came from

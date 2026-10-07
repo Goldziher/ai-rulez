@@ -187,19 +187,7 @@ func gitSourceProblem(src string) string {
 	lower := strings.ToLower(src)
 	switch {
 	case strings.HasPrefix(lower, "https://"), strings.HasPrefix(lower, "ssh://"):
-		u, err := url.Parse(src)
-		if err != nil || u.Host == "" {
-			return "is not a valid URL"
-		}
-		if u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || strings.Contains(src, "#") {
-			return "carries a query string or fragment (a token often travels there); use a plain repository URL"
-		}
-		if u.User != nil {
-			if _, hasPassword := u.User.Password(); hasPassword || u.Scheme == "https" {
-				return "embeds credentials; use a ${VAR} reference or a credential helper"
-			}
-		}
-		return ""
+		return urlSourceProblem(src)
 	case scpSource.MatchString(src):
 		if strings.ContainsAny(src, "?#") {
 			return "carries a query string or fragment; use a plain repository path"
@@ -207,6 +195,23 @@ func gitSourceProblem(src string) string {
 		return ""
 	}
 	return "must be an https://, ssh:// or git@host:path URL"
+}
+
+// urlSourceProblem checks an https:// or ssh:// git source.
+func urlSourceProblem(src string) string {
+	u, err := url.Parse(src)
+	if err != nil || u.Host == "" {
+		return "is not a valid URL"
+	}
+	if u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || strings.Contains(src, "#") {
+		return "carries a query string or fragment (a token often travels there); use a plain repository URL"
+	}
+	if u.User != nil {
+		if _, hasPassword := u.User.Password(); hasPassword || u.Scheme == "https" {
+			return "embeds credentials; use a ${VAR} reference or a credential helper"
+		}
+	}
+	return ""
 }
 
 // redactedReason is the message of a validation error without its details.
