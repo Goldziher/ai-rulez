@@ -102,8 +102,8 @@ func resolveTarget(t Target) (Target, error) {
 	if err != nil {
 		return t, err //nolint:wrapcheck // the caller logs it with the path
 	}
-	if real, evalErr := filepath.EvalSymlinks(abs); evalErr == nil {
-		abs = real
+	if realPath, evalErr := filepath.EvalSymlinks(abs); evalErr == nil {
+		abs = realPath
 	} else if parent, parentErr := filepath.EvalSymlinks(filepath.Dir(abs)); parentErr == nil {
 		abs = filepath.Join(parent, filepath.Base(abs))
 	}
@@ -188,11 +188,11 @@ func (w *Watcher) addDir(dir string) {
 	if w.watched[dir] {
 		return
 	}
-	real := dir
+	realPath := dir
 	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
-		real = resolved
+		realPath = resolved
 	}
-	if err := w.add(real); err != nil {
+	if err := w.add(realPath); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			w.logf("watch: directory does not exist yet", "path", dir)
 			return
@@ -206,29 +206,29 @@ func (w *Watcher) addDir(dir string) {
 		return
 	}
 	w.watched[dir] = true
-	if real != dir {
-		w.aliases[real] = dir
+	if realPath != dir {
+		w.aliases[realPath] = dir
 	}
 }
 
 // unwatchLocked forgets a watched directory and releases its OS watch, unless
 // another watched path (a second link to it) still needs the same real path.
 func (w *Watcher) unwatchLocked(dir string) {
-	real := dir
+	realPath := dir
 	for r, via := range w.aliases {
 		if via == dir {
-			real = r
+			realPath = r
 			delete(w.aliases, r)
 		}
 	}
 	delete(w.watched, dir)
 	for other := range w.watched {
-		if resolved, err := filepath.EvalSymlinks(other); err == nil && resolved == real {
-			w.aliases[real] = other
+		if resolved, err := filepath.EvalSymlinks(other); err == nil && resolved == realPath {
+			w.aliases[realPath] = other
 			return
 		}
 	}
-	if err := w.fs.Remove(real); err != nil {
+	if err := w.fs.Remove(realPath); err != nil {
 		return // the directory may already be gone
 	}
 }
@@ -258,15 +258,15 @@ func (w *Watcher) addTree(dir string) {
 }
 
 func (w *Watcher) walk(root, dir string, ancestors map[string]bool) {
-	real, err := filepath.EvalSymlinks(dir)
-	if err != nil || ancestors[real] {
+	realPath, err := filepath.EvalSymlinks(dir)
+	if err != nil || ancestors[realPath] {
 		return
 	}
 	if dir != root && w.isIgnored(dir) {
 		return
 	}
-	ancestors[real] = true
-	defer delete(ancestors, real)
+	ancestors[realPath] = true
+	defer delete(ancestors, realPath)
 	w.addDir(dir)
 
 	entries, err := os.ReadDir(dir)
