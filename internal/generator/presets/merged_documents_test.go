@@ -50,7 +50,7 @@ func TestApplyMergedDocumentRejectsUnregisteredPath(t *testing.T) {
 		t.Parallel()
 
 		path := filepath.Join(t.TempDir(), ".newtool", "settings.json")
-		_, err := applyMergedDocument(path, []jsonmerge.OwnedKey{{Name: keyMCPServers, Value: map[string]any{}}})
+		_, err := applyMergedDocument(nil, path, []jsonmerge.OwnedKey{{Name: keyMCPServers, Value: map[string]any{}}})
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "merged JSON document path is not registered")
@@ -60,7 +60,7 @@ func TestApplyMergedDocumentRejectsUnregisteredPath(t *testing.T) {
 	t.Run("an empty path renders a fresh document", func(t *testing.T) {
 		t.Parallel()
 
-		result, err := applyMergedDocument("", []jsonmerge.OwnedKey{{Name: keyMCPServers, Value: map[string]any{}}})
+		result, err := applyMergedDocument(nil, "", []jsonmerge.OwnedKey{{Name: keyMCPServers, Value: map[string]any{}}})
 
 		require.NoError(t, err, "an empty path names no file, so the registry does not apply")
 		assert.Contains(t, result.Body, keyMCPServers)
@@ -74,7 +74,7 @@ func TestApplyMergedDocumentRejectsUnregisteredPath(t *testing.T) {
 			path := filepath.Join(baseDir, filepath.FromSlash(relPath))
 			require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
 
-			result, err := applyMergedDocument(path,
+			result, err := applyMergedDocument(nil, path,
 				[]jsonmerge.OwnedKey{{Name: keyMCPServers, Value: map[string]any{}}})
 
 			require.NoError(t, err, "%s is registered and must be accepted", relPath)

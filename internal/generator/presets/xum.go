@@ -221,7 +221,7 @@ func (g *XumPresetGenerator) renderMCPConfig(baseDir string, cfg *config.Config)
 	}
 
 	path := filepath.Join(baseDir, filepath.FromSlash(MergedDocXumMCP))
-	result, err := applyMergedDocument(path, []jsonmerge.OwnedKey{{Name: keyServers, Value: servers, Members: true}})
+	result, err := applyMergedDocument(cfg, path, []jsonmerge.OwnedKey{{Name: keyServers, Value: servers, Members: true}})
 	if err != nil {
 		return nil, fmt.Errorf("render .xum/mcp.jsonc: %w", err)
 	}

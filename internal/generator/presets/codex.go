@@ -183,7 +183,7 @@ func (g *CodexPresetGenerator) renderConfigTOML(path string, cfg *config.Config)
 	if len(owned) == 0 {
 		return config.OutputFile{}, false, nil
 	}
-	res, err := applyMergedDocumentAs(path, docmerge.FormatTOML, owned)
+	res, err := applyMergedDocumentAs(cfg, path, docmerge.FormatTOML, owned)
 	if err != nil {
 		return config.OutputFile{}, false, err
 	}

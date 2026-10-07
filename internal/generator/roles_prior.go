@@ -167,7 +167,7 @@ func (g *Generator) restoreSkillOverride(settingsPath string, doc map[string]jso
 	if err := json.Unmarshal(prior, &value); err != nil {
 		return nil //nolint:nilerr // an unreadable ledger value is dropped, never written
 	}
-	result, err := jsonmerge.Apply(settingsPath, []jsonmerge.OwnedKey{
+	result, err := jsonmerge.ApplyWith(g.config.ReadExisting, settingsPath, []jsonmerge.OwnedKey{
 		{Path: []string{keySkillOverride}, Value: map[string]any{skill: value}, Members: true},
 	})
 	if err != nil {

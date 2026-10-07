@@ -44,6 +44,11 @@ func ReadExisting(path string) (contents string, found bool, err error) {
 	return readExistingDocument(path)
 }
 
+// ReadExistingWith is ReadExisting reading through read.
+func ReadExistingWith(read Reader, path string) (contents string, found bool, err error) {
+	return readExistingWith(read, path)
+}
+
 // MatchesValue reports whether value (a document value decoded into Go types) is
 // one this claim may remove.
 func (c Claim) MatchesValue(value any) bool {

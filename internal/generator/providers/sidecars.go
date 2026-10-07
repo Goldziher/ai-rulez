@@ -109,13 +109,13 @@ func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath st
 		if err != nil {
 			return sidecarRender{}, err
 		}
-		return jsonmerge.Apply(outputPath, owned)
+		return jsonmerge.ApplyWith(cfg.ReadExisting, outputPath, owned)
 	case SidecarMCPJSON:
-		return jsonmerge.Apply(outputPath, mcpJSONOwnedKeys(cfg, g.Spec != nil && presets.IsLiteralMCPJSONWriter(g.Spec.Name)))
+		return jsonmerge.ApplyWith(cfg.ReadExisting, outputPath, mcpJSONOwnedKeys(cfg, g.Spec != nil && presets.IsLiteralMCPJSONWriter(g.Spec.Name)))
 	case SidecarAmpSettingsJSON:
-		return jsonmerge.Apply(outputPath, g.ampSettingsOwnedKeys(cfg))
+		return jsonmerge.ApplyWith(cfg.ReadExisting, outputPath, g.ampSettingsOwnedKeys(cfg))
 	case SidecarPiMCPJSON:
-		return jsonmerge.Apply(outputPath, []jsonmerge.OwnedKey{
+		return jsonmerge.ApplyWith(cfg.ReadExisting, outputPath, []jsonmerge.OwnedKey{
 			{Name: piMCPKeyServers, Value: piMCPServerEntries(cfg), Members: true},
 		})
 	case SidecarClaudePluginsJSON:

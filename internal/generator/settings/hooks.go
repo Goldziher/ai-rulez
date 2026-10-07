@@ -347,7 +347,7 @@ func (s hookSpec) requiredKeys(cfg *config.Config, docPath string) []jsonmerge.O
 		if req.userOnly && !cfg.UserScope {
 			continue
 		}
-		if existing := readPath(docPath, req.path); existing != nil && !hookClaimedBefore(cfg, docPath, req.path) {
+		if existing := readPath(cfg, docPath, req.path); existing != nil && !hookClaimedBefore(cfg, docPath, req.path) {
 			if wanted, err := json.Marshal(req.value); err == nil && !equalJSON(existing, wanted) {
 				cfg.Diag.Warn(fmt.Sprintf("[[hooks]] for %s: %s is %s, but the hooks need %s; the existing value is kept, so they may not run",
 					s.name, strings.Join(req.path, "."), existing, wanted))

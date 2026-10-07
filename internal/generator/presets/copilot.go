@@ -188,7 +188,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	// so merge into it.
 	if servers := mcpEntries(cfg, VSCodeMCPEntry); len(servers) > 0 {
 		path := filepath.Join(baseDir, filepath.FromSlash(MergedDocVSCodeMCP))
-		doc, err := renderMergedMCP(path, docmerge.FormatJSONC, []string{keyServers}, servers)
+		doc, err := renderMergedMCP(cfg, path, docmerge.FormatJSONC, []string{keyServers}, servers)
 		if err != nil {
 			return nil, fmt.Errorf("render .vscode/mcp.json: %w", err)
 		}
@@ -516,7 +516,7 @@ func renderSharedMCPJSON(mcpPath string, cfg *config.Config) (jsonmerge.Result, 
 		mcpServers[name] = entry
 	}
 
-	return applyMergedDocument(mcpPath, []jsonmerge.OwnedKey{
+	return applyMergedDocument(cfg, mcpPath, []jsonmerge.OwnedKey{
 		{Name: keyMCPServers, Value: mcpServers, Members: true},
 	})
 }

@@ -1,10 +1,11 @@
 package providers
 
 import (
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 
 	"gopkg.in/yaml.v3"
 )

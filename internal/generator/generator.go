@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,6 +35,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
@@ -915,7 +917,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	activeProfile, contentTree, run := render.profile, render.content, render.run
 
 	// Flatten outputs for writing, detecting conflicts and deduplicating
-	flatOutputs, err := flattenPresetOutputs(g.config.Diag, g.log(), render.byPreset)
+	flatOutputs, err := flattenPresetOutputs(g.config.Diag, g.log(), g.config.ReadExisting, render.byPreset)
 	if err != nil {
 		return nil, "", err
 	}
@@ -1181,14 +1183,14 @@ func (g *Generator) appendAgentsOverride(allOutputs map[string][]config.OutputFi
 // isHandWritten reports whether the file at path exists and is not one ai-rulez
 // wrote: it is in neither manifest and carries no generated banner or hashes.
 func (g *Generator) isHandWritten(path string) bool {
-	if !pathIsFile(path) {
+	if !g.pathIsFile(path) {
 		return false
 	}
 	rel := filepath.ToSlash(g.convertToRelativePath(path))
 	if slices.Contains(g.previousManifestFiles(), rel) {
 		return false
 	}
-	return !looksGenerated(path)
+	return !g.looksGenerated(path)
 }
 
 // rootAgentsMD returns the content of the project's AGENTS.md as written this
@@ -1198,7 +1200,7 @@ func rootAgentsMD(d *diag.Collector, allOutputs map[string][]config.OutputFile, 
 	path := filepath.Join(baseDir, string(config.SharedAgentsMD))
 	// A conflict is reported by collectOutputs; the files found so far still tell
 	// what AGENTS.md says.
-	flat, _ := flattenPresetOutputs(d, nil, allOutputs)
+	flat, _ := flattenPresetOutputs(d, nil, nil, allOutputs)
 	for _, o := range flat {
 		if !o.IsDir && o.RawContent == nil && samePath(o.Path, path) {
 			return o.Content, true
@@ -1403,7 +1405,7 @@ func (g *Generator) collectMCPServersForContent(content *config.ContentTree, pro
 // every rule inlined, because dropping the inlined rules would silently take
 // them from the tools that have no folder. The choice does not depend on the
 // order of the preset names, and a warning names the presets.
-func flattenPresetOutputs(d *diag.Collector, log logger.Logger, allOutputs map[string][]config.OutputFile) ([]config.OutputFile, error) {
+func flattenPresetOutputs(d *diag.Collector, log logger.Logger, read jsonmerge.Reader, allOutputs map[string][]config.OutputFile) ([]config.OutputFile, error) {
 	var flatOutputs []config.OutputFile
 	type claim struct {
 		preset string
@@ -1441,7 +1443,7 @@ func flattenPresetOutputs(d *diag.Collector, log logger.Logger, allOutputs map[s
 			var united config.OutputFile
 			var unionable bool
 			if !sameOutputContent(kept, output) {
-				united, unionable = unionOutputs(kept, output)
+				united, unionable = unionOutputs(read, kept, output)
 			}
 			switch {
 			case sameOutputContent(kept, output):
@@ -1644,7 +1646,7 @@ func (g *Generator) isUnmanagedRuleFile(absPath, wantContent string) bool {
 	if !g.config.InRulesDir(rel) && !isNestedAgentsMD(rel) {
 		return false
 	}
-	info, err := os.Stat(absPath)
+	info, err := g.config.StatExisting(absPath)
 	if err != nil || info.IsDir() {
 		return false
 	}
@@ -1657,10 +1659,10 @@ func (g *Generator) isUnmanagedRuleFile(absPath, wantContent string) bool {
 	if g.previousFiles[rel] {
 		return false
 	}
-	if contentHash, _ := extractStoredHashes(absPath); contentHash != "" {
+	if contentHash, _, _ := g.scanHashes(absPath); contentHash != "" {
 		return false
 	}
-	data, err := os.ReadFile(absPath)
+	data, err := g.config.ReadExisting(absPath)
 	if err != nil {
 		return false
 	}
@@ -1814,7 +1816,7 @@ func (g *Generator) finalContent(output config.OutputFile) string {
 func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, finalContent string) bool {
 	if g.config.GetHeaderHashes() == config.HeaderHashesFull && finalCarriesHash(finalContent) {
 		contentHash := templates.HashContent(stripHeader(output.Content, output.Path))
-		existingContentHash, existingSourceHash, legacy := scanStoredHashes(absPath)
+		existingContentHash, existingSourceHash, legacy := g.scanHashes(absPath)
 		if legacy && g.config.InRulesDir(output.Path) {
 			// Hashes in the frontmatter are the pre-banner layout: rewrite once.
 			return false
@@ -1826,10 +1828,10 @@ func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, final
 		// The header hashes alone would leave a hand-edited body in place for ever
 		// (and --check failing): only a body that still matches its Content-Hash may
 		// be skipped, otherwise generate repairs the file.
-		existing, err := os.ReadFile(absPath)
-		return err == nil && !bodyEdited(string(existing), absPath)
+		existing, err := g.config.ReadExisting(absPath)
+		return err == nil && !g.bodyEdited(string(existing), absPath)
 	}
-	existing, err := os.ReadFile(absPath)
+	existing, err := g.config.ReadExisting(absPath)
 	if err != nil {
 		return false
 	}
@@ -1926,11 +1928,20 @@ func writeRawOutput(log logger.Logger, absPath string, viaLink bool, output conf
 }
 
 func rawWriteCanSkip(absPath string, payload []byte, mode os.FileMode) bool {
-	existing, err := os.ReadFile(absPath)
+	return rawWriteCanSkipWith(os.ReadFile, os.Stat, absPath, payload, mode)
+}
+
+// rawWriteCanSkip is rawWriteCanSkip reading the file from the project's workspace.
+func (g *Generator) rawWriteCanSkip(absPath string, payload []byte, mode os.FileMode) bool {
+	return rawWriteCanSkipWith(g.config.ReadExisting, g.config.StatExisting, absPath, payload, mode)
+}
+
+func rawWriteCanSkipWith(read jsonmerge.Reader, stat func(string) (os.FileInfo, error), absPath string, payload []byte, mode os.FileMode) bool {
+	existing, err := read(absPath)
 	if err != nil || !bytes.Equal(existing, payload) {
 		return false
 	}
-	info, err := os.Stat(absPath)
+	info, err := stat(absPath)
 	if err != nil {
 		return false
 	}
@@ -1972,7 +1983,23 @@ func extractStoredHashes(filePath string) (contentHash, sourceHash string) {
 // found inside the frontmatter block (the layout older versions used for
 // rules-folder files). Lines of any length are handled and CRLF is accepted.
 func scanStoredHashes(filePath string) (contentHash, sourceHash string, inFrontmatterBlock bool) {
-	file, err := os.Open(filePath)
+	return scanHashesFrom(func(p string) (io.ReadCloser, error) { return os.Open(p) }, filePath)
+}
+
+// opener opens an existing file: os.Open, or the project's workspace.
+type opener func(path string) (io.ReadCloser, error)
+
+// scanHashes is scanStoredHashes reading the file from the project's workspace.
+func (g *Generator) scanHashes(filePath string) (contentHash, sourceHash string, inFrontmatterBlock bool) {
+	return scanHashesFrom(g.opener(), filePath)
+}
+
+func (g *Generator) opener() opener {
+	return func(p string) (io.ReadCloser, error) { return g.config.OpenExisting(p) }
+}
+
+func scanHashesFrom(open opener, filePath string) (contentHash, sourceHash string, inFrontmatterBlock bool) {
+	file, err := open(filePath)
 	if err != nil {
 		return "", "", false
 	}
@@ -2552,7 +2579,7 @@ func (g *Generator) readManifest(path string) generatedManifest {
 	if path == g.localManifestPath() && g.localManifestUntrusted() {
 		manifest = generatedManifest{}
 	} else {
-		manifest = readManifestFile(g.log(), path)
+		manifest = readManifestFile(g.log(), g.config.ReadExisting, path)
 	}
 	if g.manifests == nil {
 		g.manifests = map[string]generatedManifest{}
@@ -2566,6 +2593,13 @@ func (g *Generator) readManifest(path string) generatedManifest {
 // .gitignore does not stop a tracked one. It warns once per Generator.
 func (g *Generator) localManifestUntrusted() bool {
 	reason := g.git().UntrustedLocalFile(g.localManifestPath())
+	if _, committed := workspace.CommitOf(g.config.Workspace); committed && reason == "" {
+		// A commit holds whatever its author chose: a machine-local record found
+		// there was committed, not written by this machine.
+		if _, err := g.config.StatExisting(g.localManifestPath()); err == nil {
+			reason = "it is part of a commit"
+		}
+	}
 	if reason == "" {
 		return false
 	}
@@ -2600,8 +2634,8 @@ func (g *Generator) localManifestTracked() bool {
 	return true
 }
 
-func readManifestFile(log logger.Logger, path string) generatedManifest {
-	data, err := os.ReadFile(path)
+func readManifestFile(log logger.Logger, read jsonmerge.Reader, path string) generatedManifest {
+	data, err := read(path)
 	if err != nil {
 		return generatedManifest{}
 	}
@@ -2837,7 +2871,7 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 			g.warnOnce("Stale file not removed: " + relPath + " is behind a symlink that leaves the project")
 			continue
 		}
-		if _, err := os.Stat(absPath); err != nil {
+		if _, err := g.config.StatExisting(absPath); err != nil {
 			continue
 		}
 		if !g.userMode {
@@ -2849,14 +2883,14 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 				continue
 			}
 		}
-		if !provablyGenerated(relPath, absPath, digests) {
+		if !g.provablyGenerated(relPath, absPath, digests) {
 			g.warnOnce("Stale file not removed: cannot verify "+relPath+" was generated",
 				"hint", "delete it by hand if it is no longer needed")
 			continue
 		}
 		// A rules folder is shared with hand-written rules: delete only a file that
 		// still looks generated, even when a manifest lists it.
-		if g.config.InRulesDir(relPath) && !looksGenerated(absPath) {
+		if g.config.InRulesDir(relPath) && !g.looksGenerated(absPath) {
 			g.log().Debug("Keeping manifest-listed rule file without a generated marker", "path", relPath)
 			continue
 		}
@@ -2887,6 +2921,21 @@ func looksGenerated(absPath string) bool {
 	}
 	data, err := os.ReadFile(absPath)
 	return err == nil && hasGeneratedBanner(absPath, data)
+}
+
+// looksGenerated is looksGenerated reading the file from the project's workspace.
+func (g *Generator) looksGenerated(absPath string) bool {
+	if contentHash, _, _ := g.scanHashes(absPath); contentHash != "" {
+		return true
+	}
+	data, err := g.config.ReadExisting(absPath)
+	return err == nil && hasGeneratedBanner(absPath, data)
+}
+
+// pathIsFile is pathIsFile on the project's workspace.
+func (g *Generator) pathIsFile(path string) bool {
+	info, err := g.config.StatExisting(path)
+	return err == nil && !info.IsDir()
 }
 
 // isMergedDocumentPath reports whether relPath names one of the merged settings

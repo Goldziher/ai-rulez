@@ -51,7 +51,7 @@ func validateElements(i int, sc *SidecarSpec) error {
 func elementsOwnedKey(sc *SidecarSpec, cfg *config.Config, outputPath string) (key jsonmerge.OwnedKey, ok bool, err error) {
 	e := sc.Elements
 	existing := []any{}
-	if doc, found, rerr := jsonmerge.ReadExisting(outputPath); rerr != nil {
+	if doc, found, rerr := jsonmerge.ReadExistingWith(cfg.ReadExisting, outputPath); rerr != nil {
 		return key, false, rerr
 	} else if found {
 		if tree, derr := jsonmerge.DecodeTolerantTree(doc); derr == nil {

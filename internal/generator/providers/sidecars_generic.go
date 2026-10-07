@@ -94,7 +94,7 @@ func (g *Generator) renderGenericSidecar(sc *SidecarSpec, cfg *config.Config, ou
 	if len(owned) == 0 && (sc.Kind == SidecarHooks || sc.Kind == SidecarPermissions) {
 		return sidecarRender{}, nil // nothing applies: the user's file is not rewritten or registered
 	}
-	return mergeDocument(outputPath, sc.DocFormat(), owned)
+	return mergeDocument(cfg, outputPath, sc.DocFormat(), owned)
 }
 
 // sharedSidecars returns the sidecars of the spec that merge into the document
@@ -146,7 +146,7 @@ func (g *Generator) renderSidecarGroup(group []*SidecarSpec, cfg *config.Config,
 	if len(owned) == 0 {
 		return sidecarRender{}, nil // nothing applies: the user's file is not rewritten or registered
 	}
-	return mergeDocument(outputPath, group[0].DocFormat(), owned)
+	return mergeDocument(cfg, outputPath, group[0].DocFormat(), owned)
 }
 
 // sameDocFormat reports whether two formats are one syntax: JSON and JSONC are
@@ -209,8 +209,8 @@ func (g *Generator) genericOwnedKeys(sc *SidecarSpec, cfg *config.Config, output
 
 // mergeDocument merges owned keys into the document at outputPath, whatever its
 // format (json, jsonc, toml or yaml), through docmerge.
-func mergeDocument(outputPath, format string, owned []jsonmerge.OwnedKey) (sidecarRender, error) {
-	return docmerge.Apply(outputPath, docmerge.Format(format), owned)
+func mergeDocument(cfg *config.Config, outputPath, format string, owned []jsonmerge.OwnedKey) (sidecarRender, error) {
+	return docmerge.ApplyWith(cfg.ReadExisting, outputPath, docmerge.Format(format), owned)
 }
 
 // MergedSidecarDoc is a merged document declared by a builtin spec.

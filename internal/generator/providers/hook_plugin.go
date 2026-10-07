@@ -32,7 +32,7 @@ func validateHookPluginSidecar(i int, sc *SidecarSpec) error {
 // a warning, and the render is empty.
 func (g *Generator) renderHookPlugin(sc *SidecarSpec, cfg *config.Config, outputPath string) (sidecarRender, error) {
 	body, ok, err := hookplugins.Render(cfg, g.Spec.Name, hookplugins.Flavor(sc.Flavor))
-	if err != nil || !ok || !hookplugins.MayWriteModule(cfg.Diag, outputPath) {
+	if err != nil || !ok || !hookplugins.MayWriteModule(cfg.Diag, cfg.ReadExisting, outputPath) {
 		return sidecarRender{}, err
 	}
 	return sidecarRender{Body: body}, nil

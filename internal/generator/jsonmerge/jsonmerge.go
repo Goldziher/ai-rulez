@@ -150,7 +150,12 @@ type jsonMember struct {
 // ai-rulez does not own, which is what makes the file the consumer's rather than
 // a generated artifact.
 func Apply(path string, owned []OwnedKey) (Result, error) {
-	existing, found, err := readExistingDocument(path)
+	return ApplyWith(os.ReadFile, path, owned)
+}
+
+// ApplyWith is Apply reading the existing document through read.
+func ApplyWith(read Reader, path string, owned []OwnedKey) (Result, error) {
+	existing, found, err := readExistingWith(read, path)
 	if err != nil {
 		return Result{}, err
 	}
@@ -415,10 +420,18 @@ func hasUnownedPaths(members []jsonMember, paths [][]string) bool {
 // other read failure stops generation: silently treating an unreadable file as
 // absent is how the clobbering bug behaved.
 func readExistingDocument(path string) (contents string, found bool, err error) {
+	return readExistingWith(os.ReadFile, path)
+}
+
+// Reader reads an existing document: os.ReadFile for the real file system, or
+// the workspace the project was loaded from (config.Config.ReadExisting).
+type Reader func(path string) ([]byte, error)
+
+func readExistingWith(read Reader, path string) (contents string, found bool, err error) {
 	if path == "" {
 		return "", false, nil
 	}
-	data, err := os.ReadFile(path) //nolint:gosec // path is derived from the provider spec + config base dir
+	data, err := read(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return "", false, nil
