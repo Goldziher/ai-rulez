@@ -3,6 +3,7 @@ package skillsearch
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -33,7 +34,9 @@ func TestQueryLog_RecordsAndReads(t *testing.T) {
 	assert.NotContains(t, got[0].Session, "session-1", "the session id is hashed")
 	info, err := os.Stat(path)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	if runtime.GOOS != "windows" { // Windows has no POSIX permission bits to check
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	}
 }
 
 func TestQueryLog_NilAndSecrets(t *testing.T) {
