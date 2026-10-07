@@ -1,0 +1,10 @@
+{
+  "$schema": "https://github.com/Goldziher/ai-rulez/schema/ai-rules.schema.json",
+  "version": "4.0",
+  "name": "json-basic",
+  "presets": ["claude", "codex"],
+  "agents_md": true,
+  "mcp_servers": [
+    {"name": "fs", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem@1.0.0", "."]}
+  ]
+}

@@ -1,0 +1,56 @@
+# Project configuration (4.x)
+version = "5.0" # config format
+name = "toml-full"
+description = "Every deprecated feature in one TOML project"
+presets = ["claude", "cursor"]
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+agents_md = false
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+gitignore = true
+
+# Keep the header short.
+[header]
+style = "compact"
+hashes = "full"
+
+[lint]
+fail_on = "warning"
+
+# Tolerated finding counts, lowered over time.
+[lint.ratchet]
+AR401 = 3
+AR101 = 1
+
+[lint.budgets.skill]
+max_lines = 400
+
+[[hooks]]
+event = "SessionStart"
+
+[[hooks.hooks]]
+type = "command"
+command = "ai-rulez telemetry hook --event start"
+
+[[hooks]]
+event = "Stop"
+
+[[hooks.hooks]]
+type = "command"
+command = "ai-rulez telemetry record --skill demo && ai-rulez telemetry report .ai-rulez/usage.jsonl"
+
+[[plugins]]
+name = "legacy-plugin"
+source = "github.com/example/plugin"
+
+[[mcp_servers]]
+name = "docs"
+transport = "http"
+url = "https://docs.example.com/mcp"
+
+[[mcp_servers]]
+name = "github"
+args = ["-y", "@modelcontextprotocol/server-github@1.2.3"]
+command = "npx"
+
+[mcp_servers.env]
+GITHUB_TOKEN = "${GITHUB_TOKEN}"
