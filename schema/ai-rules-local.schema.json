@@ -2388,6 +2388,11 @@
           },
           "type": "array"
         },
+        "spec": {
+          "description": "Agent Plugins specification version of the agent-plugins, copilot and root-layout codex bundles. Default: 1.0.0.",
+          "enum": ["1.0.0", "1.1.0"],
+          "type": "string"
+        },
         "statusline": {
           "additionalProperties": false,
           "description": "Claude-only status-line script passthrough.",
