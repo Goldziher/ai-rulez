@@ -71,15 +71,27 @@ func cmdContext() context.Context {
 // loadProject, loadProjectFile and loadProjectDir are the project loaders under
 // the command line's policy.
 func loadProject(ctx context.Context, dir string, opts ...config.LoadOption) (*config.Config, error) {
-	return project.Load(config.WithPolicyContext(ctx, activePolicy), dir, opts...) //nolint:wrapcheck // already contextual
+	return refusalsReported(project.Load(config.WithPolicyContext(ctx, activePolicy), dir, opts...))
 }
 
 func loadProjectFile(ctx context.Context, path string, opts ...config.LoadOption) (*config.Config, error) {
-	return project.LoadFile(config.WithPolicyContext(ctx, activePolicy), path, opts...) //nolint:wrapcheck // already contextual
+	return refusalsReported(project.LoadFile(config.WithPolicyContext(ctx, activePolicy), path, opts...))
 }
 
 func loadProjectDir(ctx context.Context, dir, configDirName string, opts ...config.LoadOption) (*config.Config, error) {
-	return project.LoadDir(config.WithPolicyContext(ctx, activePolicy), dir, configDirName, opts...) //nolint:wrapcheck // already contextual
+	return refusalsReported(project.LoadDir(config.WithPolicyContext(ctx, activePolicy), dir, configDirName, opts...))
+}
+
+// refusalsReported prints the symlinked content of the project the loader refused
+// to stderr, which --quiet does not silence: the library records them in
+// Config.ContentProblems and prints nothing itself.
+func refusalsReported(cfg *config.Config, err error) (*config.Config, error) {
+	if err == nil && cfg != nil {
+		for _, p := range cfg.ContentProblems {
+			fmt.Fprintf(os.Stderr, "WARN  refusing symlinked content %s: %s\n", p.Path, p.Reason)
+		}
+	}
+	return cfg, err //nolint:wrapcheck // already contextual
 }
 
 // --policy-trust-tofu uses stdinIsTerminal (approve.go): it refuses to run in a
