@@ -26,7 +26,7 @@ A symlink resolves only inside the workspace. A snapshot has no machine-local fi
 
 ## Plans
 
-`Project.Plan` lists every file a run would write, merge into or remove, with a digest of the rendered content, and writes nothing. `Plan.Digest` is the SHA-256 of the canonical plan document (`schema/plan.schema.json`, also what `ai-rulez generate --emit-plan` prints): equal sources give equal digests whichever workspace they came from. A workspace that is not a directory is planned as a project with no generated files yet, so files the engine merges into (`.claude/settings.json`) are rendered from scratch.
+`Project.Plan` lists every file a run would write, merge into or remove, with a digest of the rendered content, and writes nothing. `Plan.Digest` is the SHA-256 of the canonical plan document (`schema/plan.schema.json`, also what `ai-rulez generate --emit-plan` prints): equal sources give equal digests whichever workspace they came from. The plan reads what already exists from the workspace itself: the previous manifest, merged documents such as `.claude/settings.json` and hand-edited outputs. A workspace in memory or in a commit therefore plans its own `removals` (stale files, entries taken back out of merged documents) the way a directory does. A machine-local record found in a commit is not believed, because a commit holds whatever its author chose. `Lock` is not part of the API yet: the content lock still reads the disk.
 
 `Project.Generate` applies a run: `Write` (directory workspaces only; anything else fails with `CodeDiskRequired` before touching anything), `DryRun` (the action list) or `Check` (files that differ from the plan). The same appliers back `generate`, `generate --dry-run`, `generate --check` and `generate --emit-plan`.
 
@@ -34,7 +34,7 @@ A symlink resolves only inside the workspace. A snapshot has no machine-local fi
 
 ## No ambient authority
 
-Loading and planning use no working directory, no process environment, no clock and no subprocess unless you give them: pass `Options.Env`, `Options.Clock`, `Options.Runner` (default `DenyAll`; implement the `Runner` interface with the public `Spec` and `Result` types to deny, record or sandbox commands) and `Options.Logger`. Remote includes and installed skills are fetched only with `Options.Remote`, through your `Runner`, with `Options.GitToken`. Two `Project`s share no state, so a service can plan different projects concurrently; the operations of one `Project` are serialized.
+Loading and planning use no working directory, no process environment, no clock and no subprocess unless you give them: pass `Options.Env`, `Options.Clock`, `Options.Runner` (default `DenyAll`; implement the `Runner` interface with the public `Spec` and `Result` types to deny, record or sandbox commands) and `Options.Logger` (every warning of a load, validation or plan goes there, and a service that gives none gets none). A load is bound by no organization policy unless one is given to it; the process-wide policy of the command line does not reach a library user. Remote includes and installed skills are fetched only with `Options.Remote`, through your `Runner`, with `Options.GitToken`. Two `Project`s share no state, so a service can plan different projects concurrently; the operations of one `Project` are serialized.
 
 ## Not in the API
 
