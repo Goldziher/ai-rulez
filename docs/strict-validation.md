@@ -310,7 +310,7 @@ max_length = 1024
 require_use_when = true            # enables AR803 at warning
 near_duplicate_threshold = 0.9
 
-[lint.tolerate]                    # tolerated findings per rule (see Baseline and tolerated findings)
+[lint.ratchet]                     # tolerated findings per rule (see Baseline and tolerated findings)
 AR401 = 12
 link-unresolved = 0
 
@@ -440,7 +440,7 @@ After the fixes the run reports what is left, and the exit code reflects that. T
 ## Baseline and tolerated findings
 
 A team adopting strict validation on an existing tree usually cannot fix everything at once. A **baseline**
-records the findings you accept today, so only *new* findings fail the build, and `[lint.tolerate]` caps how many
+records the findings you accept today, so only *new* findings fail the build, and `[lint.ratchet]` caps how many
 findings of one rule are tolerated. (Do not confuse it with `[lint.budgets.<kind>]`, the size budgets of a content kind.)
 
 ```bash
@@ -483,12 +483,13 @@ one entry per accepted finding:
 - **`expires`** is an optional `YYYY-MM-DD`. Through that day the entry applies; after it the finding counts as new
   and the entry is listed as expired. The date comes from the clock in the CLI only; pin it with `--today` or
   `AI_RULEZ_TODAY` for reproducible runs.
-- **Tolerated findings.** `[lint.tolerate]` maps a code or name to a number: up to that many unaccepted findings of the
+- **Tolerated findings.** `[lint.ratchet]` maps a code or name to a number: up to that many unaccepted findings of the
   rule are tolerated and do not count toward the exit code. One more, and all of that rule's findings count again (the
-  text report says `tolerate: AR401 has 13 finding(s), over its tolerated count of 12`; the JSON key is still
-  `budgets_exceeded`). Lower the number over time. Tolerated counts apply per root, after the baseline. `[lint.budget]` is
-  the deprecated spelling of the same table: it still works and warns. Putting the size-budget shape in it
-  (`[lint.tolerate.skill]`) or a rule count in `[lint.budgets]` (`AR201 = 1`) is an error that names the right table.
+  text report says `ratchet: AR401 has 13 finding(s), over its ratchet of 12`; the JSON key is `ratchet_exceeded`).
+  A rule over its ratchet fails the run (exit 2) whatever its severity. Lower the number over time. Ratchet counts apply
+  per root, after the baseline. `[lint.budget]` and `[lint.ratchet]` are removed spellings of the same table and fail
+  to load with a message naming `[lint.ratchet]`. Putting the size-budget shape in it
+  (`[lint.ratchet.skill]`) or a rule count in `[lint.budgets]` (`AR201 = 1`) is an error that names the right table.
 
 ## Analyzers and scopes
 
@@ -576,7 +577,7 @@ threshold. The flag is `--lint-profile`, not `--profile`, because `--profile` se
 | `permissive` | `fail_on = error`. Demotes to warning: `AR101`, `AR201`, `AR301`, `AR302`, `AR402`, `AR951`, `AR952`, `AR954`. Demotes to info: `AR202`, `AR401`, `AR701`, `AR702`, `AR703`, `AR901`, `AR902` |
 
 Security rules (`AR0xx`) are never changed by a profile, and a profile does not touch `[lint.security]` or
-`[lint.tolerate]`. Precedence, highest first: `--fail-on` / `--lint-profile` on the command line, the
+`[lint.ratchet]`. Precedence, highest first: `--fail-on` / `--lint-profile` on the command line, the
 `config.local.*` overlay, `config.toml` (`fail_on`, `[lint.severity]`, `profile`), then the preset. The text
 report starts with a `lint profile:` line when a non-default profile is active, and `--format json` carries
 `"profile"`. The preset tables live in `internal/lint/profile.go`.
@@ -633,7 +634,7 @@ the text report says how many were left out. Each finding carries a `hop` in `--
 The text report ends with a `changed-only since <rev> (depth <n|all>)` line and `--format json` carries a
 `changed_only` object (`depth`, `-1` for `all`; `changed_files`, `dependent_files`, `transitive_files`, `truncated_files`,
 `dropped_findings`). The baseline is applied to the full set first, so stale entries are judged against every
-finding, and a `[lint.tolerate]` count is judged against the full set too; exit status reflects only the findings shown.
+finding, and a `[lint.ratchet]` count is judged against the full set too; exit status reflects only the findings shown.
 `--update-baseline` cannot be combined with `--since`.
 
 git is run with the repository variables a parent git process exports (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`,
@@ -916,7 +917,7 @@ Severities are configured like any other code (`[lint.severity]`, `[lint.ignore]
 }
 ```
 
-`baseline`, `budgets_exceeded` and `changed_only` objects appear when those features are used; a finding accepted by
+`baseline`, `ratchet_exceeded` and `changed_only` objects appear when those features are used; a finding accepted by
 a baseline carries `"accepted": true`.
 
 `file` is relative to the working directory when inside it. Findings are sorted by file, line and code.
