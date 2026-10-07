@@ -43,6 +43,9 @@ func shellWords(s string) []string {
 var (
 	versionPinRe = regexp.MustCompile(`^(?:==|=|@)?[v=]?[\^~]?\d`)
 	hexRefRe     = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
+	// versionRangeRe matches an npm version that selects a range, not a release:
+	// ^1.2.0, ~1.2, >=1, 1, 1.2, 1.x, *.
+	versionRangeRe = regexp.MustCompile(`^(?:(?:[\^~]|>=?|<=?)\s*v?\d.*|[*xX]|v?\d+(?:\.(?:\d+|[xX*]))?(?:\.[xX*])?)$`)
 )
 
 // pinOf splits "pkg@1.2.3" / "@scope/pkg@1.2.3" into name and version ("" when none).
@@ -57,11 +60,19 @@ func pinOf(spec string) (name, version string) {
 // or not a registry package).
 func npmPinProblem(spec string) string {
 	if spec == "" || strings.HasPrefix(spec, ".") || strings.HasPrefix(spec, "/") || strings.HasPrefix(spec, "~") ||
-		strings.Contains(spec, "://") || strings.HasPrefix(spec, "file:") || strings.HasPrefix(spec, "git+") || strings.HasPrefix(spec, "github:") {
+		strings.Contains(spec, "://") || strings.HasPrefix(spec, "file:") || strings.HasPrefix(spec, "git+") {
 		return ""
+	}
+	if host, rest, ok := strings.Cut(spec, ":"); ok && (host == "github" || host == "gitlab" || host == "bitbucket") {
+		if _, ref, has := strings.Cut(rest, "#"); has && (hexRefRe.MatchString(ref) || versionPinRe.MatchString(ref)) {
+			return ""
+		}
+		return "the " + host + " shorthand has no #<commit> pin, so it follows the default branch"
 	}
 	_, ver := pinOf(spec)
 	switch {
+	case versionRangeRe.MatchString(ver):
+		return "@" + ver + " is a moving version range"
 	case strings.ContainsAny(ver, "<>${}"):
 		return "" // a placeholder in documentation
 	case ver == "":
