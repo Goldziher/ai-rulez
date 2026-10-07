@@ -2,10 +2,11 @@ package includes
 
 import (
 	"context"
-	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 
@@ -23,7 +24,7 @@ func TestScanInstalledSkillDir_RefusesSymlinkedSkillMd(t *testing.T) {
 	linkOrSkip(t, secret, filepath.Join(dir, skillMarkerFile))
 
 	// Act
-	file, err := ScanInstalledSkillDir(dir, "evil")
+	file, err := ScanInstalledSkillDir(t.Context(), dir, "evil")
 
 	// Assert
 	require.Error(t, err)

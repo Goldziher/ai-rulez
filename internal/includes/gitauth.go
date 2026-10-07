@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
@@ -23,8 +23,6 @@ const TokenHostsEnv = "AI_RULEZ_GIT_TOKEN_HOSTS"
 
 // defaultTokenHosts is the allowlist when TokenHostsEnv is unset.
 var defaultTokenHosts = []string{"github.com"}
-
-var warnedHosts sync.Map
 
 // tokenHosts returns the lower-cased hosts the token may be sent to.
 func tokenHosts(host ambient.Host) []string {
@@ -77,7 +75,7 @@ func withAuth(ctx context.Context, env []string, repoURL, token string) []string
 	origin, ok := tokenAllowedFor(ambient.FromContext(ctx), repoURL)
 	if !ok {
 		if strings.HasPrefix(strings.ToLower(strings.TrimPrefix(repoURL, "git+")), "https://") {
-			warnTokenWithheld(repoURL)
+			warnTokenWithheld(ctx, repoURL)
 		}
 		return env
 	}
@@ -104,16 +102,19 @@ func withAuth(ctx context.Context, env []string, repoURL, token string) []string
 	)
 }
 
-func warnTokenWithheld(repoURL string) {
+// warnTokenWithheld says once per run and host that the token was not sent. The
+// run's collector remembers it (the process default one when ctx carries none).
+func warnTokenWithheld(ctx context.Context, repoURL string) {
 	u, err := url.Parse(strings.TrimPrefix(repoURL, "git+"))
 	if err != nil {
 		return
 	}
 	host := strings.ToLower(u.Hostname())
-	if _, seen := warnedHosts.LoadOrStore(host, true); seen {
+	d := diag.FromContext(ctx)
+	if !d.Sticky("token-withheld\x00" + host) {
 		return
 	}
-	logger.Warn("git access token not sent: host is not in the token allowlist", "host", host, "allow_with", TokenHostsEnv+"="+host)
+	logger.FromContext(ctx).Warn("git access token not sent: host is not in the token allowlist", "host", host, "allow_with", TokenHostsEnv+"="+host)
 }
 
 // scrubLegacyCredentials rewrites the origin of a cache cloned by an earlier
@@ -126,6 +127,6 @@ func scrubLegacyCredentials(ctx context.Context, cacheDir, cleanURL string) {
 	}
 	res := gitRun(ctx, cacheDir, gitEnvFor(ctx), "remote", "set-url", "origin", cleanURL)
 	if out, err := combined(res), gitutil.ResultErr(res); err != nil {
-		logger.Warn("could not scrub a credential from the include cache; delete it", "cache_dir", cacheDir, "error", err, "output", RedactURL(string(out)))
+		logger.FromContext(ctx).Warn("could not scrub a credential from the include cache; delete it", "cache_dir", cacheDir, "error", err, "output", RedactURL(string(out)))
 	}
 }

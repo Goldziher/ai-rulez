@@ -90,7 +90,7 @@ func (r *Resolved) Entry() lockfile.Entry {
 // Resolve fetches (or finds in the cache) the source and lists its skills.
 func Resolve(ctx context.Context, spec Spec, opts Options) (*Resolved, error) {
 	if !spec.IsGit() {
-		return resolveLocal(spec, opts)
+		return resolveLocal(ctx, spec, opts)
 	}
 	return resolveGit(ctx, spec, opts)
 }
@@ -99,7 +99,7 @@ func errLock(spec Spec, format string, args ...any) error {
 	return oops.Wrapf(config.ErrLockViolation, "skill source %q: %s", spec.Name, fmt.Sprintf(format, args...))
 }
 
-func resolveLocal(spec Spec, opts Options) (*Resolved, error) {
+func resolveLocal(ctx context.Context, spec Spec, opts Options) (*Resolved, error) {
 	base := spec.URL
 	if !spec.AllowOutside && opts.ProjectRoot != "" && !filepath.IsAbs(base) {
 		base = filepath.Join(opts.ProjectRoot, base)
@@ -137,7 +137,7 @@ func resolveLocal(spec Spec, opts Options) (*Resolved, error) {
 		res.Locked = true
 	}
 	res.Pinned = res.Locked
-	res.Skills, err = Discover(spec, root)
+	res.Skills, err = Discover(ctx, spec, root)
 	return res, err
 }
 
@@ -204,7 +204,7 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 	}
 	res.Tag, res.TagObject, res.Released, res.ReleasedFrom = tag.Tag, tag.TagObject, tag.Released, tag.ReleasedFrom
 	if warnUnpinned(res, opts) {
-		logger.Warn("Skill source follows a moving ref and is not pinned by the lock (AR010); run `ai-rulez lock`",
+		logger.FromContext(ctx).Warn("Skill source follows a moving ref and is not pinned by the lock (AR010); run `ai-rulez lock`",
 			"source", spec.Name, "ref", refLabel(spec.Want().Ref), "commit", commit)
 	}
 	return res, nil
@@ -253,12 +253,12 @@ func materialize(ctx context.Context, spec Spec, q treeRequest) (*Resolved, erro
 	if err := m.ensure(ctx); err != nil {
 		return nil, err
 	}
-	res, err := finish(spec, m.treeDir, q.commit, q.kind, q.entry, q.covered)
+	res, err := finish(ctx, spec, m.treeDir, q.commit, q.kind, q.entry, q.covered)
 	if err != nil && errors.Is(err, errDigest) && !m.fetched && !q.offline {
 		// A damaged cache looks like tampering; fetch the pinned commit again before failing.
 		if rmErr := os.RemoveAll(filepath.Join(q.repoDir, q.commit)); rmErr == nil {
 			if err = m.ensure(ctx); err == nil {
-				res, err = finish(spec, m.treeDir, q.commit, q.kind, q.entry, q.covered)
+				res, err = finish(ctx, spec, m.treeDir, q.commit, q.kind, q.entry, q.covered)
 			}
 		}
 	}
@@ -274,7 +274,7 @@ func materialize(ctx context.Context, spec Spec, q treeRequest) (*Resolved, erro
 // match, or has no record, is fetched again (online) or refused (offline).
 func (m *materializer) verifyUnlocked(ctx context.Context, res *Resolved) (*Resolved, error) {
 	if m.fetched {
-		storeDigest(m.treeDir, m.q.commit, res.Digest)
+		storeDigest(ctx, m.treeDir, m.q.commit, res.Digest)
 		return res, nil
 	}
 	checkErr := checkDigest(m.treeDir, m.q.commit, res.Digest)
@@ -285,18 +285,18 @@ func (m *materializer) verifyUnlocked(ctx context.Context, res *Resolved) (*Reso
 		return nil, oops.With("url", m.spec.Redacted()).With("commit", m.q.commit).
 			Wrapf(errors.Join(config.ErrLockViolation, checkErr), "skill source %q: the cached tree cannot be trusted and the network is off (--frozen/--offline); serve once online to repair the cache, or pin the source with `ai-rulez lock`", m.spec.Name)
 	}
-	logger.Warn("The cached tree of a skill source is not verified; fetching it again", "source", m.spec.Name, "commit", m.q.commit, "reason", checkErr.Error())
+	logger.FromContext(ctx).Warn("The cached tree of a skill source is not verified; fetching it again", "source", m.spec.Name, "commit", m.q.commit, "reason", checkErr.Error())
 	if err := removeTree(m.treeDir); err != nil {
 		return nil, err
 	}
 	if err := m.ensure(ctx); err != nil {
 		return nil, err
 	}
-	fresh, err := finish(m.spec, m.treeDir, m.q.commit, m.q.kind, m.q.entry, m.q.covered)
+	fresh, err := finish(ctx, m.spec, m.treeDir, m.q.commit, m.q.kind, m.q.entry, m.q.covered)
 	if err != nil {
 		return nil, err
 	}
-	storeDigest(m.treeDir, m.q.commit, fresh.Digest)
+	storeDigest(ctx, m.treeDir, m.q.commit, fresh.Digest)
 	return fresh, nil
 }
 
@@ -360,7 +360,7 @@ var lockCommit = regexp.MustCompile(`^([0-9a-f]{40}|[0-9a-f]{64})$`)
 
 var errLockCommit = errors.New("invalid commit in the lock")
 
-func finish(spec Spec, treeDir, commit, kind string, entry *lockfile.Entry, covered bool) (*Resolved, error) {
+func finish(ctx context.Context, spec Spec, treeDir, commit, kind string, entry *lockfile.Entry, covered bool) (*Resolved, error) {
 	dir := treeDir
 	if spec.Path != "" {
 		dir = filepath.Join(treeDir, filepath.FromSlash(spec.Path))
@@ -383,7 +383,7 @@ func finish(spec Spec, treeDir, commit, kind string, entry *lockfile.Entry, cove
 		Spec: spec, Dir: dir, Commit: commit, Digest: digest, RefKind: kind,
 		Locked: covered, Pinned: covered || fullSHA.MatchString(spec.Ref),
 	}
-	res.Skills, err = Discover(spec, dir)
+	res.Skills, err = Discover(ctx, spec, dir)
 	return res, err
 }
 

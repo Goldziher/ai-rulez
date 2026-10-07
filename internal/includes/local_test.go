@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
@@ -212,7 +213,7 @@ func TestFindAIRulesDirInPath(t *testing.T) {
 	source := NewLocalSource("test", tmpDir, "/base", nil)
 
 	// Act
-	found := source.findAIRulezDir(workspace.OSView(tmpDir), tmpDir)
+	found := source.findAIRulezDir(workspace.OSView(tmpDir), logger.Discard(), tmpDir)
 
 	// Assert
 	expected := filepath.Join(tmpDir, ".ai-rulez")
@@ -228,7 +229,7 @@ func TestFindAIRulesDirWhenIsAIRulez(t *testing.T) {
 	source := NewLocalSource("test", aiRulezPath, "/base", nil)
 
 	// Act
-	found := source.findAIRulezDir(workspace.OSView(aiRulezPath), aiRulezPath)
+	found := source.findAIRulezDir(workspace.OSView(aiRulezPath), logger.Discard(), aiRulezPath)
 
 	// Assert
 	if found != aiRulezPath {
@@ -243,7 +244,7 @@ func TestFindAIRulesDirNotFound(t *testing.T) {
 	source := NewLocalSource("test", tmpDir, "/base", nil)
 
 	// Act
-	found := source.findAIRulezDir(workspace.OSView(tmpDir), tmpDir)
+	found := source.findAIRulezDir(workspace.OSView(tmpDir), logger.Discard(), tmpDir)
 
 	// Assert
 	if found != "" {
