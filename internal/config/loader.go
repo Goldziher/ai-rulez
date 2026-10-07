@@ -592,6 +592,7 @@ type tomlConfig struct {
 	Guard           *GuardConfig           `toml:"guard"`
 	Permissions     *Permissions           `toml:"permissions"`
 	OKF             *OKFConfig             `toml:"okf"`
+	LLMsTxt         *LLMsTxtConfig         `toml:"llms_txt"`
 }
 
 // decodeConfigTOML decodes TOML bytes; path is used for error context only.
@@ -663,6 +664,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Rules:           raw.Rules,
 		Lint:            raw.Lint,
 		OKF:             raw.OKF,
+		LLMsTxt:         raw.LLMsTxt,
 		Verifiers:       raw.Verifiers,
 		Usage:           raw.Usage,
 		Skills:          raw.Skills,

@@ -267,6 +267,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9L0`-`AR9L9` | LLM access (`AR9L0`, `AR9L1`) | allocated |
 | `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
 | `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N9` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
+| `AR9P0`-`AR9P9` | llms.txt files ([llms.txt](llms-txt.md); `AR9P0`-`AR9P6` used) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
 Unlisted letters (`AR9I`, `AR9O`, `AR9Q`-`AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
@@ -514,6 +515,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `delivery` | `AR989`-`AR994` |
 | `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A5` |
 | `okf` | `AR9B0`-`AR9B9` |
+| `llmstxt` | `AR9P0`-`AR9P6` |
 | `traps` | `AR9C0`-`AR9CA` |
 | `config` | `AR731`, `AR740`-`AR749`, `AR750`-`AR753`, `AR9K0`, `AR9L0` (invalid version constraints, the organization policy, the SBOM gates, `[telemetry]` and `[llm]` tables) |
 | `convert` | `AR9F0`-`AR9F5` (the `convert` report; never emitted by `validate`) |
@@ -873,6 +875,22 @@ current content: `scanner`, `version` (its `--version` line when it ran), `tree`
 `findings`, `max_severity` and `result` (`pass`, or `fail` when a finding reaches `fail_on`, `error` by default;
 counted before the scanner baseline). `lock` starts no program, so run `scan --external` first; a scanner with no
 cached result has no record, and `lock` says so. The records sit outside the tree digest, like approvals.
+
+## llms.txt checks
+
+A project that turns on the [`llms-txt` preset](llms-txt.md) has the files it writes (`llms.txt`, `llms-full.txt`)
+checked against the [llms.txt format](https://llmstxt.org/) by `validate --strict`. Only the H1 title is mandatory in
+the format, so only structure that breaks it is an error.
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR9P0 | `llmstxt-title-missing` | error | The file does not start with an H1 title, or has a second H1 |
+| AR9P1 | `llmstxt-summary-misplaced` | warning | The summary blockquote is empty or does not directly follow the title |
+| AR9P2 | `llmstxt-heading-invalid` | error | A heading other than the H1 title and H2 section names, or an H2 without a name |
+| AR9P3 | `llmstxt-link-entry-invalid` | error | A file-list section holds prose, or a list entry without a `[name](url)` link, or a link target with whitespace |
+| AR9P4 | `llmstxt-optional-misplaced` | warning | The `Optional` section is not the last section |
+| AR9P5 | `llmstxt-section-duplicate-or-empty` | warning | A section has no entries, or repeats an earlier section name |
+| AR9P6 | `llmstxt-link-target-invalid` | warning | A link has an empty target |
 
 ## OKF bundle checks
 
@@ -3227,5 +3245,75 @@ an emitter whose format is not verified against vendor documentation was request
 - Why: The Port, AWS Agent Registry and Kiro formats are written from public descriptions, not from a schema the vendor publishes, so their output is labeled experimental and needs `--experimental`.
 - Bad: Uploading `emit/port/*.json` to a catalog without checking it against your blueprint
 - Good: Validate the files against your own blueprint or registry, or render exactly what you need with the template emitter
+
+### AR9P0 llmstxt-title-missing
+
+an llms.txt file does not start with a single H1 title
+
+- Default severity: `error`
+- Analyzer: `llmstxt` (scope `item`)
+- Why: The H1 title is the one element every llms.txt reader depends on; without it (or with two) the file is not an llms.txt file.
+- Bad: A file that opens with a paragraph or an H2, or has two H1 lines
+- Good: `# Project name` as the first line, once
+
+### AR9P1 llmstxt-summary-misplaced
+
+the llms.txt summary blockquote is empty or does not directly follow the H1 title
+
+- Default severity: `warning`
+- Analyzer: `llmstxt` (scope `item`)
+- Why: The blockquote summary carries the key facts a reader needs before the links; away from the title, or empty, it is not read as the summary.
+- Bad: `> Summary` after a detail paragraph, or a bare `>`
+- Good: A one-paragraph `> Summary` directly under the H1
+
+### AR9P2 llmstxt-heading-invalid
+
+an llms.txt file has a heading other than the H1 title and H2 section names, or an H2 without a name
+
+- Default severity: `error`
+- Analyzer: `llmstxt` (scope `item`)
+- Why: llms.txt allows only the H1 title and H2 section names; any other heading breaks the section structure readers split the file on.
+- Bad: `### Rules` inside a section, or a bare `##`
+- Good: Name each section with an H2; put detail text in plain paragraphs
+
+### AR9P3 llmstxt-link-entry-invalid
+
+an llms.txt file-list section has content that is not a list entry holding a [name](url) link
+
+- Default severity: `error`
+- Analyzer: `llmstxt` (scope `item`)
+- Why: A file-list section is a list of links; prose or an entry without a link has no target a reader can fetch.
+- Bad: `- see the style guide` under `## Rules`
+- Good: `- [Style guide](rules/style.md): naming and layout`
+
+### AR9P4 llmstxt-optional-misplaced
+
+the llms.txt Optional section is not the last section
+
+- Default severity: `warning`
+- Analyzer: `llmstxt` (scope `item`)
+- Why: Readers drop the Optional section to shorten the context; when it is not last they cannot drop it as one trailing block.
+- Bad: `## Optional` followed by `## Docs`
+- Good: Move `## Optional` to the end
+
+### AR9P5 llmstxt-section-duplicate-or-empty
+
+an llms.txt section has no entries, or repeats the name of an earlier section
+
+- Default severity: `warning`
+- Analyzer: `llmstxt` (scope `item`)
+- Why: An empty section is noise, and a repeated section name makes readers pick one list arbitrarily.
+- Bad: Two `## Docs` sections, or a `## Docs` with no entries
+- Good: Merge the lists; drop empty sections
+
+### AR9P6 llmstxt-link-target-invalid
+
+an llms.txt link has an empty target
+
+- Default severity: `warning`
+- Analyzer: `llmstxt` (scope `item`)
+- Why: A link with an empty target points nowhere.
+- Bad: `- [Guide]()`
+- Good: `- [Guide](docs/guide.md)`
 
 <!-- rules:end -->

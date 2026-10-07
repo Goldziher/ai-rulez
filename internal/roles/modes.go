@@ -139,7 +139,7 @@ func skillPresets(cfg *config.Config) []string {
 	var out []string
 	for i := range cfg.Presets {
 		name := cfg.Presets[i].GetName()
-		if name == "mcp" || name == "okf" {
+		if name == "mcp" || name == "okf" || name == config.PresetLLMsTxt {
 			continue
 		}
 		out = append(out, name)

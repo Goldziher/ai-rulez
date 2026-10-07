@@ -482,7 +482,8 @@
               "zcode",
               "zed",
               "zoocode",
-              "okf"
+              "okf",
+              "llms-txt"
             ]
           },
           "type": "object"
@@ -547,7 +548,8 @@
               "zcode",
               "zed",
               "zoocode",
-              "okf"
+              "okf",
+              "llms-txt"
             ]
           },
           "type": "object"
@@ -2028,6 +2030,37 @@
       "minLength": 1,
       "type": "string"
     },
+    "llms_txt": {
+      "additionalProperties": false,
+      "description": "llms.txt output written by the llms-txt preset and linted by `validate --strict` (AR9P0-AR9P6).",
+      "properties": {
+        "dir": {
+          "description": "Directory llms.txt is written to, relative to the project root. Defaults to the project root. Must not be inside the configuration directory or .git.",
+          "type": "string"
+        },
+        "full": {
+          "description": "Also write llms-full.txt, holding the full text of every listed item.",
+          "type": "boolean"
+        },
+        "include": {
+          "description": "Content kinds to list. Defaults to rules, context and skills; agents and commands are listed in the Optional section.",
+          "items": {
+            "enum": ["rules", "context", "skills", "agents", "commands"],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "description": "Blockquote under the title. Defaults to the project description.",
+          "type": "string"
+        },
+        "title": {
+          "description": "H1 of the file. Defaults to the project name.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "okf": {
       "additionalProperties": false,
       "description": "Open Knowledge Format (OKF v0.2) bundle written by the okf preset and linted by `validate` (AR9B0-AR9B9).",
@@ -2508,7 +2541,8 @@
               "zcode",
               "zed",
               "zoocode",
-              "okf"
+              "okf",
+              "llms-txt"
             ],
             "type": "string"
           },
@@ -3074,7 +3108,8 @@
                 "zcode",
                 "zed",
                 "zoocode",
-                "okf"
+                "okf",
+                "llms-txt"
               ],
               "type": "string"
             },
