@@ -43,7 +43,7 @@ is not overwritten without --force. --lift-assertions also turns criteria in a f
 the rubric; every lift is listed for review. Text with hidden characters or credentials is refused;
 instruction-override phrases are flagged. See docs/evals.md.`,
 	Args: cobra.MinimumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error { return runEvalImport(cmd, args) },
+	RunE: runEvalImport,
 }
 
 func init() {

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -20,6 +21,9 @@ const EvalDateEnv = "AI_RULEZ_EVAL_DATE"
 
 // exitEvalFailed is the exit status of a run with failing, erroring or invalid skills.
 const exitEvalFailed = 2
+
+// evalHarnessClaude is the default harness and runner executable name.
+const evalHarnessClaude = "claude"
 
 var evalFlags struct {
 	harness         string
@@ -120,10 +124,10 @@ allow_network plus a model in the user config; --grader-max-cost caps its spend,
 
 func init() {
 	f := evalRunCmd.Flags()
-	f.StringVar(&evalFlags.harness, "harness", "claude", "Harness the cases run against (recorded in the results)")
+	f.StringVar(&evalFlags.harness, "harness", evalHarnessClaude, "Harness the cases run against (recorded in the results)")
 	f.StringVar(&evalFlags.runner, "runner", "", "Runner: claude-plugin-eval, command, claude-native or codex-native (default claude-plugin-eval for the claude harness, command when --runner-command is set; claude-native or codex-native for --surface native)")
 	f.StringVar(&evalFlags.runnerCommand, "runner-command", "", "Shell command for the command runner: receives the request JSON on stdin, prints the response JSON")
-	f.StringVar(&evalFlags.claudeBin, "claude-bin", "claude", "claude executable for the claude-plugin-eval and claude-native runners")
+	f.StringVar(&evalFlags.claudeBin, "claude-bin", evalHarnessClaude, "claude executable for the claude-plugin-eval and claude-native runners")
 	f.StringVar(&evalFlags.codexBin, "codex-bin", "codex", "codex executable for the codex-native runner")
 	f.StringArrayVar(&evalFlags.runnerArgs, "runner-arg", nil, "Extra argument for the claude-plugin-eval runner (for example --trust-plugin); repeatable")
 	f.IntVar(&evalFlags.runs, "runs", 0, "Runs per case: for claude-plugin-eval (default 3, always passed to claude explicitly) and per prompt for --surface native (default 5)")
@@ -184,10 +188,7 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 	}
 	defer release()
 	opts.Grader = grader
-	if cfg.Lint != nil && cfg.Lint.Evals != nil && cfg.Lint.Evals.MinPassRate > 0 && !thresholdGiven(cmd) {
-		floor := cfg.Lint.Evals.MinPassRate
-		opts.PassThreshold = &floor
-	}
+	applyConfigPassFloor(cmd, cfg, opts)
 	store, err := attachStore(opts, resultsPath(cfg.ConfigDir))
 	if err != nil {
 		return false, err
@@ -207,6 +208,14 @@ func runEval(cmd *cobra.Command, skills []string) (failed bool, err error) {
 		}
 	}
 	return report.Failed, errors.Join(writeEvalReport(cmd, report), runErr)
+}
+
+// applyConfigPassFloor takes the pass-rate floor from [lint.evals] unless --threshold was given.
+func applyConfigPassFloor(cmd *cobra.Command, cfg *config.Config, opts *evals.RunOptions) {
+	if cfg.Lint != nil && cfg.Lint.Evals != nil && cfg.Lint.Evals.MinPassRate > 0 && !thresholdGiven(cmd) {
+		floor := cfg.Lint.Evals.MinPassRate
+		opts.PassThreshold = &floor
+	}
 }
 
 // saveEachSkill writes the store (atomically) as soon as a skill has run, so a
@@ -355,7 +364,7 @@ func buildEvalRunner(cmd *cobra.Command) (evals.Runner, int, error) {
 		switch {
 		case evalFlags.runnerCommand != "":
 			name = evals.RunnerCommand
-		case evalFlags.harness == "claude":
+		case evalFlags.harness == evalHarnessClaude:
 			name = evals.RunnerClaudePluginEval
 		default:
 			return nil, 1, oops.Hint("Use --runner-command to plug in a runner for the "+evalFlags.harness+" harness").
