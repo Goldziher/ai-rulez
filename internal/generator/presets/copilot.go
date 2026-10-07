@@ -397,6 +397,15 @@ func (g *CopilotPresetGenerator) renderCopilotAgentFile(agent config.ContentFile
 }
 
 // buildCopilotAgentFrontmatter builds frontmatter for a Copilot agent file
+// copilotAgentFields are the agent frontmatter keys Copilot carries through.
+// mcp-servers connects, so it must be in config's executing-key registry (a test
+// checks it).
+var copilotAgentFields = []string{
+	keyDescription, "target",
+	"user-invocable", "disable-model-invocation",
+	"agents", "handoffs", "mcp-servers",
+}
+
 func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
 		keyName: agent.Name,
@@ -412,12 +421,7 @@ func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.Conte
 		return frontmatter
 	}
 
-	copilotFields := []string{
-		keyDescription, "target",
-		"user-invocable", "disable-model-invocation",
-		"agents", "handoffs", "mcp-servers",
-	}
-	for _, field := range copilotFields {
+	for _, field := range copilotAgentFields {
 		if val, ok := typedAgentField(agent.Metadata, field); ok {
 			frontmatter[field] = val
 		}
