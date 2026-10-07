@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/stretchr/testify/assert"
@@ -47,4 +48,28 @@ func TestExportKeepsItemsNamedLikeReservedOKFFiles(t *testing.T) {
 	for i := range first.Files {
 		assert.Equal(t, string(first.Files[i].Data), string(second.Files[i].Data), first.Files[i].Path)
 	}
+}
+
+func TestExportSkipsItemsMergedInFromIncludes(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: r\npresets:\n  - claude\n")
+	write(t, root, ".ai-rulez/rules/own.md", "own rule\n")
+	tree := loadTree(t, root)
+	elsewhere := t.TempDir()
+	tree.Rules = append(tree.Rules, config.ContentFile{Name: "always-use-x", Path: filepath.Join(elsewhere, "rules", "always-use-x.md"), Content: "from an include\n"})
+
+	res, err := okfbridge.Export(tree, okfbridge.ExportOptions{LocalDir: filepath.Join(root, ".ai-rulez")})
+	require.NoError(t, err)
+	var paths []string
+	for _, f := range res.Files {
+		paths = append(paths, f.Path)
+	}
+	assert.Contains(t, paths, "rules/own.md")
+	assert.NotContains(t, paths, "rules/always-use-x.md")
+	assert.Contains(t, res.Notes[0], "includes")
+	assert.Equal(t, 1, res.Counts[okfbridge.KindRule])
+
+	all, err := okfbridge.Export(tree, okfbridge.ExportOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, 2, all.Counts[okfbridge.KindRule], "no filter without a local dir")
 }

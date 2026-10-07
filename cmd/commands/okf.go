@@ -287,7 +287,7 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(oops.Errorf("unknown --index-style %q (use %s or %s)", style, okf.StyleBody, okf.StyleFrontmatter))
 		return exitOKFCannotRun
 	}
-	res, err := okfbridge.Export(tree, okfbridge.ExportOptions{Include: kinds, IndexStyle: style})
+	res, err := okfbridge.Export(tree, okfbridge.ExportOptions{Include: kinds, IndexStyle: style, LocalDir: cfg.ConfigDir})
 	if err != nil {
 		fmtError(err)
 		return exitOKFCannotRun

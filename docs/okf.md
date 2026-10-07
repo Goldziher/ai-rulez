@@ -364,8 +364,9 @@ index_style = "body"             # or "frontmatter", see Index styles
 ```
 
 The preset exports the profile `generate` runs with, from the shared sources only (never `.ai-rulez/local/`). Domains
-that come from builtins or includes are skipped, in the preset and in `export okf`, because they are not this project's
-own content; root content is exported as the generator sees it. The bundle is committed documentation: `gitignore = true`
+that come from builtins or includes are skipped, in the preset and in `export okf`, and so is any root-level or domain
+item merged in from an include (its source file is outside your `.ai-rulez/` directory), because they are not this
+project's own content; `export okf` names the number skipped on stderr. The bundle is committed documentation: `gitignore = true`
 never ignores it, and files are written verbatim with no generated-by banner. `generate --check` and `doctor` report a
 hand-edited, missing or stale bundle file as drift, and `generate` removes concept files whose source is gone.
 
