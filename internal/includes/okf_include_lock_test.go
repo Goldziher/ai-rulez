@@ -26,7 +26,7 @@ type okfLockFixture struct {
 
 func newOKFLockFixture(t *testing.T, ref string) *okfLockFixture {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	isolateHome(t)
 	lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false
 	OKFScan = nil
 	ResetObserved()
@@ -161,7 +161,7 @@ func TestOKFInclude_FrozenNeverFetches(t *testing.T) {
 	assert.Contains(t, f.body(cfg), "version one")
 
 	// A cold cache cannot be filled while frozen.
-	t.Setenv("HOME", t.TempDir())
+	isolateHome(t)
 	_, err = f.load(t)
 	require.Error(t, err, "a failing include is an error while frozen")
 	assert.Contains(t, err.Error(), "not in the local cache", "nothing was fetched to fill the cold cache")
