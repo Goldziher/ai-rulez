@@ -256,7 +256,7 @@ func readLines(path string) ([][]byte, error) {
 		} else if oversize {
 			lines = append(lines, []byte(oversizeMarker))
 		}
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return lines, nil
 		}
 		if err != nil {
