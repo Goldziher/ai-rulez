@@ -106,21 +106,22 @@ func runMigrate(out io.Writer, target string) int {
 }
 
 func printMigrateReport(out io.Writer, r *migrate.Report) {
+	w := reportWriter{out}
 	for _, p := range r.Projects {
-		fmt.Fprintf(out, "%s (%s): %s\n", p.Path, p.ConfigDir, p.Status)
+		w.printf("%s (%s): %s\n", p.Path, p.ConfigDir, p.Status)
 		for _, c := range p.Changes {
-			fmt.Fprintf(out, "  [%s] %s: %s\n", c.Rule, c.File, c.Detail)
+			w.printf("  [%s] %s: %s\n", c.Rule, c.File, c.Detail)
 		}
-		for _, w := range p.Warnings {
-			fmt.Fprintf(out, "  warning: %s\n", w)
+		for _, warning := range p.Warnings {
+			w.printf("  warning: %s\n", warning)
 		}
 		if p.Error != "" {
-			fmt.Fprintf(out, "  error: %s\n", p.Error)
+			w.printf("  error: %s\n", p.Error)
 		}
 	}
 	verb := "migrated"
 	if r.DryRun || r.Check {
 		verb = "would migrate"
 	}
-	fmt.Fprintf(out, "%s %d, unchanged %d, errors %d\n", verb, r.Summary.Migrated, r.Summary.Unchanged, r.Summary.Errors)
+	w.printf("%s %d, unchanged %d, errors %d\n", verb, r.Summary.Migrated, r.Summary.Unchanged, r.Summary.Errors)
 }

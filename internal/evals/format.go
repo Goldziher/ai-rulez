@@ -3,9 +3,10 @@ package evals
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 )
 
 // Output formats of `eval run`.

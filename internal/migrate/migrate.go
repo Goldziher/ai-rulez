@@ -175,33 +175,57 @@ func relTo(root, p string) string {
 // .config/ wrapper of .config/ai-rulez is skipped.
 func projectDir(configDir string) string {
 	parent := filepath.Dir(configDir)
-	if filepath.Base(parent) == ".config" {
+	if filepath.Base(parent) == dirConfig {
 		return filepath.Dir(parent)
 	}
 	return parent
 }
 
+const (
+	dirAIRulez = ".ai-rulez"
+	dirConfig  = ".config"
+)
+
+// probeConfigDirs returns the config directories below dir named by names that
+// hold a config file. Without an explicit name a sibling .ai-rulez wins over
+// .config/ai-rulez.
+func probeConfigDirs(dir string, names []string, explicit bool) []string {
+	var found []string
+	for _, n := range names {
+		cd := filepath.Join(dir, filepath.FromSlash(n))
+		info, err := os.Stat(cd)
+		if err != nil || !info.IsDir() || !hasAnyConfig(cd) {
+			continue
+		}
+		found = append(found, cd)
+		if !explicit && n == dirAIRulez {
+			break
+		}
+	}
+	return found
+}
+
+// skipDir reports whether a recursive search must not descend into path, which
+// held found config directories.
+func skipDir(root, path, name string, found []string) bool {
+	if path == root {
+		return false
+	}
+	if len(found) > 0 || name == dirAIRulez {
+		return true
+	}
+	return name != dirConfig && walkutil.ShouldSkipDir(name)
+}
+
 // findConfigDirs returns the config directories to migrate, sorted.
 func findConfigDirs(root string, opts Options) ([]string, error) {
-	names := []string{".ai-rulez", ".config/ai-rulez"}
-	if opts.ConfigDirName != "" {
+	names := []string{dirAIRulez, dirConfig + "/ai-rulez"}
+	explicit := opts.ConfigDirName != ""
+	if explicit {
 		names = []string{filepath.ToSlash(opts.ConfigDirName)}
 	}
-	probe := func(dir string) []string {
-		var found []string
-		for _, n := range names {
-			cd := filepath.Join(dir, filepath.FromSlash(n))
-			if info, err := os.Stat(cd); err == nil && info.IsDir() && hasAnyConfig(cd) {
-				found = append(found, cd)
-				if opts.ConfigDirName == "" && n == ".ai-rulez" {
-					break // a sibling .ai-rulez wins over .config/ai-rulez
-				}
-			}
-		}
-		return found
-	}
 	if !opts.Recursive {
-		return probe(root), nil
+		return probeConfigDirs(root, names, explicit), nil
 	}
 	var out []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -214,16 +238,10 @@ func findConfigDirs(root string, opts Options) ([]string, error) {
 		if !d.IsDir() {
 			return nil
 		}
-		found := probe(path)
+		found := probeConfigDirs(path, names, explicit)
 		out = append(out, found...)
-		if path != root && (len(found) > 0 || d.Name() == ".ai-rulez") {
+		if skipDir(root, path, d.Name(), found) {
 			return filepath.SkipDir
-		}
-		if path != root && d.Name() != ".config" && walkutil.ShouldSkipDir(d.Name()) {
-			return filepath.SkipDir
-		}
-		if d.Name() == ".config" {
-			return nil
 		}
 		return nil
 	})
@@ -260,7 +278,7 @@ func apply(p *plan) error {
 }
 
 // planProject computes the migration of one config directory.
-func planProject(dir string, opts Options) (*plan, error) {
+func planProject(dir string, opts Options) (*plan, error) { //nolint:gocyclo // one pass: read the source, convert, rewrite, verify, then plan the side files
 	p := &plan{}
 	src, srcName := "", ""
 	for _, n := range sourceNames {

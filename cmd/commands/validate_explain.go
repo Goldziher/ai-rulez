@@ -1,10 +1,10 @@
 package commands
 
 import (
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/samber/oops"
 )

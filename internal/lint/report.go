@@ -2,11 +2,12 @@ package lint
 
 import (
 	"fmt"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 )
 
 // Summary aggregates findings across roots.
