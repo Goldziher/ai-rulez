@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/cmd/commands"
 )
@@ -17,17 +16,13 @@ func TestGenerateCommand(t *testing.T) {
 	flags := commands.GenerateCmd.Flags()
 	assert.Equal(t, "d", flags.Lookup("dry-run").Shorthand)
 	assert.Equal(t, "i", flags.Lookup("gitignore").Shorthand)
-	assert.NotNil(t, flags.Lookup("update-gitignore"))
-	assert.True(t, flags.Lookup("update-gitignore").Hidden)
 	assert.Equal(t, "r", flags.Lookup("recursive").Shorthand)
-	// Removed behavior: the flags stay accepted but are hidden, deprecated no-ops.
-	for name, short := range map[string]string{"no-configure-cli-mcp": "M", "skip-cli-mcp": "S"} {
-		flag := flags.Lookup(name)
-		require.NotNil(t, flag, name)
-		assert.Equal(t, short, flag.Shorthand, name)
-		assert.True(t, flag.Hidden, name)
-		assert.NotEmpty(t, flag.Deprecated, name)
+	// Removed in v5: the deprecated aliases and no-op flags are gone.
+	for _, name := range []string{"update-gitignore", "no-configure-cli-mcp", "skip-cli-mcp"} {
+		assert.Nil(t, flags.Lookup(name), name)
 	}
+	assert.Nil(t, flags.ShorthandLookup("M"))
+	assert.Nil(t, flags.ShorthandLookup("S"))
 	assert.Equal(t, "p", flags.Lookup("profile").Shorthand)
 	assert.Equal(t, "f", flags.Lookup("no-fetch").Shorthand)
 	assert.Equal(t, "n", flags.Lookup("config-dir").Shorthand)

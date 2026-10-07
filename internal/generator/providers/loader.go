@@ -611,7 +611,7 @@ func isValidPredicate(p string) bool {
 
 func isValidSidecarKind(k string) bool {
 	switch k {
-	case SidecarClaudeSettingsJSON, SidecarClaudePluginsJSON,
+	case SidecarClaudeSettingsJSON,
 		SidecarMCPJSON, SidecarAmpSettingsJSON, SidecarPiMCPJSON,
 		SidecarMCP, SidecarChecks, SidecarPermissions, SidecarHooks, SidecarHookPlugin:
 		return true
