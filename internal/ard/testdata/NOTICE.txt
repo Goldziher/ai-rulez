@@ -1,0 +1,4 @@
+upstream-basic.json is an unmodified copy of conformance/examples/basic/ard.json
+from https://github.com/ards-project/ard-spec (commit
+b76f235a8f461876ad4f1e77abd0eb0eb302b48d), licensed under the Apache License 2.0.
+It is used only as a test fixture for validating an upstream manifest.
