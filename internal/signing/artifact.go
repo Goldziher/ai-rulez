@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/samber/oops"
 )
 
@@ -170,7 +171,7 @@ func requireSubject(st *Statement, exp Expectation) error {
 		if exp.Name != "" && sub.Name != exp.Name {
 			continue
 		}
-		if exp.DigestHex != "" && strings.EqualFold(sub.Digest["sha256"], exp.DigestHex) {
+		if exp.DigestHex != "" && strings.EqualFold(sub.Digest[contentlock.Algorithm], exp.DigestHex) {
 			return nil
 		}
 	}

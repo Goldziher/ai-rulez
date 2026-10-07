@@ -8,6 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 )
 
 // PredicateApproval is the predicate type of a signed approval (docs/approvals.md).
@@ -54,7 +55,7 @@ func ApprovalStatement(sub ApprovalSubject, pred ApprovalPredicate) (*Statement,
 	if !strings.HasPrefix(sub.Digest, "sha256:") || !isHex(hex) {
 		return nil, oops.Errorf("approval digest %q is not a sha256 digest", sub.Digest)
 	}
-	return NewStatement(PredicateApproval, []Subject{{Name: sub.name(), Digest: map[string]string{"sha256": hex}}}, pred)
+	return NewStatement(PredicateApproval, []Subject{{Name: sub.name(), Digest: map[string]string{contentlock.Algorithm: hex}}}, pred)
 }
 
 func isHex(s string) bool {
@@ -129,7 +130,8 @@ func PrepareApprovalCheck(cfg *config.Config, env ambient.Env) (*ApprovalCheck, 
 // ("key:<fingerprint>") to the person its [[signing.trust]] entry names.
 func (c *ApprovalCheck) KeyReviewers() map[string]string {
 	out := map[string]string{}
-	for _, e := range c.Trust.Entries {
+	for i := range c.Trust.Entries {
+		e := &c.Trust.Entries[i]
 		if e.Key == nil || e.Reviewer == "" {
 			continue
 		}
@@ -154,7 +156,7 @@ func (c *ApprovalCheck) Verify(data []byte, sub ApprovalSubject, now time.Time) 
 	if err := c.Trust.Check(res, SubjectApproval, now); err != nil {
 		return nil, err
 	}
-	if err := res.Statement.RequireSubject("sha256", hexDigest(sub.Digest)); err != nil {
+	if err := res.Statement.RequireSubject(contentlock.Algorithm, hexDigest(sub.Digest)); err != nil {
 		return nil, Errorf(CodeSubjectMismatch, "the attestation does not cover %s at %s", sub.name(), sub.Digest)
 	}
 	var pred ApprovalPredicate
