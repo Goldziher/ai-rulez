@@ -38,8 +38,29 @@ type wireChatRequest struct {
 }
 
 type wireUsage struct {
-	PromptTokens     int `json:"prompt_tokens"`
-	CompletionTokens int `json:"completion_tokens"`
+	PromptTokens            int `json:"prompt_tokens"`
+	CompletionTokens        int `json:"completion_tokens"`
+	TotalTokens             int `json:"total_tokens"`
+	CompletionTokensDetails struct {
+		ReasoningTokens int `json:"reasoning_tokens"`
+	} `json:"completion_tokens_details"`
+}
+
+// usage is the billed usage of a reply. Gemini (on its OpenAI-compatible endpoint and behind
+// liter-llm) leaves the thinking tokens out of completion_tokens but bills them at the output
+// rate; they show only in total_tokens. OpenAI counts reasoning_tokens inside completion_tokens,
+// another provider may report them beside it. The completion charged is therefore the largest of
+// completion_tokens, total_tokens minus prompt_tokens, and reasoning_tokens on top of a smaller
+// completion: never less than the provider's own total.
+func (w wireUsage) usage() Usage {
+	prompt, completion := max(w.PromptTokens, 0), max(w.CompletionTokens, 0)
+	if rest := w.TotalTokens - prompt; rest > completion {
+		completion = rest
+	}
+	if r := w.CompletionTokensDetails.ReasoningTokens; r > completion {
+		completion += r
+	}
+	return Usage{PromptTokens: prompt, CompletionTokens: completion}
 }
 
 type wireChatResponse struct {
@@ -91,7 +112,7 @@ func decodeChat(body []byte, pricing Pricing, fallbackModel string) (ChatRespons
 	}
 	text := contentText(w.Choices[0].Message.Content)
 	model := firstNonEmpty(w.Model, fallbackModel)
-	usage := Usage(w.Usage)
+	usage := w.Usage.usage()
 	cost, known := pricing.Cost(model, usage)
 	return ChatResponse{Text: text, Model: model, Usage: usage, CostUSD: cost, CostKnown: known}, nil
 }
@@ -121,7 +142,7 @@ func decodeEmbed(body []byte, pricing Pricing, fallbackModel string, want int) (
 		vecs[d.Index] = d.Embedding
 	}
 	model := firstNonEmpty(w.Model, fallbackModel)
-	usage := Usage{PromptTokens: w.Usage.PromptTokens}
+	usage := Usage{PromptTokens: max(w.Usage.PromptTokens, w.Usage.TotalTokens, 0)}
 	cost, known := pricing.Cost(model, usage)
 	return EmbedResponse{Vectors: vecs, Model: model, Usage: usage, CostUSD: cost, CostKnown: known}, nil
 }
