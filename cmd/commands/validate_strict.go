@@ -512,6 +512,37 @@ func enforceScanImports(cfg *config.Config) error {
 		Errorf("imported content failed the security scan; nothing was written:\n  %s", strings.Join(lines, "\n  "))
 }
 
+// authoredSecretGate refuses to write while the project's own content holds a
+// credential the security scan recognizes (AR001): generated outputs are
+// committed or sent to a model, and content can reach them through a symlink or
+// a copy-paste. An inline ignore comment or a [lint] rule setting silences a
+// reviewed false positive, as it does for `validate --strict`.
+func authoredSecretGate(cfg *config.Config) error {
+	if cfg.BaseDir == "" {
+		return nil
+	}
+	var loader lint.Loader
+	tree, err := loader.LoadContext(cmdContext(), cfg.BaseDir)
+	if err != nil {
+		return oops.Wrapf(err, "index content for the secret scan")
+	}
+	report, err := lint.RunWith(cfg, tree, lint.Options{SecurityOnly: true})
+	if err != nil {
+		return oops.Wrapf(err, "scan content for secrets")
+	}
+	var lines []string
+	for _, f := range report.Findings {
+		if f.Code == lint.CodeSecretDetected && f.Severity == lint.SeverityError {
+			lines = append(lines, fmt.Sprintf("%s:%d: %s %s: %s", f.File, f.Line, f.Severity, f.Code, f.Message))
+		}
+	}
+	if len(lines) == 0 {
+		return nil
+	}
+	return oops.Hint("Remove the credential from the content (and rotate it), or mark a reviewed false positive with an ai-rulez ignore comment").
+		Errorf("content failed the security scan (it holds a secret); nothing was written:\n  %s", strings.Join(lines, "\n  "))
+}
+
 // checkOKFProject lints the configured OKF bundle (AR9B0-AR9B9), including
 // drift against what the okf preset would write now. nil when none is configured.
 func checkOKFProject(cfg *config.Config) (*okfbridge.ProjectResult, error) {

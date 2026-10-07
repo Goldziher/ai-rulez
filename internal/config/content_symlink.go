@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/samber/oops"
@@ -103,6 +104,10 @@ func (s *contentScanner) admit(path string) (os.FileInfo, bool) {
 		s.refuse(path, "symlink cannot be resolved")
 		return nil, false
 	}
+	if reason := sensitiveTarget(s.v.Root(), target); reason != "" {
+		s.refuse(path, fmt.Sprintf("target %s is %s", target, reason))
+		return nil, false
+	}
 	tinfo, err := s.v.Stat(target)
 	if err != nil {
 		s.refuse(path, "symlink target cannot be read")
@@ -191,4 +196,48 @@ func (c *Config) validateContentProblems() error {
 	return oops.
 		Hint("A content symlink is followed only when its target is inside the project; point it at a file in the repository or replace it with a regular file").
 		Errorf("refused symlinked content:\n  %s", strings.Join(lines, "\n  "))
+}
+
+// sensitiveTarget says why a symlink target inside the repository must not be
+// followed into generated content: it lives under .git/ (remote URLs with tokens,
+// hooks) or is a file that conventionally holds credentials. "" means followable.
+func sensitiveTarget(root, target string) string {
+	rel := target
+	if r, err := filepath.Rel(root, target); err == nil {
+		rel = r
+	}
+	segments := strings.Split(filepath.ToSlash(rel), "/")
+	if slices.Contains(segments, ".git") {
+		return "inside .git"
+	}
+	if isSecretFileName(segments[len(segments)-1]) {
+		return "a file that holds credentials"
+	}
+	return ""
+}
+
+// secretFileNames are files that conventionally hold credentials.
+var secretFileNames = map[string]bool{
+	".env": true, ".envrc": true, ".npmrc": true, ".pypirc": true, ".netrc": true, "_netrc": true, ".git-credentials": true,
+	".htpasswd": true, "credentials": true, "credentials.json": true, "secrets.json": true, "secrets.yaml": true, "secrets.yml": true,
+	"id_rsa": true, "id_dsa": true, "id_ecdsa": true, "id_ed25519": true, "terraform.tfvars": true,
+}
+
+func isSecretFileName(name string) bool {
+	lower := strings.ToLower(name)
+	if secretFileNames[lower] {
+		return true
+	}
+	if rest, ok := strings.CutPrefix(lower, ".env."); ok {
+		switch rest {
+		case "example", "sample", "template", "dist", "defaults":
+			return false
+		}
+		return true
+	}
+	switch filepath.Ext(lower) {
+	case ".pem", ".key", ".p12", ".pfx", ".keystore":
+		return true
+	}
+	return false
 }
