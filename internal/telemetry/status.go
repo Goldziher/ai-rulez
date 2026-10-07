@@ -91,7 +91,7 @@ func BuildStatus(s *Settings, dir, logPath string) *Status {
 	cur := spool.ReadCursor()
 	st.Cursor = CursorStatus{Set: cur.Set(), Offset: cur.Offset, LastEventID: cur.LastEventID, UpdatedAt: cur.UpdatedAt}
 	if cur.Set() && logPath != "" {
-		if n, err := spool.PendingInLog(logPath, statusLogCap); err == nil {
+		if n, err := spool.PendingInLog(logPath, statusLogCap, s.ConsentGrantedAt()); err == nil {
 			st.Pending.Log = n
 			st.Pending.LogCapped = n >= statusLogCap
 		}
