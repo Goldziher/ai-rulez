@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // vcsDirName marks the top of a version-controlled work tree.
@@ -27,16 +29,19 @@ func OS(root string) (Workspace, error) {
 }
 
 // Around returns a workspace for the project that contains dir: rooted at the
-// nearest ancestor holding a .git entry, or at dir itself when there is none. A
-// content symlink may point anywhere in that tree, so a project nested in a
-// larger repository can link to its siblings.
+// nearest ancestor holding a .git entry when that repository tracks the project,
+// else at dir itself. A content symlink may point anywhere in that tree, so a
+// project nested in a larger repository can link to its siblings; a project that
+// merely sits below an unrelated repository (a dotfiles repository in $HOME) gets
+// no such reach.
 func Around(dir string) (Workspace, error) {
 	return AroundBelow(dir, "")
 }
 
 // AroundBelow is Around that, like the VCS itself, does not look for a repository
 // in the directories listed in ceilings (the value of GIT_CEILING_DIRECTORIES:
-// paths separated by the OS list separator) or above them.
+// paths separated by the OS list separator, symlinks in them resolved as the VCS
+// does) or above them.
 func AroundBelow(dir, ceilings string) (Workspace, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
@@ -45,21 +50,37 @@ func AroundBelow(dir, ceilings string) (Workspace, error) {
 	return OS(vcsTop(abs, ceilings))
 }
 
-// vcsTop walks up from abs looking for a .git entry; it returns abs when none
-// exists, or when a ceiling directory is reached first.
+// projectMarker is the file whose presence in a repository's index says the
+// repository holds the project.
+const projectMarker = ".ai-rulez/config.toml"
+
+// vcsTop walks up from abs looking for a .git entry. It returns abs when none
+// exists, when a ceiling directory is reached first, or when the repository found
+// does not track the project: only a repository that holds the project may widen
+// the boundary its symlinks are held to.
 func vcsTop(abs, ceilings string) string {
 	ceiling := map[string]bool{}
 	for _, c := range filepath.SplitList(ceilings) {
-		if c != "" {
-			ceiling[filepath.Clean(c)] = true
+		if c == "" {
+			continue
+		}
+		ceiling[filepath.Clean(c)] = true
+		if real, err := filepath.EvalSymlinks(c); err == nil {
+			ceiling[real] = true
 		}
 	}
 	for cur := abs; ; {
 		if ceiling[cur] {
 			return abs
 		}
+		if real, err := filepath.EvalSymlinks(cur); err == nil && ceiling[real] {
+			return abs
+		}
 		if _, err := os.Lstat(filepath.Join(cur, vcsDirName)); err == nil {
-			return cur
+			if cur == abs || tracksProject(cur, abs) {
+				return cur
+			}
+			return abs
 		}
 		parent := filepath.Dir(cur)
 		if parent == cur {
@@ -67,6 +88,19 @@ func vcsTop(abs, ceilings string) string {
 		}
 		cur = parent
 	}
+}
+
+// tracksProject reports whether the repository at repo has the project's config
+// in its index. A failure to ask counts as not tracked: the narrower root is the
+// safe one.
+func tracksProject(repo, project string) bool {
+	rel, err := filepath.Rel(repo, project)
+	if err != nil {
+		return false
+	}
+	marker := filepath.ToSlash(filepath.Join(rel, filepath.FromSlash(projectMarker)))
+	tracked, err := gitutil.Git{}.TrackedAmong(repo, []string{marker})
+	return err == nil && tracked[marker]
 }
 
 // IsDisk reports whether ws reads the real file system: only such a workspace
