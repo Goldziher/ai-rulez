@@ -14,6 +14,8 @@ const (
 	defaultPollInterval = 2 * time.Second
 	// maxRetryPause caps the pause between retries of a failed rebuild.
 	maxRetryPause = time.Minute
+	// defaultRevalidateInterval is how often admission is judged again.
+	defaultRevalidateInterval = time.Minute
 )
 
 // Replace swaps in a freshly built catalog and updates the registered skill://
@@ -66,25 +68,37 @@ func (s *Server) registerSkillFiles(skill *CatalogSkill) {
 
 // Watch polls the Fingerprint of the catalog's inputs and, when it changes,
 // rebuilds the catalog and calls Replace. A failed rebuild keeps the previous
-// catalog serving and is logged. It returns when ctx ends, or at once when the
-// server was built without Rebuild and Fingerprint. Polling (not fsnotify)
-// keeps the dependency set unchanged and behaves the same on every platform.
+// catalog serving and is logged. Every RevalidateInterval it also admits the
+// current build again (Revalidate), because approvals expire and signing keys
+// stop being valid with no file changing. It returns when ctx ends, or at once
+// when the server has neither live reload nor revalidation. Polling (not
+// fsnotify) keeps the dependency set unchanged and behaves the same on every
+// platform.
 func (s *Server) Watch(ctx context.Context) {
 	o := s.serve.opts
 	log := logger.Or(o.Log)
-	if o.Rebuild == nil || o.Fingerprint == nil {
+	reload := o.Rebuild != nil && o.Fingerprint != nil
+	if !reload && o.Revalidate == nil {
 		return
 	}
 	interval := o.PollInterval
 	if interval <= 0 {
 		interval = defaultPollInterval
 	}
+	revalidateEvery := o.RevalidateInterval
+	if revalidateEvery <= 0 {
+		revalidateEvery = defaultRevalidateInterval
+	}
+	interval = min(interval, revalidateEvery)
 	last := o.Baseline
-	if last == "" {
+	if reload && last == "" {
 		var err error
 		if last, err = o.Fingerprint(); err != nil {
 			log.Warn("Live reload disabled: cannot fingerprint the skill files", "error", err.Error())
-			return
+			reload = false
+			if o.Revalidate == nil {
+				return
+			}
 		}
 	}
 	ticker := time.NewTicker(interval)
@@ -94,29 +108,62 @@ func (s *Server) Watch(ctx context.Context) {
 		retryAt  time.Time
 		failedAt string // the fingerprint whose rebuild failed
 	)
+	admittedAt := time.Now()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 		}
-		cur, err := o.Fingerprint()
-		// A new edit since the failed rebuild ends the pause: the user fixed it.
-		if err != nil || cur == last || (ambient.Clock(nil).Now().Before(retryAt) && cur == failedAt) {
-			continue
+		if reload {
+			cur, err := o.Fingerprint()
+			// A new edit since the failed rebuild ends the pause: the user fixed it.
+			if err == nil && cur != last && (!ambient.Clock(nil).Now().Before(retryAt) || cur != failedAt) {
+				next, err := o.Rebuild()
+				if err != nil {
+					// Keep `last`: the change is still unapplied, so the rebuild is tried
+					// again (with a growing pause) instead of waiting for another edit.
+					failures++
+					failedAt = cur
+					retryAt = ambient.Clock(nil).Now().Add(min(interval<<min(failures, 6), maxRetryPause))
+					log.Warn("Skill files changed but the catalog could not be rebuilt; keeping the previous one and retrying", "error", err.Error(), "attempt", failures)
+					continue
+				}
+				last, failures, retryAt = cur, 0, time.Time{}
+				admittedAt = time.Now()
+				s.Replace(next)
+				log.Info("Reloaded served skills", "skills", len(next.Skills()))
+				continue
+			}
 		}
-		next, err := o.Rebuild()
-		if err != nil {
-			// Keep `last`: the change is still unapplied, so the rebuild is tried
-			// again (with a growing pause) instead of waiting for another edit.
-			failures++
-			failedAt = cur
-			retryAt = ambient.Clock(nil).Now().Add(min(interval<<min(failures, 6), maxRetryPause))
-			log.Warn("Skill files changed but the catalog could not be rebuilt; keeping the previous one and retrying", "error", err.Error(), "attempt", failures)
-			continue
+		if o.Revalidate != nil && time.Since(admittedAt) >= revalidateEvery {
+			admittedAt = time.Now()
+			s.revalidate(o.Revalidate(), log)
 		}
-		last, failures, retryAt = cur, 0, time.Time{}
+	}
+}
+
+// revalidate swaps in a re-admitted catalog when admission changed, logging
+// each skill that is no longer served or is served again.
+func (s *Server) revalidate(next *Catalog, log logger.Logger) {
+	if next == nil {
+		return
+	}
+	prev := s.cat()
+	changed := false
+	for _, skill := range prev.Skills() {
+		if r, refused := next.Refusal(skill.Name); refused {
+			changed = true
+			log.Warn("Refusing to serve a skill", "skill", skill.Name, "code", r.Code, "reason", r.Reason)
+		}
+	}
+	for _, skill := range next.Skills() {
+		if _, ok := prev.byName[skill.Name]; !ok {
+			changed = true
+			log.Info("Serving a skill that is now admitted", "skill", skill.Name)
+		}
+	}
+	if changed {
 		s.Replace(next)
-		log.Info("Reloaded served skills", "skills", len(next.Skills()))
 	}
 }

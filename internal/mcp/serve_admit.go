@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
@@ -51,6 +52,8 @@ type Admission struct {
 	DefaultTrust func(*CatalogSkill) string
 	// Log receives the refusals and scan findings; nil is the CLI's logger.
 	Log logger.Logger
+	// Now is the clock approvals are judged by; nil is the wall clock.
+	Now func() time.Time
 }
 
 // Admit returns a catalog holding only the admitted skills. Refused skills are

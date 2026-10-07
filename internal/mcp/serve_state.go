@@ -104,6 +104,11 @@ type ServeOptions struct {
 	Baseline string
 	// PollInterval is how often Fingerprint is checked; 0 selects two seconds.
 	PollInterval time.Duration
+	// Revalidate admits the current build again at the current time (approval
+	// expiry, signing key validity) without a file change; nil disables it.
+	Revalidate func() *Catalog
+	// RevalidateInterval is how often Revalidate runs; 0 selects one minute.
+	RevalidateInterval time.Duration
 	// Search ranks find_skill with the configured mode; nil ranks lexically.
 	Search *SearchRuntime
 	// Log receives the server's reports (live reload); nil is the CLI's logger.
