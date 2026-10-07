@@ -53,6 +53,12 @@ func (f *ageFixture) release(body, tag string, annotated bool) string {
 
 // newAgeFixture builds the remote and writes a config made of lockTable (the
 // [lock] and [lint] tables) and one include with includeLines; it does not lock.
+// tomlEscape escapes s for a basic TOML string: a Windows path's backslashes
+// would otherwise be read as escape sequences.
+func tomlEscape(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s)
+}
+
 func newAgeFixture(t *testing.T, lockTable, includeLines string) *ageFixture {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
@@ -66,7 +72,7 @@ func newAgeFixture(t *testing.T, lockTable, includeLines string) *ageFixture {
 	f.release("two", "v1.1.0", true)
 	repo.Date = ""
 	f.release("three, just released", "v1.2.0", false)
-	f.root = lockProject(t, "\n"+lockTable+"\n[[includes]]\nname = \"shared\"\nsource = \""+repo.URL+"\"\n"+includeLines+"\n")
+	f.root = lockProject(t, "\n"+lockTable+"\n[[includes]]\nname = \"shared\"\nsource = \""+tomlEscape(repo.URL)+"\"\n"+includeLines+"\n")
 	return f
 }
 
