@@ -25,7 +25,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/tests/e2e/testutil"
 )
 
-const serveBaseConfig = "version = \"4.0\"\nname = \"p\"\ngitignore = false\npresets = [\"claude\"]\n"
+const serveBaseConfig = "version = \"5.0\"\nname = \"p\"\ngitignore = false\npresets = [\"claude\"]\n"
 
 func serveSkill(name, desc, body, extra string) string {
 	return fmt.Sprintf("---\nname: %s\ndescription: %s\n%s---\n\n# %s\n\n%s\n", name, desc, extra, name, body)

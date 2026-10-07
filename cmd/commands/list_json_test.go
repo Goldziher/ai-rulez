@@ -9,8 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// An empty list in JSON mode is the JSON array [], not nothing: a script piping
-// `--format json` into jq must not fail on a project with nothing to list.
+// An empty list in JSON mode is a versioned document with an empty items array,
+// not nothing: a script piping `--format json` into jq must not fail on a
+// project with nothing to list.
 func TestListCommands_EmptyListPrintsAnEmptyJSONArray(t *testing.T) {
 	tests := []struct {
 		name string
@@ -46,9 +47,13 @@ func TestListCommands_EmptyListPrintsAnEmptyJSONArray(t *testing.T) {
 			out := captureStdout(t, tt.run)
 
 			// Assert
-			var got []any
+			var got struct {
+				SchemaVersion int   `json:"schema_version"`
+				Items         []any `json:"items"`
+			}
 			require.NoError(t, json.Unmarshal([]byte(out), &got), "stdout = %q", out)
-			assert.Empty(t, got)
+			assert.Equal(t, 1, got.SchemaVersion, "stdout = %q", out)
+			assert.Empty(t, got.Items)
 		})
 	}
 }

@@ -37,7 +37,7 @@ func TestInstalledSkill_UnresolvedFailsTheLoad(t *testing.T) {
 			// Arrange
 			t.Setenv("HOME", t.TempDir())
 			dir := t.TempDir()
-			writeTestFile(t, filepath.Join(dir, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n\n[[installed_skills]]\nname = \"foo\"\nsource = \"vendor\"\npath = \"foo\"\n")
+			writeTestFile(t, filepath.Join(dir, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n\n[[installed_skills]]\nname = \"foo\"\nsource = \"vendor\"\npath = \"foo\"\n")
 			require.NoError(t, os.MkdirAll(filepath.Join(dir, "vendor"), 0o755)) // the skill itself is gone
 			ctx := context.Background()
 			if tt.ctx != nil {

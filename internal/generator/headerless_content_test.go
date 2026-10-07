@@ -20,7 +20,7 @@ func codexAgentProject(t *testing.T) string {
 	dir := t.TempDir()
 	writeCodexAgent(t, dir, "Help.")
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"x\"\npresets = [\"codex\"]\ngitignore = false\n"), 0o644))
+		[]byte("version = \"5.0\"\nname = \"x\"\npresets = [\"codex\"]\ngitignore = false\n"), 0o644))
 	return dir
 }
 
