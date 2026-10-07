@@ -861,12 +861,12 @@ func (g *Generator) planLines(outputs []config.OutputFile) []string {
 	for _, output := range outputs {
 		abs := g.absOutputPath(output.Path)
 		relPath := g.convertToRelativePath(abs)
-		if output.IsDir {
-			lines = append(lines, "create-dir: "+relPath)
-			continue
-		}
 		if reason, ok := g.refusalReason(relPath); ok {
 			lines = append(lines, "blocked: "+filepath.ToSlash(relPath)+" ("+reason+")")
+			continue
+		}
+		if output.IsDir {
+			lines = append(lines, "create-dir: "+relPath)
 			continue
 		}
 		if g.linkedOutputs[filepath.ToSlash(relPath)] {
