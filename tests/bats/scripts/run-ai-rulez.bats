@@ -212,29 +212,29 @@ cached_binary() {
   [ -z "$(ls -A "$TMPDIR")" ]
 }
 
-@test "checksums.txt without an entry for the archive warns and continues like the npm and PyPI wrappers" {
+@test "checksums.txt without an entry for the archive fails closed and caches nothing" {
   make_release darwin arm64
   printf '%s  %s\n' "$(sha256 "$RELEASE/$ARCHIVE")" "ai-rulez_9.8.7_linux_amd64.tar.gz" \
     >"$RELEASE/checksums.txt"
 
   run "$SCRIPT" generate
 
-  xberg_assert_status 0
-  xberg_assert_output_contains "no checksum for ai-rulez_9.8.7_darwin_arm64.tar.gz"
-  xberg_assert_output_contains "fake ai-rulez: [generate]"
+  xberg_assert_status 1
+  xberg_assert_output_contains "No checksum for ai-rulez_9.8.7_darwin_arm64.tar.gz"
+  xberg_assert_file_absent "$(cached_binary darwin-arm64)"
 }
 
-@test "an unreachable checksums.txt is reported, not skipped silently" {
+@test "an unreachable checksums.txt fails closed and caches nothing" {
   make_release darwin arm64
 
   run "$SCRIPT" generate
 
-  xberg_assert_status 0
-  xberg_assert_output_contains "Could not download checksums.txt, skipping checksum verification"
-  xberg_assert_output_contains "fake ai-rulez: [generate]"
+  xberg_assert_status 1
+  xberg_assert_output_contains "Could not download checksums.txt, refusing to install an unverified binary"
+  xberg_assert_file_absent "$(cached_binary darwin-arm64)"
 }
 
-@test "without shasum or sha256sum the checksum is skipped with a warning" {
+@test "without shasum or sha256sum the install fails closed" {
   BATS_FILE_TMPDIR="$BATS_TEST_TMPDIR" xberg_shadow_system_path_without ai-rulez shasum sha256sum
   PATH="$(xberg_isolated_path)"
   make_release darwin arm64
@@ -243,9 +243,9 @@ cached_binary() {
 
   run "$SCRIPT" generate
 
-  xberg_assert_status 0
-  xberg_assert_output_contains "Neither shasum nor sha256sum is available, skipping checksum verification"
-  xberg_assert_output_contains "fake ai-rulez: [generate]"
+  xberg_assert_status 1
+  xberg_assert_output_contains "Neither shasum nor sha256sum is available, refusing to install an unverified binary"
+  xberg_assert_file_absent "$(cached_binary darwin-arm64)"
 }
 
 @test "the binary's exit status is the script's exit status" {
