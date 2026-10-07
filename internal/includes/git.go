@@ -161,6 +161,7 @@ type GitSource struct {
 	baseDir     string            // project the include belongs to, for recording what it resolved to
 	okf         bool              // the repository holds an OKF bundle (at path) instead of an .ai-rulez directory
 	okfScan     okfbridge.Scanner // security scan for the OKF conversion (nil skips it)
+	state       *resolutionState  // per-load records of what this fetch resolved to
 	log         logger.Logger
 }
 
@@ -304,7 +305,7 @@ func (s *GitSource) checkPin() error {
 	if meta, metaErr := readCacheMeta(s.cacheDir); metaErr == nil && meta != nil {
 		commit = meta.RemoteHEADSHA
 	}
-	return s.pin.check(s.baseDir, lockfile.KindInclude, s.name, commit, digest)
+	return s.pin.check(s.state, s.baseDir, lockfile.KindInclude, s.name, commit, digest)
 }
 
 func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
