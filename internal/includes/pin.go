@@ -209,9 +209,11 @@ func (p *pin) check(baseDir, kind, name, commit, digest string) error {
 // problems name every source that could not be locked.
 func BuildLock(cfg *config.Config, current *lockfile.File) (lock *lockfile.File, problems []string) {
 	out := &lockfile.File{Version: lockfile.Version}
-	for _, w := range Lockable(cfg) {
+	wants := Lockable(cfg)
+	for i := range wants {
+		w := &wants[i]
 		if !refreshing(cfg, w.Kind, w.Name) {
-			if e := current.Find(w.Kind, w.Name); e.Covers(w) {
+			if e := current.Find(w.Kind, w.Name); e.Covers(*w) {
 				out.Set(w.Kind, *e)
 				continue
 			}
@@ -254,24 +256,25 @@ func CheckLock(cfg *config.Config, lock *lockfile.File) (problems []Problem, cac
 		return nil, 0
 	}
 	if lock == nil {
-		for _, w := range wants {
-			problems = append(problems, Problem{w.Kind, w.Name, "not pinned: " + lockfile.FileName + " does not exist"})
+		for i := range wants {
+			problems = append(problems, Problem{wants[i].Kind, wants[i].Name, "not pinned: " + lockfile.FileName + " does not exist"})
 		}
 		return problems, 0
 	}
 	configured := map[string]bool{}
-	for _, w := range wants {
+	for i := range wants {
+		w := &wants[i]
 		configured[w.Kind+"\x00"+w.Name] = true
 		entry := lock.Find(w.Kind, w.Name)
 		switch {
 		case entry == nil:
 			problems = append(problems, Problem{w.Kind, w.Name, "not covered by the lock"})
 			continue
-		case !entry.Covers(w):
+		case !entry.Covers(*w):
 			problems = append(problems, Problem{w.Kind, w.Name, "lock is stale: source, path or ref changed since it was written"})
 			continue
 		}
-		digest, commit, ok, err := cachedState(cfg, w)
+		digest, commit, ok, err := cachedState(cfg, *w)
 		if err != nil {
 			problems = append(problems, Problem{w.Kind, w.Name, "cannot digest the cached content: " + err.Error()})
 			continue
@@ -355,9 +358,10 @@ func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok
 // NotCached lists the remote sources whose content is not in the local cache.
 func NotCached(cfg *config.Config) []lockfile.Want {
 	var out []lockfile.Want
-	for _, w := range Lockable(cfg) {
-		if dir, _, _ := cachedTree(cfg, w); dir == "" {
-			out = append(out, w)
+	wants := Lockable(cfg)
+	for i := range wants {
+		if dir, _, _ := cachedTree(cfg, wants[i]); dir == "" {
+			out = append(out, wants[i])
 		}
 	}
 	return out
@@ -395,11 +399,12 @@ func Unpinned(cfg *config.Config) []lockfile.Want {
 	}
 	lock, _ := lockfile.Load(cfg.ConfigDir) //nolint:errcheck // an unreadable lock pins nothing
 	var out []lockfile.Want
-	for _, w := range wants {
-		if lockfile.IsFullSHA(w.Ref) || lock.Find(w.Kind, w.Name).Covers(w) {
+	for i := range wants {
+		w := &wants[i]
+		if lockfile.IsFullSHA(w.Ref) || lock.Find(w.Kind, w.Name).Covers(*w) {
 			continue
 		}
-		out = append(out, w)
+		out = append(out, *w)
 	}
 	return out
 }
@@ -411,9 +416,10 @@ func unconfiguredEntries(lock *lockfile.File, configured map[string]bool) []Prob
 		kind    string
 		entries []lockfile.Entry
 	}{{lockfile.KindInclude, lock.Include}, {lockfile.KindSkill, lock.Skill}} {
-		for _, e := range list.entries {
-			if !configured[list.kind+"\x00"+e.Name] {
-				out = append(out, Problem{list.kind, e.Name, "in the lock but no longer configured"})
+		for i := range list.entries {
+			name := list.entries[i].Name
+			if !configured[list.kind+"\x00"+name] {
+				out = append(out, Problem{list.kind, name, "in the lock but no longer configured"})
 			}
 		}
 	}
