@@ -411,6 +411,11 @@ func resolveScannerPath(raw, root string) (abs string, ok bool) {
 	if strings.ContainsRune(p, 0) {
 		return "", false
 	}
+	if strings.HasPrefix(p, "/") && !filepath.IsAbs(filepath.FromSlash(p)) {
+		// A rooted path with no drive (/etc/passwd on Windows) names the root of the
+		// current drive; joining it to the project root would make it look inside.
+		return "", false
+	}
 	if !filepath.IsAbs(filepath.FromSlash(p)) {
 		p = filepath.Join(root, filepath.FromSlash(p))
 	}
