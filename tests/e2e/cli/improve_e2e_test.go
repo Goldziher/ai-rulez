@@ -218,12 +218,10 @@ func TestImprovePRUsesAFakeGhE2E(t *testing.T) {
 	assert.False(t, strings.Contains(env.git(root, "log", "--oneline", "-1"), "improve"), "nothing is committed on the user's branch")
 }
 
-// TestImproveResolvesARelativeOptimizerFromTheWorkingDirectoryE2E pins MAN-1:
+// TestImproveResolvesARelativeOptimizerFromTheWorkingDirectoryE2E covers MAN-1:
 // --with ./optimize.sh (and the documented `--with 'python optimize.py'`) is
-// resolved against the throwaway workspace, not the directory the command ran
-// in, so every round fails with "the optimizer is not available".
+// resolved from the directory the command ran in, not the throwaway workspace.
 func TestImproveResolvesARelativeOptimizerFromTheWorkingDirectoryE2E(t *testing.T) {
-	blockedOn(t, "MAN-1")
 	// Arrange
 	env := newIsoEnv(t)
 	root, tools := improveProject(t, env)
