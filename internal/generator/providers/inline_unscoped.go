@@ -44,7 +44,8 @@ func (g *Generator) splitUnscoped(d *diag.Collector, all []config.ContentFile, n
 				" cannot apply it automatically there; omitted", "path", cf.Path)
 		}
 	}
-	for _, cf := range all {
+	for idx := range all {
+		cf := all[idx]
 		switch mode := rulefiles.EffectiveModeOf(cf); {
 		case mode == config.ActivationAuto || mode == config.ActivationManual:
 			stay(cf)
@@ -65,14 +66,17 @@ func mergeInline(kind rulefiles.Kind, all, planned, direct []config.ContentFile)
 		return strconv.Itoa(int(kind)) + "\x00" + cf.Path + "\x00" + cf.Name
 	}
 	want := make(map[string]struct{}, len(planned)+len(direct))
-	for _, cf := range planned {
+	for idx := range planned {
+		cf := planned[idx]
 		want[key(cf)] = struct{}{}
 	}
-	for _, cf := range direct {
+	for idx := range direct {
+		cf := direct[idx]
 		want[key(cf)] = struct{}{}
 	}
 	var out []config.ContentFile
-	for _, cf := range all {
+	for idx := range all {
+		cf := all[idx]
 		if _, ok := want[key(cf)]; ok {
 			out = append(out, cf)
 		}

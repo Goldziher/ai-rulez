@@ -118,13 +118,13 @@ func (g *Generator) sharedSidecars(sc *SidecarSpec, cfg *config.Config) []*Sidec
 // sidecarIsMerged is SidecarIsMergedDocument for one sidecar: a hooks file the
 // harness loads next to others and ai-rulez writes whole (Copilot's) is not merged.
 func sidecarIsMerged(sc *SidecarSpec) bool {
-	return SidecarIsMergedDocument(sc.Kind) && !(sc.Kind == SidecarHooks && settings.HookDialectOwnsFile(sc.Dialect))
+	return SidecarIsMergedDocument(sc.Kind) && (sc.Kind != SidecarHooks || !settings.HookDialectOwnsFile(sc.Dialect))
 }
 
 // isMergedGenericSidecar reports whether the sidecar merges into a shared document.
 func isMergedGenericSidecar(sc *SidecarSpec) bool {
 	return isGenericSidecarKind(sc.Kind) && sc.Kind != SidecarChecks &&
-		!(sc.Kind == SidecarHooks && settings.HookDialectOwnsFile(sc.Dialect))
+		(sc.Kind != SidecarHooks || !settings.HookDialectOwnsFile(sc.Dialect))
 }
 
 // renderSidecarGroup merges the owned keys of several sidecars into their one
@@ -160,37 +160,7 @@ func sameDocFormat(a, b string) bool {
 func (g *Generator) genericOwnedKeys(sc *SidecarSpec, cfg *config.Config, outputPath string) ([]jsonmerge.OwnedKey, error) {
 	switch sc.Kind {
 	case SidecarMCP:
-		dialect, err := mcpDialectFor(sc.Dialect)
-		if err != nil {
-			return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
-		}
-		if dialect.arrayKey != "" {
-			key, err := arrayOwnedKey(sc, dialect, cfg, outputPath)
-			if err != nil {
-				return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
-			}
-			return []jsonmerge.OwnedKey{key}, nil
-		}
-		// Elements that are project-relative globs mean nothing in the user scope.
-		elements := sc.Elements
-		if elements != nil && elements.ProjectOnly && cfg != nil && cfg.UserScope {
-			elements = nil
-		}
-		entries := mcpDialectEntriesFor(dialect, cfg, &mcpEntryOpts{transports: sc.Transports, refSyntax: sc.EnvRefSyntax})
-		var owned []jsonmerge.OwnedKey
-		if len(entries) > 0 || elements == nil {
-			owned = append(owned, jsonmerge.OwnedKey{Path: sc.ownedKeyPath(dialect), Value: entries, Members: true})
-		}
-		if elements != nil {
-			key, ok, err := elementsOwnedKey(sc, cfg, outputPath)
-			if err != nil {
-				return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
-			}
-			if ok {
-				owned = append(owned, key)
-			}
-		}
-		return owned, nil
+		return g.mcpOwnedKeys(sc, cfg, outputPath)
 	case SidecarHooks:
 		keys, err := settings.HookKeys(cfg, sc.Dialect, outputPath)
 		if err != nil {
@@ -205,6 +175,42 @@ func (g *Generator) genericOwnedKeys(sc *SidecarSpec, cfg *config.Config, output
 		return keys, nil
 	}
 	return nil, oops.Errorf("unknown generic sidecar kind %q", sc.Kind)
+}
+
+// mcpOwnedKeys is what an mcp sidecar owns in the document at outputPath: the
+// servers, and the array elements its spec also claims.
+func (g *Generator) mcpOwnedKeys(sc *SidecarSpec, cfg *config.Config, outputPath string) ([]jsonmerge.OwnedKey, error) {
+	dialect, err := mcpDialectFor(sc.Dialect)
+	if err != nil {
+		return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+	}
+	if dialect.arrayKey != "" {
+		key, err := arrayOwnedKey(sc, dialect, cfg, outputPath)
+		if err != nil {
+			return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+		}
+		return []jsonmerge.OwnedKey{key}, nil
+	}
+	// Elements that are project-relative globs mean nothing in the user scope.
+	elements := sc.Elements
+	if elements != nil && elements.ProjectOnly && cfg != nil && cfg.UserScope {
+		elements = nil
+	}
+	entries := mcpDialectEntriesFor(dialect, cfg, &mcpEntryOpts{transports: sc.Transports, refSyntax: sc.EnvRefSyntax})
+	var owned []jsonmerge.OwnedKey
+	if len(entries) > 0 || elements == nil {
+		owned = append(owned, jsonmerge.OwnedKey{Path: sc.ownedKeyPath(dialect), Value: entries, Members: true})
+	}
+	if elements != nil {
+		key, ok, err := elementsOwnedKey(sc, cfg, outputPath)
+		if err != nil {
+			return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+		}
+		if ok {
+			owned = append(owned, key)
+		}
+	}
+	return owned, nil
 }
 
 // mergeDocument merges owned keys into the document at outputPath, whatever its
@@ -236,9 +242,9 @@ func MergedSidecarDocs() []MergedSidecarDoc {
 			}
 			docs = append(docs, MergedSidecarDoc{Path: filepath.ToSlash(sc.Path), Format: format})
 		}
-		if path := aggregateChecksPath(spec); path != "" && !seen[path] {
-			seen[path] = true
-			docs = append(docs, MergedSidecarDoc{Path: path, Format: string(docmerge.FormatMarkdown)})
+		if checksPath := aggregateChecksPath(spec); checksPath != "" && !seen[checksPath] {
+			seen[checksPath] = true
+			docs = append(docs, MergedSidecarDoc{Path: checksPath, Format: string(docmerge.FormatMarkdown)})
 		}
 	}
 	slices.SortFunc(docs, func(a, b MergedSidecarDoc) int { return strings.Compare(a.Path, b.Path) })

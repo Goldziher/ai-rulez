@@ -23,8 +23,8 @@ func marshalFrontmatter(frontmatter map[string]any, spec *FrontmatterSpec) ([]by
 	}
 	sort.Strings(keys)
 	if spec.NameFirst {
-		if i := slices.Index(keys, "name"); i > 0 {
-			keys = append([]string{"name"}, slices.Delete(keys, i, i+1)...)
+		if i := slices.Index(keys, fieldName); i > 0 {
+			keys = append([]string{fieldName}, slices.Delete(keys, i, i+1)...)
 		}
 	}
 
