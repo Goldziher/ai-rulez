@@ -21,6 +21,9 @@ import (
 const (
 	searchSubcommandSchema = 1
 	searchBytesPerKiB      = 1024
+
+	// searchIndexChanged labels the stale documents in the index status report.
+	searchIndexChanged = "changed"
 )
 
 var searchSubFlags struct {
@@ -131,33 +134,17 @@ func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 	if idx, loadErr := skillsearch.LoadIndex(dir); loadErr == nil {
 		old = idx
 	}
-	only := map[string]bool{}
-	known := skillsearch.IDs(env.items)
-	for _, id := range searchSubFlags.items {
-		if !slices.Contains(known, id) {
-			fmtError(oops.Errorf("--items %q: no such served skill", id))
-			return 1
-		}
-		only[id] = true
+	only, err := selectIndexItems(env)
+	if err != nil {
+		fmtError(err)
+		return 1
 	}
 	opts := &skillsearch.BuildOptions{
 		Config: env.resolved.Search, Embedder: emb, Old: old, Rebuild: searchSubFlags.rebuild, Only: only, Scanner: lint.DetectSecret,
 	}
 	plan := skillsearch.PlanBuild(env.items, opts)
 	prov := env.resolved.Describe()
-	sum := indexSummaryJSON{
-		SchemaVersion: searchSubcommandSchema, DryRun: searchSubFlags.dryRun, Provider: prov.Fingerprint, Host: prov.Host, Model: prov.Model,
-		Total: plan.Total, Reused: plan.Reused, ToEmbed: plan.ToEmbed, Bytes: plan.Bytes, Tokens: plan.EstTokens, Reason: plan.Reason,
-		Withheld: withheldIDs(plan), Missing: []string{}, Rejected: []string{},
-	}
-	for _, w := range plan.Withheld {
-		reportWriter{errOut}.printf("%s: skill %q was not embedded: its text looks like it holds a secret (%s); it ranks lexically only\n", skillsearch.CodeTextWithheld, w.ID, w.Kind)
-	}
-	pricing := llm.NewPricing(env.resolved.LLM)
-	cost, known2 := pricing.Cost(prov.Model, llm.Usage{PromptTokens: plan.EstTokens})
-	if known2 {
-		sum.CostUSD = &cost
-	}
+	sum := newIndexSummary(errOut, env, plan, prov)
 	if searchSubFlags.dryRun {
 		if searchFlags.format == formatJSON {
 			return emit(writeJSON(out, sum))
@@ -170,6 +157,12 @@ func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 			Errorf("search index would send %d texts (%d bytes) to %s, but the network is disabled", plan.ToEmbed, plan.Bytes, prov.Host))
 		return 1
 	}
+	return buildAndWriteIndex(ctx, out, errOut, env, opts, dir, &sum)
+}
+
+// buildAndWriteIndex embeds under the index lock, writes the index when it changed and reports.
+func buildAndWriteIndex(ctx context.Context, out, errOut io.Writer, env *searchEnv, opts *skillsearch.BuildOptions, dir string, sumPtr *indexSummaryJSON) int {
+	sum := *sumPtr
 	release2, err := skillsearch.Lock(dir, nil)
 	if err != nil {
 		fmtError(err)
@@ -181,16 +174,7 @@ func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 		fmtError(err)
 		return 1
 	}
-	sum.Embedded, sum.Reused, sum.Calls, sum.Tokens, sum.Missing = res.Embedded, res.Reused, res.Calls, res.Tokens, res.Missing
-	sum.Rejected = reportRejected(errOut, res.Rejected)
-	if res.CostKnown {
-		sum.CostUSD = &res.CostUSD
-	} else {
-		sum.CostUSD = nil
-	}
-	if res.Err != nil {
-		sum.Stopped = llm.RedactSecrets(res.Err.Error())
-	}
+	recordBuildResult(errOut, &sum, res)
 	if res.Index == nil {
 		fmtError(oops.Errorf("nothing was embedded: %s", sum.Stopped))
 		return 1
@@ -209,6 +193,50 @@ func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 		printIndexResult(out, sum, dir)
 	}
 	return indexExitCode(errOut, res, &sum)
+}
+
+// selectIndexItems validates --items against the served skills; the map is empty when none was given.
+func selectIndexItems(env *searchEnv) (map[string]bool, error) {
+	only := map[string]bool{}
+	known := skillsearch.IDs(env.items)
+	for _, id := range searchSubFlags.items {
+		if !slices.Contains(known, id) {
+			return nil, oops.Errorf("--items %q: no such served skill", id)
+		}
+		only[id] = true
+	}
+	return only, nil
+}
+
+// newIndexSummary builds the planned summary, naming the skills withheld for a secret-looking text.
+func newIndexSummary(errOut io.Writer, env *searchEnv, plan *skillsearch.Plan, prov setup.Provider) indexSummaryJSON {
+	sum := indexSummaryJSON{
+		SchemaVersion: searchSubcommandSchema, DryRun: searchSubFlags.dryRun, Provider: prov.Fingerprint, Host: prov.Host, Model: prov.Model,
+		Total: plan.Total, Reused: plan.Reused, ToEmbed: plan.ToEmbed, Bytes: plan.Bytes, Tokens: plan.EstTokens, Reason: plan.Reason,
+		Withheld: withheldIDs(plan), Missing: []string{}, Rejected: []string{},
+	}
+	for _, w := range plan.Withheld {
+		reportWriter{errOut}.printf("%s: skill %q was not embedded: its text looks like it holds a secret (%s); it ranks lexically only\n", skillsearch.CodeTextWithheld, w.ID, w.Kind)
+	}
+	pricing := llm.NewPricing(env.resolved.LLM)
+	if cost, known := pricing.Cost(prov.Model, llm.Usage{PromptTokens: plan.EstTokens}); known {
+		sum.CostUSD = &cost
+	}
+	return sum
+}
+
+// recordBuildResult copies the outcome of a build into the summary.
+func recordBuildResult(errOut io.Writer, sum *indexSummaryJSON, res *skillsearch.BuildResult) {
+	sum.Embedded, sum.Reused, sum.Calls, sum.Tokens, sum.Missing = res.Embedded, res.Reused, res.Calls, res.Tokens, res.Missing
+	sum.Rejected = reportRejected(errOut, res.Rejected)
+	if res.CostKnown {
+		sum.CostUSD = &res.CostUSD
+	} else {
+		sum.CostUSD = nil
+	}
+	if res.Err != nil {
+		sum.Stopped = llm.RedactSecrets(res.Err.Error())
+	}
 }
 
 // indexExitCode reports why a build did not index every skill and returns the exit status: 2 for a skill the
@@ -430,7 +458,7 @@ func printStatus(out io.Writer, d statusJSON) {
 		for _, g := range []struct {
 			label string
 			ids   []string
-		}{{"changed", d.Stale}, {"not indexed", d.Missing}, {"no longer served", d.Orphaned}} {
+		}{{searchIndexChanged, d.Stale}, {"not indexed", d.Missing}, {"no longer served", d.Orphaned}} {
 			if len(g.ids) > 0 {
 				p.printf("  %s: %s\n", g.label, strings.Join(g.ids, ", "))
 			}
@@ -468,7 +496,7 @@ func runSearchMine(ctx context.Context, out, errOut io.Writer) int {
 		return 1
 	}
 	if len(mined.Cases) == 0 {
-		raw = []byte("# no query could be labelled\n")
+		raw = []byte("# no query could be labeled\n")
 	}
 	if searchFlags.out != "" {
 		if err := os.WriteFile(searchFlags.out, raw, 0o644); err != nil { //nolint:gosec // a cases file the user asked for
