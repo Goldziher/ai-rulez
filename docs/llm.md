@@ -22,7 +22,7 @@ cache           = true                     # default true
 allow_network   = false                    # default false; nothing is sent unless true
 ```
 
-Other keys: `timeout_seconds` (default 60, covers the retries), `max_retries` (default 3, `-1` disables, at most 10), `price_input_per_mtok` and `price_output_per_mtok` (USD per million tokens; override the built-in price table, needed for cost limits on models the table does not know; user scope only, see below). An override prices only the model you set in user scope (`model` in the user config file or `AI_RULEZ_LLM_MODEL`); a model a repository picks, or a per-request model, is priced from the built-in table and, under a cost limit, refused when the table does not know it.
+Other keys: `timeout_seconds` (default 60, covers the retries, at most 3600), `max_retries` (default 3, `-1` disables, at most 10), `price_input_per_mtok` and `price_output_per_mtok` (USD per million tokens; override the built-in price table, needed for cost limits on models the table does not know; user scope only, see below). An override prices only the model you set in user scope (`model` in the user config file or `AI_RULEZ_LLM_MODEL`); a model a repository picks, or a per-request model, is priced from the built-in table and, under a cost limit, refused when the table does not know it.
 
 ### Trust rule
 
@@ -55,7 +55,7 @@ or export `AI_RULEZ_LLM_ALLOW_NETWORK=1` (and `_BASE_URL`, `_API_KEY_ENV`). Prec
 
 ### Validation: `AR9L0 llm-config-invalid`
 
-`validate --strict`, the JSON schema and `ai-rulez doctor` reject an unknown `backend`, a secret where a variable name belongs (`api_key = ...`, or a key-looking `api_key_env` such as `sk-proj-...` or `AKIA...`), credentials or a query string in `base_url`, plain `http://` to a non-loopback host when an API key is sent (use `https`; `localhost`, `127.0.0.1` and `::1` may use `http`; see "Plain-http gateways" for the explicit opt-in), `allow_plain_http` without `plain_http_hosts`, a `max_retries` above 10, and negative limits. A message never repeats the offending value, and `llm doctor`, `ai-rulez doctor` and the JSON report show `api_key_env` only when it is a valid variable name. The literal-secret key check (`api_key = ...`) covers both `config.toml` and `config.local.*`. A repository key the trust rule ignores is reported as `AR9L1`.
+`validate --strict`, the JSON schema and `ai-rulez doctor` reject an unknown `backend`, a secret where a variable name belongs (`api_key = ...`, or a key-looking `api_key_env` such as `sk-proj-...` or `AKIA...`), credentials or a query string in `base_url`, plain `http://` to a non-loopback host when an API key is sent (use `https`; `localhost`, `127.0.0.1` and `::1` may use `http`; see "Plain-http gateways" for the explicit opt-in), `allow_plain_http` without `plain_http_hosts`, a `max_retries` above 10, a `timeout_seconds` above 3600, and negative or non-finite (`nan`, `inf`) limits and prices. A message never repeats the offending value, and `llm doctor`, `ai-rulez doctor` and the JSON report show `api_key_env` only when it is a valid variable name. The literal-secret key check (`api_key = ...`) covers both `config.toml` and `config.local.*`. A repository key the trust rule ignores is reported as `AR9L1`.
 
 ### Plain-http gateways
 
