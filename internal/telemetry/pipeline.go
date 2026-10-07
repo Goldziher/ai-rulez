@@ -150,7 +150,7 @@ func (p *Pipeline) Flush(ctx context.Context) (FlushResult, error) {
 		return FlushResult{}, nil
 	}
 	if p.LogPath != "" {
-		_, _ = p.Spool.CatchUp(p.LogPath, CatchUpOptions{Sample: &p.Settings.Sample}) //nolint:errcheck // best effort: the outbox still ships
+		_, _ = p.Spool.CatchUp(p.LogPath, CatchUpOptions{Sample: &p.Settings.Sample, GrantedAt: p.Settings.ConsentGrantedAt()}) //nolint:errcheck // best effort: the outbox still ships
 	}
 	return p.Exporter.Flush(ctx)
 }

@@ -90,7 +90,7 @@ func runUsageExportOTLP(out io.Writer) error {
 		}
 	}
 	if usageExportDryRun {
-		res, err := p.Spool.CatchUp(logPath, telemetry.CatchUpOptions{Sample: &settings.Sample, All: usageExportAll, DryRun: true})
+		res, err := p.Spool.CatchUp(logPath, telemetry.CatchUpOptions{Sample: &settings.Sample, GrantedAt: settings.ConsentGrantedAt(), All: usageExportAll, DryRun: true})
 		if err != nil {
 			return err
 		}
@@ -108,7 +108,7 @@ func runUsageExportOTLP(out io.Writer) error {
 		return err
 	}
 	for round := 0; round < usageExportMaxBatches; round++ {
-		res, err := p.Spool.CatchUp(logPath, telemetry.CatchUpOptions{Sample: &settings.Sample, All: usageExportAll && round == 0})
+		res, err := p.Spool.CatchUp(logPath, telemetry.CatchUpOptions{Sample: &settings.Sample, GrantedAt: settings.ConsentGrantedAt(), All: usageExportAll && round == 0})
 		if err != nil {
 			return err
 		}

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -202,6 +203,105 @@ func TestCatchUp_SampleZeroExportsNothing(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantQueued, res.Queued)
 			assert.Equal(t, 20, res.Queued+res.Skipped)
+		})
+	}
+}
+
+// appendLogAt appends item events recorded at the given time.
+func appendLogAt(t *testing.T, path string, from, to int, at time.Time) {
+	t.Helper()
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) //nolint:gosec // test file
+	require.NoError(t, err)
+	defer f.Close() //nolint:errcheck // test
+	for i := from; i < to; i++ {
+		e := logEvent(i)
+		e.Time = FormatTime(at)
+		line, err := json.Marshal(&e)
+		require.NoError(t, err)
+		_, err = f.Write(append(line, '\n'))
+		require.NoError(t, err)
+	}
+}
+
+func TestCatchUp_ConsentIsNotRetroactive(t *testing.T) {
+	// RV-LLM-29: project B kept its cursor and kept recording while consent was
+	// off; re-enabling consent elsewhere must not export that gap.
+	granted := time.Now().Add(-time.Hour).UTC().Truncate(time.Second)
+	tests := []struct {
+		name       string
+		placedAt   string // "" keeps the cursor as written before placed_at existed
+		backfill   bool
+		all        bool
+		grantedAt  time.Time
+		wantQueued []string
+	}{
+		{"old cursor drops the gap", "", false, false, granted, []string{fmt.Sprintf("%016x", 3), fmt.Sprintf("%016x", 4)}},
+		{"cursor placed before the grant drops the gap", FormatTime(granted.Add(-24 * time.Hour)), false, false, granted,
+			[]string{fmt.Sprintf("%016x", 3), fmt.Sprintf("%016x", 4)}},
+		{"--backfill under this consent exports history", "", true, false, granted,
+			[]string{fmt.Sprintf("%016x", 0), fmt.Sprintf("%016x", 1), fmt.Sprintf("%016x", 2), fmt.Sprintf("%016x", 3), fmt.Sprintf("%016x", 4)}},
+		{"--all exports history", "", false, true, granted,
+			[]string{fmt.Sprintf("%016x", 0), fmt.Sprintf("%016x", 1), fmt.Sprintf("%016x", 2), fmt.Sprintf("%016x", 3), fmt.Sprintf("%016x", 4)}},
+		{"no consent record keeps every event", "", false, false, time.Time{},
+			[]string{fmt.Sprintf("%016x", 0), fmt.Sprintf("%016x", 1), fmt.Sprintf("%016x", 2), fmt.Sprintf("%016x", 3), fmt.Sprintf("%016x", 4)}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: a cursor at the start of the log, three events recorded
+			// while consent was off and two after it was granted.
+			spool, log := newCursorFixture(t)
+			appendLogAt(t, log, 0, 3, granted.Add(-30*time.Minute))
+			appendLogAt(t, log, 3, 5, granted.Add(time.Minute))
+			if tt.backfill {
+				require.NoError(t, spool.PlaceCursor(log, true))
+			} else {
+				id, _, err := LogID(log)
+				require.NoError(t, err)
+				require.NoError(t, spool.UpdateCursor(func(c *Cursor) { c.LogID, c.Offset, c.PlacedAt = id, 0, tt.placedAt }))
+			}
+			// Act
+			res, err := spool.CatchUp(log, CatchUpOptions{GrantedAt: tt.grantedAt, All: tt.all})
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantQueued, ids(res.Events))
+			assert.Equal(t, 5, res.Queued+res.Skipped)
+		})
+	}
+}
+
+func TestFlush_QueuesNoEventRecordedBeforeTheConsent(t *testing.T) {
+	// Arrange: an old cursor and events recorded before the consent record's grant.
+	granted := time.Now().UTC().Truncate(time.Second)
+	spool, log := newCursorFixture(t)
+	appendLogAt(t, log, 0, 3, granted.Add(-time.Hour))
+	id, _, err := LogID(log)
+	require.NoError(t, err)
+	require.NoError(t, spool.UpdateCursor(func(c *Cursor) { c.LogID, c.Offset = id, 0 }))
+	settings := Settings{Sample: 1, ConsentState: ConsentRecord, Consent: &Consent{GrantedAt: FormatTime(granted)}}
+	p := &Pipeline{Spool: spool, LogPath: log, Settings: settings, Exporter: &Exporter{Spool: spool}}
+	// Act
+	_, _ = p.Flush(context.Background()) //nolint:errcheck // the exporter has no endpoint; the outbox is what counts
+	// Assert
+	pending, _, err := spool.Pending()
+	require.NoError(t, err)
+	assert.Empty(t, pending)
+}
+
+func TestSettings_ConsentGrantedAtOnlyForARecordGrant(t *testing.T) {
+	at := "2026-10-01T10:00:00Z"
+	tests := []struct {
+		name  string
+		s     Settings
+		wantZ bool
+	}{
+		{"record grant", Settings{ConsentState: ConsentRecord, Consent: &Consent{GrantedAt: at}}, false},
+		{"allow_network grant", Settings{ConsentState: ConsentConfig, Consent: &Consent{GrantedAt: at}}, true},
+		{"no record", Settings{ConsentState: ConsentRecord}, true},
+		{"unreadable time", Settings{ConsentState: ConsentRecord, Consent: &Consent{GrantedAt: "yesterday"}}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantZ, tt.s.ConsentGrantedAt().IsZero())
 		})
 	}
 }
