@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -238,6 +239,21 @@ func TestSkillServer_ExtensionMethodsWaitForInitialize(t *testing.T) {
 			assert.NotNil(t, after["result"])
 		})
 	}
+}
+
+func TestPreInitializeRequestsUseOneErrorCode(t *testing.T) {
+	cat, err := BuildCatalog("p", "claude", testServed(), SkillFilter{})
+	require.NoError(t, err)
+	p, _ := startUninitializedSkillServer(t, cat, ServeOptions{})
+
+	for _, method := range []string{"tools/list", "resources/list", "skills/list"} {
+		resp := p.call(method, map[string]any{})
+		rpcErr, ok := resp["error"].(map[string]any)
+		require.True(t, ok, "%s answered before initialize: %v", method, resp)
+		assert.EqualValues(t, jsonrpc.CodeInvalidRequest, rpcErr["code"], method)
+	}
+	resp := p.call("ping", map[string]any{})
+	assert.Nil(t, resp["error"], "ping is allowed before initialize")
 }
 
 func (p *rpcPeer) notify(method string) {
