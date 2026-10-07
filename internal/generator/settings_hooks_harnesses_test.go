@@ -61,7 +61,7 @@ func hookHarnessConfig(presets []string) string {
 	for i, p := range presets {
 		quoted[i] = `"` + p + `"`
 	}
-	return `version = "4.0"
+	return `version = "5.0"
 name = "hooks"
 presets = [` + strings.Join(quoted, ", ") + `]
 gitignore = false
@@ -280,7 +280,7 @@ func TestUser_HooksLandWhereEachHarnessReadsThem(t *testing.T) {
 			if preset == "gitlab-duo" {
 				event = "SessionStart"
 			}
-			cfg := "version = \"4.0\"\nname = \"me\"\npresets = [\"" + preset + "\"]\n\n[[hooks]]\nevent = \"" + event +
+			cfg := "version = \"5.0\"\nname = \"me\"\npresets = [\"" + preset + "\"]\n\n[[hooks]]\nevent = \"" + event +
 				"\"\n[[hooks.hooks]]\ncommand = \"echo user-marker\"\n"
 			home, gen := newUserHome(t, cfg, userPresetFixture())
 			gen.SetUserEnv(noEnv)

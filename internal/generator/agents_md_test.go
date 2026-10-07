@@ -34,7 +34,7 @@ func agentsMDConfig(presets []string, flag string, extra string) string {
 	for i, p := range presets {
 		quoted[i] = strconv.Quote(p)
 	}
-	return "version = \"4.0\"\nname = \"shared\"\ngitignore = false\npresets = [" + strings.Join(quoted, ", ") + "]\n" +
+	return "version = \"5.0\"\nname = \"shared\"\ngitignore = false\npresets = [" + strings.Join(quoted, ", ") + "]\n" +
 		flag + extra
 }
 

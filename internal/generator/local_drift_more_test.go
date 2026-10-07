@@ -15,7 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
-const driftIgnoring = `version = "4.0"
+const driftIgnoring = `version = "5.0"
 name = "shared-project"
 presets = ["claude"]
 `

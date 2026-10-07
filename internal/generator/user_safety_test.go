@@ -13,7 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
-const claudeOnlyConfig = "version = \"4.0\"\nname = \"me\"\npresets = [\"claude\"]\n"
+const claudeOnlyConfig = "version = \"5.0\"\nname = \"me\"\npresets = [\"claude\"]\n"
 
 func writeUserManifest(t *testing.T, home string, files ...string) {
 	t.Helper()
