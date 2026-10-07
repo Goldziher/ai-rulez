@@ -150,7 +150,7 @@ func TestUpdateMajor_RefusesToGuessWhenConfigCannotBePatched(t *testing.T) {
 	cfg := f.config()
 	start := strings.Index(cfg, "[[includes]]")
 	require.GreaterOrEqual(t, start, 0)
-	cfg = cfg[:start] + "includes = [{ name = \"shared\", source = \"" + f.repo.URL + "\", version = \"^1\" }]\n"
+	cfg = cfg[:start] + "includes = [{ name = \"shared\", source = \"" + tomlEscape(f.repo.URL) + "\", version = \"^1\" }]\n"
 	f.setConfig(cfg)
 	lockBefore := f.lock()
 	updateMajor, updateWriteConfig = true, true

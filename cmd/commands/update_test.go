@@ -54,7 +54,7 @@ func newUpdateFixture(t *testing.T, include string) *updateFixture {
 	f.release("one", "v1.0.0", false)
 	f.release("two", "v1.1.0", true)
 	f.release("three", "v2.0.0", false)
-	f.root = lockProject(t, "\n[[includes]]\nname = \"shared\"\nsource = \""+repo.URL+"\"\n"+include+"\n")
+	f.root = lockProject(t, "\n[[includes]]\nname = \"shared\"\nsource = \""+tomlEscape(repo.URL)+"\"\n"+include+"\n")
 	require.Equal(t, 0, writeLockAt("", "", nil))
 	return f
 }
@@ -189,7 +189,7 @@ func TestUpdate_UnsatisfiableConstraintIsRefused(t *testing.T) {
 
 func (f *updateFixture) writeVersion(t *testing.T, include string) {
 	t.Helper()
-	writeFile(t, filepath.Join(f.root, ".ai-rulez", "config.toml"), lockProjectConfig+"\n[[includes]]\nname = \"shared\"\nsource = \""+f.repo.URL+"\"\n"+include+"\n")
+	writeFile(t, filepath.Join(f.root, ".ai-rulez", "config.toml"), lockProjectConfig+"\n[[includes]]\nname = \"shared\"\nsource = \""+tomlEscape(f.repo.URL)+"\"\n"+include+"\n")
 }
 
 func TestUpdate_UnknownNamesKindsAndOffline(t *testing.T) {
