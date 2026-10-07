@@ -10,7 +10,7 @@ This becomes 5.0.0. Upgrade steps for every item under Breaking are in [Migratin
 
 ### Breaking
 
-Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles each change below where it is mechanical. See [Migrating to v5](migration-v5.md).
+Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles each change below where it is mechanical. See [Migrating to v5](docs/migration-v5.md).
 
 - **BREAKING: config `version = "5.0"`.** A `4.x` config is rejected with `run ai-rulez migrate v5`; a `2.x`/`3.x` config with "install ai-rulez 4.x to migrate it to 4.0, then run `ai-rulez migrate v5`". `migrate` reads 4.x only.
 - **BREAKING: YAML and JSON configs are no longer loaded** (`config.yaml`, `config.yml`, `config.json`, `config.local.yaml`, `config.local.yml`, `config.local.json`); the error names the file and `ai-rulez migrate v5`. `migrate v5` converts them to `config.toml`, keeping keys, order and comments.
