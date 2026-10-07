@@ -255,7 +255,7 @@ func (s *Spool) catchUp(logPath string, o CatchUpOptions) (CatchUpResult, error)
 		if err != nil || o.DryRun {
 			return result, err
 		}
-		return result, s.updateCursorLocked(func(c *Cursor) { c.LogID, c.Offset, c.PlacedAt = logID, end, FormatTime(time.Now()) })
+		return result, s.updateCursorLocked(func(c *Cursor) { c.LogID, c.Offset, c.PlacedAt = logID, end, formatOrderTime(time.Now()) })
 	}
 	skip, err := s.knownIDs(cur)
 	if err != nil {
@@ -440,7 +440,7 @@ func (s *Spool) PlaceCursor(logPath string, fromStart bool) error {
 		}
 	}
 	return s.UpdateCursor(func(c *Cursor) {
-		c.LogID, c.Offset, c.LastEventID, c.PlacedAt = logID, end, "", FormatTime(time.Now())
+		c.LogID, c.Offset, c.LastEventID, c.PlacedAt = logID, end, "", formatOrderTime(time.Now())
 	})
 }
 
