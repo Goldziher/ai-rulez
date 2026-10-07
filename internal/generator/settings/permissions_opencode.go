@@ -34,6 +34,7 @@ const (
 	ocBash      = "bash"
 	ocRead      = "read"
 	ocEdit      = "edit"
+	ocWrite     = "write"
 	ocWebfetch  = "webfetch"
 	ocWebsearch = "websearch"
 	ocTask      = "task"
@@ -70,7 +71,7 @@ func buildOpencode(t *translation) ([]jsonmerge.OwnedKey, error) {
 
 	var keys []jsonmerge.OwnedKey
 	for _, tool := range tools {
-		path := []string{"permission", tool}
+		path := []string{keyPermission, tool}
 		existing, ok := existingObject(t.cfg, t.docPath, path)
 		if !ok {
 			for _, r := range byTool[tool] {
@@ -222,7 +223,7 @@ func pathPatterns(e permEntry) (tool string, patterns []string, why string) {
 	tool = ocRead
 	if r.Kind == KindEdit {
 		tool = ocEdit
-		if r.Tool != "Edit" && e.Action == ActionAllow {
+		if r.Tool != toolEdit && e.Action == ActionAllow {
 			return "", nil, "the edit permission also covers every other edit tool, so a " + r.Tool + " allow rule would be widened"
 		}
 	}

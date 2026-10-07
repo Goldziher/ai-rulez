@@ -49,7 +49,7 @@ func buildHermes(t *translation) ([]jsonmerge.OwnedKey, error) {
 		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"command_allowlist"}, dedupe(allow)))
 	}
 	if len(deny) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"approvals", "deny"}, dedupe(deny)))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"approvals", string(ActionDeny)}, dedupe(deny)))
 	}
 	return keys, nil
 }
@@ -90,7 +90,7 @@ func buildKimi(t *translation) ([]jsonmerge.OwnedKey, error) {
 	if len(rules) == 0 {
 		return nil, nil
 	}
-	return []jsonmerge.OwnedKey{docArrayKey(t.cfg, t.docPath, []string{"permission", "rules"}, dedupe(rules))}, nil
+	return []jsonmerge.OwnedKey{docArrayKey(t.cfg, t.docPath, []string{keyPermission, "rules"}, dedupe(rules))}, nil
 }
 
 func kimiPatterns(e permEntry) ([]string, string) {
@@ -100,13 +100,13 @@ func kimiPatterns(e permEntry) ([]string, string) {
 		p := r.Shell()
 		switch p.Kind {
 		case ShellAny:
-			return []string{"Bash"}, ""
+			return []string{toolBash}, ""
 		case ShellPrefix:
 			return []string{"Bash(" + p.Literal + ")", "Bash(" + p.Literal + " *)"}, ""
 		}
 		return []string{"Bash(" + p.Literal + ")"}, ""
 	case r.Kind == KindRead && r.Bare:
-		return []string{"Read"}, ""
+		return []string{toolRead}, ""
 	}
 	return nil, "only Bash rules and a bare Read rule are documented for Kimi Code"
 }

@@ -20,11 +20,11 @@ import (
 var _ = registerPermissionDialect("vibe", buildVibe)
 
 var vibeWholeTools = map[string][]string{
-	"Read":      {"read_file"},
-	"Edit":      {"write_file", "edit"},
-	"Write":     {"write_file"},
-	"WebFetch":  {"web_fetch"},
-	"WebSearch": {"web_search"},
+	toolRead:      {nativeReadFile},
+	toolEdit:      {nativeWriteFile, ocEdit},
+	toolWrite:     {nativeWriteFile},
+	toolWebFetch:  {nativeWebFetch},
+	toolWebSearch: {"web_search"},
 }
 
 func buildVibe(t *translation) ([]jsonmerge.OwnedKey, error) {
@@ -47,7 +47,7 @@ func buildVibe(t *translation) ([]jsonmerge.OwnedKey, error) {
 	sort.Strings(names)
 	for _, name := range names {
 		tool, list, _ := strings.Cut(name, ".")
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"tools", tool, list}, lists[name]))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyTools, tool, list}, lists[name]))
 	}
 	tools := make([]string, 0, len(never))
 	for tool := range never {
@@ -55,7 +55,7 @@ func buildVibe(t *translation) ([]jsonmerge.OwnedKey, error) {
 	}
 	sort.Strings(tools)
 	for _, tool := range tools {
-		if key, ok := scalarKey(t, []string{"tools", tool, "permission"}, "never"); ok {
+		if key, ok := scalarKey(t, []string{keyTools, tool, keyPermission}, "never"); ok {
 			keys = append(keys, key)
 		}
 	}
@@ -73,7 +73,7 @@ func vibeAdd(e permEntry, lists map[string][]any, never map[string]bool) string 
 		p := r.Shell()
 		switch {
 		case p.Kind == ShellAny && e.Action == ActionDeny:
-			never["bash"] = true
+			never[ocBash] = true
 		case p.Kind == ShellPrefix, p.Kind == ShellExact && e.Action == ActionDeny:
 			lists["bash."+list] = append(lists["bash."+list], p.Literal)
 		case p.Kind == ShellExact:
@@ -134,7 +134,7 @@ func buildPoolside(t *translation) ([]jsonmerge.OwnedKey, error) {
 			p := r.Shell()
 			switch {
 			case p.Kind == ShellAny && e.Action == ActionDeny:
-				if key, ok := scalarKey(t, []string{"tools", "shell", "disabled"}, true); ok {
+				if key, ok := scalarKey(t, []string{keyTools, "shell", "disabled"}, true); ok {
 					keys = append(keys, key)
 				}
 			case p.Kind == ShellAny:
@@ -155,7 +155,7 @@ func buildPoolside(t *translation) ([]jsonmerge.OwnedKey, error) {
 			}
 			entry := map[string]any{"path": poolsidePath(r)}
 			if e.Action == ActionAllow && r.Kind == KindEdit {
-				entry["write"] = true
+				entry[ocWrite] = true
 			}
 			paths[e.Action] = append(paths[e.Action], entry)
 		default:
@@ -164,7 +164,7 @@ func buildPoolside(t *translation) ([]jsonmerge.OwnedKey, error) {
 	}
 	for _, action := range []PermAction{ActionAllow, ActionDeny} {
 		if len(shell[action]) > 0 {
-			keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"tools", "shell", string(action)}, dedupe(shell[action])))
+			keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyTools, "shell", string(action)}, dedupe(shell[action])))
 		}
 		if len(paths[action]) > 0 {
 			keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"paths", string(action)}, paths[action]))
@@ -203,9 +203,9 @@ func dedupe(in []any) []any {
 // (main, read 2026-10-05).
 var _ = registerPermissionDialect("omp", buildOmp)
 
-var ompApproval = map[PermAction]string{ActionAllow: "allow", ActionAsk: "prompt", ActionDeny: "deny"}
+var ompApproval = map[PermAction]string{ActionAllow: string(ActionAllow), ActionAsk: "prompt", ActionDeny: string(ActionDeny)}
 
-var ompTools = map[string]string{"Bash": "bash", "Read": "read", "Edit": "edit", "Write": "write", "WebSearch": "web_search", "Task": "task"}
+var ompTools = map[string]string{toolBash: ocBash, toolRead: ocRead, toolEdit: ocEdit, toolWrite: ocWrite, toolWebSearch: "web_search", "Task": "task"}
 
 var ompName = regexp.MustCompile(`[^a-z0-9_]+`)
 
@@ -232,14 +232,14 @@ func buildOmp(t *translation) ([]jsonmerge.OwnedKey, error) {
 	}
 	var keys []jsonmerge.OwnedKey
 	if len(patterns) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"bash", "patterns"}, dedupe(patterns)))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{ocBash, "patterns"}, dedupe(patterns)))
 	}
 	if len(tools) > 0 {
 		values := make(map[string]any, len(tools))
 		for tool, action := range tools {
 			values[tool] = ompApproval[action]
 		}
-		if key, ok := docMembersKey(t, []string{"tools", "approval"}, values); ok {
+		if key, ok := docMembersKey(t, []string{keyTools, "approval"}, values); ok {
 			keys = append(keys, key)
 		}
 	}
@@ -254,7 +254,7 @@ func ompEntry(e permEntry) (patterns []string, tool, why string) {
 		case ShellPrefix:
 			return []string{p.Literal, p.Literal + " *"}, "", ""
 		case ShellAny:
-			return nil, "bash", ""
+			return nil, ocBash, ""
 		default:
 			return []string{p.Literal}, "", ""
 		}
@@ -285,8 +285,8 @@ func ompEntry(e permEntry) (patterns []string, tool, why string) {
 var _ = registerPermissionDialect("augment", buildAugment)
 
 var augmentTools = map[string][]string{
-	"Bash": {"terminal"}, "Read": {"read"}, "Edit": {"edit", "write"}, "MultiEdit": {"edit"},
-	"Write": {"write"}, "WebFetch": {"web-fetch"}, "WebSearch": {"web-search"},
+	toolBash: {keyTerminal}, toolRead: {ocRead}, toolEdit: {ocEdit, ocWrite}, "MultiEdit": {ocEdit},
+	toolWrite: {ocWrite}, toolWebFetch: {"web-fetch"}, toolWebSearch: {"web-search"},
 }
 
 func buildAugment(t *translation) ([]jsonmerge.OwnedKey, error) {
@@ -325,7 +325,7 @@ func augmentEntries(e permEntry) ([]any, string) {
 		default:
 			re = denyShellRegex(p, false)
 		}
-		el := map[string]any{"toolName": names[0], "permission": perm}
+		el := map[string]any{"toolName": names[0], keyPermission: perm}
 		if re != "" {
 			el["shellInputRegex"] = re
 		}
@@ -336,7 +336,7 @@ func augmentEntries(e permEntry) ([]any, string) {
 	}
 	var out []any
 	for _, n := range names {
-		out = append(out, map[string]any{"toolName": n, "permission": perm})
+		out = append(out, map[string]any{"toolName": n, keyPermission: perm})
 	}
 	return out, ""
 }
