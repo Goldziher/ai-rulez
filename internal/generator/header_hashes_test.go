@@ -21,7 +21,7 @@ func hashesProject(t *testing.T, headerBlock string) string {
 	configDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
-		"version = \"4.0\"\nname = \"hashes\"\npresets = [\"claude\"]\ngitignore = false\n"+headerBlock), 0o644))
+		"version = \"5.0\"\nname = \"hashes\"\npresets = [\"claude\"]\ngitignore = false\n"+headerBlock), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "rules", "style.md"),
 		[]byte("---\npriority: high\n---\n# Style\n\nUse tabs.\n"), 0o644))
 	for _, name := range []string{"alpha", "beta"} {
@@ -162,7 +162,7 @@ func TestHeaderHashes_ReRendersWhenHeaderStyleChanges(t *testing.T) {
 	// The body (and so the Content-Hash) is unchanged; only the banner differs,
 	// which no Source-Hash is around to flag.
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte(
-		"version = \"4.0\"\nname = \"hashes\"\npresets = [\"claude\"]\ngitignore = false\n[header]\nhashes = \"content\"\nstyle = \"detailed\"\n"), 0o644))
+		"version = \"5.0\"\nname = \"hashes\"\npresets = [\"claude\"]\ngitignore = false\n[header]\nhashes = \"content\"\nstyle = \"detailed\"\n"), 0o644))
 	generateHashesProject(t, dir)
 	assert.Contains(t, changedPaths(before, snapshotTree(t, dir)), "CLAUDE.md")
 }

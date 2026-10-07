@@ -25,7 +25,7 @@ func codesOf(fs []okf.Finding) []string {
 func TestCheckProject(t *testing.T) {
 	root := sampleProject(t)
 	cfgFile := filepath.Join(root, ".ai-rulez", "config.toml")
-	require.NoError(t, os.WriteFile(cfgFile, []byte("version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\", \"okf\"]\n"), 0o644))
+	require.NoError(t, os.WriteFile(cfgFile, []byte("version = \"5.0\"\nname = \"sample\"\npresets = [\"claude\", \"okf\"]\n"), 0o644))
 	cfg, err := config.LoadConfig(context.Background(), root)
 	require.NoError(t, err)
 	tree := cfg.Content
@@ -74,7 +74,7 @@ func TestCheckProjectNamesAnEditedTitleAndHonoursTheConfiguredStyle(t *testing.T
 	// Arrange
 	root := sampleProject(t)
 	cfgFile := filepath.Join(root, ".ai-rulez", "config.toml")
-	require.NoError(t, os.WriteFile(cfgFile, []byte("version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\", \"okf\"]\n\n[okf]\nindex_style = \"frontmatter\"\n"), 0o644))
+	require.NoError(t, os.WriteFile(cfgFile, []byte("version = \"5.0\"\nname = \"sample\"\npresets = [\"claude\", \"okf\"]\n\n[okf]\nindex_style = \"frontmatter\"\n"), 0o644))
 	cfg, err := config.LoadConfig(context.Background(), root)
 	require.NoError(t, err)
 	exp, err := okfbridge.Export(cfg.Content, okfbridge.ExportOptions{IndexStyle: okf.StyleFrontmatter})

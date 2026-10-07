@@ -13,7 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 )
 
-const overlayProjectConfig = `version = "4.0"
+const overlayProjectConfig = `version = "5.0"
 name = "test-project"
 presets = ["claude"]
 `

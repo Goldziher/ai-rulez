@@ -30,7 +30,7 @@ func writeMinimalConfig(t *testing.T, dir string) {
 	t.Helper()
 	cfgDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-	body := "version = \"4.0\"\nname = \"test\"\npresets = [\"claude\"]\n"
+	body := "version = \"5.0\"\nname = \"test\"\npresets = [\"claude\"]\n"
 	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(body), 0o644))
 }
 
@@ -274,7 +274,7 @@ func TestUpdateConfigHandler_ConventionConfigDir(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, ".config", "ai-rulez")
 	require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-	body := "version = \"4.0\"\nname = \"test\"\npresets = [\"claude\"]\n"
+	body := "version = \"5.0\"\nname = \"test\"\npresets = [\"claude\"]\n"
 	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(body), 0o644))
 
 	res, err := UpdateConfigHandler(context.Background(), newRequestWithArgs(map[string]any{
@@ -307,7 +307,7 @@ func TestAgentsMDConfigRoundTrip(t *testing.T) {
 			dir := t.TempDir()
 			cfgDir := filepath.Join(dir, ".ai-rulez")
 			require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-			body := "version = \"4.0\"\nname = \"test\"\n" + tc.initial + "presets = [\"claude\"]\n"
+			body := "version = \"5.0\"\nname = \"test\"\n" + tc.initial + "presets = [\"claude\"]\n"
 			require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(body), 0o644))
 
 			args := map[string]any{"working_directory": dir, "description": "d"}

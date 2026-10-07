@@ -25,7 +25,7 @@ func timestampProject(t *testing.T, header string) string {
 	configDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
-		"version = \"4.0\"\nname = \"stamped\"\npresets = [\"claude\", \"codex\"]\ngitignore = false\n\n[rules]\nmode = \"inline\"\n"+header),
+		"version = \"5.0\"\nname = \"stamped\"\npresets = [\"claude\", \"codex\"]\ngitignore = false\n\n[rules]\nmode = \"inline\"\n"+header),
 		0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "rules", "style.md"),
 		[]byte("---\npriority: high\n---\n# Style\n\nUse tabs.\n"), 0o644))
@@ -154,7 +154,7 @@ func TestGenerator_SharedAgentsMDIdenticalAcrossPresets(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Join(configDir, "context"), 0o755))
 		list := "[\"" + strings.Join(presets, "\", \"") + "\"]"
 		require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
-			"version = \"4.0\"\nname = \"shared\"\npresets = "+list+"\ngitignore = false\n\n[rules]\nmode = \"inline\"\n"), 0o644))
+			"version = \"5.0\"\nname = \"shared\"\npresets = "+list+"\ngitignore = false\n\n[rules]\nmode = \"inline\"\n"), 0o644))
 		require.NoError(t, os.WriteFile(filepath.Join(configDir, "rules", "style.md"),
 			[]byte("---\npriority: high\n---\n# Style\n\nUse tabs.\n"), 0o644))
 		require.NoError(t, os.WriteFile(filepath.Join(configDir, "context", "arch.md"),

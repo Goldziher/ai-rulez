@@ -66,7 +66,7 @@ func (s *InitCLITestSuite) TestBasicInit() {
 
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "TestProject")
-	s.Contains(content, `version = "4.0"`)
+	s.Contains(content, `version = "5.0"`)
 }
 
 func (s *InitCLITestSuite) TestInitWithoutProjectName() {
@@ -79,7 +79,7 @@ func (s *InitCLITestSuite) TestInitWithoutProjectName() {
 	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "name = ")
-	s.Contains(content, `version = "4.0"`)
+	s.Contains(content, `version = "5.0"`)
 }
 
 func (s *InitCLITestSuite) TestInitWithDomains() {

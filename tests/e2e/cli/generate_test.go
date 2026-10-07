@@ -39,7 +39,7 @@ func (s *GenerateCLITestSuite) TestGenerateWithCustomConfig() {
 	aiRulesDir := filepath.Join(s.workingDir, "custom", ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "custom-project"
 description = "Custom configuration"
 presets = ["claude"]
@@ -67,7 +67,7 @@ Test content for custom config
 func (s *GenerateCLITestSuite) TestGenerateWithPositionalConfigFileAndDryRun() {
 	configDir := filepath.Join(s.workingDir, ".rules")
 	s.NoError(os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
-	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "5.0"
 name = "positional-config"
 presets = ["codex"]
 gitignore = false
@@ -95,7 +95,7 @@ Generated from exact config path
 func (s *GenerateCLITestSuite) TestGenerateWithConfigDirFlag() {
 	configDir := filepath.Join(s.workingDir, "ai-policy")
 	s.NoError(os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
-	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "5.0"
 name = "config-dir-flag"
 presets = ["codex"]
 gitignore = false
@@ -117,7 +117,7 @@ Generated from --config-dir
 func (s *GenerateCLITestSuite) TestGenerateWithMCPEnvFlag() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(filepath.Join(aiRulesDir, "rules"), 0o755))
-	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "5.0"
 name = "mcp-env-cli"
 presets = ["claude"]
 gitignore = true
@@ -160,7 +160,7 @@ func (s *GenerateCLITestSuite) TestGenerateWithMCPEnvFileFlag() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(filepath.Join(aiRulesDir, "rules"), 0o755))
 	testutil.WriteFile(s.T(), s.workingDir, "mcp.env", "GRAFANA_TOKEN=from-env-file\n")
-	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "5.0"
 name = "mcp-env-file-cli"
 presets = ["claude"]
 gitignore = true
@@ -189,7 +189,7 @@ func (s *GenerateCLITestSuite) TestGenerateWithScopedOutputs() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(filepath.Join(aiRulesDir, "rules"), 0o755))
 	s.NoError(os.MkdirAll(filepath.Join(aiRulesDir, "domains", "frontend", "rules"), 0o755))
-	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "5.0"
 name = "scoped-cli"
 presets = ["codex"]
 gitignore = false
@@ -230,7 +230,7 @@ func (s *GenerateCLITestSuite) TestGenerateWithAgents() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "agent-test-project"
 description = "Project with agents"
 presets = ["claude"]
@@ -273,7 +273,7 @@ func (s *GenerateCLITestSuite) TestGenerateWithTargets() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "multi-preset-project"
 description = "Project with multiple presets"
 presets = ["claude", "cursor"]
@@ -352,7 +352,7 @@ func (s *GenerateCLITestSuite) TestGenerateDirectoryOutputs() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "directory-test-project"
 description = "Test directory outputs"
 presets = ["cursor"]
@@ -383,7 +383,7 @@ Test content
 func (s *GenerateCLITestSuite) TestGenerateWarnsOnUnknownBuiltinExclusion() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
-	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "5.0"
 name = "unknown-exclusions"
 presets = ["claude"]
 gitignore = false
@@ -403,7 +403,7 @@ builtins = ["!ai-governance/this-rule-does-not-exist", "!nosuchpack/whatever"]
 func (s *GenerateCLITestSuite) TestGenerateSilentOnValidBuiltinExclusions() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
-	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "5.0"
 name = "valid-exclusions"
 presets = ["claude"]
 gitignore = false

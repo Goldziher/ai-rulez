@@ -12,7 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 )
 
-const mutatorSharedConfig = `version = "4.0"
+const mutatorSharedConfig = `version = "5.0"
 name = "test-project"
 presets = ["claude"]
 default = "base"
