@@ -960,6 +960,13 @@ func (c *Config) validateMCPServerHeaders() error {
 	sort.Strings(names)
 	for _, name := range names {
 		server := c.MCPServers[name]
+		if server != nil {
+			for key, value := range server.Env {
+				if err := CheckRepoTelemetryEnv(key, value); err != nil {
+					return oops.With("field", "mcp_servers."+name+".env").Errorf("%s", err.Error())
+				}
+			}
+		}
 		if server == nil || len(server.Headers) == 0 {
 			continue
 		}
