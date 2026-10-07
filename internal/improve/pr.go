@@ -1,6 +1,7 @@
 package improve
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -266,12 +267,18 @@ func (p *prRun) applyAt(wt, skillDir, base string) error {
 	if info, err := os.Lstat(skillDir); err != nil || !info.IsDir() {
 		return refuse(CodePRRefused, "the base %s has no skill directory at %s", base, r.SkillPath)
 	}
-	if now, err := evals.SkillDigest(skillDir); err != nil || now != r.OriginalDigest {
-		return refuse(CodeRunStale, "%s at %s differs from what run %s measured: re-run `ai-rulez improve run %s` on that base", r.Skill, base, o.RunID, r.Skill)
-	}
 	orig, err := ReadTree(skillDir)
 	if err != nil {
 		return err
+	}
+	if now, err := evals.SkillDigest(skillDir); err != nil || now != r.OriginalDigest {
+		// Git may have checked the base out with converted line endings (core.autocrlf=true, the Git for
+		// Windows default): the same blobs, other bytes. Compare with the copy the run measured instead.
+		measured, ok := p.measuredOriginal()
+		if !ok || !sameModuloEOL(orig, measured) {
+			return refuse(CodeRunStale, "%s at %s differs from what run %s measured: re-run `ai-rulez improve run %s` on that base", r.Skill, base, o.RunID, r.Skill)
+		}
+		orig = measured
 	}
 	if len(orig.Odd) > 0 {
 		return refuse(CodePRRefused, "%s contains symlinks, hard links or oversized files: improve pr will not write into it", r.SkillPath)
@@ -290,6 +297,36 @@ func (p *prRun) applyAt(wt, skillDir, base string) error {
 		return err
 	}
 	return nil
+}
+
+// measuredOriginal is the skill copy the run measured (the run directory's original/), when its digest still is
+// the report's original digest.
+func (p *prRun) measuredOriginal() (*Tree, bool) {
+	dir := filepath.Join(p.dir, "original", p.report.Skill)
+	if d, err := evals.SkillDigest(dir); err != nil || d != p.report.OriginalDigest {
+		return nil, false
+	}
+	t, err := ReadTree(dir)
+	if err != nil || len(t.Odd) > 0 {
+		return nil, false
+	}
+	return t, true
+}
+
+// sameModuloEOL reports whether two trees hold the same files with the same modes and the same content once CRLF
+// line endings are read as LF, which is all a checkout's end-of-line conversion changes.
+func sameModuloEOL(a, b *Tree) bool {
+	if len(a.Files) != len(b.Files) {
+		return false
+	}
+	lf := func(d []byte) []byte { return bytes.ReplaceAll(d, []byte("\r\n"), []byte("\n")) }
+	for path, ea := range a.Files {
+		eb, ok := b.Files[path]
+		if !ok || ea.Exec != eb.Exec || !bytes.Equal(lf(ea.Data), lf(eb.Data)) {
+			return false
+		}
+	}
+	return true
 }
 
 // plainPath checks that no component of target below root (the skill directory and every parent up to
