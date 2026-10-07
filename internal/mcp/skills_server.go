@@ -107,7 +107,9 @@ func (s *Server) readResource(_ context.Context, req *sdkmcp.ReadResourceRequest
 	return &sdkmcp.ReadResourceResult{Contents: []*sdkmcp.ResourceContents{contents}}, nil
 }
 
-// resourceNotFound is the -32002 error the SDK would build, with the URI
+// resourceNotFound is the resource-not-found error the SDK would build
+// (-32602 since SEP-2164, which the SDK's deprecated CodeResourceNotFound
+// already equals), with the URI
 // escaped: the SDK formats it with %q, which emits \x escapes for control
 // characters, produces invalid JSON and used to end the session on marshal.
 func resourceNotFound(uri string) error {
@@ -115,7 +117,7 @@ func resourceNotFound(uri string) error {
 	if err != nil {
 		data = []byte("{}")
 	}
-	return &jsonrpc.Error{Code: sdkmcp.CodeResourceNotFound, Message: "Resource not found", Data: data}
+	return &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "Resource not found", Data: data}
 }
 
 // unknownResourceMiddleware answers resources/read of a URI that is not a
