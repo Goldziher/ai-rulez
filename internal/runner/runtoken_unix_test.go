@@ -119,3 +119,35 @@ func TestProcessEnvReadsOwnProcess(t *testing.T) {
 		t.Fatalf("own environment has no PATH: %d entries", len(env))
 	}
 }
+
+// The sweep after each run must not adopt a process another, concurrent run
+// has forked but not yet exec'd: that process holds a copy of this run's marker
+// read end until its exec closes it, and it is not this run's.
+func TestConcurrentRunsDoNotKillEachOther(t *testing.T) {
+	// Arrange
+	const workers, runs = 32, 20
+	errs := make(chan string, workers*runs)
+	done := make(chan struct{})
+
+	// Act
+	for range workers {
+		go func() {
+			defer func() { done <- struct{}{} }()
+			for range runs {
+				res := Run(context.Background(), Spec{Argv: []string{"/bin/sh", "-c", "exit 0"}, Env: []string{"PATH=/usr/bin:/bin"}, Timeout: 30 * time.Second})
+				if res.Status != StatusOK {
+					errs <- string(res.Status) + ": " + string(res.Stderr)
+				}
+			}
+		}()
+	}
+	for range workers {
+		<-done
+	}
+	close(errs)
+
+	// Assert
+	for e := range errs {
+		t.Errorf("a concurrent run did not finish cleanly: %s", e)
+	}
+}
