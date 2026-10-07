@@ -60,8 +60,8 @@ func TestLoadConfigReadsOnlyThroughTheWorkspace(t *testing.T) {
 
 			// Assert
 			require.NoError(t, err)
-			assert.Equal(t, "/virtual/proj", cfg.BaseDir)
-			assert.Equal(t, "/virtual/proj/.ai-rulez", cfg.ConfigDir)
+			assert.Equal(t, filepath.FromSlash("/virtual/proj"), cfg.BaseDir)
+			assert.Equal(t, filepath.FromSlash("/virtual/proj/.ai-rulez"), cfg.ConfigDir)
 			var rules []string
 			for _, r := range cfg.Content.Rules {
 				rules = append(rules, r.Name)
@@ -90,7 +90,7 @@ func TestLoadConfigFromFileUsesTheWorkspace(t *testing.T) {
 
 	// Assert
 	require.NoError(t, err)
-	assert.Equal(t, "/virtual/proj", cfg.BaseDir)
+	assert.Equal(t, filepath.FromSlash("/virtual/proj"), cfg.BaseDir)
 	assert.Len(t, cfg.Content.Rules, 1)
 }
 

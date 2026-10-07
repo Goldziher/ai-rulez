@@ -127,7 +127,7 @@ func (c *Config) validateGovernance() error {
 		return oops.With("field", "governance.min_assurance").Errorf("invalid min_assurance %q (use %s)", g.MinAssurance, strings.Join(ApprovalAssurances, ", "))
 	}
 	if from := g.ApproversFrom; from != "" && from != ApproversFromCodeowners {
-		if filepath.IsAbs(from) || strings.Contains(filepath.ToSlash(from), "..") || strings.ContainsAny(from, "\x00\n") {
+		if rooted(from) || strings.Contains(filepath.ToSlash(from), "..") || strings.ContainsAny(from, "\x00\n") {
 			return oops.With("field", "governance.approvers_from").Errorf("invalid approvers_from %q (use %q or a path inside the project)", from, ApproversFromCodeowners)
 		}
 	}
