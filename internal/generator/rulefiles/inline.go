@@ -40,7 +40,8 @@ func WriteInlineRules(b *strings.Builder, rules []config.ContentFile, opts Inlin
 		return
 	}
 	b.WriteString("## Rules\n\n")
-	for _, rule := range rules {
+	for i := range rules {
+		rule := &rules[i]
 		start := mark(rec, b)
 		b.WriteString("### ")
 		b.WriteString(rule.Name)
@@ -68,7 +69,8 @@ func WriteInlineContext(b *strings.Builder, ctxFiles []config.ContentFile, opts 
 		return
 	}
 	b.WriteString("## Context\n\n")
-	for _, ctx := range ctxFiles {
+	for i := range ctxFiles {
+		ctx := &ctxFiles[i]
 		start := mark(rec, b)
 		b.WriteString("### ")
 		b.WriteString(ctx.Name)
@@ -91,7 +93,7 @@ func WriteInlineContext(b *strings.Builder, ctxFiles []config.ContentFile, opts 
 // writeActivation writes the scope or trigger hint for f. Manual activation
 // has no inline form, so it is recorded as a downgrade and rendered as
 // always-on.
-func writeActivation(b *strings.Builder, d *diag.Collector, kind string, f config.ContentFile) {
+func writeActivation(b *strings.Builder, d *diag.Collector, kind string, f *config.ContentFile) {
 	act := f.Metadata.ResolveActivation()
 	switch act.Mode {
 	case config.ActivationGlob:

@@ -37,17 +37,9 @@ func Render(t Target, it Item, cfg *config.Config) (text string, notes []Note, e
 
 	var b strings.Builder
 	if fm != nil {
-		b.WriteString("---\n")
-		if t.IsMappedLines() {
-			b.WriteString(MappedLines(fm))
-		} else {
-			marshaled, err := yaml.Marshal(fm) // yaml.v3 sorts map keys
-			if err != nil {
-				return "", nil, oops.With("rule", it.File.Name).Wrapf(err, "marshal frontmatter")
-			}
-			b.Write(unquoteGlobs(t.Dialect, fm, marshaled))
+		if err := writeFrontmatter(&b, t, it, fm); err != nil {
+			return "", nil, err
 		}
-		b.WriteString("---\n")
 	}
 	if t.Banner {
 		b.WriteString(templates.RuleBanner(sourceLabel(it.File.Path, cfg)))
@@ -57,15 +49,7 @@ func Render(t Target, it Item, cfg *config.Config) (text string, notes []Note, e
 	if !cfg.IsCompact() && it.File.Metadata != nil && it.File.Metadata.Priority != "" {
 		b.WriteString("**Priority:** " + it.File.Metadata.Priority + "\n\n")
 	}
-	if t.Dialect == DialectJunie && it.Activation.Mode == config.ActivationGlob {
-		if kept, _ := splitNegated(it.Activation.Globs); len(kept) > 0 {
-			spans := make([]string, len(kept))
-			for i, g := range kept {
-				spans[i] = codeSpan(g)
-			}
-			b.WriteString("_Applies to: " + strings.Join(spans, ", ") + "_\n\n")
-		}
-	}
+	writeJunieScope(&b, t, it)
 	b.WriteString(strings.TrimRight(markdown.ProcessEmbeddedContent(it.File.Content), "\n"))
 	b.WriteString("\n")
 
@@ -75,6 +59,37 @@ func Render(t Target, it Item, cfg *config.Config) (text string, notes []Note, e
 			utf8.RuneCountInString(out), t.Preset, t.MaxChars), false))
 	}
 	return out, notes, nil
+}
+
+// writeFrontmatter writes the YAML frontmatter block of a rule file.
+func writeFrontmatter(b *strings.Builder, t Target, it Item, fm map[string]any) error {
+	b.WriteString("---\n")
+	if t.IsMappedLines() {
+		b.WriteString(MappedLines(fm))
+	} else {
+		marshaled, err := yaml.Marshal(fm) // yaml.v3 sorts map keys
+		if err != nil {
+			return oops.With("rule", it.File.Name).Wrapf(err, "marshal frontmatter")
+		}
+		b.Write(unquoteGlobs(t.Dialect, fm, marshaled))
+	}
+	b.WriteString("---\n")
+	return nil
+}
+
+// writeJunieScope writes the "Applies to" line Junie rules carry in the body,
+// since its frontmatter cannot hold the globs.
+func writeJunieScope(b *strings.Builder, t Target, it Item) {
+	if t.Dialect != DialectJunie || it.Activation.Mode != config.ActivationGlob {
+		return
+	}
+	if kept, _ := splitNegated(it.Activation.Globs); len(kept) > 0 {
+		spans := make([]string, len(kept))
+		for i, g := range kept {
+			spans[i] = codeSpan(g)
+		}
+		b.WriteString("_Applies to: " + strings.Join(spans, ", ") + "_\n\n")
+	}
 }
 
 // bareGlobs is the allowlist for a Cursor globs value written without quotes.

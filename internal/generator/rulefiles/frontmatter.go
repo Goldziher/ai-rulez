@@ -112,7 +112,15 @@ func frontmatterFor(d Dialect, mapping *ActivationMap, it Item) (fm map[string]a
 		}
 	}
 
-	var extra []Note
+	fm, extra := dialectFrontmatter(d, mapping, it, mode, joined)
+	return fm, mergeNotes(notes, extra)
+}
+
+// dialectFrontmatter renders the frontmatter of one dialect for the effective
+// mode; joined is the brace-expanded glob list the comma-separated dialects use.
+func dialectFrontmatter(d Dialect, mapping *ActivationMap, it Item, mode config.ActivationMode, joined string,
+) (fm map[string]any, extra []Note) {
+	act := it.Activation
 	switch d {
 	case DialectClaude, DialectCline:
 		fm, extra = listPathsFrontmatter(d, it, mode)
@@ -129,7 +137,7 @@ func frontmatterFor(d Dialect, mapping *ActivationMap, it Item) (fm map[string]a
 	case DialectMapped:
 		fm, extra = mappedFrontmatter(mapping, it, mode)
 	}
-	return fm, mergeNotes(notes, extra)
+	return fm, extra
 }
 
 // mergeNotes combines the notes from resolving the effective mode with those
