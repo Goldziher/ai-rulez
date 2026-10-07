@@ -105,6 +105,7 @@ func TestCheckDrift_ReportsTheLocalDriftRefusal(t *testing.T) {
 			if tt.want {
 				assert.Equal(t, DriftBlocked, kinds["CLAUDE.md"])
 			} else {
+				assert.NotEqual(t, DriftBlocked, kinds["CLAUDE.md"])
 			}
 		})
 	}
