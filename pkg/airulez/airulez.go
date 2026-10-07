@@ -321,6 +321,9 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 		config.WithWorkspace(ws),
 		config.WithHost(ambient.Host{Env: env, Clock: o.Clock, Runner: runnerAdapter{r: run}, Log: log}),
 		config.WithRegistry(registry.Default()),
+		// A Project plans and writes outputs: an enforced ai-rulez.lock ([lock]
+		// enforce, on whenever the lock exists) is required, as by `generate`.
+		config.WithLockPolicy(config.LockPolicy{RequireWhenEnforced: true}),
 	}
 	if !o.WithLocal {
 		opts = append(opts, config.WithoutLocal())

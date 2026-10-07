@@ -142,13 +142,13 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 
 	s.logger().Debug("Fetching installed skill", "name", s.name, "repo", RedactURL(s.repoURL), "path", s.path, "ref", s.ref)
 
-	if SkipFetch || config.OfflineIncludes(ctx) {
+	if config.OfflineIncludes(ctx) {
 		skillDir := s.findSkillDir()
 		if skillDir == "" {
 			return config.ContentFile{}, oops.
 				With("repo", RedactURL(s.repoURL)).
 				With("cache_dir", s.cacheDir).
-				Wrapf(ErrNotCached, "%s: no cached skill found for '%s'", offlineReason(), s.name)
+				Wrapf(ErrNotCached, "%s: no cached skill found for '%s'", offlineReason(ctx), s.name)
 		}
 		return ScanInstalledSkillDir(logger.WithContext(ctx, s.log), skillDir, s.name)
 	}

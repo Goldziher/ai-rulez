@@ -340,7 +340,7 @@ func applyUpdates(path string, cfg *config.Config, current *lockfile.File, srcs 
 	includes.AllowDowngrade, includes.AcceptMovedTag = updateAllowDowngrade, updateAcceptMoved
 	defer func() { includes.Advance, includes.AllowDowngrade, includes.AcceptMovedTag = nil, false, false }()
 	defer prepareLockRun(true, "", wanted)()
-	includes.RefreshFilter = updateRefreshFilter(rep.moves) // by kind and name: a same-named source of another kind stays put
+	cliLockPolicy.Refresh = updateRefreshFilter(rep.moves) // by kind and name: a same-named source of another kind stays put
 
 	fresh, err := loadForLock(path, config.WithoutLocal())
 	if err != nil {

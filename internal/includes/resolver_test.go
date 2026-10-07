@@ -13,9 +13,6 @@ import (
 func TestResolverCircularDependencyDetection(t *testing.T) {
 	// This test verifies that circular dependencies are caught
 	// Note: a failing include is an error unless the run is offline
-	oldSkip := SkipFetch
-	SkipFetch = true
-	defer func() { SkipFetch = oldSkip }()
 	resolver := NewResolver("/tmp", "")
 
 	// Create two includes with the same name (represents circular reference)
@@ -33,6 +30,7 @@ func TestResolverCircularDependencyDetection(t *testing.T) {
 		Content: &config.ContentTree{
 			Domains: make(map[string]*config.Domain),
 		},
+		LockPolicy: config.LockPolicy{Offline: true},
 	}
 
 	ctx := context.Background()
@@ -56,6 +54,7 @@ func TestResolverCircularDependencyDetection(t *testing.T) {
 		Content: &config.ContentTree{
 			Domains: make(map[string]*config.Domain),
 		},
+		LockPolicy: config.LockPolicy{Offline: true},
 	}
 
 	result2, _ := resolver2.ResolveIncludes(ctx, cfg2)
@@ -522,6 +521,7 @@ func TestResolverLocalInclude(t *testing.T) {
 		Content: &config.ContentTree{
 			Domains: make(map[string]*config.Domain),
 		},
+		LockPolicy: config.LockPolicy{Offline: true},
 	}
 
 	ctx := context.Background()

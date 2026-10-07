@@ -55,6 +55,10 @@ type ServeSetup struct {
 	// the network. Offline never uses the network but does not require the lock.
 	Frozen  bool
 	Offline bool
+	// LockPolicy is the lock policy of the configuration loads when the setup
+	// runs inside another command's load (a `lock` refresh); nil derives it from
+	// Frozen and Offline.
+	LockPolicy *config.LockPolicy
 	// CacheDir overrides the skill-source cache (tests).
 	CacheDir string
 	// MaxCloneBytes is the clone size limit of git skill sources that set no
@@ -368,6 +372,22 @@ func (st *ServeSetup) workDir() string {
 	return st.WorkDir
 }
 
+// lockPolicy is the lock policy of the server's loads: the one it was given
+// (LockPolicy), with --frozen and --offline applied.
+func (st *ServeSetup) lockPolicy() config.LockPolicy {
+	var p config.LockPolicy
+	if st.LockPolicy != nil {
+		p = *st.LockPolicy
+	}
+	switch {
+	case st.Frozen:
+		p.Mode, p.Offline = config.LockFrozen, true
+	case st.Offline:
+		p.Offline = true
+	}
+	return p
+}
+
 func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 	wd := st.workDir()
 	if config.ResolveConfigDirName(wd) == "" && len(st.Sources) > 0 {
@@ -375,7 +395,9 @@ func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 		abs, _ := filepath.Abs(wd) //nolint:errcheck // falls back to the given dir
 		return &config.Config{BaseDir: abs}, nil
 	}
-	var opts []config.LoadOption
+	// --frozen and --offline are the lock policy of the load, exactly as
+	// `generate --frozen` and `generate --no-fetch` make them.
+	opts := []config.LoadOption{config.WithLockPolicy(st.lockPolicy())}
 	if st.Collector != nil {
 		opts = append(opts, config.WithCollector(st.Collector))
 	}

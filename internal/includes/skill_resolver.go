@@ -15,6 +15,7 @@ import (
 // ResolveInstalledSkills resolves all configured installed skills and returns their content
 func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken string) ([]config.ContentFile, error) {
 	cfg.Log().Debug("Resolving installed skills", "count", len(cfg.InstalledSkills))
+	ctx = policyContext(ctx, cfg)
 
 	var skills []config.ContentFile
 	var violations []error
@@ -56,7 +57,7 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfile.File, skillConf *config.InstalledSkillConfig, accessToken string) (config.ContentFile, error) {
 	baseDir := cfg.BaseDir
 	// Check for local override first
-	if skillConf.LocalOverride != "" && !refreshing(lockfile.KindSkill, skillConf.Name) {
+	if skillConf.LocalOverride != "" && !refreshing(cfg, lockfile.KindSkill, skillConf.Name) {
 		if err := checkLocalOverride(cfg, "installed_skills", skillConf.Name); err != nil {
 			return config.ContentFile{}, err
 		}
@@ -82,7 +83,7 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		if err != nil {
 			return config.ContentFile{}, err
 		}
-		ref, err := versionRef(ctx, lock, w, p, stripGitPlus(skillConf.Source), accessToken, baseDir)
+		ref, err := versionRef(ctx, cfg, lock, w, p, stripGitPlus(skillConf.Source), accessToken, baseDir)
 		if err != nil {
 			return config.ContentFile{}, err
 		}

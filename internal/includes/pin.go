@@ -14,34 +14,17 @@ import (
 	"github.com/samber/oops"
 )
 
-// LockMode says how resolution treats ai-rulez.lock.
-type LockMode int
+// LockMode says how resolution treats ai-rulez.lock. The policy is a per-load
+// option (config.WithLockPolicy) that the loaded Config carries, never process
+// state: two loads in one process may resolve under different policies.
+type LockMode = config.LockMode
 
+// Lock modes, see config.LockMode.
 const (
-	// LockAuto uses the lock when one covers a source and fetches an uncovered
-	// source as before. Without a lock file nothing changes.
-	LockAuto LockMode = iota
-	// LockRequire (generate --locked) fails when the lock is missing or does not
-	// cover a configured remote source.
-	LockRequire
-	// LockFrozen (generate --frozen) is LockRequire that never touches the
-	// network; the caller also sets SkipFetch.
-	LockFrozen
-	// LockRefresh (ai-rulez lock) re-resolves the sources selected by
-	// RefreshFilter from the remote, ignoring their pins, so new pins can be recorded.
-	LockRefresh
-)
-
-// Lock policy for this process, set from the CLI before any config is loaded.
-var (
-	Mode LockMode
-	// RefreshFilter selects what LockRefresh re-resolves; nil selects everything.
-	RefreshFilter func(kind, name string) bool
-	// RequireWhenEnforced makes an enforced lock ([lock] enforce, on by default
-	// when ai-rulez.lock exists) behave like LockRequire: a remote source the
-	// lock does not cover is a violation instead of an unpinned fetch. `generate`
-	// sets it; commands that only read or report leave it off.
-	RequireWhenEnforced bool
+	LockAuto    = config.LockAuto
+	LockRequire = config.LockRequire
+	LockFrozen  = config.LockFrozen
+	LockRefresh = config.LockRefresh
 )
 
 // observed is what a fetch actually resolved to, recorded so `ai-rulez lock`
@@ -78,9 +61,19 @@ func ResetObserved() {
 	resetTags()
 }
 
+// policyContext is ctx as the lock policy of cfg asks: offline when the policy
+// says so. The loader marks the context it hands the resolvers the same way; a
+// resolver called directly with a configuration gets the same behaviour.
+func policyContext(ctx context.Context, cfg *config.Config) context.Context {
+	if cfg != nil && cfg.LockPolicy.Offline && !config.NoFetchRequested(ctx) {
+		return config.WithNoFetch(ctx)
+	}
+	return ctx
+}
+
 // refreshing reports whether the source is being re-resolved by `ai-rulez lock`.
-func refreshing(kind, name string) bool {
-	return Mode == LockRefresh && (RefreshFilter == nil || RefreshFilter(kind, name))
+func refreshing(cfg *config.Config, kind, name string) bool {
+	return cfg != nil && cfg.LockPolicy.Refreshing(kind, name)
 }
 
 // Lockable lists the configured remote sources a lock should cover: git
@@ -127,7 +120,7 @@ func withVersion(w lockfile.Want, v config.VersionSpec) lockfile.Want {
 // instead of being skipped with a warning: generate --locked, --frozen, or an
 // enforced lock under `generate`.
 func strictLock(cfg *config.Config) bool {
-	return Mode == LockRequire || Mode == LockFrozen || (RequireWhenEnforced && cfg.LockEnforced())
+	return cfg != nil && cfg.LockPolicy.Strict(cfg.LockEnforced())
 }
 
 // pin is the resolved lock entry a source must match.
@@ -140,7 +133,7 @@ type pin struct {
 // pinFor decides how one git source is fetched. It returns the pin to enforce
 // (nil to fetch unpinned) or a lock violation.
 func pinFor(cfg *config.Config, lock *lockfile.File, w lockfile.Want) (*pin, error) {
-	if refreshing(w.Kind, w.Name) {
+	if refreshing(cfg, w.Kind, w.Name) {
 		return nil, nil
 	}
 	entry := lock.Find(w.Kind, w.Name)
@@ -183,7 +176,7 @@ func violationWith(cause error, w lockfile.Want, format string, args ...any) err
 // retryable reports whether a failed pin check is worth one fresh fetch: the
 // digest differed and the network may be used.
 func retryable(ctx context.Context, err error) bool {
-	return errors.Is(err, errDigestMismatch) && !SkipFetch && !config.OfflineIncludes(ctx)
+	return errors.Is(err, errDigestMismatch) && !config.OfflineIncludes(ctx)
 }
 
 // effectiveRef is the ref to fetch: the locked commit when pinned.
@@ -212,12 +205,12 @@ func (p *pin) check(baseDir, kind, name, commit, digest string) error {
 }
 
 // BuildLock turns the recorded resolutions of cfg's sources into a lock file.
-// Entries not selected by RefreshFilter keep their current pin. The returned
+// Entries the refresh of cfg's LockPolicy does not select keep their current pin. The returned
 // problems name every source that could not be locked.
 func BuildLock(cfg *config.Config, current *lockfile.File) (lock *lockfile.File, problems []string) {
 	out := &lockfile.File{Version: lockfile.Version}
 	for _, w := range Lockable(cfg) {
-		if !refreshing(w.Kind, w.Name) {
+		if !refreshing(cfg, w.Kind, w.Name) {
 			if e := current.Find(w.Kind, w.Name); e.Covers(w) {
 				out.Set(w.Kind, *e)
 				continue

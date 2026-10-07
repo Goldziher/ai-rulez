@@ -69,7 +69,7 @@ func publishProject(t *testing.T) string {
 	resetPublishFlags(t)
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("SOURCE_DATE_EPOCH", "")
-	includes.Mode, includes.SkipFetch = includes.LockAuto, false
+	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), publishProjectConfig)
 	writeFile(t, filepath.Join(root, ".ai-rulez", "skills", "deploy", "SKILL.md"),

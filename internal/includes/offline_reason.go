@@ -1,9 +1,16 @@
 package includes
 
-// offlineReason names why a source is read from the cache only: the user's
-// --no-fetch, or a command that never fetches includes by design (sbom, list).
-func offlineReason() string {
-	if SkipFetch {
+import (
+	"context"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+)
+
+// offlineReason names why a source is read from the cache only: the load's
+// policy (--no-fetch, --frozen), or a command that never fetches includes by
+// design (sbom, list).
+func offlineReason(ctx context.Context) string {
+	if config.NoFetchRequested(ctx) {
 		return "--no-fetch specified"
 	}
 	return "this command does not fetch includes"

@@ -32,12 +32,6 @@ func TestResolveIncludes_FailingIncludeIsAnErrorUnlessOffline(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			oldMode, oldReq := Mode, RequireWhenEnforced
-			t.Cleanup(func() { Mode, RequireWhenEnforced = oldMode, oldReq })
-			Mode, RequireWhenEnforced = tt.mode, tt.require
-			oldSkip := SkipFetch
-			t.Cleanup(func() { SkipFetch = oldSkip })
-			SkipFetch = tt.name == "--no-fetch keeps the warning"
 			dir := t.TempDir()
 			cfgDir := filepath.Join(dir, ".ai-rulez")
 			require.NoError(t, os.MkdirAll(cfgDir, 0o755))
@@ -48,6 +42,8 @@ func TestResolveIncludes_FailingIncludeIsAnErrorUnlessOffline(t *testing.T) {
 				BaseDir: dir, ConfigDir: cfgDir,
 				Includes: []config.IncludeConfig{{Name: "gone", Source: filepath.Join(dir, "missing")}},
 				Content:  &config.ContentTree{Domains: map[string]*config.Domain{}},
+				LockPolicy: config.LockPolicy{Mode: tt.mode, RequireWhenEnforced: tt.require,
+					Offline: tt.name == "--no-fetch keeps the warning"},
 			}
 
 			// Act

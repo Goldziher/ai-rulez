@@ -551,7 +551,8 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 }
 
 func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (map[string]interface{}, error) {
-	cfg, err := loadProjectConfig(ctx, request, baseDir)
+	// generate_outputs writes outputs: an enforced lock is required, as by `generate`.
+	cfg, err := loadProjectConfigWith(ctx, request, baseDir, config.WithLockPolicy(config.LockPolicy{RequireWhenEnforced: true}))
 	if err != nil {
 		return nil, err
 	}

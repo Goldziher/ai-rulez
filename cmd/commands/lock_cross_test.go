@@ -68,10 +68,10 @@ func crossOKFBody(version string) string {
 func newCrossFixture(t *testing.T) *crossFixture {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
-	includes.Mode, includes.RefreshFilter, includes.SkipFetch = includes.LockAuto, nil, false
+	cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
 	includes.ResetObserved()
 	t.Cleanup(func() {
-		includes.Mode, includes.RefreshFilter, includes.SkipFetch = includes.LockAuto, nil, false
+		cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
 	})
 	fx := &crossFixture{
 		src: crossRepo(t, crossSkillFile, crossSkillBody("version one")),
@@ -372,7 +372,7 @@ func TestLockCross_TamperedLockFile(t *testing.T) {
 			applyLockFlags()
 			_, err := loadForLock("")
 			*flag = false
-			includes.Mode, includes.SkipFetch = includes.LockAuto, false
+			cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 			require.ErrorIs(t, err, config.ErrLockViolation)
 		}
 	})

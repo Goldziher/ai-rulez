@@ -263,6 +263,7 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	config.Host = lo.host
 	config.Resolve = lo.resolvers
 	config.Registry = lo.registry
+	config.LockPolicy = lo.lockPolicy
 	config.RulesDirs = &RulesDirSet{}
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
 	// Each loaded project owns its warning state: a nil collector stands for the
@@ -325,6 +326,9 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	}
 
 	ctx = diag.WithContext(ambient.WithContext(ctx, loadHost(lo)), config.Diag)
+	if lo.lockPolicy.Offline {
+		ctx = WithNoFetch(ctx)
+	}
 	if err := resolveIncludesIfNeeded(ctx, configDir, config, lo.resolvers.Includes); err != nil {
 		return nil, err
 	}

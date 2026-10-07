@@ -6,7 +6,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -46,10 +45,8 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 		}
 	}
 	if cfg.LockEnforced() {
-		defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
-		includes.SkipFetch = true
 		setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}
-		problems, err := setup.ServedProblems(cmdContext())
+		problems, err := setup.ServedProblems(config.WithOfflineIncludes(cmdContext()))
 		if err != nil {
 			out = append(out, lint.DeliveryFinding{Code: lint.CodeServedLockMismatch, Message: "the served skills could not be checked against " + lockfile.FileName + " offline: " + err.Error() + "; [lock] enforce does not accept an unchecked lock"})
 		}
@@ -66,11 +63,9 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 // (AR989). Findings of the security rules on an authored skill are reported by
 // those rules themselves, so only refusals of source skills are repeated here.
 func sourceRefusalFindings(cfg *config.Config) []lint.DeliveryFinding {
-	defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
-	includes.SkipFetch = true
 	setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}
 	var out []lint.DeliveryFinding
-	reports, err := setup.ServedScanReports(cmdContext())
+	reports, err := setup.ServedScanReports(config.WithOfflineIncludes(cmdContext()))
 	if err != nil {
 		logger.Debug("Skipped the served file scan check", "error", err.Error())
 		return nil

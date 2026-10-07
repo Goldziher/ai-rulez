@@ -266,17 +266,17 @@ func writeLockAt(path, kind string, names []string) int {
 // prepareLockRun sets the include policy of a `lock` run (refresh the remotes, or
 // stay offline for --content-only) and returns the function that restores it.
 func prepareLockRun(remoteRefresh bool, kind string, wanted map[string]bool) (restore func()) {
+	prev := cliLockPolicy
 	if remoteRefresh {
-		includes.Mode = includes.LockRefresh
-		includes.RefreshFilter = func(k, n string) bool {
+		cliLockPolicy.Mode = config.LockRefresh
+		cliLockPolicy.Refresh = func(k, n string) bool {
 			return (kind == "" || kind == k) && (len(wanted) == 0 || wanted[n])
 		}
 		includes.ResetObserved()
-		return func() { includes.Mode, includes.RefreshFilter = includes.LockAuto, nil }
+	} else {
+		cliLockPolicy.Offline = true
 	}
-	prev := includes.SkipFetch
-	includes.SkipFetch = true
-	return func() { includes.SkipFetch = prev }
+	return func() { cliLockPolicy = prev }
 }
 
 // nextLock builds the remote, source and served entries of the new lock. The
