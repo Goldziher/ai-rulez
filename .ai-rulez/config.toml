@@ -1,4 +1,4 @@
-version = "4.0"
+version = "5.0"
 name = "AI-Rulez"
 description = "AI-powered development governance CLI and multi-runtime tooling."
 gitignore = true
@@ -6,6 +6,8 @@ gitignore = true
 presets = ["claude", "codex", "hermes", "opencode"]
 
 builtins = ["go", "security", "git-workflow", "code-quality", "testing", "default-commands"]
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+agents_md = false
 
 [[mcp_servers]]
 name = "ai-rulez"
@@ -23,3 +25,7 @@ marketplace = "basemind"
 name = "basemind"
 scope = "project"
 enabled = true
+
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[header]
+hashes = "full"
