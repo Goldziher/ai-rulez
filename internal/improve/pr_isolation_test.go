@@ -20,7 +20,6 @@ import (
 type recordingSelf struct {
 	mu    sync.Mutex
 	argvs [][]string
-	envs  [][]string
 	dirs  []string
 }
 
