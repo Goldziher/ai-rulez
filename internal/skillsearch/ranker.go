@@ -139,7 +139,13 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 	res.Ranking = cfg.Mode
 	switch {
 	case cfg.Mode == ModeVector:
-		res.Hits = r.withoutVectors(r.fuse(nil, vec, cfg, query, true), lex)
+		res.Hits = r.fuse(nil, vec, cfg, query, true)
+		// Abstain on the vector-ranked list: the lexical fill-in of skills without a vector
+		// is not a confident match and must not hide that nothing cleared the threshold.
+		res.Abstained = cfg.VectorMinSim > 0 && emb.Dropped > 0 && len(res.Hits) == 0
+		if !res.Abstained {
+			res.Hits = r.withoutVectors(res.Hits, lex)
+		}
 	case cfg.Fusion == FusionAuto && emb.Covered:
 		// every skill in scope has a current vector: rank by cosine, keeping the exact-id pin
 		res.Ranking = ModeVector
@@ -148,7 +154,7 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 		res.Hits = r.fuse(lex, vec, cfg, query, false)
 	}
 	r.markStale(res.Hits)
-	res.Abstained = cfg.VectorMinSim > 0 && emb.Dropped > 0 && len(res.Hits) == 0
+	res.Abstained = res.Abstained || (cfg.VectorMinSim > 0 && emb.Dropped > 0 && len(res.Hits) == 0)
 	res.Elapsed = r.Clock.Now().Sub(start)
 	return res
 }
@@ -284,7 +290,7 @@ func (r *Ranker) vector(ctx context.Context, pool []int, query string) ([]vecHit
 	if len(out) > 0 {
 		use.TopSim = math.Round(out[0].sim*1e6) / 1e6
 	}
-	if floor := r.Cfg.VectorMinSim; floor > 0 {
+	if floor := r.Cfg.Resolved().VectorMinSim; floor > 0 { // the same resolved value Abstained is judged by
 		kept := out[:0:0]
 		for _, h := range out {
 			if h.sim >= floor {

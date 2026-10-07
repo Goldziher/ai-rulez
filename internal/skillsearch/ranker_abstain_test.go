@@ -78,3 +78,17 @@ func TestConfig_VectorMinSimIsValidated(t *testing.T) {
 		})
 	}
 }
+
+func TestRanker_VectorModeAbstainsDespiteASkillWithoutAVector(t *testing.T) {
+	t.Parallel()
+	// Arrange: one skill changed since the index was built, so it has no vector
+	r := autoRanker(t, Config{Mode: ModeVector, VectorMinSim: 0.5})
+	r.Items[1].Doc.Description = "Something else entirely"
+
+	// Act
+	got := r.Search(t.Context(), "entirely")
+
+	// Assert: the lexical fill-in of the stale skill must not hide the abstention
+	assert.True(t, got.Abstained)
+	assert.Empty(t, got.Hits, "hits: %v", names(r, got.Hits))
+}
