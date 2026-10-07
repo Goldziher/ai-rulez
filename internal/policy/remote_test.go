@@ -228,6 +228,10 @@ func TestDiscoverURLCacheAndMaxStale(t *testing.T) {
 		{"max_stale 0 allows no stale copy", time.Minute, "0", false, "", "older than max_stale (0)", true},
 		{"offline uses the cache without asking the network", time.Hour, "", true, "cached copy", "", false},
 		{"offline and too old fails closed", 8 * 24 * time.Hour, "", true, "", "AR742", false},
+		// RV-GOV-8: fetched while the clock ran 30 days ahead, read after it was corrected.
+		{"a copy stamped in the future is not used", -25 * 24 * time.Hour, "1h", false, "", "in the future", true},
+		{"offline, a copy stamped in the future is not used", -25 * 24 * time.Hour, "", true, "", "in the future", false},
+		{"a stamp within the clock skew is used", -time.Minute, "1h", false, "cached copy", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

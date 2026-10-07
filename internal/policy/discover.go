@@ -486,6 +486,11 @@ func (l *loader) fromCache(ref Ref, mode remoteMode, cause error) (data, bundle 
 	// Past the cache lookup the cause is flattened (%v): an expired or offline
 	// answer must not keep a statusError that LoadOrg would read as "no policy".
 	age := l.opts.Clock.Now().Sub(at)
+	if age < -cacheClockSkew {
+		// Fetched while the clock ran ahead: a negative age would pass every
+		// max_stale until the clock caught up, so the copy cannot be dated.
+		return nil, nil, "", fmt.Errorf("%v, and the cached copy is stamped %s, in the future", cause, at.UTC().Format(time.RFC3339))
+	}
 	if l.maxStale < 0 || age > l.maxStale {
 		return nil, nil, "", fmt.Errorf("%v, and the cached copy fetched %s ago is older than max_stale (%s)", cause, age.Round(time.Minute), staleText(l.maxStale))
 	}
@@ -494,6 +499,10 @@ func (l *loader) fromCache(ref Ref, mode remoteMode, cause error) (data, bundle 
 		"policy", ref.Display(), "fetched", at.UTC().Format(time.RFC3339), "reason", cause.Error())
 	return body, bun, note, nil
 }
+
+// cacheClockSkew is how far ahead of the clock a cache stamp may be before the
+// cached copy is treated as undated.
+const cacheClockSkew = 5 * time.Minute
 
 func staleText(d time.Duration) string {
 	if d < 0 {
