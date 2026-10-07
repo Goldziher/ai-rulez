@@ -1,0 +1,98 @@
+name: Bats
+
+on:
+  push:
+    branches: [main, develop]
+    paths: &bats-paths
+      - "scripts/**"
+      - "tests/bats/**"
+      - "tests/lib/**"
+      - "internal/hooks/**"
+      - "internal/generator/settings/**"
+      - "internal/improve/adapter/**"
+      - "internal/lint/**"
+      - "cmd/**"
+      - "go.mod"
+      - "go.sum"
+      - "Taskfile.yml"
+      - ".github/workflows/bats.yaml"
+  pull_request:
+    branches: [main]
+    paths: *bats-paths
+  workflow_dispatch:
+
+concurrency:
+  group: bats-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The version scripts/bats/run.sh is used with locally, passed explicitly so the workflow does not
+  # silently follow a changed action default.
+  BATS_VERSION: "1.14.0"
+
+jobs:
+  bats:
+    name: Bats on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Both: the pre-commit script maps uname per platform and the suites shadow the host's
+        # system bins, which differ between the two images.
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+
+      # The suites that check emitted scripts (Cline hooks, the Husky hook, the improve template,
+      # the rule docs) render them through a binary built from this commit.
+      - name: Build ai-rulez
+        run: |
+          go build -o "$RUNNER_TEMP/ai-rulez" ./cmd/ai-rulez
+          echo "AI_RULEZ_BATS_BIN=$RUNNER_TEMP/ai-rulez" >>"$GITHUB_ENV"
+
+      - name: Install Bats
+        uses: xberg-io/actions/install-bats@v1
+        with:
+          version: ${{ env.BATS_VERSION }}
+
+      - name: Run the shell script suites
+        uses: xberg-io/actions/run-bats@v1
+        with:
+          path: tests/bats
+          # bats_load_library searches BATS_LIB_PATH only; scripts/bats/run.sh sets the same path.
+          lib-path: tests/lib
+          args: |-
+            --recursive
+            --print-output-on-failure
+
+  lib:
+    name: Vendored xberg-bats and Bats lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check tests/lib/xberg-bats against the pinned xberg-io/actions commit
+        run: scripts/bats/sync-xberg-bats.sh --check
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+
+      # poly has no engine for .bats, so the suites are linted directly. shfmt is not on the
+      # runner image; pinned to the version used locally.
+      - name: Install shfmt
+        run: |
+          go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
+          echo "$(go env GOPATH)/bin" >>"$GITHUB_PATH"
+
+      - name: Lint the Bats suites
+        run: scripts/bats/lint.sh
