@@ -102,3 +102,36 @@ func TestEvaluate_CountsPeopleNotKeys(t *testing.T) {
 		})
 	}
 }
+
+// TestEvaluate_SignedApprovedAtIsBound is RV-GOV-4: approved_at is covered by the
+// signature, so editing it cannot lift an approval past [governance] max_age.
+func TestEvaluate_SignedApprovedAtIsBound(t *testing.T) {
+	s := Subject{Kind: KindInclude, ID: "shared", Digest: signedDigest, Class: ClassRemote}
+	now := time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name       string
+		signedAt   string
+		recordedAt string
+		want       string
+	}{
+		{"signed long ago is past max_age", "2025-01-01T00:00:00Z", "2025-01-01T00:00:00Z", StatusExpired},
+		{"an edited approved_at does not revive it", "2025-01-01T00:00:00Z", "2026-10-06T00:00:00Z", StatusUnverified},
+		{"a recent signature holds", "2026-10-06T00:00:00Z", "2026-10-06T00:00:00Z", StatusOK},
+		{"the same instant in another zone is the same time", "2026-10-06T00:00:00Z", "2026-10-06T02:00:00+02:00", StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg, keys := signedProject(t, "")
+			rec := signedRecord(t, cfg, keys[0], s, tt.signedAt)
+			rec.ApprovedAt = tt.recordedAt
+			p := Policy{Selectors: []string{"remote"}, MaxAge: 90 * 24 * time.Hour, Signed: newConfigVerifier(cfg)}
+
+			// Act
+			res := p.Evaluate([]lockfile.Approval{rec}, s, now)
+
+			// Assert
+			assert.Equal(t, tt.want, res.Status, res.Detail)
+		})
+	}
+}
