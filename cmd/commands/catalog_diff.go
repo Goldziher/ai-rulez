@@ -52,7 +52,7 @@ catalogs differ.`,
   ai-rulez catalog diff before.json after.json --exit-code`,
 	Args: cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
-		identical, err := runCatalogDiff(cmd.Context(), cmd.OutOrStdout(), args)
+		identical, err := runCatalogDiff(watchParentContext(cmd), cmd.OutOrStdout(), args)
 		exitOn(err)
 		if catalogDiffExitCode && !identical {
 			os.Exit(exitCatalogDrift)
@@ -96,17 +96,17 @@ func runCatalogDiff(ctx context.Context, out io.Writer, args []string) (identica
 	if err := checkFormatFlag(catalogDiffFormat); err != nil {
 		return false, err
 	}
-	if ctx == nil {
-		ctx = cmdContext()
+	if len(args) == 0 || len(args) > 2 {
+		return false, oops.Errorf("catalog diff takes one or two arguments, got %d", len(args))
 	}
 	project := &catalogDiffProject{}
 	from, err := resolveCatalogSide(ctx, project, args[0])
 	if err != nil {
 		return false, err
 	}
-	to := &catalogSide{}
-	if len(args) == 2 {
-		to, err = resolveCatalogSide(ctx, project, args[1])
+	var to *catalogSide
+	if rest := args[1:]; len(rest) == 1 {
+		to, err = resolveCatalogSide(ctx, project, rest[0])
 	} else {
 		to, err = workingTreeSide(ctx, project)
 	}
@@ -178,10 +178,11 @@ func revisionSide(ctx context.Context, project *catalogDiffProject, rev string) 
 	if err != nil {
 		return nil, oops.Hint("run catalog diff inside the project, or pass catalog JSON files").Wrapf(err, "locate the project to read revision %q", rev)
 	}
-	top := gitutil.Git{}.TopLevel(cfg.BaseDir)
-	if top == "" {
+	top, err := gitutil.Git{}.Output(ctx, cfg.BaseDir, "rev-parse", "--show-toplevel")
+	if err != nil || top == "" {
 		return nil, oops.Errorf("%s is not inside a git work tree: cannot read revision %q", cfg.BaseDir, rev)
 	}
+	top = filepath.Clean(top)
 	base := gitutil.RepoRelative(top, cfg.BaseDir)
 	name := filepath.Base(cfg.ConfigDir)
 	if base == "" || name == "" || name == "." {
