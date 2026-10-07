@@ -212,6 +212,15 @@ func requireJSONDoc(t *testing.T, res *testutil.CLIResult) map[string]any {
 	return doc
 }
 
+// blockedOn skips a test that pins an open finding. Set
+// AI_RULEZ_E2E_RUN_BLOCKED=1 to run it anyway and see the defect fail.
+func blockedOn(t *testing.T, finding string) {
+	t.Helper()
+	if os.Getenv("AI_RULEZ_E2E_RUN_BLOCKED") != "1" {
+		t.Skip("blocked on " + finding)
+	}
+}
+
 // minimalProject is a project with one rule and one skill.
 func minimalProject(t *testing.T, extraConfig string) string {
 	t.Helper()
