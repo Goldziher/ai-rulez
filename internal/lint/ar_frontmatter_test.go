@@ -73,3 +73,18 @@ func TestToolNamesAR305(t *testing.T) {
 		{name: "tool names are checked for the claude preset", config: "", skill: skillDoc("allowed-tools: run_shell_command\n", "x\n"), want: []string{"AR305:SKILL.md:4"}},
 	})
 }
+
+func TestFrontmatterMalformedAR306(t *testing.T) {
+	runRuleCases(t, []ruleCase{
+		{name: "list", files: map[string]string{".ai-rulez/rules/a.md": "---\n- a\n- b\n---\n# Rule\n"}, want: []string{"AR306:a.md:1"}},
+		{name: "scalar", files: map[string]string{".ai-rulez/rules/a.md": "---\njust text\n---\n# Rule\n"}, want: []string{"AR306:a.md:1"}},
+		{name: "tab", files: map[string]string{".ai-rulez/rules/a.md": "---\n\tkey: v\n---\n# Rule\n"}, want: []string{"AR306:a.md:1"}},
+		{name: "bad utf8", files: map[string]string{".ai-rulez/rules/a.md": "---\nkey: \xff\xfe\n---\n# Rule\n"}, want: []string{"AR306:a.md:1"}},
+		{name: "unterminated rule", files: map[string]string{".ai-rulez/rules/a.md": "---\npriority: high\n\n# Rule\nbody\n"}, want: []string{"AR306:a.md:1"}},
+		{name: "other files still reported", files: map[string]string{
+			".ai-rulez/rules/a.md": "---\n- a\n---\n# Rule\n",
+			".ai-rulez/rules/b.md": "# B\nSee [x](missing.md)\n",
+		}, want: []string{"AR306:a.md:1", "AR201:b.md:2"}},
+		{name: "valid frontmatter", files: map[string]string{".ai-rulez/rules/a.md": "---\npriority: high\n---\n# Rule\n"}, absent: []string{"AR306"}},
+	})
+}
