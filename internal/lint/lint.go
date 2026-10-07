@@ -174,6 +174,7 @@ type runner struct {
 	noInlineIgnore bool
 	opts           Options
 	drift          []PluginDrift
+	agentPlugins   []AgentPluginFinding
 	delivery       []DeliveryFinding
 	verifiers      []VerifierFinding
 	lockDrift      []LockDrift
@@ -329,6 +330,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.unit(unitOf("delivery", AnalyzerDelivery, AnalyzerSecurity, AnalyzerLock), r.checkDelivery)
 	r.unit(unitOf("imported", AnalyzerSecurity), r.scanImported)
 	r.unit(unitOf("plugin-drift", AnalyzerPlugin), r.checkPluginDrift)
+	r.unit(unitOf("agent-plugins", AnalyzerPlugin), r.checkAgentPlugins)
 	r.unit(unitOf("eval-runner", AnalyzerEvals), r.checkEvalRunner)
 	r.unit(unitOf("roles", AnalyzerRoles), r.checkRoles)
 	r.unit(unitOf("lock-drift", AnalyzerLock), r.checkLockDrift)
