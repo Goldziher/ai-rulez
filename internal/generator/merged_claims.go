@@ -124,7 +124,8 @@ func (g *Generator) splitMergedClaims(outputs []config.OutputFile,
 			continue
 		}
 		fromLocal := output.Sensitive || output.LocalOnly || g.plan.diverges(rel, output.MergeClaims)
-		for _, claim := range output.MergeClaims {
+		for i := range output.MergeClaims {
+			claim := output.MergeClaims[i]
 			claim.Local = fromLocal
 			local[rel] = append(local[rel], claim)
 		}
@@ -246,7 +247,8 @@ func (g *Generator) dropUserHeldClaims(outputs []config.OutputFile) {
 // as it stood on disk and prev what the previous run recorded for it.
 func withoutUserHeld(claims, prev []jsonmerge.Claim, before map[string]any) []jsonmerge.Claim {
 	kept := make([]jsonmerge.Claim, 0, len(claims))
-	for _, claim := range claims {
+	for i := range claims {
+		claim := claims[i]
 		index := slices.IndexFunc(prev, func(c jsonmerge.Claim) bool { return slices.Equal(c.Path, claim.Path) })
 		value, present := jsonmerge.LookupTree(before, claim.Path)
 		if !present {
@@ -325,10 +327,12 @@ func (g *Generator) reclaimStaleMembers(outputs []config.OutputFile) {
 // only the elements cur does not claim.
 func subtractClaims(prev, cur []jsonmerge.Claim) []jsonmerge.Claim {
 	var gone []jsonmerge.Claim
-	for _, claim := range prev {
+	for i := range prev {
+		claim := prev[i]
 		remaining := claim
 		covered := false
-		for _, now := range cur {
+		for j := range cur {
+			now := cur[j]
 			if !isPathPrefix(now.Path, claim.Path) {
 				continue
 			}
@@ -359,12 +363,14 @@ func isPathPrefix(prefix, path []string) bool {
 // counterpart is dropped, so what it addresses stays.
 func guardClaims(claims, current []jsonmerge.Claim) []jsonmerge.Claim {
 	guarded := make([]jsonmerge.Claim, 0, len(claims))
-	for _, claim := range claims {
+	for i := range claims {
+		claim := claims[i]
 		if claim.Guarded() || claim.HasElements() {
 			guarded = append(guarded, claim)
 			continue
 		}
-		for _, now := range current {
+		for j := range current {
+			now := current[j]
 			if now.Guarded() && slices.Equal(now.Path, claim.Path) {
 				claim.Equals, claim.Sum = now.Equals, now.Sum
 				guarded = append(guarded, claim)

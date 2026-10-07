@@ -88,16 +88,16 @@ func checkLocalCollisions(cfg *config.Config, shared, local *config.ContentTree)
 	type source struct{ kind, name, path string }
 	index := func(t *config.ContentTree) map[string]source {
 		byKey := map[string]source{}
-		for _, f := range presets.AllSkills(t) {
+		for _, f := range contentRefs(presets.AllSkills(t)) {
 			byKey[kindSkill+":"+f.Name] = source{kindSkill, f.Name, f.Path}
 		}
-		for _, f := range presets.AllCommands(t) {
+		for _, f := range contentRefs(presets.AllCommands(t)) {
 			byKey[kindSkill+":"+f.Name] = source{"command", f.Name, f.Path}
 		}
-		for _, f := range presets.AllAgents(t) {
+		for _, f := range contentRefs(presets.AllAgents(t)) {
 			byKey["agent:"+f.Name] = source{"agent", f.Name, f.Path}
 		}
-		for _, f := range presets.AllChecks(cfg, t) {
+		for _, f := range contentRefs(presets.AllChecks(cfg, t)) {
 			byKey["check:"+strings.ToLower(f.Name)] = source{"check", f.Name, f.Path}
 		}
 		return byKey
@@ -288,7 +288,8 @@ func (g *Generator) droppedItems(cfg *config.Config, items *config.ContentTree, 
 			if (sharedPlaced && isConsumer && consumer.Reads(config.SharedAgentSkills)) || anyUnknown(outs, known) {
 				continue
 			}
-			for _, f := range files {
+			for i := range files {
+				f := files[i]
 				dropped[name] = append(dropped[name], kind.label+" "+f.Name)
 			}
 		}
@@ -332,4 +333,13 @@ func onlyKind(t *config.ContentTree, skills, agents, commands, checks bool) *con
 		}
 	}
 	return out
+}
+
+// contentRefs points at each file of files, so a loop reads them without copying.
+func contentRefs(files []config.ContentFile) []*config.ContentFile {
+	refs := make([]*config.ContentFile, len(files))
+	for i := range files {
+		refs[i] = &files[i]
+	}
+	return refs
 }
