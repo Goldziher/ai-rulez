@@ -13,19 +13,21 @@ import (
 )
 
 func TestUntrustedLocalFile(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("POSIX permission bits")
-	}
 	tests := []struct {
 		name  string
 		setup func(t *testing.T, path string)
 		want  string
 	}{
 		{"missing file is trusted", func(*testing.T, string) {}, ""},
+		// On Windows every writable file reports mode 0666: this case is the one
+		// that distrusted every machine-local file there.
 		{"private untracked file is trusted", func(t *testing.T, p string) {
 			require.NoError(t, os.WriteFile(p, []byte("{}"), 0o600))
 		}, ""},
 		{"group writable", func(t *testing.T, p string) {
+			if runtime.GOOS == "windows" {
+				t.Skip("POSIX permission bits: Windows governs writers with ACLs")
+			}
 			require.NoError(t, os.WriteFile(p, []byte("{}"), 0o600))
 			require.NoError(t, os.Chmod(p, 0o660))
 		}, "it is writable by group or others"},
