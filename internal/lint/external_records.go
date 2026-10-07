@@ -62,7 +62,9 @@ func (r *runner) scanRecords(root string) []ScanRecord {
 	if t, ok := ParseSeverity(policyOf(&r.lc).failOn); ok && t != SeverityOff {
 		threshold = t
 	}
-	for _, sc := range r.scanners() {
+	scanners := r.scanners()
+	for i := range scanners {
+		sc := scanners[i]
 		if len(sc.Inputs) == 0 || sc.Egress == nil || *sc.Egress || len(sc.allProblems()) > 0 {
 			continue
 		}
@@ -92,7 +94,9 @@ func (r *runner) scanRecords(root string) []ScanRecord {
 func summarize(sc resolvedScanner, hit cachedScan, threshold Severity) (count int, maxSeverity string, pass bool) {
 	pass = true
 	top := SeverityOff
-	for _, f := range fromCached(hit.Findings) {
+	cached := fromCached(hit.Findings)
+	for i := range cached {
+		f := cached[i]
 		if f.Suppressed {
 			continue
 		}

@@ -72,7 +72,9 @@ func InspectScanners(cfg *config.Config, dir string) []ScannerInfo {
 	}
 	pol := policyOf(cfg.Lint)
 	var out []ScannerInfo
-	for _, sc := range resolveScanners(cfg.Lint, cfg.Plugin != nil || cfg.Marketplace != nil) {
+	resolved := resolveScanners(cfg.Lint, cfg.Plugin != nil || cfg.Marketplace != nil)
+	for i := range resolved {
+		sc := &resolved[i]
 		info := ScannerInfo{
 			Name: sc.Name, Command: sc.Command[0], Egress: "undeclared", Format: sc.Format, Inputs: sc.Inputs,
 			EnvPass: sc.EnvPass, Problems: sc.allProblems(), Profile: sc.Profile, Presets: sc.Presets,

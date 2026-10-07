@@ -169,7 +169,8 @@ type chainFile struct {
 // sum first crosses it. A [codex] project_doc_max_bytes setting replaces the
 // documented default; 0 or less turns the check off.
 func (r *runner) checkChains(traps []Trap, chains map[string][]chainFile) {
-	for _, t := range traps {
+	for k := range traps {
+		t := traps[k]
 		if !t.Predicate.isChain() {
 			continue
 		}
@@ -211,8 +212,8 @@ func (r *runner) checkTableAge() {
 	if r.lc.Traps == nil || r.lc.Traps.MaxTableAgeDays <= 0 {
 		return
 	}
-	path := r.configFilePath()
-	if path == "" {
+	cfgPath := r.configFilePath()
+	if cfgPath == "" {
 		return
 	}
 	for _, row := range TableRows() {
@@ -224,7 +225,7 @@ func (r *runner) checkTableAge() {
 		if !ok {
 			msg = fmt.Sprintf("%s %s has no valid verified_on date; re-check %s", row.Kind, row.ID, row.Source)
 		}
-		r.add(CodeHarnessTableStale, path, 1, "%s", msg)
+		r.add(CodeHarnessTableStale, cfgPath, 1, "%s", msg)
 	}
 }
 
@@ -260,11 +261,13 @@ type TableRow struct {
 func TableRows() []TableRow {
 	var rows []TableRow
 	traps, _ := Traps() //nolint:errcheck // an unreadable table has no rows
-	for _, t := range traps {
+	for i := range traps {
+		t := &traps[i]
 		rows = append(rows, TableRow{"trap", t.Code + " " + t.Name + " (" + t.Harness + ")", t.Source, t.VerifiedOn})
 	}
 	limits, _ := harnesslimits.All() //nolint:errcheck // an unreadable table has no rows
-	for _, l := range limits {
+	for i := range limits {
+		l := &limits[i]
 		rows = append(rows, TableRow{"limit", l.ID, l.Source, l.VerifiedOn})
 	}
 	return rows

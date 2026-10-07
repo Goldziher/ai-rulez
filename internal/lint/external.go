@@ -126,7 +126,9 @@ func (r *runner) checkExternalConfig() {
 		r.addRun(CodeScannerConfigInvalid, "scanner_policy", p)
 	}
 	r.checkScannerBaselineLocation()
-	for _, sc := range r.scanners() {
+	scanners := r.scanners()
+	for i := range scanners {
+		sc := &scanners[i]
 		for _, p := range sc.allProblems() {
 			r.addRun(CodeScannerConfigInvalid, sc.Name, p)
 		}

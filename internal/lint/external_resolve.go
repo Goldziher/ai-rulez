@@ -111,7 +111,8 @@ func resolveScanners(lc *config.LintConfig, hasPlugin bool) []resolvedScanner {
 	}
 	var out []resolvedScanner
 	taken := map[string]bool{}
-	for _, ex := range lc.External {
+	for i := range lc.External {
+		ex := lc.External[i]
 		if ex.Name != "" {
 			taken[ex.Name] = true
 		}
@@ -131,7 +132,8 @@ func resolveScanners(lc *config.LintConfig, hasPlugin bool) []resolvedScanner {
 			out = append(out, rs)
 		}
 	}
-	for _, ex := range lc.External {
+	for i := range lc.External {
+		ex := lc.External[i]
 		if strings.TrimSpace(ex.Name) == "" {
 			continue
 		}

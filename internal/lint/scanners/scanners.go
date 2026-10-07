@@ -81,9 +81,10 @@ func load() file {
 
 // Lookup returns the profile called name.
 func Lookup(name string) (Profile, bool) {
-	for _, p := range load().Profile {
-		if p.Name == name {
-			return p, true
+	profiles := load().Profile
+	for i := range profiles {
+		if profiles[i].Name == name {
+			return profiles[i], true
 		}
 	}
 	return Profile{}, false
@@ -92,8 +93,9 @@ func Lookup(name string) (Profile, bool) {
 // Names lists the profile names, sorted.
 func Names() []string {
 	var out []string
-	for _, p := range load().Profile {
-		out = append(out, p.Name)
+	profiles := load().Profile
+	for i := range profiles {
+		out = append(out, profiles[i].Name)
 	}
 	sort.Strings(out)
 	return out
