@@ -70,6 +70,7 @@ func init() {
 	RootCmd.AddCommand(ValidateCmd)
 	RootCmd.AddCommand(ScanCmd)
 	RootCmd.AddCommand(VerifyCmd)
+	RootCmd.AddCommand(MigrateCmd)
 	RootCmd.AddCommand(DoctorCmd)
 	RootCmd.AddCommand(GuardCmd)
 	RootCmd.AddCommand(VerifiersCmd)
