@@ -26,7 +26,7 @@ func TestFindLegacyConfig(t *testing.T) {
 		{"V2 flat .ai-rulez.yml", map[string]string{".ai-rulez.yml": "metadata:\n  name: x\n"}, ".ai-rulez.yml"},
 		{"V2 flat ai_rulez.yaml", map[string]string{"ai_rulez.yaml": "metadata:\n  name: x\n"}, "ai_rulez.yaml"},
 		{"config.toml wins over a stale config.yaml", map[string]string{
-			".ai-rulez/config.toml": "version = \"4.0\"\n", ".ai-rulez/config.yaml": "x: 1\n",
+			".ai-rulez/config.toml": "version = \"5.0\"\n", ".ai-rulez/config.yaml": "x: 1\n",
 		}, ""},
 		{"nothing", nil, ""},
 	}
@@ -87,7 +87,7 @@ func TestLoadConfig_LegacyFilesAreRefused(t *testing.T) {
 		}, ""},
 		{"V3 config.local.yaml beside a config.toml", ".ai-rulez/config.local.yaml", func(root string) error {
 			require.NoError(t, os.WriteFile(filepath.Join(root, ".ai-rulez", "config.toml"),
-				[]byte("version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n"), 0o644))
+				[]byte("version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n"), 0o644))
 			_, err := LoadConfig(context.Background(), root)
 			return err
 		}, ""},
@@ -106,7 +106,7 @@ func TestLoadConfig_LegacyFilesAreRefused(t *testing.T) {
 			require.Error(t, err)
 			assert.ErrorIs(t, err, ErrLegacyConfig)
 			assert.Contains(t, err.Error(), filepath.Base(tt.file))
-			assert.Contains(t, err.Error(), "npx ai-rulez@4 migrate v4")
+			assert.Contains(t, err.Error(), "ai-rulez migrate v5")
 			var oe oops.OopsError
 			require.ErrorAs(t, err, &oe)
 			assert.Contains(t, oe.Hint(), tt.wantHint)
@@ -142,7 +142,7 @@ presets = ["claude"]
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "my-project"
 description = "A test project"
 presets = ["claude", "cursor", { name = "custom", type = "markdown", path = "CUSTOM.md" }]
@@ -228,7 +228,7 @@ backend = ["backend"]
 
 			_, err := LoadConfig(context.Background(), tempDir)
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "YAML configs are no longer loaded")
+			assert.Contains(t, err.Error(), "no longer read")
 			assert.Contains(t, err.Error(), "ai-rulez migrate v5")
 		})
 	}
@@ -919,7 +919,7 @@ func TestSaveConfig_WritesTOML(t *testing.T) {
 		aiRulezDir := filepath.Join(dir, ".ai-rulez")
 		require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-		original := `version = "4.0"
+		original := `version = "5.0"
 name = "my-project"
 presets = ["claude"]
 
@@ -950,7 +950,7 @@ source = "https://github.com/example/old"
 	t.Run("never creates a V3 file", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
-		cfg := &Config{Version: "4.0", Name: "p", Presets: []Preset{{BuiltIn: "claude"}}}
+		cfg := &Config{Version: "5.0", Name: "p", Presets: []Preset{{BuiltIn: "claude"}}}
 
 		require.NoError(t, SaveConfig(cfg, dir))
 

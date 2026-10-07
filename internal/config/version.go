@@ -38,6 +38,12 @@ func IsLegacyVersion(v string) bool {
 // 3.x version is older than `migrate v5` reads and must go through ai-rulez 4.x
 // first.
 func CheckVersion(v string) error {
+	if strings.TrimSpace(v) == "" {
+		return oops.
+			With("field", "version").
+			Hint("Add version = \"" + ConfigVersionV5 + "\" at the top of your config file").
+			Errorf("missing required key: version")
+	}
 	if n, ok := versionMajor(v); ok && n > 0 && n < 4 {
 		return oops.
 			With("field", "version").

@@ -225,7 +225,7 @@ func TestCustomPresetPathIsValidated(t *testing.T) {
 	t.Parallel()
 	for _, p := range []string{".git/config", "../escaped.md", "/etc/passwd", ".ai-rulez/config.toml"} {
 		cfg := &Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 			Presets: []Preset{{Name: "x", Type: PresetTypeMarkdown, Path: p, Template: "x"}},
 		}
@@ -238,7 +238,7 @@ func TestCustomPresetPathIsValidated(t *testing.T) {
 func TestOKFDirRejectsControlDirs(t *testing.T) {
 	t.Parallel()
 	for _, dir := range []string{".git/hooks", "a/.GIT/x", "/etc", "../x", ".hg/store"} {
-		cfg := &Config{Version: "4.0", Name: "test", Presets: []Preset{{BuiltIn: "claude"}}, OKF: &OKFConfig{Dir: dir}}
+		cfg := &Config{Version: "5.0", Name: "test", Presets: []Preset{{BuiltIn: "claude"}}, OKF: &OKFConfig{Dir: dir}}
 		err := cfg.Validate()
 		require.Error(t, err, dir)
 		assert.Contains(t, err.Error(), "okf.dir", dir)
