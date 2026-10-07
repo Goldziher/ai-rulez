@@ -91,7 +91,7 @@ type Summary struct {
 	Baselined int `json:"baselined,omitempty"`
 }
 
-// EgressInfo summarises what a judged run sent: sizes, never content.
+// EgressInfo summarizes what a judged run sent: sizes, never content.
 type EgressInfo struct {
 	Items       int      `json:"items"`
 	Bytes       int      `json:"bytes"`

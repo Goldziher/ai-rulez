@@ -166,7 +166,7 @@ func TestCalibrateAPerfectJudgePasses(t *testing.T) {
 	assert.Equal(t, CalPass, inj.Status)
 	assert.InDelta(t, 1.0, inj.Recall, 0.001)
 	assert.InDelta(t, 1.0, inj.Metamorphic[ProbeCanary], 0.001)
-	assert.Equal(t, CalUncalibrated, rec.Dimensions["scope-creep"].Status, "a dimension nobody labelled is never trusted")
+	assert.Equal(t, CalUncalibrated, rec.Dimensions["scope-creep"].Status, "a dimension nobody labeled is never trusted")
 	assert.Equal(t, VerdictWarn, rec.Cases["case-03"]["trigger-quality"])
 	assert.Positive(t, rep.Usage.Calls)
 }
@@ -615,7 +615,7 @@ func TestCalibrateWithOneVoteDoesNotPassMinConsistency(t *testing.T) {
 // A case the judge could not answer counts as a wrong answer, so a judge that fails on the hard
 // cases does not pass on the easy ones alone (RV-LLM-13).
 func TestCalibrateCountsAnUnansweredCaseAsWrong(t *testing.T) {
-	// Arrange: the judge's reply does not parse on two of the cases labelled fail (one worker, and
+	// Arrange: the judge's reply does not parse on two of the cases labeled fail (one worker, and
 	// not adjacent, so the run's consecutive-failure stop does not end it)
 	rb := calibrationRubric(t)
 	cases := tenCases()

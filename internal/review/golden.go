@@ -14,7 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
-// GoldenCase is one human-labelled case of a rubric's golden set.
+// GoldenCase is one human-labeled case of a rubric's golden set.
 type GoldenCase struct {
 	ID   string
 	Kind string

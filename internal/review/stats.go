@@ -52,9 +52,9 @@ func wilson(successes, n int) (lo, hi float64) {
 	p := float64(successes) / float64(n)
 	nf := float64(n)
 	denom := 1 + z*z/nf
-	centre := p + z*z/(2*nf)
+	center := p + z*z/(2*nf)
 	margin := z * math.Sqrt(p*(1-p)/nf+z*z/(4*nf*nf))
-	return math.Max(0, (centre-margin)/denom), math.Min(1, (centre+margin)/denom)
+	return math.Max(0, (center-margin)/denom), math.Min(1, (center+margin)/denom)
 }
 
 // fleissKappa is Fleiss' kappa for subjects each rated by the same number of raters;
