@@ -348,14 +348,13 @@ func FailedWith(findings []Finding, failOn string, ratchet Ratchet) bool {
 // caller, for a run that narrows findings (changed-only) after judging the ratchet
 // against the full set.
 func FailedWithExcess(findings []Finding, failOn string, ratchet Ratchet, excess []RatchetExcess) bool {
-	over := map[string]bool{}
-	for _, e := range excess {
-		over[e.Code] = true
+	if len(excess) > 0 {
+		return true // a rule over its ratchet gates the run whatever its severity
 	}
 	var counting []Finding
 	for i := range findings {
 		f := findings[i]
-		if _, budgeted := ratchet[f.Code]; budgeted && !over[f.Code] {
+		if _, budgeted := ratchet[f.Code]; budgeted {
 			continue
 		}
 		counting = append(counting, f)
