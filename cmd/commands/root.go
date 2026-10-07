@@ -76,7 +76,7 @@ func init() {
 	RootCmd.AddCommand(VerifiersCmd)
 	RootCmd.AddCommand(ScannersCmd)
 	RootCmd.AddCommand(VersionCmd)
-	RootCmd.AddCommand(InitCmd, MigrateCmd)
+	RootCmd.AddCommand(InitCmd)
 	RootCmd.AddCommand(ConvertCmd)
 	RootCmd.AddCommand(MCPCmd)
 	RootCmd.AddCommand(DomainCmd)
