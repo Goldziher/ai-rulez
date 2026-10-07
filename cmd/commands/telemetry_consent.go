@@ -141,10 +141,12 @@ func displayEndpoint(endpoint string) string {
 var telemetryDisableCmd = &cobra.Command{
 	Use:   "disable",
 	Short: "Withdraw telemetry consent",
-	Long: `Delete your consent record: network export stops at once. Local recording into the usage log
-and events already waiting in the outbox are kept (delete .ai-rulez/local/telemetry-* to discard the
-outbox). Export also stays off while allow_network or AI_RULEZ_TELEMETRY_ALLOW_NETWORK is unset; if
-either is set it still grants export and this command tells you so.`,
+	Long: `Delete your consent record: network export stops at once, and so does the local recording the
+record turned on; recording that your user config, the repository config or AI_RULEZ_TELEMETRY
+turns on continues. The usage log and events already waiting in the outbox are kept (delete
+.ai-rulez/local/telemetry-* to discard the outbox). Export also stays off while allow_network or
+AI_RULEZ_TELEMETRY_ALLOW_NETWORK is unset; if either is set it still grants export and this command
+tells you so.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		return runTelemetryDisable(cmd.OutOrStdout())
@@ -167,8 +169,30 @@ func runTelemetryDisable(out io.Writer) error {
 		w.printf("export is still on because %s grants it; remove allow_network from your user config or unset the variable\n", consentSourceName(&after))
 		return nil
 	}
-	w.printf("export is off; local recording and the local log are unchanged\n")
+	w.printf("export is off; %s; the usage log and the outbox are kept\n", recordingState(&after))
 	return nil
+}
+
+// recordingState says whether local recording continues once the consent record
+// is gone: the record turned recording on, so it stops unless a config or the
+// environment turns it on too.
+func recordingState(s *telemetry.Settings) string {
+	if !s.RecordActive() {
+		return "local recording is off"
+	}
+	return "local recording stays on (" + recordingSource(s.Sources["enabled"]) + " enables it)"
+}
+
+func recordingSource(scope string) string {
+	switch scope {
+	case telemetry.ScopeEnv:
+		return telemetry.EnvEnabled
+	case telemetry.ScopeUser:
+		return "your user config"
+	case telemetry.ScopeRepo:
+		return "the repository config"
+	}
+	return "the configuration"
 }
 
 func consentSourceName(s *telemetry.Settings) string {
