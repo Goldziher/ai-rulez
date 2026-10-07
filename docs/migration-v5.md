@@ -37,6 +37,7 @@ git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rule
 | Staged scanners are confined under `isolation = "auto"` (the default) wherever a backend works | A scanner that writes outside its scratch directory now fails (`AR9E3`): point it at `TMPDIR`/`HOME`, or set `isolation = "none"`; see [Isolation](strict-validation.md#isolation) |
 | Custom preset and provider output paths are validated | Remove `..`, absolute and `.git` paths |
 | `lock` and `update` scan every remote tree they pin to something new | Fix error findings, or pass `--accept-findings` after reviewing them |
+| `generate` refuses an existing file it did not write (a hand-written `CLAUDE.md`) and never writes through a symlinked output | Run `ai-rulez convert --write` to import the file (the first `generate` then replaces it), move it, or pass `generate --force`; see [Existing files](cli.md#existing-files-generate-will-not-overwrite) |
 | `init --from` runs through `convert --write` | Expect one context item per root file (`convert --split-headings` splits it); see [`init --from`](#init-from) |
 | `generate --check` reports `blocked:` for a shared file a machine-local input would change | Commit or drop the local change, or run `generate --allow-local-drift` |
 | The forge client (release dates, review-linked approvals) has its own host allowlist | GitHub Enterprise: set `AI_RULEZ_FORGE_HOSTS` |

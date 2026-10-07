@@ -181,6 +181,7 @@ func (g *Generator) VerifyGenerated() (drift []Drift, checked int, err error) {
 func (g *Generator) resetRunState() {
 	g.previousFiles = nil
 	g.manifests = nil
+	g.refusedOutputs, g.linkedOutputs = nil, nil
 }
 
 func (g *Generator) relSlash(abs string) string {

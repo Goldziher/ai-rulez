@@ -187,6 +187,7 @@ func generateOnce(ctx context.Context, args []string, loadOpts ...config.LoadOpt
 	}
 	gen := generator.NewGenerator(cfg)
 	gen.SetAllowLocalDrift(allowLocalDrift)
+	gen.SetOverwriteUnowned(generateForce)
 	gen.SetContext(ctx)
 	if err := applyRole(gen); err != nil {
 		return cfg, err

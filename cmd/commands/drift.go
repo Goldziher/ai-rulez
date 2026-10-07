@@ -68,6 +68,7 @@ func checkConfigDrift(cfg *config.Config, mode driftMode) (int, error) {
 	gen := generator.NewGenerator(cfg)
 	gen.SetContext(cmdContext())
 	gen.SetAllowLocalDrift(allowLocalDrift)
+	gen.SetOverwriteUnowned(generateForce)
 	if err := applyRole(gen); err != nil {
 		return 0, err
 	}

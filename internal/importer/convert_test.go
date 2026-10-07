@@ -13,6 +13,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/kaptinlin/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -577,6 +578,7 @@ func TestConvert_Golden(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, report.Written, "%+v", report.Security)
 			got := snapshot(t, filepath.Join(dir, ".ai-rulez"))
+			delete(got, generator.ConvertRecordName) // a sidecar, covered by TestConvert_WriteRecordsTheImportedNativeFiles
 			// The project name is the temp directory; pin it.
 			cfg := strings.ReplaceAll(got["config.toml"], "name = '"+filepath.Base(dir)+"'", "name = 'fixture'")
 			got["config.toml"] = cfg

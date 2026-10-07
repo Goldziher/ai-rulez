@@ -117,7 +117,6 @@ func lifecycleScenarios(multi []string) []scenario {
 				".codex/config.toml":      "# my codex config\nmodel = \"mine\"\n",
 				".gemini/settings.json":   "{\"mine\": true}\n",
 				".claude/CLAUDE.local.md": "mine\n",
-				"AGENTS.md":               "# Hand-written agents file\n",
 				".claude/rules/always.md": "# my own rule\n",
 				".mcp.json":               "{\"mcpServers\": {\"mine\": {\"command\": \"x\"}}}\n",
 			}),
