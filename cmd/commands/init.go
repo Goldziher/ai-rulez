@@ -70,24 +70,7 @@ func runInit(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Check if the configuration directory already exists
-	if _, err := os.Stat(configDir); err == nil {
-		logger.Info(configDir + "/ directory already exists")
-		if !shouldOverwriteConfig(configDir + "/") {
-			logger.Info("Operation canceled. Remove or rename the existing directory to initialize a new configuration")
-			os.Exit(1)
-		}
-
-		// An import keeps the old directory until the new one is written; anything
-		// else starts from nothing.
-		if fromFlag == "" {
-			if err := os.RemoveAll(configDir); err != nil {
-				logger.Error("Failed to remove existing "+configDir+"/ directory", "error", err)
-				os.Exit(1)
-			}
-			logger.Info("Existing " + configDir + "/ directory removed")
-		}
-	}
+	confirmExistingConfigDir(configDir)
 
 	// Handle --from flag for importing from existing tool files
 	if fromFlag != "" {
@@ -126,6 +109,28 @@ func runInit(cmd *cobra.Command, args []string) {
 	if abs, err := filepath.Abs(configDir); err == nil {
 		noteHandWrittenFiles(filepath.Dir(abs))
 	}
+}
+
+// confirmExistingConfigDir asks before replacing an existing configuration
+// directory and exits when the user declines. An import keeps the old directory
+// until the new one is written; anything else starts from nothing.
+func confirmExistingConfigDir(configDir string) {
+	if _, err := os.Stat(configDir); err != nil {
+		return
+	}
+	logger.Info(configDir + "/ directory already exists")
+	if !shouldOverwriteConfig(configDir + "/") {
+		logger.Info("Operation canceled. Remove or rename the existing directory to initialize a new configuration")
+		os.Exit(1)
+	}
+	if fromFlag != "" {
+		return
+	}
+	if err := os.RemoveAll(configDir); err != nil {
+		logger.Error("Failed to remove existing "+configDir+"/ directory", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("Existing " + configDir + "/ directory removed")
 }
 
 // nativeRootFiles are the root files generate writes and refuses to overwrite
