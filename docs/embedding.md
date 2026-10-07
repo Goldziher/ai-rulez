@@ -1,6 +1,6 @@
 # Embedding ai-rulez (Go API)
 
-`github.com/Goldziher/ai-rulez/v5/pkg/airulez` loads a project, validates it and plans or applies a generate run from Go, inside a process that may serve many projects at once. It is **Experimental** for its first minor release: after that, `pkg/...` changes only additively inside a major version (CI runs `gorelease` against the last release). Everything under `internal/` is private.
+`github.com/Goldziher/ai-rulez/v5/pkg/airulez` loads a project, validates it, plans or applies a generate run and writes or checks its lock from Go, inside a process that may serve many projects at once. It is **Experimental** for its first minor release: after that, `pkg/...` changes only additively inside a major version (CI runs `gorelease` against the last release). Everything under `internal/` is private.
 
 ```go
 ws := airulez.NewMemWorkspace()
@@ -26,11 +26,22 @@ A symlink resolves only inside the workspace. A symlink the load refuses goes to
 
 ## Plans
 
-`Project.Plan` lists every file a run would write, merge into or remove, with a digest of the rendered content, and writes nothing. `Plan.Digest` is the SHA-256 of the canonical plan document (`schema/plan.schema.json`, also what `ai-rulez generate --emit-plan` prints). It covers the sources and the existing outputs and manifests the workspace holds, so it is not a fingerprint of the sources alone: the same sources in a fresh directory and in one holding earlier outputs give different digests. The plan reads what already exists from the workspace itself: the previous manifest, merged documents such as `.claude/settings.json` and hand-edited outputs. A workspace in memory or in a commit therefore plans its own `removals` (stale files, entries taken back out of merged documents) the way a directory does. A machine-local record found in a commit is not believed, because a commit holds whatever its author chose. `Lock` is not part of the API yet: the content lock still reads the disk.
+`Project.Plan` lists every file a run would write, merge into or remove, with a digest of the rendered content, and writes nothing. `Plan.Digest` is the SHA-256 of the canonical plan document (`schema/plan.schema.json`, also what `ai-rulez generate --emit-plan` prints). It covers the sources and the existing outputs and manifests the workspace holds, so it is not a fingerprint of the sources alone: the same sources in a fresh directory and in one holding earlier outputs give different digests. The plan reads what already exists from the workspace itself: the previous manifest, merged documents such as `.claude/settings.json` and hand-edited outputs. A workspace in memory or in a commit therefore plans its own `removals` (stale files, entries taken back out of merged documents) the way a directory does. A machine-local record found in a commit is not believed, because a commit holds whatever its author chose.
 
 `Project.Generate` applies a run: `Write` (directory workspaces only; anything else fails with `CodeDiskRequired` before touching anything), `DryRun` (the action list) or `Check` (files that differ from the plan). The same appliers back `generate`, `generate --dry-run`, `generate --check` and `generate --emit-plan`.
 
 `Project.Validate` checks the configuration; `ValidateOptions.Strict` also runs the content and security checks (stable `AR` codes) and needs a directory workspace. Git, used to index tracked files, runs through `Options.Runner`; with the default `DenyAll()` the directory is walked instead. A canceled context stops `Validate` between its steps.
+
+## Locks
+
+`Project.Lock` writes `.ai-rulez/ai-rulez.lock` the way `ai-rulez lock` does, through the same code and with the same gates: the minimum release age of version ranges, the security scan (`AR001`-`AR009`) of every remote tree about to be pinned and of every served skill, the deny list (`AR717`) and the carry-over of approvals. `LockOptions` mirrors the command's flags (`Names`, `Kind`, `ContentOnly`, `Profile`, `Roles`, `AcceptFindings`, `Strict`). Both `Lock` and `LockCheck` need a directory workspace (anything else is `CodeDiskRequired`).
+
+- A remote tree whose scan has error findings, or with `Strict` a served skill the scan refuses, fails with `CodeFindings` and writes nothing. `errors.As(err, &fe)` with a `*airulez.FindingsError` lists each one as a `LockFinding` with its `AR` code. This is exit 2 of the command.
+- Without `Strict` a refused served skill is left out of the lock and reported in `LockResult.Unpinned`, while the rest is written. This is exit 3 of the command.
+- Remote sources are re-resolved through `Options.Runner` only when the project was loaded with `Options.Remote`. Release times are then also asked of the forge over HTTPS; without `Remote` the forge is never contacted.
+- The `Project` keeps the configuration it was loaded with. `Load` again to plan against the new lock.
+
+`Project.LockCheck` is `ai-rulez lock --check` without the network: it compares the lock with the sources, the rendered outputs and the cached remote content, and returns `LockStatus{InSync, Changes, Notes}`. Cached remote content that disagrees with the lock is drift (`InSync` false), not an error. The remote tag (`--verify-tags`) and signature checks of the command are not part of it. A project with no lock, and no `[lock] enforce`, fails with `CodeLock`.
 
 ## No ambient authority
 
@@ -45,4 +56,4 @@ The agent subcommand, file watching, `init` prompts, scanners, usage recording, 
 - Additive changes in minor releases; breaking changes only with a new major version and `/vN` path.
 - New surface is `Experimental` for one minor release, marked in its godoc.
 - The plan document has its own `schema` number: a new field is additive, a removed or re-typed one raises it and is announced in the changelog.
-- Errors are `*airulez.Error` with a stable `Code` (`load`, `plan`, `validate`, `apply`, `disk-required`, `refused`); the cause is reachable with `errors.Is` and `errors.As`. `refused` (`errors.Is(err, airulez.ErrRefused)`) is a run that would overwrite a file ai-rulez cannot prove it wrote; nothing was written.
+- Errors are `*airulez.Error` with a stable `Code` (`load`, `plan`, `validate`, `apply`, `disk-required`, `refused`, `lock`, `findings`); the cause is reachable with `errors.Is` and `errors.As`. `refused` (`errors.Is(err, airulez.ErrRefused)`) is a run that would overwrite a file ai-rulez cannot prove it wrote; nothing was written.

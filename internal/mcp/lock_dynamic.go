@@ -16,6 +16,10 @@ import (
 // top of the default one and the ones the lock records. The version is the
 // ai-rulez version the check reports as running.
 func DynamicLockProblems(ctx context.Context, cfg *config.Config, lock *lockfile.File, version string, extras ...ServeSetup) []string {
+	return dynamicLockProblems(ctx, cfg, lock, version, nil, extras)
+}
+
+func dynamicLockProblems(ctx context.Context, cfg *config.Config, lock *lockfile.File, version string, loadOpts []config.LoadOption, extras []ServeSetup) []string {
 	if !usesDynamicSkills(cfg, len(extras) > 0) {
 		return nil
 	}
@@ -38,7 +42,7 @@ func DynamicLockProblems(ctx context.Context, cfg *config.Config, lock *lockfile
 		out = append(out, "  "+p.String())
 	}
 	if lock != nil && (len(lock.Served) > 0 || len(extras) > 0 || cfg.LockEnforced()) {
-		setup := &ServeSetup{Version: version, WorkDir: cfg.BaseDir, NoWatch: true, Collector: cfg.Diag}
+		setup := &ServeSetup{Version: version, WorkDir: cfg.BaseDir, NoWatch: true, Collector: cfg.Diag, LoadOptions: loadOpts}
 		problems, err := setup.ServedProblems(ctx, extras...)
 		if err != nil {
 			out = append(out, "  served: "+err.Error())
@@ -53,8 +57,14 @@ func DynamicLockProblems(ctx context.Context, cfg *config.Config, lock *lockfile
 // DynamicLockChanges reports the source and served pins that disagree with the
 // configuration and the local cache, as changes for `lock --check` and `--diff`.
 func DynamicLockChanges(ctx context.Context, cfg *config.Config, lock *lockfile.File, version string, extras ...ServeSetup) []contentlock.Change {
+	return DynamicLockChangesWith(ctx, cfg, lock, version, nil, extras...)
+}
+
+// DynamicLockChangesWith is DynamicLockChanges whose serve views load the
+// project with loadOpts added (an embedding service's workspace and host).
+func DynamicLockChangesWith(ctx context.Context, cfg *config.Config, lock *lockfile.File, version string, loadOpts []config.LoadOption, extras ...ServeSetup) []contentlock.Change {
 	var out []contentlock.Change
-	for _, line := range DynamicLockProblems(ctx, cfg, lock, version, extras...) {
+	for _, line := range dynamicLockProblems(ctx, cfg, lock, version, loadOpts, extras) {
 		kind, rest, _ := strings.Cut(strings.TrimSpace(line), " ")
 		kind = strings.TrimSuffix(kind, ":")
 		name, detail, found := strings.Cut(rest, ": ")

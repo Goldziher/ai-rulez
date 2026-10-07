@@ -1,6 +1,7 @@
 // Package airulez is the public Go API of the ai-rulez engine: load a project,
-// validate it and plan or apply a generate run, from a directory, from memory or
-// from a git commit, in a process that may serve many projects at once.
+// validate it, plan or apply a generate run and write or check its lock, from a
+// directory, from memory or from a git commit, in a process that may serve many
+// projects at once.
 //
 // Stability: everything in this package is Experimental for its first minor
 // release. After that it follows the module's semantic versioning: additive
@@ -257,6 +258,13 @@ type Project struct {
 	disk bool
 	// git answers repository questions through the Options.Runner.
 	git gitutil.Git
+	// opts reload the project as it was loaded (workspace, host, remote access),
+	// without its lock policy: Lock and LockCheck load under their own.
+	opts []config.LoadOption
+	// run is the Options.Runner; remote and token are Options.Remote and GitToken.
+	run    runner.Runner
+	remote bool
+	token  string
 }
 
 // Error is returned for the failures a caller is expected to tell apart; the
@@ -294,6 +302,12 @@ const (
 	// cannot prove it wrote (a hand-written file in the way, or a symlink), as
 	// opposed to an I/O failure (CodeApply). Nothing was written.
 	CodeRefused = "refused"
+	// CodeLock is a Lock or LockCheck that could not run (as opposed to findings).
+	CodeLock = "lock"
+	// CodeFindings is a Lock the security scan refused: a remote tree about to
+	// be pinned, or a served skill under LockOptions.Strict. The cause is a
+	// *FindingsError listing them with their AR codes. Nothing was written.
+	CodeFindings = "findings"
 )
 
 // ErrDiskRequired is the cause of a CodeDiskRequired error.
@@ -340,9 +354,6 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 		config.WithWorkspace(ws),
 		config.WithHost(ambient.Host{Env: env, Clock: o.Clock, Runner: runnerAdapter{r: run}, Log: log}),
 		config.WithRegistry(registry.Default()),
-		// A Project plans and writes outputs: an enforced ai-rulez.lock ([lock]
-		// enforce, on whenever the lock exists) is required, as by `generate`.
-		config.WithLockPolicy(config.LockPolicy{RequireWhenEnforced: true}),
 	}
 	if !o.WithLocal {
 		opts = append(opts, config.WithoutLocal())
@@ -352,11 +363,14 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 	} else {
 		opts = append(opts, config.WithoutRemote())
 	}
-	cfg, err := config.LoadConfig(ctx, ".", opts...)
+	// A Project plans and writes outputs: an enforced ai-rulez.lock ([lock]
+	// enforce, on whenever the lock exists) is required, as by `generate`.
+	cfg, err := config.LoadConfig(ctx, ".", append(opts[:len(opts):len(opts)], config.WithLockPolicy(config.LockPolicy{RequireWhenEnforced: true}))...)
 	if err != nil {
 		return nil, &Error{Code: CodeLoad, Err: err}
 	}
-	return &Project{cfg: cfg, disk: disk, git: gitutil.New(runnerAdapter{r: run})}, nil
+	return &Project{cfg: cfg, disk: disk, git: gitutil.New(runnerAdapter{r: run}), opts: opts,
+		run: runnerAdapter{r: run}, remote: o.Remote, token: o.GitToken}, nil
 }
 
 // Name is the project name from its configuration.
