@@ -122,6 +122,17 @@ func validateLockFlags(args []string) error {
 	if err := checkFormatFlag(lockFormat); err != nil {
 		return err
 	}
+	if err := validateLockOutputFlags(); err != nil {
+		return err
+	}
+	if err := validateLockOutdatedFlags(); err != nil {
+		return err
+	}
+	return validateLockRolesSubjectFlags(args)
+}
+
+// validateLockOutputFlags checks --format, --check/--diff and --output.
+func validateLockOutputFlags() error {
 	if lockFormat != "" && !lockCheck && !lockDiffFlag && !lockSubject && !lockOutdated {
 		return oops.Errorf("--format applies to --check, --diff, --outdated and --subject only")
 	}
@@ -134,6 +145,11 @@ func validateLockFlags(args []string) error {
 	if lockSubjectOutput != "" && lockRecursive {
 		return oops.Errorf("--output cannot be combined with --recursive: every root would overwrite the same file")
 	}
+	return nil
+}
+
+// validateLockOutdatedFlags checks --verify-tags and the --outdated family.
+func validateLockOutdatedFlags() error {
 	if lockVerifyTags && !lockCheck {
 		return oops.Errorf("--verify-tags only applies to --check")
 	}
@@ -143,6 +159,11 @@ func validateLockFlags(args []string) error {
 	if lockOutdated && (lockCheck || lockDiffFlag || lockContentOnly || lockSubject) {
 		return oops.Errorf("--outdated only reads the remote: it cannot be combined with --check, --diff, --content-only or --subject")
 	}
+	return nil
+}
+
+// validateLockRolesSubjectFlags checks --roles and --subject against the rest.
+func validateLockRolesSubjectFlags(args []string) error {
 	if lockRoles && (lockCheck || lockDiffFlag || lockSubject || lockOutdated) {
 		return oops.Errorf("--roles pins every role: use it without --check, --diff, --outdated or --subject (name roles with --role to limit a check)")
 	}
@@ -246,6 +267,17 @@ func writeLockAt(path, kind string, names []string) int {
 		fmtError(err)
 		return 1
 	}
+	printLockWritten(next)
+	printScans(next)
+	logger.Success("Wrote lock file", "path", lockfile.Path(cfg.ConfigDir))
+	if len(lockUnpinned) > unpinnedBefore {
+		return exitUnpinned
+	}
+	return 0
+}
+
+// printLockWritten lists what the written lock pins.
+func printLockWritten(next *lockfile.File) {
 	entries := lockedEntries(next)
 	for i := range entries {
 		e := &entries[i]
@@ -257,12 +289,6 @@ func writeLockAt(path, kind string, names []string) int {
 			fmt.Printf("pinned outputs of role %s %s\n", r.Role, r.Digest)
 		}
 	}
-	printScans(next)
-	logger.Success("Wrote lock file", "path", lockfile.Path(cfg.ConfigDir))
-	if len(lockUnpinned) > unpinnedBefore {
-		return exitUnpinned
-	}
-	return 0
 }
 
 // prepareLockRun sets the include policy of a `lock` run (refresh the remotes, or

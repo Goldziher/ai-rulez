@@ -147,6 +147,14 @@ func init() {
 }
 
 func validateSignFlags() error {
+	if err := validateSignSubjectFlags(); err != nil {
+		return err
+	}
+	return validateSignModeFlags()
+}
+
+// validateSignSubjectFlags checks that one subject is chosen and its flags fit it.
+func validateSignSubjectFlags() error {
 	subjects := 0
 	for _, set := range []bool{signLock, signBundle != "", signSkill != "", signSBOM != "", signPolicy != ""} {
 		if set {
@@ -168,12 +176,27 @@ func validateSignFlags() error {
 		return oops.Errorf("--embed-items applies to --lock")
 	case signPublicOut != "" && signKey == "":
 		return oops.Errorf("--public-key-out applies to --key")
+	}
+	return nil
+}
+
+// validateSignModeFlags checks the key or keyless flags and the Sigstore URLs.
+func validateSignModeFlags() error {
+	switch {
 	case signKey == "" && !signKeyless:
 		return oops.Hint("pass --key <file> for key mode, or --keyless").Errorf("choose how to sign")
 	case signKey != "" && signKeyless:
 		return oops.Errorf("--key and --keyless are mutually exclusive")
 	case signKeyless && signTLog:
 		return oops.Errorf("--tlog applies to --key: keyless signatures are always logged")
+	}
+	return validateSignKeylessFlags()
+}
+
+// validateSignKeylessFlags checks the flags that belong to one signing mode,
+// and the Sigstore URLs.
+func validateSignKeylessFlags() error {
+	switch {
 	case !signKeyless && (signTokenEnv != "" || signFulcioURL != "" || signInteractive):
 		return oops.Errorf("--identity-token-env, --interactive and --fulcio-url apply to --keyless")
 	case signKeyless && signKeyPassEnv != "":
@@ -207,6 +230,23 @@ func checkSigstoreURL(flag, raw string) error {
 	return oops.Hint("use an https:// URL").Errorf("%s %q must be https (plain http is allowed only for localhost)", flag, raw)
 }
 
+// loadSignLock loads the project at args[0] (or the current directory) and its lock.
+func loadSignLock(args []string) (*config.Config, *lockfile.File, error) {
+	path := ""
+	if len(args) > 0 {
+		path = args[0]
+	}
+	cfg, _, err := loadForLockCheck(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	lock, err := lockfile.Load(cfg.ConfigDir)
+	if err != nil {
+		return nil, nil, err
+	}
+	return cfg, lock, nil
+}
+
 // runSign signs the lock of the project at args[0] (or the current directory)
 // and returns the exit code.
 func runSign(ctx context.Context, args []string, env ambient.Env) int {
@@ -220,16 +260,7 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	if signBundle != "" || signSkill != "" || signSBOM != "" {
 		return runSignArtifact(ctx, env)
 	}
-	path := ""
-	if len(args) > 0 {
-		path = args[0]
-	}
-	cfg, _, err := loadForLockCheck(path) //nolint:contextcheck // the lock config loads without a context
-	if err != nil {
-		fmtError(err)
-		return 1
-	}
-	lock, err := lockfile.Load(cfg.ConfigDir)
+	cfg, lock, err := loadSignLock(args) //nolint:contextcheck // the lock config loads without a context
 	if err != nil {
 		fmtError(err)
 		return 1
