@@ -1,11 +1,13 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -112,6 +114,7 @@ func runListRules(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	warnUnlistedIncludes(ctx)
 	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeRules)
 	if err != nil {
 		logger.Error("Failed to list rules", "error", err)
@@ -138,6 +141,7 @@ func runListContext(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	warnUnlistedIncludes(ctx)
 	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeContext)
 	if err != nil {
 		logger.Error("Failed to list context", "error", err)
@@ -164,6 +168,7 @@ func runListSkills(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	warnUnlistedIncludes(ctx)
 	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeSkills)
 	if err != nil {
 		logger.Error("Failed to list skills", "error", err)
@@ -239,6 +244,7 @@ func runListItems(ftype, title, noun string) {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
 	}
+	warnUnlistedIncludes(cmdContext())
 	files, err := op.ListFiles(cmdContext(), listDomain, ftype)
 	if err != nil {
 		logger.Error("Failed to list "+noun, "error", err)
@@ -252,6 +258,20 @@ func runListItems(ftype, title, noun string) {
 		outputListJSON(ftype, files)
 	} else {
 		outputListTable(title, files)
+	}
+}
+
+// warnUnlistedIncludes makes the listing say what it leaves out. The lists read
+// the local content tree only; an include that cannot be resolved (nothing cached,
+// no network is used) is reported as a warning by the load, which is tolerant here
+// by design, and a config that does not load at all is left to the listing itself.
+func warnUnlistedIncludes(ctx context.Context) {
+	if listLocal {
+		return
+	}
+	ctx = config.WithOfflineIncludes(config.WithUnresolvedIncludesTolerated(ctx))
+	if _, err := loadConfigForCommand(ctx, nil, config.WithoutLocal()); err != nil {
+		logger.Debug("Could not check includes for the listing", "error", err)
 	}
 }
 
