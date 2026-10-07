@@ -467,12 +467,11 @@ func (g *Generator) claimsToTakeBack(outputs []config.OutputFile, clean bool) ma
 			claims[rel] = subtractClaims(prev, current[rel])
 		}
 	}
-	if !clean {
-		return claims
-	}
-	for rel, cur := range current {
-		if _, recorded := previous[rel]; !recorded {
-			claims[rel] = cur
+	if clean {
+		for rel, cur := range current {
+			if _, recorded := previous[rel]; !recorded {
+				claims[rel] = cur
+			}
 		}
 	}
 	listed := map[string]bool{}
@@ -486,7 +485,16 @@ func (g *Generator) claimsToTakeBack(outputs []config.OutputFile, clean bool) ma
 			// a rule the user wrote themselves.
 			continue
 		}
-		claims[rel] = append(claims[rel], withoutPermissionClaims(g.legacyClaims(rel))...)
+		legacy := withoutPermissionClaims(g.legacyClaims(rel))
+		if !clean {
+			// An upgrade takes back what an older version wrote and this one no
+			// longer does (Claude's servers in .claude/settings.json), and only
+			// entries that are exactly that rendering.
+			legacy = subtractClaims(legacy, current[rel])
+		}
+		if len(legacy) > 0 {
+			claims[rel] = append(claims[rel], legacy...)
+		}
 	}
 	return claims
 }
