@@ -43,10 +43,13 @@ func fixture() Input {
 // output).
 func fixtureFor(name string) Input {
 	in := fixture()
-	if name != "agent-plugins" {
-		return in
+	switch name {
+	case "ard":
+		in.ARD = ardFixture()
+		in.Plugins[0].Files = append(in.Plugins[0].Files, agentPluginFixtureFiles()...)
+	case "agent-plugins":
+		in.Plugins[0].Files = append(in.Plugins[0].Files, agentPluginFixtureFiles()...)
 	}
-	in.Plugins[0].Files = append(in.Plugins[0].Files, agentPluginFixtureFiles()...)
 	return in
 }
 
@@ -119,7 +122,7 @@ func TestEmitters_AreDeterministicAndSorted(t *testing.T) {
 
 func TestStatuses(t *testing.T) {
 	want := map[string]string{
-		"cursor-team-marketplace": StatusVerified, "agent-plugins": StatusVerified, "port": StatusExperimental,
+		"cursor-team-marketplace": StatusVerified, "agent-plugins": StatusVerified, "ard": StatusVerified, "port": StatusExperimental,
 		"aws-agent-registry": StatusExperimental, "kiro-steering": StatusExperimental,
 	}
 	for name, status := range want {
