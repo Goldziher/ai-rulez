@@ -238,3 +238,28 @@ func TestRequestModel(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "gemini/other", routed.requestModel(), "literllm routes on provider/model")
 }
+
+func TestResolve_UserScopeOwnsTheAbstentionThreshold(t *testing.T) {
+	t.Parallel()
+	repo := projectConfig(&skillsearch.Config{VectorMinSim: 1})
+	tests := []struct {
+		name string
+		user string
+		want float64
+	}{
+		{"repo value without a user value", "", 1},
+		{"user value over the repo's", "[search]\nvector_min_sim = 0.4\n", 0.4},
+		{"an explicit user 0 switches it off", "[search]\nvector_min_sim = 0\n", 0},
+		{"a user table without the key keeps the repo's", "[search]\nmode = \"lexical\"\n", 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange / Act
+			r, err := Resolve(repo, Options{Getenv: userConfig(t, tt.user)})
+
+			// Assert
+			require.NoError(t, err)
+			assert.InDelta(t, tt.want, r.Search.VectorMinSim, 1e-9)
+		})
+	}
+}

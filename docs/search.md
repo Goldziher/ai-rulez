@@ -145,7 +145,7 @@ and, when it fell back, `degraded`; see [the MCP server](mcp-server.md#dynamic-s
 A query nothing resembles ("what is the weather in Berlin") still has nearest skills. With `vector_min_sim` set, a
 skill whose cosine to the query is below it is not a match: a vector ranking (including the `auto` default on a fresh
 index) with none above it returns nothing, `search --format json` says `"abstained": true` and `find_skill` returns
-no skill; `rrf` and `weighted` drop only the weak vector candidates, so a skill that matches by word still ranks.
+no skill; `rrf` and `weighted` drop only the weak vector candidates, so a skill that matches by word still ranks. Skills without a current vector do not hide an abstention in `vector` mode. The user config's `vector_min_sim` wins over the repository's, and an explicit `0` there switches the threshold off.
 Cosines differ per model, so no default ships: `search --eval` calibrates one from your cases. When the file has
 positive and negative cases and a vector or hybrid mode ran, it prints the threshold that answers the most positives
 while abstaining on the most negatives (`calibration` in the JSON) and each case's best cosine (`top_sim`). On this

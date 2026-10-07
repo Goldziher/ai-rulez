@@ -73,11 +73,15 @@ func Resolve(cfg *config.Config, opts Options) (*Resolved, error) {
 		repo = cfg.Search
 		r.ConfigDir = cfg.ConfigDir
 	}
-	user, err := loadUser(config.UserConfigFile(getenv))
+	user, userMinSim, err := loadUser(config.UserConfigFile(getenv))
 	if err != nil {
 		return nil, err
 	}
 	merged := merge(repo, user)
+	if userMinSim != nil {
+		// 0 is a value in user scope: it switches a repository's abstention threshold off.
+		merged.VectorMinSim = *userMinSim
+	}
 	// The query log records what users ask, so only user scope may start it.
 	if repo != nil && repo.LogQueries && !(user != nil && user.LogQueries) {
 		r.Notes = append(r.Notes, "search.log_queries in the repository config is ignored: a repository cannot start recording queries; set it in the user config file or "+LogQueriesEnv+"=1")
@@ -125,24 +129,34 @@ func Resolve(cfg *config.Config, opts Options) (*Resolved, error) {
 	return r, nil
 }
 
-func loadUser(path string) (*skillsearch.Config, error) {
+// loadUser reads the [search] table of the user config. The second result is
+// vector_min_sim when the file sets it, including an explicit 0.
+func loadUser(path string) (*skillsearch.Config, *float64, error) {
 	if path == "" {
-		return nil, nil
+		return nil, nil, nil
 	}
 	data, err := os.ReadFile(path) //nolint:gosec // the user's own config file
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, nil, nil
 		}
-		return nil, oops.With("path", path).Wrapf(err, "read user config")
+		return nil, nil, oops.With("path", path).Wrapf(err, "read user config")
 	}
 	var doc struct {
 		Search *skillsearch.Config `toml:"search"`
 	}
 	if err := toml.Unmarshal(data, &doc); err != nil {
-		return nil, oops.With("path", path).Wrapf(err, "parse user config")
+		return nil, nil, oops.With("path", path).Wrapf(err, "parse user config")
 	}
-	return doc.Search, nil
+	var raw struct {
+		Search struct {
+			VectorMinSim *float64 `toml:"vector_min_sim"`
+		} `toml:"search"`
+	}
+	if err := toml.Unmarshal(data, &raw); err != nil {
+		return nil, nil, oops.With("path", path).Wrapf(err, "parse user config")
+	}
+	return doc.Search, raw.Search.VectorMinSim, nil
 }
 
 // merge lays user over repo field by field: a user value that is set wins.
