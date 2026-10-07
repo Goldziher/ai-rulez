@@ -3,6 +3,7 @@ package usage
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -26,6 +27,9 @@ func TestAsyncSink_RecordServedDoesNotWaitForASlowSink(t *testing.T) {
 }
 
 func TestAsyncSink_DeliversTheSameLineAsTheLog(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a POSIX shell")
+	}
 	// Arrange
 	dir := t.TempDir()
 	logPath, out := filepath.Join(dir, "usage.jsonl"), filepath.Join(dir, "sink.out")
