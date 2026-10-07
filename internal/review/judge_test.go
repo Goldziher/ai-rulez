@@ -210,3 +210,35 @@ func itemIDs(items []Item) []string {
 	}
 	return out
 }
+
+// A rubric that leaves max_output_tokens unset gave the judge 400 completion tokens, which a
+// thinking model spends before the verdict, so dimensions came back truncated (RV-LLM-21). The
+// default is the built-in rubric's cap, and the estimate plans with the same value.
+func TestJudgeCompletionCapDefaultsToTheBuiltinRubricsCap(t *testing.T) {
+	tests := []struct {
+		name   string
+		maxOut int
+		want   int
+	}{
+		{"unset uses the default", 0, DefaultMaxOutputTokens},
+		{"set is honoured", 800, 800},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			rb := *builtin(t)
+			rb.Limits.MaxOutputTokens = tc.maxOut
+			sp := callSpec{rb: &rb, dims: rb.Dimensions[:1]}
+
+			// Act
+			req := requestFor(sp, builtCall{}, 0, false, "m")
+			est := Plan(EstimateInput{Rubric: &rb, Results: Run(Input{Rubric: &rb, Items: []Item{skill("a", "Deploy a build to staging")}}), Content: config.ReviewContentDescriptions})
+
+			// Assert
+			assert.Equal(t, tc.want, req.MaxTokens)
+			require.NotEmpty(t, est.Items)
+			assert.Equal(t, tc.want, est.Items[0].Calls[0].OutputTokens)
+		})
+	}
+	assert.Equal(t, 1500, builtin(t).Limits.MaxOutputTokens, "the default follows the built-in rubric")
+}
