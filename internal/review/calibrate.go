@@ -135,10 +135,22 @@ func Calibrate(ctx context.Context, in CalibrateInput) (*CalibrationReport, erro
 		if in.NoProbes || len(gc.Probes) == 0 {
 			return
 		}
-		tally := runProbes(ctx, gc, results[i], sem, pj, rj)
+		tally, perr := runProbes(ctx, gc, results[i], sem, pj, rj)
 		mu.Lock()
+		defer mu.Unlock()
 		mergeTally(probeTally, tally)
-		mu.Unlock()
+		switch {
+		case perr == nil:
+		case errors.Is(perr, ErrFatal):
+			if fatal == nil && !(budget && errors.Is(perr, context.Canceled)) {
+				fatal = perr
+				cancel()
+			}
+		default:
+			// The spend cap stopped a probe: the probes are not all measured, so the run is incomplete.
+			budget = true
+			cancel()
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -241,8 +253,11 @@ func probeVariant(probe string, it Item) Item {
 }
 
 // runProbes judges the transformed variants of a case (first vote only) and checks the
-// invariant of each probe against the first vote of the original.
-func runProbes(ctx context.Context, gc GoldenCase, base CaseResult, baseSem *SemanticResult, pj, rj *Judge) map[string]map[string]*passCount {
+// invariant of each probe against the first vote of the original. A probe the judge did not
+// answer for a dimension (the call failed, or the reply for that dimension did not parse, as
+// when a canary hijacks the judge into prose) fails that probe. The error is the judge's error
+// (the spend cap or a fatal one); the tally still holds what was measured.
+func runProbes(ctx context.Context, gc GoldenCase, base CaseResult, baseSem *SemanticResult, pj, rj *Judge) (map[string]map[string]*passCount, error) {
 	tally := map[string]map[string]*passCount{}
 	record := func(dim, probe string, ok bool) {
 		if tally[dim] == nil {
@@ -273,26 +288,28 @@ func runProbes(ctx context.Context, gc GoldenCase, base CaseResult, baseSem *Sem
 		}
 		r := ItemResult{Item: item, Status: StatusScored}
 		sem, err := judge.ItemSemantic(ctx, &r, gc.Siblings)
-		if err != nil || sem == nil {
-			continue
+		got := CaseResult{}
+		if sem != nil {
+			got = caseResultOf(gc.ID, sem)
 		}
-		got := caseResultOf(gc.ID, sem)
 		for _, d := range baseSem.Dimensions {
 			if d.Status != SemJudged && d.Status != SemUnstable {
 				continue
 			}
 			before, ok1 := first(base.Votes[d.ID])
+			if !ok1 || (probe == ProbeReorder && d.Group != GroupContextual) {
+				continue
+			}
 			after, ok2 := first(got.Votes[d.ID])
-			if !ok1 || !ok2 {
+			if !ok2 {
+				record(d.ID, probe, false)
 				continue
 			}
 			switch probe {
 			case ProbePad:
 				record(d.ID, probe, verdictRank(after) >= verdictRank(before))
 			case ProbeReorder:
-				if d.Group == GroupContextual {
-					record(d.ID, probe, after == before)
-				}
+				record(d.ID, probe, after == before)
 			case ProbeRename:
 				record(d.ID, probe, after == before)
 			case ProbeCanary:
@@ -303,8 +320,38 @@ func runProbes(ctx context.Context, gc GoldenCase, base CaseResult, baseSem *Sem
 				}
 			}
 		}
+		if err != nil {
+			return tally, err
+		}
 	}
-	return tally
+	return tally, nil
+}
+
+// declaredProbes are the probes the golden cases labelled for d ask for, and that apply to it:
+// reorder only to a contextual dimension of a case with at least two siblings.
+func declaredProbes(d Dimension, cases []GoldenCase) map[string]bool {
+	out := map[string]bool{}
+	for _, gc := range cases {
+		if _, ok := gc.Adjudicated[d.ID]; !ok {
+			continue
+		}
+		for _, p := range gc.Probes {
+			if p == ProbeReorder && (d.Group != GroupContextual || len(gc.Siblings) < 2) {
+				continue
+			}
+			out[p] = true
+		}
+	}
+	return out
+}
+
+// wrongRank is the verdict an unanswered case counts as: the opposite call to the label, a
+// missed flag when the label flags and a false flag when it passes.
+func wrongRank(label int) int {
+	if label > 0 {
+		return 0
+	}
+	return 2
 }
 
 // buildRecord turns the case results into the record and the list of disagreements.
@@ -348,6 +395,7 @@ func buildRecord(rb *Rubric, set *GoldenSet, cases []GoldenCase, results []CaseR
 // measureDimension computes the calibration of one dimension and checks it against the
 // rubric's thresholds.
 func measureDimension(rb *Rubric, d Dimension, cases []GoldenCase, results []CaseResult, probes map[string]*passCount, k int) (DimCalibration, []CaseDiff) {
+	declared := declaredProbes(d, cases)
 	var gold, pred []int
 	var diffs []CaseDiff
 	var counts [][]int
@@ -363,16 +411,21 @@ func measureDimension(rb *Rubric, d Dimension, cases []GoldenCase, results []Cas
 		}
 		res := results[i]
 		got, judged := res.Verdicts[d.ID]
-		if !judged {
+		g := verdictRank(label)
+		p, rationale := wrongRank(g), res.Rationale[d.ID]
+		if judged {
+			p = verdictRank(got)
+		} else {
+			// An unanswered case is a wrong answer: a judge that fails on the hard cases must not
+			// pass on the easy ones alone.
 			errs++
-			continue
+			got, rationale = "error", res.Errors[d.ID]
 		}
-		g, p := verdictRank(label), verdictRank(got)
 		gold, pred = append(gold, g), append(pred, p)
 		goldFlag, predFlag = append(goldFlag, g > 0), append(predFlag, p > 0)
 		agree = append(agree, res.Agreement[d.ID])
 		if g != p {
-			diffs = append(diffs, CaseDiff{Case: gc.ID, Dimension: d.ID, Label: label, Got: got, Agreement: res.Agreement[d.ID], Rationale: res.Rationale[d.ID]})
+			diffs = append(diffs, CaseDiff{Case: gc.ID, Dimension: d.ID, Label: label, Got: got, Agreement: res.Agreement[d.ID], Rationale: rationale})
 		}
 		if votes := res.Votes[d.ID]; len(votes) == k && k > 1 {
 			row := make([]int, 3)
@@ -454,7 +507,7 @@ func measureDimension(rb *Rubric, d Dimension, cases []GoldenCase, results []Cas
 			dc.Metamorphic[p] = round3(ratio(c.pass, c.total))
 		}
 	}
-	dc.Status, dc.Misses = judgeThresholds(rb, d, dc, tp+fp, tp+fn, len(humanA) > 0)
+	dc.Status, dc.Misses = judgeThresholds(rb, d, dc, tp+fp, tp+fn, len(humanA) > 0, withVotes > 0, declared)
 	return dc, diffs
 }
 
@@ -496,8 +549,10 @@ func curveOf(agree []float64, pred, gold []bool) []CurvePoint {
 	return out
 }
 
-// judgeThresholds applies the rubric's [calibration] thresholds to one dimension.
-func judgeThresholds(rb *Rubric, d Dimension, dc DimCalibration, predicted, positives int, haveHuman bool) (string, []string) {
+// judgeThresholds applies the rubric's [calibration] thresholds to one dimension. votesMeasured
+// is whether any case had k > 1 votes (the only way consistency is measured); declared are the
+// probes the golden set asks for this dimension, each of which must have been measured.
+func judgeThresholds(rb *Rubric, d Dimension, dc DimCalibration, predicted, positives int, haveHuman, votesMeasured bool, declared map[string]bool) (string, []string) {
 	c := rb.Calibration
 	var misses []string
 	if c.MinHumanKappa > 0 && haveHuman && dc.HumanKappa < c.MinHumanKappa {
@@ -506,7 +561,10 @@ func judgeThresholds(rb *Rubric, d Dimension, dc DimCalibration, predicted, posi
 	if dc.Kappa < c.MinWeightedKappa {
 		misses = append(misses, fmt.Sprintf("kappa %.2f below %.2f", dc.Kappa, c.MinWeightedKappa))
 	}
-	if dc.Consistency < c.MinConsistency {
+	switch {
+	case c.MinConsistency > 0 && !votesMeasured:
+		misses = append(misses, fmt.Sprintf("consistency was not measured (no case has k > 1 votes), so it cannot meet %.2f; calibrate with --k 2 or more", c.MinConsistency))
+	case dc.Consistency < c.MinConsistency:
 		misses = append(misses, fmt.Sprintf("consistency %.2f below %.2f", dc.Consistency, c.MinConsistency))
 	}
 	if floor, ok := c.MinRecall[d.ID]; ok && positives > 0 && dc.Recall < floor {
@@ -516,16 +574,29 @@ func judgeThresholds(rb *Rubric, d Dimension, dc DimCalibration, predicted, posi
 		misses = append(misses, fmt.Sprintf("precision %.2f below %.2f", dc.Precision, c.MinPrecision))
 	}
 	if c.MinProbe > 0 {
-		for _, p := range sortedKeys(dc.Metamorphic) {
-			if v := dc.Metamorphic[p]; v < c.MinProbe {
-				misses = append(misses, fmt.Sprintf("probe %s %.2f below %.2f", p, v, c.MinProbe))
-			}
-		}
+		misses = append(misses, probeMisses(dc.Metamorphic, declared, c.MinProbe)...)
 	}
 	if len(misses) > 0 {
 		return CalFail, misses
 	}
 	return CalPass, nil
+}
+
+// probeMisses checks each measured probe against minProbe and requires every declared probe to
+// have been measured.
+func probeMisses(measured map[string]float64, declared map[string]bool, minProbe float64) []string {
+	var misses []string
+	for _, p := range sortedKeys(measured) {
+		if v := measured[p]; v < minProbe {
+			misses = append(misses, fmt.Sprintf("probe %s %.2f below %.2f", p, v, minProbe))
+		}
+	}
+	for _, p := range sortedKeys(declared) {
+		if _, ok := measured[p]; !ok {
+			misses = append(misses, fmt.Sprintf("probe %s was declared but never measured", p))
+		}
+	}
+	return misses
 }
 
 // Drift is the result of comparing a fresh calibration with the committed one.

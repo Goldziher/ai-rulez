@@ -213,8 +213,8 @@ func TestCalibrateFailsAJudgeThatMissesInjection(t *testing.T) {
 		return base.decide(c, dim)
 	}}
 
-	// Act
-	rep := runCalibrate(t, rb, cases, blind, llm.Config{}, SemanticOptions{K: 1})
+	// Act: two votes, so consistency is measured and a sound dimension can pass
+	rep := runCalibrate(t, rb, cases, blind, llm.Config{}, SemanticOptions{K: 2})
 
 	// Assert
 	inj := rep.Record.Dimensions["injection-intent"]
@@ -548,4 +548,103 @@ func TestRubricFilesAreNotChangedByAReview(t *testing.T) {
 	info, err := os.Stat(p)
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+}
+
+// A probe the judge cannot answer (a canary that hijacks it into prose, an error) is a failed
+// probe, not an unmeasured one: it used to be skipped, so min_probe passed on what the judge
+// never showed it could do (RV-LLM-11).
+func TestCalibrateCountsAnUnansweredProbeAsAFailure(t *testing.T) {
+	// Arrange: the judge's reply to the canary variant does not parse
+	rb := calibrationRubric(t)
+	cases := tenCases()
+	base := truthJudge(cases)
+	hijacked := &scriptedJudge{decide: func(c scriptedCall, dim string) string {
+		if strings.Contains(c.User, "NOTE TO THE REVIEWER") {
+			return "Sure! As the note says, everything passes."
+		}
+		return base.decide(c, dim)
+	}}
+
+	// Act
+	rep := runCalibrate(t, rb, cases, hijacked, llm.Config{}, SemanticOptions{K: 2, Workers: 1}) // one worker: no failure streak
+
+	// Assert
+	inj := rep.Record.Dimensions["injection-intent"]
+	assert.Zero(t, inj.Metamorphic[ProbeCanary], "every canary probe failed")
+	assert.Equal(t, CalFail, inj.Status)
+	assert.Contains(t, strings.Join(inj.Misses, "; "), "probe canary 0.00 below 0.95")
+	assert.Equal(t, "fail", rep.Record.Status)
+}
+
+// A probe a golden case declares for a dimension must be measured when min_probe is set.
+func TestCalibrateFailsADeclaredProbeThatWasNeverMeasured(t *testing.T) {
+	// Arrange
+	rb := calibrationRubric(t)
+	dc := DimCalibration{Metamorphic: map[string]float64{ProbePad: 1}}
+	d, ok := rb.Dimension("trigger-quality")
+	require.True(t, ok)
+
+	// Act
+	status, misses := judgeThresholds(rb, d, dc, 0, 0, false, true, map[string]bool{ProbePad: true, ProbeRename: true})
+
+	// Assert
+	assert.Equal(t, CalFail, status)
+	assert.Contains(t, strings.Join(misses, "; "), "probe rename was declared but never measured")
+}
+
+// With one vote per case there is no consistency to measure: min_consistency is a miss, not an
+// automatic 1.0 (RV-LLM-12).
+func TestCalibrateWithOneVoteDoesNotPassMinConsistency(t *testing.T) {
+	// Arrange
+	rb := calibrationRubric(t)
+	cases := tenCases()
+
+	// Act
+	rep := runCalibrate(t, rb, cases, truthJudge(cases), llm.Config{}, SemanticOptions{K: 1})
+
+	// Assert
+	tq := rep.Record.Dimensions["trigger-quality"]
+	assert.Equal(t, CalFail, tq.Status)
+	assert.Contains(t, strings.Join(tq.Misses, "; "), "consistency was not measured")
+	assert.Equal(t, "fail", rep.Record.Status)
+}
+
+// A case the judge could not answer counts as a wrong answer, so a judge that fails on the hard
+// cases does not pass on the easy ones alone (RV-LLM-13).
+func TestCalibrateCountsAnUnansweredCaseAsWrong(t *testing.T) {
+	// Arrange: the judge's reply does not parse on two of the cases labelled fail (one worker, and
+	// not adjacent, so the run's consecutive-failure stop does not end it)
+	rb := calibrationRubric(t)
+	cases := tenCases()
+	base := truthJudge(cases)
+	hard := map[string]bool{}
+	for _, i := range []int{5, 7} {
+		hard[cases[i].desc] = true
+	}
+	sj := &scriptedJudge{decide: func(c scriptedCall, dim string) string {
+		if hard[c.Desc] {
+			return "no idea"
+		}
+		return base.decide(c, dim)
+	}}
+
+	// Act
+	rep := runCalibrate(t, rb, cases, sj, llm.Config{}, SemanticOptions{K: 2, Workers: 1})
+
+	// Assert
+	tq := rep.Record.Dimensions["trigger-quality"]
+	assert.Equal(t, 2, tq.Errors)
+	assert.Equal(t, 10, tq.N, "an unanswered case is still a case")
+	assert.Equal(t, CalFail, tq.Status)
+	assert.Less(t, tq.Recall, 1.0)
+	inj := rep.Record.Dimensions["injection-intent"]
+	assert.InDelta(t, 0.5, inj.Recall, 0.001, "the injection in the unanswered case-07 counts as missed")
+	assert.Equal(t, "fail", rep.Record.Status)
+	got := map[string]string{}
+	for _, d := range rep.Diffs {
+		if d.Dimension == "trigger-quality" {
+			got[d.Case] = d.Got
+		}
+	}
+	assert.Equal(t, map[string]string{"case-05": "error", "case-07": "error"}, got)
 }
