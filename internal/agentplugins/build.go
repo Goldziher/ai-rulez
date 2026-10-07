@@ -72,6 +72,9 @@ func Build(p *Plugin, opts Options) (map[string][]byte, []Finding, error) {
 	if err := b.addRootFiles(p.Files); err != nil {
 		return nil, nil, err
 	}
+	if err := checkTree(b.files); err != nil {
+		return nil, nil, err
+	}
 
 	manifest := wireManifest{
 		Schema:      PluginSchemaID(spec),
@@ -221,6 +224,18 @@ func (b *builder) addRootFiles(files map[string][]byte) error {
 				"file %q is inside the extension namespace directory %s; add it to that extension's Files", name, first)
 		}
 		b.files[name] = data
+	}
+	return nil
+}
+
+// checkTree refuses a path that is both a file and the directory of another.
+func checkTree(files map[string][]byte) error {
+	for _, name := range sortedKeys(files) {
+		for dir := path.Dir(name); dir != "."; dir = path.Dir(dir) {
+			if _, ok := files[dir]; ok {
+				return oops.With("file", dir).Errorf("%s is both a file and a directory (of %s)", dir, name)
+			}
+		}
 	}
 	return nil
 }
