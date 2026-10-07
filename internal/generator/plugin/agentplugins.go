@@ -3,7 +3,6 @@ package plugin
 import (
 	"encoding/json"
 	"maps"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -152,25 +151,6 @@ func AgentPluginFindings(m *Manifest, baseDir string) ([]agentplugins.Finding, e
 	return findings, nil
 }
 
-// AgentPluginEntry names a built Agent Plugins package: what a registry entry
-// (an ARD catalog) needs to point at it.
-type AgentPluginEntry struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	// Path is the package directory relative to the project root, slash separated.
-	Path string `json:"path"`
-}
-
-// AgentPluginEntryFor describes the package a manifest builds at baseDir. rootDir
-// is the project root the path is relative to.
-func AgentPluginEntryFor(m *Manifest, baseDir, rootDir string) AgentPluginEntry {
-	rel, err := filepath.Rel(rootDir, baseDir)
-	if err != nil {
-		rel = baseDir
-	}
-	return AgentPluginEntry{Name: m.Name, Version: m.Version, Path: path.Clean(filepath.ToSlash(rel))}
-}
-
 // agentPluginsCore writes the root plugin.json, skills/ and mcp.json from the
 // library's output. Findings are logged: the dropped content is also reported by
 // `validate --strict` and `publish`, which fail on it.
@@ -200,4 +180,11 @@ func agentPluginsCore(m *Manifest, baseDir string) ([]config.OutputFile, error) 
 		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, filepath.FromSlash(rel)), RawContent: files[rel]})
 	}
 	return outputs, nil
+}
+
+// UsesAgentPlugins reports whether m writes an Agent Plugins package: the
+// agent-plugins and copilot runtimes, and codex with the root layout.
+func UsesAgentPlugins(m *Manifest) bool {
+	return slices.Contains(m.Runtimes, config.PluginRuntimeAgentPlugins) ||
+		slices.Contains(m.Runtimes, config.PluginRuntimeCopilot) || codexRootLayout(m)
 }
