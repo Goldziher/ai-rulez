@@ -1,6 +1,6 @@
 # Configuration Reference
 
-Configuration reference for `.ai-rulez/config.toml` (`config.json` also loads; YAML configs do not).
+Configuration reference for `.ai-rulez/config.toml` (YAML and JSON configs are no longer read; `ai-rulez migrate v5` converts them).
 
 ## File-Based Configuration
 
@@ -110,7 +110,7 @@ args = ["-y", "ai-rulez@latest", "mcp"]
 
 ### `version`
 
-The config schema version. Must be `"4.0"`; `"3.0"` is rejected.
+The config schema version. Must be `"5.0"`; `"4.0"` and older are rejected with a pointer to `ai-rulez migrate v5`.
 
 ```toml
 version = "5.0"
