@@ -57,7 +57,11 @@ func TestOKFPresetWritesConformantBundleAndTracksDrift(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, drift, 1)
 	assert.Equal(t, "docs/okf/rules/style.md", drift[0].Path)
+	// The bundle has no header to prove ai-rulez wrote it: a hand-edited file is refused, not overwritten.
+	require.Error(t, gen.Generate("default"))
+	gen.SetOverwriteUnowned(true)
 	require.NoError(t, gen.Generate("default"))
+	gen.SetOverwriteUnowned(false)
 
 	// Removing a source removes its concept and its index entry.
 	require.NoError(t, os.Remove(filepath.Join(dir, ".ai-rulez", "rules", "extra.md")))

@@ -70,9 +70,6 @@ func TestGenerate_RewritesFilesItProvablyWrote(t *testing.T) {
 		setup func(t *testing.T, dir string)
 	}{
 		{"a second run over its own output", func(t *testing.T, dir string) {}},
-		{"a file whose header was stripped but the manifest lists it", func(t *testing.T, dir string) {
-			require.NoError(t, os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("stripped\n"), 0o644))
-		}},
 		{"an empty file", func(t *testing.T, dir string) {
 			require.NoError(t, os.Remove(filepath.Join(dir, ".ai-rulez", generatedManifestName)))
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "CLAUDE.md"), nil, 0o644))
