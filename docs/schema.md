@@ -32,7 +32,7 @@ Add a `.vscode/settings.json` to reference the schema:
 
 ### Required Fields
 
-- **`version`**: Must be `"4.0"`
+- **`version`**: Must be `"5.0"`
 - **`name`**: Project name (required, non-empty string)
 
 ### Optional Fields
@@ -85,7 +85,7 @@ Which of these a repository may set, and which only the user config file or the 
 
 ### Field Constraints
 
-- **`version`**: Must be `"4.0"`
+- **`version`**: Must be `"5.0"`
 - **`name`**: Non-empty string
 - **`priority`** (in markdown frontmatter): One of `critical`, `high`, `medium`, `low`, `minimal`
 - **`targets`** (in markdown frontmatter): Selects output files, as preset names (`claude`), root files (`CLAUDE.md`), paths or base names, directory prefixes (`.cursor/rules/`), globs (`.cursor/rules/*`), or `*`. See [Targets](rules.md#targets)

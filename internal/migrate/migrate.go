@@ -14,6 +14,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 )
@@ -39,6 +40,7 @@ const (
 	RuleFrontmatter   = "frontmatter-alias"
 	RuleCommand       = "command-rename"
 	RulePreset        = "preset-rename"
+	RuleGitignore     = "gitignore-block"
 )
 
 // Options configures a migration run.
@@ -310,11 +312,25 @@ func planProject(dir string, opts Options) (*plan, error) { //nolint:gocyclo // 
 
 	oldVersion, _ := currentVersion(doc)
 	if !converted && oldVersion == config.ConfigVersionV5 {
+		// The config is already v5, but the files beside it may not be: a rerun
+		// with --write still has the frontmatter aliases and the overlay to do.
 		p.warnings = append(p.warnings, legacyFileWarnings(dir)...)
-		return &plan{warnings: p.warnings}, nil
+		if err := planLocalOverlay(p, dir); err != nil {
+			return nil, err
+		}
+		if err := planFrontmatter(p, dir, opts.Write); err != nil {
+			return nil, err
+		}
+		return p, nil
 	}
 	if err := checkSourceVersion(oldVersion); err != nil {
 		return nil, oops.With("path", src).Wrap(err)
+	}
+	if spellings := doc.ratchetSpellings(); len(spellings) > 1 {
+		return nil, oops.
+			With("path", src).
+			Hint("Keep one table (merge the entries by hand into [lint.ratchet]) and delete the others, then run migrate again").
+			Errorf("%s are set together, but v5 has one table for them, [lint.ratchet] (4.x preferred [lint.tolerate] over [lint.budget])", bracketed(spellings))
 	}
 
 	mainTarget := filepath.Join(dir, "config.toml")
@@ -342,6 +358,37 @@ func planProject(dir string, opts Options) (*plan, error) { //nolint:gocyclo // 
 		return nil, err
 	}
 	return p, nil
+}
+
+// planStaleGitignoreBlock removes the managed .gitignore block of a 4.x project
+// that takes the v5 default (gitignore off): the block would keep ignoring
+// outputs that v5 expects to be committed.
+func planStaleGitignoreBlock(p *plan, dir string, doc *tomlDoc) {
+	if i := doc.rootKey("gitignore"); i >= 0 {
+		_, val, _ := strings.Cut(stripComment(doc.lines[doc.stmts[i].start]), "=")
+		if strings.TrimSpace(val) != "false" {
+			return
+		}
+	}
+	path := filepath.Join(projectDir(dir), ".gitignore")
+	if info, err := os.Lstat(path); err != nil || !info.Mode().IsRegular() {
+		return
+	}
+	raw, err := os.ReadFile(path) //nolint:gosec // the project's own .gitignore in a one-shot rewrite
+	if err != nil {
+		return
+	}
+	text := string(raw)
+	stripped := gitignore.WithoutManagedBlock(text)
+	if stripped == text {
+		return
+	}
+	stripped = strings.TrimRight(stripped, "\n")
+	if stripped != "" {
+		stripped += "\n"
+	}
+	p.writes = append(p.writes, fileWrite{path: path, data: []byte(stripped), perm: 0o644})
+	p.change(relTo(projectDir(dir), path), RuleGitignore, "removed the ai-rulez managed block (v5 default: gitignore = false, generated files are committed)")
 }
 
 // currentVersion reads the root version of the document.
@@ -387,6 +434,8 @@ func planMainConfig(p *plan, dir string, doc *tomlDoc, oldVersion, srcName strin
 	}
 	if !opts.AdoptDefaults {
 		pinDefaults(p, doc, file)
+	} else {
+		planStaleGitignoreBlock(p, dir, doc)
 	}
 	p.warnings = append(p.warnings, deprecatedWarnings(doc)...)
 }
@@ -457,4 +506,13 @@ func legacyFileWarnings(dir string) []string {
 		}
 	}
 	return out
+}
+
+// bracketed renders ["budget", "tolerate"] as "[lint.budget] and [lint.tolerate]".
+func bracketed(names []string) string {
+	parts := make([]string, len(names))
+	for i, n := range names {
+		parts[i] = "[lint." + n + "]"
+	}
+	return strings.Join(parts, " and ")
 }

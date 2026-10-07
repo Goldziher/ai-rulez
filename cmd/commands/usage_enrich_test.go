@@ -86,8 +86,8 @@ func TestUsageFeedback_WritesRecordAndKeepsNoteLocal(t *testing.T) {
 
 	feedbackKind, feedbackNote = "wrong", note
 	var out bytes.Buffer
-	usageFeedbackCmd.SetOut(&out)
-	require.NoError(t, usageFeedbackCmd.RunE(usageFeedbackCmd, []string{"alpha"}))
+	telemetryFeedbackCmd.SetOut(&out)
+	require.NoError(t, telemetryFeedbackCmd.RunE(telemetryFeedbackCmd, []string{"alpha"}))
 	assert.Contains(t, out.String(), "Recorded wrong feedback for alpha")
 
 	logPath := filepath.Join(root, ".ai-rulez", "local", usage.FeedbackFileName)
@@ -100,7 +100,7 @@ func TestUsageFeedback_WritesRecordAndKeepsNoteLocal(t *testing.T) {
 	assert.FileExists(t, filepath.Join(root, ".ai-rulez", "local", "feedback-notes", entries[0].Note))
 
 	feedbackKind = "bogus"
-	assert.Error(t, usageFeedbackCmd.RunE(usageFeedbackCmd, []string{"alpha"}))
+	assert.Error(t, telemetryFeedbackCmd.RunE(telemetryFeedbackCmd, []string{"alpha"}))
 }
 
 func writeStore(t *testing.T, root string) {
