@@ -89,6 +89,9 @@ func TestTelemetryEnableStatusDisable_Lifecycle(t *testing.T) {
 	require.NoError(t, runTelemetryDisable(&out))
 	assert.Contains(t, out.String(), "consent withdrawn")
 	assert.Contains(t, out.String(), "export is off")
+	// MAN-2: the record was what turned recording on, so recording stops with it.
+	assert.Contains(t, out.String(), "local recording is off")
+	assert.NotContains(t, out.String(), "unchanged")
 	assert.NoFileExists(t, consentFile(env))
 	assert.FileExists(t, env.log)
 	out.Reset()

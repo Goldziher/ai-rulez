@@ -193,7 +193,9 @@ ai-rulez telemetry disable
 - **It is not retroactive.** `enable` places the export cursor at the end of the current usage log, so only events
   recorded from now on are sent; `--backfill` places it at the start to send the existing history. Re-enabling is a fresh
   decision: opt-in gates from the previous record do not carry over.
-- `disable` deletes the record. Local recording, the usage log and the outbox are left alone.
+- `disable` deletes the record. Export stops, and so does the local recording the record turned on; recording that the
+  user or repository config or `AI_RULEZ_TELEMETRY` turns on continues, and `disable` says which. The usage log and the
+  outbox are kept.
 
 ## Wiring the hooks
 
