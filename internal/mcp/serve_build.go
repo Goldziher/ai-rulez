@@ -112,11 +112,18 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 		Search:       NewSearchRuntime(holder.get).WithLog(st.Log),
 		Log:          st.Log,
 	}
+	var srv *Server
 	if !st.NoWatch {
 		roots := st.watchRoots(first)
+		guard := newSaveGuard(roots, first.catalog)
 		opts.Rebuild = func() (*Catalog, error) {
 			b, err := st.build(ctx, buildOptions{admit: true})
 			if err != nil {
+				return nil, err
+			}
+			// After the build: a file it read mid-save is still incomplete now,
+			// and a save that completes later changes the fingerprint again.
+			if err := guard.check(srv.Catalog()); err != nil {
 				return nil, err
 			}
 			holder.set(b.cfg)
@@ -131,7 +138,7 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 	if first.empty != "" {
 		st.logger().Warn(first.empty)
 	}
-	srv := NewSkillServerWith(st.Version, first.catalog, opts)
+	srv = NewSkillServerWith(st.Version, first.catalog, opts)
 	srv.closers = append(srv.closers, func() { closeSink(usageSinkFlushWait) })
 	srv.closers = append(srv.closers, opts.Search.Close)
 	return srv, nil
