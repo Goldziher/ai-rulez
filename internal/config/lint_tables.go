@@ -20,10 +20,10 @@ const (
 // not that kind of mistake.
 func swappedLintTablesTOML(path string, data []byte) error {
 	var doc map[string]any
-	if toml.Unmarshal(data, &doc) != nil {
-		return nil
+	if toml.Unmarshal(data, &doc) == nil {
+		return swappedLintTables(path, doc)
 	}
-	return swappedLintTables(path, doc)
+	return nil // not TOML at all: the caller's decode error stands
 }
 
 // swappedLintTables reports a size-budget table written where tolerated findings
@@ -35,7 +35,10 @@ func swappedLintTables(path string, doc map[string]any) error {
 		return nil
 	}
 	for _, name := range []string{"tolerate", "budget"} {
-		table, _ := lint[name].(map[string]any)
+		table, ok := lint[name].(map[string]any)
+		if !ok {
+			continue
+		}
 		for _, key := range sortedKeys(table) {
 			if _, isTable := table[key].(map[string]any); isTable {
 				return oops.With("path", path).
@@ -45,7 +48,10 @@ func swappedLintTables(path string, doc map[string]any) error {
 			}
 		}
 	}
-	budgets, _ := lint["budgets"].(map[string]any)
+	budgets, ok := lint["budgets"].(map[string]any)
+	if !ok {
+		return nil
+	}
 	for _, key := range sortedKeys(budgets) {
 		if _, isTable := budgets[key].(map[string]any); !isTable {
 			return oops.With("path", path).

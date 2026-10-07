@@ -68,8 +68,8 @@ func ScanVerifierFilesIn(v workspace.View, configDir string) ([]ImportedVerifier
 			continue
 		}
 		data, readErr := io.ReadAll(io.LimitReader(f, maxVerifierFileBytes+1))
-		_ = f.Close()
-		if readErr != nil || len(data) > maxVerifierFileBytes {
+		closeErr := f.Close()
+		if readErr != nil || closeErr != nil || len(data) > maxVerifierFileBytes {
 			continue
 		}
 		out = append(out, ImportedVerifierFile{Name: e.Name(), Data: string(data)})

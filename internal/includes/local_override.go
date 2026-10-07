@@ -34,16 +34,19 @@ func overlaySetsField(cfg *config.Config, listKey, name, field string) bool {
 	if cfg == nil || cfg.LocalOverlay == nil {
 		return false
 	}
-	list, _ := cfg.LocalOverlay.Doc[listKey].([]any)
+	list, ok := cfg.LocalOverlay.Doc[listKey].([]any)
+	if !ok {
+		return false
+	}
 	for _, item := range list {
-		entry, _ := item.(map[string]any)
-		if entry == nil {
+		entry, ok := item.(map[string]any)
+		if !ok {
 			continue
 		}
-		if n, _ := entry["name"].(string); n != name {
+		if n, ok := entry["name"].(string); !ok || n != name {
 			continue
 		}
-		if v, _ := entry[field].(string); v != "" {
+		if v, ok := entry[field].(string); ok && v != "" {
 			return true
 		}
 	}

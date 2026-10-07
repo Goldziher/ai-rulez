@@ -228,7 +228,9 @@ func (w *Watcher) unwatchLocked(dir string) {
 			return
 		}
 	}
-	_ = w.fs.Remove(real) // the directory may already be gone
+	if err := w.fs.Remove(real); err != nil {
+		return // the directory may already be gone
+	}
 }
 
 // translate maps an event path under the real path of a symlinked directory to
@@ -331,13 +333,6 @@ func (w *Watcher) relevant(path string) bool {
 		}
 	}
 	return false
-}
-
-func (w *Watcher) isDirTarget(path string) bool {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	t, ok := w.targets[path]
-	return ok && !t.File
 }
 
 // forget drops the watch bookkeeping for a removed path and everything below it.

@@ -73,14 +73,6 @@ func (c *Config) ResolveLLM(getenv func(string) string) (LLMResolution, error) {
 	return out, err
 }
 
-// baseDirOf is the project directory of c, "" for none.
-func baseDirOf(c *Config) string {
-	if c == nil {
-		return ""
-	}
-	return c.BaseDir
-}
-
 // ResolvedLLM returns the effective [llm] table (zero value when absent) with the
 // trust rule and the AI_RULEZ_LLM_* environment overrides applied.
 func (c *Config) ResolvedLLM() (llm.Config, error) {
