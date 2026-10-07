@@ -30,6 +30,7 @@ const (
 
 // Frontmatter keys and YAML tags the bridge writes and reads.
 const (
+	yamlMapTag     = "!!map"
 	keyType        = "type"
 	keyTitle       = "title"
 	keyDescription = "description"

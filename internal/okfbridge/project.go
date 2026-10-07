@@ -143,7 +143,7 @@ func titleOnlyDiffers(have, want []byte) (haveTitle, wantTitle string, ok bool) 
 }
 
 func withoutTitle(fm okf.Frontmatter) string {
-	clone := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	clone := &yaml.Node{Kind: yaml.MappingNode, Tag: yamlMapTag}
 	for i := 0; i+1 < len(fm.Root.Content); i += 2 {
 		if fm.Root.Content[i].Value != "title" {
 			clone.Content = append(clone.Content, fm.Root.Content[i], fm.Root.Content[i+1])
