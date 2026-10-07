@@ -77,11 +77,12 @@ func DiffLocks(prev, cur *lockfile.File) []NoteChange {
 func diffEntries(kind string, prev, cur []lockfile.Entry) []NoteChange {
 	var out []NoteChange
 	old := map[string]lockfile.Entry{}
-	for _, e := range prev {
-		old[e.Name+"\x00"+e.View] = e
+	for i := range prev {
+		old[prev[i].Name+"\x00"+prev[i].View] = prev[i]
 	}
 	seen := map[string]bool{}
-	for _, e := range cur {
+	for i := range cur {
+		e := &cur[i]
 		key := e.Name + "\x00" + e.View
 		seen[key] = true
 		switch p, ok := old[key]; {
@@ -91,8 +92,8 @@ func diffEntries(kind string, prev, cur []lockfile.Entry) []NoteChange {
 			out = append(out, NoteChange{ChangeChanged, kind, "", e.Name, e.Digest})
 		}
 	}
-	for _, e := range prev {
-		if !seen[e.Name+"\x00"+e.View] {
+	for i := range prev {
+		if e := &prev[i]; !seen[e.Name+"\x00"+e.View] {
 			out = append(out, NoteChange{ChangeRemoved, kind, "", e.Name, e.Digest})
 		}
 	}
