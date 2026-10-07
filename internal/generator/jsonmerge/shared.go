@@ -135,11 +135,11 @@ type pathSpec struct {
 }
 
 // elementsOf is the claim when it covers only some array elements, else nil.
-func elementsOf(claim Claim) *Claim {
+func elementsOf(claim *Claim) *Claim {
 	if !claim.HasElements() {
 		return nil
 	}
-	return &claim
+	return claim
 }
 
 // ownedSpecs lists what Apply of owned is allowed to change in before.
@@ -178,7 +178,8 @@ func ownedSpecs(before map[string]any, owned []OwnedKey) []pathSpec {
 // claimSpecs lists what Unmerge of claims is allowed to change.
 func claimSpecs(claims []Claim) []pathSpec {
 	specs := make([]pathSpec, 0, len(claims))
-	for _, claim := range claims {
+	for i := range claims {
+		claim := &claims[i]
 		if len(claim.Path) > 0 {
 			specs = append(specs, pathSpec{path: claim.Path, elements: elementsOf(claim)})
 		}
@@ -189,7 +190,7 @@ func claimSpecs(claims []Claim) []pathSpec {
 // CheckPreservedApply verifies that merging owned into before, which produced
 // after (both decoded documents), changed nothing but the owned keys: with every
 // owned path removed from both, what is left must be identical. It is the
-// engines' last line of defence against a text edit that damaged content it did
+// engines' last line of defense against a text edit that damaged content it did
 // not own, and a violation means the merge must be abandoned.
 func CheckPreservedApply(before, after map[string]any, owned []OwnedKey) error {
 	return checkPreserved(before, after, ownedSpecs(before, owned))
@@ -201,8 +202,8 @@ func CheckPreservedUnmerge(before, after map[string]any, claims []Claim) error {
 }
 
 func checkPreserved(before, after map[string]any, specs []pathSpec) error {
-	b := deepCopy(before).(map[string]any)
-	a := deepCopy(after).(map[string]any)
+	b := deepCopyMap(before)
+	a := deepCopyMap(after)
 	for _, spec := range specs {
 		if err := spec.checkElementCounts(before, after); err != nil {
 			return err
@@ -233,7 +234,9 @@ func (s pathSpec) checkElementCounts(before, after map[string]any) error {
 	}
 	nowList := []any{}
 	if now, present := LookupTree(after, s.path); present {
-		nowList, _ = now.([]any)
+		if list, isNowList := now.([]any); isNowList {
+			nowList = list
+		}
 	}
 	budget := map[string]int{}
 	for _, sum := range s.elements.ElementDigests() {
@@ -320,11 +323,7 @@ func tableAt(tree map[string]any, path []string) map[string]any {
 func deepCopy(value any) any {
 	switch v := value.(type) {
 	case map[string]any:
-		out := make(map[string]any, len(v))
-		for k, item := range v {
-			out[k] = deepCopy(item)
-		}
-		return out
+		return deepCopyMap(v)
 	case []any:
 		out := make([]any, len(v))
 		for i, item := range v {
@@ -336,6 +335,15 @@ func deepCopy(value any) any {
 	}
 }
 
+// deepCopyMap copies a decoded object and everything under it.
+func deepCopyMap(m map[string]any) map[string]any {
+	out := make(map[string]any, len(m))
+	for k, item := range m {
+		out[k] = deepCopy(item)
+	}
+	return out
+}
+
 // firstDiff returns the path of the first difference between two decoded values.
 func firstDiff(a, b any, path []string) ([]string, bool) {
 	switch av := a.(type) {
@@ -344,28 +352,7 @@ func firstDiff(a, b any, path []string) ([]string, bool) {
 		if !ok {
 			return path, true
 		}
-		keys := make([]string, 0, len(av)+len(bv))
-		for k := range av {
-			keys = append(keys, k)
-		}
-		for k := range bv {
-			if _, in := av[k]; !in {
-				keys = append(keys, k)
-			}
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			x, inA := av[k]
-			y, inB := bv[k]
-			sub := append(slices.Clone(path), k)
-			if inA != inB {
-				return sub, true
-			}
-			if diff, differs := firstDiff(x, y, sub); differs {
-				return diff, true
-			}
-		}
-		return nil, false
+		return firstMapDiff(av, bv, path)
 	case []any:
 		bv, ok := b.([]any)
 		if !ok || len(av) != len(bv) {
@@ -389,13 +376,40 @@ func firstDiff(a, b any, path []string) ([]string, bool) {
 	return nil, false
 }
 
+// firstMapDiff is firstDiff for two decoded objects, visiting keys in sorted order.
+func firstMapDiff(av, bv map[string]any, path []string) ([]string, bool) {
+	keys := make([]string, 0, len(av)+len(bv))
+	for k := range av {
+		keys = append(keys, k)
+	}
+	for k := range bv {
+		if _, in := av[k]; !in {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		x, inA := av[k]
+		y, inB := bv[k]
+		sub := append(slices.Clone(path), k)
+		if inA != inB {
+			return sub, true
+		}
+		if diff, differs := firstDiff(x, y, sub); differs {
+			return diff, true
+		}
+	}
+	return nil, false
+}
+
 // AnnotateClaims records, on each claim, the ancestors of its path that the
 // document already held empty before the merge (see Claim.Preexisting) and
 // whether it lacked a final newline (see Claim.NoFinalNewline). before is the
 // document as decoded before Apply ran and original its text.
 func AnnotateClaims(claims []Claim, before map[string]any, original string) []Claim {
 	claims = NoteFinalNewline(claims, original)
-	for i, claim := range claims {
+	for i := range claims {
+		claim := &claims[i]
 		for n := 1; n < len(claim.Path); n++ {
 			value, present := LookupTree(before, claim.Path[:n])
 			if !present {

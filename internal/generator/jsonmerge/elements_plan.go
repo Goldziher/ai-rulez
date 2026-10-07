@@ -5,7 +5,8 @@ package jsonmerge
 // duplicate of a claimed element is not mistaken for the claimed one.
 func ClaimsOwner[T any](claims []Claim) func(T) bool {
 	matchers := make([]*ElementMatcher, len(claims))
-	for i, claim := range claims {
+	for i := range claims {
+		claim := &claims[i]
 		matchers[i] = claim.NewElementMatcher()
 	}
 	return func(element T) bool {
