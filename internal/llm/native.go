@@ -271,26 +271,40 @@ func batchUsage(body []byte) Usage {
 // liter-llm answers a batch with a single vector, so the batch is retried as
 // singles rather than failing or returning too few vectors. spent and requests
 // are what an already-sent batch cost, so the response charges and counts it.
+//
+// The caller's budget reservation covers the call's first request (the batch, or else the
+// first single); every further request is admitted by the budget before it is sent and charged
+// when it ends. On a failure the usage of a completed first request travels back in
+// firstBilled, so the budget charges what was billed rather than one estimate for the batch.
 func (l *literLLM) embedEach(ctx context.Context, model string, req EmbedRequest, spent Usage, requests int) (EmbedResponse, error) {
 	cost, known := l.pricing.Cost(model, spent)
 	out := EmbedResponse{Model: model, Usage: spent, CostUSD: cost, CostKnown: known || spent.Total() == 0, Requests: requests}
+	sub := subBudgetFrom(ctx)
+	var first *Usage
+	if requests > 0 {
+		first = &spent
+	}
+	failed := func(err error) (EmbedResponse, error) { return EmbedResponse{firstBilled: first}, err }
 	for _, in := range req.Input {
 		one := req
 		one.Input = []string{in}
 		body, err := encodeEmbed(model, one)
 		if err != nil {
-			return EmbedResponse{}, newError(KindConfig, "cannot encode request: %v", err)
+			return failed(newError(KindConfig, "cannot encode request: %v", err))
 		}
-		raw, err := l.native.EmbedJSON(ctx, body)
+		var res *reservation
+		if out.Requests > 0 {
+			if res, err = sub.reserve(Usage{PromptTokens: EstimateTokens(in)}); err != nil {
+				return failed(err)
+			}
+		}
+		r, err := l.embedOne(ctx, model, body)
+		res.done(model, r.Usage, err)
 		if err != nil {
-			return EmbedResponse{}, classifyNative(err)
+			return failed(err)
 		}
-		if len(raw) == 0 {
-			return EmbedResponse{}, errEmptyNative
-		}
-		r, err := decodeEmbed(raw, l.pricing, model, 1)
-		if err != nil {
-			return EmbedResponse{}, err
+		if out.Requests == 0 {
+			first = &r.Usage
 		}
 		out.Vectors = append(out.Vectors, r.Vectors[0])
 		out.Usage.PromptTokens += r.Usage.PromptTokens
@@ -300,6 +314,18 @@ func (l *literLLM) embedEach(ctx context.Context, model string, req EmbedRequest
 		out.Requests++
 	}
 	return out, nil
+}
+
+// embedOne sends one single-input embedding request.
+func (l *literLLM) embedOne(ctx context.Context, model string, body []byte) (EmbedResponse, error) {
+	raw, err := l.native.EmbedJSON(ctx, body)
+	if err != nil {
+		return EmbedResponse{}, classifyNative(err)
+	}
+	if len(raw) == 0 {
+		return EmbedResponse{}, errEmptyNative
+	}
+	return decodeEmbed(raw, l.pricing, model, 1)
 }
 
 func (l *literLLM) Close() error {
