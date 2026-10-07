@@ -39,10 +39,10 @@ func CheckMetaString(f *ContentFile, key string) string {
 	return strings.TrimSpace(f.Metadata.Extra[key])
 }
 
-func validateCheckSlice(checks []ContentFile, scope string) error {
+func (c *Config) validateCheckSlice(checks []ContentFile, scope string) error {
 	for i := range checks {
 		check := &checks[i]
-		warnInvalidTargets(*check)
+		c.warnInvalidTargets(*check)
 		if !IsValidCheckName(check.Name) {
 			return oops.
 				With("check", check.Name).
@@ -78,7 +78,7 @@ func (c *Config) validateChecks() error {
 	if c.Content == nil {
 		return nil
 	}
-	if err := validateCheckSlice(c.Content.Checks, "root"); err != nil {
+	if err := c.validateCheckSlice(c.Content.Checks, "root"); err != nil {
 		return err
 	}
 	names := make([]string, 0, len(c.Content.Domains))
@@ -91,7 +91,7 @@ func (c *Config) validateChecks() error {
 		if domain == nil {
 			continue
 		}
-		if err := validateCheckSlice(domain.Checks, "domain "+name); err != nil {
+		if err := c.validateCheckSlice(domain.Checks, "domain "+name); err != nil {
 			return err
 		}
 	}
