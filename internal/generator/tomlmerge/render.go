@@ -22,7 +22,7 @@ func renderKey(part string) string {
 	if bareKey.MatchString(part) {
 		return part
 	}
-	quoted, _ := json.Marshal(part)
+	quoted, _ := json.Marshal(part) //nolint:errcheck // marshaling a string cannot fail
 	return string(quoted)
 }
 
@@ -112,7 +112,7 @@ func quote(s string) string {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
-	_ = enc.Encode(s)
+	_ = enc.Encode(s) //nolint:errcheck // encoding a string cannot fail
 	return strings.ReplaceAll(strings.TrimSuffix(buf.String(), "\n"), "\x7f", `\u007f`)
 }
 
