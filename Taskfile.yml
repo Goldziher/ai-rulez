@@ -4,8 +4,8 @@ tasks:
   setup:
     desc: "Set up the development environment"
     cmds:
-      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest || true
-      - go install github.com/goreleaser/goreleaser/v2@latest || true
+      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 || true
+      - go install github.com/goreleaser/goreleaser/v2@v2.18.2 || true
       - poly hooks install
       - go mod download
 
@@ -90,7 +90,7 @@ tasks:
   test:
     desc: "Run unit and integration tests"
     cmds:
-      - go test -timeout 30m ./cmd/... ./internal/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/...
+      - go test -timeout 30m ./cmd/... ./internal/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...
 
   test:verbose:
     desc: "Run all tests with verbose output"

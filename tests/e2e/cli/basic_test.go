@@ -118,7 +118,7 @@ func (s *BasicCLITestSuite) TestLegacyConfigIsRefused() {
 
 				// Assert
 				s.Equal(1, result.ExitCode)
-				result.AssertOutputContains(s.T(), tt.file)
+				result.AssertOutputContains(s.T(), filepath.FromSlash(tt.file))
 				result.AssertOutputContains(s.T(), "ai-rulez migrate v5")
 			})
 		}
