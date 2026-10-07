@@ -54,6 +54,10 @@ type Admission struct {
 	Log logger.Logger
 	// Now is the clock approvals are judged by; nil is the wall clock.
 	Now func() time.Time
+	// PolicyDenied maps a digest the organization policy denies
+	// (sources.deny_digests) to the policy's message; a skill with that digest
+	// is refused with AR747.
+	PolicyDenied map[string]string
 }
 
 // Admit returns a catalog holding only the admitted skills. Refused skills are
@@ -127,6 +131,9 @@ func (c *Catalog) Refusals() []Refusal {
 }
 
 func (a Admission) check(s *CatalogSkill) *Refusal {
+	if reason, denied := a.PolicyDenied[s.LockDigest]; denied && s.LockDigest != "" {
+		return &Refusal{Name: s.Name, Code: lint.CodeDigestDenied, Reason: reason}
+	}
 	if r := a.scan(s); r != nil {
 		return r
 	}
