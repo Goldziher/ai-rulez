@@ -91,7 +91,7 @@ func decodeChat(body []byte, pricing Pricing, fallbackModel string) (ChatRespons
 	}
 	text := contentText(w.Choices[0].Message.Content)
 	model := firstNonEmpty(w.Model, fallbackModel)
-	usage := Usage(w.Usage)
+	usage := Usage{PromptTokens: max(w.Usage.PromptTokens, 0), CompletionTokens: max(w.Usage.CompletionTokens, 0)}
 	cost, known := pricing.Cost(model, usage)
 	return ChatResponse{Text: text, Model: model, Usage: usage, CostUSD: cost, CostKnown: known}, nil
 }
@@ -121,7 +121,7 @@ func decodeEmbed(body []byte, pricing Pricing, fallbackModel string, want int) (
 		vecs[d.Index] = d.Embedding
 	}
 	model := firstNonEmpty(w.Model, fallbackModel)
-	usage := Usage{PromptTokens: w.Usage.PromptTokens}
+	usage := Usage{PromptTokens: max(w.Usage.PromptTokens, 0)}
 	cost, known := pricing.Cost(model, usage)
 	return EmbedResponse{Vectors: vecs, Model: model, Usage: usage, CostUSD: cost, CostKnown: known}, nil
 }

@@ -180,10 +180,8 @@ func (c *budgetClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 		res.fail(err)
 		return resp, err
 	}
-	usage := resp.Usage
-	if usage.Total() == 0 {
-		usage = worst // no usage reported: assume the worst, fail closed
-	}
+	usage := chargeable(resp.Usage, worst)
+	resp.Usage = usage
 	resp.CostUSD, resp.CostKnown = res.settle(resp.Model, usage)
 	return resp, nil
 }
@@ -204,10 +202,8 @@ func (c *budgetClient) Embed(ctx context.Context, req EmbedRequest) (EmbedRespon
 		res.fail(err)
 		return resp, err
 	}
-	usage := resp.Usage
-	if usage.Total() == 0 {
-		usage = worst
-	}
+	usage := chargeable(resp.Usage, worst)
+	resp.Usage = usage
 	if resp.Requests > 1 {
 		c.b.addCalls(resp.Requests - 1)
 	}
@@ -220,6 +216,16 @@ func (b *Budget) addCalls(n int) {
 	b.mu.Lock()
 	b.spent.Calls += n
 	b.mu.Unlock()
+}
+
+// chargeable is the usage a call is charged. The provider's figure is trusted
+// only when it is plausible: a missing report (zero) or a negative component
+// could lower the spent total, so either one fails closed to the worst case.
+func chargeable(reported, worst Usage) Usage {
+	if reported.PromptTokens < 0 || reported.CompletionTokens < 0 || reported.Total() <= 0 {
+		return worst
+	}
+	return reported
 }
 
 func (c *budgetClient) Close() error { return c.next.Close() }
