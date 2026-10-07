@@ -25,6 +25,11 @@ const DefaultConfigDir = ".ai-rulez"
 
 const autoFrom = "auto"
 
+// ErrNothingToConvert is returned by Convert when the selected importers found
+// nothing to import. It is an outcome, not a failure: the command reports it and
+// exits 0.
+var ErrNothingToConvert = errors.New("nothing to convert")
+
 // ErrConflicts is returned by Convert when a write would replace existing
 // content and --force was not given. Nothing is written.
 var ErrConflicts = oops.Errorf("existing files differ from the converted content")
@@ -199,7 +204,7 @@ func planConversion(ctx context.Context, opts ConvertOptions) (*conversion, erro
 			hint = fmt.Sprintf("The input names %d remote source(s) that are not on disk; rerun with --fetch to import them", len(c.plan.Remotes))
 		}
 		return nil, oops.Hint(hint).
-			Errorf("nothing to convert: the selected importers found no importable content in %s", abs)
+			Wrapf(ErrNothingToConvert, "the selected importers found no importable content in %s", abs)
 	}
 	if opts.Merge {
 		if err := mergeRename(c.plan, c.intoAbs, opts.Domain, opts.KeepNames); err != nil {
@@ -385,7 +390,7 @@ func autoImporters(abs string) ([]Format, error) {
 	}
 	if len(found) == 0 {
 		return nil, oops.Hint("Run `ai-rulez convert --list` to see what each importer looks for").
-			Errorf("no importable files found in %s", abs)
+			Wrapf(ErrNothingToConvert, "no importable files found in %s", abs)
 	}
 	return found, nil
 }
