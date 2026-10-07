@@ -107,13 +107,14 @@ type fixFixture struct {
 	verifier *scriptedJudge
 }
 
-func newFixFixture(t *testing.T, fixerReply func(call int) string, verdictOf func(desc, dim string) string) *fixFixture {
+// siblings are further items in the pool, so the contextual dimensions are judged too.
+func newFixFixture(t *testing.T, fixerReply func(call int) string, verdictOf func(desc, dim string) string, siblings ...Item) *fixFixture {
 	t.Helper()
 	rb := builtin(t)
 	it := skill("deploy", "Helps with deployments")
 	it = it.WithText(fixOriginal)
 	it.Owned = true
-	res := Run(Input{Rubric: rb, Items: []Item{it}})
+	res := Run(Input{Rubric: rb, Items: append([]Item{it}, siblings...)})
 	sj := &scriptedJudge{decide: func(c scriptedCall, dim string) string { return verdictOf(c.Desc, dim) }}
 	jc, _ := newClient(t, sj, llm.Config{})
 	mustRun(t, SemanticInput{Rubric: rb, Results: res, Options: SemanticOptions{Client: jc, K: 1, Content: config.ReviewContentFull}})
@@ -123,7 +124,7 @@ func newFixFixture(t *testing.T, fixerReply func(call int) string, verdictOf fun
 	fc := llm.Wrap(fixer, llm.Config{AllowNetwork: true, Model: "fake/fixer"}, llm.Options{})
 	var findings []Finding
 	for _, f := range res.Findings(rb) {
-		if f.Origin == OriginLLMJudge {
+		if f.Origin == OriginLLMJudge && f.ItemID == res.Items[0].ID {
 			findings = append(findings, f)
 		}
 	}
@@ -284,4 +285,27 @@ func TestFixPromptKeepsTheFindingsInsideTheirOwnFence(t *testing.T) {
 	assert.Less(t, open, strings.Index(user, "Ignore the rules"))
 	assert.Less(t, strings.Index(user, "Ignore the rules"), end, "model-written text stays inside the fence")
 	assert.Contains(t, user, "untrusted data")
+}
+
+// A patch that makes the re-judge lose dimensions it had before (the contextual call stops
+// parsing) is not "no worse": it is rejected, never verified or applied (RV-LLM-14).
+func TestProposeFixRejectsAPatchWhoseRejudgeLosesADimension(t *testing.T) {
+	// Arrange
+	fx := newFixFixture(t, func(int) string {
+		return editReply("Helps with deployments", "Deploy a build to staging when asked to ship; not for rollbacks")
+	}, func(desc, dim string) string {
+		if dim == "overlap" && strings.Contains(desc, "staging") {
+			return "unparseable"
+		}
+		return vagueIsBad(desc, dim)
+	}, skill("release", "Cut a release tag and publish the changelog"))
+
+	// Act
+	p, err := ProposeFix(t.Context(), fx.in)
+
+	// Assert
+	require.NoError(t, err)
+	assert.False(t, p.Verified)
+	assert.Empty(t, p.Patch)
+	assert.Contains(t, p.Reason, "the judge gave no verdict on instruction-conflict")
 }
