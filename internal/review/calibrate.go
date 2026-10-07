@@ -113,6 +113,20 @@ func Calibrate(ctx context.Context, in CalibrateInput) (*CalibrationReport, erro
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// stop records a judge error and cancels the run; mu must be held. A fatal error ends the run
+	// (unless it is the cancellation a spend-cap stop caused); any other is the spend cap, which
+	// leaves the run incomplete.
+	stop := func(err error) {
+		if !errors.Is(err, ErrFatal) {
+			budget = true
+			cancel()
+			return
+		}
+		if fatal == nil && (!budget || !errors.Is(err, context.Canceled)) {
+			fatal = err
+			cancel()
+		}
+	}
 	run := func(i int) {
 		gc := cases[i]
 		r := ItemResult{Item: gc.Item, Status: StatusScored}
@@ -120,15 +134,7 @@ func Calibrate(ctx context.Context, in CalibrateInput) (*CalibrationReport, erro
 		if err != nil {
 			mu.Lock()
 			defer mu.Unlock()
-			if errors.Is(err, ErrFatal) {
-				if fatal == nil && !(budget && errors.Is(err, context.Canceled)) {
-					fatal = err
-					cancel()
-				}
-			} else {
-				budget = true
-				cancel()
-			}
+			stop(err)
 			return
 		}
 		results[i] = caseResultOf(gc.ID, sem)
@@ -139,17 +145,9 @@ func Calibrate(ctx context.Context, in CalibrateInput) (*CalibrationReport, erro
 		mu.Lock()
 		defer mu.Unlock()
 		mergeTally(probeTally, tally)
-		switch {
-		case perr == nil:
-		case errors.Is(perr, ErrFatal):
-			if fatal == nil && !(budget && errors.Is(perr, context.Canceled)) {
-				fatal = perr
-				cancel()
-			}
-		default:
-			// The spend cap stopped a probe: the probes are not all measured, so the run is incomplete.
-			budget = true
-			cancel()
+		if perr != nil {
+			// A probe the cap or a fatal error stopped leaves the probes unmeasured: the run stops too.
+			stop(perr)
 		}
 	}
 

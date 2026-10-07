@@ -363,7 +363,7 @@ func compareVerdicts(targets map[string]bool, before, after map[string]string) s
 // rejudge judges the patched item with the verifier and returns its verdict per dimension, and
 // whether the judgement is incomplete.
 func rejudge(ctx context.Context, in FixInput, patched string, p *FixProposal) (map[string]string, bool, error) {
-	pi := in.Item.Item.WithText(patched)
+	pi := in.Item.WithText(patched)
 	r := ItemResult{Item: pi, Status: StatusScored, Redacted: in.Item.Redacted, Dimensions: in.Item.Dimensions}
 	// The verifier is used by one fix at a time, so the change in its usage is what this re-judge
 	// spent: calls, cache hits, tokens and cost.
