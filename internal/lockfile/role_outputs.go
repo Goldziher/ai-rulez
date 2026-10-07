@@ -49,5 +49,6 @@ func (f *File) RoleOutput(role string) (string, bool) {
 // SetRoleOutputs replaces every role output pin with pins.
 func (f *File) SetRoleOutputs(pins []OutputPin) {
 	kept := f.DefaultOutputs()
-	f.Output = append(kept, pins...)
+	kept = append(kept, pins...)
+	f.Output = kept
 }
