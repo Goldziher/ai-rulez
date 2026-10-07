@@ -78,7 +78,8 @@ type Result struct {
 	// Triggered says whether the skill fired. Required for the "with" arm.
 	Triggered *bool `json:"triggered,omitempty"`
 	// Passed, when set, is the runner's own verdict on the outcome checks
-	// (assertions and rubric); ai-rulez then does not grade the case itself.
+	// (assertions and rubric); ai-rulez then does not grade the case itself,
+	// except that a rubric graded by the built-in grader must pass as well.
 	Passed *bool `json:"passed,omitempty"`
 	// Output is the final answer, graded by the case's assertions when Passed is
 	// not set.
@@ -89,9 +90,13 @@ type Result struct {
 	// RubricRationale the grader's one-line reason (set by the built-in grader).
 	RubricScore     *float64 `json:"rubric_score,omitempty"`
 	RubricRationale string   `json:"rubric_rationale,omitempty"`
-	InputTokens     int      `json:"input_tokens,omitempty"`
-	OutputTokens    int      `json:"output_tokens,omitempty"`
-	CostUSD         float64  `json:"cost_usd,omitempty"`
+	// builtinRubric is set by the built-in grader: it owns the rubric verdict, so
+	// RubricScore is checked even when the runner gave its own Passed verdict
+	// (which then covers only the runner's other checks).
+	builtinRubric bool
+	InputTokens   int     `json:"input_tokens,omitempty"`
+	OutputTokens  int     `json:"output_tokens,omitempty"`
+	CostUSD       float64 `json:"cost_usd,omitempty"`
 	// Fired, FiredCounts and Runs answer an activation request: how often each skill
 	// of the installed set loaded over Runs repetitions of the prompt (a skill that
 	// never loaded is absent). Triggered says whether the case's target loaded in

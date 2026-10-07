@@ -242,8 +242,9 @@ ai-rulez eval run --runner-command ./my-runner --grader builtin --allow-llm --gr
   `output`. The judge returns a score in [0,1] with a one-line rationale at temperature 0, which replaces a
   `rubric_score` the runner gave and is compared with `rubric_min_score` (default 0.7); the rationale is in the
   report (`rubric_note`). A checklist is graded as one call: the score is the share of the total weight satisfied.
-  A result whose runner gave its own `passed` verdict is left alone (with a warning), and a result with no `output` has
-  nothing to grade and fails the rubric (with a warning). A failed judge call leaves that case ungraded, which scores
+  When the runner also gave its own `passed` verdict (for example from its assertion graders), the rubric grade must
+  pass as well: the case passes only when both do. A result with no `output` has nothing to grade and fails the rubric
+  (with a warning). A failed judge call leaves that case ungraded, which scores
   as a failure.
 - **Treated as data.** The rubric and the transcript go to the judge between markers that carry a token derived from
   the request, the judge is told to ignore instructions inside them, and its reply must be exactly one JSON object.

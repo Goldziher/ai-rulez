@@ -99,13 +99,13 @@ func TestGradeRubrics(t *testing.T) {
 	assert.Equal(t, 0.9, *resp.Results[0].RubricScore, "the built-in score replaces the runner's")
 	assert.Equal(t, "fine", resp.Results[0].RubricRationale)
 	assert.Nil(t, resp.Results[1].RubricScore, "a case without a rubric is not graded")
-	assert.Nil(t, resp.Results[2].RubricScore, "the runner's own verdict is left alone")
+	require.NotNil(t, resp.Results[2].RubricScore, "a runner's own verdict does not stand in for the rubric")
 	assert.Nil(t, resp.Results[3].RubricScore, "a runner score with no transcript to check it against is dropped")
 	assert.Nil(t, resp.Results[4].RubricScore)
 	require.NotNil(t, resp.Results[6].RubricScore, "the without arm is graded too, for the ablation")
-	assert.Len(t, *seen, 2, "only the two results with a rubric and an output reach the judge")
+	assert.Len(t, *seen, 3, "only the three results with a rubric and an output reach the judge")
 	joined := strings.Join(warnings, "\n")
-	assert.Contains(t, joined, `case "own-verdict" (with arm): the runner gave its own verdict`)
+	assert.NotContains(t, joined, "own-verdict")
 	assert.Contains(t, joined, `case "silent" (with arm): the runner returned no output`)
 }
 
@@ -130,6 +130,40 @@ func TestGradeRubrics_ANetworkGateStopsGrading(t *testing.T) {
 
 	require.Error(t, refused)
 	assert.True(t, errors.Is(refused, llm.ErrNetworkDisabled))
+}
+
+func TestGradeOutcome_TheBuiltinRubricGradeMustPassBesideTheRunnersVerdict(t *testing.T) {
+	tests := []struct {
+		name       string
+		score      float64
+		runnerPass bool
+		output     string
+		wantPassed bool
+		wantCalls  int
+	}{
+		{"assertions pass, rubric fails", 0, true, "ok", false, 1},
+		{"assertions pass, rubric passes", 0.9, true, "ok", true, 1},
+		{"assertions fail, rubric passes", 0.9, false, "ok", false, 1},
+		{"no output to grade the rubric from", 0.9, true, "", false, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: what the claude runner reports under --grader builtin, the assertion graders' verdict.
+			c := Case{ID: "c1", Prompt: "p", ExpectTrigger: bp(true), Rubric: "must cite the doc", Assertions: []Assertion{{Type: AssertContains, Value: "ok"}}}
+			passed := tt.runnerPass
+			resp := &Response{Version: ProtocolVersion, Results: []Result{{Case: "c1", Arm: ArmWith, Passed: &passed, Output: tt.output}}}
+			fake, seen := verdictFake(tt.score, "graded")
+
+			// Act
+			_, refused := gradeRubrics(context.Background(), &JudgeGrader{Client: fake}, []Case{c}, resp)
+			out := GradeOutcome(&c, &resp.Results[0], GradeOptions{})
+
+			// Assert
+			require.NoError(t, refused)
+			assert.Len(t, *seen, tt.wantCalls)
+			assert.Equal(t, tt.wantPassed, out.Passed, out.Failures)
+		})
+	}
 }
 
 // gradedProject is a skill with one rubric case, answered by a runner that returns output and no score.

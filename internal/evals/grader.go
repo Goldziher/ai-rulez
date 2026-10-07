@@ -130,11 +130,13 @@ func oneLine(s string) string {
 
 // gradeRubrics grades the rubric of every case that has one, from the output the
 // runner returned, and sets Result.RubricScore. It overrides a runner's own rubric
-// score (the point of the built-in grader is not to depend on it), leaves a result
-// whose runner gave its own verdict (Passed) alone, and never grades a result with
-// no output. A call that fails leaves that result ungraded, which scores as a
-// failure, with the reason as a warning. It returns the warnings and whether the
-// model layer refused to run at all (network disabled), which ends the grading.
+// score (the point of the built-in grader is not to depend on it) and never grades
+// a result with no output. When the runner also gave its own verdict (Passed, for
+// example from its assertion graders) the rubric grade must pass as well: a
+// passing assertion never stands in for an ungraded rubric. A call that fails
+// leaves that result ungraded, which scores as a failure, with the reason as a
+// warning. It returns the warnings and whether the model layer refused to run at
+// all (network disabled), which ends the grading.
 func gradeRubrics(ctx context.Context, g RubricGrader, cases []Case, resp *Response) (warnings []string, refused error) {
 	byID := map[string]*Case{}
 	for i := range cases {
@@ -147,11 +149,8 @@ func gradeRubrics(ctx context.Context, g RubricGrader, cases []Case, resp *Respo
 			continue
 		}
 		label := fmt.Sprintf("case %q (%s arm)", r.Case, r.Arm)
-		switch {
-		case r.Passed != nil:
-			warnings = append(warnings, label+": the runner gave its own verdict, so the built-in grader did not grade the rubric")
-			continue
-		case strings.TrimSpace(r.Output) == "":
+		r.builtinRubric = true
+		if strings.TrimSpace(r.Output) == "" {
 			warnings = append(warnings, label+": the runner returned no output, so there is no transcript for the built-in grader")
 			r.RubricScore = nil
 			continue
