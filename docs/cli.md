@@ -1793,7 +1793,7 @@ Rank the skills `mcp --serve-skills` would serve against a query, with the ranke
 | `--format text\|json` | Output format (default `text`) |
 | `--mode lexical\|hybrid\|vector` | Ranking for this run (default `[search] mode`, then lexical) |
 | `--explain` | Show each skill's rank in the lexical and vector lists and how the query was embedded |
-| `--allow-exec` | Honour `[search.embeddings] command` from the repository config (it runs a program) |
+| `--allow-exec` | Honor `[search.embeddings] command` from the repository config (it runs a program) |
 | `--profile`, `--targets`, `--domain`, `--allow`, `--deny`, `--source`, `--role`, `--include-static`, `--offline`, `--frozen` | Select the catalog, as for `mcp --serve-skills` |
 
 A hybrid or vector search that cannot embed the query ranks lexically and reports `degraded` (`no_index`, `provider_unavailable`, `timeout`, `budget`, `network_disabled`). With the default `[search] fusion = "auto"`, hybrid ranks by cosine alone while every skill has a current vector. With `[search] vector_min_sim` set, a vector ranking with no skill above it returns nothing and reports `abstained` (see [Abstaining](search.md#abstaining)).
