@@ -259,7 +259,7 @@ func handlerCommand(cfg *config.Config, spec hookSpec, action *config.HookAction
 	}
 	script := path.Clean(filepath.ToSlash(action.Script))
 	if cfg.UserScope {
-		return quote(filepath.Join(cfg.ConfigDir, filepath.FromSlash(script))), action.Args, true
+		return quote(filepath.ToSlash(filepath.Join(cfg.ConfigDir, filepath.FromSlash(script)))), action.Args, true
 	}
 	// The script path is single-quoted on top of the config-time allowlist
 	// (config.IsSafeHookScript); only the root variable stays double-quoted, because

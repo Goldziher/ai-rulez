@@ -94,7 +94,7 @@ type hookSpec struct {
 	// userContainer / userRootKeyed override the container in user scope, for a
 	// harness whose user-level file is a different document (Devin's config.json).
 	userContainer []string
-	// matcherEvents lists the native events that honour a matcher; nil means all.
+	// matcherEvents lists the native events that honor a matcher; nil means all.
 	matcherEvents map[string]bool
 	// scriptVar is the environment variable naming the project root in a command
 	// ("$FACTORY_PROJECT_DIR"); empty when the harness documents none.
