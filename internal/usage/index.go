@@ -109,9 +109,9 @@ func DefaultIndexPath(projectRoot, configDirName string) string {
 // byID returns the records sharing an id.
 func (i *Index) byID(id string) []SkillRecord {
 	var out []SkillRecord
-	for _, record := range i.Skills {
-		if record.ID == id {
-			out = append(out, record)
+	for j := range i.Skills {
+		if i.Skills[j].ID == id {
+			out = append(out, i.Skills[j])
 		}
 	}
 	return out

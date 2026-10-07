@@ -169,7 +169,7 @@ func singleQuote(value string) string {
 // Plain names and paths stay as they are, so the common "ai-rulez" is unchanged.
 func ShellWord(value string) string {
 	if value != "" && strings.IndexFunc(value, func(r rune) bool {
-		return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("_-./:@%+=,", r))
+		return (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && !strings.ContainsRune("_-./:@%+=,", r)
 	}) < 0 {
 		return value
 	}

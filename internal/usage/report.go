@@ -107,7 +107,8 @@ func BuildReport(index *Index, entries []Entry, skipped int) *Report {
 	}
 
 	indexed := map[string]bool{}
-	for _, record := range index.Skills {
+	for j := range index.Skills {
+		record := &index.Skills[j]
 		indexed[record.ID] = true
 		row := SkillUsage{ID: record.ID, Domain: record.Domain, Owner: record.Owner}
 		t := tallies[record.ID]
