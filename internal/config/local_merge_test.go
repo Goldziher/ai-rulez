@@ -59,15 +59,15 @@ func TestMergeConfigDocs(t *testing.T) {
 		},
 		{
 			name:    "version mismatch errors",
-			shared:  `version = "4.0"`,
+			shared:  `version = "5.0"`,
 			local:   `version = "3.0"`,
 			wantErr: "does not match",
 		},
 		{
 			name:   "version equal ok",
-			shared: `version = "4.0"`,
-			local:  `version = "4.0"`,
-			want:   `{"version":"4.0"}`,
+			shared: `version = "5.0"`,
+			local:  `version = "5.0"`,
+			want:   `{"version":"5.0"}`,
 		},
 		{
 			name:   "builtins replaced",

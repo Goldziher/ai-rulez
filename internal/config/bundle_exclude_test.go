@@ -145,9 +145,9 @@ func TestBundleExcludeFromConfig(t *testing.T) {
 		"skills/demo/scripts/.venv-x/lib.py",
 	)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"x\"\nbundle_exclude = [\"*.bak\"]\n"), 0o644))
+		[]byte("version = \"5.0\"\nname = \"x\"\nbundle_exclude = [\"*.bak\"]\n"), 0o644))
 
-	cfg, err := decodeConfigTOML([]byte("version = \"4.0\"\nname = \"x\"\nbundle_exclude = [\"*.bak\"]\ncodex_skills_dir = \".codex/skills\"\n"), "x")
+	cfg, err := decodeConfigTOML([]byte("version = \"5.0\"\nname = \"x\"\nbundle_exclude = [\"*.bak\"]\ncodex_skills_dir = \".codex/skills\"\n"), "x")
 	require.NoError(t, err)
 	assert.Equal(t, []string{"*.bak"}, cfg.BundleExclude)
 	assert.Equal(t, ".codex/skills", cfg.CodexSkillsDir)
