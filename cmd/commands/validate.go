@@ -74,7 +74,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		cfg, err := loadConfigForCommand(ctx, args, config.WithFrontmatterErrors())
 		if err != nil {
 			logger.Error("Failed to load config")
-			fmtError(err)
+			fmtErrorFormat(validateFormat, err)
 			os.Exit(1)
 		}
 
