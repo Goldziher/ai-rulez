@@ -230,7 +230,10 @@ func hasPrefix(path, prefix []string) bool {
 	return len(path) >= len(prefix) && equalPath(path[:len(prefix)], prefix)
 }
 
-const lintBudgetKey = "budget"
+const (
+	lintTable     = "lint"
+	lintBudgetKey = "budget"
+)
 
 var (
 	versionValue = regexp.MustCompile(`^(\s*version\s*=\s*)(?:"[^"]*"|'[^']*'|\d[0-9.]*)(.*)$`)
@@ -302,11 +305,11 @@ func (d *tomlDoc) renameLintBudget() int { //nolint:gocyclo // the three spellin
 	for _, s := range d.stmts {
 		line := d.lines[s.start]
 		switch {
-		case s.header && len(s.path) >= 2 && s.path[0] == "lint" && s.path[1] == lintBudgetKey:
+		case s.header && len(s.path) >= 2 && s.path[0] == lintTable && s.path[1] == lintBudgetKey:
 			d.lines[s.start] = budgetHeader.ReplaceAllString(line, "${1}ratchet")
-		case !s.header && len(s.table) == 1 && s.table[0] == "lint" && len(s.key) > 0 && s.key[0] == lintBudgetKey:
+		case !s.header && len(s.table) == 1 && s.table[0] == lintTable && len(s.key) > 0 && s.key[0] == lintBudgetKey:
 			d.lines[s.start] = budgetKey.ReplaceAllString(line, "${1}ratchet${2}")
-		case !s.header && len(s.table) == 0 && len(s.key) > 1 && s.key[0] == "lint" && s.key[1] == lintBudgetKey:
+		case !s.header && len(s.table) == 0 && len(s.key) > 1 && s.key[0] == lintTable && s.key[1] == lintBudgetKey:
 			d.lines[s.start] = lintBudgetKV.ReplaceAllString(line, "${1}ratchet")
 		default:
 			continue
