@@ -113,7 +113,10 @@ packs the planned directory with the real npm when it is installed.
   certificate settings. Its output is redacted before it is shown.
 - The signature covers the release archive, not the tarball npm packs, so `require_signature` fails an npm release (`AR9N7`)
   and a signed npm release warns. Publish the signed archive with `--to github-release` or `--to oci` for a verifiable release.
-- npm provenance (`--provenance`) is not offered: it depends on the CI environment, which a plan must not.
+- npm provenance (`--provenance`) is CI-only: npm signs it with the OIDC identity of the CI job (GitHub Actions or
+  GitLab CI with `id-token: write`) and refuses it anywhere else, so it is not part of the plan, whose argv must not
+  depend on where it runs. To publish with provenance, run `publish --to npm` without `--execute` in that CI job and run
+  the two planned commands yourself, adding `--provenance` to `npm publish`.
 
 ### OCI
 
