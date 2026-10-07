@@ -302,7 +302,7 @@ func (e *editor) removeOccurrence(doc *document, occ occurrence) {
 }
 
 // removeSpan deletes [start, end) along with the blank line that separated it
-// from its neighbours, so removing what an earlier insert added restores the
+// from its neighbors, so removing what an earlier insert added restores the
 // original bytes.
 func (e *editor) removeSpan(start, end int, isSection, soleRoot bool) {
 	afterLen := blankAfterLen(e.src, end)
