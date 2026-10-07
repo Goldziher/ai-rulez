@@ -148,7 +148,6 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-
 	exitOnLockedDrift(enforceLockedContent(cfg))
 	exitOnMovedTags(cfg) // only with --verify-tags or [lock] verify_tags: a pinned tag that moved ends the run
 

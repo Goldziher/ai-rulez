@@ -38,7 +38,7 @@ func setupTelemetry(t *testing.T, repoToml, userToml string) telemetryEnv {
 	t.Cleanup(func() {
 		telemetrySpawn = previous
 		telHarness, telRole, telRoot, telConfigDir, telFormat, telOutput, telJSON, reportItems = "", "", "", "", "json", "", false, false
-		usageLog, usageIndex, usageHarness, usageRole, usageSalt, reportJSON, reportEvals, reportFeedback = "", "", "", "", "", false, "", ""
+		usageLog, usageIndex, telHarness, telRole, usageSalt, reportJSON, reportEvals, reportFeedback = "", "", "", "", "", false, "", ""
 		configDir = ""
 	})
 	return telemetryEnv{root: root, xdg: xdg, log: filepath.Join(root, ".ai-rulez", "local", "usage.jsonl"), spawns: &spawns}

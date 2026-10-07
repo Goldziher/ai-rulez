@@ -51,15 +51,23 @@ var TelemetryCmd = &cobra.Command{
 	Long: `Record which rules, agents, context files and skills an AI harness loaded, as
 identifier-only events, and optionally export them to an OpenTelemetry collector.
 
-  ai-rulez telemetry hook     print the hooks that record loads (Claude Code: InstructionsLoaded,
-                              SubagentStart/Stop, plus the Skill hooks of "usage hook")
-  ai-rulez telemetry record   the command those hooks run; reads one hook event on stdin
-  ai-rulez telemetry enable   consent to export to one collector (stored per user; a repo cannot)
-  ai-rulez telemetry status   on or off, consent, pending events, delivery failures
-  ai-rulez telemetry disable  withdraw consent
-  ai-rulez telemetry flush    ship the local outbox to the collector now
-  ai-rulez telemetry doctor   show the resolved configuration, consent state and buffer
-  ai-rulez telemetry preview  print exactly what an export would send (no network)
+  ai-rulez telemetry hook      print the hooks that record loads (Claude Code: InstructionsLoaded,
+                               SubagentStart/Stop and the Skill hooks; codex and cursor: the skill hook)
+  ai-rulez telemetry record    the command those hooks run; reads one hook event on stdin
+  ai-rulez telemetry feedback  record that a skill misled you, is stale, wrong or great (notes stay local)
+  ai-rulez telemetry report    join the usage log with the skills index, feedback and eval scores;
+                               "report evals" ranks skills to prune or rewrite
+  ai-rulez telemetry enable    consent to export to one collector (stored per user; a repo cannot)
+  ai-rulez telemetry status    on or off, consent, pending events, delivery failures
+  ai-rulez telemetry disable   withdraw consent
+  ai-rulez telemetry flush     ship the local outbox to the collector now
+  ai-rulez telemetry doctor    show the resolved configuration, consent state and buffer
+  ai-rulez telemetry preview   print exactly what an export would send (no network)
+
+Skill usage lines go to a machine-local log (default .ai-rulez/local/usage.jsonl) that holds the
+skill name, a timestamp, a salted hash of the session id, the content hash, the harness and an
+outcome; never prompts, arguments or file contents. Set [usage] skills_index = true so generate
+writes .ai-rulez/skills-index.json, which gives every logged skill its content hash.
 
 Everything is off by default. See docs/telemetry.md for what is collected, what never
 is, and the rule that a repository cannot enable network export.`,
@@ -74,7 +82,15 @@ config.toml (--format toml), so "ai-rulez generate" writes them into .claude/set
 owns them. Handlers are async with a 5 second timeout: they only append to a local file.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		out, err := telemetry.HookTemplate(telemetry.TemplateOptions{Executable: telExecutable, Harness: telHarness, Role: telRole, Format: telFormat})
+		out, err := telemetry.HookTemplate(telemetry.TemplateOptions{
+			Executable: telExecutable, Harness: telHarness, Role: telRole, Format: telFormat,
+			LogPath: usageLog, SinkCommand: usageSinkCommand, IndexPath: usageIndex,
+		})
+		var unsupported *usage.UnsupportedHarnessError
+		if errors.As(err, &unsupported) {
+			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "warning:", unsupported) //nolint:errcheck // a warning on a closed stderr is not actionable
+			return nil
+		}
 		if err != nil {
 			return err
 		}
@@ -91,9 +107,12 @@ owns them. Handlers are async with a 5 second timeout: they only append to a loc
 
 var telemetryRecordCmd = &cobra.Command{
 	Use:   "record",
-	Short: "Record one item load from a hook event on stdin",
-	Long: `Read one hook event from standard input. InstructionsLoaded, SubagentStart and
-SubagentStop become item events; any other event is ignored. The command prints nothing
+	Short: "Record one skill or item load from a hook event on stdin",
+	Long: `Read one hook event from standard input. A skill invocation is appended to the usage
+log (ts, skill, id, hash, session, invocation); for codex and cursor only a read of
+skills/<id>/SKILL.md counts, and their payload is inferred, not verified. InstructionsLoaded,
+SubagentStart and SubagentStop become item events when [telemetry] enabled is set; any other
+event is ignored. The command prints nothing
 on standard output, never fails the session (errors go to standard error and the exit
 status stays 0) and never waits on the network.`,
 	Args: cobra.NoArgs,
@@ -113,14 +132,19 @@ func runTelemetryRecord(in io.Reader) error {
 		CWD string `json:"cwd"`
 	}
 	_ = json.Unmarshal(data, &peek) //nolint:errcheck // the handler reports a parse error itself
+	// The usage recorder ignores events that are not skill loads and the item
+	// handler ignores the rest, so one event feeds whichever applies.
+	usageErr := runUsageRecord(bytes.NewReader(data))
 	p := newTelemetryPipeline(peek.CWD, true)
 	if !p.Settings.RecordActive() {
-		return nil
+		return usageErr
 	}
 	ctx, cancel := context.WithTimeout(cmdContext(), 2*time.Second)
 	defer cancel()
-	_, err = p.HandleHook(ctx, bytes.NewReader(data), telemetry.HookOptions{Harness: telHarness, Role: telemetryRole()})
-	return err
+	if _, err = p.HandleHook(ctx, bytes.NewReader(data), telemetry.HookOptions{Harness: telHarness, Role: telemetryRole()}); err != nil {
+		return err
+	}
+	return usageErr
 }
 
 func telemetryRole() string {
@@ -403,6 +427,14 @@ func wireMCPTelemetry(srv *mcp.Server) func() {
 func init() {
 	RootCmd.AddCommand(TelemetryCmd)
 	TelemetryCmd.AddCommand(telemetryHookCmd, telemetryRecordCmd, telemetryFlushCmd, telemetryDoctorCmd, telemetryPreviewCmd)
+	for _, c := range []*cobra.Command{telemetryHookCmd, telemetryRecordCmd} {
+		c.Flags().StringVar(&usageLog, "log", "", "Usage log file to append skill loads to (default .ai-rulez/local/usage.jsonl)")
+		c.Flags().StringVar(&usageSinkCommand, "sink-command", "", "Shell command that receives each usage log line on stdin")
+		c.Flags().StringVar(&usageIndex, "index", "", "Skills index used to resolve content hashes")
+	}
+	telemetryRecordCmd.Flags().StringVar(&usageOutcome, "outcome", "", "Outcome to record for a skill load: loaded (default), used or abandoned")
+	telemetryRecordCmd.Flags().BoolVar(&usageServed, "served", false, "Mark the skill load as served by the MCP server")
+	telemetryRecordCmd.Flags().StringVar(&usageSalt, "salt-file", "", "File holding the session-hash salt (default usage.salt beside the log; $AI_RULEZ_USAGE_SALT wins)")
 	for _, c := range []*cobra.Command{telemetryHookCmd, telemetryRecordCmd} {
 		c.Flags().StringVar(&telHarness, "harness", "", "Harness: claude (default), codex or cursor")
 		c.Flags().StringVar(&telRole, flagRole, "", "Role active in this session (recorded as given; else $"+roleEnv+")")
