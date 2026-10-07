@@ -90,7 +90,7 @@ tasks:
   test:
     desc: "Run unit and integration tests"
     cmds:
-      - go test -timeout 30m ./cmd/... ./internal/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/...
+      - go test -timeout 30m ./cmd/... ./internal/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...
 
   test:verbose:
     desc: "Run all tests with verbose output"
