@@ -12,6 +12,9 @@ import (
 // MarketplaceDir is the dist directory of the pinned marketplace indexes.
 const MarketplaceDir = "marketplace"
 
+// githubHost is the public GitHub host.
+const githubHost = "github.com"
+
 // claudeIndexPath is where a Claude Code marketplace keeps its index, relative to the marketplace root.
 const claudeIndexPath = ".claude-plugin/marketplace.json"
 
@@ -120,7 +123,7 @@ func pinnedDir(p Pin, rel string) (string, error) {
 func sourceFor(host, slug, dir, ref, commit string) pinnedSource {
 	repoURL := "https://" + host + "/" + slug + ".git"
 	switch {
-	case dir == "." && host == "github.com":
+	case dir == "." && host == githubHost:
 		return pinnedSource{Source: "github", Repo: slug, Ref: ref, SHA: commit}
 	case dir == ".":
 		return pinnedSource{Source: "url", URL: repoURL, Ref: ref, SHA: commit}
@@ -134,7 +137,7 @@ func splitRepo(repo string) (host, slug string, ok bool) {
 	parts := strings.Split(repo, "/")
 	switch len(parts) {
 	case 2:
-		return "github.com", repo, true
+		return githubHost, repo, true
 	case 3:
 		return parts[0], parts[1] + "/" + parts[2], true
 	}
