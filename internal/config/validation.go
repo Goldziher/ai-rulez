@@ -296,9 +296,10 @@ func (c *Config) validateFrontmatter() error {
 // delimited frontmatter block whose YAML could not be parsed. A skill or agent
 // with malformed frontmatter is silently invisible downstream (no name, no
 // description, no tools), so `validate` — the CI gate — must exit non-zero
-// rather than warn-and-continue (#175).
+// rather than warn-and-continue (#175). A caller that lints the tree sets
+// DeferMalformedFrontmatter and reports each file as a finding (AR306) instead.
 func (c *Config) validateMalformedFrontmatter() error {
-	if c.Content == nil {
+	if c.Content == nil || c.DeferMalformedFrontmatter {
 		return nil
 	}
 
