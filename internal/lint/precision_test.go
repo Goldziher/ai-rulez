@@ -155,3 +155,36 @@ func TestDescriptionStylePrecision(t *testing.T) {
 		})
 	}
 }
+
+// A slash command is invoked by the user by name, so it has no trigger to state:
+// AR803 asks for "when to use" on skills and agents only.
+func TestDescriptionStyleAppliesToSkillsAndAgentsOnly(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want int
+	}{
+		{"skill is checked", ".ai-rulez/skills/alpha/SKILL.md", 1},
+		{"agent is checked", ".ai-rulez/agents/alpha.md", 1},
+		{"command is not", ".ai-rulez/commands/alpha.md", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml": baseConfig + "\n[lint.description]\nrequire_use_when = true\n",
+				tt.path:                 "---\nname: alpha\ndescription: Auto-fix linting, formatting, and common issues\n---\nbody\n",
+			})
+			gitAdd(t, root)
+
+			// Act
+			fs := lintDir(t, root)
+
+			// Assert
+			if got := countCode(fs, CodeDescriptionStyle); got != tt.want {
+				t.Errorf("AR803 count = %d, want %d:\n%s", got, tt.want, dump(fs))
+			}
+		})
+	}
+}
