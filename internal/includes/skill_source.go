@@ -41,8 +41,9 @@ type SkillGitSource struct {
 	ref         string
 	cacheDir    string
 	accessToken string
-	pin         *pin   // ai-rulez.lock entry this skill must match (nil: unpinned)
-	baseDir     string // project the skill belongs to, for recording what it resolved to
+	pin         *pin             // ai-rulez.lock entry this skill must match (nil: unpinned)
+	baseDir     string           // project the skill belongs to, for recording what it resolved to
+	state       *resolutionState // per-load records of what this fetch resolved to
 	log         logger.Logger
 }
 
@@ -132,7 +133,7 @@ func (s *SkillGitSource) checkPin() error {
 	if meta, metaErr := readCacheMeta(s.cacheDir); metaErr == nil && meta != nil {
 		commit = meta.RemoteHEADSHA
 	}
-	return s.pin.check(s.baseDir, lockfile.KindSkill, s.name, commit, digest)
+	return s.pin.check(s.state, s.baseDir, lockfile.KindSkill, s.name, commit, digest)
 }
 
 func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) {

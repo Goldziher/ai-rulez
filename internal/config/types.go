@@ -145,6 +145,12 @@ type Config struct {
 	// shared baseline used by the drift guard) never fetches twice. It is owned
 	// by the includes resolver; nil means "not created yet".
 	IncludeMemo any `yaml:"-" json:"-" toml:"-"`
+	// ResolutionState holds what a load's include and skill fetches resolved to
+	// (commit, digest, tag, problems) so `BuildLock` can write it down. It is
+	// owned by the includes resolver and is per load: two loads in one process
+	// keep separate records and never clobber each other. nil means "not
+	// created yet".
+	ResolutionState any `yaml:"-" json:"-" toml:"-"`
 	// LocalOverlay is set when a config.local.* overlay was merged into this
 	// configuration. Such a config is a merged view and is never written back.
 	LocalOverlay  *LocalOverlay         `yaml:"-" json:"-" toml:"-"`

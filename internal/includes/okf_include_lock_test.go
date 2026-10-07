@@ -28,7 +28,6 @@ func newOKFLockFixture(t *testing.T, ref string) *okfLockFixture {
 	t.Helper()
 	isolateHome(t)
 	lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false
-	ResetObserved()
 	t.Cleanup(func() { lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false })
 
 	remote := t.TempDir()
@@ -83,7 +82,6 @@ func (f *okfLockFixture) advance(t *testing.T) string {
 func (f *okfLockFixture) writeLock(t *testing.T) *lockfile.File {
 	t.Helper()
 	lockPolicy.Mode = LockRefresh
-	ResetObserved()
 	cfg, err := f.load(t)
 	require.NoError(t, err)
 	lockPolicy.Mode = LockAuto

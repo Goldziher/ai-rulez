@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
@@ -31,34 +30,17 @@ const (
 // can write it down.
 type observed struct{ commit, digest string }
 
-var (
-	observedMu sync.Mutex
-	observedBy = map[string]observed{}
-)
-
 func observedKey(baseDir, kind, name string) string { return baseDir + "\x00" + kind + "\x00" + name }
 
-func record(baseDir, kind, name string, o observed) {
-	observedMu.Lock()
-	observedBy[observedKey(baseDir, kind, name)] = o
-	observedMu.Unlock()
-}
-
 // ObservedCommit is the commit a fetch of the named source resolved to in this
-// process, or "" when none was fetched. It lets a `lock` run pin the include of
-// a served skill before the lock file that records it has been written.
-func ObservedCommit(baseDir, kind, name string) string {
-	observedMu.Lock()
-	defer observedMu.Unlock()
-	return observedBy[observedKey(baseDir, kind, name)].commit
-}
-
-// ResetObserved forgets the recorded resolutions.
-func ResetObserved() {
-	observedMu.Lock()
-	observedBy = map[string]observed{}
-	observedMu.Unlock()
-	resetTags()
+// load, or "" when none was fetched. It lets a `lock` run pin the include of a
+// served skill before the lock file that records it has been written.
+func ObservedCommit(cfg *config.Config, kind, name string) string {
+	if cfg == nil {
+		return ""
+	}
+	o, _ := stateFor(cfg).observedFor(cfg.BaseDir, kind, name)
+	return o.commit
 }
 
 // policyContext is ctx as the lock policy of cfg asks: offline when the policy
@@ -128,6 +110,7 @@ type pin struct {
 	entry lockfile.Entry
 	kind  string
 	name  string
+	state *resolutionState
 }
 
 // pinFor decides how one git source is fetched. It returns the pin to enforce
@@ -142,7 +125,7 @@ func pinFor(cfg *config.Config, lock *lockfile.File, w lockfile.Want) (*pin, err
 		if lockfile.IsFullSHA(w.Ref) && w.Ref != entry.Commit {
 			return nil, violation(w, "ref is pinned to %s but the lock records commit %s; run `ai-rulez lock`", w.Ref, entry.Commit)
 		}
-		return &pin{entry: *entry, kind: w.Kind, name: w.Name}, nil
+		return &pin{entry: *entry, kind: w.Kind, name: w.Name, state: stateFor(cfg)}, nil
 	case strictLock(cfg):
 		if lock == nil {
 			return nil, violation(w, "%s not found in %s; run `ai-rulez lock` and commit it", lockfile.FileName, cfg.ConfigDir)
@@ -189,8 +172,11 @@ func (p *pin) effectiveRef(requested string) string {
 
 // check records what a fetch resolved to and, for a pinned source, fails when
 // the commit or the content digest differs from the lock.
-func (p *pin) check(baseDir, kind, name, commit, digest string) error {
-	record(baseDir, kind, name, observed{commit: commit, digest: digest})
+func (p *pin) check(st *resolutionState, baseDir, kind, name, commit, digest string) error {
+	if st == nil {
+		st = newResolutionState()
+	}
+	st.record(baseDir, kind, name, observed{commit: commit, digest: digest})
 	if p == nil {
 		return nil
 	}
@@ -218,11 +204,10 @@ func BuildLock(cfg *config.Config, current *lockfile.File) (lock *lockfile.File,
 				continue
 			}
 		}
-		observedMu.Lock()
-		o, ok := observedBy[observedKey(cfg.BaseDir, w.Kind, w.Name)]
-		observedMu.Unlock()
+		st := stateFor(cfg)
+		o, ok := st.observedFor(cfg.BaseDir, w.Kind, w.Name)
 		if !ok || o.commit == "" || o.digest == "" {
-			if msg := recordedProblem(cfg.BaseDir, w.Kind, w.Name); msg != "" {
+			if msg := st.problemFor(cfg.BaseDir, w.Kind, w.Name); msg != "" {
 				problems = append(problems, fmt.Sprintf("%s %q: %s", w.Kind, w.Name, msg))
 			} else {
 				problems = append(problems, fmt.Sprintf("%s %q could not be resolved; see the warnings above", w.Kind, w.Name))
@@ -231,7 +216,7 @@ func BuildLock(cfg *config.Config, current *lockfile.File) (lock *lockfile.File,
 		}
 		entry := lockfile.Entry{Name: w.Name, Source: w.Source, Path: w.Path, Ref: w.Ref, Commit: o.commit, Digest: o.digest}
 		if w.Constraint != "" {
-			t, _ := recordedTag(cfg.BaseDir, w.Kind, w.Name)
+			t, _ := st.tagFor(cfg.BaseDir, w.Kind, w.Name)
 			entry.Tag, entry.TagObject, entry.Released, entry.ReleasedFrom = t.tag, t.tagObject, t.released, t.releasedFrom
 		}
 		out.Set(w.Kind, entry)
