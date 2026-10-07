@@ -64,6 +64,12 @@ func Diagnose(cfg Config, opts Options) Diagnosis {
 	if cfg.UsesPlainHTTPOptIn() {
 		d.Warnings = append(d.Warnings, "plain-http opt-in in use: the API key is sent unencrypted to "+d.BaseURLHost+" (allow_plain_http; prefer https or a loopback tunnel)")
 	}
+	d.addBackendProblems(cfg)
+	return d
+}
+
+// addBackendProblems reports what keeps the configured backend from making a call.
+func (d *Diagnosis) addBackendProblems(cfg Config) {
 	if routed := cfg.RoutingFromRepo(); len(routed) > 0 && d.Backend == BackendLiterLLM {
 		d.Problems = append(d.Problems, "the repository config chooses the provider ("+strings.Join(routed, ", ")+") but the key comes from user scope; the literllm backend refuses this, set them in user scope")
 	}
@@ -73,7 +79,6 @@ func Diagnose(cfg Config, opts Options) Diagnosis {
 	if cfg.AllowNetwork && cfg.Model == "" {
 		d.Problems = append(d.Problems, "no model configured")
 	}
-	return d
 }
 
 // WriteText prints the diagnosis for humans. The API key variable is named, its value never shown.
