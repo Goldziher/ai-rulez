@@ -38,6 +38,18 @@ func fixture() Input {
 	}
 }
 
+// fixtureFor is the shared fixture, plus the Agent Plugins package the
+// agent-plugins emitter needs (the other emitters would copy it into their
+// output).
+func fixtureFor(name string) Input {
+	in := fixture()
+	if name != "agent-plugins" {
+		return in
+	}
+	in.Plugins[0].Files = append(in.Plugins[0].Files, agentPluginFixtureFiles()...)
+	return in
+}
+
 func readTree(t *testing.T, root string) map[string]string {
 	t.Helper()
 	out := map[string]string{}
@@ -64,7 +76,7 @@ func TestEmitters_MatchTheGoldenFiles(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e, _ := Lookup(name)
 
-			files, _, err := e.Emit(fixture())
+			files, _, err := e.Emit(fixtureFor(name))
 
 			require.NoError(t, err)
 			got := map[string]string{}
@@ -89,9 +101,9 @@ func TestEmitters_AreDeterministicAndSorted(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e, _ := Lookup(name)
 
-			a, _, err := e.Emit(fixture())
+			a, _, err := e.Emit(fixtureFor(name))
 			require.NoError(t, err)
-			b, _, err := e.Emit(fixture())
+			b, _, err := e.Emit(fixtureFor(name))
 			require.NoError(t, err)
 
 			assert.Equal(t, a, b)
@@ -107,7 +119,7 @@ func TestEmitters_AreDeterministicAndSorted(t *testing.T) {
 
 func TestStatuses(t *testing.T) {
 	want := map[string]string{
-		"cursor-team-marketplace": StatusVerified, "port": StatusExperimental,
+		"cursor-team-marketplace": StatusVerified, "agent-plugins": StatusVerified, "port": StatusExperimental,
 		"aws-agent-registry": StatusExperimental, "kiro-steering": StatusExperimental,
 	}
 	for name, status := range want {

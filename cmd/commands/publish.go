@@ -115,8 +115,8 @@ Nothing leaves the machine unless --execute --yes is given with --to:
 message signature, the form cosign sign-blob --bundle writes). --sbom ships the
 project SBOM. --marketplace writes a Claude marketplace index pinned to the
 release commit under marketplace/, one per --channel. --emit NAME runs an
-emitter (cursor-team-marketplace is verified; port, aws-agent-registry and
-kiro-steering are experimental and need --experimental). --runtime limits the
+emitter (cursor-team-marketplace and agent-plugins are verified; port,
+aws-agent-registry and kiro-steering are experimental and need --experimental). --runtime limits the
 bundle to some of the plugin runtimes. The release notes list what changed in the
 lock since the previous tag (--since TAG chooses another). A [marketplace] with
 members or domain plugins publishes one bundle per plugin under plugins/<name>
@@ -173,8 +173,8 @@ var publishEmitCmd = &cobra.Command{
 emitter to --out (default emit/<emitter>). Nothing is uploaded and no dist
 directory is written; use it to review or commit what a channel needs.
 
-Emitters: cursor-team-marketplace (verified), port, aws-agent-registry and
-kiro-steering (experimental: they need --experimental and carry no vendor
+Emitters: cursor-team-marketplace and agent-plugins (verified), port,
+aws-agent-registry and kiro-steering (experimental: they need --experimental and carry no vendor
 schema to test against).`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -197,7 +197,7 @@ func init() {
 	f.BoolVar(&publishMarketplace, "marketplace", false, "Write a Claude marketplace index pinned to the release commit under marketplace/")
 	f.StringArrayVar(&publishRuntimes, "runtime", nil, "Publish only these plugin runtimes (repeatable; default: [publish] runtimes, else the [plugin] runtimes)")
 	f.StringArrayVar(&publishOnly, "only", nil, "Multi-plugin: publish only the plugin with this name (repeatable)")
-	f.StringArrayVar(&publishEmit, "emit", nil, "Run an emitter (repeatable): cursor-team-marketplace, port, aws-agent-registry, kiro-steering")
+	f.StringArrayVar(&publishEmit, "emit", nil, "Run an emitter (repeatable): cursor-team-marketplace, agent-plugins, port, aws-agent-registry, kiro-steering")
 	f.BoolVar(&publishExperimental, "experimental", false, "Allow emitters whose format is not verified against vendor documentation")
 	f.BoolVar(&publishWithSBOM, "sbom", false, "Ship the project SBOM (CycloneDX) with the release")
 	f.StringVar(&publishSince, "since", "", "Tag whose lock the release notes diff against (default: the previous tag)")
