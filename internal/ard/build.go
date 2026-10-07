@@ -115,40 +115,12 @@ type manifest struct {
 // representative queries) are findings. The output is checked against the
 // vendored schema before it is returned.
 func Build(m Model) ([]byte, []Finding, error) {
-	types, err := mediaTypes(m.MediaTypes)
+	out, findings, errs, err := render(m)
 	if err != nil {
 		return nil, nil, err
-	}
-	var (
-		errs     []error
-		findings []Finding
-		entries  = make([]entry, 0, len(m.Resources))
-		byID     = map[string]string{}
-	)
-	for _, r := range m.Resources {
-		e, f, err := buildEntry(m, types, r)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		if prev, dup := byID[e.Identifier]; dup {
-			errs = append(errs, oops.Errorf("%s is the identifier of more than one resource (%s and %s)",
-				e.Identifier, prev, r.Kind))
-			continue
-		}
-		byID[e.Identifier] = string(r.Kind)
-		entries = append(entries, e)
-		findings = append(findings, f...)
 	}
 	if len(errs) > 0 {
 		return nil, nil, errors.Join(errs...)
-	}
-	sort.Slice(entries, func(i, j int) bool { return entries[i].Identifier < entries[j].Identifier })
-	sort.SliceStable(findings, func(i, j int) bool { return findings[i].Identifier < findings[j].Identifier })
-
-	out, err := encode(manifest{Entries: entries})
-	if err != nil {
-		return nil, nil, err
 	}
 	check, err := Validate(out)
 	if err != nil {
@@ -158,6 +130,84 @@ func Build(m Model) ([]byte, []Finding, error) {
 		return nil, nil, oops.Errorf("ard: built manifest fails the schema: %+v", check)
 	}
 	return out, findings, nil
+}
+
+// Check reports every problem of m as a finding, without stopping at the first:
+// an invalid identifier or entry and a duplicate identifier are errors, a
+// missing or out-of-range representativeQueries is a warning, and a manifest
+// that renders is validated against the vendored schema. It is what
+// `validate --strict` runs; Build fails on the same errors.
+func Check(m Model) ([]Finding, error) {
+	out, findings, errs, err := render(m)
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range errs {
+		f := Finding{Rule: RuleEntry, Severity: SeverityError, Message: e.Error()}
+		var re *ruleError
+		if errors.As(e, &re) {
+			f.Rule, f.Identifier = re.rule, re.identifier
+		}
+		findings = append(findings, f)
+	}
+	if len(errs) == 0 {
+		check, err := Validate(out)
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range check {
+			if f.Rule != RuleQueries { // render reported those already
+				findings = append(findings, f)
+			}
+		}
+	}
+	sortFindings(findings)
+	return findings, nil
+}
+
+// ruleError is a problem that makes an entry invalid, tagged with its rule.
+type ruleError struct {
+	rule       string
+	identifier string
+	err        error
+}
+
+func (e *ruleError) Error() string { return e.err.Error() }
+func (e *ruleError) Unwrap() error { return e.err }
+
+// render builds the entries; errs are per-entry problems, err is a problem with
+// the model itself (an unusable media type override).
+func render(m Model) (out []byte, findings []Finding, errs []error, err error) {
+	types, err := mediaTypes(m.MediaTypes)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	var (
+		entries = make([]entry, 0, len(m.Resources))
+		byID    = map[string]string{}
+	)
+	for _, r := range m.Resources {
+		e, f, err := buildEntry(m, types, r)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if prev, dup := byID[e.Identifier]; dup {
+			errs = append(errs, &ruleError{rule: RuleIdentifier, identifier: e.Identifier,
+				err: oops.Errorf("%s is the identifier of more than one resource (%s and %s)", e.Identifier, prev, r.Kind)})
+			continue
+		}
+		byID[e.Identifier] = string(r.Kind)
+		entries = append(entries, e)
+		findings = append(findings, f...)
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Identifier < entries[j].Identifier })
+	sort.SliceStable(findings, func(i, j int) bool { return findings[i].Identifier < findings[j].Identifier })
+	if len(errs) > 0 {
+		return nil, findings, errs, nil
+	}
+	out, err = encode(manifest{Entries: entries})
+	return out, findings, nil, err
 }
 
 func mediaTypes(overrides map[Kind]string) (map[Kind]string, error) {
@@ -184,15 +234,16 @@ func buildEntry(m Model, types map[Kind]string, r Resource) (entry, []Finding, e
 	}
 	id, err := NewIdentifier(m.Publisher, m.Namespace, r.Name)
 	if err != nil {
-		return entry{}, nil, oops.Wrapf(err, "%s %q", r.Kind, r.Name)
+		return entry{}, nil, &ruleError{rule: RuleIdentifier, err: oops.Wrapf(err, "%s %q", r.Kind, r.Name)}
 	}
 	ident := id.String()
 	if (r.URL == "") == (r.Data == nil) {
-		return entry{}, nil, oops.Errorf("%s: exactly one of url or data is required (spec section 4.3)", ident)
+		return entry{}, nil, &ruleError{rule: RuleEntry, identifier: ident,
+			err: oops.Errorf("%s: exactly one of url or data is required (spec section 4.3)", ident)}
 	}
 	if r.URL != "" {
 		if err := checkURL(r.URL); err != nil {
-			return entry{}, nil, oops.Wrapf(err, "%s", ident)
+			return entry{}, nil, &ruleError{rule: RuleEntry, identifier: ident, err: oops.Wrapf(err, "%s", ident)}
 		}
 	}
 	e := entry{

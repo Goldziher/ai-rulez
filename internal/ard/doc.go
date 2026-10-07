@@ -38,6 +38,9 @@ const (
 	// RuleIdentifier: an identifier breaks the Appendix C URN grammar (its
 	// publisher is not an FQDN) or is used by two entries.
 	RuleIdentifier = "ard-identifier"
+	// RuleEntry: an entry cannot be built: it has both or neither of url and
+	// data, or its url is not an absolute https URL.
+	RuleEntry = "ard-entry"
 	// RuleQueries: representativeQueries is missing or holds fewer than 2 or
 	// more than 5 queries (spec section 4.2 and D.2: a warning, not an error).
 	RuleQueries = "ard-representative-queries"
