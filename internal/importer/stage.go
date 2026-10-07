@@ -26,7 +26,7 @@ func checkStaged(ctx context.Context, report *Report, files map[string][]byte, c
 	if err != nil {
 		return oops.Wrapf(err, "create scratch directory")
 	}
-	defer os.RemoveAll(tmp)
+	defer removeScratch(tmp)
 
 	root := filepath.Join(tmp, DefaultConfigDir)
 	for rel, data := range files {
