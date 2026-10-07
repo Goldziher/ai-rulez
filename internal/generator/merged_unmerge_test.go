@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -343,6 +344,9 @@ func TestWriteFileAtomic_WritesThroughSymlink(t *testing.T) {
 	got, err := os.ReadFile(target)
 	require.NoError(t, err)
 	assert.Equal(t, "new", string(got))
+	if runtime.GOOS == "windows" {
+		return // Windows file modes carry only the read-only bit
+	}
 	stat, err := os.Stat(target)
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0o600), stat.Mode().Perm(), "existing mode is kept")
