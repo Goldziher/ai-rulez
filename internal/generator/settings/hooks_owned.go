@@ -24,7 +24,7 @@ func OwnedHooksKeys(cfg *config.Config, harness string) (keys []jsonmerge.OwnedK
 	}
 	keys = append(keys, jsonmerge.OwnedKey{Path: []string{keyVersion}, Value: copilotHooksVersion})
 	for _, event := range rendered.events {
-		keys = append(keys, jsonmerge.OwnedKey{Path: []string{"hooks", event}, Value: rendered.entries[event]})
+		keys = append(keys, jsonmerge.OwnedKey{Path: []string{keyHooks, event}, Value: rendered.entries[event]})
 	}
 	return keys, true, nil
 }
@@ -37,7 +37,7 @@ func RenderOwnedHooks(keys []jsonmerge.OwnedKey) (string, error) {
 		switch {
 		case len(key.Path) == 1 && key.Path[0] == keyVersion:
 			version = key.Value
-		case len(key.Path) == 2 && key.Path[0] == "hooks":
+		case len(key.Path) == 2 && key.Path[0] == keyHooks:
 			entries, ok := key.Value.([]json.RawMessage)
 			if !ok {
 				entries = nil
@@ -45,7 +45,7 @@ func RenderOwnedHooks(keys []jsonmerge.OwnedKey) (string, error) {
 			hooks[key.Path[1]] = entries
 		}
 	}
-	data, err := json.MarshalIndent(map[string]any{keyVersion: version, "hooks": hooks}, "", "  ")
+	data, err := json.MarshalIndent(map[string]any{keyVersion: version, keyHooks: hooks}, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("marshal the owned hooks document: %w", err)
 	}

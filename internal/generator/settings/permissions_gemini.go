@@ -20,11 +20,11 @@ const geminiShell = "run_shell_command"
 // geminiTools maps a bare rule to Gemini's tool names; deny lists every name the
 // capability may go by, allow only the primary one.
 var geminiTools = map[string]struct{ allow, deny []string }{
-	"Read":      {[]string{"read_file"}, []string{"read_file", "read_many_files"}},
-	"Edit":      {[]string{"replace", "write_file"}, []string{"replace", "write_file"}},
-	"Write":     {[]string{"write_file"}, []string{"write_file"}},
-	"WebFetch":  {[]string{"web_fetch"}, []string{"web_fetch"}},
-	"WebSearch": {[]string{"google_web_search"}, []string{"google_web_search"}},
+	toolRead:      {[]string{nativeReadFile}, []string{nativeReadFile, "read_many_files"}},
+	toolEdit:      {[]string{"replace", nativeWriteFile}, []string{"replace", nativeWriteFile}},
+	toolWrite:     {[]string{nativeWriteFile}, []string{nativeWriteFile}},
+	toolWebFetch:  {[]string{nativeWebFetch}, []string{nativeWebFetch}},
+	toolWebSearch: {[]string{"google_web_search"}, []string{"google_web_search"}},
 }
 
 func buildGemini(t *translation) ([]jsonmerge.OwnedKey, error) {
@@ -49,10 +49,10 @@ func buildGemini(t *translation) ([]jsonmerge.OwnedKey, error) {
 	}
 	var keys []jsonmerge.OwnedKey
 	if len(allowed) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"tools", "allowed"}, allowed))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyTools, "allowed"}, allowed))
 	}
 	if len(excluded) > 0 {
-		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{"tools", "exclude"}, excluded))
+		keys = append(keys, docArrayKey(t.cfg, t.docPath, []string{keyTools, "exclude"}, excluded))
 	}
 	return keys, nil
 }
