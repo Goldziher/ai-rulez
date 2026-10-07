@@ -92,6 +92,10 @@ func fileExists(p string) bool {
 	return err == nil && !info.IsDir()
 }
 
+// realMatcher reports whether a hook matcher narrows anything: an empty
+// matcher and "*" both match every subject.
+func realMatcher(m string) bool { return m != "" && m != "*" }
+
 func quoteNeedle(s string) string { return `"` + s + `"` }
 
 // eventProblems checks what depends on the event alone.
@@ -124,7 +128,10 @@ func configHookProblems(groups []config.HookGroup) []hookProblem {
 		for _, a := range g.Hooks {
 			hasIf = hasIf || a.If != ""
 		}
-		matcher := g.Matcher != "" || len(g.Matchers) > 0
+		matcher := realMatcher(g.Matcher)
+		for _, m := range g.Matchers {
+			matcher = matcher || realMatcher(m)
+		}
 		out = append(out, eventProblems(g.Event, matcher, hasIf)...)
 		for _, a := range g.Hooks {
 			if a.Type != "" && !slices.Contains(hookHandlerTypes, a.Type) {
@@ -170,7 +177,7 @@ func jsonGroupProblems(event string, g map[string]json.RawMessage) []hookProblem
 		if json.Unmarshal(m, &s) != nil {
 			out = append(out, hookProblem{"matcher-type", event, `"matcher"`, fmt.Sprintf("%s matcher must be a string", event)})
 		} else {
-			hasMatcher = s != "" && s != "*"
+			hasMatcher = realMatcher(s)
 		}
 	}
 	var handlers []map[string]json.RawMessage
