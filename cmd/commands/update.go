@@ -259,7 +259,8 @@ func planAndApply(path string, cfg *config.Config, current *lockfile.File, srcs 
 
 func checkNamesMatched(srcs []versionSrc, wanted map[string]bool) error {
 	found := map[string]bool{}
-	for _, s := range srcs {
+	for i := range srcs {
+		s := &srcs[i]
 		found[s.name] = true
 	}
 	var missing []string
@@ -278,43 +279,44 @@ func checkNamesMatched(srcs []versionSrc, wanted map[string]bool) error {
 
 // planUpdates sorts the evaluated sources into moves, refusals and no-ops.
 func planUpdates(rep *updateReport, srcs []versionSrc, rows []tagresolve.Row) {
-	for i, row := range rows {
+	for i := range rows {
+		row := &rows[i]
 		src := srcs[i]
 		// A moved tag is a finding before it is a downgrade: it must never land in Unchanged.
 		if row.Downgrade && !updateAllowDowngrade && row.Status != tagresolve.StatusTagMoved {
-			rep.Unchanged = append(rep.Unchanged, row)
+			rep.Unchanged = append(rep.Unchanged, *row)
 			continue
 		}
 		switch row.Status {
 		case tagresolve.StatusUpdatable, tagresolve.StatusNotLocked, tagresolve.StatusTagMissing:
-			rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: row, src: src}
+			rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: *row, src: src}
 		case tagresolve.StatusTagMoved:
 			switch {
 			case !updateAcceptMoved:
-				rep.Blocked = append(rep.Blocked, row)
+				rep.Blocked = append(rep.Blocked, *row)
 			case row.Downgrade && !updateAllowDowngrade:
-				rep.Unchanged = append(rep.Unchanged, row)
+				rep.Unchanged = append(rep.Unchanged, *row)
 			default:
-				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: row, src: src}
+				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: *row, src: src}
 				rep.Notes = append(rep.Notes, fmt.Sprintf("%s %s: accepted the moved tag %s", row.Kind, row.Name, row.Locked.Tag))
 			}
 		case tagresolve.StatusLockedNonVersion:
 			// Moving off a pin that is not a version has no ordering to protect: ask for the same consent as a downgrade.
 			if updateAllowDowngrade {
-				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: row, src: src}
+				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: *row, src: src}
 			} else {
-				rep.Unchanged = append(rep.Unchanged, row)
+				rep.Unchanged = append(rep.Unchanged, *row)
 			}
 		case tagresolve.StatusUnsatisfied, tagresolve.StatusInvalid:
-			rep.Blocked = append(rep.Blocked, row)
+			rep.Blocked = append(rep.Blocked, *row)
 		case tagresolve.StatusLowerOnly:
 			if updateAllowDowngrade {
-				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: row, src: src}
+				rep.moves[moveKey(row.Kind, row.Name)] = &moveTo{row: *row, src: src}
 			} else {
-				rep.Unchanged = append(rep.Unchanged, row)
+				rep.Unchanged = append(rep.Unchanged, *row)
 			}
 		default:
-			rep.Unchanged = append(rep.Unchanged, row)
+			rep.Unchanged = append(rep.Unchanged, *row)
 		}
 	}
 }
@@ -428,7 +430,8 @@ func scanTreeDir(cfg *config.Config, name, dir string, accept bool) *scanSummary
 // majorUpdate is `update --major`: it lists the sources that have a newer major
 // version than their constraint allows and, with --write-config, takes it.
 func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs []versionSrc, rows []tagresolve.Row, report *updateReport) int {
-	for i, row := range rows {
+	for i := range rows {
+		row := &rows[i]
 		if !row.MajorAvailable || row.Latest == nil || blockedStatus(row.Status) {
 			continue
 		}
@@ -582,7 +585,8 @@ func writeUpdateText(rep *updateReport) {
 		verb = "would update"
 	}
 	refused := 0
-	for _, u := range rep.Updates {
+	for i := range rep.Updates {
+		u := &rep.Updates[i]
 		from := "(unlocked)"
 		if u.From != nil {
 			from = u.From.Tag
@@ -601,7 +605,7 @@ func writeUpdateText(rep *updateReport) {
 			fmt.Printf("  tree %s -> %s\n", u.DigestOld, u.DigestNew)
 		}
 		if u.Scan != nil {
-			writeScanText(u)
+			writeScanText(*u)
 			if u.Scan.Refused {
 				refused++
 			}
@@ -616,10 +620,12 @@ func writeUpdateText(rep *updateReport) {
 			fmt.Printf("%s %s: newer major %s: version = %q (now %q); `update --major --write-config` applies it\n", m.Kind, m.Name, m.Latest, m.To, m.From)
 		}
 	}
-	for _, r := range rep.Blocked {
+	for i := range rep.Blocked {
+		r := &rep.Blocked[i]
 		fmt.Fprintf(os.Stderr, "refused %s %s: %s %s\n", r.Kind, r.Name, r.Code, r.Note)
 	}
-	for _, r := range rep.Unchanged {
+	for i := range rep.Unchanged {
+		r := &rep.Unchanged[i]
 		if r.Downgrade {
 			fmt.Printf("%s %s: %s\n", r.Kind, r.Name, r.Note)
 		}

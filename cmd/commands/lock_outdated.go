@@ -36,7 +36,9 @@ type versionSrc struct {
 func versionSources(cfg *config.Config, kind string, names map[string]bool) []versionSrc {
 	var out []versionSrc
 	keep := func(k, n string) bool { return (kind == "" || kind == k) && (len(names) == 0 || names[n]) }
-	for _, vs := range includes.VersionSources(cfg) {
+	sources := includes.VersionSources(cfg)
+	for i := range sources {
+		vs := &sources[i]
 		if !keep(vs.Want.Kind, vs.Want.Name) {
 			continue
 		}
@@ -93,8 +95,9 @@ func requireOnline(command string) error {
 func evaluateSources(ctx context.Context, srcs []versionSrc, lock *lockfile.File) ([]tagresolve.Row, error) {
 	var lister tagLister
 	rows := make([]tagresolve.Row, 0, len(srcs))
-	for _, s := range srcs {
-		tags, err := lister.of(ctx, s)
+	for i := range srcs {
+		s := &srcs[i]
+		tags, err := lister.of(ctx, *s)
 		if err != nil {
 			return nil, err
 		}

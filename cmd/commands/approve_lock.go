@@ -37,14 +37,16 @@ func carryApprovals(current, next *lockfile.File, full bool) {
 		return
 	}
 	gone := map[string]bool{}
-	for _, a := range orphans {
+	for i := range orphans {
+		a := &orphans[i]
 		gone[a.ItemKey()] = true
 		logger.Warn("Dropped an approval of content that no longer exists", "code", approval.CodeOrphan, "kind", a.Kind, "id", a.ID, "reviewer", a.Reviewer)
 	}
 	kept := next.Approval[:0:0]
-	for _, a := range next.Approval {
+	for i := range next.Approval {
+		a := &next.Approval[i]
 		if !gone[a.ItemKey()] {
-			kept = append(kept, a)
+			kept = append(kept, *a)
 		}
 	}
 	next.Approval = kept
@@ -99,10 +101,13 @@ func approvalStatusFindings(cfg *config.Config) []lint.ApprovalFinding {
 		}
 		st := govview.EvaluateApprovals(shared, lock, snapItems, govview.ApprovalNow())
 		var out []lint.ApprovalFinding
-		for _, r := range approval.Failures(st.Results) {
+		failures := approval.Failures(st.Results)
+		for i := range failures {
+			r := &failures[i]
 			out = append(out, lint.ApprovalFinding{Code: approval.CodeOf(r.Status), Path: lockRel, Message: r.Message()})
 		}
-		for _, a := range st.Orphans {
+		for i := range st.Orphans {
+			a := &st.Orphans[i]
 			out = append(out, lint.ApprovalFinding{Code: approval.CodeOrphan, Path: lockRel,
 				Message: fmt.Sprintf("the approval by %s names %s:%s, which no longer exists; run `ai-rulez approve --prune`", a.Reviewer, a.Kind, a.ID)})
 		}

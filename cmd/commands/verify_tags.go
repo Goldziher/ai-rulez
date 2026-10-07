@@ -46,12 +46,14 @@ func verifyPinnedTags(ctx context.Context, cfg *config.Config, lock *lockfile.Fi
 	}
 	var lister tagLister
 	var out []tagFinding
-	for _, s := range versionSources(cfg, "", nil) {
+	sources := versionSources(cfg, "", nil)
+	for i := range sources {
+		s := &sources[i]
 		entry := lock.Find(s.kind, s.name)
 		if entry == nil || entry.Tag == "" {
 			continue
 		}
-		tags, err := lister.of(ctx, s)
+		tags, err := lister.of(ctx, *s)
 		if err != nil {
 			return nil, err
 		}

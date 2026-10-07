@@ -78,7 +78,7 @@ func (g *approveGit) pinnedAt(s approval.Subject) func(ctx context.Context, sha 
 }
 
 // lockedAt reads the digest the lock at sha pins for s.
-func (g *approveGit) lockedAt(ctx context.Context, s approval.Subject, sha string) (string, bool, error) {
+func (g *approveGit) lockedAt(ctx context.Context, s approval.Subject, sha string) (digest string, pinned bool, err error) {
 	rel := g.rel(lockfile.Path(g.cfg.ConfigDir))
 	if rel == "" {
 		return "", false, oops.Errorf("%s is outside the git work tree", lockfile.Path(g.cfg.ConfigDir))
@@ -105,7 +105,7 @@ func (g *approveGit) lockedAt(ctx context.Context, s approval.Subject, sha strin
 // recomputedAt digests the authored content of the configuration as committed at
 // sha (what `lock` pins, computed from the files, never read from the lock) and
 // returns the digest of s. The tree is exported to a temporary directory.
-func (g *approveGit) recomputedAt(ctx context.Context, s approval.Subject, sha string) (string, bool, error) {
+func (g *approveGit) recomputedAt(ctx context.Context, s approval.Subject, sha string) (digest string, pinned bool, err error) {
 	items, err := g.itemsAt(ctx, sha)
 	if err != nil {
 		return "", false, err
@@ -121,12 +121,13 @@ func (g *approveGit) recomputedAt(ctx context.Context, s approval.Subject, sha s
 // servedLocalAt recomputes the served pins of the configuration as committed at
 // sha, offline, and returns the digest of s, a served skill authored in the
 // project. A remote served skill is never answered here.
-func (g *approveGit) servedLocalAt(ctx context.Context, s approval.Subject, sha string) (string, bool, error) {
+func (g *approveGit) servedLocalAt(ctx context.Context, s approval.Subject, sha string) (digest string, pinned bool, err error) {
 	served, err := g.servedAt(ctx, sha)
 	if err != nil {
 		return "", false, err
 	}
-	for _, e := range served {
+	for i := range served {
+		e := &served[i]
 		if e.Name == s.ID && e.View == s.Domain && !approval.RemoteServed(e.Source, e.Ref, e.Commit) {
 			return e.Digest, true, nil
 		}
