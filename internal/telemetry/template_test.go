@@ -44,7 +44,7 @@ func TestHookTemplate_HasEveryEventAndIsAsync(t *testing.T) {
 		}
 	}
 	assert.Contains(t, doc.Hooks["InstructionsLoaded"][0].Hooks[0].Command, "telemetry record")
-	assert.Contains(t, doc.Hooks["PreToolUse"][0].Hooks[0].Command, "usage record")
+	assert.Contains(t, doc.Hooks["PreToolUse"][0].Hooks[0].Command, "telemetry record")
 }
 
 func TestHookTemplate_TOMLParsesIntoHookGroups(t *testing.T) {
