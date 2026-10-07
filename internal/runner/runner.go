@@ -1,6 +1,6 @@
 // Package runner runs an external command with the limits a tool needs when it
 // executes something it did not write: a scrubbed environment, a timeout that
-// kills the whole process group, a cap on captured output, and a distinct
+// kills the whole process tree, a cap on captured output, and a distinct
 // outcome for a binary that is not installed. It never goes through a shell.
 //
 // The package carries no policy about what the command prints. Callers (lint
