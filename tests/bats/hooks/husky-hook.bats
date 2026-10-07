@@ -75,7 +75,6 @@ husky_v8_layout() {
 }
 
 @test "a fresh hook runs on a Husky v9+ layout, which no longer ships husky.sh" {
-  known_bug "internal/hooks/setup.go sources .husky/_/husky.sh, deprecated in Husky v9 and removed in v10; drop the two-line header"
   mkdir -p "$PROJECT/.husky/_"
   printf '%s\n' '#!/usr/bin/env sh' >"$PROJECT/.husky/_/h"
   setup_hooks
