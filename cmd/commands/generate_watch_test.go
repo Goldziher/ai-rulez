@@ -52,6 +52,11 @@ func TestCheckGenerateWatchFlags(t *testing.T) {
 
 func TestWatchTargets(t *testing.T) {
 	base := filepath.Join(string(filepath.Separator), "proj")
+	// An absolute path needs a volume on Windows; \opt\rules is relative to the drive.
+	abs := filepath.Join(string(filepath.Separator), "opt", "rules")
+	if runtime.GOOS == "windows" {
+		abs = `C:\opt\rules`
+	}
 	tests := []struct {
 		name string
 		cfg  *config.Config
@@ -64,13 +69,13 @@ func TestWatchTargets(t *testing.T) {
 				Includes: []config.IncludeConfig{
 					{Name: "shared", Source: "../shared"},
 					{Name: "remote", Source: "https://github.com/acme/rules.git"},
-					{Name: "abs", Source: filepath.Join(string(filepath.Separator), "opt", "rules")},
+					{Name: "abs", Source: abs},
 				},
 			},
 			want: []watch.Target{
 				{Path: filepath.Join(base, ".ai-rulez")},
 				{Path: filepath.Join(base, "..", "shared")},
-				{Path: filepath.Join(string(filepath.Separator), "opt", "rules")},
+				{Path: abs},
 			},
 		},
 	}

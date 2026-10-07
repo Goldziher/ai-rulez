@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -167,7 +168,9 @@ func hostileCatalogProject(t *testing.T) string {
 	writeFile(t, filepath.Join(skills, "evil", "SKILL.md"),
 		"---\nname: evil\ndescription: \"<script>alert(1)</script> \\\"><img src=x onerror=alert(2)> javascript:alert(3)\"\nowner: \"'-alert(4)-'\"\nversion: 1.0.0\n---\n"+
 			"Body </script><script>alert(5)</script> <!-- [x](javascript:alert(6)) [y](data:text/html,<b>)\nbidi ‮evil⁦ zero​width\n")
-	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "<b>bold</b>.md"), "# Rule\nHello\n")
+	if runtime.GOOS != "windows" { // < and > cannot appear in a Windows file name
+		writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "<b>bold</b>.md"), "# Rule\nHello\n")
+	}
 	return root
 }
 
