@@ -3,6 +3,7 @@
 package govview
 
 import (
+	"context"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -91,8 +92,11 @@ func addCatalogRoles(doc *CatalogDoc, cfg *config.Config, counter tokens.Counter
 	return membership, roleDelivery
 }
 
-func BuildCatalog(cfg *config.Config, counter tokens.Counter, toolVersion string) (*CatalogDoc, error) {
-	doc, _, err := buildCatalogCore(cfg, counter, toolVersion)
+func BuildCatalog(ctx context.Context, cfg *config.Config, counter tokens.Counter, toolVersion string) (*CatalogDoc, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err //nolint:wrapcheck // cancellation is reported as is
+	}
+	doc, _, err := buildCatalogCore(cfg, counter, toolVersion) //nolint:contextcheck // the lock snapshot renders with the generator, which takes no context
 	if err == nil {
 		for _, note := range doc.notes {
 			cfg.Log().Warn(note)

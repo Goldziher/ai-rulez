@@ -1,6 +1,8 @@
 package govview
 
 import (
+	"context"
+
 	"errors"
 	"fmt"
 	"strings"
@@ -124,13 +126,16 @@ func LockDiffRoles(cfg *config.Config, lock *lockfile.File, profileName string, 
 // CheckLock is the comparison behind `lock --check`: it reads the lock next to
 // cfg and diffs it with the working tree. profileOverride, when set, replaces the
 // profile the lock recorded. It never writes and never uses the network.
-func CheckLock(cfg *config.Config, remoteSkipped bool, profileOverride, toolVersion string, dynamic DynamicChanges) (*contentlock.Diff, error) {
-	return CheckLockRoles(cfg, remoteSkipped, profileOverride, toolVersion, dynamic, RoleSelection{})
+func CheckLock(ctx context.Context, cfg *config.Config, remoteSkipped bool, profileOverride, toolVersion string, dynamic DynamicChanges) (*contentlock.Diff, error) {
+	return CheckLockRoles(ctx, cfg, remoteSkipped, profileOverride, toolVersion, dynamic, RoleSelection{})
 }
 
 // CheckLockRoles is CheckLock limited to the roles in sel.Only (all pinned roles
-// when empty).
-func CheckLockRoles(cfg *config.Config, remoteSkipped bool, profileOverride, toolVersion string, dynamic DynamicChanges, sel RoleSelection) (*contentlock.Diff, error) {
+// when empty). A canceled ctx stops it before any work.
+func CheckLockRoles(ctx context.Context, cfg *config.Config, remoteSkipped bool, profileOverride, toolVersion string, dynamic DynamicChanges, sel RoleSelection) (*contentlock.Diff, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err //nolint:wrapcheck // cancellation is reported as is
+	}
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
@@ -139,7 +144,9 @@ func CheckLockRoles(cfg *config.Config, remoteSkipped bool, profileOverride, too
 	if profile == "" && lock != nil {
 		profile = lock.Profile
 	}
-	return LockDiffRoles(cfg, lock, profile, remoteSkipped, toolVersion, dynamic, sel)
+	// The comparison renders the outputs with the generator, which takes no
+	// context (nor do the gitutil probes it makes); ctx was checked above.
+	return LockDiffRoles(cfg, lock, profile, remoteSkipped, toolVersion, dynamic, sel) //nolint:contextcheck // the generator renders without a context
 }
 
 // LoadWithCacheFallback loads with remote includes, and retries without them only
