@@ -43,7 +43,7 @@ func ValidateCheckSeverity(severity string) error {
 
 // ValidateCheckTargets accepts a preset name, "*" or "**", or a path or glob that
 // can match an output file (anything with a "/", a glob character or a file
-// extension). A bare word that is none of those, such as a misspelt preset, would
+// extension). A bare word that is none of those, such as a misspelled preset, would
 // silently select no output at all, so it is rejected.
 func ValidateCheckTargets(targets []string) error {
 	for _, raw := range targets {
@@ -190,7 +190,7 @@ func renderFrontmatter(m *yaml.Node) (string, error) {
 //   - no content keeps the existing body;
 //   - then the given fields are set on the frontmatter.
 //
-// The frontmatter is marshalled with a YAML encoder, never assembled from text, so
+// The frontmatter is marshaled with a YAML encoder, never assembled from text, so
 // any value is quoted correctly. An existing is "" when creating a check.
 func MergeCheckContent(existing, content string, contentGiven bool, f CheckFields) (string, error) {
 	if contentGiven && f.IsZero() {
