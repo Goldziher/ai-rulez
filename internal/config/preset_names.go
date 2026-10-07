@@ -38,7 +38,7 @@ func IsBuiltInPresetName(name string) bool {
 }
 
 // IndividualPresetNames returns the per-tool presets, excluding the shared `mcp`
-// config preset and the `okf` knowledge-bundle preset (neither targets a coding
+// config preset and the `okf` and `llms-txt` knowledge presets (neither targets a coding
 // tool), sorted.
 func IndividualPresetNames() []string {
 	return sortedPresetNames(true)
@@ -48,7 +48,7 @@ func sortedPresetNames(excludeMCP bool) []string {
 	set := builtInPresetSet()
 	names := make([]string, 0, len(set))
 	for name := range set {
-		if excludeMCP && (name == string(PresetMCP) || name == PresetOKF) {
+		if excludeMCP && (name == string(PresetMCP) || name == PresetOKF || name == PresetLLMsTxt) {
 			continue
 		}
 		names = append(names, name)

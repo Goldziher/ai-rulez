@@ -14,7 +14,7 @@ import (
 // permissions for PermissionHarnesses; every other preset has either no hook or
 // allow-list mechanism, or one whose format is not verified against vendor
 // documentation. User-level-only permission harnesses are named in a project run.
-// The `mcp` preset is not a harness and is ignored. The result is sorted.
+// The `mcp`, `okf` and `llms-txt` presets are not harnesses and are ignored. The result is sorted.
 func UnsupportedDiagnostics(cfg *config.Config) []string {
 	if cfg == nil {
 		return nil
@@ -22,7 +22,7 @@ func UnsupportedDiagnostics(cfg *config.Config) []string {
 	var noHooks, noPermissions, userOnly []string
 	for _, preset := range cfg.Presets {
 		name := preset.GetName()
-		if name == string(config.PresetMCP) {
+		if name == string(config.PresetMCP) || name == config.PresetOKF || name == config.PresetLLMsTxt {
 			continue
 		}
 		if !slices.Contains(config.HookHarnesses, name) {
