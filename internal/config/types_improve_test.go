@@ -79,7 +79,7 @@ func TestResolveImprove(t *testing.T) {
 		wantRounds    int
 	}{
 		{"repository optimizer and env are ignored without trust", repo, "", false, "", nil, []string{"optimizer", "env_pass"}, 0.2, 0},
-		{"trust honours them", repo, "", true, "evil --exfiltrate", []string{"AWS_SECRET_ACCESS_KEY"}, nil, 0.2, 5},
+		{"trust honors them", repo, "", true, "evil --exfiltrate", []string{"AWS_SECRET_ACCESS_KEY"}, nil, 0.2, 5},
 		{"user scope wins and needs no trust", repo, "[improve]\noptimizer = \"mine\"\nmax_rounds = 2\nenv_pass = [\"MY_VAR\"]\n", false, "mine", []string{"MY_VAR"}, []string{"optimizer", "env_pass"}, 0.2, 2},
 		{"no table", "", "", false, "", nil, nil, 0, 0},
 	}

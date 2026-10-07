@@ -42,7 +42,7 @@ const DefaultReviewFixMaxGrowthPercent = 25
 
 // ReviewConfig is the [review] table: which rubric scores the content, what an item
 // sends to a judge, the spend ceilings of a judged run, and the gate and fix settings
-// (docs/review.md). allowed_hosts is honoured from user scope only.
+// (docs/review.md). allowed_hosts is honored from user scope only.
 type ReviewConfig struct {
 	// Rubric is the rubric id: `builtin:skill-quality` or a directory under .ai-rulez/rubrics.
 	Rubric string `yaml:"rubric,omitempty" json:"rubric,omitempty" toml:"rubric,omitempty"`

@@ -29,7 +29,7 @@ type Options struct {
 }
 
 // Watch runs Options.Run once, then again whenever a watched path changes, until
-// ctx is cancelled. The watchers are armed before the first run so a change made
+// ctx is canceled. The watchers are armed before the first run so a change made
 // during it is not lost. It waits for an in-flight run before returning.
 func Watch(ctx context.Context, o Options) error {
 	var sched *Scheduler
