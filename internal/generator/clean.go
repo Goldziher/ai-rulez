@@ -44,7 +44,7 @@ type CleanPlan struct {
 	// keys and keeps the rest. A document left with nothing else is in Files.
 	Unmerged []string
 	// Restored lists the absolute paths of imported commands generate retired in
-	// favour of a generated skill; clean writes them back as it removes the skill.
+	// favor of a generated skill; clean writes them back as it removes the skill.
 	Restored []string
 }
 

@@ -23,7 +23,7 @@ import (
 // each preset declares (its spec's [global] block, or presets.GlobalOutputProvider),
 // so only locations a vendor documents are written. A tool's home variable
 // (CODEX_HOME, HERMES_HOME, ...) relocates its directory, and only an absolute
-// value is honoured.
+// value is honored.
 //
 // The config directory (default ~/.config/ai-rulez) keeps the generated manifest
 // beside the user config, which is what `clean --user` reads. Nothing is written
@@ -85,7 +85,7 @@ func (g *Generator) userEnv() func(string) string {
 // below the home directory, and records the tool homes environment variables
 // relocated outside it, for the configured presets. It returns the supported layouts and the reason for each
 // unsupported preset.
-func (g *Generator) resolveUserLayouts() (map[string]*userscope.Layout, map[string]string, error) {
+func (g *Generator) resolveUserLayouts() (supported map[string]*userscope.Layout, reasons map[string]string, err error) {
 	layouts, unsupported, err := userscope.AllFor(g.config, g.config.BaseDir, g.userEnv())
 	if err != nil {
 		return nil, nil, oops.With("home", g.config.BaseDir).
@@ -280,7 +280,9 @@ func (g *Generator) stageUserDocuments(stage string, presets []config.Preset, la
 // userPreviousAliases returns the previous run's generated files and merge claims
 // under the project-relative paths the presets render at. The manifest records the
 // user-level destinations, and a preset looks its own files up by what it renders.
-func (g *Generator) userPreviousAliases(presets []config.Preset, layouts map[string]*userscope.Layout) ([]string, map[string][]jsonmerge.Claim) {
+func (g *Generator) userPreviousAliases(presets []config.Preset, layouts map[string]*userscope.Layout) (
+	aliases []string, aliasClaims map[string][]jsonmerge.Claim,
+) {
 	files := g.previousManifestFiles()
 	claims := g.previousMergedClaims()
 	generated := slices.Clone(files)
@@ -375,7 +377,7 @@ func (g *Generator) guardUserOutputs(outputs []config.OutputFile) (kept []config
 		}
 		if reason := g.userConflict(abs, output, previous); reason != "" {
 			skips = append(skips, UserSkip{Path: abs, Reason: reason})
-			if filepath.Base(abs) == "SKILL.md" {
+			if filepath.Base(abs) == skillEntryFile {
 				skippedDirs[filepath.Dir(abs)] = true
 			}
 			continue
@@ -844,7 +846,7 @@ func (g *Generator) userWarnings(outputs []config.OutputFile) []string {
 	byDir := map[string][]string{} // user-level skill dir (absolute) -> skill ids
 	for _, output := range outputs {
 		abs := g.absOutputPath(output.Path)
-		if output.IsDir || filepath.Base(abs) != "SKILL.md" {
+		if output.IsDir || filepath.Base(abs) != skillEntryFile {
 			continue
 		}
 		dir := filepath.Dir(filepath.Dir(abs))
@@ -935,7 +937,7 @@ func (g *Generator) projectOverlapWarnings(byDir map[string][]string) []string {
 				continue
 			}
 			for _, id := range byDir[row.To] {
-				projectSkill := filepath.Join(g.projectDir, filepath.FromSlash(row.From), id, "SKILL.md")
+				projectSkill := filepath.Join(g.projectDir, filepath.FromSlash(row.From), id, skillEntryFile)
 				if _, err := os.Stat(projectSkill); err != nil {
 					continue
 				}

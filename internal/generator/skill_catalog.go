@@ -12,7 +12,11 @@ import (
 	"github.com/samber/oops"
 )
 
-const skillEntryFile = "SKILL.md"
+const (
+	skillEntryFile = "SKILL.md"
+	// skillsDirName is the folder that holds one directory per skill.
+	skillsDirName = "skills"
+)
 
 // ServedSkillFile is one file of a served skill, exactly as `generate` writes it.
 type ServedSkillFile struct {
@@ -137,7 +141,7 @@ func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill
 			continue
 		}
 		dir := filepath.Dir(out.Path)
-		if filepath.Base(filepath.Dir(dir)) != "skills" {
+		if filepath.Base(filepath.Dir(dir)) != skillsDirName {
 			continue
 		}
 		skill := ServedSkill{ID: filepath.Base(dir)}
@@ -257,7 +261,7 @@ func installedOrigin(baseDir string, inst *config.InstalledSkillConfig, p string
 	}
 	segs := strings.Split(filepath.ToSlash(p), "/")
 	for i := 0; i+1 < len(segs); i++ {
-		if segs[i] == "skills" && includes.CacheDirMatches(segs[i+1], inst.Name) {
+		if segs[i] == skillsDirName && includes.CacheDirMatches(segs[i+1], inst.Name) {
 			return true
 		}
 	}

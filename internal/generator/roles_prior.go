@@ -189,7 +189,8 @@ func (g *Generator) dropSkillClaim(skill string) error {
 			continue
 		}
 		kept := make([]jsonmerge.Claim, 0, len(claims))
-		for _, c := range claims {
+		for i := range claims {
+			c := claims[i]
 			if len(c.Path) == 2 && c.Path[0] == keySkillOverride && c.Path[1] == skill {
 				continue
 			}
@@ -228,7 +229,8 @@ func readSkillOverrides(read func(string) ([]byte, error), path string) (map[str
 }
 
 func skillClaim(claims []jsonmerge.Claim, skill string) (jsonmerge.Claim, bool) {
-	for _, c := range claims {
+	for i := range claims {
+		c := claims[i]
 		if len(c.Path) == 2 && c.Path[0] == keySkillOverride && c.Path[1] == skill {
 			return c, true
 		}
@@ -242,7 +244,8 @@ func claimedSkill(claims []jsonmerge.Claim, skill string) bool {
 	if _, ok := skillClaim(claims, skill); ok {
 		return true
 	}
-	for _, c := range claims {
+	for i := range claims {
+		c := claims[i]
 		if len(c.Path) == 1 && c.Path[0] == keySkillOverride {
 			return true
 		}

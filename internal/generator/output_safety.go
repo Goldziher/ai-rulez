@@ -49,9 +49,9 @@ func WriteConvertRecord(configDir string, files map[string][]byte) error {
 	if len(files) == 0 {
 		return nil
 	}
-	path := filepath.Join(configDir, ConvertRecordName)
+	recordPath := filepath.Join(configDir, ConvertRecordName)
 	rec := convertRecord{Version: "1", Files: map[string]string{}}
-	if data, err := os.ReadFile(path); err == nil {
+	if data, err := os.ReadFile(recordPath); err == nil {
 		var old convertRecord
 		if json.Unmarshal(data, &old) == nil {
 			for rel, sum := range old.Files {
@@ -69,7 +69,7 @@ func WriteConvertRecord(configDir string, files map[string][]byte) error {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return oops.With("dir", configDir).Wrapf(err, "create config directory")
 	}
-	return config.WriteFileAtomic(path, append(out, '\n'), 0o644)
+	return config.WriteFileAtomic(recordPath, append(out, '\n'), 0o644)
 }
 
 // convertRecordFiles reads the record (nil when absent or unreadable).
@@ -139,7 +139,7 @@ func (g *Generator) supersededCommands(outputs []config.OutputFile) []string {
 		if !strings.HasSuffix(dir, "/commands/") || !strings.HasSuffix(file, ".md") || written[rel] {
 			continue
 		}
-		skill := path.Join(path.Dir(path.Dir(dir)), "skills", strings.TrimSuffix(file, ".md"), "SKILL.md")
+		skill := path.Join(path.Dir(path.Dir(dir)), skillsDirName, strings.TrimSuffix(file, ".md"), skillEntryFile)
 		if !written[skill] {
 			continue
 		}
@@ -182,7 +182,7 @@ func (g *Generator) retiredCommand(abs string) (string, bool) {
 	}
 	rel := g.relSlash(abs)
 	skillDir := path.Dir(rel)
-	if path.Base(rel) != "SKILL.md" || path.Base(path.Dir(skillDir)) != "skills" {
+	if path.Base(rel) != skillEntryFile || path.Base(path.Dir(skillDir)) != skillsDirName {
 		return "", false
 	}
 	cmd := path.Join(path.Dir(path.Dir(skillDir)), "commands", path.Base(skillDir)+".md")
@@ -481,8 +481,8 @@ func (g *Generator) refusalReason(relPath string) (string, bool) {
 }
 
 // isSymlink reports whether path is itself a symbolic link.
-func isSymlink(path string) bool {
-	info, err := os.Lstat(path)
+func isSymlink(p string) bool {
+	info, err := os.Lstat(p)
 	return err == nil && info.Mode()&os.ModeSymlink != 0
 }
 

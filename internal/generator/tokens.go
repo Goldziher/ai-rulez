@@ -281,7 +281,8 @@ func domainIndex(content *config.ContentTree) map[string]string {
 	}
 	record := func(domain string, files ...[]config.ContentFile) {
 		for _, slice := range files {
-			for _, file := range slice {
+			for i := range slice {
+				file := slice[i]
 				if file.Path != "" {
 					index[file.Path] = domain
 				}

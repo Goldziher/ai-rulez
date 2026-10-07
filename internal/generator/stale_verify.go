@@ -204,8 +204,8 @@ func (g *Generator) wholeMergedDocuments(outputs []config.OutputFile) map[string
 }
 
 // addMergedDigests records the digest of each whole merged document claimed in
-// merged, as written to disk.
-func (g *Generator) addMergedDigests(digests *map[string]string, merged map[string][]jsonmerge.Claim, whole map[string]bool) {
+// merged, as written to disk, and returns digests (allocated when it was nil).
+func (g *Generator) addMergedDigests(digests map[string]string, merged map[string][]jsonmerge.Claim, whole map[string]bool) map[string]string {
 	for rel := range merged {
 		if !whole[rel] {
 			continue
@@ -214,9 +214,10 @@ func (g *Generator) addMergedDigests(digests *map[string]string, merged map[stri
 		if err != nil {
 			continue
 		}
-		if *digests == nil {
-			*digests = map[string]string{}
+		if digests == nil {
+			digests = map[string]string{}
 		}
-		(*digests)[rel] = fileDigest(data)
+		digests[rel] = fileDigest(data)
 	}
+	return digests
 }

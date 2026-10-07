@@ -57,7 +57,8 @@ func (g *Generator) Role() string {
 // not rendered, so it gets no override.
 func (g *Generator) applyRoleSkillOverrides(res *config.ResolvedRole, outcomes []roles.SkillOutcome) {
 	dropped := map[string]bool{}
-	for _, o := range outcomes {
+	for i := range outcomes {
+		o := outcomes[i]
 		if o.Action == roles.ActionDrop {
 			dropped[o.ID] = true
 		}
@@ -102,7 +103,8 @@ func (g *Generator) applyRoleSkillOverrides(res *config.ResolvedRole, outcomes [
 // added to its skills exclude list (a copy; the resolved role is not touched).
 func applyModeFallback(flat *config.RoleConfig, outcomes []roles.SkillOutcome) *config.RoleConfig {
 	var drop []string
-	for _, o := range outcomes {
+	for i := range outcomes {
+		o := outcomes[i]
 		if o.Action == roles.ActionDrop {
 			drop = append(drop, o.Key())
 		}
@@ -127,7 +129,8 @@ func withServedFallback(override map[string]string, outcomes []roles.SkillOutcom
 	for k, v := range override {
 		out[k] = v
 	}
-	for _, o := range outcomes {
+	for i := range outcomes {
+		o := outcomes[i]
 		if o.Action == roles.ActionServe {
 			out[o.Key()] = string(config.DeliveryServed)
 		}
@@ -143,7 +146,8 @@ func withSkillKeys(tree *config.ContentTree, outcomes []roles.SkillOutcome) *con
 		return nil
 	}
 	keys := map[string]map[string]bool{}
-	for _, o := range outcomes {
+	for i := range outcomes {
+		o := outcomes[i]
 		if o.Action == roles.ActionFrontmatter {
 			keys[o.Key()] = o.Keys
 		}
@@ -198,7 +202,8 @@ func skillsWithKeys(skills []config.ContentFile, domain string, keys map[string]
 // express the mode the role sets, so the person knows what is not applied. Nothing
 // is approximated for them.
 func (g *Generator) warnRoleSkillModeHarnesses(name string, outcomes []roles.SkillOutcome) {
-	for _, o := range outcomes {
+	for i := range outcomes {
+		o := outcomes[i]
 		if len(o.Overridden) > 0 {
 			g.log().Warn("skill_mode "+o.Mode+" of skill "+o.Key()+" in role "+name+" is not applied on "+strings.Join(o.Overridden, ", ")+
 				": the skill's own frontmatter sets disable-model-invocation or user-invocable to another value, and an author's key is never overwritten",
