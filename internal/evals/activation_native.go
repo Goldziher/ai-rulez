@@ -338,7 +338,7 @@ func (n *nativeRun) skipExecution(plan *nativePlan, spent float64) (ActivationSk
 	case n.opts.DryRun:
 		run.Status = RunDryRun
 		return run, true
-	case n.opts.MaxCostUSD > 0 && spent >= n.opts.MaxCostUSD:
+	case exhausted(n.opts.MaxCostUSD, spent):
 		run.Status = RunOverBudget
 		run.Error = fmt.Sprintf("spend $%.2f reached --max-cost $%.2f", spent, n.opts.MaxCostUSD)
 		return run, true
