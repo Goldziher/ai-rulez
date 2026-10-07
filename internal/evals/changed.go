@@ -47,17 +47,18 @@ func ChangedSkills(run GitFunc, repoDir, base string, skills []Skill) (map[strin
 	if _, err := run(repoDir, "rev-parse", "--verify", "--quiet", base+"^{commit}"); err != nil {
 		return nil, fmt.Errorf("--base %q is not a commit: %w", base, err)
 	}
-	diff, err := run(repoDir, "diff", "--name-only", base, "--")
+	diff, err := run(repoDir, "diff", "--name-only", "-z", base, "--")
 	if err != nil {
 		return nil, err
 	}
-	untracked, err := run(repoDir, "ls-files", "--others", "--exclude-standard", "--full-name")
+	untracked, err := run(repoDir, "ls-files", "--others", "--exclude-standard", "--full-name", "-z")
 	if err != nil {
 		return nil, err
 	}
 	var changed []string
-	for _, line := range strings.Split(diff+"\n"+untracked, "\n") {
-		if line = strings.TrimSpace(line); line != "" {
+	// NUL-separated: git quotes non-ASCII names in line mode.
+	for _, line := range strings.Split(diff+"\x00"+untracked, "\x00") {
+		if line != "" {
 			changed = append(changed, filepath.Join(topDir, filepath.FromSlash(line)))
 		}
 	}
