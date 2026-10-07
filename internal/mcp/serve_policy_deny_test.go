@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,6 +26,66 @@ func orgPolicyContext(t *testing.T, path string) context.Context {
 		return policy.DiscoverOptions{Flag: path, Env: ambient.MapEnv{Vars: map[string]string{}, Home: t.TempDir()}, ManagedPaths: []string{missing}}
 	})
 	return config.WithPolicyContext(context.Background(), e)
+}
+
+// rereadingPolicy is a policy enforcer that reads its files on every use, as
+// an enforcer that notices an edited policy file does.
+type rereadingPolicy struct{ opts func() policy.DiscoverOptions }
+
+func (r rereadingPolicy) fresh() *policy.Enforcer { return policy.NewEnforcer(r.opts) }
+func (r rereadingPolicy) Enforce(ctx context.Context, cfg *config.Config) (*config.PolicyOutcome, error) {
+	return r.fresh().Enforce(ctx, cfg) //nolint:wrapcheck // test double
+}
+func (r rereadingPolicy) EnforceContent(ctx context.Context, cfg *config.Config) []config.PolicyViolation {
+	return r.fresh().EnforceContent(ctx, cfg)
+}
+func (r rereadingPolicy) Locks(feature string) bool       { return r.fresh().Locks(feature) }
+func (r rereadingPolicy) Load() (*policy.Resolved, error) { return r.fresh().Load() } //nolint:wrapcheck // test double
+
+// The live reload watches the organization policy's files: a digest added to
+// deny_digests while the server runs refuses that skill without a restart.
+func TestWatch_ReloadsWhenThePolicyFileChanges(t *testing.T) {
+	// Arrange
+	root := project(t, baseConfig, map[string]string{
+		"skills/core/SKILL.md":  skillFile("core", "Core conventions", ""),
+		"skills/other/SKILL.md": skillFile("other", "Other skill", ""),
+	})
+	pin := &ServeSetup{WorkDir: root, CacheDir: filepath.Join(t.TempDir(), "cache")}
+	_, served, _, err := pin.LockRecords(context.Background())
+	require.NoError(t, err)
+	require.NoError(t, lockfile.Save(filepath.Join(root, ".ai-rulez"), &lockfile.File{Version: lockfile.Version, Served: served}))
+	pol := filepath.Join(t.TempDir(), "policy.toml")
+	require.NoError(t, os.WriteFile(pol, []byte("policy_version = 1\nname = \"t\"\n"), 0o644))
+	missing := filepath.Join(t.TempDir(), "managed.toml")
+	home := t.TempDir()
+	enforcer := rereadingPolicy{opts: func() policy.DiscoverOptions {
+		return policy.DiscoverOptions{Flag: pol, Env: ambient.MapEnv{Vars: map[string]string{}, Home: home}, ManagedPaths: []string{missing}}
+	}}
+	ctx, cancel := context.WithCancel(config.WithPolicyContext(context.Background(), enforcer))
+	defer cancel()
+	setup := &ServeSetup{WorkDir: root, PollInterval: 10 * time.Millisecond, CacheDir: filepath.Join(t.TempDir(), "cache")}
+	srv, err := setup.NewServer(ctx)
+	require.NoError(t, err)
+	_, ok := srv.Catalog().Lookup("core")
+	require.True(t, ok)
+	go srv.Watch(ctx)
+	var coreDigest string
+	for _, e := range served {
+		if e.Name == "core" {
+			coreDigest = e.Digest
+		}
+	}
+
+	// Act
+	require.NoError(t, os.WriteFile(pol, []byte("policy_version = 1\nname = \"t\"\n[sources]\ndeny_digests = [\""+coreDigest+"\"]\n"), 0o644))
+
+	// Assert
+	require.Eventually(t, func() bool {
+		_, refused := srv.Catalog().Refusal("core")
+		return refused
+	}, 5*time.Second, 10*time.Millisecond, "the policy edit was not reloaded")
+	_, ok = srv.Catalog().Lookup("other")
+	assert.True(t, ok)
 }
 
 func TestTakeServedDenials_TakesOnlyViolationsNamingAServedPin(t *testing.T) {
