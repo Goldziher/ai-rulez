@@ -136,7 +136,7 @@ func runDomainList(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(domains) == 0 {
+	if len(domains) == 0 && !domainJSON {
 		logger.Info("No domains found")
 		return
 	}
