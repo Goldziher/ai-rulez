@@ -270,11 +270,18 @@ func llmPreds(r *Require) []*LLMPred {
 	return append(out, llmPreds(r.Not)...)
 }
 
+// specDigest covers everything that decides the verifier's verdict around its
+// llm predicates: the whole predicate tree (a calibrated predicate wrapped in
+// `not`, or given `any`/`all` siblings, is a different check), the file scope
+// and the prompt version. A record whose digest differs stops gating.
 func specDigest(sp *Spec) string {
 	return digestOf(struct {
-		Preds  []*LLMPred `json:"preds"`
-		Prompt string     `json:"prompt"`
-	}{llmPreds(sp.Require), LLMPromptVersion})
+		Schema      string   `json:"schema"`
+		Require     *Require `json:"require"`
+		WhenChanged []string `json:"when_changed"`
+		Exclude     []string `json:"exclude"`
+		Prompt      string   `json:"prompt"`
+	}{"verifier-spec/2", sp.Require, sp.WhenChanged, sp.Exclude, LLMPromptVersion})
 }
 
 func examplesDigest(exs []Example) string {
