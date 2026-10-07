@@ -40,7 +40,8 @@ func runReviewExplain(cmd *cobra.Command, code string) error {
 	var sb strings.Builder
 	lint.WriteExplanation(&sb, e)
 	if rb := explainRubric(cmd); rb != nil {
-		for _, d := range rb.Dimensions {
+		for i := range rb.Dimensions {
+			d := &rb.Dimensions[i]
 			if d.Code != code {
 				continue
 			}
