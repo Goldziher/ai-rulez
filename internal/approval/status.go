@@ -166,9 +166,12 @@ func (p Policy) pastCeiling(a lockfile.Approval, now time.Time) bool {
 // knownAssurance reports whether a record's assurance is one this version defines.
 func knownAssurance(level string) bool { return lockfile.AssuranceRank(level) > 0 }
 
-// counted is an approval that applies, with the reviewer it counts for.
+// counted is an approval that applies, with the reviewer it counts for. person
+// is who that reviewer is (a signing key's owner from its trust entry); one
+// person counts once however many keys they sign with. Empty means reviewer.
 type counted struct {
 	reviewer  string
+	person    string
 	expires   string
 	assurance string
 }
@@ -231,7 +234,7 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 			low = true
 			res.Detail = fmt.Sprintf("%s approval, [governance] min_assurance is %s", a.Assurance, p.MinAssurance)
 		default:
-			valid = append(valid, counted{reviewer: who, expires: a.Expires, assurance: a.Assurance})
+			valid = append(valid, counted{reviewer: who, person: p.IdentityOf(who), expires: a.Expires, assurance: a.Assurance})
 		}
 	}
 	res.Reviewers, res.Expires = reviewersOf(valid)
@@ -325,7 +328,7 @@ func (p Policy) currentReviewers(recs []lockfile.Approval, s Subject, now time.T
 				continue
 			}
 		}
-		valid = append(valid, counted{reviewer: who, expires: a.Expires, assurance: a.Assurance})
+		valid = append(valid, counted{reviewer: who, person: p.IdentityOf(who), expires: a.Expires, assurance: a.Assurance})
 	}
 	reviewers, _ := reviewersOf(valid)
 	return reviewers
@@ -335,7 +338,11 @@ func reviewersOf(valid []counted) (reviewers []string, expires string) {
 	seen := map[string]bool{}
 	for _, c := range valid {
 		who := NormalizeReviewer(c.reviewer)
-		key := Identity(c.reviewer)
+		person := c.person
+		if person == "" {
+			person = c.reviewer
+		}
+		key := Identity(person)
 		if !seen[key] {
 			seen[key] = true
 			reviewers = append(reviewers, who)

@@ -376,6 +376,64 @@ func TestVerifyLockSetThreshold(t *testing.T) {
 	assert.Empty(t, rep.Cosigners)
 }
 
+// TestThresholdCountsPeopleNotKeys is RV-GOV-3 on the signing side: the trust
+// table maps keys to the person who holds them, and a threshold counts people.
+func TestThresholdCountsPeopleNotKeys(t *testing.T) {
+	setUserDirs(t)
+	lock := testLock(t, nil)
+	const issuer = "https://accounts.example.org"
+	fs := newFakeSigstore(t, "alice@example.org", issuer)
+	payload := func() []byte {
+		st, err := LockStatement(lock, LockMeta{Version: "5", Now: time.Now()})
+		require.NoError(t, err)
+		data, err := st.Marshal()
+		require.NoError(t, err)
+		return data
+	}
+	keyed := func(reviewer string) (TrustEntry, []byte) {
+		data, pub := signKeyed(t, lock, LockMeta{Now: time.Now()})
+		pk, err := ParsePublicKey(pub)
+		require.NoError(t, err)
+		return TrustEntry{Subject: SubjectLock, Key: pk, Reviewer: reviewer}, data
+	}
+	alice1, byAlice1 := keyed("alice@example.org")
+	alice2, byAlice2 := keyed("Alice@Example.org ")
+	bob, byBob := keyed("bob@example.org")
+	anon1, byAnon1 := keyed("")
+	anon2, byAnon2 := keyed("")
+	keyless := TrustEntry{Subject: SubjectLock, Identity: "alice@example.org", Issuer: issuer}
+	byKeyless := fs.bundle(payload())
+
+	tests := []struct {
+		name     string
+		trust    []TrustEntry
+		bundles  [][]byte
+		wantCode string
+	}{
+		{"one person with two keys is one signer", []TrustEntry{alice1, alice2}, [][]byte{byAlice1, byAlice2}, CodeThreshold},
+		{"a key and the keyless identity of one person are one signer", []TrustEntry{alice1, keyless}, [][]byte{byAlice1, byKeyless}, CodeThreshold},
+		{"two people meet two", []TrustEntry{alice1, bob}, [][]byte{byAlice1, byBob}, ""},
+		{"keys no entry names count as themselves", []TrustEntry{anon1, anon2}, [][]byte{byAnon1, byAnon2}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			trust := TrustSet{Entries: tt.trust}
+			policy := LockPolicy{Verifier: Verifier{TrustedRoot: fs.trustedRoot(), Keys: trust.Keys(SubjectLock), TLog: TLogOptional}, Trust: trust, Threshold: 2, Now: time.Now()}
+
+			// Act
+			_, err := VerifyLockSet(tt.bundles, lock, policy)
+
+			// Assert
+			if tt.wantCode != "" {
+				assert.Equal(t, tt.wantCode, CodeOf(err), "%v", err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestBundleFilesAreNumericallyOrdered(t *testing.T) {
 	dir := t.TempDir()
 	primary := filepath.Join(dir, "ai-rulez.lock.sigstore.json")

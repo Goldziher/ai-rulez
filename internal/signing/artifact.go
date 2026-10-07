@@ -110,7 +110,8 @@ func VerifyArtifact(bundles [][]byte, exp Expectation, p ArtifactPolicy) (*Artif
 		}
 		reports = append(reports, rep)
 	}
-	kept, err := pickSigners(reports, errs, func(r *ArtifactReport) SignerInfo { return r.Result.Signer }, p.Threshold)
+	idOf := func(r *ArtifactReport) string { return p.Trust.signerKey(r.Result.Signer, p.Subject, p.Source) }
+	kept, err := pickSigners(reports, errs, idOf, p.Threshold)
 	if err != nil {
 		return nil, err
 	}

@@ -155,7 +155,8 @@ func VerifyLockSet(bundles [][]byte, lock *lockfile.File, p LockPolicy) (*LockRe
 		}
 		reports = append(reports, rep)
 	}
-	kept, err := pickSigners(reports, errs, func(r *LockReport) SignerInfo { return r.Result.Signer }, p.Threshold)
+	idOf := func(r *LockReport) string { return p.Trust.signerKey(r.Result.Signer, SubjectLock, "") }
+	kept, err := pickSigners(reports, errs, idOf, p.Threshold)
 	if err != nil {
 		return nil, err
 	}
