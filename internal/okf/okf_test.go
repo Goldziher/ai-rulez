@@ -2,6 +2,7 @@ package okf
 
 import (
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -222,7 +223,9 @@ func TestWriteCompareAndPrune(t *testing.T) {
 	assert.True(t, d.Empty())
 	info, err := os.Stat(dir + "/s.sh")
 	require.NoError(t, err)
-	assert.NotZero(t, info.Mode()&0o100)
+	if runtime.GOOS != "windows" { // Windows has no exec permission bit to preserve
+		assert.NotZero(t, info.Mode()&0o100)
+	}
 
 	require.NoError(t, os.WriteFile(dir+"/a/b.md", []byte("changed"), 0o644))
 	require.NoError(t, os.WriteFile(dir+"/stale.md", []byte("x"), 0o644))
