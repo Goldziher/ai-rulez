@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
@@ -29,10 +30,20 @@ func TestParseSource(t *testing.T) {
 		require.NoError(t, err, in)
 		assert.Equal(t, want, got, in)
 	}
-	for _, bad := range []string{"", "http://x.y/r", "https://x.y/r#../../etc", "https://x.y/r@-upload-pack=evil", "https://x.y/r#/abs"} {
+	for _, bad := range []string{"", "http://x.y/r", "https://x.y/r#../../etc", "https://x.y/r@-upload-pack=evil", "https://x.y/r#/abs", `https://x.y/r#\abs`, "https://x.y/r#C:/abs"} {
 		_, err := okfbridge.ParseSource(bad)
 		assert.Error(t, err, bad)
 	}
+}
+
+// fileURL builds a file:// URL for a local path; Windows paths need a leading
+// slash and forward slashes (file:///C:/dir).
+func fileURL(p string) string {
+	p = filepath.ToSlash(p)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	return "file://" + p
 }
 
 func TestFetchLocalGitRepoAtRef(t *testing.T) {
@@ -55,7 +66,7 @@ func TestFetchLocalGitRepoAtRef(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(repo, "kb", "a.md"), []byte("---\ntype: Decision\n---\nv2\n"), 0o644))
 	run("commit", "--quiet", "-am", "two")
 
-	src, err := okfbridge.ParseSource("file://" + repo + "@v1#kb")
+	src, err := okfbridge.ParseSource(fileURL(repo) + "@v1#kb")
 	require.NoError(t, err)
 	dir, cleanup, err := src.Fetch(context.Background())
 	require.NoError(t, err)
@@ -64,7 +75,7 @@ func TestFetchLocalGitRepoAtRef(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "v1")
 
-	src, err = okfbridge.ParseSource("file://" + repo + "#kb")
+	src, err = okfbridge.ParseSource(fileURL(repo) + "#kb")
 	require.NoError(t, err)
 	dir2, cleanup2, err := src.Fetch(context.Background())
 	require.NoError(t, err)

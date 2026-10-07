@@ -88,7 +88,10 @@ func checkSubdir(sub string) error {
 			return oops.Errorf("invalid bundle subdirectory %q", sub)
 		}
 	}
-	if filepath.IsAbs(sub) {
+	// The subdirectory is a slash path inside the repository: a leading slash or
+	// backslash or a drive letter is absolute on some platform even when
+	// filepath.IsAbs says otherwise on this one.
+	if filepath.IsAbs(sub) || strings.HasPrefix(sub, "/") || strings.HasPrefix(sub, `\`) || (len(sub) > 1 && sub[1] == ':') {
 		return oops.Errorf("the bundle subdirectory must be relative, got %q", sub)
 	}
 	return nil
