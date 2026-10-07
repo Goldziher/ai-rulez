@@ -303,20 +303,24 @@ func TestLockCross_MovedOKFTagStaysPinnedAndACachePoisonIsCaught(t *testing.T) {
 	assert.NoError(t, d.locked)
 	assert.NotContains(t, okfRuleBody(t), "TWO injected")
 
-	// Somebody edits the cached checkout of the pinned commit.
-	var cached string
+	// Somebody edits the cached checkout of the pinned commit. Every cached copy
+	// is edited: the cache may hold one per commit, and their order on disk
+	// differs between systems.
+	var cached []string
 	home, err := os.UserHomeDir()
 	require.NoError(t, err)
 	require.NoError(t, filepath.Walk(filepath.Join(home, ".cache", "ai-rulez", "includes"), func(p string, info os.FileInfo, err error) error {
 		if err == nil && !info.IsDir() && filepath.Base(p) == "shared.md" && !strings.Contains(p, string(filepath.Separator)+".git"+string(filepath.Separator)) {
-			cached = p
+			cached = append(cached, p)
 		}
 		return nil
 	}))
 	require.NotEmpty(t, cached, "the OKF include is cached")
-	data, err := os.ReadFile(cached)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(cached, append(data, []byte("poison\n")...), 0o644))
+	for _, p := range cached {
+		data, err := os.ReadFile(p)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(p, append(data, []byte("poison\n")...), 0o644))
+	}
 
 	var code int
 	_, stderr := capture(t, func() { code = checkLockAt("") })
