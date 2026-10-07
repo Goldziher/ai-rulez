@@ -110,17 +110,17 @@ func TreeOf(f *lockfile.File) string {
 		}
 		entries = append(entries, Entry{Kind: "output", Key: o.Path, Digest: o.Digest})
 	}
-	for _, e := range f.Include {
-		entries = append(entries, entryOf("include", e))
+	for i := range f.Include {
+		entries = append(entries, entryOf("include", f.Include[i]))
 	}
-	for _, e := range f.Skill {
-		entries = append(entries, entryOf("installed-skill", e))
+	for i := range f.Skill {
+		entries = append(entries, entryOf("installed-skill", f.Skill[i]))
 	}
-	for _, e := range f.Source {
-		entries = append(entries, entryOf("skill-source", e))
+	for i := range f.Source {
+		entries = append(entries, entryOf("skill-source", f.Source[i]))
 	}
-	for _, e := range f.Served {
-		entries = append(entries, entryOf("served-skill", e))
+	for i := range f.Served {
+		entries = append(entries, entryOf("served-skill", f.Served[i]))
 	}
 	return TopDigest(entries)
 }

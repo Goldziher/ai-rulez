@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
@@ -61,35 +60,44 @@ func (c *collector) collectRubrics() error {
 }
 
 // rubricLeaves lists the regular files under a rubric directory.
-func (c *collector) rubricLeaves(dir, rel string) ([]Leaf, []string) {
-	var leaves []Leaf
-	var problems []string
+func (c *collector) rubricLeaves(dir, rel string) (leaves []Leaf, problems []string) {
 	walkErr := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			problems = append(problems, "rubric path "+rel+" cannot be read: "+err.Error())
-			return nil
+			return nil //nolint:nilerr // reported as a problem; the rest of the rubric is still pinned
 		}
 		if d.IsDir() {
 			return nil
 		}
-		sub, _ := filepath.Rel(dir, p)
-		sub = filepath.ToSlash(sub)
-		info, ierr := d.Info()
-		if ierr != nil || !info.Mode().IsRegular() {
-			problems = append(problems, "rubric file "+rel+"/"+sub+" is not a regular file, so it cannot be pinned")
+		leaf, problem := c.rubricLeaf(dir, rel, p, d)
+		if problem != "" {
+			problems = append(problems, problem)
 			return nil
 		}
-		data, rerr := os.ReadFile(p) //nolint:gosec // a regular file inside the rubric directory
-		if rerr != nil {
-			problems = append(problems, "rubric file "+rel+"/"+sub+" cannot be read: "+rerr.Error())
-			return nil
-		}
-		leaves = append(leaves, Leaf{Path: sub, Mode: c.modes.mode(c.configRoot(), p, info), Data: data})
+		leaves = append(leaves, leaf)
 		return nil
 	})
 	if walkErr != nil {
 		problems = append(problems, "rubric "+rel+" cannot be walked: "+walkErr.Error())
 	}
-	sort.Slice(leaves, func(i, j int) bool { return strings.Compare(leaves[i].Path, leaves[j].Path) < 0 })
+	sort.Slice(leaves, func(i, j int) bool { return leaves[i].Path < leaves[j].Path })
 	return leaves, problems
+}
+
+// rubricLeaf reads one file of a rubric directory, or says why it cannot be pinned.
+func (c *collector) rubricLeaf(dir, rel, p string, d fs.DirEntry) (leaf Leaf, problem string) {
+	sub, err := filepath.Rel(dir, p)
+	if err != nil {
+		return leaf, "rubric file " + rel + " cannot be located: " + err.Error()
+	}
+	sub = filepath.ToSlash(sub)
+	info, ierr := d.Info()
+	if ierr != nil || !info.Mode().IsRegular() {
+		return leaf, "rubric file " + rel + "/" + sub + " is not a regular file, so it cannot be pinned"
+	}
+	data, rerr := os.ReadFile(p) //nolint:gosec // a regular file inside the rubric directory
+	if rerr != nil {
+		return leaf, "rubric file " + rel + "/" + sub + " cannot be read: " + rerr.Error()
+	}
+	return Leaf{Path: sub, Mode: c.modes.mode(c.configRoot(), p, info), Data: data}, ""
 }

@@ -101,8 +101,8 @@ func (c *collector) collectVerifierFiles() error {
 			continue
 		}
 		for i, table := range doc.Verifiers {
-			id, _ := table["id"].(string)
-			if id == "" {
+			id, ok := table["id"].(string)
+			if !ok || id == "" {
 				id = rel + "#" + strconv.Itoa(i+1)
 			}
 			if err := c.addVerifier(id, rel, table); err != nil {
