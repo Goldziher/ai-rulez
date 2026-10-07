@@ -5,9 +5,11 @@ package runner
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestWithRunToken(t *testing.T) {
@@ -66,6 +68,43 @@ func TestRunTagsTheChildWithARunToken(t *testing.T) {
 	a, b := string(first.Stdout), string(second.Stdout)
 	if len(a) != 32 || len(b) != 32 || a == b {
 		t.Fatalf("run tokens %q and %q: want two distinct 32-hex tokens", a, b)
+	}
+}
+
+// TestRunKillsADetachedSystemBinary is the RV-SEC-2 replay: a double fork made
+// of system binaries (perl, /bin/sh) whose middle exits at once. macOS
+// withholds the environment of such binaries, so the run token alone cannot
+// find the grandchild there; the marker descriptor does.
+func TestRunKillsADetachedSystemBinary(t *testing.T) {
+	if _, err := LookPath("perl"); err != nil {
+		t.Skip("perl is needed for the setsid double fork")
+	}
+	tests := []struct {
+		name    string
+		timeout time.Duration
+		hold    string
+		want    Status
+	}{
+		{"at the timeout", time.Second, "30", StatusTimeout},
+		{"after a clean exit", 10 * time.Second, "0.5", StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			marker := filepath.Join(t.TempDir(), "alive")
+			spawn := "perl -e 'use POSIX; fork and exit; POSIX::setsid(); " +
+				"exec(\"/bin/sh\",\"-c\",\"sleep 3; : > " + marker + "\")' & sleep " + tt.hold
+			// Act
+			res := Run(context.Background(), Spec{Argv: []string{"/bin/sh", "-c", spawn}, InheritEnv: true, Timeout: tt.timeout})
+			// Assert
+			if res.Status != tt.want {
+				t.Fatalf("status = %s (%v), want %s", res.Status, res.Err, tt.want)
+			}
+			time.Sleep(4 * time.Second)
+			if _, err := os.Stat(marker); err == nil {
+				t.Fatal("the detached grandchild outlived the run")
+			}
+		})
 	}
 }
 
