@@ -804,8 +804,10 @@ prints "not probed"), and with `auto` and no backend it runs unconfined.
 
 Confinement is best effort, not a security boundary. The macOS profile allows everything except the network, file
 writes outside the scratch directory and the Mach services that start or script applications (LaunchServices and
-Apple Events), so `open -b <bundle id>` from a scanner fails; the rest of the user session stays visible. `bwrap` adds
-a new session and a PID namespace. `unshare` confines the network only.
+Apple Events), so `open -b <bundle id>` from a scanner fails; terminal devices are neither writable nor open to
+ioctls, and every command starts in a new session without a controlling terminal, so a scanner cannot push input into
+the shell that ran ai-rulez (`TIOCSTI`); the rest of the user session stays visible. `bwrap` adds a PID namespace.
+`unshare` confines the network only.
 
 A scanner without `inputs` runs in the project root and cannot be confined: `require` refuses it (`AR9E3`), `auto`
 leaves it as it was. A scanner that writes to a path outside its scratch directory (a cache under the real home, a
