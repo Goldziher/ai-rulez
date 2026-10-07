@@ -199,3 +199,33 @@ func TestClean_NeverRemovesAUsersSymlink(t *testing.T) {
 	assert.NotZero(t, info.Mode()&os.ModeSymlink)
 	assert.NoFileExists(t, filepath.Join(dir, "AGENTS.md"), "the generated target is removed with the rest")
 }
+
+func TestKeepReason_NamesTheRealReason(t *testing.T) {
+	quietWarnings(t)
+	tests := []struct {
+		name         string
+		dropManifest bool
+		want         string
+	}{
+		{"listed in the manifest", false, "the generated manifest lists it"},
+		{"not listed in the manifest", true, "is not in the generated manifest"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := hashesProject(t, "")
+			generateHashesProject(t, dir)
+			claude := filepath.Join(dir, "CLAUDE.md")
+			require.NoError(t, os.WriteFile(claude, []byte("stripped of its header\n"), 0o644))
+			if tt.dropManifest {
+				require.NoError(t, os.Remove(filepath.Join(dir, ".ai-rulez", generatedManifestName)))
+			}
+
+			// Act
+			reason := newProjectGenerator(t, dir).keepReason(claude)
+
+			// Assert
+			assert.Contains(t, reason, tt.want)
+		})
+	}
+}

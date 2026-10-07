@@ -203,8 +203,8 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 		// user's own (a CLAUDE.md that `convert` imported and generate has not yet
 		// replaced), and being at the path proves nothing.
 		if !g.userMode && !g.projectFileIsOurs(abs, output) {
-			g.warnOnce("Keeping "+output.Path+": nothing shows ai-rulez wrote it",
-				"hint", "it has no Content-Hash and is not in the generated manifest; delete it by hand if it is not needed")
+			g.warnOnce("Keeping "+g.relSlash(abs)+": nothing shows ai-rulez wrote it",
+				"hint", g.keepReason(abs)+"; delete it by hand if it is not needed")
 			continue
 		}
 		plan.Files = append(plan.Files, abs)
