@@ -18,7 +18,7 @@ func registerArCmdrisk(s *ruleSet) {
 	MarkExampleAware(CodeUnpinnedExec, CodeDestructive)
 	s.addRules(
 		RuleInfo{CodeUnpinnedExec, "unpinned-package-exec", SeverityWarning, "a command runs a package it does not pin: npx -y pkg, uvx pkg, pipx run pkg, pip install from a URL or an unpinned git requirement, go run pkg@latest"},
-		RuleInfo{CodeDestructive, "destructive-command", SeverityWarning, "a command wipes the root, home or working tree (rm -rf /, ~, $HOME/*, *), overwrites a disk (dd of=/dev/sdX, mkfs), force-pushes main, drops a database or forks a bomb"},
+		RuleInfo{CodeDestructive, "destructive-command", SeverityWarning, "a command wipes the root, home or working tree (rm -rf /, ~, $HOME/*, *), overwrites a disk (dd of=/dev/sdX, mkfs), force-pushes main (--force or a +main refspec), drops a database or schema or forks a bomb"},
 		RuleInfo{CodeStealthCommand, "stealth-command", SeverityError, "a command erases shell history or evidence (history -c, unset HISTFILE, HISTFILE=/dev/null, shred, chattr +i): no legitimate skill does this"},
 	)
 	s.addTextScan(scanUnpinnedExec, AnalyzerSecurity)
@@ -101,6 +101,8 @@ func forcePush(args []string) string {
 			force = true
 		case protectedBr[a]:
 			branch = a
+		case strings.HasPrefix(a, "+") && protectedBr[a[1:]]:
+			force, branch = true, a[1:] // a leading + forces that one ref
 		}
 	}
 	if force && branch != "" {
