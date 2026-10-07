@@ -19,6 +19,19 @@ const (
 // hookTimeout is the per-hook timeout written to the template, in seconds.
 const hookTimeout = 5
 
+// Fields of a hook handler. A command handler has type "command" and names its
+// command under the key of the same name.
+const (
+	fieldCommand = "command"
+	fieldTimeout = "timeout"
+	// fieldHooks holds the handlers of a matcher group, and the events of a document.
+	fieldHooks = "hooks"
+)
+
+func commandHandler(command string) map[string]any {
+	return map[string]any{"type": fieldCommand, fieldCommand: command}
+}
+
 // TemplateOptions configures HookTemplate.
 type TemplateOptions struct {
 	// Executable is the command that runs ai-rulez. Default "ai-rulez".
@@ -88,19 +101,19 @@ func claudeJSON(base []byte, command string) ([]byte, error) {
 		return nil, oops.Wrapf(err, "decode usage template")
 	}
 	for _, event := range telemetryEvents {
-		doc.Hooks[event] = []map[string]any{{"hooks": []any{map[string]any{"type": "command", "command": command}}}}
+		doc.Hooks[event] = []map[string]any{{fieldHooks: []any{commandHandler(command)}}}
 	}
 	for _, groups := range doc.Hooks {
 		for _, group := range groups {
-			handlers, _ := group["hooks"].([]any) //nolint:errcheck // decoded JSON array
+			handlers, _ := group[fieldHooks].([]any) //nolint:errcheck // decoded JSON array
 			for _, h := range handlers {
 				if handler, ok := h.(map[string]any); ok {
-					handler["async"], handler["timeout"] = true, hookTimeout
+					handler["async"], handler[fieldTimeout] = true, hookTimeout
 				}
 			}
 		}
 	}
-	out, err := json.MarshalIndent(map[string]any{"hooks": doc.Hooks}, "", "  ")
+	out, err := json.MarshalIndent(map[string]any{fieldHooks: doc.Hooks}, "", "  ")
 	if err != nil {
 		return nil, oops.Wrapf(err, "encode hook template")
 	}
@@ -116,14 +129,14 @@ func otherHarnessJSON(base []byte, harness, command string) ([]byte, error) {
 	if err := json.Unmarshal(base, &doc); err != nil {
 		return nil, oops.Wrapf(err, "decode usage template")
 	}
-	hooks, _ := doc["hooks"].(map[string]any) //nolint:errcheck // produced by usage.HookTemplate
+	hooks, _ := doc[fieldHooks].(map[string]any) //nolint:errcheck // produced by usage.HookTemplate
 	if harness == usage.HarnessCursor {
 		for _, event := range []string{"subagentStart", "subagentStop"} {
-			hooks[event] = []any{map[string]any{"command": command, "timeout": hookTimeout}}
+			hooks[event] = []any{map[string]any{fieldCommand: command, fieldTimeout: hookTimeout}}
 		}
 	} else {
 		for _, event := range []string{HookSubagentStart, HookSubagentStop} {
-			hooks[event] = []any{map[string]any{"hooks": []any{map[string]any{"type": "command", "command": command}}}}
+			hooks[event] = []any{map[string]any{fieldHooks: []any{commandHandler(command)}}}
 		}
 	}
 	out, err := json.MarshalIndent(doc, "", "  ")
