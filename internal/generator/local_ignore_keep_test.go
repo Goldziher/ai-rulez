@@ -23,7 +23,7 @@ func localOnDisk(t *testing.T, withLocal bool) *config.Config {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "config.local.toml"), []byte("name = \"x\"\n"), 0o600))
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, "local", "rules"), 0o755))
 	}
-	return &config.Config{BaseDir: base, ConfigDir: dir, ConfigDirName: ".ai-rulez"}
+	return &config.Config{BaseDir: base, ConfigDir: dir, ConfigDirName: ".ai-rulez", Gitignore: gitignoreOn()}
 }
 
 func TestCollectGitignorePaths_KeepsLocalPatternsWhenLocalWasNotLoaded(t *testing.T) {

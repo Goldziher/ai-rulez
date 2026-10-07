@@ -179,7 +179,7 @@ func TestCustomPresetGenerator_GenerateJSON(t *testing.T) {
 	cfg := &config.Config{
 		Name:        "test",
 		Description: "Test config",
-		Version:     "4.0",
+		Version:     "5.0",
 	}
 
 	g := NewCustomPresetGenerator(&preset)
@@ -204,8 +204,8 @@ func TestCustomPresetGenerator_GenerateJSON(t *testing.T) {
 		t.Errorf("Expected Name=test, got %v", result["Name"])
 	}
 
-	if result["Version"] != "4.0" {
-		t.Errorf("Expected Version=4.0, got %v", result["Version"])
+	if result["Version"] != "5.0" {
+		t.Errorf("Expected Version=5.0, got %v", result["Version"])
 	}
 
 	rules, ok := result["Rules"].([]interface{})
@@ -301,7 +301,7 @@ func TestCustomPresetGenerator_PrepareTemplateData(t *testing.T) {
 	cfg := &config.Config{
 		Name:        "test",
 		Description: "Test config",
-		Version:     "4.0",
+		Version:     "5.0",
 	}
 
 	g := NewCustomPresetGenerator(&preset)

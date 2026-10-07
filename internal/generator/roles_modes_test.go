@@ -10,7 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const modesProjectConfig = `version = "4.0"
+const modesProjectConfig = `version = "5.0"
+agents_md = false
 name = "modes"
 presets = [%s]
 gitignore = false
