@@ -310,7 +310,7 @@ func TestServeSkills_ShutdownFlushesTheUsageSink(t *testing.T) {
 		name string
 		stop func(p *serveProc)
 	}{
-		{name: "end of input", stop: func(p *serveProc) { _ = p.stdin.Close() }},                    //nolint:errcheck // closing is the signal
+		{name: "end of input", stop: func(p *serveProc) { _ = p.stdin.Close() }},                  //nolint:errcheck // closing is the signal
 		{name: "SIGTERM", stop: func(p *serveProc) { _ = p.cmd.Process.Signal(syscall.SIGTERM) }}, //nolint:errcheck // checked by the exit
 	}
 	for _, tt := range tests {
