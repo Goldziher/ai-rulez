@@ -93,8 +93,34 @@ func (c *evalCtx) evalCommand(ctx context.Context, p *vspec.CommandPred) (evalOu
 	if err := c.execAllowed(); err != nil {
 		return evalOut{}, err
 	}
-	argv := append([]string(nil), p.Argv...)
-	var stdin []byte
+	argv, stdin, err := c.commandInput(p)
+	if err != nil {
+		return evalOut{}, err
+	}
+	res := c.env.commandRunner().Run(ctx, runner.Spec{
+		Argv: argv, Dir: c.env.Root, Env: c.env.commandEnv(), Stdin: stdin, Timeout: c.commandTimeout(p), MaxOutput: maxCommandOutput,
+	})
+	if res.StdoutTruncated || res.StderrTruncated {
+		c.note("%s: output was truncated to %d KiB", argv[0], maxCommandOutput>>10)
+	}
+	if err := commandRunError(argv[0], &res); err != nil {
+		return evalOut{}, err
+	}
+	want := 0
+	if p.ExpectExit != nil {
+		want = *p.ExpectExit
+	}
+	if res.ExitCode == want {
+		return evalOut{pass: true}, nil
+	}
+	f := Finding{Message: "`" + argv[0] + "`" + fmt.Sprintf(" exited %d, expected %d", res.ExitCode, want), Match: outputExcerpt(res)}
+	return evalOut{findings: []Finding{f}}, nil
+}
+
+// commandInput builds the argument vector and standard input of the command,
+// passing the scoped files as arguments or as NUL-separated standard input.
+func (c *evalCtx) commandInput(p *vspec.CommandPred) (argv []string, stdin []byte, err error) {
+	argv = append([]string(nil), p.Argv...)
 	switch p.PassFiles {
 	case passFilesArgs:
 		total := 0
@@ -102,7 +128,7 @@ func (c *evalCtx) evalCommand(ctx context.Context, p *vspec.CommandPred) (evalOu
 			total += len(f) + 1
 		}
 		if len(c.scoped) > maxArgFiles || total > maxArgBytes {
-			return evalOut{}, execErrorf("%d changed files are too many to pass as arguments: use pass_files = \"stdin0\"", len(c.scoped))
+			return nil, nil, execErrorf("%d changed files are too many to pass as arguments: use pass_files = \"stdin0\"", len(c.scoped))
 		}
 		for _, f := range c.scoped {
 			argv = append(argv, argPath(f))
@@ -113,6 +139,14 @@ func (c *evalCtx) evalCommand(ctx context.Context, p *vspec.CommandPred) (evalOu
 			stdin = append(stdin, 0)
 		}
 	}
+	if stdin == nil {
+		stdin = []byte{}
+	}
+	return argv, stdin, nil
+}
+
+// commandTimeout is the predicate's timeout capped at the configured maximum.
+func (c *evalCtx) commandTimeout(p *vspec.CommandPred) time.Duration {
 	timeout := defaultCommandTimeout
 	if p.TimeoutS > 0 {
 		timeout = time.Duration(p.TimeoutS) * time.Second
@@ -124,33 +158,21 @@ func (c *evalCtx) evalCommand(ctx context.Context, p *vspec.CommandPred) (evalOu
 	if limit := time.Duration(maxT) * time.Second; timeout > limit {
 		timeout = limit
 	}
-	if stdin == nil {
-		stdin = []byte{}
-	}
-	res := c.env.commandRunner().Run(ctx, runner.Spec{
-		Argv: argv, Dir: c.env.Root, Env: c.env.commandEnv(), Stdin: stdin, Timeout: timeout, MaxOutput: maxCommandOutput,
-	})
-	if res.StdoutTruncated || res.StderrTruncated {
-		c.note("%s: output was truncated to %d KiB", argv[0], maxCommandOutput>>10)
-	}
+	return timeout
+}
+
+// commandRunError turns a run that did not complete into an execution error.
+func commandRunError(name string, res *runner.Result) error {
 	switch res.Status {
 	case runner.StatusOK, runner.StatusExit:
+		return nil
 	case runner.StatusTimeout:
-		return evalOut{}, execErrorf("%s timed out after %s", argv[0], res.Timeout)
+		return execErrorf("%s timed out after %s", name, res.Timeout)
 	case runner.StatusUnavailable:
-		return evalOut{}, execErrorf("%s could not be started: %s", argv[0], errText(res.Err))
+		return execErrorf("%s could not be started: %s", name, errText(res.Err))
 	default:
-		return evalOut{}, execErrorf("%s did not run: %s", argv[0], errText(res.Err))
+		return execErrorf("%s did not run: %s", name, errText(res.Err))
 	}
-	want := 0
-	if p.ExpectExit != nil {
-		want = *p.ExpectExit
-	}
-	if res.ExitCode == want {
-		return evalOut{pass: true}, nil
-	}
-	f := Finding{Message: fmt.Sprintf("`%s` exited %d, expected %d", argv[0], res.ExitCode, want), Match: outputExcerpt(res)}
-	return evalOut{findings: []Finding{f}}, nil
 }
 
 // argPath makes a repo-relative path safe as a command-line argument: a name that

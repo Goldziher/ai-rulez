@@ -62,9 +62,9 @@ func RunExamplesWith(ctx context.Context, cfg *config.Config, names []string, op
 			want[n] = true
 		}
 		picked = nil
-		for _, sp := range specs {
-			if want[sp.ID] {
-				picked = append(picked, sp)
+		for i := range specs {
+			if sp := &specs[i]; want[sp.ID] {
+				picked = append(picked, *sp)
 				delete(want, sp.ID)
 			}
 		}
@@ -103,7 +103,7 @@ func runExample(ctx context.Context, cfg *config.Config, sp *Spec, ex Example, o
 		out.Got, out.Message = StatusError, err.Error()
 		return out
 	}
-	defer os.RemoveAll(dir)
+	defer os.RemoveAll(dir) //nolint:errcheck // throwaway directory
 	tree := make([]string, 0, len(ex.Files))
 	for name, content := range ex.Files {
 		rel, err := cleanRel(name)

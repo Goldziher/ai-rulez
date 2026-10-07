@@ -46,6 +46,20 @@ const (
 const (
 	severityError   = "error"
 	severityWarning = "warning"
+	severityInfo    = "info"
+
+	verbExists = "exists"
+
+	kindRule    = "rule"
+	kindSkill   = "skill"
+	kindAgent   = "agent"
+	kindCommand = "command"
+
+	predicatePaired  = "paired"
+	predicateCommand = "command"
+
+	// llmOffHint tells the user how to turn on the llm predicate.
+	llmOffHint = "pass --allow-llm and enable [llm] allow_network in the user config"
 )
 
 // Result is the outcome of one verifier.
@@ -99,8 +113,8 @@ type Report struct {
 // Counts returns the number of results per status.
 func (r *Report) Counts() map[Status]int {
 	out := map[Status]int{}
-	for _, res := range r.Results {
-		out[res.Status]++
+	for i := range r.Results {
+		out[r.Results[i].Status]++
 	}
 	return out
 }
@@ -117,13 +131,13 @@ func (r *Report) Failed(strict bool) bool {
 // FailedAt reports whether a verifier failed at or above the severity: "error",
 // "warning" or "info". "none" never fails.
 func (r *Report) FailedAt(level string) bool {
-	rank := map[string]int{"info": 1, severityWarning: 2, severityError: 3}
+	rank := map[string]int{severityInfo: 1, severityWarning: 2, severityError: 3}
 	threshold, ok := rank[level]
 	if !ok {
 		return false
 	}
-	for _, res := range r.Results {
-		if res.Status == StatusFail && rank[res.Severity] >= threshold {
+	for i := range r.Results {
+		if res := &r.Results[i]; res.Status == StatusFail && rank[res.Severity] >= threshold {
 			return true
 		}
 	}

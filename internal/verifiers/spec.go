@@ -109,13 +109,13 @@ type specFile struct {
 func (s *Spec) TargetKind() (kind, id string) {
 	switch {
 	case s.Rule != "":
-		return "rule", s.Rule
+		return kindRule, s.Rule
 	case s.Skill != "":
-		return "skill", s.Skill
+		return kindSkill, s.Skill
 	case s.Agent != "":
-		return "agent", s.Agent
+		return kindAgent, s.Agent
 	case s.Command != "":
-		return "command", s.Command
+		return kindCommand, s.Command
 	}
 	return "", ""
 }
@@ -173,6 +173,14 @@ func LoadSpecs(cfg *config.Config) (specs []Spec, problems []Problem) {
 		imported, importProblems := loadImported(cfg, seen)
 		return append(specs, imported...), append(problems, importProblems...)
 	}
+	dirSpecs, dirProblems := loadDirSpecs(cfg, dir, entries, seen)
+	specs, problems = append(specs, dirSpecs...), append(problems, dirProblems...)
+	imported, importProblems := loadImported(cfg, seen)
+	return append(specs, imported...), append(problems, importProblems...)
+}
+
+// loadDirSpecs reads the spec files of the verifiers directory in name order.
+func loadDirSpecs(cfg *config.Config, dir string, entries []os.DirEntry, seen map[string]string) (specs []Spec, problems []Problem) {
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".toml") {
@@ -200,8 +208,7 @@ func LoadSpecs(cfg *config.Config) (specs []Spec, problems []Problem) {
 			specs = append(specs, sp)
 		}
 	}
-	imported, importProblems := loadImported(cfg, seen)
-	return append(specs, imported...), append(problems, importProblems...)
+	return specs, problems
 }
 
 // loadImported reads the verifier files that arrived through includes. They are
@@ -370,7 +377,7 @@ func validateSpec(cfg *config.Config, s *Spec) string {
 		return "invalid id " + quote(s.ID) + ": use lowercase letters, digits, '.', '_' and '-'"
 	}
 	switch s.Severity {
-	case "", severityError, severityWarning, "info":
+	case "", severityError, severityWarning, severityInfo:
 	default:
 		return "invalid severity " + quote(s.Severity) + ": use error, warning or info"
 	}
@@ -643,46 +650,14 @@ func findTarget(cfg *config.Config, kind, id string) (config.ContentFile, bool) 
 
 // findTargetIn is findTarget over an explicit content tree.
 func findTargetIn(content *config.ContentTree, kind, id string) (config.ContentFile, bool) {
-	pick := func(files []config.ContentFile, name string) (config.ContentFile, bool) {
-		for _, f := range files {
-			if f.Name == name {
-				return f, true
-			}
-		}
-		return config.ContentFile{}, false
-	}
-	listOf := func(root *config.ContentTree, d *config.Domain) []config.ContentFile {
-		switch kind {
-		case "rule":
-			if d != nil {
-				return d.Rules
-			}
-			return root.Rules
-		case "skill":
-			if d != nil {
-				return d.Skills
-			}
-			return root.Skills
-		case "agent":
-			if d != nil {
-				return d.Agents
-			}
-			return root.Agents
-		default:
-			if d != nil {
-				return d.Commands
-			}
-			return root.Commands
-		}
-	}
 	if domain, name, ok := strings.Cut(id, "/"); ok {
 		d := content.Domains[domain]
 		if d == nil {
 			return config.ContentFile{}, false
 		}
-		return pick(listOf(content, d), name)
+		return pickContentFile(contentFiles(content, d, kind), name)
 	}
-	if f, ok := pick(listOf(content, nil), id); ok {
+	if f, ok := pickContentFile(contentFiles(content, nil, kind), id); ok {
 		return f, true
 	}
 	names := make([]string, 0, len(content.Domains))
@@ -691,11 +666,48 @@ func findTargetIn(content *config.ContentTree, kind, id string) (config.ContentF
 	}
 	sort.Strings(names)
 	for _, n := range names {
-		if f, ok := pick(listOf(content, content.Domains[n]), id); ok {
+		if f, ok := pickContentFile(contentFiles(content, content.Domains[n], kind), id); ok {
 			return f, true
 		}
 	}
 	return config.ContentFile{}, false
+}
+
+// pickContentFile returns the file called name.
+func pickContentFile(files []config.ContentFile, name string) (config.ContentFile, bool) {
+	for i := range files {
+		if files[i].Name == name {
+			return files[i], true
+		}
+	}
+	return config.ContentFile{}, false
+}
+
+// contentFiles lists the items of one kind in a domain, or at the root when d
+// is nil.
+func contentFiles(root *config.ContentTree, d *config.Domain, kind string) []config.ContentFile {
+	switch kind {
+	case kindRule:
+		if d != nil {
+			return d.Rules
+		}
+		return root.Rules
+	case kindSkill:
+		if d != nil {
+			return d.Skills
+		}
+		return root.Skills
+	case kindAgent:
+		if d != nil {
+			return d.Agents
+		}
+		return root.Agents
+	default:
+		if d != nil {
+			return d.Commands
+		}
+		return root.Commands
+	}
 }
 
 // anchorLine returns the 1-based line of the heading equal to anchor, or 0.
