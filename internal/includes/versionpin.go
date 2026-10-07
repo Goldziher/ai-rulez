@@ -287,9 +287,11 @@ func VersionSources(cfg *config.Config) []VersionSource {
 	for i := range cfg.InstalledSkills {
 		urls[lockfile.KindSkill+"\x00"+cfg.InstalledSkills[i].Name] = stripGitPlus(cfg.InstalledSkills[i].Source)
 	}
-	for _, w := range Lockable(cfg) {
+	wants := Lockable(cfg)
+	for i := range wants {
+		w := &wants[i]
 		if w.Constraint != "" {
-			out = append(out, VersionSource{Want: w, URL: urls[w.Kind+"\x00"+w.Name]})
+			out = append(out, VersionSource{Want: *w, URL: urls[w.Kind+"\x00"+w.Name]})
 		}
 	}
 	return out

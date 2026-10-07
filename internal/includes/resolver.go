@@ -65,12 +65,13 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 	var skipped []includeFailure
 	for i := range cfg.Includes {
 		if err := r.processInclude(ctx, &mergedContent, &cfg.Includes[i]); err != nil {
-			if errors.Is(err, config.ErrLockViolation) {
+			switch {
+			case errors.Is(err, config.ErrLockViolation):
 				violations = append(violations, err)
-			} else if errors.Is(err, config.ErrIncludeOutsideProject) {
+			case errors.Is(err, config.ErrIncludeOutsideProject):
 				// A path the committed config must not name is an error, not a skipped include.
 				return nil, oops.Wrapf(err, "include %q", cfg.Includes[i].Name)
-			} else {
+			default:
 				// Both sentinels make the config loader propagate the error
 				// instead of continuing with local content only; a lock
 				// violation also exits as drift.
@@ -468,8 +469,8 @@ func (r *Resolver) mergeDomainContent(target *config.Domain, include *config.Con
 func mergeContentFiles(base, include []config.ContentFile, baseWins bool) []config.ContentFile {
 	// Build a map of base files by name
 	baseMap := make(map[string]config.ContentFile)
-	for _, file := range base {
-		baseMap[file.Name] = file
+	for i := range base {
+		baseMap[base[i].Name] = base[i]
 	}
 
 	// Build result with include files
@@ -478,30 +479,30 @@ func mergeContentFiles(base, include []config.ContentFile, baseWins bool) []conf
 
 	if baseWins {
 		// Add all base files
-		for _, file := range base {
-			result = append(result, file)
-			seen[file.Name] = true
+		for i := range base {
+			result = append(result, base[i])
+			seen[base[i].Name] = true
 		}
 		// Add include files that don't conflict
-		for _, file := range include {
-			if !seen[file.Name] {
-				result = append(result, file)
-				seen[file.Name] = true
+		for i := range include {
+			if !seen[include[i].Name] {
+				result = append(result, include[i])
+				seen[include[i].Name] = true
 			}
 		}
 	} else {
 		// Add all include files first (preserve slice order for deterministic output)
-		for _, file := range include {
-			if !seen[file.Name] {
-				result = append(result, file)
-				seen[file.Name] = true
+		for i := range include {
+			if !seen[include[i].Name] {
+				result = append(result, include[i])
+				seen[include[i].Name] = true
 			}
 		}
 		// Add base files that don't conflict
-		for _, file := range base {
-			if !seen[file.Name] {
-				result = append(result, file)
-				seen[file.Name] = true
+		for i := range base {
+			if !seen[base[i].Name] {
+				result = append(result, base[i])
+				seen[base[i].Name] = true
 			}
 		}
 	}
@@ -512,12 +513,12 @@ func mergeContentFiles(base, include []config.ContentFile, baseWins bool) []conf
 // detectConflicts checks if two content file slices have conflicting names
 func detectConflicts(base, include []config.ContentFile) bool {
 	baseNames := make(map[string]bool)
-	for _, file := range base {
-		baseNames[file.Name] = true
+	for i := range base {
+		baseNames[base[i].Name] = true
 	}
 
-	for _, file := range include {
-		if baseNames[file.Name] {
+	for i := range include {
+		if baseNames[include[i].Name] {
 			return true
 		}
 	}
