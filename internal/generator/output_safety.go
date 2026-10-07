@@ -223,8 +223,19 @@ func (g *Generator) restoreRetiredCommands(restored []string) error {
 // symlinks onto another path this run generates (the target gets its own
 // content, the link stays as the user made it and is not recorded as ours).
 func (g *Generator) outputSafety(outputs []config.OutputFile) (refused []outputRefusal, linked map[string]bool) {
+	guarded := g.guardRefusals(outputs)
 	if g.userMode {
-		return g.userOutputSafety(outputs), nil
+		refused = g.userOutputSafety(outputs)
+		for rel, reason := range guarded {
+			if !slices.ContainsFunc(refused, func(r outputRefusal) bool { return r.rel == rel }) {
+				refused = append(refused, outputRefusal{rel, reason})
+			}
+		}
+		sort.Slice(refused, func(i, j int) bool { return refused[i].rel < refused[j].rel })
+		return refused, nil
+	}
+	for rel, reason := range guarded {
+		refused = append(refused, outputRefusal{rel, reason})
 	}
 	linked = map[string]bool{}
 	written := map[string]bool{}
@@ -246,6 +257,9 @@ func (g *Generator) outputSafety(outputs []config.OutputFile) (refused []outputR
 		}
 		abs := g.absOutputPath(output.Path)
 		rel := g.relSlash(abs)
+		if _, ok := guarded[rel]; ok {
+			continue
+		}
 		info, err := os.Lstat(abs)
 		if err != nil {
 			continue
@@ -271,6 +285,37 @@ func (g *Generator) outputSafety(outputs []config.OutputFile) (refused []outputR
 	}
 	sort.Slice(refused, func(i, j int) bool { return refused[i].rel < refused[j].rel })
 	return refused, linked
+}
+
+// guardRefusals runs the write guard over every output, directories included, so
+// a symlink anywhere on an output's path that leads out of the places the run may
+// write refuses the run before anything is removed or written; the write itself
+// would fail half way through. It maps the output's project path to the reason.
+// A path the guard rejects for any other reason (outside the project, inside
+// .git) is left to the write, which names it.
+func (g *Generator) guardRefusals(outputs []config.OutputFile) map[string]string {
+	refused := map[string]string{}
+	for _, output := range outputs {
+		abs := g.absOutputPath(output.Path)
+		if !g.withinScope(abs) || g.inGitDir(abs) {
+			continue
+		}
+		if _, _, err := g.guardWrite(abs); err == nil {
+			continue
+		}
+		rel := g.relSlash(abs)
+		resolved, _, err := resolveWriteTarget(abs, new(int))
+		switch {
+		case err != nil:
+			refused[rel] = "a symlink chain on its path that cannot be resolved"
+		case isSymlink(abs):
+			refused[rel] = fmt.Sprintf("a symlink to %s, outside the project", g.displayTarget(resolved))
+		default:
+			refused[rel] = fmt.Sprintf("a symlinked parent directory leads outside the project, to %s",
+				g.displayTarget(resolved))
+		}
+	}
+	return refused
 }
 
 // displayTarget shows a link target relative to the project when it is inside it.
