@@ -253,7 +253,7 @@ func caseFiles(dir string) []string {
 			return nil //nolint:nilerr // an unreadable entry is skipped, not fatal
 		}
 		name := d.Name()
-		if p != dir && (strings.HasPrefix(name, ".") || (d.IsDir() && (name == "results" || name == "node_modules"))) {
+		if p != dir && (strings.HasPrefix(name, ".") || (d.IsDir() && (name == dirResults || name == "node_modules"))) {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}
@@ -312,7 +312,7 @@ func (r digestRoot) skips(rel, name string, isDir bool) bool {
 		return true
 	}
 	if r.authored {
-		return isDir && (name == "results" || name == "node_modules")
+		return isDir && (name == dirResults || name == "node_modules")
 	}
 	return false
 }
