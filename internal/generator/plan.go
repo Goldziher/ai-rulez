@@ -95,7 +95,7 @@ type PlanRemoval struct {
 
 // PlanOutputs renders every output for opts in memory and returns the plan, without
 // writing, deleting or ignoring anything. It reads the project the way a run does
-// (the previous manifest, merged documents) and honours cfg.Host.
+// (the previous manifest, merged documents) and honors cfg.Host.
 //
 // MCP placeholders stay as written (${VAR}), so the plan depends on neither the
 // environment nor the checkout and never holds a resolved secret. generate itself
