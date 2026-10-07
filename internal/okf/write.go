@@ -79,7 +79,7 @@ func Compare(dir string, files []File) (Drift, error) {
 			return walkErr
 		}
 		if e.IsDir() {
-			if e.Name() == ".git" {
+			if e.Name() == gitDir {
 				return fs.SkipDir
 			}
 			return nil
@@ -153,7 +153,7 @@ func checkPrunable(dir string) error {
 	}
 	content := 0
 	for _, e := range entries {
-		if e.Name() != ".git" {
+		if e.Name() != gitDir {
 			content++
 		}
 	}

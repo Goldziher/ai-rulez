@@ -314,7 +314,7 @@ func conceptFields(it sourceItem, id string) (fields []okf.Field, description st
 func dropDerivedName(meta []okf.Field, id string) []okf.Field {
 	out := meta[:0:0]
 	for _, f := range meta {
-		if s, ok := f.Value.(string); f.Key == "name" && ok && s == id {
+		if s, ok := f.Value.(string); f.Key == keyName && ok && s == id {
 			continue
 		}
 		out = append(out, f)
