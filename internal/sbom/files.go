@@ -20,6 +20,9 @@ type contentIndex struct {
 	files     map[string]*config.ContentFile // kind + "\x00" + item path
 }
 
+// componentFile is the CycloneDX component type of a file.
+const componentFile = "file"
+
 func newContentIndex(cfg *config.Config) *contentIndex {
 	idx := &contentIndex{configDir: cfg.ConfigDir, files: map[string]*config.ContentFile{}}
 	if cfg.Content == nil {
@@ -139,11 +142,11 @@ func fileComponents(parent string, entries []fileEntry) []Component {
 	}
 	out := make([]Component, 0, len(entries))
 	for _, e := range entries {
-		props := []Property{prop("kind", "file")}
+		props := []Property{prop("kind", componentFile)}
 		if e.executes {
 			props = append(props, prop("executes", "true"))
 		}
-		comp := Component{Type: "file", BOMRef: parent + ":file:" + e.path, Name: e.path}
+		comp := Component{Type: componentFile, BOMRef: parent + ":file:" + e.path, Name: e.path}
 		if e.hashed {
 			props = append(props, prop("size", itoa(e.size)))
 			comp.Hashes = []Hash{{Alg: "SHA-256", Content: e.sha256}}

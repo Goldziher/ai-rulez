@@ -476,7 +476,7 @@ func (b *builder) outputComponents() ([]Component, error) {
 			return nil, oops.Wrap(err)
 		}
 		comps = append(comps, Component{
-			Type: "file", BOMRef: "ai-rulez:output:" + out.Path, Name: out.Path,
+			Type: componentFile, BOMRef: "ai-rulez:output:" + out.Path, Name: out.Path,
 			Properties: sortProps([]Property{prop("kind", "output"), prop("output-digest", digest), prop("path", out.Path)}),
 		})
 	}

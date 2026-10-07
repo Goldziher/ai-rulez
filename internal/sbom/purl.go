@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// subcommandRun is the "run" subcommand launchers take before a package.
+const subcommandRun = "run"
+
 // purlSegment percent-encodes one purl name or namespace segment ("@" becomes %40).
 func purlSegment(s string) string {
 	return strings.ReplaceAll(url.PathEscape(s), "@", "%40")
@@ -101,19 +104,19 @@ func detectLauncher(command string, args []string) (launcher, bool) {
 	case "uvx":
 		return pypiTarget(args)
 	case "pipx":
-		if len(args) > 0 && args[0] == "run" {
+		if len(args) > 0 && args[0] == subcommandRun {
 			return pypiTarget(args[1:])
 		}
 	case "uv":
-		if len(args) > 1 && args[0] == "tool" && args[1] == "run" {
+		if len(args) > 1 && args[0] == "tool" && args[1] == subcommandRun {
 			return pypiTarget(args[2:])
 		}
 	case "docker", "podman":
-		if len(args) > 0 && args[0] == "run" {
+		if len(args) > 0 && args[0] == subcommandRun {
 			return ociTarget(args[1:])
 		}
 	case "go":
-		if len(args) > 0 && args[0] == "run" {
+		if len(args) > 0 && args[0] == subcommandRun {
 			return goTarget(args[1:])
 		}
 	}
