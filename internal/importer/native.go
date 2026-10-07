@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/utils"
 )
 
@@ -179,6 +180,7 @@ func (n nativeImporter) importRootFile(p *Plan, r *reader, file string, opt Opti
 		p.add(newFinding(StatusDropped, file, "", "", "file is empty"))
 		return
 	}
+	text = n.nestRootKeys(p, file, text)
 	name := contextName(file)
 	if !opt.SplitHeadings {
 		p.Items = append(p.Items, Item{Kind: KindContext, Name: name, Sources: []string{file}, Main: ensureNewline(text)})
@@ -199,6 +201,18 @@ func (n nativeImporter) importRootFile(p *Plan, r *reader, file string, opt Opti
 		}
 		p.Items = append(p.Items, Item{Kind: KindContext, Name: secName, Sources: []string{file}, Main: ensureNewline(body)})
 	}
+}
+
+// nestRootKeys keeps a root file's frontmatter keys that no tool reads (title,
+// applies_to, updated) under `metadata:` rather than at the top level, where the
+// strict validator would report each one (AR303), and says so.
+func (nativeImporter) nestRootKeys(p *Plan, file, text string) string {
+	out, moved := nestUnknownKeys(text, lint.KnownContextKeys())
+	if len(moved) > 0 {
+		p.add(newFinding(StatusApproximated, file, "frontmatter", "",
+			"frontmatter keys no tool reads were kept under metadata: "+strings.Join(moved, ", ")))
+	}
+	return out
 }
 
 type h2Section struct{ header, body string }
