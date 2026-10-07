@@ -89,6 +89,11 @@ type PluginAuthoring struct {
 	// shipped to consumers of the bundle.
 	IncludeEvals bool `yaml:"include_evals,omitempty" json:"include_evals,omitempty" toml:"include_evals,omitempty"` //nolint:tagliatelle
 
+	// Spec is the Agent Plugins version the agent-plugins, copilot and root-layout
+	// codex bundles follow: "1.0.0" (the default) or "1.1.0". plugin.json and
+	// mcp.json carry the matching $schema.
+	Spec string `yaml:"spec,omitempty" json:"spec,omitempty" toml:"spec,omitempty"`
+
 	// Runtimes restricts which runtime manifests are emitted. Empty means all
 	// of AllPluginRuntimes.
 	Runtimes []string `yaml:"runtimes,omitempty" json:"runtimes,omitempty" toml:"runtimes,omitempty"`

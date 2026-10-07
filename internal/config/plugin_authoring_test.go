@@ -161,6 +161,9 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		{name: "agent-plugins consecutive hyphen", mutate: func(p *PluginAuthoring) {
 			p.Name, p.Runtimes = "bad--name", []string{"agent-plugins"}
 		}, wantErr: "not valid for the agent-plugins runtime"},
+		{name: "spec 1.0.0", mutate: func(p *PluginAuthoring) { p.Spec = "1.0.0" }},
+		{name: "spec 1.1.0", mutate: func(p *PluginAuthoring) { p.Spec = "1.1.0" }},
+		{name: "unknown spec", mutate: func(p *PluginAuthoring) { p.Spec = "2.0.0" }, wantErr: "unsupported Agent Plugins spec"},
 		{name: "dotted and underscored name ok", mutate: func(p *PluginAuthoring) { p.Name = "my_tool.v2-x" }},
 		{name: "uppercase name", mutate: func(p *PluginAuthoring) { p.Name = "MyTool" }, wantErr: "not a valid plugin name"},
 		{name: "scoped name with slash", mutate: func(p *PluginAuthoring) { p.Name = "@scope/tool" }, wantErr: "not a valid plugin name"},
