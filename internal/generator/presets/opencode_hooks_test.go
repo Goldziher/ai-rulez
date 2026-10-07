@@ -59,8 +59,8 @@ func TestOpencodePresetGenerator_HooksPlugin(t *testing.T) {
 
 func TestOpencodePresetGenerator_HooksPluginUserScope(t *testing.T) {
 	g := &OpencodePresetGenerator{}
-	paths := g.GlobalOutputPaths("/home/u", func(string) string { return "" })
+	paths := g.GlobalOutputPaths(absSlash("/home/u"), func(string) string { return "" })
 
-	assert.Equal(t, filepath.FromSlash("/home/u/.config/opencode/plugins/ai-rulez-hooks.js"),
+	assert.Equal(t, absSlash("/home/u/.config/opencode/plugins/ai-rulez-hooks.js"),
 		paths.Sidecars[".opencode/plugins/ai-rulez-hooks.js"])
 }

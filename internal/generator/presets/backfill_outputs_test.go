@@ -216,7 +216,7 @@ func TestDevinCommandSkill_SkillWithSameIDWins(t *testing.T) {
 }
 
 func TestGoPresets_GlobalOutputPaths(t *testing.T) {
-	home := filepath.FromSlash("/home/u")
+	home := absSlash("/home/u")
 	abs := func(rel string) string { return filepath.Join(home, filepath.FromSlash(rel)) }
 
 	cases := []struct {
@@ -300,8 +300,8 @@ func TestGoPresets_GlobalOutputPaths(t *testing.T) {
 }
 
 func TestCodexGlobalOutputPaths_HonoursCodexHome(t *testing.T) {
-	home := filepath.FromSlash("/home/u")
-	override := filepath.FromSlash("/data/codex")
+	home := absSlash("/home/u")
+	override := absSlash("/data/codex")
 	got := (&CodexPresetGenerator{}).GlobalOutputPaths(home, func(k string) string {
 		if k == "CODEX_HOME" {
 			return override
