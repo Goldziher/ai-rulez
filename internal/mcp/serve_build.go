@@ -195,6 +195,10 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		return nil, err
 	}
 	var served []generator.ServedSkill
+	// Names of every project skill, including those delivered static: a source
+	// skill must not reuse one, or an agent that also has the static copy would
+	// see two different skills under one name.
+	projectNames := map[string]bool{}
 	if cfg.Content != nil {
 		if preset, served, err = gen.ServedSkills(profile, preset); err != nil {
 			return nil, oops.Wrapf(err, "render skills")
@@ -205,6 +209,9 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		case profile == "":
 			profile = cfg.Default
 		}
+		for i := range served {
+			projectNames[catalogName(&served[i])] = true
+		}
 		served = selectByDelivery(served, st.IncludeStatic)
 	}
 
@@ -213,7 +220,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		return nil, err
 	}
 	b := &built{cfg: cfg, lock: lock, view: st.ViewKey()}
-	taken := map[string]bool{}
+	taken := projectNames
 	for i := range served {
 		taken[catalogName(&served[i])] = true
 	}
