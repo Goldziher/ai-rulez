@@ -35,13 +35,13 @@ const (
 	maxFrontmatterScan     = 10
 )
 
-func init() {
-	registerRules(
+func registerTrapsPlan(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeKiroAgentSteering, "kiro-agent-steering-not-loaded", SeverityWarning, "a Kiro custom agent file has no resources while .kiro/steering holds steering files, so the agent never loads them"},
 		RuleInfo{CodeKiroSteeringFirst, "kiro-steering-frontmatter-not-first", SeverityWarning, "a Kiro steering file has its inclusion frontmatter after a blank line or other text, so Kiro does not read it"},
 		RuleInfo{CodeProjectTrap, "project-trap", SeverityWarning, "a trap row of the project (.ai-rulez/traps/*.toml) matched a file, or a row is invalid"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeKiroAgentSteering: {
 			Why:  "Kiro does not include steering files in a custom agent on its own; the agent must list them in its resources, so the steering context is missing without an error.",
 			Bad:  "`.kiro/agents/review.json` without `resources`, next to `.kiro/steering/style.md`",

@@ -20,14 +20,14 @@ const (
 	CodeLowAnalyzability  = "AR034"
 )
 
-func init() {
-	registerRules(
+func registerArTrust(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodePublisherMismatch, "publisher-mismatch", SeverityWarning, "an installed skill's, or a git include's skill, agent or command, name or description credits a publisher that is not the owner of the repository it came from"},
 		RuleInfo{CodeAuthorityClaim, "authority-claim", SeverityInfo, "an installed skill's or git include's description claims to be official, verified or trusted, but its source owner is not a known or configured trusted organization"},
 		RuleInfo{CodeLowAnalyzability, "low-analyzability", SeverityInfo, "most of a skill directory is binary, archived or oversize, so the scan did not read it"},
 	)
-	registerRunCheck(checkInstalledTrust, AnalyzerSecurity)
-	registerRunCheck(checkAnalyzability, AnalyzerSecurity)
+	s.addRunCheck(checkInstalledTrust, AnalyzerSecurity)
+	s.addRunCheck(checkAnalyzability, AnalyzerSecurity)
 }
 
 var (

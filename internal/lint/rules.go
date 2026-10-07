@@ -123,7 +123,7 @@ type RuleInfo struct {
 	Describe string   `json:"description"`
 }
 
-var registry = []RuleInfo{
+var baseRegistry = []RuleInfo{
 	{CodeSecretDetected, "secret-detected", SeverityError, "a credential pattern (cloud key, token, private key or a configured pattern) appears in content or a script"},
 	{CodeHiddenCharacters, "hidden-characters", SeverityError, "zero-width, bidirectional-control or Unicode tag characters hide text from a reviewer"},
 	{CodeCommentInstruction, "html-comment-instruction", SeverityWarning, "an HTML comment carries imperative or injection-style text the reader will not see"},
@@ -188,7 +188,7 @@ var registry = []RuleInfo{
 
 // Rules returns the registry sorted by code.
 func Rules() []RuleInfo {
-	out := append([]RuleInfo(nil), registry...)
+	out := append([]RuleInfo(nil), ruleTables().rules...)
 	sort.Slice(out, func(i, j int) bool { return out[i].Code < out[j].Code })
 	return out
 }
@@ -196,7 +196,7 @@ func Rules() []RuleInfo {
 // lookupRule resolves a code or a name, case-insensitively.
 func lookupRule(key string) (RuleInfo, bool) {
 	key = strings.TrimSpace(key)
-	for _, r := range registry {
+	for _, r := range ruleTables().rules {
 		if strings.EqualFold(r.Code, key) || strings.EqualFold(r.Name, key) {
 			return r, true
 		}

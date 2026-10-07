@@ -20,13 +20,13 @@ const (
 	CodeSecretInConfig   = "AR015"
 )
 
-func init() {
-	registerRules(
+func registerArMcp(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeMCPUnpinned, "mcp-unpinned-package", SeverityWarning, "an MCP server (or settings entry) runs a package through npx, uvx, pipx or docker without pinning its version"},
 		RuleInfo{CodeSecretInConfig, "secret-in-env-or-header", SeverityError, "an MCP server env value, header, command-line flag or settings env holds a literal credential instead of a ${VAR} reference"},
 		RuleInfo{CodeMCPConfigInvalid, "mcp-config-invalid", SeverityError, "an MCP server definition is malformed: missing command or url, unknown transport, wrong field types, duplicate name, empty server or deprecated SSE transport"},
 	)
-	registerRunCheck(checkMCPConfig, AnalyzerMCP, AnalyzerSecurity)
+	s.addRunCheck(checkMCPConfig, AnalyzerMCP, AnalyzerSecurity)
 }
 
 // mcpServer is an MCP server definition read from any supported source.

@@ -25,9 +25,9 @@ const (
 	CodeOKFLossyMapping      = "AR9B9"
 )
 
-func init() {
+func registerOkf(s *ruleSet) {
 	for _, r := range okf.Rules() {
-		registerRules(RuleInfo{Code: r.Code, Name: r.Name, Default: Severity(r.Default), Describe: r.Describe})
+		s.addRules(RuleInfo{Code: r.Code, Name: r.Name, Default: Severity(r.Default), Describe: r.Describe})
 	}
 }
 

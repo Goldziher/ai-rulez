@@ -22,7 +22,7 @@ func TestEveryRuleHasDocs(t *testing.T) {
 		assert.NotEmpty(t, e.Anchor, r.Code)
 		assert.True(t, strings.HasSuffix(e.DocsURL, "#"+e.Anchor), r.Code)
 	}
-	for code := range ruleDocs {
+	for code := range ruleTables().docs {
 		_, ok := lookupRule(code)
 		assert.True(t, ok, "ruleDocs has an entry for unregistered code %s", code)
 	}

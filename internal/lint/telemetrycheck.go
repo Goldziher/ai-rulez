@@ -15,12 +15,12 @@ const (
 )
 
 // The telemetry checks register themselves so this file is the only place to touch.
-func init() {
-	registerRules(
+func registerTelemetrycheck(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeTelemetryConfigInvalid, "telemetry-config-invalid", SeverityError, "a [telemetry] setting is invalid: bad enum or range, unsupported protocol, non-https endpoint, or a literal credential in headers_env"},
 		RuleInfo{CodeTelemetryKeyIgnored, "telemetry-repo-key-ignored", SeverityWarning, "a repository [telemetry] sets a key only user scope may set (allow_network, otlp_endpoint, headers_env, ...); it is ignored"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeTelemetryConfigInvalid: {
 			Why:  "An out-of-range sample, an unsupported protocol, a non-https or credential-bearing endpoint, or a literal credential in headers_env makes export fail or leaks the credential into the repository.",
 			Bad:  "`otlp_endpoint = \"http://user:pw@collector.example.com\"`",

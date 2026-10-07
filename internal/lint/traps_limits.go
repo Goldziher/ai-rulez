@@ -28,14 +28,14 @@ const (
 	measureChainBytes          = "chain-bytes"
 )
 
-func init() {
-	registerRules(
+func registerTrapsLimits(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeHarnessTableStale, "harness-table-stale", SeverityWarning, "a row of the harness trap or limits table was last verified more than [lint.traps] max_table_age_days ago (off unless the setting is above 0)"},
 		RuleInfo{CodeClaudeKeySpelling, "claude-frontmatter-key-spelling", SeverityWarning, "a Claude Code skill or subagent file spells a frontmatter key in a variant (underscore for hyphen, wrong case) that Claude Code silently ignores"},
 		RuleInfo{CodeClaudeListingTruncated, "claude-listing-truncated", SeverityWarning, "a generated Claude Code skill has description plus when_to_use past the skill listing cap, so the rest is cut off"},
 		RuleInfo{CodeHarnessLimitExceeded, "harness-limit-exceeded", SeverityWarning, "a generated instruction file or chain is past the documented size limit of its harness (Codex AGENTS.md chain, Devin and Antigravity rule files, Kilo REVIEW.md), so the rest is not loaded"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeHarnessTableStale: {
 			Why:  "The vendor limits and trap rows are checked by hand against the vendor pages; an old date means the rule may describe a harness that has changed.",
 			Bad:  "`[lint.traps] max_table_age_days = 90` with a row verified 200 days ago",

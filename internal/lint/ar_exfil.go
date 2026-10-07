@@ -18,9 +18,9 @@ const (
 	CodeEscapeObfuscated = "AR023"
 )
 
-func init() {
+func registerArExfil(s *ruleSet) {
 	MarkExampleAware(CodeEscapeObfuscated, CodeInsecureHTTP, CodeRawIPURL)
-	registerRules(
+	s.addRules(
 		RuleInfo{CodeExfilCommand, "exfil-command", SeverityError, "a network command sends a secret environment variable, the environment or a credential file off the machine (curl/wget/nc with $TOKEN, DNS exfiltration)"},
 		RuleInfo{CodeImageExfil, "markdown-image-exfil", SeverityWarning, "a markdown image URL carries a query string; rendering it in an agent UI sends the query to the host"},
 		RuleInfo{CodeEscapeObfuscated, "escape-sequence-obfuscation", SeverityInfo, "four or more consecutive \\xNN or \\uNNNN escapes hide a string from a reviewer"},
@@ -28,13 +28,13 @@ func init() {
 		RuleInfo{CodeRawIPURL, "raw-ip-url", SeverityInfo, "a URL points at a public IPv4 address instead of a host name"},
 		RuleInfo{CodeDataURILink, "data-uri-link", SeverityWarning, "a markdown link or image target starts with data: or javascript:"},
 	)
-	registerTextScan(scanExfilCommands, AnalyzerSecurity)
-	registerTextScan(scanImageExfil, AnalyzerSecurity)
-	registerTextScan(scanDataURIs, AnalyzerSecurity)
-	registerTextScan(scanRawIPs, AnalyzerSecurity)
-	registerTextScan(scanInsecureHTTP, AnalyzerSecurity)
-	registerTextScan(scanEscapes, AnalyzerSecurity)
-	registerRunCheck(checkInsecureConfig, AnalyzerSecurity)
+	s.addTextScan(scanExfilCommands, AnalyzerSecurity)
+	s.addTextScan(scanImageExfil, AnalyzerSecurity)
+	s.addTextScan(scanDataURIs, AnalyzerSecurity)
+	s.addTextScan(scanRawIPs, AnalyzerSecurity)
+	s.addTextScan(scanInsecureHTTP, AnalyzerSecurity)
+	s.addTextScan(scanEscapes, AnalyzerSecurity)
+	s.addRunCheck(checkInsecureConfig, AnalyzerSecurity)
 }
 
 // logicalLines returns the lines of t with shell continuation lines joined into

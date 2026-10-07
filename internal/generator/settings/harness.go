@@ -160,6 +160,9 @@ var (
 			eventSubagentStart: "subagentStart", eventSubagentStop: "subagentStop",
 			eventPreCompact: "preCompact", eventStop: "stop", eventUserPromptSubmit: "beforeSubmitPrompt",
 		},
+		// Cursor runs project hooks from the project root.
+		scriptCwd: true,
+		required:  []requiredKey{{path: []string{keyVersion}, value: cursorHooksVersion}},
 	}
 	copilotSpec = hookSpec{
 		name: config.HarnessCopilot,
@@ -191,12 +194,6 @@ type requiredKey struct {
 	userOnly bool
 }
 
-func init() {
-	// Cursor runs project hooks from the project root.
-	cursorSpec.scriptCwd = true
-	cursorSpec.required = []requiredKey{{path: []string{keyVersion}, value: cursorHooksVersion}}
-}
-
 func identityEvents(names []string) map[string]string {
 	m := make(map[string]string, len(names))
 	for _, n := range names {
@@ -220,7 +217,7 @@ func specFor(harness string) (hookSpec, bool) {
 	case config.HarnessCopilotCLI:
 		return copilotCLISpec, true
 	}
-	spec, ok := dialectSpecs[harness]
+	spec, ok := dialectSpecs()[harness]
 	return spec, ok
 }
 

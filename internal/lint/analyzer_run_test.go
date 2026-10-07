@@ -155,8 +155,8 @@ func sortedEntries(in []BaselineEntry) []BaselineEntry {
 }
 
 func TestRegisteredHooksMustDeclareAnalyzers(t *testing.T) {
-	assert.Panics(t, func() { registerRunCheck(func(*runner) {}) })
-	for _, c := range runChecks {
+	assert.Panics(t, func() { (&ruleSet{}).addRunCheck(func(*runner) {}) })
+	for _, c := range ruleTables().runChecks {
 		assert.NotEmpty(t, c.unit.analyzers, c.unit.name)
 	}
 }

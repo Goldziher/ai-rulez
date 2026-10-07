@@ -29,13 +29,13 @@ const (
 	keyAllowImplicit          = "allow_implicit_invocation"
 )
 
-func init() {
-	registerRules(
+func registerArActivationCases(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeActivationPolicyConflict, "activation-policy-conflict", SeverityWarning, "an eval case contradicts the skill's invocation policy: it expects a trigger although the frontmatter stops the model from invoking the skill, or expects none for a skill only ever started explicitly (disable-model-invocation: true or allow_implicit_invocation: false)"},
 		RuleInfo{CodeActivationPromptNames, "activation-prompt-names-skill", SeverityOff, "a positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill (off by default; enable it in [lint.severity])"},
 		RuleInfo{CodeEvalImportUnmapped, "eval-import-unmapped", SeverityInfo, "fields of an imported eval scenario that have no counterpart in the case format (reported by `ai-rulez eval import`, never by `validate`)"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeActivationPolicyConflict: {
 			Why:  "A case that expects a trigger for a skill the model is not allowed to start can never pass, so the eval measures nothing and fails for a reason no edit to the description fixes. A case that expects no trigger for such a skill can never fail, so it pads the pass rate.",
 			Bad:  "A case with `expect_trigger: true`, or `false`, for a skill with `disable-model-invocation: true`",
@@ -55,7 +55,7 @@ func init() {
 	SetAnalyzer(CodeActivationPolicyConflict, AnalyzerEvals, ScopeItem)
 	SetAnalyzer(CodeActivationPromptNames, AnalyzerEvals, ScopeItem)
 	SetAnalyzer(CodeEvalImportUnmapped, AnalyzerEvals, ScopeItem)
-	registerItemCheck(checkActivationCases, AnalyzerEvals)
+	s.addItemCheck(checkActivationCases, AnalyzerEvals)
 }
 
 // checkActivationCases reads the skill's authored eval cases against its

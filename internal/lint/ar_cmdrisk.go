@@ -14,16 +14,16 @@ const (
 	unpinnedStartWordsPat = `^(?:sudo\s+)?(?:npx|bunx|pnpx|uvx|pipx|pip3?|go|pnpm|npm|yarn|bun|uv|python3?)\b`
 )
 
-func init() {
+func registerArCmdrisk(s *ruleSet) {
 	MarkExampleAware(CodeUnpinnedExec, CodeDestructive)
-	registerRules(
+	s.addRules(
 		RuleInfo{CodeUnpinnedExec, "unpinned-package-exec", SeverityWarning, "a command runs a package it does not pin: npx -y pkg, uvx pkg, pipx run pkg, pip install from a URL or an unpinned git requirement, go run pkg@latest"},
 		RuleInfo{CodeDestructive, "destructive-command", SeverityWarning, "a command wipes the root, home or working tree (rm -rf /, ~, $HOME/*, *), overwrites a disk (dd of=/dev/sdX, mkfs), force-pushes main, drops a database or forks a bomb"},
 		RuleInfo{CodeStealthCommand, "stealth-command", SeverityError, "a command erases shell history or evidence (history -c, unset HISTFILE, HISTFILE=/dev/null, shred, chattr +i): no legitimate skill does this"},
 	)
-	registerTextScan(scanUnpinnedExec, AnalyzerSecurity)
-	registerTextScan(scanDestructive, AnalyzerSecurity)
-	registerTextScan(scanStealth, AnalyzerSecurity)
+	s.addTextScan(scanUnpinnedExec, AnalyzerSecurity)
+	s.addTextScan(scanDestructive, AnalyzerSecurity)
+	s.addTextScan(scanStealth, AnalyzerSecurity)
 }
 
 var unpinnedStartRe = regexp.MustCompile(unpinnedStartWordsPat)
