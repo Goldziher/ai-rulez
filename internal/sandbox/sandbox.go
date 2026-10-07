@@ -229,8 +229,12 @@ func (s *Sandbox) Wrap(spec Spec, argv []string) (Wrapped, error) {
 }
 
 // launchServices are the Mach services through which a confined process can
-// make a daemon outside the sandbox start or script an application.
+// make a daemon outside the sandbox start or script an application, or write a
+// file for it: cfprefsd writes ~/Library/Preferences/<domain>.plist on behalf
+// of `defaults write <domain>`, past the file-write denial. The confined tools
+// do not need to persist preferences.
 var launchServices = []string{
+	`(global-name-prefix "com.apple.cfprefsd.")`,
 	`(global-name "com.apple.coreservices.launchservicesd")`,
 	`(global-name "com.apple.coreservices.appleevents")`,
 	`(global-name-prefix "com.apple.lsd.")`,
