@@ -182,6 +182,19 @@ func TestFailOnPrecedenceWithProfile(t *testing.T) {
 	assert.Equal(t, "error", failOnFor(strictCfg), "--fail-on beats both")
 }
 
+func TestLintProfileFlagBeatsConfigFailOn(t *testing.T) {
+	resetStrictFlags(t)
+	cfg := &config.Config{Lint: &config.LintConfig{FailOn: "warning"}}
+	assert.Equal(t, "warning", failOnFor(cfg))
+	validateLintProfile = "permissive"
+	assert.Equal(t, "error", failOnFor(cfg), "--lint-profile beats [lint] fail_on")
+	validateLintProfile = "default"
+	assert.Equal(t, "error", failOnFor(cfg), "the default profile fails on errors")
+	validateLintProfile = "strict"
+	validateFailOn = "none"
+	assert.Equal(t, "none", failOnFor(cfg), "--fail-on still beats --lint-profile")
+}
+
 func TestLintProfileFlagValidation(t *testing.T) {
 	resetStrictFlags(t)
 	validateLintProfile = "paranoid"
