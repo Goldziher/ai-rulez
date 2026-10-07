@@ -425,7 +425,8 @@ func chromeProbe(bin string) error {
 }
 
 // requireBrowserEnv, when set (the CI jobs that install Chrome), turns a browser
-// that is missing or does not start into a failure instead of a skip.
+// that is missing or does not start into a failure instead of a skip; macOS is
+// exempt for a Chrome that is installed but cannot start headless.
 const requireBrowserEnv = "AI_RULEZ_REQUIRE_BROWSER"
 
 // requireBrowser returns the Chrome to use or skips the test.
@@ -443,6 +444,11 @@ func requireBrowser(t *testing.T) string {
 		skip("no Chrome or Chromium found (set %s to the executable)", browserEnv)
 	}
 	if err := chromeProbe(bin); err != nil {
+		if runtime.GOOS == "darwin" {
+			// Hosted macOS runners have no display: headless Chrome hangs on
+			// CVDisplayLinkCreateWithCGDisplay, so it cannot be required there.
+			t.Skipf("%s cannot run headless on this macOS machine (no usable display): %v", bin, err)
+		}
 		skip("%s is installed but does not start on this machine: %v", bin, err)
 	}
 	return bin
