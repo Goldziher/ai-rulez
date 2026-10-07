@@ -2,6 +2,7 @@ package commands
 
 import (
 	"strconv"
+	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -82,18 +83,50 @@ func narrowToChanged(reports []*lint.Report, cfgs []*config.Config) error {
 		if cfg == nil {
 			continue
 		}
-		top := gitutil.TopLevel(cfg.BaseDir)
-		changed, ok := cache[top]
+		// Finding paths are relative to the lint tree (which --repo-root may
+		// narrow below the git toplevel), so the change set is rebased onto it.
+		tree, err := strictTreeCache.Load(cfg.BaseDir)
+		if err != nil {
+			return oops.Wrapf(err, "index repository files")
+		}
+		changed, ok := cache[tree.Top]
 		if !ok {
-			var changedErr error
-			changed, changedErr = gitutil.ChangedSince(cfg.BaseDir, rev)
-			if changedErr != nil {
-				return oops.Wrap(changedErr)
+			changed, err = changedInTree(tree.Top, rev)
+			if err != nil {
+				return err
 			}
-			cache[top] = changed
+			cache[tree.Top] = changed
 		}
 		scope := lint.NarrowToChangedWith(r, changed, rev, lint.NarrowOptions{Depth: depth, MaxFiles: validateSinceMax})
 		r.Scope = &scope
 	}
 	return nil
+}
+
+// changedInTree lists the files changed since rev as paths relative to treeTop.
+// git reports them relative to its toplevel, which is an ancestor of treeTop
+// when --repo-root narrows the tree; paths outside treeTop are dropped. A
+// treeTop outside any git repository cannot be mapped and is an error, so the
+// gate never passes vacuously.
+func changedInTree(treeTop, rev string) ([]string, error) {
+	changed, err := gitutil.ChangedSince(treeTop, rev)
+	if err != nil {
+		return nil, oops.Wrap(err)
+	}
+	gitTop := gitutil.Resolve(gitutil.TopLevel(treeTop))
+	prefix, err := filepath.Rel(gitTop, gitutil.Resolve(treeTop))
+	if err != nil || prefix == ".." || strings.HasPrefix(prefix, ".."+string(filepath.Separator)) {
+		return nil, oops.Errorf("cannot map the files changed since %s onto %s: it is outside the git repository %s", rev, treeTop, gitTop)
+	}
+	if prefix == "." {
+		return changed, nil
+	}
+	prefix = filepath.ToSlash(prefix) + "/"
+	out := make([]string, 0, len(changed))
+	for _, c := range changed {
+		if rest, found := strings.CutPrefix(filepath.ToSlash(c), prefix); found {
+			out = append(out, rest)
+		}
+	}
+	return out, nil
 }
