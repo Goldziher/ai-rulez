@@ -207,7 +207,8 @@ func TestSignedPolicyConfigFromTheEnvironmentAndUserConfig(t *testing.T) {
 		assert.NotEmpty(t, layers[0].Signer)
 	})
 	t.Run("signers and the requirement from the user config", func(t *testing.T) {
-		cfg := "[policy]\nrequire_signature = true\n[[policy.signers]]\nkey_file = " + `"` + key.pubPath + `"` + "\n"
+		// A literal string: a Windows path's backslashes are not TOML escapes.
+		cfg := "[policy]\nrequire_signature = true\n[[policy.signers]]\nkey_file = '" + key.pubPath + "'\n"
 		o := signedOpts(t, signed, nil)
 		o.Env = userEnv(t, cfg)
 		layers, err := Discover(o)
