@@ -34,11 +34,23 @@ func scanUnpinnedExec(r *runner, t *scanText) {
 			continue
 		}
 		for _, seg := range t.commandSegments(l, unpinnedStartRe) {
-			if pkg, why := pinProblem(shellWords(seg), true, false); pkg != "" && (t.shellLike(l) || !proseWords[strings.ToLower(pkg)]) {
+			pkg, why := pinProblem(shellWords(seg), true, false)
+			if pkg != "" && !t.shellLike(l) && r.ownPackageMention(pkg, why) {
+				continue // prose naming the project's own published tool
+			}
+			if pkg != "" && (t.shellLike(l) || !proseWords[strings.ToLower(pkg)]) {
 				r.add(CodeUnpinnedExec, t.abs, l.No, "runs %q without pinning it (%s); pin a version so a new release cannot change what runs", pkg, why)
 			}
 		}
 	}
+}
+
+// ownPackageMention reports whether pkg is the project's own package, named in
+// prose without any pin ("Also usable via `uvx gitfluff`"): a description of a
+// channel the project publishes to, not a third-party command to pin. A moving
+// tag (@latest) is still reported.
+func (r *runner) ownPackageMention(pkg, why string) bool {
+	return r.cfg != nil && r.cfg.Name != "" && strings.EqualFold(pkg, r.cfg.Name) && why == "no version is pinned"
 }
 
 var (
