@@ -161,7 +161,7 @@ func loadScenario(dir, origin string, limits Limits) (Scenario, error) {
 }
 
 // readRegular reads a regular file (not a symlink, not a device) of at most max bytes.
-func readRegular(path string, max int64) ([]byte, error) {
+func readRegular(path string, limit int64) ([]byte, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // the message names the path
@@ -169,20 +169,20 @@ func readRegular(path string, max int64) ([]byte, error) {
 	if !info.Mode().IsRegular() {
 		return nil, fmt.Errorf("%s is not a regular file (symlinks are refused)", filepath.Base(path))
 	}
-	if info.Size() > max {
-		return nil, fmt.Errorf("%s is %d bytes; the limit is %d", filepath.Base(path), info.Size(), max)
+	if info.Size() > limit {
+		return nil, fmt.Errorf("%s is %d bytes; the limit is %d", filepath.Base(path), info.Size(), limit)
 	}
 	f, err := os.Open(path) //nolint:gosec // a path the caller named, checked above
 	if err != nil {
 		return nil, err //nolint:wrapcheck // the message names the path
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	data, err := io.ReadAll(io.LimitReader(f, max+1))
+	data, err := io.ReadAll(io.LimitReader(f, limit+1))
 	if err != nil {
 		return nil, err //nolint:wrapcheck // the message names the path
 	}
-	if int64(len(data)) > max {
-		return nil, fmt.Errorf("%s is larger than %d bytes", filepath.Base(path), max)
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("%s is larger than %d bytes", filepath.Base(path), limit)
 	}
 	return data, nil
 }
@@ -235,9 +235,18 @@ type consumed map[string]bool
 
 func (c consumed) mark(path string) { c[path] = true }
 
+// typed returns v as T, or T's zero value when v holds another type.
+func typed[T any](v any) T {
+	if t, ok := v.(T); ok {
+		return t
+	}
+	var zero T
+	return zero
+}
+
 // Map implements Source.
 func (t Tessl) Map(sc *Scenario, opts MapOptions) (*Mapped, error) {
-	doc, _ := sc.Raw.(map[string]any)
+	doc := typed[map[string]any](sc.Raw)
 	used := consumed{}
 	m := &Mapped{Report: Report{Source: sc.Origin, SourceSHA256: sc.SHA256}}
 	rep := &m.Report
@@ -389,11 +398,11 @@ func readCriterion(entry any, path string, used consumed) (criterion, error) {
 	case map[string]any:
 		used.mark(path)
 		if k, v := firstKey(t, critNameKeys); k != "" {
-			c.name, _ = v.(string)
+			c.name = typed[string](v)
 			used.mark(path + "." + k)
 		}
 		if k, v := firstKey(t, critTextKeys); k != "" {
-			c.text, _ = v.(string)
+			c.text = typed[string](v)
 			used.mark(path + "." + k)
 		}
 		if k, v := firstKey(t, critWeightKey); k != "" {
@@ -484,7 +493,7 @@ func parseThreshold(raw any) (value float64, unit string, err error) {
 	return percentToFraction(v)
 }
 
-func percentToFraction(v float64) (float64, string, error) {
+func percentToFraction(v float64) (fraction float64, unit string, err error) {
 	if v > 100 {
 		return 0, "", fmt.Errorf("%v is above 100", v)
 	}
@@ -528,9 +537,9 @@ func mapFixtures(m *Mapped, sc *Scenario, doc map[string]any, used consumed) err
 			if !ok {
 				return fmt.Errorf("$.%s[%d] must be an object with a path", key, i)
 			}
-			p, _ := obj["path"].(string)
-			content, _ := obj["content"].(string)
-			source, _ := obj["source"].(string)
+			p := typed[string](obj["path"])
+			content := typed[string](obj["content"])
+			source := typed[string](obj["source"])
 			if content != "" && source != "" {
 				return fmt.Errorf("$.%s[%d] has both content and source", key, i)
 			}
@@ -594,7 +603,7 @@ func mapActivation(m *Mapped, doc map[string]any, used consumed) {
 	if nk == "" {
 		return
 	}
-	list, _ := nraw.([]any)
+	list := typed[[]any](nraw)
 	used.mark(fmt.Sprintf("$.%s.%s", key, nk))
 	for _, e := range list {
 		if s, ok := e.(string); ok && strings.TrimSpace(s) != "" {
@@ -723,7 +732,7 @@ func Slug(name string) string {
 }
 
 // firstKey returns the first of keys present in obj.
-func firstKey(obj map[string]any, keys []string) (string, any) {
+func firstKey(obj map[string]any, keys []string) (key string, value any) {
 	for _, k := range keys {
 		if v, ok := obj[k]; ok {
 			return k, v

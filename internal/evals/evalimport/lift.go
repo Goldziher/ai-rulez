@@ -42,11 +42,11 @@ func liftAssertions(criteria []criterion) []lifted {
 }
 
 func liftOne(text string) (evals.Assertion, bool) {
-	if m := liftFileAbsent.FindStringSubmatch(text); m != nil && evals.CheckRelPath(m[1]) == "" {
+	if m := liftFileAbsent.FindStringSubmatch(text); len(m) > 1 && evals.CheckRelPath(m[1]) == "" {
 		no := false
 		return evals.Assertion{Type: evals.AssertFileExists, Path: m[1], Exists: &no}, true
 	}
-	if m := liftFileExists.FindStringSubmatch(text); m != nil && evals.CheckRelPath(m[1]) == "" {
+	if m := liftFileExists.FindStringSubmatch(text); len(m) > 1 && evals.CheckRelPath(m[1]) == "" {
 		return evals.Assertion{Type: evals.AssertFileExists, Path: m[1]}, true
 	}
 	if m := liftNotContains.FindStringSubmatch(text); m != nil {
@@ -60,8 +60,7 @@ func liftOne(text string) (evals.Assertion, bool) {
 
 // describeAssertion renders an assertion for the report.
 func describeAssertion(a evals.Assertion) string {
-	switch a.Type {
-	case evals.AssertFileExists:
+	if a.Type == evals.AssertFileExists {
 		if a.Exists != nil && !*a.Exists {
 			return fmt.Sprintf("file_exists %q (absent)", a.Path)
 		}
