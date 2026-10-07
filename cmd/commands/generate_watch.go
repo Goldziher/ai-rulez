@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -52,13 +53,16 @@ func runGenerateWatch(parent context.Context, args []string) error {
 	ctx, stop := interruptContext(parent)
 	defer stop()
 
+	// Every cycle reloads the project: one collector for the whole watch says a
+	// warning about the project once, not on every change.
+	collector := diag.New(nil)
 	var last *config.Config // the most recent successfully loaded configuration
 	outputs := newGeneratedOutputFilter(initialConfigDir(args))
 	run := func(ctx context.Context, triggers []string) error {
 		if changed := changedPaths(triggers); len(changed) > 0 {
 			logger.Info("Change detected, regenerating", "changed", describeTriggers(changed))
 		}
-		cfg, err := generateOnce(ctx, args)
+		cfg, err := generateOnce(ctx, args, config.WithCollector(collector))
 		if cfg != nil {
 			last = cfg
 			outputs.refresh(cfg)
@@ -169,8 +173,8 @@ func initialConfigDir(args []string) string {
 // generateOnce is the single-root path of `generate`, returning errors rather
 // than exiting. The configuration is returned (when it loaded) so the caller
 // can derive what to watch.
-func generateOnce(ctx context.Context, args []string) (*config.Config, error) {
-	cfg, err := loadConfigForCommand(ctx, args)
+func generateOnce(ctx context.Context, args []string, loadOpts ...config.LoadOption) (*config.Config, error) {
+	cfg, err := loadConfigForCommand(ctx, args, loadOpts...)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
@@ -23,6 +24,7 @@ type loadOptions struct {
 	registry      *Registry
 	policy        PolicyEnforcer
 	policyDir     string
+	collector     *diag.Collector
 }
 
 // LoadOption customizes how a configuration is loaded.
@@ -48,6 +50,15 @@ func WithoutRemote() LoadOption {
 // a snapshot of an earlier revision extracted to a temporary directory.
 func WithPolicyDir(dir string) LoadOption {
 	return func(o *loadOptions) { o.policyDir = dir }
+}
+
+// WithCollector makes the load keep its warning state in c instead of a fresh
+// collector, and say each warning once for the life of c. A caller that loads the
+// same project over and over (a watch loop, a live reload) passes one collector
+// that outlives the loads, so a warning about the project is not repeated on every
+// cycle. Loads that must not share state keep their own collector (the default).
+func WithCollector(c *diag.Collector) LoadOption {
+	return func(o *loadOptions) { o.collector = c }
 }
 
 // WithIncludeMemo makes the loaded config share an include fetch cache created
@@ -124,6 +135,9 @@ func applyLoadOptions(opts []LoadOption) loadOptions {
 		if opt != nil {
 			opt(&lo)
 		}
+	}
+	if lo.collector != nil {
+		lo.host.Log = diag.OnceLogger(lo.collector, lo.host.Log)
 	}
 	return lo
 }
