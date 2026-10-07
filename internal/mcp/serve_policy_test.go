@@ -20,12 +20,10 @@ func (loosening) Locks(string) bool { return false }
 
 func TestServeSetup_RefusesAConfigurationThatLoosensThePolicy(t *testing.T) {
 	// Arrange
-	config.SetPolicyEnforcer(loosening{})
-	t.Cleanup(func() { config.SetPolicyEnforcer(nil) })
 	setup := &ServeSetup{WorkDir: project(t, baseConfig, nil), NoWatch: true, CacheDir: filepath.Join(t.TempDir(), "cache")}
 
 	// Act
-	_, err := setup.NewServer(context.Background())
+	_, err := setup.NewServer(config.WithPolicyContext(context.Background(), loosening{}))
 
 	// Assert
 	require.Error(t, err)

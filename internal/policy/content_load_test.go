@@ -26,11 +26,10 @@ func TestLoadBoundsTheHooksAnIncludeDelivers(t *testing.T) {
 	write("shared/.ai-rulez/agents/shared.md", "---\nname: shared\ndescription: shared agent\n"+hookFrontmatter+"---\nBody.\n")
 	policyFile := filepath.Join(t.TempDir(), "policy.toml")
 	require.NoError(t, os.WriteFile(policyFile, []byte("policy_version = 1\n[hooks]\nallow = false\n"), 0o644))
-	config.SetPolicyEnforcer(NewEnforcer(func() DiscoverOptions { return DiscoverOptions{Flag: policyFile, Env: ambient.MapEnv{}} }))
-	t.Cleanup(func() { config.SetPolicyEnforcer(nil) })
+	enforcer := NewEnforcer(func() DiscoverOptions { return DiscoverOptions{Flag: policyFile, Env: ambient.MapEnv{}} })
 
 	// Act
-	cfg, err := config.LoadConfig(context.Background(), root, config.WithResolvers(includes.Resolvers("")))
+	cfg, err := config.LoadConfig(context.Background(), root, config.WithResolvers(includes.Resolvers("")), config.WithPolicy(enforcer))
 
 	// Assert
 	require.NoError(t, err)

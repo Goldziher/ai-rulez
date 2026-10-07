@@ -186,6 +186,9 @@ type Config struct {
 	// or the repository containing BaseDir); nil on a Config built by hand.
 	Workspace workspace.Workspace `yaml:"-" json:"-" toml:"-"`
 
+	// enforcer is the organization policy this configuration was loaded under.
+	enforcer PolicyEnforcer
+
 	// deprecatedLintBudgetPath is the config file that still uses [lint.budget];
 	// finishLoadConfig warns about it once, through this config's host.
 	deprecatedLintBudgetPath string

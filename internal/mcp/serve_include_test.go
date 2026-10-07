@@ -1,10 +1,11 @@
 package mcp
 
 import (
-	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -94,7 +94,7 @@ func (js *judgeSetup) ready(cfg *config.Config) error {
 	switch {
 	case lc.FullModel() == "":
 		return oops.Hint("set [llm] model in config.toml, or pass --model").Errorf("no model configured for the judge")
-	case config.PolicyLocksIn("llm", cfg.BaseDir):
+	case config.PolicyLocksIn(activePolicy, "llm", cfg.BaseDir):
 		return oops.Errorf("the organization policy forbids model calls ([llm] allow_network = false): a judged review is refused")
 	case !lc.AllowNetwork:
 		return oops.Hint("--semantic and allow_network are both required").Errorf("%s", llm.NetworkDisabledMessage)

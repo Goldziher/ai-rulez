@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -33,7 +34,7 @@ that mode, so it is safe to hand to an unattended agent.`,
 }
 
 func runMCPServer(cmd *cobra.Command, args []string) {
-	ctx := context.Background()
+	ctx := config.WithPolicyContext(context.Background(), activePolicy)
 	serveOnly := append([]string{"profile", "targets", flagServeDomain, "allow", "deny"}, dynamicServeFlagNames...)
 	if serve, _ := cmd.Flags().GetBool("serve-skills"); !serve {
 		for _, name := range serveOnly {

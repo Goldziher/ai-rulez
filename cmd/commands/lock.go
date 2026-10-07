@@ -16,7 +16,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 var (
@@ -190,7 +189,7 @@ func runLockFor(kind string, names []string) int {
 
 func loadForLock(path string, opts ...config.LoadOption) (*config.Config, error) {
 	if path != "" {
-		return project.LoadFile(context.Background(), path, opts...)
+		return loadProjectFile(context.Background(), path, opts...)
 	}
 	return loadConfigForCommand(context.Background(), nil, opts...)
 }

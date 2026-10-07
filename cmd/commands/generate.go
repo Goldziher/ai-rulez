@@ -21,7 +21,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
-	"github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 )
 
@@ -277,15 +276,15 @@ func loadConfigForCommand(ctx context.Context, args []string, opts ...config.Loa
 		opts = append(opts, config.WithoutLocal())
 	}
 	if len(args) > 0 {
-		return project.LoadFile(ctx, args[0], opts...)
+		return loadProjectFile(ctx, args[0], opts...)
 	}
 	if cfgFile != "" {
-		return project.LoadFile(ctx, cfgFile, opts...)
+		return loadProjectFile(ctx, cfgFile, opts...)
 	}
 	if configDir != "" {
-		return project.LoadDir(ctx, ".", configDir, opts...)
+		return loadProjectDir(ctx, ".", configDir, opts...)
 	}
-	return project.Load(ctx, ".", opts...)
+	return loadProject(ctx, ".", opts...)
 }
 
 // pluginLoadOptions returns the load options for plugin bundle work. Plugin
@@ -591,7 +590,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	fileCounter.StartFile(configPath)
 
 	ctx := context.Background()
-	cfg, err := project.LoadFile(ctx, configPath, pluginLoadOptions(pluginMode)...)
+	cfg, err := loadProjectFile(ctx, configPath, pluginLoadOptions(pluginMode)...)
 	if err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err

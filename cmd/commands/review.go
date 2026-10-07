@@ -417,7 +417,7 @@ func planWith(rc *reviewContext, res *rv.Results, lc llm.Config, resolved config
 	}
 	return rv.Plan(rv.EstimateInput{
 		Rubric: rc.rb, Results: res, Content: rc.content(), Model: model, Host: hostOf(lc, rc.cfg.ConfigDir),
-		NetworkAllowed: lc.AllowNetwork, IgnoredLLMKeys: resolved.Ignored, PolicyForbidsLLM: config.PolicyLocksIn("llm", rc.cfg.BaseDir),
+		NetworkAllowed: lc.AllowNetwork, IgnoredLLMKeys: resolved.Ignored, PolicyForbidsLLM: config.PolicyLocksIn(activePolicy, "llm", rc.cfg.BaseDir),
 		Prices: prices, MaxCostUSD: maxCost, MaxCalls: maxCalls, ShowPrompt: showPrompt,
 	})
 }

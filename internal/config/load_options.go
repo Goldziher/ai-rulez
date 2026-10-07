@@ -21,6 +21,7 @@ type loadOptions struct {
 	ws            workspace.Workspace
 	resolvers     Resolvers
 	registry      *Registry
+	policy        PolicyEnforcer
 }
 
 // LoadOption customizes how a configuration is loaded.
