@@ -335,7 +335,9 @@ func (r *Ranker) cached(q string) []float32 {
 	defer r.mu.Unlock()
 	if e, ok := r.cache[q]; ok {
 		r.lru.MoveToFront(e)
-		return e.Value.(*cachedQuery).vec
+		if cq, ok := e.Value.(*cachedQuery); ok {
+			return cq.vec
+		}
 	}
 	return nil
 }
@@ -351,7 +353,9 @@ func (r *Ranker) store(q string, v []float32) {
 	for r.lru.Len() > queryCacheSize {
 		old := r.lru.Back()
 		r.lru.Remove(old)
-		delete(r.cache, old.Value.(*cachedQuery).query)
+		if cq, ok := old.Value.(*cachedQuery); ok {
+			delete(r.cache, cq.query)
+		}
 	}
 }
 
@@ -489,6 +493,6 @@ func pins(q, id string, multiWord bool) bool {
 
 func idTokens(s string) []string {
 	return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {
-		return !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r > 127)
+		return (r < 'a' || r > 'z') && (r < '0' || r > '9') && r <= 127
 	})
 }
