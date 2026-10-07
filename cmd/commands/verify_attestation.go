@@ -29,7 +29,7 @@ var (
 	verifyIssuer          string
 	verifyNoState         bool
 	verifyFormat          string
-	verifyAttestationOnly = []string{"lock", "attestation-file", "trusted-root", "public-key", "identity", "issuer", "no-state", "source", "require-provenance"}
+	verifyAttestationOnly = []string{"lock", "attestation-file", "trusted-root", "public-key", "identity", "issuer", "no-state", keySource, "require-provenance"}
 )
 
 // attestationReportVersion versions the JSON of `verify --attestation --format json`.

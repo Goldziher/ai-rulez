@@ -23,7 +23,7 @@ func checkVerifySelfFlags(cmd *cobra.Command) error {
 	if verifyApprovals || verifyArtifactMode() || verifyPlugin || verifyIfConfigured || verifyIfGenerated || verifyRecursive {
 		return oops.Errorf("--self cannot be combined with --approvals, --bundle, --skill, --sbom, --plugin, --if-configured, --if-generated or --recursive")
 	}
-	for _, name := range []string{"lock", "no-state", "source", "require-provenance"} {
+	for _, name := range []string{"lock", "no-state", keySource, "require-provenance"} {
 		if cmd.Flags().Changed(name) {
 			return oops.Errorf("--%s does not apply to --self", name)
 		}

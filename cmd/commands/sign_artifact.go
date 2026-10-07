@@ -134,7 +134,7 @@ func provenanceBuilder(env ambient.Env) string {
 	if wf := ambient.Getenv(env, "GITHUB_WORKFLOW_REF"); wf != "" {
 		server := ambient.Getenv(env, "GITHUB_SERVER_URL")
 		if server == "" {
-			server = "https://github.com"
+			server = githubServerURL
 		}
 		return strings.TrimSuffix(server, "/") + "/" + wf
 	}
@@ -155,7 +155,7 @@ func provenanceInvocation(env ambient.Env) string {
 	}
 	server := ambient.Getenv(env, "GITHUB_SERVER_URL")
 	if server == "" {
-		server = "https://github.com"
+		server = githubServerURL
 	}
 	return strings.TrimSuffix(server, "/") + "/" + repo + "/actions/runs/" + run
 }
