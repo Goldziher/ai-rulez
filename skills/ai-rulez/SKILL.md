@@ -253,8 +253,8 @@ Configure in your AI tool's MCP settings to enable CRUD operations from within t
 
 MCP server env values can use `${VAR}` placeholders. `ai-rulez generate` resolves them from `--env`,
 process env, and dotenv files, then refuses to write secret-bearing generated MCP configs unless the
-target paths are gitignored.
+target paths are gitignored (`gitignore = true` or `generate --gitignore` adds them to the managed block).
 
 ## Plugins and Marketplaces
 
-V4 can package the same source (skills, commands, agents, MCP servers) as distributable plugin bundles and a marketplace index for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes via `ai-rulez generate --plugin`. Consumer `[[plugins]]`/`[[marketplaces]]` arrays declare plugins to install from a marketplace (rendered into `.claude/plugins.json` and `.codex/plugins.json`).
+ai-rulez can package the same source (skills, commands, agents, MCP servers) as distributable plugin bundles and a marketplace index for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes via `ai-rulez generate --plugin`. Consumer `[[plugins]]`/`[[marketplaces]]` arrays declare plugins to install from a marketplace (no output file is written for them: `generate` warns that `[[plugins]]` has no effect; enable plugins through `[claude.settings]` for Claude Code and `.codex/config.toml` for Codex).

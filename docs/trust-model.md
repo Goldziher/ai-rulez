@@ -74,7 +74,7 @@ timeout and an output cap, but a sink command is code you chose to run.
 
 - `ai-rulez doctor` and `llm doctor` list repository `[llm]` keys that were ignored and where the user file was read.
 - `telemetry doctor` lists ignored `[telemetry]` keys and every validation problem.
-- `AR9L1` and `AR9K0` report the same under `validate --strict`.
+- `AR9L1` and `AR9K0` report the same under `validate`.
 
 ## Checklist for a new privileged setting
 

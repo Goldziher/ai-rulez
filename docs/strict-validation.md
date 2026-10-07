@@ -1,20 +1,24 @@
 # Strict validation
 
-`ai-rulez validate` checks that configuration parses and matches the schema. `ai-rulez validate --strict` goes
-further and checks that the instruction content actually *works*: globs that select nothing, links and
-references that point nowhere, hooks that cannot run. Each problem is a finding with a stable code, a severity
-and a `file:line`.
+`ai-rulez validate` checks that configuration parses and matches the schema, and then checks that the instruction
+content actually *works*: globs that select nothing, links and references that point nowhere, hooks that cannot
+run. This content check (called strict validation in this page) is the default. Each problem is a finding with a
+stable code, a severity and a `file:line`.
 
 ```bash
-ai-rulez validate --strict                       # text report, exit 2 on errors
-ai-rulez validate --strict --format json         # machine-readable
-ai-rulez validate --strict --format sarif --output ai-rulez.sarif   # code scanning upload
-ai-rulez validate --strict --recursive           # every nested root
-ai-rulez validate --strict --fail-on warning     # warnings also fail
+ai-rulez validate                                # text report, exit 2 on errors
+ai-rulez validate --format json                  # machine-readable
+ai-rulez validate --format sarif --output ai-rulez.sarif   # code scanning upload
+ai-rulez validate --recursive                    # every nested root
+ai-rulez validate --fail-on warning              # warnings also fail
+ai-rulez validate --strict                       # same as --fail-on warning
+ai-rulez validate --config-only                  # configuration checks only, no content checks
 ```
 
-Strict mode runs after the normal validation passes, so a config that fails schema or structural validation
-still exits 1 and never reaches the content checks.
+The content checks run after the configuration validation passes, so a config that fails schema or structural
+validation still exits 1 and never reaches them. `--strict` means "warnings fail"; it cannot be combined with
+`--config-only` or another `--fail-on`. Earlier releases ran the content checks only with `--strict`; see
+[Migrating to v5](migration-v5.md).
 
 ## Exit codes
 
@@ -22,10 +26,10 @@ still exits 1 and never reaches the content checks.
 | --- | --- |
 | 0 | Configuration valid and no finding at or above the fail threshold |
 | 1 | Configuration invalid or could not be loaded (unchanged), or an invalid `[lint]` setting |
-| 2 | Strict findings at or above the threshold (`--fail-on`, else `[lint] fail_on`, else `error`) |
+| 2 | Findings at or above the threshold (`--fail-on`, else `[lint] fail_on`, else `error`) |
 
 `--fail-on` accepts `error`, `warning`, `info` or `none` (report, never fail). `--format`, `--output` and `--fail-on`
-require `--strict`. With any structured `--format` (everything but `text`) nothing but the report is written to
+apply to the content checks, so they cannot be combined with `--config-only`. With any structured `--format` (everything but `text`) nothing but the report is written to
 stdout.
 
 ## What is checked against what
@@ -402,9 +406,9 @@ See `legacy/old-tool/README.md` and the `retired-helper` skill.
 ## Automatic fixes
 
 ```bash
-ai-rulez validate --strict --fix --dry-run      # show a unified diff, change nothing
-ai-rulez validate --strict --fix                # apply the safe fixes
-ai-rulez validate --strict --fix-unsafe         # also apply fixes that can change meaning
+ai-rulez validate --fix --dry-run      # show a unified diff, change nothing
+ai-rulez validate --fix                # apply the safe fixes
+ai-rulez validate --fix-unsafe         # also apply fixes that can change meaning
 ```
 
 A finding may carry a mechanical fix. Only deterministic, local corrections exist:
@@ -444,10 +448,10 @@ records the findings you accept today, so only *new* findings fail the build, an
 findings of one rule are tolerated. (Do not confuse it with `[lint.budgets.<kind>]`, the size budgets of a content kind.)
 
 ```bash
-ai-rulez validate --strict --update-baseline --baseline-reason "legacy, tracked in TEAM-123"
+ai-rulez validate --update-baseline --baseline-reason "legacy, tracked in TEAM-123"
 git add .ai-rulez/lint-baseline.json
-ai-rulez validate --strict            # exit 2 only for findings not in the baseline
-ai-rulez validate --strict --strict-baseline   # ratchet: stale entries fail too
+ai-rulez validate            # exit 2 only for findings not in the baseline
+ai-rulez validate --strict-baseline   # stale entries fail too
 ```
 
 `.ai-rulez/lint-baseline.json` (next to `config.toml`; `--baseline <file>` names another, which must exist) holds
@@ -605,8 +609,8 @@ info = 0
 ## Changed-only mode
 
 ```bash
-ai-rulez validate --strict --since origin/main    # files changed since a revision
-ai-rulez validate --strict --changed              # shorthand for --since HEAD
+ai-rulez validate --since origin/main    # files changed since a revision
+ai-rulez validate --changed              # shorthand for --since HEAD
 ```
 
 The whole tree is still indexed and linted, so a link, a skill name or a hook path is resolved against everything
@@ -644,14 +648,14 @@ hook's repository instead of the project.
 
 `AR001` to `AR011` are deterministic and offline: they read text and report patterns, they never fetch or run
 anything. `ai-rulez scan` runs only this family (same `--format`, `--fail-on`, `--recursive`, exit codes);
-`validate --strict` runs it together with everything else.
+`validate` runs it together with everything else.
 
 They cover `SKILL.md`, rules, context, agents, commands, markdown references and the text files a skill ships
 (scripts, data). Disable a rule everywhere with `ignore`, one file with `ignore_paths`, one line with
 `ai-rulez-lint-ignore`. The patterns are heuristics tuned for precision, and a finding in prose that *documents*
 a risky command needs an inline ignore.
 
-**Imported content.** Content from `includes` and `installed_skills` is scanned by default: `validate --strict`
+**Imported content.** Content from `includes` and `installed_skills` is scanned by default: `validate`
 reports it, and `generate` scans it *before writing anything* and stops at an error-level finding. With
 `[lint.security] scan_imports = "error"` every finding in imported text counts as an error, `"warn"` only logs, and
 `"off"` opts out of the scan (unset keeps each finding's own severity). The level replaces the severity of findings in
@@ -862,7 +866,7 @@ cached result has no record, and `lock` says so. The records sit outside the tre
 ## OKF bundle checks
 
 A project that turns on the [`okf` preset](okf.md) (or sets `[okf] dir`) also has its Open Knowledge Format bundle
-linted by `validate --strict` and `doctor`. The same checks run on any third-party bundle with
+linted by `validate` and `doctor`. The same checks run on any third-party bundle with
 `ai-rulez okf validate <dir>`. Severities below are defaults; the spec says consumers must tolerate most of these
 (broken links, a missing or partial index), so only conformance failures and export drift are errors.
 
@@ -885,6 +889,7 @@ Severities are configured like any other code (`[lint.severity]`, `[lint.ignore]
 
 ```json
 {
+  "schema_version": 1,
   "roots": ["."],
   "findings": [
     {
@@ -902,7 +907,7 @@ Severities are configured like any other code (`[lint.severity]`, `[lint.ignore]
 }
 ```
 
-`baseline`, `budgets_exceeded` and `changed_only` objects appear when those features are used; a finding accepted by
+`baseline`, `ratchet_exceeded` and `changed_only` objects appear when those features are used; a finding accepted by
 a baseline carries `"accepted": true`.
 
 `file` is relative to the working directory when inside it. Findings are sorted by file, line and code.
@@ -930,7 +935,7 @@ relative to the repository root (`uriBaseId` `%SRCROOT%`). Every result has
 
 ```yaml
 # .github/workflows/ai-rulez.yml
-- run: ai-rulez validate --strict --format sarif --output ai-rulez.sarif
+- run: ai-rulez validate --format sarif --output ai-rulez.sarif
   continue-on-error: true
 - uses: github/codeql-action/upload-sarif@v3
   with: { sarif_file: ai-rulez.sarif }
@@ -950,9 +955,9 @@ JSON output; the other keys are unchanged.
 
 ## Relation to other checks
 
-Strict mode does not repeat what `validate` already enforces (malformed frontmatter, duplicate output ids,
+The content checks do not repeat what the configuration checks of `validate` already enforce (malformed frontmatter, duplicate output ids,
 skill/command namespace collisions, plugin hook `script` existence, unresolved includes). `generate --check` and
-`verify --plugin` cover drift of generated output; strict mode covers the health of the *sources*.
+`verify --plugin` cover drift of generated output; the content checks cover the health of the *sources*.
 
 ## Limits
 
@@ -972,7 +977,7 @@ skill/command namespace collisions, plugin hook `script` existence, unresolved i
 <!-- lint-rules:begin -->
 The rules below were added after the first release of strict validation. Each has a stable code, is deterministic
 and offline, honors `[lint.severity]`, `[lint] ignore` and the inline `ai-rulez-lint-ignore` comment, and is listed
-by `ai-rulez validate --strict --format json` under its name. "Default" is the severity when `[lint.severity]`
+by `ai-rulez validate --format json` under its name. "Default" is the severity when `[lint.severity]`
 does not override it; a rule that reports mild and serious cases at different levels says so.
 
 | Code | Name | Default | Finds |

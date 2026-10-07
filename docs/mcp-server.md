@@ -480,7 +480,7 @@ enforce = true   # the default whenever ai-rulez.lock exists; false opts out
 ```
 
 the server refuses a served skill whose digest differs from the lock, and one the lock does not pin, with
-`AR995`. `validate --strict` reports the same. The lock digest is a `sha256:` tree digest in the same scheme as
+`AR995`. `validate` reports the same. The lock digest is a `sha256:` tree digest in the same scheme as
 the other pins ([Lock file](lockfile.md#served-skills-and-skill-sources), domain `ai-rulez/served-skill/v1`). It
 covers the rendered files but not the generated header lines that change without the skill changing (a whole
 `Source-Hash: <algorithm>:<hex>` or `Content-Hash: <algorithm>:<hex>` line and the `Generated:` date stamp, in the first 40 lines of a rendered
@@ -524,7 +524,7 @@ to the log on first use), harness (the MCP client name), the role the server run
 hash from the skills index, the served digest, and `served: true` (log format `v: 3`, the same as hook-recorded
 loads).
 A supporting file loaded with `path` is logged with `resource: true` and is not counted again by
-`ai-rulez report usage`. Nothing is written until you opt in: pass `--usage-log <file>` or `--usage-sink <command>`,
+`ai-rulez telemetry report`. Nothing is written until you opt in: pass `--usage-log <file>` or `--usage-sink <command>`,
 or enable `[usage] skills_index = true`, which logs to `<config dir>/local/usage.jsonl`.
 
 A `--usage-sink` receives exactly the line the log gets, salted session included. Without a `--usage-log` the salt
@@ -577,7 +577,7 @@ See [Strict validation](strict-validation.md) for the full table.
 3. **Commit changes**:
 
    ```bash
-   git add .ai-rulez/   # plus generated files only if gitignore = false
+   git add .ai-rulez/   # plus the generated files unless gitignore = true
    git commit -m "docs: update AI guidelines"
    ```
 
@@ -1173,7 +1173,7 @@ Update supported project configuration fields.
 - `name` (optional, string): Project name
 - `description` (optional, string): Project description
 - `builtins` (optional, array): Builtin names to enable
-- `gitignore` (optional, boolean): Whether generation updates `.gitignore`
+- `gitignore` (optional, boolean): Whether generation maintains the managed `.gitignore` block (off by default)
 - `default_effort` (optional, string): Default reasoning effort
 - `default_effort_by_preset` (optional, object): Per-preset reasoning effort overrides
 - `rules_mode` (optional, string): Default rules output mode, `split` or `inline`; empty string clears it

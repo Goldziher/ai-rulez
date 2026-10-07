@@ -8,7 +8,7 @@
 4. Resolve installed skills (fetch and add to content tree)
 5. Select profile → determine active domains
 6. Generate preset outputs from combined content, including configured scoped subfolder outputs
-7. Remove stale files from `.generated-manifest.json`, write outputs, update the manifest, and update `.gitignore`
+7. Remove stale files from `.generated-manifest.json`, write outputs, update the manifest, and (when `gitignore = true`) update the managed `.gitignore` block
 
 ## Built-in Presets
 

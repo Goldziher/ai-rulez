@@ -64,7 +64,7 @@ default, which is to render it with no override.
 
 Claude Code's `skillOverrides` is one flat map keyed by skill id, so two kept skills with the same id in different
 domains share one entry. When a role resolves them to different modes (for example `backend/deploy = "off"` while
-`frontend/deploy` has no mode), `validate --strict` reports `AR971`; give both the same mode (a bare `deploy` key does)
+`frontend/deploy` has no mode), `validate` reports `AR971`; give both the same mode (a bare `deploy` key does)
 or exclude one of them.
 
 ### Delivery
@@ -111,7 +111,7 @@ merged over the parent as follows.
 
 `Validate()` fails hard only on a bad name, a duplicate name, an invalid `skill_mode` value or an invalid `delivery` value. Inheritance
 problems (unknown parent, cycle, depth greater than one) are logged as warnings there so that
-`validate --strict` can report them as [AR972](strict-validation.md). A role with broken inheritance is left out of
+`validate` can report them as [AR972](strict-validation.md). A role with broken inheritance is left out of
 `roles.json` with a warning.
 
 Roles are overlayable in `config.local.toml` the same way profiles are: entries merge by `name`, and an entry with

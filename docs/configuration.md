@@ -1,10 +1,10 @@
 # Configuration Reference
 
-V4 configuration reference for `.ai-rulez/config.toml` (defaults to TOML format).
+Configuration reference for `.ai-rulez/config.toml` (`config.json` also loads; YAML configs do not).
 
 ## File-Based Configuration
 
-V4 uses a file-based approach where you edit files directly with your editor or use CRUD commands:
+ai-rulez uses a file-based approach where you edit files directly with your editor or use CRUD commands:
 
 - **Configuration**: Edit `.ai-rulez/config.toml` (TOML format) with any text editor
 - **Rules**: Add/edit `.ai-rulez/rules/*.md` files or use `ai-rulez add rule`
@@ -12,7 +12,7 @@ V4 uses a file-based approach where you edit files directly with your editor or 
 - **Skills**: Add/edit `.ai-rulez/skills/{name}/SKILL.md` files or use `ai-rulez add skill`
 - **Commands**: Add/edit `.ai-rulez/commands/{name}.md` (flat form) or `.ai-rulez/commands/{name}/COMMAND.md` (directory form with optional `references/` subdirectory)
 - **Checks**: Add/edit `.ai-rulez/checks/{name}.md` code-review guidelines (frontmatter `description`, `severity`, `tools`, `targets`) or use `ai-rulez add check`; see [Checks](checks.md)
-- **Agents**: Add/edit `.ai-rulez/agents/*.md` files or use `ai-rulez add agent` (`add command` likewise creates commands). The `claude` preset passes the documented Claude Code subagent keys (`disallowedTools`, `permissionMode`, `memory`, `maxTurns`, `mcpServers`, `hooks`, `background`, `isolation`, `color`, `initialPrompt`, `omitClaudeMd`) through with their YAML types; other presets ignore them. `validate` and `generate` warn about an agent key no tool reads (with a suggestion) and about a `skills:` entry that names no skill; `validate --strict` reports the same findings as `AR303` and `AR302`
+- **Agents**: Add/edit `.ai-rulez/agents/*.md` files or use `ai-rulez add agent` (`add command` likewise creates commands). The `claude` preset passes the documented Claude Code subagent keys (`disallowedTools`, `permissionMode`, `memory`, `maxTurns`, `mcpServers`, `hooks`, `background`, `isolation`, `color`, `initialPrompt`, `omitClaudeMd`) through with their YAML types; other presets ignore them. `validate` and `generate` warn about an agent key no tool reads (with a suggestion) and about a `skills:` entry that names no skill; `validate` reports the same findings as `AR303` and `AR302`
 - **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills,agents,commands,checks}/*.md` files or use `ai-rulez domain add`
 - **MCP Servers**: Inline in `.ai-rulez/config.toml`
 - **Machine-local configuration**: Personal content under `.ai-rulez/local/` and a `config.local.toml` overlay, both gitignored. See [Local overlay](#local-overlay)
@@ -74,17 +74,17 @@ the same list on every regeneration that changes a command, and the MCP `generat
 
 ## Basic Structure
 
-The minimal valid V4 configuration:
+The minimal valid configuration:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-project"
 ```
 
 A typical production configuration:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-project"
 description = "My project description"
 
@@ -112,7 +112,7 @@ args = ["-y", "ai-rulez@latest", "mcp"]
 The config schema version. Must be `"4.0"`; `"3.0"` is rejected.
 
 ```toml
-version = "4.0"
+version = "5.0"
 ```
 
 ### `name`
@@ -372,7 +372,7 @@ inline_filter = "path_scoped"
 
 `split` also requires `rules_inline` in `root.sections` and cannot be combined with `filter`. The
 folder is treated like the built-in rules folders: hand-written files are never overwritten, hashes go
-in the banner, and generated files are gitignored one by one. A provider without `split` inlines all
+in the banner, and, with `gitignore = true`, generated files are gitignored one by one. A provider without `split` inlines all
 rules in its root file. Custom providers get no [local](local-overrides.md) output.
 
 ### `default`
@@ -443,7 +443,7 @@ migrate = "name-only"
 
 ### `lock`
 
-`[lock]` tunes how strictly `ai-rulez.lock` is enforced: `enforce` (default `true` whenever `ai-rulez.lock` exists, `enforce = false` opts out) makes `validate --strict`
+`[lock]` tunes how strictly `ai-rulez.lock` is enforced: `enforce` (default `true` whenever `ai-rulez.lock` exists, `enforce = false` opts out) makes `validate`
 report content drift (or an unreadable lock) as `AR981` / `AR982`, makes `generate` refuse a remote include or installed skill the lock does not pin (and `AR010` an error), and makes `generate --locked` require content pins (`lock --check` always does); `include_outputs`
 (default `true`) pins generated outputs; `scope` is `all` (default) or `skills`. See [Lock file](lockfile.md).
 An [organization policy](policy.md) can force `enforce` and `include_outputs` on.
@@ -477,11 +477,12 @@ prefix, not into the scope directory; see [Scoped Rule Files](monorepo.md#scoped
 
 ### `gitignore`
 
-Controls whether `ai-rulez` automatically updates `.gitignore` with generated output patterns.
+Opt-in: controls whether `ai-rulez` maintains a managed block in `.gitignore` with generated output patterns.
+It is off by default, because committed outputs should not flip-flop in and out of the ignore block.
 
 ```toml
-gitignore = true   # Default: update .gitignore automatically
-# gitignore = false  # Manage .gitignore yourself
+gitignore = true     # Maintain the managed .gitignore block (or pass `generate --gitignore`)
+# gitignore = false  # Default: leave .gitignore alone
 ```
 
 When `true`, ai-rulez adds the specific generated files and owned subdirectories to `.gitignore` —
@@ -508,8 +509,8 @@ no line for it: the local outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI
 `.ai-rulez/.generated-manifest.local.json`. Overlay-derived outputs whose names differ per machine are
 excluded through `.git/info/exclude` instead. See [Local Configuration](local-overrides.md).
 
-`gitignore` defaults to `true`, so generated files are normally not committed; set it to `false` when
-the team commits generated output.
+`gitignore` defaults to `false`, so generated files are normally committed; set it to `true` when the team
+keeps generated output out of git and regenerates it locally.
 
 ### `compact`
 
@@ -525,14 +526,15 @@ When `true`, generated presets (CLAUDE.md, GEMINI.md, copilot-instructions.md, e
 
 ### `agents_md`
 
-Renders the files several tools share once instead of once per tool.
+Renders the files several tools share once instead of once per tool. On by default: `AGENTS.md` is the canonical
+instruction file and `CLAUDE.md` imports `@AGENTS.md`.
 
 ```toml
-agents_md = false  # Default: every preset writes its own files
-# agents_md = true
+agents_md = true     # Default: one shared AGENTS.md and .agents/skills
+# agents_md = false  # Every preset writes its own files
 ```
 
-When `true`, always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` for each
+When `true` (the default), always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` for each
 `[[scopes]]` entry) and skills go into one `.agents/skills/<name>/SKILL.md`. The presets that read these files
 (`codex`, `opencode`, `amp`, `xum`, `pi`, `claude`, `gemini`, `antigravity`, `hermes`, `cursor`, `copilot`, `devin`,
 `cline` and `junie`) stop writing their own `AGENTS.md` copy, root file and skills directory.
@@ -566,7 +568,7 @@ codex_skills_dir = ".codex/skills"  # Default: ".agents/skills"
 
 After the default changes, `generate` writes the new tree and removes the files it previously wrote to
 `.codex/skills` (only manifest-tracked files; hand-written skills stay). The path must stay inside the project.
-With `agents_md` on, skills are written once to `.agents/skills` whatever this is set to.
+With `agents_md` on (the default), skills are written once to `.agents/skills` whatever this is set to.
 
 ### `bundle_exclude`
 
@@ -591,7 +593,7 @@ Project-level MCP generation options.
 ```toml
 [mcp]
 self_server = true                # add ai-rulez's own MCP server to .mcp.json
-# self_server_version = "4.19.0"  # default: the running binary's version ("latest" for a dev build)
+# self_server_version = "5.0.0"   # default: the running binary's version ("latest" for a dev build)
 # self_server_command = ["ai-rulez", "mcp"]  # replace the whole launch command instead of npx
 ```
 
@@ -788,8 +790,7 @@ so a resolved secret in a merged server entry is not copied into `.generated-man
 ### `plugins`
 
 Plugins to install from a configured marketplace. This is the **consumer** side of the plugin
-config: ai-rulez emits these declarations into `.claude/plugins.json` and `.codex/plugins.json`,
-and the target tool performs the install. It is distinct from the **producer** `[plugin]` block
+config. It is distinct from the **producer** `[plugin]` block
 (see [Authoring Plugins](plugins.md)) that packages this project as a plugin.
 
 ```toml
@@ -800,14 +801,14 @@ scope = "project"          # project or user; defaults to project
 enabled = true             # defaults to true
 ```
 
-!!! warning "Deprecated"
-    `.claude/plugins.json` and `.codex/plugins.json` are not read by Claude Code or Codex (checked
-    2026-10-04). Claude Code records installs in `.claude/settings.json` (`enabledPlugins`,
-    `extraKnownMarketplaces`); Codex enables plugins with `[plugins."name@marketplace"] enabled = true`
-    in `config.toml`. `generate` keeps writing the files and now warns when `[[plugins]]` is set
-    together with the `claude` or `codex` preset. Migrate to [`[claude.settings]`](#claudesettings)
-    for Claude Code, and to a `config.toml` entry you keep yourself for Codex; ai-rulez does not write
-    `.codex/config.toml` plugin entries because it owns that file outright. The Copilot
+!!! warning "No effect"
+    `[[plugins]]` no longer writes `.claude/plugins.json` or `.codex/plugins.json`: Claude Code and Codex do not
+    read them. The table is still accepted, and `generate` warns when it is set. Claude Code records installs in
+    `.claude/settings.json` (`enabledPlugins`, `extraKnownMarketplaces`); Codex enables plugins with
+    `[plugins."name@marketplace"] enabled = true` in `.codex/config.toml`. Use
+    [`[claude.settings]`](#claudesettings) (`manage = true` with `enable_plugins`) for Claude Code, and keep the
+    Codex entry yourself; ai-rulez does not write `.codex/config.toml` plugin entries because it owns that file
+    outright. Delete the files an earlier version left behind. The Copilot
     `enabledPlugins` settings syntax is not shown in the vendor documentation, so it is not generated.
 
 ### `marketplaces`
@@ -1286,13 +1287,13 @@ style = "minimal"   # Default: bare minimum header
 # style = "detailed" # Comprehensive header with full documentation
 # timestamp = true  # Emit the "Generated:" line (default: false)
 # text = "..."      # Override the generated prose (see "Custom header")
-# hashes = "content" # Freshness lines: "full" (default), "content", or "none"
+# hashes = "full"    # Freshness lines: "content" (default), "full", or "none"
 ```
 
 The default is `minimal`. Every style — including `minimal` — carries the "DO NOT EDIT"
-warning and the injected `Content-Hash` / `Source-Hash` freshness lines (see [`hashes`](#hashes)) that ai-rulez uses to
-detect whether a generated file (or its sources) changed since the last `generate`. Only the
-amount of explanatory prose differs between styles.
+warning and the injected `Content-Hash` freshness line (plus `Source-Hash` with `hashes = "full"`; see
+[`hashes`](#hashes)) that ai-rulez uses to detect whether a generated file changed since the last `generate`.
+Only the amount of explanatory prose differs between styles.
 
 #### `hashes`
 
@@ -1301,16 +1302,16 @@ skills and agents, an HTML comment in `CLAUDE.md`). `hashes` selects which ones:
 
 | Value               | Lines written                 | Effect                                                                                      |
 | ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------- |
-| `full` (default)    | `Content-Hash`, `Source-Hash` | Unchanged behaviour.                                                                        |
-| `content`           | `Content-Hash`                | Each header depends only on that file's own body.                                           |
+| `content` (default) | `Content-Hash`                | Each header depends only on that file's own body.                                           |
+| `full`              | `Content-Hash`, `Source-Hash` | Adds the project-wide `Source-Hash`.                                                        |
 | `none`              | neither                       | No hash lines at all.                                                                       |
 
 `Content-Hash` is a hash of the file's own body and is stable. `Source-Hash` is a hash of the entire
 source set (config, every rule, skill, agent, command, MCP server), so under `full` one edit changes the
 `Source-Hash` line in every generated file. That is harmless for gitignored output, but when generated
 files are committed it makes every change to `.ai-rulez/` rewrite hundreds of files and makes concurrent
-branches conflict. With `content` or `none`, editing one skill changes only that skill's output (and
-`CLAUDE.md` when the edit changes what `CLAUDE.md` renders).
+branches conflict, which is why it is not the default. With `content` or `none`, editing one skill changes only
+that skill's output (and `AGENTS.md`/`CLAUDE.md` when the edit changes what they render).
 
 With `content` or `none`, `generate` decides whether to rewrite a file by comparing the whole rendered
 file to what is on disk (ignoring the `Generated:` text when `timestamp = true`), so a changed header
@@ -1350,7 +1351,7 @@ A value that is not a parsable integer is ignored and the wall clock is used.
 - Only critical information
 - Brief "DO NOT EDIT" warning
 - MCP server reference
-- `Content-Hash` / `Source-Hash` freshness lines
+- `Content-Hash` freshness line (and `Source-Hash` with `hashes = "full"`)
 - Best for: keeping always-loaded files small (the default)
 - Size: ~10 lines
 
@@ -1388,7 +1389,7 @@ Regenerate with: ai-rulez generate
 
 A few details worth knowing:
 
-- The `Content-Hash` / `Source-Hash` freshness lines are still appended inside the banner, so
+- The freshness lines selected by `hashes` are still appended inside the banner, so
   hash-based skip detection keeps working. Do not add a closing comment marker of your own.
 - `timestamp = true` still does nothing to a custom header; add a `Generated:` line in `text`
   yourself if you want one.
@@ -1934,7 +1935,7 @@ not pass unnoticed. An `extends` cycle degrades the same way.
 ### Small Project (Single Team)
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "My Startup"
 description = "Early-stage SaaS with React + Go"
 
@@ -1961,7 +1962,7 @@ Directory structure:
 ### Medium Project (Multiple Teams)
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "Enterprise Platform"
 description = "Multi-team SaaS platform"
 
@@ -2012,7 +2013,7 @@ Directory structure:
 ### Complex Project (Multiple Presets)
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "Advanced ML Platform"
 description = "Research platform with team separation"
 
@@ -2041,7 +2042,7 @@ frontend = ["frontend"]
 For projects with a single team, skip domains entirely:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "simple-project"
 presets = ["claude", "cursor"]
 ```
@@ -2051,7 +2052,7 @@ presets = ["claude", "cursor"]
 For monorepos with multiple independent teams:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "platform"
 presets = ["claude", "cursor"]
 
@@ -2069,7 +2070,7 @@ mobile = ["mobile"]
 For different behavior in dev, staging, production:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "saas-app"
 presets = ["claude"]
 
@@ -2090,11 +2091,12 @@ the schema check.
 
 ```bash
 ai-rulez validate
+ai-rulez validate --config-only
 ```
 
 The structural checks cover:
 
-- `version` is `"4.0"` or `"3.0"` (for backward compatibility)
+- `version` is `"5.0"`
 - `name` is present and non-empty
 - All preset names are valid
 - `builtin:<name>` references in profiles name a real builtin
@@ -2105,7 +2107,7 @@ The structural checks cover:
 
 ## Programmatic Modification with CRUD Operations
 
-V4 provides CRUD (Create, Read, Update, Delete) commands to programmatically modify your configuration. This is useful for:
+ai-rulez provides CRUD (Create, Read, Update, Delete) commands to programmatically modify your configuration. This is useful for:
 
 - Automation and scripting
 - Integration with CI/CD pipelines
@@ -2228,7 +2230,7 @@ ai-rulez add rule my-rule --priority high --targets claude,cursor
 3. **Organize by domain**: Put domain-specific rules in `domains/name/` directories
 4. **Validate after changes**: Run `ai-rulez validate` to check configuration
 5. **Regenerate after changes**: Run `ai-rulez generate` to create tool-specific outputs
-6. **Commit sources, and outputs only if you set `gitignore = false`**: `gitignore` defaults to `true`, so generated files are normally ignored; commit `.ai-rulez/` always, and generated files only when the team chooses to version them
+6. **Commit sources and outputs together**: `gitignore` defaults to `false`, so commit `.ai-rulez/` and the generated files; set `gitignore = true` only when the team keeps generated files out of git
 
 ### Programmatic Workflow Example
 
@@ -2251,7 +2253,7 @@ ai-rulez validate
 # Generate
 ai-rulez generate
 
-# Commit (add generated files too only if gitignore = false)
+# Commit (generated files too, unless gitignore = true)
 git add .ai-rulez/
 git commit -m "chore: add backend domain with database standards"
 ```

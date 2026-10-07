@@ -342,7 +342,7 @@ See [CLI commands](cli.md#okf-commands) for every flag.
 | `ai-rulez import okf <dir\|git-url[@ref][#subdir]> [--into kind] [--domain d] [--dry-run] [--force]` | Bundle to `.ai-rulez/` sources |
 | `ai-rulez okf validate <dir\|git-url> [--format json] [--fail-on sev]` | Lint any bundle |
 | `ai-rulez generate` / `generate --check` | Write / compare the bundle when the `okf` preset is on |
-| `ai-rulez validate --strict`, `ai-rulez doctor` | Report `AR9B*` findings for the configured bundle |
+| `ai-rulez validate`, `ai-rulez doctor` | Report `AR9B*` findings for the configured bundle |
 
 `--into` takes `rules`, `context` or `skills`; use `--domain` to place the result in a domain. (The design note
 asked for `--into domain|...`; a separate flag keeps the two choices independent.)
@@ -389,7 +389,7 @@ discarded) and merged like any other include, with the usual precedence. The AR0
 converted text; a bundle with an error-level finding is refused as a whole, and the include is skipped with an error.
 A bundle in a git repository is cached under `~/.cache/ai-rulez/includes/<name>` and recorded in `ai-rulez.lock`
 exactly like a git include: `ai-rulez lock` pins a tag or branch to its commit and a content digest, a locked run
-fetches the pinned commit (a moved tag changes nothing until you relock), `--frozen` and `--no-fetch` use the cache and
+fetches the pinned commit (a moved tag changes nothing until you relock), `--frozen` and `--offline` use the cache and
 fail when the digest differs, `lock --check` and `[lock] enforce` apply, and a branch or tag that is not locked is
 reported as `AR010`. The clone runs with hooks, credential helpers and submodules off and only the https, ssh and file
 transports. See [Lock file](lockfile.md). `install_to` places the content in a
@@ -413,7 +413,7 @@ domain like other includes. Configure with `includes[].format`; the only value i
 
 ```bash
 ai-rulez generate --check                 # includes the okf preset: fails when docs/okf is stale
-ai-rulez validate --strict                # AR9B0-AR9B9 for the configured bundle
+ai-rulez validate                         # AR9B0-AR9B9 for the configured bundle
 ai-rulez okf validate docs/okf --fail-on warning --format json
 ai-rulez export okf --out /tmp/kb --check # compare without touching the repository
 ```
