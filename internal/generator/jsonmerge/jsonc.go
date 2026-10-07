@@ -114,30 +114,8 @@ func unmergeJSONC(path, existing string, claims []Claim, strictErr error) (Unmer
 	}
 
 	ed := newJSONCEditor(existing, obj)
-	changed := false
-	var mismatched [][]string
-	for _, alone := range []bool{false, true} {
-		for _, claim := range claims {
-			if len(claim.Path) == 0 || claim.Alone != alone || (alone && len(obj.Members) != 1) {
-				continue
-			}
-			did, mismatch := ed.unmergeClaim(obj, claim.Path, claim)
-			changed = changed || did
-			if mismatch {
-				mismatched = append(mismatched, claim.Path)
-			}
-		}
-	}
-
-	var kept [][]string
-	seen := map[string]bool{}
-	for _, claimPath := range mismatched {
-		key := strings.Join(claimPath, "\x00")
-		if !seen[key] && jsoncPresent(obj, claimPath) {
-			seen[key] = true
-			kept = append(kept, claimPath)
-		}
-	}
+	changed, mismatched := unmergeJSONCClaims(ed, obj, claims)
+	kept := keptJSONCPaths(obj, mismatched)
 	if !changed {
 		return Unmerged{Kept: kept}, nil
 	}
@@ -153,6 +131,39 @@ func unmergeJSONC(path, existing string, claims []Claim, strictErr error) (Unmer
 	}
 	empty := len(obj.Members) == 0 && !jsoncHasComments(&root)
 	return Unmerged{Body: body, Changed: true, Empty: empty, Kept: kept}, nil
+}
+
+// unmergeJSONCClaims removes every claim from obj, the claims that own the whole
+// document last, and returns the paths whose guard rejected the member.
+func unmergeJSONCClaims(ed jsoncEditor, obj *hujson.Object, claims []Claim) (changed bool, mismatched [][]string) {
+	for _, alone := range []bool{false, true} {
+		for i := range claims {
+			claim := &claims[i]
+			if len(claim.Path) == 0 || claim.Alone != alone || (alone && len(obj.Members) != 1) {
+				continue
+			}
+			did, mismatch := ed.unmergeClaim(obj, claim.Path, *claim)
+			changed = changed || did
+			if mismatch {
+				mismatched = append(mismatched, claim.Path)
+			}
+		}
+	}
+	return changed, mismatched
+}
+
+// keptJSONCPaths is the distinct mismatched paths that are still present in obj.
+func keptJSONCPaths(obj *hujson.Object, mismatched [][]string) [][]string {
+	var kept [][]string
+	seen := map[string]bool{}
+	for _, claimPath := range mismatched {
+		key := strings.Join(claimPath, "\x00")
+		if !seen[key] && jsoncPresent(obj, claimPath) {
+			seen[key] = true
+			kept = append(kept, claimPath)
+		}
+	}
+	return kept
 }
 
 // unmergeClaim removes the member (or array elements) the claim addresses,
@@ -235,28 +246,7 @@ func jsoncPresent(obj *hujson.Object, path []string) bool {
 func (ed jsoncEditor) setPath(obj *hujson.Object, path []string, key OwnedKey, depth int) error {
 	head, rest := path[0], path[1:]
 	if len(rest) == 0 {
-		switch {
-		case key.Remove:
-			if key.RemoveIf != nil {
-				// A guarded removal takes only a value the guard accepts: one the
-				// user has since changed is theirs and stays.
-				for i := len(obj.Members) - 1; i >= 0; i-- {
-					if lit, ok := obj.Members[i].Name.Value.(hujson.Literal); ok && lit.String() == head &&
-						key.RemoveIf(standardRaw(obj.Members[i].Value)) {
-						ed.removeAt(obj, i)
-					}
-				}
-				return nil
-			}
-			for idx := jsoncFind(obj, head); idx >= 0; idx = jsoncFind(obj, head) {
-				ed.removeAt(obj, idx)
-			}
-			return nil
-		case key.Members:
-			return ed.mergeMembers(obj, head, key.Value, depth)
-		default:
-			return ed.setMember(obj, head, key.Value, depth)
-		}
+		return ed.setLeaf(obj, head, key, depth)
 	}
 
 	idx := jsoncFind(obj, head)
@@ -280,6 +270,32 @@ func (ed jsoncEditor) setPath(obj *hujson.Object, path []string, key OwnedKey, d
 		ed.removeAt(obj, idx)
 	}
 	return nil
+}
+
+// setLeaf applies the owned key to the member named head of obj: it removes it
+// (all copies, or those a guard accepts), merges its entries into it, or sets it.
+func (ed jsoncEditor) setLeaf(obj *hujson.Object, head string, key OwnedKey, depth int) error {
+	switch {
+	case key.Remove && key.RemoveIf != nil:
+		// A guarded removal takes only a value the guard accepts: one the
+		// user has since changed is theirs and stays.
+		for i := len(obj.Members) - 1; i >= 0; i-- {
+			if lit, ok := obj.Members[i].Name.Value.(hujson.Literal); ok && lit.String() == head &&
+				key.RemoveIf(standardRaw(obj.Members[i].Value)) {
+				ed.removeAt(obj, i)
+			}
+		}
+		return nil
+	case key.Remove:
+		for idx := jsoncFind(obj, head); idx >= 0; idx = jsoncFind(obj, head) {
+			ed.removeAt(obj, idx)
+		}
+		return nil
+	case key.Members:
+		return ed.mergeMembers(obj, head, key.Value, depth)
+	default:
+		return ed.setMember(obj, head, key.Value, depth)
+	}
 }
 
 // mergeMembers writes each entry of value into the object at head, replacing the
@@ -367,13 +383,13 @@ func (ed jsoncEditor) extendArray(arr *hujson.Array, value any, depth int) (bool
 	if err != nil {
 		return false, err //nolint:wrapcheck // the caller names the key
 	}
-	var want []any
-	if json.Unmarshal(encoded, &want) != nil || len(arr.Elements) == 0 || len(want) < len(arr.Elements) {
+	want, ok := decodeList(encoded)
+	if !ok || len(arr.Elements) == 0 || len(want) < len(arr.Elements) {
 		return false, nil
 	}
 	for i := range arr.Elements {
-		var have any
-		if json.Unmarshal(standardRaw(arr.Elements[i]), &have) != nil || !reflect.DeepEqual(have, want[i]) {
+		have, haveOK := decodeValue(standardRaw(arr.Elements[i]))
+		if !haveOK || !reflect.DeepEqual(have, want[i]) {
 			return false, nil
 		}
 	}
@@ -497,7 +513,8 @@ func jsoncMultiline(obj *hujson.Object) bool {
 	if bytes.IndexByte(obj.AfterExtra, '\n') >= 0 {
 		return true
 	}
-	for _, member := range obj.Members {
+	for i := range obj.Members {
+		member := &obj.Members[i]
 		if bytes.IndexByte(member.Name.BeforeExtra, '\n') >= 0 {
 			return true
 		}
@@ -508,7 +525,8 @@ func jsoncMultiline(obj *hujson.Object) bool {
 // jsoncIndent infers one indentation level from the first top-level member that
 // starts its own line, falling back to defaultJSONIndent.
 func jsoncIndent(obj *hujson.Object) string {
-	for _, member := range obj.Members {
+	for i := range obj.Members {
+		member := &obj.Members[i]
 		before := member.Name.BeforeExtra
 		nl := bytes.LastIndexByte(before, '\n')
 		if nl < 0 {
@@ -535,9 +553,9 @@ func hasUnownedJSONC(obj *hujson.Object, paths [][]string) bool {
 	for _, path := range paths {
 		roots[path[0]] = append(roots[path[0]], path[1:])
 	}
-	for _, member := range obj.Members {
-		lit, _ := member.Name.Value.(hujson.Literal)
-		rems, ok := roots[lit.String()]
+	for i := range obj.Members {
+		member := &obj.Members[i]
+		rems, ok := roots[memberName(member)]
 		if !ok {
 			return true
 		}
@@ -616,7 +634,7 @@ func elementSlots(arr *hujson.Array) []jsoncSlot {
 }
 
 // removeSlot rewrites the extras around slots[i] so the item can be deleted
-// without taking neighbouring comments or the trailing-comma style with it.
+// without taking neighboring comments or the trailing-comma style with it.
 // Comments on the line after the previous item stay with it; comments on the
 // removed item's own line go with it; comments on their own lines above it stay.
 // tail is the container's AfterExtra. The caller deletes the item afterwards.
@@ -737,4 +755,28 @@ func tokenEnd(e []byte, pos int) int {
 		}
 		return end
 	}
+}
+
+// memberName is the name of an object member as written, or "" when it is not a literal.
+func memberName(member *hujson.ObjectMember) string {
+	if lit, ok := member.Name.Value.(hujson.Literal); ok {
+		return lit.String()
+	}
+	return ""
+}
+
+// decodeList decodes data as a JSON array; ok is false when it is not one.
+func decodeList(data []byte) (list []any, ok bool) {
+	if err := json.Unmarshal(data, &list); err != nil {
+		return nil, false
+	}
+	return list, true
+}
+
+// decodeValue decodes data as any JSON value; ok is false when it is not valid JSON.
+func decodeValue(data []byte) (value any, ok bool) {
+	if err := json.Unmarshal(data, &value); err != nil {
+		return nil, false
+	}
+	return value, true
 }
