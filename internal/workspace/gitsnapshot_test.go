@@ -43,6 +43,8 @@ func gitRepo(t *testing.T) (dir, first string) {
 	testutil.SymlinkOrSkip(t, "../a.txt", filepath.Join(dir, "dir", "up"))
 	testutil.SymlinkOrSkip(t, "../../outside", filepath.Join(dir, "dir", "escape"))
 	runGit(t, dir, "add", "-A")
+	// Record the executable bit in the index: on Windows git does not read it from the file system.
+	runGit(t, dir, "update-index", "--chmod=+x", "bin/run.sh")
 	runGit(t, dir, "commit", "-q", "-m", "first")
 	first = trimmed(runGit(t, dir, "rev-parse", "HEAD"))
 
