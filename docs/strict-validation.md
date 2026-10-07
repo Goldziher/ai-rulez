@@ -53,7 +53,7 @@ stdout.
 | Code | Name | Default | Finds |
 | --- | --- | --- | --- |
 | AR001 | `secret-detected` | error | A credential pattern (AWS, GitHub, Slack, Google, Stripe, Anthropic/OpenAI keys, private keys, JWTs, `password = "..."` with a mixed-character value, or a `secret_patterns` entry) in content or a script. The finding masks the match |
-| AR002 | `hidden-characters` | error | Zero-width, bidirectional-control or Unicode tag characters (a joiner between two non-ASCII characters, as in emoji, and a leading byte order mark are fine) |
+| AR002 | `hidden-characters` | error | Zero-width, bidirectional-control, Unicode tag or other invisible characters (hangul and braille blanks, variation selectors, U+206A to U+206F, line and paragraph separators, the combining grapheme joiner). A joiner between two non-ASCII characters, an emoji presentation selector, and a leading byte order mark are fine |
 | AR003 | `html-comment-instruction` | warning | An HTML comment, invisible when rendered, with instruction-like text (`curl`, `eval`, `run:`, "secretly", injection phrases) |
 | AR004 | `prompt-injection-phrase` | warning | Text that tries to override earlier instructions or hide actions from the user ("ignore previous instructions", "do not tell the user", ...) |
 | AR005 | `risky-shell-exec` | error | `curl ... \| sh` (or an interpreter), `bash <(curl ...)`, `eval` of dynamic text, a base64 payload decoded into a shell. `eval "$(ssh-agent -s)"` and similar environment initializers are exempt. Markdown prose is not flagged only when the command is directly governed by a negation in the same clause ("never run `curl ... | bash`", "do not pipe ... to sh") or followed by a verdict ("... is unsafe"); a run, install, required, first or then in between, or a negation in another clause ("Never skip setup: run ..."), is still reported; fenced code, frontmatter and scripts always are. A prose mention of the bare shorthand `curl | sh` (a downloader with no URL or argument, only flags) names the technique and downloads nothing, so it is not reported; any URL or variable makes it a command again |
@@ -236,7 +236,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR001`-`AR099` | Security: secrets, injection, shell, exfiltration, supply chain (`AR001`-`AR034` used) | allocated |
 | `AR100`-`AR199` | Scope: glob matching (`AR101`) | allocated |
 | `AR200`-`AR299` | Links and imports (`AR201`, `AR202`, `AR210`) | allocated |
-| `AR300`-`AR399` | References and frontmatter (`AR301`-`AR305`) | allocated |
+| `AR300`-`AR399` | References and frontmatter (`AR301`-`AR306`) | allocated |
 | `AR400`-`AR499` | Paths, skill resources, commands (`AR401`-`AR403`) | allocated |
 | `AR500`-`AR599` | Hooks and permissions (`AR501`-`AR507`) | allocated |
 | `AR600`-`AR699` | MCP servers (`AR601`, `AR602`) | allocated |
@@ -310,7 +310,7 @@ max_length = 1024
 require_use_when = true            # enables AR803 at warning
 near_duplicate_threshold = 0.9
 
-[lint.tolerate]                    # tolerated findings per rule (see Baseline and tolerated findings)
+[lint.ratchet]                     # tolerated findings per rule (see Baseline and tolerated findings)
 AR401 = 12
 link-unresolved = 0
 
@@ -440,7 +440,7 @@ After the fixes the run reports what is left, and the exit code reflects that. T
 ## Baseline and tolerated findings
 
 A team adopting strict validation on an existing tree usually cannot fix everything at once. A **baseline**
-records the findings you accept today, so only *new* findings fail the build, and `[lint.tolerate]` caps how many
+records the findings you accept today, so only *new* findings fail the build, and `[lint.ratchet]` caps how many
 findings of one rule are tolerated. (Do not confuse it with `[lint.budgets.<kind>]`, the size budgets of a content kind.)
 
 ```bash
@@ -483,12 +483,13 @@ one entry per accepted finding:
 - **`expires`** is an optional `YYYY-MM-DD`. Through that day the entry applies; after it the finding counts as new
   and the entry is listed as expired. The date comes from the clock in the CLI only; pin it with `--today` or
   `AI_RULEZ_TODAY` for reproducible runs.
-- **Tolerated findings.** `[lint.tolerate]` maps a code or name to a number: up to that many unaccepted findings of the
+- **Tolerated findings.** `[lint.ratchet]` maps a code or name to a number: up to that many unaccepted findings of the
   rule are tolerated and do not count toward the exit code. One more, and all of that rule's findings count again (the
-  text report says `tolerate: AR401 has 13 finding(s), over its tolerated count of 12`; the JSON key is still
-  `budgets_exceeded`). Lower the number over time. Tolerated counts apply per root, after the baseline. `[lint.budget]` is
-  the deprecated spelling of the same table: it still works and warns. Putting the size-budget shape in it
-  (`[lint.tolerate.skill]`) or a rule count in `[lint.budgets]` (`AR201 = 1`) is an error that names the right table.
+  text report says `ratchet: AR401 has 13 finding(s), over its ratchet of 12`; the JSON key is `ratchet_exceeded`).
+  A rule over its ratchet fails the run (exit 2) whatever its severity. Lower the number over time. Ratchet counts apply
+  per root, after the baseline. `[lint.budget]` and `[lint.ratchet]` are removed spellings of the same table and fail
+  to load with a message naming `[lint.ratchet]`. Putting the size-budget shape in it
+  (`[lint.ratchet.skill]`) or a rule count in `[lint.budgets]` (`AR201 = 1`) is an error that names the right table.
 
 ## Analyzers and scopes
 
@@ -500,7 +501,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | Analyzer | Rules |
 | --- | --- |
 | `security` | `AR001`-`AR034`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E7`, `AR9K1`, `AR9L1` |
-| `references` | `AR101`, `AR201`, `AR202`, `AR210`, `AR301`-`AR305`, `AR401`-`AR403` |
+| `references` | `AR101`, `AR201`, `AR202`, `AR210`, `AR301`-`AR306`, `AR401`-`AR403` |
 | `hooks` | `AR501`-`AR505`, `AR507` |
 | `mcp` | `AR601`, `AR602` |
 | `duplicates` | `AR701`-`AR703` |
@@ -576,7 +577,7 @@ threshold. The flag is `--lint-profile`, not `--profile`, because `--profile` se
 | `permissive` | `fail_on = error`. Demotes to warning: `AR101`, `AR201`, `AR301`, `AR302`, `AR402`, `AR951`, `AR952`, `AR954`. Demotes to info: `AR202`, `AR401`, `AR701`, `AR702`, `AR703`, `AR901`, `AR902` |
 
 Security rules (`AR0xx`) are never changed by a profile, and a profile does not touch `[lint.security]` or
-`[lint.tolerate]`. Precedence, highest first: `--fail-on` / `--lint-profile` on the command line, the
+`[lint.ratchet]`. Precedence, highest first: `--fail-on` / `--lint-profile` on the command line, the
 `config.local.*` overlay, `config.toml` (`fail_on`, `[lint.severity]`, `profile`), then the preset. The text
 report starts with a `lint profile:` line when a non-default profile is active, and `--format json` carries
 `"profile"`. The preset tables live in `internal/lint/profile.go`.
@@ -633,7 +634,7 @@ the text report says how many were left out. Each finding carries a `hop` in `--
 The text report ends with a `changed-only since <rev> (depth <n|all>)` line and `--format json` carries a
 `changed_only` object (`depth`, `-1` for `all`; `changed_files`, `dependent_files`, `transitive_files`, `truncated_files`,
 `dropped_findings`). The baseline is applied to the full set first, so stale entries are judged against every
-finding, and a `[lint.tolerate]` count is judged against the full set too; exit status reflects only the findings shown.
+finding, and a `[lint.ratchet]` count is judged against the full set too; exit status reflects only the findings shown.
 `--update-baseline` cannot be combined with `--since`.
 
 git is run with the repository variables a parent git process exports (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`,
@@ -916,7 +917,7 @@ Severities are configured like any other code (`[lint.severity]`, `[lint.ignore]
 }
 ```
 
-`baseline`, `budgets_exceeded` and `changed_only` objects appear when those features are used; a finding accepted by
+`baseline`, `ratchet_exceeded` and `changed_only` objects appear when those features are used; a finding accepted by
 a baseline carries `"accepted": true`.
 
 `file` is relative to the working directory when inside it. Findings are sorted by file, line and code.
@@ -993,6 +994,7 @@ does not override it; a rule that reports mild and serious cases at different le
 | --- | --- | --- | --- |
 | AR304 | `frontmatter-value-invalid` | warning | A frontmatter value the Claude Code skill or subagent reference does not accept: `effort` (`low`, `medium`, `high`, `xhigh`, `max`), `context` (`fork`), `shell` (`bash`, `powershell`), `permissionMode`, `memory`, `isolation`, `color`, a quoted or `yes`-style value where a YAML boolean is required (a quoted `"true"` or `"false"` is fixable), a non-integer `maxTurns`, a `model` that is neither an alias (`sonnet`, `opus`, `haiku`, `inherit`), a full model ID nor a known vendor ID, and a `paths`/`globs` value that is not a glob string or a list of glob strings. The message suggests the nearest valid value |
 | AR305 | `tool-name-unknown` | warning | An `allowed-tools`, `disallowed-tools`, `tools` or `disallowedTools` entry that names no Claude Code tool (with a did-you-mean), a malformed `mcp__server__tool` name, unbalanced parentheses in a `Bash(...)` pattern, or a tool listed as both allowed and denied. MCP tools, `Bash(...)`/`WebFetch(...)` patterns and `Agent(name)` are valid. Tools provided elsewhere go in `lint.known_names`. Not checked when `claude` is not among the presets |
+| AR306 | `frontmatter-malformed` | error | The frontmatter block does not parse as a YAML mapping (a list, a scalar, a tab indent, invalid UTF-8, an unquoted `: `) or opens with `---` and never closes. The item loses its metadata, or the block is served to the model as text. One bad file is a finding, so the rest of the tree is still reported in `--format json` and `sarif` |
 | AR403 | `command-missing` | warning | A backticked `npm run X` (also `pnpm`, `yarn`, `bun`), `make X`, `task X`, `just X` or `pytest -m X` that names a script, target, task, recipe or marker the repository does not define. The build files are read from the git index (`package.json` `scripts`, `Makefile` and `*.mk` targets, `Taskfile.y*ml` tasks, `justfile` recipes and aliases, pytest markers from `pyproject.toml`, `pytest.ini`, `setup.cfg`, `tox.ini`, `addinivalue_line` and `pytest.mark.X` uses). A command is skipped when no file of its kind exists, when it carries a placeholder (`<name>`, `$VAR`), when it is scoped elsewhere (`--prefix`, `--workspace`, `-C`, `-f`, `cd`), when the Makefile has dynamic targets or includes, and inside fenced blocks |
 | AR507 | `hook-schema-invalid` | warning | A hook declaration that loads but will not do what it says, in `config.toml` (`[[hooks]]`, `[[plugin.hooks]]`), the project `.claude/settings.json`, tracked plugin `hooks/hooks.json` and the `hooks` frontmatter of agents, skills and commands: an event that is not a Claude Code event (with a did-you-mean), a `matcher` on an event without a matchable subject, an `if` on an event that never evaluates it, a handler with no or an unknown `type`, a `command`/`http`/`prompt` handler without its `command`/`url`/`prompt`, a `timeout` that is not a whole number of seconds, a group without a `hooks` list. The event tables are the ones the config loader uses. JSON files cannot carry an inline ignore; use `ignore_paths` |
 | AR012 | `mcp-unpinned-package` | warning (error under `[lock] enforce`, which is on whenever `ai-rulez.lock` exists) | An MCP server (also an inline `mcpServers` entry of an agent or skill) that launches a package without a version pin: `npx`, `bunx`, `pnpm dlx` or `npm exec` with no `@version` or a moving tag (`@latest`), `uvx`, `uv tool run` or `pipx run` with no `==version`, and `docker run` with an untagged, `:latest` or digest-less image. Checked in `[[mcp_servers]]`, `.mcp.json`, `.cursor/mcp.json` and `.vscode/mcp.json`. Shares its pin predicate with AR021 |
@@ -1495,6 +1497,16 @@ allowed-tools, tools or disallowedTools names a tool Claude Code does not have, 
 - Why: A tool name Claude Code does not have grants nothing, and a tool both allowed and denied is contradictory.
 - Bad: `allowed-tools: Bsh`
 - Good: `allowed-tools: Bash(git status:*), Read`
+
+### AR306 frontmatter-malformed
+
+the frontmatter block cannot be parsed as a YAML mapping (a list, a scalar, a tab indent, invalid UTF-8, an unquoted ': ') or never closes with ---, so the item loses its metadata or the block leaks into the prompt
+
+- Default severity: `error`
+- Analyzer: `references` (scope `item`)
+- Why: A block that does not parse is dropped, so the item has no name, description or tools; a block that never closes is served to the model as body text.
+- Bad: `description: Use when: deploying` (unquoted colon), or an opening `---` with no closing `---`
+- Good: `description: "Use when: deploying"` and a closing `---` line
 
 ### AR401 path-missing
 

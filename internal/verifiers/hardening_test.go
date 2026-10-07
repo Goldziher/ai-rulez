@@ -90,6 +90,15 @@ func TestForbid_HitInReadablePartPlusSkippedFileFails(t *testing.T) {
 	assert.Contains(t, res.Message, "not fully checked")
 }
 
+func TestRegex_MissingPlusSkippedFileSaysSo(t *testing.T) {
+	root := writeFiles(t, map[string]string{"a.txt": "nothing\n", "b.dat": "\x00"})
+
+	res := runOne(t, root, config.VerifierConfig{Type: "regex", Glob: "*", Pattern: "TODO"})
+
+	assert.Equal(t, StatusFail, res.Status)
+	assert.Contains(t, res.Message, "not fully checked")
+}
+
 func TestKeyEquals_ValueSemantics(t *testing.T) {
 	root := writeFiles(t, map[string]string{
 		"p.json": `{"big":12345678901234567890,"f":1.0,"nul":null,"empty":"","dependencies":{"lodash.merge":"4.0.0"},"a":{"b":[ {"c":"x"} ]}}`,

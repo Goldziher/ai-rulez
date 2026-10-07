@@ -198,6 +198,10 @@ type Config struct {
 	// enforcer is the organization policy this configuration was loaded under.
 	enforcer PolicyEnforcer
 
+	// DeferMalformedFrontmatter makes Validate skip the malformed-frontmatter
+	// failure because the caller reports each such file as a lint finding.
+	DeferMalformedFrontmatter bool `yaml:"-" json:"-" toml:"-"`
+
 	// frontmatterErrors records WithFrontmatterErrors, for ReloadOptions.
 	frontmatterErrors bool
 

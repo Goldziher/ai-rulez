@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -321,4 +322,23 @@ func TestSBOMTimestampReachesBothFormats(t *testing.T) {
 	// Assert
 	require.Equal(t, 0, code, errOut.String())
 	assert.Contains(t, out.String(), `"created": "2026-05-06T07:08:09Z"`)
+}
+
+func TestSBOMArgsExplainsAStrayTimestampValue(t *testing.T) {
+	cmd := &cobra.Command{Use: "sbom"}
+	cmd.Flags().String("timestamp", "", "")
+	cmd.Flags().Lookup("timestamp").NoOptDefVal = "now"
+	require.NoError(t, cmd.Flags().Parse([]string{"--timestamp", "bogus"}))
+
+	err := sbomArgs(cmd, cmd.Flags().Args())
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid --timestamp")
+	assert.NotContains(t, err.Error(), "unknown command")
+
+	plain := &cobra.Command{Use: "sbom"}
+	plain.Flags().String("timestamp", "", "")
+	require.NoError(t, plain.Flags().Parse(nil))
+	assert.Error(t, sbomArgs(plain, []string{"extra"}), "other arguments are still refused")
+	assert.NoError(t, sbomArgs(plain, nil))
 }

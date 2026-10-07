@@ -138,6 +138,8 @@ type runner struct {
 	cfg          *config.Config
 	mcpOnce      sync.Once
 	fakeTagOnce  sync.Once
+	injOnce      sync.Once
+	injRes       []*regexp.Regexp
 	fakeTagRe    *regexp.Regexp
 	mcpEffective []config.MCPServer
 	lc           config.LintConfig
