@@ -121,58 +121,12 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	exitOn(checkRoleFlags())
 	exitOn(checkEmitPlanFlags())
 
-	if generateWatch {
-		if err := runGenerateWatch(watchParentContext(cmd), args); err != nil {
-			fmtError(err)
-			os.Exit(1)
-		}
-		return
-	}
-
-	if generateCheck {
-		runGenerateCheck(args)
-		return
-	}
-
-	if handleUserGenerate(args) {
-		return
-	}
-
-	if recursive {
-		if code := runRecursiveGenerate(); code != 0 {
-			os.Exit(code)
-		}
+	if runOtherGenerateMode(cmd, args) {
 		return
 	}
 
 	ctx := cmdContext()
-
-	// Load configuration
-	cfg, err := loadConfigForCommand(ctx, args, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
-	if err != nil {
-		fmtError(err)
-		if (generateLocked || generateFrozen) && errors.Is(err, config.ErrLockViolation) {
-			os.Exit(exitDrift) // a missing or disagreeing lock is drift, the same code as a changed source
-		}
-		os.Exit(1)
-	}
-
-	// The organization policy clamped the configuration at load; refuse to
-	// generate from one that tried to loosen it.
-	if err := policyGate(cfg); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-
-	// Validate configuration
-	if err := cfg.Validate(); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-
-	exitOnLockedDrift(enforceLockedContent(cfg))
-	exitOnMovedTags(cfg) // only with --verify-tags or [lock] verify_tags: a pinned tag that moved ends the run
-
+	cfg := loadGenerateConfig(args)
 	applyGenerateOverrides(cfg)
 	warnFrontmatter(cfg)
 	if err := importGate(cfg); err != nil {
@@ -215,6 +169,60 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		fmtError(err)
 		os.Exit(1)
 	}
+}
+
+// runOtherGenerateMode runs --watch, --check, --user and --recursive, which do
+// not take the single-project path, and reports whether one of them ran.
+func runOtherGenerateMode(cmd *cobra.Command, args []string) bool {
+	switch {
+	case generateWatch:
+		if err := runGenerateWatch(watchParentContext(cmd), args); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+		return true
+	case generateCheck:
+		runGenerateCheck(args)
+		return true
+	case handleUserGenerate(args):
+		return true
+	case recursive:
+		if code := runRecursiveGenerate(); code != 0 {
+			os.Exit(code)
+		}
+		return true
+	}
+	return false
+}
+
+// loadGenerateConfig loads, policy-checks and validates the project and enforces
+// the lock; any failure ends the process with its exit code.
+func loadGenerateConfig(args []string) *config.Config {
+	cfg, err := loadConfigForCommand(cmdContext(), args, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
+	if err != nil {
+		fmtError(err)
+		if (generateLocked || generateFrozen) && errors.Is(err, config.ErrLockViolation) {
+			os.Exit(exitDrift) // a missing or disagreeing lock is drift, the same code as a changed source
+		}
+		os.Exit(1)
+	}
+
+	// The organization policy clamped the configuration at load; refuse to
+	// generate from one that tried to loosen it.
+	if err := policyGate(cfg); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+
+	// Validate configuration
+	if err := cfg.Validate(); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+
+	exitOnLockedDrift(enforceLockedContent(cfg))
+	exitOnMovedTags(cfg) // only with --verify-tags or [lock] verify_tags: a pinned tag that moved ends the run
+	return cfg
 }
 
 // emitPlan renders the generation plan without writing any output and writes it

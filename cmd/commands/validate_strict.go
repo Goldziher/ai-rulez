@@ -100,6 +100,14 @@ func checkFlagCombinations() error {
 	if fixRequested() && validateUpdateBaseline {
 		return oops.Errorf("--fix and --update-baseline cannot be combined: fix first, then record what is left")
 	}
+	if err := checkSinceFlags(); err != nil {
+		return err
+	}
+	return checkBaselineFlags()
+}
+
+// checkSinceFlags rejects --since, --changed and their limits used wrongly.
+func checkSinceFlags() error {
 	if validateSince != "" && validateChanged {
 		return oops.Errorf("--since and --changed cannot be combined (--changed is --since HEAD)")
 	}
@@ -112,6 +120,11 @@ func checkFlagCombinations() error {
 	if validateSinceMax < 0 {
 		return oops.Errorf("--since-max-files must not be negative")
 	}
+	return nil
+}
+
+// checkBaselineFlags rejects baseline flags that contradict each other.
+func checkBaselineFlags() error {
 	if validateUpdateBaseline && validateStrictBaseline {
 		return oops.Errorf("--update-baseline and --strict-baseline cannot be combined: updating rewrites the entries that --strict-baseline would reject")
 	}
@@ -173,6 +186,21 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 		return nil, oops.Wrapf(err, "index repository files")
 	}
 	sel := analyzerSelection(cfg)
+	opts := append(governanceLintOptions(cfg, sel), contentLintOptions(cfg, sel)...)
+	scanner, err := scannerOptions()
+	if err != nil {
+		return nil, err
+	}
+	scanner = withScannerCache(scanner, cfg)
+	return lint.RunWith(cfg, tree, lint.Options{
+		SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress,
+		Scanner: scanner, Analyzers: validateAnalyzers, NeedDeps: changedRev() != "", Cwd: workingDir(),
+	}, opts...)
+}
+
+// governanceLintOptions are the findings strict lint takes from outside the
+// content tree: plugin version drift, delivery, lock drift, approvals and signing.
+func governanceLintOptions(cfg *config.Config, sel []string) []lint.Option {
 	var opts []lint.Option
 	if (cfg.Plugin != nil || cfg.Marketplace != nil) && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
 		drift, driftErr := generator.NewGenerator(cfg).PluginVersionDrift("")
@@ -197,7 +225,13 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 			opts = append(opts, lint.WithSigning(findings))
 		}
 	}
-	opts = append(opts, sbomOptions(cfg, sel)...)
+	return opts
+}
+
+// contentLintOptions are the SBOM, harness trap, OKF and verifier inputs of
+// strict lint.
+func contentLintOptions(cfg *config.Config, sel []string) []lint.Option {
+	opts := sbomOptions(cfg, sel)
 	if lint.AnalyzerSelected(sel, lint.AnalyzerTraps) {
 		// The traps judge the files a run would write, whether or not generate has run.
 		opts = append(opts, lint.WithPlanned(generator.NewPlannedFiles(cfg)))
@@ -212,15 +246,7 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 	if validateVerifiers && lint.AnalyzerSelected(sel, lint.AnalyzerVerifiers) {
 		opts = append(opts, lint.WithVerifiers(verifierFindingsFor(cmdContext(), cfg)))
 	}
-	scanner, err := scannerOptions()
-	if err != nil {
-		return nil, err
-	}
-	scanner = withScannerCache(scanner, cfg)
-	return lint.RunWith(cfg, tree, lint.Options{
-		SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress,
-		Scanner: scanner, Analyzers: validateAnalyzers, NeedDeps: changedRev() != "", Cwd: workingDir(),
-	}, opts...)
+	return opts
 }
 
 // analyzerSelection is the analyzer allow-list of a run: --analyzer, else

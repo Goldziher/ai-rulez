@@ -157,7 +157,7 @@ func checkCatalogListFlags() error {
 	switch {
 	case catalogCheck:
 		return oops.Errorf("--check applies to --html only")
-	case catalogRole != "" || catalogClean || catalogIndexable || catalogTitle != "" || len(catalogAllowFindings) > 0 || catalogPageSizeSet:
+	case htmlOnlyFlagSet():
 		return oops.Errorf("--role, --clean, --indexable, --base-title, --max-items-per-page and --allow-findings apply to --html only")
 	case catalogMarkdownSet:
 		return oops.Errorf("--render-markdown applies to --html only")
@@ -169,6 +169,11 @@ func checkCatalogListFlags() error {
 		return oops.Errorf("--with-eval and --with-usage apply to --html and to --format json --schema-version 2")
 	}
 	return nil
+}
+
+// htmlOnlyFlagSet reports whether a flag that only the --html site uses is set.
+func htmlOnlyFlagSet() bool {
+	return catalogRole != "" || catalogClean || catalogIndexable || catalogTitle != "" || len(catalogAllowFindings) > 0 || catalogPageSizeSet
 }
 
 func runCatalog(out io.Writer) error {

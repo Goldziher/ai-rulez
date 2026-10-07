@@ -227,26 +227,30 @@ func selectScanners(infos []lint.ScannerInfo, names []string, all bool) (selecte
 	return selected, unknown
 }
 
+// scannerVersionText is the version row of a scanner found on PATH: probed with
+// --version only when probe is set.
+func scannerVersionText(ctx context.Context, s lint.ScannerInfo, probe bool) string {
+	if !probe {
+		return "not probed (pass --external)"
+	}
+	v, err := lint.ProbeScannerVersion(ctx, s)
+	switch {
+	case err != nil:
+		return "not probed (" + err.Error() + ")"
+	case v == "":
+		return "unknown (--version printed nothing usable)"
+	}
+	return v
+}
+
 // writeDoctor prints one scanner's report and reports whether it is healthy.
 func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe bool) bool {
 	rw := reportWriter{out}
 	row := func(key, value string) { rw.printf("  %-9s %s\n", key, value) }
 	rw.printf("%s\n", s.Name)
 	if s.Found() {
-		version := "not probed (pass --external)"
-		if probe {
-			v, err := lint.ProbeScannerVersion(ctx, s)
-			switch {
-			case err != nil:
-				version = "not probed (" + err.Error() + ")"
-			case v == "":
-				version = "unknown (--version printed nothing usable)"
-			default:
-				version = v
-			}
-		}
 		row("binary", s.Path)
-		row("version", version)
+		row("version", scannerVersionText(ctx, s, probe))
 	} else {
 		row("binary", s.Command+": not found on PATH (or only through a relative PATH entry)")
 	}
