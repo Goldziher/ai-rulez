@@ -1,11 +1,11 @@
 package config
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -64,11 +64,9 @@ func TestProjectSkillResources_SymlinkPolicy(t *testing.T) {
 			skill := filepath.Join(project, ".ai-rulez", "skills", "s")
 			write(t, filepath.Join(skill, "SKILL.md"), "---\nname: s\n---\nbody\n")
 			tt.setup(t, project, outside, skill)
-			var warned bytes.Buffer
-			old := contentWarnWriter
-			contentWarnWriter = &warned
-			t.Cleanup(func() { contentWarnWriter = old })
+			warned := &testutil.LogRecorder{}
 			s := newProjectScanner(osView(project))
+			s.log = warned
 
 			// Act
 			skills, err := s.skills(filepath.Join(project, ".ai-rulez", "skills"), nil)

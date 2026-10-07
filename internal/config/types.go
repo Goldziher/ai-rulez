@@ -186,6 +186,10 @@ type Config struct {
 	// or the repository containing BaseDir); nil on a Config built by hand.
 	Workspace workspace.Workspace `yaml:"-" json:"-" toml:"-"`
 
+	// deprecatedLintBudgetPath is the config file that still uses [lint.budget];
+	// finishLoadConfig warns about it once, through this config's host.
+	deprecatedLintBudgetPath string
+
 	// UserScope is set while rendering for `generate --user`: outputs are mapped
 	// into the person's home config directories, so renderers leave out keys that
 	// only make sense inside a project (MCP servers, plugin registration,
