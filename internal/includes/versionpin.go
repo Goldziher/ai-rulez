@@ -194,6 +194,12 @@ func ResolveVersion(ctx context.Context, lock *lockfile.File, w lockfile.Want, r
 		commit, t, err := keepPin(ctx, entry, tags, w)
 		return Resolution{Commit: commit, Tag: t.tag, TagObject: t.tagObject, Released: t.released, ReleasedFrom: t.releasedFrom}, err
 	}
+	return selectVersion(ctx, entry, tags, w)
+}
+
+// selectVersion picks the newest tag that satisfies w's constraint, through the
+// release age gate, and records its release time.
+func selectVersion(ctx context.Context, entry *lockfile.Entry, tags []tagresolve.RawTag, w lockfile.Want) (Resolution, error) {
 	spec := TagSpec(w)
 	if entry != nil {
 		spec.Pinned = entry.Tag
