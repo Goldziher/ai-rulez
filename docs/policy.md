@@ -442,7 +442,13 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
   an include or an installed skill delivers can declare `hooks` and `mcpServers` in its frontmatter. `[hooks]` and
   `[mcp]` bound those too, once the content is loaded: a file outside the project's own configuration directory (or
   inside a local include's directory) is imported. A violation unloads the key and is `AR748`, reported against the
-  imported file. Builtin packs are not bounded (they ship with the binary).
+  imported file. Every spelling of the key counts (`mcpServers`, `mcp-servers`, `mcp_servers`, any letter case): the
+  renderers that pass these keys through to a harness and the policy read one registry of the keys that execute or
+  connect. Builtin packs are not bounded (they ship with the binary).
+- **Every command is bound.** Each command's loads, CRUD operations and MCP setup run under the policy, and so do the
+  configurations `generate` loads itself (monorepo members, the shared view for `roles.json`, the drift baseline).
+  `catalog diff` and `approve` load earlier revisions from a temporary directory, but `--discover-org` still reads the
+  remote of the real project.
 - **Known gaps.** A policy value is not checked against the secret scanner yet. `deny_digests`
   bounds what the repository's own `ai-rulez.lock` says.
 - **No policy, no change.** Without a flag, variable or managed file the loader does nothing (tested).
