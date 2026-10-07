@@ -231,16 +231,6 @@ func evidenceURL(raw string) string {
 	return sanitizeScannerText(raw)
 }
 
-// resolve maps a path a scanner printed to the source file of a staged file.
-// ok is false for anything that is not a staged file.
-func (st *scannerStage) resolve(raw string) (string, bool) {
-	rel, ok := st.resolveRel(raw)
-	if !ok {
-		return "", false
-	}
-	return st.source[rel], true
-}
-
 // resolveRel maps a path a scanner printed to the stage-relative slash path of
 // a staged file. A relative path that is not under the stage root is tried
 // against the staged skill directories, which is where a scanner that was

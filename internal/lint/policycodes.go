@@ -249,7 +249,7 @@ func (r *runner) pathSuppresses(code, abs string) bool {
 // refuseSuppression records an attempted suppression of a protected code and
 // reports true; it reports false for an unprotected one.
 func (r *runner) refuseSuppression(code, route string) bool {
-	if !r.protected[code] && !(route == routeInline && r.noInline[code]) {
+	if !r.protected[code] && (route != routeInline || !r.noInline[code]) {
 		return false
 	}
 	if r.attempts == nil {
