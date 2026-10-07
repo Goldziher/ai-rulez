@@ -55,7 +55,7 @@ uvx ai-rulez init "My Project"
 
 ```bash
 # Initialize a new project
-uvx ai-rulez init "My Project" --preset claude
+uvx ai-rulez init "My Project"
 
 # Add a rule
 uvx ai-rulez add rule coding-standards --priority high

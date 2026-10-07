@@ -41,21 +41,25 @@ var rolesListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List the roles with their item counts and token estimates",
 	Args:  cobra.NoArgs,
-	Run:   func(cmd *cobra.Command, _ []string) { exitOn(runRolesList(cmd.OutOrStdout())) },
+	Run:   func(cmd *cobra.Command, _ []string) { exitOnFormat(rolesFormat, runRolesList(cmd.OutOrStdout())) },
 }
 
 var rolesShowCmd = &cobra.Command{
 	Use:   "show <name>",
 	Short: "Show a role as declared and with its parent merged in",
 	Args:  cobra.ExactArgs(1),
-	Run:   func(cmd *cobra.Command, args []string) { exitOn(runRolesShow(cmd.OutOrStdout(), args[0])) },
+	Run: func(cmd *cobra.Command, args []string) {
+		exitOnFormat(rolesFormat, runRolesShow(cmd.OutOrStdout(), args[0]))
+	},
 }
 
 var rolesResolveCmd = &cobra.Command{
 	Use:   "resolve <name>",
 	Short: "List the items a role keeps, with sizes and skill modes",
 	Args:  cobra.ExactArgs(1),
-	Run:   func(cmd *cobra.Command, args []string) { exitOn(runRolesResolve(cmd.OutOrStdout(), args[0])) },
+	Run: func(cmd *cobra.Command, args []string) {
+		exitOnFormat(rolesFormat, runRolesResolve(cmd.OutOrStdout(), args[0]))
+	},
 }
 
 func init() {

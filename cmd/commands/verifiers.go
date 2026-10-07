@@ -82,7 +82,7 @@ var VerifiersRunCmd = &cobra.Command{
 	Use:   "run [config-file]",
 	Short: "Evaluate the verifiers and report pass or fail for each",
 	Long: `Evaluate every [[verifiers]] entry (or only those named with --name) and print a
-table, or JSON with --json.
+table, or JSON with --format json.
 
 --since REV evaluates only the files changed since the merge base of REV and HEAD
 (plus uncommitted and untracked files); --staged only what is staged. A base that does
@@ -185,7 +185,7 @@ func loadVerifierConfig(ctx context.Context, args []string) (*config.Config, err
 // runVerifiers evaluates the verifiers, prints the report to out and returns
 // the process exit code.
 func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
-	progress.SetQuiet(true) // keep stdout to the report, so --json stays parseable
+	progress.SetQuiet(true) // keep stdout to the report, so --format json stays parseable
 	defer progress.SetQuiet(false)
 
 	cfg, err := loadVerifierConfig(ctx, args)

@@ -46,7 +46,7 @@ const (
 
 // Outcomes of a skill load. The recorder knows OutcomeLoaded at the moment of
 // the hook; the others are for hooks a team wires to later events (a Stop hook
-// can run `usage record --outcome used`). An unknown outcome is omitted.
+// can run `telemetry record --outcome used`). An unknown outcome is omitted.
 const (
 	OutcomeLoaded    = "loaded"
 	OutcomeUsed      = "used"

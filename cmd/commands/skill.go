@@ -147,7 +147,7 @@ func runSkillRemove(cmd *cobra.Command, args []string) {
 
 	if !skillForce {
 		if !confirmRemoval("installed skill", name) {
-			logger.Info("Operation canceled")
+			exitDeclined("Operation canceled")
 			return
 		}
 	}

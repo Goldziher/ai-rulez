@@ -136,7 +136,7 @@ func TestConvertKeepsClaudeCommandsE2E(t *testing.T) {
 	require.Equal(t, 0, env.run(root, "generate", "--yes").ExitCode)
 
 	// Act
-	clean := env.run(root, "clean", "--force")
+	clean := env.run(root, "clean", "--yes")
 
 	// Assert
 	require.Equal(t, 0, clean.ExitCode, clean.Stderr)

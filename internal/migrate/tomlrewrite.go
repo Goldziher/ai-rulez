@@ -299,6 +299,36 @@ func (d *tomlDoc) insertLines(at int, newLines ...string) {
 	d.stmts = parseTOMLDoc(d.text()).stmts
 }
 
+// ratchetSpellings lists, in document order, the distinct spellings of the lint
+// ratchet table in use: "budget", "tolerate" and "ratchet" (any of the header,
+// dotted-in-table and dotted-at-root forms).
+func (d *tomlDoc) ratchetSpellings() []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, s := range d.stmts {
+		name := ratchetSpelling(s)
+		if (isOldRatchetKey(name) || name == "ratchet") && !seen[name] {
+			seen[name] = true
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// ratchetSpelling is the name that a statement gives the table below [lint]
+// in its header, dotted-in-table or dotted-at-root form, or "".
+func ratchetSpelling(s stmt) string {
+	switch {
+	case s.header && len(s.path) >= 2 && s.path[0] == lintTable:
+		return s.path[1]
+	case !s.header && len(s.table) == 1 && s.table[0] == lintTable && len(s.key) > 0:
+		return s.key[0]
+	case !s.header && len(s.table) == 0 && len(s.key) > 1 && s.key[0] == lintTable:
+		return s.key[1]
+	}
+	return ""
+}
+
 // renameLintBudget renames `[lint.budget]` and `[lint.tolerate]` (and dotted spellings) to
 // `[lint.ratchet]` and reports how many lines changed.
 func (d *tomlDoc) renameLintBudget() int { //nolint:gocyclo // the three spellings of the table (header, dotted-in-table, dotted-at-root) in one place
