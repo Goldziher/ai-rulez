@@ -156,8 +156,7 @@ func LockStatusHandler(version string, dynamic DynamicLockChanges) func(ctx cont
 				return dynamic(ctx, cfg, lock, views)
 			}
 		}
-		//nolint:contextcheck // govview takes no context yet (its git probes use their own); requested from its owner
-		diff, err := govview.CheckLockRoles(cfg, skipped, profile, version, changes, govview.RoleSelection{Only: only})
+		diff, err := govview.CheckLockRoles(ctx, cfg, skipped, profile, version, changes, govview.RoleSelection{Only: only})
 		if err != nil {
 			return ToolError(err)
 		}
@@ -180,8 +179,7 @@ func CatalogHandler(version string) func(ctx context.Context, request *ToolReque
 		if err != nil {
 			return ToolError(err)
 		}
-		//nolint:contextcheck // govview takes no context yet (its git probes use their own); requested from its owner
-		doc, err := govview.BuildCatalog(cfg, counter, version)
+		doc, err := govview.BuildCatalog(ctx, cfg, counter, version)
 		if err != nil {
 			return ToolError(err)
 		}

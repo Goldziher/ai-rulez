@@ -418,5 +418,5 @@ func lockSummary(l catalogLock) string {
 }
 
 func buildCatalog(cfg *config.Config, counter tokens.Counter) (*catalogDoc, error) {
-	return govview.BuildCatalog(cfg, counter, Version)
+	return govview.BuildCatalog(cmdContext(), cfg, counter, Version)
 }

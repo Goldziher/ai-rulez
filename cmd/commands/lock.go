@@ -422,7 +422,7 @@ func checkLockContentAt(path string) (code int, report func()) {
 		fmtError(oops.Hint("run `ai-rulez lock` to create it").Errorf("no %s in %s: nothing to check", lockfile.FileName, cfg.ConfigDir))
 		return 1, nil
 	}
-	diff, err := govview.CheckLockRoles(cfg, remoteSkipped, lockProfile, Version, dynamicLockChanges, govview.RoleSelection{Only: lockRoleNames()})
+	diff, err := govview.CheckLockRoles(cmdContext(), cfg, remoteSkipped, lockProfile, Version, dynamicLockChanges, govview.RoleSelection{Only: lockRoleNames()})
 	if err != nil {
 		fmtError(err)
 		return 1, nil
