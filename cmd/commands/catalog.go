@@ -96,7 +96,6 @@ file they name.`,
 
 func init() {
 	addFormatFlag(CatalogCmd.Flags(), &catalogFormat, "", formatText, formatText, formatJSON)
-	addJSONFlagAlias(CatalogCmd.Flags())
 	CatalogCmd.Flags().IntVar(&catalogSchemaFlag, "schema-version", govview.CatalogSchemaVersion, "JSON schema version: 1 or 2")
 	CatalogCmd.Flags().StringVar(&catalogHTMLDir, "html", "", "Write a static website of the catalog into this directory")
 	CatalogCmd.Flags().StringVar(&catalogRole, "role", "", "With --html: keep only the items this role keeps")

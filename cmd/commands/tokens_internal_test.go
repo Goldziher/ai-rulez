@@ -45,7 +45,7 @@ func resetTokensFlags(t *testing.T) {
 func TestTokensCommand_FlagSurface(t *testing.T) {
 	flags := TokensCmd.Flags()
 	for name, shorthand := range map[string]string{
-		"json":       "j",
+		"format":     "",
 		"budget":     "b",
 		"profile":    "p",
 		"config-dir": "n",

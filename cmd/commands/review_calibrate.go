@@ -98,7 +98,6 @@ func init() {
 	f.StringVar(&calibrateFlags.compare, "compare", "", "Compare with this calibration record and fail on drift (writes nothing)")
 	f.StringVar(&calibrateFlags.out, "out", "", "Write the record here instead of the rubric's calibration.json")
 	addFormatFlag(f, &calibrateFlags.format, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(f)
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	f.BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 }

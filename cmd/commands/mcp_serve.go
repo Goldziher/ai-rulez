@@ -97,7 +97,7 @@ func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 }
 
 // applyServeNetworkPolicy turns --frozen and --offline into the include lock
-// policy, exactly as `generate --frozen` and `generate --no-fetch` do.
+// policy, exactly as `generate --frozen` and `generate --offline` do.
 func applyServeNetworkPolicy(frozen, offline bool) {
 	switch {
 	case frozen:

@@ -34,7 +34,7 @@ const (
 )
 
 // SkipFetch when true causes git sources to use cached content without fetching.
-// Set from the --no-fetch CLI flag.
+// Set from the --offline CLI flag.
 var SkipFetch bool
 
 // ErrNotCached is wrapped by the error an offline load returns for an include or
@@ -266,7 +266,7 @@ func (s *GitSource) sparsePathSpec() string {
 // Fetch downloads content from git repository and returns the content tree.
 //
 // Safe for concurrent invocation. The fast path (cache SHA matches remote,
-// or --no-fetch) is lock-free; only refresh of a stale cache is serialized
+// or --offline) is lock-free; only refresh of a stale cache is serialized
 // by a per-cacheDir mutex with double-checked locking.
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 	tree, err := s.fetch(ctx)
@@ -322,7 +322,7 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 				With("cache_dir", s.cacheDir).
 				Wrapf(ErrNotCached, "%s: no cached content found for include '%s'", offlineReason(), s.name)
 		}
-		s.logger().Debug("Skipping fetch (--no-fetch), using cached content", "name", s.name)
+		s.logger().Debug("Skipping fetch (--offline), using cached content", "name", s.name)
 		return s.scanCachedContent(ctx)
 	}
 

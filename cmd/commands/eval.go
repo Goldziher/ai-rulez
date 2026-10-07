@@ -138,7 +138,6 @@ func init() {
 	f.StringVar(&evalFlags.scope, "scope", evals.ScopeDomain, "With --mode activation: the skills that compete for a prompt: domain (the skill's domain plus root skills) or all")
 	f.StringVar(&evalFlags.descriptionFrom, "description-from", "", "With --mode activation and one skill: measure the description in this file instead of the skill's own, for this run only (nothing is recorded, the source is not edited)")
 	addFormatFlag(f, &evalFlags.format, evals.FormatMarkdown, evals.FormatMarkdown, evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit)
-	addJSONFlagAlias(f)
 	f.StringVar(&evalFlags.out, "out", "", "Write the report to <dir>/eval-report.<ext> instead of standard output")
 	f.Float64Var(&evalFlags.maxCost, "max-cost", 0, "Advisory run-wide spend cap in USD (finite, >= 0; 0 means no limit): refuse to start when the estimate exceeds it, skip skills once spend reaches it, warn when a runner overshoots the budget it was given; a runner that reports no cost is assumed to have spent the whole budget")
 	f.StringVar(&evalFlags.maxCostMode, "max-cost-mode", "", "Estimate figure that must fit under --max-cost before a run starts: expected (default for case runs) or high (default for --mode activation)")

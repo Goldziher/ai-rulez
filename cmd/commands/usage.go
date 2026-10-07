@@ -375,6 +375,6 @@ func init() {
 	telemetryReportCmd.Flags().StringVar(&usageIndex, "index", "", "Skills index to join against (default <config dir>/skills-index.json)")
 	telemetryReportCmd.Flags().StringVar(&reportFeedback, "feedback", "", "Feedback log to join (default feedback.jsonl beside the usage log, when present)")
 	telemetryReportCmd.Flags().StringVar(&reportEvals, "evals", "", "Eval results to join (default <config dir>/eval-results.json, when present)")
-	telemetryReportCmd.Flags().BoolVarP(&reportJSON, "json", "j", false, "Emit the report as JSON")
+	addJSONFormat(telemetryReportCmd.Flags(), &reportJSON, "")
 	telemetryReportCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }

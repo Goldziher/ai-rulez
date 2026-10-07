@@ -29,7 +29,6 @@ const (
 
 var (
 	verifiersStrict   bool
-	verifiersJSON     bool
 	verifiersNames    []string
 	verifiersProfile  string
 	verifiersSince    string
@@ -146,7 +145,6 @@ var VerifiersListCmd = &cobra.Command{
 func init() {
 	VerifiersCmd.AddCommand(VerifiersRunCmd, VerifiersListCmd, VerifiersExplainCmd, VerifiersTestCmd)
 	VerifiersRunCmd.Flags().BoolVar(&verifiersStrict, "strict", false, "Also exit non-zero when a warning-severity verifier fails")
-	addJSONAlias(VerifiersRunCmd.Flags(), &verifiersJSON, "")
 	VerifiersRunCmd.Flags().StringSliceVar(&verifiersNames, "name", nil, "Run only the named verifier (repeatable)")
 	VerifiersRunCmd.Flags().StringVarP(&verifiersProfile, "profile", "p", "", "Active profile: sets the profile of generated_in_sync verifiers that name none, and which rules count as active (default: from config)")
 	f := VerifiersRunCmd.Flags()
@@ -267,12 +265,6 @@ func verifierRunOptions() (opts verifiers.Options, format, failOn string, err er
 		return opts, "", "", oops.New("use only one of --since, --staged and --all")
 	}
 	format = verifiersFormat
-	if verifiersJSON {
-		if format != "" && format != "json" {
-			return opts, "", "", oops.Hint("Drop --json, or use --format json.").Errorf("--json conflicts with --format %s", format)
-		}
-		format = "json"
-	}
 	switch format {
 	case "", "text", "json", "sarif", "junit":
 	default:
