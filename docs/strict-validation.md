@@ -121,6 +121,7 @@ stdout.
 | AR997 | `eval-stale` | off | A skill changed after its last recorded passing eval run; turned on by `[lint.evals] require_fresh = "warn"\|"error"` |
 | AR998 | `eval-score-low` | off | A skill's recorded eval pass rate is below `[lint.evals] min_pass_rate`; setting that turns the rule on at error |
 | AR9A0 | `eval-results-invalid` | error | `.ai-rulez/eval-results.json` cannot be parsed or has an unsupported `schema_version` |
+| AR990 | `served-skill-referenced-statically` | warning | A static rule, context or skill names (`` `x` skill ``, `` `x` ``, `/x`, `Skill(x)`), or an agent lists in its `skills:` frontmatter, a skill whose `delivery` is `served`; the harness cannot see it until the agent calls `find_skill`. `both` skills are static and are not reported (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR9A1 | `activation-low` | off | A skill's recorded activation recall or precision (`eval run --mode activation`) is below `[lint.evals] min_activation_recall` or `min_activation_precision`; setting either turns the rule on at error (see [Evals](evals.md#activation-mode)) |
 | AR9A2 | `skill-confusable` | off | A sibling skill won at least `[lint.evals] confusion_threshold` of this skill's positive activation prompts; setting it turns the rule on at warning |
 | AR9A3 | `activation-policy-conflict` | warning | An eval case contradicts the skill's invocation policy (`disable-model-invocation: true` or `allow_implicit_invocation: false`): it expects a trigger (`expect_trigger: true`) and can never pass, or expects none and can never fail (see [Evals](evals.md#linting-cases-and-results)) |
@@ -2302,7 +2303,7 @@ a static rule, context or skill names a skill whose delivery is served, which is
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
 - Why: A static item that names a served skill points at a file the harness never gets.
-- Bad: A rule saying "run the `deploy` skill" when `deploy` is served
+- Bad: A rule saying "run the `deploy` skill", or an agent `skills: [deploy]`, when `deploy` is served
 - Good: Tell the agent to call `find_skill`, or make the skill static
 
 ### AR991 delivery-stub-missing
