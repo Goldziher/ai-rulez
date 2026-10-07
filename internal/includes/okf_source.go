@@ -14,11 +14,6 @@ import (
 	"github.com/samber/oops"
 )
 
-// OKFScan scans the text an OKF include converts to, before it is used. The
-// caller wires it to the security scan (lint imports this package, so it cannot
-// be called from here). nil skips the scan.
-var OKFScan okfbridge.Scanner
-
 // OKFSource reads an Open Knowledge Format bundle in a local directory as an
 // include: the bundle is converted to .ai-rulez sources in a temporary
 // directory, loaded like any other include, and discarded. A bundle in a git
@@ -28,6 +23,9 @@ type OKFSource struct {
 	name    string
 	dir     string
 	include []string
+	// scan runs the security scan over the converted text before it is used.
+	// The resolver supplies it per load; nil skips the scan (tests only).
+	scan okfbridge.Scanner
 }
 
 func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig) (Source, error) {
@@ -41,7 +39,7 @@ func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig)
 			logger.FromContext(ctx).Info("Skipping include (local_override path not found)", "name", c.Name, "local_override", c.LocalOverride)
 			return nil, nil
 		}
-		return &OKFSource{name: c.Name, dir: p, include: c.Include}, nil
+		return &OKFSource{name: c.Name, dir: p, include: c.Include, scan: r.okfScan}, nil
 	}
 	if DetectSourceType(source) == SourceTypeGit {
 		w := withVersion(lockfile.Want{
@@ -60,6 +58,7 @@ func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig)
 			return nil, oops.Wrapf(err, "failed to create git source for OKF include '%s'", c.Name)
 		}
 		src.pin = p
+		src.okfScan = r.okfScan
 		return src, nil
 	}
 	dir := source
@@ -69,7 +68,7 @@ func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig)
 	if c.Path != "" {
 		dir = filepath.Join(dir, filepath.FromSlash(strings.TrimPrefix(c.Path, "/")))
 	}
-	return &OKFSource{name: c.Name, dir: dir, include: c.Include}, nil
+	return &OKFSource{name: c.Name, dir: dir, include: c.Include, scan: r.okfScan}, nil
 }
 
 // GetType returns the source type.
@@ -80,12 +79,12 @@ func (s *OKFSource) GetName() string { return s.name }
 
 // Fetch converts the bundle and loads the result.
 func (s *OKFSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
-	return convertOKFBundle(ctx, s.dir, s.name, s.include)
+	return convertOKFBundle(ctx, s.dir, s.name, s.include, s.scan)
 }
 
 // convertOKFBundle reads the OKF bundle in dir and converts it to a content
 // tree through a temporary .ai-rulez directory, applying the include filter.
-func convertOKFBundle(ctx context.Context, dir, name string, include []string) (*config.ContentTree, error) {
+func convertOKFBundle(ctx context.Context, dir, name string, include []string, scan okfbridge.Scanner) (*config.ContentTree, error) {
 	b, err := okf.Load(os.DirFS(dir))
 	if err != nil {
 		return nil, oops.With("include", name).Wrapf(err, "read OKF bundle")
@@ -99,7 +98,7 @@ func convertOKFBundle(ctx context.Context, dir, name string, include []string) (
 	if err := os.MkdirAll(target, 0o755); err != nil { //nolint:gosec // temp dir
 		return nil, oops.Wrapf(err, "create temp directory")
 	}
-	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: target, Scan: OKFScan})
+	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: target, Scan: scan})
 	if err != nil {
 		return nil, oops.With("include", name).Wrapf(err, "convert OKF bundle")
 	}

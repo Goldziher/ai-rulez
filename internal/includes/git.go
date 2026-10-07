@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/samber/oops"
 )
 
@@ -156,9 +157,10 @@ type GitSource struct {
 	cacheDir    string // ~/.cache/ai-rulez/includes/{name}-{url hash}/
 	include     []string
 	accessToken string
-	pin         *pin   // ai-rulez.lock entry this source must match (nil: unpinned)
-	baseDir     string // project the include belongs to, for recording what it resolved to
-	okf         bool   // the repository holds an OKF bundle (at path) instead of an .ai-rulez directory
+	pin         *pin              // ai-rulez.lock entry this source must match (nil: unpinned)
+	baseDir     string            // project the include belongs to, for recording what it resolved to
+	okf         bool              // the repository holds an OKF bundle (at path) instead of an .ai-rulez directory
+	okfScan     okfbridge.Scanner // security scan for the OKF conversion (nil skips it)
 	log         logger.Logger
 }
 
@@ -418,7 +420,7 @@ func (s *GitSource) scanCachedContent(ctx context.Context) (*config.ContentTree,
 		if dir == "" {
 			return nil, oops.With("repo", RedactURL(s.repoURL)).With("path", s.path).Errorf("no OKF bundle found in repository")
 		}
-		return convertOKFBundle(ctx, dir, s.name, s.include)
+		return convertOKFBundle(ctx, dir, s.name, s.include, s.okfScan)
 	}
 	// Find the .ai-rulez directory in the extracted content
 	aiRulezDir := s.findAIRulezDir()

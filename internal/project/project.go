@@ -19,13 +19,18 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/registry"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
 
 // gitTokenKey is the viper key the root command binds to --token and AI_RULEZ_GIT_TOKEN.
 const gitTokenKey = "git_token"
 
 // Resolvers returns the include and installed-skill resolvers of this process.
-func Resolvers() config.Resolvers { return includes.Resolvers(viper.GetString(gitTokenKey)) }
+// The OKF include scan runs the default security rules, so an OKF include is
+// refused content a skill would be refused.
+func Resolvers() config.Resolvers {
+	return includes.Resolvers(viper.GetString(gitTokenKey), lint.OKFScanner(nil))
+}
 
 // Options returns opts preceded by the resolvers and the registry of this process
 // (the git token comes from --token or AI_RULEZ_GIT_TOKEN). An explicit
