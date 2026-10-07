@@ -232,6 +232,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - `clean` keeps a git-tracked `.ai-rulez/.generated-manifest.local.json` and warns, as `generate` does.
 - Log output honours `NO_COLOR`, `TERM=dumb` and non-terminal stderr.
 - A `SKILL.md` whose frontmatter has no closing `---` is malformed (warning on load, `validate` fails, the skills server refuses it).
+- **OKF concept titles derived from a non-ASCII file name** no longer split the first UTF-8 character.
 - **OKF index entries are percent-encoded**: a resource named `My File (1).md` produced an index link the parser could not read, so the exported bundle failed its own `AR9B0` / `AR9B4` checks.
 - **OKF documentation matches the code**: the type override is the `okf:` metadata map (there is no `okf_type` key), the config key is `[okf] spec`, `checks` appear in the layout and mapping, `export okf --role` / `--config-dir` and `import okf --config-dir` are documented, `import okf` says it can also create agents, commands and checks via `x-ai-rulez.kind`, and `AR9B8` is described by what it reports.
 - **OKF export, import, export is byte-identical again**: an import added `name` to a skill without one and the next export hoisted it into `x-ai-rulez.metadata` (a skill `name` equal to its id is no longer exported), and a resource such as `references/upper.MD` was wrapped a second time on every cycle (export now uses the same case-sensitive `.md` test as the loader, so it is carried verbatim).
