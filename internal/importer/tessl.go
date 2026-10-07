@@ -104,7 +104,7 @@ func (b *tesslPlanner) importManifest() ([]tesslDep, error) {
 		b.p.add(newFinding(StatusDropped, tesslManifest, "", "", skipReasonOr(err)))
 		return nil, nil
 	}
-	std, err := hujson.Standardize(data)
+	std, err := hujson.Standardize(trimBOM(data))
 	var doc map[string]json.RawMessage
 	if err == nil {
 		err = json.Unmarshal(std, &doc)
@@ -406,9 +406,9 @@ func (b *tesslPlanner) rubric(file string) string {
 		return ""
 	}
 	var c tesslCriteria
-	if err := json.Unmarshal(data, &c); err != nil {
+	if err := json.Unmarshal(trimBOM(data), &c); err != nil {
 		// A bare list of items is also accepted.
-		if lerr := json.Unmarshal(data, &c.Checklist); lerr != nil {
+		if lerr := json.Unmarshal(trimBOM(data), &c.Checklist); lerr != nil {
 			b.p.add(newFinding(StatusUnsupported, file, "", "", "not a criteria object or a checklist: "+err.Error()))
 			return ""
 		}

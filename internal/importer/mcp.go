@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -84,8 +85,17 @@ func importMCP(p *Plan, r *reader) {
 	}
 }
 
-// stripJSONC removes whole-line // comments, which editors allow in MCP files.
+// utf8BOM is the byte order mark some editors write at the start of a file.
+var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
+
+// trimBOM drops a leading UTF-8 byte order mark, which encoding/json and hujson
+// reject as an invalid character, so a JSON input reads like a Markdown one.
+func trimBOM(data []byte) []byte { return bytes.TrimPrefix(data, utf8BOM) }
+
+// stripJSONC removes whole-line // comments, which editors allow in MCP files,
+// and a leading byte order mark.
 func stripJSONC(data []byte) []byte {
+	data = trimBOM(data)
 	var out []string
 	for _, line := range strings.Split(string(data), "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "//") {
