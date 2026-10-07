@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   validate:
-    uses: xberg-io/actions/.github/workflows/reusable-validate.yml@v1
+    uses: xberg-io/actions/.github/workflows/reusable-validate.yml@9ed0576675002330bb3d5446ac603b70a6f096ee # v1
 
   lint:
     name: Lint
@@ -45,12 +45,12 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@v3
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
         with:
           # Pinned, so a local run with the same version matches CI; bump on purpose.
           version: v2.14.0
@@ -109,7 +109,7 @@ jobs:
             echo "::notice::no v5 release to compare pkg/airulez against yet"
             exit 0
           fi
-          go install golang.org/x/exp/cmd/gorelease@latest
+          go install golang.org/x/exp/cmd/gorelease@v0.0.0-20261005173118-76772065c9b0
           gorelease -base="$base"
 
   npm-wrapper:
@@ -158,7 +158,7 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@v3
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -232,7 +232,7 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@v3
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -349,7 +349,7 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@v3
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -399,7 +399,7 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@v3
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -448,7 +448,7 @@ jobs:
         run: go mod download
 
       - name: Install Task
-        uses: arduino/setup-task@v3
+        uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
