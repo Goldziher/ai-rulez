@@ -107,6 +107,20 @@ cached_binary() {
   xberg_assert_output 'fake ai-rulez: [generate] [--profile] [a b] [it'"'"'s] [$HOME] []'
 }
 
+@test "AI_RULEZ_BINARY that is not executable fails instead of silently using another binary" {
+  printf 'not a binary\n' >"$BATS_TEST_TMPDIR/ai-rulez"
+  export AI_RULEZ_BINARY="$BATS_TEST_TMPDIR/ai-rulez"
+  xberg_stub ai-rulez 'echo "the PATH ai-rulez ran"'
+  xberg_stub_curl_offline
+
+  run "$SCRIPT" validate
+
+  xberg_assert_status 1
+  xberg_assert_output_contains "AI_RULEZ_BINARY"
+  xberg_assert_output_contains "not executable"
+  [[ "$output" != *"the PATH ai-rulez ran"* ]]
+}
+
 @test "an ai-rulez on PATH is used without downloading" {
   xberg_stub ai-rulez 'printf "path ai-rulez %s\n" "$*"'
   xberg_stub_curl_offline
