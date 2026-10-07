@@ -69,7 +69,6 @@ func newCrossFixture(t *testing.T) *crossFixture {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
 	cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
-	includes.ResetObserved()
 	t.Cleanup(func() {
 		cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
 	})

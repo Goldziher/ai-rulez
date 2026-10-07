@@ -15,7 +15,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/forge"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -344,9 +343,6 @@ func printLockWritten(next *lockfile.File) {
 // offline, and returns the function that restores it.
 func prepareLockRun(remoteRefresh bool, kind string, wanted map[string]bool) (restore func()) {
 	prev := cliLockPolicy
-	if remoteRefresh {
-		includes.ResetObserved()
-	}
 	cliLockPolicy = lockrun.RunPolicy(cliLockPolicy, remoteRefresh, kind, wanted)
 	return func() { cliLockPolicy = prev }
 }

@@ -255,7 +255,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		if err != nil {
 			return nil, oops.Wrapf(err, "failed to create git source for include '%s'", includeConf.Name)
 		}
-		source.pin = p
+		source.pin, source.state = p, stateFor(r.cfg)
 		return source, nil
 	default:
 		return nil, oops.Errorf("unknown source type: %s", sourceType)

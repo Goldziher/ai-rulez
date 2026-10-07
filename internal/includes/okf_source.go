@@ -59,6 +59,7 @@ func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig)
 		}
 		src.pin = p
 		src.okfScan = r.okfScan
+		src.state = stateFor(r.cfg)
 		return src, nil
 	}
 	dir := source

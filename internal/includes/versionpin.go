@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -26,43 +25,6 @@ type tagInfo struct {
 	tag, tagObject string
 	// released and releasedFrom are the recorded release time (RFC 3339) and its source.
 	released, releasedFrom string
-}
-
-var (
-	tagsMu   sync.Mutex
-	tagsBy   = map[string]tagInfo{}
-	problems = map[string]string{}
-)
-
-func recordTag(baseDir, kind, name string, t tagInfo) {
-	tagsMu.Lock()
-	tagsBy[observedKey(baseDir, kind, name)] = t
-	tagsMu.Unlock()
-}
-
-func recordProblem(baseDir, kind, name, msg string) {
-	tagsMu.Lock()
-	problems[observedKey(baseDir, kind, name)] = msg
-	tagsMu.Unlock()
-}
-
-func resetTags() {
-	tagsMu.Lock()
-	tagsBy, problems = map[string]tagInfo{}, map[string]string{}
-	tagsMu.Unlock()
-}
-
-func recordedTag(baseDir, kind, name string) (tagInfo, bool) {
-	tagsMu.Lock()
-	defer tagsMu.Unlock()
-	t, ok := tagsBy[observedKey(baseDir, kind, name)]
-	return t, ok
-}
-
-func recordedProblem(baseDir, kind, name string) string {
-	tagsMu.Lock()
-	defer tagsMu.Unlock()
-	return problems[observedKey(baseDir, kind, name)]
 }
 
 // TagSpec converts a want's constraint to the resolver's spec.
@@ -110,15 +72,15 @@ func versionRef(ctx context.Context, cfg *config.Config, lock *lockfile.File, w 
 		return p.effectiveRef(w.Ref), nil
 	}
 	if p != nil {
-		recordTag(baseDir, w.Kind, w.Name, tagInfo{p.entry.Tag, p.entry.TagObject, p.entry.Released, p.entry.ReleasedFrom})
+		stateFor(cfg).recordTag(baseDir, w.Kind, w.Name, tagInfo{p.entry.Tag, p.entry.TagObject, p.entry.Released, p.entry.ReleasedFrom})
 		return p.entry.Commit, nil
 	}
 	ref, info, err := resolveConstraint(ctx, refreshRun(cfg, w), lock, w, repoURL, token)
 	if err != nil {
-		recordProblem(baseDir, w.Kind, w.Name, err.Error())
+		stateFor(cfg).recordProblem(baseDir, w.Kind, w.Name, err.Error())
 		return "", violationOrPlain(w, err)
 	}
-	recordTag(baseDir, w.Kind, w.Name, info)
+	stateFor(cfg).recordTag(baseDir, w.Kind, w.Name, info)
 	return ref, nil
 }
 
