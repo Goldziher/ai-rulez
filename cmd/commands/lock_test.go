@@ -221,17 +221,17 @@ func TestLockDriftForNeedsEnforceAndLock(t *testing.T) {
 	root := lockProject(t, "[lock]\nenforce = true\n")
 	cfg, err := loadForLock("")
 	require.NoError(t, err)
-	drift := lockDriftFor(cfg)
+	drift := lockDriftFor(t.Context(), cfg)
 	assert.Empty(t, drift, "no lock, no finding")
 
 	require.Equal(t, 0, writeLockAt("", "", nil))
-	drift = lockDriftFor(cfg)
+	drift = lockDriftFor(t.Context(), cfg)
 	assert.Empty(t, drift)
 
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "# Style\nchanged\n")
 	cfg, err = loadForLock("")
 	require.NoError(t, err)
-	drift = lockDriftFor(cfg)
+	drift = lockDriftFor(t.Context(), cfg)
 	var sources, outputs int
 	for _, d := range drift {
 		if d.Output {
@@ -248,7 +248,7 @@ func TestLockDriftForNeedsEnforceAndLock(t *testing.T) {
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig+"\n[lock]\nenforce = false\n")
 	cfg, err = loadForLock("")
 	require.NoError(t, err)
-	drift = lockDriftFor(cfg)
+	drift = lockDriftFor(t.Context(), cfg)
 	assert.Empty(t, drift)
 }
 
@@ -269,7 +269,7 @@ func TestLockDriftForUnreadableLockIsAFindingUnderEnforce(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			writeFile(t, lockPath, content)
-			drift := lockDriftFor(cfg)
+			drift := lockDriftFor(t.Context(), cfg)
 			require.NotEmpty(t, drift, "an unverifiable lock must not pass silently")
 			assert.Equal(t, ".ai-rulez/"+lockfile.FileName, drift[0].Path)
 		})
@@ -280,7 +280,7 @@ func TestLockDriftForUnreadableLockIsAFindingUnderEnforce(t *testing.T) {
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig+"\n[lock]\nenforce = false\n")
 	cfg, err = loadForLock("")
 	require.NoError(t, err)
-	assert.Empty(t, lockDriftFor(cfg))
+	assert.Empty(t, lockDriftFor(t.Context(), cfg))
 }
 
 func TestLockDiffSkippedRemoteOutputsFailUnderEnforce(t *testing.T) {

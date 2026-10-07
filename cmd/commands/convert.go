@@ -237,7 +237,7 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 		return exitConvertBlocked
 	}
 	if write && convertLock {
-		if code := lockConverted(); code != 0 {
+		if code := lockConverted(ctx); code != 0 {
 			return exitConvertCannotRun
 		}
 	}
@@ -265,7 +265,7 @@ func reportNothingToConvert(out io.Writer, err error) {
 
 // lockConverted runs `ai-rulez lock` on the config convert wrote. The lock prints
 // to stdout; with --format json that would corrupt the report, so it goes to stderr.
-func lockConverted() int {
+func lockConverted(ctx context.Context) int {
 	abs, err := filepath.Abs(convertSource)
 	if err != nil {
 		fmtError(err)
@@ -280,7 +280,7 @@ func lockConverted() int {
 		os.Stdout = os.Stderr
 		defer func() { os.Stdout = saved }()
 	}
-	return writeLockAt(filepath.Join(into, "config.toml"), "", nil)
+	return writeLockAtContext(ctx, filepath.Join(into, "config.toml"), "", nil)
 }
 
 func normalizeStatuses(in []string) []string {

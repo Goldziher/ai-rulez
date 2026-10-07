@@ -237,12 +237,13 @@ func onceCollector() *diag.Collector {
 	})
 }
 
+// loadForLock is loadForLockContext without a caller's context.
 func loadForLock(path string, opts ...config.LoadOption) (*config.Config, error) {
-	return loadForLockIn(cmdContext(), path, opts...)
+	return loadForLockContext(cmdContext(), path, opts...)
 }
 
-// loadForLockIn is loadForLock under ctx (a lock run's context).
-func loadForLockIn(ctx context.Context, path string, opts ...config.LoadOption) (*config.Config, error) {
+// loadForLockContext is loadForLock under ctx (a lock run's context).
+func loadForLockContext(ctx context.Context, path string, opts ...config.LoadOption) (*config.Config, error) {
 	if lockWarnings != nil {
 		opts = append(opts, config.WithCollector(lockWarnings))
 	}
@@ -254,8 +255,14 @@ func loadForLockIn(ctx context.Context, path string, opts ...config.LoadOption) 
 	return loadConfigForCommand(ctx, nil, opts...)
 }
 
+// writeLockAt is writeLockAtContext without a caller's context.
 func writeLockAt(path, kind string, names []string) int {
-	res, err := lockrun.Write(cmdContext(), lockRequest(kind, names), lockEnv(path))
+	return writeLockAtContext(cmdContext(), path, kind, names)
+}
+
+// writeLockAtContext writes the lock of the configuration at path under ctx.
+func writeLockAtContext(ctx context.Context, path, kind string, names []string) int {
+	res, err := lockrun.Write(ctx, lockRequest(kind, names), lockEnv(path))
 	lockUnpinned = append(lockUnpinned, res.Unpinned...)
 	if err != nil {
 		var refused *lockrun.FindingsError
@@ -284,7 +291,7 @@ func lockEnv(path string) lockrun.Env {
 		Version: Version,
 		Policy:  cliLockPolicy,
 		Load: func(ctx context.Context, p config.LockPolicy, opts ...config.LoadOption) (*config.Config, error) {
-			return loadForLockIn(ctx, path, append(opts, config.WithLockPolicy(p))...)
+			return loadForLockContext(ctx, path, append(opts, config.WithLockPolicy(p))...)
 		},
 		Collector: lockWarnings,
 		Report:    os.Stderr,
@@ -324,9 +331,9 @@ func prepareLockRun(remoteRefresh bool, kind string, wanted map[string]bool) (re
 
 // nextLock builds the remote, source and served entries of the new lock (see
 // lockrun.Next) with the serve-view flags.
-func nextLock(cfg *config.Config, current *lockfile.File, kind string, wanted map[string]bool, remoteRefresh bool) (*lockfile.File, error) {
+func nextLock(ctx context.Context, cfg *config.Config, current *lockfile.File, kind string, wanted map[string]bool, remoteRefresh bool) (*lockfile.File, error) {
 	req, env := lockRequest(kind, wantedNames(wanted)), lockEnv("")
-	next, dyn, err := lockrun.Next(cmdContext(), cfg, current, &req, &env, remoteRefresh)
+	next, dyn, err := lockrun.Next(ctx, cfg, current, &req, &env, remoteRefresh)
 	lockUnpinned = append(lockUnpinned, dyn.Unpinned...)
 	return next, err //nolint:wrapcheck // already contextual
 }

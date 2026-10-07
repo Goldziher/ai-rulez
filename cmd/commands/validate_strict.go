@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -169,7 +170,7 @@ func applyRepoRoot() error {
 }
 
 // strictLint lints one loaded root.
-func strictLint(cfg *config.Config) (*lint.Report, error) {
+func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 	if validateLintProfile != "" {
 		lc := config.LintConfig{}
 		if cfg.Lint != nil {
@@ -181,12 +182,12 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 	if problems := lint.ValidateSettings(cfg.Lint); len(problems) > 0 {
 		return nil, oops.Errorf("invalid [lint] settings: %v", problems)
 	}
-	tree, err := strictTreeCache.Load(cfg.BaseDir)
+	tree, err := strictTreeCache.LoadContext(ctx, cfg.BaseDir)
 	if err != nil {
 		return nil, oops.Wrapf(err, "index repository files")
 	}
 	sel := analyzerSelection(cfg)
-	opts := append(governanceLintOptions(cfg, sel), contentLintOptions(cfg, sel)...)
+	opts := append(governanceLintOptions(ctx, cfg, sel), contentLintOptions(ctx, cfg, sel)...)
 	scanner, err := scannerOptions()
 	if err != nil {
 		return nil, err
@@ -200,7 +201,7 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 
 // governanceLintOptions are the findings strict lint takes from outside the
 // content tree: plugin version drift, delivery, lock drift, approvals and signing.
-func governanceLintOptions(cfg *config.Config, sel []string) []lint.Option {
+func governanceLintOptions(ctx context.Context, cfg *config.Config, sel []string) []lint.Option {
 	var opts []lint.Option
 	if (cfg.Plugin != nil || cfg.Marketplace != nil) && !skipPluginDrift && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
 		drift, driftErr := generator.NewGenerator(cfg).PluginVersionDrift("")
@@ -210,15 +211,15 @@ func governanceLintOptions(cfg *config.Config, sel []string) []lint.Option {
 		opts = append(opts, lint.WithPluginDrift(drift))
 	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerDelivery, lint.AnalyzerLock) {
-		if findings := deliveryFindings(cfg); !strictSecurityOnly && len(findings) > 0 {
+		if findings := deliveryFindings(ctx, cfg); !strictSecurityOnly && len(findings) > 0 {
 			opts = append(opts, lint.WithDelivery(findings))
 		}
 	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerLock) {
-		if drift := lockDriftFor(cfg); len(drift) > 0 {
+		if drift := lockDriftFor(ctx, cfg); len(drift) > 0 {
 			opts = append(opts, lint.WithLockDrift(drift))
 		}
-		if findings := approvalFindingsFor(cfg); len(findings) > 0 {
+		if findings := approvalFindingsFor(ctx, cfg); len(findings) > 0 {
 			opts = append(opts, lint.WithApprovals(findings))
 		}
 		if findings := signingFindingsFor(cfg); len(findings) > 0 {
@@ -230,7 +231,7 @@ func governanceLintOptions(cfg *config.Config, sel []string) []lint.Option {
 
 // contentLintOptions are the SBOM, harness trap, OKF and verifier inputs of
 // strict lint.
-func contentLintOptions(cfg *config.Config, sel []string) []lint.Option {
+func contentLintOptions(ctx context.Context, cfg *config.Config, sel []string) []lint.Option {
 	opts := sbomOptions(cfg, sel)
 	if lint.AnalyzerSelected(sel, lint.AnalyzerTraps) {
 		// The traps judge the files a run would write, whether or not generate has run.
@@ -244,7 +245,7 @@ func contentLintOptions(cfg *config.Config, sel []string) []lint.Option {
 		}
 	}
 	if validateVerifiers && lint.AnalyzerSelected(sel, lint.AnalyzerVerifiers) {
-		opts = append(opts, lint.WithVerifiers(verifierFindingsFor(cmdContext(), cfg)))
+		opts = append(opts, lint.WithVerifiers(verifierFindingsFor(config.WithPolicyContext(ctx, activePolicy), cfg)))
 	}
 	return opts
 }
@@ -411,7 +412,7 @@ func runStrictSingle(cfg *config.Config) int {
 		fmtError(err)
 		return 1
 	}
-	report, err := strictLint(cfg)
+	report, err := strictLint(cmdContext(), cfg)
 	if err != nil {
 		fmtError(err)
 		return 1

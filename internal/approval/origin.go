@@ -13,8 +13,8 @@ import (
 const originProbeTimeout = 5 * time.Second
 
 // originOf returns a reader of the forge repository behind the origin remote of
-// dir, run once and only when a review-linked approval is checked.
-func originOf(dir string) func() (forge.Repo, bool) {
+// dir, run once (under ctx) and only when a review-linked approval is checked.
+func originOf(ctx context.Context, dir string) func() (forge.Repo, bool) {
 	var (
 		once sync.Once
 		repo forge.Repo
@@ -22,7 +22,7 @@ func originOf(dir string) func() (forge.Repo, bool) {
 	)
 	return func() (forge.Repo, bool) {
 		once.Do(func() {
-			ctx, cancel := context.WithTimeout(context.Background(), originProbeTimeout)
+			ctx, cancel := context.WithTimeout(ctx, originProbeTimeout)
 			defer cancel()
 			out, err := gitutil.Command(ctx, dir, "remote", "get-url", "origin").Output()
 			if err != nil {

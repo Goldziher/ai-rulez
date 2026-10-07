@@ -242,7 +242,7 @@ func loadApproveEnvAt(path string) (*approveEnv, error) {
 	if lock == nil {
 		return nil, oops.Hint("run `ai-rulez lock` first: only pinned content can be approved").Errorf("no %s in %s", lockfile.FileName, cfg.ConfigDir)
 	}
-	snap, err := lockSnapshot(cfg, lock.Profile, true)
+	snap, err := lockSnapshot(cmdContext(), cfg, lock.Profile, true)
 	if err != nil {
 		return nil, err
 	}
@@ -783,7 +783,7 @@ func (e *approveEnv) refuseBeforeReview(ctx context.Context, subs []approval.Sub
 	if err := e.refuseDenied(subs); err != nil {
 		return err
 	}
-	if err := e.checkRoleOutputs(subs); err != nil { //nolint:contextcheck // rendering a role has no context to pass
+	if err := e.checkRoleOutputs(ctx, subs); err != nil {
 		return err
 	}
 	return e.resolveTeams(ctx, subs)
@@ -836,7 +836,7 @@ func (e *approveEnv) record(ctx context.Context, out io.Writer, subs []approval.
 		if err != nil {
 			return nil, err
 		}
-		if drafts, err = e.settle(s, drafts, self, notice); err != nil { //nolint:contextcheck // the history probes of gitutil take no context
+		if drafts, err = e.settle(s, drafts, self, notice); err != nil {
 			return nil, err
 		}
 		for _, d := range drafts {
@@ -934,7 +934,7 @@ func stdinIsTerminal() bool {
 // recheck recomputes the digests right before writing: what was shown must be
 // what is recorded, even if a file changed while the reviewer read it.
 func (e *approveEnv) recheck(subs []approval.Subject) error {
-	snap, err := lockSnapshot(e.cfg, e.lock.Profile, true)
+	snap, err := lockSnapshot(cmdContext(), e.cfg, e.lock.Profile, true)
 	if err != nil {
 		return err
 	}

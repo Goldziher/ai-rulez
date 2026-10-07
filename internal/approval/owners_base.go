@@ -20,9 +20,9 @@ import (
 // (normally the merge base of the reviewed range) instead of the working tree.
 // A change under review cannot then authorize its own approvals by editing
 // CODEOWNERS.
-func LoadOwnerSetAt(baseDir, configDir, from, rev string) *OwnerSet {
-	return loadOwnerSet(baseDir, configDir, from, func(root, rel string) ([]byte, error) {
-		data, found, err := workspace.ReadFileAt(context.Background(), root, rev, rel, nil)
+func LoadOwnerSetAt(ctx context.Context, baseDir, configDir, from, rev string) *OwnerSet {
+	return loadOwnerSet(ctx, baseDir, configDir, from, func(root, rel string) ([]byte, error) {
+		data, found, err := workspace.ReadFileAt(ctx, root, rev, rel, nil)
 		if err != nil {
 			return nil, oops.With("rev", rev, "path", rel).Wrapf(err, "read %s at %s", rel, rev)
 		}
@@ -37,9 +37,9 @@ func LoadOwnerSetAt(baseDir, configDir, from, rev string) *OwnerSet {
 // merge base rev and the working tree: the CODEOWNERS file that approvers_from
 // names (when set) and the [governance] table. A change that edits them is
 // reviewed by the people it would empower, so each is an AR716 finding.
-func OwnershipChanges(cfg *config.Config, rev string) ([]string, error) {
+func OwnershipChanges(ctx context.Context, cfg *config.Config, rev string) ([]string, error) {
 	git := gitutil.Git{}
-	top := git.TopLevel(cfg.ConfigDir)
+	top := git.TopLevelContext(ctx, cfg.ConfigDir)
 	if top == "" {
 		return nil, oops.Errorf("%s is not inside a git work tree", cfg.ConfigDir)
 	}
@@ -51,7 +51,7 @@ func OwnershipChanges(cfg *config.Config, rev string) ([]string, error) {
 		}
 		for _, rel := range candidates {
 			head, headErr := readOwnersFile(top, rel)
-			base, baseOK, baseErr := workspace.ReadFileAt(context.Background(), top, rev, rel, nil)
+			base, baseOK, baseErr := workspace.ReadFileAt(ctx, top, rev, rel, nil)
 			if baseErr != nil {
 				return nil, oops.With("rev", rev, "path", rel).Wrapf(baseErr, "read %s at %s", rel, rev)
 			}
@@ -65,7 +65,7 @@ func OwnershipChanges(cfg *config.Config, rev string) ([]string, error) {
 		return out, nil
 	}
 	headRaw, _ := os.ReadFile(filepath.Join(top, filepath.FromSlash(rel))) //nolint:gosec,errcheck // a missing file is an empty table
-	baseRaw, _, err := workspace.ReadFileAt(context.Background(), top, rev, rel, nil)
+	baseRaw, _, err := workspace.ReadFileAt(ctx, top, rev, rel, nil)
 	if err != nil {
 		return nil, oops.With("rev", rev, "path", rel).Wrapf(err, "read %s at %s", rel, rev)
 	}

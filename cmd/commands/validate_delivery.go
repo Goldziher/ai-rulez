@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -17,7 +18,7 @@ import (
 // harness without MCP (AR992), a missing stub (AR991), a missing skills server
 // entry (AR993) and lock enforcement (AR995). It returns nothing for a project
 // that serves no skill.
-func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
+func deliveryFindings(ctx context.Context, cfg *config.Config) []lint.DeliveryFinding {
 	served := cfg.ServesSkills(cfg.Content) || cfg.RolesServeSkills()
 	if !served && len(cfg.SkillSources) == 0 {
 		return nil
@@ -46,7 +47,7 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 	}
 	if cfg.LockEnforced() {
 		setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}
-		problems, err := setup.ServedProblems(config.WithOfflineIncludes(cmdContext()))
+		problems, err := setup.ServedProblems(config.WithOfflineIncludes(config.WithPolicyContext(ctx, activePolicy)))
 		if err != nil {
 			out = append(out, lint.DeliveryFinding{Code: lint.CodeServedLockMismatch, Message: "the served skills could not be checked against " + lockfile.FileName + " offline: " + err.Error() + "; [lock] enforce does not accept an unchecked lock"})
 		}
@@ -54,7 +55,7 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 			out = append(out, lint.DeliveryFinding{Code: lint.CodeServedLockMismatch, Message: p + "; [lock] enforce refuses to serve it (run `ai-rulez lock` after review)"})
 		}
 	}
-	return append(out, sourceRefusalFindings(cfg)...)
+	return append(out, sourceRefusalFindings(ctx, cfg)...)
 }
 
 // sourceRefusalFindings runs the admission scan the server runs over the served
@@ -62,10 +63,10 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 // skills it refuses, which `lock` leaves unpinned, and the files it cannot read
 // (AR989). Findings of the security rules on an authored skill are reported by
 // those rules themselves, so only refusals of source skills are repeated here.
-func sourceRefusalFindings(cfg *config.Config) []lint.DeliveryFinding {
+func sourceRefusalFindings(ctx context.Context, cfg *config.Config) []lint.DeliveryFinding {
 	setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}
 	var out []lint.DeliveryFinding
-	reports, err := setup.ServedScanReports(config.WithOfflineIncludes(cmdContext()))
+	reports, err := setup.ServedScanReports(config.WithOfflineIncludes(config.WithPolicyContext(ctx, activePolicy)))
 	if err != nil {
 		logger.Debug("Skipped the served file scan check", "error", err.Error())
 		return nil
@@ -76,7 +77,7 @@ func sourceRefusalFindings(cfg *config.Config) []lint.DeliveryFinding {
 	if len(cfg.SkillSources) == 0 {
 		return out
 	}
-	refusals, err := setup.ServedRefusals(cmdContext())
+	refusals, err := setup.ServedRefusals(config.WithPolicyContext(ctx, activePolicy))
 	if err != nil {
 		logger.Debug("Skipped the skill source refusal check", "error", err.Error())
 		return out

@@ -111,12 +111,12 @@ func (pc *publishContext) signCallback() func(publish.SignRequest) (*publish.Sig
 // approvalGate reads the approval state of the lock. It returns the summary the
 // manifest records when the [governance] policy selects content, and fails
 // (AR9N8) when require is set and anything selected lacks a valid approval.
-func approvalGate(cfg *config.Config, require bool) (*publish.ApprovalInfo, error) {
+func approvalGate(ctx context.Context, cfg *config.Config, require bool) (*publish.ApprovalInfo, error) {
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil || lock == nil {
 		return nil, publish.Errorf(publish.CodePreflight, publish.ExitGate, "run `ai-rulez lock`", "cannot read %s", lockfile.FileName)
 	}
-	policy := approval.PolicyOf(cfg)
+	policy := approval.PolicyOfContext(ctx, cfg)
 	if !policy.Active() {
 		if require {
 			return nil, publish.Errorf(publish.CodeUnapproved, publish.ExitGate,
@@ -128,11 +128,11 @@ func approvalGate(cfg *config.Config, require bool) (*publish.ApprovalInfo, erro
 	if msg := policy.LockProblem(lock); msg != "" {
 		return nil, publish.Errorf(publish.CodeUnapproved, publish.ExitGate, "run `ai-rulez lock`", "%s", msg)
 	}
-	snap, err := lockSnapshot(cfg, lock.Profile, true)
+	snap, err := lockSnapshot(ctx, cfg, lock.Profile, true)
 	if err != nil {
 		return nil, err
 	}
-	st := govview.EvaluateApprovals(cfg, lock, snap.Items, govview.ApprovalNow())
+	st := govview.EvaluateApprovalsContext(ctx, cfg, lock, snap.Items, govview.ApprovalNow())
 	info := &publish.ApprovalInfo{}
 	var failing []string
 	for i := range st.Results {

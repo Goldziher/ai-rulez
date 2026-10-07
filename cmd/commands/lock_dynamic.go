@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"context"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
@@ -49,8 +51,8 @@ func knownLockKind(kind string) bool { return lockrun.KnownKind(kind) }
 // lockrun.MergeDynamic) with the serve-view flags, and collects the skills left
 // unpinned. scanOnly is true when every problem is a served skill the security
 // scan refuses under --strict: findings, which exit 2, not a failure to run.
-func mergeDynamicLock(cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool) (problems []string, scanOnly bool) {
-	res := mergeDynamicViews(cfg, current, next, dynamicRun{kind: kind, wanted: wanted, extras: lockExtraViews(), strict: lockStrict})
+func mergeDynamicLock(ctx context.Context, cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool) (problems []string, scanOnly bool) {
+	res := mergeDynamicViews(ctx, cfg, current, next, dynamicRun{kind: kind, wanted: wanted, extras: lockExtraViews(), strict: lockStrict})
 	lockUnpinned = append(lockUnpinned, res.unpinned...)
 	return res.problems, len(res.problems) > 0 && res.refused == len(res.problems)
 }
@@ -70,8 +72,8 @@ type dynamicRun struct {
 	strict bool
 }
 
-func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dynamicRun) dynamicResult {
-	res := lockrun.MergeDynamic(cmdContext(), cfg, current, next, lockrun.DynamicRun{Kind: run.kind, Wanted: run.wanted, Extras: run.extras, Strict: run.strict,
+func mergeDynamicViews(ctx context.Context, cfg *config.Config, current, next *lockfile.File, run dynamicRun) dynamicResult {
+	res := lockrun.MergeDynamic(ctx, cfg, current, next, lockrun.DynamicRun{Kind: run.kind, Wanted: run.wanted, Extras: run.extras, Strict: run.strict,
 		Version: Version, Collector: lockWarnings})
 	return dynamicResult{problems: res.Problems, refused: res.Refused, unpinned: res.Unpinned}
 }

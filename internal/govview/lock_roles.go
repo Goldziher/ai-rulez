@@ -1,6 +1,7 @@
 package govview
 
 import (
+	"context"
 	"sort"
 
 	"github.com/samber/oops"
@@ -101,6 +102,11 @@ func (s RoleSelection) applyOnly(exists, declared, pinned, requested map[string]
 // SnapshotRoles is Snapshot plus the pins of the selected roles' rendered
 // outputs. Every role is rendered in memory: nothing is written.
 func SnapshotRoles(cfg *config.Config, profileName string, sourcesOnly bool, toolVersion string, sel RoleSelection) (*contentlock.Snapshot, error) {
+	return SnapshotRolesContext(context.Background(), cfg, profileName, sourcesOnly, toolVersion, sel)
+}
+
+// SnapshotRolesContext is SnapshotRoles rendering under ctx.
+func SnapshotRolesContext(ctx context.Context, cfg *config.Config, profileName string, sourcesOnly bool, toolVersion string, sel RoleSelection) (*contentlock.Snapshot, error) {
 	var roleOutputs map[string][]contentlock.Output
 	var requested map[string]bool
 	check := sel.Enabled && !sel.Write
@@ -113,14 +119,14 @@ func SnapshotRoles(cfg *config.Config, profileName string, sourcesOnly bool, too
 		}
 		roleOutputs = map[string][]contentlock.Output{}
 		for _, name := range names {
-			outputs, err := generator.LockRoleOutputs(cfg, name)
+			outputs, err := generator.LockRoleOutputsContext(ctx, cfg, name)
 			if err != nil {
 				return nil, oops.Wrapf(err, "render the outputs of role %q to pin", name)
 			}
 			roleOutputs[name] = outputs
 		}
 	}
-	return snapshot(cfg, profileName, sourcesOnly, toolVersion, func(o *contentlock.Options) {
+	return snapshot(ctx, cfg, profileName, sourcesOnly, toolVersion, func(o *contentlock.Options) {
 		o.RoleOutputs, o.RequestedRoles, o.CheckRoles, o.RoleFiles = roleOutputs, requested, check && !sourcesOnly, sel.Files
 		if !sel.Write {
 			o.OnlyRoles = sel.Only

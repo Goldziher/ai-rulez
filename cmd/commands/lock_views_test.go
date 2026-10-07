@@ -138,7 +138,7 @@ func TestValidateStrict_ReportsASourceSkillTheScanRefuses(t *testing.T) {
 	cfg := deliveryProject(t, `["claude"]`, "\n[[skill_sources]]\nname = \"vendor\"\nurl = \"vendor-skills\"\n", files)
 
 	// Act
-	findings := codesOf(deliveryFindings(cfg))
+	findings := codesOf(deliveryFindings(t.Context(), cfg))
 
 	// Assert
 	require.Contains(t, findings, "AR005")

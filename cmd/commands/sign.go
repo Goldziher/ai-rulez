@@ -231,12 +231,12 @@ func checkSigstoreURL(flag, raw string) error {
 }
 
 // loadSignLock loads the project at args[0] (or the current directory) and its lock.
-func loadSignLock(args []string) (*config.Config, *lockfile.File, error) {
+func loadSignLock(ctx context.Context, args []string) (*config.Config, *lockfile.File, error) {
 	path := ""
 	if len(args) > 0 {
 		path = args[0]
 	}
-	cfg, _, err := loadForLockCheck(path)
+	cfg, _, err := loadForLockCheckContext(ctx, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -260,7 +260,7 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	if signBundle != "" || signSkill != "" || signSBOM != "" {
 		return runSignArtifact(ctx, env)
 	}
-	cfg, lock, err := loadSignLock(args) //nolint:contextcheck // the lock config loads without a context
+	cfg, lock, err := loadSignLock(ctx, args)
 	if err != nil {
 		fmtError(err)
 		return 1

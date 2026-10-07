@@ -50,7 +50,7 @@ func TestLock_OneFileHoldsContentPinsSourcesAndServedSkills(t *testing.T) {
 
 	cfg, err := loadForLock("")
 	require.NoError(t, err)
-	drift := lockDriftFor(cfg)
+	drift := lockDriftFor(t.Context(), cfg)
 	assert.Empty(t, drift, "[lock] enforce: nothing drifted")
 }
 
