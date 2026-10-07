@@ -278,3 +278,14 @@ func (g *Generator) keepReason(abs string) string {
 	}
 	return "it has no Content-Hash and is not in the generated manifest"
 }
+
+// checkOutputSafety fails when any output is refused, and remembers the links
+// this run leaves alone.
+func (g *Generator) checkOutputSafety(outputs []config.OutputFile) error {
+	refused, linked := g.outputSafety(outputs)
+	if len(refused) > 0 {
+		return refusalError(refused)
+	}
+	g.linkedOutputs = linked
+	return nil
+}

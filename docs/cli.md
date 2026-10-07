@@ -1291,7 +1291,7 @@ ai-rulez generate --profile frontend
 
 ## Clean Command
 
-#### Existing files generate will not overwrite
+### Existing files generate will not overwrite
 
 `generate` replaces a file only when it can prove ai-rulez wrote it: the file carries a `Content-Hash` or a generated banner, the generated manifest lists it, its bytes already equal the rendering, or `convert --write` imported it and it is unchanged since (`.ai-rulez/.converted.json` records the digest of each imported file). Any other existing file at an output path, such as a hand-written `CLAUDE.md` in a repository you just ran `init` in, stops the run before anything is written: exit `1`, naming the file with the way out. Import it with `ai-rulez convert --write`, move or delete it, or pass `--force` to overwrite it. `--dry-run` prints `blocked: CLAUDE.md (an existing file ai-rulez did not write)` and exits non-zero; `--check` lists the path as `blocked`. Rule folders keep their own guard (a hand-written rule file is skipped with a warning, or the generated rule is renamed), merged settings documents are merged into, and an empty file is replaced. `generate --user` applies the same proof to the files under your home directory.
 
