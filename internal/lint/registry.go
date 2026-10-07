@@ -91,6 +91,10 @@ var (
 )
 
 // ruleTables returns the registry, built once.
+//
+// A family function runs inside tablesOnce.Do, so it must not call ruleTables,
+// AnalyzerFor or anything else that reads the registry: sync.Once would deadlock
+// on the re-entrant call. A family only adds to the set it is given.
 func ruleTables() *ruleSet {
 	tablesOnce.Do(func() { tables = buildRuleSet() })
 	return tables
