@@ -827,7 +827,7 @@ func isNamedListKey(key string) bool {
 }
 
 var showScalarKeys = map[string]bool{
-	"name": true, "description": true, "default": true, "presets": true,
+	"name": true, "description": true, docKeyDefault: true, "presets": true,
 	"gitignore": true, "compact": true, "builtins": true,
 }
 
@@ -904,7 +904,7 @@ func isStringList(v any) bool {
 }
 
 var showScalarKinds = map[string]valueKind{
-	"name": kindString, "description": kindString, "default": kindString, "presets": kindStringList,
+	"name": kindString, "description": kindString, docKeyDefault: kindString, "presets": kindStringList,
 	"gitignore": kindBool, "compact": kindBool, "builtins": kindBoolOrStringList,
 }
 

@@ -30,7 +30,7 @@ func SkillDescriptionOrFallback(description, skillID string) string {
 		return id
 	}
 
-	return "skill"
+	return ItemKindSkill
 }
 
 // SkillID returns the canonical skill identifier from the path when available, otherwise the content name.
