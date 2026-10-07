@@ -98,9 +98,10 @@ func partialSkillFiles(current *Catalog, roots []string) ([]string, error) {
 // progress: empty, part of the opening delimiter, or a frontmatter never closed.
 func incompleteSkillFile(content []byte) bool {
 	text := strings.ReplaceAll(string(content), "\r\n", "\n")
-	if strings.TrimSpace(text) == "" || strings.HasPrefix("---\n", text) {
+	const delimiter = "---\n"
+	if strings.TrimSpace(text) == "" || (len(text) < len(delimiter) && delimiter[:len(text)] == text) {
 		return true
 	}
-	rest, ok := strings.CutPrefix(text, "---\n")
+	rest, ok := strings.CutPrefix(text, delimiter)
 	return ok && !strings.Contains(rest, "\n---")
 }
