@@ -145,8 +145,12 @@ func Calibrate(ctx context.Context, in CalibrateInput) (*CalibrationReport, erro
 		rep.Incomplete, rep.StoppedBecause = true, strings.TrimPrefix(rs.fatal.Error(), ErrFatal.Error()+": ")
 		return rep, rs.fatal
 	}
-	if rs.budget || judgedCases(results) < len(cases) {
+	if rs.budget {
 		rep.Incomplete, rep.StoppedBecause = true, "the spend cap was reached"
+		return rep, nil
+	}
+	if n := judgedCases(results); n < len(cases) {
+		rep.Incomplete, rep.StoppedBecause = true, fmt.Sprintf("%d of %d golden case(s) got no answer from the judge", len(cases)-n, len(cases))
 		return rep, nil
 	}
 	model := ""
@@ -481,8 +485,14 @@ func measureDimension(rb *Rubric, d Dimension, cases []GoldenCase, results []Cas
 		dc.Misses = []string{fmt.Sprintf("only %d labeled case(s); %d are needed", len(o.gold), minDimCases)}
 		return dc, o.diffs
 	}
-	dc.Kappa = round3(quadraticKappa(o.gold, o.pred, 3))
 	tp, fp, fn := o.confusion()
+	if misses := missingClasses(o.goldFlag); len(misses) > 0 {
+		// Recall or false-flag rate would be 1.0 over nothing; a judge that always answers the same
+		// would pass, so the dimension is not trusted until the golden set holds both kinds of case.
+		dc.Status, dc.Misses = CalUncalibrated, misses
+		return dc, o.diffs
+	}
+	dc.Kappa = round3(quadraticKappa(o.gold, o.pred, 3))
 	dc.Precision, dc.Recall = round3(ratioOr(tp, tp+fp, 1)), round3(ratioOr(tp, tp+fn, 1))
 	if dc.Precision+dc.Recall > 0 {
 		dc.F1 = round3(2 * dc.Precision * dc.Recall / (dc.Precision + dc.Recall))
@@ -516,6 +526,24 @@ func measureDimension(rb *Rubric, d Dimension, cases []GoldenCase, results []Cas
 	}
 	dc.Status, dc.Misses = judgeThresholds(rb, d, dc, tp+fp, tp+fn, len(o.humanA) > 0, o.withVotes > 0, declared)
 	return dc, o.diffs
+}
+
+// missingClasses says which kind of labeled case a dimension lacks: one flagged (warn or fail)
+// and one passing are both needed to measure recall and false flags.
+func missingClasses(goldFlag []bool) []string {
+	flagged := 0
+	for _, f := range goldFlag {
+		if f {
+			flagged++
+		}
+	}
+	switch flagged {
+	case 0:
+		return []string{"no case is labeled warn or fail, so recall is not measured; add cases the judge should flag"}
+	case len(goldFlag):
+		return []string{"no case is labeled pass, so false flags are not measured; add cases the judge should leave alone"}
+	}
+	return nil
 }
 
 func ratioOr(a, b int, empty float64) float64 {
@@ -641,10 +669,22 @@ func CompareCalibration(old, cur *CalibrationRecord) Drift {
 	if old.Model != "" && cur.Model != "" && !SameModel(old.Model, cur.Model) {
 		d.Regressions = append(d.Regressions, fmt.Sprintf("the resolved model changed: %s -> %s", old.Model, cur.Model))
 	}
+	for _, c := range []struct{ name, was, now string }{
+		{"rubric", old.Rubric.Digest, cur.Rubric.Digest},
+		{"prompt", old.PromptDigest, cur.PromptDigest},
+		{"golden set", old.GoldenDigest, cur.GoldenDigest},
+	} {
+		if c.was != "" && c.was != c.now {
+			d.Regressions = append(d.Regressions, fmt.Sprintf("the %s digest changed (%s -> %s): the committed record measured something else, recalibrate and commit it", c.name, c.was, c.now))
+		}
+	}
 	for _, id := range sortedKeys(old.Dimensions) {
 		o := old.Dimensions[id]
 		n, ok := cur.Dimensions[id]
 		if !ok {
+			if o.Status == CalPass {
+				d.Regressions = append(d.Regressions, fmt.Sprintf("%s: calibrated before and missing now", id))
+			}
 			continue
 		}
 		if o.Kappa-n.Kappa > KappaDriftTolerance {
