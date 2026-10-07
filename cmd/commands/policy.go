@@ -68,18 +68,29 @@ func cmdContext() context.Context {
 	return config.WithPolicyContext(context.Background(), activePolicy)
 }
 
+// cliLockPolicy is the lock policy of this command's loads, set from its flags
+// (generate --locked/--frozen/--no-fetch, lock). The library never reads it: the
+// command line hands it to each load (withCLILockPolicy), as it does activePolicy.
+var cliLockPolicy config.LockPolicy
+
+// withCLILockPolicy puts the command line's lock policy before opts, so a load
+// that passes its own config.WithLockPolicy overrides it.
+func withCLILockPolicy(opts []config.LoadOption) []config.LoadOption {
+	return append([]config.LoadOption{config.WithLockPolicy(cliLockPolicy)}, opts...)
+}
+
 // loadProject, loadProjectFile and loadProjectDir are the project loaders under
 // the command line's policy.
 func loadProject(ctx context.Context, dir string, opts ...config.LoadOption) (*config.Config, error) {
-	return refusalsReported(project.Load(config.WithPolicyContext(ctx, activePolicy), dir, opts...))
+	return refusalsReported(project.Load(config.WithPolicyContext(ctx, activePolicy), dir, withCLILockPolicy(opts)...))
 }
 
 func loadProjectFile(ctx context.Context, path string, opts ...config.LoadOption) (*config.Config, error) {
-	return refusalsReported(project.LoadFile(config.WithPolicyContext(ctx, activePolicy), path, opts...))
+	return refusalsReported(project.LoadFile(config.WithPolicyContext(ctx, activePolicy), path, withCLILockPolicy(opts)...))
 }
 
 func loadProjectDir(ctx context.Context, dir, configDirName string, opts ...config.LoadOption) (*config.Config, error) {
-	return refusalsReported(project.LoadDir(config.WithPolicyContext(ctx, activePolicy), dir, configDirName, opts...))
+	return refusalsReported(project.LoadDir(config.WithPolicyContext(ctx, activePolicy), dir, configDirName, withCLILockPolicy(opts)...))
 }
 
 // refusalsReported prints the symlinked content of the project the loader refused

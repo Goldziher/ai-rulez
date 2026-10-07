@@ -37,8 +37,8 @@ func addRefusedSkill(t *testing.T, root string) {
 
 func TestRunLockFor_ExitCodes(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	includes.Mode, includes.SkipFetch = includes.LockAuto, false
-	t.Cleanup(func() { includes.Mode, includes.SkipFetch = includes.LockAuto, false; lockUnpinned = nil })
+	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
+	t.Cleanup(func() { cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false; lockUnpinned = nil })
 	resetLockViewFlags(t)
 	root := lockProject(t, "")
 
@@ -66,9 +66,9 @@ func TestRunLockFor_ExitCodes(t *testing.T) {
 
 func TestRunLockFor_RecursiveTakesTheMostSevereCode(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	includes.Mode, includes.SkipFetch = includes.LockAuto, false
+	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 	t.Cleanup(func() {
-		includes.Mode, includes.SkipFetch = includes.LockAuto, false
+		cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 		lockUnpinned = nil
 		lockRecursive = false
 	})

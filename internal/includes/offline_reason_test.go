@@ -26,14 +26,14 @@ func TestSourceFetch_OfflineReasonNamesTheRealCause(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			old := SkipFetch
-			t.Cleanup(func() { SkipFetch = old })
-			SkipFetch = tt.skipFlag
 			src, err := NewGitSource("reason-"+tt.name, "https://example.invalid/none/repo.git", "", "", t.TempDir(), nil, "")
 			require.NoError(t, err)
 			skill, err := NewSkillGitSource("reason-skill-"+tt.name, "https://example.invalid/none/repo.git", "", "", "")
 			require.NoError(t, err)
 			ctx := config.WithOfflineIncludes(context.Background())
+			if tt.skipFlag {
+				ctx = config.WithNoFetch(ctx)
+			}
 
 			// Act
 			_, errInc := src.Fetch(ctx)

@@ -27,10 +27,10 @@ type okfLockFixture struct {
 func newOKFLockFixture(t *testing.T, ref string) *okfLockFixture {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
-	Mode, RefreshFilter, SkipFetch = LockAuto, nil, false
+	lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false
 	OKFScan = nil
 	ResetObserved()
-	t.Cleanup(func() { Mode, RefreshFilter, SkipFetch, OKFScan = LockAuto, nil, false, nil })
+	t.Cleanup(func() { lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline, OKFScan = LockAuto, nil, false, nil })
 
 	remote := t.TempDir()
 	git(t, remote, "init", "-q", "-b", "main")
@@ -83,11 +83,11 @@ func (f *okfLockFixture) advance(t *testing.T) string {
 
 func (f *okfLockFixture) writeLock(t *testing.T) *lockfile.File {
 	t.Helper()
-	Mode = LockRefresh
+	lockPolicy.Mode = LockRefresh
 	ResetObserved()
 	cfg, err := f.load(t)
 	require.NoError(t, err)
-	Mode = LockAuto
+	lockPolicy.Mode = LockAuto
 	next, problems := BuildLock(cfg, nil)
 	require.Empty(t, problems)
 	require.NoError(t, lockfile.Save(cfg.ConfigDir, next))
@@ -112,7 +112,7 @@ func TestOKFInclude_MovedTagKeepsThePinUntilRelocked(t *testing.T) {
 	before := f.writeLock(t)
 	second := f.advance(t)
 
-	Mode = LockRequire
+	lockPolicy.Mode = LockRequire
 	cfg, err := f.load(t)
 	require.NoError(t, err)
 	assert.Contains(t, f.body(cfg), "version one", "the locked commit is used, not the moved tag")
@@ -155,7 +155,7 @@ func TestOKFInclude_FrozenNeverFetches(t *testing.T) {
 	f.writeLock(t)
 	require.NoError(t, os.RemoveAll(f.remote), "the remote is gone: any fetch would fail")
 
-	Mode, SkipFetch = LockFrozen, true
+	lockPolicy.Mode, lockPolicy.Offline = LockFrozen, true
 	cfg, err := f.load(t)
 	require.NoError(t, err)
 	assert.Contains(t, f.body(cfg), "version one")
@@ -173,7 +173,7 @@ func TestOKFInclude_FrozenRejectsATamperedCache(t *testing.T) {
 	cachedFile := okfCachedFile(t, f)
 	require.NoError(t, os.WriteFile(cachedFile, []byte("---\ntype: Decision\n---\ntampered\n"), 0o644))
 
-	Mode, SkipFetch = LockFrozen, true
+	lockPolicy.Mode, lockPolicy.Offline = LockFrozen, true
 	_, err := f.load(t)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, config.ErrLockViolation)
@@ -181,7 +181,7 @@ func TestOKFInclude_FrozenRejectsATamperedCache(t *testing.T) {
 
 func TestOKFInclude_RequireFailsWhenNotLocked(t *testing.T) {
 	f := newOKFLockFixture(t, "v1")
-	Mode = LockRequire
+	lockPolicy.Mode = LockRequire
 	_, err := f.load(t)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, config.ErrLockViolation)

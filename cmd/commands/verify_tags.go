@@ -8,7 +8,6 @@ import (
 	"sort"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
@@ -77,7 +76,7 @@ func verifyTagsWanted(cfg *config.Config, flag bool) (bool, error) {
 	if !flag && !cfg.LockVerifyTags() {
 		return false, nil
 	}
-	if includes.SkipFetch || lockOffline {
+	if cliLockPolicy.Offline || lockOffline {
 		if flag {
 			return false, oops.Hint("Drop --no-fetch/--frozen/--offline, or drop --verify-tags").
 				Errorf("--verify-tags reads the remote's tags and needs the network")

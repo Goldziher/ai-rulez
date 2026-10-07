@@ -58,7 +58,7 @@ func (g *ageGates) gateFor(w lockfile.Want) *tagresolve.AgeGate {
 	timer, ok := g.timers[w.Source]
 	if !ok {
 		if g.client == nil {
-			g.client = newForgeClient(g.cfg, lockOffline || includes.SkipFetch)
+			g.client = newForgeClient(g.cfg, lockOffline || cliLockPolicy.Offline)
 		}
 		source := w.Source
 		timer = releasetime.New(releasetime.Options{

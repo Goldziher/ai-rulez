@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -54,8 +53,6 @@ func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Serv
 	if err != nil {
 		return nil, err
 	}
-	applyServeNetworkPolicy(setup.Frozen, setup.Offline)
-
 	srv, err := setup.NewServer(ctx)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already wrapped
@@ -94,15 +91,4 @@ func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 		return nil, err //nolint:wrapcheck // wrapped above
 	}
 	return setup, nil
-}
-
-// applyServeNetworkPolicy turns --frozen and --offline into the include lock
-// policy, exactly as `generate --frozen` and `generate --no-fetch` do.
-func applyServeNetworkPolicy(frozen, offline bool) {
-	switch {
-	case frozen:
-		includes.Mode, includes.SkipFetch = includes.LockFrozen, true
-	case offline:
-		includes.SkipFetch = true
-	}
 }
