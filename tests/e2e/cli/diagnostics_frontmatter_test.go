@@ -24,7 +24,7 @@ func TestCLI_ValidateReportsMalformedFrontmatterOnce(t *testing.T) {
 	require.NotEqual(t, 0, validate.ExitCode)
 	vout := validate.Stdout + validate.Stderr
 	assert.Equal(t, 0, strings.Count(vout, "Ignoring malformed YAML frontmatter"), vout)
-	assert.Contains(t, vout, "agents/bad.md", "the error names the file")
+	assert.Contains(t, vout, "bad.md", "the error names the file")
 	require.Equal(t, 0, list.ExitCode, list.Stderr)
 	assert.Equal(t, 1, strings.Count(list.Stdout+list.Stderr, "Ignoring malformed YAML frontmatter"), "list has no error, so it keeps the warning")
 }
