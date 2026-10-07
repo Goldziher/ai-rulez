@@ -467,6 +467,57 @@ func TestCompareCalibration(t *testing.T) {
 	}
 }
 
+func TestCalibrateDoesNotPassWithoutBothClasses(t *testing.T) {
+	// Arrange: a judge that always says pass, on a golden set where overlap has only pass labels
+	rb := calibrationRubric(t)
+	cases := tenCases()
+	always := &scriptedJudge{decide: func(scriptedCall, string) string { return VerdictPass }}
+
+	// Act
+	rep := runCalibrate(t, rb, cases, always, llm.Config{}, SemanticOptions{K: 1})
+
+	// Assert
+	overlap := rep.Record.Dimensions["overlap"]
+	assert.Equal(t, CalUncalibrated, overlap.Status, "no positive label: nothing was tested")
+	assert.Contains(t, strings.Join(overlap.Misses, "; "), "no case is labeled warn or fail")
+
+	// Arrange: every case flagged, so false flags cannot be measured
+	flagged := tenCases()
+	for i := range flagged {
+		flagged[i].labels["overlap"] = VerdictFail
+	}
+	allFail := &scriptedJudge{decide: func(scriptedCall, string) string { return VerdictFail }}
+
+	// Act
+	rep = runCalibrate(t, rb, flagged, allFail, llm.Config{}, SemanticOptions{K: 1})
+
+	// Assert
+	overlap = rep.Record.Dimensions["overlap"]
+	assert.Equal(t, CalUncalibrated, overlap.Status)
+	assert.Contains(t, strings.Join(overlap.Misses, "; "), "no case is labeled pass")
+}
+
+func TestCompareCalibrationFlagsDroppedDimensionsAndChangedDigests(t *testing.T) {
+	old := &CalibrationRecord{Model: "m", Status: "pass", PromptDigest: "p1", GoldenDigest: "g1",
+		Rubric:     CalibrationRubric{Digest: "r1"},
+		Dimensions: map[string]DimCalibration{"a": {Status: CalPass, Kappa: 0.8}, "b": {Status: CalPass, Kappa: 0.7}}}
+	cur := &CalibrationRecord{Model: "m", Status: "pass", PromptDigest: "p1", GoldenDigest: "g1",
+		Rubric:     CalibrationRubric{Digest: "r1"},
+		Dimensions: map[string]DimCalibration{"a": {Status: CalPass, Kappa: 0.8}}}
+	got := CompareCalibration(old, cur)
+	assert.True(t, got.Failed)
+	assert.Contains(t, strings.Join(got.Regressions, "; "), "b: calibrated before and missing now")
+
+	cur.Dimensions["b"] = old.Dimensions["b"]
+	cur.PromptDigest, cur.GoldenDigest, cur.Rubric.Digest = "p2", "g2", "r2"
+	got = CompareCalibration(old, cur)
+	joined := strings.Join(got.Regressions, "; ")
+	assert.True(t, got.Failed)
+	for _, want := range []string{"prompt digest changed", "golden set digest changed", "rubric digest changed"} {
+		assert.Contains(t, joined, want)
+	}
+}
+
 func TestCompareModels(t *testing.T) {
 	// Arrange
 	a := map[string]map[string]string{"i1": {"d": "pass"}, "i2": {"d": "fail"}, "i3": {"d": "warn"}}
