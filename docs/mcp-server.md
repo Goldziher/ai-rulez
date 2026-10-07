@@ -551,7 +551,10 @@ per commit and are not re-fetched.
 Approval expiry and signing key validity depend on the clock, not on files: every minute (also with
 `--no-watch`) the server judges the current build again and stops serving a skill whose approval expired or
 whose signature no longer verifies. An organization policy whose `sources.deny_digests` names the pinned
-digest of a served skill refuses that skill (AR747); the server keeps serving the others.
+digest of a served skill refuses that skill (AR747); the server keeps serving the others. A skill authored in
+the project is also gated as its `skill:<name>` item: a denied authored digest refuses it (AR717), and
+`require_approval` selectors that select the item (`all`, `local`, `kind:skill`) gate serving it under
+`enforce`.
 
 ### Strict validation
 
