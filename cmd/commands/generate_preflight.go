@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -113,6 +112,6 @@ func warnRoleSelection(cfg *config.Config, role string) {
 func warnNewCommands(cfg *config.Config, w io.Writer, record bool) {
 	lines := preflight.NewCommands(cfg, record)
 	if len(lines) > 0 && !assumeYes && !envTrue(envAckCommands) {
-		fmt.Fprint(w, preflight.Summary(cfg, lines))
+		reportWriter{w}.printf("%s", preflight.Summary(cfg, lines))
 	}
 }
