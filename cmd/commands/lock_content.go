@@ -63,6 +63,9 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 	if msg := approval.PolicyOf(cfg).LockProblem(lock); msg != "" {
 		return []string{msg}, nil
 	}
+	if lock == nil && (generateLocked || generateFrozen) {
+		return []string{lockfile.FileName + " is missing and --locked/--frozen require it; run `ai-rulez lock`"}, nil
+	}
 	if lock == nil || !lock.HasContentPins() {
 		if cfg.LockEnforced() {
 			return []string{lockfile.FileName + " has no content pins and [lock] enforce = true; run `ai-rulez lock`"}, nil
