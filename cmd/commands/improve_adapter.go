@@ -159,7 +159,12 @@ func resolveOptimizer(cmd *cobra.Command, cfg *config.Config, value string) (*op
 		if err != nil {
 			return nil, oops.Hint("Pass the optimizer with --with, for example --with 'python optimize.py' or --with builtin:review-fix").Wrap(err)
 		}
-		return &optimizerChoice{argv: argv}, nil
+		// The optimizer runs in the run's workspace: relative paths are the ones the user typed here.
+		wd, err := os.Getwd()
+		if err != nil {
+			return nil, oops.Wrapf(err, "resolve the working directory")
+		}
+		return &optimizerChoice{argv: improve.ResolveArgv(argv, wd)}, nil
 	}
 	if !adapter.IsRunnable(name) {
 		return nil, oops.Hint("Run `ai-rulez improve adapters "+name+"` to print it").Errorf("%s%s is a template, not a runnable adapter", adapter.Prefix, name)
