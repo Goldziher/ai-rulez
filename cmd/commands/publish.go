@@ -525,8 +525,8 @@ func strictGate(cfg *config.Config) error {
 		return publish.Errorf(publish.CodePreflight, publish.ExitFailed, "", "validate --strict could not run")
 	}
 	threshold := failOnFor(cfg)
-	if threshold == "none" {
-		threshold = "error"
+	if threshold == okfFailNone {
+		threshold = string(lint.SeverityError)
 	}
 	if lint.FailedWithExcess(report.Findings, threshold, budgetsFor(cfg), excess[0]) || baselineBlocks(reports) {
 		if werr := lint.Write(os.Stderr, lint.FormatText, lint.Combine(reports), lint.WriteOptions{Version: Version, FailOn: threshold}); werr != nil {
