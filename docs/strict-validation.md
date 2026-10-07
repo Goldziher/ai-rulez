@@ -11,7 +11,7 @@ ai-rulez validate --format json                  # machine-readable
 ai-rulez validate --format sarif --output ai-rulez.sarif   # code scanning upload
 ai-rulez validate --recursive                    # every nested root
 ai-rulez validate --fail-on warning              # warnings also fail
-ai-rulez validate --strict                       # same as --fail-on warning
+ai-rulez validate                       # same as --fail-on warning
 ai-rulez validate --config-only                  # configuration checks only, no content checks
 ```
 
@@ -101,10 +101,10 @@ stdout.
 | AR747 | `digest-denied` | error | `ai-rulez.lock` pins content whose digest is on the organization policy's `sources.deny_digests` list; a denied include, installed skill or skill source is not loaded (always an error) |
 | AR748 | `capability-not-allowed` | error | An MCP server or hook group the organization policy forbids: a denied transport, a command outside `mcp.allowed_commands`, or any hook when `hooks.allow` is false; it is not loaded |
 | AR749 | `policy-budget-exceeded` | error | A rule has more findings than the organization policy's `lint.max_findings` ceiling allows (`0` allows none) |
-| AR750 | `sbom-component-unpinned` | info | An MCP package or remote source in the SBOM cannot be given an exact version (a range, `latest`, an image tag, a source with no commit pin); reported by `validate --strict` and `sbom --strict-pins` (see [SBOM](sbom.md)) |
-| AR751 | `sbom-coordinates-unknown` | info | An MCP server has no package URL in the SBOM (no recognised launcher, no `package`); reported by `validate --strict` and `sbom --strict-pins` |
-| AR752 | `sbom-lock-out-of-sync` | error | `sbom --require-lock` found no lock, or one that no longer matches the sources; `validate --strict` reports a lock that exists and no longer matches |
-| AR753 | `sbom-drift` | error | `sbom --check` found the committed SBOM different from the one generated now, or none; `validate --strict` compares a committed `ai-bom.cdx.json` or `sbom.cdx.json` at the project root |
+| AR750 | `sbom-component-unpinned` | info | An MCP package or remote source in the SBOM cannot be given an exact version (a range, `latest`, an image tag, a source with no commit pin); reported by `validate` and `sbom --strict-pins` (see [SBOM](sbom.md)) |
+| AR751 | `sbom-coordinates-unknown` | info | An MCP server has no package URL in the SBOM (no recognised launcher, no `package`); reported by `validate` and `sbom --strict-pins` |
+| AR752 | `sbom-lock-out-of-sync` | error | `sbom --require-lock` found no lock, or one that no longer matches the sources; `validate` reports a lock that exists and no longer matches |
+| AR753 | `sbom-drift` | error | `sbom --check` found the committed SBOM different from the one generated now, or none; `validate` compares a committed `ai-bom.cdx.json` or `sbom.cdx.json` at the project root |
 | AR801 | `description-missing` | warning | A skill, agent or command has no `description` |
 | AR802 | `description-length` | warning | Description shorter than `min_length` (default 20) or longer than `max_length` (default 1024, the Agent Skills limit) |
 | AR803 | `description-style` | off | A skill or agent description does not say when to use it; turned on by `require_use_when = true`. Slash commands are exempt: the user invokes them by name. A trigger is "use ... when/for/before", "when", "whenever", "Load for/before/when ...", "Use this skill any time" or "Use X as ..." |
@@ -187,7 +187,7 @@ stdout.
 | AR9F3 | `convert-needs-action` | warning | A converted construct needs a manual step: a literal MCP credential replaced by `${VAR}`, a lock hash not carried over, a hook or allow rule written disabled, a remote source not fetched (convert report only) |
 | AR9F4 | `convert-unsupported` | warning | A source or construct `convert` does not support, such as a `file://` skills-lock source (convert report only) |
 | AR9F5 | `convert-blocked-by-scan` | error | The security scan of the planned tree blocked the write (convert report only) |
-| AR9N0 | `publish-preflight-failed` | error | A preflight gate of `ai-rulez publish` failed: `validate --strict`, `lock --check` or `verify --plugin` (publish only, see [Publish](publish.md)) |
+| AR9N0 | `publish-preflight-failed` | error | A preflight gate of `ai-rulez publish` failed: `validate`, `lock --check` or `verify --plugin` (publish only, see [Publish](publish.md)) |
 | AR9N1 | `publish-bundle-unsafe` | error | The bundle holds a symlink, a path outside the project or a name that cannot name a release file (publish only) |
 | AR9N2 | `publish-secret-found` | error | The secret scan of the bundle found a credential (publish only) |
 | AR9N3 | `publish-source-unreleasable` | error | `[plugin] version` is unset, or the source tree is dirty or has no commit (publish only; `--allow-dirty` waives the tree) |
@@ -212,10 +212,10 @@ stdout.
 | AR9D2 | `search-cases-invalid` | error | A skill search cases file cannot be used (`search --eval` only) |
 | AR9D3 | `search-text-withheld` | warning | A skill was not embedded because its text looks like it holds a secret (`search index` only) |
 | AR9D4 | `search-eval-regression` | error | A search metric is below its minimum or too many cases regressed against the baseline (`search --eval` only) |
-| AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` and `validate --strict --verifiers`; severity is the verifier's own) |
-| AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands and `validate --strict --verifiers`) |
-| AR9H3 | `verifier-command-failed-to-run` | error | A `command` predicate was refused (no `--allow-exec`, an untrusted include), could not start or timed out (`verifiers run`, `test` and `validate --strict --verifiers`) |
-| AR9H4 | `verifier-llm-skipped` | info | An `llm` verifier was not evaluated: LLM use is off, over budget, withheld, unreadable or `--estimate` (`verifiers run` and `validate --strict --verifiers`; shown as skipped, never as a pass) |
+| AR9H1 | `verifier-failed` | warning | A verifier's predicate did not hold; names the verifier and the rule or skill that declared it (`verifiers run` and `validate --verifiers`; severity is the verifier's own) |
+| AR9H2 | `verifier-invalid` | error | A declaration under `.ai-rulez/verifiers/` is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (`verifiers` commands and `validate --verifiers`) |
+| AR9H3 | `verifier-command-failed-to-run` | error | A `command` predicate was refused (no `--allow-exec`, an untrusted include), could not start or timed out (`verifiers run`, `test` and `validate --verifiers`) |
+| AR9H4 | `verifier-llm-skipped` | info | An `llm` verifier was not evaluated: LLM use is off, over budget, withheld, unreadable or `--estimate` (`verifiers run` and `validate --verifiers`; shown as skipped, never as a pass) |
 | AR9H5 | `verifier-dead-scope` | warning | A verifier's `when_changed` matches no file of the repository (`verifiers run --strict-applicability` or `[verifiers_settings] warn_dead`) |
 | AR9H6 | `verifier-no-examples` | warning | A spec verifier has no `[[verifiers.examples]]` (`verifiers run` with `[verifiers_settings] require_examples`) |
 | AR9J1 | `improve-run-stale` | info | A saved `improve` run's original digest no longer matches the skill; `improve apply` refuses (see [Improve](improve.md)) |
@@ -223,7 +223,7 @@ stdout.
 | AR9J3 | `improve-policy-violation` | error | A candidate round broke the diff policy (report only; the round is rejected before any eval spend) |
 | AR9J4 | `improve-sibling-regression` | error | A candidate lowered another skill's trigger recall under the offline ranker (report only; the round is rejected before any held-out spend) |
 | AR9J5 | `improve-underpowered` | info | The held-out gain of a candidate cannot be told from zero: fewer than eight cases, or the bootstrap interval includes zero (report only) |
-| AR9J6 | `improve-repo-optimizer-ignored` | warning | `[improve] optimizer`, `env_pass` or a gate key looser than the defaults in a repository config is not used without `--trust-repo-optimizer` (also emitted by `validate --strict`) |
+| AR9J6 | `improve-repo-optimizer-ignored` | warning | `[improve] optimizer`, `env_pass` or a gate key looser than the defaults in a repository config is not used without `--trust-repo-optimizer` (also emitted by `validate`) |
 | AR9J7 | `improve-isolation-unavailable` | warning | The requested optimizer isolation could not be applied: `require` refuses to run, `auto` runs unconfined |
 | AR9J8 | `improve-pr-refused` | error | `improve pr` refused: unsigned or unaccepted run, a different skill at the base, an existing branch, or unusable git |
 | AR9J9 | `improve-adapter-refused` | error | A bundled adapter (`builtin:review-fix`) could not run: no model, no network opt-in or no declared egress |
@@ -249,7 +249,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR720`-`AR729` | Signing ([#214](https://github.com/Goldziher/ai-rulez/issues/214); `AR720`-`AR729` used, see [Signing](signing.md)) | allocated |
 | `AR730`-`AR739` | Semver gates ([#215](https://github.com/Goldziher/ai-rulez/issues/215); `AR730`-`AR735` used) | allocated |
 | `AR740`-`AR749` | Policy ([#216](https://github.com/Goldziher/ai-rulez/issues/216); `AR740`-`AR749` registered, `AR741` is for pinned policies and URLs; see [Policy](policy.md)) | allocated |
-| `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `AR750`-`AR753` used, reported by `ai-rulez sbom` and `validate --strict`, see [SBOM](sbom.md)) | allocated |
+| `AR750`-`AR759` | SBOM ([#217](https://github.com/Goldziher/ai-rulez/issues/217); `AR750`-`AR753` used, reported by `ai-rulez sbom` and `validate`, see [SBOM](sbom.md)) | allocated |
 | `AR800`-`AR899` | Descriptions, names and markdown shape (`AR801`-`AR807`) | allocated |
 | `AR900`-`AR949` | Size budgets (`AR901`, `AR902`) | allocated |
 | `AR950`-`AR959` | Metadata (`AR951`-`AR954`) | allocated |
@@ -314,7 +314,7 @@ max_length = 1024
 require_use_when = true            # enables AR803 at warning
 near_duplicate_threshold = 0.9
 
-[lint.tolerate]                    # tolerated findings per rule (see Baseline and tolerated findings)
+[lint.ratchet]                    # tolerated findings per rule (see Baseline and tolerated findings)
 AR401 = 12
 link-unresolved = 0
 
@@ -448,14 +448,14 @@ After the fixes the run reports what is left, and the exit code reflects that. T
 ## Baseline and tolerated findings
 
 A team adopting strict validation on an existing tree usually cannot fix everything at once. A **baseline**
-records the findings you accept today, so only *new* findings fail the build, and `[lint.tolerate]` caps how many
+records the findings you accept today, so only *new* findings fail the build, and `[lint.ratchet]` caps how many
 findings of one rule are tolerated. (Do not confuse it with `[lint.budgets.<kind>]`, the size budgets of a content kind.)
 
 ```bash
 ai-rulez validate --update-baseline --baseline-reason "legacy, tracked in TEAM-123"
 git add .ai-rulez/lint-baseline.json
 ai-rulez validate            # exit 2 only for findings not in the baseline
-ai-rulez validate --strict-baseline   # stale entries fail too
+ai-rulez validate-baseline   # stale entries fail too
 ```
 
 `.ai-rulez/lint-baseline.json` (next to `config.toml`; `--baseline <file>` names another, which must exist) holds
@@ -495,10 +495,10 @@ one entry per accepted finding:
 - **`expires`** is an optional `YYYY-MM-DD`. Through that day the entry applies; after it the finding counts as new
   and the entry is listed as expired. The date comes from the clock in the CLI only; pin it with `--today` or
   `AI_RULEZ_TODAY` for reproducible runs.
-- **Tolerated findings.** `[lint.tolerate]` maps a code or name to a number: up to that many unaccepted findings of the
+- **Tolerated findings.** `[lint.ratchet]` maps a code or name to a number: up to that many unaccepted findings of the
   rule are tolerated and do not count toward the exit code. One more, and all of that rule's findings count again (the
   text report says `tolerate: AR401 has 13 finding(s), over its tolerated count of 12`; the JSON key is still
-  `budgets_exceeded`). Lower the number over time. Tolerated counts apply per root, after the baseline. `[lint.budget]` is
+  `budgets_exceeded`). Lower the number over time. Tolerated counts apply per root, after the baseline. `[lint.ratchet]` is
   the deprecated spelling of the same table: it still works and warns. Putting the size-budget shape in it
   (`[lint.tolerate.skill]`) or a rule count in `[lint.budgets]` (`AR201 = 1`) is an error that names the right table.
 
@@ -545,7 +545,7 @@ config list for that invocation; an unknown name is an error. The text report sa
 - Budgets and the exit code reflect the analyzers that ran.
 - `--since` and `--changed` still compute the reference graph, which the `references` checks build, but report
   none of their findings when `references` is not selected.
-- `scan` is `validate --strict` with the `security` analyzer.
+- `scan` is `validate` with the `security` analyzer.
 - `go test ./internal/lint -run '^$' -bench AnalyzerSelection -benchmem` compares the two on 300 skills of 120 lines: a security-only run took 6.6 s against 9.8 s for a full run and allocated 149 MB against 1.4 GB.
 
 ## Documenting risky commands: example regions
@@ -595,7 +595,7 @@ threshold. The flag is `--lint-profile`, not `--profile`, because `--profile` se
 | `permissive` | `fail_on = error`. Demotes to warning: `AR101`, `AR201`, `AR301`, `AR302`, `AR402`, `AR951`, `AR952`, `AR954`. Demotes to info: `AR202`, `AR401`, `AR701`, `AR702`, `AR703`, `AR901`, `AR902` |
 
 Security rules (`AR0xx`) are never changed by a profile, and a profile does not touch `[lint.security]` or
-`[lint.tolerate]`. Precedence, highest first: `--fail-on` / `--lint-profile` on the command line, the
+`[lint.ratchet]`. Precedence, highest first: `--fail-on` / `--lint-profile` on the command line, the
 `config.local.*` overlay, `config.toml` (`fail_on`, `[lint.severity]`, `profile`), then the preset. The text
 report starts with a `lint profile:` line when a non-default profile is active, and `--format json` carries
 `"profile"`. The preset tables live in `internal/lint/profile.go`.
@@ -641,7 +641,7 @@ is one hop (a file that refers to a dependent is not shown). `--since-depth N` f
 the whole reverse closure, so a change to a script a skill uses also reaches the agent that lists the skill:
 
 ```bash
-ai-rulez validate --strict --since origin/main --since-depth all --since-max-files 200
+ai-rulez validate --since origin/main --since-depth all --since-max-files 200
 ```
 
 The closure is a breadth-first walk over the same reference graph, so a cycle ends when no new file turns up and the
@@ -652,7 +652,7 @@ the text report says how many were left out. Each finding carries a `hop` in `--
 The text report ends with a `changed-only since <rev> (depth <n|all>)` line and `--format json` carries a
 `changed_only` object (`depth`, `-1` for `all`; `changed_files`, `dependent_files`, `transitive_files`, `truncated_files`,
 `dropped_findings`). The baseline is applied to the full set first, so stale entries are judged against every
-finding, and a `[lint.tolerate]` count is judged against the full set too; exit status reflects only the findings shown.
+finding, and a `[lint.ratchet]` count is judged against the full set too; exit status reflects only the findings shown.
 `--update-baseline` cannot be combined with `--since`.
 
 The revision is compared through its merge-base with `HEAD` (`git merge-base <rev> HEAD`), so with
@@ -855,7 +855,7 @@ must not do), so a launcher scanner (`npx`, `uvx`, `pipx`, `bunx`, `npm`, `pnpm`
 changes without its launcher binary changing, is served from the cache for 24 hours at most. Pin the version in
 the command, or pass `--no-scan-cache`, to control it.
 
-`scan --external --dry-run` (also `validate --strict --external --dry-run`) prints, for each scanner that would run,
+`scan --external --dry-run` (also `validate --external --dry-run`) prints, for each scanner that would run,
 its binary, command (stage paths shown as `<stage>` and `<scratch>`), isolation, the names of the environment
 variables it would receive (never values), the staged files and the cache state (`hit`, `miss`, `off`), and starts
 nothing. It skips the `version` check, which would start the scanner. With `--format json` or `sarif` the plan goes
@@ -2021,7 +2021,7 @@ a rule has more findings than the organization policy's lint.max_findings ceilin
 
 - Default severity: `error`
 - Analyzer: `config` (scope `bundle`)
-- Why: A ceiling lets an organization say how many findings of a rule it will live with, down to none, without depending on the repository's severity settings. The findings keep their own severity; going over the ceiling is the error, and baselines, [lint.tolerate] and ignore comments cannot absorb it.
+- Why: A ceiling lets an organization say how many findings of a rule it will live with, down to none, without depending on the repository's severity settings. The findings keep their own severity; going over the ceiling is the error, and baselines, [lint.ratchet] and ignore comments cannot absorb it.
 - Bad: Three AR703 findings under `[lint.max_findings] AR703 = 0`
 - Good: Fix the findings; the ceiling is lowered over time by the policy owners, not raised by the repository
 
@@ -2527,7 +2527,7 @@ two OKF concepts in one directory share a title
 
 ### AR9B8 okf-path-unsafe
 
-an OKF bundle contains a symlink, a markdown file over the size limit (skipped), or paths differing only in case
+an OKF bundle contains a symlink, a path escaping the bundle, a markdown file over the size limit (skipped), or paths differing only in case
 
 - Default severity: `error`
 - Analyzer: `okf` (scope `item`)
@@ -2947,47 +2947,47 @@ a judged review ran on a model alias, or without a calibration record that match
 
 ### AR9H1 verifier-failed
 
-a verifier's predicate did not hold; the finding names the verifier and the rule or skill that declared it (reported by `verifiers run` and `validate --strict --verifiers`)
+a verifier's predicate did not hold; the finding names the verifier and the rule or skill that declared it (reported by `verifiers run` and `validate --verifiers`)
 
 - Default severity: `warning`
 - Analyzer: `verifiers` (scope `item`)
-- Why: The check a rule or skill declared with a verifier does not hold on the evaluated files. Severity is the verifier's own (warning unless it sets `severity`). `ai-rulez verifiers run` and `validate --strict --verifiers` report it.
+- Why: The check a rule or skill declared with a verifier does not hold on the evaluated files. Severity is the verifier's own (warning unless it sets `severity`). `ai-rulez verifiers run` and `validate --verifiers` report it.
 - Bad: A migration `db/migrations/0042.sql` without a `-- down` section while verifier `migrations-have-down` requires one
 - Good: Apply the verifier's `fix`: add the section, or change the verifier if the rule changed
 
 ### AR9H2 verifier-invalid
 
-a verifier declaration is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (reported by `verifiers run` and `validate --strict --verifiers`)
+a verifier declaration is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (reported by `verifiers run` and `validate --verifiers`)
 
 - Default severity: `error`
 - Analyzer: `verifiers` (scope `item`)
-- Why: A declaration under `.ai-rulez/verifiers/` that cannot be used is reported instead of silently skipped, so a typo never disables a check. `ai-rulez verifiers run`, `list`, `test` and `validate --strict --verifiers` report it.
+- Why: A declaration under `.ai-rulez/verifiers/` that cannot be used is reported instead of silently skipped, so a typo never disables a check. `ai-rulez verifiers run`, `list`, `test` and `validate --verifiers` report it.
 - Bad: `rule = "ghost"` naming a rule that does not exist, or `regex = "("`
 - Good: Name an existing rule, skill, agent or command and a valid RE2 regex
 
 ### AR9H3 verifier-command-failed-to-run
 
-a command predicate was refused (no --allow-exec, an untrusted include) or did not run: not found, could not start, timed out (reported by `verifiers run` and `validate --strict --verifiers`)
+a command predicate was refused (no --allow-exec, an untrusted include) or did not run: not found, could not start, timed out (reported by `verifiers run` and `validate --verifiers`)
 
 - Default severity: `error`
 - Analyzer: `verifiers` (scope `item`)
-- Why: A command predicate runs a program, which only happens with `--allow-exec` (or AI_RULEZ_VERIFIERS_ALLOW_EXEC=1) and, for a verifier that came from an include, only when `[verifiers_settings] trust_exec_from` names that include. A command that is refused, cannot be started or times out is an error, never a pass, even under `not`. `ai-rulez verifiers run`, `test` and `validate --strict --verifiers` report it.
+- Why: A command predicate runs a program, which only happens with `--allow-exec` (or AI_RULEZ_VERIFIERS_ALLOW_EXEC=1) and, for a verifier that came from an include, only when `[verifiers_settings] trust_exec_from` names that include. A command that is refused, cannot be started or times out is an error, never a pass, even under `not`. `ai-rulez verifiers run`, `test` and `validate --verifiers` report it.
 - Bad: `argv = ["make", "check-lock"]` run in CI without `--allow-exec`, or a program that is not installed
 - Good: Pass `--allow-exec` for trusted refs only, install the program, or raise `timeout_s` (capped by `max_timeout_s`)
 
 ### AR9H4 verifier-llm-skipped
 
-an llm verifier was not evaluated: LLM use is off, the budget would be exceeded, the content was withheld or unreadable, or --estimate was given; never counted as a pass (reported by `verifiers run` and `validate --strict --verifiers`)
+an llm verifier was not evaluated: LLM use is off, the budget would be exceeded, the content was withheld or unreadable, or --estimate was given; never counted as a pass (reported by `verifiers run` and `validate --verifiers`)
 
 - Default severity: `info`
 - Analyzer: `verifiers` (scope `item`)
-- Why: An `llm` verifier sends the changed hunks to a model, so it runs only with `--allow-llm`, with `allow_network = true` set in the user config, a configured model and a budget. When any of that is missing, the estimate exceeds `--max-cost`, or every hunk was withheld (a secret or hidden characters) or every changed file was binary or too large, the verifier is skipped and shown as skipped, never as passed. `ai-rulez verifiers run` and `validate --strict --verifiers` report it.
+- Why: An `llm` verifier sends the changed hunks to a model, so it runs only with `--allow-llm`, with `allow_network = true` set in the user config, a configured model and a budget. When any of that is missing, the estimate exceeds `--max-cost`, or every hunk was withheld (a secret or hidden characters) or every changed file was binary or too large, the verifier is skipped and shown as skipped, never as passed. `ai-rulez verifiers run` and `validate --verifiers` report it.
 - Bad: An `llm` verifier in CI without `--allow-llm`, which silently looks green
 - Good: Pass `--allow-llm` where model use is allowed, or read the skipped line as 'not checked'
 
 ### AR9H5 verifier-dead-scope
 
-a verifier's when_changed matches no file in the repository, so it can never apply (reported by `verifiers run` and `validate --strict --verifiers`, with --strict-applicability)
+a verifier's when_changed matches no file in the repository, so it can never apply (reported by `verifiers run` and `validate --verifiers`, with --strict-applicability)
 
 - Default severity: `warning`
 - Analyzer: `verifiers` (scope `item`)
@@ -2997,11 +2997,11 @@ a verifier's when_changed matches no file in the repository, so it can never app
 
 ### AR9H6 verifier-no-examples
 
-a verifier has no self-test examples (reported by `verifiers run` and `validate --strict --verifiers`, with [verifiers_settings] require_examples)
+a verifier has no self-test examples (reported by `verifiers run` and `validate --verifiers`, with [verifiers_settings] require_examples)
 
 - Default severity: `warning`
 - Analyzer: `verifiers` (scope `item`)
-- Why: With `[verifiers_settings] require_examples = true` a verifier without `[[verifiers.examples]]` has no self-test, so a regex typo can go unnoticed. `ai-rulez verifiers run` and `validate --strict --verifiers` report it.
+- Why: With `[verifiers_settings] require_examples = true` a verifier without `[[verifiers.examples]]` has no self-test, so a regex typo can go unnoticed. `ai-rulez verifiers run` and `validate --verifiers` report it.
 - Bad: A spec verifier with a `forbid` regex and no examples
 - Good: Add a passing and a failing example and run `ai-rulez verifiers test`
 
@@ -3061,7 +3061,7 @@ an [improve] optimizer, env_pass or looser-than-default gate key of the reposito
 
 - Default severity: `warning`
 - Analyzer: `evals` (scope `item`)
-- Why: A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. A repository may also only tighten the acceptance gate: `min_gain`, `max_regressions`, `holdout_fraction` and `max_skill_growth` looser than the defaults are ignored the same way. `validate --strict` and `improve run` report them.
+- Why: A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. A repository may also only tighten the acceptance gate: `min_gain`, `max_regressions`, `holdout_fraction` and `max_skill_growth` looser than the defaults are ignored the same way. `validate` and `improve run` report them.
 - Bad: A cloned repository whose `.ai-rulez/config.toml` sets `[improve] optimizer`, run with plain `improve run <skill>`
 - Good: Pass `--with`, or review the config and add `--trust-repo-optimizer`
 
@@ -3141,7 +3141,7 @@ a preflight gate of `publish` failed: strict validation, the lock check or plugi
 
 - Default severity: `error`
 - Analyzer: `plugin` (scope `bundle`)
-- Why: A bundle must be reviewed, locked and generated before anyone downloads it, so `publish` runs `validate --strict`, `lock --check` and `verify --plugin` first and writes nothing when one fails.
+- Why: A bundle must be reviewed, locked and generated before anyone downloads it, so `publish` runs `validate`, `lock --check` and `verify --plugin` first and writes nothing when one fails.
 - Bad: A skill edited after `ai-rulez lock`, or plugin files hand-edited since `generate --plugin`
 - Good: Run `ai-rulez lock` and `ai-rulez generate --plugin`, commit, and publish again
 

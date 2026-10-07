@@ -222,7 +222,7 @@ const (
 	routeIgnorePaths = "[lint] ignore_paths"
 	routeInline      = "ai-rulez-lint-ignore comment"
 	routeBaseline    = "baseline"
-	routeRatchet    = "[lint.ratchet]"
+	routeRatchet     = "[lint.ratchet]"
 )
 
 // suppressed reports whether path or inline ignores hide a finding. A code the

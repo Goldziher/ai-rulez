@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Output formats of `validate --strict`.
+// Output formats of `validate`.
 const (
 	FormatText     = "text"
 	FormatJSON     = "json"

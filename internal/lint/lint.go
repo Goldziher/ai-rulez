@@ -305,10 +305,10 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 			r.checkItem(&r.items[i])
 		}
 	}
-	r.unit(unitOf("duplicates", AnalyzerDuplicates), r.checkDuplicates)
+	r.unit(depUnitOf("duplicates", AnalyzerDuplicates), r.checkDuplicates)
 	r.unit(unitOf("mcp-command", AnalyzerMCP), r.checkMCP)
 	r.unit(depUnitOf("settings-hooks", AnalyzerHooks), func() { r.checkHooks(baseAbs) })
-	r.unit(unitOf("collapsed", AnalyzerDuplicates), r.checkCollapsed)
+	r.unit(depUnitOf("collapsed", AnalyzerDuplicates), r.checkCollapsed)
 	r.unit(unitOf("unpinned", AnalyzerSecurity), r.checkUnpinned)
 	r.unit(unitOf("delivery", AnalyzerDelivery, AnalyzerSecurity, AnalyzerLock), r.checkDelivery)
 	r.unit(unitOf("imported", AnalyzerSecurity), r.scanImported)
@@ -885,9 +885,7 @@ func (r *runner) checkFrontmatterSkills(it *item, d doc) {
 			served = r.servedSkillNames()
 		}
 		if served[key] {
-			r.add(CodeServedReferencedStatically, it.abs, d.lineOf(s, 1),
-				"frontmatter skills: preloads %q, which is served and not written to the harness's skill tree. Set delivery: both on it or drop it from skills:", s)
-			continue
+			continue // a served skill is not on disk; checkServedReferences reports the preload (AR990)
 		}
 		if key == "" || strings.Contains(key, ":") || r.skills[key] || r.commands[key] {
 			continue
@@ -1260,23 +1258,18 @@ func (r *runner) checkSettingsConfig() {
 	}
 }
 
-// validateBudgetAndRisk checks [lint.ratchet] (and its deprecated alias [lint.budget]) and [lint.risk].
+// validateBudgetAndRisk checks [lint.ratchet] and [lint.risk].
 func validateBudgetAndRisk(lc *config.LintConfig) []string {
 	var problems []string
 	if _, ok := LookupProfile(lc.Profile); !ok {
 		problems = append(problems, fmt.Sprintf("lint.profile: unknown profile %q (use %s)", lc.Profile, strings.Join(ProfileNames(), ", ")))
 	}
-	for _, table := range []struct {
-		name   string
-		limits map[string]int
-	}{{"tolerate", lc.Tolerate}, {"budget", lc.Budget}} {
-		for key, limit := range table.limits {
-			if _, ok := lookupRule(key); !ok {
-				problems = append(problems, fmt.Sprintf("lint.%s: unknown rule %q", table.name, key))
-			}
-			if limit < 0 {
-				problems = append(problems, fmt.Sprintf("lint.%s.%s: %d is negative", table.name, key, limit))
-			}
+	for key, limit := range lc.Ratchet {
+		if _, ok := lookupRule(key); !ok {
+			problems = append(problems, fmt.Sprintf("lint.ratchet: unknown rule %q", key))
+		}
+		if limit < 0 {
+			problems = append(problems, fmt.Sprintf("lint.ratchet.%s: %d is negative", key, limit))
 		}
 	}
 	if lc.Risk != nil {

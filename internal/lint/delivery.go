@@ -121,6 +121,17 @@ func (r *runner) checkServedReferences(served map[string]bool) {
 			continue
 		}
 		reported := map[string]bool{}
+		if !it.isDoc && it.cf.Metadata != nil {
+			for _, s := range it.cf.Metadata.Skills {
+				key := strings.ToLower(strings.TrimSpace(s))
+				if !served[key] || reported[key] {
+					continue
+				}
+				reported[key] = true
+				r.add(CodeServedReferencedStatically, it.abs, d.lineOf(s, 1),
+					"frontmatter skills: preloads %q, which is served and not written to the harness's skill tree. Set delivery: both on it or drop it from skills:", s)
+			}
+		}
 		for _, l := range d.body() {
 			for _, name := range referencedNames(l, served) {
 				if reported[name] {

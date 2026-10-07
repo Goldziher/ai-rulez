@@ -9,7 +9,7 @@ import (
 
 // FrontmatterWarnings runs the frontmatter checks that plain `validate` reports
 // as warnings: an agent frontmatter key no tool reads (AR303) and a `skills:`
-// entry that names no skill (AR302). `validate --strict` reports the same
+// entry that names no skill (AR302). `validate` reports the same
 // findings at their configured severity (AR302 is an error there).
 //
 // Severities set in [lint] (severity, ignore, ignore_paths) still apply, so a
