@@ -163,15 +163,9 @@ func readSkill(log logger.Logger, dir, sourceRoot string) ([]File, error) {
 			}
 			return nil
 		}
-		info, err := d.Info()
-		if err != nil {
-			return err //nolint:wrapcheck // wrapped below
-		}
-		if !info.Mode().IsRegular() {
-			if info.Mode()&os.ModeSymlink != 0 {
-				log.Warn("Skipping a symlink in a skill; symlinks are not followed", "path", p)
-			}
-			return nil // symlinks and devices are not served
+		info, err := regularFile(log, p, d)
+		if err != nil || info == nil {
+			return err
 		}
 		if skip, limitErr := checkFileLimits(log, p, info.Size(), len(files), &total); limitErr != nil || skip {
 			return limitErr
@@ -193,6 +187,28 @@ func readSkill(log logger.Logger, dir, sourceRoot string) ([]File, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "read skill directory")
 	}
+	return orderSkillFiles(files)
+}
+
+// regularFile returns the file info of a walked entry that is served: a
+// regular file. Symlinks (warned about) and devices give nil.
+func regularFile(log logger.Logger, p string, d fs.DirEntry) (fs.FileInfo, error) {
+	info, err := d.Info()
+	if err != nil {
+		return nil, err //nolint:wrapcheck // wrapped by readSkill
+	}
+	if !info.Mode().IsRegular() {
+		if info.Mode()&os.ModeSymlink != 0 {
+			log.Warn("Skipping a symlink in a skill; symlinks are not followed", "path", p)
+		}
+		return nil, nil
+	}
+	return info, nil
+}
+
+// orderSkillFiles puts SKILL.md first and the rest by path; a skill without a
+// SKILL.md is an error.
+func orderSkillFiles(files []File) ([]File, error) {
 	sort.Slice(files, func(i, j int) bool {
 		if (files[i].Path == skillFile) != (files[j].Path == skillFile) {
 			return files[i].Path == skillFile
