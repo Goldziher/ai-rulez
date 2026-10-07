@@ -33,7 +33,12 @@ func looksPlaceholder(name string) bool {
 }
 
 func (r *runner) scanBody(it *item, d doc) {
-	for _, l := range d.body() {
+	lines := d.body()
+	for i, l := range lines {
+		prev := ""
+		if i > 0 && lines[i-1].No == l.No-1 {
+			prev = lines[i-1].Text
+		}
 		for _, target := range linkTargets(l.Plain) {
 			r.checkLink(it, l.No, target)
 		}
@@ -42,7 +47,7 @@ func (r *runner) scanBody(it *item, d doc) {
 			if tickSlashRe.MatchString(strings.TrimSpace(tok)) && !slashInvocation(l.Text[:m[0]]) {
 				continue // `/api-docs` in prose is a route, not a command
 			}
-			r.checkToken(it, l.No, tok)
+			r.checkToken(it, l.No, tok, r.pathNotAClaim(l.Text, prev, m[2], m[3]))
 		}
 		r.checkNames(it, l)
 	}
@@ -120,7 +125,10 @@ func (r *runner) checkAnchor(it *item, line int, file, frag, target string) {
 
 // checkToken handles one backticked token: a slash command, a skill-relative
 // file, or a repo path.
-func (r *runner) checkToken(it *item, line int, tok string) {
+//
+// notAClaim is set when the surrounding text does not assert the path exists
+// (negated, an example, another repository...); see pathNotAClaim.
+func (r *runner) checkToken(it *item, line int, tok string, notAClaim bool) {
 	tok = strings.TrimSpace(tok)
 	if m := tickSlashRe.FindStringSubmatch(tok); m != nil {
 		r.requireName(it, line, m[1], "command", r.commands, r.skills)
@@ -131,6 +139,9 @@ func (r *runner) checkToken(it *item, line int, tok string) {
 		return
 	}
 	tok = strings.TrimPrefix(tok, "./")
+	if notAClaim {
+		return
+	}
 	if m := skillRelRe.FindString(tok); m != "" {
 		if r.checkSkillRelative(it, line, tok, m) {
 			return
@@ -147,7 +158,7 @@ func (r *runner) checkToken(it *item, line int, tok string) {
 	if r.baseRel != "" {
 		r.dep(it.abs, filepath.Join(r.tree.Top, filepath.FromSlash(r.baseRel), filepath.FromSlash(tok)))
 	}
-	if !r.existsRepo(tok) {
+	if !r.existsRepo(tok) && !r.numberedPrefixExists(tok) {
 		r.add(CodePathMissing, it.abs, line, "path %q does not exist in the repository", path.Clean(tok))
 	}
 }
