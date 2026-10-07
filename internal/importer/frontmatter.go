@@ -427,3 +427,57 @@ func setFrontmatterName(text, name string) string {
 	}
 	return "---\n" + rewritten + "\n---\n" + body
 }
+
+// nestUnknownKeys moves the top-level frontmatter keys that known does not list
+// under `metadata:` (merged into an existing metadata map), so a root file such
+// as a CLAUDE.md that carries title, applies_to or updated keys becomes a
+// context file the strict validator accepts without losing the values. moved
+// names the keys it moved. Frontmatter that is not a plain YAML mapping is
+// returned unchanged.
+func nestUnknownKeys(text string, known map[string]bool) (out string, moved []string) {
+	fm, body, has := splitFrontmatter(text)
+	if !has {
+		return text, nil
+	}
+	var doc yaml.Node
+	if err := yaml.Unmarshal([]byte(fm), &doc); err != nil || doc.Kind != yaml.DocumentNode ||
+		len(doc.Content) != 1 || doc.Content[0].Kind != yaml.MappingNode {
+		return text, nil
+	}
+	root := doc.Content[0]
+	var keep, unknown []*yaml.Node
+	var metadata *yaml.Node
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		k, v := root.Content[i], root.Content[i+1]
+		switch {
+		case k.Value == "metadata" && v.Kind == yaml.MappingNode:
+			metadata = v
+			keep = append(keep, k, v)
+		case known[k.Value]:
+			keep = append(keep, k, v)
+		default:
+			unknown = append(unknown, k, v)
+			moved = append(moved, k.Value)
+		}
+	}
+	if len(unknown) == 0 {
+		return text, nil
+	}
+	if metadata != nil {
+		metadata.Content = append(metadata.Content, unknown...)
+		root.Content = keep
+	} else {
+		meta := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map", Content: unknown}
+		root.Content = append(keep, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "metadata"}, meta)
+	}
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(&doc); err != nil {
+		return text, nil
+	}
+	if err := enc.Close(); err != nil {
+		return text, nil
+	}
+	return "---\n" + strings.TrimRight(buf.String(), "\n") + "\n---\n" + body, moved
+}
