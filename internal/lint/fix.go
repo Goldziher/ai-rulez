@@ -105,6 +105,8 @@ type FixApplied struct {
 	Line        int
 	Description string
 	Confidence  FixConfidence
+	// Targets are the absolute paths the fix edits or changes the mode of.
+	Targets []string
 }
 
 // FixSkipped describes a finding whose fix was not applied, and why.
@@ -251,6 +253,7 @@ func planFixes(findings []Finding, o FixOptions, res *FixResult) fixPlan {
 			plan.chmods[c.File] = true
 			p.targets = append(p.targets, c.File)
 		}
+		p.applied.Targets = p.targets
 		plan.candidates = append(plan.candidates, p)
 	}
 	return plan

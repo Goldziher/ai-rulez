@@ -124,7 +124,7 @@ func updateBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 	return nil
 }
 
-// ratchetFor resolves one root's [lint.ratchet] (or its deprecated [lint.ratchet]).
+// ratchetFor resolves one root's [lint.ratchet].
 func ratchetFor(cfg *config.Config) lint.Ratchet {
 	if cfg == nil || cfg.Lint == nil {
 		return nil

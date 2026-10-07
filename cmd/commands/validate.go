@@ -98,6 +98,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 			progress.PrintIfNotQuiet("%s\n", localOverlaySummary(cfg))
 		}
 
+		cfg.DeferMalformedFrontmatter = validateStrict
 		if err := cfg.Validate(); err != nil {
 			logger.Error("Configuration validation failed", "path", cfg.ConfigDir)
 			fmtError(err)
@@ -243,6 +244,7 @@ func validateConfigFile(configPath string) (*config.Config, error) {
 	if err := validateLocalOverlay(cfg); err != nil {
 		return nil, schemaFailure(cfg, err)
 	}
+	cfg.DeferMalformedFrontmatter = validateStrict
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
