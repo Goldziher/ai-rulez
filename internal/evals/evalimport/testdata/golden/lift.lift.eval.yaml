@@ -1,5 +1,5 @@
 # imported by ai-rulez eval import (importer 1) from scenario "write-the-changelog"
-# source sha256:1d2c2867a2a4a6882bca2f5a7d191e5adb7733af0abd6e17afd6c2999760f5b6
+# source sha256:320d56ba4cb1aa8d9ac32bea12cbafd2af0b9826423b09b1c1e9c2a072454c8b
 schema_version: 1
 cases:
   - id: write-the-changelog
@@ -26,7 +26,7 @@ cases:
       2. (weight 1) The output contains "2.0.0"
       3. (weight 1) The answer does not contain `DRAFT`
       4. (weight 1) The file "notes.tmp" does not exist
-      5. (weight 3) The changelog is clear and well organised
+      5. (weight 3) The changelog is clear and well organized
       6. (weight 1) The file "../outside" exists
     tags:
       - imported:tessl
