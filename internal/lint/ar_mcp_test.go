@@ -23,7 +23,7 @@ func TestMCPConfigAR602(t *testing.T) {
 		{name: "valid stdio and http", files: mcpJSON(`{"a":{"command":"node","args":["s.js"]},"b":{"type":"http","url":"https://x.test/mcp"},"c":{"url":"https://x.test/mcp"}}`), absent: []string{"AR602"}},
 		{name: "names that differ only by case", files: mcpJSON(`{"GitHub":{"command":"node"},"github":{"command":"node"}}`), want: []string{"AR602:.mcp.json:1"}},
 		{
-			name: "a .mcp.json entry that mirrors config.toml is not checked twice", files: mcpJSON(`{"dup":{"type":"http"}}`),
+			name: "a .mcp.json entry that mirrors config.toml is not checked twice", files: mcpJSON(`{"dup":{"command":"node"}}`),
 			config: "\n[[mcp_servers]]\nname = \"dup\"\ncommand = \"node\"\n", absent: []string{"AR602"},
 		},
 		{name: "disabled servers are not checked", files: mcpJSON(`{"a":{"disabled":true}}`), absent: []string{"AR602"}},
@@ -96,4 +96,43 @@ func TestMCPSecretFindingDoesNotEchoTheValue(t *testing.T) {
 	if !found {
 		t.Fatal("no AR015 finding")
 	}
+}
+
+func TestMCPJSONEntryWithTheNameOfAConfigServerIsChecked(t *testing.T) {
+	cfg := "\n[[mcp_servers]]\nname = \"gh\"\ncommand = \"npx\"\nargs = [\"-y\", \"pkg@1.2.3\"]\n"
+	runRuleCases(t, []ruleCase{
+		{
+			name: "an edited entry with an unpinned package and a literal token", config: cfg,
+			files: mcpJSON(`{"gh":{"command":"npx","args":["-y","evil-pkg"],"env":{"GITHUB_TOKEN":"ghp_abcdefghijklmnopqrstuvwxyz0123456789"}}}`),
+			want:  []string{"AR012:.mcp.json:1", "AR015:.mcp.json:1"},
+		},
+		{
+			name: "an edited plain http url", config: "\n[[mcp_servers]]\nname = \"gh\"\nurl = \"https://x.test/mcp\"\n",
+			files: mcpJSON(`{"gh":{"type":"http","url":"http://x.test/mcp"}}`), want: []string{"AR024:.mcp.json:1"},
+		},
+		{
+			name: "an identical generated copy is checked once", config: cfg,
+			files:  mcpJSON(`{"gh":{"command":"npx","args":["-y","pkg@1.2.3"]}}`),
+			absent: []string{"AR012", "AR015", "AR602"},
+		},
+		{
+			name: "a copy with a different transport spelling is still a copy", config: "\n[[mcp_servers]]\nname = \"gh\"\nurl = \"https://x.test/mcp\"\ntransport = \"http\"\n",
+			files: mcpJSON(`{"gh":{"type":"http","url":"https://x.test/mcp"}}`), absent: []string{"AR602", "AR024"},
+		},
+	})
+}
+
+func TestMCPFindingsAreAnchoredOnTheServerDefinition(t *testing.T) {
+	cfg := "\ngitignore = true\n\n[[mcp_servers]]\nname = \"git\"\ncommand = \"npx\"\nargs = [\"-y\", \"pkg\"]\n\n[[mcp_servers]]\nname = \"a\"\ncommand = \"npx\"\nargs = [\"-y\", \"other\"]\n"
+	runRuleCases(t, []ruleCase{
+		{name: "config.toml blocks", config: cfg, want: []string{"AR012:config.toml:8", "AR012:config.toml:13"}},
+		{
+			name: "plain http is anchored like the other checks", config: "\n\n[[mcp_servers]]\nname = \"b\"\nurl = \"https://ok.test\"\n\n[[mcp_servers]]\nname = \"a\"\nurl = \"http://x.test\"\n",
+			want: []string{"AR024:config.toml:11"},
+		},
+		{
+			name: "json key, not an earlier value", files: map[string]string{".mcp.json": "{\n \"note\": \"a\",\n \"mcpServers\": {\n  \"b\": {\"command\": \"node\"},\n  \"a\": {\"command\": \"npx\", \"args\": [\"-y\", \"p\"]}\n }\n}\n"},
+			want: []string{"AR012:.mcp.json:5"},
+		},
+	})
 }
