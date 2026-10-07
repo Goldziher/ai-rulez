@@ -32,10 +32,14 @@ func TestCheckDriftKeepsFilesOfASkippedLocalOverlay(t *testing.T) {
 	}
 }
 
-const driftSharedIgnored = `version = "4.0"
+const driftSharedIgnored = `version = "5.0"
+agents_md = false
 name = "shared-project"
 presets = ["claude"]
 gitignore = true
+
+[header]
+hashes = "full"
 `
 
 func driftPaths(drift []Drift) map[string]DriftKind {
