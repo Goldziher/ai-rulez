@@ -112,7 +112,7 @@ func (apmImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 
 // readYAML reads a YAML mapping; an unparsable file is an error, as for the other
 // importers, because nothing sensible can be imported from it.
-func (b *apmPlanner) readYAML(file string) (map[string]any, bool, error) {
+func (b *apmPlanner) readYAML(file string) (parsed map[string]any, found bool, err error) {
 	if _, ok := b.r.exists(file); !ok {
 		return nil, false, nil
 	}
@@ -471,7 +471,8 @@ func (b *apmPlanner) importModules() {
 		return
 	}
 	done := map[string]bool{}
-	for _, p := range b.p.Items {
+	for i := range b.p.Items {
+		p := b.p.Items[i]
 		for _, s := range p.Sources {
 			done[s] = true
 		}
