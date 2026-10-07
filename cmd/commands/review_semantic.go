@@ -185,8 +185,17 @@ func finishBaseline(report *rv.Report, res *rv.Results, rb *rv.Rubric) error {
 	return nil
 }
 
-// runSemantic runs the judged review and writes the report.
-func runSemantic(cmd *cobra.Command, rc *reviewContext, res *rv.Results, out io.Writer) (int, error) {
+// semanticPlan is what a judged run settles before any call: the judge, its estimate and the caps.
+type semanticPlan struct {
+	js        *judgeSetup
+	est       *rv.Estimate
+	models    []string
+	k         int
+	gateLevel string
+}
+
+// planSemantic resolves the judge and refuses the run when the estimate or the caps say so.
+func planSemantic(cmd *cobra.Command, rc *reviewContext, res *rv.Results) (*semanticPlan, error) {
 	cfg, rb := rc.cfg, rc.rb
 	models := reviewModelList()
 	primary := reviewFlags.model
@@ -194,143 +203,194 @@ func runSemantic(cmd *cobra.Command, rc *reviewContext, res *rv.Results, out io.
 		primary = models[0]
 	}
 	// The plan decides whether a call is needed at all and whether the caps refuse the run.
-	js, jerr := resolveJudge(cmd, cfg, primary, rv.DefaultMaxCostUSD, rv.DefaultMaxCalls)
-	if jerr != nil {
-		return exitReviewRefused, jerr
+	js, err := resolveJudge(cmd, cfg, primary, rv.DefaultMaxCostUSD, rv.DefaultMaxCalls)
+	if err != nil {
+		return nil, err
 	}
 	est := planWith(rc, res, js.lc, js.resolved, js.maxCost, js.maxCalls, false)
 	if len(est.Refused) > 0 {
-		return exitReviewRefused, oops.Errorf("the judged run is refused: %s", strings.Join(est.Refused, "; "))
+		return nil, oops.Errorf("the judged run is refused: %s", strings.Join(est.Refused, "; "))
 	}
 	if est.Totals.CallsMin > 0 {
 		if err := js.ready(cfg); err != nil {
-			return exitReviewRefused, err
+			return nil, err
 		}
 	}
 	if len(models) > 1 {
 		// The primary model is one of the compared models and gets its share, not the whole cap.
 		js.lc.MaxCostUSD, js.lc.MaxCalls = js.share(len(models))
 	}
-	k := effectiveK(rb, reviewFlags.k)
 	gateLevel := reviewFlags.gateLevel
 	if gateLevel == "" {
 		gateLevel = cfg.Review.GateLevel()
 	}
-	if err := applyBaseline(res, rb); err != nil {
-		return exitReviewRefused, err
-	}
+	return &semanticPlan{js: js, est: est, models: models, k: effectiveK(rb, reviewFlags.k), gateLevel: gateLevel}, nil
+}
 
-	// Calibration is checked before any money is spent, so a refused gate costs nothing.
+// judgeCalibration is the calibration record of a judged run and how it matches the judge.
+type judgeCalibration struct {
+	rec    *rv.CalibrationRecord
+	recErr error
+	cur    rv.CalKey
+	maxAge int
+	now    time.Time
+	alias  bool
+	pre    rv.CalStatus
+}
+
+// loadJudgeCalibration matches the calibration record against the judge before any money is spent.
+func loadJudgeCalibration(cfg *config.Config, rb *rv.Rubric, content string, js *judgeSetup, k int) *judgeCalibration {
 	rec, recErr := rv.LoadCalibration(rv.CalibrationPath(cfg.ConfigDir, rb))
-	cur := rv.CalKey{PromptDigest: rv.PromptDigest(rb), Content: rc.content(), K: k, Model: js.lc.FullModel()}
+	cur := rv.CalKey{PromptDigest: rv.PromptDigest(rb), Content: content, K: k, Model: js.lc.FullModel()}
 	if rb.Dir != "" {
 		if set, gerr := rv.LoadGolden(rb.Dir, rb); gerr == nil {
 			cur.GoldenDigest = set.Digest
 		}
 	}
-	maxAge := 0
+	jc := &judgeCalibration{rec: rec, recErr: recErr, cur: cur, now: reviewNow(), alias: rv.IsFloatingAlias(js.lc.FullModel())}
 	if cfg.Review != nil && cfg.Review.Gate != nil {
-		maxAge = cfg.Review.Gate.CalibrationMaxAgeDays
+		jc.maxAge = cfg.Review.Gate.CalibrationMaxAgeDays
 	}
-	now := reviewNow()
-	alias := rv.IsFloatingAlias(js.lc.FullModel())
 	// The record holds the model id the provider reported (often dated), the request the id asked for:
 	// when the record's id extends the requested one the model is compared after the first call.
 	preKey := cur
 	if rec != nil && strings.HasPrefix(rv.TrimModel(rec.Model), rv.TrimModel(cur.Model)+"-") {
 		preKey.Model = ""
 	}
-	pre := rv.MatchCalibration(rb, rec, preKey, now, maxAge)
+	jc.pre = rv.MatchCalibration(rb, rec, preKey, jc.now, jc.maxAge)
 	if recErr != nil {
-		pre = rv.CalStatus{State: rv.CalStale, Reasons: []string{"the calibration record cannot be read: " + recErr.Error()}}
+		jc.pre = rv.CalStatus{State: rv.CalStale, Reasons: []string{"the calibration record cannot be read: " + recErr.Error()}}
 	}
-	gate := &rv.GateResult{Requested: reviewFlags.gate, Level: gateLevel}
-	if reviewFlags.gate {
-		switch {
-		case alias:
-			return exitReviewRefused, oops.Errorf("--gate is refused: model %s is a floating alias that may change under you; pin a model id (AR9G9)", js.lc.FullModel())
-		case cfg.Review.GateRequiresCalibration() && pre.State != rv.CalMatched:
-			return exitReviewRefused, oops.Hint("run `ai-rulez review calibrate` for this rubric, model and content mode").
-				Errorf("--gate is refused: calibration %s: %s (AR9G9)", pre.State, strings.Join(pre.Reasons, "; "))
-		}
-	}
+	return jc
+}
 
-	var outcome *rv.SemanticOutcome
-	var runErr error
-	if est.Totals.CallsMin > 0 {
-		outcome, runErr = judgeWith(cmd, cfg, js, js.lc, rb, res, k, rc.content())
-		if runErr != nil {
-			return exitReviewRefused, runErr
-		}
-	} else {
-		outcome = &rv.SemanticOutcome{}
+// refuseGate refuses --gate before any call when the judge is a floating alias or not calibrated.
+func (jc *judgeCalibration) refuseGate(cfg *config.Config, model string) error {
+	switch {
+	case jc.alias:
+		return oops.Errorf("--gate is refused: model %s is a floating alias that may change under you; pin a model id (AR9G9)", model)
+	case cfg.Review.GateRequiresCalibration() && jc.pre.State != rv.CalMatched:
+		return oops.Hint("run `ai-rulez review calibrate` for this rubric, model and content mode").
+			Errorf("--gate is refused: calibration %s: %s (AR9G9)", jc.pre.State, strings.Join(jc.pre.Reasons, "; "))
 	}
+	return nil
+}
 
-	// A model that answers under another id than the record was calibrated for is not that judge.
-	resolved := outcome.Usage.ResolvedModels()
+// settle matches the calibration again with the model id the provider reported: a model that
+// answers under another id than the record was calibrated for is not that judge.
+func (jc *judgeCalibration) settle(rb *rv.Rubric, outcome *rv.SemanticOutcome, requested string) (cal rv.CalStatus, resolved []string) {
+	resolved = outcome.Usage.ResolvedModels()
 	if len(resolved) > 0 {
-		cur.Model = resolved[0]
+		jc.cur.Model = resolved[0]
 	}
-	cal := rv.MatchCalibration(rb, rec, cur, now, maxAge)
-	if recErr != nil {
-		cal = pre
+	cal = rv.MatchCalibration(rb, jc.rec, jc.cur, jc.now, jc.maxAge)
+	if jc.recErr != nil {
+		cal = jc.pre
 	}
-	if len(resolved) > 0 && !rv.SameModel(resolved[0], js.lc.FullModel()) {
-		alias = true
+	if len(resolved) > 0 && !rv.SameModel(resolved[0], requested) {
+		jc.alias = true
 	}
-	if reviewFlags.gate {
-		switch {
-		case outcome.Incomplete:
-			gate.Refused = "the run is incomplete (" + outcome.StoppedBecause + "), so it cannot vouch for the items it did not judge"
-		case len(outcome.Truncated) > 0:
-			gate.Refused = "the judge saw only part of " + strings.Join(outcome.Truncated, ", ") + " (the body was truncated), so it cannot vouch for them; shorten the item or raise max_item_tokens"
-		case cfg.Review.GateRequiresCalibration() && cal.State != rv.CalMatched:
-			gate.Refused = "calibration " + cal.State + ": " + strings.Join(cal.Reasons, "; ")
-		default:
-			var calibrated map[string]bool
-			if cfg.Review.GateRequiresCalibration() {
-				calibrated = map[string]bool{}
-				for _, d := range cal.Dimensions {
-					calibrated[d] = true
-				}
+	return cal, resolved
+}
+
+// evaluateGate decides --gate over the judged items, or records why the run cannot vouch for them.
+func evaluateGate(cfg *config.Config, res *rv.Results, outcome *rv.SemanticOutcome, cal rv.CalStatus, gate *rv.GateResult) {
+	switch {
+	case outcome.Incomplete:
+		gate.Refused = "the run is incomplete (" + outcome.StoppedBecause + "), so it cannot vouch for the items it did not judge"
+	case len(outcome.Truncated) > 0:
+		gate.Refused = "the judge saw only part of " + strings.Join(outcome.Truncated, ", ") + " (the body was truncated), so it cannot vouch for them; shorten the item or raise max_item_tokens"
+	case cfg.Review.GateRequiresCalibration() && cal.State != rv.CalMatched:
+		gate.Refused = "calibration " + cal.State + ": " + strings.Join(cal.Reasons, "; ")
+	default:
+		var calibrated map[string]bool
+		if cfg.Review.GateRequiresCalibration() {
+			calibrated = map[string]bool{}
+			for _, d := range cal.Dimensions {
+				calibrated[d] = true
 			}
-			*gate = rv.EvaluateGate(res, gateLevel, calibrated)
+		}
+		*gate = rv.EvaluateGate(res, gate.Level, calibrated)
+	}
+}
+
+// runSemantic runs the judged review and writes the report.
+func runSemantic(cmd *cobra.Command, rc *reviewContext, res *rv.Results, out io.Writer) (int, error) {
+	cfg, rb := rc.cfg, rc.rb
+	sp, err := planSemantic(cmd, rc, res)
+	if err != nil {
+		return exitReviewRefused, err
+	}
+	js, est := sp.js, sp.est
+	if err := applyBaseline(res, rb); err != nil {
+		return exitReviewRefused, err
+	}
+
+	// Calibration is checked before any money is spent, so a refused gate costs nothing.
+	jc := loadJudgeCalibration(cfg, rb, rc.content(), js, sp.k)
+	gate := &rv.GateResult{Requested: reviewFlags.gate, Level: sp.gateLevel}
+	if reviewFlags.gate {
+		if err := jc.refuseGate(cfg, js.lc.FullModel()); err != nil {
+			return exitReviewRefused, err
 		}
 	}
-	addRunNotes(res, rb, cfg, outcome, cal, alias, js.lc.FullModel(), resolved)
+
+	outcome := &rv.SemanticOutcome{}
+	if est.Totals.CallsMin > 0 {
+		if outcome, err = judgeWith(cmd, cfg, js, js.lc, rb, res, sp.k, rc.content()); err != nil {
+			return exitReviewRefused, err
+		}
+	}
+
+	cal, resolved := jc.settle(rb, outcome, js.lc.FullModel())
+	if reviewFlags.gate {
+		evaluateGate(cfg, res, outcome, cal, gate)
+	}
+	addRunNotes(res, rb, cfg, outcome, cal, jc.alias, js.lc.FullModel(), resolved)
 
 	var comparison *rv.ModelComparison
-	if len(models) > 1 && est.Totals.CallsMin > 0 {
+	if len(sp.models) > 1 && est.Totals.CallsMin > 0 {
 		var extra rv.RunUsage
-		comparison, extra, runErr = compareModels(cmd, cfg, js, rb, res, models, k, rc)
-		if runErr != nil {
-			return exitReviewRefused, runErr
+		comparison, extra, err = compareModels(cmd, cfg, js, rb, res, sp.models, sp.k, rc)
+		if err != nil {
+			return exitReviewRefused, err
 		}
 		outcome.Usage.Add(extra)
 	}
 
+	if err := writeSemanticReport(out, rc, res, sp, outcome, cal, gate, comparison); err != nil {
+		return exitReviewRefused, err
+	}
+	return gateExit(gate, outcome), nil
+}
+
+// gateExit is the exit status of a judged run: refused or incomplete under --gate, or a failed gate.
+func gateExit(gate *rv.GateResult, outcome *rv.SemanticOutcome) int {
+	switch {
+	case gate.Requested && (gate.Refused != "" || outcome.Incomplete):
+		return exitReviewRefused
+	case gate.Requested && !gate.Passed:
+		return exitReviewGate
+	}
+	return 0
+}
+
+// writeSemanticReport builds the report of a judged run, settles the baseline and writes it.
+func writeSemanticReport(out io.Writer, rc *reviewContext, res *rv.Results, sp *semanticPlan, outcome *rv.SemanticOutcome, cal rv.CalStatus, gate *rv.GateResult, comparison *rv.ModelComparison) error {
+	js, rb := sp.js, rc.rb
 	report := rv.NewReport(rb, res, nil)
 	var reported *rv.GateResult
 	if gate.Requested {
 		reported = gate
 	}
 	report.WithSemantic(rv.SemanticReport{
-		Outcome: outcome, Model: js.lc.FullModel(), Votes: k, Content: rc.content(), CapUSD: js.maxCost, CapCalls: js.maxCalls,
-		Host: hostOf(js.lc, cfg.ConfigDir), Calibration: &cal, Gate: reported, Models: comparison, Estimate: est,
+		Outcome: outcome, Model: js.lc.FullModel(), Votes: sp.k, Content: rc.content(), CapUSD: js.maxCost, CapCalls: js.maxCalls,
+		Host: hostOf(js.lc, rc.cfg.ConfigDir), Calibration: &cal, Gate: reported, Models: comparison, Estimate: sp.est,
 	})
 	if err := finishBaseline(report, res, rb); err != nil {
-		return exitReviewRefused, err
+		return err
 	}
-	if err := writeReview(out, report, rb, res); err != nil {
-		return exitReviewRefused, err
-	}
-	switch {
-	case gate.Requested && (gate.Refused != "" || outcome.Incomplete):
-		return exitReviewRefused, nil
-	case gate.Requested && !gate.Passed:
-		return exitReviewGate, nil
-	}
-	return 0, nil
+	return writeReview(out, report, rb, res)
 }
 
 // judgeWith builds the client for lc and judges every scored item of res.
@@ -370,8 +430,8 @@ func compareModels(cmd *cobra.Command, cfg *config.Config, js *judgeSetup, rb *r
 		tables = append(tables, rv.VerdictTable(other))
 	}
 	dims := make([]string, 0, len(rb.Dimensions))
-	for _, d := range rb.Dimensions {
-		dims = append(dims, d.ID)
+	for i := range rb.Dimensions {
+		dims = append(dims, rb.Dimensions[i].ID)
 	}
 	return rv.CompareModels(names, tables, dims), used, nil
 }
