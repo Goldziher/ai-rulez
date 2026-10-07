@@ -59,20 +59,20 @@ var apmPrimitives = []struct {
 	dir  string
 	kind Kind
 }{
-	{"instructions", KindRule}, {"context", KindContext}, {"agents", KindAgent},
-	{"chatmodes", KindAgent}, {"prompts", KindCommand}, {"skills", KindSkill},
+	{"instructions", KindRule}, {"context", KindContext}, {litAgents, KindAgent},
+	{"chatmodes", KindAgent}, {"prompts", KindCommand}, {skillsDir, KindSkill},
 }
 
 // apmMetadataKeys are package metadata of apm.yml with no ai-rulez counterpart.
 var apmMetadataKeys = map[string]bool{
-	"name": true, "version": true, "description": true, "author": true, "license": true,
+	litName: true, litVersion: true, litDescription: true, "author": true, litLicense: true,
 	"keywords": true, "tags": true, "homepage": true, "repository": true,
 }
 
 // apmTargets maps the `target` of apm.yml to the presets that write the same files.
 var apmTargets = map[string]string{
-	"copilot": "copilot", "vscode": "copilot", "claude": "claude", "cursor": "cursor",
-	"opencode": "opencode", "codex": "codex", "gemini": "gemini", "windsurf": "devin",
+	litCopilot: litCopilot, "vscode": litCopilot, litClaude: litClaude, litCursor: litCursor,
+	litOpencode: litOpencode, litCodex: litCodex, litGemini: litGemini, "windsurf": litDevin,
 }
 
 type apmPlanner struct {
@@ -262,7 +262,7 @@ func (b *apmPlanner) importMCPDependency(field string, v any) {
 		b.p.add(newFinding(StatusUnsupported, apmManifest, field, "",
 			fmt.Sprintf("%q is an MCP registry reference; convert never queries a registry. Add the server to [[mcp_servers]] by hand", t)))
 	case map[string]any:
-		name := stringOf(t["name"])
+		name := stringOf(t[litName])
 		if name == "" {
 			b.p.add(newFinding(StatusUnsupported, apmManifest, field, "", "an MCP server needs a name"))
 			return
@@ -271,7 +271,7 @@ func (b *apmPlanner) importMCPDependency(field string, v any) {
 		for k, val := range t {
 			raw[k] = val
 		}
-		delete(raw, "name")
+		delete(raw, litName)
 		if tr, ok := raw["transport"]; ok {
 			raw["type"] = tr
 			delete(raw, "transport")
@@ -503,7 +503,7 @@ func (b *apmPlanner) importModules() {
 }
 
 func (b *apmPlanner) isPackage(dir string) bool {
-	for _, marker := range []string{apmDir, apmManifest, "SKILL.md", "skills", "agents", "commands"} {
+	for _, marker := range []string{apmDir, apmManifest, litSkillMD, skillsDir, litAgents, litCommands} {
 		if _, ok := b.r.exists(path.Join(dir, marker)); ok {
 			return true
 		}
@@ -540,7 +540,7 @@ func (b *apmPlanner) importPackage(root, label string, project bool) {
 }
 
 func (b *apmPlanner) importPrimitives(dir string) {
-	known := map[string]bool{"hooks": true}
+	known := map[string]bool{litHooks: true}
 	for _, pr := range apmPrimitives {
 		known[pr.dir] = true
 		sub := path.Join(dir, pr.dir)
@@ -556,7 +556,7 @@ func (b *apmPlanner) importPrimitives(dir string) {
 			b.n.importFlat(b.p, b.r, nativeSource{Path: sub, Kind: pr.kind}, b.onSkip)
 		}
 	}
-	b.importHooksDir(path.Join(dir, "hooks"))
+	b.importHooksDir(path.Join(dir, litHooks))
 	for _, e := range b.r.dirEntries(dir, b.onSkip) {
 		if !known[e.Name()] {
 			b.p.add(newFinding(StatusDropped, path.Join(dir, e.Name()), "", "", "not an APM primitive directory; ignored"))
@@ -567,13 +567,13 @@ func (b *apmPlanner) importPrimitives(dir string) {
 // importBundle reads a package without .apm/: a SKILL.md at its root, or the
 // skills/, agents/ and commands/ directories of a plugin.
 func (b *apmPlanner) importBundle(root, label string) {
-	if _, ok := b.r.exists(path.Join(root, "SKILL.md")); ok {
+	if _, ok := b.r.exists(path.Join(root, litSkillMD)); ok {
 		b.importRootSkill(root, label)
 	}
 	for _, s := range []struct {
 		dir  string
 		kind Kind
-	}{{"skills", KindSkill}, {"agents", KindAgent}, {"commands", KindCommand}} {
+	}{{skillsDir, KindSkill}, {litAgents, KindAgent}, {litCommands, KindCommand}} {
 		sub := path.Join(root, s.dir)
 		if _, ok := b.r.exists(sub); !ok {
 			continue
@@ -594,7 +594,7 @@ func apmPackageFile(rel string) bool {
 		return true
 	case rel == apmManifest, rel == apmLockFile, rel == rulesyncAPMLockFile, rel == apmPolicyFile:
 		return true
-	case strings.HasPrefix(lower, "readme"), strings.HasPrefix(lower, "license"), strings.HasPrefix(lower, "changelog"):
+	case strings.HasPrefix(lower, "readme"), strings.HasPrefix(lower, litLicense), strings.HasPrefix(lower, "changelog"):
 		return true
 	}
 	return false
@@ -603,7 +603,7 @@ func apmPackageFile(rel string) bool {
 // importRootSkill imports a package whose SKILL.md sits at its root as one skill
 // named after its frontmatter, else after the directory.
 func (b *apmPlanner) importRootSkill(root, label string) {
-	skillFile := path.Join(root, "SKILL.md")
+	skillFile := path.Join(root, litSkillMD)
 	data, ok := b.n.readOrReport(b.p, b.r, skillFile)
 	if !ok {
 		return
@@ -616,7 +616,7 @@ func (b *apmPlanner) importRootSkill(root, label string) {
 	name, _ := safeName(base)
 	if fm, _, has := splitFrontmatter(text); has {
 		meta, _ := parseFrontmatter(fm)
-		if n := stringOf(meta["name"]); n != "" {
+		if n := stringOf(meta[litName]); n != "" {
 			name, _ = safeName(n)
 		}
 	}
@@ -624,7 +624,7 @@ func (b *apmPlanner) importRootSkill(root, label string) {
 	text = setFrontmatterName(text, name)
 	it := Item{Kind: KindSkill, Name: name, Sources: []string{root}, Main: ensureNewline(text)}
 	for _, rel := range b.r.walkFiles(root, b.onSkip) {
-		if rel == "SKILL.md" || apmPackageFile(rel) {
+		if rel == litSkillMD || apmPackageFile(rel) {
 			continue
 		}
 		file := path.Join(root, rel)
@@ -653,7 +653,7 @@ func (b *apmPlanner) importHooksDir(dir string) {
 			continue
 		}
 		src := hookSource{file: file}
-		if table, ok := hb.readTable(b.r, src, "hooks"); ok {
+		if table, ok := hb.readTable(b.r, src, litHooks); ok {
 			hb.fromEventTable(src, table, "hooks.")
 		}
 	}

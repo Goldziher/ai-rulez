@@ -34,34 +34,34 @@ var claudeVocabulary = map[string]bool{config.HarnessClaude: true, config.Harnes
 // hookEventTables maps the native event names of a harness to Claude Code's.
 var (
 	geminiHookEvents = map[string]string{
-		"SessionStart": "SessionStart", "SessionEnd": "SessionEnd", "BeforeTool": "PreToolUse",
-		"AfterTool": "PostToolUse", "Notification": "Notification", "PreCompress": "PreCompact",
-		"BeforeAgent": "UserPromptSubmit", "AfterAgent": "Stop",
+		litSessionStart: litSessionStart, litSessionEnd: litSessionEnd, "BeforeTool": litPreToolUse,
+		"AfterTool": litPostToolUse, litNotification: litNotification, "PreCompress": litPreCompact,
+		"BeforeAgent": litUserPromptSubmit, "AfterAgent": litStop,
 	}
 	cursorHookEvents = map[string]string{
-		"sessionStart": "SessionStart", "sessionEnd": "SessionEnd", "preToolUse": "PreToolUse",
-		"postToolUse": "PostToolUse", "postToolUseFailure": "PostToolUseFailure",
-		"subagentStart": "SubagentStart", "subagentStop": "SubagentStop", "preCompact": "PreCompact",
-		"stop": "Stop", "beforeSubmitPrompt": "UserPromptSubmit",
+		litSessionStartCamel: litSessionStart, litSessionEndCamel: litSessionEnd, litPreToolUseCamel: litPreToolUse,
+		litPostToolUseCamel: litPostToolUse, litPostToolUseFailureCamel: litPostToolUseFailure,
+		litSubagentStartCamel: litSubagentStart, litSubagentStopCamel: litSubagentStop, litPreCompactCamel: litPreCompact,
+		"stop": litStop, "beforeSubmitPrompt": litUserPromptSubmit,
 	}
 	copilotHookEvents = map[string]string{
-		"sessionStart": "SessionStart", "sessionEnd": "SessionEnd", "preToolUse": "PreToolUse",
-		"postToolUse": "PostToolUse", "postToolUseFailure": "PostToolUseFailure",
-		"subagentStart": "SubagentStart", "subagentStop": "SubagentStop", "preCompact": "PreCompact",
-		"agentStop": "Stop", "userPromptSubmitted": "UserPromptSubmit", "notification": "Notification",
+		litSessionStartCamel: litSessionStart, litSessionEndCamel: litSessionEnd, litPreToolUseCamel: litPreToolUse,
+		litPostToolUseCamel: litPostToolUse, litPostToolUseFailureCamel: litPostToolUseFailure,
+		litSubagentStartCamel: litSubagentStart, litSubagentStopCamel: litSubagentStop, litPreCompactCamel: litPreCompact,
+		"agentStop": litStop, "userPromptSubmitted": litUserPromptSubmit, "notification": litNotification,
 		"permissionRequest": "PermissionRequest",
 	}
 	// rulesyncHookEvents are rulesync's canonical camelCase events that have a
 	// Claude Code name (src/types/hooks.ts, CANONICAL_TO_CLAUDE_EVENT_NAMES).
 	rulesyncHookEvents = map[string]string{
-		"sessionStart": "SessionStart", "sessionEnd": "SessionEnd", "preToolUse": "PreToolUse",
-		"postToolUse": "PostToolUse", "beforeSubmitPrompt": "UserPromptSubmit", "stop": "Stop",
-		"subagentStop": "SubagentStop", "preCompact": "PreCompact", "permissionRequest": "PermissionRequest",
-		"notification": "Notification", "setup": "Setup", "worktreeCreate": "WorktreeCreate",
+		litSessionStartCamel: litSessionStart, litSessionEndCamel: litSessionEnd, litPreToolUseCamel: litPreToolUse,
+		litPostToolUseCamel: litPostToolUse, "beforeSubmitPrompt": litUserPromptSubmit, "stop": litStop,
+		litSubagentStopCamel: litSubagentStop, litPreCompactCamel: litPreCompact, "permissionRequest": "PermissionRequest",
+		"notification": litNotification, "setup": "Setup", "worktreeCreate": "WorktreeCreate",
 		"worktreeRemove": "WorktreeRemove", "messageDisplay": "MessageDisplay",
 		"instructionsLoaded": "InstructionsLoaded", "userPromptExpansion": "UserPromptExpansion",
-		"postToolUseFailure": "PostToolUseFailure", "postToolBatch": "PostToolBatch",
-		"permissionDenied": "PermissionDenied", "subagentStart": "SubagentStart",
+		litPostToolUseFailureCamel: litPostToolUseFailure, "postToolBatch": "PostToolBatch",
+		"permissionDenied": "PermissionDenied", litSubagentStartCamel: litSubagentStart,
 		"taskCreated": "TaskCreated", "taskCompleted": "TaskCompleted", "stopFailure": "StopFailure",
 		"teammateIdle": "TeammateIdle", "configChange": "ConfigChange", "cwdChanged": "CwdChanged",
 		"fileChanged": "FileChanged", "directoryAdded": "DirectoryAdded", "postCompact": "PostCompact",
@@ -76,8 +76,8 @@ var (
 	}{
 		"claudecode": {config.HarnessClaude, rulesyncHookEvents},
 		"codexcli":   {config.HarnessCodex, rulesyncHookEvents},
-		"cursor":     {config.HarnessCursor, cursorHookEvents},
-		"copilot":    {config.HarnessCopilot, copilotHookEvents},
+		litCursor:    {config.HarnessCursor, cursorHookEvents},
+		litCopilot:   {config.HarnessCopilot, copilotHookEvents},
 		"copilotcli": {config.HarnessCopilot, copilotHookEvents},
 	}
 )
@@ -138,8 +138,8 @@ func (d hookDoc) boolean(key string) (value, present bool) {
 
 // hookKeys are the handler keys importHandler reads; every other key is reported.
 var hookKeys = map[string]bool{
-	"type": true, "command": true, "bash": true, "args": true, "timeout": true, "timeoutSec": true,
-	"async": true, "if": true, "statusMessage": true, "matcher": true,
+	"type": true, "command": true, "bash": true, "args": true, litTimeout: true, "timeoutSec": true,
+	"async": true, "if": true, "statusMessage": true, litMatcher: true,
 }
 
 // hooksOf reads the event table of a native hooks object: event -> groups. A
@@ -181,9 +181,9 @@ func (b *hookBuilder) entry(src hookSource, field, event string, index int, raw 
 	}
 	at := fmt.Sprintf("%s[%d]", field, index)
 	group := config.HookGroup{Event: event}
-	matcher := d.str("matcher")
+	matcher := d.str(litMatcher)
 	var handlers []hookDoc
-	if inner, nested := d["hooks"]; nested {
+	if inner, nested := d[litHooks]; nested {
 		var list []hookDoc
 		if err := json.Unmarshal(inner, &list); err != nil {
 			b.p.add(newFinding(StatusUnsupported, src.file, at+".hooks", "", "handlers are not a list of objects"))
@@ -191,7 +191,7 @@ func (b *hookBuilder) entry(src hookSource, field, event string, index int, raw 
 		}
 		handlers = list
 		for k := range d {
-			if k != "matcher" && k != "hooks" {
+			if k != litMatcher && k != litHooks {
 				b.p.add(newFinding(StatusDropped, src.file, at+"."+k, "", "group key has no ai-rulez equivalent"))
 			}
 		}
@@ -211,7 +211,7 @@ func (b *hookBuilder) entry(src hookSource, field, event string, index int, raw 
 	b.add(src, group)
 }
 
-func hasNested(d hookDoc) bool { _, ok := d["hooks"]; return ok }
+func hasNested(d hookDoc) bool { _, ok := d[litHooks]; return ok }
 
 // setMatcher stores a matcher in the vocabulary it was written in.
 func (b *hookBuilder) setMatcher(src hookSource, g *config.HookGroup, matcher, at string) {
@@ -228,7 +228,7 @@ func (b *hookBuilder) setMatcher(src hookSource, g *config.HookGroup, matcher, a
 }
 
 // handler converts one handler object. flat handlers carry the matcher beside
-// the command, so "matcher" is not a handler key for them.
+// the command, so litMatcher is not a handler key for them.
 func (b *hookBuilder) handler(src hookSource, field string, d hookDoc, flat bool) (config.HookAction, bool) {
 	typ := d.str("type")
 	if typ != "" && typ != hookTypeCommand {
@@ -259,9 +259,9 @@ func (b *hookBuilder) handler(src hookSource, field string, d hookDoc, flat bool
 			a.Args = nil
 		}
 	}
-	for _, key := range []string{"timeout", "timeoutSec"} {
+	for _, key := range []string{litTimeout, "timeoutSec"} {
 		if n, ok := d.number(key); ok {
-			a.Timeout = b.seconds(src, field+"."+key, n, src.timeoutMs && key == "timeout")
+			a.Timeout = b.seconds(src, field+"."+key, n, src.timeoutMs && key == litTimeout)
 		}
 	}
 	a.Async, _ = d.boolean("async")
@@ -269,7 +269,7 @@ func (b *hookBuilder) handler(src hookSource, field string, d hookDoc, flat bool
 	a.StatusMessage = d.str("statusMessage")
 	var left []string
 	for k := range d {
-		if hookKeys[k] || (k == "matcher" && flat) {
+		if hookKeys[k] || (k == litMatcher && flat) {
 			continue
 		}
 		left = append(left, k)
@@ -323,10 +323,10 @@ func importNativeHooks(p *Plan, r *reader) {
 		hookSource
 		container string // key holding the event table; "" when the table is the document
 	}{
-		{hookSource{file: ".claude/settings.json", harness: config.HarnessClaude}, "hooks"},
-		{hookSource{file: ".codex/hooks.json", harness: config.HarnessCodex}, "hooks"},
-		{hookSource{file: ".gemini/settings.json", harness: config.HarnessGemini, events: geminiHookEvents, timeoutMs: true}, "hooks"},
-		{hookSource{file: ".cursor/hooks.json", harness: config.HarnessCursor, events: cursorHookEvents}, "hooks"},
+		{hookSource{file: ".claude/settings.json", harness: config.HarnessClaude}, litHooks},
+		{hookSource{file: ".codex/hooks.json", harness: config.HarnessCodex}, litHooks},
+		{hookSource{file: ".gemini/settings.json", harness: config.HarnessGemini, events: geminiHookEvents, timeoutMs: true}, litHooks},
+		{hookSource{file: ".cursor/hooks.json", harness: config.HarnessCursor, events: cursorHookEvents}, litHooks},
 	} {
 		if table, ok := b.readTable(r, spec.hookSource, spec.container); ok {
 			b.fromEventTable(spec.hookSource, table, "hooks.")
@@ -387,7 +387,7 @@ func (b *hookBuilder) copilotHooks(r *reader) {
 			continue
 		}
 		src := hookSource{file: file, harness: config.HarnessCopilot, events: copilotHookEvents}
-		if table, ok := b.readTable(r, src, "hooks"); ok {
+		if table, ok := b.readTable(r, src, litHooks); ok {
 			b.fromEventTable(src, table, "hooks.")
 		}
 	}
@@ -406,7 +406,7 @@ func (b *hookBuilder) codexInline(r *reader) {
 	}
 	for _, line := range strings.Split(normalizeText(string(data)), "\n") {
 		if t := strings.TrimSpace(line); strings.HasPrefix(t, "[hooks") || strings.HasPrefix(t, "[[hooks") {
-			b.p.add(newFinding(StatusNeedsAction, file, "hooks", "",
+			b.p.add(newFinding(StatusNeedsAction, file, litHooks, "",
 				"hooks declared inline in config.toml are not imported; move them to .codex/hooks.json and rerun, or add [[hooks]] by hand"))
 			return
 		}
@@ -428,8 +428,8 @@ func (b *rulesyncPlanner) importHooks(file string) {
 	sort.Strings(keys)
 	for _, k := range keys {
 		switch k {
-		case "$schema", "version":
-		case "hooks":
+		case litSchema, litVersion:
+		case litHooks:
 			var table map[string]json.RawMessage
 			if json.Unmarshal(doc[k], &table) != nil {
 				b.p.add(newFinding(StatusUnsupported, file, k, "", "hooks is not an object keyed by event"))

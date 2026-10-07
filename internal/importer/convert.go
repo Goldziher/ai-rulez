@@ -43,7 +43,7 @@ type ConvertOptions struct {
 	// an absolute path is used as given. Nothing is ever written through a
 	// symlink at or below it.
 	Into string
-	// From lists importer names; empty or "auto" detects.
+	// From lists importer names; empty or autoFrom detects.
 	From   []string
 	Domain string
 	// Write turns the plan into files; without it nothing is written.
@@ -476,7 +476,7 @@ func planSummary(p *Plan) string {
 	for _, k := range []struct {
 		kind  Kind
 		label string
-	}{{KindRule, "rules"}, {KindContext, "context"}, {KindSkill, "skills"}, {KindAgent, "agents"}, {KindCommand, "commands"}, {KindCheck, "checks"}} {
+	}{{KindRule, rulesDir}, {KindContext, "context"}, {KindSkill, skillsDir}, {KindAgent, litAgents}, {KindCommand, litCommands}, {KindCheck, litChecks}} {
 		if n := counts[k.kind]; n > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", n, k.label))
 		}

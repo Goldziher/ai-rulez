@@ -42,8 +42,8 @@ func (b *rulesyncPlanner) importConfig(cfg *rulesyncConfig) {
 	for _, k := range keys {
 		raw := cfg.raw[k]
 		switch k {
-		case "$schema", "inputRoots", "inputRoot":
-		case "targets":
+		case litSchema, "inputRoots", "inputRoot":
+		case litTargets:
 			b.importTargets(raw)
 		case "features":
 			b.importFeatures(raw)
@@ -78,7 +78,7 @@ func (b *rulesyncPlanner) importTargets(raw json.RawMessage) {
 			names = append(names, n)
 		}
 	} else {
-		b.p.add(newFinding(StatusUnsupported, src, "targets", "", "targets is neither a list nor an object"))
+		b.p.add(newFinding(StatusUnsupported, src, litTargets, "", "targets is neither a list nor an object"))
 		return
 	}
 	sort.Strings(names)
@@ -167,13 +167,13 @@ func (b *rulesyncPlanner) firstExisting(root string, names ...string) string {
 
 // rulesyncServerOnly are per-server keys rulesync reads that ai-rulez cannot express.
 var rulesyncServerOnly = map[string]string{
-	"targets":       "per-server targets are not carried; the server is generated for every preset",
+	litTargets:      "per-server targets are not carried; the server is generated for every preset",
 	"enabledTools":  "per-tool filtering has no ai-rulez equivalent",
 	"disabledTools": "per-tool filtering has no ai-rulez equivalent",
 }
 
 func (b *rulesyncPlanner) importMCP(root string) {
-	file := b.firstExisting(root, "mcp.jsonc", "mcp.json", ".mcp.json")
+	file := b.firstExisting(root, "mcp.jsonc", "mcp.json", litMCPJSON)
 	if file == "" {
 		return
 	}
@@ -188,8 +188,8 @@ func (b *rulesyncPlanner) importMCP(root string) {
 	sort.Strings(keys)
 	for _, k := range keys {
 		switch k {
-		case "$schema":
-		case "mcpServers":
+		case litSchema:
+		case litMCPServers:
 			b.importServers(file, doc[k])
 		default:
 			var scoped struct {
@@ -214,12 +214,12 @@ func (b *rulesyncPlanner) importMCP(root string) {
 func (b *rulesyncPlanner) importServers(file string, raw json.RawMessage) {
 	var table map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &table); err != nil {
-		b.p.add(newFinding(StatusUnsupported, file, "mcpServers", "", "server table is not an object"))
+		b.p.add(newFinding(StatusUnsupported, file, litMCPServers, "", "server table is not an object"))
 		return
 	}
 	names := make([]string, 0, len(table))
 	for n := range table {
-		if n != "$schema" { // the editor schema reference some files put inside the table
+		if n != litSchema { // the editor schema reference some files put inside the table
 			names = append(names, n)
 		}
 	}
@@ -231,21 +231,21 @@ func (b *rulesyncPlanner) importServers(file string, raw json.RawMessage) {
 			b.p.add(newFinding(StatusUnsupported, file, field, "", "server is not an object"))
 			continue
 		}
-		for _, k := range []string{"targets", "enabledTools", "disabledTools"} {
+		for _, k := range []string{litTargets, "enabledTools", "disabledTools"} {
 			if v, ok := entry[k]; ok {
-				if k == "targets" && !onlyWildcard(v) {
+				if k == litTargets && !onlyWildcard(v) {
 					b.p.add(newFinding(StatusApproximated, file, field+"."+k, "", rulesyncServerOnly[k]))
-				} else if k != "targets" {
+				} else if k != litTargets {
 					b.p.add(newFinding(StatusDropped, file, field+"."+k, "", rulesyncServerOnly[k]))
 				}
 				delete(entry, k)
 			}
 		}
-		if t := strings.ToLower(stringOf(entry["type"])); t == "local" {
-			entry["type"] = "stdio"
+		if t := strings.ToLower(stringOf(entry["type"])); t == localDir {
+			entry["type"] = litStdio
 		}
-		if t := strings.ToLower(stringOf(entry["transport"])); t == "local" {
-			entry["transport"] = "stdio"
+		if t := strings.ToLower(stringOf(entry["transport"])); t == localDir {
+			entry["transport"] = litStdio
 		}
 		srv, ok := mcpServerFrom(b.p, file, name, entry)
 		if !ok {
