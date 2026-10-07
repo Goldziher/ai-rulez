@@ -177,7 +177,7 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(includes) == 0 {
+	if len(includes) == 0 && !includeJSON {
 		logger.Info("No includes found")
 		logLocalEntriesHint("includes")
 		return

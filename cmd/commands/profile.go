@@ -183,7 +183,7 @@ func runProfileList(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(profiles) == 0 {
+	if len(profiles) == 0 && !profileJSON {
 		logger.Info("No profiles found")
 		logLocalEntriesHint("profiles")
 		return
