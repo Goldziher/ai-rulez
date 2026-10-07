@@ -41,7 +41,7 @@ func (g Git) Exec(ctx context.Context, dir string, env []string, args ...string)
 		env = Env(nil)
 	}
 	return g.runner().Run(ctx, runner.Spec{
-		Argv:    append([]string{"git"}, gitArgs(dir, args)...),
+		Argv:    append([]string{gitProgram}, gitArgs(dir, args)...),
 		Env:     env,
 		Timeout: runner.MaxTimeout,
 	})
@@ -51,7 +51,7 @@ func (g Git) Exec(ctx context.Context, dir string, env []string, args ...string)
 // captured output (zero: the runner's default), for `cat-file --batch`.
 func (g Git) ExecStdin(ctx context.Context, dir string, stdin []byte, maxOutput int64, args ...string) runner.Result {
 	return g.runner().Run(ctx, runner.Spec{
-		Argv:      append([]string{"git"}, gitArgs(dir, args)...),
+		Argv:      append([]string{gitProgram}, gitArgs(dir, args)...),
 		Env:       Env(nil),
 		Stdin:     stdin,
 		Timeout:   runner.MaxTimeout,

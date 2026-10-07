@@ -13,6 +13,9 @@ import (
 // started it, so a child `git` would otherwise act on the hook's repository
 // whatever -C or clone destination it is given (for example `git -C <tmp> init`
 // re-initializes the hook's GIT_DIR and sets core.bare = true in it).
+// gitProgram is the program every git invocation starts, found on PATH.
+const gitProgram = "git"
+
 var strippedEnv = []string{
 	"GIT_DIR",
 	"GIT_WORK_TREE",
@@ -56,14 +59,14 @@ func isStripped(name string) bool {
 // version probes). Callers set Stdin, Stdout and Stderr as they would on an
 // exec.Cmd.
 func Command(ctx context.Context, dir string, args ...string) *exec.Cmd {
-	cmd := runner.Command(ctx, "git", gitArgs(dir, args)...)
+	cmd := runner.Command(ctx, gitProgram, gitArgs(dir, args)...)
 	cmd.Env = Env(nil)
 	return cmd
 }
 
 // CommandNoContext is Command for callers that have no context to pass.
 func CommandNoContext(dir string, args ...string) *exec.Cmd {
-	cmd := runner.CommandNoContext("git", gitArgs(dir, args)...)
+	cmd := runner.CommandNoContext(gitProgram, gitArgs(dir, args)...)
 	cmd.Env = Env(nil)
 	return cmd
 }
