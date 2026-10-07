@@ -421,3 +421,13 @@ func TestCheckLockWatchFlags(t *testing.T) {
 	generateFrozen = false
 	require.NoError(t, checkLockWatchFlags())
 }
+
+func TestCheckLockContentOnlyFlags(t *testing.T) {
+	t.Cleanup(func() { lockContentOnly = false })
+	require.NoError(t, checkLockContentOnlyFlags("include", []string{"a"}), "no --content-only, no restriction")
+	lockContentOnly = true
+	require.NoError(t, checkLockContentOnlyFlags("", nil))
+	require.NoError(t, checkLockContentOnlyFlags("served", nil))
+	require.Error(t, checkLockContentOnlyFlags("include", nil))
+	require.Error(t, checkLockContentOnlyFlags("", []string{"a"}))
+}
