@@ -157,11 +157,11 @@ func ValidateFileType(ftype string) error {
 // ValidatePriority validates a priority level
 func ValidatePriority(priority string) error {
 	validPriorities := map[string]bool{
-		"critical": true,
-		"high":     true,
-		"medium":   true,
-		"low":      true,
-		"":         true, // Empty is allowed (defaults to medium)
+		"critical":      true,
+		"high":          true,
+		PriorityDefault: true,
+		"low":           true,
+		"":              true, // Empty is allowed (defaults to medium)
 	}
 
 	if !validPriorities[priority] {

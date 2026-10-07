@@ -19,7 +19,7 @@ type Template struct {
 // GenerateFrontmatter generates YAML frontmatter from a Template
 func GenerateFrontmatter(priority string, targets []string) string {
 	if priority == "" {
-		priority = "medium"
+		priority = PriorityDefault
 	}
 
 	// Normalize targets
