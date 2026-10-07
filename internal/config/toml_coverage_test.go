@@ -15,3 +15,12 @@ func TestTomlConfigCoversConfig(t *testing.T) {
 		assert.True(t, decoded[key], "config.toml key %q is not decoded by tomlConfig", key)
 	}
 }
+
+// A toml-tagged Config field missing from tomlOutput is deleted whenever a crud
+// command rewrites config.toml.
+func TestTomlOutputCoversConfig(t *testing.T) {
+	written := tomlKeys(reflect.TypeOf(tomlOutput{}))
+	for key := range tomlKeys(reflect.TypeOf(Config{})) {
+		assert.True(t, written[key], "config.toml key %q is not written by tomlOutput", key)
+	}
+}
