@@ -84,7 +84,7 @@ func applyBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 		}
 		if b == nil {
 			if validateBaseline != "" {
-				return oops.Hint("Create it with `ai-rulez validate --strict --update-baseline`").Errorf("baseline %s does not exist", path)
+				return oops.Hint("Create it with `ai-rulez validate --update-baseline`").Errorf("baseline %s does not exist", path)
 			}
 			continue
 		}
