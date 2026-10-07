@@ -100,11 +100,13 @@ func (p *capProfile) classify(line string) {
 	if _, ok := detectCredentialAccess(line); ok {
 		p.credRead = true
 	}
-	for _, rule := range stealthRules {
-		if rule.re.MatchString(line) {
-			p.stealth = true
-			p.counts[tierStealth]++
-			break
+	if containsAnyStem(line, false, stealthStems) {
+		for _, rule := range stealthRules {
+			if rule.re.MatchString(line) {
+				p.stealth = true
+				p.counts[tierStealth]++
+				break
+			}
 		}
 	}
 }

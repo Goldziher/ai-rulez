@@ -111,9 +111,18 @@ func forcePush(args []string) string {
 	return ""
 }
 
+// mayBeDestructive is the literal pre-check for scanDestructive: a line needs
+// one of the command names or markers of the shapes it looks for.
+func mayBeDestructive(text string) bool {
+	return hasCmdWord(text, "rm", "git", "dd") || strings.Contains(text, "mkfs") || strings.Contains(text, "DROP") || strings.Contains(text, ":()")
+}
+
 func scanDestructive(r *runner, t *scanText) {
 	for _, l := range t.lines {
 		if l.Front || l.Neg {
+			continue
+		}
+		if !mayBeDestructive(l.Text) {
 			continue
 		}
 		msg := ""
@@ -164,9 +173,12 @@ var stealthRules = []stealthRule{
 	{regexp.MustCompile(`\btruncate\s+(?:-\S+\s+)*\S*(?:_history|/var/log/\S*)`), "truncates a history or log file", SeverityError},
 }
 
+// stealthStems are literals that every stealthRules pattern contains.
+var stealthStems = []string{"istory", "HIST", "shred", "chattr", "truncate"}
+
 func scanStealth(r *runner, t *scanText) {
 	for _, l := range t.lines {
-		if l.Front {
+		if l.Front || !containsAnyStem(l.Text, false, stealthStems) {
 			continue
 		}
 		for _, rule := range stealthRules {
