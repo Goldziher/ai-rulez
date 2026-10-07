@@ -13,7 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const guardProjectConfig = `version = "4.0"
+const guardProjectConfig = `version = "5.0"
+agents_md = false
 name = "guard-e2e"
 presets = ["claude", "codex", "gemini", "cursor", "opencode"]
 

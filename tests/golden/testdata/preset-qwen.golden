@@ -21,7 +21,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 94efeb315983b2e925052c5e25b28b30413a32df1fef37448f538a00c7ca5e48
+.ai-rulez/config.toml file 0644 843 5e7182d9e2f1fc60ebaad083367a7b755a676d00352de6393c1a8eea7dea04cf
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -44,28 +44,28 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 .qwen/ dir 0755
 .qwen/agents/ dir 0755
-.qwen/agents/architect.md file 0644 259 3a4b850027268f73bee67de562dbfaad960ffe97c26292ec182a5926da2800b9
-.qwen/agents/tester.md file 0644 245 ae52181a925a0590dbc5256cc683a3c6aafc9727bd59eca4e6e431fc46d17490
+.qwen/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.qwen/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .qwen/commands/ dir 0755
-.qwen/commands/build.md file 0644 250 4fe3a1f40e4a812d7779ebf59741d5985f56780510dddbb766fc51e127f8d32b
-.qwen/commands/ship.md file 0644 227 2cdf14b03bc23fa5d70c2407e557024ce901799529d1509dd9440adbe84f37af
+.qwen/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.qwen/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .qwen/review-rules.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 .qwen/rules/ dir 0755
-.qwen/rules/always.md file 0644 325 7b98e0750ec3d6562b1f0ae2603c5b19db7e41f4563f1c78e90e90d24ceda9c6
-.qwen/rules/auto.md file 0644 302 00ebe3f46af8c3d6de4240c61dffd0e286af1c6823a49550eba0be5d5905aa62
-.qwen/rules/manual.md file 0644 313 3057a9ae71f8e47f97b185d12a73f28bd39cf2a150fc1ac4a501eee276073eaa
-.qwen/rules/typescript.md file 0644 376 745e0dcc9a215d467b8e4f512de369885b98d39675b2a623feaa99efacd298fb
+.qwen/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.qwen/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.qwen/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.qwen/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
 .qwen/settings.json file 0600 1078 f1bdabdbddcd8eb55d674a1370ff07b6ea1e433f1158e2ab67f23039449a7fe6
 .qwen/skills/ dir 0755
 .qwen/skills/deployer/ dir 0755
-.qwen/skills/deployer/SKILL.md file 0644 259 707ac333ed0c47250f120938831dc79d137390563f76456836ddb96d7ce491fd
+.qwen/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .qwen/skills/reviewer/ dir 0755
-.qwen/skills/reviewer/SKILL.md file 0644 506 f7a938dabbc684317ef20c228fb9072da62458a0d1ed44f442afbe7380f5e562
+.qwen/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .qwen/skills/reviewer/references/ dir 0755
 .qwen/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .qwen/skills/reviewer/scripts/ dir 0755
 .qwen/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-QWEN.md file 0644 575 fb9d2e0bdf20baa27d467c9c08b2fdd21f935114a4c2f2b05e56d4acafba1c5f
+QWEN.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -105,7 +105,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -150,7 +150,7 @@ INFO  Removed generated files files=16 directories=9
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 94efeb315983b2e925052c5e25b28b30413a32df1fef37448f538a00c7ca5e48
+.ai-rulez/config.toml file 0644 843 5e7182d9e2f1fc60ebaad083367a7b755a676d00352de6393c1a8eea7dea04cf
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

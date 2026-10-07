@@ -23,7 +23,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 ac5d627786cb68378bb92526355cfec4f51d8ead96fe9636a20a75bc17ebfc87
+.ai-rulez/config.toml file 0644 844 a4d2c73317ba8205032b2438b034fd11e1554d072b73444b157e2b9e91241bf0
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -45,29 +45,29 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .gitignore file 0644 367 974f562287cb63bac2792eff088ba915d6bed7c1fb612a8103a4ebe89cdd4933
 .junie/ dir 0755
 .junie/agents/ dir 0755
-.junie/agents/architect.md file 0644 273 577bac81e8a8ec98b516afec7c3a274b639816224c20529e060a3b870ac7200f
-.junie/agents/tester.md file 0644 245 49f59197c199a15e4a5b7018cf17ccc065e054b36a3d89b8818df43f778a8464
+.junie/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.junie/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .junie/commands/ dir 0755
-.junie/commands/build.md file 0644 250 a4bf3bd9cc094fd0d99480b881a14ace235e58ec6735c95f9d08f4dc1ab675d7
-.junie/commands/ship.md file 0644 227 7b94966c06dbb66bf8d4c35c079791a30b8fb73d1d1fb42563de7f7842fef3f6
+.junie/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.junie/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .junie/mcp/ dir 0755
 .junie/mcp/mcp.json file 0600 355 aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b
 .junie/rules/ dir 0755
-.junie/rules/always.md file 0644 325 a551987b3a6433c20dc2bfaa418b13d803ec0b6dddc5c6a8e93a55eb4ac4d3ec
-.junie/rules/auto.md file 0644 302 cc1ca4512c464a9a14d99c441980baba816b58fcd025c2ece5c92926ce9d8f8a
-.junie/rules/manual.md file 0644 313 04892a7366218501427838c4ac33436782c84d6ab15afd8b6d0eb99ad7da0db8
-.junie/rules/typescript.md file 0644 369 2c16388d75b060f3d786a2d9ef0a4bc2c59813a9c875ebeb08af74af308ca740
+.junie/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.junie/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.junie/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.junie/rules/typescript.md file 0644 284 c95977ee0abc9d97498a06f477d42bd8bef8cfe54fc539f01994aeac1757eeaf
 .junie/skills/ dir 0755
 .junie/skills/deployer/ dir 0755
-.junie/skills/deployer/SKILL.md file 0644 259 2a0c70466409cf02ed4c330d950b5795c1cec99d497d00d9f988a8cc1d771f02
+.junie/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .junie/skills/reviewer/ dir 0755
-.junie/skills/reviewer/SKILL.md file 0644 506 a0d400f4b8a018afb526b8c65d7a304406a6564dc8082878771c2e66c35c0e58
+.junie/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .junie/skills/reviewer/references/ dir 0755
 .junie/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .junie/skills/reviewer/scripts/ dir 0755
 .junie/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 575 39902fc9750a3f02f0b9a0a9dd57ec4b31e458ca8e55c040c81bed429338d8ad
+AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -111,7 +111,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -156,7 +156,7 @@ INFO  Removed generated files files=15 directories=10
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 ac5d627786cb68378bb92526355cfec4f51d8ead96fe9636a20a75bc17ebfc87
+.ai-rulez/config.toml file 0644 844 a4d2c73317ba8205032b2438b034fd11e1554d072b73444b157e2b9e91241bf0
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

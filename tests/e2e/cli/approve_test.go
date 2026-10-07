@@ -41,7 +41,7 @@ func (s *ApproveCLITestSuite) SetupTest() {
 	s.repo = tagtest.New(s.T())
 	s.release("one", "v1.0.0")
 	s.Require().NoError(os.MkdirAll(filepath.Join(s.dir, ".ai-rulez", "rules"), 0o755))
-	testutil.WriteFile(s.T(), s.dir, ".ai-rulez/config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), s.dir, ".ai-rulez/config.toml", `version = "5.0"
 name = "p"
 presets = ["claude"]
 gitignore = false
@@ -63,7 +63,7 @@ func (s *ApproveCLITestSuite) run(args ...string) *testutil.CLIResult {
 }
 
 func (s *ApproveCLITestSuite) strict() *testutil.CLIResult {
-	return s.run("validate", "--strict", "--format", "json")
+	return s.run("validate", "--format", "json")
 }
 
 type approveListJSON struct {
@@ -160,7 +160,7 @@ func (s *ApproveCLITestSuite) lockText() string {
 // A deleted or stripped lock must not switch the approvals off. The project has
 // no remote include, whose own lock checks would refuse first.
 func (s *ApproveCLITestSuite) TestEnforcedGovernanceFailsClosedWithoutALock() {
-	testutil.WriteFile(s.T(), s.dir, ".ai-rulez/config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), s.dir, ".ai-rulez/config.toml", `version = "5.0"
 name = "p"
 presets = ["claude"]
 gitignore = false
@@ -218,7 +218,7 @@ func (s *ApproveCLITestSuite) TestVerifyBaseFlagsAnApprovalAddedWithItsContent()
 	s.Contains(verify.Stdout, "AR716")
 	s.Contains(verify.Stdout, "include:shared")
 
-	strict := s.run("validate", "--strict", "--approvals-base", "main", "--format", "json")
+	strict := s.run("validate", "--approvals-base", "main", "--format", "json")
 	s.Equal(2, strict.ExitCode)
 	s.Contains(strict.Stdout, "AR716")
 
