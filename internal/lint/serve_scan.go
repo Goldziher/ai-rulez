@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -104,11 +105,69 @@ func ScanServed(cfg *config.Config, name string, files []ServedFile, level strin
 			it := &item{kind: kindSkill, abs: abs}
 			r.checkToolBreadth(it, parseFrontmatterDoc(r.docs[abs]))
 		}
+		shift := 0
+		if strings.EqualFold(f.Path, "SKILL.md") {
+			shift = authorLineShift(cfg, name, r.docs[abs])
+		}
 		for _, fd := range r.findings {
+			if fd.Line > r.docs[abs].bodyStart {
+				fd.Line += shift
+			}
 			fd.File = "skill://" + name + "/" + f.Path
 			fd.Root = ""
 			out = append(out, fd)
 		}
 	}
 	return out
+}
+
+// authorLineShift is how many lines a body line of the served SKILL.md moves to
+// sit where the author wrote it: the served copy is re-rendered with its own
+// frontmatter, so its body starts on a different line than the author's. It is
+// 0 when the author's file cannot be found or read.
+func authorLineShift(cfg *config.Config, name string, served doc) int {
+	path := authorSkillPath(cfg, name)
+	if path == "" {
+		return 0
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(cfg.BaseDir, path)
+	}
+	raw, err := readSmallFile(path)
+	if err != nil {
+		return 0
+	}
+	return parseDoc(string(raw)).bodyStart - served.bodyStart
+}
+
+// authorSkillPath finds the source SKILL.md of the skill called name among the
+// root and domain skills of the loaded content.
+func authorSkillPath(cfg *config.Config, name string) string {
+	if cfg == nil || cfg.Content == nil {
+		return ""
+	}
+	find := func(skills []config.ContentFile) string {
+		for i := range skills {
+			if skills[i].Name == name && skills[i].Path != "" {
+				return skills[i].Path
+			}
+		}
+		return ""
+	}
+	if p := find(cfg.Content.Skills); p != "" {
+		return p
+	}
+	domains := make([]string, 0, len(cfg.Content.Domains))
+	for d := range cfg.Content.Domains {
+		domains = append(domains, d)
+	}
+	sort.Strings(domains)
+	for _, d := range domains {
+		if dom := cfg.Content.Domains[d]; dom != nil {
+			if p := find(dom.Skills); p != "" {
+				return p
+			}
+		}
+	}
+	return ""
 }
