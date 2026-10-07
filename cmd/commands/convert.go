@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
+	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
 
@@ -211,6 +213,10 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 			return exitConvertCannotRun
 		}
 	}
+	if errors.Is(err, importer.ErrNothingToConvert) {
+		reportNothingToConvert(out, err)
+		return 0
+	}
 	if err != nil {
 		fmtError(err)
 		return exitConvertCannotRun
@@ -235,6 +241,21 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 		}
 	}
 	return 0
+}
+
+// reportNothingToConvert says that the selected importers found nothing to
+// import. It is not an error: nothing is written and the exit code is 0. With
+// --format json the report stream stays empty and the message goes to stderr.
+func reportNothingToConvert(out io.Writer, err error) {
+	msg := "Nothing to convert: " + strings.TrimSuffix(err.Error(), ": "+importer.ErrNothingToConvert.Error())
+	if oe, ok := oops.AsOops(err); ok && oe.Hint() != "" {
+		msg += "\n" + oe.Hint()
+	}
+	if convertFormat == formatJSON {
+		fmt.Fprintln(os.Stderr, msg)
+		return
+	}
+	fmt.Fprintln(out, msg)
 }
 
 // lockConverted runs `ai-rulez lock` on the config convert wrote. The lock prints
