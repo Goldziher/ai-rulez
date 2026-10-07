@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bytes"
 	"encoding/json"
 	"maps"
 	"path/filepath"
@@ -173,7 +174,7 @@ func agentPluginsCore(m *Manifest, baseDir string) ([]config.OutputFile, error) 
 	outputs := make([]config.OutputFile, 0, len(files))
 	for _, rel := range slices.Sorted(maps.Keys(files)) {
 		// A passthrough file keeps its mode (a skill script stays executable).
-		if src, ok := byPath[rel]; ok && string(outputBytes(src)) == string(files[rel]) {
+		if src, ok := byPath[rel]; ok && bytes.Equal(outputBytes(src), files[rel]) {
 			outputs = append(outputs, src)
 			continue
 		}

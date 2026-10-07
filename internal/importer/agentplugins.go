@@ -75,8 +75,8 @@ func (agentPluginsImporter) Plan(fsys fs.FS, _ Options) (*Plan, error) {
 	return b.p, nil
 }
 
-func firstMessage(fs []agentplugins.Finding) string {
-	for _, f := range fs {
+func firstMessage(found []agentplugins.Finding) string {
+	for _, f := range found {
 		if f.Severity == agentplugins.SeverityError {
 			return f.Message
 		}
@@ -93,8 +93,8 @@ type agentPluginsPlanner struct {
 
 // findings reports what the library skipped or warned about: skipped content is
 // dropped, a warning is an approximation.
-func (b *agentPluginsPlanner) findings(fs []agentplugins.Finding) {
-	for _, f := range fs {
+func (b *agentPluginsPlanner) findings(found []agentplugins.Finding) {
+	for _, f := range found {
 		source, field, _ := strings.Cut(f.Path, "#")
 		switch f.Severity {
 		case agentplugins.SeverityError:
@@ -202,7 +202,7 @@ func (b *agentPluginsPlanner) extensions() {
 		case agentplugins.NamespaceClaudeCode:
 			b.namespaceFiles(e, map[string]Kind{"agents": KindAgent, "commands": KindCommand}, ".md")
 		case agentplugins.NamespaceAIRulez:
-			b.namespaceFiles(e, map[string]Kind{"rules": KindRule, "context": KindContext}, ".md")
+			b.namespaceFiles(e, map[string]Kind{rulesDir: KindRule, string(KindContext): KindContext}, ".md")
 		case namespaceCopilot:
 			b.namespaceFiles(e, map[string]Kind{"agents": KindAgent}, ".agent.md")
 		default:
