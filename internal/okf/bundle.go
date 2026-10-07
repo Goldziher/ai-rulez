@@ -36,7 +36,7 @@ func (c *Concept) Type() string { return c.Frontmatter.Scalar("type") }
 // Title is the frontmatter title, or one derived from the file name
 // (SPEC section 4.1 lets consumers do that).
 func (c *Concept) Title() string {
-	if t := c.Frontmatter.Scalar("title"); t != "" {
+	if t := c.Frontmatter.Scalar(keyTitle); t != "" {
 		return t
 	}
 	return TitleFromPath(c.Path)

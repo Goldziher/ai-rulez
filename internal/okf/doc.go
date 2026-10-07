@@ -11,6 +11,12 @@ package okf
 // SpecVersion is the OKF spec version this package implements.
 const SpecVersion = "0.2"
 
+// Frontmatter keys the package reads and writes.
+const (
+	keyOKFVersion = "okf_version"
+	keyTitle      = "title"
+)
+
 // ExtensionKey is the frontmatter key ai-rulez uses to carry its own metadata
 // through a bundle. SPEC section 4.1 allows any additional key.
 const ExtensionKey = "x-ai-rulez"

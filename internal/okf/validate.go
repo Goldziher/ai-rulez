@@ -63,7 +63,7 @@ func (b *Bundle) Validate() []Finding {
 // validate must not pass it. Validate does not include this check: the
 // importers and project lint load partial trees on purpose.
 func (b *Bundle) CheckRoot() []Finding {
-	if idx, ok := b.Indexes[IndexFile]; ok && idx.Frontmatter.Present && idx.Frontmatter.Lookup("okf_version") != nil {
+	if idx, ok := b.Indexes[IndexFile]; ok && idx.Frontmatter.Present && idx.Frontmatter.Lookup(keyOKFVersion) != nil {
 		return nil
 	}
 	f := NewFinding(CodeVersionInvalid, IndexFile, 0, "not an OKF bundle: expected an index.md naming okf_version at the bundle root")
@@ -135,11 +135,11 @@ func (b *Bundle) checkReserved() []Finding {
 			continue
 		}
 		for _, k := range fm.Keys() {
-			if k != "okf_version" {
+			if k != keyOKFVersion {
 				out = append(out, NewFinding(CodeReservedStructure, p, 1, "root index frontmatter may only contain okf_version, found %q", k))
 			}
 		}
-		if v := fm.Lookup("okf_version"); v != nil {
+		if v := fm.Lookup(keyOKFVersion); v != nil {
 			out = append(out, versionFinding(p, strings.TrimSpace(v.Value))...)
 		}
 	}
@@ -162,12 +162,12 @@ func (b *Bundle) checkReserved() []Finding {
 func frontmatterStyleFindings(p string, idx *IndexFileDoc) []Finding {
 	var out []Finding
 	for _, k := range idx.Frontmatter.Keys() {
-		if frontmatterStyleKeys[k] || (k == "okf_version" && p == IndexFile) {
+		if frontmatterStyleKeys[k] || (k == keyOKFVersion && p == IndexFile) {
 			continue
 		}
 		out = append(out, NewFinding(CodeReservedStructure, p, 1, "index frontmatter may only contain title, version, entries and (at the root) okf_version, found %q", k))
 	}
-	if v := idx.Frontmatter.Lookup("okf_version"); v != nil && p == IndexFile {
+	if v := idx.Frontmatter.Lookup(keyOKFVersion); v != nil && p == IndexFile {
 		out = append(out, versionFinding(p, strings.TrimSpace(v.Value))...)
 	}
 	if p == IndexFile {
@@ -359,7 +359,7 @@ func (b *Bundle) checkTitles() []Finding {
 	var out []Finding
 	for _, p := range b.ConceptPaths() {
 		c := b.Concepts[p]
-		if c.Frontmatter.Scalar("title") == "" {
+		if c.Frontmatter.Scalar(keyTitle) == "" {
 			continue
 		}
 		dir := dirOf(p)
