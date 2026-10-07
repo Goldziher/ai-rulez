@@ -15,3 +15,6 @@ func ownedByCurrentUser(info fs.FileInfo) bool {
 	}
 	return int(st.Uid) == os.Getuid()
 }
+
+// writableByOthers reports group or world write permission.
+func writableByOthers(info fs.FileInfo) bool { return info.Mode().Perm()&0o022 != 0 }

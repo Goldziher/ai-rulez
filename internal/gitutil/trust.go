@@ -19,7 +19,7 @@ func (g Git) UntrustedLocalFile(path string) string {
 	if !info.Mode().IsRegular() {
 		return "it is not a regular file"
 	}
-	if info.Mode().Perm()&0o022 != 0 {
+	if writableByOthers(info) {
 		return "it is writable by group or others"
 	}
 	if !ownedByCurrentUser(info) {
