@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/samber/oops"
 )
 
 const (
@@ -58,16 +59,17 @@ func (skillsLockImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 	p := &Plan{}
 	data, err := newReader(fsys).read(skillsLockFile)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", skillsLockFile, err)
+		return nil, oops.With("file", skillsLockFile).Wrapf(err, "%s", skillsLockFile)
 	}
 	var doc skillsLockDoc
 	if err := json.Unmarshal(trimBOM(data), &doc); err != nil {
-		return nil, fmt.Errorf("%s is not valid JSON (%s): %w", skillsLockFile, CodeInvalid, err)
+		return nil, oops.With("file", skillsLockFile).Wrapf(err, "%s is not valid JSON (%s)", skillsLockFile, CodeInvalid)
 	}
 	if doc.Version != skillsLockVersion {
 		reason := fmt.Sprintf("lock file version %d is not the supported version %d", doc.Version, skillsLockVersion)
 		if !opt.BestEffort {
-			return nil, fmt.Errorf("%s: %s (%s); rerun with --best-effort to import the known fields", skillsLockFile, reason, CodeNeedsAction)
+			return nil, oops.With("file", skillsLockFile).Hint("Rerun with --best-effort to import the known fields").
+				Errorf("%s: %s (%s); rerun with --best-effort to import the known fields", skillsLockFile, reason, CodeNeedsAction)
 		}
 		p.add(newFinding(StatusNeedsAction, skillsLockFile, "version", "", reason+"; known fields imported best effort"))
 	}
