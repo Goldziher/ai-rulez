@@ -6,6 +6,8 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Limits that keep a hostile bundle from exhausting memory.
@@ -48,7 +50,8 @@ func TitleFromPath(p string) string {
 	base := strings.TrimSuffix(path.Base(p), ".md")
 	words := strings.FieldsFunc(base, func(r rune) bool { return r == '-' || r == '_' || r == ' ' })
 	for i, w := range words {
-		words[i] = strings.ToUpper(w[:1]) + w[1:]
+		r, size := utf8.DecodeRuneInString(w)
+		words[i] = string(unicode.ToUpper(r)) + w[size:]
 	}
 	if len(words) == 0 {
 		return base
