@@ -87,17 +87,20 @@ func unownedAtBase(cfg *config.Config, lock, base *lockfile.File, added []approv
 		subjects[s.Key()] = s
 	}
 	already := map[string]bool{}
-	for _, s := range added {
+	for i := range added {
+		s := &added[i]
 		already[s.Ref+"\x00"+approval.NormalizeReviewer(s.Approval.Reviewer)] = true
 	}
 	had := map[string]bool{}
 	if base != nil {
-		for _, a := range base.Approval {
+		for i := range base.Approval {
+			a := &base.Approval[i]
 			had[a.ItemKey()+"\x00"+a.Digest+"\x00"+approval.NormalizeReviewer(a.Reviewer)] = true
 		}
 	}
 	var out []approval.SelfApproval
-	for _, a := range lock.Approval {
+	for i := range lock.Approval {
+		a := &lock.Approval[i]
 		s, ok := subjects[a.ItemKey()]
 		if !ok || s.Digest != a.Digest || had[a.ItemKey()+"\x00"+a.Digest+"\x00"+approval.NormalizeReviewer(a.Reviewer)] {
 			continue
@@ -182,7 +185,8 @@ func (e *approveEnv) verifyBase(out io.Writer, rev string) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	for _, s := range found {
+	for i := range found {
+		s := &found[i]
 		if _, werr := fmt.Fprintf(out, "%s %s\n", approval.CodeSelf, safeText(s.Message())); werr != nil {
 			return 1, oops.Wrapf(werr, "write output")
 		}
@@ -202,7 +206,8 @@ func selfApprovalFindings(cfg *config.Config, lock *lockfile.File, rev, lockRel 
 		return []lint.ApprovalFinding{{Code: approval.CodeSelf, Path: lockRel, Message: fmt.Sprintf("cannot compare approvals with %q: %v", rev, err)}}
 	}
 	var out []lint.ApprovalFinding
-	for _, s := range found {
+	for i := range found {
+		s := &found[i]
 		out = append(out, lint.ApprovalFinding{Code: approval.CodeSelf, Path: lockRel, Message: s.Message()})
 	}
 	return out

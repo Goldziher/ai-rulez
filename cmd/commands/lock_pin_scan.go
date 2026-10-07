@@ -20,8 +20,10 @@ var lockAcceptFindings bool
 // findings without --accept-findings) and prints each refusal.
 func scanNewPins(cfg *config.Config, current, next *lockfile.File) (refused int) {
 	wants := map[string]lockfile.Want{}
-	for _, w := range includes.Lockable(cfg) {
-		wants[w.Kind+"\x00"+w.Name] = w
+	lockable := includes.Lockable(cfg)
+	for i := range lockable {
+		w := &lockable[i]
+		wants[w.Kind+"\x00"+w.Name] = *w
 	}
 	specs := map[string]skillsource.Spec{}
 	for i := range cfg.SkillSources {
