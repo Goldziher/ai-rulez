@@ -360,13 +360,15 @@ func (a *applier) signingTrust(s *config.SigningConfig, pol List) {
 	governed := governedSubjects(pol.Items)
 	var kept []config.SigningTrust
 	have := map[string]bool{}
-	for _, t := range s.SigningTrustEntries() {
+	trust := s.SigningTrustEntries()
+	for i := range trust {
+		t := &trust[i]
 		if !governed[t.Subject] {
-			kept = append(kept, t)
+			kept = append(kept, *t)
 			continue
 		}
-		if slices.Contains(pol.Items, trustKey(t)) {
-			kept = append(kept, t)
+		if slices.Contains(pol.Items, trustKey(*t)) {
+			kept = append(kept, *t)
 			have[t.Subject] = true
 			continue
 		}
@@ -378,7 +380,7 @@ func (a *applier) signingTrust(s *config.SigningConfig, pol List) {
 			needle = t.KeyFile
 		}
 		a.violate(lint.CodePolicyLoosened, "signing.trust", needle,
-			"[signing] trusts the signer %q, which is not in the policy list %s (origin: %s); it is dropped", trustKey(t), quoteList(pol.Items), a.origin("signing.trust"))
+			"[signing] trusts the signer %q, which is not in the policy list %s (origin: %s); it is dropped", trustKey(*t), quoteList(pol.Items), a.origin("signing.trust"))
 	}
 	s.Identity, s.Issuer, s.KeyFile = "", "", ""
 	for _, key := range pol.Items {

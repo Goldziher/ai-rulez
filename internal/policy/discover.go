@@ -277,10 +277,11 @@ func (l *loader) add(origin, raw, pin string, required bool) error {
 	if err != nil {
 		return err
 	}
-	for _, c := range chain {
+	for i := range chain {
+		c := &chain[i]
 		if !l.seen[c.key] {
 			l.seen[c.key] = true
-			l.layers = append(l.layers, c)
+			l.layers = append(l.layers, *c)
 		}
 	}
 	return nil
@@ -289,7 +290,8 @@ func (l *loader) add(origin, raw, pin string, required bool) error {
 // loadOne loads one policy (file or URL) without its extends. The number of
 // layers one load may pull in is bounded.
 func (l *loader) loadOne(origin string, ref Ref) (Layer, error) {
-	if l.loaded++; l.loaded > maxLayers {
+	l.loaded++
+	if l.loaded > maxLayers {
 		return Layer{}, &ParseError{Path: ref.Display(), Msg: fmt.Sprintf("more than %d policies are pulled in by extends", maxLayers)}
 	}
 	var layer Layer
@@ -481,18 +483,19 @@ func (l *loader) fromCache(ref Ref, mode remoteMode, cause error) (data, bundle 
 	}
 	body, bun, at, ok := c.get(ref.Location, ref.Digest)
 	if !ok {
-		return nil, nil, "", fmt.Errorf("%v, and there is no cached copy", cause)
+		return nil, nil, "", fmt.Errorf("%s, and there is no cached copy", cause.Error())
 	}
-	// Past the cache lookup the cause is flattened (%v): an expired or offline
-	// answer must not keep a statusError that LoadOrg would read as "no policy".
+	// Past the cache lookup the cause is flattened to its text: an expired or
+	// offline answer must not keep a statusError that LoadOrg would read as "no
+	// policy".
 	age := l.opts.Clock.Now().Sub(at)
 	if age < -cacheClockSkew {
 		// Fetched while the clock ran ahead: a negative age would pass every
 		// max_stale until the clock caught up, so the copy cannot be dated.
-		return nil, nil, "", fmt.Errorf("%v, and the cached copy is stamped %s, in the future", cause, at.UTC().Format(time.RFC3339))
+		return nil, nil, "", fmt.Errorf("%s, and the cached copy is stamped %s, in the future", cause.Error(), at.UTC().Format(time.RFC3339))
 	}
 	if l.maxStale < 0 || age > l.maxStale {
-		return nil, nil, "", fmt.Errorf("%v, and the cached copy fetched %s ago is older than max_stale (%s)", cause, age.Round(time.Minute), staleText(l.maxStale))
+		return nil, nil, "", fmt.Errorf("%s, and the cached copy fetched %s ago is older than max_stale (%s)", cause.Error(), age.Round(time.Minute), staleText(l.maxStale))
 	}
 	note = fmt.Sprintf("cached copy fetched %s (%v)", at.UTC().Format(time.RFC3339), cause)
 	l.opts.logger().Warn("Using the cached organization policy because the URL cannot be reached",

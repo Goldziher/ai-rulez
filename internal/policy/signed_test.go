@@ -337,7 +337,7 @@ func TestSignedURLPolicyCacheKeepsTheSignature(t *testing.T) {
 	t.Run("the cached copy is verified again", func(t *testing.T) {
 		layers, err := Discover(f.opts(t, url, key, func(o *DiscoverOptions) { withHome(o); o.Clock = ambient.Fixed(epoch.Add(time.Hour)) }))
 		require.NoError(t, err)
-		assert.NotEmpty(t, layers[0].Signer, "the signature travelled with the cached body")
+		assert.NotEmpty(t, layers[0].Signer, "the signature traveled with the cached body")
 		assert.Contains(t, layers[0].Note, "cached copy")
 	})
 	t.Run("a cached copy checked against another trusted key fails", func(t *testing.T) {

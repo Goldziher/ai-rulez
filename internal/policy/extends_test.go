@@ -306,7 +306,7 @@ func TestLoosensReportsWhatMergeWouldIgnore(t *testing.T) {
 			continue
 		}
 		reported++
-		assert.NotEqual(t, child, Merge(parent, child), "a reported loosening must be neutralised by the fold: %+v %+v", parent, child)
+		assert.NotEqual(t, child, Merge(parent, child), "a reported loosening must be neutralized by the fold: %+v %+v", parent, child)
 	}
 	assert.Positive(t, reported, "the generator must exercise the loosening paths")
 }
