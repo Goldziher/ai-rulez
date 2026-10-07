@@ -26,8 +26,6 @@ const (
 	// maxHookSeconds bounds a timeout read from a tool file, so a value in
 	// milliseconds that was not converted cannot become a day-long hook.
 	maxHookSeconds = 3600
-
-	harnessLabelRulesync = "rulesync"
 )
 
 // claudeVocabulary lists the harnesses whose matchers use Claude Code's tool names.
@@ -507,11 +505,15 @@ func mergeHookGroups(in []config.HookGroup) []config.HookGroup {
 
 // hookGroupKey identifies a group by what it does, ignoring where it applies.
 func hookGroupKey(g config.HookGroup) string {
-	data, _ := json.Marshal(struct {
+	data, err := json.Marshal(struct {
 		Event, Matcher string
 		Hooks          []config.HookAction
 		Matchers       map[string]string
 	}{g.Event, g.Matcher, g.Hooks, g.Matchers})
+	if err != nil {
+		// Strings, ints and maps of strings always marshal; fall back to Go syntax.
+		return fmt.Sprintf("%#v", g)
+	}
 	if len(g.Matchers) > 0 {
 		// A harness-specific matcher is a different group even with the same handlers.
 		return string(data) + "|" + strings.Join(g.Targets, ",")

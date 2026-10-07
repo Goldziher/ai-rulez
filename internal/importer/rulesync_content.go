@@ -69,12 +69,12 @@ func listOf(v any) []string {
 }
 
 func stringOf(v any) string {
-	s, _ := v.(string)
+	s := as[string](v)
 	return strings.TrimSpace(s)
 }
 
 func sectionOf(meta map[string]any, name string) map[string]any {
-	m, _ := meta[name].(map[string]any)
+	m := as[map[string]any](meta[name])
 	return m
 }
 
@@ -188,7 +188,7 @@ func (b *rulesyncPlanner) importRule(file, rel, text string) {
 		p.add(newFinding(StatusDropped, file, "", "", "rule body is empty"))
 		return
 	}
-	localRoot, _ := meta["localRoot"].(bool)
+	localRoot := as[bool](meta["localRoot"])
 	name, synth := b.nameOf(file, rel)
 	nameFinding(p, file, KindRule, name, synth)
 	taken := map[string]bool{"root": true, "localRoot": true, "targets": true, "description": true, "globs": true}
@@ -241,7 +241,7 @@ func (b *rulesyncPlanner) importRule(file, rel, text string) {
 	b.reportLeftovers(file, meta, taken)
 
 	kind := KindRule
-	if root, _ := meta["root"].(bool); root && !localRoot {
+	if as[bool](meta["root"]) && !localRoot {
 		kind = KindContext
 		p.add(newFinding(StatusApproximated, file, "root", "context/"+name+".md",
 			"root rules are written into every tool's root file; ai-rulez does that with context"))
@@ -267,7 +267,7 @@ func (b *rulesyncPlanner) importRule(file, rel, text string) {
 // it found (the section's own, or Claude Code's paths and Cursor's globs).
 func (b *rulesyncPlanner) activationHint(file string, meta, fm map[string]any, note func(section, key, target, reason string)) []string {
 	if cursor := sectionOf(meta, "cursor"); cursor != nil {
-		if on, _ := cursor["alwaysApply"].(bool); on {
+		if as[bool](cursor["alwaysApply"]) {
 			fm["alwaysApply"] = true
 			note("cursor", "alwaysApply", "rules", "always apply; the rule applies to every tool")
 			return nil

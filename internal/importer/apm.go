@@ -144,10 +144,10 @@ func (b *apmPlanner) readLock() error {
 		if !ok {
 			continue
 		}
-		deps, _ := doc["dependencies"].([]any)
+		deps := as[[]any](doc["dependencies"])
 		hashes := 0
 		for _, d := range deps {
-			m, _ := d.(map[string]any)
+			m := as[map[string]any](d)
 			repo, commit := stringOf(m["repo_url"]), stringOf(m["resolved_commit"])
 			if repo == "" || !fullSHA.MatchString(commit) {
 				continue
@@ -238,7 +238,7 @@ func (b *apmPlanner) importDependencies(v any) {
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		list, _ := deps[k].([]any)
+		list := as[[]any](deps[k])
 		switch k {
 		case "apm":
 			for i, e := range list {

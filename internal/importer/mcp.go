@@ -85,6 +85,16 @@ func importMCP(p *Plan, r *reader) {
 	}
 }
 
+// as returns v as a T, or T's zero value when v holds another type: a field of
+// the wrong type in a tool file reads as absent.
+func as[T any](v any) T {
+	if t, ok := v.(T); ok {
+		return t
+	}
+	var zero T
+	return zero
+}
+
 // utf8BOM is the byte order mark some editors write at the start of a file.
 var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
 
@@ -122,17 +132,17 @@ func mcpServerFrom(p *Plan, file, name string, raw map[string]any) (config.MCPSe
 			p.add(newFinding(StatusDropped, file, field+"."+k, "", "key has no ai-rulez equivalent"))
 		}
 	}
-	srv.Command, _ = raw["command"].(string)
+	srv.Command = as[string](raw["command"])
 	if args, ok := raw["args"].([]any); ok {
 		for _, a := range args {
 			srv.Args = append(srv.Args, fmt.Sprint(a))
 		}
 	}
-	srv.URL, _ = raw["url"].(string)
+	srv.URL = as[string](raw["url"])
 	if srv.URL == "" {
-		srv.URL, _ = raw["serverUrl"].(string)
+		srv.URL = as[string](raw["serverUrl"])
 	}
-	srv.Description, _ = raw["description"].(string)
+	srv.Description = as[string](raw["description"])
 	if isOwnServer(srv) {
 		p.add(newFinding(StatusDropped, file, field, "", "this is ai-rulez's own MCP server, which generate adds itself"))
 		return srv, false
@@ -142,9 +152,9 @@ func mcpServerFrom(p *Plan, file, name string, raw map[string]any) (config.MCPSe
 		return srv, false
 	}
 
-	typ, _ := raw["type"].(string)
+	typ := as[string](raw["type"])
 	if typ == "" {
-		typ, _ = raw["transport"].(string)
+		typ = as[string](raw["transport"])
 	}
 	switch strings.ToLower(typ) {
 	case "", "stdio":

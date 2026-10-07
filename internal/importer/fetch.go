@@ -351,8 +351,8 @@ func (b *apmPlanner) noteTransitive(rm Remote) {
 	if err != nil || !ok {
 		return
 	}
-	deps, _ := doc["dependencies"].(map[string]any)
-	if list, _ := deps["apm"].([]any); len(list) > 0 {
+	deps := as[map[string]any](doc["dependencies"])
+	if list := as[[]any](deps["apm"]); len(list) > 0 {
 		b.p.add(newFinding(StatusNeedsAction, apmManifest, "dependencies.apm", "",
 			fmt.Sprintf("%d transitive dependenc(ies) of %s are not followed; add them to the project's apm.yml and rerun", len(list), rm.URL)))
 	}
