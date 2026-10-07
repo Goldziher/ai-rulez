@@ -148,7 +148,6 @@ func TestOKFValidateExitCodesE2E(t *testing.T) {
 // TestOKFValidateEmptyDirectoryE2E pins RV-CLI-7: an empty directory is not an
 // OKF bundle and must not pass.
 func TestOKFValidateEmptyDirectoryE2E(t *testing.T) {
-	blockedOn(t, "RV-CLI-7")
 	env := newIsoEnv(t)
 
 	res := env.run(t.TempDir(), "okf", "validate", t.TempDir())
@@ -189,7 +188,6 @@ func TestOKFImportRefusesASymlinkedConceptE2E(t *testing.T) {
 // TestOKFImportJSONEmptyListsE2E pins MAN-6: import okf --format json prints
 // null instead of [] for findings, security and skipped when there are none.
 func TestOKFImportJSONEmptyListsE2E(t *testing.T) {
-	blockedOn(t, "MAN-6")
 	// Arrange
 	env := newIsoEnv(t)
 	bundle := okfBundle(t, okfGoodConcept)
