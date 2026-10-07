@@ -30,7 +30,8 @@ var geminiTools = map[string]struct{ allow, deny []string }{
 func buildGemini(t *translation) ([]jsonmerge.OwnedKey, error) {
 	var allowed, excluded []any
 	t.askUnsupported()
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		if e.Action == ActionAsk {
 			continue
 		}
@@ -57,7 +58,7 @@ func buildGemini(t *translation) ([]jsonmerge.OwnedKey, error) {
 	return keys, nil
 }
 
-func geminiNames(e permEntry) ([]string, string) {
+func geminiNames(e permEntry) (names []string, why string) {
 	r := e.Rule
 	if r.Kind == KindShell {
 		p := r.Shell()

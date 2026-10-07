@@ -40,7 +40,8 @@ func CodexRules(cfg *config.Config) (body string, ok bool) {
 	var b strings.Builder
 	b.WriteString(codexRulesHeader)
 	n := 0
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		tokens, why := codexTokens(e)
 		if why != "" {
 			t.drop(e, why)
@@ -60,7 +61,7 @@ func CodexRules(cfg *config.Config) (body string, ok bool) {
 	return b.String(), true
 }
 
-func codexTokens(e permEntry) ([]string, string) {
+func codexTokens(e permEntry) (tokens []string, why string) {
 	r := e.Rule
 	if r.Kind != KindShell {
 		return nil, "Codex has no rule surface for " + r.Tool + " (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)"
@@ -77,7 +78,7 @@ func codexTokens(e permEntry) ([]string, string) {
 	default:
 		return nil, "Codex rules match token prefixes; wildcards inside a command cannot be expressed"
 	}
-	tokens := strings.Fields(p.Literal)
+	tokens = strings.Fields(p.Literal)
 	for _, tok := range tokens {
 		if strings.ContainsAny(tok, shellUnsafe) {
 			return nil, "the command has shell syntax that a token rule cannot match literally"
