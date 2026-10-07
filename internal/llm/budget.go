@@ -157,8 +157,10 @@ type subBudgetKey struct{}
 
 // subBudgetFrom returns the subBudget of ctx, or nil when no budget is active.
 func subBudgetFrom(ctx context.Context) *subBudget {
-	s, _ := ctx.Value(subBudgetKey{}).(*subBudget)
-	return s
+	if s, ok := ctx.Value(subBudgetKey{}).(*subBudget); ok {
+		return s
+	}
+	return nil
 }
 
 // reserve admits one further request with worst-case usage worst. A nil subBudget (no budget

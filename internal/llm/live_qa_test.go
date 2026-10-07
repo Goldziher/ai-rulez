@@ -256,7 +256,7 @@ func TestLiveBudgetStopsRunAndCountsOnlyRealCalls(t *testing.T) {
 			// Act
 			var stopped error
 			calls := 0
-			for i := 0; i < 30 && stopped == nil; i++ {
+			for range 30 {
 				_, err := rec.Chat(context.Background(), ChatRequest{Messages: []Message{{Role: RoleUser, Content: "Reply with the single word: ok"}}, MaxTokens: 16, NoCache: true})
 				if err != nil {
 					stopped = err
