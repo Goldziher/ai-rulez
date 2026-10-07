@@ -90,7 +90,7 @@ func ScopeFor(includePaths, includeSession bool) ConsentScope {
 func NewConsent(endpoint, protocol string, includePaths, includeSession bool, now time.Time, version string) Consent {
 	return Consent{
 		Version: ConsentVersion, Endpoint: NormalizeEndpoint(endpoint), Protocol: protocol,
-		Scope: ScopeFor(includePaths, includeSession), GrantedAt: FormatTime(now), AIRulezVersion: version,
+		Scope: ScopeFor(includePaths, includeSession), GrantedAt: formatOrderTime(now), AIRulezVersion: version,
 	}
 }
 

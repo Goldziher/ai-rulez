@@ -291,6 +291,13 @@ func SystemClock() time.Time { return ambient.Clock(nil).Now().UTC() }
 // FormatTime renders an event timestamp.
 func FormatTime(t time.Time) string { return t.UTC().Format(time.RFC3339) }
 
+// orderTimeLayout is RFC 3339 with milliseconds, for the consent grant and the
+// cursor placement: two commands in the same second must still order.
+const orderTimeLayout = "2006-01-02T15:04:05.000Z07:00"
+
+// formatOrderTime renders a consent grant or a cursor placement time.
+func formatOrderTime(t time.Time) string { return t.UTC().Format(orderTimeLayout) }
+
 // newEventID returns 16 hex digits from a salted hash of the event's identity and
 // a random nonce: distinct loads in the same second get distinct ids, while a
 // replayed spool line keeps the id it was stored with.
