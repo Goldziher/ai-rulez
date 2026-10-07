@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -48,7 +47,7 @@ func (k keyFixture) attest(t *testing.T, data string, at time.Time) []byte {
 // blob signs the exact bytes with a message signature, as cosign sign-blob does.
 func (k keyFixture) blob(t *testing.T, data string) []byte {
 	t.Helper()
-	pb, err := k.signer.Bundle(context.Background(), &sign.PlainData{Data: []byte(data)})
+	pb, err := k.signer.Bundle(context.Background(), &signing.PlainData{Data: []byte(data)})
 	require.NoError(t, err)
 	out, err := protojson.Marshal(pb)
 	require.NoError(t, err)
