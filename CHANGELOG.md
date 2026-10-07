@@ -337,6 +337,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **`[llm]` price override no longer prices other models**: `price_input_per_mtok` and `price_output_per_mtok` apply only to the model set in user scope (user config file or `AI_RULEZ_LLM_MODEL`), so a repository-chosen model cannot be billed at a price written for another one; an unpriced model under `max_cost_usd` is refused.
 - **`[llm]` API key stays with the user's provider**: when user scope sets `api_key_env` without a `base_url`, a repository config can no longer choose the `provider` or `backend`, or a model or embedding model under another provider's prefix (which routed the key to a different service with the `literllm` backend); the dropped keys are reported by `llm doctor` and `ai-rulez doctor`.
 - **`[llm]` `timeout_seconds` is capped at 3600**: a huge value overflowed `time.Duration` and disabled the per-call timeout; `AR9L0` now rejects it.
+- **`[llm]` secret scrubbing recognises more credential shapes** (GitHub, GitLab, Google and Slack tokens, JWTs, PEM private-key headers, Basic credentials, temporary AWS keys) in provider errors and `Judge` refusals; it stays a best-effort detector.
 
 ### Security
 
