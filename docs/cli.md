@@ -2035,12 +2035,12 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | `--targets <preset>` | Also pin the view that serves this preset's rendering of the skills (as `mcp --serve-skills --targets`) |
 | `--include-static` | Also pin the view that serves static skills too |
 | `--source <src>` | Also pin the view with this extra skill source (repeatable, as `mcp --serve-skills --source`). A view is recorded next to the default one as `[[served]]` entries with a `view` key, and a plain `lock` re-pins views recorded earlier |
-| `--strict` | Fail without writing when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3) |
+| `--strict` | Fail without writing (exit 2) when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3) |
 | `--kind include\|skill\|source\|served` | Limit a refresh to one kind |
 | `--recursive` / `-r` | Process every nested root |
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
 
-Exit codes: `0` ok, `1` the command could not run (a tool error; also `--check` with no `ai-rulez.lock`, or an unknown name), `2` `--check` found drift (also a lock without content pins; with `[lock] enforce`, a missing lock too), or `--outdated` found a moved tag (`AR732`), a deleted one (`AR735`) or an unsatisfiable constraint (`AR730`), `3` the lock was written but served skills were left unpinned because the security scan refuses them. Over several roots (`--recursive`) the most severe code wins: `1`, then `2`, then `3`.
+Exit codes: `0` ok, `1` the command could not run (a tool error; also `--check` with no `ai-rulez.lock`, or an unknown name), `2` `--check` found drift (also a lock without content pins; with `[lock] enforce`, a missing lock too), or `--outdated` found a moved tag (`AR732`), a deleted one (`AR735`) or an unsatisfiable constraint (`AR730`), or `--strict` refused a served skill the security scan refuses (nothing written), `3` the lock was written but served skills were left unpinned because the security scan refuses them. Over several roots (`--recursive`) the most severe code wins: `1`, then `2`, then `3`.
 
 CI: `generate --locked` fails when the lock is missing or does not cover a configured remote source, or when an
 authored source no longer matches the lock's content pins (exit 2); `generate --frozen` additionally never touches
@@ -2467,8 +2467,8 @@ Every command follows one contract, so a script can tell a failed run from a fai
 | ---- | ------- |
 | 0    | Success |
 | 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand, a V2/V3 config file (see [Configuration Detection](#configuration-detection)), a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no manifest |
-| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file |
-| 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --strict` fails instead) |
+| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --strict` refusing a served skill the security scan refuses; `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file |
+| 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --strict` exits 2 instead) |
 
 When a command covers several roots (`--recursive`), the most severe code wins: `1`, then `2`, then `3`.
 

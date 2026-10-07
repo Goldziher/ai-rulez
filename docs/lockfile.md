@@ -177,7 +177,7 @@ joined by `+` (`role:backend+static`). The default view has no `view` key, so a 
 flags writes the same lock as before. A plain `ai-rulez lock` pins the default view, every role and every view the
 lock already records; `lock --role`, `--profile`, `--targets`, `--include-static` and `--source` add the view they name. The
 server and `lock --check` read the pins of the view they run with. A pin without a `view` also covers every view
-(locks written before views existed), but its digest must still match. `lock --strict` fails when the security scan
+(locks written before views existed), but its digest must still match. `lock --strict` fails (exit 2, nothing written) when the security scan
 refuses a served skill; without it the skill is left unpinned, the rest is pinned and `lock` exits 3.
 A plugin source with no preset (a `[plugin]` configuration such as a marketplace member, whose skills ship in the
 bundles `generate --plugin` writes) has nothing to serve: `lock` pins its content and no served skills, and `lock -r`
@@ -651,7 +651,7 @@ run `ai-rulez lock` to refresh it (after reviewing the change with `ai-rulez loc
 brings output changes with it, but an output can change alone (a new ai-rulez release, a different include
 revision), and that is worth a look too. Exit codes: `0` in sync, `1` the command could not run, `2` differences,
 and for `lock` itself `3` when the lock was written but served skills were left unpinned because the security scan
-refuses them (`--strict` fails with `1` instead). Over several roots (`--recursive`) the most severe code wins:
+refuses them (`--strict` writes nothing and exits `2` instead). Over several roots (`--recursive`) the most severe code wins:
 `1`, then `2`, then `3`.
 
 With no `ai-rulez.lock` at all, `--check` exits `1` ("no ai-rulez.lock": there is nothing to verify, which is not the same as in sync), and under `[lock] enforce = true` it exits `2` as a drift. Run `ai-rulez lock` first.
