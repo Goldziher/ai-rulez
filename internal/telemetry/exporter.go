@@ -284,18 +284,41 @@ func (x *Exporter) finishHTTP(req *http.Request) error {
 	switch code := resp.StatusCode; {
 	case code >= 200 && code < 300:
 		return nil
-	case code == http.StatusTooManyRequests, code == http.StatusBadGateway, code == http.StatusServiceUnavailable, code == http.StatusGatewayTimeout:
+	case retryableStatus(code):
 		return &transientError{msg: fmt.Sprintf("collector returned %d", code), retryAfter: parseRetryAfter(resp.Header.Get("Retry-After"))}
 	default:
 		// Everything else is permanent: a 4xx, a redirect (the collector URL is wrong, and
-		// retrying would keep the events forever) or a 5xx outside 502/503/504.
+		// retrying would keep the events forever) or a 501/505, which no retry fixes.
 		return fmt.Errorf("%w: status %d", ErrRejected, code)
 	}
 }
 
+// retryableStatus reports whether a collector status is worth retrying: throttling,
+// request timeouts and every 5xx except 501 and 505, which no retry fixes.
+func retryableStatus(code int) bool {
+	switch code {
+	case http.StatusRequestTimeout, http.StatusTooEarly, http.StatusTooManyRequests:
+		return true
+	case http.StatusNotImplemented, http.StatusHTTPVersionNotSupported:
+		return false
+	}
+	return code >= 500 && code < 600
+}
+
 func parseRetryAfter(value string) time.Duration {
-	if seconds, err := strconv.Atoi(strings.TrimSpace(value)); err == nil && seconds > 0 {
+	return parseRetryAfterAt(value, time.Now())
+}
+
+// parseRetryAfterAt reads both Retry-After forms: delay-seconds and an HTTP-date.
+func parseRetryAfterAt(value string, now time.Time) time.Duration {
+	value = strings.TrimSpace(value)
+	if seconds, err := strconv.Atoi(value); err == nil && seconds > 0 {
 		return time.Duration(seconds) * time.Second
+	}
+	if when, err := http.ParseTime(value); err == nil {
+		if d := when.Sub(now); d > 0 {
+			return d
+		}
 	}
 	return 0
 }
