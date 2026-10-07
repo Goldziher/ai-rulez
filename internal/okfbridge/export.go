@@ -3,6 +3,7 @@ package okfbridge
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -17,6 +18,12 @@ type ExportOptions struct {
 	Include []Kind
 	// IndexStyle is okf.StyleBody (the default, also for "") or okf.StyleFrontmatter.
 	IndexStyle string
+	// LocalDir is the project's own .ai-rulez directory. When set, an item whose
+	// source file lies outside it (merged in from an include) is not exported,
+	// with a note, the same way include and builtin domains are skipped: the
+	// committed bundle documents this project, not what it pulled in. Empty
+	// disables the filter.
+	LocalDir string
 }
 
 // ExportResult is the bundle and what went into it.
@@ -45,7 +52,7 @@ func Export(tree *config.ContentTree, opts ExportOptions) (*ExportResult, error)
 		include[k] = true
 	}
 	res := &ExportResult{Counts: map[Kind]int{}}
-	items := collectItems(tree, include, res)
+	items := collectItems(tree, include, opts.LocalDir, res)
 
 	used := map[string]string{}
 	claim := func(p string) string {
@@ -96,8 +103,9 @@ func claimIndex(used map[string]string, p string) string {
 	return p
 }
 
-func collectItems(tree *config.ContentTree, include map[Kind]bool, res *ExportResult) []sourceItem {
+func collectItems(tree *config.ContentTree, include map[Kind]bool, localDir string, res *ExportResult) []sourceItem {
 	var items []sourceItem
+	foreign := 0
 	add := func(domain string, lists map[Kind][]config.ContentFile) {
 		for _, k := range AllKinds {
 			if !include[k] {
@@ -106,6 +114,10 @@ func collectItems(tree *config.ContentTree, include map[Kind]bool, res *ExportRe
 			files := append([]config.ContentFile(nil), lists[k]...)
 			sort.SliceStable(files, func(i, j int) bool { return itemID(k, files[i]) < itemID(k, files[j]) })
 			for _, cf := range files {
+				if !isLocal(cf, localDir) {
+					foreign++
+					continue
+				}
 				items = append(items, sourceItem{kind: k, domain: domain, cf: cf})
 			}
 		}
@@ -133,7 +145,29 @@ func collectItems(tree *config.ContentTree, include map[Kind]bool, res *ExportRe
 			KindAgent: d.Agents, KindCommand: d.Commands, KindCheck: d.Checks,
 		})
 	}
+	if foreign > 0 {
+		res.Notes = append(res.Notes, fmt.Sprintf("skipped %d item(s) merged in from includes: they are not this project's own content", foreign))
+	}
 	return items
+}
+
+// isLocal reports whether a content file was read from localDir. Items without a
+// source path (built in memory) count as local.
+func isLocal(cf config.ContentFile, localDir string) bool {
+	if localDir == "" || cf.Path == "" {
+		return true
+	}
+	abs := func(p string) string {
+		if a, err := filepath.Abs(p); err == nil {
+			p = a
+		}
+		if r, err := filepath.EvalSymlinks(p); err == nil {
+			p = r
+		}
+		return p
+	}
+	rel, err := filepath.Rel(abs(localDir), abs(cf.Path))
+	return err == nil && filepath.IsLocal(rel)
 }
 
 // itemID is the ai-rulez identifier of an item: the directory name of a skill,
