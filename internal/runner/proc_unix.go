@@ -40,8 +40,11 @@ const (
 // setsid() or setpgid() is still a descendant, so it is tracked and killed
 // with the rest. One that detaches and loses its parent between two looks at
 // the process table (a double fork faster than the poll) is found by the run
-// token every child inherits in its environment (RunTokenEnv); only one that
-// also starts with that variable removed escapes.
+// token every child inherits in its environment (RunTokenEnv), or by the
+// write end of the marker pipe every child inherits as an extra descriptor.
+// macOS withholds the environment of hardened and platform binaries (/bin/sh,
+// perl), so there the descriptor is what finds them. Only a helper that drops
+// both, the variable and the descriptor, before it detaches escapes.
 type procTree struct {
 	mu        sync.Mutex
 	root      int
@@ -53,8 +56,13 @@ type procTree struct {
 	token string
 	// checked caches the processes already searched for the token (pid -> start).
 	checked map[int]int64
-	stop    chan struct{}
-	done    chan struct{}
+	// markR and markW are the marker pipe; markW is the child's extra
+	// descriptor and is closed here once the child has started. markID
+	// identifies the pipe (0 when there is none).
+	markR, markW *os.File
+	markID       uint64
+	stop         chan struct{}
+	done         chan struct{}
 }
 
 // configure starts the child in a new session (which is also a new process
@@ -62,11 +70,21 @@ type procTree struct {
 // with it. The new session leaves the child without a controlling terminal: a
 // command run from an interactive shell cannot open /dev/tty and push input
 // into the user's terminal (TIOCSTI). The child's environment carries a fresh
-// run token, so a helper that leaves the tree is still recognized as the run's.
+// run token and an extra descriptor on the marker pipe, so a helper that leaves
+// the tree is still recognized as the run's.
 func configure(cmd *exec.Cmd) *procTree {
 	t := &procTree{tracked: map[int]int64{}, checked: map[int]int64{}, token: newRunToken()}
 	if t.token != "" {
 		cmd.Env = withRunToken(cmd.Env, t.token)
+	}
+	if r, w, err := os.Pipe(); err == nil {
+		if id, err := markerID(r); err == nil && id != 0 {
+			t.markR, t.markW, t.markID = r, w, id
+			cmd.ExtraFiles = append(cmd.ExtraFiles, w)
+		} else {
+			_ = r.Close() //nolint:errcheck // unused
+			_ = w.Close() //nolint:errcheck // unused
+		}
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	cmd.Cancel = func() error {
@@ -78,6 +96,10 @@ func configure(cmd *exec.Cmd) *procTree {
 
 // attach starts watching the process table for the started child's descendants.
 func (t *procTree) attach(cmd *exec.Cmd) {
+	if t.markW != nil {
+		_ = t.markW.Close() //nolint:errcheck // the child has its copy
+		t.markW = nil
+	}
 	if cmd.Process == nil {
 		return
 	}
@@ -231,11 +253,11 @@ func (t *procTree) kill(cmd *exec.Cmd) {
 }
 
 // adoptCarriers adds to tracked every process of table that carries this run's
-// token in its environment: a helper that detached and was reparented before
-// the watcher saw it. Only the current user's processes started no earlier than
-// the root are searched, each once. The caller holds mu.
+// token in its environment or holds the marker pipe: a helper that detached and
+// was reparented before the watcher saw it. Only the current user's processes
+// started no earlier than the root are searched, each once. The caller holds mu.
 func (t *procTree) adoptCarriers(table []procEntry) {
-	if t.token == "" {
+	if t.token == "" && t.markID == 0 {
 		return
 	}
 	self, uid := os.Getpid(), os.Getuid()
@@ -253,10 +275,20 @@ func (t *procTree) adoptCarriers(table []procEntry) {
 		if p.uid >= 0 && p.uid != uid {
 			continue
 		}
-		if env, err := processEnv(p.pid); err == nil && hasRunToken(env, t.token) {
+		if t.carries(p.pid) {
 			t.tracked[p.pid] = p.start
 		}
 	}
+}
+
+// carries reports whether pid has this run's token or marker descriptor.
+func (t *procTree) carries(pid int) bool {
+	if t.token != "" {
+		if env, err := processEnv(pid); err == nil && hasRunToken(env, t.token) {
+			return true
+		}
+	}
+	return t.markID != 0 && holdsMarker(pid, t.markID)
 }
 
 // newRunToken returns a random token, or "" if the system has no randomness.
@@ -309,4 +341,10 @@ func (t *procTree) close() {
 		<-t.done
 		t.stop = nil
 	}
+	for _, f := range []*os.File{t.markW, t.markR} {
+		if f != nil {
+			_ = f.Close() //nolint:errcheck // nothing to recover
+		}
+	}
+	t.markW, t.markR = nil, nil
 }

@@ -669,10 +669,12 @@ Every run is bounded: a `timeout` (default 2 minutes, at most 15, applied to eac
 stdout and stderr, and a kill of the whole process tree at the timeout and again after the command exits. On Linux
 and macOS the tree is the command's session and process group plus every descendant seen while it ran (the process
 table is read at a backing-off interval up to 200 ms), so a helper that calls `setsid()` is killed too. Every child
-also starts with a random per-run token in `AI_RULEZ_RUN_TOKEN`, and the kill searches the environment of each of
-your processes started since the command (`KERN_PROCARGS2` on macOS, `/proc/<pid>/environ` on Linux) for it, so a
-daemon that forks, detaches and loses its parent between two reads is killed as well. A process that is started with
-the variable removed from its environment (`env -i`, or an exec with a fresh environment) and detaches between two
+also starts with a random per-run token in `AI_RULEZ_RUN_TOKEN` and an extra inherited descriptor (fd 3) on a marker
+pipe, and the kill searches each of your processes started since the command for either one (the environment through
+`KERN_PROCARGS2` on macOS or `/proc/<pid>/environ` on Linux, the descriptors through `proc_pidinfo` or
+`/proc/<pid>/fd`), so a daemon that forks, detaches and loses its parent between two reads is killed as well. macOS
+hides the environment of system and hardened binaries (`/bin/sh`, `perl`), so there the descriptor is what finds them.
+A process that removes both, starting with a fresh environment and the descriptor closed, and detaches between two
 reads can still escape. On Windows the child is placed in a Job
 Object that is terminated the same way; a grandchild spawned in the instant between process start and job
 assignment can escape it. Output
