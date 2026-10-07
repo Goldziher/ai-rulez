@@ -26,12 +26,14 @@ func generateFixture(t *testing.T) map[string][]byte {
 	m, err := BuildManifest(cfg, cfg.Content)
 	require.NoError(t, err)
 
-	outs, err := Generate(m, "/out")
+	// A real absolute directory: "/out" has no volume on Windows, which reads as outside the workspace.
+	outDir := t.TempDir()
+	outs, err := Generate(m, outDir)
 	require.NoError(t, err)
 
 	byPath := make(map[string][]byte, len(outs))
 	for _, o := range outs {
-		rel, err := filepath.Rel("/out", o.Path)
+		rel, err := filepath.Rel(outDir, o.Path)
 		require.NoError(t, err)
 		body := o.RawContent
 		if body == nil {
