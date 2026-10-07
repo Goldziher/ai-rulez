@@ -92,6 +92,18 @@ func Run(opts *Options) (*Result, error) {
 	if err := checkTargets(opts, files); err != nil {
 		return nil, err
 	}
+	res := buildResult(opts, mapped, files)
+	if opts.DryRun {
+		return res, nil
+	}
+	if err := writeAll(opts, files); err != nil {
+		return res, err
+	}
+	return res, nil
+}
+
+// buildResult assembles the per-scenario reports and the findings for unmapped fields.
+func buildResult(opts *Options, mapped []*Mapped, files [][]outFile) *Result {
 	res := &Result{Importer: ImporterVersion, Source: opts.Source.Name(), DryRun: opts.DryRun, Out: opts.OutDir}
 	for i, m := range mapped {
 		for _, f := range files[i] {
@@ -103,9 +115,11 @@ func Run(opts *Options) (*Result, error) {
 				Message: fmt.Sprintf("%d field(s) of the input have no counterpart and were not imported", n)})
 		}
 	}
-	if opts.DryRun {
-		return res, nil
-	}
+	return res
+}
+
+// writeAll writes every rendered file, rolling back the ones already written when a write fails.
+func writeAll(opts *Options, files [][]outFile) error {
 	var done []undo
 	for _, group := range files {
 		for _, f := range group {
@@ -113,12 +127,12 @@ func Run(opts *Options) (*Result, error) {
 			prev, hadPrev := readPrevious(path)
 			if err := writeFile(path, f.data, opts.Force); err != nil {
 				rollback(done)
-				return res, err
+				return err
 			}
 			done = append(done, undo{path: path, prev: prev, hadPrev: hadPrev})
 		}
 	}
-	return res, nil
+	return nil
 }
 
 // undo reverses one written file: the content it replaced, or its removal.
