@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -132,7 +133,7 @@ func (r *runner) scannerFingerprint(scanner string, f externalFinding, abs strin
 		put(scannerFingerprintVersion, scanner, "own", f.Rule, rel, f.Fingerprint)
 		// The first occurrence hashes as before, so existing baselines keep matching.
 		if n := occurrence[key]; n > 0 {
-			h.Write([]byte(fmt.Sprint(n)))
+			h.Write([]byte(strconv.Itoa(n)))
 		}
 		occurrence[key]++
 		return scannerFingerprintVersion + ":" + hex.EncodeToString(h.Sum(nil))[:24]
@@ -145,7 +146,7 @@ func (r *runner) scannerFingerprint(scanner string, f externalFinding, abs strin
 	}
 	key := scanner + "\x00" + f.Rule + "\x00" + rel + "\x00" + normalizeText(text)
 	put(scannerFingerprintVersion, scanner, f.Rule, rel, normalizeText(text))
-	h.Write([]byte(fmt.Sprint(occurrence[key])))
+	h.Write([]byte(strconv.Itoa(occurrence[key])))
 	occurrence[key]++
 	return scannerFingerprintVersion + ":" + hex.EncodeToString(h.Sum(nil))[:24]
 }
