@@ -248,22 +248,8 @@ func measure(run *ActivationSkill, skill *Skill, cases []Case, competing []strin
 		if len(c.Files) > 0 || len(c.Assertions) > 0 || c.HasRubric() {
 			run.Ignored++
 		}
-		hits := skillsearch.Rank(docs, c.Prompt)
-		p := ActivationPrompt{Case: c.ID, Expect: c.Expects(), NearMiss: c.NearMissOf != "", Runs: 1, Winner: activationNone}
-		if len(hits) > 0 {
-			p.Winner, p.TopScore = competing[hits[0].Index], hits[0].Score
-		}
-		for rank, h := range hits {
-			if competing[h.Index] == skill.ID {
-				r := rank + 1
-				p.Rank = &r
-				break
-			}
-		}
+		p := rankPrompt(skill, c, competing, docs)
 		fired := p.Winner == skill.ID
-		if fired {
-			p.Rate = 1
-		}
 		switch {
 		case p.Expect && fired:
 			tp++
@@ -279,12 +265,8 @@ func measure(run *ActivationSkill, skill *Skill, cases []Case, competing []strin
 			positives++
 			if p.Rank != nil {
 				rr += 1 / float64(*p.Rank)
-				if *p.Rank <= recallAtLow {
-					atLow++
-				}
-				if *p.Rank <= recallAtHigh {
-					atHigh++
-				}
+				atLow += btoi(*p.Rank <= recallAtLow)
+				atHigh += btoi(*p.Rank <= recallAtHigh)
 			}
 		} else {
 			negatives++
@@ -301,13 +283,46 @@ func measure(run *ActivationSkill, skill *Skill, cases []Case, competing []strin
 		run.MRR = ptr(round(rr / float64(positives)))
 	}
 	run.StolenBy = stolenList(stolen, positives)
+	run.Passing = passingShare(run.Prompts, threshold)
+}
+
+// passingShare says whether enough prompts passed to reach the threshold.
+func passingShare(prompts []ActivationPrompt, threshold float64) bool {
 	passed := 0
-	for i := range run.Prompts {
-		if run.Prompts[i].Status == PromptPassed {
+	for i := range prompts {
+		if prompts[i].Status == PromptPassed {
 			passed++
 		}
 	}
-	run.Passing = len(run.Prompts) > 0 && float64(passed)/float64(len(run.Prompts)) >= threshold
+	return len(prompts) > 0 && float64(passed)/float64(len(prompts)) >= threshold
+}
+
+// rankPrompt ranks one prompt against the competing skills and records the
+// winner and where the skill under test landed.
+func rankPrompt(skill *Skill, c *Case, competing []string, docs []skillsearch.Doc) ActivationPrompt {
+	hits := skillsearch.Rank(docs, c.Prompt)
+	p := ActivationPrompt{Case: c.ID, Expect: c.Expects(), NearMiss: c.NearMissOf != "", Runs: 1, Winner: activationNone}
+	if len(hits) > 0 {
+		p.Winner, p.TopScore = competing[hits[0].Index], hits[0].Score
+	}
+	for rank, h := range hits {
+		if competing[h.Index] == skill.ID {
+			r := rank + 1
+			p.Rank = &r
+			break
+		}
+	}
+	if p.Winner == skill.ID {
+		p.Rate = 1
+	}
+	return p
+}
+
+func btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 func ptr(v float64) *float64 { return &v }

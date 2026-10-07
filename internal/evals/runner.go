@@ -142,26 +142,34 @@ func (r *Response) Validate(req *Request) error {
 	}
 	for i := range r.Results {
 		result := &r.Results[i]
-		if !known[result.Case] {
-			return fmt.Errorf("results[%d]: unknown case %q", i, result.Case)
-		}
-		if result.Arm != ArmWith && result.Arm != ArmWithout {
-			return fmt.Errorf("results[%d]: arm must be %q or %q, got %q", i, ArmWith, ArmWithout, result.Arm)
-		}
-		if err := checkMoney("cost_usd", result.CostUSD); err != nil {
-			return fmt.Errorf("results[%d]: %w", i, err)
-		}
-		if result.InputTokens < 0 || result.OutputTokens < 0 {
-			return fmt.Errorf("results[%d]: token counts must be >= 0", i)
-		}
-		if result.RubricScore != nil && (*result.RubricScore < 0 || *result.RubricScore > 1) {
-			return fmt.Errorf("results[%d]: rubric_score must be between 0 and 1", i)
+		if err := result.validateCommon(i, known); err != nil {
+			return err
 		}
 		if req.Mode == ModeActivation {
 			if err := result.validateActivation(i, req); err != nil {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+// validateCommon checks the fields every result carries, whatever the mode.
+func (r *Result) validateCommon(i int, known map[string]bool) error {
+	if !known[r.Case] {
+		return fmt.Errorf("results[%d]: unknown case %q", i, r.Case)
+	}
+	if r.Arm != ArmWith && r.Arm != ArmWithout {
+		return fmt.Errorf("results[%d]: arm must be %q or %q, got %q", i, ArmWith, ArmWithout, r.Arm)
+	}
+	if err := checkMoney("cost_usd", r.CostUSD); err != nil {
+		return fmt.Errorf("results[%d]: %w", i, err)
+	}
+	if r.InputTokens < 0 || r.OutputTokens < 0 {
+		return fmt.Errorf("results[%d]: token counts must be >= 0", i)
+	}
+	if r.RubricScore != nil && (*r.RubricScore < 0 || *r.RubricScore > 1) {
+		return fmt.Errorf("results[%d]: rubric_score must be between 0 and 1", i)
 	}
 	return nil
 }
