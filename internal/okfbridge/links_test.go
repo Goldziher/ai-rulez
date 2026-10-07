@@ -132,7 +132,7 @@ func TestExportThenImportKeepsSourceLinksStable(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, b.Validate(), "no broken links in the exported bundle")
 	fresh := t.TempDir()
-	write(t, fresh, ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
+	write(t, fresh, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
 	// Act
 	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
 	require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestAcmeRetailLinksSurviveImportAndExport(t *testing.T) {
 	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan})
 	require.NoError(t, err)
 	root := filepath.Dir(cfgDir)
-	write(t, root, ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"acme\"\npresets = [\"claude\"]\n")
+	write(t, root, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"acme\"\npresets = [\"claude\"]\n")
 	// Act
 	out := exportProject(t, root)
 	dir := filepath.Join(t.TempDir(), "b")
@@ -182,7 +182,7 @@ func TestAcmeRetailLinksSurviveImportAndExport(t *testing.T) {
 
 	// Export, import and export again is a fixed point.
 	fresh := t.TempDir()
-	write(t, fresh, ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"acme\"\npresets = [\"claude\"]\n")
+	write(t, fresh, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"acme\"\npresets = [\"claude\"]\n")
 	_, err = okfbridge.Import(nb, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
 	require.NoError(t, err)
 	again := exportProject(t, fresh)

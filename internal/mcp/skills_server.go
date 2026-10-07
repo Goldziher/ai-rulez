@@ -31,10 +31,11 @@ const (
 
 // keyDigest is the JSON key digests are reported under.
 const (
-	keyDigest = "digest"
-	keyURI    = "uri"
-	keyName   = "name"
-	keySize   = "size"
+	keyDigest    = "digest"
+	keyURI       = "uri"
+	keyName      = "name"
+	keyResources = "resources"
+	keySize      = "size"
 )
 
 const skillServerInstructions = "ai-rulez serves the skills of one profile read-only. " +
@@ -271,7 +272,7 @@ func skillEntry(s *CatalogSkill, limit int) map[string]any {
 	for i := range n {
 		resources = append(resources, fileEntry(&s.Files[i]))
 	}
-	entry := map[string]any{keyURI: s.URI, "frontmatter": s.Frontmatter, "resources": resources}
+	entry := map[string]any{keyURI: s.URI, "frontmatter": s.Frontmatter, keyResources: resources}
 	if n < len(s.Files) {
 		entry["resources_truncated"] = true
 	}
@@ -367,7 +368,7 @@ func (c *Catalog) handleSkillsMethod(method string, params json.RawMessage) (res
 		if !ok {
 			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("not a directory resource: %q", p.URI)}
 		}
-		return map[string]any{"resultType": resultTypeComplete, "resources": children}, nil
+		return map[string]any{"resultType": resultTypeComplete, keyResources: children}, nil
 	}
 	return nil, &jsonrpc.Error{Code: jsonrpc.CodeMethodNotFound, Message: "method not found"}
 }

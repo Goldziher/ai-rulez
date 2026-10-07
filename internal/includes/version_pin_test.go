@@ -47,7 +47,7 @@ func newVersionFixture(t *testing.T, includeLine, skillLine string) *versionFixt
 
 func (f *versionFixture) writeConfig(t *testing.T, includeLine, skillLine string) {
 	t.Helper()
-	writeTestFile(t, filepath.Join(f.project, ".ai-rulez", "config.toml"), `version = "4.0"
+	writeTestFile(t, filepath.Join(f.project, ".ai-rulez", "config.toml"), `version = "5.0"
 name = "p"
 presets = ["claude"]
 gitignore = false

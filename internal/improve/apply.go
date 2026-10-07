@@ -158,7 +158,7 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 	if err != nil {
 		return res, err
 	}
-	fmt.Fprintf(out, "Wrote %d file(s), removed %d. Nothing was committed. Next:\n  ai-rulez lock\n  ai-rulez eval run %s\n  ai-rulez validate --strict\n", len(res.Written), len(res.Removed), Sanitize(report.Skill, 120))
+	fmt.Fprintf(out, "Wrote %d file(s), removed %d. Nothing was committed. Next:\n  ai-rulez lock\n  ai-rulez eval run %s\n  ai-rulez validate\n", len(res.Written), len(res.Removed), Sanitize(report.Skill, 120)) //nolint:errcheck // terminal output
 	return res, nil
 }
 

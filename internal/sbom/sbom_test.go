@@ -18,7 +18,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/sbom"
 )
 
-const baseConfig = `version = "4.0"
+const baseConfig = `version = "5.0"
 name = "demo"
 presets = ["claude"]
 `
@@ -96,7 +96,7 @@ func TestOutputValidatesAgainstCycloneDX16(t *testing.T) {
 	cases := map[string]project{
 		"empty config":  {cfg: baseConfig},
 		"items and mcp": {cfg: baseConfig + mcpConfig, files: sampleFiles},
-		"items only":    {cfg: `version = "4.0"` + "\n" + `name = "x"` + "\n", files: sampleFiles},
+		"items only":    {cfg: `version = "5.0"` + "\n" + `name = "x"` + "\n", files: sampleFiles},
 	}
 	for name, p := range cases {
 		t.Run(name, func(t *testing.T) {

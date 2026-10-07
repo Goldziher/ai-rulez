@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,9 +90,9 @@ func TestFetchRejectsSymlinkedSubdir(t *testing.T) {
 		require.NoError(t, err, string(out))
 	}
 	run("init", "--quiet", "-b", "main")
-	require.NoError(t, os.Symlink(secret, filepath.Join(repo, "sub")))
+	testutil.SymlinkOrSkip(t, secret, filepath.Join(repo, "sub"))
 	require.NoError(t, os.MkdirAll(filepath.Join(repo, "real"), 0o755))
-	require.NoError(t, os.Symlink(secret, filepath.Join(repo, "real", "inner")))
+	testutil.SymlinkOrSkip(t, secret, filepath.Join(repo, "real", "inner"))
 	run("add", ".")
 	run("commit", "--quiet", "-m", "one")
 

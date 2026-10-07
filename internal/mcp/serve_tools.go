@@ -177,7 +177,7 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 	out["bytes"] = len(content)
 	out["truncated"] = truncated
 	out["file_digest"] = file.Digest
-	out["resources"] = resources
+	out[keyResources] = resources
 	if resourcesTruncated {
 		out["resources_truncated"] = true // list_skill_resources pages through the rest
 	}
@@ -203,7 +203,7 @@ func (s *Server) listSkillResourcesHandler(_ context.Context, req *handlers.Tool
 		f := &skill.Files[i]
 		files = append(files, map[string]any{"path": f.RelPath, keyURI: f.URI, keySize: f.Size, "mime": f.MIME, keyDigest: f.Digest})
 	}
-	out := map[string]any{keyName: skill.Name, keyDigest: skill.Digest, "resources": files, "total": len(skill.Files)}
+	out := map[string]any{keyName: skill.Name, keyDigest: skill.Digest, keyResources: files, "total": len(skill.Files)}
 	if end < len(skill.Files) {
 		out["truncated"], out["next_offset"] = true, end
 	}

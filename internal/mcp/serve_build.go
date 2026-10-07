@@ -806,7 +806,7 @@ func (st *ServeSetup) ServedRefusals(ctx context.Context, extras ...ServeSetup) 
 
 // ServedScanReports lists, offline, the served files the security scan cannot
 // read (AR989) in the views of the setup: for authored and source skills alike,
-// refused or not. It is what `validate --strict` reports.
+// refused or not. It is what `validate` reports.
 func (st *ServeSetup) ServedScanReports(ctx context.Context, extras ...ServeSetup) ([]ScanReport, error) {
 	off := *st
 	off.Offline = true

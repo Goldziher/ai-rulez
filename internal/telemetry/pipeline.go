@@ -40,7 +40,7 @@ type BuildOptions struct {
 	Root          string
 	ConfigDirName string
 	Version       string
-	// LocalLog appends events to the usage log. Skill events from `usage record`
+	// LocalLog appends events to the usage log. Skill events from `telemetry record`
 	// pass false: that command already wrote the line.
 	LocalLog bool
 	// LogPath overrides <root>/<config dir>/local/usage.jsonl.

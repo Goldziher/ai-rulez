@@ -70,7 +70,7 @@ func addCatalogRoles(doc *CatalogDoc, cfg *config.Config, counter tokens.Counter
 	for _, name := range cfg.RoleNames() {
 		role, err := roles.BuildRole(cfg, name, counter)
 		if err != nil {
-			// Broken inheritance is also reported by `validate --strict` (AR972).
+			// Broken inheritance is also reported by `validate` (AR972).
 			doc.notes = append(doc.notes, "role "+name+" is not in the catalog: "+err.Error())
 			continue
 		}

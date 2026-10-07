@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const governanceConfig = `version = "4.0"
+const governanceConfig = `version = "5.0"
 name = "gov"
 presets = ["claude"]
 

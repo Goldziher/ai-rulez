@@ -27,7 +27,7 @@ func TestResolveIncludes_FailingIncludeIsAnErrorUnlessOffline(t *testing.T) {
 		{"--frozen", LockFrozen, true, false, true},
 		{"enforced lock under generate", LockAuto, true, true, true},
 		{"generate without lock", LockAuto, true, false, true},
-		{"--no-fetch keeps the warning", LockAuto, true, false, false},
+		{"--offline keeps the warning", LockAuto, true, false, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -37,7 +37,7 @@ func TestResolveIncludes_FailingIncludeIsAnErrorUnlessOffline(t *testing.T) {
 			Mode, RequireWhenEnforced = tt.mode, tt.require
 			oldSkip := SkipFetch
 			t.Cleanup(func() { SkipFetch = oldSkip })
-			SkipFetch = tt.name == "--no-fetch keeps the warning"
+			SkipFetch = tt.name == "--offline keeps the warning"
 			dir := t.TempDir()
 			cfgDir := filepath.Join(dir, ".ai-rulez")
 			require.NoError(t, os.MkdirAll(cfgDir, 0o755))

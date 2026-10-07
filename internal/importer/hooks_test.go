@@ -276,7 +276,7 @@ func TestConvert_MergesLiveHooksIntoAnExistingConfig(t *testing.T) {
 	dir := t.TempDir()
 	writeTree(t, dir, map[string]string{
 		".claude/settings.json": hookProject, "CLAUDE.md": "x\n",
-		".ai-rulez/config.toml": "version = \"4.0\"\nname = \"mine\"\npresets = [\"claude\"]\n\n[permissions]\ndeny = [\"Read(./secrets)\"]\n",
+		".ai-rulez/config.toml": "version = \"5.0\"\nname = \"mine\"\npresets = [\"claude\"]\n\n[permissions]\ndeny = [\"Read(./secrets)\"]\n",
 	})
 	// Act
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, EnableHooks: true})

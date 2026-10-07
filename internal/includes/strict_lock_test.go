@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,7 +71,7 @@ func TestRemoteIncludeSymlinkIsNeverFollowed(t *testing.T) {
 	f := newLockFixture(t)
 	secret := filepath.Join(t.TempDir(), "secret.md")
 	writeTestFile(t, secret, "# Secret\n\nlocal file\n")
-	require.NoError(t, os.Symlink(secret, filepath.Join(f.remote, ".ai-rulez", "rules", "leak.md")))
+	testutil.SymlinkOrSkip(t, secret, filepath.Join(f.remote, ".ai-rulez", "rules", "leak.md"))
 	git(t, f.remote, "add", "-A")
 	git(t, f.remote, "commit", "-qm", "add symlink")
 

@@ -112,7 +112,7 @@ func TestRunVerifiersHandler_SpecMapsFailureToRuleAndHonoursSince(t *testing.T) 
 		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
 		require.NoError(t, os.WriteFile(p, []byte(content), 0o600))
 	}
-	write(".ai-rulez/config.toml", "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
+	write(".ai-rulez/config.toml", "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
 	write(".ai-rulez/rules/database.md", "# Database\n\nNeeds a down section.\n")
 	write("db/1.sql", "create\n")
 	write(".ai-rulez/verifiers/db.toml", `[[verifiers]]
