@@ -31,6 +31,35 @@ type loadOptions struct {
 	frontmatterErrors bool
 }
 
+// ReloadOptions returns the options that load this project again the way c was
+// loaded: through the same workspace, host (environment, clock, runner and
+// logger), registry, resolvers, include fetch memo, organization policy and its
+// directory, warning collector and lock policy. extra come last and win. A
+// nested load of the same project (the shared view without the machine-local
+// overlay, a baseline render) uses it, so it cannot fall back to the real disk,
+// the process environment or the real git while the first load did not.
+func (c *Config) ReloadOptions(extra ...LoadOption) []LoadOption {
+	opts := []LoadOption{
+		WithHost(c.Host),
+		WithRegistry(c.Registry),
+		WithResolvers(c.Resolve),
+		WithIncludeMemo(c.IncludeMemo),
+		WithPolicy(c.Policy()),
+		WithPolicyDir(c.PolicyDir),
+		WithLockPolicy(c.LockPolicy),
+	}
+	if c.Workspace != nil {
+		opts = append(opts, WithWorkspace(c.Workspace))
+	}
+	if c.Diag != nil {
+		opts = append(opts, WithCollector(c.Diag))
+	}
+	if c.frontmatterErrors {
+		opts = append(opts, WithFrontmatterErrors())
+	}
+	return append(opts, extra...)
+}
+
 // LoadOption customizes how a configuration is loaded.
 type LoadOption func(*loadOptions)
 
