@@ -2,7 +2,10 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
@@ -33,7 +36,10 @@ that mode, so it is safe to hand to an unattended agent.`,
 }
 
 func runMCPServer(cmd *cobra.Command, args []string) {
-	ctx := cmdContext()
+	// SIGTERM and Ctrl-C end the server through its context, so shutdown still
+	// flushes the usage sink and telemetry instead of dropping queued records.
+	ctx, stop := signal.NotifyContext(cmdContext(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	serveOnly := append([]string{"profile", "targets", flagServeDomain, "allow", "deny"}, dynamicServeFlagNames...)
 	if serve, _ := cmd.Flags().GetBool("serve-skills"); !serve {
 		for _, name := range serveOnly {
@@ -60,13 +66,25 @@ func runMCPServer(cmd *cobra.Command, args []string) {
 	}
 
 	closeTelemetry := wireMCPTelemetry(srv)
-	err := srv.GetMCPServer().Run(ctx, transport)
-	closeTelemetry()
-	srv.Close()
-	if err != nil {
+	run := func(ctx context.Context) error { return srv.GetMCPServer().Run(ctx, transport) }
+	if err := serveUntilDone(ctx, run, closeTelemetry, srv.Close); err != nil {
+		stop()
 		fmtError(oops.Wrapf(err, "MCP: start MCP server"))
 		os.Exit(1)
 	}
+}
+
+// serveUntilDone runs the server until the client disconnects or ctx ends (a
+// signal), then runs closers in order. An end through ctx is a clean shutdown.
+func serveUntilDone(ctx context.Context, run func(context.Context) error, closers ...func()) error {
+	err := run(ctx)
+	for _, closeFn := range closers {
+		closeFn()
+	}
+	if err != nil && ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+		return nil
+	}
+	return err
 }
 
 // buildSkillServer builds the read-only serving server; see mcp_serve.go.
