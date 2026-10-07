@@ -52,8 +52,9 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
-          args: --timeout=5m
+          # Pinned, so a local run with the same version matches CI; bump on purpose.
+          version: v2.14.0
+          args: --timeout=10m
 
   tidy:
     name: go mod tidy
@@ -171,11 +172,21 @@ jobs:
           reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /t REG_DWORD /f /v AllowDevelopmentWithoutDevLicense /d 1
           "AI_RULEZ_REQUIRE_SYMLINKS=1" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
+      # The Ubuntu and macOS runners ship Chrome: the catalog browser tests must
+      # run there, so a Chrome that is missing or does not start fails them.
+      - name: Require the browser tests (Ubuntu, macOS)
+        if: runner.os != 'Windows'
+        run: echo "AI_RULEZ_REQUIRE_BROWSER=1" >> "$GITHUB_ENV"
+
       - name: Run all tests (unit + platform)
         run: task test
 
       - name: Run cross-platform specific tests
         run: task test:platform
+
+      # The generator characterization goldens (they skip on Windows).
+      - name: Run golden tests
+        run: go test ./tests/golden/...
 
       - name: Upload test results
         if: always()
@@ -265,7 +276,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Run govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
 
   benchmarks:
     name: Benchmarks
