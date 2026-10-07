@@ -235,3 +235,12 @@ func TestSizeFindingFingerprintTracksGrowth(t *testing.T) {
 	assert.Equal(t, at30, sizeFingerprint(t, 31), "a few lines more keep the entry")
 	assert.NotEqual(t, at30, sizeFingerprint(t, 530), "a baselined oversize file that grows 20x must fire again")
 }
+
+func TestRatchetOverCapFailsBelowFailOn(t *testing.T) {
+	warn := finding(CodePathMissing, "a.md", 1, "w")
+	warn.Severity = SeverityWarning
+	over := ResolveRatchet(map[string]int{"AR401": 0})
+	assert.True(t, FailedWith([]Finding{warn}, "error", over), "a warning over its ratchet gates the run")
+	within := ResolveRatchet(map[string]int{"AR401": 1})
+	assert.False(t, FailedWith([]Finding{warn}, "error", within))
+}
