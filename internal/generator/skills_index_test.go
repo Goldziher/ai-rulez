@@ -17,7 +17,7 @@ func indexProject(t *testing.T, extraConfig string) string {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
-		".ai-rulez/config.toml":                       "version = \"5.0\"\nname = \"idx\"\npresets = [\"claude\", \"codex\"]\ngitignore = false\n" + extraConfig,
+		".ai-rulez/config.toml":                       "version = \"5.0\"\nname = \"idx\"\npresets = [\"claude\", \"codex\"]\ngitignore = false\nagents_md = false\n" + extraConfig,
 		".ai-rulez/skills/alpha/SKILL.md":             "---\nname: alpha\ndescription: Use when a thing happens.\nowner: team-a\nversion: 1.2.0\n---\nbody\n",
 		".ai-rulez/skills/alpha/references/r.md":      "ref\n",
 		".ai-rulez/skills/beta/SKILL.md":              "---\nname: beta\ndescription: Use when another thing happens.\n---\nbody\n",
