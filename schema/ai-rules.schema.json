@@ -1144,6 +1144,35 @@
       },
       "additionalProperties": false
     },
+    "ard": {
+      "type": "object",
+      "description": "Agentic Resource Discovery manifest (ard.json, spec v0.91, a proposal). Identifiers are urn:air:<publisher>:<namespace>:<name>. Emitted by `ai-rulez publish --emit ard`; see docs/ard.md.",
+      "properties": {
+        "publisher": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+          "maxLength": 253,
+          "description": "Fully qualified domain name the identifiers are anchored to, normally the domain that serves /.well-known/ard.json."
+        },
+        "namespace": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]+(:[A-Za-z0-9._-]+)*$",
+          "description": "Identifier segment between publisher and name; colons separate sub-segments."
+        },
+        "base_url": {
+          "type": "string",
+          "pattern": "^https://",
+          "description": "https URL the skill files and server cards are served from. Without it entries point at the release of the repository."
+        },
+        "plugin_type": {
+          "type": "string",
+          "pattern": "^[^\\s/]+/[^\\s/]+$",
+          "description": "Media type of plugin entries. Default application/vnd.ai-rulez.plugin+json, because the spec registers none."
+        }
+      },
+      "required": ["publisher", "namespace"],
+      "additionalProperties": false
+    },
     "publish": {
       "type": "object",
       "description": "What `ai-rulez publish` ships and its policy gates (see docs/publish.md). It has no credential keys: registries and forges authenticate through their own CLIs and environment.",
@@ -1239,7 +1268,15 @@
             "properties": {
               "name": {
                 "type": "string",
-                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering", "agent-plugins"]
+                "enum": [
+                  "template",
+                  "cursor-team-marketplace",
+                  "port",
+                  "aws-agent-registry",
+                  "kiro-steering",
+                  "agent-plugins",
+                  "ard"
+                ]
               },
               "template": {
                 "type": "string",
