@@ -65,10 +65,15 @@ func Build(s Settings, o BuildOptions) *Pipeline {
 	}
 	p := &Pipeline{Settings: s, Root: o.Root, ConfigDirName: o.ConfigDirName, Clock: clock, Spawn: o.Spawn}
 	p.LogPath = o.LogPath
+	noProject := false
 	if p.LogPath == "" {
 		p.LogPath = filepath.Join(LocalDir(o.Root, o.ConfigDirName), usageLogName)
+		// Without an ai-rulez project here there is nowhere to keep the log, salt
+		// and spool: record nothing rather than create <dir>/.ai-rulez/local.
+		info, err := os.Stat(filepath.Join(o.Root, o.ConfigDirName))
+		noProject = err != nil || !info.IsDir()
 	}
-	if !s.RecordActive() {
+	if !s.RecordActive() || noProject {
 		p.Recorder = &Recorder{Emitter: Nop{}, Clock: clock}
 		return p
 	}

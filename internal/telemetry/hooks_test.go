@@ -20,6 +20,7 @@ import (
 func pipelineFor(t *testing.T, settings Settings) (*Pipeline, *time.Time, *atomic.Int32) {
 	t.Helper()
 	root := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(root, ".ai-rulez"), 0o750))
 	now := fixedNow
 	spawns := &atomic.Int32{}
 	p := Build(settings, BuildOptions{
@@ -241,4 +242,13 @@ func TestHandleHook_SubagentWithoutATypeIsSkipped(t *testing.T) {
 			assert.Nil(t, event)
 		})
 	}
+}
+
+func TestBuild_NoProjectRecordsNothingAndCreatesNothing(t *testing.T) {
+	root := t.TempDir()
+	p := Build(enabled(), BuildOptions{Root: root, ConfigDirName: ".ai-rulez", LocalLog: true})
+	event := Event{Version: 1, Name: EventItem, Kind: KindRule, ID: "r", Source: SourceHook, Outcome: OutcomeLoaded}
+	require.NoError(t, p.Recorder.Record(context.Background(), event))
+	_, err := os.Stat(filepath.Join(root, ".ai-rulez"))
+	assert.True(t, os.IsNotExist(err), "no .ai-rulez/local may appear outside a project")
 }
