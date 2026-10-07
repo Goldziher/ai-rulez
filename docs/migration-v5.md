@@ -254,8 +254,12 @@ Unknown subcommands (`telemetry bogus`) exit `1`. When a command covers several 
   (whenever `ai-rulez.lock` exists, unless `enforce = false`), together with `AR010`.
 - **Content symlinks follow one policy.** In the project's own `.ai-rulez/` (including domains, skill and command
   resources), a symlinked file or directory is followed only when its fully resolved target is inside the repository
-  root (the git top level, else the directory holding `.ai-rulez`); the refusal names that root. A parent `.git` widens
-  it: a project inside a repository such as a `$HOME` dotfiles repo may link to anything in that repository. A symlinked `config.toml` or `config.local.toml` follows the same
+  root (the git top level, else the directory holding `.ai-rulez`); the refusal names that root. An enclosing
+  repository widens that root only when it tracks the project (its index holds `.ai-rulez/config.toml`): a project in a
+  monorepo may link to its siblings, but a project that merely sits below a `$HOME` dotfiles repository is held to its
+  own directory. `GIT_CEILING_DIRECTORIES` entries are resolved through symlinks, as git does. A project not yet added
+  to its repository has its own directory as the root until `git add`. A symlinked `config.toml` or `config.local.toml`
+  follows the same
   boundary: a target outside the root is a load error. Any other link used to be dropped silently; it is now
   refused with a warning that is shown even with `--quiet`, and `ai-rulez validate` reports it as an error. Symlinks
   in includes (git or local), installed skills, skill sources and OKF bundles are never followed and are skipped with
