@@ -85,11 +85,11 @@ func secretVars(line string) []string {
 // dnsCarriesPayload reports whether a dig, nslookup or host segment builds the
 // queried name from a substitution that reads a file, the environment or a secret.
 func dnsCarriesPayload(seg string, backticks bool) bool {
-	if m := dnsExfilRe.FindStringSubmatch(seg); m != nil && dnsPayloadRe.MatchString(m[1]) {
+	if m := dnsExfilRe.FindStringSubmatch(seg); len(m) > 1 && dnsPayloadRe.MatchString(m[1]) {
 		return true
 	}
 	if backticks {
-		if m := dnsTickRe.FindStringSubmatch(seg); m != nil && dnsPayloadRe.MatchString(m[1]) {
+		if m := dnsTickRe.FindStringSubmatch(seg); len(m) > 1 && dnsPayloadRe.MatchString(m[1]) {
 			return true
 		}
 	}
@@ -104,7 +104,6 @@ var exfilWords = []string{"curl", "wget", "xh", "nc", "ncat", "netcat", "scp", "
 func mayExfil(text string) bool {
 	low := strings.ToLower(text)
 	return hasCmdWord(low, exfilWords...) || strings.Contains(low, "http ") || strings.Contains(low, "https ") || strings.Contains(low, "http\t") || strings.Contains(low, "https\t") // httpie
-
 }
 
 func scanExfilCommands(r *runner, t *scanText) {

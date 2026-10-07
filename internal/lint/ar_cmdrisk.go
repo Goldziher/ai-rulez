@@ -159,11 +159,13 @@ type stealthRule struct {
 
 const stealthBoundary = "(?:^|[\\s;&|(`])"
 
+const stealthDisablesHistory = "disables shell history"
+
 var stealthRules = []stealthRule{
 	{regexp.MustCompile(stealthBoundary + `history\s+-[cdw]\b`), "erases the shell history", SeverityError},
-	{regexp.MustCompile(`\bunset\s+(?:HISTFILE|HISTSIZE|HISTFILESIZE|SAVEHIST)\b`), "disables shell history", SeverityError},
-	{regexp.MustCompile(`\b(?:export\s+)?HISTFILE=/dev/null\b`), "disables shell history", SeverityError},
-	{regexp.MustCompile(`\b(?:export\s+)?(?:HISTSIZE|HISTFILESIZE|SAVEHIST)=0\b`), "disables shell history", SeverityError},
+	{regexp.MustCompile(`\bunset\s+(?:HISTFILE|HISTSIZE|HISTFILESIZE|SAVEHIST)\b`), stealthDisablesHistory, SeverityError},
+	{regexp.MustCompile(`\b(?:export\s+)?HISTFILE=/dev/null\b`), stealthDisablesHistory, SeverityError},
+	{regexp.MustCompile(`\b(?:export\s+)?(?:HISTSIZE|HISTFILESIZE|SAVEHIST)=0\b`), stealthDisablesHistory, SeverityError},
 	{regexp.MustCompile(`\bset\s+\+o\s+history\b`), "turns shell history off", SeverityWarning},
 	{regexp.MustCompile(stealthBoundary + `shred\s+(?:-\S+\s+)*[^\s` + "`" + `]*_history\b[^\s` + "`" + `]*`), "securely erases a shell history file", SeverityError},
 	{regexp.MustCompile(stealthBoundary + `shred\s+(?:-\S+\s+)*(?:[-~/$.][^\s` + "`" + `]*|[^\s` + "`" + `]*[/.]\w[^\s` + "`" + `]*)`), "irrecoverably destroys a file, leaving no evidence of its content", SeverityWarning},
