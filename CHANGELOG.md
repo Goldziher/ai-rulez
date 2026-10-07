@@ -230,6 +230,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - `clean` keeps a git-tracked `.ai-rulez/.generated-manifest.local.json` and warns, as `generate` does.
 - Log output honours `NO_COLOR`, `TERM=dumb` and non-terminal stderr.
 - A `SKILL.md` whose frontmatter has no closing `---` is malformed (warning on load, `validate` fails, the skills server refuses it).
+- **`import okf` / `validate okf` refuse a `#subdir` that is a symlink**: a fetched repository could point the bundle directory at host files (`sub -> /home/user/notes`) and have them imported. Every component of the subdirectory is now checked and a symlink is an error.
 - **OKF export skips content merged in from includes**: only include and builtin domains were skipped, so an include that added a root-level rule landed in the committed bundle as this project's own. Items whose source file is outside the project's `.ai-rulez/` directory are now skipped too, with a note.
 - **OKF export no longer loses a rule or context file named `index` or `log`**: the generated index overwrote it (and `generate` failed with two presets writing one path). Such items are written as `index_.md` / `log_.md`, like skill resources already were; the real name stays in `x-ai-rulez.id`, so the round trip is lossless.
 - **The `[okf]` table in a TOML config is honoured**: `dir`, `include` and `spec` were silently dropped by the TOML loader and writer (only YAML and JSON worked), so the bundle went to `docs/okf` regardless.

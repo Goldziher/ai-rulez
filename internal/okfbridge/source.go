@@ -131,13 +131,45 @@ func (s Source) Fetch(ctx context.Context) (dir string, cleanup func(), err erro
 	}
 	root := tmp
 	if s.Subdir != "" {
-		root = filepath.Join(tmp, filepath.FromSlash(s.Subdir))
-		if rel, relErr := filepath.Rel(tmp, root); relErr != nil || strings.HasPrefix(rel, "..") {
+		var err error
+		if root, err = safeSubdir(tmp, s.Subdir); err != nil {
 			cleanup()
-			return "", noop, fmt.Errorf("invalid bundle subdirectory %q", s.Subdir)
+			return "", noop, err
 		}
 	}
 	return root, cleanup, nil
+}
+
+// safeSubdir resolves subdir below base and refuses a path that passes through a
+// symlink: a fetched repository must not be able to point the bundle root at host
+// files.
+func safeSubdir(base, subdir string) (string, error) {
+	cur := base
+	for _, seg := range strings.Split(filepath.ToSlash(subdir), "/") {
+		if seg == "" || seg == "." {
+			continue
+		}
+		cur = filepath.Join(cur, seg)
+		info, err := os.Lstat(cur)
+		switch {
+		case err != nil:
+			return "", fmt.Errorf("bundle subdirectory %q: %w", subdir, err)
+		case info.Mode()&os.ModeSymlink != 0:
+			return "", fmt.Errorf("bundle subdirectory %q is or passes through a symlink, which is not followed", subdir)
+		}
+	}
+	realBase, err := filepath.EvalSymlinks(base)
+	if err != nil {
+		return "", fmt.Errorf("resolve %s: %w", base, err)
+	}
+	realCur, err := filepath.EvalSymlinks(cur)
+	if err != nil {
+		return "", fmt.Errorf("bundle subdirectory %q: %w", subdir, err)
+	}
+	if rel, err := filepath.Rel(realBase, realCur); err != nil || !filepath.IsLocal(rel) {
+		return "", fmt.Errorf("invalid bundle subdirectory %q", subdir)
+	}
+	return cur, nil
 }
 
 func git(ctx context.Context, dir string, args ...string) error {
