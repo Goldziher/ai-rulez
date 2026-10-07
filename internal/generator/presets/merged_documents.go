@@ -154,12 +154,12 @@ func piMCPServers(cfg *config.Config) map[string]interface{} {
 // An empty path is accepted: it means "render a fresh document" rather than
 // naming a file, so there is nothing on disk for the stale-deletion guard to
 // protect and the registry has no bearing on it.
-func applyMergedDocument(path string, owned []jsonmerge.OwnedKey) (jsonmerge.Result, error) {
-	return applyMergedDocumentAs(path, docmerge.FormatJSON, owned)
+func applyMergedDocument(cfg *config.Config, path string, owned []jsonmerge.OwnedKey) (jsonmerge.Result, error) {
+	return applyMergedDocumentAs(cfg, path, docmerge.FormatJSON, owned)
 }
 
 // applyMergedDocumentAs is applyMergedDocument for a document of another format.
-func applyMergedDocumentAs(path string, format docmerge.Format, owned []jsonmerge.OwnedKey) (jsonmerge.Result, error) {
+func applyMergedDocumentAs(cfg *config.Config, path string, format docmerge.Format, owned []jsonmerge.OwnedKey) (jsonmerge.Result, error) {
 	if path != "" && !isRegisteredMergedDocument(path) {
 		return jsonmerge.Result{}, oops.
 			With("path", path).
@@ -167,7 +167,7 @@ func applyMergedDocumentAs(path string, format docmerge.Format, owned []jsonmerg
 			Errorf("merged JSON document path is not registered")
 	}
 
-	return docmerge.Apply(path, format, owned)
+	return docmerge.ApplyWith(cfg.ReadExisting, path, format, owned)
 }
 
 // mergeSource records what a merged output was rendered from, so that presets

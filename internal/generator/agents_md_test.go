@@ -91,7 +91,7 @@ func agentsMDSnapshot(t *testing.T, root string) map[string]string {
 
 func sharedManifestFiles(t *testing.T, root string) []string {
 	t.Helper()
-	return readManifestFile(nil, filepath.Join(root, ".ai-rulez", generatedManifestName)).Files
+	return readManifestFile(nil, os.ReadFile, filepath.Join(root, ".ai-rulez", generatedManifestName)).Files
 }
 
 // TestAgentsMD_FlagOffOutputUnchanged pins the default: with agents_md absent or

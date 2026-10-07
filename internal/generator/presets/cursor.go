@@ -164,7 +164,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	// own servers survive.
 	if servers := mcpEntries(cfg, cursorMCPEntry); len(servers) > 0 {
 		path := filepath.Join(baseDir, filepath.FromSlash(MergedDocCursorMCP))
-		doc, err := renderMergedMCP(path, docmerge.FormatJSON, []string{keyMCPServers}, servers)
+		doc, err := renderMergedMCP(cfg, path, docmerge.FormatJSON, []string{keyMCPServers}, servers)
 		if err != nil {
 			return nil, fmt.Errorf("render .cursor/mcp.json: %w", err)
 		}

@@ -52,7 +52,7 @@ func (g *Generator) renderAggregate(typ string, spec *OutputSpec, items []config
 		return nil, nil
 	}
 	outputPath := filepath.Join(baseDir, filepath.FromSlash(spec.File))
-	out, err := presets.MergedChecksFile(outputPath, spec.Header, text)
+	out, err := presets.MergedChecksFile(cfg, outputPath, spec.Header, text)
 	if err != nil {
 		return nil, oops.With("preset", g.Spec.Name, "path", outputPath).Wrap(err)
 	}

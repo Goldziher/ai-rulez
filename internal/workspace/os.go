@@ -75,3 +75,18 @@ func (r rooted) Root() string { return r.root }
 func WithRoot(ws Workspace, root string) Workspace {
 	return rooted{Workspace: ws, root: filepath.Clean(root)}
 }
+
+// CommitOf returns the commit ws reads when it is a snapshot of one (also when
+// WithRoot wrapped it), and false for any other workspace.
+func CommitOf(ws Workspace) (string, bool) {
+	for {
+		switch w := ws.(type) {
+		case Snapshot:
+			return w.Commit(), true
+		case rooted:
+			ws = w.Workspace
+		default:
+			return "", false
+		}
+	}
+}

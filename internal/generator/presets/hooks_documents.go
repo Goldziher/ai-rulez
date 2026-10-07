@@ -1,7 +1,6 @@
 package presets
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -31,7 +30,7 @@ func mergedHooksOutput(cfg *config.Config, harness, baseDir, relPath string) ([]
 	if err != nil || len(keys) == 0 {
 		return nil, err
 	}
-	result, err := applyMergedDocument(docPath, keys)
+	result, err := applyMergedDocument(cfg, docPath, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +86,7 @@ func (g *DevinPresetGenerator) settingsOutputs(cfg *config.Config, baseDir strin
 	if keys = append(keys, hookKeys...); len(keys) == 0 {
 		return nil, nil
 	}
-	result, err := applyMergedDocumentAs(docPath, docmerge.FormatJSONC, keys)
+	result, err := applyMergedDocumentAs(cfg, docPath, docmerge.FormatJSONC, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +136,7 @@ func (g *ClinePresetGenerator) hooksOutputs(cfg *config.Config, baseDir string) 
 	var outputs []config.OutputFile
 	for _, script := range settings.ClineHookScripts(cfg) {
 		path := filepath.Join(baseDir, filepath.FromSlash(settings.ClineHooksDir), script.Name)
-		if existing, err := os.ReadFile(path); err == nil && !settings.IsClineHookGenerated(existing) { //nolint:gosec // path is derived from the layout
+		if existing, err := cfg.ReadExisting(path); err == nil && !settings.IsClineHookGenerated(existing) {
 			cfg.Diag.Warn("[[hooks]] not generated for cline: "+filepath.ToSlash(settings.ClineHooksDir)+"/"+script.Name+
 				" already exists and was not written by ai-rulez", "hint", "rename or remove it to let ai-rulez write the hook")
 			continue

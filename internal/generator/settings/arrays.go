@@ -2,7 +2,6 @@ package settings
 
 import (
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -29,18 +28,18 @@ func documentRel(cfg *config.Config, docPath string) string {
 // (the merge reports that itself). A strict document keeps its bytes; a JSONC one
 // (comments, trailing commas, a BOM) is read through the tolerant decoder, so a
 // commented config is not mistaken for an empty one.
-func readPath(docPath string, path []string) json.RawMessage {
+func readPath(cfg *config.Config, docPath string, path []string) json.RawMessage {
 	if docPath == "" {
 		return nil
 	}
-	data, err := os.ReadFile(docPath) //nolint:gosec // path is derived from the preset layout and the base directory
+	data, err := cfg.ReadExisting(docPath)
 	if err != nil {
 		return nil
 	}
 	if json.Valid(data) {
 		return strictPath(data, path)
 	}
-	value, ok := jsonmerge.LookupTree(docTree(docPath), path)
+	value, ok := jsonmerge.LookupTree(docTree(cfg, docPath), path)
 	if !ok {
 		return nil
 	}
@@ -89,7 +88,7 @@ func arrayKey(cfg *config.Config, docPath string, path []string, ours []json.Raw
 		return nativeArrayKey(cfg, docPath, path, ours)
 	}
 	var existing []json.RawMessage
-	if raw := readPath(docPath, path); raw != nil {
+	if raw := readPath(cfg, docPath, path); raw != nil {
 		if json.Unmarshal(raw, &existing) != nil {
 			existing = nil // a non-array value is the consumer's; Apply reports it
 		}

@@ -33,8 +33,8 @@ type codexManifest struct {
 
 // mergedMCPFile renders the mcpServers key of the .mcp.json at path, merging into
 // the document already there.
-func mergedMCPFile(path string, servers map[string]mcpEntry) (config.OutputFile, error) {
-	result, err := jsonmerge.Apply(path, []jsonmerge.OwnedKey{{Name: "mcpServers", Value: servers, Members: true}})
+func mergedMCPFile(cfg *config.Config, path string, servers map[string]mcpEntry) (config.OutputFile, error) {
+	result, err := jsonmerge.ApplyWith(cfg.ReadExisting, path, []jsonmerge.OwnedKey{{Name: "mcpServers", Value: servers, Members: true}})
 	if err != nil {
 		return config.OutputFile{}, oops.With("path", path).Wrapf(err, "merge MCP servers into .mcp.json")
 	}
@@ -109,7 +109,7 @@ func renderCodexLegacy(m *Manifest, baseDir string) ([]config.OutputFile, error)
 	// the author already keeps in the repository is merged into server by server,
 	// like every other writer of that file, so their own servers and keys stay.
 	if servers := mcpServersFor(m, config.PluginRuntimeCodex); servers != nil {
-		mcpFile, err := mergedMCPFile(filepath.Join(baseDir, ".mcp.json"), servers)
+		mcpFile, err := mergedMCPFile(m.Config, filepath.Join(baseDir, ".mcp.json"), servers)
 		if err != nil {
 			return nil, err
 		}

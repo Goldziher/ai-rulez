@@ -182,7 +182,7 @@ func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputF
 	if err != nil {
 		return nil, "", nil, err
 	}
-	outputs, err = flattenPresetOutputs(g.config.Diag, g.log(), mapped)
+	outputs, err = flattenPresetOutputs(g.config.Diag, g.log(), g.config.ReadExisting, mapped)
 	if err != nil {
 		return nil, "", nil, err
 	}

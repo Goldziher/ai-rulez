@@ -3,7 +3,6 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -206,11 +205,11 @@ func (t *translation) noDenySurface(why string) {
 
 // docTree reads the target document into generic Go values; nil when it is
 // absent or unparsable (the merge reports a broken document itself).
-func docTree(docPath string) map[string]any {
+func docTree(cfg *config.Config, docPath string) map[string]any {
 	if docPath == "" {
 		return nil
 	}
-	data, err := os.ReadFile(docPath) //nolint:gosec // path is derived from the preset layout and the base directory
+	data, err := cfg.ReadExisting(docPath)
 	if err != nil {
 		return nil
 	}
@@ -260,7 +259,7 @@ func containsValue(list []any, v any) bool {
 // only the elements ai-rulez added or claimed earlier are recorded as its own.
 func docArrayKey(cfg *config.Config, docPath string, path []string, ours []any) jsonmerge.OwnedKey {
 	var existing []any
-	if v, ok := jsonmerge.LookupTree(docTree(docPath), path); ok {
+	if v, ok := jsonmerge.LookupTree(docTree(cfg, docPath), path); ok {
 		existing, _ = v.([]any) // a non-array value is the consumer's; the merge reports it
 	}
 	value, claimed := planElements(previousElementClaims(cfg, docPath, path), existing, ours)
@@ -279,7 +278,7 @@ func docArrayKey(cfg *config.Config, docPath string, path []string, ours []any) 
 // particular never relaxes a deny); a warning says so.
 func docMembersKey(t *translation, path []string, entries map[string]any) (jsonmerge.OwnedKey, bool) {
 	var existing map[string]any
-	if v, ok := jsonmerge.LookupTree(docTree(t.docPath), path); ok {
+	if v, ok := jsonmerge.LookupTree(docTree(t.cfg, t.docPath), path); ok {
 		existing, _ = v.(map[string]any)
 	}
 	previous := t.cfg.Run.PreviousClaims(documentRel(t.cfg, t.docPath))
@@ -303,7 +302,7 @@ func docMembersKey(t *translation, path []string, entries map[string]any) (jsonm
 // differs from ours and that no earlier run wrote is the consumer's and is kept:
 // ai-rulez never overrides a setting of theirs, in particular never relaxes one.
 func scalarKey(t *translation, path []string, value any) (jsonmerge.OwnedKey, bool) {
-	if v, ok := jsonmerge.LookupTree(docTree(t.docPath), path); ok &&
+	if v, ok := jsonmerge.LookupTree(docTree(t.cfg, t.docPath), path); ok &&
 		!claimedPath(t.cfg.Run.PreviousClaims(documentRel(t.cfg, t.docPath)), path) {
 		if canonical(v) != canonical(value) {
 			t.cfg.Diag.Warn(fmt.Sprintf("[permissions] %s already sets %s; the existing value is kept", t.harness, strings.Join(path, ".")))

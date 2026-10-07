@@ -30,7 +30,7 @@ func mergedPermissionsOutput(cfg *config.Config, dialect, baseDir, relPath strin
 	if err != nil || len(keys) == 0 {
 		return nil, err
 	}
-	result, err := applyMergedDocumentAs(docPath, format, keys)
+	result, err := applyMergedDocumentAs(cfg, docPath, format, keys)
 	if err != nil {
 		return nil, err
 	}

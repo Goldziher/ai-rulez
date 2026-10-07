@@ -113,7 +113,7 @@ func (g *Generator) renderChecksSidecar(sc *SidecarSpec, checks []config.Content
 	default:
 		return sidecarRender{}, fmt.Errorf("unknown checks dialect %q", sc.Dialect)
 	}
-	return mergeDocument(outputPath, sc.DocFormat(), owned)
+	return mergeDocument(cfg, outputPath, sc.DocFormat(), owned)
 }
 
 // sameYAMLValue reports whether two values are the same document value.
@@ -124,8 +124,8 @@ func sameYAMLValue(a, b any) bool {
 // readYAMLMember returns the top-level member of the YAML document at path, and
 // whether the document has it. A missing or unparseable document has none (the
 // merge itself reports a document that does not parse).
-func readYAMLMember(path, member string) (value any, present bool, err error) {
-	text, found, rerr := jsonmerge.ReadExisting(path)
+func readYAMLMember(cfg *config.Config, path, member string) (value any, present bool, err error) {
+	text, found, rerr := jsonmerge.ReadExistingWith(cfg.ReadExisting, path)
 	if rerr != nil {
 		return nil, false, rerr //nolint:wrapcheck // already contextual
 	}
@@ -159,7 +159,7 @@ func previousChecksClaims(cfg *config.Config, outputPath string) []jsonmerge.Cla
 // guidelines, so the check is not written and the clash is reported.
 func claimableAugmentAreas(checks []config.ContentFile, cfg *config.Config, outputPath, sidecarPath string) (map[string]any, error) {
 	areas := augmentAreas(checks)
-	value, present, err := readYAMLMember(outputPath, "areas")
+	value, present, err := readYAMLMember(cfg, outputPath, "areas")
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func claimableAugmentAreas(checks []config.ContentFile, cfg *config.Config, outp
 func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath, sidecarPath string,
 ) (key jsonmerge.OwnedKey, ok bool, err error) {
 	path := []string{"instructions"}
-	value, present, err := readYAMLMember(outputPath, path[0])
+	value, present, err := readYAMLMember(cfg, outputPath, path[0])
 	if err != nil {
 		return key, false, err
 	}

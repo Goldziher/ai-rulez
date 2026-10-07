@@ -2,6 +2,7 @@ package generator
 
 import (
 	"encoding/json"
+	"os"
 	"reflect"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -17,7 +18,10 @@ import (
 // outputs do not describe a union (a plain file, other protections, other
 // documents) or two keys of one path cannot be reconciled; the caller then
 // reports the difference as a conflict.
-func unionOutputs(kept, other config.OutputFile) (config.OutputFile, bool) {
+func unionOutputs(read jsonmerge.Reader, kept, other config.OutputFile) (config.OutputFile, bool) {
+	if read == nil {
+		read = os.ReadFile
+	}
 	a, b := kept.Merge, other.Merge
 	if a == nil || b == nil || a.Path != b.Path || !sameMergeFormat(a.Format, b.Format) ||
 		kept.Sensitive != other.Sensitive || kept.LocalOnly != other.LocalOnly {
@@ -37,7 +41,7 @@ func unionOutputs(kept, other config.OutputFile) (config.OutputFile, bool) {
 		union.Content = body
 		return union, true
 	}
-	result, err := docmerge.Apply(a.Path, docmerge.Format(a.Format), owned)
+	result, err := docmerge.ApplyWith(read, a.Path, docmerge.Format(a.Format), owned)
 	if err != nil {
 		return kept, false
 	}

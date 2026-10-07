@@ -24,6 +24,7 @@
 package docmerge
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -124,16 +125,21 @@ func (f Format) Valid() bool {
 // mark is kept, and a document that had no final newline gets one from Apply,
 // which the claims record so Unmerge takes it back out.
 func Apply(path string, format Format, owned []OwnedKey) (Result, error) {
-	result, err := apply(path, format, owned)
+	return ApplyWith(os.ReadFile, path, format, owned)
+}
+
+// ApplyWith is Apply reading the existing document through read.
+func ApplyWith(read jsonmerge.Reader, path string, format Format, owned []OwnedKey) (Result, error) {
+	result, err := apply(read, path, format, owned)
 	result.Owned = owned
 	return result, err
 }
 
-func apply(path string, format Format, owned []OwnedKey) (Result, error) {
+func apply(read jsonmerge.Reader, path string, format Format, owned []OwnedKey) (Result, error) {
 	if !format.Valid() {
 		return Result{}, unsupported(format)
 	}
-	existing, found, err := jsonmerge.ReadExisting(path)
+	existing, found, err := jsonmerge.ReadExistingWith(read, path)
 	if err != nil {
 		return Result{}, err
 	}
@@ -202,22 +208,19 @@ func create(format Format, owned []OwnedKey) (Result, error) {
 // has since edited, is left alone (see Unmerged.Kept). A missing file changes
 // nothing.
 func Unmerge(path string, format Format, claims []Claim) (Unmerged, error) {
-	switch format {
-	case FormatJSON, FormatJSONC:
-		return jsonmerge.Unmerge(path, claims)
-	case FormatTOML:
-		return withoutHashHeader(tomlmerge.Unmerge(path, claims))
-	case FormatYAML:
-		return withoutHashHeader(yamlmerge.Unmerge(path, claims))
-	case FormatMarkdown:
-		existing, found, err := jsonmerge.ReadExisting(path)
-		if err != nil || !found {
-			return Unmerged{}, err
-		}
-		return unmergeMarkdown(path, existing, claims)
-	default:
+	return UnmergeWith(os.ReadFile, path, format, claims)
+}
+
+// UnmergeWith is Unmerge reading the document through read.
+func UnmergeWith(read jsonmerge.Reader, path string, format Format, claims []Claim) (Unmerged, error) {
+	if !format.Valid() {
 		return Unmerged{}, unsupported(format)
 	}
+	existing, found, err := jsonmerge.ReadExistingWith(read, path)
+	if err != nil || !found {
+		return Unmerged{}, err
+	}
+	return UnmergeDocument(path, format, existing, claims)
 }
 
 // UnmergeDocument is Unmerge for a document already read; path only names it in

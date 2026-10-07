@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 )
 
@@ -70,7 +71,7 @@ func buildOpencode(t *translation) ([]jsonmerge.OwnedKey, error) {
 	var keys []jsonmerge.OwnedKey
 	for _, tool := range tools {
 		path := []string{"permission", tool}
-		existing, ok := existingObject(t.docPath, path)
+		existing, ok := existingObject(t.cfg, t.docPath, path)
 		if !ok {
 			for _, r := range byTool[tool] {
 				t.drop(r.entry, "permission."+tool+" is not an object in the document, so it is the consumer's")
@@ -94,8 +95,8 @@ func buildOpencode(t *translation) ([]jsonmerge.OwnedKey, error) {
 
 // existingObject returns the object at path in the document: ok is false when the
 // member exists but is not an object.
-func existingObject(docPath string, path []string) (map[string]any, bool) {
-	v, found := jsonmerge.LookupTree(docTree(docPath), path)
+func existingObject(cfg *config.Config, docPath string, path []string) (map[string]any, bool) {
+	v, found := jsonmerge.LookupTree(docTree(cfg, docPath), path)
 	if !found {
 		return nil, true
 	}

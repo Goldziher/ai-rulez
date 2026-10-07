@@ -82,7 +82,7 @@ func arrayOwnedKey(sc *SidecarSpec, d mcpDialect, cfg *config.Config, outputPath
 	}
 	path := sc.ownedKeyPath(d)
 	entries := mcpDialectEntries(d, cfg)
-	existing, err := existingArrayElements(outputPath, path, d.arrayKey)
+	existing, err := existingArrayElements(cfg.ReadExisting, outputPath, path, d.arrayKey)
 	if err != nil {
 		return jsonmerge.OwnedKey{}, err
 	}
@@ -124,8 +124,8 @@ func arrayOwnedKey(sc *SidecarSpec, d mcpDialect, cfg *config.Config, outputPath
 
 // existingArrayElements reads the array of tables at path from the TOML file, or
 // nil when the file or the member is absent.
-func existingArrayElements(file string, path []string, nameKey string) ([]map[string]any, error) {
-	raw, err := os.ReadFile(file)
+func existingArrayElements(read jsonmerge.Reader, file string, path []string, nameKey string) ([]map[string]any, error) {
+	raw, err := read(file)
 	if os.IsNotExist(err) {
 		return nil, nil
 	}

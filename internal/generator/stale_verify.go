@@ -68,13 +68,13 @@ func (g *Generator) manifestDigestSet() map[string]string {
 
 // provablyGenerated reports whether the file at abs, listed in a manifest as rel,
 // can be shown to be an unedited ai-rulez output.
-func provablyGenerated(rel, abs string, digests map[string]string) bool {
-	data, err := os.ReadFile(abs)
+func (g *Generator) provablyGenerated(rel, abs string, digests map[string]string) bool {
+	data, err := g.config.ReadExisting(abs)
 	if err != nil {
 		return false
 	}
-	if stored, _, _ := scanStoredHashes(abs); stored != "" {
-		return !bodyEdited(string(data), abs)
+	if stored, _, _ := g.scanHashes(abs); stored != "" {
+		return !g.bodyEdited(string(data), abs)
 	}
 	want, ok := digests[rel]
 	return ok && bytes.Equal([]byte(want), []byte(fileDigest(data)))

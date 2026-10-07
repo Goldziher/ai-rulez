@@ -28,7 +28,7 @@ func TestOpencodeInstructions_NeverClaimsAHandWrittenDuplicate(t *testing.T) {
 			cfg := &config.Config{BaseDir: filepath.Dir(path), Run: config.NewRunState()}
 
 			// Act
-			entries, claimed, user, err := opencodeInstructions(cfg.Diag, path, "AGENTS.local.md", claimedInstructionsOwner(cfg, path))
+			entries, claimed, user, err := opencodeInstructions(cfg, path, "AGENTS.local.md", claimedInstructionsOwner(cfg, path))
 
 			// Assert
 			if err != nil {

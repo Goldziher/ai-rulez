@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -54,20 +53,20 @@ func (g *Generator) outputState(output config.OutputFile) (kind DriftKind, rewri
 	}
 	abs := g.absOutputPath(output.Path)
 	if output.RawContent != nil {
-		kind = rawState(abs, output)
+		kind = g.rawState(abs, output)
 		return kind, kind != "", true
 	}
 	final := g.finalContent(output)
 	if g.isUnmanagedRuleFile(abs, final) {
 		return "", false, false
 	}
-	existing, err := os.ReadFile(abs)
+	existing, err := g.config.ReadExisting(abs)
 	if err != nil {
 		return DriftMissing, true, true
 	}
 	rewrite = !g.canSkipWrite(abs, output, final)
 	switch {
-	case g.config.GetHeaderHashes() != config.HeaderHashesNone && bodyEdited(string(existing), abs):
+	case g.config.GetHeaderHashes() != config.HeaderHashesNone && g.bodyEdited(string(existing), abs):
 		return DriftEdited, rewrite, true
 	case rewrite:
 		return DriftStale, true, true
@@ -75,7 +74,7 @@ func (g *Generator) outputState(output config.OutputFile) (kind DriftKind, rewri
 	return "", false, true
 }
 
-func rawState(abs string, output config.OutputFile) DriftKind {
+func (g *Generator) rawState(abs string, output config.OutputFile) DriftKind {
 	mode := output.Mode.Perm()
 	if mode == 0 {
 		mode = 0o644
@@ -86,10 +85,10 @@ func rawState(abs string, output config.OutputFile) DriftKind {
 			mode = sensitiveFileMode
 		}
 	}
-	if _, err := os.Stat(abs); err != nil {
+	if _, err := g.config.StatExisting(abs); err != nil {
 		return DriftMissing
 	}
-	if !rawWriteCanSkip(abs, output.RawContent, mode) {
+	if !g.rawWriteCanSkip(abs, output.RawContent, mode) {
 		return DriftStale
 	}
 	return ""
@@ -103,6 +102,16 @@ const maxHashedTrailingNewlines = 3
 // judged and is not reported.
 func bodyEdited(content, path string) bool {
 	stored, _, _ := scanStoredHashes(path)
+	return bodyEditedWith(stored, content, path)
+}
+
+// bodyEdited is bodyEdited reading the stored hash from the project's workspace.
+func (g *Generator) bodyEdited(content, path string) bool {
+	stored, _, _ := g.scanHashes(path)
+	return bodyEditedWith(stored, content, path)
+}
+
+func bodyEditedWith(stored, content, path string) bool {
 	if stored == "" {
 		return false
 	}
@@ -142,7 +151,7 @@ func (g *Generator) VerifyGenerated() (drift []Drift, checked int, err error) {
 
 	manifest := g.readManifest(g.manifestPath())
 	if len(manifest.Files) == 0 {
-		if _, statErr := os.Stat(g.manifestPath()); statErr != nil {
+		if _, statErr := g.config.StatExisting(g.manifestPath()); statErr != nil {
 			return nil, 0, oops.With("manifest", g.manifestPath()).
 				Hint("Run ai-rulez generate first; the manifest is written next to the configuration").
 				Errorf("no generated manifest found")
@@ -153,14 +162,14 @@ func (g *Generator) VerifyGenerated() (drift []Drift, checked int, err error) {
 		if !isUnderBaseDir(g.config.BaseDir, abs) {
 			continue
 		}
-		data, readErr := os.ReadFile(abs)
+		data, readErr := g.config.ReadExisting(abs)
 		if readErr != nil {
 			drift = append(drift, Drift{Path: rel, Kind: DriftMissing})
 			continue
 		}
-		if stored, _, _ := scanStoredHashes(abs); stored != "" {
+		if stored, _, _ := g.scanHashes(abs); stored != "" {
 			checked++
-			if bodyEdited(string(data), abs) {
+			if g.bodyEdited(string(data), abs) {
 				drift = append(drift, Drift{Path: rel, Kind: DriftEdited})
 			}
 		}

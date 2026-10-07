@@ -2,7 +2,6 @@ package settings
 
 import (
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -27,8 +26,8 @@ func isJSONDocument(docPath string) bool {
 // values in the types the document's own parser gives them, so the user's
 // elements are written back as they were. It returns nil when the document or
 // the key is absent or not an array.
-func readNativeArray(docPath string, path []string) []any {
-	data, err := os.ReadFile(docPath) //nolint:gosec // path is derived from the preset layout and the base directory
+func readNativeArray(cfg *config.Config, docPath string, path []string) []any {
+	data, err := cfg.ReadExisting(docPath)
 	if err != nil {
 		return nil
 	}
@@ -65,7 +64,7 @@ func nativeArrayKey(cfg *config.Config, docPath string, path []string, ours []js
 			wanted = append(wanted, value)
 		}
 	}
-	value, claimed := planElements(previousElementClaims(cfg, docPath, path), readNativeArray(docPath, path), wanted)
+	value, claimed := planElements(previousElementClaims(cfg, docPath, path), readNativeArray(cfg, docPath, path), wanted)
 	if value == nil {
 		value = []any{}
 	}

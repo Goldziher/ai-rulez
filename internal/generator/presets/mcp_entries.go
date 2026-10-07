@@ -162,8 +162,8 @@ func mcpEntries(cfg *config.Config, build func(*config.MCPServer) map[string]any
 
 // renderMergedMCP merges the servers into the document at path under the key
 // path keyPath, leaving every other member alone.
-func renderMergedMCP(path string, format docmerge.Format, keyPath []string, entries map[string]any) (jsonmerge.Result, error) {
-	return applyMergedDocumentAs(path, format, []jsonmerge.OwnedKey{{Path: keyPath, Value: entries, Members: true}})
+func renderMergedMCP(cfg *config.Config, path string, format docmerge.Format, keyPath []string, entries map[string]any) (jsonmerge.Result, error) {
+	return applyMergedDocumentAs(cfg, path, format, []jsonmerge.OwnedKey{{Path: keyPath, Value: entries, Members: true}})
 }
 
 // mergedOutput is the OutputFile of a merged document render.
