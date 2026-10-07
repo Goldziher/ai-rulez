@@ -151,7 +151,7 @@ func WithWorkspace(ws workspace.Workspace) LoadOption {
 func (lo loadOptions) baseView(baseDir string) (workspace.View, string, error) {
 	if lo.ws != nil {
 		abs := filepath.Clean(baseDir)
-		if !filepath.IsAbs(abs) {
+		if !rooted(abs) {
 			abs = filepath.Join(lo.ws.Root(), abs)
 		}
 		return workspace.NewView(lo.ws), abs, nil

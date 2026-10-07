@@ -180,7 +180,9 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 	switch {
 	case filepath.IsAbs(absPath):
 	case lo.ws != nil:
-		absPath = filepath.Join(lo.ws.Root(), absPath)
+		if !rooted(absPath) {
+			absPath = filepath.Join(lo.ws.Root(), absPath)
+		}
 	default:
 		var err error
 		if absPath, err = filepath.Abs(path); err != nil {
