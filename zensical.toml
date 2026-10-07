@@ -24,6 +24,7 @@ nav = [
     { "AGENTS.md and .agents/skills" = "agents-md.md" },
     { "Baz" = "baz.md" },
     { "OKF (Open Knowledge Format)" = "okf.md" },
+    { "llms.txt" = "llms-txt.md" },
     { "Skill Frontmatter" = "skills.md" },
     { "Checks" = "checks.md" },
     { "Local Configuration" = "local-overrides.md" },

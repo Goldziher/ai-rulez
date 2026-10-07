@@ -66,6 +66,7 @@ func ruleFamilies() []func(*ruleSet) {
 		registerDelivery,
 		registerEvalcheck,
 		registerImprovecodes,
+		registerLLMsTxt,
 		registerOkf,
 		registerPolicycodes,
 		registerPublishcodes,
