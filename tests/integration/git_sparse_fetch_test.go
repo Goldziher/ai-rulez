@@ -75,7 +75,7 @@ func TestIntegration_SparseIncludeFetch(t *testing.T) {
 	aiRulezDir := filepath.Join(consumerDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "consumer"
 presets = ["claude"]
 
@@ -113,7 +113,7 @@ func TestIntegration_SparseSkillFetch(t *testing.T) {
 	aiRulezDir := filepath.Join(consumerDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "consumer"
 presets = ["claude"]
 
@@ -148,7 +148,7 @@ func TestIntegration_CacheInvalidation(t *testing.T) {
 	aiRulezDir := filepath.Join(consumerDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "consumer"
 presets = ["claude"]
 
@@ -207,7 +207,7 @@ func TestIntegration_SkipFetch(t *testing.T) {
 	aiRulezDir := filepath.Join(consumerDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "consumer"
 presets = ["claude"]
 

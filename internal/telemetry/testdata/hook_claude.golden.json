@@ -17,7 +17,7 @@
         "hooks": [
           {
             "async": true,
-            "command": "ai-rulez usage record --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\"",
+            "command": "ai-rulez telemetry record --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\"",
             "timeout": 5,
             "type": "command"
           }
@@ -54,7 +54,7 @@
         "hooks": [
           {
             "async": true,
-            "command": "ai-rulez usage record --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\"",
+            "command": "ai-rulez telemetry record --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\"",
             "timeout": 5,
             "type": "command"
           }

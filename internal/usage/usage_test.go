@@ -257,7 +257,7 @@ func TestHookTemplate(t *testing.T) {
 	assert.Equal(t, "*", decoded.Hooks["UserPromptExpansion"][0].Matcher)
 	command := decoded.Hooks["PreToolUse"][0].Hooks[0].Command
 	assert.Equal(t, "command", decoded.Hooks["PreToolUse"][0].Hooks[0].Type)
-	assert.Contains(t, command, "ai-rulez usage record")
+	assert.Contains(t, command, "ai-rulez telemetry record")
 	assert.Contains(t, command, `--log "${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl"`)
 
 	custom, err := HookTemplate(HookTemplateOptions{Executable: "/bin/ai-rulez", SinkCommand: "it's", IndexPath: "a b"})
