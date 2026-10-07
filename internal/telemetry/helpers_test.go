@@ -35,3 +35,5 @@ func sampleEvents() []Event {
 		{Version: 1, Name: EventItem, Time: "2026-10-05T09:12:43Z", EventID: "aaaaaaaaaaaaaaa4", Kind: KindAgent, ID: "code-reviewer", Source: SourceHook, Harness: "claude", Session: "5b1c0e9a7d3f2a64", Outcome: OutcomeUsed, LoadReason: ReasonSubagentStop, DurationMS: 2500},
 	}
 }
+
+func ptrBool(v bool) *bool { return &v }

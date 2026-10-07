@@ -210,7 +210,7 @@ func TestBuildIndexesDeterministicAndValid(t *testing.T) {
 func TestBuildIndexesEncodeAwkwardFileNames(t *testing.T) {
 	in := []IndexInput{{Path: "skills/s/references/My File (1).md", Title: "My File"}, {Path: "skills/s/SKILL.md", Title: "S"}}
 	files := map[string]string{}
-	for p, d := range BuildIndexes(in, nil) {
+	for p, d := range BuildIndexes(in, nil, "") {
 		files[p] = string(d)
 	}
 	for _, c := range in {
