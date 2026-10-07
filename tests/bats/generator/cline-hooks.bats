@@ -131,7 +131,6 @@ run_hook() {
 }
 
 @test "an exported CDPATH does not corrupt the project root when the hook is run by a relative path" {
-  known_bug "hooks_cline.go: root=\$(cd ...) prints the CDPATH match, so \$root holds the path twice; use CDPATH= cd"
   cd "$PROJECT"
   export CDPATH=".:$BATS_TEST_TMPDIR"
 

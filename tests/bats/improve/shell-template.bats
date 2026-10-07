@@ -101,7 +101,6 @@ run_optimizer() {
 }
 
 @test "a request without skill.dir fails instead of rewriting null/SKILL.md" {
-  known_bug "templates/shell.sh reads .skill.dir with jq -r, which prints null for a missing key; use jq -er"
   REQUEST='{"version":1,"skill":{"id":"deploy"},"train_cases":[]}'
 
   run_optimizer !
