@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	validRootConfig  = "version = \"5.0\"\nname = \"ok\"\npresets = [\"claude\"]\ngitignore = false\n"
+	validRootConfig  = "version = \"5.0\"\nname = \"ok\"\npresets = [\"claude\"]\ngitignore = false\nagents_md = false\n"
 	brokenRootConfig = "version = \"5.0\"\nname = \"broken\"\npresets = [\n"
 	profiledConfig   = "version = \"5.0\"\nname = \"profiled\"\npresets = [\"claude\"]\ngitignore = false\n\n[profiles]\nbackend = []\n"
 )

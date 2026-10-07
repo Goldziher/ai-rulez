@@ -21,7 +21,7 @@ func deliveryProject(t *testing.T, presets, extraConfig string, files map[string
 		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
 		require.NoError(t, os.WriteFile(p, []byte(content), 0o644))
 	}
-	write("config.toml", "version = \"5.0\"\nname = \"p\"\ngitignore = false\npresets = "+presets+"\n"+extraConfig)
+	write("config.toml", "version = \"5.0\"\nname = \"p\"\ngitignore = false\nagents_md = false\npresets = "+presets+"\n"+extraConfig)
 	for rel, content := range files {
 		write(rel, content)
 	}
