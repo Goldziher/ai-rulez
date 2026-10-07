@@ -13,7 +13,7 @@ import (
 
 func TestDecodeSettingsBlocks(t *testing.T) {
 	cfg, err := decodeConfigTOML([]byte(`
-version = "4.0"
+version = "5.0"
 name = "x"
 
 [[hooks]]
@@ -43,7 +43,7 @@ skill_overrides = { init = "off" }
 }
 
 func TestValidateSettingsBlocks(t *testing.T) {
-	base := func() *Config { return &Config{Version: "4.0", Name: "x"} }
+	base := func() *Config { return &Config{Version: "5.0", Name: "x"} }
 	tests := []struct {
 		name    string
 		mutate  func(c *Config)
@@ -140,7 +140,7 @@ func TestSettingsHookType_SchemaAndValidateAgree(t *testing.T) {
 		typ string
 		ok  bool
 	}{{"", true}, {"command", true}, {"prompt", false}, {"http", false}} {
-		body := "version = \"4.0\"\nname = \"x\"\n[[hooks]]\nevent = \"PreToolUse\"\n[[hooks.hooks]]\ncommand = \"echo\"\n"
+		body := "version = \"5.0\"\nname = \"x\"\n[[hooks]]\nevent = \"PreToolUse\"\n[[hooks.hooks]]\ncommand = \"echo\"\n"
 		if tc.typ != "" {
 			body += "type = \"" + tc.typ + "\"\n"
 		}

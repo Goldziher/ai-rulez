@@ -82,7 +82,7 @@ func TestConfigValidateMCP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := &Config{Version: "4.0", Name: "test", Presets: []Preset{{BuiltIn: "claude"}}, MCP: tt.mcp}
+			cfg := &Config{Version: "5.0", Name: "test", Presets: []Preset{{BuiltIn: "claude"}}, MCP: tt.mcp}
 			err := cfg.Validate()
 			if tt.wantErr == "" {
 				assert.NoError(t, err)
@@ -95,7 +95,7 @@ func TestConfigValidateMCP(t *testing.T) {
 }
 
 func TestLoadConfigTOML_MCPSection(t *testing.T) {
-	baseDir := writeTOMLProject(t, `version = "4.0"
+	baseDir := writeTOMLProject(t, `version = "5.0"
 name = "proj"
 presets = ["claude"]
 

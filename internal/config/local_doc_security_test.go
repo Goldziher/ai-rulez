@@ -16,7 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
-const securityShared = "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+const securityShared = "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
 
 func TestWriteFileAtomic_Permissions(t *testing.T) {
 	tests := []struct {

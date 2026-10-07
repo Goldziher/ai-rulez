@@ -436,7 +436,7 @@ func buildConfig(plan *Plan, project string) *config.Config {
 		project = "imported-project"
 	}
 	cfg := &config.Config{
-		Version:         config.ConfigVersionV4,
+		Version:         config.ConfigVersionV5,
 		Name:            project,
 		MCPServersRaw:   plan.MCPServers,
 		InstalledSkills: plan.InstalledSkills,

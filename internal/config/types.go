@@ -567,9 +567,6 @@ const (
 	PresetTypeJSON      PresetType = "json"
 )
 
-// ConfigVersionV4 is the config schema version the loader and validator accept.
-const ConfigVersionV4 = "4.0"
-
 // UnmarshalJSON implements custom JSON unmarshaling for Preset
 func (p *Preset) UnmarshalJSON(data []byte) error {
 	// Try to unmarshal as a string (built-in preset)
@@ -933,11 +930,6 @@ func (c *Config) HasProfile(profile string) bool {
 // GetVersion returns the config version
 func (c *Config) GetVersion() string {
 	return c.Version
-}
-
-// IsV4 returns true if this is a V4 config (version == "4.0")
-func (c *Config) IsV4() bool {
-	return c.Version == ConfigVersionV4
 }
 
 // IsCompact reports whether compact rendering is enabled. When true, presets

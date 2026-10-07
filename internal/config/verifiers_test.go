@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const verifiersHead = "version = \"4.0\"\nname = \"proj\"\npresets = [\"claude\"]\n"
+const verifiersHead = "version = \"5.0\"\nname = \"proj\"\npresets = [\"claude\"]\n"
 
 func TestVerifiers_TOMLRoundTripAndLoad(t *testing.T) {
 	src := verifiersHead + `
