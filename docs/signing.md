@@ -183,9 +183,11 @@ repository.
   and for the signer's own `issued_at` claim alike: a future claim would otherwise pass every `max_age` and pin the
   rollback mark ahead.
 - **Rollback** is detected with a per-user high-water mark: the latest signing time verified for each signer in each
-  project. The project is the `repository` claim plus the config directory's path inside its checkout (so the roots of a
-  monorepo are separate), or the absolute config directory when there is no claim or no checkout. The claim is the
-  signer's, so it never selects a mark by itself: a signer cannot touch another signer's mark. An older attestation than
+  project. Each signer has a mark for the absolute config directory and, when the attestation claims a `repository`
+  inside a checkout, a second one for the claim plus the config directory's path in the checkout (so clones of one
+  repository share it and the roots of a monorepo stay separate). An attestation is checked against, and advances,
+  both, so dropping or changing the claim does not escape a newer attestation's mark. The claim is the signer's, so it
+  never selects a mark by itself: a signer cannot touch another signer's mark. An older attestation than
   one this machine already verified fails with `AR727`, and the message names the state file to delete if the newer
   attestation was wrong. The state is a file outside the repository
   (`$XDG_STATE_HOME/ai-rulez/signing-state.json`, else `~/.local/state/ai-rulez/`) authenticated with an HMAC under a
