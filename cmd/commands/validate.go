@@ -161,10 +161,10 @@ func validatePreRun() error {
 	}
 	validateStrict = !validateConfigOnly
 	if validateWarnings {
-		if validateFailOn != "" && validateFailOn != "warning" {
+		if validateFailOn != "" && validateFailOn != failOnWarning {
 			return oops.Errorf("--strict means --fail-on warning and conflicts with --fail-on %s", validateFailOn)
 		}
-		validateFailOn = "warning"
+		validateFailOn = failOnWarning
 	}
 	return nil
 }

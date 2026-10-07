@@ -68,15 +68,14 @@ func statementEnd(lines []string, i int) int {
 // lexState tracks just enough TOML lexing (strings, comments, bracket depth) to
 // find where a statement ends.
 type lexState struct {
-	depth    int
-	inBasic  bool // """ multi-line basic string
-	inLit    bool // ''' multi-line literal string
-	bracketH bool // header line: brackets are not value brackets
+	depth   int
+	inBasic bool // """ multi-line basic string
+	inLit   bool // ''' multi-line literal string
 }
 
 func (s *lexState) done() bool { return s.depth == 0 && !s.inBasic && !s.inLit }
 
-func (s *lexState) scan(line string) {
+func (s *lexState) scan(line string) { //nolint:gocyclo // a flat lexer state machine over TOML string forms; splitting it hides the states
 	if s.depth == 0 && !s.inBasic && !s.inLit && strings.HasPrefix(strings.TrimSpace(line), "[") && !strings.Contains(line, "=") {
 		return // a table header carries no value
 	}
@@ -97,9 +96,10 @@ func (s *lexState) scan(line string) {
 				i += 2
 			}
 		case inStr:
-			if c == '\\' {
+			switch c {
+			case '\\':
 				i++
-			} else if c == '"' {
+			case '"':
 				inStr = false
 			}
 		case inLitStr:
@@ -152,9 +152,10 @@ func stripComment(line string) string {
 	for i := 0; i < len(line); i++ {
 		switch c := line[i]; {
 		case inStr:
-			if c == '\\' {
+			switch c {
+			case '\\':
 				i++
-			} else if c == '"' {
+			case '"':
 				inStr = false
 			}
 		case inLit:
@@ -184,12 +185,13 @@ func splitDotted(s string) []string {
 		c := s[i]
 		switch {
 		case inStr:
-			if c == '\\' && i+1 < len(s) {
+			switch {
+			case c == '\\' && i+1 < len(s):
 				cur.WriteByte(s[i+1])
 				i++
-			} else if c == '"' {
+			case c == '"':
 				inStr = false
-			} else {
+			default:
 				cur.WriteByte(c)
 			}
 		case inLit:
@@ -228,8 +230,10 @@ func hasPrefix(path, prefix []string) bool {
 	return len(path) >= len(prefix) && equalPath(path[:len(prefix)], prefix)
 }
 
+const lintBudgetKey = "budget"
+
 var (
-	versionValue = regexp.MustCompile(`^(\s*version\s*=\s*)(?:"[^"]*"|'[^']*'|[0-9][0-9.]*)(.*)$`)
+	versionValue = regexp.MustCompile(`^(\s*version\s*=\s*)(?:"[^"]*"|'[^']*'|\d[0-9.]*)(.*)$`)
 	budgetHeader = regexp.MustCompile(`^(\s*\[\[?\s*lint\s*\.\s*)budget\b`)
 	budgetKey    = regexp.MustCompile(`^(\s*)budget(\s*[.=])`)
 	lintBudgetKV = regexp.MustCompile(`^(\s*lint\s*\.\s*)budget\b`)
@@ -293,16 +297,16 @@ func (d *tomlDoc) insertLines(at int, newLines ...string) {
 
 // renameLintBudget renames `[lint.budget]` (and dotted spellings) to
 // `[lint.ratchet]` and reports how many lines changed.
-func (d *tomlDoc) renameLintBudget() int {
+func (d *tomlDoc) renameLintBudget() int { //nolint:gocyclo // the three spellings of the table (header, dotted-in-table, dotted-at-root) in one place
 	n := 0
 	for _, s := range d.stmts {
 		line := d.lines[s.start]
 		switch {
-		case s.header && len(s.path) >= 2 && s.path[0] == "lint" && s.path[1] == "budget":
+		case s.header && len(s.path) >= 2 && s.path[0] == "lint" && s.path[1] == lintBudgetKey:
 			d.lines[s.start] = budgetHeader.ReplaceAllString(line, "${1}ratchet")
-		case !s.header && len(s.table) == 1 && s.table[0] == "lint" && len(s.key) > 0 && s.key[0] == "budget":
+		case !s.header && len(s.table) == 1 && s.table[0] == "lint" && len(s.key) > 0 && s.key[0] == lintBudgetKey:
 			d.lines[s.start] = budgetKey.ReplaceAllString(line, "${1}ratchet${2}")
-		case !s.header && len(s.table) == 0 && len(s.key) > 1 && s.key[0] == "lint" && s.key[1] == "budget":
+		case !s.header && len(s.table) == 0 && len(s.key) > 1 && s.key[0] == "lint" && s.key[1] == lintBudgetKey:
 			d.lines[s.start] = lintBudgetKV.ReplaceAllString(line, "${1}ratchet")
 		default:
 			continue

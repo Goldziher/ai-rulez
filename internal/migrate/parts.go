@@ -70,8 +70,8 @@ func planMCPMerge(p *plan, dir string, doc *tomlDoc) error {
 	}
 	existing := map[string]bool{}
 	if cfg, err := config.DecodeTOML([]byte(doc.text()), "config.toml"); err == nil {
-		for _, s := range cfg.MCPServersRaw {
-			existing[s.Name] = true
+		for i := range cfg.MCPServersRaw {
+			existing[cfg.MCPServersRaw[i].Name] = true
 		}
 	}
 	var b strings.Builder
@@ -168,14 +168,14 @@ func nameFirst(m *yaml.Node) *yaml.Node {
 // and keeps the overlay's version (when it states one) equal to the main
 // config's, which the loader requires.
 func planLocalOverlay(p *plan, dir string) error {
-	toml := filepath.Join(dir, "config.local.toml")
+	localTOML := filepath.Join(dir, "config.local.toml")
 	var legacy []string
 	for _, n := range []string{"config.local.yaml", "config.local.yml", "config.local.json"} {
 		if _, err := os.Stat(filepath.Join(dir, n)); err == nil {
 			legacy = append(legacy, filepath.Join(dir, n))
 		}
 	}
-	_, tomlErr := os.Stat(toml)
+	_, tomlErr := os.Stat(localTOML)
 	hasTOML := tomlErr == nil
 	switch {
 	case len(legacy) > 1 || (len(legacy) == 1 && hasTOML):
@@ -193,18 +193,21 @@ func planLocalOverlay(p *plan, dir string) error {
 		}
 		d := parseTOMLDoc(string(out))
 		bumpLocalVersion(d)
-		p.writes = append(p.writes, fileWrite{path: toml, data: []byte(d.text()), perm: 0o600})
+		p.writes = append(p.writes, fileWrite{path: localTOML, data: []byte(d.text()), perm: 0o600})
 		p.removes = append(p.removes, src)
 		p.change(relFile(dir, filepath.Base(src)), RuleLocalOverlay, "converted to config.local.toml; "+filepath.Base(src)+" is removed")
 	case hasTOML:
-		raw, err := os.ReadFile(toml)
+		raw, err := os.ReadFile(localTOML)
 		if err != nil {
-			return oops.With("path", toml).Wrapf(err, "read config.local.toml")
+			return oops.With("path", localTOML).Wrapf(err, "read config.local.toml")
 		}
 		d := parseTOMLDoc(string(raw))
 		if bumpLocalVersion(d) {
-			info, _ := os.Stat(toml)
-			p.writes = append(p.writes, fileWrite{path: toml, data: []byte(d.text()), perm: info.Mode().Perm()})
+			perm := os.FileMode(0o600)
+			if info, statErr := os.Stat(localTOML); statErr == nil {
+				perm = info.Mode().Perm()
+			}
+			p.writes = append(p.writes, fileWrite{path: localTOML, data: []byte(d.text()), perm: perm})
 			p.change(relFile(dir, "config.local.toml"), RuleLocalOverlay, "version -> "+config.ConfigVersionV5)
 		}
 	}
@@ -229,7 +232,7 @@ var frontmatterAliases = []struct {
 
 // planFrontmatter finds the pre-4.24 frontmatter spellings Claude Code ignores.
 // Without --write they are reported; with it the markdown files are rewritten.
-func planFrontmatter(p *plan, dir string, write bool) error {
+func planFrontmatter(p *plan, dir string, write bool) error { //nolint:gocyclo // one walk with per-file read, split, alias scan and optional rewrite; splitting hides the flow
 	counts := map[string]int{}
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -238,7 +241,7 @@ func planFrontmatter(p *plan, dir string, write bool) error {
 		if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
 			return nil
 		}
-		raw, rerr := os.ReadFile(path)
+		raw, rerr := os.ReadFile(path) //nolint:gosec // reads the user's own config directory in a one-shot rewrite; a symlink race there is not a threat model
 		if rerr != nil {
 			return nil //nolint:nilerr // see above
 		}

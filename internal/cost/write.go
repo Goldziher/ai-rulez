@@ -2,9 +2,10 @@ package cost
 
 import (
 	"fmt"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 )
 
 // Output formats of the cost report.

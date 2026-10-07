@@ -2,11 +2,12 @@ package verifiers
 
 import (
 	"fmt"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"text/tabwriter"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 )
 
 type jsonReport struct {
