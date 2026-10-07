@@ -220,7 +220,7 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	if len(args) > 0 {
 		path = args[0]
 	}
-	cfg, _, err := loadForLockCheck(path)
+	cfg, _, err := loadForLockCheck(path) //nolint:contextcheck // the lock config loads without a context
 	if err != nil {
 		fmtError(err)
 		return 1
