@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -125,6 +126,9 @@ func TestExecute_PolicyViolationsAreRejectedBeforeAnyEvalSpend(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.name == "exec bit" && runtime.GOOS == "windows" {
+				t.Skip("Windows has no executable permission bit")
+			}
 			// Arrange
 			root, configDir := project(t)
 			ev := goodEval()
