@@ -278,9 +278,9 @@ func readRegular(path string) ([]byte, error) {
 
 // Dimension looks a dimension up by id.
 func (r *Rubric) Dimension(id string) (Dimension, bool) {
-	for _, d := range r.Dimensions {
-		if d.ID == id {
-			return d, true
+	for i := range r.Dimensions {
+		if r.Dimensions[i].ID == id {
+			return r.Dimensions[i], true
 		}
 	}
 	return Dimension{}, false
