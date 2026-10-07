@@ -89,10 +89,53 @@ func (n nativeImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 	importNativeHooks(p, r)
 	r.flushProblems(p)
 
+	n.addLinkPresets(p, r, sources, presetsSeen)
 	for preset := range presetsSeen {
 		p.Presets = append(p.Presets, preset)
 	}
 	return p, nil
+}
+
+// linkTargetPresets names the preset that generates a root file several presets
+// share, so a link onto it has a generated target.
+var linkTargetPresets = map[string]string{"AGENTS.md": "codex"}
+
+// addLinkPresets handles a root file that is a symlink onto another imported root
+// file (CLAUDE.md -> AGENTS.md). The link itself is not imported, but generate
+// refuses a link whose target is not a generated path, so the preset that writes
+// the target is added (and the one the link name implies): the first generate then
+// keeps the link, which points at generated content.
+func (nativeImporter) addLinkPresets(p *Plan, r *reader, sources []nativeSource, seen map[string]bool) {
+	rootFiles := map[string]nativeSource{}
+	for _, s := range sources {
+		if s.Kind == KindContext {
+			rootFiles[s.Path] = s
+		}
+	}
+	for _, s := range rootFiles {
+		info, err := fs.Lstat(r.fsys, s.Path)
+		if err != nil || info.Mode()&fs.ModeSymlink == 0 {
+			continue
+		}
+		target, err := fs.ReadLink(r.fsys, s.Path)
+		if err != nil {
+			continue
+		}
+		target = path.Clean(target)
+		preset, ok := linkTargetPresets[target]
+		if _, isRoot := rootFiles[target]; !ok || !isRoot || strings.HasPrefix(target, "../") {
+			continue
+		}
+		if _, regular := r.exists(target); !regular {
+			continue
+		}
+		seen[preset] = true
+		if own := s.impliedPreset(); own != "" {
+			seen[own] = true
+		}
+		p.add(newFinding(StatusMapped, s.Path, "", "presets."+preset,
+			"symlink to "+target+" (not imported); added the "+preset+" preset so generate writes "+target+" and keeps the link"))
+	}
 }
 
 // nestedSourcePaths lists source directories that sit inside another source
