@@ -57,14 +57,16 @@ func TestCursor_ChecksCollapseIntoBugbotFile(t *testing.T) {
 		{Name: "kilo-only", Content: "Not here.", Metadata: &config.Metadata{Targets: []string{"kilo"}}},
 	}}
 
+	base := t.TempDir()
+
 	// Act
-	outputs, err := (&CursorPresetGenerator{}).Generate(content, "/proj", &config.Config{Name: "t", BaseDir: "/proj"})
+	outputs, err := (&CursorPresetGenerator{}).Generate(content, base, &config.Config{Name: "t", BaseDir: base})
 
 	// Assert
 	require.NoError(t, err)
 	var got config.OutputFile
 	for _, o := range outputs {
-		if o.Path == filepath.Join("/proj", ".cursor", "BUGBOT.md") {
+		if o.Path == filepath.Join(base, ".cursor", "BUGBOT.md") {
 			got = o
 		}
 	}
@@ -76,11 +78,13 @@ func TestCursor_ChecksCollapseIntoBugbotFile(t *testing.T) {
 }
 
 func TestCursor_NoChecksNoBugbotFile(t *testing.T) {
-	outputs, err := (&CursorPresetGenerator{}).Generate(&config.ContentTree{}, "/proj", &config.Config{Name: "t", BaseDir: "/proj"})
+	base := t.TempDir()
+
+	outputs, err := (&CursorPresetGenerator{}).Generate(&config.ContentTree{}, base, &config.Config{Name: "t", BaseDir: base})
 
 	require.NoError(t, err)
 	for _, o := range outputs {
-		assert.NotEqual(t, filepath.Join("/proj", ".cursor", "BUGBOT.md"), o.Path)
+		assert.NotEqual(t, filepath.Join(base, ".cursor", "BUGBOT.md"), o.Path)
 	}
 }
 
@@ -111,7 +115,9 @@ func TestCursor_ChecksKeepAHandWrittenBugbotFile(t *testing.T) {
 func TestCursor_ChecksSkippedInUserScope(t *testing.T) {
 	content := &config.ContentTree{Checks: []config.ContentFile{{Name: "security", Content: "Flag injection."}}}
 
-	outputs, err := (&CursorPresetGenerator{}).Generate(content, "/home/u", &config.Config{Name: "t", BaseDir: "/home/u", UserScope: true})
+	home := t.TempDir()
+
+	outputs, err := (&CursorPresetGenerator{}).Generate(content, home, &config.Config{Name: "t", BaseDir: home, UserScope: true})
 
 	require.NoError(t, err)
 	for _, o := range outputs {
