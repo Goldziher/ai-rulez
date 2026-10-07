@@ -76,10 +76,9 @@ func usageTallies(entries []usage.Entry) map[string]*ItemUsage {
 // only, so an id shared by two skills is left unattributed rather than guessed.
 func attachSignals(doc *CatalogDocV2, opts *CatalogOptions) {
 	if opts.WithEval {
-		switch {
-		case opts.Eval == nil:
+		if opts.Eval == nil {
 			doc.Notes = append(doc.Notes, reasonOr(opts.EvalNote, "eval results were not found")+": eval fields are omitted")
-		default:
+		} else {
 			for i := range doc.Items {
 				if it := &doc.Items[i]; it.Kind == config.RoleKindSkill {
 					rec, _ := opts.Eval.Get(it.ID)
