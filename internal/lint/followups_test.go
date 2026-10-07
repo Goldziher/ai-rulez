@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -245,6 +246,9 @@ func TestExternalScanner(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if runtime.GOOS == "windows" {
+				t.Skip("fake scanners are POSIX shell scripts")
+			}
 			root := t.TempDir()
 			writeFiles(t, root, map[string]string{".ai-rulez/rules/r.md": "# Rule\n\nbody\n"})
 			script := filepath.Join(root, "scan.sh")

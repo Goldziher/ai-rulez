@@ -3,6 +3,7 @@ package lint
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -82,9 +83,12 @@ func TestApplySafeFixesOnlyByDefault(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "allowed-tools: Read")
 	assert.Contains(t, string(data), "name: Deploy_Helper", "the unsafe rename did not run")
-	info, err := os.Stat(filepath.Join(root, ".ai-rulez/skills/deploy-helper/scripts/run.sh"))
-	require.NoError(t, err)
-	assert.NotZero(t, info.Mode().Perm()&0o100, "the script is executable now")
+	assert.Equal(t, "100755", gitIndexMode(t, root, ".ai-rulez/skills/deploy-helper/scripts/run.sh"), "the executable bit is staged")
+	if runtime.GOOS != "windows" { // Windows has no mode bits on disk
+		info, err := os.Stat(filepath.Join(root, ".ai-rulez/skills/deploy-helper/scripts/run.sh"))
+		require.NoError(t, err)
+		assert.NotZero(t, info.Mode().Perm()&0o100, "the script is executable now")
+	}
 }
 
 func TestApplyUnsafeFixesAndIdempotence(t *testing.T) {
@@ -124,7 +128,11 @@ func TestDryRunChangesNothingAndPrintsDiff(t *testing.T) {
 	assert.Contains(t, res.Diff, "--- a/")
 	assert.Contains(t, res.Diff, "-allowed_tools: Read\n+allowed-tools: Read")
 	assert.Contains(t, res.Diff, "-name: Deploy_Helper\n+name: deploy-helper")
-	assert.Contains(t, res.Diff, "chmod 0644 -> 0755")
+	if runtime.GOOS == "windows" { // the modes Windows reports are not 0644 and 0755
+		assert.Contains(t, res.Diff, "chmod ")
+	} else {
+		assert.Contains(t, res.Diff, "chmod 0644 -> 0755")
+	}
 	assert.Len(t, res.Applied, 3, "a dry run reports what it would apply")
 }
 
@@ -291,9 +299,11 @@ func TestFixPreservesCRLFAndPermissions(t *testing.T) {
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
 	assert.Equal(t, "---\r\nname: crlf\r\ndescription: Use when you need the CRLF skill for tests.\r\nallowed-tools: Read\r\n---\r\nbody\r\n", string(data))
-	info, err := os.Stat(path)
-	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o640), info.Mode().Perm())
+	if runtime.GOOS != "windows" { // Windows has no permission bits to keep
+		info, err := os.Stat(path)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o640), info.Mode().Perm())
+	}
 }
 
 func TestKeyAndNameLineRewriting(t *testing.T) {
@@ -342,9 +352,12 @@ func TestHookScriptFixesStageTheExecutableBit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, res.Applied, 2)
 	for _, f := range []string{"tools/plain.sh", "tools/direct.sh"} {
-		info, err := os.Stat(filepath.Join(root, f))
-		require.NoError(t, err)
-		assert.NotZero(t, info.Mode().Perm()&0o100, f)
+		assert.Equal(t, "100755", gitIndexMode(t, root, f), f)
+		if runtime.GOOS != "windows" { // Windows has no mode bits on disk
+			info, err := os.Stat(filepath.Join(root, f))
+			require.NoError(t, err)
+			assert.NotZero(t, info.Mode().Perm()&0o100, f)
+		}
 	}
 
 	// The finding is read from the index mode, so staging the bit is what clears it.
