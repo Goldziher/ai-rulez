@@ -54,7 +54,7 @@ func BootstrapGain(rows []PairRow, resamples int) *CI {
 		case r.Cand && !r.Base:
 			delta[i] = 1
 		}
-		h.Write([]byte{byte(delta[i] + 1)})
+		h.Write([]byte{byte((delta[i] + 1) & 0xff)})
 	}
 	sum := h.Sum(nil)
 	rng := rand.New(rand.NewPCG(binary.BigEndian.Uint64(sum[:8]), binary.BigEndian.Uint64(sum[8:16]))) //nolint:gosec // a statistical resample, not a secret
