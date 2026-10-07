@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 )
 
@@ -58,14 +59,7 @@ func (r *runner) checkActivationRecord(it *item, record *evals.SkillRecord, id s
 	}
 	cfg := r.lc.Evals
 	if lowOn {
-		if floor := cfg.MinActivationRecall; floor > 0 && act.Recall != nil && *act.Recall < floor {
-			r.add(CodeActivationLow, it.abs, 1, "skill %q has a recorded activation recall of %.0f%%, below lint.evals.min_activation_recall %.0f%%",
-				id, *act.Recall*100, floor*100)
-		}
-		if floor := cfg.MinActivationPrecision; floor > 0 && act.Precision != nil && *act.Precision < floor {
-			r.add(CodeActivationLow, it.abs, 1, "skill %q has a recorded activation precision of %.0f%%, below lint.evals.min_activation_precision %.0f%%",
-				id, *act.Precision*100, floor*100)
-		}
+		r.checkActivationFloors(it, act, id, cfg)
 	}
 	if confusableOn {
 		for _, st := range act.StolenBy {
@@ -74,5 +68,18 @@ func (r *runner) checkActivationRecord(it *item, record *evals.SkillRecord, id s
 					id, st.Skill, st.Prompts, st.Share*100, cfg.ConfusionThreshold*100)
 			}
 		}
+	}
+}
+
+// checkActivationFloors reports a recorded recall or precision below its
+// lint.evals floor (AR9A1).
+func (r *runner) checkActivationFloors(it *item, act *evals.ActivationRecord, id string, cfg *config.LintEvals) {
+	if floor := cfg.MinActivationRecall; floor > 0 && act.Recall != nil && *act.Recall < floor {
+		r.add(CodeActivationLow, it.abs, 1, "skill %q has a recorded activation recall of %.0f%%, below lint.evals.min_activation_recall %.0f%%",
+			id, *act.Recall*100, floor*100)
+	}
+	if floor := cfg.MinActivationPrecision; floor > 0 && act.Precision != nil && *act.Precision < floor {
+		r.add(CodeActivationLow, it.abs, 1, "skill %q has a recorded activation precision of %.0f%%, below lint.evals.min_activation_precision %.0f%%",
+			id, *act.Precision*100, floor*100)
 	}
 }

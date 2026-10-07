@@ -249,6 +249,14 @@ func (t *Trap) validateProject() string {
 	case !slices.Contains(projectTrapKinds, t.Predicate.Kind):
 		return fmt.Sprintf("predicate kind %q is not one of %s", t.Predicate.Kind, strings.Join(projectTrapKinds, ", "))
 	}
+	if reason := t.validateProjectScope(); reason != "" {
+		return reason
+	}
+	return t.validateProjectPredicate()
+}
+
+// validateProjectScope returns why the scope of a project row cannot be used, or "".
+func (t *Trap) validateProjectScope() string {
 	if strings.Contains(t.Scope.Dir, `\`) {
 		return "scope.dir must use forward slashes"
 	}
@@ -263,35 +271,35 @@ func (t *Trap) validateProject() string {
 			return fmt.Sprintf("scope.kinds has %q (want %q or %q)", k, kindGenerated, kindHandwritten)
 		}
 	}
-	switch t.Predicate.Kind {
-	case predSizeOver:
+	return ""
+}
+
+// validateProjectPredicate returns why the predicate of a project row lacks a
+// field its kind needs, or "".
+func (t *Trap) validateProjectPredicate() string {
+	if t.Predicate.Kind == predSizeOver {
 		return t.validateProjectSize()
-	case predJSONKeyRequiredIf:
-		if t.Predicate.Key == "" || t.Predicate.WhenDir == "" {
-			return "json-key-required-if needs key and when_dir"
-		}
-	case predFrontmatterEnum:
-		if t.Predicate.Key == "" || len(t.Predicate.Allowed) == 0 {
-			return "frontmatter-enum needs key and allowed"
-		}
-	case predExtNotIn:
-		if len(t.Predicate.Allowed) == 0 {
-			return "ext-not-in needs allowed"
-		}
-	case predKeyMisspelt:
-		if len(t.Predicate.Canonical) == 0 {
-			return "key-misspelt needs canonical" //nolint:misspell // names the traps.toml predicate
-		}
-	case predNameSuffixRequired:
-		if t.Predicate.Suffix == "" {
-			return "name-suffix-required needs suffix"
-		}
-	case predFrontmatterMissing:
-		if len(t.Predicate.Keys) == 0 {
-			return "frontmatter-missing-all needs keys"
-		}
+	}
+	if need, ok := projectPredicateNeeds[t.Predicate.Kind]; ok && !need.satisfied(&t.Predicate) {
+		return need.msg
 	}
 	return ""
+}
+
+// predicateNeed is the message for a project row whose predicate lacks a field
+// its kind needs; satisfied says whether the predicate has them.
+type predicateNeed struct {
+	satisfied func(p *TrapPredicate) bool
+	msg       string
+}
+
+var projectPredicateNeeds = map[string]predicateNeed{
+	predJSONKeyRequiredIf:  {func(p *TrapPredicate) bool { return p.Key != "" && p.WhenDir != "" }, "json-key-required-if needs key and when_dir"},
+	predFrontmatterEnum:    {func(p *TrapPredicate) bool { return p.Key != "" && len(p.Allowed) > 0 }, "frontmatter-enum needs key and allowed"},
+	predExtNotIn:           {func(p *TrapPredicate) bool { return len(p.Allowed) > 0 }, "ext-not-in needs allowed"},
+	predKeyMisspelt:        {func(p *TrapPredicate) bool { return len(p.Canonical) > 0 }, "key-misspelt needs canonical"}, //nolint:misspell // names the traps.toml predicate
+	predNameSuffixRequired: {func(p *TrapPredicate) bool { return p.Suffix != "" }, "name-suffix-required needs suffix"},
+	predFrontmatterMissing: {func(p *TrapPredicate) bool { return len(p.Keys) > 0 }, "frontmatter-missing-all needs keys"},
 }
 
 func (t *Trap) validateProjectSize() string {

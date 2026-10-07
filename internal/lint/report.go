@@ -55,30 +55,13 @@ func Combine(reports []*Report) Combined {
 	for _, r := range reports {
 		c.Roots = append(c.Roots, r.Root)
 		c.Findings = append(c.Findings, r.Findings...)
-		if r.Scope != nil {
-			if c.ChangedOnly == nil {
-				c.ChangedOnly = &ChangedScope{Since: r.Scope.Since, Depth: r.Scope.Depth}
-			}
-			c.ChangedOnly.Changed += r.Scope.Changed
-			c.ChangedOnly.Dependents += r.Scope.Dependents
-			c.ChangedOnly.Transitive += r.Scope.Transitive
-			c.ChangedOnly.Truncated += r.Scope.Truncated
-			c.ChangedOnly.Dropped += r.Scope.Dropped
-		}
+		c.addScope(r.Scope)
 		for _, a := range r.Analyzers {
 			if !slices.Contains(c.Analyzers, a) {
 				c.Analyzers = append(c.Analyzers, a)
 			}
 		}
-		if r.Baseline != nil {
-			if c.Baseline == nil {
-				c.Baseline = &BaselineSummary{Paths: []string{}}
-			}
-			c.Baseline.Paths = append(c.Baseline.Paths, r.Baseline.Path)
-			c.Baseline.Accepted += r.Baseline.Accepted
-			c.Baseline.Stale = append(c.Baseline.Stale, r.Baseline.Stale...)
-			c.Baseline.Expired = append(c.Baseline.Expired, r.Baseline.Expired...)
-		}
+		c.addBaseline(r.Baseline)
 	}
 	sort.Strings(c.Analyzers)
 	c.Risk = combineRisk(reports)
@@ -87,6 +70,42 @@ func Combine(reports []*Report) Combined {
 			c.Profile = r.Profile
 		}
 	}
+	c.tally()
+	return c
+}
+
+// addScope folds one root's changed-files scope into the combined one.
+func (c *Combined) addScope(scope *ChangedScope) {
+	if scope == nil {
+		return
+	}
+	if c.ChangedOnly == nil {
+		c.ChangedOnly = &ChangedScope{Since: scope.Since, Depth: scope.Depth}
+	}
+	c.ChangedOnly.Changed += scope.Changed
+	c.ChangedOnly.Dependents += scope.Dependents
+	c.ChangedOnly.Transitive += scope.Transitive
+	c.ChangedOnly.Truncated += scope.Truncated
+	c.ChangedOnly.Dropped += scope.Dropped
+}
+
+// addBaseline folds one root's baseline outcome into the combined one.
+func (c *Combined) addBaseline(b *BaselineResult) {
+	if b == nil {
+		return
+	}
+	if c.Baseline == nil {
+		c.Baseline = &BaselineSummary{Paths: []string{}}
+	}
+	c.Baseline.Paths = append(c.Baseline.Paths, b.Path)
+	c.Baseline.Accepted += b.Accepted
+	c.Baseline.Stale = append(c.Baseline.Stale, b.Stale...)
+	c.Baseline.Expired = append(c.Baseline.Expired, b.Expired...)
+}
+
+// tally counts the findings of c by severity and code; an accepted one is
+// counted separately.
+func (c *Combined) tally() {
 	for i := range c.Findings {
 		f := &c.Findings[i]
 		if f.IsAccepted() {
@@ -105,7 +124,6 @@ func Combine(reports []*Report) Combined {
 		case SeverityOff:
 		}
 	}
-	return c
 }
 
 // WriteJSON prints the combined document.
