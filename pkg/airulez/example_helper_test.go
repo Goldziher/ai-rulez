@@ -12,7 +12,7 @@ func tempProject() (string, error) {
 		return "", err //nolint:wrapcheck // example helper
 	}
 	files := map[string]string{
-		".ai-rulez/config.toml":    "version = \"4.0\"\nname = \"demo\"\npresets = [\"claude\"]\n",
+		".ai-rulez/config.toml":    "version = \"5.0\"\nname = \"demo\"\npresets = [\"claude\"]\nagents_md = false\n",
 		".ai-rulez/rules/style.md": "# Style\n\nBe concise.\n",
 	}
 	for name, content := range files {

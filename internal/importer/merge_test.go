@@ -158,7 +158,7 @@ func TestConvert_Delivery(t *testing.T) {
 		{
 			name:       "an existing value wins",
 			opts:       ConvertOptions{Delivery: "served"},
-			existing:   "version = \"4.0\"\nname = \"mine\"\npresets = [\"claude\"]\n\n[skills]\ndelivery = \"static\"\n",
+			existing:   "version = \"5.0\"\nname = \"mine\"\npresets = [\"claude\"]\n\n[skills]\ndelivery = \"static\"\n",
 			wantGlobal: "static",
 		},
 	}

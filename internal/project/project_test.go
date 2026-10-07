@@ -25,7 +25,7 @@ func writeProject(t *testing.T, files map[string]string) string {
 func TestLoadWiresTheResolversAndTheRegistry(t *testing.T) {
 	// Arrange: a project with a local include and a built-in preset.
 	dir := writeProject(t, map[string]string{
-		".ai-rulez/config.toml":        "version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n\n[[includes]]\nname = \"shared\"\nsource = \"shared\"\n",
+		".ai-rulez/config.toml":        "version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n\n[[includes]]\nname = \"shared\"\nsource = \"shared\"\n",
 		"shared/rules/from-include.md": "# From the include\n",
 	})
 
@@ -49,7 +49,7 @@ func TestExplicitOptionsOverrideTheDefaults(t *testing.T) {
 	// Arrange
 	mine := config.NewRegistry()
 	dir := writeProject(t, map[string]string{
-		".ai-rulez/config.toml": "version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n",
+		".ai-rulez/config.toml": "version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n",
 	})
 
 	// Act
