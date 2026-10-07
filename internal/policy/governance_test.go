@@ -129,6 +129,70 @@ func TestApplyGovernance_RepoSelectorsStayExemptable(t *testing.T) {
 	assert.True(t, pol.Requires(approval.Subject{Kind: "skill", ID: "x", Class: approval.ClassLocal}))
 }
 
+// TestApplyGovernance_RepoTeamsCannotWidenAPinnedTeam is RV-GOV-2: the
+// repository adds itself to a team the policy's approvers list pins.
+func TestApplyGovernance_RepoTeamsCannotWidenAPinnedTeam(t *testing.T) {
+	include := approval.Subject{Kind: approval.KindInclude, ID: "shared", Class: approval.ClassRemote}
+	tests := []struct {
+		name         string
+		teams        map[string][]string
+		resolved     map[string][]string
+		wantCodes    []string
+		wantTeams    map[string][]string
+		authorized   []string
+		unauthorized []string
+	}{
+		{
+			name:         "a pinned team loses the repository's members",
+			teams:        map[string][]string{"@Acme/Security": {"mallory"}, "@acme/web": {"bob"}},
+			wantCodes:    []string{"AR740 governance.approvers"},
+			wantTeams:    map[string][]string{"@acme/web": {"bob"}},
+			unauthorized: []string{"github:mallory", "mallory"},
+		},
+		{
+			name:         "forge-resolved members count, the repository's never",
+			teams:        map[string][]string{"@acme/security": {"mallory"}},
+			resolved:     map[string][]string{"@acme/security": {"github:alice"}},
+			wantCodes:    []string{"AR740 governance.approvers"},
+			wantTeams:    map[string][]string{},
+			authorized:   []string{"github:alice"},
+			unauthorized: []string{"github:mallory"},
+		},
+		{
+			name:      "teams the policy does not pin are left alone",
+			teams:     map[string][]string{"@acme/web": {"bob"}},
+			wantTeams: map[string][]string{"@acme/web": {"bob"}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := testConfig(t, "")
+			cfg.Governance = &config.GovernanceConfig{Teams: tt.teams}
+			pol := Policy{Governance: Governance{RequireApproval: []string{"remote"}, Approvers: List{Set: true, Items: []string{"@acme/security"}}}}
+
+			// Act
+			res := Resolve([]Layer{layer("managed", pol)}).Apply(cfg)
+
+			// Assert
+			assert.Equal(t, tt.wantCodes, codes(res.Outcome))
+			assert.Equal(t, tt.wantTeams, cfg.Governance.Teams)
+			p := approval.PolicyOf(cfg)
+			if tt.resolved != nil {
+				p = p.WithResolvedTeams(tt.resolved)
+			}
+			for _, who := range tt.authorized {
+				assert.True(t, p.Authorized(who), who)
+			}
+			for _, who := range tt.unauthorized {
+				assert.False(t, p.Authorized(who), who)
+				assert.False(t, p.AuthorizedFor(who, include), who)
+				assert.False(t, p.Names(who, include), who)
+			}
+		})
+	}
+}
+
 func TestApplyGovernance_NoPolicyKeyLeavesTheRepoAlone(t *testing.T) {
 	cfg := testConfig(t, "")
 	cfg.Governance = &config.GovernanceConfig{Approvers: []string{"x"}}
