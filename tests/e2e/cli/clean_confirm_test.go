@@ -40,3 +40,15 @@ func TestCleanYesKeepsHandEditedFiles(t *testing.T) {
 	assert.Equal(t, 0, res.ExitCode, res.Stderr)
 	assert.NoFileExists(t, agents)
 }
+
+func TestDeclinedConfirmationExitsNonZero(t *testing.T) {
+	dir := cleanProject(t)
+
+	clean := testutil.RunCLI(t, dir, "clean")
+	assert.Equal(t, exitCannot, clean.ExitCode, "non-interactive clean without --yes did nothing")
+	assert.FileExists(t, filepath.Join(dir, "AGENTS.md"))
+
+	remove := testutil.RunCLI(t, dir, "remove", "rule", "style")
+	assert.Equal(t, exitCannot, remove.ExitCode, remove.Stdout+remove.Stderr)
+	assert.FileExists(t, filepath.Join(dir, ".ai-rulez", "rules", "style.md"))
+}

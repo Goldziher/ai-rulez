@@ -102,7 +102,7 @@ func runDomainRemove(cmd *cobra.Command, args []string) {
 	// Confirm removal unless --yes is specified
 	if !domainForce {
 		if !confirmRemoval("domain", name) {
-			logger.Info("Operation canceled")
+			exitDeclined("Operation canceled")
 			return
 		}
 	}
