@@ -140,10 +140,22 @@ func PolicyLocksIn(e PolicyEnforcer, feature, dir string) bool {
 	return e.Locks(feature)
 }
 
+// PolicyProjectDir is the directory the organization policy is discovered from:
+// PolicyDir, else BaseDir.
+func (c *Config) PolicyProjectDir() string {
+	if c == nil {
+		return ""
+	}
+	if c.PolicyDir != "" {
+		return c.PolicyDir
+	}
+	return c.BaseDir
+}
+
 // PolicyLocks reports whether the policy this configuration was loaded under
 // forbids network use of the feature, for the project this configuration is.
 func (c *Config) PolicyLocks(feature string) bool {
-	return PolicyLocksIn(c.Policy(), feature, baseDirOf(c))
+	return PolicyLocksIn(c.Policy(), feature, c.PolicyProjectDir())
 }
 
 // applyPolicy runs the installed enforcer on a loaded configuration and

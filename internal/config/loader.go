@@ -271,6 +271,7 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	config.Diag = diag.New(sink)
 
 	// The organization policy clamps the configuration before anything is fetched.
+	config.PolicyDir = lo.policyDir
 	if config.enforcer = lo.policy; config.enforcer == nil {
 		config.enforcer = policyFromContext(ctx)
 	}
