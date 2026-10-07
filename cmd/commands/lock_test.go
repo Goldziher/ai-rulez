@@ -19,6 +19,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const lockProjectConfig = `version = "4.0"
@@ -28,6 +29,9 @@ presets = ["claude"]
 
 func lockProject(t *testing.T, extraConfig string) string {
 	t.Helper()
+	// sign, approve and lock read the runner's GITHUB_* (provenance builder, repository,
+	// commit) and ACTIONS_ID_TOKEN_* (keyless); a test that wants one sets it after this.
+	testutil.ScrubCIEnv(t)
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig+extraConfig)
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "# Style\nUse tabs.\n")
