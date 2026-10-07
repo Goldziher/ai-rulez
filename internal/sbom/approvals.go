@@ -34,8 +34,9 @@ func newApprovalIndex(cfg *config.Config, lock *lockfile.File, items []lockfile.
 	policy := approval.PolicyOf(cfg)
 	subjects := approval.SubjectsOf(lock, items)
 	idx := &approvalIndex{results: map[string]approval.Result{}, records: lock.Approval, salt: tree, key: key, redact: redact}
-	for _, r := range policy.EvaluateAll(lock.Approval, subjects, now) {
-		idx.results[r.Key()] = r
+	results := policy.EvaluateAll(lock.Approval, subjects, now)
+	for i := range results {
+		idx.results[results[i].Key()] = results[i]
 	}
 	return idx
 }
@@ -106,7 +107,8 @@ func (x *approvalIndex) annotate(c *Component, kind, domain, id string) {
 	if c.info == nil {
 		c.info = &info{}
 	}
-	for _, rec := range x.records {
+	for i := range x.records {
+		rec := &x.records[i]
 		if rec.ItemKey() != s.Key() || rec.Digest != res.Digest {
 			continue
 		}
