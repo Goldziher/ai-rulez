@@ -27,6 +27,8 @@ exclude = [
   "internal/publish/emit/testdata/**",
   "internal/okf/testdata/**",
   "internal/okfbridge/testdata/**",
+  "internal/ard/schema/**",
+  "internal/ard/testdata/**",
   "internal/sbom/testdata/**",
   "internal/sbom/spdx_licenses.txt",
   "docs/snippets",
