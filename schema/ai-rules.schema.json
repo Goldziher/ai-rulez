@@ -1239,7 +1239,7 @@
             "properties": {
               "name": {
                 "type": "string",
-                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering"]
+                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering", "agent-plugins"]
               },
               "template": {
                 "type": "string",
@@ -2382,6 +2382,11 @@
         "include_evals": {
           "type": "boolean",
           "description": "Bundle eval cases: each skill's evals/ directory and the project-level evals/ tree (at <bundle>/evals/). Off by default."
+        },
+        "spec": {
+          "type": "string",
+          "enum": ["1.0.0", "1.1.0"],
+          "description": "Agent Plugins specification version of the agent-plugins, copilot and root-layout codex bundles. Default: 1.0.0."
         },
         "include_domains": {
           "type": "array",

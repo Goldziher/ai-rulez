@@ -2421,6 +2421,11 @@
           },
           "type": "array"
         },
+        "spec": {
+          "description": "Agent Plugins specification version of the agent-plugins, copilot and root-layout codex bundles. Default: 1.0.0.",
+          "enum": ["1.0.0", "1.1.0"],
+          "type": "string"
+        },
         "statusline": {
           "additionalProperties": false,
           "description": "Claude-only status-line script passthrough.",
@@ -2623,7 +2628,7 @@
             "additionalProperties": false,
             "properties": {
               "name": {
-                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering"],
+                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering", "agent-plugins"],
                 "type": "string"
               },
               "options": {
