@@ -106,8 +106,8 @@ func collectItems(tree *config.ContentTree, include map[Kind]bool, res *ExportRe
 			}
 			files := append([]config.ContentFile(nil), lists[k]...)
 			sort.SliceStable(files, func(i, j int) bool { return itemID(k, files[i]) < itemID(k, files[j]) })
-			for _, cf := range files {
-				items = append(items, sourceItem{kind: k, domain: domain, cf: cf})
+			for i := range files {
+				items = append(items, sourceItem{kind: k, domain: domain, cf: files[i]})
 			}
 		}
 	}
@@ -278,7 +278,7 @@ func kindName(k Kind) string {
 
 // fieldsNode builds an ordered mapping node.
 func fieldsNode(fields []okf.Field) *yaml.Node {
-	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	n := &yaml.Node{Kind: yaml.MappingNode, Tag: yamlMapTag}
 	for _, f := range fields {
 		key := &yaml.Node{Kind: yaml.ScalarNode, Tag: tagStr, Value: f.Key}
 		var val yaml.Node
