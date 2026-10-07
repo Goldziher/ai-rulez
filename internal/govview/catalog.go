@@ -250,7 +250,7 @@ func ClampLimit(limit int) int {
 }
 
 // CatalogView is a catalog narrowed by kind and role and capped at a limit. With
-// no filter and fewer items than the limit it serialises exactly as CatalogDoc.
+// no filter and fewer items than the limit it serializes exactly as CatalogDoc.
 type CatalogView struct {
 	*CatalogDoc
 	// TotalItems is the number of matching items before the cap; set only when
