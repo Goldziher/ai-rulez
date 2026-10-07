@@ -73,3 +73,34 @@ func TestFetchLocalGitRepoAtRef(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "v2")
 }
+
+func TestFetchRejectsSymlinkedSubdir(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	secret := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(secret, "s.md"), []byte("---\ntype: Decision\n---\nhost file\n"), 0o644))
+	repo := t.TempDir()
+	run := func(args ...string) {
+		cmd := exec.Command("git", append([]string{"-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
+		cmd.Dir = repo
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+	}
+	run("init", "--quiet", "-b", "main")
+	require.NoError(t, os.Symlink(secret, filepath.Join(repo, "sub")))
+	require.NoError(t, os.MkdirAll(filepath.Join(repo, "real"), 0o755))
+	require.NoError(t, os.Symlink(secret, filepath.Join(repo, "real", "inner")))
+	run("add", ".")
+	run("commit", "--quiet", "-m", "one")
+
+	for _, sub := range []string{"sub", "real/inner"} {
+		src, err := okfbridge.ParseSource("file://" + repo + "#" + sub)
+		require.NoError(t, err)
+		dir, cleanup, err := src.Fetch(context.Background())
+		if err == nil {
+			cleanup()
+		}
+		assert.ErrorContains(t, err, "symlink", "%s resolved to %s", sub, dir)
+	}
+}
