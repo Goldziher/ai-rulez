@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// Live evaluation of Judge against Gemini on a labelled golden set
+// Live evaluation of Judge against Gemini on a labeled golden set
 // (testdata/judge_golden.json) and an injection set. Gated by
 // AI_RULEZ_LIVE_LLM=1. Set AI_RULEZ_LIVE_OUT to a directory to get the metrics
 // as JSON. Cache is off, so every repeat is a real call.

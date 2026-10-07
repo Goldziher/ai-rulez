@@ -14,7 +14,7 @@ type Pattern struct {
 	Re   *regexp.Regexp
 }
 
-// Builtin is the credential shapes the security scan recognises.
+// Builtin is the credential shapes the security scan recognizes.
 var Builtin = []Pattern{
 	{"AWS access key id", regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`)},
 	{"GitHub token", regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{36,}\b`)},

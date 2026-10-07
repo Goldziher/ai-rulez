@@ -15,7 +15,7 @@ import (
 )
 
 // Live QA of the backends beyond the parity checks in live_test.go: cache
-// behaviour on real replies, budget stops, typed errors. Gated by
+// behavior on real replies, budget stops, typed errors. Gated by
 // AI_RULEZ_LIVE_LLM=1 and GEMINI_API_KEY; every request is a few tokens.
 
 // recorder wraps a Client and remembers what was sent and what came back.

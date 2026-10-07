@@ -46,7 +46,7 @@ func TestPlainHTTPOptInIsUserScopeOnlyAndReported(t *testing.T) {
 	if cfg.AllowPlainHTTP || len(cfg.PlainHTTPHosts) > 0 || cfg.Err() == nil {
 		t.Fatalf("repo opt-in must have no effect: %+v", cfg)
 	}
-	// user scope (or the environment) honours it, and doctor reports the use
+	// user scope (or the environment) honors it, and doctor reports the use
 	env := map[string]string{"AI_RULEZ_LLM_ALLOW_PLAIN_HTTP": "1", "AI_RULEZ_LLM_PLAIN_HTTP_HOSTS": "gateway.internal, other:80"}
 	got, err := cfg.WithEnv(func(k string) string { return env[k] })
 	if err != nil || got.Err() != nil || !got.UsesPlainHTTPOptIn() {

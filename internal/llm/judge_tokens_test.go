@@ -15,7 +15,7 @@ func TestJudge_CompletionBudget(t *testing.T) {
 		want int
 	}{
 		{name: "the default leaves room for a thinking model", opts: JudgeOptions{}, want: DefaultJudgeCompletionTokens},
-		{name: "a larger floor is honoured", opts: JudgeOptions{MinCompletionTokens: 8000}, want: 8000},
+		{name: "a larger floor is honored", opts: JudgeOptions{MinCompletionTokens: 8000}, want: 8000},
 		{name: "a smaller floor never goes below the verdict itself", opts: JudgeOptions{MinCompletionTokens: 50}, want: DefaultJudgeCompletionTokens},
 	}
 	for _, tt := range tests {
