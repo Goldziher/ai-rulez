@@ -437,6 +437,25 @@ func TestCheckLock(t *testing.T) {
 	}
 }
 
+func TestCheckIncludes_ReportsAnUncachedRemoteInclude(t *testing.T) {
+	// Arrange
+	cfg := baseConfig + "\n[[includes]]\nname = \"shared\"\nsource = \"https://github.com/acme/rules.git\"\nref = \"main\"\n"
+	dir := project(t, map[string]string{".ai-rulez/config.toml": cfg})
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	t.Setenv("HOME", t.TempDir())
+
+	// Act
+	got := byCheck(run(t, dir), CheckIncludes)
+
+	// Assert
+	if len(got) != 1 || got[0].Severity != SeverityWarning || !strings.Contains(got[0].Message, `"shared"`) {
+		t.Fatalf("findings = %+v, want one warning naming the include", got)
+	}
+	if clean := byCheck(run(t, project(t, map[string]string{".ai-rulez/config.toml": baseConfig})), CheckIncludes); len(clean) != 0 {
+		t.Errorf("no includes: findings = %+v, want none", clean)
+	}
+}
+
 func TestCheckTools(t *testing.T) {
 	cfg := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\", \"codex\", \"mcp\", \"claude\"]\ngitignore = false\n"
 	dir := project(t, map[string]string{".ai-rulez/config.toml": cfg})

@@ -12,7 +12,10 @@ import (
 // Test circular dependency detection
 func TestResolverCircularDependencyDetection(t *testing.T) {
 	// This test verifies that circular dependencies are caught
-	// Note: ResolveIncludes logs warnings but continues processing
+	// Note: a failing include is an error unless the run is offline
+	oldSkip := SkipFetch
+	SkipFetch = true
+	defer func() { SkipFetch = oldSkip }()
 	resolver := NewResolver("/tmp", "")
 
 	// Create two includes with the same name (represents circular reference)

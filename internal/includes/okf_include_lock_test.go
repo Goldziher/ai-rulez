@@ -221,9 +221,9 @@ func TestOKFInclude_SecurityFindingRefusesTheBundle(t *testing.T) {
 	OKFScan = func(map[string]string) []okfbridge.SecurityFinding {
 		return []okfbridge.SecurityFinding{{Code: "AR001", Severity: okfbridge.SeverityError, File: "decisions/shared.md", Message: "secret"}}
 	}
-	cfg, err := f.load(t)
-	require.NoError(t, err, "a refused include is skipped with a warning")
-	assert.Empty(t, f.body(cfg), "a refused bundle contributes nothing")
+	_, err := f.load(t)
+	require.Error(t, err, "a refused include stops the load")
+	assert.Contains(t, err.Error(), "kb")
 }
 
 func TestOKFInclude_GitRunsHardenedAndScrubbed(t *testing.T) {

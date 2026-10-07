@@ -197,6 +197,28 @@ func checkMCPEnv(_ context.Context, s *state) []Finding {
 	return out
 }
 
+// checkIncludes: a remote include with no cached copy cannot be rendered offline.
+// Doctor never fetches, so it cannot tell whether the remote is reachable; it
+// reports what it can see, since `generate` fails when an include can be neither
+// fetched nor read from the cache.
+func checkIncludes(_ context.Context, s *state) []Finding {
+	if s.cfg == nil {
+		return nil
+	}
+	var out []Finding
+	for _, w := range includes.NotCached(s.cfg) {
+		if w.Kind != lockfile.KindInclude {
+			continue
+		}
+		out = append(out, Finding{
+			Check: CheckIncludes, Severity: SeverityWarning, Path: w.Name,
+			Message: fmt.Sprintf("include %q is not cached: generate needs the network to fetch it, and fails when the remote is unreachable", w.Name),
+			Hint:    "run `ai-rulez generate` (or `ai-rulez lock`) while online to populate the cache",
+		})
+	}
+	return out
+}
+
 // checkDrift: generated files match what the sources render (generate --check).
 func checkDrift(_ context.Context, s *state) []Finding {
 	if s.cfg == nil {

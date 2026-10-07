@@ -362,11 +362,12 @@ Each include carries its own strategy. Includes are not recursive: an include co
 content, and any `includes` declared in the included configuration are ignored. Domains from an
 include are always carried over; `include` filters content kinds, not domains.
 
-An include that cannot be created, fetched or merged is logged as a warning and skipped; the other
-includes and your own content are still generated. Run `ai-rulez validate --verbose` to see the
-warning. Under `generate --locked`, `generate --frozen` or an enforced lock (`[lock] enforce`, on whenever
-`ai-rulez.lock` exists), it is an error instead: generating without the include would produce output the lock never
-saw.
+An include that cannot be created, fetched or merged is an error: the command exits `1` and names the
+include. A remote include that is unreachable falls back to its cached copy when one exists; with no cache there
+is nothing to render. This holds for `generate`, `generate --check`, `validate`, `doctor` and every other command
+that loads the configuration, so a CI gate cannot pass on a checkout that renders without the include. Under
+`--no-fetch` (cached content only) an include that cannot be resolved is logged as a warning and skipped instead,
+and `ai-rulez lock` reports it as a problem of its own.
 
 Included content never follows symlinks: a symlinked file or directory (a rule, skill, agent, command, context or
 check file, `rules/`, `skills/` and so on, domains, or the include's `.ai-rulez/` itself) is skipped with a warning

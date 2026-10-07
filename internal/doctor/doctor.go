@@ -42,6 +42,7 @@ const (
 	CheckMCPEnv    = "mcp-env"
 	CheckHooks     = "hooks"
 	CheckLock      = "lock"
+	CheckIncludes  = "includes"
 	CheckTools     = "tools"
 )
 
@@ -131,6 +132,7 @@ func Run(ctx context.Context, o Options) *Report {
 		checkDocuments,
 		checkOKF,
 		checkHooks,
+		checkIncludes,
 		checkLock,
 		checkLLM,
 		checkTools,
