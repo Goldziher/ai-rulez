@@ -42,6 +42,9 @@ func policyProject(t *testing.T, tomlBody string) *scannerProject {
 // fakeBin installs an executable shell script called name on PATH for the test.
 func fakeBin(t *testing.T, name, body string) string {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("fake scanners are POSIX shell scripts")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, name)
 	require.NoError(t, os.WriteFile(path, []byte("#!/bin/sh\n"+body), 0o755)) //nolint:gosec // a test script

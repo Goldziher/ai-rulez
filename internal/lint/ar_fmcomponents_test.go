@@ -77,6 +77,9 @@ func TestFrontmatterHooksAreChecked(t *testing.T) {
 				if tt.mode != 0 {
 					require.NoError(t, os.Chmod(filepath.Join(root, "tools/hook.sh"), tt.mode))
 					gitAdd(t, root) // the index records the mode lint reads
+					if tt.mode&0o111 != 0 {
+						gitSetExec(t, root, "tools/hook.sh") // Windows cannot express the bit on disk
+					}
 				}
 
 				// Act
