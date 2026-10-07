@@ -76,7 +76,7 @@ func TestBootstrapGain_IsDeterministicAndOrderedByTheData(t *testing.T) {
 	require.NotNil(t, a)
 	assert.Equal(t, a, b, "the same run reports the same interval")
 	assert.Equal(t, BootstrapResamples, a.Resamples)
-	assert.InDelta(t, 4.0/12, (a.Low+a.High)/2, 0.2, "the interval is centred near the observed gain")
+	assert.InDelta(t, 4.0/12, (a.Low+a.High)/2, 0.2, "the interval is centered near the observed gain")
 	assert.Greater(t, shifted.High, a.Low)
 }
 

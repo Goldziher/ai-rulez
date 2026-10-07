@@ -57,7 +57,7 @@ func TestSanitizeMultiline(t *testing.T) {
 	tests := []struct{ name, in, want string }{
 		{"keeps lines and tabs", "a\n\tb\r\nc", "a\n\tb\nc"},
 		{"terminal escape", "x\x1b[2Jy", "x�[2Jy"},
-		{"bidi override", "a‮b", "a�b"},
+		{"bidi override", "a\u202eb", "a�b"},
 		{"bell and nul", "a\x07\x00b", "a��b"},
 	}
 	for _, tt := range tests {

@@ -172,9 +172,9 @@ func TestExecute_SiblingGuardNeverCopiesTheTargetsEvalCases(t *testing.T) {
 
 func TestExecute_SiblingGuardSkipsASiblingItCannotCopyAndSaysSo(t *testing.T) {
 	tests := []struct {
-		name   string
-		break_ func(t *testing.T, dir string)
-		why    string
+		name    string
+		breakIt func(t *testing.T, dir string)
+		why     string
 	}{
 		{"oversized SKILL.md", func(t *testing.T, dir string) {
 			big := rollbackSkill + strings.Repeat("padding line to push the file past the copy bound\n", 25000)
@@ -196,7 +196,7 @@ func TestExecute_SiblingGuardSkipsASiblingItCannotCopyAndSaysSo(t *testing.T) {
 			require.NoError(t, os.MkdirAll(filepath.Join(broken, "evals"), 0o750))
 			require.NoError(t, os.WriteFile(filepath.Join(broken, "SKILL.md"), []byte(rollbackSkill), 0o600))
 			require.NoError(t, os.WriteFile(filepath.Join(broken, "evals", "t.eval.yaml"), []byte(strings.ReplaceAll(rollbackCases, "rb-", "bk-")), 0o600))
-			tt.break_(t, broken)
+			tt.breakIt(t, broken)
 			opt := optimizer(t, func(dir string, _ *OptimizerRequest, _ runner.Spec) {
 				setDescription(t, dir, "Deploy services to staging. Use when asked to deploy, ship or push a service to staging.")
 			})
