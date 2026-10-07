@@ -877,9 +877,18 @@ func (r *runner) checkFrontmatterSkills(it *item, d doc) {
 	if it.cf.Metadata == nil {
 		return
 	}
+	var served map[string]bool
 	for _, s := range it.cf.Metadata.Skills {
 		key := strings.ToLower(strings.TrimSpace(s))
 		r.depName(it.abs, key)
+		if served == nil {
+			served = r.servedSkillNames()
+		}
+		if served[key] {
+			r.add(CodeServedReferencedStatically, it.abs, d.lineOf(s, 1),
+				"frontmatter skills: preloads %q, which is served and not written to the harness's skill tree. Set delivery: both on it or drop it from skills:", s)
+			continue
+		}
 		if key == "" || strings.Contains(key, ":") || r.skills[key] || r.commands[key] {
 			continue
 		}

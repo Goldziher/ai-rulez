@@ -192,7 +192,7 @@ func registerRuledocsAdded(s *ruleSet) {
 		},
 		CodeServedReferencedStatically: {
 			Why:  "A static item that names a served skill points at a file the harness never gets.",
-			Bad:  "A rule saying \"run the `deploy` skill\" when `deploy` is served",
+			Bad:  "A rule saying \"run the `deploy` skill\", or an agent `skills: [deploy]`, when `deploy` is served",
 			Good: "Tell the agent to call `find_skill`, or make the skill static",
 		},
 		CodeDeliveryStubMissing: {
