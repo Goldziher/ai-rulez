@@ -143,7 +143,7 @@ func TestJSONL_SkillEventsStayReadableByUsageReaders(t *testing.T) {
 	}
 	info, err := os.Stat(path)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	assertPerm(t, 0o600, info)
 
 	entries, skipped, err := usage.ReadLog(path)
 	require.NoError(t, err)
