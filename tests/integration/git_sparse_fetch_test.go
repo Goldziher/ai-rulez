@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // register callbacks
 )
 
@@ -222,17 +222,13 @@ include = ["rules"]
 	_, err := loadWithResolvers(context.Background(), consumerDir)
 	require.NoError(t, err)
 
-	// Enable SkipFetch, restore on test exit.
-	includes.SkipFetch = true
-	t.Cleanup(func() { includes.SkipFetch = false })
-
 	// Rename the repo so any git access would fail.
 	renamed := repoDir + "-renamed"
 	require.NoError(t, os.Rename(repoDir, renamed))
 	t.Cleanup(func() { os.Rename(renamed, repoDir) }) //nolint:errcheck
 
-	// Second load — must succeed using cached content.
-	cfg2, err := loadWithResolvers(context.Background(), consumerDir)
+	// Second load, offline (--no-fetch) — must succeed using cached content.
+	cfg2, err := loadWithResolvers(context.Background(), consumerDir, config.WithLockPolicy(config.LockPolicy{Offline: true}))
 	require.NoError(t, err)
 
 	tree, err := cfg2.GetContentForProfile("default")

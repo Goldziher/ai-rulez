@@ -18,11 +18,9 @@ import (
 func enforceProject(t *testing.T, lockTable string) {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
-	includes.Mode, includes.RefreshFilter, includes.SkipFetch, includes.RequireWhenEnforced = includes.LockAuto, nil, false, false
+	cliLockPolicy = config.LockPolicy{}
 	includes.ResetObserved()
-	t.Cleanup(func() {
-		includes.Mode, includes.RefreshFilter, includes.SkipFetch, includes.RequireWhenEnforced = includes.LockAuto, nil, false, false
-	})
+	t.Cleanup(func() { cliLockPolicy = config.LockPolicy{} })
 	root := lockProject(t, lockTable)
 	require.Equal(t, 0, writeLockAt("", "", nil))
 	remote := crossRepo(t, ".ai-rulez/rules/shared.md", "# Shared\nBe kind.\n")
@@ -51,16 +49,48 @@ func TestEnforceDefaultsOnWhenALockExists(t *testing.T) {
 
 func TestEnforce_GenerateRefusesAnUnlockedRemoteInclude(t *testing.T) {
 	enforceProject(t, "")
-	includes.RequireWhenEnforced = true // what generate sets
+	applyLockFlags() // what generate sets before it loads anything
 	_, err := loadForLock("")
 	require.ErrorIs(t, err, config.ErrLockViolation)
 	assert.Contains(t, err.Error(), "not covered by ai-rulez.lock")
 	assert.Contains(t, err.Error(), "ai-rulez lock")
 }
 
+// TestApplyLockFlags pins the lock policy generate's flags give its loads: every
+// generate run requires an enforced lock (RV-ENGINE-1), --locked and --frozen
+// require a lock outright, and --frozen and --no-fetch stay offline.
+func TestApplyLockFlags(t *testing.T) {
+	tests := []struct {
+		name                    string
+		locked, frozen, noFetch bool
+		want                    config.LockPolicy
+	}{
+		{name: "plain generate", want: config.LockPolicy{RequireWhenEnforced: true}},
+		{name: "--no-fetch", noFetch: true, want: config.LockPolicy{RequireWhenEnforced: true, Offline: true}},
+		{name: "--locked", locked: true, want: config.LockPolicy{Mode: config.LockRequire, RequireWhenEnforced: true}},
+		{name: "--frozen", frozen: true, want: config.LockPolicy{Mode: config.LockFrozen, RequireWhenEnforced: true, Offline: true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			t.Cleanup(func() {
+				generateLocked, generateFrozen, noFetch = false, false, false
+				cliLockPolicy = config.LockPolicy{}
+			})
+			generateLocked, generateFrozen, noFetch = tt.locked, tt.frozen, tt.noFetch
+
+			// Act
+			applyLockFlags()
+
+			// Assert
+			assert.Equal(t, tt.want, cliLockPolicy)
+		})
+	}
+}
+
 func TestEnforce_OptOutFetchesTheUnlockedIncludeAsBefore(t *testing.T) {
 	enforceProject(t, "[lock]\nenforce = false\n")
-	includes.RequireWhenEnforced = true
+	cliLockPolicy.RequireWhenEnforced = true
 	cfg, err := loadForLock("")
 	require.NoError(t, err)
 	assert.NotEmpty(t, includes.Unpinned(cfg))
@@ -68,7 +98,7 @@ func TestEnforce_OptOutFetchesTheUnlockedIncludeAsBefore(t *testing.T) {
 
 func TestEnforce_UnpinnedRemoteIsAnErrorFindingUnderEnforceAndAWarningWithout(t *testing.T) {
 	enforceProject(t, "")
-	includes.SkipFetch = false
+	cliLockPolicy.Offline = false
 	cfg, err := loadForLock("")
 	require.NoError(t, err)
 	severity := func() string {

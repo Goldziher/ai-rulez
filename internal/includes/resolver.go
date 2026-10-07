@@ -43,6 +43,7 @@ func NewResolver(baseDir string, accessToken string) *Resolver {
 // ResolveIncludes loads all includes and merges with local content
 func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*config.ContentTree, error) {
 	cfg.Log().Debug("Resolving includes", "count", len(cfg.Includes))
+	ctx = policyContext(ctx, cfg)
 	r.memo = memoFor(cfg)
 	r.cfg = cfg
 	lock, err := loadLockFor(cfg)
@@ -95,7 +96,7 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 	// `generate --check` would pass on a broken checkout. Only an explicit offline
 	// run (--no-fetch) keeps the warning, since it asked for cached content only,
 	// and `lock` (refresh), which collects the failures and reports them itself.
-	if len(failures) > 0 && ((!tolerated(ctx) && Mode != LockRefresh) || strictLock(cfg)) {
+	if len(failures) > 0 && ((!tolerated(ctx) && cfg.LockPolicy.Mode != LockRefresh) || strictLock(cfg)) {
 		return nil, errors.Join(failures...)
 	}
 	// Only a run that goes on without the include warns: otherwise the returned
@@ -115,7 +116,7 @@ type includeFailure struct {
 // tolerated reports whether the run goes on without an include it cannot
 // resolve: an explicit offline run, or a command that only inventories sources.
 func tolerated(ctx context.Context) bool {
-	return SkipFetch || config.OfflineIncludes(ctx) || config.UnresolvedIncludesTolerated(ctx)
+	return config.OfflineIncludes(ctx) || config.UnresolvedIncludesTolerated(ctx)
 }
 
 // processInclude handles a single include configuration
@@ -177,7 +178,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		return r.createOKFSource(ctx, includeConf)
 	}
 	// Check for local override: use a local path instead of git
-	if includeConf.LocalOverride != "" && !refreshing(lockfile.KindInclude, includeConf.Name) {
+	if includeConf.LocalOverride != "" && !refreshing(r.cfg, lockfile.KindInclude, includeConf.Name) {
 		if err := checkLocalOverride(r.cfg, "includes", includeConf.Name); err != nil {
 			return nil, err
 		}
@@ -225,7 +226,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		if err != nil {
 			return nil, err
 		}
-		ref, err := versionRef(ctx, r.lock, w, p, stripGitPlus(includeConf.Source), r.accessToken, r.baseDir)
+		ref, err := versionRef(ctx, r.cfg, r.lock, w, p, stripGitPlus(includeConf.Source), r.accessToken, r.baseDir)
 		if err != nil {
 			return nil, err
 		}

@@ -158,7 +158,6 @@ func newSearchEnv(ctx context.Context, mode string) (*searchEnv, error) {
 		Offline: searchFlags.offline, NoWatch: true, WorkDir: workingDir(),
 	}
 	setupSrv.Filter.Domains, setupSrv.Filter.Allow, setupSrv.Filter.Deny = searchFlags.domains, searchFlags.allow, searchFlags.deny
-	applyServeNetworkPolicy(setupSrv.Frozen, setupSrv.Offline)
 	srv, err := setupSrv.NewServer(ctx)
 	if err != nil {
 		return nil, oops.Wrapf(err, "search: build the skill catalog")

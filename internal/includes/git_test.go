@@ -735,10 +735,7 @@ func TestGitSourceFetch_SkipFetch_MissingCache(t *testing.T) {
 		accessToken: "",
 	}
 
-	t.Cleanup(func() { SkipFetch = false })
-	SkipFetch = true
-
-	_, err := source.Fetch(context.Background())
+	_, err := source.Fetch(config.WithNoFetch(context.Background()))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no cached")
 }
@@ -762,10 +759,7 @@ func TestGitSourceFetch_SkipFetch_WithCache(t *testing.T) {
 	_, err := source.Fetch(ctx)
 	require.NoError(t, err)
 
-	t.Cleanup(func() { SkipFetch = false })
-	SkipFetch = true
-
-	tree, err := source.Fetch(ctx)
+	tree, err := source.Fetch(config.WithNoFetch(ctx))
 	require.NoError(t, err)
 	assert.NotEmpty(t, tree.Rules)
 }

@@ -16,9 +16,9 @@ import (
 func lockedProject(t *testing.T) string {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
-	includes.Mode, includes.SkipFetch = includes.LockAuto, false
+	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 	t.Cleanup(func() {
-		includes.Mode, includes.SkipFetch, includes.RequireWhenEnforced = includes.LockAuto, false, false
+		cliLockPolicy.Mode, cliLockPolicy.Offline, cliLockPolicy.RequireWhenEnforced = includes.LockAuto, false, false
 	})
 	root := lockProject(t, "")
 	require.Equal(t, 0, writeLockAt("", "", nil), "lock")

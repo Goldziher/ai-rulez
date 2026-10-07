@@ -11,7 +11,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -38,11 +37,10 @@ func lockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remot
 // are not cached (and only then: any other load error is returned as it is) the
 // load falls back to skipping them (remoteSkipped).
 func loadForLockCheck(path string) (cfg *config.Config, remoteSkipped bool, err error) {
-	prev := includes.SkipFetch
-	includes.SkipFetch = true
-	defer func() { includes.SkipFetch = prev }()
+	offline := cliLockPolicy
+	offline.Offline = true
 	return loadWithCacheFallback(func(opts ...config.LoadOption) (*config.Config, error) {
-		return loadForLock(path, append([]config.LoadOption{config.WithoutLocal()}, opts...)...)
+		return loadForLock(path, append([]config.LoadOption{config.WithoutLocal(), config.WithLockPolicy(offline)}, opts...)...)
 	})
 }
 

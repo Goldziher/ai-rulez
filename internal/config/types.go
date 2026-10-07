@@ -182,6 +182,9 @@ type Config struct {
 	// Resolve are the resolvers this config was loaded with (WithResolvers); nested
 	// loads of the same project (a baseline render, a shared view) reuse them.
 	Resolve Resolvers `yaml:"-" json:"-" toml:"-"`
+	// LockPolicy is how this config was loaded against ai-rulez.lock
+	// (WithLockPolicy); the includes resolvers and nested loads read it.
+	LockPolicy LockPolicy `yaml:"-" json:"-" toml:"-"`
 	// Workspace is the project tree this config was loaded from (WithWorkspace,
 	// or the repository containing BaseDir); nil on a Config built by hand.
 	Workspace workspace.Workspace `yaml:"-" json:"-" toml:"-"`

@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
@@ -90,8 +89,8 @@ func TestLockCheckVerifyTagsFindsTheMovedTagItself(t *testing.T) {
 }
 
 func TestVerifyTagsWanted(t *testing.T) {
-	prev := includes.SkipFetch
-	t.Cleanup(func() { includes.SkipFetch, lockOffline = prev, false })
+	prev := cliLockPolicy.Offline
+	t.Cleanup(func() { cliLockPolicy.Offline, lockOffline = prev, false })
 	on := &config.Config{Lock: &config.LockConfig{VerifyTags: true}}
 	off := &config.Config{}
 	tests := []struct {
@@ -110,7 +109,7 @@ func TestVerifyTagsWanted(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			includes.SkipFetch = tt.offline
+			cliLockPolicy.Offline = tt.offline
 
 			got, err := verifyTagsWanted(tt.cfg, tt.flag)
 

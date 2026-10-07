@@ -6,7 +6,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
@@ -125,7 +124,10 @@ func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dyn
 	if !refresh(lockfile.KindSource) && !refresh(lockfile.KindServed) {
 		return nil, nil
 	}
-	setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true, Offline: includes.SkipFetch}
+	// The views load under the lock run's policy, so a refresh re-resolves the
+	// same sources the run's own load did.
+	policy := cfg.LockPolicy
+	setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true, Offline: policy.Offline, LockPolicy: &policy}
 	res, err := setup.LockViews(cmdContext(), extras)
 	if err != nil {
 		return []string{err.Error()}, nil
@@ -232,15 +234,11 @@ func keepConfigured(entries []lockfile.Entry, keep map[string]bool) []lockfile.E
 // dynamicLockChanges reports the source and served pins that disagree with the
 // configuration and the local cache, as changes for `lock --check` and `--diff`.
 func dynamicLockChanges(cfg *config.Config, lock *lockfile.File) []contentlock.Change {
-	defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
-	includes.SkipFetch = true
-	return mcp.DynamicLockChanges(cmdContext(), cfg, lock, Version, lockExtraViews()...)
+	return mcp.DynamicLockChanges(config.WithOfflineIncludes(cmdContext()), cfg, lock, Version, lockExtraViews()...)
 }
 
 // checkDynamicLock verifies the source and served pins against the configuration
 // and the local cache without the network.
 func checkDynamicLock(cfg *config.Config, lock *lockfile.File) []string {
-	defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
-	includes.SkipFetch = true
-	return mcp.DynamicLockProblems(cmdContext(), cfg, lock, Version, lockExtraViews()...)
+	return mcp.DynamicLockProblems(config.WithOfflineIncludes(cmdContext()), cfg, lock, Version, lockExtraViews()...)
 }

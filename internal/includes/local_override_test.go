@@ -29,10 +29,7 @@ func TestCheckLocalOverride(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			old := Mode
-			Mode = tt.mode
-			t.Cleanup(func() { Mode = old })
-			cfg := &config.Config{LocalOverlay: tt.overlay}
+			cfg := &config.Config{LocalOverlay: tt.overlay, LockPolicy: config.LockPolicy{Mode: tt.mode}}
 
 			// Act
 			err := checkLocalOverride(cfg, "includes", "shared")
@@ -50,10 +47,7 @@ func TestCheckLocalOverride(t *testing.T) {
 
 func TestResolver_CreateSource_RefusesCommittedLocalOverrideUnderLock(t *testing.T) {
 	// Arrange
-	old := Mode
-	Mode = LockRequire
-	t.Cleanup(func() { Mode = old })
-	r := &Resolver{baseDir: t.TempDir(), cfg: &config.Config{}}
+	r := &Resolver{baseDir: t.TempDir(), cfg: &config.Config{LockPolicy: config.LockPolicy{Mode: LockRequire}}}
 
 	// Act
 	_, err := r.createSource(context.Background(), &config.IncludeConfig{Name: "shared", Source: "https://example.com/r.git", LocalOverride: "../x"})

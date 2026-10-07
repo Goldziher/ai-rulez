@@ -37,7 +37,7 @@ func resetUpdateFlags(t *testing.T) {
 	reset := func() {
 		lockOutdated, lockFailOnOutdated, lockOffline, lockFormat, lockKind = false, false, false, "", ""
 		updateDryRun, updateAllowDowngrade, updateAcceptMoved, updateKind, updateFormat, updateOffline = false, false, false, "", "", false
-		includes.Mode, includes.SkipFetch, includes.RefreshFilter = includes.LockAuto, false, nil
+		cliLockPolicy.Mode, cliLockPolicy.Offline, cliLockPolicy.Refresh = includes.LockAuto, false, nil
 		includes.Advance, includes.AllowDowngrade, includes.AcceptMovedTag = nil, false, false
 	}
 	reset()

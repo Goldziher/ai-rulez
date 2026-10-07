@@ -32,7 +32,7 @@ type OKFSource struct {
 
 func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig) (Source, error) {
 	source := c.Source
-	if c.LocalOverride != "" && !refreshing(lockfile.KindInclude, c.Name) {
+	if c.LocalOverride != "" && !refreshing(r.cfg, lockfile.KindInclude, c.Name) {
 		if err := checkLocalOverride(r.cfg, "includes", c.Name); err != nil {
 			return nil, err
 		}
@@ -51,7 +51,7 @@ func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig)
 		if err != nil {
 			return nil, err
 		}
-		ref, err := versionRef(withHardenedGit(ctx), r.lock, w, p, source, r.accessToken, r.baseDir)
+		ref, err := versionRef(withHardenedGit(ctx), r.cfg, r.lock, w, p, source, r.accessToken, r.baseDir)
 		if err != nil {
 			return nil, err
 		}

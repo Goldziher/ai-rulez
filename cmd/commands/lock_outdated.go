@@ -82,7 +82,7 @@ func (l *tagLister) of(ctx context.Context, s versionSrc) ([]tagresolve.RawTag, 
 
 // requireOnline is the --offline refusal of the commands that read remote tags.
 func requireOnline(command string) error {
-	if lockOffline || includes.SkipFetch {
+	if lockOffline || cliLockPolicy.Offline {
 		return oops.Hint("`ai-rulez lock --check` verifies the lock offline").
 			Errorf("%s reads the remote's tags and needs the network; it cannot run with --offline", command)
 	}

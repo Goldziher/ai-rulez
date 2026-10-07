@@ -210,7 +210,7 @@ func (g *Generator) sharedPluginView() (*Generator, error) {
 	cfgPath := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
 	cfg, err := config.LoadConfigFromFile(g.context(), cfgPath,
 		config.WithoutLocal(), config.WithIncludeMemo(g.config.IncludeMemo), config.WithResolvers(g.config.Resolve),
-		config.WithPolicy(g.config.Policy()))
+		config.WithPolicy(g.config.Policy()), config.WithLockPolicy(g.config.LockPolicy))
 	if err != nil {
 		return nil, oops.With("config", cfgPath).Wrapf(err, "load the shared configuration for the plugin drift check")
 	}

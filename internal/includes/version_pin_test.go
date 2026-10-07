@@ -67,7 +67,7 @@ source = "`+f.repo.URL+`"
 func resetPolicy(t *testing.T) {
 	t.Helper()
 	reset := func() {
-		Mode, RefreshFilter, SkipFetch = LockAuto, nil, false
+		lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false
 		Advance, AllowDowngrade, AcceptMovedTag = nil, false, false
 		ResetObserved()
 	}
@@ -80,13 +80,13 @@ func (f *versionFixture) load(t *testing.T) (*config.Config, error) {
 	return loadWithResolvers(context.Background(), f.project, config.WithoutLocal())
 }
 
-// refresh runs `ai-rulez lock` (Mode refresh) and returns the lock and the problems.
+// refresh runs `ai-rulez lock` (lockPolicy.Mode refresh) and returns the lock and the problems.
 func (f *versionFixture) refresh(t *testing.T, current *lockfile.File) (*lockfile.File, []string) {
 	t.Helper()
-	Mode = LockRefresh
-	RefreshFilter = nil
+	lockPolicy.Mode = LockRefresh
+	lockPolicy.Refresh = nil
 	ResetObserved()
-	defer func() { Mode = LockAuto }()
+	defer func() { lockPolicy.Mode = LockAuto }()
 	cfg, err := f.load(t)
 	require.NoError(t, err)
 	return BuildLock(cfg, current)
@@ -118,7 +118,7 @@ func TestVersionPin_GenerateUsesThePinNotTheTags(t *testing.T) {
 	lock := f.refresh2(t)
 	require.NotNil(t, lock)
 	f.release(t, "release 1.9", "v1.9.0", false) // a newer allowed tag appears
-	Mode = LockRequire
+	lockPolicy.Mode = LockRequire
 
 	cfg, err := f.load(t)
 
@@ -220,7 +220,7 @@ func TestVersionPin_EditingTheConstraintInvalidatesThePin(t *testing.T) {
 	f := newVersionFixture(t, `version = "^1"`, `ref = "main"`)
 	f.refresh2(t)
 	f.writeConfig(t, `version = "^2"`, `ref = "main"`)
-	Mode = LockRequire
+	lockPolicy.Mode = LockRequire
 
 	_, err := f.load(t)
 
@@ -262,8 +262,8 @@ func TestVersionPin_PlainRefsTakeTheOldPath(t *testing.T) {
 
 func TestVersionPin_NeedsTheNetworkToResolve(t *testing.T) {
 	f := newVersionFixture(t, `version = "^1"`, `ref = "main"`)
-	SkipFetch = true
-	Mode = LockRefresh
+	lockPolicy.Offline = true
+	lockPolicy.Mode = LockRefresh
 	ResetObserved()
 
 	cfg, err := f.load(t)
