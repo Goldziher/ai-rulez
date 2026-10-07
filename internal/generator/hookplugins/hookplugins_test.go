@@ -242,7 +242,7 @@ func TestFlavorFor(t *testing.T) {
 	assert.False(t, hookplugins.IsFlavor("kilo"))
 }
 
-// --- Behaviour, with the generated module loaded by node and a fake host. ---
+// --- Behavior, with the generated module loaded by node and a fake host. ---
 
 func requireNode(t *testing.T) string {
 	t.Helper()
