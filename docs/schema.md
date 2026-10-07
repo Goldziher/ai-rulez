@@ -2,15 +2,15 @@
 
 The `ai-rulez` configuration is validated against a formal JSON Schema to provide editor support like autocompletion and real-time validation.
 
-## V4 Schema
+## Config schema
 
-**For current V4 projects**, the schema is embedded in the CLI. `ai-rulez validate` validates the raw
+The schema is embedded in the CLI. `ai-rulez validate` validates the raw
 config file against it (converting TOML to JSON first) and then runs the structural checks, so edit
 your `.ai-rulez/config.toml` and run `ai-rulez validate`.
 
 ```toml
 # .ai-rulez/config.toml
-version = "4.0"
+version = "5.0"
 name = "My Project"
 ```
 
@@ -28,7 +28,7 @@ Add a `.vscode/settings.json` to reference the schema:
 
 ---
 
-## V4 Validation Rules
+## Validation Rules
 
 ### Required Fields
 
@@ -44,14 +44,14 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`schema`**: URL of the JSON Schema, for editor support
 - **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `baz_scoped`; see [Rules](rules.md#rules-mode))
 - **`scopes`**: Additional scoped output roots. Their root files (`AGENTS.md`/`CLAUDE.md`) stay in the subfolder; rule files go to the root rules folders
-- **`gitignore`**: Whether to update .gitignore with generated output patterns (default: true)
+- **`gitignore`**: Whether to maintain the managed .gitignore block with generated output patterns (default: false)
 - **`includes`**: External content sources to merge
 - **`installed_skills`**: Skills to install from external repositories
 - **`header`**: Header style/timestamp for generated files
 - **`defaults`**: Global `effort` and per-preset `effort_by_preset` / `model_by_preset`
 - **`builtins`**: Built-in domains (`true`, `false`, or a list with `!` exclusions)
 - **`compact`**: Omit per-rule priority annotations from inline sections
-- **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `false`)
+- **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `true`)
 - **`mcp_servers`**: Array of MCP server configurations
 - **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_command`)
 - **`plugins`**: Array of plugin installs from a marketplace (consumer side)
@@ -106,11 +106,11 @@ before generated configs are written.
 
 ### File Structure
 
-V4 uses TOML for configuration and markdown files with optional YAML frontmatter:
+Configuration is TOML; content is markdown files with optional YAML frontmatter:
 
 ```toml
 # config.toml
-version = "4.0"
+version = "5.0"
 name = "My Project"
 
 [[mcp_servers]]
