@@ -3,6 +3,7 @@ package mcp
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"context"
 	"errors"
@@ -152,6 +153,15 @@ func TestServeSetup_InitialFingerprintAgreesWithTheWatcherForALogInTheConfigDir(
 	assert.Equal(t, poll, baseline, "the first poll must not see a change that is only the usage files")
 }
 
+// appendStdinCommand is a sink command that appends its stdin to out, in the
+// shell the sink runs under: sh -c, or cmd /C on Windows.
+func appendStdinCommand(out string) string {
+	if runtime.GOOS == "windows" {
+		return `more >> "` + out + `"`
+	}
+	return "cat >> '" + out + "'"
+}
+
 func TestServeSetup_UsageSinkRecordsCarryTheSaltedSessionAndDoNotBlock(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -159,7 +169,7 @@ func TestServeSetup_UsageSinkRecordsCarryTheSaltedSessionAndDoNotBlock(t *testin
 		wantSession bool
 		wantFast    bool
 	}{
-		{"sink only records the session like a log line", func(out string) string { return "cat >> '" + out + "'" }, true, true},
+		{"sink only records the session like a log line", appendStdinCommand, true, true},
 		{"a hanging sink does not delay the load", func(string) string { return "sleep 30" }, false, true},
 	}
 	for _, tt := range tests {
