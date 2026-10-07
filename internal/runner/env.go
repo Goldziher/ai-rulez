@@ -9,6 +9,13 @@ import (
 	"strings"
 )
 
+// RunTokenEnv names the variable that tags every process a run starts on unix,
+// so the run can find a helper that left its process tree. Its value is a
+// colon-separated list of run tokens: a run started inside another run appends
+// its own, so the outer run still recognizes the inner one's helpers. It is not
+// a secret, and scrubbed environments keep it.
+const RunTokenEnv = "AI_RULEZ_RUN_TOKEN"
+
 // baseEnv are the variables every scrubbed environment keeps: enough for a
 // tool to find binaries, a home and temp directory, and a locale. The locale
 // (LANG, LANGUAGE and every LC_*) is kept because the scanners and gh decide
@@ -22,6 +29,7 @@ var baseEnv = map[string]bool{
 	// Windows needs these for a process to start at all.
 	"SYSTEMROOT": true, "WINDIR": true, "COMSPEC": true, "PATHEXT": true, "USERPROFILE": true,
 	"APPDATA": true, "LOCALAPPDATA": true, "PROGRAMDATA": true,
+	RunTokenEnv: true,
 }
 
 var (
