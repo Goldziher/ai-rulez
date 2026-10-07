@@ -330,6 +330,7 @@ func (st *ServeSetup) resolveSources(ctx context.Context, cfg *config.Config, lo
 	for _, spec := range specs {
 		res, err := skillsource.Resolve(ctx, spec, skillsource.Options{
 			CacheDir: st.CacheDir, Lock: lock, Offline: st.Offline, Frozen: st.Frozen, Refresh: bo.refresh,
+			Version:     cfg.LockPolicy.VersionPolicy,
 			ProjectRoot: cfg.BaseDir, MaxCloneBytes: st.MaxCloneBytes,
 		})
 		if err != nil {
