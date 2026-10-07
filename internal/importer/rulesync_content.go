@@ -33,7 +33,7 @@ func renderDoc(fields []fmField, body string) ([]byte, error) {
 		if err := val.Encode(f.val); err != nil {
 			return nil, err
 		}
-		node.Content = append(node.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: f.key}, val)
+		node.Content = append(node.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: litYAMLStr, Value: f.key}, val)
 	}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
@@ -163,7 +163,7 @@ func splitCatchAll(globs []string) (specific []string, everything bool) {
 }
 
 func (b *rulesyncPlanner) importRules(root string) {
-	dir := path.Join(root, "rules")
+	dir := path.Join(root, rulesDir)
 	if _, ok := b.r.exists(dir); !ok {
 		return
 	}
@@ -191,10 +191,10 @@ func (b *rulesyncPlanner) importRule(file, rel, text string) {
 	localRoot := as[bool](meta["localRoot"])
 	name, synth := b.nameOf(file, rel)
 	nameFinding(p, file, KindRule, name, synth)
-	taken := map[string]bool{"root": true, "localRoot": true, "targets": true, "description": true, "globs": true}
+	taken := map[string]bool{"root": true, "localRoot": true, litTargets: true, litDescription: true, litGlobs: true}
 
-	desc := stringOf(meta["description"])
-	globs := globsFrom(meta["globs"])
+	desc := stringOf(meta[litDescription])
+	globs := globsFrom(meta[litGlobs])
 	specific, everything := splitCatchAll(globs)
 	fm := map[string]any{}
 	note := func(section, key, target, reason string) {
@@ -203,10 +203,10 @@ func (b *rulesyncPlanner) importRule(file, rel, text string) {
 	}
 
 	if desc == "" {
-		for _, sec := range []string{"cursor", "devin", "antigravity", "kiro"} {
-			if d := stringOf(sectionOf(meta, sec)["description"]); d != "" {
+		for _, sec := range []string{litCursor, litDevin, litAntigravity, litKiro} {
+			if d := stringOf(sectionOf(meta, sec)[litDescription]); d != "" {
 				desc = d
-				note(sec, "description", "description", "used as the description because the rule has none of its own")
+				note(sec, litDescription, litDescription, "used as the description because the rule has none of its own")
 				break
 			}
 		}
@@ -215,27 +215,27 @@ func (b *rulesyncPlanner) importRule(file, rel, text string) {
 		specific = b.activationHint(file, meta, fm, note)
 	}
 	if desc != "" {
-		fm["description"] = desc
+		fm[litDescription] = desc
 	}
 	if len(specific) > 0 {
 		list := make([]any, len(specific))
 		for i, g := range specific {
 			list[i] = g
 		}
-		fm["globs"] = list
+		fm[litGlobs] = list
 	}
 	if everything {
 		fm["alwaysApply"] = true
 	}
 	rule, findings := translateRule(file, fm, false)
 	p.Findings = append(p.Findings, findings...)
-	rule.Targets = mapItemTargets(p, file, listOf(meta["targets"]))
+	rule.Targets = mapItemTargets(p, file, listOf(meta[litTargets]))
 	// A Cursor flag that agrees with the result carries nothing more to report.
-	cursor := sectionOf(meta, "cursor")
+	cursor := sectionOf(meta, litCursor)
 	if on, isBool := cursor["alwaysApply"].(bool); isBool && on == (rule.Activation == "") {
 		taken["cursor.alwaysApply"] = true
 	}
-	if g, has := cursor["globs"]; has && len(globsFrom(g)) == 0 {
+	if g, has := cursor[litGlobs]; has && len(globsFrom(g)) == 0 {
 		taken["cursor.globs"] = true
 	}
 	b.reportLeftovers(file, meta, taken)
@@ -266,43 +266,43 @@ func (b *rulesyncPlanner) importRule(file, rel, text string) {
 // trigger, Kiro's inclusion. It fills fm for translateRule, and returns the globs
 // it found (the section's own, or Claude Code's paths and Cursor's globs).
 func (b *rulesyncPlanner) activationHint(file string, meta, fm map[string]any, note func(section, key, target, reason string)) []string {
-	if cursor := sectionOf(meta, "cursor"); cursor != nil {
+	if cursor := sectionOf(meta, litCursor); cursor != nil {
 		if as[bool](cursor["alwaysApply"]) {
 			fm["alwaysApply"] = true
-			note("cursor", "alwaysApply", "rules", "always apply; the rule applies to every tool")
+			note(litCursor, "alwaysApply", rulesDir, "always apply; the rule applies to every tool")
 			return nil
 		}
 	}
-	for _, sec := range []string{"devin", "antigravity"} {
+	for _, sec := range []string{litDevin, litAntigravity} {
 		trigger := stringOf(sectionOf(meta, sec)["trigger"])
 		if trigger == "" {
 			continue
 		}
 		fm["trigger"] = trigger
-		note(sec, "trigger", "rules", "activation taken from this section; it applies to every tool")
-		if trigger == "glob" {
-			if g := globsFrom(sectionOf(meta, sec)["globs"]); len(g) > 0 {
-				note(sec, "globs", "rules", "globs taken from this section")
+		note(sec, "trigger", rulesDir, "activation taken from this section; it applies to every tool")
+		if trigger == litGlob {
+			if g := globsFrom(sectionOf(meta, sec)[litGlobs]); len(g) > 0 {
+				note(sec, litGlobs, rulesDir, "globs taken from this section")
 				return g
 			}
 		}
 		return nil
 	}
-	if kiro := sectionOf(meta, "kiro"); stringOf(kiro["inclusion"]) != "" {
+	if kiro := sectionOf(meta, litKiro); stringOf(kiro["inclusion"]) != "" {
 		fm["inclusion"] = stringOf(kiro["inclusion"])
-		note("kiro", "inclusion", "rules", "activation taken from this section; it applies to every tool")
+		note(litKiro, "inclusion", rulesDir, "activation taken from this section; it applies to every tool")
 		if g := globsFrom(kiro["fileMatchPattern"]); len(g) > 0 {
-			note("kiro", "fileMatchPattern", "rules", "globs taken from this section")
+			note(litKiro, "fileMatchPattern", rulesDir, "globs taken from this section")
 			return g
 		}
 		return nil
 	}
 	if g := globsFrom(sectionOf(meta, "claudecode")["paths"]); len(g) > 0 {
-		note("claudecode", "paths", "rules", "globs taken from this section because the rule has none of its own")
+		note("claudecode", "paths", rulesDir, "globs taken from this section because the rule has none of its own")
 		return g
 	}
-	if g := globsFrom(sectionOf(meta, "cursor")["globs"]); len(g) > 0 {
-		note("cursor", "globs", "rules", "globs taken from this section because the rule has none of its own")
+	if g := globsFrom(sectionOf(meta, litCursor)[litGlobs]); len(g) > 0 {
+		note(litCursor, litGlobs, rulesDir, "globs taken from this section because the rule has none of its own")
 		return g
 	}
 	return nil
@@ -333,7 +333,7 @@ func (b *rulesyncPlanner) importFlatKind(root, sub string, kind Kind) {
 		name, synth := b.nameOf(file, rel)
 		nameFinding(b.p, file, kind, name, synth)
 		if strings.Contains(strings.TrimPrefix(rel, curatedDir+"/"), "/") {
-			b.p.add(newFinding(StatusApproximated, file, "name", string(kind)+"s/"+name,
+			b.p.add(newFinding(StatusApproximated, file, litName, string(kind)+"s/"+name,
 				"the directory is part of the name; ai-rulez "+string(kind)+"s are flat"))
 		}
 		var fields []fmField
@@ -356,31 +356,31 @@ func (b *rulesyncPlanner) importFlatKind(root, sub string, kind Kind) {
 }
 
 func targetsField(p *Plan, file string, meta map[string]any) []fmField {
-	if t := mapItemTargets(p, file, listOf(meta["targets"])); len(t) > 0 {
-		return []fmField{{"targets", t}}
+	if t := mapItemTargets(p, file, listOf(meta[litTargets])); len(t) > 0 {
+		return []fmField{{litTargets, t}}
 	}
 	return nil
 }
 
 func (b *rulesyncPlanner) commandFields(file string, meta map[string]any) []fmField {
 	var fields []fmField
-	if d := stringOf(meta["description"]); d != "" {
-		fields = append(fields, fmField{"description", d})
+	if d := stringOf(meta[litDescription]); d != "" {
+		fields = append(fields, fmField{litDescription, d})
 	}
 	fields = append(fields, targetsField(b.p, file, meta)...)
-	b.reportLeftovers(file, meta, map[string]bool{"description": true, "targets": true})
+	b.reportLeftovers(file, meta, map[string]bool{litDescription: true, litTargets: true})
 	return fields
 }
 
 func (b *rulesyncPlanner) agentFields(file, name string, meta map[string]any) []fmField {
-	taken := map[string]bool{"name": true, "description": true, "targets": true}
-	agentName := stringOf(meta["name"])
+	taken := map[string]bool{litName: true, litDescription: true, litTargets: true}
+	agentName := stringOf(meta[litName])
 	if agentName == "" {
 		agentName = name
 	}
-	fields := []fmField{{"name", agentName}}
-	if d := stringOf(meta["description"]); d != "" {
-		fields = append(fields, fmField{"description", d})
+	fields := []fmField{{litName, agentName}}
+	if d := stringOf(meta[litDescription]); d != "" {
+		fields = append(fields, fmField{litDescription, d})
 	}
 	claude := sectionOf(meta, "claudecode")
 	lift := func(key string, val any) {
@@ -396,11 +396,11 @@ func (b *rulesyncPlanner) agentFields(file, name string, meta map[string]any) []
 			lift("model", m)
 		}
 	}
-	if t := listOf(claude["tools"]); len(t) > 0 {
-		lift("tools", t)
+	if t := listOf(claude[litTools]); len(t) > 0 {
+		lift(litTools, t)
 	}
-	if s := listOf(claude["skills"]); len(s) > 0 {
-		lift("skills", s)
+	if s := listOf(claude[skillsDir]); len(s) > 0 {
+		lift(skillsDir, s)
 	}
 	if e := stringOf(claude["effort"]); e != "" {
 		lift("effort", e)
@@ -412,10 +412,10 @@ func (b *rulesyncPlanner) agentFields(file, name string, meta map[string]any) []
 
 func (b *rulesyncPlanner) checkFields(file string, meta map[string]any) []fmField {
 	var fields []fmField
-	if d := stringOf(meta["description"]); d != "" {
-		fields = append(fields, fmField{"description", d})
+	if d := stringOf(meta[litDescription]); d != "" {
+		fields = append(fields, fmField{litDescription, d})
 	}
-	taken := map[string]bool{"description": true, "targets": true, "severity": true, "tools": true}
+	taken := map[string]bool{litDescription: true, litTargets: true, "severity": true, litTools: true}
 	if s := strings.ToLower(stringOf(meta["severity"])); s != "" {
 		valid := false
 		for _, v := range config.CheckSeverities {
@@ -427,8 +427,8 @@ func (b *rulesyncPlanner) checkFields(file string, meta map[string]any) []fmFiel
 			b.p.add(newFinding(StatusDropped, file, "severity", "", "unknown severity "+s+"; use low, medium, high or critical"))
 		}
 	}
-	if t := listOf(meta["tools"]); len(t) > 0 {
-		fields = append(fields, fmField{"tools", t})
+	if t := listOf(meta[litTools]); len(t) > 0 {
+		fields = append(fields, fmField{litTools, t})
 	}
 	fields = append(fields, targetsField(b.p, file, meta)...)
 	b.reportLeftovers(file, meta, taken)
@@ -436,7 +436,7 @@ func (b *rulesyncPlanner) checkFields(file string, meta map[string]any) []fmFiel
 }
 
 func (b *rulesyncPlanner) importSkills(root string) {
-	dir := path.Join(root, "skills")
+	dir := path.Join(root, skillsDir)
 	if _, ok := b.r.exists(dir); !ok {
 		return
 	}
@@ -460,7 +460,7 @@ func (b *rulesyncPlanner) importSkills(root string) {
 
 func (b *rulesyncPlanner) importSkill(skillDir, dirName string) {
 	p := b.p
-	skillFile := path.Join(skillDir, "SKILL.md")
+	skillFile := path.Join(skillDir, litSkillMD)
 	if _, ok := b.r.exists(skillFile); !ok {
 		p.add(newFinding(StatusDropped, skillDir, "", "", "no SKILL.md in the directory"))
 		return
@@ -471,19 +471,19 @@ func (b *rulesyncPlanner) importSkill(skillDir, dirName string) {
 	}
 	name, _ := safeName(dirName)
 	if name != dirName {
-		p.add(newFinding(StatusApproximated, skillDir, "name", "skills/"+name, "skill directory renamed to a valid name"))
+		p.add(newFinding(StatusApproximated, skillDir, litName, "skills/"+name, "skill directory renamed to a valid name"))
 	}
 	meta, body := b.frontmatterOf(skillFile, text)
-	taken := map[string]bool{"name": true, "description": true, "targets": true}
-	if n := stringOf(meta["name"]); n != "" && n != name {
-		p.add(newFinding(StatusApproximated, skillFile, "name", "skills/"+name,
+	taken := map[string]bool{litName: true, litDescription: true, litTargets: true}
+	if n := stringOf(meta[litName]); n != "" && n != name {
+		p.add(newFinding(StatusApproximated, skillFile, litName, "skills/"+name,
 			"name "+n+" rewritten to match the skill directory"))
 	}
-	fields := []fmField{{"name", name}}
-	if d := stringOf(meta["description"]); d != "" {
-		fields = append(fields, fmField{"description", d})
+	fields := []fmField{{litName, name}}
+	if d := stringOf(meta[litDescription]); d != "" {
+		fields = append(fields, fmField{litDescription, d})
 	}
-	for _, k := range []string{"license", "compatibility", "metadata"} {
+	for _, k := range []string{litLicense, "compatibility", litMetadata} {
 		if v, ok := meta[k]; ok {
 			taken[k] = true
 			fields = append(fields, fmField{k, v})
@@ -512,7 +512,7 @@ func (b *rulesyncPlanner) importSkill(skillDir, dirName string) {
 	}
 	it := Item{Kind: KindSkill, Name: name, Sources: []string{skillDir}, Main: out}
 	for _, rel := range b.r.walkFiles(skillDir, b.onSkip) {
-		if rel == "SKILL.md" {
+		if rel == litSkillMD {
 			continue
 		}
 		file := path.Join(skillDir, rel)

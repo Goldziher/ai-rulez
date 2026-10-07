@@ -57,7 +57,7 @@ func mergeRename(plan *Plan, intoAbs, domain string, keepNames bool) error {
 		}
 		taken[it.Rel()] = true
 		plan.retarget(oldRel, it.Rel())
-		plan.add(newFinding(StatusApproximated, src, "name", it.Rel(),
+		plan.add(newFinding(StatusApproximated, src, litName, it.Rel(),
 			fmt.Sprintf("%s already exists with other content and --merge never touches existing files; imported as %s", oldRel, renamed)))
 	}
 	return nil

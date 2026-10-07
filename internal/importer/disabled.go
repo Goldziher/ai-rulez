@@ -190,10 +190,10 @@ func mergeHooksAndPermissions(merged, add *config.Config) (added int) {
 func reportDisabled(plan *Plan, hooksOn, permsOn bool) {
 	if n := len(plan.Hooks); n > 0 {
 		if hooksOn {
-			plan.add(newFinding(StatusNeedsAction, "(hooks)", "hooks", "config.toml",
+			plan.add(newFinding(StatusNeedsAction, "(hooks)", litHooks, "config.toml",
 				fmt.Sprintf("%d hook group(s) are enabled in config.toml (--enable-hooks); each runs a command on your machine, read them before generating", n)))
 		} else {
-			plan.add(newFinding(StatusNeedsAction, "(hooks)", "hooks", "config.toml",
+			plan.add(newFinding(StatusNeedsAction, "(hooks)", litHooks, "config.toml",
 				fmt.Sprintf("%d hook group(s) were written as a commented block, not enabled: each runs a command on your machine. Review them, then uncomment or rerun with --enable-hooks", n)))
 		}
 	}

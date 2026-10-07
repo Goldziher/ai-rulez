@@ -98,7 +98,7 @@ func (n nativeImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 
 // linkTargetPresets names the preset that generates a root file several presets
 // share, so a link onto it has a generated target.
-var linkTargetPresets = map[string]string{"AGENTS.md": "codex"}
+var linkTargetPresets = map[string]string{"AGENTS.md": litCodex}
 
 // addLinkPresets handles a root file that is a symlink onto another imported root
 // file (CLAUDE.md -> AGENTS.md). The link itself is not imported, but generate
@@ -353,7 +353,7 @@ func itemName(rel string) (name string, synthesized bool) {
 
 func nameFinding(p *Plan, file string, kind Kind, name string, synthesized bool) {
 	if synthesized {
-		p.add(newFinding(StatusApproximated, file, "name", string(kind)+"s/"+name,
+		p.add(newFinding(StatusApproximated, file, litName, string(kind)+"s/"+name,
 			"the name has no ASCII letters or digits; a stable name was derived from it"))
 	}
 }
@@ -420,7 +420,7 @@ func (n nativeImporter) importSkills(p *Plan, r *reader, dir string, opt Options
 			continue
 		}
 		skillDir := path.Join(dir, e.Name())
-		skillFile := path.Join(skillDir, "SKILL.md")
+		skillFile := path.Join(skillDir, litSkillMD)
 		if _, ok := r.exists(skillFile); !ok {
 			continue
 		}
@@ -434,13 +434,13 @@ func (n nativeImporter) importSkills(p *Plan, r *reader, dir string, opt Options
 		}
 		name, _ := safeName(e.Name())
 		if name != e.Name() {
-			p.add(newFinding(StatusApproximated, skillDir, "name", "skills/"+name, "skill directory renamed to a valid name"))
+			p.add(newFinding(StatusApproximated, skillDir, litName, "skills/"+name, "skill directory renamed to a valid name"))
 		}
 		text := reviewAuxFrontmatter(p, skillFile, normalizeText(string(data)))
 		text = setFrontmatterName(text, name)
 		it := Item{Kind: KindSkill, Name: name, Sources: []string{skillDir}, Main: ensureNewline(text)}
 		for _, rel := range r.walkFiles(skillDir, onSkip) {
-			if rel == "SKILL.md" {
+			if rel == litSkillMD {
 				continue
 			}
 			file := path.Join(skillDir, rel)
