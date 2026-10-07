@@ -129,63 +129,93 @@ func ParseKey(key string) ([]string, error) {
 	if key == "" {
 		return nil, errors.New("key is empty")
 	}
-	var segs []string
-	var cur strings.Builder
-	have, afterDot, afterBracket := false, false, false
+	p := &keyParser{key: key}
 	for i := 0; i < len(key); i++ {
-		c := key[i]
-		switch {
-		case c == '.':
-			if !have && !afterBracket {
-				return nil, fmt.Errorf("key %q has an empty segment", key)
-			}
-			if have {
-				segs = append(segs, cur.String())
-				cur.Reset()
-			}
-			have, afterDot, afterBracket = false, true, false
-		case c == '[':
-			if have {
-				segs = append(segs, cur.String())
-				cur.Reset()
-				have = false
-			} else if afterBracket && !afterDot {
-				// "[0][1]": adjacent brackets are fine.
-				afterBracket = false
-			}
-			seg, next, err := parseBracket(key, i)
-			if err != nil {
-				return nil, fmt.Errorf("key %q: %w", key, err)
-			}
-			segs = append(segs, seg)
-			i = next
-			afterDot, afterBracket = false, true
+		var err error
+		switch key[i] {
+		case '.':
+			err = p.dot()
+		case '[':
+			i, err = p.bracket(i)
 		default:
-			if afterBracket {
-				return nil, fmt.Errorf("key %q: unexpected %q after ']'", key, c)
-			}
-			if c == '\\' {
-				i++
-				if i >= len(key) {
-					return nil, fmt.Errorf("key %q ends with a backslash", key)
-				}
-				c = key[i]
-			}
-			cur.WriteByte(c)
-			have, afterDot = true, false
+			i, err = p.char(i)
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
-	if have {
-		segs = append(segs, cur.String())
-	} else if afterDot {
+	if p.have {
+		p.segs = append(p.segs, p.cur.String())
+	} else if p.afterDot {
 		return nil, fmt.Errorf("key %q has an empty segment", key)
 	}
-	return segs, nil
+	return p.segs, nil
+}
+
+// keyParser holds the state of ParseKey between characters.
+type keyParser struct {
+	key  string
+	segs []string
+	cur  strings.Builder
+	// have: a segment is being built; afterDot: the last token was a dot;
+	// afterBracket: the last token was a bracketed segment.
+	have, afterDot, afterBracket bool
+}
+
+// flush ends the segment being built, if any.
+func (p *keyParser) flush() {
+	if p.have {
+		p.segs = append(p.segs, p.cur.String())
+		p.cur.Reset()
+		p.have = false
+	}
+}
+
+// dot handles a segment separator.
+func (p *keyParser) dot() error {
+	if !p.have && !p.afterBracket {
+		return fmt.Errorf("key %q has an empty segment", p.key)
+	}
+	p.flush()
+	p.afterDot, p.afterBracket = true, false
+	return nil
+}
+
+// bracket handles a bracketed segment starting at key[i] and returns the index
+// of its closing ']'. Adjacent brackets ("[0][1]") are fine.
+func (p *keyParser) bracket(i int) (int, error) {
+	p.flush()
+	seg, next, err := parseBracket(p.key, i)
+	if err != nil {
+		return i, fmt.Errorf("key %q: %w", p.key, err)
+	}
+	p.segs = append(p.segs, seg)
+	p.afterDot, p.afterBracket = false, true
+	return next, nil
+}
+
+// char handles one literal character at key[i], which may be a backslash
+// escape, and returns the index of the last byte consumed.
+func (p *keyParser) char(i int) (int, error) {
+	c := p.key[i]
+	if p.afterBracket {
+		return i, fmt.Errorf("key %q: unexpected %q after ']'", p.key, c)
+	}
+	if c == '\\' {
+		i++
+		if i >= len(p.key) {
+			return i, fmt.Errorf("key %q ends with a backslash", p.key)
+		}
+		c = p.key[i]
+	}
+	p.cur.WriteByte(c)
+	p.have, p.afterDot = true, false
+	return i, nil
 }
 
 // parseBracket reads `["..."]` or `[123]` starting at key[i] == '[' and returns
 // the segment and the index of the closing ']'.
-func parseBracket(key string, i int) (string, int, error) {
+func parseBracket(key string, i int) (seg string, closeIdx int, err error) {
 	j := i + 1
 	if j < len(key) && key[j] == '"' {
 		var sb strings.Builder
