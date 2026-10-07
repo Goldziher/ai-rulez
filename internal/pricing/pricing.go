@@ -8,7 +8,7 @@ import "strings"
 // Version identifies the table. Bump it whenever a price changes: internal/llm
 // folds it into its cache identity, so a cost recorded under old prices is never
 // replayed under new ones.
-const Version = "2026-10-07"
+const Version = "2026-10-07.1"
 
 // Price is a model price in USD per million tokens.
 type Price struct {
@@ -22,8 +22,14 @@ type Price struct {
 // removed, longest prefix first. The Gemini rows are the paid-tier standard text
 // prices from https://ai.google.dev/gemini-api/docs/pricing, checked 2026-10-06
 // (gemini-embedding-001 is the figure documented for that model; the page now
-// lists its successor first, so re-check it when updating). The bare haiku, sonnet and opus keys are the
-// short names eval cases and --model use.
+// lists its successor first, so re-check it when updating). The OpenAI rows and the Claude rows were
+// checked 2026-10-07 against developers.openai.com/api/docs/pricing and
+// platform.claude.com/docs/en/about-claude/pricing. The versioned Claude rows (the 4.5 and later Opus
+// models, Sonnet 5 and 5.5, Haiku 5.5) are the base prices; Haiku 5.5 is listed at its dearer
+// over-100,000-token tier, so an estimate never undershoots. A Claude model without a versioned row
+// (Opus 4.1 and earlier, Sonnet 4.x, Haiku 4.x) falls back to the family row, which keeps the old, dearer
+// price. The bare haiku, sonnet and opus keys are the short names eval cases and --model use and stay
+// at those conservative prices because they do not name a version.
 var table = map[string]Price{
 	"gpt-4o-mini":            {0.15, 0.60},
 	"gpt-4o":                 {2.50, 10.00},
@@ -34,8 +40,16 @@ var table = map[string]Price{
 	"gemini-2.5-flash-lite":  {0.10, 0.40},
 	"gemini-2.5-flash":       {0.30, 2.50},
 	"gemini-embedding-001":   {0.15, 0},
+	"claude-haiku-5-5":       {0.50, 2.50},
 	"claude-haiku":           {1.00, 5.00},
+	"claude-sonnet-5":        {2.00, 10.00},
 	"claude-sonnet":          {3.00, 15.00},
+	"claude-opus-5-5":        {4.00, 20.00},
+	"claude-opus-5":          {5.00, 25.00},
+	"claude-opus-4-8":        {5.00, 25.00},
+	"claude-opus-4-7":        {5.00, 25.00},
+	"claude-opus-4-6":        {5.00, 25.00},
+	"claude-opus-4-5":        {5.00, 25.00},
 	"claude-opus":            {15.00, 75.00},
 	"haiku":                  {1.00, 5.00},
 	"sonnet":                 {3.00, 15.00},

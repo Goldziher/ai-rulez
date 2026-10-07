@@ -1,7 +1,7 @@
 # Skill Search
 
 `ai-rulez search` ranks the skills your project serves against a query, with the same ranker as the `find_skill`
-tool of [`mcp --serve-skills`](mcp-server.md), and measures that ranking against labelled queries. By default it is
+tool of [`mcp --serve-skills`](mcp-server.md), and measures that ranking against labeled queries. By default it is
 lexical and deterministic: no query or skill text is sent anywhere and the same input always gives the same order.
 Optionally it is hybrid: the lexical list is fused with cosine similarity over embeddings you bring (an
 OpenAI-compatible endpoint, Gemini through `literllm`, a local server, or a command), so a paraphrase such as
@@ -110,7 +110,7 @@ Fusion. Each list is cut to `candidates` and the two are combined:
 - `weighted`: each list's scores are min-max normalised to [0, 1] over its candidates and mixed with
   `a = weights.lexical / (weights.lexical + weights.vector)`. More sensitive to the score distribution.
 
-Why `auto`. Evaluated with Gemini `gemini-embedding-001` on 36 labelled queries (plus 6 negatives) over this repository's
+Why `auto`. Evaluated with Gemini `gemini-embedding-001` on 36 labeled queries (plus 6 negatives) over this repository's
 25 served skills, cut-off k = 3:
 
 | Ranking | top-1 | hit@3 | MRR | nDCG@3 |
