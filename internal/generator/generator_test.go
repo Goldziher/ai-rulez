@@ -728,8 +728,8 @@ func TestComputeSourceHash_StableWithProjectRootPlaceholder(t *testing.T) {
 		return cfg
 	}
 
-	hashA := computeSourceHash(build(filepath.Join(string(filepath.Separator), "tmp", "a", "proj")), &config.ContentTree{})
-	hashB := computeSourceHash(build(filepath.Join(string(filepath.Separator), "tmp", "b", "work", "proj")), &config.ContentTree{})
+	hashA := computeSourceHash(build(filepath.Join(t.TempDir(), "a", "proj")), &config.ContentTree{})
+	hashB := computeSourceHash(build(filepath.Join(t.TempDir(), "b", "work", "proj")), &config.ContentTree{})
 	assert.Equal(t, hashA, hashB, "source hash must not depend on the resolved project root")
 }
 
