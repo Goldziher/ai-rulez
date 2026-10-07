@@ -107,13 +107,19 @@ type browser struct {
 // page. The browser is closed when the test ends.
 func startBrowser(t *testing.T, bin string) *browser {
 	t.Helper()
+	args := append(headlessArgs(t.TempDir()), "--remote-debugging-pipe")
+	return launchBrowser(t, bin, append(args, "about:blank"))
+}
+
+// headlessArgs are the flags of every headless run, with a throwaway profile.
+func headlessArgs(profile string) []string {
 	args := []string{"--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--disable-extensions",
 		"--disable-background-networking", "--disable-component-update", "--disable-sync", "--mute-audio",
-		"--user-data-dir=" + t.TempDir(), "--remote-debugging-pipe"}
+		"--user-data-dir=" + profile}
 	if os.Geteuid() == 0 {
-		args = append(args, "--no-sandbox")
+		args = append(args, "--no-sandbox") // Chrome refuses to sandbox as root
 	}
-	return launchBrowser(t, bin, append(args, "about:blank"))
+	return args
 }
 
 // launchBrowser runs bin with args, wired to the protocol pipes, and opens a page.
@@ -319,7 +325,10 @@ func (b *browser) evalInt(expr string) int {
 func (b *browser) click(selector string, navigates bool) {
 	b.t.Helper()
 	seen := b.count("Page.loadEventFired")
-	require.Truef(b.t, b.evalBool(fmt.Sprintf(`(function(){var e=document.querySelector(%q);if(!e){return false}e.click();return true})()`, selector)),
+	// An SVG element (a link in the graph) has no click(); a dispatched click activates it the same way.
+	require.Truef(b.t, b.evalBool(fmt.Sprintf(`(function(){var e=document.querySelector(%q);if(!e){return false}`+
+		`if(typeof e.click==="function"){e.click()}else{e.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window}))}`+
+		`return true})()`, selector)),
 		"no element matches %s", selector)
 	if navigates {
 		b.waitFor("Page.loadEventFired", seen)
@@ -387,14 +396,37 @@ func (b *browser) problems() []string {
 	return out
 }
 
-// chromeLaunches reports whether bin starts and answers --version. A browser can
-// be installed and still not run (killed by the OS, missing libraries).
-func chromeLaunches(bin string) (string, bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), browserOpTimeout)
-	defer cancel()
-	out, err := exec.CommandContext(ctx, bin, "--version").CombinedOutput() //nolint:gosec // the test machine's own browser
-	return strings.TrimSpace(string(out)), err == nil
+// chromeProbe starts bin the way the tests do: it must answer --version and
+// render a blank page headless. A browser can be installed and still not run
+// (killed by the OS at exec, missing libraries, no usable sandbox); the error
+// says which step failed and what the browser printed.
+func chromeProbe(bin string) error {
+	profile, err := os.MkdirTemp("", "ai-rulez-chrome-probe-")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.RemoveAll(profile) }() //nolint:errcheck // best-effort cleanup
+	steps := []struct {
+		name string
+		args []string
+	}{
+		{"--version", []string{"--version"}},
+		{"headless start", append(headlessArgs(profile), "--dump-dom", "about:blank")},
+	}
+	for _, s := range steps {
+		ctx, cancel := context.WithTimeout(context.Background(), browserOpTimeout)
+		out, runErr := exec.CommandContext(ctx, bin, s.args...).CombinedOutput() //nolint:gosec // the test machine's own browser
+		cancel()
+		if runErr != nil {
+			return fmt.Errorf("%s: %w: %s", s.name, runErr, strings.TrimSpace(string(out)))
+		}
+	}
+	return nil
 }
+
+// requireBrowserEnv, when set (the CI jobs that install Chrome), turns a browser
+// that is missing or does not start into a failure instead of a skip.
+const requireBrowserEnv = "AI_RULEZ_REQUIRE_BROWSER"
 
 // requireBrowser returns the Chrome to use or skips the test.
 func requireBrowser(t *testing.T) string {
@@ -402,12 +434,16 @@ func requireBrowser(t *testing.T) string {
 	if testing.Short() {
 		t.Skip("browser tests are skipped with -short")
 	}
+	skip := t.Skipf
+	if os.Getenv(requireBrowserEnv) != "" {
+		skip = t.Fatalf
+	}
 	bin := chromeBinary()
 	if bin == "" {
-		t.Skipf("no Chrome or Chromium found (set %s to the executable)", browserEnv)
+		skip("no Chrome or Chromium found (set %s to the executable)", browserEnv)
 	}
-	if _, ok := chromeLaunches(bin); !ok {
-		t.Skipf("%s is installed but does not start on this machine", bin)
+	if err := chromeProbe(bin); err != nil {
+		skip("%s is installed but does not start on this machine: %v", bin, err)
 	}
 	return bin
 }
