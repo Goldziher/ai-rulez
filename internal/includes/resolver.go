@@ -61,6 +61,7 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 
 	// Process each include
 	var violations, failures []error
+	var skipped []includeFailure
 	for i := range cfg.Includes {
 		if err := r.processInclude(ctx, &mergedContent, &cfg.Includes[i]); err != nil {
 			if errors.Is(err, config.ErrLockViolation) {
@@ -78,7 +79,7 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 				}
 				failures = append(failures, oops.Wrapf(errors.Join(sentinel, err), "include %q", cfg.Includes[i].Name))
 			}
-			cfg.Warn("Failed to process include", "name", cfg.Includes[i].Name, "error", err)
+			skipped = append(skipped, includeFailure{name: cfg.Includes[i].Name, err: err})
 			// Continue processing other includes despite errors
 			continue
 		}
@@ -97,7 +98,18 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 	if len(failures) > 0 && ((!tolerated(ctx) && Mode != LockRefresh) || strictLock(cfg)) {
 		return nil, errors.Join(failures...)
 	}
+	// Only a run that goes on without the include warns: otherwise the returned
+	// error already carries the same text, and printing both says it twice.
+	for _, f := range skipped {
+		cfg.Warn("Failed to process include", "name", f.name, "error", f.err)
+	}
 	return mergedContent, nil
+}
+
+// includeFailure is an include that could not be processed.
+type includeFailure struct {
+	name string
+	err  error
 }
 
 // tolerated reports whether the run goes on without an include it cannot
