@@ -143,7 +143,7 @@ run_hook() {
 @test "a user-scope hook addresses its script by an absolute path that may contain spaces" {
   local home="$BATS_TEST_TMPDIR/user home"
   mkdir -p "$home/.config/ai-rulez/hooks"
-  printf '%s\n' 'version = "4.0"' 'name = "user"' 'presets = ["cline"]' '[[hooks]]' 'event = "PreToolUse"' \
+  printf '%s\n' 'version = "5.0"' 'name = "user"' 'presets = ["cline"]' '[[hooks]]' 'event = "PreToolUse"' \
     '[[hooks.hooks]]' 'script = "hooks/guard.sh"' >"$home/.config/ai-rulez/config.toml"
   cp "$PROJECT/scripts/guard.sh" "$home/.config/ai-rulez/hooks/guard.sh"
   HOME="$home" XDG_CONFIG_HOME="$home/.config" XDG_CACHE_HOME="$home/.cache" \
