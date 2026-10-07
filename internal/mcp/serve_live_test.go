@@ -157,7 +157,9 @@ func TestServeSetup_InitialFingerprintAgreesWithTheWatcherForALogInTheConfigDir(
 // shell the sink runs under: sh -c, or cmd /C on Windows.
 func appendStdinCommand(out string) string {
 	if runtime.GOOS == "windows" {
-		return `more >> "` + out + `"`
+		// Go escapes embedded quotes for CreateProcess as \", which cmd does not
+		// understand, so the path goes in unquoted (the temp path has no spaces).
+		return "more >> " + out
 	}
 	return "cat >> '" + out + "'"
 }
