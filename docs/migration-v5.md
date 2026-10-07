@@ -36,6 +36,13 @@ git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rule
 | `--json` is deprecated for `--format json` | Switch scripts to `--format json` |
 | Staged scanners are confined under `isolation = "auto"` (the default) wherever a backend works | A scanner that writes outside its scratch directory now fails (`AR9E3`): point it at `TMPDIR`/`HOME`, or set `isolation = "none"`; see [Isolation](strict-validation.md#isolation) |
 | Custom preset and provider output paths are validated | Remove `..`, absolute and `.git` paths |
+| `lock` and `update` scan every remote tree they pin to something new | Fix error findings, or pass `--accept-findings` after reviewing them |
+| `init --from` runs through `convert --write` | Expect one context item per root file (`convert --split-headings` splits it); see [`init --from`](#init-from) |
+| `generate --check` reports `blocked:` for a shared file a machine-local input would change | Commit or drop the local change, or run `generate --allow-local-drift` |
+| The forge client (release dates, review-linked approvals) has its own host allowlist | GitHub Enterprise: set `AI_RULEZ_FORGE_HOSTS` |
+| An organization policy at the managed path is read automatically | None unless the machine has one; see [Organization policy](#organization-policy) |
+| Review-linked approvals count only reviews of the final head by members or named approvers; `max_age` is a ceiling | Re-run `approve --from-github-review` after new pushes; see [Approvals](#approvals) |
+| Go APIs under `internal/` changed; `pkg/airulez` is the supported API | See [Go API](#go-api) |
 | The `compression` option is gone (it was a no-op since v3.13) | Delete it; a config that still sets it loads and `generate` warns about the unknown key, but `validate` and `generate --strict` fail |
 
 ## V2 and V3 configs
@@ -61,6 +68,26 @@ alone and reports it as `manual`.
 
 A V3 file nested in a subdirectory is reported by `generate --recursive` with the same error as a root one (it is not
 read), and the run exits `1`.
+
+The MCP `init_project` tool writes the same `config.toml` layout as `ai-rulez init` (it wrote a V2 `config.yaml`) and
+refuses to overwrite an existing configuration.
+
+## `init --from`
+
+`init --from` now runs `convert --write` with its sources: importer names (`auto`, `native`, `rulesync`, ...) or the
+project paths it always took (`.claude`, `.cursor`, `CLAUDE.md`). It gets convert's scan, validation and lossiness
+report. Differences from v4:
+
+- A root file such as `CLAUDE.md` becomes one context item. Use
+  `ai-rulez convert --split-headings` to split it.
+- MCP files, hooks and permissions are imported too (hooks and `allow` rules as a commented block you review first).
+- The sources are checked in a scratch directory first. An existing configuration directory is moved aside until the
+  import has been written and is restored when the import fails, so a failed `init --from` leaves the old
+  configuration in place.
+- Symlinks in the imported repository are never followed, and files over 2 MiB are skipped.
+
+`convert --fetch`, new in v5, reads remote rulesync and APM sources over `https://` only; ssh, scp-style, `file://` and
+local sources are reported as `needs-action` instead of being cloned.
 
 ## Go module path and install
 
@@ -164,6 +191,12 @@ The npm, PyPI and Homebrew distributions are unaffected.
   the digest of a served skill.
 - **A served skill the security scan refuses no longer stops `lock`.** It is left unpinned, `lock` exits `3`, and
   `lock --strict` restores the fail-without-writing behavior.
+- **`lock` and `update` scan what they pin.** Every remote tree pinned to something new is scanned (`AR001`-`AR009`)
+  first; an error finding refuses the pin (exit `2`, nothing written) unless `--accept-findings`.
+- **`generate --check` classifies machine-local inputs like `generate`.** With a `config.local.*` overlay or `local/`
+  content it no longer reports every output as `stale`. A shared file the local input would change, and that
+  `generate` refuses to write (tracked or not ignored), is reported as `blocked: <path>` with exit `2`;
+  `--allow-local-drift` accepts it.
 
 ## Exit codes
 
@@ -189,7 +222,7 @@ need to match `2`.
 | `scanners doctor` | Healthy | Configuration does not load or a name is unknown | A checked scanner is missing or misconfigured | |
 | `guard` (hook) | Allowed | | The call edits a generated file | |
 
-Unknown subcommands (`telemetry bogus`) and an unknown `migrate` target exit `1`. When a command covers several roots
+Unknown subcommands (`telemetry bogus`) exit `1`. When a command covers several roots
 (`--recursive`, for `generate --check` and `lock`) the most severe code wins: `1`, then `2`, then `3`.
 
 ## Supply-chain defaults
@@ -203,6 +236,10 @@ Unknown subcommands (`telemetry bogus`) and an unknown `migrate` target exit `1`
   default, so list `github.com` too), as a host-scoped header rather than inside the URL, and only over `https://`.
   Set the variable to keep using a token with GitLab, Bitbucket or a self-hosted host; other hosts get no token and a
   warning. Caches written by earlier versions are scrubbed.
+- **The forge token has its own allowlist.** The forge client (release dates for `min_release_age`, review-linked
+  approvals) sends the GitHub token (`GITHUB_TOKEN`, `GH_TOKEN` or `gh auth token`) only to `github.com` or the hosts
+  in `AI_RULEZ_FORGE_HOSTS` (comma separated, environment only), never to every `AI_RULEZ_GIT_TOKEN_HOSTS` host. For
+  GitHub Enterprise Server, add its host to `AI_RULEZ_FORGE_HOSTS`. See [Forge client](forge.md).
 - **A committed config cannot point outside the project.** A local include (`source` or `local_override`) that
   resolves outside the project after symlinks (`../victim`, an absolute path) is a fatal error. It is still allowed
   in `config.local.toml` and the user config. A local `[[skill_sources]]` `url` or `path` must resolve inside the
@@ -216,9 +253,9 @@ Unknown subcommands (`telemetry bogus`) and an unknown `migrate` target exit `1`
 - **Unpinned MCP packages (`AR012`)** stay a warning in `validate`, and are an error whenever `[lock] enforce` is on
   (whenever `ai-rulez.lock` exists, unless `enforce = false`), together with `AR010`.
 - **Content symlinks follow one policy.** In the project's own `.ai-rulez/` (including domains, skill and command
-  resources), a symlinked file or directory is followed only when its fully resolved target is inside the project
-  (the git top level, else the directory holding `.ai-rulez`). A parent `.git` widens that root: a project inside a repository such as a `$HOME` dotfiles
-  repo may link to anything in that repository. A symlinked `config.toml` or `config.local.toml` follows the same
+  resources), a symlinked file or directory is followed only when its fully resolved target is inside the repository
+  root (the git top level, else the directory holding `.ai-rulez`); the refusal names that root. A parent `.git` widens
+  it: a project inside a repository such as a `$HOME` dotfiles repo may link to anything in that repository. A symlinked `config.toml` or `config.local.toml` follows the same
   boundary: a target outside the root is a load error. Any other link used to be dropped silently; it is now
   refused with a warning that is shown even with `--quiet`, and `ai-rulez validate` reports it as an error. Symlinks
   in includes (git or local), installed skills, skill sources and OKF bundles are never followed and are skipped with
@@ -226,6 +263,54 @@ Unknown subcommands (`telemetry bogus`) and an unknown `migrate` target exit `1`
   Repository content read at load time is capped at 8 MiB per file; a larger file is an error.
 - **`scan` is security-only.** `ai-rulez scan` runs only the `security` analyzer's checks. Hook and config findings
   (`AR504`, `AR9K0`, ...) that used to appear in its report belong to `validate --strict`.
+
+## Scanner isolation
+
+Staged scanners (`[[lint.external]]` with `inputs`) run confined under `isolation = "auto"`, the default, wherever a
+backend works: macOS `sandbox-exec`, Linux `bwrap` or `unshare`. A confined scanner has no network (unless it declares
+`egress = true`) and cannot write outside its scratch directory, so one that writes elsewhere now fails with `AR9E3`.
+Point it at `TMPDIR`/`HOME`, or set `isolation = "none"` on the entry or in `[lint.scanner_policy]`. Without a backend,
+`auto` runs unconfined and notes `AR9E7`; `isolation = "require"` refuses to run instead. See
+[Isolation](strict-validation.md#isolation).
+
+## Organization policy
+
+v5 reads a tighten-only organization policy from outside the repository: `--policy`, `AI_RULEZ_POLICY`, or the
+managed path (`/etc/ai-rulez/policy.toml`, `/Library/Application Support/ai-rulez/policy.toml`,
+`%ProgramData%\ai-rulez\policy.toml`). Nothing changes without one. When one applies, a repository value that
+loosens it is clamped and reported (`AR740`), and `generate` and `validate` refuse such a configuration unless
+`--policy-mode warn`. See [Organization policy](policy.md).
+
+## Approvals
+
+Approvals (`ai-rulez approve`, `[governance]`) are new in v5. Pre-release v5 builds counted some approvals that no
+longer count:
+
+- **Review-linked approvals need the pull request's final head.** `approve --from-github-review` records a review only
+  when it was made on the head the pull request ends with; a review of an earlier push does not count. Re-run it after
+  new pushes.
+- **Outsider approvals do not count.** A review counts only when the reviewer's `author_association` is `OWNER`,
+  `MEMBER` or `COLLABORATOR`, or `approvers` or CODEOWNERS name them, so a drive-by approval on a public repository is
+  ignored. The digest is recomputed from the files at the reviewed commit, not taken from the lock committed there.
+- **`[governance] max_age` is a ceiling.** An approval stops counting (`AR712`) once `approved_at` plus `max_age` has
+  passed, whatever its `expires` says, and `approve --expires` beyond it is refused.
+
+See [Approvals](approvals.md).
+
+## Go API
+
+Packages under `internal/` are not a public API, and v5 changed several of them. Code that embeds ai-rulez should use
+`github.com/Goldziher/ai-rulez/v5/pkg/airulez` (experimental, see [Embedding](embedding.md)):
+
+- The process-wide preset registry is gone: `config.GetPresetGenerator`, `config.PresetRegistry`,
+  `config.RegisterPreset` and `config.RegisterRulesDir` are removed; each generation carries its own registry.
+- `config.LoadConfig` fails when the config declares includes or installed skills unless the load is given
+  `config.WithResolvers` (or `config.WithoutRemote`).
+- `config.SetPolicyEnforcer` is gone: the organization policy belongs to the load (`config.WithPolicy`).
+- The V2/V3 helpers (`config.DetectConfigVersion`, `config.VersionDir`, `config.ConfigVersionV3`, `Config.IsV3`,
+  `config.DecodeLegacyMCPFile`, `config.MigrateLocalOverlayToTOML`, `LocalOverlay.Format`) are removed.
+- In `pkg/airulez`, the machine-local overlay (`config.local.toml`, `.ai-rulez/local/`) is read only with
+  `Options.WithLocal`; `Options.WithoutLocal` is removed.
 
 ## Trust rule for `[llm]` and `[telemetry]`
 
