@@ -458,7 +458,7 @@ suggestion never contains a `command` or `llm` predicate, and `error` is lowered
 
 Each candidate is checked without the model: it must pass the same validation as a hand-written spec (RE2 compiles,
 globs, templates, scope), the pass and fail example the model supplied must behave as claimed when run offline
-(otherwise it is rejected), and it is run against the repository to count its findings today. A candidate that fails
+(otherwise it is rejected), and it is run against the repository to count its findings today. A `forbid` that is not limited to new lines (`in = "diff-added"`) is rejected when its regex matches an everyday standard-library call (`open(`, `json.load(`, `File::open`, ...) or when it fails on more than 10 existing files. A candidate that fails
 widely is a ratchet candidate (`in = "diff-added"`) or too broad; a rule that cannot be checked mechanically gets
 `No verifier proposed` with the model's reason.
 

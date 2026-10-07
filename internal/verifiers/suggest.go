@@ -23,7 +23,7 @@ import (
 )
 
 // SuggestPromptVersion is part of the cache key of `verifiers suggest`.
-const SuggestPromptVersion = "verifier-suggest/v1"
+const SuggestPromptVersion = "verifier-suggest/v2"
 
 const (
 	// defaultMaxProposals bounds how many candidates one run asks for and keeps.
@@ -37,7 +37,39 @@ const (
 	suggestCompletionCap = 4000
 	// maxExampleContent bounds one self-test file a proposal carries.
 	maxExampleContent = 4000
+	// maxExistingHitFiles is how many existing files a `forbid` may fail on and
+	// still be offered: a check that fails on more is not a rule of the project but
+	// a pattern too common to forbid (use in = "diff-added" to ratchet it).
+	maxExistingHitFiles = 10
 )
+
+// stdlibProbes are everyday standard-library calls and imports. A forbid whose
+// regex matches one of them, and is not limited to newly added lines, would ban
+// ordinary code across the whole repository.
+var stdlibProbes = []string{
+	"open(", "read(", "write(", "json.load(", "json.loads(", "json.dump(", "File::open", "fs.readFile(",
+	"os.Getenv(", "fmt.Sprintf(", "import os", "import sys", "import json",
+}
+
+// overBroadReason says why a usable-looking forbid is too broad to offer, or ""
+// when it is not. hitFiles is how many distinct existing files it fails on.
+func overBroadReason(sp *Spec, hitFiles int) string {
+	if sp.Require == nil || sp.Require.Forbid == nil || sp.Require.Forbid.In == "diff-added" {
+		return ""
+	}
+	if re, err := regexp.Compile(sp.Require.Forbid.Regex); err == nil {
+		for _, probe := range stdlibProbes {
+			if re.MatchString(probe) {
+				return fmt.Sprintf("it forbids a common standard-library call (it matches %q) everywhere; narrow the pattern or use in = \"diff-added\"", probe)
+			}
+		}
+	}
+	if hitFiles > maxExistingHitFiles {
+		return fmt.Sprintf("it fails on %d existing files (more than %d), so it is too broad; narrow the pattern or use in = \"diff-added\"",
+			hitFiles, maxExistingHitFiles)
+	}
+	return ""
+}
 
 // SuggestOptions selects what to propose verifiers for.
 type SuggestOptions struct {
@@ -185,7 +217,7 @@ Each proposal uses exactly one predicate:
 - file_exists: "path" must exist (exists true) or not exist (exists false);
 - paired: for each scoped file matching "for_each" (a glob, or a literal path with {rel}), the path derived by the template "requires_changed" (changed too) or "requires_exists" (exists) must hold; templates use {path} {dir} {stem} {ext} {rel};
 - glob_count: the number of files matching "files" must be within min and max (-1 means unbounded).
-"when_changed" lists globs of the files the check looks at (** crosses directories); it is required for forbid and regex with same-file or diff-added, and for paired. RE2 has no backreferences or lookaround. Prefer severity "warning". Each proposal gets a lowercase id of letters, digits, '.', '_' and '-', a one-sentence message and fix, and a one-sentence rationale naming the sentence of the rule it enforces.
+"when_changed" lists globs of the files the check looks at (** crosses directories); it is required for forbid and regex with same-file or diff-added, and for paired. RE2 has no backreferences or lookaround. Prefer severity "warning". Never forbid a pattern that ordinary code of the project's language uses (standard-library calls such as open( or json.load, common imports): a forbid must name something specific to this rule, and when it can only be decided on new code use in "diff-added". Each proposal gets a lowercase id of letters, digits, '.', '_' and '-', a one-sentence message and fix, and a one-sentence rationale naming the sentence of the rule it enforces.
 Also give one small example that must pass (pass_path, pass_content) and one that must fail (fail_path, fail_content): file names that match when_changed with the content that satisfies or violates the check; leave all four "" for a glob_count or file_exists proposal. Use "" for every field that does not apply to the predicate, and -1 for an unused min or max, and true for exists when unused.
 Reply with JSON only: {"proposals":[{...}],"skipped_reason":""}.`
 
@@ -492,11 +524,21 @@ func assess(ctx context.Context, cfg *config.Config, kind, target string, rp *ra
 		p.Hits = len(res.Findings)
 		seen := map[string]bool{}
 		for _, f := range res.Findings {
-			if f.File != "" && !seen[f.File] && len(p.HitFiles) < 5 {
+			if f.File != "" && !seen[f.File] {
 				seen[f.File] = true
-				p.HitFiles = append(p.HitFiles, f.File)
+				if len(p.HitFiles) < 5 {
+					p.HitFiles = append(p.HitFiles, f.File)
+				}
 			}
 		}
+		if reason := overBroadReason(&sp, len(seen)); reason != "" {
+			p.Rejected = reason
+			return p
+		}
+	}
+	if reason := overBroadReason(&sp, 0); reason != "" {
+		p.Rejected = reason
+		return p
 	}
 	p.TOML = renderSpec(&sp)
 	return p
