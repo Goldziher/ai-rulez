@@ -143,7 +143,17 @@ func WriteFiles(dir string, files []File, prune bool) error {
 }
 
 func checkPrunable(dir string) error {
-	if entries, err := os.ReadDir(dir); err == nil && len(entries) > 0 && !LooksLikeBundle(dir) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil //nolint:nilerr // a missing directory is created by the write
+	}
+	content := 0
+	for _, e := range entries {
+		if e.Name() != ".git" {
+			content++
+		}
+	}
+	if content > 0 && !LooksLikeBundle(dir) {
 		return fmt.Errorf("%s is not empty and is not an OKF bundle (no index.md with okf_version); refusing to remove files", dir)
 	}
 	return nil
@@ -159,7 +169,7 @@ func removeExtras(root *os.Root, dir string, files []File) error {
 			return fmt.Errorf("remove %s: %w", extra, err)
 		}
 	}
-	return pruneEmptyDirs(dir)
+	return pruneEmptyDirs(dir, drift.Extra)
 }
 
 func writeOne(root *os.Root, f File) error {
@@ -177,25 +187,25 @@ func writeOne(root *os.Root, f File) error {
 	return nil
 }
 
-func pruneEmptyDirs(dir string) error {
+// pruneEmptyDirs removes the directories that the removal of extras left empty,
+// walking up from each removed file. It never looks at anything else, so dot
+// directories such as .git and empty directories the exporter did not create
+// are left alone.
+func pruneEmptyDirs(dir string, removed []string) error {
+	seen := map[string]bool{}
 	var dirs []string
-	err := filepath.WalkDir(dir, func(p string, e fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
+	for _, rel := range removed {
+		for d := path.Dir(rel); d != "." && d != "/" && !seen[d]; d = path.Dir(d) {
+			seen[d] = true
+			dirs = append(dirs, d)
 		}
-		if e.IsDir() && p != dir {
-			dirs = append(dirs, p)
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("scan %s: %w", dir, err)
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(dirs)))
 	for _, d := range dirs {
-		if entries, err := os.ReadDir(d); err == nil && len(entries) == 0 {
-			if err := os.Remove(d); err != nil {
-				return fmt.Errorf("remove %s: %w", d, err)
+		full := filepath.Join(dir, filepath.FromSlash(d))
+		if entries, err := os.ReadDir(full); err == nil && len(entries) == 0 {
+			if err := os.Remove(full); err != nil {
+				return fmt.Errorf("remove %s: %w", full, err)
 			}
 		}
 	}
