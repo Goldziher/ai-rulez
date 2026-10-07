@@ -61,12 +61,13 @@ func SelfApprovals(base, cur *lockfile.File) []SelfApproval {
 		for _, s := range SubjectsOf(base, base.Item) {
 			baseDigest[s.Key()] = s.Digest
 		}
-		for _, a := range base.Approval {
-			had[recordKey(a)] = true
+		for i := range base.Approval {
+			had[recordKey(base.Approval[i])] = true
 		}
 	}
 	var out []SelfApproval
-	for _, a := range cur.Approval {
+	for i := range cur.Approval {
+		a := cur.Approval[i]
 		if had[recordKey(a)] {
 			continue
 		}

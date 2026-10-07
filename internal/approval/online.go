@@ -79,6 +79,43 @@ func ParseReviewRef(ref string) (repo forge.Repo, pr int, review int64, err erro
 	return repo, pr, review, nil
 }
 
+// reviewCounts reports whether review r can approve: it approves the head
+// commit, and its author is named by the policy or a maintainer with write access.
+func reviewCounts(ctx context.Context, c forge.Client, q ReviewQuery, head string, r forge.Review) (bool, error) {
+	if r.State != forge.ReviewApproved || r.CommitID == "" || head == "" || !strings.EqualFold(r.CommitID, head) {
+		return false, nil
+	}
+	named := q.Named != nil && q.Named(r.Login)
+	if !r.Maintainer() && !named {
+		return false, nil // anyone can review a public repository: an outsider approves nothing
+	}
+	if named {
+		return true, nil
+	}
+	// MEMBER of a public repository's organization may only read it.
+	return canWrite(ctx, c, q.Repo, r.Login)
+}
+
+// pinnedAtHeadOnce returns a function that reads, once, the digest the head
+// commit pins for the subject ("" when it pins none).
+func pinnedAtHeadOnce(ctx context.Context, q ReviewQuery, head string) func() (string, error) {
+	checked, pinnedAtHead := false, ""
+	return func() (string, error) {
+		if checked {
+			return pinnedAtHead, nil
+		}
+		digest, pinned, err := q.PinnedAt(ctx, head)
+		if err != nil {
+			return "", fmt.Errorf("read the content at the reviewed commit %s: %w", shortSHA(head), err)
+		}
+		if pinned {
+			pinnedAtHead = digest
+		}
+		checked = true
+		return pinnedAtHead, nil
+	}
+}
+
 // ApprovingReviews returns the reviews that approve q.Digest: the latest
 // decisive review of each reviewer is APPROVED (a later CHANGES_REQUESTED or
 // DISMISSED withdraws it; comments neither approve nor withdraw), the reviewer is
@@ -97,34 +134,18 @@ func ApprovingReviews(ctx context.Context, c forge.Client, q ReviewQuery) ([]Rev
 		return nil, fmt.Errorf("list the reviews of #%d: %w", q.PR, err)
 	}
 	var out []ReviewApproval
-	pinnedAtHead := ""
-	checked := false
+	headDigest := pinnedAtHeadOnce(ctx, q, pr.HeadSHA)
 	for login, r := range latestDecisive(reviews) {
-		if r.State != forge.ReviewApproved || r.CommitID == "" || pr.HeadSHA == "" || !strings.EqualFold(r.CommitID, pr.HeadSHA) {
+		counts, err := reviewCounts(ctx, c, q, pr.HeadSHA, r)
+		if err != nil {
+			return nil, err
+		}
+		if !counts {
 			continue
 		}
-		named := q.Named != nil && q.Named(r.Login)
-		if !r.Maintainer() && !named {
-			continue // anyone can review a public repository: an outsider approves nothing
-		}
-		if !named {
-			can, err := canWrite(ctx, c, q.Repo, r.Login)
-			if err != nil {
-				return nil, err
-			}
-			if !can {
-				continue // MEMBER of a public repository's organization may only read it
-			}
-		}
-		if !checked {
-			digest, pinned, err := q.PinnedAt(ctx, pr.HeadSHA)
-			if err != nil {
-				return nil, fmt.Errorf("read the content at the reviewed commit %s: %w", shortSHA(pr.HeadSHA), err)
-			}
-			if pinned {
-				pinnedAtHead = digest
-			}
-			checked = true
+		pinnedAtHead, err := headDigest()
+		if err != nil {
+			return nil, err
 		}
 		if pinnedAtHead == "" || pinnedAtHead != q.Digest { // an unpinned commit has no digest to match
 			continue

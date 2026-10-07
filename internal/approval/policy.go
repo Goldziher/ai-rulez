@@ -75,14 +75,16 @@ func SubjectsOf(lock *lockfile.File, items []lockfile.Item) []Subject {
 			kind    string
 			entries []lockfile.Entry
 		}{{KindInclude, lock.Include}, {KindInstalledSkill, lock.Skill}, {KindSource, lock.Source}} {
-			for _, e := range group.entries {
+			for i := range group.entries {
+				e := &group.entries[i]
 				out = append(out, Subject{Kind: group.kind, ID: e.Name, Digest: e.Digest, Class: ClassRemote})
 			}
 		}
 		for _, o := range lock.RoleOutputs() {
 			out = append(out, Subject{Kind: KindRoleOutput, ID: o.Role, Digest: o.Digest, Class: ClassRoleOutput})
 		}
-		for _, e := range lock.Served {
+		for i := range lock.Served {
+			e := &lock.Served[i]
 			out = append(out, Subject{Kind: KindServed, Domain: e.View, ID: e.Name, Digest: e.Digest, Class: ServedClass(e.Source, e.Ref, e.Commit)})
 		}
 	}
@@ -310,7 +312,7 @@ func (p Policy) Authorized(reviewer string) bool {
 // the path of s according to CODEOWNERS. A policy that names nobody names no one;
 // unlike Authorized, an empty allowlist does not stand for everybody.
 func (p Policy) Names(reviewer string, s Subject) bool {
-	if len(p.Approvers) > 0 && !(len(p.Approvers) == 1 && p.Approvers[0] == NobodyMayApprove) && p.Teams.Matches(p.Approvers, reviewer) {
+	if len(p.Approvers) > 0 && (len(p.Approvers) != 1 || p.Approvers[0] != NobodyMayApprove) && p.Teams.Matches(p.Approvers, reviewer) {
 		return true
 	}
 	if p.Owners == nil {
