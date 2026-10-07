@@ -15,8 +15,8 @@ import (
 func CeilGit() {
 	tmp := os.TempDir()
 	ceilings := []string{tmp}
-	if real, err := filepath.EvalSymlinks(tmp); err == nil && real != tmp {
-		ceilings = append(ceilings, real)
+	if resolved, err := filepath.EvalSymlinks(tmp); err == nil && resolved != tmp {
+		ceilings = append(ceilings, resolved)
 	}
 	if existing := os.Getenv("GIT_CEILING_DIRECTORIES"); existing != "" {
 		ceilings = append(ceilings, strings.Split(existing, string(os.PathListSeparator))...)
