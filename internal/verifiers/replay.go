@@ -32,6 +32,13 @@ type Replay struct {
 	Errors int `json:"errors,omitempty"`
 }
 
+// MaxReplay is the most merged diffs one suggest run replays: each one extracts a tree
+// and runs every proposal over it, so the count is bounded whatever --replay says.
+const MaxReplay = 100
+
+// ClampReplay limits a requested replay count to MaxReplay.
+func ClampReplay(n int) int { return min(n, MaxReplay) }
+
 // replayProposals runs every usable proposal over the last n merged diffs and
 // sets its Replay. A repository without history, or n <= 0, replays nothing and
 // the note says why. Each commit's tree is extracted once for all proposals.
@@ -39,6 +46,7 @@ func replayProposals(ctx context.Context, cfg *config.Config, props []*Proposal,
 	if n <= 0 || len(props) == 0 {
 		return ""
 	}
+	n = ClampReplay(n)
 	root := cfg.BaseDir
 	top := gitutil.TopLevel(root)
 	if top == "" {

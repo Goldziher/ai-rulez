@@ -54,7 +54,7 @@ func init() {
 	f := VerifiersSuggestCmd.Flags()
 	f.StringVar(&suggestKind, "kind", "rule", "What the id names: rule, skill, agent or command")
 	f.IntVar(&suggestMaxProposals, "max-proposals", 5, "Most candidates to ask for and keep")
-	f.IntVar(&suggestReplay, "replay", defaultSuggestReplay, "Try each usable proposal on the last N merged diffs (first-parent history) and report how many it would have flagged; 0 turns it off")
+	f.IntVar(&suggestReplay, "replay", defaultSuggestReplay, "Try each usable proposal on the last N merged diffs (first-parent history) and report how many it would have flagged; 0 turns it off, more than 100 is capped at 100")
 	f.BoolVar(&suggestWrite, "write", false, "Save the usable proposals to .ai-rulez/verifiers/suggested-<id>.toml (never overwrites)")
 	f.BoolVar(&verifiersAllowLLM, "allow-llm", false, "Send the rule text and a repository summary to the configured model (needs allow_network in the user config)")
 	f.Float64Var(&verifiersMaxCost, "max-cost", defaultVerifiersMaxCost, "Most the call may cost in USD (0 removes this cap; [llm] limits still apply)")
