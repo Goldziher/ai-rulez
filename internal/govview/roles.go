@@ -45,7 +45,7 @@ func ResolveRole(cfg *config.Config, name string, counter tokens.Counter) (*Role
 }
 
 // ResolutionView is a RoleResolution with the item list capped at a limit. Under
-// the limit it serialises exactly as RoleResolution.
+// the limit it serializes exactly as RoleResolution.
 type ResolutionView struct {
 	*RoleResolution
 	TotalItems int  `json:"total_items,omitempty"`

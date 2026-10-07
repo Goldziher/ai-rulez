@@ -48,7 +48,7 @@ type RevisionSnapshot struct {
 	// Commit is the commit the revision resolved to.
 	Commit string
 	Files  int
-	// Symlinks lists tracked symlinks that were not materialised: a snapshot never
+	// Symlinks lists tracked symlinks that were not materialized: a snapshot never
 	// holds one, because following it could leave the directory.
 	Symlinks []string
 }
