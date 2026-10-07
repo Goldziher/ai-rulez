@@ -90,7 +90,7 @@ const (
 	keyCommand = "command"
 )
 
-// recordCommand builds the `ai-rulez usage record` command line a hook runs.
+// recordCommand builds the `ai-rulez telemetry record` command line a hook runs.
 func recordCommand(options *HookTemplateOptions, harness string) string {
 	executable := options.Executable
 	if executable == "" {
@@ -102,7 +102,7 @@ func recordCommand(options *HookTemplateOptions, harness string) string {
 		// to the hook's working directory for the others.
 		logPath = DefaultLogPath
 	}
-	parts := []string{ShellWord(executable), "usage", "record"}
+	parts := []string{ShellWord(executable), "telemetry", "record"}
 	if harness != HarnessClaude {
 		parts = append(parts, "--harness", harness)
 	}
