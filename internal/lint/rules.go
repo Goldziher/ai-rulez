@@ -1,4 +1,4 @@
-// Package lint implements `ai-rulez validate --strict`: deep checks that find
+// Package lint implements `ai-rulez validate`: deep checks that find
 // instruction content which parses fine but does not work (globs that match
 // nothing, dead links, references to skills that do not exist, hooks that
 // cannot run, oversize rules, ...). Every finding carries a stable code, a

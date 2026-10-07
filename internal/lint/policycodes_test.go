@@ -10,7 +10,7 @@ import (
 
 func policyFixture(lintTable string) map[string]string {
 	return map[string]string{
-		".ai-rulez/config.toml": "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n" + lintTable,
+		".ai-rulez/config.toml": "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n" + lintTable,
 		".ai-rulez/rules/r.md":  "---\nname: r\n---\nkey AKIAIOSFODNN7EXAMPLE\n",
 	}
 }

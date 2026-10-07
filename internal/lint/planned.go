@@ -10,7 +10,7 @@ import (
 // generator imports this package, so a trap cannot call the generator; the
 // generator implements this interface instead and the command line hands it in
 // (WithPlanned). With it, a trap judges a generated file as the harness will read
-// it whether or not `generate` has run, so `validate --strict` no longer has to
+// it whether or not `generate` has run, so `validate` no longer has to
 // follow it.
 type PlannedFiles interface {
 	// Planned returns the final bytes a run writes at rel, a slash path relative to

@@ -1,7 +1,7 @@
 package lint
 
 // VerifierFinding is a verifier result computed outside the lint package (the
-// verifiers need the generator, which imports lint): `validate --strict
+// verifiers need the generator, which imports lint): `validate
 // --verifiers` evaluates them and hands over the findings, which are reported
 // under the AR9H codes.
 type VerifierFinding struct {

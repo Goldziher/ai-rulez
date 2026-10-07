@@ -30,7 +30,7 @@ type BaselineSummary struct {
 	Expired  []BaselineEntry `json:"expired,omitempty"`
 }
 
-// Combined is the JSON document `validate --strict --format json` prints.
+// Combined is the JSON document `validate --format json` prints.
 type Combined struct {
 	Roots    []string  `json:"roots"`
 	Findings []Finding `json:"findings"`
