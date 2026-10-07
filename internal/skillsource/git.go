@@ -47,8 +47,11 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, gitTimeout)
 	defer cancel()
 	// Everything a skill source names is untrusted: no hooks, helpers or submodules,
-	// and only the https, ssh and file transports (never ext::).
-	res := gitutil.New(runner.FromContext(ctx)).Exec(ctx, dir, gitutil.HardenedEnv(nil), append(gitutil.HardenedConfig(), args...)...)
+	// and only the https, ssh and file transports (never ext::). Long paths: the
+	// cache tree sits deep below the user cache directory, and git's own files
+	// below it pass MAX_PATH on Windows (other platforms ignore the setting).
+	argv := append(gitutil.HardenedConfig(), "-c", "core.longpaths=true")
+	res := gitutil.New(runner.FromContext(ctx)).Exec(ctx, dir, gitutil.HardenedEnv(nil), append(argv, args...)...)
 	if err := gitutil.ResultErr(res); err != nil {
 		return "", oops.With("output", includes.RedactURL(strings.TrimSpace(string(res.Stderr)))).Wrapf(err, "git %s", args[0])
 	}
