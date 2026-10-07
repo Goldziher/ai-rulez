@@ -311,7 +311,8 @@ func (c *Config) validateAgentEffort() error {
 }
 
 func validateAgentEffortSlice(agents []ContentFile, scope string) error {
-	for _, agent := range agents {
+	for i := range agents {
+		agent := &agents[i]
 		if agent.Metadata == nil {
 			continue
 		}
@@ -343,9 +344,9 @@ func (c *Config) validateMalformedFrontmatter() error {
 
 	var bad []string
 	visit := func(files []ContentFile) {
-		for _, f := range files {
-			if f.MalformedFrontmatter {
-				bad = append(bad, f.Path)
+		for i := range files {
+			if files[i].MalformedFrontmatter {
+				bad = append(bad, files[i].Path)
 			}
 		}
 	}
@@ -401,12 +402,13 @@ func (c *Config) validateSkillDescriptions() error {
 }
 
 func (c *Config) validateSkillSlice(skills []ContentFile, scope string) error {
-	for _, skill := range skills {
+	for i := range skills {
+		skill := &skills[i]
 		if SkillDescription(skill.Metadata) != "" {
 			continue
 		}
 
-		skillID := SkillID(skill)
+		skillID := SkillID(*skill)
 		c.Log().Warn("skill missing 'description' field in frontmatter — using skill name as fallback",
 			"scope", scope, "skill", skillID, "path", skill.Path)
 	}
@@ -790,8 +792,9 @@ func duplicateOutputIDs(items []ContentFile, outputID func(ContentFile) string, 
 	firstByKey := make(map[string]namespaceEntry, len(items))
 
 	var duplicates []string
-	for _, item := range items {
-		id := outputID(item)
+	for i := range items {
+		item := &items[i]
+		id := outputID(*item)
 		if id == "" {
 			continue
 		}
@@ -855,8 +858,9 @@ func (c *Config) validateOutputNamespaceCollisions() error {
 	commands := make(map[string]namespaceEntry)
 
 	collect := func(into map[string]namespaceEntry, items []ContentFile, id func(ContentFile) string) {
-		for _, item := range items {
-			itemID := id(item)
+		for i := range items {
+			item := &items[i]
+			itemID := id(*item)
 			if itemID == "" {
 				continue
 			}
@@ -1060,8 +1064,9 @@ func (c *Config) validateRuleActivation() error {
 }
 
 func (c *Config) validateActivationSlice(files []ContentFile, lenient bool) error {
-	for _, f := range files {
-		err := c.validateActivation(f)
+	for i := range files {
+		f := &files[i]
+		err := c.validateActivation(*f)
 		if err == nil {
 			continue
 		}

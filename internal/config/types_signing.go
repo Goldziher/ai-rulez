@@ -157,8 +157,8 @@ func (s *SigningConfig) SigningTLog() string {
 	if s.Identity != "" {
 		return SigningTLogRequired
 	}
-	for _, t := range s.Trust {
-		if t.KeyFile == "" {
+	for i := range s.Trust {
+		if s.Trust[i].KeyFile == "" {
 			return SigningTLogRequired
 		}
 	}
@@ -183,7 +183,9 @@ func (s *SigningConfig) SigningTrustEntries() []SigningTrust {
 	if s.Identity != "" || s.KeyFile != "" {
 		out = append(out, SigningTrust{Subject: SigningSubjectLock, Identity: s.Identity, Issuer: s.Issuer, KeyFile: s.KeyFile})
 	}
-	for _, t := range s.Trust {
+	for i := range s.Trust {
+		// Copy before filling the default subject: s.Trust must stay as written.
+		t := s.Trust[i]
 		if t.Subject == "" {
 			t.Subject = SigningSubjectLock
 		}
@@ -227,8 +229,8 @@ func (c *Config) validateSigning() error {
 	if s.Identity != "" && s.KeyFile != "" {
 		return fail("identity", "use identity and issuer, or key_file, not both; add [[signing.trust]] entries for several signers")
 	}
-	for i, t := range s.Trust {
-		if err := validateSigningTrust(t); err != nil {
+	for i := range s.Trust {
+		if err := validateSigningTrust(s.Trust[i]); err != nil {
 			return oops.With("field", fmt.Sprintf("signing.trust[%d]", i)).Wrap(err)
 		}
 	}
@@ -247,8 +249,9 @@ func (s *SigningConfig) validateTLogOff(fail func(field, format string, args ...
 	if s.TLog != SigningTLogOff {
 		return nil
 	}
-	for _, t := range s.SigningTrustEntries() {
-		if t.KeyFile == "" {
+	entries := s.SigningTrustEntries()
+	for i := range entries {
+		if entries[i].KeyFile == "" {
 			return fail("tlog", "tlog = %q only works with keys: a certificate identity needs a transparency log", SigningTLogOff)
 		}
 	}
@@ -288,8 +291,9 @@ func (s *SigningConfig) validateSigningPolicy(fail func(field, format string, ar
 }
 
 func (s *SigningConfig) hasTrustFor(subject string) bool {
-	for _, t := range s.SigningTrustEntries() {
-		if t.Subject == subject {
+	entries := s.SigningTrustEntries()
+	for i := range entries {
+		if entries[i].Subject == subject {
 			return true
 		}
 	}
@@ -300,11 +304,12 @@ func (s *SigningConfig) hasTrustFor(subject string) bool {
 // k entries, or a pattern entry (which may match many identities).
 func (s *SigningConfig) canReachThreshold(subject string, k int) bool {
 	n := 0
-	for _, t := range s.SigningTrustEntries() {
-		if t.Subject != subject {
+	entries := s.SigningTrustEntries()
+	for i := range entries {
+		if entries[i].Subject != subject {
 			continue
 		}
-		if t.IdentityRegexp != "" {
+		if entries[i].IdentityRegexp != "" {
 			return true
 		}
 		n++

@@ -413,8 +413,8 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config, resolve
 
 	// Build set of existing local skill names
 	existingNames := make(map[string]bool)
-	for _, s := range config.Content.Skills {
-		existingNames[s.Name] = true
+	for i := range config.Content.Skills {
+		existingNames[config.Content.Skills[i].Name] = true
 	}
 
 	// Map each installed skill's profile scope so generation can drop it from
@@ -425,7 +425,9 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config, resolve
 	}
 
 	// Merge: local skills win over installed skills
-	for _, s := range skills {
+	for i := range skills {
+		// Copy before setting Profiles: skills belongs to the resolver.
+		s := skills[i]
 		if existingNames[s.Name] {
 			log.Warn("Installed skill name conflicts with local skill, skipping", "name", s.Name)
 			continue
