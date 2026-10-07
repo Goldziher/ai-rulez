@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -505,18 +506,63 @@ const usageSinkQueue = 256
 const usageSinkFlushWait = 3 * time.Second
 
 // watchRoots lists the directories whose contents the catalog depends on: the
-// configuration directory and every local skill source.
+// configuration directory, every local include (or local_override) and every
+// local skill source. Remote trees are immutable per commit. A root inside
+// another root is left out so no file is fingerprinted twice.
 func (st *ServeSetup) watchRoots(b *built) []string {
-	var roots []string
+	var candidates []string
 	if b.cfg.ConfigDir != "" {
-		roots = append(roots, b.cfg.ConfigDir)
+		candidates = append(candidates, b.cfg.ConfigDir)
 	}
+	candidates = append(candidates, localIncludeDirs(b.cfg)...)
 	for _, res := range b.sources {
-		if res.Commit == "" { // a local directory; git trees are immutable per commit
-			roots = append(roots, res.Dir)
+		if res.Commit == "" {
+			candidates = append(candidates, res.Dir)
+		}
+	}
+	var roots []string
+	for _, c := range candidates {
+		if !slices.ContainsFunc(roots, func(r string) bool { return within(r, c) }) {
+			roots = append(roots, c)
 		}
 	}
 	return roots
+}
+
+// localIncludeDirs lists the directories of the configuration's local includes,
+// resolved as the include resolver does: relative to the project root, with a
+// local_override that exists taking the place of a remote source.
+func localIncludeDirs(cfg *config.Config) []string {
+	resolve := func(p string) string {
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(cfg.BaseDir, p)
+		}
+		return filepath.Clean(p)
+	}
+	var dirs []string
+	for i := range cfg.Includes {
+		inc := &cfg.Includes[i]
+		if inc.LocalOverride != "" {
+			dir := resolve(inc.LocalOverride)
+			if inc.Path != "" {
+				dir = filepath.Join(dir, filepath.FromSlash(inc.Path))
+			}
+			if info, err := os.Stat(dir); err == nil && info.IsDir() {
+				dirs = append(dirs, dir)
+				continue
+			}
+		}
+		if inc.Source != "" && includes.IsLocalPath(inc.Source) {
+			dirs = append(dirs, resolve(inc.Source))
+		}
+	}
+	return dirs
+}
+
+// within reports whether p is root or below it.
+func within(root, p string) bool {
+	rel, err := filepath.Rel(root, p)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // fingerprint hashes the path, size and modification time of every file below
