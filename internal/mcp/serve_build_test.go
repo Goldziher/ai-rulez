@@ -48,7 +48,27 @@ func remoteRepo(t *testing.T, extra map[string]string) (url, commit string) {
 	gitIn(t, work, "tag", "-a", "v1.0.0", "-m", "v1.0.0")
 	bare := filepath.Join(t.TempDir(), "remote.git")
 	gitIn(t, "", "clone", "--quiet", "--bare", work, bare)
-	return "file://" + bare, gitIn(t, work, "rev-parse", "HEAD")
+	return fileURL(bare), gitIn(t, work, "rev-parse", "HEAD")
+}
+
+// fileURL is the file:// URL of a local path with forward slashes, so it is the
+// same on every platform and can be written into a TOML string unescaped
+// (a Windows path's backslashes read as escapes there).
+func fileURL(p string) string {
+	p = filepath.ToSlash(p)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p // C:/x becomes file:///C:/x
+	}
+	return "file://" + p
+}
+
+// fileURLPath is the local path of a fileURL.
+func fileURLPath(u string) string {
+	p := strings.TrimPrefix(u, "file://")
+	if len(p) > 2 && p[0] == '/' && p[2] == ':' {
+		p = p[1:] // /C:/x is C:/x
+	}
+	return filepath.FromSlash(p)
 }
 
 func project(t *testing.T, configToml string, files map[string]string) string {
@@ -181,7 +201,7 @@ func TestServeSetup_FrozenNeverTouchesTheNetwork(t *testing.T) {
 	require.NoError(t, lockfile.Save(filepath.Join(root, ".ai-rulez"), &lockfile.File{Version: lockfile.Version, Source: sources, Served: served}))
 
 	// The remote is gone: only the lock and the cache remain.
-	require.NoError(t, os.RemoveAll(strings.TrimPrefix(url, "file://")))
+	require.NoError(t, os.RemoveAll(fileURLPath(url)))
 	frozen := &ServeSetup{WorkDir: root, NoWatch: true, CacheDir: cache, Frozen: true}
 	srv, err := frozen.NewServer(context.Background())
 	require.NoError(t, err)
