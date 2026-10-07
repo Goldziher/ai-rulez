@@ -3,6 +3,8 @@ package toolnames
 // Every vocabulary below was read from the vendor page it cites on 2026-10-05.
 // A Claude tool that a vendor does not document is left out on purpose: a hook
 // matcher naming it is skipped for that harness rather than guessed.
+//
+//nolint:goconst // each string is a vendor's own tool name, copied from the page cited above it
 func init() {
 	// OpenCode and Kilo: https://opencode.ai/docs/tools/. Kilo shares the table.
 	register(&Vocabulary{
