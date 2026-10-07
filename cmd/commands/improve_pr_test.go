@@ -14,6 +14,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/improve"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func readTestFile(t *testing.T, p string) string {
@@ -31,6 +32,7 @@ func TestImprovePR_OpensAPullRequestWithAFakeGH(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
 	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
+	testutil.GitIdentity(t) // improve pr commits through its own git, which the -c user.* below does not reach
 	root := setupImproveRun(t)
 	improveChildSelf(t)
 	var out, errOut bytes.Buffer
