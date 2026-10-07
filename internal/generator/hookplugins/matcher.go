@@ -51,29 +51,43 @@ func matcherProblem(matcher string) string {
 	return ""
 }
 
+// incompatibleSyntax names the first construct of matcher that Go and JavaScript
+// read differently, or returns "".
 func incompatibleSyntax(matcher string) string {
 	inClass := false
 	for i := 0; i < len(matcher); i++ {
-		switch c := matcher[i]; {
+		c := matcher[i]
+		switch {
 		case c == '\\':
 			i++
-			if i >= len(matcher) {
-				return "a trailing backslash"
+			if problem := escapeProblem(matcher, i); problem != "" {
+				return problem
 			}
-			if strings.ContainsRune("zZAQEpPkK123456789", rune(matcher[i])) {
-				return fmt.Sprintf(`\%c is not portable`, matcher[i])
-			}
-		case inClass && c == '[' && i+1 < len(matcher) && matcher[i+1] == ':':
+		case inClass && c == '[' && hasAt(matcher, i+1, ':'):
 			return "POSIX classes are not portable"
 		case inClass && c == ']':
 			inClass = false
 		case !inClass && c == '[':
 			inClass = true
-		case !inClass && c == '(' && i+1 < len(matcher) && matcher[i+1] == '?':
-			if i+2 >= len(matcher) || matcher[i+2] != ':' {
+		case !inClass && c == '(' && hasAt(matcher, i+1, '?'):
+			if !hasAt(matcher, i+2, ':') {
 				return "only (?: groups are portable"
 			}
 		}
 	}
 	return ""
 }
+
+// escapeProblem checks the escaped character at matcher[i].
+func escapeProblem(matcher string, i int) string {
+	if i >= len(matcher) {
+		return "a trailing backslash"
+	}
+	if strings.ContainsRune("zZAQEpPkK123456789", rune(matcher[i])) {
+		return fmt.Sprintf(`\%c is not portable`, matcher[i])
+	}
+	return ""
+}
+
+// hasAt reports whether s[i] exists and is c.
+func hasAt(s string, i int, c byte) bool { return i < len(s) && s[i] == c }
