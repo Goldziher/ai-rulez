@@ -119,8 +119,11 @@ func predRegex(ctx context.Context, env *Env, v config.VerifierConfig) (Outcome,
 		}
 	}
 	if len(missing) > 0 {
-		return Outcome{Message: fmt.Sprintf("pattern %q not found in %s", v.Pattern, listFirst(missing)),
-			Findings: fileFindings(missing, fmt.Sprintf("pattern %q not found", v.Pattern))}, nil
+		msg := fmt.Sprintf("pattern %q not found in %s", v.Pattern, listFirst(missing))
+		if len(skipped) > 0 {
+			msg += fmt.Sprintf("; %d file(s) were not fully checked (binary or over %s)", len(skipped), sizeText(env.fileLimit()))
+		}
+		return Outcome{Message: msg, Findings: fileFindings(missing, fmt.Sprintf("pattern %q not found", v.Pattern))}, nil
 	}
 	if len(skipped) > 0 {
 		return Outcome{}, unchecked(env, skipped)
