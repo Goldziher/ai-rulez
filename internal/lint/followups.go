@@ -258,6 +258,11 @@ func (r *runner) checkCollapsed() {
 			anchor = dup.Losers[0]
 		}
 		abs, _ := filepath.Abs(anchor) //nolint:errcheck // display only
+		for _, p := range paths {
+			if filepath.IsAbs(p) && p != anchor {
+				r.dep(abs, p) // the finding sits on the anchor but exists because of the others
+			}
+		}
 		r.add(CodeDuplicateCollapsed, abs, 1, "%s %q is defined in %s (kept) and %s (dropped); rename one, or list %q in lint.allow_overrides if the shadowing is intended",
 			dup.Kind, dup.Name, r.labelPath(dup.Winner), r.labelPaths(dup.Losers), dup.Name)
 	}
