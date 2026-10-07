@@ -206,7 +206,9 @@ func checkIncludes(_ context.Context, s *state) []Finding {
 		return nil
 	}
 	var out []Finding
-	for _, w := range includes.NotCached(s.cfg) {
+	notCached := includes.NotCached(s.cfg)
+	for i := range notCached {
+		w := &notCached[i]
 		if w.Kind != lockfile.KindInclude {
 			continue
 		}

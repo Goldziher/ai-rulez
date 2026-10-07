@@ -23,14 +23,16 @@ func checkRoleModes(_ context.Context, s *state) []Finding {
 		if err != nil {
 			continue // reported by the config check and validate --strict (AR972)
 		}
-		for _, o := range roles.PlanSkillModes(s.cfg, res) {
+		outcomes := roles.PlanSkillModes(s.cfg, res)
+		for i := range outcomes {
+			o := &outcomes[i]
 			if len(o.Degraded) == 0 {
 				continue
 			}
 			out = append(out, Finding{
 				Check: CheckRoleModes, Severity: SeverityInfo,
 				Message: "role " + name + ": skill_mode " + o.Mode + " of " + o.Key() + " is not honored on " +
-					strings.Join(o.Degraded, ", ") + "; " + degradedEffect(o),
+					strings.Join(o.Degraded, ", ") + "; " + degradedEffect(*o),
 				Hint: "see docs/roles.md#skill_mode-on-other-harnesses; [role_manifest] skill_mode_fallback picks drop or serve for off",
 			})
 		}
