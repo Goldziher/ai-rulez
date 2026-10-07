@@ -115,7 +115,7 @@ func TestConsentFile_RoundTripPermissionsAndRefusals(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 	assert.Equal(t, 1, got.Version)
-	assert.Equal(t, "2026-10-05T09:12:44Z", got.GrantedAt)
+	assert.Equal(t, "2026-10-05T09:12:44.000Z", got.GrantedAt, "milliseconds order a grant and a cursor placed in the same second")
 	assert.Contains(t, got.Scope.Fields, "ai_rulez.session")
 
 	if runtime.GOOS != "windows" {
