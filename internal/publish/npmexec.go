@@ -111,7 +111,8 @@ type npmSession struct {
 	snapshot *packageSnapshot
 }
 
-func (s *npmSession) close() { os.RemoveAll(s.tmp) } //nolint:errcheck // best effort cleanup of our own directory
+// close removes the session's own temporary directory; best effort.
+func (s *npmSession) close() { _ = os.RemoveAll(s.tmp) }
 
 // startNPM validates the plan and the dist directory and prepares the empty
 // working directory, the explicit config files and the registry check.
@@ -127,7 +128,7 @@ func startNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOp
 	if err != nil {
 		return nil, newError(CodeTarget, ExitFailed, "", "cannot resolve the dist directory: %v", err)
 	}
-	if err := requireVerifiedDist(abs); err != nil {
+	if err := requireVerifiedDist(abs); err != nil { //nolint:contextcheck // Verify reads local files and repacks in memory; it takes no context
 		return nil, err
 	}
 	snap, err := snapshotPackage(filepath.Join(abs, filepath.FromSlash(NPMPackageDir)))
@@ -140,7 +141,7 @@ func startNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOp
 	}
 	cfg, err := newNPMConfig(tmp, opts.Env)
 	if err != nil {
-		os.RemoveAll(tmp) //nolint:errcheck // best effort cleanup of our own directory
+		_ = os.RemoveAll(tmp) // best effort cleanup of our own directory
 		return nil, err
 	}
 	r = runner.Or(r)

@@ -217,6 +217,7 @@ func TestDistWrite_RemovalDoesNotFollowSymlinkedDirectories(t *testing.T) {
 	require.NoError(t, os.RemoveAll(filepath.Join(dir, EmitDir)))
 	testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, EmitDir))
 	next, err := Build(sampleInput()) // no template: emit/x.json is only in the old plan
+	require.NoError(t, err)
 
 	// Act
 	err = next.Write(dir)
