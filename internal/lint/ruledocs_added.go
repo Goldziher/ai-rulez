@@ -121,7 +121,7 @@ func registerRuledocsAdded(s *ruleSet) {
 			Good: "Ship readable sources; keep binaries out of the skill",
 		},
 		CodeImportInvalid: {
-			Why:  "Claude Code does not load an `@path` import that is missing, cyclic or more than five hops deep.",
+			Why:  "Claude Code does not load an `@path` import in a memory file (a rule or context file) that is missing, cyclic or more than five hops deep.",
 			Bad:  "`@docs/missing.md`",
 			Good: "Point the import at an existing file and keep the chain short",
 		},
