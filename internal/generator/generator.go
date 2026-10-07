@@ -2880,7 +2880,7 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 
 	digests := g.manifestDigestSet()
 	var matcher *outputMatcher
-	var stale []string
+	var stale, unknown, unverified []string
 	for _, relPath := range previous {
 		if next[relPath] || (isMergedDocumentPath(merged, relPath) && !local[relPath]) {
 			continue
@@ -2905,13 +2905,12 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 				matcher = g.outputMatcher(outputs)
 			}
 			if !matcher.matches(relPath) {
-				g.warnOnce("Stale file not removed: " + relPath + " is not a path any preset writes")
+				unknown = append(unknown, relPath)
 				continue
 			}
 		}
 		if !g.provablyGenerated(relPath, absPath, digests) {
-			g.warnOnce("Stale file not removed: cannot verify "+relPath+" was generated",
-				"hint", "delete it by hand if it is no longer needed")
+			unverified = append(unverified, relPath)
 			continue
 		}
 		// A rules folder is shared with hand-written rules: delete only a file that
@@ -2921,6 +2920,19 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 			continue
 		}
 		stale = append(stale, absPath)
+	}
+	sort.Strings(unknown)
+	sort.Strings(unverified)
+	// An upgrade can meet dozens of leftovers an older version listed: one line per
+	// reason, naming the files, rather than one warning per file.
+	if len(unknown) > 0 {
+		g.warnOnce(fmt.Sprintf("Stale files not removed: %d file(s) the previous manifest lists are not at a path any preset writes",
+			len(unknown)), "files", unknown, "hint", "delete them by hand if they are no longer needed")
+	}
+	if len(unverified) > 0 {
+		g.warnOnce(fmt.Sprintf("Stale files not removed: cannot verify that ai-rulez generated %d file(s) the previous manifest lists",
+			len(unverified)), "files", unverified,
+			"hint", "they carry no Content-Hash and no digest was recorded for them; delete them by hand if they are no longer needed")
 	}
 	sort.Strings(stale)
 	return stale
