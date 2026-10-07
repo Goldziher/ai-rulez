@@ -50,8 +50,8 @@ func TestHookPluginSidecar_BuiltinSpecs(t *testing.T) {
 			assert.Contains(t, found.Content, tt.contains)
 			assert.Contains(t, found.Content, `"command": "echo guard"`)
 			assert.False(t, found.PartiallyOwned)
-			assert.Equal(t, filepath.FromSlash("/home/u/"+tt.userPath),
-				gen.GlobalOutputPaths("/home/u", func(string) string { return "" }).Sidecars[tt.path])
+			assert.Equal(t, absSlash("/home/u/"+tt.userPath),
+				gen.GlobalOutputPaths(absSlash("/home/u"), func(string) string { return "" }).Sidecars[tt.path])
 
 			// Without hooks there is no module.
 			outputs, err = gen.Generate(&config.ContentTree{}, t.TempDir(), &config.Config{Name: "test"})

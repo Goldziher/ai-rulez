@@ -2,7 +2,6 @@ package providers_test
 
 import (
 	"encoding/json"
-	"path/filepath"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -71,9 +70,9 @@ func TestWarp_MCPJSON(t *testing.T) {
 func TestWarp_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	g := warpGen(t).Spec.GlobalPaths("/home/u", func(string) string { return "" })
+	g := warpGen(t).Spec.GlobalPaths(absSlash("/home/u"), func(string) string { return "" })
 	require.NotNil(t, g)
-	assert.Equal(t, filepath.FromSlash("/home/u/.agents/AGENTS.md"), g.RootFile)
-	assert.Equal(t, filepath.FromSlash("/home/u/.warp/skills"), g.SkillsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.warp/.mcp.json"), g.Sidecars[".warp/.mcp.json"])
+	assert.Equal(t, absSlash("/home/u/.agents/AGENTS.md"), g.RootFile)
+	assert.Equal(t, absSlash("/home/u/.warp/skills"), g.SkillsDir)
+	assert.Equal(t, absSlash("/home/u/.warp/.mcp.json"), g.Sidecars[".warp/.mcp.json"])
 }

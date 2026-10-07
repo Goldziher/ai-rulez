@@ -58,10 +58,10 @@ func TestLetta_Generate(t *testing.T) {
 func TestLetta_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	g := lettaGen(t).Spec.GlobalPaths("/home/u", func(string) string { return "" })
+	g := lettaGen(t).Spec.GlobalPaths(absSlash("/home/u"), func(string) string { return "" })
 	require.NotNil(t, g)
-	assert.Equal(t, filepath.FromSlash("/home/u/.letta/agents"), g.AgentsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.letta/skills"), g.SkillsDir)
+	assert.Equal(t, absSlash("/home/u/.letta/agents"), g.AgentsDir)
+	assert.Equal(t, absSlash("/home/u/.letta/skills"), g.SkillsDir)
 }
 
 // TestLetta_JoinListsOffByDefault: the other presets keep writing YAML lists.

@@ -41,7 +41,7 @@ func batchAContent() *config.ContentTree {
 // batchAConfig carries a local, a streamable-HTTP and an SSE MCP server.
 func batchAConfig() *config.Config {
 	return &config.Config{
-		Name: "demo", Description: "Demo project.", BaseDir: "/p", ConfigDir: "/p/.ai-rulez", ConfigDirName: ".ai-rulez",
+		Name: "demo", Description: "Demo project.", BaseDir: absSlash("/p"), ConfigDir: filepath.Join(absSlash("/p"), ".ai-rulez"), ConfigDirName: ".ai-rulez",
 		MCPServers: map[string]*config.MCPServer{
 			"local": {Name: "local", Command: "npx", Args: []string{"-y", "pkg"}, Env: map[string]string{"K": "v"}},
 			"http": {
@@ -59,7 +59,7 @@ func batchAGenerate(t *testing.T, name string, cfg *config.Config) []config.Outp
 	gen, err := providers.LoadBuiltin(name)
 	require.NoError(t, err)
 	assert.Equal(t, name, gen.GetName())
-	outputs, err := gen.Generate(batchAContent(), "/p", cfg)
+	outputs, err := gen.Generate(batchAContent(), absSlash("/p"), cfg)
 	require.NoError(t, err)
 	return outputs
 }
@@ -77,13 +77,13 @@ func batchAGlobal(t *testing.T, name string, env map[string]string) providers.Gl
 	t.Helper()
 	gen, err := providers.LoadBuiltin(name)
 	require.NoError(t, err)
-	got := gen.Spec.GlobalPaths(filepath.FromSlash("/home/u"), func(k string) string { return env[k] })
+	got := gen.Spec.GlobalPaths(absSlash("/home/u"), func(k string) string { return env[k] })
 	require.NotNil(t, got)
 	return *got
 }
 
 func batchAJoin(p string) string {
-	return filepath.Join(filepath.FromSlash("/home/u"), filepath.FromSlash(p))
+	return filepath.Join(absSlash("/home/u"), filepath.FromSlash(p))
 }
 
 func TestQwen_Generate(t *testing.T) {
@@ -182,6 +182,6 @@ func TestQwen_Global(t *testing.T) {
 	}
 	assert.Equal(t, want, batchAGlobal(t, "qwen", nil))
 
-	relocated := batchAGlobal(t, "qwen", map[string]string{"QWEN_HOME": filepath.FromSlash("/data/qwen")})
-	assert.Equal(t, filepath.FromSlash("/data/qwen/rules"), relocated.RulesDir)
+	relocated := batchAGlobal(t, "qwen", map[string]string{"QWEN_HOME": absSlash("/data/qwen")})
+	assert.Equal(t, absSlash("/data/qwen/rules"), relocated.RulesDir)
 }

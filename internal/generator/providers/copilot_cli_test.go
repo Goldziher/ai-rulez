@@ -214,13 +214,13 @@ func TestCopilotCLI_MCPJSON(t *testing.T) {
 func TestCopilotCLI_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	g := copilotCLIGen(t).Spec.GlobalPaths("/home/u", func(string) string { return "" })
+	g := copilotCLIGen(t).Spec.GlobalPaths(absSlash("/home/u"), func(string) string { return "" })
 	require.NotNil(t, g)
-	assert.Equal(t, filepath.FromSlash("/home/u/.copilot/copilot-instructions.md"), g.RootFile)
-	assert.Equal(t, filepath.FromSlash("/home/u/.copilot/skills"), g.SkillsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.copilot/agents"), g.AgentsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.copilot/instructions"), g.RulesDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.copilot/mcp-config.json"), g.Sidecars[".github/mcp.json"])
+	assert.Equal(t, absSlash("/home/u/.copilot/copilot-instructions.md"), g.RootFile)
+	assert.Equal(t, absSlash("/home/u/.copilot/skills"), g.SkillsDir)
+	assert.Equal(t, absSlash("/home/u/.copilot/agents"), g.AgentsDir)
+	assert.Equal(t, absSlash("/home/u/.copilot/instructions"), g.RulesDir)
+	assert.Equal(t, absSlash("/home/u/.copilot/mcp-config.json"), g.Sidecars[".github/mcp.json"])
 }
 
 // TestCopilotCLI_ExtensionsValidate pins the loader checks of the generic DSL
