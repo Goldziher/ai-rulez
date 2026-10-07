@@ -238,7 +238,7 @@ func CheckPolicy(cfg *Config) error {
 		return nil
 	}
 	lines := policyLines(cfg.PolicyOutcome)
-	return oops.With("violations", lines).
+	return policyLoosening{err: oops.With("violations", lines).
 		Hint("The organization policy only lets a repository add restrictions; remove the entries above or ask the policy owners to change the policy").
-		Errorf("the configuration loosens the organization policy:\n  %s", strings.Join(lines, "\n  "))
+		Errorf("the configuration loosens the organization policy:\n  %s", strings.Join(lines, "\n  "))}
 }
