@@ -34,7 +34,9 @@ func ValidTelemetryProtocol(p string) bool {
 // needs AllowNetwork and an endpoint, and a repository config cannot grant
 // either (see internal/telemetry and docs/telemetry.md for the trust rule).
 type TelemetryConfig struct {
-	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
+	// Enabled is a pointer so the user config can say false explicitly: an
+	// explicit user-scope false beats a repository's true.
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
 	// AllowNetwork is the explicit consent for OTLP export. User scope only.
 	AllowNetwork bool `yaml:"allow_network,omitempty" json:"allow_network,omitempty" toml:"allow_network,omitempty"` //nolint:tagliatelle
 	// OTLPEndpoint is the collector base URL ("https://collector:4318"); for the

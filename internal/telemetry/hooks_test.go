@@ -31,11 +31,11 @@ func pipelineFor(t *testing.T, settings Settings) (*Pipeline, *time.Time, *atomi
 }
 
 func enabled() Settings {
-	return Resolve(Layers{Repo: &config.TelemetryConfig{Enabled: true}, Getenv: env()})
+	return Resolve(Layers{Repo: &config.TelemetryConfig{Enabled: ptrBool(true)}, Getenv: env()})
 }
 
 func exporting() Settings {
-	return Resolve(Layers{User: &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "http://127.0.0.1:1"}, Getenv: env()})
+	return Resolve(Layers{User: &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "http://127.0.0.1:1"}, Getenv: env()})
 }
 
 func hookJSON(fields string) *bytes.Reader {
@@ -94,7 +94,7 @@ func TestHandleHook_ContextFilesAndOutsideFiles(t *testing.T) {
 }
 
 func TestHandleHook_IncludePathsOptIn(t *testing.T) {
-	s := Resolve(Layers{User: &config.TelemetryConfig{Enabled: true, IncludePaths: true}, Getenv: env()})
+	s := Resolve(Layers{User: &config.TelemetryConfig{Enabled: ptrBool(true), IncludePaths: true}, Getenv: env()})
 	p, _, _ := pipelineFor(t, s)
 	file := filepath.Join(p.Root, ".claude", "rules", "r.md")
 	event, err := p.HandleHook(context.Background(), hookJSON(`"hook_event_name":"InstructionsLoaded","file_path":"`+file+`","memory_type":"Project","load_reason":"session_start"`), HookOptions{})
@@ -161,7 +161,7 @@ func TestPipeline_RecordNeverWaitsOnADeadCollector(t *testing.T) {
 }
 
 func TestPipeline_SamplingAppliesToExportNotToTheLocalLog(t *testing.T) {
-	s := Resolve(Layers{User: &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "http://127.0.0.1:1", Sample: ptrFloat(0)}, Getenv: env()})
+	s := Resolve(Layers{User: &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "http://127.0.0.1:1", Sample: ptrFloat(0)}, Getenv: env()})
 	p, _, _ := pipelineFor(t, s)
 	require.NoError(t, p.Record(context.Background(), Event{Kind: KindRule, ID: "r", Source: SourceHook, Outcome: OutcomeLoaded}))
 	events, _, _ := p.Spool.Pending()
