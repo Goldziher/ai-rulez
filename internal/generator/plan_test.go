@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -212,7 +213,9 @@ func TestPlanMatchesWhatGenerateWrites(t *testing.T) {
 		if f.Sensitive {
 			continue // the plan is conservative: a run may find the file holds no secret
 		}
-		assert.Equal(t, f.Mode, fmt.Sprintf("%04o", info.Mode().Perm()), f.Path)
+		if runtime.GOOS != "windows" { // Windows file modes carry only the read-only bit
+			assert.Equal(t, f.Mode, fmt.Sprintf("%04o", info.Mode().Perm()), f.Path)
+		}
 	}
 }
 
