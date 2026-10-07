@@ -298,7 +298,6 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	scanner := newProjectScanner(v)
 	scanner.git = gitutil.New(loadHost(lo).Runner)
 	scanner.log = lo.host.Log
-	config.warnDeprecatedLintBudget()
 	contentTree, err := scanContentTree(scanner, configDir, config.BundleExclude)
 	if err != nil {
 		return nil, err
@@ -655,8 +654,8 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Permissions:     raw.Permissions,
 	}
 	cfg.VerifiersSettings = raw.VerifiersSet
-	if raw.Lint != nil && len(raw.Lint.Budget) > 0 {
-		cfg.deprecatedLintBudgetPath = path
+	if err := renamedRatchetTable(path, raw.Lint); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil

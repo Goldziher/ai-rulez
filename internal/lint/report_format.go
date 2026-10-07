@@ -266,8 +266,8 @@ func WriteMarkdown(w io.Writer, c Combined) error {
 }
 
 func writeBaselineMarkdown(sb *strings.Builder, c Combined) {
-	for _, e := range c.Budgets {
-		fmt.Fprintf(sb, "\n**Over budget:** `%s` has %d finding(s), budget %d.\n", e.Code, e.Count, e.Max)
+	for _, e := range c.Ratchet {
+		fmt.Fprintf(sb, "\n**Over ratchet:** `%s` has %d finding(s), ratchet %d.\n", e.Code, e.Count, e.Max)
 	}
 	if c.Baseline == nil {
 		return
