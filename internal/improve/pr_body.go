@@ -47,7 +47,6 @@ func writeResult(b *strings.Builder, r *Report, rd *RoundReport) {
 		}
 		b.WriteString("\n")
 	}
-
 }
 
 func writeGuards(b *strings.Builder, rd *RoundReport) {
@@ -64,7 +63,6 @@ func writeGuards(b *strings.Builder, rd *RoundReport) {
 		fmt.Fprintf(b, "- Sibling trigger guard (native model, %d run(s) per prompt): %d sibling skill(s) checked, none lost trigger recall.\n", rd.SiblingsNative.Runs, len(rd.SiblingsNative.Results))
 	}
 	b.WriteString("\n")
-
 }
 
 func writeCost(b *strings.Builder, r *Report) {
@@ -87,7 +85,6 @@ func writeCost(b *strings.Builder, r *Report) {
 	}
 	fmt.Fprintf(b, "- Declared egress: %s (informational: not enforced unless the environment does).\n", idList(r.Egress))
 	fmt.Fprintf(b, "- Environment variable names forwarded: %s.\n\n", idList(r.EnvPass))
-
 }
 
 func writeDetails(b *strings.Builder, r *Report, rd *RoundReport) {

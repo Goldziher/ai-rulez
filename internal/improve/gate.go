@@ -27,7 +27,7 @@ type CaseOutcome struct {
 	NearMiss bool `json:"near_miss,omitempty"`
 }
 
-// Metrics summarises an arm over the cases both arms scored.
+// Metrics summarizes an arm over the cases both arms scored.
 type Metrics struct {
 	Scored                 int      `json:"scored"`
 	Passed                 int      `json:"passed"`
@@ -64,16 +64,36 @@ type Evaluator struct {
 	Counter tokens.Counter
 }
 
+// caseTally counts the verdicts one case received across the runs of an arm.
+type caseTally struct {
+	pass, fail, trig, noTrig, seen int
+	expect, nearMiss               bool
+}
+
+// add folds one run's score of a case into the tally.
+func (t *caseTally) add(cs *evals.CaseScore) {
+	if cs.Status == evals.StatusSkipped {
+		return
+	}
+	t.seen++
+	if cs.Status == evals.StatusPassed {
+		t.pass++
+	} else {
+		t.fail++
+	}
+	if cs.Triggered != nil && *cs.Triggered {
+		t.trig++
+	} else {
+		t.noTrig++
+	}
+}
+
 // Eval runs cases (already expanded) against the skill in dir. budget is the
 // USD left (0: unlimited); a run that reports no cost under a budget is charged
 // the whole budget, the rule the eval engine uses.
 func (e *Evaluator) Eval(ctx context.Context, id, dir, digest string, cases []evals.Case, budget float64) (*Measurement, error) {
 	runs := max(e.Runs, 1)
-	type tally struct {
-		pass, fail, trig, noTrig, seen int
-		expect, nearMiss               bool
-	}
-	by := map[string]*tally{}
+	by := map[string]*caseTally{}
 	m := &Measurement{}
 	skillTokens := 0
 	if e.Counter != nil {
@@ -108,23 +128,10 @@ func (e *Evaluator) Eval(ctx context.Context, id, dir, digest string, cases []ev
 			cs := &scores[i]
 			t := by[cs.Case]
 			if t == nil {
-				t = &tally{expect: cs.ExpectTrigger, nearMiss: cs.NearMiss}
+				t = &caseTally{expect: cs.ExpectTrigger, nearMiss: cs.NearMiss}
 				by[cs.Case] = t
 			}
-			if cs.Status == evals.StatusSkipped {
-				continue
-			}
-			t.seen++
-			if cs.Status == evals.StatusPassed {
-				t.pass++
-			} else {
-				t.fail++
-			}
-			if cs.Triggered != nil && *cs.Triggered {
-				t.trig++
-			} else {
-				t.noTrig++
-			}
+			t.add(cs)
 		}
 		if budget > 0 && left <= 0 && run < runs-1 {
 			m.Truncated = true
@@ -132,6 +139,12 @@ func (e *Evaluator) Eval(ctx context.Context, id, dir, digest string, cases []ev
 			break
 		}
 	}
+	collectOutcomes(m, by)
+	return m, nil
+}
+
+// collectOutcomes turns the tallies into the majority outcome of each case, in case order.
+func collectOutcomes(m *Measurement, by map[string]*caseTally) {
 	ids := make([]string, 0, len(by))
 	for id := range by {
 		ids = append(ids, id)
@@ -148,7 +161,6 @@ func (e *Evaluator) Eval(ctx context.Context, id, dir, digest string, cases []ev
 			Unstable: t.pass != 0 && t.fail != 0, Expect: t.expect, NearMiss: t.nearMiss,
 		})
 	}
-	return m, nil
 }
 
 func reportedCost(resp *evals.Response) bool {
@@ -175,7 +187,7 @@ func budgetUSD(left float64) float64 {
 	return max(roundUSD(left), 0.0001)
 }
 
-// MetricsOf summarises outcomes, optionally restricted to the cases in only.
+// MetricsOf summarizes outcomes, optionally restricted to the cases in only.
 func MetricsOf(outcomes []CaseOutcome, only map[string]bool) Metrics {
 	var m Metrics
 	var tp, fp, fn int
@@ -351,6 +363,13 @@ func worse(base, cand *float64) bool {
 	return *cand+epsilon < *base
 }
 
+// Decisions a round report records and an optimizer is told.
+const (
+	decisionRegression = "rejected: regression"
+	decisionOverBudget = "rejected: over budget"
+	reasonOverBudget   = "stopped: over budget"
+)
+
 // Decision is the one-word feedback an optimizer receives about a round; it
 // never carries per-case held-out information.
 func (v Verdict) Decision() string {
@@ -359,7 +378,7 @@ func (v Verdict) Decision() string {
 	}
 	for _, r := range v.Reasons {
 		if strings.HasPrefix(r, "regression") {
-			return "rejected: regression"
+			return decisionRegression
 		}
 	}
 	for _, r := range v.Reasons {

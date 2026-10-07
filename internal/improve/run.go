@@ -186,12 +186,12 @@ type GateReport struct {
 func (r *Report) Accepted() bool { return r.Status == StatusAccepted }
 
 // Sanitize makes untrusted optimizer text safe to print: control characters
-// (terminal escapes included) become spaces and the text is cut at max runes.
-func Sanitize(s string, max int) string {
+// (terminal escapes included) become spaces and the text is cut at limit runes.
+func Sanitize(s string, limit int) string {
 	var b strings.Builder
 	n := 0
 	for _, r := range s {
-		if n >= max {
+		if n >= limit {
 			b.WriteString("...")
 			break
 		}
@@ -322,7 +322,7 @@ func (x *execution) nativeSiblingGuard(rr roundResult, rep *RoundReport) (reject
 		rep.Decision = "rejected: sibling guard failed"
 		rep.Reasons = append(rep.Reasons, "the native sibling trigger guard could not run, so the candidate cannot be cleared: "+Sanitize(err.Error(), 300))
 	case len(nat.Regressions()) > 0:
-		rep.Decision = "rejected: regression"
+		rep.Decision = decisionRegression
 		rep.Reasons = append(rep.Reasons, nat.Reasons()...)
 	default:
 		return false
@@ -349,51 +349,68 @@ type bestRound struct {
 	digest string
 }
 
-func (x *execution) loop() (*bestRound, error) {
+// measureBaselines scores the unmodified skill on the held-out and train cases. A nil measurement with a nil
+// error means there is nothing to gain and the report already says so.
+func (x *execution) measureBaselines() (baseHeld *Measurement, scores *trainScores, err error) {
 	p, o := x.p, &x.p.Opts
 	origDigest := p.OrigDigest
-	baseHeld, err := x.eval.Eval(x.ctx, p.Skill.ID, x.origDir, origDigest, p.heldCases, x.left())
+	baseHeld, err = x.eval.Eval(x.ctx, p.Skill.ID, x.origDir, origDigest, p.heldCases, x.left())
 	if baseHeld != nil {
 		x.charge(baseHeld.CostUSD, 0)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("measure the baseline: %w", err)
+		return nil, nil, fmt.Errorf("measure the baseline: %w", err)
 	}
 	x.report.Warnings = append(x.report.Warnings, prefixed("baseline held-out cases: ", baseHeld.Warnings)...)
 	if err := x.checkBaseline(baseHeld); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	baseMetrics := MetricsOf(baseHeld.Outcomes, nil)
 	x.report.Baseline = &baseMetrics
 	if baseMetrics.PassRate >= 1-epsilon || baseMetrics.PassRate+o.MinGain > 1+epsilon {
 		x.report.Status = StatusNoCandidate
 		x.report.Reason = "nothing to gain on held-out: the baseline already passes every held-out case or the required gain cannot be reached"
-		return nil, nil
+		return nil, nil, nil
 	}
-	var scores *trainScores
 	if !x.overBudget() {
 		baseTrain, terr := x.eval.Eval(x.ctx, p.Skill.ID, x.origDir, origDigest, p.trainCases, x.left())
 		if baseTrain != nil {
 			x.charge(baseTrain.CostUSD, 0)
 		}
 		if terr != nil {
-			return nil, fmt.Errorf("measure the baseline on train cases: %w", terr)
+			return nil, nil, fmt.Errorf("measure the baseline on train cases: %w", terr)
 		}
 		x.report.Warnings = append(x.report.Warnings, prefixed("baseline train cases: ", baseTrain.Warnings)...)
 		m := MetricsOf(baseTrain.Outcomes, nil)
 		x.report.BaselineTrain = &m
 		scores = &trainScores{PassRate: m.PassRate, TriggerPrecision: m.TriggerPrecision, TriggerRecall: m.TriggerRecall}
 	}
+	return baseHeld, scores, nil
+}
+
+// stopReason says why no further round may start, or "" when one may.
+func (x *execution) stopReason(holdoutEvals int) string {
+	switch {
+	case x.overBudget():
+		return reasonOverBudget
+	case holdoutEvals >= x.p.Opts.MaxHoldoutEvals:
+		return "stopped: max held-out evaluations reached"
+	}
+	return ""
+}
+
+func (x *execution) loop() (*bestRound, error) {
+	o := &x.p.Opts
+	baseHeld, scores, err := x.measureBaselines()
+	if err != nil || baseHeld == nil {
+		return nil, err
+	}
 	var best *bestRound
 	var history []string
 	holdoutEvals := 0
 	for round := 1; round <= o.MaxRounds; round++ {
-		if x.overBudget() {
-			x.report.Reason = "stopped: over budget"
-			break
-		}
-		if holdoutEvals >= o.MaxHoldoutEvals {
-			x.report.Reason = "stopped: max held-out evaluations reached"
+		if reason := x.stopReason(holdoutEvals); reason != "" {
+			x.report.Reason = reason
 			break
 		}
 		rr := x.round(round, scores, history)
@@ -519,7 +536,7 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 		return out, nil
 	case len(sib.Regressions()) > 0:
 		rep.Siblings = sib
-		rep.Decision = "rejected: regression"
+		rep.Decision = decisionRegression
 		rep.Reasons = append(rep.Reasons, sib.Reasons()...)
 		x.prev = rr.cand
 		return out, nil
@@ -546,8 +563,8 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 		out.train = &trainScores{PassRate: m.PassRate, TriggerPrecision: m.TriggerPrecision, TriggerRecall: m.TriggerRecall}
 	}
 	if x.overBudget() {
-		rep.Decision, rep.Reasons = "rejected: over budget", append(rep.Reasons, "the budget ran out before the held-out evaluation")
-		x.report.Reason = "stopped: over budget"
+		rep.Decision, rep.Reasons = decisionOverBudget, append(rep.Reasons, "the budget ran out before the held-out evaluation")
+		x.report.Reason = reasonOverBudget
 		return out, x.reset(x.prev)
 	}
 	held, err := x.eval.Eval(x.ctx, p.Skill.ID, rr.dir, digest, p.heldCases, x.left())
@@ -562,9 +579,9 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 	rep.Warnings = append(rep.Warnings, prefixed("held-out cases: ", held.Warnings)...)
 	if held.Truncated {
 		// Fewer runs than the baseline had: the majority is not comparable, so it cannot clear the gate.
-		rep.Decision = "rejected: over budget"
+		rep.Decision = decisionOverBudget
 		rep.Reasons = append(rep.Reasons, "the budget ran out before every held-out run of the candidate finished; a partial measurement cannot clear the gate")
-		x.report.Reason = "stopped: over budget"
+		x.report.Reason = reasonOverBudget
 		return out, x.reset(x.prev)
 	}
 	cmp := Compare(baseHeld.Outcomes, held.Outcomes)
@@ -642,7 +659,7 @@ func (x *execution) reset(tree *Tree) error {
 
 // runOptimizer starts the optimizer and decodes its answer. A non-empty reason
 // means the round failed.
-func (x *execution) runOptimizer(round int, scores *trainScores, history []string, rep *RoundReport) (*OptimizerResponse, string) {
+func (x *execution) runOptimizer(round int, scores *trainScores, history []string, rep *RoundReport) (answer *OptimizerResponse, failure string) {
 	p, o := x.p, &x.p.Opts
 	budget := budgetUSD(x.left())
 	req := OptimizerRequest{
@@ -703,7 +720,7 @@ func (x *execution) runOptimizer(round int, scores *trainScores, history []strin
 
 // decodeOptimizerResponse decodes and checks an optimizer's answer; a non-empty
 // reason says why it is unusable.
-func decodeOptimizerResponse(stdout []byte) (*OptimizerResponse, string) {
+func decodeOptimizerResponse(stdout []byte) (answer *OptimizerResponse, failure string) {
 	var resp OptimizerResponse
 	dec := json.NewDecoder(bytes.NewReader(stdout))
 	if err := dec.Decode(&resp); err != nil {
@@ -736,14 +753,14 @@ func (x *execution) chargeFailedRound(budget float64, stdout []byte, rep *RoundR
 	rep.CostUSD = roundUSD(rep.CostUSD + cost)
 }
 
-// previousRound summarises the last finished round for the next optimizer call.
+// previousRound summarizes the last finished round for the next optimizer call.
 func (x *execution) previousRound() *PreviousRound {
 	n := len(x.report.Rounds)
 	if n == 0 {
 		return nil
 	}
 	rd := &x.report.Rounds[n-1]
-	prev := &PreviousRound{Round: rd.Round, Decision: Sanitize(rd.Decision, 80), Summary: Sanitize(rd.Summary, 300), WorkspaceKept: rd.Digest != "" && rd.Decision != "rejected: over budget"}
+	prev := &PreviousRound{Round: rd.Round, Decision: Sanitize(rd.Decision, 80), Summary: Sanitize(rd.Summary, 300), WorkspaceKept: rd.Digest != "" && rd.Decision != decisionOverBudget}
 	if rd.Held == nil { // the held-out set was not consulted: the reasons carry nothing held-out
 		for _, v := range rd.Violations {
 			prev.Reasons = append(prev.Reasons, v.String())

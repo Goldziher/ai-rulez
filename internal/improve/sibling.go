@@ -90,7 +90,7 @@ func pct(v *float64) float64 {
 }
 
 // rankerFields are the frontmatter keys the find_skill ranker reads.
-var rankerFields = []string{"name", "description", "triggers", "keywords"}
+var rankerFields = []string{frontmatterName, "description", "triggers", "keywords"}
 
 // rankerFieldsChanged reports whether the candidate's SKILL.md differs from the
 // original's in anything the ranker searches, so a body-only edit skips the guard.
@@ -141,19 +141,7 @@ func (p *Plan) guardSiblings(ctx context.Context, cand *Tree, native *SiblingNat
 	if err != nil {
 		return nil, fmt.Errorf("list skills: %w", err)
 	}
-	var siblings []string
-	for i := range all {
-		if all[i].ID == p.Skill.ID {
-			continue
-		}
-		if why := siblingProblem(&all[i]); why != "" {
-			rep.Unmeasured = append(rep.Unmeasured, SiblingSkip{Skill: all[i].ID, Reason: why})
-			continue
-		}
-		if len(all[i].EvalDirs) > 0 {
-			siblings = append(siblings, all[i].ID)
-		}
-	}
+	siblings := p.measurableSiblings(all, rep)
 	if len(siblings) == 0 {
 		rep.Skipped = "no other skill has trigger cases"
 		return rep, nil
@@ -188,10 +176,29 @@ func (p *Plan) guardSiblings(ctx context.Context, cand *Tree, native *SiblingNat
 	return rep, nil
 }
 
+// measurableSiblings lists the other skills that have trigger cases and can be copied into the guard's scratch
+// tree; the ones that cannot are recorded in rep.Unmeasured.
+func (p *Plan) measurableSiblings(all []evals.Skill, rep *SiblingReport) []string {
+	var siblings []string
+	for i := range all {
+		if all[i].ID == p.Skill.ID {
+			continue
+		}
+		if why := siblingProblem(&all[i]); why != "" {
+			rep.Unmeasured = append(rep.Unmeasured, SiblingSkip{Skill: all[i].ID, Reason: why})
+			continue
+		}
+		if len(all[i].EvalDirs) > 0 {
+			siblings = append(siblings, all[i].ID)
+		}
+	}
+	return siblings
+}
+
 // siblingActivation builds a scratch config directory holding the siblings (SKILL.md and
 // eval cases) and the target skill (SKILL.md of tree only, never its eval cases), and
 // runs the retrieval activation on the siblings.
-func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Skill, tree *Tree, siblings []string, native *SiblingNative, budget float64) (map[string]evals.ActivationSkill, float64, error) {
+func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Skill, tree *Tree, siblings []string, native *SiblingNative, budget float64) (skills map[string]evals.ActivationSkill, costUSD float64, err error) {
 	configDir := p.Opts.ConfigDir
 	for i := range all {
 		s := &all[i]
@@ -208,19 +215,8 @@ func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Sk
 		if siblingProblem(s) != "" {
 			continue // reported by checkSiblings; the same skills are left out of both arms
 		}
-		if err := copyRegular(filepath.Join(s.Dir, skillFile), filepath.Join(dst, skillFile)); err != nil {
-			return nil, 0, fmt.Errorf("copy %s: %w", s.ID, err)
-		}
-		for _, ev := range s.EvalDirs {
-			target := filepath.Join(dst, "evals")
-			if rel, err := filepath.Rel(s.Dir, ev); err == nil && !strings.HasPrefix(rel, "..") {
-				target = filepath.Join(dst, rel)
-			} else if rel, err := filepath.Rel(filepath.Join(configDir, evals.ProjectEvalsDir), ev); err == nil && !strings.HasPrefix(rel, "..") {
-				target = filepath.Join(dir, evals.ProjectEvalsDir, rel)
-			}
-			if err := copyRegularTree(ev, target); err != nil {
-				return nil, 0, fmt.Errorf("copy the eval cases of %s: %w", s.ID, err)
-			}
+		if err := copySibling(s, dir, dst, configDir); err != nil {
+			return nil, 0, err
 		}
 	}
 	report, err := p.runSiblingActivation(ctx, dir, siblings, native, budget)
@@ -234,6 +230,26 @@ func (p *Plan) siblingActivation(ctx context.Context, dir string, all []evals.Sk
 		}
 	}
 	return out, report.Cost.ActualUSD, nil
+}
+
+// copySibling copies a sibling's SKILL.md to dst and its eval cases below dir (next to the skill, or under the
+// project evals directory when that is where they live).
+func copySibling(s *evals.Skill, dir, dst, configDir string) error {
+	if err := copyRegular(filepath.Join(s.Dir, skillFile), filepath.Join(dst, skillFile)); err != nil {
+		return fmt.Errorf("copy %s: %w", s.ID, err)
+	}
+	for _, ev := range s.EvalDirs {
+		target := filepath.Join(dst, "evals")
+		if rel, err := filepath.Rel(s.Dir, ev); err == nil && !strings.HasPrefix(rel, "..") {
+			target = filepath.Join(dst, rel)
+		} else if rel, err := filepath.Rel(filepath.Join(configDir, evals.ProjectEvalsDir), ev); err == nil && !strings.HasPrefix(rel, "..") {
+			target = filepath.Join(dir, evals.ProjectEvalsDir, rel)
+		}
+		if err := copyRegularTree(ev, target); err != nil {
+			return fmt.Errorf("copy the eval cases of %s: %w", s.ID, err)
+		}
+	}
+	return nil
 }
 
 // runSiblingActivation measures the siblings on the offline ranker, or, with native set, on the
@@ -284,14 +300,14 @@ func compareSiblings(base, cand map[string]evals.ActivationSkill) []SiblingResul
 // lostPrompts lists the positive prompts the baseline won for the sibling and the candidate does not.
 func lostPrompts(base, cand *evals.ActivationSkill) []string {
 	won := map[string]bool{}
-	for _, p := range cand.Prompts {
-		if p.Expect && p.Winner == cand.ID {
+	for i := range cand.Prompts {
+		if p := &cand.Prompts[i]; p.Expect && p.Winner == cand.ID {
 			won[p.Case] = true
 		}
 	}
 	var lost []string
-	for _, p := range base.Prompts {
-		if p.Expect && p.Winner == base.ID && !won[p.Case] {
+	for i := range base.Prompts {
+		if p := &base.Prompts[i]; p.Expect && p.Winner == base.ID && !won[p.Case] {
 			lost = append(lost, p.Case)
 		}
 	}
@@ -317,7 +333,8 @@ func siblingProblem(s *evals.Skill) string {
 				return werr //nolint:wrapcheck // reported as the reason
 			}
 			if d.Type().IsRegular() {
-				if files++; files > siblingMaxFiles {
+				files++
+				if files > siblingMaxFiles {
 					return fmt.Errorf("more than %d eval files", siblingMaxFiles)
 				}
 			}
@@ -374,7 +391,8 @@ func copyRegularTree(src, dst string) error {
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		if files++; files > siblingMaxFiles {
+		files++
+		if files > siblingMaxFiles {
 			return fmt.Errorf("more than %d files below %s", siblingMaxFiles, src)
 		}
 		rel, err := filepath.Rel(src, path)
@@ -382,7 +400,7 @@ func copyRegularTree(src, dst string) error {
 			return err //nolint:wrapcheck // named by the caller
 		}
 		if info, ierr := d.Info(); ierr != nil || info.Size() > siblingMaxFileBytes {
-			return nil
+			return nil //nolint:nilerr // an unreadable or oversized file is left out of the copy, not an error
 		}
 		return copyRegular(path, filepath.Join(dst, rel))
 	})
