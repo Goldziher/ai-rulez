@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"slices"
 	"strings"
 	"testing"
 
@@ -11,25 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEveryJSONFlagHasAFormatFlagAndIsAHiddenAlias(t *testing.T) {
+func TestNoCommandHasAJSONFlag(t *testing.T) {
 	// Arrange
 	var checked int
 	walkCommands(RootCmd, func(cmd *cobra.Command) {
-		// Act
-		jf := cmd.Flags().Lookup("json")
-		if jf == nil {
-			return
-		}
 		checked++
 
-		// Assert
-		ff := cmd.Flags().Lookup("format")
-		if assert.NotNil(t, ff, "%s has --json but no --format", cmd.CommandPath()) {
-			assert.Contains(t, formatsOf(ff), formatJSON, "%s --format must accept json", cmd.CommandPath())
-			assert.Greater(t, len(formatsOf(ff)), 1, "%s --format must accept more than json", cmd.CommandPath())
-		}
-		assert.True(t, jf.Hidden, "%s --json must be hidden", cmd.CommandPath())
-		assert.NotEmpty(t, jf.Deprecated, "%s --json must be deprecated", cmd.CommandPath())
+		// Assert: --format json replaces --json/-j everywhere
+		assert.Nil(t, cmd.Flags().Lookup("json"), "%s still has --json; use --format json", cmd.CommandPath())
+		assert.Nil(t, cmd.InheritedFlags().Lookup("json"), "%s inherits --json", cmd.CommandPath())
 	})
 	assert.Positive(t, checked)
 }
@@ -55,11 +44,8 @@ func TestNormalizeFormatFlags(t *testing.T) {
 	}{
 		{"neither", nil, false, ""},
 		{"--format json sets the bool", []string{"--format", "json"}, true, ""},
-		{"--json maps to json", []string{"--json"}, true, ""},
-		{"--json with --format json", []string{"--json", "--format", "json"}, true, ""},
-		{"--json=false is a no-op", []string{"--json=false"}, false, ""},
-		{"--json conflicts with --format text", []string{"--json", "--format", "text"}, false, "--json conflicts with --format text"},
-		{"unknown value", []string{"--format", "yaml"}, false, `unknown --format "yaml" (use text, json)`},
+		{"--format text clears the bool", []string{"--format", "text"}, false, ""},
+		{"unknown value", []string{"--format", "yaml"}, false, `unknown format "yaml" (use text or json)`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -67,10 +53,12 @@ func TestNormalizeFormatFlags(t *testing.T) {
 			var asJSON bool
 			cmd := &cobra.Command{Use: "x"}
 			addJSONFormat(cmd.Flags(), &asJSON, "j")
-			require.NoError(t, cmd.ParseFlags(tt.args))
+			err := cmd.ParseFlags(tt.args)
 
 			// Act
-			err := normalizeFormatFlags(cmd)
+			if err == nil {
+				err = normalizeFormatFlags(cmd)
+			}
 
 			// Assert
 			if tt.wantErr != "" {
@@ -94,25 +82,4 @@ func TestCheckFormatWording(t *testing.T) {
 
 func formatsOf(f *pflag.Flag) []string {
 	return strings.Split(strings.Join(f.Annotations[formatValuesAnnotation], ","), ",")
-}
-
-func TestEveryJSONFormatHasTheHiddenJSONAlias(t *testing.T) {
-	// Arrange
-	var checked int
-	walkCommands(RootCmd, func(cmd *cobra.Command) {
-		ff := cmd.Flags().Lookup("format")
-		if ff == nil || !slices.Contains(formatsOf(ff), formatJSON) {
-			return
-		}
-		checked++
-
-		// Act
-		jf := cmd.Flags().Lookup("json")
-
-		// Assert
-		if assert.NotNil(t, jf, "%s has --format json but no --json alias", cmd.CommandPath()) {
-			assert.True(t, jf.Hidden, "%s --json must be hidden", cmd.CommandPath())
-		}
-	})
-	assert.Positive(t, checked)
 }
