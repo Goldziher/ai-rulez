@@ -322,9 +322,6 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		r.unit(unitOf("external", AnalyzerSecurity), r.runExternal)
 	}
 	r.runRunChecks()
-	if so.SecurityOnly {
-		r.findings = securityOnly(r.findings)
-	}
 	r.unit(unitOf("settings-config", AnalyzerHooks, AnalyzerSecurity), r.checkSettingsConfig)
 	r.unit(unitOf("llm-config", AnalyzerConfig, AnalyzerSecurity), r.checkLLMConfig)
 	r.unit(unitOf("improve-config", AnalyzerEvals), r.checkImproveConfig)
