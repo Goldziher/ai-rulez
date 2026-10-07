@@ -122,18 +122,10 @@ func runFix(cmd *cobra.Command, args []string, out io.Writer) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	fixer := fixFlags.model
-	if fixer == "" && cfg.Review != nil && cfg.Review.Fix != nil {
-		fixer = cfg.Review.Fix.Model
-	}
 	judgeName := js.lc.FullModel()
-	switch {
-	case fixer == "" && !fixFlags.allowSame:
-		return 0, oops.Hint("pass --model or set [review.fix] model; or --allow-same-model").Errorf("no fixer model: it must differ from the judge model %s", judgeName)
-	case fixer == "":
-		fixer = judgeName
-	case rv.SameModel(fixer, judgeName) && !fixFlags.allowSame:
-		return 0, oops.Hint("pass a different --model, or --allow-same-model").Errorf("the fixer and the judge are both %s: a model verifying its own edit is biased toward them", judgeName)
+	fixer, err := chooseFixer(cfg, judgeName)
+	if err != nil {
+		return 0, err
 	}
 	est := planWith(rc, res, js.lc, js.resolved, js.maxCost, js.maxCalls, false)
 	if len(est.Refused) > 0 {
@@ -158,69 +150,115 @@ func runFix(cmd *cobra.Command, args []string, out io.Writer) (int, error) {
 	}
 	verifier := rv.NewJudge(rb, rv.SemanticOptions{Client: client, K: k, Content: content})
 
-	byItem := fixableFindings(res, rb, fixFlags.finding)
 	result := fixOutput{Usage: outcome.Usage}
-	var proposals []*rv.FixProposal
-	growth := cfg.Review.FixMaxGrowthPercent()
-	for _, id := range sortedItemIDs(byItem) {
-		ir := itemByID(res, id)
-		if reason := unfixable(cfg, ir); reason != "" {
-			proposals = append(proposals, &rv.FixProposal{Item: id, Path: ir.Path, Digest: ir.Digest, Reason: reason, Code: byItem[id][0].Code, Dimension: byItem[id][0].Dimension, Fingerprint: byItem[id][0].Fingerprint})
-			continue
-		}
-		p, perr := rv.ProposeFix(commandContext(cmd), rv.FixInput{
-			Rubric: rb, Item: *ir, Findings: byItem[id], Pool: poolOf(res), Fixer: client, FixerModel: fixer, Verifier: verifier,
-			MaxGrowthPercent: growth, LintCheck: scanDelta(ir),
-		})
-		if p != nil {
-			result.Usage.Calls += p.Usage.Calls
-			result.Usage.Cached += p.Usage.Cached
-			result.Usage.Tokens += p.Usage.Tokens
-			result.Usage.CostUSD += p.Usage.CostUSD
-			proposals = append(proposals, p)
-		}
-		if perr != nil {
-			return 0, oops.Wrapf(perr, "propose a fix for %s", id)
-		}
+	proposals, err := proposeFixes(cmd, rc, res, client, verifier, fixer, &result.Usage)
+	if err != nil {
+		return 0, err
 	}
 	result.Proposals = proposals
 	patch := rv.RenderPatch(proposals, rb, fixer, judgeName)
 	result.Patch = patch
 
 	exit := 0
-	for _, p := range proposals {
-		if !p.Verified {
-			exit = exitReviewGate
-		}
+	if !allVerified(proposals) {
+		exit = exitReviewGate
 	}
 	if fixFlags.apply {
-		var writes []fileWrite
-		for _, p := range proposals {
-			if p.Verified {
-				writes = append(writes, fileWrite{abs: itemByID(res, p.Item).Abs, digest: p.Digest, text: p.Patched, label: p.Path})
-			}
-		}
-		applied, err := applyFiles(writes)
+		applied, err := applyVerifiedFixes(res, proposals)
 		if err != nil {
-			return 0, oops.Wrapf(err, "apply the fixes")
+			return 0, err
 		}
 		result.Applied = applied
 	}
 	return exit, writeFixOutput(out, cmd, result, patch)
 }
 
+// allVerified reports whether every proposal passed verification.
+func allVerified(proposals []*rv.FixProposal) bool {
+	for _, p := range proposals {
+		if !p.Verified {
+			return false
+		}
+	}
+	return true
+}
+
+// applyVerifiedFixes writes the verified proposals to their files and lists what it wrote.
+func applyVerifiedFixes(res *rv.Results, proposals []*rv.FixProposal) ([]string, error) {
+	var writes []fileWrite
+	for _, p := range proposals {
+		if p.Verified {
+			writes = append(writes, fileWrite{abs: itemByID(res, p.Item).Abs, digest: p.Digest, text: p.Patched, label: p.Path})
+		}
+	}
+	applied, err := applyFiles(writes)
+	if err != nil {
+		return nil, oops.Wrapf(err, "apply the fixes")
+	}
+	return applied, nil
+}
+
+// chooseFixer resolves the fixer model: --model, else [review.fix] model, else the judge when
+// --allow-same-model. A fixer that is the judge verifies its own edit, so it is refused otherwise.
+func chooseFixer(cfg *config.Config, judgeName string) (string, error) {
+	fixer := fixFlags.model
+	if fixer == "" && cfg.Review != nil && cfg.Review.Fix != nil {
+		fixer = cfg.Review.Fix.Model
+	}
+	switch {
+	case fixer == "" && !fixFlags.allowSame:
+		return "", oops.Hint("pass --model or set [review.fix] model; or --allow-same-model").Errorf("no fixer model: it must differ from the judge model %s", judgeName)
+	case fixer == "":
+		fixer = judgeName
+	case rv.SameModel(fixer, judgeName) && !fixFlags.allowSame:
+		return "", oops.Hint("pass a different --model, or --allow-same-model").Errorf("the fixer and the judge are both %s: a model verifying its own edit is biased toward them", judgeName)
+	}
+	return fixer, nil
+}
+
+// proposeFixes proposes a fix for every item with fixable findings and adds the calls it spent to usage.
+func proposeFixes(cmd *cobra.Command, rc *reviewContext, res *rv.Results, client llm.Client, verifier *rv.Judge, fixer string, usage *rv.RunUsage) ([]*rv.FixProposal, error) {
+	byItem := fixableFindings(res, rc.rb, fixFlags.finding)
+	var proposals []*rv.FixProposal
+	growth := rc.cfg.Review.FixMaxGrowthPercent()
+	for _, id := range sortedItemIDs(byItem) {
+		ir := itemByID(res, id)
+		if reason := unfixable(rc.cfg, ir); reason != "" {
+			proposals = append(proposals, &rv.FixProposal{Item: id, Path: ir.Path, Digest: ir.Digest, Reason: reason, Code: byItem[id][0].Code, Dimension: byItem[id][0].Dimension, Fingerprint: byItem[id][0].Fingerprint})
+			continue
+		}
+		p, perr := rv.ProposeFix(commandContext(cmd), rv.FixInput{
+			Rubric: rc.rb, Item: *ir, Findings: byItem[id], Pool: poolOf(res), Fixer: client, FixerModel: fixer, Verifier: verifier,
+			MaxGrowthPercent: growth, LintCheck: scanDelta(ir),
+		})
+		if p != nil {
+			usage.Calls += p.Usage.Calls
+			usage.Cached += p.Usage.Cached
+			usage.Tokens += p.Usage.Tokens
+			usage.CostUSD += p.Usage.CostUSD
+			proposals = append(proposals, p)
+		}
+		if perr != nil {
+			return nil, oops.Wrapf(perr, "propose a fix for %s", id)
+		}
+	}
+	return proposals, nil
+}
+
 // fixableFindings groups the stable judge findings of the run by item: verdicts below pass, not
 // baselined, optionally one fingerprint.
 func fixableFindings(res *rv.Results, rb *rv.Rubric, fingerprint string) map[string][]rv.Finding {
 	out := map[string][]rv.Finding{}
-	for _, f := range res.Findings(rb) {
+	all := res.Findings(rb)
+	for i := range all {
+		f := &all[i]
 		if f.Origin != rv.OriginLLMJudge || f.Status != rv.SemJudged || f.Baselined || f.ItemID == "" {
 			continue
 		}
 		if fingerprint != "" && !strings.HasPrefix(f.Fingerprint, fingerprint) {
 			continue
 		}
-		out[f.ItemID] = append(out[f.ItemID], f)
+		out[f.ItemID] = append(out[f.ItemID], *f)
 	}
 	return out
 }
@@ -282,8 +320,8 @@ func resolvedPath(path string) string {
 	path = filepath.Clean(path)
 	rest := ""
 	for cur := path; ; cur = filepath.Dir(cur) {
-		if real, err := filepath.EvalSymlinks(cur); err == nil {
-			return filepath.Join(real, rest)
+		if resolved, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(resolved, rest)
 		}
 		if filepath.Dir(cur) == cur {
 			return path

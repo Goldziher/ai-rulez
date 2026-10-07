@@ -124,86 +124,16 @@ type calibrationError struct {
 }
 
 func runCalibrate(cmd *cobra.Command, out io.Writer) (int, error) {
-	if calibrateFlags.workers < 0 || calibrateFlags.workers > maxConcurrency {
-		return 0, oops.Errorf("--concurrency must be between 1 and %d", maxConcurrency)
-	}
-	if err := checkCaps(calibrateFlags.maxCost, calibrateFlags.maxCalls, calibrateFlags.k); err != nil {
+	if err := validateCalibrateFlags(cmd); err != nil {
 		return 0, err
 	}
-	if calibrateFlags.models != "" && (calibrateFlags.compare != "" || cmd.Flags().Changed("model")) {
-		return 0, oops.Errorf("--models cannot be combined with --model or --compare")
-	}
-	if calibrateFlags.content != config.ReviewContentFull && calibrateFlags.content != config.ReviewContentDescriptions {
-		return 0, oops.Errorf("unknown --content %q (use full or descriptions)", calibrateFlags.content)
-	}
-	cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+	cfg, rb, set, err := loadCalibrationInputs(cmd)
 	if err != nil {
 		return 0, err
 	}
-	if problems := cfg.Review.Validate(); len(problems) > 0 {
-		return 0, oops.Errorf("invalid [review] settings: %s", strings.Join(problems, "; "))
-	}
-	ref := calibrateFlags.rubric
-	if ref == "" && cfg.Review != nil {
-		ref = cfg.Review.Rubric
-	}
-	rb, err := rv.Load(cfg.ConfigDir, ref)
+	reports, names, exit, err := calibrateModels(cmd, cfg, rb, set, calibrationModels())
 	if err != nil {
-		return 0, err //nolint:wrapcheck // already contextual
-	}
-	base := calibrateFlags.golden
-	if base == "" {
-		if rb.Dir == "" {
-			return 0, oops.Hint("pass --golden DIR with the golden cases").Errorf("the built-in rubric %s has no golden set of its own", rb.Ref)
-		}
-		base = rb.Dir
-	}
-	set, err := rv.LoadGolden(base, rb)
-	if err != nil {
-		return 0, err //nolint:wrapcheck // already contextual
-	}
-	if len(set.Cases) == 0 {
-		return 0, oops.Errorf("no golden cases under %s", base)
-	}
-
-	models := []string{calibrateFlags.model}
-	if calibrateFlags.models != "" {
-		models = nil
-		for _, m := range strings.Split(calibrateFlags.models, ",") {
-			if m = strings.TrimSpace(m); m != "" {
-				models = append(models, m)
-			}
-		}
-	}
-	// The spend caps come from the flags here, not from reviewFlags.
-	defCost, defCalls := defaultCalibrateMaxCostUSD, defaultCalibrateMaxCalls
-	var reports []*rv.CalibrationReport
-	var names []string
-	for _, m := range models {
-		js, rerr := resolveCalibrateJudge(cmd, cfg, m, defCost, defCalls, len(models))
-		if rerr != nil {
-			return 0, rerr
-		}
-		if err := js.ready(cfg); err != nil {
-			return 0, err
-		}
-		client, cerr := reviewClientFactory(js.lc, llm.Options{ConfigDir: cfg.ConfigDir, NoCache: calibrateFlags.noCache})
-		if cerr != nil {
-			return 0, cerr
-		}
-		rep, runErr := rv.Calibrate(commandContext(cmd), rv.CalibrateInput{
-			Rubric: rb, Golden: set, Now: reviewNow(), NoProbes: calibrateFlags.noProbes,
-			Options: rv.SemanticOptions{Client: client, K: calibrateFlags.k, Content: calibrateFlags.content, Workers: calibrateFlags.workers},
-		})
-		_ = client.Close() //nolint:errcheck // nothing to flush
-		if runErr != nil {
-			return 0, oops.Wrapf(runErr, "calibration of %s stopped", js.lc.FullModel())
-		}
-		if rep.Incomplete {
-			return exitReviewRefused, oops.Errorf("calibration of %s is incomplete: %s; raise --max-cost or --max-calls", js.lc.FullModel(), rep.StoppedBecause)
-		}
-		reports = append(reports, rep)
-		names = append(names, js.lc.FullModel())
+		return exit, err
 	}
 
 	result := calibrationOutput{Usage: reports[0].Usage}
@@ -213,67 +143,182 @@ func runCalibrate(cmd *cobra.Command, out io.Writer) (int, error) {
 		result.Usage.Tokens += r.Usage.Tokens
 		result.Usage.CostUSD += r.Usage.CostUSD
 	}
-	exit := 0
 	if len(reports) == 1 {
-		rep := reports[0]
-		result.Record, result.Differences = rep.Record, rep.Diffs
-		for _, c := range rep.Cases {
-			for _, d := range sortedStrings(c.Errors) {
-				result.Errors = append(result.Errors, calibrationError{Case: c.ID, Dimension: d, Note: c.Errors[d]})
-			}
-		}
-		switch {
-		case calibrateFlags.compare != "":
-			old, lerr := rv.LoadCalibration(calibrateFlags.compare)
-			if lerr != nil {
-				return 0, lerr //nolint:wrapcheck // already contextual
-			}
-			if old == nil {
-				return 0, oops.Errorf("no calibration record at %s", calibrateFlags.compare)
-			}
-			drift := rv.CompareCalibration(old, rep.Record)
-			result.Drift = &drift
-			if drift.Failed {
-				exit = exitReviewGate
-			}
-		case !calibrateFlags.noWrite:
-			path := calibrateFlags.out
-			if path == "" {
-				path = rv.CalibrationPath(cfg.ConfigDir, rb)
-			}
-			if err := rv.SaveCalibration(path, rep.Record); err != nil {
-				return 0, err //nolint:wrapcheck // already contextual
-			}
-			result.RecordFile = path
-		}
-		if rep.Record.Status != "pass" && exit == 0 {
-			exit = exitReviewGate
+		exit, err = summarizeCalibration(&result, reports[0], cfg, rb)
+		if err != nil {
+			return 0, err
 		}
 	} else {
-		tables := make([]map[string]map[string]string, len(reports))
-		for i, r := range reports {
-			tables[i] = map[string]map[string]string{}
-			for _, c := range r.Cases {
-				tables[i][c.ID] = c.Verdicts
-			}
-		}
-		dims := make([]string, 0, len(rb.Dimensions))
-		for _, d := range rb.Dimensions {
-			dims = append(dims, d.ID)
-		}
-		result.Comparison = rv.CompareModels(names, tables, dims)
-		result.Record = reports[0].Record
-		for _, r := range reports {
-			if r.Record.Status != "pass" {
-				exit = exitReviewGate
-			}
-		}
+		exit = compareCalibrations(&result, rb, reports, names)
 	}
 	if calibrateFlags.format == formatJSON {
 		return exit, writeIndentedJSON(out, result)
 	}
 	writeCalibrationText(out, rb, set, names, reports, result)
 	return exit, nil
+}
+
+// validateCalibrateFlags rejects what can be rejected before the configuration is loaded.
+func validateCalibrateFlags(cmd *cobra.Command) error {
+	if calibrateFlags.workers < 0 || calibrateFlags.workers > maxConcurrency {
+		return oops.Errorf("--concurrency must be between 1 and %d", maxConcurrency)
+	}
+	if err := checkCaps(calibrateFlags.maxCost, calibrateFlags.maxCalls, calibrateFlags.k); err != nil {
+		return err
+	}
+	if calibrateFlags.models != "" && (calibrateFlags.compare != "" || cmd.Flags().Changed("model")) {
+		return oops.Errorf("--models cannot be combined with --model or --compare")
+	}
+	if calibrateFlags.content != config.ReviewContentFull && calibrateFlags.content != config.ReviewContentDescriptions {
+		return oops.Errorf("unknown --content %q (use full or descriptions)", calibrateFlags.content)
+	}
+	return nil
+}
+
+// loadCalibrationInputs loads the configuration, the rubric and its golden cases.
+func loadCalibrationInputs(cmd *cobra.Command) (*config.Config, *rv.Rubric, *rv.GoldenSet, error) {
+	cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if problems := cfg.Review.Validate(); len(problems) > 0 {
+		return nil, nil, nil, oops.Errorf("invalid [review] settings: %s", strings.Join(problems, "; "))
+	}
+	ref := calibrateFlags.rubric
+	if ref == "" && cfg.Review != nil {
+		ref = cfg.Review.Rubric
+	}
+	rb, err := rv.Load(cfg.ConfigDir, ref)
+	if err != nil {
+		return nil, nil, nil, err //nolint:wrapcheck // already contextual
+	}
+	base := calibrateFlags.golden
+	if base == "" {
+		if rb.Dir == "" {
+			return nil, nil, nil, oops.Hint("pass --golden DIR with the golden cases").Errorf("the built-in rubric %s has no golden set of its own", rb.Ref)
+		}
+		base = rb.Dir
+	}
+	set, err := rv.LoadGolden(base, rb)
+	if err != nil {
+		return nil, nil, nil, err //nolint:wrapcheck // already contextual
+	}
+	if len(set.Cases) == 0 {
+		return nil, nil, nil, oops.Errorf("no golden cases under %s", base)
+	}
+	return cfg, rb, set, nil
+}
+
+// calibrationModels lists the models to calibrate: --models, else --model.
+func calibrationModels() []string {
+	if calibrateFlags.models == "" {
+		return []string{calibrateFlags.model}
+	}
+	var models []string
+	for _, m := range strings.Split(calibrateFlags.models, ",") {
+		if m = strings.TrimSpace(m); m != "" {
+			models = append(models, m)
+		}
+	}
+	return models
+}
+
+// calibrateModels calibrates each model in turn. The exit status is meaningful with an error only.
+func calibrateModels(cmd *cobra.Command, cfg *config.Config, rb *rv.Rubric, set *rv.GoldenSet, models []string) (reports []*rv.CalibrationReport, names []string, exit int, err error) {
+	// The spend caps come from the flags here, not from reviewFlags.
+	defCost, defCalls := defaultCalibrateMaxCostUSD, defaultCalibrateMaxCalls
+	for _, m := range models {
+		js, rerr := resolveCalibrateJudge(cmd, cfg, m, defCost, defCalls, len(models))
+		if rerr != nil {
+			return nil, nil, 0, rerr
+		}
+		if err := js.ready(cfg); err != nil {
+			return nil, nil, 0, err
+		}
+		client, cerr := reviewClientFactory(js.lc, llm.Options{ConfigDir: cfg.ConfigDir, NoCache: calibrateFlags.noCache})
+		if cerr != nil {
+			return nil, nil, 0, cerr
+		}
+		rep, runErr := rv.Calibrate(commandContext(cmd), rv.CalibrateInput{
+			Rubric: rb, Golden: set, Now: reviewNow(), NoProbes: calibrateFlags.noProbes,
+			Options: rv.SemanticOptions{Client: client, K: calibrateFlags.k, Content: calibrateFlags.content, Workers: calibrateFlags.workers},
+		})
+		_ = client.Close() //nolint:errcheck // nothing to flush
+		if runErr != nil {
+			return nil, nil, 0, oops.Wrapf(runErr, "calibration of %s stopped", js.lc.FullModel())
+		}
+		if rep.Incomplete {
+			return nil, nil, exitReviewRefused, oops.Errorf("calibration of %s is incomplete: %s; raise --max-cost or --max-calls", js.lc.FullModel(), rep.StoppedBecause)
+		}
+		reports = append(reports, rep)
+		names = append(names, js.lc.FullModel())
+	}
+	return reports, names, 0, nil
+}
+
+// summarizeCalibration fills result from the one report of a single-model run, compares it with
+// --compare or saves the record, and returns the exit status.
+func summarizeCalibration(result *calibrationOutput, rep *rv.CalibrationReport, cfg *config.Config, rb *rv.Rubric) (int, error) {
+	exit := 0
+	result.Record, result.Differences = rep.Record, rep.Diffs
+	for _, c := range rep.Cases {
+		for _, d := range sortedStrings(c.Errors) {
+			result.Errors = append(result.Errors, calibrationError{Case: c.ID, Dimension: d, Note: c.Errors[d]})
+		}
+	}
+	switch {
+	case calibrateFlags.compare != "":
+		old, lerr := rv.LoadCalibration(calibrateFlags.compare)
+		if lerr != nil {
+			return 0, lerr //nolint:wrapcheck // already contextual
+		}
+		if old == nil {
+			return 0, oops.Errorf("no calibration record at %s", calibrateFlags.compare)
+		}
+		drift := rv.CompareCalibration(old, rep.Record)
+		result.Drift = &drift
+		if drift.Failed {
+			exit = exitReviewGate
+		}
+	case !calibrateFlags.noWrite:
+		path := calibrateFlags.out
+		if path == "" {
+			path = rv.CalibrationPath(cfg.ConfigDir, rb)
+		}
+		if err := rv.SaveCalibration(path, rep.Record); err != nil {
+			return 0, err //nolint:wrapcheck // already contextual
+		}
+		result.RecordFile = path
+	}
+	if rep.Record.Status != "pass" && exit == 0 {
+		exit = exitReviewGate
+	}
+	return exit, nil
+}
+
+// compareCalibrations fills result with the cross-model comparison of a --models run and returns
+// the exit status.
+func compareCalibrations(result *calibrationOutput, rb *rv.Rubric, reports []*rv.CalibrationReport, names []string) int {
+	tables := make([]map[string]map[string]string, len(reports))
+	for i, r := range reports {
+		tables[i] = map[string]map[string]string{}
+		for _, c := range r.Cases {
+			tables[i][c.ID] = c.Verdicts
+		}
+	}
+	dims := make([]string, 0, len(rb.Dimensions))
+	for i := range rb.Dimensions {
+		dims = append(dims, rb.Dimensions[i].ID)
+	}
+	result.Comparison = rv.CompareModels(names, tables, dims)
+	result.Record = reports[0].Record
+	exit := 0
+	for _, r := range reports {
+		if r.Record.Status != "pass" {
+			exit = exitReviewGate
+		}
+	}
+	return exit
 }
 
 // resolveCalibrateJudge is resolveJudge with the calibration caps: --max-cost and --max-calls,
@@ -312,28 +357,9 @@ func writeCalibrationText(out io.Writer, rb *rv.Rubric, set *rv.GoldenSet, names
 		rec := rep.Record
 		w.printf("rubric %s@%d  %d golden cases  model %s (answered as %s)  k=%d  content %s\n", rb.ID, rb.Version, len(set.Cases), names[i], rec.Model, rec.K, rec.Content)
 		w.printf("%-22s %4s %6s %6s %6s %6s %7s %7s %7s  %s\n", "dimension", "n", "kappa", "prec", "recall", "f1", "consist", "fleiss", "human", "status")
-		for _, d := range rb.Dimensions {
-			dc := rec.Dimensions[d.ID]
-			w.printf("%-22s %4d %6.2f %6.2f %6.2f %6.2f %7.2f %7.2f %7.2f  %s\n", d.ID, dc.N, dc.Kappa, dc.Precision, dc.Recall, dc.F1, dc.Consistency, dc.FleissKappa, dc.HumanKappa, dc.Status)
-			if len(dc.Metamorphic) > 0 {
-				var parts []string
-				for _, p := range []string{rv.ProbePad, rv.ProbeReorder, rv.ProbeRename, rv.ProbeCanary} {
-					if v, ok := dc.Metamorphic[p]; ok {
-						parts = append(parts, fmt.Sprintf("%s %.2f", p, v))
-					}
-				}
-				w.printf("%-22s probes: %s\n", "", strings.Join(parts, "  "))
-			}
-			for _, m := range dc.Misses {
-				w.printf("%-22s miss: %s\n", "", m)
-			}
-			if len(dc.Curve) > 0 {
-				var parts []string
-				for _, c := range dc.Curve {
-					parts = append(parts, fmt.Sprintf("agree %.2f -> precision %.2f (n=%d)", c.Agreement, c.Precision, c.N))
-				}
-				w.printf("%-22s curve: %s\n", "", strings.Join(parts, "; "))
-			}
+		for j := range rb.Dimensions {
+			id := rb.Dimensions[j].ID
+			writeCalibrationDimension(w, id, rec.Dimensions[id])
 		}
 		w.printf("calibration: %s\n", rec.Status)
 		if len(rep.Diffs) > 0 {
@@ -346,19 +372,7 @@ func writeCalibrationText(out io.Writer, rb *rv.Rubric, set *rv.GoldenSet, names
 	if res.RecordFile != "" {
 		w.printf("record written to %s (run `ai-rulez lock` to pin it)\n", res.RecordFile)
 	}
-	if d := res.Drift; d != nil {
-		if d.Failed {
-			w.printf("DRIFT:\n")
-		} else {
-			w.printf("no drift against %s\n", calibrateFlags.compare)
-		}
-		for _, r := range d.Regressions {
-			w.printf("  %s\n", r)
-		}
-		for _, c := range d.Changed {
-			w.printf("  changed: %-28s %-20s %s -> %s\n", c.Case, c.Dimension, c.Was, c.Now)
-		}
-	}
+	writeCalibrationDrift(w, res.Drift)
 	if m := res.Comparison; m != nil {
 		sb := &strings.Builder{}
 		rv.WriteModelsText(sb, m)
@@ -368,6 +382,48 @@ func writeCalibrationText(out io.Writer, rb *rv.Rubric, set *rv.GoldenSet, names
 		w.printf("%d dimension(s) could not be answered, for example %s %s: %s\n", n, res.Errors[0].Case, res.Errors[0].Dimension, res.Errors[0].Note)
 	}
 	w.printf("calls %d, cached %d, tokens %d, cost $%.4f, %d quote(s) dropped\n", res.Usage.Calls, res.Usage.Cached, res.Usage.Tokens, res.Usage.CostUSD, res.Usage.Hallucinated)
+}
+
+// writeCalibrationDimension writes the metrics row of one dimension and its probes, misses and curve.
+func writeCalibrationDimension(w reportWriter, id string, dc rv.DimCalibration) {
+	w.printf("%-22s %4d %6.2f %6.2f %6.2f %6.2f %7.2f %7.2f %7.2f  %s\n", id, dc.N, dc.Kappa, dc.Precision, dc.Recall, dc.F1, dc.Consistency, dc.FleissKappa, dc.HumanKappa, dc.Status)
+	if len(dc.Metamorphic) > 0 {
+		var parts []string
+		for _, p := range []string{rv.ProbePad, rv.ProbeReorder, rv.ProbeRename, rv.ProbeCanary} {
+			if v, ok := dc.Metamorphic[p]; ok {
+				parts = append(parts, fmt.Sprintf("%s %.2f", p, v))
+			}
+		}
+		w.printf("%-22s probes: %s\n", "", strings.Join(parts, "  "))
+	}
+	for _, m := range dc.Misses {
+		w.printf("%-22s miss: %s\n", "", m)
+	}
+	if len(dc.Curve) > 0 {
+		var parts []string
+		for _, c := range dc.Curve {
+			parts = append(parts, fmt.Sprintf("agree %.2f -> precision %.2f (n=%d)", c.Agreement, c.Precision, c.N))
+		}
+		w.printf("%-22s curve: %s\n", "", strings.Join(parts, "; "))
+	}
+}
+
+// writeCalibrationDrift writes the comparison with an earlier record, if one was asked for.
+func writeCalibrationDrift(w reportWriter, d *rv.Drift) {
+	if d == nil {
+		return
+	}
+	if d.Failed {
+		w.printf("DRIFT:\n")
+	} else {
+		w.printf("no drift against %s\n", calibrateFlags.compare)
+	}
+	for _, r := range d.Regressions {
+		w.printf("  %s\n", r)
+	}
+	for _, c := range d.Changed {
+		w.printf("  changed: %-28s %-20s %s -> %s\n", c.Case, c.Dimension, c.Was, c.Now)
+	}
 }
 
 func sortedStrings(m map[string]string) []string {

@@ -28,6 +28,9 @@ const (
 // exitRubricFindings is the exit status of `rubric lint` with findings, matching `validate --strict`.
 const exitRubricFindings = 2
 
+// failOnError is the lint severity threshold that fails on errors only.
+const failOnError = "error"
+
 // maxConcurrency bounds --concurrency: more parallel calls mostly trip provider rate limits.
 const maxConcurrency = 16
 
@@ -193,8 +196,6 @@ func init() {
 
 // validateReviewFlags rejects what can be rejected before any work starts.
 func validateReviewFlags(cmd *cobra.Command) error {
-	fl := cmd.Flags()
-	judged := reviewFlags.semantic || reviewFlags.estimate
 	if reviewFlags.showPrompt && !reviewFlags.estimate {
 		return oops.Errorf("--show-prompt needs --estimate")
 	}
@@ -209,18 +210,8 @@ func validateReviewFlags(cmd *cobra.Command) error {
 	if err := checkCaps(reviewFlags.maxCost, reviewFlags.maxCalls, reviewFlags.k); err != nil {
 		return err
 	}
-	for _, name := range []string{"model", "models", "max-cost", "max-calls"} {
-		if fl.Changed(name) && !judged {
-			return oops.Errorf("--%s applies to --semantic or --estimate only", name)
-		}
-	}
-	for _, name := range []string{"k", "gate", "gate-level", "no-cache", "cache-dir", "concurrency"} {
-		if fl.Changed(name) && !reviewFlags.semantic {
-			return oops.Errorf("--%s applies to --semantic only", name)
-		}
-	}
-	if fl.Changed("gate-level") && !reviewFlags.gate {
-		return oops.Errorf("--gate-level needs --gate")
+	if err := validateReviewFlagScope(cmd); err != nil {
+		return err
 	}
 	switch reviewFlags.gateLevel {
 	case "", config.ReviewGateInfo, config.ReviewGateWarning, config.ReviewGateError:
@@ -233,8 +224,28 @@ func validateReviewFlags(cmd *cobra.Command) error {
 	if reviewFlags.estimate && reviewFlags.gate {
 		return oops.Errorf("--gate needs a judged run; --estimate sends nothing")
 	}
-	if reviewFlags.models != "" && fl.Changed("model") {
+	if reviewFlags.models != "" && cmd.Flags().Changed("model") {
 		return oops.Errorf("use --model or --models, not both")
+	}
+	return nil
+}
+
+// validateReviewFlagScope rejects flags given for a mode that does not use them.
+func validateReviewFlagScope(cmd *cobra.Command) error {
+	fl := cmd.Flags()
+	judged := reviewFlags.semantic || reviewFlags.estimate
+	for _, name := range []string{"model", "models", "max-cost", "max-calls"} {
+		if fl.Changed(name) && !judged {
+			return oops.Errorf("--%s applies to --semantic or --estimate only", name)
+		}
+	}
+	for _, name := range []string{"k", "gate", "gate-level", "no-cache", "cache-dir", "concurrency"} {
+		if fl.Changed(name) && !reviewFlags.semantic {
+			return oops.Errorf("--%s applies to --semantic only", name)
+		}
+	}
+	if fl.Changed("gate-level") && !reviewFlags.gate {
+		return oops.Errorf("--gate-level needs --gate")
 	}
 	return nil
 }
@@ -332,12 +343,12 @@ func runReview(cmd *cobra.Command, args []string, out io.Writer) (exit int, err 
 
 // reviewCaps resolves the spend ceilings: a flag, else user scope, else the lower of the
 // repository value and the default.
-func reviewCaps(cmd *cobra.Command, cfg *config.Config, defCost float64, defCalls int) (float64, int, config.ReviewResolution, error) {
-	res, err := cfg.ResolveReview(nil)
+func reviewCaps(cmd *cobra.Command, cfg *config.Config, defCost float64, defCalls int) (cost float64, calls int, res config.ReviewResolution, err error) {
+	res, err = cfg.ResolveReview(nil)
 	if err != nil {
 		return 0, 0, res, err //nolint:wrapcheck // already contextual
 	}
-	cost, calls := res.Caps(cfg.Review, defCost, defCalls)
+	cost, calls = res.Caps(cfg.Review, defCost, defCalls)
 	if cmd.Flags().Changed("max-cost") {
 		cost = reviewFlags.maxCost
 	}
@@ -519,7 +530,8 @@ func runRubricShow(cmd *cobra.Command, args []string, out io.Writer) error {
 	}
 	w := reportWriter{out}
 	w.printf("%s  version %d  %s\napplies to: %s\n%s\n\n", rb.Ref, rb.Version, rb.Digest, strings.Join(rb.AppliesTo, ", "), rv.Formula)
-	for _, d := range rb.Dimensions {
+	for i := range rb.Dimensions {
+		d := &rb.Dimensions[i]
 		w.printf("%-22s %-6s weight %.2f  %-12s ceiling %-7s twins: %s\n  %s\n", d.ID, d.Code, d.Weight, d.Group, d.Severity, orDash(strings.Join(d.Twins, ", ")), d.Question)
 	}
 	return nil
@@ -572,7 +584,7 @@ func runRubricLint(cmd *cobra.Command, args []string, out io.Writer) (found bool
 		reportWriter{out}.printf("no rubrics under %s\n", filepath.Join(cfg.ConfigDir, rv.RubricsDir))
 		return false, nil
 	}
-	if err := lint.Write(out, rubricFormat, lint.Combine([]*lint.Report{rep}), lint.WriteOptions{Version: Version, FailOn: "error"}); err != nil {
+	if err := lint.Write(out, rubricFormat, lint.Combine([]*lint.Report{rep}), lint.WriteOptions{Version: Version, FailOn: failOnError}); err != nil {
 		return false, oops.Wrapf(err, "write report")
 	}
 	return len(problems) > 0, nil
