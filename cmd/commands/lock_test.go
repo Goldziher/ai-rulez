@@ -219,7 +219,7 @@ func TestLockDriftForNeedsEnforceAndLock(t *testing.T) {
 	cfg, err := loadForLock("")
 	require.NoError(t, err)
 	drift := lockDriftFor(cfg)
-	assert.Empty(t, drift, "no lock, no finding")
+	assert.NotEmpty(t, drift, "enforce = true without a lock is a finding")
 
 	require.Equal(t, 0, writeLockAt("", "", nil))
 	drift = lockDriftFor(cfg)
@@ -394,4 +394,19 @@ func TestLockDiffUncachedIncludeIsNamedAndOutputsAreNotReportedRemoved(t *testin
 	require.NoError(t, err)
 	assert.Empty(t, diff.Outputs(), "outputs were not compared, so none is reported removed")
 	assert.Contains(t, diff.Notes, "include shared not cached; run ai-rulez lock or generate")
+}
+
+func TestLockDriftForMissingLockIsAFindingUnderEnforce(t *testing.T) {
+	root := lockProject(t, "\n[lock]\nenforce = true\n")
+	cfg, err := loadForLock("")
+	require.NoError(t, err)
+
+	drift := lockDriftFor(cfg)
+	require.NotEmpty(t, drift, "enforce = true with no lock must not pass validation")
+	assert.Equal(t, ".ai-rulez/"+lockfile.FileName, drift[0].Path)
+
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig+"\n[lock]\nenforce = false\n")
+	cfg, err = loadForLock("")
+	require.NoError(t, err)
+	assert.Empty(t, lockDriftFor(cfg))
 }
