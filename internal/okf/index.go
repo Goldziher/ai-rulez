@@ -31,7 +31,7 @@ func (e Entry) fileLine(bodyOffset int) int {
 }
 
 // frontmatterStyleKeys are the keys of a frontmatter-style index.
-var frontmatterStyleKeys = map[string]bool{"title": true, "version": true, "entries": true}
+var frontmatterStyleKeys = map[string]bool{keyTitle: true, "version": true, "entries": true}
 
 // isFrontmatterIndex reports whether an index frontmatter uses the
 // frontmatter style (title, version or entries).
@@ -62,7 +62,7 @@ func frontmatterEntries(fm Frontmatter) []Entry {
 			for i := 0; i+1 < len(item.Content); i += 2 {
 				v := strings.TrimSpace(item.Content[i+1].Value)
 				switch item.Content[i].Value {
-				case "title":
+				case keyTitle:
 					e.Title = v
 				case "path", "url", "link", "target":
 					e.Target = v
@@ -211,11 +211,11 @@ func frontmatterIndex(dir string, own []IndexInput, subs []string, labels DirLab
 	title := "Index"
 	var fields []Field
 	if dir == "" {
-		fields = append(fields, Field{"okf_version", SpecVersion})
+		fields = append(fields, Field{keyOKFVersion, SpecVersion})
 	} else {
 		title = TitleFromPath(path.Base(dir) + ".md")
 	}
-	fields = append(fields, Field{"title", title}, Field{"version", FrontmatterIndexVersion}, Field{"entries", entries})
+	fields = append(fields, Field{keyTitle, title}, Field{"version", FrontmatterIndexVersion}, Field{"entries", entries})
 	data, err := MarshalFrontmatter(fields)
 	if err != nil {
 		// Every value is a string or a slice of string structs; encoding cannot fail.
