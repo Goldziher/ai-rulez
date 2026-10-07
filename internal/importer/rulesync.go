@@ -76,7 +76,7 @@ func readRulesyncConfig(r *reader) (*rulesyncConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", rulesyncConfigFile, skipReasonOr(err))
 	}
-	std, err := hujson.Standardize(data)
+	std, err := hujson.Standardize(trimBOM(data))
 	if err != nil {
 		return nil, fmt.Errorf("%s is not valid JSONC (%s): %w", rulesyncConfigFile, CodeInvalid, err)
 	}

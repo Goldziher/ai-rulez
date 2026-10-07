@@ -61,7 +61,7 @@ func (skillsLockImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 		return nil, fmt.Errorf("%s: %w", skillsLockFile, err)
 	}
 	var doc skillsLockDoc
-	if err := json.Unmarshal(data, &doc); err != nil {
+	if err := json.Unmarshal(trimBOM(data), &doc); err != nil {
 		return nil, fmt.Errorf("%s is not valid JSON (%s): %w", skillsLockFile, CodeInvalid, err)
 	}
 	if doc.Version != skillsLockVersion {

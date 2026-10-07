@@ -135,7 +135,7 @@ func (b *rulesyncPlanner) readJSONC(file string) (map[string]json.RawMessage, bo
 		b.p.add(newFinding(StatusDropped, file, "", "", skipReasonOr(err)))
 		return nil, false
 	}
-	std, err := hujson.Standardize(data)
+	std, err := hujson.Standardize(trimBOM(data))
 	var doc map[string]json.RawMessage
 	if err == nil {
 		err = json.Unmarshal(std, &doc)
