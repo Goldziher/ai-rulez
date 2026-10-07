@@ -87,8 +87,13 @@ Includes can be:
     A local path (or `local_override`) in the project's committed config must resolve inside the project, after
     symlinks are resolved: a repository could otherwise name `../victim` or `~/.config` and have that content
     written into its generated outputs. A path outside the project stops loading with an error naming it (it is not skipped with a warning). Set it in the
-    machine-local overlay (`config.local.toml`), declare the include in your user config (`generate --user`), or use a
-    git include instead. The examples below that use `../` or an absolute path need one of these.
+    machine-local overlay (`config.local.toml`) or declare the include in your user config (`generate --user`). The
+    examples below that use `../` or an absolute path need one of these.
+
+    A `file://` git URL is a local path too and follows the same rule, for includes and `skill_sources`: it must name
+    a repository inside the project, unless it comes from the machine-local overlay or the user config. A remote git
+    URL (`https://`, `ssh://`, `git@host:path`) is not affected. To let a project config use `file://` repositories
+    elsewhere on your machine, set `AI_RULEZ_ALLOW_FILE_URLS=1` in your own environment.
 
 ### Examples
 
