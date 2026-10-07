@@ -184,7 +184,7 @@ func TestCatalogDiffTextNeverEmitsControlCharacters(t *testing.T) {
 		return string(data)
 	}
 	writeFile(t, filepath.Join(dir, "a.json"), mk("one"))
-	writeFile(t, filepath.Join(dir, "b.json"), mk("two\x1b]0;pwned\x07 ‮evil"))
+	writeFile(t, filepath.Join(dir, "b.json"), mk("two\x1b]0;pwned\x07 \u202eevil"))
 	resetCatalogDiffFlags(t)
 	var out bytes.Buffer
 
@@ -196,6 +196,6 @@ func TestCatalogDiffTextNeverEmitsControlCharacters(t *testing.T) {
 	for _, r := range out.String() {
 		assert.False(t, r != '\n' && r != '\t' && (r < 0x20 || r == 0x7f), "control character %U in the output", r)
 	}
-	assert.NotContains(t, out.String(), "‮")
+	assert.NotContains(t, out.String(), "\u202e")
 	assert.True(t, strings.Contains(out.String(), `\u{1B}`))
 }
