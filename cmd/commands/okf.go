@@ -30,6 +30,12 @@ const (
 
 const okfFailNone = "none"
 
+// okfIndexNone labels a bundle that has no index style yet, and okfDriftChanged the changed group of a drift report.
+const (
+	okfIndexNone    = "none"
+	okfDriftChanged = "changed"
+)
+
 var (
 	okfOut        string
 	okfProfile    string
@@ -269,11 +275,7 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(err)
 		return exitOKFCannotRun
 	}
-	includeList := okfInclude
-	if len(includeList) == 0 {
-		includeList = cfg.OKFInclude()
-	}
-	kinds, err := okfbridge.ParseKinds(includeList)
+	opts, err := okfExportOptions(cfg)
 	if err != nil {
 		fmtError(err)
 		return exitOKFCannotRun
@@ -283,15 +285,7 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(err)
 		return exitOKFCannotRun
 	}
-	style := okfIndexStyle
-	if style == "" {
-		style = cfg.OKFIndexStyle()
-	}
-	if style != okf.StyleBody && style != okf.StyleFrontmatter {
-		fmtError(oops.Errorf("unknown --index-style %q (use %s or %s)", style, okf.StyleBody, okf.StyleFrontmatter))
-		return exitOKFCannotRun
-	}
-	res, err := okfbridge.Export(tree, okfbridge.ExportOptions{Include: kinds, IndexStyle: style})
+	res, err := okfbridge.Export(tree, opts)
 	if err != nil {
 		fmtError(err)
 		return exitOKFCannotRun
@@ -314,14 +308,7 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 			w.printf("%s is up to date (%d files)\n", dir, len(res.Files))
 			return 0
 		}
-		for _, group := range []struct {
-			label string
-			paths []string
-		}{{"missing", drift.Missing}, {"changed", drift.Changed}, {"extra", drift.Extra}} {
-			for _, p := range group.paths {
-				w.printf("%s: %s\n", group.label, p)
-			}
-		}
+		printOKFDrift(w, drift)
 		w.printf("%s differs from the sources; run ai-rulez export okf (or generate) to update it\n", dir)
 		return exitOKFProblems
 	}
@@ -331,6 +318,38 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 	}
 	w.printf("Wrote %d files to %s (%s)\n", len(res.Files), dir, kindCounts(res.Counts))
 	return 0
+}
+
+// okfExportOptions resolves the kinds and the index style from the flags, then the config.
+func okfExportOptions(cfg *config.Config) (okfbridge.ExportOptions, error) {
+	includeList := okfInclude
+	if len(includeList) == 0 {
+		includeList = cfg.OKFInclude()
+	}
+	kinds, err := okfbridge.ParseKinds(includeList)
+	if err != nil {
+		return okfbridge.ExportOptions{}, err //nolint:wrapcheck // already contextual
+	}
+	style := okfIndexStyle
+	if style == "" {
+		style = cfg.OKFIndexStyle()
+	}
+	if style != okf.StyleBody && style != okf.StyleFrontmatter {
+		return okfbridge.ExportOptions{}, oops.Errorf("unknown --index-style %q (use %s or %s)", style, okf.StyleBody, okf.StyleFrontmatter)
+	}
+	return okfbridge.ExportOptions{Include: kinds, IndexStyle: style}, nil
+}
+
+// printOKFDrift lists the paths a bundle is missing, has changed or has extra.
+func printOKFDrift(w reportWriter, drift okf.Drift) {
+	for _, group := range []struct {
+		label string
+		paths []string
+	}{{"missing", drift.Missing}, {okfDriftChanged, drift.Changed}, {"extra", drift.Extra}} {
+		for _, p := range group.paths {
+			w.printf("%s: %s\n", group.label, p)
+		}
+	}
 }
 
 // okfExportTree selects the content to export: a role's slice with --role, else
@@ -494,7 +513,7 @@ func nonNilActions(a []okfbridge.Action) []okfbridge.Action {
 
 func indexStyleLabel(style string) string {
 	if style == "" {
-		return "none"
+		return okfIndexNone
 	}
 	return style
 }
