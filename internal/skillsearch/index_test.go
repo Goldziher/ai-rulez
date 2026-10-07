@@ -145,6 +145,65 @@ func TestLoadIndex_RejectsNaNInVectors(t *testing.T) {
 	require.ErrorIs(t, err, ErrNoIndex)
 }
 
+func TestLoadIndex_RowsMustBeUnitLength(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		dtype  string
+		scale  float32
+		loads  bool
+		reason string
+	}{
+		{"a row scaled by 100 wins every query: refused", DTypeFloat32, 100, false, "not unit length"},
+		{"a row scaled by 1.01: refused", DTypeFloat32, 1.01, false, "not unit length"},
+		{"float32 rounding is fine", DTypeFloat32, 1.0002, true, ""},
+		{"float16 rounding is fine", DTypeFloat16, 1.004, true, ""},
+		{"a zero row never ranks above anything", DTypeFloat32, 0, true, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Arrange: a committed index whose first row was rewritten (the digest is recomputed on write).
+			x := testIndex(t, tt.dtype)
+			for j := range x.vecs[0] {
+				x.vecs[0][j] *= tt.scale
+			}
+			dir := t.TempDir()
+			require.NoError(t, WriteIndex(dir, x))
+
+			// Act
+			got, err := LoadIndex(dir)
+
+			// Assert
+			if !tt.loads {
+				require.ErrorIs(t, err, ErrNoIndex)
+				assert.Contains(t, err.Error(), tt.reason)
+				return
+			}
+			require.NoError(t, err)
+			for _, h := range got.TopK([]float32{1, 2, 3}, 2, nil) {
+				assert.LessOrEqual(t, h.Sim, 1.0)
+			}
+		})
+	}
+}
+
+func TestTopK_ClampsTheSimilarity(t *testing.T) {
+	t.Parallel()
+	// Arrange: an unnormalized query against a unit row.
+	x := testIndex(t, DTypeFloat32)
+
+	// Act
+	hits := x.TopK([]float32{100, 200, 300}, 2, nil)
+
+	// Assert
+	require.Len(t, hits, 2)
+	for _, h := range hits {
+		assert.LessOrEqual(t, h.Sim, 1.0)
+		assert.GreaterOrEqual(t, h.Sim, -1.0)
+	}
+}
+
 func TestNewIndex_RejectsBadVectors(t *testing.T) {
 	t.Parallel()
 	m := Manifest{Dims: 2, DType: DTypeFloat32}
