@@ -23,8 +23,8 @@ func validateGraderFlags() error {
 	if evalFlags.mode == evals.ModeActivation {
 		return oops.Errorf("--grader needs --mode cases: an activation run grades no rubric")
 	}
-	if evalFlags.graderMaxCost < 0 {
-		return oops.Errorf("--grader-max-cost must be >= 0, got %v", evalFlags.graderMaxCost)
+	if !llm.Finite(evalFlags.graderMaxCost) || evalFlags.graderMaxCost < 0 {
+		return oops.Errorf("--grader-max-cost must be a finite number >= 0, got %v", evalFlags.graderMaxCost)
 	}
 	return nil
 }
