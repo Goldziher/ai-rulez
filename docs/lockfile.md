@@ -179,6 +179,9 @@ lock already records; `lock --role`, `--profile`, `--targets`, `--include-static
 server and `lock --check` read the pins of the view they run with. A pin without a `view` also covers every view
 (locks written before views existed), but its digest must still match. `lock --strict` fails when the security scan
 refuses a served skill; without it the skill is left unpinned, the rest is pinned and `lock` exits 3.
+A plugin source with no preset (a `[plugin]` configuration such as a marketplace member, whose skills ship in the
+bundles `generate --plugin` writes) has nothing to serve: `lock` pins its content and no served skills, and `lock -r`
+locks it alongside the marketplace root.
 
 A served skill is a tree digest in the scheme below with the kind `served-skill` (`ai-rulez/served-skill/v1`), over
 the files the server returns, with the lines of the generated header that change without the skill changing left
