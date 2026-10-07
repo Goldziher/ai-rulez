@@ -298,7 +298,7 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 				return oops.With("path", path).Wrapf(err, "stat skill resource")
 			}
 
-			resource := SkillResource{Kind: kind, RelPath: relToSkill, Content: data, Mode: info.Mode().Perm()}
+			resource := SkillResource{Kind: kind, RelPath: relToSkill, Content: data, Mode: resourceMode(info.Mode())}
 			if kind == SkillKindReferences && strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
 				resource.Description = extractResourceDescription(data)
 			}
