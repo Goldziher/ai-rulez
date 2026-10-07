@@ -6,6 +6,7 @@ import (
 	"io"
 	"math"
 	"strings"
+	"unicode"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/sarifout"
@@ -299,7 +300,7 @@ func writeSemanticText(sb *strings.Builder, it ItemResult, hidden map[string]boo
 		switch d.Status {
 		case SemJudged, SemUnstable:
 		case SemError:
-			fmt.Fprintf(sb, "  %-6s %-20s error %s\n", d.Code, d.ID, d.Note)
+			fmt.Fprintf(sb, "  %-6s %-20s error %s\n", d.Code, d.ID, termText(d.Note))
 			continue
 		default:
 			continue
@@ -319,11 +320,26 @@ func writeSemanticText(sb *strings.Builder, it ItemResult, hidden map[string]boo
 		if hidden[fp] {
 			continue
 		}
-		fmt.Fprintf(sb, "  %-6s %-20s %-4s %s- %s  [judge, %s]\n", d.Code, d.ID, d.Verdict, quote, d.Rationale, tag)
+		fmt.Fprintf(sb, "  %-6s %-20s %-4s %s- %s  [judge, %s]\n", d.Code, d.ID, d.Verdict, quote, termText(d.Rationale), tag)
 	}
 	if it.Semantic.Truncated {
 		sb.WriteString("  AR9G0  truncated: head and tail of the body were sent; verdicts are reported at info\n")
 	}
+}
+
+// termText makes model- or provider-written text safe for one line of a terminal: line breaks
+// and tabs become spaces, other control characters (escape sequences, bells, carriage returns)
+// and invisible format characters (bidirectional overrides, zero-width) are dropped.
+func termText(s string) string {
+	return strings.Join(strings.Fields(strings.Map(func(r rune) rune {
+		switch {
+		case r == '\n' || r == '\r' || r == '\t':
+			return ' '
+		case unicode.IsControl(r) || unicode.Is(unicode.Cf, r):
+			return -1
+		}
+		return r
+	}, s)), " ")
 }
 
 func firstQuote(d SemDim) string {
@@ -354,7 +370,7 @@ func writeRunText(sb *strings.Builder, r *Report) {
 		fmt.Fprintf(sb, "%d quote(s) the judge cited were not in the item and were dropped\n", ru.HallucinatedEvidence)
 	}
 	if ru.Incomplete {
-		fmt.Fprintf(sb, "INCOMPLETE: %s", ru.StoppedBecause)
+		fmt.Fprintf(sb, "INCOMPLETE: %s", termText(ru.StoppedBecause))
 		if len(ru.Unjudged) > 0 {
 			fmt.Fprintf(sb, "; not judged: %s", strings.Join(ru.Unjudged, ", "))
 		}
@@ -366,14 +382,14 @@ func writeRunText(sb *strings.Builder, r *Report) {
 			fmt.Fprintf(sb, " (%s, %d days old, model %s)", c.Date, c.AgeDays, c.Model)
 		}
 		for _, why := range c.Reasons {
-			fmt.Fprintf(sb, "\n  %s", why)
+			fmt.Fprintf(sb, "\n  %s", termText(why))
 		}
 		sb.WriteString("\n")
 	}
 	if g := r.Gate; g != nil {
 		switch {
 		case g.Refused != "":
-			fmt.Fprintf(sb, "gate: refused: %s\n", g.Refused)
+			fmt.Fprintf(sb, "gate: refused: %s\n", termText(g.Refused))
 		case g.Passed:
 			fmt.Fprintf(sb, "gate: passed (level %s)\n", g.Level)
 		default:

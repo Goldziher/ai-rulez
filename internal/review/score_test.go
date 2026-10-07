@@ -532,3 +532,30 @@ func TestTruncateBodyKeepsWholeRunesAtTheCut(t *testing.T) {
 	assert.True(t, utf8.ValidString(got))
 	assert.NotContains(t, got, "\ufffd")
 }
+
+// The model's rationale and a provider's error note reach the terminal in the text report; a
+// control sequence in them (an escape that clears the screen, a carriage return that overwrites
+// the line) must not (RV-LLM-25).
+func TestTextReportStripsControlCharactersFromModelText(t *testing.T) {
+	// Arrange
+	score := 50
+	it := ItemResult{Item: Item{ID: "skill:a"}, Semantic: &SemanticResult{Score: &score, Dimensions: []SemDim{
+		{ID: "trigger-quality", Code: "AR9G1", Status: SemJudged, Verdict: VerdictFail, Votes: []string{VerdictFail}, Rationale: "vague\x1b[2J\rALL CLEAR\u202e"},
+		{ID: "overlap", Code: "AR9G2", Status: SemError, Note: "provider said \x1b]8;;http://evil\x07click\x1b]8;;\x07\nnext"},
+	}}}
+	run := &Report{Run: RunInfo{Incomplete: true, StoppedBecause: "stopped\x1b[1A\rhidden"}}
+
+	// Act
+	var sb strings.Builder
+	writeSemanticText(&sb, it, nil)
+	writeRunText(&sb, run)
+	out := sb.String()
+
+	// Assert
+	for _, bad := range []string{"\x1b", "\r", "\x07", "\u202e"} {
+		assert.NotContains(t, out, bad)
+	}
+	assert.Contains(t, out, "vague[2J ALL CLEAR")
+	assert.Contains(t, out, "next")
+	assert.Equal(t, 4, strings.Count(out, "\n"), "one line per dimension, the totals and the stop: a newline in model text is not a new line")
+}
