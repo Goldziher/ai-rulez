@@ -15,7 +15,7 @@ func main() {
 	schema.Version = version
 
 	if err := commands.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, commands.FormatError(err))
 		os.Exit(1)
 	}
 }
