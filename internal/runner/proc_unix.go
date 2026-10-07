@@ -172,10 +172,12 @@ func (t *procTree) isSeed(p procEntry, rootOurs bool) bool {
 	return rootOurs && t.root > 1 && (p.pid == t.root || p.pgid == t.root || p.sid == t.root)
 }
 
-// kill ends the whole tree: the process group, and every tracked descendant
-// still alive. Members are stopped first so none can fork a child that would
-// be reparented away before the kill; the table is read again until no new
-// member appears. It is a no-op once nothing is left.
+// kill ends the whole tree. One read of the process table records the
+// descendants that left the group, then the group is killed at once (as before
+// the tree was tracked, so the run's pipes close without waiting for the
+// sweep); then every other tracked process is stopped, so none can fork a child
+// that would be reparented away, the table is read again until no new member
+// appears, and the stopped ones are killed. It is a no-op once nothing is left.
 func (t *procTree) kill(cmd *exec.Cmd) {
 	if cmd.Process == nil {
 		return
@@ -184,6 +186,12 @@ func (t *procTree) kill(cmd *exec.Cmd) {
 	defer t.mu.Unlock()
 	if t.root == 0 {
 		t.root = cmd.Process.Pid // canceled before attach: the group kill below still applies
+	}
+	if table, err := processTable(); err == nil {
+		t.collect(table)
+	}
+	if !t.rootReused {
+		_ = syscall.Kill(-t.root, syscall.SIGKILL) //nolint:errcheck // ESRCH when nothing is left
 	}
 	stopped := map[int]bool{}
 	for range stopRounds {
@@ -201,9 +209,6 @@ func (t *procTree) kill(cmd *exec.Cmd) {
 		if !fresh {
 			break
 		}
-	}
-	if !t.rootReused {
-		_ = syscall.Kill(-t.root, syscall.SIGKILL) //nolint:errcheck // ESRCH when nothing is left
 	}
 	for pid := range stopped {
 		_ = syscall.Kill(pid, syscall.SIGKILL) //nolint:errcheck // gone already is fine
