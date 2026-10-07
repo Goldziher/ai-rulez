@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,6 +27,9 @@ type SchemaFinding struct {
 	Key string
 	// Suggestion is the nearest known key of Path, "" when none is close.
 	Suggestion string
+	// TopLevel is set when Key is a known top-level key found inside the table
+	// Path: it was written after a [table] header and so belongs to that table.
+	TopLevel bool
 	// Message describes a finding that is not an unknown key.
 	Message string
 }
@@ -40,7 +44,14 @@ func (f SchemaFinding) String() string {
 		full = f.Path + "." + f.Key
 	}
 	text := fmt.Sprintf("%s: unknown key %q", f.File, full)
-	if f.Suggestion != "" {
+	switch {
+	case f.TopLevel:
+		table := f.Path
+		if i := strings.LastIndex(table, "."); i >= 0 {
+			table = table[i+1:]
+		}
+		text += fmt.Sprintf(" (%s is a top-level key: a key after a [%s] line belongs to that table, so move it above the first [table])", f.Key, table)
+	case f.Suggestion != "":
 		text += fmt.Sprintf(" (did you mean %q?)", f.Suggestion)
 	}
 	return text
@@ -124,7 +135,11 @@ func findingsOf(path string, err error) ([]SchemaFinding, error) {
 }
 
 func unknownKey(file, parent, key string) SchemaFinding {
-	return SchemaFinding{File: file, Path: parent, Key: key, Suggestion: nearestKey(key, knownKeys(parent))}
+	f := SchemaFinding{File: file, Path: parent, Key: key, Suggestion: nearestKey(key, knownKeys(parent))}
+	if parent != "" && slices.Contains(knownKeys(""), key) && !slices.Contains(knownKeys(parent), key) {
+		f.TopLevel = true
+	}
+	return f
 }
 
 // knownKeys lists the keys of the configuration table at the dotted path
