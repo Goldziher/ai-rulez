@@ -135,6 +135,23 @@ func analyzerRan(selection []string, code string) bool {
 	return selection == nil || AnalyzerSelected(selection, AnalyzerFor(code).Name)
 }
 
+// Covers reports whether the run that produced r looked for code at all: the
+// analyzer of code must have run, and scanner findings and scanner failures
+// need --external. A baseline entry for a code the run did not look for says
+// nothing about this run, so it is neither stale nor replaced.
+func (r *Report) Covers(code string) bool {
+	if !analyzerRan(r.Analyzers, code) {
+		return false
+	}
+	if !r.External {
+		switch code {
+		case CodeExternalFinding, CodeScannerUnavailable, CodeScannerRunFailed:
+			return false
+		}
+	}
+	return true
+}
+
 // ApplyBaseline marks the findings of r that b accepts. today is a YYYY-MM-DD
 // date supplied by the caller, so the result is deterministic.
 func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
@@ -168,7 +185,7 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 		res.Accepted++
 	}
 	for _, e := range b.Entries {
-		if !matched[e.Fingerprint] && analyzerRan(r.Analyzers, e.Code) {
+		if !matched[e.Fingerprint] && r.Covers(e.Code) {
 			res.Stale = append(res.Stale, e)
 		}
 	}
@@ -195,7 +212,7 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 	var unexplained []string
 	if prev != nil {
 		for _, e := range prev.Entries {
-			if !analyzerRan(r.Analyzers, e.Code) {
+			if !r.Covers(e.Code) {
 				out.Entries = append(out.Entries, e) // its analyzer did not run: keep the entry as it is
 				seen[e.Fingerprint] = true
 			}
@@ -220,6 +237,13 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 		out.Entries = append(out.Entries, BaselineEntry{
 			Fingerprint: fp, Code: f.Code, File: f.RepoPath(), Message: f.Message, Reason: strings.TrimSpace(reason),
 		})
+	}
+	if prev != nil {
+		for _, e := range prev.Entries {
+			if !r.Covers(e.Code) && !seen[e.Fingerprint] {
+				out.Entries = append(out.Entries, e)
+			}
+		}
 	}
 	if len(unexplained) > 0 {
 		return nil, fmt.Errorf("accepting security findings needs a reason (--baseline-reason): %s", strings.Join(unexplained, ", "))

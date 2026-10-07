@@ -224,6 +224,47 @@ func TestAnalyzerFilter(t *testing.T) {
 	assert.Error(t, checkStrictFlags(), "--analyzer needs --strict")
 }
 
+func TestScanUpdateBaselineKeepsNonSecurityEntries(t *testing.T) {
+	resetStrictFlags(t)
+	root, cfg := strictProject(t, "", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})
+	basePath := filepath.Join(root, ".ai-rulez", lint.BaselineFile)
+
+	validateUpdateBaseline, validateBaselineReason = true, "legacy"
+	require.Equal(t, 0, runStrict(t, root, cfg))
+	validateUpdateBaseline, validateBaselineReason = false, ""
+	before, err := lint.LoadBaseline(basePath)
+	require.NoError(t, err)
+	require.Len(t, before.Entries, 1)
+
+	strictSecurityOnly = true
+	t.Cleanup(func() { strictSecurityOnly = false })
+	validateUpdateBaseline = true
+	require.Equal(t, 0, runStrict(t, root, cfg))
+	validateUpdateBaseline = false
+	after, err := lint.LoadBaseline(basePath)
+	require.NoError(t, err)
+	assert.Equal(t, before.Entries, after.Entries, "scan must not delete the entries of rules it does not run")
+
+	validateStrictBaseline = true
+	assert.Equal(t, 0, runStrict(t, root, cfg), "scan does not report non-security entries as stale")
+}
+
+func TestUpdateBaselineRejectsNarrowedRuns(t *testing.T) {
+	resetStrictFlags(t)
+	validateUpdateBaseline = true
+	validateLintProfile = "permissive"
+	assert.Error(t, checkStrictFlags(), "a profile override hides findings")
+	validateLintProfile = ""
+	validateAnalyzers = []string{"security"}
+	assert.Error(t, checkStrictFlags(), "an analyzer filter is a narrowed run")
+	validateAnalyzers = nil
+
+	validateBaseline = "shared.json"
+	err := updateBaselines([]*lint.Report{{}, {}}, []*config.Config{nil, nil})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "single root")
+}
+
 func TestAnalyzerRunKeepsBaselineEntriesOfAnalyzersThatDidNotRun(t *testing.T) {
 	resetStrictFlags(t)
 	root, cfg := strictProject(t, "", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})

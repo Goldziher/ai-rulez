@@ -96,6 +96,9 @@ func applyBaselines(reports []*lint.Report, cfgs []*config.Config) error {
 
 // updateBaselines rewrites each root's baseline to accept its current findings.
 func updateBaselines(reports []*lint.Report, cfgs []*config.Config) error {
+	if validateBaseline != "" && len(reports) > 1 {
+		return oops.Errorf("--update-baseline with --baseline <file> needs a single root: %d roots would each rewrite the shared file and drop the entries of the others", len(reports))
+	}
 	for i, r := range reports {
 		path := baselinePathFor(cfgAt(cfgs, i))
 		if path == "" {
