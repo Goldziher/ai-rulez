@@ -254,8 +254,8 @@ func TestInterruptContext_SecondSignalKills(t *testing.T) {
 		defer stop()
 		fmt.Println("ready")
 		<-ctx.Done()
-		time.Sleep(200 * time.Millisecond) // interruptContext releases the handlers right after cancelling
-		fmt.Println("cancelled")
+		time.Sleep(200 * time.Millisecond) // interruptContext releases the handlers right after canceling
+		fmt.Println("canceled")
 		time.Sleep(time.Minute) // a run that does not stop on its own
 		return
 	}
@@ -289,7 +289,7 @@ func TestInterruptContext_SecondSignalKills(t *testing.T) {
 	if err := cmd.Process.Signal(os.Interrupt); err != nil {
 		t.Fatal(err)
 	}
-	waitLine("cancelled")
+	waitLine("canceled")
 	if err := cmd.Process.Signal(os.Interrupt); err != nil {
 		t.Fatal(err)
 	}

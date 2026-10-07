@@ -25,7 +25,7 @@ func TestRolesResolveReportsDegradedSkillModes(t *testing.T) {
 	require.NoError(t, runRolesResolve(&doc, "dev"))
 
 	// Assert
-	assert.Contains(t, text.String(), "skill_mode not honoured")
+	assert.Contains(t, text.String(), "skill_mode not honored")
 	assert.Contains(t, text.String(), "migrate = name-only")
 	var parsed struct {
 		SkillModes []struct {
