@@ -137,17 +137,29 @@ func scanDestructive(r *runner, t *scanText) {
 	}
 }
 
-var stealthRes = []*regexp.Regexp{
-	regexp.MustCompile(`(?:^|[\s;&|(])history\s+-[cdw]\b`),
-	regexp.MustCompile(`\bunset\s+(?:HISTFILE|HISTSIZE|HISTFILESIZE|SAVEHIST)\b`),
-	regexp.MustCompile(`\b(?:export\s+)?HISTFILE=/dev/null\b`),
-	regexp.MustCompile(`\b(?:export\s+)?(?:HISTSIZE|HISTFILESIZE|SAVEHIST)=0\b`),
-	regexp.MustCompile(`\bset\s+\+o\s+history\b`),
-	regexp.MustCompile(`(?:^|[\s;&|(])shred\s+(?:-\S+\s+)*(?:[-~/$.]|\S*[/.]\w)`),
-	regexp.MustCompile(`(?:^|[\s;&|(:])>\s*~?/?\S*\.(?:bash|zsh|sh|python|node)_history\b`),
-	regexp.MustCompile(`\brm\s+(?:-\S+\s+)*\S*\.(?:bash|zsh|sh|python|node|psql|mysql)_history\b`),
-	regexp.MustCompile(`\bchattr\s+\+i\b`),
-	regexp.MustCompile(`\btruncate\s+(?:-\S+\s+)*\S*(?:_history|/var/log/\S*)`),
+// stealthRule is one history- or evidence-erasing command shape. Rules whose
+// command has legitimate uses (secure-deleting a temp file, an immutable flag)
+// report at warning; wiping history is an error.
+type stealthRule struct {
+	re     *regexp.Regexp
+	reason string
+	sev    Severity
+}
+
+const stealthBoundary = "(?:^|[\\s;&|(`])"
+
+var stealthRules = []stealthRule{
+	{regexp.MustCompile(stealthBoundary + `history\s+-[cdw]\b`), "erases the shell history", SeverityError},
+	{regexp.MustCompile(`\bunset\s+(?:HISTFILE|HISTSIZE|HISTFILESIZE|SAVEHIST)\b`), "disables shell history", SeverityError},
+	{regexp.MustCompile(`\b(?:export\s+)?HISTFILE=/dev/null\b`), "disables shell history", SeverityError},
+	{regexp.MustCompile(`\b(?:export\s+)?(?:HISTSIZE|HISTFILESIZE|SAVEHIST)=0\b`), "disables shell history", SeverityError},
+	{regexp.MustCompile(`\bset\s+\+o\s+history\b`), "turns shell history off", SeverityWarning},
+	{regexp.MustCompile(stealthBoundary + `shred\s+(?:-\S+\s+)*[^\s` + "`" + `]*_history\b[^\s` + "`" + `]*`), "securely erases a shell history file", SeverityError},
+	{regexp.MustCompile(stealthBoundary + `shred\s+(?:-\S+\s+)*(?:[-~/$.][^\s` + "`" + `]*|[^\s` + "`" + `]*[/.]\w[^\s` + "`" + `]*)`), "irrecoverably destroys a file, leaving no evidence of its content", SeverityWarning},
+	{regexp.MustCompile(stealthBoundary + `>\s*~?/?\S*\.(?:bash|zsh|sh|python|node)_history\b`), "truncates a shell history file", SeverityError},
+	{regexp.MustCompile(`\brm\s+(?:-\S+\s+)*\S*\.(?:bash|zsh|sh|python|node|psql|mysql)_history\b`), "deletes a shell history file", SeverityError},
+	{regexp.MustCompile(`\bchattr\s+\+i\b`), "makes a file immutable so it cannot be changed or removed", SeverityWarning},
+	{regexp.MustCompile(`\btruncate\s+(?:-\S+\s+)*\S*(?:_history|/var/log/\S*)`), "truncates a history or log file", SeverityError},
 }
 
 func scanStealth(r *runner, t *scanText) {
@@ -155,9 +167,9 @@ func scanStealth(r *runner, t *scanText) {
 		if l.Front {
 			continue
 		}
-		for _, re := range stealthRes {
-			if m := re.FindString(l.Text); m != "" {
-				r.add(CodeStealthCommand, t.abs, l.No, "%q erases history or evidence of what the agent ran; no skill has a legitimate reason to", strings.TrimSpace(m))
+		for _, rule := range stealthRules {
+			if m := rule.re.FindString(l.Text); m != "" {
+				r.addSev(rule.sev, CodeStealthCommand, t.abs, l.No, "%q %s; no skill has a legitimate reason to hide what the agent ran", strings.TrimSpace(strings.TrimLeft(m, "`")), rule.reason)
 				break
 			}
 		}
