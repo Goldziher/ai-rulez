@@ -110,7 +110,8 @@ var ImportCmd = &cobra.Command{
 var importOKFCmd = &cobra.Command{
 	Use:   "okf <dir|git-url[@ref][#subdir]>",
 	Short: "Import an OKF bundle into .ai-rulez/",
-	Long: `Convert the concepts of an OKF bundle into ai-rulez rules, context and skills.
+	Long: `Convert the concepts of an OKF bundle into ai-rulez rules, context and skills
+(a concept whose x-ai-rulez.kind is agent, command or check becomes that kind).
 
 Each concept lands by its x-ai-rulez metadata when it has it (a bundle made by
 "export okf" round-trips losslessly), otherwise by its type: decision-like types
