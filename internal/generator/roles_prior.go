@@ -56,7 +56,7 @@ func (g *Generator) readRoleLedger() roleLedger {
 func (g *Generator) writeRoleLedger(l roleLedger) error {
 	path := g.roleLedgerPath()
 	if len(l.Prior) == 0 {
-		if _, err := os.Lstat(path); err != nil {
+		if _, err := g.config.LstatExisting(path); err != nil {
 			return nil //nolint:nilerr // no ledger, nothing to remove
 		}
 		if err := safefs.EnsureParent(path); err != nil { // never remove through a linked directory
@@ -109,7 +109,7 @@ func (g *Generator) ReconcileRoleSkillOverrides() error {
 		return nil
 	}
 	settingsPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(settingsRel))
-	doc, ok := readSkillOverrides(settingsPath)
+	doc, ok := readSkillOverrides(g.config.ReadExisting, settingsPath)
 	want := g.roleSkillOverrides()
 	ledger := g.readRoleLedger()
 	if !ok && len(ledger.Prior) == 0 {
@@ -211,8 +211,8 @@ func (g *Generator) dropSkillClaim(skill string) error {
 	return nil
 }
 
-func readSkillOverrides(path string) (map[string]json.RawMessage, bool) {
-	data, err := os.ReadFile(path) //nolint:gosec // the project's own settings document
+func readSkillOverrides(read func(string) ([]byte, error), path string) (map[string]json.RawMessage, bool) {
+	data, err := read(path)
 	if err != nil {
 		return nil, false
 	}
