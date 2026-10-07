@@ -27,7 +27,7 @@ func TestAServiceCanPlanSourcesThatExistOnlyInMemory(t *testing.T) {
 	ws.Set(".ai-rulez/rules/style.md", "# Style\n\nBe concise.\n", 0o644)
 
 	// Act
-	project, err := airulez.Load(ctx, airulez.Options{Workspace: ws, Runner: airulez.DenyAll})
+	project, err := airulez.Load(ctx, airulez.Options{Workspace: ws, Runner: airulez.DenyAll()})
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestAServicePlanSeesTheOutputsAlreadyInItsWorkspace(t *testing.T) {
 	sum := sha256.Sum256([]byte(cursor))
 	ws.Set(".ai-rulez/.generated-manifest.local.json",
 		`{"version":"1","files":[],"digests":{".cursor/rules/style.mdc":"`+hex.EncodeToString(sum[:])+`"}}`, 0o644)
-	project, err := airulez.Load(ctx, airulez.Options{Workspace: ws, Runner: airulez.DenyAll})
+	project, err := airulez.Load(ctx, airulez.Options{Workspace: ws, Runner: airulez.DenyAll()})
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
