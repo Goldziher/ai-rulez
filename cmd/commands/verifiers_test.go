@@ -18,7 +18,7 @@ const verifiersBase = "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n
 func resetVerifiersFlags(t *testing.T) {
 	t.Helper()
 	reset := func() {
-		verifiersStrict, verifiersJSON, verifiersNames, verifiersProfile, noLocal, configDir = false, false, nil, "", false, ""
+		verifiersStrict, verifiersNames, verifiersProfile, noLocal, configDir = false, nil, "", false, ""
 		verifiersSince, verifiersStaged, verifiersAll, verifiersRule, verifiersFormat = "", false, false, "", ""
 		verifiersFailOn, verifiersOut, verifiersDead, verifiersListJSON, verifiersExec, verifiersRole = "", "", false, false, false, ""
 		verifiersAllowLLM, verifiersMaxCost, verifiersEstimate = false, defaultVerifiersMaxCost, false
@@ -51,7 +51,10 @@ func TestRunVerifiers_ExitCodes(t *testing.T) {
 			root := t.TempDir()
 			writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), tt.config)
 			chdir(t, root)
-			verifiersStrict, verifiersJSON, verifiersNames = tt.strict, tt.json, tt.names
+			verifiersStrict, verifiersNames = tt.strict, tt.names
+			if tt.json {
+				verifiersFormat = "json"
+			}
 			var out bytes.Buffer
 
 			got := runVerifiers(context.Background(), nil, &out)
@@ -320,38 +323,6 @@ func TestRunVerifiers_JSONFollowsTheSchema(t *testing.T) {
 	runVerifiers(context.Background(), nil, &out)
 
 	validateAgainst(t, "../../schema/verifiers-report.schema.json", out.Bytes())
-}
-
-func TestVerifierRunOptionsJSONFlagConflict(t *testing.T) {
-	tests := []struct {
-		name       string
-		json       bool
-		format     string
-		wantFormat string
-		wantErr    bool
-	}{
-		{"json alone", true, "", "json", false},
-		{"json with json", true, "json", "json", false},
-		{"json with text", true, "text", "", true},
-		{"json with sarif", true, "sarif", "", true},
-		{"format alone", false, "junit", "junit", false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oldJ, oldF := verifiersJSON, verifiersFormat
-			t.Cleanup(func() { verifiersJSON, verifiersFormat = oldJ, oldF })
-			verifiersJSON, verifiersFormat = tt.json, tt.format
-
-			_, format, _, err := verifierRunOptions()
-
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
-			}
-			if format != tt.wantFormat {
-				t.Fatalf("format = %q, want %q", format, tt.wantFormat)
-			}
-		})
-	}
 }
 
 const verifiersCommandSpec = verifiersBase + "[[verifiers]]\nname = \"cmd\"\nrule = \"r\"\nseverity = \"error\"\nwhen_changed = [\"*.txt\"]\n" +

@@ -101,7 +101,6 @@ Nothing outside that directory is touched; a run directory that is a symlink is 
 func init() {
 	for _, c := range []*cobra.Command{improveShowCmd, improveCleanCmd} {
 		addFormatFlag(c.Flags(), &improveFlags.format, formatText, formatText, formatText, formatJSON)
-		addJSONFlagAlias(c.Flags())
 		c.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	}
 	improveCleanCmd.Flags().BoolVar(&improveCleanFlags.all, "all", false, "Delete every saved run")

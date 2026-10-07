@@ -72,14 +72,14 @@ func verifyPinnedTags(ctx context.Context, cfg *config.Config, lock *lockfile.Fi
 
 // verifyTagsWanted reports whether a run should ask the remotes: the flag, or
 // [lock] verify_tags. Asking needs the network; an explicit flag with
-// --no-fetch/--frozen is a usage error, the config key is skipped quietly.
+// --offline/--frozen is a usage error, the config key is skipped quietly.
 func verifyTagsWanted(cfg *config.Config, flag bool) (bool, error) {
 	if !flag && !cfg.LockVerifyTags() {
 		return false, nil
 	}
 	if includes.SkipFetch || lockOffline {
 		if flag {
-			return false, oops.Hint("Drop --no-fetch/--frozen/--offline, or drop --verify-tags").
+			return false, oops.Hint("Drop --offline/--frozen, or drop --verify-tags").
 				Errorf("--verify-tags reads the remote's tags and needs the network")
 		}
 		logger.Debug("not verifying pinned tags: the run is offline")

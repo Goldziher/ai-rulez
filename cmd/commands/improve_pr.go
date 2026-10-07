@@ -147,7 +147,6 @@ func init() {
 	f.BoolVar(&improveFlags.allowScripts, "allow-scripts", false, "Allow the candidate to change scripts/ and assets/ and reference scripts")
 	f.BoolVar(&improveFlags.allowFrontmatter, "allow-frontmatter", false, "Allow the candidate to change allowed-tools, model and disable-model-invocation")
 	addFormatFlag(f, &improveFlags.format, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(f)
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	ImproveCmd.AddCommand(improvePRCmd)
 }

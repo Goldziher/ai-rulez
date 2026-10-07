@@ -14,7 +14,7 @@ var (
 	ErrLockViolation = errors.New("ai-rulez.lock violation")
 	// ErrIncludeUnresolved marks an include that could not be fetched (no network
 	// and no cached copy), read or merged. It is fatal: rendering without it
-	// would produce outputs the configuration never described. Only --no-fetch
+	// would produce outputs the configuration never described. Only --offline
 	// downgrades it to a warning.
 	ErrIncludeUnresolved = errors.New("include could not be resolved")
 	// ErrIncludeOutsideProject marks a local include declared in the committed
