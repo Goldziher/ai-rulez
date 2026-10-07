@@ -165,18 +165,11 @@ func joinRankUsage(in *evals.RankInput, cfgDir string) (usageSources, error) {
 	if !explicit {
 		paths = []string{filepath.Join(cfgDir, "local", "usage.jsonl")}
 	}
-	var logs [][]usage.Entry
-	for _, path := range paths {
-		if _, err := os.Stat(path); err != nil && !explicit {
-			continue // the default log is optional
-		}
-		entries, err := readUsageEvidence(path, reportEvalsFlags.fromOTLP)
-		if err != nil {
-			return src, err
-		}
-		logs = append(logs, entries)
-		src.logs++
+	logs, logCount, err := readUsageLogs(paths, explicit, reportEvalsFlags.fromOTLP)
+	if err != nil {
+		return src, err
 	}
+	src.logs = logCount
 	if src.logs > 0 {
 		merged, duplicates := usage.MergeEntries(logs...)
 		src.events, src.duplicates = len(merged), duplicates
@@ -223,6 +216,26 @@ func readUsageEvidence(path string, fromOTLP bool) ([]usage.Entry, error) {
 	}
 	entries, _, err := usage.ReadLog(path)
 	return entries, err
+}
+
+// readUsageLogs reads every path into its entries and returns how many logs
+// were read. A default (non-explicit) log that is absent is skipped; a named
+// one is an error if it cannot be read.
+func readUsageLogs(paths []string, explicit, fromOTLP bool) ([][]usage.Entry, int, error) {
+	var logs [][]usage.Entry
+	count := 0
+	for _, path := range paths {
+		if _, err := os.Stat(path); err != nil && !explicit {
+			continue // the default log is optional
+		}
+		entries, err := readUsageEvidence(path, fromOTLP)
+		if err != nil {
+			return logs, count, err
+		}
+		logs = append(logs, entries)
+		count++
+	}
+	return logs, count, nil
 }
 
 func writeEvalsReport(w reportWriter, rows []evals.RankRow, haveUsage bool) {

@@ -107,13 +107,7 @@ func (r *runner) checkServedReferences(served map[string]bool) {
 	}
 	for i := range r.items {
 		it := &r.items[i]
-		if !it.owned {
-			continue
-		}
-		if it.kind == kindSkill && !it.isDoc && served[strings.ToLower(itemID(kindSkill, it.cf))] {
-			continue // served content may refer to other served content
-		}
-		if it.kind == kindSkill && it.isDoc && it.itemDir != "" && r.resourceOfServed(it, served) {
+		if !it.owned || r.servedSelfOrResource(it, served) {
 			continue
 		}
 		d, ok := r.docs[it.abs]
@@ -121,26 +115,44 @@ func (r *runner) checkServedReferences(served map[string]bool) {
 			continue
 		}
 		reported := map[string]bool{}
-		if !it.isDoc && it.cf.Metadata != nil {
-			for _, s := range it.cf.Metadata.Skills {
-				key := strings.ToLower(strings.TrimSpace(s))
-				if !served[key] || reported[key] {
-					continue
-				}
-				reported[key] = true
-				r.add(CodeServedReferencedStatically, it.abs, d.lineOf(s, 1),
-					"frontmatter skills: preloads %q, which is served and not written to the harness's skill tree. Set delivery: both on it or drop it from skills:", s)
-			}
+		r.checkServedFrontmatter(it, d, served, reported)
+		r.checkServedBody(it, d, served, reported)
+	}
+}
+
+// servedSelfOrResource reports whether the item is itself served content (or a
+// resource of one), which may refer to other served content.
+func (r *runner) servedSelfOrResource(it *item, served map[string]bool) bool {
+	if it.kind == kindSkill && !it.isDoc && served[strings.ToLower(itemID(kindSkill, it.cf))] {
+		return true
+	}
+	return it.kind == kindSkill && it.isDoc && it.itemDir != "" && r.resourceOfServed(it, served)
+}
+
+func (r *runner) checkServedFrontmatter(it *item, d doc, served, reported map[string]bool) {
+	if it.isDoc || it.cf.Metadata == nil {
+		return
+	}
+	for _, s := range it.cf.Metadata.Skills {
+		key := strings.ToLower(strings.TrimSpace(s))
+		if !served[key] || reported[key] {
+			continue
 		}
-		for _, l := range d.body() {
-			for _, name := range referencedNames(l, served) {
-				if reported[name] {
-					continue
-				}
-				reported[name] = true
-				r.add(CodeServedReferencedStatically, it.abs, l.No,
-					"%s is served, not written to the harness's skill tree; this static %s refers to it by name. Load it with find_skill/load_skill, or set delivery: both on %s", name, it.kind, name)
+		reported[key] = true
+		r.add(CodeServedReferencedStatically, it.abs, d.lineOf(s, 1),
+			"frontmatter skills: preloads %q, which is served and not written to the harness's skill tree. Set delivery: both on it or drop it from skills:", s)
+	}
+}
+
+func (r *runner) checkServedBody(it *item, d doc, served, reported map[string]bool) {
+	for _, l := range d.body() {
+		for _, name := range referencedNames(l, served) {
+			if reported[name] {
+				continue
 			}
+			reported[name] = true
+			r.add(CodeServedReferencedStatically, it.abs, l.No,
+				"%s is served, not written to the harness's skill tree; this static %s refers to it by name. Load it with find_skill/load_skill, or set delivery: both on %s", name, it.kind, name)
 		}
 	}
 }

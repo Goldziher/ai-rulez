@@ -76,7 +76,7 @@ func launcherScript(words []string) string {
 					i++
 				}
 			}
-		case w == "nohup" || w == cmdTime || w == "exec" || w == "command":
+		case w == "nohup" || w == cmdTime || w == "exec" || w == hookTypeCommand:
 		default:
 			interp := interpreterOf(w)
 			if interp == "" {

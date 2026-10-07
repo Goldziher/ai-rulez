@@ -272,16 +272,26 @@ func hasConfigFile(v workspace.View, dir string) bool {
 	return v.IsRegularFile(filepath.Join(dir, configTOMLFilename))
 }
 
+// checkLegacyVersion reports the migration error of a config that still carries
+// a removed version; a missing version is left to Validate.
+func checkLegacyVersion(config *Config, configDir string) error {
+	if !IsLegacyVersion(config.Version) {
+		return nil
+	}
+	if err := CheckVersion(config.Version); err != nil {
+		return oops.With("path", filepath.Join(configDir, config.ConfigFile)).Wrap(err)
+	}
+	return nil
+}
+
 func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, baseDir, configDir string, lo loadOptions) (*Config, error) {
 	if lo.frontmatterErrors {
 		lo.host.Log = quietFrontmatterLog{logger.Or(lo.host.Log)}
 	}
 	// A v3/v4 config must go through `ai-rulez migrate v5` before anything
 	// reads it. A missing version is left to Validate, which reports it.
-	if IsLegacyVersion(config.Version) {
-		if err := CheckVersion(config.Version); err != nil {
-			return nil, oops.With("path", filepath.Join(configDir, config.ConfigFile)).Wrap(err)
-		}
+	if err := checkLegacyVersion(config, configDir); err != nil {
+		return nil, err
 	}
 	config.Workspace = v.W
 	config.BaseDir = baseDir

@@ -23,6 +23,12 @@ const (
 	BackendLiterLLM     = "literllm"
 )
 
+// URL schemes accepted in [llm] base_url.
+const (
+	schemeHTTP  = "http"
+	schemeHTTPS = "https"
+)
+
 // Config is the [llm] table of config.toml. Nothing calls out unless
 // AllowNetwork is true.
 //
@@ -125,33 +131,55 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 	if getenv == nil {
 		getenv = ambient.GetenvFunc(nil)
 	}
-	str := func(name string, dst *string) {
-		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
+	c.applyStringOverrides(getenv)
+	errs := c.applyNumberOverrides(getenv)
+	c.applyBooleanOverrides(getenv, &errs)
+	if len(errs) > 0 {
+		return c, newError(KindConfig, "%s: %s", CodeConfigInvalid, strings.Join(errs, "; "))
+	}
+	return c, nil
+}
+
+// envValue returns the trimmed value of AI_RULEZ_LLM_<name>, or "".
+func envValue(getenv func(string) string, name string) string {
+	return strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name))
+}
+
+// applyStringOverrides sets the string fields named in the environment and
+// clears the repo-scope routing flags a user-scope value overrides.
+func (c *Config) applyStringOverrides(getenv func(string) string) {
+	setIf := func(name string, dst *string) {
+		if v := envValue(getenv, name); v != "" {
 			*dst = v
 		}
 	}
-	str("PROVIDER", &c.Provider)
-	if m := strings.TrimSpace(getenv("AI_RULEZ_LLM_MODEL")); m != "" {
+	setIf("PROVIDER", &c.Provider)
+	if m := envValue(getenv, "MODEL"); m != "" {
 		// A model named in the environment is user scope, so the price override applies to it.
 		c.priceBound, c.priceModel = true, m
 	}
-	str("MODEL", &c.Model)
-	if strings.TrimSpace(getenv("AI_RULEZ_LLM_PROVIDER")) != "" {
+	setIf("MODEL", &c.Model)
+	if envValue(getenv, "PROVIDER") != "" {
 		c.repoProvider = false
 	}
-	if strings.TrimSpace(getenv("AI_RULEZ_LLM_MODEL")) != "" {
+	if envValue(getenv, "MODEL") != "" {
 		c.repoModelRoute = false
 	}
-	if strings.TrimSpace(getenv("AI_RULEZ_LLM_EMBEDDING_MODEL")) != "" {
+	if envValue(getenv, "EMBEDDING_MODEL") != "" {
 		c.repoEmbedRoute = false
 	}
-	str("BACKEND", &c.Backend)
-	str("BASE_URL", &c.BaseURL)
-	str("API_KEY_ENV", &c.APIKeyEnv)
-	str("EMBEDDING_MODEL", &c.EmbeddingModel)
+	setIf("BACKEND", &c.Backend)
+	setIf("BASE_URL", &c.BaseURL)
+	setIf("API_KEY_ENV", &c.APIKeyEnv)
+	setIf("EMBEDDING_MODEL", &c.EmbeddingModel)
+}
+
+// applyNumberOverrides sets the numeric fields named in the environment and
+// returns one message per unparseable value.
+func (c *Config) applyNumberOverrides(getenv func(string) string) []string {
 	var errs []string
 	flt := func(name string, dst *float64) {
-		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
+		if v := envValue(getenv, name); v != "" {
 			f, err := strconv.ParseFloat(v, 64)
 			if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
 				errs = append(errs, "AI_RULEZ_LLM_"+name+" is not a finite number")
@@ -161,7 +189,7 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 		}
 	}
 	num := func(name string, dst *int) {
-		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
+		if v := envValue(getenv, name); v != "" {
 			n, err := strconv.Atoi(v)
 			if err != nil {
 				errs = append(errs, "AI_RULEZ_LLM_"+name+" is not an integer")
@@ -170,22 +198,28 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 			*dst = n
 		}
 	}
+	flt("MAX_COST_USD", &c.MaxCostUSD)
+	num("MAX_TOKENS", &c.MaxTokens)
+	num("MAX_CALLS", &c.MaxCalls)
+	num("TIMEOUT_SECONDS", &c.TimeoutSeconds)
+	return errs
+}
+
+// applyBooleanOverrides sets the boolean fields named in the environment and
+// the plain_http_hosts list, appending one message per unparseable value.
+func (c *Config) applyBooleanOverrides(getenv func(string) string, errs *[]string) {
 	boolean := func(name string) (bool, bool) {
-		v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name))
+		v := envValue(getenv, name)
 		if v == "" {
 			return false, false
 		}
 		b, err := strconv.ParseBool(v)
 		if err != nil {
-			errs = append(errs, "AI_RULEZ_LLM_"+name+" is not a boolean")
+			*errs = append(*errs, "AI_RULEZ_LLM_"+name+" is not a boolean")
 			return false, false
 		}
 		return b, true
 	}
-	flt("MAX_COST_USD", &c.MaxCostUSD)
-	num("MAX_TOKENS", &c.MaxTokens)
-	num("MAX_CALLS", &c.MaxCalls)
-	num("TIMEOUT_SECONDS", &c.TimeoutSeconds)
 	if b, ok := boolean("CACHE"); ok {
 		c.Cache = &b
 	}
@@ -195,7 +229,7 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 	if b, ok := boolean("ALLOW_PLAIN_HTTP"); ok {
 		c.AllowPlainHTTP = b
 	}
-	if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_PLAIN_HTTP_HOSTS")); v != "" {
+	if v := envValue(getenv, "PLAIN_HTTP_HOSTS"); v != "" {
 		c.PlainHTTPHosts = nil
 		for _, h := range strings.Split(v, ",") {
 			if h = strings.TrimSpace(h); h != "" {
@@ -203,10 +237,6 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 			}
 		}
 	}
-	if len(errs) > 0 {
-		return c, newError(KindConfig, "%s: %s", CodeConfigInvalid, strings.Join(errs, "; "))
-	}
-	return c, nil
 }
 
 var (
@@ -275,13 +305,13 @@ func (c Config) validateBaseURL() []string {
 	}
 	u, err := url.Parse(c.BaseURL)
 	switch {
-	case err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https"):
+	case err != nil || u.Host == "" || (u.Scheme != schemeHTTP && u.Scheme != schemeHTTPS):
 		return []string{"base_url must be an http(s) URL with a host"}
 	case u.User != nil:
 		return []string{"base_url must not embed credentials; put the key in the variable named by api_key_env"}
 	case u.RawQuery != "":
 		return []string{"base_url must not carry a query string (it may hold a key); configure headers at the gateway instead"}
-	case u.Scheme == "http" && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()) && !c.plainHTTPAllowed(u.Host):
+	case u.Scheme == schemeHTTP && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()) && !c.plainHTTPAllowed(u.Host):
 		return []string{"base_url must use https when an API key is sent (plain http is accepted only for a loopback host such as localhost, or a host listed in plain_http_hosts together with allow_plain_http = true in user scope)"}
 	}
 	return nil
@@ -304,7 +334,7 @@ func (c Config) plainHTTPAllowed(host string) bool {
 // to base_url, so doctor can surface it.
 func (c Config) UsesPlainHTTPOptIn() bool {
 	u, err := url.Parse(c.BaseURL)
-	return err == nil && u.Scheme == "http" && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()) && c.plainHTTPAllowed(u.Host)
+	return err == nil && u.Scheme == schemeHTTP && c.APIKeyEnv != "" && !isLoopbackHost(u.Hostname()) && c.plainHTTPAllowed(u.Host)
 }
 
 func (c Config) validatePlainHTTP() []string {
