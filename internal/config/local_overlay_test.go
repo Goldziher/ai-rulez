@@ -280,7 +280,7 @@ presets = ["claude", {name = "mine", path = "OUT.md", type = "markdown"}]
 		{"toml builtins bool", "config.toml", "version = \"5.0\"\nname = \"x\"\nbuiltins = false\n"},
 		{"toml builtins list", "config.toml", "version = \"5.0\"\nname = \"x\"\nbuiltins = [\"go\", \"!security\"]\n"},
 		{"toml full", "config.toml", overlayMainTOML + "\n[header]\nstyle = \"compact\"\n\n[defaults.effort_by_preset]\nclaude = \"high\"\n"},
-		{"toml with schema key", "config.toml", "schema = \"https://example.com/s.json\"\nversion = \"4.0\"\nname = \"x\"\n"},
+		{"toml with schema key", "config.toml", "schema = \"https://example.com/s.json\"\nversion = \"5.0\"\nname = \"x\"\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

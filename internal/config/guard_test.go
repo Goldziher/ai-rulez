@@ -76,7 +76,7 @@ func TestConfigValidateGuard(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := &Config{Version: "4.0", Name: "test", Presets: []Preset{{BuiltIn: "claude"}}, Guard: tt.guard}
+			cfg := &Config{Version: "5.0", Name: "test", Presets: []Preset{{BuiltIn: "claude"}}, Guard: tt.guard}
 
 			err := cfg.Validate()
 
@@ -91,7 +91,7 @@ func TestConfigValidateGuard(t *testing.T) {
 }
 
 func TestLoadConfigTOML_GuardSection(t *testing.T) {
-	baseDir := writeTOMLProject(t, `version = "4.0"
+	baseDir := writeTOMLProject(t, `version = "5.0"
 name = "proj"
 presets = ["claude"]
 

@@ -15,7 +15,7 @@ func TestLoadConfig_CatalogTable(t *testing.T) {
 	dir := t.TempDir()
 	configDir := filepath.Join(dir, aiRulezDirName)
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
-	body := `version = "4.0"
+	body := `version = "5.0"
 name = "catalog-test"
 presets = ["claude"]
 

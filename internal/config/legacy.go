@@ -104,7 +104,7 @@ func isLegacyConfigName(base string) bool {
 type legacyConfigError struct{ path string }
 
 func (e *legacyConfigError) Error() string {
-	return fmt.Sprintf("found %s: YAML and JSON configs are no longer read; run `%s` to convert it to config.toml",
+	return fmt.Sprintf("found %s: YAML and JSON configs are no longer read; run %#q to convert it to config.toml",
 		e.path, legacyMigrationCommand)
 }
 

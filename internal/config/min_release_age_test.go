@@ -66,7 +66,7 @@ func TestLockMinReleaseAgeValidation(t *testing.T) {
 
 func TestMinReleaseAgeDecodesFromTOML(t *testing.T) {
 	data := []byte(`
-version = "4.0"
+version = "5.0"
 name = "p"
 
 [lock]

@@ -200,7 +200,7 @@ func TestTOMLOutputCarriesEveryConfigKey(t *testing.T) {
 
 func TestMarshalTOMLKeepsOKFTable(t *testing.T) {
 	// Arrange
-	cfg := &Config{Version: "4.0", Name: "x", OKF: &OKFConfig{Dir: "docs/okf"}}
+	cfg := &Config{Version: "5.0", Name: "x", OKF: &OKFConfig{Dir: "docs/okf"}}
 
 	// Act
 	out, err := MarshalTOML(cfg)

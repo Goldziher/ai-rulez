@@ -11,8 +11,8 @@ import (
 // sentence naming the right table.
 
 const (
-	lintRatchetPath  = "[lint.ratchet]"
-	lintBudgetsPath  = "[lint.budgets.<kind>]"
+	lintRatchetPath = "[lint.ratchet]"
+	lintBudgetsPath = "[lint.budgets.<kind>]"
 )
 
 // swappedLintTablesTOML explains a TOML document that fails to decode because a

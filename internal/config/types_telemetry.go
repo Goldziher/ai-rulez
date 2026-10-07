@@ -244,7 +244,7 @@ func CheckRepoTelemetryEnv(name, value string) error {
 	}
 	if name == telemetryEnvPrefix {
 		switch strings.ToLower(strings.TrimSpace(value)) {
-		case "0", "false", "no", "off":
+		case "0", boolFalse, "no", "off":
 			return nil
 		}
 	}

@@ -38,7 +38,7 @@ func TestOKFIndexStyle(t *testing.T) {
 
 func TestDecodeConfigTOMLReadsTheOKFSection(t *testing.T) {
 	// Arrange
-	data := []byte("version = \"4.0\"\nname = \"x\"\n\n[okf]\ndir = \"docs/kb\"\ninclude = [\"rules\"]\nindex_style = \"frontmatter\"\n")
+	data := []byte("version = \"5.0\"\nname = \"x\"\n\n[okf]\ndir = \"docs/kb\"\ninclude = [\"rules\"]\nindex_style = \"frontmatter\"\n")
 	// Act
 	cfg, err := decodeConfigTOML(data, "config.toml")
 	// Assert

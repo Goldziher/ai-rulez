@@ -31,7 +31,7 @@ func TestLoadWithoutResolversFailsWhenAnIncludeIsConfigured(t *testing.T) {
 			dir := t.TempDir()
 			cfgDir := filepath.Join(dir, ".ai-rulez")
 			require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-			body := "version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n\n[[includes]]\nname = \"shared\"\nsource = \"shared\"\n"
+			body := "version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n\n[[includes]]\nname = \"shared\"\nsource = \"shared\"\n"
 			require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(body), 0o644))
 
 			// Act

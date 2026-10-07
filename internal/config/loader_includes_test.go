@@ -51,7 +51,7 @@ func TestLoadConfigWithIncludes_LocalIncludes(t *testing.T) {
 		require.NoError(t, os.MkdirAll(includeConfigDir, 0o755))
 
 		// Create config.yaml with includes
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-with-includes"
 description = "Test config with local includes"
 presets = ["claude"]

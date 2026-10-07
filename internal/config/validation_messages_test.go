@@ -16,12 +16,12 @@ func TestValidate_RemovedPresetAndMissingVersionMessages(t *testing.T) {
 	}{
 		{
 			name:    "windsurf was renamed",
-			cfg:     config.Config{Version: "4.0", Name: "p", Presets: []config.Preset{{BuiltIn: "windsurf"}}},
+			cfg:     config.Config{Version: "5.0", Name: "p", Presets: []config.Preset{{BuiltIn: "windsurf"}}},
 			wantErr: []string{"unknown built-in preset", "renamed to devin"},
 		},
 		{
 			name:    "continue-dev was removed",
-			cfg:     config.Config{Version: "4.0", Name: "p", Presets: []config.Preset{{BuiltIn: "continue-dev"}}},
+			cfg:     config.Config{Version: "5.0", Name: "p", Presets: []config.Preset{{BuiltIn: "continue-dev"}}},
 			wantErr: []string{"unknown built-in preset", "removed"},
 		},
 		{
