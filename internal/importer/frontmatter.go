@@ -96,7 +96,7 @@ func lineFrontmatter(fm string) map[string]any {
 		switch {
 		case trimmed == "" || strings.HasPrefix(trimmed, "#"):
 		case strings.HasPrefix(trimmed, "- ") && key != "":
-			list, _ := out[key].([]any)
+			list := as[[]any](out[key])
 			out[key] = append(list, unquote(strings.TrimPrefix(trimmed, "- ")))
 		default:
 			k, v, ok := strings.Cut(trimmed, ":")

@@ -1,6 +1,8 @@
 package importer
 
 import (
+	"errors"
+	"os"
 	"testing"
 
 	"github.com/samber/oops"
@@ -53,4 +55,34 @@ func TestReaderSkipReasons_KeepTheirText(t *testing.T) {
 	assert.Equal(t, "path escapes the source directory", skipReason(escapeErr))
 	assert.Equal(t, "file is larger than the 2 MiB limit", skipReason(bigErr))
 	assert.ErrorIs(t, bigErr, errSkipped)
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("disk full") }
+
+func TestReportWriteText_ReturnsTheWriteError(t *testing.T) {
+	// Arrange
+	r := &Report{Importer: "native", Source: "."}
+
+	// Act
+	err := r.WriteText(failingWriter{})
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "disk full")
+}
+
+func TestDiscardTemp_RemovesTheFileAndKeepsTheCause(t *testing.T) {
+	// Arrange
+	f, err := os.CreateTemp(t.TempDir(), "x")
+	require.NoError(t, err)
+	cause := errors.New("write failed")
+
+	// Act
+	got := discardTemp(f, f.Name(), cause)
+
+	// Assert
+	require.ErrorIs(t, got, cause)
+	assert.NoFileExists(t, f.Name())
 }

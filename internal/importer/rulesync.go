@@ -50,7 +50,10 @@ func (rulesyncImporter) Detect(fsys fs.FS) []string {
 			found = append(found, f)
 		}
 	}
-	cfg, _ := readRulesyncConfig(r)
+	cfg, err := readRulesyncConfig(r)
+	if err != nil {
+		cfg = nil // an unreadable rulesync.jsonc still detects; Plan reports it
+	}
 	for _, root := range rulesyncRoots(cfg, nil) {
 		for _, in := range rulesyncInputs {
 			if _, ok := r.exists(path.Join(root, in)); ok {
