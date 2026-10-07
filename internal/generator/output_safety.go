@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -96,6 +97,59 @@ func (g *Generator) convertedOriginal(rel string) bool {
 func (g *Generator) adoptable(rel string, data []byte) bool {
 	want, ok := g.convertRecordFiles()[rel]
 	return ok && want == fileDigest(data)
+}
+
+// retiredFiles is what a generate removes: the stale manifest entries, plus the
+// command files `convert` imported that a generated skill now replaces. clean
+// does not use it: it keeps every file convert imported.
+func (g *Generator) retiredFiles(outputs []config.OutputFile) []string {
+	files := g.staleManifestFiles(outputs)
+	for _, abs := range g.supersededCommands(outputs) {
+		if !slices.Contains(files, abs) {
+			files = append(files, abs)
+		}
+	}
+	sort.Strings(files)
+	return files
+}
+
+// supersededCommands lists the imported `<dir>/commands/<name>.md` files that are
+// unchanged since convert and whose `<dir>/skills/<name>/SKILL.md` this run
+// generates. Their content lives under the config directory, and a harness that
+// loads both would show the command twice. An edited file stays.
+func (g *Generator) supersededCommands(outputs []config.OutputFile) []string {
+	if g.userMode {
+		return nil
+	}
+	record := g.convertRecordFiles()
+	if len(record) == 0 {
+		return nil
+	}
+	written := map[string]bool{}
+	for _, output := range outputs {
+		if !output.IsDir {
+			written[g.relSlash(g.absOutputPath(output.Path))] = true
+		}
+	}
+	var out []string
+	for rel := range record {
+		dir, file := path.Split(rel)
+		if !strings.HasSuffix(dir, "/commands/") || !strings.HasSuffix(file, ".md") || written[rel] {
+			continue
+		}
+		skill := path.Join(path.Dir(path.Dir(dir)), "skills", strings.TrimSuffix(file, ".md"), "SKILL.md")
+		if !written[skill] {
+			continue
+		}
+		abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(rel))
+		data, err := g.config.ReadExisting(abs)
+		if err != nil || !g.adoptable(rel, data) || isSymlink(abs) || !g.removalConfined(abs) {
+			continue
+		}
+		out = append(out, abs)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // outputSafety classifies the outputs a project-scope run is about to write.
