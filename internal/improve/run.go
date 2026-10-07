@@ -644,7 +644,7 @@ func (x *execution) reset(tree *Tree) error {
 // means the round failed.
 func (x *execution) runOptimizer(round int, scores *trainScores, history []string, rep *RoundReport) (*OptimizerResponse, string) {
 	p, o := x.p, &x.p.Opts
-	budget := roundUSD(x.left())
+	budget := budgetUSD(x.left())
 	req := OptimizerRequest{
 		Version: ProtocolVersion, RunID: p.RunID, Round: round,
 		Skill:      optimizerSkill{ID: p.Skill.ID, Dir: p.Skill.ID, Digest: digestOfTree(x.prev)},
