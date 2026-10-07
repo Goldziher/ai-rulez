@@ -71,6 +71,18 @@ func TestCommandRunner_PipesRequestAndReadsResponse(t *testing.T) {
 	assert.NotContains(t, string(data), `"File"`, "authoring paths are not part of the protocol")
 }
 
+// printJSON returns a shell command that prints doc verbatim under both sh and
+// cmd.exe, which keeps single quotes in an echo argument.
+func printJSON(t *testing.T, doc string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "out.json")
+	require.NoError(t, os.WriteFile(path, []byte(doc), 0o600))
+	if runtime.GOOS == "windows" {
+		return `type "` + path + `"`
+	}
+	return "cat '" + path + "'"
+}
+
 func TestCommandRunner_Errors(t *testing.T) {
 	req := sampleRequest(t)
 	_, err := (&CommandRunner{}).Run(context.Background(), req)
@@ -82,13 +94,13 @@ func TestCommandRunner_Errors(t *testing.T) {
 	_, err = (&CommandRunner{Command: "echo not-json"}).Run(context.Background(), req)
 	assert.ErrorContains(t, err, "invalid JSON")
 
-	_, err = (&CommandRunner{Command: `echo '{"version":2,"results":[]}'`}).Run(context.Background(), req)
+	_, err = (&CommandRunner{Command: printJSON(t, `{"version":2,"results":[]}`)}).Run(context.Background(), req)
 	assert.ErrorContains(t, err, "protocol version")
 
-	_, err = (&CommandRunner{Command: `echo '{"version":1,"results":[{"case":"ghost","arm":"with"}]}'`}).Run(context.Background(), req)
+	_, err = (&CommandRunner{Command: printJSON(t, `{"version":1,"results":[{"case":"ghost","arm":"with"}]}`)}).Run(context.Background(), req)
 	assert.ErrorContains(t, err, "unknown case")
 
-	_, err = (&CommandRunner{Command: `echo '{"version":1,"results":[{"case":"fires","arm":"sideways"}]}'`}).Run(context.Background(), req)
+	_, err = (&CommandRunner{Command: printJSON(t, `{"version":1,"results":[{"case":"fires","arm":"sideways"}]}`)}).Run(context.Background(), req)
 	assert.ErrorContains(t, err, "arm must be")
 }
 
