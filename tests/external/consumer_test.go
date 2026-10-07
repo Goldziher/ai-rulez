@@ -13,6 +13,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -149,5 +151,53 @@ func TestAServiceCanImplementItsOwnRunner(t *testing.T) {
 	}
 	if len(run.argv) == 0 || run.argv[0][0] != "git" {
 		t.Errorf("the service's runner was not asked to start the version control tool: %v", run.argv)
+	}
+}
+
+func TestAServiceCanLockAProjectDirectoryAndCheckIt(t *testing.T) {
+	// Arrange: a project directory with one rule and no lock yet.
+	ctx := context.Background()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(home, ".cache"))
+	dir := t.TempDir()
+	for name, content := range map[string]string{
+		".ai-rulez/config.toml":    "version = \"4.0\"\nname = \"consumer\"\npresets = [\"claude\"]\n",
+		".ai-rulez/rules/style.md": "# Style\n\nBe concise.\n",
+	} {
+		path := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ws, err := airulez.DirWorkspace(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	project, err := airulez.Load(ctx, airulez.Options{Workspace: ws, Runner: airulez.DenyAll(), Env: airulez.MapEnv{Home: home}})
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Act
+	res, err := project.Lock(ctx, airulez.LockOptions{Strict: true})
+	if err != nil {
+		var findings *airulez.FindingsError
+		if errors.As(err, &findings) {
+			t.Fatalf("Lock refused findings %v", findings.Findings)
+		}
+		t.Fatalf("Lock: %v", err)
+	}
+	status, err := project.LockCheck(ctx, airulez.LockCheckOptions{})
+
+	// Assert
+	if res.Path != ".ai-rulez/ai-rulez.lock" || res.Tree == "" || len(res.Unpinned) != 0 {
+		t.Errorf("Lock = %+v, want the lock file with content pins", res)
+	}
+	if err != nil || !status.InSync {
+		t.Errorf("LockCheck = %+v, %v; want a lock in sync with the sources it was just written from", status, err)
 	}
 }
