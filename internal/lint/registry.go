@@ -41,6 +41,7 @@ type ruleSet struct {
 func ruleFamilies() []func(*ruleSet) {
 	return []func(*ruleSet){
 		registerActivationcodes,
+		registerAgentPlugins,
 		registerApprovals,
 		registerArActivationCases,
 		registerArBudget,

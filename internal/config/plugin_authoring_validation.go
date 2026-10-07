@@ -533,7 +533,7 @@ func validatePluginRuntimeRules(p *PluginAuthoring) error {
 		return oops.
 			With("field", "plugin.spec").
 			With("value", p.Spec).
-			Hint("Supported Agent Plugins specs: " + strings.Join(agentplugins.Specs, ", ")).
+			Hint("Supported Agent Plugins specs: "+strings.Join(agentplugins.Specs, ", ")).
 			Errorf("plugin %q sets unsupported Agent Plugins spec %q", p.Name, p.Spec)
 	}
 	usesStandard := pluginTargetsRuntime(p, PluginRuntimeAgentPlugins) || pluginTargetsRuntime(p, PluginRuntimeCopilot) ||
