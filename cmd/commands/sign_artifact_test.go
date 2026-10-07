@@ -106,6 +106,39 @@ func TestVerifyBundleJSONMatchesTheSchema(t *testing.T) {
 	assert.Equal(t, signing.DefaultBuilderID, r.Provenance.Builder)
 }
 
+func TestSignBundleProvenanceNamesTheGitHubWorkflowAsBuilder(t *testing.T) {
+	tests := []struct {
+		name   string
+		server string
+		want   string
+	}{
+		{"github.com", "", "https://github.com/acme/tools/.github/workflows/release.yaml@refs/tags/v1.2.0"},
+		{"enterprise server", "https://ghe.example.org/", "https://ghe.example.org/acme/tools/.github/workflows/release.yaml@refs/tags/v1.2.0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: the variables a GitHub Actions run sets, on purpose.
+			f := newArtifactFixture(t, artifactTrustTable)
+			t.Setenv("GITHUB_WORKFLOW_REF", "acme/tools/.github/workflows/release.yaml@refs/tags/v1.2.0")
+			if tt.server != "" {
+				t.Setenv("GITHUB_SERVER_URL", tt.server)
+			}
+
+			// Act
+			require.Equal(t, 0, f.signWith(t, f.privKey, func() { signBundle, signProvenance = f.bundle, true }))
+			code, stdout, _ := f.verifyWith(t, func() { verifyBundleDir, verifyFormat = f.bundle, formatJSON })
+
+			// Assert
+			require.Equal(t, 0, code)
+			var doc attestationReport
+			require.NoError(t, json.Unmarshal([]byte(stdout), &doc))
+			require.Len(t, doc.Results, 1)
+			require.NotNil(t, doc.Results[0].Provenance)
+			assert.Equal(t, tt.want, doc.Results[0].Provenance.Builder)
+		})
+	}
+}
+
 func TestVerifyBundleFailures(t *testing.T) {
 	tests := []struct {
 		name       string
