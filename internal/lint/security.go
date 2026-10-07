@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/secretpat"
 )
 
 // The security family (AR001...) is deterministic and offline: it reads text and
@@ -17,22 +18,19 @@ type secretPattern struct {
 	re   *regexp.Regexp
 }
 
-var builtinSecrets = []secretPattern{
-	{"AWS access key id", regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`)},
-	{"GitHub token", regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{36,}\b`)},
-	{"GitHub fine-grained token", regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{22,}\b`)},
-	{"Slack token", regexp.MustCompile(`\bxox[abprs]-[A-Za-z0-9-]{10,}\b`)},
-	{"Google API key", regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{35}\b`)},
-	{"Stripe live key", regexp.MustCompile(`\b[sr]k_live_[0-9A-Za-z]{24,}\b`)},
-	{"Anthropic API key", regexp.MustCompile(`\bsk-ant-[A-Za-z0-9_-]{20,}\b`)},
-	{"OpenAI API key", regexp.MustCompile(`\bsk-(?:proj-)?[A-Za-z0-9_-]{40,}\b`)},
-	{"private key block", regexp.MustCompile(`-{5}BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-{5}`)},
-	{"JSON web token", regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b`)},
-}
+// builtinSecrets are the credential shapes shared with the model layer's refuse-to-send check
+// (internal/secretpat), so a key the scan reports is never sent to a model unnoticed.
+var builtinSecrets = func() []secretPattern {
+	out := make([]secretPattern, 0, len(secretpat.Builtin))
+	for _, p := range secretpat.Builtin {
+		out = append(out, secretPattern{name: p.Name, re: p.Re})
+	}
+	return out
+}()
 
 // genericCredential matches `password = "..."` style assignments; the value must
 // mix letters and digits so placeholders such as "your-key-here" pass.
-var genericCredential = regexp.MustCompile(`(?i)\b(?:api[_-]?key|secret|token|passwd|password|client[_-]?secret)\b["']?\s*[:=]\s*["']([A-Za-z0-9/+_.=-]{20,})["']`)
+var genericCredential = secretpat.GenericCredential
 
 var injectionPhrases = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bignore\s+(?:all\s+|any\s+|the\s+)?(?:previous|prior|above|earlier|preceding)\s+(?:instructions?|prompts?|rules?|directions?|context)\b`),
