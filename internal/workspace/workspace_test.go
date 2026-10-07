@@ -179,7 +179,7 @@ func TestAroundRootsAtTheVCSTop(t *testing.T) {
 		t.Fatalf("Around root = %s, want %s", got, want)
 	}
 	bare := t.TempDir()
-	ws, err = workspace.Around(bare)
+	ws, err = workspace.AroundBelow(bare, filepath.Dir(bare)) // a repository enclosing the temporary directory is not this test's
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -27,6 +27,13 @@ func TestStateScope(t *testing.T) {
 			for _, m := range tt.markers {
 				require.NoError(t, os.MkdirAll(filepath.Join(top, m), 0o755))
 			}
+			if len(tt.markers) == 0 {
+				// The case is the absence of a checkout: a repository enclosing the
+				// temporary directory (a TMPDIR inside a checkout) would decide it.
+				if rel, _ := stateScope(top); rel != "" {
+					t.Skip("the temporary directory is inside a git checkout")
+				}
+			}
 			cfg := filepath.Join(top, filepath.FromSlash(tt.config))
 			require.NoError(t, os.MkdirAll(cfg, 0o755))
 

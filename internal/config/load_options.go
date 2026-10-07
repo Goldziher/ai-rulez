@@ -103,7 +103,7 @@ func (lo loadOptions) baseView(baseDir string) (workspace.View, string, error) {
 			Hint("Check if the directory path is valid and accessible").
 			Wrapf(err, "resolve absolute path")
 	}
-	ws, err := workspace.Around(abs)
+	ws, err := workspace.AroundBelow(abs, lo.host.GetEnv("GIT_CEILING_DIRECTORIES"))
 	if err != nil {
 		return workspace.View{}, "", err //nolint:wrapcheck // already contextual
 	}
@@ -127,7 +127,7 @@ func (lo loadOptions) fileView(absPath string) (workspace.View, string, error) {
 	if lo.ws != nil {
 		return workspace.NewView(lo.ws), absPath, nil
 	}
-	ws, err := workspace.Around(bootstrapBase(absPath))
+	ws, err := workspace.AroundBelow(bootstrapBase(absPath), lo.host.GetEnv("GIT_CEILING_DIRECTORIES"))
 	if err != nil {
 		return workspace.View{}, "", err //nolint:wrapcheck // already contextual
 	}

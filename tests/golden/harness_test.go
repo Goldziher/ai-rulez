@@ -27,6 +27,8 @@ import (
 	"sync"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 var (
@@ -38,6 +40,7 @@ var (
 
 // TestMain only builds lazily (see binary), so `go test -run Other` stays fast.
 func TestMain(m *testing.M) {
+	testutil.CeilGit()
 	code := m.Run()
 	if binaryPath != "" {
 		_ = os.RemoveAll(filepath.Dir(binaryPath)) //nolint:errcheck // best-effort cleanup
@@ -272,6 +275,9 @@ func baseEnv(home string, extra []string) []string {
 		"NO_COLOR=1",
 		"TERM=dumb",
 		"CI=1",
+		// Temporary directories may sit inside a checkout (a TMPDIR below the
+		// repository): its ignore rules must not decide a golden.
+		"GIT_CEILING_DIRECTORIES=" + os.TempDir(),
 		"GIT_CONFIG_GLOBAL=" + os.DevNull,
 		"GIT_CONFIG_NOSYSTEM=1",
 		"GIT_AUTHOR_NAME=golden", "GIT_AUTHOR_EMAIL=golden@example.invalid",

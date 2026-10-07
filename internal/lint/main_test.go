@@ -6,12 +6,15 @@ import (
 	"sort"
 	"sync"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // TestMain fails the package when any test run made a unit report a rule of an
 // analyzer it did not declare: such a unit would be skipped wrongly when only
 // that analyzer is selected, so `--analyzer x` would miss findings.
 func TestMain(m *testing.M) {
+	testutil.CeilGit()
 	var mu sync.Mutex
 	seen := map[string]bool{}
 	onUndeclaredEmission = func(unit, code string) {

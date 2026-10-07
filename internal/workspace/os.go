@@ -31,16 +31,33 @@ func OS(root string) (Workspace, error) {
 // content symlink may point anywhere in that tree, so a project nested in a
 // larger repository can link to its siblings.
 func Around(dir string) (Workspace, error) {
+	return AroundBelow(dir, "")
+}
+
+// AroundBelow is Around that, like the VCS itself, does not look for a repository
+// in the directories listed in ceilings (the value of GIT_CEILING_DIRECTORIES:
+// paths separated by the OS list separator) or above them.
+func AroundBelow(dir, ceilings string) (Workspace, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, oops.With("path", dir).Wrapf(err, "resolve workspace root")
 	}
-	return OS(vcsTop(abs))
+	return OS(vcsTop(abs, ceilings))
 }
 
-// vcsTop walks up from abs looking for a .git entry; it returns abs when none exists.
-func vcsTop(abs string) string {
+// vcsTop walks up from abs looking for a .git entry; it returns abs when none
+// exists, or when a ceiling directory is reached first.
+func vcsTop(abs, ceilings string) string {
+	ceiling := map[string]bool{}
+	for _, c := range filepath.SplitList(ceilings) {
+		if c != "" {
+			ceiling[filepath.Clean(c)] = true
+		}
+	}
 	for cur := abs; ; {
+		if ceiling[cur] {
+			return abs
+		}
 		if _, err := os.Lstat(filepath.Join(cur, vcsDirName)); err == nil {
 			return cur
 		}
