@@ -3,6 +3,7 @@ package contentlock
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"hash"
 	"io"
 	"io/fs"
 	"os"
@@ -75,49 +76,61 @@ func readTree(dir string, keep map[string]bool) ([]treeFile, error) {
 		if walkErr != nil {
 			return walkErr
 		}
-		rel, err := filepath.Rel(dir, path)
-		if err != nil {
-			return err //nolint:wrapcheck // wrapped by the caller
+		tf, err := treeEntry(dir, path, d, keep)
+		if tf != nil {
+			files = append(files, *tf)
 		}
-		rel = filepath.ToSlash(rel)
-		if keep != nil && rel != "." && !strings.Contains(rel, "/") && !keep[rel] {
-			if d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if d.Type()&fs.ModeSymlink != 0 {
-			target, err := os.Readlink(path)
-			if err != nil {
-				return err //nolint:wrapcheck // wrapped by the caller
-			}
-			files = append(files, treeFile{rel: rel, abs: path, mode: modeSymlink, target: filepath.ToSlash(target)})
-			return nil
-		}
-		if d.IsDir() {
-			if d.Name() == ".git" && path != dir {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if rel == cacheMetaFile || rel == cacheMetaTmpFile {
-			return nil
-		}
-		info, err := d.Info()
-		if err != nil {
-			return err //nolint:wrapcheck // wrapped by the caller
-		}
-		if !info.Mode().IsRegular() {
-			files = append(files, treeFile{rel: rel, abs: path, mode: modeIrregular})
-			return nil
-		}
-		files = append(files, treeFile{rel: rel, abs: path, info: info})
-		return nil
+		return err
 	})
 	if err != nil {
 		return nil, oops.With("dir", dir).Wrapf(err, "digest directory")
 	}
 	return files, nil
+}
+
+// outsideKeep reports a top-level entry that keep (when set) does not name.
+func outsideKeep(rel string, keep map[string]bool) bool {
+	return keep != nil && rel != "." && !strings.Contains(rel, "/") && !keep[rel]
+}
+
+// treeEntry is the tree file for one walked entry: nil for a directory or an
+// entry that is not part of the tree (filepath.SkipDir to prune it).
+func treeEntry(dir, path string, d fs.DirEntry, keep map[string]bool) (*treeFile, error) {
+	rel, err := filepath.Rel(dir, path)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // wrapped by the caller
+	}
+	rel = filepath.ToSlash(rel)
+	if outsideKeep(rel, keep) {
+		if d.IsDir() {
+			return nil, filepath.SkipDir
+		}
+		return nil, nil
+	}
+	if d.Type()&fs.ModeSymlink != 0 {
+		target, err := os.Readlink(path)
+		if err != nil {
+			return nil, err //nolint:wrapcheck // wrapped by the caller
+		}
+		return &treeFile{rel: rel, abs: path, mode: modeSymlink, target: filepath.ToSlash(target)}, nil
+	}
+	if d.IsDir() {
+		if d.Name() == ".git" && path != dir {
+			return nil, filepath.SkipDir
+		}
+		return nil, nil
+	}
+	if rel == cacheMetaFile || rel == cacheMetaTmpFile {
+		return nil, nil
+	}
+	info, err := d.Info()
+	if err != nil {
+		return nil, err //nolint:wrapcheck // wrapped by the caller
+	}
+	if !info.Mode().IsRegular() {
+		return &treeFile{rel: rel, abs: path, mode: modeIrregular}, nil
+	}
+	return &treeFile{rel: rel, abs: path, info: info}, nil
 }
 
 // DigestDir returns the digest of the regular files below dir under the one
@@ -218,11 +231,12 @@ func streamLeafDigest(abs, rel, mode string) ([sha256.Size]byte, error) {
 	return out, nil
 }
 
-func writeLP(w io.Writer, b []byte) {
+// writeLP writes b length-prefixed to a hash, whose Write never fails.
+func writeLP(h hash.Hash, b []byte) {
 	var n [8]byte
 	binary.BigEndian.PutUint64(n[:], uint64(len(b)))
-	_, _ = w.Write(n[:])
-	_, _ = w.Write(b)
+	h.Write(n[:])
+	h.Write(b)
 }
 
 func streamedLength(abs string, text bool) (int64, error) {
