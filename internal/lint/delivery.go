@@ -23,8 +23,8 @@ const (
 	CodeServedLockMismatch         = "AR995"
 )
 
-func init() {
-	registerRules(
+func registerDelivery(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeServedReferencedStatically, "served-skill-referenced-statically", SeverityWarning, "a static rule, context or skill names a skill whose delivery is served, which is not in the harness's skill tree"},
 		RuleInfo{CodeDeliveryStubMissing, "delivery-stub-missing", SeverityError, "skills are served but a harness that can call MCP has no dynamic-skills stub telling the agent to call find_skill"},
 		RuleInfo{CodeDeliveryStaticFallback, "delivery-static-fallback", SeverityWarning, "a harness without MCP support keeps served skills as static files (nothing is dropped)"},

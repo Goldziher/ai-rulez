@@ -9,8 +9,8 @@ import (
 // CodeUnknownDotdir reads a hidden directory of the home folder that no credential family names.
 const CodeUnknownDotdir = "AR027"
 
-func init() {
-	registerRules(RuleInfo{CodeUnknownDotdir, "unknown-dotdir-read", SeverityOff, "a read command targets a hidden directory of the home folder that is not in the credential table or a known benign list (off by default; a catch-all for locations the table does not know)"})
+func registerArCredtable(s *ruleSet) {
+	s.addRules(RuleInfo{CodeUnknownDotdir, "unknown-dotdir-read", SeverityOff, "a read command targets a hidden directory of the home folder that is not in the credential table or a known benign list (off by default; a catch-all for locations the table does not know)"})
 }
 
 // Credential tiers. critical and high report as AR006's warning, the rest as info;

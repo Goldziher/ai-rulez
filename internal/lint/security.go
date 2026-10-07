@@ -228,6 +228,7 @@ func hasLetterAndDigit(s string) bool {
 }
 
 func (r *runner) injectionRes() []*regexp.Regexp {
+	ruleTables() // a family adds its phrases when the registry is built
 	res := injectionPhrases
 	for _, p := range r.security().InjectionPhrases {
 		if p = strings.TrimSpace(p); p != "" {

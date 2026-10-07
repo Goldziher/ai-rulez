@@ -17,8 +17,8 @@ const (
 	CodeImproveAdapterRefused       = "AR9J9"
 )
 
-func init() {
-	registerRules(
+func registerImprovecodes(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeImproveRunStale, "improve-run-stale", SeverityInfo, "a saved improve run's original digest no longer matches the skill (improve apply only)"},
 		RuleInfo{CodeImproveNoHoldout, "improve-no-holdout", SeverityOff, "a skill has fewer held-out eval cases than improve needs (improve only)"},
 		RuleInfo{CodeImprovePolicyViolation, "improve-policy-violation", SeverityError, "a candidate round broke the diff policy (improve report only)"},
@@ -29,7 +29,7 @@ func init() {
 		RuleInfo{CodeImprovePRRefused, "improve-pr-refused", SeverityError, "improve pr refused to open a pull request (improve only)"},
 		RuleInfo{CodeImproveAdapterRefused, "improve-adapter-refused", SeverityError, "a bundled optimizer adapter could not run (improve only)"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeImproveRunStale: {
 			Why:  "The skill was edited after the run measured it, so applying the candidate would overwrite those edits or mix two baselines. `improve apply` and `improve pr` report it.",
 			Bad:  "Edit `SKILL.md`, then run `ai-rulez improve apply imp-1a2b3c4d` for a run made before the edit",

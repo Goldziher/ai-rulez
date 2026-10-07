@@ -16,12 +16,14 @@ const (
 // HookPluginHarnesses lists the plugin-based harnesses, in a stable order.
 var HookPluginHarnesses = []string{HarnessOpencode, HarnessKilo, HarnessMimocode, HarnessPi, HarnessAmp}
 
-// Appended in init so the list stays independent of the declaration of
-// HookHarnesses, which other hook renderers extend.
-func init() {
+// withPluginHarnesses appends the plugin-based harnesses the list lacks, so the
+// list stays independent of the declaration of HookHarnesses, which other hook
+// renderers extend.
+func withPluginHarnesses(list []string) []string {
 	for _, harness := range HookPluginHarnesses {
-		HookHarnesses = appendMissing(HookHarnesses, harness)
+		list = appendMissing(list, harness)
 	}
+	return list
 }
 
 func appendMissing(list []string, name string) []string {

@@ -17,15 +17,15 @@ const (
 	CodeSearchEvalRegression = "AR9D4"
 )
 
-func init() {
-	registerRules(
+func registerSearchcodes(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeSearchConfigInvalid, "search-config-invalid", SeverityError, "the [search] table is invalid: an unknown mode, fusion or dtype, an unknown field, an out-of-range number or an index_dir that leaves the config directory"},
 		RuleInfo{CodeSearchIndexStale, "search-index-stale", SeverityWarning, "a committed skill search index no longer matches the skills or the embedding model: a changed description, an added or removed skill, another model or text template"},
 		RuleInfo{CodeSearchTextWithheld, "search-text-withheld", SeverityWarning, "a skill was not embedded because its text looks like it holds a secret; it ranks lexically only (search index only)"},
 		RuleInfo{CodeSearchCasesInvalid, "search-cases-invalid", SeverityError, "a skill search cases file cannot be used: not valid JSON, unknown key, unsupported schema version or an invalid case (search --eval only)"},
 		RuleInfo{CodeSearchEvalRegression, "search-eval-regression", SeverityError, "a skill search metric is below its minimum, or more cases regressed against the baseline than allowed (search --eval only)"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeSearchConfigInvalid: {
 			Why:  "A bad [search] table would silently change how find_skill ranks, so it is reported with the key at fault. An index_dir outside the config directory is refused so a committed config cannot make the tool read or write elsewhere.",
 			Bad:  "`mode = \"semantic\"` or `index_dir = \"../shared\"`",

@@ -33,8 +33,8 @@ func WithApprovals(findings []ApprovalFinding) Option {
 	return func(r *runner) { r.approvals = findings }
 }
 
-func init() {
-	registerRules(
+func registerApprovals(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeApprovalMissing, "approval-missing", SeverityError, "content that [governance] require_approval selects has no reviewer approval in ai-rulez.lock"},
 		RuleInfo{CodeApprovalStale, "approval-stale", SeverityError, "content was approved, but its digest changed since: the approval no longer applies"},
 		RuleInfo{CodeApprovalExpired, "approval-expired", SeverityError, "every approval of the current digest is past its expiry date"},
@@ -46,7 +46,7 @@ func init() {
 		RuleInfo{CodeApproverUnresolved, "approver-unresolved", SeverityError, "[governance] approvers_from or a team cannot be resolved (no CODEOWNERS file, or a team with no member list), so nobody is authorized by it"},
 		RuleInfo{CodeApprovalOrphan, "approval-orphan", SeverityWarning, "an approval in ai-rulez.lock names content that no longer exists; remove it with `ai-rulez approve --prune`"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeApprovalMissing: {
 			Why:  "[governance] require_approval says this content must be read and accepted by a person before agents use it, and the lock records no such decision.",
 			Bad:  "An included skill pack with no `[[approval]]` entry while `require_approval = [\"remote\"]`",
@@ -101,7 +101,7 @@ func init() {
 	for _, code := range []string{CodeApprovalMissing, CodeApprovalStale, CodeApprovalExpired, CodeApproverUnauthorized, CodeApprovalInsufficient, CodeApprovalOrphan, CodeApprovalSelf, CodeApprovalDenied, CodeApprovalUnverified, CodeApproverUnresolved} {
 		SetAnalyzer(code, AnalyzerLock, ScopeBundle)
 	}
-	registerRunCheck((*runner).checkApprovals, AnalyzerLock)
+	s.addRunCheck((*runner).checkApprovals, AnalyzerLock)
 }
 
 // checkApprovals reports the supplied approval findings.

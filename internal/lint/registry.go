@@ -1,5 +1,11 @@
 package lint
 
+import (
+	"maps"
+	"slices"
+	"sync"
+)
+
 // Rule families added after the first strict-validation release register
 // themselves from init() in their own file: a RuleInfo for the code registry,
 // plus any of a per-item check, a per-text scan or a whole-run check. The
@@ -20,49 +26,122 @@ type registered[F any] struct {
 	fn   F
 }
 
-var (
+// ruleSet is the registry of rule families while it is being built.
+type ruleSet struct {
+	rules      []RuleInfo
+	docs       map[string]RuleDoc
 	itemChecks []registered[itemCheck]
 	textScans  []registered[textScan]
 	runChecks  []registered[runCheck]
-)
+}
 
-// registerRules adds rules to the code registry.
-func registerRules(infos ...RuleInfo) { registry = append(registry, infos...) }
-
-// registerRuleDocs adds the long-form explanation of rules by code. Every
-// registered code needs one (TestEveryRuleHasDocs).
-func registerRuleDocs(docs map[string]RuleDoc) {
-	for code, d := range docs {
-		ruleDocs[code] = d
+// ruleFamilies lists, in the order they register, the files that add rules after
+// the first release (the order is the file-name order init functions ran in, so
+// the registry is the same as it was).
+func ruleFamilies() []func(*ruleSet) {
+	return []func(*ruleSet){
+		registerActivationcodes,
+		registerApprovals,
+		registerArActivationCases,
+		registerArBudget,
+		registerArCapability,
+		registerArCmdrisk,
+		registerArCommands,
+		registerArCredtable,
+		registerArExfil,
+		registerArFmcomponents,
+		registerArFrontmatter,
+		registerArHooks,
+		registerArImports,
+		registerArInvocation,
+		registerArMarkdown,
+		registerArMcp,
+		registerArPlugin,
+		registerArPrompt,
+		registerArQuality,
+		registerArReview,
+		registerArTaint,
+		registerArTrust,
+		registerConvertcodes,
+		registerDelivery,
+		registerEvalcheck,
+		registerImprovecodes,
+		registerOkf,
+		registerPolicycodes,
+		registerPublishcodes,
+		registerRuledocsAdded,
+		registerSbomcodes,
+		registerSearchcodes,
+		registerSemvercodes,
+		registerServeScan,
+		registerSigning,
+		registerTelemetrycheck,
+		registerTrapsLimits,
+		registerTrapsPlan,
+		registerVerifiercodes,
 	}
 }
 
-// The register functions take the analyzers whose rules the hook can report, so
-// a run that selects other analyzers skips it (see units.go).
-func registerItemCheck(fn itemCheck, analyzers ...string) {
-	itemChecks = append(itemChecks, registered[itemCheck]{mustDeclare("item check", fn, analyzers), fn})
+// The tables are derived from the base tables and the families on first use, not
+// by an init function: a check function reads them through lookupRule, so a
+// package variable initialized from the families would be an initialization cycle.
+var (
+	tablesOnce sync.Once
+	tables     *ruleSet
+)
+
+// ruleTables returns the registry, built once.
+func ruleTables() *ruleSet {
+	tablesOnce.Do(func() { tables = buildRuleSet() })
+	return tables
 }
 
-func registerTextScan(fn textScan, analyzers ...string) {
-	textScans = append(textScans, registered[textScan]{mustDeclare("text scan", fn, analyzers), fn})
+// addRules adds rules to the code registry.
+func (s *ruleSet) addRules(infos ...RuleInfo) { s.rules = append(s.rules, infos...) }
+
+// addDocs adds the long-form explanation of rules by code. Every registered code
+// needs one (TestEveryRuleHasDocs).
+func (s *ruleSet) addDocs(docs map[string]RuleDoc) {
+	for code, d := range docs {
+		s.docs[code] = d
+	}
 }
 
-func registerRunCheck(fn runCheck, analyzers ...string) {
-	runChecks = append(runChecks, registered[runCheck]{mustDeclare("run check", fn, analyzers), fn})
+// The add functions take the analyzers whose rules the hook can report, so a run
+// that selects other analyzers skips it (see units.go).
+func (s *ruleSet) addItemCheck(fn itemCheck, analyzers ...string) {
+	s.itemChecks = append(s.itemChecks, registered[itemCheck]{mustDeclare("item check", fn, analyzers), fn})
+}
+
+func (s *ruleSet) addTextScan(fn textScan, analyzers ...string) {
+	s.textScans = append(s.textScans, registered[textScan]{mustDeclare("text scan", fn, analyzers), fn})
+}
+
+func (s *ruleSet) addRunCheck(fn runCheck, analyzers ...string) {
+	s.runChecks = append(s.runChecks, registered[runCheck]{mustDeclare("run check", fn, analyzers), fn})
+}
+
+// buildRuleSet returns the base rules and documentation with every family added.
+func buildRuleSet() *ruleSet {
+	s := &ruleSet{rules: slices.Clone(baseRegistry), docs: maps.Clone(baseRuleDocs)}
+	for _, family := range ruleFamilies() {
+		family(s)
+	}
+	return s
 }
 
 func (r *runner) runItemChecks(it *item, d doc, fm frontmatter) {
-	for _, c := range itemChecks {
+	for _, c := range ruleTables().itemChecks {
 		r.unit(c.unit, func() { c.fn(r, it, d, fm) })
 	}
 }
 
 func (r *runner) runTextScans(abs, raw string) {
-	if len(textScans) == 0 {
+	if len(ruleTables().textScans) == 0 {
 		return
 	}
 	var t *scanText
-	for _, c := range textScans {
+	for _, c := range ruleTables().textScans {
 		if !r.selected(c.unit) {
 			continue
 		}
@@ -74,7 +153,7 @@ func (r *runner) runTextScans(abs, raw string) {
 }
 
 func (r *runner) runRunChecks() {
-	for _, c := range runChecks {
+	for _, c := range ruleTables().runChecks {
 		r.unit(c.unit, func() { c.fn(r) })
 	}
 }

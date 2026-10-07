@@ -11,12 +11,12 @@ const (
 	CodeFinalNewline  = "AR807"
 )
 
-func init() {
-	registerRules(
+func registerArMarkdown(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeFenceUnclosed, "fence-unclosed", SeverityWarning, "a fenced code block is opened and never closed, so every line after it is read as code"},
 		RuleInfo{CodeFinalNewline, "final-newline-missing", SeverityInfo, "a content file does not end with a newline"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeFenceUnclosed: {
 			Why:  "Past an unclosed fence every line is code: links, names and headings stop being read as prose, and a harness may render or load the rest of the file differently. It is almost always a hand-edit slip. `validate --fix` closes the fence at the end of the file; check that is where the block should end.",
 			Bad:  "A file whose last block starts with ```` ```bash ```` and has no closing ```` ``` ````",

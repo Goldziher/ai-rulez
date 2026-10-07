@@ -14,8 +14,8 @@ const (
 	CodeConvertBlockedScan  = "AR9F5"
 )
 
-func init() {
-	registerRules(
+func registerConvertcodes(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeConvertInvalid, "convert-input-invalid", SeverityError, "an input file of `convert` cannot be parsed at all (reported by convert, never by validate)"},
 		RuleInfo{CodeConvertApproximated, "convert-approximated", SeverityWarning, "a construct was converted with a different meaning or without part of its fields (convert report only)"},
 		RuleInfo{CodeConvertDropped, "convert-dropped", SeverityWarning, "a construct has no equivalent and was not converted (convert report only)"},
@@ -23,7 +23,7 @@ func init() {
 		RuleInfo{CodeConvertUnsupported, "convert-unsupported", SeverityWarning, "a source or construct convert does not support (convert report only)"},
 		RuleInfo{CodeConvertBlockedScan, "convert-blocked-by-scan", SeverityError, "the security scan of the planned tree blocked the write (convert report only)"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeConvertInvalid: {
 			Why:  "A tool file that cannot be parsed cannot be translated, so the run stops instead of writing a partial tree. Only `ai-rulez convert` reports it.",
 			Bad:  "`.cursor/rules/a.mdc` with a broken YAML header, or a `skills-lock.json` that is not JSON",

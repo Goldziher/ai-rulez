@@ -14,9 +14,9 @@ const CodeImportInvalid = "AR210"
 // import another, up to five hops from the file that started the chain.
 const maxImportHops = 5
 
-func init() {
-	registerRules(RuleInfo{CodeImportInvalid, "import-invalid", SeverityError, "an `@path` memory import points at a missing file, forms a cycle, or sits more than five hops deep, so Claude Code does not load it"})
-	registerRunCheck(checkImports, AnalyzerReferences)
+func registerArImports(s *ruleSet) {
+	s.addRules(RuleInfo{CodeImportInvalid, "import-invalid", SeverityError, "an `@path` memory import points at a missing file, forms a cycle, or sits more than five hops deep, so Claude Code does not load it"})
+	s.addRunCheck(checkImports, AnalyzerReferences)
 }
 
 var (

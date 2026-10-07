@@ -1,8 +1,9 @@
 package lint
 
 import (
-	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 
 	"github.com/stretchr/testify/assert"
 )

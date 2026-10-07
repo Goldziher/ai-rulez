@@ -18,9 +18,9 @@ import (
 // loader rejects or tolerates with a warning.
 const CodePluginManifest = "AR963"
 
-func init() {
-	registerRules(RuleInfo{CodePluginManifest, "plugin-manifest-invalid", SeverityError, "a .claude-plugin/plugin.json or marketplace.json breaks the documented schema (required or reserved names, non-./ paths, wrong types, unknown fields) or a shell-form plugin hook leaves ${CLAUDE_PLUGIN_ROOT} unquoted"})
-	registerRunCheck(checkPluginManifests, AnalyzerPlugin)
+func registerArPlugin(s *ruleSet) {
+	s.addRules(RuleInfo{CodePluginManifest, "plugin-manifest-invalid", SeverityError, "a .claude-plugin/plugin.json or marketplace.json breaks the documented schema (required or reserved names, non-./ paths, wrong types, unknown fields) or a shell-form plugin hook leaves ${CLAUDE_PLUGIN_ROOT} unquoted"})
+	s.addRunCheck(checkPluginManifests, AnalyzerPlugin)
 }
 
 var (

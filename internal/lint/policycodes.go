@@ -31,8 +31,8 @@ var policyCodes = []string{
 	CodePolicySignature, CodeDigestDenied, CodeCapabilityNotAllowed, CodePolicyBudgetExceeded,
 }
 
-func init() {
-	registerRules(
+func registerPolicycodes(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodePolicyLoosened, "policy-loosened", SeverityError, "the repository configuration weakens a key the organization policy only lets it tighten; the policy value is enforced and the attempt reported (always an error)"},
 		RuleInfo{CodePolicyDigestMismatch, "policy-digest-mismatch", SeverityError, "a policy file or URL does not match the digest it is pinned to, or a policy URL has no digest (a URL policy is never loaded unpinned)"},
 		RuleInfo{CodePolicyUnavailable, "policy-unavailable", SeverityError, "a policy that was demanded by --policy or AI_RULEZ_POLICY cannot be read, or its URL cannot be reached and no cached copy younger than max_stale exists; ai-rulez fails closed instead of running without it"},
@@ -44,7 +44,7 @@ func init() {
 		RuleInfo{CodePolicyBudgetExceeded, "policy-budget-exceeded", SeverityError, "a rule has more findings than the organization policy's lint.max_findings ceiling allows (0 allows none); always an error"},
 		RuleInfo{CodeCapabilityNotAllowed, "capability-not-allowed", SeverityError, "an MCP server or hook group the organization policy forbids (a denied transport, a command outside mcp.allowed_commands, or hooks when hooks.allow is false); it is not loaded"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodePolicyLoosened: {
 			Why:  "A policy is a floor the repository may raise but never lower. Without clamping and reporting, one pull request could delete the control that the same pull request violates; the stricter value is enforced and the attempt is named here so the author learns why.",
 			Bad:  "`[lint.severity] AR008 = \"off\"` under a policy floor of `warning`, or an entry in `lint.security.allowed_hosts` that the policy list does not cover",
@@ -99,7 +99,7 @@ func init() {
 	for _, code := range policyCodes {
 		SetAnalyzer(code, AnalyzerConfig, ScopeBundle)
 	}
-	registerRunCheck((*runner).checkPolicy, AnalyzerConfig)
+	s.addRunCheck((*runner).checkPolicy, AnalyzerConfig)
 }
 
 // ResolveCode returns the rule code a code or name stands for.

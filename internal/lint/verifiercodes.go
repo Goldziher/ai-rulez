@@ -17,8 +17,8 @@ const (
 	CodeVerifierNoExample = "AR9H6"
 )
 
-func init() {
-	registerRules(
+func registerVerifiercodes(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeVerifierFailed, "verifier-failed", SeverityWarning, "a verifier's predicate did not hold; the finding names the verifier and the rule or skill that declared it (reported by `verifiers run` and `validate --strict --verifiers`)"},
 		RuleInfo{CodeVerifierInvalid, "verifier-invalid", SeverityError, "a verifier declaration is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (reported by `verifiers run` and `validate --strict --verifiers`)"},
 		RuleInfo{CodeVerifierCommand, "verifier-command-failed-to-run", SeverityError, "a command predicate was refused (no --allow-exec, an untrusted include) or did not run: not found, could not start, timed out (reported by `verifiers run` and `validate --strict --verifiers`)"},
@@ -26,7 +26,7 @@ func init() {
 		RuleInfo{CodeVerifierDeadScope, "verifier-dead-scope", SeverityWarning, "a verifier's when_changed matches no file in the repository, so it can never apply (reported by `verifiers run` and `validate --strict --verifiers`, with --strict-applicability)"},
 		RuleInfo{CodeVerifierNoExample, "verifier-no-examples", SeverityWarning, "a verifier has no self-test examples (reported by `verifiers run` and `validate --strict --verifiers`, with [verifiers_settings] require_examples)"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeVerifierFailed: {
 			Why:  "The check a rule or skill declared with a verifier does not hold on the evaluated files. Severity is the verifier's own (warning unless it sets `severity`). `ai-rulez verifiers run` and `validate --strict --verifiers` report it.",
 			Bad:  "A migration `db/migrations/0042.sql` without a `-- down` section while verifier `migrations-have-down` requires one",

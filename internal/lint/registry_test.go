@@ -24,7 +24,7 @@ func TestRegisteredCodesAreUniqueAndDocumented(t *testing.T) {
 		docs += string(data)
 	}
 	codes, names := map[string]bool{}, map[string]bool{}
-	for _, r := range registry {
+	for _, r := range ruleTables().rules {
 		if !codeFormatRe.MatchString(r.Code) {
 			t.Errorf("code %q is not of the form ARxxx", r.Code)
 		}

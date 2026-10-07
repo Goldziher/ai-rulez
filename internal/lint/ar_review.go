@@ -22,8 +22,8 @@ const (
 	reviewCodeDescriptionSuffix = " (advisory: reported by `ai-rulez review`, never by `validate`)"
 )
 
-func init() {
-	registerRules(
+func registerArReview(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeReviewRunNote, "review-run-note", SeverityInfo, "a review note: an item withheld from a judge, excluded or skipped" + reviewCodeDescriptionSuffix},
 		RuleInfo{CodeReviewTriggerVague, "trigger-vague", SeverityWarning, "a description lacks a concrete trigger or a non-trigger" + reviewCodeDescriptionSuffix},
 		RuleInfo{CodeReviewTriggerOverlap, "trigger-overlap", SeverityWarning, "a description is likely to be confused with a sibling" + reviewCodeDescriptionSuffix},
@@ -35,7 +35,7 @@ func init() {
 		RuleInfo{CodeReviewRubricInvalid, "rubric-invalid", SeverityError, "a rubric (`.ai-rulez/rubrics/<id>/rubric.toml`) or one of its golden or calibration files is malformed"},
 		RuleInfo{CodeReviewCalibrationStale, "judge-calibration-stale", SeverityInfo, "a judged review ran on a model alias, or without a calibration record that matches the rubric, prompt, golden set and model" + reviewCodeDescriptionSuffix},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeReviewRunNote: {
 			Why:  "A review that silently skips an item looks like a pass. The note says which item was withheld (a secret or hidden characters), excluded or left out, and why.",
 			Bad:  "An item with an `AR001` finding scored as if it had been reviewed",

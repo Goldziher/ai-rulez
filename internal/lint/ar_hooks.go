@@ -19,9 +19,9 @@ import (
 // disagree about what an event is.
 const CodeHookSchema = "AR507"
 
-func init() {
-	registerRules(RuleInfo{CodeHookSchema, "hook-schema-invalid", SeverityWarning, "a hook declaration has an unknown event, a missing or unknown type, no command, url or prompt, an invalid timeout, or a matcher or `if` on an event that ignores it"})
-	registerRunCheck(checkHookSchema, AnalyzerHooks)
+func registerArHooks(s *ruleSet) {
+	s.addRules(RuleInfo{CodeHookSchema, "hook-schema-invalid", SeverityWarning, "a hook declaration has an unknown event, a missing or unknown type, no command, url or prompt, an invalid timeout, or a matcher or `if` on an event that ignores it"})
+	s.addRunCheck(checkHookSchema, AnalyzerHooks)
 }
 
 // hookHandlerTypes are the handler types Claude Code documents.
