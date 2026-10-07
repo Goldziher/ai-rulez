@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -44,6 +44,12 @@ func runUsageRecord(in io.Reader) error {
 		}
 		logPath = filepath.Join(root, ".ai-rulez", "local", "usage.jsonl")
 	}
+	saltPath := usageSalt
+	if saltPath == "" {
+		// Hash sessions with the same salt the telemetry pipeline uses, so skill
+		// events and rule/agent events of one session agree.
+		saltPath = telemetry.ResolveFor(telemetryRoot(""), telemetryConfigDirName(), nil).SaltFile
+	}
 	entry, err := usage.Record(in, usage.RecordOptions{
 		LogPath:     logPath,
 		SinkCommand: usageSinkCommand,
@@ -52,7 +58,7 @@ func runUsageRecord(in io.Reader) error {
 		Outcome:     usageOutcome,
 		Role:        telRole,
 		Served:      usageServed,
-		SaltPath:    usageSalt,
+		SaltPath:    saltPath,
 	})
 	emitUsageTelemetry(entry)
 	return err
