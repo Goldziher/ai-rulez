@@ -264,6 +264,7 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	config.Resolve = lo.resolvers
 	config.Registry = lo.registry
 	config.LockPolicy = lo.lockPolicy
+	config.frontmatterErrors = lo.frontmatterErrors
 	config.RulesDirs = &RulesDirSet{}
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
 	// Each loaded project owns its warning state: a nil collector stands for the
@@ -1570,6 +1571,9 @@ const malformedFrontmatterMsg = "Ignoring malformed YAML frontmatter — check f
 // quietFrontmatterLog drops the malformed-frontmatter warning (see
 // WithFrontmatterErrors) and forwards everything else.
 type quietFrontmatterLog struct{ logger.Logger }
+
+// Unwrap returns the wrapped logger (see diag.OnceLogger).
+func (q quietFrontmatterLog) Unwrap() logger.Logger { return q.Logger }
 
 func (q quietFrontmatterLog) Warn(msg string, args ...any) {
 	if msg != malformedFrontmatterMsg {
