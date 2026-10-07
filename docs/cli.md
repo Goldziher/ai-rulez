@@ -8,7 +8,7 @@ All AI-Rulez CLI commands and flags.
 
 | Command                         | Description                                         |
 | ------------------------------- | --------------------------------------------------- |
-| `ai-rulez init`                 | Initialize V4 directory-based configuration         |
+| `ai-rulez init`                 | Initialize directory-based configuration            |
 | `ai-rulez convert`              | Convert existing tool files into `.ai-rulez/` with a lossiness report ([details](#convert-command)) |
 | `ai-rulez generate`             | Generate presets for specific profile               |
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
@@ -69,7 +69,7 @@ write to the `config.local.*` overlay. See [Local Configuration](local-overrides
 
 ## CRUD Commands
 
-AI-Rulez provides CRUD commands to programmatically modify your V4 `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills/agents/commands, manage includes, and organize profiles.
+AI-Rulez provides CRUD commands to programmatically modify your `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills/agents/commands, manage includes, and organize profiles.
 
 `add agent` and `add command` take `--domain`/`-d`, `--description`/`-s`, `--content`/`-c` and
 `--local`. `remove agent|command` and `list agents|commands` take the same flags as their rule/skill
@@ -135,7 +135,7 @@ ai-rulez domain remove <name> [flags]
 
 **Flags:**
 
-- `--force` / `-f` (optional): Skip confirmation prompt
+- `--yes` / `-y` (optional): Skip confirmation prompt
 
 **Examples:**
 
@@ -148,7 +148,7 @@ ai-rulez domain remove backend
 Remove without confirmation:
 
 ```bash
-ai-rulez domain remove backend --force
+ai-rulez domain remove backend --yes
 ```
 
 #### `ai-rulez domain list [flags]`
@@ -173,7 +173,7 @@ List domains:
 ai-rulez domain list
 ```
 
-List as JSON:
+List as JSON (a wrapper document, `{"schema_version": 1, "items": [...]}`):
 
 ```bash
 ai-rulez domain list --format json
@@ -324,7 +324,7 @@ ai-rulez remove rule <name> [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): Domain name
-- `--force` / `-f` (optional): Skip confirmation
+- `--yes` / `-y` (optional): Skip confirmation
 - `--local` (optional): Remove from the machine-local tree `.ai-rulez/local/`
 
 **Examples:**
@@ -338,7 +338,7 @@ ai-rulez remove rule code-quality
 Remove a domain rule:
 
 ```bash
-ai-rulez remove rule database-standards --domain backend --force
+ai-rulez remove rule database-standards --domain backend --yes
 ```
 
 #### `ai-rulez remove context <name> [flags]`
@@ -358,14 +358,14 @@ ai-rulez remove context <name> [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): Domain name
-- `--force` / `-f` (optional): Skip confirmation
+- `--yes` / `-y` (optional): Skip confirmation
 - `--local` (optional): Remove from the machine-local tree `.ai-rulez/local/`
 
 **Examples:**
 
 ```bash
 ai-rulez remove context architecture
-ai-rulez remove context backend-design --domain backend --force
+ai-rulez remove context backend-design --domain backend --yes
 ```
 
 #### `ai-rulez remove skill <name> [flags]`
@@ -385,14 +385,14 @@ ai-rulez remove skill <name> [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): Domain name
-- `--force` / `-f` (optional): Skip confirmation
+- `--yes` / `-y` (optional): Skip confirmation
 - `--local` (optional): Remove from the machine-local tree `.ai-rulez/local/`
 
 **Examples:**
 
 ```bash
 ai-rulez remove skill code-reviewer
-ai-rulez remove skill performance-optimizer --domain backend --force
+ai-rulez remove skill performance-optimizer --domain backend --yes
 ```
 
 #### `ai-rulez list rules [flags]`
@@ -508,14 +508,14 @@ Remove an installed skill from the configuration.
 
 **Flags:**
 
-- `--force` / `-f` (optional): Skip confirmation prompt
+- `--yes` / `-y` (optional): Skip confirmation prompt
 - `--local` (optional): Remove through the `config.local.*` overlay. A skill installed in the shared config is hidden on this machine with `remove = true`
 
 **Examples:**
 
 ```bash
 ai-rulez skill remove kreuzberg
-ai-rulez skill remove my-lib --force
+ai-rulez skill remove my-lib --yes
 ```
 
 #### `ai-rulez skill list [flags]`
@@ -597,14 +597,14 @@ ai-rulez include remove <name> [flags]
 
 **Flags:**
 
-- `--force` / `-f` (optional): Skip confirmation
+- `--yes` / `-y` (optional): Skip confirmation
 - `--local` (optional): Remove through the `config.local.*` overlay. An include defined in the shared config is hidden on this machine with `remove = true`
 
 **Examples:**
 
 ```bash
 ai-rulez include remove corporate-rules
-ai-rulez include remove shared-patterns --force
+ai-rulez include remove shared-patterns --yes
 ```
 
 #### `ai-rulez include list [flags]`
@@ -682,14 +682,14 @@ ai-rulez profile remove <name> [flags]
 
 **Flags:**
 
-- `--force` / `-f` (optional): Skip confirmation
+- `--yes` / `-y` (optional): Skip confirmation
 - `--local` (optional): Remove a profile defined in the overlay. A profile from the shared config cannot be removed locally (error)
 
 **Examples:**
 
 ```bash
 ai-rulez profile remove staging
-ai-rulez profile remove development --force
+ai-rulez profile remove development --yes
 ```
 
 #### `ai-rulez profile set-default <name> [flags]`
@@ -795,7 +795,7 @@ When a `config.local.*` overlay or `local/` content exists, `generate` also rend
 
 Whether a path is tracked or ignored is asked of git in one call each; if git fails inside a repository the guard assumes every affected file is tracked and refuses. If a `.gitignore` rule un-ignores a machine-local or secret-bearing output, the overlay or the `local/` tree, or `.gitignore` is a symbolic link (entries then go to `.git/info/exclude`), see [Local overrides](local-overrides.md); the run is refused with the paths listed when something would stay committable. `--allow-local-drift` is command-line only (MCP clients cannot pass it) and can write non-secret overlay values into files that are tracked and shared, so review `git diff` before committing. It does not bypass the secret guard: a generated MCP config that would carry resolved secrets (`env`, `headers`, URL credentials, secret flags) is still refused unless it is git-ignored.
 
-Shared outputs keep the baseline `Source-Hash`, so your headers match a teammate's; local-only outputs carry a hash of their local inputs. `generate --dry-run` prints `local-only:`, `drift:`, `allowed:` (a drift file that is git-ignored), `suppressed:` and `blocked:` lines, and exits non-zero when any line is `blocked:` (the real run would refuse). A run with `--no-local` (or `generate --plugin`, which never uses local config) does not delete your local files.
+Shared outputs keep the baseline hashes, so your headers match a teammate's; local-only outputs carry a hash of their local inputs. `generate --dry-run` prints `local-only:`, `drift:`, `allowed:` (a drift file that is git-ignored), `suppressed:` and `blocked:` lines, and exits non-zero when any line is `blocked:` (the real run would refuse). A run with `--no-local` (or `generate --plugin`, which never uses local config) does not delete your local files.
 
 ## Builtins Command
 
@@ -997,7 +997,7 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 **Blocked scan.** When the scan finds an error-level problem (a secret, a risky command), `convert` prints each finding at the **source** file and line it came from (`.rulesync/rules/x.md:33`), with the planned `.ai-rulez/` path in parentheses, exits 2 and writes nothing. Remove the text from the source and run again. To write anyway, pass `--allow-findings AR001` (repeatable, comma separated): the finding stays in the report, marked `allowed`, and only that code is let through. Findings in the generated `config.toml` keep their planned path. In `--format json` the source location is `file`/`line` and the planned one is `planned`.
 
-**Safety:** the planned tree is loaded and security-scanned (the `AR0xx` family of `validate --strict`) in a scratch directory before anything is written. A blocking finding or a validation error exits 2 with `AR9F5`/validation messages and writes nothing; the security findings are reported even when validation fails, and inline `ai-rulez-lint-ignore` comments in converted text are not honoured. Writes are atomic per file; if one fails, every file written so far is restored or removed, the directories the run created are removed, and anything that could not be undone is named in the error.
+**Safety:** the planned tree is loaded and security-scanned (the `AR0xx` family of `validate`) in a scratch directory before anything is written. A blocking finding or a validation error exits 2 with `AR9F5`/validation messages and writes nothing; the security findings are reported even when validation fails, and inline `ai-rulez-lint-ignore` comments in converted text are not honoured. Writes are atomic per file; if one fails, every file written so far is restored or removed, the directories the run created are removed, and anything that could not be undone is named in the error.
 
 **Report codes:** `AR9F1` approximated, `AR9F2` dropped, `AR9F3` needs-action, `AR9F4` unsupported, `AR9F5` blocked by the scan; `AR9F0` marks an input file that cannot be parsed at all and appears only in the error that stops the run. They have their own range, apart from the `AR9E0`-`AR9E4` scanner codes, and appear in the convert report only; `validate` does not emit them.
 
@@ -1013,7 +1013,7 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 ### `ai-rulez init [project-name]`
 
-Initialize a new V4 directory-based configuration.
+Initialize a new directory-based configuration. It writes `.ai-rulez/config.toml`.
 
 **Syntax:**
 
@@ -1025,7 +1025,7 @@ ai-rulez init [project-name] [flags]
 
 - `[project-name]` (optional): The project name. If omitted, the current directory's base name is used (falling back to `MyProject`). Nothing is prompted.
 
-**V4-specific Flags:**
+**Flags:**
 
 | Flag                    | Type    | Default | Description                                                          |
 | ----------------------- | ------- | ------- | -------------------------------------------------------------------- |
@@ -1042,7 +1042,7 @@ place; if none of the three is present it logs a message and does nothing rather
 width survive. Husky has no configuration file to preserve — the validation step is appended to
 `.husky/pre-commit`. Re-running is a no-op once ai-rulez is already wired in.
 
-ai-rulez is safe to run inside a git hook. Git exports `GIT_DIR`, `GIT_INDEX_FILE` and related variables to hooks, which would make every nested `git` call act on the hook's repository; ai-rulez removes `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES` and `GIT_NAMESPACE` from the environment of every git subprocess it starts (and of `usage` sink commands) and targets repositories only with an explicit `-C`.
+ai-rulez is safe to run inside a git hook. Git exports `GIT_DIR`, `GIT_INDEX_FILE` and related variables to hooks, which would make every nested `git` call act on the hook's repository; ai-rulez removes `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES` and `GIT_NAMESPACE` from the environment of every git subprocess it starts (and of `telemetry` sink commands) and targets repositories only with an explicit `-C`.
 The generated config lists the built-in presets in a comment (`ai-rulez init --help` prints them too) and
 enables `claude`. Add the harnesses you use to `presets`; all 52 and what each supports are in
 [Supported harnesses](harnesses.md). The former `windsurf` preset is `devin`, and `continue-dev` is removed.
@@ -1056,7 +1056,7 @@ enables `claude`. Add the harnesses you use to `presets`; all 52 and what each s
 
 **Examples:**
 
-Basic V4 initialization (TOML format):
+Basic initialization:
 
 ```bash
 ai-rulez init "my-project"
@@ -1068,7 +1068,7 @@ V4 with multiple domains:
 ai-rulez init "my-project" --domains "backend,frontend,qa"
 ```
 
-V4 with example content skipped:
+With example content skipped:
 
 ```bash
 ai-rulez init "my-project" --skip-content
@@ -1130,8 +1130,7 @@ ai-rulez generate [config-file] [flags]
 | `--strict`                      | boolean | false         | Fail on unknown or invalid configuration keys instead of warning (env `AI_RULEZ_STRICT=1`). `generate` checks `config.toml` and `config.local.*` against the schema either way; this is not `validate --strict` (deep content checks) |
 
 `--token` / `-T` is a global flag (see [Global Flags](#global-flags)); it is not generate-specific.
-`--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
-`--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S` are hidden deprecated no-ops kept so existing scripts keep working: `generate` only writes MCP config files and never configures CLI tools, so there is nothing to skip.
+`--update-gitignore`, `--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S` were removed in v5 (use `--gitignore`; the others had no effect).
 
 `--dry-run` lists each file as `write-file:` (it would be written), `unchanged:` (already current) or `edited:` (changed by hand; `generate` overwrites the edit).
 
@@ -1193,7 +1192,7 @@ Dry-run to preview generation:
 ai-rulez generate --dry-run --profile backend
 ```
 
-Generate and update .gitignore:
+Generate and maintain the managed .gitignore block (opt-in):
 
 ```bash
 ai-rulez generate --profile full --gitignore
@@ -1306,7 +1305,7 @@ The `.ai-rulez/` source tree is never touched. Generated directories are only re
 
 Settings documents you share with ai-rulez (`.claude/settings.json`, `.gemini/settings.json`, `opencode.json`, `.mcp.json`, ...) are not deleted: `clean` removes only the keys, MCP server entries and array elements ai-rulez merged into them (including a stale entry that holds a resolved secret), and deletes the file only when nothing else is left. The plan lists them as `remove ai-rulez keys from:`. See [Settings documents shared with you](local-overrides.md#settings-documents-shared-with-you).
 
-By default `clean` lists what it will remove and asks for confirmation. In non-interactive shells the prompt declines automatically — pass `--force` there.
+By default `clean` lists what it will remove and asks for confirmation. In non-interactive shells the prompt declines automatically — pass `--yes` there.
 
 **Syntax:**
 
@@ -1335,13 +1334,13 @@ ai-rulez clean --dry-run
 Remove all generated files without a prompt:
 
 ```bash
-ai-rulez clean --force
+ai-rulez clean --yes
 ```
 
 Remove generated files but keep the `.gitignore` block and manifest:
 
 ```bash
-ai-rulez clean --force --keep-gitignore --keep-manifest
+ai-rulez clean --yes --keep-gitignore --keep-manifest
 ```
 
 ## Verify Command
@@ -1925,19 +1924,31 @@ Explain a rule:
 ai-rulez validate --explain AR401
 ```
 
-Run the deep content checks, as JSON, across every root:
+Run the checks as JSON across every root:
 
 ```bash
-ai-rulez validate --strict --recursive --format json
+ai-rulez validate --recursive --format json
 ```
 
-Validate every config in a monorepo (all roots are checked; exit status 1 if any fails):
+Fail on warnings too:
+
+```bash
+ai-rulez validate --strict
+```
+
+Check only the configuration file, as `validate` did before v5:
+
+```bash
+ai-rulez validate --config-only
+```
+
+Validate every config in a monorepo (all roots are checked; exit status 1 if any config is invalid, 2 on findings):
 
 ```bash
 ai-rulez validate --recursive
 ```
 
-Validate current configuration:
+Validate current configuration (configuration checks, then the deep content checks):
 
 ```bash
 ai-rulez validate
@@ -1957,7 +1968,7 @@ ai-rulez validate --verbose
 
 ### What Gets Validated
 
-For V4 configs the raw file is also checked against `schema/ai-rules.schema.json`, so an unknown key
+The raw config file is also checked against `schema/ai-rules.schema.json`, so an unknown key
 or a value outside an enum fails rather than being silently dropped. The structural checks are:
 
 - A `config.local.*` overlay, when present, is checked against `schema/ai-rules-local.schema.json`, and the merged config is validated. The output names the overlay file and prints a one-line summary of overridden, added and removed key paths, never values
@@ -2045,7 +2056,7 @@ Exit codes: `0` ok, `1` the command could not run (a tool error; also `--check` 
 CI: `generate --locked` fails when the lock is missing or does not cover a configured remote source, or when an
 authored source no longer matches the lock's content pins (exit 2); `generate --frozen` additionally never touches
 the network. `validate` logs a warning for each remote source that follows a moving ref without a pin, and
-`validate --strict` reports it as `AR010` (a warning; an error under enforcement, or raise it with `[lint.severity]`). Enforcement is on
+`validate` reports it as `AR010` (a warning; an error under enforcement, or raise it with `[lint.severity]`). Enforcement is on
 whenever `ai-rulez.lock` exists (`[lock] enforce = false` opts out); it also reports content drift as `AR981` / `AR982`, and `generate`
 refuses a remote source the lock does not cover, as `--locked` does. Pinning `ref` to a full commit SHA also counts as pinned.
 
@@ -2662,7 +2673,7 @@ ai-rulez list rules --domain backend
 ai-rulez list rules --domain frontend
 
 # Remove a rule
-ai-rulez remove rule old-guideline --force
+ai-rulez remove rule old-guideline --yes
 ```
 
 ---
@@ -2714,7 +2725,7 @@ ai-rulez validate
 ai-rulez generate
 
 # Commit changes
-git add .ai-rulez/   # plus generated files only if gitignore = false
+git add .ai-rulez/   # plus the generated files unless gitignore = true
 git commit -m "docs: update AI assistant guidelines"
 ```
 
@@ -2724,18 +2735,16 @@ git commit -m "docs: update AI assistant guidelines"
 #!/bin/bash
 # Simple CI/CD script
 
-# Validate configuration (--no-local: ignore any machine-local overlay)
+# Validate configuration and content (--no-local: ignore any machine-local overlay).
+# Exit 2 means findings, exit 1 means the setup is broken.
 ai-rulez validate --no-local || exit 1
 
-# Generate all outputs
-ai-rulez generate --no-local || exit 1
-
-# Check for uncommitted changes
-if ! git diff --quiet CLAUDE.md .cursor/ GEMINI.md; then
+# Fail when the committed generated files differ from the sources (exit 2 on drift)
+ai-rulez generate --check --no-local || {
   echo "Generated files are out of sync"
   echo "Run: ai-rulez generate"
   exit 1
-fi
+}
 ```
 
 ## Troubleshooting

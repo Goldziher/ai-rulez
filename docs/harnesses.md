@@ -117,10 +117,10 @@ permissions docs. Nothing is approximated.
 | `cline` | MCP | Cline has no project MCP file |
 | `cortex` | rules folder, MCP | Cortex reads only `AGENTS.md`; project MCP is not documented (servers live in `~/.snowflake/cortex/mcp.json`) |
 | `dsh` | MCP | Servers live in the home-level `cordis.patch.yml`, which a project preset cannot express |
-| `gemini` | rules folder, commands | Rules stay in `GEMINI.md`; project commands are not generated (see the [plugin runtime](plugins.md) for `commands/<name>.toml`) |
+| `gemini` | rules folder, commands | Rules stay in the root file (`AGENTS.md`, or `GEMINI.md` with `agents_md = false`); project commands are not generated (see the [plugin runtime](plugins.md) for `commands/<name>.toml`) |
 | `gitlab-duo` | skills, rules folder | GitLab documents skills only inside plugins; Duo CLI reads one rules file, `.gitlab/duo/chat-rules.md` |
 | `goose` | rules folder, commands | goose has no rules folder; recipes are not slash commands |
-| `hermes` | skills | By default only project context is written (`.hermes.md`); skills come from the shared `.agents/skills` with `agents_md` |
+| `hermes` | skills | With `agents_md = false` only project context is written (`.hermes.md`); skills come from the shared `.agents/skills`, which `agents_md` (the default) writes |
 | `kimi`, `deepagents`, `factory`, `zcode`, `mimocode`, `zoocode`, `warp` | rules folder | No rules folder (or one the harness does not auto-load): rules are inlined into the root file. `kilo` keeps `.kilo/rules` and registers it in `kilo.jsonc` |
 | `letta` | rules, MCP | No rules or MCP file the tool documents |
 | `muse` | MCP | MCP servers live only in the user `settings.json` |

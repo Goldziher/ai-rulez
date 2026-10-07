@@ -385,7 +385,7 @@ URL>` with mode `0700`.
   checkout can be included without affecting teammates. Overlay includes merge by name with the shared
   list; `remove = true` hides a shared include on your machine. See
   [Local Configuration](local-overrides.md).
-- `ai-rulez generate --no-fetch` skips network fetches and uses cached content for remote includes.
+- `ai-rulez generate --offline` skips network fetches and uses cached content for remote includes.
   CRUD commands that validate a change (including the `--local` ones) read remote includes from cache
   only.
 
