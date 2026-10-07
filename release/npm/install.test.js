@@ -8,6 +8,7 @@ const {
   getBinaryName,
   getPackagedBinaryCandidates,
   usePackagedBinaryIfAvailable,
+  verifyArchiveChecksum,
 } = require("./install");
 
 function withTempBinDir(fn) {
@@ -81,5 +82,47 @@ test("usePackagedBinaryIfAvailable returns false when no packaged binary exists"
 
     assert.equal(usedPackaged, false);
     assert.equal(fs.existsSync(path.join(binDir, getBinaryName("linux"))), false);
+  });
+});
+
+async function withArchive(checksumsFor, fn) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-rulez-npm-sum-"));
+  try {
+    const archive = path.join(dir, "ai-rulez_1.0.0_linux_amd64.tar.gz");
+    fs.writeFileSync(archive, "archive-bytes");
+    const sums = path.join(dir, "checksums.txt");
+    if (checksumsFor !== null) {
+      fs.writeFileSync(sums, checksumsFor);
+    }
+    await fn(archive, sums);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const archiveName = "ai-rulez_1.0.0_linux_amd64.tar.gz";
+const archiveSha = require("node:crypto").createHash("sha256").update("archive-bytes").digest("hex");
+
+test("verifyArchiveChecksum accepts a matching entry", async () => {
+  await withArchive(`${archiveSha}  ${archiveName}\n`, async (archive, sums) => {
+    await verifyArchiveChecksum(archive, sums, archiveName);
+  });
+});
+
+test("verifyArchiveChecksum fails closed when checksums.txt is missing", async () => {
+  await withArchive(null, async (archive, sums) => {
+    await assert.rejects(verifyArchiveChecksum(archive, sums, archiveName), /checksums\.txt is unavailable/);
+  });
+});
+
+test("verifyArchiveChecksum fails closed when the archive has no entry", async () => {
+  await withArchive(`${archiveSha}  other.tar.gz\n`, async (archive, sums) => {
+    await assert.rejects(verifyArchiveChecksum(archive, sums, archiveName), /no checksum for/);
+  });
+});
+
+test("verifyArchiveChecksum rejects a mismatching digest", async () => {
+  await withArchive(`${"0".repeat(64)}  ${archiveName}\n`, async (archive, sums) => {
+    await assert.rejects(verifyArchiveChecksum(archive, sums, archiveName), /Checksum verification failed/);
   });
 });
