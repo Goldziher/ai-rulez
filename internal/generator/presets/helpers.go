@@ -91,7 +91,8 @@ func combineContentFiles(slices ...[]config.ContentFile) []config.ContentFile {
 func dedupeByName(files []config.ContentFile) (kept []config.ContentFile, dropped []string) {
 	seen := make(map[string]struct{}, len(files))
 	kept = make([]config.ContentFile, 0, len(files))
-	for _, file := range files {
+	for idx := range files {
+		file := files[idx]
 		if _, ok := seen[file.Name]; ok {
 			dropped = append(dropped, file.Name)
 			continue
@@ -180,7 +181,7 @@ func rootContext(content *config.ContentTree, cfg *config.Config, preset, rootFi
 
 // withoutBazNestedAt applies withoutBazNested to the shared AGENTS.md only.
 func withoutBazNestedAt(items []config.ContentFile, cfg *config.Config, rootFile string) []config.ContentFile {
-	if rootFile != "AGENTS.md" {
+	if rootFile != agentsMDFile {
 		return items
 	}
 	return withoutBazNested(items, cfg)
@@ -259,7 +260,8 @@ func unresolvedExtends(content *config.ContentTree) []extendsMiss {
 func resolveAgentExtends(combined []config.ContentFile, misses *[]extendsMiss) []config.ContentFile {
 	byName := make(map[string][]config.ContentFile, len(combined))
 	order := make([]string, 0, len(combined))
-	for _, f := range combined {
+	for idx := range combined {
+		f := combined[idx]
 		if _, ok := byName[f.Name]; !ok {
 			order = append(order, f.Name)
 		}
@@ -513,13 +515,15 @@ func renderAgentsSection(builder *strings.Builder, content *config.ContentTree, 
 	builder.WriteString("## Agents\n\n")
 
 	// Render instruction text from the builtin's context files
-	for _, ctx := range delegationDomain.Context {
+	for idx := range delegationDomain.Context {
+		ctx := delegationDomain.Context[idx]
 		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
 		builder.WriteString(processedContent)
 		builder.WriteString("\n\n")
 	}
 
-	for _, agent := range agents {
+	for idx := range agents {
+		agent := agents[idx]
 		description := ""
 		if agent.Metadata != nil {
 			description = agent.Metadata.Extra["description"]
@@ -541,7 +545,8 @@ func renderAgentsSection(builder *strings.Builder, content *config.ContentTree, 
 // since untargeted content is already present in the main output file (e.g. CLAUDE.md).
 func filterContentByExplicitTargets(files []config.ContentFile, outputPath, baseDir string) []config.ContentFile {
 	var result []config.ContentFile
-	for _, f := range files {
+	for idx := range files {
+		f := files[idx]
 		if f.Metadata != nil && len(f.Metadata.Targets) > 0 {
 			if shouldIncludeInOutput(f.Metadata.Targets, outputPath, baseDir) {
 				result = append(result, f)
@@ -740,7 +745,8 @@ func FindDuplicateContent(slices ...[]config.ContentFile) []DuplicateContent {
 	order := make([]string, 0)
 	entries := make(map[string]*entry)
 	for _, slice := range slices {
-		for _, file := range slice {
+		for idx := range slice {
+			file := slice[idx]
 			if existing, ok := entries[file.Name]; ok {
 				existing.losers = append(existing.losers, file.Path)
 				continue

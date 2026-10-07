@@ -24,7 +24,7 @@ import (
 func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Config, owners []string,
 	inlining config.AgentsMDInlining,
 ) config.OutputFile {
-	all := rulefiles.RootOwners("AGENTS.md")
+	all := rulefiles.RootOwners(agentsMDFile)
 	var aliases []string
 	for _, owner := range owners {
 		if !slices.Contains(all, owner) {
@@ -36,7 +36,7 @@ func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Con
 	}
 	shared := &sharedAgentsMDOpts{owners: all, aliases: aliases, inlining: inlining, negatedOnly: !rulefiles.InScope(cfg)}
 	return config.OutputFile{
-		Path:    filepath.Join(baseDir, "AGENTS.md"),
+		Path:    filepath.Join(baseDir, agentsMDFile),
 		Content: (&CodexPresetGenerator{}).renderAgentsMarkdownFor(content, cfg, shared),
 	}
 }
@@ -46,7 +46,9 @@ func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Con
 // tree, which every reader sees whatever the targets say.
 func SkillTargets(content *config.ContentTree) map[string][]string {
 	targeted := map[string][]string{}
-	for _, skill := range allSkills(content) {
+	skillList := allSkills(content)
+	for idx := range skillList {
+		skill := skillList[idx]
 		if skill.Metadata != nil && len(skill.Metadata.Targets) > 0 {
 			targeted[extractSkillID(skill.Path)] = skill.Metadata.Targets
 		}
@@ -61,7 +63,9 @@ func SkillTargets(content *config.ContentTree) map[string][]string {
 // has no such skills.
 func SharedAgentSkills(content *config.ContentTree, baseDir string) []config.OutputFile {
 	var skills []config.ContentFile
-	for _, skill := range allSkills(content) {
+	skillList := allSkills(content)
+	for idx := range skillList {
+		skill := skillList[idx]
 		if skill.Metadata == nil || len(skill.Metadata.Targets) == 0 {
 			skills = append(skills, skill)
 		}
@@ -74,7 +78,8 @@ func SharedAgentSkills(content *config.ContentTree, baseDir string) []config.Out
 		{Path: filepath.Join(baseDir, ".agents"), IsDir: true},
 		{Path: root, IsDir: true},
 	}
-	for _, skill := range skills {
+	for idx := range skills {
+		skill := skills[idx]
 		skillDir := filepath.Join(root, extractSkillID(skill.Path))
 		outputs = append(outputs,
 			config.OutputFile{Path: skillDir, IsDir: true},
@@ -132,7 +137,7 @@ func agentSkillExtraFields(skill config.ContentFile) map[string]any {
 	if scope := skill.Metadata.PathScope(); len(scope) > 0 {
 		extra["paths"] = scope
 	}
-	for _, key := range []string{"disable-model-invocation", "user-invocable"} {
+	for _, key := range []string{metaDisableModelInvocation, metaUserInvocable} {
 		if val, set := skill.Metadata.ExtraBool(key); set {
 			extra[key] = val
 		}
@@ -145,7 +150,7 @@ func agentSkillExtraFields(skill config.ContentFile) map[string]any {
 // booleans, every other key with its original YAML type (list, map, bool,
 // date), a plain string as text. The second result is false when it is unset.
 func typedAgentField(meta *config.Metadata, key string) (any, bool) {
-	if val, set := meta.ExtraBool(key); set && (key == "user-invocable" || key == "disable-model-invocation") {
+	if val, set := meta.ExtraBool(key); set && (key == metaUserInvocable || key == metaDisableModelInvocation) {
 		return val, true
 	}
 	if val, ok := meta.TypedExtra(key); ok {
@@ -168,7 +173,8 @@ func inlinedInAgentsMD(items []config.ContentFile, shared *sharedAgentsMDOpts, c
 		return items
 	}
 	kept := make([]config.ContentFile, 0, len(items))
-	for _, cf := range items {
+	for idx := range items {
+		cf := items[idx]
 		raw := cf.Metadata.ResolveActivation().Mode
 		effective := rulefiles.EffectiveModeOf(cf)
 		autoManual := effective == config.ActivationAuto || effective == config.ActivationManual

@@ -46,7 +46,7 @@ func (g *DevinPresetGenerator) GetOutputPaths(baseDir string) []string {
 // ProjectLayout is where the preset writes project-level files; user scope maps them
 // onto GlobalOutputPaths.
 func (g *DevinPresetGenerator) ProjectLayout() ProjectLayout {
-	return ProjectLayout{RootFile: "AGENTS.md", RulesDir: ".devin/rules", SkillsDir: ".devin/skills", AgentsDir: ".devin/agents"}
+	return ProjectLayout{RootFile: agentsMDFile, RulesDir: ".devin/rules", SkillsDir: ".devin/skills", AgentsDir: ".devin/agents"}
 }
 
 // GlobalOutputPaths is the Devin user-scope layout under ~/.config/devin.
@@ -105,7 +105,8 @@ func (g *DevinPresetGenerator) Generate(content *config.ContentTree, baseDir str
 
 	// Generate skill files to .devin/skills/
 	allSkills := allSkills(content)
-	for _, skill := range allSkills {
+	for idx := range allSkills {
+		skill := allSkills[idx]
 		skillID := extractSkillID(skill.Path)
 
 		skillDir := filepath.Join(baseDir, ".devin", "skills", skillID)
@@ -124,10 +125,13 @@ func (g *DevinPresetGenerator) Generate(content *config.ContentTree, baseDir str
 
 	// Commands become user-invocable skills, unless a skill of that id exists.
 	skillIDs := map[string]bool{}
-	for _, skill := range allSkills {
+	for idx := range allSkills {
+		skill := allSkills[idx]
 		skillIDs[extractSkillID(skill.Path)] = true
 	}
-	for _, command := range allCommands(content) {
+	commandList := allCommands(content)
+	for idx := range commandList {
+		command := commandList[idx]
 		id := sanitizeName(command.Name)
 		if skillIDs[id] || !commandTargets(command, devinPresetName) {
 			continue
@@ -166,7 +170,8 @@ func (g *DevinPresetGenerator) Generate(content *config.ContentTree, baseDir str
 
 	// Generate agent files to .devin/agents/
 	allAgents := allAgents(content)
-	for _, agent := range allAgents {
+	for idx := range allAgents {
+		agent := allAgents[idx]
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderDevinAgentFile(agent, cfg)
 		if err != nil {

@@ -79,7 +79,8 @@ func (g *CustomPresetGenerator) generateDirectory(content *config.ContentTree, b
 
 	// Generate files for each rule, context, and skill
 	allRules := allInlineRules(content)
-	for _, rule := range allRules {
+	for idx := range allRules {
+		rule := allRules[idx]
 		sanitized := rulefiles.ItemID(rule.Name)
 		ruleContent := g.renderContentFile(rule)
 
@@ -132,7 +133,8 @@ func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTree,
 
 	// Convert to template-friendly structures
 	rules := make([]map[string]interface{}, 0, len(allRules))
-	for _, rule := range allRules {
+	for idx := range allRules {
+		rule := allRules[idx]
 		ruleData := map[string]interface{}{
 			keyNameField:    rule.Name,
 			keyContentField: rule.Content,
@@ -149,7 +151,8 @@ func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTree,
 	}
 
 	contextData := make([]map[string]interface{}, 0, len(allContext))
-	for _, ctx := range allContext {
+	for idx := range allContext {
+		ctx := allContext[idx]
 		contextData = append(contextData, map[string]interface{}{
 			keyNameField:    ctx.Name,
 			keyContentField: ctx.Content,
@@ -157,7 +160,8 @@ func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTree,
 	}
 
 	skills := make([]map[string]interface{}, 0, len(allSkills))
-	for _, skill := range allSkills {
+	for idx := range allSkills {
+		skill := allSkills[idx]
 		// Backward-compat default for legacy templates that interpolate
 		// `.Content` directly: include inlined references so users who never
 		// updated their template still see reference material.
@@ -228,7 +232,8 @@ func skillResourcesToMaps(resources []config.SkillResource) []map[string]interfa
 
 func (g *CustomPresetGenerator) contentFilesToMaps(files []config.ContentFile) []map[string]interface{} {
 	result := make([]map[string]interface{}, 0, len(files))
-	for _, file := range files {
+	for idx := range files {
+		file := files[idx]
 		fileData := map[string]interface{}{
 			keyNameField:    file.Name,
 			keyContentField: file.Content,
