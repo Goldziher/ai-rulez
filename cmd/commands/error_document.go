@@ -13,11 +13,21 @@ import (
 // failed before it could produce its report: schema_version, the error message and, when there is one, a hint. A consumer that parses
 // stdout then always gets a document.
 func writeErrorDocument(w io.Writer, err error) error {
-	doc := map[string]string{"status": "error", "error": err.Error()}
-	if oopsErr, ok := oops.AsOops(err); ok && oopsErr.Hint() != "" {
-		doc["hint"] = oopsErr.Hint()
+	doc := errorDocument{Status: errorDocumentStatus, Error: err.Error()}
+	if oopsErr, ok := oops.AsOops(err); ok {
+		doc.Hint = oopsErr.Hint()
 	}
 	return jsondoc.Write(w, doc)
+}
+
+// errorDocumentStatus is the status member of an error document.
+const errorDocumentStatus = "error"
+
+// errorDocument is the `--format json` document of a failed command.
+type errorDocument struct {
+	Status string `json:"status"`
+	Error  string `json:"error"`
+	Hint   string `json:"hint,omitempty"`
 }
 
 // fmtErrorFormat prints err for a human on stderr and, under --format json, the

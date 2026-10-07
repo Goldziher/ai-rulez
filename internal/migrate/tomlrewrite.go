@@ -305,23 +305,28 @@ func (d *tomlDoc) insertLines(at int, newLines ...string) {
 func (d *tomlDoc) ratchetSpellings() []string {
 	var out []string
 	seen := map[string]bool{}
-	add := func(name string) {
+	for _, s := range d.stmts {
+		name := ratchetSpelling(s)
 		if (isOldRatchetKey(name) || name == "ratchet") && !seen[name] {
 			seen[name] = true
 			out = append(out, name)
 		}
 	}
-	for _, s := range d.stmts {
-		switch {
-		case s.header && len(s.path) >= 2 && s.path[0] == lintTable:
-			add(s.path[1])
-		case !s.header && len(s.table) == 1 && s.table[0] == lintTable && len(s.key) > 0:
-			add(s.key[0])
-		case !s.header && len(s.table) == 0 && len(s.key) > 1 && s.key[0] == lintTable:
-			add(s.key[1])
-		}
-	}
 	return out
+}
+
+// ratchetSpelling is the name that a statement gives the table below [lint]
+// in its header, dotted-in-table or dotted-at-root form, or "".
+func ratchetSpelling(s stmt) string {
+	switch {
+	case s.header && len(s.path) >= 2 && s.path[0] == lintTable:
+		return s.path[1]
+	case !s.header && len(s.table) == 1 && s.table[0] == lintTable && len(s.key) > 0:
+		return s.key[0]
+	case !s.header && len(s.table) == 0 && len(s.key) > 1 && s.key[0] == lintTable:
+		return s.key[1]
+	}
+	return ""
 }
 
 // renameLintBudget renames `[lint.budget]` and `[lint.tolerate]` (and dotted spellings) to
