@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -163,6 +164,9 @@ func mustApprove(t *testing.T, refs ...string) int {
 }
 
 func TestApprove_ExecutableBitFlipMakesItStale(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows has no executable bit to flip: modes come from the git index there, and this project is not a repository")
+	}
 	root := approveProject(t, "")
 	script := filepath.Join(root, ".ai-rulez", "skills", "deploy", "references", "api.md")
 	approveYes, approveReviewer = true, "alice@example.org"
