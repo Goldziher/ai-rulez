@@ -17,6 +17,7 @@ func Register(r *config.Registry) {
 	r.Register("cursor", &CursorPresetGenerator{alwaysFileLocalRules{target: &cursorRulesTarget, routing: rulefiles.RoutingEverything}})
 	r.Register(devinPresetName, &DevinPresetGenerator{alwaysFileLocalRules{target: &devinRulesTarget, routing: rulefiles.RoutingEverything}})
 	r.Register(presetNameGemini, &GeminiPresetGenerator{})
+	r.Register(config.PresetLLMsTxt, &LLMsTxtPresetGenerator{})
 	r.Register(config.PresetOKF, &OKFPresetGenerator{})
 	r.Register(opencodePresetName, &OpencodePresetGenerator{})
 	r.Register(xumPresetName, &XumPresetGenerator{})
