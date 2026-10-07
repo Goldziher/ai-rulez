@@ -70,7 +70,7 @@ Flags:
 
 ### `ai-rulez scan`
 
-Security checks only (`AR0xx`): secrets, hidden characters, prompt injection, risky shell, unpinned remotes. Same output, baseline and changed-only flags as `validate --strict`, plus `--external` for `[[lint.external]]` scanners (`--write-baseline --reason`, `--scanner-baseline`, `--show-suppressed`). `ai-rulez scanners list|doctor [--external] [--format json]` inspects those scanners.
+Security checks only (`AR0xx`): secrets, hidden characters, prompt injection, risky shell, unpinned remotes. Same output, baseline and changed-only flags as `validate`, plus `--external` for `[[lint.external]]` scanners (`--write-baseline --reason`, `--scanner-baseline`, `--show-suppressed`). `ai-rulez scanners list|doctor [--external] [--format json]` inspects those scanners.
 
 ### `ai-rulez doctor`
 
@@ -162,7 +162,7 @@ Checks are code-review guidelines (`.ai-rulez/checks/<name>.md`) and have no `--
 - `ai-rulez skill list [--format json]`
 - `ai-rulez skill update [name...]` — Re-pin installed skills in `ai-rulez.lock`
 
-Commands that print JSON take `--format text|json`; `--json` is a hidden, deprecated alias.
+Commands that print JSON take `--format text|json`; `--json` was removed in v5.
 
 ## Roles, Lock and Catalog
 
@@ -178,13 +178,13 @@ Commands that print JSON take `--format text|json`; `--json` is a hidden, deprec
 - `ai-rulez verifiers run|list|explain|test` — Deterministic repo checks from `[[verifiers]]` and `.ai-rulez/verifiers/*.toml`; `run` takes `--since <rev>`, `--staged`, `--all`, `--rule`, `--name`, `--format text|json|sarif|junit`, `--out`, `--fail-on`, `--strict`, `--strict-applicability`
 - `ai-rulez search <query> [--limit <n>] [--format json]` ranks the skills a skills server would serve (same selection flags as `mcp --serve-skills`); `search --eval <cases.yaml> [--k] [--min] [--baseline] [--max-flips] [--out]` measures the ranking
 - `ai-rulez eval run [skill...]` — Run skill evals through a runner and score them (`--harness`, `--runner`, `--runner-command`, `--ablation`, `--dry-run`, `--max-cost`, `--changed-only`, `--force`, `--threshold`, `--format json|markdown|junit`); results are signed per user, so CI needs `--force`
-- `ai-rulez usage hook|record|export|feedback`, `ai-rulez telemetry hook|record|flush|preview|doctor`, `ai-rulez report usage|evals` — Opt-in, identifier-only usage and item-load telemetry
+- `ai-rulez telemetry hook|record|export|feedback`, `ai-rulez telemetry hook|record|flush|preview|doctor`, `ai-rulez telemetry report|evals` — Opt-in, identifier-only usage and item-load telemetry
 - `ai-rulez llm doctor [--ping]` / `llm estimate <file>` — Inspect `[llm]` access without calling a model
 - `ai-rulez local init|show|set|unset|path` — Manage the machine-local `config.local.*` overlay
 
 ## Exit Codes
 
-`0` success, `1` the command could not run, `2` findings, drift or a failed gate (`validate --strict`, `scan`, `generate --check`, `verify`, `lock --check`, `doctor`, `verifiers`, `eval`, budgets, ...), `3` `lock` only: served skills left unpinned.
+`0` success, `1` the command could not run, `2` findings, drift or a failed gate (`validate`, `scan`, `generate --check`, `verify`, `lock --check`, `doctor`, `verifiers`, `eval`, budgets, ...), `3` `lock` only: served skills left unpinned.
 
 ## Other Commands
 

@@ -289,7 +289,7 @@ Each key has one direction. The policy value is **enforced** (clamped) and any a
 | `lint.required_codes` | union of layers | `[lint.severity] CODE = "off"` or `[lint] ignore` | `AR744` |
 | `lint.severity_floor` | the higher severity of the layers | a lower `[lint.severity]`, or `[lint] ignore` of a floored code | `AR740` |
 | `lint.no_inline_ignore` | union of layers | an `ai-rulez-lint-ignore` comment for a listed code; the finding is still reported | `AR740` |
-| `lint.max_findings.<code>` | the lower ceiling per code (`0` allows none). The code is protected: baselines, `[lint.tolerate]` and ignores do not apply | (a ceiling is not a repository key; going over it is reported) | `AR749` |
+| `lint.max_findings.<code>` | the lower ceiling per code (`0` allows none). The code is protected: baselines, `[lint.ratchet]` and ignores do not apply | (a ceiling is not a repository key; going over it is reported) | `AR749` |
 | `lint.security.allowed_hosts` | repository entries the list covers; the policy list when it sets none | an entry the list does not provably cover; the entry is dropped | `AR740` |
 | `lint.security.scan_imports` | the stricter level (`off` < `warn` < unset < `error`) | a weaker explicit level | `AR740` |
 | `lint.security.directive_tags` | union of layers, then the repository's own tags | (nothing to report: the repository's list only adds) | none |
@@ -380,7 +380,7 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 
 ## What honors the policy
 
-- `validate` and `validate --strict`: the clamp is applied at load. `--strict` reports each attempt as an `AR74x`
+- `validate` and `validate`: the clamp is applied at load. `--strict` reports each attempt as an `AR74x`
   finding and exits `2` (the findings are errors); plain `validate` fails with the same lines and exits `1`, as do
   `generate` and `validate --show-policy`. The severity floor and required codes are enforced inside the
   lint run, so a floored finding cannot be demoted by a lint profile.
@@ -390,9 +390,9 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
   `generate_outputs` and `validate_config` tools of `mcp` refuse it (`validate_config` answers `valid: false`).
 - No suppression hides a protected code: for every code in `required_codes` or raised by `severity_floor` (and
   AR740-AR745 themselves), `ai-rulez-lint-ignore` comments, `[lint] ignore_paths`, baseline entries and
-  `[lint.tolerate]` budgets are not applied. The finding stays at its enforced severity and counts toward the exit
+  `[lint.ratchet]` budgets are not applied. The finding stays at its enforced severity and counts toward the exit
   code, and one AR740 finding per route names the attempt (`[lint] ignore_paths`, `ai-rulez-lint-ignore comment`,
-  `baseline`, `[lint.tolerate]`) and the codes it tried to hide.
+  `baseline`, `[lint.ratchet]`) and the codes it tried to hide.
 - Remote sources a policy refuses are dropped before anything is fetched.
 
 ## Design decisions
@@ -436,7 +436,7 @@ to LF. Exit code 1 when the repository loosens the policy. The policy file forma
 - **Provenance** names the strongest layer that decides a key (a tie goes to the stronger anchor), and every
   contributing layer for a set.
 - **`max_findings` is a gate, not a forgiveness.** Up to the ceiling the findings keep their own severity; one more is
-  `AR749`. The code is protected, so baselines, `[lint.tolerate]` and ignores cannot absorb it. The design's
+  `AR749`. The code is protected, so baselines, `[lint.ratchet]` and ignores cannot absorb it. The design's
   `[lint.size] max_tokens` is the existing `[lint.budgets.<kind>]` table here.
 - **Imported hooks and MCP servers.** MCP servers cannot be imported from an include, but an agent, skill or command
   an include or an installed skill delivers can declare `hooks` and `mcpServers` in its frontmatter. `[hooks]` and
