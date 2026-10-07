@@ -10,6 +10,7 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/agentplugins"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
@@ -527,6 +528,13 @@ func validatePluginRuntimeRules(p *PluginAuthoring) error {
 	}
 	if err := validateCodexExtras(p); err != nil {
 		return err
+	}
+	if p.Spec != "" && !agentplugins.SupportedSpec(p.Spec) {
+		return oops.
+			With("field", "plugin.spec").
+			With("value", p.Spec).
+			Hint("Supported Agent Plugins specs: " + strings.Join(agentplugins.Specs, ", ")).
+			Errorf("plugin %q sets unsupported Agent Plugins spec %q", p.Name, p.Spec)
 	}
 	usesStandard := pluginTargetsRuntime(p, PluginRuntimeAgentPlugins) || pluginTargetsRuntime(p, PluginRuntimeCopilot) ||
 		(pluginTargetsRuntime(p, PluginRuntimeCodex) && p.Codex.ManifestLayout() != CodexManifestLegacy)
