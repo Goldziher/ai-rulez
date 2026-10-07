@@ -1,7 +1,7 @@
 # Golden set for `builtin:skill-quality`
 
-55 labelled cases for `ai-rulez review calibrate --golden tests/review/golden/skill-quality`. Seven dimensions
-are labelled per case (385 labels; `overlap` and `instruction-conflict` only where siblings are listed).
+55 labeled cases for `ai-rulez review calibrate --golden tests/review/golden/skill-quality`. Seven dimensions
+are labeled per case (385 labels; `overlap` and `instruction-conflict` only where siblings are listed).
 
 ## What is in it
 
