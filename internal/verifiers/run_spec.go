@@ -101,11 +101,11 @@ func predicateKind(r *Require) string {
 	case r.FileExists != nil:
 		return config.VerifierFileExists
 	case r.Paired != nil:
-		return "paired"
+		return predicatePaired
 	case r.GlobCount != nil:
 		return config.VerifierGlobCount
 	case r.Command != nil:
-		return "command"
+		return predicateCommand
 	case r.LLM != nil:
 		return "llm"
 	case len(r.All) > 0:
@@ -166,12 +166,12 @@ func missingExamples(env *Env, sp *Spec) (Result, bool) {
 //
 // A failing verifier declared at error severity keeps it only under --gate-llm
 // and only while its calibration record is current and meets the bar
-// (CalibrationMinPrecision on labelled examples); see Calibrate.
+// (CalibrationMinPrecision on labeled examples); see Calibrate.
 func capAdvisory(env *Env, sp *Spec, res *Result) {
 	res.Advisory = true
 	switch {
 	case res.Status == StatusSkipped:
-		res.Severity = "info"
+		res.Severity = severityInfo
 	case res.Severity == severityError:
 		if res.Status == StatusFail && env.opts.LLM != nil && env.opts.LLM.Gate {
 			rec, err := LoadCalibration(env.Cfg, sp.ID)

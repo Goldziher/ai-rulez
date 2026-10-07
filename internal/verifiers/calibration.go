@@ -28,9 +28,9 @@ const (
 	// calibrationDir is the directory of the records under verifiers/.
 	calibrationDir = "calibration"
 	// CalibrationMinPrecision is the share of the model's `fail` verdicts that
-	// must be right on the labelled examples before a verifier may gate.
+	// must be right on the labeled examples before a verifier may gate.
 	CalibrationMinPrecision = 0.8
-	// CalibrationMinExamples is how many labelled examples a verifier needs, and
+	// CalibrationMinExamples is how many labeled examples a verifier needs, and
 	// CalibrationMinPerClass how many of each expected outcome (pass and fail).
 	CalibrationMinExamples = 10
 	CalibrationMinPerClass = 3
@@ -39,7 +39,7 @@ const (
 )
 
 // Calibration is the recorded measurement of an llm verifier against its
-// labelled examples: how often its `fail` verdict was right (precision) and how
+// labeled examples: how often its `fail` verdict was right (precision) and how
 // many real failures it found (recall). It is committed beside the declaration
 // (.ai-rulez/verifiers/calibration/<id>.json), and a verifier gates only while
 // the record describes the verifier that runs now. The fields follow the review
@@ -50,7 +50,7 @@ type Calibration struct {
 	SchemaVersion int    `json:"schema_version"`
 	Verifier      string `json:"verifier"`
 	// SpecDigest covers the llm predicates (checklist, model, max_diff_bytes) and
-	// the prompt version; ExamplesDigest covers the labelled examples.
+	// the prompt version; ExamplesDigest covers the labeled examples.
 	SpecDigest     string `json:"spec_digest"`
 	ExamplesDigest string `json:"examples_digest"`
 	PromptVersion  string `json:"prompt_version"`
@@ -97,14 +97,14 @@ type CalibrateOptions struct {
 	Now time.Time
 }
 
-// Calibrate runs the labelled examples of the llm verifiers through the model
+// Calibrate runs the labeled examples of the llm verifiers through the model
 // and measures how reliable their `fail` verdicts are. It writes nothing; see
 // SaveCalibration.
 func Calibrate(ctx context.Context, cfg *config.Config, opts CalibrateOptions) (*CalibrationReport, error) {
 	if opts.LLM.Client == nil && !opts.LLM.Estimate {
 		reason := opts.LLM.Disabled
 		if reason == "" {
-			reason = "pass --allow-llm and enable [llm] allow_network in the user config"
+			reason = llmOffHint
 		}
 		return nil, oops.Errorf("calibration needs a model: %s", reason)
 	}
@@ -171,7 +171,7 @@ func estimateExamples(ctx context.Context, cfg *config.Config, sp *Spec, o LLMOp
 }
 
 // calibrateSpec measures one verifier. An example counts as flagged when the
-// verifier fails on it; it is a true flag when the example is labelled `fail`.
+// verifier fails on it; it is a true flag when the example is labeled `fail`.
 func calibrateSpec(ctx context.Context, cfg *config.Config, sp *Spec, opts CalibrateOptions, shared *llmRun) Calibration {
 	rec := Calibration{
 		SchemaVersion: calibrationSchemaVersion, Verifier: sp.ID, SpecDigest: specDigest(sp), ExamplesDigest: examplesDigest(sp.Examples),
@@ -218,7 +218,7 @@ func calibrateSpec(ctx context.Context, cfg *config.Config, sp *Spec, opts Calib
 func calibrationMisses(rec *Calibration, expectedPass int) []string {
 	var misses []string
 	if rec.NItems < CalibrationMinExamples || rec.Positives < CalibrationMinPerClass || expectedPass < CalibrationMinPerClass {
-		misses = append(misses, fmt.Sprintf("needs at least %d labelled examples with at least %d expected to fail and %d to pass (has %d: %d fail, %d pass)",
+		misses = append(misses, fmt.Sprintf("needs at least %d labeled examples with at least %d expected to fail and %d to pass (has %d: %d fail, %d pass)",
 			CalibrationMinExamples, CalibrationMinPerClass, CalibrationMinPerClass, rec.NItems, rec.Positives, expectedPass))
 	}
 	if rec.Errors > 0 {
@@ -231,16 +231,16 @@ func calibrationMisses(rec *Calibration, expectedPass int) []string {
 }
 
 // ratio is k/n with its 95% Wilson interval; no observations give 0 and [0,1].
-func ratio(k, n int) (float64, [2]float64) {
+func ratio(k, n int) (rate float64, interval [2]float64) {
 	if n == 0 {
 		return 0, [2]float64{0, 1}
 	}
 	p := float64(k) / float64(n)
 	z2 := wilsonZ * wilsonZ
 	denom := 1 + z2/float64(n)
-	centre := (p + z2/(2*float64(n))) / denom
+	center := (p + z2/(2*float64(n))) / denom
 	margin := wilsonZ * math.Sqrt(p*(1-p)/float64(n)+z2/(4*float64(n)*float64(n))) / denom
-	return p, [2]float64{math.Max(0, centre-margin), math.Min(1, centre+margin)}
+	return p, [2]float64{math.Max(0, center-margin), math.Min(1, center+margin)}
 }
 
 // effectiveModel is the model the verifier's calls use: its own, else the run's.

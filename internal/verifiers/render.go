@@ -51,14 +51,21 @@ func WriteText(w io.Writer, r *Report) error {
 		return wrapWrite(err)
 	}
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "STATUS\tSEVERITY\tNAME\tMESSAGE")
-	for _, res := range r.Results {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", res.Status, res.Severity, sanitize(res.Name), sanitize(res.Message))
+	if _, err := fmt.Fprintln(tw, "STATUS\tSEVERITY\tNAME\tMESSAGE"); err != nil {
+		return wrapWrite(err)
+	}
+	for i := range r.Results {
+		res := &r.Results[i]
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", res.Status, res.Severity, sanitize(res.Name), sanitize(res.Message)); err != nil {
+			return wrapWrite(err)
+		}
 	}
 	if err := tw.Flush(); err != nil {
 		return wrapWrite(err)
 	}
-	writeDetails(w, r)
+	if err := writeDetails(w, r); err != nil {
+		return wrapWrite(err)
+	}
 	c := r.Counts()
 	line := fmt.Sprintf("\n%d passed, %d failed, %d could not run", c[StatusPass], c[StatusFail], c[StatusError])
 	if n := c[StatusNotApplicable]; n > 0 {
@@ -85,38 +92,55 @@ func WriteText(w io.Writer, r *Report) error {
 
 // writeDetails prints, for each failed or invalid verifier, the rule it
 // enforces, every finding and the fix.
-func writeDetails(w io.Writer, r *Report) {
+func writeDetails(w io.Writer, r *Report) error {
 	first := true
-	for _, res := range r.Results {
-		if res.Status != StatusFail && !(res.Status == StatusError && res.Code != "") {
+	for i := range r.Results {
+		res := &r.Results[i]
+		if res.Status != StatusFail && (res.Status != StatusError || res.Code == "") {
 			continue
 		}
 		if len(res.Findings) == 0 && res.Fix == "" && res.Target == nil {
 			continue
 		}
 		if first {
-			fmt.Fprintln(w)
+			if _, err := fmt.Fprintln(w); err != nil {
+				return err
+			}
 			first = false
 		}
-		head := res.Code + " " + sanitize(res.Name)
-		if res.Target != nil {
-			head += fmt.Sprintf(" (%s %q", res.Target.Kind, sanitize(res.Target.ID))
-			if res.Target.Path != "" {
-				head += ", " + sanitize(res.Target.Path)
-				if res.Target.Line > 0 {
-					head += fmt.Sprintf(":%d", res.Target.Line)
-				}
-			}
-			head += ")"
-		}
-		fmt.Fprintln(w, head)
-		for _, f := range res.Findings {
-			fmt.Fprintln(w, "  "+findingLine(f))
-		}
-		if res.Fix != "" {
-			fmt.Fprintln(w, "  fix: "+sanitize(res.Fix))
+		if err := writeDetail(w, res); err != nil {
+			return err
 		}
 	}
+	return nil
+}
+
+func writeDetail(w io.Writer, res *Result) error {
+	head := res.Code + " " + sanitize(res.Name)
+	if res.Target != nil {
+		head += fmt.Sprintf(" (%s %q", res.Target.Kind, sanitize(res.Target.ID))
+		if res.Target.Path != "" {
+			head += ", " + sanitize(res.Target.Path)
+			if res.Target.Line > 0 {
+				head += fmt.Sprintf(":%d", res.Target.Line)
+			}
+		}
+		head += ")"
+	}
+	if _, err := fmt.Fprintln(w, head); err != nil {
+		return err
+	}
+	for _, f := range res.Findings {
+		if _, err := fmt.Fprintln(w, "  "+findingLine(f)); err != nil {
+			return err
+		}
+	}
+	if res.Fix != "" {
+		if _, err := fmt.Fprintln(w, "  fix: "+sanitize(res.Fix)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func findingLine(f Finding) string {
