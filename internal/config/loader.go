@@ -118,7 +118,7 @@ type Resolvers struct {
 // .config/ai-rulez/) with config.toml.
 func LoadConfig(ctx context.Context, baseDir string, opts ...LoadOption) (*Config, error) {
 	lo := applyLoadOptions(opts)
-	v, absDir, err := lo.baseView(baseDir)
+	v, absDir, err := lo.baseView(ctx, baseDir)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func LoadConfig(ctx context.Context, baseDir string, opts ...LoadOption) (*Confi
 // LoadConfigFromDir loads configuration from configDirName below baseDir.
 func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts ...LoadOption) (*Config, error) {
 	lo := applyLoadOptions(opts)
-	v, absDir, err := lo.baseView(baseDir)
+	v, absDir, err := lo.baseView(ctx, baseDir)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 				Wrapf(err, "resolve absolute config path")
 		}
 	}
-	v, absPath, err := lo.fileView(absPath)
+	v, absPath, err := lo.fileView(ctx, absPath)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	config.MCPServers = serversToMap(config.MCPServersRaw)
 
 	// Scan content directories
-	scanner := newProjectScanner(v)
+	scanner := newProjectScanner(ctx, v)
 	scanner.git = gitutil.New(loadHost(lo).Runner)
 	scanner.log = lo.host.Log
 	config.warnDeprecatedLintBudget()
@@ -698,14 +698,14 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 // ScanContentTreeWith is ScanContentTree with extra bundle_exclude patterns
 // applied to the resources of every skill and command.
 func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree, error) {
-	return scanContentTree(newIncludeScanner(osView(configDir)), configDir, bundleExclude)
+	return scanContentTree(newIncludeScanner(context.Background(), osView(configDir)), configDir, bundleExclude)
 }
 
 // ScanContentTreeContext is ScanContentTree whose git questions (which files a
 // work tree ignores) run through the runner ctx carries (runner.WithContext);
 // without one it runs real git.
 func ScanContentTreeContext(ctx context.Context, configDir string) (*ContentTree, error) {
-	s := newIncludeScanner(osView(configDir))
+	s := newIncludeScanner(ctx, osView(configDir))
 	s.git = gitutil.New(runner.FromContext(ctx))
 	s.log = logger.FromContext(ctx)
 	return scanContentTree(s, configDir, nil)
@@ -716,7 +716,7 @@ func ScanContentTreeContext(ctx context.Context, configDir string) (*ContentTree
 // real file system. configDir is an absolute path below v's root. Symlinks are
 // never followed, as for any included content.
 func ScanContentTreeIn(ctx context.Context, v workspace.View, configDir string) (*ContentTree, error) {
-	s := newIncludeScanner(v)
+	s := newIncludeScanner(ctx, v)
 	s.git = gitutil.New(runner.FromContext(ctx))
 	s.log = logger.FromContext(ctx)
 	return scanContentTree(s, configDir, nil)
@@ -817,7 +817,7 @@ func ScanLocalContentTree(configDir string) (*ContentTree, error) {
 
 // ScanLocalContentTreeWith is ScanLocalContentTree with extra bundle_exclude patterns.
 func ScanLocalContentTreeWith(configDir string, bundleExclude []string) (*ContentTree, error) {
-	return scanLocalContentTree(newIncludeScanner(osView(configDir)), configDir, bundleExclude)
+	return scanLocalContentTree(newIncludeScanner(context.Background(), osView(configDir)), configDir, bundleExclude)
 }
 
 func scanLocalContentTree(s *contentScanner, configDir string, bundleExclude []string) (*ContentTree, error) {
@@ -921,7 +921,7 @@ func (s *contentScanner) skills(skillsDir string, bundleExclude []string) ([]Con
 // COMMAND.md files in subdirectories (directory form with optional resources/).
 // Mirrors the structure of scanSkills to support bundled reference material.
 func scanCommands(commandsDir string) ([]ContentFile, error) {
-	return newIncludeScanner(osView(commandsDir)).commands(commandsDir, nil)
+	return newIncludeScanner(context.Background(), osView(commandsDir)).commands(commandsDir, nil)
 }
 
 func (s *contentScanner) commands(commandsDir string, bundleExclude []string) ([]ContentFile, error) {
@@ -1125,7 +1125,7 @@ func (s *contentScanner) domains(domainsDir string, bundleExclude []string) (map
 
 // scanAgents scans one agents directory without following symlinks.
 func scanAgents(agentsPath string) ([]ContentFile, error) {
-	return newIncludeScanner(osView(agentsPath)).agents(agentsPath)
+	return newIncludeScanner(context.Background(), osView(agentsPath)).agents(agentsPath)
 }
 
 // ParseFrontmatterPublic is the exported version of parseFrontmatter for use by other packages

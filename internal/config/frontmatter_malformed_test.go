@@ -82,7 +82,7 @@ func TestScanSkills_UnclosedFrontmatterIsMalformed(t *testing.T) {
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "x", "SKILL.md"), []byte(tt.body), 0o644))
 
 			// Act
-			skills, err := newIncludeScanner(osView(dir)).skills(dir, nil)
+			skills, err := newIncludeScanner(t.Context(), osView(dir)).skills(dir, nil)
 
 			// Assert
 			require.NoError(t, err)
