@@ -107,7 +107,7 @@ func binary(t *testing.T) string {
 		binaryPath = out
 		ver := exec.Command(out, "version") //nolint:gosec // the binary was just built
 		raw, _ := ver.CombinedOutput()      //nolint:errcheck // an unreadable version only skips normalization
-		if m := regexp.MustCompile(`version=(\S+)`).FindSubmatch(raw); m != nil {
+		if m := regexp.MustCompile(`ai-rulez version (\S+)`).FindSubmatch(raw); m != nil {
 			binaryVersion = string(m[1])
 		}
 	})
