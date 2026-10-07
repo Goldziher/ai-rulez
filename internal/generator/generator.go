@@ -647,6 +647,7 @@ func (g *Generator) collectMemberOutputs(member string) ([]config.OutputFile, pl
 		config.WithResolvers(g.config.Resolve),
 		config.WithHost(g.host()),
 		config.WithRegistry(g.config.Registry),
+		config.WithPolicy(g.config.Policy()),
 	}
 	if g.config.Workspace != nil {
 		loadOpts = append(loadOpts, config.WithWorkspace(g.config.Workspace))

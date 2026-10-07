@@ -224,7 +224,7 @@ func runTelemetryPreview(out io.Writer) error {
 		return oops.Errorf("--limit must not be negative")
 	}
 	root, name := telemetryRoot(""), telemetryConfigDirName()
-	settings := telemetry.ResolveFor(root, name, nil)
+	settings := telemetry.ResolveFor(root, name, nil, activePolicy)
 	source, err := previewEvents(&settings, root, name)
 	if err != nil {
 		return err
@@ -357,7 +357,7 @@ func telemetryRoot(hint string) string {
 func newTelemetryPipeline(cwdHint string, localLog bool) *telemetry.Pipeline {
 	root := telemetryRoot(cwdHint)
 	name := telemetryConfigDirName()
-	settings := telemetry.ResolveFor(root, name, nil)
+	settings := telemetry.ResolveFor(root, name, nil, activePolicy)
 	return telemetry.Build(settings, telemetry.BuildOptions{Root: root, ConfigDirName: name, Version: Version, LocalLog: localLog, Spawn: telemetrySpawn})
 }
 

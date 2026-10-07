@@ -264,7 +264,8 @@ func (g *Generator) sharedConfig() (*config.Config, error) {
 	}
 	path := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
 	shared, err := config.LoadConfigFromFile(g.context(), path,
-		config.WithoutLocal(), config.WithIncludeMemo(g.config.IncludeMemo), config.WithResolvers(g.config.Resolve))
+		config.WithoutLocal(), config.WithIncludeMemo(g.config.IncludeMemo), config.WithResolvers(g.config.Resolve),
+		config.WithPolicy(g.config.Policy()))
 	if err != nil {
 		return nil, oops.Wrapf(err, "load the shared configuration for roles.json")
 	}

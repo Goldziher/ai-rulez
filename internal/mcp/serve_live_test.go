@@ -6,10 +6,11 @@ import (
 
 	"context"
 	"errors"
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

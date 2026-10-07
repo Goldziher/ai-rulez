@@ -1,11 +1,13 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -43,7 +45,7 @@ func Execute() error {
 	RootCmd.Version = Version
 	RootCmd.SetVersionTemplate("ai-rulez version {{.Version}}\n")
 	requireKnownSubcommands(RootCmd)
-	return RootCmd.Execute()
+	return RootCmd.ExecuteContext(config.WithPolicyContext(context.Background(), activePolicy))
 }
 
 func init() {

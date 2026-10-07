@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/policy"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/samber/oops"
 )
 
@@ -54,6 +55,25 @@ var policyEnforcer = policy.NewEnforcer(func() policy.DiscoverOptions {
 	}
 })
 
+// activePolicy is the policy every load the command line makes runs under. The
+// library never reads a process-wide policy: this is the CLI handing its own to
+// each load (tests swap it).
+var activePolicy config.PolicyEnforcer = policyEnforcer
+
+// loadProject, loadProjectFile and loadProjectDir are the project loaders under
+// the command line's policy.
+func loadProject(ctx context.Context, dir string, opts ...config.LoadOption) (*config.Config, error) {
+	return project.Load(config.WithPolicyContext(ctx, activePolicy), dir, opts...) //nolint:wrapcheck // already contextual
+}
+
+func loadProjectFile(ctx context.Context, path string, opts ...config.LoadOption) (*config.Config, error) {
+	return project.LoadFile(config.WithPolicyContext(ctx, activePolicy), path, opts...) //nolint:wrapcheck // already contextual
+}
+
+func loadProjectDir(ctx context.Context, dir, configDirName string, opts ...config.LoadOption) (*config.Config, error) {
+	return project.LoadDir(config.WithPolicyContext(ctx, activePolicy), dir, configDirName, opts...) //nolint:wrapcheck // already contextual
+}
+
 // --policy-trust-tofu uses stdinIsTerminal (approve.go): it refuses to run in a
 // pipe or in CI, where nobody reviews the digest.
 
@@ -84,7 +104,6 @@ func init() {
 		"How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced)")
 	ValidateCmd.Flags().BoolVar(&validateShowPolicy, "show-policy", false,
 		"Print the effective organization policy with the origin of every value and what the repository tried to loosen (text, or JSON with --format json), then exit")
-	config.SetPolicyEnforcer(policyEnforcer)
 }
 
 // policyGate fails when the policy had to clamp the repository configuration:
