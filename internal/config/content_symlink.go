@@ -51,13 +51,13 @@ func (s *contentScanner) logger() logger.Logger { return logger.Or(s.log) }
 // the repository top-level containing the project (see workspace.Around), or at
 // the project itself when there is no repository.
 func newProjectScanner(ctx context.Context, v workspace.View) *contentScanner {
-	return &contentScanner{v: v, root: v.Root(), ctx: ctx}
+	return &contentScanner{v: v, root: v.Root(), ctx: orBackground(ctx)}
 }
 
 // newIncludeScanner returns a scanner for included, installed or bundled
 // content, which never follows a symlink.
 func newIncludeScanner(ctx context.Context, v workspace.View) *contentScanner {
-	return &contentScanner{v: v, ctx: ctx}
+	return &contentScanner{v: v, ctx: orBackground(ctx)}
 }
 
 // refuse records a refused path. With no injected logger nothing is printed: a

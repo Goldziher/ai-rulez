@@ -165,7 +165,7 @@ func (lo loadOptions) baseView(ctx context.Context, baseDir string) (workspace.V
 			Hint("Check if the directory path is valid and accessible").
 			Wrapf(err, "resolve absolute path")
 	}
-	ws, err := workspace.AroundBelow(ctx, gitutil.New(loadHost(lo).Runner), abs, lo.host.GetEnv("GIT_CEILING_DIRECTORIES"))
+	ws, err := workspace.AroundBelow(orBackground(ctx), gitutil.New(loadHost(lo).Runner), abs, lo.host.GetEnv("GIT_CEILING_DIRECTORIES"))
 	if err != nil {
 		return workspace.View{}, "", err //nolint:wrapcheck // already contextual
 	}
@@ -192,7 +192,7 @@ func (lo loadOptions) fileView(ctx context.Context, absPath string) (workspace.V
 	if lo.ws != nil {
 		return workspace.NewView(lo.ws), absPath, nil
 	}
-	ws, err := workspace.AroundBelow(ctx, gitutil.New(loadHost(lo).Runner), bootstrapBase(absPath), lo.host.GetEnv("GIT_CEILING_DIRECTORIES"))
+	ws, err := workspace.AroundBelow(orBackground(ctx), gitutil.New(loadHost(lo).Runner), bootstrapBase(absPath), lo.host.GetEnv("GIT_CEILING_DIRECTORIES"))
 	if err != nil {
 		return workspace.View{}, "", err //nolint:wrapcheck // already contextual
 	}
@@ -214,4 +214,13 @@ func bootstrapBase(absPath string) string {
 		return projectBaseDir(absPath)
 	}
 	return absPath
+}
+
+// orBackground is ctx, or context.Background() for a caller that passed nil
+// (the git questions a load asks need a context to run under).
+func orBackground(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }
