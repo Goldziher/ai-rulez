@@ -13,12 +13,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
 
-// Frontmatter keys through which content declares what runs.
-const (
-	fmHooks      = "hooks"
-	fmMCPServers = "mcpServers"
-)
-
 // ApplyContent bounds the hooks and MCP servers that the content delivered by
 // includes and installed skills declares in its frontmatter, by the same [hooks]
 // and [mcp] policy that bounds the repository's own config.toml. It runs after
@@ -125,19 +119,22 @@ func (c *contentApplier) report(f *config.ContentFile, key, format string, args 
 	})
 }
 
+// dropHooks unloads every spelling of the hooks key (config.ExtraKeysFor reads
+// the registry of executing keys the renderers share).
 func (c *contentApplier) dropHooks(f *config.ContentFile) {
-	if _, ok := f.Metadata.TypedExtra(fmHooks); !ok {
+	keys := f.Metadata.ExtraKeysFor(config.FrontmatterHooks)
+	if len(keys) == 0 {
 		return
 	}
 	c.report(f, "hooks.allow", "%q declares hooks in its frontmatter, but the policy forbids hooks (origin: %s); they are not loaded",
 		f.Name, c.res.Provenance["hooks.allow"])
-	f.Metadata.DropExtra(fmHooks)
+	f.Metadata = f.Metadata.WithoutExtra(keys...)
 }
 
 func (c *contentApplier) dropMCP(f *config.ContentFile) {
 	pol := c.res.Policy.MCP
-	servers := inlineMCPServers(f.Metadata)
-	for _, s := range servers {
+	keys := f.Metadata.ExtraKeysFor(config.FrontmatterMCPServers)
+	for _, s := range inlineMCPServers(f.Metadata, keys) {
 		switch {
 		case slices.Contains(pol.DenyTransports, s.transport):
 			c.report(f, "mcp.deny_transports", "%q declares MCP server %q on the %s transport, which the policy denies (origin: %s); its mcpServers are not loaded",
@@ -148,7 +145,10 @@ func (c *contentApplier) dropMCP(f *config.ContentFile) {
 		default:
 			continue
 		}
-		f.Metadata.DropExtra(fmMCPServers)
+		// One denied server makes the whole declaration untrustworthy: every
+		// spelling of the key goes. The metadata is copied, never edited: it may be
+		// shared with a load that runs without this policy.
+		f.Metadata = f.Metadata.WithoutExtra(keys...)
 		return
 	}
 }
@@ -161,20 +161,28 @@ type inlineServer struct {
 // inlineMCPServers decodes the `mcpServers` frontmatter in both documented
 // shapes: a mapping of name to definition, and a list whose entries are a name
 // (a server defined elsewhere, skipped) or a one-key mapping.
-func inlineMCPServers(m *config.Metadata) []inlineServer {
-	raw, ok := m.TypedExtra(fmMCPServers)
+func inlineMCPServers(m *config.Metadata, keys []string) []inlineServer {
+	defs := map[string]map[string]any{}
+	for _, key := range keys {
+		collectInlineServers(m, key, defs)
+	}
+	return sortedInlineServers(defs)
+}
+
+// collectInlineServers adds the servers the frontmatter key declares to defs.
+func collectInlineServers(m *config.Metadata, key string, defs map[string]map[string]any) {
+	raw, ok := m.TypedExtra(key)
 	if !ok {
-		return nil
+		return
 	}
 	node, isNode := raw.(*yaml.Node)
 	if !isNode {
-		return nil
+		return
 	}
 	var v any
 	if node.Decode(&v) != nil {
-		return nil
+		return
 	}
-	defs := map[string]map[string]any{}
 	collect := func(name string, def any) {
 		if d, ok := def.(map[string]any); ok {
 			defs[name] = d
@@ -194,6 +202,9 @@ func inlineMCPServers(m *config.Metadata) []inlineServer {
 			}
 		}
 	}
+}
+
+func sortedInlineServers(defs map[string]map[string]any) []inlineServer {
 	names := make([]string, 0, len(defs))
 	for name := range defs {
 		names = append(names, name)
