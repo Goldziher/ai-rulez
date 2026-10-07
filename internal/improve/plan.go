@@ -187,6 +187,35 @@ func ParseArgv(s string) ([]string, error) {
 	return strings.Fields(s), nil
 }
 
+// ResolveArgv makes the relative paths of an optimizer command absolute from dir
+// (the directory improve was started in): the optimizer runs in the run's
+// throwaway workspace, where `./optimize.sh` or `python optimize.py` would name
+// nothing. The program is resolved when it has a path separator (a bare name
+// stays a PATH lookup); a later argument is resolved when it is not a flag and
+// names an existing regular file in dir.
+func ResolveArgv(argv []string, dir string) []string {
+	out := append([]string(nil), argv...)
+	for i, arg := range out {
+		if arg == "" || filepath.IsAbs(arg) {
+			continue
+		}
+		local := filepath.Join(dir, filepath.FromSlash(arg))
+		if i == 0 {
+			if strings.ContainsAny(arg, `/\`) {
+				out[0] = local
+			}
+			continue
+		}
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+		if info, err := os.Stat(local); err == nil && info.Mode().IsRegular() {
+			out[i] = local
+		}
+	}
+	return out
+}
+
 // Prepare checks every precondition and computes the plan. It writes nothing
 // and calls no optimizer or eval runner, so it backs --dry-run too.
 func Prepare(ctx context.Context, opts *Options) (*Plan, error) {
