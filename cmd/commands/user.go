@@ -105,6 +105,9 @@ func runUserGenerate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if err := importGate(cfg); err != nil {
+		return err
+	}
 	plan, err := gen.PlanUser(profile)
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
