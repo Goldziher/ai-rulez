@@ -451,7 +451,7 @@ func init() {
 		c.Flags().StringVar(&usageIndex, "index", "", "Skills index used to resolve content hashes")
 	}
 	for _, c := range []*cobra.Command{usageHookCmd, usageRecordCmd, usageFeedbackCmd} {
-		c.Flags().StringVar(&usageHarness, "harness", "", "Harness: claude, codex or cursor (default claude; feedback records it as given)")
+		c.Flags().StringVar(&usageHarness, "harness", "", "Harness: claude, codex or cursor (hook and record default to claude; feedback records it as given)")
 		c.Flags().StringVar(&usageRole, flagRole, "", "Role active when the skill loaded, a role of [[roles]] (recorded as given)")
 	}
 	usageRecordCmd.Flags().StringVar(&usageOutcome, "outcome", "", "Outcome to record: loaded (default), used or abandoned")
