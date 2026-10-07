@@ -84,7 +84,7 @@ func runGenerateWatch(parent context.Context, args []string) error {
 	})
 }
 
-// interruptContext is a context cancelled by the first SIGINT or SIGTERM. The
+// interruptContext is a context canceled by the first SIGINT or SIGTERM. The
 // signal handling is released right after, so a second Ctrl-C takes the default
 // action and kills the process even while a run is stuck.
 func interruptContext(parent context.Context) (context.Context, context.CancelFunc) {
@@ -108,7 +108,7 @@ func changedPaths(triggers []string) []string {
 	return out
 }
 
-// generatedOutputFilter recognises the files the previous run recorded as
+// generatedOutputFilter recognizes the files the previous run recorded as
 // generated. An include source can sit on a tree that also holds outputs; their
 // rewrite must not count as a change, or every run would trigger the next.
 type generatedOutputFilter struct {

@@ -42,7 +42,7 @@ func TestSetConstraint(t *testing.T) {
 		wantErr    string
 	}{
 		{
-			name: "version key keeps comments and neighbours", src: base, table: "includes", entry: "shared", constraint: "^2.0",
+			name: "version key keeps comments and neighbors", src: base, table: "includes", entry: "shared", constraint: "^2.0",
 			want: `version = "^2.0"  # stay on 1.x`,
 		},
 		{
