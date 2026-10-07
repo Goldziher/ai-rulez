@@ -20,6 +20,9 @@ const (
 // variable so a test can lower it.
 var maxTotalSize int64 = 256 << 20
 
+// gitDir is the directory a bundle load, compare or prune never enters.
+const gitDir = ".git"
+
 // Concept is one non-reserved markdown file.
 type Concept struct {
 	// Path is the slash-separated bundle-relative path, including .md.
@@ -150,7 +153,7 @@ func Load(root fs.FS) (*Bundle, error) {
 			return nil
 		}
 		if d.IsDir() {
-			if d.Name() == ".git" {
+			if d.Name() == gitDir {
 				return fs.SkipDir
 			}
 			b.Dirs[p] = true
