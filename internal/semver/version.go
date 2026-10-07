@@ -213,7 +213,7 @@ func numericID(s string) (uint64, bool) {
 // prefix the tag must start with it and the rest must be a plain version
 // ("deploy/v" + "2.1.3"). Anything else is not a version tag (ok is false).
 func ParseTag(name, prefix string) (Version, bool) {
-	rest := name
+	var rest string
 	if prefix == "" {
 		rest = strings.TrimPrefix(name, "v")
 	} else {
