@@ -100,11 +100,33 @@ func TestRunGivesTheChildNoControllingTerminal(t *testing.T) {
 //   - escapee <pidfile> <hold>: start a linger in a new session (setsid), write
 //     its pid, then stay alive for hold;
 //   - daemon <pidfile> <hold>: start an escapee (holding 300ms) in a new
-//     session, a double fork, then stay alive for hold.
+//     session, a double fork, then stay alive for hold;
+//   - fastdaemon <pidfile> <hold>: wait a second (so the tracker has backed
+//     off), then start an escapee that exits as soon as its linger is started
+//     (the middle of `fork and exit; setsid; exec`), then stay alive for hold.
+//     The linger is reparented to init before the tracker can see its parent.
 func helperMore(mode string, args []string) int {
 	switch mode {
 	case "linger":
 		time.Sleep(30 * time.Second)
+		return 0
+	case "fastdaemon":
+		if len(args) < 2 {
+			return 2
+		}
+		hold, err := time.ParseDuration(args[1])
+		if err != nil {
+			return 2
+		}
+		time.Sleep(time.Second)
+		exe, _ := os.Executable()             //nolint:errcheck // the parent already ran it
+		c := exec.Command(exe, args[0], "0s") //nolint:gosec // the test binary
+		c.Env = append(os.Environ(), helperEnv+"=escapee")
+		c.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		if err := c.Start(); err != nil {
+			return 3
+		}
+		time.Sleep(hold)
 		return 0
 	case "escapee", "daemon":
 		if len(args) < 2 {
@@ -154,6 +176,10 @@ func TestRunKillsHelpersThatLeaveTheGroup(t *testing.T) {
 		{"setsid helper at the timeout", "escapee", "30s", 500 * time.Millisecond, StatusTimeout},
 		{"setsid helper after a clean exit", "escapee", "300ms", 10 * time.Second, StatusOK},
 		{"double-forked daemon after a clean exit", "daemon", "800ms", 10 * time.Second, StatusOK},
+		// RV-SEC-2 replay: the middle process exits at once, so the linger is
+		// reparented to init between two looks at the process table.
+		{"double fork with a short-lived middle at the timeout", "fastdaemon", "30s", 3 * time.Second, StatusTimeout},
+		{"double fork with a short-lived middle after a clean exit", "fastdaemon", "1500ms", 10 * time.Second, StatusOK},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

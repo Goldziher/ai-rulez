@@ -17,6 +17,7 @@ func processTable() ([]procEntry, error) {
 			pid:   int(kp.Proc.P_pid),
 			ppid:  int(kp.Eproc.Ppid),
 			pgid:  int(kp.Eproc.Pgid),
+			uid:   int(kp.Eproc.Ucred.Uid),
 			start: kp.Proc.P_starttime.Sec*1_000_000 + int64(kp.Proc.P_starttime.Usec),
 		})
 	}

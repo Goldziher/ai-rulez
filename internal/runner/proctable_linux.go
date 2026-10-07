@@ -49,6 +49,6 @@ func parseStat(pid int, data []byte) (procEntry, bool) {
 		}
 		return n
 	}
-	p := procEntry{pid: pid, ppid: int(num(f[1])), pgid: int(num(f[2])), sid: int(num(f[3])), start: num(f[19])}
+	p := procEntry{pid: pid, ppid: int(num(f[1])), pgid: int(num(f[2])), sid: int(num(f[3])), uid: -1, start: num(f[19])}
 	return p, p.ppid >= 0 && p.start >= 0
 }
