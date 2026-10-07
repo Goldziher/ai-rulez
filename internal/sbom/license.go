@@ -68,65 +68,83 @@ func normalizeExpression(text string) (string, bool) {
 	if len(tokens) < 2 {
 		return "", false
 	}
-	var out []string
-	depth := 0
-	expectOperand := true // an id or "(" is next
-	afterWith := false    // an exception id is next
+	p := exprParser{expectOperand: true}
 	for _, tok := range tokens {
-		upper := strings.ToUpper(tok)
-		switch {
-		case afterWith:
-			id, ok := spdxExceptions[strings.ToLower(tok)]
-			if !ok {
-				return "", false
-			}
-			out = append(out, id)
-			afterWith = false
-		case tok == "(":
-			if !expectOperand {
-				return "", false
-			}
-			depth++
-			out = append(out, "(")
-		case tok == ")":
-			if expectOperand || depth == 0 {
-				return "", false
-			}
-			depth--
-			out = append(out, ")")
-		case upper == "AND" || upper == "OR":
-			if expectOperand {
-				return "", false
-			}
-			out = append(out, upper)
-			expectOperand = true
-		case upper == "WITH":
-			if expectOperand || len(out) == 0 {
-				return "", false
-			}
-			out = append(out, upper)
-			afterWith = true
-		default:
-			if !expectOperand {
-				return "", false
-			}
-			plus := strings.HasSuffix(tok, "+")
-			id, ok := spdxLicenses[strings.ToLower(strings.TrimSuffix(tok, "+"))]
-			if !ok {
-				return "", false
-			}
-			if plus {
-				id += "+"
-			}
-			out = append(out, id)
-			expectOperand = false
+		if !p.step(tok) {
+			return "", false
 		}
 	}
-	if depth != 0 || expectOperand || afterWith {
+	if p.depth != 0 || p.expectOperand || p.afterWith {
 		return "", false
 	}
-	joined := strings.Join(out, " ")
+	joined := strings.Join(p.out, " ")
 	return strings.NewReplacer("( ", "(", " )", ")").Replace(joined), true
+}
+
+// exprParser is the state of normalizeExpression over the tokens so far.
+type exprParser struct {
+	out           []string
+	depth         int
+	expectOperand bool // an id or "(" is next
+	afterWith     bool // an exception id is next
+}
+
+// step consumes one token; false means the expression is not valid.
+func (p *exprParser) step(tok string) bool {
+	upper := strings.ToUpper(tok)
+	switch {
+	case p.afterWith:
+		id, ok := spdxExceptions[strings.ToLower(tok)]
+		if !ok {
+			return false
+		}
+		p.out = append(p.out, id)
+		p.afterWith = false
+	case tok == "(":
+		if !p.expectOperand {
+			return false
+		}
+		p.depth++
+		p.out = append(p.out, "(")
+	case tok == ")":
+		if p.expectOperand || p.depth == 0 {
+			return false
+		}
+		p.depth--
+		p.out = append(p.out, ")")
+	case upper == "AND" || upper == "OR":
+		if p.expectOperand {
+			return false
+		}
+		p.out = append(p.out, upper)
+		p.expectOperand = true
+	case upper == "WITH":
+		if p.expectOperand || len(p.out) == 0 {
+			return false
+		}
+		p.out = append(p.out, upper)
+		p.afterWith = true
+	default:
+		return p.license(tok)
+	}
+	return true
+}
+
+// license consumes a license id, optionally with a trailing "+".
+func (p *exprParser) license(tok string) bool {
+	if !p.expectOperand {
+		return false
+	}
+	id, ok := spdxLicenses[strings.ToLower(strings.TrimSuffix(tok, "+"))]
+	if !ok {
+		return false
+	}
+	if strings.HasSuffix(tok, "+") {
+		id += "+"
+	}
+	p.out = append(p.out, id)
+	p.expectOperand = false
+	return true
 }
 
 // licenseChoices turns a declared license into CycloneDX licenses.
