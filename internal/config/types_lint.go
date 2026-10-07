@@ -155,7 +155,7 @@ type LintExternal struct {
 	Format string `yaml:"format,omitempty" json:"format,omitempty" toml:"format,omitempty"`
 	// Egress declares whether content derived from the scanned files can leave
 	// the machine (or a credential is used to call a network service). Unset keeps
-	// the legacy behaviour (full inherited environment) and is reported as AR9E1.
+	// the legacy behavior (full inherited environment) and is reported as AR9E1.
 	// false scrubs the environment and rejects known egress flags; true runs the
 	// scanner only when its name is passed to --allow-egress.
 	Egress *bool `yaml:"egress,omitempty" json:"egress,omitempty" toml:"egress,omitempty"`

@@ -39,7 +39,7 @@ const (
 
 // ImproveConfig is the [improve] table: defaults of `ai-rulez improve run` (docs/improve.md). A flag always
 // wins. optimizer and env_pass choose a command and the environment it receives, so a repository config
-// is honoured for them only with --trust-repo-optimizer; the thresholds apply from any config.
+// is honored for them only with --trust-repo-optimizer; the thresholds apply from any config.
 //
 //nolint:tagliatelle // config keys are snake_case by project convention
 type ImproveConfig struct {

@@ -15,7 +15,7 @@ import (
 // coalescing them keeps the terminal readable and avoids redundant work.
 const DefaultDebounce = 300 * time.Millisecond
 
-// Timer is a pending callback that can be cancelled.
+// Timer is a pending callback that can be canceled.
 type Timer interface {
 	Stop() bool
 }
