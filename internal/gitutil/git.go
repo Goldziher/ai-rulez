@@ -47,6 +47,18 @@ func (g Git) Exec(ctx context.Context, dir string, env []string, args ...string)
 	})
 }
 
+// ExecStdin is Exec with data piped to git's standard input and a cap on the
+// captured output (zero: the runner's default), for `cat-file --batch`.
+func (g Git) ExecStdin(ctx context.Context, dir string, stdin []byte, maxOutput int64, args ...string) runner.Result {
+	return g.runner().Run(ctx, runner.Spec{
+		Argv:      append([]string{"git"}, gitArgs(dir, args)...),
+		Env:       Env(nil),
+		Stdin:     stdin,
+		Timeout:   runner.MaxTimeout,
+		MaxOutput: maxOutput,
+	})
+}
+
 // ResultErr is the error of a failed run: nil for StatusOK, else the runner's
 // error (an *exec.ExitError for a non-zero exit).
 func ResultErr(res runner.Result) error {
