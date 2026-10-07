@@ -2,7 +2,6 @@ package providers_test
 
 import (
 	"encoding/json"
-	"path/filepath"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -95,11 +94,11 @@ func TestFactory_MCPJSON(t *testing.T) {
 func TestFactory_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	g := factoryGen(t).Spec.GlobalPaths("/home/u", func(string) string { return "" })
+	g := factoryGen(t).Spec.GlobalPaths(absSlash("/home/u"), func(string) string { return "" })
 	require.NotNil(t, g)
-	assert.Equal(t, filepath.FromSlash("/home/u/.factory/AGENTS.md"), g.RootFile)
-	assert.Equal(t, filepath.FromSlash("/home/u/.factory/skills"), g.SkillsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.factory/droids"), g.AgentsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.factory/commands"), g.CommandsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.factory/mcp.json"), g.Sidecars[".factory/mcp.json"])
+	assert.Equal(t, absSlash("/home/u/.factory/AGENTS.md"), g.RootFile)
+	assert.Equal(t, absSlash("/home/u/.factory/skills"), g.SkillsDir)
+	assert.Equal(t, absSlash("/home/u/.factory/droids"), g.AgentsDir)
+	assert.Equal(t, absSlash("/home/u/.factory/commands"), g.CommandsDir)
+	assert.Equal(t, absSlash("/home/u/.factory/mcp.json"), g.Sidecars[".factory/mcp.json"])
 }

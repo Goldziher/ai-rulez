@@ -1,6 +1,7 @@
 package providers_test
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -80,13 +81,13 @@ func TestGlobalPaths_RelativeHomeAndEnv(t *testing.T) {
 	assert.Nil(t, spec.GlobalPaths("relative/home", func(string) string { return "" }))
 
 	// A relative env override is ignored with the home-based path used instead.
-	g := spec.GlobalPaths("/home/u", func(string) string { return "rel/dir" })
+	g := spec.GlobalPaths(absSlash("/home/u"), func(string) string { return "rel/dir" })
 	require.NotNil(t, g)
-	assert.Equal(t, "/home/u/.t/AGENTS.md", strings.ReplaceAll(g.RootFile, "\\", "/"))
+	assert.Equal(t, filepath.ToSlash(absSlash("/home/u/.t/AGENTS.md")), filepath.ToSlash(g.RootFile))
 
-	g = spec.GlobalPaths("/home/u", func(string) string { return "/opt/t" })
+	g = spec.GlobalPaths(absSlash("/home/u"), func(string) string { return absSlash("/opt/t") })
 	require.NotNil(t, g)
-	assert.Equal(t, "/opt/t/AGENTS.md", strings.ReplaceAll(g.RootFile, "\\", "/"))
+	assert.Equal(t, filepath.ToSlash(absSlash("/opt/t/AGENTS.md")), filepath.ToSlash(g.RootFile))
 }
 
 func TestSharedDirs(t *testing.T) {

@@ -264,13 +264,13 @@ header = "# Bugbot rules\n"
 			checkItems = func(*config.Config, *config.ContentTree) []config.ContentFile { return tt.items }
 
 			// Act
-			outputs, err := gen.Generate(&config.ContentTree{}, "/proj", &config.Config{Name: "t"})
+			outputs, err := gen.Generate(&config.ContentTree{}, absSlash("/proj"), &config.Config{Name: "t"})
 
 			// Assert
 			require.NoError(t, err)
 			var got *config.OutputFile
 			for i := range outputs {
-				if outputs[i].Path == "/proj/.cursor/BUGBOT.md" {
+				if outputs[i].Path == filepath.Join(absSlash("/proj"), ".cursor", "BUGBOT.md") {
 					got = &outputs[i]
 				}
 			}
@@ -301,12 +301,12 @@ sections = ["frontmatter", "content"]
 		return []config.ContentFile{{Name: "Perf Check", Content: "Look at hot loops."}}
 	}
 
-	outputs, err := New(spec).Generate(&config.ContentTree{}, "/proj", &config.Config{Name: "t"})
+	outputs, err := New(spec).Generate(&config.ContentTree{}, absSlash("/proj"), &config.Config{Name: "t"})
 
 	require.NoError(t, err)
 	var content string
 	for _, o := range outputs {
-		if o.Path == "/proj/.x/checks/perf-check.md" {
+		if o.Path == filepath.Join(absSlash("/proj"), ".x", "checks", "perf-check.md") {
 			content = o.Content
 		}
 	}

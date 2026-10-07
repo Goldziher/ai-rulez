@@ -25,7 +25,7 @@ func agentFor(t *testing.T, preset, dir string, tools []string, model string) co
 		Name: "scout", Path: "/p/.ai-rulez/agents/scout.md", Content: "Body.",
 		Metadata: &config.Metadata{Tools: tools, Extra: extra},
 	}}}
-	outputs, err := gen.Generate(content, "/p", &config.Config{Name: "t", BaseDir: "/p"})
+	outputs, err := gen.Generate(content, absSlash("/p"), &config.Config{Name: "t", BaseDir: absSlash("/p")})
 	require.NoError(t, err)
 	out, ok := outputByPath(outputs, dir+"/scout.md")
 	require.True(t, ok, dir)
@@ -129,7 +129,7 @@ func TestJunieCommands_ArgumentsBecomePrompt(t *testing.T) {
 			}}}
 
 			// Act
-			outputs, err := gen.Generate(content, "/p", &config.Config{Name: "t", BaseDir: "/p"})
+			outputs, err := gen.Generate(content, absSlash("/p"), &config.Config{Name: "t", BaseDir: absSlash("/p")})
 			require.NoError(t, err)
 
 			// Assert
@@ -174,7 +174,7 @@ func TestCodebuffMCP_DollarReferences(t *testing.T) {
 	// Arrange
 	gen, err := providers.LoadBuiltin("codebuff")
 	require.NoError(t, err)
-	cfg := &config.Config{Name: "t", BaseDir: "/p", MCPServers: map[string]*config.MCPServer{
+	cfg := &config.Config{Name: "t", BaseDir: absSlash("/p"), MCPServers: map[string]*config.MCPServer{
 		"s": {
 			Name: "s", Command: "npx", Env: map[string]string{"TOKEN": "secret-value", "PLAIN": "x"},
 			EnvRefs: map[string]string{"TOKEN": "${TOKEN}"},
@@ -182,7 +182,7 @@ func TestCodebuffMCP_DollarReferences(t *testing.T) {
 	}}
 
 	// Act
-	outputs, err := gen.Generate(&config.ContentTree{}, "/p", cfg)
+	outputs, err := gen.Generate(&config.ContentTree{}, absSlash("/p"), cfg)
 	require.NoError(t, err)
 
 	// Assert
@@ -213,7 +213,7 @@ func TestCommandArgumentHint(t *testing.T) {
 			}}}
 
 			// Act
-			outputs, err := gen.Generate(content, "/p", &config.Config{Name: "t", BaseDir: "/p"})
+			outputs, err := gen.Generate(content, absSlash("/p"), &config.Config{Name: "t", BaseDir: absSlash("/p")})
 			require.NoError(t, err)
 
 			// Assert
@@ -244,7 +244,7 @@ func TestBareAliasDroppedForForeignModelNamespaces(t *testing.T) {
 			}}}
 
 			// Act
-			outputs, err := gen.Generate(content, "/p", &config.Config{Name: "t", BaseDir: "/p"})
+			outputs, err := gen.Generate(content, absSlash("/p"), &config.Config{Name: "t", BaseDir: absSlash("/p")})
 			require.NoError(t, err)
 
 			// Assert
@@ -281,7 +281,7 @@ func TestMCPDialectsPerPreset(t *testing.T) {
 
 			gen, err := providers.LoadBuiltin(tt.preset)
 			require.NoError(t, err)
-			outputs, err := gen.Generate(&config.ContentTree{}, "/p", &config.Config{Name: "t", BaseDir: "/p", MCPServers: servers})
+			outputs, err := gen.Generate(&config.ContentTree{}, absSlash("/p"), &config.Config{Name: "t", BaseDir: absSlash("/p"), MCPServers: servers})
 			require.NoError(t, err)
 			out, ok := outputByPath(outputs, tt.path)
 			require.True(t, ok)

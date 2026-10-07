@@ -304,7 +304,7 @@ kind = "mcp"
 path = ".tool/mcp.json"
 global_path = ".tool/mcp.json"
 `).Spec
-	home := filepath.FromSlash("/home/me")
+	home := absSlash("/home/me")
 
 	tests := []struct {
 		name string
@@ -314,19 +314,19 @@ global_path = ".tool/mcp.json"
 		{
 			name: "default home",
 			want: providers.GlobalPaths{
-				RootFile:  filepath.FromSlash("/home/me/.tool/RULES.md"),
-				SkillsDir: filepath.FromSlash("/home/me/.tool/skills"),
-				Sidecars:  map[string]string{".tool/mcp.json": filepath.FromSlash("/home/me/.tool/mcp.json")},
+				RootFile:  absSlash("/home/me/.tool/RULES.md"),
+				SkillsDir: absSlash("/home/me/.tool/skills"),
+				Sidecars:  map[string]string{".tool/mcp.json": absSlash("/home/me/.tool/mcp.json")},
 			},
 		},
 		{
 			name: "home_env re-roots everything under home_dir",
-			env:  map[string]string{"TOOL_HOME": filepath.FromSlash("/opt/tool")},
+			env:  map[string]string{"TOOL_HOME": absSlash("/opt/tool")},
 			want: providers.GlobalPaths{
-				RootFile:      filepath.FromSlash("/opt/tool/RULES.md"),
-				SkillsDir:     filepath.FromSlash("/opt/tool/skills"),
-				Sidecars:      map[string]string{".tool/mcp.json": filepath.FromSlash("/opt/tool/mcp.json")},
-				RelocatedHome: filepath.FromSlash("/opt/tool"),
+				RootFile:      absSlash("/opt/tool/RULES.md"),
+				SkillsDir:     absSlash("/opt/tool/skills"),
+				Sidecars:      map[string]string{".tool/mcp.json": absSlash("/opt/tool/mcp.json")},
+				RelocatedHome: absSlash("/opt/tool"),
 			},
 		},
 	}
@@ -346,13 +346,13 @@ global_path = ".tool/mcp.json"
 
 func TestGlobalPaths_NoneDeclared(t *testing.T) {
 	t.Parallel()
-	assert.Nil(t, loadSpec(t, `name = "plain"`).Spec.GlobalPaths("/home/me", os.Getenv))
+	assert.Nil(t, loadSpec(t, `name = "plain"`).Spec.GlobalPaths(absSlash("/home/me"), os.Getenv))
 }
 
 func TestBuiltinGlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	home := filepath.FromSlash("/h")
+	home := absSlash("/h")
 	j := func(p string) string { return filepath.Join(home, filepath.FromSlash(p)) }
 	tests := []struct {
 		preset string
@@ -386,10 +386,10 @@ func TestBuiltinGlobalPaths(t *testing.T) {
 				".junie/config.json":  j(".junie/config.json"),
 			},
 		}},
-		{"hermes", map[string]string{"HERMES_HOME": filepath.FromSlash("/data/hermes")}, providers.GlobalPaths{
-			SkillsDir:     filepath.FromSlash("/data/hermes/skills"),
-			Sidecars:      map[string]string{".hermes/config.yaml": filepath.FromSlash("/data/hermes/config.yaml")},
-			RelocatedHome: filepath.FromSlash("/data/hermes"),
+		{"hermes", map[string]string{"HERMES_HOME": absSlash("/data/hermes")}, providers.GlobalPaths{
+			SkillsDir:     absSlash("/data/hermes/skills"),
+			Sidecars:      map[string]string{".hermes/config.yaml": absSlash("/data/hermes/config.yaml")},
+			RelocatedHome: absSlash("/data/hermes"),
 		}},
 	}
 	for _, tt := range tests {

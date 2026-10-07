@@ -1,7 +1,6 @@
 package providers_test
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,9 +63,9 @@ skills_dir = ".r/skills"
 skill_readers = [".r/skills", ".agents/skills"]
 skill_precedence = "workspace wins"
 `).Spec
-	got := spec.GlobalPaths(filepath.FromSlash("/home/me"), func(string) string { return "" })
+	got := spec.GlobalPaths(absSlash("/home/me"), func(string) string { return "" })
 	require.NotNil(t, got)
-	assert.Equal(t, []string{filepath.FromSlash("/home/me/.r/skills"), filepath.FromSlash("/home/me/.agents/skills")}, got.SkillReaders)
+	assert.Equal(t, []string{absSlash("/home/me/.r/skills"), absSlash("/home/me/.agents/skills")}, got.SkillReaders)
 	assert.Equal(t, "workspace wins", got.SkillPrecedence)
 
 	_, err := providers.LoadProviderSpec([]byte("name = \"bad\"\n[global]\nskills_dir = \"s\"\nskill_readers = [\"../x\"]\n"), "spec.toml", providers.FormatAuto)

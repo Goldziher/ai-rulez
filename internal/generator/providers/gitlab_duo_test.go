@@ -2,7 +2,6 @@ package providers_test
 
 import (
 	"encoding/json"
-	"path/filepath"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -75,9 +74,9 @@ func TestGitlabDuo_MCPJSON(t *testing.T) {
 func TestGitlabDuo_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	g := gitlabDuoGen(t).Spec.GlobalPaths("/home/u", func(string) string { return "" })
+	g := gitlabDuoGen(t).Spec.GlobalPaths(absSlash("/home/u"), func(string) string { return "" })
 	require.NotNil(t, g)
-	assert.Equal(t, filepath.FromSlash("/home/u/.gitlab/duo/chat-rules.md"), g.RootFile)
-	assert.Equal(t, filepath.FromSlash("/home/u/.gitlab/duo/commands"), g.CommandsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.gitlab/duo/mcp.json"), g.Sidecars[".gitlab/duo/mcp.json"])
+	assert.Equal(t, absSlash("/home/u/.gitlab/duo/chat-rules.md"), g.RootFile)
+	assert.Equal(t, absSlash("/home/u/.gitlab/duo/commands"), g.CommandsDir)
+	assert.Equal(t, absSlash("/home/u/.gitlab/duo/mcp.json"), g.Sidecars[".gitlab/duo/mcp.json"])
 }

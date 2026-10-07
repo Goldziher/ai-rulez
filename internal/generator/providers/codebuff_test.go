@@ -29,7 +29,7 @@ func TestCodebuff_Outputs(t *testing.T) {
 		Skills: []config.ContentFile{{Name: "demo", Path: "/test/.ai-rulez/skills/demo/SKILL.md", Content: "x"}},
 	}
 	disabled := false
-	cfg := &config.Config{Name: "demo", BaseDir: "/test", MCPServers: map[string]*config.MCPServer{
+	cfg := &config.Config{Name: "demo", BaseDir: absSlash("/test"), MCPServers: map[string]*config.MCPServer{
 		"local": {Name: "local", Command: "npx", Args: []string{"-y", "pkg"}, Env: map[string]string{"A": "B"}, Description: "ignored"},
 		"remote": {
 			Name: "remote", Transport: config.TransportHTTP, URL: "https://example.com/mcp",
@@ -38,7 +38,7 @@ func TestCodebuff_Outputs(t *testing.T) {
 		"off": {Name: "off", Command: "x", Enabled: &disabled},
 	}}
 
-	outputs, err := codebuffGen(t).Generate(content, "/test", cfg)
+	outputs, err := codebuffGen(t).Generate(content, absSlash("/test"), cfg)
 	require.NoError(t, err)
 
 	var files []string
@@ -47,7 +47,8 @@ func TestCodebuff_Outputs(t *testing.T) {
 			files = append(files, filepath.ToSlash(o.Path))
 		}
 	}
-	assert.ElementsMatch(t, []string{"/test/AGENTS.md", "/test/.agents/skills/demo/SKILL.md", "/test/.agents/mcp.json"}, files)
+	base := filepath.ToSlash(absSlash("/test"))
+	assert.ElementsMatch(t, []string{base + "/AGENTS.md", base + "/.agents/skills/demo/SKILL.md", base + "/.agents/mcp.json"}, files)
 	agentsMD := requireFile(t, outputs, "AGENTS.md")
 	assert.Contains(t, agentsMD.Content, "Always be nice.", "rules are inlined into the knowledge file")
 
@@ -74,7 +75,7 @@ func TestCodebuff_NoServersNoOutput(t *testing.T) {
 func TestCodebuff_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	g := codebuffGen(t).Spec.GlobalPaths("/home/u", func(string) string { return "" })
+	g := codebuffGen(t).Spec.GlobalPaths(absSlash("/home/u"), func(string) string { return "" })
 	require.NotNil(t, g)
-	assert.Equal(t, filepath.FromSlash("/home/u/.agents/mcp.json"), g.Sidecars[".agents/mcp.json"])
+	assert.Equal(t, absSlash("/home/u/.agents/mcp.json"), g.Sidecars[".agents/mcp.json"])
 }

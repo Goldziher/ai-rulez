@@ -74,9 +74,9 @@ func TestPoolside_NoServersNoSettings(t *testing.T) {
 func TestPoolside_GlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	g := poolsideGen(t).Spec.GlobalPaths("/home/u", func(string) string { return "" })
+	g := poolsideGen(t).Spec.GlobalPaths(absSlash("/home/u"), func(string) string { return "" })
 	require.NotNil(t, g)
-	assert.Equal(t, filepath.FromSlash("/home/u/.config/poolside/AGENTS.md"), g.RootFile)
-	assert.Equal(t, filepath.FromSlash("/home/u/.config/poolside/skills"), g.SkillsDir)
-	assert.Equal(t, filepath.FromSlash("/home/u/.config/poolside/settings.yaml"), g.Sidecars[".poolside/settings.yaml"])
+	assert.Equal(t, absSlash("/home/u/.config/poolside/AGENTS.md"), g.RootFile)
+	assert.Equal(t, absSlash("/home/u/.config/poolside/skills"), g.SkillsDir)
+	assert.Equal(t, absSlash("/home/u/.config/poolside/settings.yaml"), g.Sidecars[".poolside/settings.yaml"])
 }
