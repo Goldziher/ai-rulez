@@ -137,7 +137,7 @@ func uncommented(s string) string {
 // TestConvertKeepsClaudeCommandsE2E pins N15: convert, generate and clean must
 // not lose .claude/commands/*.md.
 func TestConvertKeepsClaudeCommandsE2E(t *testing.T) {
-	t.Skip("blocked on N15")
+	blockedOn(t, "N15")
 	// Arrange
 	env := newIsoEnv(t)
 	root := claudeProject(t)

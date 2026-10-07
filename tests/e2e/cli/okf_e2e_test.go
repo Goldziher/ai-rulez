@@ -148,7 +148,7 @@ func TestOKFValidateExitCodesE2E(t *testing.T) {
 // TestOKFValidateEmptyDirectoryE2E pins RV-CLI-7: an empty directory is not an
 // OKF bundle and must not pass.
 func TestOKFValidateEmptyDirectoryE2E(t *testing.T) {
-	t.Skip("blocked on RV-CLI-7")
+	blockedOn(t, "RV-CLI-7")
 	env := newIsoEnv(t)
 
 	res := env.run(t.TempDir(), "okf", "validate", t.TempDir())
