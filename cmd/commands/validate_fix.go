@@ -107,8 +107,12 @@ func appliedOutside(applied []lint.FixApplied, root string) int {
 	}
 	n := 0
 	for _, a := range applied {
-		if rel, err := filepath.Rel(root, gitutil.Resolve(a.File)); err != nil || strings.HasPrefix(rel, "..") {
-			n++
+		for _, target := range a.Targets {
+			rel, err := filepath.Rel(root, gitutil.Resolve(target))
+			if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				n++
+				break
+			}
 		}
 	}
 	return n

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,6 +78,20 @@ func TestPrintFixSummaryNamesHandWrittenFiles(t *testing.T) {
 			assert.Equal(t, tt.wantHand, strings.Contains(out, hand), out)
 		})
 	}
+}
+
+func TestAppliedOutsideCountsOnlyFilesOutsideTheConfigDir(t *testing.T) {
+	root := gitutil.Resolve(t.TempDir())
+	inside := filepath.Join(root, ".ai-rulez", "skills", "a", "SKILL.md")
+	dotted := filepath.Join(root, ".ai-rulez", "..foo.md")
+	outside := filepath.Join(root, "CLAUDE.md")
+	applied := []lint.FixApplied{
+		{File: ".ai-rulez/skills/a/SKILL.md", Targets: []string{inside}},
+		{File: "CLAUDE.md", Targets: []string{outside}},
+		{File: "x", Targets: []string{dotted}},
+	}
+	assert.Equal(t, 1, appliedOutside(applied, filepath.Join(root, ".ai-rulez")))
+	assert.Equal(t, 0, appliedOutside(applied, ""))
 }
 
 func TestFixFlagValidation(t *testing.T) {
