@@ -116,6 +116,8 @@ func TestBuildRejectsWhatCannotFormAPlugin(t *testing.T) {
 		{"root file over plugin.json", func(p *Plugin) { p.Files["plugin.json"] = nil }, Options{}, "reserved"},
 		{"root file under skills", func(p *Plugin) { p.Files["skills/x/SKILL.md"] = nil }, Options{}, "reserved"},
 		{"root file in a namespace dir", func(p *Plugin) { p.Files["com.acme.client/x"] = nil }, Options{}, "extension"},
+		{"file and directory collide", func(p *Plugin) { p.Files["bin/validator/x"] = nil }, Options{}, "both a file and a directory"},
+		{"skill file and directory collide", func(p *Plugin) { p.Skills[0].Files["scripts"] = nil }, Options{}, "both a file and a directory"},
 		{"unmarshalable manifest data", func(p *Plugin) {
 			p.Extensions[1].Manifest = map[string]any{"f": func() {}}
 		}, Options{}, "extension"},
