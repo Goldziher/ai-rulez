@@ -301,7 +301,7 @@ func ProposeFix(ctx context.Context, in FixInput) (*FixProposal, error) {
 				continue
 			}
 		}
-		after, jerr := rejudge(ctx, in, patched, p)
+		after, incomplete, jerr := rejudge(ctx, in, patched, p)
 		if jerr != nil {
 			return p, jerr
 		}
@@ -309,7 +309,12 @@ func ProposeFix(ctx context.Context, in FixInput) (*FixProposal, error) {
 		for dim := range targets {
 			p.After[dim] = after[dim]
 		}
-		if why := compareVerdicts(targets, before, after); why != "" {
+		why := compareVerdicts(targets, before, after)
+		if why == "" && incomplete {
+			// The spend cap cut the votes short or a dimension got no usable answer.
+			why = "the re-judge of the patched item is incomplete, so it cannot vouch for the patch"
+		}
+		if why != "" {
 			rejection = why
 			p.Reason = "rejected: " + why
 			continue
@@ -328,7 +333,8 @@ func fatalFix(err error) bool {
 }
 
 // compareVerdicts is the re-judge rule: every targeted dimension must improve and no other
-// dimension may get worse.
+// dimension may get worse. A dimension judged before that has no verdict after (its call errored
+// or the reply did not parse) is not "no worse": the patch is rejected.
 func compareVerdicts(targets map[string]bool, before, after map[string]string) string {
 	for dim := range targets {
 		b, a := verdictRank(before[dim]), verdictRank(after[dim])
@@ -343,15 +349,20 @@ func compareVerdicts(targets map[string]bool, before, after map[string]string) s
 		if targets[dim] {
 			continue
 		}
-		if a, ok := after[dim]; ok && verdictRank(a) > verdictRank(before[dim]) {
+		a, ok := after[dim]
+		if !ok {
+			return fmt.Sprintf("the judge gave no verdict on %s for the patched item", dim)
+		}
+		if verdictRank(a) > verdictRank(before[dim]) {
 			return fmt.Sprintf("the judge rates %s worse (%s, was %s)", dim, a, before[dim])
 		}
 	}
 	return ""
 }
 
-// rejudge judges the patched item with the verifier and returns its verdict per dimension.
-func rejudge(ctx context.Context, in FixInput, patched string, p *FixProposal) (map[string]string, error) {
+// rejudge judges the patched item with the verifier and returns its verdict per dimension, and
+// whether the judgement is incomplete.
+func rejudge(ctx context.Context, in FixInput, patched string, p *FixProposal) (map[string]string, bool, error) {
 	pi := in.Item.Item.WithText(patched)
 	r := ItemResult{Item: pi, Status: StatusScored, Redacted: in.Item.Redacted, Dimensions: in.Item.Dimensions}
 	sem, err := in.Verifier.ItemSemantic(ctx, &r, in.Pool)
@@ -360,7 +371,7 @@ func rejudge(ctx context.Context, in FixInput, patched string, p *FixProposal) (
 		p.Usage.Cached += sem.Cached
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	out := map[string]string{}
 	for _, d := range sem.Dimensions {
@@ -368,7 +379,7 @@ func rejudge(ctx context.Context, in FixInput, patched string, p *FixProposal) (
 			out[d.ID] = d.Verdict
 		}
 	}
-	return out, nil
+	return out, sem.Incomplete, nil
 }
 
 // proposeEdits asks the fixer and applies its edits to the item text.
