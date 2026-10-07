@@ -49,21 +49,35 @@ type permissionDialect struct {
 	required [][]string
 }
 
-// permissionDialects is one map literal so every dialect exists before any
-// init(); each file permissions_<harness>.go contributes through
-// registerPermissionDialect from a var initialiser rather than init().
-var permissionDialects = map[string]permissionDialect{}
-
-func registerPermissionDialect(name string, build func(t *translation) ([]jsonmerge.OwnedKey, error)) struct{} {
-	permissionDialects[name] = permissionDialect{build: build}
-	return struct{}{}
-}
-
-// registerPermissionDialectRequiring is registerPermissionDialect for a harness
-// whose document must hold the given array paths whenever it holds any permission.
-func registerPermissionDialectRequiring(name string, build func(t *translation) ([]jsonmerge.OwnedKey, error), required ...[]string) struct{} {
-	permissionDialects[name] = permissionDialect{build: build, required: required}
-	return struct{}{}
+// permissionDialects maps a harness to its [permissions] renderer. It is one
+// literal, written at no other time; each renderer and the sources it follows live
+// in permissions_<harness>.go.
+var permissionDialects = map[string]permissionDialect{
+	"augment":             {build: buildAugment},
+	"codebuddy":           {build: codebuddyPermissions.build},
+	"commandcode":         {build: commandcodePermissions.build},
+	"copilot-cli":         {build: buildCopilotCLI},
+	config.HarnessCopilot: {build: buildVSCode},
+	// Cursor's schema requires both arrays whenever the document holds any permission.
+	config.HarnessCursor: {build: buildCursor, required: [][]string{
+		{keyPermissions, string(ActionAllow)}, {keyPermissions, string(ActionDeny)},
+	}},
+	"devin":        {build: buildDevin},
+	"gemini":       {build: buildGemini},
+	"grok":         {build: buildGrok},
+	"hermes":       {build: buildHermes},
+	"kilo":         {build: buildOpencode},
+	"kimi":         {build: buildKimi},
+	"letta":        {build: lettaPermissions.build},
+	"mimocode":     {build: buildOpencode},
+	"omp":          {build: buildOmp},
+	"opencode":     {build: buildOpencode},
+	"poolside":     {build: buildPoolside},
+	"qoder":        {build: qoderPermissions.build},
+	"qwen":         {build: qwenPermissions.build},
+	"vibe":         {build: buildVibe},
+	"zed":          {build: buildZed},
+	harnessZoocode: {build: buildVSCode},
 }
 
 // withRequiredArrays adds, for every required path no key addresses, the array

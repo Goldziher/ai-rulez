@@ -19,11 +19,6 @@ import (
 //
 // Sources (read 2026-10-05): https://hermes-agent.nousresearch.com/docs/user-guide/security
 // and https://moonshotai.github.io/kimi-code/en/configuration/config-files.html.
-var (
-	_ = registerPermissionDialect("hermes", buildHermes)
-	_ = registerPermissionDialect("kimi", buildKimi)
-)
-
 func buildHermes(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	var allow, deny []any

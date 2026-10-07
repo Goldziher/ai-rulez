@@ -13,8 +13,6 @@ import (
 //
 // Sources: https://geminicli.com/docs/reference/configuration/ and
 // https://geminicli.com/docs/reference/policy-engine/ (read 2026-10-05).
-var _ = registerPermissionDialect("gemini", buildGemini)
-
 const geminiShell = "run_shell_command"
 
 // geminiTools maps a bare rule to Gemini's tool names; deny lists every name the
