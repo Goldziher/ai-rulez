@@ -229,3 +229,24 @@ func TestKeepReason_NamesTheRealReason(t *testing.T) {
 		})
 	}
 }
+
+func TestClean_KeepsTheGeneratedFileThatReplacedAConvertedOriginal(t *testing.T) {
+	quietWarnings(t)
+	// Arrange
+	dir := hashesProject(t, "")
+	claude := filepath.Join(dir, "CLAUDE.md")
+	require.NoError(t, os.WriteFile(claude, []byte(handWritten), 0o644))
+	require.NoError(t, WriteConvertRecord(filepath.Join(dir, ".ai-rulez"), map[string][]byte{"CLAUDE.md": []byte(handWritten)}))
+	require.NoError(t, newProjectGenerator(t, dir).Generate("default"))
+
+	// Act
+	plan, err := newProjectGenerator(t, dir).Clean("default", CleanOptions{RemoveEdited: true})
+
+	// Assert
+	require.NoError(t, err)
+	assert.FileExists(t, claude, "the user must not end up with neither the original nor the generated file")
+	for _, f := range plan.Files {
+		assert.NotEqual(t, claude, f)
+	}
+	assert.NoFileExists(t, filepath.Join(dir, ".claude", "skills", "alpha", "SKILL.md"), "other outputs are still cleaned")
+}
