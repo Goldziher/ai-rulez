@@ -1434,94 +1434,128 @@ func (g *Generator) collectMCPServersForContent(content *config.ContentTree, pro
 // them from the tools that have no folder. The choice does not depend on the
 // order of the preset names, and a warning names the presets.
 func flattenPresetOutputs(d *diag.Collector, log logger.Logger, read jsonmerge.Reader, allOutputs map[string][]config.OutputFile) ([]config.OutputFile, error) {
-	var flatOutputs []config.OutputFile
-	type claim struct {
-		preset string
-		index  int // position in flatOutputs
+	f := &presetFlattener{
+		read:        read,
+		seenPaths:   make(map[string]presetClaim),
+		seenDirs:    make(map[string]bool),
+		conflicting: make(map[string][]string),
+		omitting:    make(map[string][]string),
 	}
-	seenPaths := make(map[string]claim)
-	seenDirs := make(map[string]bool)
 	presetNames := make([]string, 0, len(allOutputs))
 	for presetName := range allOutputs {
 		presetNames = append(presetNames, presetName)
 	}
 	sort.Strings(presetNames)
-	conflicting := make(map[string][]string) // path -> presets that differ from its first writer
-	var conflictPaths []string
-	omitting := make(map[string][]string) // path -> presets whose rule-less version yielded
-	var omittingPaths []string
 	for _, presetName := range presetNames {
 		outputs := allOutputs[presetName]
 		logger.Or(log).Debug("Generated outputs for preset", "preset", presetName, "count", len(outputs))
 		for _, output := range outputs {
-			if output.IsDir {
-				if !seenDirs[output.Path] {
-					seenDirs[output.Path] = true
-					flatOutputs = append(flatOutputs, output)
-				}
-				continue
-			}
-			prev, ok := seenPaths[output.Path]
-			if !ok {
-				seenPaths[output.Path] = claim{preset: presetName, index: len(flatOutputs)}
-				flatOutputs = append(flatOutputs, output)
-				continue
-			}
-			kept := flatOutputs[prev.index]
-			var united config.OutputFile
-			var unionable bool
-			if !sameOutputContent(kept, output) {
-				united, unionable = unionOutputs(read, kept, output)
-			}
-			switch {
-			case sameOutputContent(kept, output):
-			case unionable:
-				flatOutputs[prev.index] = united
-			case kept.OmitsRules && !output.OmitsRules:
-				omitting[output.Path] = append(omitting[output.Path], prev.preset)
-				if len(omitting[output.Path]) == 1 {
-					omittingPaths = append(omittingPaths, output.Path)
-				}
-				flatOutputs[prev.index] = output
-				seenPaths[output.Path] = claim{preset: presetName, index: prev.index}
-			case !kept.OmitsRules && output.OmitsRules:
-				omitting[output.Path] = append(omitting[output.Path], presetName)
-				if len(omitting[output.Path]) == 1 {
-					omittingPaths = append(omittingPaths, output.Path)
-				}
-			default:
-				if _, seen := conflicting[output.Path]; !seen {
-					conflictPaths = append(conflictPaths, output.Path)
-				}
-				conflicting[output.Path] = append(conflicting[output.Path], presetName)
-			}
+			f.add(presetName, output)
 		}
 	}
-	for _, path := range omittingPaths {
+	f.warnOmitting(d)
+	return f.flat, f.conflictError()
+}
+
+// presetClaim records which preset first wrote a path and where its output sits
+// in presetFlattener.flat.
+type presetClaim struct {
+	preset string
+	index  int // position in flat
+}
+
+// presetFlattener accumulates the outputs of every preset into one list with a
+// single entry per path, remembering which presets diverged or yielded.
+type presetFlattener struct {
+	read          jsonmerge.Reader
+	flat          []config.OutputFile
+	seenPaths     map[string]presetClaim
+	seenDirs      map[string]bool
+	conflicting   map[string][]string // path -> presets that differ from its first writer
+	conflictPaths []string
+	omitting      map[string][]string // path -> presets whose rule-less version yielded
+	omittingPaths []string
+}
+
+// add folds one preset's output into the flattened list.
+func (f *presetFlattener) add(presetName string, output config.OutputFile) {
+	if output.IsDir {
+		if !f.seenDirs[output.Path] {
+			f.seenDirs[output.Path] = true
+			f.flat = append(f.flat, output)
+		}
+		return
+	}
+	prev, ok := f.seenPaths[output.Path]
+	if !ok {
+		f.seenPaths[output.Path] = presetClaim{preset: presetName, index: len(f.flat)}
+		f.flat = append(f.flat, output)
+		return
+	}
+	kept := f.flat[prev.index]
+	var united config.OutputFile
+	var unionable bool
+	if !sameOutputContent(kept, output) {
+		united, unionable = unionOutputs(f.read, kept, output)
+	}
+	switch {
+	case sameOutputContent(kept, output):
+	case unionable:
+		f.flat[prev.index] = united
+	case kept.OmitsRules && !output.OmitsRules:
+		f.noteOmitting(output.Path, prev.preset)
+		f.flat[prev.index] = output
+		f.seenPaths[output.Path] = presetClaim{preset: presetName, index: prev.index}
+	case !kept.OmitsRules && output.OmitsRules:
+		f.noteOmitting(output.Path, presetName)
+	default:
+		if _, seen := f.conflicting[output.Path]; !seen {
+			f.conflictPaths = append(f.conflictPaths, output.Path)
+		}
+		f.conflicting[output.Path] = append(f.conflicting[output.Path], presetName)
+	}
+}
+
+// noteOmitting records that preset's rule-less version of path yielded.
+func (f *presetFlattener) noteOmitting(path, preset string) {
+	f.omitting[path] = append(f.omitting[path], preset)
+	if len(f.omitting[path]) == 1 {
+		f.omittingPaths = append(f.omittingPaths, path)
+	}
+}
+
+// warnOmitting names, once per path, the presets whose rule-less file yielded.
+func (f *presetFlattener) warnOmitting(d *diag.Collector) {
+	for _, path := range f.omittingPaths {
 		// Through the shared sink, which says each message once per run: this
 		// function runs more than once (rootAgentsMD, scopes) and clean silences it.
 		d.Warn("Presets with a rules folder and presets without one write the same file ("+path+"); "+
 			"keeping the version that inlines every rule. Set agents_md = true or rules.mode = \"inline\" to share it",
-			"path", path, "kept_from", seenPaths[path].preset, "rules_in_folder", strings.Join(omitting[path], ", "))
+			"path", path, "kept_from", f.seenPaths[path].preset, "rules_in_folder", strings.Join(f.omitting[path], ", "))
 	}
-	if len(conflictPaths) > 0 {
-		conflicts := make([]string, 0, len(conflictPaths))
-		for _, path := range conflictPaths {
-			conflicts = append(conflicts, fmt.Sprintf("%s (%s differs from %s)",
-				path, strings.Join(conflicting[path], ", "), seenPaths[path].preset))
-		}
-		hint := "Presets that write the same file must render identical content; " +
-			"drop one of the presets or report the divergence"
-		if slices.Contains(conflicting[".mcp.json"], "qoder") || seenPaths[".mcp.json"].preset == "qoder" {
-			hint += ". qoder documents no ${VAR} expansion, so it cannot share .mcp.json with a tool " +
-				"that reads references; drop one of them or supply the secret through --env or .env"
-		}
-		return flatOutputs, oops.
-			With("conflicts", strings.Join(conflicts, "; ")).
-			Hint(hint).
-			Errorf("presets write different content to the same path: %s", strings.Join(conflicts, "; "))
+}
+
+// conflictError returns the error naming every path that presets rendered
+// differently, or nil when there is none.
+func (f *presetFlattener) conflictError() error {
+	if len(f.conflictPaths) == 0 {
+		return nil
 	}
-	return flatOutputs, nil
+	conflicts := make([]string, 0, len(f.conflictPaths))
+	for _, path := range f.conflictPaths {
+		conflicts = append(conflicts, fmt.Sprintf("%s (%s differs from %s)",
+			path, strings.Join(f.conflicting[path], ", "), f.seenPaths[path].preset))
+	}
+	hint := "Presets that write the same file must render identical content; " +
+		"drop one of the presets or report the divergence"
+	if slices.Contains(f.conflicting[".mcp.json"], "qoder") || f.seenPaths[".mcp.json"].preset == "qoder" {
+		hint += ". qoder documents no ${VAR} expansion, so it cannot share .mcp.json with a tool " +
+			"that reads references; drop one of them or supply the secret through --env or .env"
+	}
+	return oops.
+		With("conflicts", strings.Join(conflicts, "; ")).
+		Hint(hint).
+		Errorf("presets write different content to the same path: %s", strings.Join(conflicts, "; "))
 }
 
 // sameOutputContent reports whether two outputs for one path hold the same bytes
@@ -1603,19 +1637,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	finalContent := g.finalContent(output)
 
 	if g.isUnmanagedRuleFile(absPath, finalContent) {
-		if g.skippedPaths == nil {
-			g.skippedPaths = make(map[string]bool)
-		}
-		g.skippedPaths[filepath.ToSlash(g.convertToRelativePath(absPath))] = true
-		if output.LocalOnly {
-			g.log().Warn("Skipped existing hand-written file that collides with a machine-local rule file; "+
-				"*.local.* names in rules folders are reserved for ai-rulez local rules, rename the file",
-				"path", output.Path)
-			return nil
-		}
-		g.log().Warn("Skipped existing hand-written rule file that collides with a generated rule; rename one of them"+
-			g.unmanagedHint(),
-			"path", output.Path, "rule", strings.TrimSuffix(filepath.Base(output.Path), filepath.Ext(output.Path)))
+		g.skipUnmanagedRuleOutput(output, absPath)
 		return nil
 	}
 
@@ -1638,6 +1660,30 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 			Wrapf(err, "create parent directory")
 	}
 
+	return g.writeFinalContent(output, absPath, target, finalContent)
+}
+
+// skipUnmanagedRuleOutput records and warns that output was not written because a
+// hand-written file already sits at its path in a shared rules folder.
+func (g *Generator) skipUnmanagedRuleOutput(output config.OutputFile, absPath string) {
+	if g.skippedPaths == nil {
+		g.skippedPaths = make(map[string]bool)
+	}
+	g.skippedPaths[filepath.ToSlash(g.convertToRelativePath(absPath))] = true
+	if output.LocalOnly {
+		g.log().Warn("Skipped existing hand-written file that collides with a machine-local rule file; "+
+			"*.local.* names in rules folders are reserved for ai-rulez local rules, rename the file",
+			"path", output.Path)
+		return
+	}
+	g.log().Warn("Skipped existing hand-written rule file that collides with a generated rule; rename one of them"+
+		g.unmanagedHint(),
+		"path", output.Path, "rule", strings.TrimSuffix(filepath.Base(output.Path), filepath.Ext(output.Path)))
+}
+
+// writeFinalContent writes the rendered content of output to target. The file is
+// replaced atomically, and owner-only when it carries secrets.
+func (g *Generator) writeFinalContent(output config.OutputFile, absPath, target, finalContent string) error {
 	if output.Sensitive {
 		// Owner-only temp file renamed into place: the secret is never on disk
 		// with a wider mode, and an existing world-readable file is replaced.
@@ -2706,26 +2752,8 @@ func (g *Generator) previousManifestFiles() []string {
 // Machine-local outputs go to the separate, gitignored local manifest, which is
 // removed when no local output remains.
 func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
-	var shared, local []string
 	committedMerged, localMerged := g.splitMergedClaims(outputs)
-	for _, output := range outputs {
-		if output.IsDir || output.PartiallyOwned {
-			continue
-		}
-		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
-		if g.userMode && filepath.IsAbs(filepath.FromSlash(rel)) {
-			// No relative form (another volume): a later run could not resolve the entry.
-			g.log().Warn("Not recording a generated file the manifest cannot express", "path", rel)
-			continue
-		}
-		switch {
-		case g.skippedPaths[rel]:
-		case output.LocalOnly:
-			local = append(local, rel)
-		default:
-			shared = append(shared, rel)
-		}
-	}
+	shared, local := g.manifestEntries(outputs)
 	if g.plan != nil {
 		// The committed manifest describes the shared baseline, not this machine.
 		shared = g.plan.sharedManifestFiles(g.skippedPaths)
@@ -2744,15 +2772,46 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		return g.updateLocalManifest(localMerged, digests)
 	}
 	if len(local) == 0 && len(localMerged) == 0 && len(digests) == 0 {
-		if !g.removalConfined(g.localManifestPath()) || g.localManifestTracked() {
-			return nil
-		}
-		if err := os.Remove(g.localManifestPath()); err != nil && !os.IsNotExist(err) {
-			return oops.With("path", g.localManifestPath()).Wrapf(err, "remove local manifest")
-		}
-		return nil
+		return g.removeLocalManifest()
 	}
 	return g.writeManifest(g.localManifestPath(), local, localMerged, digests)
+}
+
+// manifestEntries splits the relative paths of outputs into the shared entries
+// and the machine-local ones, leaving out directories, partially owned
+// documents and the paths this run skipped.
+func (g *Generator) manifestEntries(outputs []config.OutputFile) (shared, local []string) {
+	for _, output := range outputs {
+		if output.IsDir || output.PartiallyOwned {
+			continue
+		}
+		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+		if g.userMode && filepath.IsAbs(filepath.FromSlash(rel)) {
+			// No relative form (another volume): a later run could not resolve the entry.
+			g.log().Warn("Not recording a generated file the manifest cannot express", "path", rel)
+			continue
+		}
+		switch {
+		case g.skippedPaths[rel]:
+		case output.LocalOnly:
+			local = append(local, rel)
+		default:
+			shared = append(shared, rel)
+		}
+	}
+	return shared, local
+}
+
+// removeLocalManifest deletes the machine-local manifest once no local output
+// remains, unless it is tracked or sits behind a link that leaves the project.
+func (g *Generator) removeLocalManifest() error {
+	if !g.removalConfined(g.localManifestPath()) || g.localManifestTracked() {
+		return nil
+	}
+	if err := os.Remove(g.localManifestPath()); err != nil && !os.IsNotExist(err) {
+		return oops.With("path", g.localManifestPath()).Wrapf(err, "remove local manifest")
+	}
+	return nil
 }
 
 // updateLocalManifest folds this run's claims and digests into the machine-local
@@ -2843,25 +2902,15 @@ func (g *Generator) keepForRole(previous []string, next map[string]bool) {
 	}
 }
 
+// staleManifestFiles returns the absolute paths the previous manifest lists that
+// this run no longer generates and that are provably ai-rulez's to delete.
 func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	previous := g.previousManifestFiles()
 	if len(previous) == 0 {
 		return nil
 	}
 
-	next := make(map[string]bool)
-	// Files only the shared baseline produces are never this machine's to delete.
-	if g.plan != nil {
-		for _, rel := range g.plan.suppressed {
-			next[rel] = true
-		}
-	}
-	for _, output := range outputs {
-		if output.IsDir {
-			continue
-		}
-		next[filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))] = true
-	}
+	next := g.currentManifestSet(outputs)
 
 	// Never delete a merged settings document from a manifest entry. The manifest
 	// holds bare paths with no record of what the document contained, and one
@@ -2887,51 +2936,103 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 
 	digests := g.manifestDigestSet()
 	var matcher *outputMatcher
+	matcherFor := func() *outputMatcher {
+		if matcher == nil {
+			matcher = g.outputMatcher(outputs)
+		}
+		return matcher
+	}
 	var stale, unknown, unverified []string
 	for _, relPath := range previous {
 		if next[relPath] || (isMergedDocumentPath(merged, relPath) && !local[relPath]) {
 			continue
 		}
 		absPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(relPath))
-		if !g.withinScope(absPath) {
-			g.log().Warn("Skipping generated manifest path outside project", "path", relPath)
-			continue
-		}
-		if g.userMode && !g.userManifestEntryOK(relPath, absPath) {
-			continue
-		}
-		if !g.removalConfined(absPath) {
-			g.warnOnce("Stale file not removed: " + relPath + " is behind a symlink that leaves the project")
-			continue
-		}
-		if _, err := g.config.StatExisting(absPath); err != nil {
-			continue
-		}
-		if !g.userMode {
-			if matcher == nil {
-				matcher = g.outputMatcher(outputs)
-			}
-			if !matcher.matches(relPath) {
-				unknown = append(unknown, relPath)
-				continue
-			}
-		}
-		if !g.provablyGenerated(relPath, absPath, digests) {
+		switch g.staleVerdictFor(relPath, absPath, digests, matcherFor) {
+		case staleRemove:
+			stale = append(stale, absPath)
+		case staleUnknown:
+			unknown = append(unknown, relPath)
+		case staleUnverified:
 			unverified = append(unverified, relPath)
-			continue
+		case staleKeep:
 		}
-		// A rules folder is shared with hand-written rules: delete only a file that
-		// still looks generated, even when a manifest lists it.
-		if g.config.InRulesDir(relPath) && !g.looksGenerated(absPath) {
-			g.log().Debug("Keeping manifest-listed rule file without a generated marker", "path", relPath)
-			continue
-		}
-		stale = append(stale, absPath)
 	}
 	sort.Strings(unknown)
 	sort.Strings(unverified)
-	// An upgrade can meet dozens of leftovers an older version listed: one line per
-	// reason, naming the files, rather than one warning per file.
+	g.warnStaleKept(unknown, unverified)
+	sort.Strings(stale)
+	return stale
+}
+
+// currentManifestSet is the set of relative paths this run generates, plus the
+// ones only the shared baseline produces, which are never this machine's to delete.
+func (g *Generator) currentManifestSet(outputs []config.OutputFile) map[string]bool {
+	next := make(map[string]bool)
+	if g.plan != nil {
+		for _, rel := range g.plan.suppressed {
+			next[rel] = true
+		}
+	}
+	for _, output := range outputs {
+		if output.IsDir {
+			continue
+		}
+		next[filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))] = true
+	}
+	return next
+}
+
+// staleVerdict is what staleManifestFiles decides for one manifest entry.
+type staleVerdict int
+
+const (
+	// staleKeep leaves the entry alone.
+	staleKeep staleVerdict = iota
+	// staleRemove marks the entry as a generated file to delete.
+	staleRemove
+	// staleUnknown keeps an entry no preset writes at its path.
+	staleUnknown
+	// staleUnverified keeps an entry nothing proves ai-rulez generated.
+	staleUnverified
+)
+
+// staleVerdictFor decides what to do with the manifest entry relPath at absPath.
+// matcherFor returns the output matcher, built on first use.
+func (g *Generator) staleVerdictFor(relPath, absPath string, digests map[string]string, matcherFor func() *outputMatcher) staleVerdict {
+	if !g.withinScope(absPath) {
+		g.log().Warn("Skipping generated manifest path outside project", "path", relPath)
+		return staleKeep
+	}
+	if g.userMode && !g.userManifestEntryOK(relPath, absPath) {
+		return staleKeep
+	}
+	if !g.removalConfined(absPath) {
+		g.warnOnce("Stale file not removed: " + relPath + " is behind a symlink that leaves the project")
+		return staleKeep
+	}
+	if _, err := g.config.StatExisting(absPath); err != nil {
+		return staleKeep
+	}
+	if !g.userMode && !matcherFor().matches(relPath) {
+		return staleUnknown
+	}
+	if !g.provablyGenerated(relPath, absPath, digests) {
+		return staleUnverified
+	}
+	// A rules folder is shared with hand-written rules: delete only a file that
+	// still looks generated, even when a manifest lists it.
+	if g.config.InRulesDir(relPath) && !g.looksGenerated(absPath) {
+		g.log().Debug("Keeping manifest-listed rule file without a generated marker", "path", relPath)
+		return staleKeep
+	}
+	return staleRemove
+}
+
+// warnStaleKept explains the stale entries that were left in place. An upgrade
+// can meet dozens of leftovers an older version listed: one line per reason,
+// naming the files, rather than one warning per file.
+func (g *Generator) warnStaleKept(unknown, unverified []string) {
 	if len(unknown) > 0 {
 		g.warnOnce(fmt.Sprintf("Stale files not removed: %d file(s) the previous manifest lists are not at a path any preset writes",
 			len(unknown)), "files", unknown, "hint", "delete them by hand if they are no longer needed")
@@ -2941,8 +3042,6 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 			len(unverified)), "files", unverified,
 			"hint", "they carry no Content-Hash and no digest was recorded for them; delete them by hand if they are no longer needed")
 	}
-	sort.Strings(stale)
-	return stale
 }
 
 // localManifestSet is the set of paths the machine-local manifest authorizes
@@ -3236,42 +3335,57 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 			}
 			continue
 		}
-		// A hand-written file the overwrite guard skipped is the user's, not ours.
-		if g.skippedPaths[relPath] {
-			continue
-		}
-		// A partially owned settings document is hand-authored and tracked apart
-		// from the one key ai-rulez writes into it; telling git to ignore it
-		// would hide the user's own file (#185).
-		if output.PartiallyOwned {
-			continue
-		}
-		// Check outputs are read by hosted reviewers from the committed tree.
-		if output.Committed {
-			continue
-		}
 		if !includeCommitted {
 			continue
 		}
-		if g.shouldSkipPath(relPath) {
-			continue
+		if pattern := g.committedOutputPattern(output, relPath, committed); pattern != "" {
+			paths[pattern] = true
 		}
-		pattern := gitignorePatternForOutput(g.config.RulesDirs, relPath, output.IsDir)
-		if pattern == "" {
-			continue
-		}
-		// A directory pattern that would swallow a committed output (the factory
-		// skills dir holding the review-guidelines check) is narrowed to the
-		// generated files themselves, since git cannot re-include under it.
-		if strings.HasSuffix(pattern, "/") && coversCommitted(pattern, committed) {
-			if output.IsDir {
-				continue
-			}
-			pattern = relPath
-		}
-		paths[pattern] = true
+	}
+	g.addLocalSourcePatterns(paths, includeCommitted)
+	if includeCommitted {
+		g.addManifestPatterns(paths)
 	}
 
+	return paths
+}
+
+// committedOutputPattern is the .gitignore pattern for a generated output that
+// is not machine-local, or "" when the output must not be ignored.
+func (g *Generator) committedOutputPattern(output config.OutputFile, relPath string, committed []string) string {
+	// A hand-written file the overwrite guard skipped is the user's, not ours.
+	if g.skippedPaths[relPath] {
+		return ""
+	}
+	// A partially owned settings document is hand-authored and tracked apart
+	// from the one key ai-rulez writes into it; telling git to ignore it
+	// would hide the user's own file (#185).
+	if output.PartiallyOwned {
+		return ""
+	}
+	// Check outputs are read by hosted reviewers from the committed tree.
+	if output.Committed {
+		return ""
+	}
+	if g.shouldSkipPath(relPath) {
+		return ""
+	}
+	pattern := gitignorePatternForOutput(g.config.RulesDirs, relPath, output.IsDir)
+	// A directory pattern that would swallow a committed output (the factory
+	// skills dir holding the review-guidelines check) is narrowed to the
+	// generated files themselves, since git cannot re-include under it.
+	if pattern != "" && strings.HasSuffix(pattern, "/") && coversCommitted(pattern, committed) {
+		if output.IsDir {
+			return ""
+		}
+		return relPath
+	}
+	return pattern
+}
+
+// addLocalSourcePatterns adds the patterns for machine-local inputs to paths:
+// the .ai-rulez/local/ source subtree and the outputs an earlier run recorded.
+func (g *Generator) addLocalSourcePatterns(paths map[string]bool, includeCommitted bool) {
 	// The .ai-rulez/local/ source subtree holds machine-local override content
 	// and must never be committed. Ignore it unconditionally, bypassing the
 	// config-dir skip that normally protects .ai-rulez/.
@@ -3295,22 +3409,20 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 			}
 		}
 	}
+}
 
-	// The generated manifest sits inside the config dir and is rewritten on
-	// every `generate`; include it explicitly so the managed fence covers it.
-	// Only relevant when committed outputs are managed.
-	if includeCommitted {
-		if manifestRel := filepath.ToSlash(g.convertToRelativePath(g.manifestPath())); manifestRel != "" {
-			paths[manifestRel] = true
-		}
-		// The machine-local record holds this machine's claims and digests.
-		if localRel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); localRel != "" &&
-			(g.localManifestPending || pathIsFile(g.localManifestPath())) {
-			paths[localRel] = true
-		}
+// addManifestPatterns adds the generated manifest and the machine-local record
+// to paths. The manifest sits inside the config dir and is rewritten on every
+// `generate`; including it explicitly lets the managed fence cover it.
+func (g *Generator) addManifestPatterns(paths map[string]bool) {
+	if manifestRel := filepath.ToSlash(g.convertToRelativePath(g.manifestPath())); manifestRel != "" {
+		paths[manifestRel] = true
 	}
-
-	return paths
+	// The machine-local record holds this machine's claims and digests.
+	if localRel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); localRel != "" &&
+		(g.localManifestPending || pathIsFile(g.localManifestPath())) {
+		paths[localRel] = true
+	}
 }
 
 // committedOutputPaths lists the relative paths of outputs that must stay tracked.
@@ -3366,18 +3478,8 @@ func gitignorePatternForOutput(rd *config.RulesDirSet, relPath string, isDir boo
 	if relPath == ".github" || strings.HasSuffix(relPath, "/.github") {
 		return ""
 	}
-	// Rules folders are shared with hand-written rules, so ignore generated
-	// files one by one rather than the folder.
-	if rest, ok := rd.Remainder(relPath); ok {
-		if rest == "" {
-			return ""
-		}
-		// A subfolder of a rules folder (.clinerules/workflows/) is hand-authored
-		// territory too, so it is never ignored as a whole either.
-		if isDir {
-			return ""
-		}
-		return relPath
+	if pattern, matched := rulesDirGitignorePattern(rd, relPath, isDir); matched {
+		return pattern
 	}
 	// A plugin directory is shared with hand-written plugins: ignore the generated module only.
 	if !isDir && hookplugins.IsModulePath(relPath) {
@@ -3395,15 +3497,32 @@ func gitignorePatternForOutput(rd *config.RulesDirSet, relPath string, isDir boo
 	if pattern, matched := assistantDirGitignorePattern(relPath, isDir); matched {
 		return pattern
 	}
-	for _, file := range gitignoreRootFiles() {
-		if relPath == file {
-			return file
-		}
+	if slices.Contains(gitignoreRootFiles(), relPath) {
+		return relPath
 	}
 	if isDir {
 		return strings.TrimSuffix(relPath, "/") + "/"
 	}
 	return relPath
+}
+
+// rulesDirGitignorePattern resolves relPath against the rules folders. They are
+// shared with hand-written rules, so generated files are ignored one by one
+// rather than the folder; matched is false when relPath is not under one.
+func rulesDirGitignorePattern(rd *config.RulesDirSet, relPath string, isDir bool) (pattern string, matched bool) {
+	rest, ok := rd.Remainder(relPath)
+	if !ok {
+		return "", false
+	}
+	if rest == "" {
+		return "", true
+	}
+	// A subfolder of a rules folder (.clinerules/workflows/) is hand-authored
+	// territory too, so it is never ignored as a whole either.
+	if isDir {
+		return "", true
+	}
+	return relPath, true
 }
 
 // sharedDirGitignorePattern resolves relPath against the directories users keep
@@ -3672,42 +3791,10 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 
 	if len(sortedPaths) == 0 {
 		g.log().Debug("No paths to add to .gitignore")
-		// Nothing is left to add: drop a block from an earlier run rather than
-		// leave an empty fence behind.
-		if !contains(existingContent, gitignore.BeginMarker) && !contains(existingContent, gitignore.OldHeader) {
-			return nil
-		}
-		safePath, _, guardErr := g.guardWrite(gitignorePath)
-		if guardErr != nil {
-			return guardErr
-		}
-		return dropManagedBlock(safePath, existingContent)
+		return g.dropGitignoreBlock(gitignorePath, existingContent)
 	}
 
-	// Build the fenced block
-	var fencedBlock strings.Builder
-	fencedBlock.WriteString(gitignore.BeginMarker + "\n")
-	for _, p := range sortedPaths {
-		fencedBlock.WriteString(p + "\n")
-	}
-	fencedBlock.WriteString(gitignore.EndMarker + "\n")
-
-	var newContent string
-
-	switch {
-	case contains(existingContent, gitignore.BeginMarker):
-		newContent = gitignore.ReplaceFencedBlock(existingContent, fencedBlock.String())
-	case contains(existingContent, gitignore.OldHeader):
-		newContent = gitignore.ReplaceOldHeaderBlock(existingContent, fencedBlock.String())
-	case len(existingData) == 0:
-		newContent = fencedBlock.String()
-	default:
-		newContent = existingContent
-		if !hasSuffix(newContent, "\n") {
-			newContent += "\n"
-		}
-		newContent += "\n" + fencedBlock.String()
-	}
+	newContent := gitignoreWithBlock(existingContent, sortedPaths)
 
 	gitignorePath, _, err = g.guardWrite(gitignorePath)
 	if err != nil {
@@ -3721,6 +3808,45 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 
 	g.log().Debug("Updated .gitignore", "entries", len(sortedPaths))
 	return nil
+}
+
+// dropGitignoreBlock removes the managed block an earlier run left in
+// existingContent, rather than leaving an empty fence behind when nothing is
+// left to add.
+func (g *Generator) dropGitignoreBlock(gitignorePath, existingContent string) error {
+	if !contains(existingContent, gitignore.BeginMarker) && !contains(existingContent, gitignore.OldHeader) {
+		return nil
+	}
+	safePath, _, guardErr := g.guardWrite(gitignorePath)
+	if guardErr != nil {
+		return guardErr
+	}
+	return dropManagedBlock(safePath, existingContent)
+}
+
+// gitignoreWithBlock returns existingContent with the fenced block listing paths
+// replacing an earlier block, or appended when there is none.
+func gitignoreWithBlock(existingContent string, paths []string) string {
+	var fencedBlock strings.Builder
+	fencedBlock.WriteString(gitignore.BeginMarker + "\n")
+	for _, p := range paths {
+		fencedBlock.WriteString(p + "\n")
+	}
+	fencedBlock.WriteString(gitignore.EndMarker + "\n")
+
+	switch {
+	case contains(existingContent, gitignore.BeginMarker):
+		return gitignore.ReplaceFencedBlock(existingContent, fencedBlock.String())
+	case contains(existingContent, gitignore.OldHeader):
+		return gitignore.ReplaceOldHeaderBlock(existingContent, fencedBlock.String())
+	case existingContent == "":
+		return fencedBlock.String()
+	}
+	newContent := existingContent
+	if !hasSuffix(newContent, "\n") {
+		newContent += "\n"
+	}
+	return newContent + "\n" + fencedBlock.String()
 }
 
 func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) error {
