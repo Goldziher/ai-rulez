@@ -16,6 +16,18 @@ const (
 	keySuccess = "success"
 )
 
+// Values that several commands compare against or print.
+const (
+	valueTrue     = "true"
+	valueNone     = "none"
+	answerYes     = "yes"
+	failOnError   = "error"
+	failOnWarning = "warning"
+	kindSkill     = "skill"
+	presetClaude  = "claude"
+	labelChanged  = "changed"
+)
+
 // Config file base names supported by the CLI.
 const (
 	configFileTOML = "config.toml"

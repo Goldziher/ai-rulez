@@ -133,7 +133,7 @@ func writeScannerList(out io.Writer, infos []lint.ScannerInfo) {
 			inputs = strings.Join(s.Inputs, ",")
 		}
 		egress := s.Egress
-		if egress == "true" {
+		if egress == valueTrue {
 			egress = "YES"
 		}
 		reportWriter{w}.printf("%s\t%s\t%s\t%s\t%s\n", s.Name, egress, inputs, presetColumn(*s), scannerStatus(*s))
@@ -198,7 +198,7 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 
 func scannerNames(infos []lint.ScannerInfo) string {
 	if len(infos) == 0 {
-		return "none"
+		return valueNone
 	}
 	names := make([]string, len(infos))
 	for i := range infos {
@@ -263,7 +263,7 @@ func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe b
 		row("range", s.Version+" (checked against --version before every run)")
 	}
 	switch s.Egress {
-	case "true":
+	case valueTrue:
 		row("egress", "true: content may leave the machine; runs only with --allow-egress="+s.Name)
 		if len(s.DataSent) > 0 {
 			row("", "the vendor documents receiving: "+strings.Join(s.DataSent, "; "))
@@ -303,7 +303,7 @@ func writeDoctor(ctx context.Context, out io.Writer, s lint.ScannerInfo, probe b
 // isolationText says how this system would confine the scanner.
 func isolationText(s lint.ScannerInfo) string {
 	switch {
-	case s.Isolation == "none":
+	case s.Isolation == valueNone:
 		return "none (isolation = \"none\")"
 	case len(s.Inputs) == 0 && s.Isolation == "require":
 		return "require: refused, a scanner without inputs runs in the project root and cannot be confined"
