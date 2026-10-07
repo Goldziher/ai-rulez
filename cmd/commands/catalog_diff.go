@@ -196,7 +196,7 @@ func revisionSide(ctx context.Context, project *catalogDiffProject, rev string) 
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
-	revCfg, err := loadProjectDir(ctx, filepath.Join(dest, filepath.FromSlash(base)), name, config.WithoutRemote(), config.WithoutLocal())
+	revCfg, err := loadProjectDir(ctx, filepath.Join(dest, filepath.FromSlash(base)), name, config.WithoutRemote(), config.WithoutLocal(), config.WithPolicyDir(cfg.PolicyProjectDir()))
 	if err != nil {
 		return nil, oops.With("rev", rev).Wrapf(err, "load the configuration at revision %q", rev)
 	}

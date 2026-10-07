@@ -128,7 +128,7 @@ func (g *approveGit) itemsAt(ctx context.Context, sha string) ([]lockfile.Item, 
 	if _, err := govview.ExtractRevision(ctx, g.cfg.BaseDir, sha, path.Join(filepath.ToSlash(base), name), dest); err != nil {
 		return nil, oops.With("commit", sha).Wrapf(err, "read the configuration at the reviewed commit")
 	}
-	cfg, err := loadProjectDir(ctx, filepath.Join(dest, filepath.FromSlash(base)), name, config.WithoutRemote(), config.WithoutLocal())
+	cfg, err := loadProjectDir(ctx, filepath.Join(dest, filepath.FromSlash(base)), name, config.WithoutRemote(), config.WithoutLocal(), config.WithPolicyDir(g.cfg.PolicyProjectDir()))
 	if err != nil {
 		return nil, oops.With("commit", sha).Wrapf(err, "load the configuration at the reviewed commit")
 	}

@@ -186,6 +186,12 @@ type Config struct {
 	// or the repository containing BaseDir); nil on a Config built by hand.
 	Workspace workspace.Workspace `yaml:"-" json:"-" toml:"-"`
 
+	// PolicyDir is the project directory the organization policy is discovered
+	// from (WithPolicyDir); empty means BaseDir. A snapshot of an old revision is
+	// loaded from a temporary directory with no remote, and is judged by the policy
+	// of the project it is a snapshot of.
+	PolicyDir string `yaml:"-" json:"-" toml:"-"`
+
 	// enforcer is the organization policy this configuration was loaded under.
 	enforcer PolicyEnforcer
 
