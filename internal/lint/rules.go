@@ -167,7 +167,7 @@ var baseRegistry = []RuleInfo{
 	{CodeDuplicateCollapsed, "duplicate-collapsed", SeverityWarning, "two sources define the same name and one was silently dropped (allow intentional shadowing with lint.allow_overrides)"},
 	{CodeDescriptionMissing, "description-missing", SeverityWarning, "a skill, agent or command has no description"},
 	{CodeDescriptionLength, "description-length", SeverityWarning, "a description is shorter or longer than the configured bounds"},
-	{CodeDescriptionStyle, "description-style", SeverityOff, "a description does not say when to use the item (enabled by lint.description.require_use_when)"},
+	{CodeDescriptionStyle, "description-style", SeverityOff, "a skill or agent description does not say when to use it (enabled by lint.description.require_use_when; commands are exempt, the user invokes them by name)"},
 	{CodeSkillNameInvalid, "skill-name-invalid", SeverityWarning, "a skill name is not lowercase-hyphen, exceeds 64 characters, or differs from its directory"},
 	{CodeSizeLines, "size-lines", SeverityWarning, "an item exceeds its line budget"},
 	{CodeSizeTokens, "size-tokens", SeverityWarning, "an item exceeds its token budget"},
