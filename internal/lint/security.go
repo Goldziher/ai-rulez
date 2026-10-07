@@ -278,6 +278,10 @@ var (
 	// unsafeAfterRe reads a trailing verdict: "curl | sh is unsafe".
 	unsafeAfterRe = regexp.MustCompile(`(?i)^[\s)\x60'"]*(?:is|are|was|were)\s+(?:\w+\s+){0,2}?(?:unsafe|dangerous|insecure|risky|harmful|malicious|bad|an?\s+anti-?patterns?)\b`)
 	clauseEndRe   = regexp.MustCompile(`[.;:!?]`)
+	// bareDownloaderRe is the shorthand "curl | sh" (flags at most): it names the
+	// technique but downloads nothing, so prose that uses it as a label is no
+	// instruction. Any URL, variable or other argument makes it a real command.
+	bareDownloaderRe = regexp.MustCompile(`(?i)^(?:curl|wget)(?:\s+-\S+)*\s*\|`)
 )
 
 // negLeadWords is how far a negation may sit before the span it governs.
@@ -358,6 +362,9 @@ func (r *runner) scanShell(abs string, no int, line string, prose bool) {
 	if msg, spans := execFinding(line); msg != "" {
 		report := !prose
 		for _, sp := range spans {
+			if prose && bareDownloaderRe.MatchString(line[sp[0]:sp[1]]) {
+				continue
+			}
 			if !governedSpan(line, sp[0], sp[1]) {
 				report = true
 			}
