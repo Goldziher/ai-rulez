@@ -8,7 +8,7 @@ import "strings"
 // Version identifies the table. Bump it whenever a price changes: internal/llm
 // folds it into its cache identity, so a cost recorded under old prices is never
 // replayed under new ones.
-const Version = "2026-10"
+const Version = "2026-10-07"
 
 // Price is a model price in USD per million tokens.
 type Price struct {
@@ -44,16 +44,64 @@ var table = map[string]Price{
 
 // Lookup returns the built-in price of a model. known is false when no entry
 // matches.
+//
+// The longest table key that prefixes the name wins. What follows the key must be
+// a plain snapshot suffix (a date, a version number, "latest" or "preview"); any
+// other suffix names a variant (realtime, audio, tts, image, ...) that may cost
+// more than the base model, so it is priced at the highest sibling instead.
 func Lookup(model string) (price Price, known bool) {
 	name := strings.ToLower(model)
 	if i := strings.LastIndex(name, "/"); i >= 0 {
 		name = name[i+1:]
 	}
-	bestLen := 0
-	for prefix, p := range table {
-		if strings.HasPrefix(name, prefix) && len(prefix) > bestLen {
-			price, bestLen, known = p, len(prefix), true
+	bestKey := ""
+	for prefix := range table {
+		if strings.HasPrefix(name, prefix) && len(prefix) > len(bestKey) {
+			bestKey = prefix
 		}
 	}
-	return price, known
+	if bestKey == "" {
+		return Price{}, false
+	}
+	if plainSuffix(name[len(bestKey):]) {
+		return table[bestKey], true
+	}
+	return highestSibling(bestKey), true
+}
+
+// plainSuffix reports whether rest only versions or dates the base model.
+func plainSuffix(rest string) bool {
+	if rest == "" {
+		return true
+	}
+	if rest[0] != '-' && rest[0] != '@' {
+		return false
+	}
+	for _, seg := range strings.FieldsFunc(rest, func(r rune) bool { return r == '-' || r == '@' || r == '.' || r == '_' }) {
+		if seg == "latest" || seg == "preview" || seg == "exp" {
+			continue
+		}
+		for _, r := range seg {
+			if r < '0' || r > '9' {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// highestSibling returns the dearest price among the chat models in key's family
+// (the part before its first dash). Embedding rows are not siblings of chat models.
+func highestSibling(key string) Price {
+	family, _, _ := strings.Cut(key, "-")
+	best := table[key]
+	for other, p := range table {
+		if strings.Contains(other, "embedding") {
+			continue
+		}
+		if f, _, _ := strings.Cut(other, "-"); f == family && p.InPerMTok+p.OutPerMTok > best.InPerMTok+best.OutPerMTok {
+			best = p
+		}
+	}
+	return best
 }
