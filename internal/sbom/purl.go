@@ -94,33 +94,37 @@ func detectLauncher(command string, args []string) (launcher, bool) {
 	for _, ext := range []string{".exe", ".cmd", ".bat"} {
 		exe = strings.TrimSuffix(exe, ext)
 	}
-	switch exe {
-	case "npx", "bunx":
-		return npmTarget(args)
-	case "pnpm", "yarn":
-		if len(args) > 0 && args[0] == "dlx" {
-			return npmTarget(args[1:])
-		}
-	case "uvx":
-		return pypiTarget(args)
-	case "pipx":
-		if len(args) > 0 && args[0] == subcommandRun {
-			return pypiTarget(args[1:])
-		}
-	case "uv":
-		if len(args) > 1 && args[0] == "tool" && args[1] == subcommandRun {
-			return pypiTarget(args[2:])
-		}
-	case "docker", "podman":
-		if len(args) > 0 && args[0] == subcommandRun {
-			return ociTarget(args[1:])
-		}
-	case "go":
-		if len(args) > 0 && args[0] == subcommandRun {
-			return goTarget(args[1:])
+	l, ok := launchers[exe]
+	if !ok || len(args) < len(l.subcommand) {
+		return launcher{}, false
+	}
+	for i, word := range l.subcommand {
+		if args[i] != word {
+			return launcher{}, false
 		}
 	}
-	return launcher{}, false
+	return l.target(args[len(l.subcommand):])
+}
+
+// launcherCommand is how an ecosystem launcher names the package it runs: the
+// subcommand words that come first, then the arguments target reads.
+type launcherCommand struct {
+	subcommand []string
+	target     func(args []string) (launcher, bool)
+}
+
+// launchers maps a launcher executable to its command form.
+var launchers = map[string]launcherCommand{
+	"npx":    {target: npmTarget},
+	"bunx":   {target: npmTarget},
+	"pnpm":   {subcommand: []string{"dlx"}, target: npmTarget},
+	"yarn":   {subcommand: []string{"dlx"}, target: npmTarget},
+	"uvx":    {target: pypiTarget},
+	"pipx":   {subcommand: []string{subcommandRun}, target: pypiTarget},
+	"uv":     {subcommand: []string{"tool", subcommandRun}, target: pypiTarget},
+	"docker": {subcommand: []string{subcommandRun}, target: ociTarget},
+	"podman": {subcommand: []string{subcommandRun}, target: ociTarget},
+	"go":     {subcommand: []string{subcommandRun}, target: goTarget},
 }
 
 // firstOperand returns the package operand of a launcher command line: the value
