@@ -238,17 +238,19 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 		return err
 	}
 
-	place := func(cf config.ContentFile, kind Kind, asFile bool, inline *[]config.ContentFile) error {
-		return routeItem(*t, cf, kind, scope, asFile, inline, add)
+	place := func(cf *config.ContentFile, kind Kind, asFile bool, inline *[]config.ContentFile) error {
+		return routeItem(*t, *cf, kind, scope, asFile, inline, add)
 	}
 
-	for _, r := range rules {
+	for i := range rules {
+		r := &rules[i]
 		asFile := ruleIsFile(routing, r) && !keepNegatedInline(reg.diag, *t, scope, routing, r, "rule")
 		if err := place(r, KindRule, asFile, &inlineRules); err != nil {
 			return nil, nil, nil, err
 		}
 	}
-	for _, c := range context {
+	for i := range context {
+		c := &context[i]
 		asFile := (routing == RoutingEverything || isScoped(c)) && !keepNegatedInline(reg.diag, *t, scope, routing, c, "context")
 		if err := place(c, KindContext, asFile, &inlineContext); err != nil {
 			return nil, nil, nil, err
@@ -267,15 +269,15 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 // AGENTS.md (the agents_md flag), which carries it for every reader so the
 // folder must not repeat it; otherwise it becomes an always-on file (see
 // Frontmatter).
-func keepNegatedInline(d *diag.Collector, t Target, scope ScopeInfo, routing Routing, cf config.ContentFile, kind string) bool {
+func keepNegatedInline(d *diag.Collector, t Target, scope ScopeInfo, routing Routing, cf *config.ContentFile, kind string) bool {
 	rootFile := t.RootFile
 	if routing == RoutingNonAlways {
 		rootFile = "AGENTS.md"
 	}
-	if rootFile == "" || scope.Prefix != "" || !OnlyNegatedGlobs(cf) || !InlineAllowed(cf, t) {
+	if rootFile == "" || scope.Prefix != "" || !OnlyNegatedGlobs(*cf) || !InlineAllowed(*cf, t) {
 		return false
 	}
-	WarnOnlyNegated(d, kind, cf, rootFile)
+	WarnOnlyNegated(d, kind, *cf, rootFile)
 	return true
 }
 
@@ -319,7 +321,7 @@ func planItem(d *diag.Collector, t Target, cf config.ContentFile, kind Kind, sco
 }
 
 // ruleIsFile reports whether routing sends the rule to a rule file.
-func ruleIsFile(routing Routing, r config.ContentFile) bool {
+func ruleIsFile(routing Routing, r *config.ContentFile) bool {
 	switch routing {
 	case RoutingAll, RoutingEverything:
 		return true
@@ -330,11 +332,11 @@ func ruleIsFile(routing Routing, r config.ContentFile) bool {
 	}
 }
 
-func isAlwaysOn(cf config.ContentFile) bool {
+func isAlwaysOn(cf *config.ContentFile) bool {
 	return cf.Metadata.ResolveActivation().Mode == config.ActivationAlways
 }
 
-func isScoped(cf config.ContentFile) bool {
+func isScoped(cf *config.ContentFile) bool {
 	return cf.Metadata.ResolveActivation().Mode == config.ActivationGlob
 }
 
