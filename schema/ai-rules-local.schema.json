@@ -2594,7 +2594,7 @@
             "additionalProperties": false,
             "properties": {
               "name": {
-                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering"],
+                "enum": ["template", "cursor-team-marketplace", "port", "aws-agent-registry", "kiro-steering", "agent-plugins"],
                 "type": "string"
               },
               "options": {
