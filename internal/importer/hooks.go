@@ -366,7 +366,7 @@ func (b *hookBuilder) readTable(r *reader, src hookSource, key string) (map[stri
 const copilotHooksDir = ".github/hooks"
 
 // nativeSettingsFiles are the tool files read for hooks and permissions, listed
-// by Detect so a project that has only those is still recognised.
+// by Detect so a project that has only those is still recognized.
 var nativeSettingsFiles = []string{
 	claudeSettingsFile, ".codex/hooks.json", ".cursor/hooks.json", cursorCLIFile, copilotHooksDir,
 }
@@ -442,7 +442,7 @@ func (b *rulesyncPlanner) importHooks(file string) {
 				Hooks map[string]json.RawMessage `json:"hooks"`
 			}
 			if json.Unmarshal(doc[k], &scoped) != nil || len(scoped.Hooks) == 0 {
-				b.p.add(newFinding(StatusDropped, file, k, "", "unrecognised key"))
+				b.p.add(newFinding(StatusDropped, file, k, "", "unrecognized key"))
 				continue
 			}
 			if !known {

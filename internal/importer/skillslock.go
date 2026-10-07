@@ -108,7 +108,7 @@ func importLockEntry(p *Plan, name, field string, e skillsLockEntry) {
 	for _, have := range p.InstalledSkills {
 		if have.Name == clean {
 			p.add(newFinding(StatusUnsupported, skillsLockFile, field, "",
-				fmt.Sprintf("not imported: its name collides with another entry as %q after sanitising; rename one in the lock and rerun", clean)))
+				fmt.Sprintf("not imported: its name collides with another entry as %q after sanitizing; rename one in the lock and rerun", clean)))
 			return
 		}
 	}

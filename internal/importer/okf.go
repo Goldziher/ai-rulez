@@ -33,7 +33,7 @@ func (okfImporter) Description() string {
 }
 
 // bundleRoot returns the directory of the bundle inside the source, "" when there
-// is none. A bundle is recognised by its root index.md naming okf_version.
+// is none. A bundle is recognized by its root index.md naming okf_version.
 func bundleRoot(r *reader) string {
 	for _, dir := range []string{".", okfDefaultDir} {
 		index := path.Join(dir, okf.IndexFile)

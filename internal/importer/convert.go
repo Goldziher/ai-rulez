@@ -80,7 +80,7 @@ type ConvertOptions struct {
 	NativePaths []string
 }
 
-// Detection is what one importer recognises in a source directory.
+// Detection is what one importer recognizes in a source directory.
 type Detection struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`

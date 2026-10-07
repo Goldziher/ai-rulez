@@ -59,7 +59,7 @@ func (b *rulesyncPlanner) importConfig(cfg *rulesyncConfig) {
 			if what, ok := rulesyncGenerationKeys[k]; ok {
 				b.p.add(newFinding(StatusDropped, src, k, "", what+"; ai-rulez has no equivalent setting"))
 			} else {
-				b.p.add(newFinding(StatusDropped, src, k, "", "unrecognised rulesync.jsonc key"))
+				b.p.add(newFinding(StatusDropped, src, k, "", "unrecognized rulesync.jsonc key"))
 			}
 		}
 	}
@@ -196,7 +196,7 @@ func (b *rulesyncPlanner) importMCP(root string) {
 				Servers map[string]json.RawMessage `json:"mcpServers"`
 			}
 			if json.Unmarshal(doc[k], &scoped) != nil || scoped.Servers == nil {
-				b.p.add(newFinding(StatusDropped, file, k, "", "unrecognised key"))
+				b.p.add(newFinding(StatusDropped, file, k, "", "unrecognized key"))
 				continue
 			}
 			names := make([]string, 0, len(scoped.Servers))

@@ -131,7 +131,7 @@ func init() {
 	addFormatFlag(f, &convertFormat, formatText, formatText, formatText, formatJSON)
 	addJSONFlagAlias(f)
 	f.StringSliceVar(&convertFailOn, "fail-on", nil, "Exit 2 when a finding has one of these statuses: approximated, dropped, needs-action, unsupported")
-	f.BoolVar(&convertBestEffort, "best-effort", false, "Import the known fields of an unrecognised format version")
+	f.BoolVar(&convertBestEffort, "best-effort", false, "Import the known fields of an unrecognized format version")
 	f.BoolVar(&convertSplitHeadings, "split-headings", false, "Split root files such as CLAUDE.md into one context per H2 heading")
 	f.StringSliceVar(&convertAllowFindings, "allow-findings", nil, "Write despite security findings of these codes (for example AR001, a secret in the source); they stay in the report. Discouraged")
 	f.BoolVar(&convertMerge, "merge", false, "Add beside an existing tree without touching a file of it: an item whose file exists with other content is imported as NAME-imported (excludes --force)")
@@ -151,7 +151,7 @@ func stdoutIsTerminal() bool {
 
 var allowCodeRe = regexp.MustCompile(`(?i)^AR[0-9A-Z]{3,4}$`)
 
-// checkConvertFlags rejects flag combinations convert cannot honour.
+// checkConvertFlags rejects flag combinations convert cannot honor.
 func checkConvertFlags(interactive bool) error {
 	switch {
 	case convertWrite && convertDryRun:
