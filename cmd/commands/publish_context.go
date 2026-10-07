@@ -186,8 +186,8 @@ func (pc *publishContext) previousLockFor(spec *pluginSpec) (data []byte, label 
 		return nil, ""
 	}
 	lockRel := gitutil.RepoRelative(pc.top, lockfile.Path(pc.cfg.ConfigDir))
-	data, ok := gitutil.New(publishRunner).ShowFile(pc.cfg.BaseDir, tag, lockRel)
-	if !ok {
+	data, found, err := workspace.ReadFileAt(pc.ctx, pc.cfg.BaseDir, tag, lockRel, publishRunner)
+	if err != nil || !found {
 		return nil, ""
 	}
 	return data, tag

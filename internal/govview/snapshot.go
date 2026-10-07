@@ -1,7 +1,6 @@
 package govview
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -11,13 +10,14 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
 // Limits on what a revision snapshot may hold, so a hostile or huge repository
@@ -30,8 +30,16 @@ const (
 	snapshotDirMode     = 0o750
 	snapshotFileMode    = 0o640
 	snapshotExecMode    = 0o750
-	maxGitStderr        = 64 << 10
 )
+
+// snapshotLimits are the bounds of one extraction.
+type snapshotLimits struct {
+	files    int
+	fileSize int64
+	total    int64
+}
+
+var defaultSnapshotLimits = snapshotLimits{files: snapshotMaxFiles, fileSize: snapshotMaxFileSize, total: snapshotMaxTotal}
 
 var commitRE = regexp.MustCompile(`^[0-9a-f]{40}([0-9a-f]{24})?$`)
 
@@ -49,37 +57,48 @@ type RevisionSnapshot struct {
 // the root of the repository that contains dir) as they were at rev into dest,
 // keeping the path: dest/relPath/... Untracked, ignored and machine-local files
 // are not part of a revision, so they are absent. Nothing is fetched and the
-// working tree is not touched; the files are read with `git archive`, extracted
-// through an os.Root (the export-ignore and export-subst attributes are not applied),
-// and bounded in count and size. A file committed executable stays executable.
+// working tree is not touched. The files are read through a workspace.GitSnapshot
+// of the commit (so the export-ignore and export-subst attributes are not applied
+// and git runs through the runner ctx carries), written through an os.Root, and
+// bounded in count and size. A file committed executable stays executable.
 func ExtractRevision(ctx context.Context, dir, rev, relPath, dest string) (*RevisionSnapshot, error) {
 	rel := path.Clean(filepath.ToSlash(relPath))
 	if rel == "." || !fs.ValidPath(rel) {
 		return nil, oops.Errorf("invalid path %q for a revision snapshot", relPath)
 	}
-	return extractRevision(ctx, dir, rev, rel, dest)
+	return extractRevision(ctx, defaultSnapshotLimits, dir, rev, rel, dest)
 }
 
 // ExtractRevisionAll is ExtractRevision for the whole repository: every tracked
 // file as it was at rev, under dest, with the same limits.
 func ExtractRevisionAll(ctx context.Context, dir, rev, dest string) (*RevisionSnapshot, error) {
-	return extractRevision(ctx, dir, rev, ".", dest)
+	return extractRevision(ctx, defaultSnapshotLimits, dir, rev, ".", dest)
 }
 
-func extractRevision(ctx context.Context, dir, rev, rel, dest string) (*RevisionSnapshot, error) {
+func extractRevision(ctx context.Context, lim snapshotLimits, dir, rev, rel, dest string) (*RevisionSnapshot, error) {
 	if err := gitutil.CheckArg("revision", rev); err != nil {
 		return nil, oops.Wrap(err)
 	}
-	top := gitutil.Git{}.TopLevel(dir)
+	run := runner.FromContext(ctx)
+	git := gitutil.New(run)
+	top := git.TopLevel(dir)
 	if top == "" {
 		return nil, oops.With("dir", dir).Errorf("%s is not inside a git work tree: cannot read revision %q", dir, rev)
 	}
 	ctx, cancel := context.WithTimeout(ctx, snapshotTimeout)
 	defer cancel()
 
-	commit, err := resolveCommit(ctx, top, rev)
+	commit, err := resolveCommit(ctx, git, top, rev)
 	if err != nil {
 		return nil, err
+	}
+	var paths []string
+	if rel != "." {
+		paths = []string{rel}
+	}
+	snap, err := workspace.GitSnapshot(ctx, top, commit, run, paths...)
+	if err != nil {
+		return nil, oops.Wrapf(err, "read revision %q", rev)
 	}
 	root, err := os.OpenRoot(dest)
 	if err != nil {
@@ -87,174 +106,120 @@ func extractRevision(ctx context.Context, dir, rev, rel, dest string) (*Revision
 	}
 	defer root.Close() //nolint:errcheck // nothing buffered
 
-	snap := &RevisionSnapshot{Commit: commit}
-	if err := extractTree(ctx, top, commit, rel, root, snap); err != nil {
+	out := &RevisionSnapshot{Commit: commit}
+	files, err := collectFiles(snap, lim, rel, out)
+	if err != nil {
 		return nil, err
 	}
-	if snap.Files == 0 {
+	if len(files) == 0 {
 		return nil, oops.With("rev", rev).Errorf("%s has no files at revision %q", rel, rev)
 	}
-	return snap, nil
+	if err := writeFiles(snap, files, root, out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
-func resolveCommit(ctx context.Context, top, rev string) (string, error) {
-	cmd := gitutil.Command(ctx, top, "rev-parse", "--verify", "--quiet", "--end-of-options", rev+"^{commit}")
-	out, err := cmd.Output()
-	commit := strings.TrimSpace(string(out))
-	if err != nil || !commitRE.MatchString(commit) {
+func resolveCommit(ctx context.Context, git gitutil.Git, top, rev string) (string, error) {
+	res := git.Exec(ctx, top, nil, "rev-parse", "--verify", "--quiet", "--end-of-options", rev+"^{commit}")
+	commit := strings.TrimSpace(string(res.Stdout))
+	if gitutil.ResultErr(res) != nil || !commitRE.MatchString(commit) {
 		return "", oops.Hint("check `git rev-parse --verify "+rev+"`; a shallow clone may lack the revision").
 			Errorf("revision %q does not exist in this repository", rev)
 	}
 	return commit, nil
 }
 
-type limitedWriter struct {
-	w    io.Writer
-	left int
+// snapFile is one regular file to extract.
+type snapFile struct {
+	name string
+	exec bool
 }
 
-func (l *limitedWriter) Write(p []byte) (int, error) {
-	n := len(p)
-	if l.left <= 0 {
-		return n, nil
-	}
-	if len(p) > l.left {
-		p = p[:l.left]
-	}
-	l.left -= len(p)
-	_, err := l.w.Write(p)
-	return n, err //nolint:wrapcheck // a bytes.Buffer never fails
-}
-
-// treeEntry is one blob of `git ls-tree -r --long`.
-type treeEntry struct {
-	mode string
-	oid  string
-	size int64
-	path string
-}
-
-// extractTree writes the blobs of rel at commit into root. It reads the tree with
-// ls-tree and cat-file rather than `git archive`, because archive honours the
-// export-ignore and export-subst attributes of the very revision it reads: a
-// committed .gitattributes could hide or rewrite files of the snapshot.
-func extractTree(ctx context.Context, top, commit, rel string, root *os.Root, snap *RevisionSnapshot) error {
-	args := []string{"ls-tree", "-r", "-z", "--long", commit}
-	if rel != "." {
-		args = append(args, "--", rel)
-	}
-	ls := gitutil.Command(ctx, top, args...)
-	var lsErr bytes.Buffer
-	ls.Stderr = &limitedWriter{w: &lsErr, left: maxGitStderr}
-	out, err := ls.Output()
-	if err != nil {
-		return oops.Wrapf(err, "git ls-tree failed: %s", strings.TrimSpace(lsErr.String()))
-	}
-	var files []treeEntry
+// collectFiles lists the regular files below rel in the snapshot and applies the
+// limits from the tree metadata, before any content is read. Symlinks are
+// reported in out, never listed; submodules hold no files here.
+func collectFiles(snap workspace.Snapshot, lim snapshotLimits, rel string, out *RevisionSnapshot) ([]snapFile, error) {
+	var files []snapFile
 	var total int64
-	for _, rec := range strings.Split(string(out), "\x00") {
-		if rec == "" {
-			continue
+	var walk func(name string) error
+	visit := func(name string, info fs.FileInfo) error {
+		switch {
+		case info.Mode()&fs.ModeSymlink != 0:
+			out.Symlinks = append(out.Symlinks, name)
+		case info.IsDir():
+			return walk(name)
+		case info.Mode().IsRegular():
+			if !fs.ValidPath(name) || (rel != "." && name != rel && !strings.HasPrefix(name, rel+"/")) {
+				return oops.With("path", name).Errorf("the snapshot produced %q outside %s", name, rel)
+			}
+			total += info.Size()
+			if len(files) >= lim.files || info.Size() > lim.fileSize || total > lim.total {
+				return oops.Errorf("%s is too large for a revision snapshot (limit %d files, %d MiB)", rel, lim.files, lim.total>>20)
+			}
+			files = append(files, snapFile{name: name, exec: info.Mode()&0o111 != 0})
 		}
-		meta, name, ok := strings.Cut(rec, "\t")
-		fields := strings.Fields(meta)
-		if !ok || len(fields) != 4 {
-			return oops.Errorf("unexpected git ls-tree record %q", rec)
-		}
-		mode, typ, oid, sizeText := fields[0], fields[1], fields[2], fields[3]
-		name = path.Clean(name)
-		if typ != "blob" {
-			continue // a submodule has no files here
-		}
-		if mode == "120000" {
-			snap.Symlinks = append(snap.Symlinks, name)
-			continue
-		}
-		if !fs.ValidPath(name) || (rel != "." && name != rel && !strings.HasPrefix(name, rel+"/")) {
-			return oops.With("path", name).Errorf("git produced %q outside %s", name, rel)
-		}
-		size, convErr := strconv.ParseInt(sizeText, 10, 64)
-		if convErr != nil {
-			return oops.Errorf("unexpected size %q in a git ls-tree record", sizeText)
-		}
-		total += size
-		if len(files) >= snapshotMaxFiles || size > snapshotMaxFileSize || total > snapshotMaxTotal {
-			return oops.Errorf("%s is too large for a revision snapshot (limit %d files, %d MiB)", rel, snapshotMaxFiles, snapshotMaxTotal>>20)
-		}
-		files = append(files, treeEntry{mode: mode, oid: oid, size: size, path: name})
-	}
-	if len(files) == 0 {
 		return nil
 	}
-	return writeBlobs(ctx, top, files, root, snap)
-}
-
-// writeBlobs reads the blobs through one `git cat-file --batch` and writes them.
-func writeBlobs(ctx context.Context, top string, files []treeEntry, root *os.Root, snap *RevisionSnapshot) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	cat := gitutil.Command(ctx, top, "cat-file", "--batch")
-	var stderr bytes.Buffer
-	cat.Stderr = &limitedWriter{w: &stderr, left: maxGitStderr}
-	stdin, err := cat.StdinPipe()
-	if err != nil {
-		return oops.Wrapf(err, "run git cat-file")
-	}
-	stdout, err := cat.StdoutPipe()
-	if err != nil {
-		return oops.Wrapf(err, "run git cat-file")
-	}
-	if err := cat.Start(); err != nil {
-		return oops.Wrapf(err, "run git cat-file")
-	}
-	go func() {
-		defer stdin.Close() //nolint:errcheck // the reader side reports failures
-		for i := range files {
-			if _, werr := io.WriteString(stdin, files[i].oid+"\n"); werr != nil {
-				return
+	walk = func(dir string) error {
+		entries, err := snap.ReadDir(dir)
+		if err != nil {
+			return oops.With("path", dir).Wrapf(err, "list the snapshot")
+		}
+		for _, e := range entries {
+			info, err := e.Info()
+			if err != nil {
+				return oops.With("path", e.Name()).Wrapf(err, "stat in the snapshot")
+			}
+			if err := visit(path.Join(dir, e.Name()), info); err != nil {
+				return err
 			}
 		}
-	}()
-	br := bufio.NewReader(stdout)
-	var readErr error
-	for i := range files {
-		if readErr = copyBlob(br, &files[i], root); readErr != nil {
-			break
+		return nil
+	}
+	start, err := snap.Lstat(rel)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
 		}
-		snap.Files++
+		return nil, oops.With("path", rel).Wrapf(err, "stat in the snapshot")
 	}
-	cancel()
-	_ = cat.Wait() //nolint:errcheck // killed after an early stop; the read error is the one to report
-	if readErr != nil {
-		return oops.With("stderr", strings.TrimSpace(stderr.String())).Wrapf(readErr, "read git cat-file")
+	if err := visit(rel, start); err != nil {
+		return nil, err
 	}
-	return nil
+	return files, nil
 }
 
-// copyBlob reads one `oid type size\n<content>\n` answer of cat-file --batch and
-// writes the content to the snapshot.
-func copyBlob(br *bufio.Reader, e *treeEntry, root *os.Root) error {
-	header, err := br.ReadString('\n')
-	if err != nil {
-		return oops.Wrapf(err, "read header of %s", e.path)
+// writeFiles reads the files (in batches when the snapshot can) and writes them
+// below root.
+func writeFiles(snap workspace.Snapshot, files []snapFile, root *os.Root, out *RevisionSnapshot) error {
+	modes := make(map[string]os.FileMode, len(files))
+	names := make([]string, len(files))
+	for i, f := range files {
+		names[i] = f.name
+		modes[f.name] = snapshotFileMode
+		if f.exec {
+			modes[f.name] = snapshotExecMode
+		}
 	}
-	fields := strings.Fields(header)
-	if len(fields) != 3 || fields[0] != e.oid || fields[1] != "blob" {
-		return oops.Errorf("unexpected cat-file answer %q for %s", strings.TrimSpace(header), e.path)
+	write := func(name string, data []byte) error {
+		if err := writeSnapshotFile(root, name, bytes.NewReader(data), modes[name]); err != nil {
+			return err
+		}
+		out.Files++
+		return nil
 	}
-	size, err := strconv.ParseInt(fields[2], 10, 64)
-	if err != nil || size != e.size {
-		return oops.Errorf("cat-file reports %s bytes for %s, ls-tree %d", fields[2], e.path, e.size)
+	if br, ok := snap.(workspace.BatchReader); ok {
+		return br.ReadBatch(names, write) //nolint:wrapcheck // already contextual
 	}
-	mode := os.FileMode(snapshotFileMode)
-	if e.mode == "100755" {
-		mode = snapshotExecMode
-	}
-	if werr := writeSnapshotFile(root, e.path, io.LimitReader(br, size), mode); werr != nil {
-		return werr
-	}
-	if _, err := br.Discard(1); err != nil { // the newline after the content
-		return oops.Wrapf(err, "read end of %s", e.path)
+	for _, name := range names {
+		data, err := snap.ReadFile(name)
+		if err != nil {
+			return oops.With("path", name).Wrapf(err, "read from the snapshot")
+		}
+		if err := write(name, data); err != nil {
+			return err
+		}
 	}
 	return nil
 }
