@@ -371,7 +371,7 @@ applies_to = ["skill", "agent", "command"]   # also: rule
 [limits]
 max_item_tokens = 6000           # longer bodies are head+tail truncated; verdicts are capped at info
 max_siblings = 5
-max_output_tokens = 700
+max_output_tokens = 700          # the judge's completion cap; unset means 1500 (thinking models spend part of it)
 
 [votes]
 first_temperature = 0.0
