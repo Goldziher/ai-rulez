@@ -550,9 +550,9 @@ func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir
 		}
 	}
 	if lock != nil {
-		for _, e := range lock.Source {
-			if !configured[e.Name] {
-				problems = append(problems, Problem{e.Name, "in the lock but no longer configured"})
+		for i := range lock.Source {
+			if name := lock.Source[i].Name; !configured[name] {
+				problems = append(problems, Problem{name, "in the lock but no longer configured"})
 			}
 		}
 	}
