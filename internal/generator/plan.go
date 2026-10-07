@@ -122,7 +122,7 @@ func PlanOutputs(ctx context.Context, cfg *config.Config, opts PlanOptions) (*Pl
 	g.lockRender = true // leave ${VAR} and ${PROJECT_ROOT} as written
 	// ctx reaches the run through g.SetContext above; the git probes deep below it
 	// (gitutil's IsRepo and ls-files) take no context and are bounded by their own timeout.
-	res, err := g.run(opts.Profile, DescribeApplier) //nolint:contextcheck // see above
+	res, err := g.run(opts.Profile, DescribeApplier)
 	if err != nil {
 		return nil, err
 	}
