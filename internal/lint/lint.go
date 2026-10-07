@@ -768,7 +768,8 @@ func (r *runner) checkDescription(it *item, d doc) {
 	} else if n > maxLen {
 		r.add(CodeDescriptionLength, it.abs, line, "description is %d characters, above the maximum of %d", n, maxLen)
 	}
-	if !useWhenRe.MatchString(desc) {
+	// A command is invoked by name, so it has no trigger to state.
+	if it.kind != kindCommand && !useWhenRe.MatchString(desc) {
 		r.add(CodeDescriptionStyle, it.abs, line, "description does not say when to use this %s (e.g. \"Use when ...\")", it.kind)
 	}
 }

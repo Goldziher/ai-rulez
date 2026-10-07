@@ -262,7 +262,7 @@ type LintDescription struct {
 	// MinLength and MaxLength bound the description in characters. Zero keeps the default.
 	MinLength int `yaml:"min_length,omitempty" json:"min_length,omitempty" toml:"min_length,omitempty"` //nolint:tagliatelle
 	MaxLength int `yaml:"max_length,omitempty" json:"max_length,omitempty" toml:"max_length,omitempty"` //nolint:tagliatelle
-	// RequireUseWhen asks that a description state when to use the item ("Use when ...").
+	// RequireUseWhen asks that a skill or agent description state when to use it ("Use when ...").
 	RequireUseWhen bool `yaml:"require_use_when,omitempty" json:"require_use_when,omitempty" toml:"require_use_when,omitempty"` //nolint:tagliatelle
 	// NearDuplicateThreshold is the word-set similarity (0-1) at which two descriptions are reported.
 	NearDuplicateThreshold float64 `yaml:"near_duplicate_threshold,omitempty" json:"near_duplicate_threshold,omitempty" toml:"near_duplicate_threshold,omitempty"` //nolint:tagliatelle
