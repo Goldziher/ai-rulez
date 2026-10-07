@@ -94,7 +94,7 @@ func (r *runner) policyBaselinePath() (abs, problem string) {
 		return "", fmt.Sprintf("lint.scanner_policy.baseline %q must be a path inside the project", rel)
 	}
 	abs = filepath.Join(r.rootAbs(), clean)
-	if real, err := filepath.EvalSymlinks(abs); err == nil && r.tree.Rel(real) == "" {
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil && r.tree.Rel(resolved) == "" {
 		return "", fmt.Sprintf("lint.scanner_policy.baseline %q resolves outside the project", rel)
 	}
 	return abs, ""
@@ -183,7 +183,8 @@ func (r *runner) finishExternal(all []scannerFinding, ran map[string]bool) {
 		}
 	}
 	r.findings = append(r.findings, rep.Findings[len(findings):]...) // policy refusals of the baseline
-	for _, e := range res.Expired {
+	for i := range res.Expired {
+		e := &res.Expired[i]
 		r.addAt(CodeScannerBaselineExpired, path, fmt.Sprintf("[%s] the baseline entry for %s in %s expired on %s; the finding is reported again (remove the entry or renew it with --write-baseline)",
 			e.Scanner, e.Rule, e.File, e.Expires))
 	}
@@ -202,7 +203,8 @@ func (r *runner) finishExternal(all []scannerFinding, ran map[string]bool) {
 func dedupeScannerFindings(all []scannerFinding) []scannerFinding {
 	seen := map[string]bool{}
 	out := all[:0:0]
-	for _, f := range all {
+	for i := range all {
+		f := all[i]
 		key := f.scanner + "\x00" + f.Fingerprint()
 		if seen[key] {
 			continue
@@ -230,7 +232,8 @@ func (r *runner) writeScannerBaseline(path string, all []scannerFinding, finding
 		return
 	}
 	scanners := map[string]scannerFinding{}
-	for _, f := range all {
+	for i := range all {
+		f := all[i]
 		scanners[f.Fingerprint()] = f
 	}
 	for i := range next.Entries {
@@ -239,11 +242,13 @@ func (r *runner) writeScannerBaseline(path string, all []scannerFinding, finding
 		}
 	}
 	have := map[string]bool{}
-	for _, e := range next.Entries {
+	for i := range next.Entries {
+		e := next.Entries[i]
 		have[e.Fingerprint] = true
 	}
 	if prev != nil {
-		for _, e := range prev.Entries {
+		for i := range prev.Entries {
+			e := prev.Entries[i]
 			if !have[e.Fingerprint] && !ran[e.Scanner] {
 				next.Entries = append(next.Entries, e)
 			}

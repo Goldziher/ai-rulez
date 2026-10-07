@@ -39,7 +39,8 @@ func (r *runner) runExternal() {
 	files := r.scannedFiles()
 	list := r.scanners()
 	r.opts.Scanner.required = map[string]bool{}
-	for _, sc := range list {
+	for i := range list {
+		sc := list[i]
 		if sc.Required {
 			r.opts.Scanner.required[sc.Name] = true
 		}
@@ -47,7 +48,8 @@ func (r *runner) runExternal() {
 	r.requireConfigured(list)
 	var all []scannerFinding
 	ran := map[string]bool{}
-	for _, sc := range list {
+	for i := range list {
+		sc := list[i]
 		if len(sc.allProblems()) > 0 || !r.egressAllowed(sc) {
 			continue
 		}
@@ -72,7 +74,8 @@ func (r *runner) runExternal() {
 // preset member or entry provides: nothing would ever run it.
 func (r *runner) requireConfigured(list []resolvedScanner) {
 	have := map[string]bool{}
-	for _, sc := range list {
+	for i := range list {
+		sc := list[i]
 		have[sc.Name] = true
 	}
 	want := make([]string, 0, len(r.opts.Scanner.required))
@@ -478,11 +481,13 @@ func (r *runner) parseRun(sc resolvedScanner, res cmdrun.Result) ([]externalFind
 // (AR9E6). The result no longer depends on where the stage was written, which
 // is what the cache stores.
 func (st *scannerStage) normalize(found []externalFinding) (out []externalFinding, outOfScope int, firstOut string) {
-	for _, f := range found {
+	for i := range found {
+		f := found[i]
 		if f.File != "" {
 			rel, ok := st.resolveRel(f.File)
 			if !ok {
-				if outOfScope++; firstOut == "" {
+				outOfScope++
+				if firstOut == "" {
 					firstOut = sanitizeScannerText(f.File)
 				}
 				continue
@@ -628,7 +633,8 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 	})
 	var out []scannerFinding
 	occurrence := map[string]int{}
-	for _, f := range found {
+	for i := range found {
+		f := found[i]
 		f.Line = min(max(f.Line, 0), maxScannerLine)
 		abs, inside := r.locate(&f, scope)
 		msg := sanitizeScannerText(f.Message)
@@ -637,7 +643,8 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 		}
 		if !inside {
 			if scope.lookup != nil {
-				if outOfScope++; firstOut == "" {
+				outOfScope++
+				if firstOut == "" {
 					firstOut = sanitizeScannerText(f.File)
 				}
 				continue

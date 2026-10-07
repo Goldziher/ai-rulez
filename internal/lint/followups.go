@@ -326,7 +326,9 @@ func namesTOMLString(line, name string) bool {
 
 // checkUnpinned reports remote sources that follow a moving ref without a pin.
 func (r *runner) checkUnpinned() {
-	for _, w := range includes.Unpinned(r.cfg) {
+	unpinned := includes.Unpinned(r.cfg)
+	for i := range unpinned {
+		w := &unpinned[i]
 		path := r.configFilePath()
 		if path == "" {
 			path = filepath.Join(r.rootAbs(), ".ai-rulez", "config.toml")
@@ -547,7 +549,8 @@ func validateCapabilityAndLoadBudgets(lc *config.LintConfig) []string {
 
 func validateExternal(list []config.LintExternal) []string {
 	var problems []string
-	for i, ex := range list {
+	for i := range list {
+		ex := &list[i]
 		if strings.TrimSpace(ex.Name) == "" || (len(ex.Command) == 0 && ex.Profile == "") {
 			problems = append(problems, fmt.Sprintf("lint.external[%d]: name and command (or profile) are required", i))
 		}

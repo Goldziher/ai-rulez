@@ -313,7 +313,8 @@ func (r *runner) checkTraps() {
 	}
 	active := r.activeHarnesses()
 	var relevant []Trap
-	for _, t := range traps {
+	for i := range traps {
+		t := traps[i]
 		if active[t.Harness] {
 			relevant = append(relevant, t)
 		}
@@ -343,7 +344,8 @@ func (r *runner) checkTraps() {
 		}
 		var content []byte
 		var read, generated bool
-		for _, t := range relevant {
+		for i := range relevant {
+			t := relevant[i]
 			if !t.Scope.matches(rel) {
 				continue
 			}
@@ -390,7 +392,8 @@ func (r *runner) ignoredGeneratedPaths(relevant []Trap, known []string) []string
 		have[k] = true
 	}
 	dirs := map[string]bool{}
-	for _, t := range relevant {
+	for i := range relevant {
+		t := &relevant[i]
 		if d := strings.Trim(t.Scope.Dir, "/"); d != "" && slices.Contains(t.Scope.Kinds, kindGenerated) {
 			dirs[d] = true
 		}
@@ -503,7 +506,8 @@ func (r *runner) severityConfigured(code string) bool {
 func trapHarnesses() []string {
 	traps, _ := Traps() //nolint:errcheck // an unreadable table has no harnesses
 	set := map[string]bool{}
-	for _, t := range traps {
+	for i := range traps {
+		t := traps[i]
 		set[t.Harness] = true
 	}
 	out := make([]string, 0, len(set))
@@ -537,7 +541,8 @@ func TrapsMarkdown() (string, error) {
 	}
 	var sb strings.Builder
 	sb.WriteString("| Code | Name | Harness | Inert | Fires when | Fix | Evidence |\n| --- | --- | --- | --- | --- | --- | --- |\n")
-	for _, t := range traps {
+	for i := range traps {
+		t := &traps[i]
 		inert := "no"
 		if t.CertainlyInert {
 			inert = "yes"

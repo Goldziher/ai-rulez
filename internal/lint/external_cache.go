@@ -76,8 +76,8 @@ func UserScanCache(log logger.Logger, configDir string) *ScanCache {
 	if err != nil {
 		abs = configDir
 	}
-	if real, rerr := filepath.EvalSymlinks(abs); rerr == nil {
-		abs = real // /var and /private/var name one project
+	if resolved, rerr := filepath.EvalSymlinks(abs); rerr == nil {
+		abs = resolved // /var and /private/var name one project
 	}
 	sum := sha256.Sum256([]byte(filepath.Clean(abs)))
 	dir, err := config.CacheDir("scan", hex.EncodeToString(sum[:8]))
@@ -155,16 +155,16 @@ func cacheExpired(sc resolvedScanner, hit cachedScan, at time.Time) bool {
 
 func toCached(found []externalFinding) []cachedFinding {
 	out := make([]cachedFinding, len(found))
-	for i, f := range found {
-		out[i] = cachedFinding(f)
+	for i := range found {
+		out[i] = cachedFinding(found[i])
 	}
 	return out
 }
 
 func fromCached(in []cachedFinding) []externalFinding {
 	out := make([]externalFinding, len(in))
-	for i, f := range in {
-		out[i] = externalFinding(f)
+	for i := range in {
+		out[i] = externalFinding(in[i])
 	}
 	return out
 }
@@ -305,14 +305,14 @@ func digestStage(files []stagedFile) string {
 	return "sha256:" + hex.EncodeToString(h.Sum(nil))
 }
 
-// scanKeyFor builds the key of one scanner over a staged tree. binary is the
+// scanKeyFor builds the key of one scanner over a staged tree. bin is the
 // resolved executable ("" when it is not installed, which has no cached result).
 // The scanner's identity is its binary file (path, size, modification time) and
 // its command line; the version string is stored with the entry but is not part
 // of the key, so computing a key never starts a program.
-func scanKeyFor(sc resolvedScanner, binary, tree string, showSuppressed bool, isolation string) (string, bool) {
-	info, err := os.Stat(binary)
-	if binary == "" || err != nil {
+func scanKeyFor(sc resolvedScanner, bin, tree string, showSuppressed bool, isolation string) (string, bool) {
+	info, err := os.Stat(bin)
+	if bin == "" || err != nil {
 		return "", false
 	}
 	smap := make([]string, 0, len(sc.SeverityMap))
@@ -322,7 +322,7 @@ func scanKeyFor(sc resolvedScanner, binary, tree string, showSuppressed bool, is
 	sort.Strings(smap)
 	return scanCacheKeyInput{
 		EnvValues: envValueHashes(sc.EnvPass, cmdrun.HostEnv()), Isolation: isolation, Mapping: scanMappingVersion,
-		V: scanCacheVersion, Scanner: sc.Name, Binary: binary, BinSize: info.Size(), BinTime: info.ModTime().UnixNano(),
+		V: scanCacheVersion, Scanner: sc.Name, Binary: bin, BinSize: info.Size(), BinTime: info.ModTime().UnixNano(),
 		Command: sc.Command, Format: sc.Format, Layout: sc.Layout, Inputs: sc.Inputs,
 		EnvPass: sc.EnvPass, SeverityMap: smap, MaxSeverity: sc.MaxSeverity, Suppressed: showSuppressed, Tree: tree,
 	}.hash(), true

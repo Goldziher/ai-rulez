@@ -121,8 +121,8 @@ func (r *runner) buildStageFrom(files []stagedFile) (*scannerStage, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "create the scratch directory")
 	}
-	if real, rerr := filepath.EvalSymlinks(base); rerr == nil {
-		base = real // a scanner prints paths it resolved; match them
+	if resolved, rerr := filepath.EvalSymlinks(base); rerr == nil {
+		base = resolved // a scanner prints paths it resolved; match them
 	}
 	st := &scannerStage{scratch: base, root: filepath.Join(base, "stage"), source: map[string]string{}}
 	if err := st.write(files); err != nil {
@@ -476,7 +476,7 @@ func (r *runner) layoutPath(it *item, layout string) (skillDir, rel string) {
 // pluginLayout moves an item to the path a plugin validator reads:
 // skills/<name>/SKILL.md, agents/<name>.md, commands/<name>.md. Other kinds
 // are not part of a plugin and are left out (empty rel).
-func pluginLayout(it *item, dir, rel string) (string, string) {
+func pluginLayout(it *item, dir, rel string) (stageDir, stageRel string) {
 	name := sanitizeStageName(itemID(it.kind, it.cf))
 	switch it.kind {
 	case kindSkill:
