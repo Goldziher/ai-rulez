@@ -34,3 +34,21 @@ func TestLookup(t *testing.T) {
 		})
 	}
 }
+
+func TestClaudeVersionedPrices(t *testing.T) {
+	tests := map[string]Price{
+		"claude-opus-5-5":           {4, 20},
+		"claude-opus-4-8":           {5, 25},
+		"claude-opus-4-1-20250805":  {15, 75},
+		"claude-sonnet-5-5":         {2, 10},
+		"claude-sonnet-4-6":         {3, 15},
+		"claude-haiku-5-5":          {0.5, 2.5},
+		"claude-haiku-4-5-20251001": {1, 5},
+	}
+	for model, want := range tests {
+		got, ok := Lookup(model)
+		if !ok || got != want {
+			t.Errorf("Lookup(%q) = %v, %v; want %v", model, got, ok, want)
+		}
+	}
+}
