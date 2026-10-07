@@ -448,3 +448,28 @@ func TestOKFIndexStyleFlagConfigAndDetection(t *testing.T) {
 	okfIndexStyle = "yaml"
 	assert.Equal(t, exitOKFCannotRun, mustExport(t))
 }
+
+func TestOKFImportJSONPrintsEmptyLists(t *testing.T) {
+	// Arrange
+	root := okfProject(t)
+	require.Equal(t, 0, mustExport(t))
+	bundle := filepath.Join(root, "docs", "okf")
+	target := t.TempDir()
+	writeFile(t, filepath.Join(target, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"y\"\npresets = [\"claude\"]\n")
+	chdir(t, target)
+	okfDryRun, okfFormat = true, formatJSON
+	t.Cleanup(func() { okfFormat = formatText })
+
+	// Act
+	var out bytes.Buffer
+	code := runOKFImport(context.Background(), bundle, &out)
+
+	// Assert
+	require.Equal(t, 0, code, out.String())
+	var doc map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(out.Bytes(), &doc))
+	for _, key := range []string{"actions", "findings", "security", "skipped"} {
+		assert.NotEqual(t, "null", string(doc[key]), "%s must be a list", key)
+	}
+	assert.JSONEq(t, "[]", string(doc["security"]))
+}
