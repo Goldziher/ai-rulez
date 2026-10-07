@@ -91,7 +91,7 @@ func boolCoercion(it *item, d doc, k fmKey) *Fix {
 	}
 	line := d.lines[k.Line-1]
 	m := quotedBoolRe.FindStringSubmatch(line)
-	if m == nil || m[2] != m[4] || !strings.Contains(m[1], k.Name) {
+	if len(m) == 0 || m[2] != m[4] || !strings.Contains(m[1], k.Name) {
 		return nil
 	}
 	return &Fix{

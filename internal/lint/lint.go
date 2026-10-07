@@ -647,7 +647,8 @@ func contentNames(kind string, cf config.ContentFile) []string {
 
 func (r *runner) addItems(configDir, kind, domain string, files []config.ContentFile) {
 	set := map[string]map[string]bool{kindSkill: r.skills, kindCommand: r.commands, kindAgent: r.agents, kindRule: r.rules, kindContext: r.contexts}[kind]
-	for _, cf := range files {
+	for i := range files {
+		cf := files[i]
 		abs, _ := filepath.Abs(cf.Path) //nolint:errcheck // keeps the raw path
 		rel, err := filepath.Rel(configDir, abs)
 		owned := err == nil && !strings.HasPrefix(rel, "..") && !strings.Contains(cf.Path, "://")

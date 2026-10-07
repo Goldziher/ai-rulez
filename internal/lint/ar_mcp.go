@@ -58,7 +58,9 @@ var mcpJSONFiles = []struct{ rel, key string }{
 func (r *runner) mcpServers() []*mcpServer {
 	var out []*mcpServer
 	if cfgPath := r.configFilePath(); cfgPath != "" {
-		for _, s := range r.effectiveMCPServers() {
+		servers := r.effectiveMCPServers()
+		for i := range servers {
+			s := &servers[i]
 			out = append(out, &mcpServer{file: cfgPath, name: s.Name, transport: s.Transport, command: s.Command, args: s.Args, url: s.URL, env: s.Env, headers: s.Headers, disabled: !s.IsEnabled()})
 		}
 	}
@@ -88,8 +90,9 @@ func (r *runner) effectiveMCPServers() []config.MCPServer {
 }
 
 func (r *runner) declaresMCPServer(name string) bool {
-	for _, s := range r.effectiveMCPServers() {
-		if s.Name == name {
+	servers := r.effectiveMCPServers()
+	for i := range servers {
+		if servers[i].Name == name {
 			return true
 		}
 	}

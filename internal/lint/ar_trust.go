@@ -93,7 +93,8 @@ func checkInstalledTrust(r *runner) { //nolint:gocyclo // linear checks over a d
 		return
 	}
 	lines := r.fileLines(cfgPath)
-	for _, s := range r.cfg.InstalledSkills {
+	for j := range r.cfg.InstalledSkills {
+		s := &r.cfg.InstalledSkills[j]
 		owner := sourceOwner(s.Source)
 		if owner == "" {
 			continue // a local source: nothing to compare with

@@ -200,7 +200,7 @@ func (r *runner) projectTraps() []Trap {
 }
 
 // parseProjectTraps reads one project trap file and validates every row.
-func parseProjectTraps(file string) ([]Trap, []string) {
+func parseProjectTraps(file string) (parsed []Trap, issues []string) {
 	info, err := os.Stat(file)
 	if err != nil || !info.Mode().IsRegular() {
 		return nil, []string{"trap file is not a regular file"}

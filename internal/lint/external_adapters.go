@@ -180,7 +180,8 @@ func parseSnyk(out []byte, exitCode int) ([]externalFinding, error) {
 	var top map[string]json.RawMessage
 	var found []externalFinding
 	add := func(file string, issues []snykIssue) error {
-		for _, is := range issues {
+		for i := range issues {
+			is := &issues[i]
 			if len(found) >= maxScannerResults {
 				return oops.Errorf("more than %d results", maxScannerResults)
 			}

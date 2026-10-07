@@ -164,7 +164,8 @@ func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed b
 		if err := sarifRunError(run); err != nil {
 			return nil, err
 		}
-		for _, res := range run.Results {
+		for i := range run.Results {
+			res := run.Results[i]
 			suppressed := sarifSuppressed(res)
 			if suppressed && !keepSuppressed {
 				continue
@@ -322,7 +323,7 @@ func sarifSuppressed(res sarifResult) bool {
 }
 
 var (
-	ansiCSI = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
+	ansiCSI = regexp.MustCompile(`\x1b\[[0-9;?]*[\x20-\x2f]*[\x40-\x7e]`)
 	ansiOSC = regexp.MustCompile(`\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)`)
 	winDriv = regexp.MustCompile(`^/[A-Za-z]:/`)
 	// driveAuthority is a Windows drive letter in the authority slot of a file URI.
@@ -396,7 +397,7 @@ func resolveScannerPath(raw, root string) (abs string, ok bool) {
 		switch {
 		case authority == "" || strings.EqualFold(authority, hostLocalhost):
 		case driveAuthority.MatchString(authority):
-			// file://C:/x is a common malformed spelling of file:///C:/x
+			// the malformed spelling file://C:/x of the file URL for C:/x
 			path = "/" + authority + path
 		default:
 			// A UNC or remote host: not a file in this project.
@@ -432,8 +433,8 @@ func resolveScannerPath(raw, root string) (abs string, ok bool) {
 // either, as on macOS where /var is a link to /private/var).
 func scannerRoots(root string) []string {
 	roots := []string{filepath.Clean(root)}
-	if real, err := filepath.EvalSymlinks(root); err == nil && real != roots[0] {
-		roots = append(roots, real)
+	if resolved, err := filepath.EvalSymlinks(root); err == nil && resolved != roots[0] {
+		roots = append(roots, resolved)
 	}
 	return roots
 }

@@ -146,7 +146,8 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 	matched := map[string]bool{}
 	refused := map[string]bool{}
 	byFP := map[string]BaselineEntry{}
-	for _, e := range b.Entries {
+	for i := range b.Entries {
+		e := b.Entries[i]
 		byFP[e.Fingerprint] = e
 	}
 	for i := range r.Findings {
@@ -168,7 +169,8 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 		m.Accepted, m.AcceptReason = true, e.Reason
 		res.Accepted++
 	}
-	for _, e := range b.Entries {
+	for i := range b.Entries {
+		e := b.Entries[i]
 		if !matched[e.Fingerprint] && analyzerRan(r.Analyzers, e.Code) {
 			res.Stale = append(res.Stale, e)
 		}
@@ -187,7 +189,8 @@ func ApplyBaseline(r *Report, b *Baseline, path, today string) BaselineResult {
 func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error) {
 	old := map[string]BaselineEntry{}
 	if prev != nil {
-		for _, e := range prev.Entries {
+		for i := range prev.Entries {
+			e := prev.Entries[i]
 			old[e.Fingerprint] = e
 		}
 	}
@@ -195,7 +198,8 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 	seen := map[string]bool{}
 	var unexplained []string
 	if prev != nil {
-		for _, e := range prev.Entries {
+		for i := range prev.Entries {
+			e := prev.Entries[i]
 			if !analyzerRan(r.Analyzers, e.Code) {
 				out.Entries = append(out.Entries, e) // its analyzer did not run: keep the entry as it is
 				seen[e.Fingerprint] = true
@@ -247,7 +251,7 @@ func ResolveBudgets(raw map[string]int) Budgets {
 
 // Without drops the budgets of the protected codes, which a policy never lets a
 // repository tolerate, and lists the codes it dropped.
-func (b Budgets) Without(protected map[string]bool) (Budgets, []string) {
+func (b Budgets) Without(protected map[string]bool) (kept Budgets, droppedCodes []string) {
 	if len(protected) == 0 {
 		return b, nil
 	}
