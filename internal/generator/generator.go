@@ -1907,9 +1907,11 @@ var generatedStampPattern = regexp.MustCompile(`(?m)(?: \| )?Generated: [^\n]*$`
 // existing bytes and mode already match on disk so unchanged bundled
 // assets don't dirty the working tree on every regeneration.
 //
-// The mode is applied to a file this call creates, and to an existing regular
-// file that is not reached through a symlink; a file reached through a link is
-// never chmodded, since it is not ours.
+// The bytes go to a temp file renamed into place, so a crash or a full disk never
+// leaves a truncated script and a path hard-linked elsewhere is replaced, not
+// written through. The mode is applied to a file this call creates, and to an
+// existing regular file that is not reached through a symlink; a file reached
+// through a link keeps the mode it has, since it is not ours.
 func writeRawOutput(log logger.Logger, absPath string, viaLink bool, output config.OutputFile) error {
 	mode := output.Mode.Perm()
 	if mode == 0 {
@@ -1935,25 +1937,19 @@ func writeRawOutput(log logger.Logger, absPath string, viaLink bool, output conf
 			Hint(fmt.Sprintf("Check directory permissions for: %s", dir)).
 			Wrapf(err, "create parent directory")
 	}
-	if err := os.WriteFile(absPath, output.RawContent, mode); err != nil {
+	writeMode := mode
+	if viaLink {
+		if info, err := os.Stat(absPath); err == nil {
+			writeMode = info.Mode().Perm()
+		}
+	}
+	if err := config.WriteFileAtomic(absPath, output.RawContent, writeMode); err != nil {
 		return oops.
 			With("path", absPath).
 			Hint(fmt.Sprintf("Check write permissions for: %s", absPath)).
 			Wrapf(err, "write file")
 	}
-	if viaLink {
-		log.Debug("Wrote raw file through a symlink, mode left as is", "path", output.Path)
-		return nil
-	}
-	// os.WriteFile only applies the mode on file creation. To handle mode
-	// changes on subsequent regenerations, chmod explicitly.
-	if err := os.Chmod(absPath, mode); err != nil {
-		return oops.
-			With("path", absPath).
-			With("mode", mode).
-			Wrapf(err, "set file mode")
-	}
-	log.Debug("Wrote raw file", "path", output.Path, "size", len(output.RawContent), "mode", mode)
+	log.Debug("Wrote raw file", "path", output.Path, "size", len(output.RawContent), "mode", writeMode)
 	return nil
 }
 
