@@ -215,7 +215,7 @@ func runUsageExport(out io.Writer, args []string) error {
 		}
 		events = append(events[:len(events):len(events)], evalEvents...)
 	}
-	settings := telemetry.ResolveFor(telemetryRoot(""), telemetryConfigDirName(), nil)
+	settings := telemetry.ResolveFor(telemetryRoot(""), telemetryConfigDirName(), nil, activePolicy)
 	encoder := settings.Encoder(Version)
 	file, err := encoder.EncodeFile(events)
 	if err != nil {

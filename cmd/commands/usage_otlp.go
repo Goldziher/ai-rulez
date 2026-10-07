@@ -64,7 +64,7 @@ func loadEvalEvents(path string) ([]telemetry.Event, error) {
 // failure is an error here (exit 1) so CI notices; the background flush stays silent.
 func runUsageExportOTLP(out io.Writer) error {
 	root, name := telemetryRoot(""), telemetryConfigDirName()
-	settings := telemetry.ResolveFor(root, name, nil)
+	settings := telemetry.ResolveFor(root, name, nil, activePolicy)
 	logPath := usageLog
 	if logPath == "" {
 		logPath = defaultUsageLogPath()

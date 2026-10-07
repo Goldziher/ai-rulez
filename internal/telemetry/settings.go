@@ -131,6 +131,8 @@ type Layers struct {
 	// Root is the project directory, so an organization policy discovered from the
 	// repository's owner can forbid export too; "" for none.
 	Root string
+	// Policy is the organization policy in force (nil for none).
+	Policy config.PolicyEnforcer
 }
 
 // Resolve applies the layers in precedence order (kill switches, environment,
@@ -173,7 +175,7 @@ func Resolve(layers Layers) Settings {
 		ServiceName: s.ServiceName, Sample: &s.Sample, SaltFile: s.SaltFile, Resource: s.Resource,
 	}
 	s.addBlocking(effective.Validate()...)
-	if config.PolicyLocksIn("telemetry", layers.Root) {
+	if config.PolicyLocksIn(layers.Policy, "telemetry", layers.Root) {
 		// An organization policy switches export off whatever the user scope says.
 		s.AllowNetwork = false
 		set("allow_network", ScopePolicy)
@@ -518,11 +520,11 @@ func loadTable(paths []string) (*config.TelemetryConfig, error) {
 // them against the real environment. A table that fails to decode becomes a
 // Problem (telemetry stays off for export) instead of an error, so a typo in a
 // config never breaks a hook.
-func ResolveFor(root, configDirName string, getenv func(string) string) Settings {
+func ResolveFor(root, configDirName string, getenv func(string) string, policy config.PolicyEnforcer) Settings {
 	user, _, userErr := LoadUser(getenv)
 	repo, repoErr := LoadRepo(root, configDirName)
 	consent, consentErr := LoadConsent(ConsentPath(getenv))
-	s := Resolve(Layers{Repo: repo, User: user, Consent: consent, ConsentErr: consentErr, Getenv: getenv, Root: root})
+	s := Resolve(Layers{Repo: repo, User: user, Consent: consent, ConsentErr: consentErr, Getenv: getenv, Root: root, Policy: policy})
 	if userErr != nil {
 		s.addBlocking("user config: " + firstLine(userErr.Error()))
 	}

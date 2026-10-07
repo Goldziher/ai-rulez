@@ -305,8 +305,9 @@ func TestReviewEstimateRefusedUnderAPolicyLLMLock(t *testing.T) {
 	// Arrange
 	reviewProject(t, "\n[llm]\nmodel = \"claude-haiku-4-5\"\n")
 	reviewFlags.estimate = true
-	config.SetPolicyEnforcer(llmLockEnforcer{})
-	t.Cleanup(func() { config.SetPolicyEnforcer(policyEnforcer) })
+	previous := activePolicy
+	activePolicy = llmLockEnforcer{}
+	t.Cleanup(func() { activePolicy = previous })
 	var out bytes.Buffer
 
 	// Act

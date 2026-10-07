@@ -97,10 +97,10 @@ func TestResolveFor_OnlyTheUserDirectoryHoldsConsent(t *testing.T) {
 	write(t, filepath.Join(root, ".ai-rulez", "config.toml"), "[telemetry]\nenabled = true\n")
 	e := env("XDG_CONFIG_HOME", xdg)
 
-	assert.False(t, ResolveFor(root, ".ai-rulez", e).ExportActive(), "a record in the repository is never read")
+	assert.False(t, ResolveFor(root, ".ai-rulez", e, nil).ExportActive(), "a record in the repository is never read")
 
 	require.NoError(t, SaveConsent(ConsentPath(e), record(consentEndpoint, "http/json", false, false)))
-	s := ResolveFor(root, ".ai-rulez", e)
+	s := ResolveFor(root, ".ai-rulez", e, nil)
 	assert.True(t, s.ExportActive())
 	assert.Equal(t, consentEndpoint, s.Endpoint)
 }

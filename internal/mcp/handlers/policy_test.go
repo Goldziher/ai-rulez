@@ -21,14 +21,13 @@ func (loosening) Locks(string) bool { return false }
 func TestMCPGenerateAndValidateRefusePolicyViolations(t *testing.T) {
 	// Arrange
 	dir := driftProject(t)
-	config.SetPolicyEnforcer(loosening{})
-	t.Cleanup(func() { config.SetPolicyEnforcer(nil) })
+	ctx := config.WithPolicyContext(context.Background(), loosening{})
 	args := map[string]any{"working_directory": dir, "no_local": true}
 
 	// Act
-	gen, err := GenerateOutputsHandler(context.Background(), newRequestWithArgs(args))
+	gen, err := GenerateOutputsHandler(ctx, newRequestWithArgs(args))
 	require.NoError(t, err)
-	val, err := ValidateConfigHandler(context.Background(), newRequestWithArgs(args))
+	val, err := ValidateConfigHandler(ctx, newRequestWithArgs(args))
 	require.NoError(t, err)
 
 	// Assert

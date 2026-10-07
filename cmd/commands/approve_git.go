@@ -14,7 +14,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
-	"github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
@@ -129,7 +128,7 @@ func (g *approveGit) itemsAt(ctx context.Context, sha string) ([]lockfile.Item, 
 	if _, err := govview.ExtractRevision(ctx, g.cfg.BaseDir, sha, path.Join(filepath.ToSlash(base), name), dest); err != nil {
 		return nil, oops.With("commit", sha).Wrapf(err, "read the configuration at the reviewed commit")
 	}
-	cfg, err := project.LoadDir(ctx, filepath.Join(dest, filepath.FromSlash(base)), name, config.WithoutRemote(), config.WithoutLocal())
+	cfg, err := loadProjectDir(ctx, filepath.Join(dest, filepath.FromSlash(base)), name, config.WithoutRemote(), config.WithoutLocal())
 	if err != nil {
 		return nil, oops.With("commit", sha).Wrapf(err, "load the configuration at the reviewed commit")
 	}

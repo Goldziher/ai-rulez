@@ -51,10 +51,10 @@ AI_RULEZ_TELEMETRY=off and DO_NOT_TRACK=1 still win over a record, and so does a
 
 func runTelemetryEnable(out io.Writer) error {
 	root, name := telemetryRoot(""), telemetryConfigDirName()
-	if config.PolicyLocksIn("telemetry", root) {
+	if config.PolicyLocksIn(activePolicy, "telemetry", root) {
 		return oops.Hint("Ask the owner of the organization policy.").Errorf("an organization policy forbids telemetry export")
 	}
-	settings := telemetry.ResolveFor(root, name, nil)
+	settings := telemetry.ResolveFor(root, name, nil, activePolicy)
 
 	endpoint := telEnableEndpoint
 	if endpoint == "" {
@@ -94,7 +94,7 @@ func runTelemetryEnable(out io.Writer) error {
 	}
 	placeCursor(w, root, name)
 
-	after := telemetry.ResolveFor(root, name, nil)
+	after := telemetry.ResolveFor(root, name, nil, activePolicy)
 	switch {
 	case after.ExportActive():
 		w.printf("export is on. Hooks record events (ai-rulez telemetry hook); preview what is sent with `ai-rulez telemetry preview`.\n")
@@ -162,7 +162,7 @@ func runTelemetryDisable(out io.Writer) error {
 	} else {
 		w.printf("there was no consent record\n")
 	}
-	after := telemetry.ResolveFor(telemetryRoot(""), telemetryConfigDirName(), nil)
+	after := telemetry.ResolveFor(telemetryRoot(""), telemetryConfigDirName(), nil, activePolicy)
 	if after.ExportActive() {
 		w.printf("export is still on because %s grants it; remove allow_network from your user config or unset the variable\n", consentSourceName(&after))
 		return nil
@@ -193,7 +193,7 @@ silent to your harness by design; this is where they show. Nothing is written or
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		root, name := telemetryRoot(""), telemetryConfigDirName()
-		settings := telemetry.ResolveFor(root, name, nil)
+		settings := telemetry.ResolveFor(root, name, nil, activePolicy)
 		status := telemetry.BuildStatus(&settings, telemetry.LocalDir(root, name), defaultUsageLogPath())
 		if telStatusJSON {
 			encoder := json.NewEncoder(cmd.OutOrStdout())
