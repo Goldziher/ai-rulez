@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // copilotNamespaceDir is the vendor directory the Agent Plugins layout gives
@@ -34,10 +33,10 @@ func renderCopilot(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		outputs = appendIf(outputs, out)
 	}
 	if len(m.Commands) > 0 {
-		logger.Warn("The copilot runtime does not bundle commands: their file format is not documented", "plugin", m.Name, "commands", len(m.Commands))
+		m.log().Warn("The copilot runtime does not bundle commands: their file format is not documented", "plugin", m.Name, "commands", len(m.Commands))
 	}
 	if len(m.Hooks) > 0 {
-		logger.Warn("The copilot runtime does not bundle hooks: their file format is not documented", "plugin", m.Name, "hooks", len(m.Hooks))
+		m.log().Warn("The copilot runtime does not bundle hooks: their file format is not documented", "plugin", m.Name, "hooks", len(m.Hooks))
 	}
 	return outputs, nil
 }

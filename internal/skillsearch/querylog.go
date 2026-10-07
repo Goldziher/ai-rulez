@@ -60,6 +60,8 @@ type QueryLog struct {
 	Scanner SecretScanner
 	// Now is the clock; nil is the wall clock.
 	Now ambient.Clock
+	// Log receives the log's warning; nil is the CLI's logger.
+	Log logger.Logger
 
 	mu     sync.Mutex
 	warned bool
@@ -140,7 +142,7 @@ func (l *QueryLog) warnOnce(msg string, args ...any) {
 		return
 	}
 	l.warned = true
-	logger.Warn(msg, args...)
+	logger.Or(l.Log).Warn(msg, args...)
 }
 
 // ReadLog reads the entries of a log file; a missing file is an empty log.

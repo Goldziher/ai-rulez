@@ -14,7 +14,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
@@ -288,7 +287,7 @@ func splitCopilotCandidates(d *diag.Collector, all []config.ContentFile, kind st
 			return
 		}
 		if rulefiles.FileAllowed(cf, target, kindOf(kind)) {
-			logger.Warn(kind+" \""+cf.Name+"\" is targeted only at "+target.Dir+" but Copilot cannot apply it "+
+			d.Raise(kind+" \""+cf.Name+"\" is targeted only at "+target.Dir+" but Copilot cannot apply it "+
 				"automatically there; omitted", "path", cf.Path)
 		}
 	}

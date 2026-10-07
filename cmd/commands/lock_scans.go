@@ -29,7 +29,7 @@ func pinScans(cfg *config.Config, current, next *lockfile.File, full bool) {
 		logger.Warn("Scan results are not recorded: the repository files could not be indexed", "error", err)
 		return
 	}
-	records, err := lint.ScanRecords(cfg, tree, lint.Options{Cwd: workingDir(), Scanner: lint.ScannerOptions{Cache: lint.UserScanCache(cfg.ConfigDir)}})
+	records, err := lint.ScanRecords(cfg, tree, lint.Options{Cwd: workingDir(), Scanner: lint.ScannerOptions{Cache: lint.UserScanCache(cfg.Log(), cfg.ConfigDir)}})
 	if err != nil {
 		logger.Warn("Scan results are not recorded", "error", err)
 		return

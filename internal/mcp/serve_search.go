@@ -33,6 +33,7 @@ type SearchRuntime struct {
 	stamp    string
 	ranker   *skillsearch.Ranker
 	warned   map[string]bool
+	log      logger.Logger
 	// newEmbedder builds the embedder; tests replace it.
 	newEmbedder func(*setup.Resolved) (skillsearch.Embedder, func(), error)
 }
@@ -40,6 +41,12 @@ type SearchRuntime struct {
 // NewSearchRuntime returns a runtime reading the configuration of the latest build.
 func NewSearchRuntime(get func() *config.Config) *SearchRuntime {
 	return &SearchRuntime{get: get, warned: map[string]bool{}, newEmbedder: func(r *setup.Resolved) (skillsearch.Embedder, func(), error) { return r.Embedder() }}
+}
+
+// WithLog makes the runtime report to log instead of the CLI's logger.
+func (rt *SearchRuntime) WithLog(log logger.Logger) *SearchRuntime {
+	rt.log = log
+	return rt
 }
 
 // Close releases the embedding client.
@@ -169,7 +176,7 @@ func (rt *SearchRuntime) warnOnce(key, msg string) {
 		return
 	}
 	rt.warned[key] = true
-	logger.Warn(msg)
+	logger.Or(rt.log).Warn(msg)
 }
 
 // indexStamp changes whenever the index files do, so a rebuilt index is picked up without a restart.

@@ -34,6 +34,8 @@ type Options struct {
 	Commit CommitDater
 	// Clock is the time source; the zero value is the wall clock.
 	Clock ambient.Clock
+	// Log receives the timer's reports; nil is the CLI's logger.
+	Log logger.Logger
 }
 
 // Timer implements tagresolve.ReleaseTimer for one repository.
@@ -99,12 +101,12 @@ func (t *Timer) lookup(ctx context.Context, tag tagresolve.RawTag) (tagresolve.R
 	if forgeErr == nil {
 		return forgeRT, nil
 	}
-	logger.Debug("release time: forge unavailable, trying first-seen", "tag", tag.Name, "error", forgeErr)
+	logger.Or(t.opt.Log).Debug("release time: forge unavailable, trying first-seen", "tag", tag.Name, "error", forgeErr)
 	seenRT, seenErr := t.fromSeen(tag)
 	if seenErr == nil {
 		return seenRT, nil
 	}
-	logger.Warn("release time: the first-seen record cannot be used, holding the tag back (age_source = \"commit\" would trust the forgeable commit date)",
+	logger.Or(t.opt.Log).Warn("release time: the first-seen record cannot be used, holding the tag back (age_source = \"commit\" would trust the forgeable commit date)",
 		"tag", tag.Name, "error", seenErr)
 	return tagresolve.ReleaseTime{}, fmt.Errorf("no release time for %s: %w", tag.Name, errors.Join(forgeErr, seenErr))
 }
@@ -160,7 +162,7 @@ func (t *Timer) Observe(tags []tagresolve.RawTag) {
 		return
 	}
 	if err := t.opt.Seen.Observe(t.opt.Source, tags, t.opt.Clock.Now()); err != nil {
-		logger.Debug("could not record the tags seen", "error", err)
+		logger.Or(t.opt.Log).Debug("could not record the tags seen", "error", err)
 	}
 }
 

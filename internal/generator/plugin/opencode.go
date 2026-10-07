@@ -14,7 +14,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/opencodev1"
 	"github.com/samber/oops"
 )
@@ -211,7 +210,7 @@ func openCodePublishedFiles(m *Manifest) []string {
 				seen[top] = true
 				info, err := os.Stat(filepath.Join(m.SourceDir, top))
 				if err != nil {
-					logger.Warn("MCP server references a path missing from the plugin source; it will not be published",
+					m.log().Warn("MCP server references a path missing from the plugin source; it will not be published",
 						"server", server.Name, "path", top)
 					continue
 				}
@@ -251,7 +250,7 @@ func openCodeModule(m *Manifest, outputPath string, hasContent bool) (config.Out
 		if err != nil {
 			return config.OutputFile{}, err
 		}
-		opencodev1.WarnSource(sourcePath, string(out.RawContent))
+		opencodev1.WarnSource(m.Config.Collector(), m.log(), sourcePath, string(out.RawContent))
 		return out, nil
 	}
 	if !os.IsNotExist(err) {

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
 )
@@ -66,7 +65,7 @@ func newSignatureGate(cfg *config.Config, origins map[string]skillOrigin, now ti
 		} else {
 			g.check = check
 			for _, w := range check.Warnings {
-				logger.Warn(w)
+				cfg.Log().Warn(w)
 			}
 		}
 	}

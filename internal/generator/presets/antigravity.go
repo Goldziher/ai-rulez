@@ -15,7 +15,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
@@ -171,7 +170,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 	}
 	outputs = append(outputs, hookOutputs...)
 
-	routing, demoted := antigravityRouting(cfg, logger.Warn)
+	routing, demoted := antigravityRouting(cfg, cfg.Log().Warn)
 	rules, contexts := allInlineRules(content), allInlineContext(content)
 	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, contexts,
 		&antigravityRulesTarget, routing, rulefiles.ScopeOf(cfg), rulefiles.RegistryFor(cfg, presetNameAntigravity))

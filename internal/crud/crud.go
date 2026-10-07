@@ -7,6 +7,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -65,7 +66,19 @@ type OperatorImpl struct {
 	filesMgr   *FileManager
 	local      bool        // route config mutations to the config.local.* overlay (see Local)
 	env        ambient.Env // environment for ~ and $VAR in local include paths; nil is the real one
+	log        logger.Logger
 }
+
+// WithLogger returns a copy of the operator that reports to log instead of the
+// CLI's logger.
+func (op *OperatorImpl) WithLogger(log logger.Logger) *OperatorImpl {
+	c := *op
+	c.log = log
+	return &c
+}
+
+// logger is where the operator reports what it changed: the CLI's unless WithLogger set one.
+func (op *OperatorImpl) logger() logger.Logger { return logger.Or(op.log) }
 
 // WithEnv returns a copy of the operator that reads the environment from env.
 func (op *OperatorImpl) WithEnv(env ambient.Env) *OperatorImpl {

@@ -6,7 +6,6 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
@@ -57,7 +56,7 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 		return oops.With("config_dir", op.aiRulezDir).Wrapf(err, "save config")
 	}
 
-	logger.Info("Skill installed successfully",
+	op.logger().Info("Skill installed successfully",
 		"name", req.Name,
 		"source", req.Source,
 		"type", sourceType,
@@ -109,7 +108,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 		return oops.With("config_dir", op.aiRulezDir).Wrapf(err, "save config")
 	}
 
-	logger.Info("Skill uninstalled successfully", "name", name)
+	op.logger().Info("Skill uninstalled successfully", "name", name)
 	return nil
 }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
@@ -238,7 +237,7 @@ func (g *XumPresetGenerator) renderMCPConfig(baseDir string, cfg *config.Config)
 func xumServers(cfg *config.Config) map[string]interface{} {
 	servers := map[string]interface{}{}
 	for name, server := range cfg.MCPServers {
-		if entry := xumMCPEntry(server); entry != nil {
+		if entry := xumMCPEntry(cfg, server); entry != nil {
 			servers[name] = entry
 		}
 	}
@@ -249,7 +248,7 @@ func xumServers(cfg *config.Config) map[string]interface{} {
 // entry where the shared stdio/url shape is enough: a stdio server is a shell
 // command string (or an object when disabled), and a remote one carries the
 // `transport` key the other tools do not.
-func xumMCPEntry(server *config.MCPServer) interface{} {
+func xumMCPEntry(cfg *config.Config, server *config.MCPServer) interface{} {
 	if server == nil {
 		return nil
 	}
@@ -275,7 +274,7 @@ func xumMCPEntry(server *config.MCPServer) interface{} {
 		// POSIX shell, so args are joined into the command and env becomes a
 		// leading KEY=value assignment list.
 		command := joinShellCommand(server.Command, server.Args)
-		if prefix := xumEnvPrefix(server); prefix != "" {
+		if prefix := xumEnvPrefix(cfg, server); prefix != "" {
 			command = prefix + " " + command
 		}
 		if server.IsEnabled() {
@@ -288,11 +287,11 @@ func xumMCPEntry(server *config.MCPServer) interface{} {
 // xumEnvPrefix renders a stdio server's env as shell assignments ("A=1 B='x y'")
 // in key order. Names that are not shell identifiers cannot be assigned this way
 // and are skipped with a warning.
-func xumEnvPrefix(server *config.MCPServer) string {
+func xumEnvPrefix(cfg *config.Config, server *config.MCPServer) string {
 	keys := make([]string, 0, len(server.Env))
 	for key := range server.Env {
 		if !isShellIdentifier(key) {
-			logger.Warn("Skipping an MCP env variable Xum's mcp.jsonc cannot express; "+
+			cfg.Warn("Skipping an MCP env variable Xum's mcp.jsonc cannot express; "+
 				"set it in the environment Xum runs in", "server", server.Name, "variable", key)
 			continue
 		}

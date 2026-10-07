@@ -118,7 +118,7 @@ schema compliance, and structural issues.`,
 			}
 			return
 		}
-		presets.WarnDuplicateContent(cfg.Content)
+		presets.WarnDuplicateContent(cfg.Log(), cfg.Content)
 		warnUnpinned(cfg)
 		warnFrontmatter(cfg)
 		displayConfigurationSummary(cfg)

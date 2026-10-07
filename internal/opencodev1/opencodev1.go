@@ -15,8 +15,8 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
@@ -113,54 +113,31 @@ type Finding struct {
 	Path string
 }
 
-var (
-	warnedMu sync.Mutex
-	warned   = map[string]bool{}
-)
-
-// ResetWarned clears the set of files already warned about; for tests.
-func ResetWarned() {
-	warnedMu.Lock()
-	defer warnedMu.Unlock()
-	warned = map[string]bool{}
+// claim reports whether path has not been warned about yet in this run (the
+// collector d remembers it; nil is the process default), and marks it.
+func claim(d *diag.Collector, path string) bool {
+	return d.Sticky("opencode-v1\x00" + path)
 }
 
-// claim reports whether path has not been warned about yet, and marks it.
-func claim(path string) bool {
-	warnedMu.Lock()
-	defer warnedMu.Unlock()
-	if warned[path] {
+// WarnSource warns once per run when an authored plugin entrypoint has the v1
+// shape. log is where the warning goes; nil is the CLI's logger.
+func WarnSource(d *diag.Collector, log logger.Logger, path, source string) bool {
+	if !IsV1Plugin(source) || !claim(d, path) {
 		return false
 	}
-	warned[path] = true
-	return true
-}
-
-// WasWarned reports whether a warning has already been emitted for path.
-func WasWarned(path string) bool {
-	warnedMu.Lock()
-	defer warnedMu.Unlock()
-	return warned[path]
-}
-
-// WarnSource warns once when an authored plugin entrypoint has the v1 shape.
-func WarnSource(path, source string) bool {
-	if !IsV1Plugin(source) || !claim(path) {
-		return false
-	}
-	logger.Warn("OpenCode plugin entrypoint is a v1 plugin", "file", path, "hint", MigrationHint)
+	logger.Or(log).Warn("OpenCode plugin entrypoint is a v1 plugin", "file", path, "hint", MigrationHint)
 	return true
 }
 
 // WarnProject scans the project for v1-shaped local plugins and warns once per
 // file. It never fails: unreadable files and malformed config are skipped.
-func WarnProject(root string) []Finding {
+func WarnProject(d *diag.Collector, log logger.Logger, root string) []Finding {
 	var fresh []Finding
 	for _, finding := range ScanProject(root) {
-		if !claim(finding.Path) {
+		if !claim(d, finding.Path) {
 			continue
 		}
-		logger.Warn("OpenCode plugin is a v1 plugin and will not load in OpenCode v2",
+		logger.Or(log).Warn("OpenCode plugin is a v1 plugin and will not load in OpenCode v2",
 			"file", finding.Path, "hint", MigrationHint)
 		fresh = append(fresh, finding)
 	}

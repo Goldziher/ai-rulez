@@ -130,6 +130,7 @@ type verifier struct {
 	require bool
 	state   *signing.State
 	now     func() time.Time
+	log     logger.Logger
 }
 
 // sidecarRef names the signature next to a policy reference.
@@ -214,7 +215,7 @@ func (l *loader) buildVerifier() (*verifier, error) {
 		}
 		return nil, nil //nolint:nilnil // no trust configured: signatures are not checked
 	}
-	pv := &verifier{trust: signing.TrustSet{Entries: entries}, require: require, now: l.opts.Clock.Now}
+	pv := &verifier{trust: signing.TrustSet{Entries: entries}, require: require, now: l.opts.Clock.Now, log: l.opts.logger()}
 	tlog := signing.TLogOff
 	if pv.trust.HasIdentities(SubjectPolicy) {
 		tlog = signing.TLogRequired
@@ -233,7 +234,7 @@ func (l *loader) buildVerifier() (*verifier, error) {
 	pv.v = signing.Verifier{TrustedRoot: tr, Keys: keys, TLog: tlog}
 	statePath, secretPath := signing.StatePaths(env)
 	if st, serr := signing.OpenState(statePath, secretPath); serr != nil {
-		logger.Debug("policy rollback detection is off", "error", serr)
+		l.opts.logger().Debug("policy rollback detection is off", "error", serr)
 	} else {
 		pv.state = st
 	}
@@ -324,7 +325,7 @@ func (v *verifier) verify(ref Ref, raw, bundle []byte) (signer string, err error
 			return "", err //nolint:wrapcheck // AR727
 		}
 		if err := v.state.AdvanceDigest(key, d); err != nil {
-			logger.Debug("cannot record the policy digest", "error", err)
+			v.log.Debug("cannot record the policy digest", "error", err)
 		}
 	}
 	if v.state != nil && !at.IsZero() {
@@ -332,7 +333,7 @@ func (v *verifier) verify(ref Ref, raw, bundle []byte) (signer string, err error
 			return "", err //nolint:wrapcheck // AR727
 		}
 		if err := v.state.Advance(key, at); err != nil {
-			logger.Debug("cannot record the policy signing time", "error", err)
+			v.log.Debug("cannot record the policy signing time", "error", err)
 		}
 	}
 	return signerKey(res.Signer), nil

@@ -7,6 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -157,23 +160,19 @@ func TestOpencodeConfig_ListsLocalRootFile(t *testing.T) {
 	}
 }
 
-// captureLocalWarnings collects the dropped-local-content warnings as
+// localWarnings returns the dropped-local-content warnings a recorder holds as
 // "preset: items" strings.
-func captureLocalWarnings(t *testing.T) *[]string {
-	t.Helper()
+func localWarnings(rec *testutil.LogRecorder) []string {
 	var got []string
-	previous := warnLocal
-	warnLocal = func(_ string, args ...any) {
-		fields := map[string]string{}
-		for i := 0; i+1 < len(args); i += 2 {
-			key, _ := args[i].(string)
-			value, _ := args[i+1].(string)
-			fields[key] = value
+	for _, line := range rec.Level("WARN") {
+		if !strings.Contains(line, "Machine-local content has no output") {
+			continue
 		}
-		got = append(got, fields["preset"]+": "+fields["items"])
+		preset, _, _ := strings.Cut(strings.SplitN(line, " preset=", 2)[1], " items=")
+		_, items, _ := strings.Cut(line, " items=")
+		got = append(got, preset+": "+items)
 	}
-	t.Cleanup(func() { warnLocal = previous })
-	return &got
+	return got
 }
 
 // Codex and Hermes (reading the AGENTS chain) load a machine-local
@@ -263,17 +262,17 @@ func TestLocalRoot_WarnsOnceWhereNoMechanismExists(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			warned := captureLocalWarnings(t)
+			rec := &testutil.LogRecorder{}
 			root := t.TempDir()
 			writeAgentsMDProject(t, root, tt.flag+agentsMDConfig([]string{tt.preset}, "", ""))
 			writeAgentsMDFile(t, root, ".ai-rulez/local/context/notes.md", "LOCAL_BODY\n")
 			writeAgentsMDFile(t, root, ".ai-rulez/local/rules/r.md", "LOCAL_RULE\n")
 
 			// Act
-			runAgentsMDGenerate(t, root)
+			runAgentsMDGenerate(t, root, config.WithHost(ambient.Host{Log: rec}))
 
 			// Assert
-			assert.Equal(t, tt.want, *warned)
+			assert.Equal(t, tt.want, localWarnings(rec))
 			for _, rel := range []string{".hermes.local.md", "AGENTS.local.md"} {
 				assert.NoFileExists(t, filepath.Join(root, rel))
 			}

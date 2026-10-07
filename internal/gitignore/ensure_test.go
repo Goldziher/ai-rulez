@@ -62,10 +62,10 @@ func TestEnsureEntries(t *testing.T) {
 			}
 
 			// Act
-			require.NoError(t, EnsureEntries(dir, tt.patterns))
+			require.NoError(t, EnsureEntries(nil, dir, tt.patterns))
 			first, err := os.ReadFile(path)
 			require.NoError(t, err)
-			require.NoError(t, EnsureEntries(dir, tt.patterns))
+			require.NoError(t, EnsureEntries(nil, dir, tt.patterns))
 			second, err := os.ReadFile(path)
 			require.NoError(t, err)
 

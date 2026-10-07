@@ -29,7 +29,7 @@ func renderSharedPathsWithEnvRef(t *testing.T, base *config.Config, presets []st
 	g := NewGenerator(&cfg)
 	render, err := g.renderPresets("")
 	require.NoError(t, err)
-	flat, err := flattenPresetOutputs(nil, render.byPreset)
+	flat, err := flattenPresetOutputs(nil, nil, render.byPreset)
 	if err != nil {
 		return nil, err
 	}

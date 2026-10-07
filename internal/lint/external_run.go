@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
@@ -153,7 +152,7 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 	}
 	files := r.stageFiles(want, sc.Layout)
 	if len(files) == 0 || (slices.Contains(sc.Command, phSkillDirs) && !hasSkillDir(files)) {
-		logger.Debug("Scanner has nothing staged to scan", "scanner", sc.Name, "inputs", sc.Inputs)
+		r.log().Debug("Scanner has nothing staged to scan", "scanner", sc.Name, "inputs", sc.Inputs)
 		return nil, true
 	}
 	binary := lookExecutable(sc.Command[0], root)
@@ -161,7 +160,7 @@ func (r *runner) runStaged(sc resolvedScanner, root string) (all []scannerFindin
 	key, cache := r.cacheFor(sc, binary, digest)
 	if key != "" {
 		if hit, found := r.cacheGet(sc, cache, key); found && !r.opts.Scanner.DryRun {
-			logger.Debug("Scanner result served from the cache", "scanner", sc.Name)
+			r.log().Debug("Scanner result served from the cache", "scanner", sc.Name)
 			return r.fromCache(sc, files, hit), true
 		}
 	}

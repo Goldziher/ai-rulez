@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
@@ -63,4 +64,13 @@ func (c *Config) WarnOnce(key, msg string, args ...any) {
 	if c.OnceKey(key) {
 		c.Log().Warn(msg, args...)
 	}
+}
+
+// Collector is the config's warning collector (nil, which stands for the process
+// default one, outside a load). Safe on a nil Config.
+func (c *Config) Collector() *diag.Collector {
+	if c == nil {
+		return nil
+	}
+	return c.Diag
 }

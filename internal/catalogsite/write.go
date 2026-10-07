@@ -49,7 +49,7 @@ type WriteResult struct {
 //
 // All access goes through an os.Root, so a symlink inside dir cannot lead a
 // write or a removal outside it.
-func Write(dir string, site *Site, clean bool) (*WriteResult, error) {
+func Write(log logger.Logger, dir string, site *Site, clean bool) (*WriteResult, error) {
 	if dir == "" {
 		return nil, oops.Errorf("no output directory")
 	}
@@ -96,7 +96,7 @@ func Write(dir string, site *Site, clean bool) (*WriteResult, error) {
 			final[old] = previous[old] // stays listed so a later --clean can remove it
 			continue
 		}
-		if removeOwned(root, old, previous[old]) {
+		if removeOwned(log, root, old, previous[old]) {
 			res.Removed = append(res.Removed, old)
 		} else {
 			final[old] = previous[old]
@@ -279,9 +279,10 @@ func writeOne(root *os.Root, name string, data []byte) error {
 // removeOwned removes a listed file that has the shape of a site file and still
 // holds the bytes this command wrote (the digest the marker recorded), and any
 // directories it leaves empty; it reports whether the file was removed.
-func removeOwned(root *os.Root, name, want string) bool {
+func removeOwned(log logger.Logger, root *os.Root, name, want string) bool {
+	log = logger.Or(log)
 	if want == "" || !isSiteFile(name) {
-		logger.Warn("Not removing a file the catalog marker lists: it is not a verifiable catalog output", "path", name)
+		log.Warn("Not removing a file the catalog marker lists: it is not a verifiable catalog output", "path", name)
 		return false
 	}
 	f, err := root.Open(name)
@@ -291,7 +292,7 @@ func removeOwned(root *os.Root, name, want string) bool {
 	data, readErr := io.ReadAll(io.LimitReader(f, maxSiteFileBytes))
 	_ = f.Close() //nolint:errcheck // read-only
 	if readErr != nil || digestOf(data) != want {
-		logger.Warn("Not removing a catalog file that changed since it was written", "path", name)
+		log.Warn("Not removing a catalog file that changed since it was written", "path", name)
 		return false
 	}
 	if err := root.Remove(name); err != nil {

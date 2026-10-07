@@ -71,6 +71,7 @@ func (s *Server) registerSkillFiles(skill *CatalogSkill) {
 // keeps the dependency set unchanged and behaves the same on every platform.
 func (s *Server) Watch(ctx context.Context) {
 	o := s.serve.opts
+	log := logger.Or(o.Log)
 	if o.Rebuild == nil || o.Fingerprint == nil {
 		return
 	}
@@ -82,7 +83,7 @@ func (s *Server) Watch(ctx context.Context) {
 	if last == "" {
 		var err error
 		if last, err = o.Fingerprint(); err != nil {
-			logger.Warn("Live reload disabled: cannot fingerprint the skill files", "error", err.Error())
+			log.Warn("Live reload disabled: cannot fingerprint the skill files", "error", err.Error())
 			return
 		}
 	}
@@ -111,11 +112,11 @@ func (s *Server) Watch(ctx context.Context) {
 			failures++
 			failedAt = cur
 			retryAt = ambient.Clock(nil).Now().Add(min(interval<<min(failures, 6), maxRetryPause))
-			logger.Warn("Skill files changed but the catalog could not be rebuilt; keeping the previous one and retrying", "error", err.Error(), "attempt", failures)
+			log.Warn("Skill files changed but the catalog could not be rebuilt; keeping the previous one and retrying", "error", err.Error(), "attempt", failures)
 			continue
 		}
 		last, failures, retryAt = cur, 0, time.Time{}
 		s.Replace(next)
-		logger.Info("Reloaded served skills", "skills", len(next.Skills()))
+		log.Info("Reloaded served skills", "skills", len(next.Skills()))
 	}
 }

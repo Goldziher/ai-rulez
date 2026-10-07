@@ -13,7 +13,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/roles"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
@@ -96,7 +95,7 @@ func BuildCatalog(cfg *config.Config, counter tokens.Counter, toolVersion string
 	doc, _, err := buildCatalogCore(cfg, counter, toolVersion)
 	if err == nil {
 		for _, note := range doc.notes {
-			logger.Warn(note)
+			cfg.Log().Warn(note)
 		}
 	}
 	return doc, err

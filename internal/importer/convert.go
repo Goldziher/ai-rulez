@@ -15,6 +15,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/utils"
 	"github.com/samber/oops"
 )
@@ -142,7 +143,7 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 		return report, err
 	}
 	report.Written = true
-	if err := ignoreLocalTree(c.abs, c.intoAbs, p.files); err != nil {
+	if err := ignoreLocalTree(logger.FromContext(ctx), c.abs, c.intoAbs, p.files); err != nil {
 		return report, err
 	}
 	return report, nil
@@ -274,7 +275,7 @@ func (c *conversion) prepare(ctx context.Context, opts ConvertOptions) (*prepare
 // ignoreLocalTree keeps the personal content convert wrote below local/ out of
 // git until `generate` takes over that job: it adds the tree to the project's
 // .gitignore. A config directory outside the project cannot be ignored from it.
-func ignoreLocalTree(abs, intoAbs string, files map[string][]byte) error {
+func ignoreLocalTree(log logger.Logger, abs, intoAbs string, files map[string][]byte) error {
 	wrote := false
 	for rel := range files {
 		if strings.HasPrefix(rel, localDir+"/") {
@@ -290,7 +291,7 @@ func ignoreLocalTree(abs, intoAbs string, files map[string][]byte) error {
 		return nil
 	}
 	pattern := path.Join(filepath.ToSlash(rel), localDir) + "/"
-	if err := gitignore.EnsureEntries(abs, []string{pattern}); err != nil {
+	if err := gitignore.EnsureEntries(log, abs, []string{pattern}); err != nil {
 		return oops.Hint("Add "+pattern+" to .gitignore by hand: it holds personal content").Wrapf(err, "ignore the local tree")
 	}
 	return nil

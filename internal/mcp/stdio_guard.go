@@ -30,17 +30,20 @@ const jsonRPCVersion = "2.0"
 // every line first, answers the bad ones with -32700 / -32600 itself and
 // forwards only well-formed frames, so a confused client cannot take the
 // server down.
-func NewGuardedStdioTransport(in io.Reader, out io.Writer) sdkmcp.Transport {
-	return newGuardedTransport(in, out, MaxFrameBytes)
+//
+// log receives the guard's debug reports; nil is the CLI's logger.
+func NewGuardedStdioTransport(in io.Reader, out io.Writer, log logger.Logger) sdkmcp.Transport {
+	return newGuardedTransport(in, out, MaxFrameBytes, log)
 }
 
-func newGuardedTransport(in io.Reader, out io.Writer, frameLimit int) sdkmcp.Transport {
+func newGuardedTransport(in io.Reader, out io.Writer, frameLimit int, log logger.Logger) sdkmcp.Transport {
+	log = logger.Or(log)
 	w := &lockedWriter{w: out}
 	pr, pw := io.Pipe()
-	go pumpValidFrames(in, pw, w, frameLimit)
+	go pumpValidFrames(in, pw, w, frameLimit, log)
 	return &tolerantTransport{inner: &sdkmcp.IOTransport{
 		Reader: pr, Writer: nopWriteCloser{w}, MaxLineLength: -1,
-	}, out: w}
+	}, out: w, log: log}
 }
 
 type lockedWriter struct {
@@ -59,16 +62,16 @@ type nopWriteCloser struct{ io.Writer }
 func (nopWriteCloser) Close() error { return nil }
 
 // pumpValidFrames copies the valid lines of in to out, answering invalid ones.
-func pumpValidFrames(in io.Reader, out *io.PipeWriter, replies io.Writer, frameLimit int) {
+func pumpValidFrames(in io.Reader, out *io.PipeWriter, replies io.Writer, frameLimit int, log logger.Logger) {
 	br := bufio.NewReaderSize(in, 64*1024)
 	for {
 		line, tooLong, err := readBoundedLine(br, frameLimit)
 		switch {
 		case tooLong:
-			writeRPCError(replies, nil, jsonrpc.CodeInvalidRequest, "request line exceeds the size limit and was dropped")
+			writeRPCError(log, replies, nil, jsonrpc.CodeInvalidRequest, "request line exceeds the size limit and was dropped")
 		case len(bytes.TrimSpace(line)) > 0:
 			if code, msg, id := validateFrame(line); code != 0 {
-				writeRPCError(replies, id, code, msg)
+				writeRPCError(log, replies, id, code, msg)
 			} else if _, werr := out.Write(append(bytes.TrimSpace(line), '\n')); werr != nil {
 				return
 			}
@@ -146,7 +149,7 @@ func validateObject(raw []byte) (code int64, msg string, id json.RawMessage) {
 	return 0, "", id
 }
 
-func writeRPCError(w io.Writer, id json.RawMessage, code int64, message string) {
+func writeRPCError(log logger.Logger, w io.Writer, id json.RawMessage, code int64, message string) {
 	if len(id) == 0 {
 		id = json.RawMessage("null")
 	}
@@ -157,7 +160,7 @@ func writeRPCError(w io.Writer, id json.RawMessage, code int64, message string) 
 		return
 	}
 	if _, err := w.Write(append(body, '\n')); err != nil {
-		logger.Debug("MCP: could not answer a malformed frame", "error", err)
+		log.Debug("MCP: could not answer a malformed frame", "error", err)
 	}
 }
 
@@ -167,6 +170,7 @@ func writeRPCError(w io.Writer, id json.RawMessage, code int64, message string) 
 type tolerantTransport struct {
 	inner sdkmcp.Transport
 	out   io.Writer
+	log   logger.Logger
 }
 
 func (t *tolerantTransport) Connect(ctx context.Context) (sdkmcp.Connection, error) {
@@ -174,12 +178,13 @@ func (t *tolerantTransport) Connect(ctx context.Context) (sdkmcp.Connection, err
 	if err != nil {
 		return nil, err //nolint:wrapcheck // transport errors pass through unchanged
 	}
-	return &tolerantConn{Connection: conn, out: t.out}, nil
+	return &tolerantConn{Connection: conn, out: t.out, log: t.log}, nil
 }
 
 type tolerantConn struct {
 	sdkmcp.Connection
 	out io.Writer
+	log logger.Logger
 }
 
 func (c *tolerantConn) Read(ctx context.Context) (jsonrpc.Message, error) {
@@ -192,7 +197,7 @@ func (c *tolerantConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 			failures >= maxConsecutiveReadErrors {
 			return nil, err //nolint:wrapcheck // end of stream passes through unchanged
 		}
-		logger.Debug("MCP: dropped a frame the SDK rejected", "error", err)
-		writeRPCError(c.out, nil, jsonrpc.CodeInvalidRequest, "invalid request: "+err.Error())
+		c.log.Debug("MCP: dropped a frame the SDK rejected", "error", err)
+		writeRPCError(c.log, c.out, nil, jsonrpc.CodeInvalidRequest, "invalid request: "+err.Error())
 	}
 }

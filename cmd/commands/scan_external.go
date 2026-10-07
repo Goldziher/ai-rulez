@@ -73,7 +73,7 @@ func scannerOptions() (lint.ScannerOptions, error) {
 // withScannerCache attaches the per-user scanner result cache of cfg's project.
 func withScannerCache(opts lint.ScannerOptions, cfg *config.Config) lint.ScannerOptions {
 	if validateExtern && !opts.NoCache && cfg != nil {
-		opts.Cache = lint.UserScanCache(cfg.ConfigDir)
+		opts.Cache = lint.UserScanCache(cfg.Log(), cfg.ConfigDir)
 	}
 	return opts
 }

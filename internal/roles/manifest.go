@@ -15,7 +15,6 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
@@ -98,7 +97,7 @@ func Build(cfg *config.Config, counter tokens.Counter) *Manifest {
 		if err != nil {
 			// A role with broken inheritance is reported by `validate --strict`
 			// (AR972); it must not stop the others from being published.
-			logger.Warn("Left a role out of the manifest", "role", name, "error", err)
+			cfg.Log().Warn("Left a role out of the manifest", "role", name, "error", err)
 			continue
 		}
 		m.Roles = append(m.Roles, *role)

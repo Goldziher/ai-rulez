@@ -20,7 +20,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 const (
@@ -276,7 +275,7 @@ func readRecord(path string) map[string]bool {
 	return known
 }
 
-func writeRecord(path string, items []Item) {
+func writeRecord(cfg *config.Config, path string, items []Item) {
 	rec := record{Digests: make([]string, 0, len(items))}
 	for _, it := range items {
 		rec.Digests = append(rec.Digests, it.digest())
@@ -289,7 +288,7 @@ func writeRecord(path string, items []Item) {
 		}
 	}
 	if err != nil {
-		logger.Debug("Could not record the announced commands", "path", path, "error", err)
+		cfg.Log().Debug("Could not record the announced commands", "path", path, "error", err)
 	}
 }
 
@@ -314,7 +313,7 @@ func NewCommands(cfg *config.Config, remember bool) []string {
 	}
 	path, err := recordPath(cfg)
 	if err != nil {
-		logger.Debug("No place to record the announced commands", "error", err)
+		cfg.Log().Debug("No place to record the announced commands", "error", err)
 	}
 	known := map[string]bool{}
 	if err == nil && previousManifestExists(cfg) {
@@ -327,7 +326,7 @@ func NewCommands(cfg *config.Config, remember bool) []string {
 		}
 	}
 	if remember && err == nil {
-		writeRecord(path, items)
+		writeRecord(cfg, path, items)
 	}
 	return lines
 }
@@ -341,7 +340,7 @@ func Remember(cfg *config.Config) {
 		return
 	}
 	if path, err := recordPath(cfg); err == nil {
-		writeRecord(path, items)
+		writeRecord(cfg, path, items)
 	}
 }
 

@@ -400,7 +400,7 @@ func (g *Generator) ignoredSet(rels, pending []string) map[string]bool {
 		return ignored
 	}
 	patterns := append([]string(nil), pending...)
-	if data, readErr := gitutil.ReadIgnoreFileOrEmpty(filepath.Join(g.config.BaseDir, ".gitignore")); readErr == nil {
+	if data, readErr := gitutil.ReadIgnoreFileOrEmpty(g.log(), filepath.Join(g.config.BaseDir, ".gitignore")); readErr == nil {
 		patterns = append(patterns, gitignorePatterns(string(data))...)
 	}
 	for _, rel := range rels {

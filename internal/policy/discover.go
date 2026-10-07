@@ -86,7 +86,12 @@ type DiscoverOptions struct {
 
 	// Signature configures the check of a policy's signature (see SignatureOptions).
 	Signature SignatureOptions
+	// Log receives the discovery's reports; nil is the CLI's logger.
+	Log logger.Logger
 }
+
+// logger is where discovery reports.
+func (o DiscoverOptions) logger() logger.Logger { return logger.Or(o.Log) }
 
 // context is the context of a load.
 func (o DiscoverOptions) context() context.Context { return context.Background() }
@@ -345,7 +350,7 @@ func (l *loader) openCache() *cache {
 		l.cacheOnce = true
 		c, err := openCache(l.opts.Env)
 		if err != nil {
-			logger.Debug("policy cache unavailable", "error", err)
+			l.opts.logger().Debug("policy cache unavailable", "error", err)
 		} else {
 			l.cache = c
 		}
@@ -421,7 +426,7 @@ func (l *loader) loadRemote(origin string, ref Ref) (Layer, error) {
 		if err := l.openCache().tofuRecord(ref.Location, ref.Digest); err != nil {
 			return unavailable(fmt.Errorf("cannot record the digest: %w", err))
 		}
-		logger.Warn("Recorded the digest of an unpinned policy URL on first use; verify it, then pin it with @sha256 in your configuration",
+		l.opts.logger().Warn("Recorded the digest of an unpinned policy URL on first use; verify it, then pin it with @sha256 in your configuration",
 			"policy", disp, "digest", ref.Digest)
 	}
 	layer, err := buildLayer(origin, ref, data, note)
@@ -432,7 +437,7 @@ func (l *loader) loadRemote(origin string, ref Ref) (Layer, error) {
 	if note == "" {
 		if c := l.openCache(); c != nil {
 			if perr := c.put(ref.Location, ref.Digest, data, bundle, l.opts.Clock.Now()); perr != nil {
-				logger.Debug("cannot cache the policy", "policy", disp, "error", perr)
+				l.opts.logger().Debug("cannot cache the policy", "policy", disp, "error", perr)
 			}
 		}
 	}
@@ -460,7 +465,7 @@ func (l *loader) obtain(ref Ref, pv *verifier, mode remoteMode) (data, bundle []
 		if pv.require || mode == modeSigned {
 			return l.fromCache(ref, mode, ne) // a signature is needed, so a stale bundle may stand in
 		}
-		logger.Warn("The policy signature could not be fetched; the digest pin still vouches for the policy", "policy", ref.Display(), "reason", ne.Error())
+		l.opts.logger().Warn("The policy signature could not be fetched; the digest pin still vouches for the policy", "policy", ref.Display(), "reason", ne.Error())
 		return data, nil, "", nil
 	}
 	return data, bundle, "", err
@@ -485,7 +490,7 @@ func (l *loader) fromCache(ref Ref, mode remoteMode, cause error) (data, bundle 
 		return nil, nil, "", fmt.Errorf("%v, and the cached copy fetched %s ago is older than max_stale (%s)", cause, age.Round(time.Minute), staleText(l.maxStale))
 	}
 	note = fmt.Sprintf("cached copy fetched %s (%v)", at.UTC().Format(time.RFC3339), cause)
-	logger.Warn("Using the cached organization policy because the URL cannot be reached",
+	l.opts.logger().Warn("Using the cached organization policy because the URL cannot be reached",
 		"policy", ref.Display(), "fetched", at.UTC().Format(time.RFC3339), "reason", cause.Error())
 	return body, bun, note, nil
 }
