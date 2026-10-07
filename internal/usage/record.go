@@ -314,7 +314,6 @@ func splitShell(command string) []string {
 	}
 	runes := []rune(command)
 	for i, r := range runes {
-		isAnd := r == '&' && ((i+1 < len(runes) && runes[i+1] == '&') || (i > 0 && runes[i-1] == '&'))
 		switch {
 		case escaped:
 			escaped = false
@@ -326,7 +325,7 @@ func splitShell(command string) []string {
 			}
 		case r == '\'' || r == '"':
 			quote = r
-		case r == ';' || r == '|' || r == '\n' || isAnd:
+		case isSeparator(runes, i):
 			flush()
 			continue
 		}
@@ -334,6 +333,18 @@ func splitShell(command string) []string {
 	}
 	flush()
 	return segments
+}
+
+// isSeparator reports whether runes[i], outside quotes, ends a command: ;, |, a
+// newline, or either & of &&.
+func isSeparator(runes []rune, i int) bool {
+	switch r := runes[i]; r {
+	case ';', '|', '\n':
+		return true
+	case '&':
+		return (i+1 < len(runes) && runes[i+1] == '&') || (i > 0 && runes[i-1] == '&')
+	}
+	return false
 }
 
 func skillFromReadingCommand(command string) string {
