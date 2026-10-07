@@ -1,0 +1,30 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.1.0/plugin.schema.json",
+  "name": "acme.tools",
+  "version": "1.2.0",
+  "description": "Acme review tooling <beta> & checks.",
+  "author": {
+    "name": "Acme",
+    "email": "dev@acme.example",
+    "url": "https://acme.example"
+  },
+  "homepage": "https://acme.example/tools",
+  "repository": "https://github.com/acme/tools",
+  "license": "MIT",
+  "keywords": [
+    "review",
+    "mcp"
+  ],
+  "extensions": {
+    "com.example.client": {
+      "level": 2,
+      "nested": {
+        "a": [
+          "y"
+        ],
+        "b": "x"
+      },
+      "setting": true
+    }
+  }
+}
