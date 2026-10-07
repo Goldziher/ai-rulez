@@ -167,7 +167,7 @@ func hostileCatalogProject(t *testing.T) string {
 	skills := filepath.Join(root, ".ai-rulez", "skills")
 	writeFile(t, filepath.Join(skills, "evil", "SKILL.md"),
 		"---\nname: evil\ndescription: \"<script>alert(1)</script> \\\"><img src=x onerror=alert(2)> javascript:alert(3)\"\nowner: \"'-alert(4)-'\"\nversion: 1.0.0\n---\n"+
-			"Body </script><script>alert(5)</script> <!-- [x](javascript:alert(6)) [y](data:text/html,<b>)\nbidi ‮evil⁦ zero​width\n")
+			"Body </script><script>alert(5)</script> <!-- [x](javascript:alert(6)) [y](data:text/html,<b>)\nbidi \u202eevil\u2066 zero\u200bwidth\n")
 	if runtime.GOOS != "windows" { // < and > cannot appear in a Windows file name
 		writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "<b>bold</b>.md"), "# Rule\nHello\n")
 	}
@@ -199,7 +199,7 @@ func TestCatalogHTMLEscapesHostileSource(t *testing.T) {
 			continue
 		}
 		pages++
-		for _, bad := range []string{"<script>alert", "<img src=x", "onerror=alert(2)>", "‮", "⁦", "​", "<b>bold</b>"} {
+		for _, bad := range []string{"<script>alert", "<img src=x", "onerror=alert(2)>", "\u202e", "\u2066", "\u200b", "<b>bold</b>"} {
 			assert.NotContainsf(t, page, bad, "%s", name)
 		}
 		assert.Equalf(t, 1, strings.Count(page, "<script"), "%s: only the local catalog.js script", name)

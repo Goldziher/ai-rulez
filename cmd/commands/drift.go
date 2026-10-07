@@ -237,10 +237,10 @@ const blockedRemedy = "import it with `ai-rulez convert --write`, move or delete
 // generate will not overwrite, so telling the user to run generate would lead
 // into the refusal: it names the remedy instead.
 func driftMessage(differing, blocked int, fix string) string {
-	switch {
-	case blocked == 0:
+	switch blocked {
+	case 0:
 		return fmt.Sprintf("%d generated file(s) differ from their sources; %s", differing, fix)
-	case blocked == differing:
+	case differing:
 		return fmt.Sprintf("%d generated file(s) differ from their sources, %d blocked: generate will not overwrite a file ai-rulez did not write; %s",
 			differing, blocked, blockedRemedy)
 	default:
