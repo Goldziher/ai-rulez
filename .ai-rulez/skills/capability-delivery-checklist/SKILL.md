@@ -1,5 +1,5 @@
 ---
-description: "End-to-end checklist for delivering new capabilities across CLI, presets, and tests"
+description: "Use when adding a new CLI command, flag, preset, or other user-visible capability, and before opening a pull request for it: covers the plan, tests, docs, schema, wrappers, and final validation steps."
 priority: medium
 targets:
   - CLAUDE.md
