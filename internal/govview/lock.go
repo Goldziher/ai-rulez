@@ -161,8 +161,8 @@ func LoadWithCacheFallback(load func(opts ...config.LoadOption) (*config.Config,
 		if err == nil {
 			return nil, false, retryErr
 		}
-		// The first error stays the cause; the retry's failure is told, not dropped.
-		return nil, false, fmt.Errorf("%w (retrying without remote includes also failed: %s)", err, retryErr)
+		// The first error stays the only cause; the retry's failure is told, not dropped.
+		return nil, false, fmt.Errorf("%w (retrying without remote includes also failed: %s)", err, retryErr.Error())
 	}
 	return cfg, len(includes.Lockable(cfg)) > 0, nil
 }
