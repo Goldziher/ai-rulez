@@ -31,7 +31,7 @@ const (
 // rewrite. It polls for up to wait (0 tries once) and returns ErrLogLocked when the lock stays taken. The
 // release function is safe to call once.
 func lockLog(path string, exclusive bool, wait time.Duration) (release func(), err error) {
-	f, err := safefs.OpenAppend(path + logLockSuffix)
+	f, err := safefs.OpenLockFile(path + logLockSuffix)
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "open usage log lock")
 	}
