@@ -273,7 +273,7 @@ func (g *Generator) unowned(abs, rel string, output config.OutputFile, info os.F
 	if g.adoptable(rel, data) {
 		return false
 	}
-	switch g.outputProvenance(abs, rel, data, output.RawContent != nil) {
+	switch g.outputProvenance(abs, rel, data, g.headerlessOutput(abs, output)) {
 	case provenLegacy:
 		g.warnOnce("Overwriting "+rel+": it has no generated header and no recorded digest, and the generated manifest lists it",
 			"hint", "an older ai-rulez wrote it; this run records its digest")
@@ -282,6 +282,17 @@ func (g *Generator) unowned(abs, rel string, output config.OutputFile, info os.F
 		return false
 	}
 	return true
+}
+
+// headerlessOutput reports whether the rendering of output carries no generated
+// banner: raw outputs, and rendered formats with no header (the Codex agent TOML).
+// For such a file a missing banner proves nothing, so an older manifest that
+// lists it without a digest still vouches for it.
+func (g *Generator) headerlessOutput(abs string, output config.OutputFile) bool {
+	if output.RawContent != nil {
+		return true
+	}
+	return !hasGeneratedBanner(abs, []byte(g.finalContent(output)))
 }
 
 // provenance is how well the bytes at a path show ai-rulez wrote them. generate
@@ -301,7 +312,7 @@ const (
 )
 
 // outputProvenance classifies existing bytes at abs (manifest path rel). headerless
-// says the output format carries no header (RawContent), so a missing banner
+// says the output's rendering carries no header (headerlessOutput), so a missing banner
 // proves nothing and only a recorded digest can vouch for an unchanged file.
 func (g *Generator) outputProvenance(abs, rel string, data []byte, headerless bool) provenance {
 	if stored, _, _ := g.scanHashes(abs); stored != "" {
