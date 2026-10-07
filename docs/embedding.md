@@ -22,7 +22,7 @@ A `Workspace` is the read view of a project tree (an `io/fs` file system plus `L
 | `NewMemWorkspace()` | files you `Set` in memory |
 | `GitSnapshot(ctx, repoDir, rev, runner)` | the tree of a commit, nothing checked out |
 
-A symlink resolves only inside the workspace. A snapshot has no machine-local files, like `--no-local`. A directory workspace ignores them too unless you set `Options.WithLocal`: machine-local files (`config.local.toml`, `.ai-rulez/local/`) carry the trust of the machine that wrote them, which a service loading someone else's tree should not grant.
+A symlink resolves only inside the workspace. A symlink the load refuses goes to `Options.Logger`, and validation fails on one in the project's own content; without a logger nothing is written to stderr. A snapshot has no machine-local files, like `--no-local`. A directory workspace ignores them too unless you set `Options.WithLocal`: machine-local files (`config.local.toml`, `.ai-rulez/local/`) carry the trust of the machine that wrote them, which a service loading someone else's tree should not grant.
 
 ## Plans
 
