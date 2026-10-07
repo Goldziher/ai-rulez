@@ -14,7 +14,7 @@ import (
 
 func TestExportKeepsItemsNamedLikeReservedOKFFiles(t *testing.T) {
 	root := t.TempDir()
-	write(t, root, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: r\npresets:\n  - claude\n")
+	write(t, root, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"r\"\npresets = [\"claude\"]\n")
 	write(t, root, ".ai-rulez/rules/index.md", "RULE INDEX BODY\n")
 	write(t, root, ".ai-rulez/context/index.md", "CONTEXT INDEX BODY\n")
 	write(t, root, ".ai-rulez/context/log.md", "CONTEXT LOG BODY\n")
@@ -35,7 +35,7 @@ func TestExportKeepsItemsNamedLikeReservedOKFFiles(t *testing.T) {
 	assert.Equal(t, 3, len(b.Concepts), "all three items are concepts")
 
 	fresh := t.TempDir()
-	write(t, fresh, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: r\npresets:\n  - claude\n")
+	write(t, fresh, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"r\"\npresets = [\"claude\"]\n")
 	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
 	require.NoError(t, err)
 	for rel, body := range map[string]string{"rules/index.md": "RULE INDEX BODY\n", "context/index.md": "CONTEXT INDEX BODY\n", "context/log.md": "CONTEXT LOG BODY\n"} {
@@ -52,7 +52,7 @@ func TestExportKeepsItemsNamedLikeReservedOKFFiles(t *testing.T) {
 
 func TestExportSkipsItemsMergedInFromIncludes(t *testing.T) {
 	root := t.TempDir()
-	write(t, root, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: r\npresets:\n  - claude\n")
+	write(t, root, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"r\"\npresets = [\"claude\"]\n")
 	write(t, root, ".ai-rulez/rules/own.md", "own rule\n")
 	tree := loadTree(t, root)
 	elsewhere := t.TempDir()
@@ -76,7 +76,7 @@ func TestExportSkipsItemsMergedInFromIncludes(t *testing.T) {
 
 func TestRoundTripIsStableForNamelessSkillsAndUppercaseResources(t *testing.T) {
 	root := t.TempDir()
-	write(t, root, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: r\npresets:\n  - claude\n")
+	write(t, root, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"r\"\npresets = [\"claude\"]\n")
 	write(t, root, ".ai-rulez/skills/plain/SKILL.md", "---\ndescription: No name key\n---\n\nBody.\n")
 	write(t, root, ".ai-rulez/skills/plain/references/upper.MD", "# Upper\n")
 	write(t, root, ".ai-rulez/skills/plain/references/lower.md", "# Lower\n")
@@ -98,7 +98,7 @@ func TestRoundTripIsStableForNamelessSkillsAndUppercaseResources(t *testing.T) {
 		b, err := okf.Load(os.DirFS(dir))
 		require.NoError(t, err)
 		next := t.TempDir()
-		write(t, next, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: r\npresets:\n  - claude\n")
+		write(t, next, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"r\"\npresets = [\"claude\"]\n")
 		_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(next, ".ai-rulez"), Scan: testScan})
 		require.NoError(t, err)
 		cur = next
