@@ -43,8 +43,8 @@ type procTree struct {
 	// rootReused is set once the root's pid belongs to another process.
 	rootReused bool
 	tracked    map[int]int64 // pid -> start time
-	stop      chan struct{}
-	done      chan struct{}
+	stop       chan struct{}
+	done       chan struct{}
 }
 
 // configure starts the child in a new session (which is also a new process
