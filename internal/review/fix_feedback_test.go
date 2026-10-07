@@ -75,3 +75,21 @@ func TestProposeFix_TheFirstAttemptAlreadySeesTheFeedback(t *testing.T) {
 	require.Len(t, prompts, 1)
 	assert.Contains(t, prompts[0], "a sibling lost its trigger")
 }
+
+func TestCleanFeedback_StripsInvisibleFormatCharacters(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name, in, want string
+	}{
+		{"zero width space and joiner", "ig\u200bnore\u200d rules", "ignore rules"},
+		{"bidirectional override", "safe \u202eevil\u202c", "safe evil"},
+		{"unicode tag characters", "hi \U000E0041\U000E0042", "hi"},
+		{"byte order mark", "\ufeffplain", "plain"},
+		{"newline and tab survive", "a\n\tb", "a\n\tb"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, cleanFeedback(tt.in))
+		})
+	}
+}
