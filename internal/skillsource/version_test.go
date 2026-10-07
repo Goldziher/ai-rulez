@@ -7,15 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve/tagtest"
 )
 
 func versionRepo(t *testing.T) *tagtest.Repo {
 	t.Helper()
-	includes.Advance, includes.AllowDowngrade, includes.AcceptMovedTag = nil, false, false
-	t.Cleanup(func() { includes.Advance, includes.AllowDowngrade, includes.AcceptMovedTag = nil, false, false })
 	r := tagtest.New(t)
 	r.Write("skills/pdf/SKILL.md", skillMD("pdf", "Work with PDF files"))
 	r.Write("skills/pdf/references/forms.md", "forms v1\n")
@@ -62,8 +60,8 @@ func TestResolve_ACoveredVersionPinIsUsedWithoutResolving(t *testing.T) {
 	require.NoError(t, err)
 	kept, err := Resolve(context.Background(), spec, Options{CacheDir: cache, Lock: lock, Refresh: true})
 	require.NoError(t, err)
-	includes.Advance = func(kind, name string) bool { return kind == lockfile.KindSource }
-	advanced, err := Resolve(context.Background(), spec, Options{CacheDir: cache, Lock: lock, Refresh: true})
+	advance := config.VersionPolicy{Advance: func(kind, name string) bool { return kind == lockfile.KindSource }}
+	advanced, err := Resolve(context.Background(), spec, Options{CacheDir: cache, Lock: lock, Refresh: true, Version: advance})
 	require.NoError(t, err)
 
 	assert.Equal(t, first.Commit, locked.Commit)
@@ -85,8 +83,7 @@ func TestResolve_AMovedVersionTagFailsWithAR732(t *testing.T) {
 	r.AnnotatedTag("v1.1.0")
 
 	_, err = Resolve(context.Background(), spec, Options{CacheDir: cache, Lock: lock, Refresh: true})
-	includes.AcceptMovedTag = true
-	accepted, err2 := Resolve(context.Background(), spec, Options{CacheDir: cache, Lock: lock, Refresh: true})
+	accepted, err2 := Resolve(context.Background(), spec, Options{CacheDir: cache, Lock: lock, Refresh: true, Version: config.VersionPolicy{AcceptMovedTag: true}})
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "AR732")

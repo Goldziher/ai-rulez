@@ -14,7 +14,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/forge"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve/tagtest"
@@ -26,7 +25,7 @@ func resetAgeFlags(t *testing.T) {
 	t.Helper()
 	reset := func() {
 		updateMajor, updateWriteConfig, updateAcceptFindings = false, false, false
-		includes.ReleaseGate = nil
+		cliLockPolicy.ReleaseGate = nil
 	}
 	reset()
 	t.Cleanup(reset)

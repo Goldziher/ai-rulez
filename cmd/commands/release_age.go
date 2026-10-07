@@ -90,6 +90,6 @@ func installReleaseGate(path string) (restore func()) {
 
 func installReleaseGateFor(cfg *config.Config) (restore func()) {
 	gates := newAgeGates(cfg)
-	includes.ReleaseGate = gates.gateFor
-	return func() { includes.ReleaseGate = nil }
+	cliLockPolicy.ReleaseGate = gates.gateFor // handed to every later load of the run (withCLILockPolicy)
+	return func() { cliLockPolicy.ReleaseGate = nil }
 }
