@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"gopkg.in/yaml.v3"
@@ -176,18 +175,27 @@ func (p *planner) rejectUnsafe(b *okf.Bundle) error {
 	return nil
 }
 
-// scan runs the AR0xx security scan over everything about to be written.
+// scan runs the AR0xx security scan over everything about to be written. A file
+// that is not valid UTF-8 is scanned with the invalid bytes dropped, so a stray
+// byte cannot hide a payload. A file too large to scan is reported as an error
+// finding: whatever cannot be scanned is not imported.
 func scan(scanner Scanner, files []planned) []SecurityFinding {
 	if scanner == nil {
 		return nil
 	}
 	texts := map[string]string{}
+	var unscanned []SecurityFinding
 	for i := range files {
-		if len(files[i].data) <= maxScanSize && utf8.Valid(files[i].data) {
-			texts[files[i].rel] = string(files[i].data)
+		if len(files[i].data) > maxScanSize {
+			unscanned = append(unscanned, SecurityFinding{
+				Code: okf.CodePathUnsafe, Severity: SeverityError, File: files[i].rel, Line: 1,
+				Message: fmt.Sprintf("file is larger than %d bytes and cannot be security-scanned; it was not imported", maxScanSize),
+			})
+			continue
 		}
+		texts[files[i].rel] = strings.ToValidUTF8(string(files[i].data), "")
 	}
-	return scanner(texts)
+	return append(scanner(texts), unscanned...)
 }
 
 type planner struct {
