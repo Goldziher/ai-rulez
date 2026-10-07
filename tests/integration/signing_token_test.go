@@ -60,7 +60,9 @@ func TestResolveIDToken(t *testing.T) {
 	}{
 		{
 			name: "a named variable wins and nothing is requested", tokenEnv: "MY_OIDC",
-			env:  func(url string) map[string]string { return map[string]string{"MY_OIDC": "tok-from-env", "ACTIONS_ID_TOKEN_REQUEST_URL": url, "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"} },
+			env: func(url string) map[string]string {
+				return map[string]string{"MY_OIDC": "tok-from-env", "ACTIONS_ID_TOKEN_REQUEST_URL": url, "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"}
+			},
 			want: "tok-from-env",
 		},
 		{
@@ -70,7 +72,9 @@ func TestResolveIDToken(t *testing.T) {
 		},
 		{
 			name: "the Actions runtime answers with a token for the sigstore audience", status: http.StatusOK, body: `{"value":"tok-from-actions"}`,
-			env:         func(url string) map[string]string { return map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": url + "/token?api-version=2.0", "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"} },
+			env: func(url string) map[string]string {
+				return map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": url + "/token?api-version=2.0", "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"}
+			},
 			want:        "tok-from-actions",
 			wantRequest: true,
 		},
@@ -83,19 +87,25 @@ func TestResolveIDToken(t *testing.T) {
 		},
 		{
 			name: "a non-200 answer is an error", status: http.StatusForbidden, body: `{"message":"no id-token permission"}`,
-			env:         func(url string) map[string]string { return map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": url, "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"} },
+			env: func(url string) map[string]string {
+				return map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": url, "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"}
+			},
 			wantErr:     "403",
 			wantRequest: true,
 		},
 		{
 			name: "an empty token is an error", status: http.StatusOK, body: `{"value":"  "}`,
-			env:         func(url string) map[string]string { return map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": url, "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"} },
+			env: func(url string) map[string]string {
+				return map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": url, "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"}
+			},
 			wantErr:     "returned no token",
 			wantRequest: true,
 		},
 		{
 			name: "an oversized answer is cut and rejected", status: http.StatusOK, body: `{"value":"` + strings.Repeat("a", 1<<17) + `"}`,
-			env:         func(url string) map[string]string { return map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": url, "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"} },
+			env: func(url string) map[string]string {
+				return map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": url, "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"}
+			},
 			wantErr:     "returned no token",
 			wantRequest: true,
 		},
