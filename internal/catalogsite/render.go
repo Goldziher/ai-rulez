@@ -282,9 +282,12 @@ func (b *builder) assignPaths() {
 	}
 }
 
+// notApplicable is shown where a value does not apply.
+const notApplicable = "n/a"
+
 func statusOf(l *govview.ItemLint) (class, label string) {
 	if l == nil {
-		return "na", "n/a"
+		return "na", notApplicable
 	}
 	switch l.Status {
 	case govview.LintError:
@@ -532,7 +535,7 @@ func (b *builder) renderMCP() error {
 	anchors := newSlugger()
 	for i := range b.doc.MCPServers {
 		m := &b.doc.MCPServers[i]
-		pinned := "n/a"
+		pinned := notApplicable
 		if m.Pinned != nil {
 			pinned = "no"
 			if *m.Pinned {
@@ -562,7 +565,7 @@ func percent(rate float64) string { return strconv.FormatFloat(rate*100, 'f', 0,
 
 func optPercent(rate *float64) string {
 	if rate == nil {
-		return "n/a"
+		return notApplicable
 	}
 	return percent(*rate)
 }
