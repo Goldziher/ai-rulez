@@ -143,10 +143,9 @@ func TestEvalResultsCacheAndReportE2E(t *testing.T) {
 	assert.Nil(t, frow["pass_rate"])
 }
 
-// TestEvalUnknownRunnerNamesEveryRunnerE2E pins MAN-7: the error for an
-// unknown --runner lists two of the four runners the help documents.
+// TestEvalUnknownRunnerNamesEveryRunnerE2E covers MAN-7: the error for an
+// unknown --runner names all four runners the help documents.
 func TestEvalUnknownRunnerNamesEveryRunnerE2E(t *testing.T) {
-	blockedOn(t, "MAN-7")
 	// Arrange
 	env := newIsoEnv(t)
 	root, runners := evalProject(t)
