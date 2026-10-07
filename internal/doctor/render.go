@@ -1,8 +1,8 @@
 package doctor
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"text/tabwriter"
 
@@ -28,12 +28,7 @@ func WriteJSON(w io.Writer, r *Report) error {
 		},
 		Findings: r.Findings,
 	}
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(out); err != nil {
-		return oops.Wrapf(err, "write doctor report")
-	}
-	return nil
+	return jsondoc.Write(w, out)
 }
 
 // WriteText writes the report as a table followed by a summary line.

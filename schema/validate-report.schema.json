@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/validate-report.schema.json",
+  "title": "ai-rulez validate report",
+  "description": "Output of `ai-rulez validate --format json` and `ai-rulez scan --format json`: the content-check findings of every root.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "roots",
+    "findings",
+    "summary"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "roots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "severity"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning",
+              "info",
+              "off"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "total",
+        "errors",
+        "warnings",
+        "infos"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "errors": {
+          "type": "integer"
+        },
+        "warnings": {
+          "type": "integer"
+        },
+        "infos": {
+          "type": "integer"
+        },
+        "by_code": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "baseline": {
+      "type": "object"
+    },
+    "ratchet_exceeded": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "count",
+          "max"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "max": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "profile": {
+      "type": "string"
+    },
+    "risk": {
+      "type": "object"
+    },
+    "changed_only": {
+      "type": "object"
+    }
+  }
+}

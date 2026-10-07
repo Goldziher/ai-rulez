@@ -134,8 +134,13 @@ func TestRunTokens_CompareProfiles(t *testing.T) {
 	_, err := runTokens(&out, []string{tokensFixturePath(t)})
 	require.NoError(t, err)
 
-	var reports []map[string]any
-	require.NoError(t, json.Unmarshal(out.Bytes(), &reports))
+	var doc struct {
+		SchemaVersion int              `json:"schema_version"`
+		Items         []map[string]any `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(out.Bytes(), &doc))
+	assert.Equal(t, 1, doc.SchemaVersion)
+	reports := doc.Items
 	require.Len(t, reports, 2)
 	assert.Equal(t, "backend", reports[0]["profile"])
 	assert.Equal(t, "full", reports[1]["profile"])
@@ -173,8 +178,13 @@ func TestRunTokens_CompareComposedProfiles(t *testing.T) {
 	_, err := runTokens(&out, []string{tokensFixturePath(t)})
 	require.NoError(t, err)
 
-	var reports []map[string]any
-	require.NoError(t, json.Unmarshal(out.Bytes(), &reports))
+	var doc struct {
+		SchemaVersion int              `json:"schema_version"`
+		Items         []map[string]any `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(out.Bytes(), &doc))
+	assert.Equal(t, 1, doc.SchemaVersion)
+	reports := doc.Items
 	require.Len(t, reports, 2)
 	assert.Equal(t, "backend", reports[0]["profile"])
 	assert.Equal(t, "backend,frontend", reports[1]["profile"])

@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
@@ -184,7 +184,7 @@ func runSkillList(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(skills) == 0 {
+	if len(skills) == 0 && !skillJSON {
 		logger.Info("No installed skills found")
 		logLocalEntriesHint("installed_skills")
 		return
@@ -201,12 +201,12 @@ func runSkillList(cmd *cobra.Command, args []string) {
 				keyType:  s.Type,
 			}
 		}
-		data, err := json.MarshalIndent(output, "", "  ")
+		data, err := jsondoc.Marshal(output)
 		if err != nil {
 			logger.Error("Failed to marshal JSON", "error", err)
 			os.Exit(1)
 		}
-		fmt.Println(string(data))
+		fmt.Print(string(data))
 	} else {
 		logger.Info("Installed skills:")
 		for _, s := range skills {

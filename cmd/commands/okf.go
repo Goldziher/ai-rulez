@@ -2,9 +2,9 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"os"
 	"path/filepath"
@@ -234,9 +234,7 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 		findings = []okf.Finding{}
 	}
 	if asJSON {
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		return enc.Encode(map[string]any{
+		return jsondoc.Write(out, map[string]any{
 			"bundle": spec, "okf_spec": okf.SpecVersion,
 			"concepts": len(b.Concepts), "index_style": b.IndexStyle(), "findings": findings,
 		})
@@ -445,9 +443,7 @@ func importLintConfig(ctx context.Context) *config.LintConfig {
 
 func writeOKFImport(out io.Writer, spec, targetDir string, res *okfbridge.ImportResult) error {
 	if okfFormat == formatJSON {
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		return enc.Encode(map[string]any{
+		return jsondoc.Write(out, map[string]any{
 			keySource: spec, "target": targetDir, "dry_run": okfDryRun,
 			"actions": nonNilActions(res.Actions), "findings": res.Findings,
 			"security": res.Security, "skipped": res.Skipped, "index_style": res.IndexStyle,

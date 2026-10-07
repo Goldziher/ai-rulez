@@ -1,8 +1,8 @@
 package lint
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"slices"
 	"sort"
@@ -110,9 +110,7 @@ func Combine(reports []*Report) Combined {
 
 // WriteJSON prints the combined document.
 func WriteJSON(w io.Writer, c Combined) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	return enc.Encode(c) //nolint:wrapcheck // writer error
+	return jsondoc.Write(w, c)
 }
 
 // WriteText prints one line per finding (file:line: severity code name: message)

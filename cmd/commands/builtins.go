@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"os"
 	"strings"
 
@@ -71,12 +71,12 @@ func outputBuiltinsJSON(domains []builtins.BuiltinDomain) {
 			"description":  d.Description,
 		}
 	}
-	data, err := json.MarshalIndent(output, "", "  ")
+	data, err := jsondoc.Marshal(output)
 	if err != nil {
 		logger.Error("Failed to marshal JSON", "error", err)
 		os.Exit(1)
 	}
-	fmt.Println(string(data))
+	fmt.Print(string(data))
 }
 
 func outputBuiltinsTable(domains []builtins.BuiltinDomain) {
@@ -138,12 +138,12 @@ func outputShowJSON(name string, entries []builtins.ContentEntry) {
 		"content":  grouped,
 	}
 
-	data, err := json.MarshalIndent(output, "", "  ")
+	data, err := jsondoc.Marshal(output)
 	if err != nil {
 		logger.Error("Failed to marshal JSON", "error", err)
 		os.Exit(1)
 	}
-	fmt.Println(string(data))
+	fmt.Print(string(data))
 }
 
 func outputShowFormatted(name string, entries []builtins.ContentEntry) {
