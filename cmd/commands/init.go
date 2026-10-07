@@ -64,7 +64,7 @@ func runInit(cmd *cobra.Command, args []string) {
 			logger.Error("Failed to get working directory", "error", err)
 			os.Exit(1)
 		}
-		if err := previewInitImport(cmd.Context(), workingDir); err != nil {
+		if err := previewInitImport(watchParentContext(cmd), workingDir); err != nil {
 			logger.Error("Failed to import from sources", "error", err)
 			os.Exit(1)
 		}
@@ -74,7 +74,7 @@ func runInit(cmd *cobra.Command, args []string) {
 
 	// Handle --from flag for importing from existing tool files
 	if fromFlag != "" {
-		err := replaceConfigDir(configDir, func() error { return runInitImport(cmd.Context(), workingDir, configDir) })
+		err := replaceConfigDir(configDir, func() error { return runInitImport(watchParentContext(cmd), workingDir, configDir) })
 		if err != nil {
 			logger.Error("Failed to import from sources", "error", err)
 			os.Exit(1)

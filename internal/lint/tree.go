@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"context"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -38,12 +39,17 @@ func LoadTreeAt(base, root string) (*Tree, error) {
 // LoadTreeWith is LoadTreeAt with the git questions answered through git, so a
 // caller can inject the runner that starts the process.
 func LoadTreeWith(git gitutil.Git, base, root string) (*Tree, error) {
+	return LoadTreeContext(context.Background(), git, base, root)
+}
+
+// LoadTreeContext is LoadTreeWith with the git probes bounded by ctx.
+func LoadTreeContext(ctx context.Context, git gitutil.Git, base, root string) (*Tree, error) {
 	base = gitutil.Resolve(base)
 	t := &Tree{files: map[string]uint32{}, dirs: map[string]struct{}{}, topNames: map[string]struct{}{}}
 	if root != "" {
 		root = gitutil.Resolve(root)
 		t.Explicit = true
-		files, ok, err := git.TrackedFiles(root)
+		files, ok, err := git.TrackedFilesContext(ctx, root)
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already contextual
 		}
@@ -56,8 +62,8 @@ func LoadTreeWith(git gitutil.Git, base, root string) (*Tree, error) {
 		t.index()
 		return t, nil
 	}
-	if top := git.TopLevel(base); top != "" {
-		files, ok, err := git.TrackedFiles(top)
+	if top := git.TopLevelContext(ctx, base); top != "" {
+		files, ok, err := git.TrackedFilesContext(ctx, top)
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already contextual
 		}
@@ -192,12 +198,18 @@ type Loader struct {
 	cache map[string]*Tree
 }
 
-// Load returns the tree for the repository containing base.
+// Load is LoadContext without a caller's context.
 func (l *Loader) Load(base string) (*Tree, error) {
+	return l.LoadContext(context.Background(), base)
+}
+
+// LoadContext returns the tree for the repository containing base, with the git
+// probes bounded by ctx.
+func (l *Loader) LoadContext(ctx context.Context, base string) (*Tree, error) {
 	if l.cache == nil {
 		l.cache = map[string]*Tree{}
 	}
-	key := gitutil.TopLevel(gitutil.Resolve(base))
+	key := gitutil.Git{}.TopLevelContext(ctx, gitutil.Resolve(base))
 	if l.Root != "" {
 		key = "root:" + gitutil.Resolve(l.Root)
 	} else if key == "" {
@@ -206,7 +218,7 @@ func (l *Loader) Load(base string) (*Tree, error) {
 	if t, ok := l.cache[key]; ok {
 		return t, nil
 	}
-	t, err := LoadTreeAt(base, l.Root)
+	t, err := LoadTreeContext(ctx, gitutil.Git{}, base, l.Root)
 	if err != nil {
 		return nil, err
 	}
