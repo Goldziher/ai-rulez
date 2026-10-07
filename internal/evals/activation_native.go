@@ -104,26 +104,53 @@ func runActivationNative(ctx context.Context, opts *ActivationOptions) (*Activat
 	return n.report, n.execute(ctx, plans)
 }
 
+// validateNativeOptions rejects options a native run cannot honor.
+func validateNativeOptions(opts *ActivationOptions) error {
+	if opts.Runner == nil && !opts.DryRun {
+		return fmt.Errorf("no runner configured for the native surface")
+	}
+	if opts.Runs < 0 {
+		return fmt.Errorf("runs must be >= 0, got %d", opts.Runs)
+	}
+	switch opts.MaxCostMode {
+	case "", CostModeExpected, CostModeHigh:
+	default:
+		return fmt.Errorf("unknown max cost mode %q (use %s or %s)", opts.MaxCostMode, CostModeExpected, CostModeHigh)
+	}
+	for name, v := range map[string]float64{"max cost": opts.MaxCostUSD, "price in": opts.Price.InPerMTok, "price out": opts.Price.OutPerMTok} {
+		if err := checkMoney(name, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// resolveCounterAndPrice fills the token counter and price a run was not given.
+func (n *nativeRun) resolveCounterAndPrice() error {
+	if n.counter == nil {
+		c, err := tokens.New("")
+		if err != nil {
+			return fmt.Errorf("token counter: %w", err)
+		}
+		n.counter = c
+	}
+	if n.price == (Price{}) {
+		var known bool
+		n.price, known = PriceFor(n.opts.Model)
+		if !known && n.opts.MaxCostUSD > 0 {
+			return fmt.Errorf("model %q has no built-in price, so --max-cost cannot be checked: pass --price-in and --price-out, or use a model the price table lists", n.opts.Model)
+		}
+	}
+	return nil
+}
+
 func newNativeRun(opts *ActivationOptions) (*nativeRun, []Skill, error) {
 	scope, threshold, all, selected, err := activationSetup(opts)
 	if err != nil {
 		return nil, nil, err
 	}
-	if opts.Runner == nil && !opts.DryRun {
-		return nil, nil, fmt.Errorf("no runner configured for the native surface")
-	}
-	if opts.Runs < 0 {
-		return nil, nil, fmt.Errorf("runs must be >= 0, got %d", opts.Runs)
-	}
-	switch opts.MaxCostMode {
-	case "", CostModeExpected, CostModeHigh:
-	default:
-		return nil, nil, fmt.Errorf("unknown max cost mode %q (use %s or %s)", opts.MaxCostMode, CostModeExpected, CostModeHigh)
-	}
-	for name, v := range map[string]float64{"max cost": opts.MaxCostUSD, "price in": opts.Price.InPerMTok, "price out": opts.Price.OutPerMTok} {
-		if err := checkMoney(name, v); err != nil {
-			return nil, nil, err
-		}
+	if err := validateNativeOptions(opts); err != nil {
+		return nil, nil, err
 	}
 	n := &nativeRun{opts: opts, runs: opts.Runs, model: opts.Model, price: opts.Price, counter: opts.Counter, skillsDir: map[string]Skill{}}
 	if n.runs == 0 {
@@ -132,19 +159,8 @@ func newNativeRun(opts *ActivationOptions) (*nativeRun, []Skill, error) {
 	if n.model == "" {
 		n.model = "default"
 	}
-	if n.counter == nil {
-		c, err := tokens.New("")
-		if err != nil {
-			return nil, nil, fmt.Errorf("token counter: %w", err)
-		}
-		n.counter = c
-	}
-	if n.price == (Price{}) {
-		var known bool
-		n.price, known = PriceFor(opts.Model)
-		if !known && opts.MaxCostUSD > 0 {
-			return nil, nil, fmt.Errorf("model %q has no built-in price, so --max-cost cannot be checked: pass --price-in and --price-out, or use a model the price table lists", opts.Model)
-		}
+	if err := n.resolveCounterAndPrice(); err != nil {
+		return nil, nil, err
 	}
 	for i := range all {
 		n.skillsDir[all[i].ID] = all[i]
@@ -271,18 +287,8 @@ func (n *nativeRun) execute(ctx context.Context, plans []*nativePlan) error {
 
 func (n *nativeRun) executeOne(ctx context.Context, plan *nativePlan, spent *float64) ActivationSkill {
 	run := plan.run
-	switch {
-	case !plan.ready:
-		return run
-	case plan.cached != nil:
-		return replayActivation(run, plan.cached)
-	case n.opts.DryRun:
-		run.Status = RunDryRun
-		return run
-	case n.opts.MaxCostUSD > 0 && *spent >= n.opts.MaxCostUSD:
-		run.Status = RunOverBudget
-		run.Error = fmt.Sprintf("spend $%.2f reached --max-cost $%.2f", *spent, n.opts.MaxCostUSD)
-		return run
+	if skipped, ok := n.skipExecution(plan, *spent); ok {
+		return skipped
 	}
 	budget := remaining(n.opts.MaxCostUSD, *spent)
 	plan.req.MaxCostUSD = budget
@@ -316,13 +322,39 @@ func (n *nativeRun) executeOne(ctx context.Context, plan *nativePlan, spent *flo
 	run.CostUSD = round(cost)
 	run.EstimateVsActual = NewEstimateRecord(&plan.estimate, cost, in+out).WithUsage(&plan.estimate, in, out, n.opts.Params)
 	n.scoreNative(&run, plan, resp)
-	if run.Status == RunRan && run.Error == "" && n.opts.Store != nil {
-		rec := run.Record(SurfaceNative, n.report.Scope, n.opts.Date)
-		rec.Runner, rec.Harness, rec.Model, rec.Runs = n.report.Runner, n.opts.Harness, n.model, n.runs
-		rec.Passing, rec.CacheKey, rec.Estimate = run.Passing, plan.cacheKey, run.EstimateVsActual
-		n.opts.Store.PutActivation(run.ID, run.Digest, rec)
-	}
+	n.storeNative(&run, plan)
 	return run
+}
+
+// skipExecution reports the run that stands in for a skill that is not sent to
+// the runner (not ready, replayed from the store, a dry run or over budget).
+func (n *nativeRun) skipExecution(plan *nativePlan, spent float64) (ActivationSkill, bool) {
+	run := plan.run
+	switch {
+	case !plan.ready:
+		return run, true
+	case plan.cached != nil:
+		return replayActivation(run, plan.cached), true
+	case n.opts.DryRun:
+		run.Status = RunDryRun
+		return run, true
+	case n.opts.MaxCostUSD > 0 && spent >= n.opts.MaxCostUSD:
+		run.Status = RunOverBudget
+		run.Error = fmt.Sprintf("spend $%.2f reached --max-cost $%.2f", spent, n.opts.MaxCostUSD)
+		return run, true
+	}
+	return run, false
+}
+
+// storeNative records a scored run so the next identical run can replay it.
+func (n *nativeRun) storeNative(run *ActivationSkill, plan *nativePlan) {
+	if run.Status != RunRan || run.Error != "" || n.opts.Store == nil {
+		return
+	}
+	rec := run.Record(SurfaceNative, n.report.Scope, n.opts.Date)
+	rec.Runner, rec.Harness, rec.Model, rec.Runs = n.report.Runner, n.opts.Harness, n.model, n.runs
+	rec.Passing, rec.CacheKey, rec.Estimate = run.Passing, plan.cacheKey, run.EstimateVsActual
+	n.opts.Store.PutActivation(run.ID, run.Digest, rec)
 }
 
 // replayActivation turns a stored native record back into a run (figures only:
@@ -375,18 +407,8 @@ func (n *nativeRun) scoreNative(run *ActivationSkill, plan *nativePlan, resp *Re
 		c := &plan.req.Cases[i]
 		p := ActivationPrompt{Case: c.ID, Expect: c.Expects(), NearMiss: c.NearMissOf != "", Winner: activationNone}
 		res, ok := byCase[c.ID]
-		switch {
-		case !ok:
-			p.Status, p.Error = PromptError, "the runner returned no result for this prompt"
-		case res.Skipped:
-			p.Status, p.Error = PromptError, "the runner skipped this prompt: "+res.Reason
-		case res.Error != "":
-			p.Status, p.Error = PromptError, res.Error
-		case res.ErroredRuns > res.Runs:
-			p.Status = PromptError
-			p.Error = fmt.Sprintf("%d of %d runs errored; too few completed to score", res.ErroredRuns, res.Runs+res.ErroredRuns)
-		}
-		if p.Status == PromptError {
+		if msg := nativeResultProblem(res, ok); msg != "" {
+			p.Status, p.Error = PromptError, msg
 			errs++
 			run.Prompts = append(run.Prompts, p)
 			continue
@@ -438,6 +460,21 @@ func (n *nativeRun) scoreNative(run *ActivationSkill, plan *nativePlan, resp *Re
 		}
 	}
 	run.Passing = len(run.Prompts) > 0 && float64(passed)/float64(len(run.Prompts)) >= n.env.threshold
+}
+
+// nativeResultProblem says why a runner result cannot be scored, or "" when it can.
+func nativeResultProblem(res *Result, ok bool) string {
+	switch {
+	case !ok:
+		return "the runner returned no result for this prompt"
+	case res.Skipped:
+		return "the runner skipped this prompt: " + res.Reason
+	case res.Error != "":
+		return res.Error
+	case res.ErroredRuns > res.Runs:
+		return fmt.Sprintf("%d of %d runs errored; too few completed to score", res.ErroredRuns, res.Runs+res.ErroredRuns)
+	}
+	return ""
 }
 
 // nativePromptStatus judges k fires in n runs against the thresholds: a positive

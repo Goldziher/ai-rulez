@@ -108,10 +108,8 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 	}
 	// A kept directory may hold the previous run's result and cases; a failed run
 	// must never be scored from them.
-	for _, stale := range []string{"aggregate.json", dirResults, "evals", "skills"} {
-		if err := os.RemoveAll(filepath.Join(dir, stale)); err != nil {
-			return nil, fmt.Errorf("clear stale %s: %w", stale, err)
-		}
+	if err := clearStale(dir); err != nil {
+		return nil, err
 	}
 	translated, err := BuildClaudePlugin(dir, req)
 	if err != nil {
@@ -158,6 +156,16 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 	// A non-zero exit with a parsed result is a partial run (cost ceiling, abort):
 	// the cases missing from the result score as errors.
 	return resp, nil
+}
+
+// clearStale removes what a previous run left in a kept directory.
+func clearStale(dir string) error {
+	for _, stale := range []string{"aggregate.json", dirResults, "evals", "skills"} {
+		if err := os.RemoveAll(filepath.Join(dir, stale)); err != nil {
+			return fmt.Errorf("clear stale %s: %w", stale, err)
+		}
+	}
+	return nil
 }
 
 // args builds the `claude` command line for a throwaway plugin.
