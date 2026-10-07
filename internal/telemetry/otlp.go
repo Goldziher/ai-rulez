@@ -21,7 +21,7 @@ const (
 	MetricLoads     = "ai_rulez.item.loads"
 	MetricOutcomes  = "ai_rulez.item.outcomes"
 	MetricAgentTime = "ai_rulez.agent.duration"
-	// Eval gauges: the latest recorded score of a skill, labelled with the skill id
+	// Eval gauges: the latest recorded score of a skill, labeled with the skill id
 	// and the harness it was evaluated on. The digest the score is about travels on
 	// the eval_result log record, not as a label (cardinality).
 	MetricEvalPassRate  = "ai_rulez.skill.eval.pass_rate"

@@ -103,15 +103,7 @@ func (p *Pipeline) HandleHook(ctx context.Context, in io.Reader, options HookOpt
 	}
 	switch name {
 	case strings.ToLower(HookInstructionsLoaded):
-		item := ClassifyInstruction(p.Root, payload.CWD, payload.FilePath)
-		event.Kind, event.ID = item.Kind, item.ID
-		event.LoadReason, event.MemoryType = payload.LoadReason, payload.MemoryType
-		if item.Path != "" {
-			event.Digest = FileDigest(filepath.Join(p.Root, filepath.FromSlash(item.Path)))
-			if p.Settings.IncludePaths {
-				event.Path = item.Path
-			}
-		}
+		p.fillInstruction(&event, &payload)
 	case strings.ToLower(HookSubagentStart):
 		if payload.AgentType == "" {
 			return nil, nil // no id to record under; a hook must not fail the harness over it
@@ -135,6 +127,20 @@ func (p *Pipeline) HandleHook(ctx context.Context, in io.Reader, options HookOpt
 		return nil, err
 	}
 	return &event, nil
+}
+
+// fillInstruction sets what an InstructionsLoaded event records: the item the
+// loaded file is, its digest, and its path when paths are opted in.
+func (p *Pipeline) fillInstruction(event *Event, payload *hookPayload) {
+	item := ClassifyInstruction(p.Root, payload.CWD, payload.FilePath)
+	event.Kind, event.ID = item.Kind, item.ID
+	event.LoadReason, event.MemoryType = payload.LoadReason, payload.MemoryType
+	if item.Path != "" {
+		event.Digest = FileDigest(filepath.Join(p.Root, filepath.FromSlash(item.Path)))
+		if p.Settings.IncludePaths {
+			event.Path = item.Path
+		}
+	}
 }
 
 // agentKey identifies one subagent run without storing the raw ids.
