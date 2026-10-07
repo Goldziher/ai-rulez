@@ -267,3 +267,41 @@ func TestSensitiveExtended(t *testing.T) {
 		}
 	}
 }
+
+func TestSensitiveCredentialShapes(t *testing.T) {
+	// RV-SEC-5: names a verifier's command_env accepted although they carry a
+	// credential, and names that must stay usable.
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"OPENAI_KEY", true},
+		{"SENDGRID_KEY", true},
+		{"STRIPE_SK", true},
+		{"STRIPE_PK", false},
+		{"MY_BEARER", true},
+		{"SUPABASE_JWT", true},
+		{"SIGNING_KEYS", true},
+		{"SMTP_PASS", true},
+		{"DOCKER_CREDS", true},
+		{"HFTOKEN", true},
+		{"MYAPIKEY", true},
+		{"CLIENTSECRET", true},
+		{"KEYBOARD", false},
+		{"MONKEY_PATCH", false},
+		{"SKIP_TESTS", false},
+		{"PASSTHROUGH", false},
+		{"BYPASS_CACHE", false},
+		{"PWD", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			got := Sensitive(tt.name)
+			// Assert
+			if got != tt.want {
+				t.Errorf("Sensitive(%q) = %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
