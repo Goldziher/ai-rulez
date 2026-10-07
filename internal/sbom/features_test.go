@@ -47,7 +47,7 @@ func TestLicenses(t *testing.T) {
 		{"free text", "Proprietary, see LICENSE.txt", sbom.LicenseChoice{License: &sbom.License{Name: "Proprietary, see LICENSE.txt"}}, "", true},
 		{"unknown id in an expression", "MIT OR Nonsense-9", sbom.LicenseChoice{License: &sbom.License{Name: "MIT OR Nonsense-9"}}, "", true},
 		{"dangling operator", "MIT AND", sbom.LicenseChoice{License: &sbom.License{Name: "MIT AND"}}, "", true},
-		{"control and bidi characters are dropped", "MIT‮\x1b", sbom.LicenseChoice{License: &sbom.License{ID: "MIT"}}, "MIT", false},
+		{"control and bidi characters are dropped", "MIT\u202e\x1b", sbom.LicenseChoice{License: &sbom.License{ID: "MIT"}}, "MIT", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
