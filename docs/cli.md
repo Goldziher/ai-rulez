@@ -1895,7 +1895,7 @@ ai-rulez validate [config-path] [flags]
 | `--no-scan-cache` | boolean | With `--external`: ignore and do not update the scanner result cache |
 | `--dry-run` | boolean | With `--external` (and no `--fix`): print what each scanner would run and start nothing ([Scan Command](#scan-command)) |
 | `--baseline`          | string  | With `--strict`: accept the findings in this baseline file (default `<config dir>/lint-baseline.json` when present); only new findings fail |
-| `--update-baseline`   | boolean | With `--strict`: record every current finding in the baseline (keeps reasons, drops stale entries) and exit 0 |
+| `--update-baseline`   | boolean | With `--strict`: record every current finding in the baseline (keeps reasons, drops stale entries) and exit 0. Refused with `--fix`, `--since`/`--changed`, `--analyzer`, `--lint-profile` and a shared `--baseline` across roots |
 | `--baseline-reason`   | string  | With `--update-baseline`: the reason stored on new entries (required for security findings) |
 | `--strict-baseline`   | boolean | With `--strict`: exit 2 when the baseline has stale or expired entries (ratchet) |
 | `--since`             | string  | With `--strict`: report only findings in files changed since this git revision and in files that refer to them (the whole tree is still resolved) |

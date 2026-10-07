@@ -434,7 +434,11 @@ Guarantees:
 - **Idempotent and atomic.** An edit records the line it replaces and is skipped (reported) when the file changed
   since the lint run; files are rewritten atomically with their permissions and line endings (LF or CRLF) kept.
   Running `--fix` twice changes nothing the second time.
-- **Baselined findings are left alone.** A finding accepted by the baseline is not fixed.
+- **Baselined findings are left alone.** The baseline is applied before the fixers run, and a finding accepted by it is
+  not fixed.
+- **Scoped like the report.** With `--analyzer` only the chosen analyzers' findings are fixed; with `--since` or
+  `--changed` only findings in the changed files themselves are fixed (a file that merely refers to a changed file is
+  shown in the report but not edited).
 - **`--dry-run`** prints the unified diff (to stdout with the text format, to stderr with a structured format so
   stdout stays the report) plus a `chmod` line per mode change, and writes nothing.
 
@@ -479,7 +483,11 @@ one entry per accepted finding:
   `file` and `message` are there for the reviewer of the baseline diff.
 - **`--update-baseline`** rewrites the file to accept every current finding. Entries that still match keep their
   `reason` and `expires`; entries that match nothing are dropped. New entries get `--baseline-reason`. Accepting a
-  security finding (`AR0xx`) requires a reason. It exits 0 and cannot be combined with `--strict-baseline`.
+  security finding (`AR0xx`) requires a reason. It exits 0 and cannot be combined with `--strict-baseline`,
+  `--fix`, `--since`/`--changed`, `--analyzer` or `--lint-profile` (each shows fewer findings than the full run), and
+  `--baseline <file>` with several roots (`-r`) is refused because every root would rewrite the shared file.
+  `ai-rulez scan` only checks the security family and only `--external` runs scanners, so its update leaves the
+  entries of every other rule untouched (and `--strict-baseline` does not call them stale).
 - **Only new findings count.** Accepted findings stay visible (`"accepted": true` in JSON, a SARIF `suppression` with
   the reason, `baselineState` `unchanged` or `new`), but they are left out of the totals and the exit code.
 - **Stale entries.** An entry whose finding is gone is reported (`baseline: N accepted, M stale`). By default that is
@@ -647,9 +655,19 @@ The text report ends with a `changed-only since <rev> (depth <n|all>)` line and 
 finding, and a `[lint.tolerate]` count is judged against the full set too; exit status reflects only the findings shown.
 `--update-baseline` cannot be combined with `--since`.
 
+The revision is compared through its merge-base with `HEAD` (`git merge-base <rev> HEAD`), so with
+`--since origin/main` a file that only `main` changed since your branch forked is not counted; when no common ancestor
+exists (a shallow clone) the revision itself is used. Paths are matched relative to the lint tree, so `--repo-root`
+below the git toplevel works: changes outside that root are ignored, and a root outside any git repository is an
+error (exit 1) rather than an empty change set. A duplicate description (`AR701`) counts as referring to the file it
+duplicates, so introducing a duplicate of an unchanged file still shows the finding.
+
 git is run with the repository variables a parent git process exports (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`,
-`GIT_CONFIG_*`, ...) removed from its environment, so the command is safe inside a git hook and never addresses the
-hook's repository instead of the project.
+...) removed from its environment (the repository-selection variables only: `GIT_DIR`, `GIT_WORK_TREE`,
+`GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`,
+`GIT_NAMESPACE`; `GIT_CONFIG_*` is left alone), so the command is safe inside a git hook and never addresses the
+hook's repository instead of the project. Because `GIT_INDEX_FILE` is dropped, `--fix` stages a restored executable bit
+in the repository's real index, not in the temporary index of a `git commit <paths>` hook; run it before `git add`.
 
 ## Security checks
 
@@ -957,7 +975,10 @@ with its severity in the message, so it stays visible without failing the job.
 **Fingerprints.** Each finding has a `fingerprint` (`ar1:` plus 24 hex digits): a hash of the rule code, the
 repository-relative path and the whitespace-normalized text of the flagged line. It does not include the line
 number, so inserting text above a finding does not change it; editing the flagged line does. Two findings with
-the same code on identical lines of one file are told apart by their order. The `fingerprint` key is new in the
+the same code on identical lines of one file are told apart by their order. Size findings (`AR901`, `AR902`) point at
+the first line of the file, so their fingerprint also carries the measurement in steps of 25% growth: a baselined
+oversize file keeps its entry while it wobbles by a few lines and fires as a new finding once it has clearly grown.
+The `fingerprint` key is new in the
 JSON output; the other keys are unchanged.
 
 ## Relation to other checks
