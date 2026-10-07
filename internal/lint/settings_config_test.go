@@ -35,6 +35,7 @@ deny = ["Bash(*)"]
 		t.Fatal(err)
 	}
 	gitAdd(t, root)
+	gitSetExec(t, root, "tools/ready.sh") // Windows cannot express the bit on disk
 	fs := lintDir(t, root)
 
 	tests := []struct {

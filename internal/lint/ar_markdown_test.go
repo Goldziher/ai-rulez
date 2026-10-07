@@ -3,6 +3,7 @@ package lint
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -114,9 +115,11 @@ func TestMarkdownFixKeepsFileModeAndShowsADiffInDryRun(t *testing.T) {
 	opts.DryRun = false
 	_, err = ApplyFixes(rep.Findings, opts)
 	require.NoError(t, err)
-	info, err := os.Stat(file)
-	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o640), info.Mode().Perm())
+	if runtime.GOOS != "windows" { // Windows has no permission bits to keep
+		info, err := os.Stat(file)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o640), info.Mode().Perm())
+	}
 }
 
 func TestMarkdownFixSkipsBaselinedFindings(t *testing.T) {
