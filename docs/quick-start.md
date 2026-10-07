@@ -32,7 +32,7 @@ This creates a `.ai-rulez/` directory with:
 Edit `.ai-rulez/config.toml` to specify which tools to generate for:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-project"
 description = "My awesome project"
 
@@ -157,9 +157,9 @@ git add .ai-rulez/
 git commit -m "docs: initialize AI assistant configuration"
 ```
 
-`gitignore` defaults to `true`, so `generate` adds the generated files to `.gitignore` and teammates
-run `ai-rulez generate` themselves. To commit generated files instead, set `gitignore = false` in
-`config.toml` and add them to the commit.
+Generated files are not gitignored by default, so add them to the commit. To keep them out of git and let
+teammates run `ai-rulez generate` themselves, set `gitignore = true` in `config.toml` (or pass
+`generate --gitignore`); `generate` then maintains a managed block in `.gitignore`.
 
 Personal notes that should not be shared go in `.ai-rulez/local/` (`ai-rulez add rule my-notes --local`);
 see [Local Configuration](local-overrides.md).
@@ -194,7 +194,7 @@ priority: critical
 **3. Update `config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-platform"
 
 presets = ["claude", "cursor"]

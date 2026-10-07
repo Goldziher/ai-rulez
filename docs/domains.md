@@ -198,7 +198,7 @@ priority: critical
 ### Step 3: Update config.toml
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-platform"
 
 presets = ["claude", "cursor"]

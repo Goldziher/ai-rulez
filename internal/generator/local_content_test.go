@@ -20,6 +20,10 @@ const localContentConfig = `version = "5.0"
 name = "t"
 presets = ["%s"]
 gitignore = true
+agents_md = false
+
+[header]
+hashes = "full"
 
 [profiles]
 me = ["mine"]
