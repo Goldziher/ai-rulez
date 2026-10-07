@@ -65,50 +65,63 @@ func buildVibe(t *translation) ([]jsonmerge.OwnedKey, error) {
 
 func vibeAdd(e permEntry, lists map[string][]any, never map[string]bool) string {
 	r := e.Rule
+	switch r.Kind {
+	case KindShell:
+		return vibeShell(e, lists, never)
+	case KindRead, KindEdit, KindFetch, KindSearch:
+		return vibeTool(e, lists, never)
+	}
+	return "the harness has no equivalent of " + r.Tool + " rules"
+}
+
+// vibeShell files a shell rule into the bash allow or deny list, or switches the
+// tool off; the returned reason is empty when it was expressed.
+func vibeShell(e permEntry, lists map[string][]any, never map[string]bool) string {
 	list := "allowlist"
 	if e.Action == ActionDeny {
 		list = "denylist"
 	}
-	switch r.Kind {
-	case KindShell:
-		p := r.Shell()
-		switch {
-		case p.Kind == ShellAny && e.Action == ActionDeny:
-			never[ocBash] = true
-		case p.Kind == ShellPrefix, p.Kind == ShellExact && e.Action == ActionDeny:
-			lists["bash."+list] = append(lists["bash."+list], p.Literal)
-		case p.Kind == ShellExact:
-			return "Vibe matches command prefixes, so an exact-command allow would be widened"
-		default:
-			return "Vibe shell lists hold command prefixes; wildcards and allow-all cannot be expressed"
-		}
-		return ""
-	case KindRead, KindEdit, KindFetch, KindSearch:
-		tools := vibeWholeTools[r.Tool]
-		if tools == nil {
-			return "the harness has no equivalent of " + r.Tool + " rules"
-		}
-		if e.Action != ActionDeny {
-			return "Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule"
-		}
-		if r.Bare {
-			for _, tool := range tools {
-				never[tool] = true
-			}
-			return ""
-		}
-		if r.Kind == KindFetch || r.Kind == KindSearch {
-			return "Vibe's web tools have no domain list, only a whole-tool switch"
-		}
-		if r.Path.Anchor != AnchorCwd && r.Path.Anchor != AnchorProject {
-			return "home and absolute path anchors are not expressed as the absolute-path globs Vibe matches"
-		}
+	p := e.Rule.Shell()
+	switch {
+	case p.Kind == ShellAny && e.Action == ActionDeny:
+		never[ocBash] = true
+	case p.Kind == ShellPrefix, p.Kind == ShellExact && e.Action == ActionDeny:
+		lists["bash."+list] = append(lists["bash."+list], p.Literal)
+	case p.Kind == ShellExact:
+		return "Vibe matches command prefixes, so an exact-command allow would be widened"
+	default:
+		return "Vibe shell lists hold command prefixes; wildcards and allow-all cannot be expressed"
+	}
+	return ""
+}
+
+// vibeTool files a file or web rule: Vibe only denies, and only by whole tool or
+// absolute-path glob.
+func vibeTool(e permEntry, lists map[string][]any, never map[string]bool) string {
+	r := e.Rule
+	tools := vibeWholeTools[r.Tool]
+	if tools == nil {
+		return "the harness has no equivalent of " + r.Tool + " rules"
+	}
+	if e.Action != ActionDeny {
+		return "Vibe cannot scope an allow to a path or a domain, and allowing the whole tool would widen the rule"
+	}
+	if r.Bare {
 		for _, tool := range tools {
-			lists[tool+".denylist"] = append(lists[tool+".denylist"], "*/"+r.Path.Glob)
+			never[tool] = true
 		}
 		return ""
 	}
-	return "the harness has no equivalent of " + r.Tool + " rules"
+	if r.Kind == KindFetch || r.Kind == KindSearch {
+		return "Vibe's web tools have no domain list, only a whole-tool switch"
+	}
+	if r.Path.Anchor != AnchorCwd && r.Path.Anchor != AnchorProject {
+		return "home and absolute path anchors are not expressed as the absolute-path globs Vibe matches"
+	}
+	for _, tool := range tools {
+		lists[tool+".denylist"] = append(lists[tool+".denylist"], "*/"+r.Path.Glob)
+	}
+	return ""
 }
 
 // Poolside: .poolside/settings.yaml `tools.shell.{allow,deny}` (glob patterns, `*`
@@ -133,33 +146,11 @@ func buildPoolside(t *translation) ([]jsonmerge.OwnedKey, error) {
 		r := e.Rule
 		switch r.Kind {
 		case KindShell:
-			p := r.Shell()
-			switch {
-			case p.Kind == ShellAny && e.Action == ActionDeny:
-				if key, ok := scalarKey(t, []string{keyTools, "shell", "disabled"}, true); ok {
-					keys = append(keys, key)
-				}
-			case p.Kind == ShellAny:
-				t.drop(e, "allowing every command is not documented")
-			case p.Kind == ShellPrefix:
-				shell[e.Action] = append(shell[e.Action], p.Literal, p.Literal+" *")
-			default:
-				shell[e.Action] = append(shell[e.Action], p.Literal)
+			if key, ok := poolsideShell(t, e, shell); ok {
+				keys = append(keys, key)
 			}
 		case KindRead, KindEdit:
-			if r.Bare {
-				t.drop(e, "paths rules need a path")
-				continue
-			}
-			if r.Path.Anchor != AnchorCwd && r.Path.Anchor != AnchorProject && !t.cfg.UserScope {
-				t.drop(e, "the shared project file takes project-relative paths only")
-				continue
-			}
-			entry := map[string]any{"path": poolsidePath(r)}
-			if e.Action == ActionAllow && r.Kind == KindEdit {
-				entry[ocWrite] = true
-			}
-			paths[e.Action] = append(paths[e.Action], entry)
+			poolsidePathRule(t, e, paths)
 		default:
 			t.drop(e, "the harness has no documented equivalent of "+r.Tool+" rules")
 		}
@@ -173,6 +164,41 @@ func buildPoolside(t *translation) ([]jsonmerge.OwnedKey, error) {
 		}
 	}
 	return keys, nil
+}
+
+// poolsideShell files a shell rule into the shell lists. Denying every command
+// instead switches the tool off, which is the owned key it returns.
+func poolsideShell(t *translation, e permEntry, shell map[PermAction][]any) (key jsonmerge.OwnedKey, ok bool) {
+	p := e.Rule.Shell()
+	switch {
+	case p.Kind == ShellAny && e.Action == ActionDeny:
+		return scalarKey(t, []string{keyTools, "shell", "disabled"}, true)
+	case p.Kind == ShellAny:
+		t.drop(e, "allowing every command is not documented")
+	case p.Kind == ShellPrefix:
+		shell[e.Action] = append(shell[e.Action], p.Literal, p.Literal+" *")
+	default:
+		shell[e.Action] = append(shell[e.Action], p.Literal)
+	}
+	return jsonmerge.OwnedKey{}, false
+}
+
+// poolsidePathRule files a Read or Edit rule into the paths lists.
+func poolsidePathRule(t *translation, e permEntry, paths map[PermAction][]any) {
+	r := e.Rule
+	if r.Bare {
+		t.drop(e, "paths rules need a path")
+		return
+	}
+	if r.Path.Anchor != AnchorCwd && r.Path.Anchor != AnchorProject && !t.cfg.UserScope {
+		t.drop(e, "the shared project file takes project-relative paths only")
+		return
+	}
+	entry := map[string]any{"path": poolsidePath(r)}
+	if e.Action == ActionAllow && r.Kind == KindEdit {
+		entry[ocWrite] = true
+	}
+	paths[e.Action] = append(paths[e.Action], entry)
 }
 
 func poolsidePath(r Rule) string {

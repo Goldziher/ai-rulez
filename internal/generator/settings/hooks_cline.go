@@ -65,31 +65,16 @@ func ClineHookScripts(cfg *config.Config) []HookScript {
 		if !g.HookTargetsHarness(harness) {
 			continue
 		}
-		native, ok := clineEvents[g.Event]
+		native, ok := clineGroupEvent(cfg, g)
 		if !ok {
-			warn(cfg.Diag, harness, fmt.Sprintf("the event %s has no equivalent", g.Event), "hint", "restrict the group with targets, or remove it")
 			continue
 		}
-		if matcher := g.Matchers[harness]; g.Matcher != "" || matcher != "" {
-			warn(cfg.Diag, harness, fmt.Sprintf("Cline hooks have no matcher, so the %s group would run on every occurrence", g.Event),
-				"hint", "remove the matcher or set targets to leave this harness out")
+		lines, usesRoot := clineHandlerLines(cfg, g)
+		if len(lines) == 0 {
 			continue
 		}
-		for j := range g.Hooks {
-			action := &g.Hooks[j]
-			if reason := clineUnsupported(action); reason != "" {
-				warn(cfg.Diag, harness, fmt.Sprintf("a %s handler %s", g.Event, reason))
-				continue
-			}
-			if action.Script != "" && !config.IsSafeHookScript(action.Script) {
-				warn(cfg.Diag, harness, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
-					g.Event, action.Script))
-				continue
-			}
-			line, usesRoot := clineCommand(cfg, action)
-			commands[native] = append(commands[native], line)
-			needsRoot[native] = needsRoot[native] || usesRoot
-		}
+		commands[native] = append(commands[native], lines...)
+		needsRoot[native] = needsRoot[native] || usesRoot
 	}
 	names := make([]string, 0, len(commands))
 	for native := range commands {
@@ -101,6 +86,45 @@ func ClineHookScripts(cfg *config.Config) []HookScript {
 		scripts = append(scripts, HookScript{Name: native, Body: clineScript(native, commands[native], needsRoot[native])})
 	}
 	return scripts
+}
+
+// clineGroupEvent returns the Cline event of a group; ok is false, after a
+// warning, when Cline cannot carry the group.
+func clineGroupEvent(cfg *config.Config, g *config.HookGroup) (native string, ok bool) {
+	const harness = config.HarnessCline
+	native, ok = clineEvents[g.Event]
+	if !ok {
+		warn(cfg.Diag, harness, fmt.Sprintf("the event %s has no equivalent", g.Event), "hint", "restrict the group with targets, or remove it")
+		return "", false
+	}
+	if g.Matcher != "" || g.Matchers[harness] != "" {
+		warn(cfg.Diag, harness, fmt.Sprintf("Cline hooks have no matcher, so the %s group would run on every occurrence", g.Event),
+			"hint", "remove the matcher or set targets to leave this harness out")
+		return "", false
+	}
+	return native, true
+}
+
+// clineHandlerLines returns the shell lines of the handlers of a group that Cline
+// can carry, and whether any of them needs the project root.
+func clineHandlerLines(cfg *config.Config, g *config.HookGroup) (lines []string, needsRoot bool) {
+	const harness = config.HarnessCline
+	for j := range g.Hooks {
+		action := &g.Hooks[j]
+		if reason := clineUnsupported(action); reason != "" {
+			warn(cfg.Diag, harness, fmt.Sprintf("a %s handler %s", g.Event, reason))
+			continue
+		}
+		if action.Script != "" && !config.IsSafeHookScript(action.Script) {
+			warn(cfg.Diag, harness, fmt.Sprintf("a %s handler has an unsafe script %q; a script path may only contain letters, digits, '.', '_', '-' and '/'",
+				g.Event, action.Script))
+			continue
+		}
+		line, usesRoot := clineCommand(cfg, action)
+		lines = append(lines, line)
+		needsRoot = needsRoot || usesRoot
+	}
+	return lines, needsRoot
 }
 
 func clineUnsupported(action *config.HookAction) string {
