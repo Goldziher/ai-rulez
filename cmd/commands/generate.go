@@ -878,7 +878,7 @@ func enforceLockedContent(cfg *config.Config) error {
 // `generate --check`, which verifies the content whenever the lock is enforced,
 // not only under --locked or --frozen.
 func enforceLockedContentFor(cfg *config.Config, check bool) error {
-	if !generateLocked && !generateFrozen && !(check && cfg.LockEnforced()) {
+	if !generateLocked && !generateFrozen && (!check || !cfg.LockEnforced()) {
 		return nil
 	}
 	lines, err := verifyLockedSources(cfg)
