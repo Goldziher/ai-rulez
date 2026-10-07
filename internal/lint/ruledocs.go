@@ -194,7 +194,7 @@ var baseRuleDocs = map[string]RuleDoc{
 		Good: "A sentence or two that states what the item does and when to use it",
 	},
 	CodeDescriptionStyle: {
-		Why:  "Descriptions that state when to use an item are selected more reliably (enabled by require_use_when).",
+		Why:  "Descriptions that state when to use a skill or agent are selected more reliably (enabled by require_use_when). Commands are exempt: the user invokes them by name.",
 		Bad:  "`description: Database migration helper`",
 		Good: "`description: Use when writing or reviewing database migrations`",
 	},
