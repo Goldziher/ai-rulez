@@ -9,7 +9,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
-	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -35,30 +34,36 @@ that mode, so it is safe to hand to an unattended agent.`,
 	Run: runMCPServer,
 }
 
-func runMCPServer(cmd *cobra.Command, args []string) {
+func runMCPServer(cmd *cobra.Command, _ []string) {
+	if err := runMCP(cmd); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+}
+
+// runMCP runs the MCP server until the client disconnects or a signal ends it.
+func runMCP(cmd *cobra.Command) error {
 	// SIGTERM and Ctrl-C end the server through its context, so shutdown still
 	// flushes the usage sink and telemetry instead of dropping queued records.
 	ctx, stop := signal.NotifyContext(cmdContext(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	serveOnly := append([]string{"profile", "targets", flagServeDomain, "allow", "deny"}, dynamicServeFlagNames...)
-	if serve, _ := cmd.Flags().GetBool("serve-skills"); !serve {
+	serve, _ := cmd.Flags().GetBool("serve-skills") //nolint:errcheck // the flag is registered in init
+	if !serve {
+		serveOnly := append([]string{"profile", "targets", flagServeDomain, "allow", "deny"}, dynamicServeFlagNames...)
 		for _, name := range serveOnly {
 			if cmd.Flags().Changed(name) {
-				fmtError(oops.Errorf("--%s requires --serve-skills", name))
-				os.Exit(1)
+				return oops.Errorf("--%s requires --serve-skills", name)
 			}
 		}
 	}
 	var (
 		srv       *mcp.Server
-		transport sdkmcp.Transport = mcp.NewGuardedStdioTransport(os.Stdin, os.Stdout, nil)
+		transport = mcp.NewGuardedStdioTransport(os.Stdin, os.Stdout, nil)
 	)
-	if serve, _ := cmd.Flags().GetBool("serve-skills"); serve {
+	if serve {
 		var err error
-		srv, err = buildSkillServer(ctx, cmd)
-		if err != nil {
-			fmtError(oops.Wrapf(err, "MCP: build skills server"))
-			os.Exit(1)
+		if srv, err = buildSkillServer(ctx, cmd); err != nil {
+			return oops.Wrapf(err, "MCP: build skills server")
 		}
 		transport = srv.WrapTransport(transport)
 	} else {
@@ -68,10 +73,9 @@ func runMCPServer(cmd *cobra.Command, args []string) {
 	closeTelemetry := wireMCPTelemetry(srv)
 	run := func(ctx context.Context) error { return srv.GetMCPServer().Run(ctx, transport) }
 	if err := serveUntilDone(ctx, run, closeTelemetry, srv.Close); err != nil {
-		stop()
-		fmtError(oops.Wrapf(err, "MCP: start MCP server"))
-		os.Exit(1)
+		return oops.Wrapf(err, "MCP: start MCP server")
 	}
+	return nil
 }
 
 // serveUntilDone runs the server until the client disconnects or ctx ends (a
