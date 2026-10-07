@@ -156,9 +156,7 @@ func cacheExpired(sc resolvedScanner, hit cachedScan, at time.Time) bool {
 func toCached(found []externalFinding) []cachedFinding {
 	out := make([]cachedFinding, len(found))
 	for i, f := range found {
-		out[i] = cachedFinding{File: f.File, Line: f.Line, Severity: f.Severity, Rule: f.Rule, Message: f.Message,
-			Fingerprint: f.Fingerprint, Score: f.Score, HasScore: f.HasScore, DefaultLevel: f.DefaultLevel,
-			HelpURI: f.HelpURI, Suppressed: f.Suppressed}
+		out[i] = cachedFinding(f)
 	}
 	return out
 }
@@ -166,9 +164,7 @@ func toCached(found []externalFinding) []cachedFinding {
 func fromCached(in []cachedFinding) []externalFinding {
 	out := make([]externalFinding, len(in))
 	for i, f := range in {
-		out[i] = externalFinding{File: f.File, Line: f.Line, Severity: f.Severity, Rule: f.Rule, Message: f.Message,
-			Fingerprint: f.Fingerprint, Score: f.Score, HasScore: f.HasScore, DefaultLevel: f.DefaultLevel,
-			HelpURI: f.HelpURI, Suppressed: f.Suppressed}
+		out[i] = externalFinding(f)
 	}
 	return out
 }

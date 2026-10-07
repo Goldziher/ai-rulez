@@ -178,7 +178,7 @@ func (s TrapScope) matches(rel string) bool {
 	if s.RootOnly && dir == "" && strings.Contains(rel, "/") {
 		return false
 	}
-	if dir != "" && !(strings.HasPrefix(rel, dir+"/") || strings.Contains(rel, "/"+dir+"/")) {
+	if dir != "" && !strings.HasPrefix(rel, dir+"/") && !strings.Contains(rel, "/"+dir+"/") {
 		return false
 	}
 	if s.Suffix == "" {
@@ -192,11 +192,6 @@ func (s TrapScope) matches(rel string) bool {
 
 func (s TrapScope) hasKind(kind string) bool {
 	return len(s.Kinds) == 0 || slices.Contains(s.Kinds, kind)
-}
-
-// eval runs the predicate against one file.
-func (p TrapPredicate) eval(rel string, content []byte) []trapHit {
-	return p.evalIn(rel, content, trapEnv{})
 }
 
 func (p TrapPredicate) evalIn(rel string, content []byte, env trapEnv) []trapHit {
