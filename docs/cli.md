@@ -16,6 +16,8 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez cost`                 | Report the biggest context-cost offenders           |
 | `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
 | `ai-rulez lock`                 | Pin remote includes, installed skills and authored content in `ai-rulez.lock` ([Lock file](lockfile.md)) |
+| `ai-rulez sign`                 | Sign the lock, a plugin bundle, a skill, an SBOM or a policy into a Sigstore bundle ([details](#sign-command)) |
+| `ai-rulez trust update`         | Cache the Sigstore trusted root used to verify keyless attestations ([details](#trust-command)) |
 | `ai-rulez approve`              | Record, list and revoke reviewer approvals bound to a content digest ([Approvals](approvals.md)) |
 | `ai-rulez update`               | Move pins of sources that use a `version` range to the newest allowed tag ([details](#update-command)) |
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
@@ -25,7 +27,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
 | `ai-rulez guard`                | Hidden PreToolUse hook that blocks agent edits to generated files ([details](#guard-command)) |
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
-| `ai-rulez verifiers run/list/explain/test/suggest` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
+| `ai-rulez verifiers run/list/explain/test/calibrate/suggest` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez scanners list/doctor` | Inspect the `[[lint.external]]` scanners ([details](#scan-command)) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
@@ -34,6 +36,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez eval import`          | Import eval scenarios from another tool as eval cases ([details](evals.md#importing-scenarios)) |
 | `ai-rulez eval calibrate-estimate` | Propose cost-estimate assumptions measured from recorded runs ([details](evals.md#calibrating-the-estimate)) |
 | `ai-rulez review` / `rubric`    | Score skills against a rubric: offline, or with an LLM judge (`--semantic`), calibration, a calibrated gate and `review fix` ([details](#review-commands)) |
+| `ai-rulez improve`              | (experimental) Improve a skill with an external optimizer behind a held-out eval gate ([Improve](improve.md)) |
 | `ai-rulez usage` / `report`     | Opt-in usage log, feedback and reports ([details](#usage-commands)) |
 | `ai-rulez telemetry`            | Item-load telemetry and opt-in OTLP export ([details](#usage-commands)) |
 | `ai-rulez export okf` / `import okf` / `okf validate` | Open Knowledge Format bundles ([details](#okf-commands)) |
@@ -997,7 +1000,7 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 #### `init --from`
 
-`ai-rulez init --from` runs `convert --write` with its sources: importer names (`auto`, `native`, `rulesync`, ...) or the project paths it always took (`.claude`, `.cursor`, `CLAUDE.md`), which limit the native importer to those paths. The sources are checked in a scratch directory first, so a source that cannot be imported, or a blocked scan, leaves an existing `.ai-rulez/` alone. Compared with the engine it replaced: a root file such as `CLAUDE.md` is one context item (`convert --split-headings` splits it), and MCP files, hooks and permissions are imported, with the report printed. [`import okf`](#ai-rulez-import-okf) stays as the direct entry point to the OKF mapping; `convert --from okf` is the same mapping with convert's report.
+`ai-rulez init --from` runs `convert --write` with its sources: importer names (`auto`, `native`, `rulesync`, ...) or the project paths it always took (`.claude`, `.cursor`, `CLAUDE.md`), which limit the native importer to those paths. The sources are checked in a scratch directory first, so a source that cannot be imported, or a blocked scan, leaves an existing `.ai-rulez/` alone. When you confirm replacing an existing configuration directory (or pass `--yes`), it is moved aside to `<dir>.replaced-<pid>` while the import writes and restored if the write fails; it is deleted only after the import succeeded. Compared with the engine it replaced: a root file such as `CLAUDE.md` is one context item (`convert --split-headings` splits it), and MCP files, hooks and permissions are imported, with the report printed. [`import okf`](#ai-rulez-import-okf) stays as the direct entry point to the OKF mapping; `convert --from okf` is the same mapping with convert's report.
 
 ## Initialization Command
 
@@ -1353,6 +1356,9 @@ ai-rulez verify [config-path] [--plugin] [flags]
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts       |
 | `--attestation`       | boolean | false              | Verify the signed lock offline against the `[signing]` policy (see [Signing](signing.md)) |
 | `--attestation-file`  | string  | next to the lock   | With `--attestation`: the bundle to verify                 |
+| `--lock`              | boolean | false              | With `--attestation`: verify the lock attestation (the default and only lock subject) |
+| `--approvals`         | boolean | false              | Re-check the signed and review-linked approvals that apply to the current content (see below) |
+| `--online`            | boolean | false              | With `--approvals`: also check review-linked approvals against the forge (network and a token) |
 | `--self`              | boolean | false              | Verify this ai-rulez binary against its release's Sigstore bundle (see [Signing](signing.md#verifying-ai-rulez-itself)) |
 | `--bundle`, `--skill` | string  | none               | Verify the attestation of this plugin bundle or published skill directory (implies `--attestation`) |
 | `--sbom`              | string  | none               | Verify the attestation of this SBOM file (implies `--attestation`) |
@@ -1362,7 +1368,7 @@ ai-rulez verify [config-path] [--plugin] [flags]
 | `--public-key`        | string  | none               | With `--attestation`: also trust this PEM public key (repeatable) |
 | `--identity` / `--issuer` | string | none            | With `--attestation`: also trust this certificate identity and its OIDC issuer |
 | `--no-state`          | boolean | false              | With `--attestation`: skip the per-user rollback state     |
-| `--format`            | string  | `text`             | With `--attestation`: `text` or `json` (`schema/verify-attestation.schema.json`) |
+| `--format`            | string  | `text`             | With `--attestation` or `--approvals`: `text` or `json` (`schema/verify-attestation.schema.json`, `schema/verify-approvals.schema.json`) |
 
 Verify the signed lock (exit `0` verified, `1` cannot run, `2` verification failed with an `AR720` to `AR727` code):
 
@@ -1488,7 +1494,7 @@ Exit `0` within budget, `2` over a ceiling, `1` the configuration could not be l
 
 ## Verifiers Command
 
-### `ai-rulez verifiers run|list|explain|test|suggest`
+### `ai-rulez verifiers run|list|explain|test|calibrate|suggest`
 
 Run the read-only, deterministic repo checks declared as `[[verifiers]]` in `config.toml` (a file exists or is absent, a glob matches a bounded number of files, a regex is required or forbidden, a JSON/YAML/TOML key has a value, generated files are in sync) and as rule-linked specs under `.ai-rulez/verifiers/*.toml` (paired files, `all`/`any`/`not`, changed-only scope; a failure names the rule or skill it enforces). Verifiers never write. Two predicates of a rule-linked verifier are opt-in per run: `command` starts a program (`--allow-exec`) and `llm` sends the changed lines to a model (`--allow-llm`); without the flags nothing runs and nothing leaves the machine. Types, fields and semantics are in [Verifiers](verifiers.md) and the [`verifiers` reference](configuration.md#verifiers).
 
@@ -1524,7 +1530,7 @@ ai-rulez verifiers suggest <id> [--kind rule|skill|agent|command] [--max-proposa
 | `--no-local` | Ignore the machine-local overlay and `local/` content |
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
 
-`list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`. `suggest` asks the model for candidate verifiers for a rule and prints the ones that pass deterministic checks; it never writes without `--write` (see [Verifiers](verifiers.md#suggesting-verifiers)). `[verifiers_settings]` holds the limits and policy (`max_timeout_s`, `max_file_bytes`, `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`).
+`list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`. `calibrate` measures the precision and recall of an `llm` verifier's `fail` verdict on its labelled examples and records it in `.ai-rulez/verifiers/calibration/<id>.json` (`--no-write` prints it only); `run --gate-llm` reads that record. `suggest` asks the model for candidate verifiers for a rule and prints the ones that pass deterministic checks; it never writes without `--write` (see [Verifiers](verifiers.md#suggesting-verifiers)). `[verifiers_settings]` holds the limits and policy (`max_timeout_s`, `max_file_bytes`, `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`).
 
 Exit codes: `0` no verifier failed at the `--fail-on` severity, `2` at least one failed, even when another verifier could not be evaluated (a failure is never hidden behind exit `1`; the report shows both), `1` nothing failed but the run could not complete: the configuration does not load or validate, a `--name` is unknown, the `--since` base cannot be used, or a verifier could not be evaluated (status `error`). A failing `info` verifier never fails the run unless `--fail-on info`. The MCP server exposes the same run as the read-only `run_verifiers` tool (with `since`, `staged` and `rule` parameters); it does not resolve includes, so `generated_in_sync` reports `error` there for a project that declares includes or installed skills.
 
@@ -1736,6 +1742,7 @@ Score skills, agents and commands against a rubric. Offline by default (lint evi
 | `--k n` | Most votes for a flagged dimension (default the rubric's `votes.max`) |
 | `--max-cost usd`, `--max-calls n` | Spend caps (defaults `[review]`, else 0.50 and 300; `--max-cost 0` is unlimited) |
 | `--no-cache`, `--cache-dir d` | Bypass or relocate the response cache |
+| `--concurrency n` | Items judged at once (default 4, at most 16) |
 | `--gate`, `--gate-level info\|warning\|error` | Exit 2 on a stable fail verdict of a calibrated dimension; refused without a matching calibration |
 | `--baseline f`, `--write-baseline f` | Hide the findings in a baseline or earlier report; write a baseline |
 | `--since rev`, `--role r`, `--profile p` | Only items changed since a revision; only the content slice of a role or profile |
@@ -1749,8 +1756,8 @@ Exit codes: 0 reviewed, 1 could not run or was refused, 2 `--gate` failed.
 
 | Command | Meaning |
 | --- | --- |
-| `review calibrate [--rubric r] [--golden dir] [--model m \| --models a,b] [--k n] [--content full\|descriptions] [--compare f] [--no-probes] [--no-write] [--no-cache] [--out f] [--max-cost usd] [--max-calls n] [--format text\|json]` | Measure the judge against the golden set and write `calibration.json`; `--compare` is the drift check. Exit 2 when it does not pass or drifted |
-| `review fix [id\|name\|path...] [--finding fp] [--model fixer] [--judge-model m] [--out f] [--apply] [--allow-same-model] [--patch f] [--format text\|json]` | Propose a verified patch for stable judged findings; never writes without `--apply`. Exit 2 when a finding has no safe fix |
+| `review calibrate [--rubric r] [--golden dir] [--model m \| --models a,b] [--k n] [--content full\|descriptions] [--compare f] [--no-probes] [--no-write] [--no-cache] [--out f] [--max-cost usd] [--max-calls n] [--concurrency n] [--format text\|json]` | Measure the judge against the golden set and write `calibration.json`; `--compare` is the drift check. Defaults: `--content full`, `--max-cost 2.00`, `--max-calls 1000`. Exit 2 when it does not pass or drifted |
+| `review fix [id\|name\|path...] [--finding fp] [--model fixer] [--judge-model m] [--rubric r] [--content full\|descriptions] [--k n] [--since rev] [--profile p] [--role r] [--max-cost usd] [--max-calls n] [--no-cache] [--concurrency n] [--out f] [--apply] [--allow-same-model] [--patch f] [--format text\|json]` | Propose a verified patch for stable judged findings; never writes without `--apply`. `--content` defaults to `full` here (a fix needs the body). Exit 2 when a finding has no safe fix |
 | `review explain CODE` | Explain `AR9G0`-`AR9G9` with the rubric's definitions |
 
 ### `ai-rulez rubric list|show|lint`
@@ -1798,6 +1805,7 @@ Runs an external optimizer on a throwaway copy of an authored skill and accepts 
 | `--max-cost USD` | required | ceiling for evals plus optimizer-reported cost |
 | `--runs N` | `3` | eval runs per case, majority vote |
 | `--timeout D` | `20m` | per optimizer invocation |
+| `--eval-timeout D` | `30m` | per eval runner call |
 | `--env-pass A,B` / `--egress H,I` | | forwarded environment names / declared hosts (credential-like names need `--egress`) |
 | `--allow-frontmatter` / `--allow-scripts` | off | widen the diff policy |
 | `--adapter NAME` | | a bundled optimizer, the same as `--with builtin:NAME` (`improve adapters`) |
@@ -1815,13 +1823,13 @@ Exit 0: candidate accepted. Exit 2: no acceptable candidate (report written). Ex
 
 ### `ai-rulez improve apply <run-id>` (experimental)
 
-Shows the diff of an accepted run and writes it into the skill after confirmation (`--yes` skips it). Refuses with `AR9J1` when the skill changed since the run.
+Shows the diff of an accepted run and writes it into the skill after confirmation (`--yes` skips it). Refuses with `AR9J1` when the skill changed since the run. `--allow-frontmatter` and `--allow-scripts` widen the diff policy as for `run`; `--format text|json`.
 
 ### `ai-rulez improve show|clean|pr|adapters` (experimental)
 
 - `improve show <run-id>`: the report of a saved run (rounds, held-out comparison with its bootstrap interval, sibling guard, costs) and the diff; `--format json` prints `improve-show/1`.
 - `improve clean [<run-id>|--all]`: delete saved runs (`--dry-run`, `--yes`).
-- `improve pr <run-id>`: branch and pull request from an isolated worktree (`--base`, `--remote`, `--draft`, `--no-push`, `--run-evals`, `--isolation none|auto|require`, `--yes`); refusals carry `AR9J8`.
+- `improve pr <run-id>`: branch and pull request from an isolated worktree (`--base`, `--remote`, `--draft`, `--no-push`, `--run-evals`, `--eval-arg`, `--env-pass`, `--isolation none|auto|require`, `--allow-frontmatter`, `--allow-scripts`, `--yes`); the ai-rulez commands it runs in the worktree get a scrubbed environment, so pass the eval runner's credentials by name with `--env-pass`. Refusals carry `AR9J8`.
 - `improve adapters [name]`: list the bundled optimizers, or print a template (`shell`, `research`, and `repair-workflow`, a scheduled GitHub Actions workflow that repairs skills after a model change).
 
 ### `ai-rulez search --eval <cases.yaml>`
@@ -1939,7 +1947,7 @@ For V4 configs the raw file is also checked against `schema/ai-rules.schema.json
 or a value outside an enum fails rather than being silently dropped. The structural checks are:
 
 - A `config.local.*` overlay, when present, is checked against `schema/ai-rules-local.schema.json`, and the merged config is validated. The output names the overlay file and prints a one-line summary of overridden, added and removed key paths, never values
-- `version` is `"3.0"` or `"4.0"`
+- `version` is `"4.0"` (`"3.0"` is rejected)
 - `name` is present and non-empty
 - All preset names are valid
 - A `builtin:<name>` reference in a profile names a real builtin
@@ -2027,8 +2035,9 @@ the network. `validate` logs a warning for each remote source that follows a mov
 whenever `ai-rulez.lock` exists (`[lock] enforce = false` opts out); it also reports content drift as `AR981` / `AR982`, and `generate`
 refuses a remote source the lock does not cover, as `--locked` does. Pinning `ref` to a full commit SHA also counts as pinned.
 
-ai-rulez does not verify signatures itself: the lock proves the bytes did not change since you reviewed them, not
-who published them. To add that, sign `lock --subject` with `cosign` ([recipe](lockfile.md#signing-the-lock)).
+The lock proves the bytes did not change since you reviewed them, not who published them. To add that, sign it with
+[`ai-rulez sign --lock`](#sign-command) and verify with `verify --attestation`, or sign `lock --subject` with `cosign`
+([recipe](lockfile.md#signing-the-lock)).
 
 ## Sign Command
 
@@ -2109,7 +2118,7 @@ ai-rulez approve --revoke include:shared --deny --reason "exfiltrates ~/.ssh"   
 | `--revoke`, `--prune` | Remove records |
 | `--verify-base <rev>` | Compare the lock with the one at the merge base of `<rev>` and `HEAD` and report every approval added since for content that was added or changed since (`AR716`); exit `2` when there is one; writes nothing |
 | `--from-github-review <pr>` | Record one `review-linked` approval per approving review of the pull request (reviewer `github:<login>`, `ref` the review URL), after checking through the forge API; needs the network and a token |
-| `--sign` | Sign the approval as an in-toto statement (DSSE) with `--key` or `--keyless`; the signer's identity is the reviewer. Takes the signing flags of [`sign`](#ai-rulez-sign-config-file): `--key`, `--key-password-env`, `--keyless`, `--identity-token-env`, `--interactive`, `--fulcio-url`, `--rekor-url`, `--tlog` |
+| `--sign` | Sign the approval as an in-toto statement (DSSE) with `--key` or `--keyless`; the signer's identity is the reviewer. Takes the signing flags of [`sign`](#sign-command): `--key`, `--key-password-env`, `--keyless`, `--identity-token-env`, `--interactive`, `--fulcio-url`, `--rekor-url`, `--tlog` |
 | `--resolve-teams` | Expand `@org/team` entries of `approvers` and CODEOWNERS from the forge (needs `read:org`), for `--list` and approving |
 | `--deny`, `--reason` | With `--revoke`: add the item's digest to the `[[deny]]` list, with a reason |
 | `--base <rev>` | With `forbid_self_approval`: count commit authors since this revision (default: the branch's upstream) |
@@ -2233,13 +2242,16 @@ The machine-local overlay is never included. Nothing is rendered; the only file 
 
 ```bash
 ai-rulez publish [--dist dist] [--to github-release|npm|oci] [--tag v1.4.0] [--repo OWNER/REPO] [--channel NAME]
-                 [--oci-ref host/path] [--npm-scope @acme] [--public]
-                 [--sign-key FILE | --sign-keyless] [--sbom] [--marketplace] [--emit NAME]... [--experimental]
-                 [--runtime R]... [--only NAME]... [--since TAG]
+                 [--oci-ref host/path] [--npm-scope @acme] [--public] [--confirm-registry URL]
+                 [--sign-key FILE [--sign-key-password-env VAR] [--sign-tlog] | --sign-keyless [--sign-token-env VAR] [--sign-interactive]]
+                 [--fulcio-url URL] [--rekor-url URL] [--sbom] [--marketplace] [--emit NAME]... [--experimental]
+                 [--runtime R]... [--only NAME]... [--since TAG] [--profile P]
                  [--dry-run | --execute --yes [--force]] [--allow-dirty] [--template file]... [--format text|json]
-ai-rulez publish verify <dir|oci-ref> [--key PUBLIC.pem]... [--identity ID --issuer URL] [--require-signature] [--format text|json]
-ai-rulez publish emit <emitter> [--out dir] [--experimental]
+ai-rulez publish verify <dir|oci-ref> [--key PUBLIC.pem]... [--identity ID --issuer URL] [--trusted-root file] [--require-signature] [--format text|json]
+ai-rulez publish emit <emitter> [--out dir] [--experimental] [--channel NAME] [--runtime R]... [--profile P] [--allow-dirty]
 ```
+
+`--confirm-registry URL` is required with `--to npm --execute` when the committed `[publish.npm]` config names a registry other than the public one.
 
 Runs `validate --strict`, `lock --check`, `verify --plugin`, a secret scan and the `[publish]` policy gates
 (`require_approved`, `require_signature`), then writes a reproducible `<name>-<version>.tar.gz`, its manifest,
@@ -2289,7 +2301,7 @@ the security scan), `1` it could not run.
 ### `ai-rulez export okf`
 
 ```bash
-ai-rulez export okf [config-file] [--out dir] [--profile p] [--include rules,context,skills] [--index-style body|frontmatter] [--check]
+ai-rulez export okf [config-file] [--out dir] [--profile p | --role r] [--include rules,context,skills,agents,commands,checks] [--index-style body|frontmatter] [--check]
 ```
 
 Writes rules, context, skills, agents, commands and checks as an OKF v0.2 bundle. Without `--out` the bundle goes
