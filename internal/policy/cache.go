@@ -118,15 +118,11 @@ func (c *cache) put(rawURL, digest string, body, bundle []byte, at time.Time) er
 func (c *cache) get(rawURL, digest string) (body, bundle []byte, fetchedAt time.Time, ok bool) {
 	miss := func() ([]byte, []byte, time.Time, bool) { return nil, nil, time.Time{}, false }
 	stem := filepath.Join(c.dir, c.name(rawURL, digest))
-	meta, err := safefs.ReadRegular(stem + ".json")
-	if err != nil || len(meta) > maxCacheMeta {
+	e, found := c.entry(stem, rawURL, digest)
+	if !found {
 		return miss()
 	}
-	var e cacheEntry
-	if json.Unmarshal(meta, &e) != nil || e.V != cacheVersion || e.URL != rawURL || e.Digest != digest || !hmac.Equal([]byte(e.MAC), []byte(c.entryMAC(e))) {
-		return miss()
-	}
-	body, err = safefs.ReadRegular(stem + ".toml")
+	body, err := safefs.ReadRegular(stem + ".toml")
 	if err != nil || len(body) > maxPolicyBytes {
 		return miss()
 	}
@@ -135,12 +131,7 @@ func (c *cache) get(rawURL, digest string) (body, bundle []byte, fetchedAt time.
 		return miss()
 	}
 	if e.BundleSHA != "" {
-		bundle, err = safefs.ReadRegular(stem + SidecarSuffix)
-		if err != nil || len(bundle) > signing.MaxBundleBytes {
-			return miss()
-		}
-		bsum := sha256.Sum256(bundle)
-		if hex.EncodeToString(bsum[:]) != e.BundleSHA {
+		if bundle, found = readSidecar(stem, e.BundleSHA); !found {
 			return miss()
 		}
 	}
@@ -149,6 +140,30 @@ func (c *cache) get(rawURL, digest string) (body, bundle []byte, fetchedAt time.
 		return miss()
 	}
 	return body, bundle, at, true
+}
+
+// entry reads the metadata of a cached policy and checks its MAC and that it is
+// the entry for rawURL at digest.
+func (c *cache) entry(stem, rawURL, digest string) (cacheEntry, bool) {
+	var e cacheEntry
+	meta, err := safefs.ReadRegular(stem + ".json")
+	if err != nil || len(meta) > maxCacheMeta {
+		return e, false
+	}
+	if json.Unmarshal(meta, &e) != nil || e.V != cacheVersion || e.URL != rawURL || e.Digest != digest || !hmac.Equal([]byte(e.MAC), []byte(c.entryMAC(e))) {
+		return e, false
+	}
+	return e, true
+}
+
+// readSidecar reads a cached signature bundle whose SHA-256 must be want.
+func readSidecar(stem, want string) ([]byte, bool) {
+	bundle, err := safefs.ReadRegular(stem + SidecarSuffix)
+	if err != nil || len(bundle) > signing.MaxBundleBytes {
+		return nil, false
+	}
+	sum := sha256.Sum256(bundle)
+	return bundle, hex.EncodeToString(sum[:]) == want
 }
 
 // tofuDoc is the record of digests accepted on first use.
