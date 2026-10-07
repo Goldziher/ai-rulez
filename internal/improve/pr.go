@@ -129,7 +129,7 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 		return nil, err
 	}
 	g := opts.Git
-	top := g.TopLevel(opts.RepoDir) //nolint:contextcheck // gitutil.Git.TopLevel takes no context; the fix belongs in gitutil
+	top := g.TopLevelContext(ctx, opts.RepoDir)
 	if top == "" {
 		return nil, refuse(CodePRRefused, "%s is not inside a git repository: improve pr needs one to make a worktree", opts.RepoDir)
 	}
@@ -445,7 +445,7 @@ func (p *prRun) committedOutputs(ctx context.Context, opts *PROptions, projDir, 
 		return nil
 	}
 	manifestRel := filepath.ToSlash(filepath.Join(p.configRel, manifestName))
-	tracked, err := opts.Git.TrackedAmong(projDir, append(files, manifestRel)) //nolint:contextcheck // gitutil.Git.TrackedAmong takes no context; the fix belongs in gitutil
+	tracked, err := opts.Git.TrackedAmongContext(ctx, projDir, append(files, manifestRel))
 	if err != nil {
 		return nil
 	}
@@ -458,7 +458,7 @@ func (p *prRun) committedOutputs(ctx context.Context, opts *PROptions, projDir, 
 	}
 	// git add refuses a gitignored path, so an output the project does not commit (next to ones it does) is
 	// dropped; a tracked file stays even when a pattern matches it.
-	ignored, err := opts.Git.IgnoredAmong(projDir, files) //nolint:contextcheck // gitutil.Git.IgnoredAmong takes no context; the fix belongs in gitutil
+	ignored, err := opts.Git.IgnoredAmongContext(ctx, projDir, files)
 	if err != nil {
 		return nil
 	}

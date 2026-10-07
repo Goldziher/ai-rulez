@@ -48,7 +48,7 @@ func replayProposals(ctx context.Context, cfg *config.Config, props []*Proposal,
 	}
 	n = ClampReplay(n)
 	root := cfg.BaseDir
-	top := gitutil.TopLevel(root) //nolint:contextcheck // gitutil helpers take no context; threading one is a gitutil API change
+	top := gitutil.Git{}.TopLevelContext(ctx, root)
 	if top == "" {
 		return "replay skipped: the project is not in a git repository"
 	}
@@ -61,7 +61,7 @@ func replayProposals(ctx context.Context, cfg *config.Config, props []*Proposal,
 	if err != nil || strings.HasPrefix(rel, "..") {
 		return "replay skipped: the project is not inside its repository"
 	}
-	commits, err := gitutil.FirstParentCommits(root, n) //nolint:contextcheck // gitutil helpers take no context; threading one is a gitutil API change
+	commits, err := gitutil.Git{}.FirstParentCommitsContext(ctx, root, n)
 	if err != nil {
 		return "replay skipped: " + oneLineErr(err)
 	}
@@ -91,7 +91,7 @@ func oneLineErr(err error) string { return collapseSpace(err.Error()) }
 
 // replayCommit evaluates every proposal on the change commit c made.
 func replayCommit(ctx context.Context, cfg *config.Config, top, rel string, c gitutil.Commit, props []*Proposal) error {
-	changes, err := gitutil.ChangesBetween(cfg.BaseDir, c.Parent, c.SHA) //nolint:contextcheck // gitutil helpers take no context; threading one is a gitutil API change
+	changes, err := gitutil.Git{}.ChangesBetweenContext(ctx, cfg.BaseDir, c.Parent, c.SHA)
 	if err != nil {
 		return oops.Wrapf(err, "diff of %s", shortSHA(c.SHA))
 	}

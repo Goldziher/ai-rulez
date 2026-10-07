@@ -73,12 +73,12 @@ func (e *Env) prepareScope(ctx context.Context) error {
 	switch {
 	case e.opts.Since != "":
 		mode, rev = ModeSince, e.opts.Since
-		if changes, err = gitutil.ChangesSince(e.Root, rev); err != nil { //nolint:contextcheck // gitutil helpers take no context; threading one is a gitutil API change
+		if changes, err = (gitutil.Git{}).ChangesSinceContext(ctx, e.Root, rev); err != nil {
 			return oops.Wrapf(err, "resolve changed files")
 		}
 	case e.opts.Staged:
 		mode = ModeStaged
-		if changes, err = gitutil.StagedChanges(e.Root); err != nil { //nolint:contextcheck // gitutil helpers take no context; threading one is a gitutil API change
+		if changes, err = (gitutil.Git{}).StagedChangesContext(ctx, e.Root); err != nil {
 			return oops.Wrapf(err, "resolve staged files")
 		}
 	default:
@@ -94,7 +94,7 @@ func (e *Env) prepareScope(ctx context.Context) error {
 // non-ignored files inside a repository, a directory walk elsewhere. Symlinks
 // are never listed.
 func (e *Env) treeFiles(ctx context.Context) ([]string, error) {
-	listed, ok, err := gitutil.ListFiles(e.Root) //nolint:contextcheck // gitutil helpers take no context; threading one is a gitutil API change
+	listed, ok, err := gitutil.Git{}.ListFilesContext(ctx, e.Root)
 	if err != nil {
 		return nil, oops.Wrapf(err, "list repository files")
 	}
