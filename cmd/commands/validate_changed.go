@@ -83,24 +83,33 @@ func narrowToChanged(reports []*lint.Report, cfgs []*config.Config) error {
 		if cfg == nil {
 			continue
 		}
-		// Finding paths are relative to the lint tree (which --repo-root may
-		// narrow below the git toplevel), so the change set is rebased onto it.
-		tree, err := strictTreeCache.Load(cfg.BaseDir)
+		changed, err := changedFiles(cfg, rev, cache)
 		if err != nil {
-			return oops.Wrapf(err, "index repository files")
-		}
-		changed, ok := cache[tree.Top]
-		if !ok {
-			changed, err = changedInTree(tree.Top, rev)
-			if err != nil {
-				return err
-			}
-			cache[tree.Top] = changed
+			return err
 		}
 		scope := lint.NarrowToChangedWith(r, changed, rev, lint.NarrowOptions{Depth: depth, MaxFiles: validateSinceMax})
 		r.Scope = &scope
 	}
 	return nil
+}
+
+// changedFiles lists the files of cfg's lint tree changed since rev. Finding
+// paths are relative to that tree (which --repo-root may narrow below the git
+// toplevel), so the change set is rebased onto it. cache is keyed by tree top.
+func changedFiles(cfg *config.Config, rev string, cache map[string][]string) ([]string, error) {
+	tree, err := strictTreeCache.Load(cfg.BaseDir)
+	if err != nil {
+		return nil, oops.Wrapf(err, "index repository files")
+	}
+	if changed, ok := cache[tree.Top]; ok {
+		return changed, nil
+	}
+	changed, err := changedInTree(tree.Top, rev)
+	if err != nil {
+		return nil, err
+	}
+	cache[tree.Top] = changed
+	return changed, nil
 }
 
 // changedInTree lists the files changed since rev as paths relative to treeTop.

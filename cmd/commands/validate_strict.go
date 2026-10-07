@@ -303,21 +303,16 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 }
 
 // prepareReports runs the steps between linting and printing, in the order that
-// keeps each one honest: fixes first (so fixed findings leave the report), then
-// the baseline against every finding of the analyzers that ran (so stale
-// entries are judged on the full set; entries of an analyzer that did not run
-// are left alone), budgets on the full set, and only then the view that narrows
-// the report (changed-only) and the risk score of what is shown. done is
-// true when the run ends here with code (--update-baseline, or an error).
+// keeps each one honest: the baseline against every finding first (so stale
+// entries are judged on the full set and accepted findings are never fixed),
+// then fixes (scoped like the report, so fixed findings leave it), budgets on
+// the full set, and only then the views that narrow the report (analyzer
+// filter, changed-only) and the risk score of what is shown. done is true when
+// the run ends here with code (--update-baseline, or an error).
 func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, code int, done bool) {
 	fail := func(err error) ([][]lint.RatchetExcess, int, bool) {
 		fmtError(err)
 		return nil, 1, true
-	}
-	if fixRequested() {
-		if err := applyFixes(reports, cfgs); err != nil {
-			return fail(err)
-		}
 	}
 	if validateUpdateBaseline {
 		if err := updateBaselines(reports, cfgs); err != nil {
@@ -329,6 +324,11 @@ func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]l
 		return fail(err)
 	}
 	reportRefusedRatchet(reports, cfgs)
+	if fixRequested() {
+		if err := applyFixes(reports, cfgs); err != nil {
+			return fail(err)
+		}
+	}
 	excess = make([][]lint.RatchetExcess, len(reports))
 	for i, report := range reports {
 		excess[i] = ratchetFor(cfgAt(cfgs, i)).Excess(report.Findings)
