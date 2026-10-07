@@ -125,7 +125,7 @@ func runProfileRemove(cmd *cobra.Command, args []string) {
 	// Confirm removal unless --yes is specified
 	if !profileForce {
 		if !confirmRemoval("profile", name) {
-			logger.Info("Operation canceled")
+			exitDeclined("Operation canceled")
 			return
 		}
 	}
