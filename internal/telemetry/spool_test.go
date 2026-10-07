@@ -183,6 +183,25 @@ func TestLock_StaleLockThatCannotBeTakenOverHonoursTheWait(t *testing.T) {
 	}
 }
 
+func TestLockTaken_WindowsDeletePendingIsAHeldLock(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		goos string
+		want bool
+	}{
+		{"exists", os.ErrExist, "linux", true},
+		{"access denied on windows (delete pending)", os.ErrPermission, "windows", true},
+		{"access denied elsewhere is an error", os.ErrPermission, "linux", false},
+		{"other error", os.ErrNotExist, "windows", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, lockTaken(&os.PathError{Op: "open", Path: "l", Err: tt.err}, tt.goos))
+		})
+	}
+}
+
 func TestLock_ConcurrentTakeoverOfAStaleLockIsExclusive(t *testing.T) {
 	for round := 0; round < 20; round++ {
 		path := filepath.Join(t.TempDir(), "l")
