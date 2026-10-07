@@ -34,6 +34,8 @@ type scriptedModel struct {
 	mu     sync.Mutex
 	models []string
 	fix    func(llm.ChatRequest) string
+	// fixErr makes every fixer call fail.
+	fixErr error
 }
 
 func (s *scriptedModel) chat(req llm.ChatRequest) (string, error) {
@@ -41,6 +43,9 @@ func (s *scriptedModel) chat(req llm.ChatRequest) (string, error) {
 	s.models = append(s.models, req.Model)
 	s.mu.Unlock()
 	if req.ResponseFormat != nil && req.ResponseFormat.Name == "review_fix" {
+		if s.fixErr != nil {
+			return "", s.fixErr
+		}
 		if s.fix != nil {
 			return s.fix(req), nil
 		}
@@ -321,4 +326,27 @@ func TestListAndTemplates(t *testing.T) {
 	assert.False(t, is2)
 	assert.True(t, IsRunnable(NoOp))
 	assert.False(t, IsRunnable(Shell))
+}
+
+func TestReviewFix_AFailedRoundStillReportsWhatItSpent(t *testing.T) {
+	// Arrange: the judge answers, then every fixer call fails at the provider.
+	ws := workspaceWith(t, vagueSkill)
+	sm := &scriptedModel{fixErr: &llm.Error{Kind: llm.KindAuth, Message: "key revoked"}}
+	o := reviewFixOptions(sm)
+	o.ReviewFix.LLM.PriceInputPerMTok, o.ReviewFix.LLM.PriceOutputPerMTok = 1, 1
+	var out bytes.Buffer
+
+	// Act
+	in := requestJSON(t, func(r *improve.OptimizerRequest) { r.Budget.MaxCostUSD = 1 })
+	err := Serve(context.Background(), ReviewFix, bytes.NewReader(in), &out, ws, o)
+
+	// Assert: the error ends the child, and the printed answer carries the judge's spend.
+	require.Error(t, err)
+	var resp improve.OptimizerResponse
+	require.NoError(t, json.Unmarshal(out.Bytes(), &resp), out.String())
+	assert.Equal(t, improve.ProtocolVersion, resp.Version)
+	assert.Positive(t, resp.CostUSD)
+	assert.Empty(t, resp.Changed)
+	data, _ := os.ReadFile(filepath.Join(ws, "deploy", "SKILL.md"))
+	assert.Equal(t, vagueSkill, string(data))
 }
