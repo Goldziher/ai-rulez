@@ -216,32 +216,45 @@ func validateSharedSidecarPaths(sidecars []*SidecarSpec) error {
 func validateOutputMode(typ string, out *OutputSpec) error {
 	switch out.Mode {
 	case OutputModePerItemFile:
-		if out.File != "" || out.Header != "" {
-			return fmt.Errorf("outputs[%q]: file and header are only valid with mode %q", typ, OutputModeAggregate)
-		}
-		if fm := out.Frontmatter; fm != nil && fm.JoinLists && !fm.Tools && !fm.Skills {
-			return fmt.Errorf("outputs[%q].frontmatter.join_lists needs tools or skills to be true", typ)
-		}
-		if fm := out.Frontmatter; fm != nil {
-			if fm.ToolCase != "" && fm.ToolCase != ToolCaseLower {
-				return fmt.Errorf("outputs[%q].frontmatter.tool_case: unknown case %q", typ, fm.ToolCase)
-			}
-			if (len(fm.ToolNames) > 0 || fm.ToolCase != "") && !fm.Tools {
-				return fmt.Errorf("outputs[%q].frontmatter.tool_names and tool_case need tools to be true", typ)
-			}
-		}
+		return validatePerItemMode(typ, out)
 	case OutputModeAggregate:
-		if typ != OutputTypeChecks {
-			return fmt.Errorf("outputs[%q].mode: %q is only valid on outputs.%s", typ, out.Mode, OutputTypeChecks)
-		}
-		if err := validateRelativeFile(fmt.Sprintf("outputs[%q].file", typ), out.File); err != nil {
-			return err
-		}
-		if out.Dir != "" || out.Filename != "" || out.Resources || out.Body != nil || out.Frontmatter != nil {
-			return fmt.Errorf("outputs[%q]: mode %q takes only file and header", typ, OutputModeAggregate)
-		}
+		return validateAggregateMode(typ, out)
 	default:
 		return fmt.Errorf("outputs[%q].mode: unknown mode %q", typ, out.Mode)
+	}
+}
+
+// validatePerItemMode checks the fields of a per_item_file output.
+func validatePerItemMode(typ string, out *OutputSpec) error {
+	if out.File != "" || out.Header != "" {
+		return fmt.Errorf("outputs[%q]: file and header are only valid with mode %q", typ, OutputModeAggregate)
+	}
+	fm := out.Frontmatter
+	if fm == nil {
+		return nil
+	}
+	if fm.JoinLists && !fm.Tools && !fm.Skills {
+		return fmt.Errorf("outputs[%q].frontmatter.join_lists needs tools or skills to be true", typ)
+	}
+	if fm.ToolCase != "" && fm.ToolCase != ToolCaseLower {
+		return fmt.Errorf("outputs[%q].frontmatter.tool_case: unknown case %q", typ, fm.ToolCase)
+	}
+	if (len(fm.ToolNames) > 0 || fm.ToolCase != "") && !fm.Tools {
+		return fmt.Errorf("outputs[%q].frontmatter.tool_names and tool_case need tools to be true", typ)
+	}
+	return nil
+}
+
+// validateAggregateMode checks the fields of an aggregate output.
+func validateAggregateMode(typ string, out *OutputSpec) error {
+	if typ != OutputTypeChecks {
+		return fmt.Errorf("outputs[%q].mode: %q is only valid on outputs.%s", typ, out.Mode, OutputTypeChecks)
+	}
+	if err := validateRelativeFile(fmt.Sprintf("outputs[%q].file", typ), out.File); err != nil {
+		return err
+	}
+	if out.Dir != "" || out.Filename != "" || out.Resources || out.Body != nil || out.Frontmatter != nil {
+		return fmt.Errorf("outputs[%q]: mode %q takes only file and header", typ, OutputModeAggregate)
 	}
 	return nil
 }
@@ -270,6 +283,27 @@ func validateSidecar(i int, sc *SidecarSpec) error {
 	if sc.EmitWhen != "" && !isValidPredicate(sc.EmitWhen) {
 		return fmt.Errorf("sidecars[%d].emit_when: unknown predicate %q", i, sc.EmitWhen)
 	}
+	if err := validateSidecarPaths(i, sc); err != nil {
+		return err
+	}
+	if err := validateSidecarMCPFields(i, sc); err != nil {
+		return err
+	}
+	if err := validateHookPluginSidecar(i, sc); err != nil {
+		return err
+	}
+	if !isGenericSidecarKind(sc.Kind) {
+		if sc.Format != "" || len(sc.Key) > 0 || sc.Dialect != "" || sc.Elements != nil {
+			return fmt.Errorf("sidecars[%d]: format, key and dialect are only valid on the generic kinds (%s, %s, %s)",
+				i, SidecarMCP, SidecarPermissions, SidecarHooks)
+		}
+		return nil
+	}
+	return validateGenericSidecar(i, sc)
+}
+
+// validateSidecarPaths checks the path, global_path and global_mcp_path of a sidecar.
+func validateSidecarPaths(i int, sc *SidecarSpec) error {
 	if err := validateRelativeFile(fmt.Sprintf("sidecars[%d].path", i), sc.Path); err != nil {
 		return err
 	}
@@ -289,6 +323,11 @@ func validateSidecar(i int, sc *SidecarSpec) error {
 			return fmt.Errorf("sidecars[%d].global_mcp_path is only valid on a sidecar that holds MCP servers", i)
 		}
 	}
+	return nil
+}
+
+// validateSidecarMCPFields checks the transports and env_ref_syntax of a sidecar.
+func validateSidecarMCPFields(i int, sc *SidecarSpec) error {
 	for _, tr := range sc.Transports {
 		if tr != config.TransportStdio && tr != config.TransportHTTP && tr != config.TransportSSE {
 			return fmt.Errorf("sidecars[%d].transports: unknown transport %q", i, tr)
@@ -303,17 +342,7 @@ func validateSidecar(i int, sc *SidecarSpec) error {
 	if len(sc.Transports) > 0 && !IsMCPSidecarKind(sc.Kind) {
 		return fmt.Errorf("sidecars[%d].transports is only valid on a sidecar that holds MCP servers", i)
 	}
-	if err := validateHookPluginSidecar(i, sc); err != nil {
-		return err
-	}
-	if !isGenericSidecarKind(sc.Kind) {
-		if sc.Format != "" || len(sc.Key) > 0 || sc.Dialect != "" || sc.Elements != nil {
-			return fmt.Errorf("sidecars[%d]: format, key and dialect are only valid on the generic kinds (%s, %s, %s)",
-				i, SidecarMCP, SidecarPermissions, SidecarHooks)
-		}
-		return nil
-	}
-	return validateGenericSidecar(i, sc)
+	return nil
 }
 
 // validateGenericSidecar checks the format, key and dialect of a generic sidecar.
@@ -332,38 +361,49 @@ func validateGenericSidecar(i int, sc *SidecarSpec) error {
 	if sc.Dialect != "" && sc.Kind != SidecarMCP && sc.Kind != SidecarChecks && sc.Kind != SidecarHooks && sc.Kind != SidecarPermissions {
 		return fmt.Errorf("sidecars[%d].dialect is only valid on kinds %q, %q, %q and %q", i, SidecarMCP, SidecarChecks, SidecarHooks, SidecarPermissions)
 	}
-	if sc.Kind == SidecarPermissions {
-		if err := validatePermissionsSidecar(i, sc); err != nil {
+	if validate := sidecarKindValidators[sc.Kind]; validate != nil {
+		if err := validate(i, sc); err != nil {
 			return err
-		}
-	}
-	if sc.Kind == SidecarHooks {
-		if err := validateHooksSidecar(i, sc); err != nil {
-			return err
-		}
-	}
-	if sc.Kind == SidecarChecks {
-		if !isChecksDialect(sc.Dialect) {
-			return fmt.Errorf("sidecars[%d].dialect: kind %q needs dialect %q or %q", i, SidecarChecks, ChecksDialectAugment, ChecksDialectGitLabDuo)
-		}
-		if sc.DocFormat() != DocFormatYAML || len(sc.Key) > 0 {
-			return fmt.Errorf("sidecars[%d]: kind %q writes a yaml document and takes no key", i, SidecarChecks)
-		}
-	}
-	if sc.Kind == SidecarMCP {
-		if _, err := mcpDialectFor(sc.Dialect); err != nil {
-			return fmt.Errorf("sidecars[%d].dialect: %w", i, err)
-		}
-		if sc.EmitWhen == "" {
-			// No servers, no document: an mcp sidecar is not an always-on file,
-			// unless it also owns array elements, which need no server.
-			sc.EmitWhen = PredicateHasMCPServers
-			if sc.Elements != nil {
-				sc.EmitWhen = PredicateAlways
-			}
 		}
 	}
 	return validateElements(i, sc)
+}
+
+// sidecarKindValidators are the checks of the generic kinds that have their own.
+var sidecarKindValidators = map[string]func(i int, sc *SidecarSpec) error{
+	SidecarPermissions: validatePermissionsSidecar,
+	SidecarHooks:       validateHooksSidecar,
+	SidecarChecks:      validateChecksSidecar,
+	SidecarMCP:         validateMCPSidecar,
+}
+
+// validateChecksSidecar checks a `checks` sidecar: a yaml document in one of the
+// two review-tool dialects, with no key.
+func validateChecksSidecar(i int, sc *SidecarSpec) error {
+	if !isChecksDialect(sc.Dialect) {
+		return fmt.Errorf("sidecars[%d].dialect: kind %q needs dialect %q or %q", i, SidecarChecks, ChecksDialectAugment, ChecksDialectGitLabDuo)
+	}
+	if sc.DocFormat() != DocFormatYAML || len(sc.Key) > 0 {
+		return fmt.Errorf("sidecars[%d]: kind %q writes a yaml document and takes no key", i, SidecarChecks)
+	}
+	return nil
+}
+
+// validateMCPSidecar checks the dialect of an `mcp` sidecar and defaults its
+// emit_when.
+func validateMCPSidecar(i int, sc *SidecarSpec) error {
+	if _, err := mcpDialectFor(sc.Dialect); err != nil {
+		return fmt.Errorf("sidecars[%d].dialect: %w", i, err)
+	}
+	if sc.EmitWhen == "" {
+		// No servers, no document: an mcp sidecar is not an always-on file,
+		// unless it also owns array elements, which need no server.
+		sc.EmitWhen = PredicateHasMCPServers
+		if sc.Elements != nil {
+			sc.EmitWhen = PredicateAlways
+		}
+	}
+	return nil
 }
 
 // validateHooksSidecar checks a `hooks` sidecar: its dialect names the harness
@@ -460,13 +500,18 @@ func validateSplitEnums(typ string, out *OutputSpec) error {
 	return nil
 }
 
+// usesSplitFields reports whether an output sets any of the split fields.
+func usesSplitFields(out *OutputSpec) bool {
+	return out.Split || out.InlineFilter != "" || out.Dialect != "" || out.Activation != nil || out.AlwaysFiles
+}
+
 // validateSplitFields checks the split/inline_filter/dialect trio of a rules
 // output.
 func validateSplitFields(typ string, out *OutputSpec, rootSections []string) error {
 	if out.InlineUnscoped && (typ != OutputTypeRules || !out.Split) {
 		return fmt.Errorf("outputs[%q].inline_unscoped is only valid on outputs.rules with split = true", typ)
 	}
-	if !out.Split && out.InlineFilter == "" && out.Dialect == "" && out.Activation == nil && !out.AlwaysFiles {
+	if !usesSplitFields(out) {
 		return nil
 	}
 	if out.Activation != nil && out.Dialect == "" {
@@ -484,6 +529,12 @@ func validateSplitFields(typ string, out *OutputSpec, rootSections []string) err
 	if out.Dialect != "" && (out.Body != nil || out.Frontmatter != nil) {
 		return fmt.Errorf("outputs[%q]: dialect cannot be combined with body or frontmatter blocks", typ)
 	}
+	return validateSplitLayout(typ, out, rootSections)
+}
+
+// validateSplitLayout checks what a split rules output needs: split itself, the
+// inline section, no filter, a dialect, and a valid directory and filename.
+func validateSplitLayout(typ string, out *OutputSpec, rootSections []string) error {
 	if !out.Split {
 		return fmt.Errorf("outputs[%q]: inline_filter, dialect, activation and always_files require split = true", typ)
 	}

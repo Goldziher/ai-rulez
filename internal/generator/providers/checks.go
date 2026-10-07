@@ -42,7 +42,8 @@ var checkSizeLimits = map[string]int{"kilo": 10000}
 // returns nil when there are no items, so a project without checks gets no file.
 func (g *Generator) renderAggregate(typ string, spec *OutputSpec, items []config.ContentFile, baseDir string, cfg *config.Config) (*config.OutputFile, error) {
 	var allowed []config.ContentFile
-	for _, item := range items {
+	for idx := range items {
+		item := items[idx]
 		if g.filterAllows(spec, item) {
 			allowed = append(allowed, item)
 		}

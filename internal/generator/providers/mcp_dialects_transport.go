@@ -73,6 +73,15 @@ func vibeMCPEntry(server *config.MCPServer) map[string]any {
 	return entry
 }
 
+// stringField is the string value of key in m, "" when it is absent or not a string.
+func stringField(m map[string]any, key string) string {
+	s, ok := m[key].(string)
+	if !ok {
+		return ""
+	}
+	return s
+}
+
 // arrayOwnedKey builds the owned key of an array-of-tables dialect. The array
 // keeps every existing element whose name is not one of ours (servers added with
 // `vibe mcp add`) and claims only the elements ai-rulez writes.
@@ -96,19 +105,21 @@ func arrayOwnedKey(sc *SidecarSpec, d mcpDialect, cfg *config.Config, outputPath
 	var kept []any
 	byName := make(map[string]map[string]any, len(existing))
 	for _, el := range existing {
-		if name, _ := el[d.arrayKey].(string); name != "" {
+		if name := stringField(el, d.arrayKey); name != "" {
 			byName[name] = el
 		}
 	}
 	for _, el := range existing {
-		if name, _ := el[d.arrayKey].(string); entries[name] == nil {
+		if entries[stringField(el, d.arrayKey)] == nil {
 			kept = append(kept, el)
 		}
 	}
 	for _, name := range names {
 		entry := map[string]any{d.arrayKey: name}
-		for k, v := range entries[name].(map[string]any) {
-			entry[k] = v
+		if fields, isMap := entries[name].(map[string]any); isMap {
+			for k, v := range fields {
+				entry[k] = v
+			}
 		}
 		if prev := byName[name]; prev != nil {
 			for _, field := range vibeUserManagedFields {

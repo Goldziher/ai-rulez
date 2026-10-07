@@ -62,22 +62,22 @@ type mcpDialect struct {
 // builtin specs are validated against it in hints.go and init.go) and the
 // registration order cannot depend on file names.
 var mcpDialects = map[string]mcpDialect{
-	MCPDialectStandard:     {defaultKey: []string{"mcpServers"}, build: standardMCPEntry},
-	MCPDialectClaude:       {defaultKey: []string{"mcpServers"}, build: claudeMCPEntry},
-	MCPDialectGemini:       {defaultKey: []string{"mcpServers"}, build: geminiMCPEntry},
+	MCPDialectStandard:     {defaultKey: []string{settingsKeyMCPServers}, build: standardMCPEntry},
+	MCPDialectClaude:       {defaultKey: []string{settingsKeyMCPServers}, build: claudeMCPEntry},
+	MCPDialectGemini:       {defaultKey: []string{settingsKeyMCPServers}, build: geminiMCPEntry},
 	MCPDialectOpencode:     {defaultKey: []string{"mcp"}, build: opencodeMCPEntry},
-	MCPDialectVSCode:       {defaultKey: []string{"servers"}, build: vscodeMCPEntry, jsoncDefault: true},
+	MCPDialectVSCode:       {defaultKey: []string{settingsKeyServers}, build: vscodeMCPEntry, jsoncDefault: true},
 	MCPDialectZed:          {defaultKey: []string{"context_servers"}, build: zedMCPEntry, jsoncDefault: true},
-	MCPDialectCodex:        {defaultKey: []string{"mcp_servers"}, build: codexMCPEntry},
+	MCPDialectCodex:        {defaultKey: []string{settingsKeyMCPServersSnake}, build: codexMCPEntry},
 	MCPDialectAmp:          {defaultKey: []string{"amp.mcpServers"}, build: ampMCPEntry},
-	MCPDialectYAMLStandard: {defaultKey: []string{"mcp_servers"}, build: yamlStandardMCPEntry},
-	MCPDialectCodewhale:    {defaultKey: []string{"servers"}, build: codewhaleMCPEntry},
-	MCPDialectRoo:          {defaultKey: []string{"mcpServers"}, build: rooMCPEntry},
-	MCPDialectBob:          {defaultKey: []string{"mcpServers"}, build: bobMCPEntry},
+	MCPDialectYAMLStandard: {defaultKey: []string{settingsKeyMCPServersSnake}, build: yamlStandardMCPEntry},
+	MCPDialectCodewhale:    {defaultKey: []string{settingsKeyServers}, build: codewhaleMCPEntry},
+	MCPDialectRoo:          {defaultKey: []string{settingsKeyMCPServers}, build: rooMCPEntry},
+	MCPDialectBob:          {defaultKey: []string{settingsKeyMCPServers}, build: bobMCPEntry},
 	MCPDialectZcode:        {defaultKey: []string{"mcp", "servers"}, build: zcodeMCPEntry},
-	MCPDialectGrok:         {defaultKey: []string{"mcp_servers"}, build: grokMCPEntry},
-	MCPDialectTransport:    {defaultKey: []string{"mcpServers"}, build: transportMCPEntry},
-	MCPDialectVibe:         {defaultKey: []string{"mcp_servers"}, build: vibeMCPEntry, arrayKey: "name"},
+	MCPDialectGrok:         {defaultKey: []string{settingsKeyMCPServersSnake}, build: grokMCPEntry},
+	MCPDialectTransport:    {defaultKey: []string{settingsKeyMCPServers}, build: transportMCPEntry},
+	MCPDialectVibe:         {defaultKey: []string{settingsKeyMCPServersSnake}, build: vibeMCPEntry, arrayKey: fieldName},
 }
 
 // IsMCPDialect reports whether name is a known MCP entry dialect.
@@ -343,7 +343,7 @@ func ampMCPEntry(server *config.MCPServer) map[string]any {
 	if entry == nil {
 		return nil
 	}
-	delete(entry, "description")
+	delete(entry, fieldDescription)
 	return entry
 }
 
