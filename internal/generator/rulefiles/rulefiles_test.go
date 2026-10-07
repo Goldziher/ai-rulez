@@ -557,13 +557,7 @@ func TestExpandBraces_Cap(t *testing.T) {
 	require.Len(t, notes, 1)
 }
 
-func planNames(t *testing.T, rules, ctx []config.ContentFile, tg *Target, routing Routing) []string {
-	t.Helper()
-	d, _ := collector()
-	return planNamesWith(t, d, rules, ctx, tg, routing)
-}
-
-// planNamesWith is planNames reporting through d.
+// planNamesWith plans rules and ctx for tg, reporting through d, and returns the planned file names.
 func planNamesWith(t *testing.T, d *diag.Collector, rules, ctx []config.ContentFile, tg *Target, routing Routing) []string {
 	t.Helper()
 	files, _, _, err := Plan(rules, ctx, tg, routing, ScopeInfo{}, registryWith(d))
