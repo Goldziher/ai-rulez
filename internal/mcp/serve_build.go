@@ -460,9 +460,10 @@ func (st *ServeSetup) telemetry(cfg *config.Config) (record func(SessionTelemetr
 	options := usage.RecordOptions{LogPath: logPath, SinkCommand: st.UsageSink}
 	if cfg.ConfigDir != "" {
 		options.IndexPath = filepath.Join(cfg.ConfigDir, usage.IndexFileName)
-		if logPath == "" {
+		if logPath == "" && st.UsageSink != "" {
 			// A sink without a log has no salt file beside it; use the project's
 			// so a sink record carries the same salted session as a log line.
+			// With neither, nothing records and nothing may be written.
 			options.SaltPath = filepath.Join(cfg.ConfigDir, "local", "usage.salt")
 		}
 	}
