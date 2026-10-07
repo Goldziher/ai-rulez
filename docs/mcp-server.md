@@ -325,7 +325,7 @@ The serve-mode flags above (and `--profile`, `--targets`, `--domain`, `--allow`,
 | ---- | --------- | ------ |
 | `find_skill` | `task` (required), `limit` (default 5, max 20), `role` | Ranked matches: name, description, score, domain, digest. With a role, `in_role` and the role's skills first. |
 | `load_skill` | `name` (required), `path`, `budget_bytes` | The file (`SKILL.md` by default), `provenance`, `digest`, and an index of the skill's other files. |
-| `list_skill_resources` | `name` (required) | Every file of the skill with path, URI, size, MIME type and digest, without loading them. |
+| `list_skill_resources` | `name` (required), `offset` | The files of the skill with path, URI, size, MIME type and digest, without loading them: at most 200 per call, with `total`, `truncated` and `next_offset` when there are more. |
 
 `search_skills`, `get_skill` and `read_skill_file`, the `skill://` resources, `skills/list` and `skills/get` keep
 working as described above. All tools are annotated read-only.
@@ -361,6 +361,7 @@ working as described above. All tools are annotated read-only.
   remainder is refused and is not charged (`load_skill` reports the bytes left; `resources/read` fails with
   JSON-RPC error `-32600`); the server tracks at most 1024 sessions; `budget_bytes` on one call truncates that
   call's file (at a character boundary) and reports `truncated` and `total_bytes`. Supporting files count too.
+- **Metadata is bounded.** The budget charges file content only, so metadata is capped at build time and in replies: a description is cut to 1024 bytes, keywords and triggers to 64 entries of 128 bytes, and frontmatter strings, lists and maps are bounded the same way (the served files and their digests are untouched). `find_skill` returns at most 20 hits, `load_skill` and `skills/list` list at most 200 files per skill (`resources_truncated`), and `list_skill_resources` pages with `offset`. `skills/get` returns a skill's whole file list.
 - **Path.** `path` is relative to the skill. Absolute paths, `..`, backslashes and names that are not valid
   `skill://` path segments are rejected. A path with `.` or `..` segments that normalises to a file inside the
   skill (`references/../SKILL.md`) is accepted as that file; one that would leave the skill is rejected. The
