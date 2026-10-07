@@ -470,8 +470,8 @@ func writeOKFImport(out io.Writer, spec, targetDir string, res *okfbridge.Import
 		enc.SetIndent("", "  ")
 		return enc.Encode(map[string]any{
 			keySource: spec, "target": targetDir, "dry_run": okfDryRun,
-			"actions": nonNilActions(res.Actions), "findings": res.Findings,
-			"security": res.Security, "skipped": res.Skipped, "index_style": res.IndexStyle,
+			"actions": nonNilSlice(res.Actions), "findings": nonNilSlice(res.Findings),
+			"security": nonNilSlice(res.Security), "skipped": nonNilSlice(res.Skipped), "index_style": res.IndexStyle,
 		})
 	}
 	w := reportWriter{out}
@@ -504,11 +504,12 @@ func writeOKFImport(out io.Writer, spec, targetDir string, res *okfbridge.Import
 	return nil
 }
 
-func nonNilActions(a []okfbridge.Action) []okfbridge.Action {
-	if a == nil {
-		return []okfbridge.Action{}
+// nonNilSlice returns s, or an empty slice for nil, so a JSON list is [] and never null.
+func nonNilSlice[T any](s []T) []T {
+	if s == nil {
+		return []T{}
 	}
-	return a
+	return s
 }
 
 func indexStyleLabel(style string) string {
