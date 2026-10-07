@@ -81,7 +81,7 @@ func extractRevision(ctx context.Context, lim snapshotLimits, dir, rev, rel, des
 	}
 	run := runner.FromContext(ctx)
 	git := gitutil.New(run)
-	top := git.TopLevel(dir) //nolint:contextcheck // gitutil probes without a context; the runner from ctx is used
+	top := git.TopLevelContext(ctx, dir)
 	if top == "" {
 		return nil, oops.With("dir", dir).Errorf("%s is not inside a git work tree: cannot read revision %q", dir, rev)
 	}
