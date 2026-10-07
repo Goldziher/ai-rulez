@@ -91,7 +91,7 @@ func TestCatalogFromFiles(t *testing.T) {
 
 func TestDiagnose_ShowsHostOnlyAndNoSecrets(t *testing.T) {
 	s := Resolve(Layers{
-		User: &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://collector.example.org:4318/secret-path", HeadersEnv: []string{"OTLP_HEADERS"}}, Getenv: env("OTLP_HEADERS", "authorization=Bearer topsecret"),
+		User: &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://collector.example.org:4318/secret-path", HeadersEnv: []string{"OTLP_HEADERS"}}, Getenv: env("OTLP_HEADERS", "authorization=Bearer topsecret"),
 	})
 	dir := t.TempDir()
 	spool := &Spool{Dir: dir}
@@ -115,7 +115,7 @@ func TestDiagnose_ShowsHostOnlyAndNoSecrets(t *testing.T) {
 }
 
 func TestDiagnose_ExplainsWhyExportIsOff(t *testing.T) {
-	s := Resolve(Layers{Repo: &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://evil.example.com"}, Getenv: env()})
+	s := Resolve(Layers{Repo: &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://evil.example.com"}, Getenv: env()})
 	report := Diagnose(&s, t.TempDir(), env())
 	assert.False(t, report.Export)
 	assert.True(t, report.Recording)
@@ -135,7 +135,7 @@ func TestFlushViaPipelineClose(t *testing.T) {
 	c := &collector{}
 	srv := httptest.NewServer(c.handler())
 	defer srv.Close()
-	s := Resolve(Layers{User: &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "http://127.0.0.1:1"}, Getenv: env()})
+	s := Resolve(Layers{User: &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "http://127.0.0.1:1"}, Getenv: env()})
 	s.Endpoint = srv.URL
 	p, _, _ := pipelineFor(t, s)
 	require.NoError(t, p.Record(context.Background(), Event{Kind: KindRule, ID: "r", Source: SourceHook, Outcome: OutcomeLoaded}))

@@ -44,7 +44,7 @@ func TestResolve_ConsentRecordGrantsExportOnlyWhileItMatches(t *testing.T) {
 		{name: "the environment can refuse over a record", consent: record(consentEndpoint, "http/json", false, false), env: env(EnvAllowNetwork, "0"), wantState: ConsentDenied},
 		{name: "a kill switch beats a record", consent: record(consentEndpoint, "http/json", false, false), env: env("DO_NOT_TRACK", "1"), wantState: ConsentRecord},
 		{name: "no record, no consent", env: env(), wantState: ConsentNone},
-		{name: "allow_network in user config still works without a record", user: &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: consentEndpoint}, env: env(), wantExport: true, wantState: ConsentConfig},
+		{name: "allow_network in user config still works without a record", user: &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: consentEndpoint}, env: env(), wantExport: true, wantState: ConsentConfig},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -75,7 +75,7 @@ func TestResolve_RecordProvidesEndpointProtocolAndGates(t *testing.T) {
 }
 
 func TestResolve_RepoConfigCanNeverGrantConsent(t *testing.T) {
-	hostile := &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://evil.example.com", OTLPProtocol: "grpc"}
+	hostile := &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://evil.example.com", OTLPProtocol: "grpc"}
 	s := Resolve(Layers{Repo: hostile, Getenv: env()})
 	assert.False(t, s.ExportActive())
 	assert.Equal(t, ConsentNone, s.ConsentState)

@@ -151,7 +151,7 @@ func Resolve(layers Layers) Settings {
 
 	if repo := layers.Repo; repo != nil {
 		s.Problems = append(s.Problems, repo.Validate()...)
-		if repo.Enabled {
+		if repo.Enabled != nil && *repo.Enabled {
 			s.Enabled = true
 			set("enabled", ScopeRepo)
 		}
@@ -286,8 +286,8 @@ func PrivilegedKeys(repo *config.TelemetryConfig) []string {
 
 func applyUser(s *Settings, user *config.TelemetryConfig, scope string) {
 	set := func(key string) { s.Sources[key] = scope }
-	if user.Enabled {
-		s.Enabled = true
+	if user.Enabled != nil {
+		s.Enabled = *user.Enabled
 		set("enabled")
 	}
 	if user.AllowNetwork {
