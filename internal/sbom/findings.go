@@ -74,7 +74,7 @@ func exactVersion(typ, v string) bool {
 	return exactSemver.MatchString(v)
 }
 
-var pseudoVersion = regexp.MustCompile(`^v\d+\.\d+\.\d+-(0\.)?[0-9]{14}-[0-9a-f]{12}$`)
+var pseudoVersion = regexp.MustCompile(`^v\d+\.\d+\.\d+-(0\.)?\d{14}-[0-9a-f]{12}$`)
 
 // purlParts splits a package URL into its type and version. ok is false when it
 // is not a pkg: URL with a type and a name.
