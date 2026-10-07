@@ -190,7 +190,10 @@ func effectiveTransport(s *mcpServer) string {
 
 func checkMCPConfig(r *runner) {
 	r.checkSettingsSecrets()
-	servers := r.mcpServers()
+	r.checkMCPServers(r.mcpServers())
+}
+
+func (r *runner) checkMCPServers(servers []*mcpServer) {
 	if len(servers) == 0 {
 		return
 	}
