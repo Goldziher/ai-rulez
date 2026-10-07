@@ -164,7 +164,7 @@ func TestManagedPolicyOnThisOS(t *testing.T) {
 		m.writeManaged(managedPolicy)
 		m.config("[lock]\nenforce = false\n")
 		res := m.run(nil, "validate", "--show-policy", "--format", "json")
-		assert.Equal(t, 1, res.Exit, "a loosening repository exits 1: %s", res.Stderr)
+		assert.Equal(t, 2, res.Exit, "a loosening repository exits 2: %s", res.Stderr)
 		var rep struct {
 			Layers []struct {
 				Origin, Source, Name string
@@ -182,7 +182,7 @@ func TestManagedPolicyOnThisOS(t *testing.T) {
 		assert.Equal(t, "AR740", rep.Violations[0].Code)
 
 		gen := m.run(nil, "generate")
-		assert.Equal(t, 1, gen.Exit, gen.Stdout)
+		assert.Equal(t, 2, gen.Exit, gen.Stdout)
 		assert.Contains(t, gen.Stderr, "AR740")
 		assert.Contains(t, gen.Stderr, "loosens the organization policy")
 

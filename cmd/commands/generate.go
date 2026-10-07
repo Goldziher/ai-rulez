@@ -189,7 +189,7 @@ func loadGenerateConfig(args []string) *config.Config {
 	// generate from one that tried to loosen it.
 	if err := policyGate(cfg); err != nil {
 		fmtError(err)
-		os.Exit(1)
+		os.Exit(exitCodeFor(err))
 	}
 
 	// Validate configuration
@@ -679,9 +679,10 @@ func parseMCPEnvOverrides(values []string) map[string]string {
 }
 
 // exitCodeFor is the exit code of a failed command: 2 for a role that names
-// something that does not exist (AR971, the code `validate` gives findings), else 1.
+// something that does not exist (AR971) or a configuration that loosens the
+// organization policy, the code `validate` gives findings, else 1.
 func exitCodeFor(err error) int {
-	if errors.Is(err, config.ErrRoleReference) {
+	if errors.Is(err, config.ErrRoleReference) || errors.Is(err, config.ErrPolicyLoosens) {
 		return 2
 	}
 	return 1
@@ -918,4 +919,16 @@ func enforceLockedContentFor(cfg *config.Config, check bool) error {
 	lines = append(lines, signLines...)
 	return oops.Hint("Review the change with `ai-rulez lock --diff`, then run `ai-rulez lock` to accept it (and `ai-rulez sign --lock` when [signing] require is set)").
 		Wrapf(errLockedSourceDrift, "%s does not match the sources:\n  %s", "ai-rulez.lock", strings.Join(lines, "\n  "))
+}
+
+// FormatError renders err for the terminal: the error text, then the oops hint
+// when the error carries one.
+func FormatError(err error) string {
+	text := err.Error()
+	if oopsErr, ok := oops.AsOops(err); ok {
+		if hint := oopsErr.Hint(); hint != "" {
+			text += "\n\nHint: " + hint
+		}
+	}
+	return text
 }

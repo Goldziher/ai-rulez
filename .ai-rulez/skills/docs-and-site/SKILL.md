@@ -1,5 +1,5 @@
 ---
-description: "Docs and Site Steward"
+description: "Use when editing files under docs/, zensical.toml, or the generated site/, or when a CLI or config change needs its documentation, examples, onboarding, or migration guidance updated."
 priority: medium
 targets:
   - CLAUDE.md

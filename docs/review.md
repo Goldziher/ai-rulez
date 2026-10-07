@@ -4,7 +4,7 @@
 score comes from the lint findings each rubric dimension names, no model is called, and nothing leaves the machine.
 With `--semantic` it adds an **LLM judge** for what lint cannot see: a vague or overlapping trigger, a body that
 contradicts its description, injection intent, scope creep. The judge is advisory, cached, bounded by spend caps, and
-may gate a build only after `review calibrate` measured it against a labelled golden set. `review fix` proposes a
+may gate a build only after `review calibrate` measured it against a labeled golden set. `review fix` proposes a
 patch for its findings and never writes without `--apply`. Design: [#220](https://github.com/Goldziher/ai-rulez/issues/220),
 follow-up [#269](https://github.com/Goldziher/ai-rulez/issues/269).
 
@@ -211,7 +211,7 @@ ai-rulez review calibrate --models gemini-2.5-flash-lite,gemini-2.5-flash   # co
 ai-rulez review calibrate --compare .ai-rulez/calibration/skill-quality.builtin.json   # drift check
 ```
 
-A golden case (`golden/*.golden.yaml`, paths relative to the golden directory) is labelled by at least two labelers and
+A golden case (`golden/*.golden.yaml`, paths relative to the golden directory) is labeled by at least two labelers and
 adjudicated:
 
 ```yaml
@@ -234,7 +234,7 @@ and F1 of "flagged" (not `pass`) with Wilson 95% intervals; the labelers' own **
 appended; the verdict must not improve: verbosity bias), `reorder` (siblings reversed; the verdict must not change:
 position bias), `rename` (the item renamed; the verdict must not change: name priors) and `canary` (text addressed to
 the reviewer; `injection-intent` must flag it and no verdict may improve); and the **calibration curve** (vote
-agreement against measured precision). A dimension with fewer than 6 labelled cases is `uncalibrated`.
+agreement against measured precision). A dimension with fewer than 6 labeled cases is `uncalibrated`.
 A case the judge could not answer for a dimension counts as a wrong answer (and in `errors`); a probe it could not
 answer fails; a probe a case declares that was never measured misses `min_probe`; and with `--k 1` consistency is not
 measured, so a positive `min_consistency` is a miss.
@@ -354,7 +354,7 @@ directory with a symlink is a lock problem, not a skipped file. See [Lockfile](l
 .ai-rulez/rubrics/<id>/
   rubric.toml                 # dimensions, weights, limits, votes, thresholds
   system.md                   # optional system prompt override
-  golden/*.golden.yaml        # human-labelled cases for calibration
+  golden/*.golden.yaml        # human-labeled cases for calibration
   fixtures/...                # the items the cases point at
   calibration.json            # written by `review calibrate`
 ```
@@ -481,7 +481,7 @@ and `baseline`.
 - **Evidence or nothing.** A verdict the item cannot back is dropped and counted, not reported.
 - **Gating is earned per rubric and model.** A record binds the result to the exact rubric, prompt, golden set, model id
   and content mode; anything else is stale. `require_calibration = false` is the explicit opt-out.
-- **Dimensions are gated individually.** A dimension that did not pass calibration, or that nobody labelled, is advisory
+- **Dimensions are gated individually.** A dimension that did not pass calibration, or that nobody labeled, is advisory
   even when others gate.
 - **Repository config cannot raise spend or widen hosts.** Caps can only be lowered by a repository; `allowed_hosts`
   is user scope only.

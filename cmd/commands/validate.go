@@ -114,7 +114,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 			// A strict run reports the same attempts as AR74x findings.
 			if err := policyGate(cfg); err != nil {
 				fmtError(err)
-				os.Exit(1)
+				os.Exit(exitCodeFor(err))
 			}
 		}
 

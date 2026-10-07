@@ -273,7 +273,7 @@ local sources are reported as `needs-action` instead of being cloned.
 - **Run `ai-rulez lock` once after upgrading**, review the diff and commit the file. The lock reads as stale until
   you do, for these reasons:
   - The `tree` digest now also covers the `source`, `ref` and `path` of remote entries and the `view` of served
-    entries, so relabelling or swapping entries is detected. A lock written by an earlier v5 build reports the tree
+    entries, so relabeling or swapping entries is detected. A lock written by an earlier v5 build reports the tree
     digest as stale.
   - `lock` pins the project scripts run by agent, skill and command frontmatter `hooks`. Editing such a script makes
     `lock --check` exit 2; locks of items with frontmatter hook scripts need `lock` once.
