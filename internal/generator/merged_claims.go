@@ -192,29 +192,34 @@ func (g *Generator) carryClaimAnnotations(outputs []config.OutputFile) {
 		for j := range claims {
 			claims[j].NoFinalNewline = claims[j].NoFinalNewline || noEOL
 			for k := range prev {
-				if !slices.Equal(prev[k].Path, claims[j].Path) {
-					continue
-				}
-				if claims[j].HasElements() && !prev[k].IsPreexisting(claims[j].Path) {
-					// An array that was empty when this run read it was ai-rulez's own
-					// (an earlier run created it): only the first run can tell the user's
-					// empty array from the one it made.
-					claims[j].Preexisting = slices.DeleteFunc(slices.Clone(claims[j].Preexisting),
-						func(p []string) bool { return slices.Equal(p, claims[j].Path) })
-				}
-				for _, empty := range prev[k].EmptyMaps {
-					if !claims[j].IsEmptyMap(empty) {
-						claims[j].EmptyMaps = append(claims[j].EmptyMaps, empty)
-					}
-				}
-				for _, ancestor := range prev[k].Preexisting {
-					if !claims[j].IsPreexisting(ancestor) {
-						claims[j].Preexisting = append(claims[j].Preexisting, ancestor)
-					}
+				if slices.Equal(prev[k].Path, claims[j].Path) {
+					carryClaim(&claims[j], &prev[k])
 				}
 			}
 		}
 		output.MergeClaims = claims
+	}
+}
+
+// carryClaim copies onto claim what prev, the earlier run's claim for the same
+// path, learned about the document's original shape.
+func carryClaim(claim, prev *jsonmerge.Claim) {
+	if claim.HasElements() && !prev.IsPreexisting(claim.Path) {
+		// An array that was empty when this run read it was ai-rulez's own
+		// (an earlier run created it): only the first run can tell the user's
+		// empty array from the one it made.
+		claim.Preexisting = slices.DeleteFunc(slices.Clone(claim.Preexisting),
+			func(p []string) bool { return slices.Equal(p, claim.Path) })
+	}
+	for _, empty := range prev.EmptyMaps {
+		if !claim.IsEmptyMap(empty) {
+			claim.EmptyMaps = append(claim.EmptyMaps, empty)
+		}
+	}
+	for _, ancestor := range prev.Preexisting {
+		if !claim.IsPreexisting(ancestor) {
+			claim.Preexisting = append(claim.Preexisting, ancestor)
+		}
 	}
 }
 

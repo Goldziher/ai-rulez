@@ -687,53 +687,70 @@ func (g *Generator) GenerateUser(profile string) (*UserPlan, error) {
 // the first level (~/.claude, ~/.codex, ~/.config), a relocated tool home and the
 // user config directory are never candidates. Only empty directories are removed.
 func (g *Generator) userPruneCandidates(removed []string) []string {
-	var roots []string
-	for _, layout := range g.userLayouts {
-		for _, root := range layout.Roots() {
-			// A root is a content folder; the home directory or a parent of it never is.
-			if !isUnderBaseDir(root, g.config.BaseDir) && !slices.Contains(g.userHomes, root) {
-				roots = append(roots, root)
-			}
-		}
-	}
+	roots := g.userContentRoots()
 	if g.userDirs == nil {
 		g.loadUserDirs()
 	}
 	home := filepath.Clean(g.config.BaseDir)
-	keep := func(dir string) bool {
-		if slices.Contains(g.userHomes, dir) || dir == home || filepath.Dir(dir) == home {
-			return true
-		}
-		return g.config.ConfigDir != "" && isUnderBaseDir(dir, g.config.ConfigDir)
-	}
 	seen := map[string]bool{}
 	var dirs []string
 	for _, file := range removed {
-		for dir := filepath.Dir(file); g.withinScope(dir); dir = filepath.Dir(dir) {
-			if g.userDirsRecorded && isUnderBaseDir(home, dir) {
-				// The manifest says which directories ai-rulez created: those go once
-				// empty, wherever they sit, and every other one stays.
-				if !g.userDirs[dir] || !g.userDirEligible(dir) {
-					break
-				}
-				if !seen[dir] {
-					seen[dir] = true
-					dirs = append(dirs, dir)
-				}
-				continue
-			}
-			inRoot := slices.ContainsFunc(roots, func(root string) bool { return isUnderBaseDir(root, dir) })
-			if keep(dir) && !inRoot {
-				break
-			}
-			if g.config.ConfigDir != "" && isUnderBaseDir(dir, g.config.ConfigDir) {
-				break // the user config lives here; never an output folder
-			}
+		for _, dir := range g.userPruneDirsAbove(file, roots, home) {
 			if !seen[dir] {
 				seen[dir] = true
 				dirs = append(dirs, dir)
 			}
 		}
+	}
+	return dirs
+}
+
+// userContentRoots lists the content folders the user presets own. The home
+// directory or a parent of it is never one.
+func (g *Generator) userContentRoots() []string {
+	var roots []string
+	for _, layout := range g.userLayouts {
+		for _, root := range layout.Roots() {
+			if !isUnderBaseDir(root, g.config.BaseDir) && !slices.Contains(g.userHomes, root) {
+				roots = append(roots, root)
+			}
+		}
+	}
+	return roots
+}
+
+// userPruneKeep reports whether dir is never a prune candidate: a tool home, the
+// home directory itself, a first-level directory below it, or the user config.
+func (g *Generator) userPruneKeep(dir, home string) bool {
+	if slices.Contains(g.userHomes, dir) || dir == home || filepath.Dir(dir) == home {
+		return true
+	}
+	return g.config.ConfigDir != "" && isUnderBaseDir(dir, g.config.ConfigDir)
+}
+
+// userPruneDirsAbove walks from the directory of file up to the edge of the
+// scope and returns the directories that qualify as prune candidates, nearest
+// first. roots are the content folders, home the cleaned home directory.
+func (g *Generator) userPruneDirsAbove(file string, roots []string, home string) []string {
+	var dirs []string
+	for dir := filepath.Dir(file); g.withinScope(dir); dir = filepath.Dir(dir) {
+		if g.userDirsRecorded && isUnderBaseDir(home, dir) {
+			// The manifest says which directories ai-rulez created: those go once
+			// empty, wherever they sit, and every other one stays.
+			if !g.userDirs[dir] || !g.userDirEligible(dir) {
+				break
+			}
+			dirs = append(dirs, dir)
+			continue
+		}
+		inRoot := slices.ContainsFunc(roots, func(root string) bool { return isUnderBaseDir(root, dir) })
+		if g.userPruneKeep(dir, home) && !inRoot {
+			break
+		}
+		if g.config.ConfigDir != "" && isUnderBaseDir(dir, g.config.ConfigDir) {
+			break // the user config lives here; never an output folder
+		}
+		dirs = append(dirs, dir)
 	}
 	return dirs
 }

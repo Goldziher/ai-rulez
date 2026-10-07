@@ -238,19 +238,7 @@ func (g *Generator) outputSafety(outputs []config.OutputFile) (refused []outputR
 		refused = append(refused, outputRefusal{rel, reason})
 	}
 	linked = map[string]bool{}
-	written := map[string]bool{}
-	for _, output := range outputs {
-		if output.IsDir {
-			continue
-		}
-		abs := g.absOutputPath(output.Path)
-		if info, err := os.Lstat(abs); err == nil && info.Mode()&os.ModeSymlink != 0 {
-			continue
-		}
-		if resolved, _, err := resolveWriteTarget(abs, new(int)); err == nil {
-			written[resolved] = true
-		}
-	}
+	written := g.writtenTargets(outputs)
 	for _, output := range outputs {
 		if output.IsDir {
 			continue
@@ -265,17 +253,11 @@ func (g *Generator) outputSafety(outputs []config.OutputFile) (refused []outputR
 			continue
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			resolved, _, rerr := resolveWriteTarget(abs, new(int))
-			if rerr == nil && written[resolved] {
+			if reason, isLinked := g.symlinkedOutput(abs, written); isLinked {
 				linked[rel] = true
-				continue
+			} else {
+				refused = append(refused, outputRefusal{rel, reason})
 			}
-			shown := g.displayTarget(resolved)
-			reason := fmt.Sprintf(reasonLinkFmt, shown)
-			if filepath.IsAbs(shown) {
-				reason = fmt.Sprintf("a symlink to %s, outside the project", shown)
-			}
-			refused = append(refused, outputRefusal{rel, reason})
 			continue
 		}
 		if g.overwriteUnowned || !g.unowned(abs, rel, output, info) {
@@ -285,6 +267,39 @@ func (g *Generator) outputSafety(outputs []config.OutputFile) (refused []outputR
 	}
 	sort.Slice(refused, func(i, j int) bool { return refused[i].rel < refused[j].rel })
 	return refused, linked
+}
+
+// writtenTargets is the set of paths the non-link file outputs really land on.
+func (g *Generator) writtenTargets(outputs []config.OutputFile) map[string]bool {
+	written := map[string]bool{}
+	for _, output := range outputs {
+		if output.IsDir {
+			continue
+		}
+		abs := g.absOutputPath(output.Path)
+		if info, err := os.Lstat(abs); err == nil && info.Mode()&os.ModeSymlink != 0 {
+			continue
+		}
+		if resolved, _, err := resolveWriteTarget(abs, new(int)); err == nil {
+			written[resolved] = true
+		}
+	}
+	return written
+}
+
+// symlinkedOutput judges an output whose path abs is a symlink. It reports
+// linked when the link points onto another path this run writes (written), and
+// otherwise the reason generate refuses to write through it.
+func (g *Generator) symlinkedOutput(abs string, written map[string]bool) (reason string, linked bool) {
+	resolved, _, rerr := resolveWriteTarget(abs, new(int))
+	if rerr == nil && written[resolved] {
+		return "", true
+	}
+	shown := g.displayTarget(resolved)
+	if filepath.IsAbs(shown) {
+		return fmt.Sprintf("a symlink to %s, outside the project", shown), false
+	}
+	return fmt.Sprintf(reasonLinkFmt, shown), false
 }
 
 // guardRefusals runs the write guard over every output, directories included, so
