@@ -998,7 +998,9 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 **Report codes:** `AR9F1` approximated, `AR9F2` dropped, `AR9F3` needs-action, `AR9F4` unsupported, `AR9F5` blocked by the scan; `AR9F0` marks an input file that cannot be parsed at all and appears only in the error that stops the run. They have their own range, apart from the `AR9E0`-`AR9E4` scanner codes, and appear in the convert report only; `validate` does not emit them.
 
-**Exit codes:** 0 done (the report may contain losses), 1 could not run or would overwrite existing files, 2 blocked by the scan or validation, or `--fail-on` matched.
+**Exit codes:** 0 done (the report may contain losses) or nothing to convert, 1 could not run or would overwrite existing files, 2 blocked by the scan or validation, or `--fail-on` matched.
+
+**Nothing to convert.** When no importer finds anything to import (no tool files, or only files `ai-rulez generate` wrote), `convert` prints `Nothing to convert: ...` with a hint, writes nothing and exits 0, so a script converting many repositories keeps going. With `--format json` the message goes to stderr and stdout stays empty.
 
 #### `init --from`
 
