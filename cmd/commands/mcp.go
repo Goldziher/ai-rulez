@@ -31,7 +31,8 @@ With --serve-skills the server instead becomes a read-only skills server
 skill:// resources, answers skills/list and skills/get, and adds search_skills,
 get_skill and read_skill_file tools. The authoring tools are not registered in
 that mode, so it is safe to hand to an unattended agent.`,
-	Run: runMCPServer,
+	Args: cobra.NoArgs,
+	Run:  runMCPServer,
 }
 
 func runMCPServer(cmd *cobra.Command, _ []string) {

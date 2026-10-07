@@ -413,7 +413,7 @@ func checkLockAt(path string) int {
 func checkLockContentAt(path string) (code int, report func()) {
 	cfg, remoteSkipped, err := loadForLockCheck(path)
 	if err != nil {
-		fmtError(err)
+		fmtErrorFormat(lockFormat, err)
 		if errors.Is(err, config.ErrLockViolation) {
 			return exitDrift, nil // fetched or cached remote content disagrees with the lock: drift, not a tool failure
 		}
@@ -422,12 +422,12 @@ func checkLockContentAt(path string) (code int, report func()) {
 	// A project that was never locked has nothing to verify: "up to date" would be a lie.
 	// Under [lock] enforce the missing lock is a drift finding (exit 2) from the comparison below.
 	if lock, loadErr := lockfile.Load(cfg.ConfigDir); loadErr == nil && lock == nil && !cfg.LockEnforced() {
-		fmtError(oops.Hint("run `ai-rulez lock` to create it").Errorf("no %s in %s: nothing to check", lockfile.FileName, cfg.ConfigDir))
+		fmtErrorFormat(lockFormat, oops.Hint("run `ai-rulez lock` to create it").Errorf("no %s in %s: nothing to check", lockfile.FileName, cfg.ConfigDir))
 		return 1, nil
 	}
 	diff, err := govview.CheckLockRoles(cmdContext(), cfg, remoteSkipped, lockProfile, Version, dynamicLockChanges, govview.RoleSelection{Only: lockRoleNames()})
 	if err != nil {
-		fmtError(err)
+		fmtErrorFormat(lockFormat, err)
 		return 1, nil
 	}
 	if lockFormat == formatJSON {
