@@ -337,13 +337,10 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 		return nil, err
 	}
 
-	// Fast path: cache SHA matches — touch FetchedAt and return without acquiring the write lock.
+	// Fast path: the cache is current. Nothing was fetched, so nothing is written:
+	// a read-only load must not touch the cache metadata (FetchedAt records the
+	// last real fetch, and nothing reads it as a last-used time).
 	if isCacheHit(s.cacheDir, currentSHA) {
-		meta, _ := readCacheMeta(s.cacheDir) //nolint:errcheck // best-effort; cache hit already confirmed
-		if meta != nil {
-			meta.FetchedAt = ambient.FromContext(ctx).Now()
-			_ = writeCacheMeta(s.cacheDir, meta) //nolint:errcheck // best-effort timestamp update
-		}
 		return s.scanCachedContent(ctx)
 	}
 
