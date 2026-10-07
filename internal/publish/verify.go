@@ -335,6 +335,12 @@ func checkManifest(dir string, m Manifest, recorded map[string]string, res *Veri
 		res.add(LockFile, "manifest lock.file_digest %s differs from %s (%s)", m.Lock.FileDigest, SumsFile, d)
 	}
 	checkAttachments(m, recorded, res)
+	checkArchiveContents(dir, m, res)
+}
+
+// checkArchiveContents compares the bundle archive's size, identity and file
+// list with the manifest.
+func checkArchiveContents(dir string, m Manifest, res *VerifyResult) {
 	archive, err := readRegular(filepath.Join(dir, m.Bundle.File))
 	if err != nil {
 		return // already reported as unreadable by the SHA256SUMS pass
@@ -392,6 +398,13 @@ func checkPlan(dir string, m Manifest, recorded map[string]string, res *VerifyRe
 	if plan.Name != m.Name || plan.Version != m.Version {
 		res.add(PlanFile, "plan is for %s %s, the manifest for %s %s", plan.Name, plan.Version, m.Name, m.Version)
 	}
+	checkPlanArtifacts(dir, plan, recorded, res)
+	checkPlanCommands(dir, plan, m, res)
+}
+
+// checkPlanArtifacts checks each artifact the plan lists against the file on
+// disk and SHA256SUMS, and that SHA256SUMS lists nothing the plan does not.
+func checkPlanArtifacts(dir string, plan Plan, recorded map[string]string, res *VerifyResult) {
 	for _, a := range plan.Artifacts {
 		if !ValidPath(a.Path) {
 			res.add(PlanFile, "plan lists an unsafe path %q", a.Path)
@@ -421,7 +434,6 @@ func checkPlan(dir string, m Manifest, recorded map[string]string, res *VerifyRe
 			res.add(p, "listed in %s but not in the plan", SumsFile)
 		}
 	}
-	checkPlanCommands(dir, plan, m, res)
 }
 
 // checkAttachments requires the signature and SBOM files the manifest names to

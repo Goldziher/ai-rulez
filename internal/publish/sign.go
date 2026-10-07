@@ -199,34 +199,52 @@ func VerifyReleaseAttestation(bundle []byte, m Manifest, files ReleaseFiles, o V
 	if err := st.DecodePredicate(&pred); err != nil {
 		return nil, err //nolint:wrapcheck // a signing.Error carries its AR code
 	}
+	if err := checkReleaseMeta(&pred, &m); err != nil {
+		return nil, err
+	}
+	if err := checkReleaseDigests(st, &pred, &m, files); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// checkReleaseMeta compares what the release statement says about the plugin
+// (name, version, source, approval summary) with the manifest.
+func checkReleaseMeta(pred *ReleasePredicate, m *Manifest) error {
 	if pred.Name != m.Name || pred.Version != m.Version {
-		return nil, oops.Errorf("the attestation signs %s %s, the manifest names %s %s", pred.Name, pred.Version, m.Name, m.Version)
+		return oops.Errorf("the attestation signs %s %s, the manifest names %s %s", pred.Name, pred.Version, m.Name, m.Version)
 	}
 	if pred.Source != m.Source {
-		return nil, oops.Errorf("the attestation signs source %s@%s (dirty: %t), the manifest names %s@%s (dirty: %t)",
+		return oops.Errorf("the attestation signs source %s@%s (dirty: %t), the manifest names %s@%s (dirty: %t)",
 			pred.Source.Repo, pred.Source.Commit, pred.Source.Dirty, m.Source.Repo, m.Source.Commit, m.Source.Dirty)
 	}
 	if (pred.Approval == nil) != (m.Approval == nil) || (m.Approval != nil && *pred.Approval != *m.Approval) {
-		return nil, oops.Errorf("the attestation signs another approval summary than the manifest shows")
+		return oops.Errorf("the attestation signs another approval summary than the manifest shows")
 	}
+	return nil
+}
+
+// checkReleaseDigests compares the signed digests of the archive, lock copy and
+// SBOM with the files in hand, and requires the statement's subjects to name them.
+func checkReleaseDigests(st *signing.Statement, pred *ReleasePredicate, m *Manifest, files ReleaseFiles) error {
 	for _, c := range []struct{ what, file, got, signed string }{
 		{"archive", m.Bundle.File, Digest(files.Archive), pred.Bundle.Digest},
 		{"lock copy", LockFile, Digest(files.Lock), pred.Lock.Digest},
 	} {
 		if c.got != c.signed {
-			return nil, oops.Errorf("the %s %s has digest %s, the attestation signs %s", c.what, c.file, c.got, c.signed)
+			return oops.Errorf("the %s %s has digest %s, the attestation signs %s", c.what, c.file, c.got, c.signed)
 		}
 		if err := st.RequireSubject(digestSHA256, hexOf(c.got)); err != nil {
-			return nil, err //nolint:wrapcheck // a signing.Error carries its AR code
+			return err //nolint:wrapcheck // a signing.Error carries its AR code
 		}
 	}
 	switch {
 	case m.SBOM == nil && pred.SBOM != nil:
-		return nil, oops.Errorf("the attestation signs an SBOM the manifest does not name")
+		return oops.Errorf("the attestation signs an SBOM the manifest does not name")
 	case m.SBOM != nil && pred.SBOM == nil:
-		return nil, oops.Errorf("the manifest names an SBOM the attestation does not sign")
+		return oops.Errorf("the manifest names an SBOM the attestation does not sign")
 	case m.SBOM != nil && Digest(files.SBOM) != pred.SBOM.Digest:
-		return nil, oops.Errorf("the SBOM %s has digest %s, the attestation signs %s", m.SBOM.File, Digest(files.SBOM), pred.SBOM.Digest)
+		return oops.Errorf("the SBOM %s has digest %s, the attestation signs %s", m.SBOM.File, Digest(files.SBOM), pred.SBOM.Digest)
 	}
-	return res, nil
+	return nil
 }

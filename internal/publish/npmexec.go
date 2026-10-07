@@ -434,30 +434,38 @@ func (snap *packageSnapshot) verifyTarball(tarball []byte) error {
 		if hdr.Typeflag == tar.TypeDir {
 			continue // holds no content; a path below it is checked on its own
 		}
-		name := strings.TrimPrefix(hdr.Name, "package/")
-		if hdr.Typeflag != tar.TypeReg || name == hdr.Name || !ValidPath(name) {
-			return npmTarballError("holds %q, which is not a regular file of the package", hdr.Name)
-		}
-		want, ok := snap.digests[name]
-		if !ok {
-			return npmTarballError("holds %q, which the dist directory does not", name)
-		}
-		if hdr.Size < 0 || hdr.Size > maxVerifyBytes-total {
-			return npmTarballError("exceeds the %d byte verification limit", maxVerifyBytes)
-		}
-		total += hdr.Size
-		body, err := io.ReadAll(io.LimitReader(tr, hdr.Size+1))
-		if err != nil || int64(len(body)) != hdr.Size {
-			return npmTarballError("entry %q is truncated", name)
-		}
-		if name == npmManifest {
-			if err := samePackageJSON(body, snap.packageJSON); err != nil {
-				return err
-			}
-		} else if Digest(body) != want {
-			return npmTarballError("holds %q with other bytes than the dist directory", name)
+		if err := snap.checkTarEntry(tr, hdr, &total); err != nil {
+			return err
 		}
 	}
+}
+
+// checkTarEntry checks one non-directory entry of the packed tarball against
+// the snapshot; total counts the bytes read so far.
+func (snap *packageSnapshot) checkTarEntry(tr *tar.Reader, hdr *tar.Header, total *int64) error {
+	name := strings.TrimPrefix(hdr.Name, "package/")
+	if hdr.Typeflag != tar.TypeReg || name == hdr.Name || !ValidPath(name) {
+		return npmTarballError("holds %q, which is not a regular file of the package", hdr.Name)
+	}
+	want, ok := snap.digests[name]
+	if !ok {
+		return npmTarballError("holds %q, which the dist directory does not", name)
+	}
+	if hdr.Size < 0 || hdr.Size > maxVerifyBytes-*total {
+		return npmTarballError("exceeds the %d byte verification limit", maxVerifyBytes)
+	}
+	*total += hdr.Size
+	body, err := io.ReadAll(io.LimitReader(tr, hdr.Size+1))
+	if err != nil || int64(len(body)) != hdr.Size {
+		return npmTarballError("entry %q is truncated", name)
+	}
+	if name == npmManifest {
+		return samePackageJSON(body, snap.packageJSON)
+	}
+	if Digest(body) != want {
+		return npmTarballError("holds %q with other bytes than the dist directory", name)
+	}
+	return nil
 }
 
 func npmTarballError(format string, args ...any) error {
