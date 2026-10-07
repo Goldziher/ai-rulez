@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -89,7 +88,7 @@ func runTokens(out io.Writer, args []string) (overBudget bool, err error) {
 		return false, oops.Hint("Accepted values: "+strings.Join(tokens.Names(), ", ")).Wrapf(err, "select tokenizer")
 	}
 
-	cfg, err := loadConfigForCommand(context.Background(), args)
+	cfg, err := loadConfigForCommand(cmdContext(), args)
 	if err != nil {
 		return false, err
 	}

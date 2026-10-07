@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"os"
 	"strings"
 
@@ -72,7 +71,7 @@ func runCost(cmd *cobra.Command, args []string) (exceeded bool, err error) {
 	if err != nil {
 		return false, oops.Hint("Accepted values: "+strings.Join(tokens.Names(), ", ")).Wrapf(err, "select tokenizer")
 	}
-	cfg, err := loadConfigForCommand(context.Background(), args)
+	cfg, err := loadConfigForCommand(cmdContext(), args)
 	if err != nil {
 		return false, err
 	}

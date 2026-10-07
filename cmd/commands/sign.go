@@ -112,7 +112,7 @@ signature. Exit codes: 0 signed, 1 the command could not run, 2 the lock is
 stale (its tree does not match its entries).`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(_ *cobra.Command, args []string) {
-		if code := runSign(context.Background(), args, nil); code != 0 {
+		if code := runSign(cmdContext(), args, nil); code != 0 {
 			os.Exit(code)
 		}
 	},

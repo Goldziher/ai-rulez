@@ -117,7 +117,7 @@ func runUsageExportOTLP(out io.Writer) error {
 		if res.Initialized {
 			w.printf("export cursor placed at the end of the usage log: events from before export was on are not sent (use --all to send history)\n")
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), telemetry.MaxFlushTimeout)
+		ctx, cancel := context.WithTimeout(cmdContext(), telemetry.MaxFlushTimeout)
 		flushed, err := p.Exporter.Flush(ctx)
 		cancel()
 		sent += flushed.Sent

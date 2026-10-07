@@ -117,7 +117,7 @@ func runTelemetryRecord(in io.Reader) error {
 	if !p.Settings.RecordActive() {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(cmdContext(), 2*time.Second)
 	defer cancel()
 	_, err = p.HandleHook(ctx, bytes.NewReader(data), telemetry.HookOptions{Harness: telHarness, Role: telemetryRole()})
 	return err
@@ -154,7 +154,7 @@ bounded by the flush deadline and exits 0; failures are counted in "telemetry st
 		if timeout > telemetry.MaxFlushTimeout {
 			return oops.Errorf("--timeout %s exceeds the maximum %s (the flush lock would look stale and be taken over)", timeout, telemetry.MaxFlushTimeout)
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(cmdContext(), timeout)
 		defer cancel()
 		result, err := p.Flush(ctx)
 		if telBackground {
@@ -376,7 +376,7 @@ func emitUsageTelemetry(entry *usage.Entry) {
 	if !p.Settings.ExportActive() {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(cmdContext(), time.Second)
 	defer cancel()
 	_ = p.Record(ctx, telemetry.FromUsageEntry(entry)) //nolint:errcheck // a skill hook must not fail on telemetry
 }
@@ -394,7 +394,7 @@ func wireMCPTelemetry(srv *mcp.Server) func() {
 	srv.SetTelemetry(p, mcp.TelemetryOptions{Role: telemetryRole(), Session: p.Session(hex.EncodeToString(raw))})
 	p.Start()
 	return func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(cmdContext(), 3*time.Second)
 		defer cancel()
 		_ = p.Close(ctx) //nolint:errcheck // shutdown flush is best effort
 	}

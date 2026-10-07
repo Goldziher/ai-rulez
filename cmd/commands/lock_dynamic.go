@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"sort"
 
@@ -127,7 +126,7 @@ func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dyn
 		return nil, nil
 	}
 	setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true, Offline: includes.SkipFetch}
-	res, err := setup.LockViews(context.Background(), extras)
+	res, err := setup.LockViews(cmdContext(), extras)
 	if err != nil {
 		return []string{err.Error()}, nil
 	}
@@ -235,7 +234,7 @@ func keepConfigured(entries []lockfile.Entry, keep map[string]bool) []lockfile.E
 func dynamicLockChanges(cfg *config.Config, lock *lockfile.File) []contentlock.Change {
 	defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
 	includes.SkipFetch = true
-	return mcp.DynamicLockChanges(context.Background(), cfg, lock, Version, lockExtraViews()...)
+	return mcp.DynamicLockChanges(cmdContext(), cfg, lock, Version, lockExtraViews()...)
 }
 
 // checkDynamicLock verifies the source and served pins against the configuration
@@ -243,5 +242,5 @@ func dynamicLockChanges(cfg *config.Config, lock *lockfile.File) []contentlock.C
 func checkDynamicLock(cfg *config.Config, lock *lockfile.File) []string {
 	defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
 	includes.SkipFetch = true
-	return mcp.DynamicLockProblems(context.Background(), cfg, lock, Version, lockExtraViews()...)
+	return mcp.DynamicLockProblems(cmdContext(), cfg, lock, Version, lockExtraViews()...)
 }
