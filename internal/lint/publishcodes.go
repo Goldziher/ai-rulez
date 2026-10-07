@@ -85,7 +85,7 @@ func registerPublishcodes(s *ruleSet) {
 			Good: "Review with `ai-rulez approve --diff` and approve the item, then publish",
 		},
 		CodePublishExperimental: {
-			Why:  "The Port, AWS Agent Registry and Kiro formats are written from public descriptions, not from a schema the vendor publishes, so their output is labelled experimental and needs `--experimental`.",
+			Why:  "The Port, AWS Agent Registry and Kiro formats are written from public descriptions, not from a schema the vendor publishes, so their output is labeled experimental and needs `--experimental`.",
 			Bad:  "Uploading `emit/port/*.json` to a catalog without checking it against your blueprint",
 			Good: "Validate the files against your own blueprint or registry, or render exactly what you need with the template emitter",
 		},

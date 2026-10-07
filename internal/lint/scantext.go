@@ -6,7 +6,7 @@ import (
 
 // ScanText applies the security rules (AR0xx) with default settings to one text
 // that is not part of a loaded project, for example a file staged by `convert`.
-// Inline ai-rulez-lint-ignore comments in the text are not honoured: the text
+// Inline ai-rulez-lint-ignore comments in the text are not honored: the text
 // is not trusted to silence its own findings.
 func ScanText(file, text string, opts ...Option) []Finding {
 	r := &runner{cfg: &config.Config{}, docs: map[string]doc{file: {}}}
@@ -19,7 +19,7 @@ func ScanText(file, text string, opts ...Option) []Finding {
 }
 
 // DetectSecret reports whether s contains a credential the security scan
-// recognises (cloud keys, tokens, private keys, JWTs and key=value
+// recognizes (cloud keys, tokens, private keys, JWTs and key=value
 // assignments with a long mixed value) and returns the pattern name.
 func DetectSecret(s string) (string, bool) {
 	for _, p := range builtinSecrets {
