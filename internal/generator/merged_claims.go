@@ -128,7 +128,7 @@ func (g *Generator) splitMergedClaims(outputs []config.OutputFile,
 			claim.Local = fromLocal
 			local[rel] = append(local[rel], claim)
 		}
-		if !(output.PartiallyOwned || output.Sensitive || output.LocalOnly || g.plan.diverges(rel, output.MergeClaims)) {
+		if !output.PartiallyOwned && !fromLocal {
 			committed[rel] = []jsonmerge.Claim{}
 		}
 	}
