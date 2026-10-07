@@ -131,7 +131,7 @@ func (r *runner) checkAnchor(it *item, line int, file, frag, target string) {
 func (r *runner) checkToken(it *item, line int, tok string, notAClaim bool) {
 	tok = strings.TrimSpace(tok)
 	if m := tickSlashRe.FindStringSubmatch(tok); m != nil {
-		r.requireName(it, line, m[1], "command", r.commands, r.skills)
+		r.requireName(it, line, m[1], kindCommand, r.commands, r.skills)
 		return
 	}
 	tok = lineSuffixRe.ReplaceAllString(strings.TrimRight(tok, ".,;:"), "")
@@ -283,7 +283,7 @@ func (r *runner) checkNames(it *item, l bodyLine) {
 		if !slashInvocation(l.Plain[:m[2]-1]) {
 			continue // "GET /user-profile" is a route, not a command
 		}
-		r.requireName(it, l.No, l.Plain[m[2]:m[3]], "command", r.commands, r.skills)
+		r.requireName(it, l.No, l.Plain[m[2]:m[3]], kindCommand, r.commands, r.skills)
 	}
 	for _, m := range skillCallRe.FindAllStringSubmatch(l.Text, -1) {
 		r.requireName(it, l.No, m[1], "skill", r.skills, r.commands)

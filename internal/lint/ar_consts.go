@@ -46,3 +46,36 @@ const (
 	wordInstall = "install"
 	wordRun     = "run"
 )
+
+// Names the rule files share beyond the keys above: packages, interpreters,
+// severity levels and a few fixed phrases.
+const (
+	presetClaude = "claude"
+	unitBytes    = "bytes"
+
+	toolBun    = "bun"
+	toolPnpm   = "pnpm"
+	toolYarn   = "yarn"
+	toolNpx    = "npx"
+	toolUvx    = "uvx"
+	toolPipx   = "pipx"
+	toolPython = "python"
+
+	shellBash = "bash"
+	shellZsh  = "zsh"
+	cmdTime   = "time"
+
+	osWindows      = "windows"
+	transportStdio = "stdio"
+	keyTargets     = "targets"
+
+	fenceFrontmatter   = "---"
+	whyNoVersionPinned = "no version is pinned"
+
+	boolTrue  = "true"
+	boolFalse = "false"
+
+	levelError   = "error"
+	levelWarning = "warning"
+	levelOff     = "off"
+)

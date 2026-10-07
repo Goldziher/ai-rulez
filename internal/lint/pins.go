@@ -65,7 +65,7 @@ func npmPinProblem(spec string) string {
 	case strings.ContainsAny(ver, "<>${}"):
 		return "" // a placeholder in documentation
 	case ver == "":
-		return "no version is pinned"
+		return whyNoVersionPinned
 	case versionPinRe.MatchString(ver):
 		return ""
 	default:
@@ -103,7 +103,7 @@ func pythonPinProblem(spec string) string {
 		}
 		return "@" + ver + " is a moving tag"
 	}
-	return "no version is pinned"
+	return whyNoVersionPinned
 }
 
 // flag-with-value sets for the launchers below.
@@ -122,7 +122,7 @@ func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) {
 	for len(argv) > 0 && (strings.Contains(argv[0], "=") && !strings.HasPrefix(argv[0], "-")) { // VAR=value prefix
 		argv = argv[1:]
 	}
-	for len(argv) > 0 && (argv[0] == cmdSudo || argv[0] == keyEnv || argv[0] == "time" || argv[0] == cmdExec) {
+	for len(argv) > 0 && (argv[0] == cmdSudo || argv[0] == keyEnv || argv[0] == cmdTime || argv[0] == cmdExec) {
 		argv = argv[1:]
 	}
 	if len(argv) == 0 {
@@ -131,9 +131,9 @@ func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) {
 	cmd := path.Base(argv[0])
 	args := argv[1:]
 	switch cmd {
-	case "npx", "bunx", "pnpx":
-		return npxProblem(args, needYes && cmd == "npx")
-	case "pnpm", "yarn", "bun":
+	case toolNpx, "bunx", "pnpx":
+		return npxProblem(args, needYes && cmd == toolNpx)
+	case toolPnpm, toolYarn, toolBun:
 		if len(args) > 0 && (args[0] == "dlx" || args[0] == "x") {
 			return npxProblem(args[1:], false)
 		}
@@ -141,7 +141,7 @@ func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) {
 		if len(args) > 0 && (args[0] == cmdExec || args[0] == "x") {
 			return npxProblem(args[1:], needYes)
 		}
-	case "uvx":
+	case toolUvx:
 		return uvxProblem(args)
 	case "uv":
 		if len(args) > 1 && args[0] == "tool" && args[1] == wordRun {
@@ -153,7 +153,7 @@ func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) {
 		if len(args) > 1 && args[0] == cmdPip && args[1] == wordInstall {
 			return pipProblem(args[2:])
 		}
-	case "pipx":
+	case toolPipx:
 		if len(args) > 0 && args[0] == wordRun {
 			return pipxRunProblem(args[1:])
 		}
@@ -161,7 +161,7 @@ func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) {
 		if len(args) > 0 && args[0] == wordInstall {
 			return pipProblem(args[1:])
 		}
-	case "python", "python3":
+	case toolPython, "python3":
 		if len(args) > 2 && args[0] == "-m" && args[1] == cmdPip && args[2] == wordInstall {
 			return pipProblem(args[3:])
 		}

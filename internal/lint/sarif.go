@@ -303,7 +303,7 @@ func sarifRunError(run sarifRun) error {
 			return oops.Errorf("the scanner reported executionSuccessful=false")
 		}
 		for _, n := range inv.Notifications {
-			if strings.EqualFold(n.Level, "error") {
+			if strings.EqualFold(n.Level, levelError) {
 				return oops.Errorf("the scanner reported an error: %s", sanitizeScannerText(n.Message.Text))
 			}
 		}

@@ -50,7 +50,7 @@ func isShellScript(t *scanText) bool {
 		return true
 	}
 	first, _, _ := strings.Cut(t.raw, "\n")
-	return strings.HasPrefix(first, "#!") && (strings.Contains(first, "sh") || strings.Contains(first, "bash") || strings.Contains(first, "zsh")) && !strings.Contains(first, "python")
+	return strings.HasPrefix(first, "#!") && (strings.Contains(first, "sh") || strings.Contains(first, shellBash) || strings.Contains(first, shellZsh)) && !strings.Contains(first, toolPython)
 }
 
 func scanTaint(r *runner, t *scanText) {
@@ -197,7 +197,7 @@ func commandWord(words []string) string {
 		w := words[0]
 		switch {
 		case strings.Contains(w, "=") && !strings.HasPrefix(w, "-") && !strings.Contains(w, "/"):
-		case w == cmdSudo || w == "time" || w == "nohup" || w == keyEnv || w == hookTypeCommand || w == cmdExec || w == "xargs":
+		case w == cmdSudo || w == cmdTime || w == "nohup" || w == keyEnv || w == hookTypeCommand || w == cmdExec || w == "xargs":
 		default:
 			return filepath.Base(w)
 		}

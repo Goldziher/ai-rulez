@@ -34,7 +34,7 @@ func adapterName(format string) (string, bool) {
 // validFormat reports whether format is "", sarif, json or a known adapter.
 func validFormat(format string) bool {
 	switch strings.ToLower(format) {
-	case "", "sarif", "json":
+	case "", FormatSARIF, "json":
 		return true
 	}
 	name, ok := adapterName(format)
@@ -107,12 +107,12 @@ func parseClaudeValidate(out []byte) ([]externalFinding, error) {
 		for _, group := range []struct {
 			issues []claudeValidateIssue
 			level  string
-		}{{e.Errors, "error"}, {e.Warnings, "warning"}, {e.Notes, "note"}} {
+		}{{e.Errors, levelError}, {e.Warnings, levelWarning}, {e.Notes, "note"}} {
 			for _, is := range group.issues {
 				if len(found) >= maxScannerResults {
 					return nil, oops.Errorf("more than %d results", maxScannerResults)
 				}
-				if group.level == "error" {
+				if group.level == levelError {
 					errCount++
 				}
 				rule := is.Path

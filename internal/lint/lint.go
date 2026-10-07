@@ -705,7 +705,7 @@ func (r *runner) checkItem(it *item) {
 		r.unit(unitOf("tool-breadth", AnalyzerSecurity), func() { r.checkToolBreadth(it, fm) })
 		r.unit(unitOf("resources", AnalyzerSecurity), func() { r.scanResources(it) })
 		r.unit(unitOf("globs", AnalyzerReferences), func() { r.checkGlobs(it, d) })
-		r.unit(unitOf("description", AnalyzerDescriptions), func() { r.checkDescription(it, d) })
+		r.unit(unitOf(keyDescription, AnalyzerDescriptions), func() { r.checkDescription(it, d) })
 		r.unit(unitOf("budget", AnalyzerBudgets), func() { r.checkBudget(it, raw) })
 		r.unit(unitOf("required-metadata", AnalyzerMetadata), func() { r.checkRequiredMetadata(it, d, fm) })
 		r.unit(unitOf("skill-name", AnalyzerDescriptions), func() { r.checkSkillName(it, d) })
@@ -750,7 +750,7 @@ func (r *runner) checkDescription(it *item, d doc) {
 		return
 	}
 	desc := r.description(it)
-	line := d.lineOf("description", 1)
+	line := d.lineOf(keyDescription, 1)
 	if desc == "" {
 		r.add(CodeDescriptionMissing, it.abs, 1, "%s %q has no description in its frontmatter", it.kind, itemID(it.kind, it.cf))
 		return
@@ -818,7 +818,7 @@ func metaValue(m *config.Metadata, key string) string {
 		return m.Effort
 	case "activation":
 		return m.Activation
-	case "targets":
+	case keyTargets:
 		return strings.Join(m.Targets, ",")
 	case keyTools:
 		return strings.Join(m.Tools, ",")
@@ -936,7 +936,7 @@ func (r *runner) checkDuplicates() {
 		for i := 0; i < j; i++ {
 			if code, dup := compareDescriptions(entries[i], b, threshold); dup {
 				a := entries[i]
-				line := r.docs[b.it.abs].lineOf("description", 1)
+				line := r.docs[b.it.abs].lineOf(keyDescription, 1)
 				r.add(code, b.it.abs, line, "description is %s %s %q (%s)", map[string]string{CodeDescriptionDup: "identical to", CodeDescriptionNearDup: "near-identical to"}[code], a.it.kind, itemID(a.it.kind, a.it.cf), r.display(a.it.abs))
 				break
 			}
@@ -1028,7 +1028,7 @@ func (r *runner) checkMCP() {
 // skill whose command is not on PATH.
 func (r *runner) checkFrontmatterMCPCommands() {
 	for _, s := range r.frontmatterMCPServers() {
-		if s.disabled || effectiveTransport(s) != "stdio" || s.command == "" || strings.Contains(s.command, "$") || r.commandResolves(s.command) {
+		if s.disabled || effectiveTransport(s) != transportStdio || s.command == "" || strings.Contains(s.command, "$") || r.commandResolves(s.command) {
 			continue
 		}
 		r.add(CodeMCPCommandNotFound, s.file, s.line, "MCP server %q runs %q, which is not on PATH", s.name, s.command)
@@ -1082,7 +1082,7 @@ func (r *runner) checkHooks(baseAbs string) {
 	for _, event := range events {
 		for _, group := range hf.Hooks[event] {
 			for _, h := range group.Hooks {
-				if h.Type != "" && h.Type != "command" {
+				if h.Type != "" && h.Type != hookTypeCommand {
 					continue
 				}
 				r.checkHookCommand(path, event, h.Command)

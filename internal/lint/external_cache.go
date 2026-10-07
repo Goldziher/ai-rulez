@@ -133,8 +133,8 @@ type cachedScan struct {
 // launchers are the commands that download and run a tool: the scanner's
 // version is not the launcher binary's.
 var launchers = map[string]bool{
-	"npx": true, "pnpx": true, "bunx": true, "uvx": true, "pipx": true,
-	"uv": true, "npm": true, "pnpm": true, "yarn": true, "bun": true,
+	toolNpx: true, "pnpx": true, "bunx": true, toolUvx: true, toolPipx: true,
+	"uv": true, "npm": true, toolPnpm: true, toolYarn: true, toolBun: true,
 }
 
 // cacheExpired reports whether a cached result of sc is too old to serve. Only

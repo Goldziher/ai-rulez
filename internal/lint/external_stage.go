@@ -458,7 +458,7 @@ func (st *scannerStage) expand(cmd []string) []string {
 func (st *scannerStage) env(pass, parent []string) []string {
 	home, tmp := filepath.Join(st.scratch, "home"), filepath.Join(st.scratch, "tmp")
 	extra := []string{"HOME=" + home, "TMPDIR=" + tmp}
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == osWindows {
 		extra = append(extra, "USERPROFILE="+home, "TMP="+tmp, "TEMP="+tmp)
 	}
 	return cmdrun.ScrubEnv(parent, pass, extra)
