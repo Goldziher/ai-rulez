@@ -1,6 +1,7 @@
 package skillsource
 
 import (
+	"context"
 	"io/fs"
 	"os"
 	"path"
@@ -63,9 +64,10 @@ type Skill struct {
 // a SKILL.md, or root itself when it has one. Include/exclude globs match the
 // directory name; exclude wins. Symlinks are never followed (a link could point
 // out of the source), and a skill over the size limits is skipped with a warning (a single file over the limit is dropped on its own), and a source over max_skills or max_bytes is an error.
-func Discover(spec Spec, root string) ([]Skill, error) {
+func Discover(ctx context.Context, spec Spec, root string) ([]Skill, error) {
+	log := logger.FromContext(ctx)
 	var dirs []string
-	if fileExists(filepath.Join(root, skillFile)) {
+	if fileExists(log, filepath.Join(root, skillFile)) {
 		dirs = []string{root}
 	} else {
 		entries, err := os.ReadDir(root)
@@ -74,10 +76,10 @@ func Discover(spec Spec, root string) ([]Skill, error) {
 		}
 		for _, e := range entries {
 			if e.Type()&os.ModeSymlink != 0 {
-				logger.Warn("Skipping a symlink in a skill source; symlinks are not followed", "source", spec.Name, "path", filepath.Join(root, e.Name()))
+				log.Warn("Skipping a symlink in a skill source; symlinks are not followed", "source", spec.Name, "path", filepath.Join(root, e.Name()))
 				continue
 			}
-			if e.IsDir() && !strings.HasPrefix(e.Name(), ".") && fileExists(filepath.Join(root, e.Name(), skillFile)) {
+			if e.IsDir() && !strings.HasPrefix(e.Name(), ".") && fileExists(log, filepath.Join(root, e.Name(), skillFile)) {
 				dirs = append(dirs, filepath.Join(root, e.Name()))
 			}
 		}
@@ -96,9 +98,9 @@ func Discover(spec Spec, root string) ([]Skill, error) {
 	total := 0
 	for _, dir := range chosen {
 		base := filepath.Base(dir)
-		files, err := readSkill(dir, root)
+		files, err := readSkill(log, dir, root)
 		if err != nil {
-			logger.Warn("Skipping a skill in a skill source", "source", spec.Name, "skill", base, "reason", err.Error())
+			log.Warn("Skipping a skill in a skill source", "source", spec.Name, "skill", base, "reason", err.Error())
 			continue
 		}
 		for i := range files {
@@ -133,10 +135,10 @@ func selected(spec Spec, name string) bool {
 	return len(spec.Include) == 0 || match(spec.Include)
 }
 
-func fileExists(p string) bool {
+func fileExists(log logger.Logger, p string) bool {
 	info, err := os.Lstat(p)
 	if err == nil && info.Mode()&os.ModeSymlink != 0 {
-		logger.Warn("Ignoring a symlinked SKILL.md in a skill source; symlinks are not followed", "path", p)
+		log.Warn("Ignoring a symlinked SKILL.md in a skill source; symlinks are not followed", "path", p)
 	}
 	return err == nil && info.Mode().IsRegular()
 }
@@ -148,7 +150,7 @@ var cacheMetaNames = map[string]bool{".cache_meta.json": true, ".cache_meta.json
 
 // readSkill reads the files of the skill in dir; sourceRoot is the directory the
 // source digest is taken over.
-func readSkill(dir, sourceRoot string) ([]File, error) {
+func readSkill(log logger.Logger, dir, sourceRoot string) ([]File, error) {
 	var files []File
 	total := 0
 	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, walkErr error) error {
@@ -167,11 +169,11 @@ func readSkill(dir, sourceRoot string) ([]File, error) {
 		}
 		if !info.Mode().IsRegular() {
 			if info.Mode()&os.ModeSymlink != 0 {
-				logger.Warn("Skipping a symlink in a skill; symlinks are not followed", "path", p)
+				log.Warn("Skipping a symlink in a skill; symlinks are not followed", "path", p)
 			}
 			return nil // symlinks and devices are not served
 		}
-		if skip, limitErr := checkFileLimits(p, info.Size(), len(files), &total); limitErr != nil || skip {
+		if skip, limitErr := checkFileLimits(log, p, info.Size(), len(files), &total); limitErr != nil || skip {
 			return limitErr
 		}
 		data, err := os.ReadFile(p) //nolint:gosec // p comes from WalkDir below the resolved source
@@ -206,9 +208,9 @@ func readSkill(dir, sourceRoot string) ([]File, error) {
 // checkFileLimits applies the per-file and per-skill limits to one more file: a
 // single file over maxFileBytes is skipped (skip) with a warning; a skill with
 // too many files or bytes is an error.
-func checkFileLimits(p string, size int64, fileCount int, total *int) (skip bool, err error) {
+func checkFileLimits(log logger.Logger, p string, size int64, fileCount int, total *int) (skip bool, err error) {
 	if size > maxFileBytes {
-		logger.Warn("Not serving a file of a skill because it is too large", "file", p, "limit_bytes", maxFileBytes)
+		log.Warn("Not serving a file of a skill because it is too large", "file", p, "limit_bytes", maxFileBytes)
 		return true, nil
 	}
 	if fileCount >= maxSkillFiles {

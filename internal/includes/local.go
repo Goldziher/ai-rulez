@@ -60,7 +60,7 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 		return nil, oops.Wrapf(err, "failed to resolve path")
 	}
 
-	logger.Debug("Loading local source", "name", s.name, "path", resolvedPath)
+	logger.FromContext(ctx).Debug("Loading local source", "name", s.name, "path", resolvedPath)
 
 	v := s.v.For(resolvedPath)
 
@@ -70,13 +70,13 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 	}
 
 	// Check if this is an .ai-rulez directory or contains one
-	aiRulezPath := s.findAIRulezDir(v, resolvedPath)
+	aiRulezPath := s.findAIRulezDir(v, logger.FromContext(ctx), resolvedPath)
 
 	// Without an .ai-rulez directory the path is a bare structure (rules/,
 	// agents/, ... directly in it) and is scanned in place.
 	scanDir := aiRulezPath
 	if scanDir == "" {
-		logger.Debug("No .ai-rulez directory found, using bare structure", "path", resolvedPath)
+		logger.FromContext(ctx).Debug("No .ai-rulez directory found, using bare structure", "path", resolvedPath)
 		scanDir = resolvedPath
 	}
 
@@ -133,15 +133,15 @@ func (s *LocalSource) validatePath(v workspace.View, path string) error {
 
 // findAIRulezDir finds the .ai-rulez directory in the given path
 // Returns the path to the .ai-rulez directory, or empty string if not found
-func (s *LocalSource) findAIRulezDir(v workspace.View, path string) string {
+func (s *LocalSource) findAIRulezDir(v workspace.View, log logger.Logger, path string) string {
 	// Check if path itself is a .ai-rulez directory
-	if filepath.Base(path) == aiRulezDir && isRealDirIn(v, path) {
+	if filepath.Base(path) == aiRulezDir && isRealDirIn(v, log, path) {
 		return path
 	}
 
 	// Check if path contains a .ai-rulez subdirectory
 	aiRulezPath := filepath.Join(path, aiRulezDir)
-	if isRealDirIn(v, aiRulezPath) {
+	if isRealDirIn(v, log, aiRulezPath) {
 		return aiRulezPath
 	}
 

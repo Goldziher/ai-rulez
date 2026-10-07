@@ -158,7 +158,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		localPath := r.resolveLocalOverride(includeConf)
 		if localPath == "" {
 			// Local override path does not exist — skip silently
-			logger.Info("Skipping include (local_override path not found)",
+			logger.FromContext(ctx).Info("Skipping include (local_override path not found)",
 				"name", includeConf.Name,
 				"local_override", includeConf.LocalOverride)
 			return nil, nil
@@ -166,7 +166,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		if err := checkInsideProject(r.cfg, r.baseDir, "local_override", includeConf.Name, localPath); err != nil {
 			return nil, err
 		}
-		logger.Info("Using local override for include",
+		logger.FromContext(ctx).Info("Using local override for include",
 			"name", includeConf.Name,
 			"path", localPath)
 		return NewLocalSource(

@@ -38,7 +38,7 @@ func (r *Resolver) createOKFSource(ctx context.Context, c *config.IncludeConfig)
 		}
 		p := r.resolveLocalOverride(c)
 		if p == "" {
-			logger.Info("Skipping include (local_override path not found)", "name", c.Name, "local_override", c.LocalOverride)
+			logger.FromContext(ctx).Info("Skipping include (local_override path not found)", "name", c.Name, "local_override", c.LocalOverride)
 			return nil, nil
 		}
 		return &OKFSource{name: c.Name, dir: p, include: c.Include}, nil
@@ -104,7 +104,7 @@ func convertOKFBundle(ctx context.Context, dir, name string, include []string) (
 		return nil, oops.With("include", name).Wrapf(err, "convert OKF bundle")
 	}
 	for _, p := range b.Problems {
-		logger.Warn("OKF include skipped an unsafe bundle path", "include", name, "path", p.Path, "reason", p.Message)
+		logger.FromContext(ctx).Warn("OKF include skipped an unsafe bundle path", "include", name, "path", p.Path, "reason", p.Message)
 	}
 	tree, err := config.ScanContentTreeContext(ctx, target)
 	if err != nil {

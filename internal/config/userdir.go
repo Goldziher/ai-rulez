@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"path/filepath"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 
 	"github.com/samber/oops"
 )

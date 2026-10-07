@@ -135,7 +135,7 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 				Errorf("ref %q not found on remote", ref)
 		}
 		sha := strings.SplitN(line, "\t", 2)[0]
-		logger.Debug("resolved remote HEAD SHA", "url", RedactURL(repoURL), "ref", ref, "sha", sha)
+		logger.FromContext(ctx).Debug("resolved remote HEAD SHA", "url", RedactURL(repoURL), "ref", ref, "sha", sha)
 		return sha, nil
 	}
 
