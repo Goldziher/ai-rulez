@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
@@ -39,6 +41,15 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 	g.diagnostics()
 	if g.config.Plugin == nil && g.config.Marketplace == nil {
 		return nil, nil
+	}
+	// generate --plugin never reads machine-local inputs (a bundle is distributable),
+	// so the comparison is made on the shared view of the configuration too.
+	if g.config.HasLocalInputs() && g.config.ConfigDir != "" && g.config.ConfigFile != "" {
+		shared, err := g.sharedPluginView()
+		if err != nil {
+			return nil, err
+		}
+		return shared.PluginVersionDrift(profile)
 	}
 	top := g.git().TopLevel(g.config.BaseDir)
 	if top == "" {
@@ -178,4 +189,23 @@ func firstNonEmptyString(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// sharedPluginView is a generator over the same configuration loaded without the
+// config.local.* overlay and the local/ tree, the view `generate --plugin` renders.
+func (g *Generator) sharedPluginView() (*Generator, error) {
+	cfgPath := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
+	cfg, err := config.LoadConfigFromFile(g.context(), cfgPath,
+		config.WithoutLocal(), config.WithIncludeMemo(g.config.IncludeMemo), config.WithResolvers(g.config.Resolve),
+		config.WithPolicy(g.config.Policy()))
+	if err != nil {
+		return nil, oops.With("config", cfgPath).Wrapf(err, "load the shared configuration for the plugin drift check")
+	}
+	cfg.MCPEnvOverrides = g.config.MCPEnvOverrides
+	cfg.MCPEnvFiles = g.config.MCPEnvFiles
+	cfg.GeneratedAt = g.config.GeneratedAt
+	cfg.Diag = g.diagnostics()
+	shared := NewGenerator(cfg)
+	shared.ctx = g.ctx
+	return shared, nil
 }

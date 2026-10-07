@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 func gitCmd(t *testing.T, dir string, args ...string) {
@@ -63,6 +66,40 @@ func TestPluginVersionDrift(t *testing.T) {
 			assert.Contains(t, drift[0].Changed, "skills/a-s/SKILL.md")
 		})
 	}
+}
+
+// generate --plugin never reads machine-local inputs, so the drift check must not
+// either: a personal skill would otherwise make a clean bundle look changed.
+func TestPluginVersionDrift_IgnoresMachineLocalInputs(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	// Arrange
+	dir := t.TempDir()
+	writeDomainsFile(t, filepath.Join(dir, ".ai-rulez", "config.toml"),
+		"version = \"4.0\"\nname = \"demo\"\npresets = [\"claude\"]\ngitignore = false\n\n"+
+			"[plugin]\nname = \"demo\"\nversion = \"1.0.0\"\ndescription = \"demo plugin\"\nruntimes = [\"claude\", \"opencode\"]\n")
+	writeDomainsFile(t, filepath.Join(dir, ".ai-rulez", "skills", "core-s", "SKILL.md"), "---\ndescription: core\n---\nbody\n")
+	shared, err := config.LoadConfig(context.Background(), dir, config.WithoutLocal())
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(shared).GeneratePlugin(""))
+	gitCmd(t, dir, "init", "-q")
+	gitCmd(t, dir, "add", "-A")
+	gitCmd(t, dir, "commit", "-q", "-m", "baseline")
+	writeDomainsFile(t, filepath.Join(dir, ".ai-rulez", "local", "skills", "mine", "SKILL.md"),
+		"---\ndescription: personal\n---\nmy own skill\n")
+	writeDomainsFile(t, filepath.Join(dir, ".ai-rulez", "config.local.toml"),
+		"[[mcp_servers]]\nname = \"loc\"\ncommand = \"echo\"\n")
+	withLocal, err := config.LoadConfig(context.Background(), dir)
+	require.NoError(t, err)
+	require.True(t, withLocal.HasLocalInputs(), "the personal skill is loaded")
+
+	// Act
+	drift, err := NewGenerator(withLocal).PluginVersionDrift("")
+
+	// Assert
+	require.NoError(t, err)
+	assert.Empty(t, drift, "the committed bundle is what generate --plugin writes")
 }
 
 func replaceAll(s, old, replacement string) string {
