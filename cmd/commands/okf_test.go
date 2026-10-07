@@ -90,6 +90,35 @@ func TestOKFExportOutIncludeAndRefusal(t *testing.T) {
 	assert.Equal(t, exitOKFCannotRun, code)
 }
 
+func TestOKFValidateRejectsNonBundleDirectory(t *testing.T) {
+	tests := []struct {
+		name  string
+		files map[string]string
+	}{
+		{"empty directory", nil},
+		{"only notes.txt", map[string]string{"notes.txt": "hello\n"}},
+		{"index without okf_version", map[string]string{"index.md": "# Concepts\n"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			okfProject(t)
+			dir := t.TempDir()
+			for name, content := range tt.files {
+				writeFile(t, filepath.Join(dir, name), content)
+			}
+
+			// Act
+			var out bytes.Buffer
+			code := runOKFValidate(context.Background(), dir, &out)
+
+			// Assert
+			assert.Equal(t, exitOKFProblems, code, out.String())
+			assert.Contains(t, out.String(), "okf_version")
+		})
+	}
+}
+
 func TestOKFValidateCommand(t *testing.T) {
 	root := okfProject(t)
 	require.Equal(t, 0, mustExport(t))
