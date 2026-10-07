@@ -246,8 +246,10 @@ ai-rulez eval run --runner-command ./my-runner --grader builtin --allow-llm --gr
   pass as well: the case passes only when both do. A result with no `output` has nothing to grade and fails the rubric
   (with a warning). A failed judge call leaves that case ungraded, which scores
   as a failure.
-- **Treated as data.** The rubric and the transcript go to the judge between markers that carry a token derived from
-  the request, the judge is told to ignore instructions inside them, and its reply must be exactly one JSON object.
+- **Treated as data.** The transcript goes to the judge between markers that carry a token derived from the request;
+  the prompt names the exact closing line, so a look-alike marker in the transcript cannot end the fence, and runs of
+  three angle brackets in the transcript are broken up. Text in the transcript that addresses the grader or asks for a
+  score is treated as an injection attempt and scores 0. The reply must be exactly one JSON object.
   Secret-looking text in the rubric or transcript makes that case ungraded (nothing is sent); an oversized transcript
   is cut to its head and tail (64 KiB). The judge call gets at least 2,048 completion tokens (`llm.DefaultJudgeCompletionTokens`, the floor of the model
   layer's own judge): a reasoning model such as `gemini-2.5-flash` spends its thinking out of that budget before the
