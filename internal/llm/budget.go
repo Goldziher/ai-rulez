@@ -63,6 +63,7 @@ type reservation struct {
 	model string
 	worst Usage
 	cost  float64
+	sub   *subBudget // set for a further request of a split call; records what it charged
 }
 
 // reserve atomically checks the limits against spent + reserved + the worst case
@@ -132,6 +133,57 @@ func (r *reservation) release(tokens int, cost float64) {
 	r.b.reserved.CostUSD -= r.cost
 	r.b.spent.Tokens += tokens
 	r.b.spent.CostUSD += cost
+	if r.sub != nil {
+		r.sub.tokens += tokens
+		r.sub.cost += cost
+		r.sub.calls++
+	}
+}
+
+// subBudget admits the further provider requests of one call that a backend splits (the
+// liter-llm one-request-per-input embedding fallback). The call's own reservation covers its
+// first request; every further one reserves its own worst case before it is sent, so max_calls,
+// max_tokens and max_cost_usd hold per request, and is charged as it ends. It is used by one
+// goroutine at a time (the backend sends the requests in sequence).
+type subBudget struct {
+	b      *Budget
+	model  string
+	tokens int
+	cost   float64
+	calls  int
+}
+
+type subBudgetKey struct{}
+
+// subBudgetFrom returns the subBudget of ctx, or nil when no budget is active.
+func subBudgetFrom(ctx context.Context) *subBudget {
+	s, _ := ctx.Value(subBudgetKey{}).(*subBudget)
+	return s
+}
+
+// reserve admits one further request with worst-case usage worst. A nil subBudget (no budget
+// active) admits everything and returns a nil reservation, whose methods do nothing.
+func (s *subBudget) reserve(worst Usage) (*reservation, error) {
+	if s == nil {
+		return nil, nil
+	}
+	r, err := s.b.reserve(s.model, worst)
+	if err != nil {
+		return nil, err
+	}
+	r.sub = s
+	return r, nil
+}
+
+// done settles a further request: its usage on success, the failure rule otherwise.
+func (r *reservation) done(model string, usage Usage, err error) {
+	switch {
+	case r == nil:
+	case err != nil:
+		r.fail(err)
+	default:
+		r.settle(model, usage)
+	}
 }
 
 // unbilled reports whether err is a rejection the provider did not bill.
@@ -206,19 +258,27 @@ func (c *budgetClient) Embed(ctx context.Context, req EmbedRequest) (EmbedRespon
 	if err != nil {
 		return EmbedResponse{}, err
 	}
-	resp, err := c.next.Embed(ctx, req)
+	sub := &subBudget{b: c.b, model: model}
+	resp, err := c.next.Embed(context.WithValue(ctx, subBudgetKey{}, sub), req)
 	if err != nil {
-		res.fail(err)
-		return resp, err
+		if resp.firstBilled != nil {
+			// The first request completed before a further one failed: it was billed as reported.
+			res.settle(model, *resp.firstBilled)
+		} else {
+			res.fail(err)
+		}
+		return EmbedResponse{}, err
 	}
-	usage := resp.Usage
-	if usage.Total() == 0 {
+	// The further requests charged themselves; the reservation settles what is left.
+	usage := Usage{PromptTokens: max(resp.Usage.PromptTokens-sub.tokens, 0)}
+	if resp.Usage.Total() == 0 {
 		usage = worst
 	}
-	if resp.Requests > 1 {
-		c.b.addCalls(resp.Requests - 1)
+	if extra := resp.Requests - 1 - sub.calls; extra > 0 {
+		c.b.addCalls(extra)
 	}
-	resp.CostUSD, resp.CostKnown = res.settle(resp.Model, usage)
+	cost, known := res.settle(resp.Model, usage)
+	resp.CostUSD, resp.CostKnown = cost+sub.cost, known
 	return resp, nil
 }
 
