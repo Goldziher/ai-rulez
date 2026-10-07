@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,6 +22,9 @@ func TestReviewConfig_Validate(t *testing.T) {
 		{"valid", &ReviewConfig{Content: "full", Exclude: []string{"internal-*"}, MaxCostUSD: 1, MaxCalls: 5}, ""},
 		{"bad content", &ReviewConfig{Content: "everything"}, "review.content"},
 		{"negative cost", &ReviewConfig{MaxCostUSD: -1}, "max_cost_usd"},
+		{"NaN cost", &ReviewConfig{MaxCostUSD: math.NaN()}, "review.max_cost_usd must be a finite number"},
+		{"infinite cost", &ReviewConfig{MaxCostUSD: math.Inf(1)}, "review.max_cost_usd must be a finite number"},
+		{"negative infinite cost", &ReviewConfig{MaxCostUSD: math.Inf(-1)}, "review.max_cost_usd must be a finite number"},
 		{"negative calls", &ReviewConfig{MaxCalls: -1}, "max_calls"},
 		{"bad glob", &ReviewConfig{Exclude: []string{"[a"}}, "not a valid glob"},
 	}
