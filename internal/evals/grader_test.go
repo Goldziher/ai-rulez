@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -312,8 +311,8 @@ func TestCacheKey_TheGraderJoinsTheKeyOnlyWhenSet(t *testing.T) {
 
 func TestParseClaudeResult_TheRubricEvidenceBecomesTheOutput(t *testing.T) {
 	// Arrange: a run in which claude's own llm grader passed the rubric and read the answer.
-	doc := fmt.Sprintf(`{"costUsd":0.02,"cases":[{"name":"graded","dir":"evals/graded","arms":{"with":[
-	  {"costUsd":0.01,"graders":[{"name":"trigger","passed":true},{"name":"rubric","passed":true,"evidence":"deployed to staging-eu"}]}]}}]}`)
+	doc := `{"costUsd":0.02,"cases":[{"name":"graded","dir":"evals/graded","arms":{"with":[
+	  {"costUsd":0.01,"graders":[{"name":"trigger","passed":true},{"name":"rubric","passed":true,"evidence":"deployed to staging-eu"}]}]}}]}`
 	req := &Request{Cases: []Case{{ID: "graded", Prompt: "p", ExpectTrigger: bp(true), Rubric: "names the cluster"}}}
 	tr := &ClaudeTranslation{Dirs: map[string]string{"graded": "graded"}, Inverted: map[string]bool{}, Skipped: map[string]string{}}
 

@@ -358,9 +358,9 @@ func relativeProblems(configDir string, problems []Problem) []Problem {
 
 // loadSkillMetas reads the searchable text and digest of every skill. A skill
 // that cannot be read is left out and its reason returned.
-func loadSkillMetas(skills []Skill) (map[string]skillMeta, map[string]string) {
-	metas := map[string]skillMeta{}
-	bad := map[string]string{}
+func loadSkillMetas(skills []Skill) (metas map[string]skillMeta, bad map[string]string) {
+	metas = map[string]skillMeta{}
+	bad = map[string]string{}
 	for i := range skills {
 		s := &skills[i]
 		doc, err := readSkillDoc(s)
@@ -397,7 +397,7 @@ func readSkillDoc(skill *Skill) (skillsearch.Doc, error) {
 	if err != nil {
 		return skillsearch.Doc{}, fmt.Errorf("SKILL.md frontmatter: %w", err)
 	}
-	doc := skillsearch.Doc{Name: stringOf(front["name"]), Description: stringOf(front["description"]),
+	doc := skillsearch.Doc{Name: stringOf(front["name"]), Description: stringOf(front[frontmatterDescription]),
 		Triggers: listOf(front["triggers"]), Keywords: listOf(front["keywords"])}
 	if doc.Name == "" {
 		doc.Name = skill.ID
@@ -430,7 +430,10 @@ func frontmatterOf(data []byte) (map[string]any, error) {
 }
 
 func stringOf(v any) string {
-	s, _ := v.(string)
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
 	return strings.TrimSpace(s)
 }
 

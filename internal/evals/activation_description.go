@@ -136,13 +136,13 @@ func withDescription(data []byte, desc string) ([]byte, error) {
 	value := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: desc}
 	set := false
 	for i := 0; i+1 < len(mapping.Content); i += 2 {
-		if mapping.Content[i].Value == "description" {
+		if mapping.Content[i].Value == frontmatterDescription {
 			mapping.Content[i+1] = value
 			set = true
 		}
 	}
 	if !set {
-		mapping.Content = append(mapping.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "description"}, value)
+		mapping.Content = append(mapping.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: frontmatterDescription}, value)
 	}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)

@@ -245,7 +245,7 @@ func round(v float64) float64 { return math.Round(v*1e4) / 1e4 }
 // Percent formats an optional rate for text output.
 func Percent(v *float64) string {
 	if v == nil {
-		return "n/a"
+		return textNA
 	}
 	return fmt.Sprintf("%.0f%%", *v*100)
 }
