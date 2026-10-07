@@ -56,6 +56,7 @@ func (s *JSONSchemaSuite) validate(schemaFile string, doc []byte) {
 
 func (s *JSONSchemaSuite) TestDocumentsMatchTheirSchemas() {
 	s.project()
+	s.write("bundle/index.md", "---\nokf_version: \"0.2\"\n---\n\n# Concepts\n")
 	s.write("bundle/decisions/use-go.md", "---\ntype: Decision\ndescription: Use Go\n---\nWe write Go.\n")
 	cases := []struct {
 		schema string

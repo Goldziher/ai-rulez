@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/secretpat"
 )
 
 // printf writes to w and ignores write errors: the writers are terminals and buffers.
@@ -32,7 +33,9 @@ var secretRe = regexp.MustCompile(`(?i)(bearer\s+[A-Za-z0-9._~+/=-]{8,}|sk-[A-Za
 
 // RedactSecrets masks key-looking substrings (bearer and basic credentials,
 // common vendor token shapes, JWTs, PEM private-key headers and key=value
-// pairs). It is a best-effort detector, not a guarantee. Provider error bodies can echo
+// pairs). Besides its own patterns it masks every credential shape the security
+// scan (AR001) recognizes, from the shared internal/secretpat list. It is a
+// best-effort detector, not a guarantee. Provider error bodies can echo
 // credentials, so every error message built from a response passes through it.
 //
 // An assignment whose value is, in its entirety, an environment lookup
@@ -52,7 +55,7 @@ func RedactSecrets(s string) string {
 		last = loc[1]
 	}
 	b.WriteString(s[last:])
-	return b.String()
+	return secretpat.Redact(b.String(), "[REDACTED]")
 }
 
 // assignStartRe matches the key-and-separator prefix of an assignment match.
