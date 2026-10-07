@@ -94,7 +94,7 @@ func buildActivationRunner(cmd *cobra.Command) (evals.Runner, string, error) {
 		}
 		return &evals.CommandRunner{Command: evalFlags.runnerCommand, Timeout: evalFlags.timeout, Stderr: cmd.ErrOrStderr()}, harness, nil
 	}
-	return nil, harness, oops.Errorf("unknown runner %q (use %s, %s or %s)", name, evals.RunnerClaudeNative, evals.RunnerCodexNative, evals.RunnerCommand)
+	return nil, harness, unknownEvalRunner(name)
 }
 
 // estimateParams reads the [lint.evals.estimate] assumptions.

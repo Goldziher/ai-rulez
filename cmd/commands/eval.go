@@ -388,7 +388,16 @@ func buildEvalRunner(cmd *cobra.Command) (evals.Runner, int, error) {
 		}
 		return &evals.CommandRunner{Command: evalFlags.runnerCommand, Timeout: evalFlags.timeout, Stderr: cmd.ErrOrStderr()}, 1, nil
 	}
-	return nil, 1, oops.Errorf("unknown runner %q (use %s or %s)", name, evals.RunnerClaudePluginEval, evals.RunnerCommand)
+	if name == evals.RunnerClaudeNative || name == evals.RunnerCodexNative {
+		return nil, 1, oops.Errorf("runner %q measures activation (--surface native), not case runs: use %s or %s", name, evals.RunnerClaudePluginEval, evals.RunnerCommand)
+	}
+	return nil, 1, unknownEvalRunner(name)
+}
+
+// unknownEvalRunner names every runner --runner accepts.
+func unknownEvalRunner(name string) error {
+	return oops.Errorf("unknown runner %q (use %s, %s, %s or %s)", name,
+		evals.RunnerClaudePluginEval, evals.RunnerCommand, evals.RunnerClaudeNative, evals.RunnerCodexNative)
 }
 
 func writeEvalReport(cmd *cobra.Command, report *evals.RunReport) error {
