@@ -84,6 +84,19 @@ func Write(log logger.Logger, dir string, site *Site, clean bool) (*WriteResult,
 		}
 	}
 	res := &WriteResult{Written: len(paths)}
+	final := retireStale(log, root, previous, next, clean, res)
+	if err := writeMarker(root, final); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// retireStale handles the files an earlier run listed that the new site no
+// longer has: with clean it removes the ones this command still owns, and it
+// returns the final marker entries (next plus every stale file left in place).
+func retireStale(log logger.Logger, root *os.Root, previous, next map[string]string, clean bool,
+	res *WriteResult,
+) map[string]string {
 	final := maps.Clone(next)
 	for _, old := range sortedKeys(previous) {
 		if _, keep := next[old]; keep {
@@ -103,10 +116,7 @@ func Write(log logger.Logger, dir string, site *Site, clean bool) (*WriteResult,
 		}
 	}
 	sort.Strings(res.Removed)
-	if err := writeMarker(root, final); err != nil {
-		return nil, err
-	}
-	return res, nil
+	return final
 }
 
 func sortedKeys(m map[string]string) []string {

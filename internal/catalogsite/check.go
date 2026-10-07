@@ -56,33 +56,7 @@ func Check(dir string, site *Site) (*CheckResult, error) {
 	}
 	defer root.Close() //nolint:errcheck // read-only
 
-	present := map[string]bool{}
-	walkErr := fs.WalkDir(root.FS(), ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		present[p] = true
-		if p == MarkerFile {
-			return nil
-		}
-		want, ok := site.Files[p]
-		if !ok {
-			res.Extra = append(res.Extra, p)
-			return nil
-		}
-		if !d.Type().IsRegular() {
-			res.Changed = append(res.Changed, p)
-			return nil
-		}
-		got, readErr := readSiteFile(root, p)
-		if readErr != nil || !bytes.Equal(got, want) {
-			res.Changed = append(res.Changed, p)
-		}
-		return nil
-	})
+	present, walkErr := compareTree(root, site, res)
 	if walkErr != nil {
 		return nil, oops.With("dir", dir).Wrapf(walkErr, "read output directory")
 	}
@@ -98,6 +72,38 @@ func Check(dir string, site *Site) (*CheckResult, error) {
 		sort.Strings(list)
 	}
 	return res, nil
+}
+
+// compareTree walks root, recording every extra and changed file in res, and
+// returns the set of files present.
+func compareTree(root *os.Root, site *Site, res *CheckResult) (map[string]bool, error) {
+	present := map[string]bool{}
+	err := fs.WalkDir(root.FS(), ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		present[p] = true
+		if p == MarkerFile {
+			return nil
+		}
+		want, ok := site.Files[p]
+		switch {
+		case !ok:
+			res.Extra = append(res.Extra, p)
+		case !d.Type().IsRegular():
+			res.Changed = append(res.Changed, p)
+		default:
+			got, readErr := readSiteFile(root, p)
+			if readErr != nil || !bytes.Equal(got, want) {
+				res.Changed = append(res.Changed, p)
+			}
+		}
+		return nil
+	})
+	return present, err //nolint:wrapcheck // Check wraps it with the directory
 }
 
 func readSiteFile(root *os.Root, name string) ([]byte, error) {
