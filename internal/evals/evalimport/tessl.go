@@ -530,43 +530,62 @@ func mapFixtures(m *Mapped, sc *Scenario, doc map[string]any, used consumed) err
 		files = append(files, evals.Fixture{Path: path, Content: content})
 		return nil
 	}
+	var err error
 	switch t := raw.(type) {
 	case []any:
-		for i, entry := range t {
-			obj, ok := entry.(map[string]any)
-			if !ok {
-				return fmt.Errorf("$.%s[%d] must be an object with a path", key, i)
-			}
-			p := typed[string](obj["path"])
-			content := typed[string](obj["content"])
-			source := typed[string](obj["source"])
-			if content != "" && source != "" {
-				return fmt.Errorf("$.%s[%d] has both content and source", key, i)
-			}
-			if err := add(p, content, source); err != nil {
-				return err
-			}
-			for _, k := range []string{"path", "content", "source"} {
-				used.mark(fmt.Sprintf("$.%s[%d].%s", key, i, k))
-			}
-			used.mark(fmt.Sprintf("$.%s[%d]", key, i))
-		}
+		err = mapFixtureList(key, t, add, used)
 	case map[string]any:
-		for _, p := range sortedKeys(t) {
-			content, ok := t[p].(string)
-			if !ok {
-				return fmt.Errorf("%s must be the file's content as a string", child("$."+key, p))
-			}
-			if err := add(p, content, ""); err != nil {
-				return err
-			}
-			used.mark(child("$."+key, p))
-		}
+		err = mapFixtureObject(key, t, add, used)
 	default:
-		return fmt.Errorf("$.%s must be a list or an object", key)
+		err = fmt.Errorf("$.%s must be a list or an object", key)
+	}
+	if err != nil {
+		return err
 	}
 	m.Case.Files = files
 	m.Report.Mapped = append(m.Report.Mapped, fmt.Sprintf("%d fixture(s) -> files", len(files)))
+	return nil
+}
+
+// fixtureAdder records one fixture file for the mapped case.
+type fixtureAdder func(path, content, source string) error
+
+// mapFixtureList maps the list form of the fixtures: objects with a path and a content or source.
+func mapFixtureList(key string, list []any, add fixtureAdder, used consumed) error {
+	for i, entry := range list {
+		obj, ok := entry.(map[string]any)
+		if !ok {
+			return fmt.Errorf("$.%s[%d] must be an object with a path", key, i)
+		}
+		p := typed[string](obj["path"])
+		content := typed[string](obj["content"])
+		source := typed[string](obj["source"])
+		if content != "" && source != "" {
+			return fmt.Errorf("$.%s[%d] has both content and source", key, i)
+		}
+		if err := add(p, content, source); err != nil {
+			return err
+		}
+		for _, k := range []string{"path", "content", "source"} {
+			used.mark(fmt.Sprintf("$.%s[%d].%s", key, i, k))
+		}
+		used.mark(fmt.Sprintf("$.%s[%d]", key, i))
+	}
+	return nil
+}
+
+// mapFixtureObject maps the object form of the fixtures: file path to content.
+func mapFixtureObject(key string, obj map[string]any, add fixtureAdder, used consumed) error {
+	for _, p := range sortedKeys(obj) {
+		content, ok := obj[p].(string)
+		if !ok {
+			return fmt.Errorf("%s must be the file's content as a string", child("$."+key, p))
+		}
+		if err := add(p, content, ""); err != nil {
+			return err
+		}
+		used.mark(child("$."+key, p))
+	}
 	return nil
 }
 
