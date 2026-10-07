@@ -268,7 +268,9 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	if log := lo.host.Log; log != nil {
 		sink = func(msg string, args ...any) { log.Warn(msg, args...) }
 	}
-	config.Diag = diag.New(sink)
+	if config.Diag = lo.collector; config.Diag == nil {
+		config.Diag = diag.New(sink)
+	}
 
 	// The organization policy clamps the configuration before anything is fetched.
 	config.PolicyDir = lo.policyDir
