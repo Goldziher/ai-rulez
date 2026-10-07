@@ -84,18 +84,11 @@ func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
 	if f == nil {
 		return nil, newError(KindConfig, "%s llm-config-invalid: backend %q is not compiled in; use a release built with -tags literllm or set backend = \"openaicompat\"", CodeConfigInvalid, BackendLiterLLM)
 	}
-	// liter-llm reads the routed provider's own key variable (OPENAI_API_KEY, ...) when no key is
-	// given, so a repository route picks which of the user's keys is sent and billed even without
-	// api_key_env: refuse it either way.
-	if routed := cfg.RoutingFromRepo(); len(routed) > 0 {
-		source := "the provider's own environment variable"
-		if cfg.APIKeyEnv != "" {
-			source = cfg.APIKeyEnv
-		}
-		return nil, newError(KindConfig, "%s llm-config-invalid: refusing to send the key from %s to a provider chosen by the repository config (%s); set provider and model in the user config file or AI_RULEZ_LLM_PROVIDER / AI_RULEZ_LLM_MODEL", CodeConfigInvalid, source, strings.Join(routed, ", "))
-	}
 	key := ""
 	if cfg.APIKeyEnv != "" {
+		if routed := cfg.RoutingFromRepo(); len(routed) > 0 {
+			return nil, newError(KindConfig, "%s llm-config-invalid: refusing to send the key from %s to a provider chosen by the repository config (%s); set provider and model in the user config file or AI_RULEZ_LLM_PROVIDER / AI_RULEZ_LLM_MODEL", CodeConfigInvalid, cfg.APIKeyEnv, strings.Join(routed, ", "))
+		}
 		if key = getenv(cfg.APIKeyEnv); key == "" {
 			return nil, newError(KindAuth, "environment variable %s (api_key_env) is empty or unset", cfg.APIKeyEnv)
 		}
@@ -210,25 +203,7 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 	if len(out) == 0 {
 		return ChatResponse{}, errEmptyNative
 	}
-	resp, err := decodeChat(out, l.pricing, model)
-	if err == nil && req.MaxTokens > 0 && hidesThinking(model) && resp.Usage.CompletionTokens < req.MaxTokens {
-		// The thinking tokens are billed but not reported. Gemini counts them against the completion
-		// cap, so the cap is the true upper bound: charge it rather than the visible answer alone.
-		resp.Usage.CompletionTokens = req.MaxTokens
-		resp.CostUSD, resp.CostKnown = l.pricing.Cost(resp.Model, resp.Usage)
-	}
-	return resp, err
-}
-
-// hidesThinking reports whether liter-llm's route for model leaves Gemini's thinking tokens out of
-// the usage it returns (liter-llm 2.1.4 maps usageMetadata without thoughtsTokenCount, so even
-// total_tokens omits them). The openaicompat backend reads them from total_tokens instead.
-func hidesThinking(model string) bool {
-	switch modelPrefix(model) {
-	case "gemini", "google_ai", "vertex_ai":
-		return true
-	}
-	return false
+	return decodeChat(out, l.pricing, model)
 }
 
 func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error) {
@@ -271,47 +246,33 @@ func batchUsage(body []byte) Usage {
 	if json.Unmarshal(body, &w) != nil {
 		return Usage{}
 	}
-	return Usage{PromptTokens: max(w.Usage.PromptTokens, w.Usage.TotalTokens, 0)}
+	return Usage{PromptTokens: w.Usage.PromptTokens}
 }
 
 // embedEach embeds the inputs one request at a time. Gemini's native route behind
 // liter-llm answers a batch with a single vector, so the batch is retried as
 // singles rather than failing or returning too few vectors. spent and requests
 // are what an already-sent batch cost, so the response charges and counts it.
-//
-// The caller's budget reservation covers the call's first request (the batch, or else the
-// first single); every further request is admitted by the budget before it is sent and charged
-// when it ends. On a failure the usage of a completed first request travels back in
-// firstBilled, so the budget charges what was billed rather than one estimate for the batch.
 func (l *literLLM) embedEach(ctx context.Context, model string, req EmbedRequest, spent Usage, requests int) (EmbedResponse, error) {
 	cost, known := l.pricing.Cost(model, spent)
 	out := EmbedResponse{Model: model, Usage: spent, CostUSD: cost, CostKnown: known || spent.Total() == 0, Requests: requests}
-	sub := subBudgetFrom(ctx)
-	var first *Usage
-	if requests > 0 {
-		first = &spent
-	}
-	failed := func(err error) (EmbedResponse, error) { return EmbedResponse{firstBilled: first}, err }
 	for _, in := range req.Input {
 		one := req
 		one.Input = []string{in}
 		body, err := encodeEmbed(model, one)
 		if err != nil {
-			return failed(newError(KindConfig, "cannot encode request: %v", err))
+			return EmbedResponse{}, newError(KindConfig, "cannot encode request: %v", err)
 		}
-		var res *reservation
-		if out.Requests > 0 {
-			if res, err = sub.reserve(Usage{PromptTokens: EstimateTokens(in)}); err != nil {
-				return failed(err)
-			}
-		}
-		r, err := l.embedOne(ctx, model, body)
-		res.done(model, r.Usage, err)
+		raw, err := l.native.EmbedJSON(ctx, body)
 		if err != nil {
-			return failed(err)
+			return EmbedResponse{}, classifyNative(err)
 		}
-		if out.Requests == 0 {
-			first = &r.Usage
+		if len(raw) == 0 {
+			return EmbedResponse{}, errEmptyNative
+		}
+		r, err := decodeEmbed(raw, l.pricing, model, 1)
+		if err != nil {
+			return EmbedResponse{}, err
 		}
 		out.Vectors = append(out.Vectors, r.Vectors[0])
 		out.Usage.PromptTokens += r.Usage.PromptTokens
@@ -321,18 +282,6 @@ func (l *literLLM) embedEach(ctx context.Context, model string, req EmbedRequest
 		out.Requests++
 	}
 	return out, nil
-}
-
-// embedOne sends one single-input embedding request.
-func (l *literLLM) embedOne(ctx context.Context, model string, body []byte) (EmbedResponse, error) {
-	raw, err := l.native.EmbedJSON(ctx, body)
-	if err != nil {
-		return EmbedResponse{}, classifyNative(err)
-	}
-	if len(raw) == 0 {
-		return EmbedResponse{}, errEmptyNative
-	}
-	return decodeEmbed(raw, l.pricing, model, 1)
 }
 
 func (l *literLLM) Close() error {

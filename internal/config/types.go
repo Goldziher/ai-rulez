@@ -883,7 +883,7 @@ func (m *Metadata) HasTargets() bool {
 // ShouldUpdateGitignore returns whether .gitignore should be updated
 func (c *Config) ShouldUpdateGitignore() bool {
 	if c.Gitignore == nil {
-		return true
+		return false
 	}
 	return *c.Gitignore
 }
