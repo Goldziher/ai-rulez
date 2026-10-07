@@ -225,11 +225,17 @@ func frontmatterIndex(dir string, own []IndexInput, subs []string, labels DirLab
 }
 
 func writeEntry(b *strings.Builder, title, target, desc string) {
-	b.WriteString("* [" + escapeTitle(title) + "](" + target + ")")
+	b.WriteString("* [" + escapeTitle(title) + "](" + escapeTarget(target) + ")")
 	if desc = escapeText(oneLine(desc)); desc != "" {
 		b.WriteString(" - " + desc)
 	}
 	b.WriteString("\n")
+}
+
+// escapeTarget percent-encodes the characters that would end or break a markdown
+// link target (space, parentheses, %, # and ?). The link resolver unescapes them.
+func escapeTarget(t string) string {
+	return strings.NewReplacer("%", "%25", " ", "%20", "(", "%28", ")", "%29", "#", "%23", "?", "%3F").Replace(t)
 }
 
 func escapeTitle(t string) string {

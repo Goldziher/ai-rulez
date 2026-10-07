@@ -207,6 +207,19 @@ func TestBuildIndexesDeterministicAndValid(t *testing.T) {
 	assert.Empty(t, load(t, files).Validate())
 }
 
+func TestBuildIndexesEncodeAwkwardFileNames(t *testing.T) {
+	in := []IndexInput{{Path: "skills/s/references/My File (1).md", Title: "My File"}, {Path: "skills/s/SKILL.md", Title: "S"}}
+	files := map[string]string{}
+	for p, d := range BuildIndexes(in, nil) {
+		files[p] = string(d)
+	}
+	for _, c := range in {
+		files[c.Path] = "---\ntype: X\ntitle: " + c.Title + "\n---\n"
+	}
+	assert.Contains(t, files["skills/s/references/index.md"], "(My%20File%20%281%29.md)")
+	assert.Empty(t, load(t, files).Validate())
+}
+
 func TestMarshalFrontmatterOrder(t *testing.T) {
 	out, err := MarshalFrontmatter([]Field{{"type", "Decision"}, {"title", "T: colon"}, {"x", map[string]any{"b": 1, "a": []string{"z"}}}})
 	require.NoError(t, err)
