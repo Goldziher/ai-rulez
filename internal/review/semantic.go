@@ -560,7 +560,7 @@ type SemanticInput struct {
 	Options SemanticOptions
 }
 
-// SemanticOutcome summarises a judged run.
+// SemanticOutcome summarizes a judged run.
 type SemanticOutcome struct {
 	Usage RunUsage
 	// Unjudged lists the scored items no call was made for (the run stopped first).
