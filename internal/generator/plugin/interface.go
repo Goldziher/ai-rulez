@@ -1,6 +1,12 @@
 package plugin
 
-import "github.com/Goldziher/ai-rulez/v5/internal/config"
+import (
+	"encoding/json"
+
+	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+)
 
 // interfaceDoc is the rich UI block shared by Codex and Kimi manifests, with the
 // camelCase JSON keys those runtimes expect.
@@ -45,4 +51,25 @@ func buildInterface(in *config.PluginInterface) *interfaceDoc {
 		LogoDark:          in.LogoDark,
 		Screenshots:       in.Screenshots,
 	}
+}
+
+// InterfaceFromDoc reads a manifest interface block (the camelCase keys Codex
+// and Kimi manifests use, extensions.com.openai.interface in an Agent Plugins
+// manifest) into the configuration shape.
+func InterfaceFromDoc(doc map[string]any) (*config.PluginInterface, error) {
+	raw, err := json.Marshal(doc)
+	if err != nil {
+		return nil, oops.Wrapf(err, "encode the interface block")
+	}
+	var in interfaceDoc
+	if err := json.Unmarshal(raw, &in); err != nil {
+		return nil, oops.Wrapf(err, "decode the interface block")
+	}
+	return &config.PluginInterface{
+		DisplayName: in.DisplayName, ShortDescription: in.ShortDescription, LongDescription: in.LongDescription,
+		DeveloperName: in.DeveloperName, Category: in.Category, Capabilities: in.Capabilities,
+		DefaultPrompt: in.DefaultPrompt, WebsiteURL: in.WebsiteURL, PrivacyPolicyURL: in.PrivacyPolicyURL,
+		TermsOfServiceURL: in.TermsOfServiceURL, BrandColor: in.BrandColor, ComposerIcon: in.ComposerIcon,
+		Logo: in.Logo, LogoDark: in.LogoDark, Screenshots: in.Screenshots,
+	}, nil
 }
