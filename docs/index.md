@@ -130,10 +130,11 @@ frontend = ["frontend", "qa"]
 - Custom presets for any tool and format
 - Installed skills from external repositories
 - Remote includes for sharing rules across projects
+- `ai-rulez.lock` pins, reviewer approvals, Sigstore signing and an organization policy for supply-chain control
 - MCP integration for programmatic access
 - Support for monorepos and multi-team projects
 - Optional shared `AGENTS.md` and `.agents/skills` for every tool that reads them (`agents_md`)
-- Machine-local, gitignored content and config overlay (`config.local.*`, `.ai-rulez/local/`)
+- Machine-local, gitignored content and config overlay (`config.local.toml`, `.ai-rulez/local/`)
 
 ## Project Structure
 
@@ -165,4 +166,4 @@ project-root/
 
 ## Version
 
-This documentation covers **AI-Rulez V4** (TOML-based configuration with inline MCP servers and plugins).
+This documentation covers **ai-rulez v5**. It reads the V4 TOML configuration (`version = "4.0"`); V2 and V3 configs are not read, see [Migrating to v5](migration-v5.md).

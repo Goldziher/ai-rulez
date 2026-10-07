@@ -71,9 +71,10 @@ Need the same knowledge outside coding agents? `ai-rulez export okf` writes rule
 | **Native MCP env references** | A `${VAR}` placeholder is written as the tool's own reference where it expands one, so no secret lands in the file | [configuration](docs/configuration.md#mcp_servers) |
 | **Watch and doctor** | `generate --watch` regenerates on save; `ai-rulez doctor` reports drift, removed presets, unresolved placeholders and missing tools | [CLI](docs/cli.md) |
 | **Lock and updates** | `ai-rulez lock` pins remote includes, installed skills, skill sources, authored content and outputs by commit and sha256; `generate --locked` is the CI mode, `version = "^1.2"` ranges are moved by `ai-rulez update` | [lock file](docs/lockfile.md) |
+| **Governance and release** | `ai-rulez approve` records reviewer approvals in the lock, `sign` and `verify --attestation` sign and check it with Sigstore, an organization policy sets tighten-only floors, and `publish` packages the plugin bundle into reproducible, signed release artifacts | [approvals](docs/approvals.md), [signing](docs/signing.md), [policy](docs/policy.md), [publish](docs/publish.md) |
 | **Dynamic skills and roles** | `delivery = "served"` skills are loaded on demand through `ai-rulez mcp --serve-skills` (`find_skill`, `load_skill`) instead of written to every harness; `[[roles]]` render a slice of the content per job | [MCP server](docs/mcp-server.md#dynamic-skill-loading), [roles](docs/roles.md) |
 | **Validation and verifiers** | `validate --strict` and `scan` run deep content and security checks with stable `AR` codes; `[[verifiers]]` run deterministic repo checks (`--since`, SARIF, JUnit); `[guard]` blocks agent edits to generated files | [strict validation](docs/strict-validation.md), [verifiers](docs/verifiers.md) |
-| **Inventory** | `ai-rulez sbom` (CycloneDX), `catalog` (JSON or a static site), `tokens`, `cost` and `search` report what the configuration contains and costs; `convert` imports existing tool files, rulesync, APM, Tessl and OKF projects | [SBOM](docs/sbom.md), [catalog](docs/catalog.md), [CLI](docs/cli.md) |
+| **Inventory** | `ai-rulez sbom` (CycloneDX or SPDX), `catalog` (JSON or a static site), `tokens`, `cost` and `search` report what the configuration contains and costs; `convert` imports existing tool files, rulesync, APM, Tessl and OKF projects | [SBOM](docs/sbom.md), [catalog](docs/catalog.md), [CLI](docs/cli.md) |
 
 ## Generate Plugins, Not Just Config
 
@@ -204,7 +205,7 @@ ai-rulez add rule my-scratch-notes --local   # → .ai-rulez/local/rules/, gener
 ai-rulez local set presets '["codex", "!cursor"]'   # → .ai-rulez/config.local.toml overlay
 ```
 
-`.ai-rulez/local/`, the `config.local.*` overlay and the generated `*.local.*` outputs are gitignored
+`.ai-rulez/local/`, the `config.local.toml` overlay and the generated `*.local.*` outputs are gitignored
 unconditionally, and `generate` refuses to let local config change tracked shared files (use
 `--no-local` for the teammate view). See [docs/local-overrides.md](docs/local-overrides.md).
 
@@ -453,7 +454,7 @@ pre-commit:
 ```
 
 Hooks run on each developer's machine and would otherwise load that developer's gitignored
-`config.local.*` overlay and `.ai-rulez/local/` content. Pass `--no-local` (also accepted by `validate`
+`config.local.toml` overlay and `.ai-rulez/local/` content. Pass `--no-local` (also accepted by `validate`
 and `tokens`) where a hook should see only the shared configuration, as a teammate or CI does. If you do
 not, `generate` still refuses to write local-derived changes into tracked shared files; never add
 `--allow-local-drift` to a hook. See [Poly hooks guide](docs/poly-hooks.md#machine-local-configuration-in-hooks).
