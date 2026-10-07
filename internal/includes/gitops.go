@@ -42,7 +42,7 @@ var (
 // requireGit checks that git is in PATH and version >= 2.25.
 // Result is cached for the process lifetime.
 func requireGit(ctx context.Context) error {
-	if _, real := runner.FromContext(ctx).(runner.Exec); !real {
+	if _, isExec := runner.FromContext(ctx).(runner.Exec); !isExec {
 		// The result is cached per process only for real git: an injected
 		// runner answers for itself every time.
 		return probeGit(ctx)
