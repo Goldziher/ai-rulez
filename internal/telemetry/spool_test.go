@@ -133,6 +133,56 @@ func TestLock_ReleaseRemovesOnlyItsOwnLock(t *testing.T) {
 	releaseC()
 }
 
+func TestLock_StaleLockThatCannotBeTakenOverHonoursTheWait(t *testing.T) {
+	// RV-LLM-18: a failed takeover skipped the deadline and the sleep, so lock
+	// spun at full CPU for as long as the takeover kept failing.
+	tests := []struct {
+		name    string
+		arrange func(t *testing.T, path string)
+		wantErr error
+		notErr  error
+	}{
+		{"a directory at the lock path is refused", func(t *testing.T, path string) {
+			require.NoError(t, os.MkdirAll(filepath.Join(path, "x"), 0o700))
+		}, nil, ErrBusy},
+		{"a takeover guard held by a live process", func(t *testing.T, path string) {
+			require.NoError(t, os.WriteFile(path+".takeover", []byte("other"), 0o600))
+			require.NoError(t, os.WriteFile(path, []byte("crashed"), 0o600))
+		}, ErrBusy, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			path := filepath.Join(t.TempDir(), ".telemetry.lock")
+			tt.arrange(t, path)
+			old := time.Now().Add(-time.Hour)
+			require.NoError(t, os.Chtimes(path, old, old))
+			done := make(chan error, 1)
+			// Act
+			go func() {
+				release, err := lock(path, 25*time.Millisecond, time.Minute)
+				if release != nil {
+					release()
+				}
+				done <- err
+			}()
+			// Assert
+			select {
+			case err := <-done:
+				require.Error(t, err)
+				if tt.wantErr != nil {
+					require.ErrorIs(t, err, tt.wantErr)
+				}
+				if tt.notErr != nil {
+					require.NotErrorIs(t, err, tt.notErr, "a lock path that is not a file is an error, not a busy lock")
+				}
+			case <-time.After(3 * time.Second):
+				t.Fatal("lock(wait=25ms) was still looping after 3s")
+			}
+		})
+	}
+}
+
 func TestLock_ConcurrentTakeoverOfAStaleLockIsExclusive(t *testing.T) {
 	for round := 0; round < 20; round++ {
 		path := filepath.Join(t.TempDir(), "l")
