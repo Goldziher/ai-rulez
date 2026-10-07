@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
-	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"io"
 	"io/fs"
 	"os"
@@ -17,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"gopkg.in/yaml.v3"
 )
 
@@ -87,14 +87,14 @@ func (*ClaudePluginEval) Name() string { return RunnerClaudePluginEval }
 func (r *ClaudePluginEval) Fingerprint() string {
 	bin := r.Bin
 	if bin == "" {
-		bin = "claude"
+		bin = claudeBinName
 	}
 	return fmt.Sprintf("bin=%s binfile=%s runs=%d judge=%s args=%q ignore-rubric=%t", bin, executableStamp(bin), r.Runs, r.JudgeModel, r.ExtraArgs, r.IgnoreRubricVerdict)
 }
 
 // Run implements Runner.
 func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, error) {
-	if req.Harness != "" && req.Harness != "claude" {
+	if req.Harness != "" && req.Harness != claudeBinName {
 		return nil, fmt.Errorf("the %s runner only drives the claude harness, not %q", RunnerClaudePluginEval, req.Harness)
 	}
 	dir := r.KeepDir
@@ -108,7 +108,7 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 	}
 	// A kept directory may hold the previous run's result and cases; a failed run
 	// must never be scored from them.
-	for _, stale := range []string{"aggregate.json", "results", "evals", "skills"} {
+	for _, stale := range []string{"aggregate.json", dirResults, "evals", "skills"} {
 		if err := os.RemoveAll(filepath.Join(dir, stale)); err != nil {
 			return nil, fmt.Errorf("clear stale %s: %w", stale, err)
 		}
@@ -122,7 +122,7 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 
 	bin := r.Bin
 	if bin == "" {
-		bin = "claude"
+		bin = claudeBinName
 	}
 	run := r.Exec
 	if run == nil {
@@ -163,7 +163,7 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 // args builds the `claude` command line for a throwaway plugin.
 func (r *ClaudePluginEval) args(dir, resultFile string, req *Request) []string {
 	args := []string{"plugin", "eval", dir, "--json", resultFile, "--no-publish", "--threshold", "0",
-		"--output-dir", filepath.Join(dir, "results")}
+		"--output-dir", filepath.Join(dir, dirResults)}
 	if req.Ablation {
 		args = append(args, "--ablation", "with-without")
 	} else {
@@ -270,7 +270,7 @@ func BuildClaudePlugin(dir string, req *Request) (*ClaudeTranslation, error) {
 		tr.Inverted[c.ID] = !c.Expects()
 		front := map[string]any{
 			"max_turns":     10,
-			"allowed_tools": []string{"Skill", "Read", "Glob", "Grep"},
+			"allowed_tools": []string{claudeSkillTool, "Read", "Glob", "Grep"},
 		}
 		if c.Model != "" {
 			front["model"] = c.Model
@@ -281,7 +281,7 @@ func BuildClaudePlugin(dir string, req *Request) (*ClaudeTranslation, error) {
 		if err := writeMarkdown(filepath.Join(caseDir, "prompt.md"), front, c.Prompt); err != nil {
 			return nil, err
 		}
-		trigger := map[string]any{keyType: "tool_used", "tool": "Skill", "input_match": triggerMatch(req.Skill.ID)}
+		trigger := map[string]any{keyType: "tool_used", "tool": claudeSkillTool, "input_match": triggerMatch(req.Skill.ID)}
 		if !c.Expects() {
 			trigger["min"], trigger["max"], trigger["arm"] = 0, 0, "both"
 		}

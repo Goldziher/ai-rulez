@@ -117,9 +117,9 @@ func Wilson(k, n int) Interval {
 	nf := float64(n)
 	z2 := wilsonZ * wilsonZ
 	denom := 1 + z2/nf
-	centre := (p + z2/(2*nf)) / denom
+	center := (p + z2/(2*nf)) / denom
 	margin := wilsonZ * math.Sqrt(p*(1-p)/nf+z2/(4*nf*nf)) / denom
-	return Interval{Low: round(math.Max(0, centre-margin)), High: round(math.Min(1, centre+margin))}
+	return Interval{Low: round(math.Max(0, center-margin)), High: round(math.Min(1, center+margin))}
 }
 
 // newRate builds a Rate of k in n; nil when n is zero.
@@ -287,7 +287,7 @@ func setDigest(ids []string, digests map[string]string) string {
 	sort.Strings(sorted)
 	h := sha256.New()
 	for _, id := range sorted {
-		fmt.Fprintf(h, "%s\x00%s\n", id, digests[id])
+		_, _ = fmt.Fprintf(h, "%s\x00%s\n", id, digests[id])
 	}
 	return "sha256:" + hex.EncodeToString(h.Sum(nil))
 }
@@ -367,14 +367,14 @@ func activationStatus(s *ActivationSkill) string {
 
 func rateText(r *Rate) string {
 	if r == nil {
-		return "n/a"
+		return textNA
 	}
 	return fmt.Sprintf("%.0f%% (%.0f-%.0f%%)", r.Value*100, r.Interval.Low*100, r.Interval.High*100)
 }
 
 func mrrText(v *float64) string {
 	if v == nil {
-		return "n/a"
+		return textNA
 	}
 	return fmt.Sprintf("%.2f", *v)
 }
@@ -462,3 +462,12 @@ func confusionLines(m map[string]map[string]int) []string {
 	}
 	return lines
 }
+
+// Shared string constants.
+const (
+	textNA                 = "n/a"
+	frontmatterDescription = "description"
+	dirResults             = "results"
+	claudeBinName          = "claude"
+	claudeSkillTool        = "Skill"
+)
