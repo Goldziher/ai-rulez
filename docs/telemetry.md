@@ -14,10 +14,10 @@ ai-rulez telemetry disable           # withdraw consent
 ai-rulez telemetry doctor            # resolved config, consent, buffer, last flush
 ai-rulez telemetry flush             # ship the outbox now
 ai-rulez telemetry preview           # print exactly what an export would send; sends nothing
-ai-rulez usage export --to file out.ndjson   # the same payload as a local OTLP JSON file, no network
-ai-rulez usage export --to otlp      # push the usage log past the export cursor to the consented collector
-ai-rulez usage prune --keep-days 90  # trim the usage log behind the export cursor
-ai-rulez report usage .ai-rulez/local/usage.jsonl   # rules per session, never-loaded rules, load reasons
+ai-rulez telemetry export --to file out.ndjson   # the same payload as a local OTLP JSON file, no network
+ai-rulez telemetry export --to otlp      # push the usage log past the export cursor to the consented collector
+ai-rulez telemetry prune --keep-days 90  # trim the usage log behind the export cursor
+ai-rulez telemetry report .ai-rulez/local/usage.jsonl   # rules per session, never-loaded rules, load reasons
 ```
 
 ## What is collected
@@ -44,7 +44,7 @@ One event per load. The model is closed: these are all the fields, versioned by 
 | `pass_rate`, `trigger_precision`, `trigger_recall`, `ablation_delta` | scores of an `eval_result` event only (0..1; the ablation delta -1..1); never on a load | `0.62` |
 
 Besides `item_event`, an export can carry **`eval_result`** events: one per verified eval result, built from
-`.ai-rulez/eval-results.json` at export time (`usage export --with-evals`, `telemetry preview --with-evals`), never
+`.ai-rulez/eval-results.json` at export time (`telemetry export --with-evals`, `telemetry preview --with-evals`), never
 recorded in the usage log. It has the skill id, the canonical digest the run covered (`digest` +
 `digest_scheme = ai-rulez/skill/v1`, absent for a result written before `lock_digest` existed), the harness the eval
 ran on, the run date as the time, and the four scores. It carries no case, prompt or output and none of the load
@@ -52,7 +52,7 @@ fields (path, session, role, outcome). Its `event_id` is derived from what it sa
 twice. Unsigned or foreign-signed records and activation-only records are not results and are never exported.
 
 Skill events are written to the usage log in the existing v3 line format, so `usage` readers are unaffected. The
-other kinds are new `item_event` lines in the same file; `report usage` ignores them in its skill sections and never
+other kinds are new `item_event` lines in the same file; `telemetry report` ignores them in its skill sections and never
 counts them as unreadable.
 
 **Never collected**: prompts, model output, tool inputs or results, file contents, command arguments, transcripts,
@@ -87,7 +87,7 @@ Codex and Cursor, checked against their published hook documentation on 2026-10-
 | Cursor | `preToolUse` (matcher `Shell`, `Read`, ...) | `tool_name`, `tool_input` | documented 2026-10-06 |
 | Codex, Cursor | rule, agent or context **load** event | none | not documented: Codex states no event reports loaded skills or instructions, and Cursor lists none; nothing is recorded |
 
-`telemetry hook --harness codex|cursor` therefore prints the skill-read template of `usage hook` plus the subagent events
+`telemetry hook --harness codex|cursor` therefore prints the skill-read template plus the subagent events
 above, each running `telemetry record --harness <name>`. Cursor's `subagentStop` has no `subagent_id`, so the duration
 comes from the payload's `duration_ms`; Codex has no duration, so it is computed from the paired `SubagentStart` as
 for Claude Code.
@@ -229,7 +229,7 @@ timeout = 5
 ```
 
 `ai-rulez telemetry hook --format toml` prints these three groups plus the two skill groups (`PreToolUse` on `Skill`
-and `UserPromptExpansion`, running `usage record`). `telemetry record` prints nothing on stdout, exits 0 on every
+and `UserPromptExpansion`, running `telemetry record`). `telemetry record` prints nothing on stdout, exits 0 on every
 error, ignores events it does not handle, and does nothing when telemetry is off (not even creating the salt file).
 The role comes from `--role` or `$AI_RULEZ_ROLE`.
 
@@ -269,12 +269,12 @@ delivered, and moves the cursor. That covers events that never reached the outbo
 they were recorded while the outbox was off) without sending anything twice. Rules:
 
 - A cursor that was never set is placed at the **end** of the log by the first catch-up and nothing is queued: history is
-  exported only on request (`telemetry enable --backfill`, `usage export --to otlp --all`).
+  exported only on request (`telemetry enable --backfill`, `telemetry export --to otlp --all`).
 - One catch-up queues at most 2,000 events; the rest is picked up by the next one.
 - Sampling (`sample`) applies to catch-up events as it does when recording; `sample = 0` exports nothing.
 - Under a consent record, a cursor placed before the consent was granted (another project, which kept recording while
   consent was off) skips the events recorded before the grant; `--all` still sends them on request.
-- `usage export --to otlp` is the same pass run by hand, with `--all`, `--dry-run` and `--with-evals`; it refuses without
+- `telemetry export --to otlp` is the same pass run by hand, with `--all`, `--dry-run` and `--with-evals`; it refuses without
   consent and exits 1 when delivery fails so CI notices.
 
 **Opportunistic flush.** A hook never waits on the network: after recording it may start one detached
@@ -286,7 +286,7 @@ totals.
 
 ### Pruning the usage log
 
-`usage prune --keep-days N` deletes usage-log lines older than N days, but only those **behind the cursor**: an event that
+`telemetry prune --keep-days N` deletes usage-log lines older than N days, but only those **behind the cursor**: an event that
 is still waiting to be sent is kept however old, so pruning never costs an export. With no cursor (export was never on)
 age alone decides. A line with no readable `ts` is kept. The file is replaced atomically (mode 0600) and the cursor is
 moved to match, so the next flush neither re-reads the log from the start nor skips an event. If the cursor describes
@@ -390,7 +390,7 @@ Nothing was sent.
   metric timestamps: the preview uses the newest previewed event's time so the output is reproducible, while a flush
   stamps its own clock. `--limit` also trims the batch, so a flush of more events sends larger requests.
 - `--limit N` previews the first N events (default 5, `0` for all). Sampling applies to a log as it would on recording.
-  `--with-evals` adds the `eval_result` events and eval gauges `usage export --with-evals` would send.
+  `--with-evals` adds the `eval_result` events and eval gauges `telemetry export --with-evals` would send.
 - The destination shows the scheme, host and path of the endpoint only: user info and query are dropped, headers
   (`headers_env`) are never shown; `telemetry doctor` prints a `headers_env` entry only when it is shaped like a variable name, and shows `(invalid, hidden)` for anything else. Without an endpoint it says `<no endpoint configured>`.
 - `fields withheld` lists the allowlist attributes whose opt-in (`include_paths`, `include_session`) is closed.
@@ -428,10 +428,10 @@ sum by (kind, id) (increase(ai_rulez_item_loads_total[30d])) == 0
 ```
 
 Metrics cannot see an item that was never loaded, because no series exists for it. Use
-`ai-rulez report usage` for "never loaded": it joins the log with the generated manifest. Rules loaded per session
+`ai-rulez telemetry report` for "never loaded": it joins the log with the generated manifest. Rules loaded per session
 needs the session, which is pseudonymous and off by default: with `include_session = true` the Loki/LogQL form is
 roughly `sum by (ai_rulez_session) (count_over_time({service_name="ai-rulez"} | ai_rulez_item_kind="rule" [1d]))`,
-but `report usage` computes the median and distribution exactly from the local log.
+but `telemetry report` computes the median and distribution exactly from the local log.
 
 ## Verifying against a real collector
 

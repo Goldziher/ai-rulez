@@ -95,8 +95,6 @@ func init() {
 	RootCmd.AddCommand(SBOMCmd)
 	RootCmd.AddCommand(TokensCmd)
 	RootCmd.AddCommand(CostCmd)
-	RootCmd.AddCommand(UsageCmd)
-	RootCmd.AddCommand(ReportCmd)
 	RootCmd.AddCommand(EvalCmd)
 	RootCmd.AddCommand(ImproveCmd)
 	RootCmd.AddCommand(LocalCmd)

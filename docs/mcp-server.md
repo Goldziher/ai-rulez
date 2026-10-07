@@ -524,7 +524,7 @@ to the log on first use), harness (the MCP client name), the role the server run
 hash from the skills index, the served digest, and `served: true` (log format `v: 3`, the same as hook-recorded
 loads).
 A supporting file loaded with `path` is logged with `resource: true` and is not counted again by
-`ai-rulez report usage`. Nothing is written until you opt in: pass `--usage-log <file>` or `--usage-sink <command>`,
+`ai-rulez telemetry report`. Nothing is written until you opt in: pass `--usage-log <file>` or `--usage-sink <command>`,
 or enable `[usage] skills_index = true`, which logs to `<config dir>/local/usage.jsonl`.
 
 A `--usage-sink` receives exactly the line the log gets, salted session included. Without a `--usage-log` the salt
