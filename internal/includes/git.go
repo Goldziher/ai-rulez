@@ -320,7 +320,7 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 			return nil, oops.
 				With("repo", RedactURL(s.repoURL)).
 				With("cache_dir", s.cacheDir).
-				Wrapf(ErrNotCached, "--no-fetch specified but no cached content found for include '%s'", s.name)
+				Wrapf(ErrNotCached, "%s: no cached content found for include '%s'", offlineReason(), s.name)
 		}
 		s.logger().Debug("Skipping fetch (--no-fetch), using cached content", "name", s.name)
 		return s.scanCachedContent(ctx)
