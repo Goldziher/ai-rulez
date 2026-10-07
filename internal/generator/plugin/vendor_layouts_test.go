@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/agentplugins"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,7 +89,7 @@ func TestCodexManifestLayouts(t *testing.T) {
 
 			if tt.wantRoot {
 				doc := parseJSON(t, out["plugin.json"])
-				assert.Equal(t, agentPluginsSchema, doc["$schema"])
+				assert.Equal(t, agentplugins.PluginSchemaID(agentplugins.DefaultSpec), doc["$schema"])
 				assert.NotContains(t, doc, "skills", "skills/ is fixed in the portable format")
 				assert.NotContains(t, doc, "mcpServers", "MCP lives in mcp.json")
 				iface := doc["extensions"].(map[string]any)["com.openai"].(map[string]any)["interface"].(map[string]any)
@@ -176,7 +177,7 @@ func TestCopilotRuntime(t *testing.T) {
 	out := render(t, m)
 
 	doc := parseJSON(t, out["plugin.json"])
-	assert.Equal(t, agentPluginsSchema, doc["$schema"])
+	assert.Equal(t, agentplugins.PluginSchemaID(agentplugins.DefaultSpec), doc["$schema"])
 	assert.Equal(t, "acme.tools", doc["name"])
 	assert.NotContains(t, doc, "extensions", "the Codex overlay belongs to the codex runtime")
 

@@ -1,51 +1,19 @@
 package plugin
 
 import (
+	"encoding/json"
+	"maps"
+	"path"
 	"path/filepath"
+	"slices"
+	"strings"
+	"testing/fstest"
 
+	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/agentplugins"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
-
-// Agent Plugins 1.0.0 canonical schema identifiers. The standard shares one
-// version between the plugin manifest and the MCP configuration.
-const (
-	agentPluginsVersion   = "1.0.0"
-	agentPluginsSchema    = "https://agent-plugins.org/schemas/" + agentPluginsVersion + "/plugin.schema.json"
-	agentPluginsMCPSchema = "https://agent-plugins.org/schemas/" + agentPluginsVersion + "/mcp.schema.json"
-)
-
-// agentPluginsManifest is the closed schema of the root plugin.json. Only the
-// fields permitted by the standard are emitted.
-type agentPluginsManifest struct {
-	Schema      string         `json:"$schema"`
-	Name        string         `json:"name"`
-	Version     string         `json:"version,omitempty"`
-	Description string         `json:"description,omitempty"`
-	Author      *config.Author `json:"author,omitempty"`
-	Homepage    string         `json:"homepage,omitempty"`
-	Repository  string         `json:"repository,omitempty"`
-	License     string         `json:"license,omitempty"`
-	Keywords    []string       `json:"keywords,omitempty"`
-	// Extensions carries client-specific manifest data keyed by reverse-domain
-	// namespace. ai-rulez writes only com.openai (the Codex interface block).
-	Extensions map[string]any `json:"extensions,omitempty"`
-}
-
-// agentPluginsMCPDoc is the root mcp.json shape: exactly $schema + mcpServers.
-type agentPluginsMCPDoc struct {
-	Schema     string                           `json:"$schema"`
-	MCPServers map[string]agentPluginsMCPServer `json:"mcpServers"`
-}
-
-// agentPluginsMCPServer is one server entry. The standard's server schema is a
-// closed union: stdio carries command/args/env/cwd; remote carries url/headers.
-type agentPluginsMCPServer struct {
-	Type    string            `json:"type"`
-	Command string            `json:"command,omitempty"`
-	Args    []string          `json:"args,omitempty"`
-	Env     map[string]string `json:"env,omitempty"`
-	URL     string            `json:"url,omitempty"`
-}
 
 // renderAgentPlugins emits the portable Agent Plugins package: a root
 // plugin.json, the fixed skills/ directory, and (when configured) mcp.json.
@@ -54,88 +22,182 @@ func renderAgentPlugins(m *Manifest, baseDir string) ([]config.OutputFile, error
 	return agentPluginsCore(m, baseDir)
 }
 
-// buildAgentPluginsManifest is the one root plugin.json every runtime built on
-// the standard (agent-plugins, copilot, codex in root layout) writes, so the
-// runtimes can share the file. The Codex interface block is added under
-// extensions.com.openai exactly when the Codex root layout is active.
-func buildAgentPluginsManifest(m *Manifest) agentPluginsManifest {
-	doc := agentPluginsManifest{
-		Schema:      agentPluginsSchema,
-		Name:        m.Name,
-		Version:     m.Version,
-		Description: m.Description,
-		Author:      m.Author,
-		Homepage:    m.Homepage,
-		Repository:  m.Repository,
-		License:     m.License,
-		Keywords:    m.Keywords,
+// agentPluginsExtensions is the client extension data a bundle carries. Only the
+// Codex interface block is written, and only when the Codex root layout is active.
+func agentPluginsExtensions(m *Manifest) ([]agentplugins.Extension, error) {
+	if !codexRootLayout(m) {
+		return nil, nil
 	}
-	if codexRootLayout(m) {
-		if iface := buildInterface(m.Interface); iface != nil {
-			doc.Extensions = map[string]any{"com.openai": map[string]any{"interface": iface}}
-		}
+	iface := buildInterface(m.Interface)
+	if iface == nil {
+		return nil, nil
 	}
-	return doc
+	// Round-trip through JSON so the data is a plain map: its keys are then
+	// written sorted, the way an import of the package reads them back.
+	raw, err := json.Marshal(map[string]any{"interface": iface})
+	if err != nil {
+		return nil, oops.Wrapf(err, "encode the codex interface")
+	}
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return nil, oops.Wrapf(err, "decode the codex interface")
+	}
+	return []agentplugins.Extension{{Namespace: agentplugins.NamespaceCodex, Manifest: data}}, nil
 }
 
-// agentPluginsCore writes the root plugin.json, skills/ and mcp.json.
-func agentPluginsCore(m *Manifest, baseDir string) ([]config.OutputFile, error) {
-	manifest, err := jsonOutput(filepath.Join(baseDir, "plugin.json"), buildAgentPluginsManifest(m))
-	if err != nil {
-		return nil, err
-	}
-	outputs := []config.OutputFile{manifest}
-
-	content, err := bundleContent(m, baseDir, contentLayout{Skills: true})
-	if err != nil {
-		return nil, err
-	}
-	outputs = append(outputs, content...)
-
-	if servers := agentPluginsMCPServers(m); servers != nil {
-		mcpFile, err := jsonOutput(filepath.Join(baseDir, "mcp.json"), agentPluginsMCPDoc{
-			Schema:     agentPluginsMCPSchema,
-			MCPServers: servers,
-		})
-		if err != nil {
-			return nil, err
-		}
-		outputs = append(outputs, mcpFile)
-	}
-
-	return outputs, nil
-}
-
-// agentPluginsMCPServers maps the plugin's MCP servers onto the standard's
-// closed variant set. stdio commands are rewritten to plugin-relative paths
-// (the standard forbids placeholders in `command`); remote transports map
-// http → streamable-http and keep sse. Returns nil when there are no servers.
-func agentPluginsMCPServers(m *Manifest) map[string]agentPluginsMCPServer {
-	if len(m.MCP) == 0 {
-		return nil
-	}
-	servers := make(map[string]agentPluginsMCPServer, len(m.MCP))
+// agentPluginsMCPServers maps the plugin's MCP servers onto the library model.
+// The library rewrites a ${PLUGIN_ROOT}-rooted command to the plugin-relative
+// form the standard requires and refuses any other placeholder.
+func agentPluginsMCPServers(m *Manifest) []agentplugins.MCPServer {
+	servers := make([]agentplugins.MCPServer, 0, len(m.MCP))
 	for _, s := range m.MCP {
-		switch s.Transport {
-		case config.TransportHTTP:
-			servers[s.Name] = agentPluginsMCPServer{Type: "streamable-http", URL: s.URL}
-		case config.TransportSSE:
-			servers[s.Name] = agentPluginsMCPServer{Type: "sse", URL: s.URL}
-		default:
-			servers[s.Name] = agentPluginsMCPServer{
-				Type:    "stdio",
-				Command: agentPluginsCommand(s.Command),
-				Args:    s.Args,
-				Env:     s.Env,
-			}
+		server := agentplugins.MCPServer{
+			Name: s.Name, Command: s.Command, Args: s.Args, Env: s.Env,
+			Transport: s.Transport, URL: s.URL,
 		}
+		if s.Disabled {
+			off := false
+			server.Enabled = &off
+		}
+		servers = append(servers, server)
 	}
 	return servers
 }
 
-// agentPluginsCommand rewrites a ${PLUGIN_ROOT}-rooted command to the
-// plugin-relative "./..." form the standard requires for bundled executables.
-// A bare executable name is passed through unchanged.
-func agentPluginsCommand(command string) string {
-	return rewriteRoot(command, config.PluginRuntimeAgentPlugins)
+// agentPluginsModel assembles the library Plugin from the manifest and the
+// verbatim content outputs (skills, and eval cases when bundled).
+func agentPluginsModel(m *Manifest, content []config.OutputFile, baseDir string) (*agentplugins.Plugin, error) {
+	exts, err := agentPluginsExtensions(m)
+	if err != nil {
+		return nil, err
+	}
+	p := &agentplugins.Plugin{
+		Metadata: agentplugins.Metadata{
+			Name: m.Name, Version: m.Version, Description: m.Description,
+			Homepage: m.Homepage, Repository: m.Repository, License: m.License, Keywords: m.Keywords,
+		},
+		MCPServers: agentPluginsMCPServers(m),
+		Extensions: exts,
+		Files:      map[string][]byte{},
+	}
+	if a := m.Author; a != nil {
+		p.Metadata.Author = &agentplugins.Author{Name: a.Name, Email: a.Email, URL: a.URL}
+	}
+	skills := map[string]*agentplugins.Skill{}
+	for _, o := range content {
+		rel, err := filepath.Rel(baseDir, o.Path)
+		if err != nil {
+			return nil, oops.With("path", o.Path).Wrapf(err, "resolve bundle path")
+		}
+		rel = filepath.ToSlash(rel)
+		data := outputBytes(o)
+		name, inSkill, ok := strings.Cut(strings.TrimPrefix(rel, "skills/"), "/")
+		if !strings.HasPrefix(rel, "skills/") || !ok {
+			p.Files[rel] = data
+			continue
+		}
+		sk := skills[name]
+		if sk == nil {
+			sk = &agentplugins.Skill{Name: name, Files: map[string][]byte{}}
+			skills[name] = sk
+		}
+		if inSkill == "SKILL.md" {
+			sk.SkillMD = data
+			continue
+		}
+		sk.Files[inSkill] = data
+	}
+	for _, name := range slices.Sorted(maps.Keys(skills)) {
+		if skills[name].SkillMD != nil {
+			p.Skills = append(p.Skills, *skills[name])
+		}
+	}
+	return p, nil
+}
+
+// agentPluginsBuild builds the package of m through the library, which is the one
+// implementation of the standard: it validates plugin.json and mcp.json against
+// the vendored official schemas and drops the skills and servers a conformant
+// client would skip, reporting each as a finding. The content outputs carry the
+// file modes of the sources; the returned map is keyed by slash path.
+func agentPluginsBuild(m *Manifest, baseDir string) (files map[string][]byte, content []config.OutputFile, findings []agentplugins.Finding, err error) {
+	content, err = bundleContent(m, baseDir, contentLayout{Skills: true})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	model, err := agentPluginsModel(m, content, baseDir)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	files, findings, err = agentplugins.Build(model, agentplugins.Options{Spec: m.Spec})
+	if err != nil {
+		return nil, nil, nil, oops.With("plugin", m.Name).Wrapf(err, "build the Agent Plugins package")
+	}
+	return files, content, findings, nil
+}
+
+// AgentPluginFindings builds the Agent Plugins package of m in memory and
+// returns what the library reports, then validates the built package the way a
+// conformant client loads it. baseDir only anchors the content paths.
+func AgentPluginFindings(m *Manifest, baseDir string) ([]agentplugins.Finding, error) {
+	files, _, findings, err := agentPluginsBuild(m, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	mem := fstest.MapFS{}
+	for rel, data := range files {
+		mem[rel] = &fstest.MapFile{Data: data}
+	}
+	findings = append(findings, agentplugins.Validate(mem).Findings...)
+	return findings, nil
+}
+
+// AgentPluginEntry names a built Agent Plugins package: what a registry entry
+// (an ARD catalog) needs to point at it.
+type AgentPluginEntry struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	// Path is the package directory relative to the project root, slash separated.
+	Path string `json:"path"`
+}
+
+// AgentPluginEntryFor describes the package a manifest builds at baseDir. rootDir
+// is the project root the path is relative to.
+func AgentPluginEntryFor(m *Manifest, baseDir, rootDir string) AgentPluginEntry {
+	rel, err := filepath.Rel(rootDir, baseDir)
+	if err != nil {
+		rel = baseDir
+	}
+	return AgentPluginEntry{Name: m.Name, Version: m.Version, Path: path.Clean(filepath.ToSlash(rel))}
+}
+
+// agentPluginsCore writes the root plugin.json, skills/ and mcp.json from the
+// library's output. Findings are logged: the dropped content is also reported by
+// `validate --strict` and `publish`, which fail on it.
+func agentPluginsCore(m *Manifest, baseDir string) ([]config.OutputFile, error) {
+	files, content, findings, err := agentPluginsBuild(m, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range findings {
+		if f.Severity != agentplugins.SeverityInfo {
+			m.log().Warn("Agent Plugins: "+f.Message, "plugin", m.Name, "code", f.Code, "path", f.Path, "severity", string(f.Severity))
+		}
+	}
+	byPath := make(map[string]config.OutputFile, len(content))
+	for _, o := range content {
+		if rel, err := filepath.Rel(baseDir, o.Path); err == nil {
+			byPath[filepath.ToSlash(rel)] = o
+		}
+	}
+	outputs := make([]config.OutputFile, 0, len(files))
+	for _, rel := range slices.Sorted(maps.Keys(files)) {
+		// A passthrough file keeps its mode (a skill script stays executable).
+		if src, ok := byPath[rel]; ok && string(outputBytes(src)) == string(files[rel]) {
+			outputs = append(outputs, src)
+			continue
+		}
+		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, filepath.FromSlash(rel)), RawContent: files[rel]})
+	}
+	return outputs, nil
 }

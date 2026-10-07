@@ -295,6 +295,7 @@ func BuildDomainManifest(cfg *config.Config, p *PlannedPlugin) *Manifest {
 		m.Homepage = root.Homepage
 		m.Repository = root.Repository
 		m.License = root.License
+		m.Spec = root.Spec
 		m.Codex = root.Codex
 		m.Cursor = root.Cursor
 	}

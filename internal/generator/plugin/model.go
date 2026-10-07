@@ -38,6 +38,10 @@ type Manifest struct {
 	Keywords    []string
 	Tags        []string
 
+	// Spec is the Agent Plugins version of the standard-based bundles; empty
+	// means agentplugins.DefaultSpec.
+	Spec string
+
 	// Runtimes are the target runtimes to emit, already resolved (never empty).
 	Runtimes []string
 
@@ -120,6 +124,7 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 		Logo:        p.Logo,
 		Keywords:    p.Keywords,
 		Tags:        p.Tags,
+		Spec:        p.Spec,
 		Runtimes:    p.ResolvedRuntimes(),
 		MCP:         resolveMCP(p, cfg, p.ResolvedRuntimes()),
 		Hooks:       p.Hooks,
