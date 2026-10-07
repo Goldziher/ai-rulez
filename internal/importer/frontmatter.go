@@ -200,112 +200,132 @@ var validActivations = map[string]bool{litAlways: true, litGlob: true, autoFrom:
 // Cursor dialect, where a file without frontmatter is manual. Anything else is
 // dropped with a finding; nothing is kept silently.
 func translateRule(source string, fm map[string]any, cursor bool) (ruleFM, []Finding) {
-	var out ruleFM
-	var findings []Finding
+	t := &ruleTranslator{source: source}
 	keys := make([]string, 0, len(fm))
 	for k := range fm {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-
-	activation := ""
-	approximate := func(field, reason string) {
-		findings = append(findings, newFinding(StatusApproximated, source, field, rulesDir, reason))
-	}
 	for _, k := range keys {
-		v := fm[k]
-		switch k {
-		case litDescription:
-			if s, ok := v.(string); ok {
-				out.Description = strings.TrimSpace(s)
-			}
-		case litGlobs, "paths", "fileMatchPattern":
-			out.Globs = append(out.Globs, globsFrom(v)...)
-		case "applyTo":
-			g := globsFrom(v)
-			if len(g) == 1 && (g[0] == "**" || g[0] == "**/*") {
-				activation = litAlways
-				continue
-			}
-			out.Globs = append(out.Globs, g...)
-		case "alwaysApply":
-			if b, ok := v.(bool); ok && b {
-				activation = litAlways
-			}
-		case "trigger":
-			switch fmt.Sprint(v) {
-			case "always_on":
-				activation = litAlways
-			case litGlob:
-				activation = litGlob
-			case "model_decision":
-				activation = autoFrom
-			case ActionManual:
-				activation = ActionManual
-			default:
-				findings = append(findings, newFinding(StatusDropped, source, k, "", "unknown trigger value"))
-			}
-		case "inclusion":
-			switch fmt.Sprint(v) {
-			case litAlways:
-				activation = litAlways
-			case "fileMatch":
-				activation = litGlob
-			case autoFrom:
-				activation = autoFrom
-			case ActionManual:
-				activation = ActionManual
-			default:
-				findings = append(findings, newFinding(StatusDropped, source, k, "", "unknown inclusion value"))
-			}
-		case "activation":
-			if s := fmt.Sprint(v); validActivations[s] {
-				activation = s
-			} else {
-				findings = append(findings, newFinding(StatusDropped, source, k, "", "unknown activation value"))
-			}
-		case "priority":
-			if s := fmt.Sprint(v); config.Priority(s).IsValid() {
-				out.Priority = s
-			} else {
-				findings = append(findings, newFinding(StatusDropped, source, k, "", "unknown priority value"))
-			}
-		case litName:
-			// The rule is named after its file.
-		default:
-			findings = append(findings, newFinding(StatusDropped, source, k, "",
-				"frontmatter key has no ai-rulez equivalent"))
-		}
+		t.translateKey(k, fm[k])
 	}
-	out.Globs = dedupeSorted(out.Globs)
+	t.out.Globs = dedupeSorted(t.out.Globs)
+	t.settleActivation(cursor)
+	return t.out, t.findings
+}
 
+// ruleTranslator accumulates the translation of one rule's frontmatter.
+type ruleTranslator struct {
+	source     string
+	out        ruleFM
+	findings   []Finding
+	activation string
+}
+
+var (
+	triggerActivations   = map[string]string{"always_on": litAlways, litGlob: litGlob, "model_decision": autoFrom, ActionManual: ActionManual}
+	inclusionActivations = map[string]string{litAlways: litAlways, "fileMatch": litGlob, autoFrom: autoFrom, ActionManual: ActionManual}
+)
+
+func (t *ruleTranslator) approximate(field, reason string) {
+	t.findings = append(t.findings, newFinding(StatusApproximated, t.source, field, rulesDir, reason))
+}
+
+func (t *ruleTranslator) drop(key, reason string) {
+	t.findings = append(t.findings, newFinding(StatusDropped, t.source, key, "", reason))
+}
+
+func (t *ruleTranslator) translateKey(k string, v any) {
+	switch k {
+	case litDescription:
+		if s, ok := v.(string); ok {
+			t.out.Description = strings.TrimSpace(s)
+		}
+	case litGlobs, "paths", "fileMatchPattern":
+		t.out.Globs = append(t.out.Globs, globsFrom(v)...)
+	case "applyTo":
+		t.applyTo(v)
+	case "alwaysApply":
+		if b, ok := v.(bool); ok && b {
+			t.activation = litAlways
+		}
+	case "trigger":
+		t.mapActivation(triggerActivations, k, v, "trigger")
+	case "inclusion":
+		t.mapActivation(inclusionActivations, k, v, "inclusion")
+	case "activation":
+		t.setActivation(k, v)
+	case "priority":
+		t.setPriority(k, v)
+	case litName:
+		// The rule is named after its file.
+	default:
+		t.drop(k, "frontmatter key has no ai-rulez equivalent")
+	}
+}
+
+// applyTo reads a Copilot applyTo: a catch-all glob means always on.
+func (t *ruleTranslator) applyTo(v any) {
+	g := globsFrom(v)
+	if len(g) == 1 && (g[0] == "**" || g[0] == "**/*") {
+		t.activation = litAlways
+		return
+	}
+	t.out.Globs = append(t.out.Globs, g...)
+}
+
+func (t *ruleTranslator) setActivation(key string, v any) {
+	if s := fmt.Sprint(v); validActivations[s] {
+		t.activation = s
+	} else {
+		t.drop(key, "unknown activation value")
+	}
+}
+
+func (t *ruleTranslator) setPriority(key string, v any) {
+	if s := fmt.Sprint(v); config.Priority(s).IsValid() {
+		t.out.Priority = s
+	} else {
+		t.drop(key, "unknown priority value")
+	}
+}
+
+// mapActivation sets the activation from a tool-specific value through table.
+func (t *ruleTranslator) mapActivation(table map[string]string, key string, v any, what string) {
+	if a, ok := table[fmt.Sprint(v)]; ok {
+		t.activation = a
+		return
+	}
+	t.drop(key, "unknown "+what+" value")
+}
+
+// settleActivation picks the activation the keys left open and normalizes it.
+func (t *ruleTranslator) settleActivation(cursor bool) {
 	switch {
-	case activation != "":
-	case len(out.Globs) > 0:
-		activation = litGlob
-	case cursor && out.Description != "":
-		activation = autoFrom
-		approximate(litDescription, "description-only auto-attach is approximated as activation: auto")
+	case t.activation != "":
+	case len(t.out.Globs) > 0:
+		t.activation = litGlob
+	case cursor && t.out.Description != "":
+		t.activation = autoFrom
+		t.approximate(litDescription, "description-only auto-attach is approximated as activation: auto")
 	case cursor:
-		activation = ActionManual
-		approximate("frontmatter", "a Cursor rule with no alwaysApply, globs or description is applied manually")
+		t.activation = ActionManual
+		t.approximate("frontmatter", "a Cursor rule with no alwaysApply, globs or description is applied manually")
 	}
-	if activation == litGlob && len(out.Globs) == 0 {
-		activation = ""
-		approximate("activation", "glob activation without globs; the rule is always applied")
+	if t.activation == litGlob && len(t.out.Globs) == 0 {
+		t.activation = ""
+		t.approximate("activation", "glob activation without globs; the rule is always applied")
 	}
-	if activation == litAlways {
-		if len(out.Globs) > 0 {
+	if t.activation == litAlways {
+		if len(t.out.Globs) > 0 {
 			// An always-on rule applies everywhere; keeping its globs would scope it.
-			findings = append(findings, newFinding(StatusApproximated, source, litGlobs, rulesDir,
-				"the rule is always on, so its globs are dropped (ai-rulez would otherwise scope it to them)"))
-			out.Globs = nil
+			t.approximate(litGlobs, "the rule is always on, so its globs are dropped (ai-rulez would otherwise scope it to them)")
+			t.out.Globs = nil
 		}
 		// always is ai-rulez's default; keep it explicit only when it carries meaning.
-		activation = ""
+		t.activation = ""
 	}
-	out.Activation = activation
-	return out, findings
+	t.out.Activation = t.activation
 }
 
 func dedupeSorted(in []string) []string {

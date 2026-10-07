@@ -116,36 +116,42 @@ func rulesyncRoots(cfg *rulesyncConfig, p *Plan) []string {
 		}
 	}
 	if cfg != nil {
-		var list []json.RawMessage
-		if raw, ok := cfg.raw["inputRoots"]; ok {
-			if err := json.Unmarshal(raw, &list); err != nil {
-				report("inputRoots", "inputRoots must be a list of strings and was ignored")
-			}
-		}
-		for _, raw := range list {
-			var entry string
-			if json.Unmarshal(raw, &entry) != nil {
-				report("inputRoots", "an input root that is not a string was ignored")
-				continue
-			}
-			add("inputRoots", entry)
-		}
-		if len(list) == 0 {
-			if raw, ok := cfg.raw["inputRoot"]; ok {
-				var one string
-				switch {
-				case json.Unmarshal(raw, &one) != nil:
-					report("inputRoot", "inputRoot must be a string and was ignored")
-				case one != "":
-					add("inputRoot", path.Join(one, rulesyncDir))
-				}
-			}
-		}
+		configuredRoots(cfg, report, add)
 	}
 	if len(roots) == 0 {
 		roots = []string{rulesyncDir}
 	}
 	return roots
+}
+
+// configuredRoots reads inputRoots, or inputRoot when that is absent, from the
+// config and hands each entry to add.
+func configuredRoots(cfg *rulesyncConfig, report func(field, reason string), add func(field, entry string)) {
+	var list []json.RawMessage
+	if raw, ok := cfg.raw["inputRoots"]; ok {
+		if err := json.Unmarshal(raw, &list); err != nil {
+			report("inputRoots", "inputRoots must be a list of strings and was ignored")
+		}
+	}
+	for _, raw := range list {
+		var entry string
+		if json.Unmarshal(raw, &entry) != nil {
+			report("inputRoots", "an input root that is not a string was ignored")
+			continue
+		}
+		add("inputRoots", entry)
+	}
+	if len(list) == 0 {
+		if raw, ok := cfg.raw["inputRoot"]; ok {
+			var one string
+			switch {
+			case json.Unmarshal(raw, &one) != nil:
+				report("inputRoot", "inputRoot must be a string and was ignored")
+			case one != "":
+				add("inputRoot", path.Join(one, rulesyncDir))
+			}
+		}
+	}
 }
 
 func (rulesyncImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
