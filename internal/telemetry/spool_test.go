@@ -24,7 +24,7 @@ func TestSpool_AppendPendingRemove(t *testing.T) {
 	}
 	info, err := os.Stat(s.outbox())
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	assertPerm(t, 0o600, info)
 
 	events, corrupt, err := s.Pending()
 	require.NoError(t, err)
