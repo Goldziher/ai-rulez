@@ -677,7 +677,10 @@ func (c *prConfinement) wrap(argv []string, projDir string, env []string) ([]str
 	return w.Argv, nil
 }
 
-// prWriteDirs are the directories a worktree command may write, among those that exist.
+// prWriteDirs are the directories a worktree command may write, among those that exist: the project, ai-rulez's
+// own subdirectories of the user cache and data roots (never the whole of either, which hold other tools'
+// state), AI_RULEZ_HOME and the temp directory. The two ai-rulez subdirectories are created when missing so
+// the first fetch can write below them.
 func prWriteDirs(projDir string, env []string) []string {
 	get := func(name string) string {
 		for _, kv := range env {
@@ -688,13 +691,28 @@ func prWriteDirs(projDir string, env []string) []string {
 		return ""
 	}
 	home := get("HOME")
-	cache := orElse(get("XDG_CACHE_HOME"), filepath.Join(home, ".cache"))
-	candidates := []string{projDir, cache, get("XDG_DATA_HOME"), get("AI_RULEZ_HOME"), os.TempDir()}
+	candidates := []string{projDir, get("AI_RULEZ_HOME"), os.TempDir()}
+	var own []string
+	if home != "" {
+		own = append(own, filepath.Join(home, ".cache", "ai-rulez"))
+	}
+	if v := get("XDG_CACHE_HOME"); v != "" {
+		own = append(own, filepath.Join(v, "ai-rulez"))
+	}
+	if v := get("XDG_DATA_HOME"); v != "" {
+		own = append(own, filepath.Join(v, "ai-rulez"))
+	}
+	for _, d := range own {
+		_ = os.MkdirAll(d, 0o750) //nolint:errcheck // a directory that cannot be made is simply not writable
+	}
+	candidates = append(candidates, own...)
 	var out []string
+	seen := map[string]bool{}
 	for _, d := range candidates {
-		if d == "" || d == ".cache" {
+		if d == "" || d == ".cache" || seen[d] {
 			continue
 		}
+		seen[d] = true
 		if info, err := os.Stat(d); err == nil && info.IsDir() {
 			out = append(out, d)
 		}
