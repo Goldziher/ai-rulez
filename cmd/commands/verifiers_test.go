@@ -13,7 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
-const verifiersBase = "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+const verifiersBase = "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
 
 func resetVerifiersFlags(t *testing.T) {
 	t.Helper()

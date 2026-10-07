@@ -43,9 +43,9 @@ func TestFindConfigFilesRecursively(t *testing.T) {
 	root := t.TempDir()
 
 	// Real configs that should be discovered.
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"root\"\n")
-	writeFile(t, filepath.Join(root, "service-a", ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"a\"\n")
-	writeFile(t, filepath.Join(root, "service-b", ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"b\"\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"root\"\n")
+	writeFile(t, filepath.Join(root, "service-a", ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"a\"\n")
+	writeFile(t, filepath.Join(root, "service-b", ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"b\"\n")
 
 	// Pruned dirs: must not be descended into.
 	writeFile(t, filepath.Join(root, "node_modules", "pkg", ".ai-rulez", "config.toml"), "x = 1")
@@ -57,7 +57,7 @@ func TestFindConfigFilesRecursively(t *testing.T) {
 
 	// Shared rule library: `ai-rulez/` (no dot) with a root config — its
 	// nested module configs are for inclusion, not generation.
-	writeFile(t, filepath.Join(root, "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"shared-lib\"\n")
+	writeFile(t, filepath.Join(root, "ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"shared-lib\"\n")
 	writeFile(t, filepath.Join(root, "ai-rulez", "modules", "core", ".ai-rulez", "config.toml"), "name = \"lib-core\"")
 	writeFile(t, filepath.Join(root, "ai-rulez", "modules", "extra", ".ai-rulez", "config.toml"), "name = \"lib-extra\"")
 
@@ -101,15 +101,15 @@ func TestFindConfigFilesRecursively_ConfigConvention(t *testing.T) {
 	root := t.TempDir()
 
 	// Conventional nested layout: <dir>/.config/ai-rulez/.
-	writeFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"root\"\n")
-	writeFile(t, filepath.Join(root, "service-a", ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"a\"\n")
+	writeFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"root\"\n")
+	writeFile(t, filepath.Join(root, "service-a", ".config", "ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"a\"\n")
 
 	// A different tool's .config subtree must be neither discovered nor descended.
 	writeFile(t, filepath.Join(root, ".config", "other-tool", "config.toml"), "x = 1")
 	writeFile(t, filepath.Join(root, ".config", "other-tool", ".config", "ai-rulez", "config.toml"), "x = 1")
 
 	// .ai-rulez continues to work alongside the convention.
-	writeFile(t, filepath.Join(root, "service-b", ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"b\"\n")
+	writeFile(t, filepath.Join(root, "service-b", ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"b\"\n")
 
 	// Pruned dirs: must not be descended into.
 	writeFile(t, filepath.Join(root, "node_modules", "pkg", ".config", "ai-rulez", "config.toml"), "x = 1")
@@ -137,8 +137,8 @@ func TestFindConfigFilesRecursively_ConfigConvention(t *testing.T) {
 
 func TestFindConfigFilesRecursively_ConfigConventionPrefersDotAiRulez(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"preferred\"\n")
-	writeFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"fallback\"\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"preferred\"\n")
+	writeFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"fallback\"\n")
 
 	chdir(t, root)
 	got := findConfigFilesRecursively()
@@ -190,28 +190,28 @@ func TestSelectRecursivePluginConfigsUsesMarketplaceRoot(t *testing.T) {
 	consumerConfig := filepath.Join(root, "consumer", ".ai-rulez", "config.toml")
 
 	writeFile(t, rootConfig, `
-version = "4.0"
+version = "5.0"
 name = "marketplace"
 [marketplace]
 name = "marketplace"
 members = ["plugins/example"]
 `)
 	writeFile(t, memberConfig, `
-version = "4.0"
+version = "5.0"
 name = "example"
 [plugin]
 name = "example"
 version = "1.0.0"
 `)
 	writeFile(t, standaloneConfig, `
-version = "4.0"
+version = "5.0"
 name = "standalone"
 [plugin]
 name = "standalone"
 version = "1.0.0"
 `)
 	writeFile(t, consumerConfig, `
-version = "4.0"
+version = "5.0"
 name = "consumer"
 [[plugins]]
 marketplace = "example"

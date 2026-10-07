@@ -24,7 +24,7 @@ func withUserHome(t *testing.T) string {
 	configDir := filepath.Join(home, ".config", "ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "skills", "mine"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"me\"\npresets = [\"claude\", \"codex\"]\n"), 0o644))
+		[]byte("version = \"5.0\"\nname = \"me\"\npresets = [\"claude\", \"codex\"]\n"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "skills", "mine", "SKILL.md"),
 		[]byte("---\nname: mine\ndescription: Does my thing. Use when I ask for my thing.\n---\nBody.\n"), 0o644))
 	return home
