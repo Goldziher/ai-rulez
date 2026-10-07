@@ -236,6 +236,27 @@ func (r Review) Maintainer() bool {
 	return false
 }
 
+// Repository roles CollaboratorPermission reports.
+const (
+	PermissionAdmin    = "admin"
+	PermissionMaintain = "maintain"
+	PermissionWrite    = "write"
+	PermissionTriage   = "triage"
+	PermissionRead     = "read"
+	PermissionNone     = "none"
+)
+
+// CanWrite reports whether a role can push to the repository, which is what an
+// approval of its content needs: a read or triage role (an org member of a
+// public repository has read) reviews without the power to change anything.
+func CanWrite(permission string) bool {
+	switch strings.ToLower(permission) {
+	case PermissionAdmin, PermissionMaintain, PermissionWrite:
+		return true
+	}
+	return false
+}
+
 // Codeowners is a CODEOWNERS file.
 type Codeowners struct {
 	// Path is where it was found: ".github/CODEOWNERS", "CODEOWNERS" or "docs/CODEOWNERS".
@@ -276,4 +297,9 @@ type Client interface {
 	TeamMembers(ctx context.Context, team Team) ([]string, error)
 	// IsTeamMember reports whether login is an active member of the team.
 	IsTeamMember(ctx context.Context, team Team, login string) (bool, error)
+	// CollaboratorPermission is the repository role of login (PermissionAdmin,
+	// PermissionMaintain, PermissionWrite, PermissionTriage, PermissionRead or
+	// PermissionNone). The forge only answers a token that can push to the
+	// repository: ErrForbidden or ErrUnauthorized mean "cannot tell".
+	CollaboratorPermission(ctx context.Context, repo Repo, login string) (string, error)
 }

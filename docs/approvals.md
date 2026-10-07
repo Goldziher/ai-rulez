@@ -217,7 +217,10 @@ host allowlist ([forge client](forge.md#safety-properties)). A review counts whe
   withdraws it, a comment neither approves nor withdraws it);
 - the reviewer is an `OWNER`, `MEMBER` or `COLLABORATOR` of the repository (the review's `author_association`), or is
   named by `approvers` or CODEOWNERS for the item. Anyone can review a public repository, so a drive-by `APPROVED` from
-  anyone else approves nothing;
+  anyone else approves nothing. The reviewer must also hold a `write`, `maintain` or `admin` role on the repository
+  (read with `GET /repos/{o}/{r}/collaborators/{login}/permission`): `MEMBER` of a public repository's organization only
+  reads it. A token that cannot read roles (it needs push access) leaves the association as the evidence;
+  any other failure of that lookup is an error;
 - **the commit the reviewer saw is the pull request's final head** (read with `GET /pulls/{n}`). A review of an earlier
   head approves nothing, even when the content looks the same: push, then ask for a new review (or have the branch
   protection dismiss stale reviews);

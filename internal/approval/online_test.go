@@ -229,3 +229,62 @@ func TestAuthorIs(t *testing.T) {
 	assert.Contains(t, msg, "forbid_self_approval")
 	assert.Contains(t, msg, "rule:style")
 }
+
+func TestApprovingReviews_RequiresAWriteRole(t *testing.T) {
+	tests := []struct {
+		name  string
+		perms map[string]string
+		named func(string) bool
+		want  []string
+	}{
+		{"write, maintain and admin approve", map[string]string{"alice": "write", "bob": "maintain", "carol": "admin"}, nil, []string{"alice", "bob", "carol"}},
+		{"read and triage roles approve nothing, though MEMBER or COLLABORATOR", map[string]string{"alice": "read", "bob": "triage", "carol": "write"}, nil, []string{"carol"}},
+		{"a login the forge does not know is no maintainer", map[string]string{"carol": "write"}, nil, []string{"carol"}},
+		{"a reviewer the policy names needs no role", map[string]string{}, func(l string) bool { return l == "alice" }, []string{"alice"}},
+		{"a token that cannot read roles falls back to the author association", nil, nil, []string{"alice", "bob", "carol"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			c := fakeForge(
+				review(1, "alice", forge.ReviewApproved, headSHA, 1),
+				review(2, "bob", forge.ReviewApproved, headSHA, 2),
+				review(3, "carol", forge.ReviewApproved, headSHA, 3),
+			)
+			if tt.perms != nil {
+				c.Permissions = map[string]string{}
+				for login, role := range tt.perms {
+					c.Permissions[testRepo.String()+"@"+login] = role
+				}
+			}
+			q := ReviewQuery{Repo: testRepo, PR: 7, Digest: approvedDigest, PinnedAt: pinned(map[string]string{headSHA: approvedDigest}), Named: tt.named}
+
+			// Act
+			got, err := ApprovingReviews(context.Background(), c, q)
+
+			// Assert
+			require.NoError(t, err)
+			var logins []string
+			for _, r := range got {
+				logins = append(logins, r.Login)
+			}
+			assert.Equal(t, tt.want, logins)
+		})
+	}
+	t.Run("another forge failure is an error, not a guess", func(t *testing.T) {
+		c := fakeForge(review(1, "alice", forge.ReviewApproved, headSHA, 1))
+		c.Permissions = map[string]string{}
+		q := ReviewQuery{Repo: testRepo, PR: 7, Digest: approvedDigest, PinnedAt: pinned(map[string]string{headSHA: approvedDigest})}
+		c.Err = nil
+		failing := &roleFails{Fake: c}
+		_, err := ApprovingReviews(context.Background(), failing, q)
+		assert.ErrorIs(t, err, forge.ErrRateLimited)
+	})
+}
+
+// roleFails is a forge whose role lookup is rate limited.
+type roleFails struct{ *forge.Fake }
+
+func (roleFails) CollaboratorPermission(context.Context, forge.Repo, string) (string, error) {
+	return "", forge.ErrRateLimited
+}
