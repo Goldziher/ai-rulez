@@ -3,6 +3,7 @@ package skillsource
 import (
 	"context"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,6 +45,12 @@ func TestResolve_GitPathThroughASymlinkIsRefused(t *testing.T) {
 	for _, p := range []string{"linked", "alias"} {
 		_, err := Resolve(context.Background(), Spec{Name: "team", URL: "git+" + f.url, Path: p}, Options{CacheDir: t.TempDir()})
 		require.Error(t, err, p)
+		if runtime.GOOS == "windows" {
+			// Git for Windows checks a link out as a plain file holding its target
+			// unless core.symlinks is on, so the path is then not a directory.
+			assert.Regexp(t, "symlink|does not exist", err.Error(), p)
+			continue
+		}
 		assert.Contains(t, err.Error(), "symlink", p)
 	}
 }
