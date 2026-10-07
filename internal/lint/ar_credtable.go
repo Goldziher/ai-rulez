@@ -225,10 +225,10 @@ func methodVerb(method string) string {
 var (
 	dotdirRe     = regexp.MustCompile(home + `/\.([A-Za-z0-9][A-Za-z0-9_-]*)/`)
 	benignDotdir = map[string]bool{
-		"claude": true, presetCursor: true, presetCodex: true, keyAgents: true, "cache": true, "local": true, "config": true, "gemini": true,
+		presetClaude: true, presetCursor: true, presetCodex: true, keyAgents: true, "cache": true, "local": true, "config": true, "gemini": true,
 		"windsurf": true, "vscode": true, cmdNPM: true, "nvm": true, "rustup": true, "pyenv": true, "rbenv": true, "bundle": true, "m2": true,
-		"gradle": true, "oh-my-zsh": true, "zsh": true, "tmux": true, "fzf": true, "cargo": true, "bun": true, "deno": true, "volta": true,
-		"sdkman": true, "asdf": true, "mise": true, "rtx": true, "pnpm": true, "yarn": true, "ai-rulez": true, "basemind": true, "copilot": true,
+		"gradle": true, "oh-my-zsh": true, shellZsh: true, "tmux": true, "fzf": true, "cargo": true, toolBun: true, "deno": true, "volta": true,
+		"sdkman": true, "asdf": true, "mise": true, "rtx": true, toolPnpm: true, toolYarn: true, "ai-rulez": true, "basemind": true, "copilot": true,
 		"kiro": true, "continue": true, "cline": true, "roo": true, "amp": true, "opencode": true, "junie": true, "trae": true,
 	}
 	tableDotdirs = regexp.MustCompile(`^(?:ssh|aws|gnupg|kube|docker|azure|terraform\.d|gem|op|age|password-store|openvpn|vault-token)$`)

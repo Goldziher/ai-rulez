@@ -40,7 +40,7 @@ var (
 
 var pytestBuiltinMarks = map[string]bool{
 	"skip": true, "skipif": true, "xfail": true, "parametrize": true, "usefixtures": true, "filterwarnings": true,
-	wordAnd: true, "or": true, "not": true, "true": true, "false": true,
+	wordAnd: true, "or": true, "not": true, boolTrue: true, boolFalse: true,
 }
 
 // manifests indexes the build files of the repository.

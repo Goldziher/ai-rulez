@@ -55,7 +55,7 @@ type ScannerInfo struct {
 func (s ScannerInfo) Found() bool { return s.Path != "" }
 
 // NeedsAllow reports whether a run needs --allow-egress=<name>.
-func (s ScannerInfo) NeedsAllow() bool { return s.Egress == "true" }
+func (s ScannerInfo) NeedsAllow() bool { return s.Egress == boolTrue }
 
 // Healthy reports whether the scanner can run as configured: a valid entry,
 // an installed binary, and no network flag on an egress = false entry.
@@ -80,12 +80,12 @@ func InspectScanners(cfg *config.Config, dir string) []ScannerInfo {
 			Isolation: string(pol.isolation), Backend: string(scannerSandbox.Backend()),
 		}
 		if info.Format == "" {
-			info.Format = "sarif"
+			info.Format = FormatSARIF
 		}
 		if sc.Egress != nil {
-			info.Egress = "false"
+			info.Egress = boolFalse
 			if *sc.Egress {
-				info.Egress = "true"
+				info.Egress = boolTrue
 			} else {
 				info.EgressFlag = sc.egressFlag()
 			}
@@ -117,7 +117,7 @@ func lookExecutable(name, dir string) string {
 		p = filepath.Join(dir, p)
 	}
 	info, err := os.Stat(p)
-	if err != nil || info.IsDir() || (info.Mode()&0o111 == 0 && runtime.GOOS != "windows") {
+	if err != nil || info.IsDir() || (info.Mode()&0o111 == 0 && runtime.GOOS != osWindows) {
 		return ""
 	}
 	return p

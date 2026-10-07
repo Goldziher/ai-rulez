@@ -35,7 +35,7 @@ var now = ambient.Clock(nil).Now
 // Agent Skills specification, the Claude Code skill and subagent references,
 // and the keys ai-rulez itself reads from frontmatter.
 var (
-	specKeys = []string{"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
+	specKeys = []string{"name", keyDescription, "license", "compatibility", "metadata", "allowed-tools"}
 	// claudeSkillKeys are the documented Claude Code skill and command keys.
 	claudeSkillKeys = []string{
 		"when_to_use", "argument-hint", "arguments", "disable-model-invocation", "user-invocable",
@@ -48,12 +48,12 @@ var (
 	}
 	// ruleKeys are the keys rules and context files understand, including the
 	// Cursor and Windsurf spellings ai-rulez maps.
-	ruleKeys = []string{keyGlobs, keyPaths, "glob", "alwaysApply", "trigger", "activation", "description", "name"}
+	ruleKeys = []string{keyGlobs, keyPaths, "glob", "alwaysApply", "trigger", "activation", keyDescription, "name"}
 	// checkKeys are the frontmatter keys of a code-review check (docs/checks.md).
-	checkKeys = []string{"description", "severity", "tools", "targets"}
+	checkKeys = []string{keyDescription, "severity", "tools", keyTargets}
 	// ownKeys are the ai-rulez keys valid on every kind.
 	ownKeys = []string{
-		"priority", "targets", "aliases", "keywords", "usage", "shortcut", "category", "placement", "short-description",
+		"priority", keyTargets, "aliases", "keywords", "usage", "shortcut", "category", "placement", "short-description",
 		keyTools, keySkills, keyGlobs, keyPaths, keyEffort, "deprecated", "superseded_by", "delivery", "triggers",
 	}
 )
@@ -374,9 +374,9 @@ func (r *runner) importLevel() (force Severity, on bool) {
 	switch strings.ToLower(strings.TrimSpace(r.security().ScanImports)) {
 	case freshOff:
 		return "", false
-	case "error":
+	case levelError:
 		return SeverityError, true
-	case "warn", "warning":
+	case "warn", levelWarning:
 		return SeverityWarning, true
 	}
 	return "", true
@@ -493,7 +493,7 @@ func validateSecurity(sec *config.LintSecurity) []string {
 	}
 	var problems []string
 	switch strings.ToLower(sec.ScanImports) {
-	case "", "off", "warn", "warning", "error":
+	case "", levelOff, "warn", levelWarning, levelError:
 	default:
 		problems = append(problems, fmt.Sprintf("lint.security.scan_imports: unknown level %q (use off, warn or error, or leave it unset)", sec.ScanImports))
 	}

@@ -35,8 +35,8 @@ type loadBudget struct {
 const loadBudgetsChecked = "2026-10-05"
 
 var loadBudgets = []loadBudget{
-	{ID: "claude-skill-listing", Presets: []string{"claude"}, Scope: "listing", Unit: unitChars, Limit: 1536, Source: "https://code.claude.com/docs/en/skills", Checked: loadBudgetsChecked, Verified: true},
-	{ID: "codex-agents-chain", Presets: []string{presetCodex}, Scope: scopeChain, Unit: "bytes", Limit: 32768, Source: "https://learn.chatgpt.com/docs/agent-configuration/agents-md", Checked: loadBudgetsChecked, Verified: true},
+	{ID: "claude-skill-listing", Presets: []string{presetClaude}, Scope: "listing", Unit: unitChars, Limit: 1536, Source: "https://code.claude.com/docs/en/skills", Checked: loadBudgetsChecked, Verified: true},
+	{ID: "codex-agents-chain", Presets: []string{presetCodex}, Scope: scopeChain, Unit: unitBytes, Limit: 32768, Source: "https://learn.chatgpt.com/docs/agent-configuration/agents-md", Checked: loadBudgetsChecked, Verified: true},
 	{ID: "codex-skill-listing", Presets: []string{presetCodex}, Scope: keySkills, Unit: unitChars, Limit: 8000, Source: "https://learn.chatgpt.com/docs/agent-configuration/skills", Checked: loadBudgetsChecked},
 	{ID: "windsurf-rule-file", Presets: []string{"devin"}, Scope: scopeFile, Unit: unitChars, Limit: 12000, Source: "https://docs.devin.ai/desktop/cascade/memories", Checked: loadBudgetsChecked, Verified: true},
 	{ID: "cursor-rule-lines", Presets: []string{presetCursor}, Scope: scopeFile, Unit: unitLines, Limit: 500, Source: "https://cursor.com/docs/context/rules", Checked: loadBudgetsChecked, Verified: true},
@@ -79,7 +79,7 @@ func (b loadBudget) applies(presets map[string]bool) bool {
 
 func measure(unit, text string) int {
 	switch unit {
-	case "bytes":
+	case unitBytes:
 		return len(text)
 	case unitLines:
 		return len(strings.Split(strings.TrimRight(text, "\n"), "\n"))

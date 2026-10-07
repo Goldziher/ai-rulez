@@ -281,7 +281,7 @@ func frontmatterTruthy(v any) bool {
 	if b, ok := v.(bool); ok {
 		return b
 	}
-	return strings.EqualFold(scalar(v), "true")
+	return strings.EqualFold(scalar(v), boolTrue)
 }
 
 // activeHarnesses lists the harnesses whose traps run: configured presets plus

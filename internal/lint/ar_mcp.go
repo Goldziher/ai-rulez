@@ -169,7 +169,7 @@ func effectiveTransport(s *mcpServer) string {
 	case s.url != "" && s.command == "":
 		return transportHTTP
 	}
-	return "stdio"
+	return transportStdio
 }
 
 func checkMCPConfig(r *runner) {
@@ -215,7 +215,7 @@ func (r *runner) checkMCPShape(s *mcpServer, at int, byName map[string][]*mcpSer
 	}
 	t := effectiveTransport(s)
 	switch t {
-	case "stdio":
+	case transportStdio:
 		switch {
 		case s.command == "" && s.url == "":
 			bad("defines neither a command (stdio) nor a url (http), so it is empty")
@@ -262,7 +262,7 @@ func (r *runner) checkMCPPins(s *mcpServer, at int) {
 
 func pinExample(command, pkg string) string {
 	switch path.Base(command) {
-	case "uvx", "pipx", "uv":
+	case toolUvx, toolPipx, "uv":
 		return pkg + "==1.2.3"
 	case cmdDocker, "podman":
 		return pkg + "@sha256:..."

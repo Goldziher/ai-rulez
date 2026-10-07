@@ -19,14 +19,14 @@ type launcher struct {
 }
 
 var hookLaunchers = map[string]launcher{
-	"sh":     shellLauncher,
-	"bash":   shellLauncher,
-	"zsh":    shellLauncher,
-	"dash":   shellLauncher,
-	"python": {inline: set("-c", "-m"), withArg: set("-W", "-X", "-Q")},
-	"node":   {inline: set("-e", "-p", "--eval", "--print"), withArg: set("-r", "--require", "--import", "--loader", "--experimental-loader", "--input-type")},
-	"ruby":   {inline: set("-e"), withArg: set("-r", "-I", "-C"), evalCluster: true},
-	"perl":   {inline: set("-e", "-E"), withArg: set("-I", "-M", "-m"), evalCluster: true},
+	"sh":       shellLauncher,
+	shellBash:  shellLauncher,
+	shellZsh:   shellLauncher,
+	"dash":     shellLauncher,
+	toolPython: {inline: set("-c", "-m"), withArg: set("-W", "-X", "-Q")},
+	"node":     {inline: set("-e", "-p", "--eval", "--print"), withArg: set("-r", "--require", "--import", "--loader", "--experimental-loader", "--input-type")},
+	"ruby":     {inline: set("-e"), withArg: set("-r", "-I", "-C"), evalCluster: true},
+	"perl":     {inline: set("-e", "-E"), withArg: set("-I", "-M", "-m"), evalCluster: true},
 }
 
 var shellLauncher = launcher{inline: set("-c"), withArg: set("-o", "+o", "-O", "+O"), shell: true}
@@ -51,7 +51,7 @@ func interpreterOf(word string) string {
 		base = m[1]
 	}
 	if base == "python3" {
-		base = "python"
+		base = toolPython
 	}
 	if _, ok := hookLaunchers[base]; ok {
 		return base
@@ -76,7 +76,7 @@ func launcherScript(words []string) string {
 					i++
 				}
 			}
-		case w == "nohup" || w == "time" || w == "exec" || w == "command":
+		case w == "nohup" || w == cmdTime || w == "exec" || w == "command":
 		default:
 			interp := interpreterOf(w)
 			if interp == "" {

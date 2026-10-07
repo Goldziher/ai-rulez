@@ -27,7 +27,7 @@ var (
 	contextValues        = []string{"fork"}
 	permissionModeValues = []string{"default", "acceptEdits", "auto", "dontAsk", "bypassPermissions", "plan"}
 	memoryValues         = []string{"user", "project", "local"}
-	shellValues          = []string{"bash", "powershell"}
+	shellValues          = []string{shellBash, "powershell"}
 	isolationValues      = []string{"worktree"}
 	colorValues          = []string{"red", "blue", "green", "yellow", "purple", "orange", "pink", "cyan"}
 	modelAliases         = []string{"sonnet", "opus", "haiku", "inherit", "default", "best", "opusplan", "sonnet[1m]", "opus[1m]"}
@@ -84,7 +84,7 @@ func checkFrontmatterValues(r *runner, it *item, d doc, fm frontmatter) { //noli
 		if k, ok := fm.top(key); ok {
 			if _, isBool := k.Value.(bool); !isBool {
 				msg := fmt.Sprintf("frontmatter %q: must be a YAML boolean (true or false), got %s", k.Name, describeValue(k.Value))
-				if str, isStr := k.Value.(string); isStr && (strings.EqualFold(str, "true") || strings.EqualFold(str, "false")) {
+				if str, isStr := k.Value.(string); isStr && (strings.EqualFold(str, boolTrue) || strings.EqualFold(str, boolFalse)) {
 					r.addFix(boolCoercion(it, d, k), CodeFrontmatterValue, it.abs, k.Line, "%s", msg)
 				} else {
 					r.add(CodeFrontmatterValue, it.abs, k.Line, "%s", msg)

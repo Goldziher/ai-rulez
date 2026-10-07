@@ -65,13 +65,13 @@ func registerTrapsPlan(s *ruleSet) {
 // follows, and the block holds the Key line. Without the Key condition a
 // horizontal rule would match.
 func (p TrapPredicate) evalFirst(content []byte) []trapHit {
-	if bytes.HasPrefix(content, []byte("---")) {
+	if bytes.HasPrefix(content, []byte(fenceFrontmatter)) {
 		return nil
 	}
 	lines := strings.Split(string(content), "\n")
 	open := -1
 	for i := 0; i < len(lines) && i < maxFrontmatterScan; i++ {
-		if strings.TrimPrefix(strings.TrimRight(lines[i], "\r \t"), "\xef\xbb\xbf") == "---" {
+		if strings.TrimPrefix(strings.TrimRight(lines[i], "\r \t"), "\xef\xbb\xbf") == fenceFrontmatter {
 			open = i
 			break
 		}
@@ -82,7 +82,7 @@ func (p TrapPredicate) evalFirst(content []byte) []trapHit {
 	hasKey := p.Key == ""
 	for _, l := range lines[open+1:] {
 		trimmed := strings.TrimRight(l, "\r \t")
-		if trimmed == "---" {
+		if trimmed == fenceFrontmatter {
 			if !hasKey {
 				return nil
 			}
@@ -310,7 +310,7 @@ func (t *Trap) validateProjectSize() string {
 	}
 	unit := "chars"
 	if p.Measure == measureFileBytes {
-		unit = "bytes"
+		unit = unitBytes
 	}
 	p.limit = harnesslimits.Limit{Value: p.Limit, Unit: unit, Behavior: "over the project limit"}
 	return ""

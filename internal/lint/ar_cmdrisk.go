@@ -50,7 +50,7 @@ func scanUnpinnedExec(r *runner, t *scanText) {
 // channel the project publishes to, not a third-party command to pin. A moving
 // tag (@latest) is still reported.
 func (r *runner) ownPackageMention(pkg, why string) bool {
-	return r.cfg != nil && r.cfg.Name != "" && strings.EqualFold(pkg, r.cfg.Name) && why == "no version is pinned"
+	return r.cfg != nil && r.cfg.Name != "" && strings.EqualFold(pkg, r.cfg.Name) && why == whyNoVersionPinned
 }
 
 var (
