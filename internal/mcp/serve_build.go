@@ -11,8 +11,10 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
@@ -71,8 +73,15 @@ type ServeSetup struct {
 	// creates one when it is nil, so the live reload does not repeat a warning
 	// about the project on every reload.
 	Collector *diag.Collector
-	// NoWatch disables live reload.
+	// NoWatch disables live reload. Admission is still re-judged against the
+	// clock every RevalidateInterval.
 	NoWatch bool
+	// RevalidateInterval is how often admission (approval expiry, signing key
+	// validity) is judged again without a file change; 0 selects one minute.
+	RevalidateInterval time.Duration
+	// Clock judges approval expiry and signing key validity; nil is the wall
+	// clock (tests set it).
+	Clock ambient.Clock
 }
 
 // built is one build of the catalog with what produced it.
@@ -86,6 +95,9 @@ type built struct {
 	view string
 	// empty says why nothing is served, when nothing is.
 	empty string
+	// readmit admits the same skills again at the current time, quietly; nil
+	// for a build made without admission.
+	readmit func() *Catalog
 }
 
 // NewServer builds the catalog and the skills server around it. The caller runs
@@ -114,6 +126,15 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 		Log:          st.Log,
 	}
 	var srv *Server
+	var current atomic.Pointer[built]
+	current.Store(first)
+	opts.Revalidate = func() *Catalog {
+		if b := current.Load(); b.readmit != nil {
+			return b.readmit()
+		}
+		return nil
+	}
+	opts.RevalidateInterval = st.RevalidateInterval
 	if !st.NoWatch {
 		roots := st.watchRoots(first)
 		guard := newSaveGuard(roots, first.catalog)
@@ -128,6 +149,7 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 				return nil, err
 			}
 			holder.set(b.cfg)
+			current.Store(b)
 			return b.catalog, nil
 		}
 		logs := st.usageFiles(first.cfg)
@@ -259,11 +281,23 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		b.empty = noSkillsMessage(served, st.Filter)
 	}
 	if bo.admit {
-		adm := Admission{Config: cfg, Enforce: enforcesLock(cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view, DefaultTrust: defaultTrust(cfg), Log: st.Log}
-		if !bo.ignoreLock {
-			adm.Lock, adm.Signatures = lock, newSignatureGate(cfg, skillOrigins(cfg, b.sources), approvalNow())
+		adm := Admission{
+			Config: cfg, Enforce: enforcesLock(cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view,
+			DefaultTrust: defaultTrust(cfg), Now: st.Clock.Now,
 		}
-		catalog = catalog.Admit(adm)
+		raw := catalog
+		admit := func(log logger.Logger) *Catalog {
+			a := adm
+			a.Log = log
+			if !bo.ignoreLock {
+				a.Lock, a.Signatures = lock, newSignatureGate(cfg, skillOrigins(cfg, b.sources), a.now())
+			}
+			return raw.Admit(a)
+		}
+		catalog = admit(st.Log)
+		// Approvals expire and signing keys stop being valid with time alone,
+		// so the server judges the same build again later (serve_live.go).
+		b.readmit = func() *Catalog { return admit(logger.Discard()) }
 	}
 	b.catalog = catalog
 	return b, nil
