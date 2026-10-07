@@ -174,7 +174,7 @@ func TestGenerate_UserOnlyHarnessesWriteNothingIntoTheProject(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(root, ".kimi-code", "config.toml"))
 }
 
-const cursorDenyOnlyConfig = "version = \"4.0\"\nname = \"p\"\npresets = [\"cursor\"]\ngitignore = false\n\n[permissions]\ndeny = [\"Bash(rm -rf:*)\"]\n"
+const cursorDenyOnlyConfig = "version = \"5.0\"\nname = \"p\"\npresets = [\"cursor\"]\ngitignore = false\n\n[permissions]\ndeny = [\"Bash(rm -rf:*)\"]\n"
 
 // TestGenerate_CursorDenyOnlyWritesBothRequiredArrays pins that Cursor's cli.json
 // always carries permissions.allow and permissions.deny (both are required by its

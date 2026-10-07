@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const guardHookConfig = `version = "4.0"
+const guardHookConfig = `version = "5.0"
 name = "guard-hooks"
 presets = ["claude", "codex", "gemini", "cursor", "factory", "copilot", "opencode"]
 
@@ -53,7 +53,7 @@ func TestGenerate_GuardHookPerHarness(t *testing.T) {
 }
 
 func TestGenerate_GuardHookIsOptIn(t *testing.T) {
-	root := writeProject(t, `version = "4.0"
+	root := writeProject(t, `version = "5.0"
 name = "no-guard"
 presets = ["claude"]
 `, nil)

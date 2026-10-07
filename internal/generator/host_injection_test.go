@@ -29,7 +29,7 @@ func hostProject(t *testing.T) string {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(cfgDir, "rules"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(`version = "5.0"
 name = "host"
 presets = ["claude"]
 gitignore = false

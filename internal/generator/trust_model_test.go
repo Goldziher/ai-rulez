@@ -20,7 +20,8 @@ import (
 // Content-Hash, the machine-local manifest or the current rendering may license
 // taking something back or deleting it.
 
-const trustConfig = `version = "4.0"
+const trustConfig = `version = "5.0"
+agents_md = false
 name = "trust"
 presets = ["claude"]
 `
@@ -78,7 +79,7 @@ func TestClean_KeepsHandWrittenSettingsEqualToTheRendering(t *testing.T) {
 
 func TestClean_DoesNotFollowSymlinkedOutputDirectory(t *testing.T) {
 	// Arrange: .cursor/commands is a link to a folder outside the project.
-	root := writeProject(t, "version = \"4.0\"\nname = \"t\"\npresets = [\"cursor\"]\n",
+	root := writeProject(t, "version = \"5.0\"\nagents_md = false\nname = \"t\"\npresets = [\"cursor\"]\n",
 		map[string]string{".ai-rulez/commands/ship.md": "---\ndescription: ship\n---\nShip it.\n"})
 	generateProject(t, root)
 	outside := t.TempDir()
@@ -105,7 +106,7 @@ func TestClean_DoesNotFollowSymlinkedOutputDirectory(t *testing.T) {
 
 func TestGenerate_StaleRemovalDoesNotFollowSymlinkedOutputDirectory(t *testing.T) {
 	// Arrange
-	root := writeProject(t, "version = \"4.0\"\nname = \"t\"\npresets = [\"cursor\"]\n", map[string]string{
+	root := writeProject(t, "version = \"5.0\"\nagents_md = false\nname = \"t\"\npresets = [\"cursor\"]\n", map[string]string{
 		".ai-rulez/commands/ship.md": "---\ndescription: ship\n---\nShip it.\n",
 		".ai-rulez/commands/old.md":  "---\ndescription: old\n---\nOld.\n",
 	})
@@ -201,25 +202,25 @@ func TestGenerateThenClean_RestoresMergedDocumentsByteForByte(t *testing.T) {
 	}{
 		{
 			name:     "one-line JSON without a final newline",
-			config:   "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n" + mcp + "\n[permissions]\ndeny = [\"Read(./.env)\"]\n",
+			config:   "version = \"5.0\"\nagents_md = false\nname = \"t\"\npresets = [\"claude\"]\n" + mcp + "\n[permissions]\ndeny = [\"Read(./.env)\"]\n",
 			file:     ".claude/settings.json",
 			original: `{"model":"opus"}`,
 		},
 		{
 			name:     "strict JSON with empty containers",
-			config:   "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[permissions]\ndeny = [\"Read(./.env)\"]\n",
+			config:   "version = \"5.0\"\nagents_md = false\nname = \"t\"\npresets = [\"claude\"]\n\n[permissions]\ndeny = [\"Read(./.env)\"]\n",
 			file:     ".claude/settings.json",
 			original: "{\"hooks\":{},\"permissions\":{\"deny\":[]}}\n",
 		},
 		{
 			name:     "TOML with an empty mcp_servers header",
-			config:   "version = \"4.0\"\nname = \"t\"\npresets = [\"codex\"]\n" + mcp,
+			config:   "version = \"5.0\"\nagents_md = false\nname = \"t\"\npresets = [\"codex\"]\n" + mcp,
 			file:     ".codex/config.toml",
 			original: "model = \"gpt\"\n\n[mcp_servers]\n",
 		},
 		{
 			name:     "YAML with an empty mcp_servers map",
-			config:   "version = \"4.0\"\nname = \"t\"\npresets = [\"poolside\"]\n" + mcp,
+			config:   "version = \"5.0\"\nagents_md = false\nname = \"t\"\npresets = [\"poolside\"]\n" + mcp,
 			file:     ".poolside/settings.yaml",
 			original: "mcp_servers: {}\n",
 		},
@@ -243,7 +244,7 @@ func TestGenerateThenClean_RestoresMergedDocumentsByteForByte(t *testing.T) {
 
 func TestGenerateUser_GuardHookStaysOutOfUserScope(t *testing.T) {
 	// Arrange
-	home, gen := newUserHome(t, "version = \"4.0\"\nname = \"me\"\npresets = [\"claude\", \"copilot\", \"copilot-cli\"]\n"+
+	home, gen := newUserHome(t, "version = \"5.0\"\nagents_md = false\nname = \"me\"\npresets = [\"claude\", \"copilot\", \"copilot-cli\"]\n"+
 		"\n[guard]\ngenerated = true\n\n[[hooks]]\nevent = \"Stop\"\n[[hooks.hooks]]\ncommand = \"echo done\"\n", userFixture())
 	require.NoError(t, gen.config.Validate())
 
@@ -265,7 +266,8 @@ func TestGenerateUser_GuardHookStaysOutOfUserScope(t *testing.T) {
 
 func TestGenerate_CopilotAndCopilotCLIShareTheGuardWithoutConflict(t *testing.T) {
 	// Arrange
-	root := writeProject(t, `version = "4.0"
+	root := writeProject(t, `version = "5.0"
+agents_md = false
 name = "g"
 presets = ["copilot", "copilot-cli"]
 
