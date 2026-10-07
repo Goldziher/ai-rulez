@@ -263,7 +263,7 @@ func TestDiscover_IncludeExcludePrefixAndSymlinks(t *testing.T) {
 	write(t, outside, "secret.txt", "secret")
 	testutil.SymlinkOrSkip(t, filepath.Join(outside, "secret.txt"), filepath.Join(root, "pdf", "leak.txt"))
 
-	all, err := Discover(Spec{Name: "s"}, root)
+	all, err := Discover(t.Context(), Spec{Name: "s"}, root)
 	require.NoError(t, err)
 	var got []string
 	for _, s := range all {
@@ -271,7 +271,7 @@ func TestDiscover_IncludeExcludePrefixAndSymlinks(t *testing.T) {
 	}
 	assert.Equal(t, []string{"pdf", "sql", "sql-wip"}, got)
 
-	only, err := Discover(Spec{Name: "s", Include: []string{"sql*"}, Exclude: []string{"*-wip"}, NamePrefix: "team-"}, root)
+	only, err := Discover(t.Context(), Spec{Name: "s", Include: []string{"sql*"}, Exclude: []string{"*-wip"}, NamePrefix: "team-"}, root)
 	require.NoError(t, err)
 	require.Len(t, only, 1)
 	assert.Equal(t, "team-sql", only[0].Name)
@@ -279,7 +279,7 @@ func TestDiscover_IncludeExcludePrefixAndSymlinks(t *testing.T) {
 	assert.Contains(t, string(only[0].Files[0].Content), "name: team-sql")
 	assert.NotContains(t, string(only[0].Files[0].Content), "name: sql\n")
 
-	pdf, err := Discover(Spec{Name: "s", Include: []string{"pdf"}}, root)
+	pdf, err := Discover(t.Context(), Spec{Name: "s", Include: []string{"pdf"}}, root)
 	require.NoError(t, err)
 	require.Len(t, pdf, 1)
 	var paths []string

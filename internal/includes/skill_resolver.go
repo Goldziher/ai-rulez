@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // ResolveInstalledSkills resolves all configured installed skills and returns their content
@@ -62,7 +63,7 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		localDir := resolveSkillLocalOverride(baseDir, skillConf)
 		if localDir != "" {
 			cfg.Log().Info("Using local override for installed skill", "name", skillConf.Name, "path", localDir)
-			return ScanInstalledSkillDir(localDir, skillConf.Name)
+			return ScanInstalledSkillDir(logger.WithContext(ctx, cfg.Host.Log), localDir, skillConf.Name)
 		}
 		cfg.Log().Info("Skipping installed skill (local_override path not found)", "name", skillConf.Name, "local_override", skillConf.LocalOverride)
 		return config.ContentFile{}, oops.Errorf("local override path not found for skill '%s'", skillConf.Name)
@@ -111,7 +112,7 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 				With("path", skillDir).
 				Errorf("no SKILL.md found at local path for skill '%s'", skillConf.Name)
 		}
-		return ScanInstalledSkillDir(skillDir, skillConf.Name)
+		return ScanInstalledSkillDir(logger.WithContext(ctx, cfg.Host.Log), skillDir, skillConf.Name)
 
 	default:
 		return config.ContentFile{}, oops.Errorf("unknown source type for skill '%s': %s", skillConf.Name, sourceType)

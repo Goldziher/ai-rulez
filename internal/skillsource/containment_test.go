@@ -87,7 +87,7 @@ func TestDiscover_NeverServesTheFileTheDigestLeavesOut(t *testing.T) {
 	write(t, root, "refs/.cache_meta.json", "nested is content")
 
 	// Act
-	skills, err := Discover(Spec{Name: "solo"}, root)
+	skills, err := Discover(t.Context(), Spec{Name: "solo"}, root)
 
 	// Assert
 	require.NoError(t, err)

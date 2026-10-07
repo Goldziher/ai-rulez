@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/samber/oops"
 )
 
@@ -49,6 +53,16 @@ var skillResourceKinds = []string{
 // over LoadResources for the common case.
 func LoadSkillResources(skillDir string) ([]SkillResource, error) {
 	return LoadResources(skillDir, ItemKindSkill)
+}
+
+// LoadSkillResourcesContext is LoadSkillResources reporting through the logger
+// ctx carries (logger.WithContext) and asking the VCS, to leave out ignored
+// files, through the runner ctx carries.
+func LoadSkillResourcesContext(ctx context.Context, skillDir string) ([]SkillResource, error) {
+	s := newIncludeScanner(osView(skillDir))
+	s.log = logger.FromContext(ctx)
+	s.git = gitutil.New(runner.FromContext(ctx))
+	return s.loadResources(skillDir, ItemKindSkill, nil)
 }
 
 // LoadResources is LoadResourcesWith with only the default bundle excludes.

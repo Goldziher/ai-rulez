@@ -32,7 +32,7 @@ This is a test skill.
 		err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(skillContent), 0o644)
 		require.NoError(t, err)
 
-		cf, err := ScanInstalledSkillDir(dir, "test-skill")
+		cf, err := ScanInstalledSkillDir(t.Context(), dir, "test-skill")
 		require.NoError(t, err)
 
 		assert.Equal(t, "test-skill", cf.Name)
@@ -49,7 +49,7 @@ This is a test skill.
 		err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(skillContent), 0o644)
 		require.NoError(t, err)
 
-		cf, err := ScanInstalledSkillDir(dir, "simple")
+		cf, err := ScanInstalledSkillDir(t.Context(), dir, "simple")
 		require.NoError(t, err)
 
 		assert.Equal(t, "simple", cf.Name)
@@ -80,7 +80,7 @@ This is a test skill.
 		err = os.WriteFile(filepath.Join(refsDir, "notes.txt"), []byte("ignored by index"), 0o644)
 		require.NoError(t, err)
 
-		cf, err := ScanInstalledSkillDir(dir, "with-refs")
+		cf, err := ScanInstalledSkillDir(t.Context(), dir, "with-refs")
 		require.NoError(t, err)
 
 		assert.Equal(t, "with-refs", cf.Name)
@@ -116,7 +116,7 @@ This is a test skill.
 		assetBytes := []byte{0x00, 0xff, 0x10, 0x20, 0x00}
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "assets", "blob.bin"), assetBytes, 0o644))
 
-		cf, err := ScanInstalledSkillDir(dir, "with-extras")
+		cf, err := ScanInstalledSkillDir(t.Context(), dir, "with-extras")
 		require.NoError(t, err)
 
 		require.Len(t, cf.Resources, 2)
@@ -132,7 +132,7 @@ This is a test skill.
 		t.Parallel()
 		dir := t.TempDir()
 
-		_, err := ScanInstalledSkillDir(dir, "missing")
+		_, err := ScanInstalledSkillDir(t.Context(), dir, "missing")
 		assert.Error(t, err)
 	})
 
@@ -146,7 +146,7 @@ This is a test skill.
 		refsDir := filepath.Join(dir, "references")
 		require.NoError(t, os.MkdirAll(refsDir, 0o755))
 
-		cf, err := ScanInstalledSkillDir(dir, "empty-refs")
+		cf, err := ScanInstalledSkillDir(t.Context(), dir, "empty-refs")
 		require.NoError(t, err)
 		assert.Equal(t, "empty-refs", cf.Name)
 		assert.Contains(t, cf.Content, "# Skill")
@@ -167,7 +167,7 @@ This is a test skill.
 		err = os.WriteFile(filepath.Join(refsDir, "ref.md"), []byte(refContent), 0o644)
 		require.NoError(t, err)
 
-		cf, err := ScanInstalledSkillDir(dir, "fm-refs")
+		cf, err := ScanInstalledSkillDir(t.Context(), dir, "fm-refs")
 		require.NoError(t, err)
 
 		// Body must NOT contain inlined reference text — references are separate resources.
