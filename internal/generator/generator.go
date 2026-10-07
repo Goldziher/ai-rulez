@@ -61,6 +61,14 @@ type Generator struct {
 	// the latest writeOutputs pass. They are hand-written, so they stay out of
 	// the generated manifest and the managed .gitignore block.
 	skippedPaths map[string]bool
+	// overwriteUnowned lets generate replace an existing file it cannot prove it
+	// wrote (SetOverwriteUnowned, `generate --force`).
+	overwriteUnowned bool
+	// refusedOutputs and linkedOutputs are what the latest run's output-safety
+	// pass found (see output_safety.go): files it will not write, and outputs
+	// that are links onto another generated path.
+	refusedOutputs []outputRefusal
+	linkedOutputs  map[string]bool
 
 	// Machine-local overlay handling (see local_drift.go).
 	ctx             context.Context // caller's context for the baseline load (nil means Background)
@@ -824,6 +832,9 @@ func (g *Generator) planDomainPlugins(profile string) ([]plugin.PlannedPlugin, e
 func (g *Generator) DryRunBlocked() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	if len(g.refusedOutputs) > 0 {
+		return refusalError(g.refusedOutputs)
+	}
 	if g.plan == nil {
 		return nil
 	}
@@ -852,6 +863,14 @@ func (g *Generator) planLines(outputs []config.OutputFile) []string {
 		relPath := g.convertToRelativePath(abs)
 		if output.IsDir {
 			lines = append(lines, "create-dir: "+relPath)
+			continue
+		}
+		if reason, ok := g.refusalReason(relPath); ok {
+			lines = append(lines, "blocked: "+filepath.ToSlash(relPath)+" ("+reason+")")
+			continue
+		}
+		if g.linkedOutputs[filepath.ToSlash(relPath)] {
+			lines = append(lines, "skipped: "+filepath.ToSlash(relPath)+" (a symlink to a path generated in this run)")
 			continue
 		}
 		kind, rewrite, compared := g.outputState(output)
@@ -1544,6 +1563,13 @@ func (g *Generator) absOutputPath(path string) string {
 // spuriously modify the file after generation.
 func (g *Generator) writeOutput(output config.OutputFile) error {
 	absPath := g.absOutputPath(output.Path)
+	if rel := g.relSlash(absPath); g.linkedOutputs[rel] {
+		// A link onto another generated path: the target is written under its own
+		// name, the link stays the user's and is not recorded as ours.
+		g.skippedPaths[rel] = true
+		g.log().Debug("Skipped a symlinked output whose target is generated", "path", output.Path)
+		return nil
+	}
 	// target is where a write really lands; absPath stays the lexical path that
 	// ownership and manifest logic key on.
 	target, viaLink, err := g.guardWrite(absPath)
@@ -3005,6 +3031,10 @@ func (g *Generator) removeStaleFile(filePath string) {
 	// removal out of it.
 	if g.userMode && filePath != g.manifestPath() && filePath != g.localManifestPath() &&
 		!g.userMayTouch(filepath.Dir(filePath)) {
+		return
+	}
+	if !g.userMode && filePath != g.manifestPath() && filePath != g.localManifestPath() && isSymlink(filePath) {
+		g.log().Warn("Not removing a symlink: links are the user's to remove", "path", filePath)
 		return
 	}
 	if !g.removalConfined(filePath) {

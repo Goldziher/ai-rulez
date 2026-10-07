@@ -165,6 +165,14 @@ func (diskApplier) lifecycle() runLifecycle { return runLifecycle{downgrades: tr
 func (diskApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	flatOutputs := p.Outputs
 
+	// Nothing is written, ignored or removed when a file ai-rulez cannot prove it
+	// wrote (or a symlinked output) is in the way: the user decides first.
+	refused, linked := g.outputSafety(flatOutputs)
+	if len(refused) > 0 {
+		return nil, refusalError(refused)
+	}
+	g.linkedOutputs = linked
+
 	// The machine-local inputs (overlay, local/ tree) are ignored before any check
 	// can refuse the run, so a refused first run never leaves them unignored.
 	if err := g.ignoreLocalInputs(); err != nil {
@@ -243,6 +251,7 @@ func (dryRunApplier) lifecycle() runLifecycle { return runLifecycle{downgrades: 
 
 func (dryRunApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	flatOutputs := p.Outputs
+	g.refusedOutputs, g.linkedOutputs = g.outputSafety(flatOutputs)
 	local, err := g.planLocal(p.Requested, flatOutputs)
 	if err != nil {
 		return nil, err
@@ -287,7 +296,14 @@ func (checkApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		}
 	}
 	var drift []Drift
+	refused, linked := g.outputSafety(outputs)
+	for _, r := range refused {
+		blocked[r.rel] = true
+	}
 	for _, output := range outputs {
+		if linked[g.relSlash(g.absOutputPath(output.Path))] {
+			continue
+		}
 		kind, _, ok := g.outputState(output)
 		if !ok || kind == "" {
 			continue

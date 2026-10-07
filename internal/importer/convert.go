@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/utils"
@@ -148,6 +149,9 @@ func Convert(ctx context.Context, opts ConvertOptions) (*Report, error) {
 		return report, err
 	}
 	report.Written = true
+	if err := recordImported(c); err != nil {
+		return report, err
+	}
 	if err := ignoreLocalTree(logger.FromContext(ctx), c.abs, c.intoAbs, p.files); err != nil {
 		return report, err
 	}
@@ -878,4 +882,60 @@ func writeFiles(report *Report, files map[string][]byte, execs map[string]bool, 
 		return oops.With("path", target).Wrapf(err, "write %s", f.Path)
 	}
 	return nil
+}
+
+// recordImported leaves the record generate reads (generator.ConvertRecordName):
+// the native files whose content now lives in the config directory. The first
+// generate replaces them without --force; a file nobody imported stays protected.
+func recordImported(c *conversion) error {
+	seen := map[string]bool{}
+	var rels []string
+	add := func(rel string) {
+		rel = path.Clean(strings.TrimPrefix(filepath.ToSlash(rel), "./"))
+		if rel != "." && !seen[rel] && fs.ValidPath(rel) {
+			seen[rel] = true
+			rels = append(rels, rel)
+		}
+	}
+	for _, it := range c.plan.Items {
+		for _, s := range it.Sources {
+			add(s)
+		}
+	}
+	for _, s := range c.plan.Pointers {
+		add(s)
+	}
+	files := map[string][]byte{}
+	for _, rel := range rels {
+		abs := filepath.Join(c.abs, filepath.FromSlash(rel))
+		info, err := os.Lstat(abs)
+		switch {
+		case err != nil || info.Mode()&os.ModeSymlink != 0:
+		case info.IsDir():
+			collectDirFiles(c.abs, abs, files)
+		case info.Mode().IsRegular() && info.Size() <= maxFileBytes:
+			if data, rerr := os.ReadFile(abs); rerr == nil {
+				files[rel] = data
+			}
+		}
+	}
+	return generator.WriteConvertRecord(c.intoAbs, files)
+}
+
+// collectDirFiles adds every regular file below dir to files, keyed by its path below root.
+func collectDirFiles(root, dir string, files map[string][]byte) {
+	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !d.Type().IsRegular() {
+			return nil //nolint:nilerr // an unreadable entry is simply not recorded
+		}
+		if info, ierr := d.Info(); ierr != nil || info.Size() > maxFileBytes {
+			return nil //nolint:nilerr // too large to have been imported
+		}
+		data, rerr := os.ReadFile(p)
+		rel, relErr := filepath.Rel(root, p)
+		if rerr == nil && relErr == nil {
+			files[filepath.ToSlash(rel)] = data
+		}
+		return nil
+	})
 }

@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/stretchr/testify/assert"
@@ -59,6 +60,7 @@ func TestConvert_OKFWritesWhatImportOKFWrites(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, report.Written, "%+v", report.Security)
 	got := snapshot(t, filepath.Join(dir, ".ai-rulez"))
+	delete(got, generator.ConvertRecordName)
 	delete(got, "config.toml")
 	assert.Equal(t, snapshot(t, direct), got)
 }
