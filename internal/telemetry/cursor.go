@@ -148,8 +148,10 @@ func encodeEvents(events []Event) ([]byte, error) {
 
 // CatchUpOptions configures CatchUp.
 type CatchUpOptions struct {
-	// Sample is the export sample fraction (Settings.Sample); 0 means everything.
-	Sample float64
+	// Sample is the export sample fraction (Settings.Sample), applied the way the
+	// recorder applies it: 0 exports nothing. nil applies no sampling at all, for
+	// a count of the log rather than an export.
+	Sample *float64
 	// All reads the log from its first line instead of the cursor: the way to export
 	// history, which a consent never covers on its own.
 	All bool
@@ -332,7 +334,7 @@ func readTail(file *os.File, offset int64, skip map[string]bool, o CatchUpOption
 			continue
 		}
 		tail.lastID = event.EventID
-		if skip[event.EventID] || (o.Sample > 0 && !Sampled(o.Sample, &event)) {
+		if skip[event.EventID] || (o.Sample != nil && !Sampled(*o.Sample, &event)) {
 			tail.skipped++
 			continue
 		}
