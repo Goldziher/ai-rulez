@@ -232,7 +232,7 @@ func (b *rulesyncPlanner) importProjectFiles() {
 }
 
 // importIgnore reports an ignore file: ai-rulez has no ignore feature, and
-// rulesync deprecates it in favour of permissions (read deny).
+// rulesync deprecates it in favor of permissions (read deny).
 func (b *rulesyncPlanner) importIgnore(file string) {
 	if _, ok := b.r.exists(file); !ok {
 		return
