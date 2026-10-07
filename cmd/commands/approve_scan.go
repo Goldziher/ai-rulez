@@ -2,36 +2,24 @@ package commands
 
 import (
 	"bufio"
-	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
-	"unicode"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/approval"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
-// Bounds of what `approve` reads of one subject: a tree larger than this is not
-// shown or scanned in full, and the reviewer is told so.
-const (
-	approveMaxFiles    = 2000
-	approveMaxFileSize = lint.MaxServedScanBytes
-)
+// approveMaxFileSize bounds what `approve` reads of one file (lockrun.MaxFileSize).
+const approveMaxFileSize = lockrun.MaxFileSize
 
 // approvedFile is one file of the content being approved.
-type approvedFile struct {
-	Path       string
-	Size       int64
-	Executable bool
-	Data       []byte // nil when the file was too large or unreadable to scan
-}
+type approvedFile = lockrun.File
 
 // subjectFiles lists the files behind a subject, for display and scanning. note
 // explains what could not be listed (content declared in config.toml, a tree
@@ -74,88 +62,18 @@ func subjectFiles(cfg *config.Config, s approval.Subject) (files []approvedFile,
 	return nil, "the source is not a regular file"
 }
 
-// walkFiles lists the regular files below dir (only the named ones when only is
-// given), skipping symlinks and VCS and cache bookkeeping.
+// walkFiles lists the regular files below dir (see lockrun.WalkFiles).
 func walkFiles(dir string, only ...string) (files []approvedFile, note string) {
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, relErr := filepath.Rel(dir, path)
-		if relErr != nil || rel == "." {
-			return nil //nolint:nilerr // the root itself
-		}
-		if d.IsDir() {
-			if d.Name() == ".git" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !d.Type().IsRegular() || rel == ".cache_meta.json" || (len(only) > 0 && rel != only[0]) {
-			return nil
-		}
-		if len(files) >= approveMaxFiles {
-			note = fmt.Sprintf("more than %d files: the rest are not listed or scanned", approveMaxFiles)
-			return filepath.SkipAll
-		}
-		info, statErr := d.Info()
-		if statErr != nil {
-			return nil //nolint:nilerr // listed as unreadable below
-		}
-		f := approvedFile{Path: filepath.ToSlash(rel), Size: info.Size(), Executable: info.Mode().Perm()&0o100 != 0}
-		if info.Size() <= approveMaxFileSize {
-			if data, readErr := safefs.ReadRegular(path); readErr == nil {
-				f.Data = data
-			}
-		}
-		files = append(files, f)
-		return nil
-	})
-	if err != nil {
-		note = "the tree cannot be read completely: " + err.Error()
-	}
-	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
-	return files, note
+	return lockrun.WalkFiles(dir, only...)
 }
 
-// scanApproved runs the security scan over the files and returns the findings,
-// errors first. A file with no Data (over the size limit) is not scanned; the
-// caller lists it. A binary file is reported by the scan itself.
+// scanApproved runs the security scan over the files (see lockrun.ScanFiles).
 func scanApproved(cfg *config.Config, name string, files []approvedFile) []lint.Finding {
-	var served []lint.ServedFile
-	for _, f := range files {
-		if f.Data != nil {
-			served = append(served, lint.ServedFile{Path: f.Path, Content: f.Data})
-		}
-	}
-	found := lint.ScanServed(cfg, name, served, "")
-	sort.SliceStable(found, func(i, j int) bool {
-		if (found[i].Severity == lint.SeverityError) != (found[j].Severity == lint.SeverityError) {
-			return found[i].Severity == lint.SeverityError
-		}
-		return found[i].Code < found[j].Code
-	})
-	return found
+	return lockrun.ScanFiles(cfg, name, files)
 }
 
-// safeText makes untrusted text safe to print: control characters (other than
-// tab), bidirectional controls, zero-width and tag characters are replaced by
-// their \u escape, so content cannot hide text from the reviewer.
-func safeText(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		switch {
-		case r == '\t':
-			b.WriteRune(r)
-		case unicode.IsControl(r), r >= 0x200B && r <= 0x200F, r >= 0x202A && r <= 0x202E,
-			r >= 0x2060 && r <= 0x2069, r == 0xFEFF, r >= 0xE0000 && r <= 0xE007F:
-			fmt.Fprintf(&b, "\\u{%X}", r)
-		default:
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
-}
+// safeText makes untrusted text safe to print (see lockrun.SafeText).
+func safeText(s string) string { return lockrun.SafeText(s) }
 
 // gitUserEmail reads user.email from the git configuration files that apply to
 // dir: the repository's, then the global ones. It reads them directly instead of

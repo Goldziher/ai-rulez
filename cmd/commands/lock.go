@@ -1,21 +1,23 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
-	"strings"
+	"sort"
 	"sync"
 
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
+	"github.com/Goldziher/ai-rulez/v5/internal/forge"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
@@ -236,11 +238,16 @@ func onceCollector() *diag.Collector {
 }
 
 func loadForLock(path string, opts ...config.LoadOption) (*config.Config, error) {
+	return loadForLockIn(cmdContext(), path, opts...)
+}
+
+// loadForLockIn is loadForLock under ctx (a lock run's context).
+func loadForLockIn(ctx context.Context, path string, opts ...config.LoadOption) (*config.Config, error) {
 	if lockWarnings != nil {
 		opts = append(opts, config.WithCollector(lockWarnings))
 	}
 	// lock reports an include it cannot resolve as a problem of its own.
-	ctx := config.WithUnresolvedIncludesTolerated(cmdContext())
+	ctx = config.WithUnresolvedIncludesTolerated(ctx)
 	if path != "" {
 		return loadProjectFile(ctx, path, opts...)
 	}
@@ -248,71 +255,49 @@ func loadForLock(path string, opts ...config.LoadOption) (*config.Config, error)
 }
 
 func writeLockAt(path, kind string, names []string) int {
-	wanted := map[string]bool{}
-	for _, n := range names {
-		wanted[n] = true
-	}
-	remoteRefresh := !lockContentOnly
-	unpinnedBefore := len(lockUnpinned)
-	if remoteRefresh {
-		defer installReleaseGate(path)() // min_release_age holds back young tags while ranges resolve
-	}
-	defer prepareLockRun(remoteRefresh, kind, wanted)()
-
-	cfg, err := loadForLock(path, config.WithoutLocal())
+	res, err := lockrun.Write(cmdContext(), lockRequest(kind, names), lockEnv(path))
+	lockUnpinned = append(lockUnpinned, res.Unpinned...)
 	if err != nil {
-		fmtError(err)
-		return 1
-	}
-	// Pin only what generate would accept: a lock for a configuration that
-	// fails validation would record content no run can use.
-	if err := cfg.Validate(); err != nil {
-		fmtError(err)
-		return 1
-	}
-	current, err := lockfile.Load(cfg.ConfigDir)
-	if err != nil {
-		fmtError(err)
-		return 1
-	}
-	next, err := nextLock(cfg, current, kind, wanted, remoteRefresh)
-	if err != nil {
-		fmtError(err)
-		if errors.Is(err, errScanRefused) {
-			return exitDrift // findings, like a refused pre-pin scan
+		var refused *lockrun.FindingsError
+		if errors.As(err, &refused) && refused.Sources > 0 {
+			fmt.Fprintln(os.Stderr, refused.Error())
+		} else {
+			fmtError(err)
 		}
-		return 1
+		return lockrun.ExitCode(res, err)
 	}
-	if err := pinContent(cfg, current, next, kind, wanted); err != nil {
-		fmtError(err)
-		return 1
+	printLockWritten(res.Lock)
+	printScans(res.Lock)
+	logger.Success("Wrote lock file", "path", res.Path)
+	return lockrun.ExitCode(res, nil)
+}
+
+// lockRequest is what the flags ask one `lock` run to pin.
+func lockRequest(kind string, names []string) lockrun.Request {
+	return lockrun.Request{Kind: kind, Names: names, ContentOnly: lockContentOnly, Profile: lockProfile, AllRoles: lockRoles,
+		Roles: lockRoleNames(), AcceptFindings: lockAcceptFindings, Strict: lockStrict, Extras: lockExtraViews()}
+}
+
+// lockEnv is the command line as the host of a lock run over the root at path.
+func lockEnv(path string) lockrun.Env {
+	return lockrun.Env{
+		Version: Version,
+		Policy:  cliLockPolicy,
+		Load: func(ctx context.Context, p config.LockPolicy, opts ...config.LoadOption) (*config.Config, error) {
+			return loadForLockIn(ctx, path, append(opts, config.WithLockPolicy(p))...)
+		},
+		Collector: lockWarnings,
+		Report:    os.Stderr,
+		NewForge:  func(cfg *config.Config, offline bool) forge.Client { return newForgeClient(cfg, offline) },
+		GitToken:  GetGitToken(),
+		Tree:      strictTreeCache.Load,
+		Cwd:       workingDir(),
 	}
-	carryApprovals(current, next, len(wanted) == 0 && kind == "")
-	if err := deniedPinsError(next); err != nil {
-		fmtError(err)
-		return 1
-	}
-	if refused := scanNewPins(cfg, current, next); refused > 0 {
-		fmt.Fprintf(os.Stderr, "refused %d source(s): the security scan of the new tree has error findings; review them, then pass --accept-findings. Nothing was written\n", refused)
-		return exitDrift
-	}
-	pinScans(cfg, current, next, len(wanted) == 0 && kind == "")
-	if err := lockfile.Save(cfg.ConfigDir, next); err != nil {
-		fmtError(err)
-		return 1
-	}
-	printLockWritten(next)
-	printScans(next)
-	logger.Success("Wrote lock file", "path", lockfile.Path(cfg.ConfigDir))
-	if len(lockUnpinned) > unpinnedBefore {
-		return exitUnpinned
-	}
-	return 0
 }
 
 // printLockWritten lists what the written lock pins.
 func printLockWritten(next *lockfile.File) {
-	entries := lockedEntries(next)
+	entries := lockrun.Entries(next)
 	for i := range entries {
 		e := &entries[i]
 		fmt.Printf("locked %s %s %s\n", e.Name, shortSHA(e.Commit), e.Digest)
@@ -325,92 +310,40 @@ func printLockWritten(next *lockfile.File) {
 	}
 }
 
-// prepareLockRun sets the include policy of a `lock` run (refresh the remotes, or
-// stay offline for --content-only) and returns the function that restores it.
+// prepareLockRun sets the include policy of a run that refreshes the lock
+// through the command line's loads (`update`): refresh the remotes, or stay
+// offline, and returns the function that restores it.
 func prepareLockRun(remoteRefresh bool, kind string, wanted map[string]bool) (restore func()) {
 	prev := cliLockPolicy
 	if remoteRefresh {
-		cliLockPolicy.Mode = config.LockRefresh
-		cliLockPolicy.Refresh = func(k, n string) bool {
-			return (kind == "" || kind == k) && (len(wanted) == 0 || wanted[n])
-		}
 		includes.ResetObserved()
-	} else {
-		cliLockPolicy.Offline = true
 	}
+	cliLockPolicy = lockrun.RunPolicy(cliLockPolicy, remoteRefresh, kind, wanted)
 	return func() { cliLockPolicy = prev }
 }
 
-// errScanRefused marks a lock refused only because the security scan refuses
-// served skills under --strict: findings (exit 2), not a failure to run.
-var errScanRefused = errors.New("the security scan refuses served skills (--strict)")
-
-// nextLock builds the remote, source and served entries of the new lock. The
-// content pins are added by pinContent.
+// nextLock builds the remote, source and served entries of the new lock (see
+// lockrun.Next) with the serve-view flags.
 func nextLock(cfg *config.Config, current *lockfile.File, kind string, wanted map[string]bool, remoteRefresh bool) (*lockfile.File, error) {
-	next := &lockfile.File{Version: lockfile.Version}
-	if remoteRefresh {
-		var problems []string
-		next, problems = includes.BuildLock(cfg, current)
-		if len(problems) > 0 {
-			return nil, oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  "))
-		}
-	} else if current != nil {
-		next.Include, next.Skill = current.Include, current.Skill
-	}
-
-	// Source and served pins: refreshed with the remote pins; --content-only
-	// refreshes only the served digests, and only when that works offline.
-	dynamicKind := kind
-	if !remoteRefresh {
-		dynamicKind = lockfile.KindServed
-	}
-	if problems, scanOnly := mergeDynamicLock(cfg, current, next, dynamicKind, wanted); len(problems) > 0 {
-		if scanOnly {
-			return nil, oops.With("config", cfg.ConfigDir).Wrapf(errScanRefused, "cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  "))
-		}
-		if remoteRefresh {
-			return nil, oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  "))
-		}
-		logger.Warn("Kept the served pins: they cannot be recomputed offline", "problems", strings.Join(problems, "; "))
-	}
-	for name := range wanted {
-		if !lockHasName(next, name) {
-			return nil, oops.Errorf("%q is not a remote include, installed skill, skill source or served skill in %s", name, cfg.ConfigDir)
-		}
-	}
-	return next, nil
+	req, env := lockRequest(kind, wantedNames(wanted)), lockEnv("")
+	next, dyn, err := lockrun.Next(cmdContext(), cfg, current, &req, &env, remoteRefresh)
+	lockUnpinned = append(lockUnpinned, dyn.Unpinned...)
+	return next, err //nolint:wrapcheck // already contextual
 }
 
-// pinContent adds the content pins to next. A refresh limited to some remote
-// sources leaves the content pins alone; otherwise they are recomputed from the
-// sources on disk.
+// pinContent adds the content pins to next (see lockrun.PinContent).
 func pinContent(cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool) error {
-	if len(wanted) == 0 && kind == "" {
-		profileName := lockProfile
-		if profileName == "" && current != nil {
-			profileName = current.Profile
-		}
-		snap, err := lockRoleSnapshot(cfg, profileName, false, govview.RoleSelection{Write: true, All: lockRoles, Lock: current, Only: lockRoleNames()})
-		if err != nil {
-			return err
-		}
-		for _, problem := range snap.Problems {
-			logger.Warn("Cannot pin part of the configuration; lock --check will fail until it is fixed", "problem", problem)
-		}
-		contentlock.Build(next, snap)
-		return nil
+	req := lockRequest(kind, wantedNames(wanted))
+	return lockrun.PinContent(cfg, current, next, &req, Version) //nolint:wrapcheck // already contextual
+}
+
+func wantedNames(wanted map[string]bool) []string {
+	names := make([]string, 0, len(wanted))
+	for n := range wanted {
+		names = append(names, n)
 	}
-	if current == nil {
-		return nil
-	}
-	next.AIRulezVersion, next.Profile = current.AIRulezVersion, current.Profile
-	next.Scope, next.OutputsPinned = current.Scope, current.OutputsPinned
-	next.Item, next.Output = current.Item, current.Output
-	if next.HasContentPins() {
-		next.Tree = contentlock.TreeOf(next)
-	}
-	return nil
+	sort.Strings(names)
+	return names
 }
 
 // lockProfileFor picks the profile a check renders: --profile, else the one the
