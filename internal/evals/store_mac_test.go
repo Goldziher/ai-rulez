@@ -113,3 +113,45 @@ func TestRun_ForgedPassingRecordWithMatchingDigestsStillRuns(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, calls+2, runner.calls)
 }
+
+func TestStorePut_NeverSignsWhatAnUnverifiedRecordCarried(t *testing.T) {
+	recall := 1.0
+	carried := &ActivationRecord{Surface: "native", Scope: "s", Digest: "d", SetDigest: "sd", Positives: 10, Negatives: 10, Recall: &recall, Precision: &recall}
+	tests := []struct {
+		name   string
+		signed bool
+		// wantCarried says whether the activation block and the last-pass mark survive the run.
+		wantCarried bool
+	}{
+		{"a forged (unsigned) record loses its activation and last pass", false, false},
+		{"a record signed by this key keeps them", true, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: a record on disk carrying an activation block and a last-pass mark.
+			path := filepath.Join(t.TempDir(), "eval-results.json")
+			seed := NewStore()
+			if tt.signed {
+				seed.SetKey(macKey)
+			}
+			seed.Skills = append(seed.Skills, SkillRecord{ID: "x", Digest: "d", Activation: carried, LastPass: &PassMark{Digest: "d", Date: "2026-01-01"}, verified: true})
+			require.NoError(t, seed.Save(path))
+			store, err := LoadStoreKeyed(path, macKey)
+			require.NoError(t, err)
+			old, _ := store.Get("x")
+			require.Equal(t, tt.signed, old.Verified())
+
+			// Act: an ordinary, failing case run of the skill.
+			store.Put(SkillRecord{ID: "x", Digest: "d", Passing: false})
+			require.NoError(t, store.Save(path))
+			reloaded, err := LoadStoreKeyed(path, macKey)
+
+			// Assert
+			require.NoError(t, err)
+			rec, _ := reloaded.Get("x")
+			assert.True(t, rec.Verified(), "the new run is signed")
+			assert.Equal(t, tt.wantCarried, rec.Activation != nil, "activation carried")
+			assert.Equal(t, tt.wantCarried, rec.LastPass != nil, "last pass carried")
+		})
+	}
+}
