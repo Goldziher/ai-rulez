@@ -376,7 +376,7 @@ repo overrides rejected: 1
 `--format json` writes the same report (`schema/policy-effective.schema.json`): `layers[{origin, source, name,
 digest}]`, `effective`, `provenance` (dotted key to the layer, joined with `+` when several layers contribute to a
 set), `overrides{accepted, rejected}` and `violations[]`. The digest is the SHA-256 of the file with CRLF normalized
-to LF. Exit code 1 when the repository loosens the policy. The policy file format is
+to LF. Exit code 2 when the repository loosens the policy (the same code `generate` and `validate` give). The policy file format is
 `schema/policy.schema.json`.
 
 ## What honors the policy
