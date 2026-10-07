@@ -1,0 +1,800 @@
+# scenario llms-txt
+
+## step 1: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=17
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 652 f40a7083ac318d1a88f312fdabd4f37892642d04e16d590b3caaf2e663390f84
+.ai-rulez/.generated-manifest.local.json file 0644 1931 64f353e4b63b3cad5cc8d0da94731185612ac9e03a1e8444bb0729edbd711487
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+.ai-rulez/config.toml file 0644 565 c9c9cec853523b46e07db2f62c7f659db926848b3a67bc7d22fec74e9128e535
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.claude/agents/tester.md file 0644 171 0657702e7537dae198f90daa49e6ceeea314d0daef45f6c4a53988ff95eab003
+.claude/rules/ dir 0755
+.claude/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.claude/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
+.claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
+.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+.claude/skills/ dir 0755
+.claude/skills/build/ dir 0755
+.claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
+.claude/skills/deployer/ dir 0755
+.claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
+.claude/skills/reviewer/ dir 0755
+.claude/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
+.claude/skills/reviewer/references/ dir 0755
+.claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+.claude/skills/reviewer/scripts/ dir 0755
+.claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
+.gitignore file 0644 349 2ffb984e2683844a8cf8c22786762a2370eec69cfde95c61f6b2ba34adfa0bbd
+CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
+llms-full.txt file 0644 837 c6fd24daa9df4c6c87949f51066ec798db452b52c5f76a7c3919fa2e08e666e1
+llms.txt file 0644 671 ac4237010387404701e56f5d212b299f4f379f2bbdcbd8a3a28c4d78dddc851d
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+--- home tree
+(no change)
+
+## step 2: ai-rulez generate --yes
+exit: 0
+--- stdout
+--- stderr
+INFO  Generating with configuration profile=default
+INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+INFO  Generation complete files=17
+WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 3: ai-rulez generate --check
+exit: 0
+--- stdout
+--- stderr
+INFO  Generated files are up to date roots=1
+--- project tree
+(no change)
+--- home tree
+(no change)
+
+## step 4: ai-rulez validate --strict
+exit: 2
+--- stdout
+.ai-rulez/agents/architect.md:3: warning AR802 description-length: description is 15 characters, below the minimum of 20
+.ai-rulez/agents/tester.md:3: warning AR802 description-length: description is 12 characters, below the minimum of 20
+.ai-rulez/commands/build.md:3: warning AR802 description-length: description is 17 characters, below the minimum of 20
+.ai-rulez/commands/ship.md:3: warning AR802 description-length: description is 14 characters, below the minimum of 20
+.ai-rulez/skills/deployer/SKILL.md:3: warning AR802 description-length: description is 19 characters, below the minimum of 20
+.ai-rulez/skills/reviewer/scripts/run.sh:1: warning AR503 script-not-executable: script has a shebang but is not executable (chmod +x, and commit the mode)
+
+strict validation: 0 error(s), 6 warning(s), 0 info across 1 root(s)
+  AR503 script-not-executable        1
+  AR802 description-length           5
+risk (advisory, never fails the run): medium (score 48/100)
+  medium      8  .ai-rulez/agents/architect.md
+  medium      8  .ai-rulez/agents/tester.md
+  medium      8  .ai-rulez/commands/build.md
+  medium      8  .ai-rulez/commands/ship.md
+  medium      8  .ai-rulez/skills/deployer/SKILL.md
+  ... and 1 more item(s)
+--- stderr
+INFO  Configuration is valid path=$ROOT/.ai-rulez
+--- project tree
+.ai-rulez/ dir 0755
+.ai-rulez/.generated-manifest.json file 0644 652 f40a7083ac318d1a88f312fdabd4f37892642d04e16d590b3caaf2e663390f84
+>>>>
+{
+  "version": "1",
+  "files": [
+    ".claude/agents/architect.md",
+    ".claude/agents/tester.md",
+    ".claude/rules/always.md",
+    ".claude/rules/auto.md",
+    ".claude/rules/manual.md",
+    ".claude/rules/targeted.md",
+    ".claude/rules/typescript.md",
+    ".claude/settings.json",
+    ".claude/skills/build/SKILL.md",
+    ".claude/skills/deployer/SKILL.md",
+    ".claude/skills/reviewer/SKILL.md",
+    ".claude/skills/reviewer/references/checklist.md",
+    ".claude/skills/reviewer/scripts/run.sh",
+    ".claude/skills/ship/SKILL.md",
+    "CLAUDE.md",
+    "llms-full.txt",
+    "llms.txt"
+  ],
+  "merged": {
+    ".claude/settings.json": []
+  }
+}
+<<<<
+.ai-rulez/.generated-manifest.local.json file 0644 1931 64f353e4b63b3cad5cc8d0da94731185612ac9e03a1e8444bb0729edbd711487
+>>>>
+{
+  "version": "1",
+  "files": [],
+  "merged": {
+    ".claude/settings.json": [
+      {
+        "path": [
+          "hooks",
+          "PreToolUse"
+        ],
+        "elementSums": [
+          "54635121d8f6e71ad7bc18abf9f1ff33a3dc95673c6c6a75a639d654832c8081",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+        ]
+      },
+      {
+        "path": [
+          "hooks",
+          "SessionStart"
+        ],
+        "elementSums": [
+          "05e8f7d1cb0715d6a17483f3d6c1a5eab9569874a2e54e854e67b01c29d51f86"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "allow"
+        ],
+        "elementSums": [
+          "4b79ff9e0bd4048e1a7d0b993b2bba4336ad7f2dd385ca312d04d46ee518d2d6",
+          "51ab4feb934e42152b9e06978628e6478131dcd20ed3dc3247b44f3c3e378083",
+          "7980f3870c01e194db9c1e8874a073687d09e6b182a0b27596ffce30a6f80f51"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "ask"
+        ],
+        "elementSums": [
+          "9361f4e2cabb52e2a1f986dd57aa9aa77b64cdd7df81feb7ebd095b9a34ecd06"
+        ]
+      },
+      {
+        "path": [
+          "permissions",
+          "deny"
+        ],
+        "elementSums": [
+          "8dd3b1a58515b0c193982a408b39ffa017372a95e8a2d4a4c44636f35c6eedf6",
+          "d32001d08b7e0990e2ef5732ac51425f931e5ceedaff77f3c92d7d13db4ec72b"
+        ]
+      }
+    ]
+  },
+  "digests": {
+    ".claude/settings.json": "0e293c7ca1d8c791d15dab4cebee34c2f5400d0bef14dec1304ce335f83447fe",
+    ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+    "llms-full.txt": "c6fd24daa9df4c6c87949f51066ec798db452b52c5f76a7c3919fa2e08e666e1",
+    "llms.txt": "ac4237010387404701e56f5d212b299f4f379f2bbdcbd8a3a28c4d78dddc851d"
+  }
+}
+<<<<
+.ai-rulez/agents/ dir 0755
+.ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
+>>>>
+---
+name: architect
+description: Designs systems
+model: sonnet
+---
+# Architect
+
+Think in layers.
+<<<<
+.ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
+>>>>
+---
+name: tester
+description: Writes tests
+effort: high
+---
+# Tester
+
+Test first.
+<<<<
+.ai-rulez/checks/ dir 0755
+.ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
+>>>>
+---
+description: Flags common security issues
+severity: high
+tools: [Read, Grep]
+---
+
+Review the diff for injection and secrets.
+<<<<
+.ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
+>>>>
+---
+description: Style consistency
+severity: low
+---
+
+Keep the style consistent.
+<<<<
+.ai-rulez/commands/ dir 0755
+.ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
+>>>>
+---
+name: build
+description: Build the project
+---
+Run the build and report failures.
+<<<<
+.ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
+>>>>
+---
+name: ship
+description: Ship a release
+---
+Cut a release.
+<<<<
+.ai-rulez/config.toml file 0644 565 c9c9cec853523b46e07db2f62c7f659db926848b3a67bc7d22fec74e9128e535
+>>>>
+version = "5.0"
+name = "golden"
+description = "Golden fixture project"
+presets = ["claude", "llms-txt"]
+gitignore = true
+agents_md = false
+
+[guard]
+generated = true
+
+[permissions]
+allow = ["Bash(npm run test:*)", "Read(./src/**)", "WebFetch(domain:example.com)"]
+ask = ["Bash(git push:*)"]
+deny = ["Bash(rm -rf:*)", "Read(./.env)"]
+
+[[hooks]]
+event = "PreToolUse"
+matcher = "Bash"
+[[hooks.hooks]]
+script = "scripts/guard.sh"
+timeout = 10
+
+[[hooks]]
+event = "SessionStart"
+[[hooks.hooks]]
+command = "echo started"
+status_message = "Starting"
+
+[llms_txt]
+full = true
+<<<<
+.ai-rulez/context/ dir 0755
+.ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
+>>>>
+# Architecture
+
+Layers and boundaries.
+<<<<
+.ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
+>>>>
+---
+priority: high
+---
+# Overview
+
+The project overview.
+<<<<
+.ai-rulez/rules/ dir 0755
+.ai-rulez/rules/always.md file 0644 61 9c177b14cdaff230d103d9ee46ba44ce2455c5df6038cf1ea69e1e2e4c811282
+>>>>
+---
+priority: critical
+---
+# Always
+
+Always apply this rule.
+<<<<
+.ai-rulez/rules/auto.md file 0644 101 88e5024831ae852d1bbce5c72672c24f8fc7b5342288a389ec797e65f5f60375
+>>>>
+---
+activation: auto
+description: Database migrations
+---
+# Migrations
+
+Write reversible migrations.
+<<<<
+.ai-rulez/rules/manual.md file 0644 68 341ce1713db555c6d51e3253679660f1bb3afd322c72030d151f1a979d81b79b
+>>>>
+---
+activation: manual
+priority: low
+---
+# Manual
+
+Only when asked.
+<<<<
+.ai-rulez/rules/targeted.md file 0644 79 cab22af28f9870a3a1f8a42a44c3f1eec2050e8acca7a60b96e1688af4c698a2
+>>>>
+---
+targets:
+  - claude
+  - cursor
+---
+# Targeted
+
+For claude and cursor only.
+<<<<
+.ai-rulez/rules/typescript.md file 0644 117 0e693f8a0ede994dfb6ede7fc2966d0d2092059a0d2858ec1fddd07c7529e6d2
+>>>>
+---
+priority: high
+paths:
+  - "src/**/*.{ts,tsx}"
+  - "tests/**"
+activation: glob
+---
+# TypeScript
+
+Use strict mode.
+<<<<
+.ai-rulez/skills/ dir 0755
+.ai-rulez/skills/deployer/ dir 0755
+.ai-rulez/skills/deployer/SKILL.md file 0644 83 bad245bf59d4d4f2ecd6a6980b475e628280c348abaa2c33a51cfde8f8019289
+>>>>
+---
+name: deployer
+description: Deploys the service
+---
+# Deployer
+
+Deploy safely.
+<<<<
+.ai-rulez/skills/reviewer/ dir 0755
+.ai-rulez/skills/reviewer/SKILL.md file 0644 88 a944e83c0c4f2209746efcc77d875153037389d2c36e01af2a6ae88949b123fa
+>>>>
+---
+name: reviewer
+description: Reviews pull requests
+---
+# Reviewer
+
+Review carefully.
+<<<<
+.ai-rulez/skills/reviewer/references/ dir 0755
+.ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+>>>>
+# Checklist
+
+- tests
+- docs
+<<<<
+.ai-rulez/skills/reviewer/scripts/ dir 0755
+.ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+>>>>
+#!/bin/sh
+echo review
+<<<<
+.claude/ dir 0755
+.claude/agents/ dir 0755
+.claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+>>>>
+---
+description: Designs systems
+model: sonnet
+name: architect
+# Content-Hash: blake3:547979f4030dff81336eb9cf564c34b5b36de1be7622e7be50a46092e0446308
+---
+
+# Architect
+
+Think in layers.
+<<<<
+.claude/agents/tester.md file 0644 171 0657702e7537dae198f90daa49e6ceeea314d0daef45f6c4a53988ff95eab003
+>>>>
+---
+description: Writes tests
+effort: high
+name: tester
+# Content-Hash: blake3:8c2953e0659d5d2ac2b289c89ed37134651de764e1e9ccaa06249678c44b91a4
+---
+
+# Tester
+
+Test first.
+<<<<
+.claude/rules/ dir 0755
+.claude/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/always.md. Edit the source, not this file.
+Content-Hash: blake3:8619eb3299aa8004e3f834b0e168b69773d111e6ee9dd4a0976edd239cd9b2b9
+-->
+
+# always
+
+**Priority:** critical
+
+Always apply this rule.
+<<<<
+.claude/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/auto.md. Edit the source, not this file.
+Content-Hash: blake3:c3daa0d9ba075b78b99be891af258f8c49ae246849266b000e739b149860b0dd
+-->
+
+# auto
+
+Write reversible migrations.
+<<<<
+.claude/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/manual.md. Edit the source, not this file.
+Content-Hash: blake3:412154e103f874e7b9ff9368bccb1914c0e5ad5f560662f656177a3eabb3e454
+-->
+
+# manual
+
+**Priority:** low
+
+Only when asked.
+<<<<
+.claude/rules/targeted.md file 0644 224 02e9f8e03a4ae407a9240b1b3859c9e4e12a5902973c2e8f129438f30a18e9fb
+>>>>
+<!--
+Generated by ai-rulez from .ai-rulez/rules/targeted.md. Edit the source, not this file.
+Content-Hash: blake3:9bd64aba4b097d10347fe257749d3605da9f2caae4a80f8c62cbaf19e95e7f96
+-->
+
+# targeted
+
+For claude and cursor only.
+<<<<
+.claude/rules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
+>>>>
+---
+paths:
+    - src/**/*.{ts,tsx}
+    - tests/**
+---
+<!--
+Generated by ai-rulez from .ai-rulez/rules/typescript.md. Edit the source, not this file.
+Content-Hash: blake3:a52b70995e9cea56b35ec77edbcdace649631c71e91397447d630ff6d9528d2c
+-->
+
+# typescript
+
+**Priority:** high
+
+Use strict mode.
+<<<<
+.claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
+>>>>
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/'scripts/guard.sh'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y ai-rulez@$VERSION guard",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo started",
+            "statusMessage": "Starting"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run test:*)",
+      "Read(./src/**)",
+      "WebFetch(domain:example.com)"
+    ],
+    "ask": [
+      "Bash(git push:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Read(./.env)"
+    ]
+  }
+}
+<<<<
+.claude/skills/ dir 0755
+.claude/skills/build/ dir 0755
+.claude/skills/build/SKILL.md file 0644 196 73e28d1d970abeb6d84ee2cba5436c5197ed7b78c92d995706a1fd10344cb0a3
+>>>>
+---
+description: Build the project
+name: build
+user-invocable: true
+# Content-Hash: blake3:0c2f1142800625bc65a6860d5509185112fbb00b48e700ab8d132b3ca5b265de
+---
+
+Run the build and report failures.
+<<<<
+.claude/skills/deployer/ dir 0755
+.claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
+>>>>
+---
+description: Deploys the service
+name: deployer
+# Content-Hash: blake3:089be46da587aa53591d09850c31f8d19292bfc8d2a55ad0240069145ac242ff
+---
+
+# Deployer
+
+Deploy safely.
+<<<<
+.claude/skills/reviewer/ dir 0755
+.claude/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
+>>>>
+---
+description: Reviews pull requests
+name: reviewer
+# Content-Hash: blake3:74b19c3624586cf01ab96bd81ab893047c0f8b7fd1a60d89e112c3cc0cd7e9ef
+---
+
+# Reviewer
+
+Review carefully.
+
+
+## Resources
+
+This skill bundles supporting files. Read them on demand when the task calls for them — don't bulk-load.
+
+### References
+
+- [`references/checklist.md`](references/checklist.md) — Checklist
+
+### Scripts
+
+- `scripts/run.sh`
+<<<<
+.claude/skills/reviewer/references/ dir 0755
+.claude/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
+>>>>
+# Checklist
+
+- tests
+- docs
+<<<<
+.claude/skills/reviewer/scripts/ dir 0755
+.claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
+>>>>
+#!/bin/sh
+echo review
+<<<<
+.claude/skills/ship/ dir 0755
+.claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
+>>>>
+---
+description: Ship a release
+name: ship
+user-invocable: true
+# Content-Hash: blake3:60e00915d412121dd52c6ccb3c5a111be448284990a2bf42a6d78a0f0cd8d44d
+---
+
+Cut a release.
+<<<<
+.gitignore file 0644 349 2ffb984e2683844a8cf8c22786762a2370eec69cfde95c61f6b2ba34adfa0bbd
+>>>>
+# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
+.ai-rulez/.generated-manifest.json
+.ai-rulez/.generated-manifest.local.json
+.ai-rulez/local/
+.claude/agents/
+.claude/rules/always.md
+.claude/rules/auto.md
+.claude/rules/manual.md
+.claude/rules/targeted.md
+.claude/rules/typescript.md
+.claude/settings.json
+.claude/skills/
+CLAUDE.md
+# END ai-rulez
+<<<<
+CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
+>>>>
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: golden
+Source: .ai-rulez/config.toml
+
+NEVER edit this file - modify .ai-rulez/ content instead
+Use MCP server: npx -y ai-rulez@latest mcp
+Regenerate: ai-rulez generate
+
+Docs: https://github.com/Goldziher/ai-rulez
+Content-Hash: blake3:2d7c528e752b413fa5da736b24437ed1bbd61eaaa88cbc4aa3a61fb8306bff6e
+-->
+
+# golden
+
+Golden fixture project
+
+## Context
+
+### overview
+
+The project overview.
+
+### architecture
+
+Layers and boundaries.
+<<<<
+llms-full.txt file 0644 837 c6fd24daa9df4c6c87949f51066ec798db452b52c5f76a7c3919fa2e08e666e1
+>>>>
+# golden
+
+> Golden fixture project
+
+## Always
+
+Source: .ai-rulez/rules/always.md
+
+### Always
+
+Always apply this rule.
+
+## Migrations
+
+Source: .ai-rulez/rules/auto.md
+
+### Migrations
+
+Write reversible migrations.
+
+## Manual
+
+Source: .ai-rulez/rules/manual.md
+
+### Manual
+
+Only when asked.
+
+## Targeted
+
+Source: .ai-rulez/rules/targeted.md
+
+### Targeted
+
+For claude and cursor only.
+
+## TypeScript
+
+Source: .ai-rulez/rules/typescript.md
+
+### TypeScript
+
+Use strict mode.
+
+## Architecture
+
+Source: .ai-rulez/context/architecture.md
+
+### Architecture
+
+Layers and boundaries.
+
+## Overview
+
+Source: .ai-rulez/context/overview.md
+
+### Overview
+
+The project overview.
+
+## Deployer
+
+Source: .ai-rulez/skills/deployer/SKILL.md
+
+### Deployer
+
+Deploy safely.
+
+## Reviewer
+
+Source: .ai-rulez/skills/reviewer/SKILL.md
+
+### Reviewer
+
+Review carefully.
+<<<<
+llms.txt file 0644 671 ac4237010387404701e56f5d212b299f4f379f2bbdcbd8a3a28c4d78dddc851d
+>>>>
+# golden
+
+> Golden fixture project
+
+## Rules
+
+- [Always](.ai-rulez/rules/always.md): Always apply this rule.
+- [Migrations](.ai-rulez/rules/auto.md): Database migrations
+- [Manual](.ai-rulez/rules/manual.md): Only when asked.
+- [Targeted](.ai-rulez/rules/targeted.md): For claude and cursor only.
+- [TypeScript](.ai-rulez/rules/typescript.md): Use strict mode.
+
+## Context
+
+- [Architecture](.ai-rulez/context/architecture.md): Layers and boundaries.
+- [Overview](.ai-rulez/context/overview.md): The project overview.
+
+## Skills
+
+- [Deployer](.ai-rulez/skills/deployer/SKILL.md): Deploys the service
+- [Reviewer](.ai-rulez/skills/reviewer/SKILL.md): Reviews pull requests
+<<<<
+scripts/ dir 0755
+scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+>>>>
+#!/bin/sh
+exit 0
+<<<<
+--- home tree
+(no change)
