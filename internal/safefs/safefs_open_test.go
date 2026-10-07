@@ -54,15 +54,21 @@ func TestOpenRegular(t *testing.T) {
 		name    string
 		path    string
 		wantErr string
+		// wantIs is checked instead of a message that differs between platforms.
+		wantIs error
 	}{
-		{"regular file", regular, ""},
-		{"symlink", link, "symlink"},
-		{"directory", dir, "regular file"},
-		{"missing", filepath.Join(dir, "none"), "no such file"},
+		{"regular file", regular, "", nil},
+		{"symlink", link, "symlink", nil},
+		{"directory", dir, "regular file", nil},
+		{"missing", filepath.Join(dir, "none"), "", os.ErrNotExist},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f, err := OpenRegular(tt.path)
+			if tt.wantIs != nil {
+				require.ErrorIs(t, err, tt.wantIs)
+				return
+			}
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
 				return
