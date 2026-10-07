@@ -13,6 +13,15 @@ import (
 // let an environment variable revive an expired approval.
 func approvalNow() time.Time { return ambient.Clock(nil).Now() }
 
+// now is the time the admission judges approvals and signatures at: Now, or
+// the wall clock.
+func (a Admission) now() time.Time {
+	if a.Now != nil {
+		return a.Now()
+	}
+	return approvalNow()
+}
+
 // admitApproval applies [governance] to one served skill. A skill the policy
 // requires approval for gets Approved and Approvers set from the lock's records;
 // under [governance] enforce a skill without a valid approval of its served digest
@@ -41,7 +50,7 @@ func (a Admission) admitApproval(s *CatalogSkill) *Refusal {
 		}
 		return nil
 	}
-	res := policy.Evaluate(a.Lock.Approval, subject, approvalNow())
+	res := policy.Evaluate(a.Lock.Approval, subject, a.now())
 	if !res.Required {
 		return nil
 	}
