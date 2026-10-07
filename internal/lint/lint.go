@@ -509,6 +509,15 @@ func (r *runner) addWithSeverity(code string, override Severity, abs string, lin
 	})
 }
 
+// addMetric is add for a finding about a measurement n (see FindingMeta.Metric).
+func (r *runner) addMetric(code, abs string, line, n int, format string, args ...any) {
+	before := len(r.findings)
+	r.add(code, abs, line, format, args...)
+	if len(r.findings) > before {
+		r.findings[before].meta().Metric = n
+	}
+}
+
 func (r *runner) rootAbs() string {
 	abs, _ := filepath.Abs(r.cfg.BaseDir) //nolint:errcheck // display only
 	return abs
@@ -791,11 +800,11 @@ func (r *runner) checkBudget(it *item, raw string) {
 	b := r.budgetFor(it.kind)
 	lines := len(strings.Split(strings.TrimRight(raw, "\n"), "\n"))
 	if b.MaxLines > 0 && lines > b.MaxLines {
-		r.add(CodeSizeLines, it.abs, 1, "%s is %d lines, over the budget of %d; move detail into references/ or split it", it.kind, lines, b.MaxLines)
+		r.addMetric(CodeSizeLines, it.abs, 1, lines, "%s is %d lines, over the budget of %d; move detail into references/ or split it", it.kind, lines, b.MaxLines)
 	}
 	if b.MaxTokens > 0 {
 		if n := r.counter.Count(raw); n > b.MaxTokens {
-			r.add(CodeSizeTokens, it.abs, 1, "%s is about %d tokens, over the budget of %d", it.kind, n, b.MaxTokens)
+			r.addMetric(CodeSizeTokens, it.abs, 1, n, "%s is about %d tokens, over the budget of %d", it.kind, n, b.MaxTokens)
 		}
 	}
 }

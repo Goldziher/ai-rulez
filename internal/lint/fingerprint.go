@@ -35,6 +35,17 @@ func fingerprintOf(code, path, text string, occurrence int) string {
 	return fingerprintVersion + ":" + hex.EncodeToString(h.Sum(nil))[:24]
 }
 
+// metricBucket groups a measurement into steps of 25% growth (1, 2, 3, 4, 5,
+// 7, 9, 11, ...), so a size finding keeps its fingerprint while the file
+// wobbles by a few lines and gets a new one once it has clearly grown.
+func metricBucket(n int) int {
+	bucket := 0
+	for v := 1.0; v*1.25 <= float64(n); v *= 1.25 {
+		bucket++
+	}
+	return bucket
+}
+
 // assignIdentity fills Path and Fingerprint on findings sorted by file, line
 // and code. abs resolves a display path to a file on disk.
 func assignIdentity(findings []Finding, tree *Tree, cwd string) {
@@ -67,6 +78,11 @@ func assignIdentity(findings []Finding, tree *Tree, cwd string) {
 		text := f.Message // unreadable file (a synthetic location): the message is the identity
 		if f.Line >= 1 && f.Line <= len(ls) {
 			text = ls[f.Line-1]
+		}
+		if f.Meta.Metric > 0 {
+			// The flagged line is a generic anchor (the frontmatter opener);
+			// the size bucket is what distinguishes one measurement from another.
+			text += "\x00size-bucket:" + strconv.Itoa(metricBucket(f.Meta.Metric))
 		}
 		key := f.Code + "\x00" + path + "\x00" + normalizeText(text)
 		if f.meta().Fingerprint == "" { // an external scanner's finding arrives with its own
