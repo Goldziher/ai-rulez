@@ -172,7 +172,7 @@ func TestTessl_LiftedAssertionsAreConservativeAndKeepTheRubric(t *testing.T) {
 	assert.False(t, *got[3].Exists)
 	assert.Len(t, res.Reports[0].Lifted, 4)
 	assert.Contains(t, cases[0].Rubric, "The file 'CHANGELOG.md' exists", "the original criterion stays in the rubric")
-	assert.Contains(t, cases[0].Rubric, "clear and well organised")
+	assert.Contains(t, cases[0].Rubric, "clear and well organized")
 	assert.Contains(t, string(data), "# lifted from criterion \"file exists\"")
 }
 
@@ -308,8 +308,8 @@ func TestTessl_HostileAndBrokenInput(t *testing.T) {
 		{name: "fixture source escapes", criteria: `{"criteria":[{"description":"d"}],"files":[{"path":"a","source":"../secret"}]}`, task: "t", wantErr: "must stay inside"},
 		{name: "fixture source missing", criteria: `{"criteria":[{"description":"d"}],"files":[{"path":"a","source":"nope.txt"}]}`, task: "t", wantErr: "cannot read"},
 		{name: "fixture with both", criteria: `{"criteria":[{"description":"d"}],"files":[{"path":"a","content":"c","source":"s"}]}`, task: "t", wantErr: "both content and source"},
-		{name: "hidden character in the task", criteria: `{"criteria":[{"description":"d"}]}`, task: "do it​ now", wantErr: "AR002"},
-		{name: "hidden character in a criterion", criteria: "{\"criteria\":[{\"description\":\"gra‮de\"}]}", task: "t", wantErr: "AR002"},
+		{name: "hidden character in the task", criteria: `{"criteria":[{"description":"d"}]}`, task: "do it\u200b now", wantErr: "AR002"},
+		{name: "hidden character in a criterion", criteria: "{\"criteria\":[{\"description\":\"gra\u202ede\"}]}", task: "t", wantErr: "AR002"},
 		{name: "credential in a fixture", criteria: `{"criteria":[{"description":"d"}]}`, task: "t",
 			extra: map[string]string{"s.txt": "token AKIAABCDEFGHIJKLMNOP\n"}, wantErr: ""},
 	}

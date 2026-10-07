@@ -5,7 +5,7 @@
     { "name": "mentions version", "description": "The output contains \"2.0.0\"", "weight": 1 },
     { "name": "no draft marker", "description": "The answer does not contain `DRAFT`", "weight": 1 },
     { "name": "no tmp file", "description": "The file \"notes.tmp\" does not exist", "weight": 1 },
-    { "name": "reads well", "description": "The changelog is clear and well organised", "weight": 3 },
+    { "name": "reads well", "description": "The changelog is clear and well organized", "weight": 3 },
     { "name": "escapes", "description": "The file \"../outside\" exists", "weight": 1 }
   ]
 }
