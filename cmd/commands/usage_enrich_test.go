@@ -20,7 +20,7 @@ func resetEnrichFlags(t *testing.T) {
 	t.Helper()
 	resetUsageFlags(t)
 	clear := func() {
-		usageHarness, usageOutcome, usageRole, usageServed, usageSalt = "", "", "", false, ""
+		telHarness, usageOutcome, telRole, usageServed, usageSalt = "", "", "", false, ""
 		feedbackKind, feedbackNote, reportFeedback, reportEvals = "", "", "", ""
 		reportEvalsFlags.usageLogs, reportEvalsFlags.usageLogsAlias, reportEvalsFlags.fromOTLP, reportEvalsFlags.feedback, reportEvalsFlags.results = nil, nil, false, "", ""
 		reportEvalsFlags.minPass, reportEvalsFlags.minTrigger, reportEvalsFlags.json = evals.DefaultMinPassRate, evals.DefaultMinTrigger, false
@@ -32,18 +32,18 @@ func resetEnrichFlags(t *testing.T) {
 func TestUsageHook_HarnessTemplatesAndWarning(t *testing.T) {
 	resetEnrichFlags(t)
 	var out, errOut bytes.Buffer
-	usageHookCmd.SetOut(&out)
-	usageHookCmd.SetErr(&errOut)
+	telemetryHookCmd.SetOut(&out)
+	telemetryHookCmd.SetErr(&errOut)
 
-	usageHarness = "codex"
-	require.NoError(t, usageHookCmd.RunE(usageHookCmd, nil))
+	telHarness = "codex"
+	require.NoError(t, telemetryHookCmd.RunE(telemetryHookCmd, nil))
 	assert.Contains(t, out.String(), "--harness codex")
 	assert.Contains(t, out.String(), "PreToolUse")
 	assert.Empty(t, errOut.String())
 
 	out.Reset()
-	usageHarness = "windsurf"
-	require.NoError(t, usageHookCmd.RunE(usageHookCmd, nil), "an unsupported harness warns, it does not fail")
+	telHarness = "windsurf"
+	require.NoError(t, telemetryHookCmd.RunE(telemetryHookCmd, nil), "an unsupported harness warns, it does not fail")
 	assert.Empty(t, out.String(), "and prints no template")
 	assert.Contains(t, errOut.String(), "warning:")
 	assert.Contains(t, errOut.String(), "windsurf")
@@ -54,7 +54,7 @@ func TestUsageRecord_HarnessAndOutcomeFlags(t *testing.T) {
 	t.Setenv(usage.SaltEnv, "test-salt")
 	dir := t.TempDir()
 	usageLog = filepath.Join(dir, "usage.jsonl")
-	usageHarness, usageOutcome, usageRole, usageServed = "cursor", "used", "reviewer", true
+	telHarness, usageOutcome, telRole, usageServed = "cursor", "used", "reviewer", true
 	event := `{"hook_event_name":"preToolUse","session_id":"sess-9","tool_name":"Read","tool_input":{"file_path":"/p/.cursor/skills/beta/SKILL.md"}}`
 	require.NoError(t, runUsageRecord(strings.NewReader(event)))
 
@@ -85,8 +85,8 @@ func TestUsageFeedback_WritesRecordAndKeepsNoteLocal(t *testing.T) {
 
 	feedbackKind, feedbackNote = "wrong", note
 	var out bytes.Buffer
-	usageFeedbackCmd.SetOut(&out)
-	require.NoError(t, usageFeedbackCmd.RunE(usageFeedbackCmd, []string{"alpha"}))
+	telemetryFeedbackCmd.SetOut(&out)
+	require.NoError(t, telemetryFeedbackCmd.RunE(telemetryFeedbackCmd, []string{"alpha"}))
 	assert.Contains(t, out.String(), "Recorded wrong feedback for alpha")
 
 	logPath := filepath.Join(root, ".ai-rulez", "local", usage.FeedbackFileName)
@@ -99,7 +99,7 @@ func TestUsageFeedback_WritesRecordAndKeepsNoteLocal(t *testing.T) {
 	assert.FileExists(t, filepath.Join(root, ".ai-rulez", "local", "feedback-notes", entries[0].Note))
 
 	feedbackKind = "bogus"
-	assert.Error(t, usageFeedbackCmd.RunE(usageFeedbackCmd, []string{"alpha"}))
+	assert.Error(t, telemetryFeedbackCmd.RunE(telemetryFeedbackCmd, []string{"alpha"}))
 }
 
 func writeStore(t *testing.T, root string) {

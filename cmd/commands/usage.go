@@ -2,7 +2,6 @@ package commands
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -21,13 +20,9 @@ var (
 	usageLog         string
 	usageSinkCommand string
 	usageIndex       string
-	usageExecutable  string
-	usageOutput      string
 	reportJSON       bool
 
-	usageHarness   string
 	usageOutcome   string
-	usageRole      string
 	usageServed    bool
 	usageSalt      string
 	feedbackKind   string
@@ -39,84 +34,6 @@ var (
 	usageExportFile   string
 	usageExportDryRun bool
 )
-
-// UsageCmd groups the usage-telemetry commands. Nothing here runs unless a user
-// wires the recorder into their harness, and nothing makes a network call.
-var UsageCmd = &cobra.Command{
-	Use:   "usage",
-	Short: "Usage telemetry: generate a skill-usage hook and record skill invocations",
-	Long: `Support for finding out which generated skills are ever used.
-
-  ai-rulez usage hook      print a Claude Code hooks block that records skill invocations
-  ai-rulez usage record    the command that block runs; appends one identifier-only JSON line
-  ai-rulez usage feedback  record that a skill misled you, is stale, wrong or great (notes stay local)
-  ai-rulez usage export    write the log as an OTLP JSON file (--to file), or push it to your consented collector (--to otlp)
-  ai-rulez usage prune     delete log lines older than N days that are already exported
-  ai-rulez report usage    join a log with the skills index, feedback and eval scores
-
-Set [usage] skills_index = true so generate writes .ai-rulez/skills-index.json, which gives
-every logged skill its content hash. The log holds the skill name, a timestamp, a salted hash
-of the session id (never the raw id), the hash, the harness and an outcome. It never holds
-prompts, arguments or file contents, and ai-rulez makes no network call; a --sink-command is the only way a line leaves the machine, and only if you
-write one.`,
-}
-
-var usageHookCmd = &cobra.Command{
-	Use:   "hook",
-	Short: "Print the hooks block that records skill invocations (claude, codex, cursor)",
-	Long: `Print a "hooks" block that runs "ai-rulez usage record" when a skill is loaded. For
---harness claude (the default) it goes in .claude/settings.json or a plugin hooks file and
-covers the model calling the Skill tool and the user typing a skill's slash command. For codex
-(.codex/hooks.json) and cursor (.cursor/hooks.json) it covers the PreToolUse event, where a
-skill load is a read of skills/<name>/SKILL.md; the event names come from ai-rulez's hook
-support, but those harnesses' payload fields are inferred, so check the log after wiring it.
-Any other harness prints a warning and no template. The block is a template: merge it into
-your settings yourself. Nothing is enabled by default.`,
-	Args: cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		template, err := usage.HookTemplate(usage.HookTemplateOptions{
-			Executable:  usageExecutable,
-			LogPath:     usageLog,
-			SinkCommand: usageSinkCommand,
-			IndexPath:   usageIndex,
-			Harness:     usageHarness,
-			Role:        usageRole,
-		})
-		var unsupported *usage.UnsupportedHarnessError
-		if errors.As(err, &unsupported) {
-			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "warning:", unsupported) //nolint:errcheck // a warning on a closed stderr is not actionable
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if usageOutput == "" {
-			_, err = cmd.OutOrStdout().Write(template)
-			return oops.Wrapf(err, "write hook template")
-		}
-		if err := os.MkdirAll(filepath.Dir(usageOutput), 0o750); err != nil {
-			return oops.Wrapf(err, "create output directory")
-		}
-		return oops.Wrapf(os.WriteFile(usageOutput, template, 0o600), "write hook template")
-	},
-}
-
-var usageRecordCmd = &cobra.Command{
-	Use:   "record",
-	Short: "Record one skill invocation from a hook event on stdin",
-	Long: `Read one hook event from standard input and, when it is a skill invocation, append a
-JSON line (ts, skill, id, hash, session, invocation) to the log. Any other event is ignored.
-For codex and cursor only a read of skills/<id>/SKILL.md counts (a read tool, or cat, head, sed -n and
-similar); writes, git add and other mentions of the path do not. The payload is inferred, not verified.
-The command never fails a session: errors are reported on standard error and the exit status
-stays 0.`,
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, _ []string) {
-		if err := runUsageRecord(cmd.InOrStdin()); err != nil {
-			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "ai-rulez usage record:", err) //nolint:errcheck // a hook must not fail on a closed stderr
-		}
-	},
-}
 
 func runUsageRecord(in io.Reader) error {
 	logPath := usageLog
@@ -131,9 +48,9 @@ func runUsageRecord(in io.Reader) error {
 		LogPath:     logPath,
 		SinkCommand: usageSinkCommand,
 		IndexPath:   usageIndex,
-		Harness:     usageHarness,
+		Harness:     telHarness,
 		Outcome:     usageOutcome,
-		Role:        usageRole,
+		Role:        telRole,
 		Served:      usageServed,
 		SaltPath:    usageSalt,
 	})
@@ -141,16 +58,16 @@ func runUsageRecord(in io.Reader) error {
 	return err
 }
 
-var usageExportCmd = &cobra.Command{
+var telemetryExportCmd = &cobra.Command{
 	Use:   "export [path]",
 	Short: "Write the usage log as an OTLP JSON file, or push it to the collector",
 	Long: `--to file writes the events of the usage log to a file, one OTLP logs request per line, the
 format the OpenTelemetry Collector's otlpjsonfile receiver reads. Nothing is sent over a network, and
 the file needs no consent: it is a local copy you move yourself.
 
-  ai-rulez usage export --to file usage.ndjson
-  ai-rulez usage export --to file --file usage.ndjson --log other/usage.jsonl
-  ai-rulez usage export --to file --with-evals usage.ndjson
+  ai-rulez telemetry export --to file usage.ndjson
+  ai-rulez telemetry export --to file --file usage.ndjson --log other/usage.jsonl
+  ai-rulez telemetry export --to file --with-evals usage.ndjson
 
 --to otlp pushes the log past the export cursor to the collector you consented to (see
 "telemetry enable"): it queues what the outbox does not hold, sends it with retry, and moves the
@@ -246,7 +163,7 @@ func sameFile(a, b string) (bool, error) {
 	return os.SameFile(infoA, infoB), nil
 }
 
-var usageFeedbackCmd = &cobra.Command{
+var telemetryFeedbackCmd = &cobra.Command{
 	Use:   "feedback <skill>",
 	Short: "Record that a skill misled you, is stale, wrong or great",
 	Long: `Append one identifier-only feedback record for a skill to the feedback log (default
@@ -255,7 +172,7 @@ timestamp. With --note-file the text of a note is copied to feedback-notes/ next
 (mode 0600) and only the note's file name is recorded. Notes stay on this machine: they are
 not in the log line, the skills index, the eval results or any hash.
 
-  ai-rulez usage feedback deploy-staging --kind stale --note-file ./why.txt`,
+  ai-rulez telemetry feedback deploy-staging --kind stale --note-file ./why.txt`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logPath := usageLog
@@ -267,7 +184,7 @@ not in the log line, the skills index, the eval results or any hash.
 			indexPath = usage.DefaultIndexPath(".", configDirName())
 		}
 		entry, err := usage.RecordFeedback(args[0], feedbackKind, usage.FeedbackOptions{
-			LogPath: logPath, IndexPath: indexPath, NoteFile: feedbackNote, Harness: usageHarness, Role: usageRole,
+			LogPath: logPath, IndexPath: indexPath, NoteFile: feedbackNote, Harness: telHarness, Role: telRole,
 		})
 		if err != nil {
 			return err
@@ -277,7 +194,7 @@ not in the log line, the skills index, the eval results or any hash.
 	},
 }
 
-// defaultUsageLogPath is the usage log `usage export` and `telemetry preview` read
+// defaultUsageLogPath is the usage log `telemetry export` and `telemetry preview` read
 // by default: the same project root and config directory resolution for both.
 func defaultUsageLogPath() string {
 	return filepath.Join(telemetry.LocalDir(telemetryRoot(""), telemetryConfigDirName()), "usage.jsonl")
@@ -300,16 +217,10 @@ func configDirName() string {
 	return defaultConfigDirName
 }
 
-// ReportCmd groups report commands.
-var ReportCmd = &cobra.Command{
-	Use:   "report",
-	Short: "Reports over data ai-rulez collected",
-}
-
-var reportUsageCmd = &cobra.Command{
-	Use:   "usage <log>",
+var telemetryReportCmd = &cobra.Command{
+	Use:   "report [log]",
 	Short: "List never-used skills and skills edited since they were used",
-	Long: `Join a usage log (written by "ai-rulez usage record") with the skills index and list:
+	Long: `Join a usage log (written by "ai-rulez telemetry record") with the skills index and list:
 
   used          skills with at least one logged invocation, most used first
   never used    indexed skills with no logged invocation: candidates for retirement
@@ -317,10 +228,15 @@ var reportUsageCmd = &cobra.Command{
                 evidence may describe an older version
   unknown       logged skills that are not in the index (renamed, removed, external)
 
-The command reports and exits 0; it does not gate anything.`,
-	Args: cobra.ExactArgs(1),
+The command reports and exits 0; it does not gate anything. Without a log argument it reads
+<config dir>/local/usage.jsonl. "telemetry report evals" ranks skills by eval scores joined with usage.`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runReportUsage(cmd.OutOrStdout(), args[0])
+		logPath := filepath.Join(defaultLocalDir(), "usage.jsonl")
+		if len(args) == 1 {
+			logPath = args[0]
+		}
+		return runReportUsage(cmd.OutOrStdout(), logPath)
 	},
 }
 
@@ -435,43 +351,30 @@ func usageExtras(row usage.SkillUsage) string {
 }
 
 func init() {
-	UsageCmd.AddCommand(usageHookCmd, usageRecordCmd, usageFeedbackCmd, usageExportCmd)
-	usageExportCmd.Flags().StringVar(&usageExportTo, "to", "", "Destination kind: file or otlp (required)")
-	addUsageExportOTLPFlags(usageExportCmd)
-	usageExportCmd.Flags().StringVar(&usageExportFile, "file", "", "Destination path (or pass it as the argument)")
-	usageExportCmd.Flags().StringVar(&usageLog, "log", "", "Usage log to export (default <config dir>/local/usage.jsonl)")
-	usageExportCmd.Flags().BoolVar(&usageExportDryRun, "dry-run", false, "Encode the log and report the result without writing the file (--to otlp: without queueing or sending)")
-	usageExportCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
-	if err := usageExportCmd.MarkFlagRequired("to"); err != nil {
+	TelemetryCmd.AddCommand(telemetryFeedbackCmd, telemetryExportCmd, telemetryReportCmd)
+	telemetryExportCmd.Flags().StringVar(&usageExportTo, "to", "", "Destination kind: file or otlp (required)")
+	addUsageExportOTLPFlags(telemetryExportCmd)
+	telemetryExportCmd.Flags().StringVar(&usageExportFile, "file", "", "Destination path (or pass it as the argument)")
+	telemetryExportCmd.Flags().StringVar(&usageLog, "log", "", "Usage log to export (default <config dir>/local/usage.jsonl)")
+	telemetryExportCmd.Flags().BoolVar(&usageExportDryRun, "dry-run", false, "Encode the log and report the result without writing the file (--to otlp: without queueing or sending)")
+	telemetryExportCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	if err := telemetryExportCmd.MarkFlagRequired("to"); err != nil {
 		panic(err)
 	}
-	for _, c := range []*cobra.Command{usageHookCmd, usageRecordCmd} {
-		c.Flags().StringVar(&usageLog, "log", "", "Usage log file to append to (default .ai-rulez/local/usage.jsonl)")
-		c.Flags().StringVar(&usageSinkCommand, "sink-command", "", "Shell command that receives each log line on stdin")
-		c.Flags().StringVar(&usageIndex, "index", "", "Skills index used to resolve content hashes")
-	}
-	for _, c := range []*cobra.Command{usageHookCmd, usageRecordCmd, usageFeedbackCmd} {
-		c.Flags().StringVar(&usageHarness, "harness", "", "Harness: claude, codex or cursor (hook and record default to claude; feedback records it as given)")
-		c.Flags().StringVar(&usageRole, flagRole, "", "Role active when the skill loaded, a role of [[roles]] (recorded as given)")
-	}
-	usageRecordCmd.Flags().StringVar(&usageOutcome, "outcome", "", "Outcome to record: loaded (default), used or abandoned")
-	usageRecordCmd.Flags().BoolVar(&usageServed, "served", false, "Mark the load as served by the MCP server")
-	usageRecordCmd.Flags().StringVar(&usageSalt, "salt-file", "", "File holding the session-hash salt (default usage.salt beside the log; $AI_RULEZ_USAGE_SALT wins)")
-	usageFeedbackCmd.Flags().StringVar(&feedbackKind, "kind", "", "Feedback kind: "+strings.Join(usage.FeedbackKinds, ", ")+" (required)")
-	usageFeedbackCmd.Flags().StringVar(&feedbackNote, "note-file", "", "File whose text is kept as a local note (never logged or hashed)")
-	usageFeedbackCmd.Flags().StringVar(&usageLog, "log", "", "Feedback log to append to (default .ai-rulez/local/feedback.jsonl)")
-	usageFeedbackCmd.Flags().StringVar(&usageIndex, "index", "", "Skills index used to resolve the current hash")
-	usageFeedbackCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
-	if err := usageFeedbackCmd.MarkFlagRequired("kind"); err != nil {
+	telemetryFeedbackCmd.Flags().StringVar(&telHarness, "harness", "", "Harness the feedback is about (recorded as given)")
+	telemetryFeedbackCmd.Flags().StringVar(&telRole, flagRole, "", "Role active when the skill loaded, a role of [[roles]] (recorded as given)")
+	telemetryFeedbackCmd.Flags().StringVar(&feedbackKind, "kind", "", "Feedback kind: "+strings.Join(usage.FeedbackKinds, ", ")+" (required)")
+	telemetryFeedbackCmd.Flags().StringVar(&feedbackNote, "note-file", "", "File whose text is kept as a local note (never logged or hashed)")
+	telemetryFeedbackCmd.Flags().StringVar(&usageLog, "log", "", "Feedback log to append to (default .ai-rulez/local/feedback.jsonl)")
+	telemetryFeedbackCmd.Flags().StringVar(&usageIndex, "index", "", "Skills index used to resolve the current hash")
+	telemetryFeedbackCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	if err := telemetryFeedbackCmd.MarkFlagRequired("kind"); err != nil {
 		panic(err)
 	}
-	usageHookCmd.Flags().StringVar(&usageExecutable, "executable", "ai-rulez", "Command the hook runs")
-	usageHookCmd.Flags().StringVarP(&usageOutput, "output", "o", "", "Write the template to this file instead of stdout")
 
-	ReportCmd.AddCommand(reportUsageCmd)
-	reportUsageCmd.Flags().StringVar(&usageIndex, "index", "", "Skills index to join against (default <config dir>/skills-index.json)")
-	reportUsageCmd.Flags().StringVar(&reportFeedback, "feedback", "", "Feedback log to join (default feedback.jsonl beside the usage log, when present)")
-	reportUsageCmd.Flags().StringVar(&reportEvals, "evals", "", "Eval results to join (default <config dir>/eval-results.json, when present)")
-	addJSONFormat(reportUsageCmd.Flags(), &reportJSON, "j")
-	reportUsageCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	telemetryReportCmd.Flags().StringVar(&usageIndex, "index", "", "Skills index to join against (default <config dir>/skills-index.json)")
+	telemetryReportCmd.Flags().StringVar(&reportFeedback, "feedback", "", "Feedback log to join (default feedback.jsonl beside the usage log, when present)")
+	telemetryReportCmd.Flags().StringVar(&reportEvals, "evals", "", "Eval results to join (default <config dir>/eval-results.json, when present)")
+	telemetryReportCmd.Flags().BoolVarP(&reportJSON, "json", "j", false, "Emit the report as JSON")
+	telemetryReportCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
