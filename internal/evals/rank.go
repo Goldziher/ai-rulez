@@ -96,12 +96,12 @@ const (
 )
 
 // joinClass classifies the uses of a skill against its eval record.
-func joinClass(in *RankInput, id string, record *SkillRecord) (string, map[string]int) {
+func joinClass(in *RankInput, id string, record *SkillRecord) (kind string, counts map[string]int) {
 	uses := in.Uses[id]
 	if uses == 0 || record == nil {
 		return JoinNone, nil
 	}
-	counts := map[string]int{}
+	counts = map[string]int{}
 	if record.LockDigest == "" || in.UseDigests == nil {
 		counts[JoinLegacy] = uses
 		return JoinLegacy, counts

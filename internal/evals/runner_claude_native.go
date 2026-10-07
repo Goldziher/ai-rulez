@@ -83,14 +83,14 @@ func (r *ClaudeNative) Fingerprint() string {
 
 func (r *ClaudeNative) bin() string {
 	if r.Bin == "" {
-		return "claude"
+		return claudeBinName
 	}
 	return r.Bin
 }
 
 // Run implements Runner.
 func (r *ClaudeNative) Run(ctx context.Context, req *Request) (*Response, error) {
-	if req.Harness != "" && req.Harness != "claude" {
+	if req.Harness != "" && req.Harness != claudeBinName {
 		return nil, fmt.Errorf("the %s runner only drives the claude harness, not %q", RunnerClaudeNative, req.Harness)
 	}
 	dir := r.KeepDir
@@ -143,7 +143,7 @@ func (r *ClaudeNative) args(pluginDir string, req *Request) []string {
 	args := []string{
 		"-p", "--output-format", "stream-json", "--verbose", "--max-turns", strconv.Itoa(turns),
 		"--no-session-persistence", "--setting-sources", "", "--permission-mode", "dontAsk",
-		"--plugin-dir", pluginDir, "--tools", "Skill", "--allowedTools", "Skill",
+		"--plugin-dir", pluginDir, "--tools", claudeSkillTool, "--allowedTools", claudeSkillTool,
 	}
 	if req.Model != "" {
 		args = append(args, "--model", req.Model)
@@ -242,7 +242,7 @@ func writeActivationSkill(s *SkillRef, dst string, gate func(id, text string) er
 }
 
 // activationFrontmatterKeys are the frontmatter keys an activation plugin keeps.
-var activationFrontmatterKeys = map[string]bool{"name": true, "description": true}
+var activationFrontmatterKeys = map[string]bool{"name": true, frontmatterDescription: true}
 
 // stripSkillFrontmatter keeps only the name and description keys (with their
 // indented continuation lines) of a SKILL.md frontmatter, and the body unchanged.
@@ -255,7 +255,7 @@ func stripSkillFrontmatter(text string) string {
 	var front []string
 	body := ""
 	closed := false
-	for len(rest) > 0 {
+	for rest != "" {
 		line, tail, _ := strings.Cut(rest, "\n")
 		rest = tail
 		if strings.TrimRight(line, " \t") == "---" {
@@ -308,7 +308,7 @@ type claudeStreamLine struct {
 // markSkillCalls adds the installed skills the line's Skill tool calls name.
 func (l *claudeStreamLine) markSkillCalls(ids map[string]bool, fired map[string]bool) {
 	for _, block := range l.Message.Content {
-		if block.Type != "tool_use" || block.Name != "Skill" {
+		if block.Type != "tool_use" || block.Name != claudeSkillTool {
 			continue
 		}
 		if id := skillIDOf(block.Input.Skill, ids); id != "" {

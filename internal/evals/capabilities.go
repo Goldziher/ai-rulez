@@ -29,7 +29,7 @@ type SurfaceReporter interface {
 }
 
 // CostReporter is implemented by runners that know whether they report what a
-// run cost. A runner that reports false cannot honour --max-cost (the budget is
+// run cost. A runner that reports false cannot honor --max-cost (the budget is
 // only ever checked against reported spend), so a capped run refuses to start.
 type CostReporter interface {
 	ReportsCost() bool

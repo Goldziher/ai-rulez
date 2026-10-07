@@ -253,11 +253,12 @@ func (c *Calibration) WriteText(w io.Writer) error {
 		return err
 	}
 	best := 0
-	for i, g := range c.Groups {
+	for i := range c.Groups {
+		g := &c.Groups[i]
 		if g.Samples > c.Groups[best].Samples {
 			best = i
 		}
-		fmt.Fprintf(&b, "%s, harness %s, model %s: %d run(s)%s\n", g.Kind, orDefault(g.Harness), orDefault(g.Model), g.Samples, lowNote(g))
+		fmt.Fprintf(&b, "%s, harness %s, model %s: %d run(s)%s\n", g.Kind, orDefault(g.Harness), orDefault(g.Model), g.Samples, lowNote(*g))
 		fmt.Fprintf(&b, "  overhead_tokens          %6d -> %d\n", g.Current.OverheadTokens, g.Proposed.OverheadTokens)
 		if g.Kind == KindActivation {
 			fmt.Fprintf(&b, "  activation_output_tokens %6d -> %d\n", g.Current.ActivationOutputTokens, g.Proposed.ActivationOutputTokens)
@@ -266,7 +267,7 @@ func (c *Calibration) WriteText(w io.Writer) error {
 		}
 		fmt.Fprintf(&b, "  token error (median)     %+5.0f%% -> %+.0f%%; recorded cost error median %.0f%%, p90 %.0f%%\n",
 			g.TokenErrorBefore*100, g.TokenErrorAfter*100, g.CostErrorMedian*100, g.CostErrorP90*100)
-		if priceDiffers(g) {
+		if priceDiffers(*g) {
 			fmt.Fprintf(&b, "  input price per MTok     %s list -> %s billed (prompt caching)\n", formatPrice(g.ListPriceIn), formatPrice(g.EffectivePriceIn))
 		}
 	}

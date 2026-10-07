@@ -140,7 +140,7 @@ func statusLabel(s *SkillRun) string {
 
 func deltaText(v *float64) string {
 	if v == nil {
-		return "n/a"
+		return textNA
 	}
 	return fmt.Sprintf("%+.0f pts", *v*100)
 }
