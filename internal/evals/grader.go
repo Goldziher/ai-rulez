@@ -57,9 +57,10 @@ type RubricGrader interface {
 	SpentUSD() float64
 }
 
-// JudgeGrader grades with internal/llm's Judge: structured output at temperature
-// 0, the transcript fenced as untrusted data, secret-looking text refused before
-// anything is sent, and the budget, cache and network gate of the model layer.
+// JudgeGrader grades through the model layer: structured output at temperature
+// 0, the transcript fenced as untrusted data by a per-request token the prompt
+// states (grader_prompt.go), secret-looking text refused before anything is
+// sent, and the budget, cache and network gate of the model layer.
 type JudgeGrader struct {
 	// Client is the model client (llm.New's managed client, or a fake in tests).
 	Client llm.Client
@@ -82,7 +83,7 @@ type JudgeGrader struct {
 // Name implements RubricGrader: the grader, its model and the judge prompt
 // version, so a change to any of them re-runs a cached result.
 func (g *JudgeGrader) Name() string {
-	return fmt.Sprintf("%s:%s:%s", GraderBuiltin, g.Model, llm.JudgePromptVersion)
+	return fmt.Sprintf("%s:%s:%s", GraderBuiltin, g.Model, GraderPromptVersion)
 }
 
 // Grade implements RubricGrader.
@@ -94,9 +95,9 @@ func (g *JudgeGrader) Grade(ctx context.Context, rubric, transcript string) (Rub
 	if floor <= 0 {
 		floor = DefaultJudgeCompletionTokens
 	}
-	v, err := llm.JudgeWith(ctx, completionFloor{Client: g.Client, min: floor}, rubric, transcript, llm.JudgeOptions{RedactSecrets: g.RedactSecrets})
+	v, err := judgeRubric(ctx, completionFloor{Client: g.Client, min: floor}, rubric, transcript, g.RedactSecrets)
 	if err != nil {
-		return RubricGrade{}, err //nolint:wrapcheck // the model layer's typed error is the useful one
+		return RubricGrade{}, err
 	}
 	return RubricGrade{Score: round(v.Score), Rationale: oneLine(v.Rationale)}, nil
 }
