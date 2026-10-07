@@ -92,3 +92,31 @@ func TestSkillResourceMissingPrecision(t *testing.T) {
 		})
 	}
 }
+
+func TestUnpinnedExecOwnPackagePrecision(t *testing.T) {
+	const cfg = "version = \"4.0\"\nname = \"gitfluff\"\npresets = [\"claude\"]\n"
+	tests := []struct {
+		name string
+		body string
+		want int
+	}{
+		{"prose naming the project's own tool", "Published on PyPI. Also usable via `uvx gitfluff`.", 0},
+		{"prose naming another tool stays reported", "Also usable via `uvx other-tool`.", 1},
+		{"own tool under a moving tag stays reported", "Run `npx -y gitfluff@latest`.", 1},
+		{"own tool in a fenced shell block stays reported", "```sh\nuvx gitfluff\n```", 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":  cfg,
+				".ai-rulez/rules/doc.md": "# Doc\n" + tt.body + "\n",
+			})
+			gitAdd(t, root)
+			fs := lintDir(t, root)
+			if got := countCode(fs, CodeUnpinnedExec); got != tt.want {
+				t.Errorf("AR021 count = %d, want %d:\n%s", got, tt.want, dump(fs))
+			}
+		})
+	}
+}
