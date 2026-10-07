@@ -68,7 +68,7 @@ func resetPolicy(t *testing.T) {
 	t.Helper()
 	reset := func() {
 		lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false
-		Advance, AllowDowngrade, AcceptMovedTag = nil, false, false
+		lockPolicy.VersionPolicy = config.VersionPolicy{}
 		ResetObserved()
 	}
 	reset()
@@ -142,7 +142,7 @@ func TestVersionPin_LockKeepsAPinThatStillSatisfiesAndUpdateAdvancesIt(t *testin
 
 	kept, problems := f.refresh(t, first)
 	require.Empty(t, problems)
-	Advance = func(kind, name string) bool { return kind == lockfile.KindInclude }
+	lockPolicy.Advance = func(kind, name string) bool { return kind == lockfile.KindInclude }
 	moved, problems2 := f.refresh(t, first)
 
 	require.Empty(t, problems2)
@@ -159,7 +159,7 @@ func TestVersionPin_AMovedTagIsAnErrorUnlessAccepted(t *testing.T) {
 	require.NotEqual(t, was, now)
 
 	_, problems := f.refresh(t, first)
-	AcceptMovedTag = true
+	lockPolicy.AcceptMovedTag = true
 	accepted, problems2 := f.refresh(t, first)
 
 	require.Len(t, problems, 1)
@@ -204,10 +204,10 @@ func TestVersionPin_DowngradeIsRefusedUnlessAllowed(t *testing.T) {
 	f := newVersionFixture(t, `version = "^1"`, `ref = "main"`)
 	first := f.refresh2(t)
 	f.repo.DeleteTag("v1.1.0") // a truncated tag list: the highest allowed tag is now v1.0.0
-	Advance = func(string, string) bool { return true }
+	lockPolicy.Advance = func(string, string) bool { return true }
 
 	_, problems := f.refresh(t, first)
-	AllowDowngrade = true
+	lockPolicy.AllowDowngrade = true
 	down, problems2 := f.refresh(t, first)
 
 	require.Len(t, problems, 1)
