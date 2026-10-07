@@ -95,6 +95,11 @@ func (s *Server) emitToolTelemetry(ctx context.Context, tool string, req *handle
 	if !ok {
 		return
 	}
+	// The served-skills server already records a load_skill through its own
+	// recorder (with the resource flag); a second event would double count it.
+	if tool == toolLoadSkill && s.serve != nil && s.serve.opts.Telemetry != nil {
+		return
+	}
 	id := ""
 	if item.idArg != "" {
 		id = req.GetString(item.idArg, "")
