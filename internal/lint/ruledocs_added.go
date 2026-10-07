@@ -3,8 +3,8 @@ package lint
 // Documentation for the rules registered from init() (see registry.go) and for
 // the role, lock, delivery, eval, OKF and LLM families. ruledocs.go holds the
 // first release of rules; the lookup is the same map.
-func init() {
-	registerRuleDocs(map[string]RuleDoc{
+func registerRuledocsAdded(s *ruleSet) {
+	s.addDocs(map[string]RuleDoc{
 		CodeMCPUnpinned: {
 			Why:  "An unpinned npx, uvx, pipx or docker launch fetches whatever the registry serves today, so a new release can change what the MCP server does without a review.",
 			Bad:  "`npx -y @scope/server` as an MCP server command",

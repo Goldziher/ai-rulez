@@ -12,13 +12,13 @@ const (
 	CodeToolUnknown      = "AR305"
 )
 
-func init() {
-	registerRules(
+func registerArFrontmatter(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeFrontmatterValue, "frontmatter-value-invalid", SeverityWarning, "a frontmatter value is not one the Claude Code skill or subagent reference accepts (effort, context, model, permissionMode, memory, shell, booleans, paths)"},
 		RuleInfo{CodeToolUnknown, "tool-name-unknown", SeverityWarning, "allowed-tools, tools or disallowedTools names a tool Claude Code does not have, or lists a tool as both allowed and denied"},
 	)
-	registerItemCheck(checkFrontmatterValues, AnalyzerReferences)
-	registerItemCheck(checkToolNames, AnalyzerReferences)
+	s.addItemCheck(checkFrontmatterValues, AnalyzerReferences)
+	s.addItemCheck(checkToolNames, AnalyzerReferences)
 }
 
 // Enumerations from the Claude Code skills and subagents references.

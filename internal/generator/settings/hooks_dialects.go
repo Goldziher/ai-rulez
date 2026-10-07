@@ -2,6 +2,7 @@ package settings
 
 import (
 	"encoding/json"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
@@ -185,127 +186,131 @@ var factoryEvents = identityEvents([]string{
 	eventPreCompact, eventSessionStart, eventSessionEnd,
 })
 
-// dialectSpecs are the harnesses rendered through the generic handler shape.
-// Each entry cites the vendor page it was read from (read 2026-10-05); events
-// the vendor does not document are left out, and a matcher is only accepted on
-// the events the vendor says honour one.
-var dialectSpecs = map[string]hookSpec{
-	// Qwen Code: .qwen/settings.json `hooks`, Claude nesting, seconds, regex matcher
-	// that accepts Claude tool aliases. https://qwenlm.github.io/qwen-code-docs/en/users/features/hooks/
-	config.HarnessQwen: {
-		name: config.HarnessQwen, events: qwenEvents, nested: true, matcherPassthrough: true,
-		async: true, status: true, shape: claudeShape,
-		matcherEvents: allBut(qwenEvents, "PostToolBatch", eventUserPromptSubmit, "MessageDisplay", eventStop),
-		scriptVar:     "$QWEN_PROJECT_DIR",
-	},
-	// Augment (Auggie CLI): .augment/settings.json `hooks`, five events, matcher on
-	// tool events only and in Augment's own tool names, timeout in milliseconds.
-	// The docs name no way to address a project script. https://docs.augmentcode.com/cli/hooks
-	config.HarnessAugment: {
-		name: config.HarnessAugment,
-		events: identityEvents([]string{
-			eventSessionStart, eventSessionEnd, eventPreToolUse, eventPostToolUse, eventStop,
-		}),
-		nested: true, shape: &handlerShape{typed: true, timeoutMS: true},
-		matcherEvents: set(eventPreToolUse, eventPostToolUse),
-	},
-	// CodeBuddy Code: .codebuddy/settings.json `hooks`, Claude nesting and tool names,
-	// seconds. https://www.codebuddy.ai/docs/cli/hooks
-	config.HarnessCodeBuddy: {
-		name: config.HarnessCodeBuddy, events: codebuddyEvents, nested: true, matcherPassthrough: true,
-		shape:         claudeShape,
-		matcherEvents: set(eventPreToolUse, eventPostToolUse, eventPreCompact, eventSessionStart, eventNotify),
-		scriptVar:     "$CODEBUDDY_PROJECT_DIR",
-	},
-	// Qoder CLI: .qoder/settings.json `hooks`, Claude nesting and tool names, seconds,
-	// exec-form args, async and a glob `if`. https://docs.qoder.com/cli/hooks
-	config.HarnessQoder: {
-		name: config.HarnessQoder, events: qoderEvents, nested: true, matcherPassthrough: true,
-		args: true, async: true, condition: true, shape: claudeShape,
-		matcherEvents: allBut(qoderEvents, eventUserPromptSubmit, eventStop, "StopFailure", "CwdChanged",
-			"WorktreeCreate", "WorktreeRemove"),
-		scriptVar: "$QODER_PROJECT_DIR",
-	},
-	// Command Code: .commandcode/settings.json `hooks`, four events, seconds; the
-	// matcher is a regex over the tool display name (SHELL, READ, WRITE, EDIT), so a
-	// Claude matcher does not carry over. https://commandcode.ai/docs/hooks
-	config.HarnessCommandCode: {
-		name: config.HarnessCommandCode,
-		events: identityEvents([]string{
-			eventSessionStart, eventPreToolUse, eventPostToolUse, eventStop,
-		}),
-		nested: true, shape: claudeShape,
-		matcherEvents: set(eventPreToolUse, eventPostToolUse),
-		scriptVar:     "$COMMANDCODE_PROJECT_DIR",
-	},
-	// Letta Code: .letta/settings.json `hooks`, Claude nesting and tool names,
-	// milliseconds; hooks run from the project directory.
-	// https://docs.letta.com/letta-code/hooks
-	config.HarnessLetta: {
-		name: config.HarnessLetta,
-		events: identityEvents([]string{
-			eventPreToolUse, eventPostToolUse, eventPostToolUseFailure, eventPermissionRequest, eventUserPromptSubmit,
-			eventNotify, eventStop, eventSubagentStop, eventPreCompact, eventSessionStart, eventSessionEnd,
-		}),
-		nested: true, matcherPassthrough: true, shape: &handlerShape{typed: true, timeoutMS: true},
-		matcherEvents: set(eventPreToolUse, eventPostToolUse, eventPostToolUseFailure, eventPermissionRequest),
-		scriptCwd:     true,
-	},
-	// Factory Droid: .factory/hooks.json keyed by event at the document root, Claude
-	// nesting, seconds; tools are Execute/Create rather than Bash/Write, and
-	// scripts are addressed through $FACTORY_PROJECT_DIR.
-	// https://docs.factory.com/reference/hooks-reference
-	config.HarnessFactory: {
-		name: config.HarnessFactory, events: factoryEvents, nested: true, rootKeyed: true, shape: claudeShape,
-		matcherEvents: set(eventPreToolUse, eventPostToolUse),
-		scriptVar:     "$FACTORY_PROJECT_DIR",
-	},
-	// Google Antigravity: .agents/hooks.json is a map of named hook groups; ai-rulez
-	// owns the group "ai-rulez". Three events overlap Claude Code's, seconds, tools
-	// are snake_case (run_command). https://antigravity.google/docs/hooks
-	config.HarnessAntigravity: {
-		name: config.HarnessAntigravity,
-		events: identityEvents([]string{
-			eventPreToolUse, eventPostToolUse, eventStop,
-		}),
-		nested: true, container: []string{antigravityGroup}, shape: claudeShape,
-		matcherEvents: set(eventPreToolUse, eventPostToolUse),
-		scriptCwd:     true,
-	},
-	// GitLab Duo CLI: .gitlab/duo/hooks.json `hooks`, SessionStart only; the matcher
-	// is a regex over the session source (startup, resume), seconds. Project hooks
-	// stay off until the user opts in. https://docs.gitlab.com/user/gitlab_duo_cli/customize/
-	config.HarnessGitLabDuo: {
-		name:   config.HarnessGitLabDuo,
-		events: identityEvents([]string{eventSessionStart}),
-		nested: true, shape: claudeShape,
-		matcherEvents: set(eventSessionStart),
-		scriptVar:     "$DUO_PROJECT_DIR",
-		note: "Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks " +
-			"or set GITLAB_ENABLE_PROJECT_HOOKS=true",
-	},
-	// Devin CLI: .devin/hooks.v1.json keyed by event at the document root (user scope
-	// is the `hooks` key of ~/.config/devin/config.json), eight events, seconds.
-	// https://docs.devin.ai/cli/extensibility/hooks/overview
-	config.HarnessDevin: {
-		name: config.HarnessDevin,
-		events: events(
-			eventSessionStart, eventSessionStart, eventSessionEnd, eventSessionEnd, eventPreToolUse, eventPreToolUse,
-			eventPostToolUse, eventPostToolUse, eventPermissionRequest, eventPermissionRequest,
-			eventUserPromptSubmit, eventUserPromptSubmit, eventStop, eventStop, eventPostCompact, "PostCompaction",
-		),
-		nested: true, rootKeyed: true, userContainer: []string{"hooks"}, shape: claudeShape,
-		matcherEvents: set(eventPreToolUse, eventPostToolUse, eventPermissionRequest),
-		scriptVar:     "$DEVIN_PROJECT_DIR",
-		note:          "Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice",
-	},
+// dialectSpecs are the harnesses rendered through the generic handler shape,
+// built on first use. Each entry cites the vendor page it was read from (read
+// 2026-10-05); events the vendor does not document are left out, and a matcher
+// is only accepted on the events the vendor says honour one.
+var dialectSpecs = sync.OnceValue(func() map[string]hookSpec {
+	specs := baseDialectSpecs()
+	for name, spec := range moreDialectSpecs() {
+		specs[name] = spec
+	}
+	return specs
+})
+
+func baseDialectSpecs() map[string]hookSpec {
+	return map[string]hookSpec{
+		// Qwen Code: .qwen/settings.json `hooks`, Claude nesting, seconds, regex matcher
+		// that accepts Claude tool aliases. https://qwenlm.github.io/qwen-code-docs/en/users/features/hooks/
+		config.HarnessQwen: {
+			name: config.HarnessQwen, events: qwenEvents, nested: true, matcherPassthrough: true,
+			async: true, status: true, shape: claudeShape,
+			matcherEvents: allBut(qwenEvents, "PostToolBatch", eventUserPromptSubmit, "MessageDisplay", eventStop),
+			scriptVar:     "$QWEN_PROJECT_DIR",
+		},
+		// Augment (Auggie CLI): .augment/settings.json `hooks`, five events, matcher on
+		// tool events only and in Augment's own tool names, timeout in milliseconds.
+		// The docs name no way to address a project script. https://docs.augmentcode.com/cli/hooks
+		config.HarnessAugment: {
+			name: config.HarnessAugment,
+			events: identityEvents([]string{
+				eventSessionStart, eventSessionEnd, eventPreToolUse, eventPostToolUse, eventStop,
+			}),
+			nested: true, shape: &handlerShape{typed: true, timeoutMS: true},
+			matcherEvents: set(eventPreToolUse, eventPostToolUse),
+		},
+		// CodeBuddy Code: .codebuddy/settings.json `hooks`, Claude nesting and tool names,
+		// seconds. https://www.codebuddy.ai/docs/cli/hooks
+		config.HarnessCodeBuddy: {
+			name: config.HarnessCodeBuddy, events: codebuddyEvents, nested: true, matcherPassthrough: true,
+			shape:         claudeShape,
+			matcherEvents: set(eventPreToolUse, eventPostToolUse, eventPreCompact, eventSessionStart, eventNotify),
+			scriptVar:     "$CODEBUDDY_PROJECT_DIR",
+		},
+		// Qoder CLI: .qoder/settings.json `hooks`, Claude nesting and tool names, seconds,
+		// exec-form args, async and a glob `if`. https://docs.qoder.com/cli/hooks
+		config.HarnessQoder: {
+			name: config.HarnessQoder, events: qoderEvents, nested: true, matcherPassthrough: true,
+			args: true, async: true, condition: true, shape: claudeShape,
+			matcherEvents: allBut(qoderEvents, eventUserPromptSubmit, eventStop, "StopFailure", "CwdChanged",
+				"WorktreeCreate", "WorktreeRemove"),
+			scriptVar: "$QODER_PROJECT_DIR",
+		},
+		// Command Code: .commandcode/settings.json `hooks`, four events, seconds; the
+		// matcher is a regex over the tool display name (SHELL, READ, WRITE, EDIT), so a
+		// Claude matcher does not carry over. https://commandcode.ai/docs/hooks
+		config.HarnessCommandCode: {
+			name: config.HarnessCommandCode,
+			events: identityEvents([]string{
+				eventSessionStart, eventPreToolUse, eventPostToolUse, eventStop,
+			}),
+			nested: true, shape: claudeShape,
+			matcherEvents: set(eventPreToolUse, eventPostToolUse),
+			scriptVar:     "$COMMANDCODE_PROJECT_DIR",
+		},
+		// Letta Code: .letta/settings.json `hooks`, Claude nesting and tool names,
+		// milliseconds; hooks run from the project directory.
+		// https://docs.letta.com/letta-code/hooks
+		config.HarnessLetta: {
+			name: config.HarnessLetta,
+			events: identityEvents([]string{
+				eventPreToolUse, eventPostToolUse, eventPostToolUseFailure, eventPermissionRequest, eventUserPromptSubmit,
+				eventNotify, eventStop, eventSubagentStop, eventPreCompact, eventSessionStart, eventSessionEnd,
+			}),
+			nested: true, matcherPassthrough: true, shape: &handlerShape{typed: true, timeoutMS: true},
+			matcherEvents: set(eventPreToolUse, eventPostToolUse, eventPostToolUseFailure, eventPermissionRequest),
+			scriptCwd:     true,
+		},
+		// Factory Droid: .factory/hooks.json keyed by event at the document root, Claude
+		// nesting, seconds; tools are Execute/Create rather than Bash/Write, and
+		// scripts are addressed through $FACTORY_PROJECT_DIR.
+		// https://docs.factory.com/reference/hooks-reference
+		config.HarnessFactory: {
+			name: config.HarnessFactory, events: factoryEvents, nested: true, rootKeyed: true, shape: claudeShape,
+			matcherEvents: set(eventPreToolUse, eventPostToolUse),
+			scriptVar:     "$FACTORY_PROJECT_DIR",
+		},
+		// Google Antigravity: .agents/hooks.json is a map of named hook groups; ai-rulez
+		// owns the group "ai-rulez". Three events overlap Claude Code's, seconds, tools
+		// are snake_case (run_command). https://antigravity.google/docs/hooks
+		config.HarnessAntigravity: {
+			name: config.HarnessAntigravity,
+			events: identityEvents([]string{
+				eventPreToolUse, eventPostToolUse, eventStop,
+			}),
+			nested: true, container: []string{antigravityGroup}, shape: claudeShape,
+			matcherEvents: set(eventPreToolUse, eventPostToolUse),
+			scriptCwd:     true,
+		},
+		// GitLab Duo CLI: .gitlab/duo/hooks.json `hooks`, SessionStart only; the matcher
+		// is a regex over the session source (startup, resume), seconds. Project hooks
+		// stay off until the user opts in. https://docs.gitlab.com/user/gitlab_duo_cli/customize/
+		config.HarnessGitLabDuo: {
+			name:   config.HarnessGitLabDuo,
+			events: identityEvents([]string{eventSessionStart}),
+			nested: true, shape: claudeShape,
+			matcherEvents: set(eventSessionStart),
+			scriptVar:     "$DUO_PROJECT_DIR",
+			note: "Duo CLI ignores project hooks until they are enabled: run it with --enable-project-hooks " +
+				"or set GITLAB_ENABLE_PROJECT_HOOKS=true",
+		},
+		// Devin CLI: .devin/hooks.v1.json keyed by event at the document root (user scope
+		// is the `hooks` key of ~/.config/devin/config.json), eight events, seconds.
+		// https://docs.devin.ai/cli/extensibility/hooks/overview
+		config.HarnessDevin: {
+			name: config.HarnessDevin,
+			events: events(
+				eventSessionStart, eventSessionStart, eventSessionEnd, eventSessionEnd, eventPreToolUse, eventPreToolUse,
+				eventPostToolUse, eventPostToolUse, eventPermissionRequest, eventPermissionRequest,
+				eventUserPromptSubmit, eventUserPromptSubmit, eventStop, eventStop, eventPostCompact, "PostCompaction",
+			),
+			nested: true, rootKeyed: true, userContainer: []string{"hooks"}, shape: claudeShape,
+			matcherEvents: set(eventPreToolUse, eventPostToolUse, eventPermissionRequest),
+			scriptVar:     "$DEVIN_PROJECT_DIR",
+			note:          "Devin also loads the hooks of .claude/settings.json, so a hook generated for both claude and devin runs twice",
+		},
+	}
 }
 
 // antigravityGroup is the name of the hook group ai-rulez owns in .agents/hooks.json.
 const antigravityGroup = "ai-rulez"
-
-func init() {
-	for name, spec := range moreDialectSpecs() {
-		dialectSpecs[name] = spec
-	}
-}

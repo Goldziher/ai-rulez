@@ -16,9 +16,9 @@ import (
 // repository's own build files do not define.
 const CodeCommandMissing = "AR403"
 
-func init() {
-	registerRules(RuleInfo{CodeCommandMissing, "command-missing", SeverityWarning, "a backticked `npm run X`, `make X`, `task X`, `just X` or `pytest -m X` names a script, target, task, recipe or marker the repository does not define"})
-	registerRunCheck(checkDeadCommands, AnalyzerReferences)
+func registerArCommands(s *ruleSet) {
+	s.addRules(RuleInfo{CodeCommandMissing, "command-missing", SeverityWarning, "a backticked `npm run X`, `make X`, `task X`, `just X` or `pytest -m X` names a script, target, task, recipe or marker the repository does not define"})
+	s.addRunCheck(checkDeadCommands, AnalyzerReferences)
 }
 
 var (

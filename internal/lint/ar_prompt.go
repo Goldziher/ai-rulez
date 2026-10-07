@@ -13,8 +13,8 @@ const (
 	CodeSelfPropagation = "AR020"
 )
 
-func init() {
-	registerRules(
+func registerArPrompt(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeDirectiveLabel, "directive-label-prefix", SeverityWarning, "a prose line starts with an uppercase SYSTEM:, OVERRIDE:, ADMIN:, ROOT: or IGNORE: label that imitates a privileged message"},
 		RuleInfo{CodeFakeTag, "fake-directive-tag", SeverityWarning, "prose contains a literal <system> or <override> tag, or a chat-template token, that imitates a privileged message"},
 		RuleInfo{CodeConfigTamper, "agent-config-tamper", SeverityInfo, "text tells the agent to write to its own memory or instruction files (MEMORY.md, CLAUDE.md, AGENTS.md, .cursorrules, settings.json)"},
@@ -29,11 +29,11 @@ func init() {
 		regexp.MustCompile(`^\s*(?:[-*>]\s*)*(?:DEVELOPER MODE|DEV MODE|DAN MODE|JAILBREAK)\b`),
 	)
 	hiddenRunes[0x00AD] = "SOFT HYPHEN"
-	registerTextScan(scanDirectiveLabels, AnalyzerSecurity)
-	registerTextScan(scanFakeTags, AnalyzerSecurity)
-	registerTextScan(scanConfigTamper, AnalyzerSecurity)
-	registerTextScan(scanSelfPropagation, AnalyzerSecurity)
-	registerTextScan(scanRefComments, AnalyzerSecurity)
+	s.addTextScan(scanDirectiveLabels, AnalyzerSecurity)
+	s.addTextScan(scanFakeTags, AnalyzerSecurity)
+	s.addTextScan(scanConfigTamper, AnalyzerSecurity)
+	s.addTextScan(scanSelfPropagation, AnalyzerSecurity)
+	s.addTextScan(scanRefComments, AnalyzerSecurity)
 }
 
 var (

@@ -10,9 +10,9 @@ import (
 // it, so the part past the limit never reaches the model.
 const CodeLoadBudget = "AR964"
 
-func init() {
-	registerRules(RuleInfo{CodeLoadBudget, "load-budget-exceeded", SeverityWarning, "content exceeds a documented load limit of a configured harness (Claude skill listing, Codex AGENTS.md chain and skill listing, Windsurf/Devin rule files, Cursor rule length)"})
-	registerRunCheck(checkLoadBudgets, AnalyzerPlugin)
+func registerArBudget(s *ruleSet) {
+	s.addRules(RuleInfo{CodeLoadBudget, "load-budget-exceeded", SeverityWarning, "content exceeds a documented load limit of a configured harness (Claude skill listing, Codex AGENTS.md chain and skill listing, Windsurf/Devin rule files, Cursor rule length)"})
+	s.addRunCheck(checkLoadBudgets, AnalyzerPlugin)
 }
 
 // loadBudget is one documented limit. The table below is the single place these

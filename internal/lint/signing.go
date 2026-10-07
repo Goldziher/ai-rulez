@@ -24,8 +24,8 @@ func WithSigning(findings []ApprovalFinding) Option {
 	return func(r *runner) { r.approvals = append(r.approvals, findings...) }
 }
 
-func init() {
-	registerRules(
+func registerSigning(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeSignatureMissing, "signature-missing", SeverityError, "[signing] require asks for a signed lock and no attestation file exists"},
 		RuleInfo{CodeSignatureInvalid, "signature-invalid", SeverityError, "the lock attestation is not a valid Sigstore bundle: bad envelope, signature, certificate chain or log proof"},
 		RuleInfo{CodeSignerNotTrusted, "signer-not-trusted", SeverityError, "the lock was signed by an identity, issuer or key that no [[signing.trust]] entry accepts, or an identity_regexp is not anchored"},
@@ -37,7 +37,7 @@ func init() {
 		RuleInfo{CodeSignatureThreshold, "signature-threshold-not-met", SeverityError, "fewer distinct trusted signers signed than [signing] thresholds asks for"},
 		RuleInfo{CodeProvenanceInvalid, "provenance-invalid", SeverityError, "the SLSA provenance of a bundle is missing, malformed or names a builder that [signing] builders does not list"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeSignatureMissing: {
 			Why:  "[signing] require = [\"lock\"] says the committed lock must be signed, and there is no attestation file next to it.",
 			Bad:  "`require = [\"lock\"]` and no `.ai-rulez/ai-rulez.lock.sigstore.json`",

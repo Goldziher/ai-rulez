@@ -11,10 +11,10 @@ const CodeBodyEmpty = "AR805"
 // descWarnAt is where a description starts to warn that it is close to the limit.
 const descWarnAt = 900
 
-func init() {
-	registerRules(RuleInfo{CodeBodyEmpty, "body-empty", SeverityWarning, "a skill, agent, command or rule has frontmatter but no body, so it instructs nothing"})
-	registerItemCheck(checkBodyEmpty, AnalyzerDescriptions)
-	registerItemCheck(checkDescriptionNearLimit, AnalyzerDescriptions)
+func registerArQuality(s *ruleSet) {
+	s.addRules(RuleInfo{CodeBodyEmpty, "body-empty", SeverityWarning, "a skill, agent, command or rule has frontmatter but no body, so it instructs nothing"})
+	s.addItemCheck(checkBodyEmpty, AnalyzerDescriptions)
+	s.addItemCheck(checkDescriptionNearLimit, AnalyzerDescriptions)
 }
 
 func checkBodyEmpty(r *runner, it *item, d doc, _ frontmatter) {

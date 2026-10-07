@@ -32,6 +32,7 @@ type ScanRecord struct {
 // scanner of cfg and returns one record each, in scanner order. It starts no
 // program: a scanner that was not run on the current content has Cached false.
 func ScanRecords(cfg *config.Config, tree *Tree, so Options, opts ...Option) ([]ScanRecord, error) {
+	ruleTables()
 	counter, err := tokens.New("")
 	if err != nil {
 		return nil, fmt.Errorf("token counter: %w", err)
