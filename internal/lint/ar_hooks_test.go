@@ -89,6 +89,15 @@ func TestHookSchemaAR507(t *testing.T) {
 			absent: []string{"AR507"},
 		},
 		{
+			name:   "config.toml wildcard matcher means every subject, like the JSON form",
+			config: "\n[[hooks]]\nevent = \"Stop\"\nmatcher = \"*\"\n[[hooks.hooks]]\ncommand = \"echo\"\n",
+			absent: []string{"AR507"},
+		},
+		{
+			name:  "json wildcard matcher",
+			files: settings(`{"Stop":[{"matcher":"*","hooks":[{"type":"command","command":"x"}]}]}`), absent: []string{"AR507"},
+		},
+		{
 			name:   "severity off",
 			files:  settings(`{"Nope":[]}`),
 			config: "\n[lint.severity]\nhook-schema-invalid = \"off\"\n",
