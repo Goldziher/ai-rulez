@@ -22,7 +22,9 @@ func TestLock_ConvergesInOneRunWithAGitInclude(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
 	includes.ResetObserved()
-	t.Cleanup(func() { cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false })
+	t.Cleanup(func() {
+		cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
+	})
 	remote := crossRepo(t, ".ai-rulez/skills/inc/SKILL.md",
 		"---\nname: inc\ndescription: Shared skill. Use when sharing.\n---\n\nINC\n")
 	root := lockProject(t, "\n[skills]\ndelivery = \"served\"\n\n[[includes]]\nname = \"gitinc\"\nsource = \"file://"+
