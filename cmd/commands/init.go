@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/hooks"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
@@ -122,6 +123,42 @@ func runInit(cmd *cobra.Command, args []string) {
 	}
 
 	displaySuccessMessage(projectName, configDir)
+	if abs, err := filepath.Abs(configDir); err == nil {
+		noteHandWrittenFiles(filepath.Dir(abs))
+	}
+}
+
+// nativeRootFiles are the root files generate writes and refuses to overwrite
+// when someone else wrote them.
+var nativeRootFiles = []string{"AGENTS.md", "CLAUDE.md", "GEMINI.md"}
+
+// handWrittenNativeFiles lists the root instruction files in dir that hold
+// content and carry no generated banner: `generate` will refuse them.
+func handWrittenNativeFiles(dir string) []string {
+	var found []string
+	for _, name := range nativeRootFiles {
+		path := filepath.Join(dir, name)
+		if _, err := os.Lstat(path); err != nil {
+			continue
+		}
+		data, err := os.ReadFile(path)
+		if err != nil || len(strings.TrimSpace(string(data))) == 0 || generator.HasGeneratedBanner(path, data) {
+			continue
+		}
+		found = append(found, name)
+	}
+	return found
+}
+
+// noteHandWrittenFiles tells the user about existing hand-written root files
+// before "Next steps" leads them into generate's refusal.
+func noteHandWrittenFiles(dir string) {
+	files := handWrittenNativeFiles(dir)
+	if len(files) == 0 {
+		return
+	}
+	logger.Warn("Found hand-written "+strings.Join(files, ", ")+": `ai-rulez generate` will not overwrite it",
+		"hint", "import it with `ai-rulez convert --write` (or `init --from`) before generating, or pass `generate --force` to replace it")
 }
 
 // createStructure creates the basic configuration directory structure
