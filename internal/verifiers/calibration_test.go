@@ -219,3 +219,25 @@ func TestSaveCalibration_RoundTrips(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, missing)
 }
+
+func TestSpecDigest_CoversThePredicateTreeAndScope(t *testing.T) {
+	pred := &LLMPred{Checklist: []string{"errors are handled"}}
+	base := &Spec{Require: &Require{LLM: pred}, WhenChanged: []string{"**/*.go"}}
+	tests := []struct {
+		name string
+		spec *Spec
+	}{
+		{"wrapped in not", &Spec{Require: &Require{Not: &Require{LLM: pred}}, WhenChanged: base.WhenChanged}},
+		{"an any sibling", &Spec{Require: &Require{Any: []Require{{LLM: pred}, {Regex: &RegexPred{Regex: "x"}}}}, WhenChanged: base.WhenChanged}},
+		{"a different scope", &Spec{Require: &Require{LLM: pred}, WhenChanged: []string{"**/*.ts"}}},
+		{"an exclude", &Spec{Require: &Require{LLM: pred}, WhenChanged: base.WhenChanged, Exclude: []string{"vendor/**"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act and Assert: a changed check never reuses the calibrated record.
+			assert.NotEqual(t, specDigest(base), specDigest(tt.spec))
+		})
+	}
+	same := &Spec{ID: "renamed", Message: "m", Require: &Require{LLM: &LLMPred{Checklist: []string{"errors are handled"}}}, WhenChanged: []string{"**/*.go"}}
+	assert.Equal(t, specDigest(base), specDigest(same), "the id and message do not change the verdict")
+}
