@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -113,6 +114,20 @@ func (s Settings) RecordActive() bool { return s.Enabled && s.Killed == "" }
 // ExportActive reports whether OTLP export is on: every gate must be open.
 func (s Settings) ExportActive() bool {
 	return s.RecordActive() && s.AllowNetwork && s.Endpoint != "" && config.ValidTelemetryProtocol(s.Protocol) && len(s.blocking) == 0
+}
+
+// ConsentGrantedAt is when the consent record that grants export was given,
+// zero when export does not rest on a record (allow_network, or no consent) or
+// the time cannot be read.
+func (s Settings) ConsentGrantedAt() time.Time {
+	if s.ConsentState != ConsentRecord || s.Consent == nil {
+		return time.Time{}
+	}
+	at, err := time.Parse(time.RFC3339, s.Consent.GrantedAt)
+	if err != nil {
+		return time.Time{}
+	}
+	return at
 }
 
 // Sources of settings. Repo is a repository's own config plus its local overlay

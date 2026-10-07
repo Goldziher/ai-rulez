@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
@@ -41,6 +42,10 @@ type Cursor struct {
 	Offset      int64  `json:"offset"`
 	LastEventID string `json:"last_event_id,omitempty"`
 	UpdatedAt   string `json:"updated_at,omitempty"`
+	// PlacedAt is when the cursor was placed (PlaceCursor, or the first catch-up
+	// of the log). A cursor placed before the current consent was granted belongs
+	// to a project that may have kept recording while consent was off.
+	PlacedAt string `json:"placed_at,omitempty"`
 	// Sent is a ring of the most recently delivered (or permanently rejected)
 	// event ids, oldest first. A catch-up skips them, so an event the outbox already
 	// delivered is not delivered again from the log.
@@ -160,6 +165,11 @@ type CatchUpOptions struct {
 	Max int
 	// DryRun computes the result without queueing or moving the cursor.
 	DryRun bool
+	// GrantedAt is when the consent the export runs under was given (zero for
+	// none). Unless All, events recorded before it are not queued while the
+	// cursor was placed before it: consent is not retroactive, so a project that
+	// kept recording while consent was off does not export that gap.
+	GrantedAt time.Time
 }
 
 // CatchUpResult says what a catch-up did.
@@ -245,13 +255,13 @@ func (s *Spool) catchUp(logPath string, o CatchUpOptions) (CatchUpResult, error)
 		if err != nil || o.DryRun {
 			return result, err
 		}
-		return result, s.updateCursorLocked(func(c *Cursor) { c.LogID, c.Offset = logID, end })
+		return result, s.updateCursorLocked(func(c *Cursor) { c.LogID, c.Offset, c.PlacedAt = logID, end, FormatTime(time.Now()) })
 	}
 	skip, err := s.knownIDs(cur)
 	if err != nil {
 		return result, err
 	}
-	tail, err := readTail(file, offset, skip, o)
+	tail, err := readTail(file, offset, skip, o, notBefore(cur, o))
 	if err != nil {
 		return result, err
 	}
@@ -302,9 +312,29 @@ type tailRead struct {
 	more              bool
 }
 
+// notBefore is the earliest event time a catch-up may queue: the consent's grant
+// time when the cursor predates it (or its placement is unknown), else zero.
+func notBefore(cur Cursor, o CatchUpOptions) time.Time {
+	if o.All || o.GrantedAt.IsZero() {
+		return time.Time{}
+	}
+	if placed, err := time.Parse(time.RFC3339, cur.PlacedAt); err == nil && !placed.Before(o.GrantedAt) {
+		return time.Time{} // placed under this consent: what it covers was chosen then (--backfill)
+	}
+	return o.GrantedAt
+}
+
+// recordedBefore reports whether e was recorded before t; an event without a
+// readable time counts as before.
+func recordedBefore(e *Event, t time.Time) bool {
+	at, err := time.Parse(time.RFC3339, e.Time)
+	return err != nil || at.Before(t)
+}
+
 // readTail reads complete log lines from offset until the bound or the end of the
-// log, keeping the events that are not in skip and are inside the sample.
-func readTail(file *os.File, offset int64, skip map[string]bool, o CatchUpOptions) (tailRead, error) {
+// log, keeping the events that are not in skip, are inside the sample and were
+// not recorded before notBefore.
+func readTail(file *os.File, offset int64, skip map[string]bool, o CatchUpOptions, notBefore time.Time) (tailRead, error) {
 	tail := tailRead{end: offset}
 	if _, err := file.Seek(offset, io.SeekStart); err != nil {
 		return tail, oops.Wrapf(err, "seek usage log")
@@ -334,7 +364,8 @@ func readTail(file *os.File, offset int64, skip map[string]bool, o CatchUpOption
 			continue
 		}
 		tail.lastID = event.EventID
-		if skip[event.EventID] || (o.Sample != nil && !Sampled(*o.Sample, &event)) {
+		if skip[event.EventID] || (o.Sample != nil && !Sampled(*o.Sample, &event)) ||
+			(!notBefore.IsZero() && recordedBefore(&event, notBefore)) {
 			tail.skipped++
 			continue
 		}
@@ -406,7 +437,9 @@ func (s *Spool) PlaceCursor(logPath string, fromStart bool) error {
 			return err
 		}
 	}
-	return s.UpdateCursor(func(c *Cursor) { c.LogID, c.Offset, c.LastEventID = logID, end, "" })
+	return s.UpdateCursor(func(c *Cursor) {
+		c.LogID, c.Offset, c.LastEventID, c.PlacedAt = logID, end, "", FormatTime(time.Now())
+	})
 }
 
 // PendingInLog counts the events after the cursor that a catch-up would look at

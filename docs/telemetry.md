@@ -269,7 +269,9 @@ they were recorded while the outbox was off) without sending anything twice. Rul
 - A cursor that was never set is placed at the **end** of the log by the first catch-up and nothing is queued: history is
   exported only on request (`telemetry enable --backfill`, `usage export --to otlp --all`).
 - One catch-up queues at most 2,000 events; the rest is picked up by the next one.
-- Sampling (`sample`) applies to catch-up events as it does when recording.
+- Sampling (`sample`) applies to catch-up events as it does when recording; `sample = 0` exports nothing.
+- Under a consent record, a cursor placed before the consent was granted (another project, which kept recording while
+  consent was off) skips the events recorded before the grant; `--all` still sends them on request.
 - `usage export --to otlp` is the same pass run by hand, with `--all`, `--dry-run` and `--with-evals`; it refuses without
   consent and exits 1 when delivery fails so CI notices.
 
