@@ -248,8 +248,9 @@ key_file = "keys/bob.pub"
 
 Each signer writes their own bundle: `sign --lock --key alice.key`, then `sign --lock --key bob.key --append`, which
 writes `ai-rulez.lock.2.sigstore.json` next to `ai-rulez.lock.sigstore.json` (numbered files are found by name; at most
-16). Verification checks every file and counts distinct accepted signers: a key by fingerprint, a certificate by
-identity and issuer, so two bundles by one signer count once. A file that fails is ignored while enough others verify;
+16). Verification checks every file and counts distinct accepted people: a certificate by its identity, a key by the
+`reviewer` its trust entry names (else by fingerprint), so two bundles by one signer count once, and so do two keys,
+or a key and a keyless identity, of one person. A file that fails is ignored while enough others verify;
 with none valid the first failure is reported, and with some but too few the result is `AR728`. Each subject has its own
 threshold (`lock`, `bundle`, `skill`, `sbom`; default 1), and a threshold of k needs at least k trust entries for the
 subject, or an `identity_regexp`, which may match many identities. It applies to `lock --check`, `generate --locked`,
