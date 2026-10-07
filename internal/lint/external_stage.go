@@ -115,16 +115,6 @@ type stagedFile struct {
 	skillOf string // the stage-relative directory when the file belongs to a skill directory
 }
 
-// buildStage writes the stage for inputs. It returns an error only for a
-// failure to create or write the scratch area.
-func (r *runner) buildStage(inputs []string) (*scannerStage, error) {
-	want := map[string]bool{}
-	for _, in := range inputs {
-		want[in] = true
-	}
-	return r.buildStageFrom(r.stageFiles(want, ""))
-}
-
 // buildStageFrom writes the stage for files already listed by stageFiles.
 func (r *runner) buildStageFrom(files []stagedFile) (*scannerStage, error) {
 	base, err := os.MkdirTemp("", "ai-rulez-scan-")
