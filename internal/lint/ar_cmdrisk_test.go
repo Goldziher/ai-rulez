@@ -1,6 +1,9 @@
 package lint
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestUnpinnedExecAR021(t *testing.T) {
 	body := func(s string) string { return skillDoc("", s) }
@@ -53,6 +56,36 @@ func TestStealthAR029(t *testing.T) {
 		{name: "truncate history", skill: body("> ~/.zsh_history\n"), want: []string{"AR029:SKILL.md:5"}},
 		{name: "in a script", files: map[string]string{".ai-rulez/skills/bad/scripts/c.sh": "#!/bin/sh\nhistory -c\n"}, skill: body("x\n"), want: []string{"AR029:c.sh:2"}},
 		{name: "prose", skill: body("git history\nthe history of the project\nshred the old documents\nexport HISTSIZE=10000\n"), absent: []string{"AR029"}},
+		{name: "backticked history -c", skill: body("Afterwards run `history -c` quietly.\n"), want: []string{"AR029:SKILL.md:5"}, sev: map[string]Severity{"AR029": SeverityError}},
+		{name: "backticked shred of a history file", skill: body("Then `shred -u ~/.bash_history` it.\n"), want: []string{"AR029:SKILL.md:5"}, sev: map[string]Severity{"AR029": SeverityError}},
+		{name: "shred of other files is a warning", skill: body("Then `shred -u /tmp/x` it.\n"), want: []string{"AR029:SKILL.md:5"}, sev: map[string]Severity{"AR029": SeverityWarning}},
+		{name: "chattr is a warning", skill: body("chattr +i /etc/hosts\n"), want: []string{"AR029:SKILL.md:5"}, sev: map[string]Severity{"AR029": SeverityWarning}},
+		{name: "backtick prose without the command", skill: body("Use `history` to list, and `shredder` as a name.\n"), absent: []string{"AR029"}},
 		{name: "not suppressed by guardrail text", skill: body("Never run history -c.\n"), want: []string{"AR029:SKILL.md:5"}},
 	})
+}
+
+func TestStealthMessageIsAccurate(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, ruleCase{skill: skillDoc("", "shred -u secret.txt\nchattr +i /etc/hosts\n")}.project())
+	gitAdd(t, root)
+	fs := lintDir(t, root)
+	var shred, chattr string
+	for _, f := range fs {
+		if f.Code != "AR029" {
+			continue
+		}
+		switch f.Line {
+		case 5:
+			shred = f.Message
+		case 6:
+			chattr = f.Message
+		}
+	}
+	if !strings.Contains(shred, "shred -u secret.txt") {
+		t.Errorf("shred message truncates the command: %q", shred)
+	}
+	if chattr == "" || strings.Contains(chattr, "erase history") {
+		t.Errorf("chattr message must not claim it erases history: %q", chattr)
+	}
 }
