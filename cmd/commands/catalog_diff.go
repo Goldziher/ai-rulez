@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
@@ -43,7 +44,9 @@ commit are extracted to a temporary directory and a catalog is built from them. 
 one argument, the other side is the current project's shared configuration (the
 machine-local overlay is left out so both sides see what a teammate sees). Remote
 includes and installed skills are not resolved for a revision or the working tree;
-compare two catalog.json files to include them.
+compare two catalog.json files to include them. Both sides are linted against the
+working tree's repository (for the paths content names), and the plugin version
+drift check, which needs generated outputs on disk, is left out.
 
 Exit codes: 0 unless the command could not run (1); with --exit-code, 2 when the
 catalogs differ.`,
@@ -204,7 +207,10 @@ func revisionSide(ctx context.Context, project *catalogDiffProject, rev string) 
 	if err := revCfg.Validate(); err != nil {
 		return nil, oops.With("rev", rev).Wrapf(err, "the configuration at revision %q is invalid", rev)
 	}
-	doc, err := buildDiffCatalog(revCfg)
+	// Only the configuration directory is extracted, so the repository paths its
+	// content names (AR401, the harness traps) are checked against the work tree
+	// the other side uses, not against an almost empty snapshot directory.
+	doc, err := buildRevisionCatalog(revCfg, top)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +230,26 @@ func shortCommit(c string) string {
 
 // buildDiffCatalog builds the version 2 catalog of cfg for a comparison: no
 // excerpts, no eval or usage, linted in process.
+// buildRevisionCatalog is buildDiffCatalog for a configuration extracted from a
+// revision, linted with repoRoot as the repository (an explicit --repo-root wins).
+func buildRevisionCatalog(cfg *config.Config, repoRoot string) (*govview.CatalogDocV2, error) {
+	if strictTreeCache.Root == "" {
+		prev := strictTreeCache
+		strictTreeCache = lint.Loader{Root: repoRoot}
+		defer func() { strictTreeCache = prev }()
+	}
+	return buildDiffCatalog(cfg)
+}
+
+// skipPluginDrift leaves the plugin version drift check (AR961) out of strict
+// lint. It compares the plugin a project renders with the baseline generated on
+// disk, which a revision extracted from git does not have, so catalog diff skips
+// it on both sides instead of reporting it on the working tree only.
+var skipPluginDrift bool
+
 func buildDiffCatalog(cfg *config.Config) (*govview.CatalogDocV2, error) {
+	skipPluginDrift = true
+	defer func() { skipPluginDrift = false }()
 	if err := cfg.Validate(); err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
