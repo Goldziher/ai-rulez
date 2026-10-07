@@ -55,8 +55,9 @@ type ArtifactReport struct {
 	// SigningTime is SignedAt, or the claimed issue time when Weak.
 	SigningTime time.Time
 	// Age is how long ago the signature was made.
-	Age      time.Duration
-	StateKey string
+	Age time.Duration
+	// StateKeys are the rollback marks this report is checked and committed under.
+	StateKeys []string
 	// Cosigners are the reports of the other distinct trusted signers accepted
 	// beside this one.
 	Cosigners []*ArtifactReport
@@ -84,7 +85,7 @@ func (r *ArtifactReport) Commit(s *State) error {
 	if r.SigningTime.IsZero() {
 		return nil
 	}
-	return s.Advance(r.StateKey, r.SigningTime)
+	return s.advanceAll(r.StateKeys, r.SigningTime)
 }
 
 // VerifyArtifact verifies the attestation files of one artifact against what the
@@ -152,13 +153,13 @@ func verifyArtifactBundle(data []byte, exp Expectation, p ArtifactPolicy) (*Arti
 	if err := CheckFresh(res, claim.IssuedAt, p.MaxAge, p.Now); err != nil {
 		return nil, err
 	}
-	key := scopedStateKey(res.Signer, claim.Repository, p.ScopeRel, p.ScopeAbs) + "|" + p.Subject + ":" + p.Source + "/" + subjectName(st, exp) + "@" + st.PredicateType
+	keys := suffixed(scopedStateKeys(res.Signer, claim.Repository, p.ScopeRel, p.ScopeAbs), "|"+p.Subject+":"+p.Source+"/"+subjectName(st, exp)+"@"+st.PredicateType)
 	if p.State != nil && !at.IsZero() {
-		if err := p.State.Check(key, at); err != nil {
+		if err := p.State.checkAll(keys, at); err != nil {
 			return nil, err
 		}
 	}
-	return &ArtifactReport{Result: res, Statement: st, SigningTime: at, Age: p.Now.Sub(at), StateKey: key}, nil
+	return &ArtifactReport{Result: res, Statement: st, SigningTime: at, Age: p.Now.Sub(at), StateKeys: keys}, nil
 }
 
 // requireSubject finds the statement subject carrying the expected digest (and
