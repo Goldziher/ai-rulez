@@ -199,8 +199,10 @@ a team). Nothing is cached: `validate` and the skills server never call the forg
 `[governance.teams]` for them.
 
 An organization [policy](policy.md) sets floors for `min_assurance` (the stronger level wins), `forbid_self_approval`
-(on if either sets it) and `approvers_from = "CODEOWNERS"` (`AR740` when the repository turns it off). Only `teams` has
-no floor; the repository can change it in the same pull request it would gate.
+(on if either sets it) and `approvers_from = "CODEOWNERS"` (`AR740` when the repository turns it off). A team the
+policy's `approvers` list pins is expanded only from the forge (`--resolve-teams`): the repository's
+`[governance.teams]` entry for it is ignored with `AR740`, so a pull request cannot add its author to the team. Other
+teams have no floor; the repository can change them in the same pull request it would gate.
 
 ## Review-linked approvals
 
