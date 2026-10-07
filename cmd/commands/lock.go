@@ -114,7 +114,7 @@ func runLock(_ *cobra.Command, args []string) {
 	}
 }
 
-// validateLockFlags rejects flag combinations `lock` cannot honour.
+// validateLockFlags rejects flag combinations `lock` cannot honor.
 func validateLockFlags(args []string) error {
 	if lockKind != "" && !knownLockKind(lockKind) {
 		return oops.Errorf("unknown --kind %q (use include, skill, source or served)", lockKind)
