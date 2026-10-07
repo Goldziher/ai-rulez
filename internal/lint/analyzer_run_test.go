@@ -117,9 +117,9 @@ func TestConfigAnalyzersAllowListAndFlagOverride(t *testing.T) {
 }
 
 func TestValidateSettingsRejectsUnknownAnalyzer(t *testing.T) {
-	problems := ValidateSettings(&config.LintConfig{Analyzers: []string{"security", "secruity"}})
+	problems := ValidateSettings(&config.LintConfig{Analyzers: []string{"security", "securty"}})
 	require.Len(t, problems, 1)
-	assert.Contains(t, problems[0], `lint.analyzers: unknown analyzer "secruity"`)
+	assert.Contains(t, problems[0], `lint.analyzers: unknown analyzer "securty"`)
 }
 
 func TestBaselineKeepsEntriesOfAnalyzersThatDidNotRun(t *testing.T) {

@@ -14,7 +14,7 @@ import (
 	"github.com/samber/oops"
 )
 
-// The size-over and key-misspelt predicates of the harness trap table, the
+// The size-over predicate, the predicate for misspelled keys of the harness trap table, the
 // stale-table check (AR9C0) and the codes of the limit traps.
 
 // Codes of the harness traps added with the limits table.
@@ -43,7 +43,7 @@ func registerTrapsLimits(s *ruleSet) {
 			Good: "Re-check the row against its source, update `quote` and `verified_on`",
 		},
 		CodeClaudeKeySpelling: {
-			Why:  "Claude Code ignores a frontmatter field it does not recognise without reporting an error, so `user_invocable` silently does nothing.",
+			Why:  "Claude Code ignores a frontmatter field it does not recognize without reporting an error, so `user_invocable` silently does nothing.",
 			Bad:  "`disable_model_invocation: true` in a SKILL.md, or `max_turns: 5` in a subagent",
 			Good: "`disable-model-invocation: true`; `maxTurns: 5`",
 		},
@@ -115,7 +115,7 @@ func (p TrapPredicate) evalMisspelt(content []byte) []trapHit {
 	return hits
 }
 
-// keyRenameFix is the fix of a misspelt top-level key: the line with the key
+// keyRenameFix is the fix of a misspelled top-level key: the line with the key
 // spelled as documented. It is nil unless the line starts with name and a colon.
 func keyRenameFix(content []byte, line int, name, canonical string) *lineFix {
 	lines := strings.Split(string(content), "\n")

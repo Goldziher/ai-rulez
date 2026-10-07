@@ -104,7 +104,7 @@ func (c *ScanCache) key32() []byte {
 }
 
 // cachedFinding is a finding as the cache keeps it (every field the mapping
-// needs, which externalFinding does not all serialise).
+// needs, which externalFinding does not all serialize).
 type cachedFinding struct {
 	File         string  `json:"file,omitempty"`
 	Line         int     `json:"line,omitempty"`

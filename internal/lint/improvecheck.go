@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// checkImproveConfig reports what a repository [improve] table asks for that `improve run` will not honour
+// checkImproveConfig reports what a repository [improve] table asks for that `improve run` will not honor
 // without --trust-repo-optimizer (AR9J6): an optimizer command, forwarded environment variables, or a gate
 // looser than the defaults. The values themselves are checked by the config schema.
 func (r *runner) checkImproveConfig() {

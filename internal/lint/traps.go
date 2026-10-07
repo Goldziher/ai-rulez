@@ -34,7 +34,7 @@ const (
 	predNameSuffixRequired = "name-suffix-required"
 	predFrontmatterEnum    = "frontmatter-enum"
 	predFrontmatterMissing = "frontmatter-missing-all"
-	predKeyMisspelt        = "key-misspelt"
+	predKeyMisspelt        = "key-misspelt" //nolint:misspell // the predicate name is a key of traps.toml
 	predSizeOver           = "size-over"
 	predFrontmatterFirst   = "frontmatter-first"
 	predJSONKeyRequiredIf  = "json-key-required-if"
@@ -94,7 +94,7 @@ type TrapPredicate struct {
 	Key         string   `toml:"key"`
 	Keys        []string `toml:"keys"`
 	Unless      []string `toml:"unless"`
-	// Canonical lists the real key spellings of key-misspelt: a key that equals
+	// Canonical lists the real key spellings for the misspelled-key predicate: a key that equals
 	// one ignoring case, hyphens and underscores, but not exactly, is flagged.
 	Canonical []string `toml:"canonical"`
 	// LimitID names the row of limits.toml a size-over predicate measures against.
@@ -143,7 +143,7 @@ type trapHit struct {
 	line   int
 	detail string
 	// fix is a safe correction of the flagged line, set only by predicates that
-	// can state one (a misspelt key).
+	// can state one (a misspelled key).
 	fix *lineFix
 }
 

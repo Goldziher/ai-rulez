@@ -77,7 +77,7 @@ func registerArReview(s *ruleSet) {
 			Good: "A short body, with detail moved to `references/`",
 		},
 		CodeReviewCalibrationStale: {
-			Why:  "A judge is only trusted to gate a build after `ai-rulez review calibrate` measured it against a human-labelled golden set for this exact rubric, prompt and model. A floating model alias, an edited rubric or an old record means the measurement no longer describes the judge that ran.",
+			Why:  "A judge is only trusted to gate a build after `ai-rulez review calibrate` measured it against a human-labeled golden set for this exact rubric, prompt and model. A floating model alias, an edited rubric or an old record means the measurement no longer describes the judge that ran.",
 			Bad:  "`review --semantic --gate` on `gemini-flash-latest`, or after editing `rubric.toml`, with the old `calibration.json`",
 			Good: "A pinned model id and a `calibration.json` written by `review calibrate` for the current rubric digest, prompt digest and golden set, younger than `max_age_days`",
 		},
@@ -92,7 +92,7 @@ func registerArReview(s *ruleSet) {
 // secretRedaction replaces a credential in redacted text.
 const secretRedaction = "[REDACTED:" + CodeSecretDetected + "]"
 
-// RedactSecrets masks every credential the security scan (AR001) recognises with
+// RedactSecrets masks every credential the security scan (AR001) recognizes with
 // [REDACTED:AR001]. `ai-rulez review` uses it for [review] on_secret = "redact": it
 // then re-scans the masked text and withholds the item if anything is left.
 func RedactSecrets(s string) string {
