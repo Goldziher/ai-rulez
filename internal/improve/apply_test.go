@@ -156,6 +156,7 @@ func TestUnifiedDiff_AppliesWithGit(t *testing.T) {
 		require.NoError(t, err)
 	}
 	git("init", "-q")
+	git("config", "core.autocrlf", "false") // the patch must apply byte for byte, whatever the user's global setting
 	require.NoError(t, os.WriteFile(filepath.Join(root, "p.patch"), []byte(patch), 0o600))
 
 	// Act + Assert
@@ -326,4 +327,17 @@ func TestApply_RollsBackWhenAWriteFails(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, before, readFileString(t, filepath.Join(skillDir, "SKILL.md")), "SKILL.md was restored")
 	assert.Equal(t, "blocker", readFileString(t, filepath.Join(skillDir, "references")))
+}
+
+func TestRemoveAndEmptyParents_KeepsAFileAtAParentPath(t *testing.T) {
+	// Arrange: the apply failed because "references" is a file, so nothing below it was created
+	dir := t.TempDir()
+	blocker := filepath.Join(dir, "references")
+	require.NoError(t, os.WriteFile(blocker, []byte("blocker"), 0o600))
+
+	// Act: the error (or none, where the OS reports a missing path) does not matter, the file does
+	_ = removeAndEmptyParents(dir, filepath.Join(blocker, "extra.md"))
+
+	// Assert
+	assert.Equal(t, "blocker", readFileString(t, blocker))
 }
