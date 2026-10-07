@@ -14,7 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-const driftShared = `version = "4.0"
+const driftShared = `version = "5.0"
 name = "shared-project"
 presets = ["claude"]
 gitignore = false

@@ -149,7 +149,7 @@ func TestVerifyPlugin_NotGenerated(t *testing.T) {
 	configDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
-		"version = \"4.0\"\nname = \"demo\"\npresets = [\"claude\"]\ngitignore = false\n\n"+
+		"version = \"5.0\"\nname = \"demo\"\npresets = [\"claude\"]\ngitignore = false\n\n"+
 			"[plugin]\nname = \"demo\"\nversion = \"1.0.0\"\ndescription = \"d\"\nruntimes = [\"claude\"]\n"), 0o644))
 	cfg, err := config.LoadConfig(context.Background(), dir, config.WithoutLocal())
 	require.NoError(t, err)

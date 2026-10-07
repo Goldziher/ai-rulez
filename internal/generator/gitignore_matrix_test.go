@@ -59,7 +59,7 @@ func generateWithUserGitignore(t *testing.T, preset string, agentsMD bool, userG
 		require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
 	}
 	var sb strings.Builder
-	sb.WriteString("version = \"4.0\"\nname = \"matrix\"\ngitignore = true\n")
+	sb.WriteString("version = \"5.0\"\nname = \"matrix\"\ngitignore = true\n")
 	if agentsMD {
 		sb.WriteString("agents_md = true\n")
 	}

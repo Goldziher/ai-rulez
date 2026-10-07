@@ -15,7 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
-const driftSharedIgnoring = `version = "4.0"
+const driftSharedIgnoring = `version = "5.0"
 name = "shared-project"
 presets = ["claude"]
 `
@@ -176,7 +176,7 @@ func geminiLocalMCPProject(t *testing.T) *driftProject {
 	t.Helper()
 	p := newDriftProject(t, driftShared)
 	p.writeFile(t, ".ai-rulez/config.toml",
-		"version = \"4.0\"\nname = \"shared-project\"\npresets = [\"gemini\", \"claude\"]\nagents_md = true\n")
+		"version = \"5.0\"\nname = \"shared-project\"\npresets = [\"gemini\", \"claude\"]\nagents_md = true\n")
 	p.git(t, "init", "-q")
 	p.overlay(t, "[[mcp_servers]]\nname = \"loc\"\ncommand = \"x\"\n")
 	return p

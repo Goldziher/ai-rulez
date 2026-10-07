@@ -14,7 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-const permissionsProjectConfig = `version = "4.0"
+const permissionsProjectConfig = `version = "5.0"
 name = "perms"
 presets = ["claude", "codex", "cursor", "copilot", "gemini", "devin", "opencode", "kilo", "mimocode", "codebuddy",
   "commandcode", "qoder", "qwen", "letta", "grok", "vibe", "poolside", "omp", "augment", "zoocode", "copilot-cli", "zed"]
@@ -120,7 +120,7 @@ func TestGenerate_DroppingPermissionsRemovesTheirRules(t *testing.T) {
 	generateProject(t, root)
 	require.Contains(t, readProjectFile(t, root, ".qwen/settings.json"), "Bash(rm -rf:*)")
 
-	trimmed := "version = \"4.0\"\nname = \"perms\"\npresets = [\"qwen\", \"grok\", \"codex\"]\ngitignore = false\n"
+	trimmed := "version = \"5.0\"\nname = \"perms\"\npresets = [\"qwen\", \"grok\", \"codex\"]\ngitignore = false\n"
 	require.NoError(t, os.WriteFile(filepath.Join(root, ".ai-rulez", "config.toml"), []byte(trimmed), 0o644))
 	generateProject(t, root)
 
@@ -129,7 +129,7 @@ func TestGenerate_DroppingPermissionsRemovesTheirRules(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(root, ".codex", "rules", "ai-rulez.rules"), "no expressible rule left, so no rules file")
 }
 
-const userPermissionsConfig = `version = "4.0"
+const userPermissionsConfig = `version = "5.0"
 name = "me"
 presets = ["claude", "codex", "gemini", "opencode", "zed", "qwen", "grok", "kilo", "hermes", "kimi"]
 
@@ -164,7 +164,7 @@ func TestUser_PermissionsLandInTheUserFiles(t *testing.T) {
 
 func TestGenerate_UserOnlyHarnessesWriteNothingIntoTheProject(t *testing.T) {
 	quietWarnings(t)
-	root := writeProject(t, "version = \"4.0\"\nname = \"p\"\npresets = [\"zed\", \"hermes\", \"kimi\"]\ngitignore = false\n"+
+	root := writeProject(t, "version = \"5.0\"\nname = \"p\"\npresets = [\"zed\", \"hermes\", \"kimi\"]\ngitignore = false\n"+
 		"[permissions]\ndeny = [\"Bash(rm -rf:*)\"]\n", nil)
 
 	generateProject(t, root)
