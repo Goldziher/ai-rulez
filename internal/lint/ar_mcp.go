@@ -3,10 +3,12 @@ package lint
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/url"
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -45,6 +47,8 @@ type mcpServer struct {
 	// line is the 1-based line of the definition when the source knows it
 	// (frontmatter); 0 means search the file for the name.
 	line int
+	// section is the JSON key that holds the servers ("" for config.toml).
+	section string
 }
 
 // mcpJSONFiles are the hand-authored MCP files checked when tracked or present:
@@ -58,9 +62,7 @@ var mcpJSONFiles = []struct{ rel, key string }{
 func (r *runner) mcpServers() []*mcpServer {
 	var out []*mcpServer
 	if cfgPath := r.configFilePath(); cfgPath != "" {
-		servers := r.effectiveMCPServers()
-		for i := range servers {
-			s := &servers[i]
+		for _, s := range r.effectiveMCPServers() {
 			out = append(out, &mcpServer{file: cfgPath, name: s.Name, transport: s.Transport, command: s.Command, args: s.Args, url: s.URL, env: s.Env, headers: s.Headers, disabled: !s.IsEnabled()})
 		}
 	}
@@ -71,8 +73,8 @@ func (r *runner) mcpServers() []*mcpServer {
 			continue
 		}
 		for _, srv := range decodeMCPJSON(p, f.key, data) {
-			if r.declaresMCPServer(srv.name) {
-				continue // the file mirrors config.toml, which is checked at its source
+			if gen := r.configMCPServer(srv.name); gen != nil && sameMCPServer(srv, gen) {
+				continue // a copy of what config.toml generates, which is checked at its source
 			}
 			out = append(out, srv)
 		}
@@ -89,14 +91,25 @@ func (r *runner) effectiveMCPServers() []config.MCPServer {
 	return r.mcpEffective
 }
 
-func (r *runner) declaresMCPServer(name string) bool {
+// configMCPServer returns the server of that name as written in config.toml, or nil.
+func (r *runner) configMCPServer(name string) *config.MCPServer {
 	servers := r.effectiveMCPServers()
 	for i := range servers {
 		if servers[i].Name == name {
-			return true
+			return &servers[i]
 		}
 	}
-	return false
+	return nil
+}
+
+// sameMCPServer reports whether a server read from a JSON file carries the same
+// launch definition as the config.toml server of that name, so the file is a
+// generated copy. Any difference means the file was edited and is checked itself.
+func sameMCPServer(j *mcpServer, gen *config.MCPServer) bool {
+	g := &mcpServer{transport: gen.Transport, command: gen.Command, url: gen.URL}
+	return len(j.typeProblems) == 0 && j.command == gen.Command && j.url == gen.URL &&
+		effectiveTransport(j) == effectiveTransport(g) &&
+		slices.Equal(j.args, gen.Args) && maps.Equal(j.env, gen.Env) && maps.Equal(j.headers, gen.Headers)
 }
 
 func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
@@ -116,7 +129,7 @@ func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocycl
 	var out []*mcpServer
 	for _, n := range names {
 		f := servers[n]
-		s := &mcpServer{file: file, name: n}
+		s := &mcpServer{file: file, name: n, section: key}
 		str := func(k string, dst *string) {
 			if raw, ok := f[k]; ok {
 				if json.Unmarshal(raw, dst) != nil {
@@ -172,12 +185,15 @@ func effectiveTransport(s *mcpServer) string {
 	case s.url != "" && s.command == "":
 		return transportHTTP
 	}
-	return transportStdio
+	return "stdio"
 }
 
 func checkMCPConfig(r *runner) {
 	r.checkSettingsSecrets()
-	servers := r.mcpServers()
+	r.checkMCPServers(r.mcpServers())
+}
+
+func (r *runner) checkMCPServers(servers []*mcpServer) {
 	if len(servers) == 0 {
 		return
 	}
@@ -193,7 +209,7 @@ func checkMCPConfig(r *runner) {
 			continue
 		}
 		lines := r.fileLines(s.file)
-		at := lineContaining(lines, s.name)
+		at := mcpServerLine(lines, s)
 		if s.line > 0 {
 			at = s.line
 		}
@@ -201,6 +217,31 @@ func checkMCPConfig(r *runner) {
 		r.checkMCPPins(s, at)
 		r.checkMCPSecrets(s, lines, at)
 	}
+}
+
+// mcpServerLine is the 1-based line that defines s: its name = "..." line in a
+// [[mcp_servers]] block of config.toml, or its quoted key inside the servers
+// object of a JSON file. A bare substring search would land on an unrelated
+// line that merely contains the name.
+func mcpServerLine(lines []string, s *mcpServer) int {
+	q := regexp.QuoteMeta(s.name)
+	re := regexp.MustCompile(`^\s*(?:-\s*)?name\s*[=:]\s*["']?` + q + `["']?\s*(?:#.*)?$`)
+	from := 0
+	if s.section != "" {
+		re = regexp.MustCompile(`"` + q + `"\s*:`)
+		for i, l := range lines {
+			if strings.Contains(l, `"`+s.section+`"`) {
+				from = i
+				break
+			}
+		}
+	}
+	for i := from; i < len(lines); i++ {
+		if re.MatchString(lines[i]) {
+			return i + 1
+		}
+	}
+	return lineContaining(lines, quoteNeedle(s.name))
 }
 
 func (r *runner) checkMCPShape(s *mcpServer, at int, byName map[string][]*mcpServer) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
@@ -218,7 +259,7 @@ func (r *runner) checkMCPShape(s *mcpServer, at int, byName map[string][]*mcpSer
 	}
 	t := effectiveTransport(s)
 	switch t {
-	case transportStdio:
+	case "stdio":
 		switch {
 		case s.command == "" && s.url == "":
 			bad("defines neither a command (stdio) nor a url (http), so it is empty")
@@ -265,13 +306,21 @@ func (r *runner) checkMCPPins(s *mcpServer, at int) {
 
 func pinExample(command, pkg string) string {
 	switch path.Base(command) {
-	case toolUvx, toolPipx, "uv":
-		return pkg + "==1.2.3"
+	case "uvx", "pipx", "uv":
+		return pythonPackageName(pkg) + "==1.2.3"
 	case cmdDocker, "podman":
 		return pkg + "@sha256:..."
 	}
 	name, _ := pinOf(pkg)
 	return name + "@1.2.3"
+}
+
+// pythonPackageName strips a version specifier (==, >=, ~=, @tag, [extras]) from a requirement.
+func pythonPackageName(spec string) string {
+	if i := strings.IndexAny(spec, "@=<>~!^[ ;"); i > 0 {
+		return spec[:i]
+	}
+	return spec
 }
 
 var (

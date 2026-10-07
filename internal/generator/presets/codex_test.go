@@ -1,7 +1,6 @@
 package presets
 
 import (
-	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -164,27 +163,6 @@ func TestCodexPresetGenerator_renderSkillFile_PreservesShortDescriptionMetadata(
 	if !strings.Contains(result, `short-description: "Maintains config schema contracts."`) {
 		t.Fatalf("expected quoted short-description in output, got:\n%s", result)
 	}
-}
-
-func TestCodexPresetGenerator_renderPluginsJSON(t *testing.T) {
-	g := &CodexPresetGenerator{}
-
-	enabled := true
-	cfg := &config.Config{
-		Plugins: []config.PluginConfig{
-			{Marketplace: "openai-curated", Name: "gmail", Scope: "user", Enabled: &enabled},
-		},
-	}
-
-	content, err := g.renderPluginsJSON(cfg)
-	require.NoError(t, err)
-	assert.Contains(t, content, "openai-curated")
-	assert.Contains(t, content, "gmail")
-
-	var parsed []interface{}
-	err = json.Unmarshal([]byte(content), &parsed)
-	require.NoError(t, err)
-	assert.Len(t, parsed, 1)
 }
 
 func TestCodexPresetGenerator_CommandsAreSkills(t *testing.T) {

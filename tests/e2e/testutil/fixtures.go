@@ -9,7 +9,7 @@ const V4AgentWithPerPresetModels = helpers.V4AgentWithPerPresetModels
 const V4AgentWithDefaultedModel = helpers.V4AgentWithDefaultedModel
 
 // Configuration Fixtures
-const BasicConfigTOML = `version = "4.0"
+const BasicConfigTOML = `version = "5.0"
 name = "test-project"
 description = "Basic test configuration"
 presets = ["claude"]
@@ -39,7 +39,7 @@ const ProjectContextMarkdown = `# Project Information
 This is a test project for validating MCP operations.
 `
 
-const ConfigWithMCPServersTOML = `version = "4.0"
+const ConfigWithMCPServersTOML = `version = "5.0"
 name = "mcp-test-project"
 description = "configuration with MCP servers"
 presets = ["claude"]
@@ -62,14 +62,14 @@ enabled = false
 env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }
 `
 
-const ConfigWithMultiplePresetsTOML = `version = "4.0"
+const ConfigWithMultiplePresetsTOML = `version = "5.0"
 name = "multi-preset-project"
 description = "Multiple preset configuration"
 presets = ["claude", "cursor"]
 gitignore = false
 `
 
-const InvalidConfigTOML = `version = "4.0"
+const InvalidConfigTOML = `version = "5.0"
 name = "invalid-project"
 description = "This is invalid"
 presets = "not-a-list"

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const userRestoreConfig = `version = "4.0"
+const userRestoreConfig = `version = "5.0"
 name = "user"
 presets = ["claude"]
 

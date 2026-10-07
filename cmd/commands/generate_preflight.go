@@ -93,7 +93,7 @@ func checkConfigSchema(cfg *config.Config, strict bool) error {
 
 // warnRoleSelection prints the AR971 findings of the role about to be rendered: a
 // domain that does not exist or a selector that matches nothing makes the role
-// render less than its author meant, and only validate --strict reported it.
+// render less than its author meant, and only validate reported it.
 // It uses the same computation as the AR971 lint rule (Config.RoleProblems).
 func warnRoleSelection(cfg *config.Config, role string) {
 	for _, p := range cfg.RoleProblems() {

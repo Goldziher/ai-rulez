@@ -41,6 +41,18 @@ func TestStrict_ServedSkillReferencedStatically(t *testing.T) {
 	}
 }
 
+func TestStrict_ServedSkillPreloadedByAgent(t *testing.T) {
+	root := t.TempDir()
+	files := deliveryFixture("")
+	files[".ai-rulez/agents/pre.md"] = "---\nname: pre\ndescription: Preloads skills. Use when testing agent skills.\nskills:\n  - heavy\n  - kept\n---\nBody.\n"
+	writeFiles(t, root, files)
+	gitAdd(t, root)
+	fs := lintDir(t, root)
+	assert.True(t, has(fs, CodeServedReferencedStatically, "agents/pre.md", 5), "a preloaded served skill is not on disk: %v", fs)
+	assert.Equal(t, 3, countCode(fs, CodeServedReferencedStatically), "the skill, the rule and the agent entry; delivery: both is on disk, so preloading it is fine")
+	assert.Zero(t, countCode(fs, CodeFrontmatterSkill))
+}
+
 func TestStrict_DeliveryInvalid(t *testing.T) {
 	root := t.TempDir()
 	writeFiles(t, root, deliveryFixture(""))

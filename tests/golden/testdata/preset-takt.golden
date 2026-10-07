@@ -23,7 +23,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 b6ef33d4692f00bb13152b57f1a639a36560de436e870d1c7e39c9917d2c83b9
+.ai-rulez/config.toml file 0644 843 5e061aace81281d90eefe9698e1e1e1abcda8831f84044ca96f7f9bd623d6b83
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -56,12 +56,12 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .takt/facets/personas/architect.md file 0644 30 f9636f9d8bcd09740615da88b7863fc6bd4d05263fad085c658fe78134d0d729
 .takt/facets/personas/tester.md file 0644 22 f952423a1993cf58602aceda35eae67def5d5dfd6fbd1c5bed3d7be0688dc5e1
 .takt/facets/policies/ dir 0755
-.takt/facets/policies/always.md file 0644 325 bc051080386a0a09143adee3084d3c68be22647177053ba23f9ad0ff36d6b1b3
-.takt/facets/policies/auto.md file 0644 302 90315d38300d8e91d204ff2c55e65726428507b9fbccf1a9219c44336f918108
-.takt/facets/policies/context-architecture.md file 0644 314 00799e77a907256dc8c77ba2255c4514e158f6490e07b658ec1dd70ab31a7202
-.takt/facets/policies/context-overview.md file 0644 325 2687a582307bfc2527d4a6c3544cfc9c83848721016dbdc1a1fc7995a2649372
-.takt/facets/policies/manual.md file 0644 313 0d969a750f8f4dfb600d282b536348b8afc858f85895f861c15cb447af36e709
-.takt/facets/policies/typescript.md file 0644 369 135cadaf30d774e21263ddcfadde17dc2ee343c9b51a14b99285aa3e093d0763
+.takt/facets/policies/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.takt/facets/policies/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.takt/facets/policies/context-architecture.md file 0644 229 3e1cc120d6c3b2174d960922a74a7e546f038a999566d8b2207f29ce349b2c2d
+.takt/facets/policies/context-overview.md file 0644 240 c45a46772f97e4529794efa5cff529b70a489ebb6154c2fedc9587710e7d0bc6
+.takt/facets/policies/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.takt/facets/policies/typescript.md file 0644 284 c95977ee0abc9d97498a06f477d42bd8bef8cfe54fc539f01994aeac1757eeaf
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -105,7 +105,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -144,7 +144,7 @@ INFO  Removed generated files files=13 directories=6
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 825 b6ef33d4692f00bb13152b57f1a639a36560de436e870d1c7e39c9917d2c83b9
+.ai-rulez/config.toml file 0644 843 5e061aace81281d90eefe9698e1e1e1abcda8831f84044ca96f7f9bd623d6b83
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

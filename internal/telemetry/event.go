@@ -334,7 +334,7 @@ func FromUsageEntry(entry *usage.Entry) Event {
 }
 
 // ToUsageEntry renders a skill event as the usage log line (the current entry
-// version), keeping the log readable by every release that reads `usage record`
+// version), keeping the log readable by every release that reads `telemetry record`
 // output.
 func ToUsageEntry(e *Event) usage.Entry {
 	invocation := "tool"
@@ -348,7 +348,7 @@ func ToUsageEntry(e *Event) usage.Entry {
 	}
 	if strings.HasPrefix(e.Digest, "sha256:") {
 		// A load through the skills server reports the served-skill digest; the
-		// canonical digest reaches the log through `usage record` and the index.
+		// canonical digest reaches the log through `telemetry record` and the index.
 		entry.Digest, entry.DigestScheme = e.Digest, usage.DigestSchemeServed
 		if e.DigestScheme != "" {
 			entry.DigestScheme = e.DigestScheme

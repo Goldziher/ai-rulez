@@ -124,7 +124,7 @@ enforce          = true
 | `min_assurance` | The weakest [assurance level](#assurance-levels) that counts. Default `asserted` |
 | `forbid_self_approval` | An approval by an author of the content it approves does not count; see [Self-approval](#self-approval) |
 | `max_age` | Default and maximum lifetime of an approval: `365d` or a Go duration such as `720h`. An approval stops counting (`AR712`) once `approved_at` plus `max_age` has passed, whatever its `expires` says |
-| `enforce` | Make `lock --check`, `generate --locked` and `mcp --serve-skills` fail. `validate --strict` reports regardless |
+| `enforce` | Make `lock --check`, `generate --locked` and `mcp --serve-skills` fail. `validate` reports regardless |
 
 `[governance]` is shared policy: a machine-local config overlay cannot set or relax it (the key is ignored with a
 warning). An [organization policy](policy.md) can set a floor under it: `enforce` on, `require_approval` selectors the
@@ -132,14 +132,14 @@ repository's `exempt` cannot narrow, a minimum `min_approvers`, and the only `ap
 loosens one is clamped and reported as `AR740`.
 
 Under `enforce` the check never fails open: a missing `ai-rulez.lock`, or one that pins no content, is itself `AR710`
-in `lock --check`, `generate --locked`, `validate --strict` and the skills server (`mcp --serve-skills`). Without `enforce` nothing is refused. A record that claims an `assurance` it cannot back (a `signed` one whose attestation does not verify, a
+in `lock --check`, `generate --locked`, `validate` and the skills server (`mcp --serve-skills`). Without `enforce` nothing is refused. A record that claims an `assurance` it cannot back (a `signed` one whose attestation does not verify, a
 `review-linked` one with no `ref`, an unknown level) does not count (`AR718`).
 
 ## Where it is enforced
 
 | Where | Behaviour |
 | --- | --- |
-| `validate --strict` | AR710 to AR719 at their default severities, `enforce` or not |
+| `validate` | AR710 to AR719 at their default severities, `enforce` or not |
 | `lock --check`, `generate --locked` | With `enforce = true`, exit 2 for content whose approval is missing, stale, expired, unauthorized or insufficient. `lock --diff --format json` lists them with `scope: "approval"` (`schema/lock-diff.schema.json`). Without `enforce` the diff only carries a note |
 | `mcp --serve-skills` | With `enforce = true`, a served skill the policy selects (`remote`, `all`, `kind:served`) and that lacks a valid approval of its served digest is refused, with the AR71x code; with no lock every selected skill is refused (`AR710`). Provenance gains `approved` and `approvers`. The server also refuses unpinned or changed skills with `AR995` whenever a lock exists, even without a `[lock]` table |
 | `catalog --format json --schema-version 2` | `items[].approval` is `{required, status, reviewers, assurance, expires}`, `null` for an item that needs no approval and has no record (`schema/catalog.schema.json`) |
@@ -153,7 +153,7 @@ in `lock --check`, `generate --locked`, `validate --strict` and the skills serve
 | `AR713` | `approver-not-authorized` | Every record of the current digest is by a reviewer outside `approvers` |
 | `AR714` | `approval-insufficient` | Fewer distinct valid reviewers than `min_approvers` |
 | `AR715` | `approval-orphan` | A record names content that no longer exists (warning) |
-| `AR716` | `approval-with-change` | An approval was added in the same change as the content it approves, or (with `forbid_self_approval`) the reviewer authored a change to it (only with `approve --verify-base` or `validate --strict --approvals-base`); also a change to CODEOWNERS or `[governance]` in the range, and a new approval by a reviewer who did not own the item at the merge base |
+| `AR716` | `approval-with-change` | An approval was added in the same change as the content it approves, or (with `forbid_self_approval`) the reviewer authored a change to it (only with `approve --verify-base` or `validate --approvals-base`); also a change to CODEOWNERS or `[governance]` in the range, and a new approval by a reviewer who did not own the item at the merge base |
 | `AR717` | `approval-denied` | The content's digest is on the `[[deny]]` list |
 | `AR718` | `approval-unverified` | Every approval of the current digest claims an assurance (`signed`, `review-linked`) that could not be verified |
 | `AR719` | `approver-unresolved` | `approvers_from` or a team cannot be resolved, so nobody is authorized by it |
@@ -192,7 +192,7 @@ everything below, `docs/*` owns the files directly in `docs/` but not below, and
 This was implemented from the documentation and tested against a table of cases, not against the forge itself.
 
 Everything fails closed: a CODEOWNERS file that cannot be found, a path no line covers and a team with no known members
-authorize nobody, and `validate --strict` says why (`AR719`). Teams are expanded offline from `[governance.teams]`;
+authorize nobody, and `validate` says why (`AR719`). Teams are expanded offline from `[governance.teams]`;
 `approve --resolve-teams` (and `approve --list --resolve-teams`) reads the members of the teams it needs from the forge
 instead, with the token the [forge client](forge.md) finds in the environment (`read:org` is needed for the members of
 a team). Nothing is cached: `validate` and the skills server never call the forge, so list the team in
@@ -302,7 +302,7 @@ reason = "exfiltrates ~/.ssh in scripts/setup.sh"
 
 A denied digest can be neither approved nor used, whether or not `[governance]` selects the item:
 
-- `approve` refuses it, `validate --strict` reports `AR717` for any pinned content with that digest, and a denied
+- `approve` refuses it, `validate` reports `AR717` for any pinned content with that digest, and a denied
   skill is never served by `mcp --serve-skills` (refusal `AR717`);
 - `ai-rulez lock` refuses to pin it and leaves the lock as it was; change the content and lock again;
 - the entry names the digest, not the item, so it survives re-locking and keeps blocking a rollback to the old bytes;
@@ -321,7 +321,7 @@ since the base revision:
 
 - `approve` counts commit authors from `--base <rev>`, else the branch's upstream, else `origin/HEAD`, and refuses
   when none can be found rather than skip the check;
-- `approve --verify-base <rev>` and `validate --strict --approvals-base <rev>` report approvals by an author as
+- `approve --verify-base <rev>` and `validate --approvals-base <rev>` report approvals by an author as
   `AR716` with the author's email;
 - with `--from-github-review`, the pull request author's own review is skipped.
 
@@ -398,7 +398,7 @@ jobs:
 
 Notes on the pattern. Pin the actions by commit; the versions above are illustrative.
 
-- Run `ai-rulez approve --verify-base origin/main` and `validate --strict --approvals-base origin/main` on pull
+- Run `ai-rulez approve --verify-base origin/main` and `validate --approvals-base origin/main` on pull
   requests that touch the lock, so a pull request cannot carry both content and its approval.
 - Put `ai-rulez.lock` under CODEOWNERS and require that owner's review on the follow-up pull request: the approval of
   the approvals.
@@ -420,7 +420,7 @@ CI recipe. Run it on a pull request whose base branch is trusted:
 
 ```console
 ai-rulez approve --verify-base origin/main        # exit 2 on AR716
-ai-rulez validate --strict --approvals-base origin/main
+ai-rulez validate --approvals-base origin/main
 ```
 
 Both compare the lock with the one at the merge base of the revision and `HEAD`, and report (`AR716`) every

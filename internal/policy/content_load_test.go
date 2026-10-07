@@ -22,7 +22,7 @@ func TestLoadBoundsTheHooksAnIncludeDelivers(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
 		require.NoError(t, os.WriteFile(p, []byte(body), 0o644))
 	}
-	write(".ai-rulez/config.toml", "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n[[includes]]\nname = \"shared\"\nsource = \"./shared\"\ninclude = [\"agents\"]\n")
+	write(".ai-rulez/config.toml", "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n[[includes]]\nname = \"shared\"\nsource = \"./shared\"\ninclude = [\"agents\"]\n")
 	write("shared/.ai-rulez/agents/shared.md", "---\nname: shared\ndescription: shared agent\n"+hookFrontmatter+"---\nBody.\n")
 	policyFile := filepath.Join(t.TempDir(), "policy.toml")
 	require.NoError(t, os.WriteFile(policyFile, []byte("policy_version = 1\n[hooks]\nallow = false\n"), 0o644))

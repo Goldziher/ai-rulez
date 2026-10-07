@@ -1,12 +1,13 @@
 package verifiers
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"text/tabwriter"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 )
 
 type jsonReport struct {
@@ -36,12 +37,7 @@ func summary(r *Report) map[string]int {
 
 // WriteJSON writes the report as indented JSON.
 func WriteJSON(w io.Writer, r *Report) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(jsonReport{Root: r.Root, Mode: r.Mode, Summary: summary(r), Results: r.Results, LLM: r.LLM}); err != nil {
-		return oops.Wrapf(err, "write verifiers report")
-	}
-	return nil
+	return jsondoc.Write(w, jsonReport{Root: r.Root, Mode: r.Mode, Summary: summary(r), Results: r.Results, LLM: r.LLM})
 }
 
 // WriteText writes the report as a table followed by a summary line.

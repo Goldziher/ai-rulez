@@ -102,17 +102,13 @@ func TestExplicitBaselineMustExist(t *testing.T) {
 	assert.Equal(t, 1, runStrict(t, root, cfg))
 }
 
-func TestToleratesAndRatchets(t *testing.T) {
-	for _, table := range []string{"tolerate", "budget"} { // budget is the deprecated alias
-		t.Run(table, func(t *testing.T) {
-			resetStrictFlags(t)
-			root, cfg := strictProject(t, "\n[lint."+table+"]\nAR201 = 1\n", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})
-			assert.Equal(t, 0, runStrict(t, root, cfg), "one AR201 is within a tolerated count of 1")
+func TestRatchetToleratesUpToTheCount(t *testing.T) {
+	resetStrictFlags(t)
+	root, cfg := strictProject(t, "\n[lint.ratchet]\nAR201 = 1\n", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})
+	assert.Equal(t, 0, runStrict(t, root, cfg), "one AR201 is within a ratchet of 1")
 
-			writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "b.md"), strings.ReplaceAll(brokenLinkRule, "docs/missing.md", "docs/other.md"))
-			assert.Equal(t, exitStrictFindings, runStrict(t, root, loadStrictProject(t, root)), "two exceed it")
-		})
-	}
+	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "b.md"), strings.ReplaceAll(brokenLinkRule, "docs/missing.md", "docs/other.md"))
+	assert.Equal(t, exitStrictFindings, runStrict(t, root, loadStrictProject(t, root)), "two exceed it")
 }
 
 func TestUpdateBaselineRefusesUnexplainedSecurityFinding(t *testing.T) {
@@ -222,6 +218,47 @@ func TestAnalyzerFilter(t *testing.T) {
 	validateStrict = false
 	validateAnalyzers = []string{"security"}
 	assert.Error(t, checkStrictFlags(), "--analyzer needs --strict")
+}
+
+func TestScanUpdateBaselineKeepsNonSecurityEntries(t *testing.T) {
+	resetStrictFlags(t)
+	root, cfg := strictProject(t, "", map[string]string{".ai-rulez/rules/a.md": brokenLinkRule})
+	basePath := filepath.Join(root, ".ai-rulez", lint.BaselineFile)
+
+	validateUpdateBaseline, validateBaselineReason = true, "legacy"
+	require.Equal(t, 0, runStrict(t, root, cfg))
+	validateUpdateBaseline, validateBaselineReason = false, ""
+	before, err := lint.LoadBaseline(basePath)
+	require.NoError(t, err)
+	require.Len(t, before.Entries, 1)
+
+	strictSecurityOnly = true
+	t.Cleanup(func() { strictSecurityOnly = false })
+	validateUpdateBaseline = true
+	require.Equal(t, 0, runStrict(t, root, cfg))
+	validateUpdateBaseline = false
+	after, err := lint.LoadBaseline(basePath)
+	require.NoError(t, err)
+	assert.Equal(t, before.Entries, after.Entries, "scan must not delete the entries of rules it does not run")
+
+	validateStrictBaseline = true
+	assert.Equal(t, 0, runStrict(t, root, cfg), "scan does not report non-security entries as stale")
+}
+
+func TestUpdateBaselineRejectsNarrowedRuns(t *testing.T) {
+	resetStrictFlags(t)
+	validateUpdateBaseline = true
+	validateLintProfile = "permissive"
+	assert.Error(t, checkStrictFlags(), "a profile override hides findings")
+	validateLintProfile = ""
+	validateAnalyzers = []string{"security"}
+	assert.Error(t, checkStrictFlags(), "an analyzer filter is a narrowed run")
+	validateAnalyzers = nil
+
+	validateBaseline = "shared.json"
+	err := updateBaselines([]*lint.Report{{}, {}}, []*config.Config{nil, nil})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "single root")
 }
 
 func TestAnalyzerRunKeepsBaselineEntriesOfAnalyzersThatDidNotRun(t *testing.T) {

@@ -22,7 +22,7 @@ const (
 // enforced. Enforcement is on whenever ai-rulez.lock exists; `enforce = false`
 // opts out.
 type LockConfig struct {
-	// Enforce makes `validate --strict` report content drift (AR981, AR982),
+	// Enforce makes `validate` report content drift (AR981, AR982),
 	// makes `lock --check` fail on a lock without content pins, makes `generate`
 	// refuse a remote include or installed skill the lock does not pin (AR010 is
 	// an error), and makes the skills server refuse a served skill whose digest

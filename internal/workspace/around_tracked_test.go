@@ -26,7 +26,7 @@ func projectIn(t *testing.T, repo, rel string) string {
 	t.Helper()
 	dir := filepath.Join(repo, filepath.FromSlash(rel))
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte("version = \"4.0\"\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte("version = \"5.0\"\n"), 0o644))
 	return dir
 }
 

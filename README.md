@@ -55,9 +55,20 @@ ai-rulez generates correct, tool-native output for **52 harnesses**, among them 
 
 For a tool that isn't built in, a custom preset can point at a declarative **provider spec** (`provider = ".ai-rulez/providers/my-tool.toml"`) and get the same full feature set as a built-in — root instructions file, skills/agents/commands, per-agent frontmatter, and MCP sidecars. See [Custom Presets](docs/configuration.md#provider-backed-presets-full-parity).
 
-Set `agents_md = true` to write `AGENTS.md` and `.agents/skills/` once for the tools that read them (Codex, Cursor, Copilot, Gemini, Claude through an `@AGENTS.md` shim, and more) instead of one copy per tool. Off by default. See [docs/agents-md.md](docs/agents-md.md).
+`AGENTS.md` and `.agents/skills/` are written once for the tools that read them (Codex, Cursor, Copilot, Gemini, Claude through an `@AGENTS.md` shim, and more) instead of one copy per tool. Set `agents_md = false` for per-tool files. See [docs/agents-md.md](docs/agents-md.md).
 
 Need the same knowledge outside coding agents? `ai-rulez export okf` writes rules, context and skills as an [Open Knowledge Format](docs/okf.md) bundle (the `okf` preset keeps it in sync on every `generate`), `ai-rulez import okf <dir|git-url>` turns an existing OKF bundle into `.ai-rulez/` sources, and `ai-rulez okf validate` lints any bundle. See [docs/okf.md](docs/okf.md).
+
+## What's new in v5
+
+v5 is a major release. Coming from 4.x, run `ai-rulez migrate v5 --dry-run`, then `ai-rulez migrate v5`: it rewrites `config.toml` in place (comments kept), converts YAML and JSON configs to TOML, merges legacy `mcp.*` files, and pins the 4.x defaults so your generated files do not move. The full list, with before and after, is in [Migrating to v5](docs/migration-v5.md).
+
+- **Config `version = "5.0"`.** YAML configs are no longer loaded; `migrate` reads 4.x only (2.x and 3.x go through ai-rulez 4.x first).
+- **New defaults:** `agents_md = true` (one canonical `AGENTS.md`), content-only `Content-Hash` headers, and no managed `.gitignore` block unless you ask for it.
+- **`validate` runs the content checks by default**; `--config-only` skips them and `--strict` makes warnings fail.
+- **One command namespace for usage data:** `telemetry hook|record|feedback|report`, replacing `usage ...` and `report ...`.
+- **One flag vocabulary and one exit-code contract** (0 ok, 1 could not run, 2 findings or drift); `--format json` everywhere, with `schema_version` in every JSON document and schemas under [`schema/`](docs/schema.md).
+- **Safer supply chain:** a content-pinning `ai-rulez.lock` that enforces itself, `https`-only remotes, scanned imports and one [trust model](docs/trust-model.md) for everything that can reach the network.
 
 ## Beyond Instructions
 
@@ -73,7 +84,7 @@ Need the same knowledge outside coding agents? `ai-rulez export okf` writes rule
 | **Lock and updates** | `ai-rulez lock` pins remote includes, installed skills, skill sources, authored content and outputs by commit and sha256; `generate --locked` is the CI mode, `version = "^1.2"` ranges are moved by `ai-rulez update` | [lock file](docs/lockfile.md) |
 | **Governance and release** | `ai-rulez approve` records reviewer approvals in the lock, `sign` and `verify --attestation` sign and check it with Sigstore, an organization policy sets tighten-only floors, and `publish` packages the plugin bundle into reproducible, signed release artifacts | [approvals](docs/approvals.md), [signing](docs/signing.md), [policy](docs/policy.md), [publish](docs/publish.md) |
 | **Dynamic skills and roles** | `delivery = "served"` skills are loaded on demand through `ai-rulez mcp --serve-skills` (`find_skill`, `load_skill`) instead of written to every harness; `[[roles]]` render a slice of the content per job | [MCP server](docs/mcp-server.md#dynamic-skill-loading), [roles](docs/roles.md) |
-| **Validation and verifiers** | `validate --strict` and `scan` run deep content and security checks with stable `AR` codes; `[[verifiers]]` run deterministic repo checks (`--since`, SARIF, JUnit); `[guard]` blocks agent edits to generated files | [strict validation](docs/strict-validation.md), [verifiers](docs/verifiers.md) |
+| **Validation and verifiers** | `validate` and `scan` run deep content and security checks with stable `AR` codes; `[[verifiers]]` run deterministic repo checks (`--since`, SARIF, JUnit); `[guard]` blocks agent edits to generated files | [strict validation](docs/strict-validation.md), [verifiers](docs/verifiers.md) |
 | **Inventory** | `ai-rulez sbom` (CycloneDX or SPDX), `catalog` (JSON or a static site), `tokens`, `cost` and `search` report what the configuration contains and costs; `convert` imports existing tool files, rulesync, APM, Tessl and OKF projects | [SBOM](docs/sbom.md), [catalog](docs/catalog.md), [CLI](docs/cli.md) |
 
 ## Generate Plugins, Not Just Config

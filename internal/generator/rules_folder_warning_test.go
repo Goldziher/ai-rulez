@@ -14,7 +14,7 @@ import (
 func TestGenerate_RulesFolderWarningIsIssuedOnce(t *testing.T) {
 	// Arrange
 	warnings := quietWarnings(t)
-	cfg := "version = \"4.0\"\nname = \"p\"\npresets = [\"junie\", \"codex\"]\ngitignore = false\n"
+	cfg := "version = \"5.0\"\nagents_md = false\nname = \"p\"\npresets = [\"junie\", \"codex\"]\ngitignore = false\n"
 	root := writeProject(t, cfg, nil)
 	count := func() int {
 		n := 0

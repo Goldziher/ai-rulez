@@ -10,7 +10,7 @@ import (
 )
 
 func TestSchema_DynamicSkillLoading(t *testing.T) {
-	head := "version: \"4.0\"\nname: p\npresets: [claude]\n"
+	head := "version: \"5.0\"\nname: p\npresets: [claude]\n"
 
 	valid := head + `
 skills:

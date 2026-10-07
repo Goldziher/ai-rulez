@@ -152,11 +152,6 @@ global_path = ".claude/settings.json"
 global_mcp_path = ".claude.json"
 emit_when = "has_claude_settings"
 
-[[sidecars]]
-kind = "claude_plugins_json"
-path = ".claude/plugins.json"
-emit_when = "has_plugins"
-
 # User-scope layout (paths relative to the home directory). Claude Code reads
 # user-level memory, skills, agents, commands and rules from ~/.claude.
 [global]

@@ -65,7 +65,7 @@ var credentialTable = []credFamily{
 			}
 			return false
 		}},
-	{id: "aws-credentials", tier: tierCritical, label: "AWS credentials", re: hp(`\.aws/(?:credentials|config|sso/\S*)`)},
+	{id: "aws-credentials", tier: tierCritical, label: "AWS credentials", re: hp(`\.aws(?:/(?:credentials|config|sso/\S*)|/?(?:[\s"';|)&>]|$))`)},
 	{id: "etc-shadow", tier: tierCritical, label: "the system password hashes", re: ap(`/etc/(?:shadow|gshadow|master\.passwd)\b`)},
 	{id: "git-credentials", tier: tierCritical, label: "stored git credentials", re: hp(`\.git-credentials\b`)},
 	{id: "netrc", tier: tierCritical, label: ".netrc", re: hp(`[._]netrc\b`)},
@@ -95,6 +95,14 @@ var credentialTable = []credFamily{
 	{id: "shell-history", tier: tierLow, label: "shell history", re: hp(`\.(?:bash|zsh|python|node|psql|mysql)_history\b|` + `\.local/share/fish/fish_history\b`)},
 	{id: "openvpn", tier: tierLow, label: "OpenVPN profiles", re: regexp.MustCompile(`(?:^|[\s"'=])(?:/etc/openvpn|~/\.openvpn)\b`)},
 	{id: "auth-log", tier: tierInfo, label: "the authentication log", re: ap(`/var/log/(?:auth\.log|secure)\b`)},
+}
+
+// credentialStems are literals that every credentialTable pattern contains;
+// a line without one cannot match any family, so the table is skipped for it.
+var credentialStems = []string{
+	".ssh", "id_", ".env", ".aws", "/etc/", ".git-credentials", "netrc", ".gnupg", ".kube", ".vault-token", ".terraform", "keyrings",
+	".npmrc", ".pypirc", ".gem/", ".pgpass", ".my.cnf", ".azure", ".config/", ".docker", ".password-store", "Keychains", ".cargo",
+	".op", ".age", "_history", "openvpn", "/var/log",
 }
 
 var (
@@ -149,6 +157,9 @@ type credHit struct {
 // detectCredentialAccess finds the most severe credential access on a line.
 func detectCredentialAccess(line string) (credHit, bool) {
 	var best credHit
+	if !containsAnyStem(line, false, credentialStems) {
+		return best, false
+	}
 	for _, fam := range credentialTable {
 		for _, loc := range fam.re.FindAllStringSubmatchIndex(line, -1) {
 			m := make([]string, len(loc)/2)

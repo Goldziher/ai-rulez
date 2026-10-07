@@ -25,7 +25,7 @@ func writeTOMLProject(t *testing.T, tomlBody string) string {
 }
 
 func TestSaveConfig_TOMLProjectWritesTOMLNotYAML(t *testing.T) {
-	baseDir := writeTOMLProject(t, "version = \"4.0\"\nname = \"proj\"\npresets = [\"claude\"]\n")
+	baseDir := writeTOMLProject(t, "version = \"5.0\"\nname = \"proj\"\npresets = [\"claude\"]\n")
 
 	cfg, err := LoadConfig(context.Background(), baseDir)
 	require.NoError(t, err)
@@ -45,7 +45,7 @@ func TestSaveConfig_TOMLProjectWritesTOMLNotYAML(t *testing.T) {
 
 func TestSaveConfig_DefaultsToTOMLWhenNoConfigExists(t *testing.T) {
 	configDir := t.TempDir()
-	cfg := &Config{Version: "4.0", Name: "proj", Presets: []Preset{{BuiltIn: "claude"}}}
+	cfg := &Config{Version: "5.0", Name: "proj", Presets: []Preset{{BuiltIn: "claude"}}}
 
 	require.NoError(t, SaveConfig(cfg, configDir))
 	assert.FileExists(t, filepath.Join(configDir, configTOMLFilename))
@@ -54,7 +54,7 @@ func TestSaveConfig_DefaultsToTOMLWhenNoConfigExists(t *testing.T) {
 
 func TestMarshalTOML_RoundTripsAllPresetKinds(t *testing.T) {
 	cfg := &Config{
-		Version: "4.0",
+		Version: "5.0",
 		Name:    "proj",
 		Presets: []Preset{
 			{BuiltIn: "claude"},
@@ -86,7 +86,7 @@ func TestMarshalTOML_RoundTripsAllPresetKinds(t *testing.T) {
 
 func TestLoadConfigTOML_CustomAndProviderPresets(t *testing.T) {
 	baseDir := writeTOMLProject(t, `
-version = "4.0"
+version = "5.0"
 name = "proj"
 presets = [
   "claude",
@@ -121,7 +121,7 @@ func TestPresetProvider_JSONRoundTrip(t *testing.T) {
 }
 
 func TestLintConfig_TOMLRoundTripAndLoad(t *testing.T) {
-	src := `version = "4.0"
+	src := `version = "5.0"
 name = "proj"
 presets = ["claude"]
 
@@ -200,7 +200,7 @@ func TestTOMLOutputCarriesEveryConfigKey(t *testing.T) {
 
 func TestMarshalTOMLKeepsOKFTable(t *testing.T) {
 	// Arrange
-	cfg := &Config{Version: "4.0", Name: "x", OKF: &OKFConfig{Dir: "docs/okf"}}
+	cfg := &Config{Version: "5.0", Name: "x", OKF: &OKFConfig{Dir: "docs/okf"}}
 
 	// Act
 	out, err := MarshalTOML(cfg)

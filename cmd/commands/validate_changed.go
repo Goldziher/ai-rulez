@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -50,13 +51,10 @@ func changedRev() string {
 	return ""
 }
 
-// strictOnly words a flag description that only applies in strict mode: validate
-// needs --strict, scan always runs it, so its help must not mention the flag.
-func strictOnly(cmd *cobra.Command, text string) string {
-	if cmd.Name() == "scan" {
-		return strings.ToUpper(text[:1]) + text[1:]
-	}
-	return "With --strict, " + text
+// strictOnly words a flag description that only applies to the content checks:
+// validate runs them by default, so it just capitalizes the text.
+func strictOnly(_ *cobra.Command, text string) string {
+	return strings.ToUpper(text[:1]) + text[1:]
 }
 
 func addChangedFlags(cmd *cobra.Command) {
@@ -85,18 +83,59 @@ func narrowToChanged(reports []*lint.Report, cfgs []*config.Config) error {
 		if cfg == nil {
 			continue
 		}
-		top := gitutil.TopLevel(cfg.BaseDir)
-		changed, ok := cache[top]
-		if !ok {
-			var changedErr error
-			changed, changedErr = gitutil.ChangedSince(cfg.BaseDir, rev)
-			if changedErr != nil {
-				return oops.Wrap(changedErr)
-			}
-			cache[top] = changed
+		changed, err := changedFiles(cfg, rev, cache)
+		if err != nil {
+			return err
 		}
 		scope := lint.NarrowToChangedWith(r, changed, rev, lint.NarrowOptions{Depth: depth, MaxFiles: validateSinceMax})
 		r.Scope = &scope
 	}
 	return nil
+}
+
+// changedFiles lists the files of cfg's lint tree changed since rev. Finding
+// paths are relative to that tree (which --repo-root may narrow below the git
+// toplevel), so the change set is rebased onto it. cache is keyed by tree top.
+func changedFiles(cfg *config.Config, rev string, cache map[string][]string) ([]string, error) {
+	tree, err := strictTreeCache.Load(cfg.BaseDir)
+	if err != nil {
+		return nil, oops.Wrapf(err, "index repository files")
+	}
+	if changed, ok := cache[tree.Top]; ok {
+		return changed, nil
+	}
+	changed, err := changedInTree(tree.Top, rev)
+	if err != nil {
+		return nil, err
+	}
+	cache[tree.Top] = changed
+	return changed, nil
+}
+
+// changedInTree lists the files changed since rev as paths relative to treeTop.
+// git reports them relative to its toplevel, which is an ancestor of treeTop
+// when --repo-root narrows the tree; paths outside treeTop are dropped. A
+// treeTop outside any git repository cannot be mapped and is an error, so the
+// gate never passes vacuously.
+func changedInTree(treeTop, rev string) ([]string, error) {
+	changed, err := gitutil.ChangedSince(treeTop, rev)
+	if err != nil {
+		return nil, oops.Wrap(err)
+	}
+	gitTop := gitutil.Resolve(gitutil.TopLevel(treeTop))
+	prefix, err := filepath.Rel(gitTop, gitutil.Resolve(treeTop))
+	if err != nil || prefix == ".." || strings.HasPrefix(prefix, ".."+string(filepath.Separator)) {
+		return nil, oops.Errorf("cannot map the files changed since %s onto %s: it is outside the git repository %s", rev, treeTop, gitTop)
+	}
+	if prefix == "." {
+		return changed, nil
+	}
+	prefix = filepath.ToSlash(prefix) + "/"
+	out := make([]string, 0, len(changed))
+	for _, c := range changed {
+		if rest, found := strings.CutPrefix(filepath.ToSlash(c), prefix); found {
+			out = append(out, rest)
+		}
+	}
+	return out, nil
 }

@@ -391,3 +391,38 @@ func TestGlobNoMatchMessageForAlwaysApply(t *testing.T) {
 		})
 	}
 }
+
+func TestSecurityOnlyDropsSettingsAndLLMFindings(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml": baseConfig + "\n[[hooks]]\nevent = \"SessionStart\"\n[[hooks.hooks]]\nscript = \"scripts/nope.sh\"\n\n[permissions]\nallow = [\"Bash(*)\"]\n",
+		".ai-rulez/rules/r.md":  "# R\n\nAKIAIOSFODNN7EXAMPLE\n",
+	})
+	gitAdd(t, root)
+	cfg := loadNoRemote(t, root)
+	tree, err := LoadTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := RunWith(cfg, tree, Options{SecurityOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if countCode(rep.Findings, CodeSecretDetected) != 1 {
+		t.Fatalf("the security finding must stay:\n%s", dump(rep.Findings))
+	}
+	for _, f := range rep.Findings {
+		if AnalyzerFor(f.Code).Name != AnalyzerSecurity {
+			t.Errorf("security-only leaked %s:\n%s", f.Code, dump(rep.Findings))
+		}
+	}
+}
+
+func TestArticle(t *testing.T) {
+	if got := article(kindAgent); got != "an" {
+		t.Errorf("article(agent) = %q", got)
+	}
+	if got := article(kindSkill); got != "a" {
+		t.Errorf("article(skill) = %q", got)
+	}
+}

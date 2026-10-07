@@ -86,7 +86,7 @@ func registerPolicycodes(s *ruleSet) {
 			Good: "Remove the content, or re-pin to a version that is not denied; ask the policy owners if the digest was listed by mistake",
 		},
 		CodePolicyBudgetExceeded: {
-			Why:  "A ceiling lets an organization say how many findings of a rule it will live with, down to none, without depending on the repository's severity settings. The findings keep their own severity; going over the ceiling is the error, and baselines, [lint.tolerate] and ignore comments cannot absorb it.",
+			Why:  "A ceiling lets an organization say how many findings of a rule it will live with, down to none, without depending on the repository's severity settings. The findings keep their own severity; going over the ceiling is the error, and baselines, [lint.ratchet] and ignore comments cannot absorb it.",
 			Bad:  "Three AR703 findings under `[lint.max_findings] AR703 = 0`",
 			Good: "Fix the findings; the ceiling is lowered over time by the policy owners, not raised by the repository",
 		},
@@ -188,7 +188,7 @@ func (r *runner) checkPolicy() {
 
 // ProtectedCodes lists the rule codes a policy shields from suppression: its
 // required codes, the codes it floors and its own AR740-AR745. Ignore comments,
-// ignore_paths, baselines and [lint.tolerate] do not apply to them. It is nil
+// ignore_paths, baselines and [lint.ratchet] do not apply to them. It is nil
 // without a policy.
 func ProtectedCodes(out *config.PolicyOutcome) map[string]bool {
 	if out == nil {
@@ -222,7 +222,7 @@ const (
 	routeIgnorePaths = "[lint] ignore_paths"
 	routeInline      = "ai-rulez-lint-ignore comment"
 	routeBaseline    = "baseline"
-	routeTolerate    = "[lint.tolerate]"
+	routeRatchet     = "[lint.ratchet]"
 )
 
 // suppressed reports whether path or inline ignores hide a finding. A code the
@@ -291,7 +291,7 @@ func suppressionAttempt(file, route string, codes []string, root string, sev Sev
 }
 
 // refuse adds the one AR740 finding per route that tried to
-// accept or tolerate a protected code through a baseline or [lint.tolerate].
+// accept or tolerate a protected code through a baseline or [lint.ratchet].
 func (r *Report) refuse(route string, codes []string) {
 	if len(codes) == 0 {
 		return
@@ -307,9 +307,9 @@ func (r *Report) refuse(route string, codes []string) {
 	r.Findings = append(r.Findings, f)
 }
 
-// RefuseTolerate reports a [lint.tolerate] entry for protected codes, which the
+// RefuseRatchet reports a [lint.ratchet] entry for protected codes, which the
 // caller dropped from the budgets.
-func (r *Report) RefuseTolerate(codes []string) { r.refuse(routeTolerate, codes) }
+func (r *Report) RefuseRatchet(codes []string) { r.refuse(routeRatchet, codes) }
 
 // SizeBudgetKinds lists the content kinds [lint.budgets] may bound, in a stable order.
 func SizeBudgetKinds() []string {

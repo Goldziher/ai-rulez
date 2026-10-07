@@ -198,7 +198,7 @@ INFO  Dry run: nothing was written
 .config/ai-rulez/ dir 0755
 .config/ai-rulez/agents/ dir 0755
 .config/ai-rulez/agents/buddy.md file 0644 47 fcb959e7b44ff6286d5fc44a17e26a7ed98b39296c89639944f63d582b2377e2
-.config/ai-rulez/config.toml file 0644 780 c4b51c9e569bebdee77dc0f20faeb3d1723ae8cbaa0a2e06279a3c49aa34d31a
+.config/ai-rulez/config.toml file 0644 798 31724eff7521ab741bbec498d6a7d138010d763d5646111809c89685a888276f
 .config/ai-rulez/context/ dir 0755
 .config/ai-rulez/context/me.md file 0644 24 95b9f14fdc22e6f7ba5c8056af68acce4bcf61bb5c556eb1c460c4acd9df3311
 .config/ai-rulez/domains/ dir 0755
@@ -424,345 +424,345 @@ INFO  User-level generation complete files=160
 (no change)
 --- home tree
 + .agents/ dir 0755
-+ .agents/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .agents/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .agents/plugins/ dir 0755
 + .agents/plugins/ai-rulez/ dir 0755
 + .agents/plugins/ai-rulez/hooks/ dir 0755
 + .agents/plugins/ai-rulez/hooks/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .agents/skills/ dir 0755
 + .agents/skills/helper/ dir 0755
-+ .agents/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .agents/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .augment/ dir 0755
 + .augment/agents/ dir 0755
-+ .augment/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .augment/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .augment/commands/ dir 0755
 + .augment/rules/ dir 0755
-+ .augment/rules/mine.md file 0644 342 ead677f614902bba4219fd2f895d091d8babb4778800371e3bef70c1c57f974f
++ .augment/rules/mine.md file 0644 257 e4ba1de48b09c10365cf37b362cef38a6068a8d1b1b841de6c4a9cf2b236fc8d
 + .augment/settings.json file 0644 561 0365dfacad70f38e1ffeec207c8d438816fcfe7b24419ab4a6f4040bd8885292
 + .augment/skills/ dir 0755
 + .augment/skills/helper/ dir 0755
-+ .augment/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .augment/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .bob/ dir 0755
-+ .bob/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .bob/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .bob/commands/ dir 0755
 + .bob/rules/ dir 0755
-+ .bob/rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .bob/rules/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 + .bob/settings/ dir 0755
 + .bob/settings/settings.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .bob/skills/ dir 0755
 + .bob/skills/helper/ dir 0755
-+ .bob/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .bob/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .claude/agents/ dir 0755
-+ .claude/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .claude/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .claude/rules/ dir 0755
-+ .claude/rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .claude/rules/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 ~ .claude/settings.json file 0644 303 514ca2b250aa4c0ca59774f6091c9eee6cddbd070495f5f5dbb54bbed4224675
 + .claude/skills/ dir 0755
 + .claude/skills/helper/ dir 0755
-+ .claude/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .claude/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .cline/ dir 0755
 + .cline/agents/ dir 0755
-+ .cline/agents/buddy.yaml file 0644 223 21e666868c797b20f97e961e425bd2628d366682b3d5e3d4d8d5b6c84f010f1f
++ .cline/agents/buddy.yaml file 0644 136 4563b7305f1a05528ca6cc0fe6a8899f603f5bf081e5305e8aa8263ac9100266
 + .cline/skills/ dir 0755
 + .cline/skills/helper/ dir 0755
-+ .cline/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .cline/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .codebuddy/ dir 0755
-+ .codebuddy/CODEBUDDY.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .codebuddy/CODEBUDDY.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .codebuddy/agents/ dir 0755
-+ .codebuddy/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .codebuddy/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .codebuddy/commands/ dir 0755
 + .codebuddy/rules/ dir 0755
-+ .codebuddy/rules/mine.md file 0644 341 b9a9df77cde473edde39f1a2165fe386bb4fa599b10b2127b7e66cf50106449b
++ .codebuddy/rules/mine.md file 0644 256 d8a2265c65aa7ed0ca6d6129ee00be6663cf3391fafbaf05ddf4d6adafd087e9
 + .codebuddy/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
 + .codebuddy/skills/ dir 0755
 + .codebuddy/skills/helper/ dir 0755
-+ .codebuddy/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .codebuddy/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .codewhale/ dir 0755
-+ .codewhale/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .codewhale/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .codewhale/commands/ dir 0755
 + .codewhale/skills/ dir 0755
 + .codewhale/skills/helper/ dir 0755
-+ .codewhale/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .codewhale/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .codex/ dir 0755
-+ .codex/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .codex/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .codex/agents/ dir 0755
 + .codex/agents/buddy.toml file 0644 79 5b24c2cf8325b9be648ca2caed19d84f1e339b7a4e0029fc809509dc5b5def96
 + .codex/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .codex/rules/ dir 0755
-+ .codex/rules/ai-rulez.rules file 0644 425 190011027c9ce04e0d64e52748b137b2c43b771fda090b97dd3e4be9b94a8367
++ .codex/rules/ai-rulez.rules file 0644 338 20e79faa1ff0244bcf6238a431259150f364c373a0f70a020f09789f645744a3
 + .commandcode/ dir 0755
-+ .commandcode/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .commandcode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .commandcode/agents/ dir 0755
-+ .commandcode/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .commandcode/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .commandcode/commands/ dir 0755
 + .commandcode/settings.json file 0644 302 7a25e2ebf831ac932802e34cf13ef4e0c62f4ff1d6a237a549d0f006713dc2fc
 + .commandcode/skills/ dir 0755
 + .commandcode/skills/helper/ dir 0755
-+ .commandcode/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .commandcode/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .config/agents/ dir 0755
 + .config/agents/skills/ dir 0755
 + .config/agents/skills/helper/ dir 0755
-+ .config/agents/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .config/agents/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .config/ai-rulez/.generated-manifest.json file 0644 11820 8bcd5fe40cc06f432c43d528a9ae6e10eb34bb24bcfd75125082f77d5c207ee4
 + .config/ai-rulez/.generated-manifest.local.json file 0644 19430 871fcf0cf9e8e9f5041cb96aa62ada0dfeb5a589d65ddcaea94e67a21b56e18b
 + .config/amp/ dir 0755
-+ .config/amp/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .config/amp/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .config/amp/plugins/ dir 0755
 + .config/amp/plugins/ai-rulez-hooks.ts file 0644 7355 3eb89e87c0f874a9e41f8f6d616fc7ed3615a6aa550496cb09be306240ef3f78
 + .config/crush/ dir 0755
-+ .config/crush/CRUSH.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .config/crush/CRUSH.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .config/crush/skills/ dir 0755
 + .config/crush/skills/helper/ dir 0755
-+ .config/crush/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .config/crush/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .config/devin/ dir 0755
 + .config/devin/agents/ dir 0755
-+ .config/devin/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .config/devin/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .config/devin/config.json file 0644 296 d7a95904a7143dd68dfedfb25beaa5d7a6b23875f1ae7a0c1646a6f5f79a5869
 + .config/devin/skills/ dir 0755
 + .config/devin/skills/helper/ dir 0755
-+ .config/devin/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .config/devin/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .config/goose/ dir 0755
-+ .config/goose/.goosehints file 0644 574 d487b28418adf817ef730f90eb3efd6e91551273ae39f28c5ead0b12cdd0b30d
++ .config/goose/.goosehints file 0644 487 0ac16766e0e7e4622820074caebac274ef93d1e3b253cc411abeb9454d09cfa7
 + .config/goose/agents/ dir 0755
-+ .config/goose/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .config/goose/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .config/kilo/ dir 0755
-+ .config/kilo/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .config/kilo/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .config/kilo/agents/ dir 0755
-+ .config/kilo/agents/buddy.md file 0644 226 1cf11196df5a1e1c6269088fb651ed43c62f4aa6459d00341a1ec3b263f3f595
++ .config/kilo/agents/buddy.md file 0644 139 5ce4d18d2a0cd1963ef73413c758b4b5f3e2d10f1e8704b233562f60722f58ee
 + .config/kilo/commands/ dir 0755
 + .config/kilo/kilo.jsonc file 0644 117 5c792fd5f36121e8add38e5fc7da94b1028b75c545e2e2a92805abcc32dea80b
 + .config/kilo/plugins/ dir 0755
 + .config/kilo/plugins/ai-rulez-hooks.js file 0644 8335 9d4f85a750e3181f1cda99170ff12192a5d19f18bb65aa179fe79986b3fc40fd
 + .config/mimocode/ dir 0755
-+ .config/mimocode/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .config/mimocode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .config/mimocode/agents/ dir 0755
-+ .config/mimocode/agents/buddy.md file 0644 226 1cf11196df5a1e1c6269088fb651ed43c62f4aa6459d00341a1ec3b263f3f595
++ .config/mimocode/agents/buddy.md file 0644 139 5ce4d18d2a0cd1963ef73413c758b4b5f3e2d10f1e8704b233562f60722f58ee
 + .config/mimocode/commands/ dir 0755
 + .config/mimocode/mimocode.jsonc file 0644 104 66b56b5fbe2846254f89a538d3afd4e58f5365d1f67cfba385f8206cb7291538
 + .config/mimocode/plugins/ dir 0755
 + .config/mimocode/plugins/ai-rulez-hooks.js file 0644 8343 0c12d22a6c48443e2b37b4eee66a9ba33f330ab51f8627d0449a17cb36bca110
 + .config/mimocode/skills/ dir 0755
 + .config/mimocode/skills/helper/ dir 0755
-+ .config/mimocode/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .config/mimocode/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .config/muse/ dir 0755
 + .config/muse/skills/ dir 0755
 + .config/muse/skills/helper/ dir 0755
-+ .config/muse/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .config/muse/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .config/opencode/ dir 0755
-+ .config/opencode/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .config/opencode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .config/opencode/agents/ dir 0755
-+ .config/opencode/agents/buddy.md file 0644 221 22b0890b5c271994a6e71a864e3d58ed83d10e87a0399df84cf58cd8950eea1b
++ .config/opencode/agents/buddy.md file 0644 134 81ae320b25c504b95e130059b3a32a3ae4cff078f93dd97cc607adc182d19508
 + .config/opencode/opencode.json file 0644 104 66b56b5fbe2846254f89a538d3afd4e58f5365d1f67cfba385f8206cb7291538
 + .config/opencode/plugins/ dir 0755
 + .config/opencode/plugins/ai-rulez-hooks.js file 0644 8886 56b4f64d52bcede8715bd13582db3cc6571f06f44d21eebcf9badb7a5c8b1fbd
 + .config/opencode/skills/ dir 0755
 + .config/opencode/skills/helper/ dir 0755
-+ .config/opencode/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .config/opencode/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .config/poolside/ dir 0755
-+ .config/poolside/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .config/poolside/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .config/poolside/settings.yaml file 0644 178 83dc335d3a4207b149f527fe30ef3caf547fb4f4f3e29d22a9aefd37d45f6b8d
 + .config/poolside/skills/ dir 0755
 + .config/poolside/skills/helper/ dir 0755
-+ .config/poolside/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .config/poolside/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .config/zed/ dir 0755
 + .config/zed/AGENTS.md file 0644 399 f2922fe67d62cc42465ade34e8e2e62ebbc7b55726e1c3a6829015a40630e5e9
 + .config/zed/settings.json file 0644 423 5aae152603d0e7e7f70efc9da9fb4ab98a6f7a2ed075bdd9d25f4ad6cc232139
 + .copilot/ dir 0755
 + .copilot/agents/ dir 0755
-+ .copilot/agents/buddy.agent.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
-+ .copilot/copilot-instructions.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .copilot/agents/buddy.agent.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
++ .copilot/copilot-instructions.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .copilot/hooks/ dir 0755
 + .copilot/hooks/ai-rulez.json file 0644 134 4131f375c09c1b51bab37ad266216db2fb267c027c4a29c000fd734c99dcaaf0
 + .copilot/instructions/ dir 0755
-+ .copilot/instructions/mine.instructions.md file 0644 341 89a631dc294ed68a023453133efe1f47e8e879f9bf9f0d10d6eb7ddc0edefd9a
++ .copilot/instructions/mine.instructions.md file 0644 254 4df7caf7e1d101f8f891b42effd2e8f75033c720a4709709af31359a872259c8
 + .copilot/skills/ dir 0755
 + .copilot/skills/helper/ dir 0755
-+ .copilot/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .copilot/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .cursor/ dir 0755
 + .cursor/agents/ dir 0755
-+ .cursor/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .cursor/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .cursor/commands/ dir 0755
 + .cursor/hooks.json file 0644 110 e9a380a5c6bdb9ce11e590ccb2dfa562fa3c7b12802d51360212e768fcf38584
 + .deepagents/ dir 0755
 + .deepagents/agent/ dir 0755
-+ .deepagents/agent/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .deepagents/agent/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .deepagents/agent/agents/ dir 0755
 + .deepagents/agent/agents/buddy/ dir 0755
-+ .deepagents/agent/agents/buddy/AGENTS.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .deepagents/agent/agents/buddy/AGENTS.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .deepagents/agent/skills/ dir 0755
 + .deepagents/agent/skills/helper/ dir 0755
-+ .deepagents/agent/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .deepagents/agent/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .deepagents/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .dsh/ dir 0755
-+ .dsh/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .dsh/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .dsh/skills/ dir 0755
 + .dsh/skills/helper/ dir 0755
-+ .dsh/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .dsh/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .factory/ dir 0755
-+ .factory/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .factory/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .factory/commands/ dir 0755
 + .factory/droids/ dir 0755
-+ .factory/droids/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .factory/droids/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .factory/hooks.json file 0644 145 9961ee7e1de0d4605e8a4ad3426687c28a17336ee36b6acc04050df5bdc5fa6e
 + .factory/skills/ dir 0755
 + .factory/skills/helper/ dir 0755
-+ .factory/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .factory/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .gemini/ dir 0755
-+ .gemini/GEMINI.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .gemini/GEMINI.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .gemini/agents/ dir 0755
-+ .gemini/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .gemini/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .gemini/config/ dir 0755
 + .gemini/config/agents/ dir 0755
-+ .gemini/config/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .gemini/config/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .gemini/config/skills/ dir 0755
 + .gemini/config/skills/helper/ dir 0755
-+ .gemini/config/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .gemini/config/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .gemini/settings.json file 0644 322 da7a6947eb7aab4b4d90cfc67845a253729cd3c89da99b93538e534f4aaca3a6
 + .gitlab/ dir 0755
 + .gitlab/duo/ dir 0755
-+ .gitlab/duo/chat-rules.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .gitlab/duo/chat-rules.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .gitlab/duo/commands/ dir 0755
 + .gitlab/duo/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .grok/ dir 0755
-+ .grok/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .grok/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .grok/agents/ dir 0755
-+ .grok/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .grok/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .grok/commands/ dir 0755
 + .grok/config.toml file 0644 110 568bcc840b23193cde397827caa35d7c320b8ba9b22b5e9ecfc1c82eb126b7da
 + .grok/hooks/ dir 0755
 + .grok/hooks/ai-rulez.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .grok/rules/ dir 0755
-+ .grok/rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .grok/rules/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 + .grok/skills/ dir 0755
 + .grok/skills/helper/ dir 0755
-+ .grok/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .grok/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .hermes/ dir 0755
 + .hermes/config.yaml file 0644 152 32c3b9ed9c4970f678c8c4ea520d99607ce1021eebe3f768bab8840aeeed78ba
 + .hermes/skills/ dir 0755
 + .hermes/skills/helper/ dir 0755
-+ .hermes/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .hermes/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .junie/ dir 0755
-+ .junie/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .junie/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .junie/agents/ dir 0755
-+ .junie/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .junie/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .junie/commands/ dir 0755
 + .junie/config.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .junie/skills/ dir 0755
 + .junie/skills/helper/ dir 0755
-+ .junie/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .junie/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .kilo/ dir 0755
 + .kilo/rules/ dir 0755
-+ .kilo/rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .kilo/rules/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 + .kilo/skills/ dir 0755
 + .kilo/skills/helper/ dir 0755
-+ .kilo/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .kilo/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .kimi-code/ dir 0755
-+ .kimi-code/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .kimi-code/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .kimi-code/agents/ dir 0755
-+ .kimi-code/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .kimi-code/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .kimi-code/config.toml file 0644 331 176792a187f98dba4a39b9b3add5d2580b725359b83fd69670bb36b661302448
 + .kimi-code/skills/ dir 0755
 + .kimi-code/skills/helper/ dir 0755
-+ .kimi-code/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .kimi-code/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .kiro/ dir 0755
 + .kiro/agents/ dir 0755
-+ .kiro/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .kiro/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .kiro/hooks/ dir 0755
 + .kiro/hooks/ai-rulez.json file 0644 208 11eb544c03951b1e960f159872deb200b73f99ca4efed6bbbc749f66bcf639a2
 + .kiro/prompts/ dir 0755
 + .kiro/skills/ dir 0755
 + .kiro/skills/helper/ dir 0755
-+ .kiro/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .kiro/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .kiro/steering/ dir 0755
-+ .kiro/steering/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
-+ .kiro/steering/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .kiro/steering/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
++ .kiro/steering/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 + .letta/ dir 0755
 + .letta/agents/ dir 0755
-+ .letta/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .letta/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .letta/commands/ dir 0755
 + .letta/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
 + .letta/skills/ dir 0755
 + .letta/skills/helper/ dir 0755
-+ .letta/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .letta/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .omp/ dir 0755
 + .omp/agent/ dir 0755
-+ .omp/agent/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .omp/agent/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .omp/agent/agents/ dir 0755
-+ .omp/agent/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .omp/agent/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .omp/agent/commands/ dir 0755
 + .omp/agent/config.yml file 0644 200 7fc55085fa9dd87cd60b15b5cb70722dcc7d5f0e1a86e2c3400aee0e44863306
 + .omp/agent/rules/ dir 0755
-+ .omp/agent/rules/mine.md file 0644 345 d2e04ad283e7a9e09065b3cdc326eebf6f492355c37404f4a3af4b3840545349
++ .omp/agent/rules/mine.md file 0644 258 7e1844d85e79f0fdb13a3d8a852327e5cfa6820a684acdc82aec126404f4b241
 + .omp/agent/skills/ dir 0755
 + .omp/agent/skills/helper/ dir 0755
-+ .omp/agent/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .omp/agent/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .openclaw/ dir 0755
 + .openclaw/workspace/ dir 0755
-+ .openclaw/workspace/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .openclaw/workspace/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .pi/ dir 0755
 + .pi/agent/ dir 0755
-+ .pi/agent/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .pi/agent/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .pi/agent/agents/ dir 0755
-+ .pi/agent/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .pi/agent/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .pi/agent/extensions/ dir 0755
 + .pi/agent/extensions/ai-rulez-hooks.ts file 0644 7925 5812828fe79fc856c8f372bbea25c620d39d6337e357990a3a7d64c52c6b2073
 + .pi/agent/prompts/ dir 0755
 + .pi/agent/skills/ dir 0755
 + .pi/agent/skills/helper/ dir 0755
-+ .pi/agent/skills/helper/SKILL.md file 0644 227 6138779f40fd74e43aa67136ab14701196341474e7dfdd3f9414d9503dc980ae
++ .pi/agent/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .qoder/ dir 0755
-+ .qoder/AGENTS.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .qoder/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .qoder/agents/ dir 0755
-+ .qoder/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .qoder/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .qoder/commands/ dir 0755
 + .qoder/rules/ dir 0755
-+ .qoder/rules/mine.md file 0644 342 462af47766e9355ab56e9d68fd7871cf7387ec879a4ffba8583d5036819bdcda
++ .qoder/rules/mine.md file 0644 257 8ba5f03bd0ad69a816962c967731e40545b94bb920bef9fec8d13305fe93165e
 + .qoder/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
 + .qoder/skills/ dir 0755
 + .qoder/skills/helper/ dir 0755
-+ .qoder/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .qoder/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .qwen/ dir 0755
-+ .qwen/QWEN.md file 0644 505 4bc1e0f6f46e5e64137b85d22eb8da14bde93a739a12a78037d298e54715f18e
++ .qwen/QWEN.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .qwen/agents/ dir 0755
-+ .qwen/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .qwen/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .qwen/commands/ dir 0755
 + .qwen/rules/ dir 0755
-+ .qwen/rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .qwen/rules/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 + .qwen/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
 + .qwen/skills/ dir 0755
 + .qwen/skills/helper/ dir 0755
-+ .qwen/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .qwen/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .reasonix/ dir 0755
-+ .reasonix/REASONIX.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .reasonix/REASONIX.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .reasonix/commands/ dir 0755
 + .reasonix/settings.json file 0644 94 9a1c39720a52146fbdaa7eb199514dcfec58f172aaa582a89e366753e9cdc4ea
 + .reasonix/skills/ dir 0755
 + .reasonix/skills/buddy/ dir 0755
-+ .reasonix/skills/buddy/SKILL.md file 0644 258 454abb26ea85d3a1704c47951e2332fa8deac142d1eb1a210b83259877742faf
++ .reasonix/skills/buddy/SKILL.md file 0644 171 3a9b3ecf0d8245b45008f8e90a9d15542ebfd64e64b60ca984534a61e700bc3c
 + .reasonix/skills/helper/ dir 0755
-+ .reasonix/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .reasonix/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .roo/ dir 0755
 + .roo/commands/ dir 0755
 + .roo/rules/ dir 0755
-+ .roo/rules/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .roo/rules/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .roo/skills/ dir 0755
 + .roo/skills/helper/ dir 0755
-+ .roo/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .roo/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .rovodev/ dir 0755
-+ .rovodev/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .rovodev/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .rovodev/skills/ dir 0755
 + .rovodev/skills/helper/ dir 0755
-+ .rovodev/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .rovodev/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .rovodev/subagents/ dir 0755
-+ .rovodev/subagents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .rovodev/subagents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .snowflake/ dir 0755
 + .snowflake/cortex/ dir 0755
 + .snowflake/cortex/agents/ dir 0755
-+ .snowflake/cortex/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .snowflake/cortex/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .snowflake/cortex/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .snowflake/cortex/skills/ dir 0755
 + .snowflake/cortex/skills/helper/ dir 0755
-+ .snowflake/cortex/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .snowflake/cortex/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .takt/ dir 0755
 + .takt/facets/ dir 0755
 + .takt/facets/instructions/ dir 0755
@@ -771,39 +771,39 @@ INFO  User-level generation complete files=160
 + .takt/facets/personas/ dir 0755
 + .takt/facets/personas/buddy.md file 0644 8 3031677d46e9f37a351585f00edb071905ffab733fae99a30b3bcbf8677dfbc7
 + .takt/facets/policies/ dir 0755
-+ .takt/facets/policies/context-me.md file 0644 296 f15b68d4fff345807f46d3caf06924aad56494d1df20c9e36b783fce7f873cfc
-+ .takt/facets/policies/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ .takt/facets/policies/context-me.md file 0644 211 056f30f945a1c1d0cf8b4b01cf0f63f58e67946882d112a5fb3a11caa01ff351
++ .takt/facets/policies/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 + .trae/ dir 0755
 + .trae/skills/ dir 0755
 + .trae/skills/helper/ dir 0755
-+ .trae/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .trae/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .vibe/ dir 0755
-+ .vibe/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .vibe/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .vibe/config.toml file 0644 64 4410c95e96dcbb0d498d046a1bee08942e66267174c97cfc127e960680c16109
 + .vibe/skills/ dir 0755
 + .vibe/skills/helper/ dir 0755
-+ .vibe/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .vibe/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .warp/ dir 0755
 + .warp/skills/ dir 0755
 + .warp/skills/helper/ dir 0755
-+ .warp/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .warp/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .zcode/ dir 0755
-+ .zcode/AGENTS.md file 0644 561 f02ca5dab98944b9758ff6a7ee346a6a0d609eeacfb05804e9646dd42679e2f9
++ .zcode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .zcode/agents/ dir 0755
-+ .zcode/agents/buddy.md file 0644 223 7cbd8adadffd3836e9601e491bc36cf7efcee6c081ff25848af595fcc461b5ee
++ .zcode/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .zcode/cli/ dir 0755
 + .zcode/cli/config.json file 0644 245 8fe1f632687ca113ba17ebbdb1209d8b773782d4d7a845eed98d16a90872287e
 + .zcode/commands/ dir 0755
 + .zcode/skills/ dir 0755
 + .zcode/skills/helper/ dir 0755
-+ .zcode/skills/helper/SKILL.md file 0644 225 db14300c8f0a51bfe172d64bb420328cd5b020c9de959a5639dae44b362c3ca3
++ .zcode/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + Documents/ dir 0755
 + Documents/Cline/ dir 0755
 + Documents/Cline/Hooks/ dir 0755
 + Documents/Cline/Hooks/TaskStart file 0755 316 8ad7f953648e89258b629cd88326ec23fe23a4a82b80e1dc9afbe80a467838d2
 + Documents/Cline/Rules/ dir 0755
-+ Documents/Cline/Rules/context-me.md file 0644 296 f15b68d4fff345807f46d3caf06924aad56494d1df20c9e36b783fce7f873cfc
-+ Documents/Cline/Rules/mine.md file 0644 315 b5d3c8305cbc82db503efd260a60dbd18ec8070f543e13484300fa859c5da5c0
++ Documents/Cline/Rules/context-me.md file 0644 211 056f30f945a1c1d0cf8b4b01cf0f63f58e67946882d112a5fb3a11caa01ff351
++ Documents/Cline/Rules/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 
 ## step 3: ai-rulez generate --user --yes
 exit: 0
@@ -1278,218 +1278,123 @@ INFO  User-level generation complete files=213
 --- project tree
 (no change)
 --- home tree
-~ .agents/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .agents/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .agents/skills/db/ dir 0755
-+ .agents/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
-~ .agents/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
-~ .augment/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-+ .augment/rules/be.md file 0644 333 3325dd27295df5cc727b8d5730aff3c6e968fc86ca75bc9b7efa20937be395d0
-~ .augment/rules/mine.md file 0644 342 d3812bb85e5f2250f74c3dc4e712bfa59b387ba881b381e53f266b869f00de1d
++ .agents/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
++ .augment/rules/be.md file 0644 248 f5ad4e4aa14543eaae0d08c8f5e129422bcc7feeb3715429b13f7cbcdb8a2575
 + .augment/skills/db/ dir 0755
-+ .augment/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .augment/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .bob/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
-+ .bob/rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
-~ .bob/rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .augment/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
++ .bob/rules/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .bob/skills/db/ dir 0755
-+ .bob/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .bob/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .claude/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-+ .claude/rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
-~ .claude/rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .bob/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
++ .claude/rules/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .claude/skills/db/ dir 0755
-+ .claude/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .claude/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .cline/agents/buddy.yaml file 0644 223 be7e03ea96d5f3ad4a32675cd52dd98d6d62a77da61cdc899c75ac36fc937567
++ .claude/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .cline/skills/db/ dir 0755
-+ .cline/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
-~ .cline/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
-~ .codebuddy/CODEBUDDY.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
-~ .codebuddy/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-+ .codebuddy/rules/be.md file 0644 332 79afa3873308ab798dd376aa08b78b073b7ec6878b1157ad64d4bb7b8c006348
-~ .codebuddy/rules/mine.md file 0644 341 ebf10ccd052fc300955ae2136495875e38eecfefbbbd5e1196626b2ca496c04c
++ .cline/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
++ .codebuddy/rules/be.md file 0644 247 6e999aab3c134cd149317f1718aceb7489f17d8b153aa084532a6cac3ff96dae
 + .codebuddy/skills/db/ dir 0755
-+ .codebuddy/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .codebuddy/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .codewhale/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
++ .codebuddy/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .codewhale/skills/db/ dir 0755
-+ .codewhale/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .codewhale/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .codex/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .codex/rules/ai-rulez.rules file 0644 425 f90f51a23de7d98484953b3b39bfa0c8b7ff65b31c8e9ffc25a1676fe840c0ea
-~ .commandcode/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .commandcode/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .codewhale/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .codex/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .commandcode/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .commandcode/skills/db/ dir 0755
-+ .commandcode/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .commandcode/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .commandcode/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .config/agents/skills/db/ dir 0755
-+ .config/agents/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
-~ .config/agents/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
++ .config/agents/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
 ~ .config/ai-rulez/.generated-manifest.json file 0644 14693 6ea29bfde73bffb5ebc04d21f52c2cea05e3ea013680e439231dccafc28f92d2
 ~ .config/ai-rulez/.generated-manifest.local.json file 0644 19534 9f1d6a109f74058947e3ed7a925c2adf42ab407008e8b0656f0a00fafaa108e7
-~ .config/amp/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .config/crush/CRUSH.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
+~ .config/amp/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .config/crush/CRUSH.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .config/crush/skills/db/ dir 0755
-+ .config/crush/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .config/crush/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .config/devin/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .config/crush/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .config/devin/skills/db/ dir 0755
-+ .config/devin/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
-~ .config/devin/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
-~ .config/goose/.goosehints file 0644 597 5ade376410986469788dc305d49f657d9daf1df6aa201ff2d3605adf102e91fa
-~ .config/goose/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-~ .config/kilo/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
-~ .config/kilo/agents/buddy.md file 0644 226 f821198deb5a5247a0f8d0c2b0a2509cc5e67a046a1665328f1bfebc1cb70667
-~ .config/mimocode/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .config/mimocode/agents/buddy.md file 0644 226 f821198deb5a5247a0f8d0c2b0a2509cc5e67a046a1665328f1bfebc1cb70667
++ .config/devin/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
+~ .config/goose/.goosehints file 0644 510 9ab65dace71afe16ee15f4c21a9a6bdb1a47c9eb49d60517cdc25bc697dabf95
+~ .config/mimocode/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .config/mimocode/skills/db/ dir 0755
-+ .config/mimocode/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .config/mimocode/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .config/mimocode/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .config/muse/skills/db/ dir 0755
-+ .config/muse/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
-~ .config/muse/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
-~ .config/opencode/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .config/opencode/agents/buddy.md file 0644 221 991b6208143452cedf14046b5f708c4cf83820a600827f1d38f0b10da811632c
++ .config/muse/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
+~ .config/opencode/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .config/opencode/skills/db/ dir 0755
-+ .config/opencode/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
-~ .config/opencode/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
-~ .config/poolside/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .config/opencode/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
+~ .config/poolside/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .config/poolside/skills/db/ dir 0755
-+ .config/poolside/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .config/poolside/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .config/poolside/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 ~ .config/zed/AGENTS.md file 0644 422 7143aa5f97219ca1ca6007e3f1282d89a8f0fb403db044c392275376ceaee4a1
-~ .copilot/agents/buddy.agent.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-~ .copilot/copilot-instructions.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
-+ .copilot/instructions/be.instructions.md file 0644 332 3f441391f2d73088fa033393863dbf782374d892eb88f296274e4eac5b03f71c
-~ .copilot/instructions/mine.instructions.md file 0644 341 f544b499c6873141d41edfe3f3c4b38fb83930c4bbbd10b008bb3fdd7522cfa5
++ .copilot/instructions/be.instructions.md file 0644 245 86e3815921417e89f25d932ae31709c5515fc275ae5b4f762da1fb98419cb2f1
 + .copilot/skills/db/ dir 0755
-+ .copilot/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
-~ .copilot/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
-~ .cursor/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-~ .deepagents/agent/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .deepagents/agent/agents/buddy/AGENTS.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .copilot/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
+~ .deepagents/agent/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .deepagents/agent/skills/db/ dir 0755
-+ .deepagents/agent/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .deepagents/agent/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .dsh/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .deepagents/agent/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .dsh/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .dsh/skills/db/ dir 0755
-+ .dsh/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .dsh/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .factory/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .factory/droids/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .dsh/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .factory/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .factory/skills/db/ dir 0755
-+ .factory/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .factory/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .gemini/GEMINI.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .gemini/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-~ .gemini/config/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .factory/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .gemini/GEMINI.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .gemini/config/skills/db/ dir 0755
-+ .gemini/config/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
-~ .gemini/config/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
-~ .gitlab/duo/chat-rules.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .grok/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
-~ .grok/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-+ .grok/rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
-~ .grok/rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .gemini/config/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
+~ .gitlab/duo/chat-rules.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
++ .grok/rules/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .grok/skills/db/ dir 0755
-+ .grok/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .grok/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .grok/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .hermes/skills/db/ dir 0755
-+ .hermes/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .hermes/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .junie/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
-~ .junie/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .hermes/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .junie/skills/db/ dir 0755
-+ .junie/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .junie/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-+ .kilo/rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
-~ .kilo/rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .junie/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
++ .kilo/rules/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .kilo/skills/db/ dir 0755
-+ .kilo/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .kilo/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .kimi-code/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .kimi-code/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .kilo/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .kimi-code/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .kimi-code/skills/db/ dir 0755
-+ .kimi-code/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .kimi-code/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .kiro/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .kimi-code/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .kiro/skills/db/ dir 0755
-+ .kiro/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .kiro/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .kiro/steering/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
-+ .kiro/steering/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
-~ .kiro/steering/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
-~ .letta/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .kiro/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
++ .kiro/steering/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .letta/skills/db/ dir 0755
-+ .letta/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
-~ .letta/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
-~ .omp/agent/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
-~ .omp/agent/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-+ .omp/agent/rules/be.md file 0644 336 3c2b5b098be61fd5decbd58cd0eb0542906a58fc964d8eca92863b74c3143e2a
-~ .omp/agent/rules/mine.md file 0644 345 ecbd43ef303c96d404e28153bb19a8e93796a2695f39a207ec877cf34551ef8f
++ .letta/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
++ .omp/agent/rules/be.md file 0644 249 d08c11a08559ff2ed801683d35ee371926f8ad6e16cea9be3b4e0e1a409bb355
 + .omp/agent/skills/db/ dir 0755
-+ .omp/agent/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .omp/agent/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .openclaw/workspace/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .pi/agent/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .pi/agent/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .omp/agent/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .openclaw/workspace/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
+~ .pi/agent/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .pi/agent/skills/db/ dir 0755
-+ .pi/agent/skills/db/SKILL.md file 0644 216 7966b53f8f721a3b9dce4b048005dd8b822cbb16ad84e93895aed20f5447f254
-~ .pi/agent/skills/helper/SKILL.md file 0644 227 00606dccd2928e2b021bbbdea7b99c1a2cdd2f1cc04f8a1440dcafd3533c1fb3
-~ .qoder/AGENTS.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
-~ .qoder/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-+ .qoder/rules/be.md file 0644 333 a69302b03c1d45be09606897ecff4d6b58a3a5ad3df07f01e031d0e5a0deab0d
-~ .qoder/rules/mine.md file 0644 342 bfc9a8d41f8c41f964d852cfb316894b5001cf927fde66b4f91a8feb4636e77a
++ .pi/agent/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
++ .qoder/rules/be.md file 0644 248 0d24889315fcf09b20a5b33ce3d635b4b475938ed68839c831d9a8ea4f63af46
 + .qoder/skills/db/ dir 0755
-+ .qoder/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .qoder/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .qwen/QWEN.md file 0644 505 df9364ac838f6cbe7f2e3d800bfc2b9fb113402e8539215e39965282043b9912
-~ .qwen/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-+ .qwen/rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
-~ .qwen/rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .qoder/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
++ .qwen/rules/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .qwen/skills/db/ dir 0755
-+ .qwen/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .qwen/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .reasonix/REASONIX.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .reasonix/skills/buddy/SKILL.md file 0644 258 8007babacb3fcb6d36373318db87e6233e2bffc3ffac395f2e4e461f838d75c7
++ .qwen/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .reasonix/REASONIX.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .reasonix/skills/db/ dir 0755
-+ .reasonix/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .reasonix/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .roo/rules/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .reasonix/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .roo/rules/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .roo/skills/db/ dir 0755
-+ .roo/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .roo/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .rovodev/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .roo/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .rovodev/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .rovodev/skills/db/ dir 0755
-+ .rovodev/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .rovodev/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .rovodev/subagents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
-~ .snowflake/cortex/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .rovodev/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .snowflake/cortex/skills/db/ dir 0755
-+ .snowflake/cortex/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .snowflake/cortex/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .snowflake/cortex/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .takt/facets/knowledge/db.md file 0644 5 9e911773a38a300f2ca5a7287acf421682fcdf99584d5226132b2dc15cbdbdd9
-+ .takt/facets/policies/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
-~ .takt/facets/policies/context-me.md file 0644 296 46ce98997dcd1cfe49140fdbda41d16198694a0f3e833e707603167d7a7f6326
-~ .takt/facets/policies/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .takt/facets/policies/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 + .trae/skills/db/ dir 0755
-+ .trae/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .trae/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .vibe/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
++ .trae/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .vibe/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .vibe/skills/db/ dir 0755
-+ .vibe/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .vibe/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
++ .vibe/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .warp/skills/db/ dir 0755
-+ .warp/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .warp/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-~ .zcode/AGENTS.md file 0644 584 300a189ca49d6c1e564a247373e017621fcc4701a66e611d9f3715f1de37350d
-~ .zcode/agents/buddy.md file 0644 223 18ab01f73c691072efe7a77831e747e2baa4cf07d2922a62c61ed19df9da65b7
++ .warp/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
+~ .zcode/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .zcode/skills/db/ dir 0755
-+ .zcode/skills/db/SKILL.md file 0644 214 2134be092a78dbde8a4b4c8c428bcf3128155f1b654127f4aec6a2889c9fc32e
-~ .zcode/skills/helper/SKILL.md file 0644 225 860ed33c2f57fccd314ebc25cdd9f822430fb7f8472dc64c1ad748152487a4af
-+ Documents/Cline/Rules/be.md file 0644 306 418aac88e50cb7066115833d59b68f3f1187737e938ea7419a74bc09e4c05d9c
-~ Documents/Cline/Rules/context-me.md file 0644 296 46ce98997dcd1cfe49140fdbda41d16198694a0f3e833e707603167d7a7f6326
-~ Documents/Cline/Rules/mine.md file 0644 315 b59a134da6aa4ff490d0edc0a1c4371463ee2c2df4b0ff9402ed3603f010b59c
++ .zcode/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
++ Documents/Cline/Rules/be.md file 0644 221 be22a2a52fc770b6949c3b43d3a8183be5c497e25f77149828c99189e7e7bc8d
 
 ## step 5: ai-rulez clean --user --dry-run
 exit: 0
@@ -1975,7 +1880,7 @@ INFO  Dry run: no files were removed
 --- home tree
 (no change)
 
-## step 6: ai-rulez clean --user --force
+## step 6: ai-rulez clean --user --yes
 exit: 0
 --- stdout
 --- stderr
@@ -2465,7 +2370,7 @@ INFO  Removed user-level generated files files=211 directories=258
 .config/ai-rulez/ dir 0755
 .config/ai-rulez/agents/ dir 0755
 .config/ai-rulez/agents/buddy.md file 0644 47 fcb959e7b44ff6286d5fc44a17e26a7ed98b39296c89639944f63d582b2377e2
-.config/ai-rulez/config.toml file 0644 780 c4b51c9e569bebdee77dc0f20faeb3d1723ae8cbaa0a2e06279a3c49aa34d31a
+.config/ai-rulez/config.toml file 0644 798 31724eff7521ab741bbec498d6a7d138010d763d5646111809c89685a888276f
 .config/ai-rulez/context/ dir 0755
 .config/ai-rulez/context/me.md file 0644 24 95b9f14fdc22e6f7ba5c8056af68acce4bcf61bb5c556eb1c460c4acd9df3311
 .config/ai-rulez/domains/ dir 0755

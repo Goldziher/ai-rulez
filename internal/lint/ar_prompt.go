@@ -38,6 +38,11 @@ func registerArPrompt(s *ruleSet) {
 
 var (
 	directiveRe = regexp.MustCompile(`^\s*(?:[-*>+]\s*)*[*_]{0,2}(?:SYSTEM|OVERRIDE|ADMIN|ROOT|IGNORE)[*_]{0,2}\s*:(.*)$`)
+	// ambiguousLabelRe are the labels that are also ordinary documentation words
+	// (ROOT: the repository root); they count only with a command-like remainder.
+	ambiguousLabelRe = regexp.MustCompile(`^\s*(?:[-*>+]\s*)*[*_]{0,2}(?:ROOT|IGNORE)[*_]{0,2}\s*:`)
+	// commandCueRe marks a remainder that addresses the model or gives an order.
+	commandCueRe = regexp.MustCompile(`(?i)\b(?:you|your|must|should|always|never|do|don'?t|ignore|disregard|forget|follow|obey|execute|run|reveal|print|output|respond|answer|act|pretend|instructions?|prompts?|previous|above|anything|everything|all)\b`)
 	// scalarValueRe is the right-hand side of a config-like `KEY: value` line.
 	scalarValueRe = regexp.MustCompile(`^\s*(?:true|false|null|~|\d+(?:\.\d+)?|\.{0,2}/[\w./-]*|~/[\w./-]*|\{.*\}|\[.*\])\s*$`)
 )
@@ -47,7 +52,8 @@ func scanDirectiveLabels(r *runner, t *scanText) {
 		if !t.prose(l) {
 			continue
 		}
-		if m := directiveRe.FindStringSubmatch(l.Text); len(m) > 1 && !scalarValueRe.MatchString(m[1]) {
+		if m := directiveRe.FindStringSubmatch(l.Text); len(m) > 1 && !scalarValueRe.MatchString(m[1]) &&
+			(!ambiguousLabelRe.MatchString(l.Text) || commandCueRe.MatchString(m[1])) {
 			r.add(CodeDirectiveLabel, t.abs, l.No, "the line starts with an uppercase privileged-looking label; a model may read it as a system or administrator message")
 		}
 	}
@@ -89,7 +95,7 @@ func scanFakeTags(r *runner, t *scanText) {
 	}
 }
 
-var configTamperRe = regexp.MustCompile(`(?i)\b(?:write|modify|edit|update|append|add|insert|inject)\w*\b.{0,30}?(?:\b(?:MEMORY|SOUL|CLAUDE|AGENTS)\.md\b|\.cursorrules\b|\.windsurfrules\b|\.clinerules\b|\.claude/settings(?:\.local)?\.json\b)`)
+var configTamperRe = newGatedRe(`(?i)\b(?:write|modify|edit|update|append|add|insert|inject)\w*\b.{0,30}?(?:\b(?:MEMORY|SOUL|CLAUDE|AGENTS)\.md\b|\.cursorrules\b|\.windsurfrules\b|\.clinerules\b|\.claude/settings(?:\.local)?\.json\b)`, true, "memory.md", "soul.md", "claude.md", "agents.md", ".cursorrules", ".windsurfrules", ".clinerules", "settings")
 
 func scanConfigTamper(r *runner, t *scanText) {
 	for _, l := range t.lines {
@@ -102,7 +108,7 @@ func scanConfigTamper(r *runner, t *scanText) {
 	}
 }
 
-var selfPropRe = regexp.MustCompile(`(?i)\b(?:add|inject|insert|include|append|copy|propagate)\s+(?:this|these|the\s+following)\s+(?:instruction|rule|directive|text|prompt|message)s?\s+(?:to|into|in|at\s+the\s+(?:start|end)\s+of)\s+(?:all|every|each|any|other)\s+(?:other\s+)?(?:skills?|agents?|files?|rules?|projects?|repos?\w*|prompts?|instructions?|configs?|documents?|sessions?|conversations?|memory|memories|commands?|plugins?)\b`)
+var selfPropRe = newGatedRe(`(?i)\b(?:add|inject|insert|include|append|copy|propagate)\s+(?:this|these|the\s+following)\s+(?:instruction|rule|directive|text|prompt|message)s?\s+(?:to|into|in|at\s+the\s+(?:start|end)\s+of)\s+(?:all|every|each|any|other)\s+(?:other\s+)?(?:skills?|agents?|files?|rules?|projects?|repos?\w*|prompts?|instructions?|configs?|documents?|sessions?|conversations?|memory|memories|commands?|plugins?)\b`, true, "instruction", "rule", "directive", " text", "prompt", "message")
 
 func scanSelfPropagation(r *runner, t *scanText) {
 	for _, l := range t.lines {

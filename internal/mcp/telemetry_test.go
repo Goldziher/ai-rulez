@@ -56,7 +56,7 @@ func telemetryProject(t *testing.T) string {
 	dir := t.TempDir()
 	cfg := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(cfg, "rules"), 0o750))
-	require.NoError(t, os.WriteFile(filepath.Join(cfg, "config.toml"), []byte("version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(cfg, "config.toml"), []byte("version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(cfg, "rules", "atomic-commits.md"), []byte("# Atomic\n"), 0o600))
 	return dir
 }
@@ -136,4 +136,16 @@ func TestSkillRefName(t *testing.T) {
 	assert.Equal(t, "a", skillRefName("skill://a/SKILL.md"))
 	assert.Equal(t, "a", skillRefName("a"))
 	assert.Equal(t, "plugin:a", skillRefName("plugin:a"))
+}
+
+func TestTelemetry_LoadSkillIsRecordedOnceWhenServedRecorderIsWired(t *testing.T) {
+	var served int
+	p, srv := startSkillServerWith(t, loadCatalog(t), ServeOptions{Telemetry: func(SessionTelemetry) { served++ }})
+	rec := &fakeRecorder{}
+	srv.SetTelemetry(rec, TelemetryOptions{Harness: "claude"})
+
+	_, isErr, _ := callTool(t, p, "load_skill", map[string]any{"name": "pdf-processing"})
+	require.False(t, isErr)
+	assert.Equal(t, 1, served)
+	assert.Empty(t, rec.snapshot(), "the pipeline must not log the load a second time")
 }

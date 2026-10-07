@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -51,12 +50,6 @@ const (
 
 	// piMCPKeyServers is the only top-level key ai-rulez owns in .pi/mcp.json.
 	piMCPKeyServers = "mcpServers"
-
-	// arraySidecarIndent is the indentation for the one sidecar ai-rulez owns
-	// outright (.claude/plugins.json, a JSON array). Object-shaped sidecars take
-	// their indentation from jsonmerge instead, which adapts to the document that
-	// is already on disk.
-	arraySidecarIndent = "  "
 )
 
 // evalPredicate dispatches the closed-set emit_when value. Most predicates
@@ -129,11 +122,6 @@ func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath st
 		return jsonmerge.ApplyWith(cfg.ReadExisting, outputPath, []jsonmerge.OwnedKey{
 			{Name: piMCPKeyServers, Value: piMCPServerEntries(cfg), Members: true},
 		})
-	case SidecarClaudePluginsJSON:
-		// .claude/plugins.json is a JSON array wholly owned by ai-rulez: there
-		// are no user-authored sibling keys to preserve.
-		body, err := renderClaudePluginsJSON(cfg)
-		return sidecarRender{Body: body}, err
 	}
 	return sidecarRender{}, fmt.Errorf("unknown sidecar kind %q", kind)
 }
@@ -394,33 +382,6 @@ func applyMCPTransport(entry map[string]any, server *config.MCPServer) {
 	if server.URL != "" {
 		entry["url"] = server.URL
 	}
-}
-
-// renderClaudePluginsJSON produces .claude/plugins.json. Lifted verbatim
-// from the legacy claude.go::renderPluginsJSON.
-func renderClaudePluginsJSON(cfg *config.Config) (string, error) {
-	type pluginEntry struct {
-		Marketplace string `json:"marketplace"`
-		Name        string `json:"name"`
-		Scope       string `json:"scope"`
-		Enabled     bool   `json:"enabled"`
-	}
-
-	var plugins []pluginEntry
-	for _, p := range cfg.Plugins {
-		plugins = append(plugins, pluginEntry{
-			Marketplace: p.Marketplace,
-			Name:        p.Name,
-			Scope:       p.GetScope(),
-			Enabled:     p.IsEnabled(),
-		})
-	}
-
-	jsonBytes, err := json.MarshalIndent(plugins, "", arraySidecarIndent)
-	if err != nil {
-		return "", fmt.Errorf("marshal plugins JSON: %w", err)
-	}
-	return string(jsonBytes) + "\n", nil
 }
 
 // piMCPServerEntries builds the mcpServers object of .pi/mcp.json. Unlike the

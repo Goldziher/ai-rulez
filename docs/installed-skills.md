@@ -91,7 +91,7 @@ Remove an installed skill from the configuration.
 
 **Flags:**
 
-- `--force` (optional): Skip confirmation prompt
+- `--yes`, `-y` (optional): Skip confirmation prompt
 - `--local` (optional): Remove through the overlay. A skill defined in the shared config is hidden on this machine by writing `remove = true` to the overlay; the shared config is not changed
 
 ### `ai-rulez skill list [flags]`
@@ -100,7 +100,7 @@ List all installed skills.
 
 **Flags:**
 
-- `--format text|json` (optional, default `text`): `json` prints JSON (`--json` is a deprecated alias)
+- `--format text|json` (optional, default `text`): `json` prints JSON
 
 ## How It Works
 

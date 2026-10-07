@@ -77,6 +77,9 @@ type Report struct {
 	// [lint] analyzers); nil when every analyzer ran. Baseline entries of the
 	// analyzers that did not run are neither stale nor rewritten.
 	Analyzers []string `json:"-"`
+	// External records that the run executed the [[lint.external]] scanners; a
+	// baseline entry for a scanner finding says nothing about a run without them.
+	External bool `json:"-"`
 	// Protected holds the codes the organization policy protects from
 	// suppression (required or floored codes and AR740-AR745): a baseline never
 	// accepts them and [lint.tolerate] never tolerates them.

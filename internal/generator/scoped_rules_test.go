@@ -15,10 +15,11 @@ import (
 	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // registers the includes resolver
 )
 
-const scopedRulesConfig = `version = "4.0"
+const scopedRulesConfig = `version = "5.0"
 name = "mono"
 presets = ["claude", "cursor", "copilot", "antigravity", "devin"]
 gitignore = false
+agents_md = false
 
 [rules]
 mode = "%s"

@@ -111,10 +111,19 @@ no longer holds).`,
 				return
 			}
 			fmtError(err)
-			os.Exit(1)
+			os.Exit(pluginVerifyExitCode(err))
 		}
 		logger.Success("Generated plugin artifacts are valid", "path", cfg.BaseDir)
 	},
+}
+
+// pluginVerifyExitCode is 2 when the bundle differs from its sources and 1 when
+// the check could not run, matching the non-plugin verify.
+func pluginVerifyExitCode(err error) int {
+	if errors.Is(err, generator.ErrPluginDrift) {
+		return exitDrift
+	}
+	return 1
 }
 
 func init() {
@@ -140,7 +149,6 @@ func init() {
 	f.StringVar(&verifySource, "source", "", "With --skill: the skill source or installed skill name, to apply [[signing.trust]] entries scoped by source")
 	f.BoolVar(&verifyRequireProvenance, "require-provenance", false, "With --bundle: require a verified SLSA provenance statement next to the bundle attestation")
 	addFormatFlag(f, &verifyFormat, "", formatText, formatText, formatJSON)
-	addJSONFlagAlias(f)
 	VerifyCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
 	VerifyCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }

@@ -35,7 +35,7 @@ What the lock gives you:
 | An executable bit added to a script | the file mode is part of the digest |
 | A change in what gets generated, by any cause | output digests |
 | An accidentally edited or truncated lock | the `tree` digest no longer matches the pins, or is missing |
-| A lock replaced by one without content pins (a downgrade) | `lock --check` fails and `generate --locked` warns; under `enforce`, `generate --locked` and `validate --strict` fail |
+| A lock replaced by one without content pins (a downgrade) | `lock --check` fails and `generate --locked` warns; under `enforce`, `generate --locked` and `validate` fail |
 
 The `tree` digest is an integrity check, not a signature: whoever can edit the lock can recompute it (`ai-rulez
 lock` does exactly that). It catches accidental edits and merge mistakes; a deliberate change to the pins is caught
@@ -43,7 +43,7 @@ by review of the lock diff and by CI running `lock --check` against the sources,
 
 What it does **not** do: it does not say *who* published a change, it does not sandbox anything, and it cannot
 tell a malicious edit from a good one. It makes every change explicit and reviewable; a human still reviews it
-(see [Reviewing lock diffs](#reviewing-lock-diffs)). Pair it with `ai-rulez scan` / `validate --strict` for the
+(see [Reviewing lock diffs](#reviewing-lock-diffs)). Pair it with `ai-rulez scan` / `validate` for the
 content itself. ai-rulez does not sign or verify signatures itself; [Signing the lock](#signing-the-lock) shows
 how to do it with `cosign`.
 
@@ -77,7 +77,7 @@ regular file on write (it never writes through the link), and every command that
 symlinked one with an error, so a link cannot point the pins at another file. Delete the link and run
 `ai-rulez lock` to recreate it.
 
-Outputs are pinned from the in-memory rendering, before the `Content-Hash` / `Source-Hash` lines are injected and
+Outputs are pinned from the in-memory rendering, before the hash lines (`Content-Hash`, and `Source-Hash` with `hashes = "full"`) are injected and
 with the `Generated:` stamp removed, so the digests are the same under every `[header] hashes` mode and whether or
 not `[header] timestamp` is on. Not pinned: machine-local outputs, outputs that may carry resolved secrets, and
 documents that are partly yours, that is, a merged document in which the consumer owns some keys. A plain
@@ -87,7 +87,7 @@ above) are.
 
 ```toml
 version = 1
-ai_rulez_version = "4.25.0"
+ai_rulez_version = "5.0.0"
 scope = "all"
 outputs_pinned = true
 tree = "sha256:6cd1d810fce0e91263b3ebfa3610821a820a07b415a8f2a4b9415de191b6c24e"
@@ -202,7 +202,7 @@ served entry, so editing or swapping them is detected even when the content dige
 
 `lock --check` and `lock --diff` compare these entries without the network: a changed served skill is a `served`
 change, a source whose cached tree no longer matches its pin is a `remote` change. `[lock] enforce = true` makes
-`validate --strict` report served-skill mismatches as `AR995` and makes the server refuse them. `lock --kind
+`validate` report served-skill mismatches as `AR995` and makes the server refuse them. `lock --kind
 source|served` refreshes one kind, `generate --frozen`/`mcp --serve-skills --frozen` never use the network, and
 `lock --content-only` recomputes authored content and the served digests of local skills offline while keeping the
 remote pins.
@@ -345,7 +345,7 @@ tags are listed as `AR733` in the note (`held_back` in JSON) and counted in the 
 "warning"|"error"` reports every updatable source as an `AR734` finding (`code` and `severity` in JSON); `error` also
 exits `2`. Off by default. Exit codes: `0` (also when updates exist), `2` with `--fail-on-outdated` when any source has an allowed
 update, and always `2` for a moved or deleted tag (`AR735`) or an unsatisfiable constraint, `1` when it could not run. It needs the
-network: `--offline` (or `--no-fetch`) refuses with a hint, and `lock --check` stays the offline verification. A
+network: `--offline` (or `--offline`) refuses with a hint, and `lock --check` stays the offline verification. A
 scheduled CI job can run `ai-rulez lock --outdated --format json --fail-on-outdated`.
 
 ### `update`
@@ -415,7 +415,7 @@ comes from an include or the local overlay) is refused with a hint to edit by ha
 opt in: `lock --check --verify-tags`, `generate --verify-tags`, or `[lock] verify_tags = true` for both. One `git
 ls-remote` per repository (no content is fetched) compares each locked tag with the commit it pins: a moved tag is
 `AR732` (error, exit `2`, `generate` writes nothing), a deleted one `AR735` (warning, the pinned commit is still
-used). An unreachable remote is exit `1`. The key is skipped quietly under `--no-fetch`, `--frozen` and `--offline`;
+used). An unreachable remote is exit `1`. The key is skipped quietly under `--offline`, `--frozen` and `--offline`;
 the flag with them is an error. `generate --recursive` verifies the tags of every root it processes; a root with a moved tag fails (exit `2` when every failure is drift).
 
 `ai-rulez skill update` is `lock --kind skill`: it re-resolves plain refs (a branch follows its tip) and keeps range
@@ -708,7 +708,7 @@ verify_tags = false      # true: generate and lock --check ask the remotes wheth
 lock records the settings it was written with, and `--check` reports a mismatch so a changed `[lock]` table cannot
 silently weaken a check.
 
-With `enforce = true`, and only when a lock exists, `validate --strict` adds:
+With `enforce = true`, and only when a lock exists, `validate` adds:
 
 | Code | Meaning |
 | --- | --- |

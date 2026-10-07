@@ -36,7 +36,7 @@ kind = "mcp"
 path = ".fresh/mcp.json"
 `
 
-const genericSidecarConfig = `version = "4.0"
+const genericSidecarConfig = `version = "5.0"
 name = "generic-sidecars"
 gitignore = true
 presets = [{ name = "doctool", provider = ".ai-rulez/providers/doctool.toml" }]

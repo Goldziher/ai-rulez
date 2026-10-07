@@ -31,7 +31,7 @@ func TestResolve_DefaultsAreOff(t *testing.T) {
 
 func TestResolve_RepoConfigCannotEnableNetworkExport(t *testing.T) {
 	hostile := &config.TelemetryConfig{
-		Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://evil.example.com", HeadersEnv: []string{"HOME_TOKEN"},
+		Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://evil.example.com", HeadersEnv: []string{"HOME_TOKEN"},
 		IncludePaths: true, IncludeSession: true, SaltFile: "/etc/passwd", ServiceName: "mine",
 		Resource: map[string]string{"team": "evil"},
 	}
@@ -66,7 +66,7 @@ func TestResolve_ServiceNameIsUserScopeOnly(t *testing.T) {
 }
 
 func TestResolve_UserScopeOptsInAndRepoCannotRedirectIt(t *testing.T) {
-	user := &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://collector.example.org:4318/", HeadersEnv: []string{"OTLP_HEADERS"}}
+	user := &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://collector.example.org:4318/", HeadersEnv: []string{"OTLP_HEADERS"}}
 	repo := &config.TelemetryConfig{OTLPEndpoint: "https://evil.example.com"}
 	s := Resolve(Layers{Repo: repo, User: user, Getenv: env()})
 	assert.True(t, s.ExportActive())
@@ -82,7 +82,7 @@ func TestResolve_EnvironmentOptsIn(t *testing.T) {
 }
 
 func TestResolve_KillSwitchesWin(t *testing.T) {
-	user := &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org"}
+	user := &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://c.example.org"}
 	for name, e := range map[string]func(string) string{
 		"off":          env(EnvEnabled, "off"),
 		"do not track": env("DO_NOT_TRACK", "1"),
@@ -96,22 +96,22 @@ func TestResolve_KillSwitchesWin(t *testing.T) {
 
 func TestResolve_InsecureEndpointAndBadProtocolBlockExport(t *testing.T) {
 	for name, user := range map[string]*config.TelemetryConfig{
-		"plain http":       {Enabled: true, AllowNetwork: true, OTLPEndpoint: "http://collector.example.org"},
-		"credentials":      {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://user:pw@collector.example.org"},
-		"unknown protocol": {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org", OTLPProtocol: "carrier-pigeon"},
-		"grpc with a path": {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org/v1/logs", OTLPProtocol: "grpc"},
-		"query":            {Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org?x=1"},
+		"plain http":       {Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "http://collector.example.org"},
+		"credentials":      {Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://user:pw@collector.example.org"},
+		"unknown protocol": {Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://c.example.org", OTLPProtocol: "carrier-pigeon"},
+		"grpc with a path": {Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://c.example.org/v1/logs", OTLPProtocol: "grpc"},
+		"query":            {Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://c.example.org?x=1"},
 	} {
 		s := Resolve(Layers{User: user, Getenv: env()})
 		assert.False(t, s.ExportActive(), name)
 		assert.NotEmpty(t, s.Problems, name)
 	}
-	loopback := &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "http://localhost:4318"}
+	loopback := &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "http://localhost:4318"}
 	assert.True(t, Resolve(Layers{User: loopback, Getenv: env()}).ExportActive())
 }
 
 func TestResolve_RepoProblemsDoNotTurnOffAUsersExport(t *testing.T) {
-	user := &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org"}
+	user := &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://c.example.org"}
 	repo := &config.TelemetryConfig{OTLPEndpoint: "http://not-https.example.com"}
 	s := Resolve(Layers{Repo: repo, User: user, Getenv: env()})
 	assert.True(t, s.ExportActive(), "a hostile repo must not be able to disable export either")
@@ -153,7 +153,8 @@ func TestLoadRepo_OverlayWinsPerKeyAndUnknownKeysFail(t *testing.T) {
 	cfg, err := LoadRepo(root, ".ai-rulez")
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
-	assert.True(t, cfg.Enabled)
+	require.NotNil(t, cfg.Enabled)
+	assert.True(t, *cfg.Enabled)
 	assert.Equal(t, "mine", cfg.ServiceName)
 
 	write(t, filepath.Join(root, ".ai-rulez", "config.local.toml"), "[telemetry]\nenabeld = true\n")
@@ -202,13 +203,13 @@ func TestResolve_ResourceIsUserScopeAndEnvOnly(t *testing.T) {
 }
 
 func TestResolve_InvalidResourceBlocksExport(t *testing.T) {
-	user := &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org"}
+	user := &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://c.example.org"}
 	tests := []struct {
 		name string
 		user *config.TelemetryConfig
 		env  func(string) string
 	}{
-		{"reserved key in user config", &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://c.example.org", Resource: map[string]string{"host.name": "x"}}, env()},
+		{"reserved key in user config", &config.TelemetryConfig{Enabled: ptrBool(true), AllowNetwork: true, OTLPEndpoint: "https://c.example.org", Resource: map[string]string{"host.name": "x"}}, env()},
 		{"reserved key from env", user, env(EnvResource, "user.id=bob")},
 		{"malformed env pair", user, env(EnvResource, "team")},
 	}
@@ -223,7 +224,7 @@ func TestResolve_InvalidResourceBlocksExport(t *testing.T) {
 
 func TestDiagnose_ShowsResourceAndItsSource(t *testing.T) {
 	// Arrange
-	user := &config.TelemetryConfig{Enabled: true, Resource: map[string]string{"team": "platform", "env": "prod"}}
+	user := &config.TelemetryConfig{Enabled: ptrBool(true), Resource: map[string]string{"team": "platform", "env": "prod"}}
 	repo := &config.TelemetryConfig{Resource: map[string]string{"team": "evil"}}
 	s := Resolve(Layers{User: user, Repo: repo, Getenv: env()})
 
@@ -305,7 +306,7 @@ func TestDiagnose_HidesCredentialShapedHeadersEnvNames(t *testing.T) {
 
 func TestRender_AlignsLongSettingValues(t *testing.T) {
 	// Arrange
-	user := &config.TelemetryConfig{Enabled: true, Resource: map[string]string{"deployment.environment": "production-eu-west-1", "team": "platform-engineering"}}
+	user := &config.TelemetryConfig{Enabled: ptrBool(true), Resource: map[string]string{"deployment.environment": "production-eu-west-1", "team": "platform-engineering"}}
 	s := Resolve(Layers{User: user, Getenv: env()})
 	var text bytes.Buffer
 
@@ -324,4 +325,13 @@ func TestRender_AlignsLongSettingValues(t *testing.T) {
 		}
 	}
 	assert.Len(t, offsets, 1, text.String())
+}
+
+func TestResolve_UserFalseBeatsRepoTrue(t *testing.T) {
+	repo := &config.TelemetryConfig{Enabled: ptrBool(true)}
+	user := &config.TelemetryConfig{Enabled: ptrBool(false)}
+	s := Resolve(Layers{Repo: repo, User: user, Getenv: env()})
+	assert.False(t, s.RecordActive())
+	assert.Equal(t, ScopeUser, s.Sources["enabled"])
+	assert.True(t, Resolve(Layers{Repo: repo, Getenv: env()}).RecordActive())
 }

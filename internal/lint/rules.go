@@ -1,4 +1,4 @@
-// Package lint implements `ai-rulez validate --strict`: deep checks that find
+// Package lint implements `ai-rulez validate`: deep checks that find
 // instruction content which parses fine but does not work (globs that match
 // nothing, dead links, references to skills that do not exist, hooks that
 // cannot run, oversize rules, ...). Every finding carries a stable code, a
@@ -253,6 +253,10 @@ type FindingMeta struct {
 	// Hop says how far the finding's file is from the changed set in a
 	// changed-only report: "changed", "dependent" or "transitive(n)".
 	Hop string
+	// Metric is the measured value of a size finding (lines, tokens). Its
+	// bucket joins the fingerprint, so a baselined finding fires again once the
+	// measurement has grown well past what was accepted.
+	Metric int
 }
 
 func (f *Finding) meta() *FindingMeta {

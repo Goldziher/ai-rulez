@@ -15,10 +15,10 @@ import (
 
 func resetUsageFlags(t *testing.T) {
 	t.Helper()
-	usageLog, usageSinkCommand, usageIndex, usageExecutable, usageOutput, reportJSON = "", "", "", "ai-rulez", "", false
+	usageLog, usageSinkCommand, usageIndex, telExecutable, telOutput, reportJSON = "", "", "", "ai-rulez", "", false
 	previousConfigDir := configDir
 	t.Cleanup(func() {
-		usageLog, usageSinkCommand, usageIndex, usageExecutable, usageOutput, reportJSON = "", "", "", "ai-rulez", "", false
+		usageLog, usageSinkCommand, usageIndex, telExecutable, telOutput, reportJSON = "", "", "", "ai-rulez", "", false
 		configDir = previousConfigDir
 	})
 }
@@ -27,14 +27,14 @@ func TestUsageHook_PrintsAndWritesTheTemplate(t *testing.T) {
 	resetUsageFlags(t)
 
 	var out bytes.Buffer
-	usageHookCmd.SetOut(&out)
-	require.NoError(t, usageHookCmd.RunE(usageHookCmd, nil))
+	telemetryHookCmd.SetOut(&out)
+	require.NoError(t, telemetryHookCmd.RunE(telemetryHookCmd, nil))
 	assert.True(t, json.Valid(out.Bytes()))
-	assert.Contains(t, out.String(), "ai-rulez usage record")
+	assert.Contains(t, out.String(), "ai-rulez telemetry record")
 
-	usageOutput = filepath.Join(t.TempDir(), "sub", "hooks.json")
-	require.NoError(t, usageHookCmd.RunE(usageHookCmd, nil))
-	written, err := os.ReadFile(usageOutput)
+	telOutput = filepath.Join(t.TempDir(), "sub", "hooks.json")
+	require.NoError(t, telemetryHookCmd.RunE(telemetryHookCmd, nil))
+	written, err := os.ReadFile(telOutput)
 	require.NoError(t, err)
 	assert.Contains(t, string(written), "UserPromptExpansion")
 }

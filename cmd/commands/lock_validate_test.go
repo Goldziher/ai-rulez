@@ -18,7 +18,7 @@ func TestLock_RefusesAnInvalidConfiguration(t *testing.T) {
 	cfgPath := filepath.Join(root, ".ai-rulez", "config.toml")
 	data, err := os.ReadFile(cfgPath)
 	require.NoError(t, err)
-	text := strings.Replace(string(data), `version = "4.0"`, `version = "4"`, 1)
+	text := strings.Replace(string(data), `version = "5.0"`, `version = "4"`, 1)
 	require.NotEqual(t, string(data), text, "the fixture sets a version to replace")
 	require.NoError(t, os.WriteFile(cfgPath, []byte(text), 0o644))
 

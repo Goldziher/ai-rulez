@@ -34,7 +34,9 @@ func ValidTelemetryProtocol(p string) bool {
 // needs AllowNetwork and an endpoint, and a repository config cannot grant
 // either (see internal/telemetry and docs/telemetry.md for the trust rule).
 type TelemetryConfig struct {
-	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
+	// Enabled is a pointer so the user config can say false explicitly: an
+	// explicit user-scope false beats a repository's true.
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
 	// AllowNetwork is the explicit consent for OTLP export. User scope only.
 	AllowNetwork bool `yaml:"allow_network,omitempty" json:"allow_network,omitempty" toml:"allow_network,omitempty"` //nolint:tagliatelle
 	// OTLPEndpoint is the collector base URL ("https://collector:4318"); for the
@@ -236,4 +238,26 @@ func ValidateTelemetryEnvName(name string) string {
 		return "looks like a literal credential, not an environment variable name (value hidden)"
 	}
 	return ""
+}
+
+// telemetryEnvPrefix starts every environment variable that configures telemetry.
+const telemetryEnvPrefix = "AI_RULEZ_TELEMETRY"
+
+// CheckRepoTelemetryEnv rejects a repository-declared environment entry (Claude
+// managed settings env, MCP server env) that would widen telemetry. Those entries
+// reach hook and server processes as real environment variables, which outrank
+// user config, so a repository could otherwise enable export and pick a
+// destination. Only entries that turn telemetry off are allowed.
+func CheckRepoTelemetryEnv(name, value string) error {
+	if !strings.HasPrefix(name, telemetryEnvPrefix) {
+		return nil
+	}
+	if name == telemetryEnvPrefix {
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "0", boolFalse, "no", "off":
+			return nil
+		}
+	}
+	return fmt.Errorf("%s may not be set from a repository config: telemetry settings are user scope "+
+		"(only %s=off is allowed)", name, telemetryEnvPrefix)
 }

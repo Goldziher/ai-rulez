@@ -6,6 +6,8 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/samber/oops"
 )
@@ -15,6 +17,13 @@ const (
 	maxFiles    = 50000
 	maxFileSize = 8 << 20
 )
+
+// maxTotalSize bounds the markdown Load keeps in memory across all files. A
+// variable so a test can lower it.
+var maxTotalSize int64 = 256 << 20
+
+// gitDir is the directory a bundle load, compare or prune never enters.
+const gitDir = ".git"
 
 // Concept is one non-reserved markdown file.
 type Concept struct {
@@ -50,7 +59,8 @@ func TitleFromPath(p string) string {
 	base := strings.TrimSuffix(path.Base(p), ".md")
 	words := strings.FieldsFunc(base, func(r rune) bool { return r == '-' || r == '_' || r == ' ' })
 	for i, w := range words {
-		words[i] = strings.ToUpper(w[:1]) + w[1:]
+		r, size := utf8.DecodeRuneInString(w)
+		words[i] = string(unicode.ToUpper(r)) + w[size:]
 	}
 	if len(words) == 0 {
 		return base
@@ -136,6 +146,7 @@ func Load(root fs.FS) (*Bundle, error) {
 		Logs: map[string]*LogDoc{}, Files: map[string]bool{}, Dirs: map[string]bool{"": true}, fsys: root,
 	}
 	count := 0
+	var total int64
 	err := fs.WalkDir(root, ".", func(p string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -144,7 +155,7 @@ func Load(root fs.FS) (*Bundle, error) {
 			return nil
 		}
 		if d.IsDir() {
-			if d.Name() == ".git" {
+			if d.Name() == gitDir {
 				return fs.SkipDir
 			}
 			b.Dirs[p] = true
@@ -172,6 +183,10 @@ func Load(root fs.FS) (*Bundle, error) {
 		if info.Size() > maxFileSize {
 			b.Problems = append(b.Problems, Problem{Path: p, Message: fmt.Sprintf("file is larger than %d bytes and was skipped", maxFileSize)})
 			return nil
+		}
+		total += info.Size()
+		if total > maxTotalSize {
+			return fmt.Errorf("bundle markdown is larger than %d bytes in total", maxTotalSize)
 		}
 		data, err := fs.ReadFile(root, p)
 		if err != nil {

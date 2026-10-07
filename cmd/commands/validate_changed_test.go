@@ -191,3 +191,46 @@ func TestChangedOnlyFollowsTransitiveDependents(t *testing.T) {
 	require.NoError(t, lint.Write(&sb, lint.FormatText, two, lint.WriteOptions{}))
 	assert.Contains(t, sb.String(), "changed-only since HEAD (depth 2)")
 }
+
+func TestChangedOnlyWithRepoRootNarrowerThanGitToplevel(t *testing.T) {
+	resetStrictFlags(t)
+	top := t.TempDir()
+	sub := filepath.Join(top, "services", "foo")
+	writeFile(t, filepath.Join(sub, ".ai-rulez", "config.toml"), validRootConfig)
+	writeFile(t, filepath.Join(sub, ".ai-rulez", "rules", "a.md"), brokenLinkRule)
+	writeFile(t, filepath.Join(sub, ".ai-rulez", "rules", "b.md"), strings.ReplaceAll(brokenLinkRule, "docs/missing.md", "docs/other.md"))
+	gitIn(t, top, "init", "-q")
+	gitIn(t, top, "add", "-A")
+	gitIn(t, top, "commit", "-q", "-m", "init")
+	writeFile(t, filepath.Join(sub, ".ai-rulez", "rules", "a.md"), brokenLinkRule+"\nedited\n")
+
+	validateRepoRoot = sub
+	t.Cleanup(func() { validateRepoRoot = "" })
+	require.NoError(t, applyRepoRoot())
+	validateChanged = true
+	cfg := loadStrictProject(t, sub)
+	report, err := strictLint(context.Background(), cfg)
+	require.NoError(t, err)
+	require.NoError(t, narrowToChanged([]*lint.Report{report}, []*config.Config{cfg}))
+
+	files := map[string]bool{}
+	for i := range report.Findings {
+		files[report.Findings[i].RepoPath()] = true
+	}
+	assert.True(t, files[".ai-rulez/rules/a.md"], "the changed file's finding must survive a narrow --repo-root: %v", files)
+	assert.False(t, files[".ai-rulez/rules/b.md"])
+}
+
+func TestChangedOnlyFailsClosedWhenRepoRootIsNotInGit(t *testing.T) {
+	resetStrictFlags(t)
+	outside := t.TempDir()
+	writeFile(t, filepath.Join(outside, "x.txt"), "x")
+	validateRepoRoot = outside
+	t.Cleanup(func() { validateRepoRoot = "" })
+	validateChanged = true
+
+	err := applyRepoRoot()
+
+	require.Error(t, err, "a change set that cannot be mapped must not pass vacuously")
+	assert.Contains(t, err.Error(), "not inside a git repository")
+}

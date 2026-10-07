@@ -15,7 +15,7 @@ const CodeImportInvalid = "AR210"
 const maxImportHops = 5
 
 func registerArImports(s *ruleSet) {
-	s.addRules(RuleInfo{CodeImportInvalid, "import-invalid", SeverityError, "an `@path` memory import points at a missing file, forms a cycle, or sits more than five hops deep, so Claude Code does not load it"})
+	s.addRules(RuleInfo{CodeImportInvalid, "import-invalid", SeverityError, "an `@path` memory import in a rule or context file points at a missing file, forms a cycle, or sits more than five hops deep, so Claude Code does not load it"})
 	s.addRunCheck(checkImports, AnalyzerReferences)
 }
 
@@ -76,7 +76,9 @@ func (r *runner) importsOfFile(abs string) []importRef {
 func checkImports(r *runner) {
 	for i := range r.items {
 		it := &r.items[i]
-		if !it.owned {
+		// Only memory files evaluate @imports; a skill, agent or command body
+		// is read as plain text, so an @path there loads nothing either way.
+		if !it.owned || (it.kind != kindRule && it.kind != kindContext) {
 			continue
 		}
 		d, ok := r.docs[it.abs]

@@ -121,7 +121,7 @@ func registerRuledocsAdded(s *ruleSet) {
 			Good: "Ship readable sources; keep binaries out of the skill",
 		},
 		CodeImportInvalid: {
-			Why:  "Claude Code does not load an `@path` import that is missing, cyclic or more than five hops deep.",
+			Why:  "Claude Code does not load an `@path` import in a memory file (a rule or context file) that is missing, cyclic or more than five hops deep.",
 			Bad:  "`@docs/missing.md`",
 			Good: "Point the import at an existing file and keep the chain short",
 		},
@@ -192,7 +192,7 @@ func registerRuledocsAdded(s *ruleSet) {
 		},
 		CodeServedReferencedStatically: {
 			Why:  "A static item that names a served skill points at a file the harness never gets.",
-			Bad:  "A rule saying \"run the `deploy` skill\" when `deploy` is served",
+			Bad:  "A rule saying \"run the `deploy` skill\", or an agent `skills: [deploy]`, when `deploy` is served",
 			Good: "Tell the agent to call `find_skill`, or make the skill static",
 		},
 		CodeDeliveryStubMissing: {

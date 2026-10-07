@@ -167,7 +167,7 @@ func TestIsolationText(t *testing.T) {
 
 func TestScannersListSeesThePresetAndProfiles(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[lint.scanner_policy]\npreset = \"strict\"\nrequired = [\"agnix\"]\n\n[[lint.external]]\nname = \"snyk\"\nprofile = \"snyk-agent-scan\"\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[lint.scanner_policy]\npreset = \"strict\"\nrequired = [\"agnix\"]\n\n[[lint.external]]\nname = \"snyk\"\nprofile = \"snyk-agent-scan\"\n")
 	chdir(t, root)
 	infos, err := loadScanners(t.Context(), nil)
 	require.NoError(t, err)

@@ -1,19 +1,165 @@
 # Migrating to v5
 
-This page lists every breaking change of v5 with the action it needs. The [changelog](CHANGELOG.md#unreleased) has
-the complete list of additions and fixes. The config format `version` stays `"4.0"`: a v4 `config.toml` loads
-unchanged. V2 and V3 configs are no longer read, and `ai-rulez migrate` is gone; see
-[V2 and V3 configs](#v2-and-v3-configs).
+This page collects the breaking changes of the v5 release and what `ai-rulez migrate v5` does about each. The
+detail of every change is in the [changelog](CHANGELOG.md).
 
-Run `ai-rulez doctor` first. It reports removed presets with a replacement, drifted outputs and generated paths
-git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rulez lock` once if you use a lock
-(see [Lock file and enforcement](#lock-file-and-enforcement)), and commit the sources, outputs and lock together.
+## Upgrade in four steps
 
-## Checklist
+1. Commit or stash your work, then preview: `ai-rulez migrate v5 --dry-run` prints the change list and writes nothing.
+2. Run `ai-rulez migrate v5`. It rewrites the project in place (add `--recursive` for a monorepo with several
+   `.ai-rulez/` directories). `--check` exits 2 while anything still needs migrating, for CI.
+3. Run `ai-rulez doctor`. It reports removed presets with a replacement, drifted outputs and generated paths git
+   does not ignore.
+4. Run `ai-rulez generate`, review the diff and commit the sources and outputs together.
+
+`migrate` only reads a **4.x** project. A 2.x or 3.x project must first be migrated to 4.0 with ai-rulez 4.x
+(`npx ai-rulez@4 migrate v4`), then with `ai-rulez migrate v5`. Every v5 command that meets an older version stops
+with one actionable error: 2.x and 3.x say "install ai-rulez 4.x to migrate it to 4.0, then run `ai-rulez migrate
+v5`", 4.x says "run `ai-rulez migrate v5`".
+
+## What `migrate v5` does
+
+| Rule | Rewrite |
+| ---- | ------- |
+| `version` | `version = "4.x"` becomes `version = "5.0"`, keeping the rest of the line (including a trailing comment). |
+| `convert-format` | A 4.x `config.yaml`, `config.yml` or `config.json` is converted to `config.toml` with keys, order and comments kept, and the old file is removed. The `$schema` key becomes `schema`. |
+| `lint-ratchet` | `[lint.budget]` and `[lint.tolerate]` are renamed `[lint.ratchet]` (per-rule finding counts). `[lint.budgets.<kind>]` (size limits) is unchanged. |
+| `preset-rename` | The `windsurf` preset becomes `devin` (outputs move from `.windsurf/` to `.devin/`, delete the old directory) and the removed `continue-dev` preset is dropped. With `--write`, `windsurf_model` in agent frontmatter becomes `devin_model`. |
+| `mcp-merge` | A legacy `mcp.toml`, `mcp.yaml` or `mcp.json` (4.x read the first of them) is folded into `[[mcp_servers]]` of `config.toml` and removed. When `config.toml` already defines `mcp_servers`, nothing is merged: the file is left in place and the report warns, so you can move the servers over by hand. |
+| `pin-default` | The three defaults v5 changes are pinned to their 4.x value so the generated output does not move: `agents_md = false`, `gitignore = true` and `[header] hashes = "full"`. Each pin carries a comment; delete the line to take the v5 default. A key you already set is never touched. |
+| `local-overlay` | `config.local.yaml`, `.yml` and `.json` become `config.local.toml` (mode 0600). |
+| `command-rename` | `ai-rulez usage ...` (`hook`, `record`, `feedback`, `export`, `prune`) and `ai-rulez report usage|evals` inside hook, verifier and script commands become `ai-rulez telemetry ...`. |
+| `frontmatter-alias` | The pre-4.24 frontmatter spellings `permission_mode` and `user_invocable` (Claude Code ignores them) become `permissionMode` and `user-invocable`. Without `--write` they are only reported; with it the markdown sources are rewritten. |
+
+Options:
+
+- `--dry-run`: compute and print the change list, write nothing.
+- `--check`: like `--dry-run`, and exit 2 when a project still needs migration (0 when none does).
+- `--adopt-defaults`: do not pin the 4.x defaults; take the v5 ones (`agents_md = true`, no managed `.gitignore`
+  block, content-only headers). Regenerate and review the diff.
+- `--write`: also rewrite frontmatter aliases in the `.ai-rulez` markdown sources.
+- `--recursive`: migrate every project found below the current directory.
+- `--format json`: a machine-readable report (`schema_version`, one entry per project with `status`, `changes`,
+  `warnings` and `error`).
+
+A migrated project is a fixed point: running `migrate v5` again changes nothing. The rewrite is text-level, so
+comments survive, and the result is decoded again before it is written; a file that would not load is reported and
+left alone. Exit codes: 0 migrated or nothing to do, 1 a project could not be migrated, 2 `--check` found work.
+
+YAML and JSON configs are not loaded in v5 (only `config.toml` is), so `migrate` converts a `config.yaml`,
+`config.yml` or `config.json` to `config.toml`; see below.
+
+## Breaking changes
+
+Each entry says what changed, what `migrate v5` does, and what remains for you.
+
+### Config format and files
+
+- **`version = "5.0"` is the only accepted config version.** A `4.x` config is rejected with
+  `run ai-rulez migrate v5`; `2.x`/`3.x` with the instruction to install ai-rulez 4.x first.
+  *Migrate:* rewrites the version.
+- **YAML and JSON configs are no longer loaded** (`config.yaml`, `config.yml`, `config.json`, the
+  `config.local.*` forms and the YAML or JSON form of `mcp.*`). Any command that finds one stops with `YAML and JSON
+  configs are no longer read ...: run ai-rulez migrate v5`. *Migrate:* converts them to TOML. The YAML frontmatter of
+  markdown content is unaffected.
+- **Separate `mcp.toml`, `mcp.yaml`, `mcp.json` files are no longer read.** *Migrate:* merges them into
+  `config.toml`. `ai-rules-mcp.schema.json` is removed.
+- **`init --format yaml|json` is removed**; `init` writes `config.toml`.
+- **`migrate v4` is removed.** `migrate` takes one target, `v5`.
+- **`[lint.budget]` is now `[lint.ratchet]`** (and `ratchet_exceeded` in the JSON report, `Over ratchet` in
+  Markdown). It never meant a size limit; `[lint.budgets.<kind>]` is. *Migrate:* renames the table.
+
+*Before:*
+
+```toml
+version = "4.0"
+
+[lint.budget]
+AR401 = 3
+```
+
+*After `ai-rulez migrate v5`:*
+
+```toml
+version = "5.0"
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+agents_md = false
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+gitignore = true
+
+[lint.ratchet]
+AR401 = 3
+
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[header]
+hashes = "full"
+```
+
+### Defaults
+
+- **`agents_md = true` by default.** `AGENTS.md` is the single canonical instruction file (root and nested
+  scopes); `CLAUDE.md` is a shim that imports `@AGENTS.md`; skills go to `.agents/skills` where the harness reads
+  them. Set `agents_md = false` for the old per-harness files. *Migrate:* pins `agents_md = false` unless you pass
+  `--adopt-defaults`.
+- **Generated headers carry only the per-file `Content-Hash`.** The project-wide `Source-Hash` line, which
+  rewrote every generated file on any edit, is gone by default. `[header] hashes = "full"` brings it back and
+  `"none"` drops both. *Migrate:* pins `hashes = "full"`.
+- **The managed `.gitignore` block is opt-in.** `gitignore` defaults to off, because committed outputs should not
+  flip-flop in and out of the ignore block. Machine-local outputs (`config.local.*`, `local/` content) are still
+  excluded automatically. `generate --gitignore` or `gitignore = true` turns the block on. *Migrate:* pins
+  `gitignore = true`.
+
+### Commands and flags
+
+- **`validate` runs the content checks by default.** What `validate --strict` did is now plain `validate`
+  (globs that match nothing, dead links, missing hooks, oversize content, the security rules). `--config-only`
+  keeps the old config-only behavior. `--strict` now means *warnings fail*, the same as `--fail-on warning`, as it
+  already did for `doctor` and `verifiers run`; it cannot be combined with `--config-only` or another `--fail-on`.
+  A CI job that ran `ai-rulez validate` and passed can now exit 2 on findings: fix them, lower a rule with
+  `[lint.severity]`, record them with `--update-baseline`, or pin the old check with `validate --config-only`.
+  Replace `validate --strict` by `validate` in scripts (keep `--strict` only when warnings should fail).
+- **`usage ...` and `report usage|evals` are folded into `telemetry ...`, with no aliases:**
+
+  | 4.x | 5.0 |
+  | --- | --- |
+  | `ai-rulez usage hook` | `ai-rulez telemetry hook` |
+  | `ai-rulez usage record` | `ai-rulez telemetry record` |
+  | `ai-rulez usage feedback` | `ai-rulez telemetry feedback` |
+  | `ai-rulez report usage <log>` | `ai-rulez telemetry report [log]` |
+  | `ai-rulez report evals` | `ai-rulez telemetry report evals` |
+
+  `telemetry record` handles skill loads and item loads in one command, so one hook block records both. Hook
+  blocks already written into `.claude/settings.json` by hand run the old command and must be regenerated with
+  `ai-rulez telemetry hook`. *Migrate:* rewrites the commands inside `config.toml` hooks and verifiers.
+- **One flag vocabulary.** `--json` / `-j` is gone everywhere: use `--format json` (`--format text` is the
+  default). `generate --no-fetch` / `-f` is now `--offline`, as on `mcp`. The confirmation skip of `clean` and of
+  `remove` / `domain remove` / `profile remove` / `include remove` / `skill remove` is now `--yes` / `-y`
+  (it was `--force`). `convert --force`, `eval run --force` and `import okf --force` (overwrite) are unchanged.
+- **Removed deprecated flags:** `generate --update-gitignore` (use `--gitignore`), `--no-configure-cli-mcp` / `-M`
+  and `--skip-cli-mcp` / `-S` (they had no effect).
+- **Exit codes follow one contract**: 0 ok, 1 the command could not run (or the configuration is invalid or an older
+  version), 2 findings or drift. See [the CLI reference](cli.md#exit-codes). `lock` keeps its documented codes.
+
+### Outputs
+
+- **`[[plugins]]` no longer writes `.claude/plugins.json` or `.codex/plugins.json`.** No tool read them. The table
+  is still accepted and `generate` warns that it has no effect. Use `[claude.settings] manage = true` with
+  `enable_plugins` for Claude Code and `[plugins."name@marketplace"] enabled = true` in `.codex/config.toml`
+  for Codex. *Migrate:* warns; delete the files it left behind.
+- **Every `--format json` document carries `schema_version`.** List commands (`list`, `domain list`,
+  `profile list`, `include list`, `skill list`, `builtins list`) and multi-profile `tokens` now return
+  `{"schema_version": 1, "items": [...]}` instead of a bare array. Schemas: `schema/validate-report`, `cost-report`,
+  `telemetry-doctor`, `eval-report`, `okf-validate`, `catalog`, `roles-manifest`, `lock-diff` and `convert-report`
+  (`*.schema.json`). A change to a document's shape bumps its `schema_version`.
+- **`ai-rulez.lock`, `[lock] enforce`, `http://` sources, `scan_imports`** and the trust model: see the sections
+  below.
+
+## Other changes
+
+The changes below came with the same release; none is touched by `migrate v5`.
 
 | Change | Action |
 | ------ | ------ |
-| V2/V3 configs are no longer read: `config.yaml`, `config.yml`, `config.json`, `config.local.yaml`/`.yml`/`.json`, `mcp.yaml`/`.toml`/`.json` and the flat `ai-rulez.yaml`; `migrate` and `init --format` are removed; `version = "3.0"` is rejected | Migrate with ai-rulez 4.x first (`npx ai-rulez@4 migrate v4`), then upgrade; see [V2 and V3 configs](#v2-and-v3-configs) |
 | Go module is `github.com/Goldziher/ai-rulez/v5` and the entry point is `cmd/ai-rulez` | `go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest`; update Go imports |
 | `windsurf` is renamed `devin`; `continue-dev` is removed | Rename or remove the preset, delete old outputs |
 | `[lock] enforce` is on whenever `ai-rulez.lock` exists | Commit a current lock, or set `enforce = false` |
@@ -25,15 +171,13 @@ git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rule
 | A committed config cannot reach outside the project | Move such paths to `config.local.toml` or the user config |
 | Symlinked content must resolve inside the project | Replace links that leave the project |
 | `scan_imports` is on by default | Fix findings, or set `scan_imports = "off"` |
-| `scan` runs only the `security` analyzer | Use `validate --strict` for the other findings |
+| `scan` runs only the `security` analyzer | Use `validate` for the other findings |
 | Claude MCP servers are written only to `.mcp.json` | None; `.claude/settings.json` loses `mcpServers` |
 | `[telemetry] service_name` is user scope only | Move it to the user config or the environment |
 | Eval results are signed per user | Use `eval run --force` in CI |
 | Usage log is version 3 | None; older logs still read |
 | `schema/catalog.schema.json` is catalog version 2 | Point validators of version 1 at `schema/catalog.v1.schema.json` |
 | `generate` warns about unknown config keys and new commands | Fix the keys; set `--yes` or `AI_RULEZ_ACK_COMMANDS=1` in CI |
-| `[lint.budget]` is renamed `[lint.tolerate]` | Rename; the old name still works and warns |
-| `--json` is deprecated for `--format json` | Switch scripts to `--format json` |
 | Staged scanners are confined under `isolation = "auto"` (the default) wherever a backend works | A scanner that writes outside its scratch directory now fails (`AR9E3`): point it at `TMPDIR`/`HOME`, or set `isolation = "none"`; see [Isolation](strict-validation.md#isolation) |
 | Custom preset and provider output paths are validated | Remove `..`, absolute and `.git` paths |
 | `lock` and `update` scan every remote tree they pin to something new | Fix error findings, or pass `--accept-findings` after reviewing them |
@@ -46,32 +190,6 @@ git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rule
 | Go APIs under `internal/` changed; `pkg/airulez` is the supported API | See [Go API](#go-api) |
 | The `compression` option is gone (it was a no-op since v3.13) | Delete it; a config that still sets it loads and `generate` warns about the unknown key, but `validate` and `generate --strict` fail |
 
-## V2 and V3 configs
-
-v5 reads one config format: `.ai-rulez/config.toml` (or `.config/ai-rulez/config.toml`) with its content tree,
-`config.local.toml` and the user `config.toml`. A project that holds only an older file stops with an error that names
-the file and exits `1`; `ai-rulez doctor` reports the same file. Nothing is converted for you in v5 (`ai-rulez migrate`
-exits `1` and prints the command below), so migrate before you upgrade:
-
-```bash
-# V3: .ai-rulez/config.yaml (or .yml / .json), config.local.*, mcp.yaml|toml|json
-npx ai-rulez@4 migrate v4
-
-# V2: a flat ai-rulez.yaml (also .ai-rulez.yaml, ai_rulez.yaml and the .yml forms)
-# move it to .ai-rulez/config.yaml first, then run the command above
-```
-
-Then upgrade to v5, run `ai-rulez generate` and commit `config.toml` with the outputs. The 4.x command writes
-`config.toml`, converts a `config.local.*` overlay to `config.local.toml` and folds a separate MCP file into
-`[[mcp_servers]]`. `version = "3.0"` is rejected with `version = "4.0"` as the fix. `ai-rulez init` always writes
-`config.toml`, so its `--format` flag is gone, and `init --from` writes TOML too. `convert` leaves a `config.yaml` it finds
-alone and reports it as `manual`.
-
-A V3 file nested in a subdirectory is reported by `generate --recursive` with the same error as a root one (it is not
-read), and the run exits `1`.
-
-The MCP `init_project` tool writes the same `config.toml` layout as `ai-rulez init` (it wrote a V2 `config.yaml`) and
-refuses to overwrite an existing configuration.
 
 ## `init --from`
 
@@ -89,17 +207,6 @@ report. Differences from v4:
 
 `convert --fetch`, new in v5, reads remote rulesync and APM sources over `https://` only; ssh, scp-style, `file://` and
 local sources are reported as `needs-action` instead of being cloned.
-
-## Go module path and install
-
-The Go module is now `github.com/Goldziher/ai-rulez/v5`, and the main package moved from `cmd/` to `cmd/ai-rulez`.
-Code that imports ai-rulez packages, or installs the CLI with `go install`, must use the new path:
-
-```bash
-go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest
-```
-
-The npm, PyPI and Homebrew distributions are unaffected.
 
 ## Presets
 
@@ -187,8 +294,7 @@ The npm, PyPI and Homebrew distributions are unaffected.
 - **An include that cannot be resolved is an error, with or without a lock.** Before, an unreachable remote include
   (no network, a deleted repository, no cached copy) was a warning and `validate`, `doctor`, `generate` and
   `generate --check` exited `0` while rendering without it. They now exit `1` and name the include. `--no-fetch`
-  keeps the old behaviour (a warning, the include skipped). An installed skill that cannot be resolved is an error
-  the same way: before, `generate` removed its outputs as stale and `generate --check` passed.
+  keeps the old behaviour (a warning, the include skipped).
 - **`[lock] enforce = true` is strict.** It makes `validate --strict` report `AR981` (source drift) and `AR982`
   (output drift), makes `generate --locked` fail on drift, and makes the skills server refuse a served skill that
   the lock does not pin or whose digest differs. A corrupt lock, a lock of another `version` or a source that cannot be
