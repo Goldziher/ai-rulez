@@ -1,6 +1,6 @@
 # LLM access
 
-`internal/llm.Client` is the one Go interface for reaching a language model, so the provider, the cost controls and the privacy rules live in one place. Its consumers are the rubric grader of `eval run`, `review --semantic`, `review calibrate`, `review fix` and `review explain`, the LLM-backed `[[verifiers]]`, the embeddings behind `search` (skill search index), and the diagnostics `llm doctor` (and its `--ping`) and the `llm` section of `ai-rulez doctor`.
+`internal/llm.Client` is the one Go interface for reaching a language model, so the provider, the cost controls and the privacy rules live in one place. Its consumers are the rubric grader of `eval run`, `review --semantic`, `review calibrate`, `review fix` and `review explain`, the LLM-backed `[[verifiers]]` and `verifiers suggest`, the `review-fix` adapter of `improve run`, the embeddings behind `search` (skill search index), and the diagnostics `llm doctor` (and its `--ping`) and the `llm` section of `ai-rulez doctor`.
 
 **Nothing calls a model unless you turn it on.** `allow_network` defaults to `false`; every call is refused with a message that names the setting.
 
