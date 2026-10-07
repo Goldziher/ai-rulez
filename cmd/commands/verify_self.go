@@ -37,7 +37,8 @@ func checkVerifySelfFlags(cmd *cobra.Command) error {
 
 // runVerifySelf verifies the ai-rulez binary at exe against the Sigstore bundle
 // of its release, offline. Exit codes: 0 official build, 1 the check could not
-// run, 2 verification failed.
+// run, 2 verification failed. A missing bundle or trusted root is 1: nothing was
+// verified, and nothing was found wrong.
 func runVerifySelf(exe string, env ambient.Env, out io.Writer) int {
 	if exe == "" {
 		var err error
@@ -53,7 +54,11 @@ func runVerifySelf(exe string, env ambient.Env, out io.Writer) int {
 	})
 	if err != nil {
 		if signing.CodeOf(err) != "" {
-			return reportAttestation(out, artifactFailure(signing.SubjectRelease, verifyAttFile, err), now)
+			code := reportAttestation(out, artifactFailure(signing.SubjectRelease, verifyAttFile, err), now)
+			if cannotVerify(signing.CodeOf(err)) {
+				return 1 // no bundle or no trusted root is "could not check", not a verdict on the binary
+			}
+			return code
 		}
 		fmtError(err)
 		return 1
@@ -63,6 +68,12 @@ func runVerifySelf(exe string, env ambient.Env, out io.Writer) int {
 		fmt.Fprintf(out, "%s is an official ai-rulez build.\n", exe)
 	}
 	return reportAttestation(out, res, now)
+}
+
+// cannotVerify reports the codes that mean the check had nothing to verify
+// against (no bundle, no trusted root) rather than that the binary failed it.
+func cannotVerify(code string) bool {
+	return code == signing.CodeMissing || code == signing.CodeRootUnavailable
 }
 
 // selfExecutable is the path of the running binary with symlinks resolved, so a
