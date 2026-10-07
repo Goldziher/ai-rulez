@@ -97,7 +97,7 @@ func tomlFieldKeys(t reflect.Type) map[string]reflect.Type {
 		}
 		if strings.Contains(opts, "inline") || (f.Anonymous && name == "") {
 			ft := f.Type
-			for ft.Kind() == reflect.Ptr {
+			for ft.Kind() == reflect.Pointer {
 				ft = ft.Elem()
 			}
 			if ft.Kind() == reflect.Struct {
@@ -118,7 +118,7 @@ func tomlFieldKeys(t reflect.Type) map[string]reflect.Type {
 // walkTOMLType checks every key of t against node and recurses into nested
 // structs, slices of structs and maps of structs.
 func walkTOMLType(d schemaDoc, t reflect.Type, node map[string]any, path string, stack map[reflect.Type]bool, missing *[]string) {
-	for t.Kind() == reflect.Ptr || t.Kind() == reflect.Slice || t.Kind() == reflect.Array || t.Kind() == reflect.Map {
+	for t.Kind() == reflect.Pointer || t.Kind() == reflect.Slice || t.Kind() == reflect.Array || t.Kind() == reflect.Map {
 		if t.Kind() == reflect.Map || t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
 			child, ok := d.child(node)
 			if !ok {
