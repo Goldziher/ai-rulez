@@ -134,6 +134,28 @@ tasks:
     cmds:
       - go test ./tests/platform/...
 
+  test:bats:
+    desc: "Run the Bats suites for shell scripts (usage: task test:bats -- [bats args or suite path])"
+    cmds:
+      # run.sh sets BATS_LIB_PATH=tests/lib (bats_load_library searches nothing else) and builds
+      # ai-rulez once for the suites that render scripts through the binary.
+      - scripts/bats/run.sh {{.CLI_ARGS}}
+
+  test:lib:sync:
+    desc: "Refresh tests/lib/xberg-bats from xberg-io/actions (task test:lib:sync -- --ref v1 re-pins)"
+    cmds:
+      - scripts/bats/sync-xberg-bats.sh {{.CLI_ARGS}}
+
+  test:lib:check:
+    desc: "Fail when tests/lib/xberg-bats has drifted from the pinned xberg-io/actions commit"
+    cmds:
+      - scripts/bats/sync-xberg-bats.sh --check
+
+  lint:bats:
+    desc: "Format-check and lint the Bats suites (poly has no engine for .bats)"
+    cmds:
+      - scripts/bats/lint.sh
+
   test:benchmark:
     desc: "Run Go benchmarks"
     cmds:
