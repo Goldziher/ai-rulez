@@ -83,7 +83,7 @@ func withoutManagedBlock(content string) string {
 // missing or failing), so callers fall back to adding everything.
 func (g *Generator) userIgnoreRules(probes []string) map[string]gitutil.IgnoreMatch {
 	rootRel := ".gitignore"
-	if prefix := gitutil.RepoRelative(g.git().TopLevel(g.config.BaseDir), g.config.BaseDir); prefix != "" && prefix != "." {
+	if prefix := gitutil.RepoRelative(g.git().TopLevelContext(g.ctx, g.config.BaseDir), g.config.BaseDir); prefix != "" && prefix != "." {
 		rootRel = prefix + "/.gitignore"
 	}
 	begin, end := g.excludeMarkers()
@@ -101,9 +101,9 @@ func (g *Generator) userIgnoreRules(probes []string) map[string]gitutil.IgnoreMa
 	var rules map[string]gitutil.IgnoreMatch
 	var err error
 	if g.hasOwnIgnoreBlock(begin) {
-		rules, err = g.git().IgnoreRulesMirrored(g.config.BaseDir, probes, rewrite)
+		rules, err = g.git().IgnoreRulesMirroredContext(g.ctx, g.config.BaseDir, probes, rewrite)
 	} else {
-		rules, err = g.git().IgnoreRules(g.config.BaseDir, probes)
+		rules, err = g.git().IgnoreRulesContext(g.ctx, g.config.BaseDir, probes)
 	}
 	if err != nil {
 		g.log().Debug("Could not ask git about ignore rules; adding every entry", "error", err)
@@ -120,7 +120,7 @@ func (g *Generator) hasOwnIgnoreBlock(excludeBegin string) bool {
 			return true
 		}
 	}
-	if exclude := g.git().InfoExcludePath(g.config.BaseDir); exclude != "" {
+	if exclude := g.git().InfoExcludePathContext(g.ctx, g.config.BaseDir); exclude != "" {
 		fallbackBegin, _ := gitignore.FallbackMarkers(g.config.BaseDir)
 		if data, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), exclude); err == nil &&
 			(strings.Contains(string(data), excludeBegin) || strings.Contains(string(data), fallbackBegin)) {

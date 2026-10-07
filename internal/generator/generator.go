@@ -71,7 +71,7 @@ type Generator struct {
 	linkedOutputs  map[string]bool
 
 	// Machine-local overlay handling (see local_drift.go).
-	ctx             context.Context // caller's context for the baseline load (nil means Background)
+	ctx             context.Context // caller's context (SetContext); NewGenerator starts it at Background
 	allowLocalDrift bool            // write merged output even when it drifts from the shared baseline
 	lenientMCP      bool            // tolerate unresolved MCP placeholders (baseline renders)
 	plan            *localPlan      // baseline comparison for this run; nil without local inputs
@@ -176,6 +176,7 @@ func NewGenerator(cfg *config.Config) *Generator {
 	}
 	return &Generator{
 		config: cfg,
+		ctx:    context.Background(),
 	}
 }
 
@@ -451,7 +452,7 @@ func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error
 	}
 	if g.config.Plugin.ContentRoot != "" {
 		contentDir := filepath.Join(g.config.BaseDir, g.config.Plugin.ContentRoot)
-		contentTree, err = config.ScanContentTreeIn(g.context(), g.config.ViewFor(contentDir), contentDir)
+		contentTree, err = config.ScanContentTreeIn(g.ctx, g.config.ViewFor(contentDir), contentDir)
 		if err != nil {
 			return nil, oops.With("content_root", g.config.Plugin.ContentRoot).Wrapf(err, "scan plugin content")
 		}
@@ -661,7 +662,7 @@ func (g *Generator) collectMemberOutputs(member string) ([]config.OutputFile, pl
 	if g.config.Workspace != nil {
 		loadOpts = append(loadOpts, config.WithWorkspace(g.config.Workspace))
 	}
-	memberCfg, err := config.LoadConfig(g.context(), memberDir, loadOpts...)
+	memberCfg, err := config.LoadConfig(g.ctx, memberDir, loadOpts...)
 	if err != nil {
 		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "load monorepo member config")
 	}
@@ -2671,7 +2672,7 @@ func (g *Generator) readManifest(path string) generatedManifest {
 // ignored: a repository can commit that file with forged claims and digests, and
 // .gitignore does not stop a tracked one. It warns once per Generator.
 func (g *Generator) localManifestUntrusted() bool {
-	reason := g.git().UntrustedLocalFile(g.localManifestPath())
+	reason := g.git().UntrustedLocalFileContext(g.ctx, g.localManifestPath())
 	if _, committed := workspace.CommitOf(g.config.Workspace); committed && reason == "" {
 		// A commit holds whatever its author chose: a machine-local record found
 		// there was committed, not written by this machine.
@@ -2705,7 +2706,7 @@ func (g *Generator) localManifestFix(reason string) string {
 // run never writes claims into such a file: a hostile repository could have
 // pre-filled it, and the write would turn into a tracked change.
 func (g *Generator) localManifestTracked() bool {
-	if !g.git().IsTracked(g.localManifestPath()) {
+	if !g.git().IsTrackedContext(g.ctx, g.localManifestPath()) {
 		return false
 	}
 	g.warnOnce("Not writing "+g.localManifestRel()+": git tracks it, and it must stay machine-local",
@@ -3453,7 +3454,7 @@ func coversCommitted(dirPattern string, committed []string) bool {
 // named after local content are excluded per clone and stay in .git/info/exclude,
 // which such a run leaves alone; only outside a repository do they need the block.
 func (g *Generator) skippedLocalPattern(rel string) string {
-	if stableLocalName(rel) || g.git().InfoExcludePath(g.config.BaseDir) == "" {
+	if stableLocalName(rel) || g.git().InfoExcludePathContext(g.ctx, g.config.BaseDir) == "" {
 		return localGitignorePattern(g.config.RulesDirs, rel)
 	}
 	return ""

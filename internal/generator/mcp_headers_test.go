@@ -132,7 +132,7 @@ func TestComputeSourceHash_RedactsSecretHeaders(t *testing.T) {
 				},
 			},
 		}
-		require.NoError(t, (&Generator{config: cfg}).resolveMCPEnv())
+		require.NoError(t, (&Generator{ctx: t.Context(), config: cfg}).resolveMCPEnv())
 		return cfg
 	}
 
@@ -179,7 +179,7 @@ func TestResolveMCPEnv_KeepsSecretKeysAcrossPasses(t *testing.T) {
 			},
 		},
 	}
-	gen := &Generator{config: cfg}
+	gen := &Generator{ctx: t.Context(), config: cfg}
 
 	require.NoError(t, gen.resolveMCPEnv())
 	require.NoError(t, gen.resolveMCPEnv())

@@ -97,7 +97,7 @@ func TestGeneratorSetHostOverridesTheConfigHost(t *testing.T) {
 
 	// Act
 	g.SetHost(ambient.Host{Runner: fake, Env: ambient.MapEnv{Vars: map[string]string{"HOST_TEST_TOKEN": "x"}}})
-	_, _ = g.git().IsRepo(dir), g.git().TopLevel(dir)
+	_, _ = g.git().IsRepoContext(g.ctx, dir), g.git().TopLevelContext(g.ctx, dir)
 
 	// Assert
 	assert.Len(t, fake.Calls(), 2, "git questions go through the injected runner")

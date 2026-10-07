@@ -67,15 +67,14 @@ type localViolation struct {
 // env, headers) may be written into files that are tracked by git.
 func (g *Generator) SetAllowLocalDrift(allow bool) { g.allowLocalDrift = allow }
 
-// SetContext sets the context used for the shared-baseline load, so a caller's
-// cancellation and offline-include request (config.WithOfflineIncludes) apply to it.
-func (g *Generator) SetContext(ctx context.Context) { g.ctx = ctx }
-
-func (g *Generator) context() context.Context {
-	if g.ctx != nil {
-		return g.ctx
+// SetContext sets the context the generator runs under: the shared-baseline
+// load and every git probe, so a caller's cancellation and offline-include
+// request (config.WithOfflineIncludes) apply to them. A nil ctx keeps the
+// current one (Background from NewGenerator).
+func (g *Generator) SetContext(ctx context.Context) {
+	if ctx != nil {
+		g.ctx = ctx
 	}
-	return context.Background()
 }
 
 // outputIndex maps relative path to output for files (directories skipped).
@@ -141,7 +140,7 @@ func (g *Generator) renderBaseline(profile string) ([]config.OutputFile, string,
 		return nil, "", oops.Errorf("the config file location is unknown")
 	}
 	cfgPath := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
-	cfg, err := config.LoadConfigFromFile(g.context(), cfgPath,
+	cfg, err := config.LoadConfigFromFile(g.ctx, cfgPath,
 		g.config.ReloadOptions(config.WithoutLocal(), config.WithHost(g.host()))...)
 	if err != nil {
 		return nil, "", err //nolint:wrapcheck // wrapped by planLocal
@@ -347,7 +346,7 @@ func stripURLCredentials(value string) string {
 // ones count for them. When git cannot answer, every candidate counts as tracked.
 func (g *Generator) findViolations(plan *localPlan, merged []config.OutputFile) []localViolation {
 	candidates := append(append([]string(nil), plan.localOnly...), plan.drift...)
-	tracked, err := g.git().TrackedAmong(g.config.BaseDir, candidates)
+	tracked, err := g.git().TrackedAmongContext(g.ctx, g.config.BaseDir, candidates)
 	failClosed := err != nil
 	if failClosed {
 		g.log().Warn("Could not ask git which files are tracked; treating local outputs as tracked", "error", err)
@@ -392,7 +391,7 @@ func (g *Generator) ignoredSet(rels, pending []string) map[string]bool {
 	if len(rels) == 0 {
 		return ignored
 	}
-	byGit, err := g.git().IgnoredAmong(g.config.BaseDir, rels)
+	byGit, err := g.git().IgnoredAmongContext(g.ctx, g.config.BaseDir, rels)
 	if err != nil {
 		g.log().Warn("Could not ask git which files are ignored; using the built-in matcher", "error", err)
 	}
@@ -475,7 +474,7 @@ func (g *Generator) excludeMarkers() (begin, end string) {
 // managed .gitignore block. plan may be nil: a run with no local inputs removes
 // a block left by an earlier run.
 func (g *Generator) syncMachineExcludes(plan *localPlan) error {
-	exclude := g.git().InfoExcludePath(g.config.BaseDir)
+	exclude := g.git().InfoExcludePathContext(g.ctx, g.config.BaseDir)
 	if exclude == "" {
 		if plan != nil && len(plan.machineLocal) > 0 {
 			for rel := range plan.machineLocal {
@@ -486,7 +485,7 @@ func (g *Generator) syncMachineExcludes(plan *localPlan) error {
 		return nil
 	}
 
-	top := g.git().TopLevel(g.config.BaseDir)
+	top := g.git().TopLevelContext(g.ctx, g.config.BaseDir)
 	var patterns []string
 	if plan != nil {
 		for rel := range plan.machineLocal {

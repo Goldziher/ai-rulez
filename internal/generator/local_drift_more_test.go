@@ -434,8 +434,8 @@ func TestBaselineLoad_HonoursTheCallersContext(t *testing.T) {
 
 	// Act: the baseline render itself does not fail on a canceled context for
 	// local content, so assert the context is the one the generator holds.
-	assert.Equal(t, ctx, gen.context())
-	assert.Equal(t, context.Background(), NewGenerator(p.load(t)).context())
+	assert.Equal(t, ctx, gen.ctx)
+	assert.Equal(t, context.Background(), NewGenerator(p.load(t)).ctx)
 }
 
 func mustJSONString(t *testing.T, v any) string {
