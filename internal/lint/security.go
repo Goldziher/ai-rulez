@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -44,7 +45,8 @@ var injectionPhrases = []*regexp.Regexp{
 }
 
 var (
-	htmlCommentRe  = regexp.MustCompile(`(?s)<!--(.*?)-->`)
+	// An unclosed <!-- runs to the end of the file in CommonMark, so it hides text too.
+	htmlCommentRe  = regexp.MustCompile(`(?s)<!--(.*?)(?:-->|\z)`)
 	imperativeRe   = regexp.MustCompile(`(?i)\b(?:curl|wget|eval|sudo|exfiltrate|secretly|silently|execute)\b|\brun\s*:`)
 	pipeToShellRe  = regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?(?:ba|z|da|k)?sh\b`)
 	pipeToInterpRe = regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+)?(?:python3?|perl|ruby|node)\b`)
@@ -72,6 +74,46 @@ var hiddenRunes = map[rune]string{
 	0x202A: "LEFT-TO-RIGHT EMBEDDING", 0x202B: "RIGHT-TO-LEFT EMBEDDING", 0x202C: "POP DIRECTIONAL FORMATTING",
 	0x202D: "LEFT-TO-RIGHT OVERRIDE", 0x202E: "RIGHT-TO-LEFT OVERRIDE",
 	0x2066: "LEFT-TO-RIGHT ISOLATE", 0x2067: "RIGHT-TO-LEFT ISOLATE", 0x2068: "FIRST STRONG ISOLATE", 0x2069: "POP DIRECTIONAL ISOLATE",
+	// Default-ignorable or blank-rendering characters an invisible payload can hide in.
+	0x034F: "COMBINING GRAPHEME JOINER", 0x061C: "ARABIC LETTER MARK", 0x115F: "HANGUL CHOSEONG FILLER", 0x1160: "HANGUL JUNGSEONG FILLER",
+	0x17B4: "KHMER VOWEL INHERENT AQ", 0x17B5: "KHMER VOWEL INHERENT AA", 0x180B: "MONGOLIAN FREE VARIATION SELECTOR ONE",
+	0x180C: "MONGOLIAN FREE VARIATION SELECTOR TWO", 0x180D: "MONGOLIAN FREE VARIATION SELECTOR THREE",
+	0x2028: "LINE SEPARATOR", 0x2029: "PARAGRAPH SEPARATOR", 0x2800: "BRAILLE PATTERN BLANK",
+	0x3164: "HANGUL FILLER", 0xFFA0: "HALFWIDTH HANGUL FILLER",
+}
+
+// hiddenName names a hidden code point, including the ranges: the deprecated
+// formatting characters U+206A to U+206F and the variation selectors.
+func hiddenName(c rune) (string, bool) {
+	switch {
+	case c >= 0x206A && c <= 0x206F:
+		return "DEPRECATED FORMAT CHARACTER", true
+	case isVariationSelector(c):
+		return "VARIATION SELECTOR", true
+	}
+	name, ok := hiddenRunes[c]
+	return name, ok
+}
+
+func isVariationSelector(c rune) bool {
+	return (c >= 0xFE00 && c <= 0xFE0F) || (c >= 0xE0100 && c <= 0xE01EF)
+}
+
+// variationIsLegitimate accepts the one selector that modifies the character
+// before it: after a symbol or a keycap base (emoji presentation), or after a
+// CJK ideograph. A selector after a letter, or one in a run, can carry a payload.
+func variationIsLegitimate(runes []rune, i int) bool {
+	if i == 0 || (i+1 < len(runes) && isVariationSelector(runes[i+1])) || isVariationSelector(runes[i-1]) {
+		return false
+	}
+	prev := runes[i-1]
+	switch {
+	case unicode.IsSymbol(prev), unicode.Is(unicode.Han, prev):
+		return true
+	case prev == '#' || prev == '*' || (prev >= '0' && prev <= '9'):
+		return i+1 < len(runes) && runes[i+1] == 0x20E3
+	}
+	return false
 }
 
 // isTagRune reports a Unicode tag character (U+E0000 to U+E007F), which can
@@ -137,7 +179,7 @@ func hiddenIn(line string, firstLine bool) []string {
 	seen := map[rune]bool{}
 	var found []string
 	for i, c := range runes {
-		name, hidden := hiddenRunes[c]
+		name, hidden := hiddenName(c)
 		if !hidden && !isTagRune(c) {
 			continue
 		}
@@ -145,6 +187,9 @@ func hiddenIn(line string, firstLine bool) []string {
 			continue // a byte order mark
 		}
 		if (c == 0x200C || c == 0x200D) && joinerIsLegitimate(runes, i) {
+			continue
+		}
+		if isVariationSelector(c) && variationIsLegitimate(runes, i) {
 			continue
 		}
 		if seen[c] {
@@ -225,15 +270,19 @@ func hasLetterAndDigit(s string) bool {
 	return letter && digit
 }
 
+// injectionRes is the built-in and configured injection phrases, compiled once per run.
 func (r *runner) injectionRes() []*regexp.Regexp {
-	ruleTables() // a family adds its phrases when the registry is built
-	res := injectionPhrases
-	for _, p := range r.security().InjectionPhrases {
-		if p = strings.TrimSpace(p); p != "" {
-			res = append(res[:len(res):len(res)], regexp.MustCompile(`(?i)`+regexp.QuoteMeta(p)))
+	r.injOnce.Do(func() {
+		ruleTables() // a family adds its phrases when the registry is built
+		res := injectionPhrases
+		for _, p := range r.security().InjectionPhrases {
+			if p = strings.TrimSpace(p); p != "" {
+				res = append(res[:len(res):len(res)], regexp.MustCompile(`(?i)`+regexp.QuoteMeta(p)))
+			}
 		}
-	}
-	return res
+		r.injRes = res
+	})
+	return r.injRes
 }
 
 func (r *runner) scanInjection(abs string, no int, line string) {
@@ -248,6 +297,7 @@ func (r *runner) scanInjection(abs string, no int, line string) {
 // scanComments reports HTML comments that carry instruction-like text; such a
 // comment is invisible in rendered markdown but is read by the model.
 func (r *runner) scanComments(abs, raw string) {
+	line, from := 1, 0 // matches come in order, so count newlines once across the text
 	for _, m := range htmlCommentRe.FindAllStringSubmatchIndex(raw, -1) {
 		body := raw[m[2]:m[3]]
 		if strings.Contains(body, "ai-rulez-lint-ignore") {
@@ -260,7 +310,8 @@ func (r *runner) scanComments(abs, raw string) {
 			}
 		}
 		if suspicious {
-			line := strings.Count(raw[:m[0]], "\n") + 1
+			line += strings.Count(raw[from:m[0]], "\n")
+			from = m[0]
 			r.add(CodeCommentInstruction, abs, line, "HTML comment contains instruction-like text the reader will not see")
 		}
 	}
