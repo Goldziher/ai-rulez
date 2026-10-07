@@ -91,9 +91,15 @@ func TestWatch_ReloadsWhenThePolicyFileChanges(t *testing.T) {
 func TestTakeServedDenials_TakesOnlyViolationsNamingAServedPin(t *testing.T) {
 	const digest = "sha256:aaaa"
 	lock := &lockfile.File{Served: []lockfile.Entry{{Name: "core", Digest: digest}}}
-	served := config.PolicyViolation{Code: lint.CodeDigestDenied, Message: `served skill "core": ai-rulez.lock pins sha256:aaaa, which the policy denies (origin: flag)`}
-	include := config.PolicyViolation{Code: lint.CodeDigestDenied, Message: `include "shared": ai-rulez.lock pins sha256:aaaa, which the policy denies (origin: flag)`}
-	otherName := config.PolicyViolation{Code: lint.CodeDigestDenied, Message: `served skill "kit": ai-rulez.lock pins sha256:aaaa, which the policy denies (origin: flag)`}
+	served := config.PolicyViolation{Code: lint.CodeDigestDenied, Message: `served skill "core": ai-rulez.lock pins sha256:aaaa, which the policy denies (origin: flag)`,
+		Subject: &config.PolicySubject{Kind: lockfile.KindServed, Name: "core", Digest: digest}}
+	include := config.PolicyViolation{Code: lint.CodeDigestDenied, Message: `include "shared": ai-rulez.lock pins sha256:aaaa, which the policy denies (origin: flag)`,
+		Subject: &config.PolicySubject{Kind: lockfile.KindInclude, Name: "shared", Digest: digest}}
+	otherName := config.PolicyViolation{Code: lint.CodeDigestDenied, Message: `served skill "kit": ai-rulez.lock pins sha256:aaaa, which the policy denies (origin: flag)`,
+		Subject: &config.PolicySubject{Kind: lockfile.KindServed, Name: "kit", Digest: digest}}
+	otherView := config.PolicyViolation{Code: lint.CodeDigestDenied, Message: served.Message,
+		Subject: &config.PolicySubject{Kind: lockfile.KindServed, Name: "core", Domain: "role:dev", Digest: digest}}
+	noSubject := config.PolicyViolation{Code: lint.CodeDigestDenied, Message: served.Message}
 	tests := []struct {
 		name       string
 		outcome    *config.PolicyOutcome
@@ -103,6 +109,8 @@ func TestTakeServedDenials_TakesOnlyViolationsNamingAServedPin(t *testing.T) {
 		{name: "served pin is taken", outcome: &config.PolicyOutcome{Violations: []config.PolicyViolation{served}}, wantDenied: map[string]string{digest: served.Message}, wantKept: 0},
 		{name: "include stays a load failure", outcome: &config.PolicyOutcome{Violations: []config.PolicyViolation{served, include}}, wantDenied: map[string]string{digest: served.Message}, wantKept: 1},
 		{name: "a name the lock does not pin is kept", outcome: &config.PolicyOutcome{Violations: []config.PolicyViolation{otherName}}, wantKept: 1},
+		{name: "a view the lock does not pin is kept", outcome: &config.PolicyOutcome{Violations: []config.PolicyViolation{otherView}}, wantKept: 1},
+		{name: "the message alone never matches", outcome: &config.PolicyOutcome{Violations: []config.PolicyViolation{noSubject}}, wantKept: 1},
 		{name: "no policy", outcome: nil},
 	}
 	for _, tt := range tests {
