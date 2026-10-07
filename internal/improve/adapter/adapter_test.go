@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -175,7 +176,9 @@ func TestReviewFix_WritesAVerifiedFixAndKeepsTheMode(t *testing.T) {
 	assert.Contains(t, string(data), "description: "+fixedDesc)
 	info, err := os.Stat(path)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+	if runtime.GOOS != "windows" { // Windows reports 0666 for every writable file: it has no permission bits to keep
+		assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+	}
 	assert.Contains(t, sm.models, "fixer-model", "the fixer is called with its own model")
 	assert.Contains(t, sm.models, "", "the judge keeps the client default model, the configured judge")
 }
