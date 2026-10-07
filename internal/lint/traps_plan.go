@@ -18,7 +18,7 @@ import (
 
 // The frontmatter-first and json-key-required-if predicates, the Kiro traps
 // (AR9C5, AR9C6), project-defined trap rows (AR9CA) and the safe fix of a
-// misspelt key.
+// misspelled key.
 //
 // The traps read the files on disk, except for a file a run would write, which they
 // read from the plan (PlannedFiles): the generator imports this package, so a trap
@@ -280,7 +280,7 @@ func (t *Trap) validateProject() string {
 		}
 	case predKeyMisspelt:
 		if len(t.Predicate.Canonical) == 0 {
-			return "key-misspelt needs canonical"
+			return "key-misspelt needs canonical" //nolint:misspell // names the traps.toml predicate
 		}
 	case predNameSuffixRequired:
 		if t.Predicate.Suffix == "" {

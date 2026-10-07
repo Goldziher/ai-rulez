@@ -3,7 +3,7 @@ package lint
 // Codes of the `ai-rulez improve` report (internal/improve, docs/improve.md).
 // They are registered here so `validate --explain AR9J3` works and the
 // allocation of the AR9 blocks is checked in one place; `validate` emits only
-// AR9J6 (a repository [improve] table `improve run` will not honour). TestAllocatedBlocksCoverLiteralsInOtherPackages keeps them equal to the
+// AR9J6 (a repository [improve] table `improve run` will not honor). TestAllocatedBlocksCoverLiteralsInOtherPackages keeps them equal to the
 // constants in internal/improve.
 const (
 	CodeImproveRunStale             = "AR9J1"
