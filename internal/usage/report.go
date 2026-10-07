@@ -3,8 +3,9 @@ package usage
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"sort"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 
 	"github.com/samber/oops"
 )

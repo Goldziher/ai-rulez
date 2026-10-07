@@ -9,7 +9,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
@@ -67,7 +66,7 @@ func (op *OperatorImpl) AddProfile(ctx context.Context, name string, domains []s
 			Wrapf(err, "save config")
 	}
 
-	logger.Info(
+	op.logger().Info(
 		"Profile added successfully",
 		"name", name,
 		"domains", len(domains),
@@ -170,7 +169,7 @@ func (op *OperatorImpl) RemoveProfile(ctx context.Context, name string) error {
 			Wrapf(err, "save config")
 	}
 
-	logger.Info("Profile removed successfully", "name", name)
+	op.logger().Info("Profile removed successfully", "name", name)
 
 	return nil
 }
@@ -218,7 +217,7 @@ func (op *OperatorImpl) SetDefaultProfile(ctx context.Context, name string) erro
 			Wrapf(err, "save config")
 	}
 
-	logger.Info("Default profile set successfully", "name", name)
+	op.logger().Info("Default profile set successfully", "name", name)
 
 	return nil
 }

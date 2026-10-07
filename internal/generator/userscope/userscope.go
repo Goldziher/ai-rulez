@@ -111,6 +111,9 @@ func ResolveFor(cfg *config.Config, preset, home string, getenv func(string) str
 	if global == nil {
 		return nil, &UnsupportedError{preset, "no vendor-documented user-level location is declared for it"}
 	}
+	if global.IgnoredHomeValue != "" {
+		cfg.Warn("ignoring relative home override; using the home directory", "env", global.IgnoredHomeEnv, "value", global.IgnoredHomeValue)
+	}
 	if reason := unsafeRelocation(global, home); reason != "" {
 		return nil, &UnsupportedError{preset, reason}
 	}

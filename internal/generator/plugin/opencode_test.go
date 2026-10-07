@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/opencodev1"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -59,12 +62,13 @@ func TestRenderOpenCodeWarnsOnV1AuthoredSource(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			opencodev1.ResetWarned()
 			root := t.TempDir()
 			source := filepath.Join(root, openCodeSourcePath)
 			require.NoError(t, os.MkdirAll(filepath.Dir(source), 0o755))
 			require.NoError(t, os.WriteFile(source, []byte(tt.source), 0o644))
-			m := &Manifest{Name: "test-plugin", Version: "1.2.3", SourceDir: root}
+			rec := &testutil.LogRecorder{}
+			m := &Manifest{Name: "test-plugin", Version: "1.2.3", SourceDir: root,
+				Config: &config.Config{Diag: diag.New(nil), Host: ambient.Host{Log: rec}}}
 
 			// Act
 			outputs, err := renderOpenCode(m, "/out")
@@ -72,7 +76,7 @@ func TestRenderOpenCodeWarnsOnV1AuthoredSource(t *testing.T) {
 			// Assert: generation still succeeds and copies the file verbatim.
 			require.NoError(t, err)
 			assert.Equal(t, tt.source, string(outputs[0].RawContent))
-			assert.Equal(t, tt.wantWarned, opencodev1.WasWarned(source))
+			assert.Equal(t, tt.wantWarned, strings.Contains(rec.String(), source), rec.String())
 		})
 	}
 }

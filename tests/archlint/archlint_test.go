@@ -33,6 +33,12 @@ var forbidden = map[string][]string{
 	},
 	"time":    {"Now", "Since", "Until"},
 	"os/exec": {"Command", "CommandContext", "LookPath"},
+	// The process-wide logger functions. A library package reports through the
+	// logger of its host (config.Log, ambient.Host.Logger, a logger.Logger it was
+	// given or logger.FromContext); logger.Std, Or and Discard are not listed.
+	"github.com/Goldziher/ai-rulez/v5/internal/logger": {
+		"Debug", "Info", "Warn", "Error", "LogError", "Success", "Get", "SetLevel",
+	},
 }
 
 // exempt are the packages that are allowed to use ambient authority by design:
@@ -186,7 +192,7 @@ func TestLibraryPackagesStayFreeOfAmbientAuthority(t *testing.T) {
 	var problems []string
 	for key, n := range found {
 		if n > allowed[key] {
-			problems = append(problems, fmt.Sprintf("NEW  %s: %d site(s), allowlist has %d: inject the dependency (runner.Runner, Env, Clock) instead", key, n, allowed[key]))
+			problems = append(problems, fmt.Sprintf("NEW  %s: %d site(s), allowlist has %d: inject the dependency (runner.Runner, Env, Clock, a logger.Logger) instead", key, n, allowed[key]))
 		}
 	}
 	for key, n := range allowed {
@@ -213,6 +219,11 @@ func TestScannerFlagsASeededViolation(t *testing.T) {
 		"\t_, _ = os.UserConfigDir()\n\t_, _ = os.UserCacheDir()\n\t_, _ = os.Hostname()\n\t_, _ = os.Executable()\n" +
 		"\t_, _ = exec.LookPath(\"x\")\n\t_ = stdtime.Since(stdtime.Time{})\n\t_ = stdtime.Until(stdtime.Time{})\n}\n"
 	dot := "package seeded\n\nimport . \"os\"\n\nfunc G() string { return Getenv(\"X\") }\n"
+	logs := "package seeded\n\nimport lg \"github.com/Goldziher/ai-rulez/v5/internal/logger\"\n\n" +
+		"func H() {\n\tlg.Warn(\"x\")\n\tlg.Debug(\"x\")\n\t_ = lg.Std()\n\t_ = lg.Or(nil)\n}\n"
+	if err := os.WriteFile(filepath.Join(pkg, "logs.go"), []byte(logs), 0o644); err != nil { //nolint:gosec // scratch file
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(pkg, "dot.go"), []byte(dot), 0o644); err != nil { //nolint:gosec // scratch file
 		t.Fatal(err)
 	}
@@ -230,6 +241,8 @@ func TestScannerFlagsASeededViolation(t *testing.T) {
 		"internal/seeded/seeded.go os.Hostname":      1,
 		"internal/seeded/seeded.go os.Executable":    1,
 		"internal/seeded/seeded.go exec.LookPath":    1,
+		"internal/seeded/logs.go lg.Warn":            1, // the global logger; Std and Or are the sanctioned defaults
+		"internal/seeded/logs.go lg.Debug":           1,
 		"internal/seeded/seeded.go stdtime.Since":    1,
 		"internal/seeded/seeded.go stdtime.Until":    1,
 		"internal/seeded/dot.go .os":                 1, // a dot-import hides every selector, so the import itself is the site

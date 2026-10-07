@@ -8,7 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,14 +44,11 @@ const (
 `
 )
 
-// capturedMergeWarnings collects the merged-document warnings of a test.
-func capturedMergeWarnings(t *testing.T) *[]string {
-	t.Helper()
-	var warned []string
-	previous := mergedWarn
-	mergedWarn = func(msg string, _ ...any) { warned = append(warned, msg) }
-	t.Cleanup(func() { mergedWarn = previous })
-	return &warned
+// capturedMergeWarnings returns the recorder the merged-document warnings of a
+// test go to, and the load option that routes the run's host logger there.
+func capturedMergeWarnings() (*testutil.LogRecorder, config.LoadOption) {
+	rec := &testutil.LogRecorder{}
+	return rec, config.WithHost(ambient.Host{Log: rec})
 }
 
 func mcpServerNames(t *testing.T, doc string, path ...string) []string {
@@ -86,17 +86,17 @@ func TestGenerate_NeverTakesBackAHandWrittenServerWithoutARecord(t *testing.T) {
 	root := t.TempDir()
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"cursor"}, "", mcpServerS1))
 	writeAgentsMDFile(t, root, ".claude/settings.json", userSettingsWithServer)
-	warned := capturedMergeWarnings(t)
+	warned, host := capturedMergeWarnings()
 
 	// Act
-	runAgentsMDGenerate(t, root)
-	runAgentsMDGenerate(t, root)
-	_, err := NewGenerator(loadAgentsMDConfig(t, root)).Clean("", CleanOptions{})
+	runAgentsMDGenerate(t, root, host)
+	runAgentsMDGenerate(t, root, host)
+	_, err := NewGenerator(loadAgentsMDConfig(t, root, host)).Clean("", CleanOptions{})
 
 	// Assert
 	require.NoError(t, err)
 	assert.Equal(t, userSettingsWithServer, readAgentsMDFile(t, root, ".claude/settings.json"))
-	assert.Empty(t, *warned, "a document no manifest lists is the user's and is not even examined")
+	assert.Empty(t, warned.Level("WARN"), "a document no manifest lists is the user's and is not even examined")
 }
 
 func TestClean_KeepsAHandWrittenServerEvenWhenItEqualsWhatClaudeWouldRender(t *testing.T) {
@@ -166,15 +166,15 @@ func TestClean_LeavesAServerTheUserEditedAndSaysSo(t *testing.T) {
 			runAgentsMDGenerate(t, root)
 			edited := strings.Replace(readAgentsMDFile(t, root, tt.path), `"uvx"`, `"my-uvx"`, 1)
 			writeAgentsMDFile(t, root, tt.path, edited)
-			warned := capturedMergeWarnings(t)
+			warned, host := capturedMergeWarnings()
 
 			// Act
-			_, err := NewGenerator(loadAgentsMDConfig(t, root)).Clean("", CleanOptions{})
+			_, err := NewGenerator(loadAgentsMDConfig(t, root, host)).Clean("", CleanOptions{})
 
 			// Assert
 			require.NoError(t, err)
 			assert.Equal(t, []string{"mine", "s1"}, withoutNames(mcpServerNames(t, readAgentsMDFile(t, root, tt.path), "mcpServers"), "ai-rulez"))
-			assert.Equal(t, 1, countContaining(*warned, "mcpServers.s1 in "+tt.path), "%v", *warned)
+			assert.Equal(t, 1, countContaining(warned.Level("WARN"), "mcpServers.s1 in "+tt.path), "%v", warned.Level("WARN"))
 		})
 	}
 }
@@ -277,16 +277,16 @@ func TestGenerate_CommentedXumDocumentKeepsItsCommentsWhenTheServersAreDropped(t
 	commented := "// my notes\n" + readAgentsMDFile(t, root, ".xum/mcp.jsonc")
 	writeAgentsMDFile(t, root, ".xum/mcp.jsonc", commented)
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"xum"}, "", ""))
-	warned := capturedMergeWarnings(t)
+	warned, host := capturedMergeWarnings()
 
 	// Act
-	runAgentsMDGenerate(t, root)
+	runAgentsMDGenerate(t, root, host)
 
 	// Assert
 	got := readAgentsMDFile(t, root, ".xum/mcp.jsonc")
 	assert.Contains(t, got, "// my notes", "the user's comment survives the unmerge")
 	assert.NotContains(t, got, "s1", "the dropped server is taken back out of the commented file")
-	assert.Empty(t, *warned, "a commented document is no longer a problem")
+	assert.Empty(t, warned.Level("WARN"), "a commented document is no longer a problem")
 }
 
 func TestReadManifest_ReadsEachManifestOncePerRun(t *testing.T) {

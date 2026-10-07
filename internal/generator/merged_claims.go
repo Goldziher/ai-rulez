@@ -12,7 +12,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -41,9 +40,6 @@ import (
 // it would render. Generate never uses the fallback, because a hand-written entry
 // it cannot tell from its own must not be deleted on every run. See
 // presets.LegacyMergeClaims.
-
-// mergedWarn reports a merged document ai-rulez left alone; tests replace it.
-var mergedWarn = logger.Warn
 
 // mergedEdit is the result of taking ai-rulez's claims out of one document.
 type mergedEdit struct {
@@ -511,7 +507,7 @@ func (g *Generator) warnOnce(msg string, args ...any) {
 		g.warned = map[string]bool{}
 	}
 	g.warned[msg] = true
-	mergedWarn(msg, args...)
+	g.log().Warn(msg, args...)
 }
 
 // warnUnmerge reports a document ai-rulez could not take its content out of.

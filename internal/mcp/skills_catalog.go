@@ -109,6 +109,12 @@ type Catalog struct {
 // are skipped with a warning: the extension requires one. Two served skills
 // with the same name are an error.
 func BuildCatalog(profile, preset string, served []generator.ServedSkill, filter SkillFilter) (*Catalog, error) {
+	return BuildCatalogIn(nil, profile, preset, served, filter)
+}
+
+// BuildCatalogIn is BuildCatalog reporting what it skips to log (nil: the CLI's logger).
+func BuildCatalogIn(log logger.Logger, profile, preset string, served []generator.ServedSkill, filter SkillFilter) (*Catalog, error) {
+	log = logger.Or(log)
 	cat := &Catalog{
 		Profile: profile,
 		Preset:  preset,
@@ -124,15 +130,15 @@ func BuildCatalog(profile, preset string, served []generator.ServedSkill, filter
 		if src.MalformedFrontmatter {
 			// validate fails on this; the server must not serve a skill whose
 			// frontmatter keys were dropped on load.
-			cat.refuseMalformed(src)
+			cat.refuseMalformed(log, src)
 			continue
 		}
-		skill, err := newCatalogSkill(src)
+		skill, err := newCatalogSkill(log, src)
 		if err != nil {
 			// One malformed skill must not take the whole server down; the
 			// extension cannot represent it (name and description are required
 			// and the served bytes must match), so it is left out and reported.
-			logger.Warn("Not serving a skill the Skills extension cannot represent", "skill", src.ID, "reason", err.Error())
+			log.Warn("Not serving a skill the Skills extension cannot represent", "skill", src.ID, "reason", err.Error())
 			continue
 		}
 		if _, dup := cat.byName[skill.Name]; dup {
@@ -154,13 +160,13 @@ func BuildCatalog(profile, preset string, served []generator.ServedSkill, filter
 // project before any rule runs.
 const CodeMalformedFrontmatter = "malformed-frontmatter"
 
-func (c *Catalog) refuseMalformed(src *generator.ServedSkill) {
+func (c *Catalog) refuseMalformed(log logger.Logger, src *generator.ServedSkill) {
 	if c.refused == nil {
 		c.refused = map[string]Refusal{}
 	}
 	reason := "the SKILL.md frontmatter is not valid YAML (check for unquoted values containing ': '); fix it and run `ai-rulez validate`"
 	c.refused[src.ID] = Refusal{Name: src.ID, Code: CodeMalformedFrontmatter, Reason: reason}
-	logger.Warn("Not serving a skill with malformed frontmatter", "skill", src.ID, "source", src.Source)
+	log.Warn("Not serving a skill with malformed frontmatter", "skill", src.ID, "source", src.Source)
 }
 
 func (f SkillFilter) allows(s *generator.ServedSkill) bool {
@@ -197,7 +203,7 @@ func containsString(list []string, want string) bool {
 	return false
 }
 
-func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
+func newCatalogSkill(log logger.Logger, src *generator.ServedSkill) (*CatalogSkill, error) {
 	if len(src.Files) == 0 || src.Files[0].RelPath != skillMarkdown {
 		return nil, oops.Errorf("skill %q has no SKILL.md", src.ID)
 	}
@@ -217,7 +223,7 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 	if strings.TrimSpace(desc) == "" {
 		// The extension requires a description. Falling back to the name keeps the
 		// skill findable; the bytes served are untouched, so digests still match.
-		logger.Warn("A served skill has no description; using its name (add a description frontmatter field so find_skill can rank it)", "skill", src.ID)
+		log.Warn("A served skill has no description; using its name (add a description frontmatter field so find_skill can rank it)", "skill", src.ID)
 		desc = name
 		front["description"] = desc
 	}

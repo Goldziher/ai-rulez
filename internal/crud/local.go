@@ -8,7 +8,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
@@ -30,7 +29,7 @@ func (op *OperatorImpl) Local() *OperatorImpl {
 	// Content written here may hold secrets: fail closed unless the tree is
 	// ignored first.
 	local.filesMgr.guard = func() error {
-		return gitignore.EnsureEntries(op.baseDir, config.LocalGitignorePatterns(op.aiRulezDir)) //nolint:wrapcheck // already contextual
+		return gitignore.EnsureEntries(op.log, op.baseDir, config.LocalGitignorePatterns(op.aiRulezDir)) //nolint:wrapcheck // already contextual
 	}
 	return &local
 }
@@ -90,7 +89,7 @@ func (op *OperatorImpl) addProfileLocal(ctx context.Context, name string, domain
 	if err := doc.Save(ctx); err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
-	logger.Info("Local profile added successfully", "name", name, "domains", len(domains))
+	op.logger().Info("Local profile added successfully", "name", name, "domains", len(domains))
 	return nil
 }
 
@@ -124,7 +123,7 @@ func (op *OperatorImpl) removeProfileLocal(ctx context.Context, name string) err
 	if err := doc.Save(ctx); err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
-	logger.Info("Local profile removed successfully", "name", name)
+	op.logger().Info("Local profile removed successfully", "name", name)
 	return nil
 }
 
@@ -148,7 +147,7 @@ func (op *OperatorImpl) setDefaultProfileLocal(ctx context.Context, name string)
 	if err := doc.Save(ctx); err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
-	logger.Info("Local default profile set successfully", "name", name)
+	op.logger().Info("Local default profile set successfully", "name", name)
 	return nil
 }
 
@@ -178,7 +177,7 @@ func (op *OperatorImpl) addIncludeLocal(ctx context.Context, req *AddIncludeRequ
 	if err := op.upsertLocalNamed(ctx, listIncludes, req.Name, fields); err != nil {
 		return err
 	}
-	logger.Info("Local include added successfully", "name", req.Name, "type", sourceType)
+	op.logger().Info("Local include added successfully", "name", req.Name, "type", sourceType)
 	return nil
 }
 
@@ -194,7 +193,7 @@ func (op *OperatorImpl) removeIncludeLocal(ctx context.Context, name string) err
 	if err := op.removeLocalNamed(ctx, listIncludes, name, sharedHas, "include"); err != nil {
 		return err
 	}
-	logger.Info("Local include removed successfully", "name", name)
+	op.logger().Info("Local include removed successfully", "name", name)
 	return nil
 }
 
@@ -220,7 +219,7 @@ func (op *OperatorImpl) installSkillLocal(ctx context.Context, req *InstallSkill
 	if err := op.upsertLocalNamed(ctx, listInstalledSkills, req.Name, fields); err != nil {
 		return err
 	}
-	logger.Info("Local skill installed successfully", "name", req.Name, "type", sourceType)
+	op.logger().Info("Local skill installed successfully", "name", req.Name, "type", sourceType)
 	return nil
 }
 
@@ -236,7 +235,7 @@ func (op *OperatorImpl) uninstallSkillLocal(ctx context.Context, name string) er
 	if err := op.removeLocalNamed(ctx, listInstalledSkills, name, sharedHas, "installed skill"); err != nil {
 		return err
 	}
-	logger.Info("Local skill uninstalled successfully", "name", name)
+	op.logger().Info("Local skill uninstalled successfully", "name", name)
 	return nil
 }
 

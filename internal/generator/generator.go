@@ -144,7 +144,7 @@ func (g *Generator) host() ambient.Host {
 }
 
 // git answers repository questions through the host's runner.
-func (g *Generator) git() gitutil.Git { return gitutil.New(g.host().Runner) }
+func (g *Generator) git() gitutil.Git { return gitutil.New(g.host().Runner).WithLog(g.log()) }
 
 // log is the host's logger (the CLI's when unset).
 func (g *Generator) log() logger.Logger { return g.host().Logger() }
@@ -576,7 +576,7 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 		return nil, oops.Wrapf(err, "render monorepo marketplace")
 	}
 	rootFiles := []config.OutputFile{marketplaceOutput}
-	extraIndexes, err := renderExtraMarketplaces(mkt, market, entries, codexEntries, root, codex)
+	extraIndexes, err := g.renderExtraMarketplaces(mkt, market, entries, codexEntries, root, codex)
 	if err != nil {
 		return nil, err
 	}
@@ -591,7 +591,7 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 // renderExtraMarketplaces renders the non-Claude marketplace indexes of a
 // monorepo or domain-plugin root: the Codex index when some plugin ships a Codex
 // bundle, and the Cursor index when [marketplace] cursor_index is set.
-func renderExtraMarketplaces(mkt *config.MarketplaceAuthoring, market plugin.MarketInfo, entries, codexEntries []plugin.MemberEntry, root string, codex bool) ([]config.OutputFile, error) {
+func (g *Generator) renderExtraMarketplaces(mkt *config.MarketplaceAuthoring, market plugin.MarketInfo, entries, codexEntries []plugin.MemberEntry, root string, codex bool) ([]config.OutputFile, error) {
 	var files []config.OutputFile
 	if codex {
 		out, err := plugin.RenderCodexMonorepoMarketplace(market, codexEntries, root)
@@ -601,7 +601,7 @@ func renderExtraMarketplaces(mkt *config.MarketplaceAuthoring, market plugin.Mar
 		files = append(files, out)
 	}
 	if mkt.CursorIndex {
-		out, err := plugin.RenderCursorMarketplace(market, entries, root)
+		out, err := plugin.RenderCursorMarketplace(g.log(), market, entries, root)
 		if err != nil {
 			return nil, oops.Wrapf(err, "render Cursor marketplace")
 		}
@@ -915,7 +915,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	activeProfile, contentTree, run := render.profile, render.content, render.run
 
 	// Flatten outputs for writing, detecting conflicts and deduplicating
-	flatOutputs, err := flattenPresetOutputs(g.config.Diag, render.byPreset)
+	flatOutputs, err := flattenPresetOutputs(g.config.Diag, g.log(), render.byPreset)
 	if err != nil {
 		return nil, "", err
 	}
@@ -980,7 +980,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 		"agents", len(contentTree.Agents),
 		"domains", len(contentTree.Domains))
 
-	presets.WarnDuplicateContent(contentTree)
+	presets.WarnDuplicateContent(g.log(), contentTree)
 	g.warnUnbundledPluginOnly(contentTree)
 	g.warnUnreadConsumerFiles()
 	for _, diagnostic := range settings.UnsupportedDiagnostics(g.config) {
@@ -1111,7 +1111,7 @@ func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile
 		}
 		if !ok {
 			if !readsAgentsOverride(g.config, name) {
-				warnDroppedLocal(name, rules, allContext)
+				g.warnDroppedLocal(name, rules, allContext)
 			}
 			continue
 		}
@@ -1198,7 +1198,7 @@ func rootAgentsMD(d *diag.Collector, allOutputs map[string][]config.OutputFile, 
 	path := filepath.Join(baseDir, string(config.SharedAgentsMD))
 	// A conflict is reported by collectOutputs; the files found so far still tell
 	// what AGENTS.md says.
-	flat, _ := flattenPresetOutputs(d, allOutputs)
+	flat, _ := flattenPresetOutputs(d, nil, allOutputs)
 	for _, o := range flat {
 		if !o.IsDir && o.RawContent == nil && samePath(o.Path, path) {
 			return o.Content, true
@@ -1246,18 +1246,14 @@ func droppedLocalItems(rules, contexts []config.ContentFile) []string {
 
 // warnDroppedLocal warns about local rules and context a preset has no output
 // for: it writes no local root file and does not route them to rule files.
-func warnDroppedLocal(preset string, rules, contexts []config.ContentFile) {
+func (g *Generator) warnDroppedLocal(preset string, rules, contexts []config.ContentFile) {
 	items := droppedLocalItems(rules, contexts)
 	if len(items) == 0 {
 		return
 	}
-	warnLocal("Machine-local content has no output for this preset and was not written",
+	g.log().Warn("Machine-local content has no output for this preset and was not written",
 		"preset", preset, "items", strings.Join(items, ", "))
 }
-
-// warnLocal reports local content a preset has no place for; a variable so tests
-// can observe the warnings.
-var warnLocal = logger.Warn
 
 // resolveProfile determines which profile to use. A composed value
 // ("base,backend") is canonicalized but kept composed: it is resolved to the union
@@ -1407,7 +1403,7 @@ func (g *Generator) collectMCPServersForContent(content *config.ContentTree, pro
 // every rule inlined, because dropping the inlined rules would silently take
 // them from the tools that have no folder. The choice does not depend on the
 // order of the preset names, and a warning names the presets.
-func flattenPresetOutputs(d *diag.Collector, allOutputs map[string][]config.OutputFile) ([]config.OutputFile, error) {
+func flattenPresetOutputs(d *diag.Collector, log logger.Logger, allOutputs map[string][]config.OutputFile) ([]config.OutputFile, error) {
 	var flatOutputs []config.OutputFile
 	type claim struct {
 		preset string
@@ -1426,7 +1422,7 @@ func flattenPresetOutputs(d *diag.Collector, allOutputs map[string][]config.Outp
 	var omittingPaths []string
 	for _, presetName := range presetNames {
 		outputs := allOutputs[presetName]
-		logger.Debug("Generated outputs for preset", "preset", presetName, "count", len(outputs))
+		logger.Or(log).Debug("Generated outputs for preset", "preset", presetName, "count", len(outputs))
 		for _, output := range outputs {
 			if output.IsDir {
 				if !seenDirs[output.Path] {
@@ -1564,7 +1560,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	// scripts, assets) where the standard header banner would corrupt the
 	// payload (e.g. Python scripts) or break binary files.
 	if output.RawContent != nil {
-		return writeRawOutput(target, viaLink, output)
+		return writeRawOutput(g.log(), target, viaLink, output)
 	}
 
 	finalContent := g.finalContent(output)
@@ -1882,7 +1878,7 @@ var generatedStampPattern = regexp.MustCompile(`(?m)(?: \| )?Generated: [^\n]*$`
 // The mode is applied to a file this call creates, and to an existing regular
 // file that is not reached through a symlink; a file reached through a link is
 // never chmodded, since it is not ours.
-func writeRawOutput(absPath string, viaLink bool, output config.OutputFile) error {
+func writeRawOutput(log logger.Logger, absPath string, viaLink bool, output config.OutputFile) error {
 	mode := output.Mode.Perm()
 	if mode == 0 {
 		mode = 0o644
@@ -1895,7 +1891,7 @@ func writeRawOutput(absPath string, viaLink bool, output config.OutputFile) erro
 	}
 
 	if rawWriteCanSkip(absPath, output.RawContent, mode) {
-		logger.Debug("Skipped unchanged raw file", "path", output.Path)
+		log.Debug("Skipped unchanged raw file", "path", output.Path)
 		return nil
 	}
 
@@ -1914,7 +1910,7 @@ func writeRawOutput(absPath string, viaLink bool, output config.OutputFile) erro
 			Wrapf(err, "write file")
 	}
 	if viaLink {
-		logger.Debug("Wrote raw file through a symlink, mode left as is", "path", output.Path)
+		log.Debug("Wrote raw file through a symlink, mode left as is", "path", output.Path)
 		return nil
 	}
 	// os.WriteFile only applies the mode on file creation. To handle mode
@@ -1925,7 +1921,7 @@ func writeRawOutput(absPath string, viaLink bool, output config.OutputFile) erro
 			With("mode", mode).
 			Wrapf(err, "set file mode")
 	}
-	logger.Debug("Wrote raw file", "path", output.Path, "size", len(output.RawContent), "mode", mode)
+	log.Debug("Wrote raw file", "path", output.Path, "size", len(output.RawContent), "mode", mode)
 	return nil
 }
 
@@ -2556,7 +2552,7 @@ func (g *Generator) readManifest(path string) generatedManifest {
 	if path == g.localManifestPath() && g.localManifestUntrusted() {
 		manifest = generatedManifest{}
 	} else {
-		manifest = readManifestFile(path)
+		manifest = readManifestFile(g.log(), path)
 	}
 	if g.manifests == nil {
 		g.manifests = map[string]generatedManifest{}
@@ -2604,14 +2600,14 @@ func (g *Generator) localManifestTracked() bool {
 	return true
 }
 
-func readManifestFile(path string) generatedManifest {
+func readManifestFile(log logger.Logger, path string) generatedManifest {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return generatedManifest{}
 	}
 	var manifest generatedManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		logger.Warn("Ignoring invalid generated manifest", "path", path, "error", err)
+		logger.Or(log).Warn("Ignoring invalid generated manifest", "path", path, "error", err)
 		return generatedManifest{}
 	}
 	return manifest
@@ -3080,7 +3076,7 @@ func (g *Generator) ignoreLocalInputs() error {
 	}
 	// The overlay's lock and temp files come and go: ignore them before they exist.
 	patterns = append(patterns, g.configDirName()+"/.config.local.*")
-	if err := gitignore.EnsureEntries(g.config.BaseDir, patterns); err != nil {
+	if err := gitignore.EnsureEntries(g.log(), g.config.BaseDir, patterns); err != nil {
 		return oops.Wrapf(err, "gitignore the machine-local inputs")
 	}
 	return nil
@@ -3568,7 +3564,7 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	}
 
 	// Read existing .gitignore content
-	existingData, err := gitutil.ReadIgnoreFileOrEmpty(gitignorePath)
+	existingData, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), gitignorePath)
 	if err != nil && !os.IsNotExist(err) {
 		return oops.
 			With("path", gitignorePath).
@@ -3580,7 +3576,7 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	// change a file that lives elsewhere: keep every entry in .git/info/exclude.
 	// The link's patterns protect nothing, so none may be dropped as user-covered.
 	if gitignore.IsSymlink(g.config.BaseDir) {
-		return gitignore.ReplaceViaExclude(g.config.BaseDir, paths) //nolint:wrapcheck // already contextual
+		return gitignore.ReplaceViaExclude(g.log(), g.config.BaseDir, paths) //nolint:wrapcheck // already contextual
 	}
 
 	sortedPaths := dropUserPatterns(paths, existingContent)

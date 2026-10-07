@@ -27,7 +27,7 @@ type Sink func(msg string, args ...any)
 
 var (
 	defaultMu   sync.RWMutex
-	defaultSink Sink = logger.Warn
+	defaultSink Sink = logger.Std().Warn
 	// processDefault is the collector a nil *Collector stands for.
 	processDefault = New(nil)
 )
@@ -153,7 +153,7 @@ func (c *Collector) first(namespace, key string) bool {
 // the target and was rendered as always-on. Duplicates (the same item rendered
 // into several root files) collapse into one entry.
 func (c *Collector) RecordDowngrade(kind, name, mode string) {
-	logger.Debug("Activation downgraded to always-on in inline output", "kind", kind, "name", name, "mode", mode)
+	logger.Std().Debug("Activation downgraded to always-on in inline output", "kind", kind, "name", name, "mode", mode)
 	c = c.self()
 	c.mu.Lock()
 	defer c.mu.Unlock()

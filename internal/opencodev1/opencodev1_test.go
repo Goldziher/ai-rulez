@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -252,17 +254,20 @@ func TestScanProject(t *testing.T) {
 
 func TestWarnProjectWarnsOncePerFile(t *testing.T) {
 	// Arrange
-	ResetWarned()
+	d, rec := diag.New(nil), &testutil.LogRecorder{}
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, ".opencode", "plugins", "old.js"), v1Source)
 
 	// Act
-	first := WarnProject(root)
-	second := WarnProject(root)
+	first := WarnProject(d, rec, root)
+	second := WarnProject(d, rec, root)
+	other := WarnProject(diag.New(nil), &testutil.LogRecorder{}, root)
 
 	// Assert
 	assert.Len(t, first, 1)
 	assert.Empty(t, second, "a file already warned about in this run is not reported again")
+	assert.Len(t, other, 1, "another run warns about the same file again")
+	assert.Len(t, rec.Level("WARN"), 1)
 }
 
 func TestFileURLToPath(t *testing.T) {

@@ -51,6 +51,8 @@ const (
 type ScanCache struct {
 	dir        string
 	secretPath string
+	// log receives the cache's debug reports; nil is the CLI's logger.
+	log logger.Logger
 
 	once   sync.Once
 	secret []byte
@@ -69,7 +71,7 @@ func NewScanCache(dir, secretPath string) *ScanCache {
 // whose configuration directory is configDir: ~/.cache/ai-rulez/scan/<project
 // hash> and the secret in the user config directory. It returns nil when there
 // is no home directory.
-func UserScanCache(configDir string) *ScanCache {
+func UserScanCache(log logger.Logger, configDir string) *ScanCache {
 	abs, err := filepath.Abs(configDir)
 	if err != nil {
 		abs = configDir
@@ -82,14 +84,18 @@ func UserScanCache(configDir string) *ScanCache {
 	if err != nil {
 		return nil
 	}
-	return NewScanCache(dir, llm.UserSecretPath(scanCacheSecretFile))
+	cache := NewScanCache(dir, llm.UserSecretPath(scanCacheSecretFile))
+	if cache != nil {
+		cache.log = log
+	}
+	return cache
 }
 
 func (c *ScanCache) key32() []byte {
 	c.once.Do(func() {
 		secret, err := llm.LoadSecretFile(c.secretPath)
 		if err != nil {
-			logger.Debug("Scanner result cache is off: no usable secret", "error", err)
+			logger.Or(c.log).Debug("Scanner result cache is off: no usable secret", "error", err)
 			return
 		}
 		c.secret = secret

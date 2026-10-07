@@ -13,7 +13,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // CleanOptions controls Clean behavior.
@@ -216,7 +215,7 @@ func (g *Generator) editedGenerated(abs string) bool {
 // gitignoreHasManagedBlock reports whether <BaseDir>/.gitignore contains the
 // ai-rulez fenced block.
 func (g *Generator) gitignoreHasManagedBlock() bool {
-	data, err := gitutil.ReadIgnoreFileOrEmpty(filepath.Join(g.config.BaseDir, ".gitignore"))
+	data, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), filepath.Join(g.config.BaseDir, ".gitignore"))
 	if err != nil {
 		return false
 	}
@@ -408,12 +407,12 @@ func (g *Generator) removeEmptyDir(dir string) {
 	if !g.removalConfined(dir) {
 		return
 	}
-	removeDirIfEmpty(dir)
+	g.removeDirIfEmpty(dir)
 }
 
 // removeDirIfEmpty removes a directory only when it holds no entries, so
 // user-authored files inside a generated directory are never destroyed.
-func removeDirIfEmpty(dir string) {
+func (g *Generator) removeDirIfEmpty(dir string) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return
@@ -422,9 +421,9 @@ func removeDirIfEmpty(dir string) {
 		return
 	}
 	if err := os.Remove(dir); err != nil {
-		logger.Debug("Kept non-removable directory", "path", dir, "error", err)
+		g.log().Debug("Kept non-removable directory", "path", dir, "error", err)
 	} else {
-		logger.Debug("Removed empty directory", "path", dir)
+		g.log().Debug("Removed empty directory", "path", dir)
 	}
 }
 
