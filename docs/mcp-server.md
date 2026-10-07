@@ -440,7 +440,7 @@ so `git@host:org/repo.git` and `https://user@host/...` keep their user info. The
   symlink is refused, and a local source directory that is itself a symlink is resolved and digested through
   the link. A file over 2 MiB is dropped with a warning, a skill over 8 MiB is skipped with a warning. A source
   skill is served under its directory name (with `name_prefix`), whatever its `name:` says (SKILL.md is
-  rewritten), and a skill whose name collides with one already served is skipped (set `name_prefix`); the
+  rewritten), and a skill whose name collides with a project skill (served or static) or an earlier source skill is skipped (set `name_prefix`); the
   project's skill wins.
 - **Symlinked skills.** A skill directory that is a symlink out of the project is dropped by the server with a
   warning, while `validate` fails on it: fix the link rather than relying on the warning.
