@@ -18,13 +18,13 @@ var (
 	calibrateJSON    bool
 )
 
-// VerifiersCalibrateCmd measures the llm verifiers against their labelled examples.
+// VerifiersCalibrateCmd measures the llm verifiers against their labeled examples.
 var VerifiersCalibrateCmd = &cobra.Command{
 	Use:   "calibrate [name...]",
 	Short: "Measure how reliable an llm verifier's failures are, so it may gate",
 	Long: fmt.Sprintf(`Run the [[verifiers.examples]] of the llm verifiers (default: all of them) through
 the model and record how often a "fail" verdict was right (precision) and how many real
-failures it found (recall), with 95%% intervals. An example labelled expect = "fail" is a
+failures it found (recall), with 95%% intervals. An example labeled expect = "fail" is a
 true flag when the verifier fails on it. The record goes to
 .ai-rulez/verifiers/calibration/<id>.json; commit it.
 

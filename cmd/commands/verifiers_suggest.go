@@ -73,7 +73,7 @@ func suggestVerifiers(ctx context.Context, id string, out io.Writer) int {
 		return exitVerifiersCannotRun
 	}
 	switch suggestKind {
-	case "rule", "skill", "agent", "command":
+	case "rule", improveKindSkill, "agent", "command":
 	default:
 		fmtError(oops.Hint("Use rule, skill, agent or command.").Errorf("unknown --kind %q", suggestKind))
 		return exitVerifiersCannotRun
@@ -125,30 +125,19 @@ func renderSuggestion(res *verifiers.SuggestResult, written string, wantWrite bo
 		return b.String()
 	}
 	rejected, shown := 0, 0
-	for _, p := range res.Proposals {
+	for i := range res.Proposals {
+		p := &res.Proposals[i]
 		if p.Rejected != "" {
 			rejected++
 			continue
 		}
 		shown++
-		fmt.Fprintf(&b, "\n# %d. %s\n# %s\n# findings in the repository today: %d", shown, p.ID, p.Rationale, p.Hits)
-		if len(p.HitFiles) > 0 {
-			fmt.Fprintf(&b, " (%s)", strings.Join(p.HitFiles, ", "))
-		}
-		fmt.Fprintf(&b, "; examples: %s\n", p.Examples)
-		if r := p.Replay; r != nil {
-			fmt.Fprintf(&b, "# replay: would have flagged %d of %d merged diff(s)", r.Flagged, r.Diffs)
-			if len(r.FlaggedCommits) > 0 {
-				fmt.Fprintf(&b, " (%s)", strings.Join(r.FlaggedCommits, "; "))
-			}
-			b.WriteString("\n")
-		}
-		b.WriteString(p.TOML)
+		writeProposal(&b, shown, p)
 	}
 	if rejected > 0 {
 		b.WriteString("\nRejected:\n")
-		for _, p := range res.Proposals {
-			if p.Rejected != "" {
+		for i := range res.Proposals {
+			if p := &res.Proposals[i]; p.Rejected != "" {
 				fmt.Fprintf(&b, "  %s: %s\n", p.ID, p.Rejected)
 			}
 		}
@@ -164,11 +153,7 @@ func renderSuggestion(res *verifiers.SuggestResult, written string, wantWrite bo
 		b.WriteString("note: " + n + "\n")
 	}
 	if u := res.LLM; u != nil {
-		fmt.Fprintf(&b, "\nllm: %d call(s), %d from cache, %d prompt + %d completion tokens, about $%.4f", u.Calls, u.Cached, u.PromptTokens, u.CompletionTokens, u.CostUSD)
-		if u.MaxCostUSD > 0 {
-			fmt.Fprintf(&b, " of $%.2f", u.MaxCostUSD)
-		}
-		b.WriteString("\n")
+		writeSuggestUsage(&b, u)
 	}
 	switch {
 	case written != "":
@@ -178,4 +163,30 @@ func renderSuggestion(res *verifiers.SuggestResult, written string, wantWrite bo
 		b.WriteString("Dry run: nothing was written. Re-run with --write to save the usable proposals to .ai-rulez/verifiers/.\n")
 	}
 	return b.String()
+}
+
+// writeProposal renders one usable proposal, numbered n.
+func writeProposal(b *strings.Builder, n int, p *verifiers.Proposal) {
+	fmt.Fprintf(b, "\n# %d. %s\n# %s\n# findings in the repository today: %d", n, p.ID, p.Rationale, p.Hits)
+	if len(p.HitFiles) > 0 {
+		fmt.Fprintf(b, " (%s)", strings.Join(p.HitFiles, ", "))
+	}
+	fmt.Fprintf(b, "; examples: %s\n", p.Examples)
+	if r := p.Replay; r != nil {
+		fmt.Fprintf(b, "# replay: would have flagged %d of %d merged diff(s)", r.Flagged, r.Diffs)
+		if len(r.FlaggedCommits) > 0 {
+			fmt.Fprintf(b, " (%s)", strings.Join(r.FlaggedCommits, "; "))
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString(p.TOML)
+}
+
+// writeSuggestUsage renders the model usage line.
+func writeSuggestUsage(b *strings.Builder, u *verifiers.LLMUsage) {
+	fmt.Fprintf(b, "\nllm: %d call(s), %d from cache, %d prompt + %d completion tokens, about $%.4f", u.Calls, u.Cached, u.PromptTokens, u.CompletionTokens, u.CostUSD)
+	if u.MaxCostUSD > 0 {
+		fmt.Fprintf(b, " of $%.2f", u.MaxCostUSD)
+	}
+	b.WriteString("\n")
 }
