@@ -48,6 +48,11 @@ func TestSchemaFindings(t *testing.T) {
 			want: []string{"config.toml: unknown key \"compression\""},
 		},
 		{
+			name: "a top-level key after a table header is told where it landed",
+			main: "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n[header]\nhashes = \"none\"\nbuiltins = [\"rust\"]\n",
+			want: []string{"config.toml: unknown key \"header.builtins\" (builtins is a top-level key: a key after a [header] line belongs to that table, so move it above the first [table])"},
+		},
+		{
 			name:  "local overlay is included",
 			main:  "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
 			local: "[lock]\nenforc = true\n",
