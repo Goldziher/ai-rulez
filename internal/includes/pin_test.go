@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -41,7 +42,7 @@ type lockFixture struct {
 
 func newLockFixture(t *testing.T) *lockFixture {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	isolateHome(t)
 	lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false
 	ResetObserved()
 	t.Cleanup(func() { lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false })
@@ -265,6 +266,9 @@ func TestCheckLock_ReportsUndigestableCache(t *testing.T) {
 	dir, _, _ := cachedTree(cfg, skill)
 	require.NotEmpty(t, dir)
 	marker := filepath.Join(dir, skillMarkerFile)
+	if runtime.GOOS == "windows" {
+		t.Skip("a file cannot be made unreadable with chmod on Windows")
+	}
 	require.NoError(t, os.Chmod(marker, 0))
 	t.Cleanup(func() { _ = os.Chmod(marker, 0o644) })
 

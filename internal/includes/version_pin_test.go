@@ -35,7 +35,7 @@ func (f *versionFixture) release(t *testing.T, body string, tag string, annotate
 
 func newVersionFixture(t *testing.T, includeLine, skillLine string) *versionFixture {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	isolateHome(t)
 	resetPolicy(t)
 	f := &versionFixture{repo: tagtest.New(t), project: t.TempDir()}
 	f.release(t, "release one", "v1.0.0", false)
@@ -54,12 +54,12 @@ gitignore = false
 
 [[includes]]
 name = "shared"
-source = "`+f.repo.URL+`"
+source = "`+filepath.ToSlash(f.repo.URL)+`"
 `+includeLine+`
 
 [[installed_skills]]
 name = "foo"
-source = "`+f.repo.URL+`"
+source = "`+filepath.ToSlash(f.repo.URL)+`"
 `+skillLine+`
 `)
 }
