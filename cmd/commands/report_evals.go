@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
-	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
+	"github.com/Goldziher/ai-rulez/v5/internal/telemetry"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -182,8 +182,8 @@ func joinRankUsage(in *evals.RankInput, cfgDir string) (usageSources, error) {
 		src.events, src.duplicates = len(merged), duplicates
 		in.Uses, in.UseDigests = map[string]int{}, map[string]map[string]int{}
 		for i := range merged {
-			if merged[i].Resource {
-				continue // a supporting file of a skill is not a further use of it
+			if merged[i].Resource || merged[i].ID == telemetry.ListID {
+				continue // a supporting file of a skill, or a listing older releases logged as a skill, is not a use
 			}
 			id := merged[i].ID
 			in.Uses[id]++

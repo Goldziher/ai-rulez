@@ -314,3 +314,19 @@ func TestReportEvals_IgnoresAnUnsignedRecord(t *testing.T) {
 	assert.Nil(t, decoded.Skills[0].PassRate)
 	assert.NotEqual(t, evals.ActionKeep, decoded.Skills[0].Action)
 }
+
+func TestJoinRankUsage_SkipsResourceLoadsAndListings(t *testing.T) {
+	resetEnrichFlags(t)
+	dir := t.TempDir()
+	log := filepath.Join(dir, "usage.jsonl")
+	lines := `{"v":2,"event":"skill_invoked","skill":"alpha","id":"alpha"}
+{"v":2,"event":"skill_invoked","skill":"alpha","id":"alpha","resource":true}
+{"v":2,"event":"skill_invoked","skill":"_list","id":"_list"}
+`
+	require.NoError(t, os.WriteFile(log, []byte(lines), 0o600))
+	reportEvalsFlags.usageLogs = []string{log}
+	in := &evals.RankInput{}
+	_, err := joinRankUsage(in, dir)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]int{"alpha": 1}, in.Uses)
+}
