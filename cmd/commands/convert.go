@@ -187,6 +187,19 @@ func convertOptions(write bool) importer.ConvertOptions {
 	}
 }
 
+// printConvertNext tells a text-format user what to do after a dry run or a write.
+func printConvertNext(out io.Writer, report *importer.Report, write bool) {
+	if convertFormat != formatText {
+		return
+	}
+	switch {
+	case !write:
+		fprintf(out, "\nDry run: nothing was written. Rerun with --write to create the files.\n")
+	case report.NeedsLock() && !convertLock:
+		fprintf(out, "\nNext: run `ai-rulez lock` to pin the imported remote skills (or rerun with --lock).\n")
+	}
+}
+
 // runConvert runs the command and returns the process exit code.
 func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	progress.SetQuiet(true)
@@ -231,14 +244,7 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	if len(convertFailOn) > 0 && report.Matches(normalizeStatuses(convertFailOn)) {
 		return exitConvertBlocked
 	}
-	if convertFormat == formatText {
-		switch {
-		case !write:
-			fprintf(out, "\nDry run: nothing was written. Rerun with --write to create the files.\n")
-		case report.NeedsLock() && !convertLock:
-			fprintf(out, "\nNext: run `ai-rulez lock` to pin the imported remote skills (or rerun with --lock).\n")
-		}
-	}
+	printConvertNext(out, report, write)
 	return 0
 }
 
