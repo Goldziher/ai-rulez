@@ -93,7 +93,6 @@ func TestTelemetryConsentE2E(t *testing.T) {
 	})
 
 	t.Run("events recorded while consent was withdrawn are not exported after re-enabling", func(t *testing.T) {
-		blockedOn(t, "RV-LLM-29")
 		// Arrange: project b records locally (its repository turns recording on)
 		// and holds an export cursor from an earlier consent; a is another project
 		// of the same user.
@@ -115,20 +114,33 @@ func TestTelemetryConsentE2E(t *testing.T) {
 		assert.Contains(t, status, `"log": 0`, "consent is not retroactive: b's gap is not pending export")
 	})
 
-	t.Run("disable keeps local recording on, as it says", func(t *testing.T) {
-		blockedOn(t, "MAN-2")
-		// Arrange
-		p := newTelemetryProject(t)
-		p.run("telemetry", "enable", "--endpoint", closedEndpoint)
-		p.record("a")
-		before := p.logLines()
+	// MAN-2: the consent record turns recording on, so withdrawing it stops the
+	// recording it started; a config that turns recording on keeps it on. The
+	// message says which.
+	for _, tc := range []struct {
+		name, userConfig, wantOut string
+		wantRecorded              int
+	}{
+		{"disable stops the recording the consent turned on", "", "local recording is off", 0},
+		{"disable keeps the recording a user config turns on", "[telemetry]\nenabled = true\n", "local recording stays on (your user config enables it)", 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			p := newTelemetryProject(t)
+			if tc.userConfig != "" {
+				p.userConfig(tc.userConfig)
+			}
+			p.run("telemetry", "enable", "--endpoint", closedEndpoint)
+			p.record("a")
+			before := p.logLines()
 
-		// Act
-		out := p.run("telemetry", "disable")
-		p.record("b")
+			// Act
+			out := p.run("telemetry", "disable")
+			p.record("b")
 
-		// Assert
-		require.Contains(t, out, "local recording and the local log are unchanged")
-		assert.Equal(t, before+1, p.logLines(), "the load after disable is still recorded locally")
-	})
+			// Assert
+			require.Contains(t, out, tc.wantOut)
+			assert.Equal(t, before+tc.wantRecorded, p.logLines())
+		})
+	}
 }

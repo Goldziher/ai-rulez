@@ -78,9 +78,8 @@ func TestCommandVerifiersNeedAllowExecE2E(t *testing.T) {
 }
 
 // TestCommandVerifierSecretKeyNamesE2E pins RV-SEC-5: an environment variable
-// whose name ends in _KEY reaches a command verifier through the allowlist.
+// whose name ends in _KEY must not reach a command verifier through the allowlist.
 func TestCommandVerifierSecretKeyNamesE2E(t *testing.T) {
-	blockedOn(t, "RV-SEC-5")
 	// Arrange
 	env := newIsoEnv(t)
 	markers := t.TempDir()
