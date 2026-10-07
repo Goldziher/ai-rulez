@@ -2348,6 +2348,11 @@
           "type": "boolean",
           "description": "Bundle eval cases: each skill's evals/ directory and the project-level evals/ tree (at <bundle>/evals/). Off by default."
         },
+        "spec": {
+          "type": "string",
+          "enum": ["1.0.0", "1.1.0"],
+          "description": "Agent Plugins specification version of the agent-plugins, copilot and root-layout codex bundles. Default: 1.0.0."
+        },
         "include_domains": {
           "type": "array",
           "description": "Domains (names or globs) whose skills, commands and agents are bundled next to the root content. Empty keeps the bundle root-only. A root item wins over a same-named domain item.",
