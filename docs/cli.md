@@ -30,6 +30,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez verifiers run/list/explain/test/calibrate/suggest` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez scanners list/doctor` | Inspect the `[[lint.external]]` scanners ([details](#scan-command)) |
+| `ai-rulez migrate v5`           | Migrate a 4.x project to 5.0 ([details](#migrate-command)) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
 | `ai-rulez search`               | Rank skills against a query (lexical or hybrid with embeddings); `index`, `status`, `mine`; `--eval` measures the ranking ([details](#search-command)) |
 | `ai-rulez eval run`             | Run skill evals and score them ([details](#eval-commands)) |
@@ -1705,28 +1706,27 @@ while `.claude/agents/*.md` already carry the same text on demand. Drop it with
 `builtins = ["!agent-delegation"]` — the agent files are still generated, so nothing is
 lost. See [Configuration](configuration.md#drop-the-agents-roster-from-root-files).
 
-## Usage Commands
+## Telemetry Commands
 
-Opt-in usage telemetry, documented in [Usage telemetry](usage-telemetry.md).
+Opt-in usage and item-load telemetry, documented in [Usage telemetry](usage-telemetry.md) and
+[Telemetry](telemetry.md). One namespace replaces the 4.x `usage ...` and `report usage|evals` commands.
 
 | Command | Purpose |
 | --- | --- |
-| `ai-rulez usage hook [-o file] [--harness claude\|codex\|cursor] [--role r] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the hooks block that records skill invocations; other harnesses warn and print nothing |
-| `ai-rulez usage record [--harness h] [--outcome o] [--role r] [--served] [--salt-file f] [--log f] [--sink-command c] [--index f]` | Read one hook event on stdin and append an identifier-only JSON line; always exits 0 |
-| `ai-rulez usage export --to file <path> [--file f] [--log f] [--with-evals] [--dry-run] [-n dir]` | Write the usage log as an OTLP JSON file (one logs request per line, allowlisted identifier-only fields, deterministic); no network |
-| `ai-rulez usage export --to otlp [--all] [--with-evals] [--max-batches n] [--dry-run]` | Push the usage log past the export cursor (and eval results) to the consented collector; exits 1 when delivery fails |
-| `ai-rulez usage prune --keep-days n [--dry-run] [--ignore-cursor] [--log f]` | Delete usage-log lines older than n days that are behind the export cursor |
+| `ai-rulez telemetry hook [--harness claude\|codex\|cursor] [--role r] [--format json\|toml] [-o file] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the hooks that record skill, rule, context and agent loads (Claude Code: `InstructionsLoaded`, `SubagentStart`, `SubagentStop` plus the skill hooks; codex and cursor: the skill hook) as a hooks block or `[[hooks]]` groups; other harnesses warn and print nothing |
+| `ai-rulez telemetry record [--harness h] [--role r] [--outcome o] [--served] [--salt-file f] [--log f] [--sink-command c] [--index f] [--root dir]` | Read one hook event on stdin: a skill invocation appends an identifier-only JSON line to the usage log, an item load is recorded when `[telemetry] enabled`; silent, always exits 0 |
+| `ai-rulez telemetry feedback <skill> --kind misled\|stale\|wrong\|great [--note-file f] [--log f] [--harness h] [--role r]` | Append an identifier-only feedback record; the note text stays in `feedback-notes/` |
+| `ai-rulez telemetry report [log] [--index f] [--feedback f] [--evals f] [--items] [--format json] [-n dir]` | Join a usage log (default `.ai-rulez/local/usage.jsonl`) with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown; rule, agent and context sections when the log holds item events |
+| `ai-rulez telemetry report evals [--usage f]... [--from-otlp] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--format json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
+| `ai-rulez telemetry export --to file <path> [--file f] [--log f] [--with-evals] [--dry-run] [-n dir]` | Write the usage log as an OTLP JSON file (one logs request per line, allowlisted identifier-only fields, deterministic); no network |
+| `ai-rulez telemetry export --to otlp [--all] [--with-evals] [--max-batches n] [--dry-run]` | Push the usage log past the export cursor (and eval results) to the consented collector; exits 1 when delivery fails |
+| `ai-rulez telemetry prune --keep-days n [--dry-run] [--ignore-cursor] [--log f]` | Delete usage-log lines older than n days that are behind the export cursor |
 | `ai-rulez telemetry enable [--endpoint url] [--protocol http/json\|http/protobuf\|grpc] [--include-session] [--include-paths] [--backfill]` | Store your consent for one collector (per user, mode 0600; a repository cannot grant it) |
 | `ai-rulez telemetry status [--format json]` | Recording and export on or off, consent state, pending events, cursor, failed flushes |
 | `ai-rulez telemetry disable` | Withdraw consent |
-| `ai-rulez usage feedback <skill> --kind misled\|stale\|wrong\|great [--note-file f] [--log f] [--harness h] [--role r]` | Append an identifier-only feedback record; the note text stays in `feedback-notes/` |
-| `ai-rulez report usage <log> [--index f] [--feedback f] [--evals f] [--items] [--format json] [-n dir]` | Join a usage log with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown; rule, agent and context sections when the log holds item events |
-| `ai-rulez telemetry hook [--harness h] [--role r] [--format json\|toml] [-o file] [--executable e]` | Print the hooks that record skill, rule, context and agent loads (Claude Code: `InstructionsLoaded`, `SubagentStart`, `SubagentStop` plus the skill hooks) as a hooks block or `[[hooks]]` groups |
-| `ai-rulez telemetry record [--harness h] [--role r] [--root dir]` | Read one hook event on stdin and record an item event; silent, always exits 0 |
 | `ai-rulez telemetry flush [--background] [--timeout d] [--root dir]` | Send the local outbox to the OTLP collector with retry and backoff |
 | `ai-rulez telemetry preview [--log f] [--limit n] [--with-evals] [--root dir] [-n dir]` | Print the exact OTLP requests an export would send (destination, body, exported and withheld fields) from the outbox or the usage log; sends nothing |
 | `ai-rulez telemetry doctor [--format json] [--root dir]` | Show the resolved telemetry config and where each key came from, consent, endpoint host, buffer and last flush |
-| `ai-rulez report evals [--usage f]... [--from-otlp] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--format json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
 
 ## Eval Commands
 
@@ -2353,6 +2353,53 @@ ai-rulez llm estimate <file> [--max-output <tokens>] [--format text|json]
 
 `doctor` prints the resolved backend, model, endpoint host, whether the key variable is set (never its value), whether network use is allowed and the cache directory; `--ping` makes one 1-token call and refuses unless `allow_network = true`. `estimate` approximates the prompt tokens of a file and the worst-case cost offline. A failure exits `1`.
 
+## Migrate Command
+
+### `ai-rulez migrate v5`
+
+Rewrite a 4.x project for ai-rulez 5.0. `migrate` reads 4.x only: a 2.x or 3.x project must first be migrated to
+4.0 with ai-rulez 4.x. The full list of breaking changes and the before/after of each is in
+[Migrating to v5](migration-v5.md).
+
+**Syntax:**
+
+```bash
+ai-rulez migrate v5 [--dry-run] [--check] [--adopt-defaults] [--write] [--recursive] [--config-dir name] [--format text|json]
+```
+
+**Flags:**
+
+- `--dry-run`: print the change list and write nothing.
+- `--check`: write nothing and exit 2 when a project still needs migration.
+- `--adopt-defaults`: do not pin the 4.x defaults (`agents_md = false`, `gitignore = true`, `[header] hashes = "full"`); take the v5 ones.
+- `--write`: also rewrite the deprecated frontmatter spellings `permission_mode` and `user_invocable` in the markdown sources.
+- `--recursive`: migrate every project found below the current directory.
+- `--config-dir`: migrate one config directory name instead of `.ai-rulez` (then `.config/ai-rulez`).
+- `--format json`: a machine-readable report with `schema_version`, one entry per project and a summary.
+
+**What It Does (per project):**
+
+1. Converts a 4.x `config.yaml`, `config.yml` or `config.json` to `config.toml`, keeping keys, order and comments, and removes the old file.
+2. Sets `version = "5.0"` in place, keeping the rest of the line.
+3. Renames `[lint.budget]` to `[lint.ratchet]`.
+4. Merges a legacy `mcp.toml`, `mcp.yaml` or `mcp.json` into `[[mcp_servers]]` and removes it (left alone with a warning when `config.toml` already has `mcp_servers`).
+5. Pins the three changed defaults to their 4.x values unless `--adopt-defaults`.
+6. Converts a `config.local.yaml`, `.yml` or `.json` overlay to `config.local.toml` (owner-only).
+7. Rewrites `ai-rulez usage ...` and `report usage|evals` to `telemetry ...` inside the hook, verifier and script commands of `config.toml`.
+8. Warns about `[[plugins]]` (no longer written to any file) and about a 4.x file it left in place.
+
+The result is decoded with the v5 loader before anything is written; a project that would not load is reported with
+its error and left untouched. Running `migrate v5` on a migrated project changes nothing.
+
+**Exit codes:** `0` migrated or nothing to do, `1` a project could not be migrated (or an unsupported target),
+`2` `--check` found a project that needs migration.
+
+Then regenerate outputs and review the diff:
+
+```bash
+ai-rulez generate
+```
+
 ## Version Command
 
 ### `ai-rulez version`
@@ -2442,7 +2489,7 @@ Commands that load a project directory use the following config order:
 3. **Project convention**: `.config/ai-rulez/config.toml`, used only when discovering the default layout (an explicit `--config-dir` is honoured exactly and never falls back)
 4. **Error**: No configuration found
 
-The search walks up from the current directory. `config.toml` is the only config format read. A project that has only a V3 `.ai-rulez/config.yaml`, `.yml` or `.json` (or a `config.local.yaml`, `.yml` or `.json` overlay), or a flat V2 `ai-rulez.yaml` (also `.ai-rulez.yaml`, `ai_rulez.yaml` and their `.yml` forms), stops with an error that names the file and exits `1`; migrate it with ai-rulez 4.x first (`npx ai-rulez@4 migrate v4`; for a flat V2 file, move it to `.ai-rulez/config.yaml` first), then upgrade. `doctor` reports the same file.
+The search walks up from the current directory. `config.toml` is the only config format read. A project that has only a YAML or JSON config (`.ai-rulez/config.yaml`, `.yml` or `.json`, or a `config.local.yaml`, `.yml` or `.json` overlay), or a flat V2 `ai-rulez.yaml` (also `.ai-rulez.yaml`, `ai_rulez.yaml` and their `.yml` forms), stops with an error that names the file and exits `1`; run `ai-rulez migrate v5` to convert it (a 2.x or 3.x project goes through ai-rulez 4.x first). A `config.toml` whose `version` is `4.0` stops the same way. `doctor` reports the same file.
 
 Example detection flow:
 
@@ -2461,16 +2508,19 @@ ai-rulez generate --config ./ai-policy/config.toml
 
 ## Exit Codes
 
-Every command follows one contract, so a script can tell a failed run from a failed check:
+Every command follows one contract (`lock` adds `3`, see [Lock file](lockfile.md)), so a script can tell a failed run from a failed check:
 
 | Code | Meaning |
 | ---- | ------- |
 | 0    | Success |
-| 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand, a V2/V3 config file (see [Configuration Detection](#configuration-detection)), a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no manifest |
-| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file |
+| 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand, a YAML, JSON or older-version config (see [Configuration Detection](#configuration-detection)), a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no manifest |
+| 2    | The command ran and found something: `validate` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `migrate v5 --check` finding a project to migrate; `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file |
 | 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --strict` fails instead) |
 
 When a command covers several roots (`--recursive`), the most severe code wins: `1`, then `2`, then `3`.
+
+The contract is covered by a table test over the built binary (`tests/e2e/cli/exit_codes_test.go`), so a
+CI step can rely on it: `0` pass, `2` fix the content, `1` fix the setup.
 
 ## Output Examples
 

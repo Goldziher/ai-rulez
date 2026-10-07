@@ -141,7 +141,7 @@ The schema files are available in the repository:
 
 | File                              | Format      | Version | Notes                                               |
 | --------------------------------- | ----------- | ------- | --------------------------------------------------- |
-| `schema/ai-rules.schema.json`     | JSON Schema | V4      | Config schema; `version` must be `"4.0"`             |
+| `schema/ai-rules.schema.json`     | JSON Schema | v5      | Config schema; accepts `version` `"5.0"` only |
 | `schema/ai-rules-local.schema.json` | JSON Schema | V4    | Machine-local `config.local.toml` overlay; used by `validate`, `local set` and the MCP `validate_config` tool |
 | `schema/provider.schema.json`     | JSON Schema | V4      | Declarative provider spec referenced by `[[presets]] provider = "..."`; see [Provider-backed Presets](configuration.md#provider-backed-presets-full-parity) |
 | `schema/roles-manifest.schema.json` | JSON Schema | v1    | `roles.json` and `roles list --format json`; see [Roles](roles.md#the-roles-manifest) |
@@ -149,6 +149,12 @@ The schema files are available in the repository:
 | `schema/catalog-diff.schema.json` | JSON Schema | v1      | `ai-rulez catalog diff --format json`; see [Catalog](catalog.md#comparing-catalogs) |
 | `schema/catalog.v1.schema.json`   | JSON Schema | v1      | `ai-rulez catalog --format json` (the default until the next minor release) |
 | `schema/plan.schema.json`         | JSON Schema | v1      | `ai-rulez generate --emit-plan FILE` and `generator.PlanOutputs`: every file a run would write, merge or remove, with digests and no secrets; see [Embedding the plan](cli.md#embedding-the-plan) |
+| `schema/validate-report.schema.json` | JSON Schema | v1   | `ai-rulez validate --format json` and `scan --format json` |
+| `schema/cost-report.schema.json`  | JSON Schema | v1      | `ai-rulez cost --format json` |
+| `schema/telemetry-doctor.schema.json` | JSON Schema | v1  | `ai-rulez telemetry doctor --format json` |
+| `schema/eval-report.schema.json`  | JSON Schema | v1      | `ai-rulez eval run --format json` |
+| `schema/okf-validate.schema.json` | JSON Schema | v1      | `ai-rulez okf validate --format json` |
+| `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json` |
 | `schema/lock-diff.schema.json`    | JSON Schema | v1      | `ai-rulez lock --diff --format json`; see [Lock file](lockfile.md) |
 | `schema/lock-outdated.schema.json` | JSON Schema | v1     | `ai-rulez lock --outdated --format json`: sources with a version constraint and the newer tags they could move to |
 | `schema/review-report.schema.json` | JSON Schema | v1     | `ai-rulez review --format json`: the rubric with its weights and formula, one entry per item, and the egress manifest of `--estimate` |
