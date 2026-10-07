@@ -14,6 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// registryImage is registry:2 pinned to the digest CI pulls, so the test runs
+// the same image everywhere.
+const registryImage = "registry:2@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373"
+
 // TestLive_RegistryV2RoundTrip pushes to and pulls from a real `registry:2`
 // container. It is opt-in (AI_RULEZ_LIVE_PUBLISH=1) because it needs Docker and
 // the registry image.
@@ -28,7 +32,7 @@ func TestLive_RegistryV2RoundTrip(t *testing.T) {
 	t.Setenv("DOCKER_CONFIG", t.TempDir())
 	const port = "5173"
 	name := fmt.Sprintf("ai-rulez-registry-%d", os.Getpid())
-	out, err := exec.Command(docker, "run", "-d", "--rm", "--name", name, "-p", "127.0.0.1:"+port+":5000", "registry:2").CombinedOutput() //nolint:gosec // fixed argv in an opt-in test
+	out, err := exec.Command(docker, "run", "-d", "--rm", "--name", name, "-p", "127.0.0.1:"+port+":5000", registryImage).CombinedOutput() //nolint:gosec // fixed argv in an opt-in test
 	require.NoError(t, err, string(out))
 	t.Cleanup(func() { _ = exec.Command(docker, "rm", "-f", name).Run() }) //nolint:gosec // fixed argv in an opt-in test
 	host := "127.0.0.1:" + port
