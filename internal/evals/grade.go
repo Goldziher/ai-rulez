@@ -23,6 +23,22 @@ type GradeOptions struct {
 	CommandTimeout time.Duration
 	// Runner starts the command; nil runs a real process (runner.Exec).
 	Runner runner.Runner
+	// Environ is the parent environment a command_exit command's scrubbed
+	// environment is built from (KEY=VALUE); nil is the real one.
+	Environ []string
+	// EnvPass names variables a command_exit command keeps besides the runner's
+	// base allowlist (PATH, HOME, temp directories, locale) and CI.
+	EnvPass []string
+}
+
+// commandEnv is the environment of a command_exit command: the case is
+// repository content, so it never gets the caller's credentials.
+func (o *GradeOptions) commandEnv() []string {
+	parent := o.Environ
+	if parent == nil {
+		parent = runner.HostEnv()
+	}
+	return runner.ScrubEnv(parent, append([]string{"CI"}, o.EnvPass...), nil)
 }
 
 // OutcomeGrade is the verdict on a case's outcome checks (assertions and rubric).
@@ -195,9 +211,9 @@ func runCommandAssertion(a *Assertion, workDir string, opts GradeOptions) string
 		argv = []string{"cmd", "/C", a.Command}
 	}
 	// The assertion's command is authored content gated by --allow-exec; it runs
-	// with the caller's full environment, as it always did, in its own process tree.
+	// in its own process tree with a scrubbed environment.
 	res := runner.Or(opts.Runner).Run(context.Background(), runner.Spec{
-		Argv: argv, Dir: workDir, InheritEnv: true, Timeout: timeout,
+		Argv: argv, Dir: workDir, Env: opts.commandEnv(), Timeout: timeout,
 	})
 	want := 0
 	if a.ExitCode != nil {

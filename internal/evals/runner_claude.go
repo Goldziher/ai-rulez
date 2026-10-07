@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"io"
 	"io/fs"
@@ -74,6 +75,9 @@ type ClaudePluginEval struct {
 	// through it (and so can be denied or recorded) instead of os/exec. The
 	// timeout still applies through the context.
 	Runner runner.Runner
+	// Env supplies the parent environment the scrubbed child environment is built
+	// from (claudeEnvNames only, as for the native runner); nil is the real one.
+	Env ambient.Env
 }
 
 // Name implements Runner.
@@ -122,7 +126,7 @@ func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, er
 	}
 	run := r.Exec
 	if run == nil {
-		run = execThrough(runner.Or(r.Runner))
+		run = execThrough(runner.Or(r.Runner), claudeChildEnv(r.Env))
 	}
 	timeout := r.Timeout
 	if timeout <= 0 {
@@ -185,12 +189,14 @@ func (r *ClaudePluginEval) args(dir, resultFile string, req *Request) []string {
 // beyond this is noise that must not exhaust memory.
 const maxToolOutputBytes = 8 << 20
 
-// execThrough runs the tool through r. Output is captured by the runner (capped
-// at maxToolOutputBytes per stream) and written to the sinks when the tool ends.
-func execThrough(r runner.Runner) func(ctx context.Context, bin string, args []string, stdout, stderr io.Writer) error {
+// execThrough runs the tool through r with the environment env (a scrubbed one:
+// the eval's skill and cases are repository content, and claude runs them).
+// Output is captured by the runner (capped at maxToolOutputBytes per stream) and
+// written to the sinks when the tool ends.
+func execThrough(r runner.Runner, env []string) func(ctx context.Context, bin string, args []string, stdout, stderr io.Writer) error {
 	return func(ctx context.Context, bin string, args []string, stdout, stderr io.Writer) error {
 		res := r.Run(ctx, runner.Spec{
-			Argv: append([]string{bin}, args...), InheritEnv: true,
+			Argv: append([]string{bin}, args...), Env: env,
 			Timeout: runner.MaxTimeout, MaxOutput: maxToolOutputBytes,
 		})
 		if stdout != nil {

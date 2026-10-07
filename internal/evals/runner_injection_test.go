@@ -3,11 +3,13 @@ package evals
 import (
 	"bytes"
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
@@ -76,6 +78,63 @@ func TestDeniedRunnerStopsACommandAssertion(t *testing.T) {
 	// Assert
 	assert.Contains(t, msg, "command did not run")
 	assert.Contains(t, msg, "not allowed")
+}
+
+func TestChildProcessesGetAScrubbedEnvironment(t *testing.T) {
+	parent := []string{"PATH=/bin", "HOME=/home/u", "CI=true", "GITHUB_TOKEN=gh", "AWS_SECRET_ACCESS_KEY=aws", "ANTHROPIC_API_KEY=k", "PROJECT_FLAG=1"}
+	tests := []struct {
+		name    string
+		run     func(t *testing.T, fake *runner.Fake)
+		want    []string
+		dropped []string
+	}{
+		{
+			name: "a command_exit assertion keeps the base, CI and --env-pass names",
+			run: func(t *testing.T, fake *runner.Fake) {
+				t.Helper()
+				opts := GradeOptions{AllowExec: true, Runner: fake, Environ: parent, EnvPass: []string{"PROJECT_FLAG"}}
+				assert.Empty(t, runCommandAssertion(&Assertion{Type: AssertCommandExit, Command: "true"}, t.TempDir(), opts))
+			},
+			want:    []string{"PATH=/bin", "HOME=/home/u", "CI=true", "PROJECT_FLAG=1"},
+			dropped: []string{"GITHUB_TOKEN", "AWS_SECRET_ACCESS_KEY", "ANTHROPIC_API_KEY"},
+		},
+		{
+			name: "claude plugin eval keeps only what claude needs",
+			run: func(t *testing.T, fake *runner.Fake) {
+				t.Helper()
+				env := ambient.MapEnv{Vars: map[string]string{}}
+				for _, kv := range parent {
+					k, v, _ := strings.Cut(kv, "=")
+					env.Vars[k] = v
+				}
+				exec := execThrough(fake, claudeChildEnv(env))
+				_ = exec(context.Background(), "claude", []string{"plugin", "eval"}, nil, nil)
+			},
+			want:    []string{"PATH=/bin", "HOME=/home/u", "ANTHROPIC_API_KEY=k"},
+			dropped: []string{"GITHUB_TOKEN", "AWS_SECRET_ACCESS_KEY", "PROJECT_FLAG", "CI="},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			fake := &runner.Fake{}
+
+			// Act
+			tt.run(t, fake)
+
+			// Assert
+			require.Len(t, fake.Calls(), 1)
+			spec := fake.Calls()[0]
+			assert.False(t, spec.InheritEnv, "the parent environment is never inherited whole")
+			env := strings.Join(spec.Env, "\n")
+			for _, w := range tt.want {
+				assert.Contains(t, env, w)
+			}
+			for _, d := range tt.dropped {
+				assert.NotContains(t, env, d)
+			}
+		})
+	}
 }
 
 func TestCommandAssertionExitStatus(t *testing.T) {

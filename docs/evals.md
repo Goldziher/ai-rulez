@@ -106,7 +106,7 @@ Assertions:
 | `contains` / `not_contains` | `value`, optional `path` | the final answer (or the file at `path`) does / does not contain the text |
 | `regex` | `value` (RE2), optional `path` | the answer (or file) matches |
 | `file_exists` | `path`, `exists` (default true) | the file is / is not in the working directory |
-| `command_exit` | `command`, `exit_code` (default 0) | the command, run through the shell in the working directory, exits with that status; **needs `--allow-exec`** because it executes text from a case file |
+| `command_exit` | `command`, `exit_code` (default 0) | the command, run through the shell in the working directory, exits with that status; **needs `--allow-exec`** because it executes text from a case file. It gets a scrubbed environment: `PATH`, `HOME`, the temp directories, the locale and `CI`, never your credentials |
 
 Every path must be relative and stay inside its directory (no leading `/` or `~`, no `..`). `prompt_file` and
 `files[].source` are also checked after symlinks are resolved: a symlink (to a file or to a directory) whose target
@@ -178,7 +178,9 @@ The adapter never adds `--trust-plugin` itself: pass `--runner-arg --trust-plugi
 directory. It was written against the help text and interview prompt of Claude Code 2.1.289; the JSON shape it reads
 (`cases[].arms.with|without[]` with `graders[]`, `costUsd`, `error`) was not checked against a live run, and an
 unrecognized document is an error rather than a silent pass. `claude plugin eval` publishes its report to claude.ai by
-default; the adapter always passes `--no-publish`.
+default; the adapter always passes `--no-publish`. `claude` gets the same scrubbed environment as the native activation
+runner (`PATH`, `HOME`, locale, `CLAUDE_CONFIG_DIR`, `ANTHROPIC_*` and `CLAUDE_CODE_*` authentication and provider
+variables); cloud and forge credentials are not passed.
 
 ### The command runner
 
