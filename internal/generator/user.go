@@ -153,7 +153,7 @@ func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputF
 		return nil, "", nil, oops.Wrapf(err, "create the scratch directory")
 	}
 	defer func() { _ = os.RemoveAll(stage) }()
-	if err := stageUserDocuments(stage, presets, layouts); err != nil {
+	if err := g.stageUserDocuments(stage, presets, layouts); err != nil {
 		return nil, "", nil, err
 	}
 
@@ -251,13 +251,13 @@ func (g *Generator) mapUserOutputs(stage string, rendered map[string][]config.Ou
 
 // stageUserDocuments copies the existing settings documents the presets merge
 // into from their user-level location to the path they render at.
-func stageUserDocuments(stage string, presets []config.Preset, layouts map[string]*userscope.Layout) error {
+func (g *Generator) stageUserDocuments(stage string, presets []config.Preset, layouts map[string]*userscope.Layout) error {
 	for _, preset := range presets {
 		for _, row := range layouts[preset.BuiltIn].Rows {
 			if row.Kind != userscope.KindSettings || row.To == "" {
 				continue
 			}
-			data, err := os.ReadFile(row.To)
+			data, err := g.config.ReadExisting(row.To)
 			if err != nil {
 				continue // absent, or not readable: the merge starts from nothing, and the guard reports the path
 			}
@@ -449,7 +449,7 @@ func (g *Generator) checkSymlinkEscape(abs string) error {
 
 // userConflict explains why an existing file at abs must not be written, or "".
 func (g *Generator) userConflict(abs string, output config.OutputFile, previous map[string]bool) string {
-	info, err := os.Lstat(abs)
+	info, err := g.config.LstatExisting(abs)
 	if err != nil {
 		return ""
 	}
@@ -473,7 +473,7 @@ func (g *Generator) userConflict(abs string, output config.OutputFile, previous 
 // userFileIsOurs reports whether the file at abs already is what would be written,
 // or carries ai-rulez's generated banner.
 func (g *Generator) userFileIsOurs(abs string, output config.OutputFile) bool {
-	data, err := os.ReadFile(abs)
+	data, err := g.config.ReadExisting(abs)
 	if err != nil {
 		return false
 	}
@@ -492,12 +492,12 @@ func (g *Generator) userFileIsOurs(abs string, output config.OutputFile) bool {
 // carry the generated banner and a JSON document (Copilot's hooks file, which has
 // no room for one) rests on the manifest alone.
 func (g *Generator) userStaleOK(abs string) bool {
-	info, err := os.Lstat(abs)
+	info, err := g.config.LstatExisting(abs)
 	if err != nil || info.IsDir() || !g.userMayTouch(filepath.Dir(abs)) {
 		return false
 	}
 	if headerCapable(abs) {
-		return looksGenerated(abs)
+		return g.looksGenerated(abs)
 	}
 	if g.userInContentFolder(abs) {
 		return true
@@ -505,7 +505,7 @@ func (g *Generator) userStaleOK(abs string) bool {
 	if !g.userFileRow(abs) {
 		return false
 	}
-	return strings.EqualFold(filepath.Ext(abs), ".json") || looksGenerated(abs)
+	return strings.EqualFold(filepath.Ext(abs), ".json") || g.looksGenerated(abs)
 }
 
 // userFileRow reports whether abs is the destination of a file row of some

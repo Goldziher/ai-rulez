@@ -255,7 +255,7 @@ func TestWriteOutput_BannerlessRulesDirFile_IsStableAndManaged(t *testing.T) {
 	// Assert
 	assert.True(t, info.ModTime().Equal(old), "second run does not rewrite the file")
 	assert.False(t, gen.skippedPaths[rel], "recognized as ours even with no manifest")
-	assert.True(t, looksGenerated(abs))
+	assert.True(t, gen.looksGenerated(abs))
 }
 
 func TestExtractStoredHashes_Robustness(t *testing.T) {
