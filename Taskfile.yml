@@ -203,6 +203,16 @@ tasks:
     cmds:
       - go run ./cmd/ai-rulez validate
 
+  docs:llms:
+    desc: "Regenerate docs/llms.txt and docs/llms-full.txt from zensical.toml and docs/"
+    cmds:
+      - go run ./scripts/docsllms
+
+  docs:llms:check:
+    desc: "Fail when docs/llms.txt or docs/llms-full.txt differ from the docs sources"
+    cmds:
+      - go run ./scripts/docsllms --check
+
   harness:verify:
     desc: "List harness trap and limit rows with source and verified_on; fail when older than max_table_age_days (default 90). HARNESS_MAX_AGE_DAYS overrides; HARNESS_VERIFY_FETCH=1 also re-fetches each quote (network)"
     cmds:
