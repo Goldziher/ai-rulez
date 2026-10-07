@@ -333,7 +333,9 @@ func (x *execution) nativeSiblingGuard(rr roundResult, rep *RoundReport) (reject
 
 func (x *execution) left() float64 { return math.Max(0, x.p.Opts.MaxCostUSD-x.spent) }
 
-func (x *execution) overBudget() bool { return x.left() <= 0 }
+// overBudget is true once what is left rounds to nothing: handing out a budget of
+// 0 would read as unlimited.
+func (x *execution) overBudget() bool { return spentOut(x.left()) }
 
 func (x *execution) charge(eval, opt float64) {
 	x.spent = roundUSD(x.spent + eval + opt)
@@ -661,7 +663,7 @@ func (x *execution) reset(tree *Tree) error {
 // means the round failed.
 func (x *execution) runOptimizer(round int, scores *trainScores, history []string, rep *RoundReport) (answer *OptimizerResponse, failure string) {
 	p, o := x.p, &x.p.Opts
-	budget := budgetUSD(x.left())
+	budget := roundUSD(x.left())
 	req := OptimizerRequest{
 		Version: ProtocolVersion, RunID: p.RunID, Round: round,
 		Skill:      optimizerSkill{ID: p.Skill.ID, Dir: p.Skill.ID, Digest: digestOfTree(x.prev)},
