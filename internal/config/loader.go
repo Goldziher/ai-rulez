@@ -254,6 +254,9 @@ func hasConfigFile(v workspace.View, dir string) bool {
 }
 
 func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, baseDir, configDir string, lo loadOptions) (*Config, error) {
+	if lo.frontmatterErrors {
+		lo.host.Log = quietFrontmatterLog{logger.Or(lo.host.Log)}
+	}
 	config.Workspace = v.W
 	config.BaseDir = baseDir
 	config.ConfigDir = configDir
@@ -1555,5 +1558,17 @@ func loadHost(lo loadOptions) ambient.Host {
 // could not be parsed. The block is dropped from the content and the file is
 // marked malformed, so validation fails; this tells the author which file and why.
 func warnMalformedFrontmatter(log logger.Logger, path string) {
-	log.Warn("Ignoring malformed YAML frontmatter — check for unquoted values containing ': '", "path", path)
+	log.Warn(malformedFrontmatterMsg, "path", path)
+}
+
+const malformedFrontmatterMsg = "Ignoring malformed YAML frontmatter — check for unquoted values containing ': '"
+
+// quietFrontmatterLog drops the malformed-frontmatter warning (see
+// WithFrontmatterErrors) and forwards everything else.
+type quietFrontmatterLog struct{ logger.Logger }
+
+func (q quietFrontmatterLog) Warn(msg string, args ...any) {
+	if msg != malformedFrontmatterMsg {
+		q.Logger.Warn(msg, args...)
+	}
 }
