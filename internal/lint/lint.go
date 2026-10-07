@@ -936,6 +936,7 @@ func (r *runner) checkDuplicates() {
 			if code, dup := compareDescriptions(entries[i], b, threshold); dup {
 				a := entries[i]
 				line := r.docs[b.it.abs].lineOf("description", 1)
+				r.dep(b.it.abs, a.it.abs) // the finding sits on b but exists because of a
 				r.add(code, b.it.abs, line, "description is %s %s %q (%s)", map[string]string{CodeDescriptionDup: "identical to", CodeDescriptionNearDup: "near-identical to"}[code], a.it.kind, itemID(a.it.kind, a.it.cf), r.display(a.it.abs))
 				break
 			}
