@@ -49,8 +49,10 @@ func readNativeArray(cfg *config.Config, docPath string, path []string) []any {
 		}
 		node = object[key]
 	}
-	list, _ := node.([]any)
-	return list
+	if list, ok := node.([]any); ok {
+		return list
+	}
+	return nil
 }
 
 // nativeArrayKey is arrayKey for a TOML or YAML document: the same ownership

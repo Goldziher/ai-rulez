@@ -157,7 +157,10 @@ func stricterBefore(earlier []string, chosen map[string]ocRule, r ocRule, existi
 		if _, ours := chosen[name]; ours {
 			continue
 		}
-		action, _ := existing[name].(string)
+		action, isString := existing[name].(string)
+		if !isString {
+			action = ""
+		}
 		if strictness(PermAction(action)) > strictness(r.entry.Action) && globsOverlap(name, r.pattern) {
 			return name
 		}

@@ -38,7 +38,10 @@ func RenderOwnedHooks(keys []jsonmerge.OwnedKey) (string, error) {
 		case len(key.Path) == 1 && key.Path[0] == keyVersion:
 			version = key.Value
 		case len(key.Path) == 2 && key.Path[0] == "hooks":
-			entries, _ := key.Value.([]json.RawMessage)
+			entries, ok := key.Value.([]json.RawMessage)
+			if !ok {
+				entries = nil
+			}
 			hooks[key.Path[1]] = entries
 		}
 	}
