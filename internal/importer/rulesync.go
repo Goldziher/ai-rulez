@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/samber/oops"
 	"github.com/tailscale/hujson"
 )
 
@@ -74,15 +75,15 @@ func readRulesyncConfig(r *reader) (*rulesyncConfig, error) {
 	}
 	data, err := r.read(rulesyncConfigFile)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %s", rulesyncConfigFile, skipReasonOr(err))
+		return nil, oops.With("file", rulesyncConfigFile).Errorf("%s: %s", rulesyncConfigFile, skipReasonOr(err))
 	}
 	std, err := hujson.Standardize(trimBOM(data))
 	if err != nil {
-		return nil, fmt.Errorf("%s is not valid JSONC (%s): %w", rulesyncConfigFile, CodeInvalid, err)
+		return nil, oops.With("file", rulesyncConfigFile).Wrapf(err, "%s is not valid JSONC (%s)", rulesyncConfigFile, CodeInvalid)
 	}
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(std, &raw); err != nil {
-		return nil, fmt.Errorf("%s is not a JSON object (%s): %w", rulesyncConfigFile, CodeInvalid, err)
+		return nil, oops.With("file", rulesyncConfigFile).Wrapf(err, "%s is not a JSON object (%s)", rulesyncConfigFile, CodeInvalid)
 	}
 	return &rulesyncConfig{raw: raw}, nil
 }

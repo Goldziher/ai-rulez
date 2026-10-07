@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/samber/oops"
 	"github.com/tailscale/hujson"
 	"gopkg.in/yaml.v3"
 )
@@ -110,7 +111,7 @@ func (b *tesslPlanner) importManifest() ([]tesslDep, error) {
 		err = json.Unmarshal(std, &doc)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%s is not valid JSON (%s): %w", tesslManifest, CodeInvalid, err)
+		return nil, oops.With("file", tesslManifest).Wrapf(err, "%s is not valid JSON (%s)", tesslManifest, CodeInvalid)
 	}
 	keys := make([]string, 0, len(doc))
 	for k := range doc {
@@ -476,10 +477,10 @@ var evalIDChars = regexp.MustCompile(`[^a-z0-9._-]+`)
 func renderEvalFile(c evalCase) ([]byte, error) {
 	id := evalIDChars.ReplaceAllString(strings.ToLower(c.id), "-")
 	if id == "" {
-		return nil, fmt.Errorf("empty case id")
+		return nil, oops.Errorf("empty case id")
 	}
 	if c.prompt == "" {
-		return nil, fmt.Errorf("the scenario has an empty task")
+		return nil, oops.Errorf("the scenario has an empty task")
 	}
 	cs := yamlMap()
 	yamlAdd(cs, "id", yamlStr(id))
@@ -498,10 +499,10 @@ func renderEvalFile(c evalCase) ([]byte, error) {
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)
 	if err := enc.Encode(root); err != nil {
-		return nil, fmt.Errorf("render eval case: %w", err)
+		return nil, oops.Wrapf(err, "render eval case")
 	}
 	if err := enc.Close(); err != nil {
-		return nil, fmt.Errorf("render eval case: %w", err)
+		return nil, oops.Wrapf(err, "render eval case")
 	}
 	return buf.Bytes(), nil
 }

@@ -22,6 +22,14 @@ const (
 
 var errSkipped = errors.New("skipped")
 
+// skipError is an input the reader refuses; its text is the reason recorded in
+// the report, and it matches errSkipped.
+type skipError string
+
+func (e skipError) Error() string { return errSkipped.Error() + ": " + string(e) }
+
+func (e skipError) Is(target error) bool { return target == errSkipped }
+
 // reader reads from a source tree and enforces the input limits: no symlinks,
 // a per-file size cap and a total cap. Every refusal is returned as an error
 // whose text is the reason recorded in the report.
@@ -123,27 +131,27 @@ func (r *reader) exists(p string) (isDir, ok bool) {
 
 func (r *reader) read(p string) ([]byte, error) {
 	if !fs.ValidPath(p) {
-		return nil, fmt.Errorf("%w: path escapes the source directory", errSkipped)
+		return nil, skipError("path escapes the source directory")
 	}
 	link, err := r.symlinkIn(p)
 	if err != nil {
 		return nil, err
 	}
 	if link {
-		return nil, fmt.Errorf("%w: symlinks are not followed", errSkipped)
+		return nil, skipError("symlinks are not followed")
 	}
 	info, err := fs.Stat(r.fsys, p)
 	if err != nil {
 		return nil, err
 	}
 	if !info.Mode().IsRegular() {
-		return nil, fmt.Errorf("%w: not a regular file", errSkipped)
+		return nil, skipError("not a regular file")
 	}
 	if info.Size() > maxFileBytes {
-		return nil, fmt.Errorf("%w: file is larger than the %d MiB limit", errSkipped, maxFileBytes>>20)
+		return nil, skipError(fmt.Sprintf("file is larger than the %d MiB limit", maxFileBytes>>20))
 	}
 	if r.total+info.Size() > maxTotalBytes {
-		return nil, fmt.Errorf("%w: total input exceeds the %d MiB limit", errSkipped, maxTotalBytes>>20)
+		return nil, skipError(fmt.Sprintf("total input exceeds the %d MiB limit", maxTotalBytes>>20))
 	}
 	data, err := fs.ReadFile(r.fsys, p)
 	if err != nil {
@@ -155,10 +163,11 @@ func (r *reader) read(p string) ([]byte, error) {
 
 // skipReason returns the human reason of a skipped read, or "" for other errors.
 func skipReason(err error) string {
-	if !errors.Is(err, errSkipped) {
+	var skip skipError
+	if !errors.As(err, &skip) {
 		return ""
 	}
-	return strings.TrimPrefix(err.Error(), errSkipped.Error()+": ")
+	return string(skip)
 }
 
 // dirEntries lists a directory, sorted, without symlink entries; skipped

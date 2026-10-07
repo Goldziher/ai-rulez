@@ -156,24 +156,24 @@ var allowCodeRe = regexp.MustCompile(`(?i)^AR[0-9A-Z]{3,4}$`)
 func checkConvertFlags(interactive bool) error {
 	switch {
 	case convertWrite && convertDryRun:
-		return fmt.Errorf("--write and --dry-run cannot be combined")
+		return oops.Errorf("--write and --dry-run cannot be combined")
 	case !convertWrite && !convertDryRun && !interactive:
-		return fmt.Errorf("pass --write to convert or --dry-run to preview; a script never converts by surprise")
+		return oops.Errorf("pass --write to convert or --dry-run to preview; a script never converts by surprise")
 	case convertMerge && convertForce:
-		return fmt.Errorf("--merge and --force cannot be combined: --merge keeps every existing file, --force replaces them")
+		return oops.Errorf("--merge and --force cannot be combined: --merge keeps every existing file, --force replaces them")
 	case convertLock && !convertWrite:
-		return fmt.Errorf("--lock pins what was written: it needs --write")
+		return oops.Errorf("--lock pins what was written: it needs --write")
 	}
 	for _, c := range convertAllowFindings {
 		if !allowCodeRe.MatchString(strings.TrimSpace(c)) {
-			return fmt.Errorf("invalid --allow-findings code %q (expected a rule code such as AR001)", c)
+			return oops.Errorf("invalid --allow-findings code %q (expected a rule code such as AR001)", c)
 		}
 	}
 	for _, s := range convertFailOn {
 		switch strings.ReplaceAll(s, "_", "-") {
 		case "approximated", "dropped", "needs-action", "unsupported":
 		default:
-			return fmt.Errorf("unknown --fail-on status %q", s)
+			return oops.Hint("Use approximated, dropped, needs-action or unsupported").Errorf("unknown --fail-on status %q", s)
 		}
 	}
 	return nil
@@ -302,7 +302,7 @@ func printConvertReport(out io.Writer, report *importer.Report) error {
 		// WriteFile reports the close error a deferred Close would drop: a full disk
 		// shows up there.
 		if err := os.WriteFile(convertReport, buf.Bytes(), 0o644); err != nil { //nolint:gosec // a report the user asked for
-			return fmt.Errorf("write report file: %w", err)
+			return oops.With("path", convertReport).Wrapf(err, "write report file")
 		}
 	}
 	return render(out)
