@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"os"
 	"strings"
 
@@ -177,7 +177,7 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(includes) == 0 {
+	if len(includes) == 0 && !includeJSON {
 		logger.Info("No includes found")
 		logLocalEntriesHint("includes")
 		return
@@ -193,12 +193,12 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 				keyType:  inc.Type,
 			}
 		}
-		data, err := json.MarshalIndent(output, "", "  ")
+		data, err := jsondoc.Marshal(output)
 		if err != nil {
 			logger.Error("Failed to marshal JSON", "error", err)
 			os.Exit(1)
 		}
-		fmt.Println(string(data))
+		fmt.Print(string(data))
 	} else {
 		// Output as human-readable table
 		logger.Info("Includes:")
