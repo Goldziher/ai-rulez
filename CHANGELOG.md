@@ -340,6 +340,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **`[llm]` secret scrubbing recognises more credential shapes** (GitHub, GitLab, Google and Slack tokens, JWTs, PEM private-key headers, Basic credentials, temporary AWS keys) in provider errors and `Judge` refusals; it stays a best-effort detector.
 - **`[llm]` cost cap cannot be defeated by `max_cost_usd = nan`, `inf` or a negative value**: a repository value that is not a usable limit no longer replaces the user's cap (it counts as unset), and `AR9L0` and `AI_RULEZ_LLM_MAX_COST_USD` reject non-finite numbers and prices.
 - **`[llm]` budget ignores negative provider-reported usage**: a reply with a negative token count used to lower the spent total; it (like a missing report) is now charged at the worst case, and decoded usage is clamped to zero.
+- **`mcp --serve-skills` no longer rebuilds the catalog after every `load_skill`** when `--usage-log` points inside a watched directory: the live-reload fingerprint now skips the configured log (relative or absolute) and the `usage.salt` beside it, as the startup baseline already did.
 
 ### Security
 
