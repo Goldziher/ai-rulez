@@ -19,6 +19,7 @@ const scopedRulesConfig = `version = "5.0"
 name = "mono"
 presets = ["claude", "cursor", "copilot", "antigravity", "devin"]
 gitignore = false
+agents_md = false
 
 [rules]
 mode = "%s"
