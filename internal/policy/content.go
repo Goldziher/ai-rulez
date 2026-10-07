@@ -81,10 +81,13 @@ func (c *contentApplier) files(groups ...[]config.ContentFile) {
 // installed skill: it lives outside the project's own configuration directory,
 // or inside the directory of a local-path include.
 func (c *contentApplier) imported(path string) bool {
-	if path == "" || !filepath.IsAbs(path) {
-		return false
+	if path == "" || strings.Contains(path, "://") {
+		return false // a builtin pack, not a source the policy must vet
 	}
-	if c.cfg.ConfigDir == "" || !within(c.cfg.ConfigDir, path) {
+	// A configuration loaded from a relative directory carries relative paths:
+	// compare absolute forms so none of them reads as "not imported".
+	path = absPath(path)
+	if c.cfg.ConfigDir == "" || !within(absPath(c.cfg.ConfigDir), path) {
 		return true
 	}
 	for i := range c.cfg.Includes {
@@ -96,11 +99,19 @@ func (c *contentApplier) imported(path string) bool {
 		if !filepath.IsAbs(root) {
 			root = filepath.Join(c.cfg.BaseDir, root)
 		}
-		if within(root, path) && !within(c.cfg.ConfigDir, root) {
+		root = absPath(root)
+		if within(root, path) && !within(absPath(c.cfg.ConfigDir), root) {
 			return true
 		}
 	}
 	return false
+}
+
+func absPath(p string) string {
+	if abs, err := filepath.Abs(p); err == nil {
+		return abs
+	}
+	return filepath.Clean(p)
 }
 
 func isRemoteSource(src string) bool {
