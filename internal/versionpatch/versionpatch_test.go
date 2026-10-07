@@ -8,7 +8,7 @@ import (
 )
 
 const base = `# project config
-version = "4.0"
+version = "5.0"
 name = "p"
 
 [lock]
@@ -105,7 +105,7 @@ func TestSetConstraintChangesOneLineOnly(t *testing.T) {
 	require.NoError(t, err)
 
 	want := `# project config
-version = "4.0"
+version = "5.0"
 name = "p"
 
 [lock]

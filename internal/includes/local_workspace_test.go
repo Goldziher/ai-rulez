@@ -43,7 +43,7 @@ func TestLocalIncludeIsReadThroughTheProjectWorkspace(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange: the project exists only in memory.
 			ws := workspace.NewMem("/virtual/proj")
-			ws.Set(".ai-rulez/config.toml", "version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n", 0o644)
+			ws.Set(".ai-rulez/config.toml", "version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n", 0o644)
 			ws.Set(".ai-rulez/rules/base.md", "# Base\n", 0o644)
 			ws.Set("shared/rules/shared-rule.md", "# Shared\n", 0o644)
 			if tt.setup != nil {

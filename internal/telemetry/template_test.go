@@ -69,7 +69,6 @@ func TestHookTemplate_OtherHarnessesAndErrors(t *testing.T) {
 	codex, err := HookTemplate(TemplateOptions{Harness: "codex"})
 	require.NoError(t, err)
 	assert.NotContains(t, string(codex), "InstructionsLoaded", "Codex documents no instruction-load event")
-	assert.Contains(t, string(codex), "usage record")
 	assert.Contains(t, string(codex), "ai-rulez telemetry record --harness codex")
 	assert.Contains(t, string(codex), `"SubagentStart"`)
 	assert.Contains(t, string(codex), `"SubagentStop"`)

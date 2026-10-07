@@ -42,7 +42,7 @@ func EvaluateApprovals(cfg *config.Config, lock *lockfile.File, items []lockfile
 
 // ApprovalChanges reports the content that needs approval and lacks it, as
 // approval-scope changes of a lock diff. It reports nothing unless [governance]
-// enforce is set: a policy without enforcement is reported by `validate --strict`
+// enforce is set: a policy without enforcement is reported by `validate`
 // and `approve --list`, and mentioned in the diff notes.
 func ApprovalChanges(cfg *config.Config, lock *lockfile.File, items []lockfile.Item, now time.Time) (changes []contentlock.Change, notes []string) {
 	if msg := approval.PolicyOf(cfg).LockProblem(lock); msg != "" {
@@ -80,7 +80,7 @@ type approvalIndex struct {
 
 // newApprovalIndex reads the approval records of cfg's lock. A missing or
 // unreadable lock has none, so every item's approval is null: the catalog is a
-// view, and `lock --check` and `validate --strict` report an unreadable lock.
+// view, and `lock --check` and `validate` report an unreadable lock.
 func newApprovalIndex(cfg *config.Config) *approvalIndex {
 	idx := &approvalIndex{policy: approval.PolicyOf(cfg), now: ApprovalNow()}
 	if lock, err := lockfile.Load(cfg.ConfigDir); err == nil && lock != nil {

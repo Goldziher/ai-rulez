@@ -62,7 +62,7 @@ func projectIn(t *testing.T, rel string) (root, configDir string) {
 	root = t.TempDir()
 	configDir = filepath.Join(root, filepath.FromSlash(rel))
 	files := map[string]string{
-		"config.toml":                         "version = \"4.0\"\nname = \"t\"\n",
+		"config.toml":                         "version = \"5.0\"\nname = \"t\"\n",
 		"skills/deploy/SKILL.md":              skillBody,
 		"skills/deploy/evals/train.eval.yaml": trainCases,
 		"skills/deploy/evals/held.eval.yaml":  heldCases,
