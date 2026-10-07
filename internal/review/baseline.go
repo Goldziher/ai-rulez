@@ -29,7 +29,8 @@ type Baseline struct {
 func NewBaseline(rep *Report) *Baseline {
 	b := &Baseline{Schema: BaselineSchema, Rubric: rep.Rubric.ID + "@" + strconv.Itoa(rep.Rubric.Version), Fingerprints: []string{}}
 	seen := map[string]bool{}
-	for _, f := range rep.Findings {
+	for i := range rep.Findings {
+		f := &rep.Findings[i]
 		if isNote(f.Code) || seen[f.Fingerprint] {
 			continue
 		}
@@ -64,7 +65,8 @@ func LoadBaseline(path string) (*Baseline, error) {
 		return &Baseline{Schema: BaselineSchema, Fingerprints: probe.Prints}, nil
 	case ReportSchema:
 		b := &Baseline{Schema: BaselineSchema}
-		for _, f := range probe.Findings {
+		for i := range probe.Findings {
+			f := &probe.Findings[i]
 			if !isNote(f.Code) && f.Fingerprint != "" {
 				b.Fingerprints = append(b.Fingerprints, f.Fingerprint)
 			}
@@ -98,7 +100,9 @@ func (r *Results) SetBaseline(set map[string]bool) { r.baselined = set }
 
 // BaselineCounts returns how many dimension findings are baselined and how many are new.
 func (r *Results) BaselineCounts(rb *Rubric) (baselined, fresh int) {
-	for _, f := range r.Findings(rb) {
+	findings := r.Findings(rb)
+	for i := range findings {
+		f := &findings[i]
 		if isNote(f.Code) || f.Origin == "" {
 			continue
 		}

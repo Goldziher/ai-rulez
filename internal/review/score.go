@@ -121,75 +121,88 @@ func Run(in Input) *Results {
 	}
 	res := &Results{}
 	status := map[string]ItemResult{}
-	for _, it := range in.Items {
-		status[it.ID] = judgeItem(in, it, evidenceFor(evidence, it), exclude)
+	for i := range in.Items {
+		it := &in.Items[i]
+		status[it.ID] = judgeItem(in, *it, evidenceFor(evidence, *it), exclude)
 	}
-	for _, it := range in.Items {
+	for i := range in.Items {
+		it := &in.Items[i]
 		if r := status[it.ID]; r.Status == StatusScored {
-			res.pool = append(res.pool, sendView(it, r.Redacted))
+			res.pool = append(res.pool, sendView(*it, r.Redacted))
 		}
 	}
-	for _, it := range Selected(in.Items, in.Selector) {
-		if in.Only != nil && !in.Only[it.ID] {
+	selected := Selected(in.Items, in.Selector)
+	for i := range selected {
+		if in.Only != nil && !in.Only[selected[i].ID] {
 			continue
 		}
-		res.Items = append(res.Items, status[it.ID])
+		res.Items = append(res.Items, status[selected[i].ID])
 	}
 	return res
 }
 
-// judgeItem decides an item's status and, when it is reviewable, its score.
-func judgeItem(in Input, it Item, ev []lint.Finding, exclude []string) ItemResult {
-	r := ItemResult{Item: it}
+// skipOutcome gives the status and reason of an item that is not reviewed at all (status "" when it is).
+func skipOutcome(in Input, it *Item, exclude []string) (status, reason string) {
 	switch {
 	case !in.Rubric.Applies(it.Kind):
-		r.Status, r.Reason = StatusSkipped, "rubric "+in.Rubric.ID+" does not apply to "+it.Kind+" items"
-		return r
+		return StatusSkipped, "rubric " + in.Rubric.ID + " does not apply to " + it.Kind + " items"
 	case !it.Owned && !in.IncludeImports:
-		r.Status, r.Reason = StatusSkipped, "imported content (include, installed skill or builtin); use --include-imports"
-		return r
+		return StatusSkipped, "imported content (include, installed skill or builtin); use --include-imports"
 	case it.ReadError != "":
-		r.Status, r.Reason = StatusSkipped, "unreadable: "+it.ReadError
-		return r
+		return StatusSkipped, "unreadable: " + it.ReadError
 	}
-	if g, ok := excludedBy(it, exclude); ok {
-		r.Status, r.Reason = StatusExcluded, "matches [review] exclude "+g
-		return r
+	if g, ok := excludedBy(*it, exclude); ok {
+		return StatusExcluded, "matches [review] exclude " + g
 	}
-	secretFinding, elsewhere := false, false
+	return "", ""
+}
+
+// withholdReason says why an item must not be sent to a judge ("" when it may be) and whether it
+// holds a secret that on_secret = "redact" would mask.
+func withholdReason(in Input, it *Item, ev []lint.Finding) (reason string, secretFinding bool) {
+	elsewhere := false
 	for i := range ev {
 		switch ev[i].Code {
 		case lint.CodeHiddenCharacters:
-			r.Status = StatusWithheld
-			r.Reason = ev[i].Code + " " + ev[i].Name + ": never sent to a judge"
-			return r
+			return ev[i].Code + " " + ev[i].Name + ": never sent to a judge", secretFinding
 		case lint.CodeSecretDetected:
 			secretFinding = true
 			elsewhere = elsewhere || ev[i].RepoPath() != it.Path
 			if in.OnSecretMode() != config.ReviewOnSecretRedact || elsewhere {
-				r.Status = StatusWithheld
-				r.Reason = ev[i].Code + " " + ev[i].Name + ": never sent to a judge"
-				return r
+				return ev[i].Code + " " + ev[i].Name + ": never sent to a judge", secretFinding
 			}
 		}
 	}
 	// The lint findings above can be removed by [lint] ignore, severity, ignore_paths or an
 	// inline ignore in the item itself; what may leave the machine must not depend on them.
-	if reason := directHiddenReason(it); reason != "" {
-		r.Status, r.Reason = StatusWithheld, reason
-		return r
+	if direct := directHiddenReason(*it); direct != "" {
+		return direct, secretFinding
 	}
-	if reason := directSecretReason(it); reason != "" {
+	if direct := directSecretReason(*it); direct != "" {
 		if in.OnSecretMode() != config.ReviewOnSecretRedact {
-			r.Status, r.Reason = StatusWithheld, reason
-			return r
+			return direct, secretFinding
 		}
 		secretFinding = true
 	}
+	return "", secretFinding
+}
+
+// judgeItem decides an item's status and, when it is reviewable, its score.
+func judgeItem(in Input, it Item, ev []lint.Finding, exclude []string) ItemResult {
+	r := ItemResult{Item: it}
+	if status, reason := skipOutcome(in, &it, exclude); status != "" {
+		r.Status, r.Reason = status, reason
+		return r
+	}
+	reason, secretFinding := withholdReason(in, &it, ev)
+	if reason != "" {
+		r.Status, r.Reason = StatusWithheld, reason
+		return r
+	}
 	if secretFinding {
 		// on_secret = "redact": mask the credential, and send only if nothing credential-shaped is left.
-		if reason := directSecretReason(sendView(it, true)); reason != "" {
-			r.Status, r.Reason = StatusWithheld, reason+" (redaction left a credential-shaped value)"
+		if left := directSecretReason(sendView(it, true)); left != "" {
+			r.Status, r.Reason = StatusWithheld, left+" (redaction left a credential-shaped value)"
 			return r
 		}
 		r.Redacted = true
@@ -202,7 +215,8 @@ func judgeItem(in Input, it Item, ev []lint.Finding, exclude []string) ItemResul
 
 func scoreDimensions(rb *Rubric, ev []lint.Finding) []DimResult {
 	out := make([]DimResult, 0, len(rb.Dimensions))
-	for _, d := range rb.Dimensions {
+	for di := range rb.Dimensions {
+		d := &rb.Dimensions[di]
 		dr := DimResult{ID: d.ID, Code: d.Code, Weight: d.Weight, severity: d.Severity}
 		if len(d.Twins) == 0 {
 			dr.Status, dr.Note = DimNotScored, "no lint twin: needs a judge"
@@ -237,7 +251,8 @@ func scoreDimensions(rb *Rubric, ev []lint.Finding) []DimResult {
 // scoreOf applies the published formula to the scored dimensions; nil when none was scored.
 func scoreOf(dims []DimResult) *int {
 	sum, weights := 0.0, 0.0
-	for _, d := range dims {
+	for i := range dims {
+		d := &dims[i]
 		if d.Status != DimScored {
 			continue
 		}
@@ -339,7 +354,8 @@ func (r *Results) Findings(rb *Rubric) []Finding {
 			})
 			continue
 		}
-		for _, d := range it.Dimensions {
+		for di := range it.Dimensions {
+			d := &it.Dimensions[di]
 			if d.Status != DimScored || d.Verdict == VerdictPass || d.Code == "" {
 				continue
 			}
@@ -385,7 +401,8 @@ func semanticFindings(it *ItemResult) []Finding {
 		return nil
 	}
 	var out []Finding
-	for _, d := range it.Semantic.Dimensions {
+	for di := range it.Semantic.Dimensions {
+		d := &it.Semantic.Dimensions[di]
 		if (d.Status != SemJudged && d.Status != SemUnstable) || d.Verdict == VerdictPass || d.Code == "" {
 			continue
 		}

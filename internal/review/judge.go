@@ -28,6 +28,17 @@ const defaultSystemPrompt = `You review agent instruction files against a rubric
 // replySchemaName names the response schema for the provider.
 const replySchemaName = "review_judge"
 
+// JSON-schema keywords and type names of the reply schema.
+const (
+	schemaType       = "type"
+	schemaObject     = "object"
+	schemaString     = "string"
+	schemaArray      = "array"
+	schemaProperties = "properties"
+	schemaItems      = "items"
+	schemaRequired   = "required"
+)
+
 // siblingExcerptBytes bounds the body excerpt of a sibling sent with --content full.
 const siblingExcerptBytes = 1500
 
@@ -95,36 +106,36 @@ func systemPrompt(rb *Rubric) string {
 // refused by parseReply's strict decode instead.
 func replySchema(dims []Dimension) map[string]any {
 	ids := make([]any, len(dims))
-	for i, d := range dims {
-		ids[i] = d.ID
+	for i := range dims {
+		ids[i] = dims[i].ID
 	}
-	str := map[string]any{"type": "string"}
+	str := map[string]any{schemaType: schemaString}
 	return map[string]any{
-		"type": "object",
-		"properties": map[string]any{
+		schemaType: schemaObject,
+		schemaProperties: map[string]any{
 			"dimensions": map[string]any{
-				"type": "array",
-				"items": map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"id":      map[string]any{"type": "string", "enum": ids},
-						"verdict": map[string]any{"type": "string", "enum": []any{VerdictPass, VerdictWarn, VerdictFail}},
+				schemaType: schemaArray,
+				schemaItems: map[string]any{
+					schemaType: schemaObject,
+					schemaProperties: map[string]any{
+						"id":      map[string]any{schemaType: schemaString, "enum": ids},
+						"verdict": map[string]any{schemaType: schemaString, "enum": []any{VerdictPass, VerdictWarn, VerdictFail}},
 						"evidence": map[string]any{
-							"type": "array",
-							"items": map[string]any{
-								"type":       "object",
-								"properties": map[string]any{"quote": str, "where": str},
-								"required":   []string{"quote", "where"},
+							schemaType: schemaArray,
+							schemaItems: map[string]any{
+								schemaType:       schemaObject,
+								schemaProperties: map[string]any{"quote": str, "where": str},
+								schemaRequired:   []string{"quote", "where"},
 							},
 						},
 						"rationale":  str,
 						"suggestion": str,
 					},
-					"required": []string{"id", "verdict", "evidence", "rationale", "suggestion"},
+					schemaRequired: []string{"id", "verdict", "evidence", "rationale", "suggestion"},
 				},
 			},
 		},
-		"required": []string{"dimensions"},
+		schemaRequired: []string{"dimensions"},
 	}
 }
 
@@ -158,7 +169,8 @@ func buildCall(sp callSpec) builtCall {
 	data, truncated, corpus := renderData(sp)
 	var head strings.Builder
 	fmt.Fprintf(&head, "RUBRIC %s@%d (%s)\n", sp.rb.ID, sp.rb.Version, sp.group)
-	for _, d := range sp.dims {
+	for i := range sp.dims {
+		d := &sp.dims[i]
 		fmt.Fprintf(&head, "dimension %s: %s\n  pass: %s\n  warn: %s\n  fail: %s\n", d.ID, d.Question, d.Pass, d.Warn, d.Fail)
 		if d.AllowAbsence {
 			head.WriteString("  (when the problem is that something is missing, evidence may be empty)\n")
@@ -241,7 +253,8 @@ func renderData(sp callSpec) (data string, truncated bool, corpus []string) {
 		corpus = append(corpus, body)
 		truncated = cut
 	}
-	for _, s := range sp.sibs {
+	for i := range sp.sibs {
+		s := &sp.sibs[i]
 		fmt.Fprintf(&sb, "sibling %s: %s\n", s.ID, s.Description)
 		corpus = append(corpus, s.Description)
 		if sp.content == config.ReviewContentFull && sp.group == GroupContextual {
@@ -280,8 +293,8 @@ func parseReply(text string, want []Dimension) (map[string]DimVerdict, error) {
 		return nil, oops.Errorf("the reply has data after the JSON object")
 	}
 	allowed := map[string]bool{}
-	for _, d := range want {
-		allowed[d.ID] = true
+	for i := range want {
+		allowed[want[i].ID] = true
 	}
 	out := map[string]DimVerdict{}
 	for _, dv := range reply.Dimensions {
@@ -296,9 +309,9 @@ func parseReply(text string, want []Dimension) (map[string]DimVerdict, error) {
 		}
 		out[dv.ID] = dv
 	}
-	for _, d := range want {
-		if _, ok := out[d.ID]; !ok {
-			return nil, oops.Errorf("the reply does not answer dimension %q", d.ID)
+	for i := range want {
+		if _, ok := out[want[i].ID]; !ok {
+			return nil, oops.Errorf("the reply does not answer dimension %q", want[i].ID)
 		}
 	}
 	return out, nil

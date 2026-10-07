@@ -53,17 +53,20 @@ func editScript(a, b []string) []diffOp {
 	return ops
 }
 
-func middleScript(a, b []string) []diffOp {
+// replaceBlock is the script that removes all of a and adds all of b.
+func replaceBlock(a, b []string) []diffOp {
 	var ops []diffOp
-	if len(a) == 0 || len(b) == 0 || len(a)*len(b) > maxDiffCells {
-		for _, l := range a {
-			ops = append(ops, diffOp{'-', l})
-		}
-		for _, l := range b {
-			ops = append(ops, diffOp{'+', l})
-		}
-		return ops
+	for _, l := range a {
+		ops = append(ops, diffOp{'-', l})
 	}
+	for _, l := range b {
+		ops = append(ops, diffOp{'+', l})
+	}
+	return ops
+}
+
+// lcsTable holds, at [i][j], the length of the longest common subsequence of a[i:] and b[j:].
+func lcsTable(a, b []string) [][]int32 {
 	n, m := len(a), len(b)
 	lcs := make([][]int32, n+1)
 	for i := range lcs {
@@ -78,6 +81,16 @@ func middleScript(a, b []string) []diffOp {
 			}
 		}
 	}
+	return lcs
+}
+
+func middleScript(a, b []string) []diffOp {
+	if len(a) == 0 || len(b) == 0 || len(a)*len(b) > maxDiffCells {
+		return replaceBlock(a, b)
+	}
+	var ops []diffOp
+	n, m := len(a), len(b)
+	lcs := lcsTable(a, b)
 	i, j := 0, 0
 	for i < n && j < m {
 		switch {
@@ -117,18 +130,7 @@ func UnifiedDiff(path, a, b string) string {
 	}
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "--- a/%s\n+++ b/%s\n", path, path)
-	// Positions in a and b (0-based) before each op.
-	type pos struct{ a, b int }
-	at := make([]pos, len(ops)+1)
-	for i, op := range ops {
-		at[i+1] = at[i]
-		if op.kind != '+' {
-			at[i+1].a++
-		}
-		if op.kind != '-' {
-			at[i+1].b++
-		}
-	}
+	at := opPositions(ops)
 	i := 0
 	for i < len(ops) {
 		for i < len(ops) && ops[i].kind == ' ' {
@@ -138,28 +140,50 @@ func UnifiedDiff(path, a, b string) string {
 			break
 		}
 		start := max(i-diffContext, 0)
-		end := i
-		for end < len(ops) {
-			// Extend the hunk through changes and gaps of at most 2*context unchanged lines.
-			j := end
-			for j < len(ops) && ops[j].kind != ' ' {
-				j++
-			}
-			k := j
-			for k < len(ops) && ops[k].kind == ' ' {
-				k++
-			}
-			if k < len(ops) && k-j <= 2*diffContext {
-				end = k
-				continue
-			}
-			end = min(j+diffContext, len(ops))
-			break
-		}
+		end := hunkEnd(ops, i)
 		writeHunk(&sb, ops[start:end], at[start].a, at[start].b, len(al), len(bl), aNL, bNL)
 		i = end
 	}
 	return sb.String()
+}
+
+type opPos struct{ a, b int }
+
+// opPositions gives the 0-based positions in a and b before each op, and after the last.
+func opPositions(ops []diffOp) []opPos {
+	at := make([]opPos, len(ops)+1)
+	for i, op := range ops {
+		at[i+1] = at[i]
+		if op.kind != '+' {
+			at[i+1].a++
+		}
+		if op.kind != '-' {
+			at[i+1].b++
+		}
+	}
+	return at
+}
+
+// hunkEnd is where the hunk that holds the change at ops[from] stops: it runs through changes and
+// gaps of at most 2*context unchanged lines, then takes one more context.
+func hunkEnd(ops []diffOp, from int) int {
+	end := from
+	for end < len(ops) {
+		j := end
+		for j < len(ops) && ops[j].kind != ' ' {
+			j++
+		}
+		k := j
+		for k < len(ops) && ops[k].kind == ' ' {
+			k++
+		}
+		if k < len(ops) && k-j <= 2*diffContext {
+			end = k
+			continue
+		}
+		return min(j+diffContext, len(ops))
+	}
+	return end
 }
 
 func allContext(ops []diffOp) bool {
@@ -222,60 +246,86 @@ type PatchFile struct {
 	Hunks  []Hunk
 }
 
+// patchParser is the line-by-line state of ParsePatch.
+type patchParser struct {
+	files   []PatchFile
+	cur     *PatchFile
+	hunk    *Hunk
+	pending PatchFile
+}
+
+func (p *patchParser) flush() {
+	if p.hunk != nil && p.cur != nil {
+		p.cur.Hunks = append(p.cur.Hunks, *p.hunk)
+	}
+	p.hunk = nil
+}
+
+// header records a `# item`, `# path` or `# digest` line and says whether line was one.
+func (p *patchParser) header(line string) bool {
+	switch {
+	case strings.HasPrefix(line, "# item: "):
+		p.pending.Item = strings.TrimPrefix(line, "# item: ")
+	case strings.HasPrefix(line, "# path: "):
+		p.pending.Path = strings.TrimPrefix(line, "# path: ")
+	case strings.HasPrefix(line, "# digest: "):
+		p.pending.Digest = strings.TrimPrefix(line, "# digest: ")
+	default:
+		return false
+	}
+	return true
+}
+
+func (p *patchParser) feed(line string) error {
+	if p.header(line) {
+		return nil
+	}
+	switch {
+	case strings.HasPrefix(line, "# ai-rulez review fix"):
+		p.flush()
+		p.cur = nil
+		p.pending = PatchFile{}
+	case strings.HasPrefix(line, "--- a/"):
+		p.flush()
+		if path := strings.TrimPrefix(line, "--- a/"); p.pending.Path != "" && path != p.pending.Path {
+			return oops.Errorf("the diff is for %q but the header says %q", path, p.pending.Path)
+		}
+		p.files = append(p.files, p.pending)
+		p.cur = &p.files[len(p.files)-1]
+		p.pending = PatchFile{}
+	case strings.HasPrefix(line, "+++ b/"):
+	case strings.HasPrefix(line, "@@ "):
+		p.flush()
+		if p.cur == nil {
+			return oops.Errorf("a hunk before any file header")
+		}
+		h, err := parseHunkHeader(line)
+		if err != nil {
+			return err
+		}
+		p.hunk = &h
+	case p.hunk != nil && line != "" && strings.ContainsRune(" +-\\", rune(line[0])):
+		p.hunk.Lines = append(p.hunk.Lines, line)
+	case strings.HasPrefix(line, "#"), line == "":
+	default:
+		return oops.Errorf("unexpected line in the patch: %q", line)
+	}
+	return nil
+}
+
 // ParsePatch reads the patch `review fix` writes: per file, `# item`, `# path` and `# digest`
 // header lines (anything else starting with # is ignored), then a unified diff.
 func ParsePatch(text string) ([]PatchFile, error) {
-	var files []PatchFile
-	var cur *PatchFile
-	var hunk *Hunk
-	flush := func() {
-		if hunk != nil && cur != nil {
-			cur.Hunks = append(cur.Hunks, *hunk)
-		}
-		hunk = nil
-	}
-	var pending PatchFile
+	var p patchParser
 	for _, line := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
-		switch {
-		case strings.HasPrefix(line, "# ai-rulez review fix"):
-			flush()
-			cur = nil
-			pending = PatchFile{}
-		case strings.HasPrefix(line, "# item: "):
-			pending.Item = strings.TrimPrefix(line, "# item: ")
-		case strings.HasPrefix(line, "# path: "):
-			pending.Path = strings.TrimPrefix(line, "# path: ")
-		case strings.HasPrefix(line, "# digest: "):
-			pending.Digest = strings.TrimPrefix(line, "# digest: ")
-		case strings.HasPrefix(line, "--- a/"):
-			flush()
-			if p := strings.TrimPrefix(line, "--- a/"); pending.Path != "" && p != pending.Path {
-				return nil, oops.Errorf("the diff is for %q but the header says %q", p, pending.Path)
-			}
-			files = append(files, pending)
-			cur = &files[len(files)-1]
-			pending = PatchFile{}
-		case strings.HasPrefix(line, "+++ b/"):
-		case strings.HasPrefix(line, "@@ "):
-			flush()
-			if cur == nil {
-				return nil, oops.Errorf("a hunk before any file header")
-			}
-			h, err := parseHunkHeader(line)
-			if err != nil {
-				return nil, err
-			}
-			hunk = &h
-		case hunk != nil && len(line) > 0 && strings.ContainsRune(" +-\\", rune(line[0])):
-			hunk.Lines = append(hunk.Lines, line)
-		case strings.HasPrefix(line, "#"), line == "":
-		default:
-			return nil, oops.Errorf("unexpected line in the patch: %q", line)
+		if err := p.feed(line); err != nil {
+			return nil, err
 		}
 	}
-	flush()
-	for _, f := range files {
-		if f.Path == "" || f.Digest == "" {
+	p.flush()
+	files := p.files
+	for i := range files {
+		if files[i].Path == "" || files[i].Digest == "" {
 			return nil, oops.Errorf("a patch file entry has no path or digest header: it was not written by `ai-rulez review fix`")
 		}
 	}
@@ -305,6 +355,44 @@ func parseHunkHeader(line string) (Hunk, error) {
 	return h, nil
 }
 
+// applyHunk applies one hunk at lines[pos:], appending to out. It returns the new position and out,
+// and whether a "No newline" marker followed a context or added line.
+func applyHunk(lines, out []string, pos int, h *Hunk, hi int) (newPos int, newOut []string, markerNew bool, err error) {
+	from := h.OldStart - 1
+	if h.OldLines == 0 {
+		from = h.OldStart
+	}
+	if from < pos || from > len(lines) {
+		return 0, nil, false, oops.Errorf("hunk %d does not fit the file", hi+1)
+	}
+	out = append(out, lines[pos:from]...)
+	pos = from
+	for li, l := range h.Lines {
+		kind, body := l[0], l[1:]
+		switch kind {
+		case ' ', '-':
+			if pos >= len(lines) || lines[pos] != body {
+				return 0, nil, false, oops.Errorf("hunk %d does not match the file at line %d: the file changed since the patch was made", hi+1, pos+1)
+			}
+			pos++
+			if kind == ' ' {
+				out = append(out, body)
+			}
+		case '+':
+			out = append(out, body)
+		case '\\':
+			// "No newline at end of file" applies to the line before it.
+			if li > 0 {
+				prev := h.Lines[li-1][0]
+				if prev == ' ' || prev == '+' {
+					markerNew = true
+				}
+			}
+		}
+	}
+	return pos, out, markerNew, nil
+}
+
 // ApplyHunks applies hunks to text. Every context and removed line must match exactly where
 // the hunk says; there is no fuzz, so a patch made for other text is refused.
 func ApplyHunks(text string, hunks []Hunk) (string, error) {
@@ -312,39 +400,14 @@ func ApplyHunks(text string, hunks []Hunk) (string, error) {
 	var out []string
 	pos := 0
 	markerNew := false
-	for hi, h := range hunks {
-		from := h.OldStart - 1
-		if h.OldLines == 0 {
-			from = h.OldStart
+	for hi := range hunks {
+		var marker bool
+		var err error
+		pos, out, marker, err = applyHunk(lines, out, pos, &hunks[hi], hi)
+		if err != nil {
+			return "", err
 		}
-		if from < pos || from > len(lines) {
-			return "", oops.Errorf("hunk %d does not fit the file", hi+1)
-		}
-		out = append(out, lines[pos:from]...)
-		pos = from
-		for li, l := range h.Lines {
-			kind, body := l[0], l[1:]
-			switch kind {
-			case ' ', '-':
-				if pos >= len(lines) || lines[pos] != body {
-					return "", oops.Errorf("hunk %d does not match the file at line %d: the file changed since the patch was made", hi+1, pos+1)
-				}
-				pos++
-				if kind == ' ' {
-					out = append(out, body)
-				}
-			case '+':
-				out = append(out, body)
-			case '\\':
-				// "No newline at end of file" applies to the line before it.
-				if li > 0 {
-					prev := h.Lines[li-1][0]
-					if prev == ' ' || prev == '+' {
-						markerNew = true
-					}
-				}
-			}
-		}
+		markerNew = markerNew || marker
 	}
 	// When the hunks reach the end of the file they decide whether it ends with a newline;
 	// otherwise the untouched tail keeps the original's.

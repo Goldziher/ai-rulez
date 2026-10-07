@@ -33,6 +33,9 @@ const maxSystemPromptBytes = 64 << 10
 // weightTolerance is how far the weights may sit from 1 (float rounding of decimal weights).
 const weightTolerance = 0.001
 
+// fieldPass names the rubric dimension field that describes a passing answer.
+const fieldPass = "pass"
+
 // goldenFile is one golden/*.golden.yaml case.
 //
 //nolint:tagliatelle // golden keys are snake_case by project convention
@@ -306,9 +309,9 @@ func lintDimensions(r *Rubric, file string, raw []byte) []Problem {
 	codes := registeredCodes()
 	seenID, seenCode := map[string]bool{}, map[string]bool{}
 	sum := 0.0
-	for _, d := range r.Dimensions {
-		lintDimension(d, codes, seenID, seenCode, add)
-		sum += d.Weight
+	for i := range r.Dimensions {
+		lintDimension(r.Dimensions[i], codes, seenID, seenCode, add)
+		sum += r.Dimensions[i].Weight
 	}
 	if math.Abs(sum-1) > weightTolerance {
 		add("weight", "dimension weights sum to %.3f; they must sum to 1", sum)
@@ -336,7 +339,7 @@ func lintDimension(d Dimension, codes, seenID, seenCode map[string]bool, add fun
 	if d.Severity != "info" && d.Severity != "warning" {
 		add(marker, "dimension %q severity must be \"info\" or \"warning\" (the judge never reports an error)", d.ID)
 	}
-	for _, f := range []struct{ name, text string }{{"question", d.Question}, {"pass", d.Pass}, {"warn", d.Warn}, {"fail", d.Fail}} {
+	for _, f := range []struct{ name, text string }{{"question", d.Question}, {fieldPass, d.Pass}, {"warn", d.Warn}, {"fail", d.Fail}} {
 		if strings.TrimSpace(f.text) == "" {
 			add(marker, "dimension %q has an empty %s", d.ID, f.name)
 		}
@@ -489,7 +492,7 @@ func lintCalibration(dir string, r *Rubric) ([]Problem, []fileBytes) {
 	if c.Rubric.ID != r.ID {
 		out = append(out, Problem{File: path, Line: 1, Message: fmt.Sprintf("calibration is for rubric %q, not %q", c.Rubric.ID, r.ID)})
 	}
-	if c.Status != "pass" && c.Status != "fail" {
+	if c.Status != CalPass && c.Status != CalFail {
 		out = append(out, Problem{File: path, Line: 1, Message: fmt.Sprintf("status %q must be pass or fail", c.Status)})
 	}
 	return out, files

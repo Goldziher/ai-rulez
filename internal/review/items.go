@@ -55,8 +55,8 @@ func Collect(cfg *config.Config, rel func(abs string) string) []Item {
 			kind  string
 			files []config.ContentFile
 		}{{KindRule, rules}, {KindSkill, skills}, {KindAgent, agents}, {KindCommand, commands}} {
-			for _, cf := range group.files {
-				items = append(items, newItem(group.kind, domain, cf, configDir, rel))
+			for i := range group.files {
+				items = append(items, newItem(group.kind, domain, group.files[i], configDir, rel))
 			}
 		}
 	}
@@ -132,7 +132,7 @@ func (it Item) WithText(text string) Item {
 
 // splitFrontmatter separates a leading ---/--- YAML block from the body. A
 // missing or malformed block yields an empty map and the whole text.
-func splitFrontmatter(raw string) (map[string]any, string) {
+func splitFrontmatter(raw string) (meta map[string]any, body string) {
 	text := strings.TrimPrefix(raw, "\xef\xbb\xbf")
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 	rest, ok := strings.CutPrefix(text, "---\n")
@@ -190,11 +190,12 @@ func Selected(items []Item, selectors []string) []Item {
 		return items
 	}
 	var out []Item
-	for _, it := range items {
+	for i := range items {
+		it := &items[i]
 		for _, s := range selectors {
 			s = strings.TrimSuffix(filepath.ToSlash(s), "/")
 			if s == it.ID || s == it.Name || s == it.Path || strings.HasSuffix(it.Path, "/"+s) || strings.HasPrefix(it.Path, s+"/") {
-				out = append(out, it)
+				out = append(out, *it)
 				break
 			}
 		}
@@ -261,7 +262,8 @@ func ChangedItems(items []Item, changed []string, baseRel string) map[string]boo
 		set[filepath.ToSlash(c)] = true
 	}
 	out := map[string]bool{}
-	for _, it := range items {
+	for i := range items {
+		it := &items[i]
 		file := path.Join(baseRel, it.Path)
 		if set[file] {
 			out[it.ID] = true
