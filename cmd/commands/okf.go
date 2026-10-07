@@ -448,7 +448,7 @@ func importLintConfig(ctx context.Context) *config.LintConfig {
 func writeOKFImport(out io.Writer, spec, targetDir string, res *okfbridge.ImportResult) error {
 	if okfFormat == formatJSON {
 		return jsondoc.Write(out, map[string]any{
-			keySource: spec, "target": targetDir, "dry_run": okfDryRun,
+			keySource: includes.RedactURL(spec), "target": targetDir, "dry_run": okfDryRun,
 			"actions": nonNilActions(res.Actions), "findings": res.Findings,
 			"security": res.Security, "skipped": res.Skipped, "index_style": res.IndexStyle,
 		})
