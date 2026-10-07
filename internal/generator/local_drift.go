@@ -147,6 +147,9 @@ func (g *Generator) renderBaseline(profile string) ([]config.OutputFile, string,
 	if err != nil {
 		return nil, "", err //nolint:wrapcheck // wrapped by planLocal
 	}
+	if err := g.nestedPolicy(cfg, false); err != nil {
+		return nil, "", err
+	}
 	cfg.MCPEnvOverrides = g.config.MCPEnvOverrides
 	cfg.MCPEnvFiles = g.config.MCPEnvFiles
 	cfg.GeneratedAt = g.config.GeneratedAt

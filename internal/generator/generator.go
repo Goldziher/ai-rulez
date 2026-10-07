@@ -656,6 +656,9 @@ func (g *Generator) collectMemberOutputs(member string) ([]config.OutputFile, pl
 	if err != nil {
 		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "load monorepo member config")
 	}
+	if err := g.nestedPolicy(memberCfg, true); err != nil {
+		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "monorepo member config")
+	}
 	memberCfg.Diag = g.config.Diag
 	if memberCfg.Plugin == nil {
 		return nil, plugin.MemberEntry{}, oops.

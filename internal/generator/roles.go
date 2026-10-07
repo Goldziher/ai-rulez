@@ -269,8 +269,25 @@ func (g *Generator) sharedConfig() (*config.Config, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "load the shared configuration for roles.json")
 	}
+	if err := g.nestedPolicy(shared, false); err != nil {
+		return nil, oops.Wrapf(err, "the shared configuration for roles.json")
+	}
 	shared.Diag = g.config.Diag
 	return shared, nil
+}
+
+// nestedPolicy holds a configuration the generator loaded itself (a monorepo
+// member, the shared view of the project) to the organization policy: a
+// violation fails the run, except under --policy-mode warn, where the warnings
+// are logged when warn is set. The shared views reload the root's own files, which
+// the command line already reported, so they pass warn false.
+func (g *Generator) nestedPolicy(cfg *config.Config, warn bool) error {
+	if warn {
+		for _, line := range config.PolicyWarnings(cfg) {
+			g.log().Warn("Organization policy violation (--policy-mode warn): " + line)
+		}
+	}
+	return config.CheckPolicy(cfg) //nolint:wrapcheck // already contextual
 }
 
 // presetClaude is the preset whose settings carry skillOverrides.
