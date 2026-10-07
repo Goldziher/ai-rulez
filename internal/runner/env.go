@@ -30,7 +30,10 @@ var (
 		"SOCKS_PROXY": true, "SSL_CERT_FILE": true, "SSL_CERT_DIR": true, "CURL_CA_BUNDLE": true,
 		"REQUESTS_CA_BUNDLE": true, "NODE_EXTRA_CA_CERTS": true,
 	}
-	credentialEnv = regexp.MustCompile(`(?i)(^|_)(TOKEN|SECRET|PASSWORD|PASSWD|PASSPHRASE|CREDENTIALS?|API_?KEY|ACCESS_?KEY|PRIVATE_?KEY|AUTH|PAT|DSN|WEBHOOK_URL|COOKIES?|SESSION)(_|$)`)
+	// credentialEnv matches the shape of a credential's name: a marker word as a
+	// whole underscore-separated part (OPENAI_KEY, STRIPE_SK, MY_BEARER), or a
+	// marker glued to the end of the name (HFTOKEN, MYAPIKEY).
+	credentialEnv = regexp.MustCompile(`(?i)(^|_)(TOKEN|SECRET|PASSWORD|PASSWD|PASSPHRASE|PASS|CREDENTIALS?|CREDS?|API_?KEY|ACCESS_?KEY|PRIVATE_?KEY|KEYS?|SK|BEARER|JWT|AUTH|PAT|DSN|WEBHOOK_URL|COOKIES?|SESSION)(_|$)|(TOKEN|SECRET|PASSWORD|APIKEY|ACCESSKEY|PRIVATEKEY)$`)
 	// providerEnv are credential-style names that carry no obvious marker.
 	providerEnv = map[string]bool{
 		"AWS_ACCESS_KEY_ID": true, "AWS_SESSION_TOKEN": true, "GOOGLE_APPLICATION_CREDENTIALS": true,
