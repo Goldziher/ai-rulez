@@ -37,7 +37,7 @@ type Config struct {
 	Compact         *bool                  `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
 	// AgentsMD defaults to true in v5 when a config file does not state it;
 	// the loaders apply the default, a Config built in code keeps the zero value.
-	AgentsMD        bool                   `yaml:"agents_md" json:"agents_md" toml:"agents_md,omitempty"` //nolint:tagliatelle
+	AgentsMD bool `yaml:"agents_md" json:"agents_md" toml:"agents_md,omitempty"` //nolint:tagliatelle
 	// BundleExclude adds patterns to DefaultBundleExcludes: skill and command
 	// resources matching one are not listed in SKILL.md or copied.
 	BundleExclude []string `yaml:"bundle_exclude,omitempty" json:"bundle_exclude,omitempty" toml:"bundle_exclude,omitempty"` //nolint:tagliatelle
