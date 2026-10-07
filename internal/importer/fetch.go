@@ -307,19 +307,19 @@ func (p *Plan) importRemotePackage(rm Remote, f *Fetched, opt Options) {
 	r := newReader(os.DirFS(f.Dir))
 	source, field := splitOrigin(rm.Origin)
 	_, hasAPM := r.exists(apmDir)
-	if _, ok := r.exists("SKILL.md"); ok && !hasAPM && rm.Path != "" {
-		data, err := r.read("SKILL.md")
+	if _, ok := r.exists(litSkillMD); ok && !hasAPM && rm.Path != "" {
+		data, err := r.read(litSkillMD)
 		if err == nil {
 			name := path.Base(rm.Path)
 			if fm, _, has := splitFrontmatter(string(data)); has {
 				meta, _ := parseFrontmatter(fm)
-				if n := stringOf(meta["name"]); n != "" {
+				if n := stringOf(meta[litName]); n != "" {
 					name = n
 				}
 			}
-			files := map[string][]byte{"SKILL.md": data}
+			files := map[string][]byte{litSkillMD: data}
 			for _, rel := range r.walkFiles(".", func(string, string) {}) {
-				if rel == "SKILL.md" {
+				if rel == litSkillMD {
 					continue
 				}
 				if res, rerr := r.read(rel); rerr == nil {

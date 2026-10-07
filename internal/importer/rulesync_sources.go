@@ -14,8 +14,8 @@ import (
 // transport is not a git source and is not imported.
 
 const (
-	rulesyncDefaultSkillsPath = "skills"
-	rulesyncDefaultRulesPath  = "rules"
+	rulesyncDefaultSkillsPath = skillsDir
+	rulesyncDefaultRulesPath  = rulesDir
 	transportGit              = "git"
 	transportNPM              = "npm"
 	transportGitHub           = "github"
@@ -35,7 +35,7 @@ func parseRulesyncSource(e map[string]any) (rulesyncSource, string) {
 		return s, "the entry has no source"
 	}
 	transport := strings.ToLower(stringOf(e["transport"]))
-	s.skills, s.rules = listOf(e["skills"]), listOf(e["rules"])
+	s.skills, s.rules = listOf(e[skillsDir]), listOf(e[rulesDir])
 	s.ref, s.path, s.rulesPath = stringOf(e["ref"]), stringOf(e["path"]), stringOf(e["rulesPath"])
 	switch transport {
 	case transportNPM:

@@ -38,7 +38,7 @@ func (rulesyncImporter) Description() string {
 
 // rulesyncInputs are the paths below an input root that Detect lists.
 var rulesyncInputs = []string{
-	"rules", "commands", "subagents", "skills", "checks", "mcp.jsonc", "mcp.json", ".mcp.json",
+	rulesDir, litCommands, "subagents", skillsDir, litChecks, "mcp.jsonc", "mcp.json", litMCPJSON,
 	"hooks.jsonc", "hooks.json", "permissions.jsonc", "permissions.json", ".aiignore",
 }
 
@@ -179,7 +179,7 @@ type rulesyncPlanner struct {
 func (b *rulesyncPlanner) addItem(it Item) {
 	key := it.root() + string(it.Kind) + "\x00" + it.Name
 	if i, ok := b.seen[key]; ok {
-		b.p.add(newFinding(StatusApproximated, it.Sources[0], "name", it.Rel(),
+		b.p.add(newFinding(StatusApproximated, it.Sources[0], litName, it.Rel(),
 			"overrides the item of the same name from "+b.p.Items[i].Sources[0]+" (a later input root wins)"))
 		b.p.Items[i] = it
 		return
@@ -189,8 +189,8 @@ func (b *rulesyncPlanner) addItem(it Item) {
 }
 
 var rulesyncRootEntries = map[string]bool{
-	"rules": true, "commands": true, "subagents": true, "skills": true, "checks": true,
-	"mcp.jsonc": true, "mcp.json": true, ".mcp.json": true, "hooks.jsonc": true, "hooks.json": true,
+	rulesDir: true, litCommands: true, "subagents": true, skillsDir: true, litChecks: true,
+	"mcp.jsonc": true, "mcp.json": true, litMCPJSON: true, "hooks.jsonc": true, "hooks.json": true,
 	"permissions.jsonc": true, "permissions.json": true, ".aiignore": true,
 }
 
@@ -205,9 +205,9 @@ func (b *rulesyncPlanner) importRoot(root string) {
 		}
 	}
 	b.importRules(root)
-	b.importFlatKind(root, "commands", KindCommand)
+	b.importFlatKind(root, litCommands, KindCommand)
 	b.importFlatKind(root, "subagents", KindAgent)
-	b.importFlatKind(root, "checks", KindCheck)
+	b.importFlatKind(root, litChecks, KindCheck)
 	b.importSkills(root)
 	b.importMCP(root)
 	b.importHooksAndPermissions(root)

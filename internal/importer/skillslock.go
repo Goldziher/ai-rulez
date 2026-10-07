@@ -71,7 +71,7 @@ func (skillsLockImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 			return nil, oops.With("file", skillsLockFile).Hint("Rerun with --best-effort to import the known fields").
 				Errorf("%s: %s (%s); rerun with --best-effort to import the known fields", skillsLockFile, reason, CodeNeedsAction)
 		}
-		p.add(newFinding(StatusNeedsAction, skillsLockFile, "version", "", reason+"; known fields imported best effort"))
+		p.add(newFinding(StatusNeedsAction, skillsLockFile, litVersion, "", reason+"; known fields imported best effort"))
 	}
 
 	names := make([]string, 0, len(doc.Skills))
@@ -151,7 +151,7 @@ func lockSourceURL(e skillsLockEntry) (url, reason string) {
 	switch e.SourceType {
 	case "node_modules":
 		return "", "npm package skills are not git sources; install the package and copy the skill into skills/"
-	case "local":
+	case localDir:
 		return "", "local skills are not tracked remotely; copy the skill into skills/"
 	}
 	for _, cand := range []string{e.SourceURL, e.Source} {
@@ -218,7 +218,7 @@ func redactedReason(err error) string {
 // lock records the path of SKILL.md.
 func lockSkillDir(skillPath string) string {
 	p := strings.TrimSuffix(strings.TrimPrefix(path.Clean(skillPath), "./"), "/")
-	if path.Base(p) == "SKILL.md" {
+	if path.Base(p) == litSkillMD {
 		p = path.Dir(p)
 	}
 	return p

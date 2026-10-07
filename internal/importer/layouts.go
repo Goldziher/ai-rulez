@@ -24,35 +24,35 @@ type nativeSource struct {
 // (Windsurf rules are read by the devin preset, Roo by zoocode, the legacy
 // single-file rule formats by cursor and devin).
 var extraSources = []nativeSource{
-	{Path: ".cursorrules", Kind: KindContext, Presets: []string{"cursor"}},
-	{Path: ".windsurfrules", Kind: KindContext, Presets: []string{"devin"}},
-	{Path: ".windsurf/rules", Kind: KindRule, Presets: []string{"devin"}},
-	{Path: ".windsurf/workflows", Kind: KindCommand, Presets: []string{"devin"}},
-	{Path: ".windsurf/skills", Kind: KindSkill, Presets: []string{"devin"}},
-	{Path: ".roo/rules", Kind: KindRule, Presets: []string{"zoocode"}},
-	{Path: ".roo/commands", Kind: KindCommand, Presets: []string{"zoocode"}},
-	{Path: ".roo/skills", Kind: KindSkill, Presets: []string{"zoocode"}},
-	{Path: ".claude/commands", Kind: KindCommand, Presets: []string{"claude"}},
-	{Path: ".junie/guidelines.md", Kind: KindContext, Presets: []string{"junie"}},
+	{Path: ".cursorrules", Kind: KindContext, Presets: []string{litCursor}},
+	{Path: ".windsurfrules", Kind: KindContext, Presets: []string{litDevin}},
+	{Path: ".windsurf/rules", Kind: KindRule, Presets: []string{litDevin}},
+	{Path: ".windsurf/workflows", Kind: KindCommand, Presets: []string{litDevin}},
+	{Path: ".windsurf/skills", Kind: KindSkill, Presets: []string{litDevin}},
+	{Path: ".roo/rules", Kind: KindRule, Presets: []string{litZoocode}},
+	{Path: ".roo/commands", Kind: KindCommand, Presets: []string{litZoocode}},
+	{Path: ".roo/skills", Kind: KindSkill, Presets: []string{litZoocode}},
+	{Path: ".claude/commands", Kind: KindCommand, Presets: []string{litClaude}},
+	{Path: ".junie/guidelines.md", Kind: KindContext, Presets: []string{litJunie}},
 	{Path: ".xum/skills", Kind: KindSkill, Presets: []string{"xum"}},
 	{Path: ".xum/agents", Kind: KindAgent, Presets: []string{"xum"}},
-	{Path: ".opencode/command", Kind: KindCommand, Presets: []string{"opencode"}},
-	{Path: ".github/prompts", Kind: KindCommand, Presets: []string{"copilot"}},
+	{Path: ".opencode/command", Kind: KindCommand, Presets: []string{litOpencode}},
+	{Path: ".github/prompts", Kind: KindCommand, Presets: []string{litCopilot}},
 }
 
 // preferredPresets decides which preset a path implies when several write it.
 var preferredPresets = map[string]string{
-	".github/copilot-instructions.md": "copilot",
-	".github/instructions":            "copilot",
-	".github/agents":                  "copilot",
-	".github/skills":                  "copilot",
-	".github/prompts":                 "copilot",
-	"GEMINI.md":                       "gemini",
+	".github/copilot-instructions.md": litCopilot,
+	".github/instructions":            litCopilot,
+	".github/agents":                  litCopilot,
+	".github/skills":                  litCopilot,
+	".github/prompts":                 litCopilot,
+	"GEMINI.md":                       litGemini,
 }
 
 // skippedPresets have a layout that is not instructions-shaped (takt writes
 // workflow facets), so reading it as content would be wrong.
-var skippedPresets = map[string]bool{"takt": true}
+var skippedPresets = map[string]bool{litTakt: true}
 
 var (
 	sourcesOnce sync.Once
