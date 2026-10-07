@@ -1,6 +1,7 @@
 package approval
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -54,7 +55,7 @@ func OwnershipChanges(cfg *config.Config, rev string) ([]string, error) {
 			if baseErr != nil {
 				return nil, oops.With("rev", rev, "path", rel).Wrapf(baseErr, "read %s at %s", rel, rev)
 			}
-			if (headErr == nil) != baseOK || (headErr == nil && string(head) != string(base)) {
+			if (headErr == nil) != baseOK || (headErr == nil && !bytes.Equal(head, base)) {
 				out = append(out, "the CODEOWNERS file "+rel+" changed since "+short(rev)+"; approvers_from is read from the base, so a change cannot authorize its own approvals")
 			}
 		}
