@@ -76,10 +76,13 @@ func checkConfig(_ context.Context, s *state) []Finding {
 	return out
 }
 
+// presetDevin is the devin preset, which replaced windsurf.
+const presetDevin = "devin"
+
 // removedPresets maps a preset name that no longer exists to what replaced it.
 // An empty replacement means there is none.
 var removedPresets = map[string]string{
-	"windsurf":     "devin",
+	"windsurf":     presetDevin,
 	"continue-dev": "",
 }
 
@@ -450,16 +453,16 @@ func lockContentFindings(cfg *config.Config, lock *lockfile.File) []Finding {
 // counts. Presets that are not listed are skipped: either they have no CLI or
 // the binary name is not known with certainty.
 var presetBinaries = map[string][]string{
-	"claude":   {"claude"},
-	"codex":    {"codex"},
-	"gemini":   {"gemini"},
-	"opencode": {"opencode"},
-	"amp":      {"amp"},
-	"copilot":  {"copilot"},
-	"cline":    {"cline"},
-	"devin":    {"devin"},
-	"cursor":   {"cursor-agent", "cursor"},
-	"junie":    {"junie"},
+	"claude":    {"claude"},
+	"codex":     {"codex"},
+	"gemini":    {"gemini"},
+	"opencode":  {"opencode"},
+	"amp":       {"amp"},
+	"copilot":   {"copilot"},
+	"cline":     {"cline"},
+	presetDevin: {presetDevin},
+	"cursor":    {"cursor-agent", "cursor"},
+	"junie":     {"junie"},
 }
 
 // checkTools: the tool behind each preset is installed (information only; the
