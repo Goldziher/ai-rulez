@@ -31,8 +31,8 @@ const LogQueriesEnv = "AI_RULEZ_SEARCH_LOG_QUERIES"
 type Options struct {
 	// Mode overrides the mode (the --mode flag); "" keeps the configured one.
 	Mode string
-	// AllowExec honours [search.embeddings] command from a repository config
-	// (the --allow-exec flag). The command is always honoured from the user config.
+	// AllowExec honors [search.embeddings] command from a repository config
+	// (the --allow-exec flag). The command is always honored from the user config.
 	AllowExec bool
 	// Getenv resolves environment variables; nil means the process environment.
 	Getenv func(string) string
@@ -83,7 +83,7 @@ func Resolve(cfg *config.Config, opts Options) (*Resolved, error) {
 		merged.VectorMinSim = *userMinSim
 	}
 	// The query log records what users ask, so only user scope may start it.
-	if repo != nil && repo.LogQueries && !(user != nil && user.LogQueries) {
+	if repo != nil && repo.LogQueries && (user == nil || !user.LogQueries) {
 		r.Notes = append(r.Notes, "search.log_queries in the repository config is ignored: a repository cannot start recording queries; set it in the user config file or "+LogQueriesEnv+"=1")
 	}
 	merged.LogQueries = user != nil && user.LogQueries
@@ -237,7 +237,7 @@ func (r *Resolved) QueryLog(scan skillsearch.SecretScanner) *skillsearch.QueryLo
 }
 
 // mergeScoring applies the user's list weights and abstention threshold over the repository's.
-func mergeScoring(weights skillsearch.Weights, minSim float64, user *skillsearch.Config) (skillsearch.Weights, float64) {
+func mergeScoring(weights skillsearch.Weights, minSim float64, user *skillsearch.Config) (merged skillsearch.Weights, minSimilarity float64) {
 	if user.Weights.Lexical > 0 {
 		weights.Lexical = user.Weights.Lexical
 	}

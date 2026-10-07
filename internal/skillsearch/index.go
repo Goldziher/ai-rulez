@@ -321,10 +321,10 @@ func LoadIndex(dir string) (*Index, error) {
 	}
 	var m Manifest
 	if err := json.Unmarshal(raw, &m); err != nil {
-		return nil, fmt.Errorf("%w: manifest does not parse: %v", ErrNoIndex, err)
+		return nil, fmt.Errorf("%w: manifest does not parse: %w", ErrNoIndex, err)
 	}
 	if err := m.check(); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrNoIndex, err)
+		return nil, fmt.Errorf("%w: %w", ErrNoIndex, err)
 	}
 	width := 4
 	if m.DType == DTypeFloat16 {
@@ -334,7 +334,7 @@ func LoadIndex(dir string) (*Index, error) {
 	vpath := filepath.Join(dir, VectorsFile)
 	vinfo, err := os.Stat(vpath)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrNoIndex, err)
+		return nil, fmt.Errorf("%w: %w", ErrNoIndex, err)
 	}
 	if !vinfo.Mode().IsRegular() || vinfo.Size() != int64(want) || want > maxVectorsBytes {
 		return nil, fmt.Errorf("%w: %s is %d bytes, the manifest needs %d (limit %d)", ErrNoIndex, VectorsFile, vinfo.Size(), want, maxVectorsBytes)
@@ -360,10 +360,10 @@ func LoadIndex(dir string) (*Index, error) {
 			}
 		}
 		if err := finite(v); err != nil {
-			return nil, fmt.Errorf("%w: row %d %v", ErrNoIndex, i, err)
+			return nil, fmt.Errorf("%w: row %d %w", ErrNoIndex, i, err)
 		}
 		if err := unitLength(v, width); err != nil {
-			return nil, fmt.Errorf("%w: row %d %v", ErrNoIndex, i, err)
+			return nil, fmt.Errorf("%w: row %d %w", ErrNoIndex, i, err)
 		}
 		x.vecs[i] = v
 		x.byKey[itemKey(m.Items[i].Kind, m.Items[i].Domain, m.Items[i].ID)] = i
