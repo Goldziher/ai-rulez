@@ -163,14 +163,11 @@ func TestOSAliasesASymlinkedRoot(t *testing.T) {
 }
 
 func TestAroundRootsAtTheVCSTop(t *testing.T) {
+	needGit(t)
 	top := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(top, ".git"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	sub := filepath.Join(top, "svc", "api")
-	if err := os.MkdirAll(sub, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	runGit(t, top, "init", "-q", ".")
+	sub := projectIn(t, top, "svc/api")
+	runGit(t, top, "add", "svc/api/.ai-rulez/config.toml")
 	ws, err := workspace.Around(sub)
 	if err != nil {
 		t.Fatal(err)
