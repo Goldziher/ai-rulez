@@ -85,7 +85,7 @@ func otherScenarios() []scenario {
 			full:  true,
 			steps: []step{
 				runEnv(goldenEnv, "generate", "--yes"),
-				step{kind: stepWrite, path: ".ai-rulez/config.toml", data: richConfig([]string{"codex", "claude", "gemini", "cursor", "opencode"}, "")},
+				{kind: stepWrite, path: ".ai-rulez/config.toml", data: richConfig([]string{"codex", "claude", "gemini", "cursor", "opencode"}, "")},
 				runEnv(goldenEnv, "generate", "--yes"),
 			},
 		},

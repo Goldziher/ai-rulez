@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -217,8 +218,8 @@ func execute(t *testing.T, sc scenario) string {
 			cmd.Stdout, cmd.Stderr = &stdout, &stderr
 			exit := 0
 			if err := cmd.Run(); err != nil {
-				ee, ok := err.(*exec.ExitError)
-				if !ok {
+				var ee *exec.ExitError
+				if !errors.As(err, &ee) {
 					t.Fatalf("run %v: %v", st.args, err)
 				}
 				exit = ee.ExitCode()
