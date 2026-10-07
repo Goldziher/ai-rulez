@@ -64,18 +64,17 @@ func driftLoadOptions(mode driftMode) []config.LoadOption {
 
 // checkConfigDrift runs the drift check for one loaded config and prints the
 // differing files. It returns how many differ.
-func checkConfigDrift(cfg *config.Config, mode driftMode) (int, error) {
+func checkConfigDrift(cfg *config.Config, mode driftMode) (differing, blocked int, err error) {
 	gen := generator.NewGenerator(cfg)
 	gen.SetContext(cmdContext())
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetOverwriteUnowned(generateForce)
 	if err := applyRole(gen); err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	var (
 		drift   []generator.Drift
 		checked int
-		err     error
 	)
 	if mode == driftManifest {
 		drift, checked, err = gen.VerifyGenerated()
@@ -83,15 +82,18 @@ func checkConfigDrift(cfg *config.Config, mode driftMode) (int, error) {
 		drift, err = gen.CheckDrift(profile)
 	}
 	if err != nil {
-		return 0, err //nolint:wrapcheck // already contextual
+		return 0, 0, err //nolint:wrapcheck // already contextual
 	}
 	for _, d := range drift {
+		if d.Kind == generator.DriftBlocked {
+			blocked++
+		}
 		fmt.Printf("%s: %s\n", d.Kind, displayDriftPath(cfg, d.Path))
 	}
 	if len(drift) == 0 && mode == driftManifest {
 		progress.PrintlnIfNotQuiet(fmt.Sprintf("verified %d generated file(s) against their Content-Hash", checked))
 	}
-	return len(drift), nil
+	return len(drift), blocked, nil
 }
 
 // displayDriftPath shows a project-relative path relative to the working
@@ -144,7 +146,7 @@ func runDriftCheckGated(args []string, isRecursive bool, mode driftMode, gate fu
 		return 1
 	}
 	applyGenerateOverrides(cfg)
-	n, err := checkConfigDrift(cfg, mode)
+	n, blocked, err := checkConfigDrift(cfg, mode)
 	if err != nil {
 		fmtError(err)
 		return 1
@@ -152,7 +154,7 @@ func runDriftCheckGated(args []string, isRecursive bool, mode driftMode, gate fu
 	if gateDrift {
 		return exitDrift
 	}
-	return finishDrift(n, 1, fix)
+	return finishDrift(n, blocked, 1, fix)
 }
 
 // runGate runs the gate on cfg and reports whether it found lock drift or failed.
@@ -177,7 +179,7 @@ func runRecursiveDrift(mode driftMode, fix string, gate func(*config.Config) err
 		progress.PrintlnIfNotQuiet("No configuration files found")
 		return 0
 	}
-	total, failed, gateDrift := 0, 0, 0
+	total, totalBlocked, failed, gateDrift := 0, 0, 0, 0
 	for _, path := range paths {
 		cfg, err := loadProjectFile(cmdContext(), path, driftLoadOptions(mode)...)
 		if err == nil {
@@ -201,13 +203,14 @@ func runRecursiveDrift(mode driftMode, fix string, gate func(*config.Config) err
 			gateDrift++
 		}
 		applyGenerateOverrides(cfg)
-		n, err := checkConfigDrift(cfg, mode)
+		n, blocked, err := checkConfigDrift(cfg, mode)
 		if err != nil {
 			fmtError(oops.With("config", path).Wrapf(err, "check generated files"))
 			failed++
 			continue
 		}
 		total += n
+		totalBlocked += blocked
 	}
 	if failed > 0 {
 		return 1
@@ -215,14 +218,33 @@ func runRecursiveDrift(mode driftMode, fix string, gate func(*config.Config) err
 	if total == 0 && gateDrift > 0 {
 		return exitDrift
 	}
-	return finishDrift(total, len(paths), fix)
+	return finishDrift(total, totalBlocked, len(paths), fix)
 }
 
-func finishDrift(differing, roots int, fix string) int {
+func finishDrift(differing, blocked, roots int, fix string) int {
 	if differing == 0 {
 		logger.Success("Generated files are up to date", "roots", roots)
 		return 0
 	}
-	fmt.Fprintf(os.Stderr, "%d generated file(s) differ from their sources; %s\n", differing, fix)
+	fmt.Fprintln(os.Stderr, driftMessage(differing, blocked, fix))
 	return exitDrift
+}
+
+// blockedRemedy is the way out for a file generate refuses to overwrite.
+const blockedRemedy = "import it with `ai-rulez convert --write`, move or delete it, or pass --force"
+
+// driftMessage is the closing line of a drift check. A blocked file is one
+// generate will not overwrite, so telling the user to run generate would lead
+// into the refusal: it names the remedy instead.
+func driftMessage(differing, blocked int, fix string) string {
+	switch {
+	case blocked == 0:
+		return fmt.Sprintf("%d generated file(s) differ from their sources; %s", differing, fix)
+	case blocked == differing:
+		return fmt.Sprintf("%d generated file(s) differ from their sources, %d blocked: generate will not overwrite a file ai-rulez did not write; %s",
+			differing, blocked, blockedRemedy)
+	default:
+		return fmt.Sprintf("%d generated file(s) differ from their sources; %s. %d blocked: generate will not overwrite a file ai-rulez did not write; %s",
+			differing, fix, blocked, blockedRemedy)
+	}
 }
