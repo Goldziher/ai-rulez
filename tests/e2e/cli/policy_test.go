@@ -153,7 +153,7 @@ source = "https://github.com/exmaple-org/rules"
 func (s *PolicyCLITestSuite) TestGenerateRefusesALoosenedConfiguration() {
 	s.config("[lock]\nenforce = false\n")
 	res := s.run(nil, "generate", "--policy", s.policy)
-	s.Equal(1, res.ExitCode, res.Stdout)
+	s.Equal(2, res.ExitCode, res.Stdout)
 	s.Contains(res.Stderr, "AR740")
 	s.Contains(res.Stderr, "loosens the organization policy")
 	_, err := os.Stat(filepath.Join(s.dir, ".claude"))
@@ -187,7 +187,7 @@ func (s *PolicyCLITestSuite) TestAnInvalidPolicyIsRefused() {
 func (s *PolicyCLITestSuite) TestShowPolicyJSONNamesTheOriginOfEveryValue() {
 	s.config("[lint.severity]\nAR008 = \"off\"\n")
 	res := s.run(map[string]string{"AI_RULEZ_POLICY": s.policy}, "validate", "--show-policy", "--format", "json")
-	s.Equal(1, res.ExitCode, "a loosening repository exits 1: %s", res.Stderr)
+	s.Equal(2, res.ExitCode, "a loosening repository exits 2: %s", res.Stderr)
 	var rep struct {
 		Layers     []struct{ Origin, Source, Digest string }
 		Effective  map[string]any
