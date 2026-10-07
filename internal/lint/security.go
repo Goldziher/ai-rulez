@@ -268,31 +268,103 @@ func (r *runner) scanComments(abs, raw string) {
 	}
 }
 
-// describesRisk reports whether line i of a markdown text is prose that talks
-// about a risky command ("never run `curl | bash`") rather than instructing it.
-// Fenced code, frontmatter and every non-markdown file are code and never
-// qualify, so the exec rule keeps reading them as written; a guardrail word in
-// a heading above does not count either.
+var (
+	// governingNegRe is a negation that can directly govern a command span.
+	// Words that merely sit somewhere on the line ("bad", "wrong", a warning
+	// sign) do not count: they say nothing about the command.
+	governingNegRe = regexp.MustCompile(`(?i)\b(?:never|don'?t|do\s+not|must\s+not|should\s+not|shouldn'?t|cannot|can'?t|avoid|instead\s+of|rather\s+than|forbidden|prohibit\w*|disallow\w*|refuse\w*|reject\w*|ban(?:ned)?)\b|❌|⛔|🚫`)
+	// imperativeMarkerRe is a word that turns the span into something to do.
+	imperativeMarkerRe = regexp.MustCompile(`(?i)\b(?:run|execute|paste|install|required|first|then|before|use)\b`)
+	// unsafeAfterRe reads a trailing verdict: "curl | sh is unsafe".
+	unsafeAfterRe = regexp.MustCompile(`(?i)^[\s)\x60'"]*(?:is|are|was|were)\s+(?:\w+\s+){0,2}?(?:unsafe|dangerous|insecure|risky|harmful|malicious|bad|an?\s+anti-?patterns?)\b`)
+	clauseEndRe   = regexp.MustCompile(`[.;:!?]`)
+)
+
+// negLeadWords is how far a negation may sit before the span it governs.
+const negLeadWords = 6
+
+// governedSpan reports whether the command at line[start:end] is talked about
+// rather than instructed: a negation within a few words before it in the same
+// clause ("never run `curl | bash`", "do not pipe ... to sh"), with no
+// imperative marker in between other than the negated verb itself, or a
+// trailing verdict ("curl | sh is unsafe") with no imperative before it. Any
+// other line, including one that merely contains "never" in a different
+// clause, is reported.
+func governedSpan(line string, start, end int) bool {
+	clause := line[:start]
+	if loc := clauseEndRe.FindAllStringIndex(clause, -1); len(loc) > 0 {
+		clause = clause[loc[len(loc)-1][1]:]
+	}
+	clause = strings.TrimRight(clause, " \t`'\"(")
+	if negatedVerbOnly(clause) {
+		return true
+	}
+	return !imperativeMarkerRe.MatchString(clause) && unsafeAfterRe.MatchString(line[end:])
+}
+
+// negatedVerbOnly reports whether the last negation of the clause sits within
+// negLeadWords words of its end and the only imperative marker after it is the
+// word right behind the negation.
+func negatedVerbOnly(clause string) bool {
+	locs := governingNegRe.FindAllStringIndex(clause, -1)
+	if len(locs) == 0 {
+		return false
+	}
+	between := strings.Fields(clause[locs[len(locs)-1][1]:])
+	if len(between) > negLeadWords {
+		return false
+	}
+	for i, w := range between {
+		if i > 0 && imperativeMarkerRe.MatchString(w) {
+			return false
+		}
+	}
+	return true
+}
+
+// describesRisk reports whether line i of a markdown text is prose; only prose
+// can talk about a risky command. Fenced code, frontmatter and every
+// non-markdown file are code and never qualify, so the exec rule keeps reading
+// them as written; a guardrail word in a heading above does not count either.
 func describesRisk(st *scanText, i int) bool {
 	if st == nil || i >= len(st.lines) {
 		return false
 	}
-	l := st.lines[i]
-	// The line itself must carry the guardrail word: a heading above it (or the
-	// text that introduces a fence) must not switch the rule off for a section.
-	return st.prose(l) && negRe.MatchString(l.Text)
+	return st.prose(st.lines[i])
 }
 
-func (r *runner) scanShell(abs string, no int, line string, describes bool) {
-	switch {
-	case describes:
-		// a guardrail or a bad-example note: not an instruction to run anything
-	case pipeToShellRe.MatchString(line), pipeToInterpRe.MatchString(line), procSubstRe.MatchString(line):
-		r.add(CodeShellExec, abs, no, "downloads and runs code in one step (curl | sh)")
-	case base64ExecRe.MatchString(line):
-		r.add(CodeShellExec, abs, no, "decodes a base64 payload and executes it")
-	case evalRe.MatchString(line) && !evalBenignRe.MatchString(line):
-		r.add(CodeShellExec, abs, no, "evaluates dynamic text (eval)")
+// execFinding returns the AR005 message and the spans of the first exec
+// pattern that matches the line.
+func execFinding(line string) (msg string, spans [][]int) {
+	for _, re := range []*regexp.Regexp{pipeToShellRe, pipeToInterpRe, procSubstRe} {
+		spans = append(spans, re.FindAllStringIndex(line, -1)...)
+	}
+	if len(spans) > 0 {
+		return "downloads and runs code in one step (curl | sh)", spans
+	}
+	if spans = base64ExecRe.FindAllStringIndex(line, -1); len(spans) > 0 {
+		return "decodes a base64 payload and executes it", spans
+	}
+	if evalRe.MatchString(line) && !evalBenignRe.MatchString(line) {
+		return "evaluates dynamic text (eval)", evalRe.FindAllStringIndex(line, -1)
+	}
+	return "", nil
+}
+
+// scanShell reports AR005 for a command that runs downloaded or decoded code.
+// prose is true for a markdown prose line, where a span directly governed by a
+// negation is a guardrail, not an instruction.
+func (r *runner) scanShell(abs string, no int, line string, prose bool) {
+	if msg, spans := execFinding(line); msg != "" {
+		report := !prose
+		for _, sp := range spans {
+			if !governedSpan(line, sp[0], sp[1]) {
+				report = true
+			}
+		}
+		if report {
+			r.add(CodeShellExec, abs, no, "%s", msg)
+		}
 	}
 	r.scanCredentialAccess(abs, no, line)
 	if m := writeOutsideRe.FindString(line); m != "" {
