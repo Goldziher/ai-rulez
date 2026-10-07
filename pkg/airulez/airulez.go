@@ -12,12 +12,13 @@
 // What a plan is. A plan lists every file a generate run would write, merge into
 // or remove, with a digest of the content ai-rulez renders for it. Planning
 // reads the project through the Workspace, writes nothing and starts no process
-// unless a Runner allows one. A Workspace that is not backed by a directory
-// (memory, a git snapshot) is planned as a project that has no generated files
-// yet: files the engine merges into (.claude/settings.json) are rendered from
-// scratch, because the engine reads existing outputs from the directory a
-// workspace names and a snapshot of sources has none. Two workspaces holding
-// the same sources therefore give the same Plan digest.
+// unless a Runner allows one. Everything the plan reads comes from the
+// Workspace, the existing outputs included: the previous manifest, documents
+// the engine merges into (.claude/settings.json) and hand-edited files, so a
+// workspace in memory or in a commit plans its own removals as a directory
+// does. The Plan digest therefore covers the sources and the outputs and
+// manifests the workspace holds: two workspaces with the same sources but
+// different existing outputs give different digests.
 //
 // Out of scope here: the agent subcommand, file watching, init prompts,
 // scanners, usage recording, the eval runners and the MCP server. They stay in
@@ -469,8 +470,9 @@ type Plan struct {
 	// Files are the outputs, sorted by path; Removals what a run takes back.
 	Files    []PlanFile
 	Removals []PlanRemoval
-	// Digest is the SHA-256 of the canonical plan document: equal for equal
-	// sources, whichever workspace they came from.
+	// Digest is the SHA-256 of the canonical plan document. It covers the
+	// sources and the existing outputs and manifests the workspace holds, so it
+	// is equal for equal workspaces, not for equal sources alone.
 	Digest string
 
 	doc *generator.Plan
