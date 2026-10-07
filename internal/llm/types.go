@@ -106,6 +106,9 @@ type EmbedResponse struct {
 	// Requests is how many provider requests the call took when that is more than one (a batch the
 	// backend had to split); 0 means one. The budget counts every one of them against max_calls.
 	Requests int `json:"-"`
+	// firstBilled, on a failed split call, is the usage of the first request, which completed and
+	// was billed before a further request failed (the budget charges it instead of the worst case).
+	firstBilled *Usage
 }
 
 // Client is the one interface features use to reach a model.
