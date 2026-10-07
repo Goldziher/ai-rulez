@@ -9,7 +9,7 @@ import (
 
 func TestRoleDelivery_ParsesValidatesAndInherits(t *testing.T) {
 	cfg, err := decodeConfigTOML([]byte(`
-version = "4.0"
+version = "5.0"
 name = "x"
 [[roles]]
 name = "base"
@@ -137,7 +137,7 @@ func TestRoleProblems_SkillSourceSkillsCannotBeCheckedOffline(t *testing.T) {
 
 func TestTOMLRoundTripKeepsEveryTableOfTheMergedFeatures(t *testing.T) {
 	cfg, err := decodeConfigTOML([]byte(`
-version = "4.0"
+version = "5.0"
 name = "x"
 [skills]
 delivery = "served"

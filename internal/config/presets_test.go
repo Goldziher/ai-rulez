@@ -39,7 +39,7 @@ func TestRegistry_Generator_NotFound(t *testing.T) {
 func TestGeneratePresets_NoContent(t *testing.T) {
 	cfg := &Config{
 		Name:    "test",
-		Version: "4.0",
+		Version: "5.0",
 		Presets: []Preset{
 			{BuiltIn: "claude"},
 		},

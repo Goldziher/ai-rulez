@@ -439,7 +439,7 @@ func TestConvert_WriteIsIdempotentAndLeavesSourceAlone(t *testing.T) {
 func TestConvert_ConflictNeedsForce(t *testing.T) {
 	dir := t.TempDir()
 	writeTree(t, dir, sampleProject)
-	writeTree(t, dir, map[string]string{".ai-rulez/rules/ts.md": "mine\n", ".ai-rulez/config.toml": "version = \"4.0\"\nname = \"mine\"\npresets = [\"codex\"]\n"})
+	writeTree(t, dir, map[string]string{".ai-rulez/rules/ts.md": "mine\n", ".ai-rulez/config.toml": "version = \"5.0\"\nname = \"mine\"\npresets = [\"codex\"]\n"})
 	before := snapshot(t, dir)
 
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
@@ -463,7 +463,7 @@ func TestConvert_ConflictNeedsForce(t *testing.T) {
 func TestConvert_DomainKeepsExistingTree(t *testing.T) {
 	dir := t.TempDir()
 	writeTree(t, dir, sampleProject)
-	writeTree(t, dir, map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"mine\"\npresets = [\"claude\"]\n", ".ai-rulez/rules/ts.md": "mine\n"})
+	writeTree(t, dir, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"mine\"\npresets = [\"claude\"]\n", ".ai-rulez/rules/ts.md": "mine\n"})
 
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, Domain: "imported"})
 

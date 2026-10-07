@@ -33,7 +33,7 @@ func roleFixture() *Config {
 
 func TestRolesParseFromTOML(t *testing.T) {
 	cfg, err := decodeConfigTOML([]byte(`
-version = "4.0"
+version = "5.0"
 name = "x"
 [role_manifest]
 enabled = true

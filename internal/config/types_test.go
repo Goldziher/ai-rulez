@@ -369,43 +369,6 @@ func TestConfig_HasProfile(t *testing.T) {
 	}
 }
 
-func TestConfig_IsV4(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		config   config.Config
-		expected bool
-	}{
-		{
-			name: "valid v4 config",
-			config: config.Config{
-				Version: "4.0",
-			},
-			expected: true,
-		},
-		{
-			name: "v3 config returns false",
-			config: config.Config{
-				Version: "3.0",
-			},
-			expected: false,
-		},
-		{
-			name:     "empty version",
-			config:   config.Config{},
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.config.IsV4()
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestConfig_Validate(t *testing.T) {
 	t.Parallel()
 
@@ -418,7 +381,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "valid config",
 			config: config.Config{
-				Version: "4.0",
+				Version: "5.0",
 				Name:    "test-project",
 				Presets: []config.Preset{
 					{BuiltIn: "claude"},
@@ -429,7 +392,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "invalid version",
 			config: config.Config{
-				Version: "2.0",
+				Version: "6.0",
 				Name:    "test-project",
 			},
 			expectErr: true,
@@ -438,7 +401,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "missing name",
 			config: config.Config{
-				Version: "4.0",
+				Version: "5.0",
 				Presets: []config.Preset{
 					{BuiltIn: "claude"},
 				},
@@ -449,7 +412,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "invalid default profile",
 			config: config.Config{
-				Version: "4.0",
+				Version: "5.0",
 				Name:    "test-project",
 				Default: "nonexistent",
 				Presets: []config.Preset{
@@ -465,7 +428,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "invalid preset",
 			config: config.Config{
-				Version: "4.0",
+				Version: "5.0",
 				Name:    "test-project",
 				Presets: []config.Preset{
 					{BuiltIn: "invalid-preset"},
@@ -659,7 +622,7 @@ func TestConfig_GetContentForProfile(t *testing.T) {
 
 	t.Run("no content loaded", func(t *testing.T) {
 		cfg := &config.Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 		}
 
@@ -670,7 +633,7 @@ func TestConfig_GetContentForProfile(t *testing.T) {
 
 	t.Run("with content", func(t *testing.T) {
 		cfg := &config.Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 			Default: "backend",
 			Profiles: map[string][]string{
@@ -705,7 +668,7 @@ func TestConfig_GetContentForProfile_ScopedBuiltins(t *testing.T) {
 
 	newConfig := func() *config.Config {
 		return &config.Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 			Profiles: map[string][]string{
 				"backend":  {"builtin:docker"},
@@ -743,7 +706,7 @@ func TestConfig_GetContentForProfile_ScopedBuiltins(t *testing.T) {
 
 	t.Run("bare name does not widen a scoped builtin", func(t *testing.T) {
 		cfg := &config.Config{
-			Version: "4.0",
+			Version: "5.0",
 			Name:    "test",
 			Profiles: map[string][]string{
 				"backend": {"docker"},

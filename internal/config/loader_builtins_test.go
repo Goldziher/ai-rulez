@@ -16,7 +16,7 @@ func TestLoadConfig_BuiltinsArray(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-builtins"
 presets = ["claude"]
 builtins = ["rust", "security"]
@@ -41,7 +41,7 @@ builtins = ["rust", "security"]
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-builtins-exclude"
 presets = ["claude"]
 builtins = ["rust", "!ai-governance"]
@@ -65,7 +65,7 @@ func TestLoadConfig_BuiltinsBoolean(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-builtins-true"
 presets = ["claude"]
 builtins = true
@@ -94,7 +94,7 @@ builtins = true
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-builtins-false"
 presets = ["claude"]
 builtins = false
@@ -117,7 +117,7 @@ func TestLoadConfig_BuiltinsNotSet(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-no-builtins"
 presets = ["claude"]
 `
@@ -154,7 +154,7 @@ This is a local override.
 			[]byte(localRule), 0o644,
 		))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-local-override"
 presets = ["claude"]
 builtins = ["rust"]
@@ -182,7 +182,7 @@ func TestLoadConfig_BuiltinsContent(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-content"
 presets = ["claude"]
 builtins = ["!ai-governance", "ai-governance"]
@@ -204,7 +204,7 @@ builtins = ["!ai-governance", "ai-governance"]
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-security"
 presets = ["claude"]
 builtins = ["security", "!ai-governance"]
@@ -229,7 +229,7 @@ builtins = ["security", "!ai-governance"]
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-commands"
 presets = ["claude"]
 builtins = ["default-commands", "!ai-governance"]
@@ -260,7 +260,7 @@ builtins = ["default-commands", "!ai-governance"]
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-frontmatter"
 presets = ["claude"]
 builtins = ["ai-governance", "!ai-governance", "security"]
@@ -351,7 +351,7 @@ func TestLoadConfig_ProfileBuiltinRefs(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-profile-builtins"
 presets = ["claude"]
 
@@ -388,7 +388,7 @@ frontend = ["builtin:typescript"]
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-profile-builtins-off"
 presets = ["claude"]
 builtins = false
@@ -417,7 +417,7 @@ backend = ["builtin:rust"]
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-profile-builtins-global"
 presets = ["claude"]
 builtins = ["rust"]
@@ -449,7 +449,7 @@ backend = ["builtin:rust"]
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		configContent := `version = "4.0"
+		configContent := `version = "5.0"
 name = "test-profile-builtins-bad"
 presets = ["claude"]
 

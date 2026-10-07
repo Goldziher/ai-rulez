@@ -292,7 +292,7 @@ func TestValidate_RuleActivation_Wiring(t *testing.T) {
 		return []ContentFile{{Name: "r", Path: "rules/r.md", Metadata: meta}}
 	}
 	base := func(tree *ContentTree) *Config {
-		return &Config{Version: "4.0", Name: "x", Presets: []Preset{{BuiltIn: "claude"}}, Content: tree}
+		return &Config{Version: "5.0", Name: "x", Presets: []Preset{{BuiltIn: "claude"}}, Content: tree}
 	}
 
 	t.Run("Validate surfaces the activation error", func(t *testing.T) {
