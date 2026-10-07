@@ -59,6 +59,9 @@ type ServeSetup struct {
 	// runs inside another command's load (a `lock` refresh); nil derives it from
 	// Frozen and Offline.
 	LockPolicy *config.LockPolicy
+	// LoadOptions are added to every configuration load of the setup (an
+	// embedding service's workspace and host, through the lock run).
+	LoadOptions []config.LoadOption
 	// CacheDir overrides the skill-source cache (tests).
 	CacheDir string
 	// MaxCloneBytes is the clone size limit of git skill sources that set no
@@ -402,6 +405,7 @@ func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 	if st.Collector != nil {
 		opts = append(opts, config.WithCollector(st.Collector))
 	}
+	opts = append(opts, st.LoadOptions...)
 	cfg, err := proj.Load(ctx, wd, opts...)
 	if err != nil {
 		return nil, oops.Wrapf(err, "load configuration")

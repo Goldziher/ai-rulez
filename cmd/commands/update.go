@@ -7,17 +7,18 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/samber/oops"
+	"github.com/spf13/cobra"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
-	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 	"github.com/Goldziher/ai-rulez/v5/internal/versionpatch"
-	"github.com/samber/oops"
-	"github.com/spf13/cobra"
 )
 
 // UpdateSchemaVersion versions the JSON of `update --format json`.
@@ -122,25 +123,7 @@ type updateItem struct {
 }
 
 // scanSummary is the security scan (AR001-AR009) of a tree about to be pinned.
-type scanSummary struct {
-	Errors   int           `json:"errors"`
-	Warnings int           `json:"warnings"`
-	Findings []scanFinding `json:"findings,omitempty"`
-	// Refused is true when the error findings block the pin.
-	Refused bool `json:"refused,omitempty"`
-	// Accepted is true when --accept-findings let the pin through.
-	Accepted bool `json:"accepted,omitempty"`
-	// Note says what could not be scanned (a tree over the limits).
-	Note string `json:"note,omitempty"`
-}
-
-type scanFinding struct {
-	Code     string `json:"code"`
-	Severity string `json:"severity"`
-	File     string `json:"file"`
-	Line     int    `json:"line,omitempty"`
-	Message  string `json:"message"`
-}
+type scanSummary = lockrun.ScanSummary
 
 // majorItem is one source with a newer major version than its constraint allows.
 type majorItem struct {
@@ -402,9 +385,6 @@ func updateItemFor(fresh *config.Config, current, next *lockfile.File, m *moveTo
 	return item, nil
 }
 
-// maxScanFindingsListed bounds the findings printed per source; the counts are exact.
-const maxScanFindingsListed = 20
-
 // scanNewTree runs the security scan (AR001-AR009, the one skill installs and
 // approvals use) over the tree a pin is about to point to. Error findings refuse
 // the pin unless --accept-findings.
@@ -412,31 +392,9 @@ func scanNewTree(cfg *config.Config, m *moveTo, commit string) *scanSummary {
 	return scanTreeDir(cfg, m.row.Name, m.src.treeDir(commit), updateAcceptFindings)
 }
 
-// scanTreeDir scans the cached tree in dir ("" = not cached, not scanned).
-// Error findings refuse the pin unless accept is set.
+// scanTreeDir scans the cached tree in dir (see lockrun.ScanTree).
 func scanTreeDir(cfg *config.Config, name, dir string, accept bool) *scanSummary {
-	sum := &scanSummary{}
-	if dir == "" {
-		sum.Note = "the new tree is not in the local cache: it was not scanned"
-		return sum
-	}
-	files, note := walkFiles(dir)
-	sum.Note = note
-	for _, f := range scanApproved(cfg, name, files) {
-		switch f.Severity {
-		case lint.SeverityError:
-			sum.Errors++
-		case lint.SeverityWarning:
-			sum.Warnings++
-		}
-		if len(sum.Findings) < maxScanFindingsListed && (f.Severity == lint.SeverityError || f.Severity == lint.SeverityWarning) {
-			sum.Findings = append(sum.Findings, scanFinding{Code: f.Code, Severity: string(f.Severity), File: f.File, Line: f.Line, Message: f.Message})
-		}
-	}
-	if sum.Errors > 0 {
-		sum.Refused, sum.Accepted = !accept, accept
-	}
-	return sum
+	return lockrun.ScanTree(cfg, name, dir, accept)
 }
 
 // majorUpdate is `update --major`: it lists the sources that have a newer major
