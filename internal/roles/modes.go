@@ -15,12 +15,12 @@ const (
 	capabilitiesChecked = "2026-10-06"
 )
 
-// Capability says which skill modes one harness can honour, from its vendor
+// Capability says which skill modes one harness can honor, from its vendor
 // documentation. A mode is listed only where the vendor documents a setting for
 // it; nothing is approximated, and a harness not listed here is "not documented".
 //
 // Modes holds what ai-rulez renders. Documented holds a documented setting that
-// ai-rulez does not render (so the mode still counts as not honoured), with the
+// ai-rulez does not render (so the mode still counts as not honored), with the
 // reason, so a later change has the evidence at hand.
 type Capability struct {
 	Preset     string
@@ -32,8 +32,8 @@ type Capability struct {
 	Verified string
 }
 
-// Honours returns the mechanism that implements mode on the harness.
-func (c Capability) Honours(mode string) (string, bool) {
+// Honors returns the mechanism that implements mode on the harness.
+func (c Capability) Honors(mode string) (string, bool) {
 	if mode == ModeOn {
 		return "default", true
 	}
@@ -110,13 +110,13 @@ type SkillOutcome struct {
 	Domain string `json:"domain,omitempty"`
 	ID     string `json:"id"`
 	Mode   string `json:"mode"`
-	// Honoured maps each harness that implements the mode to its mechanism.
-	Honoured map[string]string `json:"honoured,omitempty"`
+	// Honored maps each harness that implements the mode to its mechanism.
+	Honored map[string]string `json:"honoured,omitempty"` //nolint:misspell // JSON key of the roles report, kept for existing consumers
 	// Degraded lists the harnesses that cannot implement it.
 	Degraded []string `json:"degraded,omitempty"`
 	// Overridden lists the harnesses whose mode is written to SKILL.md but that
 	// the skill's own frontmatter contradicts; the author's key wins, so the mode
-	// is not honoured there. They are removed from Honoured.
+	// is not honored there. They are removed from Honored.
 	Overridden []string `json:"overridden,omitempty"`
 	// Action is what generate does beyond Claude's settings: ActionFrontmatter,
 	// or the configured fallback (ActionDrop, ActionServe) for an "off" skill a
@@ -149,7 +149,7 @@ func skillPresets(cfg *config.Config) []string {
 }
 
 // PlanSkillModes decides, for every skill the role gives a mode other than "on",
-// which configured harnesses honour it and what generate does for the rest.
+// which configured harnesses honor it and what generate does for the rest.
 //
 //   - name-only has no equivalent outside Claude Code: the skill stays listed there.
 //   - user-invocable-only is written as disable-model-invocation: true where a
@@ -168,16 +168,16 @@ func PlanSkillModes(cfg *config.Config, res *config.ResolvedRole) []SkillOutcome
 		if item.Kind != config.RoleKindSkill || item.Mode == "" || item.Mode == ModeOn {
 			continue
 		}
-		o := SkillOutcome{Domain: item.Domain, ID: item.ID, Mode: item.Mode, Honoured: map[string]string{}}
+		o := SkillOutcome{Domain: item.Domain, ID: item.ID, Mode: item.Mode, Honored: map[string]string{}}
 		viaFile := false
 		for _, p := range presets {
 			capability, _ := CapabilityOf(p)
-			how, ok := capability.Honours(item.Mode)
+			how, ok := capability.Honors(item.Mode)
 			if !ok {
 				o.Degraded = append(o.Degraded, p)
 				continue
 			}
-			o.Honoured[p] = how
+			o.Honored[p] = how
 			if how != viaSettings {
 				viaFile = true
 			}
@@ -196,8 +196,8 @@ func PlanSkillModes(cfg *config.Config, res *config.ResolvedRole) []SkillOutcome
 		if o.Action == ActionFrontmatter {
 			markOverridden(&o, skillMetadata(cfg, item.Domain, item.ID))
 		}
-		if len(o.Honoured) == 0 {
-			o.Honoured = nil
+		if len(o.Honored) == 0 {
+			o.Honored = nil
 		}
 		out = append(out, o)
 	}
@@ -206,7 +206,7 @@ func PlanSkillModes(cfg *config.Config, res *config.ResolvedRole) []SkillOutcome
 }
 
 // markOverridden moves the harnesses that read the invocation keys from SKILL.md
-// out of Honoured when the skill's own frontmatter sets one of them to another
+// out of Honored when the skill's own frontmatter sets one of them to another
 // value: generate never overwrites a key the author set.
 func markOverridden(o *SkillOutcome, meta *config.Metadata) {
 	conflict := false
@@ -218,10 +218,10 @@ func markOverridden(o *SkillOutcome, meta *config.Metadata) {
 	if !conflict {
 		return
 	}
-	for preset, how := range o.Honoured {
+	for preset, how := range o.Honored {
 		if how != viaSettings {
 			o.Overridden = append(o.Overridden, preset)
-			delete(o.Honoured, preset)
+			delete(o.Honored, preset)
 		}
 	}
 	sort.Strings(o.Overridden)
