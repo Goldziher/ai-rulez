@@ -68,7 +68,7 @@ func init() {
 func exitOn(err error) {
 	if err != nil {
 		fmtError(err)
-		os.Exit(1)
+		os.Exit(exitCodeFor(err))
 	}
 }
 
@@ -94,6 +94,9 @@ func runRolesList(out io.Writer) error {
 	cfg, err := loadRolesConfig()
 	if err != nil {
 		return err
+	}
+	if err := cfg.CheckRoleDomains(); err != nil {
+		return err //nolint:wrapcheck // already contextual
 	}
 	counter, err := tokens.New("")
 	if err != nil {

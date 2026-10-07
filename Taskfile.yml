@@ -87,6 +87,14 @@ tasks:
     cmds:
       - go build -o bin/ai-rulez ./cmd/ai-rulez
 
+  build:literllm:
+    desc: "Build and test the native liter-llm backend (-tags literllm, needs cgo)"
+    env:
+      CGO_ENABLED: "1"
+    cmds:
+      - cd internal/llm/literllm && GOWORK=off go test -tags literllm ./...
+      - GOWORK=literllm.work go build -tags literllm -o /dev/null ./cmd/ai-rulez
+
   test:
     desc: "Run unit and integration tests"
     cmds:
