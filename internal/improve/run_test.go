@@ -396,6 +396,28 @@ func TestExecute_AFailedOptimizerRoundIsChargedAndTheBudgetShrinks(t *testing.T)
 	}
 }
 
+func TestExecute_ABudgetTruncatedCandidateMeasurementIsNeverAccepted(t *testing.T) {
+	// Arrange: three runs per measurement at 0.02 each. Baseline held-out and train cost 0.12, the
+	// optimizer 0.01 and the candidate's train runs 0.06, leaving 0.02: one of three held-out runs.
+	root, configDir := project(t)
+	opt := optimizer(t, func(dir string, _ *OptimizerRequest, _ runner.Spec) { appendSkill(t, dir, "\nGOOD advice.\n") })
+	o := baseOptions(root, configDir, goodEval(), opt)
+	o.Runs, o.MaxRounds, o.MaxCostUSD = 3, 1, 0.21
+	plan := mustPrepare(t, &o)
+
+	// Act
+	report, err := plan.Execute(context.Background())
+
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, StatusNoCandidate, report.Status)
+	require.Len(t, report.Rounds, 1)
+	rd := report.Rounds[0]
+	assert.Equal(t, "rejected: over budget", rd.Decision)
+	assert.Contains(t, strings.Join(rd.Reasons, " "), "partial measurement")
+	assert.Contains(t, strings.Join(rd.Warnings, " "), "held-out cases: the budget ran out after 1 of 3 runs")
+}
+
 func TestExecute_NothingToGainStopsBeforeTheOptimizer(t *testing.T) {
 	// Arrange
 	root, configDir := project(t)

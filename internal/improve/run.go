@@ -359,6 +359,7 @@ func (x *execution) loop() (*bestRound, error) {
 	if err != nil {
 		return nil, fmt.Errorf("measure the baseline: %w", err)
 	}
+	x.report.Warnings = append(x.report.Warnings, prefixed("baseline held-out cases: ", baseHeld.Warnings)...)
 	if err := x.checkBaseline(baseHeld); err != nil {
 		return nil, err
 	}
@@ -378,6 +379,7 @@ func (x *execution) loop() (*bestRound, error) {
 		if terr != nil {
 			return nil, fmt.Errorf("measure the baseline on train cases: %w", terr)
 		}
+		x.report.Warnings = append(x.report.Warnings, prefixed("baseline train cases: ", baseTrain.Warnings)...)
 		m := MetricsOf(baseTrain.Outcomes, nil)
 		x.report.BaselineTrain = &m
 		scores = &trainScores{PassRate: m.PassRate, TriggerPrecision: m.TriggerPrecision, TriggerRecall: m.TriggerRecall}
@@ -538,6 +540,7 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 		if err != nil {
 			return nil, fmt.Errorf("round %d: evaluate the candidate on train cases: %w", round, err)
 		}
+		rep.Warnings = append(rep.Warnings, prefixed("train cases: ", train.Warnings)...)
 		m := MetricsOf(train.Outcomes, nil)
 		rep.TrainAfter = &m
 		out.train = &trainScores{PassRate: m.PassRate, TriggerPrecision: m.TriggerPrecision, TriggerRecall: m.TriggerRecall}
@@ -556,6 +559,14 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 		return nil, fmt.Errorf("round %d: evaluate the candidate on held-out cases: %w", round, err)
 	}
 	out.heldEvaluated = true
+	rep.Warnings = append(rep.Warnings, prefixed("held-out cases: ", held.Warnings)...)
+	if held.Truncated {
+		// Fewer runs than the baseline had: the majority is not comparable, so it cannot clear the gate.
+		rep.Decision = "rejected: over budget"
+		rep.Reasons = append(rep.Reasons, "the budget ran out before every held-out run of the candidate finished; a partial measurement cannot clear the gate")
+		x.report.Reason = "stopped: over budget"
+		return out, x.reset(x.prev)
+	}
 	cmp := Compare(baseHeld.Outcomes, held.Outcomes)
 	rep.Held = &cmp
 	verdict := Gate{MinGain: o.MinGain, MaxRegressions: o.MaxRegressions, RequireCIAboveZero: o.RequireCIAboveZero}.Decide(cmp)
@@ -569,6 +580,15 @@ func (x *execution) evaluateCandidate(round int, rr roundResult, baseHeld *Measu
 	}
 	x.prev = rr.cand // the optimizer keeps iterating from its own state
 	return out, nil
+}
+
+// prefixed returns each warning with prefix in front.
+func prefixed(prefix string, warnings []string) []string {
+	out := make([]string, 0, len(warnings))
+	for _, w := range warnings {
+		out = append(out, prefix+w)
+	}
+	return out
 }
 
 func heldValues(held []evals.Case) []string {
