@@ -16,6 +16,10 @@ const (
 	maxFileSize = 8 << 20
 )
 
+// maxTotalSize bounds the markdown Load keeps in memory across all files. A
+// variable so a test can lower it.
+var maxTotalSize int64 = 256 << 20
+
 // Concept is one non-reserved markdown file.
 type Concept struct {
 	// Path is the slash-separated bundle-relative path, including .md.
@@ -137,6 +141,7 @@ func Load(root fs.FS) (*Bundle, error) {
 		Logs: map[string]*LogDoc{}, Files: map[string]bool{}, Dirs: map[string]bool{"": true}, fsys: root,
 	}
 	count := 0
+	var total int64
 	err := fs.WalkDir(root, ".", func(p string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -173,6 +178,10 @@ func Load(root fs.FS) (*Bundle, error) {
 		if info.Size() > maxFileSize {
 			b.Problems = append(b.Problems, Problem{Path: p, Message: fmt.Sprintf("file is larger than %d bytes and was skipped", maxFileSize)})
 			return nil
+		}
+		total += info.Size()
+		if total > maxTotalSize {
+			return fmt.Errorf("bundle markdown is larger than %d bytes in total", maxTotalSize)
 		}
 		data, err := fs.ReadFile(root, p)
 		if err != nil {
