@@ -12,9 +12,9 @@ INFO  Generation complete files=10
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/deployer/ dir 0755
-.agents/skills/deployer/SKILL.md file 0644 261 61df01bfe0ec663ab4906ddaa8769a56ec879a8b4e216c33df684ac5316921e7
+.agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/reviewer/ dir 0755
-.agents/skills/reviewer/SKILL.md file 0644 508 f5e021ea1d4c2d36d5a6f38b49b0e030855a4758450f2a5f535b282022c606f5
+.agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .agents/skills/reviewer/references/ dir 0755
 .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .agents/skills/reviewer/scripts/ dir 0755
@@ -31,7 +31,7 @@ INFO  Generation complete files=10
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 42710461a4d57b1d4420b7fdf1867f3cf303d5674fee8ea9d2da8953f0068553
+.ai-rulez/config.toml file 0644 844 576e44f78db354095c782bb24ddc39733ff336acc63d9d15ac1edaa9903205c5
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -51,13 +51,13 @@ INFO  Generation complete files=10
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .commands/ dir 0755
-.commands/build.md file 0644 250 87c9a16916a3244165185a3180d0038a44e3c3ade3127b54aeaf87777bb3f44a
-.commands/ship.md file 0644 227 dd248ff198c0a73861f3ebb4759ab7bac1082da5944defda6cdfa9503ff873d6
+.commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .gitignore file 0644 260 a1f10d0d0a632650ffd2b2c20860cedf61cacbe30f8c98826eb79ee7ce854684
 .letta/ dir 0755
 .letta/agents/ dir 0755
-.letta/agents/architect.md file 0644 273 048aabe0e51f4e6493d6465af11f4c15c29ff66d6d4ecf45620d9270af0009ad
-.letta/agents/tester.md file 0644 245 1a8fddc1441ca92f965ed91435b7e0d1125aed2d9ec445584a055f01b8feb556
+.letta/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.letta/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .letta/settings.json file 0644 632 f3137a7ad411777ec91c9fcaf8d4fc362b74a9470e63501aa2f319758ce0a7c1
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 scripts/ dir 0755
@@ -100,7 +100,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -139,7 +139,7 @@ INFO  Removed generated files files=10 directories=9
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 42710461a4d57b1d4420b7fdf1867f3cf303d5674fee8ea9d2da8953f0068553
+.ai-rulez/config.toml file 0644 844 576e44f78db354095c782bb24ddc39733ff336acc63d9d15ac1edaa9903205c5
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

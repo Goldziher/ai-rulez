@@ -24,7 +24,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 828 27a8739088d47d5ce723c086eb4f341d888ca3dda911e67a508594ab5173ec86
+.ai-rulez/config.toml file 0644 846 ff5200ede0d3b4cb9c9dca19b01e16087f625b25065500b76dc63e4216eb8a67
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -45,22 +45,22 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .github/ dir 0755
 .github/agents/ dir 0755
-.github/agents/architect.agent.md file 0644 273 9b1b2892d9f1115dc5453cf2a9db59d729be229f8210d0145b060c8eadb8177d
-.github/agents/tester.agent.md file 0644 245 950ff91662d260c1ee6b3ed4a7aeabed6095aecd61d6086d791f577181d95ed9
-.github/copilot-instructions.md file 0644 712 78388838267dd53177047fde15d62a627b2b9fab81fa498a62479c55fc9df119
+.github/agents/architect.agent.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.github/agents/tester.agent.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
+.github/copilot-instructions.md file 0644 627 5be176ce0987ac1f8bdfaabe285222fac4fdd0e6e3c81bca9fbb2dd0bb4eedb0
 .github/hooks/ dir 0755
 .github/hooks/ai-rulez.json file 0644 489 18ab5181526ae496b5c77225b5a3af0b9d026bcdf7d3c11ba00271a17b8b1a2c
 .github/instructions/ dir 0755
-.github/instructions/always.instructions.md file 0644 347 36c6bbb4e02f60193208f52cc7125ade5d853f59319560beefb41b15d88d49f5
-.github/instructions/typescript.instructions.md file 0644 373 c91a803021d0a7b007f42706dd7bef616d4e169c214921dc71f7ce894493ccdf
+.github/instructions/always.instructions.md file 0644 262 e6d7ab8091b623f01d6cfcfe854c854842d5333da0446436d1e1ca9bbe72c1a7
+.github/instructions/typescript.instructions.md file 0644 288 14f2246195732bcddc818abd579815c3b0fba6bc55b2925fde948dafa230e2d2
 .github/prompts/ dir 0755
-.github/prompts/build.prompt.md file 0644 250 61b40f53bd674b1fabe14e28222af8773e4a0baef06bbbca807e271f248c6bd6
-.github/prompts/ship.prompt.md file 0644 227 b8a8f26159e004158bef9f47e4507a98841a5ff28429b2362b53237f5e64cdfd
+.github/prompts/build.prompt.md file 0644 163 7e3c85af2b70967aa544ebf2695885bec743b36aaa6911c94ecb84af90829b44
+.github/prompts/ship.prompt.md file 0644 140 8302239666a0f1ea2a3ef65733af690c3df05de9f0c780c8a4b05bc18039a238
 .github/skills/ dir 0755
 .github/skills/deployer/ dir 0755
-.github/skills/deployer/SKILL.md file 0644 261 9919c9c9ebebd0e2fe88c1bd0f55125151d7c9319e6765b8e2847ebbe27037d7
+.github/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .github/skills/reviewer/ dir 0755
-.github/skills/reviewer/SKILL.md file 0644 508 3cfa9d1ca8f9576369a96c4a496c62b219d520b02011d9718bd0f7d2c1b3dfee
+.github/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .github/skills/reviewer/references/ dir 0755
 .github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .github/skills/reviewer/scripts/ dir 0755
@@ -115,7 +115,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -161,7 +161,7 @@ INFO  Removed generated files files=15 directories=11
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 828 27a8739088d47d5ce723c086eb4f341d888ca3dda911e67a508594ab5173ec86
+.ai-rulez/config.toml file 0644 846 ff5200ede0d3b4cb9c9dca19b01e16087f625b25065500b76dc63e4216eb8a67
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

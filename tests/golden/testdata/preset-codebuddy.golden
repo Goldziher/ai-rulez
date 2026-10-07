@@ -21,7 +21,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 830 37f5832cd265d6b5f05400a1d5e02b5a4f5e05e56af65512afaf6545c33b0be8
+.ai-rulez/config.toml file 0644 848 c706c27aef2863864d6617d8e8a34f9188798d4ff518be7d8f38f101cced68ff
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -42,29 +42,29 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .codebuddy/ dir 0755
 .codebuddy/agents/ dir 0755
-.codebuddy/agents/architect.md file 0644 273 8d705ac3f9855ded0ffbf4f67904f144db3697baa60a20a466b66afc0b637f05
-.codebuddy/agents/tester.md file 0644 245 1f528f93b735e494832bc043fae8d32334a3f9d7448368751c7e27e33e4e33fa
+.codebuddy/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.codebuddy/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .codebuddy/commands/ dir 0755
-.codebuddy/commands/build.md file 0644 250 10d5c06050438db8eb79341c547e94b47963a52444889809fd910cacbcc916d5
-.codebuddy/commands/ship.md file 0644 227 184f6b47c1d4b8ccb69c7a566a5c3adfbcf6300cfb573327aab9fbc48c405aa7
+.codebuddy/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.codebuddy/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .codebuddy/rules/ dir 0755
-.codebuddy/rules/always.md file 0644 351 b6ecd90e29ad7cf6875d43b1a7e83cb69605a5b15c2bdaa849b72b16d13cbbcc
-.codebuddy/rules/auto.md file 0644 328 5bed1d1f4def140d1cf69a587f229c61094e28a900193938706dfae17ae6850b
-.codebuddy/rules/manual.md file 0644 339 3a7a8497e1202120d53143b7f5420b8f937701832883090427686725b1184b0b
-.codebuddy/rules/typescript.md file 0644 383 252b8fd71eb41256b731989027cbe3dea3ba0ddf99a57f2cb730ad601408f266
+.codebuddy/rules/always.md file 0644 266 474275574772fb0867056f2ea0a0165f2aae288397f50d5e7d2c0113e61d146a
+.codebuddy/rules/auto.md file 0644 243 6ee9fca4c89516d51b081aeb34a41479cbef0b08dcf0021adc56ddda1c674978
+.codebuddy/rules/manual.md file 0644 254 489ecc1f60f1344adc14606de1c38c434ea551e280e34db472f9c8f92e6471be
+.codebuddy/rules/typescript.md file 0644 298 776ace283678a497184db47c8b4492353b5a0a756a7c7812c47aca3213ed97ab
 .codebuddy/settings.json file 0644 686 d2cdb544ed0ab1b1cd4c741e0ffcd9a82ba3b0f44486a85d8a2e86ac466b8d1f
 .codebuddy/skills/ dir 0755
 .codebuddy/skills/deployer/ dir 0755
-.codebuddy/skills/deployer/SKILL.md file 0644 259 79b2dcfb9cab7828b7f454fa461d839cba93432bc6b3341d8b314d7bc6046148
+.codebuddy/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .codebuddy/skills/reviewer/ dir 0755
-.codebuddy/skills/reviewer/SKILL.md file 0644 506 d2b4e8e0cbf913e1e90d22e452677428d3aa00f3921debce5a53212b35fdff91
+.codebuddy/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .codebuddy/skills/reviewer/references/ dir 0755
 .codebuddy/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .codebuddy/skills/reviewer/scripts/ dir 0755
 .codebuddy/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 378 2d39107d9dcb15b69bafc1b9434c491d003aece6506abcd86a8eb6c879e6c723
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-CODEBUDDY.md file 0644 575 90428f1874c10dbdadc55a98f7474099e59ab4665bf0d4112335704f56a9b187
+CODEBUDDY.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -104,7 +104,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -148,7 +148,7 @@ INFO  Removed generated files files=15 directories=9
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 830 37f5832cd265d6b5f05400a1d5e02b5a4f5e05e56af65512afaf6545c33b0be8
+.ai-rulez/config.toml file 0644 848 c706c27aef2863864d6617d8e8a34f9188798d4ff518be7d8f38f101cced68ff
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

@@ -23,7 +23,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 831 a45969838dd24bb554d3ba012d74e4c3b1775770a2fbb54fb6f79c3477788a16
+.ai-rulez/config.toml file 0644 849 0d1441dd856eb5911b538dcf571935a03a023baad52d4e9ea3199756d03b81c2
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -46,22 +46,22 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .deepagents/.mcp.json file 0600 400 8c6daf79c1da0ec1f7989fce45109fddbf054dbba9dcee94c4036660f5cacaec
 .deepagents/agents/ dir 0755
 .deepagents/agents/architect/ dir 0755
-.deepagents/agents/architect/AGENTS.md file 0644 259 47b0b643b10a5357ae99f57c74b2c94710acf84844f189841f5288525a2e6f60
+.deepagents/agents/architect/AGENTS.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 .deepagents/agents/tester/ dir 0755
-.deepagents/agents/tester/AGENTS.md file 0644 245 cb4206614e42bc2be1a580944fcb883de0b83b7232b17ad9324ecc989b281ae1
+.deepagents/agents/tester/AGENTS.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .deepagents/hooks.json file 0644 479 e6b50b5711832c24b19140af44d714b3f95586e663d2d17d5d6b7ef06cc28be6
 .deepagents/skills/ dir 0755
 .deepagents/skills/deployer/ dir 0755
-.deepagents/skills/deployer/SKILL.md file 0644 259 8af72d8be2bdc68f816759a2935c819669f89b06539542d7951dcdcda53d5548
+.deepagents/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .deepagents/skills/reviewer/ dir 0755
-.deepagents/skills/reviewer/SKILL.md file 0644 506 f5fd1d4755416eabe6372735758e5f3c0c258f1434d0ae899cf182f36e56f329
+.deepagents/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .deepagents/skills/reviewer/references/ dir 0755
 .deepagents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .deepagents/skills/reviewer/scripts/ dir 0755
 .deepagents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 291 7821cc21b49f18aa725c4955aebd44de3da69fc3660fd3076ba03586d286183c
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 874 08079348c7cc54761484b7f82408fa626fe6088baa02b5710103c278ad891cd8
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -105,7 +105,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -144,7 +144,7 @@ INFO  Removed generated files files=10 directories=9
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 831 a45969838dd24bb554d3ba012d74e4c3b1775770a2fbb54fb6f79c3477788a16
+.ai-rulez/config.toml file 0644 849 0d1441dd856eb5911b538dcf571935a03a023baad52d4e9ea3199756d03b81c2
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

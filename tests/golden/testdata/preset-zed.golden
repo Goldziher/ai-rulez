@@ -14,9 +14,9 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/deployer/ dir 0755
-.agents/skills/deployer/SKILL.md file 0644 261 8f73a99a1c7f202bf2810f571cb200aee8b61afb9b0ed2225533cd0854eb3dad
+.agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/reviewer/ dir 0755
-.agents/skills/reviewer/SKILL.md file 0644 508 55c44b34b0572873bb5be3a90924e6743ffca2b0e5a5d2fcbdd0a08c8a99a0bd
+.agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .agents/skills/reviewer/references/ dir 0755
 .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .agents/skills/reviewer/scripts/ dir 0755
@@ -33,7 +33,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 824 d15dd941a09a0cceab2be7460e01d9b858902f4be55e915671235d1b053d7e35
+.ai-rulez/config.toml file 0644 842 1bd145540d90cfe0f6cae38dfd42f599dd60a69c0873ffe271c65eb8615eda16
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -54,7 +54,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 238 adf4b680a1f355fa6db5b215d707464a3d912bd9a8ff861c25bf791869b0ea5b
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-.rules file 0644 887 57716f0767cc82bfe08769b79fa1abf234e130edd12ea3f7ae6bd66fca789043
+.rules file 0644 800 8c33d106a8948844d2732d3e9518be7cb0da1155341dc81504f4c0c84b10615d
 .zed/ dir 0755
 .zed/settings.json file 0600 360 e7230018c0112ec8b0685ce1af43268fdbe6184150b11c1297443b8fac38f4c8
 scripts/ dir 0755
@@ -100,7 +100,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -134,7 +134,7 @@ INFO  Removed generated files files=7 directories=7
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 824 d15dd941a09a0cceab2be7460e01d9b858902f4be55e915671235d1b053d7e35
+.ai-rulez/config.toml file 0644 842 1bd145540d90cfe0f6cae38dfd42f599dd60a69c0873ffe271c65eb8615eda16
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
