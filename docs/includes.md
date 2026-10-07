@@ -29,7 +29,7 @@ Create a `.ai-rulez/` directory that others can include:
 **`shared-rules/.ai-rulez/config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "shared-rules"
 description = "Organization-wide AI rules"
 
@@ -59,7 +59,7 @@ priority: critical
 In your project's `.ai-rulez/config.toml`, reference the shared rules:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-project"
 
 # Include rules from another directory
@@ -508,7 +508,7 @@ monorepo/
 **`backend-team/.ai-rulez/config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "backend-api"
 
 includes = [
@@ -586,7 +586,7 @@ Bad:
 Add comments to your config explaining why includes are needed:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-backend"
 
 # Organization-wide coding standards

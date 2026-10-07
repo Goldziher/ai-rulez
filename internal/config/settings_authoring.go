@@ -180,7 +180,7 @@ func (c *Config) validateSettingsHooks() error {
 
 // validateSettingsHookAction checks one action of a top-level [[hooks]] group:
 // exactly one of command or script, and a script that stays inside the project.
-// Whether the script exists and is executable is reported by `validate --strict`
+// Whether the script exists and is executable is reported by `validate`
 // (AR504, AR505), because the file may be produced by a build step.
 func validateSettingsHookAction(event string, index int, action *HookAction) error {
 	switch {

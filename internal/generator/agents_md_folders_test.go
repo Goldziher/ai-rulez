@@ -316,5 +316,5 @@ func TestAgentsMD_CopilotLocalRulesStayFiles(t *testing.T) {
 // .ai-rulez so the next run can clean up what the flag change made stale.
 func setAgentsMDFlag(t *testing.T, root, flag string, presets []string) {
 	t.Helper()
-	writeAgentsMDFile(t, root, ".ai-rulez/config.toml", flag+agentsMDConfig(presets, "", agentsMDMCPServer))
+	writeAgentsMDFile(t, root, ".ai-rulez/config.toml", pinLegacyDefaults(flag+agentsMDConfig(presets, "", agentsMDMCPServer)))
 }

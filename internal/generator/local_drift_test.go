@@ -18,6 +18,10 @@ const driftShared = `version = "5.0"
 name = "shared-project"
 presets = ["claude"]
 gitignore = false
+agents_md = false
+
+[header]
+hashes = "full"
 `
 
 type driftProject struct {
