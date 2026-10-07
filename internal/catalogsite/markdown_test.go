@@ -96,7 +96,7 @@ func TestMarkdown_NeverEmitsActiveContent(t *testing.T) {
 		{"style attribute smuggling", `<p style="background:url(//evil)">x</p>`, "&lt;p style="},
 		{"entity-encoded script", "&lt;script&gt;alert(1)&lt;/script&gt;", "&lt;script&gt;"},
 		{"comment", "<!-- hidden -->visible", "visible"},
-		{"bidi and zero width", "evil‮ text​ here", "evil"},
+		{"bidi and zero width", "evil\u202e text\u200b here", "evil"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -107,8 +107,8 @@ func TestMarkdown_NeverEmitsActiveContent(t *testing.T) {
 			assert.Contains(t, page, tt.shown)
 			assert.NotRegexp(t, `(?i)<(script|iframe|img|object|embed|style|svg|math|form|input)\b[^>]*>`, mdPart(page), "no active element in the rendered excerpt")
 			assert.NotContains(t, mdPart(page), " href=", "a Markdown link is never an anchor")
-			assert.NotContains(t, page, "‮")
-			assert.NotContains(t, page, "​")
+			assert.NotContains(t, page, "\u202e")
+			assert.NotContains(t, page, "\u200b")
 		})
 	}
 }
