@@ -192,17 +192,7 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 		res.Reviewers = p.currentReviewers(recs, s, now)
 		return res
 	}
-	var forKey, current []lockfile.Approval
-	for _, a := range recs {
-		// A record claiming an assurance this version does not define must not count.
-		if a.ItemKey() != s.Key() || !knownAssurance(a.Assurance) {
-			continue
-		}
-		forKey = append(forKey, a)
-		if a.Digest == s.Digest {
-			current = append(current, a)
-		}
-	}
+	forKey, current := recordsFor(recs, s)
 	if len(forKey) == 0 {
 		res.Status = StatusMissing
 		return res
@@ -213,49 +203,87 @@ func (p Policy) Evaluate(recs []lockfile.Approval, s Subject, now time.Time) Res
 		return res
 	}
 	res.Recorded, _ = reviewersOf(asCounted(current))
-	var valid []counted
-	var expired, unauthorized, low bool
-	var unverified []string
-	for _, a := range current {
+	t := p.tally(current, s, now)
+	res.Reviewers, res.Expires = reviewersOf(t.valid)
+	res.Assurance = weakest(t.valid)
+	if t.low {
+		res.Detail = t.lowDetail
+	}
+	t.decide(&res, p.minApprovers())
+	return res
+}
+
+// recordsFor returns the records of s's item (forKey) and those of its current
+// digest. A record claiming an assurance this version does not define never counts.
+func recordsFor(recs []lockfile.Approval, s Subject) (forKey, current []lockfile.Approval) {
+	for i := range recs {
+		a := &recs[i]
+		if a.ItemKey() != s.Key() || !knownAssurance(a.Assurance) {
+			continue
+		}
+		forKey = append(forKey, *a)
+		if a.Digest == s.Digest {
+			current = append(current, *a)
+		}
+	}
+	return forKey, current
+}
+
+// approvalTally is what the records of the current digest amount to.
+type approvalTally struct {
+	valid                      []counted
+	expired, unauthorized, low bool
+	lowDetail                  string
+	unverified                 []string
+}
+
+// tally sorts the records of the current digest into those that count and why
+// the others do not.
+func (p Policy) tally(current []lockfile.Approval, s Subject, now time.Time) approvalTally {
+	var t approvalTally
+	for i := range current {
+		a := &current[i]
 		who := a.Reviewer
 		if a.Assurance != lockfile.AssuranceAsserted {
 			var err error
-			if who, err = p.VerifyAssurance(a, s, now); err != nil {
-				unverified = append(unverified, fmt.Sprintf("%s by %s: %v", a.Assurance, safeDetail(a.Reviewer), err))
+			if who, err = p.VerifyAssurance(*a, s, now); err != nil {
+				t.unverified = append(t.unverified, fmt.Sprintf("%s by %s: %v", a.Assurance, safeDetail(a.Reviewer), err))
 				continue
 			}
 		}
 		switch {
-		case ExpiredAt(a.Expires, now) || p.pastCeiling(a, now):
-			expired = true
+		case ExpiredAt(a.Expires, now) || p.pastCeiling(*a, now):
+			t.expired = true
 		case !p.AuthorizedFor(who, s):
-			unauthorized = true
+			t.unauthorized = true
 		case lockfile.AssuranceRank(a.Assurance) < lockfile.AssuranceRank(p.MinAssurance):
-			low = true
-			res.Detail = fmt.Sprintf("%s approval, [governance] min_assurance is %s", a.Assurance, p.MinAssurance)
+			t.low = true
+			t.lowDetail = fmt.Sprintf("%s approval, [governance] min_assurance is %s", a.Assurance, p.MinAssurance)
 		default:
-			valid = append(valid, counted{reviewer: who, person: p.IdentityOf(who), expires: a.Expires, assurance: a.Assurance})
+			t.valid = append(t.valid, counted{reviewer: who, person: p.IdentityOf(who), expires: a.Expires, assurance: a.Assurance})
 		}
 	}
-	res.Reviewers, res.Expires = reviewersOf(valid)
-	res.Assurance = weakest(valid)
+	return t
+}
+
+// decide sets the status of res from the tally, given the reviewers it needs.
+func (t *approvalTally) decide(res *Result, need int) {
 	switch {
-	case len(res.Reviewers) >= p.minApprovers():
+	case len(res.Reviewers) >= need:
 		res.Status = StatusOK
-	case len(valid) > 0:
+	case len(t.valid) > 0:
 		res.Status = StatusInsufficient
-	case low:
+	case t.low:
 		res.Status = StatusInsufficient
-	case len(unverified) > 0 && !expired && !unauthorized:
-		res.Status, res.Detail = StatusUnverified, strings.Join(unverified, "; ")
-	case expired:
+	case len(t.unverified) > 0 && !t.expired && !t.unauthorized:
+		res.Status, res.Detail = StatusUnverified, strings.Join(t.unverified, "; ")
+	case t.expired:
 		res.Status = StatusExpired
-	case unauthorized:
+	case t.unauthorized:
 		res.Status = StatusUnauthorized
 	default:
 		res.Status = StatusMissing
 	}
-	return res
 }
 
 // VerifyAssurance checks a record that claims more than "asserted" and returns
@@ -356,13 +384,13 @@ func reviewersOf(valid []counted) (reviewers []string, expires string) {
 }
 
 func newest(recs []lockfile.Approval) lockfile.Approval {
-	best := recs[0]
-	for _, a := range recs[1:] {
-		if a.ApprovedAt > best.ApprovedAt {
-			best = a
+	best := 0
+	for i := 1; i < len(recs); i++ {
+		if recs[i].ApprovedAt > recs[best].ApprovedAt {
+			best = i
 		}
 	}
-	return best
+	return recs[best]
 }
 
 // EvaluateAll evaluates every subject, in the order given.
@@ -377,9 +405,9 @@ func (p Policy) EvaluateAll(recs []lockfile.Approval, subs []Subject, now time.T
 // Failures keeps the results that need approval and lack it.
 func Failures(results []Result) []Result {
 	var out []Result
-	for _, r := range results {
-		if r.Failing() {
-			out = append(out, r)
+	for i := range results {
+		if results[i].Failing() {
+			out = append(out, results[i])
 		}
 	}
 	return out
@@ -392,9 +420,9 @@ func Orphans(recs []lockfile.Approval, subs []Subject) []lockfile.Approval {
 		known[s.Key()] = true
 	}
 	var out []lockfile.Approval
-	for _, a := range recs {
-		if !known[a.ItemKey()] {
-			out = append(out, a)
+	for i := range recs {
+		if !known[recs[i].ItemKey()] {
+			out = append(out, recs[i])
 		}
 	}
 	return out
