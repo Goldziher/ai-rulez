@@ -451,10 +451,11 @@ func fixUser(in FixInput, rejection string) string {
 	return sb.String()
 }
 
-// cleanFeedback removes control characters (except newline and tab) and caps the text.
+// cleanFeedback removes control characters (except newline and tab) and the invisible
+// format characters (zero-width, bidirectional and tag code points) and caps the text.
 func cleanFeedback(s string) string {
 	s = strings.TrimSpace(strings.Map(func(r rune) rune {
-		if r != '\n' && r != '\t' && unicode.IsControl(r) {
+		if (r != '\n' && r != '\t' && unicode.IsControl(r)) || unicode.Is(unicode.Cf, r) {
 			return -1
 		}
 		return r
