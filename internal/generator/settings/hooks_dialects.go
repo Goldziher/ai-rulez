@@ -68,34 +68,18 @@ func (s *handlerShape) handler(spec hookSpec, matcher, command string, args []st
 		o.set("type", config.HookTypeCommand)
 	}
 	if matcher != "" && !spec.nested {
-		name := s.matcherField
-		if name == "" {
-			name = "matcher"
-		}
-		o.set(name, matcher)
+		o.set(fieldOr(s.matcherField, "matcher"), matcher)
 	}
-	field := s.commandField
-	if field == "" {
-		field = "command"
-	}
-	o.set(field, command)
+	o.set(fieldOr(s.commandField, "command"), command)
 	if len(args) > 0 {
-		name := s.argsField
-		if name == "" {
-			name = "args"
-		}
-		o.set(name, args)
+		o.set(fieldOr(s.argsField, "args"), args)
 	}
 	if action.Timeout > 0 {
-		name := s.timeoutField
-		if name == "" {
-			name = "timeout"
-		}
 		timeout := action.Timeout
 		if s.timeoutMS {
 			timeout *= 1000
 		}
-		o.set(name, timeout)
+		o.set(fieldOr(s.timeoutField, "timeout"), timeout)
 	}
 	if action.Async && spec.async {
 		o.set("async", true)
@@ -107,6 +91,15 @@ func (s *handlerShape) handler(spec hookSpec, matcher, command string, args []st
 		o.set("statusMessage", action.StatusMessage)
 	}
 	return o
+}
+
+// fieldOr returns the vendor's field name, or the common one when the shape does
+// not rename it.
+func fieldOr(name, common string) string {
+	if name == "" {
+		return common
+	}
+	return name
 }
 
 // containerPath is the key path of the object holding the event arrays.
