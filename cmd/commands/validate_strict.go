@@ -202,7 +202,7 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 // content tree: plugin version drift, delivery, lock drift, approvals and signing.
 func governanceLintOptions(cfg *config.Config, sel []string) []lint.Option {
 	var opts []lint.Option
-	if (cfg.Plugin != nil || cfg.Marketplace != nil) && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
+	if (cfg.Plugin != nil || cfg.Marketplace != nil) && !skipPluginDrift && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
 		drift, driftErr := generator.NewGenerator(cfg).PluginVersionDrift("")
 		if driftErr != nil {
 			logger.Warn("Skipped the plugin version drift check", "error", driftErr)
