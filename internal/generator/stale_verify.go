@@ -84,7 +84,8 @@ func (g *Generator) provablyGenerated(rel, abs string, digests map[string]string
 // continue-dev is gone, ...). A manifest from those versions still lists them.
 var legacyOutputPaths = []string{
 	".windsurf", ".windsurfrules", ".continue", ".continue/rules", ".roo", ".roo/rules", ".codex/prompts",
-	".codex/skills", ".agents/agents", ".agents/rules", ".cursor/agents", ".cursorrules", ".clinerules",
+	".codex/skills", ".codex/commands", ".github/commands", ".agents/agents", ".agents/rules", ".cursor/agents",
+	".cursorrules", ".clinerules",
 }
 
 // outputMatcher recognizes the paths a preset could write.
