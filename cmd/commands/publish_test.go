@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -633,6 +634,9 @@ esac
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "gh"), []byte(script), 0o755)) //nolint:gosec // test stub
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "mode"), []byte(mode), 0o600))
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	resolved, err := exec.LookPath("gh")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(dir, "gh"), resolved, "the fake gh must come first on PATH, or this test would run a real gh")
 	return dir
 }
 
