@@ -61,15 +61,6 @@ func (o ordered) MarshalJSON() ([]byte, error) {
 	return append(out, '}'), nil
 }
 
-// native returns the object as a plain map, for documents that are not JSON.
-func (o ordered) native() map[string]any {
-	m := make(map[string]any, len(o))
-	for _, field := range o {
-		m[field.key] = field.value
-	}
-	return m
-}
-
 // handler builds the handler object of an action.
 func (s *handlerShape) handler(spec hookSpec, matcher, command string, args []string, action *config.HookAction) ordered {
 	var o ordered
@@ -189,7 +180,7 @@ var factoryEvents = identityEvents([]string{
 // dialectSpecs are the harnesses rendered through the generic handler shape,
 // built on first use. Each entry cites the vendor page it was read from (read
 // 2026-10-05); events the vendor does not document are left out, and a matcher
-// is only accepted on the events the vendor says honour one.
+// is only accepted on the events the vendor says honor one.
 var dialectSpecs = sync.OnceValue(func() map[string]hookSpec {
 	specs := baseDialectSpecs()
 	for name, spec := range moreDialectSpecs() {

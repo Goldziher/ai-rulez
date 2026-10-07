@@ -195,14 +195,6 @@ func (t *translation) askUnsupported() {
 	t.cfg.Diag.Warn(fmt.Sprintf("[permissions] ask rules are not generated for %s: it has no ask list and prompts for whatever is not allowed", t.harness))
 }
 
-// noDenySurface reports that the harness has no way to deny anything, once per
-// harness, when the configuration declares deny rules.
-func (t *translation) noDenySurface(why string) {
-	for _, e := range t.only(ActionDeny) {
-		t.drop(e, why)
-	}
-}
-
 // docTree reads the target document into generic Go values; nil when it is
 // absent or unparsable (the merge reports a broken document itself).
 func docTree(cfg *config.Config, docPath string) map[string]any {
@@ -260,7 +252,9 @@ func containsValue(list []any, v any) bool {
 func docArrayKey(cfg *config.Config, docPath string, path []string, ours []any) jsonmerge.OwnedKey {
 	var existing []any
 	if v, ok := jsonmerge.LookupTree(docTree(cfg, docPath), path); ok {
-		existing, _ = v.([]any) // a non-array value is the consumer's; the merge reports it
+		if list, ok := v.([]any); ok { // a non-array value is the consumer's; the merge reports it
+			existing = list
+		}
 	}
 	value, claimed := planElements(previousElementClaims(cfg, docPath, path), existing, ours)
 	if value == nil {
@@ -279,7 +273,9 @@ func docArrayKey(cfg *config.Config, docPath string, path []string, ours []any) 
 func docMembersKey(t *translation, path []string, entries map[string]any) (jsonmerge.OwnedKey, bool) {
 	var existing map[string]any
 	if v, ok := jsonmerge.LookupTree(docTree(t.cfg, t.docPath), path); ok {
-		existing, _ = v.(map[string]any)
+		if m, ok := v.(map[string]any); ok {
+			existing = m
+		}
 	}
 	previous := t.cfg.Run.PreviousClaims(documentRel(t.cfg, t.docPath))
 	value := make(map[string]any, len(entries))
