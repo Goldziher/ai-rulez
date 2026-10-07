@@ -8,6 +8,9 @@ var (
 	ErrInvalidDefaultProfile = errors.New("default profile does not exist in profiles")
 	ErrInvalidPreset         = errors.New("invalid preset configuration")
 	ErrNoContent             = errors.New("no content loaded")
+	// ErrRoleReference marks a role that names something that does not exist (AR971),
+	// such as a domain; commands exit 2 on it, the code `validate` uses for findings.
+	ErrRoleReference = errors.New("role reference does not resolve")
 	// ErrLockViolation marks a remote include or installed skill that does not
 	// match ai-rulez.lock. Unlike other resolution failures it is fatal: loading
 	// continues with local content only for a flaky remote, never for a lock mismatch.

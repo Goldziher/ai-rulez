@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -247,14 +248,50 @@ func readLines(path string) ([][]byte, error) {
 	}
 	defer file.Close() //nolint:errcheck // read-only
 	var lines [][]byte
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
-	for scanner.Scan() {
-		if line := bytes.TrimSpace(scanner.Bytes()); len(line) > 0 {
-			lines = append(lines, append([]byte(nil), line...))
+	reader := bufio.NewReaderSize(file, 64*1024)
+	for {
+		line, oversize, err := readLine(reader)
+		if len(line) > 0 {
+			lines = append(lines, line)
+		} else if oversize {
+			lines = append(lines, []byte(oversizeMarker))
+		}
+		if errors.Is(err, io.EOF) {
+			return lines, nil
+		}
+		if err != nil {
+			return lines, oops.Wrapf(err, "read telemetry outbox")
 		}
 	}
-	return lines, oops.Wrapf(scanner.Err(), "read telemetry outbox")
+}
+
+// oversizeMarker stands in for a line longer than maxLineBytes. It is not valid
+// JSON, so Pending counts it as corrupt and the next rewrite drops it.
+const oversizeMarker = "!oversize"
+
+// maxLineBytes bounds one outbox line; a longer one is corrupt, never fatal.
+const maxLineBytes = 1 << 20
+
+// readLine returns the next trimmed line. An over-long line is consumed to its end
+// and reported as oversize with no content. err is io.EOF after the last line.
+func readLine(r *bufio.Reader) (line []byte, oversize bool, err error) {
+	var buf []byte
+	for {
+		chunk, isPrefix, readErr := r.ReadLine()
+		if !oversize {
+			if len(buf)+len(chunk) > maxLineBytes {
+				oversize, buf = true, nil
+			} else {
+				buf = append(buf, chunk...)
+			}
+		}
+		if readErr != nil {
+			return bytes.TrimSpace(buf), oversize, readErr
+		}
+		if !isPrefix {
+			return bytes.TrimSpace(buf), oversize, nil
+		}
+	}
 }
 
 func writeLines(path string, lines [][]byte) error {

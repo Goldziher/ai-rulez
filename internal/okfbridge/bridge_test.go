@@ -424,3 +424,25 @@ func TestImportReportsAnUnsafeDomain(t *testing.T) {
 	}
 	assert.True(t, found, "the dropped domain is reported")
 }
+
+func TestImportReportsResourceTargetConflict(t *testing.T) {
+	meta := func(body string) string {
+		return "---\ntype: Reference\nx-ai-rulez:\n  kind: skill-resource\n  owner: skill\n  id: s\n  path: references/r.md\n---\n" + body + "\n"
+	}
+	b := foreignBundle(map[string]string{
+		"skills/s/res1.md": meta("content 1"),
+		"skills/s/res2.md": meta("content 2"),
+	})
+	cfgDir := filepath.Join(t.TempDir(), ".ai-rulez")
+	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: cfgDir, Scan: testScan})
+	require.NoError(t, err)
+	created := 0
+	for _, a := range res.Actions {
+		if a.Path == "skills/s/references/r.md" {
+			created++
+		}
+	}
+	assert.LessOrEqual(t, created, 1, "one resource target is written once")
+	require.NotEmpty(t, res.Skipped, "the losing resource is reported, not silently overwritten")
+	assert.Contains(t, res.Skipped[0], "res")
+}
