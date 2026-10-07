@@ -95,20 +95,8 @@ func ReadDirTree(dir string) (*DirTree, error) {
 			return err //nolint:wrapcheck // wrapped below
 		}
 		rel = filepath.ToSlash(rel)
-		if d.IsDir() {
-			if d.Name() == ".git" && rel != "." {
-				if rel != ".git" {
-					return oops.With("path", rel).Errorf("%s is nested version-control metadata: it would be read by an agent but covered by no signature", rel)
-				}
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if d.Name() == ".git" && rel != "." {
-			return oops.With("path", rel).Errorf("%s is a .git file (a worktree or submodule pointer): it is not covered by the signature", rel)
-		}
-		if IsSignatureFile(rel) {
-			return nil
+		if skip, err := skipTreeEntry(rel, d); skip || err != nil {
+			return err
 		}
 		fi, err := d.Info()
 		if err != nil {
@@ -137,6 +125,26 @@ func ReadDirTree(dir string) (*DirTree, error) {
 		return nil, oops.With("dir", dir).Errorf("%s has no files to sign", dir)
 	}
 	return &DirTree{Leaves: leaves}, nil
+}
+
+// gitDir is version-control metadata, never part of a signed tree.
+const gitDir = ".git"
+
+// skipTreeEntry decides on an entry of a tree before its content is read: a
+// directory is walked (the root's own .git is skipped), a signature file is
+// skipped, and .git metadata anywhere deeper is refused.
+func skipTreeEntry(rel string, d fs.DirEntry) (skip bool, err error) {
+	if d.Name() == gitDir && rel != "." {
+		switch {
+		case d.IsDir() && rel == gitDir:
+			return true, filepath.SkipDir
+		case d.IsDir():
+			return true, oops.With("path", rel).Errorf("%s is nested version-control metadata: it would be read by an agent but covered by no signature", rel)
+		default:
+			return true, oops.With("path", rel).Errorf("%s is a .git file (a worktree or submodule pointer): it is not covered by the signature", rel)
+		}
+	}
+	return d.IsDir() || IsSignatureFile(rel), nil
 }
 
 // readRegular reads a file that was size bytes when it was listed; a file that

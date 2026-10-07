@@ -85,7 +85,7 @@ func LockStatement(lock *lockfile.File, meta LockMeta) (*Statement, error) {
 			pred.Items = append(pred.Items, LockItem{Kind: it.Kind, ID: it.ID, Domain: it.Domain, Digest: it.Digest})
 		}
 	}
-	return NewStatement(PredicateLock, []Subject{{Name: LockSubjectName, Digest: map[string]string{"sha256": hexDigest(subject.Digest())}}}, pred)
+	return NewStatement(PredicateLock, []Subject{{Name: LockSubjectName, Digest: map[string]string{contentlock.Algorithm: hexDigest(subject.Digest())}}}, pred)
 }
 
 func hexDigest(d string) string { return strings.TrimPrefix(d, contentlock.Algorithm+":") }
@@ -334,7 +334,7 @@ func checkLockSubject(res *Result, lock *lockfile.File, minHash int) (LockPredic
 	if err != nil {
 		return pred, err
 	}
-	if err := res.Statement.RequireSubject("sha256", hexDigest(subject.Digest())); err != nil {
+	if err := res.Statement.RequireSubject(contentlock.Algorithm, hexDigest(subject.Digest())); err != nil {
 		return pred, Errorf(CodeSubjectMismatch, "%s changed since it was signed (its subject is %s)", lockfile.FileName, subject.Digest())
 	}
 	if err := res.Statement.DecodePredicate(&pred); err != nil {

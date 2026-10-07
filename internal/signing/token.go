@@ -64,7 +64,7 @@ func githubToken(ctx context.Context, client *http.Client, requestURL, requestTo
 	u.RawQuery = q.Encode()
 	ctx, cancel := context.WithTimeout(ctx, tokenTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), http.NoBody)
 	if err != nil {
 		return "", oops.Wrapf(err, "build the token request")
 	}

@@ -183,13 +183,16 @@ func (k *KeyPair) GetPublicKeyPem() (string, error) {
 
 // Fingerprint returns the "sha256:<hex>" fingerprint of the public key.
 func (k *KeyPair) Fingerprint() string {
-	fp, _ := Fingerprint(k.priv.Public())
+	fp, err := Fingerprint(k.priv.Public())
+	if err != nil {
+		return ""
+	}
 	return fp
 }
 
 // SignData signs data, returning the signature and the bytes that were signed
 // (a digest, except for pure ed25519).
-func (k *KeyPair) SignData(_ context.Context, data []byte) ([]byte, []byte, error) {
+func (k *KeyPair) SignData(_ context.Context, data []byte) (sig, signed []byte, err error) {
 	hf := k.details.GetHashType()
 	toSign := data
 	if hf != crypto.Hash(0) {
@@ -197,7 +200,7 @@ func (k *KeyPair) SignData(_ context.Context, data []byte) ([]byte, []byte, erro
 		h.Write(data)
 		toSign = h.Sum(nil)
 	}
-	sig, err := k.priv.Sign(rand.Reader, toSign, hf)
+	sig, err = k.priv.Sign(rand.Reader, toSign, hf)
 	if err != nil {
 		return nil, nil, err
 	}
