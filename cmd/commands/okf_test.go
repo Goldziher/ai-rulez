@@ -217,7 +217,7 @@ func TestStrictValidateLintsTheOKFBundle(t *testing.T) {
 	strictCodes := func() map[string]string {
 		cfg, err := loadConfigForCommand(context.Background(), nil)
 		require.NoError(t, err)
-		report, err := strictLint(cfg)
+		report, err := strictLint(t.Context(), cfg)
 		require.NoError(t, err)
 		got := map[string]string{}
 		for _, f := range report.Findings {

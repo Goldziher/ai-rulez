@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"sort"
 
 	"github.com/samber/oops"
@@ -37,8 +38,8 @@ func outputFiles(outputs []contentlock.Output) []approvedFile {
 
 // roleOutputDigest renders role and returns the aggregate digest the lock pins
 // for it: the digest an approval of the role's outputs is bound to.
-func roleOutputDigest(cfg *config.Config, role string) (string, error) {
-	outputs, err := generator.LockRoleOutputs(cfg, role)
+func roleOutputDigest(ctx context.Context, cfg *config.Config, role string) (string, error) {
+	outputs, err := generator.LockRoleOutputsContext(ctx, cfg, role)
 	if err != nil {
 		return "", oops.Wrap(err)
 	}
@@ -56,12 +57,12 @@ func roleOutputDigest(cfg *config.Config, role string) (string, error) {
 // checkRoleOutputs refuses to approve role outputs whose rendering no longer
 // matches the pin: the reviewer was shown the current rendering, and an approval
 // binds to the pin, so the two must be the same bytes.
-func (e *approveEnv) checkRoleOutputs(subs []approval.Subject) error {
+func (e *approveEnv) checkRoleOutputs(ctx context.Context, subs []approval.Subject) error {
 	for _, s := range subs {
 		if s.Kind != approval.KindRoleOutput {
 			continue
 		}
-		digest, err := roleOutputDigest(e.cfg, s.ID)
+		digest, err := roleOutputDigest(ctx, e.cfg, s.ID)
 		if err != nil {
 			return err
 		}

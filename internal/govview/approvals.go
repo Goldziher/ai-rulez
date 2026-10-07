@@ -1,6 +1,7 @@
 package govview
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -30,7 +31,13 @@ type ApprovalState struct {
 // verification already compared with the fetched trees. A nil lock has no
 // approvals and no subjects.
 func EvaluateApprovals(cfg *config.Config, lock *lockfile.File, items []lockfile.Item, now time.Time) *ApprovalState {
-	st := &ApprovalState{Policy: approval.PolicyOf(cfg)}
+	return EvaluateApprovalsContext(context.Background(), cfg, lock, items, now)
+}
+
+// EvaluateApprovalsContext is EvaluateApprovals with the policy's CODEOWNERS
+// lookup bounded by ctx.
+func EvaluateApprovalsContext(ctx context.Context, cfg *config.Config, lock *lockfile.File, items []lockfile.Item, now time.Time) *ApprovalState {
+	st := &ApprovalState{Policy: approval.PolicyOfContext(ctx, cfg)}
 	if lock == nil {
 		return st
 	}
@@ -45,10 +52,16 @@ func EvaluateApprovals(cfg *config.Config, lock *lockfile.File, items []lockfile
 // enforce is set: a policy without enforcement is reported by `validate --strict`
 // and `approve --list`, and mentioned in the diff notes.
 func ApprovalChanges(cfg *config.Config, lock *lockfile.File, items []lockfile.Item, now time.Time) (changes []contentlock.Change, notes []string) {
-	if msg := approval.PolicyOf(cfg).LockProblem(lock); msg != "" {
+	return ApprovalChangesContext(context.Background(), cfg, lock, items, now)
+}
+
+// ApprovalChangesContext is ApprovalChanges with the policy's CODEOWNERS lookup
+// bounded by ctx.
+func ApprovalChangesContext(ctx context.Context, cfg *config.Config, lock *lockfile.File, items []lockfile.Item, now time.Time) (changes []contentlock.Change, notes []string) {
+	if msg := approval.PolicyOfContext(ctx, cfg).LockProblem(lock); msg != "" {
 		return []contentlock.Change{{Scope: contentlock.ScopeApproval, Change: contentlock.Added, Detail: msg}}, nil
 	}
-	st := EvaluateApprovals(cfg, lock, items, now)
+	st := EvaluateApprovalsContext(ctx, cfg, lock, items, now)
 	failing := approval.Failures(st.Results)
 	if len(failing) > 0 && !st.Policy.Enforce {
 		notes = append(notes, fmt.Sprintf("%d item(s) need approval; see `ai-rulez approve --list` ([governance] enforce is not set)", len(failing)))
@@ -81,8 +94,8 @@ type approvalIndex struct {
 // newApprovalIndex reads the approval records of cfg's lock. A missing or
 // unreadable lock has none, so every item's approval is null: the catalog is a
 // view, and `lock --check` and `validate --strict` report an unreadable lock.
-func newApprovalIndex(cfg *config.Config) *approvalIndex {
-	idx := &approvalIndex{policy: approval.PolicyOf(cfg), now: ApprovalNow()}
+func newApprovalIndex(ctx context.Context, cfg *config.Config) *approvalIndex {
+	idx := &approvalIndex{policy: approval.PolicyOfContext(ctx, cfg), now: ApprovalNow()}
 	if lock, err := lockfile.Load(cfg.ConfigDir); err == nil && lock != nil {
 		idx.lock, idx.recs = lock, lock.Approval
 	}

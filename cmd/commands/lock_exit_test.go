@@ -110,7 +110,7 @@ func TestGenerateCheck_EnforcedLockGatesPlainCheck(t *testing.T) {
 func TestSharedConfig_ReloadFailureIsAnError(t *testing.T) {
 	cfg := &config.Config{ConfigDir: t.TempDir(), ConfigFile: "config.toml", LocalOverlay: &config.LocalOverlay{}}
 
-	_, err := sharedConfig(cfg)
+	_, err := sharedConfig(t.Context(), cfg)
 
 	require.Error(t, err, "a failed reload must not fall back to the config with the overlay")
 }

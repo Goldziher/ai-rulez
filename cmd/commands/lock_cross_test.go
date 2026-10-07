@@ -167,7 +167,7 @@ func (fx *crossFixture) detect(t *testing.T) detections {
 			d.frozen = err
 		}
 	}
-	for _, drift := range lockDriftFor(cfg) {
+	for _, drift := range lockDriftFor(t.Context(), cfg) {
 		if drift.Output {
 			d.outputs++
 		} else {
@@ -175,7 +175,7 @@ func (fx *crossFixture) detect(t *testing.T) detections {
 		}
 	}
 	var served []string
-	for _, f := range deliveryFindings(cfg) {
+	for _, f := range deliveryFindings(t.Context(), cfg) {
 		if f.Code == "AR995" {
 			served = append(served, f.Message)
 		}
@@ -425,7 +425,7 @@ func TestLockCross_LockOfAnotherVersionIsRefusedWithTheFix(t *testing.T) {
 
 		cfg, err := loadForLock("")
 		if err == nil {
-			assert.NotEmpty(t, lockDriftFor(cfg), "under enforce an unreadable lock is a finding: %s", from)
+			assert.NotEmpty(t, lockDriftFor(t.Context(), cfg), "under enforce an unreadable lock is a finding: %s", from)
 		}
 	}
 }

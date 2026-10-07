@@ -32,7 +32,7 @@ type approveGit struct {
 }
 
 func newApproveGit(ctx context.Context, cfg *config.Config) (*approveGit, error) {
-	top := (gitutil.Git{}).TopLevel(cfg.ConfigDir) //nolint:contextcheck // gitutil probes without a context
+	top := (gitutil.Git{}).TopLevelContext(ctx, cfg.ConfigDir)
 	if top == "" {
 		return nil, oops.Errorf("%s is not inside a git work tree: this needs the commit history", cfg.ConfigDir)
 	}
@@ -210,7 +210,7 @@ func (g *approveGit) digestSnapshot(ctx context.Context, sha, baseDir, name stri
 	if lock, lerr := lockfile.Load(g.cfg.ConfigDir); lerr == nil && lock != nil {
 		profile = lock.Profile
 	}
-	snap, err := lockSnapshot(cfg, profile, true) //nolint:contextcheck // lock snapshots read git without a context
+	snap, err := lockSnapshot(ctx, cfg, profile, true)
 	if err != nil {
 		return nil, oops.With("commit", sha).Wrapf(err, "digest the content at the reviewed commit")
 	}
@@ -240,7 +240,7 @@ func (g *approveGit) authors(base string, paths []string) ([]string, error) {
 	if err := gitutil.CheckArg("base revision", base); err != nil {
 		return nil, err //nolint:wrapcheck // names the argument
 	}
-	mb, err := (gitutil.Git{}).MergeBase(g.top, base)
+	mb, err := (gitutil.Git{}).MergeBaseContext(g.ctx, g.top, base)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
