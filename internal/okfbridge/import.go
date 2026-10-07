@@ -157,6 +157,18 @@ func Import(b *okf.Bundle, opts ImportOptions) (*ImportResult, error) {
 	return res, nil
 }
 
+type planner struct {
+	opts   ImportOptions
+	res    *ImportResult
+	out    []planned
+	taken  map[string]string // rel path -> source, to dedupe ids
+	owners map[string]ownerDir
+	// targets maps a bundle path to the path (relative to the config dir) it is
+	// imported to; links between imported files are rewritten through it.
+	targets map[string]string
+	pending []pendingBody
+}
+
 // rejectUnsafe refuses a bundle whose paths could collide (differ only in case)
 // or escape it. Symlinks and oversize files are not followed or read: they are
 // skipped with a warning and the rest of the bundle is imported.
@@ -189,18 +201,6 @@ func scan(scanner Scanner, files []planned) []SecurityFinding {
 		}
 	}
 	return scanner(texts)
-}
-
-type planner struct {
-	opts   ImportOptions
-	res    *ImportResult
-	out    []planned
-	taken  map[string]string // rel path -> source, to dedupe ids
-	owners map[string]ownerDir
-	// targets maps a bundle path to the path (relative to the config dir) it is
-	// imported to; links between imported files are rewritten through it.
-	targets map[string]string
-	pending []pendingBody
 }
 
 // pendingBody is a markdown file whose text is built once every target path is
@@ -312,7 +312,8 @@ func (p *planner) concept(c *okf.Concept) {
 
 // finish renders every markdown file now that all target paths are known.
 func (p *planner) finish() {
-	for _, pb := range p.pending {
+	for i := range p.pending {
+		pb := &p.pending[i]
 		out := &p.out[pb.out]
 		body := p.rewriteLinks(pb.concept, out.rel)
 		if pb.resource {
@@ -404,6 +405,19 @@ func (p *planner) unique(rel, source string) string {
 
 // render builds the ai-rulez source file of a concept.
 func (p *planner) render(c *okf.Concept, ext extInfo, kind Kind, id, body string) []byte {
+	fields := renderFields(c, ext, kind, id)
+	if len(fields) == 0 {
+		return []byte(body)
+	}
+	head, err := okf.MarshalFrontmatter(fields)
+	if err != nil {
+		return []byte(body)
+	}
+	return append(append(head, '\n'), body...)
+}
+
+// renderFields collects the frontmatter fields of the source file of a concept.
+func renderFields(c *okf.Concept, ext extInfo, kind Kind, id string) []okf.Field {
 	var fields []okf.Field
 	desc := c.Frontmatter.Lookup(keyDescription)
 	if desc != nil && desc.Kind == yaml.ScalarNode && strings.TrimSpace(desc.Value) != "" {
@@ -433,14 +447,7 @@ func (p *planner) render(c *okf.Concept, ext extInfo, kind Kind, id, body string
 	if memory := okfMemory(c, kind, id); memory != nil {
 		fields = append(fields, okf.Field{Key: "okf", Value: memory})
 	}
-	if len(fields) == 0 {
-		return []byte(body)
-	}
-	head, err := okf.MarshalFrontmatter(fields)
-	if err != nil {
-		return []byte(body)
-	}
-	return append(append(head, '\n'), body...)
+	return fields
 }
 
 // okfMemory collects the OKF keys that have no ai-rulez home, so an export can
@@ -450,7 +457,7 @@ func okfMemory(c *okf.Concept, kind Kind, id string) *yaml.Node {
 	if c.Frontmatter.Root == nil {
 		return nil
 	}
-	mem := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	mem := &yaml.Node{Kind: yaml.MappingNode, Tag: yamlMapTag}
 	root := c.Frontmatter.Root
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		k, v := root.Content[i].Value, root.Content[i+1]
