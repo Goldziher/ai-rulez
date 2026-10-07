@@ -197,10 +197,6 @@ type Config struct {
 	// enforcer is the organization policy this configuration was loaded under.
 	enforcer PolicyEnforcer
 
-	// deprecatedLintBudgetPath is the config file that still uses [lint.budget];
-	// finishLoadConfig warns about it once, through this config's host.
-	deprecatedLintBudgetPath string
-
 	// UserScope is set while rendering for `generate --user`: outputs are mapped
 	// into the person's home config directories, so renderers leave out keys that
 	// only make sense inside a project (MCP servers, plugin registration,

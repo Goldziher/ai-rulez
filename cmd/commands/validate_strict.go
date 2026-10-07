@@ -269,7 +269,7 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 	}
 	combined := lint.Combine(reports)
 	for _, e := range excess {
-		combined.Budgets = append(combined.Budgets, e...)
+		combined.Ratchet = append(combined.Ratchet, e...)
 	}
 	if err := writeReport(combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
 		fmtError(err)
@@ -278,7 +278,7 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 	code = 0
 	for i, report := range reports {
 		cfg := cfgAt(cfgs, i)
-		if lint.FailedWithExcess(report.Findings, failOnFor(cfg), budgetsFor(cfg), excess[i]) {
+		if lint.FailedWithExcess(report.Findings, failOnFor(cfg), ratchetFor(cfg), excess[i]) {
 			code = exitStrictFindings
 		}
 	}
@@ -295,8 +295,8 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 // are left alone), budgets on the full set, and only then the view that narrows
 // the report (changed-only) and the risk score of what is shown. done is
 // true when the run ends here with code (--update-baseline, or an error).
-func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.BudgetExcess, code int, done bool) {
-	fail := func(err error) ([][]lint.BudgetExcess, int, bool) {
+func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, code int, done bool) {
+	fail := func(err error) ([][]lint.RatchetExcess, int, bool) {
 		fmtError(err)
 		return nil, 1, true
 	}
@@ -314,10 +314,10 @@ func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]l
 	if err := applyBaselines(reports, cfgs); err != nil {
 		return fail(err)
 	}
-	reportRefusedBudgets(reports, cfgs)
-	excess = make([][]lint.BudgetExcess, len(reports))
+	reportRefusedRatchet(reports, cfgs)
+	excess = make([][]lint.RatchetExcess, len(reports))
 	for i, report := range reports {
-		excess[i] = budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)
+		excess[i] = ratchetFor(cfgAt(cfgs, i)).Excess(report.Findings)
 	}
 	if err := narrowToChanged(reports, cfgs); err != nil {
 		return fail(err)

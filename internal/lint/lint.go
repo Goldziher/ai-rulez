@@ -78,7 +78,7 @@ type Report struct {
 	Analyzers []string `json:"-"`
 	// Protected holds the codes the organization policy protects from
 	// suppression (required or floored codes and AR740-AR745): a baseline never
-	// accepts them and [lint.tolerate] never tolerates them.
+	// accepts them and [lint.ratchet] never tolerates them.
 	Protected map[string]bool `json:"-"`
 	// ConfigFile is the display path of the configuration file, where the
 	// policy reports a suppression attempt.
@@ -1241,7 +1241,7 @@ func (r *runner) checkSettingsConfig() {
 	}
 }
 
-// validateBudgetAndRisk checks [lint.tolerate] (and its deprecated alias [lint.budget]) and [lint.risk].
+// validateBudgetAndRisk checks [lint.ratchet] (and its deprecated alias [lint.budget]) and [lint.risk].
 func validateBudgetAndRisk(lc *config.LintConfig) []string {
 	var problems []string
 	if _, ok := LookupProfile(lc.Profile); !ok {

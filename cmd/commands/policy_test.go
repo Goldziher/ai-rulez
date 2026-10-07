@@ -74,8 +74,8 @@ func TestBudgetsForRefusesPolicyProtectedCodes(t *testing.T) {
 	rep := &lint.Report{Root: "r", ConfigFile: ".ai-rulez/config.toml"}
 
 	// Act
-	budgets := budgetsFor(cfg)
-	reportRefusedBudgets([]*lint.Report{rep}, []*config.Config{cfg})
+	budgets := ratchetFor(cfg)
+	reportRefusedRatchet([]*lint.Report{rep}, []*config.Config{cfg})
 
 	// Assert
 	if _, ok := budgets["AR001"]; ok || budgets["AR201"] != 2 {
