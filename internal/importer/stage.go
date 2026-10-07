@@ -33,7 +33,7 @@ func checkStaged(ctx context.Context, report *Report, files map[string][]byte, c
 		return err
 	}
 	loaded := validateStaged(ctx, tmp, report, cfg)
-	found, err := scanStaged(loaded, files, data, sc)
+	found, err := scanStaged(ctx, loaded, files, data, sc)
 	if err != nil {
 		return err
 	}
@@ -82,11 +82,11 @@ func validateStaged(ctx context.Context, tmp string, report *Report, cfg *config
 }
 
 // scanStaged runs the security scan over the staged project and every staged text.
-func scanStaged(loaded *config.Config, files map[string][]byte, data []byte, sc scanContext) ([]lint.Finding, error) {
+func scanStaged(ctx context.Context, loaded *config.Config, files map[string][]byte, data []byte, sc scanContext) ([]lint.Finding, error) {
 	var found []lint.Finding
 	if loaded != nil {
 		var loader lint.Loader
-		tree, lerr := loader.Load(loaded.BaseDir)
+		tree, lerr := loader.LoadContext(ctx, loaded.BaseDir)
 		if lerr != nil {
 			return nil, oops.Wrapf(lerr, "index scratch project")
 		}
