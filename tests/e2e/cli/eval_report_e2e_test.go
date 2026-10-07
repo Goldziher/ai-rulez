@@ -143,6 +143,24 @@ func TestEvalResultsCacheAndReportE2E(t *testing.T) {
 	assert.Nil(t, frow["pass_rate"])
 }
 
+// TestEvalUnknownRunnerNamesEveryRunnerE2E pins MAN-7: the error for an
+// unknown --runner lists two of the four runners the help documents.
+func TestEvalUnknownRunnerNamesEveryRunnerE2E(t *testing.T) {
+	blockedOn(t, "MAN-7")
+	// Arrange
+	env := newIsoEnv(t)
+	root, runners := evalProject(t)
+
+	// Act
+	res := env.run(root, "eval", "run", "--runner-command", filepath.Join(runners, "pass.sh"), "--runner", "nope")
+
+	// Assert
+	require.Equal(t, 1, res.ExitCode)
+	for _, runner := range []string{"claude-plugin-eval", "command", "claude-native", "codex-native"} {
+		assert.Contains(t, res.Stderr, runner)
+	}
+}
+
 func TestReportUsageE2E(t *testing.T) {
 	tests := []struct {
 		name     string

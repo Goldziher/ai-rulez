@@ -185,3 +185,24 @@ func TestOKFImportRefusesASymlinkedConceptE2E(t *testing.T) {
 	}))
 	assert.Empty(t, leaked, "exit %d, stdout: %s", res.ExitCode, res.Stdout)
 }
+
+// TestOKFImportJSONEmptyListsE2E pins MAN-6: import okf --format json prints
+// null instead of [] for findings, security and skipped when there are none.
+func TestOKFImportJSONEmptyListsE2E(t *testing.T) {
+	blockedOn(t, "MAN-6")
+	// Arrange
+	env := newIsoEnv(t)
+	bundle := okfBundle(t, okfGoodConcept)
+	dst := t.TempDir()
+	writeTree(t, dst, map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"dst\"\npresets = [\"claude\"]\n"})
+
+	// Act
+	res := env.run(dst, "import", "okf", bundle, "--dry-run", "--format", "json")
+
+	// Assert
+	require.Equal(t, 0, res.ExitCode, res.Stderr)
+	doc := requireJSONDoc(t, res)
+	for _, key := range []string{"findings", "security", "skipped"} {
+		assert.Equal(t, []any{}, doc[key], "%s is an empty list, not null", key)
+	}
+}
