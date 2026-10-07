@@ -61,3 +61,10 @@ func CheckVersion(v string) error {
 	}
 	return nil
 }
+
+// DecodeTOML decodes config.toml bytes without validating them or touching the
+// file system; path is used for error context only. `migrate v5` uses it to
+// prove that a rewritten configuration still decodes.
+func DecodeTOML(data []byte, path string) (*Config, error) {
+	return decodeConfigTOML(data, path)
+}

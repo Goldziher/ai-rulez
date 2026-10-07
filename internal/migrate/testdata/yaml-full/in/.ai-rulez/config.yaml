@@ -1,0 +1,38 @@
+# Project configuration (YAML, deprecated since 4.x)
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules.schema.json
+version: "4.0"
+name: yaml-full
+description: |
+  A YAML project
+  with the usual shapes
+presets:
+  - claude
+  - name: custom
+    type: markdown
+    path: CUSTOM.md
+default: backend
+profiles:
+  backend: [backend]
+  all:
+    - backend
+    - frontend
+gitignore: false # the author opted out
+header:
+  style: detailed
+  timestamp: true
+lint:
+  budget:
+    AR401: 2
+mcp_servers:
+  - name: db
+    command: uvx
+    args: [mcp-server-sqlite==1.0.0, --db-path, data.db]
+    env:
+      PORT: 8080
+      DEBUG: true
+      NAME: plain
+  - name: web
+    transport: http
+    url: https://web.example.com/mcp
+    headers:
+      Authorization: Bearer ${TOKEN}
