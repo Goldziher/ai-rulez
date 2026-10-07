@@ -5,11 +5,38 @@ package doctor
 
 import (
 	"context"
+	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
+
+// sharedWarnings makes every load of one run share a warning collector that says
+// each warning once. Doctor loads the project twice (the lock check reads it
+// without the local overlay) and renders it twice (drift, gitignore); each load
+// and each render would otherwise repeat the same warnings, since a render
+// starts a fresh de-duplication round.
+func sharedWarnings(load Loader) Loader {
+	var mu sync.Mutex
+	said := map[string]bool{}
+	out := diag.New(nil)
+	c := diag.New(func(msg string, args ...any) {
+		key := msg + "\x00" + fmt.Sprint(args...)
+		mu.Lock()
+		first := !said[key]
+		said[key] = true
+		mu.Unlock()
+		if first {
+			out.Raise(msg, args...)
+		}
+	})
+	return func(ctx context.Context, opts ...config.LoadOption) (*config.Config, error) {
+		return load(ctx, append(opts, config.WithCollector(c))...)
+	}
+}
 
 // Severity ranks a finding.
 type Severity string
@@ -116,6 +143,7 @@ func Run(ctx context.Context, o Options) *Report {
 	if o.LookPath == nil {
 		o.LookPath = runner.LookPath
 	}
+	o.Load = sharedWarnings(o.Load)
 	s := &state{opts: o}
 	s.cfg, s.loadErr = o.Load(ctx, config.WithoutRemote())
 
