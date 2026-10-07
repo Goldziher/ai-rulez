@@ -51,7 +51,8 @@ content someone else controls:
 - **Offline and `max_stale`.** When the URL cannot be reached (any network error or non-200 answer), the cached copy
   of the pinned digest stands in for it for at most `max_stale` (default `7d`: `--policy-max-stale`, or
   `AI_RULEZ_POLICY_MAX_STALE`; `0` allows none). `--policy-offline` (or `AI_RULEZ_POLICY_OFFLINE=1`) uses the cache
-  without asking the network. Past `max_stale`, or with no cached copy, the run fails with `AR742`. There is no
+  without asking the network. Past `max_stale`, with no cached copy, or with a copy stamped more than five minutes in
+  the future (fetched while the clock ran ahead), the run fails with `AR742`. There is no
   "skip the policy because it is unreachable". `validate --show-policy` marks a layer served from the cache.
 
 ### Organization discovery
