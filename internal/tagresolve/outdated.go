@@ -103,15 +103,7 @@ func EvaluateGated(ctx context.Context, w lockfile.Want, entry *lockfile.Entry, 
 	}
 	sel, err := SelectGated(ctx, tags, spec, gate)
 	if err != nil {
-		row.Status, row.Code, row.Note = StatusUnsatisfied, CodeUnsatisfiable, err.Error()
-		var coded *Error
-		if errors.As(err, &coded) {
-			row.Code, row.Note = coded.Code, coded.Msg
-			if coded.Code == CodeConstraintBad {
-				row.Status = StatusInvalid
-			}
-		}
-		row.Note = oneLine(row.Note)
+		row.unsatisfied(err)
 		return row
 	}
 	row.Allowed = &TagRef{Tag: sel.Chosen.Tag.Name, Commit: sel.Chosen.Tag.Commit}
@@ -156,6 +148,19 @@ func EvaluateGated(ctx context.Context, w lockfile.Want, entry *lockfile.Entry, 
 	return row
 }
 
+// unsatisfied records why no tag could be selected.
+func (r *Row) unsatisfied(err error) {
+	r.Status, r.Code, r.Note = StatusUnsatisfied, CodeUnsatisfiable, err.Error()
+	var coded *Error
+	if errors.As(err, &coded) {
+		r.Code, r.Note = coded.Code, coded.Msg
+		if coded.Code == CodeConstraintBad {
+			r.Status = StatusInvalid
+		}
+	}
+	r.Note = oneLine(r.Note)
+}
+
 func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 
 // NewReport sorts the rows (by kind, then name) and counts them.
@@ -169,7 +174,8 @@ func NewReport(rows []Row) *Report {
 		return a.Name < b.Name
 	})
 	rep.Summary.Total = len(rows)
-	for _, r := range rows {
+	for i := range rows {
+		r := &rows[i]
 		switch r.Status {
 		case StatusUpdatable:
 			rep.Summary.Updatable++
@@ -231,10 +237,12 @@ func (r *Report) WriteText(w io.Writer) error {
 		return err
 	}
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(tw, "SOURCE\tKIND\tCONSTRAINT\tLOCKED\tALLOWED\tLATEST\tNOTE")
-	for _, row := range r.Sources {
+	fmt.Fprintln(tw, "SOURCE\tKIND\tCONSTRAINT\tLOCKED\tALLOWED\tLATEST\tNOTE") //nolint:errcheck // tabwriter buffers; Flush reports a write error
+	for i := range r.Sources {
+		row := &r.Sources[i]
+		//nolint:errcheck // tabwriter buffers; Flush reports a write error
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", row.Name, row.Kind, row.Constraint,
-			tagName(row.Locked), tagName(row.Allowed), tagName(row.Latest), rowNote(row))
+			tagName(row.Locked), tagName(row.Allowed), tagName(row.Latest), rowNote(*row))
 	}
 	if err := tw.Flush(); err != nil {
 		return err //nolint:wrapcheck // writer error
