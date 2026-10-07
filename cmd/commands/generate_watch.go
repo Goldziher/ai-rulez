@@ -271,8 +271,8 @@ func includeTargets(cfg *config.Config) []watch.Target {
 		add(cfg.Includes[i].Source)
 		add(cfg.Includes[i].LocalOverride)
 	}
-	for _, s := range cfg.InstalledSkills {
-		add(s.LocalOverride)
+	for i := range cfg.InstalledSkills {
+		add(cfg.InstalledSkills[i].LocalOverride)
 	}
 	return out
 }
