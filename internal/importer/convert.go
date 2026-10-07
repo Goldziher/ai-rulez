@@ -295,8 +295,8 @@ func ignoreLocalTree(log logger.Logger, abs, intoAbs string, files map[string][]
 	if !wrote {
 		return nil
 	}
-	rel, err := filepath.Rel(abs, intoAbs)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	rel, inside := relInside(abs, intoAbs)
+	if !inside {
 		return nil
 	}
 	pattern := path.Join(filepath.ToSlash(rel), localDir) + "/"
@@ -620,7 +620,7 @@ func mergeConfig(existing, add *config.Config, defaultedPreset bool) (merged *co
 		}
 		return false
 	}
-	if !(defaultedPreset && len(existing.Presets) > 0) {
+	if !defaultedPreset || len(existing.Presets) == 0 {
 		for _, p := range add.Presets {
 			if !hasPreset(p.BuiltIn) {
 				merged.Presets = append(merged.Presets, p)
@@ -778,23 +778,47 @@ func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 	}
 	name := tmp.Name()
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		os.Remove(name)
-		return err
+		return discardTemp(tmp, name, err)
 	}
 	if err := tmp.Close(); err != nil {
-		os.Remove(name)
-		return err
+		return discardTemp(nil, name, err)
 	}
 	if err := os.Chmod(name, perm); err != nil {
-		os.Remove(name)
-		return err
+		return discardTemp(nil, name, err)
 	}
 	if err := os.Rename(name, path); err != nil {
-		os.Remove(name)
-		return err
+		return discardTemp(nil, name, err)
 	}
 	return nil
+}
+
+// discardTemp closes (when open) and removes a temporary file after err, and
+// returns err joined with any failure to clean up.
+func discardTemp(open *os.File, name string, err error) error {
+	if open != nil {
+		err = errors.Join(err, open.Close())
+	}
+	if rerr := os.Remove(name); rerr != nil && !errors.Is(rerr, fs.ErrNotExist) {
+		err = errors.Join(err, rerr)
+	}
+	return err
+}
+
+// relInside returns target relative to base, and false when it is not below base.
+func relInside(base, target string) (string, bool) {
+	rel, err := filepath.Rel(base, target)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	return rel, true
+}
+
+// removeScratch deletes a scratch directory; a failure only leaves temporary
+// files behind, so it is logged rather than returned.
+func removeScratch(dir string) {
+	if err := os.RemoveAll(dir); err != nil {
+		logger.Debug("could not remove the scratch directory", "path", dir, "error", err)
+	}
 }
 
 // writePerms returns the file and directory modes of a planned path. Machine-local

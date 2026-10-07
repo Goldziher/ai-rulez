@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -235,9 +234,9 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	if convertFormat == formatText {
 		switch {
 		case !write:
-			fmt.Fprintln(out, "\nDry run: nothing was written. Rerun with --write to create the files.")
+			fprintf(out, "\nDry run: nothing was written. Rerun with --write to create the files.\n")
 		case report.NeedsLock() && !convertLock:
-			fmt.Fprintln(out, "\nNext: run `ai-rulez lock` to pin the imported remote skills (or rerun with --lock).")
+			fprintf(out, "\nNext: run `ai-rulez lock` to pin the imported remote skills (or rerun with --lock).\n")
 		}
 	}
 	return 0
@@ -252,10 +251,10 @@ func reportNothingToConvert(out io.Writer, err error) {
 		msg += "\n" + oe.Hint()
 	}
 	if convertFormat == formatJSON {
-		fmt.Fprintln(os.Stderr, msg)
+		fprintf(os.Stderr, "%s\n", msg)
 		return
 	}
-	fmt.Fprintln(out, msg)
+	fprintf(out, "%s\n", msg)
 }
 
 // lockConverted runs `ai-rulez lock` on the config convert wrote. The lock prints
@@ -291,8 +290,7 @@ func printConvertReport(out io.Writer, report *importer.Report) error {
 		if convertFormat == formatJSON {
 			return report.WriteJSON(w)
 		}
-		report.WriteText(w)
-		return nil
+		return report.WriteText(w)
 	}
 	if convertReport != "" {
 		var buf bytes.Buffer
@@ -318,12 +316,12 @@ func listImporters(out io.Writer) int {
 		return writeJSONList(out, detections)
 	}
 	for _, d := range detections {
-		fmt.Fprintf(out, "%s\n  %s\n", d.Name, d.Description)
+		fprintf(out, "%s\n  %s\n", d.Name, d.Description)
 		if len(d.Files) == 0 {
-			fmt.Fprintln(out, "  detected: nothing")
+			fprintf(out, "  detected: nothing\n")
 			continue
 		}
-		fmt.Fprintf(out, "  detected: %s\n", strings.Join(d.Files, ", "))
+		fprintf(out, "  detected: %s\n", strings.Join(d.Files, ", "))
 	}
 	return 0
 }

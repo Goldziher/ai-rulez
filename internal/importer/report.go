@@ -140,26 +140,27 @@ func (r *Report) WriteJSON(w io.Writer) error {
 
 // WriteText prints the report for people. Mapped findings are grouped to one
 // line per target kind so the lossy ones stand out.
-func (r *Report) WriteText(w io.Writer) {
-	fmt.Fprintf(w, "source      %s (%s)\n", r.Importer, r.Source)
-	fmt.Fprintf(w, "into        %s\n", r.Into)
+func (r *Report) WriteText(out io.Writer) error {
+	w := &textWriter{w: out}
+	w.printf("source      %s (%s)\n", r.Importer, r.Source)
+	w.printf("into        %s\n", r.Into)
 	if r.plan != "" {
-		fmt.Fprintf(w, "plan        %s\n", r.plan)
+		w.printf("plan        %s\n", r.plan)
 	}
 	if r.Written {
-		fmt.Fprintf(w, "written     %d file(s)\n", countActions(r.Files, ActionCreate, ActionOverwrite, ActionMerge))
+		w.printf("written     %d file(s)\n", countActions(r.Files, ActionCreate, ActionOverwrite, ActionMerge))
 	} else {
-		fmt.Fprintf(w, "written     (nothing written)\n")
+		w.printf("written     (nothing written)\n")
 	}
-	fmt.Fprintln(w)
+	w.printf("\n")
 
 	files := append([]FileAction(nil), r.Files...)
 	sort.SliceStable(files, func(i, j int) bool { return files[i].Path < files[j].Path })
 	for _, f := range files {
-		fmt.Fprintf(w, "%-10s  %s\n", strings.ToUpper(f.Action), f.Path)
+		w.printf("%-10s  %s\n", strings.ToUpper(f.Action), f.Path)
 	}
 	if len(files) > 0 {
-		fmt.Fprintln(w)
+		w.printf("\n")
 	}
 	for _, f := range r.Findings {
 		if f.Status == StatusMapped {
@@ -175,22 +176,36 @@ func (r *Report) WriteText(w io.Writer) {
 		if f.Reason != "" {
 			line += "  " + f.Reason
 		}
-		fmt.Fprintln(w, line)
+		w.printf("%s\n", line)
 	}
 	c := r.Counts
-	fmt.Fprintf(w, "\nSummary: %d mapped, %d approximated, %d dropped, %d needs-action, %d unsupported.\n",
+	w.printf("\nSummary: %d mapped, %d approximated, %d dropped, %d needs-action, %d unsupported.\n",
 		c.Mapped, c.Approximated, c.Dropped, c.NeedsAction, c.Unsupported)
 	if len(r.Security.Findings) == 0 {
-		fmt.Fprintln(w, "Security scan: 0 findings.")
+		w.printf("Security scan: 0 findings.\n")
 	} else {
-		fmt.Fprintf(w, "Security scan: %d finding(s)%s.\n", len(r.Security.Findings), blockedSuffix(r.Security.Blocked))
+		w.printf("Security scan: %d finding(s)%s.\n", len(r.Security.Findings), blockedSuffix(r.Security.Blocked))
 		for _, f := range r.Security.Findings {
-			fmt.Fprintf(w, "  %s %s %s:%d %s%s\n", f.Severity, f.Code, f.File, f.Line, f.Message, findingSuffix(f))
+			w.printf("  %s %s %s:%d %s%s\n", f.Severity, f.Code, f.File, f.Line, f.Message, findingSuffix(f))
 		}
 	}
-	fmt.Fprintf(w, "Validation of the planned tree: %d error(s), %d warning(s).\n", r.Validation.Errors, r.Validation.Warnings)
+	w.printf("Validation of the planned tree: %d error(s), %d warning(s).\n", r.Validation.Errors, r.Validation.Warnings)
 	for _, m := range r.Validation.Messages {
-		fmt.Fprintf(w, "  %s\n", m)
+		w.printf("  %s\n", m)
+	}
+	return w.err
+}
+
+// textWriter keeps the first write error, so a report renders with plain
+// printf calls and still returns the failure.
+type textWriter struct {
+	w   io.Writer
+	err error
+}
+
+func (t *textWriter) printf(format string, args ...any) {
+	if t.err == nil {
+		_, t.err = fmt.Fprintf(t.w, format, args...)
 	}
 }
 

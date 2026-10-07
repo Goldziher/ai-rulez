@@ -28,7 +28,7 @@ func previewInitImport(ctx context.Context, workingDir string) error {
 	if err != nil {
 		return oops.Wrapf(err, "create scratch directory")
 	}
-	defer os.RemoveAll(scratch)
+	defer removeScratch(scratch)
 
 	opts := initConvertOptions(workingDir, filepath.Join(scratch, importer.DefaultConfigDir), false)
 	report, err := importer.Convert(ctx, opts)
@@ -36,7 +36,9 @@ func previewInitImport(ctx context.Context, workingDir string) error {
 		return err //nolint:wrapcheck // already contextual
 	}
 	if report.Security.Blocked || report.Validation.Errors > 0 {
-		report.WriteText(os.Stderr)
+		if werr := report.WriteText(os.Stderr); werr != nil {
+			return oops.Wrapf(werr, "print the convert report")
+		}
 		return oops.Hint("Remove the flagged text from the source and rerun, or use `ai-rulez convert --allow-findings CODE`").
 			Errorf("the imported content failed the security scan or validation; nothing was written")
 	}
@@ -47,7 +49,9 @@ func previewInitImport(ctx context.Context, workingDir string) error {
 func runInitImport(ctx context.Context, workingDir, configDir string) error {
 	report, err := importer.Convert(ctx, initConvertOptions(workingDir, configDir, true))
 	if report != nil {
-		report.WriteText(os.Stdout)
+		if werr := report.WriteText(os.Stdout); werr != nil && err == nil {
+			err = oops.Wrapf(werr, "print the convert report")
+		}
 	}
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
@@ -67,4 +71,12 @@ func displayImportSuccessMessage(sources, configDir string) {
 	logger.Info("  2. Edit " + configDir + "/config.toml to customize presets")
 	logger.Info("  3. Run 'ai-rulez generate' to create tool-specific outputs")
 	logger.Info("  `ai-rulez convert` offers more: --dry-run, --merge, --fetch, --enable-hooks")
+}
+
+// removeScratch deletes a scratch directory; a failure only leaves temporary
+// files behind, so it is logged rather than returned.
+func removeScratch(dir string) {
+	if err := os.RemoveAll(dir); err != nil {
+		logger.Debug("could not remove the scratch directory", "path", dir, "error", err)
+	}
 }

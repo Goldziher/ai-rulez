@@ -82,7 +82,7 @@ func (okfImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "create scratch directory")
 	}
-	defer os.RemoveAll(scratch)
+	defer removeScratch(scratch)
 	res, err := okfbridge.Import(bundle, okfbridge.ImportOptions{ConfigDir: scratch, Domain: opt.Domain})
 	if err != nil {
 		return nil, oops.Wrapf(err, "import the OKF bundle")
