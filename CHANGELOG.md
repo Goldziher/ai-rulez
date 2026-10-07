@@ -232,6 +232,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - `clean` keeps a git-tracked `.ai-rulez/.generated-manifest.local.json` and warns, as `generate` does.
 - Log output honours `NO_COLOR`, `TERM=dumb` and non-terminal stderr.
 - A `SKILL.md` whose frontmatter has no closing `---` is malformed (warning on load, `validate` fails, the skills server refuses it).
+- **OKF bundle loading has a total size budget** (256 MiB of markdown; the per-file limit alone allowed hundreds of gigabytes), and index checking no longer rescans every concept for each `index.md`, which made validation of a bundle with thousands of directories quadratic.
 - **`import okf` strips group and world write bits** from imported resources (a `0777` script in a bundle no longer lands world-writable) and redacts credentials in the `source` printed with `--format json`.
 - **`export okf --out` only prunes a directory that is really a bundle**: the guard matched the text `okf_version` anywhere in `index.md`; it now requires the key in the frontmatter. `okf validate` prints `.` instead of an empty location for root findings.
 - **OKF concept titles derived from a non-ASCII file name** no longer split the first UTF-8 character.
