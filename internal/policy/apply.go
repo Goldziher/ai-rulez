@@ -140,8 +140,8 @@ func policyKeyOf(key string) string {
 	switch {
 	case strings.HasPrefix(key, "lint.severity.") || strings.HasPrefix(key, "lint.ignore"):
 		return "lint.severity_floor." + strings.TrimPrefix(strings.TrimPrefix(key, "lint.severity."), "lint.ignore.")
-	case key == "lock.enforce":
-		return "lock.enforce"
+	case key == switchLockEnforce:
+		return switchLockEnforce
 	case strings.HasSuffix(key, ".min_release_age"):
 		return "sources.min_release_age"
 	case key == "lock.min_release_age_source":
@@ -250,7 +250,7 @@ func (a *applier) severities() {
 		val := strings.ToLower(strings.TrimSpace(lc.Severity[key]))
 		floor, floored := pol.SeverityFloor[code]
 		switch {
-		case val == "off" && required[code]:
+		case val == levelOff && required[code]:
 			a.violate(lint.CodePolicyRequiredMissing, "lint.severity."+key, key,
 				"[lint.severity] %s = \"off\" turns off %s, which the policy requires (origin: %s); it stays on", key, code, a.origin("lint.required_codes"))
 			delete(lc.Severity, key)

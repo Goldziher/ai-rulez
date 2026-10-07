@@ -222,7 +222,7 @@ func (l *loader) buildVerifier() (*verifier, error) {
 	}
 	switch strings.ToLower(strings.TrimSpace(us.TLog)) {
 	case "":
-	case "required", "optional", "off":
+	case "required", "optional", levelOff:
 		tlog = signing.TLogMode(strings.ToLower(strings.TrimSpace(us.TLog)))
 	default:
 		return nil, &ParseError{Path: "[policy] tlog", Msg: fmt.Sprintf("%q is not required, optional or off", us.TLog)}
@@ -268,7 +268,7 @@ func loadTrustedRoot(env ambient.Env, path string) (root.TrustedMaterial, error)
 	if !explicit {
 		dir, err := config.CacheDirIn(env, "sigstore")
 		if err != nil {
-			return nil, nil //nolint:nilnil // no home directory: no cached root
+			return nil, nil //nolint:nilnil,nilerr // no home directory: no cached root
 		}
 		path = filepath.Join(dir, signing.TrustedRootFile)
 	}
@@ -419,7 +419,7 @@ func fetchSidecar(ctx context.Context, client *http.Client, ref Ref) ([]byte, er
 	}
 	ctx, cancel := context.WithTimeout(ctx, client.Timeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sc.Location, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sc.Location, http.NoBody)
 	if err != nil {
 		return nil, nil //nolint:nilnil // not a fetchable URL: no signature
 	}
