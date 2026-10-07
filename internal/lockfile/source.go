@@ -1,8 +1,8 @@
 package lockfile
 
 import (
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -55,4 +55,4 @@ const EnvAllowFileURLs = "AI_RULEZ_ALLOW_FILE_URLS"
 
 // AllowFileURLsOutside reports whether the user opted in to file:// sources that
 // leave the project (EnvAllowFileURLs).
-func AllowFileURLsOutside() bool { return os.Getenv(EnvAllowFileURLs) == "1" }
+func AllowFileURLsOutside(env ambient.Env) bool { return ambient.Getenv(env, EnvAllowFileURLs) == "1" }
