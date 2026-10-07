@@ -497,13 +497,6 @@ func TestBuild_NPMNeedsAScope(t *testing.T) {
 	assert.Equal(t, CodeConfig, pe.Code)
 }
 
-func npmPlan(t *testing.T) Plan {
-	t.Helper()
-	d, err := Build(npmInput())
-	require.NoError(t, err)
-	return d.Plan
-}
-
 func writeBuilt(t *testing.T, in Input) (string, *Dist) {
 	t.Helper()
 	d, err := Build(in)
