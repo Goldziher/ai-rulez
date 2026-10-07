@@ -7,13 +7,14 @@
 // cannot find and a path outside the project all allow the call: a guard that wedges
 // the agent on its own error is worse than the hand edit it prevents, and
 // `ai-rulez verify` still catches the edit afterwards. It does not fail open on
-// input it chooses not to analyse: a payload over maxPayload or a call naming more
+// input it chooses not to analyze: a payload over maxPayload or a call naming more
 // than maxTargets files is blocked, because padding a patch must not be a bypass.
 package guard
 
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -49,7 +50,7 @@ type Decision struct {
 	// Source is the source file named in the generated file's header, when present.
 	Source string
 	// Reason, when set, replaces the generated-file message: the call was blocked
-	// because the guard would not analyse it (oversized payload, too many files).
+	// because the guard would not analyze it (oversized payload, too many files).
 	Reason string
 }
 
@@ -112,7 +113,7 @@ func Check(stdin io.Reader, cwd string) Decision {
 		if name := topLevelTool(data); name != "" && !editTools[strings.ToLower(name)] {
 			return Decision{}
 		}
-		return Decision{Block: true, Reason: fmt.Sprintf("the tool call payload is larger than %d MiB, which the ai-rulez guard does not analyse; make smaller edits", maxPayload>>20)}
+		return Decision{Block: true, Reason: fmt.Sprintf("the tool call payload is larger than %d MiB, which the ai-rulez guard does not analyze; make smaller edits", maxPayload>>20)}
 	}
 	var p payload
 	if err := json.Unmarshal(data, &p); err != nil {
@@ -130,34 +131,12 @@ func Check(stdin io.Reader, cwd string) Decision {
 	}
 	paths, over := targets(&p)
 	if over {
-		return Decision{Block: true, Reason: fmt.Sprintf("the tool call edits more than %d files, which the ai-rulez guard does not analyse; split it", maxTargets)}
+		return Decision{Block: true, Reason: fmt.Sprintf("the tool call edits more than %d files, which the ai-rulez guard does not analyze; split it", maxTargets)}
 	}
 	c := newCache()
 	for _, target := range paths {
-		// The project is located from the working directory and from the target's
-		// own directory: a payload whose cwd lies outside the project (or names
-		// none) must not hide a generated file inside it.
-		var bases []string
-		if cwd != "" {
-			bases = append(bases, cwd)
-		}
-		abs := target
-		if !filepath.IsAbs(abs) && cwd != "" {
-			abs = filepath.Join(cwd, abs)
-		}
-		if filepath.IsAbs(abs) {
-			if dir := filepath.Dir(filepath.Clean(abs)); dir != cwd {
-				bases = append(bases, dir)
-			}
-		}
-		for _, base := range bases {
-			proj, ok := c.project(base)
-			if !ok {
-				continue
-			}
-			if rel, hit := proj.files.lookup(proj.root, proj.realRoot, base, target); hit {
-				return Decision{Block: true, Path: rel, Source: sourceOf(filepath.Join(proj.root, filepath.FromSlash(rel)))}
-			}
+		if d, hit := c.check(cwd, target); hit {
+			return d
 		}
 	}
 	return Decision{}
@@ -176,7 +155,10 @@ func topLevelTool(data []byte) string {
 		if err != nil {
 			return ""
 		}
-		key, _ := keyTok.(string)
+		key, isKey := keyTok.(string)
+		if !isKey {
+			return ""
+		}
 		var raw json.RawMessage
 		if err := dec.Decode(&raw); err != nil {
 			return ""
@@ -231,6 +213,35 @@ func (c *cache) project(base string) (*project, bool) {
 	return p, true
 }
 
+// check decides one target. The project is located from the working directory
+// and from the target's own directory: a payload whose cwd lies outside the
+// project (or names none) must not hide a generated file inside it.
+func (c *cache) check(cwd, target string) (Decision, bool) {
+	var bases []string
+	if cwd != "" {
+		bases = append(bases, cwd)
+	}
+	abs := target
+	if !filepath.IsAbs(abs) && cwd != "" {
+		abs = filepath.Join(cwd, abs)
+	}
+	if filepath.IsAbs(abs) {
+		if dir := filepath.Dir(filepath.Clean(abs)); dir != cwd {
+			bases = append(bases, dir)
+		}
+	}
+	for _, base := range bases {
+		proj, ok := c.project(base)
+		if !ok {
+			continue
+		}
+		if rel, hit := proj.files.lookup(proj.root, proj.realRoot, base, target); hit {
+			return Decision{Block: true, Path: rel, Source: sourceOf(filepath.Join(proj.root, filepath.FromSlash(rel)))}, true
+		}
+	}
+	return Decision{}, false
+}
+
 // targets lists every distinct path the call writes. over is true when there are
 // more than maxTargets of them.
 func targets(p *payload) (out []string, over bool) {
@@ -249,34 +260,43 @@ func targets(p *payload) (out []string, over bool) {
 		add(p.FilePath)
 	}
 	for _, raw := range []json.RawMessage{p.ToolInput, p.ToolArgs} {
-		if len(raw) == 0 {
-			continue
+		if !inputTargets(raw, add) {
+			return out, true
 		}
-		// Some harnesses send the arguments as a JSON document inside a string.
-		var asText string
-		if json.Unmarshal(raw, &asText) == nil {
-			raw = json.RawMessage(asText)
+	}
+	return out, false
+}
+
+// inputTargets passes to add every path one tool input names; it returns false
+// as soon as add refuses one (too many targets).
+func inputTargets(raw json.RawMessage, add func(string) bool) bool {
+	if len(raw) == 0 {
+		return true
+	}
+	// Some harnesses send the arguments as a JSON document inside a string.
+	var asText string
+	if json.Unmarshal(raw, &asText) == nil {
+		raw = json.RawMessage(asText)
+	}
+	var input map[string]any
+	if json.Unmarshal(raw, &input) != nil {
+		return true
+	}
+	for _, key := range pathKeys {
+		if s, ok := input[key].(string); ok && s != "" && !add(s) {
+			return false
 		}
-		var input map[string]any
-		if json.Unmarshal(raw, &input) != nil {
-			continue
-		}
-		for _, key := range pathKeys {
-			if s, ok := input[key].(string); ok && s != "" && !add(s) {
-				return out, true
-			}
-		}
-		for _, key := range patchKeys {
-			for _, s := range stringsIn(input[key]) {
-				for _, m := range patchFile.FindAllStringSubmatch(s, -1) {
-					if !add(m[1]) {
-						return out, true
-					}
+	}
+	for _, key := range patchKeys {
+		for _, s := range stringsIn(input[key]) {
+			for _, m := range patchFile.FindAllStringSubmatch(s, -1) {
+				if !add(m[1]) {
+					return false
 				}
 			}
 		}
 	}
-	return out, false
+	return true
 }
 
 // stringsIn lists the strings of a patch value: the string itself, or every string
@@ -406,8 +426,8 @@ func (o owned) lookup(root, realRoot, cwd, target string) (string, bool) {
 func resolve(p string) string {
 	rest := ""
 	for cur := p; ; {
-		if real, err := filepath.EvalSymlinks(cur); err == nil {
-			return filepath.Join(real, rest)
+		if resolved, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(resolved, rest)
 		}
 		parent := filepath.Dir(cur)
 		if parent == cur {
@@ -428,7 +448,10 @@ func sourceOf(path string) string {
 	}
 	defer func() { _ = f.Close() }()
 	buf := make([]byte, headerBytes)
-	n, _ := io.ReadFull(f, buf)
+	n, err := io.ReadFull(f, buf)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return "" // an empty file or a read error: no banner to read
+	}
 	m := headerSource.FindSubmatch(buf[:n])
 	if m == nil {
 		return ""
