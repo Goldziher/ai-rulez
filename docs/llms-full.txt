@@ -12692,7 +12692,7 @@ itself (it records the signature), so the statement is what ties it to the signe
 certificates and two log entries. `publish verify` with a trusted signer checks the statement's signature and signer, that
 it names the manifest's name, version, source and approval summary, and that the digests equal the files in the directory; a signed release without
 the statement is a mismatch (`AR9N7`). Independently of signing, verify compares the `name` and `version` in the archive's
-own runtime manifests (`.claude-plugin/plugin.json` and the like) with the manifest's, so an archive relabelled as another
+own runtime manifests (`.claude-plugin/plugin.json` and the like) with the manifest's, so an archive relabeled as another
 plugin or version is flagged.
 
 `publish verify <oci-ref>` prints the digest the reference resolved to and warns when it is a tag (its owner can move it, and
@@ -13263,7 +13263,7 @@ repo overrides rejected: 1
 `--format json` writes the same report (`schema/policy-effective.schema.json`): `layers[{origin, source, name,
 digest}]`, `effective`, `provenance` (dotted key to the layer, joined with `+` when several layers contribute to a
 set), `overrides{accepted, rejected}` and `violations[]`. The digest is the SHA-256 of the file with CRLF normalized
-to LF. Exit code 1 when the repository loosens the policy. The policy file format is
+to LF. Exit code 2 when the repository loosens the policy (the same code `generate` and `validate` give). The policy file format is
 `schema/policy.schema.json`.
 
 #### What honors the policy
@@ -13837,7 +13837,7 @@ without examples are listed.
   skill's verifier can never use the `command` predicate, whatever `trust_exec_from` says.
 - An `llm` verdict is advisory and capped at `warning` unless the verifier is calibrated and the run passes
   `--gate-llm` (see [Calibrating llm verifiers](#calibrating-llm-verifiers)). The record is a lighter cousin of the review
-  calibration: it measures precision and recall of the `fail` verdict on labelled examples, not agreement or consistency.
+  calibration: it measures precision and recall of the `fail` verdict on labeled examples, not agreement or consistency.
 
 #### Local overlay
 
@@ -16112,7 +16112,7 @@ ai-rulez eval run --runner-command ./my-runner --grader builtin --allow-llm --gr
 - **Choose the model deliberately.** The grade is only as good as the judge. In a live comparison against Claude
   Code's own rubric grading on 24 real transcripts, `gemini-2.5-flash-lite` agreed on 79% (Cohen's kappa 0.60) and
   erred lenient (it passed a control rubric the answer plainly contradicted, and passed two answers that omitted a
-  required detail), while `gemini-2.5-flash` agreed on 96% (kappa 0.92). Check a cheap judge against a few labelled
+  required detail), while `gemini-2.5-flash` agreed on 96% (kappa 0.92). Check a cheap judge against a few labeled
   transcripts before trusting its pass rate.
 - **Runners.** The command runner must return `output`. `claude-plugin-eval` returns the answer its own llm grader
   read; with `--grader builtin` that tool still runs its grader (so the rubric is judged twice and the tool's verdict is
@@ -17095,7 +17095,7 @@ the gain is optimistic. `improve apply` and the pull request body say "selected 
 Source: https://goldziher.github.io/ai-rulez/search/
 
 `ai-rulez search` ranks the skills your project serves against a query, with the same ranker as the `find_skill`
-tool of [`mcp --serve-skills`](mcp-server.md), and measures that ranking against labelled queries. By default it is
+tool of [`mcp --serve-skills`](mcp-server.md), and measures that ranking against labeled queries. By default it is
 lexical and deterministic: no query or skill text is sent anywhere and the same input always gives the same order.
 Optionally it is hybrid: the lexical list is fused with cosine similarity over embeddings you bring (an
 OpenAI-compatible endpoint, Gemini through `literllm`, a local server, or a command), so a paraphrase such as
@@ -17204,7 +17204,7 @@ Fusion. Each list is cut to `candidates` and the two are combined:
 - `weighted`: each list's scores are min-max normalised to [0, 1] over its candidates and mixed with
   `a = weights.lexical / (weights.lexical + weights.vector)`. More sensitive to the score distribution.
 
-Why `auto`. Evaluated with Gemini `gemini-embedding-001` on 36 labelled queries (plus 6 negatives) over this repository's
+Why `auto`. Evaluated with Gemini `gemini-embedding-001` on 36 labeled queries (plus 6 negatives) over this repository's
 25 served skills, cut-off k = 3:
 
 | Ranking | top-1 | hit@3 | MRR | nDCG@3 |
@@ -17469,7 +17469,7 @@ Source: https://goldziher.github.io/ai-rulez/review/
 score comes from the lint findings each rubric dimension names, no model is called, and nothing leaves the machine.
 With `--semantic` it adds an **LLM judge** for what lint cannot see: a vague or overlapping trigger, a body that
 contradicts its description, injection intent, scope creep. The judge is advisory, cached, bounded by spend caps, and
-may gate a build only after `review calibrate` measured it against a labelled golden set. `review fix` proposes a
+may gate a build only after `review calibrate` measured it against a labeled golden set. `review fix` proposes a
 patch for its findings and never writes without `--apply`. Design: [#220](https://github.com/Goldziher/ai-rulez/issues/220),
 follow-up [#269](https://github.com/Goldziher/ai-rulez/issues/269).
 
@@ -17676,7 +17676,7 @@ ai-rulez review calibrate --models gemini-2.5-flash-lite,gemini-2.5-flash   # co
 ai-rulez review calibrate --compare .ai-rulez/calibration/skill-quality.builtin.json   # drift check
 ```
 
-A golden case (`golden/*.golden.yaml`, paths relative to the golden directory) is labelled by at least two labelers and
+A golden case (`golden/*.golden.yaml`, paths relative to the golden directory) is labeled by at least two labelers and
 adjudicated:
 
 ```yaml
@@ -17699,7 +17699,7 @@ and F1 of "flagged" (not `pass`) with Wilson 95% intervals; the labelers' own **
 appended; the verdict must not improve: verbosity bias), `reorder` (siblings reversed; the verdict must not change:
 position bias), `rename` (the item renamed; the verdict must not change: name priors) and `canary` (text addressed to
 the reviewer; `injection-intent` must flag it and no verdict may improve); and the **calibration curve** (vote
-agreement against measured precision). A dimension with fewer than 6 labelled cases is `uncalibrated`.
+agreement against measured precision). A dimension with fewer than 6 labeled cases is `uncalibrated`.
 A case the judge could not answer for a dimension counts as a wrong answer (and in `errors`); a probe it could not
 answer fails; a probe a case declares that was never measured misses `min_probe`; and with `--k 1` consistency is not
 measured, so a positive `min_consistency` is a miss.
@@ -17819,7 +17819,7 @@ directory with a symlink is a lock problem, not a skipped file. See [Lockfile](l
 .ai-rulez/rubrics/<id>/
   rubric.toml                 # dimensions, weights, limits, votes, thresholds
   system.md                   # optional system prompt override
-  golden/*.golden.yaml        # human-labelled cases for calibration
+  golden/*.golden.yaml        # human-labeled cases for calibration
   fixtures/...                # the items the cases point at
   calibration.json            # written by `review calibrate`
 ```
@@ -17946,7 +17946,7 @@ and `baseline`.
 - **Evidence or nothing.** A verdict the item cannot back is dropped and counted, not reported.
 - **Gating is earned per rubric and model.** A record binds the result to the exact rubric, prompt, golden set, model id
   and content mode; anything else is stale. `require_calibration = false` is the explicit opt-out.
-- **Dimensions are gated individually.** A dimension that did not pass calibration, or that nobody labelled, is advisory
+- **Dimensions are gated individually.** A dimension that did not pass calibration, or that nobody labeled, is advisory
   even when others gate.
 - **Repository config cannot raise spend or widen hosts.** Caps can only be lowered by a repository; `allowed_hosts`
   is user scope only.
@@ -18344,7 +18344,7 @@ Model-side retention and training terms are the provider's; check them before se
 
 ##### Cost controls
 
-Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use `ai-rulez llm estimate <file>` to see what a prompt costs first (tokens are estimated at one per three UTF-8 bytes, which overestimates English text and holds for CJK). The built-in price table is small and approximate (OpenAI `gpt-4o`/`gpt-4.1` families and embeddings, Gemini `gemini-2.5-flash`, `gemini-2.5-flash-lite` and `gemini-embedding-001`, Claude families) and only for budget estimates; set `price_input_per_mtok` / `price_output_per_mtok` for anything else. Cost in responses is an estimate from that table, not a bill.
+Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use `ai-rulez llm estimate <file>` to see what a prompt costs first (tokens are estimated at one per three UTF-8 bytes, which overestimates English text and holds for CJK). The built-in price table is small and approximate (OpenAI `gpt-4o`/`gpt-4.1` families and embeddings, Gemini `gemini-2.5-flash`, `gemini-2.5-flash-lite` and `gemini-embedding-001`, Claude families, with the current Opus, Sonnet and Haiku versions priced separately and older ones at the family price; last checked against the providers' price pages on 2026-10-07) and only for budget estimates; set `price_input_per_mtok` / `price_output_per_mtok` for anything else. Cost in responses is an estimate from that table, not a bill.
 
 #### Backends
 
@@ -21354,7 +21354,7 @@ ai-rulez verifiers suggest <id> [--kind rule|skill|agent|command] [--max-proposa
 | `--no-local` | Ignore the machine-local overlay and `local/` content |
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
 
-`list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`. `calibrate` measures the precision and recall of an `llm` verifier's `fail` verdict on its labelled examples and records it in `.ai-rulez/verifiers/calibration/<id>.json` (`--no-write` prints it only); `run --gate-llm` reads that record. `suggest` asks the model for candidate verifiers for a rule and prints the ones that pass deterministic checks; it never writes without `--write` (see [Verifiers](verifiers.md#suggesting-verifiers)). `[verifiers_settings]` holds the limits and policy (`max_timeout_s`, `max_file_bytes`, `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`).
+`list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`. `calibrate` measures the precision and recall of an `llm` verifier's `fail` verdict on its labeled examples and records it in `.ai-rulez/verifiers/calibration/<id>.json` (`--no-write` prints it only); `run --gate-llm` reads that record. `suggest` asks the model for candidate verifiers for a rule and prints the ones that pass deterministic checks; it never writes without `--write` (see [Verifiers](verifiers.md#suggesting-verifiers)). `[verifiers_settings]` holds the limits and policy (`max_timeout_s`, `max_file_bytes`, `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`).
 
 Exit codes: `0` no verifier failed at the `--fail-on` severity, `2` at least one failed, even when another verifier could not be evaluated (a failure is never hidden behind exit `1`; the report shows both), `1` nothing failed but the run could not complete: the configuration does not load or validate, a `--name` is unknown, the `--since` base cannot be used, or a verifier could not be evaluated (status `error`). A failing `info` verifier never fails the run unless `--fail-on info`. The MCP server exposes the same run as the read-only `run_verifiers` tool (with `since`, `staged` and `rule` parameters); it does not resolve includes, so `generated_in_sync` reports `error` there for a project that declares includes or installed skills.
 
@@ -21407,7 +21407,7 @@ when the surface is loaded:
 | Bucket        | Meaning                                                                       |
 | ------------- | ----------------------------------------------------------------------------- |
 | `always`      | Paid on every request: the root instructions file and the item listing (below) |
-| `conditional` | Paid in some harness modes only — path-scoped rule files and machine-local files, labelled `(machine-local)` for roots |
+| `conditional` | Paid in some harness modes only — path-scoped rule files and machine-local files, labeled `(machine-local)` for roots |
 | `on demand`   | Paid when the artifact is opened: skill, command and agent bodies             |
 | `unmodeled`   | Cost ai-rulez cannot model, such as the tool schemas an MCP manifest implies  |
 
@@ -21657,7 +21657,7 @@ Shows the diff of an accepted run and writes it into the skill after confirmatio
 
 ##### `ai-rulez search --eval <cases.yaml>`
 
-Measure the ranking against labelled queries: top-1, recall@k, hit@k, MRR and, for graded cases, nDCG@k. With positive and negative cases and a vector or hybrid mode it also prints the `[search] vector_min_sim` that best separates them (`calibration`, `abstain` rate; see [Abstaining](search.md#abstaining)).
+Measure the ranking against labeled queries: top-1, recall@k, hit@k, MRR and, for graded cases, nDCG@k. With positive and negative cases and a vector or hybrid mode it also prints the `[search] vector_min_sim` that best separates them (`calibration`, `abstain` rate; see [Abstaining](search.md#abstaining)).
 
 | Flag | Meaning |
 | --- | --- |
@@ -21696,7 +21696,7 @@ ai-rulez validate [config-path] [flags]
 | `--no-local`          | boolean | Skip the machine-local overlay and `local/` content: validate the shared view |
 | `--config-only`       | boolean | Check the configuration file only and skip the content checks (dead globs, links, references, hooks, size). See [Strict validation](strict-validation.md) |
 | `--strict`            | boolean | Fail on warnings as well as errors (the same as `--fail-on warning`); cannot be combined with `--config-only` or another `--fail-on` |
-| `--show-policy`       | boolean | Print the effective [organization policy](policy.md) with the origin of every value and what the repository tried to loosen (text, or `--format json`), then exit; exit 1 when the repository loosens it |
+| `--show-policy`       | boolean | Print the effective [organization policy](policy.md) with the origin of every value and what the repository tried to loosen (text, or `--format json`), then exit; exit 2 when the repository loosens it |
 | `--format`            | string  | `text` (default), `json`, `sarif`, `github`, `junit` or `markdown`; any value other than `text` writes the findings in that format |
 | `--output`            | string  | Write the report to this file instead of stdout |
 | `--fail-on`           | string  | Lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
@@ -22337,7 +22337,7 @@ Every command follows one contract (`lock` adds `3`, see [Lock file](lockfile.md
 | ---- | ------- |
 | 0    | Success |
 | 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand, a V2/V3 config file (see [Configuration Detection](#configuration-detection)), a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no manifest |
-| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --strict` refusing a served skill the security scan refuses; `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `migrate v5 --check` finding a project to migrate; `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file |
+| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --strict` refusing a served skill the security scan refuses; `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `migrate v5 --check` finding a project to migrate; `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file; `generate`, `validate` and `validate --show-policy` finding that the configuration loosens the [organization policy](policy.md) |
 | 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --strict` exits 2 instead) |
 
 When a command covers several roots (`--recursive`), the most severe code wins: `1`, then `2`, then `3`.
@@ -24571,7 +24571,7 @@ local sources are reported as `needs-action` instead of being cloned.
 - **Run `ai-rulez lock` once after upgrading**, review the diff and commit the file. The lock reads as stale until
   you do, for these reasons:
   - The `tree` digest now also covers the `source`, `ref` and `path` of remote entries and the `view` of served
-    entries, so relabelling or swapping entries is detected. A lock written by an earlier v5 build reports the tree
+    entries, so relabeling or swapping entries is detected. A lock written by an earlier v5 build reports the tree
     digest as stale.
   - `lock` pins the project scripts run by agent, skill and command frontmatter `hooks`. Editing such a script makes
     `lock --check` exit 2; locks of items with frontmatter hook scripts need `lock` once.
