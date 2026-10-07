@@ -6,6 +6,8 @@ import (
 	"io"
 	"sort"
 	"strings"
+
+	"github.com/samber/oops"
 )
 
 // Output formats of `validate --strict`.
@@ -60,7 +62,7 @@ func Write(w io.Writer, format string, c Combined, o WriteOptions) error {
 	case FormatMarkdown:
 		return WriteMarkdown(w, c)
 	}
-	return fmt.Errorf("unknown format %q", format)
+	return oops.Errorf("unknown format %q", format)
 }
 
 // runProperties and resultProperties are the advisory extras (risk, baseline

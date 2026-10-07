@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lint/scanners"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/samber/oops"
 )
 
 // A stage is the read-only copy of ai-rulez-owned content a scanner is allowed
@@ -128,7 +129,7 @@ func (r *runner) buildStage(inputs []string) (*scannerStage, error) {
 func (r *runner) buildStageFrom(files []stagedFile) (*scannerStage, error) {
 	base, err := os.MkdirTemp("", "ai-rulez-scan-")
 	if err != nil {
-		return nil, fmt.Errorf("create the scratch directory: %w", err)
+		return nil, oops.Wrapf(err, "create the scratch directory")
 	}
 	if real, rerr := filepath.EvalSymlinks(base); rerr == nil {
 		base = real // a scanner prints paths it resolved; match them
@@ -348,23 +349,23 @@ func redactStageURL(raw string) string {
 func (st *scannerStage) write(files []stagedFile) error {
 	for _, d := range []string{st.root, filepath.Join(st.scratch, "home"), filepath.Join(st.scratch, "tmp")} {
 		if err := os.MkdirAll(d, 0o700); err != nil {
-			return fmt.Errorf("create the scratch directory: %w", err)
+			return oops.Wrapf(err, "create the scratch directory")
 		}
 	}
 	root, err := os.OpenRoot(st.root)
 	if err != nil {
-		return fmt.Errorf("open the stage: %w", err)
+		return oops.Wrapf(err, "open the stage")
 	}
 	defer root.Close() //nolint:errcheck // the root was only used for writing
 	skills := map[string]bool{}
 	for _, f := range files {
 		if dir := path.Dir(f.rel); dir != "." {
 			if err := root.MkdirAll(filepath.FromSlash(dir), 0o700); err != nil {
-				return fmt.Errorf("stage %s: %w", f.rel, err)
+				return oops.Wrapf(err, "stage %s", f.rel)
 			}
 		}
 		if err := root.WriteFile(filepath.FromSlash(f.rel), f.data, 0o600); err != nil {
-			return fmt.Errorf("stage %s: %w", f.rel, err)
+			return oops.Wrapf(err, "stage %s", f.rel)
 		}
 		st.files = append(st.files, filepath.Join(st.root, filepath.FromSlash(f.rel)))
 		st.source[f.rel] = f.source
@@ -394,11 +395,11 @@ func (st *scannerStage) seal() error {
 		return os.Chmod(p, 0o400)
 	})
 	if err != nil {
-		return fmt.Errorf("seal the stage: %w", err)
+		return oops.Wrapf(err, "seal the stage")
 	}
 	for i := len(dirs) - 1; i >= 0; i-- {
 		if err := os.Chmod(dirs[i], 0o500); err != nil {
-			return fmt.Errorf("seal the stage: %w", err)
+			return oops.Wrapf(err, "seal the stage")
 		}
 	}
 	return nil

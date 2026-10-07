@@ -20,6 +20,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
+	"github.com/samber/oops"
 )
 
 // Default description bounds. 1024 is the Agent Skills specification limit.
@@ -273,7 +274,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	ruleTables() // the registry (and what its families set up) exists before any check runs
 	counter, err := tokens.New("")
 	if err != nil {
-		return nil, fmt.Errorf("token counter: %w", err)
+		return nil, oops.Wrapf(err, "token counter")
 	}
 	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so, cwd: so.Cwd,
 		deps: map[string]map[string]struct{}{}, names: map[string][]string{}}

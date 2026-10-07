@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/samber/oops"
 )
 
 // A baseline records findings a team has accepted. Entries are keyed by the
@@ -62,23 +63,23 @@ func LoadBaseline(path string) (*Baseline, error) {
 		return nil, nil //nolint:nilnil // absent is a normal state
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read baseline %s: %w", path, err)
+		return nil, oops.Wrapf(err, "read baseline %s", path)
 	}
 	var b Baseline
 	if err := json.Unmarshal(data, &b); err != nil {
-		return nil, fmt.Errorf("parse baseline %s: %w", path, err)
+		return nil, oops.Wrapf(err, "parse baseline %s", path)
 	}
 	if b.Version != baselineVersion {
-		return nil, fmt.Errorf("baseline %s: unsupported version %d (want %d)", path, b.Version, baselineVersion)
+		return nil, oops.Errorf("baseline %s: unsupported version %d (want %d)", path, b.Version, baselineVersion)
 	}
 	for i := range b.Entries {
 		e := &b.Entries[i]
 		if e.Fingerprint == "" {
-			return nil, fmt.Errorf("baseline %s: entry %d has no fingerprint", path, i)
+			return nil, oops.Errorf("baseline %s: entry %d has no fingerprint", path, i)
 		}
 		if e.Expires != "" {
 			if _, perr := time.Parse(dateLayout, e.Expires); perr != nil {
-				return nil, fmt.Errorf("baseline %s: entry %s: expires %q is not a YYYY-MM-DD date", path, e.Fingerprint, e.Expires)
+				return nil, oops.Errorf("baseline %s: entry %s: expires %q is not a YYYY-MM-DD date", path, e.Fingerprint, e.Expires)
 			}
 		}
 	}
@@ -104,13 +105,13 @@ func (b *Baseline) Save(path string) error {
 		b.Entries = []BaselineEntry{}
 	}
 	if err := enc.Encode(b); err != nil {
-		return fmt.Errorf("encode baseline: %w", err)
+		return oops.Wrapf(err, "encode baseline")
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return fmt.Errorf("create baseline directory: %w", err)
+		return oops.Wrapf(err, "create baseline directory")
 	}
 	if err := gitutil.WriteFileAtomic(path, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("write baseline: %w", err)
+		return oops.Wrapf(err, "write baseline")
 	}
 	return nil
 }
@@ -222,7 +223,7 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 		})
 	}
 	if len(unexplained) > 0 {
-		return nil, fmt.Errorf("accepting security findings needs a reason (--baseline-reason): %s", strings.Join(unexplained, ", "))
+		return nil, oops.Errorf("accepting security findings needs a reason (--baseline-reason): %s", strings.Join(unexplained, ", "))
 	}
 	return out, nil
 }

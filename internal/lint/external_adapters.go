@@ -3,9 +3,10 @@ package lint
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/samber/oops"
 )
 
 // Adapters turn the JSON a non-SARIF scanner prints into findings. They are
@@ -51,7 +52,7 @@ func validFormat(format string) bool {
 // parseAdapter runs the named adapter over a scanner's stdout.
 func parseAdapter(name string, out []byte, exitCode int, keepSuppressed bool) ([]externalFinding, error) {
 	if len(bytes.TrimSpace(out)) == 0 {
-		return nil, fmt.Errorf("no output")
+		return nil, oops.Errorf("no output")
 	}
 	switch name {
 	case adapterClaude:
@@ -59,7 +60,7 @@ func parseAdapter(name string, out []byte, exitCode int, keepSuppressed bool) ([
 	case adapterSnyk:
 		return parseSnyk(out, exitCode)
 	}
-	return nil, fmt.Errorf("unknown adapter %q (use %s)", name, strings.Join(knownAdapters, ", "))
+	return nil, oops.Errorf("unknown adapter %q (use %s)", name, strings.Join(knownAdapters, ", "))
 }
 
 // claudeValidateIssue is one error, warning or note of `claude plugin validate --json`.
@@ -91,10 +92,10 @@ func parseClaudeValidate(out []byte) ([]externalFinding, error) {
 		Contents []claudeValidateEntry `json:"contents"`
 	}
 	if err := json.Unmarshal(out, &doc); err != nil {
-		return nil, fmt.Errorf("invalid claude-validate-json: %w", err)
+		return nil, oops.Wrapf(err, "invalid claude-validate-json")
 	}
 	if doc.Success == nil {
-		return nil, fmt.Errorf("not a claude plugin validate report (no success field)")
+		return nil, oops.Errorf("not a claude plugin validate report (no success field)")
 	}
 	entries := doc.Contents
 	if doc.Manifest != nil {
@@ -109,7 +110,7 @@ func parseClaudeValidate(out []byte) ([]externalFinding, error) {
 		}{{e.Errors, "error"}, {e.Warnings, "warning"}, {e.Notes, "note"}} {
 			for _, is := range group.issues {
 				if len(found) >= maxScannerResults {
-					return nil, fmt.Errorf("more than %d results", maxScannerResults)
+					return nil, oops.Errorf("more than %d results", maxScannerResults)
 				}
 				if group.level == "error" {
 					errCount++
@@ -124,7 +125,7 @@ func parseClaudeValidate(out []byte) ([]externalFinding, error) {
 		}
 	}
 	if !*doc.Success && errCount == 0 {
-		return nil, fmt.Errorf("the validator reported failure without naming an error")
+		return nil, oops.Errorf("the validator reported failure without naming an error")
 	}
 	return found, nil
 }
@@ -181,7 +182,7 @@ func parseSnyk(out []byte, exitCode int) ([]externalFinding, error) {
 	add := func(file string, issues []snykIssue) error {
 		for _, is := range issues {
 			if len(found) >= maxScannerResults {
-				return fmt.Errorf("more than %d results", maxScannerResults)
+				return oops.Errorf("more than %d results", maxScannerResults)
 			}
 			found = append(found, is.finding(file))
 		}
@@ -195,7 +196,7 @@ func parseSnyk(out []byte, exitCode int) ([]externalFinding, error) {
 	case json.Unmarshal(out, &top) == nil:
 		if raw, ok := top["issues"]; ok {
 			if err := json.Unmarshal(raw, &list); err != nil {
-				return nil, fmt.Errorf("invalid snyk-json issues: %w", err)
+				return nil, oops.Wrapf(err, "invalid snyk-json issues")
 			}
 			if err := add("", list); err != nil {
 				return nil, err
@@ -221,13 +222,13 @@ func parseSnyk(out []byte, exitCode int) ([]externalFinding, error) {
 			}
 		}
 		if !recognised {
-			return nil, fmt.Errorf("not a snyk-json report (no issues list)")
+			return nil, oops.Errorf("not a snyk-json report (no issues list)")
 		}
 	default:
-		return nil, fmt.Errorf("invalid snyk-json: expected an object or a list")
+		return nil, oops.Errorf("invalid snyk-json: expected an object or a list")
 	}
 	if len(found) == 0 && exitCode != 0 {
-		return nil, fmt.Errorf("the scanner printed no issues and exited with status %d", exitCode)
+		return nil, oops.Errorf("the scanner printed no issues and exited with status %d", exitCode)
 	}
 	return found, nil
 }
