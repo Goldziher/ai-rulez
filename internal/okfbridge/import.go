@@ -521,7 +521,7 @@ func (p *planner) files(b *okf.Bundle) {
 		}
 		p.taken[strings.ToLower(target)] = f
 		p.targets[f] = target
-		p.out = append(p.out, planned{rel: target, kind: owner.kind, source: f, data: p.readFile(b, f), mode: b.Mode(f)})
+		p.out = append(p.out, planned{rel: target, kind: owner.kind, source: f, data: p.readFile(b, f), mode: b.Mode(f) & 0o755})
 	}
 }
 
