@@ -266,6 +266,28 @@ func WithPluginDrift(drift []PluginDrift) Option {
 	return func(r *runner) { r.drift = drift }
 }
 
+// newRunner builds the run state and its token counter.
+func newRunner(cfg *config.Config, tree *Tree, so Options) (*runner, error) {
+	counter, err := tokens.New("")
+	if err != nil {
+		return nil, fmt.Errorf("token counter: %w", err)
+	}
+	return &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so, cwd: so.Cwd,
+		deps: map[string]map[string]struct{}{}, names: map[string][]string{}}, nil
+}
+
+// selectAnalyzers chooses the analyzers to run: the caller's selection, the
+// config's, or the security analyzer alone for --security-only.
+func (r *runner) selectAnalyzers(so Options) {
+	r.sel = parseSelection(so.Analyzers)
+	if r.sel == nil {
+		r.sel = parseSelection(r.lc.Analyzers)
+	}
+	if so.SecurityOnly && r.sel == nil {
+		r.sel = map[string]bool{AnalyzerSecurity: true} // AR0xx is a subset of the security analyzer
+	}
+}
+
 // Run lints one loaded configuration against the repository tree.
 func Run(cfg *config.Config, tree *Tree, opts ...Option) (*Report, error) {
 	return RunWith(cfg, tree, Options{}, opts...)
@@ -274,12 +296,10 @@ func Run(cfg *config.Config, tree *Tree, opts ...Option) (*Report, error) {
 // RunWith is Run with the security and external-scanner options.
 func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Report, error) {
 	ruleTables() // the registry (and what its families set up) exists before any check runs
-	counter, err := tokens.New("")
+	r, err := newRunner(cfg, tree, so)
 	if err != nil {
-		return nil, fmt.Errorf("token counter: %w", err)
+		return nil, err
 	}
-	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so, cwd: so.Cwd,
-		deps: map[string]map[string]struct{}{}, names: map[string][]string{}}
 	for _, opt := range opts {
 		opt(r)
 	}
@@ -292,13 +312,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		r.baseRel = ""
 	}
 	r.resolveSettings()
-	r.sel = parseSelection(so.Analyzers)
-	if r.sel == nil {
-		r.sel = parseSelection(r.lc.Analyzers)
-	}
-	if so.SecurityOnly && r.sel == nil {
-		r.sel = map[string]bool{AnalyzerSecurity: true} // AR0xx is a subset of the security analyzer
-	}
+	r.selectAnalyzers(so)
 	r.collect()
 	for i := range r.items {
 		if r.items[i].owned {
@@ -655,7 +669,8 @@ func contentNames(kind string, cf config.ContentFile) []string {
 
 func (r *runner) addItems(configDir, kind, domain string, files []config.ContentFile) {
 	set := map[string]map[string]bool{kindSkill: r.skills, kindCommand: r.commands, kindAgent: r.agents, kindRule: r.rules, kindContext: r.contexts}[kind]
-	for _, cf := range files {
+	for i := range files {
+		cf := files[i]
 		abs, _ := filepath.Abs(cf.Path) //nolint:errcheck // keeps the raw path
 		rel, err := filepath.Rel(configDir, abs)
 		owned := err == nil && !strings.HasPrefix(rel, "..") && !strings.Contains(cf.Path, "://")
@@ -949,13 +964,15 @@ func (r *runner) checkDuplicates() {
 			continue
 		}
 		for i := 0; i < j; i++ {
-			if code, dup := compareDescriptions(entries[i], b, threshold); dup {
-				a := entries[i]
-				line := r.docs[b.it.abs].lineOf("description", 1)
-				r.dep(b.it.abs, a.it.abs) // the finding sits on b but exists because of a
-				r.add(code, b.it.abs, line, "description is %s %s %q (%s)", map[string]string{CodeDescriptionDup: "identical to", CodeDescriptionNearDup: "near-identical to"}[code], a.it.kind, itemID(a.it.kind, a.it.cf), r.display(a.it.abs))
-				break
+			code, dup := compareDescriptions(entries[i], b, threshold)
+			if !dup {
+				continue
 			}
+			a := entries[i]
+			line := r.docs[b.it.abs].lineOf("description", 1)
+			r.dep(b.it.abs, a.it.abs) // the finding sits on b but exists because of a
+			r.add(code, b.it.abs, line, "description is %s %s %q (%s)", map[string]string{CodeDescriptionDup: "identical to", CodeDescriptionNearDup: "near-identical to"}[code], a.it.kind, itemID(a.it.kind, a.it.cf), r.display(a.it.abs))
+			break
 		}
 	}
 }
@@ -1044,7 +1061,7 @@ func (r *runner) checkMCP() {
 // skill whose command is not on PATH.
 func (r *runner) checkFrontmatterMCPCommands() {
 	for _, s := range r.frontmatterMCPServers() {
-		if s.disabled || effectiveTransport(s) != "stdio" || s.command == "" || strings.Contains(s.command, "$") || r.commandResolves(s.command) {
+		if s.disabled || effectiveTransport(s) != transportStdio || s.command == "" || strings.Contains(s.command, "$") || r.commandResolves(s.command) {
 			continue
 		}
 		r.add(CodeMCPCommandNotFound, s.file, s.line, "MCP server %q runs %q, which is not on PATH", s.name, s.command)
@@ -1098,7 +1115,7 @@ func (r *runner) checkHooks(baseAbs string) {
 	for _, event := range events {
 		for _, group := range hf.Hooks[event] {
 			for _, h := range group.Hooks {
-				if h.Type != "" && h.Type != "command" {
+				if h.Type != "" && h.Type != hookTypeCommand {
 					continue
 				}
 				r.checkHookCommand(path, event, h.Command)

@@ -113,7 +113,8 @@ func collectItems(tree *config.ContentTree, include map[Kind]bool, localDir stri
 			}
 			files := append([]config.ContentFile(nil), lists[k]...)
 			sort.SliceStable(files, func(i, j int) bool { return itemID(k, files[i]) < itemID(k, files[j]) })
-			for _, cf := range files {
+			for i := range files {
+				cf := files[i]
 				if !isLocal(cf, localDir) {
 					foreign++
 					continue

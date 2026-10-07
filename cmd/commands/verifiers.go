@@ -198,13 +198,7 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(err)
 		return exitVerifiersCannotRun
 	}
-	if verifiersProfile != "" {
-		for i := range cfg.Verifiers {
-			if cfg.Verifiers[i].Type == config.VerifierGeneratedInSync && cfg.Verifiers[i].Profile == "" {
-				cfg.Verifiers[i].Profile = verifiersProfile
-			}
-		}
-	}
+	applyVerifierProfile(cfg)
 	if verifiersMaxCost < 0 {
 		fmtError(oops.Errorf("--max-cost must not be negative"))
 		return exitVerifiersCannotRun
@@ -251,6 +245,19 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		return exitVerifiersCannotRun
 	}
 	return 0
+}
+
+// applyVerifierProfile sets the active profile on the generated_in_sync
+// verifiers that name none.
+func applyVerifierProfile(cfg *config.Config) {
+	if verifiersProfile == "" {
+		return
+	}
+	for i := range cfg.Verifiers {
+		if cfg.Verifiers[i].Type == config.VerifierGeneratedInSync && cfg.Verifiers[i].Profile == "" {
+			cfg.Verifiers[i].Profile = verifiersProfile
+		}
+	}
 }
 
 // verifierRunOptions validates the run flags and builds the options.
@@ -385,17 +392,17 @@ func listVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		return 0
 	}
 	if len(rows) == 0 {
-		_, _ = io.WriteString(out, "No verifiers configured.\n")
+		_, _ = io.WriteString(out, "No verifiers configured.\n") //nolint:errcheck // terminal output
 		return 0
 	}
 	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	_, _ = io.WriteString(tw, "NAME\tTYPE\tSEVERITY\tENFORCES\tDESCRIPTION\n")
+	_, _ = io.WriteString(tw, "NAME\tTYPE\tSEVERITY\tENFORCES\tDESCRIPTION\n") //nolint:errcheck // flushed below
 	for _, r := range rows {
 		target := "-"
 		if r.Target != "" {
 			target = r.Target
 		}
-		_, _ = io.WriteString(tw, r.Name+"\t"+r.Type+"\t"+r.Severity+"\t"+target+"\t"+r.Description+"\n")
+		_, _ = io.WriteString(tw, r.Name+"\t"+r.Type+"\t"+r.Severity+"\t"+target+"\t"+r.Description+"\n") //nolint:errcheck // flushed below
 	}
 	if err := tw.Flush(); err != nil {
 		fmtError(oops.Wrapf(err, "write verifiers list"))
