@@ -51,7 +51,7 @@ func findingFor(findings []string, want string) bool {
 func findingTexts(t *testing.T) []string {
 	t.Helper()
 	var out []string
-	for _, f := range approvalFindingsFor(mustLoadConfig(t)) {
+	for _, f := range approvalFindingsFor(t.Context(), mustLoadConfig(t)) {
 		out = append(out, f.Code+" "+f.Message)
 	}
 	return out

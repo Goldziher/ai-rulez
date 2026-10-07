@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -180,7 +181,8 @@ func runCatalog(out io.Writer) error {
 	if err := checkCatalogFlags(); err != nil {
 		return err
 	}
-	cfg, err := loadConfigForCommand(cmdContext(), nil)
+	ctx := cmdContext()
+	cfg, err := loadConfigForCommand(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -193,10 +195,10 @@ func runCatalog(out io.Writer) error {
 	}
 	settings := resolveCatalogSettings(cfg)
 	if catalogHTMLDir != "" {
-		return runCatalogHTML(out, cfg, counter, settings)
+		return runCatalogHTML(ctx, out, cfg, counter, settings)
 	}
 	if catalogFormat == formatJSON && catalogSchemaFlag == govview.CatalogSchemaVersionV2 {
-		doc, err := buildCatalogV2(cfg, counter, settings)
+		doc, err := buildCatalogV2(ctx, cfg, counter, settings)
 		if err != nil {
 			return err
 		}
@@ -264,9 +266,9 @@ func resolveCatalogSettings(cfg *config.Config) catalogSettings {
 // buildCatalogV2 builds the version 2 catalog, linting the project in process
 // (the same engine as `validate --strict`). A lint that cannot run leaves the
 // lint fields out and says so; it never fails the catalog.
-func buildCatalogV2(cfg *config.Config, counter tokens.Counter, st catalogSettings) (*govview.CatalogDocV2, error) {
+func buildCatalogV2(ctx context.Context, cfg *config.Config, counter tokens.Counter, st catalogSettings) (*govview.CatalogDocV2, error) {
 	opts := govview.CatalogOptions{NoExcerpt: !st.Excerpt}
-	report, err := strictLint(cfg)
+	report, err := strictLint(ctx, cfg)
 	if err != nil {
 		logger.Warn("Catalog lint did not run", "error", err)
 		opts.LintReason = "the lint engine could not run"
@@ -276,7 +278,7 @@ func buildCatalogV2(cfg *config.Config, counter tokens.Counter, st catalogSettin
 	if err := addCatalogSignals(cfg, &opts); err != nil {
 		return nil, err
 	}
-	doc, err := govview.BuildCatalogV2(cfg, counter, Version, opts)
+	doc, err := govview.BuildCatalogV2(ctx, cfg, counter, Version, opts)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
@@ -286,8 +288,8 @@ func buildCatalogV2(cfg *config.Config, counter tokens.Counter, st catalogSettin
 	return doc, nil
 }
 
-func runCatalogHTML(out io.Writer, cfg *config.Config, counter tokens.Counter, st catalogSettings) error {
-	doc, err := buildCatalogV2(cfg, counter, st)
+func runCatalogHTML(ctx context.Context, out io.Writer, cfg *config.Config, counter tokens.Counter, st catalogSettings) error {
+	doc, err := buildCatalogV2(ctx, cfg, counter, st)
 	if err != nil {
 		return err
 	}

@@ -95,7 +95,7 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 		return nil, err
 	}
 	distRel := ""
-	top := gitutil.New(publishRunner).TopLevel(cfg.BaseDir) //nolint:contextcheck // gitutil probes without a context
+	top := gitutil.New(publishRunner).TopLevelContext(ctx, cfg.BaseDir)
 	if top != "" {
 		distRel = gitutil.RepoRelative(top, distAbs)
 		pc.repoPath = gitutil.RepoRelative(top, cfg.BaseDir)
@@ -105,14 +105,14 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 		return nil, publish.Errorf(publish.CodeSource, publish.ExitGate, "commit the changes (including the generated bundle), or pass --allow-dirty for a throwaway build",
 			"the source tree is dirty or has no commit")
 	}
-	if err := pc.checkBundleTracked(top); err != nil { //nolint:contextcheck // gitutil probes without a context
+	if err := pc.checkBundleTracked(ctx, top); err != nil {
 		return nil, err
 	}
 	if err := pc.resolveSourceRepo(); err != nil {
 		return nil, err
 	}
 
-	if pc.approval, err = approvalGate(cfg, opts.requireApproved); err != nil { //nolint:contextcheck // approval owners read git without a context
+	if pc.approval, err = approvalGate(ctx, cfg, opts.requireApproved); err != nil {
 		return nil, err
 	}
 	if opts.requireSignature && !publishSigning() {
@@ -142,16 +142,16 @@ func newPublishContext(ctx context.Context, cfg *config.Config, opts *publishOpt
 // checkBundleTracked fails when git does not track a bundle file: a gitignored
 // bundle passes the clean-tree check, but the commit a pinned index names would
 // not hold it. --allow-dirty turns the failure into a warning.
-func (pc *publishContext) checkBundleTracked(top string) error {
+func (pc *publishContext) checkBundleTracked(ctx context.Context, top string) error {
 	g := gitutil.New(publishRunner)
-	if top == "" || !g.IsRepo(pc.cfg.BaseDir) {
+	if top == "" || !g.IsRepoContext(ctx, pc.cfg.BaseDir) {
 		return nil // no repository: the dirty gate already decided
 	}
 	paths := make([]string, len(pc.pre.files))
 	for i, f := range pc.pre.files {
 		paths[i] = f.Path
 	}
-	tracked, err := g.TrackedAmong(pc.cfg.BaseDir, paths)
+	tracked, err := g.TrackedAmongContext(ctx, pc.cfg.BaseDir, paths)
 	if err != nil {
 		return nil //nolint:nilerr // a failing query is reported by the source and tree checks
 	}

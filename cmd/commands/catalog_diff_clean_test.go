@@ -67,7 +67,7 @@ func TestBuildDiffCatalog_SkipsPluginDrift(t *testing.T) {
 			t.Cleanup(func() { skipPluginDrift = false })
 
 			// Act
-			opts := governanceLintOptions(cfg, []string{lint.AnalyzerPlugin})
+			opts := governanceLintOptions(t.Context(), cfg, []string{lint.AnalyzerPlugin})
 
 			// Assert
 			assert.Len(t, opts, tt.want)

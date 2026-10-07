@@ -134,7 +134,7 @@ func TestScanDryRunPrintsThePlanAndRunsNothing(t *testing.T) {
 
 	var code int
 	stdout, _ := capture(t, func() {
-		report, lerr := strictLint(cfg)
+		report, lerr := strictLint(t.Context(), cfg)
 		if lerr != nil {
 			t.Error(lerr)
 			return

@@ -36,7 +36,7 @@ func loadStrictProject(t *testing.T, root string) *config.Config {
 func lintProject(t *testing.T, cfg *config.Config) *lint.Report {
 	t.Helper()
 	strictTreeCache = lint.Loader{}
-	report, err := strictLint(cfg)
+	report, err := strictLint(t.Context(), cfg)
 	require.NoError(t, err)
 	return report
 }
