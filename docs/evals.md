@@ -259,7 +259,7 @@ ai-rulez eval run --runner-command ./my-runner --grader builtin --allow-llm --gr
 - **Choose the model deliberately.** The grade is only as good as the judge. In a live comparison against Claude
   Code's own rubric grading on 24 real transcripts, `gemini-2.5-flash-lite` agreed on 79% (Cohen's kappa 0.60) and
   erred lenient (it passed a control rubric the answer plainly contradicted, and passed two answers that omitted a
-  required detail), while `gemini-2.5-flash` agreed on 96% (kappa 0.92). Check a cheap judge against a few labelled
+  required detail), while `gemini-2.5-flash` agreed on 96% (kappa 0.92). Check a cheap judge against a few labeled
   transcripts before trusting its pass rate.
 - **Runners.** The command runner must return `output`. `claude-plugin-eval` returns the answer its own llm grader
   read; with `--grader builtin` that tool still runs its grader (so the rubric is judged twice and the tool's verdict is

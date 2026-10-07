@@ -340,7 +340,7 @@ without examples are listed.
   skill's verifier can never use the `command` predicate, whatever `trust_exec_from` says.
 - An `llm` verdict is advisory and capped at `warning` unless the verifier is calibrated and the run passes
   `--gate-llm` (see [Calibrating llm verifiers](#calibrating-llm-verifiers)). The record is a lighter cousin of the review
-  calibration: it measures precision and recall of the `fail` verdict on labelled examples, not agreement or consistency.
+  calibration: it measures precision and recall of the `fail` verdict on labeled examples, not agreement or consistency.
 
 ## Local overlay
 

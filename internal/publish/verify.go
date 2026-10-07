@@ -202,7 +202,7 @@ func expectedAttachmentNames(m Manifest) bool {
 // verifyAttestation checks the signed release statement, which binds the name,
 // version and the archive, lock and SBOM digests the archive signature alone
 // does not. A signed release without one cannot be trusted: its manifest could
-// have been relabelled.
+// have been relabeled.
 func verifyAttestation(dir string, m Manifest, checks VerifyChecks, res *VerifyResult) bool {
 	att := m.Signature.Attestation
 	if att == "" {
@@ -568,7 +568,7 @@ var pluginManifestFiles = []string{
 }
 
 // checkInArchiveIdentity compares the name and version the archive's own
-// runtime manifests carry with the release manifest's: a manifest relabelled
+// runtime manifests carry with the release manifest's: a manifest relabeled
 // after the archive was built (an old archive under a new version, or another
 // plugin's under this name) is a mismatch.
 func checkInArchiveIdentity(m Manifest, manifests map[string][]byte, res *VerifyResult) {
