@@ -173,7 +173,10 @@ func verify(src, out []byte, table, name, key, constraint string) error {
 	if err := toml.NewDecoder(bytes.NewReader(out)).Decode(&after); err != nil {
 		return oops.Wrapf(err, "the patched config.toml does not parse")
 	}
-	entries, _ := before[table].([]any)
+	entries, ok := before[table].([]any)
+	if !ok {
+		return oops.Errorf("config.toml has no [[%s]] entries; edit it by hand", table)
+	}
 	set := 0
 	for _, e := range entries {
 		if m, ok := e.(map[string]any); ok && m["name"] == name {
