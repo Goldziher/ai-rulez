@@ -23,11 +23,12 @@ v5`", 4.x says "run `ai-rulez migrate v5`".
 | ---- | ------- |
 | `version` | `version = "4.x"` becomes `version = "5.0"`, keeping the rest of the line (including a trailing comment). |
 | `convert-format` | A 4.x `config.yaml`, `config.yml` or `config.json` is converted to `config.toml` with keys, order and comments kept, and the old file is removed. The `$schema` key becomes `schema`. |
-| `lint-ratchet` | `[lint.budget]` is renamed `[lint.ratchet]` (per-rule finding counts). `[lint.budgets.<kind>]` (size limits) is unchanged. |
+| `lint-ratchet` | `[lint.budget]` and `[lint.tolerate]` are renamed `[lint.ratchet]` (per-rule finding counts). `[lint.budgets.<kind>]` (size limits) is unchanged. |
+| `preset-rename` | The `windsurf` preset becomes `devin` (outputs move from `.windsurf/` to `.devin/`, delete the old directory) and the removed `continue-dev` preset is dropped. With `--write`, `windsurf_model` in agent frontmatter becomes `devin_model`. |
 | `mcp-merge` | A legacy `mcp.toml`, `mcp.yaml` or `mcp.json` (4.x read the first of them) is folded into `[[mcp_servers]]` of `config.toml` and removed. When `config.toml` already defines `mcp_servers`, nothing is merged: the file is left in place and the report warns, so you can move the servers over by hand. |
 | `pin-default` | The three defaults v5 changes are pinned to their 4.x value so the generated output does not move: `agents_md = false`, `gitignore = true` and `[header] hashes = "full"`. Each pin carries a comment; delete the line to take the v5 default. A key you already set is never touched. |
 | `local-overlay` | `config.local.yaml`, `.yml` and `.json` become `config.local.toml` (mode 0600). |
-| `command-rename` | `ai-rulez usage ...` and `ai-rulez report usage|evals` inside hook, verifier and script commands become `ai-rulez telemetry ...`. |
+| `command-rename` | `ai-rulez usage ...` (`hook`, `record`, `feedback`, `export`, `prune`) and `ai-rulez report usage|evals` inside hook, verifier and script commands become `ai-rulez telemetry ...`. |
 | `frontmatter-alias` | The pre-4.24 frontmatter spellings `permission_mode` and `user_invocable` (Claude Code ignores them) become `permissionMode` and `user-invocable`. Without `--write` they are only reported; with it the markdown sources are rewritten. |
 
 Options:
@@ -45,9 +46,8 @@ A migrated project is a fixed point: running `migrate v5` again changes nothing.
 comments survive, and the result is decoded again before it is written; a file that would not load is reported and
 left alone. Exit codes: 0 migrated or nothing to do, 1 a project could not be migrated, 2 `--check` found work.
 
-`config.json` is still a loadable config format in v5 (with `"version": "5.0"`); `migrate` converts it to
-`config.toml` like a YAML file, because TOML is the format `init`, the docs and the tooling write. YAML is gone, see
-below.
+YAML and JSON configs are not loaded in v5 (only `config.toml` is), so `migrate` converts a `config.yaml`,
+`config.yml` or `config.json` to `config.toml`; see below.
 
 ## Breaking changes
 
@@ -58,10 +58,10 @@ Each entry says what changed, what `migrate v5` does, and what remains for you.
 - **`version = "5.0"` is the only accepted config version.** A `4.x` config is rejected with
   `run ai-rulez migrate v5`; `2.x`/`3.x` with the instruction to install ai-rulez 4.x first.
   *Migrate:* rewrites the version.
-- **YAML configs are no longer loaded** (`config.yaml`, `config.yml`, `config.local.yaml`, `config.local.yml`,
-  and the YAML form of `mcp.*`). Any command that finds one stops with `YAML configs are no longer loaded ...:
-  run ai-rulez migrate v5`. *Migrate:* converts them to TOML. The YAML frontmatter of markdown content is
-  unaffected.
+- **YAML and JSON configs are no longer loaded** (`config.yaml`, `config.yml`, `config.json`, the
+  `config.local.*` forms and the YAML or JSON form of `mcp.*`). Any command that finds one stops with `YAML and JSON
+  configs are no longer read ...: run ai-rulez migrate v5`. *Migrate:* converts them to TOML. The YAML frontmatter of
+  markdown content is unaffected.
 - **Separate `mcp.toml`, `mcp.yaml`, `mcp.json` files are no longer read.** *Migrate:* merges them into
   `config.toml`. `ai-rules-mcp.schema.json` is removed.
 - **`init --format yaml|json` is removed**; `init` writes `config.toml`.
