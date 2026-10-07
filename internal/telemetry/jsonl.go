@@ -22,7 +22,8 @@ func (j JSONL) Emit(_ context.Context, event *Event) error {
 		line []byte
 		err  error
 	)
-	if event.Kind == KindSkill {
+	// A list or search is not a skill use, so it never becomes a skill_invoked line.
+	if event.Kind == KindSkill && event.ID != ListID {
 		entry := ToUsageEntry(event)
 		line, err = json.Marshal(entry)
 	} else {
