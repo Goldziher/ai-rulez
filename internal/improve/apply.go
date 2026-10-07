@@ -19,7 +19,7 @@ import (
 
 // runIDPattern is the only shape of run id Apply accepts, so a run id can never
 // name a path outside the improve directory.
-var runIDPattern = regexp.MustCompile(`^imp-[0-9a-f]{8}(-[0-9]+)?$`)
+var runIDPattern = regexp.MustCompile(`^imp-[0-9a-f]{8}(-\d+)?$`)
 
 // ValidRunID reports whether s is a well-formed run id.
 func ValidRunID(s string) bool { return runIDPattern.MatchString(s) }
@@ -53,11 +53,11 @@ func LoadReport(configDir, runID string) (*Report, string, error) {
 	return r, dir, err
 }
 
-func loadReport(configDir, runID string) (*Report, string, []byte, error) {
+func loadReport(configDir, runID string) (report *Report, dir string, raw []byte, err error) {
 	if !ValidRunID(runID) {
 		return nil, "", nil, refuse("", "%q is not a run id (expected imp-<8 hex digits>, optionally followed by -<n>, e.g. imp-bfc748ff or imp-bfc748ff-2)", runID)
 	}
-	dir := filepath.Join(configDir, LocalDir, runID)
+	dir = filepath.Join(configDir, LocalDir, runID)
 	data, err := safefs.ReadRegular(filepath.Join(dir, "report.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -66,13 +66,47 @@ func loadReport(configDir, runID string) (*Report, string, []byte, error) {
 		return nil, "", nil, fmt.Errorf("read report: %w", err)
 	}
 	var r Report
-	if err := json.Unmarshal(data, &r); err != nil {
+	if err = json.Unmarshal(data, &r); err != nil {
 		return nil, "", nil, refuse("", "report.json of %s is not valid: %v", runID, err)
 	}
 	if r.Schema != ReportSchema || r.RunID != runID {
 		return nil, "", nil, refuse("", "report.json of %s has schema %q and run id %q: not a report of this run", runID, r.Schema, r.RunID)
 	}
 	return &r, dir, data, nil
+}
+
+// verifyApplyTarget checks the live skill still matches what the run measured and the candidate files are
+// intact, then reads both trees.
+func verifyApplyTarget(opts *ApplyOptions, report *Report, dir string) (live evals.Skill, orig, cand *Tree, err error) {
+	skills, err := evals.FindSkills(opts.ConfigDir)
+	if err != nil {
+		return live, nil, nil, fmt.Errorf("list skills: %w", err)
+	}
+	idx := slices.IndexFunc(skills, func(s evals.Skill) bool { return s.ID == report.Skill })
+	if idx < 0 {
+		return live, nil, nil, refuse("", "the skill %q of run %s no longer exists", report.Skill, opts.RunID)
+	}
+	live = skills[idx]
+	if info, statErr := os.Lstat(live.Dir); statErr != nil || !info.IsDir() {
+		return live, nil, nil, refuse("", "%s is not a plain directory: improve apply will not write through it", live.Dir)
+	}
+	if now, digestErr := evals.SkillDigest(live.Dir); digestErr != nil || now != report.OriginalDigest {
+		return live, nil, nil, refuse(CodeRunStale, "%s changed since run %s measured it: run `ai-rulez improve run %s` again", report.Skill, opts.RunID, report.Skill)
+	}
+	candDir := filepath.Join(dir, "rounds", fmt.Sprint(report.AcceptedRound), "candidate", report.Skill)
+	if got, digestErr := evals.SkillDigest(candDir); digestErr != nil || got != report.CandidateDigest {
+		return live, nil, nil, refuse("", "the candidate files of run %s changed after the run (digest mismatch): refusing to apply them", opts.RunID)
+	}
+	if cand, err = ReadTree(candDir); err != nil {
+		return live, nil, nil, err
+	}
+	if orig, err = ReadTree(live.Dir); err != nil {
+		return live, nil, nil, err
+	}
+	if len(orig.Odd) > 0 {
+		return live, nil, nil, refuse("", "%s contains symlinks, hard links or oversized files: improve apply will not write into it", live.Dir)
+	}
+	return live, orig, cand, nil
 }
 
 // Apply writes the accepted candidate of a saved run into the authored skill.
@@ -89,35 +123,9 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 	if !report.Accepted() {
 		return nil, refuse("", "run %s has no accepted candidate (%s): nothing to apply", opts.RunID, report.Reason)
 	}
-	skills, err := evals.FindSkills(opts.ConfigDir)
-	if err != nil {
-		return nil, fmt.Errorf("list skills: %w", err)
-	}
-	idx := slices.IndexFunc(skills, func(s evals.Skill) bool { return s.ID == report.Skill })
-	if idx < 0 {
-		return nil, refuse("", "the skill %q of run %s no longer exists", report.Skill, opts.RunID)
-	}
-	live := skills[idx]
-	if info, err := os.Lstat(live.Dir); err != nil || !info.IsDir() {
-		return nil, refuse("", "%s is not a plain directory: improve apply will not write through it", live.Dir)
-	}
-	if now, err := evals.SkillDigest(live.Dir); err != nil || now != report.OriginalDigest {
-		return nil, refuse(CodeRunStale, "%s changed since run %s measured it: run `ai-rulez improve run %s` again", report.Skill, opts.RunID, report.Skill)
-	}
-	candDir := filepath.Join(dir, "rounds", fmt.Sprint(report.AcceptedRound), "candidate", report.Skill)
-	if got, err := evals.SkillDigest(candDir); err != nil || got != report.CandidateDigest {
-		return nil, refuse("", "the candidate files of run %s changed after the run (digest mismatch): refusing to apply them", opts.RunID)
-	}
-	cand, err := ReadTree(candDir)
+	live, orig, cand, err := verifyApplyTarget(opts, report, dir)
 	if err != nil {
 		return nil, err
-	}
-	orig, err := ReadTree(live.Dir)
-	if err != nil {
-		return nil, err
-	}
-	if len(orig.Odd) > 0 {
-		return nil, refuse("", "%s contains symlinks, hard links or oversized files: improve apply will not write into it", live.Dir)
 	}
 	counter := opts.Counter
 	if counter == nil {
@@ -137,18 +145,9 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 	if out == nil {
 		out = io.Discard
 	}
-	fmt.Fprintf(out, "Run %s: %s, round %d accepted\n", report.RunID, Sanitize(report.Skill, 120), report.AcceptedRound)
-	if round := acceptedRound(report); round != nil && round.Held != nil {
-		fmt.Fprintf(out, "Held-out pass rate %.0f%% -> %.0f%% (%+.1f points), %d win(s), %d loss(es)\n",
-			round.Held.Base.PassRate*100, round.Held.Cand.PassRate*100, round.Held.Gain*100, len(round.Held.Wins), len(round.Held.Losses))
-		if n := heldEvaluations(report); n > 1 {
-			fmt.Fprintf(out, "Selected among %d held-out evaluations: the gain is optimistic.\n", n)
-		}
-		if round.Held.Underpowered {
-			fmt.Fprintln(out, "Underpowered: few held-out cases, treat the gain as weak evidence.")
-		}
+	if err := printApplyPreview(out, report, patch); err != nil {
+		return nil, err
 	}
-	fmt.Fprintf(out, "\n%s\n", SanitizeMultiline(patch)) // the candidate is untrusted text: no terminal escapes
 	if !opts.Yes && (opts.Confirm == nil || !opts.Confirm(fmt.Sprintf("Write this change into %s?", Sanitize(report.SkillPath, 200)))) {
 		return nil, refuse("", "not confirmed: nothing was written (use --yes to skip the prompt)")
 	}
@@ -158,8 +157,33 @@ func Apply(_ context.Context, opts *ApplyOptions) (*ApplyResult, error) {
 	if err != nil {
 		return res, err
 	}
-	fmt.Fprintf(out, "Wrote %d file(s), removed %d. Nothing was committed. Next:\n  ai-rulez lock\n  ai-rulez eval run %s\n  ai-rulez validate --strict\n", len(res.Written), len(res.Removed), Sanitize(report.Skill, 120))
-	return res, nil
+	_, err = fmt.Fprintf(out, "Wrote %d file(s), removed %d. Nothing was committed. Next:\n  ai-rulez lock\n  ai-rulez eval run %s\n  ai-rulez validate --strict\n", len(res.Written), len(res.Removed), Sanitize(report.Skill, 120))
+	return res, err
+}
+
+// printApplyPreview writes the run summary and the patch the user is about to confirm.
+func printApplyPreview(out io.Writer, report *Report, patch string) error {
+	if _, err := fmt.Fprintf(out, "Run %s: %s, round %d accepted\n", report.RunID, Sanitize(report.Skill, 120), report.AcceptedRound); err != nil {
+		return err
+	}
+	if round := acceptedRound(report); round != nil && round.Held != nil {
+		if _, err := fmt.Fprintf(out, "Held-out pass rate %.0f%% -> %.0f%% (%+.1f points), %d win(s), %d loss(es)\n",
+			round.Held.Base.PassRate*100, round.Held.Cand.PassRate*100, round.Held.Gain*100, len(round.Held.Wins), len(round.Held.Losses)); err != nil {
+			return err
+		}
+		if n := heldEvaluations(report); n > 1 {
+			if _, err := fmt.Fprintf(out, "Selected among %d held-out evaluations: the gain is optimistic.\n", n); err != nil {
+				return err
+			}
+		}
+		if round.Held.Underpowered {
+			if _, err := fmt.Fprintln(out, "Underpowered: few held-out cases, treat the gain as weak evidence."); err != nil {
+				return err
+			}
+		}
+	}
+	_, err := fmt.Fprintf(out, "\n%s\n", SanitizeMultiline(patch)) // the candidate is untrusted text: no terminal escapes
+	return err
 }
 
 // heldEvaluations counts the rounds that scored a candidate on the held-out set: best-of-N selection over
@@ -244,5 +268,5 @@ func removeAndEmptyParents(dir, path string) error {
 			break
 		}
 	}
-	return nil
+	return nil //nolint:nilerr // best-effort: a parent that cannot be removed is not empty or not ours, which is fine
 }

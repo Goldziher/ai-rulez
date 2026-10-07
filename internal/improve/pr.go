@@ -112,12 +112,7 @@ func branchName(skill, digest string) string {
 // installed, pushes and opens the pull request with fixed gh arguments. improve pr itself makes no network
 // call; the generate and lock it runs may fetch remote includes. The change is never approved: the pull request says so.
 func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
-	if opts.Out == nil {
-		opts.Out = io.Discard
-	}
-	if opts.Remote == "" {
-		opts.Remote = DefaultRemote
-	}
+	opts.applyDefaults()
 	p, err := loadPRRun(opts)
 	if err != nil {
 		return nil, err
@@ -134,31 +129,17 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 		return nil, err
 	}
 	g := opts.Git
-	top := g.TopLevel(opts.RepoDir)
+	top := g.TopLevel(opts.RepoDir) //nolint:contextcheck // gitutil.Git.TopLevel takes no context; the fix belongs in gitutil
 	if top == "" {
 		return nil, refuse(CodePRRefused, "%s is not inside a git repository: improve pr needs one to make a worktree", opts.RepoDir)
 	}
-	base := opts.Base
-	if base == "" {
-		if base = g.CurrentBranch(ctx, opts.RepoDir); base == "" {
-			return nil, refuse(CodePRRefused, "HEAD is detached: pass --base BRANCH")
-		}
-	}
-	if _, err := g.CommitOf(ctx, top, base); err != nil {
-		return nil, refuse(CodePRRefused, "the base %q is not a commit of this repository: %v", base, err)
-	}
-	branch := branchName(p.report.Skill, p.report.CandidateDigest)
-	if g.BranchExists(ctx, top, branch) {
-		return nil, refuse(CodePRRefused, "the branch %s already exists: delete it (git branch -D %s) or open the pull request from it", branch, branch)
-	}
-	scratch, err := os.MkdirTemp("", "ai-rulez-improve-pr-")
+	base, branch, err := p.chooseBranches(ctx, opts, top)
 	if err != nil {
-		return nil, fmt.Errorf("create the worktree directory: %w", err)
+		return nil, err
 	}
-	wt := filepath.Join(scratch, "wt")
-	if err := g.WorktreeAdd(ctx, top, wt, branch, base); err != nil {
-		_ = os.RemoveAll(scratch) //nolint:errcheck // a temp directory
-		return nil, refuse(CodePRRefused, "create the worktree: %v", err)
+	scratch, wt, err := addTempWorktree(ctx, g, top, branch, base)
+	if err != nil {
+		return nil, err
 	}
 	committed := false
 	tmp := tempWorktree{g: g, top: top, wt: wt, scratch: scratch, branch: branch}
@@ -177,7 +158,9 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 	res = &PRResult{Branch: branch, Base: base, BodyFile: bodyFile}
 	if confinement != nil {
 		res.Isolation = &confinement.report
-		fmt.Fprintln(opts.Out, confinement.line())
+		if _, err = fmt.Fprintln(opts.Out, confinement.line()); err != nil {
+			return nil, err
+		}
 	}
 	if err := p.refresh(ctx, opts, projDir, relProject, res); err != nil {
 		return nil, err
@@ -186,8 +169,33 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 		return nil, err
 	}
 	committed = true
-	fmt.Fprintf(opts.Out, "Committed %s on %s (from %s); your checkout was not touched.\n", res.Commit[:min(12, len(res.Commit))], branch, base)
+	if _, err = fmt.Fprintf(opts.Out, "Committed %s on %s (from %s); your checkout was not touched.\n", res.Commit[:min(12, len(res.Commit))], branch, base); err != nil {
+		return res, err
+	}
 	return res, p.publish(ctx, opts, top, res)
+}
+
+// addTempWorktree makes a linked worktree of base on a new branch in a fresh temporary directory.
+func addTempWorktree(ctx context.Context, g gitutil.Git, top, branch, base string) (scratch, wt string, err error) {
+	if scratch, err = os.MkdirTemp("", "ai-rulez-improve-pr-"); err != nil {
+		return "", "", fmt.Errorf("create the worktree directory: %w", err)
+	}
+	wt = filepath.Join(scratch, "wt")
+	if err = g.WorktreeAdd(ctx, top, wt, branch, base); err != nil {
+		_ = os.RemoveAll(scratch) //nolint:errcheck // a temp directory
+		return "", "", refuse(CodePRRefused, "create the worktree: %v", err)
+	}
+	return scratch, wt, nil
+}
+
+// applyDefaults fills the output writer and the remote name when the caller left them empty.
+func (o *PROptions) applyDefaults() {
+	if o.Out == nil {
+		o.Out = io.Discard
+	}
+	if o.Remote == "" {
+		o.Remote = DefaultRemote
+	}
 }
 
 // tempWorktree is the temporary worktree of a pull request and the branch made for it.
@@ -233,6 +241,26 @@ type prRun struct {
 	configRel string
 	// confinement is how the worktree commands are confined, nil when they run as before.
 	confinement *prConfinement
+}
+
+// chooseBranches resolves the base the pull request targets and names the branch it is made on, refusing a
+// base that is not a commit and a branch that already exists.
+func (p *prRun) chooseBranches(ctx context.Context, opts *PROptions, top string) (base, branch string, err error) {
+	g := opts.Git
+	base = opts.Base
+	if base == "" {
+		if base = g.CurrentBranch(ctx, opts.RepoDir); base == "" {
+			return "", "", refuse(CodePRRefused, "HEAD is detached: pass --base BRANCH")
+		}
+	}
+	if _, err = g.CommitOf(ctx, top, base); err != nil {
+		return "", "", refuse(CodePRRefused, "the base %q is not a commit of this repository: %v", base, err)
+	}
+	branch = branchName(p.report.Skill, p.report.CandidateDigest)
+	if g.BranchExists(ctx, top, branch) {
+		return "", "", refuse(CodePRRefused, "the branch %s already exists: delete it (git branch -D %s) or open the pull request from it", branch, branch)
+	}
+	return base, branch, nil
 }
 
 func loadPRRun(opts *PROptions) (*prRun, error) {
@@ -359,19 +387,19 @@ func plainPath(root, target string) error {
 func (p *prRun) refresh(ctx context.Context, opts *PROptions, projDir, relProject string, res *PRResult) error {
 	if len(opts.Self) == 0 {
 		res.Refreshed = nil
-		fmt.Fprintln(opts.Out, "note: ai-rulez was not found to re-run itself, so the generated outputs, the lock and the eval results were not refreshed: run `ai-rulez generate` and `ai-rulez lock` on the branch")
-		return nil
+		_, err := fmt.Fprintln(opts.Out, "note: ai-rulez was not found to re-run itself, so the generated outputs, the lock and the eval results were not refreshed: run `ai-rulez generate` and `ai-rulez lock` on the branch")
+		return err
 	}
 	_, lockErr := os.Stat(filepath.Join(projDir, p.configRel, lockfile.FileName))
 	hasLock := lockErr == nil
-	steps := [][]string{{"generate", "--yes"}}
+	steps := [][]string{{stepGenerate, "--yes"}}
 	if hasLock {
 		steps = append(steps, []string{"lock"})
 	}
 	if opts.RunEvals {
 		steps = append(steps, append([]string{"eval", "run", p.report.Skill, "--changed-only"}, opts.EvalArgs...))
-	} else {
-		fmt.Fprintf(opts.Out, "note: eval results were not refreshed (they cost model calls): run `ai-rulez eval run %s --changed-only` on the branch, or pass --run-evals\n", p.report.Skill)
+	} else if _, err := fmt.Fprintf(opts.Out, "note: eval results were not refreshed (they cost model calls): run `ai-rulez eval run %s --changed-only` on the branch, or pass --run-evals\n", p.report.Skill); err != nil {
+		return err
 	}
 	run := runner.Or(opts.Exec)
 	for _, args := range steps {
@@ -383,19 +411,24 @@ func (p *prRun) refresh(ctx context.Context, opts *PROptions, projDir, relProjec
 		r := run.Run(ctx, runner.Spec{Argv: argv, Dir: projDir, Env: opts.Env, Timeout: refreshTimeout})
 		if r.Status != runner.StatusOK {
 			why := fmt.Sprintf("`ai-rulez %s` failed in the worktree (%s, exit %d): %s", strings.Join(args, " "), r.Status, r.ExitCode, Sanitize(string(r.Stderr)+string(r.Stdout), 600))
-			if args[0] == "generate" && !hasLock {
-				fmt.Fprintf(opts.Out, "warning: %s; the generated outputs were not refreshed: run `ai-rulez generate` on the branch if the project commits them\n", why)
+			if args[0] == stepGenerate && !hasLock {
+				if _, err = fmt.Fprintf(opts.Out, "warning: %s; the generated outputs were not refreshed: run `ai-rulez generate` on the branch if the project commits them\n", why); err != nil {
+					return err
+				}
 				continue
 			}
 			return refuse(CodePRRefused, "%s", why)
 		}
 		res.Refreshed = append(res.Refreshed, "ai-rulez "+strings.Join(args, " "))
-		if args[0] == "generate" {
+		if args[0] == stepGenerate {
 			p.generated = p.committedOutputs(ctx, opts, projDir, relProject)
 		}
 	}
 	return nil
 }
+
+// stepGenerate is the ai-rulez subcommand that refreshes the generated outputs in the worktree.
+const stepGenerate = "generate"
 
 // manifestName is the file `generate` writes next to the config to list the outputs it made.
 const manifestName = ".generated-manifest.json"
@@ -407,24 +440,12 @@ const maxManifestBytes = 4 << 20
 // manifest, when git tracks at least one of them at the base (the project commits its outputs). A project that
 // gitignores them gets none, so a pull request never adds generated files the project does not commit.
 func (p *prRun) committedOutputs(ctx context.Context, opts *PROptions, projDir, relProject string) []string {
-	data, err := readBounded(filepath.Join(projDir, p.configRel, manifestName), maxManifestBytes)
-	if err != nil {
+	files := p.manifestFiles(projDir)
+	if files == nil {
 		return nil
-	}
-	var m struct {
-		Files []string `json:"files"`
-	}
-	if json.Unmarshal(data, &m) != nil {
-		return nil
-	}
-	var files []string
-	for _, f := range m.Files {
-		if f != "" && filepath.IsLocal(filepath.FromSlash(f)) {
-			files = append(files, filepath.ToSlash(filepath.Clean(filepath.FromSlash(f))))
-		}
 	}
 	manifestRel := filepath.ToSlash(filepath.Join(p.configRel, manifestName))
-	tracked, err := opts.Git.TrackedAmong(projDir, append(files, manifestRel))
+	tracked, err := opts.Git.TrackedAmong(projDir, append(files, manifestRel)) //nolint:contextcheck // gitutil.Git.TrackedAmong takes no context; the fix belongs in gitutil
 	if err != nil {
 		return nil
 	}
@@ -437,7 +458,7 @@ func (p *prRun) committedOutputs(ctx context.Context, opts *PROptions, projDir, 
 	}
 	// git add refuses a gitignored path, so an output the project does not commit (next to ones it does) is
 	// dropped; a tracked file stays even when a pattern matches it.
-	ignored, err := opts.Git.IgnoredAmong(projDir, files)
+	ignored, err := opts.Git.IgnoredAmong(projDir, files) //nolint:contextcheck // gitutil.Git.IgnoredAmong takes no context; the fix belongs in gitutil
 	if err != nil {
 		return nil
 	}
@@ -454,6 +475,28 @@ func (p *prRun) committedOutputs(ctx context.Context, opts *PROptions, projDir, 
 		out = append(out, filepath.ToSlash(filepath.Join(relProject, filepath.FromSlash(manifestRel))))
 	}
 	return out
+}
+
+// manifestFiles returns the local, cleaned, slash-separated outputs the generate manifest lists, or nil when
+// the manifest is missing or unreadable.
+func (p *prRun) manifestFiles(projDir string) []string {
+	data, err := readBounded(filepath.Join(projDir, p.configRel, manifestName), maxManifestBytes)
+	if err != nil {
+		return nil
+	}
+	var m struct {
+		Files []string `json:"files"`
+	}
+	if json.Unmarshal(data, &m) != nil {
+		return nil
+	}
+	var files []string
+	for _, f := range m.Files {
+		if f != "" && filepath.IsLocal(filepath.FromSlash(f)) {
+			files = append(files, filepath.ToSlash(filepath.Clean(filepath.FromSlash(f))))
+		}
+	}
+	return files
 }
 
 func readBounded(path string, limit int64) ([]byte, error) {
@@ -511,8 +554,8 @@ func (p *prRun) publish(ctx context.Context, opts *PROptions, top string, res *P
 	}
 	res.Commands = []string{"git push --set-upstream " + opts.Remote + " " + res.Branch, shellQuote(prArgs)}
 	manual := func(why string) error {
-		fmt.Fprintf(opts.Out, "%s Run by hand:\n  %s\n  %s\n", why, res.Commands[0], res.Commands[1])
-		return nil
+		_, err := fmt.Fprintf(opts.Out, "%s Run by hand:\n  %s\n  %s\n", why, res.Commands[0], res.Commands[1])
+		return err
 	}
 	look := opts.LookPath
 	if look == nil {
@@ -547,8 +590,8 @@ func (p *prRun) publish(ctx context.Context, opts *PROptions, top string, res *P
 			res.URL = Sanitize(line, 300)
 		}
 	}
-	fmt.Fprintf(opts.Out, "Opened the pull request: %s\nIt is not approved: review the full diff.\n", orElse(res.URL, "(gh printed no URL)"))
-	return nil
+	_, err := fmt.Fprintf(opts.Out, "Opened the pull request: %s\nIt is not approved: review the full diff.\n", orElse(res.URL, "(gh printed no URL)"))
+	return err
 }
 
 // baseProblem says why the pull request cannot target base on the remote: it is not a branch the remote
@@ -668,8 +711,8 @@ func resolvePRIsolation(ctx context.Context, opts *PROptions) (*prConfinement, e
 	}
 	c := &prConfinement{report: IsolationReport{Mode: string(mode)}}
 	if !confine {
-		fmt.Fprintf(opts.Out, "warning: %s isolation: no sandbox backend works on this system, so the commands run in the worktree run unconfined (--isolation require refuses instead)\n", CodeIsolationUnavailable)
-		return c, nil
+		_, err = fmt.Fprintf(opts.Out, "warning: %s isolation: no sandbox backend works on this system, so the commands run in the worktree run unconfined (--isolation require refuses instead)\n", CodeIsolationUnavailable)
+		return c, err
 	}
 	// Ask the backend what it really enforces now, so the statement printed before anything runs is true.
 	w, werr := sb.Wrap(sandbox.Spec{WriteDirs: []string{os.TempDir()}, AllowNetwork: true}, []string{"true"})

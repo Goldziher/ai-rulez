@@ -44,18 +44,21 @@ func EffectiveGrowth(growth float64) float64 {
 	return growth
 }
 
+// frontmatterName is the frontmatter key that names a skill.
+const frontmatterName = "name"
+
 // ConstraintsFor is DefaultConstraints with an explicit growth factor
 // ([improve] max_skill_growth); a factor outside [1, MaxGrowthLimit] falls back to the default.
 func ConstraintsFor(origTokens int, growth float64, allowFrontmatter, allowScripts bool) Constraints {
 	growth = EffectiveGrowth(growth)
 	c := Constraints{
 		Editable:             []string{skillFile, "references/**"},
-		FrontmatterImmutable: []string{"name", "allowed-tools", "disable-model-invocation", "model"},
+		FrontmatterImmutable: []string{frontmatterName, "allowed-tools", "disable-model-invocation", "model"},
 		Forbid:               []string{"scripts/**", "assets/**"},
 		MaxSkillTokens:       int(math.Ceil(float64(origTokens) * growth)),
 	}
 	if allowFrontmatter {
-		c.FrontmatterImmutable = []string{"name"}
+		c.FrontmatterImmutable = []string{frontmatterName}
 	}
 	if allowScripts {
 		c.Editable = append(c.Editable, "scripts/**", "assets/**")
@@ -214,7 +217,10 @@ func Description(data []byte) string {
 	if !ok {
 		return ""
 	}
-	s, _ := fm["description"].(string)
+	s, isString := fm["description"].(string)
+	if !isString {
+		return ""
+	}
 	return strings.TrimSpace(s)
 }
 

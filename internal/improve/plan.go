@@ -278,6 +278,11 @@ func checkSettings(o *Options) error {
 	case o.MaxRegressions < 0:
 		return refuse("", "--max-regressions must be >= 0, got %d", o.MaxRegressions)
 	}
+	return checkEgressSettings(o)
+}
+
+// checkEgressSettings validates --env-pass and --egress.
+func checkEgressSettings(o *Options) error {
 	for _, name := range o.EnvPass {
 		if !runner.ValidEnvName(name) {
 			return refuse("", "--env-pass %q is not a valid environment variable name", name)
@@ -357,12 +362,12 @@ func (p *Plan) checkClean(all []evals.Skill) error {
 	}
 	if _, err := git(p.Opts.RepoDir, "rev-parse", "--show-toplevel"); err != nil {
 		p.Warnings = append(p.Warnings, "not a git repository: could not verify that the skill has no uncommitted changes")
-		return nil
+		return nil //nolint:nilerr // outside a git repository the check only warns
 	}
 	changed, err := evals.ChangedSkills(git, p.Opts.RepoDir, "HEAD", all)
 	if err != nil {
 		p.Warnings = append(p.Warnings, "could not verify that the skill has no uncommitted changes: "+err.Error())
-		return nil
+		return nil //nolint:nilerr // an unverifiable state is reported as a warning, as documented above
 	}
 	if changed[p.Skill.ID] {
 		return refuse("", "%s has uncommitted changes (including its eval cases): commit or stash them so the baseline is reproducible", p.Skill.ID)

@@ -94,13 +94,15 @@ func IDs(authored []evals.Case) []string {
 // prompt through its train copy.
 func DuplicatePrompts(train, held []evals.Case) []string {
 	seen := map[string]bool{}
-	for _, c := range evals.Expand(held) {
-		seen[normalizePrompt(c.Prompt)] = true
+	heldCases := evals.Expand(held)
+	for i := range heldCases {
+		seen[normalizePrompt(heldCases[i].Prompt)] = true
 	}
 	var dup []string
-	for _, c := range evals.Expand(train) {
-		if seen[normalizePrompt(c.Prompt)] {
-			dup = append(dup, c.ID)
+	trainCases := evals.Expand(train)
+	for i := range trainCases {
+		if seen[normalizePrompt(trainCases[i].Prompt)] {
+			dup = append(dup, trainCases[i].ID)
 		}
 	}
 	return dup
