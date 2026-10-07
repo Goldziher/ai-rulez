@@ -55,9 +55,9 @@ func All() ([]Limit, error) {
 // Get returns the row with the id.
 func Get(id string) (Limit, bool) {
 	rows, _ := All() //nolint:errcheck // an unreadable table has no rows; MustValue reports it
-	for _, l := range rows {
-		if l.ID == id {
-			return l, true
+	for i := range rows {
+		if rows[i].ID == id {
+			return rows[i], true
 		}
 	}
 	return Limit{}, false
