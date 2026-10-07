@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -48,13 +49,9 @@ func RunReviewFix(ctx context.Context, req *improve.OptimizerRequest, workspace 
 	if err := o.Check(); err != nil {
 		return nil, err
 	}
-	if strings.ContainsAny(req.Skill.Dir, `/\`) || req.Skill.Dir == "" || req.Skill.Dir == "." || req.Skill.Dir == ".." {
-		return nil, fmt.Errorf("the request names a skill directory %q outside the workspace", req.Skill.Dir)
-	}
-	skillPath := filepath.Join(workspace, req.Skill.Dir, "SKILL.md")
-	data, mode, err := safefs.ReadRegularKeepMode(skillPath)
+	skillPath, data, mode, err := readWorkspaceSkill(req, workspace)
 	if err != nil {
-		return nil, fmt.Errorf("read SKILL.md: %w", err)
+		return nil, err
 	}
 	rb, err := loadRubric(o.Rubric)
 	if err != nil {
@@ -66,11 +63,7 @@ func RunReviewFix(ctx context.Context, req *improve.OptimizerRequest, workspace 
 	res := rv.Run(rv.Input{Rubric: rb, Items: []rv.Item{item}, Content: config.ReviewContentFull})
 
 	// The judge and the fixer share one client; the model of each call is set per request.
-	lc := o.LLM
-	if req.Budget.MaxCostUSD > 0 && (lc.MaxCostUSD <= 0 || req.Budget.MaxCostUSD < lc.MaxCostUSD) {
-		lc.MaxCostUSD = req.Budget.MaxCostUSD // never spend more than the run has left
-	}
-	client, err := newClient(lc, o)
+	client, err := newClient(cappedLLM(o.LLM, req.Budget.MaxCostUSD), o)
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +114,28 @@ func RunReviewFix(ctx context.Context, req *improve.OptimizerRequest, workspace 
 	resp.Summary = "review-fix: " + prop.Note
 	resp.Notes = fmt.Sprintf("%s %s before %v, after %v, %d attempt(s)", prop.Code, prop.Dimension, prop.Before, prop.After, prop.Attempts)
 	return resp, nil
+}
+
+// readWorkspaceSkill reads the SKILL.md of the request's skill from the workspace, refusing a skill directory
+// that is not a single name inside it.
+func readWorkspaceSkill(req *improve.OptimizerRequest, workspace string) (skillPath string, data []byte, mode os.FileMode, err error) {
+	if strings.ContainsAny(req.Skill.Dir, `/\`) || req.Skill.Dir == "" || req.Skill.Dir == "." || req.Skill.Dir == ".." {
+		return "", nil, 0, fmt.Errorf("the request names a skill directory %q outside the workspace", req.Skill.Dir)
+	}
+	skillPath = filepath.Join(workspace, req.Skill.Dir, "SKILL.md")
+	data, mode, err = safefs.ReadRegularKeepMode(skillPath)
+	if err != nil {
+		return "", nil, 0, fmt.Errorf("read SKILL.md: %w", err)
+	}
+	return skillPath, data, mode, nil
+}
+
+// cappedLLM lowers the client's cost ceiling to what the run has left, never raising it.
+func cappedLLM(lc llm.Config, left float64) llm.Config {
+	if left > 0 && (lc.MaxCostUSD <= 0 || left < lc.MaxCostUSD) {
+		lc.MaxCostUSD = left // never spend more than the run has left
+	}
+	return lc
 }
 
 // previousRoundFeedback tells the fixer how the loop's last round ended. An adapter is stateless (each round is a
@@ -217,9 +232,11 @@ func newClient(lc llm.Config, o *ReviewFixOptions) (llm.Client, error) {
 // that the votes agree on.
 func stableFindings(res *rv.Results, rb *rv.Rubric) []rv.Finding {
 	var out []rv.Finding
-	for _, f := range res.Findings(rb) {
+	all := res.Findings(rb)
+	for i := range all {
+		f := &all[i]
 		if f.Origin == rv.OriginLLMJudge && f.Status == rv.SemJudged && !f.Baselined && f.ItemID != "" {
-			out = append(out, f)
+			out = append(out, *f)
 		}
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Fingerprint < out[j].Fingerprint })
