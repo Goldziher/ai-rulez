@@ -41,6 +41,13 @@ func TestMCPUnpinnedAR012(t *testing.T) {
 		{name: "npx unpinned", files: mcpJSON(`{"a":{"command":"npx","args":["-y","@modelcontextprotocol/server-github"]}}`), want: []string{"AR012:.mcp.json:1"}},
 		{name: "npx latest", files: mcpJSON(`{"a":{"command":"npx","args":["-y","pkg@latest"]}}`), want: []string{"AR012:.mcp.json:1"}},
 		{name: "npx pinned", files: mcpJSON(`{"a":{"command":"npx","args":["-y","@scope/pkg@1.2.3"]}}`), absent: []string{"AR012"}},
+		{name: "npx caret range is not a pin", files: mcpJSON(`{"a":{"command":"npx","args":["-y","pkg@^1.2.0"]}}`), want: []string{"AR012:.mcp.json:1"}},
+		{name: "npx tilde range is not a pin", files: mcpJSON(`{"a":{"command":"npx","args":["-y","pkg@~1.2"]}}`), want: []string{"AR012:.mcp.json:1"}},
+		{name: "npx bare major is not a pin", files: mcpJSON(`{"a":{"command":"npx","args":["-y","pkg@1"]}}`), want: []string{"AR012:.mcp.json:1"}},
+		{name: "npx comparison range is not a pin", files: mcpJSON(`{"a":{"command":"npx","args":["-y","pkg@>=1"]}}`), want: []string{"AR012:.mcp.json:1"}},
+		{name: "npx github shorthand without a commit", files: mcpJSON(`{"a":{"command":"npx","args":["-y","github:foo/bar"]}}`), want: []string{"AR012:.mcp.json:1"}},
+		{name: "npx github shorthand at a commit", files: mcpJSON(`{"a":{"command":"npx","args":["-y","github:foo/bar#0123456789abcdef0123456789abcdef01234567"]}}`), absent: []string{"AR012"}},
+		{name: "npx exact and prerelease versions", files: mcpJSON(`{"a":{"command":"npx","args":["-y","pkg@1.2.3"]},"b":{"command":"npx","args":["-y","pkg@2.0.0-beta.1"]},"c":{"command":"npx","args":["-y","@s/pkg@v1.0.0"]}}`), absent: []string{"AR012"}},
 		{name: "uvx unpinned", files: mcpJSON(`{"a":{"command":"uvx","args":["mcp-server-git"]}}`), want: []string{"AR012:.mcp.json:1"}},
 		{name: "uvx pinned", files: mcpJSON(`{"a":{"command":"uvx","args":["mcp-server-git==0.6.2"]}}`), absent: []string{"AR012"}},
 		{name: "uvx --from pinned", files: mcpJSON(`{"a":{"command":"uvx","args":["--from","pkg==1.0","cmd"]}}`), absent: []string{"AR012"}},
@@ -135,4 +142,19 @@ func TestMCPFindingsAreAnchoredOnTheServerDefinition(t *testing.T) {
 			want: []string{"AR012:.mcp.json:5"},
 		},
 	})
+}
+
+func TestPinExampleUsesTheBarePackageName(t *testing.T) {
+	for _, tc := range []struct{ command, pkg, want string }{
+		{"uvx", "pkg>=1.0", "pkg==1.2.3"},
+		{"uvx", "pkg@latest", "pkg==1.2.3"},
+		{"pipx", "mcp-server-git", "mcp-server-git==1.2.3"},
+		{"npx", "@scope/pkg@latest", "@scope/pkg@1.2.3"},
+		{"npx", "pkg@^1.2.0", "pkg@1.2.3"},
+		{"docker", "ghcr.io/o/img", "ghcr.io/o/img@sha256:..."},
+	} {
+		if got := pinExample(tc.command, tc.pkg); got != tc.want {
+			t.Errorf("pinExample(%q, %q) = %q, want %q", tc.command, tc.pkg, got, tc.want)
+		}
+	}
 }
