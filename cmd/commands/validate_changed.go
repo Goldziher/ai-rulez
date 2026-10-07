@@ -50,13 +50,10 @@ func changedRev() string {
 	return ""
 }
 
-// strictOnly words a flag description that only applies in strict mode: validate
-// needs --strict, scan always runs it, so its help must not mention the flag.
-func strictOnly(cmd *cobra.Command, text string) string {
-	if cmd.Name() == "scan" {
-		return strings.ToUpper(text[:1]) + text[1:]
-	}
-	return "With --strict, " + text
+// strictOnly words a flag description that only applies to the content checks:
+// validate runs them by default, so it just capitalizes the text.
+func strictOnly(_ *cobra.Command, text string) string {
+	return strings.ToUpper(text[:1]) + text[1:]
 }
 
 func addChangedFlags(cmd *cobra.Command) {

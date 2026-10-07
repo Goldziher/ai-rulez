@@ -18,12 +18,20 @@ import (
 	"github.com/samber/oops"
 )
 
-// Exit codes of `validate --strict`. 1 keeps its existing meaning (the
-// configuration itself is invalid or could not be loaded).
+// Exit codes of the content checks of `validate`. 1 keeps its existing meaning
+// (the configuration itself is invalid or could not be loaded).
 const exitStrictFindings = 2
 
 var (
+	// validateStrict means "run the deep content checks". Historic name: in v5 it
+	// is true unless --config-only is given (see validatePreRun), and the
+	// --strict flag means validateWarnings.
 	validateStrict bool
+	// validateConfigOnly is --config-only: skip the content checks.
+	validateConfigOnly bool
+	// validateWarnings is --strict: findings of severity warning fail the run,
+	// the same as --fail-on warning.
+	validateWarnings bool
 	validateFormat string
 	validateFailOn string
 	validateExtern bool
@@ -59,7 +67,7 @@ func strictOnlyFlagSet() bool {
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
 	if !validateStrict && strictOnlyFlagSet() {
-		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers and the baseline flags require --strict")
+		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers and the baseline flags need the content checks: drop --config-only")
 	}
 	if len(validateAllowEgress) > 0 && !validateExtern {
 		return oops.Errorf("--allow-egress requires --external")
