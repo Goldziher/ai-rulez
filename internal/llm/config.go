@@ -68,6 +68,11 @@ type Config struct {
 	// field, or a provider/ prefix in model or embedding_model) came from a repository config rather
 	// than from user scope. Set only by Resolve; see RoutingFromRepo.
 	repoProvider, repoModelRoute, repoEmbedRoute bool
+	// priceBound and priceModel record which model the user-scope price override
+	// is for. Resolve and WithEnv set them; a Config built directly leaves
+	// priceBound false and the override then applies to Model. Not serialized.
+	priceBound bool
+	priceModel string
 }
 
 // MaxRetriesLimit bounds max_retries so a typo cannot keep a run retrying for hours.
@@ -123,6 +128,10 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 		}
 	}
 	str("PROVIDER", &c.Provider)
+	if m := strings.TrimSpace(getenv("AI_RULEZ_LLM_MODEL")); m != "" {
+		// A model named in the environment is user scope, so the price override applies to it.
+		c.priceBound, c.priceModel = true, m
+	}
 	str("MODEL", &c.Model)
 	if strings.TrimSpace(getenv("AI_RULEZ_LLM_PROVIDER")) != "" {
 		c.repoProvider = false

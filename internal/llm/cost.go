@@ -2,6 +2,7 @@ package llm
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/pricing"
 )
@@ -15,12 +16,24 @@ const PriceTableVersion = pricing.Version
 type Pricing struct {
 	input, output float64
 	override      bool
+	// overrideModel is the bare model name the override is for; empty means every model.
+	overrideModel string
 }
 
-// NewPricing returns a Pricing that uses the config override when set.
+// NewPricing returns a Pricing that uses the config override for the model it
+// was written for: the user-scope model after Resolve or WithEnv, else Model.
+// Any other model falls back to the built-in table.
 func NewPricing(cfg Config) Pricing {
 	if cfg.PriceInputPerMTok > 0 || cfg.PriceOutputPerMTok > 0 {
-		return Pricing{input: cfg.PriceInputPerMTok, output: cfg.PriceOutputPerMTok, override: true}
+		target := cfg.Model
+		if cfg.priceBound {
+			target = cfg.priceModel
+		}
+		p := Pricing{input: cfg.PriceInputPerMTok, output: cfg.PriceOutputPerMTok, override: true, overrideModel: bareModel(target)}
+		if p.overrideModel == "" && cfg.priceBound {
+			p.override = false // the user named no model, so the override has nothing to price
+		}
+		return p
 	}
 	return Pricing{}
 }
@@ -33,8 +46,17 @@ func (p Pricing) identity() string {
 	return "builtin:" + PriceTableVersion
 }
 
+// bareModel lowercases a model name and drops any provider prefix.
+func bareModel(model string) string {
+	name := strings.ToLower(strings.TrimSpace(model))
+	if i := strings.LastIndex(name, "/"); i >= 0 {
+		name = name[i+1:]
+	}
+	return name
+}
+
 func (p Pricing) lookup(model string) (pricing.Price, bool) {
-	if p.override {
+	if p.override && (p.overrideModel == "" || p.overrideModel == bareModel(model)) {
 		return pricing.Price{InPerMTok: p.input, OutPerMTok: p.output}, true
 	}
 	return pricing.Lookup(model)
