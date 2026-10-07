@@ -79,28 +79,12 @@ func runUsageExportOTLP(out io.Writer) error {
 	p := telemetry.Build(settings, telemetry.BuildOptions{Root: root, ConfigDirName: name, Version: Version, LogPath: logPath, Spawn: telemetrySpawn})
 	w := reportWriter{out}
 
-	var evalEvents []telemetry.Event
-	if usageExportWithEvals {
-		var err error
-		if evalEvents, err = loadEvalEvents(usageExportEvalsFile); err != nil {
-			return err
-		}
-		if evalEvents, err = p.Spool.Unsent(evalEvents); err != nil {
-			return err
-		}
+	evalEvents, err := unsentEvalEvents(p)
+	if err != nil {
+		return err
 	}
 	if usageExportDryRun {
-		res, err := p.Spool.CatchUp(logPath, telemetry.CatchUpOptions{Sample: &settings.Sample, GrantedAt: settings.ConsentGrantedAt(), All: usageExportAll, DryRun: true})
-		if err != nil {
-			return err
-		}
-		pending, _, err := p.Spool.Pending()
-		if err != nil {
-			return err
-		}
-		w.printf("would queue %d events from the usage log (%d already queued or delivered)%s, %d eval results; %d events already wait in the outbox (nothing sent)\n",
-			res.Queued, res.Skipped, cursorNote(res), len(evalEvents), len(pending))
-		return nil
+		return printExportDryRun(w, p, &settings, logPath, len(evalEvents))
 	}
 
 	var queued, skipped, batches, sent int
@@ -135,6 +119,35 @@ func runUsageExportOTLP(out io.Writer) error {
 	}
 	w.printf("queued %d events from the usage log and %d eval results (%d already queued or delivered); delivered %d in %d batches\n",
 		queued, len(evalEvents), skipped, sent, batches)
+	return nil
+}
+
+// unsentEvalEvents loads the recorded eval results for --with-evals, without
+// those the outbox holds or already delivered; none without the flag.
+func unsentEvalEvents(p *telemetry.Pipeline) ([]telemetry.Event, error) {
+	if !usageExportWithEvals {
+		return nil, nil
+	}
+	events, err := loadEvalEvents(usageExportEvalsFile)
+	if err != nil {
+		return nil, err
+	}
+	return p.Spool.Unsent(events)
+}
+
+// printExportDryRun reports what an OTLP export would queue, and sends nothing.
+func printExportDryRun(w reportWriter, p *telemetry.Pipeline, settings *telemetry.Settings, logPath string, evalCount int) error {
+	opts := telemetry.CatchUpOptions{Sample: &settings.Sample, GrantedAt: settings.ConsentGrantedAt(), All: usageExportAll, DryRun: true}
+	res, err := p.Spool.CatchUp(logPath, opts)
+	if err != nil {
+		return err
+	}
+	pending, _, err := p.Spool.Pending()
+	if err != nil {
+		return err
+	}
+	w.printf("would queue %d events from the usage log (%d already queued or delivered)%s, %d eval results; %d events already wait in the outbox (nothing sent)\n",
+		res.Queued, res.Skipped, cursorNote(res), evalCount, len(pending))
 	return nil
 }
 
