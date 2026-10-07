@@ -554,7 +554,7 @@ func strictGate(cfg *config.Config) error {
 		if werr := lint.Write(os.Stderr, lint.FormatText, lint.Combine(reports), lint.WriteOptions{Version: Version, FailOn: threshold}); werr != nil {
 			logger.Warn("Could not print the findings", "error", werr)
 		}
-		return publish.Errorf(publish.CodePreflight, publish.ExitGate, "fix the findings above (see `ai-rulez validate --strict`)", "validate --strict reported findings")
+		return publish.Errorf(publish.CodePreflight, publish.ExitGate, "fix the findings above (see `ai-rulez validate`)", "validate reported findings")
 	}
 	return nil
 }

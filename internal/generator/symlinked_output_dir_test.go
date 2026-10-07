@@ -20,7 +20,7 @@ func linkedCursorProject(t *testing.T) (dir string) {
 	rules := filepath.Join(dir, ".ai-rulez", "rules")
 	require.NoError(t, os.MkdirAll(rules, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"x\"\npresets = [\"claude\", \"cursor\"]\ngitignore = false\n"), 0o644))
+		[]byte("version = \"5.0\"\nname = \"x\"\npresets = [\"claude\", \"cursor\"]\ngitignore = false\nagents_md = false\n"), 0o644))
 	for _, name := range []string{"a", "b"} {
 		writeRule(t, dir, name)
 	}

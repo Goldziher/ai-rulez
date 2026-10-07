@@ -127,15 +127,21 @@ func runUsageRecord(in io.Reader) error {
 		}
 		logPath = filepath.Join(root, ".ai-rulez", "local", "usage.jsonl")
 	}
+	saltPath := usageSalt
+	if saltPath == "" {
+		// Hash sessions with the same salt the telemetry pipeline uses, so skill
+		// events and rule/agent events of one session agree.
+		saltPath = telemetry.ResolveFor(telemetryRoot(""), telemetryConfigDirName(), nil, activePolicy).SaltFile
+	}
 	entry, err := usage.Record(in, usage.RecordOptions{
 		LogPath:     logPath,
 		SinkCommand: usageSinkCommand,
 		IndexPath:   usageIndex,
-		Harness:     usageHarness,
+		Harness:     telHarness,
 		Outcome:     usageOutcome,
-		Role:        usageRole,
+		Role:        telRole,
 		Served:      usageServed,
-		SaltPath:    usageSalt,
+		SaltPath:    saltPath,
 	})
 	emitUsageTelemetry(entry)
 	return err
@@ -452,7 +458,8 @@ func usageExtras(row usage.SkillUsage) string {
 }
 
 func init() {
-	UsageCmd.AddCommand(usageHookCmd, usageRecordCmd, usageFeedbackCmd, usageExportCmd)
+	UsageCmd.AddCommand(usageHookCmd, usageRecordCmd, usageFeedbackCmd)
+	TelemetryCmd.AddCommand(usageExportCmd)
 	usageExportCmd.Flags().StringVar(&usageExportTo, "to", "", "Destination kind: file or otlp (required)")
 	addUsageExportOTLPFlags(usageExportCmd)
 	usageExportCmd.Flags().StringVar(&usageExportFile, "file", "", "Destination path (or pass it as the argument)")

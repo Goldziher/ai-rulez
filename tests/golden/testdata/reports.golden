@@ -1049,13 +1049,10 @@ warning   mcp-env  MCP server "local-tool" env API_TOKEN references ${GOLDEN_TOK
 warning   mcp-env  MCP server "remote-tool" headers Authorization references ${GOLDEN_TOKEN}, which is not set
                      fix: export GOLDEN_TOKEN, add it to .env, or pass --env GOLDEN_TOKEN=VALUE to generate
 info      drift    drift not checked: MCP placeholders are unresolved (see the mcp-env findings)
-info      tools    preset "codex": codex not found on PATH; its files are still generated
-info      tools    preset "copilot": copilot not found on PATH; its files are still generated
 info      tools    preset "cursor": cursor-agent or cursor not found on PATH; its files are still generated
 info      tools    preset "gemini": gemini not found on PATH; its files are still generated
-info      tools    preset "opencode": opencode not found on PATH; its files are still generated
 
-0 errors, 2 warnings, 6 info
+0 errors, 2 warnings, 3 info
 --- stderr
 --- project tree
 .agents/ dir 0755

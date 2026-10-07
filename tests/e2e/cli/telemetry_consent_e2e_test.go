@@ -64,7 +64,7 @@ func TestTelemetryConsentE2E(t *testing.T) {
 	t.Run("a repository config cannot turn on export", func(t *testing.T) {
 		// Arrange
 		p := newTelemetryProject(t)
-		writeTree(t, p.root, map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"e2e\"\npresets = [\"claude\"]\n\n[telemetry]\nenabled = true\nallow_network = true\notlp_endpoint = \"" + closedEndpoint + "\"\n"})
+		writeTree(t, p.root, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"e2e\"\npresets = [\"claude\"]\n\n[telemetry]\nenabled = true\nallow_network = true\notlp_endpoint = \"" + closedEndpoint + "\"\n"})
 
 		// Act
 		p.record("a")
@@ -97,7 +97,7 @@ func TestTelemetryConsentE2E(t *testing.T) {
 		// and holds an export cursor from an earlier consent; a is another project
 		// of the same user.
 		b := newTelemetryProject(t)
-		writeTree(t, b.root, map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"b\"\npresets = [\"claude\"]\n\n[telemetry]\nenabled = true\n"})
+		writeTree(t, b.root, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"b\"\npresets = [\"claude\"]\n\n[telemetry]\nenabled = true\n"})
 		a := newTelemetryProject(t)
 		a.env = b.env
 		b.run("telemetry", "enable", "--endpoint", closedEndpoint)

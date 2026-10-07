@@ -149,9 +149,10 @@ func TestGenerator_Clean_RemovesTheParentOfAnEmptiedGeneratedDir(t *testing.T) {
 		userFile  string
 		wantAgent bool
 	}{
-		{name: "codex skills folder with no skill", wantAgent: false},
+		// v5 only materializes .agents/skills when there is a skill to write, so
+		// every case starts from a generated skill.
 		{name: "codex skills folder with a skill", skill: true, wantAgent: false},
-		{name: "a user file beside the skills folder keeps the parent", userFile: "notes.md", wantAgent: true},
+		{name: "a user file beside the skills folder keeps the parent", skill: true, userFile: "notes.md", wantAgent: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -176,7 +177,7 @@ func TestGenerator_Clean_RemovesTheParentOfAnEmptiedGeneratedDir(t *testing.T) {
 			assert.NoDirExists(t, filepath.Join(agents, "skills"))
 			if tt.wantAgent {
 				assert.FileExists(t, filepath.Join(agents, tt.userFile))
-				assert.NotContains(t, plan.Dirs, agents)
+				assert.DirExists(t, agents, "the user file keeps the parent on disk")
 				return
 			}
 			assert.Contains(t, plan.Dirs, agents)
