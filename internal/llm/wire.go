@@ -69,6 +69,7 @@ type wireChatResponse struct {
 		Message struct {
 			Content any `json:"content"`
 		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
 	Usage wireUsage `json:"usage"`
 }
@@ -114,7 +115,7 @@ func decodeChat(body []byte, pricing Pricing, fallbackModel string) (ChatRespons
 	model := firstNonEmpty(w.Model, fallbackModel)
 	usage := w.Usage.usage()
 	cost, known := pricing.Cost(model, usage)
-	return ChatResponse{Text: text, Model: model, Usage: usage, CostUSD: cost, CostKnown: known}, nil
+	return ChatResponse{Text: text, Model: model, Usage: usage, CostUSD: cost, CostKnown: known, FinishReason: w.Choices[0].FinishReason}, nil
 }
 
 func encodeEmbed(model string, req EmbedRequest) ([]byte, error) {

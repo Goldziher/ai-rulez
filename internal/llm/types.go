@@ -83,6 +83,8 @@ type ChatResponse struct {
 	CostKnown bool `json:"cost_known"`
 	// Cached is true when the answer came from the on-disk cache (no provider call, no cost).
 	Cached bool `json:"cached,omitempty"`
+	// FinishReason is the provider's stop reason ("stop", "length", "content_filter"); empty when unreported.
+	FinishReason string `json:"finish_reason,omitempty"`
 }
 
 // EmbedRequest asks for one embedding per input.
