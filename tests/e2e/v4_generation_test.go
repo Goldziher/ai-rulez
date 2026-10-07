@@ -210,7 +210,6 @@ func (s *V4GenerationSuite) TestClaude_Content() {
 	agentFile := s.requireFile(outputs, filepath.Join("agents", "security-reviewer.md"))
 	s.assertContentContains(agentFile, "name: security-reviewer")
 	s.assertContentContains(agentFile, "description:")
-
 }
 
 // ==========================================

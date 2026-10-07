@@ -240,7 +240,7 @@ var (
 	listMarkerRe = regexp.MustCompile(`^(?:[-*+>]|\d+[.)])\s+`)
 	invokeWords  = map[string]bool{
 		"run": true, "runs": true, "invoke": true, "invokes": true, "type": true, "use": true,
-		"call": true, "command": true, "commands": true, "slash": true, "execute": true, "try": true, "via": true, "or": true, "then": true,
+		"call": true, hookTypeCommand: true, "commands": true, "slash": true, "execute": true, "try": true, "via": true, "or": true, "then": true,
 	}
 )
 
