@@ -1,10 +1,14 @@
 package llm
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
@@ -222,6 +226,117 @@ func TestLiveConnectionFailureIsTransient(t *testing.T) {
 			// Assert
 			if err == nil || !IsTransient(err) {
 				t.Fatalf("a refused connection must be transient: %v", err)
+			}
+		})
+	}
+}
+
+// usageTap records the provider's own token totals from every reply that passes it.
+type usageTap struct {
+	mu     sync.Mutex
+	prompt int
+	total  int
+}
+
+func (u *usageTap) record(body []byte) {
+	var w struct {
+		Usage struct {
+			Prompt int `json:"prompt_tokens"`
+			Total  int `json:"total_tokens"`
+		} `json:"usage"`
+	}
+	if json.Unmarshal(body, &w) == nil {
+		u.mu.Lock()
+		u.prompt += w.Usage.Prompt
+		u.total += w.Usage.Total
+		u.mu.Unlock()
+	}
+}
+
+func (u *usageTap) RoundTrip(r *http.Request) (*http.Response, error) {
+	resp, err := http.DefaultTransport.RoundTrip(r)
+	if err != nil {
+		return resp, err
+	}
+	b, rerr := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	resp.Body = io.NopCloser(bytes.NewReader(b))
+	if rerr == nil {
+		u.record(b)
+	}
+	return resp, rerr
+}
+
+// tappedNative passes native replies through a usageTap.
+type tappedNative struct {
+	NativeClient
+	tap *usageTap
+}
+
+func (n *tappedNative) ChatJSON(ctx context.Context, req []byte) ([]byte, error) {
+	out, err := n.NativeClient.ChatJSON(ctx, req)
+	n.tap.record(out)
+	return out, err
+}
+
+// A thinking model bills its thinking tokens at the output rate but leaves them out of
+// completion_tokens; the budget must charge what the provider's total_tokens says (RV-LLM-1).
+// One gemini-2.5-flash call per backend, well under $0.01.
+func TestLiveThinkingTokensAreCharged(t *testing.T) {
+	for _, backend := range liveBackends(t) {
+		t.Run(backend, func(t *testing.T) {
+			// Arrange
+			tap := &usageTap{}
+			opts := Options{NoCache: true, HTTPClient: &http.Client{Transport: tap}}
+			if backend == BackendLiterLLM {
+				nativeMu.RLock()
+				prev := nativeFactory
+				nativeMu.RUnlock()
+				RegisterNative(func(c NativeConfig) (NativeClient, error) {
+					n, err := prev(c)
+					if err != nil {
+						return nil, err
+					}
+					return &tappedNative{NativeClient: n, tap: tap}, nil
+				})
+				t.Cleanup(func() { RegisterNative(prev) })
+			}
+			cfg := liveConfig(backend)
+			cfg.Model = "gemini-2.5-flash"
+			cfg.MaxCostUSD = 0.05
+			m, err := New(cfg, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = m.Close() })
+
+			// Act
+			resp, err := m.Chat(context.Background(), ChatRequest{MaxTokens: 800, Messages: []Message{{Role: RoleUser,
+				Content: "A bat and ball cost 1.10 total; the bat costs 1.00 more than the ball. Ball price? Answer with just the number."}}})
+
+			// Assert
+			if err != nil {
+				t.Fatal(err)
+			}
+			want, known := NewPricing(cfg).Cost(cfg.FullModel(), Usage{PromptTokens: tap.prompt, CompletionTokens: tap.total - tap.prompt})
+			t.Logf("provider prompt=%d total=%d; charged usage=%+v cost=$%.6f (provider total at list price $%.6f) spent=%+v",
+				tap.prompt, tap.total, resp.Usage, resp.CostUSD, want, m.Spent())
+			if tap.total == 0 || !known {
+				t.Fatalf("no provider total_tokens seen (total=%d) or no price (known=%v)", tap.total, known)
+			}
+			if backend == BackendLiterLLM {
+				// liter-llm's Gemini route hides the thinking tokens even from total_tokens, so the
+				// call is charged its completion cap, the upper bound of what was billed.
+				if resp.Usage.CompletionTokens != 800 || resp.Usage.PromptTokens != tap.prompt || m.Spent().Tokens != tap.prompt+800 {
+					t.Errorf("charged %+v (spent %d), want prompt %d plus the 800-token cap", resp.Usage, m.Spent().Tokens, tap.prompt)
+				}
+				return
+			}
+			if resp.Usage.Total() != tap.total || m.Spent().Tokens != tap.total {
+				t.Errorf("charged %d tokens (spent %d), want the provider's total_tokens %d", resp.Usage.Total(), m.Spent().Tokens, tap.total)
+			}
+			if diff := resp.CostUSD - want; diff > 1e-9 || diff < -1e-9 {
+				t.Errorf("cost = %.9f, want %.9f", resp.CostUSD, want)
 			}
 		})
 	}
