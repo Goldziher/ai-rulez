@@ -653,6 +653,32 @@ func (c *HTTPClient) TeamMembers(ctx context.Context, team Team) ([]string, erro
 	return out, err
 }
 
+// CollaboratorPermission implements Client.
+func (c *HTTPClient) CollaboratorPermission(ctx context.Context, repo Repo, login string) (string, error) {
+	if !userRe.MatchString(login) {
+		return "", fmt.Errorf("%w: invalid login", ErrUnsupportedSource)
+	}
+	req, err := c.repoPath(repo, "/collaborators/"+login+"/permission")
+	if err != nil {
+		return "", err
+	}
+	p, err := getJSON[struct {
+		Permission string `json:"permission"`
+		RoleName   string `json:"role_name"`
+	}](ctx, c, req)
+	if errors.Is(err, ErrNotFound) {
+		return PermissionNone, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	// "permission" folds maintain into write and triage into read; role_name is exact.
+	if role := strings.ToLower(p.RoleName); role == PermissionMaintain || role == PermissionTriage {
+		return role, nil
+	}
+	return strings.ToLower(p.Permission), nil
+}
+
 // IsTeamMember implements Client.
 func (c *HTTPClient) IsTeamMember(ctx context.Context, team Team, login string) (bool, error) {
 	if !userRe.MatchString(login) {
