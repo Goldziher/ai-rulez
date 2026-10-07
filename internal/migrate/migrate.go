@@ -310,11 +310,25 @@ func planProject(dir string, opts Options) (*plan, error) { //nolint:gocyclo // 
 
 	oldVersion, _ := currentVersion(doc)
 	if !converted && oldVersion == config.ConfigVersionV5 {
+		// The config is already v5, but the files beside it may not be: a rerun
+		// with --write still has the frontmatter aliases and the overlay to do.
 		p.warnings = append(p.warnings, legacyFileWarnings(dir)...)
-		return &plan{warnings: p.warnings}, nil
+		if err := planLocalOverlay(p, dir); err != nil {
+			return nil, err
+		}
+		if err := planFrontmatter(p, dir, opts.Write); err != nil {
+			return nil, err
+		}
+		return p, nil
 	}
 	if err := checkSourceVersion(oldVersion); err != nil {
 		return nil, oops.With("path", src).Wrap(err)
+	}
+	if spellings := doc.ratchetSpellings(); len(spellings) > 1 {
+		return nil, oops.
+			With("path", src).
+			Hint("Keep one table (merge the entries by hand into [lint.ratchet]) and delete the others, then run migrate again").
+			Errorf("%s are set together, but v5 has one table for them, [lint.ratchet] (4.x preferred [lint.tolerate] over [lint.budget])", bracketed(spellings))
 	}
 
 	mainTarget := filepath.Join(dir, "config.toml")
@@ -457,4 +471,13 @@ func legacyFileWarnings(dir string) []string {
 		}
 	}
 	return out
+}
+
+// bracketed renders ["budget", "tolerate"] as "[lint.budget] and [lint.tolerate]".
+func bracketed(names []string) string {
+	parts := make([]string, len(names))
+	for i, n := range names {
+		parts[i] = "[lint." + n + "]"
+	}
+	return strings.Join(parts, " and ")
 }
