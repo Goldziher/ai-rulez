@@ -128,7 +128,7 @@ func TestTrapFixRenamesMisspeltKeyInHandwrittenFile(t *testing.T) {
 	findings := codeHits(lintDir(t, root), "AR9C7")
 
 	// Act
-	res, err := ApplyFixes(findings, FixOptions{EditRoot: filepath.Join(root, ".ai-rulez")})
+	res, err := ApplyFixes(findings, FixOptions{EditRoot: filepath.Join(root, ".ai-rulez"), ProjectRoot: root})
 
 	// Assert: only the hand-written file is rewritten.
 	if err != nil {
@@ -155,7 +155,7 @@ func TestTrapFixIsIdempotent(t *testing.T) {
 		".claude/skills/h/SKILL.md": "---\nname: h\nuser_invocable: false\n---\nbody\n",
 	})
 	gitAdd(t, root)
-	opts := FixOptions{EditRoot: filepath.Join(root, ".ai-rulez")}
+	opts := FixOptions{EditRoot: filepath.Join(root, ".ai-rulez"), ProjectRoot: root}
 	if _, err := ApplyFixes(codeHits(lintDir(t, root), "AR9C7"), opts); err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +191,7 @@ func TestTrapFixKeyRenameNeverDuplicatesAKey(t *testing.T) {
 			gitAdd(t, root)
 			findings := codeHits(lintDir(t, root), "AR9C7")
 			// Act
-			res, err := ApplyFixes(findings, FixOptions{EditRoot: filepath.Join(root, ".ai-rulez")})
+			res, err := ApplyFixes(findings, FixOptions{EditRoot: filepath.Join(root, ".ai-rulez"), ProjectRoot: root})
 			// Assert
 			if err != nil {
 				t.Fatal(err)

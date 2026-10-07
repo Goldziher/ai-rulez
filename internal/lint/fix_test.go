@@ -187,6 +187,64 @@ func TestOutsideFixesStayInsideTheProjectAndOnRegularFiles(t *testing.T) {
 	}
 }
 
+func TestOutsideFixNeedsAProjectRootWhenEditsAreBounded(t *testing.T) {
+	// Arrange: an outside fix on a file anywhere on disk, with an authored root
+	// but no project root to bound it.
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{".claude/skills/h/SKILL.md": "---\nallowed_tools: Read\n---\n"})
+	file := filepath.Join(root, ".claude/skills/h/SKILL.md")
+	f := finding(CodeClaudeKeySpelling, file, 2, "x")
+	f.meta().Fix = &Fix{Description: "rename", Confidence: FixSafe, Outside: true,
+		Edits: []Edit{{File: file, Line: 2, Old: "allowed_tools: Read", New: "allowed-tools: Read"}}}
+
+	// Act
+	res, err := ApplyFixes([]Finding{f}, FixOptions{EditRoot: filepath.Join(root, ".ai-rulez"), DryRun: true})
+
+	// Assert
+	require.NoError(t, err)
+	assert.Empty(t, res.Applied, "an unbounded outside fix must fail closed")
+	require.Len(t, res.Skipped, 1)
+	assert.Contains(t, res.Skipped[0].Reason, "project")
+}
+
+func TestChmodFixesStayInsideTheProjectAndOnRegularFiles(t *testing.T) {
+	// Arrange: a script inside the project, and one elsewhere reached through a
+	// symlink, a symlinked directory and a ".." path.
+	root := t.TempDir()
+	elsewhere := t.TempDir()
+	writeFiles(t, root, map[string]string{"hooks/run.sh": "#!/bin/sh\n"})
+	writeFiles(t, elsewhere, map[string]string{"run.sh": "#!/bin/sh\n"})
+	require.NoError(t, os.Chmod(filepath.Join(root, "hooks/run.sh"), 0o644))
+	require.NoError(t, os.Chmod(filepath.Join(elsewhere, "run.sh"), 0o644))
+	testutil.SymlinkOrSkip(t, filepath.Join(elsewhere, "run.sh"), filepath.Join(root, "hooks/link.sh"))
+	testutil.SymlinkOrSkip(t, elsewhere, filepath.Join(root, "linked"))
+	chmodFinding := func(file string) Finding {
+		f := finding(CodeHookNotExecutable, file, 1, "x")
+		f.meta().Fix = chmodFix(file)
+		return f
+	}
+	tests := []struct {
+		name    string
+		file    string
+		applied bool
+	}{
+		{"a regular file inside the project", filepath.Join(root, "hooks/run.sh"), true},
+		{"a symlinked file", filepath.Join(root, "hooks/link.sh"), false},
+		{"a file behind a symlinked directory", filepath.Join(root, "linked", "run.sh"), false},
+		{"a file outside the project through ..", root + string(os.PathSeparator) + filepath.Join("hooks", "..", "..", filepath.Base(elsewhere), "run.sh"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			res, err := ApplyFixes([]Finding{chmodFinding(tt.file)}, FixOptions{EditRoot: filepath.Join(root, ".ai-rulez"), ProjectRoot: root, DryRun: true})
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.applied, len(res.Applied) == 1, "applied %+v skipped %+v", res.Applied, res.Skipped)
+		})
+	}
+}
+
 func TestFixesNeverApplyToSecurityFindings(t *testing.T) {
 	f := finding(CodeSecretDetected, "a.md", 1, "s")
 	f.meta().Fix = &Fix{Description: "redact", Confidence: FixSafe, Edits: []Edit{{File: "/nope", Line: 1, Old: "a", New: "b"}}}
