@@ -1,0 +1,6 @@
+version: "4.0"
+name: mine
+mcp_servers:
+  - name: db
+    env:
+      PORT: "9090"
