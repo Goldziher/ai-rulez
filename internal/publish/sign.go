@@ -8,7 +8,6 @@ import (
 
 	"github.com/samber/oops"
 	"github.com/sigstore/sigstore-go/pkg/root"
-	"github.com/sigstore/sigstore-go/pkg/sign"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
@@ -104,7 +103,7 @@ func SignRelease(ctx context.Context, s signing.Signer, req SignRequest) (*SignR
 // archive, the form `cosign sign-blob --bundle` writes and `cosign verify-blob
 // --bundle` reads, so cosign can verify a release signed here.
 func SignArchive(ctx context.Context, s signing.Signer, archive []byte) (*SignResult, error) {
-	pb, err := s.Bundle(ctx, &sign.PlainData{Data: archive})
+	pb, err := s.Bundle(ctx, &signing.PlainData{Data: archive})
 	if err != nil {
 		return nil, oops.Wrapf(err, "sign the release archive")
 	}

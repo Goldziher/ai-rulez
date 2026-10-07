@@ -9,8 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sigstore/sigstore-go/pkg/sign"
-	"github.com/sigstore/sigstore-go/pkg/testing/ca"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -218,43 +217,42 @@ func TestIdentityRegexpMustBeAnchored(t *testing.T) {
 }
 
 func TestKeylessLockWithVirtualSigstore(t *testing.T) {
-	vs, err := ca.NewVirtualSigstore()
-	require.NoError(t, err)
-	root := noCTRoot{vs}
 	const (
 		identity = "https://github.com/example/ai-config/.github/workflows/release.yml@refs/heads/main"
 		issuer   = "https://token.actions.githubusercontent.com"
 	)
+	fs := newFakeSigstore(t, identity, issuer)
+	trusted := fs.trustedRoot()
 	lock := testLock(t, nil)
 	st, err := LockStatement(lock, LockMeta{Version: "5", Repository: "repo", Now: time.Now()})
 	require.NoError(t, err)
 	payload, err := st.Marshal()
 	require.NoError(t, err)
-	data := virtualBundle(t, vs, identity, issuer, payload, time.Now())
+	data := fs.bundle(payload)
 	trustFor := func(e TrustEntry) TrustSet { e.Subject = SubjectLock; return TrustSet{Entries: []TrustEntry{e}} }
 
 	tests := []struct {
 		name     string
-		root     *noCTRoot
+		trusted  root.TrustedMaterial
 		trust    TrustSet
 		tlog     TLogMode
 		wantCode string
 	}{
-		{"exact identity", &root, trustFor(TrustEntry{Identity: identity, Issuer: issuer}), TLogRequired, ""},
-		{"anchored regexp", &root, trustFor(TrustEntry{IdentityRegexp: `^https://github\.com/example/[^/]+/\.github/workflows/release\.yml@refs/heads/main$`, Issuer: issuer}), TLogRequired, ""},
-		{"alternation cannot match a substring", &root, trustFor(TrustEntry{IdentityRegexp: `^nomatch|workflows/release\.yml@refs/heads/main$`, Issuer: issuer}), TLogRequired, CodeSignerNotTrusted},
-		{"wrong issuer", &root, trustFor(TrustEntry{Identity: identity, Issuer: "https://accounts.example.com"}), TLogRequired, CodeSignerNotTrusted},
-		{"look-alike identity", &root, trustFor(TrustEntry{Identity: identity + "x", Issuer: issuer}), TLogRequired, CodeSignerNotTrusted},
-		{"entry not yet valid", &root, trustFor(TrustEntry{Identity: identity, Issuer: issuer, ValidFrom: time.Now().Add(24 * time.Hour)}), TLogRequired, CodeSignerNotTrusted},
-		{"entry expired", &root, trustFor(TrustEntry{Identity: identity, Issuer: issuer, ValidUntil: time.Now().Add(-24 * time.Hour)}), TLogRequired, CodeSignerNotTrusted},
+		{"exact identity", trusted, trustFor(TrustEntry{Identity: identity, Issuer: issuer}), TLogRequired, ""},
+		{"anchored regexp", trusted, trustFor(TrustEntry{IdentityRegexp: `^https://github\.com/example/[^/]+/\.github/workflows/release\.yml@refs/heads/main$`, Issuer: issuer}), TLogRequired, ""},
+		{"alternation cannot match a substring", trusted, trustFor(TrustEntry{IdentityRegexp: `^nomatch|workflows/release\.yml@refs/heads/main$`, Issuer: issuer}), TLogRequired, CodeSignerNotTrusted},
+		{"wrong issuer", trusted, trustFor(TrustEntry{Identity: identity, Issuer: "https://accounts.example.com"}), TLogRequired, CodeSignerNotTrusted},
+		{"look-alike identity", trusted, trustFor(TrustEntry{Identity: identity + "x", Issuer: issuer}), TLogRequired, CodeSignerNotTrusted},
+		{"entry not yet valid", trusted, trustFor(TrustEntry{Identity: identity, Issuer: issuer, ValidFrom: time.Now().Add(24 * time.Hour)}), TLogRequired, CodeSignerNotTrusted},
+		{"entry expired", trusted, trustFor(TrustEntry{Identity: identity, Issuer: issuer, ValidUntil: time.Now().Add(-24 * time.Hour)}), TLogRequired, CodeSignerNotTrusted},
 		{"no trusted root", nil, trustFor(TrustEntry{Identity: identity, Issuer: issuer}), TLogRequired, CodeRootUnavailable},
-		{"tlog off needs keys", &root, trustFor(TrustEntry{Identity: identity, Issuer: issuer}), TLogOff, CodeInvalid},
+		{"tlog off needs keys", trusted, trustFor(TrustEntry{Identity: identity, Issuer: issuer}), TLogOff, CodeInvalid},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := Verifier{TLog: tt.tlog}
-			if tt.root != nil {
-				v.TrustedRoot = *tt.root
+			if tt.trusted != nil {
+				v.TrustedRoot = tt.trusted
 			}
 
 			rep, err := VerifyLock(data, lock, LockPolicy{Verifier: v, Trust: tt.trust, Now: time.Now()})
@@ -275,18 +273,16 @@ func TestKeylessLockWithVirtualSigstore(t *testing.T) {
 }
 
 func TestKeylessSignatureForOtherRootFails(t *testing.T) {
-	vs, err := ca.NewVirtualSigstore()
-	require.NoError(t, err)
-	other, err := ca.NewVirtualSigstore()
-	require.NoError(t, err)
+	fs := newFakeSigstore(t, "id", "iss")
+	other := newFakeSigstore(t, "id", "iss")
 	lock := testLock(t, nil)
 	st, err := LockStatement(lock, LockMeta{Now: time.Now()})
 	require.NoError(t, err)
 	payload, err := st.Marshal()
 	require.NoError(t, err)
-	data := virtualBundle(t, vs, "id", "iss", payload, time.Now())
+	data := fs.bundle(payload)
 
-	_, err = (&Verifier{TrustedRoot: noCTRoot{other}, TLog: TLogRequired}).Verify(data)
+	_, err = (&Verifier{TrustedRoot: other.trustedRoot(), TLog: TLogRequired}).Verify(data)
 
 	require.Error(t, err)
 	assert.Equal(t, CodeInvalid, CodeOf(err))
@@ -355,7 +351,7 @@ func blobBundle(t *testing.T, privPEM []byte, lock *lockfile.File) []byte {
 	require.NoError(t, err)
 	statement, err := subject.Statement().JSON()
 	require.NoError(t, err)
-	pb, err := sign.Bundle(&sign.PlainData{Data: statement}, kp, sign.BundleOptions{})
+	pb, err := buildBundle(context.Background(), &PlainData{Data: statement}, kp, nil, "", nil)
 	require.NoError(t, err)
 	data, err := protojson.Marshal(pb)
 	require.NoError(t, err)
