@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"os"
 	"sort"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/roles"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )

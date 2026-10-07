@@ -126,7 +126,7 @@ func isTableSeq(n *yaml.Node) bool {
 
 // emitTable writes the entries of mapping m under the table path: scalar and
 // inline values first, then sub-tables, then arrays of tables.
-func emitTable(b *strings.Builder, m *yaml.Node, path []string, str bool) error {
+func emitTable(b *strings.Builder, m *yaml.Node, path []string, str bool) error { //nolint:gocyclo // scalars, arrays, inline tables and sub-tables in one ordered pass
 	es, err := entries(m)
 	if err != nil {
 		return err

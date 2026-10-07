@@ -3,12 +3,12 @@ package commands
 import (
 	"context"
 	"fmt"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"os"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
