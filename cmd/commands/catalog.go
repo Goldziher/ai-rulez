@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -176,7 +175,7 @@ func runCatalog(out io.Writer) error {
 	if err := checkCatalogFlags(); err != nil {
 		return err
 	}
-	cfg, err := loadConfigForCommand(context.Background(), nil)
+	cfg, err := loadConfigForCommand(cmdContext(), nil)
 	if err != nil {
 		return err
 	}

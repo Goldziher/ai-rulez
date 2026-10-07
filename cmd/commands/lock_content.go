@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -101,7 +100,7 @@ func sharedConfig(cfg *config.Config) (*config.Config, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "reload the shared configuration without the local overlay")
 	}
-	reloaded, err := loadProjectFile(context.Background(), path, config.WithoutLocal())
+	reloaded, err := loadProjectFile(cmdContext(), path, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "reload the shared configuration without the local overlay")
 	}

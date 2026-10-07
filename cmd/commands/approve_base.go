@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -36,7 +35,7 @@ func baseLockOf(cfg *config.Config, rev string) (*lockfile.File, string, error) 
 	if rel == "" {
 		return nil, "", oops.Errorf("%s is outside the git work tree", lockfile.Path(cfg.ConfigDir))
 	}
-	data, found, err := workspace.ReadFileAt(context.Background(), top, base, rel, nil)
+	data, found, err := workspace.ReadFileAt(cmdContext(), top, base, rel, nil)
 	if err != nil {
 		return nil, base, oops.With("rev", base).Wrapf(err, "read %s at the base revision", lockfile.FileName)
 	}
@@ -125,7 +124,7 @@ func authorSelfApprovals(cfg *config.Config, lock *lockfile.File, rev string) ([
 	if lock == nil || len(lock.Approval) == 0 || !policy.ForbidSelf {
 		return nil, nil
 	}
-	g, err := newApproveGit(context.Background(), cfg)
+	g, err := newApproveGit(cmdContext(), cfg)
 	if err != nil {
 		return nil, err
 	}

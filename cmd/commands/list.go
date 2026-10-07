@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -106,7 +105,7 @@ func init() {
 }
 
 func runListRules(cmd *cobra.Command, args []string) {
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := newContentOperator(listLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -132,7 +131,7 @@ func runListRules(cmd *cobra.Command, args []string) {
 }
 
 func runListContext(cmd *cobra.Command, args []string) {
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := newContentOperator(listLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -158,7 +157,7 @@ func runListContext(cmd *cobra.Command, args []string) {
 }
 
 func runListSkills(cmd *cobra.Command, args []string) {
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := newContentOperator(listLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -240,7 +239,7 @@ func runListItems(ftype, title, noun string) {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
 	}
-	files, err := op.ListFiles(context.Background(), listDomain, ftype)
+	files, err := op.ListFiles(cmdContext(), listDomain, ftype)
 	if err != nil {
 		logger.Error("Failed to list "+noun, "error", err)
 		os.Exit(1)
@@ -263,7 +262,7 @@ func runListRoot(cmd *cobra.Command, _ []string) {
 		}
 		return
 	}
-	cfg, err := loadConfigForCommand(context.Background(), nil, pluginLoadOptions(true)...)
+	cfg, err := loadConfigForCommand(cmdContext(), nil, pluginLoadOptions(true)...)
 	if err != nil {
 		logger.Error("Failed to load config", "error", err)
 		os.Exit(1)

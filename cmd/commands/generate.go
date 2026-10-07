@@ -142,7 +142,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx := cmdContext()
 
 	// Load configuration
 	cfg, err := loadConfigForCommand(ctx, args, pluginLoadOptions(pluginMode)...)
@@ -589,7 +589,7 @@ func lockDriftError(err error) bool {
 func processConfigFile(configPath string, fileCounter *progress.FileCounter) (int, error) {
 	fileCounter.StartFile(configPath)
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	cfg, err := loadProjectFile(ctx, configPath, pluginLoadOptions(pluginMode)...)
 	if err != nil {
 		fileCounter.ErrorFor(configPath, err)

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -77,7 +76,7 @@ func loadRolesConfig() (*config.Config, error) {
 	if err := checkFormatFlag(rolesFormat); err != nil {
 		return nil, err
 	}
-	cfg, err := loadConfigForCommand(context.Background(), nil)
+	cfg, err := loadConfigForCommand(cmdContext(), nil)
 	if err != nil {
 		return nil, err
 	}

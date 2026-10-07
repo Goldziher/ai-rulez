@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,7 +29,7 @@ schema compliance, and structural issues.`,
 	Aliases: []string{"val", "v", "check"},
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
+		ctx := cmdContext()
 		if validateExplain != "" {
 			if err := runExplain(cmd.OutOrStdout(), validateExplain, validateFormat); err != nil {
 				fmtError(err)
@@ -210,7 +209,7 @@ func runRecursiveValidate() int {
 // validateConfigFile applies the same checks as single-root validate (schema,
 // then structural validation) to one config file.
 func validateConfigFile(configPath string) (*config.Config, error) {
-	cfg, err := loadProjectFile(context.Background(), configPath, pluginLoadOptions(false)...)
+	cfg, err := loadProjectFile(cmdContext(), configPath, pluginLoadOptions(false)...)
 	if err != nil {
 		return nil, err
 	}

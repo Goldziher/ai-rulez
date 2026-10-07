@@ -2,7 +2,6 @@ package commands
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -189,7 +188,7 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 		fmtError(err)
 		return 1
 	}
-	ctx := context.Background()
+	ctx := cmdContext()
 	if !f.online {
 		ctx = config.WithOfflineIncludes(ctx)
 	}

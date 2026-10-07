@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -50,7 +49,7 @@ func deliveryFindings(cfg *config.Config) []lint.DeliveryFinding {
 		defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
 		includes.SkipFetch = true
 		setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}
-		problems, err := setup.ServedProblems(context.Background())
+		problems, err := setup.ServedProblems(cmdContext())
 		if err != nil {
 			out = append(out, lint.DeliveryFinding{Code: lint.CodeServedLockMismatch, Message: "the served skills could not be checked against " + lockfile.FileName + " offline: " + err.Error() + "; [lock] enforce does not accept an unchecked lock"})
 		}
@@ -71,7 +70,7 @@ func sourceRefusalFindings(cfg *config.Config) []lint.DeliveryFinding {
 	includes.SkipFetch = true
 	setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}
 	var out []lint.DeliveryFinding
-	reports, err := setup.ServedScanReports(context.Background())
+	reports, err := setup.ServedScanReports(cmdContext())
 	if err != nil {
 		logger.Debug("Skipped the served file scan check", "error", err.Error())
 		return nil
@@ -82,7 +81,7 @@ func sourceRefusalFindings(cfg *config.Config) []lint.DeliveryFinding {
 	if len(cfg.SkillSources) == 0 {
 		return out
 	}
-	refusals, err := setup.ServedRefusals(context.Background())
+	refusals, err := setup.ServedRefusals(cmdContext())
 	if err != nil {
 		logger.Debug("Skipped the skill source refusal check", "error", err.Error())
 		return out

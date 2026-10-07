@@ -124,7 +124,7 @@ func verifyTagsAt(path string) int {
 		fmtError(err)
 		return 1
 	}
-	findings, err := verifyPinnedTags(context.Background(), cfg, lock)
+	findings, err := verifyPinnedTags(cmdContext(), cfg, lock)
 	if err != nil {
 		fmtError(err)
 		return 1
@@ -150,7 +150,7 @@ func movedTagsErr(cfg *config.Config) error {
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
-	findings, err := verifyPinnedTags(context.Background(), cfg, lock)
+	findings, err := verifyPinnedTags(cmdContext(), cfg, lock)
 	if err != nil {
 		return err
 	}

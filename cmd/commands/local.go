@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -206,7 +205,7 @@ func editLocal(edit func(doc *config.LocalDoc) error) (string, error) {
 	if err := edit(doc); err != nil {
 		return doc.Path, err
 	}
-	return doc.Path, doc.Save(context.Background()) //nolint:wrapcheck // already contextual
+	return doc.Path, doc.Save(cmdContext()) //nolint:wrapcheck // already contextual
 }
 
 var localPathCmd = &cobra.Command{

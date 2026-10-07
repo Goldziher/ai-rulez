@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -90,7 +89,7 @@ func runProfileAdd(cmd *cobra.Command, args []string) {
 	name := args[0]
 	domains := args[1:]
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -131,7 +130,7 @@ func runProfileRemove(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -152,7 +151,7 @@ func runProfileRemove(cmd *cobra.Command, args []string) {
 func runProfileSetDefault(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -171,7 +170,7 @@ func runProfileSetDefault(cmd *cobra.Command, args []string) {
 }
 
 func runProfileList(cmd *cobra.Command, args []string) {
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)

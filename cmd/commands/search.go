@@ -216,7 +216,7 @@ func (e *searchEnv) ranker(wantVectors bool) (*skillsearch.Ranker, func(), error
 func runSearch(cmd *cobra.Command, out, errOut io.Writer, args []string) int {
 	ctx := cmd.Context()
 	if ctx == nil {
-		ctx = context.Background()
+		ctx = cmdContext()
 	}
 	if isSearchSubcommand(args) && searchFlags.eval == "" && !searchFlags.fromEvals {
 		if err := checkSubcommandFlags(cmd, args[0]); err != nil {

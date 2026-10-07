@@ -224,7 +224,7 @@ func commandContext(cmd *cobra.Command) context.Context {
 	if ctx := cmd.Context(); ctx != nil {
 		return ctx
 	}
-	return context.Background()
+	return cmdContext()
 }
 
 // attachStore loads the results file into opts.

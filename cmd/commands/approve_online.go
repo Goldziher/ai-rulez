@@ -85,7 +85,7 @@ func runVerifyApprovals(args []string, out io.Writer) int {
 		fmtError(err)
 		return 1
 	}
-	results, err := env.checkApprovals(context.Background(), verifyOnline)
+	results, err := env.checkApprovals(cmdContext(), verifyOnline)
 	if err != nil {
 		fmtError(err)
 		return 1

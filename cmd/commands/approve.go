@@ -366,7 +366,7 @@ func (e *approveEnv) approversFrom() string {
 }
 
 func (e *approveEnv) list(out io.Writer) error {
-	if err := e.resolveTeams(context.Background(), e.subjects); err != nil {
+	if err := e.resolveTeams(cmdContext(), e.subjects); err != nil {
 		return err
 	}
 	doc := e.listDoc()
@@ -678,7 +678,7 @@ func (e *approveEnv) expiry(at time.Time) (string, error) {
 }
 
 func (e *approveEnv) approve(out io.Writer, refs []string) error {
-	ctx := context.Background()
+	ctx := cmdContext()
 	subs, err := e.resolveAll(refs)
 	if err != nil {
 		return err
