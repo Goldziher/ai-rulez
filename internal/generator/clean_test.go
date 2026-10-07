@@ -141,3 +141,46 @@ func TestGenerator_Clean_KeepsPartiallyOwnedMergedDocument(t *testing.T) {
 	require.NoError(t, err, ".mcp.json with hand-authored servers must not be deleted")
 	assert.Contains(t, string(data), `"mine"`)
 }
+
+func TestGenerator_Clean_RemovesTheParentOfAnEmptiedGeneratedDir(t *testing.T) {
+	tests := []struct {
+		name      string
+		skill     bool
+		userFile  string
+		wantAgent bool
+	}{
+		{name: "codex skills folder with no skill", wantAgent: false},
+		{name: "codex skills folder with a skill", skill: true, wantAgent: false},
+		{name: "a user file beside the skills folder keeps the parent", userFile: "notes.md", wantAgent: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			quietWarnings(t)
+			// Arrange
+			dir := codexAgentProject(t)
+			if tt.skill {
+				writeHashesSkill(t, dir, "alpha", "Body.")
+			}
+			require.NoError(t, newProjectGenerator(t, dir).Generate("default"))
+			agents := filepath.Join(dir, ".agents")
+			require.DirExists(t, filepath.Join(agents, "skills"))
+			if tt.userFile != "" {
+				require.NoError(t, os.WriteFile(filepath.Join(agents, tt.userFile), []byte("mine\n"), 0o644))
+			}
+
+			// Act
+			plan, err := newProjectGenerator(t, dir).Clean("default", CleanOptions{})
+
+			// Assert
+			require.NoError(t, err)
+			assert.NoDirExists(t, filepath.Join(agents, "skills"))
+			if tt.wantAgent {
+				assert.FileExists(t, filepath.Join(agents, tt.userFile))
+				assert.NotContains(t, plan.Dirs, agents)
+				return
+			}
+			assert.Contains(t, plan.Dirs, agents)
+			assert.NoDirExists(t, agents, "generate created .agents/ implicitly for .agents/skills")
+		})
+	}
+}
