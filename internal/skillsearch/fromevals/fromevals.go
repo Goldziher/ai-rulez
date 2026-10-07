@@ -1,5 +1,5 @@
 // Package fromevals derives skill search cases from the eval-runner cases of a
-// project: they are free labelled queries. A prompt with expect_trigger true for
+// project: they are free labeled queries. A prompt with expect_trigger true for
 // skill S becomes a case that expects S; a near-miss prompt (or any prompt with
 // expect_trigger false) becomes a case whose avoid list is S, i.e. S must not
 // rank first for it.
@@ -39,7 +39,9 @@ func Derive(configDir string) (*Derived, error) {
 		for _, p := range problems {
 			out.Problems = append(out.Problems, p.String())
 		}
-		for n, c := range evals.Expand(cases) {
+		expanded := evals.Expand(cases)
+		for n := range expanded {
+			c := &expanded[n]
 			prompt := strings.TrimSpace(c.Prompt)
 			if prompt == "" || c.ExpectTrigger == nil {
 				continue

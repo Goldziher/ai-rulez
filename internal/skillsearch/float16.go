@@ -23,7 +23,7 @@ func float32ToFloat16(f float32) uint16 {
 	case exp < 113: // subnormal half
 		shift := uint32(126 - exp)
 		m := mant | 0x800000
-		half := uint16(m >> shift)
+		half := uint16((m >> shift) & 0x3ff)
 		rem := m & (1<<shift - 1)
 		mid := uint32(1) << (shift - 1)
 		if rem > mid || (rem == mid && half&1 == 1) {
