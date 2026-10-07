@@ -533,11 +533,14 @@ func TestModelNames(t *testing.T) {
 }
 
 func TestRubricFilesAreNotChangedByAReview(t *testing.T) {
-	// Arrange: a review reads an item with mode 0644 and must not tighten it
+	// Arrange: a review reads an item with mode 0644 and must not tighten it. The mode is compared
+	// with what the file had, since Windows reports 0666 for any writable file.
 	dir := t.TempDir()
 	p := filepath.Join(dir, "SKILL.md")
 	require.NoError(t, os.WriteFile(p, []byte("---\ndescription: x\n---\n"), 0o644)) //nolint:gosec // the mode is the point
 	require.NoError(t, os.Chmod(p, 0o644))
+	before, err := os.Stat(p)
+	require.NoError(t, err)
 	cfgItem := config.ContentFile{Name: "x", Path: p}
 
 	// Act
@@ -547,7 +550,7 @@ func TestRubricFilesAreNotChangedByAReview(t *testing.T) {
 	require.Empty(t, it.ReadError)
 	info, err := os.Stat(p)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+	assert.Equal(t, before.Mode().Perm(), info.Mode().Perm())
 }
 
 // A probe the judge cannot answer (a canary that hijacks it into prose, an error) is a failed
