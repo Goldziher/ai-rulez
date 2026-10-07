@@ -137,7 +137,6 @@ func init() {
 	f.StringVar(&approveExpires, "expires", "", "Expiry date YYYY-MM-DD (default: today + [governance] max_age, else none)")
 	f.StringVar(&approveAt, "at", "", "Approval time (RFC 3339 or YYYY-MM-DD) for reproducible runs (default: SOURCE_DATE_EPOCH, else now)")
 	addFormatFlag(f, &approveFormat, "", formatText, formatText, formatJSON) // of --list
-	addJSONFlagAlias(f)
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 

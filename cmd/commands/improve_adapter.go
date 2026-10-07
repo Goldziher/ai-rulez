@@ -137,7 +137,6 @@ func init() {
 	f.IntVar(&improveAdapterFlags.maxGrowth, "max-growth-percent", 0, "How much the fix may grow SKILL.md in percent (default [review.fix] max_growth_percent)")
 	f.StringVar(&improveAdapterFlags.rubric, "rubric", "", "Built-in rubric id (default builtin:skill-quality)")
 	addFormatFlag(improveAdaptersCmd.Flags(), &improveFlags.format, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(improveAdaptersCmd.Flags())
 	ImproveCmd.AddCommand(improveAdapterCmd, improveAdaptersCmd)
 }
 

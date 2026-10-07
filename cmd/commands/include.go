@@ -53,7 +53,7 @@ var includeRemoveCmd = &cobra.Command{
 	Short: "Remove an include source",
 	Long: `Remove an include source from the configuration.
 
-Use --force to skip confirmation prompts.`,
+Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
 	Run:  runIncludeRemove,
 }
@@ -82,7 +82,7 @@ func init() {
 	includeAddCmd.Flags().StringVarP(&includeInstallTo, "install-to", "t", "", "Installation path (optional)")
 
 	// Add flags for include remove
-	includeRemoveCmd.Flags().BoolVarP(&includeForce, "force", "f", false, "Skip confirmation prompts")
+	includeRemoveCmd.Flags().BoolVarP(&includeForce, "yes", "y", false, "Skip confirmation prompts")
 
 	// Add flags for include list
 	addJSONFormat(includeListCmd.Flags(), &includeJSON, "j")
@@ -137,7 +137,7 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 func runIncludeRemove(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	// Confirm removal unless --force is specified
+	// Confirm removal unless --yes is specified
 	if !includeForce {
 		if !confirmRemoval("include", name) {
 			logger.Info("Operation canceled")

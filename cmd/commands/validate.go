@@ -141,7 +141,6 @@ func init() {
 	ValidateCmd.Flags().StringVar(&validateApprovalsBase, "approvals-base", "", "Report approvals added since this git revision for content that also changed since it (AR716)")
 	ValidateCmd.Flags().StringSliceVar(&validateAllowEgress, "allow-egress", nil, "With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable)")
 	addFormatFlag(ValidateCmd.Flags(), &validateFormat, "", formatText, lint.Formats()...) // --format implies --strict
-	addJSONFlagAlias(ValidateCmd.Flags())
 	ValidateCmd.Flags().StringVar(&validateLintProfile, "lint-profile", "", "Lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile)")
 	ValidateCmd.Flags().StringSliceVar(&validateAnalyzers, "analyzer", nil, "Run only these analyzers (repeatable or comma-separated; replaces [lint] analyzers): "+strings.Join(lint.AnalyzerNames(), ", "))
 	ValidateCmd.Flags().StringVar(&validateOutput, "output", "", "Write the report to this file instead of stdout")
@@ -382,7 +381,6 @@ func init() {
 	ScanCmd.Flags().BoolVar(&validateExtern, "external", false, "Also run the scanners configured in [[lint.external]] and merge their findings")
 	ScanCmd.Flags().StringSliceVar(&validateAllowEgress, "allow-egress", nil, "With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable)")
 	addFormatFlag(ScanCmd.Flags(), &validateFormat, "", formatText, lint.Formats()...)
-	addJSONFlagAlias(ScanCmd.Flags())
 	ScanCmd.Flags().StringVar(&validateLintProfile, "lint-profile", "", "Lint preset: default, strict or permissive (overrides [lint] profile)")
 	ScanCmd.Flags().StringVar(&validateOutput, "output", "", "Write the report to this file instead of stdout")
 	ScanCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest severity that exits 2: error (default), warning, info or none")

@@ -91,7 +91,6 @@ func init() {
 	f.Float64Var(&reviewFlags.maxCost, "max-cost", 0, "Spend cap in USD (default [review] max_cost_usd, else 0.50; 0 = unlimited)")
 	f.IntVar(&reviewFlags.maxCalls, "max-calls", 0, "Call cap (default [review] max_calls, else 300)")
 	addFormatFlag(f, &fixFlags.format, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(f)
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	f.BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 }

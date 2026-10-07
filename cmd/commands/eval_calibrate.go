@@ -38,7 +38,6 @@ func init() {
 	f.StringVar(&evalCalibrateFlags.model, "model", "", "Only runs of this model")
 	f.IntVar(&evalCalibrateFlags.minSamples, "min-samples", evals.DefaultMinSamples, "Runs a group needs before its proposal is not marked low-confidence")
 	addFormatFlag(f, &evalCalibrateFlags.format, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(f)
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	EvalCmd.AddCommand(evalCalibrateCmd)
 }

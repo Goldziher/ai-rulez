@@ -179,13 +179,11 @@ func init() {
 	f.StringVar(&reviewFlags.cacheDir, "cache-dir", "", "Response cache directory (default the user cache directory of this project)")
 	f.BoolVar(&reviewFlags.includeImports, "include-imports", false, "Also review content from includes, installed skills and builtins")
 	addFormatFlag(f, &reviewFlags.format, formatText, formatText, rv.Formats()...)
-	addJSONFlagAlias(f)
 	f.StringVar(&reviewFlags.out, "out", "", "Write the report to this file instead of standard output")
 	f.BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 
 	addFormatFlag(RubricCmd.PersistentFlags(), &rubricFormat, formatText, formatText, rv.Formats()...)
-	addJSONFlagAlias(RubricCmd.PersistentFlags())
 	RubricCmd.PersistentFlags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	RubricCmd.AddCommand(rubricListCmd, rubricShowCmd, rubricLintCmd)
 	ReviewCmd.AddCommand(reviewCalibrateCmd, reviewFixCmd, reviewExplainCmd)

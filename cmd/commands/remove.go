@@ -26,7 +26,7 @@ var removeRuleCmd = &cobra.Command{
 	Short: "Remove a rule",
 	Long: `Remove a rule file.
 
-Use --force to skip confirmation prompts.`,
+Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
 	Run:  runRemoveRule,
 }
@@ -36,7 +36,7 @@ var removeContextCmd = &cobra.Command{
 	Short: "Remove context",
 	Long: `Remove a context file.
 
-Use --force to skip confirmation prompts.`,
+Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
 	Run:  runRemoveContext,
 }
@@ -46,7 +46,7 @@ var removeSkillCmd = &cobra.Command{
 	Short: "Remove a skill",
 	Long: `Remove a skill directory.
 
-Use --force to skip confirmation prompts.`,
+Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
 	Run:  runRemoveSkill,
 }
@@ -77,10 +77,10 @@ func init() {
 	RemoveCmd.AddCommand(removeCommandCmd)
 	RemoveCmd.AddCommand(removeCheckCmd)
 	removeCheckCmd.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
-	removeCheckCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")
+	removeCheckCmd.Flags().BoolVarP(&removeForce, "yes", "y", false, "Skip confirmation prompts")
 	for _, c := range []*cobra.Command{removeRuleCmd, removeContextCmd, removeSkillCmd, removeAgentCmd, removeCommandCmd} {
 		c.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
-		c.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")
+		c.Flags().BoolVarP(&removeForce, "yes", "y", false, "Skip confirmation prompts")
 		c.Flags().BoolVar(&removeLocal, "local", false, "Remove from the machine-local tree (.ai-rulez/local/)")
 	}
 	RemoveCmd.AddCommand(removeRuleCmd)
@@ -91,7 +91,7 @@ func init() {
 func runRemoveRule(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	// Confirm removal unless --force is specified
+	// Confirm removal unless --yes is specified
 	if !removeForce {
 		resourceName := fmt.Sprintf("rule %s", name)
 		if removeDomain != "" {
@@ -121,7 +121,7 @@ func runRemoveRule(cmd *cobra.Command, args []string) {
 func runRemoveContext(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	// Confirm removal unless --force is specified
+	// Confirm removal unless --yes is specified
 	if !removeForce {
 		resourceName := fmt.Sprintf("context %s", name)
 		if removeDomain != "" {
@@ -151,7 +151,7 @@ func runRemoveContext(cmd *cobra.Command, args []string) {
 func runRemoveSkill(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	// Confirm removal unless --force is specified
+	// Confirm removal unless --yes is specified
 	if !removeForce {
 		resourceName := fmt.Sprintf("skill %s", name)
 		if removeDomain != "" {

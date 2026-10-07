@@ -180,7 +180,6 @@ func init() {
 	f.BoolVar(&improveFlags.stopAtFirstAccept, "stop-at-first-accept", false, "Stop after the first accepted round instead of using every round")
 	f.BoolVar(&improveFlags.allowExec, "allow-exec", false, "Run command_exit assertions of the cases (they execute commands from the case files)")
 	addFormatFlag(f, &improveFlags.format, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(f)
 	f.StringVar(&improveFlags.date, "date", "", "Date recorded in the report (default $"+EvalDateEnv+"; the clock is never read)")
 	f.Float64Var(&improveFlags.priceIn, "price-in", 0, "USD per million input tokens for the estimate (default by model tier)")
 	f.Float64Var(&improveFlags.priceOut, "price-out", 0, "USD per million output tokens for the estimate (default by model tier)")
@@ -198,7 +197,6 @@ func init() {
 	improveApplyCmd.Flags().BoolVar(&improveFlags.allowScripts, "allow-scripts", false, "Allow the candidate to change scripts/ and assets/ and reference scripts")
 	improveApplyCmd.Flags().BoolVar(&improveFlags.allowFrontmatter, "allow-frontmatter", false, "Allow the candidate to change allowed-tools, model and disable-model-invocation")
 	addFormatFlag(improveApplyCmd.Flags(), &improveFlags.format, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(improveApplyCmd.Flags())
 	ImproveCmd.AddCommand(improveRunCmd, improveApplyCmd)
 }
 

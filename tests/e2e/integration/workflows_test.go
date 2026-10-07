@@ -114,7 +114,7 @@ func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
 	s.Contains(content, "CRUD test rule")
 
 	// Update the rule by removing and re-adding with new content
-	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "rule", "CRUD Test Rule", "--force")
+	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "rule", "CRUD Test Rule", "--yes")
 
 	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"CRUD Test Rule",
@@ -127,7 +127,7 @@ func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
 	s.Contains(content, "critical")
 
 	// Delete the rule
-	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "rule", "CRUD Test Rule", "--force")
+	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "rule", "CRUD Test Rule", "--yes")
 	result.AssertOutputContains(s.T(), "Rule removed successfully")
 
 	s.False(testutil.FileExists(s.T(), ruleFile))

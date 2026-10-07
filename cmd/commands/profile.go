@@ -43,7 +43,7 @@ var profileRemoveCmd = &cobra.Command{
 	Short: "Remove a profile",
 	Long: `Remove a profile from the configuration.
 
-Use --force to skip confirmation prompts.
+Use --yes to skip confirmation prompts.
 Note: Cannot remove the default profile.`,
 	Args: cobra.ExactArgs(1),
 	Run:  runProfileRemove,
@@ -79,7 +79,7 @@ func init() {
 	profileAddCmd.Flags().BoolVarP(&profileSetDefault, "set-default", "s", false, "Set this profile as the default")
 
 	// Add flags for profile remove
-	profileRemoveCmd.Flags().BoolVarP(&profileForce, "force", "f", false, "Skip confirmation prompts")
+	profileRemoveCmd.Flags().BoolVarP(&profileForce, "yes", "y", false, "Skip confirmation prompts")
 
 	// Add flags for profile list
 	addJSONFormat(profileListCmd.Flags(), &profileJSON, "j")
@@ -122,7 +122,7 @@ func runProfileAdd(cmd *cobra.Command, args []string) {
 func runProfileRemove(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	// Confirm removal unless --force is specified
+	// Confirm removal unless --yes is specified
 	if !profileForce {
 		if !confirmRemoval("profile", name) {
 			logger.Info("Operation canceled")

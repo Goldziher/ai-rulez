@@ -55,7 +55,7 @@ var skillRemoveCmd = &cobra.Command{
 	Short: "Remove an installed skill",
 	Long: `Remove an installed skill from the configuration.
 
-Use --force to skip confirmation prompts.`,
+Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
 	Run:  runSkillRemove,
 }
@@ -105,7 +105,7 @@ func init() {
 	}
 
 	// Flags for skill remove
-	skillRemoveCmd.Flags().BoolVarP(&skillForce, "force", "f", false, "Skip confirmation prompts")
+	skillRemoveCmd.Flags().BoolVarP(&skillForce, "yes", "y", false, "Skip confirmation prompts")
 
 	// Flags for skill list
 	addJSONFormat(skillListCmd.Flags(), &skillJSON, "j")
