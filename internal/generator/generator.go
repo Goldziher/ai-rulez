@@ -223,7 +223,32 @@ func (g *Generator) finishGitignore(outputs []config.OutputFile, ignoredEarly bo
 		if err := g.updateGitignore(outputs); err != nil {
 			g.log().Warn("Failed to update .gitignore", "error", err)
 		}
+		return
 	}
+	g.removeStaleGitignoreBlock()
+}
+
+// removeStaleGitignoreBlock takes out the managed block an earlier run (gitignore
+// was on, or a 4.x default) left behind. With gitignore off the generated files
+// are meant to be committed, and the block would keep ignoring them.
+func (g *Generator) removeStaleGitignoreBlock() {
+	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
+	if gitignore.IsSymlink(g.config.BaseDir) {
+		return
+	}
+	data, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), gitignorePath)
+	if err != nil {
+		return
+	}
+	content := string(data)
+	if !contains(content, gitignore.BeginMarker) && !contains(content, gitignore.OldHeader) {
+		return
+	}
+	if err := g.dropGitignoreBlock(gitignorePath, content); err != nil {
+		g.log().Warn("Failed to remove the stale ai-rulez block from .gitignore", "error", err)
+		return
+	}
+	g.log().Info("Removed the ai-rulez managed block from .gitignore: gitignore is off, so generated files are not ignored", "hint", "set gitignore = true to have ai-rulez ignore them again")
 }
 
 // GeneratePlugin packages the project into distributable plugin bundles plus a
