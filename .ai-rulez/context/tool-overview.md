@@ -1,6 +1,6 @@
 ---
 priority: high
-summary: High-level overview of V4 config, profiles, presets, includes, and typical AI-Rulez workflows.
+summary: High-level overview of config, profiles, presets, includes, and typical AI-Rulez workflows.
 targets:
   - CLAUDE.md
   - GEMINI.md
@@ -19,7 +19,7 @@ for 52 built-in harness presets, including Claude Code, Cursor, Codex, Copilot, 
 
 Key concepts:
 
-- V4 config lives in `.ai-rulez/config.toml` plus `rules/`, `context/`, `skills/`, `agents/`, `commands/`, and `checks/`.
+- Config (`version = "5.0"`) lives in `.ai-rulez/config.toml` plus `rules/`, `context/`, `skills/`, `agents/`, `commands/`, and `checks/`.
 - Profiles select which domains under `.ai-rulez/domains/` are included in a generation.
 - Presets define output formats and paths; `ai-rulez generate` renders all configured presets. Most presets are declarative provider specs under `internal/generator/providers/builtin/*.toml`; ten are Go presets in `internal/generator/presets`.
 - Includes let you merge shared rule sets into local content before generation.

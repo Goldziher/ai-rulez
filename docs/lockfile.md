@@ -35,7 +35,7 @@ What the lock gives you:
 | An executable bit added to a script | the file mode is part of the digest |
 | A change in what gets generated, by any cause | output digests |
 | An accidentally edited or truncated lock | the `tree` digest no longer matches the pins, or is missing |
-| A lock replaced by one without content pins (a downgrade) | `lock --check` fails and `generate --locked` warns; under `enforce`, `generate --locked` and `validate --strict` fail |
+| A lock replaced by one without content pins (a downgrade) | `lock --check` fails and `generate --locked` warns; under `enforce`, `generate --locked` and `validate` fail |
 
 The `tree` digest is an integrity check, not a signature: whoever can edit the lock can recompute it (`ai-rulez
 lock` does exactly that). It catches accidental edits and merge mistakes; a deliberate change to the pins is caught
@@ -77,7 +77,7 @@ regular file on write (it never writes through the link), and every command that
 symlinked one with an error, so a link cannot point the pins at another file. Delete the link and run
 `ai-rulez lock` to recreate it.
 
-Outputs are pinned from the in-memory rendering, before the `Content-Hash` / `Source-Hash` lines are injected and
+Outputs are pinned from the in-memory rendering, before the hash lines (`Content-Hash`, and `Source-Hash` with `hashes = "full"`) are injected and
 with the `Generated:` stamp removed, so the digests are the same under every `[header] hashes` mode and whether or
 not `[header] timestamp` is on. Not pinned: machine-local outputs, outputs that may carry resolved secrets, and
 documents that are partly yours, that is, a merged document in which the consumer owns some keys. A plain
@@ -87,7 +87,7 @@ above) are.
 
 ```toml
 version = 1
-ai_rulez_version = "4.25.0"
+ai_rulez_version = "5.0.0"
 scope = "all"
 outputs_pinned = true
 tree = "sha256:6cd1d810fce0e91263b3ebfa3610821a820a07b415a8f2a4b9415de191b6c24e"
@@ -199,7 +199,7 @@ served entry, so editing or swapping them is detected even when the content dige
 
 `lock --check` and `lock --diff` compare these entries without the network: a changed served skill is a `served`
 change, a source whose cached tree no longer matches its pin is a `remote` change. `[lock] enforce = true` makes
-`validate --strict` report served-skill mismatches as `AR995` and makes the server refuse them. `lock --kind
+`validate` report served-skill mismatches as `AR995` and makes the server refuse them. `lock --kind
 source|served` refreshes one kind, `generate --frozen`/`mcp --serve-skills --frozen` never use the network, and
 `lock --content-only` recomputes authored content and the served digests of local skills offline while keeping the
 remote pins.
@@ -702,7 +702,7 @@ verify_tags = false      # true: generate and lock --check ask the remotes wheth
 lock records the settings it was written with, and `--check` reports a mismatch so a changed `[lock]` table cannot
 silently weaken a check.
 
-With `enforce = true`, and only when a lock exists, `validate --strict` adds:
+With `enforce = true`, and only when a lock exists, `validate` adds:
 
 | Code | Meaning |
 | --- | --- |

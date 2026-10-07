@@ -227,7 +227,7 @@ timeout = 5
 ```
 
 `ai-rulez telemetry hook --format toml` prints these three groups plus the two skill groups (`PreToolUse` on `Skill`
-and `UserPromptExpansion`, running `usage record`). `telemetry record` prints nothing on stdout, exits 0 on every
+and `UserPromptExpansion`, running `telemetry record`). `telemetry record` handles skill loads and item loads in one command, prints nothing on stdout, exits 0 on every
 error, ignores events it does not handle, and does nothing when telemetry is off (not even creating the salt file).
 The role comes from `--role` or `$AI_RULEZ_ROLE`.
 
@@ -424,10 +424,10 @@ sum by (kind, id) (increase(ai_rulez_item_loads_total[30d])) == 0
 ```
 
 Metrics cannot see an item that was never loaded, because no series exists for it. Use
-`ai-rulez report usage` for "never loaded": it joins the log with the generated manifest. Rules loaded per session
+`ai-rulez telemetry report` for "never loaded": it joins the log with the generated manifest. Rules loaded per session
 needs the session, which is pseudonymous and off by default: with `include_session = true` the Loki/LogQL form is
 roughly `sum by (ai_rulez_session) (count_over_time({service_name="ai-rulez"} | ai_rulez_item_kind="rule" [1d]))`,
-but `report usage` computes the median and distribution exactly from the local log.
+but `telemetry report` computes the median and distribution exactly from the local log.
 
 ## Verifying against a real collector
 

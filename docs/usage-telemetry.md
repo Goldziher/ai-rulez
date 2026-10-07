@@ -7,7 +7,7 @@ loads, per-session statistics and optional OpenTelemetry export, see [Item-load 
 
 1. a **skills index** written by `generate`,
 2. a **hook template** that records skill invocations as identifier-only log lines,
-3. **feedback records** (`usage feedback`) for "this skill misled me",
+3. **feedback records** (`telemetry feedback`) for "this skill misled me",
 4. a **report** that joins a log with the index, the feedback and the [eval scores](evals.md).
 
 ## The skills index
@@ -65,15 +65,16 @@ from files on disk, and is byte-stable across runs, so it is safe to commit.
 ## Recording invocations
 
 ```bash
-ai-rulez usage hook                 # print the hooks block
-ai-rulez usage hook -o hooks.json   # or write it to a file
+ai-rulez telemetry hook                 # print the hooks block
+ai-rulez telemetry hook -o hooks.json   # or write it to a file
 ```
 
 The block is a template for the `hooks` key of `.claude/settings.json` (or a plugin's hooks file). Merge it in by
 hand; nothing installs it. To have `generate` keep it in sync, declare the same commands as top-level
-[`[[hooks]]`](settings.md) (the payload fields above are read by `usage record` itself, so the command is all a
+[`[[hooks]]`](settings.md) (the payload fields above are read by `telemetry record` itself, so the command is all a
 harness needs); ai-rulez then writes them into each supported harness's own hooks file next to your other hooks,
-without touching hooks you wrote by hand. The template registers `ai-rulez usage record` for the two ways a skill is used:
+without touching hooks you wrote by hand. The template registers `ai-rulez telemetry record` for the two ways a skill is used (the same command also records
+item loads, see [Item-load telemetry](telemetry.md)):
 
 | Claude Code event | Fires when | Field read |
 | --- | --- | --- |
@@ -85,12 +86,12 @@ Both events were checked against Claude Code 2.1.289. The recorder ignores event
 ### Other harnesses
 
 ```bash
-ai-rulez usage hook --harness codex    # merge into .codex/hooks.json
-ai-rulez usage hook --harness cursor   # merge into .cursor/hooks.json
+ai-rulez telemetry hook --harness codex    # merge into .codex/hooks.json
+ai-rulez telemetry hook --harness cursor   # merge into .cursor/hooks.json
 ```
 
 Codex and Cursor have no Skill tool: they load a skill by reading its `SKILL.md`. Their templates register
-`ai-rulez usage record --harness <name>` on the `PreToolUse` (Codex, matcher `Bash`) and `preToolUse` (Cursor, matcher
+`ai-rulez telemetry record --harness <name>` on the `PreToolUse` (Codex, matcher `Bash`) and `preToolUse` (Cursor, matcher
 `Shell`) events, whose names and matchers come from ai-rulez's own [hook support](settings.md). The recorder then logs a
 skill load when a read tool (`Read`, `read_file`, `view`, `open`) is given a `file_path` or `path` of
 `skills/<id>/SKILL.md`, or a shell command runs a reader (`cat`, `head`, `tail`, `less`, `more`, `bat`, `nl`,
@@ -144,7 +145,7 @@ error and the exit status stays 0.
 ## Feedback
 
 ```bash
-ai-rulez usage feedback deploy-staging --kind stale --note-file ./why.txt
+ai-rulez telemetry feedback deploy-staging --kind stale --note-file ./why.txt
 ```
 
 Records that a skill `misled` you, is `stale`, is `wrong`, or was `great`. One line goes to
@@ -152,13 +153,13 @@ Records that a skill `misled` you, is `stale`, is `wrong`, or was `great`. One l
 the index hash, the kind, and `--harness` and `--role` when given. With `--note-file` the note's text is copied to
 `feedback-notes/<timestamp>-<id>-<kind>.txt` beside the log (mode 0600, at most 64 KB) and only that file name is
 recorded. The note is never part of a log line, the skills index, `eval-results.json` or any hash, so it cannot leave
-the machine unless you copy it. Feedback does not change a skill by itself; `report usage` shows the counts and
-[`report evals`](evals.md#reports) treats more `misled`/`wrong`/`stale` than `great` as a reason to rewrite.
+the machine unless you copy it. Feedback does not change a skill by itself; `telemetry report` shows the counts and
+[`telemetry report evals`](evals.md#reports) treats more `misled`/`wrong`/`stale` than `great` as a reason to rewrite.
 
 ## The report
 
 ```console
-$ ai-rulez report usage .ai-rulez/local/usage.jsonl
+$ ai-rulez telemetry report .ai-rulez/local/usage.jsonl
 Skill usage: 42 events
 
 Used (3)
@@ -268,5 +269,5 @@ counted as a use. `--usage-log` is the same flag as `--usage`.
 ## See also
 
 [Item-load telemetry and OTLP export](telemetry.md) extends the same log with rule, agent and context events (Claude Code
-`InstructionsLoaded`, `SubagentStart`, `SubagentStop`), adds `report usage` sections for them, and documents the opt-in
+`InstructionsLoaded`, `SubagentStart`, `SubagentStop`), adds `telemetry report` sections for them, and documents the opt-in
 OTLP exporter, its consent model and the trust rule that keeps a repository from enabling network export.

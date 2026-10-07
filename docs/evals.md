@@ -115,7 +115,7 @@ directory. `files[].path` names a file for the runner to create in the working d
 relative and inside, and the runner must keep it there. A case with no
 assertions and no rubric is a trigger-only case: it measures recall (positive) or precision (negative) and nothing else.
 Unknown fields are errors, so a typo cannot silently disable an assertion. Problems are reported by
-`ai-rulez validate --strict` as `AR996 eval-case-invalid` with the file and line.
+`ai-rulez validate` as `AR996 eval-case-invalid` with the file and line.
 
 ## Running evals
 
@@ -699,7 +699,7 @@ A skill with no recorded passing run is not reported stale (that is what `AR962`
 
 ## Reports
 
-`ai-rulez report evals` joins the results with the usage log and the feedback log (see
+`ai-rulez telemetry report evals` joins the results with the usage log and the feedback log (see
 [Usage telemetry](usage-telemetry.md)) and recommends an action per skill. The rules are fixed:
 
 | Action | When |
@@ -770,7 +770,7 @@ A skill passes when `skills/<name>/evals/` or `.ai-rulez/evals/<name>/` contains
 `.gitkeep` does not count.
 
 ```console
-$ ai-rulez validate --strict
+$ ai-rulez validate
 .ai-rulez/skills/deploy-staging/SKILL.md:2  warning  AR962 evals-missing  skill "deploy-staging" has no eval cases ...
 ```
 
@@ -779,7 +779,7 @@ $ ai-rulez validate --strict
 ```bash
 set -euo pipefail
 
-ai-rulez validate --strict                 # AR962/AR996/AR997/AR998 included when enabled; exit 2 on findings at or above fail_on
+ai-rulez validate                          # AR962/AR996/AR997/AR998 included when enabled; exit 2 on findings at or above fail_on
 ai-rulez generate --plugin                 # writes the bundle, cases included with include_evals = true
 ai-rulez verify --plugin                   # exit non-zero if any bundled file differs from its recorded hash
 
@@ -806,7 +806,7 @@ ai-rulez eval run --changed-only --base origin/main \
   `--ablation` on only where you track the delta; use a cheap `--model` or per-case `model` for smoke cases; a
   `--date` is required for a dated result and comes from CI, never from the clock inside ai-rulez.
 - **Exit codes.** `eval run` exits `0` clean, `2` for a failing/errored/over-budget/invalid skill, `1` when it could not
-  run at all. `validate --strict` exits `0` clean, `1` for an invalid configuration and `2` for findings at or above
+  run at all. `validate` exits `0` clean, `1` for an invalid configuration and `2` for findings at or above
   `fail_on`; `verify --plugin` exits non-zero on any mismatch.
 - **Secrets and trust.** The runner runs the harness as the CI user with whatever credentials that job has. Evaluate
   only skills and cases you trust; `command_exit` assertions and `--runner-arg --trust-plugin` are opt-ins for that

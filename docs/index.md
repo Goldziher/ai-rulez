@@ -112,8 +112,8 @@ frontend = ["frontend", "qa"]
    git commit -m "docs: update AI assistant guidelines"
    ```
 
-   Generated files are gitignored by default (`gitignore = true`). Add them to the commit too only
-   if you set `gitignore = false`.
+   Generated files are committed by default: add them to the commit too. Set `gitignore = true` to have
+   ai-rulez keep them out of git through a managed `.gitignore` block instead.
 
 ## Key Features
 

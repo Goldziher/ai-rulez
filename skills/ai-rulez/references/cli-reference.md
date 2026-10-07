@@ -33,10 +33,10 @@ Flags:
 - `--role <name>` — Generate the slice of content a `[[roles]]` entry selects (mutually exclusive with `--profile`; works with `--user`)
 - `--locked` / `--frozen` — Require `ai-rulez.lock` to match remote sources and authored content (`--frozen` never uses the network); exit 2 on a source difference
 - `--dry-run, -d` — Print planned directories, writes, and stale generated-file deletions without mutating files
-- `--gitignore, -i` — Update `.gitignore` with generated output patterns
+- `--gitignore, -i` — Opt in to the managed `.gitignore` block with generated output patterns (off by default; same as `gitignore = true`)
 - `--config-dir, -n <name>` — Use a non-default config directory name instead of `.ai-rulez`
 - `--recursive, -r` — Generate for every discovered config directory
-- `--no-fetch, -f` — Use cached includes and skills without fetching
+- `--offline` — Use cached includes and skills without fetching
 - `--env, -e KEY=VALUE` — MCP env override; repeatable
 - `--env-file, -E <path>` — Dotenv file for MCP placeholders; repeatable
 - `--no-local` — Ignore the machine-local `config.local.*` overlay and `local/` content
