@@ -215,7 +215,6 @@ func init() {
 	f.StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	addFormatFlag(f, &publishFormat, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(f)
 
 	v := publishVerifyCmd.Flags()
 	v.StringArrayVar(&publishVerifyKeys, "key", nil, "Trusted PEM public key for the release signature (repeatable)")
@@ -224,7 +223,6 @@ func init() {
 	v.StringVar(&publishVerifyRoot, "trusted-root", "", "Sigstore trusted root file (default: the root from ai-rulez trust update)")
 	v.BoolVar(&publishVerifyRequire, "require-signature", false, "Fail an unsigned bundle, or one whose signer is not verified")
 	addFormatFlag(v, &publishFormat, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(v)
 
 	e := publishEmitCmd.Flags()
 	e.StringVar(&publishEmitOut, "out", "", "Directory to write the emitter's files to (default emit/<emitter>)")

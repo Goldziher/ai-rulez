@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const secretServerConfig = `version = "4.0"
+const secretServerConfig = `version = "5.0"
 name = "secret-check"
 presets = ["claude"]
 gitignore = %s

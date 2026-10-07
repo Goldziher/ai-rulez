@@ -10,7 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
 
-const pluginMemberConfig = `version = "4.0"
+const pluginMemberConfig = `version = "5.0"
 name = "crawl"
 
 [plugin]

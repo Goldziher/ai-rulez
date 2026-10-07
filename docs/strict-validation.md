@@ -1198,7 +1198,7 @@ a skill the model can invoke by itself has unrestricted Bash and ships scripts, 
 
 ### AR014 exfil-command
 
-a network command sends a secret environment variable, the environment or a credential file off the machine (curl/wget/nc with $TOKEN, DNS exfiltration)
+a network command sends a secret environment variable, the environment or a credential file off the machine (curl/wget/nc with $TOKEN, an archive of a credential directory piped to curl, DNS exfiltration that carries file or secret data)
 
 - Default severity: `error`
 - Analyzer: `security` (scope `item`)
@@ -1278,7 +1278,7 @@ a command runs a package it does not pin: npx -y pkg, uvx pkg, pipx run pkg, pip
 
 ### AR022 destructive-command
 
-a command wipes the root, home or working tree (rm -rf /, ~, $HOME/*, *), overwrites a disk (dd of=/dev/sdX, mkfs), force-pushes main, drops a database or forks a bomb
+a command wipes the root, home or working tree (rm -rf /, ~, $HOME/*, *), overwrites a disk (dd of=/dev/sdX, mkfs), force-pushes main (--force or a +main refspec), drops a database or schema or forks a bomb
 
 - Default severity: `warning`
 - Analyzer: `security` (scope `item`)
@@ -1438,11 +1438,11 @@ a markdown link anchor matches no heading in the target
 
 ### AR210 import-invalid
 
-an `@path` memory import points at a missing file, forms a cycle, or sits more than five hops deep, so Claude Code does not load it
+an `@path` memory import in a rule or context file points at a missing file, forms a cycle, or sits more than five hops deep, so Claude Code does not load it
 
 - Default severity: `error`
 - Analyzer: `references` (scope `item`)
-- Why: Claude Code does not load an `@path` import that is missing, cyclic or more than five hops deep.
+- Why: Claude Code does not load an `@path` import in a memory file (a rule or context file) that is missing, cyclic or more than five hops deep.
 - Bad: `@docs/missing.md`
 - Good: Point the import at an existing file and keep the chain short
 
@@ -2002,7 +2002,7 @@ a rule has more findings than the organization policy's lint.max_findings ceilin
 
 - Default severity: `error`
 - Analyzer: `config` (scope `bundle`)
-- Why: A ceiling lets an organization say how many findings of a rule it will live with, down to none, without depending on the repository's severity settings. The findings keep their own severity; going over the ceiling is the error, and baselines, [lint.tolerate] and ignore comments cannot absorb it.
+- Why: A ceiling lets an organization say how many findings of a rule it will live with, down to none, without depending on the repository's severity settings. The findings keep their own severity; going over the ceiling is the error, and baselines, [lint.ratchet] and ignore comments cannot absorb it.
 - Bad: Three AR703 findings under `[lint.max_findings] AR703 = 0`
 - Good: Fix the findings; the ceiling is lowered over time by the policy owners, not raised by the repository
 
@@ -2283,7 +2283,7 @@ a static rule, context or skill names a skill whose delivery is served, which is
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
 - Why: A static item that names a served skill points at a file the harness never gets.
-- Bad: A rule saying "run the `deploy` skill" when `deploy` is served
+- Bad: A rule saying "run the `deploy` skill", or an agent `skills: [deploy]`, when `deploy` is served
 - Good: Tell the agent to call `find_skill`, or make the skill static
 
 ### AR991 delivery-stub-missing
@@ -2508,7 +2508,7 @@ two OKF concepts in one directory share a title
 
 ### AR9B8 okf-path-unsafe
 
-an OKF bundle contains a symlink, a path escaping the bundle, or paths differing only in case
+an OKF bundle contains a symlink, a path escaping the bundle, a markdown file over the size limit (skipped), or paths differing only in case
 
 - Default severity: `error`
 - Analyzer: `okf` (scope `item`)
@@ -2928,47 +2928,47 @@ a judged review ran on a model alias, or without a calibration record that match
 
 ### AR9H1 verifier-failed
 
-a verifier's predicate did not hold; the finding names the verifier and the rule or skill that declared it (reported by `verifiers run` and `validate --strict --verifiers`)
+a verifier's predicate did not hold; the finding names the verifier and the rule or skill that declared it (reported by `verifiers run` and `validate --verifiers`)
 
 - Default severity: `warning`
 - Analyzer: `verifiers` (scope `item`)
-- Why: The check a rule or skill declared with a verifier does not hold on the evaluated files. Severity is the verifier's own (warning unless it sets `severity`). `ai-rulez verifiers run` and `validate --strict --verifiers` report it.
+- Why: The check a rule or skill declared with a verifier does not hold on the evaluated files. Severity is the verifier's own (warning unless it sets `severity`). `ai-rulez verifiers run` and `validate --verifiers` report it.
 - Bad: A migration `db/migrations/0042.sql` without a `-- down` section while verifier `migrations-have-down` requires one
 - Good: Apply the verifier's `fix`: add the section, or change the verifier if the rule changed
 
 ### AR9H2 verifier-invalid
 
-a verifier declaration is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (reported by `verifiers run` and `validate --strict --verifiers`)
+a verifier declaration is unusable: bad regex, unknown or missing target, two predicates, bad template, unknown key (reported by `verifiers run` and `validate --verifiers`)
 
 - Default severity: `error`
 - Analyzer: `verifiers` (scope `item`)
-- Why: A declaration under `.ai-rulez/verifiers/` that cannot be used is reported instead of silently skipped, so a typo never disables a check. `ai-rulez verifiers run`, `list`, `test` and `validate --strict --verifiers` report it.
+- Why: A declaration under `.ai-rulez/verifiers/` that cannot be used is reported instead of silently skipped, so a typo never disables a check. `ai-rulez verifiers run`, `list`, `test` and `validate --verifiers` report it.
 - Bad: `rule = "ghost"` naming a rule that does not exist, or `regex = "("`
 - Good: Name an existing rule, skill, agent or command and a valid RE2 regex
 
 ### AR9H3 verifier-command-failed-to-run
 
-a command predicate was refused (no --allow-exec, an untrusted include) or did not run: not found, could not start, timed out (reported by `verifiers run` and `validate --strict --verifiers`)
+a command predicate was refused (no --allow-exec, an untrusted include) or did not run: not found, could not start, timed out (reported by `verifiers run` and `validate --verifiers`)
 
 - Default severity: `error`
 - Analyzer: `verifiers` (scope `item`)
-- Why: A command predicate runs a program, which only happens with `--allow-exec` (or AI_RULEZ_VERIFIERS_ALLOW_EXEC=1) and, for a verifier that came from an include, only when `[verifiers_settings] trust_exec_from` names that include. A command that is refused, cannot be started or times out is an error, never a pass, even under `not`. `ai-rulez verifiers run`, `test` and `validate --strict --verifiers` report it.
+- Why: A command predicate runs a program, which only happens with `--allow-exec` (or AI_RULEZ_VERIFIERS_ALLOW_EXEC=1) and, for a verifier that came from an include, only when `[verifiers_settings] trust_exec_from` names that include. A command that is refused, cannot be started or times out is an error, never a pass, even under `not`. `ai-rulez verifiers run`, `test` and `validate --verifiers` report it.
 - Bad: `argv = ["make", "check-lock"]` run in CI without `--allow-exec`, or a program that is not installed
 - Good: Pass `--allow-exec` for trusted refs only, install the program, or raise `timeout_s` (capped by `max_timeout_s`)
 
 ### AR9H4 verifier-llm-skipped
 
-an llm verifier was not evaluated: LLM use is off, the budget would be exceeded, the content was withheld or unreadable, or --estimate was given; never counted as a pass (reported by `verifiers run` and `validate --strict --verifiers`)
+an llm verifier was not evaluated: LLM use is off, the budget would be exceeded, the content was withheld or unreadable, or --estimate was given; never counted as a pass (reported by `verifiers run` and `validate --verifiers`)
 
 - Default severity: `info`
 - Analyzer: `verifiers` (scope `item`)
-- Why: An `llm` verifier sends the changed hunks to a model, so it runs only with `--allow-llm`, with `allow_network = true` set in the user config, a configured model and a budget. When any of that is missing, the estimate exceeds `--max-cost`, or every hunk was withheld (a secret or hidden characters) or every changed file was binary or too large, the verifier is skipped and shown as skipped, never as passed. `ai-rulez verifiers run` and `validate --strict --verifiers` report it.
+- Why: An `llm` verifier sends the changed hunks to a model, so it runs only with `--allow-llm`, with `allow_network = true` set in the user config, a configured model and a budget. When any of that is missing, the estimate exceeds `--max-cost`, or every hunk was withheld (a secret or hidden characters) or every changed file was binary or too large, the verifier is skipped and shown as skipped, never as passed. `ai-rulez verifiers run` and `validate --verifiers` report it.
 - Bad: An `llm` verifier in CI without `--allow-llm`, which silently looks green
 - Good: Pass `--allow-llm` where model use is allowed, or read the skipped line as 'not checked'
 
 ### AR9H5 verifier-dead-scope
 
-a verifier's when_changed matches no file in the repository, so it can never apply (reported by `verifiers run` and `validate --strict --verifiers`, with --strict-applicability)
+a verifier's when_changed matches no file in the repository, so it can never apply (reported by `verifiers run` and `validate --verifiers`, with --strict-applicability)
 
 - Default severity: `warning`
 - Analyzer: `verifiers` (scope `item`)
@@ -2978,11 +2978,11 @@ a verifier's when_changed matches no file in the repository, so it can never app
 
 ### AR9H6 verifier-no-examples
 
-a verifier has no self-test examples (reported by `verifiers run` and `validate --strict --verifiers`, with [verifiers_settings] require_examples)
+a verifier has no self-test examples (reported by `verifiers run` and `validate --verifiers`, with [verifiers_settings] require_examples)
 
 - Default severity: `warning`
 - Analyzer: `verifiers` (scope `item`)
-- Why: With `[verifiers_settings] require_examples = true` a verifier without `[[verifiers.examples]]` has no self-test, so a regex typo can go unnoticed. `ai-rulez verifiers run` and `validate --strict --verifiers` report it.
+- Why: With `[verifiers_settings] require_examples = true` a verifier without `[[verifiers.examples]]` has no self-test, so a regex typo can go unnoticed. `ai-rulez verifiers run` and `validate --verifiers` report it.
 - Bad: A spec verifier with a `forbid` regex and no examples
 - Good: Add a passing and a failing example and run `ai-rulez verifiers test`
 
@@ -3042,7 +3042,7 @@ an [improve] optimizer, env_pass or looser-than-default gate key of the reposito
 
 - Default severity: `warning`
 - Analyzer: `evals` (scope `item`)
-- Why: A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. A repository may also only tighten the acceptance gate: `min_gain`, `max_regressions`, `holdout_fraction` and `max_skill_growth` looser than the defaults are ignored the same way. `validate --strict` and `improve run` report them.
+- Why: A repository config must not choose a command that runs on your machine or the environment variables it receives, so `[improve] optimizer` and `env_pass` in a repository config are used only with `--trust-repo-optimizer`. A repository may also only tighten the acceptance gate: `min_gain`, `max_regressions`, `holdout_fraction` and `max_skill_growth` looser than the defaults are ignored the same way. `validate` and `improve run` report them.
 - Bad: A cloned repository whose `.ai-rulez/config.toml` sets `[improve] optimizer`, run with plain `improve run <skill>`
 - Good: Pass `--with`, or review the config and add `--trust-repo-optimizer`
 
@@ -3122,7 +3122,7 @@ a preflight gate of `publish` failed: strict validation, the lock check or plugi
 
 - Default severity: `error`
 - Analyzer: `plugin` (scope `bundle`)
-- Why: A bundle must be reviewed, locked and generated before anyone downloads it, so `publish` runs `validate --strict`, `lock --check` and `verify --plugin` first and writes nothing when one fails.
+- Why: A bundle must be reviewed, locked and generated before anyone downloads it, so `publish` runs `validate`, `lock --check` and `verify --plugin` first and writes nothing when one fails.
 - Bad: A skill edited after `ai-rulez lock`, or plugin files hand-edited since `generate --plugin`
 - Good: Run `ai-rulez lock` and `ai-rulez generate --plugin`, commit, and publish again
 
