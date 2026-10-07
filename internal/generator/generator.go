@@ -466,32 +466,16 @@ func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error
 	return plugin.BuildManifest(&tempCfg, contentTree)
 }
 
-// warnUnreadConsumerFiles warns that [[plugins]] is written to files no tool
-// reads. Claude Code records installed plugins in .claude/settings.json
-// (enabledPlugins, extraKnownMarketplaces) and its documentation lists no
-// .claude/plugins.json; Codex documents plugin enablement as
-// [plugins."name@marketplace"] in config.toml, not .codex/plugins.json. The files
-// are still written, so nothing changes for users who depend on them.
-func (g *Generator) warnUnreadConsumerFiles() {
+// warnIgnoredPlugins warns that [[plugins]] no longer writes any file. v4 wrote
+// .claude/plugins.json and .codex/plugins.json, which no tool reads. Claude Code
+// records plugins in .claude/settings.json and Codex in .codex/config.toml.
+func (g *Generator) warnIgnoredPlugins() {
 	if len(g.config.Plugins) == 0 {
 		return
 	}
-	var files []string
-	for i := range g.config.Presets {
-		switch g.config.Presets[i].GetName() {
-		case "claude":
-			files = append(files, ".claude/plugins.json")
-		case "codex":
-			files = append(files, ".codex/plugins.json")
-		}
-	}
-	if len(files) == 0 {
-		return
-	}
-	g.log().Warn("[[plugins]] is written to a file no tool reads; it is deprecated and will be removed. "+
-		"For Claude Code set [claude.settings] manage = true with enable_plugins (writes enabledPlugins in .claude/settings.json); "+
-		"for Codex enable plugins with [plugins.\"name@marketplace\"] enabled = true in .codex/config.toml",
-		"files", strings.Join(files, ", "))
+	g.log().Warn("[[plugins]] has no effect in v5 and can be removed. " +
+		"For Claude Code set [claude.settings] manage = true with enable_plugins (writes enabledPlugins in .claude/settings.json); " +
+		"for Codex enable plugins with [plugins.\"name@marketplace\"] enabled = true in .codex/config.toml")
 }
 
 // stalePluginDirs lists the generated domain-plugin directories whose plugin is
@@ -1007,7 +991,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 
 	presets.WarnDuplicateContent(g.log(), contentTree)
 	g.warnUnbundledPluginOnly(contentTree)
-	g.warnUnreadConsumerFiles()
+	g.warnIgnoredPlugins()
 	for _, diagnostic := range settings.UnsupportedDiagnostics(g.config) {
 		g.config.Diag.Warn(diagnostic)
 	}

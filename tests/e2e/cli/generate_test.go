@@ -148,26 +148,12 @@ priority: high
 	s.NotContains(content, "${GRAFANA_TOKEN}")
 }
 
-func (s *GenerateCLITestSuite) TestGenerateWithDeprecatedUpdateGitignoreFlag() {
-	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
-	s.NoError(os.MkdirAll(filepath.Join(aiRulesDir, "rules"), 0o755))
-	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
-name = "deprecated-gitignore"
-presets = ["codex"]
-gitignore = false
-`)
-	testutil.WriteFile(s.T(), filepath.Join(aiRulesDir, "rules"), "test-rule.md", `---
-priority: high
----
-# Test Rule
-`)
-
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate", "--update-gitignore")
-
-	result.AssertOutputContains(s.T(), "Generation complete")
-	content := testutil.ReadFile(s.T(), filepath.Join(s.workingDir, ".gitignore"))
-	s.Contains(content, "AGENTS.md")
-	s.Contains(content, ".codex/")
+func (s *GenerateCLITestSuite) TestGenerateRejectsRemovedFlags() {
+	for _, flag := range []string{"--update-gitignore", "--no-configure-cli-mcp", "--skip-cli-mcp"} {
+		result := testutil.RunCLI(s.T(), s.workingDir, "generate", flag)
+		s.NotEqual(0, result.ExitCode, flag)
+		result.AssertOutputContains(s.T(), "unknown flag")
+	}
 }
 
 func (s *GenerateCLITestSuite) TestGenerateWithMCPEnvFileFlag() {
