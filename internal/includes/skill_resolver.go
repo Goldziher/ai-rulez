@@ -107,7 +107,7 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		if err != nil {
 			return config.ContentFile{}, oops.Wrapf(err, "failed to create git source for skill '%s'", skillConf.Name)
 		}
-		source.pin, source.baseDir = p, baseDir
+		source.pin, source.baseDir, source.state = p, baseDir, stateFor(cfg)
 		return source.Fetch(ctx)
 
 	case SourceTypeLocal:
