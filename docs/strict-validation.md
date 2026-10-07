@@ -193,6 +193,12 @@ stdout.
 | AR9N7 | `publish-unsigned` | error | `require_signature` is set and the bundle is unsigned, or its signature does not verify (publish only) |
 | AR9N8 | `publish-unapproved` | error | `require_approved` is set and content the governance policy selects has no valid approval (publish only) |
 | AR9N9 | `publish-emitter-experimental` | warning | An emitter whose format is not verified against vendor documentation was requested with `--experimental` (publish only) |
+| AR9O0 | `agent-plugins-manifest-invalid` | error | `plugin.json` is missing or fails the Agent Plugins schema, names an unsupported spec version, or has an invalid extension namespace (see [Agent Plugins](agent-plugins.md)) |
+| AR9O1 | `agent-plugins-skill-invalid` | error | A skill of the Agent Plugins package breaks the Agent Skills rules or sits outside `skills/<name>/SKILL.md`, so clients skip it |
+| AR9O2 | `agent-plugins-mcp-invalid` | error | `mcp.json` or one of its servers fails the Agent Plugins schema or section 7.2 (command, url, headers), so clients skip it |
+| AR9O3 | `agent-plugins-placeholder-unsupported` | error | An MCP server uses a `${VAR}` placeholder; clients expand only `${PLUGIN_ROOT}` and `${PLUGIN_DATA}`, in args, env values and cwd |
+| AR9O4 | `agent-plugins-content-dropped` | warning | A field or server the package cannot carry was not packaged: a disabled server, or command, args, env and cwd on a remote server |
+| AR9O5 | `agent-plugins-package-unsafe` | error | A file or link of the Agent Plugins package resolves outside the plugin root or cannot be read |
 | AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
 | AR9G1 | `trigger-vague` | warning | A description lacks a concrete trigger or a non-trigger (`review`; offline evidence is `AR801`-`AR803`) |
 | AR9G2 | `trigger-overlap` | warning | A description is likely confused with a sibling (`review`; offline evidence is `AR701`, `AR702`) |
@@ -268,9 +274,10 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
 | `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N9` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
 | `AR9P0`-`AR9P9` | llms.txt files ([llms.txt](llms-txt.md); `AR9P0`-`AR9P6` used) | allocated |
+| `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
-Unlisted letters (`AR9I`, `AR9O`, `AR9Q`-`AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
+Unlisted letters (`AR9I`, `AR9Q`-`AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
 out of blocks that more than one design had claimed (review and catalog both asked for `AR9G`, publish for `AR9F`,
 a UI for `AR9H`).
 
@@ -3315,5 +3322,65 @@ an llms.txt link has an empty target
 - Why: A link with an empty target points nowhere.
 - Bad: `- [Guide]()`
 - Good: `- [Guide](docs/guide.md)`
+
+### AR9O0 agent-plugins-manifest-invalid
+
+plugin.json is missing or does not match the Agent Plugins schema, names an unsupported spec version, or carries an invalid extension namespace
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A conformant client rejects a plugin whose plugin.json fails the official schema, so ai-rulez checks the file it writes against the vendored schema of the selected spec version.
+- Bad: `[plugin] spec = "2.0.0"`, or a plugin name with an upper-case letter
+- Good: `spec = "1.1.0"` (or leave it unset for 1.0.0) and a name of lower-case letters, digits, `-` and `.`
+
+### AR9O1 agent-plugins-skill-invalid
+
+a skill of the Agent Plugins package breaks the Agent Skills rules (name, description, frontmatter) or sits outside skills/<name>/SKILL.md, so clients skip it
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: Clients skip a skill whose SKILL.md lacks a name that matches its directory or a description, so the package would ship a skill nobody can load.
+- Bad: A skill whose frontmatter has `name` but no `description`
+- Good: Give the skill a `description` and a `name` equal to its directory name
+
+### AR9O2 agent-plugins-mcp-invalid
+
+mcp.json or one of its servers does not match the Agent Plugins schema or section 7.2 (command, url, headers), so clients skip it
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: Clients skip an MCP server whose entry breaks the schema, and disable MCP when mcp.json itself is invalid. A stdio command must be one token (a bare name or a ./ path), and an HTTP url must be HTTPS or localhost.
+- Bad: `command = "npx -y server"` or `url = "http://example.com/mcp"`
+- Good: `command = "npx"`, `args = ["-y", "server"]`, and an `https://` url
+
+### AR9O3 agent-plugins-placeholder-unsupported
+
+an MCP server uses a ${VAR} placeholder; Agent Plugins clients expand only ${PLUGIN_ROOT} and ${PLUGIN_DATA}, in args, env values and cwd
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: Agent Plugins expands only ${PLUGIN_ROOT} and ${PLUGIN_DATA}. A ${API_KEY} placeholder would reach the server as that literal text, so ai-rulez drops the server instead of packaging a launch that cannot work.
+- Bad: `args = ["--key", "${API_KEY}"]` in a plugin MCP server
+- Good: Let the server read API_KEY from its environment (an `env` entry `API_KEY = "${API_KEY}"` is omitted and left to the client), or use ${PLUGIN_ROOT}/${PLUGIN_DATA}
+
+### AR9O4 agent-plugins-content-dropped
+
+a field or server the Agent Plugins package cannot carry was not packaged: a disabled server, or command, args, env and cwd on a remote server
+
+- Default severity: `warning`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: The package format has no way to say that a server is disabled, and a remote server has no command or env, so those fields are left out rather than packaged wrongly.
+- Bad: `enabled = false` on a server of a project that publishes an Agent Plugins package
+- Good: Remove the server from the plugin, or enable it
+
+### AR9O5 agent-plugins-package-unsafe
+
+a file or link of the Agent Plugins package resolves outside the plugin root or cannot be read
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A package must hold only files below its root, so a symlink that leaves the root, or a file that cannot be read, is reported and not packaged.
+- Bad: A skill directory that is a symlink to `~/skills`
+- Good: Copy the skill into the project
 
 <!-- rules:end -->

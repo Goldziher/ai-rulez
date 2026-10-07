@@ -59,6 +59,9 @@ needs-action or unsupported.
 
 Importers (--from, comma separated, default auto, which runs every importer that
 detects something, skills-lock first):
+  agent-plugins an Agent Plugins directory (agent-plugins.org): plugin.json becomes the
+                [plugin] block, skills/ the skills, mcp.json the [[mcp_servers]], and the
+                Claude Code and ai-rulez extension namespaces agents, commands and rules
   native        CLAUDE.md, AGENTS.md, GEMINI.md, .cursor/rules, .github/instructions,
                 .kiro/steering, .windsurf, .roo, .clinerules, .qwen, .junie,
                 .agents/skills, skills, agents and commands of every supported preset,
@@ -121,7 +124,7 @@ validation, or --fail-on matched.`,
 
 func init() {
 	f := ConvertCmd.Flags()
-	f.StringSliceVar(&convertFrom, "from", []string{"auto"}, "Importers to run: native, rulesync, apm, tessl, okf, skills-lock or auto (every detected importer)")
+	f.StringSliceVar(&convertFrom, "from", []string{"auto"}, "Importers to run: native, rulesync, apm, tessl, okf, skills-lock, agent-plugins or auto (every detected importer)")
 	f.StringVar(&convertSource, "source", ".", "Directory to read")
 	f.StringVar(&convertInto, "into", importer.DefaultConfigDir, "Config directory to write: relative to --source unless absolute; never written through a symlink")
 	f.StringVar(&convertDomain, "domain", "", "Put the imported content in this domain (safe next to an existing tree)")
