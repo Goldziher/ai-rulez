@@ -264,10 +264,28 @@ func (r *runner) checkCollapsed() {
 }
 
 func (r *runner) labelPath(p string) string {
+	if label, ok := includeCacheLabel(p); ok {
+		return label
+	}
 	if filepath.IsAbs(p) {
 		return r.display(p)
 	}
 	return p // an embedded builtin, already written as builtin://...
+}
+
+// includeCacheRE matches a file in the include cache, ".cache/ai-rulez/includes/<name>-<hash>/<path>".
+var includeCacheRE = regexp.MustCompile(`/ai-rulez/includes/([^/]+)-[0-9a-f]{12}/(.+)$`)
+
+// includeCacheLabel names a file of a cached include by the include and the path
+// within it. The cache lives under the user's home directory, and a message that
+// carried that absolute path gave the same finding a different fingerprint on
+// every machine.
+func includeCacheLabel(p string) (string, bool) {
+	m := includeCacheRE.FindStringSubmatch(filepath.ToSlash(p))
+	if m == nil {
+		return "", false
+	}
+	return "include " + m[1] + ":" + m[2], true
 }
 
 func (r *runner) labelPaths(paths []string) string {

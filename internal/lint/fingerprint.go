@@ -52,6 +52,9 @@ func assignIdentity(findings []Finding, tree *Tree, cwd string) {
 				path = rel
 			}
 		}
+		if label, ok := includeCacheLabel(path); ok {
+			path = label // the cache sits under the home directory, which differs per machine
+		}
 		f.meta().Path = path
 		annotateAnalyzer(f)
 		ls, ok := lines[abs]
