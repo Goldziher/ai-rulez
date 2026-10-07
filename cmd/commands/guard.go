@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"io"
 	"os"
 
@@ -29,7 +28,10 @@ Add the hook with [guard] generated = true in .ai-rulez/config.toml.`,
 	Args:         cobra.NoArgs,
 	SilenceUsage: true,
 	Run: func(cmd *cobra.Command, _ []string) {
-		cwd, _ := os.Getwd()
+		cwd, err := os.Getwd()
+		if err != nil {
+			cwd = "" // the guard fails open on its own errors
+		}
 		if code := runGuard(cmd.InOrStdin(), cmd.ErrOrStderr(), cwd); code != 0 {
 			os.Exit(code)
 		}
@@ -42,6 +44,6 @@ func runGuard(stdin io.Reader, stderr io.Writer, cwd string) int {
 	if !decision.Block {
 		return 0
 	}
-	_, _ = fmt.Fprint(stderr, decision.Message())
+	reportWriter{stderr}.printf("%s", decision.Message())
 	return guard.ExitBlock
 }
