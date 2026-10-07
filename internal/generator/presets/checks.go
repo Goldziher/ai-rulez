@@ -149,8 +149,8 @@ func RenderCheckSections(checks []config.ContentFile, header string) string {
 // partially owned when it holds anything else, so it is never deleted whole and
 // never git-ignored. It is written verbatim (RawContent): a generated-file banner
 // or content hash would land inside the user's own text.
-func MergedChecksFile(path, header, text string) (config.OutputFile, error) {
-	res, err := docmerge.Apply(path, docmerge.FormatMarkdown, []docmerge.OwnedKey{
+func MergedChecksFile(cfg *config.Config, path, header, text string) (config.OutputFile, error) {
+	res, err := docmerge.ApplyWith(cfg.ReadExisting, path, docmerge.FormatMarkdown, []docmerge.OwnedKey{
 		{Name: docmerge.HeaderKey, Value: header},
 		{Name: ChecksBlockName, Value: text},
 	})
@@ -181,7 +181,7 @@ func cursorCheckOutputs(content *config.ContentTree, baseDir string, cfg *config
 	if text == "" {
 		return nil, nil
 	}
-	out, err := MergedChecksFile(filepath.Join(baseDir, cursorChecksFile), "", text)
+	out, err := MergedChecksFile(cfg, filepath.Join(baseDir, cursorChecksFile), "", text)
 	if err != nil {
 		return nil, err
 	}

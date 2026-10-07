@@ -262,7 +262,7 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(
 	settingsPath string,
 	cfg *config.Config,
 ) (jsonmerge.Result, error) {
-	return applyMergedDocument(settingsPath, []jsonmerge.OwnedKey{
+	return applyMergedDocument(cfg, settingsPath, []jsonmerge.OwnedKey{
 		{Name: keyMCPServers, Value: antigravityMCPServers(cfg), Members: true},
 	})
 }
@@ -271,7 +271,7 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(
 // file Antigravity actually reads them from (workspace scope); settings.json is
 // kept for compatibility with earlier output.
 func (g *AntigravityPresetGenerator) renderMCPConfigJSON(path string, cfg *config.Config) (jsonmerge.Result, error) {
-	return applyMergedDocument(path, []jsonmerge.OwnedKey{
+	return applyMergedDocument(cfg, path, []jsonmerge.OwnedKey{
 		{Name: keyMCPServers, Value: antigravityMCPServers(cfg), Members: true},
 	})
 }

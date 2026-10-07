@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"slices"
 	"sort"
@@ -354,7 +355,12 @@ type Unmerged struct {
 // is absent, or whose container is not what the claim expects, is skipped. A
 // missing file changes nothing.
 func Unmerge(path string, claims []Claim) (Unmerged, error) {
-	existing, found, err := readExistingDocument(path)
+	return UnmergeWith(os.ReadFile, path, claims)
+}
+
+// UnmergeWith is Unmerge reading the document through read.
+func UnmergeWith(read Reader, path string, claims []Claim) (Unmerged, error) {
+	existing, found, err := readExistingWith(read, path)
 	if err != nil || !found {
 		return Unmerged{}, err
 	}

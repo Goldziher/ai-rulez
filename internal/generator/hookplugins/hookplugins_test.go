@@ -624,7 +624,7 @@ func TestMayWriteModuleChecksProvenance(t *testing.T) {
 				require.NoError(t, os.WriteFile(path, []byte(*tt.content), 0o644))
 			}
 
-			got := hookplugins.MayWriteModule(nil, path)
+			got := hookplugins.MayWriteModule(nil, os.ReadFile, path)
 
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.wantWarn, len(*warnings) == 1, "%v", *warnings)

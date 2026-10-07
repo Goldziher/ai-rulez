@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -203,7 +202,7 @@ func (g *GeminiPresetGenerator) renderSettings(settingsPath string, cfg *config.
 	if err != nil || len(owned) == 0 {
 		return jsonmerge.Result{}, false, err
 	}
-	result, err = applyMergedDocument(settingsPath, owned)
+	result, err = applyMergedDocument(cfg, settingsPath, owned)
 	if err != nil && len(cfg.MCPServers) == 0 && len(cfg.Hooks) == 0 {
 		cfg.Diag.Warn(".gemini/settings.json could not be merged into, so "+geminiLocalContextFile+
 			" is not added to context.fileName and Gemini CLI does not load machine-local content: "+err.Error(),
@@ -244,7 +243,7 @@ func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Co
 	if cfg.AgentsMD {
 		main = string(config.SharedAgentsMD)
 	}
-	names, isList, err := readGeminiContextFileNames(settingsPath)
+	names, isList, err := readGeminiContextFileNames(cfg, settingsPath)
 	if err != nil {
 		return nil, false, err
 	}
@@ -367,11 +366,11 @@ func (g *GeminiPresetGenerator) warnUnreachableGeminiMD(d *diag.Collector, setti
 // string is reported as one name). Existing names are kept when agents_md adds
 // AGENTS.md, because Gemini replaces its default (GEMINI.md) with whatever is
 // configured. A missing file configures none.
-func readGeminiContextFileNames(settingsPath string) (names []string, isList bool, err error) {
+func readGeminiContextFileNames(cfg *config.Config, settingsPath string) (names []string, isList bool, err error) {
 	if settingsPath == "" {
 		return nil, false, nil
 	}
-	data, err := os.ReadFile(settingsPath) //nolint:gosec // path is derived from the config base dir
+	data, err := cfg.ReadExisting(settingsPath)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		return nil, false, nil
