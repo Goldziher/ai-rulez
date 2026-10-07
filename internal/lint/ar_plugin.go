@@ -332,9 +332,9 @@ func (r *runner) delegatePluginValidate(dir string) {
 	// A missing binary, a timeout and a non-zero exit (how the tool reports errors)
 	// all leave the built-in checks as the answer; only parseable JSON is merged.
 	res := r.host.Run().Run(context.Background(), proc.Spec{
-		Argv:       []string{"claude", "plugin", "validate", dir, "--json"},
-		InheritEnv: true,
-		Timeout:    60 * time.Second,
+		Argv:    []string{"claude", "plugin", "validate", dir, "--json"},
+		Env:     proc.ScrubEnv(proc.HostEnv(), nil, nil),
+		Timeout: 60 * time.Second,
 	})
 	var rep claudeValidation
 	if res.Status == proc.StatusUnavailable || json.Unmarshal(res.Stdout, &rep) != nil {

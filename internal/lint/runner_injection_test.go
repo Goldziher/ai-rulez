@@ -47,6 +47,29 @@ func TestDelegatePluginValidateThroughAnInjectedRunner(t *testing.T) {
 	}
 }
 
+func TestDelegatePluginValidateDoesNotPassSecretsToTheSubprocess(t *testing.T) {
+	// Arrange
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "fake-secret-value")
+	t.Setenv("GITHUB_TOKEN", "fake-token-value")
+	dir := t.TempDir()
+	fake := &proc.Fake{}
+	r := &runner{cfg: &config.Config{}, tree: &Tree{Top: dir}, docs: map[string]doc{}, host: ambient.Host{Runner: fake}}
+	r.resolveSettings()
+
+	// Act
+	r.delegatePluginValidate(dir)
+
+	// Assert
+	calls := fake.Calls()
+	require.Len(t, calls, 1)
+	assert.False(t, calls[0].InheritEnv, "the subprocess must get an explicit environment")
+	for _, kv := range calls[0].Env {
+		assert.NotContains(t, kv, "fake-secret-value")
+		assert.NotContains(t, kv, "fake-token-value")
+	}
+	assert.NotEmpty(t, calls[0].Env, "the allowlisted environment (PATH, HOME) is still passed")
+}
+
 func TestScannerTodayUsesTheInjectedHost(t *testing.T) {
 	tests := []struct {
 		name string
