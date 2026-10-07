@@ -67,7 +67,8 @@ func Merge(a, b Policy) Policy {
 // Fold merges layers; no layers is the empty policy.
 func Fold(layers []Layer) Policy {
 	var out Policy
-	for _, l := range layers {
+	for i := range layers {
+		l := &layers[i]
 		out = Merge(out, l.Policy)
 	}
 	return out
@@ -175,7 +176,7 @@ func lowerLimits(a, b map[string]int) map[string]int {
 }
 
 // policyScanRank orders the values a policy holds: "" is no constraint.
-var policyScanRank = map[string]int{"": 0, "warn": 1, "error": 2}
+var policyScanRank = map[string]int{"": 0, levelWarn: 1, levelError: 2}
 
 func stricterScan(a, b string) string {
 	if policyScanRank[b] > policyScanRank[a] {

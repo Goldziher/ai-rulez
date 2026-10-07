@@ -224,16 +224,24 @@ func sortedInlineServers(defs map[string]map[string]any) []inlineServer {
 	out := make([]inlineServer, 0, len(names))
 	for _, name := range names {
 		def := defs[name]
-		command, _ := def["command"].(string)
+		command := stringValue(def["command"])
 		out = append(out, inlineServer{name: name, transport: inlineTransport(def, command), command: command})
 	}
 	return out
 }
 
+// stringValue is v when it is a string, else "".
+func stringValue(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
 // inlineTransport reads the transport of an inline definition: an explicit type,
 // else stdio when it runs a command and http when it names a URL.
 func inlineTransport(def map[string]any, command string) string {
-	t, _ := def["type"].(string)
+	t := stringValue(def["type"])
 	switch strings.ToLower(strings.TrimSpace(t)) {
 	case "sse":
 		return config.TransportSSE

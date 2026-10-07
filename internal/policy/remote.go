@@ -174,7 +174,7 @@ func sameHostRedirect(req *http.Request, via []*http.Request) error {
 func fetch(ctx context.Context, client *http.Client, ref Ref) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, client.Timeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ref.Location, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ref.Location, http.NoBody)
 	if err != nil {
 		return nil, &ParseError{Path: ref.Display(), Msg: "not a valid URL"}
 	}

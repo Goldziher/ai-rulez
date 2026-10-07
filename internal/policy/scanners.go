@@ -42,7 +42,7 @@ func (s *ScannerPolicy) fromDoc(d *fileScannerPolicy) error {
 	if d == nil {
 		return nil
 	}
-	if p := strings.ToLower(strings.TrimSpace(d.Preset)); p != "" && p != "off" {
+	if p := strings.ToLower(strings.TrimSpace(d.Preset)); p != "" && p != levelOff {
 		if _, ok := scanners.LookupPreset(p); !ok {
 			return fmt.Errorf("lint.scanner_policy.preset: %q is not one of %s", d.Preset, strings.Join(scanners.PresetNames(), ", "))
 		}
@@ -56,7 +56,7 @@ func (s *ScannerPolicy) fromDoc(d *fileScannerPolicy) error {
 	}
 	s.Required = sortedUnique(s.Required)
 	switch f := strings.ToLower(strings.TrimSpace(d.FailOn)); f {
-	case "", "error", "warning", "info":
+	case "", levelError, levelWarning, levelInfo:
 		s.FailOn = f
 	default:
 		return fmt.Errorf("lint.scanner_policy.fail_on: %q is not error, warning or info", d.FailOn)
@@ -92,11 +92,11 @@ func presetRank(name string) int {
 // failOnRank orders thresholds by strictness: info fails on the most.
 func failOnRank(v string) int {
 	switch v {
-	case "error":
+	case levelError:
 		return 1
-	case "warning":
+	case levelWarning:
 		return 2
-	case "info":
+	case levelInfo:
 		return 3
 	}
 	return 0

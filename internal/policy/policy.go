@@ -30,11 +30,21 @@ const Version = 1
 const maxPolicyBytes = 256 << 10
 
 // Severities a policy may require, lowest first. "off" is not a floor.
-var severityRank = map[string]int{"info": 1, "warning": 2, "error": 3}
+var severityRank = map[string]int{levelInfo: 1, levelWarning: 2, levelError: 3}
+
+// Levels several policy keys share.
+const (
+	levelOff  = "off"
+	levelInfo = "info"
+	levelWarn = ModeWarn
+	// levelWarning is the lint severity; levelWarn the scan threshold.
+	levelWarning = "warning"
+	levelError   = "error"
+)
 
 // scanImports levels, lowest first. An unset repository value ranks between
 // warn and error: it keeps every finding's own severity.
-var scanImportsRank = map[string]int{"off": 0, "warn": 1, "": 2, "error": 3}
+var scanImportsRank = map[string]int{levelOff: 0, levelWarn: 1, "": 2, levelError: 3}
 
 // List is an allowlist. Set distinguishes "no constraint" (not set) from
 // "nothing is allowed" (set and empty).
@@ -573,7 +583,7 @@ func (s *Security) fromDoc(d *fileSecurity) error {
 		s.AllowedHosts = List{Set: true, Items: items}
 	}
 	level := strings.ToLower(strings.TrimSpace(d.ScanImports))
-	if level != "" && level != "warn" && level != "error" {
+	if level != "" && level != levelWarn && level != levelError {
 		return fmt.Errorf("lint.security.scan_imports: %q is not allowed in a policy (use warn or error)", d.ScanImports)
 	}
 	s.ScanImports = level

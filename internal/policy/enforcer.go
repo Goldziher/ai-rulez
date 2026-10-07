@@ -95,9 +95,10 @@ func (e *Enforcer) LoadFor(dir string) (*Resolved, error) {
 	if base != nil {
 		layers, warn = append(layers, base.Layers...), base.Warn
 	}
-	for _, l := range memo.layers {
+	for i := range memo.layers {
+		l := &memo.layers[i]
 		if !hasLayer(layers, l.key) {
-			layers = append(layers, l)
+			layers = append(layers, *l)
 		}
 	}
 	res := Resolve(layers)
@@ -106,7 +107,8 @@ func (e *Enforcer) LoadFor(dir string) (*Resolved, error) {
 }
 
 func hasLayer(layers []Layer, key string) bool {
-	for _, l := range layers {
+	for i := range layers {
+		l := &layers[i]
 		if l.key != "" && l.key == key {
 			return true
 		}

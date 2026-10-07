@@ -12,18 +12,20 @@ func provenance(layers []Layer) map[string]string {
 	eff := Fold(layers)
 	name := func(l Layer) string { return l.Origin }
 	firstWith := func(key string, has func(Policy) bool) {
-		for _, l := range layers {
+		for i := range layers {
+			l := &layers[i]
 			if has(l.Policy) {
-				out[key] = name(l)
+				out[key] = name(*l)
 				return
 			}
 		}
 	}
 	all := func(key string, has func(Policy) bool) {
 		var names []string
-		for _, l := range layers {
+		for i := range layers {
+			l := &layers[i]
 			if has(l.Policy) {
-				names = append(names, name(l))
+				names = append(names, name(*l))
 			}
 		}
 		if len(names) > 0 {
