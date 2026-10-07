@@ -165,6 +165,10 @@ type Release struct {
 	Prerelease bool
 	// Published is the time the forge published the release; the trusted release date.
 	Published time.Time
+	// Commit is the commit the release was created at, when the forge recorded
+	// one (GitHub's target_commitish when it is a commit id). It is empty when the
+	// release names a branch: the forge then cannot say which commit it released.
+	Commit string
 }
 
 // TagInfo describes a git tag as the forge knows it.
