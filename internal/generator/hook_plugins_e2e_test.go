@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const hookPluginsProjectConfig = `version = "4.0"
+const hookPluginsProjectConfig = `version = "5.0"
 name = "hook-plugins"
 presets = ["opencode", "kilo", "mimocode", "pi", "amp"]
 gitignore = true
@@ -65,7 +65,7 @@ func TestGenerate_HookPluginsAreGitignoredAndCleaned(t *testing.T) {
 }
 
 func TestGenerate_NoHooksWritesNoPlugins(t *testing.T) {
-	root := writeProject(t, `version = "4.0"
+	root := writeProject(t, `version = "5.0"
 name = "plain"
 presets = ["opencode", "kilo", "mimocode", "pi", "amp"]
 gitignore = false
@@ -83,7 +83,7 @@ func TestGenerate_DroppingHooksRemovesThePlugins(t *testing.T) {
 	generateProject(t, root)
 	require.FileExists(t, filepath.Join(root, ".pi", "extensions", "ai-rulez-hooks.ts"))
 
-	trimmed := `version = "4.0"
+	trimmed := `version = "5.0"
 name = "hook-plugins"
 presets = ["opencode", "kilo", "mimocode", "pi", "amp"]
 gitignore = true

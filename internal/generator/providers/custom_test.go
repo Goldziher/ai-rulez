@@ -68,7 +68,7 @@ func TestGeneratePresets_ProviderBacked(t *testing.T) {
 	))
 
 	cfg := &config.Config{
-		Version: "4.0",
+		Version: "5.0",
 		Name:    "proj",
 		BaseDir: baseDir,
 		Content: &config.ContentTree{Rules: []config.ContentFile{{Name: "r", Content: "c"}}},
