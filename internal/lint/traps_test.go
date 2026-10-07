@@ -9,7 +9,7 @@ import (
 )
 
 func trapConfig(presets, extra string) string {
-	return "version = \"4.0\"\nname = \"t\"\npresets = [" + presets + "]\n" + extra
+	return "version = \"5.0\"\nname = \"t\"\npresets = [" + presets + "]\n" + extra
 }
 
 func trapFindings(t *testing.T, files map[string]string) []Finding {
