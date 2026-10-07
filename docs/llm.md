@@ -104,7 +104,7 @@ Model-side retention and training terms are the provider's; check them before se
 
 ### Cost controls
 
-Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use `ai-rulez llm estimate <file>` to see what a prompt costs first (tokens are estimated at one per three UTF-8 bytes, which overestimates English text and holds for CJK). The built-in price table is small and approximate (OpenAI `gpt-4o`/`gpt-4.1` families and embeddings, Gemini `gemini-2.5-flash`, `gemini-2.5-flash-lite` and `gemini-embedding-001`, Claude families) and only for budget estimates; set `price_input_per_mtok` / `price_output_per_mtok` for anything else. Cost in responses is an estimate from that table, not a bill.
+Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use `ai-rulez llm estimate <file>` to see what a prompt costs first (tokens are estimated at one per three UTF-8 bytes, which overestimates English text and holds for CJK). The built-in price table is small and approximate (OpenAI `gpt-4o`/`gpt-4.1` families and embeddings, Gemini `gemini-2.5-flash`, `gemini-2.5-flash-lite` and `gemini-embedding-001`, Claude families, with the current Opus, Sonnet and Haiku versions priced separately and older ones at the family price; last checked against the providers' price pages on 2026-10-07) and only for budget estimates; set `price_input_per_mtok` / `price_output_per_mtok` for anything else. Cost in responses is an estimate from that table, not a bill.
 
 ## Backends
 
