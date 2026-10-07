@@ -5,6 +5,11 @@
 # print one JSON response on standard output and may edit only <skill>/SKILL.md and <skill>/references/**.
 set -eu
 
+command -v jq >/dev/null 2>&1 || {
+  echo "optimize.sh: jq is required" >&2
+  exit 127
+}
+
 request=$(cat)
 
 # The skill directory, relative to the workspace (the current directory). Needs jq; any JSON tool works.
