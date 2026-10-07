@@ -3,10 +3,12 @@ package lint
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/url"
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -45,6 +47,8 @@ type mcpServer struct {
 	// line is the 1-based line of the definition when the source knows it
 	// (frontmatter); 0 means search the file for the name.
 	line int
+	// section is the JSON key that holds the servers ("" for config.toml).
+	section string
 }
 
 // mcpJSONFiles are the hand-authored MCP files checked when tracked or present:
@@ -69,8 +73,8 @@ func (r *runner) mcpServers() []*mcpServer {
 			continue
 		}
 		for _, srv := range decodeMCPJSON(p, f.key, data) {
-			if r.declaresMCPServer(srv.name) {
-				continue // the file mirrors config.toml, which is checked at its source
+			if gen := r.configMCPServer(srv.name); gen != nil && sameMCPServer(srv, gen) {
+				continue // a copy of what config.toml generates, which is checked at its source
 			}
 			out = append(out, srv)
 		}
@@ -87,13 +91,25 @@ func (r *runner) effectiveMCPServers() []config.MCPServer {
 	return r.mcpEffective
 }
 
-func (r *runner) declaresMCPServer(name string) bool {
-	for _, s := range r.effectiveMCPServers() {
-		if s.Name == name {
-			return true
+// configMCPServer returns the server of that name as written in config.toml, or nil.
+func (r *runner) configMCPServer(name string) *config.MCPServer {
+	servers := r.effectiveMCPServers()
+	for i := range servers {
+		if servers[i].Name == name {
+			return &servers[i]
 		}
 	}
-	return false
+	return nil
+}
+
+// sameMCPServer reports whether a server read from a JSON file carries the same
+// launch definition as the config.toml server of that name, so the file is a
+// generated copy. Any difference means the file was edited and is checked itself.
+func sameMCPServer(j *mcpServer, gen *config.MCPServer) bool {
+	g := &mcpServer{transport: gen.Transport, command: gen.Command, url: gen.URL}
+	return len(j.typeProblems) == 0 && j.command == gen.Command && j.url == gen.URL &&
+		effectiveTransport(j) == effectiveTransport(g) &&
+		slices.Equal(j.args, gen.Args) && maps.Equal(j.env, gen.Env) && maps.Equal(j.headers, gen.Headers)
 }
 
 func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
@@ -113,7 +129,7 @@ func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocycl
 	var out []*mcpServer
 	for _, n := range names {
 		f := servers[n]
-		s := &mcpServer{file: file, name: n}
+		s := &mcpServer{file: file, name: n, section: key}
 		str := func(k string, dst *string) {
 			if raw, ok := f[k]; ok {
 				if json.Unmarshal(raw, dst) != nil {
@@ -190,7 +206,7 @@ func checkMCPConfig(r *runner) {
 			continue
 		}
 		lines := r.fileLines(s.file)
-		at := lineContaining(lines, s.name)
+		at := mcpServerLine(lines, s)
 		if s.line > 0 {
 			at = s.line
 		}
@@ -198,6 +214,31 @@ func checkMCPConfig(r *runner) {
 		r.checkMCPPins(s, at)
 		r.checkMCPSecrets(s, lines, at)
 	}
+}
+
+// mcpServerLine is the 1-based line that defines s: its name = "..." line in a
+// [[mcp_servers]] block of config.toml, or its quoted key inside the servers
+// object of a JSON file. A bare substring search would land on an unrelated
+// line that merely contains the name.
+func mcpServerLine(lines []string, s *mcpServer) int {
+	q := regexp.QuoteMeta(s.name)
+	re := regexp.MustCompile(`^\s*(?:-\s*)?name\s*[=:]\s*["']?` + q + `["']?\s*(?:#.*)?$`)
+	from := 0
+	if s.section != "" {
+		re = regexp.MustCompile(`"` + q + `"\s*:`)
+		for i, l := range lines {
+			if strings.Contains(l, `"`+s.section+`"`) {
+				from = i
+				break
+			}
+		}
+	}
+	for i := from; i < len(lines); i++ {
+		if re.MatchString(lines[i]) {
+			return i + 1
+		}
+	}
+	return lineContaining(lines, quoteNeedle(s.name))
 }
 
 func (r *runner) checkMCPShape(s *mcpServer, at int, byName map[string][]*mcpServer) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules

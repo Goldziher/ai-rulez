@@ -253,7 +253,7 @@ func checkInsecureConfig(r *runner) {
 			continue
 		}
 		lines := r.fileLines(s.file)
-		r.add(CodeInsecureHTTP, s.file, lineContaining(lines, s.name), "MCP server %q connects over plain http://%s; use https", s.name, u.Host)
+		r.add(CodeInsecureHTTP, s.file, mcpServerLine(lines, s), "MCP server %q connects over plain http://%s; use https", s.name, u.Host)
 	}
 	cfgPath := r.configFilePath()
 	if cfgPath == "" {
