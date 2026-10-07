@@ -24,16 +24,17 @@ func (a *applier) denyDigests() {
 		return
 	}
 	denied := func(d string) bool { return slices.Contains(pol, d) }
-	report := func(what, name, digest string) {
-		a.violate(lint.CodeDigestDenied, "sources.deny_digests", digest,
-			"%s %q: %s pins %s, which the policy denies (origin: %s)", what, name, lockfile.FileName, digest, a.origin("sources.deny_digests"))
+	report := func(what string, subject config.PolicySubject) {
+		a.violate(lint.CodeDigestDenied, "sources.deny_digests", subject.Digest,
+			"%s %q: %s pins %s, which the policy denies (origin: %s)", what, subject.Name, lockfile.FileName, subject.Digest, a.origin("sources.deny_digests"))
+		a.out.Violations[len(a.out.Violations)-1].Subject = &subject
 	}
 	dropped := map[string]map[string]bool{lockfile.KindInclude: {}, lockfile.KindSkill: {}, lockfile.KindSource: {}}
 	for kind, entries := range map[string][]lockfile.Entry{lockfile.KindInclude: lock.Include, lockfile.KindSkill: lock.Skill, lockfile.KindSource: lock.Source} {
 		for i := range entries {
 			e := &entries[i]
 			if denied(e.Digest) {
-				report(kind, e.Name, e.Digest)
+				report(kind, config.PolicySubject{Kind: kind, Name: e.Name, Digest: e.Digest})
 				dropped[kind][e.Name] = true
 			}
 		}
@@ -41,12 +42,13 @@ func (a *applier) denyDigests() {
 	for i := range lock.Served {
 		e := &lock.Served[i]
 		if denied(e.Digest) {
-			report("served skill", e.Name, e.Digest)
+			report("served skill", config.PolicySubject{Kind: lockfile.KindServed, Name: e.Name, Domain: e.View, Digest: e.Digest})
 		}
 	}
-	for _, it := range lock.Item {
+	for i := range lock.Item {
+		it := &lock.Item[i]
 		if denied(it.Digest) {
-			report(it.Kind, it.ID, it.Digest)
+			report(it.Kind, config.PolicySubject{Kind: it.Kind, Name: it.ID, Domain: it.Domain, Digest: it.Digest})
 		}
 	}
 	cfg := a.cfg

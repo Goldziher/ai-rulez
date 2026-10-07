@@ -26,6 +26,20 @@ type PolicyViolation struct {
 	Message string `json:"message"`
 	// Origin names the policy layer that sets the bound ("managed", "flag", "env").
 	Origin string `json:"origin,omitempty"`
+	// Subject names the pinned content a violation is about, when it is about
+	// one (sources.deny_digests, AR747); nil otherwise. Consumers match on it,
+	// never on Message.
+	Subject *PolicySubject `json:"subject,omitempty"`
+}
+
+// PolicySubject is one pinned entry of the lock: its lock kind ("include",
+// "skill", "source", "served", or an authored item kind), its name or id, the
+// domain or serve view that qualifies it, and the digest the lock pins.
+type PolicySubject struct {
+	Kind   string `json:"kind"`
+	Name   string `json:"name"`
+	Domain string `json:"domain,omitempty"`
+	Digest string `json:"digest"`
 }
 
 // PolicyOutcome is the result of applying the organization policy to a loaded
