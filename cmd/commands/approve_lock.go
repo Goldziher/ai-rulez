@@ -55,6 +55,9 @@ func approvalStatusFindings(ctx context.Context, cfg *config.Config) []lint.Appr
 	if msg := policy.LockProblem(lock); msg != "" {
 		return []lint.ApprovalFinding{{Code: approval.CodeMissing, Path: lockRel, Message: msg}}
 	}
+	if lock == nil && policy.Active() {
+		return []lint.ApprovalFinding{{Code: approval.CodeMissing, Path: lockRel, Message: "[governance] require_approval is set and there is no " + lockfile.FileName + " to hold approvals; run `ai-rulez lock`, then `ai-rulez approve`"}}
+	}
 	if lock == nil || (!policy.Active() && len(lock.Approval) == 0 && len(lock.Deny) == 0) {
 		return nil
 	}
