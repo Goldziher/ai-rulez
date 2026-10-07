@@ -174,3 +174,32 @@ func TestNarrowToChangedHopIsInJSONOnlyWhenNarrowed(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(out), `"hop":"transitive(2)"`)
 }
+func TestChangedKeepsDuplicateDescriptionAgainstUnchangedFile(t *testing.T) {
+	root := t.TempDir()
+	skill := func(name, desc string) string {
+		return "---\nname: " + name + "\ndescription: " + desc + "\n---\nbody\n"
+	}
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml":        baseConfig,
+		".ai-rulez/skills/aa/SKILL.md": skill("aa", "Use when you deploy the billing service to production clusters."),
+		".ai-rulez/skills/bb/SKILL.md": skill("bb", "Use when you deploy the billing service to production clusters."),
+	})
+	gitAdd(t, root)
+	cfg := loadNoRemote(t, root)
+	tree, err := LoadTree(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := RunWith(cfg, tree, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if countCode(rep.Findings, CodeDescriptionDup) != 1 {
+		t.Fatalf("want one duplicate finding:\n%s", dump(rep.Findings))
+	}
+	// Only aa changed; the finding sits on bb but exists because of aa.
+	NarrowToChanged(rep, []string{".ai-rulez/skills/aa/SKILL.md"}, "HEAD")
+	if countCode(rep.Findings, CodeDescriptionDup) != 1 {
+		t.Errorf("the duplicate introduced in aa must survive --changed:\n%s", dump(rep.Findings))
+	}
+}
