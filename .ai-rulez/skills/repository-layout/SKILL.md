@@ -22,6 +22,6 @@ targets:
 
 ## Documentation & Tooling
 
-- `docs/`, `site/`, and `mkdocs.yaml`: user-facing documentation and site generation.
+- `docs/`, `site/`, and `zensical.toml`: user-facing documentation and site generation.
 - `schema/`: JSON schemas for configuration and MCP files.
 - `tests/`: fixtures, integration, e2e, and platform coverage.
