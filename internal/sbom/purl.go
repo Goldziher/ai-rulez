@@ -71,7 +71,7 @@ func sourcePURL(loc gitLocation, name, version, subpath string) string {
 	return purl("generic", "", name, version, map[string]string{"vcs_url": "git+" + loc.HTTPS()}, subpath)
 }
 
-// launcher is what a heuristic recognises in an MCP server command.
+// launcher is what a heuristic recognizes in an MCP server command.
 type launcher struct {
 	purl, name, version string
 	// requested is the version or tag the command line asked for ("" for none);
@@ -85,7 +85,7 @@ type launcher struct {
 // detectLauncher guesses the package an MCP server command runs from the
 // ecosystem launcher it uses: npx, bunx, pnpm/yarn dlx (npm), uvx and pipx run
 // (PyPI), docker/podman run (OCI) and go run (Go). It is a heuristic over the
-// command line, never an answer: an unrecognised command yields ok = false.
+// command line, never an answer: an unrecognized command yields ok = false.
 func detectLauncher(command string, args []string) (launcher, bool) {
 	exe := strings.ToLower(filepath.Base(strings.ReplaceAll(command, `\`, "/")))
 	for _, ext := range []string{".exe", ".cmd", ".bat"} {
