@@ -396,10 +396,10 @@ func TestChangedSkills_UsesGitDiffAndUntracked(t *testing.T) {
 		case "rev-parse":
 			return top + "\n", nil
 		case "diff":
-			assert.Equal(t, []string{"diff", "--name-only", "origin/main", "--"}, args)
-			return rel(filepath.Join(cfg, "skills", "alpha", "SKILL.md")) + "\nREADME.md\n", nil
+			assert.Equal(t, []string{"diff", "--name-only", "-z", "origin/main", "--"}, args)
+			return rel(filepath.Join(cfg, "skills", "alpha", "SKILL.md")) + "\x00README.md\x00", nil
 		default:
-			return rel(filepath.Join(cfg, "skills", "beta", "evals", "new.eval.yaml")) + "\n", nil
+			return rel(filepath.Join(cfg, "skills", "beta", "evals", "new.eval.yaml")) + "\x00", nil
 		}
 	}
 	changed, err := ChangedSkills(git, cfg, "origin/main", skills)
@@ -632,6 +632,25 @@ func TestChangedSkills_ProjectInASubdirectoryOfTheRepo(t *testing.T) {
 	changed, err := ChangedSkills(ExecGit, project, "HEAD", skills)
 	require.NoError(t, err)
 	assert.Equal(t, map[string]bool{"fresh": true, "old": true}, changed)
+}
+
+func TestChangedSkills_NonASCIISkillPath(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not installed")
+	}
+	repo := t.TempDir()
+	cfg := filepath.Join(repo, ".ai-rulez")
+	writeSkill(t, cfg, "café", "x", twoCases)
+	realGit(t, repo, "init", "-q")
+	realGit(t, repo, "add", "-A")
+	realGit(t, repo, "commit", "-q", "-m", "init")
+	writeSkill(t, cfg, "café", "x edited", twoCases)
+
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	changed, err := ChangedSkills(ExecGit, repo, "HEAD", skills)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]bool{"café": true}, changed)
 }
 
 func TestChangedSkills_RejectsOptionLikeBase(t *testing.T) {
