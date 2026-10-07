@@ -80,7 +80,7 @@ func init() {
 	f.Float64Var(&reportEvalsFlags.minTrigger, "min-trigger", evals.DefaultMinTrigger, "Trigger precision and recall below which a skill is a rewrite candidate")
 	addJSONFormat(f, &reportEvalsFlags.json, "j")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
-	ReportCmd.AddCommand(reportEvalsCmd)
+	telemetryReportCmd.AddCommand(reportEvalsCmd)
 }
 
 func runReportEvals(out io.Writer) error {
@@ -262,7 +262,7 @@ func rankDelta(v *float64) string {
 	return fmt.Sprintf("%+.0f pts", *v*100)
 }
 
-// loadEvalSummaries reads the eval results for `report usage`. An empty path means
+// loadEvalSummaries reads the eval results for `telemetry report`. An empty path means
 // the project's default file, which is optional.
 func loadEvalSummaries(path string) (map[string]usage.EvalSummary, error) {
 	explicit := path != ""

@@ -10,7 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 )
 
-// reportItems forces the rule/agent/context section of `report usage` even when
+// reportItems forces the rule/agent/context section of `telemetry report` even when
 // the log holds no item events (it then lists the generated rules nothing loaded).
 var reportItems bool
 
@@ -23,7 +23,7 @@ type usageReportJSON struct {
 
 // itemsSection builds the rule, agent and context section for a log. It returns
 // nil when the log has no item events and --items was not given, so the output of
-// `report usage` is unchanged for a project that does not use item telemetry.
+// `telemetry report` is unchanged for a project that does not use item telemetry.
 func itemsSection(logPath string) (*telemetry.ItemsReport, error) {
 	events, err := telemetry.ReadItemEvents(logPath)
 	if err != nil {
@@ -111,5 +111,5 @@ func itemEval(row telemetry.ItemRow) string {
 }
 
 func init() {
-	reportUsageCmd.Flags().BoolVar(&reportItems, "items", false, "Always include the rule, agent and context section (default: only when the log holds item events)")
+	telemetryReportCmd.Flags().BoolVar(&reportItems, "items", false, "Always include the rule, agent and context section (default: only when the log holds item events)")
 }
