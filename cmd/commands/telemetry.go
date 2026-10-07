@@ -160,7 +160,7 @@ var telemetryFlushCmd = &cobra.Command{
 	Short: "Send the local outbox to the OTLP collector",
 	Long: `Ship pending events to the configured collector in batches, with retry and backoff.
 First it queues the usage-log events past the export cursor that the outbox does not already hold
-(see "usage export --to otlp"). Events that cannot be delivered stay in the outbox (bounded, oldest
+(see "telemetry export --to otlp"). Events that cannot be delivered stay in the outbox (bounded, oldest
 dropped first). Only one flush runs at a time. --background is what the hooks start: it is silent,
 bounded by the flush deadline and exits 0; failures are counted in "telemetry status".`,
 	Args: cobra.NoArgs,
@@ -225,7 +225,7 @@ and this works whether or not export is enabled or consented to.
 
 The events come from the outbox when export is active, otherwise from the usage log (--log FILE
 picks another log). Sampling applies to a log, as it would when recording. --with-evals adds the
-eval_result events and gauges that "usage export --with-evals" would send. A request shows only the
+eval_result events and gauges that "telemetry export --with-evals" would send. A request shows only the
 scheme, host and path of the endpoint, never a header or credential. --limit N previews the first N
 events (default 5, 0 for all).`,
 	Args: cobra.NoArgs,

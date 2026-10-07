@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"strconv"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"

@@ -35,9 +35,9 @@ var (
 	// validateWarnings is --strict: findings of severity warning fail the run,
 	// the same as --fail-on warning.
 	validateWarnings bool
-	validateFormat string
-	validateFailOn string
-	validateExtern bool
+	validateFormat   string
+	validateFailOn   string
+	validateExtern   bool
 	// validateVerifiers is --verifiers: also report the verifiers as AR9H findings.
 	validateVerifiers bool
 	// validateApprovalsBase is --approvals-base: the git revision approvals are compared with (AR716).

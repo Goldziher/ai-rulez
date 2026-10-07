@@ -110,7 +110,7 @@ func checkLockContentOnlyFlags(kind string, names []string) error {
 	if !lockContentOnly {
 		return nil
 	}
-	if len(names) > 0 || kind == lockfile.KindInclude || kind == lockfile.KindSkill || kind == "source" {
+	if len(names) > 0 || kind == lockfile.KindInclude || kind == lockfile.KindSkill || kind == keySource {
 		return oops.Errorf("--content-only keeps every remote pin, so it cannot be combined with --kind %s or names; drop --content-only to refresh them", kindOrNames(kind))
 	}
 	return nil

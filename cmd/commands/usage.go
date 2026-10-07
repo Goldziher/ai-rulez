@@ -115,7 +115,7 @@ func runUsageExport(out io.Writer, args []string) error {
 		dest = args[0]
 	}
 	if dest == "" {
-		return oops.Hint("Pass the destination: `usage export --to file out.ndjson`.").Errorf("a destination path is required")
+		return oops.Hint("Pass the destination: `telemetry export --to file out.ndjson`.").Errorf("a destination path is required")
 	}
 	logPath := usageLog
 	if logPath == "" {

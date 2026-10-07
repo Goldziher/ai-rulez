@@ -256,7 +256,7 @@ func resolveCatalogSettings(cfg *config.Config) catalogSettings {
 }
 
 // buildCatalogV2 builds the version 2 catalog, linting the project in process
-// (the same engine as `validate --strict`). A lint that cannot run leaves the
+// (the same engine as `validate`). A lint that cannot run leaves the
 // lint fields out and says so; it never fails the catalog.
 func buildCatalogV2(cfg *config.Config, counter tokens.Counter, st catalogSettings) (*govview.CatalogDocV2, error) {
 	opts := govview.CatalogOptions{NoExcerpt: !st.Excerpt}

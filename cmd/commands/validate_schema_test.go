@@ -15,7 +15,7 @@ func TestValidateConfigFile_SchemaErrorSuggestsTheKnownKey(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, ".ai-rulez", "config.toml")
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-	require.NoError(t, os.WriteFile(path, []byte("version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\ngitignor = true\n"), 0o644))
+	require.NoError(t, os.WriteFile(path, []byte("version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\ngitignor = true\n"), 0o644))
 
 	// Act
 	_, err := validateConfigFile(path)

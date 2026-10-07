@@ -147,8 +147,8 @@ func TestRunRecursiveGenerate_ReportsNestedLegacyConfig(t *testing.T) {
 		legacy  string
 		wantErr string
 	}{
-		{name: "config.yaml beside no config.toml", legacy: "config.yaml", wantErr: "V2/V3 configs are no longer read"},
-		{name: "config.json", legacy: "config.json", wantErr: "V2/V3 configs are no longer read"},
+		{name: "config.yaml beside no config.toml", legacy: "config.yaml", wantErr: "no longer read"},
+		{name: "config.json", legacy: "config.json", wantErr: "no longer read"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

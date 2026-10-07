@@ -704,7 +704,7 @@ func TestPublish_ApprovalStateIsRecordedEvenWhenNotRequired(t *testing.T) {
 
 // ---- multi-plugin ----
 
-const publishDomainsConfig = `version = "4.0"
+const publishDomainsConfig = `version = "5.0"
 name = "acme"
 presets = ["claude"]
 

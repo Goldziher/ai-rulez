@@ -59,7 +59,7 @@ hand-edited) is marked "unverified" and ignored: the skill counts as having no e
 
 --usage may repeat (--usage-log is the same flag): the logs of several repositories or machines are
 merged and an event that appears in more than one counts once, by its event id. --from-otlp reads every
---usage file as OTLP JSON (what "usage export --to file" writes or a collector's file exporter produces)
+--usage file as OTLP JSON (what "telemetry export --to file" writes or a collector's file exporter produces)
 instead of a native usage log; the digest scheme travels in the export, so the join classes are the same.
 
 Without a usage log nothing is concluded about use. The command reports and exits 0.`,
@@ -73,7 +73,7 @@ func init() {
 	f := reportEvalsCmd.Flags()
 	f.StringArrayVar(&reportEvalsFlags.usageLogs, "usage", nil, "Usage log; repeat for several (default <config dir>/local/usage.jsonl, when present)")
 	f.StringArrayVar(&reportEvalsFlags.usageLogsAlias, "usage-log", nil, "Same as --usage")
-	f.BoolVar(&reportEvalsFlags.fromOTLP, "from-otlp", false, "Read every --usage file as OTLP JSON (usage export --to file output) instead of a native log")
+	f.BoolVar(&reportEvalsFlags.fromOTLP, "from-otlp", false, "Read every --usage file as OTLP JSON (telemetry export --to file output) instead of a native log")
 	f.StringVar(&reportEvalsFlags.feedback, "feedback", "", "Feedback log (default feedback.jsonl beside the first usage log, when present)")
 	f.StringVar(&reportEvalsFlags.results, "results", "", "Eval results (default <config dir>/eval-results.json)")
 	f.Float64Var(&reportEvalsFlags.minPass, "min-pass-rate", evals.DefaultMinPassRate, "Pass rate below which a skill is a rewrite candidate")

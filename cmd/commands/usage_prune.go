@@ -25,8 +25,8 @@ but only those behind the export cursor: events still waiting to be sent are kep
 pruning never costs an export. Without a cursor (telemetry export was never on) age alone decides.
 A line with no readable timestamp is kept. The export cursor is moved to match the rewritten log.
 
-  ai-rulez usage prune --keep-days 90
-  ai-rulez usage prune --keep-days 30 --dry-run
+  ai-rulez telemetry prune --keep-days 90
+  ai-rulez telemetry prune --keep-days 30 --dry-run
 
 If the cursor belongs to another log (the file was replaced since the last flush) the prune refuses;
 run ` + "`ai-rulez telemetry flush`" + ` first, or pass --ignore-cursor to prune by age alone. The log has no

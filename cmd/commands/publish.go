@@ -95,7 +95,7 @@ var PublishCmd = &cobra.Command{
 a reproducible tar.gz, <name>-<version>.manifest.json, SHA256SUMS, a copy of
 ai-rulez.lock, RELEASE_NOTES.md and publish-plan.json.
 
-Preflight runs first and stops before anything is written: validate --strict,
+Preflight runs first and stops before anything is written: validate,
 lock --check, verify --plugin and a secret scan of the bundle, then the policy
 gates of [publish]: require_signature (AR9N7) and require_approved (AR9N8). The
 archive is byte-identical for the same bundle and commit (sorted entries, fixed
@@ -479,7 +479,7 @@ func publishPreflight(cfg *config.Config) (*verifiedBundle, error) {
 	if err := strictGate(cfg); err != nil {
 		return nil, err
 	}
-	logger.Info("preflight: validate --strict ok")
+	logger.Info("preflight: validate ok")
 	if code := checkLockAt(""); code != 0 {
 		exit := publish.ExitFailed
 		if code == exitDrift {
@@ -510,17 +510,17 @@ func publishPreflight(cfg *config.Config) (*verifiedBundle, error) {
 	return &verifiedBundle{gen: gen, files: files}, nil
 }
 
-// strictGate is `validate --strict` as a gate: the same lint, baseline and
+// strictGate is `validate` as a gate: the same lint, baseline and
 // budget handling, failing at the configured threshold but never above error.
 func strictGate(cfg *config.Config) error {
 	report, err := strictLint(cfg)
 	if err != nil {
-		return publish.Errorf(publish.CodePreflight, publish.ExitFailed, "", "validate --strict could not run: %v", err)
+		return publish.Errorf(publish.CodePreflight, publish.ExitFailed, "", "validate could not run: %v", err)
 	}
 	reports, cfgs := []*lint.Report{report}, []*config.Config{cfg}
 	excess, _, done := prepareReports(reports, cfgs)
 	if done {
-		return publish.Errorf(publish.CodePreflight, publish.ExitFailed, "", "validate --strict could not run")
+		return publish.Errorf(publish.CodePreflight, publish.ExitFailed, "", "validate could not run")
 	}
 	threshold := failOnFor(cfg)
 	if threshold == "none" {
@@ -530,7 +530,7 @@ func strictGate(cfg *config.Config) error {
 		if werr := lint.Write(os.Stderr, lint.FormatText, lint.Combine(reports), lint.WriteOptions{Version: Version, FailOn: threshold}); werr != nil {
 			logger.Warn("Could not print the findings", "error", werr)
 		}
-		return publish.Errorf(publish.CodePreflight, publish.ExitGate, "fix the findings above (see `ai-rulez validate --strict`)", "validate --strict reported findings")
+		return publish.Errorf(publish.CodePreflight, publish.ExitGate, "fix the findings above (see `ai-rulez validate`)", "validate reported findings")
 	}
 	return nil
 }
@@ -600,7 +600,7 @@ func printPublish(out io.Writer, d *publish.Dist, dir string) error {
 	if publishDryRun {
 		verb = "would write"
 	}
-	fmt.Fprintf(out, "preflight   validate --strict ok | lock ok | verify --plugin ok | secrets 0\n")
+	fmt.Fprintf(out, "preflight   validate ok | lock ok | verify --plugin ok | secrets 0\n") //nolint:errcheck // terminal output
 	if m := d.Manifest; m.Signature != nil && publishDryRun {
 		fmt.Fprintf(out, "signature   would sign (%s)\n", publishSignFlagText())
 	} else if m.Signature != nil {
