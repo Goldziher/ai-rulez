@@ -67,12 +67,18 @@ func publishGit(t *testing.T, dir string, args ...string) {
 // publishProject is a committed, locked project with a generated plugin bundle.
 func publishProject(t *testing.T) string {
 	t.Helper()
+	return publishProjectWith(t, publishProjectConfig)
+}
+
+// publishProjectWith is publishProject with the given .ai-rulez/config.toml.
+func publishProjectWith(t *testing.T, configTOML string) string {
+	t.Helper()
 	resetPublishFlags(t)
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("SOURCE_DATE_EPOCH", "")
 	cliLockPolicy.Mode, cliLockPolicy.Offline = includes.LockAuto, false
 	root := t.TempDir()
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), publishProjectConfig)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), configTOML)
 	writeFile(t, filepath.Join(root, ".ai-rulez", "skills", "deploy", "SKILL.md"),
 		"---\nname: deploy\ndescription: Use when deploying the service to production; not for local runs.\n---\n\n# Deploy\n\nRun the pipeline.\n")
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "care.md"), "# Care\n\nBe careful.\n")

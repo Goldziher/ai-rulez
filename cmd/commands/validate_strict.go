@@ -221,6 +221,13 @@ func governanceLintOptions(ctx context.Context, cfg *config.Config, sel []string
 		}
 		opts = append(opts, lint.WithPluginDrift(drift))
 	}
+	if cfg.Plugin != nil && !skipPluginDrift && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
+		found, apErr := generator.NewGenerator(cfg).AgentPluginFindings("")
+		if apErr != nil {
+			logger.Warn("Skipped the Agent Plugins package check", "error", apErr)
+		}
+		opts = append(opts, lint.WithAgentPlugins(found))
+	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerDelivery, lint.AnalyzerLock) {
 		if findings := deliveryFindings(ctx, cfg); !strictSecurityOnly && len(findings) > 0 {
 			opts = append(opts, lint.WithDelivery(findings))
