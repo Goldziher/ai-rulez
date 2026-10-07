@@ -342,12 +342,13 @@ Use this skill when working in a project that is managed by AI-Rulez.
 - ai-rulez add|remove|list rule|context|skill|agent — manage content files.
 - ai-rulez validate — ensure config and tree structure are sound.
 - ai-rulez generate [--profile <name>] — render tool presets after edits.
+- ai-rulez migrate v5 — rewrite a 4.x configuration for v5.
 
 ## Guidelines
 
 - Treat .ai-rulez/ as the source of truth.
 - Generated files such as AGENTS.md, CLAUDE.md, or .cursor/ outputs should only change via generation.
-- Use ai-rulez init to bootstrap, generate to render outputs, and validate to check structure.
+- Use ai-rulez init to bootstrap, generate to render outputs, validate to check structure, and migrate v5 to upgrade a 4.x configuration.
 - Remember that root content is always included, while domains are controlled by profiles.
 - MCP can expose read, CRUD, generate, and validate operations for assistants.
 - When changing presets, profiles, or domains in config.toml, rerun validate then generate so downstream files stay in sync.
