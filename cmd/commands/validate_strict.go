@@ -22,6 +22,9 @@ import (
 // (the configuration itself is invalid or could not be loaded).
 const exitStrictFindings = 2
 
+// failOnWarning is the --fail-on value that makes warnings fail the run.
+const failOnWarning = "warning"
+
 var (
 	// validateStrict means "run the deep content checks". Historic name: in v5 it
 	// is true unless --config-only is given (see validatePreRun), and the

@@ -2,11 +2,12 @@ package doctor
 
 import (
 	"fmt"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"text/tabwriter"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 )
 
 // jsonReport is the stable machine-readable shape.

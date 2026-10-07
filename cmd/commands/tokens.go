@@ -2,13 +2,13 @@ package commands
 
 import (
 	"fmt"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
