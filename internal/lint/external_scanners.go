@@ -2,7 +2,6 @@ package lint
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,6 +12,7 @@ import (
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 	procrunner "github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
+	"github.com/samber/oops"
 )
 
 // ScannerInfo describes one scanner (a [[lint.external]] entry or a member of
@@ -141,7 +141,7 @@ func ProbeScannerVersion(ctx context.Context, info ScannerInfo) (string, error) 
 	}
 	confine, err := scannerSandbox.Resolve(ctx, mode)
 	if err != nil {
-		return "", fmt.Errorf("isolation = \"require\" but %w", err)
+		return "", oops.Errorf("isolation = \"require\" but %w", err)
 	}
 	dir, err := os.MkdirTemp("", "ai-rulez-probe-")
 	if err != nil {
@@ -152,7 +152,7 @@ func ProbeScannerVersion(ctx context.Context, info ScannerInfo) (string, error) 
 	if confine {
 		w, werr := scannerSandbox.Wrap(sandbox.Spec{WriteDirs: []string{dir}}, argv)
 		if werr != nil {
-			return "", fmt.Errorf("could not apply isolation: %w", werr)
+			return "", oops.Wrapf(werr, "could not apply isolation")
 		}
 		argv = w.Argv
 	}

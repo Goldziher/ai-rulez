@@ -16,6 +16,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
+	"github.com/samber/oops"
 )
 
 // Harness traps (AR9C1...): files a harness silently ignores. The traps are
@@ -125,7 +126,7 @@ func Traps() ([]Trap, error) {
 	trapsOnce.Do(func() {
 		var t trapTable
 		if err := toml.Unmarshal(trapsTOML, &t); err != nil {
-			trapsErr = fmt.Errorf("parse traps.toml: %w", err)
+			trapsErr = oops.Wrapf(err, "parse traps.toml")
 			return
 		}
 		if err := resolveLimits(t.Trap); err != nil {

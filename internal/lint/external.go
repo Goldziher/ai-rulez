@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
+	"github.com/samber/oops"
 )
 
 // knownEgressFlags are flags that make a scanner send scanned content, or call a
@@ -168,10 +169,10 @@ func (st *scannerStage) readOut() ([]byte, error) {
 	defer f.Close() //nolint:errcheck // read only
 	data, err := io.ReadAll(io.LimitReader(f, cmdrun.DefaultMaxOutput+1))
 	if err != nil {
-		return nil, fmt.Errorf("read: %w", err)
+		return nil, oops.Wrapf(err, "read")
 	}
 	if int64(len(data)) > cmdrun.DefaultMaxOutput {
-		return nil, fmt.Errorf("more than %d bytes", cmdrun.DefaultMaxOutput)
+		return nil, oops.Errorf("more than %d bytes", cmdrun.DefaultMaxOutput)
 	}
 	return data, nil
 }

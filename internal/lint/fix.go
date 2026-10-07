@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/samber/oops"
 )
 
 // Fixes are mechanical corrections a finding can carry. They exist only for
@@ -344,11 +345,11 @@ func diffName(root, file string) string {
 func applyEdits(file, name string, edits []Edit, dry bool) (string, error) {
 	data, err := os.ReadFile(file) //nolint:gosec // a source file the lint run read
 	if err != nil {
-		return "", fmt.Errorf("read %s: %w", file, err)
+		return "", oops.Wrapf(err, "read %s", file)
 	}
 	info, err := os.Stat(file)
 	if err != nil {
-		return "", fmt.Errorf("stat %s: %w", file, err)
+		return "", oops.Wrapf(err, "stat %s", file)
 	}
 	rows, applied, err := editRows(string(data), edits)
 	if err != nil {
@@ -365,7 +366,7 @@ func applyEdits(file, name string, edits []Edit, dry bool) (string, error) {
 	}
 	if !dry {
 		if err := gitutil.WriteFileAtomic(file, []byte(strings.Join(newLines, "\n")), info.Mode().Perm()); err != nil {
-			return "", fmt.Errorf("write %s: %w", file, err)
+			return "", oops.Wrapf(err, "write %s", file)
 		}
 	}
 	return unifiedRowDiff(name, rows), nil
@@ -467,7 +468,7 @@ func followedBy(file []string, idx int, lines []string) bool {
 func applyChmod(file string, dry bool) (line string, did bool, err error) {
 	info, err := os.Stat(file)
 	if err != nil {
-		return "", false, fmt.Errorf("stat %s: %w", file, err)
+		return "", false, oops.Wrapf(err, "stat %s", file)
 	}
 	mode := info.Mode().Perm()
 	want := mode | ((mode & 0o444) >> 2)
@@ -475,7 +476,7 @@ func applyChmod(file string, dry bool) (line string, did bool, err error) {
 	if want != mode {
 		if !dry {
 			if err := os.Chmod(file, want); err != nil {
-				return "", false, fmt.Errorf("chmod %s: %w", file, err)
+				return "", false, oops.Wrapf(err, "chmod %s", file)
 			}
 		}
 		fmt.Fprintf(&sb, "chmod %04o -> %04o %s\n", mode, want, filepath.ToSlash(file))
@@ -485,7 +486,7 @@ func applyChmod(file string, dry bool) (line string, did bool, err error) {
 	if !dry {
 		staged, serr := gitutil.StageExecutable(file)
 		if serr != nil {
-			return "", false, fmt.Errorf("stage %s: %w", file, serr)
+			return "", false, oops.Wrapf(serr, "stage %s", file)
 		}
 		if staged && !did {
 			fmt.Fprintf(&sb, "git update-index --chmod=+x %s\n", filepath.ToSlash(file))

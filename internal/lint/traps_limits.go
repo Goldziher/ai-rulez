@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
+	"github.com/samber/oops"
 )
 
 // The size-over and key-misspelt predicates of the harness trap table, the
@@ -69,7 +70,7 @@ func resolveLimits(traps []Trap) error {
 		}
 		l, ok := harnesslimits.Get(t.Predicate.LimitID)
 		if !ok {
-			return fmt.Errorf("traps.toml: %s size-over names unknown limit %q", t.Code, t.Predicate.LimitID)
+			return oops.Errorf("traps.toml: %s size-over names unknown limit %q", t.Code, t.Predicate.LimitID)
 		}
 		t.Predicate.limit = l
 		t.Source, t.Quote, t.VerifiedOn = l.Source, l.Quote, l.VerifiedOn
