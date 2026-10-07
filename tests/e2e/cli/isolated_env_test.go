@@ -221,10 +221,31 @@ func blockedOn(t *testing.T, finding string) {
 	}
 }
 
+// lingeringTempDir is a temporary directory for a test whose binary can leave a
+// detached child behind (telemetry record starts `telemetry flush
+// --background`, which outlives the command by design). t.TempDir fails the test
+// when such a child writes during cleanup, so removal is retried for a while.
+func lingeringTempDir(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "ai-rulez-e2e-")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		deadline := time.Now().Add(10 * time.Second)
+		for os.RemoveAll(dir) != nil && time.Now().Before(deadline) {
+			time.Sleep(200 * time.Millisecond)
+		}
+	})
+	return dir
+}
+
 // minimalProject is a project with one rule and one skill.
 func minimalProject(t *testing.T, extraConfig string) string {
 	t.Helper()
-	root := t.TempDir()
+	return minimalProjectIn(t, t.TempDir(), extraConfig)
+}
+
+func minimalProjectIn(t *testing.T, root, extraConfig string) string {
+	t.Helper()
 	writeTree(t, root, map[string]string{
 		".ai-rulez/config.toml":            "version = \"4.0\"\nname = \"e2e\"\npresets = [\"claude\"]\ngitignore = false\n" + extraConfig,
 		".ai-rulez/rules/local.md":         "---\ndescription: local rule\n---\n# Local\n\nAlways run the tests.\n",
