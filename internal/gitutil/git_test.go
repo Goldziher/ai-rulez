@@ -3,6 +3,7 @@ package gitutil
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -36,7 +37,7 @@ func TestGitRunsThroughTheInjectedRunner(t *testing.T) {
 			answer:   runner.Result{Status: runner.StatusOK, Stdout: []byte("/repo/\n")},
 			call:     func(g Git) any { return g.TopLevel("/repo/sub") },
 			wantArgv: []string{"git", "-C", "/repo/sub", "rev-parse", "--show-toplevel"},
-			want:     "/repo",
+			want:     filepath.Clean("/repo"), // TopLevel returns a native path
 		},
 		{
 			name:     "TopLevel is empty outside a repository",
