@@ -104,6 +104,14 @@ func TestApprovingReviews_Failures(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, got)
 	})
+	t.Run("an empty digest never matches an unpinned commit", func(t *testing.T) {
+		q := q
+		q.Digest = ""
+		q.PinnedAt = pinned(nil)
+		got, err := ApprovingReviews(context.Background(), fakeForge(approved), q)
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
 	t.Run("a truncated review list is never counted", func(t *testing.T) {
 		c := fakeForge(approved)
 		c.Err = forge.ErrTruncated

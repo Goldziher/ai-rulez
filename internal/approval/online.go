@@ -115,7 +115,7 @@ func ApprovingReviews(ctx context.Context, c forge.Client, q ReviewQuery) ([]Rev
 			}
 			checked = true
 		}
-		if pinnedAtHead != q.Digest {
+		if pinnedAtHead == "" || pinnedAtHead != q.Digest { // an unpinned commit has no digest to match
 			continue
 		}
 		out = append(out, ReviewApproval{
