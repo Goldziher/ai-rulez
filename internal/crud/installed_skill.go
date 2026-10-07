@@ -21,7 +21,7 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 
 	baseDir := op.baseDir
 
-	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(config.WithUnresolvedIncludesTolerated(ctx), baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}
@@ -82,7 +82,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 
 	baseDir := op.baseDir
 
-	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(config.WithUnresolvedIncludesTolerated(ctx), baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}
@@ -119,7 +119,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 func (op *OperatorImpl) ListInstalledSkills(ctx context.Context) ([]InstalledSkillInfo, error) {
 	baseDir := op.baseDir
 
-	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(config.WithUnresolvedIncludesTolerated(ctx), baseDir, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}
