@@ -96,7 +96,9 @@ directory (bounded in file count and size, extracted through a root so nothing l
 and skipped) and a catalog is built from it. With one argument the other side is the current project. Both sides are
 built from the shared configuration only: the machine-local overlay is left out, and remote includes and installed
 skills are not resolved (no network), so compare two `catalog.json` files to cover them. Untracked and ignored files
-are not part of a revision.
+are not part of a revision. Both sides are linted against the working tree's repository, so a path the content names
+(`AR401`) is checked the same way on each side, and the plugin version drift check (`AR961`), which compares with
+outputs generated on disk, is left out of both.
 
 Exit code `0` unless the command could not run (`1`); `--exit-code` makes it `2` when the catalogs differ. Text output
 escapes control and bidirectional characters from the (possibly third-party) JSON.
