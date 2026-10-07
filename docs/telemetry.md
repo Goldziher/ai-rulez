@@ -29,7 +29,7 @@ One event per load. The model is closed: these are all the fields, versioned by 
 | `v`, `event`, `ts` | schema version, always `item_event`, RFC 3339 UTC time | `1`, `item_event` |
 | `event_id` | 16 hex; replays of the same spool line keep it, so a backend can de-duplicate | `9f3c0b51a7d2e648` |
 | `kind` | `skill`, `rule`, `agent`, `command` or `context` | `rule` |
-| `id` | the item's name: a rule's file name without `.md`, an agent type, a skill name, a context file's repo-relative path | `atomic-commits` |
+| `id` | the item's name: a rule's file name without `.md`, an agent type, a skill name, a context file's repo-relative path in the local log; exported as `context:<digest_short>` unless `include_paths = true` (never in metrics) | `atomic-commits` |
 | `path` | repo-relative path, only when `include_paths = true`, never absolute | `.claude/rules/atomic-commits.md` |
 | `digest` | content digest when known: `blake3:...` (skills: the index hash, rules: the hash of the generated file) or `sha256:...` (a skill's canonical lock digest, or the digest of a served skill) | `blake3:0699fc6b...` |
 | `digest_scheme` | how a `sha256:` digest was computed: `ai-rulez/skill/v1` (the canonical digest evals and the lock share) or `ai-rulez/served-skill/v1`. It travels with the digest so an export reader joins on the canonical one only | `ai-rulez/skill/v1` |
