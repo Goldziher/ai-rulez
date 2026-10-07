@@ -106,7 +106,11 @@ func Compare(dir string, files []File) (Drift, error) {
 // existing export is recognized before stale files are removed from it.
 func LooksLikeBundle(dir string) bool {
 	data, err := os.ReadFile(filepath.Join(dir, IndexFile))
-	return err == nil && bytes.Contains(data, []byte("okf_version"))
+	if err != nil {
+		return false
+	}
+	fm, _ := SplitFrontmatter(data)
+	return fm.Err == nil && fm.Lookup("okf_version") != nil
 }
 
 // WriteFiles writes files into dir, creating it. Writes cannot escape dir, even
