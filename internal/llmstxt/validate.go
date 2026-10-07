@@ -139,8 +139,8 @@ func (v *validator) content(no int, first, _ bool) {
 
 func (v *validator) heading(no, level int, name string, first bool) {
 	v.endSummary()
-	switch {
-	case level == 1:
+	switch level {
+	case 1:
 		switch {
 		case v.seenTitle:
 			v.add(CodeTitleMissing, no, "a second H1 %q; only one title is allowed", clip(name))
@@ -152,7 +152,7 @@ func (v *validator) heading(no, level int, name string, first bool) {
 			v.afterTitle = true
 		}
 		v.inSection = false
-	case level == 2:
+	case 2:
 		if first {
 			v.add(CodeTitleMissing, no, "the file must start with an H1 title, found an H2")
 			v.titleBad = true
