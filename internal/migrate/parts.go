@@ -21,6 +21,8 @@ var commandRewrites = []struct{ old, new string }{
 	{"ai-rulez usage hook", "ai-rulez telemetry hook"},
 	{"ai-rulez usage record", "ai-rulez telemetry record"},
 	{"ai-rulez usage feedback", "ai-rulez telemetry feedback"},
+	{"ai-rulez usage export", "ai-rulez telemetry export"},
+	{"ai-rulez usage prune", "ai-rulez telemetry prune"},
 	{"ai-rulez report usage", "ai-rulez telemetry report"},
 	{"ai-rulez report evals", "ai-rulez telemetry report evals"},
 }
@@ -228,6 +230,7 @@ var frontmatterAliases = []struct {
 }{
 	{regexp.MustCompile(`(?m)^permission_mode(\s*:)`), "permission_mode", "permissionMode"},
 	{regexp.MustCompile(`(?m)^user_invocable(\s*:)`), "user_invocable", "user-invocable"},
+	{regexp.MustCompile(`(?m)^windsurf_model(\s*:)`), "windsurf_model", "devin_model"},
 }
 
 // planFrontmatter finds the pre-4.24 frontmatter spellings Claude Code ignores.
