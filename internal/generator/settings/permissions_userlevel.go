@@ -27,7 +27,8 @@ var (
 func buildHermes(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	var allow, deny []any
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		if e.Action == ActionAsk {
 			continue
 		}
@@ -54,7 +55,7 @@ func buildHermes(t *translation) ([]jsonmerge.OwnedKey, error) {
 	return keys, nil
 }
 
-func hermesPatterns(e permEntry) ([]string, string) {
+func hermesPatterns(e permEntry) (patterns []string, why string) {
 	r := e.Rule
 	if r.Kind != KindShell {
 		return nil, "Hermes only has command allow and deny lists"
@@ -77,7 +78,8 @@ func hermesPatterns(e permEntry) ([]string, string) {
 
 func buildKimi(t *translation) ([]jsonmerge.OwnedKey, error) {
 	var rules []any
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		patterns, why := kimiPatterns(e)
 		if why != "" {
 			t.drop(e, why)
@@ -93,7 +95,7 @@ func buildKimi(t *translation) ([]jsonmerge.OwnedKey, error) {
 	return []jsonmerge.OwnedKey{docArrayKey(t.cfg, t.docPath, []string{keyPermission, "rules"}, dedupe(rules))}, nil
 }
 
-func kimiPatterns(e permEntry) ([]string, string) {
+func kimiPatterns(e permEntry) (patterns []string, why string) {
 	r := e.Rule
 	switch {
 	case r.Kind == KindShell:
