@@ -98,7 +98,7 @@ func (b *rulesyncPlanner) readRulesyncLock() map[string]string {
 			ResolvedRef string `json:"resolvedRef"`
 		} `json:"sources"`
 	}
-	if json.Unmarshal(data, &doc) != nil {
+	if json.Unmarshal(trimBOM(data), &doc) != nil {
 		return out
 	}
 	for k, v := range doc.Sources {
