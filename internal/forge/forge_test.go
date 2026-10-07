@@ -119,22 +119,25 @@ func TestPaginationLinkToAnotherHostIsRefused(t *testing.T) {
 func TestRelease(t *testing.T) {
 	srv := forgetest.New(t)
 	srv.Releases = []forgetest.Release{
-		{Tag: "deploy/v2.1.3", Published: t0},
+		{Tag: "deploy/v2.1.3", Published: t0, Target: "main"},
+		{Tag: "v3", Published: t0, Target: sha1},
 		{Tag: "draft", Draft: true, Published: t0},
 	}
 	c := srv.Client(nil)
 	tests := []struct {
-		name    string
-		tag     string
-		want    time.Time
-		wantErr error
+		name       string
+		tag        string
+		want       time.Time
+		wantCommit string
+		wantErr    error
 	}{
-		{"slash tag", "deploy/v2.1.3", t0, nil},
-		{"draft is not a release", "draft", time.Time{}, forge.ErrNotFound},
-		{"unknown", "v9", time.Time{}, forge.ErrNotFound},
-		{"dot dot", "../x", time.Time{}, forge.ErrUnsupportedSource},
-		{"empty", "", time.Time{}, forge.ErrUnsupportedSource},
-		{"control char", "v1\n", time.Time{}, forge.ErrUnsupportedSource},
+		{"slash tag, released from a branch", "deploy/v2.1.3", t0, "", nil},
+		{"released at a commit", "v3", t0, sha1, nil},
+		{"draft is not a release", "draft", time.Time{}, "", forge.ErrNotFound},
+		{"unknown", "v9", time.Time{}, "", forge.ErrNotFound},
+		{"dot dot", "../x", time.Time{}, "", forge.ErrUnsupportedSource},
+		{"empty", "", time.Time{}, "", forge.ErrUnsupportedSource},
+		{"control char", "v1\n", time.Time{}, "", forge.ErrUnsupportedSource},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -145,6 +148,7 @@ func TestRelease(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.True(t, got.Published.Equal(tt.want))
+			assert.Equal(t, tt.wantCommit, got.Commit)
 		})
 	}
 }

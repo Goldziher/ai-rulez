@@ -298,9 +298,12 @@ does not re-evaluate it (the decision is in the lock, with `released` and `relea
 The release time comes from the first source that answers, in order of trust (`min_release_age_source = "auto"`):
 
 1. `forge`: the publish time of the GitHub release of the tag ([Forge client](forge.md)). A committer cannot forge
-   it. The forge is also asked which commit the tag points at: a tag moved after its release is not that release, so
-   the release time is refused and the next source applies. A tag without a release has none, so the next source
-   applies. The token is read from `GITHUB_TOKEN`,
+   it, but a release keeps that time when its tag is force-pushed later, so the time counts only for the commit that
+   was released. When the release records its commit (`target_commitish` is a commit id, as release tooling usually
+   sets it), a tag that now points elsewhere is refused and the next source applies. When it names a branch, the
+   forge cannot say which commit it released: the release time is then the later of the publish time and the
+   first-seen time of the commit below, so a moved tag counts as new (with no first-seen record, `forge` fails
+   closed). A tag without a release has none, so the next source applies. The token is read from `GITHUB_TOKEN`,
    `GH_TOKEN` or `gh auth token` and sent only to allowlisted hosts.
 2. `first-seen`: when this machine first saw the tag at that commit, kept in `~/.cache/ai-rulez/observed-tags.toml`
    (local, uncommitted, bounded). A tag never seen before is "seen now", so it is **held back, not waved through**
