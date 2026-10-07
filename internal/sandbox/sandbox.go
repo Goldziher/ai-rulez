@@ -12,8 +12,8 @@
 //
 // Confinement is best effort, not a security boundary against a determined
 // attacker. The macOS profile starts from "allow default" and denies the
-// network, file writes and the Mach services that start applications
-// (LaunchServices, Apple Events), but it does not hide the rest of the user
+// network, file writes, terminal ioctls and the Mach services that start
+// applications (LaunchServices, Apple Events), but it does not hide the rest of the user
 // session. bubblewrap adds a new session and PID namespace and is the stronger
 // of the two; unshare confines the network only.
 package sandbox
@@ -242,7 +242,10 @@ var launchServices = []string{
 
 // sandboxProfile denies the network and every write except the parameters
 // W0..Wn (passed with -D, never spliced into the profile text) and a few device
-// files every program opens.
+// files every program opens. Terminals are neither writable nor open to ioctls:
+// a process that reaches the user's terminal can push input into the shell
+// (TIOCSTI, which needs only a read-only descriptor). internal/runner also starts
+// the child in a new session, so it has no controlling terminal to open.
 func sandboxProfile(spec Spec, n int) string {
 	var b strings.Builder
 	b.WriteString("(version 1)\n(allow default)\n")
@@ -256,8 +259,9 @@ func sandboxProfile(spec Spec, n int) string {
 		fmt.Fprintf(&b, "  %s\n", svc)
 	}
 	b.WriteString(")\n")
+	b.WriteString("(deny file-ioctl (regex #\"^/dev/tty\") (literal \"/dev/console\"))\n")
 	b.WriteString("(deny file-write*)\n(allow file-write*\n")
-	b.WriteString("  (literal \"/dev/null\") (literal \"/dev/dtracehelper\") (literal \"/dev/tty\")\n")
+	b.WriteString("  (literal \"/dev/null\") (literal \"/dev/dtracehelper\")\n")
 	for i := range n {
 		fmt.Fprintf(&b, "  (subpath (param \"W%d\"))\n", i)
 	}
