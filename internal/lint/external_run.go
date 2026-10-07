@@ -562,7 +562,9 @@ func (r *runner) plan(sc resolvedScanner, p planInfo) {
 	if out == nil {
 		return
 	}
-	io.WriteString(out, w.String()) //nolint:errcheck // a failed write to the dry-run report has nowhere to be reported
+	if _, err := io.WriteString(out, w.String()); err != nil {
+		r.host.Logger().Warn("could not write the scanner plan", "scanner", sc.Name, "error", err)
+	}
 }
 
 func (p planInfo) shown(r *runner) string {
