@@ -69,18 +69,9 @@ func (kiroSteering) Emit(in Input) ([]File, []Finding, error) {
 		return nil
 	}
 	for _, r := range in.Rules {
-		front := map[string]any{keyInclusion: "always"}
-		switch r.Mode {
-		case ModeGlob:
-			if len(r.Globs) == 0 {
-				findings = append(findings, Finding{Message: "rule " + r.Name + " is glob-scoped without globs; included always"})
-				break
-			}
-			front = map[string]any{keyInclusion: "fileMatch", "fileMatchPattern": globValue(r.Globs)}
-		case ModeAuto:
-			front = map[string]any{keyInclusion: "auto", keyName: r.Name, keyDescription: descriptionOr(r)}
-		case ModeManual:
-			front = map[string]any{keyInclusion: "manual"}
+		front, note := kiroRuleFront(r)
+		if note != "" {
+			findings = append(findings, Finding{Message: note})
 		}
 		if err := add("", Doc{Name: r.Name, Body: stripFrontMatter(r.Body)}, front); err != nil {
 			return nil, nil, err
@@ -109,6 +100,23 @@ func (kiroSteering) Emit(in Input) ([]File, []Finding, error) {
 	files = append(files, File{Path: "distribution.json", Data: data})
 	out, err := finish(files)
 	return out, findings, err
+}
+
+// kiroRuleFront is the steering front matter of a rule, and a note when its
+// mode cannot be kept.
+func kiroRuleFront(r Doc) (front map[string]any, note string) {
+	switch r.Mode {
+	case ModeGlob:
+		if len(r.Globs) == 0 {
+			return map[string]any{keyInclusion: "always"}, "rule " + r.Name + " is glob-scoped without globs; included always"
+		}
+		return map[string]any{keyInclusion: "fileMatch", "fileMatchPattern": globValue(r.Globs)}, ""
+	case ModeAuto:
+		return map[string]any{keyInclusion: "auto", keyName: r.Name, keyDescription: descriptionOr(r)}, ""
+	case ModeManual:
+		return map[string]any{keyInclusion: "manual"}, ""
+	}
+	return map[string]any{keyInclusion: "always"}, ""
 }
 
 func descriptionOr(d Doc) string {
