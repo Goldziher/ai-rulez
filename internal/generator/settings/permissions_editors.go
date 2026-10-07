@@ -66,7 +66,8 @@ func buildVSCode(t *translation) ([]jsonmerge.OwnedKey, error) {
 func vscodeCopilot(t *translation) []jsonmerge.OwnedKey {
 	t.harness = config.HarnessCopilot
 	maps := map[string]map[string]any{vscTerminal: {}, vscEdits: {}, vscURLs: {}}
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		target, patterns, why := vscodeEntry(e)
 		if why != "" {
 			t.drop(e, why)
@@ -154,7 +155,8 @@ func vscodeZoo(t *translation) []jsonmerge.OwnedKey {
 	t.harness = harnessZoocode
 	t.askUnsupported()
 	var allowed, denied []string
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		if e.Action == ActionAsk {
 			continue
 		}
@@ -177,7 +179,7 @@ func vscodeZoo(t *translation) []jsonmerge.OwnedKey {
 		for _, d := range denied {
 			// The allow is written with a trailing space (below), so even an allow equal
 			// to a deny prefix is the longer match and would override it.
-			if d == "*" || strings.HasPrefix(strings.ToLower(a)+" ", strings.ToLower(d)) && len(a)+1 > len(d) {
+			if d == "*" || strings.HasPrefix(strings.ToLower(a)+" ", strings.ToLower(d)) && len(a) >= len(d) {
 				blocked = d
 				break
 			}
@@ -205,7 +207,7 @@ func vscodeZoo(t *translation) []jsonmerge.OwnedKey {
 	return keys
 }
 
-func zooPrefix(e permEntry) (string, string) {
+func zooPrefix(e permEntry) (prefix, why string) {
 	r := e.Rule
 	if r.Kind != KindShell {
 		return "", "Zoo Code only has command allow and deny lists"
@@ -234,7 +236,8 @@ var _ = registerPermissionDialect("copilot-cli", buildCopilotCLI)
 func buildCopilotCLI(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	var allowed, denied []any
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		if e.Action == ActionAsk {
 			continue
 		}
@@ -275,7 +278,8 @@ var _ = registerPermissionDialectRequiring(config.HarnessCursor, buildCursor,
 func buildCursor(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	allow, deny := []any{}, []any{}
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		if e.Action == ActionAsk {
 			continue
 		}
@@ -373,7 +377,8 @@ func buildZed(t *translation) ([]jsonmerge.OwnedKey, error) {
 	base := []string{"agent", "tool_permissions", keyTools}
 	lists := map[string][]any{}
 	var keys []jsonmerge.OwnedKey
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		tool, pattern, def, why := zedEntry(e)
 		switch {
 		case why != "":

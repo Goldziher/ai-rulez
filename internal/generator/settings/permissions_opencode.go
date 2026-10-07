@@ -47,7 +47,8 @@ type ocRule struct {
 
 func buildOpencode(t *translation) ([]jsonmerge.OwnedKey, error) {
 	byTool := map[string][]ocRule{}
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		tool, patterns, why := opencodePatterns(e)
 		if why != "" {
 			t.drop(e, why)
@@ -74,7 +75,9 @@ func buildOpencode(t *translation) ([]jsonmerge.OwnedKey, error) {
 		path := []string{keyPermission, tool}
 		existing, ok := existingObject(t.cfg, t.docPath, path)
 		if !ok {
-			for _, r := range byTool[tool] {
+			ranged := byTool[tool]
+			for ix := range ranged {
+				r := ranged[ix]
 				t.drop(r.entry, "permission."+tool+" is not an object in the document, so it is the consumer's")
 			}
 			continue
@@ -110,7 +113,8 @@ func existingObject(cfg *config.Config, docPath string, path []string) (map[stri
 // stricter rule, ours or the user's, is dropped.
 func orderSafe(t *translation, rules []ocRule, existing map[string]any) map[string]PermAction {
 	chosen := map[string]ocRule{}
-	for _, r := range rules {
+	for ix := range rules {
+		r := rules[ix]
 		prev, dup := chosen[r.pattern]
 		switch {
 		case !dup:
