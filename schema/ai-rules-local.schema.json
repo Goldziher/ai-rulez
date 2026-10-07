@@ -1072,7 +1072,7 @@
     },
     "lint": {
       "additionalProperties": false,
-      "description": "Settings for `ai-rulez validate --strict` (deep content validation).",
+      "description": "Settings for `ai-rulez validate` (deep content validation).",
       "properties": {
         "allow_overrides": {
           "description": "Content names (`name`) or domain-qualified names (`domain/name`) whose shadowing of another copy is intentional, so AR703 does not report them.",
@@ -1244,7 +1244,7 @@
           "type": "array"
         },
         "external": {
-          "description": "External scanners run with `validate --strict --external` or `scan --external`. Without `inputs` the command gets the scanned file paths appended; with `inputs` it runs on a read-only staged copy. It prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
+          "description": "External scanners run with `validate --external` or `scan --external`. Without `inputs` the command gets the scanned file paths appended; with `inputs` it runs on a read-only staged copy. It prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
           "items": {
             "additionalProperties": false,
             "anyOf": [{}, {}],
@@ -1653,7 +1653,7 @@
       "description": "Content pinning in ai-rulez.lock (see docs/lockfile.md).",
       "properties": {
         "enforce": {
-          "description": "Defaults to true whenever ai-rulez.lock exists (set false to opt out). Report content drift as AR981/AR982 in `validate --strict`, make `lock --check` fail on a lock without content pins, make `generate` refuse a remote include or installed skill the lock does not pin (AR010 becomes an error), and make the skills server (`mcp --serve-skills`) refuse a served skill whose digest is not the one recorded in ai-rulez.lock (kind served) or that the lock does not pin at all. Run `ai-rulez lock` to record the digests.",
+          "description": "Defaults to true whenever ai-rulez.lock exists (set false to opt out). Report content drift as AR981/AR982 in `validate`, make `lock --check` fail on a lock without content pins, make `generate` refuse a remote include or installed skill the lock does not pin (AR010 becomes an error), and make the skills server (`mcp --serve-skills`) refuse a served skill whose digest is not the one recorded in ai-rulez.lock (kind served) or that the lock does not pin at all. Run `ai-rulez lock` to record the digests.",
           "type": "boolean"
         },
         "include_outputs": {
@@ -2030,7 +2030,7 @@
     },
     "okf": {
       "additionalProperties": false,
-      "description": "Open Knowledge Format (OKF v0.2) bundle written by the okf preset and linted by `validate --strict` (AR9B0-AR9B9).",
+      "description": "Open Knowledge Format (OKF v0.2) bundle written by the okf preset and linted by `validate` (AR9B0-AR9B9).",
       "properties": {
         "dir": {
           "description": "Bundle directory, relative to the project root. Defaults to docs/okf. Must not be inside the configuration directory or .git.",
