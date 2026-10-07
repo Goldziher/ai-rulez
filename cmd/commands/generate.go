@@ -98,6 +98,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	exitOn(checkRoleFlags())
 	exitOn(checkEmitPlanFlags())
+	exitOn(checkLockWatchFlags())
 
 	if generateWatch {
 		if err := runGenerateWatch(watchParentContext(cmd), args); err != nil {
@@ -688,6 +689,16 @@ func fmtError(err error) {
 
 // checkGenerateCheckFlags rejects flags that make no sense with --check, which
 // must never write.
+// checkLockWatchFlags refuses --locked and --frozen with --watch: a watch run
+// rebuilds on every change and would not re-verify the lock, so the flags would
+// promise more than they enforce.
+func checkLockWatchFlags() error {
+	if generateWatch && (generateLocked || generateFrozen) {
+		return oops.Errorf("--locked and --frozen cannot be combined with --watch")
+	}
+	return nil
+}
+
 func checkGenerateCheckFlags() error {
 	switch {
 	case dryRun:
