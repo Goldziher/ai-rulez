@@ -43,6 +43,7 @@ nav = [
     { "Permissions" = "permissions.md" },
     { "User-level Configuration" = "user-scope.md" },
     { "Authoring Plugins" = "plugins.md" },
+    { "Agent Plugins" = "agent-plugins.md" },
     { "Evals" = "evals.md" },
     { "Improve (experimental)" = "improve.md" },
     { "Skill Search" = "search.md" },
