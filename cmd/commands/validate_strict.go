@@ -255,6 +255,11 @@ func contentLintOptions(ctx context.Context, cfg *config.Config, sel []string) [
 			opts = append(opts, lint.WithOKF(okfRes.Dir, okfRes.Findings))
 		}
 	}
+	if lint.AnalyzerSelected(sel, lint.AnalyzerLLMsTxt) {
+		if files := llmsTxtLintFiles(cfg); len(files) > 0 {
+			opts = append(opts, lint.WithLLMsTxt(files))
+		}
+	}
 	if validateVerifiers && lint.AnalyzerSelected(sel, lint.AnalyzerVerifiers) {
 		opts = append(opts, lint.WithVerifiers(verifierFindingsFor(config.WithPolicyContext(ctx, activePolicy), cfg)))
 	}
