@@ -103,10 +103,26 @@ func (v *configVerifier) Verify(a lockfile.Approval, s Subject, now time.Time) (
 	if !slices.Equal(sortedStrings(res.Predicate.AcceptedFindings), sortedStrings(a.AcceptedFindings)) || res.Predicate.Expires != a.Expires {
 		return "", errors.New("the record's expiry or accepted findings differ from what was signed")
 	}
+	// max_age is measured from approved_at, so it must be the signed time: an
+	// edited approved_at would otherwise revive an approval past its ceiling.
+	if !sameInstant(res.Predicate.ApprovedAt, a.ApprovedAt) {
+		return "", fmt.Errorf("the record's approved_at %q differs from the signed %q", a.ApprovedAt, res.Predicate.ApprovedAt)
+	}
 	if !SameReviewer(a.Reviewer, res.Reviewer) {
 		return "", fmt.Errorf("the record names reviewer %q but the signer is %q", a.Reviewer, res.Reviewer)
 	}
 	return res.Reviewer, nil
+}
+
+// sameInstant reports whether two RFC 3339 times name the same instant; text
+// that does not parse must match exactly.
+func sameInstant(a, b string) bool {
+	ta, errA := time.Parse(time.RFC3339, a)
+	tb, errB := time.Parse(time.RFC3339, b)
+	if errA != nil || errB != nil {
+		return a == b
+	}
+	return ta.Equal(tb)
 }
 
 func sortedStrings(in []string) []string {
