@@ -469,15 +469,6 @@ func refusalError(refused []outputRefusal) error {
 			len(refused), strings.Join(lines, "; "), remedy)
 }
 
-// blockedLines is the dry-run form of the refusals.
-func blockedLines(refused []outputRefusal) []string {
-	lines := make([]string, len(refused))
-	for i, r := range refused {
-		lines[i] = fmt.Sprintf("blocked: %s (%s)", r.rel, r.reason)
-	}
-	return lines
-}
-
 // refusalReason is why generate would not write the file at relPath, when it would not.
 func (g *Generator) refusalReason(relPath string) (string, bool) {
 	rel := filepath.ToSlash(relPath)

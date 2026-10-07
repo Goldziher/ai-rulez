@@ -152,7 +152,11 @@ func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputF
 	if err != nil {
 		return nil, "", nil, oops.Wrapf(err, "create the scratch directory")
 	}
-	defer func() { _ = os.RemoveAll(stage) }()
+	defer func() {
+		if err := os.RemoveAll(stage); err != nil {
+			g.log().Debug("Could not remove the scratch directory", "path", stage, "error", err)
+		}
+	}()
 	if err := g.stageUserDocuments(stage, presets, layouts); err != nil {
 		return nil, "", nil, err
 	}
