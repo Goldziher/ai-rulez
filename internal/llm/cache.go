@@ -11,10 +11,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // CacheVersion is bumped when the on-disk entry format or key derivation changes.
-const CacheVersion = 2
+const CacheVersion = 3
 
 // maxCacheEntryBytes bounds how much of one entry is read; a larger file is a
 // miss and is removed. It sits above the response cap so a valid reply fits.
@@ -188,17 +189,47 @@ func WithCache(next Client, c *Cache, defaultModel, defaultEmbedModel string) Cl
 	return &cacheClient{next: next, c: c, model: defaultModel, embedModel: defaultEmbedModel}
 }
 
+// withCapCache is WithCache for a stack whose budget layer injects DefaultCompletionCap
+// below the cache; the effective cap joins the key so a capped reply never serves an uncapped run.
+func withCapCache(next Client, c *Cache, defaultModel, defaultEmbedModel string, injectedCap int) Client {
+	cc, ok := WithCache(next, c, defaultModel, defaultEmbedModel).(*cacheClient)
+	if ok {
+		cc.injectedCap = injectedCap
+	}
+	return cc
+}
+
 type cacheClient struct {
 	next              Client
 	c                 *Cache
 	model, embedModel string
+	// injectedCap is the completion cap a layer below applies when the request sets none; 0 when none.
+	injectedCap int
+}
+
+// cacheable reports whether a reply is complete enough to serve later: a reply cut off by
+// the token cap or a content filter, or an empty one, would be replayed as if it were whole.
+func cacheable(resp ChatResponse) bool {
+	switch resp.FinishReason {
+	case "length", "content_filter":
+		return false
+	}
+	return strings.TrimSpace(resp.Text) != ""
 }
 
 func (cc *cacheClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
 	if req.NoCache {
 		return cc.next.Chat(ctx, req)
 	}
-	key, ok := cc.c.key("chat", firstNonEmpty(req.Model, cc.model), req)
+	effectiveCap := req.MaxTokens
+	if effectiveCap <= 0 {
+		effectiveCap = cc.injectedCap
+	}
+	keyed := struct {
+		ChatRequest
+		EffectiveMaxTokens int `json:"effective_max_tokens"`
+	}{req, effectiveCap}
+	key, ok := cc.c.key("chat", firstNonEmpty(req.Model, cc.model), keyed)
 	if !ok {
 		return cc.next.Chat(ctx, req)
 	}
@@ -211,7 +242,7 @@ func (cc *cacheClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	if err != nil {
 		return resp, err
 	}
-	if req.AcceptReply == nil || req.AcceptReply(resp.Text) == nil {
+	if cacheable(resp) && (req.AcceptReply == nil || req.AcceptReply(resp.Text) == nil) {
 		cc.c.store(key, resp)
 	}
 	return resp, nil
