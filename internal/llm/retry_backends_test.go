@@ -28,7 +28,7 @@ func TestBackendsShouldRetryTransientAndNotPermanentFailuresWithExactRequestCoun
 	}{
 		{"503 twice then ok", []step{{503, nil}, {503, nil}, {200, nil}}, 3, nil, 0},
 		{"persistent 503 stops after 1+retries", []step{{503, nil}}, 4, ErrProvider, 0},
-		{"429 with Retry-After is honoured", []step{{429, map[string]string{"Retry-After": "1"}}, {200, nil}}, 2, nil, 900 * time.Millisecond},
+		{"429 with Retry-After is honored", []step{{429, map[string]string{"Retry-After": "1"}}, {200, nil}}, 2, nil, 900 * time.Millisecond},
 		{"401 is not retried", []step{{401, nil}}, 1, ErrAuth, 0},
 		{"400 is not retried", []step{{400, nil}}, 1, ErrProvider, 0},
 	}
