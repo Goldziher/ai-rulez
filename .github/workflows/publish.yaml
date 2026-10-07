@@ -18,6 +18,7 @@ concurrency:
 permissions:
   contents: write
   id-token: write
+  attestations: write
 
 jobs:
   meta:
@@ -148,6 +149,40 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      # One SLSA provenance statement over every release binary and archive,
+      # signed with this workflow's identity: `ai-rulez verify --self` checks the
+      # binary's sha256 against it (docs/signing.md).
+      - name: Attest build provenance
+        id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/ai-rulez_*/ai-rulez
+            dist/ai-rulez_*/ai-rulez.exe
+            dist/*.tar.gz
+            dist/*.zip
+
+      - name: Upload provenance bundles
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # verify --self reads one bundle, not a JSON Lines file.
+          if [ "$(grep -c . "$BUNDLE")" -ne 1 ]; then
+            echo "expected exactly one attestation in $BUNDLE" >&2
+            exit 1
+          fi
+          mkdir -p provenance
+          for archive in dist/*.tar.gz dist/*.zip; do
+            name="$(basename "$archive")"
+            name="${name%.tar.gz}"
+            name="${name%.zip}"
+            cp "$BUNDLE" "provenance/${name}.sigstore.json"
+          done
+          gh release upload "$TAG" provenance/*.sigstore.json --clobber
 
   publish_npm:
     name: Publish npm
