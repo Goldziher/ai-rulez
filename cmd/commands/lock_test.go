@@ -22,7 +22,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
-const lockProjectConfig = `version = "4.0"
+const lockProjectConfig = `version = "5.0"
 name = "lock-test"
 presets = ["claude"]
 `

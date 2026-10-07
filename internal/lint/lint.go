@@ -20,7 +20,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
-	"github.com/samber/oops"
 )
 
 // Default description bounds. 1024 is the Agent Skills specification limit.
@@ -82,7 +81,7 @@ type Report struct {
 	External bool `json:"-"`
 	// Protected holds the codes the organization policy protects from
 	// suppression (required or floored codes and AR740-AR745): a baseline never
-	// accepts them and [lint.tolerate] never tolerates them.
+	// accepts them and [lint.ratchet] never tolerates them.
 	Protected map[string]bool `json:"-"`
 	// ConfigFile is the display path of the configuration file, where the
 	// policy reports a suppression attempt.
@@ -277,7 +276,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	ruleTables() // the registry (and what its families set up) exists before any check runs
 	counter, err := tokens.New("")
 	if err != nil {
-		return nil, oops.Wrapf(err, "token counter")
+		return nil, fmt.Errorf("token counter: %w", err)
 	}
 	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so, cwd: so.Cwd,
 		deps: map[string]map[string]struct{}{}, names: map[string][]string{}}
@@ -293,17 +292,23 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		r.baseRel = ""
 	}
 	r.resolveSettings()
-	r.selectAnalyzers(so)
+	r.sel = parseSelection(so.Analyzers)
+	if r.sel == nil {
+		r.sel = parseSelection(r.lc.Analyzers)
+	}
+	if so.SecurityOnly && r.sel == nil {
+		r.sel = map[string]bool{AnalyzerSecurity: true} // AR0xx is a subset of the security analyzer
+	}
 	r.collect()
 	for i := range r.items {
 		if r.items[i].owned {
 			r.checkItem(&r.items[i])
 		}
 	}
-	r.unit(unitOf("duplicates", AnalyzerDuplicates), r.checkDuplicates)
+	r.unit(depUnitOf("duplicates", AnalyzerDuplicates), r.checkDuplicates)
 	r.unit(unitOf("mcp-command", AnalyzerMCP), r.checkMCP)
 	r.unit(depUnitOf("settings-hooks", AnalyzerHooks), func() { r.checkHooks(baseAbs) })
-	r.unit(unitOf("collapsed", AnalyzerDuplicates), r.checkCollapsed)
+	r.unit(depUnitOf("collapsed", AnalyzerDuplicates), r.checkCollapsed)
 	r.unit(unitOf("unpinned", AnalyzerSecurity), r.checkUnpinned)
 	r.unit(unitOf("delivery", AnalyzerDelivery, AnalyzerSecurity, AnalyzerLock), r.checkDelivery)
 	r.unit(unitOf("imported", AnalyzerSecurity), r.scanImported)
@@ -320,9 +325,6 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		r.unit(unitOf("external", AnalyzerSecurity), r.runExternal)
 	}
 	r.runRunChecks()
-	if so.SecurityOnly {
-		r.findings = securityOnly(r.findings)
-	}
 	r.unit(unitOf("settings-config", AnalyzerHooks, AnalyzerSecurity), r.checkSettingsConfig)
 	r.unit(unitOf("llm-config", AnalyzerConfig, AnalyzerSecurity), r.checkLLMConfig)
 	r.unit(unitOf("improve-config", AnalyzerEvals), r.checkImproveConfig)
@@ -331,35 +333,8 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.checkMaxFindings()
 	r.keepSelected()
 
-	sortFindings(r.findings)
-	assignIdentity(r.findings, tree, r.cwd)
-	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), PolicyWarn: r.policyWarn(), Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
-		Units: map[string]int{}, unitRuns: r.units}
-	for name, u := range r.units {
-		rep.Units[name] = u.count
-	}
-	if p, ok := LookupProfile(r.lc.Profile); ok && p.Name != ProfileDefault {
-		rep.Profile = p.Name
-	}
-	return rep, nil
-}
-
-// selectAnalyzers sets the analyzers a run is limited to: the option, else the
-// [lint] setting, else (for a security-only run) the security analyzer.
-func (r *runner) selectAnalyzers(so Options) {
-	r.sel = parseSelection(so.Analyzers)
-	if r.sel == nil {
-		r.sel = parseSelection(r.lc.Analyzers)
-	}
-	if so.SecurityOnly && r.sel == nil {
-		r.sel = map[string]bool{AnalyzerSecurity: true} // AR0xx is a subset of the security analyzer
-	}
-}
-
-// sortFindings orders findings by file, line and code.
-func sortFindings(fs []Finding) {
-	sort.SliceStable(fs, func(i, j int) bool {
-		a, b := fs[i], fs[j]
+	sort.SliceStable(r.findings, func(i, j int) bool {
+		a, b := r.findings[i], r.findings[j]
 		if a.File != b.File {
 			return a.File < b.File
 		}
@@ -368,6 +343,16 @@ func sortFindings(fs []Finding) {
 		}
 		return a.Code < b.Code
 	})
+	assignIdentity(r.findings, tree, r.cwd)
+	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), PolicyWarn: r.policyWarn(), Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
+		Units: map[string]int{}, unitRuns: r.units, External: so.External}
+	for name, u := range r.units {
+		rep.Units[name] = u.count
+	}
+	if p, ok := LookupProfile(r.lc.Profile); ok && p.Name != ProfileDefault {
+		rep.Profile = p.Name
+	}
+	return rep, nil
 }
 
 func keys(set map[string]bool) []string {
@@ -524,6 +509,15 @@ func (r *runner) addWithSeverity(code string, override Severity, abs string, lin
 	})
 }
 
+// addMetric is add for a finding about a measurement n (see FindingMeta.Metric).
+func (r *runner) addMetric(code, abs string, line, n int, format string, args ...any) {
+	before := len(r.findings)
+	r.add(code, abs, line, format, args...)
+	if len(r.findings) > before {
+		r.findings[before].meta().Metric = n
+	}
+}
+
 func (r *runner) rootAbs() string {
 	abs, _ := filepath.Abs(r.cfg.BaseDir) //nolint:errcheck // display only
 	return abs
@@ -661,8 +655,7 @@ func contentNames(kind string, cf config.ContentFile) []string {
 
 func (r *runner) addItems(configDir, kind, domain string, files []config.ContentFile) {
 	set := map[string]map[string]bool{kindSkill: r.skills, kindCommand: r.commands, kindAgent: r.agents, kindRule: r.rules, kindContext: r.contexts}[kind]
-	for i := range files {
-		cf := files[i]
+	for _, cf := range files {
 		abs, _ := filepath.Abs(cf.Path) //nolint:errcheck // keeps the raw path
 		rel, err := filepath.Rel(configDir, abs)
 		owned := err == nil && !strings.HasPrefix(rel, "..") && !strings.Contains(cf.Path, "://")
@@ -720,7 +713,7 @@ func (r *runner) checkItem(it *item) {
 		r.unit(unitOf("tool-breadth", AnalyzerSecurity), func() { r.checkToolBreadth(it, fm) })
 		r.unit(unitOf("resources", AnalyzerSecurity), func() { r.scanResources(it) })
 		r.unit(unitOf("globs", AnalyzerReferences), func() { r.checkGlobs(it, d) })
-		r.unit(unitOf(keyDescription, AnalyzerDescriptions), func() { r.checkDescription(it, d) })
+		r.unit(unitOf("description", AnalyzerDescriptions), func() { r.checkDescription(it, d) })
 		r.unit(unitOf("budget", AnalyzerBudgets), func() { r.checkBudget(it, raw) })
 		r.unit(unitOf("required-metadata", AnalyzerMetadata), func() { r.checkRequiredMetadata(it, d, fm) })
 		r.unit(unitOf("skill-name", AnalyzerDescriptions), func() { r.checkSkillName(it, d) })
@@ -765,7 +758,7 @@ func (r *runner) checkDescription(it *item, d doc) {
 		return
 	}
 	desc := r.description(it)
-	line := d.lineOf(keyDescription, 1)
+	line := d.lineOf("description", 1)
 	if desc == "" {
 		r.add(CodeDescriptionMissing, it.abs, 1, "%s %q has no description in its frontmatter", it.kind, itemID(it.kind, it.cf))
 		return
@@ -807,11 +800,11 @@ func (r *runner) checkBudget(it *item, raw string) {
 	b := r.budgetFor(it.kind)
 	lines := len(strings.Split(strings.TrimRight(raw, "\n"), "\n"))
 	if b.MaxLines > 0 && lines > b.MaxLines {
-		r.add(CodeSizeLines, it.abs, 1, "%s is %d lines, over the budget of %d; move detail into references/ or split it", it.kind, lines, b.MaxLines)
+		r.addMetric(CodeSizeLines, it.abs, 1, lines, "%s is %d lines, over the budget of %d; move detail into references/ or split it", it.kind, lines, b.MaxLines)
 	}
 	if b.MaxTokens > 0 {
 		if n := r.counter.Count(raw); n > b.MaxTokens {
-			r.add(CodeSizeTokens, it.abs, 1, "%s is about %d tokens, over the budget of %d", it.kind, n, b.MaxTokens)
+			r.addMetric(CodeSizeTokens, it.abs, 1, n, "%s is about %d tokens, over the budget of %d", it.kind, n, b.MaxTokens)
 		}
 	}
 }
@@ -833,7 +826,7 @@ func metaValue(m *config.Metadata, key string) string {
 		return m.Effort
 	case "activation":
 		return m.Activation
-	case keyTargets:
+	case "targets":
 		return strings.Join(m.Targets, ",")
 	case keyTools:
 		return strings.Join(m.Tools, ",")
@@ -884,9 +877,16 @@ func (r *runner) checkFrontmatterSkills(it *item, d doc) {
 	if it.cf.Metadata == nil {
 		return
 	}
+	var served map[string]bool
 	for _, s := range it.cf.Metadata.Skills {
 		key := strings.ToLower(strings.TrimSpace(s))
 		r.depName(it.abs, key)
+		if served == nil {
+			served = r.servedSkillNames()
+		}
+		if served[key] {
+			continue // a served skill is not on disk; checkServedReferences reports the preload (AR990)
+		}
 		if key == "" || strings.Contains(key, ":") || r.skills[key] || r.commands[key] {
 			continue
 		}
@@ -951,7 +951,8 @@ func (r *runner) checkDuplicates() {
 		for i := 0; i < j; i++ {
 			if code, dup := compareDescriptions(entries[i], b, threshold); dup {
 				a := entries[i]
-				line := r.docs[b.it.abs].lineOf(keyDescription, 1)
+				line := r.docs[b.it.abs].lineOf("description", 1)
+				r.dep(b.it.abs, a.it.abs) // the finding sits on b but exists because of a
 				r.add(code, b.it.abs, line, "description is %s %s %q (%s)", map[string]string{CodeDescriptionDup: "identical to", CodeDescriptionNearDup: "near-identical to"}[code], a.it.kind, itemID(a.it.kind, a.it.cf), r.display(a.it.abs))
 				break
 			}
@@ -1043,7 +1044,7 @@ func (r *runner) checkMCP() {
 // skill whose command is not on PATH.
 func (r *runner) checkFrontmatterMCPCommands() {
 	for _, s := range r.frontmatterMCPServers() {
-		if s.disabled || effectiveTransport(s) != transportStdio || s.command == "" || strings.Contains(s.command, "$") || r.commandResolves(s.command) {
+		if s.disabled || effectiveTransport(s) != "stdio" || s.command == "" || strings.Contains(s.command, "$") || r.commandResolves(s.command) {
 			continue
 		}
 		r.add(CodeMCPCommandNotFound, s.file, s.line, "MCP server %q runs %q, which is not on PATH", s.name, s.command)
@@ -1097,7 +1098,7 @@ func (r *runner) checkHooks(baseAbs string) {
 	for _, event := range events {
 		for _, group := range hf.Hooks[event] {
 			for _, h := range group.Hooks {
-				if h.Type != "" && h.Type != hookTypeCommand {
+				if h.Type != "" && h.Type != "command" {
 					continue
 				}
 				r.checkHookCommand(path, event, h.Command)
@@ -1257,23 +1258,18 @@ func (r *runner) checkSettingsConfig() {
 	}
 }
 
-// validateBudgetAndRisk checks [lint.tolerate] (and its deprecated alias [lint.budget]) and [lint.risk].
+// validateBudgetAndRisk checks [lint.ratchet] and [lint.risk].
 func validateBudgetAndRisk(lc *config.LintConfig) []string {
 	var problems []string
 	if _, ok := LookupProfile(lc.Profile); !ok {
 		problems = append(problems, fmt.Sprintf("lint.profile: unknown profile %q (use %s)", lc.Profile, strings.Join(ProfileNames(), ", ")))
 	}
-	for _, table := range []struct {
-		name   string
-		limits map[string]int
-	}{{"tolerate", lc.Tolerate}, {"budget", lc.Budget}} {
-		for key, limit := range table.limits {
-			if _, ok := lookupRule(key); !ok {
-				problems = append(problems, fmt.Sprintf("lint.%s: unknown rule %q", table.name, key))
-			}
-			if limit < 0 {
-				problems = append(problems, fmt.Sprintf("lint.%s.%s: %d is negative", table.name, key, limit))
-			}
+	for key, limit := range lc.Ratchet {
+		if _, ok := lookupRule(key); !ok {
+			problems = append(problems, fmt.Sprintf("lint.ratchet: unknown rule %q", key))
+		}
+		if limit < 0 {
+			problems = append(problems, fmt.Sprintf("lint.ratchet.%s: %d is negative", key, limit))
 		}
 	}
 	if lc.Risk != nil {

@@ -47,56 +47,49 @@ func addFormatFlag(fs *pflag.FlagSet, target *string, initial, shown string, all
 	f.Annotations = map[string][]string{formatValuesAnnotation: allowed}
 }
 
-// addJSONAlias registers the hidden, deprecated --json (and its shorthand) of a
-// command that predates --format. normalizeFormatFlags maps it onto --format json.
-func addJSONAlias(fs *pflag.FlagSet, asJSON *bool, short string) {
-	if short != "" {
-		fs.BoolVarP(asJSON, "json", short, false, "Output as JSON (deprecated: use --format json)")
-	} else {
-		fs.BoolVar(asJSON, "json", false, "Output as JSON (deprecated: use --format json)")
-	}
-	_ = fs.MarkDeprecated("json", "use --format json") //nolint:errcheck // the flag was just registered
+// addJSONFormat gives a command that prints text or JSON the standard --format
+// text|json flag; --format json sets the command's asJSON switch. v5 has no
+// separate --json/-j: the unused short argument keeps call sites uniform.
+func addJSONFormat(fs *pflag.FlagSet, asJSON *bool, _ string) {
+	fs.Var(jsonFormat{dst: asJSON}, "format", "Output format: "+formatText+", "+formatJSON)
+	f := fs.Lookup("format")
+	f.DefValue = formatText
+	f.Annotations = map[string][]string{formatValuesAnnotation: {formatText, formatJSON}}
 }
 
-// addJSONFlagAlias adds the hidden --json alias to a command that already has
-// --format with a json value; normalizeFormatFlags maps it onto --format json.
-func addJSONFlagAlias(fs *pflag.FlagSet) {
-	addJSONAlias(fs, new(bool), "")
-}
-
-// addJSONFormat gives a command that only had --json the standard --format text|json
-// and keeps --json as the alias. The command keeps reading asJSON.
-func addJSONFormat(fs *pflag.FlagSet, asJSON *bool, short string) {
-	addFormatFlag(fs, new(string), "", formatText, formatText, formatJSON)
-	addJSONAlias(fs, asJSON, short)
-}
-
-// normalizeFormatFlags validates --format against the values its command declared
-// and keeps --format and the deprecated --json in step: --json means --format json,
-// and --format json sets a command's json switch.
+// normalizeFormatFlags validates --format against the values its command declared.
 func normalizeFormatFlags(cmd *cobra.Command) error {
 	ff := cmd.Flags().Lookup("format")
 	if ff == nil {
 		return nil
 	}
 	if allowed := ff.Annotations[formatValuesAnnotation]; len(allowed) > 0 {
-		if err := checkFormat(ff.Value.String(), allowed); err != nil {
-			return err
-		}
-	}
-	jf := cmd.Flags().Lookup("json")
-	if jf == nil {
-		return nil
-	}
-	if jf.Changed && jf.Value.String() == valueTrue {
-		if ff.Changed && ff.Value.String() != formatJSON {
-			return oops.Hint("Drop --json, or use --format json.").
-				Errorf("--json conflicts with --format %s", ff.Value.String())
-		}
-		return ff.Value.Set(formatJSON) //nolint:wrapcheck // a string flag cannot fail to take "json"
-	}
-	if ff.Value.String() == formatJSON {
-		return jf.Value.Set(valueTrue) //nolint:wrapcheck // a bool flag cannot fail to take "true"
+		return checkFormat(ff.Value.String(), allowed)
 	}
 	return nil
 }
+
+// jsonFormat is the value of a --format flag on a command that prints either
+// text or JSON. It sets the command's existing boolean.
+type jsonFormat struct{ dst *bool }
+
+func (f jsonFormat) String() string {
+	if f.dst != nil && *f.dst {
+		return formatJSON
+	}
+	return formatText
+}
+
+func (f jsonFormat) Set(v string) error {
+	switch v {
+	case formatText:
+		*f.dst = false
+	case formatJSON:
+		*f.dst = true
+	default:
+		return oops.Errorf("unknown format %q (use text or json)", v)
+	}
+	return nil
+}
+
+func (jsonFormat) Type() string { return "string" }

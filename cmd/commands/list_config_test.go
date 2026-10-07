@@ -37,8 +37,8 @@ func TestListCommands_ExitOneOnABrokenOrLegacyConfig(t *testing.T) {
 		files map[string]string
 		want  int
 	}{
-		{"valid", map[string]string{"config.toml": "version = \"4.0\"\nname = \"ok\"\npresets = [\"claude\"]\n"}, 0},
-		{"toml syntax error", map[string]string{"config.toml": "version = \"4.0\"\nname = \"x\"\npresets = [\n"}, 1},
+		{"valid", map[string]string{"config.toml": "version = \"5.0\"\nname = \"ok\"\npresets = [\"claude\"]\n"}, 0},
+		{"toml syntax error", map[string]string{"config.toml": "version = \"5.0\"\nname = \"x\"\npresets = [\n"}, 1},
 		{"legacy V3 config", map[string]string{"config.yaml": "metadata:\n  name: old\npresets:\n  - claude\n"}, 1},
 	}
 	commands := []string{"list rules", "list context", "list skills", "list agents", "list commands", "list checks", "domain list"}

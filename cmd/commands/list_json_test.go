@@ -36,7 +36,7 @@ func TestListCommands_EmptyListPrintsAnEmptyJSONArray(t *testing.T) {
 			resetContentFlags(t)
 			root := t.TempDir()
 			writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"),
-				"version = \"4.0\"\nname = \"empty\"\npresets = [\"claude\"]\n")
+				"version = \"5.0\"\nname = \"empty\"\npresets = [\"claude\"]\n")
 			chdir(t, root)
 			prev := *tt.json
 			*tt.json = true

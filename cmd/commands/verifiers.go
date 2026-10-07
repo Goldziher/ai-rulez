@@ -29,7 +29,6 @@ const (
 
 var (
 	verifiersStrict   bool
-	verifiersJSON     bool
 	verifiersNames    []string
 	verifiersProfile  string
 	verifiersSince    string
@@ -48,12 +47,6 @@ var (
 // verifiersAllowExecEnv is the CI spelling of --allow-exec.
 const verifiersAllowExecEnv = "AI_RULEZ_VERIFIERS_ALLOW_EXEC"
 
-const (
-	verifiersTrue       = "true"
-	verifiersSevError   = "error"
-	verifiersSevWarning = "warning"
-)
-
 // allowExec reports whether command predicates may run: --allow-exec or the
 // environment variable set to 1 or true. Nothing else implies it.
 func allowExec() bool {
@@ -61,7 +54,7 @@ func allowExec() bool {
 		return true
 	}
 	switch strings.ToLower(os.Getenv(verifiersAllowExecEnv)) {
-	case "1", verifiersTrue:
+	case "1", "true":
 		return true
 	}
 	return false
@@ -152,7 +145,6 @@ var VerifiersListCmd = &cobra.Command{
 func init() {
 	VerifiersCmd.AddCommand(VerifiersRunCmd, VerifiersListCmd, VerifiersExplainCmd, VerifiersTestCmd)
 	VerifiersRunCmd.Flags().BoolVar(&verifiersStrict, "strict", false, "Also exit non-zero when a warning-severity verifier fails")
-	addJSONAlias(VerifiersRunCmd.Flags(), &verifiersJSON, "")
 	VerifiersRunCmd.Flags().StringSliceVar(&verifiersNames, "name", nil, "Run only the named verifier (repeatable)")
 	VerifiersRunCmd.Flags().StringVarP(&verifiersProfile, "profile", "p", "", "Active profile: sets the profile of generated_in_sync verifiers that name none, and which rules count as active (default: from config)")
 	f := VerifiersRunCmd.Flags()
@@ -206,7 +198,13 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(err)
 		return exitVerifiersCannotRun
 	}
-	applyVerifiersProfile(cfg)
+	if verifiersProfile != "" {
+		for i := range cfg.Verifiers {
+			if cfg.Verifiers[i].Type == config.VerifierGeneratedInSync && cfg.Verifiers[i].Profile == "" {
+				cfg.Verifiers[i].Profile = verifiersProfile
+			}
+		}
+	}
 	if verifiersMaxCost < 0 {
 		fmtError(oops.Errorf("--max-cost must not be negative"))
 		return exitVerifiersCannotRun
@@ -226,7 +224,21 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		fmtError(report.Err)
 		return exitVerifiersCannotRun
 	}
-	if err = renderVerifiersReport(out, report, format, failOn); err != nil {
+	var buf bytes.Buffer
+	switch format {
+	case "json":
+		err = verifiers.WriteJSON(&buf, report)
+	case "sarif":
+		err = verifiers.WriteSARIF(&buf, report, Version)
+	case "junit":
+		err = verifiers.WriteJUnit(&buf, report, failOn)
+	default:
+		err = verifiers.WriteText(&buf, report)
+	}
+	if err == nil {
+		err = emitReport(out, buf.Bytes())
+	}
+	if err != nil {
 		fmtError(err)
 		return exitVerifiersCannotRun
 	}
@@ -241,38 +253,6 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 	return 0
 }
 
-// applyVerifiersProfile gives every generated_in_sync verifier without a profile the --profile one.
-func applyVerifiersProfile(cfg *config.Config) {
-	if verifiersProfile == "" {
-		return
-	}
-	for i := range cfg.Verifiers {
-		if cfg.Verifiers[i].Type == config.VerifierGeneratedInSync && cfg.Verifiers[i].Profile == "" {
-			cfg.Verifiers[i].Profile = verifiersProfile
-		}
-	}
-}
-
-// renderVerifiersReport writes the report to out in the chosen format.
-func renderVerifiersReport(out io.Writer, report *verifiers.Report, format, failOn string) error {
-	var buf bytes.Buffer
-	var err error
-	switch format {
-	case formatJSON:
-		err = verifiers.WriteJSON(&buf, report)
-	case "sarif":
-		err = verifiers.WriteSARIF(&buf, report, Version)
-	case "junit":
-		err = verifiers.WriteJUnit(&buf, report, failOn)
-	default:
-		err = verifiers.WriteText(&buf, report)
-	}
-	if err == nil {
-		err = emitReport(out, buf.Bytes())
-	}
-	return err
-}
-
 // verifierRunOptions validates the run flags and builds the options.
 func verifierRunOptions() (opts verifiers.Options, format, failOn string, err error) {
 	modes := 0
@@ -285,26 +265,20 @@ func verifierRunOptions() (opts verifiers.Options, format, failOn string, err er
 		return opts, "", "", oops.New("use only one of --since, --staged and --all")
 	}
 	format = verifiersFormat
-	if verifiersJSON {
-		if format != "" && format != formatJSON {
-			return opts, "", "", oops.Hint("Drop --json, or use --format json.").Errorf("--json conflicts with --format %s", format)
-		}
-		format = formatJSON
-	}
 	switch format {
-	case "", "text", formatJSON, "sarif", "junit":
+	case "", "text", "json", "sarif", "junit":
 	default:
 		return opts, "", "", oops.Hint("Use text, json, sarif or junit.").Errorf("unknown --format %q", format)
 	}
 	failOn = verifiersFailOn
 	if failOn == "" {
-		failOn = verifiersSevError
+		failOn = "error"
 		if verifiersStrict {
-			failOn = verifiersSevWarning
+			failOn = "warning"
 		}
 	}
 	switch failOn {
-	case verifiersSevError, verifiersSevWarning, "info", okfFailNone:
+	case "error", "warning", "info", "none":
 	default:
 		return opts, "", "", oops.Hint("Use error, warning, info or none.").Errorf("unknown --fail-on %q", failOn)
 	}
@@ -411,17 +385,17 @@ func listVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		return 0
 	}
 	if len(rows) == 0 {
-		reportWriter{out}.printf("No verifiers configured.\n")
+		_, _ = io.WriteString(out, "No verifiers configured.\n")
 		return 0
 	}
 	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	reportWriter{tw}.printf("NAME\tTYPE\tSEVERITY\tENFORCES\tDESCRIPTION\n")
+	_, _ = io.WriteString(tw, "NAME\tTYPE\tSEVERITY\tENFORCES\tDESCRIPTION\n")
 	for _, r := range rows {
 		target := "-"
 		if r.Target != "" {
 			target = r.Target
 		}
-		reportWriter{tw}.printf("%s\t%s\t%s\t%s\t%s\n", r.Name, r.Type, r.Severity, target, r.Description)
+		_, _ = io.WriteString(tw, r.Name+"\t"+r.Type+"\t"+r.Severity+"\t"+target+"\t"+r.Description+"\n")
 	}
 	if err := tw.Flush(); err != nil {
 		fmtError(oops.Wrapf(err, "write verifiers list"))

@@ -1,6 +1,9 @@
 package llm
 
-import "strings"
+import (
+	"math"
+	"strings"
+)
 
 // A committed repository config, and the machine-local overlay that lives in
 // the checkout, is attacker-controlled input: cloning a repository must not
@@ -85,6 +88,10 @@ func Resolve(repo, user *Config) (cfg Config, ignored []string) {
 		(u.Provider == "" || modelPrefix(cfg.EmbeddingModel) != u.Provider)
 	// Without a user config the flags still apply: an env-only user (AI_RULEZ_LLM_*)
 	// sends a key too, and WithEnv clears the flags when the env sets the routing.
+	// The user's price override is for the model the user chose. A model the
+	// repository picked is priced from the built-in table (or refused under a
+	// cost cap), never from a price that was written for another model.
+	merged.priceBound, merged.priceModel = true, u.Model
 	merged.MaxCostUSD = tighterFloat(u.MaxCostUSD, cfg.MaxCostUSD)
 	merged.MaxTokens = tighterInt(u.MaxTokens, cfg.MaxTokens)
 	merged.MaxCalls = tighterInt(u.MaxCalls, cfg.MaxCalls)
@@ -125,15 +132,12 @@ func tighterInt(a, b int) int {
 	}
 }
 
-// tighterFloat is the lower positive cap of a and b; a non-finite value counts as unset, so a
-// repository NaN can neither win the min (min(x, NaN) is NaN) nor lift the user's cap.
+// tighterFloat returns the lower positive limit. A value that is not a usable
+// limit (zero, negative, NaN or infinite) counts as unset, so a repository can
+// never replace the user's cap with a value that compares false against
+// everything.
 func tighterFloat(a, b float64) float64 {
-	if !Finite(a) {
-		a = 0
-	}
-	if !Finite(b) {
-		b = 0
-	}
+	a, b = usableLimit(a), usableLimit(b)
 	switch {
 	case a <= 0:
 		return b
@@ -142,6 +146,13 @@ func tighterFloat(a, b float64) float64 {
 	default:
 		return min(a, b)
 	}
+}
+
+func usableLimit(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) || v < 0 {
+		return 0
+	}
+	return v
 }
 
 // IgnoredKeysMessage explains which repository [llm] keys were dropped by the trust rule.

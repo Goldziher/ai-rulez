@@ -31,7 +31,7 @@ func oldManifestProject(t *testing.T) string {
 	dir := t.TempDir()
 	configDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(`version = "5.0"
 name = "upgrade"
 presets = ["claude", "codex"]
 gitignore = false
