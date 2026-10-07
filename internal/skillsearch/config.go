@@ -160,6 +160,22 @@ func (c *Config) Validate() []string {
 	}
 	var p []string
 	add := func(format string, a ...any) { p = append(p, fmt.Sprintf(format, a...)) }
+	c.validateEnums(add)
+	if c.BodyChars < 0 || c.BodyChars > maxBodyChars {
+		add("search.body_chars must be between 0 and %d", maxBodyChars)
+	}
+	c.validateNumbers(add)
+	if c.IndexDir != "" {
+		if err := checkIndexDir(c.IndexDir); err != "" {
+			add("search.index_dir %s", err)
+		}
+	}
+	c.validateEmbeddings(add)
+	return p
+}
+
+// validateEnums checks the fields that take one of a fixed set of values.
+func (c *Config) validateEnums(add func(format string, a ...any)) {
 	switch c.Mode {
 	case "", ModeLexical, ModeHybrid, ModeVector:
 	default:
@@ -180,26 +196,22 @@ func (c *Config) Validate() []string {
 			add("search.fields entry %q must be name, triggers, keywords or description", f)
 		}
 	}
-	if c.BodyChars < 0 || c.BodyChars > maxBodyChars {
-		add("search.body_chars must be between 0 and %d", maxBodyChars)
+}
+
+// validateEmbeddings checks the embeddings command table.
+func (c *Config) validateEmbeddings(add func(format string, a ...any)) {
+	e := c.Embeddings
+	if e == nil {
+		return
 	}
-	c.validateNumbers(add)
-	if c.IndexDir != "" {
-		if err := checkIndexDir(c.IndexDir); err != "" {
-			add("search.index_dir %s", err)
+	if len(e.Command) > 0 && strings.TrimSpace(e.Command[0]) == "" {
+		add("search.embeddings.command must start with a program")
+	}
+	for _, name := range e.PassEnv {
+		if strings.TrimSpace(name) == "" || strings.ContainsAny(name, "=\x00") {
+			add("search.embeddings.pass_env holds an invalid variable name %q", name)
 		}
 	}
-	if e := c.Embeddings; e != nil {
-		if len(e.Command) > 0 && strings.TrimSpace(e.Command[0]) == "" {
-			add("search.embeddings.command must start with a program")
-		}
-		for _, name := range e.PassEnv {
-			if strings.TrimSpace(name) == "" || strings.ContainsAny(name, "=\x00") {
-				add("search.embeddings.pass_env holds an invalid variable name %q", name)
-			}
-		}
-	}
-	return p
 }
 
 // validateNumbers checks the numeric keys of the table.

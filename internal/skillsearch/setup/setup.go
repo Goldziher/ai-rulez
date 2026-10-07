@@ -82,28 +82,12 @@ func Resolve(cfg *config.Config, opts Options) (*Resolved, error) {
 		// 0 is a value in user scope: it switches a repository's abstention threshold off.
 		merged.VectorMinSim = *userMinSim
 	}
-	// The query log records what users ask, so only user scope may start it.
-	if repo != nil && repo.LogQueries && (user == nil || !user.LogQueries) {
-		r.Notes = append(r.Notes, "search.log_queries in the repository config is ignored: a repository cannot start recording queries; set it in the user config file or "+LogQueriesEnv+"=1")
-	}
-	merged.LogQueries = user != nil && user.LogQueries
-	if v := strings.ToLower(strings.TrimSpace(getenv(LogQueriesEnv))); v != "" {
-		merged.LogQueries = v == "1" || v == "true"
-	}
+	applyLogQueries(r, &merged, repo, user)
 	if problems := merged.Validate(); len(problems) > 0 {
 		return nil, oops.Code(skillsearch.CodeConfigInvalid).Hint("Fix the [search] table; 'ai-rulez validate' lists every problem").
 			Errorf("%s: %s", skillsearch.CodeConfigInvalid, strings.Join(problems, "; "))
 	}
-	// Who may run a program: the user config, or an explicit flag.
-	if e := merged.Embeddings; e != nil && len(e.Command) > 0 {
-		fromUser := user != nil && user.Embeddings != nil && len(user.Embeddings.Command) > 0
-		switch {
-		case fromUser || opts.AllowExec:
-			r.Command, r.PassEnv = e.Command, e.PassEnv
-		default:
-			r.Notes = append(r.Notes, "search.embeddings.command in the repository config is ignored: a repository cannot run a program; set it in the user config file or pass --allow-exec")
-		}
-	}
+	applyCommand(r, &merged, user, opts.AllowExec)
 	if v := strings.TrimSpace(getenv(ModeEnv)); v != "" {
 		merged.Mode = v
 	}
@@ -127,6 +111,33 @@ func Resolve(cfg *config.Config, opts Options) (*Resolved, error) {
 		r.Model = e.Model
 	}
 	return r, nil
+}
+
+// applyLogQueries sets the query-log switch: the repository config cannot start it, only the user
+// config or the environment can.
+func applyLogQueries(r *Resolved, merged *skillsearch.Config, repo, user *skillsearch.Config) {
+	// The query log records what users ask, so only user scope may start it.
+	if repo != nil && repo.LogQueries && (user == nil || !user.LogQueries) {
+		r.Notes = append(r.Notes, "search.log_queries in the repository config is ignored: a repository cannot start recording queries; set it in the user config file or "+LogQueriesEnv+"=1")
+	}
+	merged.LogQueries = user != nil && user.LogQueries
+	if v := strings.ToLower(strings.TrimSpace(r.getenv(LogQueriesEnv))); v != "" {
+		merged.LogQueries = v == "1" || v == "true"
+	}
+}
+
+// applyCommand records the embeddings command when the user config or an explicit flag allows a program to run.
+func applyCommand(r *Resolved, merged *skillsearch.Config, user *skillsearch.Config, allowExec bool) {
+	e := merged.Embeddings
+	if e == nil || len(e.Command) == 0 {
+		return
+	}
+	fromUser := user != nil && user.Embeddings != nil && len(user.Embeddings.Command) > 0
+	if fromUser || allowExec {
+		r.Command, r.PassEnv = e.Command, e.PassEnv
+		return
+	}
+	r.Notes = append(r.Notes, "search.embeddings.command in the repository config is ignored: a repository cannot run a program; set it in the user config file or pass --allow-exec")
 }
 
 // loadUser reads the [search] table of the user config. The second result is
@@ -185,6 +196,13 @@ func merge(repo, user *skillsearch.Config) skillsearch.Config {
 		out.RRFK = user.RRFK
 	}
 	out.Weights, out.VectorMinSim = mergeScoring(out.Weights, out.VectorMinSim, user)
+	mergeLimits(&out, user)
+	mergeEmbeddings(&out, user)
+	return out
+}
+
+// mergeLimits lays the user's candidate, batch, timeout, directory and dtype settings over out.
+func mergeLimits(out, user *skillsearch.Config) {
 	if user.Candidates > 0 {
 		out.Candidates = user.Candidates
 	}
@@ -200,20 +218,24 @@ func merge(repo, user *skillsearch.Config) skillsearch.Config {
 	if user.DType != "" {
 		out.DType = user.DType
 	}
-	if user.Embeddings != nil {
-		e := skillsearch.EmbeddingsConfig{}
-		if out.Embeddings != nil {
-			e = *out.Embeddings
-		}
-		if len(user.Embeddings.Command) > 0 {
-			e.Command, e.PassEnv = user.Embeddings.Command, user.Embeddings.PassEnv
-		}
-		if user.Embeddings.Model != "" {
-			e.Model = user.Embeddings.Model
-		}
-		out.Embeddings = &e
+}
+
+// mergeEmbeddings lays the user's embeddings table over out's, field by field.
+func mergeEmbeddings(out, user *skillsearch.Config) {
+	if user.Embeddings == nil {
+		return
 	}
-	return out
+	e := skillsearch.EmbeddingsConfig{}
+	if out.Embeddings != nil {
+		e = *out.Embeddings
+	}
+	if len(user.Embeddings.Command) > 0 {
+		e.Command, e.PassEnv = user.Embeddings.Command, user.Embeddings.PassEnv
+	}
+	if user.Embeddings.Model != "" {
+		e.Model = user.Embeddings.Model
+	}
+	out.Embeddings = &e
 }
 
 // IndexPath is the absolute index directory.

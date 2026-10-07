@@ -147,44 +147,50 @@ func (f *CaseFile) validate() []string {
 	}
 	seen := map[string]bool{}
 	for i := range f.Cases {
-		c := &f.Cases[i]
-		where := fmt.Sprintf("case %d", i+1)
-		if c.ID != "" {
-			where = fmt.Sprintf("case %q", c.ID)
-		}
+		problems = append(problems, validateCase(&f.Cases[i], i, seen)...)
+	}
+	return problems
+}
+
+// validateCase reports the problems of case number i (zero-based); seen holds the ids met so far.
+func validateCase(c *Case, i int, seen map[string]bool) []string {
+	var problems []string
+	where := fmt.Sprintf("case %d", i+1)
+	if c.ID != "" {
+		where = fmt.Sprintf("case %q", c.ID)
+	}
+	switch {
+	case strings.TrimSpace(c.ID) == "":
+		problems = append(problems, where+": id is required")
+	case seen[c.ID]:
+		problems = append(problems, where+": duplicate id")
+	}
+	seen[c.ID] = true
+	if strings.TrimSpace(c.Query) == "" {
+		problems = append(problems, where+": query is required")
+	}
+	if len(c.Query) > maxQueryBytes {
+		problems = append(problems, fmt.Sprintf("%s: query is longer than %d bytes", where, maxQueryBytes))
+	}
+	if len(c.Expect) > maxExpectedPerQuery {
+		problems = append(problems, fmt.Sprintf("%s: more than %d expected skills", where, maxExpectedPerQuery))
+	}
+	dup := map[string]bool{}
+	for _, r := range c.Expect {
 		switch {
-		case strings.TrimSpace(c.ID) == "":
-			problems = append(problems, where+": id is required")
-		case seen[c.ID]:
-			problems = append(problems, where+": duplicate id")
+		case strings.TrimSpace(r.ID) == "":
+			problems = append(problems, where+": an expect entry has no id")
+		case dup[r.ID]:
+			problems = append(problems, fmt.Sprintf("%s: %q is listed twice in expect", where, r.ID))
 		}
-		seen[c.ID] = true
-		if strings.TrimSpace(c.Query) == "" {
-			problems = append(problems, where+": query is required")
+		dup[r.ID] = true
+		if r.Graded && (r.Grade < 1 || r.Grade > maxGrade) {
+			problems = append(problems, fmt.Sprintf("%s: grade of %q must be between 1 and %d", where, r.ID, maxGrade))
 		}
-		if len(c.Query) > maxQueryBytes {
-			problems = append(problems, fmt.Sprintf("%s: query is longer than %d bytes", where, maxQueryBytes))
-		}
-		if len(c.Expect) > maxExpectedPerQuery {
-			problems = append(problems, fmt.Sprintf("%s: more than %d expected skills", where, maxExpectedPerQuery))
-		}
-		dup := map[string]bool{}
-		for _, r := range c.Expect {
-			switch {
-			case strings.TrimSpace(r.ID) == "":
-				problems = append(problems, where+": an expect entry has no id")
-			case dup[r.ID]:
-				problems = append(problems, fmt.Sprintf("%s: %q is listed twice in expect", where, r.ID))
-			}
-			dup[r.ID] = true
-			if r.Graded && (r.Grade < 1 || r.Grade > maxGrade) {
-				problems = append(problems, fmt.Sprintf("%s: grade of %q must be between 1 and %d", where, r.ID, maxGrade))
-			}
-		}
-		for _, id := range c.Avoid {
-			if dup[id] {
-				problems = append(problems, fmt.Sprintf("%s: %q is both expected and avoided", where, id))
-			}
+	}
+	for _, id := range c.Avoid {
+		if dup[id] {
+			problems = append(problems, fmt.Sprintf("%s: %q is both expected and avoided", where, id))
 		}
 	}
 	return problems
