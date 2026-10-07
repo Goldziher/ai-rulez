@@ -126,7 +126,7 @@ func TestCursorImport_GeneratedRulesAreNotReimported(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 	writeTree(t, dir, map[string]string{
-		".ai-rulez/config.toml": "version = \"4.0\"\nname = \"gen\"\npresets = [\"cursor\"]\n\n" +
+		".ai-rulez/config.toml": "version = \"5.0\"\nname = \"gen\"\npresets = [\"cursor\"]\n\n" +
 			"[permissions]\ndeny = [\"Bash(rm -rf:*)\", \"Bash(sudo)\"]\n",
 		".ai-rulez/rules/style.md": "---\ndescription: style\n---\nUse tabs.\n",
 	})

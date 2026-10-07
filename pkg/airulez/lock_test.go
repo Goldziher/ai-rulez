@@ -116,7 +116,7 @@ func TestLockRunsTheServedSkillScan(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			p, dir := lockProject(t, withFiles(map[string]string{
-				".ai-rulez/config.toml": "version = \"4.0\"\nname = \"p\"\ngitignore = false\npresets = [\"claude\"]\n",
+				".ai-rulez/config.toml": "version = \"5.0\"\nname = \"p\"\ngitignore = false\npresets = [\"claude\"]\n",
 			}, evilSkill))
 
 			// Act

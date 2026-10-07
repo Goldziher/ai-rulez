@@ -68,13 +68,11 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&generateFrozen, "frozen", false,
 		"Like --locked, and never use the network: resolve only from the local cache, verified against the lock")
 	GenerateCmd.Flags().BoolVarP(&updateGitignore, "gitignore", "i", false, "Update .gitignore files to include generated output patterns")
-	GenerateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Deprecated alias for --gitignore")
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
-	registerRemovedCLIMCPFlags(GenerateCmd)
 	GenerateCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to generate, or a comma-separated list to compose several (default: from config or 'default')")
 	GenerateCmd.Flags().StringVar(&generateRole, flagRole, "",
 		"Generate the slice of content a role selects instead of a profile (see 'ai-rulez roles list'); mutually exclusive with --profile")
-	GenerateCmd.Flags().BoolVarP(&noFetch, "no-fetch", "f", false, "Skip fetching remote includes, use cached content only")
+	GenerateCmd.Flags().BoolVar(&noFetch, "offline", false, "Skip fetching remote includes, use cached content only")
 	GenerateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnv, "env", "e", nil, "MCP env override in KEY=VALUE form (repeatable)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnvFiles, "env-file", "E", nil, "Dotenv file for MCP env placeholders (repeatable)")
@@ -90,26 +88,6 @@ func init() {
 	GenerateCmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "With --user: write without the confirmation prompt; always: do not warn about new hook and MCP commands")
 	GenerateCmd.Flags().BoolVar(&pluginMode, "plugin", false, "Generate distributable plugin bundles and a marketplace index from the [plugin] block")
 	GenerateCmd.Flags().BoolVar(&pluginIfConfigured, "if-configured", false, "Skip plugin generation when no plugin authoring configuration is present")
-	if err := GenerateCmd.Flags().MarkDeprecated("update-gitignore", "use --gitignore instead"); err != nil {
-		logger.Debug("Failed to mark update-gitignore as deprecated", "error", err)
-	}
-	if err := GenerateCmd.Flags().MarkHidden("update-gitignore"); err != nil {
-		logger.Debug("Failed to hide update-gitignore flag", "error", err)
-	}
-}
-
-// registerRemovedCLIMCPFlags keeps --no-configure-cli-mcp / -M and --skip-cli-mcp
-// / -S accepted so existing scripts do not break. generate never configures
-// CLI-based MCP tools (it writes MCP config files only), so the flags have
-// nothing to skip; they are hidden and print a deprecation notice.
-func registerRemovedCLIMCPFlags(cmd *cobra.Command) {
-	var unused bool
-	for _, f := range []struct{ name, short string }{{"no-configure-cli-mcp", "M"}, {"skip-cli-mcp", "S"}} {
-		cmd.Flags().BoolVarP(&unused, f.name, f.short, false, "Has no effect: generate does not configure CLI-based MCP tools")
-		if err := cmd.Flags().MarkDeprecated(f.name, "it has no effect, generate only writes MCP config files"); err != nil {
-			logger.Debug("Failed to mark flag as deprecated", "flag", f.name, "error", err)
-		}
-	}
 }
 
 func runGenerate(cmd *cobra.Command, args []string) {

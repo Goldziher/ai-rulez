@@ -19,7 +19,7 @@ func TestOKFRoundTripE2E(t *testing.T) {
 	src := minimalProject(t, "")
 	bundle := filepath.Join(t.TempDir(), "bundle")
 	dst := t.TempDir()
-	writeTree(t, dst, map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"dst\"\npresets = [\"claude\"]\n"})
+	writeTree(t, dst, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"dst\"\npresets = [\"claude\"]\n"})
 
 	// Act and Assert: export, then --check is clean, then drift exits 2.
 	exp := env.run(src, "export", "okf", "-o", bundle)
@@ -165,7 +165,7 @@ func TestOKFImportRefusesASymlinkedConceptE2E(t *testing.T) {
 	require.NoError(t, os.WriteFile(outside, []byte("---\ntype: Decision\ntitle: Secret\n---\n\nTOPSECRET\n"), 0o600))
 	internaltestutil.SymlinkOrSkip(t, outside, filepath.Join(bundle, "b.md"))
 	dst := t.TempDir()
-	writeTree(t, dst, map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"dst\"\npresets = [\"claude\"]\n"})
+	writeTree(t, dst, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"dst\"\npresets = [\"claude\"]\n"})
 
 	// Act
 	res := env.run(dst, "import", "okf", bundle, "--format", "json")
@@ -192,7 +192,7 @@ func TestOKFImportJSONEmptyListsE2E(t *testing.T) {
 	env := newIsoEnv(t)
 	bundle := okfBundle(t, okfGoodConcept)
 	dst := t.TempDir()
-	writeTree(t, dst, map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"dst\"\npresets = [\"claude\"]\n"})
+	writeTree(t, dst, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"dst\"\npresets = [\"claude\"]\n"})
 
 	// Act
 	res := env.run(dst, "import", "okf", bundle, "--dry-run", "--format", "json")

@@ -57,7 +57,7 @@ func TestCommandVerifiersNeedAllowExecE2E(t *testing.T) {
 			env.commitAll(root, "hostile")
 			// The verifier's environment allowlist drops MARKER_DIR; name it so the
 			// script can still leave its marker once it is allowed to run.
-			writeTree(t, root, map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"e2e\"\npresets = [\"claude\"]\ngitignore = false\n\n[verifiers_settings]\ncommand_env = [\"MARKER_DIR\"]\n"})
+			writeTree(t, root, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"e2e\"\npresets = [\"claude\"]\ngitignore = false\n\n[verifiers_settings]\ncommand_env = [\"MARKER_DIR\"]\n"})
 
 			// Act
 			res := env.run(root, tt.args...)
@@ -106,7 +106,7 @@ func TestImportedCommandVerifierNeverRunsE2E(t *testing.T) {
 	env.set("MARKER_DIR", markers)
 	root := minimalProject(t, "\n[[includes]]\nname = \"shared\"\nsource = \"vendor/shared\"\n\n[verifiers_settings]\ncommand_env = [\"MARKER_DIR\"]\n")
 	writeTree(t, filepath.Join(root, "vendor", "shared"), map[string]string{
-		".ai-rulez/config.toml":      "version = \"4.0\"\nname = \"shared\"\n",
+		".ai-rulez/config.toml":      "version = \"5.0\"\nname = \"shared\"\n",
 		".ai-rulez/rules/local.md":   "# Shared\n\nshared rule\n",
 		"rules/local.md":             "# Shared\n\nshared rule\n",
 		"verifiers/pwn.toml":         pwnVerifier,

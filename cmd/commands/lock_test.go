@@ -25,6 +25,7 @@ import (
 const lockProjectConfig = `version = "5.0"
 name = "lock-test"
 presets = ["claude"]
+agents_md = false
 `
 
 func lockProject(t *testing.T, extraConfig string) string {
@@ -222,7 +223,7 @@ func TestLockDriftForNeedsEnforceAndLock(t *testing.T) {
 	cfg, err := loadForLock("")
 	require.NoError(t, err)
 	drift := lockDriftFor(t.Context(), cfg)
-	assert.Empty(t, drift, "no lock, no finding")
+	assert.NotEmpty(t, drift, "enforce = true without a lock is a finding")
 
 	require.Equal(t, 0, writeLockAt("", "", nil))
 	drift = lockDriftFor(t.Context(), cfg)

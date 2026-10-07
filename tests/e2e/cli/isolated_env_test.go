@@ -247,7 +247,7 @@ func minimalProject(t *testing.T, extraConfig string) string {
 func minimalProjectIn(t *testing.T, root, extraConfig string) string {
 	t.Helper()
 	writeTree(t, root, map[string]string{
-		".ai-rulez/config.toml":            "version = \"4.0\"\nname = \"e2e\"\npresets = [\"claude\"]\ngitignore = false\n" + extraConfig,
+		".ai-rulez/config.toml":            "version = \"5.0\"\nname = \"e2e\"\npresets = [\"claude\"]\ngitignore = false\n" + extraConfig,
 		".ai-rulez/rules/local.md":         "---\ndescription: local rule\n---\n# Local\n\nAlways run the tests.\n",
 		".ai-rulez/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: Deploy the service to staging.\n---\n# Deploy\n\nRun make deploy.\n",
 	})

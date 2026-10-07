@@ -58,7 +58,7 @@ func TestRemoteLoadHonoursAnEnforcedLock(t *testing.T) {
 			t.Setenv("XDG_CACHE_HOME", filepath.Join(home, ".cache"))
 			repo := includeRepo(t)
 			dir := t.TempDir()
-			cfg := "version = \"4.0\"\nname = \"p\"\npresets = [\"claude\"]\n\n[[includes]]\nname = \"b\"\nsource = \"file://" +
+			cfg := "version = \"5.0\"\nname = \"p\"\npresets = [\"claude\"]\n\n[[includes]]\nname = \"b\"\nsource = \"file://" +
 				filepath.ToSlash(repo) + "\"\n" + tt.lockTable
 			require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez"), 0o755))
 			require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte(cfg), 0o644))

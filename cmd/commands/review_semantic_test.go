@@ -724,9 +724,9 @@ func TestReviewSemanticModelsShouldSplitTheCapsEvenly(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Arrange
 			judgedProject(t, "")
-			cfgDir := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "ai-rulez")
-			require.NoError(t, os.MkdirAll(cfgDir, 0o700))
-			require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte("[llm]\nprice_input_per_mtok = 1\nprice_output_per_mtok = 1\n"), 0o600))
+			// Under the v5 pricing scope a user price override only prices the model it was
+			// written for, so the compared models use real names the built-in table prices.
+			t.Setenv("AI_RULEZ_LLM_MODEL", "gpt-4o-mini")
 			f := &fakeModel{verdicts: map[string]string{"deploy/trigger-quality": "warn"}}
 			var costs []float64
 			var calls []int
@@ -739,7 +739,7 @@ func TestReviewSemanticModelsShouldSplitTheCapsEvenly(t *testing.T) {
 				return llm.Wrap(fake, lc, opts), nil
 			}
 			t.Cleanup(func() { reviewClientFactory = old })
-			reviewFlags.models = "model,other-model,third-model"
+			reviewFlags.models = "gpt-4o-mini,gpt-4o,gpt-4.1-mini"
 			require.NoError(t, ReviewCmd.Flags().Set("models", reviewFlags.models))
 			require.NoError(t, ReviewCmd.Flags().Set("max-cost", tc.maxCost))
 			require.NoError(t, ReviewCmd.Flags().Set("max-calls", tc.maxCalls))
