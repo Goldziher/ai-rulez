@@ -130,25 +130,7 @@ func pruneOnce(path string, o PruneOptions) (res PruneResult, kept []byte, stabl
 			res.Scanned++
 			start := offset
 			offset += int64(len(line))
-			switch classify(line, start, o) {
-			case lineRemove:
-				res.Removed++
-				res.RemovedBytes += int64(len(line))
-				if start < o.TrackOffset {
-					res.RemovedBeforeTrack += int64(len(line))
-				}
-			case linePermanent:
-				res.Kept++
-				res.Unreadable++
-				out.Write(line)
-			case lineProtected:
-				res.Kept++
-				res.Protected++
-				out.Write(line)
-			default:
-				res.Kept++
-				out.Write(line)
-			}
+			res.tally(classify(line, start, o), line, start, o.TrackOffset, &out)
 		}
 		if errors.Is(readErr, io.EOF) {
 			break
@@ -168,6 +150,26 @@ func pruneOnce(path string, o PruneOptions) (res PruneResult, kept []byte, stabl
 	}
 	stable = info.Size() == before.Size() && info.ModTime().Equal(before.ModTime())
 	return res, out.Bytes(), stable, nil
+}
+
+// tally counts one complete line of class and keeps it in out unless it is removed.
+func (res *PruneResult) tally(class lineClass, line []byte, start, trackOffset int64, out *bytes.Buffer) {
+	if class == lineRemove {
+		res.Removed++
+		res.RemovedBytes += int64(len(line))
+		if start < trackOffset {
+			res.RemovedBeforeTrack += int64(len(line))
+		}
+		return
+	}
+	res.Kept++
+	switch class {
+	case linePermanent:
+		res.Unreadable++
+	case lineProtected:
+		res.Protected++
+	}
+	out.Write(line)
 }
 
 type lineClass int
