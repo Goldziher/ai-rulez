@@ -410,3 +410,14 @@ func TestLockDriftForMissingLockIsAFindingUnderEnforce(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, lockDriftFor(cfg))
 }
+
+func TestCheckLockWatchFlags(t *testing.T) {
+	t.Cleanup(func() { generateWatch, generateLocked, generateFrozen = false, false, false })
+	require.NoError(t, checkLockWatchFlags())
+	generateWatch, generateLocked = true, true
+	require.Error(t, checkLockWatchFlags())
+	generateLocked, generateFrozen = false, true
+	require.Error(t, checkLockWatchFlags())
+	generateFrozen = false
+	require.NoError(t, checkLockWatchFlags())
+}
