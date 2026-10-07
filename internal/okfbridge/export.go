@@ -8,6 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
+	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
@@ -64,7 +65,7 @@ func Export(tree *config.ContentTree, opts ExportOptions) (*ExportResult, error)
 	}
 
 	if !okf.ValidIndexStyle(opts.IndexStyle) {
-		return nil, fmt.Errorf("unknown index style %q (use %s or %s)", opts.IndexStyle, okf.StyleBody, okf.StyleFrontmatter)
+		return nil, oops.Errorf("unknown index style %q (use %s or %s)", opts.IndexStyle, okf.StyleBody, okf.StyleFrontmatter)
 	}
 	var idx []okf.IndexInput
 	var pieces []piece
@@ -374,7 +375,7 @@ func renderResources(it sourceItem, id, dir, srcDir string, claim func(string) s
 	for _, r := range res {
 		rel := path.Clean(strings.ReplaceAll(r.RelPath, "\\", "/"))
 		if err := okf.ValidatePath(rel); err != nil || !resourceK[strings.SplitN(rel, "/", 2)[0]] {
-			return nil, nil, fmt.Errorf("%s %q has an unsupported resource path %q", kindName(it.kind), id, r.RelPath)
+			return nil, nil, oops.Errorf("%s %q has an unsupported resource path %q", kindName(it.kind), id, r.RelPath)
 		}
 		src := ""
 		if srcDir != "" && srcDir != "." {

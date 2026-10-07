@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
+	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
@@ -126,10 +127,10 @@ type ownerDir struct {
 // Import converts bundle b into .ai-rulez sources under opts.ConfigDir.
 func Import(b *okf.Bundle, opts ImportOptions) (*ImportResult, error) {
 	if opts.Domain != "" && !ValidID(opts.Domain) {
-		return nil, fmt.Errorf("invalid domain name %q", opts.Domain)
+		return nil, oops.Errorf("invalid domain name %q", opts.Domain)
 	}
 	if opts.Into != "" && opts.Into != KindRule && opts.Into != KindContext && opts.Into != KindSkill {
-		return nil, fmt.Errorf("--into must be rules, context or skills, got %q", opts.Into)
+		return nil, oops.Errorf("--into must be rules, context or skills, got %q", opts.Into)
 	}
 	res := &ImportResult{IndexStyle: b.IndexStyle()}
 	p := &planner{opts: opts, res: res, taken: map[string]string{}, owners: map[string]ownerDir{}, targets: map[string]string{}}
@@ -170,7 +171,7 @@ func (p *planner) rejectUnsafe(b *okf.Bundle) error {
 	}
 	for _, f := range b.Validate() {
 		if f.Code == okf.CodePathUnsafe && f.Severity == okf.SeverityError && !skipped[f.Path] {
-			return fmt.Errorf("refusing to import a bundle with unsafe paths: %s %s", f.Path, f.Message)
+			return oops.Errorf("refusing to import a bundle with unsafe paths: %s %s", f.Path, f.Message)
 		}
 	}
 	return nil
@@ -554,14 +555,14 @@ func (p *planner) apply() error {
 		switch info, err := os.Lstat(dest); {
 		case errors.Is(err, fs.ErrNotExist):
 		case err != nil:
-			return fmt.Errorf("inspect %s: %w", f.rel, err)
+			return oops.Wrapf(err, "inspect %s", f.rel)
 		case info.Mode()&fs.ModeSymlink != 0 || !info.Mode().IsRegular():
 			status = StatusConflict
 		default:
 			existing, err := os.ReadFile(dest)
 			switch {
 			case err != nil:
-				return fmt.Errorf("read %s: %w", f.rel, err)
+				return oops.Wrapf(err, "read %s", f.rel)
 			case bytes.Equal(existing, f.data):
 				status = StatusUnchanged
 			case p.opts.Force:
