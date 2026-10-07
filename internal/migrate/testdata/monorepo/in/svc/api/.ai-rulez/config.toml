@@ -1,0 +1,7 @@
+version = "4.0"
+name = "api"
+presets = ["codex"]
+gitignore = true
+
+[header]
+style = "minimal"

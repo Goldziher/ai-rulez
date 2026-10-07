@@ -1,0 +1,8 @@
+version = "5.0"
+name = "mine"
+
+[[mcp_servers]]
+name = "db"
+
+[mcp_servers.env]
+PORT = "9090"
