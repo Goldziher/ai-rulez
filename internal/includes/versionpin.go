@@ -117,14 +117,14 @@ func ListRemoteTags(ctx context.Context, repoURL, token string) ([]tagresolve.Ra
 }
 
 // offline reports whether the run may not use the network.
-func offline(ctx context.Context) bool { return SkipFetch || config.OfflineIncludes(ctx) }
+func offline(ctx context.Context) bool { return config.OfflineIncludes(ctx) }
 
 // versionRef returns what to fetch for want w, resolving its version constraint
 // when it has one. A source with a plain ref keeps the old behaviour: the locked
 // commit when pinned, else the ref. A constraint is resolved only here, on the
 // paths that may move a pin (`lock` for a source the lock does not cover or an
 // `update` that advances it); a covered pin is used as it is.
-func versionRef(ctx context.Context, lock *lockfile.File, w lockfile.Want, p *pin, repoURL, token, baseDir string) (string, error) {
+func versionRef(ctx context.Context, cfg *config.Config, lock *lockfile.File, w lockfile.Want, p *pin, repoURL, token, baseDir string) (string, error) {
 	if w.Constraint == "" {
 		return p.effectiveRef(w.Ref), nil
 	}
@@ -132,7 +132,7 @@ func versionRef(ctx context.Context, lock *lockfile.File, w lockfile.Want, p *pi
 		recordTag(baseDir, w.Kind, w.Name, tagInfo{p.entry.Tag, p.entry.TagObject, p.entry.Released, p.entry.ReleasedFrom})
 		return p.entry.Commit, nil
 	}
-	ref, info, err := resolveConstraint(ctx, lock, w, repoURL, token)
+	ref, info, err := resolveConstraint(ctx, refreshing(cfg, w.Kind, w.Name), lock, w, repoURL, token)
 	if err != nil {
 		recordProblem(baseDir, w.Kind, w.Name, err.Error())
 		return "", violationOrPlain(w, err)
@@ -164,8 +164,8 @@ type Resolution struct {
 }
 
 // resolveConstraint picks the commit of a constraint source that has no usable pin.
-func resolveConstraint(ctx context.Context, lock *lockfile.File, w lockfile.Want, repoURL, token string) (string, tagInfo, error) {
-	res, err := ResolveVersion(ctx, lock, w, RunMode{Refresh: refreshing(w.Kind, w.Name), Offline: offline(ctx)}, func(ctx context.Context) ([]tagresolve.RawTag, error) {
+func resolveConstraint(ctx context.Context, refresh bool, lock *lockfile.File, w lockfile.Want, repoURL, token string) (string, tagInfo, error) {
+	res, err := ResolveVersion(ctx, lock, w, RunMode{Refresh: refresh, Offline: offline(ctx)}, func(ctx context.Context) ([]tagresolve.RawTag, error) {
 		return ListRemoteTags(ctx, repoURL, token)
 	})
 	return res.Commit, tagInfo{res.Tag, res.TagObject, res.Released, res.ReleasedFrom}, err

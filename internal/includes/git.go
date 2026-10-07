@@ -33,10 +33,6 @@ const (
 	rulesSubdir = "rules"
 )
 
-// SkipFetch when true causes git sources to use cached content without fetching.
-// Set from the --no-fetch CLI flag.
-var SkipFetch bool
-
 // ErrNotCached is wrapped by the error an offline load returns for an include or
 // installed skill that has no cached copy, so callers can tell a cache miss from
 // any other load failure.
@@ -315,12 +311,12 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 	}
 	s.logger().Debug("Fetching git source", "name", s.name, "repo", RedactURL(s.repoURL), "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
 
-	if SkipFetch || config.OfflineIncludes(ctx) {
+	if config.OfflineIncludes(ctx) {
 		if s.findAIRulezDir() == "" {
 			return nil, oops.
 				With("repo", RedactURL(s.repoURL)).
 				With("cache_dir", s.cacheDir).
-				Wrapf(ErrNotCached, "%s: no cached content found for include '%s'", offlineReason(), s.name)
+				Wrapf(ErrNotCached, "%s: no cached content found for include '%s'", offlineReason(ctx), s.name)
 		}
 		s.logger().Debug("Skipping fetch (--no-fetch), using cached content", "name", s.name)
 		return s.scanCachedContent(ctx)

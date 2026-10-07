@@ -20,7 +20,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
-	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
@@ -116,8 +115,7 @@ func registerRemovedCLIMCPFlags(cmd *cobra.Command) {
 func runGenerate(cmd *cobra.Command, args []string) {
 	progress.SetQuiet(viper.GetBool("quiet"))
 
-	// Set no-fetch flag for include resolution (before any config loading)
-	includes.SkipFetch = noFetch
+	// The lock policy of every load this run makes (before any config loading).
 	applyLockFlags()
 
 	exitOn(checkRoleFlags())
@@ -762,14 +760,15 @@ func processPluginConfig(configPath string, cfg *config.Config, gen *generator.G
 	return written, nil
 }
 
-// applyLockFlags turns --locked and --frozen into the include lock policy.
+// applyLockFlags turns --no-fetch, --locked and --frozen into the lock policy
+// of this run's loads. generate writes outputs, so an enforced lock is required.
 func applyLockFlags() {
-	includes.RequireWhenEnforced = true
+	cliLockPolicy = config.LockPolicy{RequireWhenEnforced: true, Offline: noFetch}
 	switch {
 	case generateFrozen:
-		includes.Mode, includes.SkipFetch = includes.LockFrozen, true
+		cliLockPolicy.Mode, cliLockPolicy.Offline = config.LockFrozen, true
 	case generateLocked:
-		includes.Mode = includes.LockRequire
+		cliLockPolicy.Mode = config.LockRequire
 	}
 }
 

@@ -25,6 +25,7 @@ type loadOptions struct {
 	policy        PolicyEnforcer
 	policyDir     string
 	collector     *diag.Collector
+	lockPolicy    LockPolicy
 	// frontmatterErrors: the caller fails on malformed frontmatter itself, so the
 	// load does not warn about the same files first.
 	frontmatterErrors bool
