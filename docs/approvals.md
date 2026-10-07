@@ -274,9 +274,10 @@ issuer   = "https://token.actions.githubusercontent.com"
 ```
 
 A signed record counts only when its bundle verifies against those entries, covers exactly this item and digest, and
-agrees with the record (reviewer, expiry, accepted findings), so editing the lock after signing breaks it (`AR718`).
-`tlog` follows `[signing]` (required by default for certificate identities). Rollback state and `max_age` are lock
-features and do not apply. A keyless signature is logged before the allowlist is checked, so an unauthorized signer
+agrees with the record (reviewer, `approved_at`, expiry, accepted findings), so editing the lock after signing breaks it
+(`AR718`); `[governance] max_age` is therefore measured from the signed approval time. `tlog` follows `[signing]`
+(required by default for certificate identities). Rollback state and `[signing] max_age` are lock features and do not
+apply. A keyless signature is logged before the allowlist is checked, so an unauthorized signer
 leaves a log entry and no record.
 
 The approval set is part of the signed [lock subject](lockfile.md#signing-the-lock): adding an approval changes the
