@@ -202,6 +202,9 @@ type Config struct {
 	// finishLoadConfig warns about it once, through this config's host.
 	deprecatedLintBudgetPath string
 
+	// frontmatterErrors records WithFrontmatterErrors, for ReloadOptions.
+	frontmatterErrors bool
+
 	// UserScope is set while rendering for `generate --user`: outputs are mapped
 	// into the person's home config directories, so renderers leave out keys that
 	// only make sense inside a project (MCP servers, plugin registration,
