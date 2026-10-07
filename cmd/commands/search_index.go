@@ -95,7 +95,7 @@ type indexSummaryJSON struct {
 
 func ctxOrBackground(ctx context.Context) context.Context {
 	if ctx == nil {
-		return context.Background()
+		return cmdContext()
 	}
 	return ctx
 }

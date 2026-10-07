@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -67,7 +66,7 @@ func driftLoadOptions(mode driftMode) []config.LoadOption {
 // differing files. It returns how many differ.
 func checkConfigDrift(cfg *config.Config, mode driftMode) (int, error) {
 	gen := generator.NewGenerator(cfg)
-	gen.SetContext(context.Background())
+	gen.SetContext(cmdContext())
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	if err := applyRole(gen); err != nil {
 		return 0, err
@@ -127,7 +126,7 @@ func runDriftCheckGated(args []string, isRecursive bool, mode driftMode, gate fu
 	if isRecursive {
 		return runRecursiveDrift(mode, fix, gate)
 	}
-	cfg, err := loadConfigForCommand(context.Background(), args, driftLoadOptions(mode)...)
+	cfg, err := loadConfigForCommand(cmdContext(), args, driftLoadOptions(mode)...)
 	if err != nil {
 		fmtError(err)
 		if gate != nil && errors.Is(err, config.ErrLockViolation) {
@@ -179,7 +178,7 @@ func runRecursiveDrift(mode driftMode, fix string, gate func(*config.Config) err
 	}
 	total, failed, gateDrift := 0, 0, 0
 	for _, path := range paths {
-		cfg, err := loadProjectFile(context.Background(), path, driftLoadOptions(mode)...)
+		cfg, err := loadProjectFile(cmdContext(), path, driftLoadOptions(mode)...)
 		if err == nil {
 			err = cfg.Validate()
 		}

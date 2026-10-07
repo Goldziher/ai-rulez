@@ -158,7 +158,7 @@ func printUserPlan(home string, plan *generator.UserPlan) {
 
 // runUserClean handles `clean --user`.
 func runUserClean() error {
-	gen, cfg, err := newUserGenerator(context.Background())
+	gen, cfg, err := newUserGenerator(cmdContext())
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func handleUserGenerate(args []string) bool {
 		fmtError(oops.Errorf("--user cannot be combined with --recursive, --plugin or a config-file argument; use --config to choose the user config"))
 		os.Exit(1)
 	}
-	if err := runUserGenerate(context.Background()); err != nil {
+	if err := runUserGenerate(cmdContext()); err != nil {
 		fmtError(err)
 		os.Exit(1)
 	}

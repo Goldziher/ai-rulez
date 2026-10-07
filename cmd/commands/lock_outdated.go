@@ -133,7 +133,7 @@ func outdatedAt(path string, kind string, names []string) int {
 		fmtError(err)
 		return 1
 	}
-	rows, err := evaluateSources(context.Background(), srcs, lock)
+	rows, err := evaluateSources(cmdContext(), srcs, lock)
 	if err != nil {
 		fmtError(err)
 		return 1

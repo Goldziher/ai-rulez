@@ -60,6 +60,14 @@ var policyEnforcer = policy.NewEnforcer(func() policy.DiscoverOptions {
 // each load (tests swap it).
 var activePolicy config.PolicyEnforcer = policyEnforcer
 
+// cmdContext is the root context of a command that has no cobra context to
+// inherit: it carries the command line's policy, so the loads, CRUD operations and
+// MCP setup made with it are bound by the organization policy. Commands never use
+// a bare context.Background() (a guard test enforces it).
+func cmdContext() context.Context {
+	return config.WithPolicyContext(context.Background(), activePolicy)
+}
+
 // loadProject, loadProjectFile and loadProjectDir are the project loaders under
 // the command line's policy.
 func loadProject(ctx context.Context, dir string, opts ...config.LoadOption) (*config.Config, error) {

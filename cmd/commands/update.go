@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -203,7 +202,7 @@ func updateRefreshFilter(moves map[string]*moveTo) func(kind, name string) bool 
 }
 
 func updateAt(path, kind string, names []string) int {
-	ctx := context.Background()
+	ctx := cmdContext()
 	cfg, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
 	if err != nil {
 		fmtError(err)
@@ -471,7 +470,7 @@ func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs [
 		names[m.Name] = true
 	}
 	srcs2 := versionSources(fresh, updateKind, names)
-	rows2, err := evaluateSources(context.Background(), srcs2, current)
+	rows2, err := evaluateSources(cmdContext(), srcs2, current)
 	if err != nil {
 		rollback()
 		fmtError(err)

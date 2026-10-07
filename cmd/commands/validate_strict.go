@@ -2,7 +2,6 @@ package commands
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -211,7 +210,7 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 		}
 	}
 	if validateVerifiers && lint.AnalyzerSelected(sel, lint.AnalyzerVerifiers) {
-		opts = append(opts, lint.WithVerifiers(verifierFindingsFor(context.Background(), cfg)))
+		opts = append(opts, lint.WithVerifiers(verifierFindingsFor(cmdContext(), cfg)))
 	}
 	scanner, err := scannerOptions()
 	if err != nil {
