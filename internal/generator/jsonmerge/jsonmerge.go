@@ -531,25 +531,10 @@ func replaceOwnedPath(members []jsonMember, path []string, key OwnedKey, depth i
 	head, rest := path[0], path[1:]
 
 	if len(rest) == 0 {
-		if key.Remove {
-			if key.RemoveIf != nil && !removalAccepted(members, head, key.RemoveIf) {
-				return members, nil
-			}
-			return removeMember(members, head), nil
-		}
-		if key.Members {
-			return mergeMembers(members, head, key.Value, depth, indent, newline)
-		}
-		return replaceMemberValue(members, head, key.Value, depth, indent, newline)
+		return replaceLeaf(members, head, key, depth, indent, newline)
 	}
 
-	idx := -1
-	for i, member := range members {
-		if member.Key == head {
-			idx = i
-			break
-		}
-	}
+	idx := memberIndex(members, head)
 
 	childMembers, err := childObjectMembers(members, idx, head)
 	if err != nil {
@@ -575,6 +560,32 @@ func replaceOwnedPath(members []jsonMember, path []string, key OwnedKey, depth i
 		return members, nil
 	}
 	return append(members, jsonMember{Key: head, Raw: []byte(raw)}), nil
+}
+
+// replaceLeaf applies the owned key to the member named head: it removes it
+// (when a guard accepts its value), merges its entries into it, or replaces it.
+func replaceLeaf(members []jsonMember, head string, key OwnedKey, depth int, indent, newline string,
+) ([]jsonMember, error) {
+	if key.Remove {
+		if key.RemoveIf != nil && !removalAccepted(members, head, key.RemoveIf) {
+			return members, nil
+		}
+		return removeMember(members, head), nil
+	}
+	if key.Members {
+		return mergeMembers(members, head, key.Value, depth, indent, newline)
+	}
+	return replaceMemberValue(members, head, key.Value, depth, indent, newline)
+}
+
+// memberIndex is the position of the first member named head, or -1.
+func memberIndex(members []jsonMember, head string) int {
+	for i := range members {
+		if members[i].Key == head {
+			return i
+		}
+	}
+	return -1
 }
 
 // removalAccepted reports whether the member head exists and accept takes its value.

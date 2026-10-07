@@ -387,7 +387,7 @@ func TestClaim_ElementsAreRecordedAsDigestsNotValues(t *testing.T) {
 
 	// Assert
 	assert.NotContains(t, string(encoded), "s3cret-value")
-	assert.True(t, back.OwnsElement(secret), "a digest still recognises the element")
+	assert.True(t, back.OwnsElement(secret), "a digest still recognizes the element")
 	assert.False(t, back.OwnsElement(map[string]any{"name": "other"}))
 	assert.Nil(t, back.Elements, "no value survives the round trip")
 }
