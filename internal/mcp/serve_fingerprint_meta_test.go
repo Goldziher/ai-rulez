@@ -1,6 +1,8 @@
 package mcp
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,6 +40,40 @@ func TestFingerprint_CacheMetaIsExcludedOnlyAtTheRootByExactName(t *testing.T) {
 
 			// Assert
 			assert.Equal(t, tt.wantsReload, before != after)
+		})
+	}
+}
+
+// RV-DYN-6: cp -p, rsync -t and tar x restore the modification time. A
+// same-size edit made that way must still change the fingerprint.
+func TestFingerprint_SeesASameSizeEditWithTheModTimeRestored(t *testing.T) {
+	tests := []struct {
+		name       string
+		next       string
+		wantReload bool
+	}{
+		{name: "same size, other content", next: "---\ndescription: B\n---\n", wantReload: true},
+		{name: "same content rewritten", next: "---\ndescription: A\n---\n", wantReload: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			writeFile(t, dir, "skills/a/SKILL.md", "---\ndescription: A\n---\n")
+			p := filepath.Join(dir, "skills", "a", "SKILL.md")
+			info, err := os.Stat(p)
+			require.NoError(t, err)
+			before, err := fingerprint([]string{dir})
+			require.NoError(t, err)
+
+			// Act
+			writeFile(t, dir, "skills/a/SKILL.md", tt.next)
+			require.NoError(t, os.Chtimes(p, info.ModTime(), info.ModTime()))
+			after, err := fingerprint([]string{dir})
+			require.NoError(t, err)
+
+			// Assert
+			assert.Equal(t, tt.wantReload, before != after)
 		})
 	}
 }
