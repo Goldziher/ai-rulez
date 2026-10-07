@@ -137,3 +137,15 @@ func TestSkillRefName(t *testing.T) {
 	assert.Equal(t, "a", skillRefName("a"))
 	assert.Equal(t, "plugin:a", skillRefName("plugin:a"))
 }
+
+func TestTelemetry_LoadSkillIsRecordedOnceWhenServedRecorderIsWired(t *testing.T) {
+	var served int
+	p, srv := startSkillServerWith(t, loadCatalog(t), ServeOptions{Telemetry: func(SessionTelemetry) { served++ }})
+	rec := &fakeRecorder{}
+	srv.SetTelemetry(rec, TelemetryOptions{Harness: "claude"})
+
+	_, isErr, _ := callTool(t, p, "load_skill", map[string]any{"name": "pdf-processing"})
+	require.False(t, isErr)
+	assert.Equal(t, 1, served)
+	assert.Empty(t, rec.snapshot(), "the pipeline must not log the load a second time")
+}
