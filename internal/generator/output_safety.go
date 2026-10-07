@@ -219,12 +219,60 @@ func (g *Generator) unowned(abs, rel string, output config.OutputFile, info os.F
 	if g.adoptable(rel, data) {
 		return false
 	}
-	if output.RawContent == nil {
-		if stored, _, _ := g.scanHashes(abs); stored != "" || hasGeneratedBanner(abs, data) {
-			return false
-		}
+	switch g.outputProvenance(abs, rel, data, output.RawContent != nil) {
+	case provenLegacy:
+		g.warnOnce("Overwriting "+rel+": it has no generated header and no recorded digest, and the generated manifest lists it",
+			"hint", "an older ai-rulez wrote it; this run records its digest")
+		return false
+	case provenStrong, provenWeak:
+		return false
 	}
-	return !slices.Contains(g.previousManifestFiles(), rel)
+	return true
+}
+
+// provenance is how well the bytes at a path show ai-rulez wrote them. generate
+// and clean share outputProvenance and differ only in how much they accept.
+type provenance int
+
+const (
+	// provenNone: nothing shows ai-rulez wrote the file.
+	provenNone provenance = iota
+	// provenLegacy: the manifest lists a header-less format and recorded no digest
+	// (an older ai-rulez wrote it). generate rewrites it with a warning; clean keeps it.
+	provenLegacy
+	// provenWeak: a generated banner no manifest vouches for. generate rewrites it; clean keeps it.
+	provenWeak
+	// provenStrong: a Content-Hash, a banner the manifest lists, or the digest recorded for it.
+	provenStrong
+)
+
+// outputProvenance classifies existing bytes at abs (manifest path rel). headerless
+// says the output format carries no header (RawContent), so a missing banner
+// proves nothing and only a recorded digest can vouch for an unchanged file.
+func (g *Generator) outputProvenance(abs, rel string, data []byte, headerless bool) provenance {
+	if stored, _, _ := g.scanHashes(abs); stored != "" {
+		return provenStrong
+	}
+	banner := hasGeneratedBanner(abs, data)
+	if !slices.Contains(g.previousManifestFiles(), rel) {
+		if banner {
+			return provenWeak
+		}
+		return provenNone
+	}
+	if banner {
+		return provenStrong
+	}
+	if want, ok := g.manifestDigestSet()[rel]; ok {
+		if want == fileDigest(data) {
+			return provenStrong
+		}
+		return provenNone
+	}
+	if headerless {
+		return provenLegacy
+	}
+	return provenNone
 }
 
 // refusalError names every refused file and the way out.
@@ -273,7 +321,11 @@ func isSymlink(path string) bool {
 
 // keepReason says why clean cannot show ai-rulez wrote the file at abs.
 func (g *Generator) keepReason(abs string) string {
-	if slices.Contains(g.previousManifestFiles(), g.relSlash(abs)) {
+	rel := g.relSlash(abs)
+	if slices.Contains(g.previousManifestFiles(), rel) {
+		if _, ok := g.manifestDigestSet()[rel]; !ok {
+			return "the generated manifest lists it, but it has no generated banner and no digest was recorded for it"
+		}
 		return "the generated manifest lists it, but it has no generated banner and matches no digest recorded for it"
 	}
 	return "it has no Content-Hash and is not in the generated manifest"

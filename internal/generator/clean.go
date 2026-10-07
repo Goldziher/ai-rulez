@@ -236,18 +236,8 @@ func (g *Generator) projectFileIsOurs(abs string, output config.OutputFile) bool
 	} else if string(data) == g.finalContent(output) {
 		return true
 	}
-	if stored, _, _ := g.scanHashes(abs); stored != "" {
-		return true
-	}
 	rel := filepath.ToSlash(g.convertToRelativePath(abs))
-	if !slices.Contains(g.previousManifestFiles(), rel) {
-		return false
-	}
-	if hasGeneratedBanner(abs, data) {
-		return true
-	}
-	want, ok := g.manifestDigestSet()[rel]
-	return ok && want == fileDigest(data)
+	return g.outputProvenance(abs, rel, data, output.RawContent != nil) == provenStrong
 }
 
 // isMergedDocument reports whether abs is one of the documents ai-rulez merges
