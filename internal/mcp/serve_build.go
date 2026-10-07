@@ -195,6 +195,10 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		return nil, err
 	}
 	var served []generator.ServedSkill
+	// taken holds every project skill name, served or static: a skill source
+	// must not take the name of a project skill, even one this view does not
+	// serve, or load_skill would hand out another procedure under its name.
+	taken := map[string]bool{}
 	if cfg.Content != nil {
 		if preset, served, err = gen.ServedSkills(profile, preset); err != nil {
 			return nil, oops.Wrapf(err, "render skills")
@@ -205,6 +209,9 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		case profile == "":
 			profile = cfg.Default
 		}
+		for i := range served {
+			taken[catalogName(&served[i])] = true
+		}
 		served = selectByDelivery(served, st.IncludeStatic)
 	}
 
@@ -213,10 +220,6 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		return nil, err
 	}
 	b := &built{cfg: cfg, lock: lock, view: st.ViewKey()}
-	taken := map[string]bool{}
-	for i := range served {
-		taken[catalogName(&served[i])] = true
-	}
 	resolved, err := st.resolveSources(ctx, cfg, lock, specs, bo)
 	if err != nil {
 		return nil, err
@@ -229,7 +232,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 				continue
 			}
 			if taken[sk.Name] {
-				st.logger().Warn("A skill source skill has the name of a skill that is already served; skipping it (set name_prefix on the source)", "source", spec.Name, "skill", sk.Name)
+				st.logger().Warn("A skill source skill has the name of a project skill or an earlier source skill; skipping it (set name_prefix on the source)", "source", spec.Name, "skill", sk.Name)
 				continue
 			}
 			taken[sk.Name] = true
