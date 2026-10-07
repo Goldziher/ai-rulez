@@ -2,7 +2,6 @@ package okfbridge
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/samber/oops"
 )
 
 const quiet = "--quiet"
@@ -33,12 +33,12 @@ var scpLike = regexp.MustCompile(`^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:`)
 func ParseSource(spec string) (Source, error) {
 	spec = strings.TrimSpace(spec)
 	if spec == "" {
-		return Source{}, fmt.Errorf("no bundle source given")
+		return Source{}, oops.Errorf("no bundle source given")
 	}
 	isGit := strings.HasPrefix(spec, "https://") || strings.HasPrefix(spec, "ssh://") ||
 		strings.HasPrefix(spec, "file://") || scpLike.MatchString(spec)
 	if strings.HasPrefix(spec, "http://") {
-		return Source{}, fmt.Errorf("plain http:// git URLs are not accepted; use https://")
+		return Source{}, oops.Errorf("plain http:// git URLs are not accepted; use https://")
 	}
 	if !isGit {
 		return Source{Dir: spec}, nil
@@ -52,7 +52,7 @@ func ParseSource(spec string) (Source, error) {
 		s.Ref, rest = rest[i+1:], rest[:i]
 	}
 	if strings.HasPrefix(rest, "-") || strings.HasPrefix(s.Ref, "-") {
-		return Source{}, fmt.Errorf("invalid git source %q", spec)
+		return Source{}, oops.Errorf("invalid git source %q", spec)
 	}
 	s.URL = rest
 	if s.Subdir != "" {
@@ -85,11 +85,11 @@ func refSeparator(s string) int {
 func checkSubdir(sub string) error {
 	for _, seg := range strings.Split(sub, "/") {
 		if seg == ".." || strings.ContainsRune(seg, 0) {
-			return fmt.Errorf("invalid bundle subdirectory %q", sub)
+			return oops.Errorf("invalid bundle subdirectory %q", sub)
 		}
 	}
 	if filepath.IsAbs(sub) {
-		return fmt.Errorf("the bundle subdirectory must be relative, got %q", sub)
+		return oops.Errorf("the bundle subdirectory must be relative, got %q", sub)
 	}
 	return nil
 }
@@ -110,7 +110,7 @@ func (s Source) Fetch(ctx context.Context) (dir string, cleanup func(), err erro
 	}
 	tmp, err := os.MkdirTemp("", "ai-rulez-okf-*")
 	if err != nil {
-		return "", noop, fmt.Errorf("create temp dir: %w", err)
+		return "", noop, oops.Wrapf(err, "create temp dir")
 	}
 	cleanup = func() { _ = os.RemoveAll(tmp) } //nolint:errcheck // best-effort temp cleanup
 	ctx, cancel := context.WithTimeout(ctx, cloneTimeout)
@@ -134,7 +134,7 @@ func (s Source) Fetch(ctx context.Context) (dir string, cleanup func(), err erro
 		root = filepath.Join(tmp, filepath.FromSlash(s.Subdir))
 		if rel, relErr := filepath.Rel(tmp, root); relErr != nil || strings.HasPrefix(rel, "..") {
 			cleanup()
-			return "", noop, fmt.Errorf("invalid bundle subdirectory %q", s.Subdir)
+			return "", noop, oops.Errorf("invalid bundle subdirectory %q", s.Subdir)
 		}
 	}
 	return root, cleanup, nil
@@ -144,7 +144,7 @@ func git(ctx context.Context, dir string, args ...string) error {
 	// -C dir (rather than a process working directory) keeps the call free of ambient state.
 	res := gitutil.New(runner.FromContext(ctx)).Exec(ctx, dir, gitutil.HardenedEnv(nil), append(gitutil.HardenedConfig(), args...)...)
 	if err := gitutil.ResultErr(res); err != nil {
-		return fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(string(res.Stdout)+string(res.Stderr)))
+		return oops.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(string(res.Stdout)+string(res.Stderr)))
 	}
 	return nil
 }
