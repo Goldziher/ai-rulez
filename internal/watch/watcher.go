@@ -346,7 +346,7 @@ func (w *Watcher) forget(path string) {
 	}
 }
 
-// Run processes events until ctx is cancelled.
+// Run processes events until ctx is canceled.
 func (w *Watcher) Run(ctx context.Context) {
 	for {
 		select {
