@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
@@ -65,6 +66,10 @@ type ServeSetup struct {
 	UsageSink string
 	// PollInterval is the live-reload check interval (0 selects the default).
 	PollInterval time.Duration
+	// Collector keeps the warnings of every load the server makes: NewServer
+	// creates one when it is nil, so the live reload does not repeat a warning
+	// about the project on every reload.
+	Collector *diag.Collector
 	// NoWatch disables live reload.
 	NoWatch bool
 }
@@ -85,6 +90,9 @@ type built struct {
 // NewServer builds the catalog and the skills server around it. The caller runs
 // Server.Watch (when NoWatch is false) and the MCP transport.
 func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
+	if st.Collector == nil {
+		st.Collector = diag.New(nil)
+	}
 	// Fingerprint before building: an edit made while the catalog is built is
 	// then seen as a change by the watcher instead of being missed.
 	baseline, baselineErr := st.initialFingerprint()
@@ -309,7 +317,11 @@ func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 		abs, _ := filepath.Abs(wd) //nolint:errcheck // falls back to the given dir
 		return &config.Config{BaseDir: abs}, nil
 	}
-	cfg, err := proj.Load(ctx, wd)
+	var opts []config.LoadOption
+	if st.Collector != nil {
+		opts = append(opts, config.WithCollector(st.Collector))
+	}
+	cfg, err := proj.Load(ctx, wd, opts...)
 	if err != nil {
 		return nil, oops.Wrapf(err, "load configuration")
 	}
