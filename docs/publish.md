@@ -18,6 +18,8 @@ ai-rulez publish verify dist
 2. Preflight, in-process, stopping before anything is written: `validate` (same baseline and budget handling,
    never looser than `error`), `lock --check`, `verify --plugin`, and a secret scan of every bundle file with the
    security scan's patterns. A symlink in the bundle is an error. The machine-local overlay is never loaded.
+   When the bundle holds an Agent Plugins package (a root `plugin.json`), `validate --strict` and the build check it
+   against the specification and fail with `AR9O0`-`AR9O5`, in `--dry-run` as well.
 3. Policy gates from [`[publish]`](#configuration): `require_approved` (AR9N8) and `require_signature` (AR9N7). They run
    before anything is signed or built.
 4. Build the dist directory, signing the archive when asked.
@@ -195,12 +197,18 @@ no file system. `--emit NAME` (repeatable) or `[[publish.emitters]]` runs it int
 | `cursor-team-marketplace` | `.cursor-plugin/marketplace.json` and `plugins/<name>/` ready to commit to the repository a Cursor team marketplace imports | verified |
 | `port` | one [Port](https://docs.port.io/api-reference/create-an-entity/) entity JSON per plugin and skill, plus `index.json` naming the request each file is the body of | experimental |
 | `aws-agent-registry` | one `CreateRegistryRecord` request body per skill (`SKILL`, `agentSkillsDefinition` with the `SKILL.md`) and one `CUSTOM` record per plugin | experimental |
+| `agent-plugins` | `<name>/plugin.json`, `skills/`, `mcp.json` and extension namespaces: one validated [Agent Plugins](agent-plugins.md) directory per plugin, without the files of other runtimes; option `spec` (`1.0.0` or `1.1.0`) | verified |
 | `kiro-steering` | `.kiro/steering/*.md` from the root rules and the skills, and `distribution.json` listing the files and digests for MDM packaging | experimental |
 | template | `--template FILE` or `[[publish.emitters]] name = "template"`: any text from a Go template over the manifest | verified |
 
 - **Cursor.** Cursor documents `.cursor-plugin/marketplace.json` (`name` in kebab-case, `owner.name`, `plugins[].name` and
   `source`) at the repository root and no way to pin a git ref, so the release is the commit that carries the tree. Tests
   check the index against that documented shape. The bundle must carry the cursor runtime.
+- **Agent Plugins.** The bundle must carry the `agent-plugins` runtime (or `copilot`, or `codex` with the root layout). The
+  emitter imports the package with `internal/agentplugins`, validates it against the vendored official schemas and writes it
+  again with the version of `options = { spec = "..." }`, or the version `plugin.json` declares. The specification has no
+  archive, registry or signature, so the directory is distributed like the rest of the dist (release archive, npm, OCI) and
+  signed with it. See [Agent Plugins](agent-plugins.md).
 - **Experimental emitters** write formats that vendors document but publish no schema ai-rulez can test against, so they
   refuse to run without `--experimental` (`AR9N6`) and then report `AR9N9`. They are compiled in, tested by golden files, and
   never call the target system. Sources and the dates they were last read:
@@ -309,6 +317,10 @@ canary = "main"                   # channel -> the git ref its index pins
 [[publish.emitters]]
 name = "port"
 options = { blueprint = "agent_skill" }
+
+[[publish.emitters]]
+name = "agent-plugins"
+options = { spec = "1.1.0" }      # optional; default: the version of the bundle's plugin.json
 
 [[publish.emitters]]
 name = "template"
