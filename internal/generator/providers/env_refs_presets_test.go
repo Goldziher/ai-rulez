@@ -64,12 +64,13 @@ func TestEnvReferences_PerPreset(t *testing.T) {
 			// Arrange
 			gen, err := providers.LoadBuiltin(tt.preset)
 			require.NoError(t, err)
+			base := t.TempDir()
 			cfg := &config.Config{
-				Name: "demo", BaseDir: "/test", MCPServers: refServers(), Presets: []config.Preset{{BuiltIn: tt.preset}},
+				Name: "demo", BaseDir: base, MCPServers: refServers(), Presets: []config.Preset{{BuiltIn: tt.preset}},
 			}
 
 			// Act
-			outputs, err := gen.Generate(&config.ContentTree{}, "/test", cfg)
+			outputs, err := gen.Generate(&config.ContentTree{}, base, cfg)
 			require.NoError(t, err)
 
 			// Assert
@@ -110,14 +111,15 @@ func TestEnvReferences_SharedMCPJSONAgrees(t *testing.T) {
 			for _, p := range tt.presets {
 				presetList = append(presetList, config.Preset{BuiltIn: p})
 			}
-			cfg := &config.Config{Name: "demo", BaseDir: "/test", MCPServers: servers, Presets: presetList}
+			base := t.TempDir()
+			cfg := &config.Config{Name: "demo", BaseDir: base, MCPServers: servers, Presets: presetList}
 
 			// Act: every active writer renders the document.
 			var bodies []string
 			for _, p := range tt.presets {
 				gen, err := providers.LoadBuiltin(p)
 				require.NoError(t, err)
-				outputs, err := gen.Generate(&config.ContentTree{}, "/test", cfg)
+				outputs, err := gen.Generate(&config.ContentTree{}, base, cfg)
 				require.NoError(t, err)
 				bodies = append(bodies, requireFile(t, outputs, ".mcp.json").Content)
 			}

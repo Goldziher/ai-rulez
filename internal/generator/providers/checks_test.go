@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -65,13 +66,13 @@ filter = "include_if_targeting_provider"
 	}
 
 	// Act
-	outputs, err := New(spec).Generate(&config.ContentTree{}, "/proj", &config.Config{Name: "t"})
+	outputs, err := New(spec).Generate(&config.ContentTree{}, absSlash("/proj"), &config.Config{Name: "t"})
 
 	// Assert
 	require.NoError(t, err)
 	var got string
 	for _, o := range outputs {
-		if o.Path == "/proj/REVIEW.md" {
+		if o.Path == filepath.Join(absSlash("/proj"), "REVIEW.md") {
 			got = string(o.RawContent)
 		}
 	}
@@ -103,13 +104,13 @@ renames = { severity = "severity-default" }
 	}
 
 	// Act
-	outputs, err := New(spec).Generate(&config.ContentTree{}, "/proj", &config.Config{Name: "t"})
+	outputs, err := New(spec).Generate(&config.ContentTree{}, absSlash("/proj"), &config.Config{Name: "t"})
 
 	// Assert
 	require.NoError(t, err)
 	var got string
 	for _, o := range outputs {
-		if o.Path == "/proj/.x/checks/sec.md" {
+		if o.Path == filepath.Join(absSlash("/proj"), ".x", "checks", "sec.md") {
 			got = o.Content
 		}
 	}
