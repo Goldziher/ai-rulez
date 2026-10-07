@@ -336,7 +336,7 @@ func applyUpdates(path string, cfg *config.Config, current *lockfile.File, srcs 
 	if err := fresh.Validate(); err != nil {
 		return false, err //nolint:wrapcheck // already contextual
 	}
-	next, err := nextLock(fresh, current, "", wanted, true)
+	next, err := nextLock(cmdContext(), fresh, current, "", wanted, true)
 	if err != nil {
 		return false, err
 	}

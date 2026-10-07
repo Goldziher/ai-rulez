@@ -5,6 +5,7 @@
 package approval
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"time"
@@ -148,6 +149,11 @@ type Policy struct {
 // the lock's deny list, the CODEOWNERS file approvers_from names, and the
 // verifier of signed approvals (built on first use).
 func PolicyOf(cfg *config.Config) Policy {
+	return PolicyOfContext(context.Background(), cfg)
+}
+
+// PolicyOfContext is PolicyOf with the CODEOWNERS lookup bounded by ctx.
+func PolicyOfContext(ctx context.Context, cfg *config.Config) Policy {
 	if cfg == nil {
 		return Policy{}
 	}
@@ -165,7 +171,7 @@ func PolicyOf(cfg *config.Config) Policy {
 			p.MaxAge, _ = config.ParseApprovalMaxAge(g.MaxAge) //nolint:errcheck // validated on load
 		}
 		if g.ApproversFrom != "" {
-			p.Owners = LoadOwnerSet(cfg.BaseDir, cfg.ConfigDir, g.ApproversFrom)
+			p.Owners = LoadOwnerSetContext(ctx, cfg.BaseDir, cfg.ConfigDir, g.ApproversFrom)
 		}
 	}
 	if cfg.ConfigDir != "" {
@@ -175,7 +181,7 @@ func PolicyOf(cfg *config.Config) Policy {
 			p.DenyProblem = "the deny list cannot be read: " + err.Error()
 		}
 		p.Signed = newConfigVerifier(cfg)
-		p.Origin = originOf(cfg.BaseDir)
+		p.Origin = originOf(ctx, cfg.BaseDir)
 	}
 	return p
 }

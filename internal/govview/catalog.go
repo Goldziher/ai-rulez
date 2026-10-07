@@ -96,7 +96,7 @@ func BuildCatalog(ctx context.Context, cfg *config.Config, counter tokens.Counte
 	if err := ctx.Err(); err != nil {
 		return nil, err //nolint:wrapcheck // cancellation is reported as is
 	}
-	doc, _, err := buildCatalogCore(cfg, counter, toolVersion) //nolint:contextcheck // the lock snapshot renders with the generator, which takes no context
+	doc, _, err := buildCatalogCore(ctx, cfg, counter, toolVersion)
 	if err == nil {
 		for _, note := range doc.notes {
 			cfg.Log().Warn(note)
@@ -107,13 +107,13 @@ func BuildCatalog(ctx context.Context, cfg *config.Config, counter tokens.Counte
 
 // buildCatalogCore builds the v1 document and returns, parallel to doc.Items,
 // the content file each item was read from (for the v2 fields).
-func buildCatalogCore(cfg *config.Config, counter tokens.Counter, toolVersion string) (*CatalogDoc, []*config.ContentFile, error) {
+func buildCatalogCore(ctx context.Context, cfg *config.Config, counter tokens.Counter, toolVersion string) (*CatalogDoc, []*config.ContentFile, error) {
 	doc := &CatalogDoc{SchemaVersion: CatalogSchemaVersion, Tokenizer: counter.Name(), Items: []CatalogItem{}, Roles: []CatalogRole{}}
 	var files []*config.ContentFile
 
 	membership, roleDelivery := addCatalogRoles(doc, cfg, counter)
 
-	snap, err := Snapshot(cfg, "", true, toolVersion)
+	snap, err := SnapshotContext(ctx, cfg, "", true, toolVersion)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -142,7 +142,7 @@ func buildCatalogCore(cfg *config.Config, counter tokens.Counter, toolVersion st
 		files = append(files, item.File)
 	}
 
-	lockStatus, err := catalogLockStatus(cfg, toolVersion)
+	lockStatus, err := catalogLockStatus(ctx, cfg, toolVersion)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -177,7 +177,7 @@ func (d DigestIndex) Lookup(kind, domain, id, path string) string {
 
 // catalogLockStatus reports whether a lock exists, whether it pins content and
 // how many authored sources differ from it.
-func catalogLockStatus(cfg *config.Config, toolVersion string) (CatalogLock, error) {
+func catalogLockStatus(ctx context.Context, cfg *config.Config, toolVersion string) (CatalogLock, error) {
 	status := CatalogLock{Enforce: cfg.LockEnforced()}
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
@@ -189,7 +189,7 @@ func catalogLockStatus(cfg *config.Config, toolVersion string) (CatalogLock, err
 	status.Present, status.Version = true, lock.Version
 	status.HasContentPins, status.Tree = lock.HasContentPins(), lock.Tree
 	if lock.HasContentPins() {
-		sourcesOnly, err := Snapshot(cfg, lock.Profile, true, toolVersion)
+		sourcesOnly, err := SnapshotContext(ctx, cfg, lock.Profile, true, toolVersion)
 		if err != nil {
 			return status, err
 		}

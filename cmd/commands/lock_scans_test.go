@@ -42,7 +42,7 @@ func scanOnce(t *testing.T, root string) {
 	cfg, err := config.LoadConfig(context.Background(), root, config.WithoutRemote())
 	require.NoError(t, err)
 	validateExtern = true
-	report, err := strictLint(cfg)
+	report, err := strictLint(t.Context(), cfg)
 	require.NoError(t, err)
 	require.NotEmpty(t, report.Findings)
 }

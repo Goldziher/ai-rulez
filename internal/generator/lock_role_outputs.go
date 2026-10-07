@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"context"
+
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -14,7 +16,13 @@ import (
 // digest. Nothing is written, and cfg is not modified: the role is applied to a
 // fresh Generator.
 func LockRoleOutputs(cfg *config.Config, role string) ([]contentlock.Output, error) {
+	return LockRoleOutputsContext(context.Background(), cfg, role)
+}
+
+// LockRoleOutputsContext is LockRoleOutputs rendering under ctx.
+func LockRoleOutputsContext(ctx context.Context, cfg *config.Config, role string) ([]contentlock.Output, error) {
 	gen := NewGenerator(cfg)
+	gen.SetContext(ctx)
 	if err := gen.SetRole(role); err != nil {
 		return nil, oops.With("role", role).Wrap(err)
 	}

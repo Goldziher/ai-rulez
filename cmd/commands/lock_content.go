@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,13 +18,13 @@ import (
 )
 
 // lockSnapshot computes the content pins of cfg (see govview.Snapshot).
-func lockSnapshot(cfg *config.Config, profileName string, sourcesOnly bool) (*contentlock.Snapshot, error) {
-	return govview.Snapshot(cfg, profileName, sourcesOnly, Version)
+func lockSnapshot(ctx context.Context, cfg *config.Config, profileName string, sourcesOnly bool) (*contentlock.Snapshot, error) {
+	return govview.SnapshotContext(ctx, cfg, profileName, sourcesOnly, Version)
 }
 
 // lockRoleSnapshot is lockSnapshot plus the pins of the selected roles' outputs.
-func lockRoleSnapshot(cfg *config.Config, profileName string, sourcesOnly bool, sel govview.RoleSelection) (*contentlock.Snapshot, error) {
-	return govview.SnapshotRoles(cfg, profileName, sourcesOnly, Version, sel)
+func lockRoleSnapshot(ctx context.Context, cfg *config.Config, profileName string, sourcesOnly bool, sel govview.RoleSelection) (*contentlock.Snapshot, error) {
+	return govview.SnapshotRolesContext(ctx, cfg, profileName, sourcesOnly, Version, sel)
 }
 
 // lockDiff compares the lock with the working tree (see govview.LockDiffRoles).
@@ -37,10 +38,15 @@ func lockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remot
 // are not cached (and only then: any other load error is returned as it is) the
 // load falls back to skipping them (remoteSkipped).
 func loadForLockCheck(path string) (cfg *config.Config, remoteSkipped bool, err error) {
+	return loadForLockCheckContext(cmdContext(), path)
+}
+
+// loadForLockCheckContext is loadForLockCheck under ctx.
+func loadForLockCheckContext(ctx context.Context, path string) (cfg *config.Config, remoteSkipped bool, err error) {
 	offline := cliLockPolicy
 	offline.Offline = true
 	return loadWithCacheFallback(func(opts ...config.LoadOption) (*config.Config, error) {
-		return loadForLock(path, append([]config.LoadOption{config.WithoutLocal(), config.WithLockPolicy(offline)}, opts...)...)
+		return loadForLockContext(ctx, path, append([]config.LoadOption{config.WithoutLocal(), config.WithLockPolicy(offline)}, opts...)...)
 	})
 }
 
@@ -66,11 +72,11 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 		}
 		return nil, nil
 	}
-	shared, err := sharedConfig(cfg)
+	shared, err := sharedConfig(cmdContext(), cfg)
 	if err != nil {
 		return nil, err
 	}
-	snap, err := lockSnapshot(shared, lock.Profile, true)
+	snap, err := lockSnapshot(cmdContext(), shared, lock.Profile, true)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +96,7 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 // sharedConfig returns cfg without the machine-local overlay: the lock pins the
 // shared sources only. A reload that fails is an error, never a silent fallback
 // to cfg, which would compare the local overlay against the shared pins.
-func sharedConfig(cfg *config.Config) (*config.Config, error) {
+func sharedConfig(ctx context.Context, cfg *config.Config) (*config.Config, error) {
 	if cfg.LocalOverlay == nil && cfg.LocalContent == nil {
 		return cfg, nil
 	}
@@ -98,7 +104,7 @@ func sharedConfig(cfg *config.Config) (*config.Config, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "reload the shared configuration without the local overlay")
 	}
-	reloaded, err := loadProjectFile(cmdContext(), path, config.WithoutLocal())
+	reloaded, err := loadProjectFile(config.WithPolicyContext(ctx, activePolicy), path, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "reload the shared configuration without the local overlay")
 	}
@@ -109,7 +115,7 @@ func sharedConfig(cfg *config.Config) (*config.Config, error) {
 // reports nothing unless [lock] enforce is set. Under enforce a lock that cannot
 // be read or compared (corrupt, newer than this ai-rulez, a source that cannot be
 // snapshotted) is itself a finding: enforcement never fails open.
-func lockDriftFor(cfg *config.Config) []lint.LockDrift {
+func lockDriftFor(ctx context.Context, cfg *config.Config) []lint.LockDrift {
 	if !cfg.LockEnforced() {
 		return nil
 	}
@@ -128,11 +134,11 @@ func lockDriftFor(cfg *config.Config) []lint.LockDrift {
 	if !lock.HasContentPins() {
 		return []lint.LockDrift{{Path: lockRel, Message: fmt.Sprintf("%s (version %d) has no content pins and [lock] enforce = true; run `ai-rulez lock`", lockfile.FileName, lock.Version)}}
 	}
-	shared, err := sharedConfig(cfg)
+	shared, err := sharedConfig(ctx, cfg)
 	if err != nil {
 		return unverifiable(err)
 	}
-	snap, err := lockRoleSnapshot(shared, lock.Profile, false, govview.RoleSelection{Enabled: true, Lock: lock})
+	snap, err := lockRoleSnapshot(ctx, shared, lock.Profile, false, govview.RoleSelection{Enabled: true, Lock: lock})
 	if err != nil {
 		return unverifiable(err)
 	}

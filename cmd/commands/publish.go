@@ -373,11 +373,11 @@ func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 	if opts.requireApproved {
 		// Before the strict gate, which would report the same missing approvals as
 		// plain findings: AR9N8 names the items and the way out.
-		if _, err := approvalGate(cfg, true); err != nil { //nolint:contextcheck // approval owners read git without a context
+		if _, err := approvalGate(ctx, cfg, true); err != nil {
 			return err
 		}
 	}
-	pre, err := publishPreflight(cfg) //nolint:contextcheck // the strict gate loads the config without a context
+	pre, err := publishPreflight(cfg) //nolint:contextcheck // the strict gate and the lock check run validate and lock, which build their own command context
 	if err != nil {
 		return err
 	}
@@ -386,7 +386,7 @@ func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 		return err
 	}
 	if multi {
-		return runPublishMulti(out, pc, emitOnly) //nolint:contextcheck // plugin manifests are built without a context
+		return runPublishMulti(out, pc, emitOnly) //nolint:contextcheck // publish.Build packs without a context
 	}
 	return runPublishSingle(ctx, out, pc, emitOnly)
 }
@@ -409,7 +409,7 @@ func checkPublishPlugin(cfg *config.Config, multi bool) error {
 }
 
 func runPublishSingle(ctx context.Context, out io.Writer, pc *publishContext, emitOnly string) error {
-	spec, err := pc.singleSpec() //nolint:contextcheck // plugin manifests are built without a context
+	spec, err := pc.singleSpec()
 	if err != nil {
 		return err
 	}
@@ -539,7 +539,7 @@ func publishPreflight(cfg *config.Config) (*verifiedBundle, error) {
 // strictGate is `validate --strict` as a gate: the same lint, baseline and
 // budget handling, failing at the configured threshold but never above error.
 func strictGate(cfg *config.Config) error {
-	report, err := strictLint(cfg)
+	report, err := strictLint(cmdContext(), cfg)
 	if err != nil {
 		return publish.Errorf(publish.CodePreflight, publish.ExitFailed, "", "validate --strict could not run: %v", err)
 	}

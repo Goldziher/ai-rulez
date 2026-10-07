@@ -138,7 +138,7 @@ func TestApprove_ContentChangeMakesTheApprovalStale(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			writeFile(t, rule, tt.content)
 			resetApproveFlags()
-			findings := approvalFindingsFor(mustLoadConfig(t))
+			findings := approvalFindingsFor(t.Context(), mustLoadConfig(t))
 			if !tt.wantStale {
 				assert.Empty(t, findings)
 				return
@@ -171,12 +171,12 @@ func TestApprove_ExecutableBitFlipMakesItStale(t *testing.T) {
 	script := filepath.Join(root, ".ai-rulez", "skills", "deploy", "references", "api.md")
 	approveYes, approveReviewer = true, "alice@example.org"
 	mustApprove(t, "skill:deploy", "rule:style")
-	require.Empty(t, approvalFindingsFor(mustLoadConfig(t)))
+	require.Empty(t, approvalFindingsFor(t.Context(), mustLoadConfig(t)))
 
 	require.NoError(t, os.Chmod(script, 0o755))
 
 	var failing []string
-	for _, f := range approvalFindingsFor(mustLoadConfig(t)) {
+	for _, f := range approvalFindingsFor(t.Context(), mustLoadConfig(t)) {
 		failing = append(failing, f.Code+" "+f.Message)
 	}
 	assert.NotEmpty(t, failing)
@@ -236,15 +236,15 @@ func TestApprove_MinApproversNeedsDistinctReviewers(t *testing.T) {
 
 	approveReviewer = "alice@example.org"
 	mustApprove(t, "rule:style")
-	findings := approvalFindingsFor(mustLoadConfig(t))
+	findings := approvalFindingsFor(t.Context(), mustLoadConfig(t))
 	assertHasCode(t, findings, "AR714", "rule:style")
 
 	mustApprove(t, "rule:style") // the same reviewer again still counts once
-	assertHasCode(t, approvalFindingsFor(mustLoadConfig(t)), "AR714", "rule:style")
+	assertHasCode(t, approvalFindingsFor(t.Context(), mustLoadConfig(t)), "AR714", "rule:style")
 
 	approveReviewer = "bob@example.org"
 	mustApprove(t, "rule:style")
-	for _, f := range approvalFindingsFor(mustLoadConfig(t)) {
+	for _, f := range approvalFindingsFor(t.Context(), mustLoadConfig(t)) {
 		assert.NotContains(t, f.Message, "rule:style")
 	}
 }
@@ -446,7 +446,7 @@ func TestApprove_GovernanceFailsClosedWithoutALockOrPins(t *testing.T) {
 			// Act
 			lines, err := verifyLockedSources(cfg)
 			diff, diffErr := lockDiff(cfg, nil, "", false)
-			findings := approvalFindingsFor(cfg)
+			findings := approvalFindingsFor(t.Context(), cfg)
 
 			// Assert
 			require.NoError(t, err)
@@ -475,7 +475,7 @@ func TestApprove_NoGovernanceMeansNoLockRequirement(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	assert.Empty(t, lines)
-	assert.Empty(t, approvalFindingsFor(cfg))
+	assert.Empty(t, approvalFindingsFor(t.Context(), cfg))
 }
 
 func TestApprove_ReviewerIsNormalisedOnWriteAndRevoke(t *testing.T) {
@@ -541,7 +541,7 @@ func TestApprove_ExpiryIgnoresSourceDateEpoch(t *testing.T) {
 
 	// Act
 	resetApproveFlags()
-	findings := approvalFindingsFor(mustLoadConfig(t))
+	findings := approvalFindingsFor(t.Context(), mustLoadConfig(t))
 
 	// Assert
 	assertHasCode(t, findings, "AR712", "rule:style")
@@ -636,7 +636,7 @@ func TestApprove_ValidateStrictApprovalsBaseReportsAR716(t *testing.T) {
 	validateApprovalsBase = "main"
 	t.Cleanup(func() { validateApprovalsBase = "" })
 
-	findings := approvalFindingsFor(mustLoadConfig(t))
+	findings := approvalFindingsFor(t.Context(), mustLoadConfig(t))
 
 	assertHasCode(t, findings, "AR716", "rule:style")
 }

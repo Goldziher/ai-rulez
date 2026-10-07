@@ -24,11 +24,16 @@ type DynamicChanges func(cfg *config.Config, lock *lockfile.File) []contentlock.
 // Snapshot computes the content pins of cfg: the authored items, and the
 // generated outputs when [lock] pins them. sourcesOnly skips rendering.
 func Snapshot(cfg *config.Config, profileName string, sourcesOnly bool, toolVersion string) (*contentlock.Snapshot, error) {
-	return snapshot(cfg, profileName, sourcesOnly, toolVersion, nil)
+	return SnapshotContext(context.Background(), cfg, profileName, sourcesOnly, toolVersion)
+}
+
+// SnapshotContext is Snapshot rendering under ctx.
+func SnapshotContext(ctx context.Context, cfg *config.Config, profileName string, sourcesOnly bool, toolVersion string) (*contentlock.Snapshot, error) {
+	return snapshot(ctx, cfg, profileName, sourcesOnly, toolVersion, nil)
 }
 
 // snapshot is Snapshot with a hook that completes the options (role pins).
-func snapshot(cfg *config.Config, profileName string, sourcesOnly bool, toolVersion string, adjust func(*contentlock.Options)) (*contentlock.Snapshot, error) {
+func snapshot(ctx context.Context, cfg *config.Config, profileName string, sourcesOnly bool, toolVersion string, adjust func(*contentlock.Options)) (*contentlock.Snapshot, error) {
 	opts := contentlock.Options{
 		Scope:          cfg.LockScope(),
 		IncludeOutputs: cfg.LockIncludeOutputs(),
@@ -37,7 +42,9 @@ func snapshot(cfg *config.Config, profileName string, sourcesOnly bool, toolVers
 		SourcesOnly:    sourcesOnly,
 	}
 	if opts.IncludeOutputs && !sourcesOnly {
-		outputs, err := generator.NewGenerator(cfg).LockOutputs(profileName)
+		gen := generator.NewGenerator(cfg)
+		gen.SetContext(ctx)
+		outputs, err := gen.LockOutputs(profileName)
 		if err != nil {
 			return nil, oops.Wrapf(err, "render the outputs to pin")
 		}
@@ -65,8 +72,13 @@ func LockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remot
 // roles with pin = true and the ones the lock pins, narrowed to sel.Only. sel
 // carries only Only and Files; the rest is filled in here.
 func LockDiffRoles(cfg *config.Config, lock *lockfile.File, profileName string, remoteSkipped bool, toolVersion string, dynamic DynamicChanges, sel RoleSelection) (*contentlock.Diff, error) {
+	return LockDiffRolesContext(context.Background(), cfg, lock, profileName, remoteSkipped, toolVersion, dynamic, sel)
+}
+
+// LockDiffRolesContext is LockDiffRoles rendering under ctx.
+func LockDiffRolesContext(ctx context.Context, cfg *config.Config, lock *lockfile.File, profileName string, remoteSkipped bool, toolVersion string, dynamic DynamicChanges, sel RoleSelection) (*contentlock.Diff, error) {
 	sel.Write, sel.Enabled, sel.Lock = false, lock != nil, lock
-	snap, err := SnapshotRoles(cfg, profileName, remoteSkipped, toolVersion, sel)
+	snap, err := SnapshotRolesContext(ctx, cfg, profileName, remoteSkipped, toolVersion, sel)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +95,7 @@ func LockDiffRoles(cfg *config.Config, lock *lockfile.File, profileName string, 
 	if dynamic != nil {
 		diff.Changes = append(diff.Changes, dynamic(cfg, lock)...)
 	}
-	approvalChanges, approvalNotes := ApprovalChanges(cfg, lock, snap.Items, ApprovalNow())
+	approvalChanges, approvalNotes := ApprovalChangesContext(ctx, cfg, lock, snap.Items, ApprovalNow())
 	diff.Changes, diff.Notes = append(diff.Changes, approvalChanges...), append(diff.Notes, approvalNotes...)
 	switch {
 	case lock == nil && cfg.LockEnforced():
@@ -144,9 +156,7 @@ func CheckLockRoles(ctx context.Context, cfg *config.Config, remoteSkipped bool,
 	if profile == "" && lock != nil {
 		profile = lock.Profile
 	}
-	// The comparison renders the outputs with the generator, which takes no
-	// context (nor do the gitutil probes it makes); ctx was checked above.
-	return LockDiffRoles(cfg, lock, profile, remoteSkipped, toolVersion, dynamic, sel) //nolint:contextcheck // the generator renders without a context
+	return LockDiffRolesContext(ctx, cfg, lock, profile, remoteSkipped, toolVersion, dynamic, sel)
 }
 
 // LoadWithCacheFallback loads with remote includes, and retries without them only

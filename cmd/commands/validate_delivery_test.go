@@ -45,12 +45,12 @@ var servedSkillFiles = map[string]string{
 
 func TestDeliveryFindings_NothingServedIsSilent(t *testing.T) {
 	cfg := deliveryProject(t, `["claude"]`, "", map[string]string{"skills/core/SKILL.md": servedSkillFiles["skills/core/SKILL.md"]})
-	assert.Empty(t, deliveryFindings(cfg))
+	assert.Empty(t, deliveryFindings(t.Context(), cfg))
 }
 
 func TestDeliveryFindings_FallbackAndNoServer(t *testing.T) {
 	cfg := deliveryProject(t, `["claude", "rovodev"]`, "", servedSkillFiles)
-	got := codesOf(deliveryFindings(cfg))
+	got := codesOf(deliveryFindings(t.Context(), cfg))
 	assert.Contains(t, got[lint.CodeDeliveryStaticFallback], `"rovodev"`)
 	assert.Contains(t, got[lint.CodeDeliveryStaticFallback], "heavy")
 	assert.Contains(t, got, lint.CodeServedNoServer, "claude can call MCP but nothing runs --serve-skills")
@@ -58,7 +58,7 @@ func TestDeliveryFindings_FallbackAndNoServer(t *testing.T) {
 
 	withServer := deliveryProject(t, `["claude", "rovodev"]`,
 		"\n[[mcp_servers]]\nname = \"skills\"\ncommand = \"ai-rulez\"\nargs = [\"mcp\", \"--serve-skills\"]\n", servedSkillFiles)
-	assert.NotContains(t, codesOf(deliveryFindings(withServer)), lint.CodeServedNoServer)
+	assert.NotContains(t, codesOf(deliveryFindings(t.Context(), withServer)), lint.CodeServedNoServer)
 }
 
 func TestDeliveryFindings_StubMissingWhenAnMCPHarnessDoesNotRenderIt(t *testing.T) {
@@ -72,18 +72,18 @@ func TestDeliveryFindings_StubMissingWhenAnMCPHarnessDoesNotRenderIt(t *testing.
 		files[k] = v
 	}
 	cfg := deliveryProject(t, `["claude", "codex"]`, "\n[placement]\nhonor_targets = true\n", files)
-	got := codesOf(deliveryFindings(cfg))
+	got := codesOf(deliveryFindings(t.Context(), cfg))
 	require.Contains(t, got, lint.CodeDeliveryStubMissing)
 	assert.Contains(t, got[lint.CodeDeliveryStubMissing], `"claude"`)
 	assert.NotContains(t, got[lint.CodeDeliveryStubMissing], `"codex"`)
 
 	withStub := deliveryProject(t, `["claude", "codebuff"]`, "", servedSkillFiles)
-	assert.NotContains(t, codesOf(deliveryFindings(withStub)), lint.CodeDeliveryStubMissing, "both presets render the stub")
+	assert.NotContains(t, codesOf(deliveryFindings(t.Context(), withStub)), lint.CodeDeliveryStubMissing, "both presets render the stub")
 }
 
 func TestDeliveryFindings_LockEnforcementReportsUnpinnedSkills(t *testing.T) {
 	cfg := deliveryProject(t, `["claude"]`, "\n[lock]\nenforce = true\n", servedSkillFiles)
-	got := codesOf(deliveryFindings(cfg))
+	got := codesOf(deliveryFindings(t.Context(), cfg))
 	require.Contains(t, got, lint.CodeServedLockMismatch)
 	assert.Contains(t, got[lint.CodeServedLockMismatch], "served heavy: not pinned")
 	assert.True(t, strings.Contains(got[lint.CodeServedLockMismatch], "ai-rulez lock"))
@@ -94,7 +94,7 @@ func TestDeliveryFindings_PresetWithoutSkillsNeedsNoStub(t *testing.T) {
 	cfg := deliveryProject(t, `["claude", "gitlab-duo"]`, "", servedSkillFiles)
 
 	// Act
-	got := codesOf(deliveryFindings(cfg))
+	got := codesOf(deliveryFindings(t.Context(), cfg))
 
 	// Assert
 	assert.NotContains(t, got, lint.CodeDeliveryStubMissing, "no stub is generated for a preset that renders no skills")
@@ -112,7 +112,7 @@ func TestDeliveryFindings_UnscannableServedFilesOfAuthoredSkills(t *testing.T) {
 		})
 
 	// Act
-	got := codesOf(deliveryFindings(cfg))
+	got := codesOf(deliveryFindings(t.Context(), cfg))
 
 	// Assert
 	require.Contains(t, got, lint.CodeServedUnscannable)
@@ -126,7 +126,7 @@ func TestDeliveryFindings_SkillSourcesNeverReachAHarnessWithoutMCP(t *testing.T)
 	cfg := deliveryProject(t, `["claude", "rovodev"]`,
 		"\n[[skill_sources]]\nname = \"vendor\"\nurl = \"vendor-skills\"\n", servedSkillFiles)
 
-	got := codesOf(deliveryFindings(cfg))
+	got := codesOf(deliveryFindings(t.Context(), cfg))
 
 	assert.Contains(t, got[lint.CodeDeliveryStaticFallback], "skill_sources")
 	assert.Contains(t, got[lint.CodeDeliveryStaticFallback], `"rovodev"`)

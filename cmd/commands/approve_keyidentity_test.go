@@ -43,7 +43,7 @@ func TestApprove_ForbidSelfApprovalUsesTheIdentityAKeyIsMappedTo(t *testing.T) {
 		lockfile.Approval{Kind: "rule", ID: "style", Digest: digest, Reviewer: "key:" + fingerprint, Assurance: lockfile.AssuranceSigned, ApprovedAt: "2026-10-01T00:00:00Z"})
 
 	// Act
-	found, err := authorSelfApprovals(cfg, lock, "base")
+	found, err := authorSelfApprovals(t.Context(), cfg, lock, "base")
 
 	// Assert: matched as a self-approval by the mapped identity, not the "names no author" refusal
 	require.NoError(t, err)

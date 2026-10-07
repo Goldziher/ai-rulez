@@ -361,7 +361,7 @@ func (e *approveEnv) settle(s approval.Subject, drafts []approvalDraft, self *se
 			err = oops.Errorf("%s %s", safeText(d.reviewer), d.skipped)
 		}
 		if err == nil {
-			err = self.check(e.policy.IdentityOf(d.reviewer), s) //nolint:contextcheck // the history probes of gitutil take no context
+			err = self.check(e.policy.IdentityOf(d.reviewer), s)
 		}
 		if err != nil {
 			if d.assurance != lockfile.AssuranceReviewLinked {

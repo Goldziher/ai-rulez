@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -20,14 +21,14 @@ import (
 // without a lock is no lock (nil): everything approved since is new. An unknown
 // rev, or a configuration outside a git work tree, is an error, so the check
 // never passes by comparing against nothing.
-func baseLockOf(cfg *config.Config, rev string) (*lockfile.File, string, error) {
+func baseLockOf(ctx context.Context, cfg *config.Config, rev string) (*lockfile.File, string, error) {
 	rev = strings.TrimSpace(rev)
 	git := gitutil.Git{}
-	top := git.TopLevel(cfg.ConfigDir)
+	top := git.TopLevelContext(ctx, cfg.ConfigDir)
 	if top == "" {
 		return nil, "", oops.Errorf("%s is not inside a git work tree: cannot read the lock at %q", cfg.ConfigDir, rev)
 	}
-	base, err := git.MergeBase(top, rev)
+	base, err := git.MergeBaseContext(ctx, top, rev)
 	if err != nil {
 		return nil, "", err //nolint:wrapcheck // already contextual
 	}
@@ -35,7 +36,7 @@ func baseLockOf(cfg *config.Config, rev string) (*lockfile.File, string, error) 
 	if rel == "" {
 		return nil, "", oops.Errorf("%s is outside the git work tree", lockfile.Path(cfg.ConfigDir))
 	}
-	data, found, err := workspace.ReadFileAt(cmdContext(), top, base, rel, nil)
+	data, found, err := workspace.ReadFileAt(ctx, top, base, rel, nil)
 	if err != nil {
 		return nil, base, oops.With("rev", base).Wrapf(err, "read %s at the base revision", lockfile.FileName)
 	}
@@ -51,21 +52,21 @@ func baseLockOf(cfg *config.Config, rev string) (*lockfile.File, string, error) 
 
 // selfApprovalsAgainst lists the approvals of lock that arrived together with
 // the content they approve, relative to rev.
-func selfApprovalsAgainst(cfg *config.Config, lock *lockfile.File, rev string) ([]approval.SelfApproval, error) {
-	base, mergeBase, err := baseLockOf(cfg, rev)
+func selfApprovalsAgainst(ctx context.Context, cfg *config.Config, lock *lockfile.File, rev string) ([]approval.SelfApproval, error) {
+	base, mergeBase, err := baseLockOf(ctx, cfg, rev)
 	if err != nil {
 		return nil, err
 	}
 	found := approval.SelfApprovals(base, lock)
-	changes, err := approval.OwnershipChanges(cfg, mergeBase)
+	changes, err := approval.OwnershipChanges(ctx, cfg, mergeBase)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
 	for _, note := range changes {
 		found = append(found, approval.SelfApproval{Note: note})
 	}
-	found = append(found, unownedAtBase(cfg, lock, base, found, mergeBase)...)
-	authored, err := authorSelfApprovals(cfg, lock, rev)
+	found = append(found, unownedAtBase(ctx, cfg, lock, base, found, mergeBase)...)
+	authored, err := authorSelfApprovals(ctx, cfg, lock, rev)
 	if err != nil {
 		return nil, err
 	}
@@ -76,12 +77,12 @@ func selfApprovalsAgainst(cfg *config.Config, lock *lockfile.File, rev string) (
 // own the item according to CODEOWNERS as it was at the merge base, so editing
 // CODEOWNERS in the change cannot make an approval authorized. It applies only
 // with approvers_from set.
-func unownedAtBase(cfg *config.Config, lock, base *lockfile.File, added []approval.SelfApproval, mergeBase string) []approval.SelfApproval {
+func unownedAtBase(ctx context.Context, cfg *config.Config, lock, base *lockfile.File, added []approval.SelfApproval, mergeBase string) []approval.SelfApproval {
 	if lock == nil || cfg.Governance == nil || cfg.Governance.ApproversFrom == "" || mergeBase == "" {
 		return nil
 	}
-	policy := approval.PolicyOf(cfg)
-	owners := approval.LoadOwnerSetAt(cfg.BaseDir, cfg.ConfigDir, cfg.Governance.ApproversFrom, mergeBase)
+	policy := approval.PolicyOfContext(ctx, cfg)
+	owners := approval.LoadOwnerSetAt(ctx, cfg.BaseDir, cfg.ConfigDir, cfg.Governance.ApproversFrom, mergeBase)
 	subjects := map[string]approval.Subject{}
 	for _, s := range approval.SubjectsOf(lock, lock.Item) {
 		subjects[s.Key()] = s
@@ -130,12 +131,12 @@ func approvalKeysOf(lock *lockfile.File) map[string]bool {
 // merge base of rev and HEAD. It is best effort and heuristic: it matches
 // commit author emails (and GitHub noreply addresses) against the reviewer
 // string, so a reviewer recorded under another name is not caught.
-func authorSelfApprovals(cfg *config.Config, lock *lockfile.File, rev string) ([]approval.SelfApproval, error) {
-	policy := approval.PolicyOf(cfg)
+func authorSelfApprovals(ctx context.Context, cfg *config.Config, lock *lockfile.File, rev string) ([]approval.SelfApproval, error) {
+	policy := approval.PolicyOfContext(ctx, cfg)
 	if lock == nil || len(lock.Approval) == 0 || !policy.ForbidSelf {
 		return nil, nil
 	}
-	g, err := newApproveGit(cmdContext(), cfg)
+	g, err := newApproveGit(config.WithPolicyContext(ctx, activePolicy), cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +190,7 @@ func signerOf(policy approval.Policy, a lockfile.Approval, s approval.Subject) s
 // after rev for content that also changed after it (AR716) and returns exit code
 // 2 when there is one. It writes nothing.
 func (e *approveEnv) verifyBase(out io.Writer, rev string) (int, error) {
-	found, err := selfApprovalsAgainst(e.cfg, e.lock, rev)
+	found, err := selfApprovalsAgainst(cmdContext(), e.cfg, e.lock, rev)
 	if err != nil {
 		return 1, err
 	}
@@ -208,8 +209,8 @@ func (e *approveEnv) verifyBase(out io.Writer, rev string) (int, error) {
 
 // selfApprovalFindings are the AR716 findings of `validate --strict --approvals-base`.
 // A base that cannot be read is a finding, never a silent pass.
-func selfApprovalFindings(cfg *config.Config, lock *lockfile.File, rev, lockRel string) []lint.ApprovalFinding {
-	found, err := selfApprovalsAgainst(cfg, lock, rev)
+func selfApprovalFindings(ctx context.Context, cfg *config.Config, lock *lockfile.File, rev, lockRel string) []lint.ApprovalFinding {
+	found, err := selfApprovalsAgainst(ctx, cfg, lock, rev)
 	if err != nil {
 		return []lint.ApprovalFinding{{Code: approval.CodeSelf, Path: lockRel, Message: fmt.Sprintf("cannot compare approvals with %q: %v", rev, err)}}
 	}

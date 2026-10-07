@@ -32,7 +32,7 @@ func TestApprove_ForbidSelfApprovalRefusesAKeySignerThatNamesNoAuthor(t *testing
 		Reviewer: "key:sha256:abc", Assurance: lockfile.AssuranceSigned, ApprovedAt: "2026-10-01T00:00:00Z"})
 
 	// Act
-	found, err := authorSelfApprovals(cfg, lock, "main")
+	found, err := authorSelfApprovals(t.Context(), cfg, lock, "main")
 
 	// Assert
 	require.NoError(t, err)

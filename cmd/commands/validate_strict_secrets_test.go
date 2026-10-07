@@ -26,10 +26,10 @@ transport = "http"
 url = "https://x.test/mcp"
 headers = { Authorization = "Bearer ${API_KEY}" }
 `, servedSkillFiles)
-	_ = deliveryFindings(cfg)
+	_ = deliveryFindings(t.Context(), cfg)
 
 	// Act
-	report, err := strictLint(cfg)
+	report, err := strictLint(t.Context(), cfg)
 
 	// Assert
 	require.NoError(t, err)
@@ -45,7 +45,7 @@ func TestStrictLint_UnscannableAuthoredSkillMDIsAnError(t *testing.T) {
 		map[string]string{"skills/nulmd/SKILL.md": "---\ndescription: NUL in SKILL.md\ndelivery: served\n---\nBody\x00\n"})
 
 	// Act
-	report, err := strictLint(cfg)
+	report, err := strictLint(t.Context(), cfg)
 
 	// Assert
 	require.NoError(t, err)

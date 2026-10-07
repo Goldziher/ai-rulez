@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -25,8 +26,8 @@ func carryApprovals(current, next *lockfile.File, full bool) {
 // It reports nothing without a lock, and nothing for a project that sets no
 // [governance] policy and has no approval records. A policy that cannot be
 // evaluated is itself a finding: enforcement never fails open.
-func approvalFindingsFor(cfg *config.Config) []lint.ApprovalFinding {
-	out := approvalStatusFindings(cfg)
+func approvalFindingsFor(ctx context.Context, cfg *config.Config) []lint.ApprovalFinding {
+	out := approvalStatusFindings(ctx, cfg)
 	if validateApprovalsBase == "" {
 		return out
 	}
@@ -35,11 +36,11 @@ func approvalFindingsFor(cfg *config.Config) []lint.ApprovalFinding {
 	if err != nil {
 		return append(out, lint.ApprovalFinding{Code: approval.CodeSelf, Path: lockRel, Message: fmt.Sprintf("cannot compare approvals with %q: %v", validateApprovalsBase, err)})
 	}
-	return append(out, selfApprovalFindings(cfg, lock, validateApprovalsBase, lockRel)...)
+	return append(out, selfApprovalFindings(ctx, cfg, lock, validateApprovalsBase, lockRel)...)
 }
 
-func approvalStatusFindings(cfg *config.Config) []lint.ApprovalFinding {
-	policy := approval.PolicyOf(cfg)
+func approvalStatusFindings(ctx context.Context, cfg *config.Config) []lint.ApprovalFinding {
+	policy := approval.PolicyOfContext(ctx, cfg)
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	lockRel := filepath.ToSlash(filepath.Join(relToBase(cfg, cfg.ConfigDir), lockfile.FileName))
 	unverifiable := func(err error) []lint.ApprovalFinding {
@@ -57,17 +58,17 @@ func approvalStatusFindings(cfg *config.Config) []lint.ApprovalFinding {
 	if lock == nil || (!policy.Active() && len(lock.Approval) == 0 && len(lock.Deny) == 0) {
 		return nil
 	}
-	shared, err := sharedConfig(cfg)
+	shared, err := sharedConfig(ctx, cfg)
 	if err == nil {
 		var snapItems []lockfile.Item
 		if lock.HasContentPins() || len(lock.Approval) > 0 {
-			snap, snapErr := lockSnapshot(shared, lock.Profile, true)
+			snap, snapErr := lockSnapshot(ctx, shared, lock.Profile, true)
 			if snapErr != nil {
 				return unverifiable(snapErr)
 			}
 			snapItems = snap.Items
 		}
-		st := govview.EvaluateApprovals(shared, lock, snapItems, govview.ApprovalNow())
+		st := govview.EvaluateApprovalsContext(ctx, shared, lock, snapItems, govview.ApprovalNow())
 		var out []lint.ApprovalFinding
 		failures := approval.Failures(st.Results)
 		for i := range failures {

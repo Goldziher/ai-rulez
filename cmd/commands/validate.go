@@ -183,7 +183,7 @@ func runRecursiveValidate() int {
 			warnFrontmatter(cfg)
 		}
 		if validateStrict {
-			report, lerr := strictLint(cfg)
+			report, lerr := strictLint(cmdContext(), cfg)
 			if lerr != nil {
 				fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
 				fmtError(lerr)

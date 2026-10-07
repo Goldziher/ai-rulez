@@ -169,7 +169,7 @@ func workingTreeSide(ctx context.Context, project *catalogDiffProject) (*catalog
 	if err != nil {
 		return nil, err
 	}
-	doc, err := buildDiffCatalog(cfg)
+	doc, err := buildDiffCatalog(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func revisionSide(ctx context.Context, project *catalogDiffProject, rev string) 
 	// Only the configuration directory is extracted, so the repository paths its
 	// content names (AR401, the harness traps) are checked against the work tree
 	// the other side uses, not against an almost empty snapshot directory.
-	doc, err := buildRevisionCatalog(revCfg, top)
+	doc, err := buildRevisionCatalog(ctx, revCfg, top)
 	if err != nil {
 		return nil, err
 	}
@@ -232,13 +232,13 @@ func shortCommit(c string) string {
 // excerpts, no eval or usage, linted in process.
 // buildRevisionCatalog is buildDiffCatalog for a configuration extracted from a
 // revision, linted with repoRoot as the repository (an explicit --repo-root wins).
-func buildRevisionCatalog(cfg *config.Config, repoRoot string) (*govview.CatalogDocV2, error) {
+func buildRevisionCatalog(ctx context.Context, cfg *config.Config, repoRoot string) (*govview.CatalogDocV2, error) {
 	if strictTreeCache.Root == "" {
 		prev := strictTreeCache
 		strictTreeCache = lint.Loader{Root: repoRoot}
 		defer func() { strictTreeCache = prev }()
 	}
-	return buildDiffCatalog(cfg)
+	return buildDiffCatalog(ctx, cfg)
 }
 
 // skipPluginDrift leaves the plugin version drift check (AR961) out of strict
@@ -247,7 +247,7 @@ func buildRevisionCatalog(cfg *config.Config, repoRoot string) (*govview.Catalog
 // it on both sides instead of reporting it on the working tree only.
 var skipPluginDrift bool
 
-func buildDiffCatalog(cfg *config.Config) (*govview.CatalogDocV2, error) {
+func buildDiffCatalog(ctx context.Context, cfg *config.Config) (*govview.CatalogDocV2, error) {
 	skipPluginDrift = true
 	defer func() { skipPluginDrift = false }()
 	if err := cfg.Validate(); err != nil {
@@ -257,7 +257,7 @@ func buildDiffCatalog(cfg *config.Config) (*govview.CatalogDocV2, error) {
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
-	return buildCatalogV2(cfg, counter, catalogSettings{Excerpt: false})
+	return buildCatalogV2(ctx, cfg, counter, catalogSettings{Excerpt: false})
 }
 
 func writeCatalogDiffText(w reportWriter, d *govview.CatalogDiff) {

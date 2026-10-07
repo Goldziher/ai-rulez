@@ -1,6 +1,7 @@
 package govview
 
 import (
+	"context"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -203,8 +204,8 @@ type CatalogOptions struct {
 
 // BuildCatalogV2 builds the version 2 catalog. It shares every v1 field with
 // BuildCatalog, so the two documents cannot disagree.
-func BuildCatalogV2(cfg *config.Config, counter tokens.Counter, toolVersion string, opts CatalogOptions) (*CatalogDocV2, error) {
-	v1, files, err := buildCatalogCore(cfg, counter, toolVersion)
+func BuildCatalogV2(ctx context.Context, cfg *config.Config, counter tokens.Counter, toolVersion string, opts CatalogOptions) (*CatalogDocV2, error) {
+	v1, files, err := buildCatalogCore(ctx, cfg, counter, toolVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +221,7 @@ func BuildCatalogV2(cfg *config.Config, counter tokens.Counter, toolVersion stri
 		Notes:         append([]string{}, v1.notes...),
 	}
 	attrib := newLintAttribution(cfg, opts.Lint)
-	approvals := newApprovalIndex(cfg)
+	approvals := newApprovalIndex(ctx, cfg)
 	seen := map[string]int{}
 	for i := range v1.Items {
 		it := &v1.Items[i]
