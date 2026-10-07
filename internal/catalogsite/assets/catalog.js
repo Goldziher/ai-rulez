@@ -64,7 +64,12 @@
           shown++;
         }
       });
-      paginate(Boolean(q.value || kind.value || status.value));
+      var filtering = Boolean(q.value || kind.value || status.value);
+      if (filtering) {
+        // A filter looks across every page; clearing it starts again from page 1.
+        page = 0;
+      }
+      paginate(filtering);
       if (count) {
         count.textContent = shown + " of " + rows.length + " shown";
       }
