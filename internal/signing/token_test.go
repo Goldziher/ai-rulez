@@ -35,8 +35,8 @@ func TestResolveIDToken(t *testing.T) {
 			vars: map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": "https://x"}, wantErr: "no OIDC identity token available",
 		},
 		{
-			name: "Actions request URL must be https",
-			vars: map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": "http://169.254.169.254/token", "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "t"},
+			name:    "Actions request URL must be https",
+			vars:    map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": "http://169.254.169.254/token", "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "t"},
 			wantErr: "not an https URL",
 		},
 	}
