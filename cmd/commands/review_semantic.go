@@ -104,6 +104,21 @@ func resolveJudge(cmd *cobra.Command, cfg *config.Config, model string, defCost 
 	return &judgeSetup{lc: lc, resolved: resolved, review: rres, maxCost: maxCost, maxCalls: maxCalls}, nil
 }
 
+// share returns the caps of one of n models judging the same items: the run's caps (the tighter of
+// [llm] and the review caps) split evenly, so the n clients together stay within them. 0 stays
+// unlimited.
+func (js *judgeSetup) share(n int) (cost float64, calls int) {
+	cost = tighterFloat(js.resolved.Config.MaxCostUSD, js.maxCost)
+	calls = tighterInt(js.resolved.Config.MaxCalls, js.maxCalls)
+	if n > 1 {
+		cost /= float64(n)
+		if calls > 0 {
+			calls = max(calls/n, 1)
+		}
+	}
+	return cost, calls
+}
+
 // ready checks that a call may be made: a model, the network opt-in in user scope, no
 // organization policy against it, and a host the user's allow-list accepts.
 func (js *judgeSetup) ready(cfg *config.Config) error {
@@ -191,6 +206,10 @@ func runSemantic(cmd *cobra.Command, rc *reviewContext, res *rv.Results, out io.
 		if err := js.ready(cfg); err != nil {
 			return exitReviewRefused, err
 		}
+	}
+	if len(models) > 1 {
+		// The primary model is one of the compared models and gets its share, not the whole cap.
+		js.lc.MaxCostUSD, js.lc.MaxCalls = js.share(len(models))
 	}
 	k := effectiveK(rb, reviewFlags.k)
 	gateLevel := reviewFlags.gateLevel
@@ -338,13 +357,9 @@ func compareModels(cmd *cobra.Command, cfg *config.Config, js *judgeSetup, rb *r
 	var used rv.RunUsage
 	names := []string{js.lc.FullModel()}
 	tables := []map[string]map[string]string{rv.VerdictTable(res)}
-	share := float64(len(models))
 	for _, m := range models[1:] {
 		lc := withModel(js.resolved.Config, m)
-		lc.MaxCostUSD = tighterFloat(js.resolved.Config.MaxCostUSD, js.maxCost/share)
-		if js.maxCalls > 0 {
-			lc.MaxCalls = tighterInt(js.resolved.Config.MaxCalls, max(js.maxCalls/len(models), 1))
-		}
+		lc.MaxCostUSD, lc.MaxCalls = js.share(len(models))
 		other := res.CloneUnjudged()
 		out, err := judgeWith(cmd, cfg, js, lc, rb, other, k, rc.content())
 		if err != nil {

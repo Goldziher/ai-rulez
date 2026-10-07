@@ -706,3 +706,55 @@ func TestSpendCapsShouldTreatNonFiniteValuesAsUnsetOrInvalid(t *testing.T) {
 	}
 	assert.NoError(t, checkCaps(0.5, 3, 1))
 }
+
+// --models splits the caps evenly between every compared model, the primary included, so the
+// clients together stay within --max-cost and --max-calls (RV-LLM-6).
+func TestReviewSemanticModelsShouldSplitTheCapsEvenly(t *testing.T) {
+	tests := []struct {
+		name      string
+		maxCost   string
+		maxCalls  string
+		wantCost  []float64
+		wantCalls []int
+	}{
+		{"cost and calls split three ways", "0.9", "30", []float64{0.3, 0.3, 0.3}, []int{10, 10, 10}},
+		{"unlimited calls stay unlimited", "0.9", "0", []float64{0.3, 0.3, 0.3}, []int{0, 0, 0}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			judgedProject(t, "")
+			cfgDir := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "ai-rulez")
+			require.NoError(t, os.MkdirAll(cfgDir, 0o700))
+			require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte("[llm]\nprice_input_per_mtok = 1\nprice_output_per_mtok = 1\n"), 0o600))
+			f := &fakeModel{verdicts: map[string]string{"deploy/trigger-quality": "warn"}}
+			var costs []float64
+			var calls []int
+			old := reviewClientFactory
+			reviewClientFactory = func(lc llm.Config, opts llm.Options) (llm.Client, error) {
+				costs = append(costs, lc.MaxCostUSD)
+				calls = append(calls, lc.MaxCalls)
+				fake := llm.NewFake()
+				fake.ChatFunc = f.chat
+				return llm.Wrap(fake, lc, opts), nil
+			}
+			t.Cleanup(func() { reviewClientFactory = old })
+			reviewFlags.models = "model,other-model,third-model"
+			require.NoError(t, ReviewCmd.Flags().Set("models", reviewFlags.models))
+			require.NoError(t, ReviewCmd.Flags().Set("max-cost", tc.maxCost))
+			require.NoError(t, ReviewCmd.Flags().Set("max-calls", tc.maxCalls))
+			t.Cleanup(func() { ReviewCmd.Flags().Lookup("max-calls").Changed = false })
+
+			// Act
+			_, _, err := runJudged(t)
+
+			// Assert
+			require.NoError(t, err)
+			require.Len(t, costs, 3)
+			for i := range costs {
+				assert.InDelta(t, tc.wantCost[i], costs[i], 1e-9, "client %d cost cap", i)
+			}
+			assert.Equal(t, tc.wantCalls, calls)
+		})
+	}
+}
