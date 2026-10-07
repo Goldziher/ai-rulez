@@ -24,7 +24,7 @@ func setupTestProject(t *testing.T) string {
 
 	// Create minimal config.yaml
 	configPath := filepath.Join(aiRulezDir, "config.toml")
-	configContent := `version = "4.0"
+	configContent := `version = "5.0"
 name = "test-project"
 includes = []
 

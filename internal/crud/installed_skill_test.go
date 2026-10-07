@@ -16,7 +16,7 @@ func setupTestProject(t *testing.T) string {
 	aiRulezDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	configContent := `version = "4.0"
+	configContent := `version = "5.0"
 name = "test-project"
 presets = ["claude"]
 `
