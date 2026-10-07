@@ -55,6 +55,28 @@ jobs:
           version: latest
           args: --timeout=5m
 
+  tidy:
+    name: go mod tidy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+          cache: false
+
+      # -e: the literllm-tagged import of internal/llm/literllm is a separate
+      # module the default graph leaves out on purpose, so tidy cannot resolve it.
+      - name: go.mod and go.sum are tidy
+        env:
+          GOWORK: "off"
+        run: |
+          go mod tidy -e -diff
+          (cd tests/external && go mod tidy -e -diff)
+
   public-api:
     name: Public API (pkg/airulez)
     runs-on: ubuntu-latest
