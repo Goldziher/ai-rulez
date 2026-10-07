@@ -31,7 +31,8 @@ func buildVibe(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	lists := map[string][]any{} // tools.<tool>.<list>
 	never := map[string]bool{}
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		if e.Action == ActionAsk {
 			continue
 		}
@@ -124,7 +125,8 @@ func buildPoolside(t *translation) ([]jsonmerge.OwnedKey, error) {
 	shell := map[PermAction][]any{}
 	paths := map[PermAction][]any{}
 	var keys []jsonmerge.OwnedKey
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		if e.Action == ActionAsk {
 			continue
 		}
@@ -214,7 +216,9 @@ func buildOmp(t *translation) ([]jsonmerge.OwnedKey, error) {
 	tools := map[string]PermAction{}
 	// First match wins: deny, then ask, then allow.
 	for _, action := range []PermAction{ActionDeny, ActionAsk, ActionAllow} {
-		for _, e := range t.only(action) {
+		ranged := t.only(action)
+		for ix := range ranged {
+			e := ranged[ix]
 			ps, tool, why := ompEntry(e)
 			if why != "" {
 				t.drop(e, why)
@@ -293,7 +297,9 @@ func buildAugment(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	var elements []any
 	for _, action := range []PermAction{ActionDeny, ActionAllow} {
-		for _, e := range t.only(action) {
+		ranged := t.only(action)
+		for ix := range ranged {
+			e := ranged[ix]
 			els, why := augmentEntries(e)
 			if why != "" {
 				t.drop(e, why)
@@ -308,7 +314,7 @@ func buildAugment(t *translation) ([]jsonmerge.OwnedKey, error) {
 	return []jsonmerge.OwnedKey{docArrayKey(t.cfg, t.docPath, []string{"toolPermissions"}, dedupe(elements))}, nil
 }
 
-func augmentEntries(e permEntry) ([]any, string) {
+func augmentEntries(e permEntry) (elements []any, why string) {
 	r := e.Rule
 	names, ok := augmentTools[r.Tool]
 	if !ok {

@@ -16,7 +16,8 @@ var _ = registerPermissionDialect("devin", buildDevin)
 
 func buildDevin(t *translation) ([]jsonmerge.OwnedKey, error) {
 	lists := map[PermAction][]any{}
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		rule, why := devinRule(e)
 		if why != "" {
 			t.drop(e, why)
@@ -33,7 +34,7 @@ func buildDevin(t *translation) ([]jsonmerge.OwnedKey, error) {
 	return keys, nil
 }
 
-func devinRule(e permEntry) (string, string) {
+func devinRule(e permEntry) (rule, why string) {
 	r := e.Rule
 	switch r.Kind {
 	case KindShell:
@@ -88,7 +89,8 @@ var _ = registerPermissionDialect("grok", buildGrok)
 
 func buildGrok(t *translation) ([]jsonmerge.OwnedKey, error) {
 	lists := map[PermAction][]any{}
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		rules, why := grokRules(e)
 		if why != "" {
 			t.drop(e, why)

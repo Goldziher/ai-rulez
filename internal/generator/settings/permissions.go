@@ -162,7 +162,8 @@ func (t *translation) parse() []permEntry {
 // only returns the entries of one list, in declaration order.
 func (t *translation) only(action PermAction) []permEntry {
 	var out []permEntry
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		if e.Action == action {
 			out = append(out, e)
 		}

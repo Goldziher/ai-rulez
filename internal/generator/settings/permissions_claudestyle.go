@@ -66,7 +66,8 @@ func kindSet(kinds ...ToolKind) map[ToolKind]bool {
 
 func (s claudeStyle) build(t *translation) ([]jsonmerge.OwnedKey, error) {
 	lists := map[PermAction][]string{}
-	for _, e := range t.entries {
+	for ix := range t.entries {
+		e := t.entries[ix]
 		out, why := s.render(e)
 		if why != "" {
 			t.drop(e, why)

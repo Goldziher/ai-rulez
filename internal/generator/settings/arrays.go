@@ -113,7 +113,9 @@ func arrayKey(cfg *config.Config, docPath string, path []string, ours []json.Raw
 // previousElementClaims lists the claims an earlier run recorded for the array at path.
 func previousElementClaims(cfg *config.Config, docPath string, path []string) []jsonmerge.Claim {
 	var claims []jsonmerge.Claim
-	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
+	ranged := cfg.Run.PreviousClaims(documentRel(cfg, docPath))
+	for ix := range ranged {
+		claim := ranged[ix]
 		if equalPath(claim.Path, path) {
 			claims = append(claims, claim)
 		}

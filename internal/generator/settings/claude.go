@@ -106,7 +106,8 @@ func ownedEntries(cfg *config.Config, docPath, key string, configured map[string
 
 // claimedEarlier reports whether a previous run recorded owning key.name.
 func claimedEarlier(claims []jsonmerge.Claim, key, name string) bool {
-	for _, claim := range claims {
+	for ix := range claims {
+		claim := claims[ix]
 		if equalPath(claim.Path, []string{key, name}) || equalPath(claim.Path, []string{key}) {
 			return true
 		}

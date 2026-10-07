@@ -359,9 +359,11 @@ func (s hookSpec) requiredKeys(cfg *config.Config, docPath string) []jsonmerge.O
 	return keys
 }
 
-func hookClaimedBefore(cfg *config.Config, docPath string, path []string) bool {
-	for _, claim := range cfg.Run.PreviousClaims(documentRel(cfg, docPath)) {
-		if equalPath(claim.Path, path) {
+func hookClaimedBefore(cfg *config.Config, docPath string, keyPath []string) bool {
+	ranged := cfg.Run.PreviousClaims(documentRel(cfg, docPath))
+	for ix := range ranged {
+		claim := ranged[ix]
+		if equalPath(claim.Path, keyPath) {
 			return true
 		}
 	}
