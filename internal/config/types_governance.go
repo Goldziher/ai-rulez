@@ -110,6 +110,25 @@ const ApproversFromCodeowners = "CODEOWNERS"
 
 var teamNamePattern = regexp.MustCompile(`^@[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
 
+// validateApprovers checks where approvers come from: the approvers_from file
+// and the named teams.
+func (g *GovernanceConfig) validateApprovers() error {
+	if from := g.ApproversFrom; from != "" && from != ApproversFromCodeowners {
+		if rooted(from) || strings.Contains(filepath.ToSlash(from), "..") || strings.ContainsAny(from, "\x00\n") {
+			return oops.With("field", "governance.approvers_from").Errorf("invalid approvers_from %q (use %q or a path inside the project)", from, ApproversFromCodeowners)
+		}
+	}
+	for team, members := range g.Teams {
+		if !teamNamePattern.MatchString(team) {
+			return oops.With("field", "governance.teams").Errorf("invalid team %q (use @org/team)", team)
+		}
+		if slices.Contains(members, "") {
+			return oops.With("field", "governance.teams").Errorf("team %q has an empty member", team)
+		}
+	}
+	return nil
+}
+
 func (c *Config) validateGovernance() error {
 	g := c.Governance
 	if g == nil {
@@ -126,18 +145,8 @@ func (c *Config) validateGovernance() error {
 	if g.MinAssurance != "" && !slices.Contains(ApprovalAssurances, g.MinAssurance) {
 		return oops.With("field", "governance.min_assurance").Errorf("invalid min_assurance %q (use %s)", g.MinAssurance, strings.Join(ApprovalAssurances, ", "))
 	}
-	if from := g.ApproversFrom; from != "" && from != ApproversFromCodeowners {
-		if rooted(from) || strings.Contains(filepath.ToSlash(from), "..") || strings.ContainsAny(from, "\x00\n") {
-			return oops.With("field", "governance.approvers_from").Errorf("invalid approvers_from %q (use %q or a path inside the project)", from, ApproversFromCodeowners)
-		}
-	}
-	for team, members := range g.Teams {
-		if !teamNamePattern.MatchString(team) {
-			return oops.With("field", "governance.teams").Errorf("invalid team %q (use @org/team)", team)
-		}
-		if slices.Contains(members, "") {
-			return oops.With("field", "governance.teams").Errorf("team %q has an empty member", team)
-		}
+	if err := g.validateApprovers(); err != nil {
+		return err
 	}
 	if g.MaxAge != "" {
 		if _, err := ParseApprovalMaxAge(g.MaxAge); err != nil {

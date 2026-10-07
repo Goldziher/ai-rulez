@@ -202,6 +202,23 @@ func (c *Config) validateSigning() error {
 	fail := func(field, format string, args ...any) error {
 		return oops.With("field", "signing."+field).Errorf(format, args...)
 	}
+	if err := s.validateSigningBasics(fail); err != nil {
+		return err
+	}
+	if err := s.validateSigningSigners(fail); err != nil {
+		return err
+	}
+	if len(s.Require) > 0 && len(s.SigningTrustEntries()) == 0 {
+		return fail("require", "require needs a trusted signer: set identity and issuer, key_file or [[signing.trust]]")
+	}
+	if err := s.validateSigningPolicy(fail); err != nil {
+		return err
+	}
+	return s.validateTLogOff(fail)
+}
+
+// validateSigningBasics checks the require, tlog, max_age and min_hash_version keys.
+func (s *SigningConfig) validateSigningBasics(fail func(field, format string, args ...any) error) error {
 	for _, r := range s.Require {
 		if !slices.Contains(requirableSigningSubjects, r) {
 			return fail("require", "invalid subject %q (use %s)", r, strings.Join(requirableSigningSubjects, ", "))
@@ -218,6 +235,12 @@ func (c *Config) validateSigning() error {
 	if s.MinHashVersion < 0 {
 		return fail("min_hash_version", "min_hash_version must not be negative")
 	}
+	return nil
+}
+
+// validateSigningSigners checks the file paths, the identity shorthand and the
+// [[signing.trust]] entries.
+func (s *SigningConfig) validateSigningSigners(fail func(field, format string, args ...any) error) error {
 	for field, p := range map[string]string{"trusted_root": s.TrustedRoot, "attestation": s.Attestation, "key_file": s.KeyFile} {
 		if err := validateSigningPath(p); err != nil {
 			return fail(field, "%v", err)
@@ -234,13 +257,7 @@ func (c *Config) validateSigning() error {
 			return oops.With("field", fmt.Sprintf("signing.trust[%d]", i)).Wrap(err)
 		}
 	}
-	if len(s.Require) > 0 && len(s.SigningTrustEntries()) == 0 {
-		return fail("require", "require needs a trusted signer: set identity and issuer, key_file or [[signing.trust]]")
-	}
-	if err := s.validateSigningPolicy(fail); err != nil {
-		return err
-	}
-	return s.validateTLogOff(fail)
+	return nil
 }
 
 // validateTLogOff refuses tlog = "off" next to a certificate identity: a
@@ -324,6 +341,23 @@ func validateSigningTrust(t SigningTrust) error {
 	if t.Source != "" && t.Subject != SigningSubjectSkill {
 		return fmt.Errorf("source scopes a trust entry with subject = %q only", SigningSubjectSkill)
 	}
+	if err := validateTrustShape(t); err != nil {
+		return err
+	}
+	if t.IdentityRegexp != "" {
+		if err := ValidateIdentityRegexp(t.IdentityRegexp); err != nil {
+			return fmt.Errorf("AR722: %w", err)
+		}
+	}
+	if err := validateSigningPath(t.KeyFile); err != nil {
+		return fmt.Errorf("key_file: %w", err)
+	}
+	return validateTrustWindow(t)
+}
+
+// validateTrustShape checks that a trust entry names exactly one kind of signer
+// and carries only the keys that kind uses.
+func validateTrustShape(t SigningTrust) error {
 	byIdentity := t.Identity != "" || t.IdentityRegexp != ""
 	switch {
 	case byIdentity && t.KeyFile != "":
@@ -336,20 +370,19 @@ func validateSigningTrust(t SigningTrust) error {
 		return fmt.Errorf("an identity entry needs an issuer")
 	case t.KeyFile != "" && t.Issuer != "":
 		return fmt.Errorf("a key_file entry has no issuer")
+	}
+	return validateTrustReviewer(t)
+}
+
+// validateTrustReviewer checks the reviewer of a trust entry, which only a key_file entry has.
+func validateTrustReviewer(t SigningTrust) error {
+	switch {
 	case t.Reviewer != "" && t.KeyFile == "":
 		return fmt.Errorf("reviewer names the owner of a key_file; an identity entry already is one")
 	case t.Reviewer != "" && (strings.TrimSpace(t.Reviewer) != t.Reviewer || strings.ContainsFunc(t.Reviewer, unicode.IsControl)):
 		return fmt.Errorf("reviewer must be an email or a github login without surrounding space or control characters")
 	}
-	if t.IdentityRegexp != "" {
-		if err := ValidateIdentityRegexp(t.IdentityRegexp); err != nil {
-			return fmt.Errorf("AR722: %w", err)
-		}
-	}
-	if err := validateSigningPath(t.KeyFile); err != nil {
-		return fmt.Errorf("key_file: %w", err)
-	}
-	return validateTrustWindow(t)
+	return nil
 }
 
 // validateTrustWindow checks the validity bounds of a trust entry.

@@ -176,21 +176,9 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts 
 // the parent of the config directory (skipping a generic .config/ wrapper).
 func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*Config, error) {
 	lo := applyLoadOptions(opts)
-	absPath := filepath.Clean(path)
-	switch {
-	case filepath.IsAbs(absPath):
-	case lo.ws != nil:
-		if !rooted(absPath) {
-			absPath = filepath.Join(lo.ws.Root(), absPath)
-		}
-	default:
-		var err error
-		if absPath, err = filepath.Abs(path); err != nil {
-			return nil, oops.
-				With("path", path).
-				Hint("Check if the config path is valid and accessible").
-				Wrapf(err, "resolve absolute config path")
-		}
+	absPath, err := absoluteConfigPath(path, lo)
+	if err != nil {
+		return nil, err
 	}
 	v, absPath, err := lo.fileView(ctx, absPath)
 	if err != nil {
@@ -205,17 +193,7 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 	}
 
 	if info.IsDir() {
-		if legacy := legacyConfigIn(v, absPath); legacy != "" && !hasConfigFile(v, absPath) {
-			return nil, newLegacyConfigError(legacy)
-		}
-		if hasConfigFile(v, absPath) {
-			cfg, loadErr := loadConfigFile(v, absPath, lo)
-			if loadErr != nil {
-				return nil, loadErr
-			}
-			return finishLoadConfig(ctx, v, cfg, projectBaseDir(absPath), absPath, lo)
-		}
-		return LoadConfig(ctx, absPath, opts...)
+		return loadConfigFromDir(ctx, v, absPath, lo, opts)
 	}
 
 	if isLegacyConfigName(filepath.Base(absPath)) {
@@ -240,6 +218,45 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 			Errorf("directory layout required for root-level config file")
 	}
 	return finishLoadConfig(ctx, v, cfg, projectBaseDir(configDir), configDir, lo)
+}
+
+// absoluteConfigPath resolves path against the workspace root when one is set,
+// otherwise against the working directory.
+func absoluteConfigPath(path string, lo loadOptions) (string, error) {
+	absPath := filepath.Clean(path)
+	switch {
+	case filepath.IsAbs(absPath):
+	case lo.ws != nil:
+		if !rooted(absPath) {
+			absPath = filepath.Join(lo.ws.Root(), absPath)
+		}
+	default:
+		var err error
+		if absPath, err = filepath.Abs(path); err != nil {
+			return "", oops.
+				With("path", path).
+				Hint("Check if the config path is valid and accessible").
+				Wrapf(err, "resolve absolute config path")
+		}
+	}
+	return absPath, nil
+}
+
+// loadConfigFromDir loads the configuration of a config directory path: the
+// directory's own config.toml when it has one, otherwise a project discovery
+// from that path.
+func loadConfigFromDir(ctx context.Context, v workspace.View, absPath string, lo loadOptions, opts []LoadOption) (*Config, error) {
+	if legacy := legacyConfigIn(v, absPath); legacy != "" && !hasConfigFile(v, absPath) {
+		return nil, newLegacyConfigError(legacy)
+	}
+	if hasConfigFile(v, absPath) {
+		cfg, loadErr := loadConfigFile(v, absPath, lo)
+		if loadErr != nil {
+			return nil, loadErr
+		}
+		return finishLoadConfig(ctx, v, cfg, projectBaseDir(absPath), absPath, lo)
+	}
+	return LoadConfig(ctx, absPath, opts...)
 }
 
 func looksLikeProjectRoot(v workspace.View, dir string) bool {

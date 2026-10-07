@@ -1105,12 +1105,18 @@ func (t *ContentTree) IsEmpty() bool {
 		return false
 	}
 	for _, domain := range t.Domains {
-		if domain != nil && (len(domain.Rules) > 0 || len(domain.Context) > 0 ||
-			len(domain.Skills) > 0 || len(domain.Agents) > 0 || len(domain.Commands) > 0 || len(domain.Checks) > 0) {
+		if domain.hasContent() {
 			return false
 		}
 	}
 	return true
+}
+
+// hasContent reports whether the domain carries content of any kind. A nil
+// domain carries none.
+func (d *Domain) hasContent() bool {
+	return d != nil && (len(d.Rules) > 0 || len(d.Context) > 0 ||
+		len(d.Skills) > 0 || len(d.Agents) > 0 || len(d.Commands) > 0 || len(d.Checks) > 0)
 }
 
 // GetAllContentFiles returns all content files from the tree

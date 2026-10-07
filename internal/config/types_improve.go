@@ -76,6 +76,13 @@ func (c *ImproveConfig) Validate() []string {
 	if c == nil {
 		return nil
 	}
+	problems := c.holdoutProblems()
+	problems = append(problems, c.gateProblems()...)
+	return append(problems, c.optimizerProblems()...)
+}
+
+// holdoutProblems checks the held-out set keys.
+func (c *ImproveConfig) holdoutProblems() []string {
 	var problems []string
 	if strings.ContainsAny(c.HoldoutTag, " \t\n") {
 		problems = append(problems, "improve.holdout_tag must not contain whitespace")
@@ -86,6 +93,12 @@ func (c *ImproveConfig) Validate() []string {
 	if c.MinHoldoutCases != 0 && c.MinHoldoutCases < ImproveMinHoldoutCases {
 		problems = append(problems, fmt.Sprintf("improve.min_holdout_cases must be at least %d, got %d", ImproveMinHoldoutCases, c.MinHoldoutCases))
 	}
+	return problems
+}
+
+// gateProblems checks the acceptance gate and the run-size keys.
+func (c *ImproveConfig) gateProblems() []string {
+	var problems []string
 	if g := c.MinGain; g != nil && (*g < 0 || *g > 1 || math.IsNaN(*g)) {
 		problems = append(problems, fmt.Sprintf("improve.min_gain must be between 0 and 1, got %v", *g))
 	}
@@ -100,6 +113,12 @@ func (c *ImproveConfig) Validate() []string {
 	if g := c.MaxSkillGrowth; g != 0 && (g < 1 || g > ImproveMaxSkillGrowth || math.IsNaN(g)) {
 		problems = append(problems, fmt.Sprintf("improve.max_skill_growth must be between 1 and %v, got %v", ImproveMaxSkillGrowth, g))
 	}
+	return problems
+}
+
+// optimizerProblems checks the keys that shape how the optimizer runs.
+func (c *ImproveConfig) optimizerProblems() []string {
+	var problems []string
 	switch c.Isolation {
 	case "", ImproveIsolationAuto, ImproveIsolationNone, ImproveIsolationRequire:
 	default:
