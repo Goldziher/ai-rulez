@@ -84,6 +84,19 @@ func (r *runner) knownKeys(kind string) map[string]bool {
 	return known
 }
 
+// KnownContextKeys lists the top-level frontmatter keys AR303 accepts on a
+// context file without a project-specific lint.allowed_keys, so an importer can
+// keep an unknown key out of the top level.
+func KnownContextKeys() map[string]bool {
+	r := &runner{}
+	known := r.knownKeys(kindContext)
+	out := make(map[string]bool, len(known))
+	for k := range known {
+		out[k] = true
+	}
+	return out
+}
+
 // checkFrontmatterKeys reports a top-level key no tool reads; a typo such as
 // allowed_tools is otherwise ignored without a message.
 func (r *runner) checkFrontmatterKeys(it *item, fm frontmatter) {
