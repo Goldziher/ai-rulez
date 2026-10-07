@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +56,7 @@ func TestOversizedRepositoryFilesAreRefused(t *testing.T) {
 		require.Error(t, err, ext)
 		assert.Contains(t, err.Error(), "MiB limit", ext)
 	}
-	_, err := readContentFile(osView(dir), big)
+	_, err := readContentFile(osView(dir), logger.Discard(), big)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "MiB limit")
 }

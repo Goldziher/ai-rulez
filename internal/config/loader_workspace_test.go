@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
@@ -123,10 +123,10 @@ func TestWorkspaceSymlinkPolicy(t *testing.T) {
 			ws := memProject()
 			ws.Set("shared/common.md", "# Common\n", 0o644)
 			ws.Symlink(".ai-rulez/rules/linked.md", tt.target)
-			warned := captureContentWarnings(t)
+			warned := &testutil.LogRecorder{}
 
 			// Act
-			cfg, err := LoadConfig(t.Context(), "/virtual/proj", WithWorkspace(ws), WithoutRemote())
+			cfg, err := LoadConfig(t.Context(), "/virtual/proj", WithWorkspace(ws), WithoutRemote(), WithHost(ambient.Host{Log: warned}))
 
 			// Assert
 			require.NoError(t, err)
@@ -192,14 +192,4 @@ func TestOSWorkspaceFollowsAnInsideSymlinkOnDisk(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, cfg.Content.Rules, 1)
 	assert.Equal(t, "common", cfg.Content.Rules[0].Name)
-}
-
-// captureContentWarnings redirects the symlink-refusal warnings of a test.
-func captureContentWarnings(t *testing.T) *bytes.Buffer {
-	t.Helper()
-	var buf bytes.Buffer
-	old := contentWarnWriter
-	contentWarnWriter = &buf
-	t.Cleanup(func() { contentWarnWriter = old })
-	return &buf
 }

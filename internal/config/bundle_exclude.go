@@ -26,6 +26,7 @@ var DefaultBundleExcludes = []string{gitDirName, ".venv*", "venv", "__pycache__"
 // bundleFilter decides which files below a skill or command root are bundled.
 type bundleFilter struct {
 	patterns []string
+	log      logger.Logger
 	// visible is the set of root-relative slash paths git considers part of the
 	// project (tracked, or untracked and not ignored). Nil disables the check:
 	// the root is not in a git work tree, git is missing, or the root itself is
@@ -35,7 +36,7 @@ type bundleFilter struct {
 
 // newBundleFilter builds the filter for one skill or command root. marker is the
 // item's entry file (SKILL.md, COMMAND.md).
-func newBundleFilter(git gitutil.Git, root, marker string, extra []string) *bundleFilter {
+func newBundleFilter(git gitutil.Git, log logger.Logger, root, marker string, extra []string) *bundleFilter {
 	patterns := make([]string, 0, len(DefaultBundleExcludes)+len(extra))
 	patterns = append(patterns, DefaultBundleExcludes...)
 	for _, p := range extra {
@@ -43,12 +44,12 @@ func newBundleFilter(git gitutil.Git, root, marker string, extra []string) *bund
 			patterns = append(patterns, p)
 		}
 	}
-	return &bundleFilter{patterns: patterns, visible: gitVisibleFiles(git, root, marker)}
+	return &bundleFilter{patterns: patterns, log: logger.Or(log), visible: gitVisibleFiles(git, logger.Or(log), root, marker)}
 }
 
 // gitVisibleFiles lists the files under root that git would not ignore, or nil
 // when that cannot be determined.
-func gitVisibleFiles(git gitutil.Git, root, marker string) map[string]bool {
+func gitVisibleFiles(git gitutil.Git, log logger.Logger, root, marker string) map[string]bool {
 	ctx := context.Background()
 	// Exit 0: the entry file is ignored, so the whole item is; 128: not a repo;
 	// an unavailable git is not an answer either (the ls-files call below fails).
@@ -58,7 +59,7 @@ func gitVisibleFiles(git gitutil.Git, root, marker string) map[string]bool {
 	res := git.Exec(ctx, root, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".")
 	if err := gitutil.ResultErr(res); err != nil {
 		if res.Status != runner.StatusUnavailable {
-			logger.Debug("git ls-files unavailable, bundling without .gitignore", "path", root, "error", err)
+			log.Debug("git ls-files unavailable, bundling without .gitignore", "path", root, "error", err)
 		}
 		return nil
 	}
@@ -94,7 +95,7 @@ func (f *bundleFilter) excluded(rel string) bool {
 		}
 	}
 	if skip {
-		logger.Debug("Skipped bundle path matching an exclude pattern", "path", rel, "pattern", matched)
+		f.log.Debug("Skipped bundle path matching an exclude pattern", "path", rel, "pattern", matched)
 	}
 	return skip
 }

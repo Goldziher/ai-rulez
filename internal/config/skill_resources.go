@@ -10,8 +10,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/samber/oops"
-
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // SkillResourceKind identifiers for the canonical Agent Skills layout.
@@ -94,7 +92,7 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 	if itemKind == ItemKindCommand {
 		marker = commandMarkerFile
 	}
-	filter := newBundleFilter(s.git, root, marker, extraExcludes)
+	filter := newBundleFilter(s.git, s.logger(), root, marker, extraExcludes)
 	var resources []SkillResource
 
 	for _, kind := range skillResourceKinds {
@@ -136,7 +134,7 @@ func (s *contentScanner) loadResources(root, itemKind string, extraExcludes []st
 	for _, warning := range warnings {
 		// The kind doubles as the attribute key, so the line reads
 		// skill=<path> or command=<path>.
-		logger.Warn(
+		s.logger().Warn(
 			warning.Message,
 			warning.Kind, warning.Root,
 			"subdirectory", warning.Subdirectory,
@@ -195,7 +193,7 @@ func (s *contentScanner) unrecognizedSubdirectoryWarnings(root, itemKind string)
 		if err != nil {
 			// A stat failure must not block the load, but it is still a
 			// diagnostic the author needs.
-			logger.Warn("Could not stat subdirectory", "owner", itemKind, "path", root, "name", entry.Name(), "error", err)
+			s.logger().Warn("Could not stat subdirectory", "owner", itemKind, "path", root, "name", entry.Name(), "error", err)
 			continue
 		}
 		if info.Mode()&os.ModeSymlink != 0 {

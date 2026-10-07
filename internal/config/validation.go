@@ -6,13 +6,11 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // Validate validates a configuration
@@ -386,7 +384,7 @@ func (c *Config) validateSkillDescriptions() error {
 		return nil
 	}
 
-	if err := validateSkillSlice(c.Content.Skills, "root"); err != nil {
+	if err := c.validateSkillSlice(c.Content.Skills, "root"); err != nil {
 		return err
 	}
 
@@ -394,7 +392,7 @@ func (c *Config) validateSkillDescriptions() error {
 		if domain == nil {
 			continue
 		}
-		if err := validateSkillSlice(domain.Skills, "domain "+domainName); err != nil {
+		if err := c.validateSkillSlice(domain.Skills, "domain "+domainName); err != nil {
 			return err
 		}
 	}
@@ -402,14 +400,14 @@ func (c *Config) validateSkillDescriptions() error {
 	return nil
 }
 
-func validateSkillSlice(skills []ContentFile, scope string) error {
+func (c *Config) validateSkillSlice(skills []ContentFile, scope string) error {
 	for _, skill := range skills {
 		if SkillDescription(skill.Metadata) != "" {
 			continue
 		}
 
 		skillID := SkillID(skill)
-		logger.Warn("skill missing 'description' field in frontmatter — using skill name as fallback",
+		c.Log().Warn("skill missing 'description' field in frontmatter — using skill name as fallback",
 			"scope", scope, "skill", skillID, "path", skill.Path)
 	}
 
@@ -1033,10 +1031,10 @@ func (c *Config) validateRuleActivation() error {
 		if tree == nil {
 			continue
 		}
-		if err := validateActivationSlice(tree.Rules, false); err != nil {
+		if err := c.validateActivationSlice(tree.Rules, false); err != nil {
 			return err
 		}
-		if err := validateActivationSlice(tree.Context, false); err != nil {
+		if err := c.validateActivationSlice(tree.Context, false); err != nil {
 			return err
 		}
 		names := make([]string, 0, len(tree.Domains))
@@ -1050,10 +1048,10 @@ func (c *Config) validateRuleActivation() error {
 				continue
 			}
 			lenient := domain.Builtin || domain.FromInclude
-			if err := validateActivationSlice(domain.Rules, lenient); err != nil {
+			if err := c.validateActivationSlice(domain.Rules, lenient); err != nil {
 				return err
 			}
-			if err := validateActivationSlice(domain.Context, lenient); err != nil {
+			if err := c.validateActivationSlice(domain.Context, lenient); err != nil {
 				return err
 			}
 		}
@@ -1061,16 +1059,16 @@ func (c *Config) validateRuleActivation() error {
 	return nil
 }
 
-func validateActivationSlice(files []ContentFile, lenient bool) error {
+func (c *Config) validateActivationSlice(files []ContentFile, lenient bool) error {
 	for _, f := range files {
-		err := validateActivation(f)
+		err := c.validateActivation(f)
 		if err == nil {
 			continue
 		}
 		if !lenient {
 			return err
 		}
-		logger.Warn("invalid activation in included content", "file", f.Path, "error", err.Error())
+		c.Log().Warn("invalid activation in included content", "file", f.Path, "error", err.Error())
 	}
 	return nil
 }
@@ -1116,19 +1114,15 @@ func unknownLegacyValues(f ContentFile) []legacyValueWarning {
 	return out
 }
 
-// invalidTargetWarned remembers the (file, target) pairs already reported so a
-// config validated several times warns once.
-var invalidTargetWarned sync.Map
-
 // warnInvalidTargets reports frontmatter targets that are malformed glob
 // patterns: they never match, so the item would be silently dropped from every
 // output that is restricted by targets.
-func warnInvalidTargets(f ContentFile) {
+//
+// A (file, target) pair is reported once for the life of the config, however many
+// times it is validated.
+func (c *Config) warnInvalidTargets(f ContentFile) {
 	for _, target := range invalidTargets(f) {
-		if _, seen := invalidTargetWarned.LoadOrStore(f.Path+"\x00"+target, struct{}{}); seen {
-			continue
-		}
-		logger.Warn("invalid glob in targets never matches any output", logKeyFile, f.Path, "name", f.Name, "target", target)
+		c.WarnOnce("invalid-target\x00"+f.Path+"\x00"+target, "invalid glob in targets never matches any output", logKeyFile, f.Path, "name", f.Name, "target", target)
 	}
 }
 
@@ -1146,10 +1140,10 @@ func invalidTargets(f ContentFile) []string {
 	return out
 }
 
-func validateActivation(f ContentFile) error {
-	warnInvalidTargets(f)
+func (c *Config) validateActivation(f ContentFile) error {
+	c.warnInvalidTargets(f)
 	for _, w := range unknownLegacyValues(f) {
-		logger.Warn(w.msg, w.attrs...)
+		c.Log().Warn(w.msg, w.attrs...)
 	}
 	if f.Metadata == nil || strings.TrimSpace(f.Metadata.Activation) == "" {
 		return nil
@@ -1178,26 +1172,26 @@ func validateActivation(f ContentFile) error {
 			"%s: activation %q conflicts with globs/paths", f.Path, m.Activation)
 	}
 
-	warnLegacyActivation(f.Path, m, mode)
+	c.warnLegacyActivation(f.Path, m, mode)
 	return nil
 }
 
 // warnLegacyActivation warns when a legacy field contradicts the explicit
 // activation, which takes precedence.
-func warnLegacyActivation(path string, m *Metadata, mode ActivationMode) {
+func (c *Config) warnLegacyActivation(path string, m *Metadata, mode ActivationMode) {
 	if legacy := triggerMode(m.Extra["trigger"]); legacy != "" && legacy != mode {
-		logger.Warn("legacy trigger contradicts activation; activation wins",
+		c.Log().Warn("legacy trigger contradicts activation; activation wins",
 			"file", path, "trigger", m.Extra["trigger"], "activation", m.Activation)
 	}
 	switch strings.ToLower(strings.TrimSpace(m.Extra["alwaysApply"])) {
 	case "true":
 		if mode != ActivationAlways {
-			logger.Warn("legacy alwaysApply contradicts activation; activation wins",
+			c.Log().Warn("legacy alwaysApply contradicts activation; activation wins",
 				"file", path, "alwaysApply", "true", "activation", m.Activation)
 		}
 	case "false":
 		if mode == ActivationAlways {
-			logger.Warn("legacy alwaysApply contradicts activation; activation wins",
+			c.Log().Warn("legacy alwaysApply contradicts activation; activation wins",
 				"file", path, "alwaysApply", "false", "activation", m.Activation)
 		}
 	}

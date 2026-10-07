@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
@@ -50,7 +51,7 @@ func TestLoadContentFile_SymlinkErrorNamesFileAndNeverReadsTarget(t *testing.T) 
 	link := filepath.Join(dir, "leak.md")
 	testutil.SymlinkOrSkip(t, secret, link)
 
-	_, err := loadContentFile(osView(dir), link)
+	_, err := loadContentFile(osView(dir), logger.Discard(), link)
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "leak.md")

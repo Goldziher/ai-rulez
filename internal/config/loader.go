@@ -281,6 +281,8 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	// Scan content directories
 	scanner := newProjectScanner(v)
 	scanner.git = gitutil.New(loadHost(lo).Runner)
+	scanner.log = lo.host.Log
+	config.warnDeprecatedLintBudget()
 	contentTree, err := scanContentTree(scanner, configDir, config.BundleExclude)
 	if err != nil {
 		return nil, err
@@ -554,8 +556,6 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 			Wrapf(err, "parse TOML config")
 	}
 
-	warnDeprecatedLintBudget(path, raw.Lint)
-
 	presets, err := presetsFromTOML(raw.Presets)
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "parse presets")
@@ -632,6 +632,9 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		OKF:             raw.OKF,
 	}
 	cfg.VerifiersSettings = raw.VerifiersSet
+	if raw.Lint != nil && len(raw.Lint.Budget) > 0 {
+		cfg.deprecatedLintBudgetPath = path
+	}
 
 	return cfg, nil
 }
@@ -747,7 +750,7 @@ func scanContentTree(s *contentScanner, configDir string, bundleExclude []string
 			Wrapf(err, "scan agents directory")
 	}
 	tree.Agents = agents
-	logger.Debug("Scanned agents directory", "path", agentsPath, "count", len(agents))
+	s.logger().Debug("Scanned agents directory", "path", agentsPath, "count", len(agents))
 
 	// Scan root commands/
 	commandsPath := filepath.Join(configDir, commandsDir)
@@ -758,7 +761,7 @@ func scanContentTree(s *contentScanner, configDir string, bundleExclude []string
 			Wrapf(err, "scan commands directory")
 	}
 	tree.Commands = commands
-	logger.Debug("Scanned commands directory", "path", commandsPath, "count", len(commands))
+	s.logger().Debug("Scanned commands directory", "path", commandsPath, "count", len(commands))
 
 	// Scan root checks/
 	checksPath := filepath.Join(configDir, checksDir)
@@ -871,7 +874,7 @@ func (s *contentScanner) skills(skillsDir string, bundleExclude []string) ([]Con
 		// A frontmatter that never closes would be served as body text with no
 		// name or description; treat it as malformed like an unparseable one.
 		if contentFile.Metadata == nil && !contentFile.MalformedFrontmatter && hasUnclosedFrontmatter(contentFile.Content) {
-			logger.Warn("Ignoring skill frontmatter with no closing '---'", "skill", entry.Name(), "path", skillPath)
+			s.logger().Warn("Ignoring skill frontmatter with no closing '---'", "skill", entry.Name(), "path", skillPath)
 			contentFile.MalformedFrontmatter = true
 		}
 
@@ -883,7 +886,7 @@ func (s *contentScanner) skills(skillsDir string, bundleExclude []string) ([]Con
 		// concatenating everything into SKILL.md.
 		resources, resErr := s.loadResources(skillRoot, ItemKindSkill, bundleExclude)
 		if resErr != nil {
-			logger.Warn("Failed to load skill resources", "skill", entry.Name(), "error", resErr)
+			s.logger().Warn("Failed to load skill resources", "skill", entry.Name(), "error", resErr)
 		}
 		contentFile.Resources = resources
 
@@ -931,7 +934,7 @@ func (s *contentScanner) commands(commandsDir string, bundleExclude []string) ([
 				// Non-fatal: one unreadable command must not fail the whole
 				// load, but dropping it without a diagnostic makes an
 				// unreadable COMMAND.md indistinguishable from a missing one.
-				logger.Warn("failed to load command file", "path", commandPath, "error", err)
+				s.logger().Warn("failed to load command file", "path", commandPath, "error", err)
 				continue
 			}
 
@@ -943,7 +946,7 @@ func (s *contentScanner) commands(commandsDir string, bundleExclude []string) ([
 			// everything into COMMAND.md.
 			resources, resErr := s.loadResources(commandRoot, ItemKindCommand, bundleExclude)
 			if resErr != nil {
-				logger.Warn("Failed to load command resources", "command", entry.Name(), "error", resErr)
+				s.logger().Warn("Failed to load command resources", "command", entry.Name(), "error", resErr)
 			}
 			contentFile.Resources = resources
 
@@ -959,7 +962,7 @@ func (s *contentScanner) commands(commandsDir string, bundleExclude []string) ([
 		filePath := entryPath
 		contentFile, err := s.loadFile(filePath)
 		if err != nil {
-			logger.Warn("failed to load command file", "path", filePath, "error", err)
+			s.logger().Warn("failed to load command file", "path", filePath, "error", err)
 			continue
 		}
 
@@ -1080,7 +1083,7 @@ func (s *contentScanner) domains(domainsDir string, bundleExclude []string) (map
 				Wrapf(err, "scan domain commands")
 		}
 		domain.Commands = domainCommands
-		logger.Debug("Scanned domain commands directory", "domain", domainName, "path", domainCommandsPath, "count", len(domainCommands))
+		s.logger().Debug("Scanned domain commands directory", "domain", domainName, "path", domainCommandsPath, "count", len(domainCommands))
 
 		// Scan domain/checks/
 		domainChecksPath := filepath.Join(domainPath, checksDir)
@@ -1175,9 +1178,8 @@ func parseFrontmatter(content string) (metadata *Metadata, body string, malforme
 			// unparseable (e.g. an unquoted value containing ": "). Do NOT
 			// return the content unstripped — that would re-emit the raw block
 			// after the generated frontmatter (#156). Warn loudly and strip it.
-			// Mark it malformed so Config.Validate can fail fast (#175).
-			logger.Warn("Ignoring malformed YAML frontmatter — check for unquoted values containing ': '",
-				"frontmatter", frontmatterYAML)
+			// Mark it malformed so Config.Validate can fail fast (#175); the
+			// caller, which knows the file and the logger, says so.
 			return nil, body, true
 		}
 		parsedMetadata = result
@@ -1289,19 +1291,19 @@ func stringSliceFromAny(v interface{}) []string {
 // A symlinked file is refused and its target is never read: an include (or a
 // cloned repository) could otherwise point a content file at any local file and
 // have it rendered into the outputs, and the content lock does not pin it.
-func loadContentFile(v workspace.View, path string) (ContentFile, error) {
+func loadContentFile(v workspace.View, log logger.Logger, path string) (ContentFile, error) {
 	if info, err := v.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		logger.Warn("Skipping symlinked content file; symlinks are not followed", "path", path)
+		log.Warn("Skipping symlinked content file; symlinks are not followed", "path", path)
 		return ContentFile{}, oops.
 			With("path", path).
 			Errorf("content file %s is a symlink; symlinks are not followed", path)
 	}
-	return readContentFile(v, path)
+	return readContentFile(v, log, path)
 }
 
 // readContentFile reads and parses a content file the caller has already
 // cleared under the symlink policy.
-func readContentFile(v workspace.View, path string) (ContentFile, error) {
+func readContentFile(v workspace.View, log logger.Logger, path string) (ContentFile, error) {
 	data, err := readCapped(v, path)
 	if err != nil {
 		return ContentFile{}, oops.
@@ -1315,6 +1317,9 @@ func readContentFile(v workspace.View, path string) (ContentFile, error) {
 
 	// Parse frontmatter (if present) - inlined to avoid import cycle
 	metadata, actualContent, malformed := parseFrontmatter(content)
+	if malformed {
+		warnMalformedFrontmatter(log, path)
+	}
 
 	return ContentFile{
 		Name:                 name,
@@ -1394,13 +1399,13 @@ func fileExists(path string) bool {
 // and a project excluding a rule that has since moved into a skill must keep
 // generating. This runs during config load, so `validate` and `generate` — and
 // every other command that loads a config — report it alike.
-func warnUnknownBuiltinExclusions(names []string) {
+func warnUnknownBuiltinExclusions(log logger.Logger, names []string) {
 	for _, unknown := range builtins.UnknownExclusions(names) {
 		args := []any{"exclusion", "!" + unknown.Spec}
 		if unknown.Suggestion != "" {
 			args = append(args, "did_you_mean", "!"+unknown.Suggestion)
 		}
-		logger.Warn("Unknown builtin exclusion ignored; nothing was suppressed", args...)
+		log.Warn("Unknown builtin exclusion ignored; nothing was suppressed", args...)
 	}
 }
 
@@ -1422,7 +1427,7 @@ func loadBuiltins(config *Config) {
 	}
 
 	if config.Builtins.IsEnabled() && !config.Builtins.IsNone() {
-		warnUnknownBuiltinExclusions(config.Builtins.GetNames())
+		warnUnknownBuiltinExclusions(config.Log(), config.Builtins.GetNames())
 
 		var resolved []string
 		if config.Builtins.IsAll() {
@@ -1480,6 +1485,9 @@ func loadBuiltinDomains(config *Config, names []string, ruleExclusions map[strin
 
 			// Parse frontmatter from embedded content
 			metadata, body, malformed := parseFrontmatter(entry.Content)
+			if malformed {
+				warnMalformedFrontmatter(config.Log(), entry.Path)
+			}
 			cf := ContentFile{
 				Name:                 entry.Name,
 				Path:                 "builtin://" + entry.Path,
@@ -1523,4 +1531,11 @@ func loadHost(lo loadOptions) ambient.Host {
 		h.Runner = lo.runner
 	}
 	return h
+}
+
+// warnMalformedFrontmatter reports a content file whose delimited frontmatter
+// could not be parsed. The block is dropped from the content and the file is
+// marked malformed, so validation fails; this tells the author which file and why.
+func warnMalformedFrontmatter(log logger.Logger, path string) {
+	log.Warn("Ignoring malformed YAML frontmatter — check for unquoted values containing ': '", "path", path)
 }
