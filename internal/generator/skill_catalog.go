@@ -214,10 +214,9 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 				o.keywords, o.category = f.Metadata.Keywords, f.Metadata.Category
 				o.triggers = f.Metadata.ExtraList("triggers")
 			}
-			if inst, ok := installed[f.Name]; ok {
+			if inst, ok := installed[f.Name]; ok && installedOrigin(cfg.BaseDir, &inst, f.Path) {
 				o.source, o.ref, o.pinned = inst.Source, inst.RequestedRef(), isCommitSHA(inst.Ref)
-			}
-			if _, isInstalled := installed[f.Name]; !isInstalled {
+			} else {
 				applyIncludeOrigin(cfg, lock, f.Path, &o)
 			}
 			owners[id] = o
@@ -233,6 +232,36 @@ func skillOwners(cfg *config.Config, tree *config.ContentTree) map[string]skillO
 		add(name, tree.Domains[name].Skills)
 	}
 	return owners
+}
+
+// installedOrigin reports whether the skill file at p came from the
+// [[installed_skills]] entry inst: it lies in the entry's local_override or local
+// source directory, or in the entry's clone in the skill cache. A name match alone
+// proves nothing: an include or a local skill can carry the same name, and taking
+// the entry's source and ref would misreport where its bytes came from.
+func installedOrigin(baseDir string, inst *config.InstalledSkillConfig, p string) bool {
+	if p == "" || !filepath.IsAbs(p) {
+		return false
+	}
+	under := func(root string) bool {
+		if !filepath.IsAbs(root) {
+			root = filepath.Join(baseDir, root)
+		}
+		return !outsideRoot(filepath.Clean(filepath.Join(root, inst.GetPath())), p)
+	}
+	if inst.LocalOverride != "" && under(inst.LocalOverride) {
+		return true
+	}
+	if !includes.IsGitURL(inst.Source) {
+		return under(inst.Source)
+	}
+	segs := strings.Split(filepath.ToSlash(p), "/")
+	for i := 0; i+1 < len(segs); i++ {
+		if segs[i] == "skills" && includes.CacheDirMatches(segs[i+1], inst.Name) {
+			return true
+		}
+	}
+	return false
 }
 
 // applyIncludeOrigin marks a skill that an [[includes]] entry supplied as
