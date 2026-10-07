@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, ci-iterate-w1a]
   pull_request:
     branches: [main]
 
