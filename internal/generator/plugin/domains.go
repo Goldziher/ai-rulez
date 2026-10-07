@@ -108,14 +108,14 @@ func includeDomainContent(tree *config.ContentTree, patterns []string) (skills, 
 		return skills, commands, agents
 	}
 	seenS, seenC, seenA := map[string]bool{}, map[string]bool{}, map[string]bool{}
-	for _, f := range tree.Skills {
-		seenS[f.Name] = true
+	for i := range tree.Skills {
+		seenS[tree.Skills[i].Name] = true
 	}
-	for _, f := range tree.Commands {
-		seenC[f.Name] = true
+	for i := range tree.Commands {
+		seenC[tree.Commands[i].Name] = true
 	}
-	for _, f := range tree.Agents {
-		seenA[f.Name] = true
+	for i := range tree.Agents {
+		seenA[tree.Agents[i].Name] = true
 	}
 	for _, name := range sortedDomainNames(tree) {
 		if !matchesAny(patterns, name) || tree.Domains[name].Builtin {
