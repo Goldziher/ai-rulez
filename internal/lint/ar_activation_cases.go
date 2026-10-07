@@ -64,7 +64,7 @@ func registerArActivationCases(s *ruleSet) {
 // AR9A4 for a positive prompt that names the skill. Cases that do not load are
 // AR996's business.
 func checkActivationCases(r *runner, it *item, _ doc, fm frontmatter) {
-	if r.cfg.ConfigDir == "" || !it.owned || it.isDoc || it.kind != kindSkill || it.itemDir == "" {
+	if !r.hasAuthoredSkillDir(it) {
 		return
 	}
 	conflictOn, namesOn := r.sev[CodeActivationPolicyConflict] != SeverityOff, r.sev[CodeActivationPromptNames] != SeverityOff
@@ -72,12 +72,7 @@ func checkActivationCases(r *runner, it *item, _ doc, fm frontmatter) {
 		return
 	}
 	id := config.SkillID(it.cf)
-	skill := evals.Skill{ID: id, Dir: it.itemDir}
-	for _, dir := range []string{filepath.Join(it.itemDir, config.SkillKindEvals), filepath.Join(r.cfg.ConfigDir, config.EvalsDirName, id)} {
-		if info, err := os.Stat(dir); err == nil && info.IsDir() {
-			skill.EvalDirs = append(skill.EvalDirs, dir)
-		}
-	}
+	skill := evals.Skill{ID: id, Dir: it.itemDir, EvalDirs: r.skillEvalDirs(it, id)}
 	if len(skill.EvalDirs) == 0 {
 		return
 	}
@@ -87,11 +82,7 @@ func checkActivationCases(r *runner, it *item, _ doc, fm frontmatter) {
 	for i := range cases {
 		c := &cases[i]
 		if conflictOn && why != "" {
-			if c.Expects() {
-				r.add(CodeActivationPolicyConflict, c.File, c.Line, "skill %q: case %q expects a trigger (expect_trigger: true), but the skill sets %s, so the model never starts it and the case can never pass", id, c.ID, why)
-			} else {
-				r.add(CodeActivationPolicyConflict, c.File, c.Line, "skill %q: case %q expects no trigger, but the skill sets %s and is only ever started explicitly, so the case can never fail and measures nothing", id, c.ID, why)
-			}
+			r.reportPolicyConflict(c, id, why)
 		}
 		if !c.Expects() {
 			continue
@@ -100,6 +91,34 @@ func checkActivationCases(r *runner, it *item, _ doc, fm frontmatter) {
 			r.add(CodeActivationPromptNames, c.File, c.Line, "skill %q: the prompt of case %q names the skill, so it tests an explicit invocation, not whether the model chooses it", id, c.ID)
 		}
 	}
+}
+
+// hasAuthoredSkillDir reports whether it is an owned skill with a directory in
+// a project that has a configuration directory: the only items with eval cases.
+func (r *runner) hasAuthoredSkillDir(it *item) bool {
+	return r.cfg.ConfigDir != "" && it.owned && !it.isDoc && it.kind == kindSkill && it.itemDir != ""
+}
+
+// reportPolicyConflict reports (AR9A3) an eval case the skill's invocation
+// policy (why) makes impossible to pass or impossible to fail.
+func (r *runner) reportPolicyConflict(c *evals.Case, id, why string) {
+	if c.Expects() {
+		r.add(CodeActivationPolicyConflict, c.File, c.Line, "skill %q: case %q expects a trigger (expect_trigger: true), but the skill sets %s, so the model never starts it and the case can never pass", id, c.ID, why)
+		return
+	}
+	r.add(CodeActivationPolicyConflict, c.File, c.Line, "skill %q: case %q expects no trigger, but the skill sets %s and is only ever started explicitly, so the case can never fail and measures nothing", id, c.ID, why)
+}
+
+// skillEvalDirs lists the directories that hold the eval cases of a skill: its
+// own evals/ directory and the project's evals/<id>/ one, when they exist.
+func (r *runner) skillEvalDirs(it *item, id string) []string {
+	var dirs []string
+	for _, dir := range []string{filepath.Join(it.itemDir, config.SkillKindEvals), filepath.Join(r.cfg.ConfigDir, config.EvalsDirName, id)} {
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			dirs = append(dirs, dir)
+		}
+	}
+	return dirs
 }
 
 // invocationBlocked returns the frontmatter setting that stops the model from

@@ -136,22 +136,7 @@ func NarrowToChangedWith(r *Report, changed []string, since string, opts NarrowO
 			}
 		}
 		sort.Strings(next)
-		kept := next[:0]
-		for _, f := range next {
-			if opts.MaxFiles > 0 && reported >= opts.MaxFiles {
-				delete(hops, f)
-				scope.Truncated++
-				continue
-			}
-			reported++
-			kept = append(kept, f)
-			if hop == 1 {
-				scope.Dependents++
-			} else {
-				scope.Transitive++
-			}
-		}
-		frontier = kept
+		frontier = keepHop(next, hop, opts.MaxFiles, &reported, hops, &scope)
 	}
 	kept := r.Findings[:0:0]
 	for i := range r.Findings {
@@ -165,6 +150,28 @@ func NarrowToChangedWith(r *Report, changed []string, since string, opts NarrowO
 	}
 	r.Findings = kept
 	return scope
+}
+
+// keepHop admits the files first reached at hop, nearest first, until the file
+// cap is hit; the files past it are forgotten and counted as truncated. It
+// returns the files kept, which are the next frontier.
+func keepHop(next []string, hop, maxFiles int, reported *int, hops map[string]int, scope *ChangedScope) []string {
+	kept := next[:0]
+	for _, f := range next {
+		if maxFiles > 0 && *reported >= maxFiles {
+			delete(hops, f)
+			scope.Truncated++
+			continue
+		}
+		*reported++
+		kept = append(kept, f)
+		if hop == 1 {
+			scope.Dependents++
+		} else {
+			scope.Transitive++
+		}
+	}
+	return kept
 }
 
 func hopLabel(hop int) string {

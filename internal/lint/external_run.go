@@ -655,11 +655,7 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 		if u := evidenceURL(f.HelpURI); u != "" {
 			msg += " (" + u + ")"
 		}
-		band := scannerBand(sc.SeverityMap, f)
-		if limit, ok := parseBand(sc.MaxSeverity); ok && band > limit {
-			band = limit
-		}
-		sev := bandSeverity(band)
+		sev := scannerSeverity(sc, f)
 		if f.Suppressed {
 			sev, msg = SeverityInfo, "(suppressed) "+msg
 		}
@@ -674,6 +670,16 @@ func (r *runner) convertFindings(sc resolvedScanner, scope scanScope, found []ex
 		r.addRun(CodeScannerOutOfScope, sc.Name, fmt.Sprintf("reported %d result(s) for files that were not staged for it, first %q; they were dropped", outOfScope, firstOut))
 	}
 	return out
+}
+
+// scannerSeverity is the severity a scanner result gets: its band through the
+// scanner's severity map, capped at the scanner's max_severity.
+func scannerSeverity(sc resolvedScanner, f externalFinding) Severity {
+	band := scannerBand(sc.SeverityMap, f)
+	if limit, ok := parseBand(sc.MaxSeverity); ok && band > limit {
+		band = limit
+	}
+	return bandSeverity(band)
 }
 
 // locate maps a finding's path to a project file. A result with no location

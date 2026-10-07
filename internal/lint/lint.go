@@ -290,13 +290,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		r.baseRel = ""
 	}
 	r.resolveSettings()
-	r.sel = parseSelection(so.Analyzers)
-	if r.sel == nil {
-		r.sel = parseSelection(r.lc.Analyzers)
-	}
-	if so.SecurityOnly && r.sel == nil {
-		r.sel = map[string]bool{AnalyzerSecurity: true} // AR0xx is a subset of the security analyzer
-	}
+	r.selectAnalyzers(so)
 	r.collect()
 	for i := range r.items {
 		if r.items[i].owned {
@@ -334,16 +328,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.checkMaxFindings()
 	r.keepSelected()
 
-	sort.SliceStable(r.findings, func(i, j int) bool {
-		a, b := r.findings[i], r.findings[j]
-		if a.File != b.File {
-			return a.File < b.File
-		}
-		if a.Line != b.Line {
-			return a.Line < b.Line
-		}
-		return a.Code < b.Code
-	})
+	sortFindings(r.findings)
 	assignIdentity(r.findings, tree, r.cwd)
 	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Protected: r.protected, ConfigFile: r.display(r.configFilePath()), PolicyWarn: r.policyWarn(), Deps: r.exportDeps(), Analyzers: SelectedAnalyzers(keys(r.sel)),
 		Units: map[string]int{}, unitRuns: r.units}
@@ -354,6 +339,32 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		rep.Profile = p.Name
 	}
 	return rep, nil
+}
+
+// selectAnalyzers sets the analyzers a run is limited to: the option, else the
+// [lint] setting, else (for a security-only run) the security analyzer.
+func (r *runner) selectAnalyzers(so Options) {
+	r.sel = parseSelection(so.Analyzers)
+	if r.sel == nil {
+		r.sel = parseSelection(r.lc.Analyzers)
+	}
+	if so.SecurityOnly && r.sel == nil {
+		r.sel = map[string]bool{AnalyzerSecurity: true} // AR0xx is a subset of the security analyzer
+	}
+}
+
+// sortFindings orders findings by file, line and code.
+func sortFindings(fs []Finding) {
+	sort.SliceStable(fs, func(i, j int) bool {
+		a, b := fs[i], fs[j]
+		if a.File != b.File {
+			return a.File < b.File
+		}
+		if a.Line != b.Line {
+			return a.Line < b.Line
+		}
+		return a.Code < b.Code
+	})
 }
 
 func keys(set map[string]bool) []string {

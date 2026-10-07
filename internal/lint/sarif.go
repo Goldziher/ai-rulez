@@ -137,17 +137,7 @@ func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed b
 		return parseAdapter(name, out, exitCode, keepSuppressed)
 	}
 	if strings.EqualFold(format, "json") {
-		var list []externalFinding
-		if err := json.Unmarshal(out, &list); err != nil {
-			return nil, oops.Wrapf(err, "invalid JSON")
-		}
-		if len(list) > maxScannerResults {
-			return nil, oops.Errorf("more than %d results", maxScannerResults)
-		}
-		if len(list) == 0 && exitCode != 0 {
-			return nil, oops.Errorf("the scanner printed no results and exited with status %d", exitCode)
-		}
-		return list, nil
+		return parseJSONFindings(out, exitCode)
 	}
 	var log sarifLog
 	if err := json.Unmarshal(out, &log); err != nil {
@@ -173,36 +163,57 @@ func parseExternalKeep(format string, out []byte, exitCode int, keepSuppressed b
 			if len(found) >= maxScannerResults {
 				return nil, oops.Errorf("more than %d results", maxScannerResults)
 			}
-			msg := res.Message.Text
-			if strings.TrimSpace(msg) == "" {
-				msg = res.Message.Markdown
-			}
-			f := externalFinding{Severity: res.Level, Message: msg, Suppressed: suppressed,
-				Fingerprint: ingestFingerprint(res)}
-			rule := ingestRuleOf(run, res)
-			f.Rule = res.RuleID
-			if f.Rule == "" {
-				f.Rule = res.Rule.ID
-			}
-			if f.Rule == "" && rule != nil {
-				f.Rule = rule.ID
-			}
-			if rule != nil {
-				f.DefaultLevel, f.HelpURI = rule.DefaultConfiguration.Level, rule.HelpURI
-			}
-			f.Score, f.HasScore = ingestScore(res.Properties)
-			if !f.HasScore && rule != nil {
-				f.Score, f.HasScore = ingestScore(rule.Properties)
-			}
-			if len(res.Locations) > 0 {
-				loc := res.Locations[0].PhysicalLocation
-				f.File = sarifLocationPath(loc.ArtifactLocation.URI, loc.ArtifactLocation.URIBaseID, run.OriginalURIBaseIDs, 0)
-				f.Line = min(max(loc.Region.StartLine, 0), maxScannerLine)
-			}
-			found = append(found, f)
+			found = append(found, sarifFinding(run, res, suppressed))
 		}
 	}
 	return found, nil
+}
+
+// parseJSONFindings reads the scanner's own JSON list of findings.
+func parseJSONFindings(out []byte, exitCode int) ([]externalFinding, error) {
+	var list []externalFinding
+	if err := json.Unmarshal(out, &list); err != nil {
+		return nil, oops.Wrapf(err, "invalid JSON")
+	}
+	if len(list) > maxScannerResults {
+		return nil, oops.Errorf("more than %d results", maxScannerResults)
+	}
+	if len(list) == 0 && exitCode != 0 {
+		return nil, oops.Errorf("the scanner printed no results and exited with status %d", exitCode)
+	}
+	return list, nil
+}
+
+// sarifFinding converts one SARIF result of run into a finding: message, rule
+// (from the result or its rules[] entry), score, fingerprint and first location.
+func sarifFinding(run sarifRun, res sarifResult, suppressed bool) externalFinding {
+	msg := res.Message.Text
+	if strings.TrimSpace(msg) == "" {
+		msg = res.Message.Markdown
+	}
+	f := externalFinding{Severity: res.Level, Message: msg, Suppressed: suppressed,
+		Fingerprint: ingestFingerprint(res)}
+	rule := ingestRuleOf(run, res)
+	f.Rule = res.RuleID
+	if f.Rule == "" {
+		f.Rule = res.Rule.ID
+	}
+	if f.Rule == "" && rule != nil {
+		f.Rule = rule.ID
+	}
+	if rule != nil {
+		f.DefaultLevel, f.HelpURI = rule.DefaultConfiguration.Level, rule.HelpURI
+	}
+	f.Score, f.HasScore = ingestScore(res.Properties)
+	if !f.HasScore && rule != nil {
+		f.Score, f.HasScore = ingestScore(rule.Properties)
+	}
+	if len(res.Locations) > 0 {
+		loc := res.Locations[0].PhysicalLocation
+		f.File = sarifLocationPath(loc.ArtifactLocation.URI, loc.ArtifactLocation.URIBaseID, run.OriginalURIBaseIDs, 0)
+		f.Line = min(max(loc.Region.StartLine, 0), maxScannerLine)
+	}
+	return f
 }
 
 // maxScannerLine bounds the line a scanner reports; a hostile value is clamped.
@@ -386,26 +397,9 @@ func resolveScannerPath(raw, root string) (abs string, ok bool) {
 		return "", true
 	}
 	if rest, found := strings.CutPrefix(p, "file://"); found {
-		if i := strings.IndexAny(rest, "?#"); i >= 0 {
-			rest = rest[:i]
-		}
-		authority := rest
-		path := ""
-		if i := strings.IndexByte(rest, '/'); i >= 0 {
-			authority, path = rest[:i], rest[i:]
-		}
-		switch {
-		case authority == "" || strings.EqualFold(authority, hostLocalhost):
-		case driveAuthority.MatchString(authority):
-			// the malformed spelling file://C:/x of the file URL for C:/x
-			path = "/" + authority + path
-		default:
-			// A UNC or remote host: not a file in this project.
+		var ok bool
+		if p, ok = fileURLPath(rest); !ok {
 			return "", false
-		}
-		p = path
-		if winDriv.MatchString(p) {
-			p = p[1:]
 		}
 	}
 	if dec, err := url.PathUnescape(p); err == nil {
@@ -427,6 +421,32 @@ func resolveScannerPath(raw, root string) (abs string, ok bool) {
 		}
 	}
 	return "", false
+}
+
+// fileURLPath is the path of a file URL without its "file://" prefix; ok is
+// false for a host other than this machine (a UNC or remote path).
+func fileURLPath(rest string) (string, bool) {
+	if i := strings.IndexAny(rest, "?#"); i >= 0 {
+		rest = rest[:i]
+	}
+	authority := rest
+	path := ""
+	if i := strings.IndexByte(rest, '/'); i >= 0 {
+		authority, path = rest[:i], rest[i:]
+	}
+	switch {
+	case authority == "" || strings.EqualFold(authority, hostLocalhost):
+	case driveAuthority.MatchString(authority):
+		// the malformed spelling file://C:/x of the file URL for C:/x
+		path = "/" + authority + path
+	default:
+		// A UNC or remote host: not a file in this project.
+		return "", false
+	}
+	if winDriv.MatchString(path) {
+		path = path[1:]
+	}
+	return path, true
 }
 
 // scannerRoots is the root and its symlink-resolved form (a scanner may print

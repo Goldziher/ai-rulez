@@ -323,9 +323,21 @@ func (r *runner) checkTraps() {
 	if len(relevant) == 0 {
 		return
 	}
+	chains := map[string][]chainFile{}
+	for _, f := range r.trapPaths(relevant) {
+		if rel, ok := r.underRoot(f); ok {
+			r.checkTrapFile(f, rel, relevant, chains)
+		}
+	}
+	r.checkChains(relevant, chains)
+}
+
+// trapPaths lists, sorted, the files the traps look at: the tracked files, the
+// ignored generated outputs, and the files the plan writes that the repository
+// does not hold yet.
+func (r *runner) trapPaths(relevant []Trap) []string {
 	paths := r.tree.Paths()
 	paths = append(paths, r.ignoredGeneratedPaths(relevant, paths)...)
-	// Files the plan writes that the repository does not hold yet.
 	have := make(map[string]bool, len(paths))
 	for _, f := range paths {
 		have[f] = true
@@ -336,45 +348,44 @@ func (r *runner) checkTraps() {
 		}
 	}
 	sort.Strings(paths)
-	chains := map[string][]chainFile{}
-	for _, f := range paths {
-		rel, ok := r.underRoot(f)
-		if !ok {
+	return paths
+}
+
+// checkTrapFile runs the traps whose scope matches one file (f is relative to
+// the tree top, rel to the lint root); chain predicates are collected into
+// chains instead of being evaluated.
+func (r *runner) checkTrapFile(f, rel string, relevant []Trap, chains map[string][]chainFile) {
+	var content []byte
+	var read, generated bool
+	for i := range relevant {
+		t := relevant[i]
+		if !t.Scope.matches(rel) {
 			continue
 		}
-		var content []byte
-		var read, generated bool
-		for i := range relevant {
-			t := relevant[i]
-			if !t.Scope.matches(rel) {
-				continue
+		if !read {
+			content, generated = readTrapFile(filepath.Join(r.tree.Top, filepath.FromSlash(f)))
+			if planned, ok := r.plannedContent(f, content != nil, generated); ok {
+				content, generated = planned, carriesGeneratedBanner(planned)
 			}
-			if !read {
-				content, generated = readTrapFile(filepath.Join(r.tree.Top, filepath.FromSlash(f)))
-				if planned, ok := r.plannedContent(f, content != nil, generated); ok {
-					content, generated = planned, carriesGeneratedBanner(planned)
-				}
-				read = true
-			}
-			kind := kindHandwritten
-			if generated {
-				kind = kindGenerated
-			}
-			if !t.Scope.hasKind(kind) {
-				continue
-			}
-			abs := filepath.Join(r.tree.Top, filepath.FromSlash(f))
-			if t.Predicate.isChain() {
-				chains[t.Code+"/"+t.Harness] = append(chains[t.Code+"/"+t.Harness], chainFile{rel: rel, abs: abs, size: len(content), generated: generated})
-				continue
-			}
-			env := trapEnv{exists: r.existsBeside(rel, t.Scope)}
-			for _, hit := range t.Predicate.evalIn(rel, content, env) {
-				r.addTrap(t, abs, hit, generated)
-			}
+			read = true
+		}
+		kind := kindHandwritten
+		if generated {
+			kind = kindGenerated
+		}
+		if !t.Scope.hasKind(kind) {
+			continue
+		}
+		abs := filepath.Join(r.tree.Top, filepath.FromSlash(f))
+		if t.Predicate.isChain() {
+			chains[t.Code+"/"+t.Harness] = append(chains[t.Code+"/"+t.Harness], chainFile{rel: rel, abs: abs, size: len(content), generated: generated})
+			continue
+		}
+		env := trapEnv{exists: r.existsBeside(rel, t.Scope)}
+		for _, hit := range t.Predicate.evalIn(rel, content, env) {
+			r.addTrap(t, abs, hit, generated)
 		}
 	}
-	r.checkChains(relevant, chains)
 }
 
 // maxIgnoredWalk bounds the files visited when looking for generated outputs
