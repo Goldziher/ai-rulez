@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,7 +64,7 @@ backend works. A harness that keeps its state elsewhere needs --isolation none f
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := commandContext(cmd)
-		fmt.Fprintln(cmd.ErrOrStderr(), improveExperimental)
+		reportWriter{cmd.ErrOrStderr()}.printf("%s\n", improveExperimental)
 		if err := checkFormatFlag(improveFlags.format); err != nil {
 			return err
 		}
@@ -109,7 +108,7 @@ backend works. A harness that keeps its state elsewhere needs --isolation none f
 			return writeImproveJSON(cmd.OutOrStdout(), res)
 		}
 		if len(res.Refreshed) > 0 {
-			fmt.Fprintf(out, "Ran in the worktree: %s\n", strings.Join(res.Refreshed, "; "))
+			reportWriter{out}.printf("Ran in the worktree: %s\n", strings.Join(res.Refreshed, "; "))
 		}
 		return nil
 	},
