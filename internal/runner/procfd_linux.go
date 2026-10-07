@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -20,18 +21,37 @@ func markerID(r *os.File) (uint64, error) {
 	return st.Ino, nil
 }
 
-// holdsMarker reports whether pid has a descriptor on the marker pipe
-// identified by id (/proc/<pid>/fd/* reads "pipe:[<inode>]").
+// holdsMarker reports whether pid has a descriptor on the write end of the
+// marker pipe identified by id. /proc/<pid>/fd/* reads "pipe:[<inode>]" for
+// both ends, so the access mode in /proc/<pid>/fdinfo tells them apart. The
+// read end does not count: a process this one forks holds a copy of it until
+// its exec closes it, and that process is not the run's.
 func holdsMarker(pid int, id uint64) bool {
-	dir := "/proc/" + strconv.Itoa(pid) + "/fd"
-	ents, err := os.ReadDir(dir)
+	base := "/proc/" + strconv.Itoa(pid)
+	ents, err := os.ReadDir(base + "/fd")
 	if err != nil {
 		return false
 	}
 	want := "pipe:[" + strconv.FormatUint(id, 10) + "]"
 	for _, e := range ents {
-		if l, err := os.Readlink(dir + "/" + e.Name()); err == nil && l == want {
+		if l, err := os.Readlink(base + "/fd/" + e.Name()); err == nil && l == want && writeOnly(base+"/fdinfo/"+e.Name()) {
 			return true
+		}
+	}
+	return false
+}
+
+// writeOnly reports whether the fdinfo file at path describes a descriptor
+// opened for writing only.
+func writeOnly(path string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if v, ok := strings.CutPrefix(line, "flags:"); ok {
+			flags, err := strconv.ParseUint(strings.TrimSpace(v), 8, 64)
+			return err == nil && flags&syscall.O_ACCMODE == syscall.O_WRONLY
 		}
 	}
 	return false
