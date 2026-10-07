@@ -270,6 +270,8 @@ func helper() int {
 			return 1
 		}
 		fmt.Print(string(data))
+	case "inject":
+		fmt.Println(injectProbe(args[1]))
 	}
 	return 0
 }
