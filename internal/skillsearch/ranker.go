@@ -113,12 +113,7 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 	r.prepare()
 	cfg := r.Cfg.Resolved()
 	cfg.Mode = mode
-	pool := make([]int, 0, len(r.Items)) // item indexes, in order
-	for i := range r.Items {
-		if allow == nil || allow(i) {
-			pool = append(pool, i)
-		}
-	}
+	pool := r.scopePool(allow)
 	lex := r.lexical(pool, query)
 	res := SearchResult{Ranking: ModeLexical}
 	if cfg.Mode == ModeLexical || cfg.Mode == "" {
@@ -157,6 +152,17 @@ func (r *Ranker) SearchMode(ctx context.Context, mode, query string, allow func(
 	res.Abstained = res.Abstained || (cfg.VectorMinSim > 0 && emb.Dropped > 0 && len(res.Hits) == 0)
 	res.Elapsed = r.Clock.Now().Sub(start)
 	return res
+}
+
+// scopePool lists the item indexes, in order, that allow admits (all of them when allow is nil).
+func (r *Ranker) scopePool(allow func(item int) bool) []int {
+	pool := make([]int, 0, len(r.Items))
+	for i := range r.Items {
+		if allow == nil || allow(i) {
+			pool = append(pool, i)
+		}
+	}
+	return pool
 }
 
 // pinFirst moves the skill whose id the query names to the front.
@@ -252,16 +258,7 @@ func (r *Ranker) vector(ctx context.Context, pool []int, query string) ([]vecHit
 	if r.Embedder == nil {
 		return nil, DegradedProvider, use
 	}
-	inPool := make(map[int]bool, len(pool))
-	for _, it := range pool {
-		inPool[it] = true
-	}
-	rowItem := map[int]int{}
-	for it := range r.Items {
-		if r.rows[it] >= 0 && inPool[it] {
-			rowItem[r.rows[it]] = it
-		}
-	}
+	rowItem := r.rowItems(pool)
 	if len(rowItem) == 0 && len(pool) > 0 {
 		// Every skill in scope is new or changed since the index was built: nothing to rank by vector.
 		return nil, DegradedNoIndex, use
@@ -301,6 +298,21 @@ func (r *Ranker) vector(ctx context.Context, pool []int, query string) ([]vecHit
 		out = kept
 	}
 	return out, "", use
+}
+
+// rowItems maps the index row of every pool item that has a current vector to its item.
+func (r *Ranker) rowItems(pool []int) map[int]int {
+	inPool := make(map[int]bool, len(pool))
+	for _, it := range pool {
+		inPool[it] = true
+	}
+	rowItem := map[int]int{}
+	for it := range r.Items {
+		if r.rows[it] >= 0 && inPool[it] {
+			rowItem[r.rows[it]] = it
+		}
+	}
+	return rowItem
 }
 
 func (r *Ranker) queryVector(ctx context.Context, query string) ([]float32, embedUse, error) {
@@ -387,25 +399,7 @@ func (r *Ranker) fuse(lex []lexHit, vec []vecHit, cfg Config, query string, vect
 			get(h.item).LexRank = i + 1
 		}
 	}
-	score := map[int]float64{}
-	switch {
-	case vectorOnly:
-		for item, h := range hits {
-			score[item] = h.VecSim
-		}
-	case cfg.Fusion == FusionWeighted:
-		weightedScores(score, lex, vec, cfg)
-	default:
-		k := float64(cfg.RRFK)
-		for item, h := range hits {
-			if h.LexRank > 0 {
-				score[item] += cfg.Weights.Lexical / (k + float64(h.LexRank))
-			}
-			if h.VecRank > 0 {
-				score[item] += cfg.Weights.Vector / (k + float64(h.VecRank))
-			}
-		}
-	}
+	score := fusionScores(hits, lex, vec, cfg, vectorOnly)
 	pin := -1
 	if !vectorOnly { // vector mode ranks by cosine alone
 		pin = r.exactPin(query, hits)
@@ -425,6 +419,30 @@ func (r *Ranker) fuse(lex []lexHit, vec []vecHit, cfg Config, query string, vect
 		return r.Items[out[i].Index].ID < r.Items[out[j].Index].ID
 	})
 	return out
+}
+
+// fusionScores scores every candidate: the cosine alone, the weighted mix, or reciprocal rank fusion.
+func fusionScores(hits map[int]*SearchHit, lex []lexHit, vec []vecHit, cfg Config, vectorOnly bool) map[int]float64 {
+	score := map[int]float64{}
+	switch {
+	case vectorOnly:
+		for item, h := range hits {
+			score[item] = h.VecSim
+		}
+	case cfg.Fusion == FusionWeighted:
+		weightedScores(score, lex, vec, cfg)
+	default:
+		k := float64(cfg.RRFK)
+		for item, h := range hits {
+			if h.LexRank > 0 {
+				score[item] += cfg.Weights.Lexical / (k + float64(h.LexRank))
+			}
+			if h.VecRank > 0 {
+				score[item] += cfg.Weights.Vector / (k + float64(h.VecRank))
+			}
+		}
+	}
+	return score
 }
 
 // weightedScores min-max normalises each list's scores to [0,1] and mixes them.
