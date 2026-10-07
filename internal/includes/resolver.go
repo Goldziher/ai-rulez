@@ -231,7 +231,7 @@ func (r *Resolver) createSource(ctx context.Context, includeConf *config.Include
 		).In(viewFor(r.cfg, r.baseDir)), nil
 	case SourceTypeGit:
 		// A file:// URL is a local path in git clothing: it stays inside the project too.
-		if path, ok := lockfile.FileURLPath(includeConf.Source); ok && !lockfile.AllowFileURLsOutside() {
+		if path, ok := lockfile.FileURLPath(includeConf.Source); ok && !lockfile.AllowFileURLsOutside(r.host().Env) {
 			if err := checkInsideProject(r.cfg, r.baseDir, "source", includeConf.Name, path); err != nil {
 				return nil, err
 			}
