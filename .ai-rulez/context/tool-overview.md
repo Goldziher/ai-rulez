@@ -29,7 +29,7 @@ Key concepts:
 - `ai-rulez generate --user` renders a user config into per-user directories; settings files you edit by hand are merged key by key and keep their comments.
 - `ai-rulez.lock` pins remote includes, installed skills, skill sources, authored content and generated outputs; it is enforced whenever it exists. `includes`, installed skills and skill sources accept `version = "^1.2"` ranges that `ai-rulez update` moves.
 - `[[roles]]` select a slice of the content (`generate --role`); `delivery = "served"` skills are served on demand by `ai-rulez mcp --serve-skills` instead of written to the harness trees.
-- `validate --strict` and `scan` run deep content and security checks with stable `AR` codes; `[[verifiers]]` run deterministic repo checks; `sbom`, `catalog`, `tokens` and `cost` report what the configuration contains and costs.
+- `validate` and `scan` run deep content and security checks with stable `AR` codes; `[[verifiers]]` run deterministic repo checks; `sbom`, `catalog`, `tokens` and `cost` report what the configuration contains and costs.
 - v5 behaviour: the Go module is `github.com/Goldziher/ai-rulez/v5`; `http://` and `git://` remotes are rejected and the git token goes only to allowlisted hosts; a committed config cannot point outside the project; content symlinks must resolve inside the project; Claude MCP servers are written only to `.mcp.json`; exit codes are `0` ok, `1` could not run, `2` findings or drift, `3` unpinned served skills (`lock`).
 - Removed or renamed presets: `windsurf` is `devin`; `continue-dev` is gone.
 
@@ -41,4 +41,4 @@ Typical workflow:
 
 Migration:
 
-- V2 (`ai-rulez.yaml`) and V3 (`.ai-rulez/config.yaml`) configs are not read in v5; migrate them with ai-rulez 4.x (`npx ai-rulez@4 migrate v4`) before upgrading.
+- YAML and JSON configs and older config versions are not read in v5; `ai-rulez migrate v5` converts a 4.x project (2.x and 3.x go through ai-rulez 4.x first).

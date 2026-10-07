@@ -278,7 +278,7 @@ into generated frontmatter.
 - A preset whose harness cannot call MCP (for example `cline`, `rovodev`, or any custom preset) keeps every
   served skill as a static file and gets no stub. Each such preset is named in a warning (`AR992`).
   Skills of `[[skill_sources]]` are served only, by design: they never reach a preset without MCP support
-  (nothing is written for them), and `generate` and `validate --strict` warn (`AR992`) for each such preset
+  (nothing is written for them), and `generate` and `validate` warn (`AR992`) for each such preset
   when `[[skill_sources]]` is configured.
 - `ai-rulez mcp --serve-skills` renders the served skills itself; it never depends on the generated trees.
 
@@ -456,7 +456,7 @@ file is not served at all (`load_skill`, `resources/read` and the file list omit
 refuses the skill. At `trust = "warn"` (skills authored in the project) the file is served with the warning.
 A skill that fails is not served: it is absent from `resources/list`,
 `skills/list` and `find_skill`, a warning names the finding on stderr, and `load_skill` says why. Inline
-`ai-rulez-lint-ignore` comments are not honored. `validate --strict` runs this same scan over the served
+`ai-rulez-lint-ignore` comments are not honored. `validate` runs this same scan over the served
 skills, authored and from sources alike, and reports `AR989` for each file it cannot read (see the table below).
 The level is `trust` for a source skill:
 
@@ -512,7 +512,7 @@ still covers every view, as long as the digests match. `--targets` is part of th
 preset's rendering has its own pins, and `lock --targets <preset>` pins it.
 
 A skill the security scan refuses is not pinned. By default `lock` reports it, pins every other skill, writes the
-lock and exits 3; `validate --strict` lists the refused skills of skill sources with their scan code (`AR0xx`). With
+lock and exits 3; `validate` lists the refused skills of skill sources with their scan code (`AR0xx`). With
 `lock --strict` any refusal stops `lock` from writing the lock. Either way a refused skill has to be fixed or
 excluded before it can be served under enforcement.
 

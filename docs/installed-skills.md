@@ -100,7 +100,7 @@ List all installed skills.
 
 **Flags:**
 
-- `--format text|json` (optional, default `text`): `json` prints JSON (`--json` is a deprecated alias)
+- `--format text|json` (optional, default `text`): `json` prints JSON
 
 ## How It Works
 

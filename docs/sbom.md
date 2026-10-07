@@ -139,7 +139,7 @@ from the same evaluation as [`ai-rulez approve`](approvals.md): `ai-rulez:approv
 `missing`, `stale`, `expired`, `unauthorized` or `insufficient`; `ai-rulez:approvers` lists the reviewers of the current
 digest, `ai-rulez:approval-assurance` is the weakest assurance among the counted approvals (`asserted`, `review-linked` or `signed`) and `ai-rulez:approval-expires` the earliest expiry. Expiry is judged
 by the wall clock, except under `--check`, which judges it at the time the committed document records (so an approval
-that expires later does not make an unchanged SBOM drift; `approve --list` and `validate --strict` report the expiry). SPDX also gets one `REVIEW` annotation per approving record (with its assurance), dated with the record's `approved_at`.
+that expires later does not make an unchanged SBOM drift; `approve --list` and `validate` report the expiry). SPDX also gets one `REVIEW` annotation per approving record (with its assurance), dated with the record's `approved_at`.
 Approvals are claims recorded in the lock, not proof of review.
 
 Reviewer identities are personal data. `--redact-reviewers` replaces each with `reviewer-` and eight hex digits of a
@@ -169,9 +169,9 @@ The ai-rulez version recorded in the document (`metadata.tools`, SPDX `creationI
 the tool does not fail the check on its own. A `--timestamp` that moves (`now`) always differs: do not use one with
 `--check`, or pin it with `SOURCE_DATE_EPOCH`.
 
-## In `validate --strict`
+## In `validate`
 
-`validate --strict` builds the SBOM in memory (nothing is written, no network) and reports the same findings under the
+`validate` builds the SBOM in memory (nothing is written, no network) and reports the same findings under the
 `config` analyzer, against `config.toml`:
 
 - `AR750` and `AR751` (`info`) for MCP packages and remote sources that cannot be given an exact version or a package
@@ -235,6 +235,6 @@ digests are pinned in a test, so updating one is a reviewed change. Any CycloneD
 - **MCP purls**: a declared `package` is authoritative; a guess identifies what the launcher would download, not what
   is installed, and is marked as heuristic.
 - **Settings pins**: the `mcp-servers` settings pin is omitted (secrets), every other settings pin is listed.
-- **Findings** (`AR750`-`AR753`) are reported by `sbom` and by `validate --strict`; see
-  [In `validate --strict`](#in-validate-strict).
+- **Findings** (`AR750`-`AR753`) are reported by `sbom` and by `validate`; see
+  [In `validate`](#in-validate-strict).
 - **Not offered**: `--include-builtins`, `--redact-hosts`, `--spec-version`, a `[sbom]` config table and `sbom --sign`.

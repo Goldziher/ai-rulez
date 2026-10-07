@@ -676,7 +676,7 @@ unverified: when `AR997` or `AR998` is enabled it is reported with an "unverifie
 a passing run. Lint never creates the key, so on a machine that has never run `eval run` every record is unverified.
 
 **CI.** A CI runner has no `eval-results.key` (it is per user and never committed), so every committed record is
-unverified there. With `require_fresh` or `min_pass_rate` set, `validate --strict` therefore reports `AR997` and
+unverified there. With `require_fresh` or `min_pass_rate` set, `validate` therefore reports `AR997` and
 `AR998` as "unverified" for every skill that has a record, whatever the stored pass rate, and they fail the build at
 the configured severity. Either run `eval run` in CI (it creates a key on the runner and records fresh, verified
 results), or leave `AR997` and `AR998` off in CI (`--lint-profile`, or `[lint.severity] AR997 = "off"` in the CI
@@ -710,9 +710,9 @@ A skill with no recorded passing run is not reported stale (that is what `AR962`
 | `keep` | everything else |
 
 Rows are ordered by action, then by number of reasons, then by pass rate (worst first), then by `SKILL.md` size.
-Records that are not signed with your key are marked `unverified` (`"unverified": true` in JSON), their scores are left out and the skill counts as having no eval results; `report usage` likewise skips them. Run `eval run` to record a signed result.
+Records that are not signed with your key are marked `unverified` (`"unverified": true` in JSON), their scores are left out and the skill counts as having no eval results; `telemetry report` likewise skips them. Run `eval run` to record a signed result.
 
-Without a usage log nothing is concluded about use. `--format json` prints the same data. `report usage` shows feedback
+Without a usage log nothing is concluded about use. `--format json` prints the same data. `telemetry report` shows feedback
 counts and the eval pass rate next to each skill.
 
 With a usage log each row also carries a `join` class (and `join_uses`, the uses behind it by class) saying how far
@@ -799,7 +799,7 @@ ai-rulez eval run --changed-only --base origin/main \
 - **Caching by digest.** Commit `.ai-rulez/eval-results.json`, or restore it from your CI cache. A skill whose digest
   and cases digest match the stored run is reported as `cached` with its stored score and is not run again, so an
   unchanged skill costs nothing even without `--changed-only` (only records signed with your own key replay; see [Caching](#caching)). Commit the updated file (or save it back to the cache)
-  after a run that changed it; `validate --strict` with `require_fresh` then fails the next change that edits a skill
+  after a run that changed it; `validate` with `require_fresh` then fails the next change that edits a skill
   without re-running its evals.
 - **Cost controls.** Run `eval run --dry-run` first to see the estimate; set `--max-cost` so a runaway suite stops
   (estimate above the cap: refuse to start; spend reaching it: skip the rest, exit 2); keep `--runs` low in CI and

@@ -94,7 +94,7 @@ keys = ["title"]
 
 ## Autofix
 
-`ai-rulez validate --strict --fix` applies the safe trap fixes. Today that is `AR9C7` and project `AR9CA` rows of kind `key-misspelt`: it renames a misspelt
+`ai-rulez validate --fix` applies the safe trap fixes. Today that is `AR9C7` and project `AR9CA` rows of kind `key-misspelt`: it renames a misspelt
 frontmatter key (`user_invocable` to `user-invocable`) in a hand-written skill or agent file, which may live outside
 `.ai-rulez/`, and only while the documented key is absent (a file that has both spellings is reported, not edited). A generated output is never edited (fix its source), and the other traps have no mechanical fix:
 renaming or moving a file, or choosing `resources`, is a decision.
