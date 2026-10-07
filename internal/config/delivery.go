@@ -197,7 +197,7 @@ func (c *Config) DeliveryFallbacks(tree *ContentTree) []DeliveryFallback {
 	seen := map[string]bool{}
 	for i := range c.Presets {
 		name := c.Presets[i].GetName()
-		if seen[name] || HarnessSupportsMCP(name) || name == "mcp" {
+		if seen[name] || HarnessSupportsMCP(name) || name == string(PresetMCP) {
 			continue
 		}
 		seen[name] = true
@@ -343,7 +343,7 @@ func (c *Config) SourceSkillBlindPresets() []string {
 	seen := map[string]bool{}
 	for i := range c.Presets {
 		name := c.Presets[i].GetName()
-		if seen[name] || HarnessSupportsMCP(name) || name == "mcp" {
+		if seen[name] || HarnessSupportsMCP(name) || name == string(PresetMCP) {
 			continue
 		}
 		seen[name] = true

@@ -100,28 +100,42 @@ func (c *Config) validateVerifierBody(v *VerifierConfig, field string) error {
 	return nil
 }
 
+// Names of the flat verifier fields, shared by the allowed-field table and the
+// set-field checks.
+const (
+	vfPath    = "path"
+	vfGlob    = "glob"
+	vfExclude = "exclude"
+	vfPattern = "pattern"
+	vfMin     = "min"
+	vfMax     = "max"
+	vfKey     = "key"
+	vfEquals  = "equals"
+	vfProfile = "profile"
+)
+
 // verifierFields maps each type to the type-specific fields it uses; setting
 // any other is rejected so a misplaced field is not silently ignored.
 var verifierFields = map[string][]string{
-	VerifierFileExists:      {"path"},
-	VerifierFileAbsent:      {"path"},
-	VerifierGlobCount:       {"glob", "exclude", "min", "max"},
-	VerifierRegex:           {"glob", "exclude", "pattern"},
-	VerifierForbid:          {"glob", "exclude", "pattern"},
-	VerifierKeyEquals:       {"path", "key", "equals"},
-	VerifierGeneratedInSync: {"profile"},
+	VerifierFileExists:      {vfPath},
+	VerifierFileAbsent:      {vfPath},
+	VerifierGlobCount:       {vfGlob, vfExclude, vfMin, vfMax},
+	VerifierRegex:           {vfGlob, vfExclude, vfPattern},
+	VerifierForbid:          {vfGlob, vfExclude, vfPattern},
+	VerifierKeyEquals:       {vfPath, vfKey, vfEquals},
+	VerifierGeneratedInSync: {vfProfile},
 }
 
 func validateVerifierFields(v *VerifierConfig, field string) error {
 	set := map[string]bool{
-		"path": v.Path != "", "glob": v.Glob != "", "exclude": len(v.Exclude) > 0, "pattern": v.Pattern != "",
-		"min": v.Min != nil, "max": v.Max != nil, "key": v.Key != "", "equals": v.Equals != nil, "profile": v.Profile != "",
+		vfPath: v.Path != "", vfGlob: v.Glob != "", vfExclude: len(v.Exclude) > 0, vfPattern: v.Pattern != "",
+		vfMin: v.Min != nil, vfMax: v.Max != nil, vfKey: v.Key != "", vfEquals: v.Equals != nil, vfProfile: v.Profile != "",
 	}
 	for _, f := range verifierFields[v.Type] {
 		delete(set, f)
 	}
 	var extra []string
-	for _, f := range []string{"path", "glob", "exclude", "pattern", "min", "max", "key", "equals", "profile"} {
+	for _, f := range []string{vfPath, vfGlob, vfExclude, vfPattern, vfMin, vfMax, vfKey, vfEquals, vfProfile} {
 		if set[f] {
 			extra = append(extra, f)
 		}
@@ -220,7 +234,7 @@ func verifierSpecFieldsSet(v *VerifierConfig) []string {
 		name string
 		on   bool
 	}{
-		{"rule", v.Rule != ""}, {"skill", v.Skill != ""}, {"agent", v.Agent != ""}, {"command", v.Command != ""},
+		{"rule", v.Rule != ""}, {ItemKindSkill, v.Skill != ""}, {"agent", v.Agent != ""}, {ItemKindCommand, v.Command != ""},
 		{"anchor", v.Anchor != ""}, {"message", v.Message != ""}, {"fix", v.Fix != ""},
 		{"when_changed", len(v.WhenChanged) > 0}, {"require", v.Require != nil}, {"examples", len(v.Examples) > 0},
 	} {
@@ -247,8 +261,8 @@ func validateVerifierSpecForm(v *VerifierConfig, field string) error {
 		name string
 		on   bool
 	}{
-		{"path", v.Path != ""}, {"glob", v.Glob != ""}, {"pattern", v.Pattern != ""}, {"min", v.Min != nil},
-		{"max", v.Max != nil}, {"key", v.Key != ""}, {"equals", v.Equals != nil}, {"profile", v.Profile != ""},
+		{vfPath, v.Path != ""}, {vfGlob, v.Glob != ""}, {vfPattern, v.Pattern != ""}, {vfMin, v.Min != nil},
+		{vfMax, v.Max != nil}, {vfKey, v.Key != ""}, {vfEquals, v.Equals != nil}, {vfProfile, v.Profile != ""},
 	} {
 		if f.on {
 			flat = append(flat, f.name)
