@@ -36,7 +36,7 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(config.WithUnresolvedIncludesTolerated(ctx), baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -109,7 +109,7 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(config.WithUnresolvedIncludesTolerated(ctx), baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -156,7 +156,7 @@ func (op *OperatorImpl) ListIncludes(ctx context.Context) ([]IncludeInfo, error)
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := project.Load(ctx, baseDir, config.WithoutLocal())
+	cfg, err := project.Load(config.WithUnresolvedIncludesTolerated(ctx), baseDir, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.
 			With("base_dir", baseDir).
