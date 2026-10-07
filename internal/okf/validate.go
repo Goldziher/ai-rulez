@@ -57,6 +57,20 @@ func (b *Bundle) Validate() []Finding {
 	return out
 }
 
+// CheckRoot reports an error when the bundle has no root index.md naming
+// okf_version. Reading tolerates that (SPEC section 11), but a directory
+// without one is not a bundle, and import okf refuses it the same way, so
+// validate must not pass it. Validate does not include this check: the
+// importers and project lint load partial trees on purpose.
+func (b *Bundle) CheckRoot() []Finding {
+	if idx, ok := b.Indexes[IndexFile]; ok && idx.Frontmatter.Present && idx.Frontmatter.Lookup("okf_version") != nil {
+		return nil
+	}
+	f := NewFinding(CodeVersionInvalid, IndexFile, 0, "not an OKF bundle: expected an index.md naming okf_version at the bundle root")
+	f.Severity = SeverityError
+	return []Finding{f}
+}
+
 func (b *Bundle) checkPaths() []Finding {
 	var out []Finding
 	for _, p := range b.Problems {
