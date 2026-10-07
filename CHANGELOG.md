@@ -342,6 +342,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **`[llm]` budget ignores negative provider-reported usage**: a reply with a negative token count used to lower the spent total; it (like a missing report) is now charged at the worst case, and decoded usage is clamped to zero.
 - **`mcp --serve-skills` no longer rebuilds the catalog after every `load_skill`** when `--usage-log` points inside a watched directory: the live-reload fingerprint now skips the configured log (relative or absolute) and the `usage.salt` beside it, as the startup baseline already did.
 - **Served-skill metadata is bounded** in `mcp --serve-skills`: a hostile skill could return an unbounded description, keyword list or file list through `find_skill`, `list_skill_resources` and `skills/list` (the session budget charges only file content). Descriptions are cut to 1024 bytes, keywords, triggers and frontmatter lists to 64 entries, `load_skill` and `skills/list` list at most 200 files per skill, and `list_skill_resources` pages with `offset`.
+- **Offline skill-source resolution validates the remembered commit**: a value in the cache's `refs.json` that is not a 40 or 64 hex commit id is treated as never resolved instead of becoming a cache path, and the index is written atomically.
 
 ### Security
 
