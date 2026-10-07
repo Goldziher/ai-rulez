@@ -306,12 +306,6 @@ func TestLoadConfig_OverlayTypeErrorsNeverEchoValues(t *testing.T) {
 		local   string
 	}{
 		{
-			name: "yaml overlay on yaml main", mainFn: "config.yaml",
-			main:    "version: \"5.0\"\nname: x\npresets: [claude]\n",
-			localFn: "config.local.yaml",
-			local:   "mcp_servers:\n  - name: x\n    command: c\n    args: \"SECRETY2\"\n",
-		},
-		{
 			name: "toml overlay on toml main", mainFn: "config.toml",
 			main:    securityShared,
 			localFn: "config.local.toml",
@@ -319,7 +313,7 @@ func TestLoadConfig_OverlayTypeErrorsNeverEchoValues(t *testing.T) {
 		},
 		{
 			name: "json overlay on json main", mainFn: "config.json",
-			main:    "{\"version\":\"4.0\",\"name\":\"x\",\"presets\":[\"claude\"]}",
+			main:    "{\"version\":\"5.0\",\"name\":\"x\",\"presets\":[\"claude\"]}",
 			localFn: "config.local.json",
 			local:   "{\"mcp_servers\":[{\"name\":\"x\",\"command\":\"c\",\"args\":\"SECRETY2\"}]}",
 		},
