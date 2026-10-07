@@ -1,8 +1,11 @@
 package workspace
 
 import (
+	"context"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/samber/oops"
 
@@ -35,19 +38,20 @@ func OS(root string) (Workspace, error) {
 // merely sits below an unrelated repository (a dotfiles repository in $HOME) gets
 // no such reach.
 func Around(dir string) (Workspace, error) {
-	return AroundBelow(dir, "")
+	return AroundBelow(context.Background(), gitutil.Git{}, dir, "")
 }
 
 // AroundBelow is Around that, like the VCS itself, does not look for a repository
 // in the directories listed in ceilings (the value of GIT_CEILING_DIRECTORIES:
 // paths separated by the OS list separator, symlinks in them resolved as the VCS
-// does) or above them.
-func AroundBelow(dir, ceilings string) (Workspace, error) {
+// does) or above them. Whether a repository tracks the project is asked
+// through git, under ctx.
+func AroundBelow(ctx context.Context, git gitutil.Git, dir, ceilings string) (Workspace, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, oops.With("path", dir).Wrapf(err, "resolve workspace root")
 	}
-	return OS(vcsTop(abs, ceilings))
+	return OS(vcsTop(ctx, git, abs, ceilings))
 }
 
 // projectMarker is the file whose presence in a repository's index says the
@@ -58,7 +62,7 @@ const projectMarker = ".ai-rulez/config.toml"
 // exists, when a ceiling directory is reached first, or when the repository found
 // does not track the project: only a repository that holds the project may widen
 // the boundary its symlinks are held to.
-func vcsTop(abs, ceilings string) string {
+func vcsTop(ctx context.Context, git gitutil.Git, abs, ceilings string) string {
 	ceiling := map[string]bool{}
 	for _, c := range filepath.SplitList(ceilings) {
 		if c == "" {
@@ -77,7 +81,7 @@ func vcsTop(abs, ceilings string) string {
 			return abs
 		}
 		if _, err := os.Lstat(filepath.Join(cur, vcsDirName)); err == nil {
-			if cur == abs || tracksProject(cur, abs) {
+			if cur == abs || tracksProject(ctx, git, cur, abs) {
 				return cur
 			}
 			return abs
@@ -93,14 +97,17 @@ func vcsTop(abs, ceilings string) string {
 // tracksProject reports whether the repository at repo has the project's config
 // in its index. A failure to ask counts as not tracked: the narrower root is the
 // safe one.
-func tracksProject(repo, project string) bool {
+func tracksProject(ctx context.Context, git gitutil.Git, repo, project string) bool {
 	rel, err := filepath.Rel(repo, project)
 	if err != nil {
 		return false
 	}
 	marker := filepath.ToSlash(filepath.Join(rel, filepath.FromSlash(projectMarker)))
-	tracked, err := gitutil.Git{}.TrackedAmong(repo, []string{marker})
-	return err == nil && tracked[marker]
+	res := git.Exec(ctx, repo, nil, "ls-files", "-z", "--", ":(literal)"+marker)
+	if gitutil.ResultErr(res) != nil {
+		return false // not a repository, or git could not answer
+	}
+	return slices.Contains(strings.Split(string(res.Stdout), "\x00"), marker)
 }
 
 // IsDisk reports whether ws reads the real file system: only such a workspace

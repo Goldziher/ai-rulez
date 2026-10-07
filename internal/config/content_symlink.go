@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -38,6 +39,8 @@ type contentScanner struct {
 	// log receives what the scan reports. nil: refusals are only recorded, never
 	// printed (see refuse). A host that injected a logger gets everything there.
 	log logger.Logger
+	// ctx bounds the git questions the scan asks.
+	ctx context.Context
 }
 
 // logger is the scanner's log, the CLI's when none was injected.
@@ -47,14 +50,14 @@ func (s *contentScanner) logger() logger.Logger { return logger.Or(s.log) }
 // through v. A symlink may point anywhere inside v's workspace, which is rooted at
 // the repository top-level containing the project (see workspace.Around), or at
 // the project itself when there is no repository.
-func newProjectScanner(v workspace.View) *contentScanner {
-	return &contentScanner{v: v, root: v.Root()}
+func newProjectScanner(ctx context.Context, v workspace.View) *contentScanner {
+	return &contentScanner{v: v, root: v.Root(), ctx: ctx}
 }
 
 // newIncludeScanner returns a scanner for included, installed or bundled
 // content, which never follows a symlink.
-func newIncludeScanner(v workspace.View) *contentScanner {
-	return &contentScanner{v: v}
+func newIncludeScanner(ctx context.Context, v workspace.View) *contentScanner {
+	return &contentScanner{v: v, ctx: ctx}
 }
 
 // refuse records a refused path. With no injected logger nothing is printed: a

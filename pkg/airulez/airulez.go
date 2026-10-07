@@ -429,7 +429,7 @@ func (p *Project) Validate(ctx context.Context, o ValidateOptions) (*Report, err
 		return nil, &Error{Code: CodeDiskRequired, Err: oops.Wrapf(ErrDiskRequired, "strict validation reads the repository tree")}
 	}
 	// git runs through Options.Runner: the default DenyAll() indexes by walking the directory.
-	tree, err := lint.LoadTreeWith(p.git, p.cfg.BaseDir, "")
+	tree, err := lint.LoadTreeWith(p.git, p.cfg.BaseDir, "") //nolint:contextcheck // internal/lint has no context-taking LoadTree; ctx is checked before and after it
 	if err != nil {
 		return nil, &Error{Code: CodeValidate, Err: oops.Wrapf(err, "index repository files")}
 	}

@@ -65,7 +65,7 @@ func TestProjectSkillResources_SymlinkPolicy(t *testing.T) {
 			write(t, filepath.Join(skill, "SKILL.md"), "---\nname: s\n---\nbody\n")
 			tt.setup(t, project, outside, skill)
 			warned := &testutil.LogRecorder{}
-			s := newProjectScanner(osView(project))
+			s := newProjectScanner(t.Context(), osView(project))
 			s.log = warned
 
 			// Act

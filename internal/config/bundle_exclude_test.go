@@ -15,7 +15,7 @@ import (
 
 func TestBundleFilterExcluded(t *testing.T) {
 	t.Parallel()
-	f := newBundleFilter(gitutil.Git{}, nil, t.TempDir(), "SKILL.md", []string{"*.log", "scripts/build/", "assets/raw/*.psd"})
+	f := newBundleFilter(t.Context(), gitutil.Git{}, nil, t.TempDir(), "SKILL.md", []string{"*.log", "scripts/build/", "assets/raw/*.psd"})
 
 	tests := []struct {
 		rel  string
@@ -191,7 +191,7 @@ func TestValidateOutputSubdir(t *testing.T) {
 
 func TestBundleFilterNegationReincludes(t *testing.T) {
 	t.Parallel()
-	f := newBundleFilter(gitutil.Git{}, nil, t.TempDir(), "SKILL.md", []string{"!references/venv", "!**/node_modules-fixtures"})
+	f := newBundleFilter(t.Context(), gitutil.Git{}, nil, t.TempDir(), "SKILL.md", []string{"!references/venv", "!**/node_modules-fixtures"})
 	assert.False(t, f.excluded("references/venv/notes.md"))
 	assert.True(t, f.excluded("scripts/venv/pyvenv.cfg"), "other venv dirs stay excluded")
 	assert.True(t, f.excluded("scripts/node_modules/x.js"))

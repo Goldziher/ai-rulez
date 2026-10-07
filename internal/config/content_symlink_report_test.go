@@ -39,7 +39,7 @@ func TestScanner_WithoutAHostWritesNothingToStderr(t *testing.T) {
 			write(t, filepath.Join(outside, "secret.md"), "# secret\n")
 			require.NoError(t, os.MkdirAll(filepath.Join(project, ".ai-rulez", "rules"), 0o755))
 			symlinkOrSkip(t, filepath.Join(outside, "secret.md"), filepath.Join(project, ".ai-rulez", "rules", "leak.md"))
-			s := newProjectScanner(osView(project))
+			s := newProjectScanner(t.Context(), osView(project))
 			_, err := scanContentTree(s, filepath.Join(project, ".ai-rulez"), nil)
 			require.NoError(t, err)
 			return s
@@ -65,7 +65,7 @@ func TestIncludeScanner_RefusalsAreReportedAtErrorLevel(t *testing.T) {
 	write(t, filepath.Join(target, "a.md"), "# a\n")
 	symlinkOrSkip(t, target, filepath.Join(root, "rules"))
 	rec := &testutil.LogRecorder{}
-	s := newIncludeScanner(osView(root))
+	s := newIncludeScanner(t.Context(), osView(root))
 	s.log = rec
 
 	// Act
