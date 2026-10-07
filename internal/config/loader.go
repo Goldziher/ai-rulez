@@ -315,7 +315,7 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 		return config, nil
 	}
 
-	ctx = ambient.WithContext(ctx, loadHost(lo))
+	ctx = diag.WithContext(ambient.WithContext(ctx, loadHost(lo)), config.Diag)
 	if err := resolveIncludesIfNeeded(ctx, configDir, config, lo.resolvers.Includes); err != nil {
 		return nil, err
 	}
@@ -688,6 +688,7 @@ func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree
 func ScanContentTreeContext(ctx context.Context, configDir string) (*ContentTree, error) {
 	s := newIncludeScanner(osView(configDir))
 	s.git = gitutil.New(runner.FromContext(ctx))
+	s.log = logger.FromContext(ctx)
 	return scanContentTree(s, configDir, nil)
 }
 
@@ -698,6 +699,7 @@ func ScanContentTreeContext(ctx context.Context, configDir string) (*ContentTree
 func ScanContentTreeIn(ctx context.Context, v workspace.View, configDir string) (*ContentTree, error) {
 	s := newIncludeScanner(v)
 	s.git = gitutil.New(runner.FromContext(ctx))
+	s.log = logger.FromContext(ctx)
 	return scanContentTree(s, configDir, nil)
 }
 
@@ -1111,6 +1113,13 @@ func scanAgents(agentsPath string) ([]ContentFile, error) {
 func ParseFrontmatterPublic(content string) (metadata *Metadata, body string) {
 	metadata, body, _ = parseFrontmatter(content)
 	return metadata, body
+}
+
+// ParseFrontmatterChecked is ParseFrontmatterPublic that also reports a delimited
+// frontmatter block whose YAML could not be parsed (it is dropped from body), so
+// the caller, which knows the file and its logger, can say so.
+func ParseFrontmatterChecked(content string) (metadata *Metadata, body string, malformed bool) {
+	return parseFrontmatter(content)
 }
 
 // hasUnclosedFrontmatter reports whether content opens a frontmatter block with

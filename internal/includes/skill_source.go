@@ -43,7 +43,11 @@ type SkillGitSource struct {
 	accessToken string
 	pin         *pin   // ai-rulez.lock entry this skill must match (nil: unpinned)
 	baseDir     string // project the skill belongs to, for recording what it resolved to
+	log         logger.Logger
 }
+
+// logger is the source's log: the host's of the config it was built for, the CLI's when none.
+func (s *SkillGitSource) logger() logger.Logger { return logger.Or(s.log) }
 
 // NewSkillGitSource creates a new SkillGitSource for fetching a skill from a git repo
 func NewSkillGitSource(name, repoURL, path, ref, accessToken string) (*SkillGitSource, error) {
@@ -71,6 +75,7 @@ func NewSkillGitSourceIn(host ambient.Host, name, repoURL, path, ref, accessToke
 		ref:         ref,
 		cacheDir:    cacheDir,
 		accessToken: accessToken,
+		log:         host.Log,
 	}, nil
 }
 
@@ -135,7 +140,7 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 	mu.Lock()
 	defer mu.Unlock()
 
-	logger.Debug("Fetching installed skill", "name", s.name, "repo", RedactURL(s.repoURL), "path", s.path, "ref", s.ref)
+	s.logger().Debug("Fetching installed skill", "name", s.name, "repo", RedactURL(s.repoURL), "path", s.path, "ref", s.ref)
 
 	if SkipFetch || config.OfflineIncludes(ctx) {
 		skillDir := s.findSkillDir()
@@ -145,7 +150,7 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 				With("cache_dir", s.cacheDir).
 				Wrapf(ErrNotCached, "--no-fetch specified but no cached skill found for '%s'", s.name)
 		}
-		return ScanInstalledSkillDir(skillDir, s.name)
+		return ScanInstalledSkillDir(logger.WithContext(ctx, s.log), skillDir, s.name)
 	}
 
 	// A full commit SHA is already the resolved commit — ls-remote never advertises
@@ -159,8 +164,8 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 		currentSHA, err = remoteHEADSHA(ctx, s.originalURL, ref, s.accessToken)
 		if err != nil {
 			if skillDir := s.findSkillDir(); skillDir != "" {
-				logger.Warn("ls-remote failed, using cached skill", "name", s.name, "error", err)
-				return ScanInstalledSkillDir(skillDir, s.name)
+				s.logger().Warn("ls-remote failed, using cached skill", "name", s.name, "error", err)
+				return ScanInstalledSkillDir(logger.WithContext(ctx, s.log), skillDir, s.name)
 			}
 			return config.ContentFile{}, oops.With("repo", RedactURL(s.repoURL)).Wrapf(err, "failed to get remote HEAD for skill %q", s.name)
 		}
@@ -168,7 +173,7 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 
 	if isCacheHit(s.cacheDir, currentSHA) {
 		if skillDir := s.findSkillDir(); skillDir != "" {
-			return ScanInstalledSkillDir(skillDir, s.name)
+			return ScanInstalledSkillDir(logger.WithContext(ctx, s.log), skillDir, s.name)
 		}
 		// Meta is valid but files are gone — fall through to re-fetch.
 	}
@@ -218,7 +223,7 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 			With("path", s.path).
 			Errorf("skill directory not found (expected SKILL.md at %s)", s.path)
 	}
-	return ScanInstalledSkillDir(skillDir, s.name)
+	return ScanInstalledSkillDir(logger.WithContext(ctx, s.log), skillDir, s.name)
 }
 
 // swapDir replaces final with tmp. The old directory is renamed aside first so
@@ -248,13 +253,13 @@ func (s *SkillGitSource) findSkillDir() string {
 	// Check at the configured path
 	if s.path != "" {
 		skillDir := filepath.Join(s.cacheDir, s.path)
-		if hasSkillMarkerUnder(s.cacheDir, skillDir) {
+		if hasSkillMarkerUnder(s.logger(), s.cacheDir, skillDir) {
 			return skillDir
 		}
 
 		// Also check under .ai-rulez/ path in case the clone extracted there
 		skillDir = filepath.Join(s.cacheDir, aiRulezDir, s.path)
-		if hasSkillMarkerUnder(s.cacheDir, skillDir) {
+		if hasSkillMarkerUnder(s.logger(), s.cacheDir, skillDir) {
 			return skillDir
 		}
 	}
@@ -287,12 +292,12 @@ func symlinkedMarker(dir string) string {
 
 // hasSkillMarkerUnder is hasSkillMarker for a directory below root, additionally
 // requiring that no component between root and dir is a symlink.
-func hasSkillMarkerUnder(root, dir string) bool {
-	return !pathHasSymlink(root, dir) && hasSkillMarker(dir)
+func hasSkillMarkerUnder(log logger.Logger, root, dir string) bool {
+	return !pathHasSymlink(log, root, dir) && hasSkillMarker(dir)
 }
 
 // pathHasSymlink reports whether any component of dir below root is a symlink.
-func pathHasSymlink(root, dir string) bool {
+func pathHasSymlink(log logger.Logger, root, dir string) bool {
 	rel, err := filepath.Rel(root, dir)
 	if err != nil || rel == "." {
 		return false
@@ -301,7 +306,7 @@ func pathHasSymlink(root, dir string) bool {
 	for _, part := range strings.Split(rel, string(filepath.Separator)) {
 		cur = filepath.Join(cur, part)
 		if info, err := os.Lstat(cur); err == nil && info.Mode()&os.ModeSymlink != 0 {
-			logger.Warn("Skipping symlinked path in installed skill; symlinks are not followed", "path", cur)
+			log.Warn("Skipping symlinked path in installed skill; symlinks are not followed", "path", cur)
 			return true
 		}
 	}
@@ -313,7 +318,8 @@ func pathHasSymlink(root, dir string) bool {
 // ContentFile. SKILL.md becomes the body; the supporting subdirectories are
 // loaded into Resources so generators can preserve the canonical Agent Skills
 // layout in their output rather than concatenating everything inline.
-func ScanInstalledSkillDir(skillDir, skillName string) (config.ContentFile, error) {
+func ScanInstalledSkillDir(ctx context.Context, skillDir, skillName string) (config.ContentFile, error) {
+	log := logger.FromContext(ctx)
 	skillPath := filepath.Join(skillDir, skillMarkerFile)
 	// Lstat before reading: a symlinked SKILL.md would be read through to any
 	// local file and rendered into the outputs.
@@ -322,7 +328,7 @@ func ScanInstalledSkillDir(skillDir, skillName string) (config.ContentFile, erro
 		return config.ContentFile{}, oops.With("path", skillPath).Wrapf(err, "read SKILL.md")
 	}
 	if !info.Mode().IsRegular() {
-		logger.Warn("Refusing SKILL.md that is not a regular file; symlinks are not followed", "path", skillPath)
+		log.Warn("Refusing SKILL.md that is not a regular file; symlinks are not followed", "path", skillPath)
 		return config.ContentFile{}, oops.With("path", skillPath).Errorf("SKILL.md at %s is a symlink or not a regular file", skillPath)
 	}
 	data, err := os.ReadFile(skillPath)
@@ -330,19 +336,22 @@ func ScanInstalledSkillDir(skillDir, skillName string) (config.ContentFile, erro
 		return config.ContentFile{}, oops.With("path", skillPath).Wrapf(err, "read SKILL.md")
 	}
 
-	metadata, body := config.ParseFrontmatterPublic(string(data))
+	metadata, body, malformed := config.ParseFrontmatterChecked(string(data))
+	if malformed {
+		log.Warn("Ignoring malformed YAML frontmatter in an installed skill", "skill", skillName, "path", skillPath)
+	}
 
-	resources, err := config.LoadSkillResources(skillDir)
+	resources, err := config.LoadSkillResourcesContext(ctx, skillDir)
 	if err != nil {
 		// Resources are optional — log but don't fail the skill load.
-		logger.Warn("Failed to read skill resources", "skill", skillName, "error", err)
+		log.Warn("Failed to read skill resources", "skill", skillName, "error", err)
 	}
 
 	// A skill may ship verifier declarations in verifiers/. They are read like an
 	// include's, as data, and can never be trusted to run commands.
 	shipped, err := config.ScanVerifierFiles(skillDir)
 	if err != nil {
-		logger.Warn("Failed to read skill verifiers", "skill", skillName, "error", err)
+		log.Warn("Failed to read skill verifiers", "skill", skillName, "error", err)
 	}
 	for i := range shipped {
 		shipped[i].Include, shipped[i].Skill = skillName, true

@@ -23,16 +23,16 @@ func manySkills(t *testing.T, n int) string {
 
 func TestDiscover_TooManySkillsIsAClearError(t *testing.T) {
 	root := manySkills(t, 5)
-	_, err := Discover(Spec{Name: "big", URL: root, MaxSkills: 3}, root)
+	_, err := Discover(t.Context(), Spec{Name: "big", URL: root, MaxSkills: 3}, root)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "max_skills")
 	assert.Contains(t, err.Error(), "5")
 
-	skills, err := Discover(Spec{Name: "big", URL: root, MaxSkills: 5}, root)
+	skills, err := Discover(t.Context(), Spec{Name: "big", URL: root, MaxSkills: 5}, root)
 	require.NoError(t, err)
 	assert.Len(t, skills, 5)
 	// include narrows what counts
-	skills, err = Discover(Spec{Name: "big", URL: root, MaxSkills: 1, Include: []string{"sa*"}}, root)
+	skills, err = Discover(t.Context(), Spec{Name: "big", URL: root, MaxSkills: 1, Include: []string{"sa*"}}, root)
 	require.NoError(t, err)
 	assert.Len(t, skills, 1)
 }
@@ -43,7 +43,7 @@ func TestDiscover_TotalBytesOfASourceIsBounded(t *testing.T) {
 		write(t, root, n+"/SKILL.md", skillMD(n, "Skill "+n))
 		write(t, root, n+"/references/data.md", strings.Repeat("x", 1000))
 	}
-	_, err := Discover(Spec{Name: "heavy", URL: root, MaxBytes: 2500}, root)
+	_, err := Discover(t.Context(), Spec{Name: "heavy", URL: root, MaxBytes: 2500}, root)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "max_bytes")
 }
@@ -53,7 +53,7 @@ func TestDiscover_OnlyTheOversizeFileIsDropped(t *testing.T) {
 	write(t, root, "a/SKILL.md", skillMD("a", "Skill a"))
 	write(t, root, "a/references/ok.md", "fine")
 	require.NoError(t, os.WriteFile(root+"/a/references/huge.bin", make([]byte, maxFileBytes+1), 0o644))
-	skills, err := Discover(Spec{Name: "s", URL: root}, root)
+	skills, err := Discover(t.Context(), Spec{Name: "s", URL: root}, root)
 	require.NoError(t, err)
 	require.Len(t, skills, 1)
 	var paths []string

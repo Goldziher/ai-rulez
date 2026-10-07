@@ -163,7 +163,11 @@ type GitSource struct {
 	pin         *pin   // ai-rulez.lock entry this source must match (nil: unpinned)
 	baseDir     string // project the include belongs to, for recording what it resolved to
 	okf         bool   // the repository holds an OKF bundle (at path) instead of an .ai-rulez directory
+	log         logger.Logger
 }
+
+// logger is the source's log: the host's of the config it was built for, the CLI's when none.
+func (s *GitSource) logger() logger.Logger { return logger.Or(s.log) }
 
 // NewGitSource creates a new git source
 func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, accessToken string) (*GitSource, error) {
@@ -197,6 +201,7 @@ func NewGitSourceIn(host ambient.Host, name, repoURL, path, ref, baseDir string,
 		include:     include,
 		accessToken: accessToken,
 		baseDir:     baseDir,
+		log:         host.Log,
 	}
 
 	return source, nil
@@ -308,7 +313,7 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 	if s.okf {
 		ctx = withHardenedGit(ctx)
 	}
-	logger.Debug("Fetching git source", "name", s.name, "repo", RedactURL(s.repoURL), "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
+	s.logger().Debug("Fetching git source", "name", s.name, "repo", RedactURL(s.repoURL), "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
 
 	if SkipFetch || config.OfflineIncludes(ctx) {
 		if s.findAIRulezDir() == "" {
@@ -317,7 +322,7 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 				With("cache_dir", s.cacheDir).
 				Wrapf(ErrNotCached, "--no-fetch specified but no cached content found for include '%s'", s.name)
 		}
-		logger.Debug("Skipping fetch (--no-fetch), using cached content", "name", s.name)
+		s.logger().Debug("Skipping fetch (--no-fetch), using cached content", "name", s.name)
 		return s.scanCachedContent(ctx)
 	}
 
@@ -330,7 +335,7 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 	currentSHA, isSHA, err := s.resolveHeadSHA(ctx, ref)
 	if err != nil {
 		if errors.Is(err, errRefLookupUnavailable) {
-			logger.Warn("ls-remote failed, using cached content", "name", s.name, "error", err)
+			s.logger().Warn("ls-remote failed, using cached content", "name", s.name, "error", err)
 			return s.scanCachedContent(ctx)
 		}
 		return nil, err
@@ -387,7 +392,7 @@ func (s *GitSource) refreshCache(ctx context.Context, ref, currentSHA string, is
 		invalidateScan(dir)
 	}
 	if err := os.RemoveAll(s.cacheDir); err != nil {
-		logger.Warn("Failed to clear include cache", "cache_dir", s.cacheDir, "error", err)
+		s.logger().Warn("Failed to clear include cache", "cache_dir", s.cacheDir, "error", err)
 	}
 	if err := os.MkdirAll(s.cacheDir, cacheDirMode); err != nil {
 		return nil, oops.
@@ -432,7 +437,7 @@ func (s *GitSource) scanCachedContent(ctx context.Context) (*config.ContentTree,
 			Errorf("no .ai-rulez directory found in repository")
 	}
 
-	logger.Debug("Found .ai-rulez directory", "path", aiRulezDir)
+	s.logger().Debug("Found .ai-rulez directory", "path", aiRulezDir)
 
 	// Process-level memoization: scanning the same cached tree from many
 	// consumer configs is wasted work — return the previously scanned
@@ -453,7 +458,7 @@ func (s *GitSource) scanCachedContent(ctx context.Context) (*config.ContentTree,
 		storeScan(aiRulezDir, scanned)
 		contentTree = scanned
 	} else {
-		logger.Debug("Reusing cached content tree scan", "path", aiRulezDir)
+		s.logger().Debug("Reusing cached content tree scan", "path", aiRulezDir)
 	}
 
 	// Filter content based on include list if specified.
@@ -473,7 +478,7 @@ func (s *GitSource) findAIRulezDir() string {
 		if s.path != "" && s.path != rootPath {
 			dir = filepath.Join(s.cacheDir, filepath.FromSlash(strings.Trim(s.path, "/")))
 		}
-		if isRealDir(dir) {
+		if isRealDir(s.logger(), dir) {
 			return dir
 		}
 		return ""
@@ -482,7 +487,7 @@ func (s *GitSource) findAIRulezDir() string {
 	// It could be at the root level or under the specified path
 
 	aiRulezPath := filepath.Join(s.cacheDir, aiRulezDir)
-	if isRealDir(aiRulezPath) {
+	if isRealDir(s.logger(), aiRulezPath) {
 		return aiRulezPath
 	}
 
@@ -490,7 +495,7 @@ func (s *GitSource) findAIRulezDir() string {
 	if s.path != "" && s.path != rootPath {
 		cleanPath := strings.Trim(s.path, rootPath)
 		aiRulezPath := filepath.Join(s.cacheDir, cleanPath, aiRulezDir)
-		if isRealDir(aiRulezPath) {
+		if isRealDir(s.logger(), aiRulezPath) {
 			return aiRulezPath
 		}
 
@@ -619,7 +624,7 @@ func (s *GitSource) hasAIRulezStructure(dir string) bool {
 	checkDirs := []string{rulesSubdir, contextSubdir, "skills", "agents"}
 	for _, subdir := range checkDirs {
 		checkPath := filepath.Join(dir, subdir)
-		if isRealDir(checkPath) {
+		if isRealDir(s.logger(), checkPath) {
 			return true
 		}
 	}

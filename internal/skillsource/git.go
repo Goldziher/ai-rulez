@@ -158,7 +158,7 @@ func cloneInto(ctx context.Context, req cloneRequest, dest string) error {
 		// Cone mode takes the path literally (no glob patterns). An old git without
 		// the command falls back to a full checkout, still bounded by the size limit.
 		if _, err := runGit(ctx, dest, "sparse-checkout", "set", "--cone", "--", p); err != nil {
-			logger.Debug("git sparse-checkout is not available; checking out the whole repository", "error", err.Error())
+			logger.FromContext(ctx).Debug("git sparse-checkout is not available; checking out the whole repository", "error", err.Error())
 		}
 	}
 	if _, err := runGit(ctx, dest, "fetch", flagQuiet, "--depth", "1", "--no-tags", req.partialFilter(), "--", "origin", req.commit); err != nil {

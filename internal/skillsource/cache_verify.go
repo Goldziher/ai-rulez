@@ -1,6 +1,7 @@
 package skillsource
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -73,14 +74,14 @@ func sidecarPath(treeDir string) string { return treeDir + sidecarSuffix }
 // storeDigest records the digest of a freshly stored tree. The write is atomic
 // (a private temp file renamed into place), so a reader never sees half a record.
 // A failure only costs a re-fetch on the next use, so it is logged, not returned.
-func storeDigest(treeDir, commit, digest string) {
+func storeDigest(ctx context.Context, treeDir, commit, digest string) {
 	data, err := json.Marshal(sidecar{Version: sidecarVersion, Commit: commit, Digest: digest})
 	if err != nil {
 		return
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(treeDir), "digest-*.tmp")
 	if err != nil {
-		logger.Warn("Could not record the digest of a cached skill source", "error", err.Error())
+		logger.FromContext(ctx).Warn("Could not record the digest of a cached skill source", "error", err.Error())
 		return
 	}
 	name := tmp.Name()
@@ -96,7 +97,7 @@ func storeDigest(treeDir, commit, digest string) {
 	}
 	if werr != nil {
 		_ = os.Remove(name) //nolint:errcheck // best-effort cleanup
-		logger.Warn("Could not record the digest of a cached skill source", "error", werr.Error())
+		logger.FromContext(ctx).Warn("Could not record the digest of a cached skill source", "error", werr.Error())
 	}
 }
 

@@ -13,6 +13,7 @@
 package diag
 
 import (
+	"context"
 	"sort"
 	"strconv"
 	"strings"
@@ -229,3 +230,25 @@ func (c *Collector) Silence() (restore func()) {
 
 // Default is the process default collector, the one a nil *Collector stands for.
 func Default() *Collector { return processDefault }
+
+type ctxKey struct{}
+
+// WithContext returns ctx carrying c, for call chains that pass a context but no
+// config (the includes resolvers). A nil c leaves ctx unchanged.
+func WithContext(ctx context.Context, c *Collector) context.Context {
+	if c == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, ctxKey{}, c)
+}
+
+// FromContext returns the Collector ctx carries; without one it is nil, which
+// stands for the process default collector.
+func FromContext(ctx context.Context) *Collector {
+	if ctx != nil {
+		if c, ok := ctx.Value(ctxKey{}).(*Collector); ok {
+			return c
+		}
+	}
+	return nil
+}

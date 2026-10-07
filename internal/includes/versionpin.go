@@ -191,7 +191,7 @@ func ResolveVersion(ctx context.Context, lock *lockfile.File, w lockfile.Want, r
 		return Resolution{}, err
 	}
 	if keep {
-		commit, t, err := keepPin(entry, tags, w)
+		commit, t, err := keepPin(ctx, entry, tags, w)
 		return Resolution{Commit: commit, Tag: t.tag, TagObject: t.tagObject, Released: t.released, ReleasedFrom: t.releasedFrom}, err
 	}
 	spec := TagSpec(w)
@@ -207,10 +207,10 @@ func ResolveVersion(ctx context.Context, lock *lockfile.File, w lockfile.Want, r
 		return Resolution{}, err //nolint:wrapcheck // carries the rule code
 	}
 	for _, n := range sel.Notes {
-		logger.Warn("Ambiguous version tags", "source", w.Name, "note", n)
+		logger.FromContext(ctx).Warn("Ambiguous version tags", "source", w.Name, "note", n)
 	}
 	for _, h := range sel.Held {
-		logger.Info(h.String(), "source", w.Name, "min_release_age", gate.Min.String())
+		logger.FromContext(ctx).Info(h.String(), "source", w.Name, "min_release_age", gate.Min.String())
 	}
 	if err := refuseDowngrade(entry, sel.Chosen, w); err != nil {
 		return Resolution{}, err
@@ -247,17 +247,17 @@ func refuseDowngrade(entry *lockfile.Entry, chosen tagresolve.Candidate, w lockf
 }
 
 // keepPin keeps the pinned commit after checking that its tag was not moved.
-func keepPin(entry *lockfile.Entry, tags []tagresolve.RawTag, w lockfile.Want) (string, tagInfo, error) {
+func keepPin(ctx context.Context, entry *lockfile.Entry, tags []tagresolve.RawTag, w lockfile.Want) (string, tagInfo, error) {
 	status, now := tagresolve.Check(tags, entry.Tag, entry.Commit)
 	switch status {
 	case tagresolve.StatusMoved:
 		if !AcceptMovedTag {
 			return "", tagInfo{}, tagresolve.MovedError(entry.Tag, entry.Commit, now.Commit)
 		}
-		logger.Warn("Accepted a moved tag", "source", w.Name, "tag", entry.Tag, "was", shortSHA(entry.Commit), "now", shortSHA(now.Commit))
+		logger.FromContext(ctx).Warn("Accepted a moved tag", "source", w.Name, "tag", entry.Tag, "was", shortSHA(entry.Commit), "now", shortSHA(now.Commit))
 		return now.Commit, tagInfo{tag: now.Name, tagObject: now.TagObject()}, nil
 	case tagresolve.StatusMissing:
-		logger.Warn(fmt.Sprintf("%s tag %q of %s %q no longer exists on the remote; keeping the pinned commit", tagresolve.CodeLockedTagMissed, entry.Tag, w.Kind, w.Name))
+		logger.FromContext(ctx).Warn(fmt.Sprintf("%s tag %q of %s %q no longer exists on the remote; keeping the pinned commit", tagresolve.CodeLockedTagMissed, entry.Tag, w.Kind, w.Name))
 	case tagresolve.StatusOK:
 	}
 	return entry.Commit, tagInfo{entry.Tag, entry.TagObject, entry.Released, entry.ReleasedFrom}, nil
