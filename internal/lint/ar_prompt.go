@@ -89,7 +89,7 @@ func scanFakeTags(r *runner, t *scanText) {
 	}
 }
 
-var configTamperRe = regexp.MustCompile(`(?i)\b(?:write|modify|edit|update|append|add|insert|inject)\w*\b.{0,30}?(?:\b(?:MEMORY|SOUL|CLAUDE|AGENTS)\.md\b|\.cursorrules\b|\.windsurfrules\b|\.clinerules\b|\.claude/settings(?:\.local)?\.json\b)`)
+var configTamperRe = newGatedRe(`(?i)\b(?:write|modify|edit|update|append|add|insert|inject)\w*\b.{0,30}?(?:\b(?:MEMORY|SOUL|CLAUDE|AGENTS)\.md\b|\.cursorrules\b|\.windsurfrules\b|\.clinerules\b|\.claude/settings(?:\.local)?\.json\b)`, true, "memory.md", "soul.md", "claude.md", "agents.md", ".cursorrules", ".windsurfrules", ".clinerules", "settings")
 
 func scanConfigTamper(r *runner, t *scanText) {
 	for _, l := range t.lines {
@@ -102,7 +102,7 @@ func scanConfigTamper(r *runner, t *scanText) {
 	}
 }
 
-var selfPropRe = regexp.MustCompile(`(?i)\b(?:add|inject|insert|include|append|copy|propagate)\s+(?:this|these|the\s+following)\s+(?:instruction|rule|directive|text|prompt|message)s?\s+(?:to|into|in|at\s+the\s+(?:start|end)\s+of)\s+(?:all|every|each|any|other)\s+(?:other\s+)?(?:skills?|agents?|files?|rules?|projects?|repos?\w*|prompts?|instructions?|configs?|documents?|sessions?|conversations?|memory|memories|commands?|plugins?)\b`)
+var selfPropRe = newGatedRe(`(?i)\b(?:add|inject|insert|include|append|copy|propagate)\s+(?:this|these|the\s+following)\s+(?:instruction|rule|directive|text|prompt|message)s?\s+(?:to|into|in|at\s+the\s+(?:start|end)\s+of)\s+(?:all|every|each|any|other)\s+(?:other\s+)?(?:skills?|agents?|files?|rules?|projects?|repos?\w*|prompts?|instructions?|configs?|documents?|sessions?|conversations?|memory|memories|commands?|plugins?)\b`, true, "instruction", "rule", "directive", " text", "prompt", "message")
 
 func scanSelfPropagation(r *runner, t *scanText) {
 	for _, l := range t.lines {
