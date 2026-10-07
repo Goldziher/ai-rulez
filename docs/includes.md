@@ -371,7 +371,7 @@ and `ai-rulez lock` reports it as a problem of its own.
 
 An `[[installed_skills]]` entry follows the same rule: a skill that cannot be fetched, found (no `SKILL.md` at its
 path) or scanned fails the load instead of being dropped, which would have removed its generated outputs as stale.
-`--no-fetch`, `lock`, `sbom` and the CRUD commands keep the warning. A `local_override` that names a missing
+`--offline`, `lock`, `sbom` and the CRUD commands keep the warning. A `local_override` that names a missing
 directory skips the skill with a notice, as it does an include.
 
 Included content never follows symlinks: a symlinked file or directory (a rule, skill, agent, command, context or
