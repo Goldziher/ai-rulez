@@ -206,17 +206,7 @@ func Resolve(layers Layers) Settings {
 // stricter explicit setting wins: an environment that refuses network export is
 // never overridden by a record.
 func applyConsent(s *Settings, layers Layers) {
-	switch {
-	case s.Sources["allow_network"] == ScopeEnv && !s.AllowNetwork:
-		s.ConsentState = ConsentDenied
-		s.ConsentDetail = EnvAllowNetwork + " refuses network export"
-	case s.AllowNetwork && s.Sources["allow_network"] == ScopeEnv:
-		s.ConsentState = ConsentEnv
-	case s.AllowNetwork:
-		s.ConsentState = ConsentConfig
-	default:
-		s.ConsentState = ConsentNone
-	}
+	initialConsentState(s)
 	if layers.ConsentErr != nil {
 		if s.ConsentState == ConsentNone {
 			s.ConsentState = ConsentInvalid
@@ -230,28 +220,7 @@ func applyConsent(s *Settings, layers Layers) {
 		return
 	}
 	s.Consent = c
-	if !s.Enabled {
-		s.Enabled = true
-		s.Sources["enabled"] = ScopeConsent
-	}
-	if s.Endpoint == "" {
-		s.Endpoint = strings.TrimRight(c.Endpoint, "/")
-		s.Sources["otlp_endpoint"] = ScopeConsent
-	}
-	if s.Sources["otlp_protocol"] == "" && c.Protocol != "" {
-		s.Protocol = c.Protocol
-		s.Sources["otlp_protocol"] = ScopeConsent
-	}
-	// An opt-in gate the user set explicitly (environment or user config) is never
-	// overridden: an environment opt-out of paths or sessions beats the record.
-	if c.Scope.IncludePaths && !s.IncludePaths && s.Sources["include_paths"] == "" {
-		s.IncludePaths = true
-		s.Sources["include_paths"] = ScopeConsent
-	}
-	if c.Scope.IncludeSession && !s.IncludeSession && s.Sources["include_session"] == "" {
-		s.IncludeSession = true
-		s.Sources["include_session"] = ScopeConsent
-	}
+	fillFromConsent(s, c)
 	reason := c.Check(config.NormalizeTelemetryEndpoint(s.Endpoint, s.Protocol), s.Protocol, s.IncludePaths, s.IncludeSession)
 	switch {
 	case s.ConsentState == ConsentDenied:
@@ -265,6 +234,49 @@ func applyConsent(s *Settings, layers Layers) {
 		s.AllowNetwork = true
 		s.Sources["allow_network"] = ScopeConsent
 		s.ConsentState = ConsentRecord
+	}
+}
+
+// initialConsentState is the consent state before the record is read: what the
+// environment or the user config says about network export.
+func initialConsentState(s *Settings) {
+	switch {
+	case s.Sources["allow_network"] == ScopeEnv && !s.AllowNetwork:
+		s.ConsentState = ConsentDenied
+		s.ConsentDetail = EnvAllowNetwork + " refuses network export"
+	case s.AllowNetwork && s.Sources["allow_network"] == ScopeEnv:
+		s.ConsentState = ConsentEnv
+	case s.AllowNetwork:
+		s.ConsentState = ConsentConfig
+	default:
+		s.ConsentState = ConsentNone
+	}
+}
+
+// fillFromConsent turns recording on and supplies the endpoint, protocol and
+// opt-in gates the user left unset from the record. An opt-in gate the user set
+// explicitly (environment or user config) is never overridden: an environment
+// opt-out of paths or sessions beats the record.
+func fillFromConsent(s *Settings, c *Consent) {
+	if !s.Enabled {
+		s.Enabled = true
+		s.Sources["enabled"] = ScopeConsent
+	}
+	if s.Endpoint == "" {
+		s.Endpoint = strings.TrimRight(c.Endpoint, "/")
+		s.Sources["otlp_endpoint"] = ScopeConsent
+	}
+	if s.Sources["otlp_protocol"] == "" && c.Protocol != "" {
+		s.Protocol = c.Protocol
+		s.Sources["otlp_protocol"] = ScopeConsent
+	}
+	if c.Scope.IncludePaths && !s.IncludePaths && s.Sources["include_paths"] == "" {
+		s.IncludePaths = true
+		s.Sources["include_paths"] = ScopeConsent
+	}
+	if c.Scope.IncludeSession && !s.IncludeSession && s.Sources["include_session"] == "" {
+		s.IncludeSession = true
+		s.Sources["include_session"] = ScopeConsent
 	}
 }
 
@@ -352,14 +364,8 @@ func applyEnv(s *Settings, getenv func(string) string) {
 	if isTruthy(getenv(envDoNotTrack)) {
 		s.Killed = envDoNotTrack
 	}
-	if raw := getenv(EnvEnabled); raw != "" {
-		switch {
-		case isTruthy(raw):
-			s.Enabled = true
-			set("enabled")
-		case isFalsy(raw):
-			s.Killed = EnvEnabled + "=off"
-		}
+	if raw := getenv(EnvEnabled); raw != "" && applyEnvEnabled(s, raw) {
+		set("enabled")
 	}
 	if v := getenv(EnvEndpoint); v != "" {
 		s.Endpoint = strings.TrimRight(v, "/")
@@ -402,19 +408,37 @@ func applyEnv(s *Settings, getenv func(string) string) {
 		set("salt_file")
 	}
 	if v := getenv(EnvResource); v != "" {
-		if s.Resource == nil {
-			s.Resource = map[string]string{}
-		}
-		for _, pair := range splitList(v) {
-			key, value, ok := strings.Cut(pair, "=")
-			if !ok {
-				s.addBlocking(EnvResource + ": each entry must be key=value")
-				continue
-			}
-			s.Resource[strings.TrimSpace(key)] = strings.TrimSpace(value)
-		}
+		applyEnvResource(s, v)
 		set("resource")
 	}
+}
+
+// applyEnvResource adds the key=value pairs of AI_RULEZ_TELEMETRY_RESOURCE.
+func applyEnvResource(s *Settings, v string) {
+	if s.Resource == nil {
+		s.Resource = map[string]string{}
+	}
+	for _, pair := range splitList(v) {
+		key, value, ok := strings.Cut(pair, "=")
+		if !ok {
+			s.addBlocking(EnvResource + ": each entry must be key=value")
+			continue
+		}
+		s.Resource[strings.TrimSpace(key)] = strings.TrimSpace(value)
+	}
+}
+
+// applyEnvEnabled applies AI_RULEZ_TELEMETRY: on enables recording (and reports
+// true), off is a kill switch.
+func applyEnvEnabled(s *Settings, raw string) bool {
+	switch {
+	case isTruthy(raw):
+		s.Enabled = true
+		return true
+	case isFalsy(raw):
+		s.Killed = EnvEnabled + "=off"
+	}
+	return false
 }
 
 func isTruthy(v string) bool {

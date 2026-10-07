@@ -163,26 +163,14 @@ func (e *Event) Normalize() error {
 	if !validDigestScheme(e.Digest, e.DigestScheme) {
 		e.DigestScheme = ""
 	}
-	if !matches(harnessPattern, e.Harness) {
-		e.Harness = ""
-	}
-	if !matches(rolePattern, e.Role) {
-		e.Role = ""
-	}
-	if !matches(sessionPattern, e.Session) {
-		e.Session = ""
-	}
-	if !matches(reasonPattern, e.LoadReason) {
-		e.LoadReason = ""
-	}
+	clearUnless(harnessPattern, &e.Harness)
+	clearUnless(rolePattern, &e.Role)
+	clearUnless(sessionPattern, &e.Session)
+	clearUnless(reasonPattern, &e.LoadReason)
 	if !memoryTypes[e.MemoryType] {
 		e.MemoryType = ""
 	}
-	if e.Time != "" {
-		if t, err := time.Parse(time.RFC3339, e.Time); err != nil || !nanosecondsRepresentable(t) {
-			e.Time = "" // optional: the Recorder stamps a new event, an export falls back to its own time
-		}
-	}
+	clearBadTime(&e.Time)
 	if e.DurationMS < 0 {
 		e.DurationMS = 0
 	}
@@ -228,15 +216,28 @@ func (e *Event) normalizeEval() error {
 	if !skillDigestPattern.MatchString(e.Digest) || e.DigestScheme != usage.DigestSchemeSkill {
 		e.Digest, e.DigestScheme = "", ""
 	}
-	if !matches(harnessPattern, e.Harness) {
-		e.Harness = ""
-	}
-	if e.Time != "" {
-		if t, err := time.Parse(time.RFC3339, e.Time); err != nil || !nanosecondsRepresentable(t) {
-			e.Time = ""
-		}
-	}
+	clearUnless(harnessPattern, &e.Harness)
+	clearBadTime(&e.Time)
 	return nil
+}
+
+// clearUnless empties an optional field whose value pattern does not accept.
+func clearUnless(pattern *regexp.Regexp, field *string) {
+	if !matches(pattern, *field) {
+		*field = ""
+	}
+}
+
+// clearBadTime empties an optional time that is not RFC 3339 or that a
+// nanosecond timestamp cannot hold: the Recorder stamps a new event, an export
+// falls back to its own time.
+func clearBadTime(field *string) {
+	if *field == "" {
+		return
+	}
+	if t, err := time.Parse(time.RFC3339, *field); err != nil || !nanosecondsRepresentable(t) {
+		*field = ""
+	}
 }
 
 func inRange(v, lo, hi float64) bool { return v >= lo && v <= hi } // false for NaN

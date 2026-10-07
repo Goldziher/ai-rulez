@@ -58,6 +58,30 @@ type DoctorBuffer struct {
 // settingKeys is the display order of the resolved keys.
 var settingKeys = []string{"enabled", "allow_network", "otlp_endpoint", "otlp_protocol", "headers_env", "service_name", "resource", "sample", "include_paths", "include_session", "salt_file"}
 
+// headersValue lists the header variable names, never their values.
+func headersValue(s *Settings) string {
+	if len(s.HeadersEnv) == 0 {
+		return "(none)"
+	}
+	names := make([]string, len(s.HeadersEnv))
+	for i, name := range s.HeadersEnv {
+		names[i] = displayHeaderName(name)
+	}
+	return strings.Join(names, ",")
+}
+
+// resourceValue lists the resource attributes as sorted key=value pairs.
+func resourceValue(s *Settings) string {
+	if len(s.Resource) == 0 {
+		return "(none)"
+	}
+	pairs := make([]string, 0, len(s.Resource))
+	for _, key := range slices.Sorted(maps.Keys(s.Resource)) {
+		pairs = append(pairs, key+"="+s.Resource[key])
+	}
+	return strings.Join(pairs, ",")
+}
+
 // settingValue renders one key for display: never the endpoint path, never a
 // header, never a salt file path.
 func settingValue(s *Settings, host, key string) string {
@@ -74,25 +98,11 @@ func settingValue(s *Settings, host, key string) string {
 	case "otlp_protocol":
 		return s.Protocol
 	case "headers_env":
-		if len(s.HeadersEnv) == 0 {
-			return "(none)"
-		}
-		names := make([]string, len(s.HeadersEnv))
-		for i, name := range s.HeadersEnv {
-			names[i] = displayHeaderName(name)
-		}
-		return strings.Join(names, ",")
+		return headersValue(s)
 	case "service_name":
 		return s.ServiceName
 	case "resource":
-		if len(s.Resource) == 0 {
-			return "(none)"
-		}
-		pairs := make([]string, 0, len(s.Resource))
-		for _, key := range slices.Sorted(maps.Keys(s.Resource)) {
-			pairs = append(pairs, key+"="+s.Resource[key])
-		}
-		return strings.Join(pairs, ",")
+		return resourceValue(s)
 	case "sample":
 		return fmt.Sprint(s.Sample)
 	case "include_paths":
