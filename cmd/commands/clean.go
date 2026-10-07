@@ -30,7 +30,7 @@ The .ai-rulez/ source tree is never touched. Directories are only removed when
 they become empty, so files you authored inside a generated directory are kept.
 
 By default clean lists what it will delete and asks for confirmation; use --yes
-to skip the prompt (required in non-interactive shells) or --dry-run
+to skip the prompt (required in non-interactive shells; declining exits 1) or --dry-run
 to preview. Generated files you edited by hand are kept with a warning; --include-edited
 removes them too.`,
 	Aliases: []string{"clear"},
@@ -89,7 +89,7 @@ func runClean(_ *cobra.Command, args []string) {
 	if !cleanForce {
 		total := len(plan.Files) + len(plan.Dirs)
 		if !confirmRemoval("", fmt.Sprintf("%d generated file(s) and %d generated director(ies)", len(plan.Files), len(plan.Dirs))) {
-			logger.Info("Aborted — nothing removed", "candidates", total)
+			exitDeclined(fmt.Sprintf("Aborted (%d candidates)", total))
 			return
 		}
 	}
