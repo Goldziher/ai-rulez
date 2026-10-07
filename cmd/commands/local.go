@@ -110,6 +110,10 @@ printed; all others show their key path with <redacted>. Pass --reveal to print 
 			os.Exit(1)
 		}
 		if overlay == nil {
+			if localShowJSON {
+				fmtError(jsondoc.Write(os.Stdout, map[string]any{"overlay": nil, "changes": []any{}}))
+				return
+			}
 			fmt.Println("No local overlay. Run 'ai-rulez local init' to create one.")
 			return
 		}

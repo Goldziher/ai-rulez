@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"encoding/json"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/samber/oops"
@@ -64,9 +64,7 @@ func runEvalCalibrate(cmd *cobra.Command) error {
 	}
 	cal := evals.Calibrate(store, &evals.CalibrateOptions{Harness: flags.harness, Model: flags.model, MinSamples: flags.minSamples})
 	if flags.format == formatJSON {
-		enc := json.NewEncoder(cmd.OutOrStdout())
-		enc.SetIndent("", "  ")
-		return oops.Wrapf(enc.Encode(cal), "write calibration")
+		return oops.Wrapf(jsondoc.Write(cmd.OutOrStdout(), cal), "write calibration")
 	}
 	return oops.Wrapf(cal.WriteText(cmd.OutOrStdout()), "write calibration")
 }

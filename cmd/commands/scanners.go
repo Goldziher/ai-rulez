@@ -2,13 +2,14 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/samber/oops"
@@ -29,7 +30,7 @@ var ScannersCmd = &cobra.Command{
 	Use:   "scanners",
 	Short: "Inspect the external scanners configured in [[lint.external]]",
 	Long: `Show and check the third-party scanners that "scan --external" and
-"validate --strict --external" run. "list" only looks the binaries up; "doctor"
+"validate --external" run. "list" only looks the binaries up; "doctor"
 starts a scanner to ask its version only with --external.`,
 }
 
@@ -366,12 +367,7 @@ func writeScannersJSON(out io.Writer, infos []lint.ScannerInfo, doctor bool, ver
 		}
 		rows = append(rows, row)
 	}
-	data, err := json.MarshalIndent(map[string]any{"scanners": rows}, "", "  ")
-	if err != nil {
-		return oops.Wrapf(err, "encode scanners")
-	}
-	_, err = fmt.Fprintln(out, string(data))
-	return err //nolint:wrapcheck // a closed stdout has no better handling
+	return jsondoc.Write(out, map[string]any{"scanners": rows}) //nolint:wrapcheck // a closed stdout has no better handling
 }
 
 func nonNil(in []string) []string {
