@@ -239,8 +239,8 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 		})
 	}
 	if prev != nil {
-		for _, e := range prev.Entries {
-			if !r.Covers(e.Code) && !seen[e.Fingerprint] {
+		for i := range prev.Entries {
+			if e := prev.Entries[i]; !r.Covers(e.Code) && !seen[e.Fingerprint] {
 				out.Entries = append(out.Entries, e)
 			}
 		}
@@ -270,7 +270,7 @@ func ResolveRatchet(raw map[string]int) Ratchet {
 
 // Without drops the ratchet entries of the protected codes, which a policy never lets a
 // repository tolerate, and lists the codes it dropped.
-func (b Ratchet) Without(protected map[string]bool) (Ratchet, []string) {
+func (b Ratchet) Without(protected map[string]bool) (kept Ratchet, refused []string) {
 	if len(protected) == 0 {
 		return b, nil
 	}

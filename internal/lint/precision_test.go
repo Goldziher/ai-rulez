@@ -94,7 +94,7 @@ func TestSkillResourceMissingPrecision(t *testing.T) {
 }
 
 func TestUnpinnedExecOwnPackagePrecision(t *testing.T) {
-	const cfg = "version = \"4.0\"\nname = \"gitfluff\"\npresets = [\"claude\"]\n"
+	const cfg = "version = \"5.0\"\nname = \"gitfluff\"\npresets = [\"claude\"]\n"
 	tests := []struct {
 		name string
 		body string
