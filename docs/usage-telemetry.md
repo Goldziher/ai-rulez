@@ -7,7 +7,7 @@ loads, per-session statistics and optional OpenTelemetry export, see [Item-load 
 
 1. a **skills index** written by `generate`,
 2. a **hook template** that records skill invocations as identifier-only log lines,
-3. **feedback records** (`usage feedback`) for "this skill misled me",
+3. **feedback records** (`telemetry feedback`) for "this skill misled me",
 4. a **report** that joins a log with the index, the feedback and the [eval scores](evals.md).
 
 ## The skills index
@@ -53,7 +53,7 @@ from files on disk, and is byte-stable across runs, so it is safe to commit.
   `ai-rulez/skill/v1`, sha256 over `SKILL.md` and the loaded `references/`, `scripts/` and `assets/` files, with
   modes and line endings normalised). A top-level `evals/` directory is not part of it, so editing an eval case never
   makes the skill look edited. Usage lines, eval results and the lock all use this one digest, which is what lets
-  `report evals` tell whether a score describes the version that was used. An index written before this field has
+  `telemetry report evals` tell whether a score describes the version that was used. An index written before this field has
   none; run `generate` again.
 - `owner` and `version` are read from the `owner` and `version` frontmatter keys when set. Add
   `require_metadata` to [`[lint]`](strict-validation.md) to make them mandatory.
@@ -65,15 +65,16 @@ from files on disk, and is byte-stable across runs, so it is safe to commit.
 ## Recording invocations
 
 ```bash
-ai-rulez usage hook                 # print the hooks block
-ai-rulez usage hook -o hooks.json   # or write it to a file
+ai-rulez telemetry hook                 # print the hooks block
+ai-rulez telemetry hook -o hooks.json   # or write it to a file
 ```
 
 The block is a template for the `hooks` key of `.claude/settings.json` (or a plugin's hooks file). Merge it in by
 hand; nothing installs it. To have `generate` keep it in sync, declare the same commands as top-level
-[`[[hooks]]`](settings.md) (the payload fields above are read by `usage record` itself, so the command is all a
+[`[[hooks]]`](settings.md) (the payload fields above are read by `telemetry record` itself, so the command is all a
 harness needs); ai-rulez then writes them into each supported harness's own hooks file next to your other hooks,
-without touching hooks you wrote by hand. The template registers `ai-rulez usage record` for the two ways a skill is used:
+without touching hooks you wrote by hand. The template registers `ai-rulez telemetry record` for the two ways a skill is used (the same command also records
+item loads, see [Item-load telemetry](telemetry.md)):
 
 | Claude Code event | Fires when | Field read |
 | --- | --- | --- |
@@ -85,12 +86,12 @@ Both events were checked against Claude Code 2.1.289. The recorder ignores event
 ### Other harnesses
 
 ```bash
-ai-rulez usage hook --harness codex    # merge into .codex/hooks.json
-ai-rulez usage hook --harness cursor   # merge into .cursor/hooks.json
+ai-rulez telemetry hook --harness codex    # merge into .codex/hooks.json
+ai-rulez telemetry hook --harness cursor   # merge into .cursor/hooks.json
 ```
 
 Codex and Cursor have no Skill tool: they load a skill by reading its `SKILL.md`. Their templates register
-`ai-rulez usage record --harness <name>` on the `PreToolUse` (Codex, matcher `Bash`) and `preToolUse` (Cursor, matcher
+`ai-rulez telemetry record --harness <name>` on the `PreToolUse` (Codex, matcher `Bash`) and `preToolUse` (Cursor, matcher
 `Shell`) events, whose names and matchers come from ai-rulez's own [hook support](settings.md). The recorder then logs a
 skill load when a read tool (`Read`, `read_file`, `view`, `open`) is given a `file_path` or `path` of
 `skills/<id>/SKILL.md`, or a shell command runs a reader (`cat`, `head`, `tail`, `less`, `more`, `bat`, `nl`,
@@ -127,7 +128,7 @@ What is **not**: prompts, slash-command arguments, tool inputs other than the sk
 the `SKILL.md` path the id was read from), transcripts, raw session ids or file contents. The recorder decodes only
 those fields, so nothing else can reach the log.
 
-Compatibility: new fields are additive. `report usage` reads version 1 lines (which may hold a raw session id written
+Compatibility: new fields are additive. `telemetry report` reads version 1 lines (which may hold a raw session id written
 before salting; nothing rewrites them, so delete or rotate an old log if it must not keep raw ids), version 2 lines
 (no digest or event id) and lines from later versions (unknown fields are ignored). Older `ai-rulez` releases read
 version 3 lines and ignore the new fields.
@@ -138,13 +139,13 @@ input, for teams that ship lines to their own collector; that command, not ai-ru
 The recorder never writes through a symlink: if the log file or any directory below the project root (`.ai-rulez`, `.ai-rulez/local`) is a symlink, the operation is refused with an error. A symlinked salt file is never read: it is replaced with a regular file holding a new salt (the link is removed, its target is untouched). The telemetry outbox, its state files and log are never followed either: `telemetry flush` and the reports refuse a symlinked outbox or log with an error, and the flush-spawn marker is replaced by rename, never written through. A repository cannot redirect the log to another file by committing a link. Point `--log` at a real directory.
 
 The generated hook command shell-quotes the executable (`--executable` is a path, not a command line: a value such as `npx -y ai-rulez` is quoted as one word) and every path argument; only `${CLAUDE_PROJECT_DIR}` is left for the shell to expand, and `$(...)`, backticks or other variables in a value stay literal.
-`--index FILE` points at a non-default index. `ai-rulez usage record` never fails a session: problems go to standard
+`--index FILE` points at a non-default index. `ai-rulez telemetry record` never fails a session: problems go to standard
 error and the exit status stays 0.
 
 ## Feedback
 
 ```bash
-ai-rulez usage feedback deploy-staging --kind stale --note-file ./why.txt
+ai-rulez telemetry feedback deploy-staging --kind stale --note-file ./why.txt
 ```
 
 Records that a skill `misled` you, is `stale`, is `wrong`, or was `great`. One line goes to
@@ -152,13 +153,13 @@ Records that a skill `misled` you, is `stale`, is `wrong`, or was `great`. One l
 the index hash, the kind, and `--harness` and `--role` when given. With `--note-file` the note's text is copied to
 `feedback-notes/<timestamp>-<id>-<kind>.txt` beside the log (mode 0600, at most 64 KB) and only that file name is
 recorded. The note is never part of a log line, the skills index, `eval-results.json` or any hash, so it cannot leave
-the machine unless you copy it. Feedback does not change a skill by itself; `report usage` shows the counts and
-[`report evals`](evals.md#reports) treats more `misled`/`wrong`/`stale` than `great` as a reason to rewrite.
+the machine unless you copy it. Feedback does not change a skill by itself; `telemetry report` shows the counts and
+[`telemetry report evals`](evals.md#reports) treats more `misled`/`wrong`/`stale` than `great` as a reason to rewrite.
 
 ## The report
 
 ```console
-$ ai-rulez report usage .ai-rulez/local/usage.jsonl
+$ ai-rulez telemetry report .ai-rulez/local/usage.jsonl
 Skill usage: 42 events
 
 Used (3)
@@ -189,14 +190,14 @@ The command reports and exits 0.
 
 ## Exporting to a file
 
-`ai-rulez usage export --to file usage.ndjson` writes the log as an OTLP JSON file for an air-gapped collector, a
+`ai-rulez telemetry export --to file usage.ndjson` writes the log as an OTLP JSON file for an air-gapped collector, a
 cross-repo aggregation job or your own tooling. It is local: no network, no consent record, and it works whether or not
 `[telemetry]` is enabled.
 
 ```console
-$ ai-rulez usage export --to file usage.ndjson
+$ ai-rulez telemetry export --to file usage.ndjson
 wrote 118 events in 1 batches to usage.ndjson
-$ ai-rulez usage export --to file --file usage.ndjson --log other/usage.jsonl --dry-run
+$ ai-rulez telemetry export --to file --file usage.ndjson --log other/usage.jsonl --dry-run
 would write 40 events in 1 batches to usage.ndjson (nothing written)
 ```
 
@@ -219,16 +220,16 @@ would write 40 events in 1 batches to usage.ndjson (nothing written)
 
 ## Pushing to a collector
 
-`ai-rulez usage export --to otlp` pushes the log past the export cursor to the collector you consented to with
+`ai-rulez telemetry export --to otlp` pushes the log past the export cursor to the collector you consented to with
 [`telemetry enable`](telemetry.md#the-consent-record). It is the by-hand form of what every flush does first: queue the
 events the outbox does not already hold, send them with retry, move the cursor.
 
 ```console
-$ ai-rulez usage export --to otlp
+$ ai-rulez telemetry export --to otlp
 queued 12 events from the usage log and 0 eval results (3 already queued or delivered); delivered 12 in 1 batches
-$ ai-rulez usage export --to otlp --with-evals
-$ ai-rulez usage export --to otlp --all        # also the history from before consent
-$ ai-rulez usage export --to otlp --dry-run    # count only: nothing queued, sent or moved
+$ ai-rulez telemetry export --to otlp --with-evals
+$ ai-rulez telemetry export --to otlp --all        # also the history from before consent
+$ ai-rulez telemetry export --to otlp --dry-run    # count only: nothing queued, sent or moved
 ```
 
 It needs consent (`telemetry status` says whether you have it), exits 1 when delivery fails so CI notices (the background
@@ -237,15 +238,15 @@ Eval results are queued once per result. See [the export cursor](telemetry.md#th
 
 ## Pruning the log
 
-`ai-rulez usage prune --keep-days 90` deletes lines older than 90 days that are behind the export cursor, so an event
+`ai-rulez telemetry prune --keep-days 90` deletes lines older than 90 days that are behind the export cursor, so an event
 still waiting to be exported is never lost to a prune. See [pruning the usage log](telemetry.md#pruning-the-usage-log) for
 the rules, `--dry-run` and `--ignore-cursor`.
 
 ## Joining several logs
 
-`ai-rulez report evals --usage a/usage.jsonl --usage b/usage.jsonl` merges the usage of several repositories or
+`ai-rulez telemetry report evals --usage a/usage.jsonl --usage b/usage.jsonl` merges the usage of several repositories or
 machines: an event that appears in more than one log counts once, by its `event_id` (lines without one, version 2 and
-older, all count). `--from-otlp` reads every `--usage` file as OTLP JSON instead (what `usage export --to file` writes, or
+older, all count). `--from-otlp` reads every `--usage` file as OTLP JSON instead (what `telemetry export --to file` writes, or
 a collector's file exporter produces). The digest scheme travels in the export, so `exact`, `stale` and `legacy` mean the
 same as for a native log; a served-skill digest is never taken for the canonical one. A load of a supporting file is not
 counted as a use. `--usage-log` is the same flag as `--usage`.
@@ -257,7 +258,7 @@ counted as a use. `--usage-log` is the same flag as `--usage`.
 - **One digest.** The lock's skill digest (`ai-rulez/skill/v1`) is the identity because it is what `lock` already pins
   and what `lock --check` verifies. A top-level `evals/` directory was never part of it (the loader does not read it as
   a resource), so no lock digest changed and no lock migration is needed.
-- **Join classes by lock digest.** `report evals` matches a use to an eval record by the record's `lock_digest`; a
+- **Join classes by lock digest.** `telemetry report evals` matches a use to an eval record by the record's `lock_digest`; a
   served-skill digest or a missing digest joins by id only (`legacy`).
 - **Served loads prefer the index digest.** A load through the skills server logs the index's canonical digest when
   there is one, so it joins like any other; otherwise its own served-skill digest is logged under
@@ -268,5 +269,5 @@ counted as a use. `--usage-log` is the same flag as `--usage`.
 ## See also
 
 [Item-load telemetry and OTLP export](telemetry.md) extends the same log with rule, agent and context events (Claude Code
-`InstructionsLoaded`, `SubagentStart`, `SubagentStop`), adds `report usage` sections for them, and documents the opt-in
+`InstructionsLoaded`, `SubagentStart`, `SubagentStop`), adds `telemetry report` sections for them, and documents the opt-in
 OTLP exporter, its consent model and the trust rule that keeps a repository from enabling network export.

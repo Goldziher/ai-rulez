@@ -26,7 +26,7 @@ func presetScenario(preset string) scenario {
 			runEnv(goldenEnv, "generate", "--yes"),
 			runEnv(goldenEnv, "generate", "--check"),
 			run("verify"),
-			run("clean", "--force"),
+			run("clean", "--yes"),
 		},
 	}
 }
@@ -51,7 +51,7 @@ func otherScenarios() []scenario {
 				runEnv(goldenEnv, "generate", "--check"),
 				runEnv(goldenEnv, "generate", "--dry-run"),
 				run("verify"),
-				run("clean", "--force"),
+				run("clean", "--yes"),
 			},
 		},
 		scenario{

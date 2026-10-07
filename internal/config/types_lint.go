@@ -1,6 +1,6 @@
 package config
 
-// LintConfig configures `ai-rulez validate --strict`. Every field is optional;
+// LintConfig configures `ai-rulez validate`. Every field is optional;
 // the lint package applies defaults for anything left unset.
 type LintConfig struct {
 	// Profile selects a preset of severities and the failure threshold:
@@ -33,17 +33,19 @@ type LintConfig struct {
 	KnownNames []string `yaml:"known_names,omitempty" json:"known_names,omitempty" toml:"known_names,omitempty"` //nolint:tagliatelle
 	// Description tunes the frontmatter description checks.
 	Description *LintDescription `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
-	// Tolerate caps how many findings of a rule are tolerated, per rule code or
-	// name: a rule whose unaccepted findings number at most N does not count
-	// toward the exit code. Lower N over time to ratchet a rule down. Not to be
-	// confused with Budgets, which caps the size of a content item.
+	// Ratchet tolerates up to N findings per rule code or name: a rule whose
+	// unaccepted findings number at most N does not count toward the exit code.
+	// Lower N over time to ratchet a rule down. Not to be confused with Budgets,
+	// which caps the size of a content item.
+	Ratchet map[string]int `yaml:"ratchet,omitempty" json:"ratchet,omitempty" toml:"ratchet,omitempty"`
+	// Tolerate and Budget are the pre-v5 spellings of Ratchet. They are only
+	// decoded so the loader can refuse them with a pointer to `ai-rulez migrate v5`.
 	Tolerate map[string]int `yaml:"tolerate,omitempty" json:"tolerate,omitempty" toml:"tolerate,omitempty"`
-	// Budget is the deprecated spelling of Tolerate; it still works and warns.
-	Budget map[string]int `yaml:"budget,omitempty" json:"budget,omitempty" toml:"budget,omitempty"`
+	Budget   map[string]int `yaml:"budget,omitempty" json:"budget,omitempty" toml:"budget,omitempty"`
 	// Risk sets the weights of the advisory risk score.
 	Risk *LintRisk `yaml:"risk,omitempty" json:"risk,omitempty" toml:"risk,omitempty"`
 	// Budgets maps a content kind (rule, context, skill, agent, command) to its size
-	// limits (max_lines, max_tokens). Not to be confused with Tolerate.
+	// limits (max_lines, max_tokens). Not to be confused with Ratchet.
 	Budgets map[string]LintBudget `yaml:"budgets,omitempty" json:"budgets,omitempty" toml:"budgets,omitempty"`
 	// Capability tunes the capability analysis (AR030).
 	Capability *LintCapability `yaml:"capability,omitempty" json:"capability,omitempty" toml:"capability,omitempty"`
@@ -67,7 +69,7 @@ type LintConfig struct {
 	// Security configures the security rule family (AR001...).
 	Security *LintSecurity `yaml:"security,omitempty" json:"security,omitempty" toml:"security,omitempty"`
 	// External lists third-party scanners whose findings are merged into the
-	// report when `validate --strict --external` (or `scan --external`) runs.
+	// report when `validate --external` (or `scan --external`) runs.
 	External []LintExternal `yaml:"external,omitempty" json:"external,omitempty" toml:"external,omitempty"`
 	// ScannerPolicy sets the policy for the external scanners as a whole: an
 	// embedded preset, required scanners, a failure threshold, isolation and
@@ -282,21 +284,4 @@ type LintRisk struct {
 	Error   *int `yaml:"error,omitempty" json:"error,omitempty" toml:"error,omitempty"`
 	Warning *int `yaml:"warning,omitempty" json:"warning,omitempty" toml:"warning,omitempty"`
 	Info    *int `yaml:"info,omitempty" json:"info,omitempty" toml:"info,omitempty"`
-}
-
-// Tolerated returns the per-rule tolerated finding counts: [lint.tolerate]
-// together with the deprecated [lint.budget], with [lint.tolerate] winning when a
-// rule is in both.
-func (l *LintConfig) Tolerated() map[string]int {
-	if l == nil || len(l.Tolerate)+len(l.Budget) == 0 {
-		return nil
-	}
-	out := make(map[string]int, len(l.Tolerate)+len(l.Budget))
-	for k, v := range l.Budget {
-		out[k] = v
-	}
-	for k, v := range l.Tolerate {
-		out[k] = v
-	}
-	return out
 }

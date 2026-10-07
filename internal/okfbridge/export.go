@@ -3,12 +3,12 @@ package okfbridge
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
-	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
@@ -18,6 +18,12 @@ type ExportOptions struct {
 	Include []Kind
 	// IndexStyle is okf.StyleBody (the default, also for "") or okf.StyleFrontmatter.
 	IndexStyle string
+	// LocalDir is the project's own .ai-rulez directory. When set, an item whose
+	// source file lies outside it (merged in from an include) is not exported,
+	// with a note, the same way include and builtin domains are skipped: the
+	// committed bundle documents this project, not what it pulled in. Empty
+	// disables the filter.
+	LocalDir string
 }
 
 // ExportResult is the bundle and what went into it.
@@ -46,7 +52,7 @@ func Export(tree *config.ContentTree, opts ExportOptions) (*ExportResult, error)
 		include[k] = true
 	}
 	res := &ExportResult{Counts: map[Kind]int{}}
-	items := collectItems(tree, include, res)
+	items := collectItems(tree, include, opts.LocalDir, res)
 
 	used := map[string]string{}
 	claim := func(p string) string {
@@ -65,7 +71,7 @@ func Export(tree *config.ContentTree, opts ExportOptions) (*ExportResult, error)
 	}
 
 	if !okf.ValidIndexStyle(opts.IndexStyle) {
-		return nil, oops.Errorf("unknown index style %q (use %s or %s)", opts.IndexStyle, okf.StyleBody, okf.StyleFrontmatter)
+		return nil, fmt.Errorf("unknown index style %q (use %s or %s)", opts.IndexStyle, okf.StyleBody, okf.StyleFrontmatter)
 	}
 	var idx []okf.IndexInput
 	var pieces []piece
@@ -97,8 +103,9 @@ func claimIndex(used map[string]string, p string) string {
 	return p
 }
 
-func collectItems(tree *config.ContentTree, include map[Kind]bool, res *ExportResult) []sourceItem {
+func collectItems(tree *config.ContentTree, include map[Kind]bool, localDir string, res *ExportResult) []sourceItem {
 	var items []sourceItem
+	foreign := 0
 	add := func(domain string, lists map[Kind][]config.ContentFile) {
 		for _, k := range AllKinds {
 			if !include[k] {
@@ -106,8 +113,12 @@ func collectItems(tree *config.ContentTree, include map[Kind]bool, res *ExportRe
 			}
 			files := append([]config.ContentFile(nil), lists[k]...)
 			sort.SliceStable(files, func(i, j int) bool { return itemID(k, files[i]) < itemID(k, files[j]) })
-			for i := range files {
-				items = append(items, sourceItem{kind: k, domain: domain, cf: files[i]})
+			for _, cf := range files {
+				if !isLocal(cf, localDir) {
+					foreign++
+					continue
+				}
+				items = append(items, sourceItem{kind: k, domain: domain, cf: cf})
 			}
 		}
 	}
@@ -134,7 +145,29 @@ func collectItems(tree *config.ContentTree, include map[Kind]bool, res *ExportRe
 			KindAgent: d.Agents, KindCommand: d.Commands, KindCheck: d.Checks,
 		})
 	}
+	if foreign > 0 {
+		res.Notes = append(res.Notes, fmt.Sprintf("skipped %d item(s) merged in from includes: they are not this project's own content", foreign))
+	}
 	return items
+}
+
+// isLocal reports whether a content file was read from localDir. Items without a
+// source path (built in memory) count as local.
+func isLocal(cf config.ContentFile, localDir string) bool {
+	if localDir == "" || cf.Path == "" {
+		return true
+	}
+	abs := func(p string) string {
+		if a, err := filepath.Abs(p); err == nil {
+			p = a
+		}
+		if r, err := filepath.EvalSymlinks(p); err == nil {
+			p = r
+		}
+		return p
+	}
+	rel, err := filepath.Rel(abs(localDir), abs(cf.Path))
+	return err == nil && filepath.IsLocal(rel)
 }
 
 // itemID is the ai-rulez identifier of an item: the directory name of a skill,
@@ -235,6 +268,9 @@ func titleOf(fields []okf.Field) string {
 // description for the index.
 func conceptFields(it sourceItem, id string) (fields []okf.Field, description string, err error) {
 	okfExtra, meta := splitMetadata(it.cf.Metadata)
+	if it.kind == KindSkill {
+		meta = dropDerivedName(meta, id)
+	}
 	typ, title := defaultType(it.kind), okf.TitleFromPath(sanitizeID(id)+".md")
 	hoisted := []okf.Field{}
 	for _, kv := range okfExtra {
@@ -272,13 +308,27 @@ func conceptFields(it sourceItem, id string) (fields []okf.Field, description st
 	return fields, description, nil
 }
 
+// dropDerivedName removes a skill `name` that equals the skill id. An import adds
+// exactly that name to a skill without one, so leaving it out keeps the round trip
+// from growing a metadata entry on every cycle.
+func dropDerivedName(meta []okf.Field, id string) []okf.Field {
+	out := meta[:0:0]
+	for _, f := range meta {
+		if s, ok := f.Value.(string); f.Key == keyName && ok && s == id {
+			continue
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
 func kindName(k Kind) string {
 	return strings.TrimSuffix(string(k), "s")
 }
 
 // fieldsNode builds an ordered mapping node.
 func fieldsNode(fields []okf.Field) *yaml.Node {
-	n := &yaml.Node{Kind: yaml.MappingNode, Tag: yamlMapTag}
+	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 	for _, f := range fields {
 		key := &yaml.Node{Kind: yaml.ScalarNode, Tag: tagStr, Value: f.Key}
 		var val yaml.Node
@@ -375,13 +425,15 @@ func renderResources(it sourceItem, id, dir, srcDir string, claim func(string) s
 	for _, r := range res {
 		rel := path.Clean(strings.ReplaceAll(r.RelPath, "\\", "/"))
 		if err := okf.ValidatePath(rel); err != nil || !resourceK[strings.SplitN(rel, "/", 2)[0]] {
-			return nil, nil, oops.Errorf("%s %q has an unsupported resource path %q", kindName(it.kind), id, r.RelPath)
+			return nil, nil, fmt.Errorf("%s %q has an unsupported resource path %q", kindName(it.kind), id, r.RelPath)
 		}
 		src := ""
 		if srcDir != "" && srcDir != "." {
 			src = path.Join(srcDir, rel)
 		}
-		if !strings.HasSuffix(strings.ToLower(rel), ".md") {
+		// Only a lower-case .md is a concept: import reads exactly that suffix, so
+		// an .MD resource travels as a plain file and survives the round trip.
+		if !strings.HasSuffix(rel, ".md") {
 			files = append(files, piece{file: okf.File{Path: claim(path.Join(dir, rel)), Data: r.Content, Mode: r.Mode}, src: src})
 			continue
 		}

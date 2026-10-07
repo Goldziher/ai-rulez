@@ -20,7 +20,7 @@ func TestFindConfigFileInDirName_ConfigConvention(t *testing.T) {
 	t.Run("finds .config/ai-rulez when .ai-rulez is absent", func(t *testing.T) {
 		root := t.TempDir()
 		want := filepath.Join(root, ".config", "ai-rulez", "config.toml")
-		writeConfigFile(t, want, "version = \"4.0\"\nname = \"x\"\n")
+		writeConfigFile(t, want, "version = \"5.0\"\nname = \"x\"\n")
 
 		got, err := FindConfigFile(root)
 		require.NoError(t, err)
@@ -30,8 +30,8 @@ func TestFindConfigFileInDirName_ConfigConvention(t *testing.T) {
 	t.Run("prefers .ai-rulez over .config/ai-rulez in the same directory", func(t *testing.T) {
 		root := t.TempDir()
 		want := filepath.Join(root, ".ai-rulez", "config.toml")
-		writeConfigFile(t, want, "version = \"4.0\"\nname = \"x\"\n")
-		writeConfigFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"y\"\n")
+		writeConfigFile(t, want, "version = \"5.0\"\nname = \"x\"\n")
+		writeConfigFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"y\"\n")
 
 		got, err := FindConfigFile(root)
 		require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestFindConfigFileInDirName_ConfigConvention(t *testing.T) {
 	t.Run("walks up to a .config/ai-rulez in an ancestor", func(t *testing.T) {
 		root := t.TempDir()
 		want := filepath.Join(root, ".config", "ai-rulez", "config.toml")
-		writeConfigFile(t, want, "version = \"4.0\"\nname = \"x\"\n")
+		writeConfigFile(t, want, "version = \"5.0\"\nname = \"x\"\n")
 		nested := filepath.Join(root, "a", "b", "c")
 		require.NoError(t, os.MkdirAll(nested, 0o755))
 
@@ -52,7 +52,7 @@ func TestFindConfigFileInDirName_ConfigConvention(t *testing.T) {
 
 	t.Run("does not expand an explicit config directory name", func(t *testing.T) {
 		root := t.TempDir()
-		writeConfigFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\n")
+		writeConfigFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"x\"\n")
 
 		_, err := FindConfigFileInDirName(root, "custom-policy")
 		require.Error(t, err)
@@ -63,14 +63,14 @@ func TestFindConfigFileInDirName_ConfigConvention(t *testing.T) {
 func TestResolveConfigDirName(t *testing.T) {
 	t.Run("returns .ai-rulez when present", func(t *testing.T) {
 		root := t.TempDir()
-		writeConfigFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\n")
+		writeConfigFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"x\"\n")
 
 		assert.Equal(t, aiRulezDirName, ResolveConfigDirName(root))
 	})
 
 	t.Run("falls back to .config/ai-rulez", func(t *testing.T) {
 		root := t.TempDir()
-		writeConfigFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\n")
+		writeConfigFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"x\"\n")
 
 		assert.Equal(t, altConfigDirName, ResolveConfigDirName(root))
 	})
@@ -105,7 +105,7 @@ func TestLoadConfig_ConfigConvention(t *testing.T) {
 	t.Run("roots outputs in the project and names the nested config dir", func(t *testing.T) {
 		root := t.TempDir()
 		writeConfigFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"),
-			"version = \"4.0\"\nname = \"nested\"\npresets = [\"claude\"]\n")
+			"version = \"5.0\"\nname = \"nested\"\npresets = [\"claude\"]\n")
 
 		cfg, err := LoadConfig(context.Background(), root)
 		require.NoError(t, err)

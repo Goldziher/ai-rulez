@@ -23,7 +23,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 1587f54648ed813fd91c729153012e992f895692270b66ea15db57774df3e849
+.ai-rulez/config.toml file 0644 844 dac314380a76551bc2fcb32dc962bd828f5a1f1678dc2275a9f248b84bfbebdb
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -44,29 +44,29 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .cline/ dir 0755
 .cline/agents/ dir 0755
-.cline/agents/architect.yaml file 0644 259 8811f9d6f981fae942c11c7c180703949c05e9734c8f0a26ffb14d52c88d3776
-.cline/agents/tester.yaml file 0644 245 9d45abfe45762d4b9b61003b1e8c5f9935681c12ae169d0c7fae955e40ddfdaf
+.cline/agents/architect.yaml file 0644 172 7c2470f6abef4ff4ae0b0906a42e2d71a617bbb3bf5089e494086912679e6e4d
+.cline/agents/tester.yaml file 0644 158 416a71a004dfc4bcd71c703930fed7f71fff28e51d2cc447b4c20becfaa07103
 .cline/skills/ dir 0755
 .cline/skills/deployer/ dir 0755
-.cline/skills/deployer/SKILL.md file 0644 261 d89e9d8ec9f63b3e663d648b30adff58975f415dc0c94b0f945bce5179162d03
+.cline/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .cline/skills/reviewer/ dir 0755
-.cline/skills/reviewer/SKILL.md file 0644 508 67c100714ffbb4b0653310665c531fa478731ff1b036188eded9c723ca97376a
+.cline/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .cline/skills/reviewer/references/ dir 0755
 .cline/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .cline/skills/reviewer/scripts/ dir 0755
 .cline/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .clinerules/ dir 0755
-.clinerules/always.md file 0644 325 489a15ee7a880819033d669c9e017b77038d2785078db679a81847579cb32a6e
-.clinerules/auto.md file 0644 302 910bbbd0e340080afaf6429ce973351958a1687857eb55a2c92d7cd9d6a5e65b
-.clinerules/context-architecture.md file 0644 314 fa3b1311725b98755d66a2deca0350ed451f3f43363499de9b1a20649fc616c6
-.clinerules/context-overview.md file 0644 325 c703b9126c33db3c7028c9c7f709b85657a2e13653bae3997319628f44ab972e
+.clinerules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.clinerules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.clinerules/context-architecture.md file 0644 229 3e1cc120d6c3b2174d960922a74a7e546f038a999566d8b2207f29ce349b2c2d
+.clinerules/context-overview.md file 0644 240 c45a46772f97e4529794efa5cff529b70a489ebb6154c2fedc9587710e7d0bc6
 .clinerules/hooks/ dir 0755
 .clinerules/hooks/TaskStart file 0755 321 2298456c55e8b48542534ff79b2ea770dd581d6062cef880212798e0b00ba564
-.clinerules/manual.md file 0644 313 10ef289c22ecbf4263293f06af00888914e903073f4ec64f8bbcea70e349979a
-.clinerules/typescript.md file 0644 376 1e7bc310743046ccff8b58d3a6402fb8f54447991fc6eec8dcb4beb9c34a1223
+.clinerules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.clinerules/typescript.md file 0644 291 3bd12c5c4eaec28ac71bd81353650bd889852148778d0895e9e8ffa113866e4e
 .clinerules/workflows/ dir 0755
-.clinerules/workflows/build.md file 0644 271 a59299ea4159df562e4a32e4cf73510ab09f9c1ebdbb6ca3f21973bea6d1ddd6
-.clinerules/workflows/ship.md file 0644 251 8c398926de9904e83b630b81d7a89134099c047e49c51c46435754bbf3b557f6
+.clinerules/workflows/build.md file 0644 186 ee2b63bdc0bfa1ea6dc1ec240d3dd97b7f6f5627d8335977580fc455c22b3779
+.clinerules/workflows/ship.md file 0644 166 1953b6dabda99ad0c37f41e5e6f45c0c0a062b044aeec8fe123cabbb653fc4a0
 .gitignore file 0644 448 b0cea88008531788ce18c02b6e862a8414062a15a29a97e30219478169fe7355
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 scripts/ dir 0755
@@ -112,7 +112,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -158,7 +158,7 @@ INFO  Removed generated files files=16 directories=10
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 826 1587f54648ed813fd91c729153012e992f895692270b66ea15db57774df3e849
+.ai-rulez/config.toml file 0644 844 dac314380a76551bc2fcb32dc962bd828f5a1f1678dc2275a9f248b84bfbebdb
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

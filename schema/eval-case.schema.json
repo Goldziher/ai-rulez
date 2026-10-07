@@ -9,7 +9,7 @@
       "type": "string",
       "minLength": 1,
       "not": { "pattern": "^(/|~|[A-Za-z]:)" },
-      "description": "A relative path that stays inside its base directory (no leading slash or ~; `..` segments are rejected by ai-rulez validate --strict, AR996)."
+      "description": "A relative path that stays inside its base directory (no leading slash or ~; `..` segments are rejected by ai-rulez validate, AR996)."
     },
     "fixture": {
       "type": "object",

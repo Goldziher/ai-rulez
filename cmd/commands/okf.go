@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
@@ -116,7 +116,8 @@ var ImportCmd = &cobra.Command{
 var importOKFCmd = &cobra.Command{
 	Use:   "okf <dir|git-url[@ref][#subdir]>",
 	Short: "Import an OKF bundle into .ai-rulez/",
-	Long: `Convert the concepts of an OKF bundle into ai-rulez rules, context and skills.
+	Long: `Convert the concepts of an OKF bundle into ai-rulez rules, context and skills
+(a concept whose x-ai-rulez.kind is agent, command or check becomes that kind).
 
 Each concept lands by its x-ai-rulez metadata when it has it (a bundle made by
 "export okf" round-trips losslessly), otherwise by its type: decision-like types
@@ -141,7 +142,6 @@ differ, 1 the bundle could not be read.`,
 
 func init() {
 	addFormatFlag(okfValidateCmd.Flags(), &okfFormat, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(okfValidateCmd.Flags())
 	okfValidateCmd.Flags().StringVar(&okfFailOn, "fail-on", "error", "Lowest severity that fails the run: error, warning, info or none")
 	OKFCmd.AddCommand(okfValidateCmd)
 
@@ -159,7 +159,6 @@ func init() {
 	importOKFCmd.Flags().BoolVar(&okfDryRun, "dry-run", false, "Report what would happen without writing")
 	importOKFCmd.Flags().BoolVar(&okfForce, "force", false, "Overwrite files that exist and differ")
 	addFormatFlag(importOKFCmd.Flags(), &okfFormat, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(importOKFCmd.Flags())
 	importOKFCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	ImportCmd.AddCommand(importOKFCmd)
 	includes.OKFScan = okfScanner(nil)
@@ -242,9 +241,7 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 		findings = []okf.Finding{}
 	}
 	if asJSON {
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		return enc.Encode(map[string]any{
+		return jsondoc.Write(out, map[string]any{
 			"bundle": spec, "okf_spec": okf.SpecVersion,
 			"concepts": len(b.Concepts), "index_style": b.IndexStyle(), "findings": findings,
 		})
@@ -255,6 +252,9 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 		f := &findings[i]
 		counts[f.Severity]++
 		loc := f.Path
+		if loc == "" {
+			loc = "."
+		}
 		if f.Line > 0 {
 			loc = fmt.Sprintf("%s:%d", f.Path, f.Line)
 		}
@@ -337,7 +337,7 @@ func okfExportOptions(cfg *config.Config) (okfbridge.ExportOptions, error) {
 	if style != okf.StyleBody && style != okf.StyleFrontmatter {
 		return okfbridge.ExportOptions{}, oops.Errorf("unknown --index-style %q (use %s or %s)", style, okf.StyleBody, okf.StyleFrontmatter)
 	}
-	return okfbridge.ExportOptions{Include: kinds, IndexStyle: style}, nil
+	return okfbridge.ExportOptions{Include: kinds, IndexStyle: style, LocalDir: cfg.ConfigDir}, nil
 }
 
 // printOKFDrift lists the paths a bundle is missing, has changed or has extra.
@@ -466,10 +466,8 @@ func importLintConfig(ctx context.Context) *config.LintConfig {
 
 func writeOKFImport(out io.Writer, spec, targetDir string, res *okfbridge.ImportResult) error {
 	if okfFormat == formatJSON {
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		return enc.Encode(map[string]any{
-			keySource: spec, "target": targetDir, "dry_run": okfDryRun,
+		return jsondoc.Write(out, map[string]any{
+			keySource: includes.RedactURL(spec), "target": targetDir, "dry_run": okfDryRun,
 			"actions": nonNilSlice(res.Actions), "findings": nonNilSlice(res.Findings),
 			"security": nonNilSlice(res.Security), "skipped": nonNilSlice(res.Skipped), "index_style": res.IndexStyle,
 		})

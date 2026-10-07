@@ -97,7 +97,6 @@ file they name.`,
 
 func init() {
 	addFormatFlag(CatalogCmd.Flags(), &catalogFormat, "", formatText, formatText, formatJSON)
-	addJSONFlagAlias(CatalogCmd.Flags())
 	CatalogCmd.Flags().IntVar(&catalogSchemaFlag, "schema-version", govview.CatalogSchemaVersion, "JSON schema version: 1 or 2")
 	CatalogCmd.Flags().StringVar(&catalogHTMLDir, "html", "", "Write a static website of the catalog into this directory")
 	CatalogCmd.Flags().StringVar(&catalogRole, "role", "", "With --html: keep only the items this role keeps")
@@ -264,7 +263,7 @@ func resolveCatalogSettings(cfg *config.Config) catalogSettings {
 }
 
 // buildCatalogV2 builds the version 2 catalog, linting the project in process
-// (the same engine as `validate --strict`). A lint that cannot run leaves the
+// (the same engine as `validate`). A lint that cannot run leaves the
 // lint fields out and says so; it never fails the catalog.
 func buildCatalogV2(ctx context.Context, cfg *config.Config, counter tokens.Counter, st catalogSettings) (*govview.CatalogDocV2, error) {
 	opts := govview.CatalogOptions{NoExcerpt: !st.Excerpt}

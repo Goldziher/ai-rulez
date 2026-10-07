@@ -11,7 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-// The "--no-fetch specified" reason is only true when the user passed the flag;
+// The "--offline specified" reason is only true when the user passed the flag;
 // a command that reads cached includes by design says so instead.
 func TestSourceFetch_OfflineReasonNamesTheRealCause(t *testing.T) {
 	tests := []struct {
@@ -20,8 +20,8 @@ func TestSourceFetch_OfflineReasonNamesTheRealCause(t *testing.T) {
 		want     string
 		notWant  string
 	}{
-		{"no flag", false, "does not fetch includes", "--no-fetch"},
-		{"flag passed", true, "--no-fetch specified", "does not fetch"},
+		{"no flag", false, "does not fetch includes", "--offline"},
+		{"flag passed", true, "--offline specified", "does not fetch"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

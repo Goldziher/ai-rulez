@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	validRootConfig  = "version = \"4.0\"\nname = \"ok\"\npresets = [\"claude\"]\ngitignore = false\n"
-	brokenRootConfig = "version = \"4.0\"\nname = \"broken\"\npresets = [\n"
-	profiledConfig   = "version = \"4.0\"\nname = \"profiled\"\npresets = [\"claude\"]\ngitignore = false\n\n[profiles]\nbackend = []\n"
+	validRootConfig  = "version = \"5.0\"\nname = \"ok\"\npresets = [\"claude\"]\ngitignore = false\nagents_md = false\n"
+	brokenRootConfig = "version = \"5.0\"\nname = \"broken\"\npresets = [\n"
+	profiledConfig   = "version = \"5.0\"\nname = \"profiled\"\npresets = [\"claude\"]\ngitignore = false\n\n[profiles]\nbackend = []\n"
 )
 
 // twoRoots builds a workspace with a valid root "a" and a second root "b" whose
@@ -104,7 +104,7 @@ func TestRunRecursiveValidate_ExitCode(t *testing.T) {
 	}{
 		{name: "all valid", bConfig: validRootConfig, wantCode: 0},
 		{name: "broken nested root", bConfig: brokenRootConfig, wantCode: 1},
-		{name: "structurally invalid root", bConfig: "version = \"4.0\"\nname = \"\"\npresets = [\"claude\"]\n", wantCode: 1},
+		{name: "structurally invalid root", bConfig: "version = \"5.0\"\nname = \"\"\npresets = [\"claude\"]\n", wantCode: 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -147,8 +147,8 @@ func TestRunRecursiveGenerate_ReportsNestedLegacyConfig(t *testing.T) {
 		legacy  string
 		wantErr string
 	}{
-		{name: "config.yaml beside no config.toml", legacy: "config.yaml", wantErr: "V2/V3 configs are no longer read"},
-		{name: "config.json", legacy: "config.json", wantErr: "V2/V3 configs are no longer read"},
+		{name: "config.yaml beside no config.toml", legacy: "config.yaml", wantErr: "no longer read"},
+		{name: "config.json", legacy: "config.json", wantErr: "no longer read"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

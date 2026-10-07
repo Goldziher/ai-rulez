@@ -1,12 +1,13 @@
 package lint
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 )
 
 // Summary aggregates findings across roots.
@@ -29,15 +30,15 @@ type BaselineSummary struct {
 	Expired  []BaselineEntry `json:"expired,omitempty"`
 }
 
-// Combined is the JSON document `validate --strict --format json` prints.
+// Combined is the JSON document `validate --format json` prints.
 type Combined struct {
 	Roots    []string  `json:"roots"`
 	Findings []Finding `json:"findings"`
 	Summary  Summary   `json:"summary"`
 	// Baseline is set when a baseline was applied.
 	Baseline *BaselineSummary `json:"baseline,omitempty"`
-	// Budgets lists rules over their [lint.tolerate] count.
-	Budgets []BudgetExcess `json:"budgets_exceeded,omitempty"`
+	// Ratchet lists rules over their [lint.ratchet] count.
+	Ratchet []RatchetExcess `json:"ratchet_exceeded,omitempty"`
 	// Profile is the lint profile when it is not the default.
 	Profile string `json:"profile,omitempty"`
 	// Risk is the advisory risk score (never affects the exit code).
@@ -128,9 +129,7 @@ func (c *Combined) tally() {
 
 // WriteJSON prints the combined document.
 func WriteJSON(w io.Writer, c Combined) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	return enc.Encode(c) //nolint:wrapcheck // writer error
+	return jsondoc.Write(w, c)
 }
 
 // WriteText prints one line per finding (file:line: severity code name: message)
@@ -191,8 +190,8 @@ func writeBaselineText(sb *strings.Builder, c Combined) {
 		}
 		fmt.Fprintf(sb, "; %d finding(s) in other files not shown\n", s.Dropped)
 	}
-	for _, e := range c.Budgets {
-		fmt.Fprintf(sb, "tolerate: %s has %d finding(s), over its tolerated count of %d\n", e.Code, e.Count, e.Max)
+	for _, e := range c.Ratchet {
+		fmt.Fprintf(sb, "ratchet: %s has %d finding(s), over its ratchet of %d\n", e.Code, e.Count, e.Max)
 	}
 	if c.Baseline == nil {
 		return

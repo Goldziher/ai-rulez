@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const sharedVSCodeConfig = `version = "4.0"
+const sharedVSCodeConfig = `version = "5.0"
 name = "shared"
 presets = ["copilot", "zoocode"]
 gitignore = false
@@ -39,7 +39,7 @@ func TestGenerate_PresetsMergingDifferentKeysIntoOneDocumentAreUnioned(t *testin
 	assert.Equal(t, sharedVSCodeHandAuthored, readProjectFile(t, root, ".vscode/settings.json"))
 }
 
-const sharedHooksConfig = `version = "4.0"
+const sharedHooksConfig = `version = "5.0"
 name = "shared"
 presets = ["copilot", "copilot-cli"]
 gitignore = false

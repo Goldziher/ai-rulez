@@ -311,7 +311,7 @@ func TestGenerate_IgnoresTheLocalManifestThatHoldsMergeRecords(t *testing.T) {
 func TestGenerate_IgnoresTheLocalManifestWithoutAnyLocalInput(t *testing.T) {
 	// Arrange: the record exists only because a hand-authored document was merged into.
 	root := t.TempDir()
-	cfg := "version = \"4.0\"\nname = \"shared\"\npresets = [\"claude\"]\n" + agentsMDMCPServer
+	cfg := "version = \"5.0\"\nname = \"shared\"\npresets = [\"claude\"]\n" + agentsMDMCPServer
 	writeAgentsMDProject(t, root, cfg)
 	writeAgentsMDFile(t, root, ".mcp.json", userClaudeSettings)
 	p := &driftProject{base: root, dir: filepath.Join(root, ".ai-rulez")}

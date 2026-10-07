@@ -159,10 +159,13 @@ func loadConfigSchema(t *testing.T) schemaDoc {
 var schemaGapAllowed = map[string]bool{
 	"plugin.hooks.targets":  true,
 	"plugin.hooks.matchers": true,
+	// pre-v5 spellings of lint.ratchet: decoded only so the loader can refuse them
+	"lint.budget":   true,
+	"lint.tolerate": true,
 }
 
 // Every key the TOML writer can emit must be a known key of the published JSON
-// schema, or editors flag a config the tool itself wrote and `validate --strict`
+// schema, or editors flag a config the tool itself wrote and `validate`
 // rejects it.
 func TestTOMLOutputKeysAreInTheSchema(t *testing.T) {
 	// Arrange

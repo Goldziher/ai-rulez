@@ -11,7 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
-const symlinkTestConfig = "version = \"4.0\"\nname = \"proj\"\npresets = [\"claude\"]\n"
+const symlinkTestConfig = "version = \"5.0\"\nname = \"proj\"\npresets = [\"claude\"]\n"
 
 // A symlinked config.toml or config.local.toml is a config file the project did
 // not author: when its target is outside the repository root it is refused, like

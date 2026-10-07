@@ -1,0 +1,10 @@
+version = "5.0"
+name = "root"
+presets = ["claude"]
+agents_md = true
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+gitignore = true
+
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[header]
+hashes = "full"

@@ -29,7 +29,7 @@ func okfProject(t *testing.T) string {
 	t.Helper()
 	resetOKFFlags(t)
 	root := t.TempDir()
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "---\ndescription: Style\n---\nUse gofmt.\n")
 	writeFile(t, filepath.Join(root, ".ai-rulez", "context", "arch.md"), "---\ndescription: Arch\n---\nLayers.\n")
 	chdir(t, root)
@@ -161,7 +161,7 @@ func TestOKFImportCommand(t *testing.T) {
 	bundle := filepath.Join(root, "docs", "okf")
 
 	target := t.TempDir()
-	writeFile(t, filepath.Join(target, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"y\"\npresets = [\"claude\"]\n")
+	writeFile(t, filepath.Join(target, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"y\"\npresets = [\"claude\"]\n")
 	chdir(t, target)
 
 	okfDryRun = true
@@ -201,7 +201,7 @@ func TestOKFImportRefusesSecrets(t *testing.T) {
 	bundle := t.TempDir()
 	writeFile(t, filepath.Join(bundle, "a.md"), "---\ntype: Decision\n---\nkey AKIAABCDEFGHIJKLMNOP\n")
 	target := t.TempDir()
-	writeFile(t, filepath.Join(target, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"y\"\npresets = [\"claude\"]\n")
+	writeFile(t, filepath.Join(target, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"y\"\npresets = [\"claude\"]\n")
 	chdir(t, target)
 	var out bytes.Buffer
 	assert.Equal(t, exitOKFProblems, runOKFImport(context.Background(), bundle, &out))
@@ -211,7 +211,7 @@ func TestOKFImportRefusesSecrets(t *testing.T) {
 
 func TestStrictValidateLintsTheOKFBundle(t *testing.T) {
 	root := okfProject(t)
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\", \"okf\"]\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\", \"okf\"]\n")
 	require.Equal(t, 0, runRecursiveGenerate())
 
 	strictCodes := func() map[string]string {
@@ -243,7 +243,7 @@ func TestStrictValidateLintsTheOKFBundle(t *testing.T) {
 
 func TestDoctorReportsOKFBundleProblems(t *testing.T) {
 	root := okfProject(t)
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\", \"okf\"]\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\", \"okf\"]\n")
 	require.Equal(t, 0, runRecursiveGenerate())
 	writeFile(t, filepath.Join(root, "docs", "okf", "rules", "notype.md"), "plain text\n")
 	t.Cleanup(func() { doctorStrict, doctorJSON, doctorProfile = false, false, "" })
@@ -259,7 +259,7 @@ func TestOKFBundleAsInclude(t *testing.T) {
 	writeFile(t, filepath.Join(bundle, "decisions", "use-go.md"), "---\ntype: Decision\ndescription: Use Go\n---\nWe write Go.\n")
 	writeFile(t, filepath.Join(bundle, "concepts", "arch.md"), "---\ntype: Concept\n---\nLayers.\n")
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"),
-		"version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[[includes]]\nname = \"kb\"\nsource = \""+bundle+"\"\nformat = \"okf\"\ninclude = [\"rules\"]\n")
+		"version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\nagents_md = false\n\n[[includes]]\nname = \"kb\"\nsource = \""+bundle+"\"\nformat = \"okf\"\ninclude = [\"rules\"]\n")
 	require.Equal(t, 0, runRecursiveGenerate())
 	got, err := os.ReadFile(filepath.Join(root, ".claude", "rules", "decisions-use-go.md"))
 	require.NoError(t, err)
@@ -271,7 +271,7 @@ func TestOKFBundleAsInclude(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(root, ".claude", "rules", "decisions-evil.md"), "the security scan refuses the whole bundle")
 }
 
-const okfRolesConfig = `version = "4.0"
+const okfRolesConfig = `version = "5.0"
 name = "x"
 presets = ["claude", "okf"]
 
@@ -379,7 +379,7 @@ func TestOKFRoleBundleRoundTripsChecksAndDelivery(t *testing.T) {
 	okfRole, okfOut = "", ""
 
 	target := t.TempDir()
-	writeFile(t, filepath.Join(target, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"y\"\npresets = [\"claude\"]\n")
+	writeFile(t, filepath.Join(target, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"y\"\npresets = [\"claude\"]\n")
 	chdir(t, target)
 	var out bytes.Buffer
 	require.Equal(t, 0, runOKFImport(context.Background(), bundle, &out), out.String())
@@ -428,7 +428,7 @@ func TestOKFIndexStyleFlagConfigAndDetection(t *testing.T) {
 
 	// The configured style is the default; the flag overrides it.
 	okfIndexStyle = ""
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[okf]\nindex_style = \"frontmatter\"\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[okf]\nindex_style = \"frontmatter\"\n")
 	code, out2 = exportRun(t, true)
 	assert.Equal(t, 0, code, out2)
 

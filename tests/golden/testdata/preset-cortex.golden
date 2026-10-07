@@ -22,7 +22,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 827 4547c6abbf5c5ef0dc5b0a947cf30d1bcff9c27337f169bc3141b821c92ddb0d
+.ai-rulez/config.toml file 0644 845 bc569a76716e09fe79e2007012eed6fd8229d39585189b4c49f5bbd16a54c197
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -43,21 +43,21 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .cortex/ dir 0755
 .cortex/agents/ dir 0755
-.cortex/agents/architect.md file 0644 259 042a8f94a310568b0ee0239af7bae65ff00556eda4a0cb3abff31ec1c566fb7f
-.cortex/agents/tester.md file 0644 245 0f1121651f7e2576011329b93a8e964379789f13df52d91221345059b1c4270d
+.cortex/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
+.cortex/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .cortex/settings.json file 0644 479 47cc96d1c8135ddd849f304622e902dc03f144119c07a07217e27af88681d4c5
 .cortex/skills/ dir 0755
 .cortex/skills/deployer/ dir 0755
-.cortex/skills/deployer/SKILL.md file 0644 259 ec47606f24b7f4d8bbde03fa5a30ca529314ec73ab6295227313498c3b20bf26
+.cortex/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .cortex/skills/reviewer/ dir 0755
-.cortex/skills/reviewer/SKILL.md file 0644 506 93663ca7a85ab5851b16bb97dd5fcf9461bec7727f0d9dff86326fb07dac18aa
+.cortex/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .cortex/skills/reviewer/references/ dir 0755
 .cortex/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .cortex/skills/reviewer/scripts/ dir 0755
 .cortex/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 235 43a4b0713fd36c5d59d1c0b75c01e567625e59f6bb686c65e1a4caf3844b9023
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 874 a179132f348df0f166375a3c7952fa3922689399a4796ebd2b1bd9620ea54b33
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -99,7 +99,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -135,7 +135,7 @@ INFO  Removed generated files files=9 directories=7
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 827 4547c6abbf5c5ef0dc5b0a947cf30d1bcff9c27337f169bc3141b821c92ddb0d
+.ai-rulez/config.toml file 0644 845 bc569a76716e09fe79e2007012eed6fd8229d39585189b4c49f5bbd16a54c197
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

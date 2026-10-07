@@ -1,0 +1,1 @@
+{"mcp_servers": [{"name": "extra", "transport": "http", "url": "https://extra.example.com/mcp"}]}

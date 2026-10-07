@@ -9,7 +9,7 @@ import (
 func TestSchemaLLMTable(t *testing.T) {
 	write := func(body string) string {
 		p := filepath.Join(t.TempDir(), "config.toml")
-		if err := os.WriteFile(p, []byte("version = \"4.0\"\nname = \"t\"\n"+body), 0o600); err != nil {
+		if err := os.WriteFile(p, []byte("version = \"5.0\"\nname = \"t\"\n"+body), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		return p

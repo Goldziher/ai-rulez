@@ -49,7 +49,7 @@ func (s *ValidateCLITestSuite) TestValidateValidConfigWithCustomPath() {
 func (s *ValidateCLITestSuite) TestValidateWithPositionalConfigFile() {
 	configDir := filepath.Join(s.workingDir, ".rules")
 	s.NoError(os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
-	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "5.0"
 name = "positional-validate"
 presets = ["codex"]
 `)
@@ -67,7 +67,7 @@ priority: high
 func (s *ValidateCLITestSuite) TestValidateWithConfigFlag() {
 	configDir := filepath.Join(s.workingDir, "ai-policy")
 	s.NoError(os.MkdirAll(configDir, 0o755))
-	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "5.0"
 name = "config-flag"
 presets = ["codex"]
 `)
@@ -86,7 +86,7 @@ presets = ["codex"]
 func (s *ValidateCLITestSuite) TestValidateWithConfigDirFlag() {
 	configDir := filepath.Join(s.workingDir, "ai-policy")
 	s.NoError(os.MkdirAll(configDir, 0o755))
-	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "5.0"
 name = "config-dir-flag"
 presets = ["codex"]
 `)
@@ -109,7 +109,7 @@ func (s *ValidateCLITestSuite) TestValidateConfigWithAgents() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "agent-test"
 description = "Config with agents"
 presets = ["claude"]
@@ -221,7 +221,7 @@ func (s *ValidateCLITestSuite) TestValidateConfigWithWarnings() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "warning-test"
 description = "Config with warnings"
 presets = ["claude"]
@@ -250,7 +250,7 @@ func (s *ValidateCLITestSuite) TestValidateWarnsWhenSkillDescriptionMissing() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "codex-skill-test"
 presets = ["codex"]
 `
@@ -276,7 +276,7 @@ priority: high
 func (s *ValidateCLITestSuite) TestValidateWarnsOnUnknownBuiltinExclusion() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
-	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "5.0"
 name = "unknown-exclusions"
 presets = ["claude"]
 builtins = ["!ai-governance/this-rule-does-not-exist", "!nosuchpack", "!git-workflow/commit-message"]
@@ -295,7 +295,7 @@ builtins = ["!ai-governance/this-rule-does-not-exist", "!nosuchpack", "!git-work
 func (s *ValidateCLITestSuite) TestValidateSilentOnValidBuiltinExclusions() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
-	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "5.0"
 name = "valid-exclusions"
 presets = ["claude"]
 builtins = ["!agent-delegation", "!git-workflow/commit-messages", "!ai-governance/minimal-changes"]

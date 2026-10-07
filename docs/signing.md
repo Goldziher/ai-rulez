@@ -158,7 +158,7 @@ reports `AR724`, not `AR722`. `--format json` prints `schema/verify-attestation.
 could not run (no trusted signer, no trusted root for a certificate bundle, unreadable lock), `2` verification failed.
 
 The same checks run, without `verify`, wherever `[signing] require = ["lock"]` applies: `lock --check`,
-`generate --locked` (and `--frozen`) and `validate --strict` report the same `AR720` to `AR727` codes.
+`generate --locked` (and `--frozen`) and `validate` report the same `AR720` to `AR727` codes.
 
 ### Trusted root
 
@@ -197,7 +197,7 @@ repository.
   plant or reset it. A file that fails its HMAC is discarded with a warning. A fresh machine or a CI runner starts empty,
   so CI relies on `max_age` and branch protection. An attacker who can present an old bundle to a fresh machine within
   `max_age` succeeds: set `max_age` to your release cadence. `verify --no-state` skips the state.
-- `lock --check`, `generate --locked` and `validate --strict` read the state but never write it; only
+- `lock --check`, `generate --locked` and `validate` read the state but never write it; only
   `verify --attestation` advances it.
 
 ## Bundles, skills and SBOMs
@@ -258,7 +258,7 @@ or a key and a keyless identity, of one person. A file that fails is ignored whi
 with none valid the first failure is reported, and with some but too few the result is `AR728`. Each subject has its own
 threshold (`lock`, `bundle`, `skill`, `sbom`; default 1), and a threshold of k needs at least k trust entries for the
 subject, or an `identity_regexp`, which may match many identities. It applies to `lock --check`, `generate --locked`,
-`validate --strict`, `verify --bundle`, `--skill` and `--sbom` and the served-skill gates. Provenance is signed by the
+`validate`, `verify --bundle`, `--skill` and `--sbom` and the served-skill gates. Provenance is signed by the
 builder alone and is not subject to the bundle's threshold.
 
 ## SLSA provenance

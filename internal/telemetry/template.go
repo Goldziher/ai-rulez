@@ -44,6 +44,8 @@ type TemplateOptions struct {
 	// default) or "toml" ([[hooks]] groups for config.toml, which `generate`
 	// writes into .claude/settings.json and owns).
 	Format string
+	// LogPath, SinkCommand and IndexPath are passed to the skill recorder.
+	LogPath, SinkCommand, IndexPath string
 }
 
 // telemetryEvents are the Claude Code events the item recorder handles, in the
@@ -51,11 +53,11 @@ type TemplateOptions struct {
 var telemetryEvents = []string{HookInstructionsLoaded, HookSubagentStart, HookSubagentStop}
 
 // HookTemplate returns the hook configuration that records skill, rule, context
-// and agent loads. For Claude Code it is the usage template (PreToolUse on the
+// and agent loads. For Claude Code it is the skill-hook template (PreToolUse on the
 // Skill tool, UserPromptExpansion) plus InstructionsLoaded, SubagentStart and
 // SubagentStop; every handler is async with a short timeout because the recorders
 // only append to a local file. Codex and Cursor document no instruction-load
-// event, so they get the usage template plus the subagent events they do document
+// event, so they get the skill-hook template plus the subagent events they do document
 // (Codex SubagentStart/SubagentStop, Cursor subagentStart/subagentStop).
 func HookTemplate(options TemplateOptions) ([]byte, error) {
 	harness := options.Harness
@@ -74,9 +76,12 @@ func HookTemplate(options TemplateOptions) ([]byte, error) {
 		return nil, oops.Errorf("unknown template format %q (use json or toml)", format)
 	}
 	if format == FormatTOML && harness != usage.HarnessClaude {
-		return nil, oops.Errorf("the [[hooks]] snippet is generated for the claude harness only (codex and cursor use `usage hook`)")
+		return nil, oops.Errorf("the [[hooks]] snippet is generated for the claude harness only (codex and cursor use --format json)")
 	}
-	base, err := usage.HookTemplate(usage.HookTemplateOptions{Executable: options.Executable, Harness: harness, Role: options.Role})
+	base, err := usage.HookTemplate(usage.HookTemplateOptions{
+		Executable: options.Executable, Harness: harness, Role: options.Role,
+		LogPath: options.LogPath, SinkCommand: options.SinkCommand, IndexPath: options.IndexPath,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +96,7 @@ func HookTemplate(options TemplateOptions) ([]byte, error) {
 	return claudeJSON(base, command)
 }
 
-// claudeJSON adds the three telemetry events to the usage template and marks
+// claudeJSON adds the three telemetry events to the skill-hook template and marks
 // every handler async with a short timeout.
 func claudeJSON(base []byte, command string) ([]byte, error) {
 	var doc struct {
@@ -160,7 +165,7 @@ func recordCommand(executable, role, harness string) string {
 func singleQuote(value string) string { return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'" }
 
 // tomlTemplate renders [[hooks]] groups for config.toml. The skill events reuse
-// the command the usage template carries.
+// the command the skill-hook template carries.
 func tomlTemplate(usageJSON []byte, telemetryCommand string) string {
 	var doc struct {
 		Hooks map[string][]struct {

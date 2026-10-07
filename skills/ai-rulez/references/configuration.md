@@ -3,7 +3,7 @@
 ## config.toml Schema
 
 ```toml
-version = "4.0"              # Required, must be "4.0"
+version = "5.0"              # Required, must be "5.0"
 name = "my-project"           # Required, project name
 
 description = ""              # Optional project description
@@ -16,7 +16,8 @@ presets = [                   # Built-in names and/or custom preset tables
 
 default = ""                  # Default profile name
 
-gitignore = true              # Auto-update .gitignore (default: true)
+gitignore = true              # Opt in to the managed .gitignore block (default: false)
+# agents_md = false           # Default true: one AGENTS.md, CLAUDE.md imports @AGENTS.md
 
 builtins = true               # Enable all built-in domains
 # builtins = false            # Disable all built-in domains
@@ -59,6 +60,7 @@ amp = "max"
 
 [header]
 style = "detailed"            # detailed | compact | minimal
+# hashes = "content"          # content (default: per-file Content-Hash) | full (adds project-wide Source-Hash) | none
 
 [[mcp_servers]]
 name = "ai-rulez"

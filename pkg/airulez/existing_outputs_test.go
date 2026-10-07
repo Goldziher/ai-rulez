@@ -47,7 +47,7 @@ func TestPlanReflectsTheExistingOutputsOfItsWorkspace(t *testing.T) {
 	doc, err := os.ReadFile(settings)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(settings, []byte(strings.Replace(string(doc), "{", "{\n  \"userKey\": true,", 1)), 0o644))
-	trimmed := map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"svc\"\npresets = [\"claude\"]\n"}
+	trimmed := map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"svc\"\npresets = [\"claude\"]\nagents_md = false\n"}
 	for name, content := range trimmed {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, filepath.FromSlash(name)), []byte(content), 0o644))
 	}

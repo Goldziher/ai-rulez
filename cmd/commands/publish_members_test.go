@@ -11,7 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 )
 
-const publishMembersRootConfig = `version = "4.0"
+const publishMembersRootConfig = `version = "5.0"
 name = "acme-plugins"
 description = "Acme plugin collection."
 presets = ["claude"]
@@ -27,7 +27,7 @@ email = "dev@acme.example"
 `
 
 func memberConfig(name string, runtimes string) string {
-	return `version = "4.0"
+	return `version = "5.0"
 name = "` + name + `"
 description = "` + name + ` plugin."
 

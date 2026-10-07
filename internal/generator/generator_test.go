@@ -243,7 +243,8 @@ func TestGenerator_Gitignore_Enabled(t *testing.T) {
 
 func TestGenerator_Gitignore_CollectsPatterns(t *testing.T) {
 	tempDir := t.TempDir()
-	gen := NewGenerator(&config.Config{BaseDir: tempDir})
+	enabled := true
+	gen := NewGenerator(&config.Config{BaseDir: tempDir, Gitignore: &enabled})
 
 	outputs := []config.OutputFile{
 		{Path: filepath.Join(tempDir, "AGENTS.md")},
@@ -277,7 +278,8 @@ func TestGenerator_Gitignore_CollectsPatterns(t *testing.T) {
 // only the subdirectories ai-rulez actually writes.
 func TestGenerator_Gitignore_DoesNotIgnoreAssistantDirRoot(t *testing.T) {
 	tempDir := t.TempDir()
-	gen := NewGenerator(&config.Config{BaseDir: tempDir})
+	enabled := true
+	gen := NewGenerator(&config.Config{BaseDir: tempDir, Gitignore: &enabled})
 
 	outputs := []config.OutputFile{
 		{Path: filepath.Join(tempDir, ".claude"), IsDir: true},
@@ -299,7 +301,8 @@ func TestGenerator_Gitignore_DoesNotIgnoreAssistantDirRoot(t *testing.T) {
 // ignored by name — narrowing the pattern must not stop covering owned content.
 func TestGenerator_Gitignore_IgnoresAssistantDirFileByName(t *testing.T) {
 	tempDir := t.TempDir()
-	gen := NewGenerator(&config.Config{BaseDir: tempDir})
+	enabled := true
+	gen := NewGenerator(&config.Config{BaseDir: tempDir, Gitignore: &enabled})
 
 	outputs := []config.OutputFile{
 		{Path: filepath.Join(tempDir, ".gemini", "GEMINI.md")},
@@ -313,9 +316,11 @@ func TestGenerator_Gitignore_IgnoresAssistantDirFileByName(t *testing.T) {
 
 func TestGenerator_Gitignore_IncludesManifest_CustomConfigDir(t *testing.T) {
 	tempDir := t.TempDir()
+	enabled := true
 	gen := NewGenerator(&config.Config{
 		BaseDir:   tempDir,
 		ConfigDir: filepath.Join(tempDir, ".cfg"),
+		Gitignore: &enabled,
 	})
 
 	patterns := gen.collectGitignorePaths(nil)
@@ -333,9 +338,8 @@ func TestGenerator_CustomPreset_Markdown(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
 
 	// Create config
-	configContent := `version = "4.0"
+	configContent := `version = "5.0"
 name = "custom-preset-test"
-gitignore = false
 
 [[presets]]
 name = "custom"
@@ -378,9 +382,8 @@ func TestGenerator_CustomPreset_Directory(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
 
 	// Create config
-	configContent := `version = "4.0"
+	configContent := `version = "5.0"
 name = "custom-preset-test"
-gitignore = false
 
 [[presets]]
 name = "custom-dir"
@@ -602,7 +605,7 @@ func TestGenerator_MCPEnv_ResolvesFromEnvFile(t *testing.T) {
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, ".env"), []byte("GRAFANA_TOKEN=from-dotenv\n"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "mcp-env"
 presets = ["claude"]
 gitignore = true
@@ -630,7 +633,7 @@ func TestGenerator_MCPEnv_CLIOverrideBeatsEnvFile(t *testing.T) {
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, ".env"), []byte("GRAFANA_TOKEN=from-dotenv\n"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "mcp-env"
 presets = ["claude"]
 gitignore = true
@@ -657,7 +660,7 @@ func TestGenerator_MCPEnv_ExpandsProjectRoot(t *testing.T) {
 	tempDir := t.TempDir()
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "mcp-root"
 presets = ["cursor"]
 gitignore = true
@@ -715,7 +718,7 @@ func TestComputeSourceHash_StableWithProjectRootPlaceholder(t *testing.T) {
 
 	build := func(root string) *config.Config {
 		cfg := &config.Config{
-			Name: "x", Version: "4.0", BaseDir: root,
+			Name: "x", Version: "5.0", BaseDir: root,
 			Content: &config.ContentTree{},
 			MCPServers: map[string]*config.MCPServer{
 				"repo": {Name: "repo", Command: "node", Args: []string{"${PROJECT_ROOT}/scripts/mcp.js"}},
@@ -725,8 +728,8 @@ func TestComputeSourceHash_StableWithProjectRootPlaceholder(t *testing.T) {
 		return cfg
 	}
 
-	hashA := computeSourceHash(build(filepath.Join(string(filepath.Separator), "tmp", "a", "proj")), &config.ContentTree{})
-	hashB := computeSourceHash(build(filepath.Join(string(filepath.Separator), "tmp", "b", "work", "proj")), &config.ContentTree{})
+	hashA := computeSourceHash(build(filepath.Join(t.TempDir(), "a", "proj")), &config.ContentTree{})
+	hashB := computeSourceHash(build(filepath.Join(t.TempDir(), "b", "work", "proj")), &config.ContentTree{})
 	assert.Equal(t, hashA, hashB, "source hash must not depend on the resolved project root")
 }
 
@@ -734,7 +737,7 @@ func TestGenerator_MCPEnv_FailsUnresolvedPlaceholder(t *testing.T) {
 	tempDir := t.TempDir()
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "mcp-env"
 presets = ["claude"]
 gitignore = true
@@ -760,7 +763,7 @@ func TestGenerator_MCPEnv_ErrorsWhenSecretOutputNotGitignored(t *testing.T) {
 	tempDir := t.TempDir()
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "mcp-env"
 presets = ["claude"]
 gitignore = false
@@ -785,7 +788,7 @@ func TestGenerator_MCPEnv_ErrorsWhenScopedSecretOutputNotGitignored(t *testing.T
 	tempDir := t.TempDir()
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "scoped-mcp-env"
 presets = ["codex"]
 gitignore = false
@@ -814,7 +817,7 @@ func TestComputeSourceHash_RedactsMCPEnvSecrets(t *testing.T) {
 	content := &config.ContentTree{}
 	cfgA := &config.Config{
 		Name:    "hash-test",
-		Version: "4.0",
+		Version: "5.0",
 		MCPServers: map[string]*config.MCPServer{
 			"grafana": {
 				Command:       "uvx",
@@ -825,7 +828,7 @@ func TestComputeSourceHash_RedactsMCPEnvSecrets(t *testing.T) {
 	}
 	cfgB := &config.Config{
 		Name:    "hash-test",
-		Version: "4.0",
+		Version: "5.0",
 		MCPServers: map[string]*config.MCPServer{
 			"grafana": {
 				Command:       "uvx",
@@ -836,7 +839,7 @@ func TestComputeSourceHash_RedactsMCPEnvSecrets(t *testing.T) {
 	}
 	cfgC := &config.Config{
 		Name:    "hash-test",
-		Version: "4.0",
+		Version: "5.0",
 		MCPServers: map[string]*config.MCPServer{
 			"grafana": {
 				Command:       "uvx",
@@ -1609,7 +1612,7 @@ func TestGenerator_CleansStaleSkillResource(t *testing.T) {
 
 	require.NoError(t, os.WriteFile(
 		filepath.Join(tempDir, ".ai-rulez", "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\ngitignore = false\n"), 0o644))
+		[]byte("version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"), 0o644))
 
 	ctx := context.Background()
 	cfg, err := config.LoadConfig(ctx, tempDir)
@@ -1645,7 +1648,7 @@ func TestGenerator_PreservesUserOwnedAssistantFiles(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 	require.NoError(t, os.WriteFile(
 		filepath.Join(configDir, "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"x\"\npresets = [\"claude\", \"codex\"]\ngitignore = false\n"),
+		[]byte("version = \"5.0\"\nname = \"x\"\npresets = [\"claude\", \"codex\"]\n"),
 		0o644,
 	))
 	require.NoError(t, os.WriteFile(
@@ -1686,7 +1689,7 @@ func TestGenerator_DryRunPlansWritesAndDeletesWithoutMutation(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 	require.NoError(t, os.WriteFile(
 		filepath.Join(configDir, "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"x\"\npresets = [\"codex\"]\ngitignore = false\n"),
+		[]byte("version = \"5.0\"\nname = \"x\"\npresets = [\"codex\"]\n"),
 		0o644,
 	))
 	require.NoError(t, os.WriteFile(
@@ -1723,7 +1726,7 @@ func TestGenerator_ScopedOutputsUseScopedProfiles(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "domains", "frontend", "rules"), 0o755))
 	require.NoError(t, os.WriteFile(
 		filepath.Join(configDir, "config.toml"),
-		[]byte(`version = "4.0"
+		[]byte(`version = "5.0"
 name = "scoped"
 presets = ["codex"]
 gitignore = false
@@ -2102,7 +2105,7 @@ func TestGenerator_HandAuthoredSettings_SurvivesGeneration(t *testing.T) {
 	require.NoError(t, os.WriteFile(settingsPath, []byte(handAuthored), 0o644))
 
 	// Create config with a NEW MCP server
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "merge-test"
 presets = ["claude"]
 gitignore = false
@@ -2171,7 +2174,7 @@ func TestGenerator_HandAuthoredSettings_NotGitignored(t *testing.T) {
 `), 0o644))
 
 	// Create config with MCP server and gitignore enabled
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "gitignore-test"
 presets = ["claude"]
 gitignore = true
@@ -2214,7 +2217,7 @@ func TestGenerator_WhollyGeneratedMCPJSON_IsGitignored(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
 
 	// No pre-existing .mcp.json
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "mcp-json-test"
 presets = ["cursor"]
 gitignore = true
@@ -2271,7 +2274,7 @@ func TestGenerator_StaleDeletion_GuardsPartiallyOwnedFiles(t *testing.T) {
 `), 0o644))
 
 	// First generation WITH an MCP server
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "stale-test"
 presets = ["claude", "cursor"]
 gitignore = false
@@ -2301,7 +2304,7 @@ command = "cmd"
 	assert.Contains(t, mcpJSONParsed, "mcpServers", "mcpServers must be present in .mcp.json after first generation")
 
 	// Remove the MCP server from config and regenerate
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "stale-test"
 presets = ["claude", "cursor"]
 gitignore = false
@@ -2372,7 +2375,7 @@ func TestGenerator_OlderManifest_GuardsPresetMergedDocuments(t *testing.T) {
 `), 0o644))
 
 			// No [[mcp_servers]], so the gate drops the document from this render.
-			cfgTOML := fmt.Sprintf("version = \"4.0\"\nname = \"manifest-test\"\npresets = [%q]\ngitignore = false\n", tc.preset)
+			cfgTOML := fmt.Sprintf("version = \"5.0\"\nname = \"manifest-test\"\npresets = [%q]\ngitignore = false\n", tc.preset)
 			require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(cfgTOML), 0o644))
 
 			cfg, err := config.LoadConfig(context.Background(), tempDir)
@@ -2435,7 +2438,7 @@ func TestGenerator_OlderManifest_GuardsPartiallyOwnedFiles(t *testing.T) {
 `), 0o644))
 
 	// Create config WITHOUT those outputs being produced
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "manifest-test"
 presets = ["codex"]
 gitignore = false
@@ -2485,7 +2488,7 @@ func TestGenerator_SecretGuard_FiresForPartiallyOwnedFile(t *testing.T) {
 `), 0o644))
 
 	// Create config with MCP server using ${VAR} placeholder, gitignore disabled
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "secret-test"
 presets = ["claude"]
 gitignore = false
@@ -2576,7 +2579,7 @@ func TestGenerator_MCPServersScopedToProfiles(t *testing.T) {
 	tempDir := t.TempDir()
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "5.0"
 name = "scoped-mcp"
 presets = ["cursor"]
 gitignore = true
@@ -2622,7 +2625,7 @@ func TestGenerator_SelfMCPServer(t *testing.T) {
 	const (
 		handMCP      = "{\n  \"mcpServers\": {\n    \"hand\": {\"type\":\"stdio\",\"command\":\"foo\"}\n  }\n}\n"
 		handSettings = "{\n  \"permissions\": {\"allow\": [\"Read\"]},\n  \"skillOverrides\": {\"init\": \"off\"}\n}\n"
-		baseConfig   = "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
+		baseConfig   = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
 	)
 
 	tests := []struct {
@@ -2709,7 +2712,7 @@ func TestGenerator_SelfMCPServer(t *testing.T) {
 
 func TestGenerator_SelfMCPServerDryRunWritesNothing(t *testing.T) {
 	dir := t.TempDir()
-	writeTestFile(t, filepath.Join(dir, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[mcp]\nself_server = true\n")
+	writeTestFile(t, filepath.Join(dir, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[mcp]\nself_server = true\n")
 	writeTestFile(t, filepath.Join(dir, ".ai-rulez", "rules", "a.md"), "---\npriority: high\n---\nbe nice\n")
 
 	cfg, err := config.LoadConfig(context.Background(), dir)
@@ -2786,7 +2789,7 @@ func TestGenerator_CursorAgentMigration(t *testing.T) {
 			require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "agents"), 0o755))
 			require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "agents", "x.md"),
 				[]byte("---\ndescription: x agent\n---\nDo x.\n"), 0o644))
-			cfgTOML := fmt.Sprintf("version = \"4.0\"\nname = \"migrate\"\npresets = %s\ngitignore = false\n", tc.presets)
+			cfgTOML := fmt.Sprintf("version = \"5.0\"\nname = \"migrate\"\npresets = %s\ngitignore = false\n", tc.presets)
 			require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(cfgTOML), 0o644))
 
 			agentsDir := filepath.Join(tempDir, ".agents", "agents")
@@ -2838,7 +2841,7 @@ func TestGenerator_GeminiAgentMigration(t *testing.T) {
 			require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "agents"), 0o755))
 			require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "agents", "x.md"),
 				[]byte("---\ndescription: x agent\n---\nDo x.\n"), 0o644))
-			cfgTOML := fmt.Sprintf("version = \"4.0\"\nname = \"migrate\"\npresets = %s\ngitignore = false\n", tc.presets)
+			cfgTOML := fmt.Sprintf("version = \"5.0\"\nname = \"migrate\"\npresets = %s\ngitignore = false\n", tc.presets)
 			require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(cfgTOML), 0o644))
 
 			agentsDir := filepath.Join(tempDir, ".agents", "agents")

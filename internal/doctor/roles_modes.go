@@ -21,7 +21,7 @@ func checkRoleModes(_ context.Context, s *state) []Finding {
 	for _, name := range s.cfg.RoleNames() {
 		res, err := s.cfg.ResolveRole(name)
 		if err != nil {
-			continue // reported by the config check and validate --strict (AR972)
+			continue // reported by the config check and validate (AR972)
 		}
 		outcomes := roles.PlanSkillModes(s.cfg, res)
 		for i := range outcomes {

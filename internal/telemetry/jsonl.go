@@ -10,7 +10,7 @@ import (
 )
 
 // JSONL appends events to the local usage log. A skill event is written as the
-// v2 usage line `usage record` writes, so every reader of that log keeps working;
+// v2 usage line `telemetry record` writes, so every reader of that log keeps working;
 // the other kinds are written as item events (event "item_event", field "v").
 type JSONL struct {
 	Path string
@@ -24,7 +24,8 @@ func (j JSONL) Emit(_ context.Context, event *Event) error {
 		line []byte
 		err  error
 	)
-	if event.Kind == KindSkill {
+	// A list or search is not a skill use, so it never becomes a skill_invoked line.
+	if event.Kind == KindSkill && event.ID != ListID {
 		entry := ToUsageEntry(event)
 		line, err = json.Marshal(entry)
 	} else {

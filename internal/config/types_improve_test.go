@@ -54,7 +54,7 @@ func loadImprove(t *testing.T, repoTOML, userTOML string) *Config {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte("version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"+repoTOML), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte("version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"+repoTOML), 0o600))
 	xdg := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", xdg)
 	if userTOML != "" {

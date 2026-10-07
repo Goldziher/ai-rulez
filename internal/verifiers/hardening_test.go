@@ -254,7 +254,7 @@ func TestDefaultDrift_DetectsStaleOutput(t *testing.T) {
 	root := t.TempDir()
 	cfgDir := filepath.Join(root, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(cfgDir, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte("version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte("version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"), 0o600))
 	cfg, err := config.LoadConfig(context.Background(), root)
 	require.NoError(t, err)
 

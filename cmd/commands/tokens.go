@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -160,12 +160,7 @@ func writeTokenReports(out io.Writer, reports []*generator.TokenReport) error {
 		if len(reports) == 1 {
 			payload = reports[0]
 		}
-		encoder := json.NewEncoder(out)
-		encoder.SetIndent("", "  ")
-		if err := encoder.Encode(payload); err != nil {
-			return oops.Wrapf(err, "encode token report")
-		}
-		return nil
+		return jsondoc.Write(out, payload)
 	}
 
 	if len(reports) > 1 {

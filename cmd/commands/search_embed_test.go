@@ -517,7 +517,7 @@ func TestSearchIndex_CommittedIndexBuiltByTheCommandIsFreshForValidate(t *testin
 		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o750))
 		require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
 	}
-	write(".ai-rulez/config.toml", "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[llm]\nembedding_model = \"concepts\"\n\n[search]\nindex_dir = \"search-index\"\nindex_body = true\n")
+	write(".ai-rulez/config.toml", "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[llm]\nembedding_model = \"concepts\"\n\n[search]\nindex_dir = \"search-index\"\nindex_body = true\n")
 	write(".ai-rulez/skills/csv-triggers/SKILL.md", "---\nname: csv-triggers\ndescription: Rotate credentials\ntriggers: rotate a key, renew a token\nkeywords: secrets, vault\n---\nRotate them in the vault.\n")
 	write(".ai-rulez/domains/ops/skills/deploy-prod/SKILL.md", "---\nname: deploy-prod\ndescription: Deploy a service to production\nkeywords: [rollout]\n---\nPromote the staging build.\n")
 	code, _, errOut := runIndex(t)

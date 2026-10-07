@@ -168,3 +168,29 @@ func TestStageExecutable(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, outside)
 }
+
+func TestChangedSinceDiffsAgainstTheMergeBase(t *testing.T) {
+	gitAvailable(t)
+	dir := t.TempDir()
+	runGit(t, dir, "init", "-q")
+	write := func(name, body string) {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600))
+	}
+	write("shared.md", "s")
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-q", "-m", "fork point")
+	runGit(t, dir, "branch", "trunk")
+	runGit(t, dir, "checkout", "-q", "-b", "feature")
+	write("feature.md", "f")
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-q", "-m", "feature work")
+	runGit(t, dir, "checkout", "-q", "trunk")
+	write("trunk-only.md", "t")
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-q", "-m", "trunk moved on")
+	runGit(t, dir, "checkout", "-q", "feature")
+
+	got, err := ChangedSince(dir, "trunk")
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"feature.md"}, got, "files only the base branch changed are not this branch's changes")
+}

@@ -11,7 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/verifiers"
 )
 
-// verifierFindingsFor runs the verifiers of cfg for `validate --strict
+// verifierFindingsFor runs the verifiers of cfg for `validate
 // --verifiers` and converts what did not pass into AR9H findings, so one
 // invocation and one report cover lint and verification. It never starts a
 // command (a command verifier is reported as skipped, AR9H3 at info) and never

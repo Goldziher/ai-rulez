@@ -22,7 +22,7 @@ func TestRunDoctor_ExitCodes(t *testing.T) {
 		{name: "clean strict", config: validRootConfig, generate: true, strict: true, want: 0},
 		{name: "drift warning passes", config: validRootConfig, want: 0},
 		{name: "drift warning fails with strict", config: validRootConfig, strict: true, want: exitDoctorFindings},
-		{name: "removed preset is an error", config: "version = \"4.0\"\nname = \"x\"\npresets = [\"windsurf\"]\n", want: exitDoctorFindings},
+		{name: "removed preset is an error", config: "version = \"5.0\"\nname = \"x\"\npresets = [\"windsurf\"]\n", want: exitDoctorFindings},
 		{name: "unloadable config cannot run", config: brokenRootConfig, want: exitDoctorCannotRun},
 		{name: "json unloadable config cannot run", config: brokenRootConfig, json: true, want: exitDoctorCannotRun},
 	}

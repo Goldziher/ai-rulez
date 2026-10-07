@@ -21,7 +21,7 @@ func newSecretMCPRepo(t *testing.T, presets string) string {
 	dir := filepath.Join(root, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "rules"), 0o755))
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "checks"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"), []byte(`version = "4.0"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"), []byte(`version = "5.0"
 name = "leaks"
 presets = `+presets+`
 gitignore = true

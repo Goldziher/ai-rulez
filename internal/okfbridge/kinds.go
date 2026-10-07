@@ -36,6 +36,7 @@ const (
 	keyDescription = "description"
 	keyKind        = "kind"
 	keyDomain      = "domain"
+	keyName        = "name"
 	tagStr         = "!!str"
 )
 

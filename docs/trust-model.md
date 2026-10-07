@@ -67,14 +67,14 @@ the repository is outside its control: review those files like code, and set `AI
 `DO_NOT_TRACK=1` when you open a checkout you do not trust.
 
 The same limit applies to the response cache and the sink command: the `[llm]` cache lives under your user cache
-directory and is authenticated with a per-user secret, and `usage record --sink-command` always runs with a 3 second
+directory and is authenticated with a per-user secret, and `telemetry record --sink-command` always runs with a 3 second
 timeout and an output cap, but a sink command is code you chose to run.
 
 ## What `doctor` and the strict rules tell you
 
 - `ai-rulez doctor` and `llm doctor` list repository `[llm]` keys that were ignored and where the user file was read.
 - `telemetry doctor` lists ignored `[telemetry]` keys and every validation problem.
-- `AR9L1` and `AR9K0` report the same under `validate --strict`.
+- `AR9L1` and `AR9K0` report the same under `validate`.
 
 ## Checklist for a new privileged setting
 

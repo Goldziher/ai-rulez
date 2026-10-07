@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"encoding/json"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/samber/oops"
@@ -38,7 +38,6 @@ func init() {
 	f.StringVar(&evalCalibrateFlags.model, "model", "", "Only runs of this model")
 	f.IntVar(&evalCalibrateFlags.minSamples, "min-samples", evals.DefaultMinSamples, "Runs a group needs before its proposal is not marked low-confidence")
 	addFormatFlag(f, &evalCalibrateFlags.format, formatText, formatText, formatText, formatJSON)
-	addJSONFlagAlias(f)
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	EvalCmd.AddCommand(evalCalibrateCmd)
 }
@@ -65,9 +64,7 @@ func runEvalCalibrate(cmd *cobra.Command) error {
 	}
 	cal := evals.Calibrate(store, &evals.CalibrateOptions{Harness: flags.harness, Model: flags.model, MinSamples: flags.minSamples})
 	if flags.format == formatJSON {
-		enc := json.NewEncoder(cmd.OutOrStdout())
-		enc.SetIndent("", "  ")
-		return oops.Wrapf(enc.Encode(cal), "write calibration")
+		return oops.Wrapf(jsondoc.Write(cmd.OutOrStdout(), cal), "write calibration")
 	}
 	return oops.Wrapf(cal.WriteText(cmd.OutOrStdout()), "write calibration")
 }

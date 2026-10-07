@@ -43,7 +43,7 @@ type Distribution struct {
 	Max      int     `json:"max"`
 }
 
-// ItemsReport is the rule, agent and context section of `report usage`.
+// ItemsReport is the rule, agent and context section of `telemetry report`.
 type ItemsReport struct {
 	Events   int `json:"events"`
 	Sessions int `json:"sessions"`

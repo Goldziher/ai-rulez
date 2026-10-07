@@ -24,7 +24,7 @@ func (s *UsageExportCLITestSuite) SetupTest() {
 	s.workingDir = testutil.CreateTempDir(s.T())
 	cfg := filepath.Join(s.workingDir, ".ai-rulez")
 	s.Require().NoError(os.MkdirAll(filepath.Join(cfg, "local"), 0o750))
-	s.Require().NoError(os.WriteFile(filepath.Join(cfg, "config.toml"), []byte("version = \"4.0\"\nname = \"e2e\"\npresets = [\"claude\"]\n"), 0o600))
+	s.Require().NoError(os.WriteFile(filepath.Join(cfg, "config.toml"), []byte("version = \"5.0\"\nname = \"e2e\"\npresets = [\"claude\"]\n"), 0o600))
 	lines := `{"ts":"2026-10-01T08:00:00Z","event":"skill_invoked","skill":"deploy","id":"deploy","invocation":"tool","harness":"claude"}
 {"v":3,"ts":"2026-10-03T08:00:00Z","event":"skill_invoked","skill":"deploy","id":"deploy","digest":"sha256:` + strings.Repeat("a", 64) + `","digest_scheme":"ai-rulez/skill/v1","event_id":"0123456789abcdef","invocation":"slash","harness":"claude","prompt":"TOPSECRET"}
 `
@@ -50,11 +50,11 @@ func (s *UsageExportCLITestSuite) TestPreviewPrintsTheBodyAndSendsNothing() {
 func (s *UsageExportCLITestSuite) TestExportWritesTheSameBytesTwiceAndNoSecrets() {
 	dest := filepath.Join(s.workingDir, "out", "usage.ndjson")
 
-	first := testutil.RunCLIWithEnv(s.T(), s.workingDir, s.env, "usage", "export", "--to", "file", dest)
+	first := testutil.RunCLIWithEnv(s.T(), s.workingDir, s.env, "telemetry", "export", "--to", "file", dest)
 	s.Equal(0, first.ExitCode, first.Stderr)
 	one, err := os.ReadFile(dest)
 	s.Require().NoError(err)
-	testutil.RunCLIWithEnv(s.T(), s.workingDir, s.env, "usage", "export", "--to", "file", dest)
+	testutil.RunCLIWithEnv(s.T(), s.workingDir, s.env, "telemetry", "export", "--to", "file", dest)
 	two, err := os.ReadFile(dest)
 	s.Require().NoError(err)
 
@@ -65,7 +65,7 @@ func (s *UsageExportCLITestSuite) TestExportWritesTheSameBytesTwiceAndNoSecrets(
 }
 
 func (s *UsageExportCLITestSuite) TestExportRequiresADestinationKind() {
-	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, s.env, "usage", "export", "out.ndjson")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, s.env, "telemetry", "export", "out.ndjson")
 
 	s.NotEqual(0, result.ExitCode)
 	result.AssertStderrContains(s.T(), `required flag(s) "to" not set`)

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const applyConfig = `version = "4.0"
+const applyConfig = `version = "5.0"
 name = "apply"
 presets = ["claude", "cursor", "codex"]
 gitignore = true

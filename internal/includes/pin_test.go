@@ -55,7 +55,7 @@ func newLockFixture(t *testing.T) *lockFixture {
 	git(t, remote, "commit", "-qm", "one")
 
 	project := t.TempDir()
-	writeTestFile(t, filepath.Join(project, ".ai-rulez", "config.toml"), `version = "4.0"
+	writeTestFile(t, filepath.Join(project, ".ai-rulez", "config.toml"), `version = "5.0"
 name = "p"
 presets = ["claude"]
 gitignore = false

@@ -39,7 +39,7 @@ func TestRegistry_Generator_NotFound(t *testing.T) {
 func TestGeneratePresets_NoContent(t *testing.T) {
 	cfg := &Config{
 		Name:    "test",
-		Version: "4.0",
+		Version: "5.0",
 		Presets: []Preset{
 			{BuiltIn: "claude"},
 		},
@@ -60,7 +60,7 @@ func TestGeneratePresets_BuiltIn(t *testing.T) {
 	cfg := &Config{
 		Registry: reg,
 		Name:     "test",
-		Version:  "4.0",
+		Version:  "5.0",
 		BaseDir:  "/test",
 		Presets: []Preset{
 			{BuiltIn: "mock"},
@@ -99,7 +99,7 @@ func TestGeneratePresets_CustomPreset(t *testing.T) {
 	cfg := &Config{
 		Registry: reg,
 		Name:     "test",
-		Version:  "4.0",
+		Version:  "5.0",
 		BaseDir:  "/test",
 		Presets: []Preset{
 			{
@@ -139,7 +139,7 @@ func TestGeneratePresets_CustomPresetFactoryNotSet(t *testing.T) {
 	cfg := &Config{
 		Registry: NewRegistry(),
 		Name:     "test",
-		Version:  "4.0",
+		Version:  "5.0",
 		BaseDir:  "/test",
 		Presets: []Preset{
 			{

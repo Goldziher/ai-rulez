@@ -14,7 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 )
 
-const localCmdShared = "version = \"4.0\"\nname = \"shared-name\"\npresets = [\"claude\"]\n\n" +
+const localCmdShared = "version = \"5.0\"\nname = \"shared-name\"\npresets = [\"claude\"]\n\n" +
 	"[[mcp_servers]]\nname = \"gh\"\ncommand = \"gh\"\n[mcp_servers.env]\nGH_TOKEN = \"shared-secret\"\n"
 
 // localProject creates a project with a shared TOML config and makes it the
@@ -177,7 +177,7 @@ func TestLocalCommands_HonourConfigFlag(t *testing.T) {
 func TestPrintDryRun_BlockedDriftIsAnError(t *testing.T) {
 	// Arrange: the overlay renames the project, so shared CLAUDE.md would change.
 	dir := localProject(t)
-	writeFile(t, filepath.Join(dir, "config.toml"), "version = \"4.0\"\nname = \"shared\"\npresets = [\"claude\"]\ngitignore = false\n")
+	writeFile(t, filepath.Join(dir, "config.toml"), "version = \"5.0\"\nname = \"shared\"\npresets = [\"claude\"]\ngitignore = false\n")
 	writeFile(t, filepath.Join(dir, "config.local.toml"), "name = \"mine\"\npresets = [\"codex\"]\n")
 	cfg, err := config.LoadConfig(t.Context(), ".")
 	require.NoError(t, err)

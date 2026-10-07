@@ -1,37 +1,40 @@
 package commands
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// `ai-rulez migrate v4` was removed in v5; a user who runs the documented 4.x
-// command gets the upgrade path, not a bare "unknown command".
-func TestMigrate_PointsAtThe4xRelease(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{"migrate v4", []string{"migrate", "v4"}},
-		{"migrate v4 with flags", []string{"migrate", "v4", "-C", "x", "--dry-run"}},
-		{"bare migrate", []string{"migrate"}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			RootCmd.SetArgs(tt.args)
-			t.Cleanup(func() { RootCmd.SetArgs(nil) })
+func TestMigrateCommand(t *testing.T) {
+	assert.NotNil(t, MigrateCmd)
+	assert.Equal(t, "migrate v5", MigrateCmd.Use)
+	assert.NotNil(t, MigrateCmd.Run)
+	assert.NotNil(t, MigrateCmd.Args)
+}
 
-			// Act
-			err := RootCmd.Execute()
-
-			// Assert
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "removed in ai-rulez 5")
-			assert.Contains(t, err.Error(), "npx ai-rulez@4 migrate v4")
-			assert.True(t, MigrateCmd.Hidden)
-		})
+func TestMigrateCommand_Flags(t *testing.T) {
+	for _, name := range []string{"dry-run", "check", "adopt-defaults", "write", "recursive", "format"} {
+		assert.NotNil(t, MigrateCmd.Flags().Lookup(name), name)
 	}
+}
+
+func TestMigrateCommand_ExitCodes(t *testing.T) {
+	project := t.TempDir()
+	dir := filepath.Join(project, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"), []byte("version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"), 0o644))
+	t.Chdir(project)
+
+	require.NoError(t, MigrateCmd.Flags().Set("check", "true"))
+	t.Cleanup(func() { _ = MigrateCmd.Flags().Set("check", "false") })
+	assert.Equal(t, 2, runMigrate(os.Stderr, "v5"), "pending migration under --check is drift")
+	assert.Equal(t, 1, runMigrate(os.Stderr, "v4"), "only v5 is a target")
+
+	require.NoError(t, MigrateCmd.Flags().Set("check", "false"))
+	assert.Equal(t, 0, runMigrate(os.Stderr, "v5"))
+	assert.Equal(t, 0, runMigrate(os.Stderr, "v5"), "second run has nothing to do")
 }

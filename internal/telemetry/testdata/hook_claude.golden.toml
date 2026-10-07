@@ -6,7 +6,7 @@ event = "PreToolUse"
 targets = ["claude"]
 matcher = "Skill"
 [[hooks.hooks]]
-command = "ai-rulez usage record --role 'backend' --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\""
+command = "ai-rulez telemetry record --role 'backend' --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\""
 async = true
 timeout = 5
 
@@ -15,7 +15,7 @@ event = "UserPromptExpansion"
 targets = ["claude"]
 matcher = "*"
 [[hooks.hooks]]
-command = "ai-rulez usage record --role 'backend' --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\""
+command = "ai-rulez telemetry record --role 'backend' --log \"${CLAUDE_PROJECT_DIR}/.ai-rulez/local/usage.jsonl\""
 async = true
 timeout = 5
 

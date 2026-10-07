@@ -14,7 +14,7 @@ import (
 // once for the life of the server, not on every reload.
 func TestServeSetup_ReloadsShareOneWarningCollector(t *testing.T) {
 	// Arrange
-	root := project(t, baseConfig+"\n[lint.budget]\nAR201 = 2\n", map[string]string{
+	root := project(t, baseConfig+"\n[lint.ratchet]\nAR201 = 2\n", map[string]string{
 		"skills/core/SKILL.md": skillFile("core", "Core conventions", ""),
 	})
 	setup := &ServeSetup{WorkDir: root, NoWatch: true, CacheDir: filepath.Join(t.TempDir(), "cache")}

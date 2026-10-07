@@ -52,7 +52,7 @@ func TestRunUserGenerateRefusesImportedSecrets(t *testing.T) {
 		[]byte("---\nname: imp\ndescription: Use when testing the imported content scan.\n---\nkey AKIAIOSFODNN7EXAMPLE\n"), 0o644))
 	configPath := filepath.Join(home, ".config", "ai-rulez", "config.toml")
 	require.NoError(t, os.WriteFile(configPath,
-		[]byte("version = \"4.0\"\nname = \"me\"\npresets = [\"claude\"]\n\n[[installed_skills]]\nname = \"imp\"\nsource = \""+filepath.ToSlash(vendor)+"\"\npath = \".\"\n"), 0o644))
+		[]byte("version = \"5.0\"\nname = \"me\"\npresets = [\"claude\"]\n\n[[installed_skills]]\nname = \"imp\"\nsource = \""+filepath.ToSlash(vendor)+"\"\npath = \".\"\n"), 0o644))
 
 	// Act
 	err := runUserGenerate(context.Background())

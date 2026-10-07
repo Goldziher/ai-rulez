@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const domainsProjectHeader = `version = "4.0"
+const domainsProjectHeader = `version = "5.0"
 name = "demo"
 presets = ["claude"]
 gitignore = false

@@ -14,8 +14,8 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .agents/ dir 0755
 .agents/commands/ dir 0755
-.agents/commands/build.md file 0644 250 8d292fd4a549813e55152da6c9a4e104842b847b33594d5e8e7ab4b328460ffd
-.agents/commands/ship.md file 0644 227 28f7e9d78d835e4c1a75e0dc3c0c401c2ae672f8af75cea8fd205c528d69a34b
+.agents/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.agents/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 382 6da4d2e0f160851200b8de3c6d38aba8879f37590d91f6240485a23565c5a62b
 .ai-rulez/.generated-manifest.local.json file 0644 1832 12f06fb4b4e9ff62f11d0f1cf0fb9df5dcabbd9022132482a85fd06854303007
@@ -28,7 +28,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 831 4c2b6b368300d5e368f0bc5d512d6316d18f4e408397d8906cdee2d51f6c8eca
+.ai-rulez/config.toml file 0644 849 9d219ea0991a7f17e2a6b3b206caf8ed29fa124bc3e35ac1026c9cd5f0e901d1
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -50,7 +50,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .gitignore file 0644 284 ddd5ef2710781f0d3f1331418869f90d8da6db96181e12eb3aa0e43d8cd68814
 .gitlab/ dir 0755
 .gitlab/duo/ dir 0755
-.gitlab/duo/chat-rules.md file 0644 874 bc32a54e079bc9a475f0c2daea19dcad67fcbfc4efac3d6a3a1d908aaccae840
+.gitlab/duo/chat-rules.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 .gitlab/duo/hooks.json file 0644 187 53a26c27c7af59a081113f2767450025cd6ab3d66c33a8515309512c6f35159a
 .gitlab/duo/mcp.json file 0600 400 8c6daf79c1da0ec1f7989fce45109fddbf054dbba9dcee94c4036660f5cacaec
 .gitlab/duo/mr-review-instructions.yaml file 0644 155 dcb98b6b78eb935ccd09ffb91a4f54775cbfc9a67b175432b6f1320cba7417d5
@@ -100,7 +100,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -131,7 +131,7 @@ INFO  Removed generated files files=7 directories=4
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 831 4c2b6b368300d5e368f0bc5d512d6316d18f4e408397d8906cdee2d51f6c8eca
+.ai-rulez/config.toml file 0644 849 9d219ea0991a7f17e2a6b3b206caf8ed29fa124bc3e35ac1026c9cd5f0e901d1
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

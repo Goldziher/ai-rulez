@@ -12,11 +12,11 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
-// loggingProject is a project whose load and validation each raise a warning:
-// a deprecated [lint.budget] table and a malformed glob in a rule's targets.
+// loggingProject is a project whose validation raises a warning: a malformed
+// glob in a rule's targets.
 func loggingProject(name string) *workspace.Mem {
 	ws := workspace.NewMem("/virtual/" + name)
-	ws.Set(".ai-rulez/config.toml", "version = \"4.0\"\nname = \""+name+"\"\npresets = [\"claude\"]\n[lint.budget]\nAR201 = 2\n", 0o644)
+	ws.Set(".ai-rulez/config.toml", "version = \"5.0\"\nname = \""+name+"\"\npresets = [\"claude\"]\n", 0o644)
 	ws.Set(".ai-rulez/rules/glob.md", "---\ntargets: [\"[unclosed\"]\n---\n# Glob\n", 0o644)
 	return ws
 }
@@ -52,8 +52,7 @@ func TestTwoProjectsInOneProcessKeepSeparateWarnings(t *testing.T) {
 			// Assert: every warning reached the logger of the project that raised it.
 			for i, rec := range recs {
 				got := warnLines(rec)
-				assert.Len(t, got, 2, "%v", got)
-				assert.Equal(t, 1, countContaining(got, "[lint.budget] is deprecated"), "deprecated table is said once per project: %v", got)
+				assert.Len(t, got, 1, "%v", got)
 				assert.Equal(t, 1, countContaining(got, "invalid glob in targets"), "validating twice warns once: %v", got)
 				assert.Contains(t, got[0], "/virtual/"+tt.projects[i], "the warning names this project's files")
 				for j, other := range recs {

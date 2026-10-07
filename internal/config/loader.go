@@ -276,6 +276,13 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	if lo.frontmatterErrors {
 		lo.host.Log = quietFrontmatterLog{logger.Or(lo.host.Log)}
 	}
+	// A v3/v4 config must go through `ai-rulez migrate v5` before anything
+	// reads it. A missing version is left to Validate, which reports it.
+	if IsLegacyVersion(config.Version) {
+		if err := CheckVersion(config.Version); err != nil {
+			return nil, oops.With("path", filepath.Join(configDir, config.ConfigFile)).Wrap(err)
+		}
+	}
 	config.Workspace = v.W
 	config.BaseDir = baseDir
 	config.ConfigDir = configDir
@@ -312,7 +319,6 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	scanner := newProjectScanner(ctx, v)
 	scanner.git = gitutil.New(loadHost(lo).Runner)
 	scanner.log = lo.host.Log
-	config.warnDeprecatedLintBudget()
 	contentTree, err := scanContentTree(scanner, configDir, config.BundleExclude)
 	if err != nil {
 		return nil, err
@@ -521,64 +527,68 @@ func loadConfigTOML(v workspace.View, path string) (*Config, error) {
 	return decodeConfigTOML(data, path)
 }
 
+// tomlConfig is the TOML decoding shape of Config: presets and builtins are
+// mixed-type arrays that need a conversion step. Every toml-tagged field of
+// Config must appear here (TestTomlConfigCoversConfig).
+type tomlConfig struct {
+	Schema          string                 `toml:"schema"`
+	Version         string                 `toml:"version"`
+	Name            string                 `toml:"name"`
+	Description     string                 `toml:"description"`
+	Presets         []any                  `toml:"presets"`
+	Default         string                 `toml:"default"`
+	Profiles        map[string][]string    `toml:"profiles"`
+	Gitignore       *bool                  `toml:"gitignore"`
+	Compact         *bool                  `toml:"compact"`
+	AgentsMD        *bool                  `toml:"agents_md"`
+	BundleExclude   []string               `toml:"bundle_exclude"`
+	CodexSkillsDir  string                 `toml:"codex_skills_dir"`
+	Includes        []IncludeConfig        `toml:"includes"`
+	InstalledSkills []InstalledSkillConfig `toml:"installed_skills"`
+	MCPServers      []MCPServer            `toml:"mcp_servers"`
+	Header          *HeaderConfig          `toml:"header"`
+	Builtins        interface{}            `toml:"builtins"`
+	Plugins         []PluginConfig         `toml:"plugins"`
+	Marketplaces    []MarketplaceConfig    `toml:"marketplaces"`
+	Scopes          []ScopeConfig          `toml:"scopes"`
+	MCP             *MCPConfig             `toml:"mcp"`
+	Defaults        *DefaultsConfig        `toml:"defaults"`
+	Rules           *RulesConfig           `toml:"rules"`
+	Lint            *LintConfig            `toml:"lint"`
+	Verifiers       []VerifierConfig       `toml:"verifiers"`
+	VerifiersSet    *VerifiersSettings     `toml:"verifiers_settings"`
+	Usage           *UsageConfig           `toml:"usage"`
+	Skills          *SkillsConfig          `toml:"skills"`
+	DomainSettings  DomainConfigs          `toml:"domains"`
+	SkillSources    []SkillSourceConfig    `toml:"skill_sources"`
+	Roles           []RoleConfig           `toml:"roles"`
+	RoleManifest    *RoleManifestConfig    `toml:"role_manifest"`
+	Lock            *LockConfig            `toml:"lock"`
+	Governance      *GovernanceConfig      `toml:"governance"`
+	Catalog         *CatalogConfig         `toml:"catalog"`
+	Signing         *SigningConfig         `toml:"signing"`
+	Publish         *PublishConfig         `toml:"publish"`
+	LLM             *llm.Config            `toml:"llm"`
+	Telemetry       *TelemetryConfig       `toml:"telemetry"`
+	Review          *ReviewConfig          `toml:"review"`
+	Improve         *ImproveConfig         `toml:"improve"`
+	Search          *skillsearch.Config    `toml:"search"`
+	Plugin          *PluginAuthoring       `toml:"plugin"`
+	Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
+	Placement       *PlacementConfig       `toml:"placement"`
+	Claude          *ClaudeConfig          `toml:"claude"`
+	Codex           *CodexConfig           `toml:"codex"`
+	Hooks           []HookGroup            `toml:"hooks"`
+	Guard           *GuardConfig           `toml:"guard"`
+	Permissions     *Permissions           `toml:"permissions"`
+	OKF             *OKFConfig             `toml:"okf"`
+}
+
 // decodeConfigTOML decodes TOML bytes; path is used for error context only.
 func decodeConfigTOML(data []byte, path string) (*Config, error) {
 	// TOML presets are plain strings; we unmarshal into an intermediate
 	// struct then convert to []Preset. This avoids custom unmarshaler
 	// issues with the TOML library.
-	type tomlConfig struct {
-		Schema          string                 `toml:"schema"`
-		Version         string                 `toml:"version"`
-		Name            string                 `toml:"name"`
-		Description     string                 `toml:"description"`
-		Presets         []any                  `toml:"presets"`
-		Default         string                 `toml:"default"`
-		Profiles        map[string][]string    `toml:"profiles"`
-		Gitignore       *bool                  `toml:"gitignore"`
-		Compact         *bool                  `toml:"compact"`
-		AgentsMD        bool                   `toml:"agents_md"`
-		BundleExclude   []string               `toml:"bundle_exclude"`
-		CodexSkillsDir  string                 `toml:"codex_skills_dir"`
-		Includes        []IncludeConfig        `toml:"includes"`
-		InstalledSkills []InstalledSkillConfig `toml:"installed_skills"`
-		MCPServers      []MCPServer            `toml:"mcp_servers"`
-		Header          *HeaderConfig          `toml:"header"`
-		Builtins        interface{}            `toml:"builtins"`
-		Plugins         []PluginConfig         `toml:"plugins"`
-		Marketplaces    []MarketplaceConfig    `toml:"marketplaces"`
-		Scopes          []ScopeConfig          `toml:"scopes"`
-		MCP             *MCPConfig             `toml:"mcp"`
-		Defaults        *DefaultsConfig        `toml:"defaults"`
-		Rules           *RulesConfig           `toml:"rules"`
-		Lint            *LintConfig            `toml:"lint"`
-		Verifiers       []VerifierConfig       `toml:"verifiers"`
-		VerifiersSet    *VerifiersSettings     `toml:"verifiers_settings"`
-		Usage           *UsageConfig           `toml:"usage"`
-		Skills          *SkillsConfig          `toml:"skills"`
-		DomainSettings  DomainConfigs          `toml:"domains"`
-		SkillSources    []SkillSourceConfig    `toml:"skill_sources"`
-		Roles           []RoleConfig           `toml:"roles"`
-		RoleManifest    *RoleManifestConfig    `toml:"role_manifest"`
-		Lock            *LockConfig            `toml:"lock"`
-		Governance      *GovernanceConfig      `toml:"governance"`
-		Catalog         *CatalogConfig         `toml:"catalog"`
-		Signing         *SigningConfig         `toml:"signing"`
-		Publish         *PublishConfig         `toml:"publish"`
-		LLM             *llm.Config            `toml:"llm"`
-		Telemetry       *TelemetryConfig       `toml:"telemetry"`
-		Review          *ReviewConfig          `toml:"review"`
-		Improve         *ImproveConfig         `toml:"improve"`
-		Search          *skillsearch.Config    `toml:"search"`
-		Plugin          *PluginAuthoring       `toml:"plugin"`
-		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
-		Placement       *PlacementConfig       `toml:"placement"`
-		Claude          *ClaudeConfig          `toml:"claude"`
-		Codex           *CodexConfig           `toml:"codex"`
-		Hooks           []HookGroup            `toml:"hooks"`
-		Guard           *GuardConfig           `toml:"guard"`
-		Permissions     *Permissions           `toml:"permissions"`
-		OKF             *OKFConfig             `toml:"okf"`
-	}
 
 	var raw tomlConfig
 	if err := toml.Unmarshal(data, &raw); err != nil {
@@ -627,7 +637,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Profiles:        raw.Profiles,
 		Gitignore:       raw.Gitignore,
 		Compact:         raw.Compact,
-		AgentsMD:        raw.AgentsMD,
+		AgentsMD:        raw.AgentsMD == nil || *raw.AgentsMD,
 		BundleExclude:   raw.BundleExclude,
 		CodexSkillsDir:  raw.CodexSkillsDir,
 		Includes:        raw.Includes,
@@ -642,6 +652,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Defaults:        raw.Defaults,
 		Rules:           raw.Rules,
 		Lint:            raw.Lint,
+		OKF:             raw.OKF,
 		Verifiers:       raw.Verifiers,
 		Usage:           raw.Usage,
 		Skills:          raw.Skills,
@@ -667,11 +678,10 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Hooks:           raw.Hooks,
 		Guard:           raw.Guard,
 		Permissions:     raw.Permissions,
-		OKF:             raw.OKF,
 	}
 	cfg.VerifiersSettings = raw.VerifiersSet
-	if raw.Lint != nil && len(raw.Lint.Budget) > 0 {
-		cfg.deprecatedLintBudgetPath = path
+	if err := renamedRatchetTable(path, raw.Lint); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil

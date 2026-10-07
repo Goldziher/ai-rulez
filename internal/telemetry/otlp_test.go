@@ -147,3 +147,20 @@ func TestEncodeLogs_NeverWritesAnOverflowedTimestamp(t *testing.T) {
 	assert.Equal(t, "0", record.Time, "0 is OTLP's unknown time")
 	assert.Equal(t, "0", record.Observed)
 }
+
+func TestEncode_ContextIDIsGatedByIncludePaths(t *testing.T) {
+	events := []Event{{Version: 1, Name: EventItem, Time: "2026-10-05T09:12:40Z", EventID: "aaaaaaaaaaaaaaa9", Kind: KindContext,
+		ID: "docs/private-notes.md", Path: "docs/private-notes.md", Digest: "blake3:0699fc6b2f01aa11223344", Source: SourceHook, Outcome: OutcomeLoaded}}
+	closed, err := (&Encoder{}).EncodeLogs(events, fixedNow)
+	require.NoError(t, err)
+	assert.NotContains(t, string(closed), "private-notes")
+	assert.Contains(t, string(closed), "context:0699fc6b2f01")
+
+	open, err := (&Encoder{IncludePaths: true}).EncodeLogs(events, fixedNow)
+	require.NoError(t, err)
+	assert.Contains(t, string(open), "docs/private-notes.md")
+
+	metrics, err := (&Encoder{IncludePaths: true}).EncodeMetrics(events, fixedNow)
+	require.NoError(t, err)
+	assert.NotContains(t, string(metrics), "private-notes")
+}

@@ -100,12 +100,31 @@ func init() {
 	LockCmd.Flags().BoolVar(&lockSubject, "subject", false, "Print the lock-subject digest and statement (the thing to sign); reads the lock only")
 	LockCmd.Flags().StringVar(&lockSubjectOutput, "output", "", "With --subject: write the JSON statement to this file")
 	addFormatFlag(LockCmd.Flags(), &lockFormat, "", formatText, formatText, formatJSON) // of --check, --diff, --outdated and --subject
-	addJSONFlagAlias(LockCmd.Flags())
 	LockCmd.Flags().StringVar(&lockProfile, "profile", "", "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
 	LockCmd.Flags().BoolVarP(&lockRecursive, "recursive", "r", false, "Process every configuration found recursively")
 	LockCmd.Flags().BoolVar(&lockRoles, "roles", false, "Also pin the rendered outputs of every role (roles with pin = true are always pinned)")
 	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source or served entries")
 	LockCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+}
+
+// checkLockContentOnlyFlags refuses --content-only together with a selection of
+// remote entries: --content-only keeps every remote pin, so the selection would
+// silently refresh nothing.
+func checkLockContentOnlyFlags(kind string, names []string) error {
+	if !lockContentOnly {
+		return nil
+	}
+	if len(names) > 0 || kind == lockfile.KindInclude || kind == lockfile.KindSkill || kind == keySource {
+		return oops.Errorf("--content-only keeps every remote pin, so it cannot be combined with --kind %s or names; drop --content-only to refresh them", kindOrNames(kind))
+	}
+	return nil
+}
+
+func kindOrNames(kind string) string {
+	if kind == "" {
+		return "(names given)"
+	}
+	return kind
 }
 
 func runLock(_ *cobra.Command, args []string) {
@@ -126,7 +145,7 @@ func validateLockFlags(args []string) error {
 	if err := checkFormatFlag(lockFormat); err != nil {
 		return err
 	}
-	if err := validateLockOutputFlags(); err != nil {
+	if err := validateLockOutputFlags(args); err != nil {
 		return err
 	}
 	if err := validateLockOutdatedFlags(); err != nil {
@@ -136,12 +155,15 @@ func validateLockFlags(args []string) error {
 }
 
 // validateLockOutputFlags checks --format, --check/--diff and --output.
-func validateLockOutputFlags() error {
+func validateLockOutputFlags(args []string) error {
 	if lockFormat != "" && !lockCheck && !lockDiffFlag && !lockSubject && !lockOutdated {
 		return oops.Errorf("--format applies to --check, --diff, --outdated and --subject only")
 	}
 	if lockCheck && lockDiffFlag {
 		return oops.Errorf("--check and --diff are mutually exclusive")
+	}
+	if err := checkLockContentOnlyFlags(lockKind, args); err != nil {
+		return err
 	}
 	if lockSubjectOutput != "" && !lockSubject {
 		return oops.Errorf("--output needs --subject")

@@ -19,7 +19,7 @@ func TestSelectRecursivePluginConfigs_IgnoresLocalOverlay(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), ".ai-rulez")
 	require.NoError(t, os.MkdirAll(dir, 0o755))
 	mainPath := filepath.Join(dir, "config.toml")
-	require.NoError(t, os.WriteFile(mainPath, []byte("version = \"4.0\"\nname = \"x\"\n"), 0o600))
+	require.NoError(t, os.WriteFile(mainPath, []byte("version = \"5.0\"\nname = \"x\"\n"), 0o600))
 	overlay := "[plugin]\nname = \"p\"\nversion = \"1.0.0\"\n"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.local.toml"), []byte(overlay), 0o600))
 

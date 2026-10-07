@@ -1,0 +1,14 @@
+version = "4.0"
+
+[[mcp_servers]]
+name = "github"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github@1.2.3"]
+
+[mcp_servers.env]
+GITHUB_TOKEN = "${GITHUB_TOKEN}"
+
+[[mcp_servers]]
+name = "docs"
+transport = "http"
+url = "https://other.example.com/mcp"

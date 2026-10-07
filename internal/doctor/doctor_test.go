@@ -16,7 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 )
 
-const baseConfig = "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\n"
+const baseConfig = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\n"
 
 // project writes files under a fresh temp dir and returns it.
 func project(t *testing.T, files map[string]string) string {
@@ -105,8 +105,8 @@ func TestCheckConfig(t *testing.T) {
 		files map[string]string
 		want  string
 	}{
-		{name: "unparseable config", files: map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\npresets = [\n"}, want: "config"},
-		{name: "invalid config", files: map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"t\"\npresets = []\n"}, want: "config"},
+		{name: "unparseable config", files: map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\npresets = [\n"}, want: "config"},
+		{name: "invalid config", files: map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"t\"\npresets = []\n"}, want: "config"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -139,7 +139,7 @@ func TestCheckPresets(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.preset, func(t *testing.T) {
-			cfg := "version = \"4.0\"\nname = \"t\"\npresets = [\"" + tt.preset + "\"]\n"
+			cfg := "version = \"5.0\"\nname = \"t\"\npresets = [\"" + tt.preset + "\"]\n"
 			dir := project(t, map[string]string{".ai-rulez/config.toml": cfg})
 
 			got := byCheck(run(t, dir), CheckPresets)
@@ -155,7 +155,7 @@ func TestCheckPresets(t *testing.T) {
 }
 
 func TestCheckPresets_UnknownPresetIsNotReportedTwice(t *testing.T) {
-	dir := project(t, map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\nname = \"t\"\npresets = [\"windsurf\"]\n"})
+	dir := project(t, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"t\"\npresets = [\"windsurf\"]\n"})
 
 	report := run(t, dir)
 
@@ -463,7 +463,7 @@ func TestCheckIncludes_ReportsAnUncachedRemoteInclude(t *testing.T) {
 }
 
 func TestCheckTools(t *testing.T) {
-	cfg := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\", \"codex\", \"mcp\", \"claude\"]\ngitignore = false\n"
+	cfg := "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\", \"codex\", \"mcp\", \"claude\"]\ngitignore = false\n"
 	dir := project(t, map[string]string{".ai-rulez/config.toml": cfg})
 	have := map[string]bool{"claude": true}
 
@@ -510,7 +510,7 @@ func TestReport_FailedAndCounts(t *testing.T) {
 }
 
 func TestRun_OrdersBySeverity(t *testing.T) {
-	cfg := "version = \"4.0\"\nname = \"t\"\npresets = [\"windsurf\"]\n\n[[mcp_servers]]\nname = \"s\"\ncommand = \"s\"\n[mcp_servers.env]\nK = \"${DOCTOR_ORDER_VAR}\"\n"
+	cfg := "version = \"5.0\"\nname = \"t\"\npresets = [\"windsurf\"]\n\n[[mcp_servers]]\nname = \"s\"\ncommand = \"s\"\n[mcp_servers.env]\nK = \"${DOCTOR_ORDER_VAR}\"\n"
 	dir := project(t, map[string]string{".ai-rulez/config.toml": cfg})
 
 	report := Run(context.Background(), Options{Load: loader(dir), LookPath: func(string) (string, error) { return "", errors.New("none") }})
@@ -624,7 +624,7 @@ func TestRun_LoadsConfigWithoutRemote(t *testing.T) {
 }
 
 func TestRun_UnloadableConfigIsMarked(t *testing.T) {
-	dir := project(t, map[string]string{".ai-rulez/config.toml": "version = \"4.0\"\npresets = [\n"})
+	dir := project(t, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\npresets = [\n"})
 
 	report := run(t, dir)
 
@@ -660,8 +660,8 @@ func TestRun_LegacyConfigIsReportedAsAnErrorNamingTheFile(t *testing.T) {
 			got := byCheck(report, CheckConfig)
 			if len(got) == 0 || got[0].Severity != SeverityError ||
 				!strings.Contains(got[0].Message, filepath.Base(tt.file)) ||
-				!strings.Contains(got[0].Message, "npx ai-rulez@4 migrate v4") {
-				t.Fatalf("config findings = %+v, want an error naming %s and the 4.x migration", got, tt.file)
+				!strings.Contains(got[0].Message, "ai-rulez migrate v5") {
+				t.Fatalf("config findings = %+v, want an error naming %s and ai-rulez migrate v5", got, tt.file)
 			}
 		})
 	}

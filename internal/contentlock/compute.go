@@ -369,7 +369,7 @@ func (c *collector) collectHook(g *config.HookGroup, ordinal map[string]int) err
 				leaf.Mode = c.modes.mode(c.cfg.BaseDir, abs, info)
 			}
 		} else {
-			leaf.Path = "missing/" + strings.TrimPrefix(rel, "./") // reported by validate --strict (AR504)
+			leaf.Path = "missing/" + strings.TrimPrefix(rel, "./") // reported by validate (AR504)
 		}
 		if !containsPath(leaves, leaf.Path) {
 			leaves = append(leaves, leaf)

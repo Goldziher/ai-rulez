@@ -1,0 +1,21 @@
+schema = "https://github.com/Goldziher/ai-rulez/schema/ai-rules.schema.json"
+version = "5.0"
+name = "json-basic"
+presets = ["claude", "codex"]
+agents_md = true
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+gitignore = true
+
+[[mcp_servers]]
+name = "fs"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem@1.0.0", "."]
+
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[header]
+hashes = "full"
+
+[[mcp_servers]]
+name = "extra"
+transport = "http"
+url = "https://extra.example.com/mcp"

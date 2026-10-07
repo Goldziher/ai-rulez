@@ -48,7 +48,7 @@ func TestLoadConfig_ReadsReviewTable(t *testing.T) {
 	dir := t.TempDir()
 	root := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(root, 0o755))
-	body := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[review]\nrubric = \"mine\"\ncontent = \"full\"\nexclude = [\"internal-*\"]\nmax_cost_usd = 0.25\nmax_calls = 40\n"
+	body := "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[review]\nrubric = \"mine\"\ncontent = \"full\"\nexclude = [\"internal-*\"]\nmax_cost_usd = 0.25\nmax_calls = 40\n"
 	require.NoError(t, os.WriteFile(filepath.Join(root, "config.toml"), []byte(body), 0o600))
 
 	// Act

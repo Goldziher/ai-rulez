@@ -59,7 +59,7 @@ func TestInitProjectHandler_RefusesToOverwriteAConfig(t *testing.T) {
 	cfgDir := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(cfgDir, 0o755))
 	existing := filepath.Join(cfgDir, "config.toml")
-	require.NoError(t, os.WriteFile(existing, []byte("version = \"4.0\"\nname = \"keep\"\n"), 0o644))
+	require.NoError(t, os.WriteFile(existing, []byte("version = \"5.0\"\nname = \"keep\"\n"), 0o644))
 
 	// Act
 	res, err := InitProjectHandler(t.Context(), newRequestWithArgs(map[string]any{"working_directory": dir}))

@@ -129,7 +129,7 @@ func lockDriftFor(ctx context.Context, cfg *config.Config) []lint.LockDrift {
 		return unverifiable(err)
 	}
 	if lock == nil {
-		return nil
+		return []lint.LockDrift{{Path: lockRel, Message: lockfile.FileName + " does not exist and [lock] enforce = true; run `ai-rulez lock`"}}
 	}
 	if !lock.HasContentPins() {
 		return []lint.LockDrift{{Path: lockRel, Message: fmt.Sprintf("%s (version %d) has no content pins and [lock] enforce = true; run `ai-rulez lock`", lockfile.FileName, lock.Version)}}

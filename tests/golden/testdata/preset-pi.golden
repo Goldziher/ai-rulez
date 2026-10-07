@@ -13,9 +13,9 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .agents/ dir 0755
 .agents/skills/ dir 0755
 .agents/skills/deployer/ dir 0755
-.agents/skills/deployer/SKILL.md file 0644 261 c8afbb700af185dcf5ca8c7abb236ec180ea588ad45267940b50ca4094c8c6c0
+.agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
 .agents/skills/reviewer/ dir 0755
-.agents/skills/reviewer/SKILL.md file 0644 508 b304e6097811d9c430d3b183d2392b7d89b06e25597dfdd52e26ea6c55650024
+.agents/skills/reviewer/SKILL.md file 0644 421 cb318db002aacac347882a1ccee67572a242722da43a959f8668f1bc77703f0e
 .agents/skills/reviewer/references/ dir 0755
 .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .agents/skills/reviewer/scripts/ dir 0755
@@ -32,7 +32,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 823 75b76a15d3450283f065ef7b0113ac4c36ef495a2ddfa99219a87569d01fe395
+.ai-rulez/config.toml file 0644 841 fdb147918547b4624f85fd19709134109af4a8d027a674a2c65cd4c1c1f57519
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -55,15 +55,15 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
 .pi/ dir 0755
 .pi/agents/ dir 0755
-.pi/agents/architect.md file 0644 273 5ad254b599ff915a964ac3e9165500584bdf0ce685cdcb2a2f4a420fb9b3148b
-.pi/agents/tester.md file 0644 260 7c5e07dbdffbd005e4aecfbc031c254c8388118d3de322b59ea019d6b66e5a62
+.pi/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
+.pi/agents/tester.md file 0644 173 49565d5e15f65ba114479d304faae3f53884babaf3d4bab9aafe54b3409712c1
 .pi/extensions/ dir 0755
 .pi/extensions/ai-rulez-hooks.ts file 0644 8372 164958fa0aad157319010a2c0b26aed69607058b63a35eb0f95cd457f89eb562
 .pi/mcp.json file 0644 347 a8847f3129ad1453b9011d0bfc41598fdfea0bde167d5bda8138f6d09fb7e654
 .pi/prompts/ dir 0755
-.pi/prompts/build.md file 0644 250 c116dbbdc2ed9d503978468522e11798d88f83c231033bd181de719989a7cbc8
-.pi/prompts/ship.md file 0644 227 cbd3be7624827fb2934606c90ebd7af03bfe9d4b6f5b69977ff3efec5ae0144e
-AGENTS.md file 0644 874 3f2158c059ab9e85bebe217daa7b3331f1a1a258e87f0a6b62f2637738cf91f0
+.pi/prompts/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.pi/prompts/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
+AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -105,7 +105,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -147,7 +147,7 @@ INFO  Removed generated files files=12 directories=10
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 823 75b76a15d3450283f065ef7b0113ac4c36ef495a2ddfa99219a87569d01fe395
+.ai-rulez/config.toml file 0644 841 fdb147918547b4624f85fd19709134109af4a8d027a674a2c65cd4c1c1f57519
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

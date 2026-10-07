@@ -8,6 +8,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/sarifout"
 )
@@ -216,9 +218,7 @@ func (r *Report) WithSemantic(sr SemanticReport) {
 
 // WriteJSON prints the report as indented JSON.
 func (r *Report) WriteJSON(w io.Writer) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(r); err != nil {
+	if err := jsondoc.Write(w, r); err != nil {
 		return fmt.Errorf("write report: %w", err)
 	}
 	return nil

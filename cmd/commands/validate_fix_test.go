@@ -121,3 +121,55 @@ func TestFixRepairsBooleansFencesAndFinalNewline(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, string(data), string(again))
 }
+
+func TestFixNeverRewritesBaselineAcceptedFindings(t *testing.T) {
+	resetFixFlags(t)
+	root, cfg := strictProject(t, "", map[string]string{".ai-rulez/skills/typo-skill/SKILL.md": typoSkill})
+	skill := filepath.Join(root, ".ai-rulez", "skills", "typo-skill", "SKILL.md")
+	validateUpdateBaseline = true
+	require.Equal(t, 0, runStrict(t, root, cfg))
+	validateUpdateBaseline = false
+
+	validateFixUnsafe = true
+	assert.Equal(t, 0, runStrict(t, root, loadStrictProject(t, root)), "accepted findings do not fail")
+	data, err := os.ReadFile(skill)
+	require.NoError(t, err)
+	assert.Equal(t, typoSkill, string(data), "a baseline-accepted finding is not fixed")
+
+	validateStrictBaseline = true
+	assert.Equal(t, 0, runStrict(t, root, loadStrictProject(t, root)), "the entries stay live")
+}
+
+func TestFixRespectsAnalyzerFilter(t *testing.T) {
+	resetFixFlags(t)
+	root, cfg := strictProject(t, "", map[string]string{".ai-rulez/skills/typo-skill/SKILL.md": typoSkill})
+	skill := filepath.Join(root, ".ai-rulez", "skills", "typo-skill", "SKILL.md")
+	validateFixUnsafe, validateAnalyzers = true, []string{"security"}
+	runStrict(t, root, cfg)
+	data, err := os.ReadFile(skill)
+	require.NoError(t, err)
+	assert.Equal(t, typoSkill, string(data), "--analyzer security must not fix other rules")
+}
+
+func TestFixRespectsChangedScope(t *testing.T) {
+	resetFixFlags(t)
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), validRootConfig)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "skills", "typo-skill", "SKILL.md"), typoSkill)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "skills", "other-skill", "SKILL.md"), "---\nname: Other_Skill\ndescription: Use when you need the other skill for tests.\n---\nbody\n")
+	gitIn(t, root, "init", "-q")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "init")
+	changedSkill := filepath.Join(root, ".ai-rulez", "skills", "typo-skill", "SKILL.md")
+	writeFile(t, changedSkill, typoSkill+"edited\n")
+
+	validateFixUnsafe, validateChanged = true, true
+	runStrict(t, root, loadStrictProject(t, root))
+
+	fixed, err := os.ReadFile(changedSkill)
+	require.NoError(t, err)
+	assert.Contains(t, string(fixed), "name: typo-skill", "the changed file is fixed")
+	untouched, err := os.ReadFile(filepath.Join(root, ".ai-rulez", "skills", "other-skill", "SKILL.md"))
+	require.NoError(t, err)
+	assert.Contains(t, string(untouched), "name: Other_Skill", "a file outside --changed is not rewritten")
+}

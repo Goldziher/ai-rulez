@@ -29,7 +29,7 @@ Create a `.ai-rulez/` directory that others can include:
 **`shared-rules/.ai-rulez/config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "shared-rules"
 description = "Organization-wide AI rules"
 
@@ -59,7 +59,7 @@ priority: critical
 In your project's `.ai-rulez/config.toml`, reference the shared rules:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-project"
 
 # Include rules from another directory
@@ -366,7 +366,7 @@ An include that cannot be created, fetched or merged is an error: the command ex
 include. A remote include that is unreachable falls back to its cached copy when one exists; with no cache there
 is nothing to render. This holds for `generate`, `generate --check`, `validate`, `doctor` and every other command
 that loads the configuration, so a CI gate cannot pass on a checkout that renders without the include. Under
-`--no-fetch` (cached content only) an include that cannot be resolved is logged as a warning and skipped instead,
+`--offline` (cached content only) an include that cannot be resolved is logged as a warning and skipped instead,
 and `ai-rulez lock` reports it as a problem of its own.
 
 An `[[installed_skills]]` entry follows the same rule: a skill that cannot be fetched, found (no `SKILL.md` at its
@@ -390,7 +390,7 @@ URL>` with mode `0700`.
   checkout can be included without affecting teammates. Overlay includes merge by name with the shared
   list; `remove = true` hides a shared include on your machine. See
   [Local Configuration](local-overrides.md).
-- `ai-rulez generate --no-fetch` skips network fetches and uses cached content for remote includes.
+- `ai-rulez generate --offline` skips network fetches and uses cached content for remote includes.
   CRUD commands that validate a change (including the `--local` ones) read remote includes from cache
   only.
 
@@ -513,7 +513,7 @@ monorepo/
 **`backend-team/.ai-rulez/config.toml`:**
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "backend-api"
 
 includes = [
@@ -591,7 +591,7 @@ Bad:
 Add comments to your config explaining why includes are needed:
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-backend"
 
 # Organization-wide coding standards

@@ -23,7 +23,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 824 56932f0e9d31e75a6893c3c81e89d9adb8b3cdeae0449009a8a7099e0a104a62
+.ai-rulez/config.toml file 0644 842 d5878594ccb4cbc6c04a4f3a9e7b8c389ac1e6115d836f440f2badd9a3000a29
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee
@@ -44,27 +44,27 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .bob/ dir 0755
 .bob/commands/ dir 0755
-.bob/commands/build.md file 0644 250 155d4980929312c106fde8cf5d461ca4543e0511901f277ca69290992a0e670b
-.bob/commands/ship.md file 0644 227 98dea8391607ca9bb02942ca9742877b215b07da965dbf3de901888012ee6fcd
+.bob/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
+.bob/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .bob/mcp.json file 0600 388 c285bf7c9478a9a83f416cb322a1e32308ca835803530657bf576381e445b0dc
 .bob/rules/ dir 0755
-.bob/rules/always.md file 0644 325 554d2ebe1bdfdf6ee4aa25a13ea54313eed80262c7a595b1d6e0f171b3a369d0
-.bob/rules/auto.md file 0644 302 5ce6076072ee8c7142d184f244b1464d866cb53be81429eed6304c7009214f5f
-.bob/rules/manual.md file 0644 313 98e4f548ecf64e64742a3bdfc7eb4cfb51326b2620b4d71d50d6c6b20f8d55fb
-.bob/rules/typescript.md file 0644 369 a77a7c40acbaed27647a57327a1a9052b5195ed1b39e50245e76c54c7dbad683
+.bob/rules/always.md file 0644 240 05e03e3751104f2d3934811e2ff08c8c890d225a26a1d1b3fe300a5c4e6c92dd
+.bob/rules/auto.md file 0644 217 68e11410d45d239b3da6c2aabca1819972e7e00afa83cc891acef89a3ae2ad28
+.bob/rules/manual.md file 0644 228 9ebb255fae76ee6cda066d34226c2862e43a7d74ddd735840a81db1d9ce680cd
+.bob/rules/typescript.md file 0644 284 c95977ee0abc9d97498a06f477d42bd8bef8cfe54fc539f01994aeac1757eeaf
 .bob/settings.json file 0644 187 53a26c27c7af59a081113f2767450025cd6ab3d66c33a8515309512c6f35159a
 .bob/skills/ dir 0755
 .bob/skills/deployer/ dir 0755
-.bob/skills/deployer/SKILL.md file 0644 259 f8770debc3ff5a2bd0f9ba2a7523c931e768e8711470e1361f20345d21425e33
+.bob/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
 .bob/skills/reviewer/ dir 0755
-.bob/skills/reviewer/SKILL.md file 0644 506 4796987d2be5c468b325a6da65abafe63fdb11b40ceb4ce1c52580c5eb213155
+.bob/skills/reviewer/SKILL.md file 0644 419 9b2dbf3fb01442905d40da0032e2e5998b4ec526247e9400a49102842056bbb1
 .bob/skills/reviewer/references/ dir 0755
 .bob/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .bob/skills/reviewer/scripts/ dir 0755
 .bob/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 353 d09f68e0d754a3f3e74926d03dae57a060b54d1fb243e32f4768bac4e5d42480
 .mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
-AGENTS.md file 0644 575 9548f2867b2e0bdda358b84ca7b92de95871d4417389321e75d889ee08fd98cf
+AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -108,7 +108,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 5: ai-rulez clean --force
+## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
 --- stderr
@@ -150,7 +150,7 @@ INFO  Removed generated files files=14 directories=8
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 824 56932f0e9d31e75a6893c3c81e89d9adb8b3cdeae0449009a8a7099e0a104a62
+.ai-rulez/config.toml file 0644 842 d5878594ccb4cbc6c04a4f3a9e7b8c389ac1e6115d836f440f2badd9a3000a29
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

@@ -1,12 +1,12 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -55,7 +55,7 @@ var skillRemoveCmd = &cobra.Command{
 	Short: "Remove an installed skill",
 	Long: `Remove an installed skill from the configuration.
 
-Use --force to skip confirmation prompts.`,
+Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
 	Run:  runSkillRemove,
 }
@@ -105,7 +105,7 @@ func init() {
 	}
 
 	// Flags for skill remove
-	skillRemoveCmd.Flags().BoolVarP(&skillForce, "force", "f", false, "Skip confirmation prompts")
+	skillRemoveCmd.Flags().BoolVarP(&skillForce, "yes", "y", false, "Skip confirmation prompts")
 
 	// Flags for skill list
 	addJSONFormat(skillListCmd.Flags(), &skillJSON, "j")
@@ -201,12 +201,12 @@ func runSkillList(cmd *cobra.Command, args []string) {
 				keyType:   s.Type,
 			}
 		}
-		data, err := json.MarshalIndent(output, "", "  ")
+		data, err := jsondoc.Marshal(output)
 		if err != nil {
 			logger.Error("Failed to marshal JSON", "error", err)
 			os.Exit(1)
 		}
-		fmt.Println(string(data))
+		fmt.Print(string(data))
 	} else {
 		logger.Info("Installed skills:")
 		for _, s := range skills {

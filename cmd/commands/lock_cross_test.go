@@ -140,7 +140,7 @@ type detections struct {
 	diff     string // lock --diff text
 	locked   error  // generate --locked, content half
 	frozen   error  // generate --frozen, content half
-	sources  int    // AR981 findings of validate --strict
+	sources  int    // AR981 findings of validate
 	outputs  int    // AR982 findings
 	served   string // AR995 findings joined, empty when none
 	drifting int    // generate --check exit code
@@ -359,7 +359,7 @@ func TestLockCross_TamperedLockFile(t *testing.T) {
 			assert.Equal(t, exitDrift, d.check)
 			require.ErrorIs(t, d.locked, errLockedSourceDrift)
 			require.ErrorIs(t, d.frozen, errLockedSourceDrift)
-			assert.Positive(t, d.sources+d.outputs, "validate --strict reports it under enforce")
+			assert.Positive(t, d.sources+d.outputs, "validate reports it under enforce")
 		})
 	}
 

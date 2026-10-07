@@ -116,7 +116,7 @@ func TestEvalRun_AppliesTheConfiguredEstimateAssumptions(t *testing.T) {
 	resetEvalFlags(t)
 	root := activationProject(t)
 	cfg := filepath.Join(root, ".ai-rulez", "config.toml")
-	body := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[lint.evals.estimate]\noverhead_tokens = 30000\n"
+	body := "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[lint.evals.estimate]\noverhead_tokens = 30000\n"
 	require.NoError(t, os.WriteFile(cfg, []byte(body), 0o600))
 	evalFlags.mode, evalFlags.surface, evalFlags.estimate, evalFlags.format = evals.ModeActivation, evals.SurfaceNative, true, evals.FormatJSON
 	var out bytes.Buffer

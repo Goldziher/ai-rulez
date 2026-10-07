@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/telemetry-doctor.schema.json",
+  "title": "ai-rulez telemetry doctor",
+  "description": "Output of `ai-rulez telemetry doctor --format json`: the resolved telemetry configuration, consent state and buffer.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "recording",
+    "export",
+    "settings",
+    "consent",
+    "buffer"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "recording": {
+      "type": "boolean"
+    },
+    "export": {
+      "type": "boolean"
+    },
+    "kill_switch": {
+      "type": "string"
+    },
+    "export_blockers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "settings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "value",
+          "source"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ignored_repo_keys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "problems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "endpoint_host": {
+      "type": "string"
+    },
+    "headers_env_set": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "headers_env_unset": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "consent": {
+      "type": "string"
+    },
+    "buffer": {
+      "type": "object"
+    }
+  }
+}

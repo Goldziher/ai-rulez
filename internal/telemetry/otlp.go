@@ -115,6 +115,27 @@ func (en *Encoder) open(gate string) bool {
 	return false
 }
 
+// contextBucket is the exported id of a context file when its path is not: the
+// id of a context item is its repository-relative path (or an out-of-repo file
+// name), so without include_paths only a digest-derived bucket leaves the machine.
+func contextBucket(e *Event) string {
+	if short := digestShort(e.Digest); short != "" {
+		return "context:" + short
+	}
+	return "context"
+}
+
+// exported returns the event as it may leave the machine: a context item keeps
+// its id only when keepPaths is set.
+func exported(e *Event, keepPaths bool) *Event {
+	if e.Kind != KindContext || keepPaths {
+		return e
+	}
+	clone := *e
+	clone.ID = contextBucket(e)
+	return &clone
+}
+
 // fieldValue returns the attribute for an allowlist row, false when the event
 // has no value for it.
 func fieldValue(a Attr, e *Event) (otlpAttr, bool) {
@@ -233,7 +254,7 @@ func nanosecondsRepresentable(t time.Time) bool {
 func (en *Encoder) EncodeLogs(events []Event, observed time.Time) ([]byte, error) {
 	records := make([]otlpLogRecord, 0, len(events))
 	for i := range events {
-		e := &events[i]
+		e := exported(&events[i], en.IncludePaths)
 		name, body := logEventNamePrefix+e.Outcome, "item "+e.Outcome
 		if e.Name == EventEvalResult {
 			name, body = logEventNameEval, "eval result"
@@ -530,7 +551,7 @@ func (en *Encoder) EncodeMetrics(events []Event, now time.Time) ([]byte, error) 
 		if t, err := time.Parse(time.RFC3339, events[i].Time); err == nil && t.Before(start) {
 			start = t
 		}
-		ag.add(&events[i])
+		ag.add(exported(&events[i], false))
 	}
 	startNano, nowNano := nanos(start), nanos(now)
 

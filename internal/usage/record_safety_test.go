@@ -152,7 +152,7 @@ func TestShellQuoting(t *testing.T) {
 
 func TestRecordCommand_QuotesTheExecutable(t *testing.T) {
 	got := recordCommand(&HookTemplateOptions{Executable: "/Users/a b/bin/ai-rulez"}, HarnessClaude)
-	assert.True(t, strings.HasPrefix(got, `'/Users/a b/bin/ai-rulez' usage record`), got)
+	assert.True(t, strings.HasPrefix(got, `'/Users/a b/bin/ai-rulez' telemetry record`), got)
 }
 
 func TestLoadSalt_IgnoresASymlinkedSaltFile(t *testing.T) {

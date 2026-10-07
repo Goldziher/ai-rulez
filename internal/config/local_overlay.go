@@ -169,6 +169,10 @@ func decodeJSONDoc(doc map[string]any, path string) (*Config, error) {
 			Hint("Check the value types in the local overlay").
 			Wrapf(err, "decode merged config")
 	}
+	// agents_md defaults to true in v5; JSON cannot tell "absent" from false.
+	if _, stated := doc["agents_md"]; !stated {
+		cfg.AgentsMD = true
+	}
 	return &cfg, nil
 }
 

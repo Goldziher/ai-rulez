@@ -1,10 +1,10 @@
 - id: ai-rulez-validate
   name: Validate AI rulez configuration
-  description: Validate ai-rulez configuration files and ensure they would generate successfully
+  description: Validate ai-rulez configuration and content (globs, links, hooks, security rules) in every nested project
   entry: scripts/pre-commit/run-ai-rulez.sh
   args:
-    - generate
-    - --dry-run
+    - validate
+    - --recursive
   language: script
   files: '(^|/)\.ai-rulez/'
   pass_filenames: false
@@ -62,35 +62,6 @@
     - --if-configured
   language: script
   files: '(^|/)\.ai-rulez/'
-  pass_filenames: false
-  always_run: false
-  require_serial: false
-
-- id: ai-rulez-enforce
-  name: AI-Rulez rule enforcement
-  description: Enforce coding standards using AI agents
-  entry: scripts/pre-commit/run-ai-rulez.sh
-  language: script
-  args:
-    - enforce
-    - --level
-    - error
-  files: '\.(js|ts|jsx|tsx|py|go|java|c|cpp|rs|php)$'
-  pass_filenames: false
-  always_run: false
-  require_serial: false
-
-- id: ai-rulez-enforce-fix
-  name: AI-Rulez enforcement with auto-fix
-  description: Enforce coding standards and automatically apply fixes using AI agents
-  entry: scripts/pre-commit/run-ai-rulez.sh
-  language: script
-  args:
-    - enforce
-    - --fix
-    - --level
-    - error
-  files: '\.(js|ts|jsx|tsx|py|go|java|c|cpp|rs|php)$'
   pass_filenames: false
   always_run: false
   require_serial: false

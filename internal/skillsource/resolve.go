@@ -485,7 +485,12 @@ func readRef(repoDir, ref string) string {
 	if json.Unmarshal(data, &m) != nil {
 		return ""
 	}
-	return m[refLabel(ref)]
+	// The index is a cache file anyone with write access to the cache may edit,
+	// and the commit becomes a cache path component: hold it to the lock's shape.
+	if commit := m[refLabel(ref)]; lockCommit.MatchString(commit) {
+		return commit
+	}
+	return ""
 }
 
 func writeRef(repoDir, ref, commit string) {
@@ -499,7 +504,15 @@ func writeRef(repoDir, ref, commit string) {
 	if err != nil || os.MkdirAll(repoDir, 0o700) != nil {
 		return
 	}
-	_ = os.WriteFile(path, data, 0o600) //nolint:errcheck // the index is only a convenience for offline runs
+	// Write to a temp file and rename, so two servers never leave a torn index.
+	tmp, err := os.CreateTemp(repoDir, "refs-*.tmp")
+	if err != nil {
+		return
+	}
+	_, werr := tmp.Write(data)
+	if cerr := tmp.Close(); werr != nil || cerr != nil || os.Rename(tmp.Name(), path) != nil {
+		_ = os.Remove(tmp.Name()) //nolint:errcheck // best effort cleanup of a convenience file
+	}
 }
 
 // Problem is one way the lock disagrees with the configured sources.

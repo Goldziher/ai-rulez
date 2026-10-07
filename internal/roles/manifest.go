@@ -95,7 +95,7 @@ func Build(cfg *config.Config, counter tokens.Counter) *Manifest {
 	for _, name := range cfg.RoleNames() {
 		role, err := BuildRole(cfg, name, counter)
 		if err != nil {
-			// A role with broken inheritance is reported by `validate --strict`
+			// A role with broken inheritance is reported by `validate`
 			// (AR972); it must not stop the others from being published.
 			cfg.Log().Warn("Left a role out of the manifest", "role", name, "error", err)
 			continue

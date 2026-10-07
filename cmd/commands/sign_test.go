@@ -239,7 +239,7 @@ func TestRequireLockSignatureGates(t *testing.T) {
 		assert.NotContains(t, oe.Hint(), "run `ai-rulez lock`", "re-locking would invalidate the signature")
 	})
 
-	t.Run("validate --strict reports it", func(t *testing.T) {
+	t.Run("validate reports it", func(t *testing.T) {
 		cfg, _, err := loadForLockCheck("")
 		require.NoError(t, err)
 

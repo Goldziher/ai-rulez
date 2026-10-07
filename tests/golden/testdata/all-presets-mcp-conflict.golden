@@ -84,7 +84,7 @@ Hint: Presets that write the same file must render identical content; drop one o
 .ai-rulez/commands/ dir 0755
 .ai-rulez/commands/build.md file 0644 86 a9cebfe205f3b9671fa95cb548dfb846742c4bbc0ea9dda6b1ceea16567cad08
 .ai-rulez/commands/ship.md file 0644 62 ef143b5a7da89769d892288d92297d90b37c637bbcd722b02ecc732d6024e3ce
-.ai-rulez/config.toml file 0644 1334 cbfa9f7a1df9a83c435b78aef192c5ec16869cc4e99e9761334c1cd29590ef1e
+.ai-rulez/config.toml file 0644 1352 973763df2ec84cc56c782e56f69f16c8b7d43b25778a4fe1a04ddd95b4e3b140
 .ai-rulez/context/ dir 0755
 .ai-rulez/context/architecture.md file 0644 39 f061e6d3090d636939192e8f2a25fc35d5e1d5f39064be561b75958bfe58affe
 .ai-rulez/context/overview.md file 0644 57 5516cc04000e99e3776a26e6b85af97da89016e71294b288c3f07cab508c08ee

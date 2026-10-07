@@ -16,7 +16,7 @@ func TestLoadLLMTableAndLocalOverlay(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	shared := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[llm]\nprovider = \"openai\"\nmodel = \"gpt-4o-mini\"\napi_key_env = \"OPENAI_API_KEY\"\nmax_cost_usd = 1.5\n"
+	shared := "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[llm]\nprovider = \"openai\"\nmodel = \"gpt-4o-mini\"\napi_key_env = \"OPENAI_API_KEY\"\nmax_cost_usd = 1.5\n"
 	if err := os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(shared), 0o600); err != nil {
 		t.Fatal(err)
 	}
