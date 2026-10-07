@@ -175,6 +175,13 @@ func TestEvalRun_RunnerSelection(t *testing.T) {
 	evalFlags.runner = "nope"
 	_, err = runEval(evalRunCmd, nil)
 	assert.ErrorContains(t, err, "unknown runner")
+	for _, name := range []string{evals.RunnerClaudePluginEval, evals.RunnerCommand, evals.RunnerClaudeNative, evals.RunnerCodexNative} {
+		assert.ErrorContains(t, err, name, "the error names every runner")
+	}
+
+	evalFlags.runner = evals.RunnerClaudeNative
+	_, err = runEval(evalRunCmd, nil)
+	assert.ErrorContains(t, err, "measures activation")
 
 	evalFlags.runner = evals.RunnerCommand
 	_, err = runEval(evalRunCmd, nil)
