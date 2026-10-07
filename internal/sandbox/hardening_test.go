@@ -16,7 +16,7 @@ import (
 
 func TestBwrapDetachesTheSession(t *testing.T) {
 	// Arrange
-	sb := New("linux", lookIn("bwrap"))
+	sb := New("linux", lookIn(t, "bwrap"))
 	// Act
 	w, err := sb.Wrap(Spec{}, []string{"/bin/true"})
 	// Assert
@@ -53,11 +53,11 @@ func TestConfinedProcessCannotLaunchApplications(t *testing.T) {
 }
 
 func TestCheckSurvivesACancelledContext(t *testing.T) {
-	// Arrange: the caller's context is already cancelled.
+	// Arrange: the caller's context is already canceled.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	fake := &runner.Fake{}
-	sb := New("linux", lookIn("bwrap")).WithRunner(fake)
+	sb := New("linux", lookIn(t, "bwrap")).WithRunner(fake)
 	// Act
 	err := sb.Check(ctx)
 	// Assert: the probe ran to completion and the answer is cached for later callers.
@@ -89,7 +89,7 @@ func TestCheckFallsBackToABackendThatWorks(t *testing.T) {
 				}
 				return runner.Result{Status: runner.StatusOK}
 			}}
-			sb := New("linux", lookIn(tt.tools...)).WithRunner(fake)
+			sb := New("linux", lookIn(t, tt.tools...)).WithRunner(fake)
 			// Act
 			err := sb.Check(context.Background())
 			// Assert
@@ -111,7 +111,7 @@ func TestCheckReportsAProbeFailure(t *testing.T) {
 	fake := &runner.Fake{Handle: func(runner.Spec) runner.Result {
 		return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("bwrap: no permissions")}
 	}}
-	err := New("linux", lookIn("bwrap")).WithRunner(fake).Check(context.Background())
+	err := New("linux", lookIn(t, "bwrap")).WithRunner(fake).Check(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no permissions")
 }

@@ -14,10 +14,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func lookIn(tools ...string) func(string) (string, error) {
+// lookIn finds the named tools under /usr/bin. On Windows a test that finds one
+// is skipped: the backends wrap unix processes, and /usr/bin/x is not an
+// absolute path there.
+func lookIn(t *testing.T, tools ...string) func(string) (string, error) {
+	t.Helper()
 	return func(name string) (string, error) {
-		for _, t := range tools {
-			if t == name {
+		for _, tool := range tools {
+			if tool == name {
+				if runtime.GOOS == "windows" {
+					t.Skip("the sandbox backends confine unix processes; their fake paths are not absolute on windows")
+				}
 				return "/usr/bin/" + name, nil
 			}
 		}
@@ -76,7 +83,7 @@ func TestWrapBuildsTheBackendCommand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			sb := New(tt.goos, lookIn(tt.tools...))
+			sb := New(tt.goos, lookIn(t, tt.tools...))
 			// Act
 			w, err := sb.Wrap(tt.spec, []string{"/bin/echo", "hi"})
 			// Assert
@@ -96,9 +103,12 @@ func TestWrapBuildsTheBackendCommand(t *testing.T) {
 
 func TestWrapKeepsPathsOutOfTheProfileText(t *testing.T) {
 	// A write directory with quote and paren characters must not reach the profile.
+	if runtime.GOOS == "windows" {
+		t.Skip("windows file names cannot hold the quote characters this test needs; sandbox-exec is macOS only")
+	}
 	dir := filepath.Join(t.TempDir(), `a")(allow network*) ("`)
 	require.NoError(t, os.MkdirAll(dir, 0o700))
-	w, err := New("darwin", lookIn("sandbox-exec")).Wrap(Spec{WriteDirs: []string{dir}}, []string{"/bin/true"})
+	w, err := New("darwin", lookIn(t, "sandbox-exec")).Wrap(Spec{WriteDirs: []string{dir}}, []string{"/bin/true"})
 	require.NoError(t, err)
 	profile := w.Argv[slicesIndex(w.Argv, "-p")+1]
 	assert.NotContains(t, profile, "allow network")
@@ -127,7 +137,7 @@ func TestUnavailableRefuses(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sb := New(tt.goos, lookIn(tt.tools...))
+			sb := New(tt.goos, lookIn(t, tt.tools...))
 			_, err := sb.Wrap(Spec{}, []string{"x"})
 			require.ErrorIs(t, err, ErrUnavailable)
 			assert.Equal(t, BackendNone, sb.Backend())
@@ -145,7 +155,7 @@ func TestUnavailableRefuses(t *testing.T) {
 }
 
 func TestWrapRejectsAnEmptyCommand(t *testing.T) {
-	_, err := New("darwin", lookIn("sandbox-exec")).Wrap(Spec{}, nil)
+	_, err := New("darwin", lookIn(t, "sandbox-exec")).Wrap(Spec{}, nil)
 	require.Error(t, err)
 }
 
