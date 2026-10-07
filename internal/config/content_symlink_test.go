@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -103,11 +102,9 @@ func TestProjectScanner_SymlinkPolicy(t *testing.T) {
 				require.NoError(t, os.RemoveAll(filepath.Join(project, ".ai-rulez")))
 			}
 			tt.setup(t, project, outside)
-			var warned bytes.Buffer
-			old := contentWarnWriter
-			contentWarnWriter = &warned
-			t.Cleanup(func() { contentWarnWriter = old })
+			warned := &testutil.LogRecorder{}
 			s := newProjectScanner(osView(project))
+			s.log = warned
 
 			// Act
 			tree, err := scanContentTree(s, filepath.Join(project, ".ai-rulez"), nil)

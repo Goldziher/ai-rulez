@@ -1,12 +1,8 @@
 package config
 
 import (
-	"sync"
-
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
-
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // Two lint tables look alike and mean different things: [lint.tolerate] maps a
@@ -60,15 +56,11 @@ func swappedLintTables(path string, doc map[string]any) error {
 	return nil
 }
 
-var warnedLintBudget sync.Map
-
-// warnDeprecatedLintBudget tells once per file that [lint.budget] was renamed.
-func warnDeprecatedLintBudget(path string, lc *LintConfig) {
-	if lc == nil || len(lc.Budget) == 0 {
+// warnDeprecatedLintBudget tells once per config file that [lint.budget] was
+// renamed; the config remembers the file when it decodes it.
+func (c *Config) warnDeprecatedLintBudget() {
+	if c.deprecatedLintBudgetPath == "" {
 		return
 	}
-	if _, seen := warnedLintBudget.LoadOrStore(path, true); seen {
-		return
-	}
-	logger.Warn("[lint.budget] is deprecated: rename it to [lint.tolerate] (it still works for now; [lint.budgets.<kind>] is the separate table for size limits)", "path", path)
+	c.WarnOnce("lint-budget\x00"+c.deprecatedLintBudgetPath, "[lint.budget] is deprecated: rename it to [lint.tolerate] (it still works for now; [lint.budgets.<kind>] is the separate table for size limits)", "path", c.deprecatedLintBudgetPath)
 }

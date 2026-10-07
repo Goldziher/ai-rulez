@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,11 +20,6 @@ type ContentProblem struct {
 	Reason string
 }
 
-// contentWarnWriter receives symlink refusals for the project's own content.
-// It is written directly instead of through the logger so the warning survives
-// --quiet, which raises the log level above warnings.
-var contentWarnWriter io.Writer = os.Stderr
-
 // contentScanner applies the symlink policy while scanning a content tree.
 //
 // With root empty (content from includes, installed skills, OKF bundles) no
@@ -41,7 +35,14 @@ type contentScanner struct {
 	// git answers which files a work tree ignores (bundle filtering); the zero
 	// value runs real git.
 	git gitutil.Git
+	// log receives what the scan reports. nil means the command line: the CLI's
+	// logger, and refusals of the project's own content written straight to stderr
+	// so they survive --quiet. A host that injected a logger gets everything there.
+	log logger.Logger
 }
+
+// logger is the scanner's log, the CLI's when none was injected.
+func (s *contentScanner) logger() logger.Logger { return logger.Or(s.log) }
 
 // newProjectScanner returns a scanner for the project's own content, read
 // through v. A symlink may point anywhere inside v's workspace, which is rooted at
@@ -59,11 +60,15 @@ func newIncludeScanner(v workspace.View) *contentScanner {
 
 func (s *contentScanner) refuse(path, reason string) {
 	if s.root == "" {
-		logger.Warn("Skipping symlink in included content; symlinks are not followed", "path", path)
+		s.logger().Warn("Skipping symlink in included content; symlinks are not followed", "path", path)
 		return
 	}
 	s.problems = append(s.problems, ContentProblem{Path: path, Reason: reason})
-	fmt.Fprintf(contentWarnWriter, "WARN  refusing symlinked content %s: %s\n", path, reason)
+	if s.log != nil {
+		s.log.Warn("refusing symlinked content", "path", path, "reason", reason)
+		return
+	}
+	fmt.Fprintf(os.Stderr, "WARN  refusing symlinked content %s: %s\n", path, reason)
 }
 
 // admit reports the FileInfo of path (the target's, for an admitted symlink).
@@ -163,7 +168,7 @@ func (s *contentScanner) loadFile(path string) (ContentFile, error) {
 	if !info.Mode().IsRegular() {
 		return ContentFile{}, oops.With("path", path).Errorf("content file %s is not a regular file", path)
 	}
-	return readContentFile(s.v, path)
+	return readContentFile(s.v, s.logger(), path)
 }
 
 // validateContentProblems turns symlink refusals into a validation error.
