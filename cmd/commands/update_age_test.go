@@ -175,7 +175,7 @@ func TestMinReleaseAge_ForgeIsTheFirstSourceForGitHubRepositories(t *testing.T) 
 	// Arrange: a GitHub source gets its release time from the (fake) forge.
 	published := time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC)
 	fake := &forge.Fake{
-		ReleasesBy: map[string][]forge.Release{"github.com/o/r": {{Tag: "v1.2.3", Published: published}}},
+		ReleasesBy: map[string][]forge.Release{"github.com/o/r": {{Tag: "v1.2.3", Published: published, Commit: strings.Repeat("a", 40)}}},
 		Tags:       map[string]forge.TagInfo{"github.com/o/r@v1.2.3": {Name: "v1.2.3", Commit: strings.Repeat("a", 40)}},
 	}
 	prev := newForgeClient
