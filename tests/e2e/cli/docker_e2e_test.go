@@ -46,7 +46,7 @@ func requireDocker(t *testing.T) string {
 // returns the container id and the host:port docker chose.
 func startContainer(t *testing.T, docker, port string, args ...string) (id, hostPort string) {
 	t.Helper()
-	argv := append([]string{"run", "-d", "--rm", "-p", "127.0.0.1::" + port}, args...)
+	argv := append([]string{"run", "-d", "-p", "127.0.0.1::" + port}, args...)
 	out, err := exec.Command(docker, argv...).CombinedOutput() //nolint:gosec // fixed image, test paths
 	require.NoError(t, err, string(out))
 	id = strings.TrimSpace(string(out))
@@ -189,7 +189,7 @@ func TestDockerTelemetryConsentE2E(t *testing.T) {
 	require.NoError(t, os.MkdirAll(out, 0o750))
 	require.NoError(t, os.Chmod(out, 0o777)) //nolint:gosec // the collector runs as another uid
 	cfg := filepath.Join(dir, "config.yaml")
-	require.NoError(t, os.WriteFile(cfg, []byte(collectorConfig), 0o600))
+	require.NoError(t, os.WriteFile(cfg, []byte(collectorConfig), 0o644)) //nolint:gosec // the collector runs as another uid and must read it
 	_, host := startContainer(t, docker, "4318", "-v", cfg+":/etc/otelcol/config.yaml:ro", "-v", out+":/out", collectorImg, "--config=/etc/otelcol/config.yaml")
 	endpoint := "http://" + host
 	waitHTTP(t, endpoint+"/v1/logs")
