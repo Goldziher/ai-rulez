@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -70,7 +69,7 @@ func init() {
 func runDomainAdd(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -108,7 +107,7 @@ func runDomainRemove(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -124,7 +123,7 @@ func runDomainRemove(cmd *cobra.Command, args []string) {
 }
 
 func runDomainList(cmd *cobra.Command, args []string) {
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)

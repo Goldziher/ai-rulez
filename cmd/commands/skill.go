@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -115,7 +114,7 @@ func init() {
 func runSkillInstall(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -153,7 +152,7 @@ func runSkillRemove(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -172,7 +171,7 @@ func runSkillRemove(cmd *cobra.Command, args []string) {
 }
 
 func runSkillList(cmd *cobra.Command, args []string) {
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,7 +46,7 @@ func init() {
 }
 
 func runClean(_ *cobra.Command, args []string) {
-	ctx := context.Background()
+	ctx := cmdContext()
 
 	if handleUserClean(args) {
 		return

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -104,7 +103,7 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 		includeList = []string{crud.ContentTypeRules, crud.ContentTypeContext, crud.ContentTypeSkills}
 	}
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -146,7 +145,7 @@ func runIncludeRemove(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -165,7 +164,7 @@ func runIncludeRemove(cmd *cobra.Command, args []string) {
 }
 
 func runIncludeList(cmd *cobra.Command, args []string) {
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)

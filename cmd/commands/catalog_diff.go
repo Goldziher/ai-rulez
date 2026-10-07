@@ -97,7 +97,7 @@ func runCatalogDiff(ctx context.Context, out io.Writer, args []string) (identica
 		return false, err
 	}
 	if ctx == nil {
-		ctx = context.Background()
+		ctx = cmdContext()
 	}
 	project := &catalogDiffProject{}
 	from, err := resolveCatalogSide(ctx, project, args[0])

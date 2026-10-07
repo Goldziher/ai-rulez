@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -104,7 +103,7 @@ func runRemoveRule(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := newContentOperator(removeLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -134,7 +133,7 @@ func runRemoveContext(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := newContentOperator(removeLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -164,7 +163,7 @@ func runRemoveSkill(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	ctx := context.Background()
+	ctx := cmdContext()
 	op, err := newContentOperator(removeLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
@@ -195,7 +194,7 @@ func runRemoveItem(name, ftype, label string) {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
 	}
-	if err := op.RemoveFile(context.Background(), removeDomain, ftype, name); err != nil {
+	if err := op.RemoveFile(cmdContext(), removeDomain, ftype, name); err != nil {
 		logger.Error("Failed to remove "+label, "error", err)
 		os.Exit(1)
 	}

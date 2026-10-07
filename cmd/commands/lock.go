@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -189,9 +188,9 @@ func runLockFor(kind string, names []string) int {
 
 func loadForLock(path string, opts ...config.LoadOption) (*config.Config, error) {
 	if path != "" {
-		return loadProjectFile(context.Background(), path, opts...)
+		return loadProjectFile(cmdContext(), path, opts...)
 	}
-	return loadConfigForCommand(context.Background(), nil, opts...)
+	return loadConfigForCommand(cmdContext(), nil, opts...)
 }
 
 func writeLockAt(path, kind string, names []string) int {

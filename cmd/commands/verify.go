@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"errors"
 	"os"
 
@@ -93,7 +92,7 @@ no longer holds).`,
 			runRecursivePluginVerify()
 			return
 		}
-		cfg, err := loadConfigForCommand(context.Background(), args, config.WithoutLocal())
+		cfg, err := loadConfigForCommand(cmdContext(), args, config.WithoutLocal())
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)

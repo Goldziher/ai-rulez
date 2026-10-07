@@ -131,7 +131,7 @@ Exit codes: 0 done, 1 the run could not complete, 2 a gate failed.`,
 	Run: func(cmd *cobra.Command, _ []string) {
 		ctx := cmd.Context()
 		if ctx == nil {
-			ctx = context.Background()
+			ctx = cmdContext()
 		}
 		exitPublish(runPublish(ctx, cmd.OutOrStdout()))
 	},
@@ -160,7 +160,7 @@ Exit codes: 0 verified, 1 the directory cannot be read, 2 a mismatch.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
 		if ctx == nil {
-			ctx = context.Background()
+			ctx = cmdContext()
 		}
 		exitPublish(runPublishVerify(ctx, cmd.OutOrStdout(), args[0]))
 	},
@@ -180,7 +180,7 @@ schema to test against).`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
 		if ctx == nil {
-			ctx = context.Background()
+			ctx = cmdContext()
 		}
 		publishEmit = []string{args[0]}
 		exitPublish(runPublishEmit(ctx, cmd.OutOrStdout(), args[0]))

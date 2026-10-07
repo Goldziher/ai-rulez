@@ -47,7 +47,7 @@ func runGenerateWatch(parent context.Context, args []string) error {
 		return err
 	}
 	if parent == nil {
-		parent = context.Background()
+		parent = cmdContext()
 	}
 	ctx, stop := interruptContext(parent)
 	defer stop()
@@ -279,5 +279,5 @@ func watchParentContext(cmd *cobra.Command) context.Context {
 	if cmd != nil && cmd.Context() != nil {
 		return cmd.Context()
 	}
-	return context.Background()
+	return cmdContext()
 }
