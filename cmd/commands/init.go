@@ -142,7 +142,7 @@ func handWrittenNativeFiles(dir string) []string {
 			continue
 		}
 		data, err := os.ReadFile(path)
-		if err != nil || len(strings.TrimSpace(string(data))) == 0 || generator.HasGeneratedBanner(path, data) {
+		if err != nil || strings.TrimSpace(string(data)) == "" || generator.HasGeneratedBanner(path, data) {
 			continue
 		}
 		found = append(found, name)

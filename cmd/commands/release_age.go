@@ -49,8 +49,8 @@ func (g *ageGates) gateFor(w lockfile.Want) *tagresolve.AgeGate {
 	if raw == "" {
 		raw = g.global
 	}
-	min, err := semver.ParseAge(raw)
-	if err != nil || min <= 0 || w.Constraint == "" {
+	minAge, err := semver.ParseAge(raw)
+	if err != nil || minAge <= 0 || w.Constraint == "" {
 		return nil // an invalid age is reported by config validation
 	}
 	g.mu.Lock()
@@ -73,7 +73,7 @@ func (g *ageGates) gateFor(w lockfile.Want) *tagresolve.AgeGate {
 		})
 		g.timers[w.Source] = timer
 	}
-	return &tagresolve.AgeGate{Min: min, Now: g.cfg.Host.Clock.Now(), Timer: timer}
+	return &tagresolve.AgeGate{Min: minAge, Now: g.cfg.Host.Clock.Now(), Timer: timer}
 }
 
 // installReleaseGate makes `lock` and `update` hold back tags younger than the

@@ -132,7 +132,8 @@ func runRolesList(out io.Writer) error {
 // with what generate does instead.
 func printModeOutcomes(w reportWriter, outcomes []roles.SkillOutcome) {
 	header := false
-	for _, o := range outcomes {
+	for i := range outcomes {
+		o := &outcomes[i]
 		if len(o.Degraded) == 0 {
 			continue
 		}
@@ -140,7 +141,7 @@ func printModeOutcomes(w reportWriter, outcomes []roles.SkillOutcome) {
 			w.printf("\nskill_mode not honored on every configured harness (see docs/roles.md#skill_mode-on-other-harnesses):\n")
 			header = true
 		}
-		w.printf("  %s = %s: not applied on %s; %s\n", o.Key(), o.Mode, strings.Join(o.Degraded, ", "), modeFallbackText(o))
+		w.printf("  %s = %s: not applied on %s; %s\n", o.Key(), o.Mode, strings.Join(o.Degraded, ", "), modeFallbackText(*o))
 	}
 }
 
