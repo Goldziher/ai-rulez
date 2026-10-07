@@ -15,6 +15,9 @@ import (
 // a hung git must not stall publish for the runner's 15 minute maximum.
 const gitQueryTimeout = 30 * time.Second
 
+// gitBin is the git executable, found on PATH.
+const gitBin = "git"
+
 // SourceInfo is what git says about the project being published.
 type SourceInfo struct {
 	Source Source
@@ -30,9 +33,9 @@ type SourceInfo struct {
 // directory) whose changes are ignored when it lies inside the repository.
 func ReadSource(ctx context.Context, r runner.Runner, dir, excludeRel string) SourceInfo {
 	out := func(args ...string) (string, bool) {
-		argv := append([]string{"git"}, args...)
+		argv := append([]string{gitBin}, args...)
 		if dir != "" {
-			argv = append([]string{"git", "-C", dir}, args...)
+			argv = append([]string{gitBin, "-C", dir}, args...)
 		}
 		res := runner.Or(r).Run(ctx, runner.Spec{
 			Argv:    argv,
@@ -106,7 +109,7 @@ func PreviousTag(ctx context.Context, r runner.Runner, dir, exclude string) stri
 // as "acme-v*", the tags of one plugin of a multi-plugin release). A glob
 // outside the tag alphabet is ignored.
 func PreviousTagMatching(ctx context.Context, r runner.Runner, dir, exclude, glob string) string {
-	argv := []string{"git"}
+	argv := []string{gitBin}
 	if dir != "" {
 		argv = append(argv, "-C", dir)
 	}
@@ -148,7 +151,7 @@ func RepoFromURL(remote string) string {
 	if host == "" || strings.Count(rest, "/") != 1 {
 		return ""
 	}
-	if host == "github.com" {
+	if host == githubHost {
 		return rest
 	}
 	return host + "/" + rest

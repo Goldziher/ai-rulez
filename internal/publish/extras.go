@@ -106,7 +106,7 @@ func BuildAggregate(name string, x Extras, plugins []PluginRef) (*Dist, error) {
 	d := &Dist{Files: files, Warnings: warnings}
 	roles := map[string]string{}
 	for p := range files {
-		roles[p] = "emitted"
+		roles[p] = roleEmitted
 		if strings.HasPrefix(p, MarketplaceDir+"/") {
 			roles[p] = "marketplace"
 		}
