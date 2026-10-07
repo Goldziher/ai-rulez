@@ -880,7 +880,7 @@ linted by `validate` and `doctor`. The same checks run on any third-party bundle
 | AR9B5 | `okf-export-drift` | error | The bundle differs from what the `okf` preset would write now (project lint only) |
 | AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md`, keys other than `okf_version` in the root one; a `log.md` heading that is not an ISO date is a warning |
 | AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
-| AR9B8 | `okf-path-unsafe` | error | A symlink, or paths differing only in case |
+| AR9B8 | `okf-path-unsafe` | error | A symlink, an oversize markdown file, or paths differing only in case |
 | AR9B9 | `okf-lossy-mapping` | info | Reserved for import notes: `x-ai-rulez` data that could not be mapped |
 
 Severities are configured like any other code (`[lint.severity]`, `[lint.ignore]`). See [OKF](okf.md).
@@ -2499,7 +2499,7 @@ two OKF concepts in one directory share a title
 
 ### AR9B8 okf-path-unsafe
 
-an OKF bundle contains a symlink, a path escaping the bundle, or paths differing only in case
+an OKF bundle contains a symlink, a markdown file over the size limit (skipped), or paths differing only in case
 
 - Default severity: `error`
 - Analyzer: `okf` (scope `item`)
