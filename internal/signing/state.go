@@ -98,7 +98,7 @@ func OpenState(path, secretPath string) (*State, error) {
 		return s, nil
 	case err != nil:
 		s.Reset = true
-		return s, nil
+		return s, nil //nolint:nilerr // an unreadable state is discarded (Reset, which the caller reports), never fatal
 	case len(data) > maxStateBytes:
 		s.Reset = true
 		return s, nil
@@ -106,12 +106,12 @@ func OpenState(path, secretPath string) (*State, error) {
 	var env stateEnvelope
 	if json.Unmarshal(data, &env) != nil || env.V != stateVersion || !hmac.Equal([]byte(env.MAC), []byte(s.mac(env.Payload))) {
 		s.Reset = true
-		return s, nil
+		return s, nil //nolint:nilerr // a corrupt or tampered state is discarded (Reset), never fatal
 	}
 	var p statePayload
 	if json.Unmarshal(env.Payload, &p) != nil {
 		s.Reset = true
-		return s, nil
+		return s, nil //nolint:nilerr // a corrupt or tampered state is discarded (Reset), never fatal
 	}
 	if p.Highwater != nil {
 		s.highwater = p.Highwater

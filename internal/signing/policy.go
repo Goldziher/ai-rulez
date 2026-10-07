@@ -275,27 +275,11 @@ func bundlePathFor(cfg *config.Config, o VerifyOptions) string {
 // a TrustSet, reading each key file.
 func buildTrust(cfg *config.Config, o VerifyOptions) (TrustSet, error) {
 	var set TrustSet
-	for _, t := range cfg.Signing.SigningTrustEntries() {
-		e := TrustEntry{Subject: t.Subject, Source: t.Source, Identity: t.Identity, IdentityRegexp: t.IdentityRegexp, Issuer: t.Issuer, Reviewer: t.Reviewer}
-		var err error
-		if t.ValidFrom != "" {
-			if e.ValidFrom, err = config.ParseSigningTime(t.ValidFrom, false); err != nil {
-				return set, oops.Wrap(err)
-			}
-		}
-		if t.ValidUntil != "" {
-			if e.ValidUntil, err = config.ParseSigningTime(t.ValidUntil, true); err != nil {
-				return set, oops.Wrap(err)
-			}
-		}
-		if t.KeyFile != "" {
-			data, err := readInProject(cfg.BaseDir, t.KeyFile)
-			if err != nil {
-				return set, oops.With("key_file", t.KeyFile).Wrapf(err, "read the trusted key")
-			}
-			if e.Key, err = ParsePublicKey(data); err != nil {
-				return set, oops.With("key_file", t.KeyFile).Wrap(err)
-			}
+	entries := cfg.Signing.SigningTrustEntries()
+	for i := range entries {
+		e, err := trustEntryOf(cfg.BaseDir, &entries[i])
+		if err != nil {
+			return set, err
 		}
 		set.Entries = append(set.Entries, e)
 	}
@@ -319,6 +303,33 @@ func buildTrust(cfg *config.Config, o VerifyOptions) (TrustSet, error) {
 	return set, nil
 }
 
+// trustEntryOf converts one [[signing.trust]] entry, reading its key file from
+// the project at baseDir.
+func trustEntryOf(baseDir string, t *config.SigningTrust) (TrustEntry, error) {
+	e := TrustEntry{Subject: t.Subject, Source: t.Source, Identity: t.Identity, IdentityRegexp: t.IdentityRegexp, Issuer: t.Issuer, Reviewer: t.Reviewer}
+	var err error
+	if t.ValidFrom != "" {
+		if e.ValidFrom, err = config.ParseSigningTime(t.ValidFrom, false); err != nil {
+			return e, oops.Wrap(err)
+		}
+	}
+	if t.ValidUntil != "" {
+		if e.ValidUntil, err = config.ParseSigningTime(t.ValidUntil, true); err != nil {
+			return e, oops.Wrap(err)
+		}
+	}
+	if t.KeyFile != "" {
+		data, err := readInProject(baseDir, t.KeyFile)
+		if err != nil {
+			return e, oops.With("key_file", t.KeyFile).Wrapf(err, "read the trusted key")
+		}
+		if e.Key, err = ParsePublicKey(data); err != nil {
+			return e, oops.With("key_file", t.KeyFile).Wrap(err)
+		}
+	}
+	return e, nil
+}
+
 // loadTrustedRoot resolves the trusted root: the option, else [signing]
 // trusted_root (inside the project), else the user cache's. A named root that is
 // missing is an error; the cached default is optional (nil when absent), since
@@ -340,7 +351,7 @@ func loadTrustedRoot(cfg *config.Config, o VerifyOptions) (root.TrustedMaterial,
 	default:
 		dir, derr := config.CacheDirIn(o.Env, "sigstore")
 		if derr != nil {
-			return nil, nil //nolint:nilnil // no home directory: no cached root
+			return nil, nil //nolint:nilnil,nilerr // no home directory: no cached root
 		}
 		data, err = readLimited(filepath.Join(dir, TrustedRootFile))
 		if errors.Is(err, os.ErrNotExist) {

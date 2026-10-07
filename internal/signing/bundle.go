@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/samber/oops"
 )
 
@@ -109,7 +110,7 @@ func TreeStatement(subject, dir string, meta ArtifactMeta) (*Statement, TreeSubj
 		Tree: ts.Digest, Files: len(ts.Tree.Leaves), Name: ts.Name, AIRulezVersion: meta.Version,
 		Repository: meta.Repository, Ref: meta.Ref, IssuedAt: meta.Now.UTC().Truncate(time.Second),
 	}
-	st, err := NewStatement(predicateType, []Subject{{Name: ts.Name, Digest: map[string]string{"sha256": ts.HexDigest()}}}, pred)
+	st, err := NewStatement(predicateType, []Subject{{Name: ts.Name, Digest: map[string]string{contentlock.Algorithm: ts.HexDigest()}}}, pred)
 	return st, ts, err
 }
 
@@ -169,7 +170,7 @@ func SBOMStatement(path string, meta ArtifactMeta) (*Statement, FileSubject, err
 		File: fs.Name, Size: fs.Size, AIRulezVersion: meta.Version,
 		Repository: meta.Repository, Ref: meta.Ref, IssuedAt: meta.Now.UTC().Truncate(time.Second),
 	}
-	st, err := NewStatement(PredicateSBOM, []Subject{{Name: fs.Name, Digest: map[string]string{"sha256": fs.DigestHex}}}, pred)
+	st, err := NewStatement(PredicateSBOM, []Subject{{Name: fs.Name, Digest: map[string]string{contentlock.Algorithm: fs.DigestHex}}}, pred)
 	return st, fs, err
 }
 

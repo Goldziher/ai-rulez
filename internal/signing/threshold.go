@@ -29,7 +29,8 @@ func (t TrustSet) signerKey(s SignerInfo, subject, source string) string {
 	if s.Kind == KindKeyless {
 		return "person:" + strings.ToLower(strings.TrimSpace(s.Identity))
 	}
-	for _, e := range t.Entries {
+	for i := range t.Entries {
+		e := &t.Entries[i]
 		if e.Reviewer != "" && e.appliesToSource(subject, source) && e.matches(s) {
 			return "person:" + strings.ToLower(strings.TrimSpace(e.Reviewer))
 		}
@@ -105,7 +106,7 @@ func cosignatureFiles(path string) ([]string, error) {
 	dir := filepath.Dir(path)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, nil //nolint:nilnil // an unreadable directory has no co-signatures; the primary read reports the problem
+		return nil, nil //nolint:nilnil,nilerr // an unreadable directory has no co-signatures; the primary read reports the problem
 	}
 	type numbered struct {
 		n    int

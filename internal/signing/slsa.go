@@ -3,6 +3,8 @@ package signing
 import (
 	"slices"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 )
 
 const (
@@ -93,7 +95,7 @@ func ProvenanceStatement(ts TreeSubject, in ProvenanceInput) (*Statement, error)
 		deps = append(deps, SLSAResourceRef{URI: "git+" + in.Repository, Digest: map[string]string{"gitCommit": in.Commit}})
 	}
 	if in.LockSubject != "" {
-		deps = append(deps, SLSAResourceRef{Name: LockSubjectName, Digest: map[string]string{"sha256": in.LockSubject}})
+		deps = append(deps, SLSAResourceRef{Name: LockSubjectName, Digest: map[string]string{contentlock.Algorithm: in.LockSubject}})
 	}
 	pred := SLSAProvenance{
 		BuildDefinition: SLSABuildDefinition{
@@ -106,7 +108,7 @@ func ProvenanceStatement(ts TreeSubject, in ProvenanceInput) (*Statement, error)
 			Metadata: SLSAMetadata{InvocationID: in.InvocationID, StartedOn: now, FinishedOn: now},
 		},
 	}
-	return NewStatement(PredicateSLSA, []Subject{{Name: ts.Name, Digest: map[string]string{"sha256": ts.HexDigest()}}}, pred)
+	return NewStatement(PredicateSLSA, []Subject{{Name: ts.Name, Digest: map[string]string{contentlock.Algorithm: ts.HexDigest()}}}, pred)
 }
 
 // decodeClaim reads the signer's own claim of time and repository from a
