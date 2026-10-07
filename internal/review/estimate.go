@@ -256,8 +256,8 @@ func planItem(in EstimateInput, r *ItemResult, system string) (EgressItem, []Pro
 		if call.OutputTokens == 0 {
 			call.OutputTokens = DefaultMaxOutputTokens
 		}
-		for _, s := range sibs {
-			call.Siblings = append(call.Siblings, s.ID)
+		for i := range sibs {
+			call.Siblings = append(call.Siblings, sibs[i].ID)
 		}
 		item.Calls = append(item.Calls, call)
 		item.Bytes += call.Bytes
@@ -277,15 +277,16 @@ func planItem(in EstimateInput, r *ItemResult, system string) (EgressItem, []Pro
 // (a dimension that needs the body is left out unless the body is sent).
 func judgeDimensions(rb *Rubric, r *ItemResult, group, content string) []Dimension {
 	pre := map[string]bool{}
-	for _, d := range r.Dimensions {
-		if d.Preempted {
+	for i := range r.Dimensions {
+		if d := &r.Dimensions[i]; d.Preempted {
 			pre[d.ID] = true
 		}
 	}
 	var out []Dimension
-	for _, d := range rb.Dimensions {
+	for i := range rb.Dimensions {
+		d := &rb.Dimensions[i]
 		if d.Group == group && !pre[d.ID] && (!d.NeedsBody || content == config.ReviewContentFull) {
-			out = append(out, d)
+			out = append(out, *d)
 		}
 	}
 	return out
@@ -293,8 +294,8 @@ func judgeDimensions(rb *Rubric, r *ItemResult, group, content string) []Dimensi
 
 func dimIDs(dims []Dimension) []string {
 	out := make([]string, len(dims))
-	for i, d := range dims {
-		out[i] = d.ID
+	for i := range dims {
+		out[i] = dims[i].ID
 	}
 	return out
 }
@@ -311,11 +312,12 @@ func shortlist(pool []Item, it Item, n int) []Item {
 		score float64
 	}
 	var cand []scored
-	for _, p := range pool {
+	for i := range pool {
+		p := &pool[i]
 		if p.ID == it.ID || p.Kind != it.Kind {
 			continue
 		}
-		cand = append(cand, scored{p, jaccard(own, wordSet(p.Description))})
+		cand = append(cand, scored{*p, jaccard(own, wordSet(p.Description))})
 	}
 	sort.SliceStable(cand, func(i, j int) bool {
 		if cand[i].score != cand[j].score {
@@ -327,8 +329,8 @@ func shortlist(pool []Item, it Item, n int) []Item {
 		cand = cand[:n]
 	}
 	out := make([]Item, len(cand))
-	for i, c := range cand {
-		out[i] = c.item
+	for i := range cand {
+		out[i] = cand[i].item
 	}
 	return out
 }
