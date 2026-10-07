@@ -16,9 +16,9 @@ type doc struct {
 func parseDoc(raw string) doc {
 	raw = strings.ReplaceAll(raw, "\r\n", "\n")
 	d := doc{lines: strings.Split(raw, "\n")}
-	if len(d.lines) > 0 && strings.TrimSpace(d.lines[0]) == "---" {
+	if len(d.lines) > 0 && strings.TrimSpace(d.lines[0]) == fenceFrontmatter {
 		for i := 1; i < len(d.lines); i++ {
-			if strings.TrimSpace(d.lines[i]) == "---" {
+			if strings.TrimSpace(d.lines[i]) == fenceFrontmatter {
 				d.bodyStart = i + 1
 				break
 			}

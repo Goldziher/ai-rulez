@@ -121,7 +121,7 @@ func isTrue(v any) bool {
 	case bool:
 		return t
 	case string:
-		return strings.EqualFold(strings.TrimSpace(t), "true")
+		return strings.EqualFold(strings.TrimSpace(t), boolTrue)
 	}
 	return false
 }
@@ -131,7 +131,7 @@ func isFalse(v any) bool {
 	case bool:
 		return !t
 	case string:
-		return strings.EqualFold(strings.TrimSpace(t), "false")
+		return strings.EqualFold(strings.TrimSpace(t), boolFalse)
 	}
 	return false
 }

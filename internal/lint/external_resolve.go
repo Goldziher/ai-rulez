@@ -86,7 +86,7 @@ func validateScannerPolicy(lc *config.LintConfig) []string {
 		}
 	}
 	switch strings.ToLower(strings.TrimSpace(sp.FailOn)) {
-	case "", "error", "warning", "info":
+	case "", levelError, levelWarning, "info":
 	default:
 		problems = append(problems, fmt.Sprintf("lint.scanner_policy.fail_on %q is not error, warning or info", sp.FailOn))
 	}
