@@ -70,7 +70,7 @@ var analyzerGroups = []analyzerGroup{
 		"AR010", "AR506", "AR9E0", "AR9E1", "AR9E2", "AR9E3", "AR9E4", "AR9E5", "AR9E6", "AR9E7", "AR9K1", "AR9L1",
 	}},
 	{AnalyzerReferences, ScopeFile, []string{"AR201", "AR202", "AR301", "AR401", "AR402"}},
-	{AnalyzerReferences, ScopeItem, []string{"AR101", "AR210", "AR302", "AR303", "AR304", "AR305", "AR403"}},
+	{AnalyzerReferences, ScopeItem, []string{"AR101", "AR210", "AR302", "AR303", "AR304", "AR305", "AR306", "AR403"}},
 	{AnalyzerHooks, ScopeBundle, []string{"AR501", "AR502", "AR504", "AR505"}},
 	{AnalyzerHooks, ScopeItem, []string{"AR503", "AR507"}},
 	{AnalyzerMCP, ScopeBundle, []string{"AR601"}},
