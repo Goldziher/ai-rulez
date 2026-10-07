@@ -78,6 +78,9 @@ type Config struct {
 // MaxRetriesLimit bounds max_retries so a typo cannot keep a run retrying for hours.
 const MaxRetriesLimit = 10
 
+// MaxTimeoutSeconds bounds timeout_seconds (one hour) so a huge value cannot overflow time.Duration and disable the timeout.
+const MaxTimeoutSeconds = 3600
+
 // Defaults.
 const (
 	DefaultTimeoutSeconds = 60
@@ -92,7 +95,7 @@ func (c Config) CacheEnabled() bool { return c.Cache == nil || *c.Cache }
 // Timeout returns the per-call timeout.
 func (c Config) Timeout() time.Duration {
 	if c.TimeoutSeconds > 0 {
-		return time.Duration(c.TimeoutSeconds) * time.Second
+		return time.Duration(min(c.TimeoutSeconds, MaxTimeoutSeconds)) * time.Second
 	}
 	return DefaultTimeoutSeconds * time.Second
 }
@@ -336,6 +339,9 @@ func (c Config) validateNumbers() []string {
 		case v < 0:
 			out = append(out, name+" must not be negative")
 		}
+	}
+	if c.TimeoutSeconds > MaxTimeoutSeconds {
+		out = append(out, "timeout_seconds must not exceed "+strconv.Itoa(MaxTimeoutSeconds))
 	}
 	if c.MaxRetries > MaxRetriesLimit {
 		out = append(out, "max_retries must not exceed "+strconv.Itoa(MaxRetriesLimit))
