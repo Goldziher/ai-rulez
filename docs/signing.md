@@ -189,7 +189,9 @@ repository.
   both, so dropping or changing the claim does not escape a newer attestation's mark. The claim is the signer's, so it
   never selects a mark by itself: a signer cannot touch another signer's mark. An older attestation than
   one this machine already verified fails with `AR727`, and the message names the state file to delete if the newer
-  attestation was wrong. The state is a file outside the repository
+  attestation was wrong. A bundle with no time at all (a `cosign sign-blob` key signature without a log) cannot be
+  ordered, so the machine records the lock versions it has verified instead: a lock it has already seen replaced fails
+  with `AR727` (it covers the versions this machine saw, no more). The state is a file outside the repository
   (`$XDG_STATE_HOME/ai-rulez/signing-state.json`, else `~/.local/state/ai-rulez/`) authenticated with an HMAC under a
   per-user secret (`$XDG_CONFIG_HOME/ai-rulez/signing-state.key`, the pattern the LLM cache uses), so a checkout cannot
   plant or reset it. A file that fails its HMAC is discarded with a warning. A fresh machine or a CI runner starts empty,
