@@ -250,6 +250,7 @@ func (dryRunApplier) lifecycle() runLifecycle { return runLifecycle{downgrades: 
 func (dryRunApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	flatOutputs := p.Outputs
 	g.refusedOutputs, g.linkedOutputs = g.outputSafety(flatOutputs)
+	g.refusedOutputs = append(g.refusedOutputs, g.secretRefusals(flatOutputs)...)
 	local, err := g.planLocal(p.Requested, flatOutputs)
 	if err != nil {
 		return nil, err
@@ -295,7 +296,9 @@ func (checkApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	}
 	var drift []Drift
 	refused, linked := g.outputSafety(outputs)
-	for _, r := range refused {
+	// generate refuses an MCP config that would carry a resolved secret while it
+	// is not ignored; --check must not call that checkout in sync.
+	for _, r := range append(refused, g.secretRefusals(outputs)...) {
 		blocked[r.rel] = true
 	}
 	for _, output := range outputs {
