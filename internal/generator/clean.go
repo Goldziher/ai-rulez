@@ -189,7 +189,11 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 		// The generated file that replaced an original `convert` imported is the only
 		// copy of it left at that path: removing it would leave neither.
 		if !g.userMode && g.convertedOriginal(g.relSlash(abs)) {
-			g.warnOnce("Keeping "+g.relSlash(abs)+": it replaced a file `convert` imported, and the content now lives under the config directory",
+			why := "it replaced a file `convert` imported, and the content now lives under the config directory"
+			if data, rerr := g.config.ReadExisting(abs); rerr == nil && g.adoptable(g.relSlash(abs), data) {
+				why = "it is the file `convert` imported, and nothing has replaced it yet"
+			}
+			g.warnOnce("Keeping "+g.relSlash(abs)+": "+why,
 				"hint", "delete it by hand once you no longer want it in the repository")
 			continue
 		}
