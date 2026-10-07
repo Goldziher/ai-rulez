@@ -35,9 +35,8 @@ type contentScanner struct {
 	// git answers which files a work tree ignores (bundle filtering); the zero
 	// value runs real git.
 	git gitutil.Git
-	// log receives what the scan reports. nil means the command line: the CLI's
-	// logger, and refusals of the project's own content written straight to stderr
-	// so they survive --quiet. A host that injected a logger gets everything there.
+	// log receives what the scan reports. nil: refusals are only recorded, never
+	// printed (see refuse). A host that injected a logger gets everything there.
 	log logger.Logger
 }
 
@@ -58,17 +57,23 @@ func newIncludeScanner(v workspace.View) *contentScanner {
 	return &contentScanner{v: v}
 }
 
+// refuse records a refused path. With no injected logger nothing is printed: a
+// library user without a host gets no output on a stream it never chose, and finds
+// the refusals of the project's own content in Config.ContentProblems (the command
+// line prints those itself). A host logger gets every refusal. A refusal of
+// included content is reported at error level, which --quiet does not hide, as the
+// refusals of the project's own content are not hidden either.
 func (s *contentScanner) refuse(path, reason string) {
 	if s.root == "" {
-		s.logger().Warn("Skipping symlink in included content; symlinks are not followed", "path", path)
+		if s.log != nil {
+			s.log.Error("Refusing symlink in included content; symlinks are not followed", "path", path)
+		}
 		return
 	}
 	s.problems = append(s.problems, ContentProblem{Path: path, Reason: reason})
 	if s.log != nil {
 		s.log.Warn("refusing symlinked content", "path", path, "reason", reason)
-		return
 	}
-	fmt.Fprintf(os.Stderr, "WARN  refusing symlinked content %s: %s\n", path, reason)
 }
 
 // admit reports the FileInfo of path (the target's, for an admitted symlink).
