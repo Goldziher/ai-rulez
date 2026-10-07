@@ -565,7 +565,7 @@ func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string
 	gen := generator.NewGenerator(cfg)
 	gen.SetContext(ctx)
 	if dryRun {
-		plan, err := gen.DryRun("") //nolint:contextcheck // the context reaches the baseline load through SetContext
+		plan, err := gen.DryRun("")
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already contextual
 		}
@@ -578,7 +578,7 @@ func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string
 	// There is no terminal to warn over MCP: the commands this run makes the
 	// harnesses run go into the tool result and to stderr (stdout is the protocol).
 	newCommands := preflight.NewCommands(cfg, false)
-	if err := gen.Generate(""); err != nil { //nolint:contextcheck // the context reaches the baseline load through SetContext
+	if err := gen.Generate(""); err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
 	preflight.Remember(cfg)
@@ -607,7 +607,7 @@ func CleanOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 	}
 
 	gen := generator.NewGenerator(cfg)
-	plan, err := gen.Clean("", generator.CleanOptions{ //nolint:contextcheck // git exclude cleanup does not take a context
+	plan, err := gen.Clean("", generator.CleanOptions{
 		DryRun:        dryRun,
 		KeepGitignore: request.GetBool("keep_gitignore", false),
 		KeepManifest:  request.GetBool("keep_manifest", false),

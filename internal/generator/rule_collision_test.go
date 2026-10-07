@@ -100,7 +100,7 @@ func TestDryRun_OmitsGuardSkippedFiles(t *testing.T) {
 
 	// A hand-written *.local.* file in a rules folder is reserved and never
 	// disambiguated; the guard skips it, so a dry run must not announce a write.
-	gen := &Generator{config: &config.Config{BaseDir: t.TempDir()}}
+	gen := &Generator{ctx: t.Context(), config: &config.Config{BaseDir: t.TempDir()}}
 	seedRuleFile(t, gen.config.BaseDir, ".claude/rules/mine.local.md", "hand written\n")
 	outputs := []config.OutputFile{
 		{Path: ".claude/rules/mine.local.md", Content: "x\n", LocalOnly: true},
@@ -140,7 +140,7 @@ func TestWriteOutput_Recognizes421CursorRuleFiles(t *testing.T) {
 			if tt.manifest {
 				writeManifest(t, dir, rel)
 			}
-			gen := &Generator{config: &config.Config{BaseDir: dir, SourceHash: "blake3:test",
+			gen := &Generator{ctx: t.Context(), config: &config.Config{BaseDir: dir, SourceHash: "blake3:test",
 				Header: &config.HeaderConfig{Hashes: config.HeaderHashesNone}}, skippedPaths: map[string]bool{}}
 
 			require.NoError(t, gen.writeOutput(config.OutputFile{Path: rel, Content: "---\nalwaysApply: true\n---\n\n# Style\n\nNew body.\n"}))
@@ -160,7 +160,7 @@ func TestCustomSplitProvider_GetsRulesFolderProtections(t *testing.T) {
 	dir := t.TempDir()
 	rel := ".w3-gen/rules/x.md"
 	seedRuleFile(t, dir, rel, "hand written\n")
-	gen := &Generator{config: &config.Config{BaseDir: dir, SourceHash: "blake3:test"}}
+	gen := &Generator{ctx: t.Context(), config: &config.Config{BaseDir: dir, SourceHash: "blake3:test"}}
 	gen.config.AddRulesDir(providers.New(loaded).SplitRulesDir()) // what generation does for a custom provider
 
 	assert.True(t, gen.isUnmanagedRuleFile(filepath.Join(dir, rel), "generated\n"), "overwrite guard applies")

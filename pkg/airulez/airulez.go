@@ -443,7 +443,7 @@ func (p *Project) Validate(ctx context.Context, o ValidateOptions) (*Report, err
 		return nil, &Error{Code: CodeDiskRequired, Err: oops.Wrapf(ErrDiskRequired, "strict validation reads the repository tree")}
 	}
 	// git runs through Options.Runner: the default DenyAll() indexes by walking the directory.
-	tree, err := lint.LoadTreeWith(p.git, p.cfg.BaseDir, "") //nolint:contextcheck // internal/lint has no context-taking LoadTree; ctx is checked before and after it
+	tree, err := lint.LoadTreeContext(ctx, p.git, p.cfg.BaseDir, "")
 	if err != nil {
 		return nil, &Error{Code: CodeValidate, Err: oops.Wrapf(err, "index repository files")}
 	}
@@ -603,7 +603,7 @@ func (p *Project) Generate(ctx context.Context, o GenerateOptions) (*GenerateRes
 	defer p.mu.Unlock()
 	g := generator.NewGenerator(p.cfg)
 	g.SetContext(ctx)
-	plan, err := g.Plan(o.Profile) //nolint:contextcheck // the context reaches the run through SetContext
+	plan, err := g.Plan(o.Profile)
 	if err != nil {
 		return nil, &Error{Code: CodePlan, Err: err}
 	}

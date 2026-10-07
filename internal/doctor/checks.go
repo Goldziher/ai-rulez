@@ -180,11 +180,11 @@ func levenshtein(a, b string) int {
 }
 
 // checkMCPEnv: ${VAR} placeholders in MCP env and headers resolve.
-func checkMCPEnv(_ context.Context, s *state) []Finding {
+func checkMCPEnv(ctx context.Context, s *state) []Finding {
 	if s.cfg == nil {
 		return nil
 	}
-	missing, err := generator.NewGenerator(s.cfg).MissingMCPEnv(s.opts.Profile)
+	missing, err := newGenerator(ctx, s.cfg).MissingMCPEnv(s.opts.Profile)
 	if err != nil {
 		return errorFinding(CheckMCPEnv, SeverityWarning, err, "")
 	}
@@ -225,7 +225,7 @@ func checkIncludes(_ context.Context, s *state) []Finding {
 }
 
 // checkDrift: generated files match what the sources render (generate --check).
-func checkDrift(_ context.Context, s *state) []Finding {
+func checkDrift(ctx context.Context, s *state) []Finding {
 	if s.cfg == nil {
 		return nil
 	}
@@ -239,7 +239,7 @@ func checkDrift(_ context.Context, s *state) []Finding {
 			Hint:    "run `ai-rulez generate --check` to compare against the resolved content",
 		}}
 	}
-	drift, err := generator.NewGenerator(s.cfg).CheckDrift(s.opts.Profile)
+	drift, err := newGenerator(ctx, s.cfg).CheckDrift(s.opts.Profile)
 	if err != nil {
 		s.renderFailed = true
 		if o, ok := oops.AsOops(err); ok && o.Context()["unresolved"] != nil {
@@ -270,11 +270,11 @@ func unresolvedSources(cfg *config.Config) bool {
 }
 
 // checkGitignore: outputs generate wants git to ignore are ignored.
-func checkGitignore(_ context.Context, s *state) []Finding {
+func checkGitignore(ctx context.Context, s *state) []Finding {
 	if s.cfg == nil || s.renderFailed {
 		return nil
 	}
-	missing, err := generator.NewGenerator(s.cfg).UnignoredOutputs(s.opts.Profile)
+	missing, err := newGenerator(ctx, s.cfg).UnignoredOutputs(s.opts.Profile)
 	if err != nil {
 		return errorFinding(CheckGitignore, SeverityWarning, err, "")
 	}
@@ -290,12 +290,12 @@ func checkGitignore(_ context.Context, s *state) []Finding {
 }
 
 // checkDocuments: shared settings documents ai-rulez merges into still parse.
-func checkDocuments(_ context.Context, s *state) []Finding {
+func checkDocuments(ctx context.Context, s *state) []Finding {
 	if s.cfg == nil {
 		return nil
 	}
 	var out []Finding
-	for _, path := range generator.NewGenerator(s.cfg).MergedDocumentPaths() {
+	for _, path := range newGenerator(ctx, s.cfg).MergedDocumentPaths() {
 		if f, bad := documentFinding(s.cfg.BaseDir, path); bad {
 			out = append(out, f)
 		}
@@ -499,4 +499,11 @@ func anyOnPath(look func(string) (string, error), bins []string) bool {
 		}
 	}
 	return false
+}
+
+// newGenerator returns a generator for cfg that runs under ctx.
+func newGenerator(ctx context.Context, cfg *config.Config) *generator.Generator {
+	g := generator.NewGenerator(cfg)
+	g.SetContext(ctx)
+	return g
 }

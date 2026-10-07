@@ -32,7 +32,7 @@ func (g *Generator) UnignoredOutputs(profile string) ([]string, error) {
 	}
 	sort.Strings(patterns)
 	probes, ranges := flattenProbes(patterns)
-	ignored, err := g.git().IgnoredAmong(g.config.BaseDir, probes)
+	ignored, err := g.git().IgnoredAmongContext(g.ctx, g.config.BaseDir, probes)
 	if err != nil || ignored == nil {
 		return nil, nil //nolint:nilerr // git cannot answer: report nothing rather than guess
 	}
