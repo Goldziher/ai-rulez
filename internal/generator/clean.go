@@ -186,6 +186,13 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 			g.warnOnce("Not removing " + output.Path + ": it is behind a symlink that leaves the project")
 			continue
 		}
+		// The generated file that replaced an original `convert` imported is the only
+		// copy of it left at that path: removing it would leave neither.
+		if !g.userMode && g.convertedOriginal(g.relSlash(abs)) {
+			g.warnOnce("Keeping "+g.relSlash(abs)+": it replaced a file `convert` imported, and the content now lives under the config directory",
+				"hint", "delete it by hand once you no longer want it in the repository")
+			continue
+		}
 		// A generated file someone edited holds work ai-rulez cannot recreate.
 		if !opts.RemoveEdited && output.RawContent == nil && g.editedGenerated(abs) {
 			g.warnOnce("Keeping "+output.Path+": its body was edited by hand", "hint", "pass --force to remove it anyway")

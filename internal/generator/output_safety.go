@@ -84,6 +84,14 @@ func (g *Generator) convertRecordFiles() map[string]string {
 	return rec.Files
 }
 
+// convertedOriginal reports whether rel is a file `convert` imported: it is in
+// the record, whatever it holds now (clean keeps the generated file that
+// replaced it).
+func (g *Generator) convertedOriginal(rel string) bool {
+	_, ok := g.convertRecordFiles()[rel]
+	return ok
+}
+
 // adoptable reports whether data is still exactly what convert imported at rel.
 func (g *Generator) adoptable(rel string, data []byte) bool {
 	want, ok := g.convertRecordFiles()[rel]
