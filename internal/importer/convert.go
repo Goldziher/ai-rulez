@@ -458,6 +458,7 @@ func buildConfig(plan *Plan, project string) *config.Config {
 		AgentsMD:        true, // the v5 default; MarshalTOML writes only an explicit false
 		MCPServersRaw:   plan.MCPServers,
 		InstalledSkills: plan.InstalledSkills,
+		Plugin:          plan.Plugin,
 	}
 	for _, p := range plan.Presets {
 		cfg.Presets = append(cfg.Presets, config.Preset{BuiltIn: p})
@@ -664,6 +665,12 @@ func mergeConfig(existing, add *config.Config, defaultedPreset bool) (merged *co
 	n, serverNotes := mergeMCPServers(merged, add)
 	added += n
 	notes = append(notes, serverNotes...)
+	if merged.Plugin == nil && add.Plugin != nil {
+		merged.Plugin = add.Plugin
+		added++
+	} else if add.Plugin != nil {
+		notes = append(notes, mergeNote{"plugin", "config.toml already has a [plugin] block; the imported plugin.json metadata is not applied"})
+	}
 	n, skillNotes := mergeInstalledSkills(merged, add)
 	added += n
 	notes = append(notes, skillNotes...)
@@ -755,6 +762,9 @@ func configSummary(p *Plan) string {
 	}
 	if n := len(p.InstalledSkills); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d [[installed_skills]]", n))
+	}
+	if p.Plugin != nil {
+		parts = append(parts, "a [plugin] block")
 	}
 	if n := len(p.Hooks); n > 0 {
 		parts = append(parts, fmt.Sprintf("%d [[hooks]] (review each command first)", n))

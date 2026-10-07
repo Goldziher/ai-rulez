@@ -1,9 +1,12 @@
 package plugin
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -152,4 +155,34 @@ func unmarshalProvenance(sidecar []byte, document *provenanceDocument) error {
 		return oops.Wrapf(err, "parse plugin provenance")
 	}
 	return nil
+}
+
+// provenanceHeaderPattern matches the comment block provenanceHeader writes, in
+// each of the comment syntaxes: HTML, // and #.
+var provenanceHeaderPattern = regexp.MustCompile(
+	`(?m)^(?:<!--\n|// |# )AI-RULEZ :: GENERATED FILE — DO NOT EDIT\n` +
+		`(?://\s|#\s)?Content-Hash: [^\n]*\n(?://\s|#\s)?Source-Hash: [^\n]*\n(?://\s|#\s)?Schema-Version: [^\n]*\n(?:-->\n)?`)
+
+// StripProvenance removes the generated-file header AddProvenance inserted into
+// body, undoing insertProvenanceHeader exactly, so a file read back from a
+// generated bundle is the source it was generated from. Files that never take a
+// header, and files without one, are returned as they are.
+func StripProvenance(path string, body []byte) []byte {
+	if provenanceHeader(path, "", "") == "" {
+		return body
+	}
+	loc := provenanceHeaderPattern.FindIndex(body)
+	if loc == nil {
+		return body
+	}
+	head, tail := body[:loc[0]], body[loc[1]:]
+	switch {
+	case len(head) == 0 && bytes.HasPrefix(tail, []byte("\n")):
+		// Inserted at the top: header, a blank line, then the content.
+		return tail[1:]
+	case bytes.HasSuffix(head, []byte("\n\n")) && !bytes.HasPrefix(body, []byte("#!")):
+		// Inserted after the front matter: a blank line, then the header.
+		return slices.Concat(head[:len(head)-1], tail)
+	}
+	return slices.Concat(head, tail)
 }
