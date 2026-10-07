@@ -40,7 +40,7 @@ Checks follow profiles like other content: root checks are always included, doma
 ai-rulez add check security -s "Security issues"
 ai-rulez add check perf --domain backend
 ai-rulez list checks [--domain backend] [--format json]
-ai-rulez remove check security [--domain backend] [--force]
+ai-rulez remove check security [--domain backend] [--yes]
 ```
 
 The MCP server exposes `create_check`, `read_check`, `update_check`, `delete_check` and `list_checks`. An include can import them with `include = ["checks"]`.
