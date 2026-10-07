@@ -104,7 +104,7 @@ func (e *Evaluator) Eval(ctx context.Context, id, dir, digest string, cases []ev
 	left := budget
 	for run := 0; run < runs; run++ {
 		req := &evals.Request{
-			Version: evals.ProtocolVersion, Harness: e.Harness, Model: e.Model, MaxCostUSD: budgetUSD(left),
+			Version: evals.ProtocolVersion, Harness: e.Harness, Model: e.Model, MaxCostUSD: roundUSD(left),
 			Skill: evals.SkillRef{ID: id, Dir: dir, Digest: digest}, Cases: cases,
 		}
 		resp, err := e.Runner.Run(ctx, req)
@@ -133,7 +133,7 @@ func (e *Evaluator) Eval(ctx context.Context, id, dir, digest string, cases []ev
 			}
 			t.add(cs)
 		}
-		if budget > 0 && left <= 0 && run < runs-1 {
+		if budget > 0 && spentOut(left) && run < runs-1 {
 			m.Truncated = true
 			m.Warnings = append(m.Warnings, fmt.Sprintf("the budget ran out after %d of %d runs; the majority uses the runs that completed", run+1, runs))
 			break
@@ -178,14 +178,9 @@ func reportedCost(resp *evals.Response) bool {
 
 func roundUSD(v float64) float64 { return math.Round(v*1e4) / 1e4 }
 
-// budgetUSD is a positive remaining budget as handed to a runner or optimizer:
-// rounded to 1e-4 USD, but never to 0, which the protocols read as unlimited.
-func budgetUSD(left float64) float64 {
-	if left <= 0 {
-		return 0
-	}
-	return max(roundUSD(left), 0.0001)
-}
+// spentOut reports a budget with nothing left to hand out: what remains rounds to
+// 0 or less, and a runner's or optimizer's max_cost_usd of 0 means unlimited.
+func spentOut(left float64) bool { return roundUSD(left) <= 0 }
 
 // MetricsOf summarizes outcomes, optionally restricted to the cases in only.
 func MetricsOf(outcomes []CaseOutcome, only map[string]bool) Metrics {
