@@ -180,7 +180,7 @@ func TestWriteOutput_LegacyFrontmatterHashesMigrateToBanner(t *testing.T) {
 	abs := filepath.Join(dir, rel)
 	require.NoError(t, os.MkdirAll(filepath.Dir(abs), 0o750))
 	require.NoError(t, os.WriteFile(abs, []byte(legacy), 0o600))
-	gen := NewGenerator(&config.Config{BaseDir: dir, SourceHash: "src"})
+	gen := NewGenerator(&config.Config{BaseDir: dir, SourceHash: "src", Header: &config.HeaderConfig{Hashes: config.HeaderHashesFull}})
 	out := config.OutputFile{Path: rel, Content: rendered}
 
 	// Act

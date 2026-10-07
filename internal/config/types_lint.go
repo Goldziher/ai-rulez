@@ -1,6 +1,6 @@
 package config
 
-// LintConfig configures `ai-rulez validate --strict`. Every field is optional;
+// LintConfig configures `ai-rulez validate`. Every field is optional;
 // the lint package applies defaults for anything left unset.
 type LintConfig struct {
 	// Profile selects a preset of severities and the failure threshold:
@@ -69,7 +69,7 @@ type LintConfig struct {
 	// Security configures the security rule family (AR001...).
 	Security *LintSecurity `yaml:"security,omitempty" json:"security,omitempty" toml:"security,omitempty"`
 	// External lists third-party scanners whose findings are merged into the
-	// report when `validate --strict --external` (or `scan --external`) runs.
+	// report when `validate --external` (or `scan --external`) runs.
 	External []LintExternal `yaml:"external,omitempty" json:"external,omitempty" toml:"external,omitempty"`
 	// ScannerPolicy sets the policy for the external scanners as a whole: an
 	// embedded preset, required scanners, a failure threshold, isolation and

@@ -19,6 +19,10 @@ func loadHashesProject(t *testing.T, dir string) *Generator {
 	return NewGenerator(cfg)
 }
 
+// v4Defaults pins the pre-v5 defaults these drift tests were written against:
+// CLAUDE.md carries the instructions itself instead of importing AGENTS.md.
+const v4Defaults = "agents_md = false\n"
+
 func TestCheckDrift(t *testing.T) {
 	skill := filepath.Join(".claude", "skills", "alpha", "SKILL.md")
 	tests := []struct {
@@ -54,7 +58,7 @@ func TestCheckDrift(t *testing.T) {
 		},
 		{
 			name:   "hashes content reports a hand edit as edited",
-			header: "[header]\nhashes = \"content\"\n",
+			header: v4Defaults + hdr("content"),
 			mutate: func(t *testing.T, dir string) {
 				appendTo(t, filepath.Join(dir, "CLAUDE.md"), "tamper\n")
 			},
@@ -62,7 +66,7 @@ func TestCheckDrift(t *testing.T) {
 		},
 		{
 			name:   "hashes none compares the whole file",
-			header: "[header]\nhashes = \"none\"\n",
+			header: v4Defaults + hdr("none"),
 			mutate: func(t *testing.T, dir string) {
 				appendTo(t, filepath.Join(dir, "CLAUDE.md"), "tamper\n")
 			},
@@ -79,7 +83,11 @@ func TestCheckDrift(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir := hashesProject(t, tt.header)
+			header := tt.header
+			if header == "" {
+				header = v4Defaults + hdr("full")
+			}
+			dir := hashesProject(t, header)
 			generateHashesProject(t, dir)
 			tt.mutate(t, dir)
 			mutated := snapshotTree(t, dir)
@@ -126,7 +134,7 @@ func TestVerifyGenerated_NoManifest(t *testing.T) {
 }
 
 func TestDryRun_ReportsUnchanged(t *testing.T) {
-	dir := hashesProject(t, "")
+	dir := hashesProject(t, v4Defaults+hdr("full"))
 	plan, err := loadHashesProject(t, dir).DryRun("default")
 	require.NoError(t, err)
 	assert.Contains(t, strings.Join(plan, "\n"), "write-file: CLAUDE.md")

@@ -243,7 +243,8 @@ func TestGenerator_Gitignore_Enabled(t *testing.T) {
 
 func TestGenerator_Gitignore_CollectsPatterns(t *testing.T) {
 	tempDir := t.TempDir()
-	gen := NewGenerator(&config.Config{BaseDir: tempDir})
+	enabled := true
+	gen := NewGenerator(&config.Config{BaseDir: tempDir, Gitignore: &enabled})
 
 	outputs := []config.OutputFile{
 		{Path: filepath.Join(tempDir, "AGENTS.md")},
@@ -277,7 +278,8 @@ func TestGenerator_Gitignore_CollectsPatterns(t *testing.T) {
 // only the subdirectories ai-rulez actually writes.
 func TestGenerator_Gitignore_DoesNotIgnoreAssistantDirRoot(t *testing.T) {
 	tempDir := t.TempDir()
-	gen := NewGenerator(&config.Config{BaseDir: tempDir})
+	enabled := true
+	gen := NewGenerator(&config.Config{BaseDir: tempDir, Gitignore: &enabled})
 
 	outputs := []config.OutputFile{
 		{Path: filepath.Join(tempDir, ".claude"), IsDir: true},
@@ -299,7 +301,8 @@ func TestGenerator_Gitignore_DoesNotIgnoreAssistantDirRoot(t *testing.T) {
 // ignored by name — narrowing the pattern must not stop covering owned content.
 func TestGenerator_Gitignore_IgnoresAssistantDirFileByName(t *testing.T) {
 	tempDir := t.TempDir()
-	gen := NewGenerator(&config.Config{BaseDir: tempDir})
+	enabled := true
+	gen := NewGenerator(&config.Config{BaseDir: tempDir, Gitignore: &enabled})
 
 	outputs := []config.OutputFile{
 		{Path: filepath.Join(tempDir, ".gemini", "GEMINI.md")},
@@ -313,9 +316,11 @@ func TestGenerator_Gitignore_IgnoresAssistantDirFileByName(t *testing.T) {
 
 func TestGenerator_Gitignore_IncludesManifest_CustomConfigDir(t *testing.T) {
 	tempDir := t.TempDir()
+	enabled := true
 	gen := NewGenerator(&config.Config{
 		BaseDir:   tempDir,
 		ConfigDir: filepath.Join(tempDir, ".cfg"),
+		Gitignore: &enabled,
 	})
 
 	patterns := gen.collectGitignorePaths(nil)

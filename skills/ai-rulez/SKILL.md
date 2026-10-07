@@ -86,7 +86,7 @@ ai-rulez doctor
 ## config.toml
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "my-project"
 description = "Project description"
 

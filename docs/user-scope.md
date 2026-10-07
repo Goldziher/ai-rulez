@@ -20,7 +20,7 @@ The user config has the same schema as a project config and lives in `~/.config/
 ```
 
 ```toml
-version = "4.0"
+version = "5.0"
 name = "me"
 presets = ["claude", "codex", "gemini"]
 default = "backend"          # the role of this machine; see below
@@ -76,8 +76,8 @@ a config-file argument. The full write list is printed before the first write, w
 ## Safety
 
 - **Only documented locations.** An output is written only where the preset's declared user-level layout
-  (the table below) places it. Anything else a preset renders (project-only rules folders, MCP files,
-  `.claude/plugins.json`) is dropped and counted; `--debug` names each one.
+  (the table below) places it. Anything else a preset renders (project-only rules folders, MCP files)
+  is dropped and counted; `--debug` names each one.
 - **Hand-authored files are never replaced.** A file that exists and was not written by ai-rulez (not in the
   manifest, no generated banner, not byte-identical to the output) is skipped and listed as `skip:`. A skill
   directory holding one is skipped whole. `~/.claude/CLAUDE.md` you wrote yourself stays yours; ai-rulez
