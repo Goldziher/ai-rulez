@@ -519,10 +519,7 @@ func (r *runner) planStaged(sc resolvedScanner, st *scannerStage, argv []string,
 // plan prints one scanner's plan: argv, staged files and environment variable
 // names (never values). Nothing is started.
 func (r *runner) plan(sc resolvedScanner, p planInfo) {
-	w := r.opts.Scanner.Out
-	if w == nil {
-		w = io.Discard
-	}
+	var w strings.Builder
 	egress := "undeclared"
 	if sc.Egress != nil {
 		egress = fmt.Sprintf("%t", *sc.Egress)
@@ -531,16 +528,16 @@ func (r *runner) plan(sc resolvedScanner, p planInfo) {
 	if format == "" {
 		format = "sarif"
 	}
-	fmt.Fprintf(w, "scanner %s (egress = %s, format = %s)\n", sc.Name, egress, format)
+	fmt.Fprintf(&w, "scanner %s (egress = %s, format = %s)\n", sc.Name, egress, format)
 	binary := p.binary
 	if binary == "" {
 		binary = "not found (it would be reported as AR9E2)"
 	}
-	fmt.Fprintf(w, "  binary:    %s\n", binary)
-	fmt.Fprintf(w, "  command:   %s\n", p.shown(r))
-	fmt.Fprintf(w, "  isolation: %s\n", r.planIsolation(sc, p))
+	fmt.Fprintf(&w, "  binary:    %s\n", binary)
+	fmt.Fprintf(&w, "  command:   %s\n", p.shown(r))
+	fmt.Fprintf(&w, "  isolation: %s\n", r.planIsolation(sc, p))
 	if p.inherit {
-		fmt.Fprintln(w, "  env:       the full environment (egress is undeclared)")
+		fmt.Fprintln(&w, "  env:       the full environment (egress is undeclared)")
 	} else {
 		names := make([]string, 0, len(p.env))
 		for _, kv := range p.env {
@@ -549,18 +546,23 @@ func (r *runner) plan(sc resolvedScanner, p planInfo) {
 			}
 		}
 		sort.Strings(names)
-		fmt.Fprintf(w, "  env:       %s\n", strings.Join(names, ", "))
+		fmt.Fprintf(&w, "  env:       %s\n", strings.Join(names, ", "))
 	}
 	if p.note != "" {
-		fmt.Fprintf(w, "  input:     %s\n", p.note)
+		fmt.Fprintf(&w, "  input:     %s\n", p.note)
 	}
 	if p.cache != "" {
-		fmt.Fprintf(w, "  cache:     %s\n", p.cache)
+		fmt.Fprintf(&w, "  cache:     %s\n", p.cache)
 	}
-	fmt.Fprintf(w, "  files:     %d\n", len(p.files))
+	fmt.Fprintf(&w, "  files:     %d\n", len(p.files))
 	for _, f := range p.files {
-		fmt.Fprintf(w, "    %s\n", f)
+		fmt.Fprintf(&w, "    %s\n", f)
 	}
+	out := r.opts.Scanner.Out
+	if out == nil {
+		return
+	}
+	io.WriteString(out, w.String()) //nolint:errcheck // a failed write to the dry-run report has nowhere to be reported
 }
 
 func (p planInfo) shown(r *runner) string {
