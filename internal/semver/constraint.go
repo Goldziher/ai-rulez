@@ -172,22 +172,9 @@ func parsePartial(s string) (partial, error) {
 	if len(parts) > 3 {
 		return partial{}, oops.Errorf("%q has more than three parts", s)
 	}
-	nums := [3]int64{-1, -1, -1}
-	wild := false
-	for i, part := range parts {
-		switch part {
-		case "x", "X", "*":
-			wild = true
-			continue
-		}
-		if wild {
-			return partial{}, oops.Errorf("%q: a number cannot follow a wildcard", s)
-		}
-		n, ok := parseNumeric(part)
-		if !ok || n > 1<<62 {
-			return partial{}, oops.Errorf("%q: %q is not a valid number", s, part)
-		}
-		nums[i] = int64(n) //nolint:gosec // bounded above
+	nums, err := parseParts(s, parts)
+	if err != nil {
+		return partial{}, err
 	}
 	p.major, p.minor, p.patch = nums[0], nums[1], nums[2]
 	if hasPre && p.patch < 0 {
@@ -197,6 +184,29 @@ func parsePartial(s string) (partial, error) {
 		return partial{}, oops.Errorf("%q: invalid wildcard", s)
 	}
 	return p, nil
+}
+
+// parseParts parses up to three dot-separated parts of s; a missing or wildcard
+// part is -1, and no number may follow a wildcard.
+func parseParts(s string, parts []string) ([3]int64, error) {
+	nums := [3]int64{-1, -1, -1}
+	wild := false
+	for i, part := range parts {
+		switch part {
+		case "x", "X", "*":
+			wild = true
+			continue
+		}
+		if wild {
+			return nums, oops.Errorf("%q: a number cannot follow a wildcard", s)
+		}
+		n, ok := parseNumeric(part)
+		if !ok || n > 1<<62 {
+			return nums, oops.Errorf("%q: %q is not a valid number", s, part)
+		}
+		nums[i] = int64(n) //nolint:gosec // bounded above
+	}
+	return nums, nil
 }
 
 func ver(major, minor, patch int64, pre ...string) Version {
@@ -227,16 +237,7 @@ func desugar(token string) ([]comparator, error) {
 	case "~", "~>":
 		return tilde(p), nil
 	case ">":
-		if p.any() {
-			return nil, oops.Errorf("%q: > with a wildcard matches nothing", token)
-		}
-		switch {
-		case p.minor < 0:
-			return []comparator{atLeast(p.major+1, 0, 0, nil)}, nil
-		case p.patch < 0:
-			return []comparator{atLeast(p.major, p.minor+1, 0, nil)}, nil
-		}
-		return []comparator{{">", full(p)}}, nil
+		return greater(token, p)
 	case ">=":
 		if p.any() {
 			return anyRelease, nil
@@ -251,27 +252,49 @@ func desugar(token string) ([]comparator, error) {
 		}
 		return []comparator{{"<", full(p)}}, nil
 	case "<=":
-		if p.any() {
-			return anyRelease, nil
-		}
-		switch {
-		case p.minor < 0:
-			return []comparator{below(p.major+1, 0, 0)}, nil
-		case p.patch < 0:
-			return []comparator{below(p.major, p.minor+1, 0)}, nil
-		}
-		return []comparator{{"<=", full(p)}}, nil
+		return atMost(p), nil
 	}
-	// exact or wildcard
+	return exact(p), nil
+}
+
+// greater is ">p": above every version a partial p covers.
+func greater(token string, p partial) ([]comparator, error) {
+	if p.any() {
+		return nil, oops.Errorf("%q: > with a wildcard matches nothing", token)
+	}
+	switch {
+	case p.minor < 0:
+		return []comparator{atLeast(p.major+1, 0, 0, nil)}, nil
+	case p.patch < 0:
+		return []comparator{atLeast(p.major, p.minor+1, 0, nil)}, nil
+	}
+	return []comparator{{">", full(p)}}, nil
+}
+
+// atMost is "<=p": up to every version a partial p covers.
+func atMost(p partial) []comparator {
 	switch {
 	case p.any():
-		return anyRelease, nil
+		return anyRelease
 	case p.minor < 0:
-		return []comparator{atLeast(p.major, 0, 0, nil), below(p.major+1, 0, 0)}, nil
+		return []comparator{below(p.major+1, 0, 0)}
 	case p.patch < 0:
-		return []comparator{atLeast(p.major, p.minor, 0, nil), below(p.major, p.minor+1, 0)}, nil
+		return []comparator{below(p.major, p.minor+1, 0)}
 	}
-	return []comparator{{"=", full(p)}}, nil
+	return []comparator{{"<=", full(p)}}
+}
+
+// exact is a bare version or wildcard: the versions p covers.
+func exact(p partial) []comparator {
+	switch {
+	case p.any():
+		return anyRelease
+	case p.minor < 0:
+		return []comparator{atLeast(p.major, 0, 0, nil), below(p.major+1, 0, 0)}
+	case p.patch < 0:
+		return []comparator{atLeast(p.major, p.minor, 0, nil), below(p.major, p.minor+1, 0)}
+	}
+	return []comparator{{"=", full(p)}}
 }
 
 func full(p partial) Version {
