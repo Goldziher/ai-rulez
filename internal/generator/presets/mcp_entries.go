@@ -113,7 +113,7 @@ func codexEnv(entry map[string]any, server *config.MCPServer) {
 	literal := map[string]string{}
 	var forwarded []string
 	for key, value := range server.Env {
-		if m := codexWholeRef.FindStringSubmatch(server.EnvRefs[key]); m != nil && m[1] == key {
+		if m := codexWholeRef.FindStringSubmatch(server.EnvRefs[key]); len(m) > 1 && m[1] == key {
 			forwarded = append(forwarded, key)
 			continue
 		}

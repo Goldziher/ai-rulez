@@ -52,7 +52,9 @@ func commandDescription(command config.ContentFile) string {
 func commandFileOutputs(content *config.ContentTree, baseDir string, spec commandFilesSpec) ([]config.OutputFile, error) {
 	root := filepath.Join(baseDir, filepath.FromSlash(spec.dir))
 	var outputs []config.OutputFile
-	for _, command := range allCommands(content) {
+	commandList := allCommands(content)
+	for idx := range commandList {
+		command := commandList[idx]
 		if !commandTargets(command, spec.preset) {
 			continue
 		}
@@ -111,11 +113,15 @@ func renderCommandMarkdown(command config.ContentFile, spec commandFilesSpec) (s
 // the user asks. A command whose name is already a skill's keeps the skill.
 func commandAsSkills(d *diag.Collector, content *config.ContentTree, preset string) []config.ContentFile {
 	taken := map[string]bool{}
-	for _, skill := range allSkills(content) {
+	skillList := allSkills(content)
+	for idx := range skillList {
+		skill := skillList[idx]
 		taken[extractSkillID(skill.Path)] = true
 	}
 	var skills []config.ContentFile
-	for _, command := range allCommands(content) {
+	commandList := allCommands(content)
+	for idx := range commandList {
+		command := commandList[idx]
 		id := sanitizeName(command.Name)
 		if !commandTargets(command, preset) {
 			continue
@@ -126,7 +132,7 @@ func commandAsSkills(d *diag.Collector, content *config.ContentTree, preset stri
 			continue
 		}
 		taken[id] = true
-		extra := map[string]string{"disable-model-invocation": "true"}
+		extra := map[string]string{metaDisableModelInvocation: "true"}
 		if desc := commandDescription(command); desc != "" {
 			extra[keyDescription] = desc
 		}

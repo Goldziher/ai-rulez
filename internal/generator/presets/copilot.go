@@ -24,7 +24,7 @@ const presetNameCopilot = "copilot"
 var copilotRulesTarget = rulefiles.Target{
 	Preset:    presetNameCopilot,
 	Dir:       ".github/instructions",
-	RootFile:  ".github/copilot-instructions.md",
+	RootFile:  copilotInstructionsFile,
 	Ext:       ".instructions.md",
 	Dialect:   rulefiles.DialectCopilot,
 	Recursive: true,
@@ -70,7 +70,7 @@ func (g *CopilotPresetGenerator) GetOutputPaths(baseDir string) []string {
 // onto GlobalOutputPaths.
 func (g *CopilotPresetGenerator) ProjectLayout() ProjectLayout {
 	return ProjectLayout{
-		RootFile: ".github/copilot-instructions.md", RulesDir: ".github/instructions", SkillsDir: ".github/skills",
+		RootFile: copilotInstructionsFile, RulesDir: ".github/instructions", SkillsDir: ".github/skills",
 		AgentsDir: ".github/agents", CommandsDir: ".github/prompts",
 	}
 }
@@ -85,7 +85,7 @@ func (g *CopilotPresetGenerator) GlobalOutputPaths(home string, getenv func(stri
 		AgentsDir: ".copilot/agents",
 		Sidecars:  map[string]string{MergedDocCopilotHooks: ".copilot/hooks/ai-rulez.json"},
 		// Copilot also reads the shared agent skill directory.
-		SkillReaders: []string{".copilot/skills", ".agents/skills"},
+		SkillReaders: []string{".copilot/skills", agentsSkillsDir},
 	}.Resolve(home, getenv)
 }
 
@@ -116,7 +116,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	// With agents_md the shared AGENTS.md carries the always-on and the auto and
 	// manual items, and copilot-instructions.md would shadow it in other tools.
 	if !cfg.ReadsSharedAgentsMD(presetNameCopilot) {
-		rulefiles.WarnUnreadScopeFile(cfg, presetNameCopilot, ".github/copilot-instructions.md", inlineRules, inlineContext)
+		rulefiles.WarnUnreadScopeFile(cfg, presetNameCopilot, copilotInstructionsFile, inlineRules, inlineContext)
 		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".github", "copilot-instructions.md"),
 			Content: g.renderInstructionsFile(cfg, inlineRules, inlineContext),
@@ -130,7 +130,8 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 
 	// Generate skill files to .github/skills/
 	allSkills := allSkills(content)
-	for _, skill := range allSkills {
+	for idx := range allSkills {
+		skill := allSkills[idx]
 		skillID := extractSkillID(skill.Path)
 
 		skillDir := filepath.Join(baseDir, ".github", "skills", skillID)
@@ -149,7 +150,8 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 
 	// Generate agent files to .github/agents/ (uses .agent.md extension)
 	allAgents := allAgents(content)
-	for _, agent := range allAgents {
+	for idx := range allAgents {
+		agent := allAgents[idx]
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderCopilotAgentFile(agent, cfg)
 		if err != nil {
@@ -171,7 +173,8 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 
 	// Generate command files to .github/prompts/*.prompt.md
 	allCommands := allCommands(content)
-	for _, command := range allCommands {
+	for idx := range allCommands {
+		command := allCommands[idx]
 		if !g.shouldIncludeCommand(command) {
 			continue
 		}
@@ -261,10 +264,13 @@ func planCopilotItems(allRules, allContext []config.ContentFile, cfg *config.Con
 	// source order.
 	keep := func(kind rulefiles.Kind, all, planInline, direct []config.ContentFile) (out []config.ContentFile) {
 		want := make(map[string]struct{}, len(planInline)+len(direct))
-		for _, cf := range append(append([]config.ContentFile{}, planInline...), direct...) {
+		cfList := append(append([]config.ContentFile{}, planInline...), direct...)
+		for idx := range cfList {
+			cf := cfList[idx]
 			want[copilotItemKey(kind, cf)] = struct{}{}
 		}
-		for _, cf := range all {
+		for idx := range all {
+			cf := all[idx]
 			if _, ok := want[copilotItemKey(kind, cf)]; ok {
 				out = append(out, cf)
 			}
@@ -291,7 +297,8 @@ func splitCopilotCandidates(d *diag.Collector, all []config.ContentFile, kind st
 				"automatically there; omitted", "path", cf.Path)
 		}
 	}
-	for _, cf := range all {
+	for idx := range all {
+		cf := all[idx]
 		switch mode := rulefiles.EffectiveModeOf(cf); {
 		case mode == config.ActivationAuto || mode == config.ActivationManual:
 			stay(cf)
@@ -346,7 +353,7 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(cfg *config.Config, allR
 	ruleCount := len(allRules)
 
 	// Generate and prepend header
-	outputPath := ".github/copilot-instructions.md"
+	outputPath := copilotInstructionsFile
 	header := generateCopilotPresetHeader(cfg, outputPath, ruleCount, 0, 0)
 	builder.WriteString(header)
 
@@ -402,7 +409,7 @@ func (g *CopilotPresetGenerator) renderCopilotAgentFile(agent config.ContentFile
 // checks it).
 var copilotAgentFields = []string{
 	keyDescription, "target",
-	"user-invocable", "disable-model-invocation",
+	metaUserInvocable, metaDisableModelInvocation,
 	"agents", "handoffs", "mcp-servers",
 }
 

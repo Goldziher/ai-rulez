@@ -29,7 +29,7 @@ var antigravityRulesTarget = rulefiles.Target{
 	Preset:    presetNameAntigravity,
 	Dir:       ".agents/rules",
 	RootFile:  geminiRootFile,
-	Ext:       ".md",
+	Ext:       extMarkdown,
 	Dialect:   rulefiles.DialectTrigger,
 	Recursive: false,
 	MaxChars:  antigravityRuleMaxChars,
@@ -100,8 +100,8 @@ func (g *AntigravityPresetGenerator) GetName() string {
 // onto GlobalOutputPaths.
 func (g *AntigravityPresetGenerator) ProjectLayout() ProjectLayout {
 	return ProjectLayout{
-		RootFile: "GEMINI.md", RulesDir: ".agents/rules", SkillsDir: ".agents/skills", AgentsDir: ".agents/agents",
-		CommandsDir: ".agents/skills",
+		RootFile: "GEMINI.md", RulesDir: ".agents/rules", SkillsDir: agentsSkillsDir, AgentsDir: ".agents/agents",
+		CommandsDir: agentsSkillsDir,
 	}
 }
 
@@ -154,7 +154,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 	// Workspace MCP servers live in .agents/mcp_config.json, the file Antigravity
 	// reads. Earlier versions also wrote .agents/settings.json, which nothing
 	// reads; it is no longer written, and renderSettingsJSON only remains so the
-	// stale-output cleanup can recognise what those versions wrote.
+	// stale-output cleanup can recognize what those versions wrote.
 	if len(cfg.MCPServers) > 0 || cfg.HasSelfServer() {
 		mcpPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocAgentsMCP))
 		mcpConfig, err := g.renderMCPConfigJSON(mcpPath, cfg)
@@ -177,17 +177,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 	if err != nil {
 		return nil, oops.With("preset", presetNameAntigravity).Wrapf(err, "plan antigravity rule files")
 	}
-	if demoted != rulefiles.RoutingNone {
-		// Informational only when the demotion actually costs rule files.
-		wouldBe, _, _, planErr := rulefiles.Plan(rules, contexts, &antigravityRulesTarget, demoted, rulefiles.ScopeInfo{}, nil)
-		msg := "antigravity rule files disabled: the gemini preset also writes GEMINI.md, " +
-			"so all rules stay inline; set rules.mode_by_preset.antigravity to override"
-		if planErr == nil && len(wouldBe) > 0 {
-			cfg.Log().Info(msg)
-		} else {
-			cfg.Log().Debug(msg)
-		}
-	}
+	logAntigravityDemotion(cfg, rules, contexts, demoted)
 	if len(files) > 0 && !rulefiles.InScope(cfg) {
 		outputs = append(outputs, config.OutputFile{
 			Path:  filepath.Join(baseDir, filepath.FromSlash(antigravityRulesTarget.Dir)),
@@ -215,11 +205,42 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		})
 	}
 
-	// Generate skill files to .agents/skills/. Workflows (the custom slash
-	// commands) retire on 2026-11-01 in favour of skills, so a command is written
-	// as a skill, which Antigravity runs on an explicit invocation.
+	outputs = append(outputs, g.skillOutputs(content, baseDir, cfg)...)
+
+	agentOutputs, err := g.agentOutputs(content, baseDir, cfg)
+	if err != nil {
+		return nil, err
+	}
+	outputs = append(outputs, agentOutputs...)
+
+	return outputs, nil
+}
+
+// logAntigravityDemotion reports that the gemini preset's GEMINI.md kept the
+// rules inline. It is informational only when the demotion actually costs rule
+// files.
+func logAntigravityDemotion(cfg *config.Config, rules, contexts []config.ContentFile, demoted rulefiles.Routing) {
+	if demoted == rulefiles.RoutingNone {
+		return
+	}
+	wouldBe, _, _, planErr := rulefiles.Plan(rules, contexts, &antigravityRulesTarget, demoted, rulefiles.ScopeInfo{}, nil)
+	msg := "antigravity rule files disabled: the gemini preset also writes GEMINI.md, " +
+		"so all rules stay inline; set rules.mode_by_preset.antigravity to override"
+	if planErr == nil && len(wouldBe) > 0 {
+		cfg.Log().Info(msg)
+	} else {
+		cfg.Log().Debug(msg)
+	}
+}
+
+// skillOutputs writes the skill files to .agents/skills/. Workflows (the custom
+// slash commands) retire on 2026-11-01 in favor of skills, so a command is written
+// as a skill, which Antigravity runs on an explicit invocation.
+func (g *AntigravityPresetGenerator) skillOutputs(content *config.ContentTree, baseDir string, cfg *config.Config) []config.OutputFile {
+	var outputs []config.OutputFile
 	allSkills := append(allSkills(content), commandAsSkills(cfg.Diag, content, presetNameAntigravity)...)
-	for _, skill := range allSkills {
+	for idx := range allSkills {
+		skill := allSkills[idx]
 		skillID := extractSkillID(skill.Path)
 
 		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
@@ -235,10 +256,15 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		})
 		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
+	return outputs
+}
 
-	// Generate agent files to .agents/agents/
+// agentOutputs writes the agent files to .agents/agents/.
+func (g *AntigravityPresetGenerator) agentOutputs(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 	allAgents := allAgents(content)
-	for _, agent := range allAgents {
+	for idx := range allAgents {
+		agent := allAgents[idx]
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderAgentFile(agent, cfg)
 		if err != nil {
@@ -250,7 +276,6 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 			Content: agentContent,
 		})
 	}
-
 	return outputs, nil
 }
 
@@ -410,7 +435,7 @@ func (g *AntigravityPresetGenerator) buildAgentFrontmatter(agent config.ContentF
 // antigravityModelTiers is how a model reads as one of Antigravity's three
 // subagent models.
 var antigravityModelTiers = []struct{ contains, tier string }{
-	{"inherit", "inherit"}, {"flash", "flash"}, {"haiku", "flash"}, {"pro", "pro"}, {"sonnet", "pro"}, {"opus", "pro"},
+	{effortInherit, effortInherit}, {tierFlash, tierFlash}, {"haiku", tierFlash}, {tierPro, tierPro}, {"sonnet", tierPro}, {"opus", tierPro},
 }
 
 // antigravityModel maps a resolved model onto inherit, flash or pro, the only

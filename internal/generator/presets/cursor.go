@@ -37,7 +37,7 @@ func (g *CursorPresetGenerator) GetOutputPaths(baseDir string) []string {
 // ProjectLayout is where the preset writes project-level files; user scope maps them
 // onto GlobalOutputPaths.
 func (g *CursorPresetGenerator) ProjectLayout() ProjectLayout {
-	return ProjectLayout{RulesDir: ".cursor/rules", SkillsDir: ".agents/skills", AgentsDir: ".cursor/agents", CommandsDir: ".cursor/commands"}
+	return ProjectLayout{RulesDir: ".cursor/rules", SkillsDir: agentsSkillsDir, AgentsDir: ".cursor/agents", CommandsDir: ".cursor/commands"}
 }
 
 // GlobalOutputPaths is the Cursor user-scope layout under ~/.cursor. User rules
@@ -46,14 +46,14 @@ func (g *CursorPresetGenerator) GlobalOutputPaths(home string, getenv func(strin
 	return GlobalLayout{
 		// Cursor reads ~/.agents/skills, the directory the project skills use too, so a
 		// skill shared with codex and gemini is written once.
-		SkillsDir:   ".agents/skills",
+		SkillsDir:   agentsSkillsDir,
 		AgentsDir:   ".cursor/agents",
 		CommandsDir: ".cursor/commands",
 		Sidecars: map[string]string{
 			MergedDocCursorMCP:   ".cursor/mcp.json",
 			MergedDocCursorHooks: ".cursor/hooks.json",
 		},
-		SkillReaders: []string{".cursor/skills", ".agents/skills", ".claude/skills", ".codex/skills"},
+		SkillReaders: []string{".cursor/skills", agentsSkillsDir, ".claude/skills", ".codex/skills"},
 	}.Resolve(home, getenv)
 }
 
@@ -95,7 +95,8 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	allCommands := allCommands(content)
 
 	// Generate command files to .cursor/commands/
-	for _, command := range allCommands {
+	for idx := range allCommands {
+		command := allCommands[idx]
 		// Check if command should be included (enabled and targets Cursor if specified)
 		if g.shouldIncludeCommand(command) {
 			commandContent := g.renderCommandFile(command)
@@ -119,7 +120,8 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	allSkills := allSkills(content)
 
 	// Generate skill files to .agents/skills/
-	for _, skill := range allSkills {
+	for idx := range allSkills {
+		skill := allSkills[idx]
 		// Check if skill should be included (enabled and targets Cursor if specified)
 		if !g.shouldIncludeSkill(skill) {
 			continue
@@ -147,7 +149,8 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 
 	// Generate agent files to .cursor/agents/ (Cursor does not read .agents/agents)
 	allAgents := allAgents(content)
-	for _, agent := range allAgents {
+	for idx := range allAgents {
+		agent := allAgents[idx]
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderCursorAgentFile(agent, cfg)
 		if err != nil {
