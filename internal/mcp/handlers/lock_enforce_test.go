@@ -3,12 +3,13 @@ package handlers
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // uncoveredIncludeProject is a project with a remote (file://) include and, when
@@ -23,8 +24,7 @@ func uncoveredIncludeProject(t *testing.T, lockFile bool) string {
 	require.NoError(t, os.MkdirAll(filepath.Dir(rule), 0o755))
 	require.NoError(t, os.WriteFile(rule, []byte("# Shared\n\nBe kind.\n"), 0o600))
 	for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"add", "-A"}, {"commit", "-qm", "one"}} {
-		cmd := exec.Command("git", append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
-		cmd.Dir = repo
+		cmd := gitutil.CommandNoContext(repo, append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err, string(out))
 	}
