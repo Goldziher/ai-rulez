@@ -161,12 +161,23 @@ var claudeEnvNames = []string{
 	"CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
 }
 
+// windowsStartEnv are the variables a Windows process needs to start at all; the
+// runner's base allowlist keeps them when they are set.
+var windowsStartEnv = []string{"TMP", "TEMP", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "PROGRAMDATA"}
+
 // claudeEnv is the scrubbed environment of a claude run.
-func (r *ClaudeNative) claudeEnv() []string {
+func (r *ClaudeNative) claudeEnv() []string { return claudeChildEnv(r.Env) }
+
+// claudeChildEnv is the scrubbed environment of every claude process an eval
+// runner starts: claudeEnvNames, plus what Windows needs to start a process,
+// read from e (nil: the real environment).
+func claudeChildEnv(e ambient.Env) []string {
 	var parent []string
-	for _, name := range claudeEnvNames {
-		if v := ambient.Getenv(r.Env, name); v != "" {
-			parent = append(parent, name+"="+v)
+	for _, names := range [][]string{claudeEnvNames, windowsStartEnv} {
+		for _, name := range names {
+			if v := ambient.Getenv(e, name); v != "" {
+				parent = append(parent, name+"="+v)
+			}
 		}
 	}
 	return runner.ScrubEnv(parent, claudeEnvNames, nil)
