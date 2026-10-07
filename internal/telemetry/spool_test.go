@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -256,4 +257,29 @@ func TestSpawnDue(t *testing.T) {
 	assert.False(t, s.SpawnDue(now.Add(time.Second), time.Minute), "rate limited to one spawn per minute")
 	require.NoError(t, s.UpdateState(func(st *State) { st.LastFlush = FormatTime(now.Add(5 * time.Minute)) }))
 	assert.False(t, s.SpawnDue(now.Add(5*time.Minute+2*time.Minute), time.Hour), "recently flushed and small: not due")
+}
+
+func TestSpool_OversizeLineIsCorruptNotFatal(t *testing.T) {
+	s := &Spool{Dir: t.TempDir()}
+	require.NoError(t, s.Append(newTestEvent(1)))
+	f, err := os.OpenFile(s.outbox(), os.O_APPEND|os.O_WRONLY, 0o600)
+	require.NoError(t, err)
+	_, err = f.WriteString(strings.Repeat("A", 2<<20) + "\n")
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+	require.NoError(t, s.Append(newTestEvent(2)))
+
+	events, corrupt, err := s.Pending()
+	require.NoError(t, err)
+	assert.Len(t, events, 2)
+	assert.Equal(t, 1, corrupt)
+
+	st := BuildStatus(&Settings{}, s.Dir, "")
+	assert.NotEmpty(t, st.Problems, "status surfaces the corrupt line")
+
+	require.NoError(t, s.Remove(map[string]bool{}))
+	events, corrupt, err = s.Pending()
+	require.NoError(t, err)
+	assert.Len(t, events, 2)
+	assert.Zero(t, corrupt)
 }
