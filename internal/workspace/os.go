@@ -69,15 +69,15 @@ func vcsTop(ctx context.Context, git gitutil.Git, abs, ceilings string) string {
 			continue
 		}
 		ceiling[filepath.Clean(c)] = true
-		if real, err := filepath.EvalSymlinks(c); err == nil {
-			ceiling[real] = true
+		if realPath, err := filepath.EvalSymlinks(c); err == nil {
+			ceiling[realPath] = true
 		}
 	}
 	for cur := abs; ; {
 		if ceiling[cur] {
 			return abs
 		}
-		if real, err := filepath.EvalSymlinks(cur); err == nil && ceiling[real] {
+		if realPath, err := filepath.EvalSymlinks(cur); err == nil && ceiling[realPath] {
 			return abs
 		}
 		if _, err := os.Lstat(filepath.Join(cur, vcsDirName)); err == nil {
