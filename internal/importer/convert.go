@@ -173,11 +173,8 @@ func planConversion(ctx context.Context, opts ConvertOptions) (*conversion, erro
 	if !filepath.IsAbs(c.intoAbs) {
 		c.intoAbs = filepath.Join(abs, c.intoAbs)
 	}
-	if opts.Domain != "" && utils.SanitizeName(opts.Domain) != opts.Domain {
-		return nil, oops.Hint("Use lowercase letters, digits and hyphens").Errorf("invalid domain name %q", opts.Domain)
-	}
-	if opts.Merge && opts.Force {
-		return nil, oops.Hint("--merge keeps every existing file; --force replaces them").Errorf("--merge and --force cannot be combined")
+	if err := validateConvertOptions(opts); err != nil {
+		return nil, err
 	}
 
 	importers, err := pickImporters(abs, opts.From)
@@ -193,8 +190,33 @@ func planConversion(ctx context.Context, opts ConvertOptions) (*conversion, erro
 	if err != nil {
 		return nil, err
 	}
+	if err := c.checkPlan(generatedFrom, importers, abs); err != nil {
+		return nil, err
+	}
+	if opts.Merge {
+		if err := mergeRename(c.plan, c.intoAbs, opts.Domain, opts.KeepNames); err != nil {
+			return nil, err
+		}
+	}
+	return c, nil
+}
+
+// validateConvertOptions rejects option combinations that cannot work.
+func validateConvertOptions(opts ConvertOptions) error {
+	if opts.Domain != "" && utils.SanitizeName(opts.Domain) != opts.Domain {
+		return oops.Hint("Use lowercase letters, digits and hyphens").Errorf("invalid domain name %q", opts.Domain)
+	}
+	if opts.Merge && opts.Force {
+		return oops.Hint("--merge keeps every existing file; --force replaces them").Errorf("--merge and --force cannot be combined")
+	}
+	return nil
+}
+
+// checkPlan refuses a plan with name collisions or nothing in it, and notes the
+// generated native files that were left out.
+func (c *conversion) checkPlan(generatedFrom string, importers []Format, abs string) error {
 	if len(c.plan.collisions) > 0 {
-		return nil, oops.Hint("Rename one of the sources, or drop --keep-names to give the later one a stable suffix").
+		return oops.Hint("Rename one of the sources, or drop --keep-names to give the later one a stable suffix").
 			Errorf("name collisions with --keep-names: %s", describeCollisions(c.plan.collisions))
 	}
 	if generatedFrom != "" {
@@ -207,15 +229,10 @@ func planConversion(ctx context.Context, opts ConvertOptions) (*conversion, erro
 		if len(c.plan.Remotes) > 0 {
 			hint = fmt.Sprintf("The input names %d remote source(s) that are not on disk; rerun with --fetch to import them", len(c.plan.Remotes))
 		}
-		return nil, oops.Hint(hint).
+		return oops.Hint(hint).
 			Wrapf(ErrNothingToConvert, "the selected importers found no importable content in %s", abs)
 	}
-	if opts.Merge {
-		if err := mergeRename(c.plan, c.intoAbs, opts.Domain, opts.KeepNames); err != nil {
-			return nil, err
-		}
-	}
-	return c, nil
+	return nil
 }
 
 // prepared is the planned tree: every file, keyed by path below the config directory.
@@ -544,18 +561,7 @@ var otherConfigNames = []string{"config.yaml", "config.yml", "config.json"}
 // in a V3 format or one that cannot be parsed stops the run. The returned
 // action is the config.toml action, or "" when it is not written.
 func resolveConfig(intoAbs string, cfg *config.Config, plan *Plan, report *Report, files map[string][]byte, off *disabledSet) (string, error) {
-	for _, name := range otherConfigNames {
-		if _, err := os.Lstat(filepath.Join(intoAbs, name)); err != nil {
-			continue
-		}
-		if _, err := os.Lstat(filepath.Join(intoAbs, configTOML)); err == nil {
-			continue
-		}
-		delete(files, configTOML)
-		report.Findings = append(report.Findings, newFinding(StatusNeedsAction, name, "", "",
-			fmt.Sprintf("%s is a V3 config that ai-rulez no longer reads and was not changed; migrate it with ai-rulez 4.x (npx ai-rulez@4 migrate v4), or add by hand: %s", name, configSummary(plan))))
-		report.Files = append(report.Files, FileAction{Path: name, Action: ActionManual})
-		sortFindings(&Plan{Findings: report.Findings})
+	if v3ConfigPresent(intoAbs, plan, report, files) {
 		return "", nil
 	}
 
@@ -580,14 +586,7 @@ func resolveConfig(intoAbs string, cfg *config.Config, plan *Plan, report *Repor
 		report.Findings = append(report.Findings, newFinding(StatusNeedsAction, configTOML, n.field, "", n.reason))
 	}
 	if plan.presetDefaulted && len(existing.Presets) > 0 {
-		kept := report.Findings[:0:0]
-		for _, f := range report.Findings {
-			if f.Source == presetsFindingPath && f.Field == "presets" {
-				continue
-			}
-			kept = append(kept, f)
-		}
-		report.Findings = kept
+		dropPresetsFinding(report)
 	}
 	sortFindings(&Plan{Findings: report.Findings})
 	if added == 0 {
@@ -603,6 +602,39 @@ func resolveConfig(intoAbs string, cfg *config.Config, plan *Plan, report *Repor
 		return ActionUnchanged, nil
 	}
 	return ActionMerge, nil
+}
+
+// v3ConfigPresent reports a V3 config that ai-rulez no longer reads and leaves
+// config.toml unwritten; it returns true when it did.
+func v3ConfigPresent(intoAbs string, plan *Plan, report *Report, files map[string][]byte) bool {
+	for _, name := range otherConfigNames {
+		if _, err := os.Lstat(filepath.Join(intoAbs, name)); err != nil {
+			continue
+		}
+		if _, err := os.Lstat(filepath.Join(intoAbs, configTOML)); err == nil {
+			continue
+		}
+		delete(files, configTOML)
+		report.Findings = append(report.Findings, newFinding(StatusNeedsAction, name, "", "",
+			fmt.Sprintf("%s is a V3 config that ai-rulez no longer reads and was not changed; migrate it with ai-rulez 4.x (npx ai-rulez@4 migrate v4), or add by hand: %s", name, configSummary(plan))))
+		report.Files = append(report.Files, FileAction{Path: name, Action: ActionManual})
+		sortFindings(&Plan{Findings: report.Findings})
+		return true
+	}
+	return false
+}
+
+// dropPresetsFinding removes the finding that said the presets were defaulted,
+// once an existing config makes it moot.
+func dropPresetsFinding(report *Report) {
+	kept := report.Findings[:0:0]
+	for _, f := range report.Findings {
+		if f.Source == presetsFindingPath && f.Field == "presets" {
+			continue
+		}
+		kept = append(kept, f)
+	}
+	report.Findings = kept
 }
 
 type mergeNote struct{ field, reason string }
@@ -628,6 +660,21 @@ func mergeConfig(existing, add *config.Config, defaultedPreset bool) (merged *co
 			}
 		}
 	}
+	n, serverNotes := mergeMCPServers(merged, add)
+	added += n
+	notes = append(notes, serverNotes...)
+	n, skillNotes := mergeInstalledSkills(merged, add)
+	added += n
+	notes = append(notes, skillNotes...)
+	added += mergeHooksAndPermissions(merged, add)
+	n, deliveryNotes := mergeDelivery(merged, add)
+	added += n
+	notes = append(notes, deliveryNotes...)
+	return merged, added, notes
+}
+
+// mergeMCPServers appends the imported servers the config does not have by name.
+func mergeMCPServers(merged, add *config.Config) (added int, notes []mergeNote) {
 	servers := map[string]config.MCPServer{}
 	for i := range merged.MCPServersRaw {
 		servers[merged.MCPServersRaw[i].Name] = merged.MCPServersRaw[i]
@@ -643,6 +690,11 @@ func mergeConfig(existing, add *config.Config, defaultedPreset bool) (merged *co
 			notes = append(notes, mergeNote{"mcp_servers." + s.Name, "an mcp_servers entry named " + s.Name + " already exists and was kept; the imported definition differs"})
 		}
 	}
+	return added, notes
+}
+
+// mergeInstalledSkills appends the imported skills the config does not have by name.
+func mergeInstalledSkills(merged, add *config.Config) (added int, notes []mergeNote) {
 	skills := map[string]config.InstalledSkillConfig{}
 	for i := range merged.InstalledSkills {
 		skills[merged.InstalledSkills[i].Name] = merged.InstalledSkills[i]
@@ -658,11 +710,7 @@ func mergeConfig(existing, add *config.Config, defaultedPreset bool) (merged *co
 			notes = append(notes, mergeNote{"installed_skills." + s.Name, "an installed_skills entry named " + s.Name + " already exists and was kept; the imported one differs"})
 		}
 	}
-	added += mergeHooksAndPermissions(merged, add)
-	n, deliveryNotes := mergeDelivery(merged, add)
-	added += n
-	notes = append(notes, deliveryNotes...)
-	return merged, added, notes
+	return added, notes
 }
 
 // classify compares the planned files with the disk and fills report.Files.
@@ -853,56 +901,75 @@ func mkdirAllTracked(dir string, perm os.FileMode) ([]string, error) {
 	return missing, os.MkdirAll(dir, perm)
 }
 
+// fileUndo is what it takes to put one written file back.
+type fileUndo struct {
+	path string
+	old  []byte
+	had  bool
+	perm os.FileMode
+}
+
+// writeTxn tracks the files and directories a write created so that a failure
+// can undo them.
+type writeTxn struct {
+	done []fileUndo
+	dirs []string
+}
+
+func (t *writeTxn) rollback() error {
+	var errs []error
+	for i := len(t.done) - 1; i >= 0; i-- {
+		u := t.done[i]
+		if u.had {
+			if err := writeFileAtomic(u.path, u.old, u.perm); err != nil {
+				errs = append(errs, err)
+			}
+		} else if err := os.Remove(u.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			errs = append(errs, err)
+		}
+	}
+	for i := len(t.dirs) - 1; i >= 0; i-- {
+		if err := os.Remove(t.dirs[i]); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// writeOne writes one planned file and records how to undo it.
+func (t *writeTxn) writeOne(target, rel string, data []byte, execs map[string]bool) error {
+	filePerm, dirPerm := writePerms(rel)
+	if execs[rel] {
+		filePerm |= (filePerm & 0o444) >> 2 // x wherever r is set: 0644 -> 0755, 0600 -> 0700
+	}
+	created, err := mkdirAllTracked(filepath.Dir(target), dirPerm)
+	t.dirs = append(t.dirs, created...)
+	if err != nil {
+		return err
+	}
+	old, readErr := os.ReadFile(target)
+	if err := writeFileAtomic(target, data, filePerm); err != nil {
+		return err
+	}
+	t.done = append(t.done, fileUndo{path: target, old: old, had: readErr == nil, perm: filePerm})
+	return nil
+}
+
 // writeFiles writes the create, overwrite and merge entries. On failure it
 // restores what it changed and removes the directories it created, so a failed
 // run leaves the project as it was; anything it could not undo is reported.
 func writeFiles(report *Report, files map[string][]byte, execs map[string]bool, intoAbs string) error {
-	type undo struct {
-		path string
-		old  []byte
-		had  bool
-		perm os.FileMode
-	}
-	var done []undo
-	var dirs []string
-	rollback := func() error {
-		var errs []error
-		for i := len(done) - 1; i >= 0; i-- {
-			u := done[i]
-			if u.had {
-				if err := writeFileAtomic(u.path, u.old, u.perm); err != nil {
-					errs = append(errs, err)
-				}
-			} else if err := os.Remove(u.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
-				errs = append(errs, err)
-			}
-		}
-		for i := len(dirs) - 1; i >= 0; i-- {
-			if err := os.Remove(dirs[i]); err != nil && !errors.Is(err, fs.ErrNotExist) {
-				errs = append(errs, err)
-			}
-		}
-		return errors.Join(errs...)
-	}
+	var txn writeTxn
 	for _, f := range report.Files {
 		if f.Action != ActionCreate && f.Action != ActionOverwrite && f.Action != ActionMerge {
 			continue
 		}
 		target := filepath.Join(intoAbs, filepath.FromSlash(f.Path))
-		filePerm, dirPerm := writePerms(f.Path)
-		if execs[f.Path] {
-			filePerm |= (filePerm & 0o444) >> 2 // x wherever r is set: 0644 -> 0755, 0600 -> 0700
-		}
-		created, err := mkdirAllTracked(filepath.Dir(target), dirPerm)
-		dirs = append(dirs, created...)
+		err := txn.writeOne(target, f.Path, files[f.Path], execs)
 		if err == nil {
-			old, readErr := os.ReadFile(target)
-			if err = writeFileAtomic(target, files[f.Path], filePerm); err == nil {
-				done = append(done, undo{path: target, old: old, had: readErr == nil, perm: filePerm})
-				continue
-			}
+			continue
 		}
-		if rbErr := rollback(); rbErr != nil {
+		if rbErr := txn.rollback(); rbErr != nil {
 			return oops.With("path", target).Wrapf(errors.Join(err, rbErr), "write %s failed and the rollback was incomplete", f.Path)
 		}
 		return oops.With("path", target).Wrapf(err, "write %s", f.Path)

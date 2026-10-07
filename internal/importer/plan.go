@@ -293,15 +293,11 @@ func (p *Plan) merge(other *Plan) {
 	p.Findings = append(p.Findings, other.Findings...)
 }
 
-// Finalize makes the plan deterministic: it drops duplicates (same content
-// found twice), gives colliding names a stable suffix, de-duplicates presets,
-// MCP servers and installed skills, and adds one mapped finding per item.
-func (p *Plan) Finalize() {
-	for i := range p.Items {
-		p.Items[i].hash = p.Items[i].computeHash()
-	}
-	sort.SliceStable(p.Items, func(i, j int) bool {
-		a, b := &p.Items[i], &p.Items[j]
+// sortItems orders items by locality, kind, name and sources, so the dedupe in
+// Finalize is deterministic.
+func sortItems(items []Item) {
+	sort.SliceStable(items, func(i, j int) bool {
+		a, b := &items[i], &items[j]
 		if a.Local != b.Local {
 			return !a.Local
 		}
@@ -313,6 +309,33 @@ func (p *Plan) Finalize() {
 		}
 		return strings.Join(a.Sources, ",") < strings.Join(b.Sources, ",")
 	})
+}
+
+// sortPlanFindings orders findings by source, field, status and reason.
+func sortPlanFindings(findings []Finding) {
+	sort.SliceStable(findings, func(i, j int) bool {
+		a, b := findings[i], findings[j]
+		if a.Source != b.Source {
+			return a.Source < b.Source
+		}
+		if a.Field != b.Field {
+			return a.Field < b.Field
+		}
+		if a.Status != b.Status {
+			return a.Status < b.Status
+		}
+		return a.Reason < b.Reason
+	})
+}
+
+// Finalize makes the plan deterministic: it drops duplicates (same content
+// found twice), gives colliding names a stable suffix, de-duplicates presets,
+// MCP servers and installed skills, and adds one mapped finding per item.
+func (p *Plan) Finalize() {
+	for i := range p.Items {
+		p.Items[i].hash = p.Items[i].computeHash()
+	}
+	sortItems(p.Items)
 
 	var out []Item
 	byContent := map[string]int{}
@@ -374,19 +397,7 @@ func (p *Plan) Finalize() {
 	p.Hooks = mergeHookGroups(p.Hooks)
 	dedupePermissions(&p.Permissions)
 
-	sort.SliceStable(p.Findings, func(i, j int) bool {
-		a, b := p.Findings[i], p.Findings[j]
-		if a.Source != b.Source {
-			return a.Source < b.Source
-		}
-		if a.Field != b.Field {
-			return a.Field < b.Field
-		}
-		if a.Status != b.Status {
-			return a.Status < b.Status
-		}
-		return a.Reason < b.Reason
-	})
+	sortPlanFindings(p.Findings)
 }
 
 func dedupeStrings(in []string) []string {

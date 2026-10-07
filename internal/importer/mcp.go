@@ -116,6 +116,43 @@ func stripJSONC(data []byte) []byte {
 	return []byte(strings.Join(out, "\n"))
 }
 
+// setMCPTransport sets the transport of srv from the type or transport key; it
+// returns false, after reporting, when the transport is not supported.
+func setMCPTransport(p *Plan, file, field, name string, raw map[string]any, srv *config.MCPServer) bool {
+	typ := as[string](raw["type"])
+	if typ == "" {
+		typ = as[string](raw["transport"])
+	}
+	switch strings.ToLower(typ) {
+	case "", litStdio:
+		if srv.URL != "" {
+			srv.Transport = config.TransportHTTP
+			p.add(newFinding(StatusApproximated, file, field+".type", "mcp_servers."+name+".transport",
+				"remote server without a type is imported as http"))
+		}
+	case "http", "streamable-http", "streamablehttp", "streamable_http":
+		srv.Transport = config.TransportHTTP
+	case "sse":
+		srv.Transport = config.TransportSSE
+	default:
+		p.add(newFinding(StatusUnsupported, file, field+".type", "", "transport "+typ+" is not supported"))
+		return false
+	}
+	return true
+}
+
+// setMCPDisabled turns the server off when the source marks it disabled.
+func setMCPDisabled(raw map[string]any, srv *config.MCPServer) {
+	if d, ok := raw["disabled"].(bool); ok && d {
+		off := false
+		srv.Enabled = &off
+	}
+	if e, ok := raw["enabled"].(bool); ok && !e {
+		off := false
+		srv.Enabled = &off
+	}
+}
+
 func mcpServerFrom(p *Plan, file, name string, raw map[string]any) (config.MCPServer, bool) {
 	field := "mcpServers." + name
 	srv := config.MCPServer{Name: name}
@@ -152,33 +189,10 @@ func mcpServerFrom(p *Plan, file, name string, raw map[string]any) (config.MCPSe
 		return srv, false
 	}
 
-	typ := as[string](raw["type"])
-	if typ == "" {
-		typ = as[string](raw["transport"])
-	}
-	switch strings.ToLower(typ) {
-	case "", litStdio:
-		if srv.URL != "" {
-			srv.Transport = config.TransportHTTP
-			p.add(newFinding(StatusApproximated, file, field+".type", "mcp_servers."+name+".transport",
-				"remote server without a type is imported as http"))
-		}
-	case "http", "streamable-http", "streamablehttp", "streamable_http":
-		srv.Transport = config.TransportHTTP
-	case "sse":
-		srv.Transport = config.TransportSSE
-	default:
-		p.add(newFinding(StatusUnsupported, file, field+".type", "", "transport "+typ+" is not supported"))
+	if !setMCPTransport(p, file, field, name, raw, &srv) {
 		return srv, false
 	}
-	if d, ok := raw["disabled"].(bool); ok && d {
-		off := false
-		srv.Enabled = &off
-	}
-	if e, ok := raw["enabled"].(bool); ok && !e {
-		off := false
-		srv.Enabled = &off
-	}
+	setMCPDisabled(raw, &srv)
 	c := credentialScan{plan: p, file: file, field: field, server: name}
 	srv.Args = c.args(srv.Args)
 	srv.URL = c.url(field+".url", srv.URL)

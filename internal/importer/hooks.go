@@ -230,6 +230,30 @@ func (b *hookBuilder) setMatcher(src hookSource, g *config.HookGroup, matcher, a
 		"the matcher uses "+src.harness+"'s own tool names, so it is kept as matchers."+src.harness+" and the group is restricted to that harness"))
 }
 
+// noteUnmapped reports the handler keys that have no ai-rulez equivalent and
+// commands that run scripts from outside the project.
+func (b *hookBuilder) noteUnmapped(src hookSource, field, command string, d hookDoc, flat bool) {
+	var left []string
+	for k := range d {
+		if hookKeys[k] || (k == litMatcher && flat) {
+			continue
+		}
+		left = append(left, k)
+	}
+	if len(left) > 0 {
+		sort.Strings(left)
+		b.p.add(newFinding(StatusDropped, src.file, field, "", "handler keys with no ai-rulez equivalent were not carried: "+strings.Join(left, ", ")))
+	}
+	switch {
+	case strings.Contains(command, ".rulesync/"):
+		b.p.add(newFinding(StatusNeedsAction, src.file, field+".command", "",
+			"the command runs a script from the rulesync input tree; copy the script into the project and point the hook at it (a script path)"))
+	case strings.Contains(command, "PLUGIN_ROOT"):
+		b.p.add(newFinding(StatusNeedsAction, src.file, field+".command", "",
+			"the command runs a script from the package root, which does not exist in this project; copy the script into the project and point the hook at it (a script path)"))
+	}
+}
+
 // handler converts one handler object. flat handlers carry the matcher beside
 // the command, so litMatcher is not a handler key for them.
 func (b *hookBuilder) handler(src hookSource, field string, d hookDoc, flat bool) (config.HookAction, bool) {
@@ -270,25 +294,7 @@ func (b *hookBuilder) handler(src hookSource, field string, d hookDoc, flat bool
 	a.Async, _ = d.boolean("async")
 	a.If = d.str("if")
 	a.StatusMessage = d.str("statusMessage")
-	var left []string
-	for k := range d {
-		if hookKeys[k] || (k == litMatcher && flat) {
-			continue
-		}
-		left = append(left, k)
-	}
-	if len(left) > 0 {
-		sort.Strings(left)
-		b.p.add(newFinding(StatusDropped, src.file, field, "", "handler keys with no ai-rulez equivalent were not carried: "+strings.Join(left, ", ")))
-	}
-	switch {
-	case strings.Contains(command, ".rulesync/"):
-		b.p.add(newFinding(StatusNeedsAction, src.file, field+".command", "",
-			"the command runs a script from the rulesync input tree; copy the script into the project and point the hook at it (a script path)"))
-	case strings.Contains(command, "PLUGIN_ROOT"):
-		b.p.add(newFinding(StatusNeedsAction, src.file, field+".command", "",
-			"the command runs a script from the package root, which does not exist in this project; copy the script into the project and point the hook at it (a script path)"))
-	}
+	b.noteUnmapped(src, field, command, d, flat)
 	return a, true
 }
 
