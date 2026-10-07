@@ -455,7 +455,7 @@ func TestOKFImportJSONPrintsEmptyLists(t *testing.T) {
 	require.Equal(t, 0, mustExport(t))
 	bundle := filepath.Join(root, "docs", "okf")
 	target := t.TempDir()
-	writeFile(t, filepath.Join(target, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"y\"\npresets = [\"claude\"]\n")
+	writeFile(t, filepath.Join(target, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"y\"\npresets = [\"claude\"]\n")
 	chdir(t, target)
 	okfDryRun, okfFormat = true, formatJSON
 	t.Cleanup(func() { okfFormat = formatText })

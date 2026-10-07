@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const publishConfig = `version = "4.0"
+const publishConfig = `version = "5.0"
 name = "acme"
 presets = ["claude"]
 gitignore = false

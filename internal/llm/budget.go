@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"sync"
 )
@@ -17,10 +16,7 @@ type Limits struct {
 }
 
 // Active reports whether any limit is set.
-// A NaN cost cap counts as set, so the budget refuses instead of treating it as unlimited.
-func (l Limits) Active() bool {
-	return l.MaxCostUSD > 0 || math.IsNaN(l.MaxCostUSD) || l.MaxTokens > 0 || l.MaxCalls > 0
-}
+func (l Limits) Active() bool { return l.MaxCostUSD > 0 || l.MaxTokens > 0 || l.MaxCalls > 0 }
 
 // Spent is the running total of a Budget.
 type Spent struct {
@@ -63,7 +59,6 @@ type reservation struct {
 	model string
 	worst Usage
 	cost  float64
-	sub   *subBudget // set for a further request of a split call; records what it charged
 }
 
 // reserve atomically checks the limits against spent + reserved + the worst case
@@ -79,12 +74,9 @@ func (b *Budget) reserve(model string, worst Usage) (*reservation, error) {
 			b.limits.MaxTokens, b.spent.Tokens, b.reserved.Tokens, worst.Total())
 	}
 	cost, known := b.pricing.Cost(model, worst)
-	if math.IsNaN(b.limits.MaxCostUSD) {
-		return nil, newError(KindBudget, "max_cost_usd is not a number; set a finite cap")
-	}
 	if b.limits.MaxCostUSD > 0 {
 		if !known {
-			return nil, newError(KindBudget, "max_cost_usd is set but no price is known for model %q; set price_input_per_mtok and price_output_per_mtok", model)
+			return nil, newError(KindBudget, "max_cost_usd is set but no price is known for model %q; set price_input_per_mtok and price_output_per_mtok in the user config and name this model there (a price override applies only to the model set in user scope)", model)
 		}
 		if b.spent.CostUSD+b.reserved.CostUSD+cost > b.limits.MaxCostUSD {
 			return nil, newError(KindBudget, "max_cost_usd %.4f would be exceeded (%.4f spent, %.4f held by calls in flight, this call may cost up to %.4f)",
@@ -133,59 +125,6 @@ func (r *reservation) release(tokens int, cost float64) {
 	r.b.reserved.CostUSD -= r.cost
 	r.b.spent.Tokens += tokens
 	r.b.spent.CostUSD += cost
-	if r.sub != nil {
-		r.sub.tokens += tokens
-		r.sub.cost += cost
-		r.sub.calls++
-	}
-}
-
-// subBudget admits the further provider requests of one call that a backend splits (the
-// liter-llm one-request-per-input embedding fallback). The call's own reservation covers its
-// first request; every further one reserves its own worst case before it is sent, so max_calls,
-// max_tokens and max_cost_usd hold per request, and is charged as it ends. It is used by one
-// goroutine at a time (the backend sends the requests in sequence).
-type subBudget struct {
-	b      *Budget
-	model  string
-	tokens int
-	cost   float64
-	calls  int
-}
-
-type subBudgetKey struct{}
-
-// subBudgetFrom returns the subBudget of ctx, or nil when no budget is active.
-func subBudgetFrom(ctx context.Context) *subBudget {
-	if s, ok := ctx.Value(subBudgetKey{}).(*subBudget); ok {
-		return s
-	}
-	return nil
-}
-
-// reserve admits one further request with worst-case usage worst. A nil subBudget (no budget
-// active) admits everything and returns a nil reservation, whose methods do nothing.
-func (s *subBudget) reserve(worst Usage) (*reservation, error) {
-	if s == nil {
-		return nil, nil
-	}
-	r, err := s.b.reserve(s.model, worst)
-	if err != nil {
-		return nil, err
-	}
-	r.sub = s
-	return r, nil
-}
-
-// done settles a further request: its usage on success, the failure rule otherwise.
-func (r *reservation) done(model string, usage Usage, err error) {
-	switch {
-	case r == nil:
-	case err != nil:
-		r.fail(err)
-	default:
-		r.settle(model, usage)
-	}
 }
 
 // unbilled reports whether err is a rejection the provider did not bill.
@@ -241,10 +180,8 @@ func (c *budgetClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 		res.fail(err)
 		return resp, err
 	}
-	usage := resp.Usage
-	if usage.Total() == 0 {
-		usage = worst // no usage reported: assume the worst, fail closed
-	}
+	usage := chargeable(resp.Usage, worst)
+	resp.Usage = usage
 	resp.CostUSD, resp.CostKnown = res.settle(resp.Model, usage)
 	return resp, nil
 }
@@ -260,27 +197,17 @@ func (c *budgetClient) Embed(ctx context.Context, req EmbedRequest) (EmbedRespon
 	if err != nil {
 		return EmbedResponse{}, err
 	}
-	sub := &subBudget{b: c.b, model: model}
-	resp, err := c.next.Embed(context.WithValue(ctx, subBudgetKey{}, sub), req)
+	resp, err := c.next.Embed(ctx, req)
 	if err != nil {
-		if resp.firstBilled != nil {
-			// The first request completed before a further one failed: it was billed as reported.
-			res.settle(model, *resp.firstBilled)
-		} else {
-			res.fail(err)
-		}
-		return EmbedResponse{}, err
+		res.fail(err)
+		return resp, err
 	}
-	// The further requests charged themselves; the reservation settles what is left.
-	usage := Usage{PromptTokens: max(resp.Usage.PromptTokens-sub.tokens, 0)}
-	if resp.Usage.Total() == 0 {
-		usage = worst
+	usage := chargeable(resp.Usage, worst)
+	resp.Usage = usage
+	if resp.Requests > 1 {
+		c.b.addCalls(resp.Requests - 1)
 	}
-	if extra := resp.Requests - 1 - sub.calls; extra > 0 {
-		c.b.addCalls(extra)
-	}
-	cost, known := res.settle(resp.Model, usage)
-	resp.CostUSD, resp.CostKnown = cost+sub.cost, known
+	resp.CostUSD, resp.CostKnown = res.settle(resp.Model, usage)
 	return resp, nil
 }
 
@@ -289,6 +216,16 @@ func (b *Budget) addCalls(n int) {
 	b.mu.Lock()
 	b.spent.Calls += n
 	b.mu.Unlock()
+}
+
+// chargeable is the usage a call is charged. The provider's figure is trusted
+// only when it is plausible: a missing report (zero) or a negative component
+// could lower the spent total, so either one fails closed to the worst case.
+func chargeable(reported, worst Usage) Usage {
+	if reported.PromptTokens < 0 || reported.CompletionTokens < 0 || reported.Total() <= 0 {
+		return worst
+	}
+	return reported
 }
 
 func (c *budgetClient) Close() error { return c.next.Close() }
