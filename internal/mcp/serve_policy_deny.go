@@ -1,9 +1,7 @@
 package mcp
 
 import (
-	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
@@ -45,10 +43,9 @@ func policyFiles(cfg *config.Config) []string {
 // instead of refusing to start: a denied served skill is content the server
 // can leave out, unlike a denied include, which stays a load failure.
 //
-// The policy reports a served pin as `served skill "<name>": <lock> pins
-// <digest>, ...`. A violation is taken only when it names a pin of the lock
-// with exactly that name and digest, so anything else (or a change of the
-// message) keeps failing the load: the fallback is the strict behavior.
+// A violation is taken only when its structured subject names a served pin
+// of the lock with exactly that name, view and digest, so anything else keeps
+// failing the load: the fallback is the strict behavior.
 func takeServedDenials(cfg *config.Config, lock *lockfile.File) map[string]string {
 	out := cfg.PolicyOutcome
 	if out == nil || out.Warn || lock == nil || len(lock.Served) == 0 {
@@ -75,13 +72,13 @@ func takeServedDenials(cfg *config.Config, lock *lockfile.File) map[string]strin
 // servedDenial reports the digest of the lock's served pin that an AR747
 // violation names, if it names one.
 func servedDenial(v config.PolicyViolation, lock *lockfile.File) (string, bool) {
-	if v.Code != lint.CodeDigestDenied {
+	sub := v.Subject
+	if v.Code != lint.CodeDigestDenied || sub == nil || sub.Kind != lockfile.KindServed || sub.Digest == "" {
 		return "", false
 	}
 	for i := range lock.Served {
 		e := &lock.Served[i]
-		prefix := fmt.Sprintf("served skill %q: %s pins %s,", e.Name, lockfile.FileName, e.Digest)
-		if e.Digest != "" && strings.HasPrefix(v.Message, prefix) {
+		if e.Name == sub.Name && e.View == sub.Domain && e.Digest == sub.Digest {
 			return e.Digest, true
 		}
 	}
