@@ -70,9 +70,9 @@ func startCollector(t *testing.T) (endpoint, outDir string) {
 	require.NoError(t, os.MkdirAll(outDir, 0o750))
 	require.NoError(t, os.Chmod(outDir, 0o777)) //nolint:gosec // the collector runs as another uid and must write here
 	cfg := filepath.Join(dir, "config.yaml")
-	require.NoError(t, os.WriteFile(cfg, []byte(otelcolConfig), 0o600))
+	require.NoError(t, os.WriteFile(cfg, []byte(otelcolConfig), 0o644)) //nolint:gosec // the collector runs as another uid and must read it
 
-	out, err := exec.Command(docker, "run", "-d", "--rm", "-p", "127.0.0.1::4318", //nolint:gosec // fixed arguments, test paths
+	out, err := exec.Command(docker, "run", "-d", "-p", "127.0.0.1::4318", //nolint:gosec // fixed arguments, test paths
 		"-v", cfg+":/etc/otelcol/config.yaml:ro", "-v", outDir+":/out", otelcolImage, "--config=/etc/otelcol/config.yaml").CombinedOutput()
 	require.NoError(t, err, string(out))
 	id := strings.TrimSpace(string(out))
