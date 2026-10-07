@@ -57,7 +57,7 @@ type CurvePoint struct {
 //nolint:tagliatelle // calibration keys are snake_case by project convention
 type DimCalibration struct {
 	Status string `json:"status"`
-	// N is how many golden cases labelled the dimension and were judged.
+	// N is how many golden cases labeled the dimension and were judged.
 	N int `json:"n"`
 	// Errors counts golden cases the judge could not answer for this dimension.
 	Errors      int        `json:"errors,omitempty"`

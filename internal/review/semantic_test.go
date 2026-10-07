@@ -19,7 +19,7 @@ func twoSkills(t *testing.T, extra ...lint.Finding) (*Rubric, *Results) {
 	t.Helper()
 	rb := builtin(t)
 	a := skill("a", "Deploy the service to staging when asked to ship a build; not for rollbacks")
-	b := skill("b", "Summarise a pull request for the changelog; not for releases")
+	b := skill("b", "Summarize a pull request for the changelog; not for releases")
 	return rb, Run(Input{Rubric: rb, Items: []Item{a, b}, Findings: extra})
 }
 
@@ -142,7 +142,7 @@ func TestVotesAreCachedSeparatelyAndReproduced(t *testing.T) {
 	before := len(fake.ChatCalls())
 
 	// Act: the same run over fresh results
-	again := Run(Input{Rubric: rb, Items: []Item{skill("a", "Deploy the service to staging when asked to ship a build; not for rollbacks"), skill("b", "Summarise a pull request for the changelog; not for releases")}})
+	again := Run(Input{Rubric: rb, Items: []Item{skill("a", "Deploy the service to staging when asked to ship a build; not for rollbacks"), skill("b", "Summarize a pull request for the changelog; not for releases")}})
 	second := mustRun(t, SemanticInput{Rubric: rb, Results: again, Options: SemanticOptions{Client: client, K: 3}})
 
 	// Assert
@@ -340,7 +340,7 @@ func TestAnItemTheJudgeSawOnlyInPartIsListedAsTruncated(t *testing.T) {
 	rb := builtin(t)
 	big := skill("a", "Deploy the service to staging")
 	big.Body = strings.Repeat("Run the deploy script and check the logs.\n", 1500)
-	small := skill("b", "Summarise a pull request for the changelog")
+	small := skill("b", "Summarize a pull request for the changelog")
 	res := Run(Input{Rubric: rb, Items: []Item{big, small}})
 	client, _ := newClient(t, &scriptedJudge{}, llm.Config{})
 
@@ -442,7 +442,7 @@ func TestRedactModeSendsTheMaskedItemAndNeverTheCredential(t *testing.T) {
 	leak.Raw = "---\nname: leak\ndescription: Rotate the cloud credentials, key AKIAIOSFODNN7EXAMPLE\n---\nbody\n"
 	hidden := skill("hidden", "Deploy\u200b the service")
 	hidden.Raw = "---\nname: hidden\ndescription: Deploy\u200b the service\n---\n"
-	other := skill("other", "Summarise a pull request for the changelog")
+	other := skill("other", "Summarize a pull request for the changelog")
 
 	t.Run("on_secret = redact masks the credential", func(t *testing.T) {
 		res := Run(Input{Rubric: rb, Items: []Item{leak, hidden, other}, Config: &config.ReviewConfig{OnSecret: config.ReviewOnSecretRedact}})

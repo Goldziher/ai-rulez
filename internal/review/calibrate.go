@@ -14,7 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-// minDimCases is how many labelled golden cases a dimension needs before its
+// minDimCases is how many labeled golden cases a dimension needs before its
 // measurements mean anything; with fewer it is reported "uncalibrated" and never gates.
 const minDimCases = 6
 
@@ -325,7 +325,7 @@ func runProbes(ctx context.Context, gc GoldenCase, base CaseResult, baseSem *Sem
 	return tally, nil
 }
 
-// declaredProbes are the probes the golden cases labelled for d ask for, and that apply to it:
+// declaredProbes are the probes the golden cases labeled for d ask for, and that apply to it:
 // reorder only to a contextual dimension of a case with at least two siblings.
 func declaredProbes(d Dimension, cases []GoldenCase) map[string]bool {
 	out := map[string]bool{}
@@ -459,7 +459,7 @@ func measureDimension(rb *Rubric, d Dimension, cases []GoldenCase, results []Cas
 	dc := DimCalibration{N: len(gold), Errors: errs}
 	if len(gold) < minDimCases {
 		dc.Status = CalUncalibrated
-		dc.Misses = []string{fmt.Sprintf("only %d labelled case(s); %d are needed", len(gold), minDimCases)}
+		dc.Misses = []string{fmt.Sprintf("only %d labeled case(s); %d are needed", len(gold), minDimCases)}
 		return dc, diffs
 	}
 	dc.Kappa = round3(quadraticKappa(gold, pred, 3))
