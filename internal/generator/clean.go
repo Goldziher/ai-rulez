@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -194,9 +195,48 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 		if g.userMode && !g.userManaged(abs, output) {
 			continue
 		}
+		// In project scope the same holds: a file at a generated path may be the
+		// user's own (a CLAUDE.md that `convert` imported and generate has not yet
+		// replaced), and being at the path proves nothing.
+		if !g.userMode && !g.projectFileIsOurs(abs, output) {
+			g.warnOnce("Keeping "+output.Path+": nothing shows ai-rulez wrote it",
+				"hint", "it has no Content-Hash and is not in the generated manifest; delete it by hand if it is not needed")
+			continue
+		}
 		plan.Files = append(plan.Files, abs)
 	}
 	return dirs
+}
+
+// projectFileIsOurs reports whether clean may remove the project file at abs
+// because ai-rulez provably wrote it: it carries a Content-Hash, its bytes equal
+// what a generate would write, or the generated manifest lists it and it carries a
+// generated banner or the digest the local manifest recorded. With no manifest
+// and no header nothing is provable, so nothing is removed.
+func (g *Generator) projectFileIsOurs(abs string, output config.OutputFile) bool {
+	data, err := g.config.ReadExisting(abs)
+	if err != nil {
+		return false
+	}
+	if output.RawContent != nil {
+		if bytes.Equal(data, output.RawContent) {
+			return true
+		}
+	} else if string(data) == g.finalContent(output) {
+		return true
+	}
+	if stored, _, _ := g.scanHashes(abs); stored != "" {
+		return true
+	}
+	rel := filepath.ToSlash(g.convertToRelativePath(abs))
+	if !slices.Contains(g.previousManifestFiles(), rel) {
+		return false
+	}
+	if hasGeneratedBanner(abs, data) {
+		return true
+	}
+	want, ok := g.manifestDigestSet()[rel]
+	return ok && want == fileDigest(data)
 }
 
 // isMergedDocument reports whether abs is one of the documents ai-rulez merges
