@@ -413,3 +413,12 @@ func TestSecurityOnlyDropsSettingsAndLLMFindings(t *testing.T) {
 		}
 	}
 }
+
+func TestArticle(t *testing.T) {
+	if got := article(kindAgent); got != "an" {
+		t.Errorf("article(agent) = %q", got)
+	}
+	if got := article(kindSkill); got != "a" {
+		t.Errorf("article(skill) = %q", got)
+	}
+}
