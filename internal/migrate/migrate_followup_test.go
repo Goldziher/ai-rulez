@@ -58,3 +58,31 @@ func TestToleratePlusBudgetGivesAnActionableError(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, string(before), string(after))
 }
+
+func TestAdoptDefaultsRemovesTheLegacyGitignoreBlock(t *testing.T) {
+	root, _ := writeProject(t, "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n", nil)
+	legacy := "node_modules/\n\n# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)\nAGENTS.md\nCLAUDE.md\n# END ai-rulez\n"
+	require.NoError(t, os.WriteFile(filepath.Join(root, ".gitignore"), []byte(legacy), 0o644))
+
+	report, err := migrate.Run(migrate.Options{Root: root, AdoptDefaults: true})
+
+	require.NoError(t, err)
+	require.False(t, report.Failed(), "%+v", report.Projects)
+	got, err := os.ReadFile(filepath.Join(root, ".gitignore"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(got), "ai-rulez")
+	assert.Contains(t, string(got), "node_modules/")
+}
+
+func TestPinnedDefaultsKeepTheLegacyGitignoreBlock(t *testing.T) {
+	root, _ := writeProject(t, "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n", nil)
+	legacy := "# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)\nAGENTS.md\n# END ai-rulez\n"
+	require.NoError(t, os.WriteFile(filepath.Join(root, ".gitignore"), []byte(legacy), 0o644))
+
+	_, err := migrate.Run(migrate.Options{Root: root})
+
+	require.NoError(t, err)
+	got, err := os.ReadFile(filepath.Join(root, ".gitignore"))
+	require.NoError(t, err)
+	assert.Equal(t, legacy, string(got), "gitignore = true is pinned, so the block is still wanted")
+}
