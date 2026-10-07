@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -93,5 +95,95 @@ func TestRunGivesTheChildNoControllingTerminal(t *testing.T) {
 	}
 }
 
-// helperMore handles the modes of later tests.
-func helperMore(string, []string) int { return 2 }
+// helperMore handles the process-tree modes:
+//   - linger: sleep, the helper that must not outlive the run;
+//   - escapee <pidfile> <hold>: start a linger in a new session (setsid), write
+//     its pid, then stay alive for hold;
+//   - daemon <pidfile> <hold>: start an escapee (holding 300ms) in a new
+//     session, a double fork, then stay alive for hold.
+func helperMore(mode string, args []string) int {
+	switch mode {
+	case "linger":
+		time.Sleep(30 * time.Second)
+		return 0
+	case "escapee", "daemon":
+		if len(args) < 2 {
+			return 2
+		}
+		hold, err := time.ParseDuration(args[1])
+		if err != nil {
+			return 2
+		}
+		exe, _ := os.Executable() //nolint:errcheck // the parent already ran it
+		var c *exec.Cmd
+		if mode == "escapee" {
+			c = exec.Command(exe) //nolint:gosec // the test binary
+			c.Env = append(os.Environ(), helperEnv+"=linger")
+		} else {
+			c = exec.Command(exe, args[0], "300ms") //nolint:gosec // the test binary
+			c.Env = append(os.Environ(), helperEnv+"=escapee")
+		}
+		c.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		if err := c.Start(); err != nil {
+			return 3
+		}
+		if mode == "escapee" {
+			if err := os.WriteFile(args[0], []byte(strconv.Itoa(c.Process.Pid)), 0o600); err != nil {
+				return 3
+			}
+		}
+		time.Sleep(hold)
+		return 0
+	}
+	return 2
+}
+
+// gone reports whether pid has exited (a zombie waiting for its new parent to
+// reap it counts as exited).
+func gone(pid int) bool {
+	return syscall.Kill(pid, 0) != nil || isZombie(pid)
+}
+
+func TestRunKillsHelpersThatLeaveTheGroup(t *testing.T) {
+	tests := []struct {
+		name       string
+		mode, hold string
+		timeout    time.Duration
+		wantStatus Status
+	}{
+		{"setsid helper at the timeout", "escapee", "30s", 500 * time.Millisecond, StatusTimeout},
+		{"setsid helper after a clean exit", "escapee", "300ms", 10 * time.Second, StatusOK},
+		{"double-forked daemon after a clean exit", "daemon", "800ms", 10 * time.Second, StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			pidfile := filepath.Join(t.TempDir(), "pid")
+			spec := helperSpec(t, tt.mode, pidfile, tt.hold)
+			spec.Timeout = tt.timeout
+			// Act
+			res := Run(context.Background(), spec)
+			// Assert
+			if res.Status != tt.wantStatus {
+				t.Fatalf("status = %s (%v), want %s", res.Status, res.Err, tt.wantStatus)
+			}
+			var pid int
+			for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+				if data, err := os.ReadFile(pidfile); err == nil && len(data) > 0 {
+					pid, _ = strconv.Atoi(string(data)) //nolint:errcheck // checked below
+					break
+				}
+			}
+			if pid <= 1 {
+				t.Fatal("the helper never reported its pid")
+			}
+			t.Cleanup(func() { _ = syscall.Kill(pid, syscall.SIGKILL) }) //nolint:errcheck // leave nothing behind
+			for deadline := time.Now().Add(3 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+				if gone(pid) {
+					return
+				}
+			}
+			t.Fatalf("helper %d outlived the run", pid)
+		})
+	}
+}

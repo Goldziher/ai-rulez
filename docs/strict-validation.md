@@ -666,9 +666,12 @@ comes from the repository, it runs only when you pass `--external`. The command 
 a shell.
 
 Every run is bounded: a `timeout` (default 2 minutes, at most 15, applied to each run), a 32 MiB cap on each of
-stdout and stderr, and a kill of the whole process group at the timeout and again after the command exits, so a
-daemonised helper does not outlive the run. On Windows the child is placed in a Job Object that is terminated the
-same way; a grandchild spawned in the instant between process start and job assignment can escape it. Output
+stdout and stderr, and a kill of the whole process tree at the timeout and again after the command exits. On Linux
+and macOS the tree is the command's session and process group plus every descendant seen while it ran (the process
+table is read at a backing-off interval up to 200 ms), so a helper that calls `setsid()` is killed too; a daemon that
+forks, detaches and loses its parent between two reads can still escape. On Windows the child is placed in a Job
+Object that is terminated the same way; a grandchild spawned in the instant between process start and job
+assignment can escape it. Output
 past the cap is dropped without blocking the scanner: stdout past it is `AR9E3` (never ingested), while stderr
 past it is truncated silently, and stderr is only ever used, cleaned and cut to 500 characters, in the detail of
 an `AR9E3` message. A command that exits 0 while a helper still holds its output pipe open is a success: its output
