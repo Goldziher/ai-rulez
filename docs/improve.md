@@ -180,7 +180,8 @@ outcome per case. A candidate is accepted only if all hold:
 - no sibling lost trigger recall (above);
 - the diff policy held.
 
-Cases that are not unanimous across runs are `unstable`: shown, but never counted as wins or losses. A baseline that
+Cases that are not unanimous across runs are `unstable`: shown, and never counted as wins; a majority pass-to-fail
+flip still counts as a loss, so noise cannot hide a regression from `--max-regressions`. A baseline that
 already passes everything exits 2 before the optimizer runs. `--max-holdout-evals` bounds how often the held-out
 set is consumed. Each round continues from the optimizer's own state; the best accepted round (highest gain,
 earliest on ties) is kept, or the first with `--stop-at-first-accept`.

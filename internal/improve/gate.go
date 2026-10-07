@@ -209,7 +209,8 @@ type PairRow struct {
 	Case string `json:"case"`
 	Base bool   `json:"base_pass"`
 	Cand bool   `json:"candidate_pass"`
-	// Unstable rows are shown but never count as wins or losses.
+	// Unstable rows are shown and never count as wins; a majority pass-to-fail flip
+	// on one still counts as a loss.
 	Unstable bool `json:"unstable,omitempty"`
 }
 
@@ -273,12 +274,17 @@ func Compare(base, cand []CaseOutcome) Comparison {
 		row := PairRow{Case: o.Case, Base: o.Pass, Cand: co.Pass, Unstable: o.Unstable || co.Unstable}
 		cmp.Table = append(cmp.Table, row)
 		switch {
+		case o.Pass && !co.Pass:
+			// A majority pass-to-fail flip is a loss even when the votes were split: noise
+			// must never hide a regression from --max-regressions.
+			cmp.Losses = append(cmp.Losses, o.Case)
+			if row.Unstable {
+				cmp.Unstable = append(cmp.Unstable, o.Case)
+			}
 		case row.Unstable:
 			cmp.Unstable = append(cmp.Unstable, o.Case)
 		case !o.Pass && co.Pass:
 			cmp.Wins = append(cmp.Wins, o.Case)
-		case o.Pass && !co.Pass:
-			cmp.Losses = append(cmp.Losses, o.Case)
 		}
 	}
 	cmp.Base, cmp.Cand = MetricsOf(b, both), MetricsOf(c, both)
