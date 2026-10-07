@@ -791,9 +791,11 @@ less egress than the profile: `AR9E0`), severity map and flag deny-list; keys se
 A staged scanner (one with `inputs`) runs confined when `isolation` allows it: no network (unless it declares
 `egress = true`) and no writes outside its scratch directory, which holds the stage, `HOME`, `TMPDIR` and the `{out}`
 file. The backends are in `internal/sandbox`: macOS `sandbox-exec` (deprecated by Apple, still present; network and
-filesystem), Linux `bwrap` (network and filesystem) or `unshare --net` (network only). A scanner that is not
-installed is not wrapped. On any other system, or where the tool is installed but cannot work (user namespaces
-disabled, already inside a sandbox), no backend is available:
+filesystem), Linux `bwrap` (network and filesystem) or `unshare --net` (network only). Each installed backend is
+tried once with a trivial command, strongest first, and the first that works is used: in a container that allows
+user namespaces but refuses `bwrap`'s `/proc` mount, `unshare` confines the network. A scanner that is not
+installed is not wrapped. On any other system, or where no installed tool works (user namespaces disabled, already
+inside a sandbox), no backend is available:
 
 | `isolation` | A backend works | No backend |
 | --- | --- | --- |

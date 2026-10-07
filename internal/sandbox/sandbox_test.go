@@ -161,10 +161,17 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// requireSandboxEnv makes a missing backend a failure instead of a skip, for a
+// run that must prove confinement (the unprivileged Linux container stage).
+const requireSandboxEnv = "AI_RULEZ_REQUIRE_SANDBOX"
+
 func realSandbox(t *testing.T) *Sandbox {
 	t.Helper()
 	sb := Default()
 	if err := sb.Check(context.Background()); err != nil {
+		if os.Getenv(requireSandboxEnv) != "" {
+			t.Fatalf("%s is set but no process isolation works: %v", requireSandboxEnv, err)
+		}
 		t.Skipf("no usable process isolation: %v", err)
 	}
 	return sb
