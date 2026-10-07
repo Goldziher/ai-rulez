@@ -245,6 +245,9 @@ func (c *Config) validateManagedSettings() error {
 			return oops.With("field", "claude.settings.managed.env").With("value", name).
 				Errorf("%q is not a valid environment variable name", name)
 		}
+		if err := CheckRepoTelemetryEnv(name, managed.Env[name]); err != nil {
+			return oops.With("field", "claude.settings.managed.env").Errorf("%s", err.Error())
+		}
 	}
 	for skill, state := range managed.SkillOverrides {
 		if strings.TrimSpace(skill) == "" {

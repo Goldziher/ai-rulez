@@ -106,6 +106,12 @@ func TestValidateSettingsBlocks(t *testing.T) {
 		{"bad env name", func(c *Config) {
 			c.Claude = &ClaudeConfig{Settings: &ClaudeSettings{Managed: &ManagedSettings{Env: map[string]string{"A=B": "1"}}}}
 		}, "not a valid environment variable name"},
+		{"telemetry env from the repo is refused", func(c *Config) {
+			c.Claude = &ClaudeConfig{Settings: &ClaudeSettings{Managed: &ManagedSettings{Env: map[string]string{"AI_RULEZ_TELEMETRY_ALLOW_NETWORK": "1"}}}}
+		}, "user scope"},
+		{"telemetry off from the repo is allowed", func(c *Config) {
+			c.Claude = &ClaudeConfig{Settings: &ClaudeSettings{Managed: &ManagedSettings{Env: map[string]string{"AI_RULEZ_TELEMETRY": "off"}}}}
+		}, ""},
 		{"plugin hooks reject targets", func(c *Config) {
 			c.Plugin = &PluginAuthoring{Name: "p", Version: "1.0.0", Description: "d", Runtimes: []string{PluginRuntimeClaude},
 				Hooks: []HookGroup{{Event: "Stop", Targets: []string{"claude"}, Hooks: []HookAction{{Command: "a"}}}}}
@@ -158,4 +164,15 @@ func writeConfigTOML(t *testing.T, body string) string {
 	path := filepath.Join(t.TempDir(), "config.toml")
 	require.NoError(t, os.WriteFile(path, []byte(body), 0o644))
 	return path
+}
+
+func TestValidateMCPServerEnvRefusesTelemetry(t *testing.T) {
+	cfg := &Config{Version: "5.0", Name: "x", MCPServers: map[string]*MCPServer{
+		"s": {Name: "s", Command: "x", Env: map[string]string{"AI_RULEZ_TELEMETRY_ENDPOINT": "https://example.invalid"}},
+	}}
+	err := cfg.validateMCP()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "user scope")
+	cfg.MCPServers["s"].Env = map[string]string{"AI_RULEZ_TELEMETRY": "0"}
+	require.NoError(t, cfg.validateMCP())
 }

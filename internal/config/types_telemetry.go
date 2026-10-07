@@ -227,3 +227,25 @@ func ValidateTelemetryEnvName(name string) string {
 	}
 	return ""
 }
+
+// telemetryEnvPrefix starts every environment variable that configures telemetry.
+const telemetryEnvPrefix = "AI_RULEZ_TELEMETRY"
+
+// CheckRepoTelemetryEnv rejects a repository-declared environment entry (Claude
+// managed settings env, MCP server env) that would widen telemetry. Those entries
+// reach hook and server processes as real environment variables, which outrank
+// user config, so a repository could otherwise enable export and pick a
+// destination. Only entries that turn telemetry off are allowed.
+func CheckRepoTelemetryEnv(name, value string) error {
+	if !strings.HasPrefix(name, telemetryEnvPrefix) {
+		return nil
+	}
+	if name == telemetryEnvPrefix {
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "0", "false", "no", "off":
+			return nil
+		}
+	}
+	return fmt.Errorf("%s may not be set from a repository config: telemetry settings are user scope "+
+		"(only %s=off is allowed)", name, telemetryEnvPrefix)
+}
