@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,6 +25,9 @@ import (
 // exitImproveNoCandidate is the exit status of a run that finished without an
 // acceptable candidate (the report is written).
 const exitImproveNoCandidate = 2
+
+// improveKindSkill is the content kind improve optimizes and the key of its plan JSON.
+const improveKindSkill = "skill"
 
 // improveExperimental is printed once per invocation.
 const improveExperimental = "warning: `ai-rulez improve` is experimental: flags, the optimizer protocol and report.json may change before it is stable (docs/improve.md)"
@@ -121,7 +125,7 @@ policy: edits to scripts/ and assets/ need --allow-scripts, frontmatter changes 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, stop := signal.NotifyContext(commandContext(cmd), os.Interrupt)
 		defer stop()
-		fmt.Fprintln(cmd.ErrOrStderr(), improveExperimental)
+		reportWriter{cmd.ErrOrStderr()}.printf("%s\n", improveExperimental)
 		cfg, err := loadConfigForCommand(ctx, nil)
 		if err != nil {
 			return err
@@ -165,10 +169,10 @@ func init() {
 	f.IntVar(&improveFlags.runs, "runs", improve.DefaultRuns, "Eval runs per case and arm; the majority outcome counts")
 	f.DurationVar(&improveFlags.timeout, "timeout", improve.DefaultTimeout, "Time limit for one optimizer invocation; its whole process tree is killed when it ends")
 	f.DurationVar(&improveFlags.evalTimeout, "eval-timeout", 30*time.Minute, "Time limit for one eval runner call")
-	f.StringVar(&improveFlags.harness, "harness", "claude", "Harness the evals run against (recorded in the report)")
+	f.StringVar(&improveFlags.harness, "harness", evalHarnessClaude, "Harness the evals run against (recorded in the report)")
 	f.StringVar(&improveFlags.model, "model", "", "Model the evals run with")
 	f.StringVar(&improveFlags.runnerCommand, "runner-command", "", "Shell command for the command eval runner (default: claude-plugin-eval for the claude harness)")
-	f.StringVar(&improveFlags.claudeBin, "claude-bin", "claude", "claude executable for the claude-plugin-eval runner")
+	f.StringVar(&improveFlags.claudeBin, "claude-bin", evalHarnessClaude, "claude executable for the claude-plugin-eval runner")
 	f.StringVar(&improveFlags.judgeModel, "judge-model", "", "Grader model for claude-plugin-eval")
 	f.StringArrayVar(&improveFlags.runnerArgs, "runner-arg", nil, "Extra argument for the claude-plugin-eval runner; repeatable")
 	f.BoolVar(&improveFlags.allowFrontmatter, "allow-frontmatter", false, "Let the optimizer change allowed-tools, model and disable-model-invocation (the name is always fixed)")
@@ -206,7 +210,7 @@ func runImprove(cmd *cobra.Command, skill string) (noCandidate bool, err error) 
 	ctx, stop := signal.NotifyContext(commandContext(cmd), os.Interrupt)
 	defer stop()
 	errOut := cmd.ErrOrStderr()
-	fmt.Fprintln(errOut, improveExperimental)
+	reportWriter{errOut}.printf("%s\n", improveExperimental)
 	if err := checkFormatFlag(improveFlags.format); err != nil {
 		return false, err
 	}
@@ -229,13 +233,9 @@ func runImprove(cmd *cobra.Command, skill string) (noCandidate bool, err error) 
 	if len(st.egress) == 0 {
 		st.egress = choice.egress // a bundled adapter's own host, shown in the consent summary
 	}
-	configDirAbs, err := filepath.Abs(cfg.ConfigDir)
+	configDirAbs, repo, err := improveDirs(cfg)
 	if err != nil {
-		return false, oops.Wrapf(err, "resolve config directory")
-	}
-	repo, err := filepath.Abs(cfg.BaseDir)
-	if err != nil {
-		return false, oops.Wrapf(err, "resolve project directory")
+		return false, err
 	}
 	opts, err := buildImproveOptions(errOut, skill, choice.argv, configDirAbs, repo, st)
 	if err != nil {
@@ -248,20 +248,36 @@ func runImprove(cmd *cobra.Command, skill string) (noCandidate bool, err error) 
 	if improveFlags.dryRun {
 		return false, printImprovePlan(cmd.OutOrStdout(), plan)
 	}
-	fmt.Fprint(errOut, plan.Summary())
+	reportWriter{errOut}.printf("%s", plan.Summary())
 	if !improveFlags.yes && !confirmProceed("Run the optimizer with this plan?") {
 		return false, oops.Hint("Re-run with --yes to skip the prompt (CI)").Errorf("not confirmed: nothing was run")
 	}
+	return executeImprove(ctx, cmd.OutOrStdout(), plan)
+}
+
+// improveDirs resolves the absolute config and project directories.
+func improveDirs(cfg *config.Config) (configDirAbs, repo string, err error) {
+	if configDirAbs, err = filepath.Abs(cfg.ConfigDir); err != nil {
+		return "", "", oops.Wrapf(err, "resolve config directory")
+	}
+	if repo, err = filepath.Abs(cfg.BaseDir); err != nil {
+		return "", "", oops.Wrapf(err, "resolve project directory")
+	}
+	return configDirAbs, repo, nil
+}
+
+// executeImprove runs the plan and prints its report; noCandidate is true when nothing was accepted.
+func executeImprove(ctx context.Context, out io.Writer, plan *improve.Plan) (noCandidate bool, err error) {
 	report, err := plan.Execute(ctx)
 	if err != nil {
 		if report != nil { // stopped mid-run: the spend and the rounds so far are in the saved report
-			if perr := printImproveReport(cmd.OutOrStdout(), report); perr != nil {
+			if perr := printImproveReport(out, report); perr != nil {
 				return false, perr
 			}
 		}
 		return false, oops.Wrap(err)
 	}
-	if err := printImproveReport(cmd.OutOrStdout(), report); err != nil {
+	if err := printImproveReport(out, report); err != nil {
 		return false, err
 	}
 	return !report.Accepted(), nil
@@ -298,14 +314,7 @@ func resolveImproveSettings(cmd *cobra.Command, cfg *config.Config, errOut io.Wr
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
-	if len(res.IgnoredRepoKeys) > 0 {
-		fmt.Fprintf(errOut, "warning: %s the repository config sets [improve] %s, which choose what runs on your machine and with which environment: ignored without --trust-repo-optimizer\n",
-			improve.CodeRepoOptimizerIgnored, strings.Join(res.IgnoredRepoKeys, " and "))
-	}
-	if len(res.LoosenedRepoKeys) > 0 {
-		fmt.Fprintf(errOut, "warning: %s the repository config sets [improve] %s looser than the defaults: ignored without --trust-repo-optimizer (a repository may tighten the gate, not weaken it)\n",
-			improve.CodeRepoOptimizerIgnored, strings.Join(res.LoosenedRepoKeys, ", "))
-	}
+	warnIgnoredImproveKeys(errOut, &res)
 	e := &res.Effective
 	changed := cmd.Flags().Changed
 	st := &improveSettings{
@@ -315,6 +324,35 @@ func resolveImproveSettings(cmd *cobra.Command, cfg *config.Config, errOut io.Wr
 		minHoldoutCases: e.MinHoldoutCases, maxSkillGrowth: e.MaxSkillGrowth, requireCI: improveFlags.requireCIAboveZero || e.RequireCIAboveZero,
 		envPass: improveFlags.envPass, egress: improveFlags.egress, ignored: res.IgnoredRepoKeys,
 	}
+	applyImproveConfigDefaults(st, changed, e)
+	if st.isolation, err = resolveImproveIsolation(changed, e); err != nil {
+		return nil, err
+	}
+	switch {
+	case improveFlags.with != "" && improveFlags.adapter != "":
+		return nil, oops.Errorf("pass --with or --adapter, not both")
+	case improveFlags.with != "":
+		st.optimizer = improveFlags.with
+	case improveFlags.adapter != "":
+		st.optimizer = adapter.Prefix + improveFlags.adapter
+	}
+	return st, nil
+}
+
+// warnIgnoredImproveKeys tells the user which repository [improve] keys were not used (AR9J6).
+func warnIgnoredImproveKeys(errOut io.Writer, res *config.ImproveResolution) {
+	if len(res.IgnoredRepoKeys) > 0 {
+		reportWriter{errOut}.printf("warning: %s the repository config sets [improve] %s, which choose what runs on your machine and with which environment: ignored without --trust-repo-optimizer\n",
+			improve.CodeRepoOptimizerIgnored, strings.Join(res.IgnoredRepoKeys, " and "))
+	}
+	if len(res.LoosenedRepoKeys) > 0 {
+		reportWriter{errOut}.printf("warning: %s the repository config sets [improve] %s looser than the defaults: ignored without --trust-repo-optimizer (a repository may tighten the gate, not weaken it)\n",
+			improve.CodeRepoOptimizerIgnored, strings.Join(res.LoosenedRepoKeys, ", "))
+	}
+}
+
+// applyImproveConfigDefaults lets [improve] fill every setting its flag did not set.
+func applyImproveConfigDefaults(st *improveSettings, changed func(string) bool, e *config.ImproveConfig) {
 	if !changed("holdout-tag") && e.HoldoutTag != "" {
 		st.holdoutTag = e.HoldoutTag
 	}
@@ -339,25 +377,22 @@ func resolveImproveSettings(cmd *cobra.Command, cfg *config.Config, errOut io.Wr
 	if !changed("env-pass") && len(e.EnvPass) > 0 {
 		st.envPass = e.EnvPass
 	}
+}
+
+// resolveImproveIsolation picks the sandbox mode from the flag, then [improve].
+func resolveImproveIsolation(changed func(string) bool, e *config.ImproveConfig) (sandbox.Mode, error) {
 	mode := improveFlags.isolation
 	if !changed("isolation") && e.Isolation != "" {
 		mode = e.Isolation
 	}
-	st.isolation = sandbox.ModeNone
-	if mode != "" {
-		if st.isolation, err = sandbox.ParseMode(mode); err != nil {
-			return nil, oops.Wrap(err)
-		}
+	if mode == "" {
+		return sandbox.ModeNone, nil
 	}
-	switch {
-	case improveFlags.with != "" && improveFlags.adapter != "":
-		return nil, oops.Errorf("pass --with or --adapter, not both")
-	case improveFlags.with != "":
-		st.optimizer = improveFlags.with
-	case improveFlags.adapter != "":
-		st.optimizer = adapter.Prefix + improveFlags.adapter
+	parsed, err := sandbox.ParseMode(mode)
+	if err != nil {
+		return sandbox.ModeNone, oops.Wrap(err)
 	}
-	return st, nil
+	return parsed, nil
 }
 
 func buildImproveOptions(errOut io.Writer, skill string, argv []string, configDirAbs, repo string, st *improveSettings) (*improve.Options, error) {
@@ -425,7 +460,7 @@ func buildImproveEvalRunner(errOut io.Writer) (evals.Runner, error) {
 	switch {
 	case improveFlags.runnerCommand != "":
 		return &evals.CommandRunner{Command: improveFlags.runnerCommand, Timeout: improveFlags.evalTimeout, Stderr: errOut}, nil
-	case improveFlags.harness == "claude":
+	case improveFlags.harness == evalHarnessClaude:
 		return &evals.ClaudePluginEval{Bin: improveFlags.claudeBin, Runs: 1, JudgeModel: improveFlags.judgeModel,
 			ExtraArgs: improveFlags.runnerArgs, Timeout: improveFlags.evalTimeout, Stderr: errOut}, nil
 	}
@@ -436,7 +471,7 @@ func buildImproveEvalRunner(errOut io.Writer) (evals.Runner, error) {
 func printImprovePlan(w io.Writer, plan *improve.Plan) error {
 	if improveFlags.format == formatJSON {
 		doc := map[string]any{
-			"schema": "improve-plan/1", "dry_run": true, "run_id": plan.RunID, "skill": plan.Skill.ID,
+			"schema": "improve-plan/1", "dry_run": true, "run_id": plan.RunID, improveKindSkill: plan.Skill.ID,
 			"train": improve.IDs(plan.Split.Train), "held_out": improve.IDs(plan.Split.Held), "split_method": plan.Split.Method,
 			"estimate": plan.Estimate, "max_cost_usd": plan.Opts.MaxCostUSD, "egress": plan.Opts.Egress, "warnings": plan.Warnings,
 		}

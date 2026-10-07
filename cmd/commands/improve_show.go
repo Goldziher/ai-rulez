@@ -27,7 +27,7 @@ candidate cannot write terminal escapes. It changes nothing. A run whose report 
 user key is shown with a warning; improve apply and improve pr refuse it.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Fprintln(cmd.ErrOrStderr(), improveExperimental)
+		reportWriter{cmd.ErrOrStderr()}.printf("%s\n", improveExperimental)
 		if err := checkFormatFlag(improveFlags.format); err != nil {
 			return err
 		}
@@ -60,7 +60,7 @@ Nothing outside that directory is touched; a run directory that is a symlink is 
 --dry-run lists what would go; --all asks for confirmation unless --yes is given.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Fprintln(cmd.ErrOrStderr(), improveExperimental)
+		reportWriter{cmd.ErrOrStderr()}.printf("%s\n", improveExperimental)
 		if err := checkFormatFlag(improveFlags.format); err != nil {
 			return err
 		}
