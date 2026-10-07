@@ -158,3 +158,28 @@ func TestPinExampleUsesTheBarePackageName(t *testing.T) {
 		}
 	}
 }
+
+func TestMCPConfigFindingsHonorATomlIgnoreComment(t *testing.T) {
+	block := func(comment string) string {
+		return "\n[[mcp_servers]]\n" + comment + "name = \"g\"\ncommand = \"npx\"\nargs = [\"-y\", \"pkg\"]\n"
+	}
+	runRuleCases(t, []ruleCase{
+		{name: "comment above the name line", config: block("# ai-rulez-lint-ignore: AR012\n"), absent: []string{"AR012"}},
+		{name: "no comment", config: block(""), want: []string{"AR012:config.toml:6"}},
+	})
+}
+
+func TestExplainShowsTheTomlIgnoreFormForConfigAnchoredRules(t *testing.T) {
+	e, ok := Explain("AR012")
+	if !ok {
+		t.Fatal("AR012 not found")
+	}
+	joined := strings.Join(e.Suppress, "\n")
+	if !strings.Contains(joined, "# ai-rulez-lint-ignore: AR012") {
+		t.Errorf("explain should show the TOML comment form for a config-anchored rule:\n%s", joined)
+	}
+	md, _ := Explain("AR001")
+	if strings.Contains(strings.Join(md.Suppress, "\n"), "# ai-rulez-lint-ignore") {
+		t.Errorf("a markdown-only rule should not show the TOML form")
+	}
+}
