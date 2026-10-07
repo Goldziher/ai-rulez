@@ -1437,6 +1437,7 @@ ai-rulez doctor [config-file] [--strict] [--format json] [--profile <name>] [--n
 | `config` | The configuration fails to load, match the schema or validate (same as `validate`) | error |
 | `presets` | An unknown or removed preset name, with a suggestion: `windsurf` is now `devin`, `continue-dev` has no replacement, a typo gets a "did you mean" | error |
 | `mcp-env` | An MCP `${VAR}` placeholder in `env` or `headers` that no environment variable, `.env` file or `--env` value resolves (`${PROJECT_ROOT}` always resolves). Only servers active in the selected profile are checked | warning |
+| `includes` | A remote include with no cached copy. Doctor never fetches, so it cannot see whether the remote is reachable; `generate` fails when an include can be neither fetched nor read from the cache | warning |
 | `drift` | Generated files that are `missing`, `stale`, `edited` or `orphan` (the machinery behind [`generate --check`](#detecting-drift)) | warning |
 | `gitignore` | Generated paths `generate` wants git to ignore (committed outputs with `gitignore = true`, machine-local and secret outputs always) that git does not ignore; asked through `git check-ignore`, skipped outside a git repository | warning |
 | `documents` | A shared settings document ai-rulez merges into (`.claude/settings.json`, `.mcp.json`, `.codex/config.toml`, ...) that no longer parses as JSON, JSONC, TOML or YAML | error |

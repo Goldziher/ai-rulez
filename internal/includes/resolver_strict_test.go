@@ -2,6 +2,7 @@ package includes
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,7 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-func TestResolveIncludes_FailingIncludeIsAnErrorWhenLockIsStrict(t *testing.T) {
+func TestResolveIncludes_FailingIncludeIsAnErrorUnlessOffline(t *testing.T) {
 	tests := []struct {
 		name    string
 		mode    LockMode
@@ -20,12 +21,13 @@ func TestResolveIncludes_FailingIncludeIsAnErrorWhenLockIsStrict(t *testing.T) {
 		lock    bool
 		wantErr bool
 	}{
-		{"default only warns", LockAuto, false, false, false},
-		{"enforced lock without generate policy only warns", LockAuto, false, true, false},
+		{"default fails", LockAuto, false, false, true},
+		{"enforced lock without generate policy fails", LockAuto, false, true, true},
 		{"--locked", LockRequire, true, false, true},
 		{"--frozen", LockFrozen, true, false, true},
 		{"enforced lock under generate", LockAuto, true, true, true},
-		{"generate without lock", LockAuto, true, false, false},
+		{"generate without lock", LockAuto, true, false, true},
+		{"--no-fetch keeps the warning", LockAuto, true, false, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -33,6 +35,9 @@ func TestResolveIncludes_FailingIncludeIsAnErrorWhenLockIsStrict(t *testing.T) {
 			oldMode, oldReq := Mode, RequireWhenEnforced
 			t.Cleanup(func() { Mode, RequireWhenEnforced = oldMode, oldReq })
 			Mode, RequireWhenEnforced = tt.mode, tt.require
+			oldSkip := SkipFetch
+			t.Cleanup(func() { SkipFetch = oldSkip })
+			SkipFetch = tt.name == "--no-fetch keeps the warning"
 			dir := t.TempDir()
 			cfgDir := filepath.Join(dir, ".ai-rulez")
 			require.NoError(t, os.MkdirAll(cfgDir, 0o755))
@@ -52,7 +57,8 @@ func TestResolveIncludes_FailingIncludeIsAnErrorWhenLockIsStrict(t *testing.T) {
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "gone")
-				assert.ErrorIs(t, err, config.ErrLockViolation, "the loader only propagates lock violations")
+				assert.True(t, errors.Is(err, config.ErrLockViolation) || errors.Is(err, config.ErrIncludeUnresolved),
+					"the loader only propagates these sentinels")
 				return
 			}
 			require.NoError(t, err)

@@ -353,7 +353,7 @@ func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Conf
 
 	mergedContent, err := resolve(ctx, config)
 	if err != nil {
-		if errors.Is(err, ErrLockViolation) || errors.Is(err, ErrIncludeOutsideProject) {
+		if errors.Is(err, ErrLockViolation) || errors.Is(err, ErrIncludeOutsideProject) || errors.Is(err, ErrIncludeUnresolved) {
 			return err
 		}
 		log.Warn("Failed to resolve includes", "error", err)
