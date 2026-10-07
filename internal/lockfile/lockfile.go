@@ -34,19 +34,6 @@ const Version = 1
 // know) instead of misreading it.
 const VersionRolePins = 2
 
-// FormatVersion is the lowest version that can express what f holds: Version, or
-// VersionRolePins when f has role output pins.
-func (f *File) FormatVersion() int {
-	if f != nil {
-		for _, o := range f.Output {
-			if o.Role != "" {
-				return VersionRolePins
-			}
-		}
-	}
-	return Version
-}
-
 // Entry kinds.
 const (
 	KindInclude = "include"
@@ -148,6 +135,19 @@ type File struct {
 	// Scan records external scanner results over the staged content (scan.go);
 	// outside the tree digest.
 	Scan []Scan `toml:"scan,omitempty"`
+}
+
+// FormatVersion is the lowest version that can express what f holds: Version, or
+// VersionRolePins when f has role output pins.
+func (f *File) FormatVersion() int {
+	if f != nil {
+		for _, o := range f.Output {
+			if o.Role != "" {
+				return VersionRolePins
+			}
+		}
+	}
+	return Version
 }
 
 // HasContentPins reports whether the lock pins authored content.
