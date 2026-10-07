@@ -184,15 +184,9 @@ func runUsageExport(out io.Writer, args []string) error {
 	default:
 		return oops.Hint("Use --to file and a destination path, or --to otlp.").Errorf("--to must be file or otlp, got %q", usageExportTo)
 	}
-	dest := usageExportFile
-	if len(args) == 1 {
-		if dest != "" && dest != args[0] {
-			return oops.Errorf("give the destination once: as an argument or --file, not both")
-		}
-		dest = args[0]
-	}
-	if dest == "" {
-		return oops.Hint("Pass the destination: `usage export --to file out.ndjson`.").Errorf("a destination path is required")
+	dest, err := exportFileDest(args)
+	if err != nil {
+		return err
 	}
 	logPath := usageLog
 	if logPath == "" {
@@ -222,18 +216,41 @@ func runUsageExport(out io.Writer, args []string) error {
 		return err
 	}
 	w := reportWriter{out}
-	if usageExportDryRun {
-		w.printf("would write %d events in %d batches to %s (nothing written)\n", file.Events, file.Batches, dest)
-	} else {
-		if err := safefs.WriteFileAtomic(dest, file.Data); err != nil {
-			return oops.Wrapf(err, "write %s", dest)
-		}
-		w.printf("wrote %d events in %d batches to %s\n", file.Events, file.Batches, dest)
+	if err := writeExportFile(w, dest, file); err != nil {
+		return err
 	}
 	if read.Rejected > 0 {
 		w.printf("left out %d lines that failed validation\n", read.Rejected)
 	}
 	return nil
+}
+
+// writeExportFile writes the encoded export to dest, or with --dry-run says what it would write.
+func writeExportFile(w reportWriter, dest string, file telemetry.FileExport) error {
+	if usageExportDryRun {
+		w.printf("would write %d events in %d batches to %s (nothing written)\n", file.Events, file.Batches, dest)
+		return nil
+	}
+	if err := safefs.WriteFileAtomic(dest, file.Data); err != nil {
+		return oops.Wrapf(err, "write %s", dest)
+	}
+	w.printf("wrote %d events in %d batches to %s\n", file.Events, file.Batches, dest)
+	return nil
+}
+
+// exportFileDest is the destination of --to file: the argument or --file, given once.
+func exportFileDest(args []string) (string, error) {
+	dest := usageExportFile
+	if len(args) == 1 {
+		if dest != "" && dest != args[0] {
+			return "", oops.Errorf("give the destination once: as an argument or --file, not both")
+		}
+		dest = args[0]
+	}
+	if dest == "" {
+		return "", oops.Hint("Pass the destination: `usage export --to file out.ndjson`.").Errorf("a destination path is required")
+	}
+	return dest, nil
 }
 
 // sameFile reports whether two paths name the same existing file.
