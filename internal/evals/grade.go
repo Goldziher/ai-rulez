@@ -34,7 +34,8 @@ type OutcomeGrade struct {
 }
 
 // GradeOutcome evaluates the assertions and rubric of c against a result. A
-// runner-supplied verdict (Result.Passed) wins over local grading.
+// runner-supplied verdict (Result.Passed) wins over local grading, except for a
+// rubric the built-in grader graded: that grade must pass as well.
 func GradeOutcome(c *Case, r *Result, opts GradeOptions) OutcomeGrade {
 	grade := OutcomeGrade{Graded: len(c.Assertions) > 0 || c.HasRubric()}
 	if !grade.Graded {
@@ -46,6 +47,9 @@ func GradeOutcome(c *Case, r *Result, opts GradeOptions) OutcomeGrade {
 		if !grade.Passed {
 			grade.Failures = append(grade.Failures, "runner reported the outcome checks as failed")
 		}
+		if r.builtinRubric && c.HasRubric() {
+			checkRubric(c, r, &grade, "rubric was not graded by the built-in grader")
+		}
 		return grade
 	}
 	grade.Passed = true
@@ -56,20 +60,26 @@ func GradeOutcome(c *Case, r *Result, opts GradeOptions) OutcomeGrade {
 		}
 	}
 	if c.HasRubric() {
-		pass := DefaultRubricMinScore
-		if c.RubricMinScore != nil {
-			pass = *c.RubricMinScore
-		}
-		switch {
-		case r.RubricScore == nil:
-			grade.Passed = false
-			grade.Failures = append(grade.Failures, "rubric was not graded by the runner")
-		case *r.RubricScore < pass:
-			grade.Passed = false
-			grade.Failures = append(grade.Failures, fmt.Sprintf("rubric score %.2f is below %.2f", *r.RubricScore, pass))
-		}
+		checkRubric(c, r, &grade, "rubric was not graded by the runner")
 	}
 	return grade
+}
+
+// checkRubric fails grade when the rubric score is missing (with ungraded as the
+// reason) or below the case's minimum.
+func checkRubric(c *Case, r *Result, grade *OutcomeGrade, ungraded string) {
+	pass := DefaultRubricMinScore
+	if c.RubricMinScore != nil {
+		pass = *c.RubricMinScore
+	}
+	switch {
+	case r.RubricScore == nil:
+		grade.Passed = false
+		grade.Failures = append(grade.Failures, ungraded)
+	case *r.RubricScore < pass:
+		grade.Passed = false
+		grade.Failures = append(grade.Failures, fmt.Sprintf("rubric score %.2f is below %.2f", *r.RubricScore, pass))
+	}
 }
 
 // checkAssertion returns "" when the assertion holds, else why not.
