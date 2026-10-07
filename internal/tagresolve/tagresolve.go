@@ -215,7 +215,8 @@ func SelectGated(ctx context.Context, tags []RawTag, spec Spec, gate *AgeGate) (
 			continue
 		}
 		if gate.Active() && cand.Tag.Name != spec.Pinned {
-			if lookups++; lookups > maxGateLookups {
+			lookups++
+			if lookups > maxGateLookups {
 				sel.Held = append(sel.Held, Held{Tag: cand.Tag.Name, Reason: fmt.Sprintf("more than %d newer tags to check", maxGateLookups)})
 				break
 			}
