@@ -83,7 +83,7 @@ func (port) Emit(in Input) ([]File, []Finding, error) {
 	for i := range in.Plugins {
 		p := &in.Plugins[i]
 		props := map[string]any{
-			"kind": "plugin", "version": p.Version, "description": p.Description,
+			"kind": "plugin", keyVersion: p.Version, keyDescription: p.Description,
 			"runtimes": nonNil(p.Runtimes), "bundle": p.BundleFile, "bundle_digest": p.BundleDigest,
 			"repository": in.Repo, "commit": in.Commit, "lock_tree": in.LockTree,
 		}
@@ -92,7 +92,7 @@ func (port) Emit(in Input) ([]File, []Finding, error) {
 		}
 		for _, s := range Skills(p.Files) {
 			sprops := map[string]any{
-				"kind": "skill", "version": p.Version, "description": s.Description,
+				"kind": "skill", keyVersion: p.Version, keyDescription: s.Description,
 				"repository": in.Repo, "commit": in.Commit, "plugin": p.Name,
 			}
 			e := portEntity{Identifier: p.Name + "-" + s.Name, Title: s.Name, Properties: sprops, Relations: map[string]any{}}

@@ -100,6 +100,13 @@ type Emitter interface {
 
 var registry = map[string]Emitter{}
 
+// Keys of front matter and of the emitted catalogs.
+const (
+	keyName        = "name"
+	keyVersion     = "version"
+	keyDescription = "description"
+)
+
 func register(e Emitter) { registry[e.Name()] = e }
 
 // Lookup returns the emitter registered under name.
@@ -163,11 +170,11 @@ func Skills(files []File) []Doc {
 			continue
 		}
 		fm := frontMatter(f.Data)
-		name := fm["name"]
+		name := fm[keyName]
 		if name == "" {
 			name = strings.TrimPrefix(dir, "skills/")
 		}
-		out = append(out, Doc{Name: name, Description: fm["description"], Body: string(f.Data)})
+		out = append(out, Doc{Name: name, Description: fm[keyDescription], Body: string(f.Data)})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out

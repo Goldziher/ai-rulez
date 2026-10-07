@@ -36,6 +36,9 @@ type kiroDistribution struct {
 // the files get there is outside ai-rulez.
 type kiroSteering struct{}
 
+// Kiro steering front matter keys.
+const keyInclusion = "inclusion"
+
 func init() { register(kiroSteering{}) }
 
 func (kiroSteering) Name() string   { return "kiro-steering" }
@@ -66,18 +69,18 @@ func (kiroSteering) Emit(in Input) ([]File, []Finding, error) {
 		return nil
 	}
 	for _, r := range in.Rules {
-		front := map[string]any{"inclusion": "always"}
+		front := map[string]any{keyInclusion: "always"}
 		switch r.Mode {
 		case ModeGlob:
 			if len(r.Globs) == 0 {
 				findings = append(findings, Finding{Message: "rule " + r.Name + " is glob-scoped without globs; included always"})
 				break
 			}
-			front = map[string]any{"inclusion": "fileMatch", "fileMatchPattern": globValue(r.Globs)}
+			front = map[string]any{keyInclusion: "fileMatch", "fileMatchPattern": globValue(r.Globs)}
 		case ModeAuto:
-			front = map[string]any{"inclusion": "auto", "name": r.Name, "description": descriptionOr(r)}
+			front = map[string]any{keyInclusion: "auto", keyName: r.Name, keyDescription: descriptionOr(r)}
 		case ModeManual:
-			front = map[string]any{"inclusion": "manual"}
+			front = map[string]any{keyInclusion: "manual"}
 		}
 		if err := add("", Doc{Name: r.Name, Body: stripFrontMatter(r.Body)}, front); err != nil {
 			return nil, nil, err
@@ -85,7 +88,7 @@ func (kiroSteering) Emit(in Input) ([]File, []Finding, error) {
 	}
 	for i := range in.Plugins {
 		for _, s := range Skills(in.Plugins[i].Files) {
-			front := map[string]any{"inclusion": "auto", "name": s.Name, "description": descriptionOr(s)}
+			front := map[string]any{keyInclusion: "auto", keyName: s.Name, keyDescription: descriptionOr(s)}
 			if err := add("skill-", Doc{Name: s.Name, Body: stripFrontMatter(s.Body)}, front); err != nil {
 				return nil, nil, err
 			}
@@ -125,7 +128,7 @@ func globValue(globs []string) any {
 // steeringFile renders the YAML front matter, which Kiro requires to be the first
 // content of the file, followed by the body.
 func steeringFile(front map[string]any, body string) ([]byte, error) {
-	order := []string{"inclusion", "fileMatchPattern", "name", "description"}
+	order := []string{keyInclusion, "fileMatchPattern", keyName, keyDescription}
 	node := &yaml.Node{Kind: yaml.MappingNode}
 	for _, k := range order {
 		v, ok := front[k]
