@@ -72,7 +72,7 @@ type Spec struct {
 }
 
 // Result is what a run produced. Apart from Duration, it is a pure function of
-// the command's behaviour: output is returned byte for byte, never reordered.
+// the command's behavior: output is returned byte for byte, never reordered.
 type Result struct {
 	Status Status
 	// ExitCode is the exit status, or -1 when the command did not exit normally.
@@ -136,7 +136,13 @@ func Run(ctx context.Context, spec Spec) Result {
 	res.Duration = time.Since(start)
 	res.Stdout, res.StdoutTruncated = stdout.bytes()
 	res.Stderr, res.StderrTruncated = stderr.bytes()
+	classify(tctx, ctx, &res, runErr, cmd)
+	return res
+}
 
+// classify sets the status, exit code and error of res from how the run ended:
+// tctx carries the run's own deadline, ctx is the caller's.
+func classify(tctx, ctx context.Context, res *Result, runErr error, cmd *exec.Cmd) {
 	switch {
 	case runErr == nil:
 		res.Status, res.ExitCode = StatusOK, 0
@@ -160,7 +166,6 @@ func Run(ctx context.Context, spec Spec) Result {
 			res.Status, res.Err = StatusError, runErr
 		}
 	}
-	return res
 }
 
 // EffectiveTimeout applies the default and the maximum to a requested timeout.

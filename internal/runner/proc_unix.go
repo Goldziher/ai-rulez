@@ -108,38 +108,22 @@ func (t *procTree) watch() {
 // the root's group or session, or a descendant of a member. It returns the
 // members alive in table. The caller holds mu.
 func (t *procTree) collect(table []procEntry) []procEntry {
-	self := os.Getpid()
 	children := map[int][]procEntry{}
-	rootOurs := true
 	for _, p := range table {
 		children[p.ppid] = append(children[p.ppid], p)
-		if p.pid == t.root && t.rootStart == 0 {
-			t.rootStart = p.start // cancelled before attach: the root is not reaped yet
-		}
-		if p.pid == t.root && p.start != t.rootStart {
-			// The root was reaped and its pid reused: the kernel does not hand
-			// out a pid still in use as a group or session id, so nothing of
-			// ours is left in that group and the group test would match
-			// strangers.
-			rootOurs = false
-			t.rootReused = true
-		}
 	}
+	rootOurs := t.identifyRoot(table)
+	self := os.Getpid()
 	member := map[int]procEntry{}
 	var queue []procEntry
 	add := func(p procEntry) {
-		if p.pid <= 1 || p.pid == self {
-			return
-		}
-		if _, ok := member[p.pid]; !ok {
+		if _, ok := member[p.pid]; !ok && p.pid > 1 && p.pid != self {
 			member[p.pid] = p
 			queue = append(queue, p)
 		}
 	}
 	for _, p := range table {
-		if start, ok := t.tracked[p.pid]; ok && start == p.start {
-			add(p)
-		} else if rootOurs && t.root > 1 && (p.pid == t.root || p.pgid == t.root || p.sid == t.root) {
+		if t.isSeed(p, rootOurs) {
 			add(p)
 		}
 	}
@@ -158,6 +142,36 @@ func (t *procTree) collect(table []procEntry) []procEntry {
 	return out
 }
 
+// identifyRoot records the root's start time the first time table shows it and
+// reports whether the root's pid is still ours. A reaped root whose pid was
+// reused is not: the kernel does not hand out a pid still in use as a group or
+// session id, so nothing of ours is left in that group and the group test would
+// match strangers.
+func (t *procTree) identifyRoot(table []procEntry) bool {
+	for _, p := range table {
+		if p.pid != t.root {
+			continue
+		}
+		if t.rootStart == 0 {
+			t.rootStart = p.start // canceled before attach: the root is not reaped yet
+		}
+		if p.start != t.rootStart {
+			t.rootReused = true
+			return false
+		}
+	}
+	return true
+}
+
+// isSeed reports whether p is a tracked process, or (while the root's pid is
+// ours) the root or a process in its group or session.
+func (t *procTree) isSeed(p procEntry, rootOurs bool) bool {
+	if start, ok := t.tracked[p.pid]; ok && start == p.start {
+		return true
+	}
+	return rootOurs && t.root > 1 && (p.pid == t.root || p.pgid == t.root || p.sid == t.root)
+}
+
 // kill ends the whole tree: the process group, and every tracked descendant
 // still alive. Members are stopped first so none can fork a child that would
 // be reparented away before the kill; the table is read again until no new
@@ -169,7 +183,7 @@ func (t *procTree) kill(cmd *exec.Cmd) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.root == 0 {
-		t.root = cmd.Process.Pid // cancelled before attach: the group kill below still applies
+		t.root = cmd.Process.Pid // canceled before attach: the group kill below still applies
 	}
 	stopped := map[int]bool{}
 	for range stopRounds {

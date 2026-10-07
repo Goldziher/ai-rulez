@@ -14,7 +14,7 @@ type Runner interface {
 }
 
 // Exec is the Runner that starts a real process through Run. It is the default
-// everywhere a Runner is optional, and keeps the behaviour callers had before
+// everywhere a Runner is optional, and keeps the behavior callers had before
 // the runner was injectable.
 type Exec struct{}
 
