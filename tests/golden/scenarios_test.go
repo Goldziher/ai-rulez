@@ -10,6 +10,7 @@ func allScenarios() []scenario {
 		all = append(all, presetScenario(name))
 	}
 	all = append(all, otherScenarios()...)
+	all = append(all, llmsTxtScenarios()...)
 	return all
 }
 
