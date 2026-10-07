@@ -304,12 +304,20 @@ func (r *runner) checkMCPPins(s *mcpServer, at int) {
 func pinExample(command, pkg string) string {
 	switch path.Base(command) {
 	case "uvx", "pipx", "uv":
-		return pkg + "==1.2.3"
+		return pythonPackageName(pkg) + "==1.2.3"
 	case cmdDocker, "podman":
 		return pkg + "@sha256:..."
 	}
 	name, _ := pinOf(pkg)
 	return name + "@1.2.3"
+}
+
+// pythonPackageName strips a version specifier (==, >=, ~=, @tag, [extras]) from a requirement.
+func pythonPackageName(spec string) string {
+	if i := strings.IndexAny(spec, "@=<>~!^[ ;"); i > 0 {
+		return spec[:i]
+	}
+	return spec
 }
 
 var (
