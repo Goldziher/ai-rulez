@@ -15,6 +15,8 @@ func TestRedactURL(t *testing.T) {
 		{"token as user", "https://ghp_abc123@github.com/o/r.git", "https://<redacted>@github.com/o/r.git"},
 		{"user and password", "https://user:pw@example.com/o/r", "https://<redacted>@example.com/o/r"},
 		{"injected token form", "https://tok:x-oauth-basic@github.com/o/r", "https://<redacted>@github.com/o/r"},
+		{"password containing an at sign", "https://user:p@ssw0rd@127.0.0.1:1/o/r.git", "https://<redacted>@127.0.0.1:1/o/r.git"},
+		{"at sign in the query is not userinfo", "https://example.com?mail=a@b", "https://example.com?mail=<redacted>"},
 		{"http scheme", "http://u:p@host/x", "http://<redacted>@host/x"},
 		{"ssh scheme", "ssh://git@github.com/o/r.git", "ssh://<redacted>@github.com/o/r.git"},
 		{"no userinfo", "https://github.com/o/r.git", "https://github.com/o/r.git"},
