@@ -381,10 +381,15 @@ type ghRelease struct {
 	Draft       bool      `json:"draft"`
 	Prerelease  bool      `json:"prerelease"`
 	PublishedAt time.Time `json:"published_at"`
+	Target      string    `json:"target_commitish"`
 }
 
 func (r ghRelease) release() Release {
-	return Release{Tag: r.TagName, Name: r.Name, Prerelease: r.Prerelease, Published: r.PublishedAt}
+	rel := Release{Tag: r.TagName, Name: r.Name, Prerelease: r.Prerelease, Published: r.PublishedAt}
+	if shaRe.MatchString(r.Target) {
+		rel.Commit = r.Target
+	}
+	return rel
 }
 
 // Releases implements Client.

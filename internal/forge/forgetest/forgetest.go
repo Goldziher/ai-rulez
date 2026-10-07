@@ -69,6 +69,8 @@ type Release struct {
 	Tag, Name         string
 	Draft, Prerelease bool
 	Published         time.Time
+	// Target is the target_commitish: a commit id or a branch name.
+	Target string
 }
 
 // Tag is a served tag; a non-empty Object makes it annotated.
@@ -315,7 +317,7 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request, items []map[string
 }
 
 func releaseJSON(r Release) map[string]any {
-	return map[string]any{"tag_name": r.Tag, "name": r.Name, "draft": r.Draft, "prerelease": r.Prerelease, "published_at": r.Published}
+	return map[string]any{"tag_name": r.Tag, "name": r.Name, "draft": r.Draft, "prerelease": r.Prerelease, "published_at": r.Published, "target_commitish": r.Target}
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
