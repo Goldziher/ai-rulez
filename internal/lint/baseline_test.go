@@ -180,3 +180,29 @@ func TestBudgetsWithoutDropsProtectedCodes(t *testing.T) {
 	assert.Equal(t, b, same)
 	assert.Empty(t, none)
 }
+
+func TestNarrowedRunKeepsBaselineEntriesItDidNotLookFor(t *testing.T) {
+	prev := &Baseline{Version: 1, Entries: []BaselineEntry{
+		{Fingerprint: "other", Code: CodePathMissing, File: "a.md", Reason: "legacy", Expires: "2027-01-01"},
+		{Fingerprint: "ext", Code: CodeExternalFinding, File: "a.md", Reason: "scanner"},
+		{Fingerprint: "sec-gone", Code: CodeSecretDetected, File: "a.md", Reason: "fixture"},
+	}}
+	r := &Report{Analyzers: []string{AnalyzerSecurity}, Findings: []Finding{finding(CodeShellExec, "s.md", 1, "fresh")}}
+
+	res := ApplyBaseline(r, prev, "b.json", "2026-10-05")
+	require.Len(t, res.Stale, 1, "only the entry of a rule the run checked can be stale")
+	assert.Equal(t, "sec-gone", res.Stale[0].Fingerprint)
+
+	next, err := UpdateBaseline(r, prev, "why")
+	require.NoError(t, err)
+	byFP := map[string]BaselineEntry{}
+	for _, e := range next.Entries {
+		byFP[e.Fingerprint] = e
+	}
+	assert.Contains(t, byFP, "other", "a security-only run must not delete non-security entries")
+	assert.Equal(t, "legacy", byFP["other"].Reason)
+	assert.Equal(t, "2027-01-01", byFP["other"].Expires)
+	assert.Contains(t, byFP, "ext", "a run without --external must keep scanner entries")
+	assert.Contains(t, byFP, "fresh")
+	assert.NotContains(t, byFP, "sec-gone", "stale entries of a checked rule are still pruned")
+}

@@ -129,6 +129,9 @@ func checkFlagCombinations() error {
 	if validateUpdateBaseline && changedRev() != "" {
 		return oops.Errorf("--update-baseline needs every finding; it cannot be combined with --since or --changed")
 	}
+	if validateUpdateBaseline && (validateLintProfile != "" || len(validateAnalyzers) > 0) {
+		return oops.Errorf("--update-baseline needs the full configured rule set; it cannot be combined with --lint-profile or --analyzer")
+	}
 	if validateBaselineReason != "" && !validateUpdateBaseline {
 		return oops.Errorf("--baseline-reason only applies with --update-baseline")
 	}
