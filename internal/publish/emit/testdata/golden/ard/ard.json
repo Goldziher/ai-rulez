@@ -1,0 +1,92 @@
+{
+  "entries": [
+    {
+      "identifier": "urn:air:acme.test:conventions:acme-conventions",
+      "displayName": "acme-conventions",
+      "type": "application/vnd.ai-rulez.plugin+json",
+      "url": "https://github.com/acme/skills/releases/download/v1.4.0/acme-conventions-1.4.0.tar.gz",
+      "description": "Conventions",
+      "tags": [
+        "agent-plugins",
+        "conventions"
+      ],
+      "capabilities": [
+        "development"
+      ],
+      "representativeQueries": [
+        "how do I deploy the api",
+        "review my diff",
+        "ship the staging build",
+        "check this pull request",
+        "roll back the last release"
+      ],
+      "version": "1.4.0",
+      "updatedAt": "2026-10-07T12:00:00Z"
+    },
+    {
+      "identifier": "urn:air:acme.test:conventions:deploy",
+      "displayName": "deploy",
+      "type": "application/ai-skill+md",
+      "url": "https://raw.githubusercontent.com/acme/skills/v1.4.0/.ai-rulez/skills/deploy/SKILL.md",
+      "description": "Deploy the service safely.",
+      "tags": [
+        "ops",
+        "release"
+      ],
+      "representativeQueries": [
+        "how do I deploy the api",
+        "ship the staging build",
+        "roll back the last release",
+        "deploy to production"
+      ],
+      "version": "1.0.0",
+      "updatedAt": "2026-10-07T12:00:00Z"
+    },
+    {
+      "identifier": "urn:air:acme.test:conventions:docs",
+      "displayName": "docs",
+      "type": "application/mcp-server-card+json",
+      "data": {
+        "description": "Search the docs.",
+        "name": "docs",
+        "transport": {
+          "type": "streamable-http",
+          "url": "https://docs.acme.test/mcp"
+        }
+      },
+      "description": "Search the docs.",
+      "updatedAt": "2026-10-07T12:00:00Z"
+    },
+    {
+      "identifier": "urn:air:acme.test:conventions:local-tools",
+      "displayName": "local-tools",
+      "type": "application/mcp-server-card+json",
+      "data": {
+        "description": "Local helper.",
+        "name": "local-tools",
+        "transport": {
+          "args": [
+            "-y",
+            "tools"
+          ],
+          "command": "npx",
+          "type": "stdio"
+        }
+      },
+      "description": "Local helper.",
+      "updatedAt": "2026-10-07T12:00:00Z"
+    },
+    {
+      "identifier": "urn:air:acme.test:conventions:review",
+      "displayName": "review",
+      "type": "application/ai-skill+md",
+      "url": "https://raw.githubusercontent.com/acme/skills/v1.4.0/.ai-rulez/skills/review/SKILL.md",
+      "description": "Review a change.",
+      "representativeQueries": [
+        "review my diff",
+        "check this pull request"
+      ],
+      "updatedAt": "2026-10-07T12:00:00Z"
+    }
+  ]
+}

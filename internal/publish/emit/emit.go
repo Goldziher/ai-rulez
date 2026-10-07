@@ -84,6 +84,8 @@ type Input struct {
 	// Rules are the project's root rules and context files (the plugin bundle
 	// carries none), sorted by name.
 	Rules []Doc
+	// ARD is the [ard] table and the resources of the ard emitter; nil for the others.
+	ARD *ARDInput
 	// Options are the emitter's own settings ([[publish.emitters]] options).
 	Options map[string]string
 }
