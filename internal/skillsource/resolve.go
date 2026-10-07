@@ -536,16 +536,8 @@ func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir
 		case spec.IsGit() && !lockCommit.MatchString(entry.Commit):
 			problems = append(problems, Problem{spec.Name, fmt.Sprintf("the lock's commit %q is not a full hexadecimal commit SHA", entry.Commit)})
 		case spec.IsGit():
-			root, _ := cacheRoot(cacheDir) //nolint:errcheck // never fails
-			tree := cacheTree(root, spec.URL, entry.Commit, spec.Path)
-			if spec.Path != "" {
-				tree = filepath.Join(tree, filepath.FromSlash(spec.Path))
-			}
-			if _, err := os.Stat(tree); err != nil {
-				continue
-			}
-			if d, err := contentlock.DigestDir(contentlock.KindSkillSource, tree); err == nil && d != entry.Digest {
-				problems = append(problems, Problem{spec.Name, fmt.Sprintf("cached content digest %s does not match the lock's %s", d, entry.Digest)})
+			if p := cachedDigestProblem(&spec, entry, cacheDir); p != nil {
+				problems = append(problems, *p)
 			}
 		}
 	}
@@ -557,6 +549,23 @@ func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir
 		}
 	}
 	return problems
+}
+
+// cachedDigestProblem compares the cached tree of a pinned git source with the
+// lock's digest; nil when it matches or nothing is cached.
+func cachedDigestProblem(spec *Spec, entry *lockfile.Entry, cacheDir string) *Problem {
+	root, _ := cacheRoot(cacheDir) //nolint:errcheck // never fails
+	tree := cacheTree(root, spec.URL, entry.Commit, spec.Path)
+	if spec.Path != "" {
+		tree = filepath.Join(tree, filepath.FromSlash(spec.Path))
+	}
+	if _, err := os.Stat(tree); err != nil {
+		return nil
+	}
+	if d, err := contentlock.DigestDir(contentlock.KindSkillSource, tree); err == nil && d != entry.Digest {
+		return &Problem{spec.Name, fmt.Sprintf("cached content digest %s does not match the lock's %s", d, entry.Digest)}
+	}
+	return nil
 }
 
 // ListTags lists the tags of a git source.
