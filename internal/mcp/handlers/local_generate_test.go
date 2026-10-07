@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const generateSharedConfig = "version = \"4.0\"\nname = \"shared-project\"\npresets = [\"claude\"]\ngitignore = false\n"
+const generateSharedConfig = "version = \"5.0\"\nname = \"shared-project\"\npresets = [\"claude\"]\ngitignore = false\n"
 
 func driftProject(t *testing.T) string {
 	t.Helper()

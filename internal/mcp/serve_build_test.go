@@ -82,7 +82,7 @@ func newServerFor(t *testing.T, setup *ServeSetup) *Server {
 	return srv
 }
 
-const baseConfig = "version = \"4.0\"\nname = \"p\"\ngitignore = false\npresets = [\"claude\"]\n"
+const baseConfig = "version = \"5.0\"\nname = \"p\"\ngitignore = false\npresets = [\"claude\"]\n"
 
 func TestServeSetup_ServesOnlyServedAndBothSkills(t *testing.T) {
 	root := project(t, baseConfig+"\n[domains.billing]\ndelivery = \"served\"\n", map[string]string{

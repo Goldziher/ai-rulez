@@ -12,7 +12,7 @@ import (
 )
 
 func TestRunVerifiersHandler(t *testing.T) {
-	const head = "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+	const head = "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
 	tests := []struct {
 		name       string
 		config     string
@@ -61,7 +61,7 @@ func TestRunVerifiersHandler(t *testing.T) {
 }
 
 func TestRunVerifiersHandler_GeneratedInSync(t *testing.T) {
-	const head = "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+	const head = "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
 	const sync = "[[verifiers]]\nname = \"sync\"\ntype = \"generated_in_sync\"\n"
 	tests := []struct {
 		name       string

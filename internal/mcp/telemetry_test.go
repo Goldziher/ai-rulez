@@ -56,7 +56,7 @@ func telemetryProject(t *testing.T) string {
 	dir := t.TempDir()
 	cfg := filepath.Join(dir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(cfg, "rules"), 0o750))
-	require.NoError(t, os.WriteFile(filepath.Join(cfg, "config.toml"), []byte("version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(cfg, "config.toml"), []byte("version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(cfg, "rules", "atomic-commits.md"), []byte("# Atomic\n"), 0o600))
 	return dir
 }
