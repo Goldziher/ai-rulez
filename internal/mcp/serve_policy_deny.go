@@ -2,12 +2,42 @@ package mcp
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/policy"
 )
+
+// policyLoader is the part of the CLI's policy enforcer (*policy.Enforcer) that
+// names the policy files in force.
+type policyLoader interface {
+	Load() (*policy.Resolved, error)
+}
+
+// policyFiles lists the local files of the organization policy cfg was loaded
+// under (--policy, AI_RULEZ_POLICY, the managed path and what they extend), so
+// the live reload sees an edit to them: a digest added to deny_digests then
+// applies without a restart. Remote policies are not watched.
+func policyFiles(cfg *config.Config) []string {
+	loader, ok := cfg.Policy().(policyLoader)
+	if !ok {
+		return nil
+	}
+	res, err := loader.Load()
+	if err != nil || res == nil {
+		return nil
+	}
+	var out []string
+	for _, l := range res.Layers {
+		if filepath.IsAbs(l.Path) {
+			out = append(out, l.Path)
+		}
+	}
+	return out
+}
 
 // takeServedDenials takes out of cfg's policy outcome the sources.deny_digests
 // violations (AR747) that name a served skill the lock pins, and returns their
