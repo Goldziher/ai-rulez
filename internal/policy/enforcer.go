@@ -3,6 +3,7 @@ package policy
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -10,13 +11,18 @@ import (
 
 // Enforcer implements config.PolicyEnforcer. It discovers the policy lazily on
 // first use and again whenever the anchors it depends on change, so a process
-// that never loads a configuration never touches the filesystem.
+// that never loads a configuration never touches the filesystem. The anchors
+// include the content of the local policy files (size, mtime and SHA-256 of each,
+// and whether it exists), so a long-running process such as the skills server
+// sees an edited policy file on its next load.
 type Enforcer struct {
 	opts func() DiscoverOptions
 
 	mu       sync.Mutex
 	have     bool
 	key      string
+	files    []string
+	stamp    string
 	resolved *Resolved
 	err      error
 	org      map[string]orgResult
@@ -32,9 +38,13 @@ func (e *Enforcer) Load() (*Resolved, error) {
 	key := o.cacheKey()
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if e.have && e.key == key {
+	if e.have && e.key == key && fileStamp(e.files) == e.stamp {
 		return e.resolved, e.err
 	}
+	// The stamp is taken before the read, so an edit made while it runs is seen
+	// on the next load rather than lost.
+	e.files = localFiles(o, nil)
+	e.stamp = fileStamp(e.files)
 	if !ValidMode(o.Mode) {
 		e.have, e.key, e.resolved = true, key, nil
 		e.err = &ParseError{Path: "--policy-mode", Msg: fmt.Sprintf("%q is not a policy mode (use enforce or warn)", o.Mode)}
@@ -42,6 +52,10 @@ func (e *Enforcer) Load() (*Resolved, error) {
 	}
 	layers, err := Discover(o)
 	e.have, e.key, e.err, e.resolved = true, key, err, nil
+	if files := localFiles(o, layers); !slices.Equal(files, e.files) {
+		// extends pulled in more local files: stamp them as read
+		e.files, e.stamp = files, fileStamp(files)
+	}
 	if err == nil {
 		e.resolved = Resolve(layers)
 		if e.resolved != nil && o.Mode == ModeWarn {
