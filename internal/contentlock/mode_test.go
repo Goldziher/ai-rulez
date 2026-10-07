@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,11 +43,11 @@ func TestModeResolver_WindowsReadsTheGitIndexOncePerTree(t *testing.T) {
 }
 
 func TestModeResolver_NoIndexIsRegularOnWindowsAndUnixReadsTheFile(t *testing.T) {
-	// Arrange
+	// Arrange: the file's own bits are 0755 (described in memory, because a
+	// Windows file system has no executable bit to write).
 	root := t.TempDir()
 	p := filepath.Join(root, "run.sh")
-	require.NoError(t, os.WriteFile(p, []byte("#!/bin/sh\n"), 0o755))
-	info, err := os.Stat(p)
+	info, err := fstest.MapFS{"run.sh": {Data: []byte("#!/bin/sh\n"), Mode: 0o755}}.Stat("run.sh")
 	require.NoError(t, err)
 	noIndex := func(string) (map[string]uint32, bool, error) { return nil, false, nil }
 
