@@ -148,7 +148,7 @@ func TestUser_HomeEnvOverrides(t *testing.T) {
 			again.SetUserEnv(getenv)
 			plan, err = again.PlanUser("")
 			require.NoError(t, err)
-			assert.Empty(t, plan.Skips, "files written by the first run are recognised as its own")
+			assert.Empty(t, plan.Skips, "files written by the first run are recognized as its own")
 			assert.Empty(t, plan.Stale)
 
 			clean := loadUserGenerator(t, home)

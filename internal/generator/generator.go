@@ -1263,10 +1263,12 @@ func (g *Generator) localRootOutput(generator config.PresetGenerator, local *con
 // droppedLocalItems labels local rules and context for the dropped-content warning.
 func droppedLocalItems(rules, contexts []config.ContentFile) []string {
 	var items []string
-	for _, r := range rules {
+	for i := range rules {
+		r := rules[i]
 		items = append(items, "rule "+r.Name)
 	}
-	for _, c := range contexts {
+	for i := range contexts {
+		c := contexts[i]
 		items = append(items, "context "+c.Name)
 	}
 	return items
@@ -2519,7 +2521,8 @@ func hashPath(path string, cfg *config.Config) string {
 // lexical by filename; include-merged trees are ordered by the include
 // resolver instead.
 func writeContentFiles(b *strings.Builder, label string, files []config.ContentFile, cfg *config.Config) {
-	for _, f := range files {
+	for i := range files {
+		f := files[i]
 		b.WriteString(label + ":" + f.Name + "|path=" + hashPath(f.Path, cfg) + "|content=" + f.Content)
 		if f.Metadata != nil {
 			metaJSON, err := json.Marshal(f.Metadata)
@@ -2734,7 +2737,7 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		return err
 	}
 	digests := g.manifestDigests(g.config.BaseDir, append(slices.Clone(shared), local...))
-	g.addMergedDigests(&digests, localMerged, g.wholeMergedDocuments(outputs))
+	digests = g.addMergedDigests(digests, localMerged, g.wholeMergedDocuments(outputs))
 	if g.localSkipped {
 		// Local files were deliberately not loaded: their manifest is not ours to
 		// drop. This run only adds what it rendered; the rest of the record stays.
@@ -2767,7 +2770,8 @@ func (g *Generator) updateLocalManifest(merged map[string][]jsonmerge.Claim, dig
 	}
 	for rel, claims := range merged {
 		kept := slices.Clone(claims)
-		for _, old := range outMerged[rel] {
+		for i := range outMerged[rel] {
+			old := outMerged[rel][i]
 			if !slices.ContainsFunc(claims, func(c jsonmerge.Claim) bool { return slices.Equal(c.Path, old.Path) }) {
 				kept = append(kept, old)
 			}

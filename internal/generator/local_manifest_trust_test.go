@@ -72,7 +72,7 @@ func TestGenerate_WorldWritableLocalManifestIsIgnored(t *testing.T) {
 
 func TestGenerate_UntrackedOwnedLocalManifestStillWorks(t *testing.T) {
 	// Arrange: the same forged content, but a normal gitignored file the user's
-	// own earlier run could have written is honoured as before.
+	// own earlier run could have written is honored as before.
 	root := writeProject(t, trustConfig, map[string]string{".claude/settings.json": forgedSettings})
 	writeForgedLocalManifest(t, root)
 	gitIn(t, root, "init", "-q")
