@@ -368,8 +368,8 @@ func checkAllowEgress(cfgs ...*config.Config) error {
 		if cfg == nil || cfg.Lint == nil {
 			continue
 		}
-		for _, ex := range cfg.Lint.External {
-			declared[ex.Name] = true
+		for i := range cfg.Lint.External {
+			declared[cfg.Lint.External[i].Name] = true
 		}
 	}
 	for _, name := range validateAllowEgress {
@@ -397,7 +397,9 @@ func runStrictSingle(cfg *config.Config) int {
 // moving ref without a pin in ai-rulez.lock. It is advice, not a failure; the
 // strict rule AR010 and "generate --locked" are the gates.
 func warnUnpinned(cfg *config.Config) {
-	for _, w := range includes.Unpinned(cfg) {
+	unpinned := includes.Unpinned(cfg)
+	for i := range unpinned {
+		w := &unpinned[i]
 		ref := w.Ref
 		if ref == "" {
 			ref = "the default branch (HEAD)"
