@@ -176,75 +176,108 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 			g.log().Warn("Skipping generated path outside project", "path", output.Path)
 			continue
 		}
-		// A merged document that also holds hand-authored content is not ours to
-		// delete; removing it would take the user's own settings with it.
-		if output.PartiallyOwned {
-			continue
-		}
-		// A merged document is taken apart by claim (planUnmerge) and deleted only
-		// when this machine recorded writing it whole; a hand-written file that
-		// merely equals the rendering is not proof.
-		if !g.userMode && !output.IsDir && (len(output.MergeClaims) > 0 || g.isMergedDocument(abs)) {
+		if g.cleanLeavesMerged(output, abs) {
 			continue
 		}
 		if output.IsDir {
 			dirs = append(dirs, abs)
 			continue
 		}
-		if !g.userMode && isSymlink(abs) {
-			g.warnOnce("Keeping " + g.relSlash(abs) + ": it is a symlink, and links are the user's to remove")
+		if g.cleanKeepsFile(output, abs, opts) {
 			continue
 		}
-		if !g.removalConfined(abs) {
-			g.warnOnce("Not removing " + output.Path + ": it is behind a symlink that leaves the project")
+		if !g.cleanRetiredCommand(abs, plan) {
 			continue
-		}
-		// The generated file that replaced an original `convert` imported is the only
-		// copy of it left at that path: removing it would leave neither.
-		if !g.userMode && g.convertedOriginal(g.relSlash(abs)) {
-			why := "it replaced a file `convert` imported, and the content now lives under the config directory"
-			if data, rerr := g.config.ReadExisting(abs); rerr == nil && g.adoptable(g.relSlash(abs), data) {
-				why = "it is the file `convert` imported, and nothing has replaced it yet"
-			}
-			g.warnOnce("Keeping "+g.relSlash(abs)+": "+why,
-				"hint", "delete it by hand once you no longer want it in the repository")
-			continue
-		}
-		// A generated file someone edited holds work ai-rulez cannot recreate.
-		if !opts.RemoveEdited && output.RawContent == nil && g.editedGenerated(abs) {
-			g.warnOnce("Keeping "+output.Path+": its body was edited by hand", "hint", "pass --force to remove it anyway")
-			continue
-		}
-		// A hand-written file in a shared rules folder is not ours to delete.
-		if output.RawContent == nil && g.isUnmanagedRuleFile(abs, g.finalContent(output)) {
-			continue
-		}
-		// In user scope a file is removed only when ai-rulez wrote it.
-		if g.userMode && !g.userManaged(abs, output) {
-			continue
-		}
-		// In project scope the same holds: a file at a generated path may be the
-		// user's own (a CLAUDE.md that `convert` imported and generate has not yet
-		// replaced), and being at the path proves nothing.
-		if !g.userMode && !g.projectFileIsOurs(abs, output) {
-			g.warnOnce("Keeping "+g.relSlash(abs)+": nothing shows ai-rulez wrote it",
-				"hint", g.keepReason(abs)+"; delete it by hand if it is not needed")
-			continue
-		}
-		// The skill that replaced a command `convert` imported goes only when the
-		// command can come back in its place.
-		if cmd, ok := g.retiredCommand(abs); ok {
-			if !g.restorableCommand(cmd) {
-				g.warnOnce("Keeping "+g.relSlash(abs)+": it replaced "+cmd+", which `convert` imported, "+
-					"and the copy under the config directory no longer holds the imported bytes",
-					"hint", "delete it by hand once you no longer want it in the repository")
-				continue
-			}
-			plan.Restored = append(plan.Restored, filepath.Join(g.config.BaseDir, filepath.FromSlash(cmd)))
 		}
 		plan.Files = append(plan.Files, abs)
 	}
 	return dirs
+}
+
+// cleanLeavesMerged reports whether output is a merged document clean must not
+// delete whole.
+func (g *Generator) cleanLeavesMerged(output config.OutputFile, abs string) bool {
+	// A merged document that also holds hand-authored content is not ours to
+	// delete; removing it would take the user's own settings with it.
+	if output.PartiallyOwned {
+		return true
+	}
+	// A merged document is taken apart by claim (planUnmerge) and deleted only
+	// when this machine recorded writing it whole; a hand-written file that
+	// merely equals the rendering is not proof.
+	return !g.userMode && !output.IsDir && (len(output.MergeClaims) > 0 || g.isMergedDocument(abs))
+}
+
+// cleanKeepsFile reports whether clean must keep the generated file at abs,
+// warning when the reason is worth telling the user.
+func (g *Generator) cleanKeepsFile(output config.OutputFile, abs string, opts CleanOptions) bool {
+	if !g.userMode && isSymlink(abs) {
+		g.warnOnce("Keeping " + g.relSlash(abs) + ": it is a symlink, and links are the user's to remove")
+		return true
+	}
+	if !g.removalConfined(abs) {
+		g.warnOnce("Not removing " + output.Path + ": it is behind a symlink that leaves the project")
+		return true
+	}
+	if g.cleanKeepsConvertedOriginal(abs) {
+		return true
+	}
+	// A generated file someone edited holds work ai-rulez cannot recreate.
+	if !opts.RemoveEdited && output.RawContent == nil && g.editedGenerated(abs) {
+		g.warnOnce("Keeping "+output.Path+": its body was edited by hand", "hint", "pass --force to remove it anyway")
+		return true
+	}
+	// A hand-written file in a shared rules folder is not ours to delete.
+	if output.RawContent == nil && g.isUnmanagedRuleFile(abs, g.finalContent(output)) {
+		return true
+	}
+	// In user scope a file is removed only when ai-rulez wrote it.
+	if g.userMode && !g.userManaged(abs, output) {
+		return true
+	}
+	// In project scope the same holds: a file at a generated path may be the
+	// user's own (a CLAUDE.md that `convert` imported and generate has not yet
+	// replaced), and being at the path proves nothing.
+	if !g.userMode && !g.projectFileIsOurs(abs, output) {
+		g.warnOnce("Keeping "+g.relSlash(abs)+": nothing shows ai-rulez wrote it",
+			"hint", g.keepReason(abs)+"; delete it by hand if it is not needed")
+		return true
+	}
+	return false
+}
+
+// cleanKeepsConvertedOriginal reports whether abs is the generated file that
+// replaced an original `convert` imported, which is the only copy of it left at
+// that path: removing it would leave neither.
+func (g *Generator) cleanKeepsConvertedOriginal(abs string) bool {
+	if g.userMode || !g.convertedOriginal(g.relSlash(abs)) {
+		return false
+	}
+	why := "it replaced a file `convert` imported, and the content now lives under the config directory"
+	if data, rerr := g.config.ReadExisting(abs); rerr == nil && g.adoptable(g.relSlash(abs), data) {
+		why = "it is the file `convert` imported, and nothing has replaced it yet"
+	}
+	g.warnOnce("Keeping "+g.relSlash(abs)+": "+why,
+		"hint", "delete it by hand once you no longer want it in the repository")
+	return true
+}
+
+// cleanRetiredCommand handles a skill that replaced a command `convert`
+// imported: it goes only when the command can come back in its place. It
+// reports whether abs may be removed, recording the command to restore in plan.
+func (g *Generator) cleanRetiredCommand(abs string, plan *CleanPlan) bool {
+	cmd, ok := g.retiredCommand(abs)
+	if !ok {
+		return true
+	}
+	if !g.restorableCommand(cmd) {
+		g.warnOnce("Keeping "+g.relSlash(abs)+": it replaced "+cmd+", which `convert` imported, "+
+			"and the copy under the config directory no longer holds the imported bytes",
+			"hint", "delete it by hand once you no longer want it in the repository")
+		return false
+	}
+	plan.Restored = append(plan.Restored, filepath.Join(g.config.BaseDir, filepath.FromSlash(cmd)))
+	return true
 }
 
 // projectFileIsOurs reports whether clean may remove the project file at abs
