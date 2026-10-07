@@ -174,20 +174,20 @@ func topBy(items []Item, n int, by func(Item) int) []Item {
 func itemsOf(tree *config.ContentTree, c tokens.Counter) []Item {
 	var out []Item
 	add := func(domain string, t *config.ContentTree) {
-		for _, f := range t.Rules {
-			out = append(out, bodyItem(KindRule, domain, f, c))
+		for i := range t.Rules {
+			out = append(out, bodyItem(KindRule, domain, t.Rules[i], c))
 		}
-		for _, f := range t.Context {
-			out = append(out, bodyItem(KindContext, domain, f, c))
+		for i := range t.Context {
+			out = append(out, bodyItem(KindContext, domain, t.Context[i], c))
 		}
-		for _, f := range t.Skills {
-			out = append(out, listedItem(KindSkill, domain, f, c))
+		for i := range t.Skills {
+			out = append(out, listedItem(KindSkill, domain, t.Skills[i], c))
 		}
-		for _, f := range t.Agents {
-			out = append(out, listedItem(KindAgent, domain, f, c))
+		for i := range t.Agents {
+			out = append(out, listedItem(KindAgent, domain, t.Agents[i], c))
 		}
-		for _, f := range t.Commands {
-			out = append(out, listedItem(KindCommand, domain, f, c))
+		for i := range t.Commands {
+			out = append(out, listedItem(KindCommand, domain, t.Commands[i], c))
 		}
 	}
 	add("", tree)
