@@ -189,9 +189,9 @@ func CheckOCI(ctx context.Context, plan Plan, opts OCIExecuteOptions) (string, e
 }
 
 // readDistFiles reads the files an OCI push needs from a dist directory.
-func readDistFiles(dir string, plan Plan) (map[string][]byte, Manifest, []byte, error) {
+func readDistFiles(dir string, plan Plan) (files map[string][]byte, m Manifest, manifestBytes []byte, err error) {
 	manifestName := plan.Name + "-" + plan.Version + ".manifest.json"
-	files := map[string][]byte{}
+	files = map[string][]byte{}
 	read := func(name string) ([]byte, error) {
 		data, err := readRegular(filepath.Join(dir, filepath.FromSlash(name)))
 		if err != nil {
@@ -199,11 +199,11 @@ func readDistFiles(dir string, plan Plan) (map[string][]byte, Manifest, []byte, 
 		}
 		return data, nil
 	}
-	manifestBytes, err := read(manifestName)
+	manifestBytes, err = read(manifestName)
 	if err != nil {
 		return nil, Manifest{}, nil, err
 	}
-	m, err := decodeManifest(manifestBytes)
+	m, err = decodeManifest(manifestBytes)
 	if err != nil {
 		return nil, Manifest{}, nil, newError(CodeTarget, ExitFailed, "", "invalid manifest: %v", err)
 	}
