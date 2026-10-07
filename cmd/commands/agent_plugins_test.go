@@ -1,15 +1,19 @@
 package commands
 
 import (
+	"bytes"
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 )
 
 const agentPluginsBaseConfig = `version = "5.0"
@@ -68,4 +72,58 @@ func TestStrictValidateIsQuietForAValidAgentPluginsPackage(t *testing.T) {
 	for _, f := range strictFindings(t) {
 		assert.NotContains(t, f.Code, "AR9O", "%v", f)
 	}
+}
+
+var agentPluginsPublishConfig = strings.Replace(agentPluginsBaseConfig, "runtimes = [\"agent-plugins\"]\n",
+	"runtimes = [\"agent-plugins\"]\nspec = \"1.1.0\"\n", 1) + `
+[[plugin.mcp]]
+name = "docs"
+transport = "http"
+url = "https://docs.acme.test/mcp"
+`
+
+func TestPublish_EmitsAValidatedAgentPluginsDirectory(t *testing.T) {
+	// Arrange
+	root := publishProjectWith(t, agentPluginsPublishConfig)
+	publishEmit = []string{"agent-plugins"}
+
+	// Act
+	_, err := runPublishCapture(t)
+
+	// Assert
+	require.NoError(t, err)
+	dist := readDist(t, filepath.Join(root, "dist"))
+	assert.Contains(t, dist["emit/agent-plugins/acme/plugin.json"], "https://agent-plugins.org/schemas/1.1.0/plugin.schema.json")
+	assert.Contains(t, dist["emit/agent-plugins/acme/mcp.json"], "https://agent-plugins.org/schemas/1.1.0/mcp.schema.json")
+	assert.Contains(t, dist, "emit/agent-plugins/acme/skills/deploy/SKILL.md")
+	assert.NotContains(t, dist, "emit/agent-plugins/acme/.ai-rulez-generated.json")
+	var verifyOut bytes.Buffer
+	_, _ = capture(t, func() { err = runPublishVerify(context.Background(), &verifyOut, filepath.Join(root, "dist")) })
+	require.NoError(t, err)
+}
+
+func TestPublish_RefusesAnAgentPluginsPackageClientsWouldSkip(t *testing.T) {
+	// Arrange: the server's placeholder is never expanded, so generate leaves the
+	// server out and the strict gate names it.
+	publishProjectWith(t, agentPluginsProjectConfig)
+	publishDryRun = true
+
+	// Act
+	_, err := runPublishCapture(t)
+
+	// Assert
+	requirePublishError(t, err, publish.CodePreflight, publish.ExitGate)
+}
+
+func TestVerifyPluginCoversTheAgentPluginsPackage(t *testing.T) {
+	root := publishProjectWith(t, agentPluginsPublishConfig)
+	cfg, err := config.LoadConfig(context.Background(), ".", config.WithoutLocal())
+	require.NoError(t, err)
+	require.NoError(t, generator.NewGenerator(cfg).VerifyPlugin(""))
+
+	// A hand edit of mcp.json is drift: the content hash of the sidecar covers it.
+	writeFile(t, filepath.Join(root, "mcp.json"), "{}\n")
+
+	err = generator.NewGenerator(cfg).VerifyPlugin("")
+	require.ErrorIs(t, err, generator.ErrPluginDrift)
 }
