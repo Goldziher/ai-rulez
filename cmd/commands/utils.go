@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // newContentOperator opens the CRUD operator for the current directory. With
@@ -34,6 +35,13 @@ func confirmRemoval(resourceType, resourceName string) bool {
 		prompt = fmt.Sprintf("Are you sure you want to remove %s '%s'? (y/N): ", resourceType, resourceName)
 	}
 	return askYesNo(prompt)
+}
+
+// exitDeclined reports that a destructive operation was not confirmed and exits
+// 1: nothing was done, which a script must be able to tell from success.
+func exitDeclined(what string) {
+	logger.Error(what+": not confirmed, nothing was changed", "hint", "pass --yes to skip the confirmation prompt (required in non-interactive shells)")
+	os.Exit(1)
 }
 
 // askYesNo prints prompt and reads a yes/no answer from an interactive terminal;

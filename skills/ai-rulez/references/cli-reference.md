@@ -48,13 +48,13 @@ Flags:
 - `--check` — Render in memory and compare with the disk without writing; exits 2 on drift
 - `--user` — Render the user config (`~/.config/ai-rulez`, or `--config <dir>`) into the per-user directories of each harness; `--yes, -y` skips the confirmation
 
-`--update-gitignore` remains as a hidden deprecated alias for `--gitignore`; `--no-configure-cli-mcp, -M` and `--skip-cli-mcp, -S` are hidden no-ops.
+`--update-gitignore`, `--no-configure-cli-mcp, -M` and `--skip-cli-mcp, -S` were removed in v5 (use `--gitignore`; the others had no effect).
 
 Exit codes: `0` ok, `1` a config failed to load or generate, `2` `--check` found drift or `--locked`/`--frozen` found a source that differs from the lock.
 
 ### `ai-rulez clean`
 
-Remove generated outputs. `--dry-run` previews, `--force` skips the prompt and also removes generated files edited by hand (otherwise kept with a warning), `--user` removes what `generate --user` wrote, `--profile`, `--keep-gitignore`, `--keep-manifest`.
+Remove generated outputs. `--dry-run` previews, `--yes` skips the prompt, `--include-edited` also removes generated files edited by hand (otherwise kept with a warning), `--user` removes what `generate --user` wrote, `--profile`, `--keep-gitignore`, `--keep-manifest`.
 
 ### `ai-rulez validate`
 
@@ -109,19 +109,19 @@ Hidden PreToolUse hook added by `[guard] generated = true`: exits 2 when a tool 
 ### Rules
 
 - `ai-rulez add rule <name> [--domain <d>] [--priority <p>] [--content <c>]`
-- `ai-rulez remove rule <name> [--domain <d>] [--force]`
+- `ai-rulez remove rule <name> [--domain <d>] [--yes]`
 - `ai-rulez list rules [--domain <d>] [--format json]`
 
 ### Context
 
 - `ai-rulez add context <name> [--domain <d>] [--priority <p>] [--content <c>]`
-- `ai-rulez remove context <name> [--domain <d>] [--force]`
+- `ai-rulez remove context <name> [--domain <d>] [--yes]`
 - `ai-rulez list context [--domain <d>] [--format json]`
 
 ### Skills
 
 - `ai-rulez add skill <name> [--domain <d>] [--description <desc>]`
-- `ai-rulez remove skill <name> [--domain <d>] [--force]`
+- `ai-rulez remove skill <name> [--domain <d>] [--yes]`
 - `ai-rulez list skills [--domain <d>] [--format json]`
 - `ai-rulez list --placement [--profile <p>]` — where each skill and command ends up (core or plugin-only)
 
@@ -130,7 +130,7 @@ Hidden PreToolUse hook added by `[guard] generated = true`: exits 2 when a tool 
 ### Agents, Commands and Checks
 
 - `ai-rulez add agent|command|check <name> [--domain <d>] [--description <desc>] [--content <c>]`
-- `ai-rulez remove agent|command|check <name> [--domain <d>] [--force]`
+- `ai-rulez remove agent|command|check <name> [--domain <d>] [--yes]`
 - `ai-rulez list agents|commands|checks [--domain <d>] [--format json]`
 
 Checks are code-review guidelines (`.ai-rulez/checks/<name>.md`) and have no `--local`.
@@ -138,7 +138,7 @@ Checks are code-review guidelines (`.ai-rulez/checks/<name>.md`) and have no `--
 ### Domains
 
 - `ai-rulez domain add <name> [--description <desc>]`
-- `ai-rulez domain remove <name> [--force]`
+- `ai-rulez domain remove <name> [--yes]`
 - `ai-rulez domain list [--format json]`
 
 ### Profiles
@@ -152,13 +152,13 @@ Checks are code-review guidelines (`.ai-rulez/checks/<name>.md`) and have no `--
 ### Includes
 
 - `ai-rulez include add <name> <source> [--path <p>] [--ref <r>] [--include <types>] [--merge-strategy <s>] [--install-to <t>]`
-- `ai-rulez include remove <name> [--force]`
+- `ai-rulez include remove <name> [--yes]`
 - `ai-rulez include list [--format json]`
 
 ### Installed Skills
 
 - `ai-rulez skill install <name> --source <url> [--path <p>] [--ref <r>]`
-- `ai-rulez skill remove <name> [--force]`
+- `ai-rulez skill remove <name> [--yes]`
 - `ai-rulez skill list [--format json]`
 - `ai-rulez skill update [name...]` — Re-pin installed skills in `ai-rulez.lock`
 

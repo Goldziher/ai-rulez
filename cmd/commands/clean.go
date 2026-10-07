@@ -13,6 +13,7 @@ import (
 var (
 	cleanDryRun        bool
 	cleanForce         bool
+	cleanIncludeEdited bool
 	cleanKeepGitignore bool
 	cleanKeepManifest  bool
 )
@@ -29,7 +30,9 @@ The .ai-rulez/ source tree is never touched. Directories are only removed when
 they become empty, so files you authored inside a generated directory are kept.
 
 By default clean lists what it will delete and asks for confirmation; use --yes
-to skip the prompt (required in non-interactive shells) or --dry-run to preview.`,
+to skip the prompt (required in non-interactive shells; declining exits 1) or --dry-run
+to preview. Generated files you edited by hand are kept with a warning; --include-edited
+removes them too.`,
 	Aliases: []string{"clear"},
 	Args:    cobra.MaximumNArgs(1),
 	Run:     runClean,
@@ -38,6 +41,7 @@ to skip the prompt (required in non-interactive shells) or --dry-run to preview.
 func init() {
 	CleanCmd.Flags().BoolVarP(&cleanDryRun, "dry-run", "d", false, "Show what would be removed without deleting anything")
 	CleanCmd.Flags().BoolVarP(&cleanForce, "yes", "y", false, "Skip the confirmation prompt")
+	CleanCmd.Flags().BoolVar(&cleanIncludeEdited, "include-edited", false, "Also remove generated files whose body was edited by hand (otherwise they are kept with a warning)")
 	CleanCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile whose outputs to remove, or a comma-separated list to compose several (default: from config or 'default')")
 	CleanCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	CleanCmd.Flags().BoolVar(&userScope, "user", false, "Remove the files 'generate --user' wrote into the home directories, as recorded in the user manifest")
@@ -85,7 +89,7 @@ func runClean(_ *cobra.Command, args []string) {
 	if !cleanForce {
 		total := len(plan.Files) + len(plan.Dirs)
 		if !confirmRemoval("", fmt.Sprintf("%d generated file(s) and %d generated director(ies)", len(plan.Files), len(plan.Dirs))) {
-			logger.Info("Aborted — nothing removed", "candidates", total)
+			exitDeclined(fmt.Sprintf("Aborted (%d candidates)", total))
 			return
 		}
 	}
@@ -100,7 +104,7 @@ func runClean(_ *cobra.Command, args []string) {
 	logger.Success("Removed generated files", "files", len(plan.Files), "directories", len(plan.Dirs))
 }
 
-// cleanOptions builds the options of a clean run from the flags. --force also
+// cleanOptions builds the options of a clean run from the flags. --include-edited also
 // removes generated files whose body was edited by hand; without it they are kept
 // with a warning, because the edit cannot be recreated.
 func cleanOptions(keepGitignore bool) generator.CleanOptions {
@@ -108,7 +112,7 @@ func cleanOptions(keepGitignore bool) generator.CleanOptions {
 		DryRun:        true,
 		KeepGitignore: keepGitignore,
 		KeepManifest:  cleanKeepManifest,
-		RemoveEdited:  cleanForce,
+		RemoveEdited:  cleanIncludeEdited,
 	}
 }
 

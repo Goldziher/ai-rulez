@@ -64,7 +64,7 @@ func init() {
 // runDoctor runs the diagnostics, prints the report to out and returns the
 // process exit code.
 func runDoctor(ctx context.Context, args []string, out io.Writer) int {
-	// Keep stdout to the report, so --json stays parseable.
+	// Keep stdout to the report, so --format json stays parseable.
 	progress.SetQuiet(true)
 	defer progress.SetQuiet(false)
 

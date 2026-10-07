@@ -98,7 +98,7 @@ func runRemoveRule(cmd *cobra.Command, args []string) {
 			resourceName = fmt.Sprintf("rule %s in domain %s", name, removeDomain)
 		}
 		if !confirmRemoval("", resourceName) {
-			logger.Info("Operation canceled")
+			exitDeclined("Operation canceled")
 			return
 		}
 	}
@@ -128,7 +128,7 @@ func runRemoveContext(cmd *cobra.Command, args []string) {
 			resourceName = fmt.Sprintf("context %s in domain %s", name, removeDomain)
 		}
 		if !confirmRemoval("", resourceName) {
-			logger.Info("Operation canceled")
+			exitDeclined("Operation canceled")
 			return
 		}
 	}
@@ -158,7 +158,7 @@ func runRemoveSkill(cmd *cobra.Command, args []string) {
 			resourceName = fmt.Sprintf("skill %s in domain %s", name, removeDomain)
 		}
 		if !confirmRemoval("", resourceName) {
-			logger.Info("Operation canceled")
+			exitDeclined("Operation canceled")
 			return
 		}
 	}
@@ -185,7 +185,7 @@ func runRemoveItem(name, ftype, label string) {
 			resourceName = fmt.Sprintf("%s %s in domain %s", label, name, removeDomain)
 		}
 		if !confirmRemoval("", resourceName) {
-			logger.Info("Operation canceled")
+			exitDeclined("Operation canceled")
 			return
 		}
 	}

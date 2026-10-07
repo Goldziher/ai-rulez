@@ -42,12 +42,12 @@ func (s *BasicCLITestSuite) TestRootHelpWithoutArgs() {
 
 func (s *BasicCLITestSuite) TestVersion() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "version")
-	result.AssertStderrContains(s.T(), "ai-rulez version")
+	result.AssertStdoutContains(s.T(), "ai-rulez version")
 }
 
 func (s *BasicCLITestSuite) TestVersionShortFlag() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "version")
-	result.AssertStderrContains(s.T(), "ai-rulez version")
+	result.AssertStdoutContains(s.T(), "ai-rulez version")
 }
 
 func (s *BasicCLITestSuite) TestGenerateHelp() {
