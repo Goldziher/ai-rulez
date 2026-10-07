@@ -99,8 +99,8 @@ func (x *approvalIndex) forItem(kind, domain, id, digest string) *ItemApproval {
 	}
 	results := []approval.Result{x.policy.Evaluate(x.recs, approval.Subject{Kind: kind, Domain: domain, ID: id, Digest: digest, Class: approval.ClassLocal}, x.now)}
 	if kind == "skill" && x.lock != nil {
-		for _, e := range x.lock.Served {
-			if e.Name == id {
+		for i := range x.lock.Served {
+			if e := &x.lock.Served[i]; e.Name == id {
 				results = append(results, x.policy.Evaluate(x.recs, approval.Subject{
 					Kind: approval.KindServed, Domain: e.View, ID: e.Name, Digest: e.Digest, Class: approval.ServedClass(e.Source, e.Ref, e.Commit),
 				}, x.now))
@@ -124,14 +124,14 @@ func (x *approvalIndex) forItem(kind, domain, id, digest string) *ItemApproval {
 // pickApproval chooses the result that describes a group of subjects: the first
 // required one that fails, else the first required one, else the first result.
 func pickApproval(results []approval.Result) approval.Result {
-	for _, r := range results {
-		if r.Failing() {
-			return r
+	for i := range results {
+		if results[i].Failing() {
+			return results[i]
 		}
 	}
-	for _, r := range results {
-		if r.Required {
-			return r
+	for i := range results {
+		if results[i].Required {
+			return results[i]
 		}
 	}
 	return results[0]

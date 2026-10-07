@@ -98,14 +98,15 @@ func LockDiffRoles(cfg *config.Config, lock *lockfile.File, profileName string, 
 		// The outputs were not rendered, so a lock that pins them would report
 		// every one as removed: drop those, they were not compared.
 		kept := diff.Changes[:0]
-		for _, c := range diff.Changes {
-			if c.Scope != contentlock.ScopeOutput {
-				kept = append(kept, c)
+		for i := range diff.Changes {
+			if diff.Changes[i].Scope != contentlock.ScopeOutput {
+				kept = append(kept, diff.Changes[i])
 			}
 		}
 		diff.Changes = kept
-		for _, w := range includes.NotCached(cfg) {
-			diff.Notes = append(diff.Notes, fmt.Sprintf("%s %s not cached; run ai-rulez lock or generate", w.Kind, w.Name))
+		notCached := includes.NotCached(cfg)
+		for i := range notCached {
+			diff.Notes = append(diff.Notes, fmt.Sprintf("%s %s not cached; run ai-rulez lock or generate", notCached[i].Kind, notCached[i].Name))
 		}
 		const msg = "remote includes are not in the local cache, so generated outputs were not compared"
 		if cfg.LockEnforced() {
