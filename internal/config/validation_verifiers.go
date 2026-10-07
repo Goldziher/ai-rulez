@@ -5,6 +5,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
@@ -55,11 +56,7 @@ func (c *Config) validateVerifierBody(v *VerifierConfig, field string) error {
 		return oops.Hint("Spec-form fields need an entry without type; a typed entry uses the flat fields.").
 			Errorf("verifier %s sets %s, which does not apply to type %s", field, strings.Join(extra, ", "), v.Type)
 	}
-	known := false
-	for _, t := range VerifierTypes {
-		known = known || t == v.Type
-	}
-	if !known {
+	if !slices.Contains(VerifierTypes, v.Type) {
 		if v.Type == "command" {
 			return oops.Hint("The command predicate is spec-form only: declare [verifiers.require.command] under a rule-linked verifier (see docs/verifiers.md).").
 				Errorf("unknown verifier type %q at %s.type", v.Type, field)
@@ -67,11 +64,8 @@ func (c *Config) validateVerifierBody(v *VerifierConfig, field string) error {
 		return oops.Hint("Use one of: "+strings.Join(VerifierTypes, ", ")).
 			Errorf("unknown verifier type %q at %s.type", v.Type, field)
 	}
-	switch v.Severity {
-	case "", "error", "warning", "info":
-	default:
-		return oops.Hint("Use one of: error, warning, info.").
-			Errorf("invalid verifier severity %q at %s.severity", v.Severity, field)
+	if err := validateVerifierSeverity(v, field); err != nil {
+		return err
 	}
 	if err := validateVerifierFields(v, field); err != nil {
 		return err
@@ -84,20 +78,36 @@ func (c *Config) validateVerifierBody(v *VerifierConfig, field string) error {
 	case VerifierRegex, VerifierForbid:
 		return validateVerifierRegex(v, field)
 	case VerifierKeyEquals:
-		if err := validateVerifierPath(v, field); err != nil {
-			return err
-		}
-		if v.Key == "" {
-			return oops.Errorf("verifier type key_equals needs %s.key", field)
-		}
-		if v.Equals == nil {
-			return oops.Errorf("verifier type key_equals needs %s.equals", field)
-		}
-		return validateVerifierKey(v, field)
+		return validateVerifierKeyEquals(v, field)
 	case VerifierGeneratedInSync:
 		return c.validateVerifierProfile(v, field)
 	}
 	return nil
+}
+
+// validateVerifierSeverity checks the severity of a verifier entry.
+func validateVerifierSeverity(v *VerifierConfig, field string) error {
+	switch v.Severity {
+	case "", "error", "warning", "info":
+	default:
+		return oops.Hint("Use one of: error, warning, info.").
+			Errorf("invalid verifier severity %q at %s.severity", v.Severity, field)
+	}
+	return nil
+}
+
+// validateVerifierKeyEquals checks a key_equals verifier: a path, a key and a value.
+func validateVerifierKeyEquals(v *VerifierConfig, field string) error {
+	if err := validateVerifierPath(v, field); err != nil {
+		return err
+	}
+	if v.Key == "" {
+		return oops.Errorf("verifier type key_equals needs %s.key", field)
+	}
+	if v.Equals == nil {
+		return oops.Errorf("verifier type key_equals needs %s.equals", field)
+	}
+	return validateVerifierKey(v, field)
 }
 
 // Names of the flat verifier fields, shared by the allowed-field table and the
@@ -250,11 +260,8 @@ func verifierSpecFieldsSet(v *VerifierConfig) []string {
 // globs and examples are validated by the verifier loader (AR9H2), which also
 // resolves the enforced item against the content tree.
 func validateVerifierSpecForm(v *VerifierConfig, field string) error {
-	switch v.Severity {
-	case "", "error", "warning", "info":
-	default:
-		return oops.Hint("Use one of: error, warning, info.").
-			Errorf("invalid verifier severity %q at %s.severity", v.Severity, field)
+	if err := validateVerifierSeverity(v, field); err != nil {
+		return err
 	}
 	var flat []string
 	for _, f := range []struct {

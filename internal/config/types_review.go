@@ -131,6 +131,19 @@ func (r *ReviewConfig) Validate() []string {
 	default:
 		problems = append(problems, fmt.Sprintf("review.on_secret %q must be %q or %q", r.OnSecret, ReviewOnSecretWithhold, ReviewOnSecretRedact))
 	}
+	problems = append(problems, r.limitProblems()...)
+	if g := r.Gate; g != nil {
+		problems = append(problems, g.problems()...)
+	}
+	if f := r.Fix; f != nil && (f.MaxGrowthPercent < 0 || strings.ContainsAny(f.Model, " \t\n")) {
+		problems = append(problems, "review.fix.max_growth_percent must not be negative and review.fix.model must not contain whitespace")
+	}
+	return problems
+}
+
+// limitProblems checks the budgets, the exclude globs and the allowed hosts.
+func (r *ReviewConfig) limitProblems() []string {
+	var problems []string
 	if r.MaxCostUSD < 0 {
 		problems = append(problems, "review.max_cost_usd must not be negative")
 	}
@@ -147,18 +160,19 @@ func (r *ReviewConfig) Validate() []string {
 			problems = append(problems, fmt.Sprintf("review.allowed_hosts entry %q must be host or host:port, without scheme or path", h))
 		}
 	}
-	if g := r.Gate; g != nil {
-		switch g.Level {
-		case "", ReviewGateInfo, ReviewGateWarning, ReviewGateError:
-		default:
-			problems = append(problems, fmt.Sprintf("review.gate.level %q must be %q, %q or %q", g.Level, ReviewGateInfo, ReviewGateWarning, ReviewGateError))
-		}
-		if g.CalibrationMaxAgeDays < 0 {
-			problems = append(problems, "review.gate.calibration_max_age_days must not be negative")
-		}
+	return problems
+}
+
+// problems returns the problems of the [review.gate] table.
+func (g *ReviewGateConfig) problems() []string {
+	var problems []string
+	switch g.Level {
+	case "", ReviewGateInfo, ReviewGateWarning, ReviewGateError:
+	default:
+		problems = append(problems, fmt.Sprintf("review.gate.level %q must be %q, %q or %q", g.Level, ReviewGateInfo, ReviewGateWarning, ReviewGateError))
 	}
-	if f := r.Fix; f != nil && (f.MaxGrowthPercent < 0 || strings.ContainsAny(f.Model, " \t\n")) {
-		problems = append(problems, "review.fix.max_growth_percent must not be negative and review.fix.model must not contain whitespace")
+	if g.CalibrationMaxAgeDays < 0 {
+		problems = append(problems, "review.gate.calibration_max_age_days must not be negative")
 	}
 	return problems
 }

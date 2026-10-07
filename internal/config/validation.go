@@ -15,68 +15,28 @@ import (
 
 // Validate validates a configuration
 func (c *Config) Validate() error {
-	if err := c.validateVersion(); err != nil {
-		return err
+	checks := []func() error{
+		c.validateVersion,
+		c.validateName,
+		c.validateContentProblems,
+		c.validatePresets,
+		c.validateCodexSkillsDir,
+		c.validateSelectors,
+		c.validateSkillDescriptions,
+		c.validateFrontmatter,
+		c.validateChecks,
+		c.validateOKF,
+		c.validateInstalledSkills,
+		c.validateDefaults,
+		c.validateMCP,
+		c.validateGuard,
+		c.validateAgentEffort,
+		c.validateAuthoring,
 	}
-
-	if err := c.validateName(); err != nil {
-		return err
-	}
-
-	if err := c.validateContentProblems(); err != nil {
-		return err
-	}
-
-	if err := c.validatePresets(); err != nil {
-		return err
-	}
-
-	if err := c.validateCodexSkillsDir(); err != nil {
-		return err
-	}
-
-	if err := c.validateSelectors(); err != nil {
-		return err
-	}
-
-	if err := c.validateSkillDescriptions(); err != nil {
-		return err
-	}
-
-	if err := c.validateFrontmatter(); err != nil {
-		return err
-	}
-
-	if err := c.validateChecks(); err != nil {
-		return err
-	}
-
-	if err := c.validateOKF(); err != nil {
-		return err
-	}
-
-	if err := c.validateInstalledSkills(); err != nil {
-		return err
-	}
-
-	if err := c.validateDefaults(); err != nil {
-		return err
-	}
-
-	if err := c.validateMCP(); err != nil {
-		return err
-	}
-
-	if err := c.validateGuard(); err != nil {
-		return err
-	}
-
-	if err := c.validateAgentEffort(); err != nil {
-		return err
-	}
-
-	if err := c.validateAuthoring(); err != nil {
-		return err
+	for _, check := range checks {
+		if err := check(); err != nil {
+			return err
+		}
 	}
 
 	// Warn about missing domain references (non-fatal)
@@ -491,19 +451,7 @@ func removedPresetSuffix(name string) string {
 func (c *Config) validatePreset(preset *Preset, index int) error {
 	// Check if it's a built-in preset
 	if preset.IsBuiltIn() {
-		if !isValidBuiltInPreset(preset.BuiltIn) {
-			hint := fmt.Sprintf("Use a valid built-in preset name\nAvailable presets: %s", getBuiltInPresetNames())
-			if note, removed := removedPresetHints[preset.BuiltIn]; removed {
-				hint = note + "\n" + hint
-			}
-			return oops.
-				With("field", fmt.Sprintf("presets[%d]", index)).
-				With("preset", preset.BuiltIn).
-				With("available_presets", getBuiltInPresetNames()).
-				Hint(hint).
-				Errorf("unknown built-in preset: %q%s", preset.BuiltIn, removedPresetSuffix(preset.BuiltIn))
-		}
-		return nil
+		return validateBuiltInPreset(preset, index)
 	}
 
 	// Custom preset validation
@@ -517,29 +465,56 @@ func (c *Config) validatePreset(preset *Preset, index int) error {
 	// Provider-backed custom presets reference a declarative provider spec
 	// instead of carrying type/path inline.
 	if preset.Provider != "" {
-		if preset.Type != "" || preset.Path != "" {
-			return oops.
-				With("field", fmt.Sprintf("presets[%d]", index)).
-				With("preset_name", preset.Name).
-				Hint("A provider-backed preset gets its type/path from the spec; drop 'type' and 'path'").
-				Errorf("custom preset %q sets both 'provider' and 'type'/'path'", preset.Name)
-		}
-		if c.Registry != nil && c.Registry.Provider != nil {
-			gen, err := c.Registry.Provider(*preset, c.BaseDir, c.View())
-			if err != nil {
-				return oops.
-					With("field", fmt.Sprintf("presets[%d].provider", index)).
-					With("preset_name", preset.Name).
-					With("provider", preset.Provider).
-					Wrapf(err, "invalid provider spec for custom preset %q", preset.Name)
-			}
-			if owner, ok := gen.(RulesDirOwner); ok {
-				c.AddRulesDir(owner.SplitRulesDir())
-			}
-		}
+		return c.validateProviderPreset(preset, index)
+	}
+	return validateTypedCustomPreset(preset, index)
+}
+
+// validateBuiltInPreset checks that a built-in preset names a known one.
+func validateBuiltInPreset(preset *Preset, index int) error {
+	if isValidBuiltInPreset(preset.BuiltIn) {
 		return nil
 	}
+	hint := fmt.Sprintf("Use a valid built-in preset name\nAvailable presets: %s", getBuiltInPresetNames())
+	if note, removed := removedPresetHints[preset.BuiltIn]; removed {
+		hint = note + "\n" + hint
+	}
+	return oops.
+		With("field", fmt.Sprintf("presets[%d]", index)).
+		With("preset", preset.BuiltIn).
+		With("available_presets", getBuiltInPresetNames()).
+		Hint(hint).
+		Errorf("unknown built-in preset: %q%s", preset.BuiltIn, removedPresetSuffix(preset.BuiltIn))
+}
 
+// validateProviderPreset checks a custom preset backed by a declarative provider spec.
+func (c *Config) validateProviderPreset(preset *Preset, index int) error {
+	if preset.Type != "" || preset.Path != "" {
+		return oops.
+			With("field", fmt.Sprintf("presets[%d]", index)).
+			With("preset_name", preset.Name).
+			Hint("A provider-backed preset gets its type/path from the spec; drop 'type' and 'path'").
+			Errorf("custom preset %q sets both 'provider' and 'type'/'path'", preset.Name)
+	}
+	if c.Registry != nil && c.Registry.Provider != nil {
+		gen, err := c.Registry.Provider(*preset, c.BaseDir, c.View())
+		if err != nil {
+			return oops.
+				With("field", fmt.Sprintf("presets[%d].provider", index)).
+				With("preset_name", preset.Name).
+				With("provider", preset.Provider).
+				Wrapf(err, "invalid provider spec for custom preset %q", preset.Name)
+		}
+		if owner, ok := gen.(RulesDirOwner); ok {
+			c.AddRulesDir(owner.SplitRulesDir())
+		}
+	}
+	return nil
+}
+
+// validateTypedCustomPreset checks the type and path of a custom preset that
+// carries them inline.
+func validateTypedCustomPreset(preset *Preset, index int) error {
 	if preset.Type == "" {
 		return oops.
 			With("field", fmt.Sprintf("presets[%d].type", index)).

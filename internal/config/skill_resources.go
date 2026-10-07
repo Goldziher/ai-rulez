@@ -269,40 +269,13 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 				}
 				continue
 			}
-			if info, ok := s.admit(path); !ok || !info.Mode().IsRegular() {
-				continue
-			}
-
-			// Path relative to the skill root, e.g. "references/api.md".
-			relToSkill, err := filepath.Rel(skillDir, path)
+			resource, keep, err := s.readSkillResource(skillDir, path, d.Name(), kind, filter)
 			if err != nil {
-				return oops.With("path", path).Wrapf(err, "compute relative path")
+				return err
 			}
-			// Always use forward slashes in stored paths so output is portable across
-			// platforms — generators feed this straight into filepath.Join, which
-			// accepts forward slashes on Windows.
-			relToSkill = filepath.ToSlash(relToSkill)
-			if !filter.keepFile(relToSkill) {
-				continue
+			if keep {
+				resources = append(resources, resource)
 			}
-
-			data, err := readCapped(s.v, path)
-			if err != nil {
-				return oops.With("path", path).Wrapf(err, "read skill resource")
-			}
-
-			// Capture file mode (of the target, for a followed link) so the
-			// executable bit on bundled scripts survives generation.
-			info, err := s.v.Stat(path)
-			if err != nil {
-				return oops.With("path", path).Wrapf(err, "stat skill resource")
-			}
-
-			resource := SkillResource{Kind: kind, RelPath: relToSkill, Content: data, Mode: resourceMode(info.Mode())}
-			if kind == SkillKindReferences && strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
-				resource.Description = extractResourceDescription(data)
-			}
-			resources = append(resources, resource)
 		}
 		return nil
 	}
@@ -316,6 +289,46 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 	})
 
 	return resources, nil
+}
+
+// readSkillResource reads one regular file under a skill's resource directory.
+// keep is false when the file is not admitted by the scanner's policy or is
+// filtered out of the bundle.
+func (s *contentScanner) readSkillResource(skillDir, path, name, kind string, filter *bundleFilter) (resource SkillResource, keep bool, err error) {
+	if info, ok := s.admit(path); !ok || !info.Mode().IsRegular() {
+		return SkillResource{}, false, nil
+	}
+
+	// Path relative to the skill root, e.g. "references/api.md".
+	relToSkill, err := filepath.Rel(skillDir, path)
+	if err != nil {
+		return SkillResource{}, false, oops.With("path", path).Wrapf(err, "compute relative path")
+	}
+	// Always use forward slashes in stored paths so output is portable across
+	// platforms — generators feed this straight into filepath.Join, which
+	// accepts forward slashes on Windows.
+	relToSkill = filepath.ToSlash(relToSkill)
+	if !filter.keepFile(relToSkill) {
+		return SkillResource{}, false, nil
+	}
+
+	data, err := readCapped(s.v, path)
+	if err != nil {
+		return SkillResource{}, false, oops.With("path", path).Wrapf(err, "read skill resource")
+	}
+
+	// Capture file mode (of the target, for a followed link) so the
+	// executable bit on bundled scripts survives generation.
+	info, err := s.v.Stat(path)
+	if err != nil {
+		return SkillResource{}, false, oops.With("path", path).Wrapf(err, "stat skill resource")
+	}
+
+	resource = SkillResource{Kind: kind, RelPath: relToSkill, Content: data, Mode: resourceMode(info.Mode())}
+	if kind == SkillKindReferences && strings.HasSuffix(strings.ToLower(name), ".md") {
+		resource.Description = extractResourceDescription(data)
+	}
+	return resource, true, nil
 }
 
 // extractResourceDescription pulls a one-line summary out of a reference
