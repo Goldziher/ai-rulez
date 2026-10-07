@@ -46,7 +46,7 @@ func TestAServiceCanPlanSourcesThatExistOnlyInMemory(t *testing.T) {
 	for _, f := range plan.Files {
 		paths[f.Path] = true
 	}
-	for _, want := range []string{"CLAUDE.md", ".cursor/rules/style.mdc"} {
+	for _, want := range []string{"CLAUDE.md", "AGENTS.md"} {
 		if !paths[want] {
 			t.Errorf("plan lacks %s; has %v", want, plan.Files)
 		}
@@ -162,7 +162,7 @@ func TestAServiceCanLockAProjectDirectoryAndCheckIt(t *testing.T) {
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(home, ".cache"))
 	dir := t.TempDir()
 	for name, content := range map[string]string{
-		".ai-rulez/config.toml":    "version = \"4.0\"\nname = \"consumer\"\npresets = [\"claude\"]\n",
+		".ai-rulez/config.toml":    "version = \"5.0\"\nname = \"consumer\"\npresets = [\"claude\"]\n",
 		".ai-rulez/rules/style.md": "# Style\n\nBe concise.\n",
 	} {
 		path := filepath.Join(dir, filepath.FromSlash(name))
