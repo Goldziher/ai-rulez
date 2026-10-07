@@ -267,3 +267,20 @@ func TestRoleProblemsSameSkillIDWithDifferentModes(t *testing.T) {
 	assert.Contains(t, got[0].Message, `id "deploy"`)
 	assert.Contains(t, got[0].Message, "off in backend")
 }
+
+func TestResolveRoleRejectsUnknownDomain(t *testing.T) {
+	c := roleFixture()
+	c.Roles = []RoleConfig{{Name: "dev", Domains: []string{"backend", "typo-domain"}}}
+	_, err := c.ResolveRole("dev")
+	require.ErrorIs(t, err, ErrRoleReference)
+	assert.Contains(t, err.Error(), "AR971")
+	assert.Contains(t, err.Error(), "typo-domain")
+}
+
+func TestCheckRoleDomains(t *testing.T) {
+	c := roleFixture()
+	c.Roles = []RoleConfig{{Name: "ok", Domains: []string{"backend"}}}
+	require.NoError(t, c.CheckRoleDomains())
+	c.Roles = append(c.Roles, RoleConfig{Name: "dev", Domains: []string{"typo-domain"}})
+	require.ErrorIs(t, c.CheckRoleDomains(), ErrRoleReference)
+}
