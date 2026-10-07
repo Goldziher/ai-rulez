@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -160,6 +161,9 @@ func TestLockStatusHandler(t *testing.T) {
 // uncached remote include must load without starting git or touching the
 // network; the control proves the instrumentation would notice a fetch.
 func TestGovernanceTools_NeverFetch(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the git shim that records network verbs is a POSIX shell script; Windows cannot run it as git")
+	}
 	var proxied atomic.Int64
 	proxy := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { proxied.Add(1) }))
 	defer proxy.Close()
