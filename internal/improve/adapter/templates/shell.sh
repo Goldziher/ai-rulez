@@ -10,8 +10,8 @@ request=$(cat)
 # The skill directory, relative to the workspace (the current directory). Needs jq; any JSON tool works.
 # -e makes a missing or non-string key an error instead of the string "null".
 dir=$(printf '%s' "$request" | jq -er '.skill.dir | strings') || {
-	echo "optimize.sh: the request has no skill.dir string" >&2
-	exit 1
+  echo "optimize.sh: the request has no skill.dir string" >&2
+  exit 1
 }
 
 # The train cases are in "$request" (.train_cases). Held-out cases are never sent.
