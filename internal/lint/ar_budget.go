@@ -28,6 +28,8 @@ type loadBudget struct {
 	// Verified is false for figures taken from a secondary summary and not yet
 	// compared with the vendor page.
 	Verified bool
+	// Label names the harness in messages when the preset name alone is unclear.
+	Label string
 	// CoveredBy names the rule that already enforces the limit (nothing is emitted here).
 	CoveredBy string
 }
@@ -38,7 +40,7 @@ var loadBudgets = []loadBudget{
 	{ID: "claude-skill-listing", Presets: []string{"claude"}, Scope: "listing", Unit: unitChars, Limit: 1536, Source: "https://code.claude.com/docs/en/skills", Checked: loadBudgetsChecked, Verified: true},
 	{ID: "codex-agents-chain", Presets: []string{presetCodex}, Scope: scopeChain, Unit: "bytes", Limit: 32768, Source: "https://learn.chatgpt.com/docs/agent-configuration/agents-md", Checked: loadBudgetsChecked, Verified: true},
 	{ID: "codex-skill-listing", Presets: []string{presetCodex}, Scope: keySkills, Unit: unitChars, Limit: 8000, Source: "https://learn.chatgpt.com/docs/agent-configuration/skills", Checked: loadBudgetsChecked},
-	{ID: "windsurf-rule-file", Presets: []string{"devin"}, Scope: scopeFile, Unit: unitChars, Limit: 12000, Source: "https://docs.devin.ai/desktop/cascade/memories", Checked: loadBudgetsChecked, Verified: true},
+	{ID: "windsurf-rule-file", Label: "Windsurf (devin preset)", Presets: []string{"devin"}, Scope: scopeFile, Unit: unitChars, Limit: 12000, Source: "https://docs.devin.ai/desktop/cascade/memories", Checked: loadBudgetsChecked, Verified: true},
 	{ID: "cursor-rule-lines", Presets: []string{presetCursor}, Scope: scopeFile, Unit: unitLines, Limit: 500, Source: "https://cursor.com/docs/context/rules", Checked: loadBudgetsChecked, Verified: true},
 	{ID: "agent-skills-body", Scope: scopeFile, Unit: unitLines, Limit: 500, Source: "https://agentskills.io/specification", Checked: loadBudgetsChecked, CoveredBy: CodeSizeLines},
 	{ID: "agent-skills-tokens", Scope: scopeFile, Unit: "tokens", Limit: 5000, Source: "https://agentskills.io/specification", Checked: loadBudgetsChecked, CoveredBy: CodeSizeTokens},
@@ -161,8 +163,15 @@ func checkLoadBudgets(r *runner) { //nolint:gocyclo // linear checks over a docu
 func skillListingName(it *item) string { return itemID(it.kind, it.cf) + " " }
 
 func (b loadBudget) presetLabel() string {
-	if len(b.Presets) == 0 {
-		return "every harness"
+	label := "every harness"
+	switch {
+	case b.Label != "":
+		label = b.Label
+	case len(b.Presets) > 0:
+		label = fmt.Sprintf("the %s harness", strings.Join(b.Presets, "/"))
 	}
-	return fmt.Sprintf("the %s harness", strings.Join(b.Presets, "/"))
+	if !b.Verified && b.CoveredBy == "" {
+		label += " (unverified figure)"
+	}
+	return label
 }
