@@ -14,7 +14,7 @@ func TestAgentsMD_LoadAndSaveRoundTrip(t *testing.T) {
 		body string
 		want bool
 	}{
-		{"absent", "version = \"5.0\"\nname = \"p\"\npresets = [\"codex\"]\n", false},
+		{"absent", "version = \"5.0\"\nname = \"p\"\npresets = [\"codex\"]\n", true},
 		{"false", "version = \"5.0\"\nname = \"p\"\nagents_md = false\npresets = [\"codex\"]\n", false},
 		{"true", "version = \"5.0\"\nname = \"p\"\nagents_md = true\npresets = [\"codex\"]\n", true},
 	}
