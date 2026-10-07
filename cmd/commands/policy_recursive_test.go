@@ -24,8 +24,9 @@ func (loosenBadEnforcer) Locks(string) bool { return false }
 
 func installLoosenBad(t *testing.T) {
 	t.Helper()
-	config.SetPolicyEnforcer(loosenBadEnforcer{})
-	t.Cleanup(func() { config.SetPolicyEnforcer(policyEnforcer) })
+	previous := activePolicy
+	activePolicy = loosenBadEnforcer{}
+	t.Cleanup(func() { activePolicy = previous })
 }
 
 const policyBadConfig = "version = \"4.0\"\nname = \"bad\"\npresets = [\"claude\"]\ngitignore = false\n"

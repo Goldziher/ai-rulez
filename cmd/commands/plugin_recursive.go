@@ -12,7 +12,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 // selectRecursivePluginConfigs keeps plugin producers and marketplace roots.
@@ -27,7 +26,7 @@ func selectRecursivePluginConfigs(paths []string) ([]string, error) {
 	candidates := make([]candidate, 0, len(paths))
 	memberRoots := make([]string, 0)
 	for _, path := range paths {
-		cfg, err := project.LoadFile(context.Background(), path, config.WithoutLocal())
+		cfg, err := loadProjectFile(context.Background(), path, config.WithoutLocal())
 		if err != nil {
 			return nil, oops.With("config", path).Wrapf(err, "load recursive plugin configuration")
 		}
@@ -85,7 +84,7 @@ func runRecursivePluginVerify() {
 		os.Exit(1)
 	}
 	for _, path := range paths {
-		cfg, err := project.LoadFile(context.Background(), path, config.WithoutLocal())
+		cfg, err := loadProjectFile(context.Background(), path, config.WithoutLocal())
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)

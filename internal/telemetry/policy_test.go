@@ -22,10 +22,8 @@ func TestPolicySwitchesExportOffWhateverTheUserScopeSays(t *testing.T) {
 	user := &config.TelemetryConfig{Enabled: true, AllowNetwork: true, OTLPEndpoint: "https://collector.example.org"}
 	before := Resolve(Layers{User: user, Getenv: env()})
 	require.True(t, before.AllowNetwork, "without a policy the user scope enables export")
-	config.SetPolicyEnforcer(lockTelemetry{})
-	t.Cleanup(func() { config.SetPolicyEnforcer(nil) })
 	// Act
-	s := Resolve(Layers{User: user, Getenv: env(EnvAllowNetwork, "true")})
+	s := Resolve(Layers{User: user, Getenv: env(EnvAllowNetwork, "true"), Policy: lockTelemetry{}})
 	// Assert
 	assert.False(t, s.AllowNetwork)
 	assert.False(t, s.ExportActive())

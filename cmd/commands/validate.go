@@ -17,7 +17,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
-	"github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
@@ -211,7 +210,7 @@ func runRecursiveValidate() int {
 // validateConfigFile applies the same checks as single-root validate (schema,
 // then structural validation) to one config file.
 func validateConfigFile(configPath string) (*config.Config, error) {
-	cfg, err := project.LoadFile(context.Background(), configPath, pluginLoadOptions(false)...)
+	cfg, err := loadProjectFile(context.Background(), configPath, pluginLoadOptions(false)...)
 	if err != nil {
 		return nil, err
 	}

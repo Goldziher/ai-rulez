@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync/atomic"
 
 	"github.com/samber/oops"
 )
@@ -73,30 +72,53 @@ type ContentEnforcer interface {
 	EnforceContent(ctx context.Context, cfg *Config) []PolicyViolation
 }
 
-type enforcerBox struct{ e PolicyEnforcer }
+// A policy comes from a flag, the environment or a managed path, never from the
+// repository being loaded, and it belongs to the load it is given to: WithPolicy,
+// or WithPolicyContext for a call chain that passes a context but no options. A
+// load given neither has no policy, so an embedding service is never bound by the
+// policy of another caller in its process.
 
-var policyEnforcer atomic.Pointer[enforcerBox]
+type policyCtxKey struct{}
 
-// SetPolicyEnforcer installs the process-wide policy enforcer (nil removes it).
-// A policy is process-wide by nature: it comes from a flag, the environment or
-// a managed path, never from the repository being loaded.
-func SetPolicyEnforcer(e PolicyEnforcer) {
+// WithPolicyContext returns ctx carrying e, the policy loads made with ctx use
+// unless WithPolicy names another. A nil e leaves ctx unchanged.
+func WithPolicyContext(ctx context.Context, e PolicyEnforcer) context.Context {
 	if e == nil {
-		policyEnforcer.Store(nil)
-		return
+		return ctx
 	}
-	policyEnforcer.Store(&enforcerBox{e})
+	return context.WithValue(ctx, policyCtxKey{}, e)
 }
 
-// PolicyLocks reports whether the installed policy forbids network use of the
-// named feature ("telemetry" or "llm"). It is false without a policy. It knows
-// no repository, so the organization policy of --discover-org is not part of it:
-// use PolicyLocksIn where a project directory is known.
-func PolicyLocks(feature string) bool {
-	if b := policyEnforcer.Load(); b != nil {
-		return b.e.Locks(feature)
+func policyFromContext(ctx context.Context) PolicyEnforcer {
+	if ctx != nil {
+		if e, ok := ctx.Value(policyCtxKey{}).(PolicyEnforcer); ok {
+			return e
+		}
 	}
-	return false
+	return nil
+}
+
+// WithPolicy loads the configuration under the policy e: it clamps the loaded
+// configuration, and the loaded Config keeps it for the questions asked later
+// (PolicyLocksIn, nested loads). A nil e is no policy.
+func WithPolicy(e PolicyEnforcer) LoadOption {
+	return func(o *loadOptions) { o.policy = e }
+}
+
+// Policy is the enforcer the configuration was loaded under (nil: none).
+func (c *Config) Policy() PolicyEnforcer {
+	if c == nil {
+		return nil
+	}
+	return c.enforcer
+}
+
+// PolicyLocks reports whether the policy forbids network use of the named
+// feature ("telemetry" or "llm"). It is false without a policy. It knows no
+// repository, so the organization policy of --discover-org is not part of it:
+// use LocksIn where a project directory is known.
+func PolicyLocks(e PolicyEnforcer, feature string) bool {
+	return e != nil && e.Locks(feature)
 }
 
 // DirLocker is a PolicyEnforcer that can answer Locks for one project, whose
@@ -108,25 +130,29 @@ type DirLocker interface {
 // PolicyLocksIn is PolicyLocks for the project at dir: when organization
 // discovery is on, the owner's policy can forbid telemetry export or model calls
 // too. An enforcer that cannot discover answers as PolicyLocks does.
-func PolicyLocksIn(feature, dir string) bool {
-	b := policyEnforcer.Load()
-	if b == nil {
+func PolicyLocksIn(e PolicyEnforcer, feature, dir string) bool {
+	if e == nil {
 		return false
 	}
-	if dl, ok := b.e.(DirLocker); ok {
+	if dl, ok := e.(DirLocker); ok {
 		return dl.LocksIn(feature, dir)
 	}
-	return b.e.Locks(feature)
+	return e.Locks(feature)
+}
+
+// PolicyLocks reports whether the policy this configuration was loaded under
+// forbids network use of the feature, for the project this configuration is.
+func (c *Config) PolicyLocks(feature string) bool {
+	return PolicyLocksIn(c.Policy(), feature, baseDirOf(c))
 }
 
 // applyPolicy runs the installed enforcer on a loaded configuration and
 // records the outcome on it.
 func applyPolicy(ctx context.Context, cfg *Config) error {
-	b := policyEnforcer.Load()
-	if b == nil {
+	if cfg.enforcer == nil {
 		return nil
 	}
-	out, err := b.e.Enforce(ctx, cfg)
+	out, err := cfg.enforcer.Enforce(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -137,11 +163,10 @@ func applyPolicy(ctx context.Context, cfg *Config) error {
 // applyContentPolicy bounds the imported content of a loaded configuration. It
 // does nothing without a policy in force (a nil outcome).
 func applyContentPolicy(ctx context.Context, cfg *Config) {
-	b := policyEnforcer.Load()
-	if b == nil || cfg.PolicyOutcome == nil {
+	if cfg.enforcer == nil || cfg.PolicyOutcome == nil {
 		return
 	}
-	ce, ok := b.e.(ContentEnforcer)
+	ce, ok := cfg.enforcer.(ContentEnforcer)
 	if !ok {
 		return
 	}

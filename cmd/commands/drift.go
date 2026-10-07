@@ -13,7 +13,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
-	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 // Exit codes of the drift checks (`generate --check` and `verify`): 0 means the
@@ -180,7 +179,7 @@ func runRecursiveDrift(mode driftMode, fix string, gate func(*config.Config) err
 	}
 	total, failed, gateDrift := 0, 0, 0
 	for _, path := range paths {
-		cfg, err := project.LoadFile(context.Background(), path, driftLoadOptions(mode)...)
+		cfg, err := loadProjectFile(context.Background(), path, driftLoadOptions(mode)...)
 		if err == nil {
 			err = cfg.Validate()
 		}

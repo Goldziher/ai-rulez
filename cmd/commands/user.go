@@ -12,7 +12,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
-	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
 var (
@@ -52,7 +51,7 @@ func newUserGenerator(ctx context.Context) (*generator.Generator, *config.Config
 	if err := requireUserConfig(path); err != nil {
 		return nil, nil, err
 	}
-	cfg, err := project.LoadFile(ctx, path, config.WithoutLocal())
+	cfg, err := loadProjectFile(ctx, path, config.WithoutLocal())
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // already contextual
 	}

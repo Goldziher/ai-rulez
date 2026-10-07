@@ -17,30 +17,25 @@ func (d *dirLockEnforcer) LocksIn(feature, dir string) bool { return dir == d.di
 
 func TestPolicyLocksInUsesTheProjectsOrganizationPolicy(t *testing.T) {
 	// Arrange
-	SetPolicyEnforcer(&dirLockEnforcer{dir: "/work/acme"})
-	t.Cleanup(func() { SetPolicyEnforcer(nil) })
+	e := &dirLockEnforcer{dir: "/work/acme"}
 
 	// Act and Assert
-	assert.True(t, PolicyLocksIn("llm", "/work/acme"))
-	assert.False(t, PolicyLocksIn("llm", "/work/other"))
-	assert.False(t, PolicyLocksIn("telemetry", "/work/acme"))
-	assert.False(t, PolicyLocks("llm"), "the process-wide answer knows no repository")
+	assert.True(t, PolicyLocksIn(e, "llm", "/work/acme"))
+	assert.False(t, PolicyLocksIn(e, "llm", "/work/other"))
+	assert.False(t, PolicyLocksIn(e, "telemetry", "/work/acme"))
+	assert.False(t, PolicyLocks(e, "llm"), "the answer without a project knows no repository")
 }
 
 func TestPolicyLocksInFallsBackToLocksForAnEnforcerThatCannotDiscover(t *testing.T) {
 	// Arrange
-	SetPolicyEnforcer(&fakeEnforcer{locked: map[string]bool{"llm": true}})
-	t.Cleanup(func() { SetPolicyEnforcer(nil) })
+	e := &fakeEnforcer{locked: map[string]bool{"llm": true}}
 
 	// Act and Assert
-	assert.True(t, PolicyLocksIn("llm", "/work/acme"))
-	assert.False(t, PolicyLocksIn("telemetry", "/work/acme"))
+	assert.True(t, PolicyLocksIn(e, "llm", "/work/acme"))
+	assert.False(t, PolicyLocksIn(e, "telemetry", "/work/acme"))
 }
 
 func TestPolicyLocksInWithoutAnEnforcerLocksNothing(t *testing.T) {
-	// Arrange
-	SetPolicyEnforcer(nil)
-
 	// Act and Assert
-	assert.False(t, PolicyLocksIn("llm", "/work/acme"))
+	assert.False(t, PolicyLocksIn(nil, "llm", "/work/acme"))
 }

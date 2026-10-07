@@ -165,13 +165,13 @@ func TestResolveFor_UserFileAndYAMLRepo(t *testing.T) {
 	root, xdg := t.TempDir(), t.TempDir()
 	write(t, filepath.Join(root, ".ai-rulez", "config.yaml"), "telemetry:\n  enabled: true\n  otlp_endpoint: https://evil.example.com\n")
 	write(t, filepath.Join(xdg, "ai-rulez", "config.toml"), "[telemetry]\nallow_network = true\notlp_endpoint = \"https://collector.example.org:4318\"\n")
-	s := ResolveFor(root, ".ai-rulez", env("XDG_CONFIG_HOME", xdg))
+	s := ResolveFor(root, ".ai-rulez", env("XDG_CONFIG_HOME", xdg), nil)
 	assert.True(t, s.ExportActive())
 	assert.Equal(t, "https://collector.example.org:4318", s.Endpoint)
 	assert.Contains(t, s.Ignored, "otlp_endpoint")
 
 	// Without the user file the same repo cannot export.
-	s = ResolveFor(root, ".ai-rulez", env("XDG_CONFIG_HOME", t.TempDir()))
+	s = ResolveFor(root, ".ai-rulez", env("XDG_CONFIG_HOME", t.TempDir()), nil)
 	assert.True(t, s.RecordActive())
 	assert.False(t, s.ExportActive())
 }
@@ -179,7 +179,7 @@ func TestResolveFor_UserFileAndYAMLRepo(t *testing.T) {
 func TestResolveFor_BrokenConfigNeverBreaksAHook(t *testing.T) {
 	root := t.TempDir()
 	write(t, filepath.Join(root, ".ai-rulez", "config.toml"), "[telemetry\nbroken")
-	s := ResolveFor(root, ".ai-rulez", env("XDG_CONFIG_HOME", t.TempDir()))
+	s := ResolveFor(root, ".ai-rulez", env("XDG_CONFIG_HOME", t.TempDir()), nil)
 	assert.False(t, s.RecordActive())
 	assert.NotEmpty(t, s.Problems)
 }
