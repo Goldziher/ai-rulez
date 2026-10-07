@@ -73,9 +73,12 @@ else
     echo "Downloading ai-rulez ${TAG} for ${PLATFORM}/${ARCH}..."
     curl -fsSL "$download_url" -o "$archive_path"
 
+    # Like the npm and PyPI wrappers: verify when the release lists a checksum, warn otherwise.
     if curl -fsSL "$checksum_url" -o "${tmp_dir}/checksums.txt" 2>/dev/null; then
-      expected_sum="$(grep " ${archive_name}$" "${tmp_dir}/checksums.txt" | awk '{print $1}')"
-      if [[ -n "$expected_sum" ]]; then
+      expected_sum="$(awk -v name="$archive_name" '$2 == name || $2 == "*" name { print $1; exit }' "${tmp_dir}/checksums.txt")"
+      if [[ -z "$expected_sum" ]]; then
+        echo "Warning: no checksum for ${archive_name} in checksums.txt, skipping checksum verification" >&2
+      else
         if command -v shasum >/dev/null 2>&1; then
           actual_sum="$(shasum -a 256 "$archive_path" | awk '{print $1}')"
         elif command -v sha256sum >/dev/null 2>&1; then
@@ -89,6 +92,8 @@ else
           exit 1
         fi
       fi
+    else
+      echo "Warning: Could not download checksums.txt, skipping checksum verification" >&2
     fi
 
     if [[ "$ext" == "zip" ]]; then
