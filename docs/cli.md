@@ -1414,6 +1414,8 @@ Verify every plugin producer and marketplace in a repository:
 ai-rulez verify --recursive --plugin --if-configured
 ```
 
+Exit codes: `0` the bundle matches its sources, `1` the check could not run (invalid configuration, no plugin configuration), `2` a bundle file is missing, stale, obsolete or fails its provenance hash.
+
 When a `[plugin]` block exists but no bundle was generated, `verify --plugin` fails with `plugin bundle not generated; run `ai-rulez generate --plugin``. `--if-configured` only skips a project with no plugin configuration; add `--if-generated` to also skip until the bundle exists.
 
 Recursive verification treats a marketplace root and its members as one atomic

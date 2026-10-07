@@ -163,7 +163,31 @@ func TestVerifyPlugin_NotGenerated(t *testing.T) {
 	require.NoError(t, err)
 	err = NewGenerator(cfg).VerifyPlugin("")
 	require.ErrorIs(t, err, ErrPluginNotGenerated)
+	require.ErrorIs(t, err, ErrPluginDrift)
 	assert.Contains(t, err.Error(), "ai-rulez generate --plugin")
+}
+
+func TestVerifyPlugin_TamperedBundleIsDrift(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(configDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
+		"version = \"5.0\"\nname = \"demo\"\npresets = [\"claude\"]\ngitignore = false\n\n"+
+			"[plugin]\nname = \"demo\"\nversion = \"1.0.0\"\ndescription = \"d\"\nruntimes = [\"claude\"]\n"), 0o644))
+	load := func() *Generator {
+		cfg, err := config.LoadConfig(context.Background(), dir, config.WithoutLocal())
+		require.NoError(t, err)
+		return NewGenerator(cfg)
+	}
+	require.NoError(t, load().GeneratePlugin(""))
+	require.NoError(t, load().VerifyPlugin(""))
+
+	manifest := filepath.Join(dir, ".claude-plugin", "plugin.json")
+	appendTo(t, manifest, "\n")
+	err := load().VerifyPlugin("")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrPluginDrift, "a hand-edited bundle file is drift, not a failed run")
+	assert.NotErrorIs(t, err, ErrPluginNotGenerated)
 }
 
 func appendTo(t *testing.T, path, text string) {

@@ -98,7 +98,7 @@ func runRecursivePluginVerify() {
 				continue
 			}
 			fmtError(oops.With("config", path).Wrapf(err, "verify plugin outputs"))
-			os.Exit(1)
+			os.Exit(pluginVerifyExitCode(err))
 		}
 	}
 	logger.Success("Generated plugin artifacts are valid", "configs", len(paths))
