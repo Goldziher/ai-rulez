@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const servedSkillsConfig = `version = "4.0"
+const servedSkillsConfig = `version = "5.0"
 name = "served"
 gitignore = false
 presets = ["claude"]

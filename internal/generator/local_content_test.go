@@ -16,7 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-const localContentConfig = `version = "4.0"
+const localContentConfig = `version = "5.0"
 name = "t"
 presets = ["%s"]
 gitignore = true

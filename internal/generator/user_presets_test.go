@@ -15,7 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/userscope"
 )
 
-const userPresetConfigFmt = `version = "4.0"
+const userPresetConfigFmt = `version = "5.0"
 name = "me"
 presets = [%s]
 
