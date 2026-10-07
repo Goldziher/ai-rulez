@@ -224,7 +224,7 @@ backend = ["backend"]
 			tempDir := t.TempDir()
 			configDir := filepath.Join(tempDir, aiRulezDirName)
 			require.NoError(t, os.MkdirAll(configDir, 0o755))
-			require.NoError(t, os.WriteFile(filepath.Join(configDir, name), []byte("version: \"4.0\"\nname: x\n"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(configDir, name), []byte("version: \"5.0\"\nname: x\n"), 0o644))
 
 			_, err := LoadConfig(context.Background(), tempDir)
 			require.Error(t, err)

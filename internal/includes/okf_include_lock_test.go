@@ -44,7 +44,7 @@ func newOKFLockFixture(t *testing.T, ref string) *okfLockFixture {
 	if ref != "" {
 		refLine = "ref = \"" + ref + "\"\n"
 	}
-	writeTestFile(t, filepath.Join(project, ".ai-rulez", "config.toml"), `version = "4.0"
+	writeTestFile(t, filepath.Join(project, ".ai-rulez", "config.toml"), `version = "5.0"
 name = "p"
 presets = ["claude"]
 gitignore = false

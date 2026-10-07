@@ -118,7 +118,7 @@ func TestConvert_V3ConfigIsLeftAlone(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 	writeTree(t, dir, sampleProject)
-	yamlCfg := "version: \"4.0\"\nname: mine\npresets: [claude]\n"
+	yamlCfg := "version: \"5.0\"\nname: mine\npresets: [claude]\n"
 	writeTree(t, dir, map[string]string{".ai-rulez/config.yaml": yamlCfg})
 
 	// Act

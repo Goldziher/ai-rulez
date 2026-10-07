@@ -34,7 +34,7 @@ func sampleProject(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	ar := ".ai-rulez/"
-	write(t, root, ar+"config.toml", "version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
+	write(t, root, ar+"config.toml", "version = \"5.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
 	write(t, root, ar+"rules/testing.md", "---\npriority: high\nglobs:\n  - \"**/*_test.go\"\ndescription: How we test\nowner: platform-team\nversion: 1.2\n---\n\n# Testing\n\nWrite table tests.\n")
 	write(t, root, ar+"rules/plain.md", "No frontmatter, just text.\n")
 	write(t, root, ar+"context/architecture.md", "---\ndescription: System layout\nokf:\n  tags: [arch, core]\n  status: stable\n---\nMonolith with plugins.\n")
@@ -114,7 +114,7 @@ func TestRoundTripIsByteIdentical(t *testing.T) {
 	b, err := okf.Load(os.DirFS(bundleDir))
 	require.NoError(t, err)
 	fresh := t.TempDir()
-	write(t, fresh, ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
+	write(t, fresh, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
 	res, err := okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
 	require.NoError(t, err)
 	assert.Equal(t, 0, res.Count(okfbridge.StatusConflict))
@@ -198,7 +198,7 @@ func TestImportForeignBundleMapsByType(t *testing.T) {
 	assert.Contains(t, string(text), "tags:")
 
 	// Loads as a normal ai-rulez project and exports again with the foreign keys back.
-	write(t, filepath.Dir(cfgDir), ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"imported\"\npresets = [\"claude\"]\n")
+	write(t, filepath.Dir(cfgDir), ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"imported\"\npresets = [\"claude\"]\n")
 	out := exportProject(t, filepath.Dir(cfgDir))
 	var ruleFile string
 	for _, f := range out.Files {
@@ -310,7 +310,7 @@ func TestImportOfficialAcmeRetail(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, res.Security)
 	assert.Equal(t, 9, len(res.Actions))
-	write(t, filepath.Dir(cfgDir), ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"acme\"\npresets = [\"claude\"]\n")
+	write(t, filepath.Dir(cfgDir), ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"acme\"\npresets = [\"claude\"]\n")
 	out := exportProject(t, filepath.Dir(cfgDir))
 	dir := t.TempDir() + "/b"
 	writeBundle(t, dir, out.Files)
@@ -324,7 +324,7 @@ func TestImportOfficialAcmeRetail(t *testing.T) {
 func TestRoundTripAddsNoKeysToASkillWithoutNameOrDescription(t *testing.T) {
 	// Arrange: a skill whose frontmatter has neither key.
 	root := t.TempDir()
-	write(t, root, ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
+	write(t, root, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
 	write(t, root, ".ai-rulez/skills/bare/SKILL.md", "---\nallowed-tools: Read\n---\n\nSteps.\n")
 	first := exportProject(t, root)
 	bundleDir := t.TempDir() + "/b"
@@ -332,7 +332,7 @@ func TestRoundTripAddsNoKeysToASkillWithoutNameOrDescription(t *testing.T) {
 	b, err := okf.Load(os.DirFS(bundleDir))
 	require.NoError(t, err)
 	fresh := t.TempDir()
-	write(t, fresh, ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
+	write(t, fresh, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
 
 	// Act
 	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
@@ -376,7 +376,7 @@ func TestExportConceptsNeverClaimReservedNames(t *testing.T) {
 
 	// And the real names come back on import.
 	fresh := t.TempDir()
-	write(t, fresh, ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
+	write(t, fresh, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
 	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})
 	require.NoError(t, err)
 	assert.FileExists(t, filepath.Join(fresh, ".ai-rulez/rules/index.md"))
@@ -386,7 +386,7 @@ func TestExportConceptsNeverClaimReservedNames(t *testing.T) {
 func TestRoundTripKeepsNonASCIINames(t *testing.T) {
 	// Arrange
 	root := t.TempDir()
-	write(t, root, ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
+	write(t, root, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
 	write(t, root, ".ai-rulez/rules/résumé.md", "---\ndescription: Accents\n---\nbody\n")
 	write(t, root, ".ai-rulez/rules/日本語.md", "---\ndescription: CJK\n---\nbody2\n")
 	first := exportProject(t, root)
@@ -395,7 +395,7 @@ func TestRoundTripKeepsNonASCIINames(t *testing.T) {
 	b, err := okf.Load(os.DirFS(dir))
 	require.NoError(t, err)
 	fresh := t.TempDir()
-	write(t, fresh, ".ai-rulez/config.toml", "version = \"4.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
+	write(t, fresh, ".ai-rulez/config.toml", "version = \"5.0\"\nname = \"sample\"\npresets = [\"claude\"]\n")
 
 	// Act
 	_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(fresh, ".ai-rulez"), Scan: testScan})

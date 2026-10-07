@@ -307,7 +307,7 @@ func TestLoadConfig_OverlayTypeErrorsNeverEchoValues(t *testing.T) {
 	}{
 		{
 			name: "yaml overlay on yaml main", mainFn: "config.yaml",
-			main:    "version: \"4.0\"\nname: x\npresets: [claude]\n",
+			main:    "version: \"5.0\"\nname: x\npresets: [claude]\n",
 			localFn: "config.local.yaml",
 			local:   "mcp_servers:\n  - name: x\n    command: c\n    args: \"SECRETY2\"\n",
 		},

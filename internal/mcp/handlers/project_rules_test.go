@@ -20,7 +20,7 @@ var rulesFormats = []struct {
 	file string
 	body string
 }{
-	{"toml", "config.toml", "version = \"4.0\"\nname = \"test\"\npresets = [\"claude\"]\n"},
+	{"toml", "config.toml", "version = \"5.0\"\nname = \"test\"\npresets = [\"claude\"]\n"},
 }
 
 func writeRulesProject(t *testing.T, file, body string) (dir, path string) {

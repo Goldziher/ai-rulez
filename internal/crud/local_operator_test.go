@@ -34,7 +34,7 @@ func setupLocalOpProject(t *testing.T) *localOpProject {
 	}
 	dir := filepath.Join(p.baseDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "domains", "backend", "rules"), 0o755))
-	p.shared = fmt.Sprintf(`version = "4.0"
+	p.shared = fmt.Sprintf(`version = "5.0"
 name = "test-project"
 presets = ["claude"]
 

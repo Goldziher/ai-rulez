@@ -21,7 +21,7 @@ func TestDoctorHandler(t *testing.T) {
 		wantCheck    string
 		wantSeverity string
 	}{
-		{name: "removed preset is an error", config: "version = \"4.0\"\nname = \"x\"\npresets = [\"windsurf\"]\n", wantOK: false, wantCheck: "presets", wantSeverity: "error"},
+		{name: "removed preset is an error", config: "version = \"5.0\"\nname = \"x\"\npresets = [\"windsurf\"]\n", wantOK: false, wantCheck: "presets", wantSeverity: "error"},
 		{name: "ungenerated output is a warning that passes", config: generateSharedConfig, wantOK: true, wantCheck: "drift", wantSeverity: "warning"},
 		{name: "strict turns the warning into a failure", config: generateSharedConfig, strict: true, wantOK: false, wantCheck: "drift", wantSeverity: "warning"},
 	}

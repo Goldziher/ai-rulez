@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	handlerSharedConfig = "version = \"4.0\"\nname = \"shared\"\npresets = [\"claude\"]\n"
+	handlerSharedConfig = "version = \"5.0\"\nname = \"shared\"\npresets = [\"claude\"]\n"
 	handlerLocalConfig  = "name = \"mine\"\n\n[[mcp_servers]]\nname = \"ghsrv\"\ncommand = \"gh\"\n\n" +
 		"[mcp_servers.env]\nTOKEN = \"s3cr3t-token\"\n"
 )

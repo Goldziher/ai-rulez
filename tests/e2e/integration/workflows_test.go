@@ -142,7 +142,7 @@ func (s *WorkflowsTestSuite) TestErrorRecoveryWorkflow() {
 	result.AssertOutputContains(s.T(), "valid")
 
 	// Make config invalid by corrupting it
-	testutil.WriteFile(s.T(), filepath.Join(s.workingDir, ".ai-rulez"), "config.toml", `version = "4.0"
+	testutil.WriteFile(s.T(), filepath.Join(s.workingDir, ".ai-rulez"), "config.toml", `version = "5.0"
 name = "broken"
 presets = "not-a-list"
 `)

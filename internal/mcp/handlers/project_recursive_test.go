@@ -14,7 +14,7 @@ func writeRecursiveConfig(t *testing.T, base, rel string) {
 	t.Helper()
 	path := filepath.Join(base, filepath.FromSlash(rel))
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-	require.NoError(t, os.WriteFile(path, []byte("version = \"4.0\"\nname = \"x\"\n"), 0o644))
+	require.NoError(t, os.WriteFile(path, []byte("version = \"5.0\"\nname = \"x\"\n"), 0o644))
 }
 
 func TestFindRecursiveConfigDirs_ConfigConvention(t *testing.T) {

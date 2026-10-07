@@ -7,7 +7,7 @@ import (
 
 func telemetryFixture(telemetry string) map[string]string {
 	return map[string]string{
-		".ai-rulez/config.toml": "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n" + telemetry,
+		".ai-rulez/config.toml": "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n" + telemetry,
 		".ai-rulez/rules/r.md":  "---\nname: r\n---\nbody\n",
 	}
 }

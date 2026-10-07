@@ -333,7 +333,7 @@ func TestGenerator_CustomPreset_Markdown(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
 
 	// Create config
-	configContent := `version = "4.0"
+	configContent := `version = "5.0"
 name = "custom-preset-test"
 gitignore = false
 
@@ -378,7 +378,7 @@ func TestGenerator_CustomPreset_Directory(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
 
 	// Create config
-	configContent := `version = "4.0"
+	configContent := `version = "5.0"
 name = "custom-preset-test"
 gitignore = false
 
@@ -1609,7 +1609,7 @@ func TestGenerator_CleansStaleSkillResource(t *testing.T) {
 
 	require.NoError(t, os.WriteFile(
 		filepath.Join(tempDir, ".ai-rulez", "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\ngitignore = false\n"), 0o644))
+		[]byte("version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\ngitignore = false\n"), 0o644))
 
 	ctx := context.Background()
 	cfg, err := config.LoadConfig(ctx, tempDir)
@@ -1645,7 +1645,7 @@ func TestGenerator_PreservesUserOwnedAssistantFiles(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 	require.NoError(t, os.WriteFile(
 		filepath.Join(configDir, "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"x\"\npresets = [\"claude\", \"codex\"]\ngitignore = false\n"),
+		[]byte("version = \"5.0\"\nname = \"x\"\npresets = [\"claude\", \"codex\"]\ngitignore = false\n"),
 		0o644,
 	))
 	require.NoError(t, os.WriteFile(
@@ -1686,7 +1686,7 @@ func TestGenerator_DryRunPlansWritesAndDeletesWithoutMutation(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 	require.NoError(t, os.WriteFile(
 		filepath.Join(configDir, "config.toml"),
-		[]byte("version = \"4.0\"\nname = \"x\"\npresets = [\"codex\"]\ngitignore = false\n"),
+		[]byte("version = \"5.0\"\nname = \"x\"\npresets = [\"codex\"]\ngitignore = false\n"),
 		0o644,
 	))
 	require.NoError(t, os.WriteFile(

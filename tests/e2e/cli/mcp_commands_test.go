@@ -89,7 +89,7 @@ func (s *MCPCommandsCLITestSuite) TestTemplateCounts() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version = "4.0"
+	configYAML := `version = "5.0"
 name = "count-test-project"
 description = "Test counting"
 presets = ["claude"]

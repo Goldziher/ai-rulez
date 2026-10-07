@@ -62,7 +62,7 @@ func TestInit_BasicStructure(t *testing.T) {
 	// Read config content
 	content, err := os.ReadFile(".ai-rulez/config.toml")
 	require.NoError(t, err)
-	assert.Contains(t, string(content), `version = "4.0"`)
+	assert.Contains(t, string(content), `version = "5.0"`)
 	assert.Contains(t, string(content), `name = "test-project"`)
 	assert.Contains(t, string(content), "presets = ")
 }
