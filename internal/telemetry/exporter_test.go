@@ -15,6 +15,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type collector struct {
@@ -169,7 +171,7 @@ func TestExporter_GivesUpAfterRetriesAndKeepsTheSpool(t *testing.T) {
 }
 
 func TestExporter_RejectedBatchIsDroppedAndCounted(t *testing.T) {
-	for _, status := range []int{400, 401, 403, 404, 413, 302, 307, 500, 501, 505} {
+	for _, status := range []int{400, 401, 403, 404, 413, 302, 307, 501, 505} {
 		c := &collector{statuses: []int{status}}
 		srv := httptest.NewServer(c.handler())
 		x, spool, sleeps := newExporter(t, srv.URL)
@@ -272,4 +274,36 @@ func TestNetworkReasonHidesURL(t *testing.T) {
 	}
 	require.Error(t, err)
 	assert.False(t, strings.Contains(networkReason(err), "secret"))
+}
+
+func TestExporter_RetriesServerErrorsAndRequestTimeouts(t *testing.T) {
+	for _, status := range []int{500, 408, 425, 507} {
+		c := &collector{statuses: []int{status}}
+		srv := httptest.NewServer(c.handler())
+		x, spool, sleeps := newExporter(t, srv.URL)
+		fill(t, spool, 2)
+		_, err := x.Flush(context.Background())
+		srv.Close()
+		require.Error(t, err, status)
+		assert.NotErrorIs(t, err, ErrRejected, status)
+		assert.NotEmpty(t, *sleeps, "a transient status is retried")
+		events, _, _ := spool.Pending()
+		assert.Len(t, events, 2, "the batch stays in the spool")
+	}
+}
+
+func TestParseRetryAfter_HTTPDate(t *testing.T) {
+	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	assert.Equal(t, 30*time.Second, parseRetryAfterAt(now.Add(30*time.Second).Format(http.TimeFormat), now))
+	assert.Zero(t, parseRetryAfterAt(now.Add(-time.Minute).Format(http.TimeFormat), now))
+	assert.Equal(t, 5*time.Second, parseRetryAfterAt("5", now))
+	assert.Zero(t, parseRetryAfterAt("junk", now))
+}
+
+func TestClassifyGRPC_RetriesInternalAndUnknown(t *testing.T) {
+	for _, code := range []codes.Code{codes.Internal, codes.Unknown, codes.Unavailable, codes.DeadlineExceeded, codes.ResourceExhausted} {
+		var transient *transientError
+		require.ErrorAs(t, classifyGRPC(status.Error(code, "x")), &transient, code.String())
+	}
+	require.ErrorIs(t, classifyGRPC(status.Error(codes.InvalidArgument, "x")), ErrRejected)
 }
