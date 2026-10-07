@@ -131,8 +131,8 @@ type LockReport struct {
 	Age time.Duration
 	// SigningTime is SignedAt, or the claimed issue time when Weak.
 	SigningTime time.Time
-	// StateKey is the rollback mark this report is checked and committed under.
-	StateKey string
+	// StateKeys are the rollback marks this report is checked and committed under.
+	StateKeys []string
 	// Cosigners are the reports of the other distinct trusted signers that
 	// VerifyLockSet accepted; the report itself is the first.
 	Cosigners []*LockReport
@@ -192,13 +192,13 @@ func VerifyLock(data []byte, lock *lockfile.File, p LockPolicy) (*LockReport, er
 	if err := CheckFresh(res, pred.IssuedAt, p.MaxAge, now); err != nil {
 		return nil, err
 	}
-	key := stateKey(res.Signer, pred.Repository, p)
+	keys := stateKeys(res.Signer, pred.Repository, p)
 	if p.State != nil && !at.IsZero() {
-		if err := p.State.Check(key, at); err != nil {
+		if err := p.State.checkAll(keys, at); err != nil {
 			return nil, err
 		}
 	}
-	return &LockReport{Result: res, Predicate: pred, Age: now.Sub(at), SigningTime: at, StateKey: key}, nil
+	return &LockReport{Result: res, Predicate: pred, Age: now.Sub(at), SigningTime: at, StateKeys: keys}, nil
 }
 
 // verifyLockBundle verifies a DSSE bundle (`ai-rulez sign --lock`) or a
@@ -263,24 +263,37 @@ func (r *LockReport) Commit(s *State) error {
 	if r.SigningTime.IsZero() {
 		return nil
 	}
-	return s.Advance(r.StateKey, r.SigningTime)
+	return s.advanceAll(r.StateKeys, r.SigningTime)
 }
 
-// stateKey names the rollback mark of a signer in one project. The repository
+// stateKeys names the rollback marks of a signer in one project. The repository
 // is the signer's own claim, so it is never the whole key: a signer can claim
 // any repository, and keying by it alone would let one signer's future-dated
-// attestation block another's. The signer and the checkout scope keep marks
-// apart; the repository claim only lets two clones of one repository share one.
-func stateKey(signer SignerInfo, repo string, p LockPolicy) string {
-	return scopedStateKey(signer, repo, p.ScopeRel, p.ScopeAbs)
+// attestation block another's. The signer and the checkout path always form
+// one mark; a repository claim adds a second, which lets two clones of one
+// repository share it. A report is checked against, and advances, both, so an
+// attestation cannot step around a newer one's mark by dropping or changing
+// its claim.
+func stateKeys(signer SignerInfo, repo string, p LockPolicy) []string {
+	return scopedStateKeys(signer, repo, p.ScopeRel, p.ScopeAbs)
 }
 
-func scopedStateKey(signer SignerInfo, repo, scopeRel, scopeAbs string) string {
+func scopedStateKeys(signer SignerInfo, repo, scopeRel, scopeAbs string) []string {
 	who := signerID(signer)
+	keys := []string{who + "|path:" + scopeAbs}
 	if repo != "" && scopeRel != "" {
-		return who + "|" + repo + "|" + scopeRel
+		keys = append(keys, who+"|"+repo+"|"+scopeRel)
 	}
-	return who + "|path:" + scopeAbs
+	return keys
+}
+
+// suffixed appends suffix to every key.
+func suffixed(keys []string, suffix string) []string {
+	out := make([]string, len(keys))
+	for i, k := range keys {
+		out[i] = k + suffix
+	}
+	return out
 }
 
 func checkLockSubject(res *Result, lock *lockfile.File, minHash int) (LockPredicate, error) {
