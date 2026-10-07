@@ -57,7 +57,7 @@ make_project() {
   local dir="$1" presets="$2" extra="${3:-}"
   mkdir -p "$dir/.ai-rulez"
   {
-    printf 'version = "4.0"\nname = "bats"\npresets = [%s]\n' "$presets"
+    printf 'version = "5.0"\nname = "bats"\npresets = [%s]\n' "$presets"
     [ -z "$extra" ] || printf '%s\n' "$extra"
   } >"$dir/.ai-rulez/config.toml"
   git -C "$dir" init -q
