@@ -30,7 +30,7 @@ func TestUsageHook_PrintsAndWritesTheTemplate(t *testing.T) {
 	telemetryHookCmd.SetOut(&out)
 	require.NoError(t, telemetryHookCmd.RunE(telemetryHookCmd, nil))
 	assert.True(t, json.Valid(out.Bytes()))
-	assert.Contains(t, out.String(), "ai-rulez usage record")
+	assert.Contains(t, out.String(), "ai-rulez telemetry record")
 
 	telOutput = filepath.Join(t.TempDir(), "sub", "hooks.json")
 	require.NoError(t, telemetryHookCmd.RunE(telemetryHookCmd, nil))

@@ -24,6 +24,7 @@ import (
 const lockProjectConfig = `version = "5.0"
 name = "lock-test"
 presets = ["claude"]
+agents_md = false
 `
 
 func lockProject(t *testing.T, extraConfig string) string {

@@ -234,9 +234,9 @@ func TestConfig_ShouldUpdateGitignore(t *testing.T) {
 		expected bool
 	}{
 		{
-			name:     "nil gitignore defaults to true",
+			name:     "nil gitignore defaults to false (opt-in managed block)",
 			config:   config.Config{},
-			expected: true,
+			expected: false,
 		},
 		{
 			name: "explicitly enabled",
