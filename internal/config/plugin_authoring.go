@@ -586,7 +586,7 @@ func (c *Config) RelativeDirectoryMarketplace() (path string, ok bool) {
 		return "", false
 	}
 	if src := s.MarketplaceSource; src != nil {
-		if src.Source != "directory" || src.Path == "" || filepath.IsAbs(src.Path) {
+		if src.Source != "directory" || src.Path == "" || rooted(src.Path) {
 			return "", false
 		}
 		return src.Path, true
