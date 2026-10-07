@@ -479,10 +479,20 @@ func refusalError(refused []outputRefusal) error {
 		remedy = "generate never writes through a symlink: remove the link (or point it at a path ai-rulez generates). " +
 			"For a plain file, import it with `ai-rulez convert --write`, move or delete it, or pass --force to overwrite it"
 	}
-	return oops.With("files", lines).
+	return refusedOutputsError{oops.With("files", lines).
 		Errorf("refusing to overwrite %d existing file(s) ai-rulez cannot prove it wrote: %s. %s",
-			len(refused), strings.Join(lines, "; "), remedy)
+			len(refused), strings.Join(lines, "; "), remedy)}
 }
+
+// refusedOutputsError marks a refusal for errors.Is(err, config.ErrOutputRefused) without
+// changing its message, which oops.Wrapf would extend with the sentinel's text.
+type refusedOutputsError struct{ err error }
+
+func (e refusedOutputsError) Error() string { return e.err.Error() }
+
+func (e refusedOutputsError) Unwrap() error { return e.err }
+
+func (refusedOutputsError) Is(target error) bool { return target == config.ErrOutputRefused }
 
 // refusalReason is why generate would not write the file at relPath, when it would not.
 func (g *Generator) refusalReason(relPath string) (string, bool) {
