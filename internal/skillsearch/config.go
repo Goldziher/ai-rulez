@@ -59,7 +59,7 @@ type Weights struct {
 }
 
 // EmbeddingsConfig is [search.embeddings]: a per-feature model override and the
-// command provider. The command runs a program, so it is honoured only from the
+// command provider. The command runs a program, so it is honored only from the
 // user config file (or with --allow-exec); a repository config cannot set it.
 //
 //nolint:tagliatelle // config keys are snake_case by project convention
@@ -106,7 +106,7 @@ type Config struct {
 	DType string `yaml:"dtype,omitempty" json:"dtype,omitempty" toml:"dtype,omitempty"`
 	// LogQueries records the text of find_skill and search queries, and the skill loaded after
 	// each, in <config dir>/local/search-queries.jsonl so `search mine` can turn them into cases.
-	// Honoured only from the user config file or AI_RULEZ_SEARCH_LOG_QUERIES: a repository config cannot turn it on.
+	// Honored only from the user config file or AI_RULEZ_SEARCH_LOG_QUERIES: a repository config cannot turn it on.
 	LogQueries bool              `yaml:"log_queries,omitempty" json:"log_queries,omitempty" toml:"log_queries,omitempty"`
 	Embeddings *EmbeddingsConfig `yaml:"embeddings,omitempty" json:"embeddings,omitempty" toml:"embeddings,omitempty"`
 }

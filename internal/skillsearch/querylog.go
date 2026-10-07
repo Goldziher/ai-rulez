@@ -109,7 +109,7 @@ func truncateBytes(s string, n int) string {
 		return s
 	}
 	s = s[:n]
-	for len(s) > 0 && !utf8.ValidString(s) {
+	for s != "" && !utf8.ValidString(s) {
 		s = s[:len(s)-1]
 	}
 	return s
@@ -209,8 +209,9 @@ func Mine(entries []LogEntry, o MineOptions) Mined {
 	byQuery := map[string]*tally{}
 	var order []string
 	current := map[string]string{} // session -> normalized query awaiting a label
-	seen := map[string]bool{}      // session+query already labelled by a load
-	for _, e := range entries {
+	seen := map[string]bool{}      // session+query already labeled by a load
+	for i := range entries {
+		e := &entries[i]
 		switch e.Event {
 		case eventQuery:
 			n := normQuery(e.Query)

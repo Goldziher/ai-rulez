@@ -88,7 +88,7 @@ func capQuery(q string) string {
 		return q
 	}
 	q = q[:maxQueryEmbedBytes]
-	for len(q) > 0 && !utf8.ValidString(q) {
+	for q != "" && !utf8.ValidString(q) {
 		q = q[:len(q)-1]
 	}
 	return q
