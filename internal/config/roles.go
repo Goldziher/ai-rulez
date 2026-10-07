@@ -598,10 +598,22 @@ func filterRoleFiles(flat *RoleConfig, kind, domain string, files []ContentFile)
 }
 
 // ResolveRole computes the effective item set of a role over the loaded content.
+// A role that names a domain which does not exist is an error (ErrRoleReference,
+// AR971): resolving it anyway would render the role as "no content", the wrong
+// direction for a role that is meant to restrict access.
 func (c *Config) ResolveRole(name string) (*ResolvedRole, error) {
+	return c.resolveRole(name, true)
+}
+
+func (c *Config) resolveRole(name string, strict bool) (*ResolvedRole, error) {
 	flat, err := c.FlattenRole(name)
 	if err != nil {
 		return nil, err
+	}
+	if strict {
+		if err := c.roleDomainError(flat); err != nil {
+			return nil, err
+		}
 	}
 	if c.Content == nil {
 		return nil, ErrNoContent
@@ -732,7 +744,7 @@ func (c *Config) RoleProblems() []RoleProblem {
 			continue // reported above
 		}
 		problems = append(problems, c.roleReferenceProblems(flat, all)...)
-		res, rerr := c.ResolveRole(name)
+		res, rerr := c.resolveRole(name, false)
 		if rerr != nil {
 			continue
 		}
@@ -862,6 +874,32 @@ func (c *Config) unmatchedEntry(role, field, kind, pattern string, selectedDomai
 	}
 	sort.Strings(elsewhere)
 	return fmt.Sprintf("role %q %s entry %q exists only in domain %q, which the role does not select", role, field, pattern, elsewhere[0])
+}
+
+// CheckRoleDomains returns the first role that lists a domain which does not exist
+// (ErrRoleReference, AR971), for commands that publish every role and must not
+// publish one that renders as "no content".
+func (c *Config) CheckRoleDomains() error {
+	for _, name := range c.RoleNames() {
+		flat, err := c.FlattenRole(name)
+		if err != nil {
+			continue // broken inheritance is AR972
+		}
+		if err := c.roleDomainError(flat); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// roleDomainError reports the first domain a role lists that does not exist.
+func (c *Config) roleDomainError(flat *FlatRole) error {
+	for _, d := range flat.Domains {
+		if !c.domainExists(d) {
+			return fmt.Errorf("%w: AR971 role %q lists domain %q, which does not exist", ErrRoleReference, flat.Name, d)
+		}
+	}
+	return nil
 }
 
 func (c *Config) domainExists(ref string) bool {
