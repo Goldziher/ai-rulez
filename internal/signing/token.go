@@ -40,7 +40,7 @@ func ResolveIDToken(ctx context.Context, env ambient.Env, tokenEnv string, inter
 	}
 	reqURL, reqToken := ambient.Getenv(env, "ACTIONS_ID_TOKEN_REQUEST_URL"), ambient.Getenv(env, "ACTIONS_ID_TOKEN_REQUEST_TOKEN")
 	if reqURL != "" && reqToken != "" {
-		return githubToken(ctx, reqURL, reqToken)
+		return githubToken(ctx, http.DefaultClient, reqURL, reqToken)
 	}
 	if !interactive {
 		return "", oops.Hint("set --identity-token-env to a variable holding an OIDC token, or run in GitHub Actions with `permissions: id-token: write`").
@@ -54,7 +54,7 @@ func ResolveIDToken(ctx context.Context, env ambient.Env, tokenEnv string, inter
 }
 
 // githubToken asks the Actions runtime for an ID token with the sigstore audience.
-func githubToken(ctx context.Context, requestURL, requestToken string) (string, error) {
+func githubToken(ctx context.Context, client *http.Client, requestURL, requestToken string) (string, error) {
 	u, err := url.Parse(requestURL)
 	if err != nil || u.Scheme != "https" || u.Host == "" {
 		return "", oops.Errorf("ACTIONS_ID_TOKEN_REQUEST_URL is not an https URL")
@@ -69,7 +69,7 @@ func githubToken(ctx context.Context, requestURL, requestToken string) (string, 
 		return "", oops.Wrapf(err, "build the token request")
 	}
 	req.Header.Set("Authorization", "Bearer "+requestToken)
-	resp, err := http.DefaultClient.Do(req) //nolint:gosec // the URL comes from the Actions runtime environment
+	resp, err := client.Do(req) //nolint:gosec // the URL comes from the Actions runtime environment
 	if err != nil {
 		return "", oops.Wrapf(err, "request the GitHub Actions identity token")
 	}
