@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"math"
 	"net"
 	"net/url"
 	"regexp"
@@ -320,7 +321,11 @@ func isLoopbackHost(host string) bool {
 func (c Config) validateNumbers() []string {
 	var out []string
 	for name, v := range map[string]float64{"max_cost_usd": c.MaxCostUSD, "price_input_per_mtok": c.PriceInputPerMTok, "price_output_per_mtok": c.PriceOutputPerMTok} {
-		if v < 0 {
+		switch {
+		case !Finite(v):
+			// TOML and strconv accept nan and inf; a NaN cap passes every comparison.
+			out = append(out, name+" must be a finite number")
+		case v < 0:
 			out = append(out, name+" must not be negative")
 		}
 	}
@@ -334,6 +339,9 @@ func (c Config) validateNumbers() []string {
 	}
 	return out
 }
+
+// Finite reports whether v is neither NaN nor an infinity.
+func Finite(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }
 
 // Err returns Validate's problems as one AR9L0 error, or nil.
 func (c Config) Err() error {

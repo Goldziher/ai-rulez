@@ -52,8 +52,9 @@ type entry struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-func (c *Cache) key(kind, model string, req any) string {
-	h := sha256.New()
+// key is the cache key of a request. ok is false when the request cannot be encoded (a NaN
+// temperature): such a request is never cached, rather than every one of them sharing a key.
+func (c *Cache) key(kind, model string, req any) (key string, ok bool) {
 	payload := struct {
 		V        int    `json:"v"`
 		Kind     string `json:"kind"`
@@ -61,8 +62,12 @@ func (c *Cache) key(kind, model string, req any) string {
 		Model    string `json:"model"`
 		Request  any    `json:"request"`
 	}{CacheVersion, kind, c.identity, model, req}
-	h.Write([]byte(mustJSON(payload)))
-	return hex.EncodeToString(h.Sum(nil))
+	b, err := json.Marshal(payload)
+	if err != nil {
+		return "", false
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:]), true
 }
 
 func (c *Cache) path(key string) string {
@@ -193,7 +198,10 @@ func (cc *cacheClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	if req.NoCache {
 		return cc.next.Chat(ctx, req)
 	}
-	key := cc.c.key("chat", firstNonEmpty(req.Model, cc.model), req)
+	key, ok := cc.c.key("chat", firstNonEmpty(req.Model, cc.model), req)
+	if !ok {
+		return cc.next.Chat(ctx, req)
+	}
 	var hit ChatResponse
 	if cc.c.load(key, &hit) && (req.AcceptReply == nil || req.AcceptReply(hit.Text) == nil) {
 		hit.Cached, hit.CostUSD = true, 0
@@ -213,7 +221,10 @@ func (cc *cacheClient) Embed(ctx context.Context, req EmbedRequest) (EmbedRespon
 	if req.NoCache {
 		return cc.next.Embed(ctx, req)
 	}
-	key := cc.c.key("embed", firstNonEmpty(req.Model, cc.embedModel), req)
+	key, ok := cc.c.key("embed", firstNonEmpty(req.Model, cc.embedModel), req)
+	if !ok {
+		return cc.next.Embed(ctx, req)
+	}
 	var hit EmbedResponse
 	if cc.c.load(key, &hit) {
 		hit.Cached, hit.CostUSD = true, 0
