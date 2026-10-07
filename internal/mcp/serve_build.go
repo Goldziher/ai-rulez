@@ -27,6 +27,9 @@ import (
 // a catalog: where the project is, which skills to keep, which extra sources to
 // add, and how strictly to treat the network, the lock and usage logging.
 type ServeSetup struct {
+	// Log receives what the server reports (skipped skills, refusals, reloads);
+	// nil is the CLI's logger.
+	Log     logger.Logger
 	Version string
 	WorkDir string
 	Profile string
@@ -98,7 +101,8 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 		BudgetBytes:  st.BudgetBytes,
 		Telemetry:    record,
 		PollInterval: st.PollInterval,
-		Search:       NewSearchRuntime(holder.get),
+		Search:       NewSearchRuntime(holder.get).WithLog(st.Log),
+		Log:          st.Log,
 	}
 	if !st.NoWatch {
 		roots := st.watchRoots(first)
@@ -117,7 +121,7 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 		}
 	}
 	if first.empty != "" {
-		logger.Warn(first.empty)
+		st.logger().Warn(first.empty)
 	}
 	srv := NewSkillServerWith(st.Version, first.catalog, opts)
 	srv.closers = append(srv.closers, func() { closeSink(usageSinkFlushWait) })
@@ -217,7 +221,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 				continue
 			}
 			if taken[sk.Name] {
-				logger.Warn("A skill source skill has the name of a skill that is already served; skipping it (set name_prefix on the source)", "source", spec.Name, "skill", sk.Name)
+				st.logger().Warn("A skill source skill has the name of a skill that is already served; skipping it (set name_prefix on the source)", "source", spec.Name, "skill", sk.Name)
 				continue
 			}
 			taken[sk.Name] = true
@@ -228,7 +232,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	if err := st.checkDomains(cfg); err != nil {
 		return nil, err
 	}
-	catalog, err := BuildCatalog(profile, preset, served, st.Filter)
+	catalog, err := BuildCatalogIn(st.Log, profile, preset, served, st.Filter)
 	if err != nil {
 		return nil, oops.Wrapf(err, "build skill catalog")
 	}
@@ -236,7 +240,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 		b.empty = noSkillsMessage(served, st.Filter)
 	}
 	if bo.admit {
-		adm := Admission{Config: cfg, Enforce: enforcesLock(cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view, DefaultTrust: defaultTrust(cfg)}
+		adm := Admission{Config: cfg, Enforce: enforcesLock(cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view, DefaultTrust: defaultTrust(cfg), Log: st.Log}
 		if !bo.ignoreLock {
 			adm.Lock, adm.Signatures = lock, newSignatureGate(cfg, skillOrigins(cfg, b.sources), approvalNow())
 		}
@@ -453,7 +457,7 @@ func (st *ServeSetup) telemetry(cfg *config.Config) (record func(SessionTelemetr
 	closeSink = func(time.Duration) {}
 	if st.UsageSink != "" {
 		sink := usage.NewAsyncSink(st.UsageSink, usageSinkQueue, func(err error) {
-			logger.Warn("Usage sink failed", "error", err.Error())
+			st.logger().Warn("Usage sink failed", "error", err.Error())
 		})
 		options.AsyncSink = sink
 		closeSink = sink.Close
@@ -463,10 +467,10 @@ func (st *ServeSetup) telemetry(cfg *config.Config) (record func(SessionTelemetr
 			Skill: t.Skill, Digest: t.Digest, Session: t.Session, Harness: t.Client, Role: t.Role, Resource: t.Resource,
 		}, options)
 		if err != nil {
-			logger.Warn("Could not record the skill load", "skill", t.Skill, "error", err.Error())
+			st.logger().Warn("Could not record the skill load", "skill", t.Skill, "error", err.Error())
 		}
 		if sink := options.AsyncSink; sink != nil && sink.Dropped() > 0 {
-			logger.Warn("Usage sink queue is full; dropping records", "dropped", sink.Dropped())
+			st.logger().Warn("Usage sink queue is full; dropping records", "dropped", sink.Dropped())
 		}
 	}, closeSink
 }
@@ -596,7 +600,7 @@ func (st *ServeSetup) buildAll(ctx context.Context, bo buildOptions, extras []Se
 			if strict {
 				return err
 			}
-			logger.Warn("Left a view out of the served-skill lock", "view", key, "error", err.Error())
+			st.logger().Warn("Left a view out of the served-skill lock", "view", key, "error", err.Error())
 			return nil
 		}
 		views = append(views, b)
@@ -853,3 +857,6 @@ func noSkillsMessage(served []generator.ServedSkill, f SkillFilter) string {
 	}
 	return fmt.Sprintf("No skills are served: %d skill(s) have delivery served, but the filters removed all of them (%s)", len(served), strings.Join(parts, "; "))
 }
+
+// logger is where the setup reports: Log, or the CLI's logger when none was given.
+func (st *ServeSetup) logger() logger.Logger { return logger.Or(st.Log) }

@@ -6,7 +6,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // planSplit routes rules and context between the root file and the rule files of
@@ -41,7 +40,7 @@ func (g *Generator) splitUnscoped(d *diag.Collector, all []config.ContentFile, n
 			return
 		}
 		if rulefiles.FileAllowed(cf, target, kind) {
-			logger.Warn(noun+" \""+cf.Name+"\" is targeted only at "+target.Dir+" but "+g.Spec.DisplayName+
+			d.Raise(noun+" \""+cf.Name+"\" is targeted only at "+target.Dir+" but "+g.Spec.DisplayName+
 				" cannot apply it automatically there; omitted", "path", cf.Path)
 		}
 	}

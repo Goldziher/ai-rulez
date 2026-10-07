@@ -65,7 +65,7 @@ func buildSite(t *testing.T, doc *govview.CatalogDocV2, opts Options) string {
 	site, err := Render(doc, opts)
 	require.NoError(t, err)
 	dir := filepath.Join(t.TempDir(), "site")
-	_, err = Write(dir, site, false)
+	_, err = Write(nil, dir, site, false)
 	require.NoError(t, err)
 	return dir
 }

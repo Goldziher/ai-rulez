@@ -95,7 +95,7 @@ func (c cl100kCounter) Count(text string) int {
 	}
 	count, err := cl100kOnce().Count(text)
 	if err != nil {
-		logger.Warn("cl100k_base tokenizer failed, falling back to a byte-ratio estimate",
+		logger.Std().Warn("cl100k_base tokenizer failed, falling back to a byte-ratio estimate",
 			"error", err, "bytes", len(text))
 		return ByteRatio(EstimateBytesPerToken).Count(text)
 	}

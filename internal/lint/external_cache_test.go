@@ -310,8 +310,8 @@ func TestUserScanCacheIsOnePerProjectWhateverTheSpelling(t *testing.T) {
 	link := filepath.Join(t.TempDir(), "link")
 	testutil.SymlinkOrSkip(t, filepath.Dir(real), link)
 
-	byReal := UserScanCache(real)
-	byLink := UserScanCache(filepath.Join(link, ".ai-rulez"))
+	byReal := UserScanCache(nil, real)
+	byLink := UserScanCache(nil, filepath.Join(link, ".ai-rulez"))
 
 	require.NotNil(t, byReal)
 	require.NotNil(t, byLink)

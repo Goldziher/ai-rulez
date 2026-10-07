@@ -300,7 +300,7 @@ func runCatalogHTML(out io.Writer, cfg *config.Config, counter tokens.Counter, s
 	if catalogCheck {
 		return checkCatalogSite(out, doc, site)
 	}
-	res, err := catalogsite.Write(catalogHTMLDir, site, catalogClean)
+	res, err := catalogsite.Write(nil, catalogHTMLDir, site, catalogClean)
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}

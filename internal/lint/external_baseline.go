@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // ScannerBaselineFile is the default scanner baseline, relative to the
@@ -54,12 +53,13 @@ type ScannerOptions struct {
 }
 
 func (o ScannerOptions) today(host ambient.Host) string {
+	log := host.Logger()
 	for _, candidate := range []struct{ source, value string }{{"--today", o.Today}, {TodayEnv, host.GetEnv(TodayEnv)}} {
 		if candidate.value == "" {
 			continue
 		}
 		if _, err := time.Parse(dateLayout, candidate.value); err != nil {
-			logger.Warn("Ignoring a malformed baseline date; expecting YYYY-MM-DD", "source", candidate.source, "value", candidate.value)
+			log.Warn("Ignoring a malformed baseline date; expecting YYYY-MM-DD", "source", candidate.source, "value", candidate.value)
 			continue
 		}
 		return candidate.value
@@ -193,7 +193,7 @@ func (r *runner) finishExternal(all []scannerFinding, ran map[string]bool) {
 		r.findings = append(r.findings, findings[i])
 	}
 	if res.Accepted > 0 {
-		logger.Info(fmt.Sprintf("%d scanner finding(s) accepted by %s", res.Accepted, path))
+		r.log().Info(fmt.Sprintf("%d scanner finding(s) accepted by %s", res.Accepted, path))
 	}
 }
 
@@ -252,7 +252,7 @@ func (r *runner) writeScannerBaseline(path string, all []scannerFinding, finding
 		r.addRun(CodeScannerConfigInvalid, "baseline", sanitizeScannerText(err.Error()))
 		return
 	}
-	logger.Info(fmt.Sprintf("scanner baseline %s: %d entries", path, len(next.Entries)))
+	r.log().Info(fmt.Sprintf("scanner baseline %s: %d entries", path, len(next.Entries)))
 }
 
 // addAt records a finding attributed to a file of the project.

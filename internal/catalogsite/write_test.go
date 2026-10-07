@@ -54,7 +54,7 @@ func TestWrite_DirectoryRules(t *testing.T) {
 			tt.setup(t, dir)
 
 			// Act
-			res, err := Write(dir, site(map[string]string{"index.html": "x", "assets/a.css": "y"}), tt.clean)
+			res, err := Write(nil, dir, site(map[string]string{"index.html": "x", "assets/a.css": "y"}), tt.clean)
 
 			// Assert
 			if tt.wantErr != "" {
@@ -74,12 +74,12 @@ func TestWrite_DirectoryRules(t *testing.T) {
 func TestWrite_CleanRemovesOnlyWhatTheMarkerListed(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	_, err := Write(dir, site(map[string]string{"index.html": "1", "items/old.html": "1", "keep.html": "1"}), false)
+	_, err := Write(nil, dir, site(map[string]string{"index.html": "1", "items/old.html": "1", "keep.html": "1"}), false)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "mine.txt"), []byte("user file"), 0o644))
 
 	// Act
-	res, err := Write(dir, site(map[string]string{"index.html": "2", "keep.html": "2"}), true)
+	res, err := Write(nil, dir, site(map[string]string{"index.html": "2", "keep.html": "2"}), true)
 
 	// Assert
 	require.NoError(t, err)
@@ -95,13 +95,13 @@ func TestWrite_CleanRemovesOnlyWhatTheMarkerListed(t *testing.T) {
 func TestWrite_WithoutCleanKeepsStaleFilesListed(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	_, err := Write(dir, site(map[string]string{"a.html": "1", "items/b.html": "1"}), false)
+	_, err := Write(nil, dir, site(map[string]string{"a.html": "1", "items/b.html": "1"}), false)
 	require.NoError(t, err)
 
 	// Act
-	_, err = Write(dir, site(map[string]string{"a.html": "2"}), false)
+	_, err = Write(nil, dir, site(map[string]string{"a.html": "2"}), false)
 	require.NoError(t, err)
-	res, err := Write(dir, site(map[string]string{"a.html": "3"}), true)
+	res, err := Write(nil, dir, site(map[string]string{"a.html": "3"}), true)
 
 	// Assert
 	require.NoError(t, err)
@@ -119,7 +119,7 @@ func TestWrite_HostileMarkerCannotRemoveOutsideTheDirectory(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, MarkerFile), []byte(marker), 0o644))
 
 	// Act
-	res, err := Write(dir, site(map[string]string{"index.html": "x"}), true)
+	res, err := Write(nil, dir, site(map[string]string{"index.html": "x"}), true)
 
 	// Assert
 	require.NoError(t, err)
@@ -143,7 +143,7 @@ func TestWrite_SymlinkCannotRedirectWritesOrRemovals(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, MarkerFile), []byte("link/secret.txt\n"), 0o644))
 
 	// Act
-	_, err := Write(dir, site(map[string]string{"link/pwned.html": "x"}), true)
+	_, err := Write(nil, dir, site(map[string]string{"link/pwned.html": "x"}), true)
 
 	// Assert
 	require.Error(t, err)
@@ -158,8 +158,8 @@ func TestWrite_IsByteStableAcrossRuns(t *testing.T) {
 	a, b := t.TempDir(), t.TempDir()
 
 	// Act
-	_, errA := Write(a, rendered, false)
-	_, errB := Write(b, rendered, false)
+	_, errA := Write(nil, a, rendered, false)
+	_, errB := Write(nil, b, rendered, false)
 
 	// Assert
 	require.NoError(t, errA)
@@ -243,7 +243,7 @@ func TestWrite_CleanNeverRemovesWhatItCannotProveItWrote(t *testing.T) {
 			require.NoError(t, os.WriteFile(filepath.Join(dir, MarkerFile), []byte(tt.marker(tt.file, tt.body)), 0o644))
 
 			// Act
-			res, err := Write(dir, site(map[string]string{"index.html": "x"}), true)
+			res, err := Write(nil, dir, site(map[string]string{"index.html": "x"}), true)
 
 			// Assert
 			require.NoError(t, err)
@@ -262,7 +262,7 @@ func TestWrite_RefusesAProjectRoot(t *testing.T) {
 			require.NoError(t, os.WriteFile(filepath.Join(dir, MarkerFile), []byte("index.html\n"), 0o644))
 
 			// Act
-			_, err := Write(dir, site(map[string]string{"index.html": "x"}), true)
+			_, err := Write(nil, dir, site(map[string]string{"index.html": "x"}), true)
 
 			// Assert
 			require.Error(t, err)
@@ -276,12 +276,12 @@ func TestWrite_MarkerListsNewFilesBeforeTheyAreWritten(t *testing.T) {
 	// Arrange: a marked directory where the second file cannot be written (its
 	// parent is a regular file), so the run fails midway.
 	dir := t.TempDir()
-	_, err := Write(dir, site(map[string]string{"index.html": "0"}), false)
+	_, err := Write(nil, dir, site(map[string]string{"index.html": "0"}), false)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "z"), []byte("blocker"), 0o644))
 
 	// Act
-	_, err = Write(dir, site(map[string]string{"index.html": "1", "z/blocked.html": "2"}), false)
+	_, err = Write(nil, dir, site(map[string]string{"index.html": "1", "z/blocked.html": "2"}), false)
 
 	// Assert: the interim marker already listed both files, and the directory stays marked.
 	require.Error(t, err)

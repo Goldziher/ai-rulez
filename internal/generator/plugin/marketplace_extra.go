@@ -32,11 +32,11 @@ type copilotMarketplaceDoc = cursorMarketplaceDoc
 
 // marketplaceOwner returns the owner both formats require, falling back to the
 // marketplace name (with a warning) when none is configured.
-func marketplaceOwner(market MarketInfo, format string) config.Author {
+func marketplaceOwner(log logger.Logger, market MarketInfo, format string) config.Author {
 	if market.Owner != nil && market.Owner.Name != "" {
 		return *market.Owner
 	}
-	logger.Warn("The marketplace has no owner; using the marketplace name. Set [marketplace.owner] or [plugin.author]",
+	logger.Or(log).Warn("The marketplace has no owner; using the marketplace name. Set [marketplace.owner] or [plugin.author]",
 		"format", format, "marketplace", market.Name)
 	return config.Author{Name: market.Name}
 }
@@ -54,7 +54,7 @@ func relativePluginSource(source string) string {
 
 // RenderCursorMarketplace emits .cursor-plugin/marketplace.json for members
 // and domain plugins.
-func RenderCursorMarketplace(market MarketInfo, members []MemberEntry, baseDir string) (config.OutputFile, error) {
+func RenderCursorMarketplace(log logger.Logger, market MarketInfo, members []MemberEntry, baseDir string) (config.OutputFile, error) {
 	plugins := make([]marketplacePlugin, 0, len(members))
 	for i := range members {
 		member := &members[i]
@@ -66,7 +66,7 @@ func RenderCursorMarketplace(market MarketInfo, members []MemberEntry, baseDir s
 	}
 	return jsonOutput(filepath.Join(baseDir, ".cursor-plugin", "marketplace.json"), cursorMarketplaceDoc{
 		Name:     market.Name,
-		Owner:    marketplaceOwner(market, "cursor"),
+		Owner:    marketplaceOwner(log, market, "cursor"),
 		Metadata: metaFor(market.Description, ""),
 		Plugins:  plugins,
 	})
@@ -100,7 +100,7 @@ func renderSingleMarketplaces(m *Manifest, baseDir string) ([]config.OutputFile,
 	if slices.Contains(m.Runtimes, config.PluginRuntimeCursor) && m.Cursor != nil && m.Cursor.Marketplace {
 		out, err := jsonOutput(filepath.Join(baseDir, ".cursor-plugin", "marketplace.json"), cursorMarketplaceDoc{
 			Name:     m.Market.Name,
-			Owner:    marketplaceOwner(m.Market, "cursor"),
+			Owner:    marketplaceOwner(m.log(), m.Market, "cursor"),
 			Metadata: metaFor(m.Market.Description, ""),
 			Plugins:  []marketplacePlugin{pluginEntry(m, ".")},
 		})
@@ -112,7 +112,7 @@ func renderSingleMarketplaces(m *Manifest, baseDir string) ([]config.OutputFile,
 	if slices.Contains(m.Runtimes, config.PluginRuntimeCopilot) {
 		out, err := jsonOutput(filepath.Join(baseDir, ".github", "plugin", "marketplace.json"), copilotMarketplaceDoc{
 			Name:     m.Market.Name,
-			Owner:    marketplaceOwner(m.Market, "copilot"),
+			Owner:    marketplaceOwner(m.log(), m.Market, "copilot"),
 			Metadata: metaFor(m.Market.Description, ""),
 			Plugins:  []marketplacePlugin{pluginEntry(m, "./")},
 		})

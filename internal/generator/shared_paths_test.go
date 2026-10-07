@@ -141,7 +141,7 @@ func renderSharedPaths(t *testing.T, base *config.Config, presets []string) (map
 	}
 	render, err := NewGenerator(&cfg).renderPresets("")
 	require.NoError(t, err)
-	flat, err := flattenPresetOutputs(nil, render.byPreset)
+	flat, err := flattenPresetOutputs(nil, nil, render.byPreset)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -334,7 +334,7 @@ func TestFlattenPresetOutputs_ConflictNamesPresets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Act
-			flat, err := flattenPresetOutputs(nil, tt.outputs)
+			flat, err := flattenPresetOutputs(nil, nil, tt.outputs)
 
 			// Assert
 			if len(tt.wantErr) == 0 {

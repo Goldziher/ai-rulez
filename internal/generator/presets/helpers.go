@@ -219,10 +219,35 @@ func allCommands(content *config.ContentTree) []config.ContentFile {
 // any `extends` agent by appending its message to the inherited base body.
 // Mirrors allInlineRules so agent precedence matches rule/context precedence.
 func allAgents(content *config.ContentTree) []config.ContentFile {
+	return resolveAgentExtends(combinedAgents(content), nil)
+}
+
+// combinedAgents lists the root agents, then the domain agents, in precedence order.
+func combinedAgents(content *config.ContentTree) []config.ContentFile {
 	combined := make([]config.ContentFile, 0, len(content.Agents))
 	combined = append(combined, content.Agents...)
-	combined = append(combined, getAllDomainAgents(content)...)
-	return resolveAgentExtends(combined)
+	return append(combined, getAllDomainAgents(content)...)
+}
+
+// extendsMiss is an `extends` directive whose target does not exist.
+type extendsMiss struct{ Agent, Extends string }
+
+// unresolvedExtends lists the agents whose `extends` target is missing, once each.
+func unresolvedExtends(content *config.ContentTree) []extendsMiss {
+	if content == nil {
+		return nil
+	}
+	var misses []extendsMiss
+	resolveAgentExtends(combinedAgents(content), &misses)
+	seen := map[extendsMiss]bool{}
+	var out []extendsMiss
+	for _, m := range misses {
+		if !seen[m] {
+			seen[m] = true
+			out = append(out, m)
+		}
+	}
+	return out
 }
 
 // resolveAgentExtends deduplicates agents by name keeping the highest-precedence
@@ -231,7 +256,7 @@ func allAgents(content *config.ContentTree) []config.ContentFile {
 // body and frontmatter of the same-named (or the named) agent from a lower layer
 // and appends its own body as an additional message. A missing base degrades to
 // a plain agent (the extends key is dropped). Output is sorted by name.
-func resolveAgentExtends(combined []config.ContentFile) []config.ContentFile {
+func resolveAgentExtends(combined []config.ContentFile, misses *[]extendsMiss) []config.ContentFile {
 	byName := make(map[string][]config.ContentFile, len(combined))
 	order := make([]string, 0, len(combined))
 	for _, f := range combined {
@@ -242,7 +267,7 @@ func resolveAgentExtends(combined []config.ContentFile) []config.ContentFile {
 	}
 	result := make([]config.ContentFile, 0, len(order))
 	for _, name := range order {
-		result = append(result, resolveAgentChain(byName, name, 0, map[string]bool{}))
+		result = append(result, resolveAgentChain(byName, name, 0, map[string]bool{}, misses))
 	}
 	sort.SliceStable(result, func(i, j int) bool {
 		return result[i].Name < result[j].Name
@@ -257,7 +282,7 @@ func resolveAgentExtends(combined []config.ContentFile) []config.ContentFile {
 // extending body always sits atop a fully-inherited base. The visiting set guards
 // against extends cycles; a revisited node degrades to a plain (extends-stripped)
 // agent instead of recursing forever.
-func resolveAgentChain(byName map[string][]config.ContentFile, name string, idx int, visiting map[string]bool) config.ContentFile {
+func resolveAgentChain(byName map[string][]config.ContentFile, name string, idx int, visiting map[string]bool, misses *[]extendsMiss) config.ContentFile {
 	variants := byName[name]
 	winner := variants[idx]
 	target := agentExtendsTarget(winner)
@@ -271,11 +296,11 @@ func resolveAgentChain(byName map[string][]config.ContentFile, name string, idx 
 	visiting[key] = true
 	defer delete(visiting, key)
 
-	base, ok := resolveExtendsBase(byName, name, idx, target, visiting)
+	base, ok := resolveExtendsBase(byName, name, idx, target, visiting, misses)
 	if !ok {
-		logger.Warn("Agent extends target not found; emitting agent without inheritance",
-			"agent", name,
-			"extends", target)
+		if misses != nil {
+			*misses = append(*misses, extendsMiss{Agent: name, Extends: target})
+		}
 		return stripExtends(winner)
 	}
 	return mergeExtendsAgent(base, winner)
@@ -286,15 +311,15 @@ func resolveAgentChain(byName map[string][]config.ContentFile, name string, idx 
 // lower same-named variant (resolved through its own extends chain); for a
 // different target name it is that name's highest-precedence variant (likewise
 // resolved). Returns ok=false when no base exists.
-func resolveExtendsBase(byName map[string][]config.ContentFile, name string, idx int, target string, visiting map[string]bool) (config.ContentFile, bool) {
+func resolveExtendsBase(byName map[string][]config.ContentFile, name string, idx int, target string, visiting map[string]bool, misses *[]extendsMiss) (config.ContentFile, bool) {
 	if target == name {
 		if idx+1 < len(byName[name]) {
-			return resolveAgentChain(byName, name, idx+1, visiting), true
+			return resolveAgentChain(byName, name, idx+1, visiting, misses), true
 		}
 		return config.ContentFile{}, false
 	}
 	if others, ok := byName[target]; ok && len(others) > 0 {
-		return resolveAgentChain(byName, target, 0, visiting), true
+		return resolveAgentChain(byName, target, 0, visiting, misses), true
 	}
 	return config.ContentFile{}, false
 }
@@ -638,9 +663,18 @@ func AllCommands(content *config.ContentTree) []config.ContentFile {
 // replaced — or the reverse — is indistinguishable from a working config without
 // it. Shared by the generator and the validate command so the message and
 // precedence stay aligned.
-func WarnDuplicateContent(content *config.ContentTree) {
+//
+// It also reports an agent whose `extends` target does not exist: it is emitted
+// without inheritance. log is where the warnings go; nil is the CLI's logger.
+func WarnDuplicateContent(log logger.Logger, content *config.ContentTree) {
+	log = logger.Or(log)
+	for _, miss := range unresolvedExtends(content) {
+		log.Warn("Agent extends target not found; emitting agent without inheritance",
+			"agent", miss.Agent,
+			"extends", miss.Extends)
+	}
 	for _, warning := range duplicateContentWarnings(content) {
-		logger.Warn("Duplicate "+warning.Kind+" collapsed",
+		log.Warn("Duplicate "+warning.Kind+" collapsed",
 			"name", warning.Duplicate.Name,
 			"kept", warning.Duplicate.Winner,
 			"dropped", strings.Join(warning.Duplicate.Losers, ", "))
@@ -649,7 +683,7 @@ func WarnDuplicateContent(content *config.ContentTree) {
 
 // duplicateContentWarning is one collapsed-duplicate diagnostic. Carried as data
 // rather than logged at the point of detection so the detection logic stays
-// testable — the logger is a process-wide singleton with no injection seam.
+// testable.
 type duplicateContentWarning struct {
 	Kind      string
 	Duplicate DuplicateContent

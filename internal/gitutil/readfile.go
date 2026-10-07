@@ -48,10 +48,10 @@ func ReadIgnoreFile(path string) ([]byte, error) {
 // ReadIgnoreFileOrEmpty is ReadIgnoreFile for pattern evaluation: an ignore file
 // that is not a bounded regular file reads as empty (with a warning). A missing
 // file still returns the os.IsNotExist error.
-func ReadIgnoreFileOrEmpty(path string) ([]byte, error) {
+func ReadIgnoreFileOrEmpty(log logger.Logger, path string) ([]byte, error) {
 	data, err := ReadIgnoreFile(path)
 	if errors.Is(err, ErrNotRegular) || errors.Is(err, ErrTooLarge) {
-		logger.Warn("Ignoring an ignore file that is not a regular file within the size limit", "path", path, "reason", err.Error())
+		logger.Or(log).Warn("Ignoring an ignore file that is not a regular file within the size limit", "path", path, "reason", err.Error())
 		return nil, nil
 	}
 	return data, err

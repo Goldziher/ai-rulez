@@ -10,10 +10,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/v5/internal/opencodev1"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestOpencodePresetGenerator_GetName(t *testing.T) {
@@ -778,7 +779,6 @@ func TestOpencodePresetGenerator_WarnsOnV1LocalPlugins(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			opencodev1.ResetWarned()
 			root := t.TempDir()
 			plugin := filepath.Join(root, ".opencode", "plugins", "p.js")
 			if err := os.MkdirAll(filepath.Dir(plugin), 0o755); err != nil {
@@ -790,14 +790,15 @@ func TestOpencodePresetGenerator_WarnsOnV1LocalPlugins(t *testing.T) {
 			g := &OpencodePresetGenerator{}
 
 			// Act
-			_, err := g.Generate(&config.ContentTree{}, root, &config.Config{Name: "test"})
+			rec := &testutil.LogRecorder{}
+			_, err := g.Generate(&config.ContentTree{}, root, &config.Config{Name: "test", Diag: diag.New(nil), Host: ambient.Host{Log: rec}})
 
 			// Assert: generation succeeds either way; only a v1 file is reported.
 			if err != nil {
 				t.Fatalf("Generate() error: %v", err)
 			}
-			if got := opencodev1.WasWarned(plugin); got != tt.wantWarned {
-				t.Errorf("WasWarned(%s) = %v, want %v", plugin, got, tt.wantWarned)
+			if got := strings.Contains(rec.String(), plugin); got != tt.wantWarned {
+				t.Errorf("warned about %s = %v, want %v (log: %s)", plugin, got, tt.wantWarned, rec.String())
 			}
 		})
 	}

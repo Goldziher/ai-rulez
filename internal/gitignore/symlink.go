@@ -31,22 +31,22 @@ func FallbackMarkers(baseDir string) (begin, end string) {
 // patterns, for a project whose .gitignore is a symlink git ignores. An empty
 // list removes the block. Outside a repository there is nothing git could
 // commit, so it only warns.
-func ReplaceViaExclude(baseDir string, patterns []string) error {
-	return writeExcludeFallback(baseDir, patterns, false)
+func ReplaceViaExclude(log logger.Logger, baseDir string, patterns []string) error {
+	return writeExcludeFallback(log, baseDir, patterns, false)
 }
 
 // ensureViaExclude adds patterns to that block, keeping its other entries.
-func ensureViaExclude(baseDir string, patterns []string) error {
-	return writeExcludeFallback(baseDir, patterns, true)
+func ensureViaExclude(log logger.Logger, baseDir string, patterns []string) error {
+	return writeExcludeFallback(log, baseDir, patterns, true)
 }
 
-func writeExcludeFallback(baseDir string, patterns []string, keep bool) error {
+func writeExcludeFallback(log logger.Logger, baseDir string, patterns []string, keep bool) error {
 	exclude := gitutil.InfoExcludePath(baseDir)
 	if exclude == "" {
-		logger.Warn(".gitignore is a symbolic link and this is not a git repository; not writing ignore entries through the link")
+		logger.Or(log).Warn(".gitignore is a symbolic link and this is not a git repository; not writing ignore entries through the link")
 		return nil
 	}
-	logger.Warn(".gitignore is a symbolic link, which git does not read; writing ignore entries to .git/info/exclude instead",
+	logger.Or(log).Warn(".gitignore is a symbolic link, which git does not read; writing ignore entries to .git/info/exclude instead",
 		"path", exclude)
 
 	data, err := gitutil.ReadIgnoreFile(exclude)

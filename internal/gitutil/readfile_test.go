@@ -66,7 +66,7 @@ func TestReadIgnoreFile(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.want, string(data))
 			}
-			lenient, lenientErr := ReadIgnoreFileOrEmpty(tt.path)
+			lenient, lenientErr := ReadIgnoreFileOrEmpty(nil, tt.path)
 			if tt.wantErr != nil {
 				assert.NoError(t, lenientErr)
 				assert.Empty(t, lenient)

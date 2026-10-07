@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // Enforcer implements config.PolicyEnforcer. It discovers the policy lazily on
@@ -47,7 +46,7 @@ func (e *Enforcer) Load() (*Resolved, error) {
 		e.resolved = Resolve(layers)
 		if e.resolved != nil && o.Mode == ModeWarn {
 			e.resolved.Warn = true
-			logger.Warn("policy mode warn: violations of the organization policy are reported but do not fail this run; the policy values are still enforced")
+			o.logger().Warn("policy mode warn: violations of the organization policy are reported but do not fail this run; the policy values are still enforced")
 		}
 	}
 	return e.resolved, e.err

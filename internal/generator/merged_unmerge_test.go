@@ -129,9 +129,9 @@ func TestClean_FallsBackToKnownValuesWithoutARecord(t *testing.T) {
 	assert.Contains(t, doc, "theme")
 }
 
-func loadAgentsMDConfig(t *testing.T, root string) *config.Config {
+func loadAgentsMDConfig(t *testing.T, root string, opts ...config.LoadOption) *config.Config {
 	t.Helper()
-	cfg, err := config.LoadConfig(context.Background(), root)
+	cfg, err := config.LoadConfig(context.Background(), root, opts...)
 	require.NoError(t, err)
 	return cfg
 }

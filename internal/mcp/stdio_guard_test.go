@@ -31,7 +31,7 @@ func startGuardedPeer(t *testing.T, frameLimit int) *guardedPeer {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
-		done <- srv.GetMCPServer().Run(ctx, srv.WrapTransport(newGuardedTransport(clientToServer, clientFromServer, frameLimit)))
+		done <- srv.GetMCPServer().Run(ctx, srv.WrapTransport(newGuardedTransport(clientToServer, clientFromServer, frameLimit, nil)))
 	}()
 	t.Cleanup(func() {
 		cancel()

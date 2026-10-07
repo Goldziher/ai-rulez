@@ -49,6 +49,8 @@ type Admission struct {
 	// skills authored in the project, "error" for everything that came from a
 	// remote. nil means "warn".
 	DefaultTrust func(*CatalogSkill) string
+	// Log receives the refusals and scan findings; nil is the CLI's logger.
+	Log logger.Logger
 }
 
 // Admit returns a catalog holding only the admitted skills. Refused skills are
@@ -74,7 +76,7 @@ func (c *Catalog) Admit(a Admission) *Catalog {
 		if r != nil {
 			r.View = a.View
 			out.refused[cp.Name] = *r
-			logger.Warn("Refusing to serve a skill", "skill", cp.Name, "code", r.Code, "reason", r.Reason)
+			logger.Or(a.Log).Warn("Refusing to serve a skill", "skill", cp.Name, "code", r.Code, "reason", r.Reason)
 			continue
 		}
 		out.skills = append(out.skills, &cp)
@@ -199,7 +201,7 @@ func (a Admission) scan(s *CatalogSkill) *Refusal {
 	}
 	if len(blocking) == 0 {
 		for _, f := range findings {
-			logger.Warn("Security scan finding in a served skill", "skill", s.Name, "code", f.Code, "where", fmt.Sprintf("%s:%d", f.File, f.Line), "message", f.Message)
+			logger.Or(a.Log).Warn("Security scan finding in a served skill", "skill", s.Name, "code", f.Code, "where", fmt.Sprintf("%s:%d", f.File, f.Line), "message", f.Message)
 		}
 		return nil
 	}

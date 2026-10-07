@@ -14,7 +14,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 const (
@@ -204,7 +203,7 @@ func OrgRef(opts DiscoverOptions) (ref Ref, ok bool, err error) {
 		if opts.DiscoverOrg {
 			return Ref{}, false, &UnavailableError{Origin: OriginOrg, Path: opts.ProjectDir, Err: rerr}
 		}
-		logger.Warn("Organization policy discovery skipped", "project", opts.ProjectDir, "reason", rerr.Error())
+		opts.logger().Warn("Organization policy discovery skipped", "project", opts.ProjectDir, "reason", rerr.Error())
 		return Ref{}, false, nil
 	}
 	us, err := LoadUserSettings(opts.Env)
@@ -229,7 +228,7 @@ func LoadOrg(opts DiscoverOptions, ref Ref) ([]Layer, error) {
 	if err != nil {
 		var se *statusError
 		if errors.As(err, &se) && se.code == 404 && !l.orgPinned(ref) {
-			logger.Info("No organization policy published", "policy", ref.Display())
+			opts.logger().Info("No organization policy published", "policy", ref.Display())
 			return nil, nil
 		}
 		var de *DigestError

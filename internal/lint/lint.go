@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	procrunner "github.com/Goldziher/ai-rulez/v5/internal/runner"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
@@ -241,6 +242,15 @@ func WithHost(h ambient.Host) Option { return func(r *runner) { r.host = h } }
 func WithCwd(dir string) Option { return func(r *runner) { r.cwd = dir } }
 
 // clock is the run's time: the injected clock, else the package clock.
+// log is where the run reports: the host's, else the loaded config's (the CLI's
+// logger when neither names one).
+func (r *runner) log() logger.Logger {
+	if r.host.Log != nil {
+		return r.host.Log
+	}
+	return r.cfg.Log()
+}
+
 func (r *runner) clock() time.Time {
 	if r.host.Clock != nil {
 		return r.host.Clock.Now()

@@ -49,7 +49,7 @@ func (g *Generator) generateScopedOutputs(activeProfile string, rootContent *con
 			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "generate scoped presets")
 		}
 		applySharedOutputs(outputsByPreset, scopeCfg, scopeCfg.Content)
-		flat, err := flattenPresetOutputs(g.config.Diag, outputsByPreset)
+		flat, err := flattenPresetOutputs(g.config.Diag, g.log(), outputsByPreset)
 		if err != nil {
 			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "merge scoped presets")
 		}

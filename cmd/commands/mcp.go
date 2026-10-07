@@ -45,7 +45,7 @@ func runMCPServer(cmd *cobra.Command, args []string) {
 	}
 	var (
 		srv       *mcp.Server
-		transport sdkmcp.Transport = mcp.NewGuardedStdioTransport(os.Stdin, os.Stdout)
+		transport sdkmcp.Transport = mcp.NewGuardedStdioTransport(os.Stdin, os.Stdout, nil)
 	)
 	if serve, _ := cmd.Flags().GetBool("serve-skills"); serve {
 		var err error

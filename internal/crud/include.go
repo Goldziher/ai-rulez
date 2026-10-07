@@ -11,7 +11,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/project"
 )
 
@@ -82,7 +81,7 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 			Wrapf(err, "save config")
 	}
 
-	logger.Info(
+	op.logger().Info(
 		"Include added successfully",
 		"name", req.Name,
 		"source", req.Source,
@@ -144,7 +143,7 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 			Wrapf(err, "save config")
 	}
 
-	logger.Info("Include removed successfully", "name", name)
+	op.logger().Info("Include removed successfully", "name", name)
 
 	return nil
 }
