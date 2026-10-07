@@ -83,6 +83,9 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	defer func() { g.previousFiles = nil }()
 
 	dirs := g.collectCleanTargets(outputs, plan, opts)
+	pluginFiles, pluginDirs := g.pluginCleanTargets(profile)
+	plan.Files = append(plan.Files, pluginFiles...)
+	dirs = append(dirs, pluginDirs...)
 
 	// Include files recorded in the manifest from earlier runs that the current
 	// profile no longer emits (e.g. a preset was removed): the exact set generate
@@ -278,6 +281,50 @@ func (g *Generator) cleanRetiredCommand(abs string, plan *CleanPlan) bool {
 	}
 	plan.Restored = append(plan.Restored, filepath.Join(g.config.BaseDir, filepath.FromSlash(cmd)))
 	return true
+}
+
+// pluginCleanTargets lists what `generate --plugin` wrote for a project with a
+// [plugin] block or a plugin marketplace: the bundle files whose bytes are still
+// exactly what it renders, and its directories (removed only when empty). The
+// bundle has no manifest entry, so that equality is the proof; an edited file is
+// kept with a warning.
+func (g *Generator) pluginCleanTargets(profile string) (files, dirs []string) {
+	mkt := g.config.Marketplace
+	if g.userMode || (g.config.Plugin == nil && (mkt == nil || (len(mkt.Members) == 0 && !mkt.HasDomainPlugins()))) {
+		return nil, nil
+	}
+	outputs, err := g.collectPluginOutputs(profile)
+	if err != nil {
+		g.warnOnce("Keeping the plugin bundle: it cannot be rendered to tell which files generate --plugin wrote",
+			"error", err)
+		return nil, nil
+	}
+	for i := range outputs {
+		output := &outputs[i]
+		abs := g.absOutputPath(output.Path)
+		if output.IsDir {
+			dirs = append(dirs, abs)
+			continue
+		}
+		if !g.withinScope(abs) || isSymlink(abs) || !g.removalConfined(abs) {
+			continue
+		}
+		data, rerr := g.config.ReadExisting(abs)
+		if rerr != nil {
+			continue
+		}
+		want := output.RawContent
+		if want == nil {
+			want = []byte(output.Content)
+		}
+		if !bytes.Equal(data, want) {
+			g.warnOnce("Keeping "+g.relSlash(abs)+": it differs from what generate --plugin writes",
+				"hint", "delete it by hand if it is no longer needed")
+			continue
+		}
+		files = append(files, abs)
+	}
+	return files, dirs
 }
 
 // projectFileIsOurs reports whether clean may remove the project file at abs
