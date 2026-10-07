@@ -115,6 +115,7 @@ const (
 	CodeCredentialHeader     = "credential-header"
 	CodeFieldIgnored         = "field-ignored"
 	CodePathEscape           = "path-escape"
+	CodeUnreadable           = "unreadable"
 )
 
 // Finding is one problem or rewrite. Path is the package path it concerns, with
