@@ -116,7 +116,9 @@ func (g *Generator) retiredFiles(outputs []config.OutputFile) []string {
 // supersededCommands lists the imported `<dir>/commands/<name>.md` files that are
 // unchanged since convert and whose `<dir>/skills/<name>/SKILL.md` this run
 // generates. Their content lives under the config directory, and a harness that
-// loads both would show the command twice. An edited file stays.
+// loads both would show the command twice. An edited file stays, and so does one
+// clean could not put back (restorableCommand): retiring it would leave clean
+// with neither the original nor the skill.
 func (g *Generator) supersededCommands(outputs []config.OutputFile) []string {
 	if g.userMode {
 		return nil
@@ -143,13 +145,77 @@ func (g *Generator) supersededCommands(outputs []config.OutputFile) []string {
 		}
 		abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(rel))
 		data, err := g.config.ReadExisting(abs)
-		if err != nil || !g.adoptable(rel, data) || isSymlink(abs) || !g.removalConfined(abs) {
+		if err != nil || !g.adoptable(rel, data) || isSymlink(abs) || !g.removalConfined(abs) ||
+			!g.restorableCommand(rel) {
 			continue
 		}
 		out = append(out, abs)
 	}
 	sort.Strings(out)
 	return out
+}
+
+// commandSource is the copy `convert` wrote under the config directory of the
+// command it imported at rel (`<dir>/commands/<name>.md`).
+func (g *Generator) commandSource(rel string) string {
+	return filepath.Join(g.manifestDir(), "commands", path.Base(rel))
+}
+
+// restorableCommand reports whether the command `convert` imported at rel can be
+// put back byte for byte: its copy under the config directory still holds exactly
+// the bytes the convert record vouches for.
+func (g *Generator) restorableCommand(rel string) bool {
+	want, ok := g.convertRecordFiles()[rel]
+	if !ok {
+		return false
+	}
+	data, err := g.config.ReadExisting(g.commandSource(rel))
+	return err == nil && fileDigest(data) == want
+}
+
+// retiredCommand is the imported command a generated skill at abs replaced: the
+// `<dir>/commands/<name>.md` the convert record lists for `<dir>/skills/<name>/SKILL.md`,
+// now missing from disk because generate retired it (supersededCommands).
+func (g *Generator) retiredCommand(abs string) (string, bool) {
+	if g.userMode {
+		return "", false
+	}
+	rel := g.relSlash(abs)
+	skillDir := path.Dir(rel)
+	if path.Base(rel) != "SKILL.md" || path.Base(path.Dir(skillDir)) != "skills" {
+		return "", false
+	}
+	cmd := path.Join(path.Dir(path.Dir(skillDir)), "commands", path.Base(skillDir)+".md")
+	if _, ok := g.convertRecordFiles()[cmd]; !ok {
+		return "", false
+	}
+	if _, err := os.Lstat(filepath.Join(g.config.BaseDir, filepath.FromSlash(cmd))); !os.IsNotExist(err) {
+		return "", false
+	}
+	return cmd, true
+}
+
+// restoreRetiredCommands writes back the imported commands clean is about to
+// leave without their replacing skill, from the copies under the config directory.
+func (g *Generator) restoreRetiredCommands(restored []string) error {
+	for _, abs := range restored {
+		rel := g.relSlash(abs)
+		data, err := g.config.ReadExisting(g.commandSource(rel))
+		if err != nil {
+			return oops.With("path", rel).Wrapf(err, "read the imported copy of a retired command")
+		}
+		target, _, err := g.guardWrite(abs)
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return oops.With("path", rel).Wrapf(err, "create the directory of a retired command")
+		}
+		if err := config.WriteFileAtomic(target, data, 0o644); err != nil {
+			return oops.With("path", rel).Wrapf(err, "restore a retired command")
+		}
+	}
+	return nil
 }
 
 // outputSafety classifies the outputs a project-scope run is about to write.
