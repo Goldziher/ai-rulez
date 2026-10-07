@@ -48,7 +48,7 @@ func runUsageRecord(in io.Reader) error {
 	if saltPath == "" {
 		// Hash sessions with the same salt the telemetry pipeline uses, so skill
 		// events and rule/agent events of one session agree.
-		saltPath = telemetry.ResolveFor(telemetryRoot(""), telemetryConfigDirName(), nil).SaltFile
+		saltPath = telemetry.ResolveFor(telemetryRoot(""), telemetryConfigDirName(), nil, activePolicy).SaltFile
 	}
 	entry, err := usage.Record(in, usage.RecordOptions{
 		LogPath:     logPath,
