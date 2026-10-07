@@ -13,7 +13,7 @@
 //
 // Home-relocating environment variables a layout names (CODEX_HOME,
 // HERMES_HOME, ...) move the paths below them, and only absolute values are
-// honoured.
+// honored.
 package userscope
 
 import (
