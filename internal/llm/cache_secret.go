@@ -106,16 +106,8 @@ func secretDirTooOpen(mode os.FileMode, goos string) bool {
 // replacement is a rename of a private temp file, never remove-then-create, so a
 // secret another process created in the meantime is re-validated and kept.
 func loadOrCreateSecret(path string) ([]byte, error) {
-	if path == "" {
-		return nil, errors.New("no user directory for the cache secret")
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := prepareSecretDir(path); err != nil {
 		return nil, err
-	}
-	if info, err := os.Stat(filepath.Dir(path)); err != nil {
-		return nil, err
-	} else if secretDirTooOpen(info.Mode(), runtime.GOOS) {
-		return nil, errors.New("cache secret directory is writable by group or others")
 	}
 	existed := false
 	if _, err := os.Lstat(path); err == nil {
@@ -128,24 +120,13 @@ func loadOrCreateSecret(path string) ([]byte, error) {
 			return nil, rerr
 		}
 	}
-	secret := make([]byte, cacheSecretBytes)
-	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
-		return nil, err
-	}
 	// Write a private temp file then link it into place, so a concurrent first
 	// use never reads a half-written secret and exactly one creator wins.
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".key-*") // mode 0600
+	secret, tmp, err := newSecretTemp(filepath.Dir(path))
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(tmp.Name()) //nolint:errcheck,gosec // temp file
-	_, werr := tmp.Write(secret)
-	if cerr := tmp.Close(); werr == nil {
-		werr = cerr
-	}
-	if werr != nil {
-		return nil, werr
-	}
+	defer os.Remove(tmp) //nolint:errcheck,gosec // temp file
 	if existed {
 		// An unusable file (empty, short, loose mode) is replaced atomically, after
 		// a last look in case another process just fixed it.
@@ -154,12 +135,12 @@ func loadOrCreateSecret(path string) ([]byte, error) {
 		} else if errors.Is(rerr, errSecretNotRegular) {
 			return nil, rerr
 		}
-		if err := os.Rename(tmp.Name(), path); err != nil {
+		if err := os.Rename(tmp, path); err != nil {
 			return nil, err
 		}
 		return secret, nil
 	}
-	if err := os.Link(tmp.Name(), path); err != nil {
+	if err := os.Link(tmp, path); err != nil {
 		if errors.Is(err, os.ErrExist) {
 			if b, rerr := readSecret(path); rerr == nil {
 				return b, nil
@@ -168,6 +149,46 @@ func loadOrCreateSecret(path string) ([]byte, error) {
 		return nil, err
 	}
 	return secret, nil
+}
+
+// prepareSecretDir creates the secret's directory (0700) and refuses one that group or others can write.
+func prepareSecretDir(path string) error {
+	if path == "" {
+		return errors.New("no user directory for the cache secret")
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	info, err := os.Stat(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	if secretDirTooOpen(info.Mode(), runtime.GOOS) {
+		return errors.New("cache secret directory is writable by group or others")
+	}
+	return nil
+}
+
+// newSecretTemp draws a fresh secret and writes it to a private (0600) temp file in dir. The
+// caller removes the temp file; on an error none is left behind.
+func newSecretTemp(dir string) (secret []byte, name string, err error) {
+	secret = make([]byte, cacheSecretBytes)
+	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
+		return nil, "", err
+	}
+	tmp, err := os.CreateTemp(dir, ".key-*") // mode 0600
+	if err != nil {
+		return nil, "", err
+	}
+	_, werr := tmp.Write(secret)
+	if cerr := tmp.Close(); werr == nil {
+		werr = cerr
+	}
+	if werr != nil {
+		_ = os.Remove(tmp.Name()) //nolint:errcheck,gosec // temp file
+		return nil, "", werr
+	}
+	return secret, tmp.Name(), nil
 }
 
 var errSecretNotRegular = errors.New("secret is not a regular file")
