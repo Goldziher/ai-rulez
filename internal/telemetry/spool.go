@@ -353,7 +353,7 @@ func releaseLock(path, token string) {
 }
 
 // takeOver replaces the stale lock (last modified at seen) with one holding
-// token, serialised by the guard file. It reports whether the lock is now ours.
+// token, serialized by the guard file. It reports whether the lock is now ours.
 func takeOver(path, token string, seen time.Time, stale time.Duration) bool {
 	guard := path + ".takeover"
 	if created, err := createLock(guard, token); err != nil || !created {
