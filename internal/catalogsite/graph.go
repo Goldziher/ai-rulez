@@ -62,16 +62,7 @@ func (b *builder) buildGraph() graphView {
 	for i := range b.doc.Items {
 		itemIndex[b.doc.Items[i].Ref] = i
 	}
-	inGraph := map[string]bool{}
-	var edges []govview.CatalogEdge
-	for _, e := range b.doc.Edges {
-		_, okFrom := itemIndex[e.From]
-		_, okTo := itemIndex[e.To]
-		if okFrom && okTo {
-			edges = append(edges, e)
-			inGraph[e.From], inGraph[e.To] = true, true
-		}
-	}
+	edges, inGraph := b.itemEdges(itemIndex)
 	for _, e := range edges {
 		gv.Rows = append(gv.Rows, graphRow{From: e.From, To: e.To, Kind: e.Kind})
 	}
@@ -102,14 +93,7 @@ func (b *builder) buildGraph() graphView {
 	shift := 0
 	if showRoles {
 		shift = 1
-		seen := map[string]bool{}
-		for _, re := range roleEdges {
-			if !seen[re.role] {
-				seen[re.role] = true
-				nodes["role:"+re.role] = &graphNode{Ref: "role:" + re.role, Label: shortLabel(re.role), Full: "role " + re.role,
-					Href: b.roleHref[re.role], Class: "node-role", col: 0}
-			}
-		}
+		b.addRoleNodes(nodes, roleEdges)
 	}
 	for _, ref := range refs {
 		it := &b.doc.Items[itemIndex[ref]]
@@ -134,6 +118,32 @@ func (b *builder) buildGraph() graphView {
 	}
 	gv.Drawn = true
 	return gv
+}
+
+// itemEdges returns the catalog edges whose ends are both items, and the set of
+// items they touch.
+func (b *builder) itemEdges(itemIndex map[string]int) (edges []govview.CatalogEdge, inGraph map[string]bool) {
+	inGraph = map[string]bool{}
+	for _, e := range b.doc.Edges {
+		_, okFrom := itemIndex[e.From]
+		_, okTo := itemIndex[e.To]
+		if okFrom && okTo {
+			edges = append(edges, e)
+			inGraph[e.From], inGraph[e.To] = true, true
+		}
+	}
+	return edges, inGraph
+}
+
+// addRoleNodes adds one node in the first column for each role in roleEdges.
+func (b *builder) addRoleNodes(nodes map[string]*graphNode, roleEdges []roleEdge) {
+	for _, re := range roleEdges {
+		if _, seen := nodes["role:"+re.role]; seen {
+			continue
+		}
+		nodes["role:"+re.role] = &graphNode{Ref: "role:" + re.role, Label: shortLabel(re.role), Full: "role " + re.role,
+			Href: b.roleHref[re.role], Class: "node-role", col: 0}
+	}
 }
 
 type roleEdge struct{ role, ref string }
