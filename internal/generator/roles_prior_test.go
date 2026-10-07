@@ -150,3 +150,23 @@ func TestWriteRoleLedger_DoesNotWriteThroughSymlinks(t *testing.T) {
 		})
 	}
 }
+
+func TestRoleKeepsLedgerEntryWhenSettingsAreNotStrictJSON(t *testing.T) {
+	// Arrange: a role replaced the hand-written value, then the person added a comment.
+	dir := rolesProject(t)
+	writeSettings(t, dir, `{"skillOverrides": {"migrate": "on"}}`+"\n")
+	runRole(t, dir, "backend")
+	ledger := filepath.Join(dir, ".ai-rulez", "local", roleLedgerName)
+	require.FileExists(t, ledger)
+	writeSettings(t, dir, "// mine\n"+`{"skillOverrides": {"migrate": "name-only", "deploy": "off"}}`+"\n")
+
+	// Act
+	g := roleGenerator(t, dir, "")
+	require.NoError(t, g.ReconcileRoleSkillOverrides())
+
+	// Assert: the prior value is still remembered for when the file parses again.
+	data, err := os.ReadFile(ledger)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), `"migrate"`)
+	assert.Contains(t, string(data), `"on"`)
+}
