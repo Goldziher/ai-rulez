@@ -20,7 +20,7 @@ func searchProject(t *testing.T) string {
 		return "---\nname: " + name + "\ndescription: " + desc + "\n" + extra + "---\nbody\n"
 	}
 	files := map[string]string{
-		".ai-rulez/config.toml":                    "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
+		".ai-rulez/config.toml":                    "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
 		".ai-rulez/skills/refund-policy/SKILL.md":  skill("refund-policy", "Process customer refund requests and chargebacks", "triggers:\n  - customer wants money back\n"),
 		".ai-rulez/skills/deploy-staging/SKILL.md": skill("deploy-staging", "Deploy a service to the staging cluster", "keywords: [rollout, staging]\n"),
 		".ai-rulez/skills/git-workflow/SKILL.md":   skill("git-workflow", "Branching and pull request conventions", ""),

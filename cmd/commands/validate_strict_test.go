@@ -2,7 +2,6 @@ package commands
 
 import (
 	"os/exec"
-	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -176,8 +175,9 @@ func TestApplyRepoRoot_RefusesADirectoryOutsideGit(t *testing.T) {
 	assert.Empty(t, strictTreeCache.Root, "the loader keeps its default")
 }
 
-// scan always runs the strict checks and has no --strict flag, so none of its
-// flag descriptions may tell the user to pass one.
+// scan always runs the content checks and has no --strict flag, so none of its
+// flag descriptions may tell the user to pass one. validate runs them by default
+// too, so it words the shared flags the same way.
 func TestScanFlagDescriptionsDoNotMentionStrict(t *testing.T) {
 	require.Nil(t, ScanCmd.Flags().Lookup("strict"))
 	ScanCmd.Flags().VisitAll(func(f *pflag.Flag) {
@@ -189,7 +189,7 @@ func TestScanFlagDescriptionsDoNotMentionStrict(t *testing.T) {
 		assert.Regexp(t, `^[A-Z]`, f.Usage, "scan --%s starts a sentence", name)
 		v := ValidateCmd.Flags().Lookup(name)
 		require.NotNil(t, v, name)
-		assert.True(t, strings.HasPrefix(v.Usage, "With --strict, "), "validate --%s", name)
+		assert.Equal(t, f.Usage, v.Usage, "validate and scan describe --%s the same way: the content checks run by default", name)
 	}
 }
 

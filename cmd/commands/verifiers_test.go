@@ -308,8 +308,11 @@ func TestListVerifiers_ShowsSpecsAndJSON(t *testing.T) {
 	if !strings.Contains(text.String(), "rule:database") {
 		t.Errorf("list should show the enforced rule:\n%s", text.String())
 	}
-	var rows []map[string]any
-	if err := json.Unmarshal(js.Bytes(), &rows); err != nil || len(rows) != 1 || rows[0]["target"] != "rule:database" {
+	var doc struct {
+		SchemaVersion int              `json:"schema_version"`
+		Items         []map[string]any `json:"items"`
+	}
+	if err := json.Unmarshal(js.Bytes(), &doc); err != nil || doc.SchemaVersion != 1 || len(doc.Items) != 1 || doc.Items[0]["target"] != "rule:database" {
 		t.Errorf("list --json = %s (%v)", js.String(), err)
 	}
 }

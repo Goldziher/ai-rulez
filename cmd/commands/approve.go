@@ -59,7 +59,7 @@ var ApproveCmd = &cobra.Command{
 and accepted it. The record is bound to the digest, so it stops applying the
 moment the content changes (a CRLF-only edit does not change the digest; a
 flipped executable bit does). [governance] require_approval chooses what needs
-one; validate --strict, lock --check, generate --locked and the skills server
+one; validate, lock --check, generate --locked and the skills server
 enforce it. See docs/approvals.md.
 
 An item is named kind:id or kind:domain/id (skill:backend/deploy, hook:PreToolUse:*:0,
