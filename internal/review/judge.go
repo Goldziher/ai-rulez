@@ -440,7 +440,7 @@ func sortedKeys[V any](m map[string]V) []string {
 func requestFor(sp callSpec, built builtCall, temperature float64, noCache bool, model string) llm.ChatRequest {
 	maxOut := sp.rb.Limits.MaxOutputTokens
 	if maxOut <= 0 {
-		maxOut = expectedOutputTokens
+		maxOut = DefaultMaxOutputTokens
 	}
 	want := sp.dims
 	return llm.ChatRequest{
