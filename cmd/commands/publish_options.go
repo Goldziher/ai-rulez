@@ -38,7 +38,7 @@ func publishConfigError(err error) error {
 		return nil
 	}
 	if oe, ok := oops.AsOops(err); ok {
-		if field, _ := oe.Context()["field"].(string); strings.HasPrefix(field, "publish") {
+		if field, isText := oe.Context()["field"].(string); isText && strings.HasPrefix(field, "publish") {
 			return publish.Errorf(publish.CodeConfig, publish.ExitGate, "fix the [publish] table in the configuration", "%v", err)
 		}
 	}

@@ -209,7 +209,7 @@ func (g *approveGit) digestSnapshot(ctx context.Context, sha, baseDir, name stri
 	if lock, lerr := lockfile.Load(g.cfg.ConfigDir); lerr == nil && lock != nil {
 		profile = lock.Profile
 	}
-	snap, err := lockSnapshot(cfg, profile, true)
+	snap, err := lockSnapshot(cfg, profile, true) //nolint:contextcheck // lock snapshots read git without a context
 	if err != nil {
 		return nil, oops.With("commit", sha).Wrapf(err, "digest the content at the reviewed commit")
 	}

@@ -182,8 +182,9 @@ func runShowPolicy(ctx context.Context, args []string, out io.Writer) int {
 			fmtError(err)
 			return 1
 		}
-	} else {
-		report.WriteText(out)
+	} else if err := report.WriteText(out); err != nil {
+		fmtError(oops.Wrapf(err, "write the policy report"))
+		return 1
 	}
 	if report.Overrides.Rejected > 0 && report.Mode != policy.ModeWarn {
 		return 1

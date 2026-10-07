@@ -311,9 +311,9 @@ func (pc *publishContext) printMulti(out io.Writer, specs []*pluginSpec, dists [
 		return nil
 	}
 	warnAll(agg.Warnings)
-	fmt.Fprintf(out, "aggregate   %d files to %s\n", len(agg.Files), filepath.Join(pc.distAbs, multiAggregateDir))
+	reportWriter{out}.printf("aggregate   %d files to %s\n", len(agg.Files), filepath.Join(pc.distAbs, multiAggregateDir))
 	for _, a := range agg.Plan.Artifacts {
-		fmt.Fprintf(out, "            %-40s %s  %d bytes\n", a.Path, a.Digest, a.Size)
+		reportWriter{out}.printf("            %-40s %s  %d bytes\n", a.Path, a.Digest, a.Size)
 	}
 	return nil
 }
@@ -368,6 +368,6 @@ func printMultiPlugin(out io.Writer, spec *pluginSpec, d *publish.Dist, dir stri
 		_, err := out.Write(d.Files[publish.PlanFile])
 		return oops.Wrapf(err, "write plan")
 	}
-	fmt.Fprintf(out, "plugin      %s %s -> %s\n", spec.name, spec.version, dir)
+	reportWriter{out}.printf("plugin      %s %s -> %s\n", spec.name, spec.version, dir)
 	return printPublish(out, d, dir)
 }
