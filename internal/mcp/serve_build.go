@@ -565,11 +565,15 @@ func within(root, p string) bool {
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
+// fingerprintHashLimit is the largest file whose bytes the fingerprint hashes;
+// a larger file counts by path, size and modification time only.
+const fingerprintHashLimit = 1 << 20
+
 // fingerprint hashes the path, size and modification time of every file below
-// roots, leaving out VCS metadata and the usage logs a load_skill appends to
-// (which must not trigger a reload): .jsonl files directly inside a `local`
-// directory, and the files named in logs. A .jsonl file anywhere else is skill
-// content and counts.
+// roots, and the content of every file up to fingerprintHashLimit, leaving out
+// VCS metadata and the usage logs a load_skill appends to (which must not
+// trigger a reload): .jsonl files directly inside a `local` directory, and the
+// files named in logs. A .jsonl file anywhere else is skill content and counts.
 func fingerprint(roots []string, logs ...string) (string, error) {
 	h := sha256.New()
 	for _, root := range roots {
@@ -597,6 +601,19 @@ func fingerprint(roots []string, logs ...string) (string, error) {
 				return err //nolint:wrapcheck // wrapped below
 			}
 			fmt.Fprintf(h, "%s\x00%d\x00%d\n", p, info.Size(), info.ModTime().UnixNano()) //nolint:errcheck // hash writes never fail
+			if info.Size() <= fingerprintHashLimit {
+				// cp -p, rsync -t and tar x restore the modification time, so a
+				// same-size edit is only seen in the bytes. Skill files are small.
+				content, err := os.ReadFile(p) //nolint:gosec // a file below a watched skill root
+				if err != nil {
+					if os.IsNotExist(err) {
+						return nil
+					}
+					return err //nolint:wrapcheck // wrapped below
+				}
+				sum := sha256.Sum256(content)
+				h.Write(sum[:]) //nolint:errcheck,gosec // hash writes never fail
+			}
 			return nil
 		})
 		if err != nil {
