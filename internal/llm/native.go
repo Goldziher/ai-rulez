@@ -84,11 +84,18 @@ func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
 	if f == nil {
 		return nil, newError(KindConfig, "%s llm-config-invalid: backend %q is not compiled in; use a release built with -tags literllm or set backend = \"openaicompat\"", CodeConfigInvalid, BackendLiterLLM)
 	}
+	// liter-llm reads the routed provider's own key variable (OPENAI_API_KEY, ...) when no key is
+	// given, so a repository route picks which of the user's keys is sent and billed even without
+	// api_key_env: refuse it either way.
+	if routed := cfg.RoutingFromRepo(); len(routed) > 0 {
+		source := "the provider's own environment variable"
+		if cfg.APIKeyEnv != "" {
+			source = cfg.APIKeyEnv
+		}
+		return nil, newError(KindConfig, "%s llm-config-invalid: refusing to send the key from %s to a provider chosen by the repository config (%s); set provider and model in the user config file or AI_RULEZ_LLM_PROVIDER / AI_RULEZ_LLM_MODEL", CodeConfigInvalid, source, strings.Join(routed, ", "))
+	}
 	key := ""
 	if cfg.APIKeyEnv != "" {
-		if routed := cfg.RoutingFromRepo(); len(routed) > 0 {
-			return nil, newError(KindConfig, "%s llm-config-invalid: refusing to send the key from %s to a provider chosen by the repository config (%s); set provider and model in the user config file or AI_RULEZ_LLM_PROVIDER / AI_RULEZ_LLM_MODEL", CodeConfigInvalid, cfg.APIKeyEnv, strings.Join(routed, ", "))
-		}
 		if key = getenv(cfg.APIKeyEnv); key == "" {
 			return nil, newError(KindAuth, "environment variable %s (api_key_env) is empty or unset", cfg.APIKeyEnv)
 		}
