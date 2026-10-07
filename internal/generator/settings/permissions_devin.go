@@ -12,8 +12,6 @@ import (
 //
 // Source: https://docs.devin.ai/cli/reference/permissions and
 // https://docs.devin.ai/cli/reference/configuration/config-file (read 2026-10-05).
-var _ = registerPermissionDialect("devin", buildDevin)
-
 func buildDevin(t *translation) ([]jsonmerge.OwnedKey, error) {
 	lists := map[PermAction][]any{}
 	for ix := range t.entries {
@@ -85,8 +83,6 @@ func devinRule(e permEntry) (rule, why string) {
 //
 // Source: https://docs.x.ai/build/settings/reference and
 // https://docs.x.ai/build/features/permissions (read 2026-10-05).
-var _ = registerPermissionDialect("grok", buildGrok)
-
 func buildGrok(t *translation) ([]jsonmerge.OwnedKey, error) {
 	lists := map[PermAction][]any{}
 	for ix := range t.entries {

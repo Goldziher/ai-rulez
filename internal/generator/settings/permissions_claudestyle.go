@@ -33,27 +33,28 @@ type claudeStyle struct {
 	agentTool string
 }
 
+// The harnesses whose permissions follow Claude Code's rule syntax.
 var (
-	_ = registerPermissionDialect("codebuddy", claudeStyle{
+	codebuddyPermissions = claudeStyle{
 		shell: toolBash, askKey: string(ActionAsk),
 		kinds: kindSet(KindShell, KindRead, KindEdit, KindFetch, KindSearch, KindMCP),
-	}.build)
-	_ = registerPermissionDialect("commandcode", claudeStyle{
+	}
+	commandcodePermissions = claudeStyle{
 		shell: "Shell", askKey: string(ActionAsk), projectPaths: true,
 		kinds: kindSet(KindShell, KindRead, KindEdit, KindFetch, KindSearch, KindMCP),
-	}.build)
-	_ = registerPermissionDialect("qoder", claudeStyle{
+	}
+	qoderPermissions = claudeStyle{
 		shell: toolBash, askKey: string(ActionAsk), projectPaths: true, editOnly: true, agentTool: toolAgent,
 		kinds: kindSet(KindShell, KindRead, KindEdit, KindMCP, KindAgent),
-	}.build)
-	_ = registerPermissionDialect("qwen", claudeStyle{
+	}
+	qwenPermissions = claudeStyle{
 		shell: toolBash, askKey: string(ActionAsk), agentTool: toolAgent,
 		kinds: kindSet(KindShell, KindRead, KindEdit, KindFetch, KindSearch, KindMCP, KindAgent),
-	}.build)
-	_ = registerPermissionDialect("letta", claudeStyle{
+	}
+	lettaPermissions = claudeStyle{
 		shell: toolBash, askKey: "alwaysAsk",
 		kinds: kindSet(KindShell, KindRead, KindEdit),
-	}.build)
+	}
 )
 
 func kindSet(kinds ...ToolKind) map[ToolKind]bool {
