@@ -48,7 +48,7 @@ func (r *runner) checkSBOM() {
 func registerSbomcodes(s *ruleSet) {
 	s.addRules(
 		RuleInfo{CodeSBOMUnpinned, "sbom-component-unpinned", SeverityInfo, "an MCP package or remote source in the SBOM cannot be given an exact version: a range, a tag such as latest, or no commit pin"},
-		RuleInfo{CodeSBOMUnknownCoords, "sbom-coordinates-unknown", SeverityInfo, "an MCP server has no package URL in the SBOM: its command is not a recognised launcher and no package is declared"},
+		RuleInfo{CodeSBOMUnknownCoords, "sbom-coordinates-unknown", SeverityInfo, "an MCP server has no package URL in the SBOM: its command is not a recognized launcher and no package is declared"},
 		RuleInfo{CodeSBOMLockStale, "sbom-lock-out-of-sync", SeverityError, "sbom --require-lock found no ai-rulez.lock, or one that no longer matches the sources, so the SBOM would not describe what the lock pins"},
 		RuleInfo{CodeSBOMDrift, "sbom-drift", SeverityError, "sbom --check found the committed SBOM different from the one generated now, or no committed SBOM"},
 	)

@@ -208,7 +208,7 @@ func parseSnyk(out []byte, exitCode int) ([]externalFinding, error) {
 			files = append(files, k)
 		}
 		sort.Strings(files)
-		recognised := false
+		recognized := false
 		for _, file := range files {
 			var entry struct {
 				Issues *[]snykIssue `json:"issues"`
@@ -216,12 +216,12 @@ func parseSnyk(out []byte, exitCode int) ([]externalFinding, error) {
 			if json.Unmarshal(top[file], &entry) != nil || entry.Issues == nil {
 				continue
 			}
-			recognised = true
+			recognized = true
 			if err := add(file, *entry.Issues); err != nil {
 				return nil, err
 			}
 		}
-		if !recognised {
+		if !recognized {
 			return nil, oops.Errorf("not a snyk-json report (no issues list)")
 		}
 	default:

@@ -98,7 +98,7 @@ stdout.
 | AR748 | `capability-not-allowed` | error | An MCP server or hook group the organization policy forbids: a denied transport, a command outside `mcp.allowed_commands`, or any hook when `hooks.allow` is false; it is not loaded |
 | AR749 | `policy-budget-exceeded` | error | A rule has more findings than the organization policy's `lint.max_findings` ceiling allows (`0` allows none) |
 | AR750 | `sbom-component-unpinned` | info | An MCP package or remote source in the SBOM cannot be given an exact version (a range, `latest`, an image tag, a source with no commit pin); reported by `validate --strict` and `sbom --strict-pins` (see [SBOM](sbom.md)) |
-| AR751 | `sbom-coordinates-unknown` | info | An MCP server has no package URL in the SBOM (no recognised launcher, no `package`); reported by `validate --strict` and `sbom --strict-pins` |
+| AR751 | `sbom-coordinates-unknown` | info | An MCP server has no package URL in the SBOM (no recognized launcher, no `package`); reported by `validate --strict` and `sbom --strict-pins` |
 | AR752 | `sbom-lock-out-of-sync` | error | `sbom --require-lock` found no lock, or one that no longer matches the sources; `validate --strict` reports a lock that exists and no longer matches |
 | AR753 | `sbom-drift` | error | `sbom --check` found the committed SBOM different from the one generated now, or none; `validate --strict` compares a committed `ai-bom.cdx.json` or `sbom.cdx.json` at the project root |
 | AR801 | `description-missing` | warning | A skill, agent or command has no `description` |
@@ -2004,7 +2004,7 @@ an MCP package or remote source in the SBOM cannot be given an exact version: a 
 
 ### AR751 sbom-coordinates-unknown
 
-an MCP server has no package URL in the SBOM: its command is not a recognised launcher and no package is declared
+an MCP server has no package URL in the SBOM: its command is not a recognized launcher and no package is declared
 
 - Default severity: `info`
 - Analyzer: `config` (scope `bundle`)
@@ -2588,7 +2588,7 @@ a Claude Code skill or subagent file spells a frontmatter key in a variant (unde
 
 - Default severity: `warning`
 - Analyzer: `traps` (scope `file`)
-- Why: Claude Code ignores a frontmatter field it does not recognise without reporting an error, so `user_invocable` silently does nothing.
+- Why: Claude Code ignores a frontmatter field it does not recognize without reporting an error, so `user_invocable` silently does nothing.
 - Bad: `disable_model_invocation: true` in a SKILL.md, or `max_turns: 5` in a subagent
 - Good: `disable-model-invocation: true`; `maxTurns: 5`
 
@@ -2908,7 +2908,7 @@ a judged review ran on a model alias, or without a calibration record that match
 
 - Default severity: `info`
 - Analyzer: `descriptions` (scope `item`)
-- Why: A judge is only trusted to gate a build after `ai-rulez review calibrate` measured it against a human-labelled golden set for this exact rubric, prompt and model. A floating model alias, an edited rubric or an old record means the measurement no longer describes the judge that ran.
+- Why: A judge is only trusted to gate a build after `ai-rulez review calibrate` measured it against a human-labeled golden set for this exact rubric, prompt and model. A floating model alias, an edited rubric or an old record means the measurement no longer describes the judge that ran.
 - Bad: `review --semantic --gate` on `gemini-flash-latest`, or after editing `rubric.toml`, with the old `calibration.json`
 - Good: A pinned model id and a `calibration.json` written by `review calibrate` for the current rubric digest, prompt digest and golden set, younger than `max_age_days`
 
@@ -3198,7 +3198,7 @@ an emitter whose format is not verified against vendor documentation was request
 
 - Default severity: `warning`
 - Analyzer: `plugin` (scope `bundle`)
-- Why: The Port, AWS Agent Registry and Kiro formats are written from public descriptions, not from a schema the vendor publishes, so their output is labelled experimental and needs `--experimental`.
+- Why: The Port, AWS Agent Registry and Kiro formats are written from public descriptions, not from a schema the vendor publishes, so their output is labeled experimental and needs `--experimental`.
 - Bad: Uploading `emit/port/*.json` to a catalog without checking it against your blueprint
 - Good: Validate the files against your own blueprint or registry, or render exactly what you need with the template emitter
 
