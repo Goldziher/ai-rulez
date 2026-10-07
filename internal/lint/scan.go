@@ -228,6 +228,11 @@ func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[
 			return
 		}
 	}
+	if kind != "rule" && r.pluginProvided(it) {
+		r.addWithSeverity(CodeReferenceUnknown, SeverityInfo, it.abs, line,
+			"references %s %q, which no local file defines; it may come from an installed plugin", kind, name)
+		return
+	}
 	r.add(CodeReferenceUnknown, it.abs, line, "references %s %q, which does not exist", kind, name)
 }
 
