@@ -121,7 +121,7 @@ func runListRules(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && !listJSON {
 		logger.Info("No rules found")
 		return
 	}
@@ -148,7 +148,7 @@ func runListContext(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && !listJSON {
 		logger.Info("No context files found")
 		return
 	}
@@ -175,7 +175,7 @@ func runListSkills(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && !listJSON {
 		logger.Info("No skills found")
 		return
 	}
@@ -250,7 +250,7 @@ func runListItems(ftype, title, noun string) {
 		logger.Error("Failed to list "+noun, "error", err)
 		os.Exit(1)
 	}
-	if len(files) == 0 {
+	if len(files) == 0 && !listJSON {
 		logger.Info("No " + noun + " found")
 		return
 	}

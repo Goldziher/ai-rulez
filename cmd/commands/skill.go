@@ -184,7 +184,7 @@ func runSkillList(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if len(skills) == 0 {
+	if len(skills) == 0 && !skillJSON {
 		logger.Info("No installed skills found")
 		logLocalEntriesHint("installed_skills")
 		return
