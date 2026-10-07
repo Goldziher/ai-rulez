@@ -338,6 +338,8 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **`[llm]` API key stays with the user's provider**: when user scope sets `api_key_env` without a `base_url`, a repository config can no longer choose the `provider` or `backend`, or a model or embedding model under another provider's prefix (which routed the key to a different service with the `literllm` backend); the dropped keys are reported by `llm doctor` and `ai-rulez doctor`.
 - **`[llm]` `timeout_seconds` is capped at 3600**: a huge value overflowed `time.Duration` and disabled the per-call timeout; `AR9L0` now rejects it.
 - **`[llm]` secret scrubbing recognises more credential shapes** (GitHub, GitLab, Google and Slack tokens, JWTs, PEM private-key headers, Basic credentials, temporary AWS keys) in provider errors and `Judge` refusals; it stays a best-effort detector.
+- **`[llm]` cost cap cannot be defeated by `max_cost_usd = nan`, `inf` or a negative value**: a repository value that is not a usable limit no longer replaces the user's cap (it counts as unset), and `AR9L0` and `AI_RULEZ_LLM_MAX_COST_USD` reject non-finite numbers and prices.
+- **`[llm]` budget ignores negative provider-reported usage**: a reply with a negative token count used to lower the spent total; it (like a missing report) is now charged at the worst case, and decoded usage is clamped to zero.
 
 ### Security
 
