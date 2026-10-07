@@ -260,12 +260,22 @@ func fileEntry(f *CatalogFile) map[string]any {
 }
 
 // skillEntry renders a skills/list or skills/get entry per SEP-2640.
-func skillEntry(s *CatalogSkill) map[string]any {
-	resources := make([]map[string]any, 0, len(s.Files))
-	for i := range s.Files {
+// skills/list lists at most maxListedResources files per skill (skills/get
+// returns them all), so a skill with a huge file tree cannot flood the reply.
+func skillEntry(s *CatalogSkill, limit int) map[string]any {
+	n := len(s.Files)
+	if limit > 0 {
+		n = min(n, limit)
+	}
+	resources := make([]map[string]any, 0, n)
+	for i := range n {
 		resources = append(resources, fileEntry(&s.Files[i]))
 	}
-	return map[string]any{keyURI: s.URI, "frontmatter": s.Frontmatter, "resources": resources}
+	entry := map[string]any{keyURI: s.URI, "frontmatter": s.Frontmatter, "resources": resources}
+	if n < len(s.Files) {
+		entry["resources_truncated"] = true
+	}
+	return entry
 }
 
 // WrapTransport returns a transport that answers skills/list and skills/get
@@ -327,7 +337,7 @@ func (c *Catalog) handleSkillsMethod(method string, params json.RawMessage) (res
 	case methodSkillsList:
 		entries := make([]map[string]any, 0, len(c.skills))
 		for _, s := range c.skills {
-			entries = append(entries, skillEntry(s))
+			entries = append(entries, skillEntry(s, maxListedResources))
 		}
 		return map[string]any{"resultType": resultTypeComplete, "skills": entries}, nil
 	case methodSkillsGet:
@@ -343,7 +353,7 @@ func (c *Catalog) handleSkillsMethod(method string, params json.RawMessage) (res
 		if !ok {
 			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("not a served skill: %q", p.URI)}
 		}
-		return map[string]any{"resultType": resultTypeComplete, "skill": skillEntry(skill)}, nil
+		return map[string]any{"resultType": resultTypeComplete, "skill": skillEntry(skill, 0)}, nil
 	case methodDirectoryRead:
 		var p struct {
 			URI string `json:"uri"`
