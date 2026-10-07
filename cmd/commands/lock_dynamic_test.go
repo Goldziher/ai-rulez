@@ -72,7 +72,7 @@ func TestMergeDynamicLock_RefusedSkillIsLeftUnpinnedUnlessStrict(t *testing.T) {
 		return out
 	}
 
-	t.Run("strict keeps today's any-refusal-fails behaviour", func(t *testing.T) {
+	t.Run("strict keeps today's any-refusal-fails behavior", func(t *testing.T) {
 		next := &lockfile.File{Version: lockfile.Version}
 		problems, unpinned := mergeDynamicViews(cfg, current, next, dynamicRun{strict: true})
 		require.Len(t, problems, 1)

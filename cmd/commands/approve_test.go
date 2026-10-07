@@ -368,11 +368,11 @@ func TestApprove_FlagValidation(t *testing.T) {
 }
 
 func TestSafeText_EscapesControlAndBidirectionalCharacters(t *testing.T) {
-	in := "ok‮evil\x1b[31m​zero\u0000nul\ttab"
+	in := "ok\u202eevil\x1b[31m\u200bzero\u0000nul\ttab"
 	got := safeText(in)
-	assert.NotContains(t, got, "‮")
+	assert.NotContains(t, got, "\u202e")
 	assert.NotContains(t, got, "\x1b")
-	assert.NotContains(t, got, "​")
+	assert.NotContains(t, got, "\u200b")
 	assert.Contains(t, got, `\u{202E}`)
 	assert.Contains(t, got, `\u{1B}`)
 	assert.Contains(t, got, "\t", "tab is kept")
