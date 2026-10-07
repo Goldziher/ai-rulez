@@ -72,7 +72,7 @@ func checkStaged(ctx context.Context, report *Report, files map[string][]byte, c
 		}
 		found = append(found, lr.Findings...)
 	}
-	// The project scan honours inline ignore comments and skips config.toml;
+	// The project scan honors inline ignore comments and skips config.toml;
 	// converted text is not trusted to silence itself, so scan every staged text again.
 	rels := make([]string, 0, len(files)+1)
 	for rel := range files {

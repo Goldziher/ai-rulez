@@ -193,7 +193,7 @@ func (nativeImporter) readOrReport(p *Plan, r *reader, file string) ([]byte, boo
 // which is every name without an ASCII letter or digit (日本語, 規則).
 const unnamedLabel = "unnamed"
 
-// safeName sanitises raw into an ai-rulez name. A name with nothing usable left
+// safeName sanitizes raw into an ai-rulez name. A name with nothing usable left
 // gets a stable label derived from the original, so two such names stay
 // distinct instead of colliding on "unnamed"; synthesized reports that.
 func safeName(raw string) (name string, synthesized bool) {

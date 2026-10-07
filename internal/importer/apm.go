@@ -662,6 +662,6 @@ func (b *apmPlanner) importHooksDir(dir string) {
 func (b *apmPlanner) importPolicy() {
 	if _, ok := b.r.exists(apmPolicyFile); ok {
 		b.p.add(newFinding(StatusUnsupported, apmPolicyFile, "", "",
-			"APM policy (allowed sources, tighten-only extends) has no ai-rulez counterpart here; see the organisation policy documentation"))
+			"APM policy (allowed sources, tighten-only extends) has no ai-rulez counterpart here; see the organization policy documentation"))
 	}
 }

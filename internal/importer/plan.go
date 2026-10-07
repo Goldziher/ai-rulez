@@ -223,7 +223,7 @@ func (p *Plan) empty() bool {
 type Options struct {
 	// SplitHeadings splits root instruction files into one context per H2.
 	SplitHeadings bool
-	// BestEffort lets an importer continue past an unrecognised format version.
+	// BestEffort lets an importer continue past an unrecognized format version.
 	BestEffort bool
 	// SkipSkills names skills another importer owns (installed from a lock).
 	SkipSkills map[string]bool
@@ -246,7 +246,7 @@ type Options struct {
 type Format interface {
 	Name() string
 	Description() string
-	// Detect lists the input files the importer recognises, sorted.
+	// Detect lists the input files the importer recognizes, sorted.
 	Detect(fsys fs.FS) []string
 	Plan(fsys fs.FS, opt Options) (*Plan, error)
 }
