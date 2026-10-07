@@ -59,12 +59,12 @@ jobs:
           echo "AI_RULEZ_BATS_BIN=$RUNNER_TEMP/ai-rulez" >>"$GITHUB_ENV"
 
       - name: Install Bats
-        uses: xberg-io/actions/install-bats@v1
+        uses: xberg-io/actions/install-bats@9ed0576675002330bb3d5446ac603b70a6f096ee # v1
         with:
           version: ${{ env.BATS_VERSION }}
 
       - name: Run the shell script suites
-        uses: xberg-io/actions/run-bats@v1
+        uses: xberg-io/actions/run-bats@9ed0576675002330bb3d5446ac603b70a6f096ee # v1
         with:
           path: tests/bats
           # bats_load_library searches BATS_LIB_PATH only; scripts/bats/run.sh sets the same path.
