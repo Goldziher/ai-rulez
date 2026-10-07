@@ -56,28 +56,8 @@ func (s RoleSelection) names(cfg *config.Config) (names []string, requested map[
 			requested[o.Role] = !declared[o.Role]
 		}
 	}
-	for _, r := range s.Only {
-		if !exists[r] {
-			return nil, nil, oops.With("role", r).Hint("`ai-rulez roles list` shows the configured roles").Errorf("unknown role %q", r)
-		}
-		if s.Write {
-			pinned[r] = true
-			requested[r] = !declared[r]
-		} else if !pinned[r] {
-			return nil, nil, oops.With("role", r).Hint("pin it with `ai-rulez lock --role "+r+"` or set pin = true on the role").
-				Errorf("role %q is not pinned in the lock", r)
-		}
-	}
-	if !s.Write && len(s.Only) > 0 {
-		keep := map[string]bool{}
-		for _, r := range s.Only {
-			keep[r] = true
-		}
-		for name := range pinned {
-			if !keep[name] {
-				delete(pinned, name)
-			}
-		}
+	if err := s.applyOnly(exists, declared, pinned, requested); err != nil {
+		return nil, nil, err
 	}
 	names = make([]string, 0, len(pinned))
 	for name := range pinned {
@@ -85,6 +65,37 @@ func (s RoleSelection) names(cfg *config.Config) (names []string, requested map[
 	}
 	sort.Strings(names)
 	return names, requested, nil
+}
+
+// applyOnly applies the roles named on the command line: writing pins them
+// (requested unless their own pin = true does), checking narrows pinned to them,
+// and each must exist (and, when checking, be pinned).
+func (s RoleSelection) applyOnly(exists, declared, pinned, requested map[string]bool) error {
+	for _, r := range s.Only {
+		if !exists[r] {
+			return oops.With("role", r).Hint("`ai-rulez roles list` shows the configured roles").Errorf("unknown role %q", r)
+		}
+		if s.Write {
+			pinned[r] = true
+			requested[r] = !declared[r]
+		} else if !pinned[r] {
+			return oops.With("role", r).Hint("pin it with `ai-rulez lock --role "+r+"` or set pin = true on the role").
+				Errorf("role %q is not pinned in the lock", r)
+		}
+	}
+	if s.Write || len(s.Only) == 0 {
+		return nil
+	}
+	keep := map[string]bool{}
+	for _, r := range s.Only {
+		keep[r] = true
+	}
+	for name := range pinned {
+		if !keep[name] {
+			delete(pinned, name)
+		}
+	}
+	return nil
 }
 
 // SnapshotRoles is Snapshot plus the pins of the selected roles' rendered

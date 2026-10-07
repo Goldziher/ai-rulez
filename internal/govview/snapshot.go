@@ -140,43 +140,6 @@ type snapFile struct {
 // limits from the tree metadata, before any content is read. Symlinks are
 // reported in out, never listed; submodules hold no files here.
 func collectFiles(snap workspace.Snapshot, lim snapshotLimits, rel string, out *RevisionSnapshot) ([]snapFile, error) {
-	var files []snapFile
-	var total int64
-	var walk func(name string) error
-	visit := func(name string, info fs.FileInfo) error {
-		switch {
-		case info.Mode()&fs.ModeSymlink != 0:
-			out.Symlinks = append(out.Symlinks, name)
-		case info.IsDir():
-			return walk(name)
-		case info.Mode().IsRegular():
-			if !fs.ValidPath(name) || (rel != "." && name != rel && !strings.HasPrefix(name, rel+"/")) {
-				return oops.With("path", name).Errorf("the snapshot produced %q outside %s", name, rel)
-			}
-			total += info.Size()
-			if len(files) >= lim.files || info.Size() > lim.fileSize || total > lim.total {
-				return oops.Errorf("%s is too large for a revision snapshot (limit %d files, %d MiB)", rel, lim.files, lim.total>>20)
-			}
-			files = append(files, snapFile{name: name, exec: info.Mode()&0o111 != 0})
-		}
-		return nil
-	}
-	walk = func(dir string) error {
-		entries, err := snap.ReadDir(dir)
-		if err != nil {
-			return oops.With("path", dir).Wrapf(err, "list the snapshot")
-		}
-		for _, e := range entries {
-			info, err := e.Info()
-			if err != nil {
-				return oops.With("path", e.Name()).Wrapf(err, "stat in the snapshot")
-			}
-			if err := visit(path.Join(dir, e.Name()), info); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
 	start, err := snap.Lstat(rel)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -184,10 +147,63 @@ func collectFiles(snap workspace.Snapshot, lim snapshotLimits, rel string, out *
 		}
 		return nil, oops.With("path", rel).Wrapf(err, "stat in the snapshot")
 	}
-	if err := visit(rel, start); err != nil {
+	c := &fileCollector{snap: snap, lim: lim, rel: rel, out: out}
+	if err := c.visit(rel, start); err != nil {
 		return nil, err
 	}
-	return files, nil
+	return c.files, nil
+}
+
+// fileCollector is the state of one collectFiles walk.
+type fileCollector struct {
+	snap  workspace.Snapshot
+	lim   snapshotLimits
+	rel   string
+	out   *RevisionSnapshot
+	files []snapFile
+	total int64
+}
+
+func (c *fileCollector) visit(name string, info fs.FileInfo) error {
+	switch {
+	case info.Mode()&fs.ModeSymlink != 0:
+		c.out.Symlinks = append(c.out.Symlinks, name)
+	case info.IsDir():
+		return c.walk(name)
+	case info.Mode().IsRegular():
+		return c.add(name, info)
+	}
+	return nil
+}
+
+// add lists a regular file, inside rel and within the limits.
+func (c *fileCollector) add(name string, info fs.FileInfo) error {
+	if !fs.ValidPath(name) || (c.rel != "." && name != c.rel && !strings.HasPrefix(name, c.rel+"/")) {
+		return oops.With("path", name).Errorf("the snapshot produced %q outside %s", name, c.rel)
+	}
+	c.total += info.Size()
+	if len(c.files) >= c.lim.files || info.Size() > c.lim.fileSize || c.total > c.lim.total {
+		return oops.Errorf("%s is too large for a revision snapshot (limit %d files, %d MiB)", c.rel, c.lim.files, c.lim.total>>20)
+	}
+	c.files = append(c.files, snapFile{name: name, exec: info.Mode()&0o111 != 0})
+	return nil
+}
+
+func (c *fileCollector) walk(dir string) error {
+	entries, err := c.snap.ReadDir(dir)
+	if err != nil {
+		return oops.With("path", dir).Wrapf(err, "list the snapshot")
+	}
+	for _, e := range entries {
+		info, err := e.Info()
+		if err != nil {
+			return oops.With("path", e.Name()).Wrapf(err, "stat in the snapshot")
+		}
+		if err := c.visit(path.Join(dir, e.Name()), info); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // writeFiles reads the files (in batches when the snapshot can) and writes them
