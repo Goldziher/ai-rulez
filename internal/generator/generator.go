@@ -3709,9 +3709,37 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 }
 
 func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) error {
-	secretKeys := g.secretMCPEnvKeys()
-	if len(secretKeys) == 0 {
+	unsafe, shared := g.unignoredSecretOutputs(outputs)
+	if len(unsafe) == 0 {
 		return nil
+	}
+	return oops.
+		With("paths", unsafe).
+		With("env_keys", g.secretMCPEnvKeys()).
+		Hint(g.secretIgnoreHint(unsafe, shared)).
+		Errorf("generated MCP config contains secrets but is not gitignored: %s", strings.Join(unsafe, ", "))
+}
+
+// reasonSecretUnignored is why generate refuses an MCP config ensureSecretOutputsIgnored rejects.
+const reasonSecretUnignored = "an MCP config holding a secret that is not gitignored"
+
+// secretRefusals is what ensureSecretOutputsIgnored would refuse, in the form
+// --check and --dry-run report as blocked.
+func (g *Generator) secretRefusals(outputs []config.OutputFile) []outputRefusal {
+	unsafe, _ := g.unignoredSecretOutputs(outputs)
+	refused := make([]outputRefusal, 0, len(unsafe))
+	for _, rel := range unsafe {
+		refused = append(refused, outputRefusal{rel, reasonSecretUnignored})
+	}
+	return refused
+}
+
+// unignoredSecretOutputs lists the MCP configs that would hold a resolved secret
+// and are not gitignored, sorted, and whether one of them is a partially owned
+// (hand-authored) document.
+func (g *Generator) unignoredSecretOutputs(outputs []config.OutputFile) (unsafe []string, shared bool) {
+	if len(g.secretMCPEnvKeys()) == 0 {
+		return nil, false
 	}
 
 	var pending []string
@@ -3720,11 +3748,6 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 	}
 
 	var candidates []string
-	var unsafe []string
-	// A partially owned document is the consumer's file: ai-rulez merges one key
-	// into it and cannot gitignore it on their behalf, so --gitignore is not the
-	// remedy and the hint must not suggest it.
-	shared := false
 	// A file needs ignoring because of what it holds, not because of its name: a
 	// merged document that is not an MCP config (a check file) or one that only
 	// references the secret by name passes.
@@ -3746,21 +3769,17 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 			unsafe = append(unsafe, relPath)
 		}
 	}
+	// A partially owned document is the consumer's file: ai-rulez merges one key
+	// into it and cannot gitignore it on their behalf, so --gitignore is not the
+	// remedy and the hint must not suggest it.
 	for _, output := range outputs {
 		if output.PartiallyOwned && !output.IsDir {
 			relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 			shared = shared || (isMCPConfigOutput(relPath) && !ignored[relPath])
 		}
 	}
-	if len(unsafe) == 0 {
-		return nil
-	}
 	sort.Strings(unsafe)
-	return oops.
-		With("paths", unsafe).
-		With("env_keys", secretKeys).
-		Hint(g.secretIgnoreHint(unsafe, shared)).
-		Errorf("generated MCP config contains secrets but is not gitignored: %s", strings.Join(unsafe, ", "))
+	return unsafe, shared
 }
 
 // secretIgnoreHint tells how to fix MCP configs that hold secrets and are not
