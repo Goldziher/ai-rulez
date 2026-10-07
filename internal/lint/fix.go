@@ -302,8 +302,8 @@ func outsideFixRefusal(file, root string) string {
 	if err != nil || !info.Mode().IsRegular() {
 		return "the file is not a regular file (a symlink is never edited)"
 	}
-	real, err := filepath.EvalSymlinks(file)
-	if err != nil || !underDir(real, gitutil.Resolve(root)) {
+	resolved, err := filepath.EvalSymlinks(file)
+	if err != nil || !underDir(resolved, gitutil.Resolve(root)) {
 		return "the file is not inside the project (a symlink on its path leaves it)"
 	}
 	return ""
