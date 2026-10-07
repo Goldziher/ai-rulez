@@ -221,7 +221,7 @@ func TestJudgeCompletionCapDefaultsToTheBuiltinRubricsCap(t *testing.T) {
 		want   int
 	}{
 		{"unset uses the default", 0, DefaultMaxOutputTokens},
-		{"set is honoured", 800, 800},
+		{"set is honored", 800, 800},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
