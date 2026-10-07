@@ -23,6 +23,7 @@ func listingFixtureReport(t *testing.T, presets []string, skills map[string]stri
 	original, err := os.ReadFile(configPath)
 	require.NoError(t, err)
 	edited := strings.Replace(string(original), "presets = [\"claude\"]\n", "presets = [\""+strings.Join(presets, "\", \"")+"\"]\n", 1)
+	edited += "\n[header]\nhashes = \"full\"\n"
 	require.NoError(t, os.WriteFile(configPath, []byte(edited), 0o600))
 	for name, text := range skills {
 		skillDir := filepath.Join(dir, ".ai-rulez", "skills", name)
