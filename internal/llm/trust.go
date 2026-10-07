@@ -1,6 +1,9 @@
 package llm
 
-import "strings"
+import (
+	"math"
+	"strings"
+)
 
 // A committed repository config, and the machine-local overlay that lives in
 // the checkout, is attacker-controlled input: cloning a repository must not
@@ -125,7 +128,12 @@ func tighterInt(a, b int) int {
 	}
 }
 
+// tighterFloat returns the lower positive limit. A value that is not a usable
+// limit (zero, negative, NaN or infinite) counts as unset, so a repository can
+// never replace the user's cap with a value that compares false against
+// everything.
 func tighterFloat(a, b float64) float64 {
+	a, b = usableLimit(a), usableLimit(b)
 	switch {
 	case a <= 0:
 		return b
@@ -134,6 +142,13 @@ func tighterFloat(a, b float64) float64 {
 	default:
 		return min(a, b)
 	}
+}
+
+func usableLimit(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) || v < 0 {
+		return 0
+	}
+	return v
 }
 
 // IgnoredKeysMessage explains which repository [llm] keys were dropped by the trust rule.
