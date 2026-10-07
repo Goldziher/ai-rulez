@@ -309,33 +309,9 @@ func parseDoc(path string, data []byte) (parsedDoc, error) {
 	fail := func(format string, args ...any) (parsedDoc, error) {
 		return parsedDoc{}, &ParseError{Path: path, Msg: fmt.Sprintf(format, args...)}
 	}
-	var doc fileDoc
-	dec := toml.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
-	if derr := dec.Decode(&doc); derr != nil {
-		var strict *toml.StrictMissingError
-		if errors.As(derr, &strict) {
-			var keys []string
-			for _, d := range strict.Errors {
-				keys = append(keys, strings.Join(d.Key(), "."))
-			}
-			return fail("unknown key(s) %s (this build reads policy_version %d; a newer policy needs a newer ai-rulez)", strings.Join(keys, ", "), Version)
-		}
-		return fail("%v", derr)
-	}
-	if doc.PolicyVersion == nil {
-		return fail("policy_version is required (use %d)", Version)
-	}
-	if *doc.PolicyVersion != Version {
-		return fail("policy_version %d is not supported by this build (it reads %d); upgrade ai-rulez", *doc.PolicyVersion, Version)
-	}
-	if len(doc.Extends) > maxExtendsPerFile {
-		return fail("extends lists %d policies; at most %d", len(doc.Extends), maxExtendsPerFile)
-	}
-	for _, e := range doc.Extends {
-		if strings.TrimSpace(e) == "" || strings.ContainsAny(e, "\r\n\x00") {
-			return fail("extends: %q is not a policy path or URL", e)
-		}
+	doc, err := decodeDoc(data)
+	if err != nil {
+		return fail("%s", err.Error())
 	}
 	for _, step := range []func() error{
 		func() error { return p.Sources.fromDoc(doc.Sources) },
@@ -349,6 +325,46 @@ func parseDoc(path string, data []byte) (parsedDoc, error) {
 			return fail("%v", err)
 		}
 	}
+	p.switchesFromDoc(&doc)
+	p.statedLoose = doc.looseSwitches()
+	return parsedDoc{name: doc.Name, policy: p, extends: doc.Extends}, nil
+}
+
+// decodeDoc decodes a policy file strictly and checks its version and extends.
+func decodeDoc(data []byte) (fileDoc, error) {
+	var doc fileDoc
+	dec := toml.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if derr := dec.Decode(&doc); derr != nil {
+		var strict *toml.StrictMissingError
+		if errors.As(derr, &strict) {
+			var keys []string
+			for _, d := range strict.Errors {
+				keys = append(keys, strings.Join(d.Key(), "."))
+			}
+			return doc, fmt.Errorf("unknown key(s) %s (this build reads policy_version %d; a newer policy needs a newer ai-rulez)", strings.Join(keys, ", "), Version)
+		}
+		return doc, derr
+	}
+	if doc.PolicyVersion == nil {
+		return doc, fmt.Errorf("policy_version is required (use %d)", Version)
+	}
+	if *doc.PolicyVersion != Version {
+		return doc, fmt.Errorf("policy_version %d is not supported by this build (it reads %d); upgrade ai-rulez", *doc.PolicyVersion, Version)
+	}
+	if len(doc.Extends) > maxExtendsPerFile {
+		return doc, fmt.Errorf("extends lists %d policies; at most %d", len(doc.Extends), maxExtendsPerFile)
+	}
+	for _, e := range doc.Extends {
+		if strings.TrimSpace(e) == "" || strings.ContainsAny(e, "\r\n\x00") {
+			return doc, fmt.Errorf("extends: %q is not a policy path or URL", e)
+		}
+	}
+	return doc, nil
+}
+
+// switchesFromDoc reads the on/off keys of [lock], [telemetry], [llm] and [guard].
+func (p *Policy) switchesFromDoc(doc *fileDoc) {
 	if doc.Lock != nil {
 		p.Lock.Enforce = doc.Lock.Enforce != nil && *doc.Lock.Enforce
 		p.Lock.IncludeOutputs = doc.Lock.IncludeOutputs != nil && *doc.Lock.IncludeOutputs
@@ -362,8 +378,6 @@ func parseDoc(path string, data []byte) (parsedDoc, error) {
 	if doc.Guard != nil {
 		p.Guard.Generated = doc.Guard.Generated != nil && *doc.Guard.Generated
 	}
-	p.statedLoose = doc.looseSwitches()
-	return parsedDoc{name: doc.Name, policy: p, extends: doc.Extends}, nil
 }
 
 // looseSwitches lists the policy keys of the document that are written as the
@@ -501,7 +515,40 @@ func (l *Lint) fromDoc(d *fileLint) error {
 		return err
 	}
 	l.RequiredCodes = req
-	for key, sev := range d.SeverityFloor {
+	if err := l.severityFloorFromDoc(d.SeverityFloor); err != nil {
+		return err
+	}
+	if d.Capability != nil && d.Capability.MaxNetworkCommands != nil {
+		if *d.Capability.MaxNetworkCommands < 0 {
+			return fmt.Errorf("lint.capability.max_network_commands: %d must not be negative", *d.Capability.MaxNetworkCommands)
+		}
+		n := *d.Capability.MaxNetworkCommands
+		l.Capability.MaxNetworkCommands = &n
+	}
+	if err := l.loadBudgetsFromDoc(d.LoadBudgets); err != nil {
+		return err
+	}
+	if err := l.ScannerPolicy.fromDoc(d.ScannerPolicy); err != nil {
+		return err
+	}
+	budgets, err := parseSizeBudgets(d.Budgets)
+	if err != nil {
+		return err
+	}
+	l.SizeBudgets = budgets
+	if l.NoInlineIgnore, err = normalizeCodes("lint.no_inline_ignore", d.NoInlineIgnore); err != nil {
+		return err
+	}
+	if err := l.maxFindingsFromDoc(d.MaxFindings); err != nil {
+		return err
+	}
+	return l.Security.fromDoc(d.Security)
+}
+
+// severityFloorFromDoc reads lint.severity_floor; two names of one rule keep
+// the stricter floor.
+func (l *Lint) severityFloorFromDoc(floor map[string]string) error {
+	for key, sev := range floor {
 		code, ok := lint.ResolveCode(key)
 		if !ok {
 			return fmt.Errorf("lint.severity_floor: unknown rule %q (the policy is newer than this ai-rulez, or the name is wrong)", key)
@@ -517,15 +564,13 @@ func (l *Lint) fromDoc(d *fileLint) error {
 			l.SeverityFloor[code] = sev
 		}
 	}
-	if d.Capability != nil && d.Capability.MaxNetworkCommands != nil {
-		if *d.Capability.MaxNetworkCommands < 0 {
-			return fmt.Errorf("lint.capability.max_network_commands: %d must not be negative", *d.Capability.MaxNetworkCommands)
-		}
-		n := *d.Capability.MaxNetworkCommands
-		l.Capability.MaxNetworkCommands = &n
-	}
+	return nil
+}
+
+// loadBudgetsFromDoc reads lint.load_budgets.
+func (l *Lint) loadBudgetsFromDoc(budgets map[string]int) error {
 	known := lint.LoadBudgetIDs()
-	for id, limit := range d.LoadBudgets {
+	for id, limit := range budgets {
 		if !slices.Contains(known, id) {
 			return fmt.Errorf("lint.load_budgets: unknown limit %q (the policy is newer than this ai-rulez, or the name is wrong; known: %s)", id, strings.Join(known, ", "))
 		}
@@ -537,18 +582,13 @@ func (l *Lint) fromDoc(d *fileLint) error {
 		}
 		l.LoadBudgets[id] = limit
 	}
-	if err := l.ScannerPolicy.fromDoc(d.ScannerPolicy); err != nil {
-		return err
-	}
-	budgets, err := parseSizeBudgets(d.Budgets)
-	if err != nil {
-		return err
-	}
-	l.SizeBudgets = budgets
-	if l.NoInlineIgnore, err = normalizeCodes("lint.no_inline_ignore", d.NoInlineIgnore); err != nil {
-		return err
-	}
-	for key, limit := range d.MaxFindings {
+	return nil
+}
+
+// maxFindingsFromDoc reads lint.max_findings; two names of one rule keep the
+// lower ceiling.
+func (l *Lint) maxFindingsFromDoc(ceilings map[string]int) error {
+	for key, limit := range ceilings {
 		code, ok := lint.ResolveCode(key)
 		if !ok {
 			return fmt.Errorf("lint.max_findings: unknown rule %q (the policy is newer than this ai-rulez, or the name is wrong)", key)
@@ -563,7 +603,7 @@ func (l *Lint) fromDoc(d *fileLint) error {
 			l.MaxFindings[code] = limit
 		}
 	}
-	return l.Security.fromDoc(d.Security)
+	return nil
 }
 
 func (s *Security) fromDoc(d *fileSecurity) error {

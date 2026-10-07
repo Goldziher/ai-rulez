@@ -383,29 +383,9 @@ func (l *loader) loadRemote(origin string, ref Ref) (Layer, error) {
 	if err != nil {
 		return Layer{}, err
 	}
-	mode := modePinned
-	if ref.Digest == "" {
-		if c := l.openCache(); c != nil {
-			if d, ok := c.tofuGet(ref.Location); ok {
-				ref.Digest = d
-			}
-		}
-	}
-	if ref.Digest == "" {
-		switch {
-		case pv != nil:
-			mode = modeSigned
-		case !l.opts.TrustOnFirstUse:
-			return Layer{}, &DigestError{Path: disp}
-		case !l.opts.Interactive:
-			return Layer{}, &ParseError{Path: disp, Msg: "--policy-trust-tofu needs an interactive terminal; in CI pin the digest with @sha256:<hex>"}
-		case l.openCache() == nil:
-			return unavailable(errors.New("--policy-trust-tofu needs the user cache to record the digest, and there is none"))
-		case l.opts.offline():
-			return unavailable(errors.New("offline: the first use of an unpinned URL needs the network"))
-		default:
-			mode = modeFirstUse
-		}
+	mode, err := l.remoteModeOf(origin, &ref, pv != nil)
+	if err != nil {
+		return Layer{}, err
 	}
 	data, bundle, note, err := l.obtain(ref, pv, mode)
 	if err != nil {
@@ -437,13 +417,50 @@ func (l *loader) loadRemote(origin string, ref Ref) (Layer, error) {
 	}
 	layer.Signer = signer
 	if note == "" {
+		l.cacheFetched(ref, data, bundle)
+	}
+	return layer, nil
+}
+
+// remoteModeOf decides how an unpinned URL may be trusted: a digest recorded on
+// first use pins it, a configured signer requires a signature, and otherwise
+// --policy-trust-tofu may record the digest now (interactive, online, with a
+// cache). It fills ref.Digest from the first-use record.
+func (l *loader) remoteModeOf(origin string, ref *Ref, signed bool) (remoteMode, error) {
+	disp := ref.Display()
+	if ref.Digest == "" {
 		if c := l.openCache(); c != nil {
-			if perr := c.put(ref.Location, ref.Digest, data, bundle, l.opts.Clock.Now()); perr != nil {
-				l.opts.logger().Debug("cannot cache the policy", "policy", disp, "error", perr)
+			if d, ok := c.tofuGet(ref.Location); ok {
+				ref.Digest = d
 			}
 		}
 	}
-	return layer, nil
+	if ref.Digest != "" {
+		return modePinned, nil
+	}
+	switch {
+	case signed:
+		return modeSigned, nil
+	case !l.opts.TrustOnFirstUse:
+		return modePinned, &DigestError{Path: disp}
+	case !l.opts.Interactive:
+		return modePinned, &ParseError{Path: disp, Msg: "--policy-trust-tofu needs an interactive terminal; in CI pin the digest with @sha256:<hex>"}
+	case l.openCache() == nil:
+		return modePinned, &UnavailableError{Origin: origin, Path: disp, Err: errors.New("--policy-trust-tofu needs the user cache to record the digest, and there is none")}
+	case l.opts.offline():
+		return modePinned, &UnavailableError{Origin: origin, Path: disp, Err: errors.New("offline: the first use of an unpinned URL needs the network")}
+	}
+	return modeFirstUse, nil
+}
+
+// cacheFetched keeps a policy fetched from the network as the stand-in for a
+// later unreachable URL; a cache that cannot be written is only logged.
+func (l *loader) cacheFetched(ref Ref, data, bundle []byte) {
+	if c := l.openCache(); c != nil {
+		if perr := c.put(ref.Location, ref.Digest, data, bundle, l.opts.Clock.Now()); perr != nil {
+			l.opts.logger().Debug("cannot cache the policy", "policy", ref.Display(), "error", perr)
+		}
+	}
 }
 
 // obtain gets the body of a policy URL, and its signature when a trust set is
