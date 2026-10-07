@@ -38,8 +38,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez eval calibrate-estimate` | Propose cost-estimate assumptions measured from recorded runs ([details](evals.md#calibrating-the-estimate)) |
 | `ai-rulez review` / `rubric`    | Score skills against a rubric: offline, or with an LLM judge (`--semantic`), calibration, a calibrated gate and `review fix` ([details](#review-commands)) |
 | `ai-rulez improve`              | (experimental) Improve a skill with an external optimizer behind a held-out eval gate ([Improve](improve.md)) |
-| `ai-rulez usage` / `report`     | Opt-in usage log, feedback and reports ([details](#usage-commands)) |
-| `ai-rulez telemetry`            | Item-load telemetry and opt-in OTLP export ([details](#usage-commands)) |
+| `ai-rulez telemetry`            | Opt-in usage log, feedback, reports, item-load telemetry and OTLP export ([details](#usage-commands)) |
 | `ai-rulez export okf` / `import okf` / `okf validate` | Open Knowledge Format bundles ([details](#okf-commands)) |
 | `ai-rulez llm`                  | Inspect the `[llm]` setup ([details](#llm-commands)) |
 | `ai-rulez version`              | Show version                                        |
@@ -76,7 +75,7 @@ AI-Rulez provides CRUD commands to programmatically modify your `.ai-rulez/` con
 counterparts.
 
 `add check`, `remove check` and `list checks` manage code-review guidelines (see [Checks](checks.md));
-they take `--domain`/`-d` (and `--description`/`-s`, `--content`/`-c` for `add`; `--force`/`-f` for `remove`) but have no `--local`.
+they take `--domain`/`-d` (and `--description`/`-s`, `--content`/`-c` for `add`; `--yes`/`-y` for `remove`) but have no `--local`.
 
 `ai-rulez list --placement [--profile <name>]` prints where every skill and command ends up (core or plugin-only),
 the plugins that bundle it, and flags plugin-only items nothing makes reachable.
@@ -1299,13 +1298,13 @@ A symlinked output is never written through. `CLAUDE.md -> AGENTS.md` is accepte
 
 ### `ai-rulez clean [config-path]`
 
-Remove the files and directories that `generate` produced — the inverse of `generate`. This deletes the generated assistant outputs (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.claude/`, `.codex/`, generated skills, etc.), the generated manifest (`.ai-rulez/.generated-manifest.json`), the local manifest (`.ai-rulez/.generated-manifest.local.json`) and the local rule files recorded in it, this project's block in `.git/info/exclude`, and the ai-rulez managed block in `.gitignore`. The ignore entries for the `config.local.*` overlay and `.ai-rulez/local/` stay in `.gitignore`: `clean` removes generated outputs, not the machine-local sources beside them. The committed manifest is treated as untrusted (see [What ai-rulez may change](settings.md#what-ai-rulez-may-change)): `generate` and `clean` delete a manifest-listed file only when its path is one a preset writes and the file proves it is ai-rulez output (its `Content-Hash` matches its body, or its SHA-256 equals the `digests` entry this machine recorded in the gitignored local manifest for header-less files). Anything else is kept and reported in one `Stale files not removed` warning per reason that names the files; on a fresh clone a header-less stale file is therefore reported, not deleted. On an upgrade, the Claude MCP servers an older version wrote into a manifest-listed `.claude/settings.json` are taken out of it when they are exactly that rendering (they now live in `.mcp.json` only). A generated file whose body was edited by hand is kept with a warning unless `--force` is given (`generate` rewrites it instead). The generated file that replaced an original `convert` imported (listed in `.ai-rulez/.converted.json`) is kept as well, even with `--force`: the original text lives under `.ai-rulez/`, and removing it would leave neither; delete it by hand if you no longer want it. A symlink is never removed, whoever made it. A merged settings document (`.claude/settings.json`, `.mcp.json`, ...) is deleted only when this machine recorded writing it whole and its digest still matches; a document that existed before ai-rulez first wrote to it is never deleted. Neither `generate` nor `clean` removes a path whose parent directory resolves through a symlink outside the project. Manifests written by older versions have no digests, so their header-less leftovers stay until deleted by hand. In a project with a `[plugin]` block or a plugin marketplace, `clean` also removes the bundle `generate --plugin` wrote: each file whose bytes still equal what `generate --plugin` renders, and the folders that leaves empty; an edited bundle file is kept with a warning. `clean` has no `--recursive`: run it in each root. It never needs MCP secrets: unset `${VAR}` placeholders do not stop it. A git-tracked `.ai-rulez/.generated-manifest.local.json` is ignored by `generate` and kept by `clean`, with a warning to `git rm --cached` it.
+Remove the files and directories that `generate` produced — the inverse of `generate`. This deletes the generated assistant outputs (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.claude/`, `.codex/`, generated skills, etc.), the generated manifest (`.ai-rulez/.generated-manifest.json`), the local manifest (`.ai-rulez/.generated-manifest.local.json`) and the local rule files recorded in it, this project's block in `.git/info/exclude`, and the ai-rulez managed block in `.gitignore`. The ignore entries for the `config.local.*` overlay and `.ai-rulez/local/` stay in `.gitignore`: `clean` removes generated outputs, not the machine-local sources beside them. The committed manifest is treated as untrusted (see [What ai-rulez may change](settings.md#what-ai-rulez-may-change)): `generate` and `clean` delete a manifest-listed file only when its path is one a preset writes and the file proves it is ai-rulez output (its `Content-Hash` matches its body, or its SHA-256 equals the `digests` entry this machine recorded in the gitignored local manifest for header-less files). Anything else is kept and reported in one `Stale files not removed` warning per reason that names the files; on a fresh clone a header-less stale file is therefore reported, not deleted. On an upgrade, the Claude MCP servers an older version wrote into a manifest-listed `.claude/settings.json` are taken out of it when they are exactly that rendering (they now live in `.mcp.json` only). A generated file whose body was edited by hand is kept with a warning unless `--include-edited` is given (`generate` rewrites it instead). The generated file that replaced an original `convert` imported (listed in `.ai-rulez/.converted.json`) is kept as well, even with `--include-edited`: the original text lives under `.ai-rulez/`, and removing it would leave neither; delete it by hand if you no longer want it. A symlink is never removed, whoever made it. A merged settings document (`.claude/settings.json`, `.mcp.json`, ...) is deleted only when this machine recorded writing it whole and its digest still matches; a document that existed before ai-rulez first wrote to it is never deleted. Neither `generate` nor `clean` removes a path whose parent directory resolves through a symlink outside the project. Manifests written by older versions have no digests, so their header-less leftovers stay until deleted by hand. In a project with a `[plugin]` block or a plugin marketplace, `clean` also removes the bundle `generate --plugin` wrote: each file whose bytes still equal what `generate --plugin` renders, and the folders that leaves empty; an edited bundle file is kept with a warning. `clean` has no `--recursive`: run it in each root. It never needs MCP secrets: unset `${VAR}` placeholders do not stop it. A git-tracked `.ai-rulez/.generated-manifest.local.json` is ignored by `generate` and kept by `clean`, with a warning to `git rm --cached` it.
 
 The `.ai-rulez/` source tree is never touched. Generated directories are only removed once they are empty, so any files you authored inside a generated directory are preserved.
 
 Settings documents you share with ai-rulez (`.claude/settings.json`, `.gemini/settings.json`, `opencode.json`, `.mcp.json`, ...) are not deleted: `clean` removes only the keys, MCP server entries and array elements ai-rulez merged into them (including a stale entry that holds a resolved secret), and deletes the file only when nothing else is left. The plan lists them as `remove ai-rulez keys from:`. See [Settings documents shared with you](local-overrides.md#settings-documents-shared-with-you).
 
-By default `clean` lists what it will remove and asks for confirmation. In non-interactive shells the prompt declines automatically — pass `--yes` there.
+By default `clean` lists what it will remove and asks for confirmation. In non-interactive shells the prompt declines automatically and `clean` exits `1` without removing anything — pass `--yes` there.
 
 **Syntax:**
 
@@ -1318,7 +1317,8 @@ ai-rulez clean [config-path] [flags]
 | Flag                  | Type    | Default            | Description                                             |
 | --------------------- | ------- | ------------------ | ------------------------------------------------------- |
 | `--dry-run` / `-d`    | boolean | false              | Show what would be removed without deleting anything    |
-| `--force` / `-y`      | boolean | false              | Skip the confirmation prompt and also remove generated files edited by hand (otherwise kept with a warning) |
+| `--yes` / `-y`        | boolean | false              | Skip the confirmation prompt |
+| `--include-edited`    | boolean | false              | Also remove generated files edited by hand (otherwise kept with a warning) |
 | `--profile` / `-p`    | string  | configured default | Profile whose outputs to remove                         |
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts    |
 | `--keep-gitignore`    | boolean | false              | Leave the ai-rulez managed block in `.gitignore`        |
@@ -1709,7 +1709,7 @@ lost. See [Configuration](configuration.md#drop-the-agents-roster-from-root-file
 ## Telemetry Commands
 
 Opt-in usage and item-load telemetry, documented in [Usage telemetry](usage-telemetry.md) and
-[Telemetry](telemetry.md). One namespace replaces the 4.x `usage ...` and `telemetry report|evals` commands.
+[Telemetry](telemetry.md). One namespace replaces the 4.x `usage ...` and `report usage|evals` commands.
 
 | Command | Purpose |
 | --- | --- |
@@ -1974,7 +1974,7 @@ The raw config file is also checked against `schema/ai-rules.schema.json`, so an
 or a value outside an enum fails rather than being silently dropped. The structural checks are:
 
 - A `config.local.*` overlay, when present, is checked against `schema/ai-rules-local.schema.json`, and the merged config is validated. The output names the overlay file and prints a one-line summary of overridden, added and removed key paths, never values
-- `version` is `"4.0"` (`"3.0"` is rejected)
+- `version` is `"5.0"` (`"4.0"` and older are rejected; `ai-rulez migrate v5` upgrades them)
 - `name` is present and non-empty
 - All preset names are valid
 - A `builtin:<name>` reference in a profile names a real builtin
@@ -2399,7 +2399,7 @@ ai-rulez migrate v5 [--dry-run] [--check] [--adopt-defaults] [--write] [--recurs
 4. Merges a legacy `mcp.toml`, `mcp.yaml` or `mcp.json` into `[[mcp_servers]]` and removes it (left alone with a warning when `config.toml` already has `mcp_servers`).
 5. Pins the three changed defaults to their 4.x values unless `--adopt-defaults`.
 6. Converts a `config.local.yaml`, `.yml` or `.json` overlay to `config.local.toml` (owner-only).
-7. Rewrites `ai-rulez usage ...` and `telemetry report|evals` to `telemetry ...` inside the hook, verifier and script commands of `config.toml`.
+7. Rewrites `ai-rulez usage ...` and `report usage|evals` to `telemetry ...` inside the hook, verifier and script commands of `config.toml`.
 8. Warns about `[[plugins]]` (no longer written to any file) and about a 4.x file it left in place.
 
 The result is decoded with the v5 loader before anything is written; a project that would not load is reported with
@@ -2470,7 +2470,7 @@ These flags work with all commands:
 | `--help` / `-h`    | boolean | Show help for a command                                                         |
 | `--version` / `-v` | boolean | Print `ai-rulez version <version>` (root command only; same as `ai-rulez version`) |
 
-Every command that can print JSON takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--json` is accepted wherever `--format json` exists; it is hidden from help and warns that it is deprecated. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal. Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--force -f`,
+Every command that can print JSON takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal. Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--yes -y`,
 `--priority -p`, `--targets -t`, `--content -c`, `--description -s`, `--path -p`,
 and `--ref -r`.
 

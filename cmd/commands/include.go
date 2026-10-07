@@ -140,7 +140,7 @@ func runIncludeRemove(cmd *cobra.Command, args []string) {
 	// Confirm removal unless --yes is specified
 	if !includeForce {
 		if !confirmRemoval("include", name) {
-			logger.Info("Operation canceled")
+			exitDeclined("Operation canceled")
 			return
 		}
 	}

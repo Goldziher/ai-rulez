@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/samber/oops"
@@ -126,4 +127,20 @@ func isFlatName(base string) bool {
 		}
 	}
 	return false
+}
+
+// legacyBesideConfigNames are the 4.x files that v5 ignores when a config.toml
+// sits next to them: the YAML/JSON config and the separate MCP file.
+var legacyBesideConfigNames = []string{"config.yaml", "config.yml", "config.json", "mcp.json", "mcp.yaml", "mcp.yml", "mcp.toml"}
+
+// LegacyFilesBeside lists the 4.x files in configDir that v5 does not read and
+// that a valid config.toml silently shadows.
+func LegacyFilesBeside(configDir string) []string {
+	var out []string
+	for _, n := range legacyBesideConfigNames {
+		if info, err := os.Stat(filepath.Join(configDir, n)); err == nil && !info.IsDir() {
+			out = append(out, n)
+		}
+	}
+	return out
 }

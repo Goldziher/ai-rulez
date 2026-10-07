@@ -223,7 +223,32 @@ func (g *Generator) finishGitignore(outputs []config.OutputFile, ignoredEarly bo
 		if err := g.updateGitignore(outputs); err != nil {
 			g.log().Warn("Failed to update .gitignore", "error", err)
 		}
+		return
 	}
+	g.removeStaleGitignoreBlock()
+}
+
+// removeStaleGitignoreBlock takes out the managed block an earlier run (gitignore
+// was on, or a 4.x default) left behind. With gitignore off the generated files
+// are meant to be committed, and the block would keep ignoring them.
+func (g *Generator) removeStaleGitignoreBlock() {
+	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
+	if gitignore.IsSymlink(g.config.BaseDir) {
+		return
+	}
+	data, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), gitignorePath)
+	if err != nil {
+		return
+	}
+	content := string(data)
+	if !contains(content, gitignore.BeginMarker) && !contains(content, gitignore.OldHeader) {
+		return
+	}
+	if err := g.dropGitignoreBlock(gitignorePath, content); err != nil {
+		g.log().Warn("Failed to remove the stale ai-rulez block from .gitignore", "error", err)
+		return
+	}
+	g.log().Info("Removed the ai-rulez managed block from .gitignore: gitignore is off, so generated files are not ignored", "hint", "set gitignore = true to have ai-rulez ignore them again")
 }
 
 // GeneratePlugin packages the project into distributable plugin bundles plus a
@@ -498,6 +523,14 @@ func (g *Generator) warnIgnoredPlugins() {
 	g.log().Warn("[[plugins]] has no effect in v5 and can be removed. " +
 		"For Claude Code set [claude.settings] manage = true with enable_plugins (writes enabledPlugins in .claude/settings.json); " +
 		"for Codex enable plugins with [plugins.\"name@marketplace\"] enabled = true in .codex/config.toml")
+}
+
+// warnLegacyFiles warns about 4.x files beside config.toml that v5 no longer
+// reads: without it their settings and MCP servers vanish without a word.
+func (g *Generator) warnLegacyFiles() {
+	for _, name := range config.LegacyFilesBeside(g.manifestDir()) {
+		g.log().Warn(name + " is no longer read by v5 and is ignored; run `" + config.MigrateCommandHint + "` to fold it into config.toml, then delete it")
+	}
 }
 
 // stalePluginDirs lists the generated domain-plugin directories whose plugin is
@@ -1015,6 +1048,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 	presets.WarnDuplicateContent(g.log(), contentTree)
 	g.warnUnbundledPluginOnly(contentTree)
 	g.warnIgnoredPlugins()
+	g.warnLegacyFiles()
 	for _, diagnostic := range settings.UnsupportedDiagnostics(g.config) {
 		g.config.Diag.Warn(diagnostic)
 	}

@@ -57,22 +57,7 @@ func flattenProbes(patterns []string) (flat []string, ranges [][2]int) {
 }
 
 // withoutManagedBlock returns content with the ai-rulez managed block removed.
-func withoutManagedBlock(content string) string {
-	switch {
-	case strings.Contains(content, gitignore.BeginMarker):
-		return gitignore.ReplaceFencedBlock(content, "")
-	case strings.Contains(content, gitignore.OldHeader):
-		var kept []string
-		for _, line := range strings.Split(content, "\n") {
-			if strings.TrimSpace(line) == gitignore.OldHeader {
-				break
-			}
-			kept = append(kept, line)
-		}
-		return strings.Join(kept, "\n")
-	}
-	return content
-}
+func withoutManagedBlock(content string) string { return gitignore.WithoutManagedBlock(content) }
 
 // userIgnoreRules asks git for the last ignore rule matching each probe, as if
 // ai-rulez's own entries were not there: a block entry would otherwise hide the

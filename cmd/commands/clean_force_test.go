@@ -6,20 +6,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCleanOptions_ForceRemovesEditedFiles(t *testing.T) {
+func TestCleanOptions_IncludeEditedRemovesEditedFiles(t *testing.T) {
 	tests := []struct {
 		name  string
 		force bool
 	}{
-		{"without force keeps hand-edited files", false},
-		{"with force removes hand-edited files", true},
+		{"without include-edited keeps hand-edited files", false},
+		{"with include-edited removes hand-edited files", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			prev := cleanForce
-			t.Cleanup(func() { cleanForce = prev })
-			cleanForce = tt.force
+			prev := cleanIncludeEdited
+			t.Cleanup(func() { cleanIncludeEdited = prev })
+			cleanIncludeEdited = tt.force
 
 			// Act
 			opts := cleanOptions(false)
