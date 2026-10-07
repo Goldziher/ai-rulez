@@ -548,10 +548,9 @@ func setupHusky() error {
 		hookContent += "echo 'Validating AI rules...'\n"
 		hookContent += "npx ai-rulez validate || exit 1\n"
 	} else {
-		hookContent = `#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# Validate AI rules configuration
+		// Husky v9 runs a hook file as is; the old husky.sh header is deprecated
+		// in v9 and gone in v10, where sourcing it fails the hook.
+		hookContent = `# Validate AI rules configuration
 echo 'Validating AI rules...'
 npx ai-rulez validate || exit 1
 `

@@ -279,9 +279,10 @@ func TestSetupHusky(t *testing.T) {
 		data, err := os.ReadFile(filepath.Join(dir, ".husky", "pre-commit"))
 		require.NoError(t, err)
 
-		content := string(data)
-		assert.Contains(t, content, "npx ai-rulez validate")
-		assert.Contains(t, content, "#!/usr/bin/env sh")
+		// Husky v9 hooks are plain commands: v9 warns about sourcing
+		// .husky/_/husky.sh and v10 removes it, failing the hook.
+		assert.Equal(t, "# Validate AI rules configuration\necho 'Validating AI rules...'\nnpx ai-rulez validate || exit 1\n", string(data))
+		assert.NotContains(t, string(data), "husky.sh")
 	})
 
 	t.Run("appends to existing pre-commit hook", func(t *testing.T) {
