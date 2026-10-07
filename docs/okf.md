@@ -304,7 +304,7 @@ changed a title, the rule is deterministic and never silent:
 - `import okf` never overwrites a source file that differs; without `--force` it reports a conflict (exit 2), with
   `--force` the bundle wins.
 - `export okf` and `generate` write the sources' title, so a title edited only in the bundle is drift. `generate --check`,
-  `export okf --check` and `validate --strict` report it as AR9B5, naming the edited title and both ways out
+  `export okf --check` and `validate` report it as AR9B5, naming the edited title and both ways out
   (`generate` restores the source, `import okf --force` adopts the edit).
 
 A title edit on a markdown skill resource is not kept: its wrapper is rebuilt from the file name.

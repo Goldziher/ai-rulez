@@ -53,7 +53,7 @@ from files on disk, and is byte-stable across runs, so it is safe to commit.
   `ai-rulez/skill/v1`, sha256 over `SKILL.md` and the loaded `references/`, `scripts/` and `assets/` files, with
   modes and line endings normalised). A top-level `evals/` directory is not part of it, so editing an eval case never
   makes the skill look edited. Usage lines, eval results and the lock all use this one digest, which is what lets
-  `report evals` tell whether a score describes the version that was used. An index written before this field has
+  `telemetry report evals` tell whether a score describes the version that was used. An index written before this field has
   none; run `generate` again.
 - `owner` and `version` are read from the `owner` and `version` frontmatter keys when set. Add
   `require_metadata` to [`[lint]`](strict-validation.md) to make them mandatory.
@@ -128,7 +128,7 @@ What is **not**: prompts, slash-command arguments, tool inputs other than the sk
 the `SKILL.md` path the id was read from), transcripts, raw session ids or file contents. The recorder decodes only
 those fields, so nothing else can reach the log.
 
-Compatibility: new fields are additive. `report usage` reads version 1 lines (which may hold a raw session id written
+Compatibility: new fields are additive. `telemetry report` reads version 1 lines (which may hold a raw session id written
 before salting; nothing rewrites them, so delete or rotate an old log if it must not keep raw ids), version 2 lines
 (no digest or event id) and lines from later versions (unknown fields are ignored). Older `ai-rulez` releases read
 version 3 lines and ignore the new fields.
@@ -139,7 +139,7 @@ input, for teams that ship lines to their own collector; that command, not ai-ru
 The recorder never writes through a symlink: if the log file or any directory below the project root (`.ai-rulez`, `.ai-rulez/local`) is a symlink, the operation is refused with an error. A symlinked salt file is never read: it is replaced with a regular file holding a new salt (the link is removed, its target is untouched). The telemetry outbox, its state files and log are never followed either: `telemetry flush` and the reports refuse a symlinked outbox or log with an error, and the flush-spawn marker is replaced by rename, never written through. A repository cannot redirect the log to another file by committing a link. Point `--log` at a real directory.
 
 The generated hook command shell-quotes the executable (`--executable` is a path, not a command line: a value such as `npx -y ai-rulez` is quoted as one word) and every path argument; only `${CLAUDE_PROJECT_DIR}` is left for the shell to expand, and `$(...)`, backticks or other variables in a value stay literal.
-`--index FILE` points at a non-default index. `ai-rulez usage record` never fails a session: problems go to standard
+`--index FILE` points at a non-default index. `ai-rulez telemetry record` never fails a session: problems go to standard
 error and the exit status stays 0.
 
 ## Feedback
@@ -190,14 +190,14 @@ The command reports and exits 0.
 
 ## Exporting to a file
 
-`ai-rulez usage export --to file usage.ndjson` writes the log as an OTLP JSON file for an air-gapped collector, a
+`ai-rulez telemetry export --to file usage.ndjson` writes the log as an OTLP JSON file for an air-gapped collector, a
 cross-repo aggregation job or your own tooling. It is local: no network, no consent record, and it works whether or not
 `[telemetry]` is enabled.
 
 ```console
-$ ai-rulez usage export --to file usage.ndjson
+$ ai-rulez telemetry export --to file usage.ndjson
 wrote 118 events in 1 batches to usage.ndjson
-$ ai-rulez usage export --to file --file usage.ndjson --log other/usage.jsonl --dry-run
+$ ai-rulez telemetry export --to file --file usage.ndjson --log other/usage.jsonl --dry-run
 would write 40 events in 1 batches to usage.ndjson (nothing written)
 ```
 
@@ -220,16 +220,16 @@ would write 40 events in 1 batches to usage.ndjson (nothing written)
 
 ## Pushing to a collector
 
-`ai-rulez usage export --to otlp` pushes the log past the export cursor to the collector you consented to with
+`ai-rulez telemetry export --to otlp` pushes the log past the export cursor to the collector you consented to with
 [`telemetry enable`](telemetry.md#the-consent-record). It is the by-hand form of what every flush does first: queue the
 events the outbox does not already hold, send them with retry, move the cursor.
 
 ```console
-$ ai-rulez usage export --to otlp
+$ ai-rulez telemetry export --to otlp
 queued 12 events from the usage log and 0 eval results (3 already queued or delivered); delivered 12 in 1 batches
-$ ai-rulez usage export --to otlp --with-evals
-$ ai-rulez usage export --to otlp --all        # also the history from before consent
-$ ai-rulez usage export --to otlp --dry-run    # count only: nothing queued, sent or moved
+$ ai-rulez telemetry export --to otlp --with-evals
+$ ai-rulez telemetry export --to otlp --all        # also the history from before consent
+$ ai-rulez telemetry export --to otlp --dry-run    # count only: nothing queued, sent or moved
 ```
 
 It needs consent (`telemetry status` says whether you have it), exits 1 when delivery fails so CI notices (the background
@@ -238,15 +238,15 @@ Eval results are queued once per result. See [the export cursor](telemetry.md#th
 
 ## Pruning the log
 
-`ai-rulez usage prune --keep-days 90` deletes lines older than 90 days that are behind the export cursor, so an event
+`ai-rulez telemetry prune --keep-days 90` deletes lines older than 90 days that are behind the export cursor, so an event
 still waiting to be exported is never lost to a prune. See [pruning the usage log](telemetry.md#pruning-the-usage-log) for
 the rules, `--dry-run` and `--ignore-cursor`.
 
 ## Joining several logs
 
-`ai-rulez report evals --usage a/usage.jsonl --usage b/usage.jsonl` merges the usage of several repositories or
+`ai-rulez telemetry report evals --usage a/usage.jsonl --usage b/usage.jsonl` merges the usage of several repositories or
 machines: an event that appears in more than one log counts once, by its `event_id` (lines without one, version 2 and
-older, all count). `--from-otlp` reads every `--usage` file as OTLP JSON instead (what `usage export --to file` writes, or
+older, all count). `--from-otlp` reads every `--usage` file as OTLP JSON instead (what `telemetry export --to file` writes, or
 a collector's file exporter produces). The digest scheme travels in the export, so `exact`, `stale` and `legacy` mean the
 same as for a native log; a served-skill digest is never taken for the canonical one. A load of a supporting file is not
 counted as a use. `--usage-log` is the same flag as `--usage`.
@@ -258,7 +258,7 @@ counted as a use. `--usage-log` is the same flag as `--usage`.
 - **One digest.** The lock's skill digest (`ai-rulez/skill/v1`) is the identity because it is what `lock` already pins
   and what `lock --check` verifies. A top-level `evals/` directory was never part of it (the loader does not read it as
   a resource), so no lock digest changed and no lock migration is needed.
-- **Join classes by lock digest.** `report evals` matches a use to an eval record by the record's `lock_digest`; a
+- **Join classes by lock digest.** `telemetry report evals` matches a use to an eval record by the record's `lock_digest`; a
   served-skill digest or a missing digest joins by id only (`legacy`).
 - **Served loads prefer the index digest.** A load through the skills server logs the index's canonical digest when
   there is one, so it joins like any other; otherwise its own served-skill digest is logged under

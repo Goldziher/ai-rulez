@@ -166,4 +166,4 @@ project-root/
 
 ## Version
 
-This documentation covers **ai-rulez v5**. It reads the V4 TOML configuration (`version = "4.0"`); V2 and V3 configs are not read, see [Migrating to v5](migration-v5.md).
+This documentation covers **ai-rulez v5**. It reads the V4 TOML configuration (`version = "5.0"`); V2 and V3 configs are not read, see [Migrating to v5](migration-v5.md).

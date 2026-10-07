@@ -26,10 +26,11 @@ When no explicit path is given, the CLI discovers configuration by walking up fr
 1. `.ai-rulez/config.toml` — the tool-specific directory (default)
 2. `.config/ai-rulez/config.toml` — the project-level [`.config/` convention](https://github.com/pi0/config-dir)
 
-`config.toml` is the only config format read. A project that has only a V3 `config.yaml`, `config.yml` or `config.json`
-(or a `config.local.yaml`, `.yml` or `.json` overlay), or a flat V2 `ai-rulez.yaml` (also `.ai-rulez.yaml`,
-`ai_rulez.yaml` and their `.yml` forms), fails with an error that names the file; migrate it with ai-rulez 4.x
-(`npx ai-rulez@4 migrate v4`), then upgrade. See [Migrating to v5](migration-v5.md).
+`config.toml` is the only config format read, and its `version` must be `"5.0"`. A project that has only a
+`config.yaml`, `config.yml` or `config.json` (or a `config.local.yaml`, `.yml` or `.json` overlay), a flat `ai-rulez.yaml`
+(also `.ai-rulez.yaml`, `ai_rulez.yaml` and their `.yml` forms), or a `config.toml` with an older `version`, fails with an
+error that names the file; run `ai-rulez migrate v5` to convert it (a 2.x or 3.x project goes through ai-rulez 4.x
+first). See [Migrating to v5](migration-v5.md).
 
 `.ai-rulez/` wins when both directory layouts exist at the same level. `--config <file>` selects an exact file, and `--config-dir <path>` selects a non-default directory (for example `--config-dir .config/ai-rulez`). To scaffold the `.config/` layout, run `ai-rulez init --config-dir .config/ai-rulez`; generated outputs and the managed `.gitignore` block then reference `.config/ai-rulez/` instead of `.ai-rulez/`.
 
@@ -51,9 +52,9 @@ the same unknown keys.
 | Command | `--strict` adds |
 | --- | --- |
 | `generate --strict` | Schema check only: an unknown or invalid configuration key fails the run instead of warning. |
-| `validate --strict` | Deep content checks (dead links and references, globs that match nothing, size and duplicate checks, findings `AR###`). Unknown keys already fail `validate` without it. |
+| `validate` | Deep content checks (dead links and references, globs that match nothing, size and duplicate checks, findings `AR###`). Unknown keys already fail `validate` without it. |
 
-Run both in CI: `ai-rulez validate --strict && ai-rulez generate --strict`.
+Run both in CI: `ai-rulez validate && ai-rulez generate --strict`.
 
 `generate` also lists the commands it is about to write that your tools will run: `[[hooks]]` commands (and the
 content digest of a hook `script` file, so a changed script behind the same path is listed again), `http` and `prompt`
@@ -1198,8 +1199,8 @@ OKF requires frontmatter at the start of each concept.
 
 ### `lint`
 
-Tunes `ai-rulez validate --strict`: severities, ignores, allow-lists, description bounds, size budgets
-(`[lint.budgets.<kind>]`), tolerated findings per rule (`[lint.tolerate]`, formerly `[lint.budget]`) and required
+Tunes `ai-rulez validate`: severities, ignores, allow-lists, description bounds, size budgets
+(`[lint.budgets.<kind>]`), tolerated findings per rule (`[lint.ratchet]`, formerly `[lint.budget]` and `[lint.tolerate]`) and required
 frontmatter keys.
 
 ```toml
@@ -1211,7 +1212,7 @@ ignore = ["AR803"]
 [lint.severity]
 AR401 = "error"
 
-[lint.tolerate]                          # tolerated findings per rule: AR401 may have up to 12
+[lint.ratchet]                          # tolerated findings per rule: AR401 may have up to 12
 AR401 = 12
 
 [lint.budgets.skill]                     # size budget of a content kind

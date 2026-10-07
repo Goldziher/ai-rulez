@@ -43,7 +43,7 @@ by review of the lock diff and by CI running `lock --check` against the sources,
 
 What it does **not** do: it does not say *who* published a change, it does not sandbox anything, and it cannot
 tell a malicious edit from a good one. It makes every change explicit and reviewable; a human still reviews it
-(see [Reviewing lock diffs](#reviewing-lock-diffs)). Pair it with `ai-rulez scan` / `validate --strict` for the
+(see [Reviewing lock diffs](#reviewing-lock-diffs)). Pair it with `ai-rulez scan` / `validate` for the
 content itself. ai-rulez does not sign or verify signatures itself; [Signing the lock](#signing-the-lock) shows
 how to do it with `cosign`.
 
@@ -339,7 +339,7 @@ tags are listed as `AR733` in the note (`held_back` in JSON) and counted in the 
 "warning"|"error"` reports every updatable source as an `AR734` finding (`code` and `severity` in JSON); `error` also
 exits `2`. Off by default. Exit codes: `0` (also when updates exist), `2` with `--fail-on-outdated` when any source has an allowed
 update, and always `2` for a moved or deleted tag (`AR735`) or an unsatisfiable constraint, `1` when it could not run. It needs the
-network: `--offline` (or `--no-fetch`) refuses with a hint, and `lock --check` stays the offline verification. A
+network: `--offline` (or `--offline`) refuses with a hint, and `lock --check` stays the offline verification. A
 scheduled CI job can run `ai-rulez lock --outdated --format json --fail-on-outdated`.
 
 ### `update`
@@ -409,7 +409,7 @@ comes from an include or the local overlay) is refused with a hint to edit by ha
 opt in: `lock --check --verify-tags`, `generate --verify-tags`, or `[lock] verify_tags = true` for both. One `git
 ls-remote` per repository (no content is fetched) compares each locked tag with the commit it pins: a moved tag is
 `AR732` (error, exit `2`, `generate` writes nothing), a deleted one `AR735` (warning, the pinned commit is still
-used). An unreachable remote is exit `1`. The key is skipped quietly under `--no-fetch`, `--frozen` and `--offline`;
+used). An unreachable remote is exit `1`. The key is skipped quietly under `--offline`, `--frozen` and `--offline`;
 the flag with them is an error. `generate --recursive` verifies the tags of every root it processes; a root with a moved tag fails (exit `2` when every failure is drift).
 
 `ai-rulez skill update` is `lock --kind skill`: it re-resolves plain refs (a branch follows its tip) and keeps range
