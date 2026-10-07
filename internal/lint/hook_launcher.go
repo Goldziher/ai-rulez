@@ -103,19 +103,26 @@ func scriptArg(l launcher, args []string) string {
 		case l.withArg[a]:
 			j++
 		case len(a) > 1 && (a[0] == '-' || (l.shell && a[0] == '+')):
-			if a[0] == '-' && a[1] != '-' {
-				if l.shell && strings.Contains(a[1:], "c") {
-					return ""
-				}
-				if l.evalCluster && (strings.HasSuffix(a, "e") || strings.HasSuffix(a, "E")) {
-					return ""
-				}
+			if l.runsInline(a) {
+				return ""
 			}
 		default:
 			return resolvable(a)
 		}
 	}
 	return ""
+}
+
+// runsInline reports whether the short-option cluster a (-lc, -e) makes the
+// interpreter run code from its arguments instead of a script file.
+func (l launcher) runsInline(a string) bool {
+	if a[0] != '-' || a[1] == '-' {
+		return false
+	}
+	if l.shell && strings.Contains(a[1:], "c") {
+		return true
+	}
+	return l.evalCluster && (strings.HasSuffix(a, "e") || strings.HasSuffix(a, "E"))
 }
 
 // resolvable keeps a script word that names a file relative to the project.

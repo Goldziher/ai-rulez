@@ -80,17 +80,23 @@ func egressFlagViolationWith(argv, extra []string) string {
 		if knownEgressFlags["--"+name] || strings.HasPrefix(name, "llm-") || slices.Contains(extra, "--"+name) {
 			return arg
 		}
-		if !strings.Contains(name, "endpoint") && !strings.Contains(name, "url") {
-			continue
-		}
-		if !hasValue && i+1 < len(argv) && !strings.HasPrefix(argv[i+1], "-") {
-			value = strings.ToLower(argv[i+1])
-		}
-		if value != "" && !loopbackValue(value) {
+		if remoteEndpointFlag(argv, i, name, value, hasValue) {
 			return arg
 		}
 	}
 	return ""
+}
+
+// remoteEndpointFlag reports whether argv[i] is an endpoint or URL flag whose
+// value (inline, or the next argument) names a host other than this machine.
+func remoteEndpointFlag(argv []string, i int, name, value string, hasValue bool) bool {
+	if !strings.Contains(name, "endpoint") && !strings.Contains(name, "url") {
+		return false
+	}
+	if !hasValue && i+1 < len(argv) && !strings.HasPrefix(argv[i+1], "-") {
+		value = strings.ToLower(argv[i+1])
+	}
+	return value != "" && !loopbackValue(value)
 }
 
 func falseValue(v string) bool {
