@@ -135,8 +135,9 @@ func (c *Config) SkillDeliveries(tree *ContentTree, roleOverride map[string]stri
 		return nil
 	}
 	var out []PlannedSkill
-	for _, s := range tree.Skills {
-		out = append(out, PlannedSkill{ID: SkillID(s), Delivery: c.EffectiveDelivery(s, "", roleOverride)})
+	for i := range tree.Skills {
+		s := &tree.Skills[i]
+		out = append(out, PlannedSkill{ID: SkillID(*s), Delivery: c.EffectiveDelivery(*s, "", roleOverride)})
 	}
 	names := make([]string, 0, len(tree.Domains))
 	for n := range tree.Domains {
@@ -144,8 +145,10 @@ func (c *Config) SkillDeliveries(tree *ContentTree, roleOverride map[string]stri
 	}
 	sort.Strings(names)
 	for _, n := range names {
-		for _, s := range tree.Domains[n].Skills {
-			out = append(out, PlannedSkill{ID: SkillID(s), Domain: n, Delivery: c.EffectiveDelivery(s, n, roleOverride)})
+		skills := tree.Domains[n].Skills
+		for i := range skills {
+			s := &skills[i]
+			out = append(out, PlannedSkill{ID: SkillID(*s), Domain: n, Delivery: c.EffectiveDelivery(*s, n, roleOverride)})
 		}
 	}
 	return out
@@ -289,14 +292,14 @@ func (c *Config) ContentForPreset(preset string) *ContentTree {
 func (c *Config) authoredStubCount(tree *ContentTree) int {
 	isStub := func(s ContentFile) bool { return SkillID(s) == DynamicSkillsName }
 	n := 0
-	for _, s := range tree.Skills {
-		if isStub(s) {
+	for i := range tree.Skills {
+		if isStub(tree.Skills[i]) {
 			n++
 		}
 	}
 	for _, d := range tree.Domains {
-		for _, s := range d.Skills {
-			if isStub(s) {
+		for i := range d.Skills {
+			if isStub(d.Skills[i]) {
 				n++
 			}
 		}
@@ -319,9 +322,9 @@ func (c *Config) warnDuplicateStub(n int) {
 
 func (c *Config) keepStatic(skills []ContentFile, domain string) []ContentFile {
 	kept := make([]ContentFile, 0, len(skills))
-	for _, s := range skills {
-		if c.EffectiveDelivery(s, domain, nil) != DeliveryServed {
-			kept = append(kept, s)
+	for i := range skills {
+		if c.EffectiveDelivery(skills[i], domain, nil) != DeliveryServed {
+			kept = append(kept, skills[i])
 		}
 	}
 	return kept

@@ -115,8 +115,8 @@ func ProfileMatches(profile string, scoped []string) bool {
 // value's elements.
 func FilterContentFilesByProfile(files []ContentFile, profile string) []ContentFile {
 	hasScoped := false
-	for _, file := range files {
-		if len(file.Profiles) > 0 {
+	for i := range files {
+		if len(files[i].Profiles) > 0 {
 			hasScoped = true
 			break
 		}
@@ -125,9 +125,9 @@ func FilterContentFilesByProfile(files []ContentFile, profile string) []ContentF
 		return files
 	}
 	out := make([]ContentFile, 0, len(files))
-	for _, file := range files {
-		if ProfileMatches(profile, file.Profiles) {
-			out = append(out, file)
+	for i := range files {
+		if ProfileMatches(profile, files[i].Profiles) {
+			out = append(out, files[i])
 		}
 	}
 	return out

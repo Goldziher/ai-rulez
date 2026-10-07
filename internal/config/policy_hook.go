@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -186,7 +187,7 @@ func applyContentPolicy(ctx context.Context, cfg *Config) {
 	if len(found) == 0 {
 		return
 	}
-	v := append(cfg.PolicyOutcome.Violations, found...)
+	v := slices.Concat(cfg.PolicyOutcome.Violations, found)
 	sort.SliceStable(v, func(i, j int) bool {
 		if v[i].Code != v[j].Code {
 			return v[i].Code < v[j].Code
