@@ -28,10 +28,10 @@ const MaxServedScanBytes = 512 * 1024
 // UnscannableReason).
 const CodeServedUnscannable = "AR989"
 
-func init() {
-	registerRules(RuleInfo{CodeServedUnscannable, "served-file-unscannable", SeverityWarning,
+func registerServeScan(s *ruleSet) {
+	s.addRules(RuleInfo{CodeServedUnscannable, "served-file-unscannable", SeverityWarning,
 		"a skill file the server would serve is binary or larger than 512 KiB, so the security scan cannot read it; reported for authored skills too. The server does not serve such a file from a remote source (trust=error) and refuses a skill whose SKILL.md is one"})
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeServedUnscannable: {
 			Why:  "The security scan only reads text of bounded size, so a binary or oversized served file would reach the agent unscanned; the server refuses it from a remote source and refuses a skill whose SKILL.md is one.",
 			Bad:  "A served skill that bundles a compiled binary or a 2 MiB text dump next to SKILL.md",

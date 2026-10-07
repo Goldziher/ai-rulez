@@ -37,7 +37,7 @@ const docsBase = "https://goldziher.github.io/ai-rulez/strict-validation/"
 // Rule documentation lives next to the registry, keyed by code, so a RuleInfo
 // literal stays four fields wide. TestEveryRuleHasDocs fails for a registered
 // code without an entry here.
-var ruleDocs = map[string]RuleDoc{
+var baseRuleDocs = map[string]RuleDoc{
 	CodeSecretDetected: {
 		Why:  "A credential committed into instructions or scripts is readable by everyone with repository access and is sent to the model provider with the prompt.",
 		Bad:  "`export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE` in a skill script",
@@ -267,7 +267,7 @@ func Explain(key string) (Explanation, bool) {
 	if !ok {
 		return Explanation{}, false
 	}
-	d := ruleDocs[r.Code]
+	d := ruleTables().docs[r.Code]
 	anchor := anchorFor(r)
 	return Explanation{
 		Code: r.Code, Name: r.Name, Default: r.Default, Summary: r.Describe,

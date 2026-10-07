@@ -18,7 +18,7 @@ const (
 	CodePublishExperimental = "AR9N9"
 )
 
-func init() {
+func registerPublishcodes(s *ruleSet) {
 	for _, code := range []string{
 		CodePublishPreflight, CodePublishBundleUnsafe, CodePublishSecret,
 		CodePublishSource, CodePublishTarget, CodePublishVerify,
@@ -26,7 +26,7 @@ func init() {
 	} {
 		SetAnalyzer(code, AnalyzerPlugin, ScopeBundle)
 	}
-	registerRules(
+	s.addRules(
 		RuleInfo{CodePublishPreflight, "publish-preflight-failed", SeverityError, "a preflight gate of `publish` failed: strict validation, the lock check or plugin verification (reported by publish, never by validate)"},
 		RuleInfo{CodePublishBundleUnsafe, "publish-bundle-unsafe", SeverityError, "the bundle holds a symlink, a path outside the project or a name that cannot name a release file (publish only)"},
 		RuleInfo{CodePublishSecret, "publish-secret-found", SeverityError, "the secret scan of the bundle found a credential (publish only)"},
@@ -38,7 +38,7 @@ func init() {
 		RuleInfo{CodePublishUnapproved, "publish-unapproved", SeverityError, "`require_approved` is set and content the governance policy selects has no valid approval (publish only)"},
 		RuleInfo{CodePublishExperimental, "publish-emitter-experimental", SeverityWarning, "an emitter whose format is not verified against vendor documentation was requested with --experimental (publish only)"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodePublishPreflight: {
 			Why:  "A bundle must be reviewed, locked and generated before anyone downloads it, so `publish` runs `validate --strict`, `lock --check` and `verify --plugin` first and writes nothing when one fails.",
 			Bad:  "A skill edited after `ai-rulez lock`, or plugin files hand-edited since `generate --plugin`",

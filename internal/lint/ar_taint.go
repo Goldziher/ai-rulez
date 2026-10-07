@@ -9,9 +9,9 @@ import (
 // CodeCredentialTaint reports a clear flow of credential data into a network command.
 const CodeCredentialTaint = "AR028"
 
-func init() {
-	registerRules(RuleInfo{CodeCredentialTaint, "credential-taint-flow", SeverityWarning, "a shell block or script reads a credential (file or secret variable) and passes it to a network command through a variable, a pipe or a temporary file"})
-	registerTextScan(scanTaint, AnalyzerSecurity)
+func registerArTaint(s *ruleSet) {
+	s.addRules(RuleInfo{CodeCredentialTaint, "credential-taint-flow", SeverityWarning, "a shell block or script reads a credential (file or secret variable) and passes it to a network command through a variable, a pipe or a temporary file"})
+	s.addTextScan(scanTaint, AnalyzerSecurity)
 }
 
 var (

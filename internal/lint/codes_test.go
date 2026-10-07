@@ -29,7 +29,7 @@ func TestRegistry_CodesAndNamesAreUnique(t *testing.T) {
 
 func TestRegistry_EveryCodeConstantIsRegisteredOnce(t *testing.T) {
 	registered := map[string]int{}
-	for _, r := range registry {
+	for _, r := range ruleTables().rules {
 		registered[r.Code]++
 	}
 	seen := map[string]string{}
@@ -67,7 +67,7 @@ func TestRegistry_EveryCodeConstantIsRegisteredOnce(t *testing.T) {
 			return true
 		})
 	}
-	assert.Len(t, seen, len(registry), "a registered rule has no Code constant, or the reverse")
+	assert.Len(t, seen, len(ruleTables().rules), "a registered rule has no Code constant, or the reverse")
 }
 
 func TestRegistry_EveryCodeIsDocumented(t *testing.T) {

@@ -1,10 +1,11 @@
 package lint
 
 import (
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 func trapConfig(presets, extra string) string {

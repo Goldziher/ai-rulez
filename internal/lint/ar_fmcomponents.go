@@ -14,9 +14,9 @@ import (
 // `npx -y` (AR021), and for inline MCP servers the shape, pin, credential and
 // PATH checks (AR602, AR012, AR015, AR601).
 
-func init() {
-	registerItemCheck(checkFrontmatterHooks, AnalyzerHooks, AnalyzerSecurity)
-	itemChecks[len(itemChecks)-1].unit.deps = true // a hook script is a dependency of the file that declares it
+func registerArFmcomponents(s *ruleSet) {
+	s.addItemCheck(checkFrontmatterHooks, AnalyzerHooks, AnalyzerSecurity)
+	s.itemChecks[len(s.itemChecks)-1].unit.deps = true // a hook script is a dependency of the file that declares it
 }
 
 // hasFrontmatterHooks reports the content kinds whose frontmatter declares hooks

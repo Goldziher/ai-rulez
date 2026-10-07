@@ -270,6 +270,7 @@ func Run(cfg *config.Config, tree *Tree, opts ...Option) (*Report, error) {
 
 // RunWith is Run with the security and external-scanner options.
 func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Report, error) {
+	ruleTables() // the registry (and what its families set up) exists before any check runs
 	counter, err := tokens.New("")
 	if err != nil {
 		return nil, fmt.Errorf("token counter: %w", err)
@@ -379,7 +380,7 @@ func (r *runner) keepSelected() {
 
 func (r *runner) resolveSettings() {
 	r.sev = map[string]Severity{}
-	for _, rule := range registry {
+	for _, rule := range ruleTables().rules {
 		r.sev[rule.Code] = rule.Default
 	}
 	r.applyProfile()

@@ -108,8 +108,8 @@ func buildAnalyzerTable() map[string]AnalyzerInfo {
 	return table
 }
 
-// SetAnalyzer classifies a rule that is not in the table above. Rule packages
-// may call it from an init function next to their registration.
+// SetAnalyzer classifies a rule that is not in the table above. A rule family
+// calls it from its register function (see registry.go), next to its rules.
 func SetAnalyzer(code, analyzer, scope string) {
 	analyzerOverrides[code] = AnalyzerInfo{Name: analyzer, Scope: scope}
 }
@@ -118,6 +118,7 @@ func SetAnalyzer(code, analyzer, scope string) {
 // are not registered fall back on their family (the hundreds digit): every
 // registered code has an explicit entry.
 func AnalyzerFor(code string) AnalyzerInfo {
+	ruleTables() // the families classify their codes when the registry is built
 	if a, ok := analyzerOverrides[code]; ok {
 		return a
 	}
@@ -146,7 +147,7 @@ func AnalyzerFor(code string) AnalyzerInfo {
 // AnalyzerNames lists the analyzers that at least one registered rule uses.
 func AnalyzerNames() []string {
 	seen := map[string]bool{}
-	for _, r := range registry {
+	for _, r := range ruleTables().rules {
 		seen[AnalyzerFor(r.Code).Name] = true
 	}
 	out := make([]string, 0, len(seen))

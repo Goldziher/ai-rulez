@@ -15,8 +15,8 @@ const (
 	CodeLockedTagMissing        = "AR735"
 )
 
-func init() {
-	registerRules(
+func registerSemvercodes(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeConstraintUnsatisfiable, "constraint-unsatisfiable", SeverityError, "no tag of the source satisfies its version constraint (or the source has no semantic version tags)"},
 		RuleInfo{CodeConstraintInvalid, "constraint-invalid", SeverityError, "a version constraint does not parse, or an include, installed skill or skill source sets both ref and version"},
 		RuleInfo{CodeTagMoved, "tag-moved", SeverityError, "a tag pinned in ai-rulez.lock now points to another commit; it is never followed silently"},
@@ -24,7 +24,7 @@ func init() {
 		RuleInfo{CodeSourceOutdated, "source-outdated", SeverityOff, "a remote source has a newer tag its version constraint allows; reported by `lock --outdated` once enabled in [lint.severity]"},
 		RuleInfo{CodeLockedTagMissing, "locked-tag-missing", SeverityWarning, "a tag pinned in ai-rulez.lock no longer exists on the remote; the pinned commit is still used"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeConstraintUnsatisfiable: {
 			Why:  "A range such as `^1.2` is resolved against the repository's semantic-version tags. With no matching tag there is nothing to pin, and falling back to a branch would change what the constraint means.",
 			Bad:  "`version = \"^3\"` on a repository whose highest tag is `v2.4.0`, or on a repository with no version tags",

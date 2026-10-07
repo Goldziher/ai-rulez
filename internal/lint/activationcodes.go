@@ -12,12 +12,12 @@ const (
 	CodeSkillConfusable = "AR9A2"
 )
 
-func init() {
-	registerRules(
+func registerActivationcodes(s *ruleSet) {
+	s.addRules(
 		RuleInfo{CodeActivationLow, "activation-low", SeverityOff, "a skill's recorded activation recall or precision is below lint.evals.min_activation_recall or min_activation_precision (enabled by setting either)"},
 		RuleInfo{CodeSkillConfusable, "skill-confusable", SeverityOff, "a sibling skill won at least lint.evals.confusion_threshold of this skill's positive activation prompts (enabled by setting it)"},
 	)
-	registerRuleDocs(map[string]RuleDoc{
+	s.addDocs(map[string]RuleDoc{
 		CodeActivationLow: {
 			Why:  "A skill that does not fire for the prompts it exists for, or fires for prompts it should not, is invisible or noisy no matter how good its body is.",
 			Bad:  "A skill whose recorded activation recall is 50% with `min_activation_recall = 0.8`",

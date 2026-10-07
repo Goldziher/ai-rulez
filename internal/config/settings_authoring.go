@@ -25,7 +25,7 @@ const (
 
 // HookHarnesses lists the harnesses `[[hooks]]` can be rendered for, in a stable
 // order. Every other preset is reported as unsupported.
-var HookHarnesses = slices.Concat([]string{HarnessClaude, HarnessCodex, HarnessCursor, HarnessGemini, HarnessCopilot}, extraHookHarnesses)
+var HookHarnesses = withPluginHarnesses(slices.Concat([]string{HarnessClaude, HarnessCodex, HarnessCursor, HarnessGemini, HarnessCopilot}, extraHookHarnesses))
 
 // Permissions is the [permissions] block: allow, ask and deny rule lists in
 // Claude Code permission-rule syntax ("Bash(git *)", "Read(./.env)"). It is
