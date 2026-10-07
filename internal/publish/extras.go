@@ -47,39 +47,50 @@ func BuildExtras(x Extras) (files map[string][]byte, warnings []string, err erro
 			continue
 		}
 		prev = name
-		e, ok := emit.Lookup(name)
-		if !ok {
-			return nil, nil, newError(CodeConfig, ExitFailed, "known emitters: "+strings.Join(emit.Names(), ", "), "unknown emitter %q", name)
-		}
-		if e.Status() == emit.StatusExperimental {
-			if !x.Emit.Experimental {
-				return nil, nil, newError(CodeConfig, ExitFailed, "review the output against your target and pass --experimental",
-					"emitter %s is experimental: its format is not verified against vendor documentation", name)
-			}
-			warnings = append(warnings, CodeExperimental+" emitter "+name+" is experimental: the format is not verified against vendor documentation")
-		}
-		in := x.Emit.Base
-		in.Plugins = x.Plugins
-		in.Options = x.Emit.Options[name]
-		out, findings, err := e.Emit(in)
+		w, err := runEmitter(x, name, files)
 		if err != nil {
-			return nil, nil, newError(CodeConfig, ExitFailed, "", "emitter %s failed: %v", name, err)
+			return nil, nil, err
 		}
-		for _, f := range findings {
-			warnings = append(warnings, name+": "+f.Message)
-		}
-		for _, f := range out {
-			dest := EmitDir + "/" + name + "/" + f.Path
-			if !ValidPath(dest) {
-				return nil, nil, newError(CodeBundleUnsafe, ExitFailed, "", "emitter %s produced the unsafe path %q", name, f.Path)
-			}
-			if _, dup := files[dest]; dup {
-				return nil, nil, newError(CodeBundleUnsafe, ExitFailed, "", "two emitters render to %s", dest)
-			}
-			files[dest] = f.Data
-		}
+		warnings = append(warnings, w...)
 	}
 	return files, warnings, nil
+}
+
+// runEmitter runs the emitter called name and adds its files below
+// emit/<name>/ to files; it returns its warnings.
+func runEmitter(x Extras, name string, files map[string][]byte) (warnings []string, err error) {
+	e, ok := emit.Lookup(name)
+	if !ok {
+		return nil, newError(CodeConfig, ExitFailed, "known emitters: "+strings.Join(emit.Names(), ", "), "unknown emitter %q", name)
+	}
+	if e.Status() == emit.StatusExperimental {
+		if !x.Emit.Experimental {
+			return nil, newError(CodeConfig, ExitFailed, "review the output against your target and pass --experimental",
+				"emitter %s is experimental: its format is not verified against vendor documentation", name)
+		}
+		warnings = append(warnings, CodeExperimental+" emitter "+name+" is experimental: the format is not verified against vendor documentation")
+	}
+	in := x.Emit.Base
+	in.Plugins = x.Plugins
+	in.Options = x.Emit.Options[name]
+	out, findings, err := e.Emit(in)
+	if err != nil {
+		return nil, newError(CodeConfig, ExitFailed, "", "emitter %s failed: %v", name, err)
+	}
+	for _, f := range findings {
+		warnings = append(warnings, name+": "+f.Message)
+	}
+	for _, f := range out {
+		dest := EmitDir + "/" + name + "/" + f.Path
+		if !ValidPath(dest) {
+			return nil, newError(CodeBundleUnsafe, ExitFailed, "", "emitter %s produced the unsafe path %q", name, f.Path)
+		}
+		if _, dup := files[dest]; dup {
+			return nil, newError(CodeBundleUnsafe, ExitFailed, "", "two emitters render to %s", dest)
+		}
+		files[dest] = f.Data
+	}
+	return warnings, nil
 }
 
 // BuildAggregate builds the dist directory of what belongs to every plugin of a
