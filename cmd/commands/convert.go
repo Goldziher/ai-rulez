@@ -3,7 +3,6 @@ package commands
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +10,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
@@ -328,9 +329,7 @@ func listImporters(out io.Writer) int {
 }
 
 func writeJSONList(out io.Writer, detections []importer.Detection) int {
-	enc := json.NewEncoder(out)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(detections); err != nil {
+	if err := jsondoc.Write(out, detections); err != nil {
 		fmtError(err)
 		return exitConvertCannotRun
 	}

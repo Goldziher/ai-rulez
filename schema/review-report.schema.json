@@ -8,6 +8,7 @@
   "additionalProperties": false,
   "properties": {
     "schema": { "const": "review-report/1" },
+    "schema_version": { "const": 1, "description": "Version of this document layout." },
     "rubric": {
       "type": "object",
       "required": ["id", "version", "ref", "digest", "formula", "applies_to", "dimensions"],
