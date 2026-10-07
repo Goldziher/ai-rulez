@@ -125,7 +125,7 @@ type Result struct {
 }
 
 // Runner starts the external commands (git) an operation needs. An embedding
-// service implements it to deny, record, sandbox or fake them; DenyAll refuses
+// service implements it to deny, record, sandbox or fake them; DenyAll() refuses
 // every one.
 //
 // Experimental.
@@ -178,10 +178,12 @@ type Clock = ambient.Clock
 // Experimental.
 type Logger = logger.Logger
 
-// DenyAll is the Runner that refuses every command. It is the default of Options.
+// DenyAll returns the Runner that refuses every command. It is the default of
+// Options. It is a function, not a variable, so no package can swap the default
+// for one that grants process execution to every later Load.
 //
 // Experimental.
-var DenyAll Runner = denyAll{}
+func DenyAll() Runner { return denyAll{} }
 
 // DirWorkspace returns a Workspace over the directory dir of the real file
 // system. Only such a workspace can be generated to disk.
@@ -199,7 +201,7 @@ func NewMemWorkspace() *MemWorkspace { return workspace.NewMem(virtualRoot()) }
 
 // GitSnapshot returns a Workspace over the tree of rev in the repository at
 // repoDir, without checking anything out. git runs through r; nil uses the real
-// git, DenyAll makes the call fail.
+// git, DenyAll() makes the call fail.
 //
 // Experimental.
 func GitSnapshot(ctx context.Context, repoDir, rev string, r Runner) (Snapshot, error) {
@@ -222,7 +224,7 @@ type Options struct {
 	// Workspace is the project tree (required).
 	Workspace Workspace
 	// Runner starts the commands a load needs (git, to resolve a remote include or
-	// to bundle skill files); the default is DenyAll.
+	// to bundle skill files); the default is DenyAll().
 	Runner Runner
 	// Env is the environment the load reads; the default is an empty one.
 	Env Env
@@ -288,10 +290,26 @@ const (
 	CodeApply = "apply"
 	// CodeDiskRequired is a write requested on a workspace that is not a directory.
 	CodeDiskRequired = "disk-required"
+	// CodeRefused is a generate run that refused to overwrite a file ai-rulez
+	// cannot prove it wrote (a hand-written file in the way, or a symlink), as
+	// opposed to an I/O failure (CodeApply). Nothing was written.
+	CodeRefused = "refused"
 )
 
 // ErrDiskRequired is the cause of a CodeDiskRequired error.
 var ErrDiskRequired = errors.New("only a directory workspace can be written to")
+
+// ErrRefused is reachable with errors.Is from a CodeRefused error.
+var ErrRefused = config.ErrOutputRefused
+
+// applyError classifies a failed apply: a refusal to overwrite a file is
+// CodeRefused, anything else CodeApply.
+func applyError(err error) *Error {
+	if errors.Is(err, ErrRefused) {
+		return &Error{Code: CodeRefused, Err: err}
+	}
+	return &Error{Code: CodeApply, Err: err}
+}
 
 // Load reads the project o.Workspace holds.
 //
@@ -310,7 +328,7 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 	if o.Logger != nil {
 		log = o.Logger
 	}
-	var run Runner = DenyAll
+	run := DenyAll()
 	if o.Runner != nil {
 		run = o.Runner
 	}
@@ -363,7 +381,7 @@ func (p *Project) Presets() []string {
 type ValidateOptions struct {
 	// Strict also runs the content and security checks (stable AR codes). It
 	// needs a directory workspace; git, to index tracked files, runs through
-	// Options.Runner (with the default DenyAll the directory is walked instead).
+	// Options.Runner (with the default DenyAll() the directory is walked instead).
 	Strict bool
 }
 
@@ -389,12 +407,16 @@ type Report struct {
 // OK reports whether nothing was found.
 func (r *Report) OK() bool { return len(r.Findings) == 0 }
 
-// Validate checks the configuration and, with Strict, the content.
+// Validate checks the configuration and, with Strict, the content. A canceled
+// ctx stops it between its steps with a CodeValidate error wrapping ctx.Err().
 //
 // Experimental.
-func (p *Project) Validate(_ context.Context, o ValidateOptions) (*Report, error) {
+func (p *Project) Validate(ctx context.Context, o ValidateOptions) (*Report, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return nil, &Error{Code: CodeValidate, Err: err}
+	}
 	report := &Report{}
 	if err := p.cfg.Validate(); err != nil {
 		report.Findings = append(report.Findings, Finding{Severity: "error", Message: err.Error()})
@@ -406,10 +428,13 @@ func (p *Project) Validate(_ context.Context, o ValidateOptions) (*Report, error
 	if !p.disk {
 		return nil, &Error{Code: CodeDiskRequired, Err: oops.Wrapf(ErrDiskRequired, "strict validation reads the repository tree")}
 	}
-	// git runs through Options.Runner: the default DenyAll indexes by walking the directory.
+	// git runs through Options.Runner: the default DenyAll() indexes by walking the directory.
 	tree, err := lint.LoadTreeWith(p.git, p.cfg.BaseDir, "")
 	if err != nil {
 		return nil, &Error{Code: CodeValidate, Err: oops.Wrapf(err, "index repository files")}
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, &Error{Code: CodeValidate, Err: err}
 	}
 	lr, err := lint.Run(p.cfg, tree)
 	if err != nil {
@@ -580,7 +605,7 @@ func (p *Project) Generate(ctx context.Context, o GenerateOptions) (*GenerateRes
 	}
 	res, err := g.Apply(plan, applier)
 	if err != nil {
-		return nil, &Error{Code: CodeApply, Err: err}
+		return nil, applyError(err)
 	}
 	out := &GenerateResult{Written: res.Written, Lines: res.Lines}
 	for _, d := range res.Drift {

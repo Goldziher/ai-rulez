@@ -27,4 +27,8 @@ var (
 	// violation: dropping the include with a warning would hide a path a
 	// repository should never be able to name.
 	ErrIncludeOutsideProject = errors.New("local include is outside the project")
+	// ErrOutputRefused marks a generate run that refused to overwrite a file
+	// ai-rulez cannot prove it wrote, so a caller can tell "a user file is in the
+	// way" from an I/O failure without matching the message.
+	ErrOutputRefused = errors.New("refusing to overwrite a file ai-rulez did not write")
 )
