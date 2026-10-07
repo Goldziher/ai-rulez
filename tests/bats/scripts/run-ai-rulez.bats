@@ -212,6 +212,28 @@ cached_binary() {
   [ -z "$(ls -A "$TMPDIR")" ]
 }
 
+@test "checksums.txt without an entry for the archive warns and continues like the npm and PyPI wrappers" {
+  make_release darwin arm64
+  printf '%s  %s\n' "$(sha256 "$RELEASE/$ARCHIVE")" "ai-rulez_9.8.7_linux_amd64.tar.gz" \
+    >"$RELEASE/checksums.txt"
+
+  run "$SCRIPT" generate
+
+  xberg_assert_status 0
+  xberg_assert_output_contains "no checksum for ai-rulez_9.8.7_darwin_arm64.tar.gz"
+  xberg_assert_output_contains "fake ai-rulez: [generate]"
+}
+
+@test "an unreachable checksums.txt is reported, not skipped silently" {
+  make_release darwin arm64
+
+  run "$SCRIPT" generate
+
+  xberg_assert_status 0
+  xberg_assert_output_contains "Could not download checksums.txt, skipping checksum verification"
+  xberg_assert_output_contains "fake ai-rulez: [generate]"
+}
+
 @test "without shasum or sha256sum the checksum is skipped with a warning" {
   BATS_FILE_TMPDIR="$BATS_TEST_TMPDIR" xberg_shadow_system_path_without ai-rulez shasum sha256sum
   PATH="$(xberg_isolated_path)"
