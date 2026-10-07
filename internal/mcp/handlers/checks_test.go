@@ -158,7 +158,7 @@ func TestCreateCheckHandler_ValidatesTargetsAndKeepsFrontmatterContent(t *testin
 	writeMinimalConfig(t, dir)
 	ctx := context.Background()
 
-	// A misspelt preset selects no output at all, so it is rejected.
+	// A misspelled preset selects no output at all, so it is rejected.
 	res, err := CreateCheckHandler(ctx, newRequestWithArgs(map[string]any{
 		"working_directory": dir, "name": "typo", "content": "x", "targets": []any{"curser"},
 	}))
