@@ -75,7 +75,7 @@ AI-Rulez provides CRUD commands to programmatically modify your `.ai-rulez/` con
 counterparts.
 
 `add check`, `remove check` and `list checks` manage code-review guidelines (see [Checks](checks.md));
-they take `--domain`/`-d` (and `--description`/`-s`, `--content`/`-c` for `add`; `--force`/`-f` for `remove`) but have no `--local`.
+they take `--domain`/`-d` (and `--description`/`-s`, `--content`/`-c` for `add`; `--yes`/`-y` for `remove`) but have no `--local`.
 
 `ai-rulez list --placement [--profile <name>]` prints where every skill and command ends up (core or plugin-only),
 the plugins that bundle it, and flags plugin-only items nothing makes reachable.
@@ -1974,7 +1974,7 @@ The raw config file is also checked against `schema/ai-rules.schema.json`, so an
 or a value outside an enum fails rather than being silently dropped. The structural checks are:
 
 - A `config.local.*` overlay, when present, is checked against `schema/ai-rules-local.schema.json`, and the merged config is validated. The output names the overlay file and prints a one-line summary of overridden, added and removed key paths, never values
-- `version` is `"4.0"` (`"3.0"` is rejected)
+- `version` is `"5.0"` (`"4.0"` and older are rejected; `ai-rulez migrate v5` upgrades them)
 - `name` is present and non-empty
 - All preset names are valid
 - A `builtin:<name>` reference in a profile names a real builtin
@@ -2470,7 +2470,7 @@ These flags work with all commands:
 | `--help` / `-h`    | boolean | Show help for a command                                                         |
 | `--version` / `-v` | boolean | Print `ai-rulez version <version>` (root command only; same as `ai-rulez version`) |
 
-Every command that can print JSON takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--json` is accepted wherever `--format json` exists; it is hidden from help and warns that it is deprecated. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal. Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--force -f`,
+Every command that can print JSON takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal. Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--yes -y`,
 `--priority -p`, `--targets -t`, `--content -c`, `--description -s`, `--path -p`,
 and `--ref -r`.
 

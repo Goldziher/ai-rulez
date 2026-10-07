@@ -392,7 +392,7 @@
     },
     "plugins": {
       "type": "array",
-      "description": "Plugins to install from a configured marketplace. ai-rulez emits these declarations into .claude/plugins.json and .codex/plugins.json; the target tool performs the install. Distinct from the producer `[plugin]` authoring block.",
+      "description": "Plugins to install from a configured marketplace. Declarations only: v5 writes no file for them (4.x wrote .claude/plugins.json and .codex/plugins.json, which no tool reads) and generate warns that the table has no effect. Enable plugins with [claude.settings] enable_plugins, or in the target tool's own settings. Distinct from the producer `[plugin]` authoring block.",
       "items": {
         "type": "object",
         "required": ["marketplace", "name"],
