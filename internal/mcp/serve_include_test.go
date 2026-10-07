@@ -1,11 +1,15 @@
 package mcp
 
 import (
+	"context"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,4 +81,56 @@ func toolText(res *sdkmcp.CallToolResult) string {
 		}
 	}
 	return b.String()
+}
+
+// RV-DYN-5: a local include outside the configuration directory is part of
+// what the catalog depends on, so an edit there is reloaded.
+func TestWatch_ReloadsAnEditToALocalIncludeOutsideTheConfigDir(t *testing.T) {
+	// Arrange
+	root, shared := includeProject(t, map[string]string{"skills/fine/SKILL.md": skillFile("fine", "A harmless skill", "")})
+	setup := &ServeSetup{WorkDir: root, PollInterval: 10 * time.Millisecond, CacheDir: filepath.Join(t.TempDir(), "cache")}
+	srv, err := setup.NewServer(context.Background())
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go srv.Watch(ctx)
+
+	// Act
+	writeFile(t, shared, ".ai-rulez/skills/fine/SKILL.md", skillFile("fine", "A harmless skill, edited", ""))
+
+	// Assert
+	require.Eventually(t, func() bool {
+		s, ok := srv.Catalog().Lookup("fine")
+		return ok && s.Description == "A harmless skill, edited"
+	}, 5*time.Second, 10*time.Millisecond, "the include edit was never reloaded")
+}
+
+func TestServeSetup_WatchRootsCoverLocalIncludes(t *testing.T) {
+	base := t.TempDir()
+	cfgDir := filepath.Join(base, ".ai-rulez")
+	writeFile(t, base, "override/x.md", "x")
+	remote := "https://example.com/org/repo.git"
+	tests := []struct {
+		name    string
+		include config.IncludeConfig
+		want    []string
+	}{
+		{name: "relative local include", include: config.IncludeConfig{Name: "a", Source: "../shared"}, want: []string{cfgDir, filepath.Join(filepath.Dir(base), "shared")}},
+		{name: "absolute local include", include: config.IncludeConfig{Name: "a", Source: filepath.Join(base, "abs")}, want: []string{cfgDir, filepath.Join(base, "abs")}},
+		{name: "remote include is immutable per commit", include: config.IncludeConfig{Name: "a", Source: remote}, want: []string{cfgDir}},
+		{name: "local override of a remote include", include: config.IncludeConfig{Name: "a", Source: remote, LocalOverride: "override"}, want: []string{cfgDir, filepath.Join(base, "override")}},
+		{name: "include inside the config dir is not watched twice", include: config.IncludeConfig{Name: "a", Source: ".ai-rulez/vendor"}, want: []string{cfgDir}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			b := &built{cfg: &config.Config{BaseDir: base, ConfigDir: cfgDir, Includes: []config.IncludeConfig{tt.include}}}
+
+			// Act
+			got := (&ServeSetup{}).watchRoots(b)
+
+			// Assert
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
