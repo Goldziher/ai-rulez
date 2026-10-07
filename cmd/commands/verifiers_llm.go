@@ -39,7 +39,7 @@ func verifierLLMOptions(ctx context.Context, cfg *config.Config) (*verifiers.LLM
 	pricing := llm.NewPricing(lc)
 	opts := &verifiers.LLMOptions{
 		Model: lc.FullModel(), MaxCostUSD: verifiersMaxCost, Estimate: verifiersEstimate, Gate: verifiersGateLLM,
-		Prices: func(model string, u llm.Usage) (float64, bool) { return pricing.Cost(model, u) },
+		Prices: pricing.Cost,
 	}
 	switch {
 	case verifiersEstimate:
@@ -54,13 +54,15 @@ func verifierLLMOptions(ctx context.Context, cfg *config.Config) (*verifiers.LLM
 		opts.Disabled = "no [llm] model is configured"
 		return opts, noop, nil
 	}
-	if cap := verifiersMaxCost; cap > 0 && (lc.MaxCostUSD == 0 || cap < lc.MaxCostUSD) {
-		lc.MaxCostUSD = cap // the budget guard enforces it too, fail closed
+	if maxCost := verifiersMaxCost; maxCost > 0 && (lc.MaxCostUSD == 0 || maxCost < lc.MaxCostUSD) {
+		lc.MaxCostUSD = maxCost // the budget guard enforces it too, fail closed
 	}
 	managed, err := llm.New(lc, llm.Options{ConfigDir: cfg.ConfigDir})
 	if err != nil {
 		return nil, noop, err //nolint:wrapcheck // already contextual
 	}
 	opts.Client = managed
-	return opts, func() { _ = managed.Close() }, nil
+	return opts, func() {
+		_ = managed.Close() //nolint:errcheck // releasing the client at exit; nothing can act on a close error
+	}, nil
 }
