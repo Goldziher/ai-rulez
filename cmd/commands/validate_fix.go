@@ -37,6 +37,7 @@ func applyFixes(reports []*lint.Report, cfgs []*config.Config) error {
 	var totalApplied, totalOutside, totalSkipped int
 	var diffs strings.Builder
 	var skipped []lint.FixSkipped
+	changedCache := map[string][]string{}
 	for i, r := range reports {
 		cfg := cfgAt(cfgs, i)
 		opts := lint.FixOptions{Unsafe: validateFixUnsafe, DryRun: validateDryRun}
@@ -69,7 +70,11 @@ func applyFixes(reports []*lint.Report, cfgs []*config.Config) error {
 				return ""
 			}
 		}
-		res, err := lint.ApplyFixes(r.Findings, opts)
+		candidates, err := fixCandidates(r, cfg, changedCache)
+		if err != nil {
+			return err
+		}
+		res, err := lint.ApplyFixes(candidates, opts)
 		if err != nil {
 			return oops.Wrapf(err, "apply fixes")
 		}
@@ -107,6 +112,36 @@ func appliedOutside(applied []lint.FixApplied, root string) int {
 		}
 	}
 	return n
+}
+
+// fixCandidates is the part of r the fixers may touch: the findings the report
+// would show, narrowed by --analyzer and, for --since/--changed, only those in
+// the changed files themselves (a file that merely refers to one is not edited).
+func fixCandidates(r *lint.Report, cfg *config.Config, cache map[string][]string) ([]lint.Finding, error) {
+	scoped := &lint.Report{Findings: r.Findings}
+	lint.FilterAnalyzers(scoped, validateAnalyzers)
+	rev := changedRev()
+	if rev == "" {
+		return scoped.Findings, nil
+	}
+	if cfg == nil {
+		return nil, nil
+	}
+	changed, err := changedFiles(cfg, rev, cache)
+	if err != nil {
+		return nil, err
+	}
+	set := make(map[string]bool, len(changed))
+	for _, c := range changed {
+		set[filepath.ToSlash(c)] = true
+	}
+	var out []lint.Finding
+	for i := range scoped.Findings {
+		if set[scoped.Findings[i].RepoPath()] {
+			out = append(out, scoped.Findings[i])
+		}
+	}
+	return out, nil
 }
 
 func printFixSummary(w io.Writer, applied, outside int, skipped []lint.FixSkipped) {
