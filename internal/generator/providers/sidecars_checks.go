@@ -61,12 +61,12 @@ func augmentAreas(checks []config.ContentFile) map[string]any {
 			desc = check.Name
 		}
 		areas[check.Name] = map[string]any{
-			"description": desc,
-			"globs":       []any{"**"},
+			fieldDescription: desc,
+			"globs":          []any{"**"},
 			"rules": []any{map[string]any{
-				"id":          check.Name,
-				"description": checkText(check),
-				"severity":    augmentSeverity(check),
+				"id":             check.Name,
+				fieldDescription: checkText(check),
+				"severity":       augmentSeverity(check),
 			}},
 		}
 	}
@@ -77,7 +77,7 @@ func augmentAreas(checks []config.ContentFile) map[string]any {
 func gitlabInstructions(checks []config.ContentFile) []any {
 	groups := make([]any, 0, len(checks))
 	for i := range checks {
-		groups = append(groups, map[string]any{"name": checks[i].Name, "instructions": checkText(&checks[i])})
+		groups = append(groups, map[string]any{fieldName: checks[i].Name, "instructions": checkText(&checks[i])})
 	}
 	return groups
 }
@@ -134,7 +134,7 @@ func readYAMLMember(cfg *config.Config, path, member string) (value any, present
 	}
 	var doc map[string]any
 	if yaml.Unmarshal([]byte(text), &doc) != nil {
-		return nil, false, nil
+		return nil, false, nil //nolint:nilerr // an unparseable document has no member; the merge itself reports it
 	}
 	value, present = doc[member]
 	return value, present && value != nil, nil
@@ -168,7 +168,9 @@ func claimableAugmentAreas(checks []config.ContentFile, cfg *config.Config, outp
 		return areas, nil
 	}
 	claimed := map[string]jsonmerge.Claim{}
-	for _, claim := range previousChecksClaims(cfg, outputPath) {
+	claimList := previousChecksClaims(cfg, outputPath)
+	for idx := range claimList {
+		claim := claimList[idx]
 		if len(claim.Path) == 2 && claim.Path[0] == "areas" {
 			claimed[claim.Path[1]] = claim
 		}
@@ -223,7 +225,9 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 	}
 
 	var previous []jsonmerge.Claim
-	for _, claim := range previousChecksClaims(cfg, outputPath) {
+	claimList := previousChecksClaims(cfg, outputPath)
+	for idx := range claimList {
+		claim := claimList[idx]
 		if len(claim.Path) == 1 && claim.Path[0] == path[0] {
 			previous = append(previous, claim)
 		}
@@ -235,14 +239,29 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 
 	oursByName := make(map[string]any, len(checks))
 	for _, group := range gitlabInstructions(checks) {
-		oursByName[group.(map[string]any)["name"].(string)] = group
+		if fields, isMap := group.(map[string]any); isMap {
+			oursByName[stringField(fields, fieldName)] = group
+		}
 	}
-	placed, skipped, handWritten := map[string]bool{}, map[string]bool{}, map[string]bool{}
-	entries := make([]any, 0, len(existing)+len(checks))
+	entries, placed, skipped, handWritten := placeGitlabGroups(existing, oursByName, owns, cfg, sidecarPath)
+	entries, claimed := claimGroups(checks, entries, oursByName, placed, skipped, handWritten)
+	return jsonmerge.OwnedKey{Path: path, Value: entries, Elements: claimed}, true, nil
+}
+
+// placeGitlabGroups walks the instruction groups already in the document and keeps
+// what is not ai-rulez's, in place: a recorded group of a check that is still
+// written is re-placed once, one the user wrote identically is theirs, one under a
+// check's name is the user's and the check is skipped with a warning, and a
+// recorded group of a check that is gone is dropped.
+func placeGitlabGroups(existing []any, oursByName map[string]any, owns func(any) bool, cfg *config.Config,
+	sidecarPath string,
+) (entries []any, placed, skipped, handWritten map[string]bool) {
+	placed, skipped, handWritten = map[string]bool{}, map[string]bool{}, map[string]bool{}
+	entries = make([]any, 0, len(existing)+len(oursByName))
 	for _, element := range existing {
 		name := ""
 		if group, isMap := element.(map[string]any); isMap {
-			name, _ = group["name"].(string)
+			name = stringField(group, fieldName)
 		}
 		ours, isOurs := oursByName[name]
 		owned := owns(element)
@@ -270,8 +289,7 @@ func gitlabOwnedKey(checks []config.ContentFile, cfg *config.Config, outputPath,
 			entries = append(entries, element)
 		}
 	}
-	entries, claimed := claimGroups(checks, entries, oursByName, placed, skipped, handWritten)
-	return jsonmerge.OwnedKey{Path: path, Value: entries, Elements: claimed}, true, nil
+	return entries, placed, skipped, handWritten
 }
 
 // claimGroups appends the groups of checks the document lacks and lists the ones
@@ -281,7 +299,8 @@ func claimGroups(checks []config.ContentFile, entries []any, oursByName map[stri
 	placed, skipped, handWritten map[string]bool,
 ) (all, claimed []any) {
 	claimed = make([]any, 0, len(oursByName))
-	for _, check := range checks {
+	for idx := range checks {
+		check := checks[idx]
 		name := check.Name
 		if skipped[name] || (handWritten[name] && !placed[name]) {
 			continue

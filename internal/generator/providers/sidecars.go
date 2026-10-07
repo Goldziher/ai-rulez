@@ -23,7 +23,14 @@ const (
 	// settingsKeyMCPServers is the only top-level key the settings-style JSON
 	// sidecars (.claude/settings.json, .mcp.json) own. Every other key in those
 	// documents is hand-authored by the consumer and must survive generation.
-	settingsKeyMCPServers = "mcpServers"
+	settingsKeyMCPServers      = "mcpServers"
+	settingsKeyServers         = "servers"
+	settingsKeyMCPServersSnake = "mcp_servers"
+
+	// fieldName and fieldDescription are the frontmatter and settings keys that name
+	// and describe an item.
+	fieldName        = "name"
+	fieldDescription = "description"
 
 	// settingsKeyExtraKnownMarketplaces and settingsKeyEnabledPlugins are the
 	// plugin keys of .claude/settings.json ai-rulez owns, entry by entry, when
@@ -60,27 +67,31 @@ func (g *Generator) evalPredicate(predicate string, cfg *config.Config) bool {
 	switch predicate {
 	case "", PredicateAlways:
 		return true
-	case PredicateHasMCPServers:
-		return cfg != nil && len(cfg.MCPServers) > 0
-	case PredicateHasMCPServersOrPluginSettings:
-		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings())
-	case PredicateHasClaudeSettings:
-		// MCP servers are not a reason: Claude Code reads them from .mcp.json.
-		return cfg != nil && (cfg.ManagesClaudeSettings() || cfg.HasClaudeSettingsContent())
-	case PredicateHasHooks:
-		return cfg != nil && cfg.HasSettingsHooks()
-	case PredicateHasPermissions:
-		return cfg != nil && !cfg.Permissions.IsEmpty()
-	case PredicateHasMCPJSONEntries:
-		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.HasSelfServer())
-	case PredicateHasPlugins:
-		return cfg != nil && len(cfg.Plugins) > 0
 	case PredicateHasResolvedEffortOrMCPServers:
 		return cfg != nil && (len(cfg.MCPServers) > 0 || g.resolveGlobalEffort(cfg) != "")
 	case PredicateHasResolvedEffort:
 		return g.resolveGlobalEffort(cfg) != ""
 	}
-	return false
+	check, known := configPredicates[predicate]
+	return known && cfg != nil && check(cfg)
+}
+
+// configPredicates are the emit_when predicates that consult the config alone.
+var configPredicates = map[string]func(cfg *config.Config) bool{
+	PredicateHasMCPServers: func(cfg *config.Config) bool { return len(cfg.MCPServers) > 0 },
+	PredicateHasMCPServersOrPluginSettings: func(cfg *config.Config) bool {
+		return len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings()
+	},
+	// MCP servers are not a reason: Claude Code reads them from .mcp.json.
+	PredicateHasClaudeSettings: func(cfg *config.Config) bool {
+		return cfg.ManagesClaudeSettings() || cfg.HasClaudeSettingsContent()
+	},
+	PredicateHasHooks:       func(cfg *config.Config) bool { return cfg.HasSettingsHooks() },
+	PredicateHasPermissions: func(cfg *config.Config) bool { return !cfg.Permissions.IsEmpty() },
+	PredicateHasMCPJSONEntries: func(cfg *config.Config) bool {
+		return len(cfg.MCPServers) > 0 || cfg.HasSelfServer()
+	},
+	PredicateHasPlugins: func(cfg *config.Config) bool { return len(cfg.Plugins) > 0 },
 }
 
 // sidecarRender is the outcome of rendering one sidecar: the body to write, plus
@@ -345,7 +356,7 @@ func marketplaceDirPath(cfg *config.Config) string {
 }
 
 // legacyClaudeMCPServerEntries is the server map earlier versions wrote to
-// .claude/settings.json. It only recognises what they left behind (see
+// .claude/settings.json. It only recognizes what they left behind (see
 // serverLegacyClaims); nothing renders it any more.
 func legacyClaudeMCPServerEntries(cfg *config.Config) map[string]any {
 	mcpServers := make(map[string]any)
@@ -457,27 +468,34 @@ func specLegacyClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 				continue
 			}
 			key := sc.Kind + "/" + sc.Dialect
-			format := sc.DocFormat()
-			if seen[key] || format == "" {
+			if seen[key] || sc.DocFormat() == "" {
 				continue
 			}
 			seen[key] = true
-			var keys []jsonmerge.OwnedKey
-			var err error
-			if sc.Kind == SidecarHooks {
-				keys, err = settings.HookKeys(cfg, sc.Dialect, "")
-			} else {
-				keys, err = settings.PermissionKeys(cfg, sc.Dialect, "")
-			}
-			if err != nil || len(keys) == 0 {
-				continue
-			}
-			if result, err := docmerge.Apply("", docmerge.Format(format), keys); err == nil {
-				claims = append(claims, result.Claims...)
-			}
+			claims = append(claims, hooksOrPermissionsClaims(sc, cfg)...)
 		}
 	}
 	return claims
+}
+
+// hooksOrPermissionsClaims is the record of what the current configuration would
+// write into the document of one hooks or permissions sidecar.
+func hooksOrPermissionsClaims(sc *SidecarSpec, cfg *config.Config) []jsonmerge.Claim {
+	var keys []jsonmerge.OwnedKey
+	var err error
+	if sc.Kind == SidecarHooks {
+		keys, err = settings.HookKeys(cfg, sc.Dialect, "")
+	} else {
+		keys, err = settings.PermissionKeys(cfg, sc.Dialect, "")
+	}
+	if err != nil || len(keys) == 0 {
+		return nil
+	}
+	result, err := docmerge.Apply("", docmerge.Format(sc.DocFormat()), keys)
+	if err != nil {
+		return nil
+	}
+	return result.Claims
 }
 
 // serverLegacyClaims is LegacyMergeClaims for the documents that hold MCP servers
