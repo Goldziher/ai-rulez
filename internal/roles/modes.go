@@ -169,19 +169,7 @@ func PlanSkillModes(cfg *config.Config, res *config.ResolvedRole) []SkillOutcome
 			continue
 		}
 		o := SkillOutcome{Domain: item.Domain, ID: item.ID, Mode: item.Mode, Honored: map[string]string{}}
-		viaFile := false
-		for _, p := range presets {
-			capability, _ := CapabilityOf(p)
-			how, ok := capability.Honors(item.Mode)
-			if !ok {
-				o.Degraded = append(o.Degraded, p)
-				continue
-			}
-			o.Honored[p] = how
-			if how != viaSettings {
-				viaFile = true
-			}
-		}
+		viaFile := o.sortPresets(presets)
 		switch {
 		case item.Mode == ModeOff && len(o.Degraded) > 0 && item.Delivery != string(config.DeliveryServed):
 			o.Action = ActionDrop
@@ -203,6 +191,24 @@ func PlanSkillModes(cfg *config.Config, res *config.ResolvedRole) []SkillOutcome
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Key() < out[j].Key() })
 	return out
+}
+
+// sortPresets fills Honored and Degraded for o.Mode over presets and reports
+// whether a harness that honors it reads the skill file (not only settings).
+func (o *SkillOutcome) sortPresets(presets []string) (viaFile bool) {
+	for _, p := range presets {
+		capability, _ := CapabilityOf(p)
+		how, ok := capability.Honors(o.Mode)
+		if !ok {
+			o.Degraded = append(o.Degraded, p)
+			continue
+		}
+		o.Honored[p] = how
+		if how != viaSettings {
+			viaFile = true
+		}
+	}
+	return viaFile
 }
 
 // markOverridden moves the harnesses that read the invocation keys from SKILL.md
