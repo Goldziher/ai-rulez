@@ -51,7 +51,7 @@ func isMissing(err error) bool {
 // missing component, a dangling symlink, a file used as a directory) does not
 // exist; a symlink anywhere on the way that resolves outside the project is an
 // error, so a probe never reports on what lies beyond the root.
-func (e *Env) stat(ctx context.Context, rel string) (real string, exists bool, err error) {
+func (e *Env) stat(ctx context.Context, rel string) (resolved string, exists bool, err error) {
 	clean, err := cleanRel(rel)
 	if err != nil {
 		return "", false, err
@@ -114,14 +114,14 @@ func sizeText(n int) string {
 // readFile reads up to the file limit of a repo-relative file. truncated is true
 // when the file is larger, in which case data is only its prefix.
 func (e *Env) readFile(ctx context.Context, rel string) (data []byte, truncated bool, err error) {
-	real, exists, err := e.stat(ctx, rel)
+	resolved, exists, err := e.stat(ctx, rel)
 	if err != nil {
 		return nil, false, err
 	}
 	if !exists {
 		return nil, false, oops.Errorf("read %s: no such file", rel)
 	}
-	f, err := os.Open(real)
+	f, err := os.Open(resolved)
 	if err != nil {
 		return nil, false, oops.Wrapf(err, "read %s", rel)
 	}
@@ -192,42 +192,7 @@ func (e *Env) listFiles(ctx context.Context) ([]string, error) {
 		return e.files, nil
 	}
 	err := filepath.WalkDir(e.Root, func(p string, d fs.DirEntry, err error) error {
-		if cerr := ctx.Err(); cerr != nil {
-			return cerr //nolint:wrapcheck // wrapped below
-		}
-		if err != nil {
-			if p == e.Root {
-				return err
-			}
-			rel, rerr := filepath.Rel(e.Root, p)
-			if rerr != nil {
-				return rerr //nolint:wrapcheck // wrapped below
-			}
-			dir := filepath.ToSlash(rel)
-			if d != nil && !d.IsDir() {
-				dir = filepath.ToSlash(filepath.Dir(rel))
-			}
-			e.unreadable = append(e.unreadable, dir)
-			if d != nil && d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if d.IsDir() {
-			if p != e.Root && skipDirs[d.Name()] {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		rel, err := filepath.Rel(e.Root, p)
-		if err != nil {
-			return err //nolint:wrapcheck // wrapped below
-		}
-		e.files = append(e.files, filepath.ToSlash(rel))
-		return nil
+		return e.visit(ctx, p, d, err)
 	})
 	if err != nil {
 		return nil, oops.Wrapf(err, "walk %s", e.Root)
@@ -236,4 +201,45 @@ func (e *Env) listFiles(ctx context.Context) ([]string, error) {
 	sort.Strings(e.unreadable)
 	e.built = true
 	return e.files, nil
+}
+
+// visit is the walk callback of listFiles: it records a regular file, notes an
+// unreadable directory and skips the directories that are never scanned.
+func (e *Env) visit(ctx context.Context, p string, d fs.DirEntry, err error) error {
+	if cerr := ctx.Err(); cerr != nil {
+		return cerr //nolint:wrapcheck // wrapped below
+	}
+	if err != nil {
+		if p == e.Root {
+			return err
+		}
+		rel, rerr := filepath.Rel(e.Root, p)
+		if rerr != nil {
+			return rerr //nolint:wrapcheck // wrapped below
+		}
+		dir := filepath.ToSlash(rel)
+		if d != nil && !d.IsDir() {
+			dir = filepath.ToSlash(filepath.Dir(rel))
+		}
+		e.unreadable = append(e.unreadable, dir)
+		if d != nil && d.IsDir() {
+			return filepath.SkipDir
+		}
+		return nil
+	}
+	if d.IsDir() {
+		if p != e.Root && skipDirs[d.Name()] {
+			return filepath.SkipDir
+		}
+		return nil
+	}
+	if !d.Type().IsRegular() {
+		return nil
+	}
+	rel, err := filepath.Rel(e.Root, p)
+	if err != nil {
+		return err //nolint:wrapcheck // wrapped below
+	}
+	e.files = append(e.files, filepath.ToSlash(rel))
+	return nil
 }

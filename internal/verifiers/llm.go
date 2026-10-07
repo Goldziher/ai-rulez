@@ -159,7 +159,7 @@ func (c *evalCtx) evalLLM(ctx context.Context, p *LLMPred) (evalOut, error) {
 	if run.opts.Client == nil && !run.opts.Estimate {
 		reason := run.opts.Disabled
 		if reason == "" {
-			reason = "pass --allow-llm and enable [llm] allow_network in the user config"
+			reason = llmOffHint
 		}
 		return evalOut{}, llmSkip("LLM use is off (%s); the checklist was not evaluated", reason)
 	}
@@ -323,26 +323,15 @@ Reply with JSON only: {"results":[{"item":<checklist number>,"verdict":"pass|fai
 // llmSchema keeps to the subset every provider accepts: Gemini's native API
 // rejects additionalProperties, so extra fields are refused by the strict
 // decode in parseLLMReply instead of by the schema.
-var llmSchema = map[string]any{
-	"type": "object",
-	"properties": map[string]any{
-		"results": map[string]any{
-			"type": "array",
-			"items": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"item":    map[string]any{"type": "integer"},
-					"verdict": map[string]any{"type": "string", "enum": []string{verdictPass, verdictFail, verdictNA}},
-					"file":    map[string]any{"type": "string"},
-					"quote":   map[string]any{"type": "string"},
-					"reason":  map[string]any{"type": "string"},
-				},
-				"required": []string{"item", "verdict", "file", "quote", "reason"},
-			},
-		},
-	},
-	"required": []string{"results"},
-}
+var llmSchema = schemaObjectOf(
+	schemaField{"results", schemaArrayOf(schemaObjectOf(
+		schemaField{"item", schemaOfType(jsonInteger)},
+		schemaField{"verdict", schemaEnumOf(verdictPass, verdictFail, verdictNA)},
+		schemaField{"file", schemaOfType(jsonString)},
+		schemaField{"quote", schemaOfType(jsonString)},
+		schemaField{"reason", schemaOfType(jsonString)},
+	))},
+)
 
 type llmResult struct {
 	Item    *int    `json:"item"`
@@ -547,12 +536,12 @@ func stopSkip(msg string) error {
 func (c *evalCtx) callChunk(ctx context.Context, run *llmRun, p *LLMPred, model string, ch *chunk) (chunkResult, error) {
 	req := c.llmRequest(p, ch)
 	est, known, _ := run.estimateCall(req, model)
-	if cap := run.opts.MaxCostUSD; cap > 0 {
+	if limit := run.opts.MaxCostUSD; limit > 0 {
 		switch {
 		case !known:
 			return chunkResult{}, stopSkip("--max-cost is set but no price is known for " + nonEmptyOr(model, "the model") + " (set [llm] price_input_per_mtok and price_output_per_mtok)")
-		case run.spent+est > cap:
-			return chunkResult{}, stopSkip(fmt.Sprintf("the worst-case cost $%.4f would exceed --max-cost $%.2f ($%.4f spent)", est, cap, run.spent))
+		case run.spent+est > limit:
+			return chunkResult{}, stopSkip(fmt.Sprintf("the worst-case cost $%.4f would exceed --max-cost $%.2f ($%.4f spent)", est, limit, run.spent))
 		}
 	}
 	resp, err := run.opts.Client.Chat(ctx, req)
@@ -678,7 +667,7 @@ func tokenBoundary(s string, i int) bool {
 	}
 	before, _ := utf8.DecodeLastRuneInString(s[:i])
 	after, _ := utf8.DecodeRuneInString(s[i:])
-	return !(isWordRune(before) && isWordRune(after))
+	return !isWordRune(before) || !isWordRune(after)
 }
 
 func isWordRune(r rune) bool { return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r) }

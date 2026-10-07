@@ -75,7 +75,7 @@ func describeRequire(b *strings.Builder, r *Require, indent string) {
 	case r.Forbid != nil:
 		fmt.Fprintf(b, "%sforbid `%s` %s\n", indent, r.Forbid.Regex, regexScope(r.Forbid))
 	case r.FileExists != nil:
-		verb := "exists"
+		verb := verbExists
 		if r.FileExists.Exists != nil && !*r.FileExists.Exists {
 			verb = "does not exist"
 		}
@@ -157,7 +157,8 @@ type ListRow struct {
 // the specs, then the invalid declarations.
 func List(cfg *config.Config) []ListRow {
 	rows := []ListRow{}
-	for _, v := range cfg.Verifiers {
+	for i := range cfg.Verifiers {
+		v := &cfg.Verifiers[i]
 		if v.IsSpec() {
 			continue
 		}

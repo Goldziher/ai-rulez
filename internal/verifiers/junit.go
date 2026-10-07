@@ -51,7 +51,7 @@ type junitProblem struct {
 func WriteJUnit(w io.Writer, r *Report, failOn string) error {
 	suites := map[string]*junitSuite{}
 	var order []string
-	suiteFor := func(res Result) *junitSuite {
+	suiteFor := func(res *Result) *junitSuite {
 		name := "config"
 		if res.Target != nil {
 			name = res.Target.Kind + ":" + res.Target.ID
@@ -63,7 +63,8 @@ func WriteJUnit(w io.Writer, r *Report, failOn string) error {
 		order = append(order, name)
 		return suites[name]
 	}
-	for _, res := range r.Results {
+	for i := range r.Results {
+		res := &r.Results[i]
 		s := suiteFor(res)
 		s.Cases = append(s.Cases, casesFor(res, failOn)...)
 	}
@@ -97,7 +98,7 @@ func WriteJUnit(w io.Writer, r *Report, failOn string) error {
 	return wrapWrite(err)
 }
 
-func casesFor(res Result, failOn string) []junitCase {
+func casesFor(res *Result, failOn string) []junitCase {
 	class := sanitize(res.Name)
 	switch res.Status {
 	case StatusPass:
@@ -141,7 +142,7 @@ func nonEmpty(s, def string) string {
 
 func severityRank(s string) int {
 	switch s {
-	case "info":
+	case severityInfo:
 		return 1
 	case severityWarning:
 		return 2

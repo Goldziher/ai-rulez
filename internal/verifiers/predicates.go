@@ -146,7 +146,6 @@ func predForbid(ctx context.Context, env *Env, v config.VerifierConfig) (Outcome
 	var hits, skipped []string
 	var hitFindings []Finding
 	checked := 0
-scan:
 	for _, f := range files {
 		if err := ctx.Err(); err != nil {
 			return Outcome{}, oops.Wrapf(err, "verifier canceled")
@@ -168,7 +167,7 @@ scan:
 				Match: excerpt(data, loc[0], loc[1])})
 		}
 		if len(hits) >= hitCap {
-			break scan
+			break
 		}
 		if truncated {
 			skipped = append(skipped, f)

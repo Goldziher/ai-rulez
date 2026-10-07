@@ -120,9 +120,10 @@ func WriteSARIF(w io.Writer, r *Report, version string) error {
 		results = []sarifResult{}
 		notes   []sarifNotification
 	)
-	for _, res := range r.Results {
+	for i := range r.Results {
+		res := &r.Results[i]
 		if res.Status == StatusError && res.Code == "" {
-			notes = append(notes, sarifNotification{Level: "error", Message: sarifText{Text: res.Name + ": " + res.Message}})
+			notes = append(notes, sarifNotification{Level: severityError, Message: sarifText{Text: res.Name + ": " + res.Message}})
 			continue
 		}
 		if res.Status == StatusSkipped {
@@ -145,7 +146,7 @@ func WriteSARIF(w io.Writer, r *Report, version string) error {
 		results = append(results, sarifResultsFor(res, ruleID, idx)...)
 	}
 	if r.Err != nil {
-		notes = append(notes, sarifNotification{Level: "error", Message: sarifText{Text: "run failed: " + sanitize(r.Err.Error())}})
+		notes = append(notes, sarifNotification{Level: severityError, Message: sarifText{Text: "run failed: " + sanitize(r.Err.Error())}})
 	}
 	doc := sarifDoc{Schema: sarifSchema, Version: sarifVersion, Runs: []sarifRun{{
 		Tool:        sarifTool{Driver: sarifDriver{Name: "ai-rulez verifiers", Version: version, InformationURI: sarifout.InformURI, Rules: rules}},
@@ -160,7 +161,7 @@ func WriteSARIF(w io.Writer, r *Report, version string) error {
 	return nil
 }
 
-func sarifRuleFor(ruleID string, res Result) sarifRule {
+func sarifRuleFor(ruleID string, res *Result) sarifRule {
 	desc := res.Description
 	if desc == "" && res.Target != nil {
 		desc = res.Message
@@ -181,7 +182,7 @@ func sarifRuleFor(ruleID string, res Result) sarifRule {
 	return rule
 }
 
-func sarifResultsFor(res Result, ruleID string, idx int) []sarifResult {
+func sarifResultsFor(res *Result, ruleID string, idx int) []sarifResult {
 	level := sarifout.Level(res.Severity)
 	if res.Status == StatusError {
 		level = sarifout.LevelError
