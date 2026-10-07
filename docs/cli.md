@@ -2340,7 +2340,7 @@ with nothing written when it finds an error. A git source is fetched shallowly i
 ai-rulez okf validate <dir|git-url[@ref][#subdir]> [--format text|json] [--fail-on error|warning|info|none]
 ```
 
-Lints any OKF bundle with the `AR9B0`-`AR9B9` checks. The default `--fail-on error` only fails on conformance problems.
+Lints any OKF bundle with the `AR9B0`-`AR9B9` checks. The default `--fail-on error` only fails on conformance problems. A directory without a root `index.md` naming `okf_version` (an empty one, say) is not a bundle: it reports an `AR9B3` error and exits `2`.
 
 ## LLM Commands
 
