@@ -236,7 +236,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR001`-`AR099` | Security: secrets, injection, shell, exfiltration, supply chain (`AR001`-`AR034` used) | allocated |
 | `AR100`-`AR199` | Scope: glob matching (`AR101`) | allocated |
 | `AR200`-`AR299` | Links and imports (`AR201`, `AR202`, `AR210`) | allocated |
-| `AR300`-`AR399` | References and frontmatter (`AR301`-`AR305`) | allocated |
+| `AR300`-`AR399` | References and frontmatter (`AR301`-`AR306`) | allocated |
 | `AR400`-`AR499` | Paths, skill resources, commands (`AR401`-`AR403`) | allocated |
 | `AR500`-`AR599` | Hooks and permissions (`AR501`-`AR507`) | allocated |
 | `AR600`-`AR699` | MCP servers (`AR601`, `AR602`) | allocated |
@@ -501,7 +501,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | Analyzer | Rules |
 | --- | --- |
 | `security` | `AR001`-`AR034`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E7`, `AR9K1`, `AR9L1` |
-| `references` | `AR101`, `AR201`, `AR202`, `AR210`, `AR301`-`AR305`, `AR401`-`AR403` |
+| `references` | `AR101`, `AR201`, `AR202`, `AR210`, `AR301`-`AR306`, `AR401`-`AR403` |
 | `hooks` | `AR501`-`AR505`, `AR507` |
 | `mcp` | `AR601`, `AR602` |
 | `duplicates` | `AR701`-`AR703` |
@@ -994,6 +994,7 @@ does not override it; a rule that reports mild and serious cases at different le
 | --- | --- | --- | --- |
 | AR304 | `frontmatter-value-invalid` | warning | A frontmatter value the Claude Code skill or subagent reference does not accept: `effort` (`low`, `medium`, `high`, `xhigh`, `max`), `context` (`fork`), `shell` (`bash`, `powershell`), `permissionMode`, `memory`, `isolation`, `color`, a quoted or `yes`-style value where a YAML boolean is required (a quoted `"true"` or `"false"` is fixable), a non-integer `maxTurns`, a `model` that is neither an alias (`sonnet`, `opus`, `haiku`, `inherit`), a full model ID nor a known vendor ID, and a `paths`/`globs` value that is not a glob string or a list of glob strings. The message suggests the nearest valid value |
 | AR305 | `tool-name-unknown` | warning | An `allowed-tools`, `disallowed-tools`, `tools` or `disallowedTools` entry that names no Claude Code tool (with a did-you-mean), a malformed `mcp__server__tool` name, unbalanced parentheses in a `Bash(...)` pattern, or a tool listed as both allowed and denied. MCP tools, `Bash(...)`/`WebFetch(...)` patterns and `Agent(name)` are valid. Tools provided elsewhere go in `lint.known_names`. Not checked when `claude` is not among the presets |
+| AR306 | `frontmatter-malformed` | error | The frontmatter block does not parse as a YAML mapping (a list, a scalar, a tab indent, invalid UTF-8, an unquoted `: `) or opens with `---` and never closes. The item loses its metadata, or the block is served to the model as text. One bad file is a finding, so the rest of the tree is still reported in `--format json` and `sarif` |
 | AR403 | `command-missing` | warning | A backticked `npm run X` (also `pnpm`, `yarn`, `bun`), `make X`, `task X`, `just X` or `pytest -m X` that names a script, target, task, recipe or marker the repository does not define. The build files are read from the git index (`package.json` `scripts`, `Makefile` and `*.mk` targets, `Taskfile.y*ml` tasks, `justfile` recipes and aliases, pytest markers from `pyproject.toml`, `pytest.ini`, `setup.cfg`, `tox.ini`, `addinivalue_line` and `pytest.mark.X` uses). A command is skipped when no file of its kind exists, when it carries a placeholder (`<name>`, `$VAR`), when it is scoped elsewhere (`--prefix`, `--workspace`, `-C`, `-f`, `cd`), when the Makefile has dynamic targets or includes, and inside fenced blocks |
 | AR507 | `hook-schema-invalid` | warning | A hook declaration that loads but will not do what it says, in `config.toml` (`[[hooks]]`, `[[plugin.hooks]]`), the project `.claude/settings.json`, tracked plugin `hooks/hooks.json` and the `hooks` frontmatter of agents, skills and commands: an event that is not a Claude Code event (with a did-you-mean), a `matcher` on an event without a matchable subject, an `if` on an event that never evaluates it, a handler with no or an unknown `type`, a `command`/`http`/`prompt` handler without its `command`/`url`/`prompt`, a `timeout` that is not a whole number of seconds, a group without a `hooks` list. The event tables are the ones the config loader uses. JSON files cannot carry an inline ignore; use `ignore_paths` |
 | AR012 | `mcp-unpinned-package` | warning (error under `[lock] enforce`, which is on whenever `ai-rulez.lock` exists) | An MCP server (also an inline `mcpServers` entry of an agent or skill) that launches a package without a version pin: `npx`, `bunx`, `pnpm dlx` or `npm exec` with no `@version` or a moving tag (`@latest`), `uvx`, `uv tool run` or `pipx run` with no `==version`, and `docker run` with an untagged, `:latest` or digest-less image. Checked in `[[mcp_servers]]`, `.mcp.json`, `.cursor/mcp.json` and `.vscode/mcp.json`. Shares its pin predicate with AR021 |
@@ -1496,6 +1497,16 @@ allowed-tools, tools or disallowedTools names a tool Claude Code does not have, 
 - Why: A tool name Claude Code does not have grants nothing, and a tool both allowed and denied is contradictory.
 - Bad: `allowed-tools: Bsh`
 - Good: `allowed-tools: Bash(git status:*), Read`
+
+### AR306 frontmatter-malformed
+
+the frontmatter block cannot be parsed as a YAML mapping (a list, a scalar, a tab indent, invalid UTF-8, an unquoted ': ') or never closes with ---, so the item loses its metadata or the block leaks into the prompt
+
+- Default severity: `error`
+- Analyzer: `references` (scope `item`)
+- Why: A block that does not parse is dropped, so the item has no name, description or tools; a block that never closes is served to the model as body text.
+- Bad: `description: Use when: deploying` (unquoted colon), or an opening `---` with no closing `---`
+- Good: `description: "Use when: deploying"` and a closing `---` line
 
 ### AR401 path-missing
 

@@ -1384,6 +1384,9 @@ func readContentFile(v workspace.View, log logger.Logger, path string) (ContentF
 
 	// Parse frontmatter (if present) - inlined to avoid import cycle
 	metadata, actualContent, malformed := parseFrontmatter(content)
+	if !malformed && metadata == nil && hasUnclosedFrontmatter(content) {
+		malformed = true // an opening '---' that never closes would leak into the prompt as text
+	}
 	if malformed {
 		warnMalformedFrontmatter(log, path)
 	}
