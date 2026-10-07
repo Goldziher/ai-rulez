@@ -1,16 +1,11 @@
+# Nightly and manual full e2e run. Pull requests and pushes are covered by the
+# e2e-test and comprehensive-test jobs in ci.yaml.
 name: E2E Tests
 
 on:
   workflow_dispatch:
   schedule:
     - cron: "0 2 * * *"
-  push:
-    paths:
-      - "tests/e2e/**"
-      - "cmd/**"
-      - "internal/**"
-      - "Taskfile.yml"
-      - ".github/workflows/e2e.yaml"
 
 concurrency:
   group: e2e-${{ github.ref }}
@@ -75,67 +70,4 @@ jobs:
           path: |
             tests/e2e/*.log
             tests/e2e/**/*.prof
-          retention-days: 7
-
-  cross-platform-test:
-    name: Cross-Platform E2E Tests
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        test-suite: [cli, mcp, integration]
-      fail-fast: false
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: false
-
-      - name: Cache Go modules
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Install dependencies
-        run: go mod download
-
-      - name: Cache Task binary
-        uses: actions/cache@v6
-        id: task-cache
-        with:
-          path: |
-            ~/.task
-            ~/bin/task
-          key: ${{ runner.os }}-task-3.x
-          restore-keys: |
-            ${{ runner.os }}-task-
-
-      - name: Install Task
-        uses: arduino/setup-task@v3
-        if: steps.task-cache.outputs.cache-hit != 'true'
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build binary for tests
-        run: task build
-
-      - name: Run e2e tests - ${{ matrix.test-suite }}
-        run: task test:e2e:${{ matrix.test-suite }}
-
-      - name: Upload cross-platform test results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: e2e-results-${{ matrix.os }}-${{ matrix.test-suite }}
-          path: tests/e2e/*.log
           retention-days: 7
