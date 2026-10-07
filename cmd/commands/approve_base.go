@@ -91,13 +91,7 @@ func unownedAtBase(cfg *config.Config, lock, base *lockfile.File, added []approv
 		s := &added[i]
 		already[s.Ref+"\x00"+approval.NormalizeReviewer(s.Approval.Reviewer)] = true
 	}
-	had := map[string]bool{}
-	if base != nil {
-		for i := range base.Approval {
-			a := &base.Approval[i]
-			had[a.ItemKey()+"\x00"+a.Digest+"\x00"+approval.NormalizeReviewer(a.Reviewer)] = true
-		}
-	}
+	had := approvalKeysOf(base)
 	var out []approval.SelfApproval
 	for i := range lock.Approval {
 		a := &lock.Approval[i]
@@ -115,6 +109,20 @@ func unownedAtBase(cfg *config.Config, lock, base *lockfile.File, added []approv
 		out = append(out, approval.SelfApproval{Note: note})
 	}
 	return out
+}
+
+// approvalKeysOf indexes the approvals of a lock (nil for none) by item,
+// digest and reviewer.
+func approvalKeysOf(lock *lockfile.File) map[string]bool {
+	keys := map[string]bool{}
+	if lock == nil {
+		return keys
+	}
+	for i := range lock.Approval {
+		a := &lock.Approval[i]
+		keys[a.ItemKey()+"\x00"+a.Digest+"\x00"+approval.NormalizeReviewer(a.Reviewer)] = true
+	}
+	return keys
 }
 
 // authorSelfApprovals is forbid_self_approval: the approvals of the current
