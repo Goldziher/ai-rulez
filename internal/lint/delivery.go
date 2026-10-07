@@ -203,7 +203,7 @@ func (r *runner) checkUnpinnedSources() {
 		line := 1
 		if data, err := os.ReadFile(path); err == nil {
 			for n, l := range strings.Split(string(data), "\n") {
-				if strings.Contains(l, `"`+src.Name+`"`) {
+				if namesTOMLString(l, src.Name) {
 					line = n + 1
 					break
 				}
