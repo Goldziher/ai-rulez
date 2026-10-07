@@ -96,10 +96,22 @@ func lockedEntries(f *lockfile.File) []lockfile.Entry {
 // returns the problems that prevent writing a lock. A skill the security scan
 // refuses is such a problem only with --strict; otherwise it is left unpinned
 // (see lockUnpinned) and the other skills are pinned.
-func mergeDynamicLock(cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool) []string {
-	problems, unpinned := mergeDynamicViews(cfg, current, next, dynamicRun{kind: kind, wanted: wanted, extras: lockExtraViews(), strict: lockStrict})
-	lockUnpinned = append(lockUnpinned, unpinned...)
-	return problems
+// mergeDynamicLock refreshes the source and served pins of next. scanOnly is
+// true when every problem is a served skill the security scan refuses under
+// --strict: findings, which exit 2, not a failure to run.
+func mergeDynamicLock(cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool) (problems []string, scanOnly bool) {
+	res := mergeDynamicViews(cfg, current, next, dynamicRun{kind: kind, wanted: wanted, extras: lockExtraViews(), strict: lockStrict})
+	lockUnpinned = append(lockUnpinned, res.unpinned...)
+	return res.problems, len(res.problems) > 0 && res.refused == len(res.problems)
+}
+
+// dynamicResult is what refreshing the dynamic pins found: problems that stop
+// the lock, how many of them are scan refusals (--strict), and the skills left
+// unpinned because the scan refuses them.
+type dynamicResult struct {
+	problems []string
+	refused  int
+	unpinned []mcp.Refusal
 }
 
 // dynamicRun is what one `lock` run refreshes: an entry kind (all when empty),
@@ -112,18 +124,18 @@ type dynamicRun struct {
 	strict bool
 }
 
-func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dynamicRun) (problems []string, unpinned []mcp.Refusal) {
+func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dynamicRun) (out dynamicResult) {
 	kind, wanted, extras, strict := run.kind, run.wanted, run.extras, run.strict
 	if current != nil {
 		next.Source, next.Served = append([]lockfile.Entry(nil), current.Source...), append([]lockfile.Entry(nil), current.Served...)
 	}
 	if !usesDynamicSkillsFor(cfg, extras) {
 		next.Source, next.Served = nil, nil
-		return nil, nil
+		return out
 	}
 	refresh := func(k string) bool { return kind == "" || kind == k }
 	if !refresh(lockfile.KindSource) && !refresh(lockfile.KindServed) {
-		return nil, nil
+		return out
 	}
 	// The views load under the lock run's policy, so a refresh re-resolves the
 	// same sources the run's own load did.
@@ -131,14 +143,16 @@ func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dyn
 	setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true, Offline: policy.Offline, LockPolicy: &policy}
 	res, err := setup.LockViews(cmdContext(), extras)
 	if err != nil {
-		return []string{err.Error()}, nil
+		out.problems = []string{err.Error()}
+		return out
 	}
 	for _, r := range res.Refused {
 		if strict {
-			problems = append(problems, fmt.Sprintf("served %s: %s %s", r.Name, r.Code, r.Reason))
+			out.problems = append(out.problems, fmt.Sprintf("served %s: %s %s", r.Name, r.Code, r.Reason))
+			out.refused++
 			continue
 		}
-		unpinned = append(unpinned, r)
+		out.unpinned = append(out.unpinned, r)
 		logger.Warn("Left a served skill unpinned: the security scan refuses it", "skill", r.Name, "view", viewLabel(r.View), "code", r.Code, "reason", r.Reason)
 	}
 	pick := func(name string) bool { return len(wanted) == 0 || wanted[name] }
@@ -154,8 +168,8 @@ func mergeDynamicViews(cfg *config.Config, current, next *lockfile.File, run dyn
 		}
 		next.Source = keepConfigured(next.Source, sourceNames(cfg, next.Served))
 	}
-	sort.Strings(problems)
-	return problems, unpinned
+	sort.Strings(out.problems)
+	return out
 }
 
 func usesDynamicSkillsFor(cfg *config.Config, extras []mcp.ServeSetup) bool {
