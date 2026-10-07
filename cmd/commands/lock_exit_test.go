@@ -58,10 +58,10 @@ func TestRunLockFor_ExitCodes(t *testing.T) {
 	assert.Equal(t, exitUnpinned, got)
 	assert.Len(t, lockUnpinned, 1, "reset per run")
 
-	// --strict fails the run instead.
+	// --strict refuses the run instead: findings, exit 2 (RV-CLI-3).
 	lockStrict = true
 	_, _ = capture(t, func() { got = runLockFor("", nil) })
-	assert.Equal(t, 1, got)
+	assert.Equal(t, exitDrift, got)
 }
 
 func TestRunLockFor_RecursiveTakesTheMostSevereCode(t *testing.T) {
