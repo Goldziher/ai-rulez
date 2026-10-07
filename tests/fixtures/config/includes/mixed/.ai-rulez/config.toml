@@ -1,4 +1,4 @@
-version = "4.0"
+version = "5.0"
 name = "project-with-mixed-includes"
 description = "Project that includes both rules and domain content"
 presets = ["claude"]
