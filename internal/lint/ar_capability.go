@@ -3,6 +3,7 @@ package lint
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -217,6 +218,9 @@ func (r *runner) crossItem(domain string, items []capItem) { //nolint:gocyclo //
 	if len(items) < 2 {
 		return
 	}
+	// Order by id so the pair that names the finding does not depend on the
+	// order the items were loaded in.
+	items = slices.SortedFunc(slices.Values(items), func(a, b capItem) int { return strings.Compare(a.id, b.id) })
 	type rule struct {
 		name string
 		sev  Severity
@@ -224,7 +228,7 @@ func (r *runner) crossItem(domain string, items []capItem) { //nolint:gocyclo //
 		why  string
 	}
 	rules := []rule{
-		{"exfil", SeverityWarning, func(x capItem) bool { return x.p.credRead && x.p.counts[tierNetwork] == 0 }, func(x capItem) bool { return x.p.counts[tierNetwork] > 0 && !x.p.credRead },
+		{"exfil", SeverityInfo, func(x capItem) bool { return x.p.credRead && x.p.counts[tierNetwork] == 0 }, func(x capItem) bool { return x.p.counts[tierNetwork] > 0 && !x.p.credRead },
 			"%q reads credentials and has no network access, %q has network access and reads none: run together they form an exfiltration chain"},
 		{"stealth", SeverityWarning, func(x capItem) bool { return x.p.stealth }, func(x capItem) bool { return x.high },
 			"%q erases history and %q carries a high-risk finding: the pair hides what the second does"},
@@ -256,7 +260,7 @@ func (r *runner) crossItem(domain string, items []capItem) { //nolint:gocyclo //
 		}
 		msg := fmt.Sprintf(ru.why, first[0].id, first[1].id) + " (" + where
 		if pairs > 1 {
-			msg += fmt.Sprintf(", and %d more pair(s)", pairs-1)
+			msg += ", and other pairs" // not a count: the text is baselined and the count moves with every new skill
 		}
 		r.addSev(ru.sev, CodeCrossItemChain, first[0].it.abs, first[0].line, "%s)", msg)
 	}
