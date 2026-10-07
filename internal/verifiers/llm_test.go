@@ -187,8 +187,8 @@ func TestLLMVerifier_WithholdsHunksWithSecretsOrHiddenCharacters(t *testing.T) {
 		want string
 	}{
 		{"credential", "package a\nvar k = \"sk-abcdefghijklmnop12345678\"\n", "credential"},
-		{"bidi control", "package a\n// ‮admin\n", "hidden or control character (U+202E)"},
-		{"zero width space", "package a\n// a​b\n", "U+200B"},
+		{"bidi control", "package a\n// \u202eadmin\n", "hidden or control character (U+202E)"},
+		{"zero width space", "package a\n// a\u200bb\n", "U+200B"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

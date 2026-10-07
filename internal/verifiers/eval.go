@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -229,28 +230,38 @@ func (c *evalCtx) evalRegex(ctx context.Context, p *RegexPred, forbid bool) (eva
 		if in == inDiffAdded && !ch.AllAdded && len(ch.Added) == 0 {
 			continue // nothing was added to this file
 		}
-		switch {
-		case forbid:
-			for _, h := range hits {
-				findings = append(findings, Finding{File: f, Line: h.line, Message: fmt.Sprintf("forbidden pattern `%s` matched", p.Regex), Match: h.text})
-			}
-		case len(hits) > 0:
-			matchedAny = true
-		case in != inAnyFile:
-			msg := fmt.Sprintf("pattern `%s` not found", p.Regex)
-			if in == inDiffAdded {
-				msg = fmt.Sprintf("pattern `%s` not found in the added lines", p.Regex)
-			}
-			findings = append(findings, Finding{File: f, Message: msg})
-		}
+		fileFindings, matched := regexFileFindings(f, p.Regex, in, forbid, hits)
+		findings = append(findings, fileFindings...)
+		matchedAny = matchedAny || matched
 		if len(findings) >= maxFindings {
 			break
 		}
 	}
 	if !forbid && in == inAnyFile && !matchedAny {
-		findings = append(findings, Finding{Message: fmt.Sprintf("pattern `%s` not found in any of %d file(s)", p.Regex, len(files))})
+		findings = append(findings, Finding{Message: "pattern `" + p.Regex + "` not found in any of " + strconv.Itoa(len(files)) + " file(s)"})
 	}
 	return evalOut{pass: len(findings) == 0, findings: findings}, nil
+}
+
+// regexFileFindings turns the matches of one file into findings: every hit of
+// a forbid pattern, or one finding when a required pattern has none. matched
+// reports that a required pattern was found.
+func regexFileFindings(f, pattern, in string, forbid bool, hits []lineHit) (findings []Finding, matched bool) {
+	switch {
+	case forbid:
+		for _, h := range hits {
+			findings = append(findings, Finding{File: f, Line: h.line, Message: "forbidden pattern `" + pattern + "` matched", Match: h.text})
+		}
+	case len(hits) > 0:
+		matched = true
+	case in != inAnyFile:
+		msg := "pattern `" + pattern + "` not found"
+		if in == inDiffAdded {
+			msg = "pattern `" + pattern + "` not found in the added lines"
+		}
+		findings = append(findings, Finding{File: f, Message: msg})
+	}
+	return findings, matched
 }
 
 type lineHit struct {

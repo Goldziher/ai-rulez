@@ -14,7 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
 
-// calibSpec is an llm verifier with n labelled examples per class: a file with a
+// calibSpec is an llm verifier with n labeled examples per class: a file with a
 // "BAD" line must fail, one without must pass.
 func calibSpec(checklist string, failing, passing int) string {
 	var b strings.Builder
