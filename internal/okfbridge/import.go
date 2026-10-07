@@ -423,7 +423,7 @@ func (p *planner) render(c *okf.Concept, ext extInfo, kind Kind, id, body string
 			if key == keyDescription {
 				continue
 			}
-			hasName = hasName || key == "name"
+			hasName = hasName || key == keyName
 			fields = append(fields, okf.Field{Key: key, Value: ext.metadata.Content[i+1]})
 		}
 	}
@@ -431,7 +431,7 @@ func (p *planner) render(c *okf.Concept, ext extInfo, kind Kind, id, body string
 	// source had; adding name or description would make the next export differ.
 	if kind == KindSkill && !ext.present {
 		if !hasName {
-			fields = append(fields, okf.Field{Key: "name", Value: id})
+			fields = append(fields, okf.Field{Key: keyName, Value: id})
 		}
 		if desc == nil || strings.TrimSpace(desc.Value) == "" {
 			fields = append([]okf.Field{{Key: keyDescription, Value: c.Title()}}, fields...)
