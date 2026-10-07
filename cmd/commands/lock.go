@@ -103,6 +103,26 @@ func init() {
 	LockCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 
+// checkLockContentOnlyFlags refuses --content-only together with a selection of
+// remote entries: --content-only keeps every remote pin, so the selection would
+// silently refresh nothing.
+func checkLockContentOnlyFlags(kind string, names []string) error {
+	if !lockContentOnly {
+		return nil
+	}
+	if len(names) > 0 || kind == lockfile.KindInclude || kind == lockfile.KindSkill || kind == "source" {
+		return oops.Errorf("--content-only keeps every remote pin, so it cannot be combined with --kind %s or names; drop --content-only to refresh them", kindOrNames(kind))
+	}
+	return nil
+}
+
+func kindOrNames(kind string) string {
+	if kind == "" {
+		return "(names given)"
+	}
+	return kind
+}
+
 func runLock(_ *cobra.Command, args []string) {
 	if err := validateLockFlags(args); err != nil {
 		fmtError(err)
@@ -126,6 +146,9 @@ func validateLockFlags(args []string) error {
 	}
 	if lockCheck && lockDiffFlag {
 		return oops.Errorf("--check and --diff are mutually exclusive")
+	}
+	if err := checkLockContentOnlyFlags(lockKind, args); err != nil {
+		return err
 	}
 	if lockSubjectOutput != "" && !lockSubject {
 		return oops.Errorf("--output needs --subject")
