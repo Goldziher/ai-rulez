@@ -50,8 +50,8 @@ git does not ignore. Then run `ai-rulez generate`, review the diff, run `ai-rule
 
 v5 reads one config format: `.ai-rulez/config.toml` (or `.config/ai-rulez/config.toml`) with its content tree,
 `config.local.toml` and the user `config.toml`. A project that holds only an older file stops with an error that names
-the file and exits `1`; `ai-rulez doctor` reports the same file. Nothing is converted for you in v5, so migrate before
-you upgrade:
+the file and exits `1`; `ai-rulez doctor` reports the same file. Nothing is converted for you in v5 (`ai-rulez migrate`
+exits `1` and prints the command below), so migrate before you upgrade:
 
 ```bash
 # V3: .ai-rulez/config.yaml (or .yml / .json), config.local.*, mcp.yaml|toml|json
