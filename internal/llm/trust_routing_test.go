@@ -84,6 +84,11 @@ func TestLiterLLMRefusesUserKeyWithRepoChosenProvider(t *testing.T) {
 		{"env-only user, repo model prefix", &Config{Model: "evil/m"}, nil, map[string]string{"AI_RULEZ_LLM_API_KEY_ENV": "K", "AI_RULEZ_LLM_ALLOW_NETWORK": "1"}, true, "model"},
 		{"env-only user, env supplies provider and model", &Config{Provider: "evil", Model: "evil/m"}, nil, map[string]string{"AI_RULEZ_LLM_API_KEY_ENV": "K", "AI_RULEZ_LLM_ALLOW_NETWORK": "1", "AI_RULEZ_LLM_PROVIDER": "openai", "AI_RULEZ_LLM_MODEL": "gpt-4o-mini"}, false, ""},
 		{"env supplies the provider", &Config{Provider: "evil", Model: "m"}, &Config{APIKeyEnv: "K", AllowNetwork: true}, map[string]string{"AI_RULEZ_LLM_PROVIDER": "openai"}, false, ""},
+		// Without api_key_env liter-llm reads the routed provider's own variable (OPENAI_API_KEY, ...),
+		// so a repository route still picks which of the user's keys is sent and billed (RV-LLM-10).
+		{"repo embedding route, no api_key_env", &Config{EmbeddingModel: "openai/text-embedding-3-large"}, &Config{Provider: "gemini", Model: "gemini-2.5-flash", AllowNetwork: true}, nil, true, "embedding_model"},
+		{"repo provider, no api_key_env", &Config{Provider: "evil", Model: "m"}, &Config{AllowNetwork: true}, nil, true, "provider"},
+		{"user route, no api_key_env", nil, &Config{Provider: "gemini", Model: "gemini-2.5-flash", AllowNetwork: true}, nil, false, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
