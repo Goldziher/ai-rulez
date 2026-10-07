@@ -27,11 +27,7 @@ import (
 //   - https://code.visualstudio.com/docs/agents/run/approvals
 //   - https://code.visualstudio.com/docs/chat/review-code-edits
 //   - Zoo-Code-Org/Zoo-Code src/package.json and src/core/auto-approval/commands.ts
-var (
-	_ = registerPermissionDialect(config.HarnessCopilot, buildVSCode)
-	_ = registerPermissionDialect(harnessZoocode, buildVSCode)
-)
-
+//
 // harnessZoocode is the preset name of Zoo Code.
 const harnessZoocode = "zoocode"
 
@@ -254,8 +250,6 @@ func zooPrefix(e permEntry) (prefix, why string) {
 //
 // Source: https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference
 // and .../cli-command-reference (read 2026-10-05).
-var _ = registerPermissionDialect("copilot-cli", buildCopilotCLI)
-
 func buildCopilotCLI(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	var allowed, denied []any
@@ -295,9 +289,6 @@ func buildCopilotCLI(t *translation) ([]jsonmerge.OwnedKey, error) {
 // The documented configuration lists both arrays as required fields of cli.json
 // (https://cursor.com/docs/cli/reference/configuration, read 2026-10-06), so a
 // document with any permission carries both.
-var _ = registerPermissionDialectRequiring(config.HarnessCursor, buildCursor,
-	[]string{keyPermissions, string(ActionAllow)}, []string{keyPermissions, string(ActionDeny)})
-
 func buildCursor(t *translation) ([]jsonmerge.OwnedKey, error) {
 	t.askUnsupported()
 	allow, deny := []any{}, []any{}
@@ -393,8 +384,6 @@ func cursorShell(e permEntry) (rule, why string) {
 // is not documented, so ai-rulez writes it to the user settings only.
 //
 // Source: https://zed.dev/docs/ai/tool-permissions (read 2026-10-05).
-var _ = registerPermissionDialect("zed", buildZed)
-
 var zedLists = map[PermAction]string{ActionAllow: "always_allow", ActionAsk: "always_confirm", ActionDeny: "always_deny"}
 
 var zedDefaults = map[PermAction]string{ActionAllow: string(ActionAllow), ActionAsk: "confirm", ActionDeny: string(ActionDeny)}
