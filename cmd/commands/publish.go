@@ -275,7 +275,14 @@ func checkPublishFlags() error {
 	if err := validatePublishSignFlags(); err != nil {
 		return err
 	}
-	ghOrPin := publishTo == publish.TargetGitHubRelease || publishMarketplace || len(publishEmit) > 0
+	if err := checkPublishModeFlags(); err != nil {
+		return err
+	}
+	return checkPublishOptionFlags()
+}
+
+// checkPublishModeFlags checks --to, --execute, --dry-run, --yes and --force.
+func checkPublishModeFlags() error {
 	switch {
 	case publishTo != "" && !isPublishTarget(publishTo):
 		return oops.Errorf("unknown --to %q (use %s)", publishTo, strings.Join(publish.Targets, ", "))
@@ -287,6 +294,14 @@ func checkPublishFlags() error {
 		return oops.Hint("review the commands with --dry-run, then pass --yes").Errorf("--execute needs --yes")
 	case publishForce && (!publishExecute || (publishTo != publish.TargetGitHubRelease && publishTo != publish.TargetOCI)):
 		return oops.Errorf("--force only applies with --to github-release or --to oci, and --execute")
+	}
+	return nil
+}
+
+// checkPublishOptionFlags checks the flags that only fit some targets.
+func checkPublishOptionFlags() error {
+	ghOrPin := publishTo == publish.TargetGitHubRelease || publishMarketplace || len(publishEmit) > 0
+	switch {
 	case publishTag != "" && !ghOrPin:
 		return oops.Errorf("--tag needs --to github-release or --marketplace")
 	case publishSince != "" && !publish.ValidSince(publishSince):
@@ -339,16 +354,8 @@ func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 		return publishConfigError(err)
 	}
 	multi := isMultiPlugin(cfg)
-	switch {
-	case multi:
-	case cfg.Plugin == nil:
-		return publish.Errorf(publish.CodeSource, publish.ExitGate, "add a [plugin] block with name and version, or a [marketplace] with members or domain plugins", "no [plugin] block is configured")
-	case len(publishOnly) > 0:
-		return publish.Errorf(publish.CodeConfig, publish.ExitFailed, "--only selects plugins of a [marketplace] with members or domain plugins", "--only needs a multi-plugin project")
-	default:
-		if err := publish.ValidateName(cfg.Plugin.Name, cfg.Plugin.Version); err != nil {
-			return err //nolint:wrapcheck // a publish.Error carries the exit status
-		}
+	if err := checkPublishPlugin(cfg, multi); err != nil {
+		return err
 	}
 	opts, err := resolvePublishOptions(cfg)
 	if err != nil {
@@ -382,6 +389,23 @@ func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 		return runPublishMulti(out, pc, emitOnly) //nolint:contextcheck // plugin manifests are built without a context
 	}
 	return runPublishSingle(ctx, out, pc, emitOnly)
+}
+
+// checkPublishPlugin checks that a single-plugin project names a valid plugin
+// and does not use --only.
+func checkPublishPlugin(cfg *config.Config, multi bool) error {
+	switch {
+	case multi:
+	case cfg.Plugin == nil:
+		return publish.Errorf(publish.CodeSource, publish.ExitGate, "add a [plugin] block with name and version, or a [marketplace] with members or domain plugins", "no [plugin] block is configured")
+	case len(publishOnly) > 0:
+		return publish.Errorf(publish.CodeConfig, publish.ExitFailed, "--only selects plugins of a [marketplace] with members or domain plugins", "--only needs a multi-plugin project")
+	default:
+		if err := publish.ValidateName(cfg.Plugin.Name, cfg.Plugin.Version); err != nil {
+			return err //nolint:wrapcheck // a publish.Error carries the exit status
+		}
+	}
+	return nil
 }
 
 func runPublishSingle(ctx context.Context, out io.Writer, pc *publishContext, emitOnly string) error {
@@ -739,24 +763,9 @@ func fileExists(path string) bool {
 	return err == nil && info.Mode().IsRegular()
 }
 
-func reportVerify(out io.Writer, results []verifyResult, target string) error {
-	problems := 0
-	for _, r := range results {
-		problems += len(r.Problems)
-	}
-	if publishFormat == formatJSON {
-		var doc any = results[0].VerifyResult
-		if len(results) > 1 || results[0].Dir != "" {
-			doc = map[string]any{"results": results}
-		}
-		data, merr := json.MarshalIndent(doc, "", "  ")
-		if merr != nil {
-			return oops.Wrapf(merr, "encode result")
-		}
-		if _, werr := out.Write(append(data, '\n')); werr != nil {
-			return oops.Wrapf(werr, "write result")
-		}
-	}
+// printVerifyResults prints the text report of `publish verify`: what verified
+// to out, the mismatches to stderr. It prints nothing for --format json.
+func printVerifyResults(out io.Writer, results []verifyResult) {
 	for _, r := range results {
 		label := r.Dir
 		if label != "" {
@@ -779,6 +788,27 @@ func reportVerify(out io.Writer, results []verifyResult, target string) error {
 			}
 		}
 	}
+}
+
+func reportVerify(out io.Writer, results []verifyResult, target string) error {
+	problems := 0
+	for _, r := range results {
+		problems += len(r.Problems)
+	}
+	if publishFormat == formatJSON {
+		var doc any = results[0].VerifyResult
+		if len(results) > 1 || results[0].Dir != "" {
+			doc = map[string]any{"results": results}
+		}
+		data, merr := json.MarshalIndent(doc, "", "  ")
+		if merr != nil {
+			return oops.Wrapf(merr, "encode result")
+		}
+		if _, werr := out.Write(append(data, '\n')); werr != nil {
+			return oops.Wrapf(werr, "write result")
+		}
+	}
+	printVerifyResults(out, results)
 	if problems > 0 {
 		code := publish.CodeVerify
 		if signatureProblems(results) {
@@ -789,9 +819,12 @@ func reportVerify(out io.Writer, results []verifyResult, target string) error {
 	return nil
 }
 
+// noneText is what the text reports show for an absent value.
+const noneText = "none"
+
 func verifyOrNone(s string) string {
 	if s == "" {
-		return "none"
+		return noneText
 	}
 	return s
 }

@@ -166,6 +166,26 @@ func committedTime(path string) (time.Time, bool) {
 	return time.Time{}, false
 }
 
+// loadSBOMConfig loads and validates the configuration; offline unless online,
+// so remote sources come from the lock and the cache.
+func loadSBOMConfig(online bool) (*config.Config, error) {
+	ctx := cmdContext()
+	if !online {
+		ctx = config.WithOfflineIncludes(ctx)
+	}
+	cfg, err := loadConfigForCommand(config.WithUnresolvedIncludesTolerated(ctx), nil, config.WithoutLocal())
+	if err != nil {
+		if !online {
+			err = oops.Hint("sbom reads remote sources from the lock and the cache only; run `ai-rulez generate` or `ai-rulez lock` to fill the cache, or pass --online").Wrap(err)
+		}
+		return nil, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
 // runSBOM builds the document and returns the exit code: 0 ok, 1 it could not
 // run, exitDrift when --require-lock, --strict-pins or --check fails.
 func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
@@ -187,19 +207,8 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 		fmtError(err)
 		return 1
 	}
-	ctx := cmdContext()
-	if !f.online {
-		ctx = config.WithOfflineIncludes(ctx)
-	}
-	cfg, err := loadConfigForCommand(config.WithUnresolvedIncludesTolerated(ctx), nil, config.WithoutLocal())
+	cfg, err := loadSBOMConfig(f.online)
 	if err != nil {
-		if !f.online {
-			err = oops.Hint("sbom reads remote sources from the lock and the cache only; run `ai-rulez generate` or `ai-rulez lock` to fill the cache, or pass --online").Wrap(err)
-		}
-		fmtError(err)
-		return 1
-	}
-	if err := cfg.Validate(); err != nil {
 		fmtError(err)
 		return 1
 	}

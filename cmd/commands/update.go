@@ -359,23 +359,10 @@ func applyUpdates(path string, cfg *config.Config, current *lockfile.File, srcs 
 		return false, err
 	}
 	for _, key := range sortedKeys(rep.moves) {
-		m := rep.moves[key]
-		entry := next.Find(m.row.Kind, m.row.Name)
-		if entry == nil || entry.Tag == "" {
-			return false, oops.Errorf("%s %q was not resolved to a tag", m.row.Kind, m.row.Name)
+		item, err := updateItemFor(fresh, current, next, rep.moves[key], before[key])
+		if err != nil {
+			return false, err
 		}
-		item := updateItem{Kind: m.row.Kind, Name: m.row.Name, To: &tagresolve.TagRef{Tag: entry.Tag, Commit: entry.Commit}, DigestNew: entry.Digest,
-			Held: m.row.Held, Released: entry.Released, ReleasedFrom: entry.ReleasedFrom}
-		if old := current.Find(m.row.Kind, m.row.Name); old != nil {
-			item.DigestOld = old.Digest
-			if old.Tag != "" {
-				item.From = &tagresolve.TagRef{Tag: old.Tag, Commit: old.Commit}
-			}
-		}
-		if len(before[key]) > 0 { // an uncached old tree has nothing to compare with
-			item.Files = tagresolve.DiffFiles(before[key], hashTree(m.src.treeDir, entry.Commit))
-		}
-		item.Scan = scanNewTree(fresh, m, entry.Commit)
 		refused = refused || item.Scan.Refused
 		rep.Updates = append(rep.Updates, item)
 	}
@@ -388,6 +375,29 @@ func applyUpdates(path string, cfg *config.Config, current *lockfile.File, srcs 
 	}
 	logger.Success("Wrote lock file", "path", lockfile.Path(fresh.ConfigDir))
 	return false, nil
+}
+
+// updateItemFor describes one move from the current lock to next: the tags, the
+// digests, the files that changed (against before, the hashes of the old tree)
+// and the security scan of the new tree.
+func updateItemFor(fresh *config.Config, current, next *lockfile.File, m *moveTo, before map[string]string) (updateItem, error) {
+	entry := next.Find(m.row.Kind, m.row.Name)
+	if entry == nil || entry.Tag == "" {
+		return updateItem{}, oops.Errorf("%s %q was not resolved to a tag", m.row.Kind, m.row.Name)
+	}
+	item := updateItem{Kind: m.row.Kind, Name: m.row.Name, To: &tagresolve.TagRef{Tag: entry.Tag, Commit: entry.Commit}, DigestNew: entry.Digest,
+		Held: m.row.Held, Released: entry.Released, ReleasedFrom: entry.ReleasedFrom}
+	if old := current.Find(m.row.Kind, m.row.Name); old != nil {
+		item.DigestOld = old.Digest
+		if old.Tag != "" {
+			item.From = &tagresolve.TagRef{Tag: old.Tag, Commit: old.Commit}
+		}
+	}
+	if len(before) > 0 { // an uncached old tree has nothing to compare with
+		item.Files = tagresolve.DiffFiles(before, hashTree(m.src.treeDir, entry.Commit))
+	}
+	item.Scan = scanNewTree(fresh, m, entry.Commit)
+	return item, nil
 }
 
 // maxScanFindingsListed bounds the findings printed per source; the counts are exact.
@@ -430,21 +440,8 @@ func scanTreeDir(cfg *config.Config, name, dir string, accept bool) *scanSummary
 // majorUpdate is `update --major`: it lists the sources that have a newer major
 // version than their constraint allows and, with --write-config, takes it.
 func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs []versionSrc, rows []tagresolve.Row, report *updateReport) int {
-	for i := range rows {
-		row := &rows[i]
-		if !row.MajorAvailable || row.Latest == nil || blockedStatus(row.Status) {
-			continue
-		}
-		if to, ok := majorConstraint(row.Latest.Tag, srcs[i].want.TagPrefix); ok {
-			report.Major = append(report.Major, majorItem{Kind: row.Kind, Name: row.Name, From: row.Constraint, To: to, Latest: row.Latest.Tag})
-		}
-	}
-	sort.Slice(report.Major, func(i, j int) bool {
-		if report.Major[i].Kind != report.Major[j].Kind {
-			return report.Major[i].Kind < report.Major[j].Kind
-		}
-		return report.Major[i].Name < report.Major[j].Name
-	})
+	report.Major = append(report.Major, majorItems(srcs, rows)...)
+	sortMajor(report.Major)
 	if len(report.Major) == 0 || !updateWriteConfig || updateDryRun {
 		return finishUpdate(report, 0)
 	}
@@ -484,6 +481,32 @@ func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs [
 		rollback() // before the report is printed, so it never claims a write that was undone
 	}
 	return finishUpdate(report, code)
+}
+
+// majorItems lists the sources whose latest tag is a newer major than their
+// constraint allows, with the constraint that would take it.
+func majorItems(srcs []versionSrc, rows []tagresolve.Row) []majorItem {
+	var out []majorItem
+	for i := range rows {
+		row := &rows[i]
+		if !row.MajorAvailable || row.Latest == nil || blockedStatus(row.Status) {
+			continue
+		}
+		if to, ok := majorConstraint(row.Latest.Tag, srcs[i].want.TagPrefix); ok {
+			out = append(out, majorItem{Kind: row.Kind, Name: row.Name, From: row.Constraint, To: to, Latest: row.Latest.Tag})
+		}
+	}
+	return out
+}
+
+// sortMajor orders the major items by kind, then name.
+func sortMajor(items []majorItem) {
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].Kind != items[j].Kind {
+			return items[i].Kind < items[j].Kind
+		}
+		return items[i].Name < items[j].Name
+	})
 }
 
 // blockedStatus reports the statuses where a constraint cannot be trusted enough to rewrite it.
@@ -579,6 +602,33 @@ func finishUpdate(rep *updateReport, code int) int {
 	return code
 }
 
+// writeUpdateItem prints one update and reports whether its scan refused it.
+func writeUpdateItem(u *updateItem) (refused bool) {
+	from := "(unlocked)"
+	if u.From != nil {
+		from = u.From.Tag
+	}
+	fmt.Printf("%s %s: %s -> %s (%s)\n", u.Kind, u.Name, from, u.To.Tag, shortSHA(u.To.Commit))
+	if u.Released != "" {
+		fmt.Printf("  released %s (%s)\n", u.Released, u.ReleasedFrom)
+	}
+	for _, h := range u.Held {
+		fmt.Printf("  %s\n", safeText(h.String()))
+	}
+	for _, f := range u.Files {
+		fmt.Printf("  %s  %s\n", f.Change, f.Path)
+	}
+	if u.DigestOld != u.DigestNew {
+		fmt.Printf("  tree %s -> %s\n", u.DigestOld, u.DigestNew)
+	}
+	if u.Scan != nil {
+		writeScanText(*u)
+		refused = u.Scan.Refused
+	}
+	fmt.Println("  run `ai-rulez generate`, then `ai-rulez lock` (it refreshes the output pins and the served-skill pins, which stay stale until then)")
+	return refused
+}
+
 func writeUpdateText(rep *updateReport) {
 	verb := "updated"
 	if rep.DryRun {
@@ -586,31 +636,9 @@ func writeUpdateText(rep *updateReport) {
 	}
 	refused := 0
 	for i := range rep.Updates {
-		u := &rep.Updates[i]
-		from := "(unlocked)"
-		if u.From != nil {
-			from = u.From.Tag
+		if writeUpdateItem(&rep.Updates[i]) {
+			refused++
 		}
-		fmt.Printf("%s %s: %s -> %s (%s)\n", u.Kind, u.Name, from, u.To.Tag, shortSHA(u.To.Commit))
-		if u.Released != "" {
-			fmt.Printf("  released %s (%s)\n", u.Released, u.ReleasedFrom)
-		}
-		for _, h := range u.Held {
-			fmt.Printf("  %s\n", safeText(h.String()))
-		}
-		for _, f := range u.Files {
-			fmt.Printf("  %s  %s\n", f.Change, f.Path)
-		}
-		if u.DigestOld != u.DigestNew {
-			fmt.Printf("  tree %s -> %s\n", u.DigestOld, u.DigestNew)
-		}
-		if u.Scan != nil {
-			writeScanText(*u)
-			if u.Scan.Refused {
-				refused++
-			}
-		}
-		fmt.Println("  run `ai-rulez generate`, then `ai-rulez lock` (it refreshes the output pins and the served-skill pins, which stay stale until then)")
 	}
 	for _, m := range rep.Major {
 		switch {

@@ -160,6 +160,14 @@ func validateApproveFlags(args []string) error {
 	if err := validateFormatAndAssurance(); err != nil {
 		return err
 	}
+	if err := validateApproveModes(args); err != nil {
+		return err
+	}
+	return validateApproveInputs()
+}
+
+// validateApproveModes checks that one mode is chosen and its flags fit it.
+func validateApproveModes(args []string) error {
 	modes := 0
 	for _, on := range []bool{approveList, approveRevoke, approveDiff, approvePrune, approveVerifyBase != ""} {
 		if on {
@@ -173,6 +181,13 @@ func validateApproveFlags(args []string) error {
 		return oops.Errorf("--format applies to --list only")
 	case approveAll && !approveList:
 		return oops.Errorf("--all applies to --list only")
+	}
+	return validateApproveTargets(args)
+}
+
+// validateApproveTargets checks the item names and --verify-base against the mode.
+func validateApproveTargets(args []string) error {
+	switch {
 	case (approveList || approvePrune || approveVerifyBase != "") && len(args) > 0:
 		return oops.Errorf("--list, --prune and --verify-base take no item names")
 	case approveVerifyBase != "" && strings.HasPrefix(strings.TrimSpace(approveVerifyBase), "-"):
@@ -180,6 +195,11 @@ func validateApproveFlags(args []string) error {
 	case !approveList && !approvePrune && approveVerifyBase == "" && len(args) == 0:
 		return oops.Hint("see `ai-rulez approve --list` for what needs approval").Errorf("name the item(s) to approve")
 	}
+	return nil
+}
+
+// validateApproveInputs checks the free-text flags: --accept, --reviewer, --note.
+func validateApproveInputs() error {
 	for _, code := range approveAccept {
 		if !approveCodePattern.MatchString(strings.ToUpper(code)) {
 			return oops.Errorf("invalid --accept %q: expected a rule code such as AR005", code)
@@ -188,11 +208,15 @@ func validateApproveFlags(args []string) error {
 	if approveReviewer != "" && !approveReviewerPattern.MatchString(approveReviewer) {
 		return oops.Errorf("invalid --reviewer: use a single line of at most 200 characters")
 	}
-	if len(approveNote) > 500 || strings.ContainsFunc(approveNote, func(r rune) bool { return r < 0x20 && r != '\n' && r != '\t' || r == 0x7f }) {
+	if len(approveNote) > 500 || strings.ContainsFunc(approveNote, isNoteControl) {
 		return oops.Errorf("invalid --note: at most 500 characters, no control characters")
 	}
 	return nil
 }
+
+// isNoteControl reports a control character a note may not carry (newline and
+// tab are allowed).
+func isNoteControl(r rune) bool { return r < 0x20 && r != '\n' && r != '\t' || r == 0x7f }
 
 // approveEnv is what every mode of the command works on.
 type approveEnv struct {
@@ -370,6 +394,30 @@ func (e *approveEnv) approversFrom() string {
 	return e.cfg.Governance.ApproversFrom
 }
 
+// approveListRow is the tab-separated text row of one item of `approve --list`.
+func approveListRow(it *approveListItem) string {
+	reviewer, expires := "-", "-"
+	if len(it.Reviewers) > 0 {
+		reviewer = safeText(strings.Join(it.Reviewers, ","))
+	}
+	if it.Expires != "" {
+		expires = it.Expires
+	}
+	status := it.Status
+	if !it.Required && status == approval.StatusNotRequired {
+		status = "-"
+	}
+	id := it.ID
+	if it.Domain != "" {
+		id = it.Domain + "/" + id
+	}
+	assurance := "-"
+	if it.Assurance != "" {
+		assurance = it.Assurance
+	}
+	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", it.Kind, safeText(id), shortDigest(it.Digest), status, reviewer, expires, assurance)
+}
+
 func (e *approveEnv) list(out io.Writer) error {
 	if err := e.resolveTeams(cmdContext(), e.subjects); err != nil {
 		return err
@@ -391,27 +439,7 @@ func (e *approveEnv) list(out io.Writer) error {
 	tw := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
 	fmt.Fprintln(tw, "KIND\tID\tDIGEST\tSTATUS\tREVIEWER\tEXPIRES\tASSURANCE") //nolint:errcheck // flushed below
 	for i := range doc.Items {
-		it := &doc.Items[i]
-		reviewer, expires := "-", "-"
-		if len(it.Reviewers) > 0 {
-			reviewer = safeText(strings.Join(it.Reviewers, ","))
-		}
-		if it.Expires != "" {
-			expires = it.Expires
-		}
-		status := it.Status
-		if !it.Required && status == approval.StatusNotRequired {
-			status = "-"
-		}
-		id := it.ID
-		if it.Domain != "" {
-			id = it.Domain + "/" + id
-		}
-		assurance := "-"
-		if it.Assurance != "" {
-			assurance = it.Assurance
-		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", it.Kind, safeText(id), shortDigest(it.Digest), status, reviewer, expires, assurance) //nolint:errcheck // flushed below
+		fmt.Fprint(tw, approveListRow(&doc.Items[i])) //nolint:errcheck // flushed below
 	}
 	for _, o := range doc.Orphans {
 		id := o.ID
