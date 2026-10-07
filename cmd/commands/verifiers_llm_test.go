@@ -3,6 +3,8 @@ package commands
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -110,15 +112,19 @@ func TestRunVerifiers_BrokenLLMSettingsOnlyMatterWhenAnLLMVerifierRuns(t *testin
 	}
 }
 
-func TestRunVerifiers_RejectsNegativeMaxCost(t *testing.T) {
-	resetVerifiersFlags(t)
-	verifiersLLMProject(t, "")
-	verifiersMaxCost = -1
-	var out bytes.Buffer
+func TestRunVerifiers_RejectsANegativeOrNonFiniteMaxCost(t *testing.T) {
+	for _, v := range []float64{-1, math.NaN(), math.Inf(1)} {
+		t.Run(fmt.Sprint(v), func(t *testing.T) {
+			resetVerifiersFlags(t)
+			verifiersLLMProject(t, "")
+			verifiersMaxCost = v
+			var out bytes.Buffer
 
-	got := runVerifiers(context.Background(), nil, &out)
+			got := runVerifiers(context.Background(), nil, &out)
 
-	assert.Equal(t, exitVerifiersCannotRun, got)
+			assert.Equal(t, exitVerifiersCannotRun, got)
+		})
+	}
 }
 
 func TestSuggestVerifiers_RefusesWithoutAModelAndEstimateCallsNothing(t *testing.T) {

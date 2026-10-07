@@ -28,8 +28,8 @@ var (
 // func releases the client.
 func verifierLLMOptions(ctx context.Context, cfg *config.Config) (*verifiers.LLMOptions, func(), error) {
 	noop := func() {}
-	if verifiersMaxCost < 0 {
-		return nil, noop, oops.Errorf("--max-cost must not be negative")
+	if !llm.Finite(verifiersMaxCost) || verifiersMaxCost < 0 {
+		return nil, noop, oops.Errorf("--max-cost must be a finite number >= 0, got %v", verifiersMaxCost)
 	}
 	resolved, err := cfg.ResolveLLM(nil)
 	if err != nil {
