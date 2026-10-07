@@ -318,6 +318,9 @@ type skillsConn struct {
 	initialized atomic.Bool
 }
 
+// methodPing is the one request MCP allows before initialize besides initialize itself.
+const methodPing = "ping"
+
 // newProtocolVersion is the first protocol version whose requests carry their
 // own protocol version in _meta and need no initialize (SEP-2575).
 const newProtocolVersion = "2026-07-28"
@@ -348,7 +351,14 @@ func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 		if ok && req.Method == methodInitialize {
 			c.initialized.Store(true)
 		}
-		if !ok || !req.ID.IsValid() || (req.Method != methodSkillsList && req.Method != methodSkillsGet && req.Method != methodDirectoryRead) {
+		if !ok || !req.ID.IsValid() {
+			return msg, nil
+		}
+		ours := req.Method == methodSkillsList || req.Method == methodSkillsGet || req.Method == methodDirectoryRead
+		// The SDK answers any other request sent before initialize with error code 0,
+		// which is not a JSON-RPC code; refuse it here with the code skills/list uses.
+		early := !ours && req.Method != methodInitialize && req.Method != methodPing && !c.mayAnswer(req.Params)
+		if !ours && !early {
 			return msg, nil
 		}
 		resp := &jsonrpc.Response{ID: req.ID}

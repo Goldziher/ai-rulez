@@ -37,7 +37,7 @@ that mode, so it is safe to hand to an unattended agent.`,
 func runMCPServer(cmd *cobra.Command, _ []string) {
 	if err := runMCP(cmd); err != nil {
 		fmtError(err)
-		os.Exit(1)
+		os.Exit(exitCodeFor(err))
 	}
 }
 

@@ -85,8 +85,14 @@ func BuildStatus(s *Settings, dir, logPath string) *Status {
 	st.Exported, st.Withheld = encoder.Fields()
 
 	spool := &Spool{Dir: dir}
-	if pending, _, err := spool.Pending(); err == nil {
+	switch pending, corrupt, err := spool.Pending(); {
+	case err != nil:
+		st.Problems = append(st.Problems, "outbox unreadable: "+err.Error())
+	default:
 		st.Pending.Outbox = len(pending)
+		if corrupt > 0 {
+			st.Problems = append(st.Problems, fmt.Sprintf("outbox holds %d unreadable or oversize line(s); the next flush drops them", corrupt))
+		}
 	}
 	cur := spool.ReadCursor()
 	st.Cursor = CursorStatus{Set: cur.Set(), Offset: cur.Offset, LastEventID: cur.LastEventID, UpdatedAt: cur.UpdatedAt}

@@ -121,7 +121,7 @@ For `openaicompat` the `model` is sent verbatim (so a gateway sees exactly the n
 
 [liter-llm](https://github.com/xberg-io/liter-llm) is a Rust client with one interface for 174 providers (`provider/model` names, keys from the provider's environment variable, its own cache, budget, rate limit and cost tracking). Its Go module is `github.com/xberg-io/liter-llm/packages/go/v2`, a cgo wrapper over the Rust library `libliter_llm_ffi`.
 
-What ai-rulez relies on, ported to liter-llm 2.1.3 and checked against its release commit (`4ad174d`, built locally) on macOS arm64. 2.1.3 is not published yet: until it is, `internal/llm/literllm/go.mod` stays on v2.1.2, which does not compile against this adapter (it needs `ChatWithContext` and typed errors), so a `literllm` build needs a workspace `replace` to a 2.1.3 checkout. When v2.1.3 ships, bump the one `require` line in `internal/llm/literllm/go.mod` and its `go.sum`.
+What ai-rulez relies on, ported to liter-llm 2.1.3 and checked against its release commit (`4ad174d`, built locally) on macOS arm64. `internal/llm/literllm/go.mod` requires v2.1.4, which has `ChatWithContext` and typed errors (v2.1.2 does not compile against this adapter). `task build:literllm` and the `literllm` CI job build and test with `-tags literllm`.
 
 - `CreateClient(apiKey, baseURL, timeoutSecs, maxRetries, modelHint)`, `ChatWithContext(ctx, req)`, `EmbedWithContext(ctx, req)` and `Free()`; request and response JSON is OpenAI-shaped, so the adapter reuses the same encoder and decoder as `openaicompat`. `response_format` with a JSON schema reaches the server. The configured `provider/model` is passed as the `modelHint`, which is what lets liter-llm strip the provider prefix when `base_url` is set.
 - Typed errors: `*literllm.Error` carries the variant (`Authentication`, `RateLimited`, `Timeout`, ...), HTTP status, a transient flag and `RetryAfter`. The adapter classifies by variant and never reads message text; a failure that is not typed is a permanent provider error.
@@ -169,13 +169,13 @@ Not verified: Linux, Windows and macOS x86_64 builds; providers other than Gemin
 - **Provider schema dialects.** liter-llm translates `response_format` into the provider's native form, and Gemini's native API rejects `additionalProperties` in a schema (HTTP 400). ai-rulez's own schemas therefore leave it out and refuse extra fields when decoding the reply; a schema you pass through the library yourself must do the same for Gemini.
 - **Model prefix.** With a `base_url`, liter-llm strips only the `provider/` prefix named by the model hint (now the configured `provider`), so `provider = "openai"`, `model = "gpt-4o-mini"` reaches a strict server as `gpt-4o-mini`. Without a configured provider the model is sent verbatim.
 - **Platforms.** Release assets exist for macOS (arm64, x86_64), Linux glibc (x86_64, aarch64) and Windows (x86_64, aarch64); none for musl.
-- **Status: experimental.** The upstream issues the adapter worked around are fixed in 2.1.3 (#244 typed errors, #245 context cancellation, #246 no `(nil, nil)`, #247 and #248 static link and macOS deployment target, #249 prefix stripping, #250 to #252 docs and client config), and live parity with `openaicompat` passes for Gemini. It stays experimental because 2.1.3 is unreleased (the pin is still 2.1.2 and a build needs a local `replace`), only macOS arm64 and only one provider have been exercised.
+- **Status: experimental.** The upstream issues the adapter worked around are fixed in 2.1.3 (#244 typed errors, #245 context cancellation, #246 no `(nil, nil)`, #247 and #248 static link and macOS deployment target, #249 prefix stripping, #250 to #252 docs and client config), and live parity with `openaicompat` passes for Gemini. It stays experimental because only macOS arm64 and only one provider have been exercised.
 
 ### Licensing
 
 liter-llm is MIT licensed (Copyright 2026 Kreuzberg, Inc.). The Go module is a wrapper around a Rust library whose dependency tree carries other licenses (its `deny.toml` allows Apache-2.0, MIT, BSD, ISC, Zlib, MPL-2.0, OpenSSL, among others), and its provider table is derived from LiteLLM's (MIT, attribution in liter-llm's `ATTRIBUTIONS.md`). A release that bundles the static library redistributes that code: ship the MIT notice and the third-party notices of the library (`cargo about` or the upstream attribution file) with the binary. The default build contains none of it.
 
-Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.1.2`, in `internal/llm/literllm/go.mod` only. The adapter needs v2.1.3 or later; bump it when that release is published.
+Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.1.4`, in `internal/llm/literllm/go.mod` only. The adapter needs v2.1.3 or later.
 
 ## Using it from a feature
 

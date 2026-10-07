@@ -135,7 +135,11 @@ func Wrap(backend Client, cfg Config, opts Options) *Managed {
 			}
 		} else {
 			cache = NewCache(dir, cacheIdentity(cfg), secret)
-			c = WithCache(c, cache, cfg.FullModel(), cfg.EmbeddingModel)
+			injected := 0
+			if budget.limits.Active() {
+				injected = DefaultCompletionCap
+			}
+			c = withCapCache(c, cache, cfg.FullModel(), cfg.EmbeddingModel, injected)
 		}
 	}
 	c = withGate(c, cfg.AllowNetwork, cfg.Timeout())

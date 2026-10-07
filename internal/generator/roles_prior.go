@@ -139,6 +139,15 @@ func (g *Generator) ReconcileRoleSkillOverrides() error {
 		}
 	}
 	for _, skill := range restore {
+		if !ok {
+			if _, readErr := g.config.ReadExisting(settingsPath); readErr == nil {
+				// The file exists but is not strict JSON: nothing can be put back, and
+				// forgetting the value here would lose what the person wrote.
+				g.log().Warn("Cannot restore skillOverrides."+skill+" in "+settingsRel+" because the file is not strict JSON; "+
+					"the value you wrote stays recorded in the role ledger until the file parses", "skill", skill)
+				continue
+			}
+		}
 		if err := g.restoreSkillOverride(settingsPath, doc, claims, skill, ledger.Prior[skill]); err != nil {
 			return err
 		}

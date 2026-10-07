@@ -678,6 +678,15 @@ func parseMCPEnvOverrides(values []string) map[string]string {
 	return out
 }
 
+// exitCodeFor is the exit code of a failed command: 2 for a role that names
+// something that does not exist (AR971, the code `validate` gives findings), else 1.
+func exitCodeFor(err error) int {
+	if errors.Is(err, config.ErrRoleReference) {
+		return 2
+	}
+	return 1
+}
+
 func fmtError(err error) {
 	if oopsErr, ok := oops.AsOops(err); ok {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
