@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,6 +64,47 @@ func TestCheckSurvivesACancelledContext(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, sb.Check(context.Background()))
 	require.Len(t, fake.Calls(), 1)
+}
+
+func TestCheckFallsBackToABackendThatWorks(t *testing.T) {
+	// A container that permits user namespaces but not a new /proc mount: bwrap
+	// is installed and fails its probe ("Can't mount proc on /proc"), unshare works.
+	tests := []struct {
+		name        string
+		tools       []string
+		failing     string
+		wantBackend Backend
+		wantErr     string
+	}{
+		{"bwrap fails, unshare works", []string{"bwrap", "unshare"}, "bwrap", BackendUnshare, ""},
+		{"bwrap works", []string{"bwrap", "unshare"}, "", BackendBwrap, ""},
+		{"both fail", []string{"bwrap", "unshare"}, "*", BackendNone, "Can't mount proc"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			fake := &runner.Fake{Handle: func(s runner.Spec) runner.Result {
+				if tt.failing == "*" || strings.HasSuffix(s.Argv[0], "/"+tt.failing) {
+					return runner.Result{Status: runner.StatusExit, ExitCode: 1, Stderr: []byte("bwrap: Can't mount proc on /proc")}
+				}
+				return runner.Result{Status: runner.StatusOK}
+			}}
+			sb := New("linux", lookIn(tt.tools...)).WithRunner(fake)
+			// Act
+			err := sb.Check(context.Background())
+			// Assert
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantBackend, sb.Backend())
+			w, err := sb.Wrap(Spec{}, []string{"/bin/true"})
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantBackend, w.Backend)
+		})
+	}
 }
 
 func TestCheckReportsAProbeFailure(t *testing.T) {
