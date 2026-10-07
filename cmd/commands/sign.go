@@ -118,6 +118,10 @@ stale (its tree does not match its entries).`,
 	},
 }
 
+// githubServerURL is the GITHUB_SERVER_URL of github.com, the default when the
+// Actions environment does not set one.
+const githubServerURL = "https://github.com"
+
 func init() {
 	f := SignCmd.Flags()
 	f.BoolVar(&signLock, "lock", false, "Sign the lock-subject statement of ai-rulez.lock")
@@ -395,7 +399,7 @@ func detectRepo(ctx context.Context, dir string, env ambient.Env) (repo, ref str
 	if gh := ambient.Getenv(env, "GITHUB_REPOSITORY"); gh != "" {
 		server := ambient.Getenv(env, "GITHUB_SERVER_URL")
 		if server == "" {
-			server = "https://github.com"
+			server = githubServerURL
 		}
 		return strings.TrimSuffix(server, "/") + "/" + gh, ambient.Getenv(env, "GITHUB_REF")
 	}
