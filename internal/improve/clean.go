@@ -39,20 +39,13 @@ func Clean(ctx context.Context, opts *CleanOptions) (*CleanResult, error) {
 	}
 	ids := []string{opts.RunID}
 	if opts.All {
-		entries, err := os.ReadDir(base)
-		if err != nil {
+		var err error
+		if ids, err = listRunIDs(base); err != nil {
 			if os.IsNotExist(err) {
 				return &CleanResult{Removed: []string{}, DryRun: opts.DryRun}, nil
 			}
 			return nil, fmt.Errorf("read %s: %w", base, err)
 		}
-		ids = ids[:0]
-		for _, e := range entries {
-			if ValidRunID(e.Name()) {
-				ids = append(ids, e.Name())
-			}
-		}
-		sort.Strings(ids)
 	}
 	res := &CleanResult{Removed: []string{}, DryRun: opts.DryRun}
 	for _, id := range ids {
@@ -71,6 +64,22 @@ func Clean(ctx context.Context, opts *CleanOptions) (*CleanResult, error) {
 		res.Removed = append(res.Removed, id)
 	}
 	return res, nil
+}
+
+// listRunIDs returns the well-formed run ids under base, sorted.
+func listRunIDs(base string) ([]string, error) {
+	entries, err := os.ReadDir(base)
+	if err != nil {
+		return nil, err
+	}
+	ids := []string{}
+	for _, e := range entries {
+		if ValidRunID(e.Name()) {
+			ids = append(ids, e.Name())
+		}
+	}
+	sort.Strings(ids)
+	return ids, nil
 }
 
 // requireRealDirs refuses to clean through a symlinked local/ or local/improve: a link there would

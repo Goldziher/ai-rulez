@@ -1,6 +1,7 @@
 package improve
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -95,7 +96,7 @@ func (s *runSnapshot) diff() ([]string, error) {
 }
 
 func sameEntry(a, b snapEntry) bool {
-	return a.dir == b.dir && a.target == b.target && string(a.data) == string(b.data) && a.mode == b.mode
+	return a.dir == b.dir && a.target == b.target && bytes.Equal(a.data, b.data) && a.mode == b.mode
 }
 
 // restore puts the snapshot back: paths created since are removed, changed or
@@ -123,32 +124,40 @@ func (s *runSnapshot) restore() error {
 	}
 	sort.Strings(paths) // parents sort before their children
 	for _, p := range paths {
-		e, full := s.entries[p], filepath.Join(s.root, filepath.FromSlash(p))
+		e := s.entries[p]
 		if n, ok := now.entries[p]; ok && sameEntry(e, n) {
 			continue
 		}
-		if err := os.RemoveAll(full); err != nil && !e.dir {
-			return fmt.Errorf("replace %s: %w", p, err)
+		if err := restoreEntry(filepath.Join(s.root, filepath.FromSlash(p)), p, &e); err != nil {
+			return err
 		}
-		switch {
-		case e.dir:
-			if info, serr := os.Lstat(full); serr != nil || !info.IsDir() {
-				_ = os.RemoveAll(full) //nolint:errcheck // MkdirAll reports the failure
-				if err := os.MkdirAll(full, 0o700); err != nil {
-					return fmt.Errorf("restore %s: %w", p, err)
-				}
-			}
-		case e.target != "":
-			if err := os.Symlink(e.target, full); err != nil {
+	}
+	return nil
+}
+
+// restoreEntry puts one snapshotted entry (named p, at full) back in place of whatever is there now.
+func restoreEntry(full, p string, e *snapEntry) error {
+	if err := os.RemoveAll(full); err != nil && !e.dir {
+		return fmt.Errorf("replace %s: %w", p, err)
+	}
+	switch {
+	case e.dir:
+		if info, serr := os.Lstat(full); serr != nil || !info.IsDir() {
+			_ = os.RemoveAll(full) //nolint:errcheck // MkdirAll reports the failure
+			if err := os.MkdirAll(full, 0o700); err != nil {
 				return fmt.Errorf("restore %s: %w", p, err)
 			}
-		default:
-			if err := os.WriteFile(full, e.data, e.mode); err != nil {
-				return fmt.Errorf("restore %s: %w", p, err)
-			}
-			if err := os.Chmod(full, e.mode); err != nil {
-				return fmt.Errorf("restore %s: %w", p, err)
-			}
+		}
+	case e.target != "":
+		if err := os.Symlink(e.target, full); err != nil {
+			return fmt.Errorf("restore %s: %w", p, err)
+		}
+	default:
+		if err := os.WriteFile(full, e.data, e.mode); err != nil {
+			return fmt.Errorf("restore %s: %w", p, err)
+		}
+		if err := os.Chmod(full, e.mode); err != nil {
+			return fmt.Errorf("restore %s: %w", p, err)
 		}
 	}
 	return nil

@@ -67,7 +67,17 @@ func (t *Tree) Paths() []string {
 func ReadTree(dir string) (*Tree, error) {
 	t := &Tree{Files: map[string]Entry{}}
 	var total int64
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
+	err := filepath.WalkDir(dir, t.walk(dir, &total))
+	if err != nil {
+		return nil, fmt.Errorf("read skill tree %s: %w", dir, err)
+	}
+	sort.Strings(t.Odd)
+	return t, nil
+}
+
+// walk returns the WalkDir callback that fills t from dir, adding each regular file's size to total.
+func (t *Tree) walk(dir string, total *int64) fs.WalkDirFunc {
+	return func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -86,36 +96,40 @@ func ReadTree(dir string) (*Tree, error) {
 		if err != nil {
 			return err //nolint:wrapcheck // contextual below
 		}
-		switch {
-		case hasControlRune(slash):
-			// A name with terminal escapes is never a skill file: refuse it like any other odd entry.
-			t.Odd = append(t.Odd, slash+oddControlSuffix)
-			if d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		case d.IsDir():
-			return nil
-		case !info.Mode().IsRegular() || hardLinked(info):
-			t.Odd = append(t.Odd, slash)
-			return nil
-		case info.Size() > maxTreeFileBytes || len(t.Files) >= maxTreeFiles || total+info.Size() > maxTreeBytes:
-			t.Odd = append(t.Odd, slash+oddLargeSuffix)
-			return nil
+		if done, cerr := t.classify(slash, d, info, *total); done {
+			return cerr
 		}
 		data, err := os.ReadFile(path) //nolint:gosec // Lstat-checked regular file below the skill directory
 		if err != nil {
 			return err //nolint:wrapcheck // contextual below
 		}
-		total += int64(len(data))
+		*total += int64(len(data))
 		t.Files[slash] = Entry{Data: data, Exec: info.Mode().Perm()&0o100 != 0}
 		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("read skill tree %s: %w", dir, err)
 	}
-	sort.Strings(t.Odd)
-	return t, nil
+}
+
+// classify records an entry that is not a readable skill file (an odd one) or skips a directory. done is false for
+// a regular file within the bounds, which the caller reads; err is the WalkDir result when done.
+func (t *Tree) classify(slash string, d fs.DirEntry, info fs.FileInfo, total int64) (done bool, err error) {
+	switch {
+	case hasControlRune(slash):
+		// A name with terminal escapes is never a skill file: refuse it like any other odd entry.
+		t.Odd = append(t.Odd, slash+oddControlSuffix)
+		if d.IsDir() {
+			return true, filepath.SkipDir
+		}
+		return true, nil
+	case d.IsDir():
+		return true, nil
+	case !info.Mode().IsRegular() || hardLinked(info):
+		t.Odd = append(t.Odd, slash)
+		return true, nil
+	case info.Size() > maxTreeFileBytes || len(t.Files) >= maxTreeFiles || total+info.Size() > maxTreeBytes:
+		t.Odd = append(t.Odd, slash+oddLargeSuffix)
+		return true, nil
+	}
+	return false, nil
 }
 
 // hasControlRune reports a control or format character (terminal escapes, bidi overrides) in s.
@@ -137,16 +151,16 @@ func WriteTree(dir string, tree *Tree) error {
 	return nil
 }
 
-func writeEntry(path string, e Entry) error {
-	if err := safefs.WriteFileAtomic(path, e.Data); err != nil {
+func writeEntry(file string, e Entry) error {
+	if err := safefs.WriteFileAtomic(file, e.Data); err != nil {
 		return err //nolint:wrapcheck // safefs errors name the path
 	}
 	mode := os.FileMode(0o644)
 	if e.Exec {
 		mode = 0o755
 	}
-	if err := os.Chmod(path, mode); err != nil {
-		return fmt.Errorf("chmod %s: %w", path, err)
+	if err := os.Chmod(file, mode); err != nil {
+		return fmt.Errorf("chmod %s: %w", file, err)
 	}
 	return nil
 }

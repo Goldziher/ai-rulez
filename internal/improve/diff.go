@@ -112,17 +112,7 @@ func hunks(a, b []string) string {
 			break
 		}
 		start := max(i-contextLines, 0)
-		end := i
-		lastChange := i
-		for end < len(ops) {
-			if ops[end].kind != ' ' {
-				lastChange = end
-			} else if end-lastChange > 2*contextLines {
-				break
-			}
-			end++
-		}
-		stop := min(lastChange+contextLines+1, len(ops))
+		stop := hunkEnd(ops, i)
 		oldStart, newStart := 1, 1
 		for _, o := range ops[:start] {
 			if o.kind != '+' {
@@ -132,31 +122,52 @@ func hunks(a, b []string) string {
 				newStart++
 			}
 		}
-		oldN, newN := 0, 0
-		var body strings.Builder
-		for _, o := range ops[start:stop] {
-			if o.kind != '+' {
-				oldN++
-			}
-			if o.kind != '-' {
-				newN++
-			}
-			body.WriteByte(o.kind)
-			body.WriteString(o.text)
-			if !strings.HasSuffix(o.text, "\n") {
-				body.WriteString("\n\\ No newline at end of file\n")
-			}
-		}
+		oldN, newN, body := hunkBody(ops[start:stop])
 		if oldN == 0 {
 			oldStart--
 		}
 		if newN == 0 {
 			newStart--
 		}
-		fmt.Fprintf(&out, "@@ -%s +%s @@\n%s", rng(oldStart, oldN), rng(newStart, newN), body.String())
+		fmt.Fprintf(&out, "@@ -%s +%s @@\n%s", rng(oldStart, oldN), rng(newStart, newN), body)
 		i = stop
 	}
 	return out.String()
+}
+
+// hunkEnd returns the exclusive end of the hunk whose first change is at ops[first]: the last change of the
+// run of changes closer together than twice the context, plus the trailing context.
+func hunkEnd(ops []op, first int) int {
+	end := first
+	lastChange := first
+	for end < len(ops) {
+		if ops[end].kind != ' ' {
+			lastChange = end
+		} else if end-lastChange > 2*contextLines {
+			break
+		}
+		end++
+	}
+	return min(lastChange+contextLines+1, len(ops))
+}
+
+// hunkBody renders the lines of one hunk and counts the old and new lines it covers.
+func hunkBody(ops []op) (oldN, newN int, body string) {
+	var sb strings.Builder
+	for _, o := range ops {
+		if o.kind != '+' {
+			oldN++
+		}
+		if o.kind != '-' {
+			newN++
+		}
+		sb.WriteByte(o.kind)
+		sb.WriteString(o.text)
+		if !strings.HasSuffix(o.text, "\n") {
+			sb.WriteString("\n\\ No newline at end of file\n")
+		}
+	}
+	return oldN, newN, sb.String()
 }
 
 func rng(start, n int) string {
