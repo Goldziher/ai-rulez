@@ -91,7 +91,7 @@ func (g gitFetcher) Fetch(ctx context.Context, rm Remote) (*Fetched, error) {
 	if rm.Commit != "" {
 		ref = rm.Commit // the input's own lock says exactly what it had fetched
 	}
-	spec := skillsource.Spec{Name: "convert-" + shortHash(rm.URL+"\x00"+rm.Path), URL: rm.URL, Ref: ref, Path: rm.Path}
+	spec := skillsource.Spec{Name: "convert-" + shortHash(rm.URL+"\x00"+rm.Path), URL: rm.URL, Ref: ref, Path: rm.Path, AllowOutside: true} // the user named the source on the command line
 	res, err := skillsource.Resolve(ctx, spec, skillsource.Options{CacheDir: g.cacheDir})
 	if err != nil {
 		return nil, oops.Wrapf(err, "resolve %s", rm.describe())

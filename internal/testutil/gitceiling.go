@@ -13,6 +13,10 @@ import (
 // to enclose the machine's temporary directory, such as a checkout whose
 // TMPDIR is inside it. Call it from TestMain.
 func CeilGit() {
+	// The tests serve include and skill-source repositories from temporary
+	// directories through file:// URLs, which the project config otherwise keeps
+	// inside the project.
+	_ = os.Setenv("AI_RULEZ_ALLOW_FILE_URLS", "1") //nolint:errcheck // best effort
 	tmp := os.TempDir()
 	ceilings := []string{tmp}
 	if resolved, err := filepath.EvalSymlinks(tmp); err == nil && resolved != tmp {

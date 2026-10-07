@@ -12,6 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/samber/oops"
 )
 
@@ -91,7 +92,8 @@ func ParseArg(arg string) (Spec, error) {
 		}
 	}
 	spec.URL = url
-	spec.AllowOutside = !includes.IsGitURL(gitURL(url)) // a path typed on the command line is the user's own choice
+	_, isFile := lockfile.FileURLPath(url)
+	spec.AllowOutside = !includes.IsGitURL(gitURL(url)) || isFile // a path or file:// URL typed on the command line is the user's own choice
 	if err := checkRemote(url, spec.Ref); err != nil {
 		return Spec{}, err
 	}
