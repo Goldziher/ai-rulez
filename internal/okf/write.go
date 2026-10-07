@@ -3,13 +3,14 @@ package okf
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/samber/oops"
 )
 
 // File is one file of a bundle to write.
@@ -31,11 +32,11 @@ func (f File) mode() fs.FileMode {
 // ValidatePath rejects a path that could escape the bundle directory.
 func ValidatePath(p string) error {
 	if p == "" || path.IsAbs(p) || strings.Contains(p, "\\") || strings.ContainsRune(p, 0) {
-		return fmt.Errorf("unsafe bundle path %q", p)
+		return oops.Errorf("unsafe bundle path %q", p)
 	}
 	for _, seg := range strings.Split(p, "/") {
 		if seg == "" || seg == "." || seg == ".." {
-			return fmt.Errorf("unsafe bundle path %q", p)
+			return oops.Errorf("unsafe bundle path %q", p)
 		}
 	}
 	return nil
@@ -66,7 +67,7 @@ func Compare(dir string, files []File) (Drift, error) {
 		case errors.Is(err, fs.ErrNotExist):
 			d.Missing = append(d.Missing, f.Path)
 		case err != nil:
-			return d, fmt.Errorf("read %s: %w", f.Path, err)
+			return d, oops.Wrapf(err, "read %s", f.Path)
 		case !bytes.Equal(got, f.Data):
 			d.Changed = append(d.Changed, f.Path)
 		}
@@ -94,7 +95,7 @@ func Compare(dir string, files []File) (Drift, error) {
 		return nil
 	})
 	if err != nil {
-		return d, fmt.Errorf("scan %s: %w", dir, err)
+		return d, oops.Wrapf(err, "scan %s", dir)
 	}
 	sort.Strings(d.Missing)
 	sort.Strings(d.Changed)
@@ -124,11 +125,11 @@ func WriteFiles(dir string, files []File, prune bool) error {
 		}
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: shareable bundle directory
-		return fmt.Errorf("create %s: %w", dir, err)
+		return oops.Wrapf(err, "create %s", dir)
 	}
 	root, err := os.OpenRoot(dir)
 	if err != nil {
-		return fmt.Errorf("open %s: %w", dir, err)
+		return oops.Wrapf(err, "open %s", dir)
 	}
 	defer root.Close() //nolint:errcheck // read-only handle
 	for _, f := range files {
@@ -144,7 +145,7 @@ func WriteFiles(dir string, files []File, prune bool) error {
 
 func checkPrunable(dir string) error {
 	if entries, err := os.ReadDir(dir); err == nil && len(entries) > 0 && !LooksLikeBundle(dir) {
-		return fmt.Errorf("%s is not empty and is not an OKF bundle (no index.md with okf_version); refusing to remove files", dir)
+		return oops.Errorf("%s is not empty and is not an OKF bundle (no index.md with okf_version); refusing to remove files", dir)
 	}
 	return nil
 }
@@ -156,7 +157,7 @@ func removeExtras(root *os.Root, dir string, files []File) error {
 	}
 	for _, extra := range drift.Extra {
 		if err := root.Remove(extra); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("remove %s: %w", extra, err)
+			return oops.Wrapf(err, "remove %s", extra)
 		}
 	}
 	return pruneEmptyDirs(dir)
@@ -165,14 +166,14 @@ func removeExtras(root *os.Root, dir string, files []File) error {
 func writeOne(root *os.Root, f File) error {
 	if sub := path.Dir(f.Path); sub != "." {
 		if err := root.MkdirAll(sub, 0o755); err != nil { //nolint:gosec // G301: shareable bundle directory
-			return fmt.Errorf("create %s: %w", sub, err)
+			return oops.Wrapf(err, "create %s", sub)
 		}
 	}
 	if err := root.WriteFile(f.Path, f.Data, f.mode()); err != nil {
-		return fmt.Errorf("write %s: %w", f.Path, err)
+		return oops.Wrapf(err, "write %s", f.Path)
 	}
 	if err := root.Chmod(f.Path, f.mode()); err != nil {
-		return fmt.Errorf("chmod %s: %w", f.Path, err)
+		return oops.Wrapf(err, "chmod %s", f.Path)
 	}
 	return nil
 }
@@ -189,13 +190,13 @@ func pruneEmptyDirs(dir string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("scan %s: %w", dir, err)
+		return oops.Wrapf(err, "scan %s", dir)
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(dirs)))
 	for _, d := range dirs {
 		if entries, err := os.ReadDir(d); err == nil && len(entries) == 0 {
 			if err := os.Remove(d); err != nil {
-				return fmt.Errorf("remove %s: %w", d, err)
+				return oops.Wrapf(err, "remove %s", d)
 			}
 		}
 	}
