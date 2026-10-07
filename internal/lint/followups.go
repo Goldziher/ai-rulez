@@ -110,7 +110,7 @@ func (r *runner) checkFrontmatterKeys(it *item, fm frontmatter) {
 			hint = fmt.Sprintf("; did you mean %q?", near)
 		}
 		r.addFix(r.renameKeyFix(it, fm, k, nearestKey(k.Name, known)), CodeFrontmatterKey, it.abs, k.Line,
-			"unknown frontmatter key %q for a %s%s (list it in lint.allowed_keys if intended)", k.Name, it.kind, hint)
+			"unknown frontmatter key %q for %s %s%s (list it in lint.allowed_keys if intended)", k.Name, article(it.kind), it.kind, hint)
 	}
 }
 
@@ -588,4 +588,12 @@ func (r *runner) renameKeyFix(it *item, fm frontmatter, k fmKey, near string) *F
 		Confidence:  FixSafe,
 		Edits:       []Edit{{File: it.abs, Line: k.Line, Old: d.lines[k.Line-1], New: newLine}},
 	}
+}
+
+// article returns "an" before a vowel and "a" otherwise.
+func article(noun string) string {
+	if noun != "" && strings.ContainsRune("aeiou", rune(noun[0])) {
+		return "an"
+	}
+	return "a"
 }
