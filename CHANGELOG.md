@@ -230,6 +230,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - `clean` keeps a git-tracked `.ai-rulez/.generated-manifest.local.json` and warns, as `generate` does.
 - Log output honours `NO_COLOR`, `TERM=dumb` and non-terminal stderr.
 - A `SKILL.md` whose frontmatter has no closing `---` is malformed (warning on load, `validate` fails, the skills server refuses it).
+- **OKF export no longer loses a rule or context file named `index` or `log`**: the generated index overwrote it (and `generate` failed with two presets writing one path). Such items are written as `index_.md` / `log_.md`, like skill resources already were; the real name stays in `x-ai-rulez.id`, so the round trip is lossless.
 - **The `[okf]` table in a TOML config is honoured**: `dir`, `include` and `spec` were silently dropped by the TOML loader and writer (only YAML and JSON worked), so the bundle went to `docs/okf` regardless.
 - **OKF import scans every file it writes**: a file with an invalid UTF-8 byte was skipped by the `AR0xx` security scan and a file over 1 MiB too, so a hostile bundle could pad a payload past the scan. Invalid bytes are now dropped before scanning, and a file too large to scan is refused (`AR9B8`, error) with nothing written. Applies to `import okf`, `[[includes]] format = "okf"` and git includes.
 - **`export okf --prune` no longer touches `.git`**: only the directories emptied by removing stale files are pruned (dot-directories and unrelated empty directories are left alone), and a `.git` directory no longer counts as foreign content.
