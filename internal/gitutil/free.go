@@ -1,7 +1,7 @@
 package gitutil
 
 // Free functions: the same questions answered by git run through runner.Exec, the
-// behaviour every caller had before the runner was injectable. A caller that wants
+// behavior every caller had before the runner was injectable. A caller that wants
 // an injected runner builds a Git with New and calls the method.
 
 // ChangedSince is Git.ChangedSince on the default runner.
