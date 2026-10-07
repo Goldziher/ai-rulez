@@ -85,14 +85,14 @@ func (d disabledSet) render() (string, error) {
 	b.WriteString(disabledMarker + "\n")
 	if len(d.Hooks) > 0 {
 		b.WriteString("# Each hook runs a command on your machine; read every command first.\n")
-		doc, err := config.MarshalTOML(&config.Config{Hooks: d.Hooks})
+		doc, err := config.MarshalTOML(&config.Config{AgentsMD: true, Hooks: d.Hooks})
 		if err != nil {
 			return "", oops.Wrapf(err, "render disabled hooks")
 		}
 		b.WriteString(commentOut(afterHeader(doc)))
 	}
 	if len(d.Allow) > 0 {
-		doc, err := config.MarshalTOML(&config.Config{Permissions: &config.Permissions{Allow: d.Allow}})
+		doc, err := config.MarshalTOML(&config.Config{AgentsMD: true, Permissions: &config.Permissions{Allow: d.Allow}})
 		if err != nil {
 			return "", oops.Wrapf(err, "render disabled permission rules")
 		}
