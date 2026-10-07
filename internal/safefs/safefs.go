@@ -106,6 +106,20 @@ func checkDir(root *os.Root, rel, path string) error {
 // project root. An existing file must be regular and is checked against a fresh
 // Lstat after the open; a missing one is created with O_EXCL.
 func OpenAppend(path string) (*os.File, error) {
+	return openNoFollow(path, os.O_APPEND|os.O_WRONLY)
+}
+
+// OpenLockFile opens path for reading and writing with the checks of
+// OpenAppend, for a file that only carries an advisory lock. Windows LockFileEx
+// needs a handle with read or write access, which an append-only handle
+// (FILE_APPEND_DATA) does not have.
+func OpenLockFile(path string) (*os.File, error) {
+	return openNoFollow(path, os.O_RDWR)
+}
+
+// openNoFollow opens path with flag (an access mode, plus O_APPEND), creating
+// it when missing; see OpenAppend.
+func openNoFollow(path string, flag int) (*os.File, error) {
 	root, rel, err := openBase(path)
 	if err != nil {
 		return nil, err
@@ -118,7 +132,7 @@ func OpenAppend(path string) (*os.File, error) {
 			if !info.Mode().IsRegular() {
 				return nil, refuse(path, "it is a symlink or not a regular file")
 			}
-			file, openErr := root.OpenFile(rel, os.O_APPEND|os.O_WRONLY, 0o600)
+			file, openErr := root.OpenFile(rel, flag, 0o600)
 			if openErr != nil {
 				return nil, oops.With("path", path).Wrapf(openErr, "open file")
 			}
@@ -128,7 +142,7 @@ func OpenAppend(path string) (*os.File, error) {
 			}
 			return file, nil
 		case errors.Is(err, os.ErrNotExist):
-			file, openErr := root.OpenFile(rel, os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+			file, openErr := root.OpenFile(rel, flag|os.O_CREATE|os.O_EXCL, 0o600)
 			if openErr == nil {
 				return file, nil
 			}
