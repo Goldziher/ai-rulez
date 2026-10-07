@@ -138,16 +138,18 @@ context/<id>.md
 skills/<id>/SKILL.md            + references/, scripts/, assets/ next to it
 agents/<id>.md
 commands/<id>.md
+checks/<id>.md
 domains/<domain>/<kind>/...     same shape for domain content
 ```
 
 | ai-rulez | OKF `type` written | Notes |
 | --- | --- | --- |
-| rule | `Decision` | A rule states a decision the team made. Override with the `okf_type` frontmatter key |
+| rule | `Decision` | A rule states a decision the team made. Override by setting `type` in the item's `okf:` metadata map (for example `okf:` with `type: Policy` nested under it); an import stores a foreign `type` there |
 | context | `Concept` | Background knowledge |
 | skill | `Playbook` | The SKILL.md body is the procedure; resources ship next to it |
 | agent | `Reference` | OKF has no agent type. `x-ai-rulez.kind: agent` restores it |
 | command | `Reference` | Same, `kind: command` |
+| check | `Reference` | Same, `kind: check` |
 | skill resource (markdown) | `Reference` | Wrapped in frontmatter so the bundle stays conformant; stripped on import. Non-markdown resources are copied verbatim |
 | metric | n/a | ai-rulez has no metric concept; an imported `Metric` becomes context |
 
@@ -186,7 +188,7 @@ no `x-ai-rulez.kind`:
 | `howto`, `playbook`, `runbook`, `procedure`, `skill` | skill |
 | `concept`, `reference`, `metric`, anything else (incl. `Attested Computation`) | context |
 
-`--into rules|context|skills` forces every concept to that kind. OKF keys with no
+`--into rules|context|skills` forces every concept to that kind. Without `--into`, a concept whose `x-ai-rulez.kind` is `agent`, `command` or `check` is imported as that kind, so a bundle can also create agents, commands and checks (the security scan runs on all of them first). OKF keys with no
 ai-rulez equivalent (`tags`, `resource`, `sources`, `status`, `stale_after`, ...) are kept
 as extra frontmatter so they survive a later export.
 
@@ -204,7 +206,7 @@ See [strict validation](strict-validation.md). AR9B0-AR9B9 are reserved for OKF.
 | AR9B5 | `okf-export-drift` | error | The configured bundle differs from what `export okf` would write now (project lint only) |
 | AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md` that is not frontmatter style, keys other than `okf_version` in a body-style root one (or other than `title`, `version`, `entries` in a frontmatter-style one), or `log.md` headings that are not ISO dates |
 | AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
-| AR9B8 | `okf-path-unsafe` | error | A symlink, a path escaping the bundle, or two paths differing only in case. `import okf` skips symlinks (warning) and refuses the other two |
+| AR9B8 | `okf-path-unsafe` | error | A symlink, a path escaping the bundle, a markdown file over the size limit that was skipped, or two paths differing only in case. `import okf` skips symlinks (warning) and refuses the other two |
 | AR9B9 | `okf-lossy-mapping` | info | Reported by `import okf`: a concept carries `x-ai-rulez` data this version cannot map (unknown `kind`, unsafe `id` or resource path) and is imported by its `type` instead, or a link in a concept points at a file that was not imported (left as written) |
 
 ## Format details

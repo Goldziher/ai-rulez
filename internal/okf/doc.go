@@ -65,7 +65,7 @@ func Rules() []Rule {
 		{CodeExportDrift, "okf-export-drift", SeverityError, "the OKF bundle on disk differs from what export okf would write now"},
 		{CodeReservedStructure, "okf-reserved-structure", SeverityError, "an OKF index.md has frontmatter its style does not allow (frontmatter in a nested one outside the frontmatter style, keys other than okf_version in a body-style root, other than title, version and entries in a frontmatter-style one), or a log.md heading is not an ISO date"},
 		{CodeTitleDuplicate, "okf-title-duplicate", SeverityInfo, "two OKF concepts in one directory share a title"},
-		{CodePathUnsafe, "okf-path-unsafe", SeverityError, "an OKF bundle contains a symlink, a path escaping the bundle, or paths differing only in case"},
+		{CodePathUnsafe, "okf-path-unsafe", SeverityError, "an OKF bundle contains a symlink, a path escaping the bundle, a markdown file over the size limit (skipped), or paths differing only in case"},
 		{CodeLossyMapping, "okf-lossy-mapping", SeverityInfo, "import okf met a concept whose x-ai-rulez data cannot be mapped (it imports by its type) or a link to a file that was not imported (left as written)"},
 	}
 }
