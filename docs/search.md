@@ -195,8 +195,9 @@ The index is two files in `index_dir`:
   no timestamps), so a committed index diffs cleanly and rebuilding from unchanged inputs rewrites nothing.
 - `vectors.bin`: little-endian, row-major, L2-normalised `float32` (or `float16`: 25 skills of 3072 dimensions are
   300 KiB, or 150 KiB in half precision). Loading checks the length against the manifest, the SHA-256, and rejects
-  NaN and infinities; a file that does not validate is "no index", never a crash. Search is a brute-force dot
-  product, fine to tens of thousands of skills.
+  NaN, infinities and rows that are not unit length (a scaled-up row in a committed index would otherwise win every
+  query); a file that does not validate is "no index", never a crash. Search is a brute-force dot product, clamped to
+  [-1, 1], fine to tens of thousands of skills.
 
 The default `local/search` is machine-local and gitignored. Set `index_dir` to a directory outside `local/` (for
 example `search-index`) to commit the index so CI can run a hybrid evaluation without a key; `validate` then

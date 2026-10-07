@@ -140,6 +140,25 @@ func finite(v []float32) error {
 	return nil
 }
 
+// unitLength refuses a stored row that is not unit length (or zero, which never
+// ranks above anything): ranking takes a plain dot product, so a row scaled up in
+// a committed index would win every query and clear vector_min_sim. The
+// tolerance covers float16 rounding (width 2 bytes) and float32 rounding.
+func unitLength(v []float32, width int) error {
+	var sum float64
+	for _, x := range v {
+		sum += float64(x) * float64(x)
+	}
+	tol := 1e-3
+	if width == 2 {
+		tol = 1e-2
+	}
+	if norm := math.Sqrt(sum); sum != 0 && math.Abs(norm-1) > tol {
+		return fmt.Errorf("is not unit length (norm %.4g); the index was not written by ai-rulez search index", norm)
+	}
+	return nil
+}
+
 // normalize scales v to unit length. A vector that already is one (within float32
 // rounding) is left alone, so reusing a stored vector never moves its bits.
 func normalize(v []float32) {
@@ -343,6 +362,9 @@ func LoadIndex(dir string) (*Index, error) {
 		if err := finite(v); err != nil {
 			return nil, fmt.Errorf("%w: row %d %v", ErrNoIndex, i, err)
 		}
+		if err := unitLength(v, width); err != nil {
+			return nil, fmt.Errorf("%w: row %d %v", ErrNoIndex, i, err)
+		}
 		x.vecs[i] = v
 		x.byKey[itemKey(m.Items[i].Kind, m.Items[i].Domain, m.Items[i].ID)] = i
 	}
@@ -393,11 +415,13 @@ func (x *Index) TopK(q []float32, k int, allow func(row int) bool) []VecHit {
 		if allow != nil && !allow(r) {
 			continue
 		}
-		var dot float32
+		var dot float64
 		for i, c := range v {
-			dot += c * q[i]
+			dot += float64(c) * float64(q[i])
 		}
-		hits = append(hits, VecHit{Row: r, Sim: float64(dot)})
+		// Both sides are unit length, so this is a cosine; clamping keeps a rounding
+		// excess or an unnormalized query from ever reading as more than identical.
+		hits = append(hits, VecHit{Row: r, Sim: max(-1, min(1, dot))})
 	}
 	sort.SliceStable(hits, func(i, j int) bool { return hits[i].Sim > hits[j].Sim })
 	if len(hits) > k {
