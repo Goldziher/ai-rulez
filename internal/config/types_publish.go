@@ -12,13 +12,14 @@ import (
 
 // Publish emitter names of [[publish.emitters]] and npm access values (docs/publish.md).
 const (
-	PublishEmitterTemplate  = "template"
-	PublishEmitterCursor    = "cursor-team-marketplace"
-	PublishEmitterPort      = "port"
-	PublishEmitterAWS       = "aws-agent-registry"
-	PublishEmitterKiro      = "kiro-steering"
-	PublishAccessRestricted = "restricted"
-	PublishAccessPublic     = "public"
+	PublishEmitterTemplate     = "template"
+	PublishEmitterCursor       = "cursor-team-marketplace"
+	PublishEmitterPort         = "port"
+	PublishEmitterAWS          = "aws-agent-registry"
+	PublishEmitterKiro         = "kiro-steering"
+	PublishEmitterAgentPlugins = "agent-plugins"
+	PublishAccessRestricted    = "restricted"
+	PublishAccessPublic        = "public"
 )
 
 var (
@@ -98,7 +99,7 @@ type PublishEmitter struct {
 }
 
 // PublishEmitterNames lists every emitter a [[publish.emitters]] entry may name.
-var PublishEmitterNames = []string{PublishEmitterTemplate, PublishEmitterCursor, PublishEmitterPort, PublishEmitterAWS, PublishEmitterKiro}
+var PublishEmitterNames = []string{PublishEmitterTemplate, PublishEmitterCursor, PublishEmitterPort, PublishEmitterAWS, PublishEmitterKiro, PublishEmitterAgentPlugins}
 
 // ValidChannel reports whether name is a usable marketplace channel name.
 func ValidChannel(name string) bool { return publishChannelPattern.MatchString(name) }
