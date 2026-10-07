@@ -1,8 +1,6 @@
 package settings
 
 import (
-	"strings"
-
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 )
 
@@ -154,5 +152,3 @@ func grokRules(e permEntry) ([]string, string) {
 	}
 	return nil, "the harness has no equivalent of " + r.Tool + " rules"
 }
-
-func hasGlob(s string) bool { return strings.ContainsAny(s, "*?[") }

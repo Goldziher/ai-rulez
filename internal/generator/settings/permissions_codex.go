@@ -46,7 +46,11 @@ func CodexRules(cfg *config.Config) (body string, ok bool) {
 			t.drop(e, why)
 			continue
 		}
-		pattern, _ := json.Marshal(tokens)
+		pattern, err := json.Marshal(tokens)
+		if err != nil {
+			t.drop(e, "its tokens cannot be encoded")
+			continue
+		}
 		b.WriteString("\nprefix_rule(\n    pattern = " + string(pattern) + ",\n    decision = \"" + codexDecisions[e.Action] + "\",\n)\n")
 		n++
 	}
