@@ -152,36 +152,7 @@ func (r *runner) stageFiles(want map[string]bool, layout string) []stagedFile {
 		if it.isDoc || (it.owned && !want[itemInputs[it.kind]]) || (!it.owned && !want[inputImports]) {
 			continue
 		}
-		dir, rel := r.layoutPath(it, layout)
-		if rel == "" {
-			continue
-		}
-		file := stagedFile{rel: claim(rel), data: []byte(it.cf.Content), source: it.abs}
-		if it.owned {
-			// The loaded content has its frontmatter removed; the scanner must see the file
-			// as it is on disk, so reported line numbers match the real file.
-			if data, ok := r.readStageSource(it.abs); ok {
-				file.data = data
-			}
-		} else {
-			file.source = cfgFile
-		}
-		out = append(out, file)
-		if dir == "" {
-			continue
-		}
-		out[len(out)-1].skillOf = path.Dir(file.rel)
-		for _, res := range it.cf.Resources {
-			rr := path.Clean(strings.ReplaceAll(res.RelPath, `\`, "/"))
-			if rr == "." || path.IsAbs(rr) || rr == ".." || strings.HasPrefix(rr, "../") {
-				continue
-			}
-			src := cfgFile
-			if it.owned {
-				src = filepath.Join(it.itemDir, filepath.FromSlash(rr))
-			}
-			out = append(out, stagedFile{rel: claim(path.Join(path.Dir(file.rel), rr)), data: res.Content, source: src, skillOf: path.Dir(file.rel)})
-		}
+		out = append(out, r.stageItem(it, layout, cfgFile, claim)...)
 	}
 	if want[inputHooks] && len(r.cfg.Hooks) > 0 {
 		if data, err := json.MarshalIndent(r.cfg.Hooks, "", "  "); err == nil {
@@ -194,6 +165,43 @@ func (r *runner) stageFiles(want map[string]bool, layout string) []stagedFile {
 		}
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].rel < out[j].rel })
+	return out
+}
+
+// stageItem lists the files one content item stages: the item itself and, for a
+// skill laid out as a directory, its supporting files. It is empty for an item
+// the layout leaves out.
+func (r *runner) stageItem(it *item, layout, cfgFile string, claim func(string) string) []stagedFile {
+	dir, rel := r.layoutPath(it, layout)
+	if rel == "" {
+		return nil
+	}
+	file := stagedFile{rel: claim(rel), data: []byte(it.cf.Content), source: it.abs}
+	if it.owned {
+		// The loaded content has its frontmatter removed; the scanner must see the file
+		// as it is on disk, so reported line numbers match the real file.
+		if data, ok := r.readStageSource(it.abs); ok {
+			file.data = data
+		}
+	} else {
+		file.source = cfgFile
+	}
+	if dir == "" {
+		return []stagedFile{file}
+	}
+	file.skillOf = path.Dir(file.rel)
+	out := []stagedFile{file}
+	for _, res := range it.cf.Resources {
+		rr := path.Clean(strings.ReplaceAll(res.RelPath, `\`, "/"))
+		if rr == "." || path.IsAbs(rr) || rr == ".." || strings.HasPrefix(rr, "../") {
+			continue
+		}
+		src := cfgFile
+		if it.owned {
+			src = filepath.Join(it.itemDir, filepath.FromSlash(rr))
+		}
+		out = append(out, stagedFile{rel: claim(path.Join(path.Dir(file.rel), rr)), data: res.Content, source: src, skillOf: path.Dir(file.rel)})
+	}
 	return out
 }
 

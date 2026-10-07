@@ -258,25 +258,8 @@ func planFixes(findings []Finding, o FixOptions, res *FixResult) fixPlan {
 
 func refuseFix(fix *Fix, o FixOptions) string {
 	for _, e := range fix.Edits {
-		if o.EditRoot != "" && !fix.Outside && !underDir(gitutil.Resolve(e.File), o.EditRoot) {
-			return "the file is not an authored source under " + filepath.ToSlash(o.EditRoot)
-		}
-		if fix.Outside {
-			if o.ProjectRoot == "" && o.EditRoot != "" {
-				// An outside fix skips the EditRoot bound; without a project root it
-				// would be bound by nothing.
-				return "the project root is unknown, so a file outside the authored sources is not edited"
-			}
-			if o.ProjectRoot != "" {
-				if reason := outsideFixRefusal(e.File, o.ProjectRoot); reason != "" {
-					return reason
-				}
-			}
-		}
-		if o.Refuse != nil {
-			if r := o.Refuse(e.File); r != "" {
-				return r
-			}
+		if reason := refuseEdit(e.File, fix.Outside, o); reason != "" {
+			return reason
 		}
 	}
 	for _, c := range fix.Chmods {
@@ -289,6 +272,31 @@ func refuseFix(fix *Fix, o FixOptions) string {
 				return r
 			}
 		}
+	}
+	return ""
+}
+
+// refuseEdit says why one text edit of file may not be applied: it is outside
+// the authored sources (unless the fix is an outside fix, which the project
+// root bounds instead), or the caller refuses the file.
+func refuseEdit(file string, outside bool, o FixOptions) string {
+	if o.EditRoot != "" && !outside && !underDir(gitutil.Resolve(file), o.EditRoot) {
+		return "the file is not an authored source under " + filepath.ToSlash(o.EditRoot)
+	}
+	if outside {
+		if o.ProjectRoot == "" && o.EditRoot != "" {
+			// An outside fix skips the EditRoot bound; without a project root it
+			// would be bound by nothing.
+			return "the project root is unknown, so a file outside the authored sources is not edited"
+		}
+		if o.ProjectRoot != "" {
+			if reason := outsideFixRefusal(file, o.ProjectRoot); reason != "" {
+				return reason
+			}
+		}
+	}
+	if o.Refuse != nil {
+		return o.Refuse(file)
 	}
 	return ""
 }
@@ -419,20 +427,7 @@ func editRows(text string, edits []Edit) (rows []diffRow, applied int, err error
 	if strings.Contains(text, "\r\n") {
 		eol = "\r"
 	}
-	lastOriginal := 0
-	for i, old := range oldLines {
-		lastOriginal = len(rows)
-		if i > 0 && i == len(oldLines)-1 && old == "" && len(after[i]) == 0 {
-			// The empty element after the final newline is not a line of the file:
-			// it is written back but takes no part in the diff.
-			rows = append(rows, diffRow{new: newAt[i], eolRow: true})
-			continue
-		}
-		rows = append(rows, diffRow{old: old, new: newAt[i], hasOld: true, hasNew: true})
-		for _, l := range after[i] {
-			rows = append(rows, diffRow{new: l + eol, hasNew: true})
-		}
-	}
+	rows, lastOriginal := layoutRows(oldLines, newAt, after, eol)
 	if wantEOL && rows[len(rows)-1].new != "" {
 		rows[lastOriginal].noNL = true // the file ends without a newline and gets one
 		rows = append(rows, diffRow{eolRow: true})
@@ -446,6 +441,26 @@ func editRows(text string, edits []Edit) (rows []diffRow, applied int, err error
 		}
 	}
 	return rows, applied, nil
+}
+
+// layoutRows pairs every original line with its replacement and the lines
+// inserted after it (given eol), and returns the index of the row of the last
+// original line.
+func layoutRows(oldLines, newAt []string, after [][]string, eol string) (rows []diffRow, lastOriginal int) {
+	for i, old := range oldLines {
+		lastOriginal = len(rows)
+		if i > 0 && i == len(oldLines)-1 && old == "" && len(after[i]) == 0 {
+			// The empty element after the final newline is not a line of the file:
+			// it is written back but takes no part in the diff.
+			rows = append(rows, diffRow{new: newAt[i], eolRow: true})
+			continue
+		}
+		rows = append(rows, diffRow{old: old, new: newAt[i], hasOld: true, hasNew: true})
+		for _, l := range after[i] {
+			rows = append(rows, diffRow{new: l + eol, hasNew: true})
+		}
+	}
+	return rows, lastOriginal
 }
 
 // applyEdit applies one edit to newAt (the replaced lines) and after (inserted

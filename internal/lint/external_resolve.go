@@ -110,16 +110,7 @@ func resolveScanners(lc *config.LintConfig, hasPlugin bool) []resolvedScanner {
 		return nil
 	}
 	var out []resolvedScanner
-	taken := map[string]bool{}
-	for i := range lc.External {
-		ex := lc.External[i]
-		if ex.Name != "" {
-			taken[ex.Name] = true
-		}
-		if ex.Profile != "" {
-			taken[ex.Profile] = true
-		}
-	}
+	taken := takenScannerNames(lc.External)
 	pol := policyOf(lc)
 	if preset, ok := scanners.LookupPreset(pol.preset); ok {
 		for _, member := range preset.Profiles {
@@ -152,6 +143,21 @@ func resolveScanners(lc *config.LintConfig, hasPlugin bool) []resolvedScanner {
 		}
 	}
 	return out
+}
+
+// takenScannerNames is the set of names and profiles the [[lint.external]]
+// entries use; a preset member with one of them is replaced by the entry.
+func takenScannerNames(entries []config.LintExternal) map[string]bool {
+	taken := map[string]bool{}
+	for i := range entries {
+		if entries[i].Name != "" {
+			taken[entries[i].Name] = true
+		}
+		if entries[i].Profile != "" {
+			taken[entries[i].Profile] = true
+		}
+	}
+	return taken
 }
 
 // fromProfile fills ex from its profile: command, format, inputs and egress
@@ -187,14 +193,7 @@ func fromProfile(ex config.LintExternal) resolvedScanner {
 		rs.Problems = append(rs.Problems, fmt.Sprintf("egress = false contradicts profile %q, which sends content off the machine", p.Name))
 	}
 	if len(p.SeverityMap) > 0 {
-		merged := map[string]string{}
-		for k, v := range p.SeverityMap {
-			merged[k] = v
-		}
-		for k, v := range ex.SeverityMap {
-			merged[k] = v
-		}
-		rs.SeverityMap = merged
+		rs.SeverityMap = mergeSeverityMaps(p.SeverityMap, ex.SeverityMap)
 	}
 	rs.Layout, rs.EgressFlags, rs.DataSent, rs.RequiresEnv = p.Layout, p.EgressFlags, p.DataSent, p.RequiresEnv
 	if rs.Egress != nil && *rs.Egress {
@@ -206,6 +205,18 @@ func fromProfile(ex config.LintExternal) resolvedScanner {
 		}
 	}
 	return rs
+}
+
+// mergeSeverityMaps returns the profile's map overlaid with the entry's.
+func mergeSeverityMaps(profile, entry map[string]string) map[string]string {
+	merged := map[string]string{}
+	for k, v := range profile {
+		merged[k] = v
+	}
+	for k, v := range entry {
+		merged[k] = v
+	}
+	return merged
 }
 
 // allProblems lists every configuration problem of the entry (AR9E0).

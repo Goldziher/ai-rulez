@@ -175,6 +175,40 @@ func (i snykIssue) finding(file string) externalFinding {
 // Severities critical, high, medium, low and info are kept (anything else counts
 // as medium). A document with none of these shapes, or an empty one from a
 // scanner that exited non-zero, is an error.
+// addSnykObject adds the issues of a snyk-json object: a top-level "issues"
+// list, or one {"issues": [...]} entry per file.
+func addSnykObject(top map[string]json.RawMessage, add func(file string, issues []snykIssue) error) error {
+	if raw, ok := top["issues"]; ok {
+		var list []snykIssue
+		if err := json.Unmarshal(raw, &list); err != nil {
+			return oops.Wrapf(err, "invalid snyk-json issues")
+		}
+		return add("", list)
+	}
+	files := make([]string, 0, len(top))
+	for k := range top {
+		files = append(files, k)
+	}
+	sort.Strings(files)
+	recognized := false
+	for _, file := range files {
+		var entry struct {
+			Issues *[]snykIssue `json:"issues"`
+		}
+		if json.Unmarshal(top[file], &entry) != nil || entry.Issues == nil {
+			continue
+		}
+		recognized = true
+		if err := add(file, *entry.Issues); err != nil {
+			return err
+		}
+	}
+	if !recognized {
+		return oops.Errorf("not a snyk-json report (no issues list)")
+	}
+	return nil
+}
+
 func parseSnyk(out []byte, exitCode int) ([]externalFinding, error) {
 	var list []snykIssue
 	var top map[string]json.RawMessage
@@ -195,35 +229,8 @@ func parseSnyk(out []byte, exitCode int) ([]externalFinding, error) {
 			return nil, err
 		}
 	case json.Unmarshal(out, &top) == nil:
-		if raw, ok := top["issues"]; ok {
-			if err := json.Unmarshal(raw, &list); err != nil {
-				return nil, oops.Wrapf(err, "invalid snyk-json issues")
-			}
-			if err := add("", list); err != nil {
-				return nil, err
-			}
-			break
-		}
-		files := make([]string, 0, len(top))
-		for k := range top {
-			files = append(files, k)
-		}
-		sort.Strings(files)
-		recognized := false
-		for _, file := range files {
-			var entry struct {
-				Issues *[]snykIssue `json:"issues"`
-			}
-			if json.Unmarshal(top[file], &entry) != nil || entry.Issues == nil {
-				continue
-			}
-			recognized = true
-			if err := add(file, *entry.Issues); err != nil {
-				return nil, err
-			}
-		}
-		if !recognized {
-			return nil, oops.Errorf("not a snyk-json report (no issues list)")
+		if err := addSnykObject(top, add); err != nil {
+			return nil, err
 		}
 	default:
 		return nil, oops.Errorf("invalid snyk-json: expected an object or a list")
