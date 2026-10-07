@@ -18,7 +18,7 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 	ctx = policyContext(ctx, cfg)
 
 	var skills []config.ContentFile
-	var violations []error
+	var violations, failures []error
 
 	lock, err := loadLockFor(cfg)
 	if err != nil {
@@ -35,11 +35,20 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 			func() (config.ContentFile, error) {
 				return resolveInstalledSkill(config.WithOfflineIncludes(ctx), cfg, lock, skillConf, accessToken)
 			})
+		if errors.Is(err, errSkillSkipped) {
+			continue
+		}
 		if err != nil {
-			if errors.Is(err, config.ErrLockViolation) || strictLock(cfg) {
+			switch {
+			case errors.Is(err, config.ErrLockViolation) || strictLock(cfg):
 				violations = append(violations, oops.Wrapf(errors.Join(config.ErrLockViolation, err), "installed skill %q", skillConf.Name))
+			case !tolerated(ctx) && cfg.LockPolicy.Mode != LockRefresh:
+				// Like an include: going on without the skill would drop its
+				// outputs as stale and let `generate --check` pass.
+				failures = append(failures, oops.Wrapf(errors.Join(config.ErrSkillUnresolved, err), "installed skill %q", skillConf.Name))
+			default:
+				cfg.Warn("Failed to resolve installed skill", "name", skillConf.Name, "error", err)
 			}
-			cfg.Warn("Failed to resolve installed skill", "name", skillConf.Name, "error", err)
 			continue
 		}
 
@@ -50,8 +59,15 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 	if len(violations) > 0 {
 		return nil, errors.Join(violations...)
 	}
+	if len(failures) > 0 {
+		return nil, errors.Join(failures...)
+	}
 	return skills, nil
 }
+
+// errSkillSkipped is a skill whose machine-local override points at nothing:
+// skipped with a notice, as an include in the same state is.
+var errSkillSkipped = errors.New("installed skill skipped")
 
 // resolveInstalledSkill resolves a single installed skill
 func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfile.File, skillConf *config.InstalledSkillConfig, accessToken string) (config.ContentFile, error) {
@@ -67,7 +83,7 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 			return ScanInstalledSkillDir(logger.WithContext(ctx, cfg.Host.Log), localDir, skillConf.Name)
 		}
 		cfg.Log().Info("Skipping installed skill (local_override path not found)", "name", skillConf.Name, "local_override", skillConf.LocalOverride)
-		return config.ContentFile{}, oops.Errorf("local override path not found for skill '%s'", skillConf.Name)
+		return config.ContentFile{}, errSkillSkipped
 	}
 
 	sourceType := DetectSourceType(skillConf.Source)
