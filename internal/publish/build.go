@@ -252,6 +252,9 @@ func Build(in Input) (*Dist, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := checkAgentPlugins(in.Files); err != nil {
+		return nil, err
+	}
 	archive, err := BuildArchive(in.Files, in.Mtime)
 	if err != nil {
 		return nil, err
