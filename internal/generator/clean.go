@@ -161,7 +161,7 @@ func (g *Generator) removableLocalManifest() string {
 	if !pathIsFile(mp) {
 		return ""
 	}
-	if g.git().IsTracked(mp) {
+	if g.git().IsTrackedContext(g.ctx, mp) {
 		g.warnOnce("Not removing "+g.localManifestRel()+": git tracks it, and it must stay machine-local",
 			"fix", "git rm --cached "+g.localManifestRel())
 		return ""

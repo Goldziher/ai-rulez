@@ -51,7 +51,7 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 		}
 		return shared.PluginVersionDrift(profile)
 	}
-	top := g.git().TopLevel(g.config.BaseDir)
+	top := g.git().TopLevelContext(g.ctx, g.config.BaseDir)
 	if top == "" {
 		return nil, nil
 	}
@@ -72,7 +72,7 @@ func (g *Generator) PluginVersionDrift(profile string) ([]lint.PluginDrift, erro
 	if len(wanted) == 0 {
 		return nil, nil
 	}
-	snap, err := workspace.GitSnapshot(g.context(), top, driftRef, g.host().Runner, wanted...)
+	snap, err := workspace.GitSnapshot(g.ctx, top, driftRef, g.host().Runner, wanted...)
 	if err != nil {
 		return nil, nil //nolint:nilerr // no baseline is not an error
 	}
@@ -208,7 +208,7 @@ func firstNonEmptyString(values ...string) string {
 // config.local.* overlay and the local/ tree, the view `generate --plugin` renders.
 func (g *Generator) sharedPluginView() (*Generator, error) {
 	cfgPath := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
-	cfg, err := config.LoadConfigFromFile(g.context(), cfgPath,
+	cfg, err := config.LoadConfigFromFile(g.ctx, cfgPath,
 		g.config.ReloadOptions(config.WithoutLocal(), config.WithHost(g.host()))...)
 	if err != nil {
 		return nil, oops.With("config", cfgPath).Wrapf(err, "load the shared configuration for the plugin drift check")
