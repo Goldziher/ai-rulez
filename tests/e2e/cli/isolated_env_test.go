@@ -20,7 +20,7 @@ import (
 // private HOME and XDG tree, a PATH of system directories plus fakes, a fixed
 // git identity, and no credential or CI variable from the developer's shell.
 // Every command test in this package that needs network-free, user-state-free
-// behaviour goes through it.
+// behavior goes through it.
 type isoEnv struct {
 	t     *testing.T
 	home  string

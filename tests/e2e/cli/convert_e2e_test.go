@@ -24,15 +24,6 @@ func claudeProject(t *testing.T) string {
 	return root
 }
 
-type convertReport struct {
-	Findings []struct {
-		Status string `json:"status"`
-	} `json:"findings"`
-	Security struct {
-		Blocked bool `json:"blocked"`
-	} `json:"security"`
-}
-
 func TestConvertE2E(t *testing.T) {
 	tests := []struct {
 		name      string
