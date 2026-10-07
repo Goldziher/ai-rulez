@@ -25,6 +25,10 @@ ai-rulez lock && ai-rulez eval run deploy && ai-rulez validate --strict
 ai-rulez improve pr <run-id>
 ```
 
+The optimizer runs in the run's throwaway workspace, so relative paths in `--with` are made absolute from the
+directory you run improve in: the program when it contains a path separator (`./optimize.sh`), and any later
+argument that names an existing file there (`optimize.py`).
+
 Commands: `run`, `apply`, `show`, `clean`, `pr`, `adapters`. Exit status of `run`: 0 candidate accepted, 2 no acceptable
 candidate (report written), 1 refused or could not run.
 
