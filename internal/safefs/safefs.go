@@ -216,11 +216,11 @@ func ReadRegular(path string) ([]byte, error) {
 // ReadRegularKeepMode is ReadRegular for a project file whose mode is not
 // ai-rulez's to change: it never tightens the mode and returns the permission
 // bits it found, so a rewrite can restore them (WriteFileAtomicMode).
-func ReadRegularKeepMode(path string) ([]byte, os.FileMode, error) {
+func ReadRegularKeepMode(path string) (data []byte, mode os.FileMode, err error) {
 	return readRegular(path, false)
 }
 
-func readRegular(path string, tighten bool) ([]byte, os.FileMode, error) {
+func readRegular(path string, tighten bool) (data []byte, mode os.FileMode, err error) {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, 0, err //nolint:wrapcheck // callers test os.ErrNotExist
@@ -239,7 +239,7 @@ func readRegular(path string, tighten bool) ([]byte, os.FileMode, error) {
 	if tighten && info.Mode().Perm()&0o077 != 0 {
 		_ = file.Chmod(0o600) //nolint:errcheck // best effort: the content is still usable
 	}
-	data, err := io.ReadAll(io.LimitReader(file, maxReadBytes+1))
+	data, err = io.ReadAll(io.LimitReader(file, maxReadBytes+1))
 	if err != nil {
 		return nil, 0, oops.With("path", path).Wrapf(err, "read file")
 	}
