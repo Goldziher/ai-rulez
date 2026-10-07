@@ -151,16 +151,19 @@ func (s *Store) Get(id string) (*SkillRecord, bool) {
 }
 
 // Put stores a record, replacing the skill's previous one and carrying its
-// last-pass mark forward unless the new run passed.
+// activation block and last-pass mark forward unless the new run passed. The new
+// record is signed on save, so only a previous record that verified (produced
+// here or signed by this user's key) passes anything on: a forged record's
+// activation or last pass must not come out of a run MAC-signed.
 func (s *Store) Put(record SkillRecord) {
 	record.verified = true
 	if old, ok := s.Get(record.ID); ok {
-		if record.Activation == nil {
+		if record.Activation == nil && old.verified {
 			record.Activation = old.Activation
 		}
 		if record.Passing {
 			record.LastPass = &PassMark{Digest: record.Digest, Date: record.Date}
-		} else if record.LastPass == nil {
+		} else if record.LastPass == nil && old.verified {
 			record.LastPass = old.LastPass
 		}
 		*old = record
