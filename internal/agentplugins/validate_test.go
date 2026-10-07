@@ -8,6 +8,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -354,9 +355,7 @@ func TestValidateOnRealSymlinks(t *testing.T) {
 		"skills/summarize/references/ok.md":  "checklist.md",
 	}
 	for name, target := range links {
-		if err := os.Symlink(target, filepath.Join(plugin, filepath.FromSlash(name))); err != nil {
-			t.Skipf("cannot create symlinks here: %v", err)
-		}
+		testutil.SymlinkOrSkip(t, target, filepath.Join(plugin, filepath.FromSlash(name)))
 	}
 
 	// Act
