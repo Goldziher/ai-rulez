@@ -6,6 +6,8 @@ import (
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/samber/oops"
 )
 
 // Limits that keep a hostile bundle from exhausting memory.
@@ -112,7 +114,7 @@ func (b *Bundle) ReadFile(name string) ([]byte, error) {
 		return nil, err
 	}
 	if info.Size() > maxFileSize {
-		return nil, fmt.Errorf("%s is larger than %d bytes", name, maxFileSize)
+		return nil, oops.Errorf("%s is larger than %d bytes", name, maxFileSize)
 	}
 	return fs.ReadFile(b.fsys, name)
 }
@@ -150,7 +152,7 @@ func Load(root fs.FS) (*Bundle, error) {
 		}
 		count++
 		if count > maxFiles {
-			return fmt.Errorf("bundle has more than %d files", maxFiles)
+			return oops.Errorf("bundle has more than %d files", maxFiles)
 		}
 		if d.Type()&fs.ModeSymlink != 0 {
 			b.Problems = append(b.Problems, Problem{Path: p, Message: "symlinks are not followed and not allowed in a bundle"})
@@ -179,7 +181,7 @@ func Load(root fs.FS) (*Bundle, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("read bundle: %w", err)
+		return nil, oops.Wrapf(err, "read bundle")
 	}
 	return b, nil
 }

@@ -2,9 +2,9 @@ package okf
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"strings"
+
+	"github.com/samber/oops"
 
 	"gopkg.in/yaml.v3"
 )
@@ -42,7 +42,7 @@ func SplitFrontmatter(src []byte) (fm Frontmatter, body string) {
 		block.WriteByte('\n')
 	}
 	// No closing delimiter: the file has no usable frontmatter.
-	return Frontmatter{Present: true, Err: errors.New("frontmatter block is not closed with ---")}, text
+	return Frontmatter{Present: true, Err: oops.Errorf("frontmatter block is not closed with ---")}, text
 }
 
 func parseBlock(block string) Frontmatter {
@@ -51,17 +51,17 @@ func parseBlock(block string) Frontmatter {
 	}
 	var doc yaml.Node
 	if err := yaml.Unmarshal([]byte(block), &doc); err != nil {
-		return Frontmatter{Err: fmt.Errorf("frontmatter is not valid YAML: %w", err)}
+		return Frontmatter{Err: oops.Wrapf(err, "frontmatter is not valid YAML")}
 	}
 	if doc.Kind != yaml.DocumentNode || len(doc.Content) != 1 {
-		return Frontmatter{Err: errors.New("frontmatter is empty")}
+		return Frontmatter{Err: oops.Errorf("frontmatter is empty")}
 	}
 	root := doc.Content[0]
 	if root.Kind == yaml.AliasNode {
-		return Frontmatter{Err: errors.New("frontmatter is an alias, not a mapping")}
+		return Frontmatter{Err: oops.Errorf("frontmatter is an alias, not a mapping")}
 	}
 	if root.Kind != yaml.MappingNode {
-		return Frontmatter{Err: errors.New("frontmatter is not a mapping")}
+		return Frontmatter{Err: oops.Errorf("frontmatter is not a mapping")}
 	}
 	return Frontmatter{Root: root}
 }
@@ -117,7 +117,7 @@ func MarshalFrontmatter(fields []Field) ([]byte, error) {
 		if n, ok := f.Value.(*yaml.Node); ok {
 			val = *n
 		} else if err := val.Encode(f.Value); err != nil {
-			return nil, fmt.Errorf("encode frontmatter key %q: %w", f.Key, err)
+			return nil, oops.Wrapf(err, "encode frontmatter key %q", f.Key)
 		}
 		root.Content = append(root.Content, key, &val)
 	}
@@ -126,10 +126,10 @@ func MarshalFrontmatter(fields []Field) ([]byte, error) {
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)
 	if err := enc.Encode(root); err != nil {
-		return nil, fmt.Errorf("encode frontmatter: %w", err)
+		return nil, oops.Wrapf(err, "encode frontmatter")
 	}
 	if err := enc.Close(); err != nil {
-		return nil, fmt.Errorf("encode frontmatter: %w", err)
+		return nil, oops.Wrapf(err, "encode frontmatter")
 	}
 	buf.WriteString("---\n")
 	return buf.Bytes(), nil
