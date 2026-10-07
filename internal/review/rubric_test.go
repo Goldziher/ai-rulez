@@ -50,6 +50,11 @@ func writeRubric(t *testing.T, root, id, body string) string {
 	return dir
 }
 
+// addTable puts a TOML table before the first [[dimension]], where top-level tables belong.
+func addTable(rubric, table string) string {
+	return strings.Replace(rubric, "[[dimension]]", table+"\n[[dimension]]", 1)
+}
+
 func messages(ps []Problem) string {
 	var parts []string
 	for _, p := range ps {
@@ -93,6 +98,13 @@ func TestLintDir(t *testing.T) {
 		{"wrong schema version", func(s string) string { return strings.Replace(s, "schema_version = 1", "schema_version = 2", 1) }, "schema_version must be 1"},
 		{"unknown kind", func(s string) string { return strings.Replace(s, `["skill"]`, `["skill", "widget"]`, 1) }, `unknown kind "widget"`},
 		{"syntax error", func(s string) string { return "id = = 1\n" }, "parse rubric"},
+		{"nan temperature", func(s string) string { return addTable(s, "[votes]\nfirst_temperature = nan\n") }, "votes.first_temperature must be between 0 and 2"},
+		{"infinite temperature", func(s string) string { return addTable(s, "[votes]\nextra_temperature = inf\n") }, "votes.extra_temperature must be between 0 and 2"},
+		{"nan instability threshold", func(s string) string { return addTable(s, "[votes]\ninstability_threshold = nan\n") }, "votes.instability_threshold must be between 0 and 1"},
+		{"nan calibration threshold", func(s string) string { return addTable(s, "[calibration]\nmin_consistency = nan\n") }, "calibration.min_consistency must be between 0 and 1"},
+		{"nan recall threshold", func(s string) string {
+			return addTable(s, "[calibration.min_recall]\ntrigger-quality = nan\n")
+		}, "calibration.min_recall.trigger-quality must be between 0 and 1"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

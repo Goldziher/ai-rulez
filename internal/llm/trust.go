@@ -125,7 +125,15 @@ func tighterInt(a, b int) int {
 	}
 }
 
+// tighterFloat is the lower positive cap of a and b; a non-finite value counts as unset, so a
+// repository NaN can neither win the min (min(x, NaN) is NaN) nor lift the user's cap.
 func tighterFloat(a, b float64) float64 {
+	if !Finite(a) {
+		a = 0
+	}
+	if !Finite(b) {
+		b = 0
+	}
 	switch {
 	case a <= 0:
 		return b

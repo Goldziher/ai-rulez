@@ -48,6 +48,9 @@ func (g *gateClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, e
 	if !g.allow {
 		return ChatResponse{}, newError(KindNetworkDisabled, "%s", NetworkDisabledMessage)
 	}
+	if !Finite(req.Temperature) {
+		return ChatResponse{}, newError(KindConfig, "temperature must be a finite number")
+	}
 	ctx, cancel := g.deadline(ctx, req.Timeout)
 	defer cancel()
 	resp, err := g.next.Chat(ctx, req)

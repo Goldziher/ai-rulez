@@ -22,7 +22,7 @@ cache           = true                     # default true
 allow_network   = false                    # default false; nothing is sent unless true
 ```
 
-Other keys: `timeout_seconds` (default 60, covers the retries), `max_retries` (default 3, `-1` disables, at most 10), `price_input_per_mtok` and `price_output_per_mtok` (USD per million tokens; override the built-in price table, needed for cost limits on models the table does not know; user scope only, see below).
+Other keys: `timeout_seconds` (default 60, covers the retries), `max_retries` (default 3, `-1` disables, at most 10), `price_input_per_mtok` and `price_output_per_mtok` (USD per million tokens; override the built-in price table, needed for cost limits on models the table does not know; user scope only, see below). Costs and prices must be finite: TOML's `nan` and `inf` are an `AR9L0` error, and a non-finite repository cap never replaces yours.
 
 ### Trust rule
 

@@ -178,7 +178,7 @@ func TestLiveCacheTamperedPlantedAndSymlinkedEntriesMiss(t *testing.T) {
 			// Act: planted entry signed with another secret
 			other := NewCache(opts.CacheDir, "attacker", []byte("0123456789abcdef0123456789abcdef"))
 			planted := tinyChat("Reply with the single word: charlie")
-			key := m.Cache().key("chat", liveChatModelFor(backend), planted)
+			key, _ := m.Cache().key("chat", liveChatModelFor(backend), planted)
 			other.store(key, ChatResponse{Text: "PLANTED", Model: "x"})
 			// the real cache key for this request is the one the middleware computes; plant under that path
 			pl, err := m.Chat(ctx, planted)

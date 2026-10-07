@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"sync"
 )
@@ -16,7 +17,10 @@ type Limits struct {
 }
 
 // Active reports whether any limit is set.
-func (l Limits) Active() bool { return l.MaxCostUSD > 0 || l.MaxTokens > 0 || l.MaxCalls > 0 }
+// A NaN cost cap counts as set, so the budget refuses instead of treating it as unlimited.
+func (l Limits) Active() bool {
+	return l.MaxCostUSD > 0 || math.IsNaN(l.MaxCostUSD) || l.MaxTokens > 0 || l.MaxCalls > 0
+}
 
 // Spent is the running total of a Budget.
 type Spent struct {
@@ -74,6 +78,9 @@ func (b *Budget) reserve(model string, worst Usage) (*reservation, error) {
 			b.limits.MaxTokens, b.spent.Tokens, b.reserved.Tokens, worst.Total())
 	}
 	cost, known := b.pricing.Cost(model, worst)
+	if math.IsNaN(b.limits.MaxCostUSD) {
+		return nil, newError(KindBudget, "max_cost_usd is not a number; set a finite cap")
+	}
 	if b.limits.MaxCostUSD > 0 {
 		if !known {
 			return nil, newError(KindBudget, "max_cost_usd is set but no price is known for model %q; set price_input_per_mtok and price_output_per_mtok", model)
