@@ -160,8 +160,9 @@ func openCodeBundleFor(m *Manifest) openCodeBundle {
 			cfg = &config.Config{}
 		}
 		bundle.Agents = make(map[string]map[string]any, len(m.Agents))
-		for _, agent := range m.Agents {
-			bundle.Agents[agent.Name] = presets.OpencodeAgentSettings(agent, cfg)
+		for i := range m.Agents {
+			agent := &m.Agents[i]
+			bundle.Agents[agent.Name] = presets.OpencodeAgentSettings(*agent, cfg)
 		}
 	}
 	return bundle
@@ -173,7 +174,8 @@ func openCodeItems(files []config.ContentFile) map[string]openCodeItem {
 		return nil
 	}
 	items := make(map[string]openCodeItem, len(files))
-	for _, file := range files {
+	for i := range files {
+		file := &files[i]
 		item := openCodeItem{}
 		if file.Metadata != nil {
 			item.Name = file.Metadata.Extra["name"]

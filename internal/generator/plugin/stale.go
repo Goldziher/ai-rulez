@@ -66,22 +66,42 @@ func RemoveGeneratedPluginDir(dir string) (kept []string, err error) {
 	if err := json.Unmarshal(data, &document); err != nil {
 		return nil, oops.With("path", sidecarPath).Wrapf(err, "parse plugin provenance")
 	}
-	for rel, recorded := range document.Outputs {
-		target, pathErr := safeOutputPath(dir, rel)
-		if pathErr != nil {
-			return nil, pathErr
-		}
-		if !unchangedInRoot(root, filepath.Clean(filepath.FromSlash(rel)), target, recorded, document.SourceHash) {
-			continue
-		}
-		if rmErr := root.Remove(filepath.Clean(filepath.FromSlash(rel))); rmErr != nil && !os.IsNotExist(rmErr) {
-			return nil, oops.With("path", target).Wrapf(rmErr, "remove stale plugin file")
-		}
+	if err := removeListedFiles(root, dir, &document); err != nil {
+		return nil, err
 	}
 	if err := root.Remove(provenanceFileName); err != nil && !os.IsNotExist(err) {
 		return nil, oops.With("path", sidecarPath).Wrapf(err, "remove plugin provenance")
 	}
 	pruneEmptyDirs(dir)
+	kept, err = filesUnder(dir)
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(kept)
+	return kept, nil
+}
+
+// removeListedFiles removes each output the provenance document lists that is
+// still unchanged; the others are left for the caller to report.
+func removeListedFiles(root *os.Root, dir string, document *provenanceDocument) error {
+	for rel, recorded := range document.Outputs {
+		target, pathErr := safeOutputPath(dir, rel)
+		if pathErr != nil {
+			return pathErr
+		}
+		if !unchangedInRoot(root, filepath.Clean(filepath.FromSlash(rel)), target, recorded, document.SourceHash) {
+			continue
+		}
+		if rmErr := root.Remove(filepath.Clean(filepath.FromSlash(rel))); rmErr != nil && !os.IsNotExist(rmErr) {
+			return oops.With("path", target).Wrapf(rmErr, "remove stale plugin file")
+		}
+	}
+	return nil
+}
+
+// filesUnder lists the files left below dir, sorted; a missing dir holds none.
+func filesUnder(dir string) ([]string, error) {
+	var kept []string
 	walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err //nolint:wrapcheck // reported by the caller below
