@@ -65,7 +65,7 @@ var credentialTable = []credFamily{
 			}
 			return false
 		}},
-	{id: "aws-credentials", tier: tierCritical, label: "AWS credentials", re: hp(`\.aws/(?:credentials|config|sso/\S*)`)},
+	{id: "aws-credentials", tier: tierCritical, label: "AWS credentials", re: hp(`\.aws(?:/(?:credentials|config|sso/\S*)|/?(?:[\s"';|)&>]|$))`)},
 	{id: "etc-shadow", tier: tierCritical, label: "the system password hashes", re: ap(`/etc/(?:shadow|gshadow|master\.passwd)\b`)},
 	{id: "git-credentials", tier: tierCritical, label: "stored git credentials", re: hp(`\.git-credentials\b`)},
 	{id: "netrc", tier: tierCritical, label: ".netrc", re: hp(`[._]netrc\b`)},

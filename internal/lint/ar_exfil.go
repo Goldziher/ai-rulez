@@ -21,7 +21,7 @@ const (
 func registerArExfil(s *ruleSet) {
 	MarkExampleAware(CodeEscapeObfuscated, CodeInsecureHTTP, CodeRawIPURL)
 	s.addRules(
-		RuleInfo{CodeExfilCommand, "exfil-command", SeverityError, "a network command sends a secret environment variable, the environment or a credential file off the machine (curl/wget/nc with $TOKEN, DNS exfiltration)"},
+		RuleInfo{CodeExfilCommand, "exfil-command", SeverityError, "a network command sends a secret environment variable, the environment or a credential file off the machine (curl/wget/nc with $TOKEN, an archive of a credential directory piped to curl, DNS exfiltration that carries file or secret data)"},
 		RuleInfo{CodeImageExfil, "markdown-image-exfil", SeverityWarning, "a markdown image URL carries a query string; rendering it in an agent UI sends the query to the host"},
 		RuleInfo{CodeEscapeObfuscated, "escape-sequence-obfuscation", SeverityInfo, "four or more consecutive \\xNN or \\uNNNN escapes hide a string from a reviewer"},
 		RuleInfo{CodeInsecureHTTP, "insecure-transport", SeverityWarning, "a plain http:// URL (not loopback or private) is fetched by a command, used by an MCP server, or is the source of an include"},
@@ -59,11 +59,16 @@ var (
 	secretVarRe = regexp.MustCompile(`\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?`)
 	secretName  = regexp.MustCompile(`(?i)(?:^|_)(?:secret|token|api_?key|passw(?:or)?d|private_?key|access_?key|secret_?key|credentials?|auth)$|^(?:DATABASE_URL|DB_URL|DB_PASSWORD)$|^AWS_SECRET`)
 	headerArgRe = regexp.MustCompile(`(?i)(?:-H|--header)\s*("[^"]*"|'[^']*')|(?:-u|--user)\s+\S+|--oauth2-bearer\s+\S+`)
+	credPathPat = `(?:\.ssh\b|\.aws\b|\.netrc|\.git-credentials|\.npmrc|\.kube\b|\.gnupg\b|\.docker/config|/\.env\b|/etc/shadow)`
 	envDumpRe   = regexp.MustCompile(`(?i)(?:^|[\s;&|(])(?:curl|wget|nc|ncat|xh)\b[^\n]*(?:\$\(\s*(?:env|printenv|set)\s*\)|` + "`" + `\s*(?:env|printenv)\s*` + "`" + `|@-?\s*<\(\s*(?:env|printenv)|\$\(\s*cat\s+\S*(?:\.ssh/|\.aws/|\.netrc|\.git-credentials|\.npmrc|\.kube/|/\.env\b)\S*\s*\))`)
-	envPipeRe   = regexp.MustCompile(`(?i)(?:(?:^|[\s;&(])(?:env|printenv)|cat\s+\S*(?:\.ssh/|\.aws/|\.netrc|\.git-credentials|\.npmrc|\.kube/|/\.env\b)\S*)\s*(?:\|[^|\n]*)*\|\s*(?:curl|wget|nc|ncat|xh)\b`)
-	dnsExfilRe  = regexp.MustCompile(`^(?:dig|nslookup|host)\s+(?:[+@-]\S*\s+)*\S*\$\(`)
-	dnsTickRe   = regexp.MustCompile(`^(?:dig|nslookup|host)\s+(?:[+@-]\S*\s+)*\S*` + "`")
-	dnsStartRe  = regexp.MustCompile(`^(?:dig|nslookup|host)\s`)
+	envPipeRe   = regexp.MustCompile(`(?i)(?:(?:^|[\s;&(])(?:env|printenv)|(?:^|[\s;&(])(?:cat|tar|zip|7z|7za|gpg|base64|openssl|gzip|bzip2|xz|zstd|cpio)\s[^|\n]*` + credPathPat + `\S*)\s*(?:\|[^|\n]*)*\|\s*(?:curl|wget|nc|ncat|xh)\b`)
+	dnsExfilRe  = regexp.MustCompile(`^(?:dig|nslookup|host)\s+(?:[+@-]\S*\s+)*\S*\$\(([^)]*)`)
+	dnsTickRe   = regexp.MustCompile(`^(?:dig|nslookup|host)\s+(?:[+@-]\S*\s+)*\S*` + "`" + `([^` + "`" + `]*)`)
+	// dnsPayloadRe is what makes a substitution inside a DNS lookup an
+	// exfiltration channel: it reads a file, dumps the environment, encodes
+	// data or expands a secret variable. $(hostname) is just a lookup.
+	dnsPayloadRe = regexp.MustCompile(`(?i)\b(?:cat|head|tail|base64|xxd|od|hexdump|env|printenv|curl|wget|openssl|gpg)\b|<\s*\S|` + credPathPat + `|\$\{?[A-Za-z_]`)
+	dnsStartRe   = regexp.MustCompile(`^(?:dig|nslookup|host)\s`)
 )
 
 // secretVars lists the secret-looking environment variables a line references.
@@ -75,6 +80,20 @@ func secretVars(line string) []string {
 		}
 	}
 	return out
+}
+
+// dnsCarriesPayload reports whether a dig, nslookup or host segment builds the
+// queried name from a substitution that reads a file, the environment or a secret.
+func dnsCarriesPayload(seg string, backticks bool) bool {
+	if m := dnsExfilRe.FindStringSubmatch(seg); m != nil && dnsPayloadRe.MatchString(m[1]) {
+		return true
+	}
+	if backticks {
+		if m := dnsTickRe.FindStringSubmatch(seg); m != nil && dnsPayloadRe.MatchString(m[1]) {
+			return true
+		}
+	}
+	return false
 }
 
 func scanExfilCommands(r *runner, t *scanText) {
@@ -102,7 +121,7 @@ func scanExfilCommands(r *runner, t *scanText) {
 			r.add(CodeExfilCommand, t.abs, l.No, "sends the environment or a credential file to a remote host")
 		default:
 			for _, seg := range t.commandSegmentsWith(l, dnsStartRe, pipeSegSplitRe) {
-				if dnsExfilRe.MatchString(seg) || (t.shellLike(l) && dnsTickRe.MatchString(seg)) {
+				if dnsCarriesPayload(seg, t.shellLike(l)) {
 					r.add(CodeExfilCommand, t.abs, l.No, "builds a DNS lookup from command output, a classic exfiltration channel")
 					break
 				}
