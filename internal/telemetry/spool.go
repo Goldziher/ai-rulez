@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -323,7 +324,7 @@ func newLockToken() string {
 func createLock(path, token string) (created bool, err error) {
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) //nolint:gosec // machine-local lock file
 	if err != nil {
-		if os.IsExist(err) {
+		if lockTaken(err, runtime.GOOS) {
 			return false, nil
 		}
 		return false, err //nolint:wrapcheck // the caller adds the path
@@ -334,6 +335,14 @@ func createLock(path, token string) (created bool, err error) {
 		return false, err   //nolint:wrapcheck // the caller adds the path
 	}
 	return true, nil
+}
+
+// lockTaken reports whether a failed exclusive create means another holder has
+// the lock. On Windows a lock file another process is deleting (a release or a
+// takeover) refuses the create with "Access is denied" until it is gone, so
+// there that is a held lock to wait for, not an error.
+func lockTaken(err error, goos string) bool {
+	return os.IsExist(err) || (goos == "windows" && os.IsPermission(err))
 }
 
 // releaseLock removes path only while it still holds token.
