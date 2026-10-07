@@ -1,7 +1,6 @@
 package importer
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	"path"
@@ -61,19 +60,20 @@ func (okfImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 	r := newReader(fsys)
 	dir := bundleRoot(r)
 	if dir == "" {
-		return nil, fmt.Errorf("no OKF bundle found: expected an index.md naming okf_version at the source root or in %s", okfDefaultDir)
+		return nil, oops.Hint("Pass the directory that holds the bundle's index.md").
+			Errorf("no OKF bundle found: expected an index.md naming okf_version at the source root or in %s", okfDefaultDir)
 	}
 	root := fsys
 	if dir != "." {
 		sub, err := fs.Sub(fsys, dir)
 		if err != nil {
-			return nil, fmt.Errorf("open the bundle %s: %w", dir, err)
+			return nil, oops.With("path", dir).Wrapf(err, "open the bundle %s", dir)
 		}
 		root = sub
 	}
 	bundle, err := okf.Load(root)
 	if err != nil {
-		return nil, fmt.Errorf("read the OKF bundle (%s): %w", CodeInvalid, err)
+		return nil, oops.Wrapf(err, "read the OKF bundle (%s)", CodeInvalid)
 	}
 
 	// The bridge writes the planned tree to disk; give it a scratch directory and
@@ -85,7 +85,7 @@ func (okfImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 	defer os.RemoveAll(scratch)
 	res, err := okfbridge.Import(bundle, okfbridge.ImportOptions{ConfigDir: scratch, Domain: opt.Domain})
 	if err != nil {
-		return nil, fmt.Errorf("import the OKF bundle: %w", err)
+		return nil, oops.Wrapf(err, "import the OKF bundle")
 	}
 	return planFromBridge(dir, scratch, res)
 }

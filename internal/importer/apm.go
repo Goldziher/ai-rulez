@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
@@ -122,7 +123,7 @@ func (b *apmPlanner) readYAML(file string) (map[string]any, bool, error) {
 	}
 	var doc map[string]any
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return nil, false, fmt.Errorf("%s is not valid YAML (%s): %w", file, CodeInvalid, err)
+		return nil, false, oops.With("file", file).Wrapf(err, "%s is not valid YAML (%s)", file, CodeInvalid)
 	}
 	return doc, true, nil
 }
