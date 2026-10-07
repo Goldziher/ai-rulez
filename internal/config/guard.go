@@ -108,7 +108,7 @@ func (c *Config) EnableGuardHooks(binaryVersion string) {
 		}
 	}
 	c.Hooks = append(c.Hooks, HookGroup{
-		Event:   "PreToolUse",
+		Event:   hookEventPreToolUse,
 		Matcher: guardMatcher,
 		Targets: append([]string(nil), GuardHarnesses...),
 		// Factory documents no MultiEdit tool but an ApplyPatch one; Codex edits

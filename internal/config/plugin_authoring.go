@@ -148,6 +148,9 @@ type PluginMCPLaunch struct {
 // runtime spawns Command, optionally with Args.
 const HookTypeCommand = "command"
 
+// hookEventPreToolUse is the Claude Code event that fires before a tool call.
+const hookEventPreToolUse = "PreToolUse"
+
 // KnownHookEvents lists every lifecycle event Claude Code documents. It exists so
 // a typo in an authored event name ("SesionStart") is reported instead of silently
 // producing a hook that never fires. Membership is advisory only — an event
@@ -158,7 +161,7 @@ var KnownHookEvents = []string{
 	"Setup",
 	"UserPromptSubmit",
 	"UserPromptExpansion",
-	"PreToolUse",
+	hookEventPreToolUse,
 	"PermissionRequest",
 	"PermissionDenied",
 	"PostToolUse",
@@ -210,7 +213,7 @@ var HookEventsWithoutMatcher = []string{
 // `if` never fires at all. Declaring `if` on, say, SessionStart therefore disables
 // the hook rather than conditioning it, which is worth a warning.
 var HookEventsEvaluatingIf = []string{
-	"PreToolUse",
+	hookEventPreToolUse,
 	"PostToolUse",
 	"PostToolUseFailure",
 	"PermissionRequest",
