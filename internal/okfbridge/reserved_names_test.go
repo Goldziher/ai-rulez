@@ -73,3 +73,37 @@ func TestExportSkipsItemsMergedInFromIncludes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, all.Counts[okfbridge.KindRule], "no filter without a local dir")
 }
+
+func TestRoundTripIsStableForNamelessSkillsAndUppercaseResources(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: r\npresets:\n  - claude\n")
+	write(t, root, ".ai-rulez/skills/plain/SKILL.md", "---\ndescription: No name key\n---\n\nBody.\n")
+	write(t, root, ".ai-rulez/skills/plain/references/upper.MD", "# Upper\n")
+	write(t, root, ".ai-rulez/skills/plain/references/lower.md", "# Lower\n")
+
+	cur := root
+	var prev *okfbridge.ExportResult
+	for cycle := 0; cycle < 3; cycle++ {
+		res := exportProject(t, cur)
+		if prev != nil {
+			require.Equal(t, len(prev.Files), len(res.Files), "cycle %d", cycle)
+			for i := range prev.Files {
+				assert.Equal(t, prev.Files[i].Path, res.Files[i].Path, "cycle %d", cycle)
+				assert.Equal(t, string(prev.Files[i].Data), string(res.Files[i].Data), "cycle %d %s", cycle, prev.Files[i].Path)
+			}
+		}
+		prev = res
+		dir := t.TempDir() + "/b"
+		writeBundle(t, dir, res.Files)
+		b, err := okf.Load(os.DirFS(dir))
+		require.NoError(t, err)
+		next := t.TempDir()
+		write(t, next, ".ai-rulez/config.yaml", "version: \"4.0\"\nname: r\npresets:\n  - claude\n")
+		_, err = okfbridge.Import(b, okfbridge.ImportOptions{ConfigDir: filepath.Join(next, ".ai-rulez"), Scan: testScan})
+		require.NoError(t, err)
+		cur = next
+	}
+	got, err := os.ReadFile(filepath.Join(cur, ".ai-rulez/skills/plain/references/upper.MD"))
+	require.NoError(t, err)
+	assert.Equal(t, "# Upper\n", string(got))
+}

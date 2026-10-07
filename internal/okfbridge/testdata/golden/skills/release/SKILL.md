@@ -7,7 +7,6 @@ x-ai-rulez:
   id: release
   metadata:
     allowed-tools: Bash(git tag:*)
-    name: release
 ---
 
 Steps go here.

@@ -268,6 +268,9 @@ func titleOf(fields []okf.Field) string {
 // description for the index.
 func conceptFields(it sourceItem, id string) (fields []okf.Field, description string, err error) {
 	okfExtra, meta := splitMetadata(it.cf.Metadata)
+	if it.kind == KindSkill {
+		meta = dropDerivedName(meta, id)
+	}
 	typ, title := defaultType(it.kind), okf.TitleFromPath(sanitizeID(id)+".md")
 	hoisted := []okf.Field{}
 	for _, kv := range okfExtra {
@@ -303,6 +306,20 @@ func conceptFields(it sourceItem, id string) (fields []okf.Field, description st
 	}
 	fields = append(fields, okf.Field{Key: okf.ExtensionKey, Value: fieldsNode(ext)})
 	return fields, description, nil
+}
+
+// dropDerivedName removes a skill `name` that equals the skill id. An import adds
+// exactly that name to a skill without one, so leaving it out keeps the round trip
+// from growing a metadata entry on every cycle.
+func dropDerivedName(meta []okf.Field, id string) []okf.Field {
+	out := meta[:0:0]
+	for _, f := range meta {
+		if s, ok := f.Value.(string); f.Key == "name" && ok && s == id {
+			continue
+		}
+		out = append(out, f)
+	}
+	return out
 }
 
 func kindName(k Kind) string {
