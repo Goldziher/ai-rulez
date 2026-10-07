@@ -49,6 +49,7 @@ type tomlOutput struct {
 	Rules           *RulesConfig           `toml:"rules,omitempty"`
 	Lint            *LintConfig            `toml:"lint,omitempty"`
 	OKF             *OKFConfig             `toml:"okf,omitempty"`
+	LLMsTxt         *LLMsTxtConfig         `toml:"llms_txt,omitempty"`
 	Verifiers       []VerifierConfig       `toml:"verifiers,omitempty"`
 	VerifiersSet    *VerifiersSettings     `toml:"verifiers_settings,omitempty"`
 	Usage           *UsageConfig           `toml:"usage,omitempty"`
@@ -150,6 +151,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Rules:           cfg.Rules,
 		Lint:            cfg.Lint,
 		OKF:             cfg.OKF,
+		LLMsTxt:         cfg.LLMsTxt,
 		Verifiers:       cfg.Verifiers,
 		VerifiersSet:    cfg.VerifiersSettings,
 		Usage:           cfg.Usage,
