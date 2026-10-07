@@ -162,7 +162,7 @@ func clineScript(event string, commands []string, needsRoot bool) string {
 	b.WriteString("# Every command receives the hook input on stdin; the last one's output is the hook's output,\n")
 	b.WriteString("# and the first command that fails stops the rest.\n")
 	if needsRoot {
-		b.WriteString("root=$(cd \"$(dirname \"$0\")/../..\" && pwd)\n")
+		b.WriteString("root=$(CDPATH= cd -- \"$(dirname -- \"$0\")/../..\" && pwd)\n")
 	}
 	fmt.Fprintf(&b, "input=$(head -c %d)\n", clineStdinLimit)
 	for i, command := range commands {
