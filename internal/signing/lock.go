@@ -133,6 +133,9 @@ type LockReport struct {
 	SigningTime time.Time
 	// StateKeys are the rollback marks this report is checked and committed under.
 	StateKeys []string
+	// SubjectDigest is the lock subject digest recorded as the current body when
+	// the attestation has no signing time (its rollback record); else "".
+	SubjectDigest string
 	// Cosigners are the reports of the other distinct trusted signers that
 	// VerifyLockSet accepted; the report itself is the first.
 	Cosigners []*LockReport
@@ -193,12 +196,27 @@ func VerifyLock(data []byte, lock *lockfile.File, p LockPolicy) (*LockReport, er
 		return nil, err
 	}
 	keys := stateKeys(res.Signer, pred.Repository, p)
-	if p.State != nil && !at.IsZero() {
-		if err := p.State.checkAll(keys, at); err != nil {
+	rep := &LockReport{Result: res, Predicate: pred, Age: now.Sub(at), SigningTime: at, StateKeys: keys}
+	if p.State == nil {
+		return rep, nil
+	}
+	if !at.IsZero() {
+		return rep, p.State.checkAll(keys, at)
+	}
+	// No signing time at all (a key-signed blob bundle without a log entry):
+	// time-ordered rollback cannot be judged, so the lock bodies this machine
+	// already replaced are the rollback record, as for a signed policy.
+	subject, err := lockSubjectOf(lock)
+	if err != nil {
+		return nil, err
+	}
+	rep.SubjectDigest = subject.Digest()
+	for _, k := range keys {
+		if err := p.State.CheckDigest(k, rep.SubjectDigest); err != nil {
 			return nil, err
 		}
 	}
-	return &LockReport{Result: res, Predicate: pred, Age: now.Sub(at), SigningTime: at, StateKeys: keys}, nil
+	return rep, nil
 }
 
 // verifyLockBundle verifies a DSSE bundle (`ai-rulez sign --lock`) or a
@@ -260,10 +278,18 @@ func (r *LockReport) Commit(s *State) error {
 			return err
 		}
 	}
-	if r.SigningTime.IsZero() {
+	if !r.SigningTime.IsZero() {
+		return s.advanceAll(r.StateKeys, r.SigningTime)
+	}
+	if r.SubjectDigest == "" {
 		return nil
 	}
-	return s.advanceAll(r.StateKeys, r.SigningTime)
+	for _, k := range r.StateKeys {
+		if err := s.AdvanceDigest(k, r.SubjectDigest); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // stateKeys names the rollback marks of a signer in one project. The repository
