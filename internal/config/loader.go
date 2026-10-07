@@ -556,6 +556,9 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		if swapped := swappedLintTablesTOML(path, data); swapped != nil {
 			return nil, swapped
 		}
+		if described := describeTOMLDecodeError(path, err); described != nil {
+			return nil, described
+		}
 		return nil, oops.
 			With("path", path).
 			Hint("Check the TOML syntax - ensure proper formatting\nCommon issues: missing quotes around strings, incorrect table syntax").
