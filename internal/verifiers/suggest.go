@@ -43,12 +43,18 @@ const (
 	maxExistingHitFiles = 10
 )
 
-// stdlibProbes are everyday standard-library calls and imports. A forbid whose
+// stdlibProbes are everyday standard-library calls and imports, both bare and as
+// whole lines of real code: a regex that requires the arguments or the code
+// around a call (`\bopen\([^)]*\)`) never matches the bare name. A forbid whose
 // regex matches one of them, and is not limited to newly added lines, would ban
 // ordinary code across the whole repository.
 var stdlibProbes = []string{
 	"open(", "read(", "write(", "json.load(", "json.loads(", "json.dump(", "File::open", "fs.readFile(",
 	"os.Getenv(", "fmt.Sprintf(", "import os", "import sys", "import json",
+	`f = open("data.txt")`, `with open('data.txt', 'r') as f:`, `data = json.load(f)`, `obj = json.loads(text)`,
+	`json.dump(obj, f, indent=2)`, `n = read(fd, buf, sizeof(buf));`, `write(fd, buf, n);`,
+	`let f = File::open("data.txt")?;`, `fs.readFile("data.txt", "utf8", cb);`, `home := os.Getenv("HOME")`,
+	`msg := fmt.Sprintf("%s: %d", name, n)`,
 }
 
 // overBroadReason says why a usable-looking forbid is too broad to offer, or ""
