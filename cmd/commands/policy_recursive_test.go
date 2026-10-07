@@ -29,7 +29,7 @@ func installLoosenBad(t *testing.T) {
 	t.Cleanup(func() { activePolicy = previous })
 }
 
-const policyBadConfig = "version = \"4.0\"\nname = \"bad\"\npresets = [\"claude\"]\ngitignore = false\n"
+const policyBadConfig = "version = \"5.0\"\nname = \"bad\"\npresets = [\"claude\"]\ngitignore = false\n"
 
 func TestRecursiveGenerateAndValidateRefusePolicyViolations(t *testing.T) {
 	tests := []struct {

@@ -99,7 +99,7 @@ func improveProject(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
-		".ai-rulez/config.toml":            "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
+		".ai-rulez/config.toml":            "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
 		".ai-rulez/skills/deploy/SKILL.md": improveSkillBody,
 		".ai-rulez/skills/deploy/evals/a.eval.yaml": `cases:
   - id: train-a

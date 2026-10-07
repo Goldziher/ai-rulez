@@ -399,7 +399,7 @@ func TestOKFIndexStyleFlagConfigAndDetection(t *testing.T) {
 
 	// The configured style is the default; the flag overrides it.
 	okfIndexStyle = ""
-	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[okf]\nindex_style = \"frontmatter\"\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[okf]\nindex_style = \"frontmatter\"\n")
 	code, out2 = exportRun(t, true)
 	assert.Equal(t, 0, code, out2)
 

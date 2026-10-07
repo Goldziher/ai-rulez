@@ -68,7 +68,7 @@ func TestShowPolicyWithoutPolicyPrintsNone(t *testing.T) {
 func TestBudgetsForRefusesPolicyProtectedCodes(t *testing.T) {
 	// Arrange
 	cfg := &config.Config{
-		Lint:          &config.LintConfig{Tolerate: map[string]int{"AR001": 5, "AR201": 2}},
+		Lint:          &config.LintConfig{Ratchet: map[string]int{"AR001": 5, "AR201": 2}},
 		PolicyOutcome: &config.PolicyOutcome{RequiredCodes: []string{"AR001"}},
 	}
 	rep := &lint.Report{Root: "r", ConfigFile: ".ai-rulez/config.toml"}

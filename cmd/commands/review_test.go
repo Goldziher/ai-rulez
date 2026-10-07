@@ -15,7 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-const reviewConfigBody = "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
+const reviewConfigBody = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
 
 func reviewProject(t *testing.T, extraConfig string) {
 	t.Helper()
