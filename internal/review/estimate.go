@@ -284,7 +284,7 @@ func judgeDimensions(rb *Rubric, r *ItemResult, group, content string) []Dimensi
 	}
 	var out []Dimension
 	for _, d := range rb.Dimensions {
-		if d.Group == group && !pre[d.ID] && !(d.NeedsBody && content != config.ReviewContentFull) {
+		if d.Group == group && !pre[d.ID] && (!d.NeedsBody || content == config.ReviewContentFull) {
 			out = append(out, d)
 		}
 	}
