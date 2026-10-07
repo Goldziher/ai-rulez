@@ -115,9 +115,9 @@ func TestEvalResultsCacheAndReportE2E(t *testing.T) {
 
 	// Act: the second run with unchanged inputs is answered from the signed cache.
 	cached := env.run(root, "eval", "run", "--runner-command", filepath.Join(runners, "pass.sh"), "--format", "json")
-	report := env.run(root, "report", "evals", "--format", "json")
+	report := env.run(root, "telemetry", "report", "evals", "--format", "json")
 	other := newIsoEnv(t)
-	foreign := other.run(root, "report", "evals", "--format", "json")
+	foreign := other.run(root, "telemetry", "report", "evals", "--format", "json")
 
 	// Assert
 	require.Equal(t, 0, cached.ExitCode, cached.Stderr)
@@ -167,9 +167,9 @@ func TestReportUsageE2E(t *testing.T) {
 		wantExit int
 		wantOut  string
 	}{
-		{name: "a log with one use lists the skill as used", args: []string{"report", "usage", "usage.jsonl", "--format", "json"}, wantOut: "deploy"},
-		{name: "a missing log cannot be read", args: []string{"report", "usage", "missing.jsonl"}, wantExit: 1},
-		{name: "the log is required", args: []string{"report", "usage"}, wantExit: 1},
+		{name: "a log with one use lists the skill as used", args: []string{"telemetry", "report", "usage.jsonl", "--format", "json"}, wantOut: "deploy"},
+		{name: "a missing log cannot be read", args: []string{"telemetry", "report", "missing.jsonl"}, wantExit: 1},
+		{name: "the default local usage log is absent", args: []string{"telemetry", "report"}, wantExit: 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
