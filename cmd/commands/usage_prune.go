@@ -86,7 +86,7 @@ func runUsagePrune(out io.Writer, now time.Time) error {
 func init() {
 	UsageCmd.AddCommand(usagePruneCmd)
 	f := usagePruneCmd.Flags()
-	f.IntVar(&usagePruneKeepDays, "keep-days", -1, "Keep lines from the last N days (required)")
+	f.IntVar(&usagePruneKeepDays, "keep-days", 0, "Keep lines from the last N days (required)")
 	f.BoolVar(&usagePruneDryRun, "dry-run", false, "Report what would be removed without rewriting the log")
 	f.BoolVar(&usagePruneIgnoreCursor, "ignore-cursor", false, "Prune by age alone, also lines not yet exported")
 	f.StringVar(&usageLog, "log", "", "Usage log to prune (default <config dir>/local/usage.jsonl)")
