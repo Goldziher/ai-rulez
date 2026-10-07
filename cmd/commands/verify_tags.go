@@ -21,9 +21,9 @@ var (
 )
 
 func init() {
-	const usage = "Ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735); needs the network (also [lock] verify_tags = true)"
-	LockCmd.Flags().BoolVar(&lockVerifyTags, "verify-tags", false, "With --check: "+usage)
-	GenerateCmd.Flags().BoolVar(&generateVerifyTags, "verify-tags", false, usage)
+	const usage = "the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735); needs the network (also [lock] verify_tags = true)"
+	LockCmd.Flags().BoolVar(&lockVerifyTags, "verify-tags", false, "With --check: ask "+usage)
+	GenerateCmd.Flags().BoolVar(&generateVerifyTags, "verify-tags", false, "Ask "+usage)
 }
 
 // tagFinding is a pinned tag the remote disagrees with.

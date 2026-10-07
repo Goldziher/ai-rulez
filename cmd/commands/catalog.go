@@ -98,10 +98,10 @@ file they name.`,
 func init() {
 	addFormatFlag(CatalogCmd.Flags(), &catalogFormat, "", formatText, formatText, formatJSON)
 	addJSONFlagAlias(CatalogCmd.Flags())
-	CatalogCmd.Flags().IntVar(&catalogSchemaFlag, "schema-version", govview.CatalogSchemaVersion, "JSON schema version: 1 (default) or 2")
+	CatalogCmd.Flags().IntVar(&catalogSchemaFlag, "schema-version", govview.CatalogSchemaVersion, "JSON schema version: 1 or 2")
 	CatalogCmd.Flags().StringVar(&catalogHTMLDir, "html", "", "Write a static website of the catalog into this directory")
 	CatalogCmd.Flags().StringVar(&catalogRole, "role", "", "With --html: keep only the items this role keeps")
-	CatalogCmd.Flags().BoolVar(&catalogExcerpt, "include-excerpt", true, "Include a body excerpt of each item (version 2 JSON and --html; off by default with --indexable)")
+	CatalogCmd.Flags().BoolVar(&catalogExcerpt, "include-excerpt", true, "Include a body excerpt of each item (version 2 JSON and --html); --indexable turns it off unless this flag is set")
 	CatalogCmd.Flags().BoolVar(&catalogIndexable, "indexable", false, "With --html: let search engines index the site (no robots.txt, no noindex)")
 	CatalogCmd.Flags().IntVar(&catalogPageSize, "max-items-per-page", 0, "With --html: overview rows per page (default: [catalog] max_items_per_page, else 200)")
 	CatalogCmd.Flags().BoolVar(&catalogMarkdown, "render-markdown", false, "With --html: render item excerpts as sanitized Markdown (no raw HTML; links shown as text)")

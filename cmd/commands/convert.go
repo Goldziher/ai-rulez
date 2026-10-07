@@ -72,7 +72,7 @@ detects something, skills-lock first):
                 docs/okf: the mapping of ` + "`ai-rulez import okf`" + `, with convert's report,
                 scan and write. --domain places the bundle in a domain
   skills-lock   skills-lock.json of the Vercel skills CLI, as [[installed_skills]]
-  tessl        tessl.json and the vendored .tessl/plugins/<workspace>/<plugin>/
+  tessl         tessl.json and the vendored .tessl/plugins/<workspace>/<plugin>/
                 skills and rules; each eval scenario (task.md and criteria.json) becomes
                 a *.eval.yaml case of the plugin's skill. A plugin that is not on disk is
                 reported: nothing is fetched from the registry
