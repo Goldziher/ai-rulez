@@ -97,6 +97,12 @@ type Sandbox struct {
 
 	once     sync.Once
 	probeErr error
+
+	mu sync.Mutex
+	// chosen is the installed backend Check found working, when it is not the
+	// first one installed (bwrap inside a container that refuses its /proc
+	// mount, with unshare still usable).
+	chosen Backend
 }
 
 // Default is the sandbox of the running system.
@@ -122,7 +128,14 @@ func (s *Sandbox) Backend() Backend {
 	return b
 }
 
-func (s *Sandbox) find() (Backend, string) {
+// tool is an installed backend and the absolute path of its command.
+type tool struct {
+	backend Backend
+	path    string
+}
+
+// installed lists the backends of the platform that are installed, strongest first.
+func (s *Sandbox) installed() []tool {
 	candidates := []Backend{}
 	switch s.goos {
 	case "darwin":
@@ -130,27 +143,47 @@ func (s *Sandbox) find() (Backend, string) {
 	case "linux":
 		candidates = []Backend{BackendBwrap, BackendUnshare}
 	}
+	var out []tool
 	for _, b := range candidates {
 		if p, err := s.lookPath(string(b)); err == nil && filepath.IsAbs(p) {
-			return b, p
+			out = append(out, tool{backend: b, path: p})
 		}
 	}
-	return BackendNone, ""
+	return out
+}
+
+// find returns the backend Check chose, else the strongest one installed.
+func (s *Sandbox) find() (b Backend, path string) {
+	tools := s.installed()
+	if len(tools) == 0 {
+		return BackendNone, ""
+	}
+	s.mu.Lock()
+	chosen := s.chosen
+	s.mu.Unlock()
+	for _, t := range tools {
+		if t.backend == chosen {
+			return t.backend, t.path
+		}
+	}
+	return tools[0].backend, tools[0].path
 }
 
 // probeTimeout bounds the availability probe.
 const probeTimeout = 10 * time.Second
 
-// Check runs a trivial command under the backend once and caches the answer, so
-// a tool that is installed but cannot work (user namespaces disabled, already
-// inside a sandbox) is reported as unavailable instead of failing every scan.
-// The answer outlives the call, so the probe does not inherit ctx's
-// cancellation: a caller that gives up must not leave every later caller
-// (isolation = "auto") believing there is no backend.
+// Check runs a trivial command under each installed backend, strongest first,
+// once, and keeps the first that works, so a tool that is installed but cannot
+// work (user namespaces disabled, a container that refuses bwrap's /proc mount,
+// already inside a sandbox) gives way to the next one, and is reported as
+// unavailable when none works instead of failing every scan. The answer
+// outlives the call, so the probe does not inherit ctx's cancellation: a caller
+// that gives up must not leave every later caller (isolation = "auto")
+// believing there is no backend.
 func (s *Sandbox) Check(ctx context.Context) error {
 	s.once.Do(func() {
-		b, _ := s.find()
-		if b == BackendNone {
+		tools := s.installed()
+		if len(tools) == 0 {
 			s.probeErr = ErrUnavailable
 			return
 		}
@@ -160,20 +193,33 @@ func (s *Sandbox) Check(ctx context.Context) error {
 			return
 		}
 		defer os.RemoveAll(dir) //nolint:errcheck // a temp directory
-		true_, lerr := s.lookPath("true")
+		trueBin, lerr := s.lookPath("true")
 		if lerr != nil {
-			true_ = "/usr/bin/true"
+			trueBin = "/usr/bin/true"
 		}
-		w, err := s.Wrap(Spec{WriteDirs: []string{dir}}, []string{true_})
+		dirs, err := resolveDirs([]string{dir})
 		if err != nil {
 			s.probeErr = err
 			return
 		}
-		res := s.run.Run(context.WithoutCancel(ctx), runner.Spec{Argv: w.Argv, Dir: dir, Timeout: probeTimeout, MaxOutput: 64 << 10})
-		if res.Status != runner.StatusOK {
+		var failures []error
+		for _, t := range tools {
+			w := wrapWith(t, Spec{}, dirs, []string{trueBin})
+			res := s.run.Run(context.WithoutCancel(ctx), runner.Spec{Argv: w.Argv, Dir: dir, Timeout: probeTimeout, MaxOutput: 64 << 10})
+			if res.Status == runner.StatusOK {
+				s.mu.Lock()
+				s.chosen = t.backend
+				s.mu.Unlock()
+				return
+			}
+			cause := res.Err
+			if cause == nil {
+				cause = fmt.Errorf("status %s", res.Status)
+			}
 			detail := strings.TrimSpace(string(res.Stdout) + " " + string(res.Stderr))
-			s.probeErr = fmt.Errorf("%s is installed but cannot confine a process: %v (%s)", b, res.Err, detail)
+			failures = append(failures, fmt.Errorf("%s is installed but cannot confine a process: %w (%s)", t.backend, cause, detail))
 		}
+		s.probeErr = errors.Join(failures...)
 	})
 	return s.probeErr
 }
@@ -201,31 +247,43 @@ func (s *Sandbox) Wrap(spec Spec, argv []string) (Wrapped, error) {
 	if len(argv) == 0 {
 		return Wrapped{}, errors.New("sandbox: empty command")
 	}
-	b, tool := s.find()
+	b, path := s.find()
 	if b == BackendNone {
 		return Wrapped{}, ErrUnavailable
 	}
-	dirs := make([]string, 0, len(spec.WriteDirs))
-	for _, d := range spec.WriteDirs {
+	dirs, err := resolveDirs(spec.WriteDirs)
+	if err != nil {
+		return Wrapped{}, err
+	}
+	return wrapWith(tool{backend: b, path: path}, spec, dirs, argv), nil
+}
+
+// resolveDirs makes the write directories absolute and resolves their symlinks.
+func resolveDirs(in []string) ([]string, error) {
+	dirs := make([]string, 0, len(in))
+	for _, d := range in {
 		abs, err := filepath.Abs(d)
 		if err != nil {
-			return Wrapped{}, fmt.Errorf("sandbox: %w", err)
+			return nil, fmt.Errorf("sandbox: %w", err)
 		}
-		if real, err := filepath.EvalSymlinks(abs); err == nil {
-			abs = real
+		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+			abs = resolved
 		}
 		dirs = append(dirs, abs)
 	}
-	switch b {
+	return dirs, nil
+}
+
+// wrapWith prefixes argv with t's confinement command; dirs are resolved.
+func wrapWith(t tool, spec Spec, dirs, argv []string) Wrapped {
+	switch t.backend {
 	case BackendSandboxExec:
-		return wrapSandboxExec(tool, spec, dirs, argv), nil
+		return wrapSandboxExec(t.path, spec, dirs, argv)
 	case BackendBwrap:
-		return wrapBwrap(tool, spec, dirs, argv), nil
-	case BackendUnshare:
-		return wrapUnshare(tool, spec, argv), nil
-	case BackendNone:
+		return wrapBwrap(t.path, spec, dirs, argv)
+	case BackendUnshare, BackendNone:
 	}
-	return Wrapped{}, ErrUnavailable
+	return wrapUnshare(t.path, spec, argv)
 }
 
 // launchServices are the Mach services through which a confined process can
