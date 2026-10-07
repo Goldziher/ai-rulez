@@ -500,6 +500,7 @@ func TestOfflineMakesNoRequest(t *testing.T) {
 	_, calls["Codeowners"] = c.Codeowners(ctx, repo, "")
 	_, calls["TeamMembers"] = c.TeamMembers(ctx, team)
 	_, calls["IsTeamMember"] = c.IsTeamMember(ctx, team, "alice")
+	_, calls["CollaboratorPermission"] = c.CollaboratorPermission(ctx, repo, "alice")
 
 	for name, err := range calls {
 		assert.ErrorIs(t, err, forge.ErrOffline, name)
@@ -538,4 +539,33 @@ func TestFakeImplementsClient(t *testing.T) {
 	_, err = c.Releases(context.Background(), repo)
 	require.True(t, errors.Is(err, forge.ErrOffline))
 	assert.Len(t, f.Calls(), 4)
+}
+
+func TestCollaboratorPermission(t *testing.T) {
+	srv := forgetest.New(t)
+	srv.Collaborators = map[string]string{"alice": "maintain", "bob": "read", "carol": "admin"}
+	c := srv.Client(map[string]string{"GITHUB_TOKEN": tok})
+	tests := []struct {
+		login string
+		want  string
+		write bool
+	}{
+		{"alice", forge.PermissionMaintain, true},
+		{"bob", forge.PermissionRead, false},
+		{"carol", forge.PermissionAdmin, true},
+		{"stranger", forge.PermissionNone, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.login, func(t *testing.T) {
+			// Act
+			got, err := c.CollaboratorPermission(context.Background(), repo, tt.login)
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.write, forge.CanWrite(got))
+		})
+	}
+	_, err := c.CollaboratorPermission(context.Background(), repo, "../x")
+	require.ErrorIs(t, err, forge.ErrUnsupportedSource)
 }

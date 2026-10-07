@@ -15,6 +15,7 @@
 | `Reviews(repo, n)` | `GET /pulls/{n}/reviews` | who approved, at which head commit, and the reviewer's `author_association` |
 | `Codeowners(repo, ref)` | `GET /contents/{path}?ref=` | `.github/CODEOWNERS`, then `CODEOWNERS`, then `docs/CODEOWNERS` |
 | `TeamMembers(team)`, `IsTeamMember(team, login)` | `GET /orgs/{org}/teams/{slug}/members`, `.../memberships/{login}` | expanding `@org/team` owners |
+| `CollaboratorPermission(repo, login)` | `GET /repos/{o}/{r}/collaborators/{login}/permission` | requiring a `write`, `maintain` or `admin` role for review approvals; needs a token with push access (`ErrForbidden` otherwise) |
 
 `ParseRepo` turns a source (`https://`, `git+https://`, `ssh://`, `git@host:o/r`) into a `Repo`. Plain `http`, `git://`, `file://`, local paths and nested paths are `ErrUnsupportedSource`: a repository whose identity is uncertain is never looked up.
 

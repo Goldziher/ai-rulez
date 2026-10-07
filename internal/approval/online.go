@@ -2,6 +2,7 @@ package approval
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -102,8 +103,18 @@ func ApprovingReviews(ctx context.Context, c forge.Client, q ReviewQuery) ([]Rev
 		if r.State != forge.ReviewApproved || r.CommitID == "" || pr.HeadSHA == "" || !strings.EqualFold(r.CommitID, pr.HeadSHA) {
 			continue
 		}
-		if !r.Maintainer() && (q.Named == nil || !q.Named(r.Login)) {
+		named := q.Named != nil && q.Named(r.Login)
+		if !r.Maintainer() && !named {
 			continue // anyone can review a public repository: an outsider approves nothing
+		}
+		if !named {
+			can, err := canWrite(ctx, c, q.Repo, r.Login)
+			if err != nil {
+				return nil, err
+			}
+			if !can {
+				continue // MEMBER of a public repository's organization may only read it
+			}
 		}
 		if !checked {
 			digest, pinned, err := q.PinnedAt(ctx, pr.HeadSHA)
@@ -125,6 +136,21 @@ func ApprovingReviews(ctx context.Context, c forge.Client, q ReviewQuery) ([]Rev
 	}
 	sort.Slice(out, func(i, j int) bool { return strings.ToLower(out[i].Login) < strings.ToLower(out[j].Login) })
 	return out, nil
+}
+
+// canWrite asks the forge whether login has a role that can push to the
+// repository. A token that cannot read collaborators (the answer needs push
+// access) leaves the author association as the only evidence: that documented
+// fallback counts the reviewer, as before. Any other failure is an error.
+func canWrite(ctx context.Context, c forge.Client, repo forge.Repo, login string) (bool, error) {
+	perm, err := c.CollaboratorPermission(ctx, repo, login)
+	switch {
+	case err == nil:
+		return forge.CanWrite(perm), nil
+	case errors.Is(err, forge.ErrForbidden), errors.Is(err, forge.ErrUnauthorized), errors.Is(err, forge.ErrOffline):
+		return true, nil
+	}
+	return false, fmt.Errorf("read the repository role of %s: %w", login, err)
 }
 
 // latestDecisive keeps, per lower-cased login, the latest review that approves or

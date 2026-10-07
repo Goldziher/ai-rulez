@@ -30,6 +30,9 @@ type Fake struct {
 	Owners map[string]Codeowners
 	// Teams by "host/org/slug": the member logins.
 	Teams map[string][]string
+	// Permissions by "repo@login": the repository role. A nil map is a token that
+	// cannot read collaborators (ErrForbidden); with a map, a missing login is none.
+	Permissions map[string]string
 
 	mu    sync.Mutex
 	calls []string
@@ -144,6 +147,20 @@ func (f *Fake) TeamMembers(_ context.Context, team Team) ([]string, error) {
 	out := append([]string(nil), m...)
 	sort.Strings(out)
 	return out, nil
+}
+
+// CollaboratorPermission implements Client.
+func (f *Fake) CollaboratorPermission(_ context.Context, repo Repo, login string) (string, error) {
+	if err := f.record("CollaboratorPermission %s %s", repo, login); err != nil {
+		return "", err
+	}
+	if f.Permissions == nil {
+		return "", ErrForbidden
+	}
+	if p, ok := f.Permissions[repo.String()+"@"+login]; ok {
+		return p, nil
+	}
+	return PermissionNone, nil
 }
 
 // IsTeamMember implements Client.
