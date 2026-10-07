@@ -443,10 +443,11 @@ func (s *Spool) PlaceCursor(logPath string, fromStart bool) error {
 }
 
 // PendingInLog counts the events after the cursor that a catch-up would look at
-// (valid lines only), for `telemetry status`. It is exact for the lines it reads,
+// (valid lines only, none recorded before a consent the cursor predates; see
+// CatchUpOptions.GrantedAt), for `telemetry status`. It is exact for the lines it reads,
 // capped at limit lines.
-func (s *Spool) PendingInLog(logPath string, limit int) (int, error) {
-	res, err := s.CatchUp(logPath, CatchUpOptions{DryRun: true, Max: limit})
+func (s *Spool) PendingInLog(logPath string, limit int, grantedAt time.Time) (int, error) {
+	res, err := s.CatchUp(logPath, CatchUpOptions{DryRun: true, Max: limit, GrantedAt: grantedAt})
 	if err != nil {
 		return 0, err
 	}
