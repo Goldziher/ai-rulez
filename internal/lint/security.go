@@ -272,7 +272,7 @@ var (
 	// governingNegRe is a negation that can directly govern a command span.
 	// Words that merely sit somewhere on the line ("bad", "wrong", a warning
 	// sign) do not count: they say nothing about the command.
-	governingNegRe = regexp.MustCompile(`(?i)\b(?:never|don'?t|do\s+not|must\s+not|should\s+not|shouldn'?t|cannot|can'?t|avoid|instead\s+of|rather\s+than|forbidden|prohibit\w*|disallow\w*|refuse\w*|reject\w*|ban(?:ned)?)\b|❌|⛔|🚫`)
+	governingNegRe = regexp.MustCompile(`(?i)\b(?:never|don'?t|do\s+not|must\s+not|should\s+not|shouldn'?t|cannot|can'?t|avoid|instead\s+of|rather\s+than|forbidden|prohibit\w*|disallow\w*|refuse\w*|reject\w*|banned|ban)\b|❌|⛔|🚫`)
 	// imperativeMarkerRe is a word that turns the span into something to do.
 	imperativeMarkerRe = regexp.MustCompile(`(?i)\b(?:run|execute|paste|install|required|first|then|before|use)\b`)
 	// unsafeAfterRe reads a trailing verdict: "curl | sh is unsafe".
