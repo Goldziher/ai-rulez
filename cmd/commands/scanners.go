@@ -126,7 +126,8 @@ func writeScannerList(out io.Writer, infos []lint.ScannerInfo) {
 	}
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	reportWriter{w}.printf("NAME\tEGRESS\tINPUTS\tPRESET\tSTATUS\n")
-	for _, s := range infos {
+	for i := range infos {
+		s := &infos[i]
 		inputs := "-"
 		if len(s.Inputs) > 0 {
 			inputs = strings.Join(s.Inputs, ",")
@@ -135,7 +136,7 @@ func writeScannerList(out io.Writer, infos []lint.ScannerInfo) {
 		if egress == "true" {
 			egress = "YES"
 		}
-		reportWriter{w}.printf("%s\t%s\t%s\t%s\t%s\n", s.Name, egress, inputs, presetColumn(s), scannerStatus(s))
+		reportWriter{w}.printf("%s\t%s\t%s\t%s\t%s\n", s.Name, egress, inputs, presetColumn(*s), scannerStatus(*s))
 	}
 	_ = w.Flush() //nolint:errcheck // a closed stdout has no better handling
 }
@@ -167,28 +168,28 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 	}
 	if scannersFormat == formatJSON {
 		versions := map[string]string{}
-		for _, s := range selected {
-			if s.Found() && scannersProbe {
-				versions[s.Name], _ = lint.ProbeScannerVersion(ctx, s) //nolint:errcheck // a refused probe leaves the version empty
+		for i := range selected {
+			if s := &selected[i]; s.Found() && scannersProbe {
+				versions[s.Name], _ = lint.ProbeScannerVersion(ctx, *s) //nolint:errcheck // a refused probe leaves the version empty
 			}
 		}
 		if err := writeScannersJSON(out, selected, true, versions); err != nil {
 			fmtError(err)
 			return 1
 		}
-		for _, s := range selected {
-			if !s.Healthy() {
+		for i := range selected {
+			if !selected[i].Healthy() {
 				return exitScannersUnhealthy
 			}
 		}
 		return 0
 	}
 	code := 0
-	for i, s := range selected {
+	for i := range selected {
 		if i > 0 {
 			reportWriter{out}.println()
 		}
-		if !writeDoctor(ctx, out, s, scannersProbe) {
+		if !writeDoctor(ctx, out, selected[i], scannersProbe) {
 			code = exitScannersUnhealthy
 		}
 	}
@@ -200,8 +201,8 @@ func scannerNames(infos []lint.ScannerInfo) string {
 		return "none"
 	}
 	names := make([]string, len(infos))
-	for i, s := range infos {
-		names[i] = s.Name
+	for i := range infos {
+		names[i] = infos[i].Name
 	}
 	return strings.Join(names, ", ")
 }
@@ -214,9 +215,9 @@ func selectScanners(infos []lint.ScannerInfo, names []string, all bool) (selecte
 	}
 	for _, name := range names {
 		found := false
-		for _, s := range infos {
-			if s.Name == name {
-				selected, found = append(selected, s), true
+		for i := range infos {
+			if infos[i].Name == name {
+				selected, found = append(selected, infos[i]), true
 			}
 		}
 		if !found {
@@ -355,11 +356,12 @@ type scannerJSON struct {
 // writeScannersJSON prints {"scanners":[...]}. doctor adds the probed versions.
 func writeScannersJSON(out io.Writer, infos []lint.ScannerInfo, doctor bool, versions map[string]string) error {
 	rows := make([]scannerJSON, 0, len(infos))
-	for _, s := range infos {
+	for i := range infos {
+		s := &infos[i]
 		row := scannerJSON{
 			Name: s.Name, Command: s.Command, Path: s.Path, Found: s.Found(), Egress: s.Egress, Format: s.Format,
 			Inputs: nonNil(s.Inputs), EnvPass: nonNil(s.EnvPass), TimeoutSec: s.Timeout.Seconds(), Problems: nonNil(s.Problems),
-			EgressFlag: s.EgressFlag, Status: scannerStatus(s), Healthy: s.Healthy(),
+			EgressFlag: s.EgressFlag, Status: scannerStatus(*s), Healthy: s.Healthy(),
 			Profile: s.Profile, Presets: nonNil(s.Presets), FromPreset: s.FromPreset, Required: s.Required,
 			VersionRange: s.Version, DataSent: s.DataSent, Isolation: s.Isolation, IsolationBackend: s.Backend,
 		}
