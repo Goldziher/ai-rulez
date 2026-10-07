@@ -14,6 +14,9 @@ import (
 )
 
 // PredicateRelease is the predicate type of the release attestation.
+// digestSHA256 is the in-toto digest algorithm of the release subjects.
+const digestSHA256 = "sha256"
+
 const PredicateRelease = "https://github.com/Goldziher/ai-rulez/attestations/publish/v1"
 
 // SignResult is a signed release: the Sigstore bundle over the archive bytes,
@@ -68,12 +71,12 @@ func ReleaseStatement(m Manifest) (*signing.Statement, error) {
 		Source: m.Source, Approval: m.Approval,
 	}
 	subjects := []signing.Subject{
-		{Name: m.Bundle.File, Digest: map[string]string{"sha256": hexOf(m.Bundle.Digest)}},
-		{Name: LockFile, Digest: map[string]string{"sha256": hexOf(m.Lock.FileDigest)}},
+		{Name: m.Bundle.File, Digest: map[string]string{digestSHA256: hexOf(m.Bundle.Digest)}},
+		{Name: LockFile, Digest: map[string]string{digestSHA256: hexOf(m.Lock.FileDigest)}},
 	}
 	if m.SBOM != nil {
 		pred.SBOM = &FileRef{File: m.SBOM.File, Digest: m.SBOM.Digest}
-		subjects = append(subjects, signing.Subject{Name: m.SBOM.File, Digest: map[string]string{"sha256": hexOf(m.SBOM.Digest)}})
+		subjects = append(subjects, signing.Subject{Name: m.SBOM.File, Digest: map[string]string{digestSHA256: hexOf(m.SBOM.Digest)}})
 	}
 	st, err := signing.NewStatement(PredicateRelease, subjects, pred)
 	if err != nil {
@@ -213,7 +216,7 @@ func VerifyReleaseAttestation(bundle []byte, m Manifest, files ReleaseFiles, o V
 		if c.got != c.signed {
 			return nil, oops.Errorf("the %s %s has digest %s, the attestation signs %s", c.what, c.file, c.got, c.signed)
 		}
-		if err := st.RequireSubject("sha256", hexOf(c.got)); err != nil {
+		if err := st.RequireSubject(digestSHA256, hexOf(c.got)); err != nil {
 			return nil, err //nolint:wrapcheck // a signing.Error carries its AR code
 		}
 	}

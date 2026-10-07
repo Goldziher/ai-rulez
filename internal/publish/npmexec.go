@@ -58,7 +58,7 @@ func ExecuteNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecute
 	if err := os.Mkdir(packDir, 0o700); err != nil {
 		return "", newError(CodeTarget, ExitFailed, "", "cannot create a temporary directory: %v", err)
 	}
-	pack := []string{"npm", "pack", "--ignore-scripts"}
+	pack := []string{npmBin, "pack", npmIgnoreScripts}
 	pack = append(pack, sess.flags...)
 	pack = append(pack, "--pack-destination", packDir, filepath.Join(sess.abs, filepath.FromSlash(NPMPackageDir)))
 	if res := sess.run(pack); res.Status != runner.StatusOK {
@@ -111,8 +111,8 @@ type npmSession struct {
 	snapshot *packageSnapshot
 }
 
-// close removes the session's own temporary directory; best effort.
-func (s *npmSession) close() { _ = os.RemoveAll(s.tmp) }
+// close removes the session's own temporary directory.
+func (s *npmSession) close() { os.RemoveAll(s.tmp) } //nolint:errcheck,gosec // best effort cleanup of our own temporary directory
 
 // startNPM validates the plan and the dist directory and prepares the empty
 // working directory, the explicit config files and the registry check.
@@ -141,7 +141,7 @@ func startNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOp
 	}
 	cfg, err := newNPMConfig(tmp, opts.Env)
 	if err != nil {
-		_ = os.RemoveAll(tmp) // best effort cleanup of our own directory
+		os.RemoveAll(tmp) //nolint:errcheck,gosec // best effort cleanup of our own temporary directory
 		return nil, err
 	}
 	r = runner.Or(r)
@@ -169,7 +169,7 @@ func startNPM(ctx context.Context, r runner.Runner, plan Plan, opts NPMExecuteOp
 // view and publish calls get: environment variables (npm_config_registry, npm_config_@scope:registry, ...), the
 // user's npmrc and the built-in default all count the way npm applies them, which a reimplementation would miss.
 func (s *npmSession) effectiveRegistry() (string, error) {
-	argv := append([]string{"npm", "config", "list", "--json", "-l"}, s.flags...)
+	argv := append([]string{npmBin, "config", "list", "--json", "-l"}, s.flags...)
 	if s.plan.NPM.Registry != "" {
 		argv = append(argv, "--registry", s.plan.NPM.Registry)
 	}
@@ -402,7 +402,7 @@ func snapshotPackage(pkgDir string) (*packageSnapshot, error) {
 		}
 		name := filepath.ToSlash(rel)
 		snap.digests[name] = Digest(data)
-		if name == "package.json" {
+		if name == npmManifest {
 			snap.packageJSON = data
 		}
 		return nil
@@ -450,7 +450,7 @@ func (snap *packageSnapshot) verifyTarball(tarball []byte) error {
 		if err != nil || int64(len(body)) != hdr.Size {
 			return npmTarballError("entry %q is truncated", name)
 		}
-		if name == "package.json" {
+		if name == npmManifest {
 			if err := samePackageJSON(body, snap.packageJSON); err != nil {
 				return err
 			}
