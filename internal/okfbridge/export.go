@@ -431,7 +431,9 @@ func renderResources(it sourceItem, id, dir, srcDir string, claim func(string) s
 		if srcDir != "" && srcDir != "." {
 			src = path.Join(srcDir, rel)
 		}
-		if !strings.HasSuffix(strings.ToLower(rel), ".md") {
+		// Only a lower-case .md is a concept: import reads exactly that suffix, so
+		// an .MD resource travels as a plain file and survives the round trip.
+		if !strings.HasSuffix(rel, ".md") {
 			files = append(files, piece{file: okf.File{Path: claim(path.Join(dir, rel)), Data: r.Content, Mode: r.Mode}, src: src})
 			continue
 		}
