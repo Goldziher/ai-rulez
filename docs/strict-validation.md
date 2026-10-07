@@ -564,6 +564,13 @@ cat ~/.ssh/id_rsa
   comment instructions and encoded blobs are never skipped: a real key in an "example" is still a leak.
 - Markers inside imported content (`scan_imports`) are ignored, like `ai-rulez-lint-ignore` there: imported text
   cannot vouch for itself.
+- Trust model: an in-file marker is written by the same author as the content it covers, exactly like an
+  `ai-rulez-lint-ignore` comment, so both are honored in files your repository owns and neither is honored in imported
+  content. A marker can therefore hide a `curl | sh` (`AR005`), a credential read (`AR006`) or an outbound host (`AR008`)
+  from the gate in a contributed skill. Treat a new `example` fence or `ai-rulez-example` / `ai-rulez-lint-ignore`
+  comment in a diff as a review item (CODEOWNERS on skill directories, or `git diff -G'ai-rulez-(example|lint-ignore)'`
+  in CI), and keep the reviewed exemptions in `[lint] example_paths`, which only a change to the configuration can grow.
+  Skills installed from elsewhere are covered by `scan_imports`, where markers never count.
 - For rule authors: `lint.MarkExampleAware("ARnnn")` in an `init` registers a command-shaped rule, and a rule
   that scans line by line can call `r.inExample(abs, line)` from the runner to skip work early.
 
