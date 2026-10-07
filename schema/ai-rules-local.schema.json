@@ -1102,15 +1102,6 @@
           },
           "type": "array"
         },
-        "budget": {
-          "additionalProperties": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "deprecated": true,
-          "description": "Deprecated spelling of [lint.tolerate]; it still works and warns.",
-          "type": "object"
-        },
         "budgets": {
           "additionalProperties": {
             "additionalProperties": false,
@@ -1124,7 +1115,7 @@
             },
             "type": "object"
           },
-          "description": "Size limits per content kind (rule, context, skill, agent, command), each a table with max_lines and max_tokens. 0 keeps the default, negative removes the limit. Tolerated findings per rule are [lint.tolerate], not this table.",
+          "description": "Size limits per content kind (rule, context, skill, agent, command), each a table with max_lines and max_tokens. 0 keeps the default, negative removes the limit. Tolerated findings per rule are [lint.ratchet], not this table.",
           "type": "object"
         },
         "capability": {
@@ -1395,9 +1386,17 @@
           "type": "object"
         },
         "profile": {
-          "description": "Preset of rule severities and the failure threshold. strict fails on warnings and promotes quality warnings to errors; permissive downgrades broken-reference errors to warnings and never weakens security rules. Explicit severity, fail_on and budget settings win over the preset.",
+          "description": "Preset of rule severities and the failure threshold. strict fails on warnings and promotes quality warnings to errors; permissive downgrades broken-reference errors to warnings and never weakens security rules. Explicit severity, fail_on and ratchet settings win over the preset.",
           "enum": ["default", "strict", "permissive"],
           "type": "string"
+        },
+        "ratchet": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Tolerated finding count per rule code or name: a rule whose unaccepted findings number at most N does not count toward the exit code. Lower N over time to ratchet a rule down. Not the size limits: those are [lint.budgets.<kind>].",
+          "type": "object"
         },
         "require_metadata": {
           "additionalProperties": {
@@ -1538,14 +1537,6 @@
             "type": "string"
           },
           "description": "Severity override per finding code or name.",
-          "type": "object"
-        },
-        "tolerate": {
-          "additionalProperties": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "description": "Tolerated finding count per rule code or name: a rule whose unaccepted findings number at most N does not count toward the exit code. Lower N over time to ratchet a rule down. Not the size limits: those are [lint.budgets.<kind>].",
           "type": "object"
         },
         "traps": {

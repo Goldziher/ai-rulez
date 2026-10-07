@@ -227,15 +227,15 @@ func UpdateBaseline(r *Report, prev *Baseline, reason string) (*Baseline, error)
 	return out, nil
 }
 
-// Budgets is the [lint.tolerate] table: it caps how many findings of a rule are tolerated: up to max findings
+// Ratchet is the [lint.ratchet] table: it caps how many findings of a rule are tolerated: up to max findings
 // of a code that are not accepted by a baseline do not count toward the exit
 // code; one more and every finding of that code counts again. Lower the number
 // over time to ratchet a rule down.
-type Budgets map[string]int
+type Ratchet map[string]int
 
-// ResolveBudgets maps codes or names to canonical codes.
-func ResolveBudgets(raw map[string]int) Budgets {
-	out := Budgets{}
+// ResolveRatchet maps codes or names to canonical codes.
+func ResolveRatchet(raw map[string]int) Ratchet {
+	out := Ratchet{}
 	for key, limit := range raw {
 		if rule, ok := lookupRule(key); ok {
 			out[rule.Code] = limit
@@ -244,13 +244,13 @@ func ResolveBudgets(raw map[string]int) Budgets {
 	return out
 }
 
-// Without drops the budgets of the protected codes, which a policy never lets a
+// Without drops the ratchet entries of the protected codes, which a policy never lets a
 // repository tolerate, and lists the codes it dropped.
-func (b Budgets) Without(protected map[string]bool) (Budgets, []string) {
+func (b Ratchet) Without(protected map[string]bool) (Ratchet, []string) {
 	if len(protected) == 0 {
 		return b, nil
 	}
-	out := Budgets{}
+	out := Ratchet{}
 	dropped := map[string]bool{}
 	for code, limit := range b {
 		if protected[code] {
@@ -271,41 +271,41 @@ func sortedSet(set map[string]bool) []string {
 	return out
 }
 
-// BudgetExcess describes a rule over its tolerated finding count.
-type BudgetExcess struct {
+// RatchetExcess describes a rule over its tolerated finding count.
+type RatchetExcess struct {
 	Code  string `json:"code"`
 	Count int    `json:"count"`
 	Max   int    `json:"max"`
 }
 
-// Excess lists the budgeted rules whose unaccepted findings exceed the cap.
-func (b Budgets) Excess(findings []Finding) []BudgetExcess {
+// Excess lists the ratcheted rules whose unaccepted findings exceed the cap.
+func (b Ratchet) Excess(findings []Finding) []RatchetExcess {
 	counts := map[string]int{}
 	for i := range findings {
 		if !findings[i].IsAccepted() {
 			counts[findings[i].Code]++
 		}
 	}
-	var out []BudgetExcess
+	var out []RatchetExcess
 	for code, limit := range b {
 		if counts[code] > limit {
-			out = append(out, BudgetExcess{Code: code, Count: counts[code], Max: limit})
+			out = append(out, RatchetExcess{Code: code, Count: counts[code], Max: limit})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Code < out[j].Code })
 	return out
 }
 
-// FailedWith is Failed with the baseline and budgets applied: accepted
-// findings never fail, and a rule within its budget is tolerated.
-func FailedWith(findings []Finding, failOn string, budgets Budgets) bool {
-	return FailedWithExcess(findings, failOn, budgets, budgets.Excess(findings))
+// FailedWith is Failed with the baseline and ratchet applied: accepted
+// findings never fail, and a rule within its ratchet count is tolerated.
+func FailedWith(findings []Finding, failOn string, ratchet Ratchet) bool {
+	return FailedWithExcess(findings, failOn, ratchet, ratchet.Excess(findings))
 }
 
-// FailedWithExcess is FailedWith with the over-budget rules computed by the
-// caller, for a run that narrows findings (changed-only) after judging budgets
+// FailedWithExcess is FailedWith with the over-ratchet rules computed by the
+// caller, for a run that narrows findings (changed-only) after judging the ratchet
 // against the full set.
-func FailedWithExcess(findings []Finding, failOn string, budgets Budgets, excess []BudgetExcess) bool {
+func FailedWithExcess(findings []Finding, failOn string, ratchet Ratchet, excess []RatchetExcess) bool {
 	over := map[string]bool{}
 	for _, e := range excess {
 		over[e.Code] = true
@@ -313,7 +313,7 @@ func FailedWithExcess(findings []Finding, failOn string, budgets Budgets, excess
 	var counting []Finding
 	for i := range findings {
 		f := findings[i]
-		if _, budgeted := budgets[f.Code]; budgeted && !over[f.Code] {
+		if _, budgeted := ratchet[f.Code]; budgeted && !over[f.Code] {
 			continue
 		}
 		counting = append(counting, f)
