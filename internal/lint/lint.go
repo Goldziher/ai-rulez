@@ -680,7 +680,7 @@ func (r *runner) addItems(configDir, kind, domain string, files []config.Content
 
 var (
 	skillNameRe = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
-	useWhenRe   = regexp.MustCompile(`(?i)\b(use|used|invoke|trigger)\b.*\b(when|before|after|for|whenever|if)\b|\bwhen\b|\bwhenever\b`)
+	useWhenRe   = regexp.MustCompile(`(?i)\b(use|used|invoke|trigger)\b.*\b(when|before|after|for|whenever|if)\b|\bwhen\b|\bwhenever\b|\bload\s+(?:this\s+\w+\s+)?(?:for|before|when|whenever|after|if)\b|\buse\s+(?:this\s+\w+\s+|\w+\s+)?(?:as|any\s?time|anytime)\b`)
 )
 
 func (r *runner) checkItem(it *item) {

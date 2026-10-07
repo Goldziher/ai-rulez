@@ -120,3 +120,38 @@ func TestUnpinnedExecOwnPackagePrecision(t *testing.T) {
 		})
 	}
 }
+
+func TestDescriptionStylePrecision(t *testing.T) {
+	tests := []struct {
+		name string
+		desc string
+		want int
+	}{
+		// Descriptions that do state a trigger, in the wording the corpus uses.
+		{"load for", "Change or evaluate OCR backends and caching. Load for OCR behavior work, not ordinary PDF text extraction.", 0},
+		{"load before", "The fixtures submodule is not committed. Load before running Rust tests on a fresh clone.", 0},
+		{"use any time", "Audit bindings for coverage gaps. Use this skill any time you need to check a type is present in every language.", 0},
+		{"use as stage", "Discovers a raw pool of developer profiles. Use as stage 1 of the daily workflow.", 0},
+		{"use tool as the gate", "Use poly as the single lint and format gate instead of invoking ruff directly.", 0},
+		{"existing use when", "Deploy the billing service. Use when releasing billing changes.", 0},
+		// Descriptions that name no trigger stay reported.
+		{"noun phrase", "Storage, middleware, and server infrastructure specialist", 1},
+		{"capability only", "Reviews SQL compilation correctness and generated code quality across all target languages.", 1},
+		{"imperative without trigger", "Run the test suite and report results", 1},
+		{"the word load as a noun", "Handles the load balancer configuration for staging clusters", 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":           baseConfig + "\n[lint.description]\nrequire_use_when = true\n",
+				".ai-rulez/skills/alpha/SKILL.md": "---\nname: alpha\ndescription: " + tt.desc + "\n---\nbody\n",
+			})
+			gitAdd(t, root)
+			fs := lintDir(t, root)
+			if got := countCode(fs, CodeDescriptionStyle); got != tt.want {
+				t.Errorf("AR803 count = %d, want %d:\n%s", got, tt.want, dump(fs))
+			}
+		})
+	}
+}

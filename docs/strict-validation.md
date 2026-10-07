@@ -103,7 +103,7 @@ stdout.
 | AR753 | `sbom-drift` | error | `sbom --check` found the committed SBOM different from the one generated now, or none; `validate --strict` compares a committed `ai-bom.cdx.json` or `sbom.cdx.json` at the project root |
 | AR801 | `description-missing` | warning | A skill, agent or command has no `description` |
 | AR802 | `description-length` | warning | Description shorter than `min_length` (default 20) or longer than `max_length` (default 1024, the Agent Skills limit) |
-| AR803 | `description-style` | off | Description does not say when to use the item; turned on by `require_use_when = true` |
+| AR803 | `description-style` | off | Description does not say when to use the item; turned on by `require_use_when = true`. A trigger is "use ... when/for/before", "when", "whenever", "Load for/before/when ...", "Use this skill any time" or "Use X as ..." |
 | AR804 | `skill-name-invalid` | warning | Skill `name` is not lowercase letters/digits/single hyphens, exceeds 64 characters, or differs from its directory (Agent Skills specification) |
 | AR901 | `size-lines` | warning | Item exceeds its line budget |
 | AR902 | `size-tokens` | warning | Item exceeds its token budget (cl100k_base, an approximation) |
