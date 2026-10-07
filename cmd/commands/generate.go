@@ -129,10 +129,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	cfg, err := loadConfigForCommand(ctx, args, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
 	if err != nil {
 		fmtError(err)
-		if (generateLocked || generateFrozen) && errors.Is(err, config.ErrLockViolation) {
-			os.Exit(exitDrift) // a missing or disagreeing lock is drift, the same code as a changed source
-		}
-		os.Exit(1)
+		os.Exit(loadFailureCode(err))
 	}
 
 	// The organization policy clamped the configuration at load; refuse to
@@ -728,6 +725,16 @@ func processPluginConfig(configPath string, cfg *config.Config, gen *generator.G
 	}
 	fileCounter.FinishFile()
 	return written, nil
+}
+
+// loadFailureCode is the exit code of a configuration that failed to load: under
+// --locked or --frozen a missing or disagreeing lock is drift, the same code as a
+// changed source, and anything else is 1.
+func loadFailureCode(err error) int {
+	if (generateLocked || generateFrozen) && errors.Is(err, config.ErrLockViolation) {
+		return exitDrift
+	}
+	return 1
 }
 
 // applyLockFlags turns --locked and --frozen into the include lock policy.
