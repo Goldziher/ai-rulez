@@ -26,6 +26,7 @@ func (c *Config) Validate() error {
 		c.validateFrontmatter,
 		c.validateChecks,
 		c.validateOKF,
+		c.validateLLMsTxt,
 		c.validateInstalledSkills,
 		c.validateDefaults,
 		c.validateMCP,

@@ -50,6 +50,7 @@ type Config struct {
 	Rules          *RulesConfig        `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
 	Lint           *LintConfig         `yaml:"lint,omitempty" json:"lint,omitempty" toml:"lint,omitempty"`
 	OKF            *OKFConfig          `yaml:"okf,omitempty" json:"okf,omitempty" toml:"okf,omitempty"`
+	LLMsTxt        *LLMsTxtConfig      `yaml:"llms_txt,omitempty" json:"llms_txt,omitempty" toml:"llms_txt,omitempty"` //nolint:tagliatelle
 	Usage          *UsageConfig        `yaml:"usage,omitempty" json:"usage,omitempty" toml:"usage,omitempty"`
 	// Roles map a job to a slice of the shared content (see roles.go); RoleManifest
 	// is the [role_manifest] table, kept apart because [[roles]] is an array.
@@ -650,7 +651,7 @@ var goPresetNames = []string{
 	string(PresetClaude), string(PresetCursor), string(PresetGemini), string(PresetCopilot), string(PresetDevin),
 	string(PresetCline), string(PresetCodex), string(PresetAmp), string(PresetJunie), string(PresetHermes),
 	string(PresetOpenCode), string(PresetAntigravity), string(PresetMCP), string(PresetXum), string(PresetPi),
-	string(PresetBaz), PresetOKF,
+	string(PresetBaz), PresetOKF, PresetLLMsTxt,
 }
 
 var (
