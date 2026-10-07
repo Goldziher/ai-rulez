@@ -253,6 +253,10 @@ type FindingMeta struct {
 	// Hop says how far the finding's file is from the changed set in a
 	// changed-only report: "changed", "dependent" or "transitive(n)".
 	Hop string
+	// Metric is the measured value of a size finding (lines, tokens). Its
+	// bucket joins the fingerprint, so a baselined finding fires again once the
+	// measurement has grown well past what was accepted.
+	Metric int
 }
 
 func (f *Finding) meta() *FindingMeta {
