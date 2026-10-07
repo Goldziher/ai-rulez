@@ -383,22 +383,33 @@ func (st *scannerStage) write(files []stagedFile) error {
 // seal makes the staged tree read-only. On Windows the mode bits do not
 // prevent writes by the owner; the stage is still a private copy.
 func (st *scannerStage) seal() error {
+	// os.Root keeps every chmod inside the scratch directory even if something
+	// swaps a path for a symlink while the walk runs.
+	root, err := os.OpenRoot(st.root)
+	if err != nil {
+		return oops.Wrapf(err, "seal the stage")
+	}
+	defer root.Close()
 	var dirs []string
-	err := filepath.WalkDir(st.root, func(p string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(st.root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+		rel, rerr := filepath.Rel(st.root, p)
+		if rerr != nil {
+			return rerr
+		}
 		if d.IsDir() {
-			dirs = append(dirs, p)
+			dirs = append(dirs, rel)
 			return nil
 		}
-		return os.Chmod(p, 0o400)
+		return root.Chmod(rel, 0o400)
 	})
 	if err != nil {
 		return oops.Wrapf(err, "seal the stage")
 	}
 	for i := len(dirs) - 1; i >= 0; i-- {
-		if err := os.Chmod(dirs[i], 0o500); err != nil {
+		if err := root.Chmod(dirs[i], 0o500); err != nil {
 			return oops.Wrapf(err, "seal the stage")
 		}
 	}
@@ -410,13 +421,25 @@ func (st *scannerStage) cleanup() {
 	if st == nil || st.scratch == "" {
 		return
 	}
-	_ = filepath.WalkDir(st.scratch, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // best effort before removal
-		if err == nil && d.IsDir() {
-			_ = os.Chmod(p, 0o700) //nolint:errcheck // best effort
+	restoreWrite(st.scratch)
+	_ = os.RemoveAll(st.scratch) //nolint:errcheck // a temp directory the OS will reap
+}
+
+// restoreWrite gives every directory below scratch its write permission back, so
+// it can be removed. The handle is closed before return: Windows cannot remove a
+// directory that is open.
+func restoreWrite(scratch string) {
+	root, err := os.OpenRoot(scratch)
+	if err != nil {
+		return
+	}
+	defer root.Close()
+	_ = filepath.WalkDir(scratch, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // best effort before removal
+		if rel, rerr := filepath.Rel(scratch, p); err == nil && rerr == nil && d.IsDir() {
+			_ = root.Chmod(rel, 0o700) //nolint:errcheck // best effort
 		}
 		return nil
 	})
-	_ = os.RemoveAll(st.scratch) //nolint:errcheck // a temp directory the OS will reap
 }
 
 // outFile is the path of the {out} file.
