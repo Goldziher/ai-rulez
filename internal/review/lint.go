@@ -103,10 +103,12 @@ func loadDir(dir string) (*Rubric, []Problem, error) {
 	}
 	data, rerr := readRegular(file)
 	if rerr != nil {
+		//nolint:nilerr // a rubric.toml that cannot be read is a lint problem of the rubric, not a failure to lint
 		return nil, []Problem{{File: file, Line: 1, Message: "rubric.toml is missing, unreadable or a symlink: " + rerr.Error()}}, nil
 	}
 	r, unknown, perr := parseRubricLenient(data)
 	if perr != nil {
+		//nolint:nilerr // a rubric.toml that does not parse is a lint problem of the rubric, not a failure to lint
 		return nil, []Problem{{File: file, Line: tomlErrorLine(data), Message: perr.Error()}}, nil
 	}
 	r.Ref = filepath.Base(dir)
