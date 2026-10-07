@@ -47,7 +47,7 @@ func TestRecord_SessionIsSaltedHashNeverRaw(t *testing.T) {
 	saltFile := filepath.Join(dir, "usage.salt")
 	info, err := os.Stat(saltFile)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	assertPerm(t, 0o600, info)
 	salt, _ := os.ReadFile(saltFile)
 	assert.Equal(t, HashSession(strings.TrimSpace(string(salt)), "raw-session-id-123"), session)
 
@@ -234,7 +234,7 @@ func TestFeedback_RecordsIdentifiersAndKeepsNotesLocal(t *testing.T) {
 	assert.Equal(t, secret, string(kept))
 	info, err := os.Stat(notePath)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	assertPerm(t, 0o600, info)
 
 	// a second note in the same second does not overwrite the first
 	second, err := RecordFeedback("alpha", FeedbackStale, FeedbackOptions{LogPath: log, NoteFile: noteFile, Now: fixedClock})
@@ -334,7 +334,7 @@ func TestSalt_EmptyFileIsReplacedAndLooseModeIsTightened(t *testing.T) {
 	assert.NotEmpty(t, salt, "an empty salt file must not silently drop every session hash")
 	info, err := os.Stat(path)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	assertPerm(t, 0o600, info)
 	assert.Equal(t, salt, loadSalt(path), "the regenerated salt is stable")
 
 	loose := filepath.Join(dir, "loose.salt")
@@ -342,7 +342,7 @@ func TestSalt_EmptyFileIsReplacedAndLooseModeIsTightened(t *testing.T) {
 	assert.Equal(t, "abc", loadSalt(loose))
 	info, err = os.Stat(loose)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	assertPerm(t, 0o600, info)
 }
 
 func TestFeedback_NoteIsBoundedBeforeReadingAndDirIsPrivate(t *testing.T) {
@@ -372,7 +372,7 @@ func TestFeedback_NoteIsBoundedBeforeReadingAndDirIsPrivate(t *testing.T) {
 	require.NoError(t, err)
 	info, err := os.Stat(notes)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o700), info.Mode().Perm())
+	assertPerm(t, 0o700, info)
 }
 
 func TestRecord_StderrRedirectDoesNotHideTheRead(t *testing.T) {
