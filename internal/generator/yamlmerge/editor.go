@@ -308,7 +308,7 @@ func wouldEmpty(m *yaml.Node, path []string) bool {
 }
 
 // removeMember deletes a member's lines, with the blank line that separated it
-// from its neighbours when it had one on each side.
+// from its neighbors when it had one on each side.
 func (e *editor) removeMember(cur *yaml.Node, idx int) {
 	start, end := e.memberSpan(cur, idx)
 	if blankBefore(e.src, start) {
@@ -515,7 +515,8 @@ func flowEnd(src string, from int) int {
 		case '[', '{':
 			depth++
 		case ']', '}':
-			if depth--; depth == 0 {
+			depth--
+			if depth == 0 {
 				return i + 1
 			}
 		case '"', '\'':
@@ -631,73 +632,14 @@ func (e *editor) replaceBlockSequence(cur *yaml.Node, idx int, key string, old *
 		return false
 	}
 	start, end := e.memberSpan(cur, idx)
-	lines := strings.SplitAfter(e.src, "\n")
-	offsets := make([]int, len(lines))
-	for i := 1; i < len(lines); i++ {
-		offsets[i] = offsets[i-1] + len(lines[i-1])
+	layout, ok := e.sequenceLayout(old, start)
+	if !ok {
+		return false
 	}
-	starts := make([]int, len(old.Content))
-	oldValues := make([]any, len(old.Content))
-	dashIndent := -1
-	for i, item := range old.Content {
-		if item.Line < 1 || item.Line > len(lines) {
-			return false
-		}
-		line := lines[item.Line-1]
-		prefix := strings.TrimRight(line[:min(byteColumn(line, item.Column-1), len(line))], " ")
-		indent, isDash := strings.CutSuffix(prefix, "-")
-		if !isDash || strings.TrimSpace(indent) != "" || (dashIndent >= 0 && len(indent) != dashIndent) {
-			return false
-		}
-		dashIndent = len(indent)
-		starts[i] = offsets[item.Line-1]
-		if starts[i] < start || (i > 0 && starts[i] <= starts[i-1]) {
-			return false
-		}
-		if err := item.Decode(&oldValues[i]); err != nil {
-			return false
-		}
+	replaced, ok := e.rebuildSequence(items, layout, start, end)
+	if !ok {
+		return false
 	}
-	spanEnd := func(i int) int {
-		if i+1 < len(starts) {
-			return starts[i+1]
-		}
-		return end
-	}
-
-	var b strings.Builder
-	b.WriteString(e.src[start:starts[0]])
-	used := make([]bool, len(oldValues))
-	retained := 0
-	for _, item := range items {
-		chunk := ""
-		for j := range oldValues {
-			if !used[j] && jsonmerge.Digest(oldValues[j]) == jsonmerge.Digest(item) {
-				used[j] = true
-				retained++
-				chunk = e.src[starts[j]:spanEnd(j)]
-				break
-			}
-		}
-		if chunk == "" {
-			rendered, err := marshal([]any{item}, e.unit)
-			if err != nil {
-				return false
-			}
-			chunk = e.indentText(rendered, dashIndent)
-		}
-		if b.Len() > 0 && !strings.HasSuffix(b.String(), "\n") {
-			b.WriteString(e.newline)
-		}
-		b.WriteString(chunk)
-	}
-	if retained == 0 {
-		return false // nothing to keep: rendering the whole list is the same edit
-	}
-	if !strings.HasSuffix(b.String(), "\n") && end < len(e.src) {
-		b.WriteString(e.newline)
-	}
-	replaced := b.String()
 
 	// The new member must read back as value on its own, before it goes in.
 	var parsedMember map[string]any
@@ -707,6 +649,96 @@ func (e *editor) replaceBlockSequence(cur *yaml.Node, idx int, key string, old *
 	}
 	e.src = e.src[:start] + replaced + e.src[end:]
 	return true
+}
+
+// sequenceLayout is where the elements of a block sequence sit in the source.
+type sequenceLayout struct {
+	starts     []int // offset of the line each element's dash is on
+	oldValues  []any // each element decoded
+	dashIndent int   // the shared indentation of the dashes
+}
+
+// sequenceLayout reads where each element of old starts, or reports false when
+// a dash is not first on its line, the dashes disagree on indentation, or the
+// elements are not in source order at or after start.
+func (e *editor) sequenceLayout(old *yaml.Node, start int) (sequenceLayout, bool) {
+	lines := strings.SplitAfter(e.src, "\n")
+	offsets := make([]int, len(lines))
+	for i := 1; i < len(lines); i++ {
+		offsets[i] = offsets[i-1] + len(lines[i-1])
+	}
+	layout := sequenceLayout{
+		starts:     make([]int, len(old.Content)),
+		oldValues:  make([]any, len(old.Content)),
+		dashIndent: -1,
+	}
+	for i, item := range old.Content {
+		if item.Line < 1 || item.Line > len(lines) {
+			return sequenceLayout{}, false
+		}
+		line := lines[item.Line-1]
+		prefix := strings.TrimRight(line[:min(byteColumn(line, item.Column-1), len(line))], " ")
+		indent, isDash := strings.CutSuffix(prefix, "-")
+		if !isDash || strings.TrimSpace(indent) != "" || (layout.dashIndent >= 0 && len(indent) != layout.dashIndent) {
+			return sequenceLayout{}, false
+		}
+		layout.dashIndent = len(indent)
+		layout.starts[i] = offsets[item.Line-1]
+		if layout.starts[i] < start || (i > 0 && layout.starts[i] <= layout.starts[i-1]) {
+			return sequenceLayout{}, false
+		}
+		if err := item.Decode(&layout.oldValues[i]); err != nil {
+			return sequenceLayout{}, false
+		}
+	}
+	return layout, true
+}
+
+// rebuildSequence renders the member's new text: each of items keeps the source
+// text of the unchanged element it equals, and new ones are rendered. It reports
+// false when an element cannot be rendered or none is kept (rendering the whole
+// list is then the same edit).
+func (e *editor) rebuildSequence(items []any, layout sequenceLayout, start, end int) (string, bool) {
+	spanEnd := func(i int) int {
+		if i+1 < len(layout.starts) {
+			return layout.starts[i+1]
+		}
+		return end
+	}
+
+	var b strings.Builder
+	b.WriteString(e.src[start:layout.starts[0]])
+	used := make([]bool, len(layout.oldValues))
+	retained := 0
+	for _, item := range items {
+		chunk := ""
+		for j := range layout.oldValues {
+			if !used[j] && jsonmerge.Digest(layout.oldValues[j]) == jsonmerge.Digest(item) {
+				used[j] = true
+				retained++
+				chunk = e.src[layout.starts[j]:spanEnd(j)]
+				break
+			}
+		}
+		if chunk == "" {
+			rendered, err := marshal([]any{item}, e.unit)
+			if err != nil {
+				return "", false
+			}
+			chunk = e.indentText(rendered, layout.dashIndent)
+		}
+		if b.Len() > 0 && !strings.HasSuffix(b.String(), "\n") {
+			b.WriteString(e.newline)
+		}
+		b.WriteString(chunk)
+	}
+	if retained == 0 {
+		return "", false // nothing to keep: rendering the whole list is the same edit
+	}
+	if !strings.HasSuffix(b.String(), "\n") && end < len(e.src) {
+		b.WriteString(e.newline)
+	}
+	return b.String(), true
 }
 
 // sliceItems returns the elements of a slice or array value.
