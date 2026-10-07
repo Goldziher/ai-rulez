@@ -8,7 +8,7 @@ import (
 )
 
 func TestRoleSkillModeFallback(t *testing.T) {
-	base := "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
+	base := "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
 	tests := []struct {
 		name    string
 		table   string

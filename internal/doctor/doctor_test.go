@@ -654,8 +654,8 @@ func TestRun_LegacyConfigIsReportedAsAnErrorNamingTheFile(t *testing.T) {
 			got := byCheck(report, CheckConfig)
 			if len(got) == 0 || got[0].Severity != SeverityError ||
 				!strings.Contains(got[0].Message, filepath.Base(tt.file)) ||
-				!strings.Contains(got[0].Message, "npx ai-rulez@4 migrate v4") {
-				t.Fatalf("config findings = %+v, want an error naming %s and the 4.x migration", got, tt.file)
+				!strings.Contains(got[0].Message, "ai-rulez migrate v5") {
+				t.Fatalf("config findings = %+v, want an error naming %s and ai-rulez migrate v5", got, tt.file)
 			}
 		})
 	}

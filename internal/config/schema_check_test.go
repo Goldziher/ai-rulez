@@ -31,30 +31,30 @@ func TestSchemaFindings(t *testing.T) {
 		local string
 		want  []string // SchemaFinding.String() with the file reduced to its base name
 	}{
-		{name: "valid config has no finding", main: "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"},
+		{name: "valid config has no finding", main: "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"},
 		{
 			name: "misspelled top-level keys suggest the nearest key",
-			main: "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\ndelivry = \"static\"\n",
+			main: "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ndelivry = \"static\"\n",
 			want: []string{"config.toml: unknown key \"delivry\""},
 		},
 		{
 			name: "nested table and array entry",
-			main: "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n[lock]\nenforc = true\n[[mcp_servers]]\nname = \"a\"\ncommand = \"x\"\ncomand = \"y\"\n",
+			main: "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n[lock]\nenforc = true\n[[mcp_servers]]\nname = \"a\"\ncommand = \"x\"\ncomand = \"y\"\n",
 			want: []string{"config.toml: unknown key \"lock.enforc\" (did you mean \"enforce\"?)", "config.toml: unknown key \"mcp_servers.0.comand\" (did you mean \"command\"?)"},
 		},
 		{
 			name: "the removed compression option loads and is reported, not fatal",
-			main: "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\ncompression = \"moderate\"\n",
+			main: "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ncompression = \"moderate\"\n",
 			want: []string{"config.toml: unknown key \"compression\""},
 		},
 		{
 			name: "a top-level key after a table header is told where it landed",
-			main: "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n[header]\nhashes = \"none\"\nbuiltins = [\"rust\"]\n",
+			main: "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n[header]\nhashes = \"none\"\nbuiltins = [\"rust\"]\n",
 			want: []string{"config.toml: unknown key \"header.builtins\" (builtins is a top-level key: a key after a [header] line belongs to that table, so move it above the first [table])"},
 		},
 		{
 			name:  "local overlay is included",
-			main:  "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
+			main:  "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
 			local: "[lock]\nenforc = true\n",
 			want:  []string{"config.local.toml: unknown key \"lock.enforc\" (did you mean \"enforce\"?)"},
 		},
