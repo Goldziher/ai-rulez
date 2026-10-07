@@ -105,7 +105,13 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 		// parent too, so the parents of the folders count as removed.
 		removing = append(slices.Clone(plan.Files), dirs...)
 	}
-	dirs = append(dirs, g.emptiedDirs(removing)...)
+	var generated []string
+	if !g.userMode {
+		// A generated folder that ends up empty (.agents/skills with no skill)
+		// empties the folder generate created implicitly above it (.agents).
+		generated = dirs
+	}
+	dirs = append(dirs, g.emptiedDirs(removing, generated...)...)
 	// Deepest-first so children are removed before their parents.
 	sort.Slice(dirs, func(i, j int) bool { return dirs[i] > dirs[j] })
 	plan.Dirs = slices.DeleteFunc(slices.Compact(dirs), func(dir string) bool { return holdsAny(dir, plan.Restored) })
@@ -378,13 +384,20 @@ func (g *Generator) pruneDirsEmptiedBy(removed []string) {
 }
 
 // emptiedDirs returns the directories that removing the given files would leave
-// empty, deepest first, without touching the filesystem.
-func (g *Generator) emptiedDirs(removed []string) []string {
+// empty, deepest first, without touching the filesystem. generatedDirs are
+// directories clean removes when empty: each is checked like a candidate, and
+// so are the directories between it and its output root.
+func (g *Generator) emptiedDirs(removed []string, generatedDirs ...string) []string {
 	gone := make(map[string]bool, len(removed))
 	for _, file := range removed {
 		gone[filepath.Clean(file)] = true
 	}
 	candidates := g.pruneCandidates(removed)
+	for _, dir := range append(g.generatedDirParents(generatedDirs), generatedDirs...) {
+		if !slices.Contains(candidates, dir) && g.isPrunableDir(dir) {
+			candidates = append(candidates, dir)
+		}
+	}
 	sort.Slice(candidates, func(i, j int) bool { return candidates[i] > candidates[j] })
 	var emptied []string
 dirLoop:
@@ -402,6 +415,24 @@ dirLoop:
 		emptied = append(emptied, dir)
 	}
 	return emptied
+}
+
+// generatedDirParents lists the directories above each generated directory up to
+// its output root (.agents above .agents/skills): generate created them
+// implicitly. A generated directory outside any hidden root has none.
+func (g *Generator) generatedDirParents(dirs []string) []string {
+	var parents []string
+	for _, dir := range dirs {
+		stop := g.outputRoot(dir)
+		for cur := dir; cur != stop; {
+			cur = filepath.Dir(cur)
+			if !g.isPrunableDir(cur) {
+				break
+			}
+			parents = append(parents, cur)
+		}
+	}
+	return parents
 }
 
 // pruneCandidates lists the directories above the removed files that may be
@@ -463,6 +494,12 @@ func (g *Generator) isPrunableDir(dir string) bool {
 	}
 	if base, err := filepath.Abs(g.config.BaseDir); err == nil {
 		if abs, absErr := filepath.Abs(clean); absErr == nil && abs == base {
+			return false
+		}
+	}
+	// A scope directory holds sources, however empty its generated outputs leave it.
+	for _, scope := range g.config.Scopes {
+		if filepath.Clean(filepath.Join(g.config.BaseDir, filepath.FromSlash(scope.Path))) == clean {
 			return false
 		}
 	}
