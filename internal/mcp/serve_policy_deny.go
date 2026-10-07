@@ -31,9 +31,9 @@ func policyFiles(cfg *config.Config) []string {
 		return nil
 	}
 	var out []string
-	for _, l := range res.Layers {
-		if filepath.IsAbs(l.Path) {
-			out = append(out, l.Path)
+	for i := range res.Layers {
+		if path := res.Layers[i].Path; filepath.IsAbs(path) {
+			out = append(out, path)
 		}
 	}
 	return out
@@ -78,7 +78,8 @@ func servedDenial(v config.PolicyViolation, lock *lockfile.File) (string, bool) 
 	if v.Code != lint.CodeDigestDenied {
 		return "", false
 	}
-	for _, e := range lock.Served {
+	for i := range lock.Served {
+		e := &lock.Served[i]
 		prefix := fmt.Sprintf("served skill %q: %s pins %s,", e.Name, lockfile.FileName, e.Digest)
 		if e.Digest != "" && strings.HasPrefix(v.Message, prefix) {
 			return e.Digest, true
