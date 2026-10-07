@@ -905,37 +905,52 @@ func recordImported(c *conversion) error {
 	for _, s := range c.plan.Pointers {
 		add(s)
 	}
-	files := map[string][]byte{}
-	for _, rel := range rels {
-		abs := filepath.Join(c.abs, filepath.FromSlash(rel))
-		info, err := os.Lstat(abs)
-		switch {
-		case err != nil || info.Mode()&os.ModeSymlink != 0:
-		case info.IsDir():
-			collectDirFiles(c.abs, abs, files)
-		case info.Mode().IsRegular() && info.Size() <= maxFileBytes:
-			if data, rerr := os.ReadFile(abs); rerr == nil {
-				files[rel] = data
-			}
-		}
+	files, err := collectImported(c.abs, rels)
+	if err != nil {
+		return err
 	}
 	return generator.WriteConvertRecord(c.intoAbs, files)
 }
 
-// collectDirFiles adds every regular file below dir to files, keyed by its path below root.
-func collectDirFiles(root, dir string, files map[string][]byte) {
-	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+// collectImported reads the regular files at rels (a directory: every regular
+// file below it) through an os.Root on the project, so a path swapped for a
+// symlink between the check and the read cannot reach outside the project.
+func collectImported(projectDir string, rels []string) (map[string][]byte, error) {
+	root, err := os.OpenRoot(projectDir)
+	if err != nil {
+		return nil, oops.With("path", projectDir).Wrapf(err, "open the project to record the imported files")
+	}
+	defer func() { _ = root.Close() }()
+	files := map[string][]byte{}
+	for _, rel := range rels {
+		info, err := root.Lstat(filepath.FromSlash(rel))
+		switch {
+		case err != nil || info.Mode()&os.ModeSymlink != 0:
+		case info.IsDir():
+			collectDirFiles(root, rel, files)
+		case info.Mode().IsRegular() && info.Size() <= maxFileBytes:
+			if data, rerr := root.ReadFile(filepath.FromSlash(rel)); rerr == nil {
+				files[rel] = data
+			}
+		}
+	}
+	return files, nil
+}
+
+// collectDirFiles adds every regular file below dir (slash-separated, relative
+// to root) to files, keyed by its path below root.
+func collectDirFiles(root *os.Root, dir string, files map[string][]byte) {
+	walkErr := fs.WalkDir(root.FS(), dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !d.Type().IsRegular() {
 			return nil //nolint:nilerr // an unreadable entry is simply not recorded
 		}
 		if info, ierr := d.Info(); ierr != nil || info.Size() > maxFileBytes {
 			return nil //nolint:nilerr // too large to have been imported
 		}
-		data, rerr := os.ReadFile(p)
-		rel, relErr := filepath.Rel(root, p)
-		if rerr == nil && relErr == nil {
-			files[filepath.ToSlash(rel)] = data
+		if data, rerr := root.ReadFile(filepath.FromSlash(p)); rerr == nil {
+			files[p] = data
 		}
 		return nil
 	})
+	_ = walkErr // the callback never fails; an unreadable directory is simply not recorded
 }
