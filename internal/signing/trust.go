@@ -48,7 +48,7 @@ type TrustSet struct {
 
 func (e TrustEntry) appliesTo(subject string) bool { return e.Subject == "" || e.Subject == subject }
 
-// appliesToSource also honours the entry's source scope.
+// appliesToSource also honors the entry's source scope.
 func (e TrustEntry) appliesToSource(subject, source string) bool {
 	return e.appliesTo(subject) && (e.Source == "" || e.Source == source)
 }
@@ -56,7 +56,8 @@ func (e TrustEntry) appliesToSource(subject, source string) bool {
 // Keys returns the public keys trusted for subject.
 func (t TrustSet) Keys(subject string) []crypto.PublicKey {
 	var out []crypto.PublicKey
-	for _, e := range t.Entries {
+	for i := range t.Entries {
+		e := &t.Entries[i]
 		if e.Key != nil && e.appliesTo(subject) {
 			out = append(out, e.Key)
 		}
@@ -67,7 +68,8 @@ func (t TrustSet) Keys(subject string) []crypto.PublicKey {
 // CountFor returns how many entries may vouch for subject.
 func (t TrustSet) CountFor(subject string) int {
 	n := 0
-	for _, e := range t.Entries {
+	for i := range t.Entries {
+		e := &t.Entries[i]
 		if e.appliesTo(subject) {
 			n++
 		}
@@ -78,7 +80,8 @@ func (t TrustSet) CountFor(subject string) int {
 // HasIdentities reports whether any entry for subject trusts a certificate
 // identity (so keyless verification and a log are in play).
 func (t TrustSet) HasIdentities(subject string) bool {
-	for _, e := range t.Entries {
+	for i := range t.Entries {
+		e := &t.Entries[i]
 		if e.Key == nil && e.appliesTo(subject) {
 			return true
 		}
@@ -123,7 +126,8 @@ func (t TrustSet) CheckFor(res *Result, subject, source string, now time.Time) e
 		at = now
 	}
 	matched := false
-	for _, e := range t.Entries {
+	for i := range t.Entries {
+		e := &t.Entries[i]
 		if !e.appliesToSource(subject, source) || !e.matches(res.Signer) {
 			continue
 		}
