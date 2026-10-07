@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
@@ -184,8 +186,10 @@ func runLockFor(kind string, names []string) int {
 		paths = findConfigFilesRecursively()
 	}
 	lockUnpinned = nil // per run: a long-lived process must not carry refusals over
+	defer func() { lockWarnings = nil }()
 	code := 0
 	for _, path := range paths {
+		lockWarnings = onceCollector() // one per root: its loads say each warning once
 		var c int
 		switch {
 		case lockSubject:
@@ -207,7 +211,34 @@ func runLockFor(kind string, names []string) int {
 	return code
 }
 
+// lockWarnings is the warning collector the loads of the root being locked
+// share: lock loads the configuration more than once (the release-age gate,
+// then the lock itself), and each load and render would repeat its warnings.
+var lockWarnings *diag.Collector
+
+// onceCollector returns a collector whose sink says each distinct warning once
+// for its life, across loads and renders (a render starts a new de-duplication
+// round of its own).
+func onceCollector() *diag.Collector {
+	var mu sync.Mutex
+	said := map[string]bool{}
+	out := diag.New(nil)
+	return diag.New(func(msg string, args ...any) {
+		key := msg + "\x00" + fmt.Sprint(args...)
+		mu.Lock()
+		first := !said[key]
+		said[key] = true
+		mu.Unlock()
+		if first {
+			out.Raise(msg, args...)
+		}
+	})
+}
+
 func loadForLock(path string, opts ...config.LoadOption) (*config.Config, error) {
+	if lockWarnings != nil {
+		opts = append(opts, config.WithCollector(lockWarnings))
+	}
 	// lock reports an include it cannot resolve as a problem of its own.
 	ctx := config.WithUnresolvedIncludesTolerated(cmdContext())
 	if path != "" {
