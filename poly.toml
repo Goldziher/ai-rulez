@@ -28,6 +28,7 @@ exclude = [
   "internal/agentplugins/testdata/**",
   "internal/okf/testdata/**",
   "internal/okfbridge/testdata/**",
+  "internal/migrate/testdata/**",
   "internal/ard/schema/**",
   "internal/ard/testdata/**",
   "internal/sbom/testdata/**",

@@ -4,13 +4,7 @@
   "title": "ai-rulez okf validate",
   "description": "Output of `ai-rulez okf validate --format json`: the findings of one OKF bundle.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "bundle",
-    "okf_spec",
-    "concepts",
-    "findings"
-  ],
+  "required": ["schema_version", "bundle", "okf_spec", "concepts", "findings"],
   "additionalProperties": true,
   "properties": {
     "schema_version": {
