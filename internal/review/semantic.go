@@ -233,9 +233,8 @@ func classify(err error) (fatal, budget bool) {
 }
 
 // vote makes one call for one group and returns the checked verdicts of its dimensions.
-func (j *Judge) vote(ctx context.Context, sp callSpec, temperature float64, use *itemUse) (map[string]DimVerdict, bool, error) {
+func (j *Judge) vote(ctx context.Context, sp callSpec, temperature float64, use *itemUse) (verdicts map[string]DimVerdict, truncated bool, callErr error) {
 	var lastErr error
-	truncated := false
 	for attempt := 0; attempt < 2; attempt++ {
 		sp.retry = attempt
 		built := buildCall(sp)
@@ -261,8 +260,9 @@ func (j *Judge) vote(ctx context.Context, sp callSpec, temperature float64, use 
 		j.answered()
 		out := map[string]DimVerdict{}
 		halluc := 0
-		for _, d := range sp.dims {
-			dv, h, dropped := checkEvidence(parsed[d.ID], d, built.Corpus)
+		for i := range sp.dims {
+			d := &sp.dims[i]
+			dv, h, dropped := checkEvidence(parsed[d.ID], *d, built.Corpus)
 			halluc += h
 			dv.dropped = dropped
 			out[d.ID] = dv
@@ -285,20 +285,7 @@ type groupOutcome struct {
 // spend cap); a failed answer only marks its dimensions.
 func (j *Judge) judgeGroup(ctx context.Context, r *ItemResult, group string, dims []Dimension, sibs []Item, use *itemUse) (*groupOutcome, error) {
 	out := &groupOutcome{dims: map[string]*SemDim{}}
-	view := sendView(r.Item, r.Redacted)
-	seed := r.Digest
-	if seed == "" {
-		seed = r.ID
-	}
-	spec := func(v int) callSpec {
-		ordDims, ordSibs := orderFor(dims, sibs, v, seed)
-		if j.opts.ReverseSiblings {
-			for a, b := 0, len(ordSibs)-1; a < b; a, b = a+1, b-1 {
-				ordSibs[a], ordSibs[b] = ordSibs[b], ordSibs[a]
-			}
-		}
-		return callSpec{rb: j.rb, system: j.system, item: view, group: group, dims: ordDims, sibs: ordSibs, content: j.opts.Content, vote: v}
-	}
+	spec := j.groupSpec(r, group, dims, sibs)
 	first, trunc, err := j.vote(ctx, spec(1), j.rb.Votes.FirstTemperature, use)
 	out.truncated = trunc
 	if err != nil {
@@ -309,11 +296,43 @@ func (j *Judge) judgeGroup(ctx context.Context, r *ItemResult, group string, dim
 		if budget {
 			return nil, err
 		}
-		for _, d := range dims {
-			out.dims[d.ID] = &SemDim{ID: d.ID, Status: SemError, Note: "no answer: " + shortError(err)}
+		for i := range dims {
+			out.dims[dims[i].ID] = &SemDim{ID: dims[i].ID, Status: SemError, Note: "no answer: " + shortError(err)}
 		}
 		return out, nil
 	}
+	votes, err := j.extraVotes(ctx, spec, dims, first, out, use)
+	if err != nil {
+		return nil, err
+	}
+	for i := range dims {
+		out.dims[dims[i].ID] = aggregateDim(dims[i], votes, j.rb.Votes.InstabilityThreshold)
+	}
+	return out, nil
+}
+
+// groupSpec returns the call of vote v for one group: the order of dimensions and siblings is
+// derived from the item, so a vote is reproducible.
+func (j *Judge) groupSpec(r *ItemResult, group string, dims []Dimension, sibs []Item) func(v int) callSpec {
+	view := sendView(r.Item, r.Redacted)
+	seed := r.Digest
+	if seed == "" {
+		seed = r.ID
+	}
+	return func(v int) callSpec {
+		ordDims, ordSibs := orderFor(dims, sibs, v, seed)
+		if j.opts.ReverseSiblings {
+			for a, b := 0, len(ordSibs)-1; a < b; a, b = a+1, b-1 {
+				ordSibs[a], ordSibs[b] = ordSibs[b], ordSibs[a]
+			}
+		}
+		return callSpec{rb: j.rb, system: j.system, item: view, group: group, dims: ordDims, sibs: ordSibs, content: j.opts.Content, vote: v}
+	}
+}
+
+// extraVotes asks the votes after the first, for the dimensions the first flagged (every one with
+// AllVotes), up to K in all. It returns the votes that were cast; an error is fatal to the run.
+func (j *Judge) extraVotes(ctx context.Context, spec func(v int) callSpec, dims []Dimension, first map[string]DimVerdict, out *groupOutcome, use *itemUse) ([]map[string]DimVerdict, error) {
 	votes := []map[string]DimVerdict{first}
 	flagged := flaggedIn(dims, votes)
 	for v := 2; v <= j.opts.K && (len(flagged) > 0 || j.opts.AllVotes); v++ {
@@ -332,10 +351,7 @@ func (j *Judge) judgeGroup(ctx context.Context, r *ItemResult, group string, dim
 			break
 		}
 	}
-	for _, d := range dims {
-		out.dims[d.ID] = aggregateDim(d, votes, j.rb.Votes.InstabilityThreshold)
-	}
-	return out, nil
+	return votes, nil
 }
 
 func shortError(err error) string {
@@ -354,7 +370,8 @@ const injectionDimension = "injection-intent"
 // injection dimension whatever it gave.
 func flaggedIn(dims []Dimension, votes []map[string]DimVerdict) []string {
 	var out []string
-	for _, d := range dims {
+	for i := range dims {
+		d := &dims[i]
 		if v, ok := votes[0][d.ID]; ok && (v.Verdict != VerdictPass || d.ID == injectionDimension) {
 			out = append(out, d.ID)
 		}
@@ -447,6 +464,39 @@ func aggregateDim(d Dimension, votes []map[string]DimVerdict, threshold float64)
 func (j *Judge) ItemSemantic(ctx context.Context, r *ItemResult, pool []Item) (*SemanticResult, error) {
 	res := &SemanticResult{}
 	use := &itemUse{}
+	byID, firstErr := j.judgeGroups(ctx, r, pool, res, use)
+	for _, sd := range byID {
+		if sd.Status == SemError {
+			// A dimension the judge could not answer leaves the item unvouched for.
+			res.Incomplete = true
+		}
+	}
+	for i := range j.rb.Dimensions {
+		d := &j.rb.Dimensions[i]
+		sd := byID[d.ID]
+		switch {
+		case sd != nil:
+			sd.Code, sd.Group, sd.Weight, sd.severity = d.Code, d.Group, d.Weight, d.Severity
+		case offlinePreempted(r, d.ID):
+			sd = unjudgedDim(d, SemPreempted, "a lint rule already reports this: the judge was not asked")
+			sd.Verdict, sd.PreemptedBy = VerdictFail, preemptedBy(r, d.ID)
+		case d.NeedsBody && j.opts.Content != config.ReviewContentFull:
+			sd = unjudgedDim(d, SemSkipped, "needs the body: use --content full")
+		case firstErr != nil:
+			sd = unjudgedDim(d, SemSkipped, "the run stopped before this dimension was judged")
+		default:
+			sd = unjudgedDim(d, SemSkipped, "not judged")
+		}
+		res.Dimensions = append(res.Dimensions, *sd)
+	}
+	res.Calls, res.Cached = use.calls, use.cached
+	res.Score = semanticScore(res.Dimensions)
+	return res, firstErr
+}
+
+// judgeGroups judges the intrinsic group, then the contextual one, and returns the answered
+// dimensions by id. The first error stops the later groups; the flags of res are set as they arise.
+func (j *Judge) judgeGroups(ctx context.Context, r *ItemResult, pool []Item, res *SemanticResult, use *itemUse) (map[string]*SemDim, error) {
 	byID := map[string]*SemDim{}
 	var firstErr error
 	for _, group := range []string{GroupIntrinsic, GroupContextual} {
@@ -455,8 +505,8 @@ func (j *Judge) ItemSemantic(ctx context.Context, r *ItemResult, pool []Item) (*
 		if group == GroupContextual && len(dims) > 0 {
 			sibs = shortlist(pool, r.Item, j.rb.Limits.MaxSiblings)
 			if len(sibs) == 0 {
-				for _, d := range dims {
-					byID[d.ID] = &SemDim{ID: d.ID, Code: d.Code, Group: d.Group, Weight: d.Weight, Status: SemSkipped, severity: d.Severity, Note: "no sibling to compare with"}
+				for i := range dims {
+					byID[dims[i].ID] = unjudgedDim(&dims[i], SemSkipped, "no sibling to compare with")
 				}
 				dims = nil
 			}
@@ -479,36 +529,17 @@ func (j *Judge) ItemSemantic(ctx context.Context, r *ItemResult, pool []Item) (*
 			byID[id] = sd
 		}
 	}
-	for _, sd := range byID {
-		if sd.Status == SemError {
-			// A dimension the judge could not answer leaves the item unvouched for.
-			res.Incomplete = true
-		}
-	}
-	for _, d := range j.rb.Dimensions {
-		sd := byID[d.ID]
-		switch {
-		case sd != nil:
-			sd.Code, sd.Group, sd.Weight, sd.severity = d.Code, d.Group, d.Weight, d.Severity
-		case offlinePreempted(r, d.ID):
-			sd = &SemDim{ID: d.ID, Code: d.Code, Group: d.Group, Weight: d.Weight, severity: d.Severity, Status: SemPreempted, Verdict: VerdictFail, PreemptedBy: preemptedBy(r, d.ID), Note: "a lint rule already reports this: the judge was not asked"}
-		case d.NeedsBody && j.opts.Content != config.ReviewContentFull:
-			sd = &SemDim{ID: d.ID, Code: d.Code, Group: d.Group, Weight: d.Weight, severity: d.Severity, Status: SemSkipped, Note: "needs the body: use --content full"}
-		case firstErr != nil:
-			sd = &SemDim{ID: d.ID, Code: d.Code, Group: d.Group, Weight: d.Weight, severity: d.Severity, Status: SemSkipped, Note: "the run stopped before this dimension was judged"}
-		default:
-			sd = &SemDim{ID: d.ID, Code: d.Code, Group: d.Group, Weight: d.Weight, severity: d.Severity, Status: SemSkipped, Note: "not judged"}
-		}
-		res.Dimensions = append(res.Dimensions, *sd)
-	}
-	res.Calls, res.Cached = use.calls, use.cached
-	res.Score = semanticScore(res.Dimensions)
-	return res, firstErr
+	return byID, firstErr
+}
+
+// unjudgedDim is the result of a dimension the judge gave no verdict.
+func unjudgedDim(d *Dimension, status, note string) *SemDim {
+	return &SemDim{ID: d.ID, Code: d.Code, Group: d.Group, Weight: d.Weight, severity: d.Severity, Status: status, Note: note}
 }
 
 func offlinePreempted(r *ItemResult, id string) bool {
-	for _, d := range r.Dimensions {
-		if d.ID == id && d.Preempted {
+	for i := range r.Dimensions {
+		if r.Dimensions[i].ID == id && r.Dimensions[i].Preempted {
 			return true
 		}
 	}
@@ -517,12 +548,13 @@ func offlinePreempted(r *ItemResult, id string) bool {
 
 func preemptedBy(r *ItemResult, id string) []string {
 	var out []string
-	for _, d := range r.Dimensions {
+	for i := range r.Dimensions {
+		d := &r.Dimensions[i]
 		if d.ID != id {
 			continue
 		}
 		for _, e := range d.Evidence {
-			if e.Severity == "error" {
+			if e.Severity == severityError {
 				out = append(out, e.Code)
 			}
 		}
@@ -535,7 +567,8 @@ func preemptedBy(r *ItemResult, id string) []string {
 // counts as a pass (it does not accuse). nil when nothing was judged.
 func semanticScore(dims []SemDim) *int {
 	sum, weights := 0.0, 0.0
-	for _, d := range dims {
+	for i := range dims {
+		d := &dims[i]
 		switch d.Status {
 		case SemJudged:
 			sum += d.Weight * verdictValue[d.Verdict]
@@ -580,67 +613,45 @@ type SemanticOutcome struct {
 // the partial outcome.
 func RunSemantic(ctx context.Context, in SemanticInput) (*SemanticOutcome, error) {
 	j := NewJudge(in.Rubric, in.Options)
-	out := &SemanticOutcome{}
 	res := in.Results
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	var (
-		wg       sync.WaitGroup
-		mu       sync.Mutex
-		fatalErr error
-		budget   bool
-	)
-	jobs := make(chan int)
-	for range j.opts.Workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := range jobs {
-				r := &res.Items[i]
-				sem, err := j.ItemSemantic(ctx, r, res.pool)
-				if err != nil {
-					mu.Lock()
-					if errors.Is(err, ErrFatal) {
-						// A call cut short by the stop another worker asked for is not a second failure.
-						if fatalErr == nil && (!budget || !errors.Is(err, context.Canceled)) {
-							fatalErr = err
-							cancel()
-						}
-					} else {
-						budget = true
-						cancel()
-					}
-					mu.Unlock()
-				}
-				if sem != nil && (sem.Calls > 0 || sem.Cached > 0) {
-					r.Semantic = sem
-				}
+	rs := &runStop{cancel: cancel}
+	runPool(ctx, j.opts.Workers, len(res.Items), rs,
+		func(i int) bool { return res.Items[i].Status == StatusScored },
+		func(i int) {
+			r := &res.Items[i]
+			sem, err := j.ItemSemantic(ctx, r, res.pool)
+			if err != nil {
+				rs.record(err)
 			}
-		}()
-	}
-	for i := range res.Items {
-		if res.Items[i].Status != StatusScored {
-			continue
-		}
-		mu.Lock()
-		stop := fatalErr != nil || budget
-		mu.Unlock()
-		if stop || ctx.Err() != nil {
-			break
-		}
-		jobs <- i
-	}
-	close(jobs)
-	wg.Wait()
+			if sem != nil && (sem.Calls > 0 || sem.Cached > 0) {
+				r.Semantic = sem
+			}
+		})
 
-	out.Usage = j.Usage()
+	out := &SemanticOutcome{Usage: j.Usage()}
+	tallyOutcome(in.Rubric, res, j.opts.Content, out)
+	switch {
+	case rs.fatal != nil:
+		out.Incomplete, out.StoppedBecause = true, strings.TrimPrefix(rs.fatal.Error(), ErrFatal.Error()+": ")
+		return out, rs.fatal
+	case rs.budget:
+		out.Incomplete, out.StoppedBecause = true, "the spend cap was reached"
+	}
+	out.Incomplete = out.Incomplete || len(out.Unjudged) > 0
+	return out, nil
+}
+
+// tallyOutcome lists which scored items were not judged, were cut short or were truncated.
+func tallyOutcome(rb *Rubric, res *Results, content string, out *SemanticOutcome) {
 	for i := range res.Items {
 		r := &res.Items[i]
 		if r.Status != StatusScored {
 			continue
 		}
-		if r.Semantic == nil && hasJudgeableDims(in.Rubric, r, j.opts.Content, res.pool) {
+		if r.Semantic == nil && hasJudgeableDims(rb, r, content, res.pool) {
 			out.Unjudged = append(out.Unjudged, r.ID)
 		} else if r.Semantic != nil && r.Semantic.Incomplete {
 			out.Incomplete = true
@@ -649,15 +660,66 @@ func RunSemantic(ctx context.Context, in SemanticInput) (*SemanticOutcome, error
 			out.Truncated = append(out.Truncated, r.ID)
 		}
 	}
-	switch {
-	case fatalErr != nil:
-		out.Incomplete, out.StoppedBecause = true, strings.TrimPrefix(fatalErr.Error(), ErrFatal.Error()+": ")
-		return out, fatalErr
-	case budget:
-		out.Incomplete, out.StoppedBecause = true, "the spend cap was reached"
+}
+
+// runStop records what ends a judged run early; the workers of a run share it.
+type runStop struct {
+	mu     sync.Mutex
+	cancel context.CancelFunc
+	// fatal is the first fatal error; budget is true once the spend cap was reached.
+	fatal  error
+	budget bool
+}
+
+// record notes a judge error and cancels the run. A fatal error is kept (unless it is the
+// cancellation a spend-cap stop caused: a call cut short by the stop another worker asked for is
+// not a second failure); any other error is the spend cap.
+func (s *runStop) record(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !errors.Is(err, ErrFatal) {
+		s.budget = true
+		s.cancel()
+		return
 	}
-	out.Incomplete = out.Incomplete || len(out.Unjudged) > 0
-	return out, nil
+	if s.fatal == nil && (!s.budget || !errors.Is(err, context.Canceled)) {
+		s.fatal = err
+		s.cancel()
+	}
+}
+
+// stopped reports whether the run has been told to end.
+func (s *runStop) stopped() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.fatal != nil || s.budget
+}
+
+// runPool calls work for each index below n that eligible accepts, on bounded workers, and stops
+// handing out work once rs says the run ended or ctx is done.
+func runPool(ctx context.Context, workers, n int, rs *runStop, eligible func(i int) bool, work func(i int)) {
+	var wg sync.WaitGroup
+	jobs := make(chan int)
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range jobs {
+				work(i)
+			}
+		}()
+	}
+	for i := range n {
+		if !eligible(i) {
+			continue
+		}
+		if rs.stopped() || ctx.Err() != nil {
+			break
+		}
+		jobs <- i
+	}
+	close(jobs)
+	wg.Wait()
 }
 
 // hasJudgeableDims reports whether a call would be made for the item.
@@ -682,7 +744,8 @@ func VerdictTable(res *Results) map[string]map[string]string {
 		if it.Semantic == nil {
 			continue
 		}
-		for _, d := range it.Semantic.Dimensions {
+		for j := range it.Semantic.Dimensions {
+			d := &it.Semantic.Dimensions[j]
 			if d.Status != SemJudged && d.Status != SemUnstable {
 				continue
 			}

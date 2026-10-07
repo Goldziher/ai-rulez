@@ -177,24 +177,7 @@ func MatchCalibration(rb *Rubric, rec *CalibrationRecord, cur CalKey, now time.T
 		st.State = CalStale
 		st.Reasons = append(st.Reasons, fmt.Sprintf(format, args...))
 	}
-	if rec.Rubric.ID != rb.ID || rec.Rubric.Digest != rb.CoreDigest {
-		stale("the rubric changed since it was calibrated (calibrated for %s@%d, now %s@%d)", rec.Rubric.ID, rec.Rubric.Version, rb.ID, rb.Version)
-	}
-	if rec.PromptDigest != cur.PromptDigest {
-		stale("the prompt changed since it was calibrated")
-	}
-	if cur.GoldenDigest != "" && rec.GoldenDigest != cur.GoldenDigest {
-		stale("the golden set changed since it was calibrated")
-	}
-	if cur.Model != "" && !SameModel(rec.Model, cur.Model) {
-		stale("calibrated for model %s, judging with %s", rec.Model, cur.Model)
-	}
-	if rec.Content != "" && cur.Content != "" && rec.Content != cur.Content {
-		stale("calibrated with --content %s, judging with --content %s", rec.Content, cur.Content)
-	}
-	if cur.K > 0 && rec.K != cur.K {
-		stale("calibrated with k=%d votes, judging with k=%d", rec.K, cur.K)
-	}
+	staleJudge(rb, rec, cur, stale)
 	limit := maxAgeDays
 	if limit <= 0 {
 		limit = rb.Calibration.MaxAgeDays
@@ -213,17 +196,39 @@ func MatchCalibration(rb *Rubric, rec *CalibrationRecord, cur CalKey, now time.T
 	} else {
 		stale("the record has no valid date")
 	}
-	if st.State == CalMatched && rec.Status != "pass" {
+	if st.State == CalMatched && rec.Status != CalPass {
 		st.State = CalFailedRecord
 		st.Reasons = append(st.Reasons, "the judge did not meet the calibration thresholds")
 	}
-	for id, d := range rec.Dimensions {
-		if d.Status == CalPass {
+	for id := range rec.Dimensions {
+		if rec.Dimensions[id].Status == CalPass {
 			st.Dimensions = append(st.Dimensions, id)
 		}
 	}
 	sortStrings(st.Dimensions)
 	return st
+}
+
+// staleJudge reports through stale each way rec does not describe the judge in cur.
+func staleJudge(rb *Rubric, rec *CalibrationRecord, cur CalKey, stale func(format string, args ...any)) {
+	if rec.Rubric.ID != rb.ID || rec.Rubric.Digest != rb.CoreDigest {
+		stale("the rubric changed since it was calibrated (calibrated for %s@%d, now %s@%d)", rec.Rubric.ID, rec.Rubric.Version, rb.ID, rb.Version)
+	}
+	if rec.PromptDigest != cur.PromptDigest {
+		stale("the prompt changed since it was calibrated")
+	}
+	if cur.GoldenDigest != "" && rec.GoldenDigest != cur.GoldenDigest {
+		stale("the golden set changed since it was calibrated")
+	}
+	if cur.Model != "" && !SameModel(rec.Model, cur.Model) {
+		stale("calibrated for model %s, judging with %s", rec.Model, cur.Model)
+	}
+	if rec.Content != "" && cur.Content != "" && rec.Content != cur.Content {
+		stale("calibrated with --content %s, judging with --content %s", rec.Content, cur.Content)
+	}
+	if cur.K > 0 && rec.K != cur.K {
+		stale("calibrated with k=%d votes, judging with k=%d", rec.K, cur.K)
+	}
 }
 
 func recordDigest(rec *CalibrationRecord) string {
@@ -277,7 +282,10 @@ type GateFailure struct {
 	Agreement float64 `json:"agreement"`
 }
 
-var severityRank = map[string]int{"info": 0, "warning": 1, "error": 2}
+// severityError is the severity of a lint finding that preempts a judged dimension.
+const severityError = "error"
+
+var severityRank = map[string]int{"info": 0, "warning": 1, severityError: 2}
 
 // EvaluateGate fails when a stable fail verdict exists on a calibrated dimension whose
 // severity ceiling is at or above level. calibrated nil means every dimension counts
@@ -290,7 +298,8 @@ func EvaluateGate(res *Results, level string, calibrated map[string]bool) GateRe
 		if it.Semantic == nil {
 			continue
 		}
-		for _, d := range it.Semantic.Dimensions {
+		for j := range it.Semantic.Dimensions {
+			d := &it.Semantic.Dimensions[j]
 			if d.Status != SemJudged || d.Verdict != VerdictFail || d.Capped {
 				continue
 			}

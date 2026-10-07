@@ -127,7 +127,8 @@ type Report struct {
 // NewReport assembles the report. est may be nil.
 func NewReport(rb *Rubric, res *Results, est *Estimate) *Report {
 	info := RubricInfo{ID: rb.ID, Version: rb.Version, Ref: rb.Ref, Digest: rb.Digest, Formula: Formula, AppliesTo: rb.AppliesTo}
-	for _, d := range rb.Dimensions {
+	for i := range rb.Dimensions {
+		d := &rb.Dimensions[i]
 		info.Dimensions = append(info.Dimensions, RubricDimInfo{ID: d.ID, Code: d.Code, Group: d.Group, Weight: d.Weight, Severity: d.Severity, Twins: d.Twins})
 	}
 	rep := &Report{Schema: ReportSchema, Rubric: info, Run: RunInfo{Phase: 0, Offline: true}, Items: res.Items, Estimate: est}
@@ -139,7 +140,8 @@ func NewReport(rb *Rubric, res *Results, est *Estimate) *Report {
 		rep.Findings = []Finding{}
 	}
 	sum, n, semSum, semN := 0, 0, 0, 0
-	for _, it := range res.Items {
+	for i := range res.Items {
+		it := &res.Items[i]
 		rep.Summary.Items++
 		switch it.Status {
 		case StatusScored:
@@ -194,18 +196,18 @@ type SemanticReport struct {
 // WithSemantic records a judged run in the report.
 func (r *Report) WithSemantic(sr SemanticReport) {
 	o := sr.Outcome
-	cap, calls := sr.CapUSD, sr.CapCalls
+	capUSD, capCalls := sr.CapUSD, sr.CapCalls
 	r.Run = RunInfo{
 		Phase: 1, Calls: o.Usage.Calls, Cached: o.Usage.Cached, Tokens: o.Usage.Tokens, CostUSD: roundUSD(o.Usage.CostUSD),
-		CapUSD: &cap, CapCalls: &calls, Incomplete: o.Incomplete, StoppedBecause: o.StoppedBecause, Unjudged: o.Unjudged,
+		CapUSD: &capUSD, CapCalls: &capCalls, Incomplete: o.Incomplete, StoppedBecause: o.StoppedBecause, Unjudged: o.Unjudged,
 		Model: &RunModel{Requested: sr.Model, Resolved: o.Usage.ResolvedModels()}, Votes: sr.Votes, Content: sr.Content,
 		HallucinatedEvidence: o.Usage.Hallucinated,
 	}
 	r.Calibration, r.Gate, r.Models = sr.Calibration, sr.Gate, sr.Models
 	if e := sr.Estimate; e != nil {
 		r.Egress = &EgressInfo{Items: e.Totals.Items, Bytes: e.Totals.Bytes, ContentMode: sr.Content, Host: sr.Host, Withheld: e.Withheld}
-		for _, it := range r.Items {
-			if it.Redacted {
+		for i := range r.Items {
+			if it := &r.Items[i]; it.Redacted {
 				r.Egress.Redacted = append(r.Egress.Redacted, it.ID)
 			}
 		}
@@ -222,66 +224,81 @@ func (r *Report) WriteJSON(w io.Writer) error {
 	return nil
 }
 
+// writeRubricLine writes the first line of the text report: the rubric and how the run was made.
+func writeRubricLine(sb *strings.Builder, r *Report) {
+	if r.Run.Offline {
+		fmt.Fprintf(sb, "rubric %s@%d (%s, %s)  offline: lint evidence only, no model call\n", r.Rubric.ID, r.Rubric.Version, r.Rubric.Ref, shortDigest(r.Rubric.Digest))
+		return
+	}
+	model := ""
+	if r.Run.Model != nil {
+		model = r.Run.Model.Requested
+		if len(r.Run.Model.Resolved) > 0 {
+			model += " (resolved " + strings.Join(r.Run.Model.Resolved, ", ") + ")"
+		}
+	}
+	fmt.Fprintf(sb, "rubric %s@%d (%s, %s)  model %s  votes<=%d  content %s  advisory\n", r.Rubric.ID, r.Rubric.Version, r.Rubric.Ref, shortDigest(r.Rubric.Digest), model, r.Run.Votes, r.Run.Content)
+}
+
+// writeItemText writes one item of the text report: its line, the dimensions below pass and the judge's findings.
+func writeItemText(sb *strings.Builder, it *ItemResult, hidden map[string]bool) {
+	if it.Status != StatusScored {
+		fmt.Fprintf(sb, "%-28s %-8s %s: %s\n", it.ID, it.Kind, it.Status, it.Reason)
+		return
+	}
+	score := "n/a"
+	if it.Score != nil {
+		score = fmt.Sprintf("%d/100", *it.Score)
+	}
+	fmt.Fprintf(sb, "%-28s %-8s score %s", it.ID, it.Kind, score)
+	if it.Semantic != nil && it.Semantic.Score != nil {
+		fmt.Fprintf(sb, "  semantic %d/100", *it.Semantic.Score)
+	}
+	if it.Redacted {
+		sb.WriteString("  (redacted before sending)")
+	}
+	sb.WriteString("\n")
+	for i := range it.Dimensions {
+		d := &it.Dimensions[i]
+		if d.Status != DimScored || d.Verdict == VerdictPass {
+			continue
+		}
+		fmt.Fprintf(sb, "  %-6s %-20s %-4s %s\n", d.Code, d.ID, d.Verdict, evidenceSummary(d.Evidence))
+	}
+	if it.Semantic != nil {
+		writeSemanticText(sb, *it, hidden)
+	}
+}
+
+// writeSummaryText writes the closing summary line of the text report.
+func writeSummaryText(sb *strings.Builder, s Summary) {
+	fmt.Fprintf(sb, "%d items: %d scored, %d withheld, %d excluded, %d skipped", s.Items, s.Scored, s.Withheld, s.Excluded, s.Skipped)
+	if s.MeanScore != nil {
+		fmt.Fprintf(sb, "; mean score %d", *s.MeanScore)
+	}
+	if s.MeanSemanticScore != nil {
+		fmt.Fprintf(sb, "; mean semantic score %d over %d judged", *s.MeanSemanticScore, s.Judged)
+	}
+	if s.Baselined > 0 {
+		fmt.Fprintf(sb, "; %d finding(s) in the baseline hidden", s.Baselined)
+	}
+	sb.WriteString("\n")
+}
+
 // WriteText prints the report for a terminal.
 func (r *Report) WriteText(w io.Writer) error {
 	var sb strings.Builder
-	if r.Run.Offline {
-		fmt.Fprintf(&sb, "rubric %s@%d (%s, %s)  offline: lint evidence only, no model call\n", r.Rubric.ID, r.Rubric.Version, r.Rubric.Ref, shortDigest(r.Rubric.Digest))
-	} else {
-		model := ""
-		if r.Run.Model != nil {
-			model = r.Run.Model.Requested
-			if len(r.Run.Model.Resolved) > 0 {
-				model += " (resolved " + strings.Join(r.Run.Model.Resolved, ", ") + ")"
-			}
-		}
-		fmt.Fprintf(&sb, "rubric %s@%d (%s, %s)  model %s  votes<=%d  content %s  advisory\n", r.Rubric.ID, r.Rubric.Version, r.Rubric.Ref, shortDigest(r.Rubric.Digest), model, r.Run.Votes, r.Run.Content)
-	}
+	writeRubricLine(&sb, r)
 	hidden := map[string]bool{}
-	for _, f := range r.Findings {
-		if f.Baselined {
+	for i := range r.Findings {
+		if f := &r.Findings[i]; f.Baselined {
 			hidden[f.Fingerprint] = true
 		}
 	}
-	for _, it := range r.Items {
-		if it.Status != StatusScored {
-			fmt.Fprintf(&sb, "%-28s %-8s %s: %s\n", it.ID, it.Kind, it.Status, it.Reason)
-			continue
-		}
-		score := "n/a"
-		if it.Score != nil {
-			score = fmt.Sprintf("%d/100", *it.Score)
-		}
-		fmt.Fprintf(&sb, "%-28s %-8s score %s", it.ID, it.Kind, score)
-		if it.Semantic != nil && it.Semantic.Score != nil {
-			fmt.Fprintf(&sb, "  semantic %d/100", *it.Semantic.Score)
-		}
-		if it.Redacted {
-			sb.WriteString("  (redacted before sending)")
-		}
-		sb.WriteString("\n")
-		for _, d := range it.Dimensions {
-			if d.Status != DimScored || d.Verdict == VerdictPass {
-				continue
-			}
-			fmt.Fprintf(&sb, "  %-6s %-20s %-4s %s\n", d.Code, d.ID, d.Verdict, evidenceSummary(d.Evidence))
-		}
-		if it.Semantic != nil {
-			writeSemanticText(&sb, it, hidden)
-		}
+	for i := range r.Items {
+		writeItemText(&sb, &r.Items[i], hidden)
 	}
-	s := r.Summary
-	fmt.Fprintf(&sb, "%d items: %d scored, %d withheld, %d excluded, %d skipped", s.Items, s.Scored, s.Withheld, s.Excluded, s.Skipped)
-	if s.MeanScore != nil {
-		fmt.Fprintf(&sb, "; mean score %d", *s.MeanScore)
-	}
-	if s.MeanSemanticScore != nil {
-		fmt.Fprintf(&sb, "; mean semantic score %d over %d judged", *s.MeanSemanticScore, s.Judged)
-	}
-	if s.Baselined > 0 {
-		fmt.Fprintf(&sb, "; %d finding(s) in the baseline hidden", s.Baselined)
-	}
-	sb.WriteString("\n")
+	writeSummaryText(&sb, r.Summary)
 	if !r.Run.Offline {
 		writeRunText(&sb, r)
 	}
@@ -296,7 +313,8 @@ func (r *Report) WriteText(w io.Writer) error {
 }
 
 func writeSemanticText(sb *strings.Builder, it ItemResult, hidden map[string]bool) {
-	for _, d := range it.Semantic.Dimensions {
+	for i := range it.Semantic.Dimensions {
+		d := &it.Semantic.Dimensions[i]
 		switch d.Status {
 		case SemJudged, SemUnstable:
 		case SemError:
@@ -342,14 +360,14 @@ func termText(s string) string {
 	}, s)), " ")
 }
 
-func firstQuote(d SemDim) string {
+func firstQuote(d *SemDim) string {
 	if len(d.Evidence) > 0 {
 		return d.Evidence[0].Quote
 	}
 	return ""
 }
 
-func agreeCount(d SemDim) int {
+func agreeCount(d *SemDim) int {
 	n := 0
 	for _, v := range d.Votes {
 		if v == d.Verdict {
@@ -546,9 +564,10 @@ type sarifLocation struct {
 // WriteSARIF prints the findings as SARIF 2.1.0. version is the ai-rulez release.
 func WriteSARIF(w io.Writer, rb *Rubric, res *Results, version string) error {
 	var findings []Finding
-	for _, f := range res.Findings(rb) {
-		if !f.Baselined {
-			findings = append(findings, f)
+	all := res.Findings(rb)
+	for i := range all {
+		if !all[i].Baselined {
+			findings = append(findings, all[i])
 		}
 	}
 	phase, offline := 0, true
@@ -559,7 +578,8 @@ func WriteSARIF(w io.Writer, rb *Rubric, res *Results, version string) error {
 	}
 	index := map[string]int{}
 	rules := []sarifRule{}
-	for _, f := range findings {
+	for i := range findings {
+		f := &findings[i]
 		if _, ok := index[f.Code]; ok {
 			continue
 		}
@@ -574,7 +594,8 @@ func WriteSARIF(w io.Writer, rb *Rubric, res *Results, version string) error {
 		})
 	}
 	results := make([]sarifResult, 0, len(findings))
-	for _, f := range findings {
+	for i := range findings {
+		f := &findings[i]
 		var loc sarifLocation
 		loc.PhysicalLocation.ArtifactLocation.URI, loc.PhysicalLocation.ArtifactLocation.URIBaseID = sarifout.ArtifactURI(f.Path)
 		loc.PhysicalLocation.Region.StartLine = max(f.Line, 1)
@@ -582,7 +603,7 @@ func WriteSARIF(w io.Writer, rb *Rubric, res *Results, version string) error {
 			RuleID: f.Code, RuleIndex: index[f.Code], Level: sarifout.Level(f.Severity),
 			Message: sarifText{Text: f.Message}, Locations: []sarifLocation{loc},
 			PartialFingerprints: map[string]string{"aiRulezReviewFingerprint/v1": f.Fingerprint},
-			Properties:          resultProperties(f, rb),
+			Properties:          resultProperties(*f, rb),
 		})
 	}
 	log := sarifLog{Schema: sarifout.Schema, Version: sarifout.Version, Runs: []sarifRun{{

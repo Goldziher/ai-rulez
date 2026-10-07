@@ -45,21 +45,21 @@ type fixReply struct {
 
 // fixSchema is the reply schema of the fixer (no additionalProperties: Gemini rejects it).
 func fixSchema() map[string]any {
-	str := map[string]any{"type": "string"}
+	str := map[string]any{schemaType: schemaString}
 	return map[string]any{
-		"type": "object",
-		"properties": map[string]any{
+		schemaType: schemaObject,
+		schemaProperties: map[string]any{
 			"edits": map[string]any{
-				"type": "array",
-				"items": map[string]any{
-					"type":       "object",
-					"properties": map[string]any{"old": str, "new": str},
-					"required":   []string{"old", "new"},
+				schemaType: schemaArray,
+				schemaItems: map[string]any{
+					schemaType:       schemaObject,
+					schemaProperties: map[string]any{"old": str, "new": str},
+					schemaRequired:   []string{"old", "new"},
 				},
 			},
 			"note": str,
 		},
-		"required": []string{"edits", "note"},
+		schemaRequired: []string{"edits", "note"},
 	}
 }
 
@@ -114,28 +114,8 @@ func CheckPatched(orig, patched string, maxGrowthPercent int) error {
 	if patched == orig {
 		return oops.Errorf("the edits change nothing")
 	}
-	ofm, ohad := frontmatterMap(orig)
-	pfm, phad := frontmatterMap(patched)
-	if ohad && !phad {
-		return oops.Errorf("the frontmatter no longer parses")
-	}
-	if !ohad && phad {
-		return oops.Errorf("the edit adds a frontmatter block; a fix may change only the description and the body")
-	}
-	if ohad {
-		for k, ov := range ofm {
-			if k == "description" {
-				continue
-			}
-			if pv, ok := pfm[k]; !ok || !reflect.DeepEqual(ov, pv) {
-				return oops.Errorf("the frontmatter key %q changed; a fix may change only the description and the body", k)
-			}
-		}
-		for k := range pfm {
-			if _, ok := ofm[k]; !ok && k != "description" {
-				return oops.Errorf("the frontmatter key %q was added; a fix may change only the description and the body", k)
-			}
-		}
+	if err := checkFrontmatterKept(orig, patched); err != nil {
+		return err
 	}
 	allowed := len(orig) * maxGrowthPercent / 100
 	if allowed < minGrowthBytes {
@@ -144,6 +124,40 @@ func CheckPatched(orig, patched string, maxGrowthPercent int) error {
 	if grow := len(patched) - len(orig); grow > allowed {
 		return oops.Errorf("the item grows by %d bytes; the limit is %d (%d%%, at least %d)", grow, allowed, maxGrowthPercent, minGrowthBytes)
 	}
+	return checkNoRiskAdded(orig, patched)
+}
+
+// checkFrontmatterKept requires the frontmatter to parse as before and to differ only in the description.
+func checkFrontmatterKept(orig, patched string) error {
+	ofm, ohad := frontmatterMap(orig)
+	pfm, phad := frontmatterMap(patched)
+	if ohad && !phad {
+		return oops.Errorf("the frontmatter no longer parses")
+	}
+	if !ohad && phad {
+		return oops.Errorf("the edit adds a frontmatter block; a fix may change only the description and the body")
+	}
+	if !ohad {
+		return nil
+	}
+	for k, ov := range ofm {
+		if k == "description" {
+			continue
+		}
+		if pv, ok := pfm[k]; !ok || !reflect.DeepEqual(ov, pv) {
+			return oops.Errorf("the frontmatter key %q changed; a fix may change only the description and the body", k)
+		}
+	}
+	for k := range pfm {
+		if _, ok := ofm[k]; !ok && k != "description" {
+			return oops.Errorf("the frontmatter key %q was added; a fix may change only the description and the body", k)
+		}
+	}
+	return nil
+}
+
+// checkNoRiskAdded rejects a credential, hidden characters, an executable line or a link the original lacked.
+func checkNoRiskAdded(orig, patched string) error {
 	if name, ok := lint.DetectSecret(patched); ok {
 		if _, had := lint.DetectSecret(orig); !had {
 			return oops.Errorf("the edit adds a credential (%s)", name)
@@ -259,10 +273,11 @@ func ProposeFix(ctx context.Context, in FixInput) (*FixProposal, error) {
 	p.Fingerprint, p.Code, p.Dimension = in.Findings[0].Fingerprint, in.Findings[0].Code, in.Findings[0].Dimension
 	targets := map[string]bool{}
 	before := map[string]string{}
-	for _, f := range in.Findings {
-		targets[f.Dimension] = true
+	for i := range in.Findings {
+		targets[in.Findings[i].Dimension] = true
 	}
-	for _, d := range it.Semantic.Dimensions {
+	for i := range it.Semantic.Dimensions {
+		d := &it.Semantic.Dimensions[i]
 		if d.Status == SemJudged || d.Status == SemUnstable {
 			before[d.ID] = d.Verdict
 		}
@@ -274,49 +289,12 @@ func ProposeFix(ctx context.Context, in FixInput) (*FixProposal, error) {
 	rejection := ""
 	for attempt := 1; attempt <= maxFixAttempts; attempt++ {
 		p.Attempts = attempt
-		patched, note, usage, err := proposeEdits(ctx, in, rejection)
-		p.Usage.Add(usage)
+		patched, why, err := attemptFix(ctx, in, rejection, targets, before, p)
 		if err != nil {
-			if fatalFix(err) {
-				return p, err
-			}
-			rejection = err.Error()
-			p.Reason = "no usable edit: " + rejection
-			continue
-		}
-		p.Note = note
-		if err := CheckPatched(it.Raw, patched, in.MaxGrowthPercent); err != nil {
-			rejection = err.Error()
-			p.Reason = "rejected: " + rejection
-			continue
-		}
-		if in.LintCheck != nil {
-			added, lerr := in.LintCheck(patched)
-			if lerr != nil {
-				return p, oops.Wrapf(lerr, "lint the proposed fix")
-			}
-			if len(added) > 0 {
-				rejection = "the edit adds lint findings: " + strings.Join(added, "; ")
-				p.Reason = "rejected: " + rejection
-				continue
-			}
-		}
-		after, incomplete, jerr := rejudge(ctx, in, patched, p)
-		if jerr != nil {
-			return p, jerr
-		}
-		p.After = map[string]string{}
-		for dim := range targets {
-			p.After[dim] = after[dim]
-		}
-		why := compareVerdicts(targets, before, after)
-		if why == "" && incomplete {
-			// The spend cap cut the votes short or a dimension got no usable answer.
-			why = "the re-judge of the patched item is incomplete, so it cannot vouch for the patch"
+			return p, err
 		}
 		if why != "" {
 			rejection = why
-			p.Reason = "rejected: " + why
 			continue
 		}
 		p.Verified, p.Reason, p.Patched = true, "", patched
@@ -324,6 +302,56 @@ func ProposeFix(ctx context.Context, in FixInput) (*FixProposal, error) {
 		return p, nil
 	}
 	return p, nil
+}
+
+// attemptFix runs one proposal through every check. A non-empty why rejects it (p.Reason says so);
+// a non-nil err ends the fix run.
+func attemptFix(ctx context.Context, in FixInput, rejection string, targets map[string]bool, before map[string]string, p *FixProposal) (patched, why string, err error) {
+	patched, note, usage, err := proposeEdits(ctx, in, rejection)
+	p.Usage.Add(usage)
+	if err != nil {
+		if fatalFix(err) {
+			return "", "", err
+		}
+		return rejectFix(p, "no usable edit: ", err.Error())
+	}
+	p.Note = note
+	if err := CheckPatched(in.Item.Raw, patched, in.MaxGrowthPercent); err != nil {
+		return rejectFix(p, "rejected: ", err.Error())
+	}
+	if in.LintCheck != nil {
+		added, lerr := in.LintCheck(patched)
+		if lerr != nil {
+			return "", "", oops.Wrapf(lerr, "lint the proposed fix")
+		}
+		if len(added) > 0 {
+			return rejectFix(p, "rejected: ", "the edit adds lint findings: "+strings.Join(added, "; "))
+		}
+	}
+	after, incomplete, jerr := rejudge(ctx, in, patched, p)
+	if jerr != nil {
+		return "", "", jerr
+	}
+	p.After = map[string]string{}
+	for dim := range targets {
+		p.After[dim] = after[dim]
+	}
+	why = compareVerdicts(targets, before, after)
+	if why == "" && incomplete {
+		// The spend cap cut the votes short or a dimension got no usable answer.
+		why = "the re-judge of the patched item is incomplete, so it cannot vouch for the patch"
+	}
+	if why != "" {
+		return rejectFix(p, "rejected: ", why)
+	}
+	return patched, "", nil
+}
+
+// rejectFix records why a proposal was refused (p.Reason is prefix + why) and returns the
+// rejection the next attempt is told about.
+func rejectFix(p *FixProposal, prefix, why string) (patched, rejection string, err error) {
+	p.Reason = prefix + why
+	return "", why, nil
 }
 
 // fatalFix reports whether an error ends the fix run (a refused network, a bad key, the spend cap).
@@ -362,7 +390,7 @@ func compareVerdicts(targets map[string]bool, before, after map[string]string) s
 
 // rejudge judges the patched item with the verifier and returns its verdict per dimension, and
 // whether the judgement is incomplete.
-func rejudge(ctx context.Context, in FixInput, patched string, p *FixProposal) (map[string]string, bool, error) {
+func rejudge(ctx context.Context, in FixInput, patched string, p *FixProposal) (verdicts map[string]string, incomplete bool, err error) {
 	pi := in.Item.WithText(patched)
 	r := ItemResult{Item: pi, Status: StatusScored, Redacted: in.Item.Redacted, Dimensions: in.Item.Dimensions}
 	// The verifier is used by one fix at a time, so the change in its usage is what this re-judge
@@ -378,7 +406,8 @@ func rejudge(ctx context.Context, in FixInput, patched string, p *FixProposal) (
 		return nil, false, err
 	}
 	out := map[string]string{}
-	for _, d := range sem.Dimensions {
+	for i := range sem.Dimensions {
+		d := &sem.Dimensions[i]
 		if d.Status == SemJudged || d.Status == SemUnstable {
 			out[d.ID] = d.Verdict
 		}
@@ -438,7 +467,8 @@ func fixUser(in FixInput, rejection string) string {
 	// The findings are model output written while reading the file, so they can repeat what the
 	// file says: they are data in a fence of their own, never instructions.
 	var fb strings.Builder
-	for _, f := range in.Findings {
+	for i := range in.Findings {
+		f := &in.Findings[i]
 		fmt.Fprintf(&fb, "- %s %s: ", f.Code, f.Dimension)
 		if dim, ok := in.Rubric.Dimension(f.Dimension); ok {
 			fmt.Fprintf(&fb, "%s (a pass means: %s) ", dim.Question, dim.Pass)
