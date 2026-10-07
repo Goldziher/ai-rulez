@@ -98,8 +98,7 @@ func TestServeSkillsGatingE2E(t *testing.T) {
 			arrange: func(t *testing.T, env *isoEnv, root string) {
 				require.Equal(t, 0, env.run(root, "lock").ExitCode)
 			},
-			blocked: "MAN-4",
-			load:    map[string]any{"name": "deploy"}, wantError: true, wantText: "AR710",
+			load: map[string]any{"name": "deploy"}, wantError: true, wantText: "AR710",
 		},
 		{
 			name:   "an approved served skill is served under enforced approvals",
@@ -126,8 +125,7 @@ func TestServeSkillsGatingE2E(t *testing.T) {
 				require.Equal(t, 0, env.run(root, "approve", "skill:deploy", "--reviewer", "alice@example.org", "--yes").ExitCode)
 				require.Equal(t, 0, env.run(root, "approve", "skill:deploy", "--revoke", "--deny", "--reason", "bad", "--yes").ExitCode)
 			},
-			blocked: "MAN-5",
-			load:    map[string]any{"name": "deploy"}, wantError: true, wantText: "AR717",
+			load: map[string]any{"name": "deploy"}, wantError: true, wantText: "AR717",
 		},
 		{
 			name:   "a skill needs a signed lock under [signing] require = [\"served\"] (AR720)",

@@ -58,6 +58,9 @@ type Admission struct {
 	// (sources.deny_digests) to the policy's message; a skill with that digest
 	// is refused with AR747.
 	PolicyDenied map[string]string
+	// Authored holds the skill:<name> items of the skills authored in the
+	// project (authoredSkillItems); nil skips the authored-item gate.
+	Authored map[string]lockfile.Item
 }
 
 // Admit returns a catalog holding only the admitted skills. Refused skills are
