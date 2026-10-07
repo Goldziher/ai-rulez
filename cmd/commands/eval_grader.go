@@ -55,8 +55,8 @@ func buildGrader(cmd *cobra.Command, cfg *config.Config) (evals.RubricGrader, fu
 	case lc.FullModel() == "":
 		return nil, noop, oops.Hint("Set [llm] model (and provider) in the user config, see docs/llm.md").Errorf("--grader builtin: no [llm] model is configured")
 	}
-	if cap := evalFlags.graderMaxCost; cap > 0 && (lc.MaxCostUSD == 0 || cap < lc.MaxCostUSD) {
-		lc.MaxCostUSD = cap // the budget guard enforces it, failing closed
+	if maxCost := evalFlags.graderMaxCost; maxCost > 0 && (lc.MaxCostUSD == 0 || maxCost < lc.MaxCostUSD) {
+		lc.MaxCostUSD = maxCost // the budget guard enforces it, failing closed
 	}
 	if lc.MaxCostUSD > 0 {
 		// The budget guard refuses a model it cannot price, per call, after the runner has been
