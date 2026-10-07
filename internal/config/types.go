@@ -267,12 +267,15 @@ func (c *Config) HasSelfServer() bool {
 // SelfMCPServerName is the key of the ai-rulez entry in generated MCP files.
 const SelfMCPServerName = "ai-rulez"
 
+// mcpKeyCommand is the .mcp.json key naming the command a stdio server runs.
+const mcpKeyCommand = "command"
+
 // SelfMCPServerEntry builds the .mcp.json entry for ai-rulez's own MCP server.
 // binaryVersion is the running binary's version; it is used unless the config
 // pins one, and "dev"/empty resolve to "latest".
 func (c *Config) SelfMCPServerEntry(binaryVersion string) map[string]any {
 	if c.MCP != nil && len(c.MCP.SelfServerCommand) > 0 {
-		entry := map[string]any{"type": "stdio", "command": c.MCP.SelfServerCommand[0]}
+		entry := map[string]any{"type": "stdio", mcpKeyCommand: c.MCP.SelfServerCommand[0]}
 		if args := c.MCP.SelfServerCommand[1:]; len(args) > 0 {
 			entry["args"] = append([]string(nil), args...)
 		}
@@ -289,9 +292,9 @@ func (c *Config) SelfMCPServerEntry(binaryVersion string) map[string]any {
 		version = "latest"
 	}
 	return map[string]any{
-		"type":    "stdio",
-		"command": "npx",
-		"args":    []string{"-y", "ai-rulez@" + version, "mcp"},
+		"type":        "stdio",
+		mcpKeyCommand: "npx",
+		"args":        []string{"-y", "ai-rulez@" + version, "mcp"},
 	}
 }
 

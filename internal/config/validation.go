@@ -667,7 +667,7 @@ func (c *Config) defaultFromOverlay() bool {
 	if c.LocalOverlay == nil {
 		return false
 	}
-	_, ok := c.LocalOverlay.Doc["default"]
+	_, ok := c.LocalOverlay.Doc[docKeyDefault]
 	return ok
 }
 

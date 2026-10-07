@@ -1529,7 +1529,7 @@ func loadBuiltinDomains(config *Config, names []string, ruleExclusions map[strin
 				domain.Rules = append(domain.Rules, cf)
 			case "context":
 				domain.Context = append(domain.Context, cf)
-			case "skills":
+			case skillsDir:
 				domain.Skills = append(domain.Skills, cf)
 			case "agents":
 				domain.Agents = append(domain.Agents, cf)
