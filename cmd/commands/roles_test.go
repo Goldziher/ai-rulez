@@ -118,11 +118,16 @@ func TestTokensByRole(t *testing.T) {
 	var out bytes.Buffer
 	_, err := runTokens(&out, nil)
 	require.NoError(t, err)
-	var reports []struct {
-		Profile string `json:"profile"`
-		Role    string `json:"role"`
+	var doc struct {
+		SchemaVersion int `json:"schema_version"`
+		Items         []struct {
+			Profile string `json:"profile"`
+			Role    string `json:"role"`
+		} `json:"items"`
 	}
-	require.NoError(t, json.Unmarshal(out.Bytes(), &reports))
+	require.NoError(t, json.Unmarshal(out.Bytes(), &doc))
+	assert.Equal(t, 1, doc.SchemaVersion)
+	reports := doc.Items
 	require.Len(t, reports, 2)
 	assert.Equal(t, "role:base", reports[0].Profile)
 	assert.Equal(t, "dev", reports[1].Role)

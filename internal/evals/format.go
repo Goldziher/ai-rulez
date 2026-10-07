@@ -1,9 +1,9 @@
 package evals
 
 import (
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"strings"
 )
@@ -19,9 +19,7 @@ const (
 func (r *RunReport) Write(w io.Writer, format string) error {
 	switch format {
 	case FormatJSON:
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		return enc.Encode(r)
+		return jsondoc.Write(w, r)
 	case FormatMarkdown:
 		return r.writeMarkdown(w)
 	case FormatJUnit:

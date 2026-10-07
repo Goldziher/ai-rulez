@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/okf-validate.schema.json",
+  "title": "ai-rulez okf validate",
+  "description": "Output of `ai-rulez okf validate --format json`: the findings of one OKF bundle.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "bundle",
+    "okf_spec",
+    "concepts",
+    "findings"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "bundle": {
+      "type": "string"
+    },
+    "okf_spec": {
+      "type": "string"
+    },
+    "concepts": {
+      "type": "integer"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"io"
 	"os"
 	"path/filepath"
@@ -207,9 +208,7 @@ any header), the outbox size and the last flush. Prints no event content.`,
 		p := newTelemetryPipeline("", false)
 		report := telemetry.Diagnose(&p.Settings, telemetry.LocalDir(p.Root, telemetryConfigDirName()), nil)
 		if telJSON {
-			encoder := json.NewEncoder(cmd.OutOrStdout())
-			encoder.SetIndent("", "  ")
-			return oops.Wrapf(encoder.Encode(report), "encode doctor report")
+			return jsondoc.Write(cmd.OutOrStdout(), report)
 		}
 		report.Render(cmd.OutOrStdout())
 		return nil
