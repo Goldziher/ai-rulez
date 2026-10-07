@@ -173,7 +173,7 @@ func (f SkillFilter) allows(s *generator.ServedSkill) bool {
 	if len(f.Domains) > 0 {
 		domain := s.Domain
 		if domain == "" {
-			domain = "root"
+			domain = domainRoot
 		}
 		if !containsString(f.Domains, domain) {
 			return false
