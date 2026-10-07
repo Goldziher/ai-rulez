@@ -155,7 +155,9 @@ type fileRecord struct {
 }
 
 // readExported waits until the collector's file holds at least one line, then
-// decodes every line.
+// decodes every complete line. The file exporter appends while it is read, so
+// the bytes after the last newline can be a half-written record: they are left
+// for the next read.
 func readExported(t *testing.T, path string) []fileRecord {
 	t.Helper()
 	var data []byte
@@ -164,6 +166,7 @@ func readExported(t *testing.T, path string) []fileRecord {
 		data, err = os.ReadFile(path) //nolint:gosec // a test file
 		return err == nil && bytes.Contains(data, []byte("\n"))
 	}, 20*time.Second, 200*time.Millisecond, "collector wrote nothing to %s", path)
+	data = data[:bytes.LastIndexByte(data, '\n')]
 	var out []fileRecord
 	for _, line := range bytes.Split(bytes.TrimSpace(data), []byte("\n")) {
 		var rec fileRecord
