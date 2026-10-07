@@ -143,7 +143,6 @@ func firstOperand(args, pkgFlags, valueFlags []string) string {
 		if contains(pkgFlags, name) {
 			if !hasValue && i+1 < len(args) {
 				value = args[i+1]
-				i++
 			}
 			return value
 		}
