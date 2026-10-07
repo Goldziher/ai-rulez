@@ -29,6 +29,11 @@ func TestEveryGroupCommandRejectsAnUnknownSubcommand(t *testing.T) {
 
 	for _, g := range groups {
 		t.Run(g.CommandPath(), func(t *testing.T) {
+			if g.CommandPath() == "ai-rulez telemetry report" {
+				// telemetry report takes the usage log as a positional argument next to its
+				// "evals" subcommand: a path that does not exist is reported by the report itself.
+				return
+			}
 			if g.Name() == "review" {
 				// review takes item selectors as positional arguments next to its subcommands: a
 				// selector that matches no item is reported by the review itself ("no item matches").

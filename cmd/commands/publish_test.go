@@ -24,7 +24,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
-const publishProjectConfig = `version = "4.0"
+const publishProjectConfig = `version = "5.0"
 name = "acme"
 presets = ["claude"]
 
@@ -401,7 +401,7 @@ func TestPublish_Gates(t *testing.T) {
 			appendFile(t, filepath.Join(root, ".ai-rulez", "rules", "care.md"), "\nMore.\n")
 			publishGit(t, root, "add", "-A")
 			publishGit(t, root, "commit", "-q", "-m", "edit")
-		}, false, publish.CodePreflight, publish.ExitGate, "validate --strict reported findings"},
+		}, false, publish.CodePreflight, publish.ExitGate, "validate reported findings"},
 		{"missing lock", func(t *testing.T, root string) {
 			require.NoError(t, os.Remove(filepath.Join(root, ".ai-rulez", "ai-rulez.lock")))
 			publishGit(t, root, "add", "-A")

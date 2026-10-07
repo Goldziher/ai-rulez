@@ -223,15 +223,14 @@ func TestChangedOnlyWithRepoRootNarrowerThanGitToplevel(t *testing.T) {
 
 func TestChangedOnlyFailsClosedWhenRepoRootIsNotInGit(t *testing.T) {
 	resetStrictFlags(t)
-	root := changedRepo(t)
 	outside := t.TempDir()
 	writeFile(t, filepath.Join(outside, "x.txt"), "x")
 	validateRepoRoot = outside
 	t.Cleanup(func() { validateRepoRoot = "" })
-	require.NoError(t, applyRepoRoot())
 	validateChanged = true
-	cfg := loadStrictProject(t, root)
-	report, err := strictLint(cfg)
-	require.NoError(t, err)
-	assert.Error(t, narrowToChanged([]*lint.Report{report}, []*config.Config{cfg}), "a change set that cannot be mapped must not pass vacuously")
+
+	err := applyRepoRoot()
+
+	require.Error(t, err, "a change set that cannot be mapped must not pass vacuously")
+	assert.Contains(t, err.Error(), "not inside a git repository")
 }

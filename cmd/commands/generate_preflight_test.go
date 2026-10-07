@@ -14,7 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-const preflightBase = "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\n"
+const preflightBase = "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\n"
 
 // preflightProject writes a config (and optional overlay) and loads it. HOME is a
 // temp directory so the machine-local command record never touches the real one.

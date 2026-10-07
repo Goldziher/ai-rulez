@@ -194,7 +194,7 @@ func (e *approveEnv) verifyBase(out io.Writer, rev string) (int, error) {
 	return 2, nil
 }
 
-// selfApprovalFindings are the AR716 findings of `validate --strict --approvals-base`.
+// selfApprovalFindings are the AR716 findings of `validate --approvals-base`.
 // A base that cannot be read is a finding, never a silent pass.
 func selfApprovalFindings(cfg *config.Config, lock *lockfile.File, rev, lockRel string) []lint.ApprovalFinding {
 	found, err := selfApprovalsAgainst(cfg, lock, rev)
