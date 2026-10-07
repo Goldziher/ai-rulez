@@ -2705,7 +2705,7 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 	if err := g.writeManifest(g.manifestPath(), shared, committedMerged, nil); err != nil {
 		return err
 	}
-	digests := manifestDigests(g.config.BaseDir, append(slices.Clone(shared), local...))
+	digests := g.manifestDigests(g.config.BaseDir, append(slices.Clone(shared), local...))
 	g.addMergedDigests(&digests, localMerged, g.wholeMergedDocuments(outputs))
 	if g.localSkipped {
 		// Local files were deliberately not loaded: their manifest is not ours to
@@ -2914,17 +2914,8 @@ func (g *Generator) localManifestSet() map[string]bool {
 	return set
 }
 
-// looksGenerated reports whether the file at absPath carries stored hashes or a
-// generated banner.
-func looksGenerated(absPath string) bool {
-	if contentHash, _ := extractStoredHashes(absPath); contentHash != "" {
-		return true
-	}
-	data, err := os.ReadFile(absPath)
-	return err == nil && hasGeneratedBanner(absPath, data)
-}
-
-// looksGenerated is looksGenerated reading the file from the project's workspace.
+// looksGenerated reports whether the file at absPath, read from the project's
+// workspace, carries stored hashes or a generated banner.
 func (g *Generator) looksGenerated(absPath string) bool {
 	if contentHash, _, _ := g.scanHashes(absPath); contentHash != "" {
 		return true
