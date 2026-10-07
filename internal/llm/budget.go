@@ -76,7 +76,7 @@ func (b *Budget) reserve(model string, worst Usage) (*reservation, error) {
 	cost, known := b.pricing.Cost(model, worst)
 	if b.limits.MaxCostUSD > 0 {
 		if !known {
-			return nil, newError(KindBudget, "max_cost_usd is set but no price is known for model %q; set price_input_per_mtok and price_output_per_mtok", model)
+			return nil, newError(KindBudget, "max_cost_usd is set but no price is known for model %q; set price_input_per_mtok and price_output_per_mtok in the user config and name this model there (a price override applies only to the model set in user scope)", model)
 		}
 		if b.spent.CostUSD+b.reserved.CostUSD+cost > b.limits.MaxCostUSD {
 			return nil, newError(KindBudget, "max_cost_usd %.4f would be exceeded (%.4f spent, %.4f held by calls in flight, this call may cost up to %.4f)",

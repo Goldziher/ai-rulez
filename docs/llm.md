@@ -22,7 +22,7 @@ cache           = true                     # default true
 allow_network   = false                    # default false; nothing is sent unless true
 ```
 
-Other keys: `timeout_seconds` (default 60, covers the retries), `max_retries` (default 3, `-1` disables, at most 10), `price_input_per_mtok` and `price_output_per_mtok` (USD per million tokens; override the built-in price table, needed for cost limits on models the table does not know; user scope only, see below).
+Other keys: `timeout_seconds` (default 60, covers the retries), `max_retries` (default 3, `-1` disables, at most 10), `price_input_per_mtok` and `price_output_per_mtok` (USD per million tokens; override the built-in price table, needed for cost limits on models the table does not know; user scope only, see below). An override prices only the model you set in user scope (`model` in the user config file or `AI_RULEZ_LLM_MODEL`); a model a repository picks, or a per-request model, is priced from the built-in table and, under a cost limit, refused when the table does not know it.
 
 ### Trust rule
 
