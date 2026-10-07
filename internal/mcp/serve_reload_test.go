@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -36,6 +37,38 @@ func TestIncompleteSkillFile(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// RV-DYN-3: a rebuild during which the files changed may have read a save in
+// progress, so it is not swapped in; the next tick builds from settled files.
+func TestWatch_DiscardsABuildTheFilesChangedUnder(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	var fp atomic.Value
+	fp.Store("v1")
+	var builds atomic.Int32
+	next := loadCatalog(t)
+	srv := NewSkillServerWith("test", &Catalog{byName: map[string]*CatalogSkill{}, byURI: map[string]*CatalogSkill{}, byFile: map[string]*CatalogFile{}}, ServeOptions{
+		PollInterval: 10 * time.Millisecond,
+		Baseline:     "v1",
+		Fingerprint:  func() (string, error) { return fp.Load().(string), nil },
+		Rebuild: func() (*Catalog, error) {
+			if builds.Add(1) == 1 {
+				fp.Store("v3") // an edit lands while the first build runs
+			}
+			return next, nil
+		},
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go srv.Watch(ctx)
+
+	// Act
+	fp.Store("v2")
+
+	// Assert
+	require.Eventually(t, func() bool { return len(srv.Catalog().Skills()) > 0 }, 5*time.Second, 5*time.Millisecond)
+	assert.GreaterOrEqual(t, builds.Load(), int32(2), "the build the files changed under was swapped in")
 }
 
 // RV-DYN-3: an in-place save truncates SKILL.md before writing it. While the

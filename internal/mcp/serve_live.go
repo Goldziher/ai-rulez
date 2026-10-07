@@ -160,6 +160,12 @@ func (w *watcher) reloadIfChanged() bool {
 		w.log.Warn("Skill files changed but the catalog could not be rebuilt; keeping the previous one and retrying", "error", err.Error(), "attempt", w.failures)
 		return true
 	}
+	if after, err := w.o.Fingerprint(); err == nil && after != cur {
+		// The files changed while the catalog was built, so it may have read a
+		// save in progress (a file truncated before it is written). Keep the
+		// previous catalog; the next tick builds from the settled files.
+		return true
+	}
 	w.last, w.failures, w.retryAt = cur, 0, time.Time{}
 	w.admittedAt = w.clock.Now()
 	w.s.Replace(next)
