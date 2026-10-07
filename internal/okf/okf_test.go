@@ -236,6 +236,22 @@ func TestWriteCompareAndPrune(t *testing.T) {
 	assert.True(t, os.IsNotExist(err), "emptied directory is pruned")
 }
 
+func TestPruneLeavesDotDirsAndForeignEmptyDirsAlone(t *testing.T) {
+	dir := t.TempDir()
+	files := []File{{Path: "index.md", Data: []byte("---\nokf_version: \"0.2\"\n---\n")}, {Path: "a/b.md", Data: []byte("x")}}
+	require.NoError(t, WriteFiles(dir, files, true))
+	for _, d := range []string{".git/refs/heads", ".git/objects", "keep-me"} {
+		require.NoError(t, os.MkdirAll(dir+"/"+d, 0o755))
+	}
+	require.NoError(t, WriteFiles(dir, files[:1], true))
+	for _, d := range []string{".git/refs/heads", ".git/objects", "keep-me"} {
+		_, err := os.Stat(dir + "/" + d)
+		assert.NoError(t, err, d)
+	}
+	_, err := os.Stat(dir + "/a")
+	assert.True(t, os.IsNotExist(err), "the directory emptied by the prune is removed")
+}
+
 func TestWriteRefusesForeignDirAndTraversal(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(dir+"/precious.txt", []byte("x"), 0o644))
