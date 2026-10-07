@@ -16,6 +16,23 @@ const (
 	presetNameJunie       = "junie"
 )
 
+// Shared file names and directories written by more than one preset.
+const (
+	agentsMDFile            = "AGENTS.md"
+	agentsSkillsDir         = ".agents/skills"
+	copilotInstructionsFile = ".github/copilot-instructions.md"
+)
+
+// Frontmatter and tool vocabulary shared by the renderers.
+const (
+	metaDisableModelInvocation = "disable-model-invocation"
+	metaUserInvocable          = "user-invocable"
+	tierFlash                  = "flash"
+	tierPro                    = "pro"
+	clineReplaceInFile         = "replace_in_file"
+	clineListFiles             = "list_files"
+)
+
 // extMarkdown is the file extension of markdown rule files in native rules folders.
 const extMarkdown = ".md"
 

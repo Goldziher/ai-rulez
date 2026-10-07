@@ -58,7 +58,7 @@ func ResolveGlobalModel(preset string, cfg *config.Config) string {
 
 // bareModelAliases are the tool-neutral Claude model aliases and the inherit
 // marker, none of which is a model id in another tool's namespace.
-var bareModelAliases = map[string]bool{"sonnet": true, "opus": true, "haiku": true, "inherit": true}
+var bareModelAliases = map[string]bool{"sonnet": true, "opus": true, "haiku": true, effortInherit: true}
 
 // IsBareModelAlias reports whether model is one of the bare Claude aliases
 // (sonnet, opus, haiku) or the inherit marker.

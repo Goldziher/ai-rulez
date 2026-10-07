@@ -45,7 +45,7 @@ func (g *CodexPresetGenerator) GetName() string {
 
 func (g *CodexPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
-		filepath.Join(baseDir, "AGENTS.md"),
+		filepath.Join(baseDir, agentsMDFile),
 		filepath.Join(baseDir, ".codex"),
 		filepath.Join(baseDir, filepath.FromSlash(config.DefaultCodexSkillsDir)),
 		filepath.Join(baseDir, ".codex", "agents"),
@@ -81,7 +81,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	agentsContent := g.renderAgentsMarkdown(content, cfg)
 
 	outputs = append(outputs, config.OutputFile{
-		Path:    filepath.Join(baseDir, "AGENTS.md"),
+		Path:    filepath.Join(baseDir, agentsMDFile),
 		Content: agentsContent,
 		IsDir:   false,
 	})
@@ -92,7 +92,8 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	allSkills := append(allSkills(content), commandAsSkills(cfg.Diag, content, codexPresetName)...)
 
 	// Generate skill files to the skills root (.agents/skills by default)
-	for _, skill := range allSkills {
+	for idx := range allSkills {
+		skill := allSkills[idx]
 		skillID := extractSkillID(skill.Path)
 
 		// Create skill directory
@@ -115,7 +116,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 
 		// Codex has no SKILL.md key for invocation control; an author-set
 		// disable-model-invocation becomes agents/openai.yaml policy.
-		if disabled, set := skill.Metadata.ExtraBool("disable-model-invocation"); set && disabled {
+		if disabled, set := skill.Metadata.ExtraBool(metaDisableModelInvocation); set && disabled {
 			agentsDir := filepath.Join(skillDir, "agents")
 			outputs = append(outputs,
 				config.OutputFile{Path: agentsDir, IsDir: true},
@@ -126,7 +127,8 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 
 	// Generate agent files to .codex/agents/ (TOML format)
 	allAgents := allAgents(content)
-	for _, agent := range allAgents {
+	for idx := range allAgents {
+		agent := allAgents[idx]
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent := g.renderAgentTOML(agent, cfg)
 
@@ -197,7 +199,7 @@ func (g *CodexPresetGenerator) ProjectLayout() ProjectLayout { return g.ProjectL
 // ProjectLayoutFor is ProjectLayout with the skills folder codex_skills_dir names.
 func (g *CodexPresetGenerator) ProjectLayoutFor(cfg *config.Config) ProjectLayout {
 	skills := cfg.CodexSkillsDirOrDefault()
-	return ProjectLayout{RootFile: "AGENTS.md", SkillsDir: skills, AgentsDir: ".codex/agents", CommandsDir: skills}
+	return ProjectLayout{RootFile: agentsMDFile, SkillsDir: skills, AgentsDir: ".codex/agents", CommandsDir: skills}
 }
 
 // GlobalOutputPaths is the Codex user-scope layout under ~/.codex (CODEX_HOME).
@@ -240,7 +242,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTr
 ) string {
 	var builder strings.Builder
 
-	root := rulefiles.RootTarget(codexPresetName, "AGENTS.md")
+	root := rulefiles.RootTarget(codexPresetName, agentsMDFile)
 	if shared != nil {
 		root.Owners, root.RootAliases = shared.owners, shared.aliases
 	}
@@ -248,7 +250,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTr
 	allAgents := allAgents(content)
 
 	// Add header before title
-	header := generateCodexPresetHeader(cfg, "AGENTS.md", len(allRules), 0, len(allAgents))
+	header := generateCodexPresetHeader(cfg, agentsMDFile, len(allRules), 0, len(allAgents))
 	builder.WriteString(header)
 
 	// Add title

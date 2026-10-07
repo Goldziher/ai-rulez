@@ -70,7 +70,7 @@ func (g *GeminiPresetGenerator) GetOutputPaths(baseDir string) []string {
 // ProjectLayout is where the preset writes project-level files; user scope maps them
 // onto GlobalOutputPaths.
 func (g *GeminiPresetGenerator) ProjectLayout() ProjectLayout {
-	return ProjectLayout{RootFile: "GEMINI.md", SkillsDir: ".agents/skills", AgentsDir: ".gemini/agents"}
+	return ProjectLayout{RootFile: "GEMINI.md", SkillsDir: agentsSkillsDir, AgentsDir: ".gemini/agents"}
 }
 
 // GlobalOutputPaths is the Gemini CLI user-scope layout under ~/.gemini; user
@@ -78,11 +78,11 @@ func (g *GeminiPresetGenerator) ProjectLayout() ProjectLayout {
 func (g *GeminiPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
 	return GlobalLayout{
 		RootFile:  ".gemini/GEMINI.md",
-		SkillsDir: ".agents/skills",
+		SkillsDir: agentsSkillsDir,
 		AgentsDir: ".gemini/agents",
 		Sidecars:  map[string]string{MergedDocGeminiSettings: ".gemini/settings.json"},
 		// Gemini CLI also reads its own ~/.gemini/skills.
-		SkillReaders:    []string{".gemini/skills", ".agents/skills"},
+		SkillReaders:    []string{".gemini/skills", agentsSkillsDir},
 		SkillPrecedence: "Gemini CLI runs the workspace skill (workspace over user)",
 	}.Resolve(home, getenv)
 }
@@ -155,7 +155,8 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 
 	// Generate skill files to .agents/skills/
 	allSkills := allSkills(content)
-	for _, skill := range allSkills {
+	for idx := range allSkills {
+		skill := allSkills[idx]
 		skillID := extractSkillID(skill.Path)
 
 		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
@@ -175,7 +176,8 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	// Generate agent files to .gemini/agents/, the only project location Gemini
 	// CLI loads subagents from.
 	allAgents := allAgents(content)
-	for _, agent := range allAgents {
+	for idx := range allAgents {
+		agent := allAgents[idx]
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderGeminiAgentFile(agent, cfg)
 		if err != nil {
@@ -313,7 +315,9 @@ func wantedNames(cfg *config.Config) []string {
 // value was ai-rulez's) stands for every name ai-rulez ever writes there.
 func previousClaimedNames(cfg *config.Config, settingsPath string) []string {
 	var names []string
-	for _, claim := range cfg.Run.PreviousClaims(projectRelative(cfg, settingsPath)) {
+	claimList := cfg.Run.PreviousClaims(projectRelative(cfg, settingsPath))
+	for idx := range claimList {
+		claim := claimList[idx]
 		if !slices.Equal(claim.Path, geminiContextFileNamePath) {
 			continue
 		}

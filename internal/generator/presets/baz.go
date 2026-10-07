@@ -53,7 +53,7 @@ func (g *BazPresetGenerator) GetName() string {
 
 func (g *BazPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
-		filepath.Join(baseDir, "AGENTS.md"),
+		filepath.Join(baseDir, agentsMDFile),
 		filepath.Join(baseDir, ".agents", "skills"),
 		filepath.Join(baseDir, filepath.FromSlash(bazClaudeAgentsDir)),
 	}
@@ -62,7 +62,7 @@ func (g *BazPresetGenerator) GetOutputPaths(baseDir string) []string {
 func (g *BazPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
 	codex := &CodexPresetGenerator{}
 	outputs := []config.OutputFile{{
-		Path:    filepath.Join(baseDir, "AGENTS.md"),
+		Path:    filepath.Join(baseDir, agentsMDFile),
 		Content: codex.renderAgentsMarkdownFor(content, cfg, nil),
 	}}
 
@@ -90,7 +90,9 @@ func (g *BazPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 func bazSkillOutputs(content *config.ContentTree, baseDir string) []config.OutputFile {
 	var outputs []config.OutputFile
 	root := filepath.Join(baseDir, ".agents", "skills")
-	for _, skill := range allSkills(content) {
+	skillList := allSkills(content)
+	for idx := range skillList {
+		skill := skillList[idx]
 		id := extractSkillID(skill.Path)
 		if skill.Metadata != nil && !targetmatch.Allow(skill.Metadata.Targets, []string{bazPresetName}, ".agents/skills/"+id+"/SKILL.md", "SKILL.md") {
 			continue
@@ -114,7 +116,9 @@ func bazSkillOutputs(content *config.ContentTree, baseDir string) []config.Outpu
 func bazAgentOutputs(content *config.ContentTree, baseDir string) []config.OutputFile {
 	var outputs []config.OutputFile
 	dir := filepath.Join(baseDir, filepath.FromSlash(bazClaudeAgentsDir))
-	for _, agent := range allAgents(content) {
+	agentList := allAgents(content)
+	for idx := range agentList {
+		agent := agentList[idx]
 		id := sanitizeAgentID(agent.Name)
 		if agent.Metadata != nil && !targetmatch.Allow(agent.Metadata.Targets, []string{bazPresetName}, bazClaudeAgentsDir+"/"+id+".md", id+".md") {
 			continue
@@ -166,9 +170,10 @@ func withoutBazNested(items []config.ContentFile, cfg *config.Config) []config.C
 	if !bazNestedActive(cfg) {
 		return items
 	}
-	target := rulefiles.RootTarget(bazPresetName, "AGENTS.md")
+	target := rulefiles.RootTarget(bazPresetName, agentsMDFile)
 	kept := make([]config.ContentFile, 0, len(items))
-	for _, cf := range items {
+	for idx := range items {
+		cf := items[idx]
 		// An item that baz's own target excludes is never written nested, so it
 		// stays in the root file for the presets that do select it.
 		if !rulefiles.InlineAllowed(cf, target) || len(bazNestedDirs(cf, cfg)) == 0 {
@@ -289,15 +294,19 @@ func bazNestedOutputs(content *config.ContentTree, baseDir string, cfg *config.C
 	if !bazNestedActive(cfg) {
 		return nil, nil
 	}
-	target := rulefiles.RootTarget(bazPresetName, "AGENTS.md")
+	target := rulefiles.RootTarget(bazPresetName, agentsMDFile)
 	rules := map[string][]config.ContentFile{}
 	contexts := map[string][]config.ContentFile{}
-	for _, rule := range rulefiles.FilterInline(allInlineRules(content), target) {
+	ruleList := rulefiles.FilterInline(allInlineRules(content), target)
+	for idx := range ruleList {
+		rule := ruleList[idx]
 		for _, dir := range bazNestedDirs(rule, cfg) {
 			rules[dir] = append(rules[dir], rule)
 		}
 	}
-	for _, ctx := range rulefiles.FilterInline(allInlineContext(content), target) {
+	ctxList := rulefiles.FilterInline(allInlineContext(content), target)
+	for idx := range ctxList {
+		ctx := ctxList[idx]
 		for _, dir := range bazNestedDirs(ctx, cfg) {
 			contexts[dir] = append(contexts[dir], ctx)
 		}
