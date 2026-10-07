@@ -14,6 +14,9 @@ const sarifOneResult = `{"version":"2.1.0","runs":[{"results":[{"ruleId":"X1","l
 // externalRun lints a fixture project with one scanner script and returns the report findings.
 func externalRun(t *testing.T, scriptBody, extraKeys string, opts Options) []Finding {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("fake scanners are POSIX shell scripts")
+	}
 	root := t.TempDir()
 	writeFiles(t, root, map[string]string{".ai-rulez/rules/r.md": "# Rule\n\nbody\n"})
 	script := filepath.Join(root, "scan.sh")
@@ -286,7 +289,7 @@ func TestResolveScannerPath(t *testing.T) {
 		{"", "", true},
 		{".ai-rulez/rules/r.md", filepath.Join(root, ".ai-rulez", "rules", "r.md"), true},
 		{"file://" + filepath.ToSlash(root) + "/a%20b.md", filepath.Join(root, "a b.md"), true},
-		{"file://localhost" + filepath.ToSlash(root) + "/l.md", filepath.Join(root, "l.md"), true},
+		{"file://localhost/" + strings.TrimPrefix(filepath.ToSlash(root), "/") + "/l.md", filepath.Join(root, "l.md"), true},
 		{"file://evil.example.com" + filepath.ToSlash(root) + "/l.md", "", false},
 		{"file://server/share/x.md", "", false},
 		{"../outside.md", "", false},
@@ -362,6 +365,9 @@ func TestBatchArgs(t *testing.T) {
 }
 
 func TestExternalBatchesLargeFileLists(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake scanners are POSIX shell scripts")
+	}
 	old := argvBudget
 	argvBudget = 400
 	t.Cleanup(func() { argvBudget = old })
