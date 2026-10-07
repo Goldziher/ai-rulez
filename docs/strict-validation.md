@@ -1006,7 +1006,7 @@ skill/command namespace collisions, plugin hook `script` existence, unresolved i
 The rules below were added after the first release of strict validation. Each has a stable code, is deterministic
 and offline, honors `[lint.severity]`, `[lint] ignore` and the inline `ai-rulez-lint-ignore` comment, and is listed
 by `ai-rulez validate --format json` under its name. "Default" is the severity when `[lint.severity]`
-does not override it; a rule that reports mild and serious cases at different levels says so.
+does not override it; a rule that reports mild and serious cases at different levels says so. Findings reported in `config.toml` (AR012, AR015, AR024, AR032, AR033, AR507, AR602, AR964) take the same marker as a TOML comment, `# ai-rulez-lint-ignore: AR012`, on the line before or on the line they are reported at (an MCP server's `name = "..."` line); a finding in a generated JSON file cannot be ignored inline, use `[lint] ignore_paths`.
 
 | Code | Name | Default | Finds |
 | --- | --- | --- | --- |
