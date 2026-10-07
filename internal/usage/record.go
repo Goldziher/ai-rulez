@@ -446,6 +446,13 @@ func newEventID(salt string, entry *Entry, options RecordOptions) string {
 // own re-read. The lock is best effort: when it cannot be had in appendLockWait (a prune of a huge log, a
 // refused lock path) the line is appended anyway, because a hook must never stall or drop its event.
 func appendLine(path string, line []byte) error {
+	return AppendLogLine(path, line)
+}
+
+// AppendLogLine appends one complete line to the usage log at path under the
+// log's shared lock, the way every recorder of that log must (see appendLine):
+// the telemetry JSONL emitter writes the same file.
+func AppendLogLine(path string, line []byte) error {
 	if release, err := lockLog(path, false, appendLockWait); err == nil {
 		defer release()
 	}

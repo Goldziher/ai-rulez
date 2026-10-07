@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
+	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/samber/oops"
 )
 
@@ -16,7 +17,8 @@ type JSONL struct {
 }
 
 // Emit appends one line. The whole line goes out in a single write so concurrent
-// sessions do not interleave.
+// sessions do not interleave, under the usage log's shared lock so a concurrent
+// `usage prune` never replaces the file between the write and its re-read.
 func (j JSONL) Emit(_ context.Context, event *Event) error {
 	var (
 		line []byte
@@ -31,7 +33,7 @@ func (j JSONL) Emit(_ context.Context, event *Event) error {
 	if err != nil {
 		return oops.Wrapf(err, "encode telemetry event")
 	}
-	return appendLine(j.Path, append(line, '\n'))
+	return usage.AppendLogLine(j.Path, append(line, '\n')) //nolint:wrapcheck // safefs errors carry the path
 }
 
 // Close does nothing: the file is opened per append.
