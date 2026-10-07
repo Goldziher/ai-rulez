@@ -1,0 +1,8 @@
+ard-entry.schema.json is an unmodified copy of spec/schemas/ard-entry.schema.json
+from https://github.com/ards-project/ard-spec (commit
+b76f235a8f461876ad4f1e77abd0eb0eb302b48d, ARD spec v0.91, status: proposal).
+Its SHA-256 is 011b86d55fd5d2883dffae3f0577d26f5efb56ca866eb079edbc78a628f95499;
+internal/ard tests fail when the file changes without the pin in schema.go.
+It is licensed under the Apache License 2.0; the license text is in
+https://github.com/ards-project/ard-spec/blob/main/LICENSE.
+To move the pin, replace the file, then update SchemaCommit and SchemaSHA256.
