@@ -166,49 +166,11 @@ func (l *loader) buildVerifier() (*verifier, error) {
 		return nil, err
 	}
 	require := so.Require || us.RequireSignature || truthy(ambient.Getenv(env, EnvRequireSigned))
-	var entries []signing.TrustEntry
-	addIdentity := func(identity, regexp, issuer string) {
-		entries = append(entries, signing.TrustEntry{Subject: SubjectPolicy, Identity: identity, IdentityRegexp: regexp, Issuer: issuer})
+	var signers policySigners
+	if err := signers.collect(us, so, env); err != nil {
+		return nil, err
 	}
-	var keys []crypto.PublicKey
-	addKey := func(path string) error {
-		data, rerr := readRegularLimited(path, maxKeyFileBytes)
-		if rerr != nil {
-			return &SignatureError{Path: path, Err: fmt.Errorf("cannot read the trusted signer key: %w", rerr)}
-		}
-		key, perr := signing.ParsePublicKey(data)
-		if perr != nil {
-			return &SignatureError{Path: path, Err: fmt.Errorf("the trusted signer key is invalid: %w", perr)}
-		}
-		keys = append(keys, key)
-		entries = append(entries, signing.TrustEntry{Subject: SubjectPolicy, Key: key})
-		return nil
-	}
-	for _, s := range us.Signers {
-		if s.KeyFile != "" {
-			if err := addKey(s.KeyFile); err != nil {
-				return nil, err
-			}
-			continue
-		}
-		addIdentity(s.Identity, s.IdentityRegexp, s.Issuer)
-	}
-	identity, issuer := firstNonEmpty(so.Identity, ambient.Getenv(env, EnvSignerIdentity)), firstNonEmpty(so.Issuer, ambient.Getenv(env, EnvSignerIssuer))
-	if (identity == "") != (issuer == "") {
-		return nil, &ParseError{Path: "--policy-signer-identity", Msg: "the signer identity and issuer go together"}
-	}
-	if identity != "" {
-		addIdentity(identity, "", issuer)
-	}
-	keyFiles := append([]string(nil), so.KeyFiles...)
-	if k := strings.TrimSpace(ambient.Getenv(env, EnvSignerKey)); k != "" {
-		keyFiles = append(keyFiles, filepath.SplitList(k)...)
-	}
-	for _, k := range keyFiles {
-		if err := addKey(k); err != nil {
-			return nil, err
-		}
-	}
+	entries, keys := signers.entries, signers.keys
 	if len(entries) == 0 {
 		if require {
 			return nil, &SignatureError{Path: "(policy signature)", Err: errors.New("signatures are required, but no trusted signer is configured; set --policy-signer-key, --policy-signer-identity and --policy-signer-issuer, or [[policy.signers]] in the user config")}
@@ -216,16 +178,9 @@ func (l *loader) buildVerifier() (*verifier, error) {
 		return nil, nil //nolint:nilnil // no trust configured: signatures are not checked
 	}
 	pv := &verifier{trust: signing.TrustSet{Entries: entries}, require: require, now: l.opts.Clock.Now, log: l.opts.logger()}
-	tlog := signing.TLogOff
-	if pv.trust.HasIdentities(SubjectPolicy) {
-		tlog = signing.TLogRequired
-	}
-	switch strings.ToLower(strings.TrimSpace(us.TLog)) {
-	case "":
-	case "required", "optional", levelOff:
-		tlog = signing.TLogMode(strings.ToLower(strings.TrimSpace(us.TLog)))
-	default:
-		return nil, &ParseError{Path: "[policy] tlog", Msg: fmt.Sprintf("%q is not required, optional or off", us.TLog)}
+	tlog, err := policyTLog(us.TLog, pv.trust.HasIdentities(SubjectPolicy))
+	if err != nil {
+		return nil, err
 	}
 	tr, err := loadTrustedRoot(env, firstNonEmpty(so.TrustedRoot, ambient.Getenv(env, EnvTrustedRoot), us.TrustedRoot))
 	if err != nil {
@@ -315,28 +270,106 @@ func (v *verifier) verify(ref Ref, raw, bundle []byte) (signer string, err error
 	if !at.IsZero() && at.After(now.Add(clockSkew)) {
 		return "", fmt.Errorf("signed in the future (%s)", at.UTC().Format(time.RFC3339))
 	}
-	key := "policy|" + signerKey(res.Signer) + "|" + redactURL(ref.Location)
-	if v.state != nil && at.IsZero() {
+	if v.state != nil {
+		if err := v.checkRollback("policy|"+signerKey(res.Signer)+"|"+redactURL(ref.Location), raw, at); err != nil {
+			return "", err
+		}
+	}
+	return signerKey(res.Signer), nil
+}
+
+// checkRollback refuses a policy older than one this machine verified from the
+// same signer and URL (AR727), and records this one.
+func (v *verifier) checkRollback(key string, raw []byte, at time.Time) error {
+	if at.IsZero() {
 		// No signing time at all (a key-signed blob bundle without a log entry):
 		// neither skew nor time-ordered rollback can be judged, so the digests
 		// already replaced on this machine are the rollback record.
 		d := digest(raw)
 		if err := v.state.CheckDigest(key, d); err != nil {
-			return "", err //nolint:wrapcheck // AR727
+			return err //nolint:wrapcheck // AR727
 		}
 		if err := v.state.AdvanceDigest(key, d); err != nil {
 			v.log.Debug("cannot record the policy digest", "error", err)
 		}
+		return nil
 	}
-	if v.state != nil && !at.IsZero() {
-		if err := v.state.Check(key, at); err != nil {
-			return "", err //nolint:wrapcheck // AR727
+	if err := v.state.Check(key, at); err != nil {
+		return err //nolint:wrapcheck // AR727
+	}
+	if err := v.state.Advance(key, at); err != nil {
+		v.log.Debug("cannot record the policy signing time", "error", err)
+	}
+	return nil
+}
+
+// policySigners gathers the signers a policy may be signed by: [[policy.signers]]
+// of the user config, then the flags and environment.
+type policySigners struct {
+	entries []signing.TrustEntry
+	keys    []crypto.PublicKey
+}
+
+func (s *policySigners) addIdentity(identity, regexp, issuer string) {
+	s.entries = append(s.entries, signing.TrustEntry{Subject: SubjectPolicy, Identity: identity, IdentityRegexp: regexp, Issuer: issuer})
+}
+
+func (s *policySigners) addKey(path string) error {
+	data, rerr := readRegularLimited(path, maxKeyFileBytes)
+	if rerr != nil {
+		return &SignatureError{Path: path, Err: fmt.Errorf("cannot read the trusted signer key: %w", rerr)}
+	}
+	key, perr := signing.ParsePublicKey(data)
+	if perr != nil {
+		return &SignatureError{Path: path, Err: fmt.Errorf("the trusted signer key is invalid: %w", perr)}
+	}
+	s.keys = append(s.keys, key)
+	s.entries = append(s.entries, signing.TrustEntry{Subject: SubjectPolicy, Key: key})
+	return nil
+}
+
+func (s *policySigners) collect(us UserSettings, so SignatureOptions, env ambient.Env) error {
+	for _, signer := range us.Signers {
+		if signer.KeyFile != "" {
+			if err := s.addKey(signer.KeyFile); err != nil {
+				return err
+			}
+			continue
 		}
-		if err := v.state.Advance(key, at); err != nil {
-			v.log.Debug("cannot record the policy signing time", "error", err)
+		s.addIdentity(signer.Identity, signer.IdentityRegexp, signer.Issuer)
+	}
+	identity, issuer := firstNonEmpty(so.Identity, ambient.Getenv(env, EnvSignerIdentity)), firstNonEmpty(so.Issuer, ambient.Getenv(env, EnvSignerIssuer))
+	if (identity == "") != (issuer == "") {
+		return &ParseError{Path: "--policy-signer-identity", Msg: "the signer identity and issuer go together"}
+	}
+	if identity != "" {
+		s.addIdentity(identity, "", issuer)
+	}
+	keyFiles := append([]string(nil), so.KeyFiles...)
+	if k := strings.TrimSpace(ambient.Getenv(env, EnvSignerKey)); k != "" {
+		keyFiles = append(keyFiles, filepath.SplitList(k)...)
+	}
+	for _, k := range keyFiles {
+		if err := s.addKey(k); err != nil {
+			return err
 		}
 	}
-	return signerKey(res.Signer), nil
+	return nil
+}
+
+// policyTLog is the transparency-log mode of policy signatures: [policy] tlog
+// of the user config, else required when a certificate identity is trusted.
+func policyTLog(configured string, identities bool) (signing.TLogMode, error) {
+	switch mode := strings.ToLower(strings.TrimSpace(configured)); mode {
+	case "":
+		if identities {
+			return signing.TLogRequired, nil
+		}
+		return signing.TLogOff, nil
+	case "required", "optional", levelOff:
+		return signing.TLogMode(mode), nil
+	}
+	return "", &ParseError{Path: "[policy] tlog", Msg: fmt.Sprintf("%q is not required, optional or off", configured)}
 }
 
 func signerKey(s signing.SignerInfo) string {

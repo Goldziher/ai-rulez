@@ -91,51 +91,73 @@ func (p Policy) Tree() map[string]any {
 		}
 		return m
 	}
-	if p.Sources.Allowed.Set {
-		table("sources")["allowed_hosts"] = nonNil(p.Sources.Allowed.Items)
+	p.Sources.addTo(table)
+	p.Lint.addTo(table)
+	p.addSwitches(table)
+	p.Governance.addTo(table)
+	p.MCP.addTo(table)
+	p.Signing.addTo(table)
+	if p.Hooks.Forbidden {
+		table("hooks")["allow"] = false
 	}
-	if len(p.Sources.Deny) > 0 {
-		table("sources")["deny_hosts"] = p.Sources.Deny
+	return root
+}
+
+// addTo adds the constrained keys of [sources] to the tree.
+func (s Sources) addTo(table func(path ...string) map[string]any) {
+	if s.Allowed.Set {
+		table("sources")["allowed_hosts"] = nonNil(s.Allowed.Items)
 	}
-	if p.Sources.RequirePinned {
+	if len(s.Deny) > 0 {
+		table("sources")["deny_hosts"] = s.Deny
+	}
+	if s.RequirePinned {
 		table("sources")["require_pinned"] = true
 	}
-	if len(p.Sources.DenyDigests) > 0 {
-		table("sources")["deny_digests"] = p.Sources.DenyDigests
+	if len(s.DenyDigests) > 0 {
+		table("sources")["deny_digests"] = s.DenyDigests
 	}
-	if p.Sources.MinReleaseAge > 0 {
-		table("sources")["min_release_age"] = formatAge(p.Sources.MinReleaseAge)
+	if s.MinReleaseAge > 0 {
+		table("sources")["min_release_age"] = formatAge(s.MinReleaseAge)
 	}
-	if p.Sources.MinReleaseAgeSource != "" {
-		table("sources")["min_release_age_source"] = p.Sources.MinReleaseAgeSource
+	if s.MinReleaseAgeSource != "" {
+		table("sources")["min_release_age_source"] = s.MinReleaseAgeSource
 	}
-	if len(p.Lint.RequiredCodes) > 0 {
-		table("lint")["required_codes"] = p.Lint.RequiredCodes
+}
+
+// addTo adds the constrained keys of [lint] to the tree.
+func (l Lint) addTo(table func(path ...string) map[string]any) {
+	if len(l.RequiredCodes) > 0 {
+		table("lint")["required_codes"] = l.RequiredCodes
 	}
-	if len(p.Lint.SeverityFloor) > 0 {
+	if len(l.SeverityFloor) > 0 {
 		floor := table("lint", "severity_floor")
-		for k, v := range p.Lint.SeverityFloor {
+		for k, v := range l.SeverityFloor {
 			floor[k] = v
 		}
 	}
-	if p.Lint.Security.AllowedHosts.Set {
-		table("lint", "security")["allowed_hosts"] = nonNil(p.Lint.Security.AllowedHosts.Items)
+	if l.Security.AllowedHosts.Set {
+		table("lint", "security")["allowed_hosts"] = nonNil(l.Security.AllowedHosts.Items)
 	}
-	if p.Lint.Security.ScanImports != "" {
-		table("lint", "security")["scan_imports"] = p.Lint.Security.ScanImports
+	if l.Security.ScanImports != "" {
+		table("lint", "security")["scan_imports"] = l.Security.ScanImports
 	}
-	p.Lint.addKnobs(table)
-	addSizeBudgets(p.Lint.SizeBudgets, table)
-	if len(p.Lint.MaxFindings) > 0 {
+	l.addKnobs(table)
+	addSizeBudgets(l.SizeBudgets, table)
+	if len(l.MaxFindings) > 0 {
 		ceilings := table("lint", "max_findings")
-		for k, v := range p.Lint.MaxFindings {
+		for k, v := range l.MaxFindings {
 			ceilings[k] = v
 		}
 	}
-	if len(p.Lint.NoInlineIgnore) > 0 {
-		table("lint")["no_inline_ignore"] = p.Lint.NoInlineIgnore
+	if len(l.NoInlineIgnore) > 0 {
+		table("lint")["no_inline_ignore"] = l.NoInlineIgnore
 	}
-	p.Lint.ScannerPolicy.addTo(table)
+	l.ScannerPolicy.addTo(table)
+}
+
+// addSwitches adds the on/off keys of [lock], [telemetry], [llm] and [guard].
+func (p Policy) addSwitches(table func(path ...string) map[string]any) {
 	if p.Lock.Enforce {
 		table("lock")["enforce"] = true
 	}
@@ -151,7 +173,10 @@ func (p Policy) Tree() map[string]any {
 	if p.Guard.Generated {
 		table("guard")["generated"] = true
 	}
-	g := p.Governance
+}
+
+// addTo adds the constrained keys of [governance] to the tree.
+func (g Governance) addTo(table func(path ...string) map[string]any) {
 	if g.Enforce {
 		table("governance")["enforce"] = true
 	}
@@ -173,12 +198,6 @@ func (p Policy) Tree() map[string]any {
 	if g.ApproversFrom != "" {
 		table("governance")["approvers_from"] = g.ApproversFrom
 	}
-	p.MCP.addTo(table)
-	p.Signing.addTo(table)
-	if p.Hooks.Forbidden {
-		table("hooks")["allow"] = false
-	}
-	return root
 }
 
 // addKnobs adds the tuning keys of [lint] to the tree.

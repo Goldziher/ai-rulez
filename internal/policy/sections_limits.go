@@ -200,26 +200,32 @@ func parseMinReleaseAge(raw string) (time.Duration, error) {
 // minReleaseAge raises [lock] min_release_age and each source's own to the policy
 // floor. An older age is a narrowing; a younger or explicitly absent ("0") one is
 // reported and raised. A source that sets none defers to [lock], which is raised.
+// raiseAge reports whether a min_release_age of have (written at where) must be
+// raised to the policy floor: it is missing, unreadable or younger. A younger
+// stated value is a violation; an older one is accepted and noted.
+func (a *applier) raiseAge(floor time.Duration, key, needle, where, have string) bool {
+	text := formatAge(floor)
+	age, err := semver.ParseAge(have)
+	if err == nil && age >= floor {
+		if age > floor {
+			a.accept = append(a.accept, fmt.Sprintf("%s (raised to %s)", key, have))
+		}
+		return false
+	}
+	if have != "" && err == nil {
+		a.violate(lint.CodePolicyLoosened, key, needle,
+			"%s min_release_age = %q is younger than the policy floor %s (origin: %s); %s is enforced", where, have, text, a.origin("sources.min_release_age"), text)
+	}
+	return true
+}
+
 func (a *applier) minReleaseAge() {
 	floor := a.res.Policy.Sources.MinReleaseAge
 	if floor <= 0 {
 		return
 	}
 	text := formatAge(floor)
-	raise := func(key, needle, where, have string) bool {
-		age, err := semver.ParseAge(have)
-		if err == nil && age >= floor {
-			if age > floor {
-				a.accept = append(a.accept, fmt.Sprintf("%s (raised to %s)", key, have))
-			}
-			return false
-		}
-		if have != "" && err == nil {
-			a.violate(lint.CodePolicyLoosened, key, needle,
-				"%s min_release_age = %q is younger than the policy floor %s (origin: %s); %s is enforced", where, have, text, a.origin("sources.min_release_age"), text)
-		}
-		return true
-	}
+	raise := func(key, needle, where, have string) bool { return a.raiseAge(floor, key, needle, where, have) }
 	if a.cfg.Lock == nil {
 		a.cfg.Lock = &config.LockConfig{}
 	}

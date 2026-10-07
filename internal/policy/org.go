@@ -54,19 +54,22 @@ type UserSettings struct {
 }
 
 type userPolicyDoc struct {
-	Policy *struct {
-		Discover         string            `toml:"discover"`
-		Digests          map[string]string `toml:"digests"`
-		RequireSignature bool              `toml:"require_signature"`
-		TrustedRoot      string            `toml:"trusted_root"`
-		TLog             string            `toml:"tlog"`
-		Signers          []struct {
-			Identity       string `toml:"identity"`
-			IdentityRegexp string `toml:"identity_regexp"`
-			Issuer         string `toml:"issuer"`
-			KeyFile        string `toml:"key_file"`
-		} `toml:"signers"`
-	} `toml:"policy"`
+	Policy *userPolicyTable `toml:"policy"`
+}
+
+// userPolicyTable is the [policy] table of the user config.
+type userPolicyTable struct {
+	Discover         string            `toml:"discover"`
+	Digests          map[string]string `toml:"digests"`
+	RequireSignature bool              `toml:"require_signature"`
+	TrustedRoot      string            `toml:"trusted_root"`
+	TLog             string            `toml:"tlog"`
+	Signers          []struct {
+		Identity       string `toml:"identity"`
+		IdentityRegexp string `toml:"identity_regexp"`
+		Issuer         string `toml:"issuer"`
+		KeyFile        string `toml:"key_file"`
+	} `toml:"signers"`
 }
 
 // LoadUserSettings reads the [policy] table of the user config. A missing file or
@@ -93,22 +96,27 @@ func LoadUserSettings(env ambient.Env) (UserSettings, error) {
 	if err := toml.Unmarshal(data, &doc); err != nil {
 		return UserSettings{}, &ParseError{Path: path, Msg: "the user config is not valid TOML: " + err.Error()}
 	}
-	var us UserSettings
 	if doc.Policy == nil {
-		return us, nil
+		return UserSettings{}, nil
 	}
-	if us.Discover = strings.ToLower(strings.TrimSpace(doc.Policy.Discover)); us.Discover != "" && us.Discover != "org" {
-		return UserSettings{}, &ParseError{Path: path, Msg: fmt.Sprintf("[policy] discover = %q is not supported (use \"org\")", doc.Policy.Discover)}
+	return userSettingsOf(path, doc.Policy)
+}
+
+// userSettingsOf checks and normalizes the [policy] table of the user config.
+func userSettingsOf(path string, p *userPolicyTable) (UserSettings, error) {
+	var us UserSettings
+	if us.Discover = strings.ToLower(strings.TrimSpace(p.Discover)); us.Discover != "" && us.Discover != "org" {
+		return UserSettings{}, &ParseError{Path: path, Msg: fmt.Sprintf("[policy] discover = %q is not supported (use \"org\")", p.Discover)}
 	}
-	us.RequireSignature, us.TrustedRoot, us.TLog = doc.Policy.RequireSignature, strings.TrimSpace(doc.Policy.TrustedRoot), strings.TrimSpace(doc.Policy.TLog)
-	for i, s := range doc.Policy.Signers {
+	us.RequireSignature, us.TrustedRoot, us.TLog = p.RequireSignature, strings.TrimSpace(p.TrustedRoot), strings.TrimSpace(p.TLog)
+	for i, s := range p.Signers {
 		signer := UserSigner{Identity: strings.TrimSpace(s.Identity), IdentityRegexp: strings.TrimSpace(s.IdentityRegexp), Issuer: strings.TrimSpace(s.Issuer), KeyFile: strings.TrimSpace(s.KeyFile)}
 		if err := checkUserSigner(signer); err != nil {
 			return UserSettings{}, &ParseError{Path: path, Msg: fmt.Sprintf("[[policy.signers]] entry %d: %v", i+1, err)}
 		}
 		us.Signers = append(us.Signers, signer)
 	}
-	for owner, d := range doc.Policy.Digests {
+	for owner, d := range p.Digests {
 		d = strings.ToLower(strings.TrimSpace(d))
 		if !digestPattern.MatchString(d) || !ownerPattern.MatchString(owner) {
 			return UserSettings{}, &ParseError{Path: path, Msg: fmt.Sprintf("[policy.digests] %q = %q: want an owner name and sha256:<hex>", owner, d)}
