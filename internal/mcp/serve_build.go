@@ -547,8 +547,9 @@ const usageSinkQueue = 256
 const usageSinkFlushWait = 3 * time.Second
 
 // watchRoots lists the directories whose contents the catalog depends on: the
-// configuration directory, every local include (or local_override) and every
-// local skill source. Remote trees are immutable per commit. A root inside
+// configuration directory, every local include (or local_override), the local
+// files of the organization policy and every local skill source. Remote trees
+// are immutable per commit. A root inside
 // another root is left out so no file is fingerprinted twice.
 func (st *ServeSetup) watchRoots(b *built) []string {
 	var candidates []string
@@ -556,6 +557,7 @@ func (st *ServeSetup) watchRoots(b *built) []string {
 		candidates = append(candidates, b.cfg.ConfigDir)
 	}
 	candidates = append(candidates, localIncludeDirs(b.cfg)...)
+	candidates = append(candidates, policyFiles(b.cfg)...)
 	for _, res := range b.sources {
 		if res.Commit == "" {
 			candidates = append(candidates, res.Dir)
