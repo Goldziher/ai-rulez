@@ -6,8 +6,9 @@ import (
 )
 
 // userinfoRe matches the credentials in a URL's authority: scheme://user:pass@.
-// scp-style remotes (git@host:owner/repo) have no scheme and are left alone.
-var userinfoRe = regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*://)[^/\s@]+@`)
+// The password may itself contain "@", so the match runs to the last "@" before
+// the first "/", "?" or "#". scp-style remotes (git@host:owner/repo) have no scheme and are left alone.
+var userinfoRe = regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*://)[^/\s?#]+@`)
 
 // queryRe matches the query string of a scheme://... URL (up to the fragment or
 // whitespace), where tokens such as ?access_token=... are commonly passed.
