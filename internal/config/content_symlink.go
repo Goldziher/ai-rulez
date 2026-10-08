@@ -218,8 +218,10 @@ func sensitiveTarget(root, target string) string {
 
 // secretDirFiles maps a credential directory to the file names in it that hold
 // credentials.
+const dockerConfigFile = "config.json"
+
 var secretDirFiles = map[string][]string{
-	".docker": {"config.json"},
+	".docker": {dockerConfigFile},
 	".kube":   {"config"},
 	".aws":    {"credentials", "config"},
 }

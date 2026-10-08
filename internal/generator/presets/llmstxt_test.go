@@ -43,7 +43,7 @@ func TestLLMsTxtPresetRendersValidIndex(t *testing.T) {
 	got := generateLLMsTxt(t, &config.Config{Name: "demo", Description: "A demo."})
 	require.Len(t, got, 1)
 	index := got["llms.txt"]
-	assert.Contains(t, index, "- [alpha](.ai-rulez/rules/alpha.md): Explicit [text]\n")
+	assert.Contains(t, index, "- [alpha](.ai-rulez/rules/alpha.md): Explicit \\[text\\]\n")
 	assert.Contains(t, index, "- [Zeta](.ai-rulez/rules/zeta.md): Last rule.\n")
 	assert.Contains(t, index, "- [React](.ai-rulez/rules/react.md): Domain web. Hooks.\n")
 	assert.Contains(t, index, "- [Ctx](.ai-rulez/context/ctx.md): Prose line.\n")
