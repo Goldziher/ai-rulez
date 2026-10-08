@@ -41,7 +41,7 @@ func runSignPolicy(ctx context.Context, env ambient.Env) int {
 		return 1
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
-	reportSigned(ctx, "Signed policy", map[string]any{"kind": "policy", "path": signPolicy, "signer": signerLabel(info), "bundle": out},
+	reportSigned(ctx, "Signed policy", map[string]any{keyKind: "policy", keyPath: signPolicy, keySigner: signerLabel(info), keyBundle: out},
 		"path", signPolicy, "signer", signerLabel(info), "bundle", out)
 	return 0
 }
