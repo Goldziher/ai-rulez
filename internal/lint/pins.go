@@ -168,7 +168,7 @@ var pinCheckers = map[string]pinChecker{
 	toolYarn:   dlxLauncher,
 	toolBun:    dlxLauncher,
 	cmdNPM:     npmLauncher,
-	toolUvx:    func(_ string, args []string, _, _ bool) (string, string) { return uvxProblem(args) },
+	toolUvx:    func(_ string, args []string, _, _ bool) (pkg, reason string) { return uvxProblem(args) },
 	"uv":       uvLauncher,
 	toolPipx:   pipxLauncher,
 	cmdPip:     pipLauncher,
@@ -180,25 +180,25 @@ var pinCheckers = map[string]pinChecker{
 	"podman":   dockerLauncher,
 }
 
-func npxLauncher(cmd string, args []string, needYes, _ bool) (string, string) {
+func npxLauncher(cmd string, args []string, needYes, _ bool) (pkg, reason string) {
 	return npxProblem(args, needYes && cmd == toolNpx)
 }
 
-func dlxLauncher(_ string, args []string, _, _ bool) (string, string) {
+func dlxLauncher(_ string, args []string, _, _ bool) (pkg, reason string) {
 	if len(args) > 0 && (args[0] == "dlx" || args[0] == "x") {
 		return npxProblem(args[1:], false)
 	}
 	return "", ""
 }
 
-func npmLauncher(_ string, args []string, needYes, _ bool) (string, string) {
+func npmLauncher(_ string, args []string, needYes, _ bool) (pkg, reason string) {
 	if len(args) > 0 && (args[0] == cmdExec || args[0] == "x") {
 		return npxProblem(args[1:], needYes)
 	}
 	return "", ""
 }
 
-func uvLauncher(_ string, args []string, _, _ bool) (string, string) {
+func uvLauncher(_ string, args []string, _, _ bool) (pkg, reason string) {
 	if len(args) > 1 && args[0] == "tool" && args[1] == wordRun {
 		return uvxProblem(args[2:])
 	}
@@ -211,28 +211,28 @@ func uvLauncher(_ string, args []string, _, _ bool) (string, string) {
 	return "", ""
 }
 
-func pipxLauncher(_ string, args []string, _, _ bool) (string, string) {
+func pipxLauncher(_ string, args []string, _, _ bool) (pkg, reason string) {
 	if len(args) > 0 && args[0] == wordRun {
 		return pipxRunProblem(args[1:])
 	}
 	return "", ""
 }
 
-func pipLauncher(_ string, args []string, _, _ bool) (string, string) {
+func pipLauncher(_ string, args []string, _, _ bool) (pkg, reason string) {
 	if len(args) > 0 && args[0] == wordInstall {
 		return pipProblem(args[1:])
 	}
 	return "", ""
 }
 
-func pythonLauncher(_ string, args []string, _, _ bool) (string, string) {
+func pythonLauncher(_ string, args []string, _, _ bool) (pkg, reason string) {
 	if len(args) > 2 && args[0] == "-m" && args[1] == cmdPip && args[2] == wordInstall {
 		return pipProblem(args[3:])
 	}
 	return "", ""
 }
 
-func goLauncher(_ string, args []string, _, _ bool) (string, string) {
+func goLauncher(_ string, args []string, _, _ bool) (pkg, reason string) {
 	if len(args) > 1 && (args[0] == wordRun || args[0] == wordInstall) {
 		for _, a := range args[1:] {
 			if strings.HasPrefix(a, "-") {
@@ -247,7 +247,7 @@ func goLauncher(_ string, args []string, _, _ bool) (string, string) {
 	return "", ""
 }
 
-func dockerLauncher(_ string, args []string, _, allowDocker bool) (string, string) {
+func dockerLauncher(_ string, args []string, _, allowDocker bool) (pkg, reason string) {
 	if allowDocker {
 		return dockerProblem(args)
 	}
