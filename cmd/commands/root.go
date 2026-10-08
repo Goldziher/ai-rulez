@@ -43,6 +43,7 @@ func Execute() error {
 	RootCmd.Version = Version
 	RootCmd.SetVersionTemplate("ai-rulez version {{.Version}}\n")
 	requireKnownSubcommands(RootCmd)
+	explainArgErrors(RootCmd)
 	return RootCmd.ExecuteContext(cmdContext())
 }
 
