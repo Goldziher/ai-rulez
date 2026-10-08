@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/samber/oops"
 )
@@ -369,7 +370,7 @@ func escapeTag(tag string) (string, error) {
 }
 
 func checkSHA(sha string) error {
-	if !shaRe.MatchString(sha) {
+	if !gitutil.IsCommitSHA(sha) {
 		return fmt.Errorf("%w: invalid commit id", ErrUnsupportedSource)
 	}
 	return nil
@@ -386,7 +387,7 @@ type ghRelease struct {
 
 func (r ghRelease) release() Release {
 	rel := Release{Tag: r.TagName, Name: r.Name, Prerelease: r.Prerelease, Published: r.PublishedAt}
-	if shaRe.MatchString(r.Target) {
+	if gitutil.IsCommitSHA(r.Target) {
 		rel.Commit = r.Target
 	}
 	return rel

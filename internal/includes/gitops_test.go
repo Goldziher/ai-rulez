@@ -26,7 +26,7 @@ func TestIsFullSHA(t *testing.T) {
 		{name: "version tag", ref: "v1.2.3", want: false},
 		{name: "short sha", ref: "abc1234", want: false},
 		{name: "39 hex chars", ref: "0123456789abcdef0123456789abcdef0123456", want: false},
-		{name: "64 hex chars", ref: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", want: false},
+		{name: "64 hex chars (SHA-256 object format)", ref: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", want: true},
 		{name: "empty", ref: "", want: false},
 		{name: "HEAD", ref: "HEAD", want: false},
 		{name: "prefixed sha", ref: "refs/0123456789abcdef0123456789abcdef01234567", want: false},
