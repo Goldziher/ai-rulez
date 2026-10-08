@@ -22,10 +22,17 @@ type stmt struct {
 type tomlDoc struct {
 	lines []string
 	stmts []stmt
+	crlf  bool // the source used CRLF line endings; text() writes them back
 }
 
 func parseTOMLDoc(text string) *tomlDoc {
-	d := &tomlDoc{lines: strings.Split(strings.TrimRight(text, "\n"), "\n")}
+	d := &tomlDoc{crlf: strings.Contains(text, "\r\n")}
+	d.lines = strings.Split(strings.TrimRight(text, "\r\n"), "\n")
+	if d.crlf {
+		for i, l := range d.lines {
+			d.lines[i] = strings.TrimSuffix(l, "\r")
+		}
+	}
 	var table []string
 	for i := 0; i < len(d.lines); {
 		trimmed := strings.TrimSpace(d.lines[i])
@@ -50,7 +57,12 @@ func parseTOMLDoc(text string) *tomlDoc {
 	return d
 }
 
-func (d *tomlDoc) text() string { return strings.Join(d.lines, "\n") + "\n" }
+func (d *tomlDoc) text() string {
+	if d.crlf {
+		return strings.Join(d.lines, "\r\n") + "\r\n"
+	}
+	return strings.Join(d.lines, "\n") + "\n"
+}
 
 // statementEnd returns the index after the last line of the statement that
 // starts at line i, following multi-line strings and multi-line arrays.
