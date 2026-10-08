@@ -207,7 +207,7 @@ func sensitiveTarget(root, target string) string {
 		rel = r
 	}
 	segments := strings.Split(filepath.ToSlash(rel), "/")
-	if slices.Contains(segments, ".git") {
+	if slices.ContainsFunc(segments, func(seg string) bool { return strings.EqualFold(seg, ".git") }) {
 		return "inside .git"
 	}
 	if isSecretFileName(segments[len(segments)-1]) {
