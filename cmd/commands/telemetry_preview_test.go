@@ -24,7 +24,7 @@ func resetPreviewFlags(t *testing.T) {
 func recordSkillLoads(t *testing.T, env telemetryEnv, skills ...string) {
 	t.Helper()
 	for _, skill := range skills {
-		event := `{"hook_event_name":"PreToolUse","tool_name":"Skill","tool_input":{"skill":"` + skill + `"},"session_id":"s1","cwd":"` + env.root + `"}`
+		event := `{"hook_event_name":"PreToolUse","tool_name":"Skill","tool_input":{"skill":"` + skill + `"},"session_id":"s1","cwd":"` + jsonPath(env.root) + `"}`
 		require.NoError(t, runUsageRecord(strings.NewReader(event)))
 	}
 }
