@@ -95,7 +95,7 @@ func validateOKFTree(cfg *config.Config, w io.Writer) bool {
 		return false
 	}
 	if err := writeOKFFindings(w, cfg.ConfigDir, b, findings, false); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return true
 	}
 	threshold := okf.SeverityError

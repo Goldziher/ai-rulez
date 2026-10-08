@@ -96,10 +96,7 @@ See docs/review.md.`,
 		if err != nil {
 			return err
 		}
-		if code != 0 {
-			os.Exit(code)
-		}
-		return nil
+		return exitStatus(code)
 	},
 }
 

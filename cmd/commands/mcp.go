@@ -32,14 +32,11 @@ skill:// resources, answers skills/list and skills/get, and adds search_skills,
 get_skill and read_skill_file tools. The authoring tools are not registered in
 that mode, so it is safe to hand to an unattended agent.`,
 	Args: cobra.NoArgs,
-	Run:  runMCPServer,
+	RunE: runMCPServer,
 }
 
-func runMCPServer(cmd *cobra.Command, _ []string) {
-	if err := runMCP(cmd); err != nil {
-		fmtError(err)
-		os.Exit(exitCodeFor(err))
-	}
+func runMCPServer(cmd *cobra.Command, _ []string) error {
+	return fail(runMCP(cmd))
 }
 
 // runMCP runs the MCP server until the client disconnects or a signal ends it.
