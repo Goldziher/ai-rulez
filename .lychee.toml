@@ -36,7 +36,18 @@ exclude = [
   # and codebuddy.ai times out from the runner's network.
   "^https://ampcode\\.com/?$",
   "^https://www\\.codebuddy\\.ai/docs/cli",
+
+  # The rule text "[name](url)" in strict-validation renders as a relative link.
+  "^file:///.*/site/url$",
+
+  # 404 until the conformance suite lands on main.
+  "^https://github\\.com/Goldziher/ai-rulez/tree/main/tests/conformance$",
 ]
+
+# llms-full.txt concatenates every docs page as plain text, so its placeholder
+# URLs (org/repo, host, example-org, ...) are examples, not links; the rendered
+# HTML pages are still checked.
+exclude_path = ["site/llms-full.txt"]
 
 # Accept these HTTP status codes as valid. 429 and 503 are throttling responses
 # (github.com serves blob pages to the checker with intermittent 503s), not dead links.
