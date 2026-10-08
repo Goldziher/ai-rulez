@@ -27,14 +27,12 @@ over 8 MiB or a call naming over 1000 files is blocked.
 Add the hook with [guard] generated = true in .ai-rulez/config.toml.`,
 	Args:         cobra.NoArgs,
 	SilenceUsage: true,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		cwd, err := os.Getwd()
 		if err != nil {
 			cwd = "" // the guard fails open on its own errors
 		}
-		if code := runGuard(cmd.InOrStdin(), cmd.ErrOrStderr(), cwd); code != 0 {
-			os.Exit(code)
-		}
+		return exitStatus(runGuard(cmd.InOrStdin(), cmd.ErrOrStderr(), cwd))
 	},
 }
 
