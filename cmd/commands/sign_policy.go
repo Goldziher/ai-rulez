@@ -17,16 +17,16 @@ import (
 func runSignPolicy(ctx context.Context, env ambient.Env) int {
 	signer, err := newSigner(ctx, env)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if err := exportPublicKey(signer); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	bundle, err := policy.SignPolicyFile(ctx, signer, signPolicy, time.Now())
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	out := signOutput
@@ -34,11 +34,11 @@ func runSignPolicy(ctx context.Context, env ambient.Env) int {
 		out = signPolicy + policy.SidecarSuffix
 	}
 	if out, err = appendTarget(out); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if err := writeBundle(out, bundle); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only

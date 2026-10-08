@@ -44,11 +44,8 @@ Environment overrides (AI_RULEZ_LLM_*) are applied.
 --ping makes one 1-token health call. It refuses unless allow_network is true. The same
 information appears as the "llm" section of "ai-rulez doctor".`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := runLLMDoctor(watchParentContext(cmd), args, cmd.OutOrStdout()); err != nil {
-			fmtError(err)
-			os.Exit(1)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return fail(runLLMDoctor(watchParentContext(cmd), args, cmd.OutOrStdout()))
 	},
 }
 
@@ -59,11 +56,8 @@ var llmEstimateCmd = &cobra.Command{
 cost with the configured model, from the built-in price table or [llm] price_input_per_mtok /
 price_output_per_mtok. Nothing is sent. An unknown model prints "cost unknown".`,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := runLLMEstimate(watchParentContext(cmd), args[0], cmd.OutOrStdout()); err != nil {
-			fmtError(err)
-			os.Exit(1)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return fail(runLLMEstimate(watchParentContext(cmd), args[0], cmd.OutOrStdout()))
 	},
 }
 
