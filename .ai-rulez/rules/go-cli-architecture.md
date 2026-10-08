@@ -1,12 +1,18 @@
 ---
-priority: critical
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - .github/copilot-instructions.md
-  - .devin/*
-  - AGENTS.md
-  - .hermes.md
+type: Decision
+title: Go Cli Architecture
+x-ai-rulez:
+  kind: rule
+  id: go-cli-architecture
+  metadata:
+    priority: critical
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - .github/copilot-instructions.md
+      - .devin/*
+      - AGENTS.md
+      - .hermes.md
 ---
 
 # Go CLI Architecture

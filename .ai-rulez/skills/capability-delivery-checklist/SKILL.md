@@ -1,9 +1,15 @@
 ---
-description: "Use when adding a new CLI command, flag, preset, or other user-visible capability, and before opening a pull request for it: covers the plan, tests, docs, schema, wrappers, and final validation steps."
-priority: medium
-targets:
-  - CLAUDE.md
-  - .github/copilot-instructions.md
+type: Playbook
+title: Capability Delivery Checklist
+description: 'Use when adding a new CLI command, flag, preset, or other user-visible capability, and before opening a pull request for it: covers the plan, tests, docs, schema, wrappers, and final validation steps.'
+x-ai-rulez:
+  kind: skill
+  id: capability-delivery-checklist
+  metadata:
+    priority: medium
+    targets:
+      - CLAUDE.md
+      - .github/copilot-instructions.md
 ---
 
 # Capability Delivery Checklist
