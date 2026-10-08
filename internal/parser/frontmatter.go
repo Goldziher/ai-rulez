@@ -37,29 +37,45 @@ func ParseFrontmatter(content string) (*Metadata, string, error) {
 		return nil, normalizedContent, nil
 	}
 
-	// Find the closing ---
-	lines := strings.Split(normalizedContent, "\n")
-	if len(lines) < 3 {
-		return nil, normalizedContent, nil
-	}
-
-	endIdx := -1
-	for i := 1; i < len(lines); i++ {
-		line := strings.TrimSpace(lines[i])
-		if line == "---" {
-			endIdx = i
+	// Find the closing --- without splitting the whole document into lines: the
+	// body can be large and only the frontmatter is parsed. lineNo counts lines
+	// from the opening marker (line 0).
+	const openLen = len("---\n")
+	yamlEnd, rest, found := 0, "", false
+	pos := openLen
+	for lineNo := 1; ; lineNo++ {
+		nl := strings.IndexByte(normalizedContent[pos:], '\n')
+		line := normalizedContent[pos:]
+		if nl >= 0 {
+			line = line[:nl]
+		}
+		if strings.TrimSpace(line) == "---" {
+			if nl < 0 && lineNo == 1 {
+				// "---\n---" holds two lines: too short to be frontmatter.
+				return nil, normalizedContent, nil
+			}
+			yamlEnd, found = openLen, true // no lines between the markers
+			if pos > openLen {
+				yamlEnd = pos - 1 // drop the newline that ends the last frontmatter line
+			}
+			if nl >= 0 {
+				rest = normalizedContent[pos+nl+1:]
+			}
 			break
 		}
+		if nl < 0 {
+			break
+		}
+		pos += nl + 1
 	}
 
-	if endIdx == -1 {
+	if !found {
 		// No closing ---, treat as regular content
 		return nil, normalizedContent, nil
 	}
 
 	// Extract frontmatter YAML
-	frontmatterLines := lines[1:endIdx]
-	frontmatterYAML := strings.Join(frontmatterLines, "\n")
+	frontmatterYAML := normalizedContent[openLen:yamlEnd]
 
 	// Parse frontmatter - return error instead of silently ignoring (fixes issue #4)
 	var metadata Metadata
@@ -71,8 +87,7 @@ func ParseFrontmatter(content string) (*Metadata, string, error) {
 	}
 
 	// Extract actual content (after frontmatter)
-	actualContent := strings.Join(lines[endIdx+1:], "\n")
-	actualContent = strings.TrimPrefix(actualContent, "\n")
+	actualContent := strings.TrimPrefix(rest, "\n")
 
 	return &metadata, actualContent, nil
 }
