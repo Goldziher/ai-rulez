@@ -2,9 +2,12 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -86,7 +89,12 @@ func loadProject(ctx context.Context, dir string, opts ...config.LoadOption) (*c
 }
 
 func loadProjectFile(ctx context.Context, path string, opts ...config.LoadOption) (*config.Config, error) {
-	return refusalsReported(project.LoadFile(config.WithPolicyContext(ctx, activePolicy), path, withCLILockPolicy(opts)...))
+	cfg, err := refusalsReported(project.LoadFile(config.WithPolicyContext(ctx, activePolicy), path, withCLILockPolicy(opts)...))
+	if err != nil && errors.Is(err, fs.ErrNotExist) && strings.Contains(err.Error(), "stat config path") {
+		return nil, oops.Hint("-C/--config (or the argument) takes a config file or a config directory such as .ai-rulez; check the path").
+			Errorf("config path %s does not exist", path)
+	}
+	return cfg, err
 }
 
 func loadProjectDir(ctx context.Context, dir, configDirName string, opts ...config.LoadOption) (*config.Config, error) {

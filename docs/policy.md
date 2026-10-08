@@ -386,11 +386,11 @@ to LF. Exit code 2 when the repository loosens the policy (the same code `genera
   `validate --show-policy`; `validate --strict` reports each attempt as an `AR74x` finding. The severity floor and
   required codes are enforced inside the lint run, so a floored finding cannot be demoted by a lint profile.
 - `generate` refuses to run on a configuration that loosens the policy, and so does each root of `generate
-  --recursive` and `validate --recursive`. With `--recursive`, `validate` exits `2`; `generate` reports the failed
-  roots and exits `1`.
-- `lock` refuses to write `ai-rulez.lock` for such a configuration (exit `1`, naming the `AR740` lines), and
-  `lock --check` reports a mismatch (exit `2`). `doctor` and `doctor --policy` do not report `AR740`; run `validate`
-  to see it.
+  --recursive` and `validate --recursive`. Loosening is exit `2` everywhere: when every failed root loosened the
+  policy (or drifted from the lock) a recursive run exits `2`, and `1` when some root failed for another reason.
+- `lock` refuses to write `ai-rulez.lock` for such a configuration (exit `2`, naming the `AR740` lines), and
+  `lock --check` reports a mismatch (exit `2`). `doctor` and `doctor --policy` report each attempt as an `AR740`
+  error finding in the `policy` check (a warning under `--policy-mode warn`) and exit `2`.
 - The MCP servers: `mcp --serve-skills` fails to start on a configuration that loosens the policy, and the
   `generate_outputs` and `validate_config` tools of `mcp` refuse it (`validate_config` answers `valid: false`).
 - No suppression hides a protected code: for every code in `required_codes` or raised by `severity_floor` (and

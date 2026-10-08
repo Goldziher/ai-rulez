@@ -153,8 +153,8 @@ func (e *FindingsError) Unwrap() error { return e.err }
 func ExitCode(res *Result, err error) int {
 	var fe *FindingsError
 	switch {
-	case errors.As(err, &fe):
-		return ExitFindings
+	case errors.As(err, &fe), errors.Is(err, config.ErrPolicyLoosens):
+		return ExitFindings // a configuration that loosens the organization policy is exit 2 everywhere
 	case err != nil:
 		return ExitFailed
 	case res != nil && len(res.Unpinned) > 0:
@@ -206,6 +206,11 @@ func Write(ctx context.Context, req Request, env Env) (*Result, error) {
 	// Pin only what generate would accept: a lock for a configuration that
 	// fails validation would record content no run can use.
 	if err := cfg.Validate(); err != nil {
+		return res, err //nolint:wrapcheck // already contextual
+	}
+	// A configuration that loosens the organization policy is refused the same way
+	// generate and validate refuse it (exit 2), whatever the lock would pin.
+	if err := config.CheckPolicy(cfg); err != nil {
 		return res, err //nolint:wrapcheck // already contextual
 	}
 	current, err := lockfile.Load(cfg.ConfigDir)

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -231,7 +232,7 @@ func processConfigFilesCounting(configFiles []string) (generated int, failed []s
 			if err != nil {
 				failedMu.Lock()
 				failed = append(failed, configPath)
-				if lockDriftError(err) {
+				if lockDriftError(err) || errors.Is(err, config.ErrPolicyLoosens) {
 					drifted++
 				}
 				failedMu.Unlock()
@@ -382,7 +383,7 @@ func runRecursiveGenerate() int {
 			fmt.Fprintf(os.Stderr, "  - %s\n", path)
 		}
 		if drifted == len(failed) {
-			return exitDrift // every failure is the lock disagreeing with the sources, as for a single root
+			return exitDrift // every failure is the lock disagreeing with the sources or a policy loosening, the same exit 2 as for a single root
 		}
 		return 1
 	}
