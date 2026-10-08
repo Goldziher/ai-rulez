@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"cmp"
 	"encoding/json"
+	"maps"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
@@ -230,7 +232,7 @@ func (b *builder) addRootFiles(files map[string][]byte) error {
 
 // checkTree refuses a path that is both a file and the directory of another.
 func checkTree(files map[string][]byte) error {
-	for _, name := range sortedKeys(files) {
+	for _, name := range slices.Sorted(maps.Keys(files)) {
 		for dir := path.Dir(name); dir != "."; dir = path.Dir(dir) {
 			if _, ok := files[dir]; ok {
 				return oops.With("file", dir).Errorf("%s is both a file and a directory (of %s)", dir, name)

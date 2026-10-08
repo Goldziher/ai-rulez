@@ -3,9 +3,11 @@ package config
 import (
 	"context"
 	"errors"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -14,6 +16,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
@@ -136,7 +139,7 @@ func readQuotedSegment(s string, i int) (seg string, next int, ok bool) {
 func checkSegments(segs []string) error {
 	if !knownConfigDocKeys()[segs[0]] {
 		return oops.
-			Hint("Valid keys: "+strings.Join(sortedKeys(knownConfigDocKeys()), ", ")).
+			Hint("Valid keys: "+strings.Join(slices.Sorted(maps.Keys(knownConfigDocKeys())), ", ")).
 			Errorf("unknown config key %q", segs[0])
 	}
 	if _, named := namedListKeys[segs[0]]; named && len(segs) < 2 {
@@ -149,7 +152,7 @@ func checkSegments(segs []string) error {
 
 func mainConfigFileName(configDir string) string {
 	for _, name := range []string{configTOMLFilename} {
-		if fileExists(filepath.Join(configDir, name)) {
+		if safefs.IsFile(filepath.Join(configDir, name)) {
 			return name
 		}
 	}
@@ -272,7 +275,7 @@ func (d *LocalDoc) Close() {
 }
 
 // Exists reports whether the overlay file is on disk.
-func (d *LocalDoc) Exists() bool { return fileExists(d.Path) }
+func (d *LocalDoc) Exists() bool { return safefs.IsFile(d.Path) }
 
 // Set stores v at the key path (see ParseLocalPath).
 func (d *LocalDoc) Set(path []string, v any) error {
@@ -1016,7 +1019,7 @@ func walkLeaves(prefix []string, v any, fn func(segs []string, v any)) {
 			fn(prefix, v)
 			return
 		}
-		for _, k := range sortedKeys(t) {
+		for _, k := range slices.Sorted(maps.Keys(t)) {
 			walkLeaves(appendSeg(prefix, k), t[k], fn)
 		}
 	case []any:

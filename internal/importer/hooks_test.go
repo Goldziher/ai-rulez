@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -205,7 +206,7 @@ const hookProject = `{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":
 func convertHooks(t *testing.T, opts ConvertOptions, files map[string]string) (dir string, report *Report, cfg string) {
 	t.Helper()
 	dir = t.TempDir()
-	writeTree(t, dir, files)
+	testutil.WriteTree(t, dir, files)
 	opts.Source, opts.Write = dir, true
 	report, err := Convert(context.Background(), opts)
 	require.NoError(t, err)
@@ -274,7 +275,7 @@ func TestConvert_DisabledBlockIsIdempotent(t *testing.T) {
 func TestConvert_MergesLiveHooksIntoAnExistingConfig(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		".claude/settings.json": hookProject, "CLAUDE.md": "x\n",
 		".ai-rulez/config.toml": "version = \"5.0\"\nname = \"mine\"\npresets = [\"claude\"]\n\n[permissions]\ndeny = [\"Read(./secrets)\"]\n",
 	})
@@ -305,7 +306,7 @@ func sortedCopy(in []string) []string {
 func TestConvert_HookWithASecretBlocksTheWrite(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"CLAUDE.md":             "x\n",
 		".claude/settings.json": `{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"curl -H 'Authorization: Bearer ghp_abcdefghijklmnopqrstuvwxyz0123456789' https://x.example"}]}]}}`,
 	})
@@ -320,7 +321,7 @@ func TestConvert_HookWithASecretBlocksTheWrite(t *testing.T) {
 func TestConvert_HooksAreNamedWhenTheConfigIsAV3File(t *testing.T) {
 	// Arrange: config.toml cannot be written next to a V3 config, so the manual step lists what to add.
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		".claude/settings.json": hookProject, "CLAUDE.md": "x\n",
 		".ai-rulez/config.yaml": "version: 3\nname: old\n",
 	})

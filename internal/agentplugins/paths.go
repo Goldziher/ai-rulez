@@ -2,7 +2,6 @@ package agentplugins
 
 import (
 	"path"
-	"slices"
 	"strings"
 )
 
@@ -72,13 +71,4 @@ func validLabel(l string) bool {
 		}
 	}
 	return true
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	return keys
 }

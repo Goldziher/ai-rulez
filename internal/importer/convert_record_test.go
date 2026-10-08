@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestConvert_WriteRecordsTheImportedNativeFiles(t *testing.T) {
@@ -21,7 +22,7 @@ func TestConvert_WriteRecordsTheImportedNativeFiles(t *testing.T) {
 		files[p] = c
 	}
 	files["GEMINI.md"] = "@CLAUDE.md\n"
-	writeTree(t, dir, files)
+	testutil.WriteTree(t, dir, files)
 
 	// Act
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
@@ -41,7 +42,7 @@ func TestConvert_WriteRecordsTheImportedNativeFiles(t *testing.T) {
 func TestConvert_DryRunLeavesNoRecord(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, sampleProject)
+	testutil.WriteTree(t, dir, sampleProject)
 
 	// Act
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir})

@@ -2,9 +2,11 @@ package okf
 
 import (
 	"fmt"
+	"maps"
 	"net/url"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -288,7 +290,7 @@ func (b *Bundle) conceptLayout() (concepts map[string][]string, subdirs map[stri
 	}
 	subdirs = make(map[string][]string, len(subSets))
 	for dir, set := range subSets {
-		subdirs[dir] = sortedKeys(set)
+		subdirs[dir] = slices.Sorted(maps.Keys(set))
 	}
 	return concepts, subdirs
 }

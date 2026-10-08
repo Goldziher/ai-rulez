@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/agentplugins"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const apSkill = "---\nname: deploy\ndescription: Deploy the service safely.\n---\n\n# Deploy\n\nRun `scripts/run.sh`.\n"
@@ -149,7 +150,7 @@ func TestAgentPluginsPlan_RejectsABrokenManifest(t *testing.T) {
 
 func TestConvert_AgentPluginsIsDetectedByAuto(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, agentPluginTree(t, fullPlugin(), "1.0.0"))
+	testutil.WriteTree(t, dir, agentPluginTree(t, fullPlugin(), "1.0.0"))
 
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
 
@@ -210,7 +211,7 @@ name = "docs"
 transport = "http"
 url = "https://docs.acme.test/mcp"
 `
-	writeTree(t, root, map[string]string{
+	testutil.WriteTree(t, root, map[string]string{
 		".ai-rulez/config.toml":                       cfg,
 		".ai-rulez/skills/deploy/SKILL.md":            apSkill,
 		".ai-rulez/skills/deploy/scripts/run.sh":      "#!/bin/sh\necho run\n",
@@ -229,7 +230,7 @@ func TestRoundTrip_ExportImportExportIsByteIdentical(t *testing.T) {
 			first := exportPlugin(t, roundTripProject(t, spec))
 			require.Contains(t, first, "plugin.json")
 			pkg := t.TempDir()
-			writeTree(t, pkg, first)
+			testutil.WriteTree(t, pkg, first)
 			again := t.TempDir()
 
 			report, err := Convert(context.Background(), ConvertOptions{
