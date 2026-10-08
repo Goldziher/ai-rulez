@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // saveGuard refuses a rebuild made while the SKILL.md of a served skill is
@@ -102,6 +104,6 @@ func incompleteSkillFile(content []byte) bool {
 	if strings.TrimSpace(text) == "" || (len(text) < len(delimiter) && delimiter[:len(text)] == text) {
 		return true
 	}
-	rest, ok := strings.CutPrefix(text, delimiter)
-	return ok && !strings.Contains(rest, "\n---")
+	block := frontmatter.SplitString(text)
+	return block.Present && !block.Closed
 }
