@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"entries\":[{\"identifier\":1e999}]}")

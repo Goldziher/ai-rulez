@@ -442,7 +442,10 @@ func TestImportReportsResourceTargetConflict(t *testing.T) {
 			created++
 		}
 	}
-	assert.LessOrEqual(t, created, 1, "one resource target is written once")
-	require.NotEmpty(t, res.Skipped, "the losing resource is reported, not silently overwritten")
-	assert.Contains(t, res.Skipped[0], "res")
+	assert.Equal(t, 1, created, "one resource target is written once")
+	require.Len(t, res.Skipped, 1, "the losing resource is reported, not silently overwritten")
+	assert.Equal(t, "skills/s/res2.md: skill resource target skills/s/references/r.md is already taken by skills/s/res1.md", res.Skipped[0])
+	written, err := os.ReadFile(filepath.Join(cfgDir, "skills", "s", "references", "r.md"))
+	require.NoError(t, err)
+	assert.Equal(t, "content 1\n", string(written), "the first resource wins the target")
 }
