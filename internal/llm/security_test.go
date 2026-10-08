@@ -19,6 +19,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 func TestLiteralKeyInAPIKeyEnvIsNeverEchoed(t *testing.T) {
@@ -129,14 +131,14 @@ func TestPlainHTTPWithKeyNeedsLoopback(t *testing.T) {
 func TestEstimateTokensIsConservativeForNonASCII(t *testing.T) {
 	cjk := strings.Repeat("日本語のテキスト", 100) // ~1 token per rune in practice
 	runes := len([]rune(cjk))
-	if got := EstimateTokens(cjk); got < runes {
+	if got := tokens.Estimate(cjk); got < runes {
 		t.Errorf("CJK: estimate %d is below the rune count %d", got, runes)
 	}
 	ascii := strings.Repeat("abcd", 100) // typical English/code is at most 4 bytes per token
-	if got := EstimateTokens(ascii); got < len(ascii)/4 {
+	if got := tokens.Estimate(ascii); got < len(ascii)/4 {
 		t.Errorf("ASCII: estimate %d below len/4", got)
 	}
-	if EstimateTokens("") != 0 || EstimateTokens("a") != 1 {
+	if tokens.Estimate("") != 0 || tokens.Estimate("a") != 1 {
 		t.Error("edge cases")
 	}
 }
