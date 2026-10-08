@@ -62,17 +62,17 @@ func TestLockRoles_SkillModeChangeIsReportedAsRoleOutputDrift(t *testing.T) {
 	require.Equal(t, 0, writeLockAt("", "", nil))
 	require.Equal(t, []string{"dev"}, pinnedRoles(t, root), "only the role with pin = true is pinned")
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
-	require.Equal(t, 0, code, stderr)
+	report, _ := capture(t, func() { code = checkLockAt("") })
+	require.Equal(t, 0, code, report)
 
 	// Act: the skill_mode changes, no source file does
 	setRoleMode(t, root, "off", "name-only")
-	_, stderr = capture(t, func() { code = checkLockAt("") })
+	report, _ = capture(t, func() { code = checkLockAt("") })
 
 	// Assert
 	assert.Equal(t, exitDrift, code)
-	assert.Contains(t, stderr, "outputs of role dev")
-	assert.NotContains(t, stderr, "ops", "an unpinned role is not compared")
+	assert.Contains(t, report, "outputs of role dev")
+	assert.NotContains(t, report, "ops", "an unpinned role is not compared")
 }
 
 func TestLockRoles_UnpinnedRolesLeaveTheLockUnchanged(t *testing.T) {
@@ -107,14 +107,14 @@ func TestLockRoles_RolesFlagPinsEveryRoleAndRoleLimitsTheCheck(t *testing.T) {
 	setRoleMode(t, root, "name-only", "on")
 	var code int
 	lockServeRole = "dev"
-	_, stderr := capture(t, func() { code = checkLockAt("") })
-	assert.NotContains(t, stderr, "outputs of role", "dev did not change (ops' own source did, which is always compared)")
+	report, _ := capture(t, func() { code = checkLockAt("") })
+	assert.NotContains(t, report, "outputs of role", "dev did not change (ops' own source did, which is always compared)")
 	lockServeRole = "ops"
-	_, stderr = capture(t, func() { code = checkLockAt("") })
+	report, _ = capture(t, func() { code = checkLockAt("") })
 
 	// Assert
 	assert.Equal(t, exitDrift, code)
-	assert.Contains(t, stderr, "outputs of role ops")
+	assert.Contains(t, report, "outputs of role ops")
 }
 
 func TestLockRoles_CheckingAnUnpinnedRoleIsAnError(t *testing.T) {
@@ -125,11 +125,11 @@ func TestLockRoles_CheckingAnUnpinnedRoleIsAnError(t *testing.T) {
 
 	// Act
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
+	_, report := capture(t, func() { code = checkLockAt("") })
 
 	// Assert
 	assert.Equal(t, 1, code)
-	assert.Contains(t, stderr, "not pinned")
+	assert.Contains(t, report, "not pinned")
 }
 
 func TestLockRoles_DiffListsPerFileDigestsAndWritesNothing(t *testing.T) {
@@ -280,20 +280,20 @@ func TestLockRoles_UnpinningARoleInTheConfigIsDriftAndLockDropsThePin(t *testing
 
 	// Act
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
+	report, _ := capture(t, func() { code = checkLockAt("") })
 
 	// Assert: the check names the pin that is no longer wanted, not only the changed role source
 	assert.Equal(t, exitDrift, code)
-	assert.Contains(t, stderr, "outputs of role dev")
-	assert.Contains(t, stderr, "no longer pinned")
+	assert.Contains(t, report, "outputs of role dev")
+	assert.Contains(t, report, "no longer pinned")
 
 	// Act: lock drops it
 	require.Equal(t, 0, writeLockAt("", "", nil))
 
 	// Assert
 	assert.Empty(t, pinnedRoles(t, root))
-	_, stderr = capture(t, func() { code = checkLockAt("") })
-	assert.Equal(t, 0, code, stderr)
+	report, _ = capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, 0, code, report)
 }
 
 func TestLockRoles_RolePinnedWithRolesFlagIsNotReportedRemovedByAPlainCheck(t *testing.T) {
@@ -306,8 +306,8 @@ func TestLockRoles_RolePinnedWithRolesFlagIsNotReportedRemovedByAPlainCheck(t *t
 
 	// Act
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
+	report, _ := capture(t, func() { code = checkLockAt("") })
 
 	// Assert
-	assert.Equal(t, 0, code, stderr)
+	assert.Equal(t, 0, code, report)
 }

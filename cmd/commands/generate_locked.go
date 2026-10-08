@@ -2,7 +2,6 @@ package commands
 
 import (
 	"errors"
-	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/approval"
@@ -53,17 +52,17 @@ func isLockedDrift(err error) bool {
 		errors.Is(err, config.ErrLockViolation)
 }
 
-// exitOnLockedDrift exits with the drift code when err says authored content no
-// longer matches the lock, and with 1 on any other error.
-func exitOnLockedDrift(err error) {
+// lockedDriftError is the failure of a run whose authored content no longer
+// matches the lock (exit 2, drift) or that failed another way (exit 1); nil when
+// err is nil.
+func lockedDriftError(err error) error {
 	if err == nil {
-		return
+		return nil
 	}
-	fmtError(err)
 	if errors.Is(err, errLockedSourceDrift) || errors.Is(err, errLockedSignature) || errors.Is(err, errLockedApproval) {
-		os.Exit(exitDrift)
+		return failWithCode(exitDrift, err)
 	}
-	os.Exit(1)
+	return failWithCode(exitFailure, err)
 }
 
 // enforceLockedContent is the content half of --locked and --frozen: when the

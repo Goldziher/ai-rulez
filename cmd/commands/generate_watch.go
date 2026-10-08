@@ -72,7 +72,7 @@ func runGenerateWatch(parent context.Context, args []string) error {
 	}
 	onError := func(err error, _ []string) {
 		// A bad config is the normal state while editing; keep watching.
-		fmtError(err)
+		renderError(os.Stderr, err)
 		logger.Warn("Generation failed; still watching for changes")
 	}
 	return watch.Watch(ctx, watch.Options{
@@ -179,7 +179,9 @@ func generateOnce(ctx context.Context, args []string, loadOpts ...config.LoadOpt
 	if err := cfg.Validate(); err != nil {
 		return cfg, err //nolint:wrapcheck // already contextual
 	}
-	applyGenerateOverrides(cfg)
+	if err := applyGenerateOverrides(cfg); err != nil {
+		return cfg, err
+	}
 	if err := importGate(cfg); err != nil {
 		return cfg, err
 	}

@@ -12,8 +12,10 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/render"
 )
 
 var (
@@ -35,6 +37,7 @@ var (
 	generateFrozen     bool
 	generateRole       string
 	generateEmitPlan   string
+	generateFormat     string
 )
 
 var GenerateCmd = &cobra.Command{
@@ -45,7 +48,7 @@ This will create markdown files for various AI assistants like Claude,
 Cursor, Devin, etc. based on your configuration.`,
 	Aliases: []string{"gen", "g"},
 	Args:    cobra.MaximumNArgs(1),
-	Run:     runGenerate,
+	RunE:    runGenerate,
 }
 
 func init() {
@@ -69,6 +72,7 @@ func init() {
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnvFiles, "env-file", "E", nil, "Dotenv file for MCP env placeholders (repeatable)")
 	GenerateCmd.Flags().StringVar(&generateEmitPlan, "emit-plan", "",
 		"Write the generation plan (every file that would be written, merged or removed, with digests; no secrets) as JSON to FILE ('-' for stdout) and apply nothing; see schema/plan.schema.json")
+	addFormatFlag(GenerateCmd.Flags(), &generateFormat, "", formatText, formatText, formatJSON)
 	GenerateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	GenerateCmd.Flags().BoolVar(&allowLocalDrift, "allow-local-drift", false,
 		"Write output even when machine-local config would change files shared with the team")
@@ -81,35 +85,51 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&pluginIfConfigured, "if-configured", false, "Skip plugin generation when no plugin authoring configuration is present")
 }
 
-func runGenerate(cmd *cobra.Command, args []string) {
-	progress.SetQuiet(viper.GetBool("quiet"))
+func runGenerate(cmd *cobra.Command, args []string) error {
+	progress.SetQuiet(viper.GetBool("quiet") || generateFormat == formatJSON)
 
 	// The lock policy of every load this run makes (before any config loading).
 	applyLockFlags()
 
-	exitOn(checkRoleFlags())
-	exitOn(checkEmitPlanFlags())
-
-	if runOtherGenerateMode(cmd, args) {
-		return
+	if err := checkFormatFlag(generateFormat); err != nil {
+		return fail(err)
+	}
+	if err := checkRoleFlags(); err != nil {
+		return fail(err)
+	}
+	if err := checkEmitPlanFlags(); err != nil {
+		return fail(err)
 	}
 
+	if ran, err := runOtherGenerateMode(cmd, args); ran {
+		return err
+	}
+
+	cfg, err := loadGenerateConfig(args)
+	if err != nil {
+		return err
+	}
+	return generateLoaded(cmd, cfg)
+}
+
+// generateLoaded is the single-project run once its configuration is loaded and
+// checked: overrides, gates, preflight, then the plan, the preview or the write.
+func generateLoaded(cmd *cobra.Command, cfg *config.Config) error {
 	ctx := cmdContext()
-	cfg := loadGenerateConfig(args)
-	applyGenerateOverrides(cfg)
+	if err := applyGenerateOverrides(cfg); err != nil {
+		return fail(err)
+	}
 	warnFrontmatter(cfg)
 	if err := importGate(cfg); err != nil {
-		fmtError(err)
-		os.Exit(1)
+		return fail(err)
 	}
 	if pluginMode && pluginIfConfigured && !cfg.HasPluginAuthoring() {
 		logger.Info("Skipping plugin generation: no plugin authoring configuration")
-		return
+		return nil
 	}
 
 	if generateEmitPlan != "" {
-		exitOn(emitPlan(ctx, cfg, generateEmitPlan))
-		return
+		return fail(emitPlan(ctx, cfg, generateEmitPlan))
 	}
 
 	// Create generator
@@ -117,81 +137,104 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetOverwriteUnowned(generateForce)
 	gen.SetContext(ctx)
-	exitOn(applyRole(gen))
-	exitOn(generatePreflight(cfg, gen))
+	if err := applyRole(gen); err != nil {
+		return fail(err)
+	}
+	if err := generatePreflight(cfg, gen); err != nil {
+		return fail(err)
+	}
 
+	out := outFor(cmd)
 	if pluginMode {
-		runPluginGenerate(gen)
-		return
+		return runPluginGenerate(out, gen)
 	}
 
 	if dryRun {
-		if err := printDryRun(gen, ""); err != nil {
-			fmtError(err)
-			os.Exit(1)
-		}
-		return
+		return fail(printDryRun(gen, ""))
 	}
 
 	// Generate files
-	if err := gen.Generate(profile); err != nil {
-		fmtError(err)
-		os.Exit(1)
+	written, err := gen.GenerateFiles(profile)
+	if err != nil {
+		return fail(err)
 	}
+	if generateFormat == formatJSON {
+		return fail(writeGenerateDocument(out, generateDocument{Status: "generated", FilesWritten: written}))
+	}
+	return nil
+}
+
+// statusDryRun is the status of a generate --dry-run document.
+const statusDryRun = "dry_run"
+
+// generateDocument is the `--format json` document of a generate run that wrote
+// (status "generated") or previewed (status statusDryRun, with the plan lines).
+type generateDocument struct {
+	Status       string   `json:"status"`
+	FilesWritten int      `json:"files_written"`
+	Plan         []string `json:"plan,omitempty"`
+}
+
+func writeGenerateDocument(out render.Out, doc generateDocument) error {
+	return jsondoc.Write(out.Stdout(), doc) //nolint:wrapcheck // already contextual
 }
 
 // runOtherGenerateMode runs --watch, --check, --user and --recursive, which do
 // not take the single-project path, and reports whether one of them ran.
-func runOtherGenerateMode(cmd *cobra.Command, args []string) bool {
+func runOtherGenerateMode(cmd *cobra.Command, args []string) (bool, error) {
 	switch {
 	case generateWatch:
-		if err := runGenerateWatch(watchParentContext(cmd), args); err != nil {
-			fmtError(err)
-			os.Exit(1)
-		}
-		return true
+		return true, fail(runGenerateWatch(watchParentContext(cmd), args))
 	case generateCheck:
-		runGenerateCheck(args)
-		return true
-	case handleUserGenerate(args):
-		return true
-	case recursive:
-		if code := runRecursiveGenerate(); code != 0 {
-			os.Exit(code)
-		}
-		return true
+		return true, runGenerateCheck(args)
 	}
-	return false
+	if userScope {
+		return true, runGenerateUser(args)
+	}
+	if recursive {
+		return true, exitStatus(runRecursiveGenerate())
+	}
+	return false, nil
+}
+
+// runGenerateUser is `generate --user`.
+func runGenerateUser(args []string) error {
+	if recursive || pluginMode || len(args) > 0 {
+		return fail(oops.Errorf("--user cannot be combined with --recursive, --plugin or a config-file argument; use --config to choose the user config"))
+	}
+	return fail(runUserGenerate(cmdContext()))
 }
 
 // loadGenerateConfig loads, policy-checks and validates the project and enforces
-// the lock; any failure ends the process with its exit code.
-func loadGenerateConfig(args []string) *config.Config {
+// the lock; any failure carries its exit code.
+func loadGenerateConfig(args []string) (*config.Config, error) {
 	cfg, err := loadConfigForCommand(cmdContext(), args, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
 	if err != nil {
-		fmtError(err)
 		if (generateLocked || generateFrozen) && errors.Is(err, config.ErrLockViolation) {
-			os.Exit(exitDrift) // a missing or disagreeing lock is drift, the same code as a changed source
+			return nil, failWithCode(exitDrift, err) // a missing or disagreeing lock is drift, the same code as a changed source
 		}
-		os.Exit(1)
+		return nil, fail(err)
 	}
 
 	// The organization policy clamped the configuration at load; refuse to
 	// generate from one that tried to loosen it.
 	if err := policyGate(cfg); err != nil {
-		fmtError(err)
-		os.Exit(exitCodeFor(err))
+		return nil, fail(err)
 	}
 
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {
-		fmtError(err)
-		os.Exit(1)
+		return nil, fail(err)
 	}
 
-	exitOnLockedDrift(enforceLockedContent(cfg))
-	exitOnMovedTags(cfg) // only with --verify-tags or [lock] verify_tags: a pinned tag that moved ends the run
-	return cfg
+	if err := lockedDriftError(enforceLockedContent(cfg)); err != nil {
+		return nil, err
+	}
+	// only with --verify-tags or [lock] verify_tags: a pinned tag that moved ends the run
+	if err := movedTagsFailure(cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 // emitPlan renders the generation plan without writing any output and writes it
@@ -222,34 +265,40 @@ func emitPlan(ctx context.Context, cfg *config.Config, dest string) error {
 // printDryRun prints the generation plan and returns an error when the plan
 // holds local drift a real run would refuse, so a blocked dry run exits non-zero.
 func printDryRun(gen *generator.Generator, indent string) error {
+	out := defaultOut()
 	plan, err := gen.DryRun(profile)
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
+	if generateFormat == formatJSON {
+		if err := writeGenerateDocument(out, generateDocument{Status: statusDryRun, Plan: plan}); err != nil {
+			return err
+		}
+		return gen.DryRunBlocked()
+	}
 	for _, line := range plan {
-		progress.PrintlnIfNotQuiet(indent + line)
+		out.Resultln(indent + line)
 	}
 	return gen.DryRunBlocked() //nolint:wrapcheck // already contextual
 }
 
 // runPluginGenerate handles `generate --plugin`: it renders (or, with --dry-run,
 // previews) the distributable plugin bundles and marketplace index.
-func runPluginGenerate(gen *generator.Generator) {
+func runPluginGenerate(out render.Out, gen *generator.Generator) error {
 	if dryRun {
 		plan, err := gen.DryRunPlugin(profile)
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
+		}
+		if generateFormat == formatJSON {
+			return fail(writeGenerateDocument(out, generateDocument{Status: statusDryRun, Plan: plan}))
 		}
 		for _, line := range plan {
-			progress.PrintlnIfNotQuiet(line)
+			out.Resultln(line)
 		}
-		return
+		return nil
 	}
-	if err := gen.GeneratePlugin(profile); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
+	return fail(gen.GeneratePlugin(profile))
 }
 
 func loadConfigForCommand(ctx context.Context, args []string, opts ...config.LoadOption) (*config.Config, error) {
@@ -284,31 +333,35 @@ const (
 	configConventionSubdir = "ai-rulez"
 )
 
-func applyGenerateOverrides(cfg *config.Config) {
+func applyGenerateOverrides(cfg *config.Config) error {
 	if updateGitignore {
 		enabled := true
 		cfg.Gitignore = &enabled
 	}
 	if len(mcpEnv) > 0 {
-		cfg.MCPEnvOverrides = parseMCPEnvOverrides(mcpEnv)
+		overrides, err := parseMCPEnvOverrides(mcpEnv)
+		if err != nil {
+			return err
+		}
+		cfg.MCPEnvOverrides = overrides
 	}
 	if len(mcpEnvFiles) > 0 {
 		cfg.MCPEnvFiles = append([]string(nil), mcpEnvFiles...)
 	}
+	return nil
 }
 
-func parseMCPEnvOverrides(values []string) map[string]string {
+func parseMCPEnvOverrides(values []string) (map[string]string, error) {
 	out := make(map[string]string, len(values))
 	for _, value := range values {
 		key, val, ok := strings.Cut(value, "=")
 		key = strings.TrimSpace(key)
 		if !ok || key == "" {
-			logger.Error("Invalid --env value; expected KEY=VALUE", "value", value)
-			os.Exit(1)
+			return nil, oops.With("value", value).Errorf("invalid --env value %q; expected KEY=VALUE", value)
 		}
 		out[key] = val
 	}
-	return out
+	return out, nil
 }
 
 // checkGenerateCheckFlags rejects flags that make no sense with --check, which
@@ -337,11 +390,9 @@ func applyLockFlags() {
 	}
 }
 
-// runGenerateCheck runs `generate --check` and exits with its code.
-func runGenerateCheck(args []string) {
-	if code := generateCheckCode(args); code != 0 {
-		os.Exit(code)
-	}
+// runGenerateCheck runs `generate --check` and returns its exit code as an error.
+func runGenerateCheck(args []string) error {
+	return exitStatus(generateCheckCode(args))
 }
 
 // generateCheckCode is `generate --check`: it first requires the sources to
@@ -351,8 +402,8 @@ func runGenerateCheck(args []string) {
 // loaded once for both.
 func generateCheckCode(args []string) int {
 	if err := checkGenerateCheckFlags(); err != nil {
-		fmtError(err)
-		return 1
+		renderError(os.Stderr, err)
+		return exitFailure
 	}
 	return runDriftCheckGated(args, recursive, driftRender, func(cfg *config.Config) error {
 		return enforceLockedContentFor(cfg, true)

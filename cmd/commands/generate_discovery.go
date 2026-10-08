@@ -58,7 +58,11 @@ func dirHasRootConfig(dir string) bool {
 // Once a config directory is encountered, its subtree is not descended into:
 // the config files are looked up directly with os.Stat.
 func findConfigFilesRecursively() []string {
-	return discoverConfigFiles().configs
+	found, err := discoverConfigFiles()
+	if err != nil {
+		renderError(os.Stderr, err) // a failed walk still yields what it found; the error is not lost
+	}
+	return found.configs
 }
 
 // discoveredConfigs is what the recursive walk found: the config.toml files
@@ -70,7 +74,7 @@ type discoveredConfigs struct {
 
 // discoverConfigFiles is findConfigFilesRecursively that also reports the
 // legacy config files it met, so `generate --recursive` can refuse them by name.
-func discoverConfigFiles() discoveredConfigs {
+func discoverConfigFiles() (discoveredConfigs, error) {
 	var found discoveredConfigs
 	spinner := progress.NewSpinner("Searching for configuration files...")
 
@@ -82,12 +86,7 @@ func discoverConfigFiles() discoveredConfigs {
 		logger.Debug("Failed to finish spinner", "error", err)
 	}
 
-	if walkErr != nil {
-		fmtError(walkErr)
-		os.Exit(1)
-	}
-
-	return found
+	return found, walkErr
 }
 
 // walkConfigDir is the per-entry callback for findConfigFilesRecursively.
@@ -279,7 +278,10 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 		return 0, err
 	}
 
-	applyGenerateOverrides(cfg)
+	if err := applyGenerateOverrides(cfg); err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
 	if err := importGate(cfg); err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
@@ -356,13 +358,17 @@ func processPluginConfig(configPath string, cfg *config.Config, gen *generator.G
 // Under --locked or --frozen, when every failure is the lock disagreeing with the
 // sources it is exitDrift, the code a single root exits with.
 func runRecursiveGenerate() int {
-	found := discoverConfigFiles()
+	found, walkErr := discoverConfigFiles()
+	if walkErr != nil {
+		renderError(os.Stderr, walkErr)
+		return exitFailure
+	}
 	configFiles := found.configs
 	if pluginMode {
 		var err error
 		configFiles, err = selectRecursivePluginConfigs(configFiles)
 		if err != nil {
-			fmtError(err)
+			renderError(os.Stderr, err)
 			return 1
 		}
 	}
