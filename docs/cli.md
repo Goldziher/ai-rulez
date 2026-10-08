@@ -1106,6 +1106,7 @@ ai-rulez generate [config-file] [flags]
 | Flag                            | Type    | Default       | Description                                                                                                                                             |
 | ------------------------------- | ------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--dry-run` / `-d`              | boolean | false         | Show what would be generated without writing files                                                                                                      |
+| `--format`                      | string  | text          | `text` or `json`. With `json`, stdout carries one document: `{"status": "generated", "files_written": n}`, `{"status": "dry_run", "plan": [...]}` for `--dry-run`, or `{"status": ..., "roots", "blocked", "differing": [{"kind", "path"}]}` for `--check` (exit code unchanged) |
 | `--force`                       | boolean | false         | Overwrite an existing file ai-rulez cannot prove it wrote (see [Existing files](#existing-files-generate-will-not-overwrite)). A symlinked output stays refused |
 | `--gitignore` / `-i`            | boolean | (from config) | Update `.gitignore` with generated output patterns git does not already ignore (a rule or `!` override of yours wins)                                                                                                      |
 | `--recursive` / `-r`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
@@ -1322,6 +1323,7 @@ ai-rulez clean [config-path] [flags]
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts    |
 | `--keep-gitignore`    | boolean | false              | Leave the ai-rulez managed block in `.gitignore`        |
 | `--keep-manifest`     | boolean | false              | Leave the generated manifest in place                   |
+| `--format`            | string  | text               | `text` or `json`. The plan (and, after confirmation, the result) is the command's result on stdout: `{"status": "planned\|removed\|nothing_to_clean", "dry_run", "profile", "files", "directories"}`; `clean --dry-run -q` still prints it |
 | `--user`              | boolean | false              | Remove what `generate --user` wrote into the home directory, as recorded in `~/.config/ai-rulez/.generated-manifest.json` (see [User-level configuration](user-scope.md)) |
 
 Preview what would be removed:
@@ -2088,6 +2090,7 @@ ai-rulez sign --lock --key second.key --append       # a second signer, for [sig
 | Flag | Description |
 | --- | --- |
 | `--lock` | Sign the lock-subject statement |
+| `--format text\|json` | `json` prints one document on stdout, `{"status": "signed", "signed": [{"kind", "path", "signer", "subject", "bundle"}]}`, instead of the success lines on stderr |
 | `--bundle <dir>` | Sign a plugin bundle: the tree digest of its files, to `<dir>/.ai-rulez.sigstore.json` |
 | `--skill <dir>` | Sign a skill directory a publisher ships, to `<dir>/.ai-rulez.sigstore.json` |
 | `--sbom <file>` | Sign any SBOM file, to `<file>.sigstore.json` |
@@ -2327,7 +2330,7 @@ the security scan), `1` it could not run.
 ### `ai-rulez export okf`
 
 ```bash
-ai-rulez export okf [config-file] [--out dir] [--profile p | --role r] [--include rules,context,skills,agents,commands,checks] [--index-style body|frontmatter] [--check] [--config-dir n]
+ai-rulez export okf [config-file] [--out dir] [--format text|json] [--profile p | --role r] [--include rules,context,skills,agents,commands,checks] [--index-style body|frontmatter] [--check] [--config-dir n]
 ```
 
 Writes rules, context, skills, agents, commands and checks as an OKF v0.2 bundle. Without `--out` the bundle goes
@@ -2425,6 +2428,7 @@ Show the current version and build information.
 
 ```bash
 ai-rulez version
+ai-rulez version --format json   # {"schema_version": 1, "version": "5.0.0"}
 ```
 
 ## MCP Server
