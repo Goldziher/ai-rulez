@@ -27,7 +27,7 @@
 - [Baz](https://goldziher.github.io/ai-rulez/baz/): The baz preset writes what the Baz pull request reviewer reads from a repository.
 - [OKF (Open Knowledge Format)](https://goldziher.github.io/ai-rulez/okf/): ai-rulez can export its rules, context, skills, agents and commands as an OKF bundle, import an existing OKF bundle into .ai-rulez/, keep a bundle in sync through the opt-in okf preset, and lint...
 - [llms.txt](https://goldziher.github.io/ai-rulez/llms-txt/): llms.txt is a markdown file at the root of a site or repository that tells language models what is there and where to read it.
-- [Skill Frontmatter](https://goldziher.github.io/ai-rulez/skills/): A skill is .ai-rulez/skills/<id>/SKILL.md: YAML frontmatter followed by the instructions.
+- [Skill Frontmatter](https://goldziher.github.io/ai-rulez/skills/): A skill is .ai-rulez/skills/\<id\>/SKILL.md: YAML frontmatter followed by the instructions.
 - [Checks](https://goldziher.github.io/ai-rulez/checks/): Checks are code-review guidelines: per-topic instructions a review tool applies to a pull or merge request.
 - [Local Configuration](https://goldziher.github.io/ai-rulez/local-overrides/): Personal, machine-local configuration that is never committed.
 - [Installed Skills](https://goldziher.github.io/ai-rulez/installed-skills/): Install named skills from external repositories.
@@ -41,15 +41,15 @@
 - [Trust Model](https://goldziher.github.io/ai-rulez/trust-model/): A repository's .ai-rulez/ configuration is content someone else may have written: you clone it, run ai-rulez generate, and it should not be able to spend your money, send your data anywhere, or...
 - [Organization Policy](https://goldziher.github.io/ai-rulez/policy/): An organization policy is a floor a repository may raise but never lower.
 - [Harness Traps](https://goldziher.github.io/ai-rulez/harness-traps/): Some harnesses accept a file that looks valid and then silently ignore it: a rule written to .cursor/rules/x.md is never read, and a Copilot path file named go.md is skipped.
-- [Verifiers](https://goldziher.github.io/ai-rulez/verifiers/): [[verifiers]] declares deterministic, read-only checks over the repository, run by ai-rulez verifiers run.
+- [Verifiers](https://goldziher.github.io/ai-rulez/verifiers/): \[\[verifiers\]\] declares deterministic, read-only checks over the repository, run by ai-rulez verifiers run.
 - [Hooks and Permissions](https://goldziher.github.io/ai-rulez/settings/): ai-rulez generate can write the lifecycle hooks, permission rules and a few other settings keys of a project into each harness's native settings file, without shipping a plugin.
-- [Permissions](https://goldziher.github.io/ai-rulez/permissions/): The top-level [permissions] block is one allow/ask/deny list for every harness that has a native permission surface.
+- [Permissions](https://goldziher.github.io/ai-rulez/permissions/): The top-level \[permissions\] block is one allow/ask/deny list for every harness that has a native permission surface.
 - [User-level Configuration](https://goldziher.github.io/ai-rulez/user-scope/): ai-rulez generate writes inside the project.
 - [Authoring Plugins](https://goldziher.github.io/ai-rulez/plugins/): ai-rulez generate --plugin packages your .ai-rulez/ project into distributable plugin bundles and a marketplace index for the Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes...
 - [Agent Plugins](https://goldziher.github.io/ai-rulez/agent-plugins/): ai-rulez packages a project's skills and MCP servers as an Agent Plugins plugin directory, so any client that conforms to the standard can load them.
 - [Agentic Resource Discovery](https://goldziher.github.io/ai-rulez/ard/): ai-rulez can publish your skills, MCP servers and plugin for discovery through Agentic Resource Discovery (ARD): one ard.json manifest that a registry or an agent fetches from...
 - [Evals](https://goldziher.github.io/ai-rulez/evals/): ai-rulez gives eval cases a supported place to live, keeps them out of the context your agents load, ships them in plugin bundles when you ask, and can report skills that have none.
-- [Improve (experimental)](https://goldziher.github.io/ai-rulez/improve/): ai-rulez improve run <skill> --with CMD runs an external optimizer (a tool that rewrites a skill against a benchmark) on a throwaway copy of the skill and accepts a candidate only if a held-out...
+- [Improve (experimental)](https://goldziher.github.io/ai-rulez/improve/): ai-rulez improve run \<skill\> --with CMD runs an external optimizer (a tool that rewrites a skill against a benchmark) on a throwaway copy of the skill and accepts a candidate only if a held-out...
 - [Skill Search](https://goldziher.github.io/ai-rulez/search/): ai-rulez search ranks the skills your project serves against a query, with the same ranker as the findskill tool of mcp --serve-skills, and measures that ranking against labeled queries.
 - [Review](https://goldziher.github.io/ai-rulez/review/): ai-rulez review scores skills, agents and commands against a rubric you own.
 - [Usage Telemetry](https://goldziher.github.io/ai-rulez/usage-telemetry/): Which generated skills are ever used, which fire when they should not, and which can be retired?
