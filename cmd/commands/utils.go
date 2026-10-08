@@ -1,12 +1,15 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/samber/oops"
 	"github.com/spf13/pflag"
 )
 
@@ -24,43 +27,49 @@ func newContentOperator(local bool) (*crud.OperatorImpl, error) {
 	return op, nil
 }
 
-// confirmRemoval prompts the user to confirm a removal operation
-// Returns true if the user confirms, false otherwise
-// If resourceType is empty, uses resourceName as the full description
-func confirmRemoval(resourceType, resourceName string) bool {
-	// Build confirmation message
-	var prompt string
-	if resourceType == "" {
-		prompt = fmt.Sprintf("Are you sure you want to remove %s? (y/N): ", resourceName)
-	} else {
-		prompt = fmt.Sprintf("Are you sure you want to remove %s '%s'? (y/N): ", resourceType, resourceName)
+// ErrNeedsYes marks a destructive operation that was neither confirmed with
+// --yes nor confirmable because there is no terminal to ask.
+var ErrNeedsYes = errors.New("needs --yes")
+
+// stdinInteractive reports whether standard input is a terminal; tests replace it.
+var stdinInteractive = func() bool {
+	stat, err := os.Stdin.Stat()
+	return err == nil && stat.Mode()&os.ModeCharDevice != 0
+}
+
+// confirmInput is where an interactive confirmation reads its answer from.
+var confirmInput io.Reader = os.Stdin
+
+// confirm is the one confirmation of every destructive command. yes (--yes)
+// confirms without asking. Otherwise it asks on stderr, so piped stdout stays
+// clean, and returns nil only on "y" or "yes". A declined prompt and a
+// non-interactive shell both return a failure (exit 1) that names declined, the
+// text of what was not done; the latter wraps ErrNeedsYes.
+func confirm(yes bool, prompt, declined string) error {
+	if yes {
+		return nil
 	}
-	return askYesNo(prompt)
-}
-
-// exitDeclined reports that a destructive operation was not confirmed and exits
-// 1: nothing was done, which a script must be able to tell from success.
-func exitDeclined(what string) {
-	logger.Error(what+": not confirmed, nothing was changed", "hint", "pass --yes to skip the confirmation prompt (required in non-interactive shells)")
-	os.Exit(1)
-}
-
-// fatal logs msg with err and exits 1: the failure path of the content-editing
-// commands, which report through the logger rather than an error document.
-func fatal(msg string, err error) {
-	logger.Error(msg, "error", err)
-	os.Exit(1)
+	hint := "pass --yes to skip the confirmation prompt (required in non-interactive shells)"
+	if !stdinInteractive() {
+		return oops.Hint(hint).Wrapf(ErrNeedsYes, "%s: not confirmed, nothing was changed", declined)
+	}
+	if !readYesNo(prompt) {
+		return oops.Hint(hint).Errorf("%s: not confirmed, nothing was changed", declined)
+	}
+	return nil
 }
 
 // confirmRemovalUnlessYes asks for confirmation before a removal unless yes is
-// set, and exits 1 through exitDeclined when the user does not confirm.
-func confirmRemovalUnlessYes(yes bool, resourceType, resourceName, declined string) {
-	if yes {
-		return
+// set. declined names what was not done.
+func confirmRemovalUnlessYes(yes bool, resourceType, resourceName, declined string) error {
+	return confirm(yes, removalPrompt(resourceType, resourceName), declined)
+}
+
+func removalPrompt(resourceType, resourceName string) string {
+	if resourceType == "" {
+		return fmt.Sprintf("Are you sure you want to remove %s? (y/N): ", resourceName)
 	}
-	if !confirmRemoval(resourceType, resourceName) {
-		exitDeclined(declined)
-	}
+	return fmt.Sprintf("Are you sure you want to remove %s '%s'? (y/N): ", resourceType, resourceName)
 }
 
 // addYesFlag registers the shared --yes/-y flag; usage is the command's own
@@ -69,23 +78,20 @@ func addYesFlag(fs *pflag.FlagSet, dst *bool, usage string) {
 	fs.BoolVarP(dst, "yes", "y", false, usage)
 }
 
-// askYesNo prints prompt and reads a yes/no answer from an interactive terminal;
-// a pipe, CI or any other non-interactive input answers no.
+// askYesNo prints prompt on stderr and reads a yes/no answer from an
+// interactive terminal; a pipe, CI or any other non-interactive input answers no.
 func askYesNo(prompt string) bool {
-	stat, err := os.Stdin.Stat()
-	if err != nil {
+	if !stdinInteractive() {
 		return false
 	}
-	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		// Non-interactive terminal
-		return false
-	}
+	return readYesNo(prompt)
+}
 
-	fmt.Print(prompt)
+func readYesNo(prompt string) bool {
+	fmt.Fprint(os.Stderr, prompt)
 
 	var response string
-	_, err = fmt.Scanln(&response)
-	if err != nil && err.Error() != "unexpected newline" {
+	if _, err := fmt.Fscanln(confirmInput, &response); err != nil && err.Error() != "unexpected newline" {
 		return false
 	}
 
