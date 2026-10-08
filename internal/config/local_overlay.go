@@ -1,18 +1,20 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
@@ -235,7 +237,10 @@ func isGitTracked(dir, file string) bool {
 	if !filepath.IsAbs(file) {
 		return false
 	}
-	cmd := exec.Command("git", "-C", dir, "ls-files", "--error-unmatch", "--", file) //nolint:gosec // fixed program, the path is an argument
-	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
-	return cmd.Run() == nil
+	res := runner.Run(context.Background(), runner.Spec{
+		Argv:    []string{"git", "-C", dir, "ls-files", "--error-unmatch", "--", file},
+		Env:     []string{"GIT_OPTIONAL_LOCKS=0"},
+		Timeout: 10 * time.Second,
+	})
+	return res.Status == runner.StatusOK
 }
