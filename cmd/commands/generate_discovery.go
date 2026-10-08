@@ -13,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
@@ -251,7 +252,7 @@ func processConfigFilesCounting(configFiles []string) (generated int, failed []s
 func processConfigFile(configPath string, fileCounter *progress.FileCounter) (int, error) {
 	fileCounter.StartFile(configPath)
 
-	ctx := cmdContext()
+	ctx := gitutil.WithMemo(cmdContext())
 	cfg, err := loadProjectFile(ctx, configPath, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
 	if err != nil {
 		fileCounter.ErrorFor(configPath, err)
