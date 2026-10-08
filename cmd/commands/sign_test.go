@@ -92,7 +92,7 @@ func TestSignAndVerifyLock(t *testing.T) {
 	assert.Contains(t, stdout, "weak freshness", "a key bundle without a log has no trustworthy time")
 	info, err := os.Stat(f.bundle())
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm(), "the attestation is public")
+	assertFileMode(t, info, 0o644, "the attestation is public")
 }
 
 func TestVerifyAttestationJSON(t *testing.T) {
