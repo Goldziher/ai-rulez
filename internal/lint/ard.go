@@ -49,8 +49,11 @@ func (r *runner) checkARD() {
 			sev = SeverityWarning
 		}
 		msg := f.Message
-		if f.Identifier != "" && f.Path != "" {
+		switch {
+		case f.Identifier != "" && f.Path != "":
 			msg = f.Identifier + " " + f.Path + ": " + msg
+		case f.Identifier != "":
+			msg = f.Identifier + ": " + msg
 		}
 		r.addWithSeverity(ard.Code(f.Rule), sev, file, 1, "%s", msg)
 	}

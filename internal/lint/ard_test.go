@@ -84,3 +84,18 @@ func TestExplainResolvesTheARDCodes(t *testing.T) {
 		assert.NotEmpty(t, ex.Why, code)
 	}
 }
+
+func TestStrictARDFindingNamesTheEntry(t *testing.T) {
+	findings := []ard.Finding{
+		{Rule: ard.RuleQueries, Severity: ard.SeverityWarning, Identifier: "urn:air:acme.test:tools:c", Message: "no representativeQueries"},
+	}
+	_, got := lintARD(t, func(c *config.Config) { c.ARD = &config.ARDConfig{Publisher: "acme.test", Namespace: "tools"} }, WithARD(findings))
+	var msgs []string
+	for _, f := range got {
+		if f.Code == CodeARDQueries {
+			msgs = append(msgs, f.Message)
+		}
+	}
+	require.Len(t, msgs, 1)
+	assert.Contains(t, msgs[0], "urn:air:acme.test:tools:c")
+}
