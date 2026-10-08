@@ -21,7 +21,6 @@ func TestLock_ConvergesInOneRunWithAGitInclude(t *testing.T) {
 	// Arrange
 	t.Setenv("HOME", t.TempDir())
 	cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
-	includes.ResetObserved()
 	t.Cleanup(func() {
 		cliLockPolicy.Mode, cliLockPolicy.Refresh, cliLockPolicy.Offline = includes.LockAuto, nil, false
 	})
@@ -36,7 +35,6 @@ func TestLock_ConvergesInOneRunWithAGitInclude(t *testing.T) {
 	first, err := os.ReadFile(lockPath)
 	require.NoError(t, err)
 	checkAfterFirst := checkLockAt("")
-	includes.ResetObserved()
 	require.Equal(t, 0, writeLockAt("", "", nil), "second lock")
 	second, err := os.ReadFile(lockPath)
 	require.NoError(t, err)

@@ -28,9 +28,7 @@ func newOKFLockFixture(t *testing.T, ref string) *okfLockFixture {
 	t.Helper()
 	isolateHome(t)
 	lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false
-	OKFScan = nil
-	ResetObserved()
-	t.Cleanup(func() { lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline, OKFScan = LockAuto, nil, false, nil })
+	t.Cleanup(func() { lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false })
 
 	remote := t.TempDir()
 	git(t, remote, "init", "-q", "-b", "main")
@@ -84,7 +82,6 @@ func (f *okfLockFixture) advance(t *testing.T) string {
 func (f *okfLockFixture) writeLock(t *testing.T) *lockfile.File {
 	t.Helper()
 	lockPolicy.Mode = LockRefresh
-	ResetObserved()
 	cfg, err := f.load(t)
 	require.NoError(t, err)
 	lockPolicy.Mode = LockAuto
@@ -218,9 +215,10 @@ func TestOKFInclude_FullCommitIsPinnedWithoutALock(t *testing.T) {
 
 func TestOKFInclude_SecurityFindingRefusesTheBundle(t *testing.T) {
 	f := newOKFLockFixture(t, "v1")
-	OKFScan = func(map[string]string) []okfbridge.SecurityFinding {
+	testOKFScan = func(map[string]string) []okfbridge.SecurityFinding {
 		return []okfbridge.SecurityFinding{{Code: "AR001", Severity: okfbridge.SeverityError, File: "decisions/shared.md", Message: "secret"}}
 	}
+	t.Cleanup(func() { testOKFScan = nil })
 	_, err := f.load(t)
 	require.Error(t, err, "a refused include stops the load")
 	assert.Contains(t, err.Error(), "kb")

@@ -196,7 +196,6 @@ func Write(ctx context.Context, req Request, env Env) (*Result, error) {
 	if remoteRefresh {
 		// min_release_age holds back young tags while ranges resolve.
 		policy.ReleaseGate = releaseGate(ctx, env)
-		includes.ResetObserved()
 	}
 	policy = RunPolicy(policy, remoteRefresh, req.Kind, wanted)
 

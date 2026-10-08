@@ -359,7 +359,7 @@ func Load(ctx context.Context, o Options) (*Project, error) {
 		opts = append(opts, config.WithoutLocal())
 	}
 	if o.Remote {
-		opts = append(opts, config.WithResolvers(includes.Resolvers(o.GitToken)))
+		opts = append(opts, config.WithResolvers(includes.Resolvers(o.GitToken, lint.OKFScanner(nil))))
 	} else {
 		opts = append(opts, config.WithoutRemote())
 	}

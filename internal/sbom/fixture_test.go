@@ -59,7 +59,7 @@ func (f *fixture) writeExec(rel, content string) {
 
 func (f *fixture) config() *config.Config {
 	f.t.Helper()
-	cfg, err := config.LoadConfig(config.WithOfflineIncludes(context.Background()), f.dir, config.WithoutLocal(), config.WithResolvers(includes.Resolvers("")))
+	cfg, err := config.LoadConfig(config.WithOfflineIncludes(context.Background()), f.dir, config.WithoutLocal(), config.WithResolvers(includes.Resolvers("", nil)))
 	require.NoError(f.t, err)
 	return cfg
 }
