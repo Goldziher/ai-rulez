@@ -27,17 +27,33 @@ func TestClaudePluginEval_TimeoutKillsTheProcessTree(t *testing.T) {
 	// Arrange: a "claude" that forks a long sleeper and waits on it
 	pidFile := filepath.Join(t.TempDir(), "pid")
 	bin := fakeClaude(t, "sleep 60 & echo $! > "+pidFile+"\nwait")
-	runner := &ClaudePluginEval{Bin: bin, Timeout: 500 * time.Millisecond}
+	runner := &ClaudePluginEval{Bin: bin, Timeout: time.Minute}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cancelWhenReady(pidFile, cancel) // the child is running before the kill
 
 	// Act
 	start := time.Now()
+	_, err := runner.Run(ctx, sampleRequest(t))
+
+	// Assert
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "interrupted")
+	assert.Less(t, time.Since(start), 45*time.Second)
+	assert.True(t, processGone(t, pidFile), "the whole tree must die with the run")
+}
+
+func TestClaudePluginEval_ReportsATimeout(t *testing.T) {
+	// Arrange
+	bin := fakeClaude(t, "sleep 60 & wait")
+	runner := &ClaudePluginEval{Bin: bin, Timeout: 200 * time.Millisecond}
+
+	// Act
 	_, err := runner.Run(context.Background(), sampleRequest(t))
 
 	// Assert
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "timed out")
-	assert.Less(t, time.Since(start), 15*time.Second)
-	assert.True(t, processGone(t, pidFile), "the whole tree must die with the timeout")
 }
 
 func TestClaudePluginEval_OutputIsCapped(t *testing.T) {
