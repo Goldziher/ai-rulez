@@ -23,7 +23,7 @@ func RuleCode(findingCode string) string {
 		return RulePlaceholder
 	case CodeServerDisabled, CodeFieldIgnored:
 		return RuleDropped
-	case CodePathEscape, CodeUnreadable:
+	case CodePathEscape, CodeUnreadable, CodeFileTooLarge:
 		return RuleUnsafe
 	default:
 		return RuleManifest

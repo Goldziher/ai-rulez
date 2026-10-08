@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -374,4 +375,51 @@ func TestValidateOnRealSymlinks(t *testing.T) {
 			assert.NotContains(t, s.Files, "references/abs.md")
 		}
 	}
+}
+
+func TestImportSkipsOversizeFiles(t *testing.T) {
+	// Arrange
+	plugin := filepath.Join(t.TempDir(), "plugin")
+	files, _, err := Build(fixturePlugin(), Options{})
+	require.NoError(t, err)
+	writeTree(t, plugin, files)
+	big, err := os.Create(filepath.Join(plugin, "skills", "summarize", "references", "big.bin"))
+	require.NoError(t, err)
+	require.NoError(t, big.Truncate(maxFileBytes+1)) // sparse: no disk or memory cost
+	require.NoError(t, big.Close())
+
+	// Act
+	model, res := Import(os.DirFS(plugin))
+
+	// Assert
+	require.NotNil(t, model)
+	assert.Contains(t, codes(res.Findings), "file-too-large@skills/summarize/references/big.bin")
+	for _, s := range model.Skills {
+		assert.NotContains(t, s.Files, "references/big.bin")
+	}
+}
+
+func TestImportStopsAtTheTotalCap(t *testing.T) {
+	// Arrange
+	old := maxTotalBytes
+	maxTotalBytes = 1 << 10
+	t.Cleanup(func() { maxTotalBytes = old })
+	plugin := filepath.Join(t.TempDir(), "plugin")
+	files, _, err := Build(fixturePlugin(), Options{})
+	require.NoError(t, err)
+	writeTree(t, plugin, files)
+	extra := filepath.Join(plugin, "skills", "summarize", "references")
+	for _, n := range []string{"a.bin", "b.bin"} {
+		require.NoError(t, os.WriteFile(filepath.Join(extra, n), make([]byte, 800), 0o600))
+	}
+
+	// Act
+	_, res := Import(os.DirFS(plugin))
+
+	// Assert
+	var found bool
+	for _, f := range res.Findings {
+		found = found || f.Code == CodeFileTooLarge && strings.Contains(f.Message, "total")
+	}
+	assert.True(t, found, "findings: %v", codes(res.Findings))
 }
