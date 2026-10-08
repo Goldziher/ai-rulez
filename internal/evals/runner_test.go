@@ -78,7 +78,9 @@ func printJSON(t *testing.T, doc string) string {
 	path := filepath.Join(t.TempDir(), "out.json")
 	require.NoError(t, os.WriteFile(path, []byte(doc), 0o600))
 	if runtime.GOOS == "windows" {
-		return `type "` + path + `"`
+		// Go escapes embedded quotes as \" for CreateProcess, which cmd /C does
+		// not understand; the temp path has no spaces, so it goes in bare.
+		return "type " + path
 	}
 	return "cat '" + path + "'"
 }
