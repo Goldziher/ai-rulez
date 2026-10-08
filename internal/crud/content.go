@@ -26,7 +26,7 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 	req.Type = ContentTypeRules
 
 	// Validate inputs
-	if err := ValidateFileName(req.Name); err != nil {
+	if err := ValidateNewFileName(req.Name); err != nil {
 		return nil, err
 	}
 
@@ -69,7 +69,7 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 	// Get file path and write
 	filePath := op.filesMgr.GetFilePath(req.Domain, ContentTypeRules, req.Name)
 
-	if err := op.filesMgr.WriteFile(filePath, content); err != nil {
+	if err := op.writeConcept(filePath, ContentTypeRules, req.Domain, req.Name, content); err != nil {
 		return nil, err
 	}
 
@@ -94,7 +94,7 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 	req.Type = ContentTypeContext
 
 	// Validate inputs
-	if err := ValidateFileName(req.Name); err != nil {
+	if err := ValidateNewFileName(req.Name); err != nil {
 		return nil, err
 	}
 
@@ -137,7 +137,7 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 	// Get file path and write
 	filePath := op.filesMgr.GetFilePath(req.Domain, ContentTypeContext, req.Name)
 
-	if err := op.filesMgr.WriteFile(filePath, content); err != nil {
+	if err := op.writeConcept(filePath, ContentTypeContext, req.Domain, req.Name, content); err != nil {
 		return nil, err
 	}
 
@@ -215,7 +215,7 @@ func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*Fil
 
 	// Write SKILL.md file
 	skillFile := filepath.Join(skillDir, "SKILL.md")
-	if err := op.filesMgr.WriteFile(skillFile, content); err != nil {
+	if err := op.writeConcept(skillFile, ContentTypeSkills, req.Domain, req.Name, content); err != nil {
 		return nil, err
 	}
 
@@ -290,7 +290,7 @@ func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name stri
 		}
 	}
 
-	return nil
+	return op.refreshIndexes()
 }
 
 // ListFiles returns information about all files of a specific type
@@ -484,7 +484,8 @@ func (op *OperatorImpl) UpdateFile(_ context.Context, domain, ftype, name, conte
 		filePath = op.filesMgr.GetFilePath(domain, ftype, name)
 	}
 
-	if err := op.filesMgr.WriteFileOverwrite(filePath, content); err != nil {
+	previous, _ := op.filesMgr.ReadFile(filePath)
+	if err := op.overwriteConcept(filePath, ftype, domain, name, content, previous); err != nil {
 		return nil, err
 	}
 
@@ -543,7 +544,7 @@ func (op *OperatorImpl) addFlatItem(req *AddFileRequest, ftype string, template 
 		return nil, oops.Hint("AddFileRequest cannot be nil").Errorf("invalid request")
 	}
 	req.Type = ftype
-	if err := ValidateFileName(req.Name); err != nil {
+	if err := ValidateNewFileName(req.Name); err != nil {
 		return nil, err
 	}
 	if req.Domain != "" {
@@ -563,8 +564,33 @@ func (op *OperatorImpl) addFlatItem(req *AddFileRequest, ftype string, template 
 	if content == "" {
 		content = template(req)
 	}
-	if err := op.filesMgr.WriteFile(filePath, EnsureTrailingNewline(content)); err != nil {
+	if err := op.writeConcept(filePath, ftype, req.Domain, req.Name, EnsureTrailingNewline(content)); err != nil {
 		return nil, err
 	}
 	return &FileResult{Name: req.Name, FullPath: filePath, Type: ftype, Domain: req.Domain}, nil
+}
+
+// writeConcept stores a new content file as an OKF concept and refreshes the indexes.
+func (op *OperatorImpl) writeConcept(path, ftype, domain, name, content string) error {
+	concept, err := op.concept(ftype, domain, name, content, "")
+	if err != nil {
+		return err
+	}
+	if err := op.filesMgr.WriteFile(path, concept); err != nil {
+		return err
+	}
+	return op.refreshIndexes()
+}
+
+// overwriteConcept replaces an existing content file with an OKF concept, keeping
+// the type and title of previous, and refreshes the indexes.
+func (op *OperatorImpl) overwriteConcept(path, ftype, domain, name, content, previous string) error {
+	concept, err := op.concept(ftype, domain, name, content, previous)
+	if err != nil {
+		return err
+	}
+	if err := op.filesMgr.WriteFileOverwrite(path, concept); err != nil {
+		return err
+	}
+	return op.refreshIndexes()
 }
