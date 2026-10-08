@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -133,7 +134,9 @@ func TestWriteRaw_NeverChangesTheModeOfAFileItDidNotCreate(t *testing.T) {
 	require.NoError(t, err)
 	info, serr := os.Stat(real)
 	require.NoError(t, serr)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	if runtime.GOOS != "windows" { // Windows reports 0o666 for every file
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	}
 	data, rerr := os.ReadFile(real)
 	require.NoError(t, rerr)
 	assert.Equal(t, "new", string(data))
@@ -150,7 +153,9 @@ func TestWriteRaw_AppliesTheModeToAFileItCreates(t *testing.T) {
 	require.NoError(t, err)
 	info, serr := os.Stat(filepath.Join(dir, "hooks", "run"))
 	require.NoError(t, serr)
-	assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
+	if runtime.GOOS != "windows" {
+		assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
+	}
 }
 
 func TestWrite_ManifestThroughALinkOutsideIsRefused(t *testing.T) {

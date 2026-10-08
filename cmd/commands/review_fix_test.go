@@ -106,7 +106,7 @@ func TestReviewFixApplyIsIdempotentAndKeepsTheFileMode(t *testing.T) {
 	assert.Contains(t, string(data), "description: "+fixedDesc)
 	info, serr := os.Stat(fixSkillPath)
 	require.NoError(t, serr)
-	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm(), "the write keeps the file's mode")
+	assertFileMode(t, info, 0o644, "the write keeps the file's mode")
 	require.NoError(t, err2)
 	assert.Zero(t, exit2)
 	assert.Empty(t, again.String(), "a second run proposes nothing: the empty patch")

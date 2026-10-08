@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -88,6 +89,9 @@ func TestFetchLocalGitRepoAtRef(t *testing.T) {
 }
 
 func TestFetchRejectsSymlinkedSubdir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("git for Windows checks symlinks out as plain files (core.symlinks=false), so the clone holds none")
+	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}

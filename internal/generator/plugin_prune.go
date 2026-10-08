@@ -57,7 +57,7 @@ func (g *Generator) planPluginPrune(outputs []config.OutputFile) ([]pluginPrune,
 			continue
 		}
 		for _, item := range obsolete {
-			entry := pluginPrune{Obsolete: item, bundleDir: bundleDir, rel: g.convertToRelativePath(item.Path)}
+			entry := pluginPrune{Obsolete: item, bundleDir: bundleDir, rel: filepath.ToSlash(g.convertToRelativePath(item.Path))}
 			switch {
 			case item.Edited:
 				entry.reason = item.Why
