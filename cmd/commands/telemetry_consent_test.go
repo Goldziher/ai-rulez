@@ -61,7 +61,7 @@ func TestTelemetryEnableStatusDisable_Lifecycle(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		info, statErr := os.Stat(consentFile(env))
 		require.NoError(t, statErr)
-		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+		assertFileMode(t, info, 0o600, "owner-only")
 	}
 	spool := &telemetry.Spool{Dir: telemetry.LocalDir(env.root, ".ai-rulez")}
 	assert.True(t, spool.ReadCursor().Set())
