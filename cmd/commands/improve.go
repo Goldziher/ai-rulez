@@ -197,7 +197,7 @@ func init() {
 	f.BoolVar(&improveFlags.siblingNative, "sibling-native", false, "Also run the sibling trigger guard on the harness's model (costs money, counted against --max-cost); the free offline guard always runs")
 	f.IntVar(&improveFlags.siblingRuns, "sibling-runs", improve.DefaultSiblingRuns, "With --sibling-native: repetitions of each sibling trigger prompt")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
-	improveApplyCmd.Flags().BoolVarP(&improveFlags.yes, "yes", "y", false, "Write without the confirmation prompt")
+	addYesFlag(improveApplyCmd.Flags(), &improveFlags.yes, "Write without the confirmation prompt")
 	improveApplyCmd.Flags().BoolVar(&improveFlags.allowScripts, "allow-scripts", false, "Allow the candidate to change scripts/ and assets/ and reference scripts")
 	improveApplyCmd.Flags().BoolVar(&improveFlags.allowFrontmatter, "allow-frontmatter", false, "Allow the candidate to change allowed-tools, model and disable-model-invocation")
 	addFormatFlag(improveApplyCmd.Flags(), &improveFlags.format, formatText, formatText, formatText, formatJSON)

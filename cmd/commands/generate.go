@@ -85,7 +85,7 @@ func init() {
 		"Overwrite an existing file ai-rulez cannot prove it wrote (a hand-written CLAUDE.md); without it generate refuses that file and exits 1")
 	GenerateCmd.Flags().BoolVar(&userScope, "user", false,
 		"Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent")
-	GenerateCmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "With --user: write without the confirmation prompt; always: do not warn about new hook and MCP commands")
+	addYesFlag(GenerateCmd.Flags(), &assumeYes, "With --user: write without the confirmation prompt; always: do not warn about new hook and MCP commands")
 	GenerateCmd.Flags().BoolVar(&pluginMode, "plugin", false, "Generate distributable plugin bundles and a marketplace index from the [plugin] block")
 	GenerateCmd.Flags().BoolVar(&pluginIfConfigured, "if-configured", false, "Skip plugin generation when no plugin authoring configuration is present")
 }
