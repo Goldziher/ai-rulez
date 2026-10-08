@@ -202,10 +202,10 @@ func (s *ValidateCLITestSuite) TestValidateInvalidTargetReference() {
 	result.AssertStderrContains(s.T(), "Error")
 }
 
-func (s *ValidateCLITestSuite) TestValidateVerboseOutput() {
+func (s *ValidateCLITestSuite) TestValidateDebugOutput() {
 	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", "--verbose")
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", "--debug")
 
 	result.AssertOutputContains(s.T(), "valid")
 }
