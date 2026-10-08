@@ -18,7 +18,7 @@ func TestAuthoringACommandOnALegacyTreeNamesTheDeprecation(t *testing.T) {
 	chdir(t, dir)
 
 	stderr := captureStderr(t, func() {
-		_, err := newContentOperator(false)
+		_, err := newWritingOperator(false)
 		require.NoError(t, err)
 	})
 
@@ -36,9 +36,25 @@ func TestAuthoringACommandOnAnOKFBundleIsQuiet(t *testing.T) {
 	chdir(t, dir)
 
 	stderr := captureStderr(t, func() {
-		_, err := newContentOperator(false)
+		_, err := newWritingOperator(false)
 		require.NoError(t, err)
 	})
 
 	assert.NotContains(t, stderr, "legacy layout")
+}
+
+func TestListingALegacyTreeStaysQuiet(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(cfgDir, "rules"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte("version = \"5.0\"\nname = \"p\"\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "rules", "r.md"), []byte("# R\n"), 0o644))
+	chdir(t, dir)
+
+	stderr := captureStderr(t, func() {
+		_, err := newContentOperator(false)
+		require.NoError(t, err)
+	})
+
+	assert.NotContains(t, stderr, "legacy layout", "list output is pinned by the golden suite")
 }
