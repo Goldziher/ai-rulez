@@ -325,8 +325,20 @@ func (g *Generator) pluginCleanTargets(profile string) (files, dirs []string) {
 			continue
 		}
 		files = append(files, abs)
+		dirs = append(dirs, g.bundleParentDirs(abs)...)
 	}
 	return files, dirs
+}
+
+// bundleParentDirs lists the directories between a bundle file and the project
+// root (skills/ above skills/<name>/). They are removed only when empty, so a
+// directory the user also keeps files in survives.
+func (g *Generator) bundleParentDirs(abs string) []string {
+	var parents []string
+	for dir := filepath.Dir(abs); g.isPrunableDir(dir); dir = filepath.Dir(dir) {
+		parents = append(parents, dir)
+	}
+	return parents
 }
 
 // projectFileIsOurs reports whether clean may remove the project file at abs
