@@ -841,7 +841,7 @@ A scanner without `inputs` runs in the project root and cannot be confined: `req
 leaves it as it was. A scanner that writes to a path outside its scratch directory (a cache under the real home, a
 shell here-document that uses `/tmp`) fails under isolation: point it at `TMPDIR`/`HOME`, or set `isolation = "none"`.
 
-### Result cache and `--dry-run`
+### Result cache and dry runs
 
 The result of a staged `egress = false` scanner is cached under `~/.cache/ai-rulez/scan/<project>` and reused while
 the staged content, the scanner binary (path, size, modification time), its command line, its mapping keys
@@ -3351,7 +3351,7 @@ an llms.txt file has a heading other than the H1 title and H2 section names, or 
 
 ### AR9P3 llmstxt-link-entry-invalid
 
-an llms.txt file-list section has content that is not a list entry holding a [name](url) link
+an llms.txt file-list section has content that is not a list entry holding a `[name](url)` link
 
 - Default severity: `error`
 - Analyzer: `llmstxt` (scope `item`)
