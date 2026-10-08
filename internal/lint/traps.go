@@ -3,6 +3,7 @@ package lint
 import (
 	_ "embed" // the trap table
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -456,9 +457,9 @@ func readTrapFile(abs string) (content []byte, generated bool) {
 		return nil, false
 	}
 	defer file.Close() //nolint:errcheck // read only
-	buf := make([]byte, maxTrapFileBytes)
-	n, _ := file.Read(buf) //nolint:errcheck // a short or failed read is treated as what was read
-	content = buf[:n]
+	// The cut at maxTrapFileBytes is the contract (predicates see a bounded prefix),
+	// and a failed read is treated as what was read; the buffer grows with the file.
+	content, _ = io.ReadAll(io.LimitReader(file, maxTrapFileBytes)) //nolint:errcheck // see above
 	return content, carriesGeneratedBanner(content)
 }
 
