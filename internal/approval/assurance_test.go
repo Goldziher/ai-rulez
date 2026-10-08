@@ -14,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 type fakeVerifier struct {
@@ -186,10 +187,10 @@ func signedFixture(t *testing.T, sub Subject, mutate func(*lockfile.Approval)) (
 	configDir := filepath.Join(base, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, lockfile.AttestationDir), 0o755))
 	require.NoError(t, os.MkdirAll(filepath.Join(base, "keys"), 0o755))
-	priv, pub, err := signing.GenerateKeyPair(nil)
+	priv, pub, err := sigstore.GenerateKeyPair(nil)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(base, "keys", "approver.pub"), pub, 0o644))
-	signer, err := signing.LoadKeySigner(priv, nil)
+	signer, err := sigstore.LoadKeySigner(priv, nil)
 	require.NoError(t, err)
 	st, err := signing.ApprovalStatement(signing.ApprovalSubject{Kind: sub.Kind, Domain: sub.Domain, ID: sub.ID, Digest: sub.Digest},
 		signing.ApprovalPredicate{ApprovedAt: "2026-10-05T00:00:00Z", Expires: "2027-01-01"})

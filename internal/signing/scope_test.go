@@ -1,6 +1,7 @@
-package signing
+package signing_test
 
 import (
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,7 +31,7 @@ func TestStateScope(t *testing.T) {
 			if len(tt.markers) == 0 {
 				// The case is the absence of a checkout: a repository enclosing the
 				// temporary directory (a TMPDIR inside a checkout) would decide it.
-				if rel, _ := stateScope(top); rel != "" {
+				if rel, _ := StateScope(top); rel != "" {
 					t.Skip("the temporary directory is inside a git checkout")
 				}
 			}
@@ -38,7 +39,7 @@ func TestStateScope(t *testing.T) {
 			require.NoError(t, os.MkdirAll(cfg, 0o755))
 
 			// Act
-			rel, abs := stateScope(cfg)
+			rel, abs := StateScope(cfg)
 
 			// Assert
 			assert.Equal(t, cfg, abs)

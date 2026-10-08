@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 // TrustCmd groups the commands that manage the Sigstore trust anchor.
@@ -28,7 +28,7 @@ This is the only command that contacts a Sigstore service for verification. For
 a private Sigstore deployment, pass its trusted root file with --trusted-root.`,
 	Args: cobra.NoArgs,
 	Run: func(_ *cobra.Command, _ []string) {
-		path, err := signing.UpdateTrustedRoot(nil)
+		path, err := sigstore.UpdateTrustedRoot(nil)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
