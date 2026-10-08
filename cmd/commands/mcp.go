@@ -69,6 +69,7 @@ func runMCP(cmd *cobra.Command) error {
 		transport = srv.WrapTransport(transport)
 	} else {
 		srv = mcp.NewServer(Version)
+		transport = mcp.GuardLifecycle(transport)
 	}
 
 	closeTelemetry := wireMCPTelemetry(srv)

@@ -291,9 +291,16 @@ func skillEntry(s *CatalogSkill, limit int) map[string]any {
 // served at the JSON-RPC layer; everything else passes through untouched.
 func (s *Server) WrapTransport(inner sdkmcp.Transport) sdkmcp.Transport {
 	if s.cat() == nil {
-		return inner
+		return GuardLifecycle(inner)
 	}
 	return &skillsTransport{inner: inner, srv: s}
+}
+
+// GuardLifecycle returns a transport that refuses a request sent before
+// initialize with -32600 instead of the SDK's error code 0. It serves no
+// extension methods; the plain `ai-rulez mcp` server uses it.
+func GuardLifecycle(inner sdkmcp.Transport) sdkmcp.Transport {
+	return &skillsTransport{inner: inner}
 }
 
 type skillsTransport struct {
@@ -344,7 +351,7 @@ func (c *skillsConn) mayAnswer(params json.RawMessage) bool {
 // answerEarly returns the response to a skills method, or to any other request
 // sent before initialize, and nil for a request the SDK should handle.
 func (c *skillsConn) answerEarly(req *jsonrpc.Request) *jsonrpc.Response {
-	ours := req.Method == methodSkillsList || req.Method == methodSkillsGet || req.Method == methodDirectoryRead
+	ours := c.srv != nil && (req.Method == methodSkillsList || req.Method == methodSkillsGet || req.Method == methodDirectoryRead)
 	// The SDK answers any other request sent before initialize with error code 0,
 	// which is not a JSON-RPC code; refuse it here with the code skills/list uses.
 	early := !ours && req.Method != methodInitialize && req.Method != methodPing && !c.mayAnswer(req.Params)
