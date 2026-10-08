@@ -57,7 +57,7 @@ func (c *Config) validateLLMsTxt() error {
 		return nil
 	}
 	l := c.LLMsTxt
-	if dir := strings.TrimSpace(l.Dir); dir != "" {
+	if dir := strings.TrimSpace(l.Dir); dir != "" && filepath.ToSlash(filepath.Clean(dir)) != "." {
 		if err := ValidateScopePath(dir); err != nil {
 			return oops.With("field", "llms_txt.dir").
 				Hint("Use a relative directory inside the project, such as docs.").

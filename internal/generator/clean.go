@@ -241,7 +241,9 @@ func (g *Generator) cleanKeepsFile(output config.OutputFile, abs string, opts Cl
 	// In project scope the same holds: a file at a generated path may be the
 	// user's own (a CLAUDE.md that `convert` imported and generate has not yet
 	// replaced), and being at the path proves nothing.
-	if !g.userMode && !g.projectFileIsOurs(abs, output) {
+	// --include-edited extends that to a file the manifest lists whose edits
+	// took away the proof (a banner-less output such as llms.txt).
+	if !g.userMode && !g.projectFileIsOurs(abs, output) && !(opts.RemoveEdited && g.manifestListsFile(abs)) {
 		g.warnOnce("Keeping "+g.relSlash(abs)+": nothing shows ai-rulez wrote it",
 			"hint", g.keepReason(abs)+"; delete it by hand if it is not needed")
 		return true
@@ -662,4 +664,9 @@ func (g *Generator) cleanGitignore(opts CleanOptions, plan *CleanPlan) {
 			g.log().Warn("Failed to remove .git/info/exclude block", "error", err)
 		}
 	}
+}
+
+// manifestListsFile reports whether the previous generated manifest lists abs.
+func (g *Generator) manifestListsFile(abs string) bool {
+	return slices.Contains(g.previousManifestFiles(), g.relSlash(abs))
 }
