@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 	"github.com/zeebo/blake3"
 )
@@ -41,7 +42,7 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 			continue
 		}
 		relativePath, err := filepath.Rel(baseDir, output.Path)
-		if err != nil || strings.HasPrefix(relativePath, "..") {
+		if err != nil || safefs.RelEscapes(relativePath) {
 			return nil, oops.With("path", output.Path).With("base_dir", baseDir).Errorf("plugin output escapes bundle root")
 		}
 		relativePath = filepath.ToSlash(relativePath)

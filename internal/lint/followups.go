@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Frontmatter key and metadata type names used more than once.
@@ -257,7 +258,7 @@ func (r *runner) checkCollapsed() {
 			continue
 		}
 		anchor := dup.Winner
-		if abs, err := filepath.Abs(anchor); err != nil || !filepath.IsAbs(dup.Winner) || !underDir(abs, configDir) {
+		if abs, err := filepath.Abs(anchor); err != nil || !filepath.IsAbs(dup.Winner) || !safefs.Within(configDir, abs) {
 			anchor = dup.Losers[0]
 		}
 		abs, _ := filepath.Abs(anchor) //nolint:errcheck // display only
@@ -304,11 +305,6 @@ func (r *runner) labelPaths(paths []string) string {
 	return strings.Join(out, ", ")
 }
 
-func underDir(abs, dir string) bool {
-	rel, err := filepath.Rel(dir, abs)
-	return err == nil && !strings.HasPrefix(rel, "..")
-}
-
 // scopeOf names where a copy lives: its domain, "builtin" for an embedded file,
 // "import" for content outside this config directory, "" for root content.
 func scopeOf(p, configDir string) string {
@@ -316,7 +312,7 @@ func scopeOf(p, configDir string) string {
 		return "builtin"
 	}
 	rel, err := filepath.Rel(configDir, p)
-	if err != nil || strings.HasPrefix(rel, "..") {
+	if err != nil || safefs.RelEscapes(rel) {
 		return "import"
 	}
 	parts := strings.Split(filepath.ToSlash(rel), "/")

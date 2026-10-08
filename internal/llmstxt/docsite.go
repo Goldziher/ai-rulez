@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // Site is the part of a zensical.toml (or mkdocs-style) project table that
@@ -211,19 +213,16 @@ func linkOf(pages []docPage, source string) Link {
 func splitFrontmatter(src string) (meta map[string]string, body string) {
 	src = strings.ReplaceAll(src, "\r\n", "\n")
 	meta = map[string]string{}
-	if !strings.HasPrefix(src, "---\n") {
+	block := frontmatter.SplitString(src)
+	if !block.Closed {
 		return meta, src
 	}
-	end := strings.Index(src[4:], "\n---\n")
-	if end < 0 {
-		return meta, src
-	}
-	for _, line := range strings.Split(src[4:4+end], "\n") {
+	for _, line := range strings.Split(strings.TrimSuffix(block.Raw, "\n"), "\n") {
 		if k, v, ok := strings.Cut(line, ":"); ok && !strings.HasPrefix(line, " ") {
 			meta[strings.TrimSpace(k)] = strings.Trim(strings.TrimSpace(v), `"'`)
 		}
 	}
-	return meta, src[4+end+5:]
+	return meta, block.Body
 }
 
 func dropLeadingH1(body string) string {

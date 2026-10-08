@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 )
 
@@ -123,7 +124,7 @@ func (t *Tree) walk() {
 // Rel returns abs as a slash path relative to the tree top, or "" when outside.
 func (t *Tree) Rel(abs string) string {
 	rel, err := filepath.Rel(t.Top, gitutil.Resolve(abs))
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(rel) {
 		return ""
 	}
 	return filepath.ToSlash(rel)

@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/watch"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -206,7 +207,7 @@ func describeTriggers(triggers []string) string {
 		shown = shown[:maxShown]
 	}
 	for i, t := range shown {
-		if rel, err := filepath.Rel(".", t); err == nil && !strings.HasPrefix(rel, "..") {
+		if rel, err := filepath.Rel(".", t); err == nil && !safefs.RelEscapes(rel) {
 			shown[i] = rel
 		}
 	}

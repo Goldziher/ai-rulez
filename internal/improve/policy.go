@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"gopkg.in/yaml.v3"
@@ -194,21 +195,17 @@ func sameValue(a, b any) bool {
 // splitFrontmatter parses the YAML block between the first two "---" lines.
 func splitFrontmatter(data []byte) (fm map[string]any, body string, ok bool) {
 	text := strings.ReplaceAll(string(data), "\r\n", "\n")
-	rest, found := strings.CutPrefix(text, "---\n")
-	if !found {
+	block := frontmatter.SplitString(text)
+	if !block.Closed {
 		return nil, text, false
 	}
-	block, body, found := strings.Cut(rest, "\n---")
-	if !found {
-		return nil, text, false
-	}
-	if err := yaml.Unmarshal([]byte(block), &fm); err != nil {
+	if err := yaml.Unmarshal([]byte(block.Raw), &fm); err != nil {
 		return nil, text, false
 	}
 	if fm == nil {
 		fm = map[string]any{}
 	}
-	return fm, body, true
+	return fm, block.Body, true
 }
 
 // Description returns the frontmatter description of a SKILL.md.

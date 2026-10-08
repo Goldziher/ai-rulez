@@ -1,8 +1,8 @@
 // Package fmdiff differential-fuzzes the frontmatter splitters that live
 // unexported in several packages. They are reached through go:linkname so no
 // production code changes for a test; the empty .s file lets the compiler accept
-// the bodyless declarations. A divergence the fuzzer finds is either listed in
-// knownDivergence (documented, not fixed here) or fails the run.
+// the bodyless declarations. Every splitter now delegates to internal/frontmatter,
+// so any divergence the fuzzer finds fails the run.
 package fmdiff
 
 import (
@@ -62,46 +62,26 @@ var splitters = []struct {
 	{"llmstxt", func(s string) split { _, b := llmstxtSplit(s); return split{b != s, b} }},
 }
 
+// isFence is the one definition every splitter now shares (internal/frontmatter):
+// a line that is "---", trailing spaces and tabs ignored.
+func isFence(line string) bool { return strings.TrimRight(line, " \t") == "---" }
+
 // reference is the contract the splitters share on LF-only input: the block
-// closes at the first line that is exactly "---".
+// closes at the first line that is a fence.
 func reference(data string) bool {
-	return slices.Contains(strings.Split(data, "\n"), "---")
+	return slices.ContainsFunc(strings.Split(data, "\n"), isFence)
 }
 
-// block is the text before the first line that is exactly "---".
+// block is the text before the first fence line.
 func block(data string) string {
 	var out []string
 	for _, line := range strings.Split(data, "\n") {
-		if line == "---" {
+		if isFence(line) {
 			break
 		}
 		out = append(out, line)
 	}
 	return strings.Join(out, "\n")
-}
-
-// knownDivergence names the documented reason a splitter disagrees with the
-// reference on input in ("---\n" + data), or "" when the disagreement is new.
-func knownDivergence(name, data string, got, want bool) string {
-	closing := false
-	for _, line := range strings.Split(data, "\n") {
-		if line == "---" {
-			break
-		}
-		if strings.HasPrefix(line, "---") {
-			closing = true // a line that starts with --- but is not exactly ---
-			break
-		}
-	}
-	switch {
-	case got && !want && closing && (name == "migrate" || name == "improve" || name == "review"):
-		return "closing fence is any line starting with ---, not only an exact --- line"
-	case !got && want && (data == "---" || strings.HasPrefix(data, "---\n")) && (name == "migrate" || name == "improve" || name == "review" || name == "llmstxt"):
-		return "an empty block (--- directly followed by ---) is not recognised"
-	case !got && want && name == "llmstxt" && !strings.Contains(data, "\n---\n"):
-		return "llmstxt needs a newline after the closing fence, so a fence at end of file is missed"
-	}
-	return ""
 }
 
 func FuzzFrontmatterSplittersAgree(f *testing.F) {
@@ -126,23 +106,23 @@ func FuzzFrontmatterSplittersAgree(f *testing.F) {
 		in := "---\n" + data
 		want := reference(data)
 		for _, s := range splitters {
-			if got := s.run(in).has; got != want && knownDivergence(s.name, data, got, want) == "" {
+			if got := s.run(in).has; got != want {
 				t.Errorf("%s: frontmatter=%v, the reference says %v for %q", s.name, got, want, in)
 			}
 		}
 	})
 }
 
-// The splitters differ on BOM and carriage returns by design of their callers;
-// this pins each so a change is deliberate.
+// BOM and CRLF are handled by the shared splitter; a lone CR is only normalised
+// by the importer, whose callers read files written by other tools.
 func TestBOMAndCarriageReturnHandling(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
 		want  map[string]bool // frontmatter found, per splitter
 	}{
-		{"bom", "\ufeff---\nk: v\n---\nb", map[string]bool{"importer": true, "crud": false, "migrate": false, "okf": true, "review": true, "improve": false, "llmstxt": false}},
-		{"crlf", "---\r\nk: v\r\n---\r\nb", map[string]bool{"importer": true, "crud": true, "migrate": false, "okf": true, "review": true, "improve": true, "llmstxt": true}},
+		{"bom", "\ufeff---\nk: v\n---\nb", map[string]bool{"importer": true, "crud": true, "migrate": true, "okf": true, "review": true, "improve": true, "llmstxt": true}},
+		{"crlf", "---\r\nk: v\r\n---\r\nb", map[string]bool{"importer": true, "crud": true, "migrate": true, "okf": true, "review": true, "improve": true, "llmstxt": true}},
 		{"lone cr", "---\rk: v\r---\rb", map[string]bool{"importer": true, "crud": false, "migrate": false, "okf": false, "review": false, "improve": false, "llmstxt": false}},
 	}
 	for _, tt := range tests {

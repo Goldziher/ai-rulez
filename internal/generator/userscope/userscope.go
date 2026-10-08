@@ -28,6 +28,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/registry"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Kind classifies what a row carries.
@@ -143,7 +144,7 @@ func unsafeRelocation(global *presets.GlobalPaths, home string) string {
 	reloc = filepath.Clean(reloc)
 	isRoot := filepath.Dir(reloc) == reloc
 	rel, err := filepath.Rel(reloc, filepath.Clean(home))
-	contains := err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	contains := err == nil && !safefs.RelEscapes(rel)
 	if !isRoot && !contains {
 		return ""
 	}

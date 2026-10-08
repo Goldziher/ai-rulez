@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 )
 
@@ -283,7 +284,7 @@ func refuseFix(fix *Fix, o FixOptions) string {
 // the authored sources (unless the fix is an outside fix, which the project
 // root bounds instead), or the caller refuses the file.
 func refuseEdit(file string, outside bool, o FixOptions) string {
-	if o.EditRoot != "" && !outside && !underDir(gitutil.Resolve(file), o.EditRoot) {
+	if o.EditRoot != "" && !outside && !safefs.Within(o.EditRoot, gitutil.Resolve(file)) {
 		return "the file is not an authored source under " + filepath.ToSlash(o.EditRoot)
 	}
 	if outside {
@@ -314,7 +315,7 @@ func outsideFixRefusal(file, root string) string {
 		return "the file is not a regular file (a symlink is never edited)"
 	}
 	resolved, err := filepath.EvalSymlinks(file)
-	if err != nil || !underDir(resolved, gitutil.Resolve(root)) {
+	if err != nil || !safefs.Within(gitutil.Resolve(root), resolved) {
 		return "the file is not inside the project (a symlink on its path leaves it)"
 	}
 	return ""
@@ -367,7 +368,7 @@ type diffRow struct {
 // separated, never starting with a slash.
 func diffName(root, file string) string {
 	if root != "" {
-		if rel, err := filepath.Rel(gitutil.Resolve(root), gitutil.Resolve(file)); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if rel, err := filepath.Rel(gitutil.Resolve(root), gitutil.Resolve(file)); err == nil && !safefs.RelEscapes(rel) {
 			return filepath.ToSlash(rel)
 		}
 	}

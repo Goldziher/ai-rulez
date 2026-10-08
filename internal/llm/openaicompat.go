@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // DefaultOpenAIBaseURL is used when provider is openai (or empty) and no base_url is set.
@@ -76,7 +77,10 @@ func (o *openAICompat) post(ctx context.Context, path string, body []byte) ([]by
 		return nil, &Error{Kind: KindProvider, Message: "request failed: " + scrubURLError(err), Cause: errors.New("transport error")}
 	}
 	defer resp.Body.Close()
-	data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
+	data, err := safefs.ReadLimited(resp.Body, maxResponseBytes)
+	if errors.Is(err, safefs.ErrTooLarge) {
+		return nil, &Error{Kind: KindProvider, Status: resp.StatusCode, Message: "response too large", Cause: err}
+	}
 	if err != nil {
 		return nil, &Error{Kind: KindProvider, Status: resp.StatusCode, Message: "reading response failed", Cause: errors.New("read error")}
 	}

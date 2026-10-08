@@ -19,6 +19,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 const (
@@ -342,7 +343,7 @@ func RepoRelative(top, absPath string) string {
 		return ""
 	}
 	rel, err := filepath.Rel(Resolve(top), Resolve(absPath))
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(rel) {
 		return ""
 	}
 	return filepath.ToSlash(rel)
@@ -492,7 +493,7 @@ func (g Git) StageExecutableContext(ctx context.Context, absPath string) (change
 		return false, nil
 	}
 	rel, relErr := filepath.Rel(Resolve(top), Resolve(absPath))
-	if relErr != nil || strings.HasPrefix(rel, "..") {
+	if relErr != nil || safefs.RelEscapes(rel) {
 		return false, nil //nolint:nilerr // outside this repository: not ours to stage
 	}
 	rel = filepath.ToSlash(rel)

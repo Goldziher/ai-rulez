@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // Agents, skills and commands can declare `hooks` in their own frontmatter. The
@@ -60,17 +62,11 @@ func frontmatterHookScripts(primary []byte) []string {
 
 // frontmatterBlock returns the YAML between the leading --- fences.
 func frontmatterBlock(content string) (string, bool) {
-	content = strings.ReplaceAll(content, "\r\n", "\n")
-	if !strings.HasPrefix(content, "---\n") {
+	block := frontmatter.SplitString(content)
+	if !block.Closed {
 		return "", false
 	}
-	lines := strings.Split(content, "\n")
-	for i := 1; i < len(lines); i++ {
-		if strings.TrimSpace(lines[i]) == "---" {
-			return strings.Join(lines[1:i], "\n"), true
-		}
-	}
-	return "", false
+	return strings.TrimSuffix(block.Raw, "\n"), true
 }
 
 // commandWords splits a command line on whitespace and shell separators and

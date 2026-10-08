@@ -16,7 +16,9 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/utils"
 	"github.com/samber/oops"
 )
@@ -791,7 +793,7 @@ func quoteAll(in []string) []string {
 // exists must be a real directory or file, for every path convert would write.
 func checkTargets(abs, intoAbs string, files map[string][]byte) error {
 	base := abs
-	if rel, err := filepath.Rel(abs, intoAbs); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if rel, err := filepath.Rel(abs, intoAbs); err != nil || safefs.RelEscapes(rel) {
 		base = filepath.Dir(intoAbs)
 	}
 	rels := make([]string, 0, len(files)+1)
@@ -833,42 +835,13 @@ func writeFileAtomic(dest string, data []byte, perm os.FileMode) error {
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(dest), ".convert-*")
-	if err != nil {
-		return err
-	}
-	name := tmp.Name()
-	if _, err := tmp.Write(data); err != nil {
-		return discardTemp(tmp, name, err)
-	}
-	if err := tmp.Close(); err != nil {
-		return discardTemp(nil, name, err)
-	}
-	if err := os.Chmod(name, perm); err != nil {
-		return discardTemp(nil, name, err)
-	}
-	if err := os.Rename(name, dest); err != nil {
-		return discardTemp(nil, name, err)
-	}
-	return nil
-}
-
-// discardTemp closes (when open) and removes a temporary file after err, and
-// returns err joined with any failure to clean up.
-func discardTemp(open *os.File, name string, err error) error {
-	if open != nil {
-		err = errors.Join(err, open.Close())
-	}
-	if rerr := os.Remove(name); rerr != nil && !errors.Is(rerr, fs.ErrNotExist) {
-		err = errors.Join(err, rerr)
-	}
-	return err
+	return gitutil.WriteFileAtomic(dest, data, perm) //nolint:wrapcheck // already contextual
 }
 
 // relInside returns target relative to base, and false when it is not below base.
 func relInside(base, target string) (string, bool) {
 	rel, err := filepath.Rel(base, target)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(rel) {
 		return "", false
 	}
 	return rel, true

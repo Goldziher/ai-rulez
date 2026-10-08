@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"gopkg.in/yaml.v3"
@@ -567,18 +568,11 @@ func extractSummary(filePath string) string {
 	}
 
 	// Parse frontmatter
-	contentStr := string(content)
-	if !strings.HasPrefix(contentStr, "---") {
+	block := frontmatter.Split(content)
+	if !block.Closed {
 		return ""
 	}
-
-	// Find the closing --- delimiter
-	endIdx := strings.Index(contentStr[3:], "---")
-	if endIdx == -1 {
-		return ""
-	}
-
-	frontmatterStr := contentStr[3 : endIdx+3]
+	frontmatterStr := block.Raw
 
 	// Parse YAML
 	var metadata map[string]interface{}

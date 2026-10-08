@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // maxReplayFlagged bounds the commits listed per proposal; the count is exact.
@@ -58,7 +59,7 @@ func replayProposals(ctx context.Context, cfg *config.Config, props []*Proposal,
 		return "replay skipped: the project directory cannot be resolved"
 	}
 	rel, err := filepath.Rel(realTop, realRoot)
-	if err != nil || strings.HasPrefix(rel, "..") {
+	if err != nil || safefs.RelEscapes(rel) {
 		return "replay skipped: the project is not inside its repository"
 	}
 	commits, err := gitutil.Git{}.FirstParentCommitsContext(ctx, root, n)

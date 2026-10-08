@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
@@ -366,7 +367,7 @@ func (e *engine) relativize(problems []Problem) []Problem {
 	root := filepath.Dir(e.opts.ConfigDir)
 	out := make([]Problem, len(problems))
 	for i, p := range problems {
-		if rel, err := filepath.Rel(root, p.File); err == nil && within(root, p.File) {
+		if rel, err := filepath.Rel(root, p.File); err == nil && safefs.Within(root, p.File) {
 			p.File = filepath.ToSlash(rel)
 		}
 		out[i] = p

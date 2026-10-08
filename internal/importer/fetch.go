@@ -5,17 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
 	"github.com/samber/oops"
 )
-
-// fullSHA matches a full git commit hash.
-var fullSHA = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // splitOrigin splits "file#field" into the finding's source and field.
 func splitOrigin(origin string) (source, field string) {
@@ -103,7 +100,7 @@ func (g gitFetcher) Fetch(ctx context.Context, rm Remote) (*Fetched, error) {
 // commit the input named is kept, anything that moves (a branch, the default
 // branch) is replaced by the commit that was read.
 func recordRef(rm Remote, f *Fetched) string {
-	if fullSHA.MatchString(rm.Ref) || (rm.Ref != "" && f.RefKind == "tag") {
+	if gitutil.IsCommitSHA(rm.Ref) || (rm.Ref != "" && f.RefKind == "tag") {
 		return rm.Ref
 	}
 	return f.Commit
@@ -137,7 +134,7 @@ func (p *Plan) resolveRemotes(ctx context.Context, opt Options) error {
 			return oops.With("source", rm.describe()).Hint("Fix the source in the input, or rerun without --fetch to import what is on disk").
 				Wrapf(err, "fetch %s", rm.Origin)
 		}
-		if fetched.Commit != "" && !fullSHA.MatchString(fetched.Commit) {
+		if fetched.Commit != "" && !gitutil.IsCommitSHA(fetched.Commit) {
 			return oops.With("source", rm.describe()).Errorf("fetch %s: the resolved commit %q is not a full commit hash", rm.Origin, fetched.Commit)
 		}
 		switch rm.Kind {

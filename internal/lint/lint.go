@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/ard"
@@ -490,7 +491,7 @@ func ValidateSettings(lc *config.LintConfig) []string {
 }
 
 func (r *runner) display(abs string) string {
-	if rel, err := filepath.Rel(r.cwd, abs); err == nil && !strings.HasPrefix(rel, "..") {
+	if rel, err := filepath.Rel(r.cwd, abs); err == nil && !safefs.RelEscapes(rel) {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.ToSlash(abs)
@@ -681,7 +682,7 @@ func (r *runner) addItems(configDir, kind, domain string, files []config.Content
 		cf := files[i]
 		abs, _ := filepath.Abs(cf.Path) //nolint:errcheck // keeps the raw path
 		rel, err := filepath.Rel(configDir, abs)
-		owned := err == nil && !strings.HasPrefix(rel, "..") && !strings.Contains(cf.Path, "://")
+		owned := err == nil && !safefs.RelEscapes(rel) && !strings.Contains(cf.Path, "://")
 		for _, n := range contentNames(kind, cf) {
 			if set != nil {
 				set[n] = true

@@ -3,9 +3,10 @@ package generator
 import (
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // PluginFile is one file of the plugin bundle a run renders: its slash path
@@ -33,7 +34,7 @@ func (g *Generator) PluginFiles(profile string) ([]PluginFile, error) {
 			continue
 		}
 		rel, relErr := filepath.Rel(root, g.absOutputPath(output.Path))
-		if relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if relErr != nil || safefs.RelEscapes(rel) {
 			return nil, oops.With("path", output.Path).Errorf("plugin output is outside the project root")
 		}
 		data := output.RawContent
