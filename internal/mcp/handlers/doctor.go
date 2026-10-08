@@ -24,7 +24,7 @@ func DoctorHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResu
 
 	redactReport(report)
 	counts := report.Counts()
-	return ToolSuccess(map[string]interface{}{
+	doc := map[string]interface{}{
 		"ok": !report.Failed(strict),
 		"summary": map[string]int{
 			string(doctor.SeverityError):   counts[doctor.SeverityError],
@@ -33,7 +33,23 @@ func DoctorHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResu
 		},
 		"root":     report.Root,
 		"findings": report.Findings,
-	})
+	}
+	// The ok field is doctor's verdict on a loadable project. A configuration
+	// that does not load at all is a failed call, as it is for every other tool.
+	if configUnreadable(report) {
+		return toolErrorDocument(doc)
+	}
+	return ToolSuccess(doc)
+}
+
+// configUnreadable reports whether the doctor could not load the configuration.
+func configUnreadable(report *doctor.Report) bool {
+	for i := range report.Findings {
+		if f := &report.Findings[i]; f.Check == doctor.CheckConfig && f.Severity == doctor.SeverityError {
+			return true
+		}
+	}
+	return false
 }
 
 // redactReport strips URL credentials from every free-text field of the report:
