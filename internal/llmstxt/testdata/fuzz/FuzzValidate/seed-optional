@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("# Title\n\n## Optional\n\n- [B](b.md)\n")
