@@ -283,7 +283,7 @@ func TestLockCheckDoesNotReportUpToDateBeforeASignatureFailure(t *testing.T) {
 
 	var code int
 	var report func()
-	capture(t, func() { code, report = checkLockContentAt("") })
+	capture(t, func() { code, report = checkLockContentAt("", defaultOut()) })
 
 	// The content comparison passes but only hands back the success report: the
 	// caller prints it after the signature check, never before.
