@@ -4,6 +4,17 @@
 // signs the lock subject printed by `lock --subject`; `sign --bundle`, `--skill`
 // and `--sbom` sign the other subjects.
 //
+// # Package split
+//
+// This package holds the verification policy: statements, trust sets, k-of-n
+// thresholds, freshness, rollback state and the lock, approval and artifact
+// checks. It imports no Sigstore, Fulcio, Rekor or KMS SDK. The cryptographic
+// work (bundle verification, trusted roots, key and keyless signing, KMS) is in
+// internal/signing/sigstore, which the command installs once at startup with
+// signing.UseBackend(sigstore.New()). Without a backend every cryptographic check
+// fails closed with AR721. Library code (pkg/airulez, govview, mcp) must not
+// import internal/signing/sigstore; tests/archlint enforces it.
+//
 // # Reusable DSSE helper API
 //
 // Later features (approval signatures, SBOM signing, signed policies, bundle
@@ -18,8 +29,8 @@
 //
 // Sign it with a Signer and get the bundle JSON (a Sigstore bundle v0.3):
 //
-//	signer, err := signing.LoadKeySigner(pemBytes, password) // key mode, offline
-//	signer, err := signing.NewKeylessSigner(signing.KeylessOptions{IDToken: tok}) // Fulcio + Rekor
+//	signer, err := sigstore.LoadKeySigner(pemBytes, password) // key mode, offline
+//	signer, err := sigstore.NewKeylessSigner(sigstore.KeylessOptions{IDToken: tok}) // Fulcio + Rekor
 //	bundleJSON, err := signing.SignStatement(ctx, signer, st)
 //
 // Only in-toto statements are signed (DSSE payload type application/vnd.in-toto+json):
@@ -50,7 +61,7 @@
 // TreeStatement and SBOMStatement (what to sign), VerifyArtifact (how a set of
 // attestation files is judged, with k-of-n thresholds) and PrepareArtifactCheck
 // (the [signing] policy for one subject). ProvenanceStatement writes SLSA v1
-// provenance for a bundle, and LoadKMSSigner signs with a KMS key URI.
+// provenance for a bundle, and sigstore.LoadKMSSigner signs with a KMS key URI.
 //
 // Errors returned by Verify, Check and the lock helpers are *Error values whose
 // Code is one of AR720 to AR729.
