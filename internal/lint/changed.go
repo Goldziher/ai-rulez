@@ -18,7 +18,7 @@ func (r *runner) dep(from, to string) {
 	if r.deps == nil {
 		r.deps = map[string]map[string]struct{}{}
 	}
-	f, t := r.tree.Rel(from), r.tree.Rel(to)
+	f, t := r.rel(from), r.rel(to)
 	if f == "" || t == "" || f == t {
 		return
 	}

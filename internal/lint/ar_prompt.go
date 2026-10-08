@@ -23,10 +23,10 @@ func registerArPrompt(s *ruleSet) {
 	// Extensions to existing rules: more injection phrases, soft hyphen, and
 	// markdown reference-link comments.
 	injectionPhrases = append(injectionPhrases,
-		regexp.MustCompile(`(?i)\bhide\s+this\s+from\s+the\s+user\b`),
-		regexp.MustCompile(`(?i)\bremove\s+(?:this|it|that)\s+from\s+(?:the\s+)?(?:chat|conversation)\s+history\b`),
-		regexp.MustCompile(`(?i)\bnever\s+(?:mention|reveal|disclose)\s+this\s+(?:instruction|rule|message|prompt)s?\b`),
-		regexp.MustCompile(`^\s*(?:[-*>]\s*)*(?:DEVELOPER MODE|DEV MODE|DAN MODE|JAILBREAK)\b`),
+		newGatedRe(`(?i)\bhide\s+this\s+from\s+the\s+user\b`, true, "hide"),
+		newGatedRe(`(?i)\bremove\s+(?:this|it|that)\s+from\s+(?:the\s+)?(?:chat|conversation)\s+history\b`, true, "history"),
+		newGatedRe(`(?i)\bnever\s+(?:mention|reveal|disclose)\s+this\s+(?:instruction|rule|message|prompt)s?\b`, true, "never"),
+		newGatedRe(`^\s*(?:[-*>]\s*)*(?:DEVELOPER MODE|DEV MODE|DAN MODE|JAILBREAK)\b`, false, "DEVELOPER MODE", "DEV MODE", "DAN MODE", "JAILBREAK"),
 	)
 	hiddenRunes[0x00AD] = "SOFT HYPHEN"
 	s.addTextScan(scanDirectiveLabels, AnalyzerSecurity)

@@ -177,3 +177,5 @@ opencode.json
 # Test fixtures hold tool files (CLAUDE.md, .claude/, .mcp.json) that are ignored above; keep them tracked.
 !**/testdata/**
 .lycheecache
+benchmark-results.txt
+bench-subset.txt
