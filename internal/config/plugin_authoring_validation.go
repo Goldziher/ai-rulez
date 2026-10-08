@@ -11,6 +11,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/agentplugins"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
@@ -132,7 +133,7 @@ func escapesProject(v workspace.View, baseDir, resolved string) bool {
 	if err != nil {
 		return true
 	}
-	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	return safefs.RelEscapes(rel)
 }
 
 // hookScriptChars is the allowlist of a hook `script` path. The path is spliced

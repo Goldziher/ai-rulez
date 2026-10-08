@@ -4,9 +4,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Obsolete is a file a previous run generated that the planned bundle no longer
@@ -98,7 +99,7 @@ func ObsoleteFiles(bundleDir string, previousSidecar, plannedSidecar []byte) ([]
 func RemoveObsolete(bundleDir, path string) error {
 	bundleDir = filepath.Clean(bundleDir)
 	rel, err := filepath.Rel(bundleDir, filepath.Clean(path))
-	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || rel == "." || safefs.RelEscapes(rel) {
 		return oops.With("path", path).With("bundle", bundleDir).Errorf("obsolete plugin file is outside its bundle")
 	}
 	root, err := os.OpenRoot(bundleDir)

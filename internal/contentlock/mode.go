@@ -4,9 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // modeResolver gives the digest mode (ModeRegular or ModeExecutable) of single
@@ -43,7 +43,7 @@ func (r *modeResolver) mode(root, abs string, info os.FileInfo) string {
 		r.trees[root] = files
 	}
 	rel, err := filepath.Rel(root, abs)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(rel) {
 		return ModeRegular
 	}
 	if files[filepath.ToSlash(rel)] == 0o100755 {

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 )
 
@@ -145,7 +146,7 @@ func ensureWithinProject(sourceDir, abs string) error {
 		return oops.With("path", abs).Wrapf(err, "resolve passthrough file")
 	}
 	rel, err := filepath.Rel(root, resolved)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(rel) {
 		return oops.
 			With("path", abs).
 			With("resolved_to", resolved).

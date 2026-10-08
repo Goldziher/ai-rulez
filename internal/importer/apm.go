@@ -10,6 +10,8 @@ import (
 
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // Microsoft APM (microsoft/apm): apm.yml declares a package and its dependencies,
@@ -149,7 +151,7 @@ func (b *apmPlanner) readLock() error {
 		for _, d := range deps {
 			m := as[map[string]any](d)
 			repo, commit := stringOf(m["repo_url"]), stringOf(m["resolved_commit"])
-			if repo == "" || !fullSHA.MatchString(commit) {
+			if repo == "" || !gitutil.IsCommitSHA(commit) {
 				continue
 			}
 			b.lock[lockKey(repo, stringOf(m["virtual_path"]))] = commit

@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	pemit "github.com/Goldziher/ai-rulez/v5/internal/publish/emit"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 )
 
@@ -99,7 +100,7 @@ func ardSkillSource(cfg *config.Config, f *config.ContentFile, repoPath string) 
 		p = filepath.Join(cfg.BaseDir, p)
 	}
 	rel, err := filepath.Rel(cfg.BaseDir, p)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(rel) {
 		return filepath.ToSlash(filepath.Join(filepath.Base(cfg.ConfigDir), "skills", f.Name, "SKILL.md"))
 	}
 	return filepath.ToSlash(filepath.Join(repoPath, rel))
