@@ -264,10 +264,16 @@ func (s *GitSource) sparsePathSpec() string {
 
 // Fetch downloads content from git repository and returns the content tree.
 //
-// Safe for concurrent invocation. The fast path (cache SHA matches remote,
-// or --no-fetch) is lock-free; only refresh of a stale cache is serialized
-// by a per-cacheDir mutex with double-checked locking.
+// Safe for concurrent invocation. One checkout per remote URL lives in the cache
+// directory, so loads of the same remote at different commits would replace each
+// other's files mid-read; the whole fetch, from refreshing the checkout to
+// scanning and digesting it, therefore runs under a per-cacheDir mutex. Loads of
+// different remotes do not wait for each other.
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
+	mu := lockForFetch(s.cacheDir)
+	mu.Lock()
+	defer mu.Unlock()
+
 	tree, err := s.fetch(ctx)
 	if err != nil {
 		return nil, err
@@ -340,19 +346,9 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 		return nil, err
 	}
 
-	// Fast path: the cache is current. Nothing was fetched, so nothing is written:
+	// The cache is current. Nothing was fetched, so nothing is written:
 	// a read-only load must not touch the cache metadata (FetchedAt records the
 	// last real fetch, and nothing reads it as a last-used time).
-	if isCacheHit(s.cacheDir, currentSHA) {
-		return s.scanCachedContent(ctx)
-	}
-
-	// Slow path: cache is stale or missing. Serialize the refresh per cache directory.
-	mu := lockForFetch(s.cacheDir)
-	mu.Lock()
-	defer mu.Unlock()
-
-	// Double-check under the lock — another goroutine may have refreshed while we waited.
 	if isCacheHit(s.cacheDir, currentSHA) {
 		return s.scanCachedContent(ctx)
 	}
