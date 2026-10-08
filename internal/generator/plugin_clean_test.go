@@ -80,3 +80,14 @@ func TestClean_RemovesWhatGeneratePluginWrote(t *testing.T) {
 		})
 	}
 }
+
+func TestClean_RemovesTheEmptiedPluginSkillsDirectory(t *testing.T) {
+	quietWarnings(t)
+	dir := pluginRuntimesProject(t)
+	require.DirExists(t, filepath.Join(dir, "skills"), "the bundle writes root skills/")
+
+	_, err := loadDomainsProject(t, dir).Clean("", CleanOptions{})
+
+	require.NoError(t, err)
+	assert.NoDirExists(t, filepath.Join(dir, "skills"))
+}
