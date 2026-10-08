@@ -109,7 +109,11 @@ phase_plugin() {
 	expect_rc 0 "lock"
 	git_commit_all "$tag"
 	ar publish --dry-run --dist "$PH_LOGS/dist"
-	if [ "$AR_RC" -ne 0 ]; then
+	if [ "$AR_RC" -eq 2 ] && grep -q 'validate reported findings' "$AR_LOG"; then
+		# The repository's own configuration carries error-level findings and
+		# publish refuses on them: that is the gate working, not a failure.
+		:
+	elif [ "$AR_RC" -ne 0 ]; then
 		fail_note "publish --dry-run: exit $AR_RC ($(last_msg))"
 	else
 		expect_grep 'artifacts|would write' "$AR_LOG" "publish --dry-run lists artifacts"
