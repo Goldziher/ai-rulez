@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ard"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 )
 
@@ -152,4 +154,41 @@ func TestPublishEmit_ExportsOnlyTheARDManifest(t *testing.T) {
 	files := readDist(t, publishEmitOut)
 	assert.Len(t, files, 1)
 	assert.Contains(t, files["ard.json"], "urn:air:acme.test:conventions:deploy")
+}
+
+func ardCodes(findings []lint.Finding, prefix string) map[string]lint.Severity {
+	out := map[string]lint.Severity{}
+	for _, f := range findings {
+		if strings.HasPrefix(f.Code, prefix) {
+			out[f.Code] = f.Severity
+		}
+	}
+	return out
+}
+
+func TestStrictValidate_LintsTheARDManifest(t *testing.T) {
+	ardProject(t)
+
+	got := ardCodes(strictFindings(t), "AR9S")
+
+	// the local-tools server has nothing to derive queries from
+	assert.Equal(t, map[string]lint.Severity{lint.CodeARDQueries: lint.SeverityWarning}, got)
+}
+
+func TestStrictValidate_ReportsARDProblems(t *testing.T) {
+	// a server named like the skill: two resources, one identifier
+	cfg := ardProjectConfig + "\n[[mcp_servers]]\nname = \"deploy\"\ntransport = \"http\"\nurl = \"https://deploy.acme.test/mcp\"\n"
+	t.Setenv("DOCS_TOKEN", "x")
+	t.Setenv("TOOLS_TOKEN", "x")
+	publishProjectWith(t, cfg)
+
+	got := ardCodes(strictFindings(t), "AR9S")
+
+	assert.Equal(t, lint.SeverityError, got[lint.CodeARDIdentifier], "%v", got)
+}
+
+func TestStrictValidate_IsQuietWithoutARD(t *testing.T) {
+	publishProject(t)
+
+	assert.Empty(t, ardCodes(strictFindings(t), "AR9S"))
 }
