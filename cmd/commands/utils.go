@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
 	"github.com/spf13/pflag"
 )
