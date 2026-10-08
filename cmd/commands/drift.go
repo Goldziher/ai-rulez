@@ -204,7 +204,7 @@ func runDriftCheckGated(args []string, isRecursive bool, mode driftMode, gate fu
 		return 1
 	}
 	if gateDrift {
-		rep.writeJSON("drift", 1, blocked)
+		rep.writeJSON(statusDrift, 1, blocked)
 		return exitDrift
 	}
 	return finishDrift(rep, n, blocked, 1, fix)
@@ -273,7 +273,7 @@ func runRecursiveDrift(rep *driftReport, mode driftMode, fix string, gate func(*
 		return 1
 	}
 	if total == 0 && gateDrift > 0 {
-		rep.writeJSON("drift", len(paths), totalBlocked)
+		rep.writeJSON(statusDrift, len(paths), totalBlocked)
 		return exitDrift
 	}
 	return finishDrift(rep, total, totalBlocked, len(paths), fix)
@@ -282,7 +282,7 @@ func runRecursiveDrift(rep *driftReport, mode driftMode, fix string, gate func(*
 func finishDrift(rep *driftReport, differing, blocked, roots int, fix string) int {
 	status := "ok"
 	if differing > 0 {
-		status = "drift"
+		status = statusDrift
 	}
 	rep.writeJSON(status, roots, blocked)
 	if differing == 0 {

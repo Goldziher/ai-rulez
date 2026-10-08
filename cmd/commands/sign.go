@@ -257,7 +257,7 @@ func loadSignLock(ctx context.Context, args []string) (*config.Config, *lockfile
 func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	code := signOne(ctx, args, env)
 	if rec := signRecorderFrom(ctx); rec != nil && code == 0 {
-		if err := jsondoc.Write(os.Stdout, map[string]any{"status": "signed", "signed": rec.entries}); err != nil {
+		if err := jsondoc.Write(os.Stdout, map[string]any{keyStatus: "signed", "signed": rec.entries}); err != nil {
 			renderStderr(err)
 			return exitFailure
 		}
@@ -339,7 +339,7 @@ func signOne(ctx context.Context, args []string, env ambient.Env) int {
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
 	subject := signingSubject(lock)
-	reportSigned(ctx, "Signed "+lockfile.FileName, map[string]any{"kind": "lock", "path": lockfile.FileName, "signer": signerLabel(info), "subject": subject, "bundle": out},
+	reportSigned(ctx, "Signed "+lockfile.FileName, map[string]any{keyKind: kindLock, keyPath: lockfile.FileName, keySigner: signerLabel(info), keySubject: subject, keyBundle: out},
 		"signer", signerLabel(info), "subject", subject, "bundle", out)
 	return 0
 }

@@ -13,7 +13,7 @@ var VersionCmd = newVersionCmd()
 
 func newVersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "version",
+		Use:   cmdUseVersion,
 		Short: "Print the version number of ai-rulez",
 		Long:  `Print the version number of ai-rulez CLI tool. The line is the same as --version prints, on stdout, and -q does not suppress it.`,
 		Args:  cobra.NoArgs,
