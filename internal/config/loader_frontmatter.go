@@ -67,7 +67,7 @@ func parseFrontmatter(content string) (metadata *Metadata, body string, malforme
 
 	// Extract frontmatter YAML
 	frontmatterLines := lines[1:endIdx]
-	frontmatterYAML := strings.Join(frontmatterLines, "\n")
+	frontmatterYAML := normalizeOKFFrontmatter(strings.Join(frontmatterLines, "\n"))
 
 	// Extract actual content (after the closing ---). Computed up front so a
 	// parse failure still strips the delimited block from the body.
