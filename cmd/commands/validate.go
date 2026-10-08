@@ -131,6 +131,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 			logger.Success("Configuration is valid", "path", cfg.ConfigDir)
 		}
 		warnWorktreeMarketplace(cfg)
+		warnLegacyLayout(cfg.ConfigDir)
 		if !validateConfigOnly && validateOKFTree(cfg, os.Stderr) {
 			os.Exit(exitOKFProblems)
 		}

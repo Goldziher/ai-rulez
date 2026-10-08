@@ -18,6 +18,7 @@ func newContentOperator(local bool) (*crud.OperatorImpl, error) {
 	if err != nil {
 		return nil, err
 	}
+	warnLegacyLayout(op.ConfigDir())
 	if local {
 		op = op.Local()
 	}
