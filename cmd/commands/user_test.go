@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/render"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,7 +77,7 @@ func TestRunUserGenerate(t *testing.T) {
 
 		cleanForce = true
 		t.Cleanup(func() { cleanForce = false })
-		require.NoError(t, runUserClean())
+		require.NoError(t, runUserClean(render.New(os.Stdout, os.Stderr, false)))
 		assert.NoFileExists(t, filepath.Join(home, ".claude", "skills", "mine", "SKILL.md"))
 		assert.NoFileExists(t, filepath.Join(home, ".config", "ai-rulez", ".generated-manifest.json"))
 		assert.FileExists(t, filepath.Join(home, ".config", "ai-rulez", "config.toml"))
