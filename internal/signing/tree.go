@@ -1,7 +1,7 @@
 package signing
 
 import (
-	"io"
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -10,6 +10,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Sidecar file names. A bundle or skill directory carries its own attestation
@@ -155,12 +156,12 @@ func readRegular(path string, size int64) ([]byte, error) {
 		return nil, err //nolint:wrapcheck // wrapped by the caller
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	data, err := io.ReadAll(io.LimitReader(f, size+1))
+	data, err := safefs.ReadLimited(f, size)
+	if errors.Is(err, safefs.ErrTooLarge) {
+		return nil, oops.With("path", path).Errorf("%s changed while it was being read", path)
+	}
 	if err != nil {
 		return nil, err //nolint:wrapcheck // wrapped by the caller
-	}
-	if int64(len(data)) > size {
-		return nil, oops.With("path", path).Errorf("%s changed while it was being read", path)
 	}
 	return data, nil
 }

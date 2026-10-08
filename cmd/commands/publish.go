@@ -21,6 +21,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
@@ -598,7 +599,7 @@ func shippedLock(raw []byte, lock *lockfile.File) ([]byte, error) {
 	if err := lockfile.Save(tmp, &stripped); err != nil {
 		return nil, oops.Wrapf(err, "render the shipped lock copy")
 	}
-	out, err := os.ReadFile(lockfile.Path(tmp)) //nolint:gosec // the file Save just wrote in our temp directory
+	out, err := safefs.ReadFileLimited(lockfile.Path(tmp), maxPublishInputBytes) // the file Save just wrote in our temp directory
 	if err != nil {
 		return nil, oops.Wrapf(err, "read the shipped lock copy")
 	}
