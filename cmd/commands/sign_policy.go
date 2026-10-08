@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/policy"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
@@ -42,6 +41,7 @@ func runSignPolicy(ctx context.Context, env ambient.Env) int {
 		return 1
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
-	logger.Success("Signed policy", "path", signPolicy, "signer", signerLabel(info), "bundle", out)
+	reportSigned("Signed policy", map[string]any{"kind": "policy", "path": signPolicy, "signer": signerLabel(info), "bundle": out},
+		"path", signPolicy, "signer", signerLabel(info), "bundle", out)
 	return 0
 }

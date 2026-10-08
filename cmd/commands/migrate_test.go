@@ -12,7 +12,7 @@ import (
 func TestMigrateCommand(t *testing.T) {
 	assert.NotNil(t, MigrateCmd)
 	assert.Equal(t, "migrate v5", MigrateCmd.Use)
-	assert.NotNil(t, MigrateCmd.Run)
+	assert.NotNil(t, MigrateCmd.RunE)
 	assert.NotNil(t, MigrateCmd.Args)
 }
 
