@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/samber/oops"
 
@@ -388,6 +389,9 @@ func (pc *publishContext) emitRequestFor(tag string) *publish.EmitRequest {
 	}
 	if p := pc.cfg.Plugin; p != nil {
 		base.Plugins = []pemit.Plugin{{Name: p.Name, Category: p.Category, Keywords: p.Keywords}}
+	}
+	if slices.Contains(pc.opts.emitters, pemit.ARDEmitter) {
+		base.ARD = ardInput(pc.cfg, pc.repoPath, time.Unix(pc.mtime, 0).UTC())
 	}
 	return &publish.EmitRequest{Names: pc.opts.emitters, Experimental: pc.opts.experimental, Base: base, Options: pc.opts.emitOptions}
 }

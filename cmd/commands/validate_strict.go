@@ -230,6 +230,9 @@ func governanceLintOptions(ctx context.Context, cfg *config.Config, sel []string
 			opts = append(opts, lint.WithAgentPlugins(found))
 		}
 	}
+	if cfg.ARD != nil && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
+		opts = append(opts, ardLintOptions(cfg)...)
+	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerDelivery, lint.AnalyzerLock) {
 		if findings := deliveryFindings(ctx, cfg); !strictSecurityOnly && len(findings) > 0 {
 			opts = append(opts, lint.WithDelivery(findings))
