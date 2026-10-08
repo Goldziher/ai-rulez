@@ -5,6 +5,7 @@ background internal/approval/owners.go 1
 background internal/approval/policy.go 1
 background internal/config/load_options.go 1
 background internal/config/loader_scan.go 4
+background internal/config/local_overlay.go 1
 background internal/config/skill_resources.go 1
 background internal/evals/changed.go 1
 background internal/evals/grade.go 1
@@ -23,6 +24,7 @@ background internal/lint/tree.go 2
 background internal/policy/discover.go 1
 background internal/publish/ocipack.go 1
 background internal/publish/verify.go 1
+background internal/signing/sigstore/fakesigstore/fakesigstore.go 1
 background internal/tagresolve/outdated.go 1
 background internal/tagresolve/tagresolve.go 1
 background internal/telemetry/otlp_emitter.go 1
@@ -45,7 +47,8 @@ global cmd/commands/domain.go 7
 global cmd/commands/eval.go 3
 global cmd/commands/eval_calibrate.go 2
 global cmd/commands/eval_import.go 2
-global cmd/commands/generate.go 20
+global cmd/commands/generate.go 19
+global cmd/commands/generate_discovery.go 1
 global cmd/commands/generate_preflight.go 1
 global cmd/commands/generate_watch.go 1
 global cmd/commands/guard.go 1
@@ -74,10 +77,11 @@ global cmd/commands/publish_multi.go 1
 global cmd/commands/release_age.go 1
 global cmd/commands/remove.go 10
 global cmd/commands/report_evals.go 2
-global cmd/commands/review.go 7
+global cmd/commands/review.go 2
 global cmd/commands/review_calibrate.go 2
 global cmd/commands/review_explain.go 1
 global cmd/commands/review_fix.go 2
+global cmd/commands/review_rubric.go 5
 global cmd/commands/review_semantic.go 2
 global cmd/commands/roles.go 5
 global cmd/commands/root.go 4
@@ -116,6 +120,7 @@ global cmd/commands/verify_attestation.go 9
 global cmd/commands/verify_self.go 1
 global cmd/commands/verify_tags.go 2
 global cmd/commands/version.go 1
+global internal/agentplugins/fsx.go 1
 global internal/agentplugins/load.go 1
 global internal/agentplugins/schema.go 6
 global internal/agentplugins/skillmd.go 1
@@ -130,7 +135,7 @@ global internal/catalogsite/write.go 1
 global internal/config/analysis.go 2
 global internal/config/bundle_exclude.go 1
 global internal/config/checks.go 1
-global internal/config/content_symlink.go 1
+global internal/config/content_symlink.go 2
 global internal/config/delivery.go 3
 global internal/config/frontmatter_exec.go 1
 global internal/config/frontmatter_typed.go 2
@@ -180,8 +185,8 @@ global internal/evals/runner_claude_native.go 3
 global internal/evals/runner_codex.go 1
 global internal/forge/http.go 2
 global internal/generator/apply.go 4
-global internal/generator/generator.go 13
 global internal/generator/gitignore_needed.go 1
+global internal/generator/gitignore_patterns.go 10
 global internal/generator/hookplugins/hookplugins.go 5
 global internal/generator/mcp_secrets.go 3
 global internal/generator/plugin/opencode.go 1
@@ -211,6 +216,7 @@ global internal/generator/registry/registry.go 2
 global internal/generator/rulefile_activation.go 1
 global internal/generator/rulefiles/mapped.go 1
 global internal/generator/rulefiles/targets.go 3
+global internal/generator/secret_outputs.go 1
 global internal/generator/settings/harness.go 6
 global internal/generator/settings/hooks_cline.go 1
 global internal/generator/settings/hooks_dialects.go 6
@@ -224,6 +230,7 @@ global internal/generator/settings/permrule.go 1
 global internal/generator/stale_verify.go 2
 global internal/generator/tokens.go 2
 global internal/generator/tokens_listing.go 1
+global internal/generator/write_outputs.go 2
 global internal/gitutil/env.go 1
 global internal/gitutil/gitutil.go 1
 global internal/govview/catalog_mcp.go 1
@@ -337,6 +344,7 @@ global internal/sbom/license.go 4
 global internal/sbom/purl.go 2
 global internal/secretpat/secretpat.go 1
 global internal/semver/constraint.go 1
+global internal/signing/backend.go 1
 global internal/signing/errors.go 1
 global internal/skillsearch/embed.go 1
 global internal/skillsearch/lexical.go 1
