@@ -16,20 +16,20 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
-	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 // keyFixture is a signing key and the public key file a machine trusts it by.
 type keyFixture struct {
-	signer  *signing.KeySigner
+	signer  *sigstore.KeySigner
 	pubPath string
 }
 
 func newKey(t *testing.T) keyFixture {
 	t.Helper()
-	priv, pub, err := signing.GenerateKeyPair(nil)
+	priv, pub, err := sigstore.GenerateKeyPair(nil)
 	require.NoError(t, err)
-	ks, err := signing.LoadKeySigner(priv, nil)
+	ks, err := sigstore.LoadKeySigner(priv, nil)
 	require.NoError(t, err)
 	path := filepath.Join(t.TempDir(), "signer.pub")
 	require.NoError(t, os.WriteFile(path, pub, 0o600))
@@ -47,7 +47,7 @@ func (k keyFixture) attest(t *testing.T, data string, at time.Time) []byte {
 // blob signs the exact bytes with a message signature, as cosign sign-blob does.
 func (k keyFixture) blob(t *testing.T, data string) []byte {
 	t.Helper()
-	pb, err := k.signer.Bundle(context.Background(), &signing.PlainData{Data: []byte(data)})
+	pb, err := k.signer.Bundle(context.Background(), &sigstore.PlainData{Data: []byte(data)})
 	require.NoError(t, err)
 	out, err := protojson.Marshal(pb)
 	require.NoError(t, err)

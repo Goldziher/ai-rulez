@@ -4,11 +4,8 @@ import (
 	"context"
 	"testing"
 
-	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
 
 // countingSigner records that something was signed (for keyless, logged) and
@@ -19,7 +16,12 @@ type countingSigner struct {
 	signed int
 }
 
-func (c *countingSigner) Bundle(context.Context, signing.Content) (*protobundle.Bundle, error) {
+func (c *countingSigner) SignDSSE(context.Context, []byte, string) ([]byte, error) {
+	c.signed++
+	return nil, assert.AnError
+}
+
+func (c *countingSigner) SignBlob(context.Context, []byte) ([]byte, error) {
 	c.signed++
 	return nil, assert.AnError
 }

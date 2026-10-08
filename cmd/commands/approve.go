@@ -23,7 +23,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 var (
@@ -123,8 +123,8 @@ func init() {
 	f.BoolVar(&signKeyless, "keyless", false, "With --sign: Fulcio certificate and Rekor log entry (network; the log is public)")
 	f.StringVar(&signTokenEnv, "identity-token-env", "", "With --sign --keyless: environment variable holding the OIDC token (default: the GitHub Actions runtime token)")
 	f.BoolVar(&signInteractive, "interactive", false, "With --sign --keyless: open a browser for the OIDC login when no token is available")
-	f.StringVar(&signFulcioURL, "fulcio-url", "", "With --sign --keyless: Fulcio URL (default "+signing.DefaultFulcioURL+")")
-	f.StringVar(&signRekorURL, "rekor-url", "", "With --sign: Rekor URL for --keyless or --tlog (default "+signing.DefaultRekorURL+")")
+	f.StringVar(&signFulcioURL, "fulcio-url", "", "With --sign --keyless: Fulcio URL (default "+sigstore.DefaultFulcioURL+")")
+	f.StringVar(&signRekorURL, "rekor-url", "", "With --sign: Rekor URL for --keyless or --tlog (default "+sigstore.DefaultRekorURL+")")
 	f.BoolVar(&signTLog, "tlog", false, "With --sign --key: also record the signature in the Rekor transparency log (network; public log)")
 	f.BoolVar(&approveDeny, "deny", false, "With --revoke: also add the digest of the item to the deny list (AR717)")
 	f.StringVar(&approveReason, "reason", "", "With --deny: why the digest is denied (stored in the lock; scanned for secrets)")

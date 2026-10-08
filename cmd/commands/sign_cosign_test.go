@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 const cosignTimeout = 60 * time.Second
@@ -38,7 +39,7 @@ func TestCosignInterop(t *testing.T) {
 	}
 	f := newSignFixture(t, "\n[signing]\nkey_file = \"keys/release.pub\"\n")
 	const password = "interop"
-	priv, pub, err := signing.GenerateKeyPair([]byte(password))
+	priv, pub, err := sigstore.GenerateKeyPair([]byte(password))
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(f.privKey, priv, 0o600))
 	require.NoError(t, os.WriteFile(f.pubKey, pub, 0o644))

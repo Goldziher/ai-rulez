@@ -1,7 +1,9 @@
-package signing
+package signing_test
 
 import (
 	"context"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 	"testing"
 	"time"
 
