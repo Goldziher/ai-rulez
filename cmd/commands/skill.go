@@ -1,12 +1,8 @@
 package commands
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -47,7 +43,7 @@ Examples:
   ai-rulez skill install ai-rulez --source https://github.com/Goldziher/ai-rulez
   ai-rulez skill install my-skill --source ./local-repo --path custom/path`,
 	Args: cobra.ExactArgs(1),
-	Run:  runSkillInstall,
+	RunE: runSkillInstall,
 }
 
 var skillRemoveCmd = &cobra.Command{
@@ -57,7 +53,7 @@ var skillRemoveCmd = &cobra.Command{
 
 Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runSkillRemove,
+	RunE: runSkillRemove,
 }
 
 var skillListCmd = &cobra.Command{
@@ -65,7 +61,7 @@ var skillListCmd = &cobra.Command{
 	Short: "List all installed skills",
 	Long:  `List all skills installed from external sources.` + localListHint,
 	Args:  cobra.NoArgs,
-	Run:   runSkillList,
+	RunE:  runSkillList,
 }
 
 var skillUpdateCmd = &cobra.Command{
@@ -79,11 +75,9 @@ A skill that uses a version range (version = ^1.2) keeps a pin that
 still satisfies the range: this command re-resolves plain refs (a branch
 follows its tip) and never upgrades a range pin. Use "ai-rulez update --kind
 skill [name...]" to move range pins to the newest allowed tag.`,
-	Run: func(_ *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		lockCheck = false
-		if code := runLockFor(kindSkill, args); code != 0 {
-			os.Exit(code)
-		}
+		return exitStatus(runLockFor(kindSkill, args))
 	},
 }
 
@@ -111,13 +105,13 @@ func init() {
 	addJSONFormat(skillListCmd.Flags(), &skillJSON, "j")
 }
 
-func runSkillInstall(cmd *cobra.Command, args []string) {
+func runSkillInstall(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 	if skillLocal {
 		op = op.Local()
@@ -131,52 +125,46 @@ func runSkillInstall(cmd *cobra.Command, args []string) {
 	}
 
 	if err := op.InstallSkill(ctx, req); err != nil {
-		fatal("Failed to install skill", err)
+		return failMsg("Failed to install skill", err)
 	}
 
-	logger.Info("Skill installed successfully",
-		"name", name,
-		"source", incl.RedactURL(skillSource),
-	)
+	return nil
 }
 
-func runSkillRemove(cmd *cobra.Command, args []string) {
+func runSkillRemove(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-	confirmRemovalUnlessYes(skillForce, "installed skill", name, "Operation canceled")
+	if err := confirmRemovalUnlessYes(skillForce, "installed skill", name, "Operation canceled"); err != nil {
+		return fail(err)
+	}
 
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 	if skillLocal {
 		op = op.Local()
 	}
 
 	if err := op.UninstallSkill(ctx, name); err != nil {
-		fatal("Failed to remove installed skill", err)
+		return failMsg("Failed to remove installed skill", err)
 	}
 
-	logger.Info("Skill removed successfully", "name", name)
+	return nil
 }
 
-func runSkillList(cmd *cobra.Command, args []string) {
+func runSkillList(cmd *cobra.Command, _ []string) error {
+	out := outFor(cmd)
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 
 	skills, err := op.ListInstalledSkills(ctx)
 	if err != nil {
-		fatal("Failed to list installed skills", err)
-	}
-
-	if len(skills) == 0 && !skillJSON {
-		logger.Info("No installed skills found")
-		logLocalEntriesHint("installed_skills")
-		return
+		return failMsg("Failed to list installed skills", err)
 	}
 
 	if skillJSON {
@@ -190,24 +178,24 @@ func runSkillList(cmd *cobra.Command, args []string) {
 				keyType:   s.Type,
 			}
 		}
-		data, err := jsondoc.Marshal(output)
-		if err != nil {
-			fatal("Failed to marshal JSON", err)
-		}
-		fmt.Print(string(data))
-	} else {
-		logger.Info("Installed skills:")
-		for _, s := range skills {
-			sourceInfo := fmt.Sprintf("[%s]", s.Type)
-			logger.Info(fmt.Sprintf("  • %s %s", s.Name, sourceInfo))
-			logger.Debug(fmt.Sprintf("    Source: %s", incl.RedactURL(s.Source)))
-			if s.Path != "" {
-				logger.Debug(fmt.Sprintf("    Path: %s", s.Path))
-			}
-			if s.Ref != "" {
-				logger.Debug(fmt.Sprintf("    Ref: %s", s.Ref))
-			}
-		}
-		logLocalEntriesHint("installed_skills")
+		return writeListJSON(out.Stdout(), output)
 	}
+	if len(skills) == 0 {
+		out.Info("No installed skills found\n")
+		logLocalEntriesHint("installed_skills")
+		return nil
+	}
+	out.Result("Installed skills:\n")
+	for _, s := range skills {
+		out.Result("  • %s [%s]\n", s.Name, s.Type)
+		out.Result("    Source: %s\n", incl.RedactURL(s.Source))
+		if s.Path != "" {
+			out.Result("    Path: %s\n", s.Path)
+		}
+		if s.Ref != "" {
+			out.Result("    Ref: %s\n", s.Ref)
+		}
+	}
+	logLocalEntriesHint("installed_skills")
+	return nil
 }

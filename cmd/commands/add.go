@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
@@ -37,7 +36,7 @@ var addRuleCmd = &cobra.Command{
 Rules contain instructions and guidelines for AI assistants.
 You can specify domain, priority level, and target providers.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runAddRule,
+	RunE: runAddRule,
 }
 
 var addContextCmd = &cobra.Command{
@@ -47,7 +46,7 @@ var addContextCmd = &cobra.Command{
 
 Context provides background information, architecture details, or project-specific information.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runAddContext,
+	RunE: runAddContext,
 }
 
 var addSkillCmd = &cobra.Command{
@@ -57,7 +56,7 @@ var addSkillCmd = &cobra.Command{
 
 Skills define specialized capabilities or personas for AI assistants.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runAddSkill,
+	RunE: runAddSkill,
 }
 
 var addAgentCmd = &cobra.Command{
@@ -67,7 +66,7 @@ var addAgentCmd = &cobra.Command{
 
 Agents define specialized sub-agents for tools that support them.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runAddAgent,
+	RunE: runAddAgent,
 }
 
 var addCommandCmd = &cobra.Command{
@@ -77,7 +76,7 @@ var addCommandCmd = &cobra.Command{
 
 Commands define reusable slash commands for tools that support them.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runAddCommand,
+	RunE: runAddCommand,
 }
 
 var addCheckCmd = &cobra.Command{
@@ -89,7 +88,7 @@ Checks are code-review guidelines (.ai-rulez/checks/<name>.md) rendered for the
 review tools that support them. Frontmatter: description, severity
 (low|medium|high|critical), tools, targets.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runAddCheck,
+	RunE: runAddCheck,
 }
 
 func init() {
@@ -128,7 +127,7 @@ func init() {
 	addSkillCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
 }
 
-func runAddRule(cmd *cobra.Command, args []string) {
+func runAddRule(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
 	// Parse targets
@@ -144,7 +143,7 @@ func runAddRule(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := newContentOperator(addLocal)
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 
 	req := &crud.AddFileRequest{
@@ -158,7 +157,7 @@ func runAddRule(cmd *cobra.Command, args []string) {
 
 	result, err := op.AddRule(ctx, req)
 	if err != nil {
-		fatal("Failed to add rule", err)
+		return failMsg("Failed to add rule", err)
 	}
 
 	output := map[string]interface{}{
@@ -174,15 +173,16 @@ func runAddRule(cmd *cobra.Command, args []string) {
 	jsonOutput, _ := json.MarshalIndent(output, "", "  ")
 	logger.Info(fmt.Sprintf("Rule added successfully: %s", result.FullPath))
 	logger.Debug(string(jsonOutput))
+	return nil
 }
 
-func runAddContext(cmd *cobra.Command, args []string) {
+func runAddContext(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
 	ctx := cmdContext()
 	op, err := newContentOperator(addLocal)
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 
 	req := &crud.AddFileRequest{
@@ -195,7 +195,7 @@ func runAddContext(cmd *cobra.Command, args []string) {
 
 	result, err := op.AddContext(ctx, req)
 	if err != nil {
-		fatal("Failed to add context", err)
+		return failMsg("Failed to add context", err)
 	}
 
 	output := map[string]interface{}{
@@ -211,15 +211,16 @@ func runAddContext(cmd *cobra.Command, args []string) {
 	jsonOutput, _ := json.MarshalIndent(output, "", "  ")
 	logger.Info(fmt.Sprintf("Context added successfully: %s", result.FullPath))
 	logger.Debug(string(jsonOutput))
+	return nil
 }
 
-func runAddSkill(cmd *cobra.Command, args []string) {
+func runAddSkill(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
 	ctx := cmdContext()
 	op, err := newContentOperator(addLocal)
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 
 	// For skills, we need to handle the skill-specific format
@@ -234,7 +235,7 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 
 	result, err := op.AddSkill(ctx, req)
 	if err != nil {
-		fatal("Failed to add skill", err)
+		return failMsg("Failed to add skill", err)
 	}
 
 	output := map[string]interface{}{
@@ -250,33 +251,34 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 	jsonOutput, _ := json.MarshalIndent(output, "", "  ")
 	logger.Info(fmt.Sprintf("Skill added successfully: %s", result.FullPath))
 	logger.Debug(string(jsonOutput))
+	return nil
 }
 
-func runAddAgent(cmd *cobra.Command, args []string) {
-	runAddItem(args[0], crud.ContentTypeAgents, "agent", (*crud.OperatorImpl).AddAgent)
+func runAddAgent(cmd *cobra.Command, args []string) error {
+	return runAddItem(args[0], crud.ContentTypeAgents, "agent", (*crud.OperatorImpl).AddAgent)
 }
 
-func runAddCommand(cmd *cobra.Command, args []string) {
-	runAddItem(args[0], crud.ContentTypeCommands, "command", (*crud.OperatorImpl).AddCommand)
+func runAddCommand(cmd *cobra.Command, args []string) error {
+	return runAddItem(args[0], crud.ContentTypeCommands, "command", (*crud.OperatorImpl).AddCommand)
 }
 
-func runAddCheck(cmd *cobra.Command, args []string) {
-	runAddItem(args[0], crud.ContentTypeChecks, "check", (*crud.OperatorImpl).AddCheck)
+func runAddCheck(cmd *cobra.Command, args []string) error {
+	return runAddItem(args[0], crud.ContentTypeChecks, "check", (*crud.OperatorImpl).AddCheck)
 }
 
 func runAddItem(name, ftype, label string,
 	add func(*crud.OperatorImpl, context.Context, *crud.AddFileRequest) (*crud.FileResult, error),
-) {
+) error {
 	op, err := newContentOperator(addLocal)
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 	result, err := add(op, cmdContext(), &crud.AddFileRequest{
 		Domain: addDomain, Type: ftype, Name: name, Description: addDesc, Content: addContent,
 	})
 	if err != nil {
-		logger.Error("Failed to add "+label, "error", err)
-		os.Exit(1)
+		return failMsg("Failed to add "+label, err)
 	}
 	logger.Info(fmt.Sprintf("%s added successfully: %s", strings.ToUpper(label[:1])+label[1:], result.FullPath))
+	return nil
 }

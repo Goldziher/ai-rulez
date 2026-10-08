@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
@@ -31,7 +32,7 @@ Categories:
 
 ai-governance is auto-included unless explicitly excluded with "!ai-governance".`,
 	Args: cobra.NoArgs,
-	Run:  runBuiltinsList,
+	RunE: runBuiltinsList,
 }
 
 var builtinsShowCmd = &cobra.Command{
@@ -49,17 +50,18 @@ func init() {
 	addJSONFormat(builtinsShowCmd.Flags(), &builtinsShowJSON, "j")
 }
 
-func runBuiltinsList(cmd *cobra.Command, args []string) {
+func runBuiltinsList(cmd *cobra.Command, _ []string) error {
 	domains := builtins.List()
+	w := outFor(cmd).Stdout()
 
 	if builtinsJSON {
-		outputBuiltinsJSON(domains)
-	} else {
-		outputBuiltinsTable(domains)
+		return outputBuiltinsJSON(w, domains)
 	}
+	outputBuiltinsTable(w, domains)
+	return nil
 }
 
-func outputBuiltinsJSON(domains []builtins.BuiltinDomain) {
+func outputBuiltinsJSON(w io.Writer, domains []builtins.BuiltinDomain) error {
 	output := make([]map[string]interface{}, len(domains))
 	for i, d := range domains {
 		output[i] = map[string]interface{}{
@@ -71,51 +73,51 @@ func outputBuiltinsJSON(domains []builtins.BuiltinDomain) {
 	}
 	data, err := jsondoc.Marshal(output)
 	if err != nil {
-		fatal("Failed to marshal JSON", err)
+		return failMsg("Failed to marshal JSON", err)
 	}
-	fmt.Print(string(data))
+	_, err = w.Write(data)
+	return err //nolint:wrapcheck // a write failure
 }
 
-func outputBuiltinsTable(domains []builtins.BuiltinDomain) {
+func outputBuiltinsTable(w io.Writer, domains []builtins.BuiltinDomain) {
 	var currentCategory builtins.Category
 
 	for _, d := range domains {
 		if d.Category != currentCategory {
 			currentCategory = d.Category
-			fmt.Printf("\n%s:\n", categoryLabel(currentCategory))
+			writef(w, "\n%s:\n", categoryLabel(currentCategory))
 		}
 
 		autoTag := ""
 		if d.AutoInclude {
 			autoTag = " (auto-included)"
 		}
-		fmt.Printf("  %-16s %s%s\n", d.Name, d.Description, autoTag)
+		writef(w, "  %-16s %s%s\n", d.Name, d.Description, autoTag)
 	}
-	fmt.Println()
+	writeln(w)
 }
 
 func runBuiltinsShow(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
 	if !builtins.IsValid(name) {
-		return fmt.Errorf("unknown builtin domain: %s", name)
+		return fail(fmt.Errorf("unknown builtin domain: %s", name)) //nolint:err113 // user-facing
 	}
 
 	entries, err := builtins.LoadDomainContent(name)
 	if err != nil {
-		return fmt.Errorf("failed to load builtin domain content: %w", err)
+		return failMsg("failed to load builtin domain content", err)
 	}
 
 	if builtinsShowJSON {
-		outputShowJSON(name, entries)
-		return nil
+		return outputShowJSON(outFor(cmd).Stdout(), name, entries)
 	}
 
-	outputShowFormatted(name, entries)
+	outputShowFormatted(outFor(cmd).Stdout(), name, entries)
 	return nil
 }
 
-func outputShowJSON(name string, entries []builtins.ContentEntry) {
+func outputShowJSON(w io.Writer, name string, entries []builtins.ContentEntry) error {
 	grouped := map[string][]map[string]string{}
 	for _, e := range entries {
 		entry := map[string]string{
@@ -137,16 +139,17 @@ func outputShowJSON(name string, entries []builtins.ContentEntry) {
 
 	data, err := jsondoc.Marshal(output)
 	if err != nil {
-		fatal("Failed to marshal JSON", err)
+		return failMsg("Failed to marshal JSON", err)
 	}
-	fmt.Print(string(data))
+	_, err = w.Write(data)
+	return err //nolint:wrapcheck // a write failure
 }
 
-func outputShowFormatted(name string, entries []builtins.ContentEntry) {
+func outputShowFormatted(w io.Writer, name string, entries []builtins.ContentEntry) {
 	domain, _ := builtins.Get(name)
 
-	fmt.Printf("Domain: %s\n", name)
-	fmt.Printf("Category: %s\n", domain.Category)
+	writef(w, "Domain: %s\n", name)
+	writef(w, "Category: %s\n", domain.Category)
 
 	// Group entries by type
 	grouped := map[string][]builtins.ContentEntry{}
@@ -160,21 +163,21 @@ func outputShowFormatted(name string, entries []builtins.ContentEntry) {
 		if !ok {
 			continue
 		}
-		fmt.Printf("\n%s:\n", titleCase(ct))
+		writef(w, "\n%s:\n", titleCase(ct))
 		for _, item := range items {
 			if item.Priority != "" {
-				fmt.Printf("  %s (priority: %s)\n", item.Name, item.Priority)
+				writef(w, "  %s (priority: %s)\n", item.Name, item.Priority)
 			} else {
-				fmt.Printf("  %s\n", item.Name)
+				writef(w, "  %s\n", item.Name)
 			}
 			// Print first non-empty, non-frontmatter line as summary
 			summary := extractSummary(item.Content)
 			if summary != "" {
-				fmt.Printf("    %s\n", summary)
+				writef(w, "    %s\n", summary)
 			}
 		}
 	}
-	fmt.Println()
+	writeln(w)
 }
 
 func extractSummary(content string) string {
