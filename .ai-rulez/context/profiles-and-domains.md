@@ -1,12 +1,18 @@
 ---
-priority: high
-summary: Domain organization, profile configuration, and team-based output tailoring.
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
-  - AGENTS.md
-  - .hermes.md
+type: Concept
+title: Profiles And Domains
+x-ai-rulez:
+  kind: context
+  id: profiles-and-domains
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
+      - AGENTS.md
+      - .hermes.md
+    summary: Domain organization, profile configuration, and team-based output tailoring.
 ---
 
 # Profiles and Domains

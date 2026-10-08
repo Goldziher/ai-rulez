@@ -1,12 +1,18 @@
 ---
-priority: medium
-summary: External includes from git or local paths with configurable merge strategies.
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
-  - AGENTS.md
-  - .hermes.md
+type: Concept
+title: Includes And Merging
+x-ai-rulez:
+  kind: context
+  id: includes-and-merging
+  metadata:
+    priority: medium
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
+      - AGENTS.md
+      - .hermes.md
+    summary: External includes from git or local paths with configurable merge strategies.
 ---
 
 # Includes and Merging

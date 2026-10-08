@@ -1,7 +1,13 @@
 ---
-name: governance-architect
+type: Reference
+title: Governance Architect
 description: Designs configuration, documentation, and MCP integrations for new capabilities.
-model: opus
+x-ai-rulez:
+  kind: agent
+  id: governance-architect
+  metadata:
+    model: opus
+    name: governance-architect
 ---
 
 # governance-architect

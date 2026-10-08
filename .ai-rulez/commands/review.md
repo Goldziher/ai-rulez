@@ -1,8 +1,15 @@
 ---
-priority: high
-aliases: [rev]
-usage: "/review"
-description: "Review current changes for correctness, style, and potential issues"
+type: Reference
+title: Review
+description: Review current changes for correctness, style, and potential issues
+x-ai-rulez:
+  kind: command
+  id: review
+  metadata:
+    priority: high
+    aliases:
+      - rev
+    usage: /review
 ---
 
 # Review

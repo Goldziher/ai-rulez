@@ -1,12 +1,23 @@
 ---
-name: test
-aliases: [t, try]
+type: Reference
+title: Test Command
 description: A test command for v3.5.0
-usage: /test [argument]
-shortcut: cmd+shift+t
-priority: high
-category: testing
-targets: [claude, cursor, devin]
+x-ai-rulez:
+  kind: command
+  id: test-command
+  metadata:
+    priority: high
+    targets:
+      - claude
+      - cursor
+      - devin
+    aliases:
+      - t
+      - try
+    usage: /test [argument]
+    shortcut: cmd+shift+t
+    category: testing
+    name: test
 ---
 
 # Test Command
