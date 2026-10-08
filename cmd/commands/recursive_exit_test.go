@@ -129,7 +129,7 @@ func TestValidateCmd_HonoursQuietFlag(t *testing.T) {
 	twoRoots(t, validRootConfig)
 	progress.SetQuiet(false)
 	viper.Set("quiet", true)
-	t.Cleanup(func() { viper.Set("quiet", false) })
+	t.Cleanup(func() { viper.Set("quiet", nil) })
 	validateRecursive = true
 	// Earlier tests leave validate's package state behind; this one needs the defaults.
 	validateFormat, validateOutput, validateFailOn, validateConfigOnly = "", "", "", false
