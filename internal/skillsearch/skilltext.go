@@ -66,3 +66,7 @@ func listValue(v any) []string {
 	}
 	return out
 }
+
+// FrontList reads a frontmatter value that is a list or one comma-separated
+// string (triggers, keywords) into trimmed, non-empty strings.
+func FrontList(v any) []string { return listValue(v) }

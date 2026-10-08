@@ -66,6 +66,8 @@ type Config struct {
 	Signing *SigningConfig `yaml:"signing,omitempty" json:"signing,omitempty" toml:"signing,omitempty"`
 	// Publish is the [publish] table: what `ai-rulez publish` ships and its policy gates (types_publish.go).
 	Publish *PublishConfig `yaml:"publish,omitempty" json:"publish,omitempty" toml:"publish,omitempty"`
+	// ARD is the [ard] table: the publisher and namespace of the Agentic Resource Discovery manifest (types_ard.go).
+	ARD *ARDConfig `yaml:"ard,omitempty" json:"ard,omitempty" toml:"ard,omitempty"`
 
 	// Dynamic skill loading (types_dynamic.go, delivery.go).
 	Skills         *SkillsConfig           `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
