@@ -133,11 +133,19 @@ func newWordGatedRe(pattern string, fold bool, stems ...string) gatedRe {
 
 // mayMatch reports whether s holds one of the stems.
 func (g gatedRe) mayMatch(s string) bool {
+	if len(g.stems) == 0 {
+		return true
+	}
 	if g.wordStart {
-		return containsWordStartStem(s, g.fold, g.stems)
+		return containsWordStartStem(s, g.fold, g.stems) || (g.fold && foldsToASCII(s))
 	}
 	return containsAnyStem(s, g.fold, g.stems)
 }
+
+// foldsToASCII reports whether s holds a character the pattern's case folding
+// equates with an ASCII letter although lower-casing it does not: U+017F (long s)
+// folds to s. The Kelvin sign U+212A lower-cases to k, so it needs no case here.
+func foldsToASCII(s string) bool { return strings.Contains(s, "\u017f") }
 
 func containsWordStartStem(s string, fold bool, stems []string) bool {
 	if fold {
@@ -165,7 +173,7 @@ func isWordByte(c byte) bool {
 
 func containsAnyStem(s string, fold bool, stems []string) bool {
 	if fold {
-		s = strings.ToLower(s)
+		return containsAnyFold(s, stems)
 	}
 	for _, st := range stems {
 		if strings.Contains(s, st) {
@@ -175,7 +183,61 @@ func containsAnyStem(s string, fold bool, stems []string) bool {
 	return false
 }
 
+// containsAnyFold is containsAnyStem without case. It compares ASCII stems in
+// place, so it allocates nothing for the common line; a stem with other
+// characters is compared against the lower-cased text. Like the patterns it
+// guards, it treats U+017F (long s) as an s.
+func containsAnyFold(s string, stems []string) bool {
+	var lowered string
+	for _, st := range stems {
+		if isASCII(st) {
+			if indexFoldASCII(s, st) >= 0 {
+				return true
+			}
+			continue
+		}
+		if lowered == "" {
+			lowered = strings.ToLower(s)
+		}
+		if strings.Contains(lowered, st) {
+			return true
+		}
+	}
+	return foldsToASCII(s) || strings.Contains(s, "\u212a")
+}
+
+// indexFoldASCII is the index of the first occurrence of stem (lower-case
+// ASCII) in s, ignoring ASCII case; -1 when there is none.
+func indexFoldASCII(s, stem string) int {
+	lower := func(c byte) byte {
+		if c >= 'A' && c <= 'Z' {
+			return c + 'a' - 'A'
+		}
+		return c
+	}
+	for i := 0; i+len(stem) <= len(s); i++ {
+		if lower(s[i]) != stem[0] {
+			continue
+		}
+		j := 1
+		for j < len(stem) && lower(s[i+j]) == stem[j] {
+			j++
+		}
+		if j == len(stem) {
+			return i
+		}
+	}
+	return -1
+}
+
 func (g gatedRe) MatchString(s string) bool { return g.mayMatch(s) && g.re.MatchString(s) }
+
+func (g gatedRe) FindAllStringIndex(s string, n int) [][]int {
+	if !g.mayMatch(s) {
+		return nil
+	}
+	return g.re.FindAllStringIndex(s, n)
+}
 
 func (g gatedRe) FindString(s string) string {
 	if !g.mayMatch(s) {
