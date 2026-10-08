@@ -11,8 +11,7 @@ import (
 // #290): internal/signing holds the verification policy and a Backend seam, and
 // only the command wires internal/signing/sigstore in.
 const (
-	modulePath       = "github.com/Goldziher/ai-rulez/v5"
-	heavySigningPath = modulePath + "/internal/signing/sigstore"
+	heavySigningPath = "github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 // heavyModulePrefixes are the module graphs the heavy signing package brings.
