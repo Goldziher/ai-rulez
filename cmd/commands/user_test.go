@@ -38,8 +38,9 @@ func TestUserConfigPath(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	assert.Equal(t, filepath.Join("/home/u", ".config", "ai-rulez"), userConfigPath("/home/u"))
 
-	t.Setenv("XDG_CONFIG_HOME", "/xdg")
-	assert.Equal(t, filepath.Join("/xdg", "ai-rulez"), userConfigPath("/home/u"))
+	xdg := t.TempDir() // an absolute path on every OS ("/xdg" is not absolute on Windows)
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	assert.Equal(t, filepath.Join(xdg, "ai-rulez"), userConfigPath("/home/u"))
 
 	t.Setenv("XDG_CONFIG_HOME", "relative/ignored")
 	assert.Equal(t, filepath.Join("/home/u", ".config", "ai-rulez"), userConfigPath("/home/u"))

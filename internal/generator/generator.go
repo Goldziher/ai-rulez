@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"sort"
 	"strconv"
@@ -906,7 +907,7 @@ func (g *Generator) planLines(outputs []config.OutputFile) []string {
 			continue
 		}
 		if output.IsDir {
-			lines = append(lines, "create-dir: "+relPath)
+			lines = append(lines, "create-dir: "+filepath.ToSlash(relPath))
 			continue
 		}
 		if g.linkedOutputs[filepath.ToSlash(relPath)] {
@@ -917,11 +918,11 @@ func (g *Generator) planLines(outputs []config.OutputFile) []string {
 		switch {
 		case !compared:
 		case rewrite:
-			lines = append(lines, "write-file: "+relPath)
+			lines = append(lines, "write-file: "+filepath.ToSlash(relPath))
 		case kind == DriftEdited:
-			lines = append(lines, "edited: "+relPath)
+			lines = append(lines, "edited: "+filepath.ToSlash(relPath))
 		default:
-			lines = append(lines, "unchanged: "+relPath)
+			lines = append(lines, "unchanged: "+filepath.ToSlash(relPath))
 		}
 	}
 	return lines
@@ -2062,6 +2063,9 @@ func rawWriteCanSkipWith(read jsonmerge.Reader, stat func(string) (os.FileInfo, 
 	info, err := stat(absPath)
 	if err != nil {
 		return false
+	}
+	if runtime.GOOS == "windows" {
+		return true // Windows reports 0o666 for every file: the mode cannot drift
 	}
 	return info.Mode().Perm() == mode
 }
