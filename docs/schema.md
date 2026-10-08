@@ -200,6 +200,6 @@ ai-rulez validate
 # Validate a specific config.toml
 ai-rulez validate .ai-rulez/config.toml
 
-# Verbose output
-ai-rulez validate --verbose
+# Debug output
+ai-rulez validate --debug
 ```
