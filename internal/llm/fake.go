@@ -6,6 +6,8 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"sync"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // Fake is a deterministic in-memory Client for tests. It never touches the
@@ -42,7 +44,7 @@ func (f *Fake) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) 
 			return ChatResponse{}, err
 		}
 	}
-	u := Usage{PromptTokens: EstimatePromptTokens(req), CompletionTokens: EstimateTokens(text)}
+	u := Usage{PromptTokens: EstimatePromptTokens(req), CompletionTokens: tokens.Estimate(text)}
 	model := req.Model
 	if model == "" {
 		model = "fake/model"
@@ -74,7 +76,7 @@ func (f *Fake) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, erro
 			vec[i] = float32(word%2000)/1000 - 1
 		}
 		out.Vectors = append(out.Vectors, vec)
-		out.Usage.PromptTokens += EstimateTokens(in)
+		out.Usage.PromptTokens += tokens.Estimate(in)
 	}
 	return out, nil
 }
