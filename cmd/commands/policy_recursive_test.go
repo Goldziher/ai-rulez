@@ -49,8 +49,8 @@ func TestRecursiveGenerateAndValidateRefusePolicyViolations(t *testing.T) {
 			code := tt.run()
 
 			// Assert
-			if code != 1 {
-				t.Errorf("exit code = %d, want 1: the root that loosens the policy must fail", code)
+			if code != 2 {
+				t.Errorf("exit code = %d, want 2: the root that loosens the policy must fail like a single root", code)
 			}
 			if _, err := os.Stat(filepath.Join(root, "b", "CLAUDE.md")); err == nil {
 				t.Error("the root that loosens the policy generated output")
