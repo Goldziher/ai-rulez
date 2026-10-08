@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
@@ -465,13 +466,13 @@ func (Tessl) mapRubric(m *Mapped, criteria []criterion, doc map[string]any, used
 	return nil
 }
 
-var percentText = regexp.MustCompile(`^\s*(\d+(?:\.\d+)?)\s*%\s*$`)
+var percentText = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\s*(\d+(?:\.\d+)?)\s*%\s*$`) })
 
 // parseThreshold reads a pass mark as a fraction (0-1) or a percent (above 1, up
 // to 100, or written with a percent sign) and returns it as a fraction.
 func parseThreshold(raw any) (value float64, unit string, err error) {
 	if s, ok := raw.(string); ok {
-		if m := percentText.FindStringSubmatch(s); m != nil {
+		if m := percentText().FindStringSubmatch(s); m != nil {
 			v, _ := strconv.ParseFloat(m[1], 64) //nolint:errcheck // the pattern guarantees a number
 			return percentToFraction(v)
 		}
@@ -661,13 +662,13 @@ func unmappedFields(doc map[string]any, used consumed) []Unmapped {
 }
 
 // simpleKey is a JSON key that can stand in a path as written.
-var simpleKey = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+var simpleKey = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`) })
 
 // child extends a JSON path with an object key. A key that is not plain is written
 // as a quoted index, so a hostile key (control characters, escape sequences) can
 // neither forge another path nor reach a terminal raw.
 func child(path, key string) string {
-	if simpleKey.MatchString(key) {
+	if simpleKey().MatchString(key) {
 		return path + "." + key
 	}
 	return path + "[" + strconv.Quote(summarize(key)) + "]"

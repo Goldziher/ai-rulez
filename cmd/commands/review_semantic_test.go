@@ -22,9 +22,11 @@ import (
 )
 
 var (
-	reqItemRe = regexp.MustCompile(`<<<DATA-[0-9a-f]+ item=(?:skill|agent|command):([^>]+)>>>`)
-	reqDimRe  = regexp.MustCompile(`(?m)^dimension ([a-z0-9-]+):`)
-	reqDescRe = regexp.MustCompile(`(?m)^description: (.*)$`)
+	reqItemRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`<<<DATA-[0-9a-f]+ item=(?:skill|agent|command):([^>]+)>>>`)
+	})
+	reqDimRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?m)^dimension ([a-z0-9-]+):`) })
+	reqDescRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?m)^description: (.*)$`) })
 )
 
 // fakeModel is a model that judges by a table and records every request.
@@ -47,16 +49,16 @@ func (f *fakeModel) chat(req llm.ChatRequest) (string, error) {
 	if req.ResponseFormat != nil && req.ResponseFormat.Name == "review_fix" && f.fixer != nil {
 		return f.fixer(req), nil
 	}
-	m := reqItemRe.FindStringSubmatch(user)
+	m := reqItemRe().FindStringSubmatch(user)
 	if m == nil {
 		return "{}", nil
 	}
 	desc := ""
-	if d := reqDescRe.FindStringSubmatch(user); d != nil {
+	if d := reqDescRe().FindStringSubmatch(user); d != nil {
 		desc = strings.TrimSpace(d[1])
 	}
 	var dims []map[string]any
-	for _, d := range reqDimRe.FindAllStringSubmatch(user, -1) {
+	for _, d := range reqDimRe().FindAllStringSubmatch(user, -1) {
 		v := f.verdicts[m[1]+"/"+d[1]]
 		if f.decide != nil {
 			v = f.decide(m[1], desc, d[1])

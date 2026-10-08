@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 
@@ -337,18 +338,18 @@ func sarifSuppressed(res sarifResult) bool {
 }
 
 var (
-	ansiCSI = regexp.MustCompile(`\x1b\[[0-9;?]*[\x20-\x2f]*[\x40-\x7e]`)
-	ansiOSC = regexp.MustCompile(`\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)`)
-	winDriv = regexp.MustCompile(`^/[A-Za-z]:/`)
+	ansiCSI = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\x1b\[[0-9;?]*[\x20-\x2f]*[\x40-\x7e]`) })
+	ansiOSC = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)`) })
+	winDriv = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^/[A-Za-z]:/`) })
 	// driveAuthority is a Windows drive letter in the authority slot of a file URI.
-	driveAuthority = regexp.MustCompile(`^[A-Za-z]:$`)
+	driveAuthority = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[A-Za-z]:$`) })
 )
 
 // sanitizeScannerText makes attacker-influenced scanner text safe to print: no
 // escape sequences, control, bidirectional, zero-width or tag characters, one
 // line, at most maxScannerMessage runes, and secret-shaped substrings masked.
 func sanitizeScannerText(s string) string {
-	s = ansiOSC.ReplaceAllString(ansiCSI.ReplaceAllString(s, ""), "")
+	s = ansiOSC().ReplaceAllString(ansiCSI().ReplaceAllString(s, ""), "")
 	var sb strings.Builder
 	for _, r := range s {
 		switch {
@@ -449,14 +450,14 @@ func fileURLPath(rest string) (string, bool) {
 	}
 	switch {
 	case authority == "" || strings.EqualFold(authority, hostLocalhost):
-	case driveAuthority.MatchString(authority):
+	case driveAuthority().MatchString(authority):
 		// the malformed spelling file://C:/x of the file URL for C:/x
 		path = "/" + authority + path
 	default:
 		// A UNC or remote host: not a file in this project.
 		return "", false
 	}
-	if winDriv.MatchString(path) {
+	if winDriv().MatchString(path) {
 		path = path[1:]
 	}
 	return path, true

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // Codes for the command-shaped rules.
@@ -26,14 +27,14 @@ func registerArCmdrisk(s *ruleSet) {
 	s.addTextScan(scanStealth, AnalyzerSecurity)
 }
 
-var unpinnedStartRe = regexp.MustCompile(unpinnedStartWordsPat)
+var unpinnedStartRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(unpinnedStartWordsPat) })
 
 func scanUnpinnedExec(r *runner, t *scanText) {
 	for _, l := range t.lines {
 		if l.Neg {
 			continue
 		}
-		for _, seg := range t.commandSegments(l, unpinnedStartRe) {
+		for _, seg := range t.commandSegments(l, unpinnedStartRe()) {
 			pkg, why := pinProblem(shellWords(seg), true, false)
 			if pkg != "" && !t.shellLike(l) && r.ownPackageMention(pkg, why) {
 				continue // prose naming the project's own published tool
@@ -58,10 +59,16 @@ var (
 		"/": true, "/*": true, "~": true, "~/": true, "~/*": true, "$HOME": true, "${HOME}": true, "$HOME/": true, "${HOME}/": true,
 		"$HOME/*": true, "${HOME}/*": true, "*": true, ".": true, "./": true, "./*": true, ".*": true, "/.": true,
 	}
-	ddDiskRe    = regexp.MustCompile(`\bdd\b[^|\n]*\bof=/dev/(?:sd[a-z]|nvme|hd[a-z]|disk|mmcblk|vd[a-z]|xvd[a-z]|rdisk)`)
-	mkfsRe      = regexp.MustCompile(`(?:^|[\s;&|(])mkfs(?:\.\w+)?\s(?:[^\n]*\s)?/dev/\S+`)
-	forkBombRe  = regexp.MustCompile(`:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:`)
-	dropDBRe    = regexp.MustCompile(`\bDROP\s+(?:DATABASE|SCHEMA)\s+(?:IF\s+EXISTS\s+)?[A-Za-z_"\x60\[]`)
+	ddDiskRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`\bdd\b[^|\n]*\bof=/dev/(?:sd[a-z]|nvme|hd[a-z]|disk|mmcblk|vd[a-z]|xvd[a-z]|rdisk)`)
+	})
+	mkfsRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?:^|[\s;&|(])mkfs(?:\.\w+)?\s(?:[^\n]*\s)?/dev/\S+`)
+	})
+	forkBombRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:`) })
+	dropDBRe   = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`\bDROP\s+(?:DATABASE|SCHEMA)\s+(?:IF\s+EXISTS\s+)?[A-Za-z_"\x60\[]`)
+	})
 	protectedBr = map[string]bool{"main": true, "master": true, "HEAD:main": true, "HEAD:master": true, "origin/main": true, "origin/master": true}
 )
 
@@ -126,20 +133,20 @@ func scanDestructive(r *runner, t *scanText) {
 			continue
 		}
 		msg := ""
-		for _, seg := range segSplitRe.Split(stripShellComment(l.Text), -1) {
+		for _, seg := range segSplitRe().Split(stripShellComment(l.Text), -1) {
 			if msg = destructiveCommand(seg); msg != "" {
 				break
 			}
 		}
 		switch {
 		case msg != "":
-		case ddDiskRe.MatchString(l.Text):
+		case ddDiskRe().MatchString(l.Text):
 			msg = "dd to a block device"
-		case mkfsRe.MatchString(l.Text):
+		case mkfsRe().MatchString(l.Text):
 			msg = "mkfs on a device"
-		case forkBombRe.MatchString(l.Text):
+		case forkBombRe().MatchString(l.Text):
 			msg = "a fork bomb"
-		case dropDBRe.MatchString(l.Text):
+		case dropDBRe().MatchString(l.Text):
 			msg = "DROP DATABASE"
 		}
 		if msg != "" {

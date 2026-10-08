@@ -3,6 +3,7 @@ package lint
 import (
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // Codes for the prompt-injection and persistence rules.
@@ -37,14 +38,22 @@ func registerArPrompt(s *ruleSet) {
 }
 
 var (
-	directiveRe = regexp.MustCompile(`^\s*(?:[-*>+]\s*)*[*_]{0,2}(?:SYSTEM|OVERRIDE|ADMIN|ROOT|IGNORE)[*_]{0,2}\s*:(.*)$`)
+	directiveRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^\s*(?:[-*>+]\s*)*[*_]{0,2}(?:SYSTEM|OVERRIDE|ADMIN|ROOT|IGNORE)[*_]{0,2}\s*:(.*)$`)
+	})
 	// ambiguousLabelRe are the labels that are also ordinary documentation words
 	// (ROOT: the repository root); they count only with a command-like remainder.
-	ambiguousLabelRe = regexp.MustCompile(`^\s*(?:[-*>+]\s*)*[*_]{0,2}(?:ROOT|IGNORE)[*_]{0,2}\s*:`)
+	ambiguousLabelRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^\s*(?:[-*>+]\s*)*[*_]{0,2}(?:ROOT|IGNORE)[*_]{0,2}\s*:`)
+	})
 	// commandCueRe marks a remainder that addresses the model or gives an order.
-	commandCueRe = regexp.MustCompile(`(?i)\b(?:you|your|must|should|always|never|do|don'?t|ignore|disregard|forget|follow|obey|execute|run|reveal|print|output|respond|answer|act|pretend|instructions?|prompts?|previous|above|anything|everything|all)\b`)
+	commandCueRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:you|your|must|should|always|never|do|don'?t|ignore|disregard|forget|follow|obey|execute|run|reveal|print|output|respond|answer|act|pretend|instructions?|prompts?|previous|above|anything|everything|all)\b`)
+	})
 	// scalarValueRe is the right-hand side of a config-like `KEY: value` line.
-	scalarValueRe = regexp.MustCompile(`^\s*(?:true|false|null|~|\d+(?:\.\d+)?|\.{0,2}/[\w./-]*|~/[\w./-]*|\{.*\}|\[.*\])\s*$`)
+	scalarValueRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^\s*(?:true|false|null|~|\d+(?:\.\d+)?|\.{0,2}/[\w./-]*|~/[\w./-]*|\{.*\}|\[.*\])\s*$`)
+	})
 )
 
 func scanDirectiveLabels(r *runner, t *scanText) {
@@ -52,8 +61,8 @@ func scanDirectiveLabels(r *runner, t *scanText) {
 		if !t.prose(l) {
 			continue
 		}
-		if m := directiveRe.FindStringSubmatch(l.Text); len(m) > 1 && !scalarValueRe.MatchString(m[1]) &&
-			(!ambiguousLabelRe.MatchString(l.Text) || commandCueRe.MatchString(m[1])) {
+		if m := directiveRe().FindStringSubmatch(l.Text); len(m) > 1 && !scalarValueRe().MatchString(m[1]) &&
+			(!ambiguousLabelRe().MatchString(l.Text) || commandCueRe().MatchString(m[1])) {
 			r.add(CodeDirectiveLabel, t.abs, l.No, "the line starts with an uppercase privileged-looking label; a model may read it as a system or administrator message")
 		}
 	}
@@ -71,13 +80,13 @@ func fakeTagPattern(extra []string) string {
 	return `(?i)</?\s*(?:` + strings.Join(names, "|") + `)(?:\s[^>]*)?/?>|<\|(?:im_start|im_end|system|endoftext)\|>|<<\s*/?SYS\s*>>|\[/?INST\]`
 }
 
-var fakeTagRe = regexp.MustCompile(fakeTagPattern(nil))
+var fakeTagRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(fakeTagPattern(nil)) })
 
 // fakeTags is the AR018 matcher for this run's configuration.
 func (r *runner) fakeTags() *regexp.Regexp {
 	extra := r.security().DirectiveTags
 	if len(extra) == 0 {
-		return fakeTagRe
+		return fakeTagRe()
 	}
 	r.fakeTagOnce.Do(func() { r.fakeTagRe = regexp.MustCompile(fakeTagPattern(extra)) })
 	return r.fakeTagRe
@@ -121,7 +130,9 @@ func scanSelfPropagation(r *runner, t *scanText) {
 	}
 }
 
-var refCommentRe = regexp.MustCompile(`^\s{0,3}\[(?://|comment|_)\]:\s*(?:#|<>)\s*(?:\((.*)\)|"(.*)"|'(.*)')\s*$`)
+var refCommentRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`^\s{0,3}\[(?://|comment|_)\]:\s*(?:#|<>)\s*(?:\((.*)\)|"(.*)"|'(.*)')\s*$`)
+})
 
 // scanRefComments applies the AR003 checks to markdown reference-link comments
 // ([//]: # (text)), which render as nothing just like HTML comments.
@@ -130,7 +141,7 @@ func scanRefComments(r *runner, t *scanText) {
 		if !t.prose(l) {
 			continue
 		}
-		m := refCommentRe.FindStringSubmatch(l.Text)
+		m := refCommentRe().FindStringSubmatch(l.Text)
 		if m == nil {
 			continue
 		}
@@ -138,7 +149,7 @@ func scanRefComments(r *runner, t *scanText) {
 		if strings.Contains(body, "ai-rulez-lint-ignore") {
 			continue
 		}
-		suspicious := imperativeRe.MatchString(body)
+		suspicious := imperativeRe().MatchString(body)
 		for _, re := range r.injectionRes() {
 			suspicious = suspicious || re.MatchString(body)
 		}
