@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 // envSpawnProbe makes the test binary act as the re-executed flush child: it
@@ -28,7 +28,7 @@ type spawnProbe struct {
 
 func TestMain(m *testing.M) {
 	if out := os.Getenv(envSpawnProbe); out != "" {
-		sid, _ := syscall.Getsid(0) //nolint:errcheck // reported as 0
+		sid, _ := unix.Getsid(0) //nolint:errcheck // reported as 0
 		in, inErr := os.Stdin.Stat()
 		null, nullErr := os.Stat(os.DevNull)
 		probe := spawnProbe{Args: os.Args[1:], SessionID: sid, PID: os.Getpid(), StdinNull: inErr == nil && nullErr == nil && os.SameFile(in, null)}
@@ -68,7 +68,7 @@ func TestSpawnFlush_ReexecsADetachedFlush(t *testing.T) {
 			want := append([]string{"telemetry", "flush", "--background", "--root", "/project/root"}, tt.wantSuffix...)
 			assert.Equal(t, want, got.Args)
 			assert.Equal(t, got.PID, got.SessionID, "the child leads its own session, so it outlives the hook")
-			assert.NotEqual(t, syscall.Getpid(), got.PID)
+			assert.NotEqual(t, os.Getpid(), got.PID)
 			assert.True(t, got.StdinNull, "the child reads /dev/null, inheriting no terminal or pipe")
 		})
 	}

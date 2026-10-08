@@ -141,7 +141,7 @@ func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocycl
 		}
 		str(hookTypeCommand, &s.command)
 		str("url", &s.url)
-		str("type", &s.transport)
+		str(keyType, &s.transport)
 		if s.transport == "" {
 			str("transport", &s.transport)
 		}

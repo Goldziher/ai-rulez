@@ -29,11 +29,11 @@ cd "$T/p"
 "$BIN" generate --offline >/dev/null 2>&1
 "$BIN" generate --plugin --offline >/dev/null 2>&1
 grep -q displayName .claude-plugin/plugin.json || {
-	echo "OK: no displayName emitted"
-	exit 0
+  echo "OK: no displayName emitted"
+  exit 0
 }
 if "$BIN" validate 2>&1 | grep -q 'AR963.*displayName'; then
-	echo "REPRODUCED: generated displayName is flagged AR963 by validate"
-	exit 1
+  echo "REPRODUCED: generated displayName is flagged AR963 by validate"
+  exit 1
 fi
 echo "OK: displayName not flagged"

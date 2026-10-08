@@ -285,7 +285,7 @@ func verifierRunOptions() (opts verifiers.Options, format, failOn string, err er
 		}
 	}
 	switch failOn {
-	case "error", "warning", "info", "none":
+	case failOnError, failOnWarning, failOnInfo, valueNone:
 	default:
 		return opts, "", "", oops.Hint("Use error, warning, info or none.").Errorf("unknown --fail-on %q", failOn)
 	}

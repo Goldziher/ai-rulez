@@ -31,6 +31,8 @@ exclude = [
   "internal/migrate/testdata/**",
   "internal/ard/schema/**",
   "internal/ard/testdata/**",
+  "cmd/commands/testdata/ard/**",
+  "tests/conformance/schemas/**",
   "internal/sbom/testdata/**",
   "internal/sbom/spdx_licenses.txt",
   "docs/snippets",

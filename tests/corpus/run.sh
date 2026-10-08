@@ -11,7 +11,7 @@ set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
-	cat <<'EOF'
+  cat <<'EOF'
 usage: run.sh [options] BINARY [REPOS_FILE]
 
   BINARY       path to the ai-rulez binary under test
@@ -42,21 +42,21 @@ SKIPLIST=""
 KEEP=0
 LIST=0
 while getopts "o:p:x:lkh" opt; do
-	case "$opt" in
-	o) OUT="$OPTARG" ;;
-	p) ONLY="$OPTARG" ;;
-	x) SKIPLIST="$OPTARG" ;;
-	l) LIST=1 ;;
-	k) KEEP=1 ;;
-	h)
-		usage
-		exit 0
-		;;
-	*)
-		usage >&2
-		exit 64
-		;;
-	esac
+  case "$opt" in
+  o) OUT="$OPTARG" ;;
+  p) ONLY="$OPTARG" ;;
+  x) SKIPLIST="$OPTARG" ;;
+  l) LIST=1 ;;
+  k) KEEP=1 ;;
+  h)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 64
+    ;;
+  esac
 done
 shift $((OPTIND - 1))
 
@@ -65,18 +65,18 @@ shift $((OPTIND - 1))
 # shellcheck source=lib/repo.sh
 . "$HERE/lib/repo.sh"
 for f in "$HERE"/lib/phases_*.sh; do
-	# shellcheck disable=SC1090
-	. "$f"
+  # shellcheck disable=SC1090
+  . "$f"
 done
 
 if [ "$LIST" -eq 1 ]; then
-	list_phases
-	exit 0
+  list_phases
+  exit 0
 fi
 
 [ $# -ge 1 ] || {
-	usage >&2
-	exit 64
+  usage >&2
+  exit 64
 }
 BIN="$1"
 REPOS_FILE="${2:-}"
@@ -91,16 +91,16 @@ have_cmd git || die "git is required"
 # Collect the repository list.
 REPO_PATHS=()
 if [ -n "$REPOS_FILE" ]; then
-	[ -f "$REPOS_FILE" ] || die "repository list not found: $REPOS_FILE"
-	while IFS= read -r line; do
-		line="${line%%#*}"
-		line="$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-		[ -n "$line" ] && REPO_PATHS+=("$line")
-	done <"$REPOS_FILE"
+  [ -f "$REPOS_FILE" ] || die "repository list not found: $REPOS_FILE"
+  while IFS= read -r line; do
+    line="${line%%#*}"
+    line="$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    [ -n "$line" ] && REPO_PATHS+=("$line")
+  done <"$REPOS_FILE"
 elif [ -n "${CORPUS_REPOS:-}" ]; then
-	for p in $CORPUS_REPOS; do
-		REPO_PATHS+=("$p")
-	done
+  for p in $CORPUS_REPOS; do
+    REPO_PATHS+=("$p")
+  done
 fi
 [ "${#REPO_PATHS[@]}" -gt 0 ] || die "no repositories: pass a list file or set CORPUS_REPOS (there is no default list)"
 
@@ -109,18 +109,18 @@ ALL_PHASES="$(list_phases)"
 PHASES=()
 ordered="upgrade mcp_smoke plugin skipped_content agent_conventions sparse local_includes profile role recursive repaired frozen signing determinism injected offline_tools validate_formats agent_plugins ard llms_txt"
 for p in $ordered; do
-	printf '%s\n' "$ALL_PHASES" | grep -qx "$p" || continue
-	if [ -n "$ONLY" ]; then
-		case ",$ONLY," in *",$p,"*) ;; *) continue ;; esac
-	fi
-	case ",$SKIPLIST," in *",$p,"*) continue ;; esac
-	PHASES+=("$p")
+  printf '%s\n' "$ALL_PHASES" | grep -qx "$p" || continue
+  if [ -n "$ONLY" ]; then
+    case ",$ONLY," in *",$p,"*) ;; *) continue ;; esac
+  fi
+  case ",$SKIPLIST," in *",$p,"*) continue ;; esac
+  PHASES+=("$p")
 done
 if [ -n "$ONLY" ]; then
-	IFS=',' read -r -a want <<<"$ONLY"
-	for p in "${want[@]}"; do
-		printf '%s\n' "$ALL_PHASES" | grep -qx "$p" || die "unknown phase: $p (see -l)"
-	done
+  IFS=',' read -r -a want <<<"$ONLY"
+  for p in "${want[@]}"; do
+    printf '%s\n' "$ALL_PHASES" | grep -qx "$p" || die "unknown phase: $p (see -l)"
+  done
 fi
 [ "${#PHASES[@]}" -gt 0 ] || die "no phase selected"
 
@@ -131,7 +131,7 @@ SNAP="$WORK/snap"
 RUN="$WORK/run"
 mkdir -p "$SNAP" "$RUN" "$WORK/tmp"
 if [ -z "$OUT" ]; then
-	OUT="$(mktemp -d "${TMPDIR:-/tmp}/corpus-out-XXXXXX")"
+  OUT="$(mktemp -d "${TMPDIR:-/tmp}/corpus-out-XXXXXX")"
 fi
 mkdir -p "$OUT/logs"
 RESULTS_TSV="$OUT/results.tsv"
@@ -141,11 +141,11 @@ TIMES_TSV="$WORK/times.tsv"
 
 # shellcheck disable=SC2329 # invoked by the EXIT trap
 cleanup() {
-	if [ "$KEEP" -eq 1 ]; then
-		log "corpus: kept $WORK"
-	else
-		rm -rf "${WORK:?}"
-	fi
+  if [ "$KEEP" -eq 1 ]; then
+    log "corpus: kept $WORK"
+  else
+    rm -rf "${WORK:?}"
+  fi
 }
 trap cleanup EXIT
 
@@ -161,43 +161,43 @@ SRC_REPORT="$WORK/sources.tsv"
 : >"$SRC_REPORT"
 idx=0
 for src in "${REPO_PATHS[@]}"; do
-	name="$(basename "$src")"
-	if ! GIT_OPTIONAL_LOCKS=0 git -C "$src" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-		log "corpus: skipping $name: not a git repository (or missing)"
-		printf '%s\t%s\t%s\n' "$name" "missing" "-" >>"$SRC_REPORT"
-		continue
-	fi
-	idx=$((idx + 1))
-	id="r$idx"
-	before="$(source_fingerprint "$src")"
-	log "corpus: snapshot $name"
-	if ! snapshot_repo "$src" "$id"; then
-		log "corpus: snapshot of $name failed"
-		printf '%s\t%s\t%s\n' "$name" "snapshot-failed" "-" >>"$SRC_REPORT"
-		continue
-	fi
-	for phase in "${PHASES[@]}"; do
-		run_phase "$phase" "$id" "$name"
-	done
-	after="$(source_fingerprint "$src")"
-	if [ "$before" = "$after" ]; then
-		printf '%s\t%s\t%s\n' "$name" "untouched" "$id" >>"$SRC_REPORT"
-	else
-		printf '%s\t%s\t%s\n' "$name" "MODIFIED" "$id" >>"$SRC_REPORT"
-		log "corpus: SOURCE CHANGED during the run: $name"
-	fi
-	rm -rf "${SNAP:?}/$id"
+  name="$(basename "$src")"
+  if ! GIT_OPTIONAL_LOCKS=0 git -C "$src" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log "corpus: skipping $name: not a git repository (or missing)"
+    printf '%s\t%s\t%s\n' "$name" "missing" "-" >>"$SRC_REPORT"
+    continue
+  fi
+  idx=$((idx + 1))
+  id="r$idx"
+  before="$(source_fingerprint "$src")"
+  log "corpus: snapshot $name"
+  if ! snapshot_repo "$src" "$id"; then
+    log "corpus: snapshot of $name failed"
+    printf '%s\t%s\t%s\n' "$name" "snapshot-failed" "-" >>"$SRC_REPORT"
+    continue
+  fi
+  for phase in "${PHASES[@]}"; do
+    run_phase "$phase" "$id" "$name"
+  done
+  after="$(source_fingerprint "$src")"
+  if [ "$before" = "$after" ]; then
+    printf '%s\t%s\t%s\n' "$name" "untouched" "$id" >>"$SRC_REPORT"
+  else
+    printf '%s\t%s\t%s\n' "$name" "MODIFIED" "$id" >>"$SRC_REPORT"
+    log "corpus: SOURCE CHANGED during the run: $name"
+  fi
+  rm -rf "${SNAP:?}/$id"
 done
 
 # Summary.
 phases_json="$(printf '%s\n' "${PHASES[@]}" | jq -R . | jq -s .)"
 jq -n \
-	--arg binary "$BIN" \
-	--arg version "$BIN_VERSION" \
-	--argjson phases "$phases_json" \
-	--rawfile results "$RESULTS_TSV" \
-	--rawfile times "$TIMES_TSV" \
-	--rawfile sources "$SRC_REPORT" '
+  --arg binary "$BIN" \
+  --arg version "$BIN_VERSION" \
+  --argjson phases "$phases_json" \
+  --rawfile results "$RESULTS_TSV" \
+  --rawfile times "$TIMES_TSV" \
+  --rawfile sources "$SRC_REPORT" '
 	def rows(s): s | split("\n") | map(select(length > 0) | split("\t"));
 	(rows($times) | map({key: (.[0] + "|" + .[1]), value: (.[2] | tonumber)}) | from_entries) as $secs
 	| (rows($results) | map({
@@ -232,7 +232,7 @@ skip_n="$(jq '.totals.SKIP' "$OUT/summary.json" 2>/dev/null || echo "?")"
 log ""
 log "corpus: PASS=$pass_n FAIL=$fail_n SKIP=$skip_n  summary: $OUT/summary.json"
 if grep -q MODIFIED "$SRC_REPORT"; then
-	exit 3
+  exit 3
 fi
 [ "$fail_n" = "0" ] || exit 1
 exit 0

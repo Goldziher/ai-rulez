@@ -25,12 +25,12 @@ source = "https://invalid.invalid/org/conventions.git"
 TOML
 cd "$T/p"
 "$BIN" generate --offline >/dev/null 2>&1 || {
-	echo "generate --offline failed too; repro does not apply"
-	exit 0
+  echo "generate --offline failed too; repro does not apply"
+  exit 0
 }
 if "$BIN" validate --config-only >/dev/null 2>&1; then
-	echo "OK: validate --config-only works with an unreachable remote include"
-	exit 0
+  echo "OK: validate --config-only works with an unreachable remote include"
+  exit 0
 fi
 echo "REPRODUCED: generate --offline succeeds, validate --config-only has no offline mode and fails"
 exit 1
