@@ -14,6 +14,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Routing decides which items become rule files.
@@ -169,7 +170,7 @@ func relUnder(root, target string) (string, bool) {
 		return "", false
 	}
 	rel, err := filepath.Rel(absRoot, absTarget)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(rel) {
 		return "", false
 	}
 	return filepath.ToSlash(rel), true

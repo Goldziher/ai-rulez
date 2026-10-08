@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Roles map a person's job to the slice of the shared content they need: which
@@ -702,7 +704,7 @@ func (c *Config) relToConfigDir(p string) string {
 	if p == "" || c.ConfigDir == "" {
 		return filepath.ToSlash(p)
 	}
-	if rel, err := filepath.Rel(c.ConfigDir, p); err == nil && !strings.HasPrefix(rel, "..") {
+	if rel, err := filepath.Rel(c.ConfigDir, p); err == nil && !safefs.RelEscapes(rel) {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.ToSlash(p)
