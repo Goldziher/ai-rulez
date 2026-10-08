@@ -247,7 +247,7 @@ func (g *Generator) stampSourceHashes(plan *localPlan, merged []config.OutputFil
 // values): the hash is written into generated headers, and a local file's
 // content already carries its own Content-Hash.
 func (g *Generator) localSourceHash(baselineHash string) (string, error) {
-	var b strings.Builder
+	b := templates.NewContentHasher()
 	b.WriteString("local-source-hash/v2\nshared=" + baselineHash + "\n")
 	if o := g.config.LocalOverlay; o != nil {
 		canonical, err := json.Marshal(canonicalOverlay(nil, o.Doc))
@@ -257,11 +257,11 @@ func (g *Generator) localSourceHash(baselineHash string) (string, error) {
 		b.WriteString("overlay=" + string(canonical) + "\n")
 	}
 	if t := g.config.LocalContent; t != nil {
-		writeContentFiles(&b, "local.rules", t.Rules, g.config)
-		writeContentFiles(&b, "local.context", t.Context, g.config)
-		writeContentFiles(&b, "local.skills", t.Skills, g.config)
-		writeContentFiles(&b, "local.agents", t.Agents, g.config)
-		writeContentFiles(&b, "local.commands", t.Commands, g.config)
+		writeContentFiles(b, "local.rules", t.Rules, g.config)
+		writeContentFiles(b, "local.context", t.Context, g.config)
+		writeContentFiles(b, "local.skills", t.Skills, g.config)
+		writeContentFiles(b, "local.agents", t.Agents, g.config)
+		writeContentFiles(b, "local.commands", t.Commands, g.config)
 		names := make([]string, 0, len(t.Domains))
 		for name := range t.Domains {
 			names = append(names, name)
@@ -273,14 +273,14 @@ func (g *Generator) localSourceHash(baselineHash string) (string, error) {
 				continue
 			}
 			prefix := "local.domain." + name + "."
-			writeContentFiles(&b, prefix+"rules", d.Rules, g.config)
-			writeContentFiles(&b, prefix+"context", d.Context, g.config)
-			writeContentFiles(&b, prefix+"skills", d.Skills, g.config)
-			writeContentFiles(&b, prefix+"agents", d.Agents, g.config)
-			writeContentFiles(&b, prefix+"commands", d.Commands, g.config)
+			writeContentFiles(b, prefix+"rules", d.Rules, g.config)
+			writeContentFiles(b, prefix+"context", d.Context, g.config)
+			writeContentFiles(b, prefix+"skills", d.Skills, g.config)
+			writeContentFiles(b, prefix+"agents", d.Agents, g.config)
+			writeContentFiles(b, prefix+"commands", d.Commands, g.config)
 		}
 	}
-	return templates.HashContent(b.String()), nil
+	return b.Sum(), nil
 }
 
 const redactedValue = "<redacted>"
