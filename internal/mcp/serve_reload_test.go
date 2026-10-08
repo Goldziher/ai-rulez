@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -71,6 +73,26 @@ func TestWatch_DiscardsABuildTheFilesChangedUnder(t *testing.T) {
 	assert.GreaterOrEqual(t, builds.Load(), int32(2), "the build the files changed under was swapped in")
 }
 
+// guardLog reports, on refused, the first rebuild the save guard refused: the
+// readiness signal that the watcher has seen the mid-save files.
+type guardLog struct {
+	refused chan struct{}
+	once    sync.Once
+}
+
+func newGuardLog() *guardLog { return &guardLog{refused: make(chan struct{})} }
+
+func (l *guardLog) Debug(string, ...any) {}
+func (l *guardLog) Info(string, ...any)  {}
+func (l *guardLog) Error(string, ...any) {}
+func (l *guardLog) Warn(_ string, args ...any) {
+	for _, a := range args {
+		if s, ok := a.(string); ok && strings.Contains(s, "a save in progress") {
+			l.once.Do(func() { close(l.refused) })
+		}
+	}
+}
+
 // RV-DYN-3: an in-place save truncates SKILL.md before writing it. While the
 // file is empty the previous version keeps serving; a deleted skill still goes.
 func TestWatch_KeepsTheServedSkillWhileItsFileIsMidSave(t *testing.T) {
@@ -92,7 +114,8 @@ func TestWatch_KeepsTheServedSkillWhileItsFileIsMidSave(t *testing.T) {
 				"skills/core/SKILL.md":  skillFile("core", "Core conventions", "delivery: served\n"),
 				"skills/other/SKILL.md": skillFile("other", "Other skill", "delivery: served\n"),
 			})
-			setup := &ServeSetup{WorkDir: root, PollInterval: 10 * time.Millisecond, CacheDir: filepath.Join(t.TempDir(), "cache")}
+			log := newGuardLog()
+			setup := &ServeSetup{Log: log, WorkDir: root, PollInterval: 10 * time.Millisecond, CacheDir: filepath.Join(t.TempDir(), "cache")}
 			srv, err := setup.NewServer(context.Background())
 			require.NoError(t, err)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -100,28 +123,34 @@ func TestWatch_KeepsTheServedSkillWhileItsFileIsMidSave(t *testing.T) {
 			go srv.Watch(ctx)
 			path := filepath.Join(root, ".ai-rulez", "skills", "core", "SKILL.md")
 
-			// Act
-			tt.edit(t, path)
+			// Act: the unrelated edit lands first, so a refused rebuild proves
+			// the guard held back a build that would have carried it.
 			writeFile(t, root, ".ai-rulez/skills/other/SKILL.md", skillFile("other", "Other skill, edited", "delivery: served\n"))
-			require.Eventually(t, func() bool {
-				other, ok := srv.Catalog().Lookup("other")
-				return ok && other.Description == "Other skill, edited" || tt.wantServed
-			}, 5*time.Second, 10*time.Millisecond)
-			time.Sleep(200 * time.Millisecond)
+			tt.edit(t, path)
 
 			// Assert
-			core, served := srv.Catalog().Lookup("core")
-			require.Equal(t, tt.wantServed, served)
 			if !tt.wantServed {
+				require.Eventually(t, func() bool {
+					other, ok := srv.Catalog().Lookup("other")
+					_, served := srv.Catalog().Lookup("core")
+					return ok && other.Description == "Other skill, edited" && !served
+				}, 30*time.Second, 10*time.Millisecond, "a deleted skill stops being served")
 				return
 			}
+			select {
+			case <-log.refused:
+			case <-time.After(30 * time.Second):
+				require.Fail(t, "the rebuild over the half-saved file was not refused")
+			}
+			core, served := srv.Catalog().Lookup("core")
+			require.True(t, served, "the skill is still served")
 			assert.Equal(t, "Core conventions", core.Description, "the previous version keeps serving")
 			writeFile(t, root, ".ai-rulez/skills/core/SKILL.md", skillFile("core", "Core conventions, saved", "delivery: served\n"))
 			require.Eventually(t, func() bool {
 				core, ok := srv.Catalog().Lookup("core")
 				other, _ := srv.Catalog().Lookup("other")
 				return ok && core.Description == "Core conventions, saved" && other != nil && other.Description == "Other skill, edited"
-			}, 5*time.Second, 10*time.Millisecond, "the completed save is picked up")
+			}, 30*time.Second, 10*time.Millisecond, "the completed save is picked up")
 		})
 	}
 }
