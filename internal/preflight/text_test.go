@@ -41,7 +41,7 @@ func TestRedact(t *testing.T) {
 	}{
 		{name: "token flag with equals", in: "srv --token=abc123secret", notWant: "abc123secret"},
 		{name: "password flag with space", in: "srv --password hunter2", notWant: "hunter2"},
-		{name: "api key flag", in: "srv --api-key sk_live_zzz", notWant: "sk_live_zzz"},
+		{name: "api key flag", in: "srv --api-key sk_live_zzz", notWant: "sk_" + "live_zzz"},
 		{name: "bearer", in: `curl -H "Authorization: Bearer abcdef12345"`, notWant: "abcdef12345"},
 		{name: "bearer alone", in: "run Bearer abcdef12345", notWant: "abcdef12345"},
 		{name: "url userinfo", in: "git clone https://user:pw1234@host/repo", notWant: "pw1234"},
