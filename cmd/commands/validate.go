@@ -135,6 +135,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 
 func init() {
 	ValidateCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Validate every configuration file found recursively")
+	ValidateCmd.Flags().BoolVar(&validateOffline, "offline", false, "Skip fetching remote includes, use cached content only (as generate --offline)")
 	ValidateCmd.Flags().BoolVar(&validateConfigOnly, "config-only", false, "Check the configuration file only and skip the content checks")
 	ValidateCmd.Flags().BoolVar(&validateWarnings, "strict", false, "Fail on warnings as well as errors (the same as --fail-on warning)")
 	ValidateCmd.Flags().BoolVar(&validateVerifiers, "verifiers", false, "Also evaluate the verifiers (never a command or a model) and report them as AR9H findings")
@@ -157,6 +158,9 @@ func init() {
 
 // validatePreRun resolves --config-only and --strict into the internal state.
 func validatePreRun() error {
+	if validateOffline {
+		cliLockPolicy.Offline = true
+	}
 	if validateWarnings && validateConfigOnly {
 		return oops.Errorf("--strict (warnings fail) needs the content checks: drop --config-only")
 	}
