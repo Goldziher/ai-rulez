@@ -47,7 +47,7 @@ func (r *runner) scanBody(it *item, d doc) {
 			if tickSlashRe.MatchString(strings.TrimSpace(tok)) && !slashInvocation(l.Text[:m[0]]) {
 				continue // `/api-docs` in prose is a route, not a command
 			}
-			r.checkToken(it, l.No, tok, r.pathNotAClaim(l.Text, prev, m[2], m[3]))
+			r.checkToken(it, l.No, tok, func() bool { return r.pathNotAClaim(l.Text, prev, m[2], m[3]) })
 		}
 		r.checkNames(it, l)
 	}
@@ -128,7 +128,10 @@ func (r *runner) checkAnchor(it *item, line int, file, frag, target string) {
 //
 // notAClaim is set when the surrounding text does not assert the path exists
 // (negated, an example, another repository...); see pathNotAClaim.
-func (r *runner) checkToken(it *item, line int, tok string, notAClaim bool) {
+// checkToken checks one backtick token. notAClaim says whether the sentence around
+// it makes it prose rather than a claim about the repository; it costs a dozen
+// regular expressions, so it is only asked for a token that looks like a path.
+func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() bool) {
 	tok = strings.TrimSpace(tok)
 	if m := tickSlashRe.FindStringSubmatch(tok); m != nil {
 		r.requireName(it, line, m[1], kindCommand, r.commands, r.skills)
@@ -139,7 +142,7 @@ func (r *runner) checkToken(it *item, line int, tok string, notAClaim bool) {
 		return
 	}
 	tok = strings.TrimPrefix(tok, "./")
-	if notAClaim {
+	if notAClaim() {
 		return
 	}
 	if m := skillRelRe.FindString(tok); m != "" {
