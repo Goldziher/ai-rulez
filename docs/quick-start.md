@@ -1,6 +1,7 @@
 # Quick Start
 
-Get AI-Rulez running in 5 minutes.
+Get AI-Rulez running in 5 minutes. This page covers the first two lifecycle stages, author and generate, then validates the
+result; [Next steps](#next-steps) points to bundling, publishing and governance.
 
 ## Step 1: Initialize Your Project
 
@@ -297,7 +298,12 @@ This will show errors in your setup.
 
 ## Next Steps
 
-- **[Configuration Reference](configuration.md)**: Learn all config options
-- **[Domains & Profiles](domains.md)**: Organize by team
-- **[Custom Presets](profiles.md)**: Generate for custom tools
-- **[Includes System](includes.md)**: Share configs across projects
+Continue along the lifecycle:
+
+- **Author**: [Configuration](configuration.md), [Domains & Profiles](domains.md), [Includes](includes.md)
+- **Generate**: [Supported harnesses](harnesses.md), [Custom presets](profiles.md), [User-level configuration](user-scope.md)
+- **Bundle and publish**: [Authoring plugins](plugins.md), [Publish](publish.md)
+- **Validate**: [Strict validation](strict-validation.md)
+- **Govern**: [Trust model](trust-model.md), [Lock file](lockfile.md)
+- **Operate**: [MCP server](mcp-server.md)
+- **Standards**: [which standards ai-rulez generates and validates](standards.md)
