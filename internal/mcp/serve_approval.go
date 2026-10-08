@@ -3,6 +3,7 @@ package mcp
 import (
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/samber/oops"
@@ -39,10 +40,7 @@ func (a Admission) now() time.Time {
 // authored digest refuses it, and a selector that selects the item (all, local,
 // kind:skill) gates serving it as it gates generating it.
 func (a Admission) admitApproval(s *CatalogSkill) *Refusal {
-	policy := approval.PolicyOf(a.Config)
-	if a.Lock != nil {
-		policy = policy.WithLock(a.Lock)
-	}
+	policy := a.policy.get(a)
 	served := approval.Subject{
 		Kind: approval.KindServed, Domain: a.View, ID: s.Name, Digest: s.LockDigest,
 		Class: approval.ServedClass(s.Source, s.Ref, s.Commit),
@@ -120,4 +118,29 @@ func (a Admission) authoredItem(s *CatalogSkill) (lockfile.Item, bool) {
 	dir := path.Base(path.Dir(filepath.ToSlash(s.Source)))
 	it, ok := a.Authored[authoredKey(s.Domain, dir)]
 	return it, ok
+}
+
+// admissionPolicy computes the [governance] policy of an Admission once, for
+// all the skills one Admit call judges: reading it parses the lock file, which
+// per skill made serving and searching quadratic in the number of skills.
+type admissionPolicy struct {
+	once   sync.Once
+	policy approval.Policy
+}
+
+// get returns the policy of a, memoised when m is set (Admit sets it).
+func (m *admissionPolicy) get(a Admission) approval.Policy {
+	if m == nil {
+		return a.buildPolicy()
+	}
+	m.once.Do(func() { m.policy = a.buildPolicy() })
+	return m.policy
+}
+
+func (a Admission) buildPolicy() approval.Policy {
+	policy := approval.PolicyOf(a.Config)
+	if a.Lock != nil {
+		policy = policy.WithLock(a.Lock)
+	}
+	return policy
 }
