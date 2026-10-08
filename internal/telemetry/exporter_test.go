@@ -297,6 +297,7 @@ func TestParseRetryAfter_HTTPDate(t *testing.T) {
 	assert.Equal(t, 30*time.Second, parseRetryAfterAt(now.Add(30*time.Second).Format(http.TimeFormat), now))
 	assert.Zero(t, parseRetryAfterAt(now.Add(-time.Minute).Format(http.TimeFormat), now))
 	assert.Equal(t, 5*time.Second, parseRetryAfterAt("5", now))
+	assert.Positive(t, parseRetryAfterAt("99999999999", now))
 	assert.Zero(t, parseRetryAfterAt("junk", now))
 }
 
