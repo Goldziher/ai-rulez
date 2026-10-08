@@ -22,6 +22,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	proj "github.com/Goldziher/ai-rulez/v5/internal/project"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/samber/oops"
@@ -595,7 +596,7 @@ func (st *ServeSetup) watchRoots(b *built) []string {
 	}
 	var roots []string
 	for _, c := range candidates {
-		if !slices.ContainsFunc(roots, func(r string) bool { return within(r, c) }) {
+		if !slices.ContainsFunc(roots, func(r string) bool { return safefs.Within(r, c) }) {
 			roots = append(roots, c)
 		}
 	}
@@ -630,12 +631,6 @@ func localIncludeDirs(cfg *config.Config) []string {
 		}
 	}
 	return dirs
-}
-
-// within reports whether p is root or below it.
-func within(root, p string) bool {
-	rel, err := filepath.Rel(root, p)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // fingerprintHashLimit is the largest file whose bytes the fingerprint hashes;

@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
 	"github.com/samber/oops"
 )
@@ -166,7 +167,7 @@ func checkInsideProject(spec Spec, opts Options, root string) error {
 		project = resolved
 	}
 	rel, err := filepath.Rel(project, root)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+	if err != nil || safefs.RelEscapes(rel) || filepath.IsAbs(rel) {
 		return oops.With("path", root).With("project", project).
 			Hint("Pass the directory with --source on the command line, or declare it in your user config").
 			Errorf("skill source %q: local path %s is outside the project %s; a local source declared in the project config must stay inside the project (pass the directory with --source, or declare it in your user config)", spec.Name, root, project)

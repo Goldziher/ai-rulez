@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // ScannerBaselineFile is the default scanner baseline, relative to the
@@ -90,7 +91,7 @@ func (r *runner) policyBaselinePath() (abs, problem string) {
 		return "", ""
 	}
 	clean := filepath.Clean(filepath.FromSlash(rel))
-	if filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+	if filepath.IsAbs(clean) || safefs.RelEscapes(clean) {
 		return "", fmt.Sprintf("lint.scanner_policy.baseline %q must be a path inside the project", rel)
 	}
 	abs = filepath.Join(r.rootAbs(), clean)

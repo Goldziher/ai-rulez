@@ -8,6 +8,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -124,7 +125,7 @@ func changedInTree(treeTop, rev string) ([]string, error) {
 	}
 	gitTop := gitutil.Resolve(gitutil.TopLevel(treeTop))
 	prefix, err := filepath.Rel(gitTop, gitutil.Resolve(treeTop))
-	if err != nil || prefix == ".." || strings.HasPrefix(prefix, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(prefix) {
 		return nil, oops.Errorf("cannot map the files changed since %s onto %s: it is outside the git repository %s", rev, treeTop, gitTop)
 	}
 	if prefix == "." {

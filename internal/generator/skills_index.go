@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 	"github.com/zeebo/blake3"
 )
@@ -106,7 +107,7 @@ func (g *Generator) relToProject(path string) string {
 	if path == "" || strings.Contains(path, "://") {
 		return path
 	}
-	if rel, err := filepath.Rel(g.config.BaseDir, path); err == nil && !strings.HasPrefix(rel, "..") {
+	if rel, err := filepath.Rel(g.config.BaseDir, path); err == nil && !safefs.RelEscapes(rel) {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.ToSlash(path)
