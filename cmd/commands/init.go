@@ -38,7 +38,7 @@ func init() {
 	InitCmd.Flags().BoolVarP(&skipContentFlag, "skip-content", "s", false, "Skip creating example content files")
 	InitCmd.Flags().StringVarP(&fromFlag, "from", "F", "", "Import from existing tool files with convert: importer names or project paths (e.g., 'auto', 'rulesync', '.claude,.cursor')")
 	InitCmd.Flags().BoolVarP(&setupHooks, "setup-hooks", "H", false, "Automatically configure git hooks for ai-rulez validation")
-	InitCmd.Flags().BoolVarP(&autoYes, "yes", "y", false, "Automatically answer yes to prompts")
+	addYesFlag(InitCmd.Flags(), &autoYes, "Automatically answer yes to prompts")
 	InitCmd.Flags().StringVar(&initConfigDirArg, "config-dir", "", "Configuration directory to create (default: .ai-rulez; use .config/ai-rulez for the .config/ convention)")
 }
 
@@ -61,12 +61,10 @@ func runInit(cmd *cobra.Command, args []string) {
 	if fromFlag != "" {
 		var err error
 		if workingDir, err = os.Getwd(); err != nil {
-			logger.Error("Failed to get working directory", "error", err)
-			os.Exit(1)
+			fatal("Failed to get working directory", err)
 		}
 		if err := previewInitImport(watchParentContext(cmd), workingDir); err != nil {
-			logger.Error("Failed to import from sources", "error", err)
-			os.Exit(1)
+			fatal("Failed to import from sources", err)
 		}
 	}
 
@@ -76,32 +74,28 @@ func runInit(cmd *cobra.Command, args []string) {
 	if fromFlag != "" {
 		err := replaceConfigDir(configDir, func() error { return runInitImport(watchParentContext(cmd), workingDir, configDir) })
 		if err != nil {
-			logger.Error("Failed to import from sources", "error", err)
-			os.Exit(1)
+			fatal("Failed to import from sources", err)
 		}
 		return
 	}
 
 	// Create directory structure
 	if err := createStructure(projectName, configDir); err != nil {
-		logger.Error("Failed to create structure", "error", err)
-		os.Exit(1)
+		fatal("Failed to create structure", err)
 	}
 
 	// Create domain directories if specified
 	if domainsFlag != "" {
 		domains := parseDomains(domainsFlag)
 		if err := createDomainDirectories(domains, configDir); err != nil {
-			logger.Error("Failed to create domain directories", "error", err)
-			os.Exit(1)
+			fatal("Failed to create domain directories", err)
 		}
 	}
 
 	// Create example content unless --skip-content is specified
 	if !skipContentFlag {
 		if err := createExampleContent(configDir); err != nil {
-			logger.Error("Failed to create example content", "error", err)
-			os.Exit(1)
+			fatal("Failed to create example content", err)
 		}
 	}
 
