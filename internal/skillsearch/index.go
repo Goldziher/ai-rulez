@@ -15,6 +15,8 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // Index files, inside the index directory. The manifest is written last, so a
@@ -271,31 +273,9 @@ func WriteIndex(dir string, x *Index) error {
 	return writeAtomic(filepath.Join(dir, ManifestFile), manifest)
 }
 
-func writeAtomic(path string, data []byte) (err error) {
-	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp-*")
-	if err != nil {
-		return oops.Wrapf(err, "write %s", filepath.Base(path))
-	}
-	defer func() {
-		if err != nil {
-			_ = os.Remove(tmp.Name()) //nolint:errcheck // best effort cleanup of the temp file
-		}
-	}()
-	if _, err = tmp.Write(data); err != nil {
-		_ = tmp.Close() //nolint:errcheck // the write error is the one to report
-		return oops.Wrapf(err, "write %s", filepath.Base(path))
-	}
-	if err = tmp.Sync(); err != nil {
-		_ = tmp.Close() //nolint:errcheck // the sync error is the one to report
-		return oops.Wrapf(err, "sync %s", filepath.Base(path))
-	}
-	if err = tmp.Close(); err != nil {
-		return oops.Wrapf(err, "write %s", filepath.Base(path))
-	}
-	if err = os.Chmod(tmp.Name(), 0o644); err != nil { //nolint:gosec // a committed index must be readable
-		return oops.Wrapf(err, "write %s", filepath.Base(path))
-	}
-	return oops.Wrapf(os.Rename(tmp.Name(), path), "write %s", filepath.Base(path))
+func writeAtomic(path string, data []byte) error {
+	// A committed index must be readable, so it is written 0644.
+	return oops.Wrapf(gitutil.WriteFileAtomic(path, data, 0o644), "write %s", filepath.Base(path))
 }
 
 // readVectors reads the vectors file and checks its size and digest against the manifest.
