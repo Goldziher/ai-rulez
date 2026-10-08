@@ -259,7 +259,7 @@ func TestOKFBundleAsInclude(t *testing.T) {
 	writeFile(t, filepath.Join(bundle, "decisions", "use-go.md"), "---\ntype: Decision\ndescription: Use Go\n---\nWe write Go.\n")
 	writeFile(t, filepath.Join(bundle, "concepts", "arch.md"), "---\ntype: Concept\n---\nLayers.\n")
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"),
-		"version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\nagents_md = false\n\n[[includes]]\nname = \"kb\"\nsource = \""+bundle+"\"\nformat = \"okf\"\ninclude = [\"rules\"]\n")
+		"version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\nagents_md = false\n\n[[includes]]\nname = \"kb\"\nsource = \""+filepath.ToSlash(bundle)+"\"\nformat = \"okf\"\ninclude = [\"rules\"]\n")
 	require.Equal(t, 0, runRecursiveGenerate())
 	got, err := os.ReadFile(filepath.Join(root, ".claude", "rules", "decisions-use-go.md"))
 	require.NoError(t, err)

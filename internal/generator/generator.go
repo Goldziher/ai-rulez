@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"sort"
 	"strconv"
@@ -439,14 +440,14 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	lines := make([]string, 0, len(outputs)+1)
 	lines = append(lines, "plugin bundle:")
 	for _, output := range outputs {
-		lines = append(lines, "write-file: "+g.convertToRelativePath(g.absOutputPath(output.Path)))
+		lines = append(lines, "write-file: "+filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path))))
 	}
 	stale, err := g.stalePluginDirs()
 	if err != nil {
 		return nil, err
 	}
 	for _, dir := range stale {
-		lines = append(lines, "delete-stale: "+g.convertToRelativePath(dir))
+		lines = append(lines, "delete-stale: "+filepath.ToSlash(g.convertToRelativePath(dir)))
 	}
 	obsolete, err := g.planPluginPrune(outputs)
 	if err != nil {
@@ -2062,6 +2063,9 @@ func rawWriteCanSkipWith(read jsonmerge.Reader, stat func(string) (os.FileInfo, 
 	info, err := stat(absPath)
 	if err != nil {
 		return false
+	}
+	if runtime.GOOS == "windows" {
+		return true // Windows reports 0o666 for every file: the mode cannot drift
 	}
 	return info.Mode().Perm() == mode
 }
