@@ -238,5 +238,5 @@ func TestUpdateMajor_WriteConfigKeepsTheFileMode(t *testing.T) {
 	require.Equal(t, 0, code)
 	info, err := os.Stat(path)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm(), "update must not tighten the project's config")
+	assertFileMode(t, info, 0o644, "update must not tighten the project's config")
 }
