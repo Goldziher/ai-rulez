@@ -37,7 +37,10 @@ func WithMemo(ctx context.Context) context.Context {
 }
 
 func memoFrom(ctx context.Context) *Memo {
-	m, _ := ctx.Value(memoCtxKey{}).(*Memo)
+	m, ok := ctx.Value(memoCtxKey{}).(*Memo)
+	if !ok {
+		return nil
+	}
 	return m
 }
 
