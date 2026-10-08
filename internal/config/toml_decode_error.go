@@ -61,7 +61,7 @@ func tomlTypeMismatch(text string) (found string, want tomlMismatch, ok bool) {
 	case goType == "string":
 		want = tomlMismatch{"a string", `"value"`}
 	case goType == "bool":
-		want = tomlMismatch{"true or false", "true"}
+		want = tomlMismatch{"true or false", boolTrue}
 	case strings.HasPrefix(goType, "[]"):
 		want = tomlMismatch{"a list", `["a", "b"]`}
 	case strings.HasPrefix(goType, "int"), strings.HasPrefix(goType, "uint"), strings.HasPrefix(goType, "float"):
