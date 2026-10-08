@@ -507,3 +507,27 @@ func newGenerator(ctx context.Context, cfg *config.Config) *generator.Generator 
 	g.SetContext(ctx)
 	return g
 }
+
+// checkPolicy reports each way the repository tried to loosen the organization
+// policy: an error (the exit 2 every command gives it), or a warning under
+// --policy-mode warn.
+func checkPolicy(_ context.Context, s *state) []Finding {
+	if s.cfg == nil || s.cfg.PolicyOutcome == nil {
+		return nil
+	}
+	severity := SeverityError
+	if s.cfg.PolicyOutcome.Warn {
+		severity = SeverityWarning
+	}
+	var out []Finding
+	for _, v := range s.cfg.PolicyOutcome.Violations {
+		out = append(out, Finding{
+			Check:    CheckPolicy,
+			Severity: severity,
+			Message:  fmt.Sprintf("%s %s", v.Code, v.Message),
+			Path:     fmt.Sprintf("%s:%d", v.File, max(v.Line, 1)),
+			Hint:     "The organization policy only lets a repository add restrictions; remove the entry or ask the policy owners to change the policy",
+		})
+	}
+	return out
+}

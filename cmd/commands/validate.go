@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -118,7 +119,11 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 			}
 		}
 
-		logger.Success("Configuration is valid", "path", cfg.ConfigDir)
+		// A strict run defers malformed frontmatter to the AR306 finding below, which
+		// would contradict a success line printed here.
+		if len(cfg.MalformedFrontmatterPaths()) == 0 {
+			logger.Success("Configuration is valid", "path", cfg.ConfigDir)
+		}
 		warnWorktreeMarketplace(cfg)
 		if validateStrict {
 			if code := runStrictSingle(cfg); code != 0 {
@@ -184,6 +189,7 @@ func runRecursiveValidate() int {
 	}
 
 	var failed []string
+	loosened := 0 // failures that are a policy loosening, which exits 2 like a single root
 	var reports []*lint.Report
 	var cfgs []*config.Config
 	if len(validateAllowEgress) > 0 {
@@ -204,6 +210,9 @@ func runRecursiveValidate() int {
 			fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
 			fmtError(err)
 			failed = append(failed, configPath)
+			if errors.Is(err, config.ErrPolicyLoosens) {
+				loosened++
+			}
 			continue
 		}
 		progress.PrintIfNotQuiet("✅ %s\n", configPath)
@@ -229,6 +238,9 @@ func runRecursiveValidate() int {
 
 	if len(failed) > 0 {
 		fmt.Fprintf(os.Stderr, "\n❌ %d of %d config(s) invalid\n", len(failed), len(configFiles))
+		if loosened == len(failed) {
+			return exitCodeFor(config.ErrPolicyLoosens)
+		}
 		return 1
 	}
 	progress.PrintIfNotQuiet("\nAll %d config(s) are valid\n", len(configFiles))
@@ -269,6 +281,9 @@ func validateConfigFile(configPath string) (*config.Config, error) {
 // key, instead of the raw "- - additionalProperties: ..." list. An error the
 // findings do not explain is returned unchanged.
 func schemaFailure(cfg *config.Config, err error) error {
+	if perr := config.UnknownPresetError(cfg); perr != nil {
+		return perr // a preset typo: one line and a suggestion, not the schema's alternatives
+	}
 	findings, ferr := config.SchemaFindings(cfg)
 	if ferr != nil || len(findings) == 0 {
 		return err
