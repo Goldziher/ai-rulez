@@ -113,17 +113,17 @@ func evaluateSources(ctx context.Context, srcs []versionSrc, lock *lockfile.File
 // outdatedAt prints which sources have newer tags than their pins.
 func outdatedAt(path string, kind string, names []string) int {
 	if err := requireOnline("lock --outdated"); err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	cfg, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	wanted := map[string]bool{}
@@ -133,12 +133,12 @@ func outdatedAt(path string, kind string, names []string) int {
 	defer installReleaseGateFor(cfg)()
 	srcs := versionSources(cfg, kind, wanted)
 	if err := checkNamesMatched(srcs, wanted); err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	rows, err := evaluateSources(cmdContext(), srcs, lock)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	report := tagresolve.NewReport(rows)
@@ -149,7 +149,7 @@ func outdatedAt(path string, kind string, names []string) int {
 		err = report.WriteText(os.Stdout)
 	}
 	if err != nil {
-		fmtError(oops.Wrapf(err, "write the report"))
+		renderError(os.Stderr, oops.Wrapf(err, "write the report"))
 		return 1
 	}
 	return outdatedExit(report)
