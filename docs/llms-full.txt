@@ -2130,6 +2130,18 @@ Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-l
 | `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB), `max_clone_files` (default 20000; each entry counts as at least 4 KiB toward `max_clone_bytes`; `AI_RULEZ_MAX_CLONE_FILES` sets it globally): skills served from a git repository or directory. A source over a limit is an error. |
 | `[lock] enforce` | The skills server refuses a served skill whose digest is not pinned in `ai-rulez.lock`. |
 
+##### `[ard]`
+
+The [Agentic Resource Discovery](ard.md) manifest written by `publish --emit ard`. Optional.
+
+| Key | Meaning |
+| --- | ------- |
+| `publisher` | Required. Fully qualified domain name the identifiers are anchored to. |
+| `namespace` | Required. Identifier segment between publisher and name; colons separate sub-segments. |
+| `base_url` | https location of `skills/<name>/SKILL.md` (written next to `ard.json`). |
+| `plugin_type` | Media type of plugin entries. |
+| `queries` | `representativeQueries` (1 to 5 each) by resource name. |
+
 ##### `[publish]`
 
 What [`ai-rulez publish`](publish.md) ships and its policy gates. All optional; it has no credential keys.
@@ -7282,6 +7294,17 @@ stdout.
 | AR9N7 | `publish-unsigned` | error | `require_signature` is set and the bundle is unsigned, or its signature does not verify (publish only) |
 | AR9N8 | `publish-unapproved` | error | `require_approved` is set and content the governance policy selects has no valid approval (publish only) |
 | AR9N9 | `publish-emitter-experimental` | warning | An emitter whose format is not verified against vendor documentation was requested with `--experimental` (publish only) |
+| AR9O0 | `agent-plugins-manifest-invalid` | error | `plugin.json` is missing or fails the Agent Plugins schema, names an unsupported spec version, or has an invalid extension namespace (see [Agent Plugins](agent-plugins.md)) |
+| AR9O1 | `agent-plugins-skill-invalid` | error | A skill of the Agent Plugins package breaks the Agent Skills rules or sits outside `skills/<name>/SKILL.md`, so clients skip it |
+| AR9O2 | `agent-plugins-mcp-invalid` | error | `mcp.json` or one of its servers fails the Agent Plugins schema or section 7.2 (command, url, headers), so clients skip it |
+| AR9O3 | `agent-plugins-placeholder-unsupported` | error | An MCP server uses a `${VAR}` placeholder; clients expand only `${PLUGIN_ROOT}` and `${PLUGIN_DATA}`, in args, env values and cwd |
+| AR9O4 | `agent-plugins-content-dropped` | warning | A field or server the package cannot carry was not packaged: a disabled server, or command, args, env and cwd on a remote server |
+| AR9O5 | `agent-plugins-package-unsafe` | error | A file or link of the Agent Plugins package resolves outside the plugin root or cannot be read |
+| AR9S0 | `ard-manifest-invalid` | error | The `ard.json` manifest fails the vendored ARD entry schema: a required field is missing or has the wrong type (see [Agentic Resource Discovery](ard.md)) |
+| AR9S1 | `ard-identifier-invalid` | error | An ARD identifier breaks the `urn:air` grammar: `[ard] publisher` is not a fully qualified domain name, a namespace or name has an illegal character, or two resources share an identifier |
+| AR9S2 | `ard-entry-invalid` | error | An ARD entry has both or neither of `url` and `data`, or its `url` is not an absolute https URL |
+| AR9S3 | `ard-queries-out-of-range` | warning | An ARD entry has no `representativeQueries`, or fewer than 2 or more than 5; registries build their search index from them |
+| AR9S4 | `ard-not-declared` | error | The `ard` emitter is requested but the configuration has no `[ard]` table with `publisher` and `namespace` |
 | AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
 | AR9G1 | `trigger-vague` | warning | A description lacks a concrete trigger or a non-trigger (`review`; offline evidence is `AR801`-`AR803`) |
 | AR9G2 | `trigger-overlap` | warning | A description is likely confused with a sibling (`review`; offline evidence is `AR701`, `AR702`) |
@@ -7357,9 +7380,11 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
 | `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N9` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
 | `AR9P0`-`AR9P9` | llms.txt files ([llms.txt](llms-txt.md); `AR9P0`-`AR9P6` used) | allocated |
+| `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
+| `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
-Unlisted letters (`AR9I`, `AR9O`, `AR9Q`-`AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
+Unlisted letters (`AR9I`, `AR9Q`, `AR9R`, `AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
 out of blocks that more than one design had claimed (review and catalog both asked for `AR9G`, publish for `AR9F`,
 a UI for `AR9H`).
 
@@ -10335,6 +10360,66 @@ an emitter whose format is not verified against vendor documentation was request
 - Bad: Uploading `emit/port/*.json` to a catalog without checking it against your blueprint
 - Good: Validate the files against your own blueprint or registry, or render exactly what you need with the template emitter
 
+##### AR9O0 agent-plugins-manifest-invalid
+
+plugin.json is missing or does not match the Agent Plugins schema, names an unsupported spec version, or carries an invalid extension namespace
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A conformant client rejects a plugin whose plugin.json fails the official schema, so ai-rulez checks the file it writes against the vendored schema of the selected spec version.
+- Bad: `[plugin] spec = "2.0.0"`, or a plugin name with an upper-case letter
+- Good: `spec = "1.1.0"` (or leave it unset for 1.0.0) and a name of lower-case letters, digits, `-` and `.`
+
+##### AR9O1 agent-plugins-skill-invalid
+
+a skill of the Agent Plugins package breaks the Agent Skills rules (name, description, frontmatter) or sits outside skills/<name>/SKILL.md, so clients skip it
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: Clients skip a skill whose SKILL.md lacks a name that matches its directory or a description, so the package would ship a skill nobody can load.
+- Bad: A skill whose frontmatter has `name` but no `description`
+- Good: Give the skill a `description` and a `name` equal to its directory name
+
+##### AR9O2 agent-plugins-mcp-invalid
+
+mcp.json or one of its servers does not match the Agent Plugins schema or section 7.2 (command, url, headers), so clients skip it
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: Clients skip an MCP server whose entry breaks the schema, and disable MCP when mcp.json itself is invalid. A stdio command must be one token (a bare name or a ./ path), and an HTTP url must be HTTPS or localhost.
+- Bad: `command = "npx -y server"` or `url = "http://example.com/mcp"`
+- Good: `command = "npx"`, `args = ["-y", "server"]`, and an `https://` url
+
+##### AR9O3 agent-plugins-placeholder-unsupported
+
+an MCP server uses a ${VAR} placeholder; Agent Plugins clients expand only ${PLUGIN_ROOT} and ${PLUGIN_DATA}, in args, env values and cwd
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: Agent Plugins expands only ${PLUGIN_ROOT} and ${PLUGIN_DATA}. A ${API_KEY} placeholder would reach the server as that literal text, so ai-rulez drops the server instead of packaging a launch that cannot work.
+- Bad: `args = ["--key", "${API_KEY}"]` in a plugin MCP server
+- Good: Let the server read API_KEY from its environment (an `env` entry `API_KEY = "${API_KEY}"` is omitted and left to the client), or use ${PLUGIN_ROOT}/${PLUGIN_DATA}
+
+##### AR9O4 agent-plugins-content-dropped
+
+a field or server the Agent Plugins package cannot carry was not packaged: a disabled server, or command, args, env and cwd on a remote server
+
+- Default severity: `warning`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: The package format has no way to say that a server is disabled, and a remote server has no command or env, so those fields are left out rather than packaged wrongly.
+- Bad: `enabled = false` on a server of a project that publishes an Agent Plugins package
+- Good: Remove the server from the plugin, or enable it
+
+##### AR9O5 agent-plugins-package-unsafe
+
+a file or link of the Agent Plugins package resolves outside the plugin root or cannot be read
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A package must hold only files below its root, so a symlink that leaves the root, or a file that cannot be read, is reported and not packaged.
+- Bad: A skill directory that is a symlink to `~/skills`
+- Good: Copy the skill into the project
+
 ##### AR9P0 llmstxt-title-missing
 
 an llms.txt file does not start with a single H1 title
@@ -10404,6 +10489,56 @@ an llms.txt link has an empty target
 - Why: A link with an empty target points nowhere.
 - Bad: `- [Guide]()`
 - Good: `- [Guide](docs/guide.md)`
+
+##### AR9S0 ard-manifest-invalid
+
+the ard.json manifest fails the vendored ARD entry schema (a required field is missing or has the wrong type)
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A registry validates ard.json against the entry schema and drops what fails it, so the manifest is checked against the schema pinned from the spec repository before it is published.
+- Bad: An entry without a displayName, or with a tags value that is not a list
+- Good: Let `ai-rulez publish --emit ard` build the file instead of editing it by hand
+
+##### AR9S1 ard-identifier-invalid
+
+an ARD identifier breaks the urn:air grammar: [ard] publisher is not a fully qualified domain name, a namespace or name has an illegal character, or two resources share an identifier
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: An identifier is urn:air:<publisher>:<namespace>:<name> and its publisher must be the fully qualified domain name that serves the manifest; a registry rejects anything else, and two entries with one identifier are ambiguous.
+- Bad: `[ard] publisher = "localhost"`, a skill named `my skill`, or a skill and an MCP server both named `docs`
+- Good: `publisher = "acme.example"`, `namespace = "tools"`, and one name per resource
+
+##### AR9S2 ard-entry-invalid
+
+an ARD entry has both or neither of url and data, or its url is not an absolute https URL
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: An entry points at its artifact with url or carries it inline in data, never both and never neither, and the manifest is served over HTTPS so its urls must be too.
+- Bad: A skill whose file is served from `http://example.com/SKILL.md`
+- Good: Publish from a tagged GitHub release, or set `[ard] base_url` to an https location
+
+##### AR9S3 ard-queries-out-of-range
+
+an ARD entry has no representativeQueries or fewer than 2 or more than 5; registries build their search index from them
+
+- Default severity: `warning`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: Registries build their semantic index from representativeQueries, and the spec asks for two to five. An entry without them is hard to find; more than five are cut.
+- Bad: An MCP server with no queries, or a skill with one trigger and no eval cases
+- Good: Add `triggers` or `representative_queries` to the skill, eval cases that expect it to trigger, or `[ard.queries]` entries for a server
+
+##### AR9S4 ard-not-declared
+
+the ard emitter is requested but the configuration has no [ard] table with publisher and namespace
+
+- Default severity: `error`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: The identifiers need a publisher and a namespace, so the emitter cannot guess them.
+- Bad: `[[publish.emitters]] name = "ard"` without an `[ard]` table
+- Good: Add `[ard]` with `publisher` (an FQDN) and `namespace`
 
 <!-- rules:end -->
 
@@ -12474,6 +12609,8 @@ ai-rulez publish verify dist
 2. Preflight, in-process, stopping before anything is written: `validate` (same baseline and budget handling,
    never looser than `error`), `lock --check`, `verify --plugin`, and a secret scan of every bundle file with the
    security scan's patterns. A symlink in the bundle is an error. The machine-local overlay is never loaded.
+   When the bundle holds an Agent Plugins package (a root `plugin.json`), `validate --strict` and the build check it
+   against the specification and fail with `AR9O0`-`AR9O5`, in `--dry-run` as well.
 3. Policy gates from [`[publish]`](#configuration): `require_approved` (AR9N8) and `require_signature` (AR9N7). They run
    before anything is signed or built.
 4. Build the dist directory, signing the archive when asked.
@@ -12651,12 +12788,19 @@ no file system. `--emit NAME` (repeatable) or `[[publish.emitters]]` runs it int
 | `cursor-team-marketplace` | `.cursor-plugin/marketplace.json` and `plugins/<name>/` ready to commit to the repository a Cursor team marketplace imports | verified |
 | `port` | one [Port](https://docs.port.io/api-reference/create-an-entity/) entity JSON per plugin and skill, plus `index.json` naming the request each file is the body of | experimental |
 | `aws-agent-registry` | one `CreateRegistryRecord` request body per skill (`SKILL`, `agentSkillsDefinition` with the `SKILL.md`) and one `CUSTOM` record per plugin | experimental |
+| `agent-plugins` | `<name>/plugin.json`, `skills/`, `mcp.json` and extension namespaces: one validated [Agent Plugins](agent-plugins.md) directory per plugin, without the files of other runtimes; option `spec` (`1.0.0` or `1.1.0`) | verified |
+| `ard` | `ard.json`: the [Agentic Resource Discovery](ard.md) manifest of the skills, MCP servers and plugin, and `skills/<name>/SKILL.md` with `[ard] base_url`; needs the `[ard]` table | verified |
 | `kiro-steering` | `.kiro/steering/*.md` from the root rules and the skills, and `distribution.json` listing the files and digests for MDM packaging | experimental |
 | template | `--template FILE` or `[[publish.emitters]] name = "template"`: any text from a Go template over the manifest | verified |
 
 - **Cursor.** Cursor documents `.cursor-plugin/marketplace.json` (`name` in kebab-case, `owner.name`, `plugins[].name` and
   `source`) at the repository root and no way to pin a git ref, so the release is the commit that carries the tree. Tests
   check the index against that documented shape. The bundle must carry the cursor runtime.
+- **Agent Plugins.** The bundle must carry the `agent-plugins` runtime (or `copilot`, or `codex` with the root layout). The
+  emitter imports the package with `internal/agentplugins`, validates it against the vendored official schemas and writes it
+  again with the version of `options = { spec = "..." }`, or the version `plugin.json` declares. The specification has no
+  archive, registry or signature, so the directory is distributed like the rest of the dist (release archive, npm, OCI) and
+  signed with it. See [Agent Plugins](agent-plugins.md).
 - **Experimental emitters** write formats that vendors document but publish no schema ai-rulez can test against, so they
   refuse to run without `--experimental` (`AR9N6`) and then report `AR9N9`. They are compiled in, tested by golden files, and
   never call the target system. Sources and the dates they were last read:
@@ -12765,6 +12909,10 @@ canary = "main"                   # channel -> the git ref its index pins
 [[publish.emitters]]
 name = "port"
 options = { blueprint = "agent_skill" }
+
+[[publish.emitters]]
+name = "agent-plugins"
+options = { spec = "1.1.0" }      # optional; default: the version of the bundle's plugin.json
 
 [[publish.emitters]]
 name = "template"
@@ -15617,8 +15765,9 @@ runtimes = ["agent-plugins"]
 ```
 
 It emits a root `plugin.json`, a root `skills/` directory, and (when the plugin
-declares MCP servers) a root `mcp.json`, matching the Agent Plugins 1.0.0
-standard. The plugin `name` must satisfy the standard's naming rules (1–64
+declares MCP servers) a root `mcp.json`, matching the Agent Plugins standard
+(1.0.0, or 1.1.0 with `spec = "1.1.0"`). The package is built and validated by the
+spec-validated library described in [Agent Plugins](agent-plugins.md). The plugin `name` must satisfy the standard's naming rules (1–64
 lowercase alphanumerics/`-`/`.`, alphanumeric ends, no `--` or `..`). Commands,
 agents, hooks, and marketplaces are outside Agent Plugins v1 and are not emitted
 for this runtime.
@@ -15836,7 +15985,7 @@ root skill with the same name wins.
 `[plugin]`: `name` (lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit, no `..`; it
 becomes a directory and file name in every runtime), `version` (required); `display_name`, `description`, `homepage`,
 `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
-`tags`, `runtimes`, `include_domains`, `include_evals` (bundle eval cases, see [Evals](evals.md)), `content_root` (project-relative directory of plugin-only
+`tags`, `runtimes`, `spec` (Agent Plugins version, `1.0.0` or `1.1.0`), `include_domains`, `include_evals` (bundle eval cases, see [Evals](evals.md)), `content_root` (project-relative directory of plugin-only
 `skills/`, `commands/`, and `agents/`). Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 `[[plugin.mcp]]`, `[[plugin.hooks]]` (+ `[[plugin.hooks.hooks]]`),
 `[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`
@@ -15848,6 +15997,244 @@ becomes a directory and file name in every runtime), `version` (required); `disp
 `[marketplace.from_domains]`, `[[marketplace.plugins]]` and `[marketplace.catalog_skill]` (see
 [Domain content and per-domain plugins](#domain-content-and-per-domain-plugins)). Related top-level
 tables: `[placement]` and `[claude.settings]`.
+
+## Agent Plugins
+
+Source: https://goldziher.github.io/ai-rulez/agent-plugins/
+
+ai-rulez packages a project's skills and MCP servers as an [Agent Plugins](https://agent-plugins.org) plugin directory, so
+any client that conforms to the standard can load them. The same code builds the package, validates it and reads it back
+(`internal/agentplugins`); it checks `plugin.json` and `mcp.json` against the official JSON Schemas, which are vendored and
+pinned for each supported version.
+
+| Spec | Status | `$schema` of `plugin.json` |
+| --- | --- | --- |
+| 1.0.0 | published, the default | `https://agent-plugins.org/schemas/1.0.0/plugin.schema.json` |
+| 1.1.0 | working draft | `https://agent-plugins.org/schemas/1.1.0/plugin.schema.json` |
+
+`mcp.json` carries the matching `mcp.schema.json` identifier. The two files always name the same version.
+
+#### Enable it
+
+```toml
+[plugin]
+name = "acme.tools"
+version = "1.2.0"
+description = "Acme review tooling."
+runtimes = ["agent-plugins"]
+spec = "1.1.0"          # optional; 1.0.0 when unset
+```
+
+```bash
+ai-rulez generate --plugin     # writes plugin.json, skills/ and mcp.json at the project root
+ai-rulez verify --plugin       # fails when a generated file was edited or no longer matches its sources
+ai-rulez validate --strict     # AR9O0-AR9O5 for anything a conformant client would skip
+```
+
+The `copilot` runtime and the `codex` runtime with `manifest = "root"` write the same package, so they follow `spec` too.
+
+#### Field mapping
+
+| ai-rulez | Package | Notes |
+| --- | --- | --- |
+| `[plugin] name` | `plugin.json` `name` | 1-64 characters from `a-z0-9.-`, starting and ending alphanumeric, no `--` or `..` |
+| `[plugin] version`, `description`, `homepage`, `repository`, `license`, `keywords` | the same keys | |
+| `[plugin.author]` `name`, `email`, `url` | `author` | an empty author is omitted |
+| `[plugin] spec` | `$schema` of `plugin.json` and `mcp.json` | |
+| `[plugin.interface]` (codex root layout) | `extensions["com.openai"].interface` | keys are written sorted |
+| skills (`.ai-rulez/skills/<name>/`) | `skills/<name>/SKILL.md`, with `scripts/`, `references/` and other files | `SKILL.md` is copied byte for byte; only the immediate children of `skills/` are read by clients |
+| `[[mcp_servers]]` or `[[plugin.mcp]]`, stdio | `mcp.json` `mcpServers.<name>` with `type = "stdio"`, `command`, `args`, `env` | see [MCP servers](#mcp-servers) |
+| `[[mcp_servers]]` or `[[plugin.mcp]]`, `transport = "http"` | `type = "streamable-http"`, `url` | `url` must be HTTPS, or HTTP to localhost |
+| `transport = "sse"` | `type = "sse"`, `url` | only when configured explicitly |
+| `enabled = false` | not packaged | the format has no flag; reported as `AR9O4` |
+| `headers` | `headers` (remote servers) | plugin bundles do not carry project server headers today |
+| agents, commands, hooks | not written | they belong in a client's extension namespace, see [Extensions](#extensions) |
+| rules, context | not written | the `io.github.goldziher.ai-rulez` namespace is read on import |
+
+#### MCP servers
+
+The specification expands only `${PLUGIN_ROOT}` and `${PLUGIN_DATA}`, and only in `args`, `env` values and `cwd`.
+
+- `command` is one token: a bare name (`npx`) or a `./` path inside the plugin. A `${PLUGIN_ROOT}/bin/server` command is
+  rewritten to `./bin/server` (a lossless rewrite, reported as info).
+- An `env` entry that only forwards a variable of the same name (`API_KEY = "${API_KEY}"`) is left out: no client
+  expands it, so the client has to supply `API_KEY` itself. This is reported as `AR9O3` (warning).
+- Any other `${VAR}` (in `args`, `env`, `url`, `headers`) is rejected: the server is not packaged and the finding is an
+  error (`AR9O3`). `generate --plugin` logs it, `validate --strict` fails on it and `publish` stops.
+- `PLUGIN_ROOT` and `PLUGIN_DATA` may not be set in `env`: the client supplies them.
+
+#### Extensions
+
+Content that only one client understands lives under a reverse-domain namespace, either as manifest data
+(`plugin.json` `extensions.<namespace>`) or as files (`<namespace>/`). Clients ignore namespaces they do not implement.
+
+| Namespace | Content |
+| --- | --- |
+| `com.anthropic.claude-code` | `agents/<name>.md`, `commands/<name>.md`, `hooks/hooks.json` |
+| `com.openai` | the Codex `interface` block (manifest data) |
+| `io.github.goldziher.ai-rulez` | `rules/<name>.md`, `context/<name>.md` |
+| `com.github.copilot` | `agents/<name>.agent.md` (the `copilot` runtime) |
+
+`generate --plugin` writes the Codex block and the Copilot agents; the other namespaces are read on import and written by
+the library when a caller supplies them.
+
+#### Determinism and verification
+
+The package is sorted, has no timestamps and is rendered with two-space JSON and a trailing newline. Every generated file
+is recorded with its `Content-Hash` in `.ai-rulez-generated.json`, so `generate --check` and `verify --plugin` cover
+`plugin.json`, `mcp.json` and the skills, and `publish` pins the whole bundle in its manifest and `SHA256SUMS`.
+
+#### Validation and the AR9O codes
+
+`validate --strict` builds the package in memory and validates it as a client loads it. `publish` runs the same check on
+the bundle it packages, in `--dry-run` as well, and fails with the first error's code and exit status 2.
+
+| Code | Meaning |
+| --- | --- |
+| `AR9O0` | `plugin.json` is missing or invalid, the spec is unsupported, or an extension namespace is invalid |
+| `AR9O1` | a skill breaks the Agent Skills rules (name, description, frontmatter) or is not at `skills/<name>/SKILL.md` |
+| `AR9O2` | `mcp.json` or a server entry fails the schema or the rules for `command`, `url` and headers |
+| `AR9O3` | an unsupported `${VAR}` placeholder |
+| `AR9O4` | a field or server that cannot be packaged was left out |
+| `AR9O5` | a path or link that resolves outside the plugin root, or a file that cannot be read |
+
+`validate --explain AR9O3` prints the rule. Only single-plugin projects are checked by `validate --strict`; the members of
+a marketplace are checked when they are published.
+
+#### Publish
+
+The specification defines no archive, registry or signature. ai-rulez reuses its [publish](publish.md) pipeline: the
+bundle with the `agent-plugins` runtime travels in the release archive, the npm package or the OCI artifact, and is signed
+with the rest of the release (`--sign-key`, `--sign-keyless`). These distribution steps sit outside the specification.
+
+`--emit agent-plugins` (or `[[publish.emitters]] name = "agent-plugins"`) writes each plugin as a clean directory,
+`emit/agent-plugins/<name>/`, holding only the Agent Plugins files (no `.claude-plugin/`, no other runtime). The directory
+is read back and written again by the library, so anything a client would skip is reported rather than shipped. The option
+`spec` converts the package to another version: `options = { spec = "1.1.0" }`.
+
+#### Import
+
+```bash
+ai-rulez convert --from agent-plugins ./some-plugin --write
+```
+
+`convert` reads an Agent Plugins directory into `.ai-rulez/`: `plugin.json` becomes the `[plugin]` block (with
+`runtimes = ["agent-plugins"]` and `spec` when it is not 1.0.0), skills keep their `scripts/` and `references/`, `mcp.json`
+becomes `[[mcp_servers]]`, and the Claude Code, Copilot and ai-rulez namespaces become agents, commands and rules. The
+report lists what has no equivalent: bundled root files, unknown namespaces, `hooks/hooks.json` and a server `cwd`. A
+manifest without `version` or `description` cannot form a `[plugin]` block, so none is written and the report says so. The
+provenance header ai-rulez writes into generated Markdown is removed on import.
+
+Export, import and export again give identical bytes; a test pins this for 1.0.0 and 1.1.0.
+
+#### Differences from earlier output
+
+The `agent-plugins` runtime used to write the manifest without checking it. Building with the library changes the output
+only where the specification requires:
+
+- A skill without a `description`, or whose `name` differs from its directory, is not packaged (clients skip it).
+- An MCP server with a `${VAR}` placeholder other than `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` is not packaged.
+- A disabled server is not packaged (it used to be bundled enabled).
+- A `env` entry `KEY = "${KEY}"` is left out.
+- The Codex `interface` block is written with sorted keys.
+
+## Agentic Resource Discovery
+
+Source: https://goldziher.github.io/ai-rulez/ard/
+
+ai-rulez can publish your skills, MCP servers and plugin for discovery through
+[Agentic Resource Discovery](https://agenticresourcediscovery.org/) (ARD): one `ard.json` manifest that a registry or an
+agent fetches from `https://<domain>/.well-known/ard.json`.
+
+!!! warning "The specification is a proposal"
+    ARD is still a proposal. ai-rulez implements **spec v0.91** and validates the manifest against the entry schema of
+    [ards-project/ard-spec](https://github.com/ards-project/ard-spec) commit `b76f235`, vendored under `internal/ard/schema`.
+    The media type registry and the term names can change; the version is pinned in `ard.SpecVersion`.
+
+#### Configure
+
+```toml
+[ard]
+publisher = "acme.example"   # the domain that serves /.well-known/ard.json (an FQDN)
+namespace = "conventions"    # colons separate sub-segments: "team:tools"
+# base_url = "https://acme.example/ard"   # where skills/<name>/SKILL.md is served (optional)
+# plugin_type = "application/vnd.example.plugin+json"
+# [ard.queries]                            # representative queries by resource name (optional)
+# docs = ["search the acme docs", "find the api reference"]
+```
+
+An identifier is `urn:air:<publisher>:<namespace>:<name>`; `validate` rejects a publisher that is not a fully qualified
+domain name and a namespace or name outside letters, digits, `.`, `_` and `-`.
+
+#### Generate
+
+```bash
+ai-rulez publish --emit ard          # dist/emit/ard/ard.json, in the release
+ai-rulez publish emit ard --out ard  # only the manifest, without a release
+```
+
+The emitter is also available as `[[publish.emitters]] name = "ard"`. Needs a committed project and a release tag, as every
+publish does.
+
+| Resource | `type` | `url` or `data` |
+| --- | --- | --- |
+| Root skill | `application/ai-skill+md` | `url`: the raw `SKILL.md` at the release tag (GitHub), or `<base_url>/skills/<name>/SKILL.md` |
+| MCP server (`[[mcp_servers]]`, `[[plugin.mcp]]`, enabled) | `application/mcp-server-card+json` | `data`: name, description and transport |
+| Plugin | `application/vnd.ai-rulez.plugin+json` (override with `plugin_type`) | `url`: the release archive |
+
+Exactly one of `url` and `data` is set. Environment values and headers of an MCP server never reach the manifest, and a
+server URL with credentials is refused. With `base_url`, the emitter also writes `skills/<name>/SKILL.md` next to
+`ard.json`, so hosting is a copy of the output directory. Only root skills are listed.
+
+The spec registers no plugin type, so the plugin type is ai-rulez's own vendor type until one exists; the conformance tool
+accepts it as an extension type. A plugin that builds an [Agent Plugins](agent-plugins.md) package is tagged `agent-plugins`.
+
+**Fields.** `displayName` defaults to the name; `description`, `version` (a skill's `metadata.version`, a plugin's
+version), `tags` (skill `keywords`, plugin keywords) and `capabilities` (the plugin category) come from the sources.
+`updatedAt` is the release time (the commit time, or `SOURCE_DATE_EPOCH`), never the clock, so the same release always
+produces the same bytes.
+
+**Representative queries** (2 to 5 per entry) are taken, in order, from the skill frontmatter `representative_queries`,
+the prompts of eval cases that expect the skill to trigger (`expect_trigger: true`, near misses excluded), then the
+frontmatter `triggers`. A plugin takes one query from each of its skills in turn. An MCP server has nothing to derive them
+from: list them under `[ard.queries]`. `[ard.queries]` replaces the derived queries of the named resource.
+
+#### Validate
+
+`validate --strict` builds the manifest in memory with a placeholder location and checks it against the pinned schema:
+[AR9S0](strict-validation.md#ar9s0-ard-manifest-invalid) (schema),
+[AR9S1](strict-validation.md#ar9s1-ard-identifier-invalid) (identifier),
+[AR9S2](strict-validation.md#ar9s2-ard-entry-invalid) (url or data),
+[AR9S3](strict-validation.md#ar9s3-ard-queries-out-of-range) (queries, a warning) and
+[AR9S4](strict-validation.md#ar9s4-ard-not-declared) (emitter without `[ard]`). `publish` runs the same gate, and prints
+the warnings of the emitter in `--dry-run` too.
+
+#### Host the file
+
+Serve the manifest at `https://<publisher>/.well-known/ard.json` with:
+
+- HTTPS only;
+- `Content-Type: application/json`;
+- `Access-Control-Allow-Origin: *`, so browser-based agents can read it.
+
+#### Discovery besides `/.well-known`
+
+- **HTML link.** A page can point at the manifest with `<link rel="ard" href="https://acme.example/ard.json">` in its
+  `<head>`; consumers must honour `rel="ard"`.
+- **DNS (optional).** If you cannot serve the well-known path, a DNS record can point at the file. The specification and the
+  how-to guide disagree: the spec (section 5.1) speaks of Service Binding records with the example name
+  `_entries._agents.example.com` and defines no record layout, while the guide shows a TXT record at
+  `_catalog._agents.yourdomain.com` with the value `"url=https://host/ard.json"`. ai-rulez publishes no DNS record; pick
+  one after checking the current spec.
+
+#### Why there is no `trustManifest`
+
+The optional `trustManifest` binds an entry to a verifiable identity. The spec (section 4.5.1) requires that identity to be
+a credential whose trust domain is the identifier's publisher, and leaves verification to a trust framework the manifest
+names. ai-rulez signs with Sigstore keyless DSSE bundles, whose identity is a CI workflow or an OIDC account rather than a
+credential issued by your domain, and no trust framework has been chosen. An emitted `trustManifest` would claim a binding
+nobody can check, so it is left out. The signature of the release itself (`--sign-keyless`) is unaffected. The pinned schema
+also spells the term `TrustManifest` while the spec text says `trustManifest`, so the name is unsettled.
 
 ## Evals
 
