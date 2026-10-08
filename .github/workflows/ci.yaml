@@ -221,7 +221,7 @@ jobs:
   e2e-test:
     name: E2E Tests - ${{ matrix.os }} - ${{ matrix.test-suite }}
     runs-on: ${{ matrix.os }}
-    needs: []
+    needs: [lint, test]
     timeout-minutes: 30
     strategy:
       matrix:
@@ -389,7 +389,7 @@ jobs:
   comprehensive-test:
     name: Comprehensive Test Suite - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    needs: []
+    needs: [lint]
     timeout-minutes: 30
     strategy:
       matrix:
