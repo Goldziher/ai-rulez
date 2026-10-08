@@ -2470,6 +2470,8 @@ These flags work with all commands:
 | `--help` / `-h`    | boolean | Show help for a command                                                         |
 | `--version` / `-v` | boolean | Print `ai-rulez version <version>` (root command only; same as `ai-rulez version`) |
 
+`-n` is the shorthand of `--config-dir` (the configuration directory name, `.ai-rulez` by default) on every command that takes it, not of a dry-run: use `-d` / `--dry-run` where it exists (`generate`, `clean`) and spell `--dry-run` out elsewhere. `--config-dir` is not a global flag: each command lists it with its own flags.
+
 Every command that can print JSON takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal. Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--yes -y`,
 `--priority -p`, `--targets -t`, `--content -c`, `--description -s`, `--path -p`,
 and `--ref -r`.
