@@ -27,14 +27,14 @@ never touches the network itself. Key-signed attestations need no trusted root.
 This is the only command that contacts a Sigstore service for verification. For
 a private Sigstore deployment, pass its trusted root file with --trusted-root.`,
 	Args: cobra.NoArgs,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		path, err := sigstore.UpdateTrustedRoot(nil)
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		logger.Success("Cached the Sigstore trusted root", "path", path)
 		reportWriter{os.Stdout}.printf("%s\n", path)
+		return nil
 	},
 }
 

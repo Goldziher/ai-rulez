@@ -36,12 +36,12 @@ func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs [
 	}
 	original, mode, err := patchMajor(cfg, report.Major)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	rollback := func() {
 		if rerr := safefs.WriteFileAtomicMode(filepath.Join(cfg.ConfigDir, configFileTOML), original, mode); rerr != nil {
-			fmtError(oops.Wrapf(rerr, "restore config.toml; it still holds the new version constraints"))
+			renderStderr(oops.Wrapf(rerr, "restore config.toml; it still holds the new version constraints"))
 		}
 		for i := range report.Major {
 			report.Major[i].Written = false
@@ -51,7 +51,7 @@ func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs [
 	fresh, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
 	if err != nil {
 		rollback()
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	names := map[string]bool{}
@@ -62,7 +62,7 @@ func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs [
 	rows2, err := evaluateSources(cmdContext(), srcs2, current)
 	if err != nil {
 		rollback()
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	code := planAndApply(path, fresh, current, srcs2, rows2, report)

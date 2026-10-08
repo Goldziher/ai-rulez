@@ -158,7 +158,7 @@ func policyGate(cfg *config.Config) error {
 func runShowPolicy(ctx context.Context, args []string, out io.Writer) int {
 	resolved, err := policyEnforcer.Load()
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	var result *policy.Result
@@ -169,7 +169,7 @@ func runShowPolicy(ctx context.Context, args []string, out io.Writer) int {
 		// is a layer of this repository only.
 		withOrg, oerr := policyEnforcer.LoadFor(cfg.BaseDir)
 		if oerr != nil {
-			fmtError(oerr)
+			renderStderr(oerr)
 			return 1
 		}
 		resolved = withOrg
@@ -182,16 +182,16 @@ func runShowPolicy(ctx context.Context, args []string, out io.Writer) int {
 	}
 	report := policy.BuildReport(resolved, result)
 	if structuredFormat(validateFormat) && validateFormat != formatJSON {
-		fmtError(oops.Errorf("validate --show-policy supports --format text and json, not %q", validateFormat))
+		renderStderr(oops.Errorf("validate --show-policy supports --format text and json, not %q", validateFormat))
 		return 1
 	}
 	if validateFormat == formatJSON {
 		if err := report.WriteJSON(out); err != nil {
-			fmtError(err)
+			renderStderr(err)
 			return 1
 		}
 	} else if err := report.WriteText(out); err != nil {
-		fmtError(oops.Wrapf(err, "write the policy report"))
+		renderStderr(oops.Wrapf(err, "write the policy report"))
 		return 1
 	}
 	if report.Overrides.Rejected > 0 && report.Mode != policy.ModeWarn {

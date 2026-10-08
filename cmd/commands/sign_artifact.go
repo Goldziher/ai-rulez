@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
 
@@ -35,30 +34,30 @@ func runSignArtifact(ctx context.Context, env ambient.Env) int {
 		st, ts, er = signing.TreeStatement(subject, target, meta)
 	}
 	if er != nil {
-		fmtError(er)
+		renderStderr(er)
 		return 1
 	}
 	out := artifactAttestationPath(subject, target)
 	if out, er = appendTarget(out); er != nil {
-		fmtError(er)
+		renderStderr(er)
 		return 1
 	}
 	signer, err := newSigner(ctx, env)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if err := exportPublicKey(signer); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	bundle, err := signing.SignStatement(ctx, signer, st)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if err := writeBundle(out, bundle); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	digest := ts.Digest
@@ -66,7 +65,8 @@ func runSignArtifact(ctx context.Context, env ambient.Env) int {
 		digest = "sha256:" + fs.DigestHex
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
-	logger.Success("Signed "+subject, "path", target, "signer", signerLabel(info), "subject", digest, "bundle", out)
+	reportSigned("Signed "+subject, map[string]any{"kind": subject, "path": target, "signer": signerLabel(info), "subject": digest, "bundle": out},
+		"path", target, "signer", signerLabel(info), "subject", digest, "bundle", out)
 	if signProvenance {
 		return signProvenanceFor(ctx, signer, ts, meta, env, out)
 	}
@@ -107,20 +107,21 @@ func signProvenanceFor(ctx context.Context, signer signing.Signer, ts signing.Tr
 	}
 	st, err := signing.ProvenanceStatement(ts, in)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	bundle, err := signing.SignStatement(ctx, signer, st)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	out := signing.ProvenanceSidecarFor(attestation)
 	if err := writeBundle(out, bundle); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
-	logger.Success("Signed SLSA provenance", "builder", in.BuilderID, "bundle", out)
+	reportSigned("Signed SLSA provenance", map[string]any{"kind": "provenance", "builder": in.BuilderID, "bundle": out},
+		"builder", in.BuilderID, "bundle", out)
 	return 0
 }
 
