@@ -331,7 +331,6 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 		return nil, err
 	}
 	config.Content = contentTree
-	warnLegacyLayout(lo.host.Log, v, configDir, contentTree)
 
 	// Scan machine-local override content into a SEPARATE tree. This never
 	// enters config.Content, so it cannot leak into committed output; it is
