@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,8 +25,8 @@ func mergeProject() map[string]string {
 func TestConvert_MergeKeepsExistingFilesAndImportsBesideThem(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, mergeProject())
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, mergeProject())
+	testutil.WriteTree(t, dir, map[string]string{
 		".ai-rulez/rules/ts.md":          "Mine, hand written.\n",
 		".ai-rulez/skills/lint/SKILL.md": "---\nname: lint\ndescription: Mine\n---\nMy lint.\n",
 	})
@@ -51,8 +52,8 @@ func TestConvert_MergeKeepsExistingFilesAndImportsBesideThem(t *testing.T) {
 func TestConvert_MergeIsIdempotent(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, mergeProject())
-	writeTree(t, dir, map[string]string{".ai-rulez/rules/ts.md": "Mine.\n"})
+	testutil.WriteTree(t, dir, mergeProject())
+	testutil.WriteTree(t, dir, map[string]string{".ai-rulez/rules/ts.md": "Mine.\n"})
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, Merge: true})
 	require.NoError(t, err)
 	first := snapshot(t, filepath.Join(dir, ".ai-rulez"))
@@ -71,8 +72,8 @@ func TestConvert_MergeIsIdempotent(t *testing.T) {
 func TestConvert_WithoutMergeTheSameTreeConflicts(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, mergeProject())
-	writeTree(t, dir, map[string]string{".ai-rulez/rules/ts.md": "Mine.\n"})
+	testutil.WriteTree(t, dir, mergeProject())
+	testutil.WriteTree(t, dir, map[string]string{".ai-rulez/rules/ts.md": "Mine.\n"})
 
 	// Act
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
@@ -83,7 +84,7 @@ func TestConvert_WithoutMergeTheSameTreeConflicts(t *testing.T) {
 
 func TestConvert_MergeAndForceExcludeEachOther(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, mergeProject())
+	testutil.WriteTree(t, dir, mergeProject())
 
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, Merge: true, Force: true})
 
@@ -94,8 +95,8 @@ func TestConvert_MergeAndForceExcludeEachOther(t *testing.T) {
 func TestConvert_MergeWithKeepNamesLeavesTheConflict(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, mergeProject())
-	writeTree(t, dir, map[string]string{".ai-rulez/rules/ts.md": "Mine.\n"})
+	testutil.WriteTree(t, dir, mergeProject())
+	testutil.WriteTree(t, dir, map[string]string{".ai-rulez/rules/ts.md": "Mine.\n"})
 
 	// Act
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, Merge: true, KeepNames: true})
@@ -124,7 +125,7 @@ func TestConvert_KeepNamesRefusesACollisionBetweenImportedItems(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			dir := t.TempDir()
-			writeTree(t, dir, files)
+			testutil.WriteTree(t, dir, files)
 
 			// Act
 			_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, KeepNames: tt.keepNames})
@@ -166,9 +167,9 @@ func TestConvert_Delivery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			dir := t.TempDir()
-			writeTree(t, dir, mergeProject())
+			testutil.WriteTree(t, dir, mergeProject())
 			if tt.existing != "" {
-				writeTree(t, dir, map[string]string{".ai-rulez/config.toml": tt.existing})
+				testutil.WriteTree(t, dir, map[string]string{".ai-rulez/config.toml": tt.existing})
 			}
 			tt.opts.Source, tt.opts.Write = dir, true
 
@@ -202,7 +203,7 @@ func TestConvert_Delivery(t *testing.T) {
 func TestConvert_DeliveryWithoutSkillsIsReportedNotWritten(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{"CLAUDE.md": "x\n"})
+	testutil.WriteTree(t, dir, map[string]string{"CLAUDE.md": "x\n"})
 
 	// Act
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, Delivery: "served"})

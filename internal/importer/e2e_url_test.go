@@ -6,12 +6,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestConvert_RedactedURLsValidate(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{".mcp.json": `{"mcpServers":{"s":{"type":"http","url":"https://user:pw1234@x.example/mcp?api_key=qq998877&v=1"}}}`})
+	testutil.WriteTree(t, dir, map[string]string{".mcp.json": `{"mcpServers":{"s":{"type":"http","url":"https://user:pw1234@x.example/mcp?api_key=qq998877&v=1"}}}`})
 
 	// Act
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})

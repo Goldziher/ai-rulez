@@ -4,10 +4,8 @@ import "errors"
 
 // Configuration errors
 var (
-	ErrMissingName           = errors.New("missing required field: name")
-	ErrInvalidDefaultProfile = errors.New("default profile does not exist in profiles")
-	ErrInvalidPreset         = errors.New("invalid preset configuration")
-	ErrNoContent             = errors.New("no content loaded")
+	ErrInvalidPreset = errors.New("invalid preset configuration")
+	ErrNoContent     = errors.New("no content loaded")
 	// ErrRoleReference marks a role that names something that does not exist (AR971),
 	// such as a domain; commands exit 2 on it, the code `validate` uses for findings.
 	ErrRoleReference = errors.New("role reference does not resolve")

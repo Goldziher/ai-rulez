@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -147,13 +148,13 @@ func firstOperand(args, pkgFlags, valueFlags []string) string {
 			break // everything after the operand belongs to the server
 		}
 		name, value, hasValue := strings.Cut(a, "=")
-		if contains(pkgFlags, name) {
+		if slices.Contains(pkgFlags, name) {
 			if !hasValue && i+1 < len(args) {
 				value = args[i+1]
 			}
 			return value
 		}
-		if !hasValue && contains(valueFlags, name) {
+		if !hasValue && slices.Contains(valueFlags, name) {
 			i++
 		}
 	}
@@ -266,15 +267,6 @@ func goTarget(args []string) (launcher, bool) {
 	}
 	pinned := exactVersion("golang", version)
 	return launcher{purl: purl("golang", ns, base, pinnedVersion(version, pinned), nil, ""), name: mod, version: pinnedVersion(version, pinned), requested: version, pinned: pinned}, true
-}
-
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 // qualifierValue escapes a qualifier value, keeping "/" and ":" readable as the

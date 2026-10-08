@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // okfLockFixture is a git repository holding an OKF bundle (tag v1 on its first
@@ -31,11 +32,11 @@ func newOKFLockFixture(t *testing.T, ref string) *okfLockFixture {
 	t.Cleanup(func() { lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false })
 
 	remote := t.TempDir()
-	git(t, remote, "init", "-q", "-b", "main")
+	testutil.Git(t, remote, "init", "-q", "-b", "main")
 	writeTestFile(t, filepath.Join(remote, "kb", "decisions", "shared.md"), "---\ntype: Decision\ndescription: Shared\n---\nversion one\n")
-	git(t, remote, "add", "-A")
-	git(t, remote, "commit", "-qm", "one")
-	git(t, remote, "tag", "v1")
+	testutil.Git(t, remote, "add", "-A")
+	testutil.Git(t, remote, "commit", "-qm", "one")
+	testutil.Git(t, remote, "tag", "v1")
 
 	project := t.TempDir()
 	refLine := ""
@@ -74,9 +75,9 @@ func (f *okfLockFixture) body(cfg *config.Config) string {
 func (f *okfLockFixture) advance(t *testing.T) string {
 	t.Helper()
 	writeTestFile(t, filepath.Join(f.remote, "kb", "decisions", "shared.md"), "---\ntype: Decision\ndescription: Shared\n---\nversion two\n")
-	git(t, f.remote, "commit", "-qam", "two")
-	git(t, f.remote, "tag", "-f", "v1")
-	return git(t, f.remote, "rev-parse", "HEAD")
+	testutil.Git(t, f.remote, "commit", "-qam", "two")
+	testutil.Git(t, f.remote, "tag", "-f", "v1")
+	return testutil.Git(t, f.remote, "rev-parse", "HEAD")
 }
 
 func (f *okfLockFixture) writeLock(t *testing.T) *lockfile.File {
@@ -93,7 +94,7 @@ func (f *okfLockFixture) writeLock(t *testing.T) *lockfile.File {
 
 func TestOKFInclude_TagIsPinnedToACommitAndDigest(t *testing.T) {
 	f := newOKFLockFixture(t, "v1")
-	first := git(t, f.remote, "rev-parse", "v1^{commit}")
+	first := testutil.Git(t, f.remote, "rev-parse", "v1^{commit}")
 	lock := f.writeLock(t)
 	require.Len(t, lock.Include, 1)
 	entry := lock.Include[0]
@@ -202,7 +203,7 @@ func TestOKFInclude_MovingRefIsUnpinnedUntilLocked(t *testing.T) {
 
 func TestOKFInclude_FullCommitIsPinnedWithoutALock(t *testing.T) {
 	f := newOKFLockFixture(t, "")
-	sha := git(t, f.remote, "rev-parse", "HEAD")
+	sha := testutil.Git(t, f.remote, "rev-parse", "HEAD")
 	f = &okfLockFixture{remote: f.remote, project: f.project}
 	cfgPath := filepath.Join(f.project, ".ai-rulez", "config.toml")
 	raw, err := os.ReadFile(cfgPath)
