@@ -125,7 +125,7 @@ func TestLockRoles_CheckingAnUnpinnedRoleIsAnError(t *testing.T) {
 
 	// Act
 	var code int
-	report, _ := capture(t, func() { code = checkLockAt("") })
+	_, report := capture(t, func() { code = checkLockAt("") })
 
 	// Assert
 	assert.Equal(t, 1, code)
