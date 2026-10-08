@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 )
 
 // fmKey is one top-level frontmatter key with its 1-based line in the file.
@@ -40,23 +42,49 @@ func parseFrontmatterDoc(d doc) frontmatter {
 	}
 	for i := 0; i+1 < len(m.Content); i += 2 {
 		k, v := m.Content[i], m.Content[i+1]
-		var val any
-		if err := v.Decode(&val); err != nil {
-			val = nil
-		}
-		fm.keys = append(fm.keys, fmKey{Name: k.Value, Line: k.Line + 1, Value: val})
-		if k.Value == "metadata" && v.Kind == yaml.MappingNode {
-			fm.meta = map[string]fmKey{}
-			for j := 0; j+1 < len(v.Content); j += 2 {
-				var mv any
-				if err := v.Content[j+1].Decode(&mv); err != nil {
-					mv = nil
-				}
-				fm.meta[v.Content[j].Value] = fmKey{Name: v.Content[j].Value, Line: v.Content[j].Line + 1, Value: mv}
-			}
+		fm.add(k, v)
+		if k.Value == okf.ExtensionKey {
+			// An OKF concept keeps the ai-rulez frontmatter in x-ai-rulez.metadata;
+			// the checks read those entries as the top-level keys they stand for.
+			fm.addExtension(v)
 		}
 	}
 	return fm
+}
+
+// add records one top-level key.
+func (f *frontmatter) add(k, v *yaml.Node) {
+	var val any
+	if err := v.Decode(&val); err != nil {
+		val = nil
+	}
+	f.keys = append(f.keys, fmKey{Name: k.Value, Line: k.Line + 1, Value: val})
+	if k.Value == "metadata" && v.Kind == yaml.MappingNode {
+		f.meta = map[string]fmKey{}
+		for j := 0; j+1 < len(v.Content); j += 2 {
+			var mv any
+			if err := v.Content[j+1].Decode(&mv); err != nil {
+				mv = nil
+			}
+			f.meta[v.Content[j].Value] = fmKey{Name: v.Content[j].Value, Line: v.Content[j].Line + 1, Value: mv}
+		}
+	}
+}
+
+// addExtension records the entries of an x-ai-rulez.metadata mapping as keys.
+func (f *frontmatter) addExtension(ext *yaml.Node) {
+	if ext.Kind != yaml.MappingNode {
+		return
+	}
+	for i := 0; i+1 < len(ext.Content); i += 2 {
+		md := ext.Content[i+1]
+		if ext.Content[i].Value != "metadata" || md.Kind != yaml.MappingNode {
+			continue
+		}
+		for j := 0; j+1 < len(md.Content); j += 2 {
+			f.add(md.Content[j], md.Content[j+1])
+		}
+	}
 }
 
 // top returns the top-level key.

@@ -173,7 +173,7 @@ func (s *contentScanner) markdownFiles(dir string) ([]ContentFile, error) {
 		}
 
 		filePath := filepath.Join(dir, entry.Name())
-		if isDir, ok := s.entryInfo(filePath, entry); !ok || isDir {
+		if isDir, ok := s.entryInfo(filePath, entry); !ok || isDir || s.isOKFListing(filePath) {
 			continue
 		}
 		contentFile, err := s.loadFile(filePath)
@@ -307,6 +307,9 @@ func (s *contentScanner) commands(commandsDir string, bundleExclude []string) ([
 		}
 
 		filePath := entryPath
+		if s.isOKFListing(filePath) {
+			continue
+		}
 		contentFile, err := s.loadFile(filePath)
 		if err != nil {
 			s.logger().Warn("failed to load command file", "path", filePath, "error", err)
@@ -337,7 +340,7 @@ func (s *contentScanner) agents(agentsPath string) ([]ContentFile, error) {
 		}
 
 		filePath := filepath.Join(agentsPath, entry.Name())
-		if isDir, ok := s.entryInfo(filePath, entry); !ok || isDir {
+		if isDir, ok := s.entryInfo(filePath, entry); !ok || isDir || s.isOKFListing(filePath) {
 			continue
 		}
 		contentFile, err := s.loadFile(filePath)
