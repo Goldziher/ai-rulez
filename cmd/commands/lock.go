@@ -18,6 +18,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/render"
 )
 
 var (
@@ -382,8 +383,12 @@ func lockProfileFor(lock *lockfile.File) string {
 
 // checkLockAt is `lock --check`: the content comparison, then the attestation
 // check when [signing] require names the lock.
-func checkLockAt(path string) int {
-	code, upToDate := checkLockContentAt(path)
+func checkLockAt(path string) int { return checkLockOut(path, defaultOut()) }
+
+// checkLockOut is checkLockAt writing its report and verdict to out, for a caller
+// (publish) that embeds the check and keeps stdout for its own document.
+func checkLockOut(path string, out render.Out) int {
+	code, upToDate := checkLockContentAt(path, out)
 	if code == 1 {
 		return code
 	}
@@ -403,7 +408,7 @@ func checkLockAt(path string) int {
 // checkLockContentAt compares the lock with the sources. The second result is
 // the success report, run by the caller once every other check has passed too, so
 // "up to date" is never printed before a signature failure.
-func checkLockContentAt(path string) (code int, report func()) {
+func checkLockContentAt(path string, out render.Out) (code int, report func()) {
 	cfg, remoteSkipped, err := loadForLockCheck(path)
 	if err != nil {
 		reportFailure(lockFormat, err)
@@ -436,7 +441,6 @@ func checkLockContentAt(path string) (code int, report func()) {
 	}
 	if !diff.InSync {
 		// The drift report is the result of --check: stdout, so -q keeps it; the remedy is a diagnostic.
-		out := defaultOut()
 		out.Result("%s does not match %s:\n", lockfile.FileName, cfg.ConfigDir)
 		if werr := diff.WriteText(out.Stdout()); werr != nil {
 			renderError(os.Stderr, werr)
@@ -448,7 +452,7 @@ func checkLockContentAt(path string) (code int, report func()) {
 		logger.Info(n)
 	}
 	// The verdict is the result of --check: stdout, so -q keeps it.
-	return 0, func() { defaultOut().Result("Lock file is up to date (%s)\n", cfg.ConfigDir) }
+	return 0, func() { out.Result("Lock file is up to date (%s)\n", cfg.ConfigDir) }
 }
 
 // diffLockAt prints how the sources and outputs differ from the lock. It exits 0
