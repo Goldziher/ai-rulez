@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -116,13 +115,11 @@ func runReportEvals(out io.Writer) error {
 	rows := evals.Rank(in)
 
 	if reportEvalsFlags.json {
-		encoder := json.NewEncoder(out)
-		encoder.SetIndent("", "  ")
 		doc := map[string]any{"schema_version": 1, "usage_log": in.Uses != nil, "skills": rows}
 		if src.logs > 0 {
 			doc["usage_sources"] = map[string]int{"logs": src.logs, "events": src.events, "duplicates": src.duplicates}
 		}
-		return oops.Wrapf(encoder.Encode(doc), "encode evals report")
+		return oops.Wrapf(writeRawJSON(out, doc), "encode evals report")
 	}
 	if src.logs > 1 || src.duplicates > 0 {
 		reportWriter{out}.printf("Usage: %d logs, %d events (%d duplicates removed by event id)\n", src.logs, src.events, src.duplicates)
