@@ -125,3 +125,20 @@ func BenchmarkSecretScanLongLine(b *testing.B) {
 		DetectSecret(text)
 	}
 }
+
+// BenchmarkSecretScanCustomPatterns scans text with configured secret patterns,
+// which used to be compiled again for every line.
+func BenchmarkSecretScanCustomPatterns(b *testing.B) {
+	text := benchSecretText(400, false)
+	lc := config.LintConfig{Security: &config.LintSecurity{SecretPatterns: []config.LintSecretPattern{
+		{Name: "internal token", Regex: `\bint_[A-Za-z0-9]{32}\b`},
+		{Name: "deploy key", Regex: `\bdk-[a-f0-9]{40}\b`},
+	}}}
+	b.ReportAllocs()
+	b.SetBytes(int64(len(text)))
+	for range b.N {
+		r := &runner{cfg: &config.Config{}, docs: map[string]doc{"a.md": {}}, lc: lc}
+		r.resolveSettings()
+		r.securityScan("a.md", text)
+	}
+}
