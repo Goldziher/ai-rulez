@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // SplitSkill separates a SKILL.md into its frontmatter and body. A file without
@@ -11,22 +13,14 @@ import (
 func SplitSkill(content []byte) (front map[string]any, body string) {
 	text := strings.ReplaceAll(string(content), "\r\n", "\n")
 	front = map[string]any{}
-	if !strings.HasPrefix(text, "---\n") {
+	block := frontmatter.SplitString(text)
+	if !block.Closed {
 		return front, text
 	}
-	rest := text[len("---\n"):]
-	end := strings.Index(rest, "\n---")
-	if end < 0 {
-		return front, text
-	}
-	if err := yaml.Unmarshal([]byte(rest[:end]), &front); err != nil || front == nil {
+	if err := yaml.Unmarshal([]byte(block.Raw), &front); err != nil || front == nil {
 		return map[string]any{}, text
 	}
-	body = rest[end+len("\n---"):]
-	if i := strings.IndexByte(body, '\n'); i >= 0 {
-		body = body[i+1:]
-	}
-	return front, strings.TrimSpace(body)
+	return front, strings.TrimSpace(block.Body)
 }
 
 // ItemFromSkill builds the searchable item of a SKILL.md the way the served
