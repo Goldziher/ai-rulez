@@ -30,6 +30,8 @@ var (
 	validateStrict bool
 	// validateConfigOnly is --config-only: skip the content checks.
 	validateConfigOnly bool
+	// validateOffline is --offline: do not fetch remote includes.
+	validateOffline bool
 	// validateWarnings is --strict: findings of severity warning fail the run,
 	// the same as --fail-on warning.
 	validateWarnings bool
