@@ -14,6 +14,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/secretpat"
 )
 
 // externalFinding is the JSON shape an external scanner may print, and the
@@ -377,7 +379,12 @@ func isInvisibleRune(r rune) bool {
 // finding from a secret scanner does not carry the secret it found.
 func maskSecrets(s string) string {
 	for _, p := range builtinSecrets {
-		s = p.re.ReplaceAllStringFunc(s, maskSecret)
+		if p.mayMatch(s) {
+			s = p.re.ReplaceAllStringFunc(s, maskSecret)
+		}
+	}
+	if !secretpat.MayHaveGenericCredential(s) {
+		return s
 	}
 	return genericCredential.ReplaceAllStringFunc(s, func(m string) string {
 		if sub := genericCredential.FindStringSubmatch(m); len(sub) > 1 && hasLetterAndDigit(sub[1]) {
