@@ -3,6 +3,7 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -96,5 +97,7 @@ func TestLocalContentCommands_LocalWithDomainWritesLocalDomain(t *testing.T) {
 	// Assert: no "cannot combine" error; the domain is created below local/.
 	data, err := os.ReadFile(filepath.Join(dir, "local", "domains", "scratch", "agents", "helper.md"))
 	require.NoError(t, err)
-	assert.Equal(t, "Body text.\n", string(data))
+	assert.True(t, strings.HasSuffix(string(data), "\n\nBody text.\n"), "the body is kept: %q", data)
+	assert.Contains(t, string(data), "type: Reference", "a local item is an OKF concept too")
+	assert.NoFileExists(t, filepath.Join(dir, "local", "domains", "scratch", "agents", "index.md"), "the local tree has no indexes")
 }
