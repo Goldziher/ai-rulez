@@ -3,6 +3,7 @@ package okfbridge_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -43,6 +44,9 @@ func TestImportRefusesFilesTooLargeToScan(t *testing.T) {
 }
 
 func TestImportDoesNotKeepGroupOrWorldWriteBits(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows reports 0o666 for every file: there are no mode bits to keep")
+	}
 	dir := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "skills/s/scripts"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "skills/s/SKILL.md"), []byte("---\ntype: Playbook\nx-ai-rulez:\n  kind: skill\n  id: s\n---\nx\n"), 0o644))
