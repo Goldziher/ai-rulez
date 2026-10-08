@@ -256,6 +256,30 @@ func TestPreInitializeRequestsUseOneErrorCode(t *testing.T) {
 	assert.Nil(t, resp["error"], "ping is allowed before initialize")
 }
 
+func TestPlainServerPreInitializeRequestIsInvalidRequest(t *testing.T) {
+	srv := NewServer("test")
+	clientToServer, serverIn := io.Pipe()
+	serverOut, clientFromServer := io.Pipe()
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		_ = srv.GetMCPServer().Run(ctx, GuardLifecycle(&sdkmcp.IOTransport{Reader: clientToServer, Writer: clientFromServer}))
+	}()
+	t.Cleanup(func() {
+		cancel()
+		_ = serverIn.Close()
+		_ = clientFromServer.Close()
+	})
+	scanner := bufio.NewScanner(serverOut)
+	scanner.Buffer(make([]byte, 1<<20), 1<<24)
+	p := &rpcPeer{t: t, in: serverIn, out: scanner}
+
+	resp := p.call("tools/list", map[string]any{})
+
+	rpcErr, ok := resp["error"].(map[string]any)
+	require.True(t, ok, "answered before initialize: %v", resp)
+	assert.EqualValues(t, jsonrpc.CodeInvalidRequest, rpcErr["code"])
+}
+
 func (p *rpcPeer) notify(method string) {
 	_, err := fmt.Fprintf(p.in, `{"jsonrpc":"2.0","method":%q}`+"\n", method)
 	require.NoError(p.t, err)
