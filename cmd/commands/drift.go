@@ -124,6 +124,18 @@ func newDriftReport(mode driftMode) *driftReport {
 	return &driftReport{out: defaultOut(), json: mode == driftRender && generateFormat == formatJSON}
 }
 
+// writeJSON writes the --format json document; it does nothing for text.
+func (r *driftReport) writeJSON(status string, roots, blocked int) {
+	if !r.json {
+		return
+	}
+	items := r.items
+	if items == nil {
+		items = []driftItem{}
+	}
+	_ = jsondoc.Write(r.out.Stdout(), driftDocument{Status: status, Roots: roots, Blocked: blocked, Differing: items}) //nolint:errcheck // stdout write failure has nowhere to be reported
+}
+
 func (r *driftReport) add(kind generator.DriftKind, path string) {
 	if r.json {
 		r.items = append(r.items, driftItem{Kind: string(kind), Path: path})
@@ -192,6 +204,7 @@ func runDriftCheckGated(args []string, isRecursive bool, mode driftMode, gate fu
 		return 1
 	}
 	if gateDrift {
+		rep.writeJSON("drift", 1, blocked)
 		return exitDrift
 	}
 	return finishDrift(rep, n, blocked, 1, fix)
@@ -260,23 +273,18 @@ func runRecursiveDrift(rep *driftReport, mode driftMode, fix string, gate func(*
 		return 1
 	}
 	if total == 0 && gateDrift > 0 {
+		rep.writeJSON("drift", len(paths), totalBlocked)
 		return exitDrift
 	}
 	return finishDrift(rep, total, totalBlocked, len(paths), fix)
 }
 
 func finishDrift(rep *driftReport, differing, blocked, roots int, fix string) int {
-	if rep.json {
-		status := "ok"
-		if differing > 0 {
-			status = "drift"
-		}
-		items := rep.items
-		if items == nil {
-			items = []driftItem{}
-		}
-		_ = jsondoc.Write(rep.out.Stdout(), driftDocument{Status: status, Roots: roots, Blocked: blocked, Differing: items}) //nolint:errcheck // stdout write failure has nowhere to be reported
+	status := "ok"
+	if differing > 0 {
+		status = "drift"
 	}
+	rep.writeJSON(status, roots, blocked)
 	if differing == 0 {
 		logger.Success("Generated files are up to date", "roots", roots)
 		return 0
