@@ -198,6 +198,7 @@ no file system. `--emit NAME` (repeatable) or `[[publish.emitters]]` runs it int
 | `port` | one [Port](https://docs.port.io/api-reference/create-an-entity/) entity JSON per plugin and skill, plus `index.json` naming the request each file is the body of | experimental |
 | `aws-agent-registry` | one `CreateRegistryRecord` request body per skill (`SKILL`, `agentSkillsDefinition` with the `SKILL.md`) and one `CUSTOM` record per plugin | experimental |
 | `agent-plugins` | `<name>/plugin.json`, `skills/`, `mcp.json` and extension namespaces: one validated [Agent Plugins](agent-plugins.md) directory per plugin, without the files of other runtimes; option `spec` (`1.0.0` or `1.1.0`) | verified |
+| `ard` | `ard.json`: the [Agentic Resource Discovery](ard.md) manifest of the skills, MCP servers and plugin, and `skills/<name>/SKILL.md` with `[ard] base_url`; needs the `[ard]` table | verified |
 | `kiro-steering` | `.kiro/steering/*.md` from the root rules and the skills, and `distribution.json` listing the files and digests for MDM packaging | experimental |
 | template | `--template FILE` or `[[publish.emitters]] name = "template"`: any text from a Go template over the manifest | verified |
 
