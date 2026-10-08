@@ -431,8 +431,10 @@ func getProjectName(args []string) string {
 }
 
 func shouldOverwriteConfig(filename string) bool {
-	if autoYes || os.Getenv("CI") != "" || os.Getenv("NO_INTERACTIVE") != "" {
-		logger.Info("Auto-overwriting existing configuration directory (--yes or CI environment)")
+	// Only an explicit --yes authorizes deleting an existing directory; a CI or
+	// NO_INTERACTIVE environment alone must never destroy user content.
+	if autoYes {
+		logger.Info("Auto-overwriting existing configuration directory (--yes)")
 		return true
 	}
 
