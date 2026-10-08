@@ -55,13 +55,13 @@ func (g Git) run(ctx context.Context, dir string, stdin []byte, args ...string) 
 // IsRepoContext reports whether dir is inside a git work tree. A missing git binary or
 // a directory outside any repository is simply "no".
 func (g Git) IsRepoContext(ctx context.Context, dir string) bool {
-	out, _, err := g.run(ctx, dir, nil, "rev-parse", "--is-inside-work-tree")
+	out, err := g.revParse(ctx, dir, "--is-inside-work-tree")
 	return err == nil && strings.TrimSpace(string(out)) == "true"
 }
 
 // TopLevelContext returns the work tree root containing dir, or "" outside a repository.
 func (g Git) TopLevelContext(ctx context.Context, dir string) string {
-	out, _, err := g.run(ctx, dir, nil, "rev-parse", "--show-toplevel")
+	out, err := g.revParse(ctx, dir, "--show-toplevel")
 	if err != nil {
 		return ""
 	}
@@ -190,10 +190,13 @@ func (g Git) checkIgnore(ctx context.Context, dir string, gitFlags, paths []stri
 // global excludes file is honored as configured. Paths are relative to dir. It
 // returns (nil, nil) outside a repository.
 func (g Git) IgnoreRulesMirroredContext(ctx context.Context, dir string, paths []string, rewrite func(rel, content string) string) (map[string]IgnoreMatch, error) {
-	if len(paths) == 0 || !g.IsRepoContext(ctx, dir) {
+	if len(paths) == 0 {
 		return nil, nil
 	}
-	top := g.TopLevelContext(ctx, dir)
+	isRepo, top := g.repoTop(ctx, dir)
+	if !isRepo {
+		return nil, nil
+	}
 	prefix := RepoRelative(top, dir)
 	if top == "" || prefix == "" {
 		return nil, oops.Errorf("cannot place %s inside its repository", dir)
@@ -317,7 +320,7 @@ func copyRewritten(log logger.Logger, src, dst, rel string, rewrite func(rel, co
 // git so linked worktrees (whose .git is a file) get the shared one. It returns
 // "" outside a repository.
 func (g Git) InfoExcludePathContext(ctx context.Context, dir string) string {
-	out, _, err := g.run(ctx, dir, nil, "rev-parse", "--git-path", "info/exclude")
+	out, err := g.revParse(ctx, dir, "--git-path", "info/exclude")
 	if err != nil {
 		return ""
 	}
@@ -404,7 +407,7 @@ func (g Git) IsLinkedWorktreeContext(ctx context.Context, dir string) bool {
 // gitPath resolves the path `git rev-parse <flag>` prints, which may be
 // relative to dir, to a symlink-free absolute path.
 func (g Git) gitPath(ctx context.Context, dir, flag string) string {
-	out, _, err := g.run(ctx, dir, nil, "rev-parse", flag)
+	out, err := g.revParse(ctx, dir, flag)
 	if err != nil {
 		return ""
 	}
@@ -565,4 +568,17 @@ func (g Git) ChangedSince(dir, rev string) ([]string, error) {
 // StageExecutable is StageExecutableContext without a caller's context.
 func (g Git) StageExecutable(absPath string) (changed bool, err error) {
 	return g.StageExecutableContext(context.Background(), absPath)
+}
+
+// repoTop answers IsRepoContext and TopLevelContext for dir with one git call
+// where git's output allows it. Anything but the plain "inside a work tree"
+// answer is asked again question by question, so the results are exactly those
+// of the two separate calls.
+func (g Git) repoTop(ctx context.Context, dir string) (isRepo bool, top string) {
+	if out, err := g.revParse(ctx, dir, "--is-inside-work-tree", "--show-toplevel"); err == nil {
+		if lines := strings.Split(strings.TrimSpace(string(out)), "\n"); len(lines) == 2 && strings.TrimSpace(lines[0]) == "true" {
+			return true, filepath.Clean(strings.TrimSpace(lines[1]))
+		}
+	}
+	return g.IsRepoContext(ctx, dir), g.TopLevelContext(ctx, dir)
 }
