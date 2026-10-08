@@ -327,7 +327,19 @@ var priorityValues = []string{"critical", "high", "medium", "low", "minimal"}
 var severityValues = []string{"low", "medium", "high", "critical"}
 
 func (s *Server) registerCRUDTools() {
-	// Domain tools
+	s.registerCRUDDomainTools()
+	s.registerCRUDRuleTools()
+	s.registerCRUDCheckTools()
+	s.registerCRUDContextTools()
+	s.registerCRUDSkillTools()
+	s.registerCRUDIncludeTools()
+	s.registerCRUDInstalledSkillTools()
+	s.registerCRUDConfigTools()
+	s.registerCRUDProfileTools()
+}
+
+// registerCRUDDomainTools adds the domain tools.
+func (s *Server) registerCRUDDomainTools() {
 	s.addTool(
 		newAnnotatedTool("create_domain", "Create a new domain with subdirectories for rules, context, and skills",
 			newSchemaBuilder().
@@ -356,8 +368,10 @@ func (s *Server) registerCRUDTools() {
 		),
 		handlers.ListDomainsHandler,
 	)
+}
 
-	// Rule tools
+// registerCRUDRuleTools adds the rule tools.
+func (s *Server) registerCRUDRuleTools() {
 	s.addTool(
 		newAnnotatedTool("create_rule", "Create a new rule file with optional YAML frontmatter",
 			newSchemaBuilder().
@@ -422,8 +436,10 @@ func (s *Server) registerCRUDTools() {
 		),
 		handlers.ListRulesHandler,
 	)
+}
 
-	// Check tools (code-review guidelines)
+// registerCRUDCheckTools adds the check tools.
+func (s *Server) registerCRUDCheckTools() {
 	s.addTool(
 		newAnnotatedTool("create_check", "Create a new code-review check file (.ai-rulez/checks/<name>.md)",
 			newSchemaBuilder().
@@ -487,8 +503,10 @@ func (s *Server) registerCRUDTools() {
 		),
 		handlers.ListChecksHandler,
 	)
+}
 
-	// Context tools
+// registerCRUDContextTools adds the context tools.
+func (s *Server) registerCRUDContextTools() {
 	s.addTool(
 		newAnnotatedTool("create_context", "Create a new context file with optional YAML frontmatter",
 			newSchemaBuilder().
@@ -553,8 +571,10 @@ func (s *Server) registerCRUDTools() {
 		),
 		handlers.ListContextsHandler,
 	)
+}
 
-	// Skill tools
+// registerCRUDSkillTools adds the skill tools.
+func (s *Server) registerCRUDSkillTools() {
 	s.addTool(
 		newAnnotatedTool("create_skill", "Create a new skill file with optional YAML frontmatter",
 			newSchemaBuilder().
@@ -619,8 +639,10 @@ func (s *Server) registerCRUDTools() {
 		),
 		handlers.ListSkillsHandler,
 	)
+}
 
-	// Include tools
+// registerCRUDIncludeTools adds the include tools.
+func (s *Server) registerCRUDIncludeTools() {
 	s.addTool(
 		newAnnotatedTool("add_include", "Add a new include source (git URL or local path) to the configuration",
 			newSchemaBuilder().
@@ -656,8 +678,10 @@ func (s *Server) registerCRUDTools() {
 		),
 		handlers.ListIncludesHandler,
 	)
+}
 
-	// Installed skill tools
+// registerCRUDInstalledSkillTools adds the installed skill tools.
+func (s *Server) registerCRUDInstalledSkillTools() {
 	s.addTool(
 		newAnnotatedTool("install_skill", "Install a named skill from a git repository or local path",
 			newSchemaBuilder().
@@ -690,8 +714,10 @@ func (s *Server) registerCRUDTools() {
 		),
 		handlers.ListInstalledSkillsHandler,
 	)
+}
 
-	// Config tools
+// registerCRUDConfigTools adds the config tools.
+func (s *Server) registerCRUDConfigTools() {
 	s.addTool(
 		newAnnotatedTool("read_config", "Read the current project configuration and return its fields as structured JSON",
 			newSchemaBuilder().
@@ -719,8 +745,10 @@ func (s *Server) registerCRUDTools() {
 		),
 		handlers.UpdateConfigHandler,
 	)
+}
 
-	// Profile tools
+// registerCRUDProfileTools adds the profile tools.
+func (s *Server) registerCRUDProfileTools() {
 	s.addTool(
 		newAnnotatedTool("add_profile", "Create a new profile with a set of domains",
 			newSchemaBuilder().

@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,6 +19,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // SourceTessl is the --from value of the Tessl scenario importer.
@@ -59,15 +62,10 @@ func (Tessl) Detect(path string) bool {
 	if !info.IsDir() {
 		return filepath.Base(path) == criteriaFile
 	}
-	if fileExists(filepath.Join(path, criteriaFile)) {
+	if safefs.IsRegular(filepath.Join(path, criteriaFile)) {
 		return true
 	}
 	return len(scenarioDirs(path)) > 0
-}
-
-func fileExists(p string) bool {
-	info, err := os.Lstat(p)
-	return err == nil && info.Mode().IsRegular()
 }
 
 // scenarioDirs lists the subdirectories of dir that hold a criteria file.
@@ -78,7 +76,7 @@ func scenarioDirs(dir string) []string {
 	}
 	var out []string
 	for _, e := range entries {
-		if e.IsDir() && fileExists(filepath.Join(dir, e.Name(), criteriaFile)) {
+		if e.IsDir() && safefs.IsRegular(filepath.Join(dir, e.Name(), criteriaFile)) {
 			out = append(out, filepath.Join(dir, e.Name()))
 		}
 	}
@@ -100,7 +98,7 @@ func (t Tessl) Load(path string, limits Limits) ([]Scenario, error) {
 			return nil, fmt.Errorf("%s: a scenario file must be named %s", path, criteriaFile)
 		}
 		dirs = []string{filepath.Dir(path)}
-	case fileExists(filepath.Join(path, criteriaFile)):
+	case safefs.IsRegular(filepath.Join(path, criteriaFile)):
 		dirs = []string{path}
 	default:
 		dirs = scenarioDirs(path)
@@ -357,7 +355,7 @@ func readCriteria(doc map[string]any, used consumed) ([]criterion, error) {
 			out = append(out, c)
 		}
 	case map[string]any:
-		for _, k := range sortedKeys(t) {
+		for _, k := range slices.Sorted(maps.Keys(t)) {
 			path := child("$."+key, k)
 			c, err := readCriterion(t[k], path, used)
 			if err != nil {
@@ -576,7 +574,7 @@ func mapFixtureList(key string, list []any, add fixtureAdder, used consumed) err
 
 // mapFixtureObject maps the object form of the fixtures: file path to content.
 func mapFixtureObject(key string, obj map[string]any, add fixtureAdder, used consumed) error {
-	for _, p := range sortedKeys(obj) {
+	for _, p := range slices.Sorted(maps.Keys(obj)) {
 		content, ok := obj[p].(string)
 		if !ok {
 			return fmt.Errorf("%s must be the file's content as a string", child("$."+key, p))
@@ -644,7 +642,7 @@ func unmappedFields(doc map[string]any, used consumed) []Unmapped {
 			// a consumed container may still hold fields nobody read
 			switch t := v.(type) {
 			case map[string]any:
-				for _, k := range sortedKeys(t) {
+				for _, k := range slices.Sorted(maps.Keys(t)) {
 					walk(child(path, k), t[k])
 				}
 			case []any:
@@ -656,7 +654,7 @@ func unmappedFields(doc map[string]any, used consumed) []Unmapped {
 		}
 		out = append(out, Unmapped{Path: path, Value: summarize(v), Hint: hints[lastKey(path)]})
 	}
-	for _, k := range sortedKeys(doc) {
+	for _, k := range slices.Sorted(maps.Keys(doc)) {
 		walk(child("$", k), doc[k])
 	}
 	return out

@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,7 +45,7 @@ func (f *fakeFetcher) Fetch(_ context.Context, rm Remote) (*Fetched, error) {
 func tree(t *testing.T, commit, kind string, files map[string]string) *Fetched {
 	t.Helper()
 	dir := t.TempDir()
-	writeTree(t, dir, files)
+	testutil.WriteTree(t, dir, files)
 	f := &Fetched{Dir: dir, Commit: commit, RefKind: kind}
 	entries, _ := os.ReadDir(dir)
 	for _, e := range entries {
@@ -121,7 +122,7 @@ func TestRulesyncPlan_SourcesBecomeRemotes(t *testing.T) {
 func TestConvert_WithoutFetchRemoteSourcesAreReportedAndNothingIsFetched(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"rulesync.jsonc":       `{"sources":[{"source":"acme/skills","skills":["release"]}]}`,
 		".rulesync/rules/x.md": "Body.\n",
 	})
@@ -139,7 +140,7 @@ func TestConvert_WithoutFetchRemoteSourcesAreReportedAndNothingIsFetched(t *test
 func TestConvert_FetchImportsRulesyncSkillsPinnedToTheCommit(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"rulesync.jsonc": `{"sources":[
 			{"source":"acme/skills@v1.2.0","skills":["release","missing"]},
 			{"source":"acme/other","skills":["*"]},
@@ -186,7 +187,7 @@ func TestConvert_FetchImportsRulesyncSkillsPinnedToTheCommit(t *testing.T) {
 func TestConvert_FetchScansWhatItFetches(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"rulesync.jsonc":       `{"sources":[{"source":"acme/skills","skills":["evil"]}]}`,
 		".rulesync/rules/x.md": "Body.\n",
 	})
@@ -209,7 +210,7 @@ func TestConvert_FetchScansWhatItFetches(t *testing.T) {
 func TestConvert_FetchCopiesSelectedRules(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"rulesync.jsonc":       `{"sources":[{"source":"acme/standards","rules":["testing","nope"]}]}`,
 		".rulesync/rules/x.md": "Body.\n",
 	})
@@ -240,7 +241,7 @@ func TestConvert_FetchCopiesSelectedRules(t *testing.T) {
 func TestConvert_FetchImportsAnAPMPackageAndASingleSkill(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"apm.yml": `dependencies:
   apm:
     - acme/standards#v1
@@ -286,7 +287,7 @@ dependencies:
 func TestConvert_FetchFailureWritesNothing(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"rulesync.jsonc":       `{"sources":[{"source":"acme/skills"}]}`,
 		".rulesync/rules/x.md": "Body.\n",
 	})
@@ -301,7 +302,7 @@ func TestConvert_FetchFailureWritesNothing(t *testing.T) {
 
 func TestConvert_FetchRefusesAnUnexpectedCommit(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{"rulesync.jsonc": `{"sources":[{"source":"acme/skills"}]}`, ".rulesync/rules/x.md": "Body.\n"})
+	testutil.WriteTree(t, dir, map[string]string{"rulesync.jsonc": `{"sources":[{"source":"acme/skills"}]}`, ".rulesync/rules/x.md": "Body.\n"})
 	fake := &fakeFetcher{trees: map[string]*Fetched{"https://github.com/acme/skills|skills": tree(t, "main", "head", map[string]string{"a/SKILL.md": "x"})}}
 
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, Fetch: true, Fetcher: fake})
@@ -348,7 +349,7 @@ func TestGitFetcher_ReadsALocalRepositoryAtTheTagCommit(t *testing.T) {
 		return strings.TrimSpace(string(out))
 	}
 	run("init", "--quiet", "--initial-branch=main")
-	writeTree(t, work, map[string]string{"skills/pdf/SKILL.md": "---\nname: pdf\ndescription: PDFs\n---\nPDF.\n"})
+	testutil.WriteTree(t, work, map[string]string{"skills/pdf/SKILL.md": "---\nname: pdf\ndescription: PDFs\n---\nPDF.\n"})
 	run("add", "-A")
 	run("commit", "--quiet", "-m", "v1")
 	run("tag", "-a", "v1.0.0", "-m", "v1.0.0")

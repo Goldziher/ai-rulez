@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestParseAPMDep(t *testing.T) {
@@ -177,7 +179,7 @@ func TestAPMPlan_HookScriptsAreReported(t *testing.T) {
 func TestConvert_APMDetectionAndNativeSkip(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"apm.yml":                             "name: x\n",
 		".apm/instructions/a.instructions.md": "Rule.\n",
 		"AGENTS.md":                           "Compiled.\n",
@@ -196,7 +198,7 @@ func TestConvert_APMDetectionAndNativeSkip(t *testing.T) {
 
 func TestConvert_RemoteOnlyProjectExplainsFetch(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{"apm.yml": "dependencies:\n  apm:\n    - acme/missing\n"})
+	testutil.WriteTree(t, dir, map[string]string{"apm.yml": "dependencies:\n  apm:\n    - acme/missing\n"})
 
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir})
 

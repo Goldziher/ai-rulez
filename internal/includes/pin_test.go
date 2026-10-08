@@ -3,7 +3,6 @@ package includes
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -16,16 +15,8 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
-
-func git(t *testing.T, dir string, args ...string) string {
-	t.Helper()
-	cmd := exec.Command("git", append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
-	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
-	require.NoError(t, err, string(out))
-	return strings.TrimSpace(string(out))
-}
 
 func writeTestFile(t *testing.T, path, body string) {
 	t.Helper()
@@ -47,11 +38,11 @@ func newLockFixture(t *testing.T) *lockFixture {
 	t.Cleanup(func() { lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false })
 
 	remote := t.TempDir()
-	git(t, remote, "init", "-q", "-b", "main")
+	testutil.Git(t, remote, "init", "-q", "-b", "main")
 	writeTestFile(t, filepath.Join(remote, ".ai-rulez", "rules", "shared.md"), "# Shared\n\nversion one\n")
 	writeTestFile(t, filepath.Join(remote, "skills", "foo", "SKILL.md"), "---\nname: foo\ndescription: Use when foo.\n---\nfoo one\n")
-	git(t, remote, "add", "-A")
-	git(t, remote, "commit", "-qm", "one")
+	testutil.Git(t, remote, "add", "-A")
+	testutil.Git(t, remote, "commit", "-qm", "one")
 
 	project := t.TempDir()
 	writeTestFile(t, filepath.Join(project, ".ai-rulez", "config.toml"), `version = "5.0"
@@ -79,7 +70,7 @@ func (f *lockFixture) load(t *testing.T) (*config.Config, error) {
 func (f *lockFixture) advance(t *testing.T) {
 	t.Helper()
 	writeTestFile(t, filepath.Join(f.remote, ".ai-rulez", "rules", "shared.md"), "# Shared\n\nversion two\n")
-	git(t, f.remote, "commit", "-qam", "two")
+	testutil.Git(t, f.remote, "commit", "-qam", "two")
 }
 
 func ruleBody(cfg *config.Config) string {
