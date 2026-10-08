@@ -166,7 +166,6 @@ testing/**/.mcp.json
 .ai-rulez/local/
 .codex/agents/
 .codex/config.toml
-.codex/plugins.json
 .hermes.md
 .opencode/agents/
 .opencode/commands/
