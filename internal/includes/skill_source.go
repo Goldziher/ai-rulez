@@ -95,11 +95,15 @@ func (s *SkillGitSource) sparsePathSpec() string {
 
 // Fetch downloads the repo and extracts the skill content.
 //
-// Safe for concurrent invocation: serialized per cache directory so
-// parallel callers targeting the same skill share a single download.
-// Unlike GitSource.Fetch, the lock is acquired first (before ls-remote)
-// since skills always check freshness under the lock.
+// Safe for concurrent invocation: serialized per cache directory so parallel
+// callers targeting the same skill share a single download, and so a fetch of
+// another commit of the same remote cannot replace the checkout between this
+// fetch and the pin check that digests it.
 func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) {
+	mu := lockForFetch(s.cacheDir)
+	mu.Lock()
+	defer mu.Unlock()
+
 	file, err := s.fetch(ctx)
 	if err != nil {
 		return config.ContentFile{}, err
@@ -137,10 +141,6 @@ func (s *SkillGitSource) checkPin() error {
 }
 
 func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) {
-	mu := lockForFetch(s.cacheDir)
-	mu.Lock()
-	defer mu.Unlock()
-
 	s.logger().Debug("Fetching installed skill", "name", s.name, "repo", RedactURL(s.repoURL), "path", s.path, "ref", s.ref)
 
 	if config.OfflineIncludes(ctx) {
