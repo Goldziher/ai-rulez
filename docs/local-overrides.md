@@ -178,7 +178,7 @@ with you or carrying overlay content in the local manifest.
 `config.local.toml` sits next to `config.toml`. It is merged onto the
 shared config in memory at load time and is never written into the shared config. A V3
 `config.local.yaml`, `.yml` or `.json` is no longer read and fails the load (see
-[Migrating to v5](migration-v5.md#v2-and-v3-configs)). The overlay is skipped for plugin bundles
+[Migrating to v5](migration-v5.md#upgrade-in-four-steps)). The overlay is skipped for plugin bundles
 (`generate --plugin`), which are distributable.
 
 Create one with `ai-rulez local init`, or let `local set`, `--local` and the MCP `local: true` flag
