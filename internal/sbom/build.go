@@ -18,6 +18,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
@@ -340,7 +341,7 @@ func sourceComponent(kind, name, source, ref, subpath string, pin *lockfile.Entr
 		comp.PURL = sourcePURL(loc, name, version, subpath)
 		comp.ExternalReferences = []ExternalReference{{Type: "vcs", URL: loc.HTTPS()}}
 		props = append(props, prop("source-location", "git"))
-		pinned := commit != "" || commitSHA.MatchString(ref)
+		pinned := commit != "" || gitutil.IsCommitSHA(ref)
 		props = append(props, prop("pinned", strconv.FormatBool(pinned)))
 		if commit == "" && pinned {
 			commit = ref

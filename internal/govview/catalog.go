@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/roles"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
@@ -230,7 +231,7 @@ func allCatalogItems(cfg *config.Config) []config.RoleItem {
 }
 
 func relToConfig(cfg *config.Config, p string) string {
-	if rel, err := filepath.Rel(cfg.ConfigDir, p); err == nil && !strings.HasPrefix(rel, "..") {
+	if rel, err := filepath.Rel(cfg.ConfigDir, p); err == nil && !safefs.RelEscapes(rel) {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.ToSlash(p)

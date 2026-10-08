@@ -13,8 +13,10 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 )
@@ -348,27 +350,11 @@ func excerptOf(body string) *Excerpt {
 // closes it (at a line end or the end of the text); text that only starts with
 // dashes, or whose fence is never closed, is not frontmatter and is kept whole.
 func stripFrontmatter(body string) string {
-	if !strings.HasPrefix(body, "---\n") {
+	block := frontmatter.SplitString(body)
+	if !block.Closed {
 		return body
 	}
-	rest := body[4:]
-	offset := 0
-	for offset <= len(rest) {
-		end := strings.IndexByte(rest[offset:], '\n')
-		line := rest[offset:]
-		next := len(rest)
-		if end >= 0 {
-			line, next = rest[offset:offset+end], offset+end+1
-		}
-		if strings.TrimRight(line, " \t") == "---" {
-			return strings.TrimLeft(rest[min(next, len(rest)):], "\n")
-		}
-		if end < 0 {
-			break
-		}
-		offset = next
-	}
-	return body
+	return strings.TrimLeft(block.Body, "\n")
 }
 
 // lintAttribution maps the findings of a lint report onto catalog items by file.
@@ -495,7 +481,7 @@ func (a *lintAttribution) overview(reason string) CatalogLint {
 		if !filepath.IsAbs(abs) {
 			abs = filepath.Join(a.cwd, filepath.FromSlash(abs))
 		}
-		if rel, err := filepath.Rel(a.baseAbs, abs); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if rel, err := filepath.Rel(a.baseAbs, abs); err == nil && !safefs.RelEscapes(rel) {
 			pf.File = filepath.ToSlash(rel)
 		}
 		out.Unattributed = append(out.Unattributed, pf)

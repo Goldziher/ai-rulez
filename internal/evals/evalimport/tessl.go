@@ -598,7 +598,7 @@ func readInside(base, rel string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot read %s", rel)
 	}
-	if r, err := filepath.Rel(resolvedBase, resolved); err != nil || r == ".." || strings.HasPrefix(r, ".."+string(filepath.Separator)) {
+	if r, err := filepath.Rel(resolvedBase, resolved); err != nil || safefs.RelEscapes(r) {
 		return nil, fmt.Errorf("%s resolves outside the scenario directory", rel)
 	}
 	return readRegular(resolved, DefaultMaxBytes)

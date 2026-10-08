@@ -14,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // CleanOptions controls Clean behavior.
@@ -568,7 +569,7 @@ func (g *Generator) outputRoot(dir string) string {
 		return dir
 	}
 	rel, err := filepath.Rel(base, dir)
-	if err != nil || strings.HasPrefix(rel, "..") {
+	if err != nil || safefs.RelEscapes(rel) {
 		return dir
 	}
 	parts := strings.Split(filepath.ToSlash(rel), "/")

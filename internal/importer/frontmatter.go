@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"gopkg.in/yaml.v3"
 )
 
@@ -15,26 +16,11 @@ import (
 func splitFrontmatter(content string) (fm, body string, has bool) {
 	content = strings.TrimPrefix(content, "\ufeff")
 	content = strings.ReplaceAll(strings.ReplaceAll(content, "\r\n", "\n"), "\r", "\n")
-	if !strings.HasPrefix(content, "---\n") {
+	block := frontmatter.SplitString(content)
+	if !block.Closed {
 		return "", content, false
 	}
-	rest := content[4:]
-	if strings.HasPrefix(rest, "---\n") || rest == "---" {
-		return "", strings.TrimPrefix(strings.TrimPrefix(rest, "---"), "\n"), true
-	}
-	idx := strings.Index(rest, "\n---")
-	for idx >= 0 {
-		after := rest[idx+4:]
-		if after == "" || strings.HasPrefix(after, "\n") {
-			return rest[:idx], strings.TrimPrefix(after, "\n"), true
-		}
-		next := strings.Index(rest[idx+1:], "\n---")
-		if next < 0 {
-			break
-		}
-		idx += 1 + next
-	}
-	return "", content, false
+	return strings.TrimSuffix(block.Raw, "\n"), block.Body, true
 }
 
 // parseFrontmatter reads a frontmatter block into a map. Editors write values

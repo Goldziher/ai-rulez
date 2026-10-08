@@ -12,6 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/verifiers/vspec"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -329,7 +330,7 @@ func (p *includePins) pinned(name string) bool {
 const localIncludeKind = "local-include"
 
 func relTo(base, p string) string {
-	if rel, err := filepath.Rel(base, p); err == nil && !strings.HasPrefix(rel, "..") {
+	if rel, err := filepath.Rel(base, p); err == nil && !safefs.RelEscapes(rel) {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.ToSlash(p)

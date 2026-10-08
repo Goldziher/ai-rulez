@@ -14,6 +14,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // ConvertRecordName is the file `convert --write` leaves in the config
@@ -335,7 +336,7 @@ func (g *Generator) guardRefusals(outputs []config.OutputFile) map[string]string
 
 // displayTarget shows a link target relative to the project when it is inside it.
 func (g *Generator) displayTarget(resolved string) string {
-	if rel, err := filepath.Rel(g.config.BaseDir, resolved); err == nil && !strings.HasPrefix(rel, "..") {
+	if rel, err := filepath.Rel(g.config.BaseDir, resolved); err == nil && !safefs.RelEscapes(rel) {
 		return filepath.ToSlash(rel)
 	}
 	return resolved

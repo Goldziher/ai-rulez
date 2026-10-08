@@ -77,7 +77,6 @@ var (
 	hostRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$`)
 	nameRe = regexp.MustCompile(`^[A-Za-z0-9._-]{1,100}$`)
 	userRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?$`)
-	shaRe  = regexp.MustCompile(`^([0-9a-f]{40}|[0-9a-f]{64})$`)
 )
 
 // Valid reports whether r can be used in a request path.
