@@ -76,7 +76,10 @@ func (op *OperatorImpl) RemoveDomain(ctx context.Context, name string) error {
 	domainPath := op.filesMgr.GetDomainPath(name)
 
 	// Delete domain directory
-	return op.filesMgr.DeleteDirectory(domainPath)
+	if err := op.filesMgr.DeleteDirectory(domainPath); err != nil {
+		return err
+	}
+	return op.refreshIndexes()
 }
 
 // ListDomains scans the domains directory and returns information about all domains

@@ -251,11 +251,11 @@ func (op *OperatorImpl) UpdateCheck(_ context.Context, domain, name, content str
 	if err != nil {
 		return nil, err
 	}
-	merged, err := MergeCheckContent(existing, content, contentGiven, f)
+	merged, err := MergeCheckContent(config.NativeContent(existing), content, contentGiven, f)
 	if err != nil {
 		return nil, fmt.Errorf("update check %q: %w", name, err)
 	}
-	if err := op.filesMgr.WriteFileOverwrite(filePath, EnsureTrailingNewline(merged)); err != nil {
+	if err := op.overwriteConcept(filePath, ContentTypeChecks, domain, name, EnsureTrailingNewline(merged), existing); err != nil {
 		return nil, err
 	}
 	return &FileResult{Name: name, FullPath: filePath, Type: ContentTypeChecks, Domain: domain}, nil

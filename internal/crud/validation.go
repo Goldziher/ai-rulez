@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/samber/oops"
 
@@ -116,10 +117,34 @@ func ValidateFileName(name string) error {
 	return nil
 }
 
+// ValidateNewFileName validates the name of a file about to be created. On top of
+// ValidateFileName it rejects whitespace and control characters, and a trailing
+// .md (the extension is added, so "x.md" would create "x.md.md").
+func ValidateNewFileName(name string) error {
+	if err := ValidateFileName(name); err != nil {
+		return err
+	}
+	if strings.HasSuffix(strings.ToLower(name), ".md") {
+		return oops.
+			With("field", "file_name").
+			With("value", name).
+			Hint("Pass the name without the .md extension; it is added for you.").
+			Errorf("file name must not end in .md: %s", name)
+	}
+	if strings.IndexFunc(name, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 {
+		return oops.
+			With("field", "file_name").
+			With("value", name).
+			Hint("Use a kebab-case name without spaces, such as 'code-quality'.").
+			Errorf("file name contains whitespace: %q", name)
+	}
+	return nil
+}
+
 // ValidateCheckName validates the name of a check file. Check names reach output
 // paths and section markers, so they are restricted to [A-Za-z0-9._-].
 func ValidateCheckName(name string) error {
-	if err := ValidateFileName(name); err != nil {
+	if err := ValidateNewFileName(name); err != nil {
 		return err
 	}
 	if !config.IsValidCheckName(name) {
