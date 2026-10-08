@@ -118,11 +118,9 @@ func (r *runner) numberedPrefixExists(rel string) bool {
 	if r.baseRel != "" {
 		roots = append(roots, r.baseRel+"/")
 	}
-	for _, p := range r.tree.Paths() {
-		for _, root := range roots {
-			if strings.HasPrefix(p, root+dir+base+"-") || strings.HasPrefix(p, root+dir+base+".") {
-				return true
-			}
+	for _, root := range roots {
+		if r.tree.HasPathPrefix(root+dir+base+"-") || r.tree.HasPathPrefix(root+dir+base+".") {
+			return true
 		}
 	}
 	return false
