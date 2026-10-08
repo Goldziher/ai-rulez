@@ -1,6 +1,7 @@
 package okfbridge
 
 import (
+	"context"
 	"io/fs"
 	"os"
 	"path"
@@ -72,8 +73,8 @@ func RenderConceptKeeping(kind Kind, domain, id string, data, previous []byte) (
 // list its current content, and removes generated indexes of directories that
 // no longer hold any. Concept files are not touched. It is what the source
 // writers (add, remove, init, the MCP tools) call after a change.
-func RefreshIndexes(configDir string) error {
-	tree, err := config.ScanContentTree(configDir)
+func RefreshIndexes(ctx context.Context, configDir string) error {
+	tree, err := config.ScanContentTreeContext(ctx, configDir)
 	if err != nil {
 		return oops.Wrapf(err, "read %s", configDir)
 	}
@@ -128,13 +129,13 @@ func removeStaleIndexes(configDir string, idx []okf.IndexInput) error {
 			if d.Name() != okf.IndexFile {
 				return nil
 			}
-			rel, err := filepath.Rel(configDir, filepath.Dir(p))
-			if err != nil || live[filepath.ToSlash(rel)] {
-				return nil
+			rel, relErr := filepath.Rel(configDir, filepath.Dir(p))
+			if relErr != nil || live[filepath.ToSlash(rel)] {
+				return nil //nolint:nilerr // a path outside the tree is not ours to remove
 			}
-			data, err := os.ReadFile(p)
-			if err == nil && config.IsOKFListing(data) {
-				return os.Remove(p)
+			data, readErr := os.ReadFile(p) //nolint:gosec // G122: the tree is the user's own configuration directory
+			if readErr == nil && config.IsOKFListing(data) {
+				return os.Remove(p) //nolint:gosec // G122: only a generated listing is removed
 			}
 			return nil
 		})

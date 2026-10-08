@@ -61,7 +61,7 @@ func runInitImport(ctx context.Context, workingDir, configDir string) error {
 		return oops.Errorf("the imported content failed the security scan or validation; nothing was written")
 	}
 	// An import writes the native layout; the project starts out as an OKF bundle.
-	if _, err := okfbridge.MigrateDir(configDir, okfbridge.MigrateOptions{Write: true}); err != nil {
+	if _, err := okfbridge.MigrateDir(ctx, configDir, okfbridge.MigrateOptions{Write: true}); err != nil {
 		logger.Warn("Imported content could not be converted to an OKF bundle", "error", err, "hint", "run 'ai-rulez migrate okf'")
 	}
 	displayImportSuccessMessage(fromFlag, configDir)
