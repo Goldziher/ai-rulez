@@ -61,7 +61,11 @@ func (c *Config) validateARD() error {
 	if a.PluginType != "" && (!strings.Contains(a.PluginType, "/") || strings.ContainsAny(a.PluginType, " \t")) {
 		return oops.With("field", "ard.plugin_type").Errorf("ard.plugin_type %q must be a media type (type/subtype)", a.PluginType)
 	}
-	for name, queries := range a.Queries {
+	return validateARDQueries(a.Queries)
+}
+
+func validateARDQueries(all map[string][]string) error {
+	for name, queries := range all {
 		if strings.TrimSpace(name) == "" || len(queries) == 0 || slices.ContainsFunc(queries, func(q string) bool { return strings.TrimSpace(q) == "" }) {
 			return oops.With("field", "ard.queries").Errorf("ard.queries.%s must be a list of non-empty queries", name)
 		}
