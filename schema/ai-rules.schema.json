@@ -2604,7 +2604,7 @@
             },
             "dependencies": {
               "type": "array",
-              "description": "PEP 508 requirements for the generated Hermes wheel and project plugin",
+              "description": "PEP 508 requirements for the generated Hermes wheel and project plugin. Direct references (name @ url) are rejected because Hermes does not install them.",
               "items": {
                 "type": "string",
                 "minLength": 1,

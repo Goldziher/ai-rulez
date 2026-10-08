@@ -15,7 +15,7 @@ func TestRenderHermesDependencies(t *testing.T) {
 	dependencies := []string{
 		"example-tool[cli]>=0.1,<1",
 		`demo; platform_system == "Linux" and implementation_name != 'pypy'`,
-		"demo @ https://example.com/demo.whl",
+		`demo>=1.0,!=1.5.*; os_name == "nt" or sys_platform == 'win32'`,
 	}
 	tests := []struct {
 		name   string

@@ -289,9 +289,11 @@ Declare Python dependencies in the same authoring block:
 dependencies = ["example-tool[cli]", "httpx>=0.28; python_version >= '3.11'"]
 ```
 
-Each entry must be a valid PEP 508 requirement. Package extras, version constraints,
-direct references, and environment markers are supported. Invalid requirements are
-rejected during configuration validation, before generation.
+Each entry must be a valid PEP 508 requirement that names a package from an index.
+Package extras, version constraints, and environment markers are supported.
+Direct references (`name @ url`) are rejected, because Hermes does not install them
+for directory plugins. Invalid requirements are rejected during configuration validation,
+before generation.
 The generator preserves the authored strings in the wheel's `project.dependencies`
 and in `python_dependencies` in both Hermes plugin manifests.
 An omitted or empty list leaves the outputs dependency-free.
