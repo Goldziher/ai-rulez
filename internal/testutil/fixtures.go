@@ -2,11 +2,11 @@ package testutil
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +25,8 @@ func WriteTree(tb testing.TB, root string, files map[string]string) {
 // non-zero exit and returns the trimmed combined output.
 func Git(tb testing.TB, dir string, args ...string) string {
 	tb.Helper()
-	cmd := exec.Command("git", append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...) //nolint:gosec // test helper
+	// runner.CommandNoContext, not gitutil.Command: gitutil's own tests import this package.
+	cmd := runner.CommandNoContext("git", append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	require.NoError(tb, err, string(out))
