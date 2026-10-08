@@ -181,16 +181,7 @@ func (diskApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		return nil, err
 	}
 
-	if role := g.Role(); role != "" {
-		// A role renders its own slice of the content, not a profile.
-		g.log().Info("Generating with configuration", "role", role)
-	} else {
-		g.log().Info("Generating with configuration", "profile", p.Profile)
-	}
-	if g.config.HasGuard() {
-		g.log().Info("Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped",
-			"harnesses", config.GuardHarnesses)
-	}
+	g.logGenerationStart(p.Profile)
 
 	if err := g.ensureSecretOutputsIgnored(flatOutputs); err != nil {
 		return nil, err
@@ -231,16 +222,37 @@ func (diskApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 
 	g.finishGitignore(flatOutputs, ignoredEarly)
 
-	written := 0
-	for _, output := range flatOutputs {
-		if !output.IsDir {
-			written++
-		}
-	}
+	written := countFiles(flatOutputs)
 
 	g.log().Info("Generation complete", "files", written)
 
 	return &ApplyResult{Written: written}, nil
+}
+
+// logGenerationStart announces the role or profile being generated and the
+// generated-file guard's reach.
+func (g *Generator) logGenerationStart(profile string) {
+	if role := g.Role(); role != "" {
+		// A role renders its own slice of the content, not a profile.
+		g.log().Info("Generating with configuration", "role", role)
+	} else {
+		g.log().Info("Generating with configuration", "profile", profile)
+	}
+	if g.config.HasGuard() {
+		g.log().Info("Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped",
+			"harnesses", config.GuardHarnesses)
+	}
+}
+
+// countFiles counts the outputs that are files rather than directories.
+func countFiles(outputs []config.OutputFile) int {
+	n := 0
+	for _, output := range outputs {
+		if !output.IsDir {
+			n++
+		}
+	}
+	return n
 }
 
 type dryRunApplier struct{}
