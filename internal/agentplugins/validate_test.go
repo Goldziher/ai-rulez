@@ -423,3 +423,20 @@ func TestImportStopsAtTheTotalCap(t *testing.T) {
 	}
 	assert.True(t, found, "findings: %v", codes(res.Findings))
 }
+
+func TestURLProblemNeverEchoesCredentials(t *testing.T) {
+	for _, raw := range []string{
+		"https://user:secret@mcp.example.com/sse?token=abc",
+		"ftp://user:secret@mcp.example.com/sse?token=abc",
+		"http://user:secret@evil.example.com/sse?token=abc",
+		"https://mcp.example.com/sse?token=abc#frag",
+		"http://evil.example.com/sse?token=abc",
+		"https://user:secret@mcp.example.com/%zz?token=abc",
+	} {
+		msg := urlProblem(raw)
+		assert.NotEmpty(t, msg, raw)
+		for _, leak := range []string{"secret", "token=abc", "abc", "user:"} {
+			assert.NotContains(t, msg, leak, raw)
+		}
+	}
+}

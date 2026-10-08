@@ -285,20 +285,33 @@ func urlProblem(raw string) string {
 		return "url is required for a remote server"
 	}
 	u, err := url.Parse(raw)
+	if err != nil {
+		return "url is not a valid URL"
+	}
+	shown := redactedURL(u)
 	switch {
-	case err != nil:
-		return fmt.Sprintf("url %q is not a valid URL", raw)
 	case (u.Scheme != "https" && u.Scheme != "http") || u.Host == "":
-		return fmt.Sprintf("url %q must be an absolute http or https URL", raw)
+		return fmt.Sprintf("url %q must be an absolute http or https URL", shown)
 	case u.User != nil:
-		return fmt.Sprintf("url %q must not contain user information", raw)
+		return fmt.Sprintf("url %q must not contain user information", shown)
 	case u.Fragment != "" || strings.Contains(raw, "#"):
-		return fmt.Sprintf("url %q must not contain a fragment", raw)
+		return fmt.Sprintf("url %q must not contain a fragment", shown)
 	case u.Scheme == "http" && !loopbackHost(u.Hostname()):
 		return fmt.Sprintf("url %q uses http to a non-loopback host; use https "+
-			"(http is allowed only for localhost and loopback addresses)", raw)
+			"(http is allowed only for localhost and loopback addresses)", shown)
 	}
 	return ""
+}
+
+// redactedURL drops user information, query values and the fragment, which can
+// all carry credentials, so a URL can appear in a log line or a finding.
+func redactedURL(u *url.URL) string {
+	c := *u
+	c.User, c.Fragment, c.RawFragment = nil, "", ""
+	if c.RawQuery != "" || c.ForceQuery {
+		c.RawQuery = "REDACTED"
+	}
+	return c.String()
 }
 
 func loopbackHost(host string) bool {
