@@ -15,6 +15,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -374,7 +375,7 @@ func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 			return err
 		}
 	}
-	pre, err := publishPreflight(cfg) //nolint:contextcheck // the strict gate and the lock check run validate and lock, which build their own command context
+	pre, err := publishPreflight(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -498,12 +499,15 @@ func warnAll(warnings []string) {
 }
 
 // publishPreflight runs the four gates and returns the verified bundle files.
-func publishPreflight(cfg *config.Config) (*verifiedBundle, error) {
-	if err := strictGate(cfg); err != nil {
+func publishPreflight(ctx context.Context, cfg *config.Config) (*verifiedBundle, error) {
+	// The gates run under the command line's policy, as validate and lock do, and
+	// share one memo of the repository questions they ask.
+	ctx = gitutil.WithMemo(config.WithPolicyContext(ctx, activePolicy))
+	if err := strictGate(ctx, cfg); err != nil {
 		return nil, err
 	}
 	logger.Info("preflight: validate --strict ok")
-	if code := checkLockAt(""); code != 0 {
+	if code := checkLockAtContext(ctx, ""); code != 0 {
 		exit := publish.ExitFailed
 		if code == exitDrift {
 			exit = publish.ExitGate
@@ -535,8 +539,8 @@ func publishPreflight(cfg *config.Config) (*verifiedBundle, error) {
 
 // strictGate is `validate --strict` as a gate: the same lint, baseline and
 // budget handling, failing at the configured threshold but never above error.
-func strictGate(cfg *config.Config) error {
-	report, err := strictLint(cmdContext(), cfg)
+func strictGate(ctx context.Context, cfg *config.Config) error {
+	report, err := strictLint(ctx, cfg)
 	if err != nil {
 		return publish.Errorf(publish.CodePreflight, publish.ExitFailed, "", "validate --strict could not run: %v", err)
 	}
