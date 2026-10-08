@@ -33,7 +33,7 @@ func countingCtx(t *testing.T) (context.Context, *atomic.Int64) {
 	return runner.WithContext(t.Context(), r), &n
 }
 
-func skillResources(t *testing.T, ctx context.Context, configDir string) map[string][]string {
+func skillResources(ctx context.Context, t *testing.T, configDir string) map[string][]string {
 	t.Helper()
 	tree, err := ScanContentTreeContext(ctx, configDir)
 	require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestBundleVisibilityMatrix(t *testing.T) {
 	want["tracked"] = []string{"references/a.md", "scripts/gen.json", "scripts/run.sh"}
 
 	ctx, n := countingCtx(t)
-	got := skillResources(t, ctx, filepath.Join(repo, ".ai-rulez"))
+	got := skillResources(ctx, t, filepath.Join(repo, ".ai-rulez"))
 	assert.Equal(t, want, got)
 	// 5 items: batching must not cost more than the nested repo's own pair
 	// plus a constant number of calls for the shared parent.
@@ -102,7 +102,7 @@ func TestBundleVisibilityLinkedWorktree(t *testing.T) {
 	gitIn(t, repo, "worktree", "add", "-q", "-b", "other", wt)
 	writeTree(t, wt, ".ai-rulez/skills/demo/scripts/gen.json", ".ai-rulez/skills/demo/scripts/new.sh")
 
-	got := skillResources(t, t.Context(), filepath.Join(wt, ".ai-rulez"))
+	got := skillResources(t.Context(), t, filepath.Join(wt, ".ai-rulez"))
 	assert.Equal(t, map[string][]string{"demo": {"scripts/new.sh", "scripts/run.sh"}}, got)
 }
 
@@ -116,7 +116,7 @@ func TestBundleVisibilityLinearGitCalls(t *testing.T) {
 		writeTree(t, filepath.Join(skills, fmt.Sprintf("s%02d", i)), "SKILL.md", "references/a.md")
 	}
 	ctx, n := countingCtx(t)
-	got := skillResources(t, ctx, filepath.Join(repo, ".ai-rulez"))
+	got := skillResources(ctx, t, filepath.Join(repo, ".ai-rulez"))
 	require.Len(t, got, items)
 	assert.LessOrEqual(t, n.Load(), int64(4), "git calls must not grow with the number of skills")
 }
