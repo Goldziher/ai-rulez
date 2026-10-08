@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -86,9 +85,7 @@ func runMigrate(out io.Writer, target string) int {
 	}
 
 	if migrateFormat == formatJSON {
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(report); err != nil {
+		if err := writeRawJSON(out, report); err != nil {
 			fmtError(err)
 			return 1
 		}

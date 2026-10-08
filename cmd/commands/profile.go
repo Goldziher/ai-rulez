@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
@@ -79,7 +78,7 @@ func init() {
 	profileAddCmd.Flags().BoolVarP(&profileSetDefault, "set-default", "s", false, "Set this profile as the default")
 
 	// Add flags for profile remove
-	profileRemoveCmd.Flags().BoolVarP(&profileForce, "yes", "y", false, "Skip confirmation prompts")
+	addYesFlag(profileRemoveCmd.Flags(), &profileForce, "Skip confirmation prompts")
 
 	// Add flags for profile list
 	addJSONFormat(profileListCmd.Flags(), &profileJSON, "j")
@@ -92,16 +91,14 @@ func runProfileAdd(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	if profileLocal {
 		op = op.Local()
 	}
 
 	if err := op.AddProfile(ctx, name, domains); err != nil {
-		logger.Error("Failed to add profile", "error", err)
-		os.Exit(1)
+		fatal("Failed to add profile", err)
 	}
 
 	logger.Info("Profile added successfully",
@@ -112,8 +109,7 @@ func runProfileAdd(cmd *cobra.Command, args []string) {
 	// Set as default if requested
 	if profileSetDefault {
 		if err := op.SetDefaultProfile(ctx, name); err != nil {
-			logger.Error("Failed to set default profile", "error", err)
-			os.Exit(1)
+			fatal("Failed to set default profile", err)
 		}
 		logger.Info("Profile set as default", "name", name)
 	}
@@ -122,27 +118,19 @@ func runProfileAdd(cmd *cobra.Command, args []string) {
 func runProfileRemove(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	// Confirm removal unless --yes is specified
-	if !profileForce {
-		if !confirmRemoval("profile", name) {
-			exitDeclined("Operation canceled")
-			return
-		}
-	}
+	confirmRemovalUnlessYes(profileForce, "profile", name, "Operation canceled")
 
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	if profileLocal {
 		op = op.Local()
 	}
 
 	if err := op.RemoveProfile(ctx, name); err != nil {
-		logger.Error("Failed to remove profile", "error", err)
-		os.Exit(1)
+		fatal("Failed to remove profile", err)
 	}
 
 	logger.Info("Profile removed successfully", "name", name)
@@ -154,16 +142,14 @@ func runProfileSetDefault(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	if profileLocal {
 		op = op.Local()
 	}
 
 	if err := op.SetDefaultProfile(ctx, name); err != nil {
-		logger.Error("Failed to set default profile", "error", err)
-		os.Exit(1)
+		fatal("Failed to set default profile", err)
 	}
 
 	logger.Info("Default profile set successfully", "name", name)
@@ -173,14 +159,12 @@ func runProfileList(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	profiles, err := op.ListProfiles(ctx)
 	if err != nil {
-		logger.Error("Failed to list profiles", "error", err)
-		os.Exit(1)
+		fatal("Failed to list profiles", err)
 	}
 
 	if len(profiles) == 0 && !profileJSON {
@@ -201,8 +185,7 @@ func runProfileList(cmd *cobra.Command, args []string) {
 		}
 		data, err := jsondoc.Marshal(output)
 		if err != nil {
-			logger.Error("Failed to marshal JSON", "error", err)
-			os.Exit(1)
+			fatal("Failed to marshal JSON", err)
 		}
 		fmt.Print(string(data))
 	} else {
