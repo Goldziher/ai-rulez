@@ -38,6 +38,12 @@ type sourceItem struct {
 	kind   Kind
 	domain string
 	cf     config.ContentFile
+	// typ and title override the defaults when set: a migrated file keeps the
+	// type and title it already declares. keepName keeps a skill name equal to
+	// its id in the metadata, since a migrated file is read back by the loader,
+	// which does not derive it the way an import does.
+	typ, title string
+	keepName   bool
 }
 
 // Export renders tree as an OKF bundle. The output is deterministic: files are
@@ -269,10 +275,16 @@ func titleOf(fields []okf.Field) string {
 // description for the index.
 func conceptFields(it sourceItem, id string) (fields []okf.Field, description string, err error) {
 	okfExtra, meta := splitMetadata(it.cf.Metadata)
-	if it.kind == KindSkill {
+	if it.kind == KindSkill && !it.keepName {
 		meta = dropDerivedName(meta, id)
 	}
 	typ, title := defaultType(it.kind), okf.TitleFromPath(sanitizeID(id)+".md")
+	if it.typ != "" {
+		typ = it.typ
+	}
+	if it.title != "" {
+		title = it.title
+	}
 	hoisted := []okf.Field{}
 	for _, kv := range okfExtra {
 		switch kv.Key {
