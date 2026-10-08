@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
@@ -23,15 +24,19 @@ func (op *OperatorImpl) concept(ftype, domain, name, content, previous string) (
 // refreshIndexes rewrites the index.md files after a change to the content tree.
 // A tree that is not an OKF bundle yet (no root index.md, see "migrate okf") and
 // the machine-local tree, which has no indexes, are left alone.
-func (op *OperatorImpl) refreshIndexes() error {
-	if op.local {
+func (op *OperatorImpl) refreshIndexes(ctx context.Context) error {
+	if op.local || !op.isBundle() {
 		return nil
 	}
-	if info, err := os.Stat(filepath.Join(op.aiRulezDir, okf.IndexFile)); err != nil || info.IsDir() {
-		return nil
-	}
-	if err := okfbridge.RefreshIndexes(op.aiRulezDir); err != nil {
+	if err := okfbridge.RefreshIndexes(ctx, op.aiRulezDir); err != nil {
 		return oops.Hint("The file was written; run 'ai-rulez migrate okf' to rebuild the index.md files.").Wrapf(err, "refresh index.md files")
 	}
 	return nil
+}
+
+// isBundle reports whether the configuration directory is an OKF bundle: it has a
+// root index.md.
+func (op *OperatorImpl) isBundle() bool {
+	info, err := os.Stat(filepath.Join(op.aiRulezDir, okf.IndexFile))
+	return err == nil && !info.IsDir()
 }

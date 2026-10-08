@@ -189,7 +189,7 @@ func NativeContent(content string) string {
 	}
 	lines := strings.Split(content, "\n")
 	for i := 1; i < len(lines); i++ {
-		if strings.TrimSpace(lines[i]) != "---" {
+		if strings.TrimSpace(lines[i]) != frontmatterFence {
 			continue
 		}
 		fm := normalizeOKFFrontmatter(strings.Join(lines[1:i], "\n"))
