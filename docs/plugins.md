@@ -282,6 +282,26 @@ a safe project-relative source:
 source = "plugin/hermes.py"
 ```
 
+Declare Python dependencies in the same authoring block:
+
+```toml
+[plugin.hermes]
+dependencies = ["example-tool[cli]", "httpx>=0.28; python_version >= '3.11'"]
+```
+
+Each entry must be a valid PEP 508 requirement. Package extras, version constraints,
+direct references, and environment markers are supported. Invalid requirements are
+rejected during configuration validation, before generation.
+The generator preserves the authored strings in the wheel's `project.dependencies`
+and in `python_dependencies` in both Hermes plugin manifests.
+An omitted or empty list leaves the outputs dependency-free.
+
+Installing the built wheel lets the Python installer resolve these dependencies.
+For a directory plugin, Hermes handles the manifest's dependency declaration through
+its normal dependency-consent flow. Neither generation nor importing the adapter
+installs packages. A Python dependency does not install browser binaries, credentials,
+or other external prerequisites; document those separately.
+
 By default, plugin payload comes from the resolved ai-rulez content tree. To keep
 distributable content separate from developer governance, set a safe project-relative
 content root containing `skills/`, `commands/`, and `agents/`:

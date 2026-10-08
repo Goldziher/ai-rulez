@@ -79,6 +79,12 @@ func hermesManifestYAML(m *Manifest, author string) string {
 			fmt.Fprintf(&manifest, "%s: %s\n", field.name, strconv.Quote(field.value))
 		}
 	}
+	if m.Hermes != nil && len(m.Hermes.Dependencies) > 0 {
+		manifest.WriteString("python_dependencies:\n")
+		for _, dependency := range m.Hermes.Dependencies {
+			fmt.Fprintf(&manifest, "  - %s\n", strconv.Quote(dependency))
+		}
+	}
 	return manifest.String()
 }
 
@@ -106,6 +112,7 @@ func hermesPyproject(m *Manifest, moduleName string) ([]byte, error) {
 			Version        string                       `toml:"version"`
 			Description    string                       `toml:"description"`
 			RequiresPython string                       `toml:"requires-python"`
+			Dependencies   []string                     `toml:"dependencies,omitempty"`
 			Keywords       []string                     `toml:"keywords,omitempty"`
 			EntryPoints    map[string]map[string]string `toml:"entry-points"`
 			URLs           map[string]string            `toml:"urls,omitempty"`
@@ -128,6 +135,9 @@ func hermesPyproject(m *Manifest, moduleName string) ([]byte, error) {
 	document.Project.Version = pythonPackageVersion(m.Version)
 	document.Project.Description = m.Description
 	document.Project.RequiresPython = requiresPython
+	if m.Hermes != nil {
+		document.Project.Dependencies = append([]string(nil), m.Hermes.Dependencies...)
+	}
 	document.Project.Keywords = append([]string(nil), m.Keywords...)
 	document.Project.EntryPoints = map[string]map[string]string{"hermes_agent.plugins": {m.Name: moduleName}}
 	document.Project.URLs = map[string]string{"Homepage": m.Homepage, "Repository": m.Repository}
