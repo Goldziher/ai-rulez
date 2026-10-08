@@ -6,17 +6,7 @@ import (
 )
 
 // Error types for CRUD operations
-var (
-	ErrDomainExists      = errors.New("domain already exists")
-	ErrDomainNotFound    = errors.New("domain not found")
-	ErrInvalidDomainName = errors.New("invalid domain name")
-	ErrInvalidFileName   = errors.New("invalid file name")
-	ErrFileExists        = errors.New("file already exists")
-	ErrFileNotFound      = errors.New("file not found")
-	ErrInvalidInclude    = errors.New("invalid include source")
-	ErrInvalidPriority   = errors.New("invalid priority level")
-	ErrConfigNotFound    = errors.New("config.toml not found")
-)
+var ErrFileNotFound = errors.New("file not found")
 
 // ValidationError wraps validation errors with additional context
 type ValidationError struct {
