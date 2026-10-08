@@ -103,23 +103,23 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .agents/commands/build.md
+  remove file: .agents/commands/ship.md
+  remove file: .gitlab/duo/chat-rules.md
+  remove file: .gitlab/duo/hooks.json
+  remove file: .gitlab/duo/mcp.json
+  remove file: .gitlab/duo/mr-review-instructions.yaml
+  remove file: .mcp.json
+  remove dir (if empty): .gitlab/duo
+  remove dir (if empty): .gitlab
+  remove dir (if empty): .agents/commands
+  remove dir (if empty): .agents
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .agents/commands/build.md
-INFO    remove file: .agents/commands/ship.md
-INFO    remove file: .gitlab/duo/chat-rules.md
-INFO    remove file: .gitlab/duo/hooks.json
-INFO    remove file: .gitlab/duo/mcp.json
-INFO    remove file: .gitlab/duo/mr-review-instructions.yaml
-INFO    remove file: .mcp.json
-INFO    remove dir (if empty): .gitlab/duo
-INFO    remove dir (if empty): .gitlab
-INFO    remove dir (if empty): .agents/commands
-INFO    remove dir (if empty): .agents
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=7 directories=4
+Removed generated files: 7 files, 4 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

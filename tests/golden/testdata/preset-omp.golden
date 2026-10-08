@@ -118,37 +118,37 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .omp/agents/architect.md
+  remove file: .omp/agents/tester.md
+  remove file: .omp/commands/build.md
+  remove file: .omp/commands/ship.md
+  remove file: .omp/config.yml
+  remove file: .omp/mcp.json
+  remove file: .omp/rules/always.md
+  remove file: .omp/rules/auto.md
+  remove file: .omp/rules/manual.md
+  remove file: .omp/rules/typescript.md
+  remove file: .omp/skills/deployer/SKILL.md
+  remove file: .omp/skills/reviewer/SKILL.md
+  remove file: .omp/skills/reviewer/references/checklist.md
+  remove file: .omp/skills/reviewer/scripts/run.sh
+  remove file: AGENTS.md
+  remove dir (if empty): .omp/skills/reviewer/scripts
+  remove dir (if empty): .omp/skills/reviewer/references
+  remove dir (if empty): .omp/skills/reviewer
+  remove dir (if empty): .omp/skills/deployer
+  remove dir (if empty): .omp/skills
+  remove dir (if empty): .omp/rules
+  remove dir (if empty): .omp/commands
+  remove dir (if empty): .omp/agents
+  remove dir (if empty): .omp
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .omp/agents/architect.md
-INFO    remove file: .omp/agents/tester.md
-INFO    remove file: .omp/commands/build.md
-INFO    remove file: .omp/commands/ship.md
-INFO    remove file: .omp/config.yml
-INFO    remove file: .omp/mcp.json
-INFO    remove file: .omp/rules/always.md
-INFO    remove file: .omp/rules/auto.md
-INFO    remove file: .omp/rules/manual.md
-INFO    remove file: .omp/rules/typescript.md
-INFO    remove file: .omp/skills/deployer/SKILL.md
-INFO    remove file: .omp/skills/reviewer/SKILL.md
-INFO    remove file: .omp/skills/reviewer/references/checklist.md
-INFO    remove file: .omp/skills/reviewer/scripts/run.sh
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .omp/skills/reviewer/scripts
-INFO    remove dir (if empty): .omp/skills/reviewer/references
-INFO    remove dir (if empty): .omp/skills/reviewer
-INFO    remove dir (if empty): .omp/skills/deployer
-INFO    remove dir (if empty): .omp/skills
-INFO    remove dir (if empty): .omp/rules
-INFO    remove dir (if empty): .omp/commands
-INFO    remove dir (if empty): .omp/agents
-INFO    remove dir (if empty): .omp
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=16 directories=9
+Removed generated files: 16 files, 9 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755
