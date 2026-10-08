@@ -173,8 +173,21 @@ func DetectHidden(text string) (string, bool) {
 	return "", false
 }
 
+// isASCII reports whether s holds only 7-bit bytes.
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= utf8.RuneSelf {
+			return false
+		}
+	}
+	return true
+}
+
 // hiddenIn lists the hidden characters of one line.
 func hiddenIn(line string, firstLine bool) []string {
+	if isASCII(line) {
+		return nil // every hidden code point is non-ASCII
+	}
 	runes := []rune(line)
 	seen := map[rune]bool{}
 	var found []string
