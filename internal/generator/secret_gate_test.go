@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
@@ -33,7 +34,9 @@ func TestGenerate_SecretOnlyInIgnoredSensitiveFiles(t *testing.T) {
 			rel, _ := filepath.Rel(root, path)
 			holders = append(holders, filepath.ToSlash(rel))
 			info, _ := d.Info()
-			assert.Equal(t, os.FileMode(0o600), info.Mode().Perm(), rel)
+			if runtime.GOOS != "windows" { // Windows reports 0o666 for every file
+				assert.Equal(t, os.FileMode(0o600), info.Mode().Perm(), rel)
+			}
 		}
 		return nil
 	}))

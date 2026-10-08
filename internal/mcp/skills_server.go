@@ -341,6 +341,29 @@ func (c *skillsConn) mayAnswer(params json.RawMessage) bool {
 	return ok && version >= newProtocolVersion
 }
 
+// answerEarly returns the response to a skills method, or to any other request
+// sent before initialize, and nil for a request the SDK should handle.
+func (c *skillsConn) answerEarly(req *jsonrpc.Request) *jsonrpc.Response {
+	ours := req.Method == methodSkillsList || req.Method == methodSkillsGet || req.Method == methodDirectoryRead
+	// The SDK answers any other request sent before initialize with error code 0,
+	// which is not a JSON-RPC code; refuse it here with the code skills/list uses.
+	early := !ours && req.Method != methodInitialize && req.Method != methodPing && !c.mayAnswer(req.Params)
+	if !ours && !early {
+		return nil
+	}
+	resp := &jsonrpc.Response{ID: req.ID}
+	if !c.mayAnswer(req.Params) {
+		resp.Error = &jsonrpc.Error{Code: jsonrpc.CodeInvalidRequest, Message: fmt.Sprintf("method %q is invalid during session initialization", req.Method)}
+	} else if result, rpcErr := c.srv.cat().handleSkillsMethod(req.Method, req.Params); rpcErr != nil {
+		resp.Error = rpcErr
+	} else if raw, mErr := json.Marshal(result); mErr != nil {
+		resp.Error = &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: mErr.Error()}
+	} else {
+		resp.Result = raw
+	}
+	return resp
+}
+
 func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 	for {
 		msg, err := c.Connection.Read(ctx)
@@ -354,22 +377,9 @@ func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 		if !ok || !req.ID.IsValid() {
 			return msg, nil
 		}
-		ours := req.Method == methodSkillsList || req.Method == methodSkillsGet || req.Method == methodDirectoryRead
-		// The SDK answers any other request sent before initialize with error code 0,
-		// which is not a JSON-RPC code; refuse it here with the code skills/list uses.
-		early := !ours && req.Method != methodInitialize && req.Method != methodPing && !c.mayAnswer(req.Params)
-		if !ours && !early {
+		resp := c.answerEarly(req)
+		if resp == nil {
 			return msg, nil
-		}
-		resp := &jsonrpc.Response{ID: req.ID}
-		if !c.mayAnswer(req.Params) {
-			resp.Error = &jsonrpc.Error{Code: jsonrpc.CodeInvalidRequest, Message: fmt.Sprintf("method %q is invalid during session initialization", req.Method)}
-		} else if result, rpcErr := c.srv.cat().handleSkillsMethod(req.Method, req.Params); rpcErr != nil {
-			resp.Error = rpcErr
-		} else if raw, mErr := json.Marshal(result); mErr != nil {
-			resp.Error = &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: mErr.Error()}
-		} else {
-			resp.Result = raw
 		}
 		if err := c.Write(ctx, resp); err != nil {
 			return nil, err //nolint:wrapcheck // transport errors pass through unchanged

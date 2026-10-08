@@ -126,9 +126,13 @@ func TestIsCommitSHA(t *testing.T) {
 	}
 }
 
+// fsRoot is the root directory of the test machine's temp volume: "/" on Unix,
+// `C:\` on Windows, where a bare "/work" is not an absolute path.
+func fsRoot() string { return filepath.VolumeName(os.TempDir()) + string(filepath.Separator) }
+
 func TestApplyIncludeOrigin(t *testing.T) {
-	base := filepath.Join(string(filepath.Separator), "work", "proj")
-	cache := filepath.Join(string(filepath.Separator), "home", "u", ".cache", "ai-rulez", "includes", "team-0123456789ab", "repo")
+	base := filepath.Join(fsRoot(), "work", "proj")
+	cache := filepath.Join(fsRoot(), "home", "u", ".cache", "ai-rulez", "includes", "team-0123456789ab", "repo")
 	cfg := &config.Config{BaseDir: base, Includes: []config.IncludeConfig{
 		{Name: "team", Source: "https://github.com/acme/rules.git"},
 		{Name: "local", Source: "../shared"},
@@ -146,7 +150,7 @@ func TestApplyIncludeOrigin(t *testing.T) {
 		{"git include root skill", filepath.Join(cache, ".ai-rulez", "skills", "a", "SKILL.md"), true, "include:team/skills/a/SKILL.md"},
 		{"git include domain skill", filepath.Join(cache, ".ai-rulez", "domains", "d", "skills", "a", "SKILL.md"), true, "include:team/domains/d/skills/a/SKILL.md"},
 		{"local include outside the project", filepath.Join(filepath.Dir(base), "shared", ".ai-rulez", "skills", "b", "SKILL.md"), true, "include:local/skills/b/SKILL.md"},
-		{"unknown file outside the project", filepath.Join(string(filepath.Separator), "elsewhere", "skills", "c", "SKILL.md"), true, ""},
+		{"unknown file outside the project", filepath.Join(fsRoot(), "elsewhere", "skills", "c", "SKILL.md"), true, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -166,9 +170,9 @@ func TestApplyIncludeOrigin(t *testing.T) {
 }
 
 func TestSkillOwners_AttributesInstalledOriginByPathNotName(t *testing.T) {
-	base := filepath.Join(string(filepath.Separator), "work", "proj")
-	shared := filepath.Join(string(filepath.Separator), "work", "shared")
-	cache := filepath.Join(string(filepath.Separator), "home", "u", ".cache", "ai-rulez", "skills", "helper-0123456789ab")
+	base := filepath.Join(fsRoot(), "work", "proj")
+	shared := filepath.Join(fsRoot(), "work", "shared")
+	cache := filepath.Join(fsRoot(), "home", "u", ".cache", "ai-rulez", "skills", "helper-0123456789ab")
 	const gitURL = "https://github.com/acme/skills.git"
 	tests := []struct {
 		name         string

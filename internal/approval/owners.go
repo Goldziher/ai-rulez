@@ -78,7 +78,7 @@ func loadOwnerSet(ctx context.Context, baseDir, configDir, from string, read fun
 		root = top
 	}
 	set := &OwnerSet{}
-	if rel, err := filepath.Rel(root, configDir); err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+	if rel, err := filepath.Rel(gitutil.Resolve(root), gitutil.Resolve(configDir)); err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
 		set.Prefix = filepath.ToSlash(rel)
 	}
 	set.LockPath = path.Join(set.Prefix, lockfile.FileName)
