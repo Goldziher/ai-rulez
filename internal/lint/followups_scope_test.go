@@ -8,7 +8,8 @@ import (
 // A directory whose name merely starts with two dots is inside the config
 // directory; only a real parent reference leaves it.
 func TestScopeOfTreatsDotDotPrefixedNamesAsInside(t *testing.T) {
-	configDir := filepath.Join(string(filepath.Separator), "proj", ".ai-rulez")
+	// A rooted path needs a volume on Windows to count as absolute.
+	configDir := filepath.Join(t.TempDir(), "proj", ".ai-rulez")
 	tests := []struct {
 		name string
 		path string

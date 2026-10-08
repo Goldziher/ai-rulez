@@ -185,7 +185,7 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 // When local_override is set and the path exists, it is used instead of the
 // configured source. If the local_override path does not exist, it returns
 // (nil, nil) so the caller can skip this include silently.
-func (r *Resolver) createSource(ctx context.Context, includeConf *config.IncludeConfig) (Source, error) {
+func (r *Resolver) createSource(ctx context.Context, includeConf *config.IncludeConfig) (Source, error) { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	if includeConf.Format == config.IncludeFormatOKF {
 		return r.createOKFSource(ctx, includeConf)
 	}

@@ -137,7 +137,7 @@ linters:
       # forbidigo applies to the engine's library packages only: the command line, the
       # packages that are the process boundary (ambient, runner) or CLI-only by design
       # (agents, watch, logger, telemetry), tests and fixtures are exempt.
-      - path: '^(cmd/|tests/|internal/(ambient|runner|agents|watch|testutil|logger|telemetry)/)|_test\.go$'
+      - path: '^(cmd/|tests/|internal/(ambient|runner|agents|watch|testutil|logger|telemetry)/|internal/signing/sigstore/fakesigstore/)|_test\.go$'
         linters:
           - forbidigo
 
@@ -151,6 +151,19 @@ linters:
 
       # SA5011 false-positives: tests guard with `if x == nil { t.Fatalf(...) }`,
       # which terminates, but staticcheck does not model t.Fatalf as terminating.
+      # fakesigstore is an in-process Sigstore stand-in for tests: it never ships, and a failed
+      # key generation or marshal there is a test-setup bug that should panic, not be plumbed.
+      - path: internal/signing/sigstore/fakesigstore/
+        linters:
+          - errcheck
+
+      # The signing tests are an external package that dot-imports the two packages they
+      # exercise (signing and its sigstore backend) after the backend was split out.
+      - path: internal/signing/.*_test\.go
+        text: "dot-imports"
+        linters:
+          - revive
+
       - path: _test\.go
         text: "SA5011"
         linters:

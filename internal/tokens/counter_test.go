@@ -89,7 +89,7 @@ func TestNames(t *testing.T) {
 
 func TestCL100KBoundsAVeryLongLine(t *testing.T) {
 	counter := tokens.CL100KBase()
-	long := strings.Repeat("​‮", 100000)
+	long := strings.Repeat("\u200b\u202e", 100000)
 	start := time.Now()
 
 	n := counter.Count("# title\n" + long + "\ntail\n")

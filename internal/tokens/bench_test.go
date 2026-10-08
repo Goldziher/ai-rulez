@@ -23,7 +23,7 @@ func BenchmarkCount(b *testing.B) {
 		{"prose-small", prose},
 		{"prose-large", strings.Repeat(prose, 50)},
 		{"long-line", strings.Repeat("0123456789abcdef", 8192)},
-		{"long-line-unicode", strings.Repeat("​‮", 20000)},
+		{"long-line-unicode", strings.Repeat("\u200b\u202e", 20000)},
 	}
 	counters := map[string]tokens.Counter{"cl100k": tokens.CL100KBase(), "ratio": tokens.ByteRatio(tokens.EstimateBytesPerToken)}
 	for _, cn := range []string{"cl100k", "ratio"} {

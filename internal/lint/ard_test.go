@@ -50,7 +50,7 @@ func TestStrictReportsARDFindingsOnTheConfigFile(t *testing.T) {
 	for _, f := range got {
 		if strings.HasPrefix(f.Code, "AR9S") {
 			codes[f.Code] = f.Severity
-			assert.Equal(t, filepath.Join(cfg.ConfigDir, cfg.ConfigFile), f.File)
+			assert.Equal(t, filepath.ToSlash(filepath.Join(cfg.ConfigDir, cfg.ConfigFile)), f.File)
 		}
 	}
 	assert.Equal(t, map[string]Severity{

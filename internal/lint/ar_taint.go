@@ -22,7 +22,7 @@ var (
 	varRefRe      = regexp.MustCompile(`\$\{?([A-Za-z_]\w*)\}?`)
 	fileArgRe     = regexp.MustCompile(`(?:@|<\s*|-T\s+|--upload-file\s+|--data-binary\s+@?)(\S+)`)
 	taintSinks    = map[string]bool{
-		"curl": true, "wget": true, "nc": true, "ncat": true, "netcat": true, "ssh": true, "scp": true, "rsync": true, "socat": true,
+		cmdCurl: true, cmdWget: true, "nc": true, "ncat": true, "netcat": true, "ssh": true, "scp": true, "rsync": true, "socat": true,
 		"dig": true, "nslookup": true, transportHTTP: true, "xh": true, "ftp": true, "telnet": true, "sftp": true,
 	}
 	pipeSplitRe = regexp.MustCompile(`\|\|?`)

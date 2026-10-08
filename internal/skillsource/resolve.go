@@ -175,7 +175,7 @@ func checkInsideProject(spec Spec, opts Options, root string) error {
 	return nil
 }
 
-func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error) {
+func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error) { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	// A file:// URL is a local path in git clothing: it stays inside the project too.
 	if path, ok := lockfile.FileURLPath(spec.URL); ok && !lockfile.AllowFileURLsOutside(nil) {
 		if abs, err := filepath.Abs(path); err == nil {

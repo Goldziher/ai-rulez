@@ -13,12 +13,12 @@ go test ./tests/conformance/
 
 | Directory | Standard and version | Source |
 | --- | --- | --- |
-| `schemas/agent-plugins/1.0.0`, `1.1.0` | Agent Plugins 1.0.0 (published), 1.1.0 (draft) | https://github.com/agentplugins/agent-plugins-spec at commit `ff8ab5e392cc87bd88d87c060815a87490e51003` |
-| `schemas/ard` | ARD 0.91 (proposal), entry schema | https://github.com/ards-project/ard-spec at commit `b76f235a8f461876ad4f1e77abd0eb0eb302b48d` |
-| `schemas/cyclonedx/1.6` | CycloneDX 1.6, with its SPDX-license and JSF dependencies | https://github.com/CycloneDX/specification, `schema/bom-1.6.schema.json`, `spdx.schema.json`, `jsf-0.82.schema.json` |
-| `schemas/spdx/2.3` | SPDX 2.3.1 JSON schema | https://github.com/spdx/spdx-spec, the SPDX 2.3 JSON schema (`spdx-schema.json`) |
-| `schemas/in-toto/statement-v1.schema.json` | in-toto Statement v1 | Hand-written from https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md. Upstream publishes no JSON Schema. |
-| `schemas/dsse/envelope.schema.json` | DSSE v1 envelope | Hand-written from https://github.com/secure-systems-lab/dsse (`envelope.md`, `protocol.md`). Upstream publishes no JSON Schema. |
+| `schemas/agent-plugins/1.0.0`, `1.1.0` | Agent Plugins 1.0.0 (published), 1.1.0 (draft) | <https://github.com/agentplugins/agent-plugins-spec> at commit `ff8ab5e392cc87bd88d87c060815a87490e51003` |
+| `schemas/ard` | ARD 0.91 (proposal), entry schema | <https://github.com/ards-project/ard-spec> at commit `b76f235a8f461876ad4f1e77abd0eb0eb302b48d` |
+| `schemas/cyclonedx/1.6` | CycloneDX 1.6, with its SPDX-license and JSF dependencies | <https://github.com/CycloneDX/specification>, `schema/bom-1.6.schema.json`, `spdx.schema.json`, `jsf-0.82.schema.json` |
+| `schemas/spdx/2.3` | SPDX 2.3.1 JSON schema | <https://github.com/spdx/spdx-spec>, the SPDX 2.3 JSON schema (`spdx-schema.json`) |
+| `schemas/in-toto/statement-v1.schema.json` | in-toto Statement v1 | Hand-written from <https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md>. Upstream publishes no JSON Schema. |
+| `schemas/dsse/envelope.schema.json` | DSSE v1 envelope | Hand-written from <https://github.com/secure-systems-lab/dsse> (`envelope.md`, `protocol.md`). Upstream publishes no JSON Schema. |
 
 Agent Skills, AGENTS.md and llms.txt have no machine-readable schema. Their rules are transcribed into Go
 (`skills_test.go`, `agentsmd_test.go`, `llmstxt_test.go`) and the test comments name the specification section.

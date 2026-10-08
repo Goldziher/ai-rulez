@@ -102,7 +102,7 @@ func validateOKFTree(cfg *config.Config, w io.Writer) bool {
 	switch validateFailOn {
 	case failOnWarning:
 		threshold = okf.SeverityWarning
-	case "info":
+	case failOnInfo:
 		threshold = okf.SeverityInfo
 	case okfFailNone:
 		return false
