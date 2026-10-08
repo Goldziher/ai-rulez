@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -41,15 +40,15 @@ var rolesListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List the roles with their item counts and token estimates",
 	Args:  cobra.NoArgs,
-	Run:   func(cmd *cobra.Command, _ []string) { exitOnFormat(rolesFormat, runRolesList(cmd.OutOrStdout())) },
+	RunE:  func(cmd *cobra.Command, _ []string) error { return fail(runRolesList(cmd.OutOrStdout())) },
 }
 
 var rolesShowCmd = &cobra.Command{
 	Use:   "show <name>",
 	Short: "Show a role as declared and with its parent merged in",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		exitOnFormat(rolesFormat, runRolesShow(cmd.OutOrStdout(), args[0]))
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return fail(runRolesShow(cmd.OutOrStdout(), args[0]))
 	},
 }
 
@@ -57,8 +56,8 @@ var rolesResolveCmd = &cobra.Command{
 	Use:   "resolve <name>",
 	Short: "List the items a role keeps, with sizes and skill modes",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		exitOnFormat(rolesFormat, runRolesResolve(cmd.OutOrStdout(), args[0]))
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return fail(runRolesResolve(cmd.OutOrStdout(), args[0]))
 	},
 }
 
@@ -67,13 +66,6 @@ func init() {
 	RolesCmd.PersistentFlags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 	RolesCmd.PersistentFlags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	RolesCmd.AddCommand(rolesListCmd, rolesShowCmd, rolesResolveCmd)
-}
-
-func exitOn(err error) {
-	if err != nil {
-		fmtError(err)
-		os.Exit(exitCodeFor(err))
-	}
 }
 
 func loadRolesConfig() (*config.Config, error) {
