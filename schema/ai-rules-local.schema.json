@@ -250,7 +250,7 @@
       "description": "Agentic Resource Discovery manifest (ard.json, spec v0.91, a proposal). Identifiers are urn:air:<publisher>:<namespace>:<name>. Emitted by `ai-rulez publish --emit ard`; see docs/ard.md.",
       "properties": {
         "base_url": {
-          "description": "https URL the skill files and server cards are served from. Without it entries point at the release of the repository.",
+          "description": "https URL the skill files (skills/<name>/SKILL.md, written next to ard.json) are served from. Without it skills point at the raw file of the release tag and plugins at the release archive.",
           "pattern": "^https://",
           "type": "string"
         },
@@ -269,6 +269,19 @@
           "maxLength": 253,
           "pattern": "^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
           "type": "string"
+        },
+        "queries": {
+          "additionalProperties": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "type": "array"
+          },
+          "description": "representativeQueries (2 to 5) of a skill, MCP server or plugin by name, replacing the ones derived from skill frontmatter and eval cases.",
+          "type": "object"
         }
       },
       "type": "object"

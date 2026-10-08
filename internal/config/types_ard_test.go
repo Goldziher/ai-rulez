@@ -25,6 +25,9 @@ func TestValidateARD(t *testing.T) {
 		{"empty namespace segment", &ARDConfig{Publisher: "example.com", Namespace: "a::b"}, "namespace segment"},
 		{"http base url", &ARDConfig{Publisher: "example.com", Namespace: "t", BaseURL: "http://example.com"}, "https"},
 		{"base url with credentials", &ARDConfig{Publisher: "example.com", Namespace: "t", BaseURL: "https://u:p@example.com"}, "https"},
+		{"queries", &ARDConfig{Publisher: "example.com", Namespace: "t", Queries: map[string][]string{"docs": {"a", "b"}}}, ""},
+		{"empty query", &ARDConfig{Publisher: "example.com", Namespace: "t", Queries: map[string][]string{"docs": {"a", " "}}}, "non-empty"},
+		{"no queries", &ARDConfig{Publisher: "example.com", Namespace: "t", Queries: map[string][]string{"docs": {}}}, "non-empty"},
 		{"plugin type", &ARDConfig{Publisher: "example.com", Namespace: "t", PluginType: "plugin"}, "type/subtype"},
 	}
 	for _, tt := range tests {

@@ -1162,12 +1162,22 @@
         "base_url": {
           "type": "string",
           "pattern": "^https://",
-          "description": "https URL the skill files and server cards are served from. Without it entries point at the release of the repository."
+          "description": "https URL the skill files (skills/<name>/SKILL.md, written next to ard.json) are served from. Without it skills point at the raw file of the release tag and plugins at the release archive."
         },
         "plugin_type": {
           "type": "string",
           "pattern": "^[^\\s/]+/[^\\s/]+$",
           "description": "Media type of plugin entries. Default application/vnd.ai-rulez.plugin+json, because the spec registers none."
+        },
+        "queries": {
+          "type": "object",
+          "description": "representativeQueries (2 to 5) of a skill, MCP server or plugin by name, replacing the ones derived from skill frontmatter and eval cases.",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1,
+            "maxItems": 5
+          }
         }
       },
       "required": ["publisher", "namespace"],

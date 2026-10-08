@@ -55,6 +55,7 @@ var (
 	ownKeys = []string{
 		"priority", keyTargets, "aliases", "keywords", "usage", "shortcut", "category", "placement", "short-description",
 		keyTools, keySkills, keyGlobs, keyPaths, keyEffort, "deprecated", "superseded_by", "delivery", "triggers",
+		"representative_queries",
 	}
 )
 

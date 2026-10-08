@@ -2,6 +2,7 @@ package config
 
 import (
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/samber/oops"
@@ -25,6 +26,10 @@ type ARDConfig struct {
 	// PluginType overrides the media type of plugin entries, for when the spec
 	// registers one.
 	PluginType string `yaml:"plugin_type,omitempty" json:"plugin_type,omitempty" toml:"plugin_type,omitempty"` //nolint:tagliatelle
+	// Queries sets the representativeQueries (2 to 5) of a skill, MCP server or
+	// plugin by name, replacing the ones derived from skill frontmatter and eval
+	// cases. An MCP server has nothing to derive them from.
+	Queries map[string][]string `yaml:"queries,omitempty" json:"queries,omitempty" toml:"queries,omitempty"`
 }
 
 // validateARD checks the [ard] table when present.
@@ -55,6 +60,11 @@ func (c *Config) validateARD() error {
 	}
 	if a.PluginType != "" && (!strings.Contains(a.PluginType, "/") || strings.ContainsAny(a.PluginType, " \t")) {
 		return oops.With("field", "ard.plugin_type").Errorf("ard.plugin_type %q must be a media type (type/subtype)", a.PluginType)
+	}
+	for name, queries := range a.Queries {
+		if strings.TrimSpace(name) == "" || len(queries) == 0 || slices.ContainsFunc(queries, func(q string) bool { return strings.TrimSpace(q) == "" }) {
+			return oops.With("field", "ard.queries").Errorf("ard.queries.%s must be a list of non-empty queries", name)
+		}
 	}
 	return nil
 }
