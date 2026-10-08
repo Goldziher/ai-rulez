@@ -8,7 +8,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
-	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	pemit "github.com/Goldziher/ai-rulez/v5/internal/publish/emit"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 )
@@ -35,7 +34,9 @@ func ardInput(cfg *config.Config, repoPath string, updatedAt time.Time) *pemit.A
 		}
 	}
 	seen := map[string]bool{}
-	for _, s := range cfg.EffectiveMCPServers() {
+	servers := cfg.EffectiveMCPServers()
+	for i := range servers {
+		s := &servers[i]
 		if !s.IsEnabled() || seen[s.Name] {
 			continue
 		}
@@ -122,17 +123,4 @@ func evalPrompts(configDir string) map[string][]string {
 		}
 	}
 	return out
-}
-
-// repoRelative is the project directory relative to the repository root, "" at
-// the root or outside a repository.
-func repoRelative(top, baseDir string) string {
-	if top == "" {
-		return ""
-	}
-	rel := gitutil.RepoRelative(top, baseDir)
-	if rel == "." {
-		return ""
-	}
-	return rel
 }
