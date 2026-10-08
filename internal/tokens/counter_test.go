@@ -3,6 +3,7 @@ package tokens_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/stretchr/testify/assert"
@@ -84,4 +85,16 @@ func TestByteRatio(t *testing.T) {
 
 func TestNames(t *testing.T) {
 	assert.Equal(t, []string{tokens.CounterCL100KBase, tokens.CounterEstimate}, tokens.Names())
+}
+
+func TestCL100KBoundsAVeryLongLine(t *testing.T) {
+	counter := tokens.CL100KBase()
+	long := strings.Repeat("​‮", 100000)
+	start := time.Now()
+
+	n := counter.Count("# title\n" + long + "\ntail\n")
+
+	assert.Less(t, time.Since(start), 20*time.Second)
+	assert.Greater(t, n, 1000)
+	assert.Equal(t, 2, counter.Count("hello world"), "below the bound the count is exact")
 }
