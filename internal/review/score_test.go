@@ -17,7 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
 
-func builtin(t *testing.T) *Rubric {
+func builtin(t testing.TB) *Rubric {
 	t.Helper()
 	rb, err := LoadBuiltin("skill-quality")
 	require.NoError(t, err)

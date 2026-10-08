@@ -173,9 +173,26 @@ tasks:
       - scripts/bats/lint.sh
 
   test:benchmark:
-    desc: "Run Go benchmarks"
+    desc: "Run Go benchmarks (small and medium synthetic projects)"
     cmds:
-      - go test -bench=. -run='^$' ./...
+      - go test -bench=. -run='^$' -timeout 30m ./...
+
+  test:benchmark:large:
+    desc: "Run Go benchmarks including the 2000-file synthetic project (one iteration each)"
+    env:
+      AI_RULEZ_BENCH_LARGE: "1"
+    cmds:
+      - go test -bench=. -benchtime=1x -run='^$' -timeout 60m ./...
+
+  test:benchmark:regression:
+    desc: "Run the curated benchmark subset and fail on a >25% time/op regression against scripts/bench-baseline.txt"
+    cmds:
+      - scripts/bench.sh
+
+  test:benchmark:baseline:
+    desc: "Re-record scripts/bench-baseline.txt on this machine"
+    cmds:
+      - scripts/bench.sh --update
 
   test:all:
     desc: "Run all test suites"
