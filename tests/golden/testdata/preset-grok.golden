@@ -115,38 +115,38 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .grok/agents/architect.md
+  remove file: .grok/agents/tester.md
+  remove file: .grok/commands/build.md
+  remove file: .grok/commands/ship.md
+  remove file: .grok/config.toml
+  remove file: .grok/hooks/ai-rulez.json
+  remove file: .grok/rules/always.md
+  remove file: .grok/rules/auto.md
+  remove file: .grok/rules/manual.md
+  remove file: .grok/rules/typescript.md
+  remove file: .grok/skills/deployer/SKILL.md
+  remove file: .grok/skills/reviewer/SKILL.md
+  remove file: .grok/skills/reviewer/references/checklist.md
+  remove file: .grok/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove dir (if empty): .grok/skills/reviewer/scripts
+  remove dir (if empty): .grok/skills/reviewer/references
+  remove dir (if empty): .grok/skills/reviewer
+  remove dir (if empty): .grok/skills/deployer
+  remove dir (if empty): .grok/skills
+  remove dir (if empty): .grok/rules
+  remove dir (if empty): .grok/hooks
+  remove dir (if empty): .grok/commands
+  remove dir (if empty): .grok/agents
+  remove dir (if empty): .grok
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .grok/agents/architect.md
-INFO    remove file: .grok/agents/tester.md
-INFO    remove file: .grok/commands/build.md
-INFO    remove file: .grok/commands/ship.md
-INFO    remove file: .grok/config.toml
-INFO    remove file: .grok/hooks/ai-rulez.json
-INFO    remove file: .grok/rules/always.md
-INFO    remove file: .grok/rules/auto.md
-INFO    remove file: .grok/rules/manual.md
-INFO    remove file: .grok/rules/typescript.md
-INFO    remove file: .grok/skills/deployer/SKILL.md
-INFO    remove file: .grok/skills/reviewer/SKILL.md
-INFO    remove file: .grok/skills/reviewer/references/checklist.md
-INFO    remove file: .grok/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .grok/skills/reviewer/scripts
-INFO    remove dir (if empty): .grok/skills/reviewer/references
-INFO    remove dir (if empty): .grok/skills/reviewer
-INFO    remove dir (if empty): .grok/skills/deployer
-INFO    remove dir (if empty): .grok/skills
-INFO    remove dir (if empty): .grok/rules
-INFO    remove dir (if empty): .grok/hooks
-INFO    remove dir (if empty): .grok/commands
-INFO    remove dir (if empty): .grok/agents
-INFO    remove dir (if empty): .grok
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=16 directories=10
+Removed generated files: 16 files, 10 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

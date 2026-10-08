@@ -1399,482 +1399,482 @@ INFO  User-level generation complete files=213
 ## step 5: ai-rulez clean --user --dry-run
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .agents/AGENTS.md
+  remove file: .agents/plugins/ai-rulez/hooks/hooks.json
+  remove file: .agents/skills/db/SKILL.md
+  remove file: .agents/skills/helper/SKILL.md
+  remove file: .augment/agents/buddy.md
+  remove file: .augment/rules/be.md
+  remove file: .augment/rules/mine.md
+  remove file: .augment/settings.json
+  remove file: .augment/skills/db/SKILL.md
+  remove file: .augment/skills/helper/SKILL.md
+  remove file: .bob/AGENTS.md
+  remove file: .bob/rules/be.md
+  remove file: .bob/rules/mine.md
+  remove file: .bob/settings/settings.json
+  remove file: .bob/skills/db/SKILL.md
+  remove file: .bob/skills/helper/SKILL.md
+  remove file: .claude/agents/buddy.md
+  remove file: .claude/rules/be.md
+  remove file: .claude/rules/mine.md
+  remove file: .claude/skills/db/SKILL.md
+  remove file: .claude/skills/helper/SKILL.md
+  remove file: .cline/agents/buddy.yaml
+  remove file: .cline/skills/db/SKILL.md
+  remove file: .cline/skills/helper/SKILL.md
+  remove file: .codebuddy/CODEBUDDY.md
+  remove file: .codebuddy/agents/buddy.md
+  remove file: .codebuddy/rules/be.md
+  remove file: .codebuddy/rules/mine.md
+  remove file: .codebuddy/settings.json
+  remove file: .codebuddy/skills/db/SKILL.md
+  remove file: .codebuddy/skills/helper/SKILL.md
+  remove file: .codewhale/AGENTS.md
+  remove file: .codewhale/skills/db/SKILL.md
+  remove file: .codewhale/skills/helper/SKILL.md
+  remove file: .codex/AGENTS.md
+  remove file: .codex/agents/buddy.toml
+  remove file: .codex/hooks.json
+  remove file: .codex/rules/ai-rulez.rules
+  remove file: .commandcode/AGENTS.md
+  remove file: .commandcode/agents/buddy.md
+  remove file: .commandcode/settings.json
+  remove file: .commandcode/skills/db/SKILL.md
+  remove file: .commandcode/skills/helper/SKILL.md
+  remove file: .config/agents/skills/db/SKILL.md
+  remove file: .config/agents/skills/helper/SKILL.md
+  remove file: .config/amp/AGENTS.md
+  remove file: .config/amp/plugins/ai-rulez-hooks.ts
+  remove file: .config/crush/CRUSH.md
+  remove file: .config/crush/skills/db/SKILL.md
+  remove file: .config/crush/skills/helper/SKILL.md
+  remove file: .config/devin/agents/buddy.md
+  remove file: .config/devin/config.json
+  remove file: .config/devin/skills/db/SKILL.md
+  remove file: .config/devin/skills/helper/SKILL.md
+  remove file: .config/goose/.goosehints
+  remove file: .config/goose/agents/buddy.md
+  remove file: .config/kilo/AGENTS.md
+  remove file: .config/kilo/agents/buddy.md
+  remove file: .config/kilo/kilo.jsonc
+  remove file: .config/kilo/plugins/ai-rulez-hooks.js
+  remove file: .config/mimocode/AGENTS.md
+  remove file: .config/mimocode/agents/buddy.md
+  remove file: .config/mimocode/mimocode.jsonc
+  remove file: .config/mimocode/plugins/ai-rulez-hooks.js
+  remove file: .config/mimocode/skills/db/SKILL.md
+  remove file: .config/mimocode/skills/helper/SKILL.md
+  remove file: .config/muse/skills/db/SKILL.md
+  remove file: .config/muse/skills/helper/SKILL.md
+  remove file: .config/opencode/AGENTS.md
+  remove file: .config/opencode/agents/buddy.md
+  remove file: .config/opencode/opencode.json
+  remove file: .config/opencode/plugins/ai-rulez-hooks.js
+  remove file: .config/opencode/skills/db/SKILL.md
+  remove file: .config/opencode/skills/helper/SKILL.md
+  remove file: .config/poolside/AGENTS.md
+  remove file: .config/poolside/settings.yaml
+  remove file: .config/poolside/skills/db/SKILL.md
+  remove file: .config/poolside/skills/helper/SKILL.md
+  remove file: .config/zed/AGENTS.md
+  remove file: .config/zed/settings.json
+  remove file: .copilot/agents/buddy.agent.md
+  remove file: .copilot/copilot-instructions.md
+  remove file: .copilot/hooks/ai-rulez.json
+  remove file: .copilot/instructions/be.instructions.md
+  remove file: .copilot/instructions/mine.instructions.md
+  remove file: .copilot/skills/db/SKILL.md
+  remove file: .copilot/skills/helper/SKILL.md
+  remove file: .cursor/agents/buddy.md
+  remove file: .cursor/hooks.json
+  remove file: .deepagents/agent/AGENTS.md
+  remove file: .deepagents/agent/agents/buddy/AGENTS.md
+  remove file: .deepagents/agent/skills/db/SKILL.md
+  remove file: .deepagents/agent/skills/helper/SKILL.md
+  remove file: .deepagents/hooks.json
+  remove file: .dsh/AGENTS.md
+  remove file: .dsh/skills/db/SKILL.md
+  remove file: .dsh/skills/helper/SKILL.md
+  remove file: .factory/AGENTS.md
+  remove file: .factory/droids/buddy.md
+  remove file: .factory/hooks.json
+  remove file: .factory/skills/db/SKILL.md
+  remove file: .factory/skills/helper/SKILL.md
+  remove file: .gemini/GEMINI.md
+  remove file: .gemini/agents/buddy.md
+  remove file: .gemini/config/agents/buddy.md
+  remove file: .gemini/config/skills/db/SKILL.md
+  remove file: .gemini/config/skills/helper/SKILL.md
+  remove file: .gemini/settings.json
+  remove file: .gitlab/duo/chat-rules.md
+  remove file: .gitlab/duo/hooks.json
+  remove file: .grok/AGENTS.md
+  remove file: .grok/agents/buddy.md
+  remove file: .grok/config.toml
+  remove file: .grok/hooks/ai-rulez.json
+  remove file: .grok/rules/be.md
+  remove file: .grok/rules/mine.md
+  remove file: .grok/skills/db/SKILL.md
+  remove file: .grok/skills/helper/SKILL.md
+  remove file: .hermes/config.yaml
+  remove file: .hermes/skills/db/SKILL.md
+  remove file: .hermes/skills/helper/SKILL.md
+  remove file: .junie/AGENTS.md
+  remove file: .junie/agents/buddy.md
+  remove file: .junie/config.json
+  remove file: .junie/skills/db/SKILL.md
+  remove file: .junie/skills/helper/SKILL.md
+  remove file: .kilo/rules/be.md
+  remove file: .kilo/rules/mine.md
+  remove file: .kilo/skills/db/SKILL.md
+  remove file: .kilo/skills/helper/SKILL.md
+  remove file: .kimi-code/AGENTS.md
+  remove file: .kimi-code/agents/buddy.md
+  remove file: .kimi-code/config.toml
+  remove file: .kimi-code/skills/db/SKILL.md
+  remove file: .kimi-code/skills/helper/SKILL.md
+  remove file: .kiro/agents/buddy.md
+  remove file: .kiro/hooks/ai-rulez.json
+  remove file: .kiro/skills/db/SKILL.md
+  remove file: .kiro/skills/helper/SKILL.md
+  remove file: .kiro/steering/AGENTS.md
+  remove file: .kiro/steering/be.md
+  remove file: .kiro/steering/mine.md
+  remove file: .letta/agents/buddy.md
+  remove file: .letta/settings.json
+  remove file: .letta/skills/db/SKILL.md
+  remove file: .letta/skills/helper/SKILL.md
+  remove file: .omp/agent/AGENTS.md
+  remove file: .omp/agent/agents/buddy.md
+  remove file: .omp/agent/config.yml
+  remove file: .omp/agent/rules/be.md
+  remove file: .omp/agent/rules/mine.md
+  remove file: .omp/agent/skills/db/SKILL.md
+  remove file: .omp/agent/skills/helper/SKILL.md
+  remove file: .openclaw/workspace/AGENTS.md
+  remove file: .pi/agent/AGENTS.md
+  remove file: .pi/agent/agents/buddy.md
+  remove file: .pi/agent/extensions/ai-rulez-hooks.ts
+  remove file: .pi/agent/skills/db/SKILL.md
+  remove file: .pi/agent/skills/helper/SKILL.md
+  remove file: .qoder/AGENTS.md
+  remove file: .qoder/agents/buddy.md
+  remove file: .qoder/rules/be.md
+  remove file: .qoder/rules/mine.md
+  remove file: .qoder/settings.json
+  remove file: .qoder/skills/db/SKILL.md
+  remove file: .qoder/skills/helper/SKILL.md
+  remove file: .qwen/QWEN.md
+  remove file: .qwen/agents/buddy.md
+  remove file: .qwen/rules/be.md
+  remove file: .qwen/rules/mine.md
+  remove file: .qwen/settings.json
+  remove file: .qwen/skills/db/SKILL.md
+  remove file: .qwen/skills/helper/SKILL.md
+  remove file: .reasonix/REASONIX.md
+  remove file: .reasonix/settings.json
+  remove file: .reasonix/skills/buddy/SKILL.md
+  remove file: .reasonix/skills/db/SKILL.md
+  remove file: .reasonix/skills/helper/SKILL.md
+  remove file: .roo/rules/AGENTS.md
+  remove file: .roo/skills/db/SKILL.md
+  remove file: .roo/skills/helper/SKILL.md
+  remove file: .rovodev/AGENTS.md
+  remove file: .rovodev/skills/db/SKILL.md
+  remove file: .rovodev/skills/helper/SKILL.md
+  remove file: .rovodev/subagents/buddy.md
+  remove file: .snowflake/cortex/agents/buddy.md
+  remove file: .snowflake/cortex/hooks.json
+  remove file: .snowflake/cortex/skills/db/SKILL.md
+  remove file: .snowflake/cortex/skills/helper/SKILL.md
+  remove file: .takt/facets/knowledge/helper.md
+  remove file: .takt/facets/personas/buddy.md
+  remove file: .takt/facets/policies/be.md
+  remove file: .takt/facets/policies/context-me.md
+  remove file: .takt/facets/policies/mine.md
+  remove file: .trae/skills/db/SKILL.md
+  remove file: .trae/skills/helper/SKILL.md
+  remove file: .vibe/AGENTS.md
+  remove file: .vibe/config.toml
+  remove file: .vibe/skills/db/SKILL.md
+  remove file: .vibe/skills/helper/SKILL.md
+  remove file: .warp/skills/db/SKILL.md
+  remove file: .warp/skills/helper/SKILL.md
+  remove file: .zcode/AGENTS.md
+  remove file: .zcode/agents/buddy.md
+  remove file: .zcode/cli/config.json
+  remove file: .zcode/skills/db/SKILL.md
+  remove file: .zcode/skills/helper/SKILL.md
+  remove file: Documents/Cline/Hooks/TaskStart
+  remove file: Documents/Cline/Rules/be.md
+  remove file: Documents/Cline/Rules/context-me.md
+  remove file: Documents/Cline/Rules/mine.md
+  remove ai-rulez keys from: .claude/settings.json
+  remove dir (if empty): Documents/Cline/Rules
+  remove dir (if empty): Documents/Cline/Hooks
+  remove dir (if empty): Documents/Cline
+  remove dir (if empty): Documents
+  remove dir (if empty): .zcode/skills/helper
+  remove dir (if empty): .zcode/skills/db
+  remove dir (if empty): .zcode/skills
+  remove dir (if empty): .zcode/commands
+  remove dir (if empty): .zcode/cli
+  remove dir (if empty): .zcode/agents
+  remove dir (if empty): .zcode
+  remove dir (if empty): .warp/skills/helper
+  remove dir (if empty): .warp/skills/db
+  remove dir (if empty): .warp/skills
+  remove dir (if empty): .warp
+  remove dir (if empty): .vibe/skills/helper
+  remove dir (if empty): .vibe/skills/db
+  remove dir (if empty): .vibe/skills
+  remove dir (if empty): .vibe
+  remove dir (if empty): .trae/skills/helper
+  remove dir (if empty): .trae/skills/db
+  remove dir (if empty): .trae/skills
+  remove dir (if empty): .trae
+  remove dir (if empty): .takt/facets/policies
+  remove dir (if empty): .takt/facets/personas
+  remove dir (if empty): .takt/facets/knowledge
+  remove dir (if empty): .takt/facets/instructions
+  remove dir (if empty): .takt/facets
+  remove dir (if empty): .takt
+  remove dir (if empty): .snowflake/cortex/skills/helper
+  remove dir (if empty): .snowflake/cortex/skills/db
+  remove dir (if empty): .snowflake/cortex/skills
+  remove dir (if empty): .snowflake/cortex/agents
+  remove dir (if empty): .snowflake/cortex
+  remove dir (if empty): .snowflake
+  remove dir (if empty): .rovodev/subagents
+  remove dir (if empty): .rovodev/skills/helper
+  remove dir (if empty): .rovodev/skills/db
+  remove dir (if empty): .rovodev/skills
+  remove dir (if empty): .rovodev
+  remove dir (if empty): .roo/skills/helper
+  remove dir (if empty): .roo/skills/db
+  remove dir (if empty): .roo/skills
+  remove dir (if empty): .roo/rules
+  remove dir (if empty): .roo/commands
+  remove dir (if empty): .roo
+  remove dir (if empty): .reasonix/skills/helper
+  remove dir (if empty): .reasonix/skills/db
+  remove dir (if empty): .reasonix/skills/buddy
+  remove dir (if empty): .reasonix/skills
+  remove dir (if empty): .reasonix/commands
+  remove dir (if empty): .reasonix
+  remove dir (if empty): .qwen/skills/helper
+  remove dir (if empty): .qwen/skills/db
+  remove dir (if empty): .qwen/skills
+  remove dir (if empty): .qwen/rules
+  remove dir (if empty): .qwen/commands
+  remove dir (if empty): .qwen/agents
+  remove dir (if empty): .qwen
+  remove dir (if empty): .qoder/skills/helper
+  remove dir (if empty): .qoder/skills/db
+  remove dir (if empty): .qoder/skills
+  remove dir (if empty): .qoder/rules
+  remove dir (if empty): .qoder/commands
+  remove dir (if empty): .qoder/agents
+  remove dir (if empty): .qoder
+  remove dir (if empty): .pi/agent/skills/helper
+  remove dir (if empty): .pi/agent/skills/db
+  remove dir (if empty): .pi/agent/skills
+  remove dir (if empty): .pi/agent/prompts
+  remove dir (if empty): .pi/agent/extensions
+  remove dir (if empty): .pi/agent/agents
+  remove dir (if empty): .pi/agent
+  remove dir (if empty): .pi
+  remove dir (if empty): .openclaw/workspace
+  remove dir (if empty): .openclaw
+  remove dir (if empty): .omp/agent/skills/helper
+  remove dir (if empty): .omp/agent/skills/db
+  remove dir (if empty): .omp/agent/skills
+  remove dir (if empty): .omp/agent/rules
+  remove dir (if empty): .omp/agent/commands
+  remove dir (if empty): .omp/agent/agents
+  remove dir (if empty): .omp/agent
+  remove dir (if empty): .omp
+  remove dir (if empty): .letta/skills/helper
+  remove dir (if empty): .letta/skills/db
+  remove dir (if empty): .letta/skills
+  remove dir (if empty): .letta/commands
+  remove dir (if empty): .letta/agents
+  remove dir (if empty): .letta
+  remove dir (if empty): .kiro/steering
+  remove dir (if empty): .kiro/skills/helper
+  remove dir (if empty): .kiro/skills/db
+  remove dir (if empty): .kiro/skills
+  remove dir (if empty): .kiro/prompts
+  remove dir (if empty): .kiro/hooks
+  remove dir (if empty): .kiro/agents
+  remove dir (if empty): .kiro
+  remove dir (if empty): .kimi-code/skills/helper
+  remove dir (if empty): .kimi-code/skills/db
+  remove dir (if empty): .kimi-code/skills
+  remove dir (if empty): .kimi-code/agents
+  remove dir (if empty): .kimi-code
+  remove dir (if empty): .kilo/skills/helper
+  remove dir (if empty): .kilo/skills/db
+  remove dir (if empty): .kilo/skills
+  remove dir (if empty): .kilo/rules
+  remove dir (if empty): .kilo
+  remove dir (if empty): .junie/skills/helper
+  remove dir (if empty): .junie/skills/db
+  remove dir (if empty): .junie/skills
+  remove dir (if empty): .junie/commands
+  remove dir (if empty): .junie/agents
+  remove dir (if empty): .junie
+  remove dir (if empty): .hermes/skills/helper
+  remove dir (if empty): .hermes/skills/db
+  remove dir (if empty): .hermes/skills
+  remove dir (if empty): .hermes
+  remove dir (if empty): .grok/skills/helper
+  remove dir (if empty): .grok/skills/db
+  remove dir (if empty): .grok/skills
+  remove dir (if empty): .grok/rules
+  remove dir (if empty): .grok/hooks
+  remove dir (if empty): .grok/commands
+  remove dir (if empty): .grok/agents
+  remove dir (if empty): .grok
+  remove dir (if empty): .gitlab/duo/commands
+  remove dir (if empty): .gitlab/duo
+  remove dir (if empty): .gitlab
+  remove dir (if empty): .gemini/config/skills/helper
+  remove dir (if empty): .gemini/config/skills/db
+  remove dir (if empty): .gemini/config/skills
+  remove dir (if empty): .gemini/config/agents
+  remove dir (if empty): .gemini/config
+  remove dir (if empty): .gemini/agents
+  remove dir (if empty): .gemini
+  remove dir (if empty): .factory/skills/helper
+  remove dir (if empty): .factory/skills/db
+  remove dir (if empty): .factory/skills
+  remove dir (if empty): .factory/droids
+  remove dir (if empty): .factory/commands
+  remove dir (if empty): .factory
+  remove dir (if empty): .dsh/skills/helper
+  remove dir (if empty): .dsh/skills/db
+  remove dir (if empty): .dsh/skills
+  remove dir (if empty): .dsh
+  remove dir (if empty): .deepagents/agent/skills/helper
+  remove dir (if empty): .deepagents/agent/skills/db
+  remove dir (if empty): .deepagents/agent/skills
+  remove dir (if empty): .deepagents/agent/agents/buddy
+  remove dir (if empty): .deepagents/agent/agents
+  remove dir (if empty): .deepagents/agent
+  remove dir (if empty): .deepagents
+  remove dir (if empty): .cursor/commands
+  remove dir (if empty): .cursor/agents
+  remove dir (if empty): .cursor
+  remove dir (if empty): .copilot/skills/helper
+  remove dir (if empty): .copilot/skills/db
+  remove dir (if empty): .copilot/skills
+  remove dir (if empty): .copilot/instructions
+  remove dir (if empty): .copilot/hooks
+  remove dir (if empty): .copilot/agents
+  remove dir (if empty): .copilot
+  remove dir (if empty): .config/zed
+  remove dir (if empty): .config/poolside/skills/helper
+  remove dir (if empty): .config/poolside/skills/db
+  remove dir (if empty): .config/poolside/skills
+  remove dir (if empty): .config/poolside
+  remove dir (if empty): .config/opencode/skills/helper
+  remove dir (if empty): .config/opencode/skills/db
+  remove dir (if empty): .config/opencode/skills
+  remove dir (if empty): .config/opencode/plugins
+  remove dir (if empty): .config/opencode/agents
+  remove dir (if empty): .config/opencode
+  remove dir (if empty): .config/muse/skills/helper
+  remove dir (if empty): .config/muse/skills/db
+  remove dir (if empty): .config/muse/skills
+  remove dir (if empty): .config/muse
+  remove dir (if empty): .config/mimocode/skills/helper
+  remove dir (if empty): .config/mimocode/skills/db
+  remove dir (if empty): .config/mimocode/skills
+  remove dir (if empty): .config/mimocode/plugins
+  remove dir (if empty): .config/mimocode/commands
+  remove dir (if empty): .config/mimocode/agents
+  remove dir (if empty): .config/mimocode
+  remove dir (if empty): .config/kilo/plugins
+  remove dir (if empty): .config/kilo/commands
+  remove dir (if empty): .config/kilo/agents
+  remove dir (if empty): .config/kilo
+  remove dir (if empty): .config/goose/agents
+  remove dir (if empty): .config/goose
+  remove dir (if empty): .config/devin/skills/helper
+  remove dir (if empty): .config/devin/skills/db
+  remove dir (if empty): .config/devin/skills
+  remove dir (if empty): .config/devin/agents
+  remove dir (if empty): .config/devin
+  remove dir (if empty): .config/crush/skills/helper
+  remove dir (if empty): .config/crush/skills/db
+  remove dir (if empty): .config/crush/skills
+  remove dir (if empty): .config/crush
+  remove dir (if empty): .config/amp/plugins
+  remove dir (if empty): .config/amp
+  remove dir (if empty): .config/agents/skills/helper
+  remove dir (if empty): .config/agents/skills/db
+  remove dir (if empty): .config/agents/skills
+  remove dir (if empty): .config/agents
+  remove dir (if empty): .commandcode/skills/helper
+  remove dir (if empty): .commandcode/skills/db
+  remove dir (if empty): .commandcode/skills
+  remove dir (if empty): .commandcode/commands
+  remove dir (if empty): .commandcode/agents
+  remove dir (if empty): .commandcode
+  remove dir (if empty): .codex/rules
+  remove dir (if empty): .codex/agents
+  remove dir (if empty): .codex
+  remove dir (if empty): .codewhale/skills/helper
+  remove dir (if empty): .codewhale/skills/db
+  remove dir (if empty): .codewhale/skills
+  remove dir (if empty): .codewhale/commands
+  remove dir (if empty): .codewhale
+  remove dir (if empty): .codebuddy/skills/helper
+  remove dir (if empty): .codebuddy/skills/db
+  remove dir (if empty): .codebuddy/skills
+  remove dir (if empty): .codebuddy/rules
+  remove dir (if empty): .codebuddy/commands
+  remove dir (if empty): .codebuddy/agents
+  remove dir (if empty): .codebuddy
+  remove dir (if empty): .cline/skills/helper
+  remove dir (if empty): .cline/skills/db
+  remove dir (if empty): .cline/skills
+  remove dir (if empty): .cline/agents
+  remove dir (if empty): .cline
+  remove dir (if empty): .claude/skills/helper
+  remove dir (if empty): .claude/skills/db
+  remove dir (if empty): .claude/skills
+  remove dir (if empty): .claude/rules
+  remove dir (if empty): .claude/agents
+  remove dir (if empty): .bob/skills/helper
+  remove dir (if empty): .bob/skills/db
+  remove dir (if empty): .bob/skills
+  remove dir (if empty): .bob/settings
+  remove dir (if empty): .bob/rules
+  remove dir (if empty): .bob/commands
+  remove dir (if empty): .bob
+  remove dir (if empty): .augment/skills/helper
+  remove dir (if empty): .augment/skills/db
+  remove dir (if empty): .augment/skills
+  remove dir (if empty): .augment/rules
+  remove dir (if empty): .augment/commands
+  remove dir (if empty): .augment/agents
+  remove dir (if empty): .augment
+  remove dir (if empty): .agents/skills/helper
+  remove dir (if empty): .agents/skills/db
+  remove dir (if empty): .agents/skills
+  remove dir (if empty): .agents/plugins/ai-rulez/hooks
+  remove dir (if empty): .agents/plugins/ai-rulez
+  remove dir (if empty): .agents/plugins
+  remove dir (if empty): .agents
+  remove manifest: .config/ai-rulez/.generated-manifest.json
+  remove local manifest: .config/ai-rulez/.generated-manifest.local.json
 --- stderr
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
-INFO  Clean plan profile=default
-INFO    remove file: .agents/AGENTS.md
-INFO    remove file: .agents/plugins/ai-rulez/hooks/hooks.json
-INFO    remove file: .agents/skills/db/SKILL.md
-INFO    remove file: .agents/skills/helper/SKILL.md
-INFO    remove file: .augment/agents/buddy.md
-INFO    remove file: .augment/rules/be.md
-INFO    remove file: .augment/rules/mine.md
-INFO    remove file: .augment/settings.json
-INFO    remove file: .augment/skills/db/SKILL.md
-INFO    remove file: .augment/skills/helper/SKILL.md
-INFO    remove file: .bob/AGENTS.md
-INFO    remove file: .bob/rules/be.md
-INFO    remove file: .bob/rules/mine.md
-INFO    remove file: .bob/settings/settings.json
-INFO    remove file: .bob/skills/db/SKILL.md
-INFO    remove file: .bob/skills/helper/SKILL.md
-INFO    remove file: .claude/agents/buddy.md
-INFO    remove file: .claude/rules/be.md
-INFO    remove file: .claude/rules/mine.md
-INFO    remove file: .claude/skills/db/SKILL.md
-INFO    remove file: .claude/skills/helper/SKILL.md
-INFO    remove file: .cline/agents/buddy.yaml
-INFO    remove file: .cline/skills/db/SKILL.md
-INFO    remove file: .cline/skills/helper/SKILL.md
-INFO    remove file: .codebuddy/CODEBUDDY.md
-INFO    remove file: .codebuddy/agents/buddy.md
-INFO    remove file: .codebuddy/rules/be.md
-INFO    remove file: .codebuddy/rules/mine.md
-INFO    remove file: .codebuddy/settings.json
-INFO    remove file: .codebuddy/skills/db/SKILL.md
-INFO    remove file: .codebuddy/skills/helper/SKILL.md
-INFO    remove file: .codewhale/AGENTS.md
-INFO    remove file: .codewhale/skills/db/SKILL.md
-INFO    remove file: .codewhale/skills/helper/SKILL.md
-INFO    remove file: .codex/AGENTS.md
-INFO    remove file: .codex/agents/buddy.toml
-INFO    remove file: .codex/hooks.json
-INFO    remove file: .codex/rules/ai-rulez.rules
-INFO    remove file: .commandcode/AGENTS.md
-INFO    remove file: .commandcode/agents/buddy.md
-INFO    remove file: .commandcode/settings.json
-INFO    remove file: .commandcode/skills/db/SKILL.md
-INFO    remove file: .commandcode/skills/helper/SKILL.md
-INFO    remove file: .config/agents/skills/db/SKILL.md
-INFO    remove file: .config/agents/skills/helper/SKILL.md
-INFO    remove file: .config/amp/AGENTS.md
-INFO    remove file: .config/amp/plugins/ai-rulez-hooks.ts
-INFO    remove file: .config/crush/CRUSH.md
-INFO    remove file: .config/crush/skills/db/SKILL.md
-INFO    remove file: .config/crush/skills/helper/SKILL.md
-INFO    remove file: .config/devin/agents/buddy.md
-INFO    remove file: .config/devin/config.json
-INFO    remove file: .config/devin/skills/db/SKILL.md
-INFO    remove file: .config/devin/skills/helper/SKILL.md
-INFO    remove file: .config/goose/.goosehints
-INFO    remove file: .config/goose/agents/buddy.md
-INFO    remove file: .config/kilo/AGENTS.md
-INFO    remove file: .config/kilo/agents/buddy.md
-INFO    remove file: .config/kilo/kilo.jsonc
-INFO    remove file: .config/kilo/plugins/ai-rulez-hooks.js
-INFO    remove file: .config/mimocode/AGENTS.md
-INFO    remove file: .config/mimocode/agents/buddy.md
-INFO    remove file: .config/mimocode/mimocode.jsonc
-INFO    remove file: .config/mimocode/plugins/ai-rulez-hooks.js
-INFO    remove file: .config/mimocode/skills/db/SKILL.md
-INFO    remove file: .config/mimocode/skills/helper/SKILL.md
-INFO    remove file: .config/muse/skills/db/SKILL.md
-INFO    remove file: .config/muse/skills/helper/SKILL.md
-INFO    remove file: .config/opencode/AGENTS.md
-INFO    remove file: .config/opencode/agents/buddy.md
-INFO    remove file: .config/opencode/opencode.json
-INFO    remove file: .config/opencode/plugins/ai-rulez-hooks.js
-INFO    remove file: .config/opencode/skills/db/SKILL.md
-INFO    remove file: .config/opencode/skills/helper/SKILL.md
-INFO    remove file: .config/poolside/AGENTS.md
-INFO    remove file: .config/poolside/settings.yaml
-INFO    remove file: .config/poolside/skills/db/SKILL.md
-INFO    remove file: .config/poolside/skills/helper/SKILL.md
-INFO    remove file: .config/zed/AGENTS.md
-INFO    remove file: .config/zed/settings.json
-INFO    remove file: .copilot/agents/buddy.agent.md
-INFO    remove file: .copilot/copilot-instructions.md
-INFO    remove file: .copilot/hooks/ai-rulez.json
-INFO    remove file: .copilot/instructions/be.instructions.md
-INFO    remove file: .copilot/instructions/mine.instructions.md
-INFO    remove file: .copilot/skills/db/SKILL.md
-INFO    remove file: .copilot/skills/helper/SKILL.md
-INFO    remove file: .cursor/agents/buddy.md
-INFO    remove file: .cursor/hooks.json
-INFO    remove file: .deepagents/agent/AGENTS.md
-INFO    remove file: .deepagents/agent/agents/buddy/AGENTS.md
-INFO    remove file: .deepagents/agent/skills/db/SKILL.md
-INFO    remove file: .deepagents/agent/skills/helper/SKILL.md
-INFO    remove file: .deepagents/hooks.json
-INFO    remove file: .dsh/AGENTS.md
-INFO    remove file: .dsh/skills/db/SKILL.md
-INFO    remove file: .dsh/skills/helper/SKILL.md
-INFO    remove file: .factory/AGENTS.md
-INFO    remove file: .factory/droids/buddy.md
-INFO    remove file: .factory/hooks.json
-INFO    remove file: .factory/skills/db/SKILL.md
-INFO    remove file: .factory/skills/helper/SKILL.md
-INFO    remove file: .gemini/GEMINI.md
-INFO    remove file: .gemini/agents/buddy.md
-INFO    remove file: .gemini/config/agents/buddy.md
-INFO    remove file: .gemini/config/skills/db/SKILL.md
-INFO    remove file: .gemini/config/skills/helper/SKILL.md
-INFO    remove file: .gemini/settings.json
-INFO    remove file: .gitlab/duo/chat-rules.md
-INFO    remove file: .gitlab/duo/hooks.json
-INFO    remove file: .grok/AGENTS.md
-INFO    remove file: .grok/agents/buddy.md
-INFO    remove file: .grok/config.toml
-INFO    remove file: .grok/hooks/ai-rulez.json
-INFO    remove file: .grok/rules/be.md
-INFO    remove file: .grok/rules/mine.md
-INFO    remove file: .grok/skills/db/SKILL.md
-INFO    remove file: .grok/skills/helper/SKILL.md
-INFO    remove file: .hermes/config.yaml
-INFO    remove file: .hermes/skills/db/SKILL.md
-INFO    remove file: .hermes/skills/helper/SKILL.md
-INFO    remove file: .junie/AGENTS.md
-INFO    remove file: .junie/agents/buddy.md
-INFO    remove file: .junie/config.json
-INFO    remove file: .junie/skills/db/SKILL.md
-INFO    remove file: .junie/skills/helper/SKILL.md
-INFO    remove file: .kilo/rules/be.md
-INFO    remove file: .kilo/rules/mine.md
-INFO    remove file: .kilo/skills/db/SKILL.md
-INFO    remove file: .kilo/skills/helper/SKILL.md
-INFO    remove file: .kimi-code/AGENTS.md
-INFO    remove file: .kimi-code/agents/buddy.md
-INFO    remove file: .kimi-code/config.toml
-INFO    remove file: .kimi-code/skills/db/SKILL.md
-INFO    remove file: .kimi-code/skills/helper/SKILL.md
-INFO    remove file: .kiro/agents/buddy.md
-INFO    remove file: .kiro/hooks/ai-rulez.json
-INFO    remove file: .kiro/skills/db/SKILL.md
-INFO    remove file: .kiro/skills/helper/SKILL.md
-INFO    remove file: .kiro/steering/AGENTS.md
-INFO    remove file: .kiro/steering/be.md
-INFO    remove file: .kiro/steering/mine.md
-INFO    remove file: .letta/agents/buddy.md
-INFO    remove file: .letta/settings.json
-INFO    remove file: .letta/skills/db/SKILL.md
-INFO    remove file: .letta/skills/helper/SKILL.md
-INFO    remove file: .omp/agent/AGENTS.md
-INFO    remove file: .omp/agent/agents/buddy.md
-INFO    remove file: .omp/agent/config.yml
-INFO    remove file: .omp/agent/rules/be.md
-INFO    remove file: .omp/agent/rules/mine.md
-INFO    remove file: .omp/agent/skills/db/SKILL.md
-INFO    remove file: .omp/agent/skills/helper/SKILL.md
-INFO    remove file: .openclaw/workspace/AGENTS.md
-INFO    remove file: .pi/agent/AGENTS.md
-INFO    remove file: .pi/agent/agents/buddy.md
-INFO    remove file: .pi/agent/extensions/ai-rulez-hooks.ts
-INFO    remove file: .pi/agent/skills/db/SKILL.md
-INFO    remove file: .pi/agent/skills/helper/SKILL.md
-INFO    remove file: .qoder/AGENTS.md
-INFO    remove file: .qoder/agents/buddy.md
-INFO    remove file: .qoder/rules/be.md
-INFO    remove file: .qoder/rules/mine.md
-INFO    remove file: .qoder/settings.json
-INFO    remove file: .qoder/skills/db/SKILL.md
-INFO    remove file: .qoder/skills/helper/SKILL.md
-INFO    remove file: .qwen/QWEN.md
-INFO    remove file: .qwen/agents/buddy.md
-INFO    remove file: .qwen/rules/be.md
-INFO    remove file: .qwen/rules/mine.md
-INFO    remove file: .qwen/settings.json
-INFO    remove file: .qwen/skills/db/SKILL.md
-INFO    remove file: .qwen/skills/helper/SKILL.md
-INFO    remove file: .reasonix/REASONIX.md
-INFO    remove file: .reasonix/settings.json
-INFO    remove file: .reasonix/skills/buddy/SKILL.md
-INFO    remove file: .reasonix/skills/db/SKILL.md
-INFO    remove file: .reasonix/skills/helper/SKILL.md
-INFO    remove file: .roo/rules/AGENTS.md
-INFO    remove file: .roo/skills/db/SKILL.md
-INFO    remove file: .roo/skills/helper/SKILL.md
-INFO    remove file: .rovodev/AGENTS.md
-INFO    remove file: .rovodev/skills/db/SKILL.md
-INFO    remove file: .rovodev/skills/helper/SKILL.md
-INFO    remove file: .rovodev/subagents/buddy.md
-INFO    remove file: .snowflake/cortex/agents/buddy.md
-INFO    remove file: .snowflake/cortex/hooks.json
-INFO    remove file: .snowflake/cortex/skills/db/SKILL.md
-INFO    remove file: .snowflake/cortex/skills/helper/SKILL.md
-INFO    remove file: .takt/facets/knowledge/helper.md
-INFO    remove file: .takt/facets/personas/buddy.md
-INFO    remove file: .takt/facets/policies/be.md
-INFO    remove file: .takt/facets/policies/context-me.md
-INFO    remove file: .takt/facets/policies/mine.md
-INFO    remove file: .trae/skills/db/SKILL.md
-INFO    remove file: .trae/skills/helper/SKILL.md
-INFO    remove file: .vibe/AGENTS.md
-INFO    remove file: .vibe/config.toml
-INFO    remove file: .vibe/skills/db/SKILL.md
-INFO    remove file: .vibe/skills/helper/SKILL.md
-INFO    remove file: .warp/skills/db/SKILL.md
-INFO    remove file: .warp/skills/helper/SKILL.md
-INFO    remove file: .zcode/AGENTS.md
-INFO    remove file: .zcode/agents/buddy.md
-INFO    remove file: .zcode/cli/config.json
-INFO    remove file: .zcode/skills/db/SKILL.md
-INFO    remove file: .zcode/skills/helper/SKILL.md
-INFO    remove file: Documents/Cline/Hooks/TaskStart
-INFO    remove file: Documents/Cline/Rules/be.md
-INFO    remove file: Documents/Cline/Rules/context-me.md
-INFO    remove file: Documents/Cline/Rules/mine.md
-INFO    remove ai-rulez keys from: .claude/settings.json
-INFO    remove dir (if empty): Documents/Cline/Rules
-INFO    remove dir (if empty): Documents/Cline/Hooks
-INFO    remove dir (if empty): Documents/Cline
-INFO    remove dir (if empty): Documents
-INFO    remove dir (if empty): .zcode/skills/helper
-INFO    remove dir (if empty): .zcode/skills/db
-INFO    remove dir (if empty): .zcode/skills
-INFO    remove dir (if empty): .zcode/commands
-INFO    remove dir (if empty): .zcode/cli
-INFO    remove dir (if empty): .zcode/agents
-INFO    remove dir (if empty): .zcode
-INFO    remove dir (if empty): .warp/skills/helper
-INFO    remove dir (if empty): .warp/skills/db
-INFO    remove dir (if empty): .warp/skills
-INFO    remove dir (if empty): .warp
-INFO    remove dir (if empty): .vibe/skills/helper
-INFO    remove dir (if empty): .vibe/skills/db
-INFO    remove dir (if empty): .vibe/skills
-INFO    remove dir (if empty): .vibe
-INFO    remove dir (if empty): .trae/skills/helper
-INFO    remove dir (if empty): .trae/skills/db
-INFO    remove dir (if empty): .trae/skills
-INFO    remove dir (if empty): .trae
-INFO    remove dir (if empty): .takt/facets/policies
-INFO    remove dir (if empty): .takt/facets/personas
-INFO    remove dir (if empty): .takt/facets/knowledge
-INFO    remove dir (if empty): .takt/facets/instructions
-INFO    remove dir (if empty): .takt/facets
-INFO    remove dir (if empty): .takt
-INFO    remove dir (if empty): .snowflake/cortex/skills/helper
-INFO    remove dir (if empty): .snowflake/cortex/skills/db
-INFO    remove dir (if empty): .snowflake/cortex/skills
-INFO    remove dir (if empty): .snowflake/cortex/agents
-INFO    remove dir (if empty): .snowflake/cortex
-INFO    remove dir (if empty): .snowflake
-INFO    remove dir (if empty): .rovodev/subagents
-INFO    remove dir (if empty): .rovodev/skills/helper
-INFO    remove dir (if empty): .rovodev/skills/db
-INFO    remove dir (if empty): .rovodev/skills
-INFO    remove dir (if empty): .rovodev
-INFO    remove dir (if empty): .roo/skills/helper
-INFO    remove dir (if empty): .roo/skills/db
-INFO    remove dir (if empty): .roo/skills
-INFO    remove dir (if empty): .roo/rules
-INFO    remove dir (if empty): .roo/commands
-INFO    remove dir (if empty): .roo
-INFO    remove dir (if empty): .reasonix/skills/helper
-INFO    remove dir (if empty): .reasonix/skills/db
-INFO    remove dir (if empty): .reasonix/skills/buddy
-INFO    remove dir (if empty): .reasonix/skills
-INFO    remove dir (if empty): .reasonix/commands
-INFO    remove dir (if empty): .reasonix
-INFO    remove dir (if empty): .qwen/skills/helper
-INFO    remove dir (if empty): .qwen/skills/db
-INFO    remove dir (if empty): .qwen/skills
-INFO    remove dir (if empty): .qwen/rules
-INFO    remove dir (if empty): .qwen/commands
-INFO    remove dir (if empty): .qwen/agents
-INFO    remove dir (if empty): .qwen
-INFO    remove dir (if empty): .qoder/skills/helper
-INFO    remove dir (if empty): .qoder/skills/db
-INFO    remove dir (if empty): .qoder/skills
-INFO    remove dir (if empty): .qoder/rules
-INFO    remove dir (if empty): .qoder/commands
-INFO    remove dir (if empty): .qoder/agents
-INFO    remove dir (if empty): .qoder
-INFO    remove dir (if empty): .pi/agent/skills/helper
-INFO    remove dir (if empty): .pi/agent/skills/db
-INFO    remove dir (if empty): .pi/agent/skills
-INFO    remove dir (if empty): .pi/agent/prompts
-INFO    remove dir (if empty): .pi/agent/extensions
-INFO    remove dir (if empty): .pi/agent/agents
-INFO    remove dir (if empty): .pi/agent
-INFO    remove dir (if empty): .pi
-INFO    remove dir (if empty): .openclaw/workspace
-INFO    remove dir (if empty): .openclaw
-INFO    remove dir (if empty): .omp/agent/skills/helper
-INFO    remove dir (if empty): .omp/agent/skills/db
-INFO    remove dir (if empty): .omp/agent/skills
-INFO    remove dir (if empty): .omp/agent/rules
-INFO    remove dir (if empty): .omp/agent/commands
-INFO    remove dir (if empty): .omp/agent/agents
-INFO    remove dir (if empty): .omp/agent
-INFO    remove dir (if empty): .omp
-INFO    remove dir (if empty): .letta/skills/helper
-INFO    remove dir (if empty): .letta/skills/db
-INFO    remove dir (if empty): .letta/skills
-INFO    remove dir (if empty): .letta/commands
-INFO    remove dir (if empty): .letta/agents
-INFO    remove dir (if empty): .letta
-INFO    remove dir (if empty): .kiro/steering
-INFO    remove dir (if empty): .kiro/skills/helper
-INFO    remove dir (if empty): .kiro/skills/db
-INFO    remove dir (if empty): .kiro/skills
-INFO    remove dir (if empty): .kiro/prompts
-INFO    remove dir (if empty): .kiro/hooks
-INFO    remove dir (if empty): .kiro/agents
-INFO    remove dir (if empty): .kiro
-INFO    remove dir (if empty): .kimi-code/skills/helper
-INFO    remove dir (if empty): .kimi-code/skills/db
-INFO    remove dir (if empty): .kimi-code/skills
-INFO    remove dir (if empty): .kimi-code/agents
-INFO    remove dir (if empty): .kimi-code
-INFO    remove dir (if empty): .kilo/skills/helper
-INFO    remove dir (if empty): .kilo/skills/db
-INFO    remove dir (if empty): .kilo/skills
-INFO    remove dir (if empty): .kilo/rules
-INFO    remove dir (if empty): .kilo
-INFO    remove dir (if empty): .junie/skills/helper
-INFO    remove dir (if empty): .junie/skills/db
-INFO    remove dir (if empty): .junie/skills
-INFO    remove dir (if empty): .junie/commands
-INFO    remove dir (if empty): .junie/agents
-INFO    remove dir (if empty): .junie
-INFO    remove dir (if empty): .hermes/skills/helper
-INFO    remove dir (if empty): .hermes/skills/db
-INFO    remove dir (if empty): .hermes/skills
-INFO    remove dir (if empty): .hermes
-INFO    remove dir (if empty): .grok/skills/helper
-INFO    remove dir (if empty): .grok/skills/db
-INFO    remove dir (if empty): .grok/skills
-INFO    remove dir (if empty): .grok/rules
-INFO    remove dir (if empty): .grok/hooks
-INFO    remove dir (if empty): .grok/commands
-INFO    remove dir (if empty): .grok/agents
-INFO    remove dir (if empty): .grok
-INFO    remove dir (if empty): .gitlab/duo/commands
-INFO    remove dir (if empty): .gitlab/duo
-INFO    remove dir (if empty): .gitlab
-INFO    remove dir (if empty): .gemini/config/skills/helper
-INFO    remove dir (if empty): .gemini/config/skills/db
-INFO    remove dir (if empty): .gemini/config/skills
-INFO    remove dir (if empty): .gemini/config/agents
-INFO    remove dir (if empty): .gemini/config
-INFO    remove dir (if empty): .gemini/agents
-INFO    remove dir (if empty): .gemini
-INFO    remove dir (if empty): .factory/skills/helper
-INFO    remove dir (if empty): .factory/skills/db
-INFO    remove dir (if empty): .factory/skills
-INFO    remove dir (if empty): .factory/droids
-INFO    remove dir (if empty): .factory/commands
-INFO    remove dir (if empty): .factory
-INFO    remove dir (if empty): .dsh/skills/helper
-INFO    remove dir (if empty): .dsh/skills/db
-INFO    remove dir (if empty): .dsh/skills
-INFO    remove dir (if empty): .dsh
-INFO    remove dir (if empty): .deepagents/agent/skills/helper
-INFO    remove dir (if empty): .deepagents/agent/skills/db
-INFO    remove dir (if empty): .deepagents/agent/skills
-INFO    remove dir (if empty): .deepagents/agent/agents/buddy
-INFO    remove dir (if empty): .deepagents/agent/agents
-INFO    remove dir (if empty): .deepagents/agent
-INFO    remove dir (if empty): .deepagents
-INFO    remove dir (if empty): .cursor/commands
-INFO    remove dir (if empty): .cursor/agents
-INFO    remove dir (if empty): .cursor
-INFO    remove dir (if empty): .copilot/skills/helper
-INFO    remove dir (if empty): .copilot/skills/db
-INFO    remove dir (if empty): .copilot/skills
-INFO    remove dir (if empty): .copilot/instructions
-INFO    remove dir (if empty): .copilot/hooks
-INFO    remove dir (if empty): .copilot/agents
-INFO    remove dir (if empty): .copilot
-INFO    remove dir (if empty): .config/zed
-INFO    remove dir (if empty): .config/poolside/skills/helper
-INFO    remove dir (if empty): .config/poolside/skills/db
-INFO    remove dir (if empty): .config/poolside/skills
-INFO    remove dir (if empty): .config/poolside
-INFO    remove dir (if empty): .config/opencode/skills/helper
-INFO    remove dir (if empty): .config/opencode/skills/db
-INFO    remove dir (if empty): .config/opencode/skills
-INFO    remove dir (if empty): .config/opencode/plugins
-INFO    remove dir (if empty): .config/opencode/agents
-INFO    remove dir (if empty): .config/opencode
-INFO    remove dir (if empty): .config/muse/skills/helper
-INFO    remove dir (if empty): .config/muse/skills/db
-INFO    remove dir (if empty): .config/muse/skills
-INFO    remove dir (if empty): .config/muse
-INFO    remove dir (if empty): .config/mimocode/skills/helper
-INFO    remove dir (if empty): .config/mimocode/skills/db
-INFO    remove dir (if empty): .config/mimocode/skills
-INFO    remove dir (if empty): .config/mimocode/plugins
-INFO    remove dir (if empty): .config/mimocode/commands
-INFO    remove dir (if empty): .config/mimocode/agents
-INFO    remove dir (if empty): .config/mimocode
-INFO    remove dir (if empty): .config/kilo/plugins
-INFO    remove dir (if empty): .config/kilo/commands
-INFO    remove dir (if empty): .config/kilo/agents
-INFO    remove dir (if empty): .config/kilo
-INFO    remove dir (if empty): .config/goose/agents
-INFO    remove dir (if empty): .config/goose
-INFO    remove dir (if empty): .config/devin/skills/helper
-INFO    remove dir (if empty): .config/devin/skills/db
-INFO    remove dir (if empty): .config/devin/skills
-INFO    remove dir (if empty): .config/devin/agents
-INFO    remove dir (if empty): .config/devin
-INFO    remove dir (if empty): .config/crush/skills/helper
-INFO    remove dir (if empty): .config/crush/skills/db
-INFO    remove dir (if empty): .config/crush/skills
-INFO    remove dir (if empty): .config/crush
-INFO    remove dir (if empty): .config/amp/plugins
-INFO    remove dir (if empty): .config/amp
-INFO    remove dir (if empty): .config/agents/skills/helper
-INFO    remove dir (if empty): .config/agents/skills/db
-INFO    remove dir (if empty): .config/agents/skills
-INFO    remove dir (if empty): .config/agents
-INFO    remove dir (if empty): .commandcode/skills/helper
-INFO    remove dir (if empty): .commandcode/skills/db
-INFO    remove dir (if empty): .commandcode/skills
-INFO    remove dir (if empty): .commandcode/commands
-INFO    remove dir (if empty): .commandcode/agents
-INFO    remove dir (if empty): .commandcode
-INFO    remove dir (if empty): .codex/rules
-INFO    remove dir (if empty): .codex/agents
-INFO    remove dir (if empty): .codex
-INFO    remove dir (if empty): .codewhale/skills/helper
-INFO    remove dir (if empty): .codewhale/skills/db
-INFO    remove dir (if empty): .codewhale/skills
-INFO    remove dir (if empty): .codewhale/commands
-INFO    remove dir (if empty): .codewhale
-INFO    remove dir (if empty): .codebuddy/skills/helper
-INFO    remove dir (if empty): .codebuddy/skills/db
-INFO    remove dir (if empty): .codebuddy/skills
-INFO    remove dir (if empty): .codebuddy/rules
-INFO    remove dir (if empty): .codebuddy/commands
-INFO    remove dir (if empty): .codebuddy/agents
-INFO    remove dir (if empty): .codebuddy
-INFO    remove dir (if empty): .cline/skills/helper
-INFO    remove dir (if empty): .cline/skills/db
-INFO    remove dir (if empty): .cline/skills
-INFO    remove dir (if empty): .cline/agents
-INFO    remove dir (if empty): .cline
-INFO    remove dir (if empty): .claude/skills/helper
-INFO    remove dir (if empty): .claude/skills/db
-INFO    remove dir (if empty): .claude/skills
-INFO    remove dir (if empty): .claude/rules
-INFO    remove dir (if empty): .claude/agents
-INFO    remove dir (if empty): .bob/skills/helper
-INFO    remove dir (if empty): .bob/skills/db
-INFO    remove dir (if empty): .bob/skills
-INFO    remove dir (if empty): .bob/settings
-INFO    remove dir (if empty): .bob/rules
-INFO    remove dir (if empty): .bob/commands
-INFO    remove dir (if empty): .bob
-INFO    remove dir (if empty): .augment/skills/helper
-INFO    remove dir (if empty): .augment/skills/db
-INFO    remove dir (if empty): .augment/skills
-INFO    remove dir (if empty): .augment/rules
-INFO    remove dir (if empty): .augment/commands
-INFO    remove dir (if empty): .augment/agents
-INFO    remove dir (if empty): .augment
-INFO    remove dir (if empty): .agents/skills/helper
-INFO    remove dir (if empty): .agents/skills/db
-INFO    remove dir (if empty): .agents/skills
-INFO    remove dir (if empty): .agents/plugins/ai-rulez/hooks
-INFO    remove dir (if empty): .agents/plugins/ai-rulez
-INFO    remove dir (if empty): .agents/plugins
-INFO    remove dir (if empty): .agents
-INFO    remove manifest: .config/ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .config/ai-rulez/.generated-manifest.local.json
-INFO  Dry run: no files were removed
+Dry run: no files were removed
 --- project tree
 (no change)
 --- home tree
@@ -1883,483 +1883,483 @@ INFO  Dry run: no files were removed
 ## step 6: ai-rulez clean --user --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .agents/AGENTS.md
+  remove file: .agents/plugins/ai-rulez/hooks/hooks.json
+  remove file: .agents/skills/db/SKILL.md
+  remove file: .agents/skills/helper/SKILL.md
+  remove file: .augment/agents/buddy.md
+  remove file: .augment/rules/be.md
+  remove file: .augment/rules/mine.md
+  remove file: .augment/settings.json
+  remove file: .augment/skills/db/SKILL.md
+  remove file: .augment/skills/helper/SKILL.md
+  remove file: .bob/AGENTS.md
+  remove file: .bob/rules/be.md
+  remove file: .bob/rules/mine.md
+  remove file: .bob/settings/settings.json
+  remove file: .bob/skills/db/SKILL.md
+  remove file: .bob/skills/helper/SKILL.md
+  remove file: .claude/agents/buddy.md
+  remove file: .claude/rules/be.md
+  remove file: .claude/rules/mine.md
+  remove file: .claude/skills/db/SKILL.md
+  remove file: .claude/skills/helper/SKILL.md
+  remove file: .cline/agents/buddy.yaml
+  remove file: .cline/skills/db/SKILL.md
+  remove file: .cline/skills/helper/SKILL.md
+  remove file: .codebuddy/CODEBUDDY.md
+  remove file: .codebuddy/agents/buddy.md
+  remove file: .codebuddy/rules/be.md
+  remove file: .codebuddy/rules/mine.md
+  remove file: .codebuddy/settings.json
+  remove file: .codebuddy/skills/db/SKILL.md
+  remove file: .codebuddy/skills/helper/SKILL.md
+  remove file: .codewhale/AGENTS.md
+  remove file: .codewhale/skills/db/SKILL.md
+  remove file: .codewhale/skills/helper/SKILL.md
+  remove file: .codex/AGENTS.md
+  remove file: .codex/agents/buddy.toml
+  remove file: .codex/hooks.json
+  remove file: .codex/rules/ai-rulez.rules
+  remove file: .commandcode/AGENTS.md
+  remove file: .commandcode/agents/buddy.md
+  remove file: .commandcode/settings.json
+  remove file: .commandcode/skills/db/SKILL.md
+  remove file: .commandcode/skills/helper/SKILL.md
+  remove file: .config/agents/skills/db/SKILL.md
+  remove file: .config/agents/skills/helper/SKILL.md
+  remove file: .config/amp/AGENTS.md
+  remove file: .config/amp/plugins/ai-rulez-hooks.ts
+  remove file: .config/crush/CRUSH.md
+  remove file: .config/crush/skills/db/SKILL.md
+  remove file: .config/crush/skills/helper/SKILL.md
+  remove file: .config/devin/agents/buddy.md
+  remove file: .config/devin/config.json
+  remove file: .config/devin/skills/db/SKILL.md
+  remove file: .config/devin/skills/helper/SKILL.md
+  remove file: .config/goose/.goosehints
+  remove file: .config/goose/agents/buddy.md
+  remove file: .config/kilo/AGENTS.md
+  remove file: .config/kilo/agents/buddy.md
+  remove file: .config/kilo/kilo.jsonc
+  remove file: .config/kilo/plugins/ai-rulez-hooks.js
+  remove file: .config/mimocode/AGENTS.md
+  remove file: .config/mimocode/agents/buddy.md
+  remove file: .config/mimocode/mimocode.jsonc
+  remove file: .config/mimocode/plugins/ai-rulez-hooks.js
+  remove file: .config/mimocode/skills/db/SKILL.md
+  remove file: .config/mimocode/skills/helper/SKILL.md
+  remove file: .config/muse/skills/db/SKILL.md
+  remove file: .config/muse/skills/helper/SKILL.md
+  remove file: .config/opencode/AGENTS.md
+  remove file: .config/opencode/agents/buddy.md
+  remove file: .config/opencode/opencode.json
+  remove file: .config/opencode/plugins/ai-rulez-hooks.js
+  remove file: .config/opencode/skills/db/SKILL.md
+  remove file: .config/opencode/skills/helper/SKILL.md
+  remove file: .config/poolside/AGENTS.md
+  remove file: .config/poolside/settings.yaml
+  remove file: .config/poolside/skills/db/SKILL.md
+  remove file: .config/poolside/skills/helper/SKILL.md
+  remove file: .config/zed/AGENTS.md
+  remove file: .config/zed/settings.json
+  remove file: .copilot/agents/buddy.agent.md
+  remove file: .copilot/copilot-instructions.md
+  remove file: .copilot/hooks/ai-rulez.json
+  remove file: .copilot/instructions/be.instructions.md
+  remove file: .copilot/instructions/mine.instructions.md
+  remove file: .copilot/skills/db/SKILL.md
+  remove file: .copilot/skills/helper/SKILL.md
+  remove file: .cursor/agents/buddy.md
+  remove file: .cursor/hooks.json
+  remove file: .deepagents/agent/AGENTS.md
+  remove file: .deepagents/agent/agents/buddy/AGENTS.md
+  remove file: .deepagents/agent/skills/db/SKILL.md
+  remove file: .deepagents/agent/skills/helper/SKILL.md
+  remove file: .deepagents/hooks.json
+  remove file: .dsh/AGENTS.md
+  remove file: .dsh/skills/db/SKILL.md
+  remove file: .dsh/skills/helper/SKILL.md
+  remove file: .factory/AGENTS.md
+  remove file: .factory/droids/buddy.md
+  remove file: .factory/hooks.json
+  remove file: .factory/skills/db/SKILL.md
+  remove file: .factory/skills/helper/SKILL.md
+  remove file: .gemini/GEMINI.md
+  remove file: .gemini/agents/buddy.md
+  remove file: .gemini/config/agents/buddy.md
+  remove file: .gemini/config/skills/db/SKILL.md
+  remove file: .gemini/config/skills/helper/SKILL.md
+  remove file: .gemini/settings.json
+  remove file: .gitlab/duo/chat-rules.md
+  remove file: .gitlab/duo/hooks.json
+  remove file: .grok/AGENTS.md
+  remove file: .grok/agents/buddy.md
+  remove file: .grok/config.toml
+  remove file: .grok/hooks/ai-rulez.json
+  remove file: .grok/rules/be.md
+  remove file: .grok/rules/mine.md
+  remove file: .grok/skills/db/SKILL.md
+  remove file: .grok/skills/helper/SKILL.md
+  remove file: .hermes/config.yaml
+  remove file: .hermes/skills/db/SKILL.md
+  remove file: .hermes/skills/helper/SKILL.md
+  remove file: .junie/AGENTS.md
+  remove file: .junie/agents/buddy.md
+  remove file: .junie/config.json
+  remove file: .junie/skills/db/SKILL.md
+  remove file: .junie/skills/helper/SKILL.md
+  remove file: .kilo/rules/be.md
+  remove file: .kilo/rules/mine.md
+  remove file: .kilo/skills/db/SKILL.md
+  remove file: .kilo/skills/helper/SKILL.md
+  remove file: .kimi-code/AGENTS.md
+  remove file: .kimi-code/agents/buddy.md
+  remove file: .kimi-code/config.toml
+  remove file: .kimi-code/skills/db/SKILL.md
+  remove file: .kimi-code/skills/helper/SKILL.md
+  remove file: .kiro/agents/buddy.md
+  remove file: .kiro/hooks/ai-rulez.json
+  remove file: .kiro/skills/db/SKILL.md
+  remove file: .kiro/skills/helper/SKILL.md
+  remove file: .kiro/steering/AGENTS.md
+  remove file: .kiro/steering/be.md
+  remove file: .kiro/steering/mine.md
+  remove file: .letta/agents/buddy.md
+  remove file: .letta/settings.json
+  remove file: .letta/skills/db/SKILL.md
+  remove file: .letta/skills/helper/SKILL.md
+  remove file: .omp/agent/AGENTS.md
+  remove file: .omp/agent/agents/buddy.md
+  remove file: .omp/agent/config.yml
+  remove file: .omp/agent/rules/be.md
+  remove file: .omp/agent/rules/mine.md
+  remove file: .omp/agent/skills/db/SKILL.md
+  remove file: .omp/agent/skills/helper/SKILL.md
+  remove file: .openclaw/workspace/AGENTS.md
+  remove file: .pi/agent/AGENTS.md
+  remove file: .pi/agent/agents/buddy.md
+  remove file: .pi/agent/extensions/ai-rulez-hooks.ts
+  remove file: .pi/agent/skills/db/SKILL.md
+  remove file: .pi/agent/skills/helper/SKILL.md
+  remove file: .qoder/AGENTS.md
+  remove file: .qoder/agents/buddy.md
+  remove file: .qoder/rules/be.md
+  remove file: .qoder/rules/mine.md
+  remove file: .qoder/settings.json
+  remove file: .qoder/skills/db/SKILL.md
+  remove file: .qoder/skills/helper/SKILL.md
+  remove file: .qwen/QWEN.md
+  remove file: .qwen/agents/buddy.md
+  remove file: .qwen/rules/be.md
+  remove file: .qwen/rules/mine.md
+  remove file: .qwen/settings.json
+  remove file: .qwen/skills/db/SKILL.md
+  remove file: .qwen/skills/helper/SKILL.md
+  remove file: .reasonix/REASONIX.md
+  remove file: .reasonix/settings.json
+  remove file: .reasonix/skills/buddy/SKILL.md
+  remove file: .reasonix/skills/db/SKILL.md
+  remove file: .reasonix/skills/helper/SKILL.md
+  remove file: .roo/rules/AGENTS.md
+  remove file: .roo/skills/db/SKILL.md
+  remove file: .roo/skills/helper/SKILL.md
+  remove file: .rovodev/AGENTS.md
+  remove file: .rovodev/skills/db/SKILL.md
+  remove file: .rovodev/skills/helper/SKILL.md
+  remove file: .rovodev/subagents/buddy.md
+  remove file: .snowflake/cortex/agents/buddy.md
+  remove file: .snowflake/cortex/hooks.json
+  remove file: .snowflake/cortex/skills/db/SKILL.md
+  remove file: .snowflake/cortex/skills/helper/SKILL.md
+  remove file: .takt/facets/knowledge/helper.md
+  remove file: .takt/facets/personas/buddy.md
+  remove file: .takt/facets/policies/be.md
+  remove file: .takt/facets/policies/context-me.md
+  remove file: .takt/facets/policies/mine.md
+  remove file: .trae/skills/db/SKILL.md
+  remove file: .trae/skills/helper/SKILL.md
+  remove file: .vibe/AGENTS.md
+  remove file: .vibe/config.toml
+  remove file: .vibe/skills/db/SKILL.md
+  remove file: .vibe/skills/helper/SKILL.md
+  remove file: .warp/skills/db/SKILL.md
+  remove file: .warp/skills/helper/SKILL.md
+  remove file: .zcode/AGENTS.md
+  remove file: .zcode/agents/buddy.md
+  remove file: .zcode/cli/config.json
+  remove file: .zcode/skills/db/SKILL.md
+  remove file: .zcode/skills/helper/SKILL.md
+  remove file: Documents/Cline/Hooks/TaskStart
+  remove file: Documents/Cline/Rules/be.md
+  remove file: Documents/Cline/Rules/context-me.md
+  remove file: Documents/Cline/Rules/mine.md
+  remove ai-rulez keys from: .claude/settings.json
+  remove dir (if empty): Documents/Cline/Rules
+  remove dir (if empty): Documents/Cline/Hooks
+  remove dir (if empty): Documents/Cline
+  remove dir (if empty): Documents
+  remove dir (if empty): .zcode/skills/helper
+  remove dir (if empty): .zcode/skills/db
+  remove dir (if empty): .zcode/skills
+  remove dir (if empty): .zcode/commands
+  remove dir (if empty): .zcode/cli
+  remove dir (if empty): .zcode/agents
+  remove dir (if empty): .zcode
+  remove dir (if empty): .warp/skills/helper
+  remove dir (if empty): .warp/skills/db
+  remove dir (if empty): .warp/skills
+  remove dir (if empty): .warp
+  remove dir (if empty): .vibe/skills/helper
+  remove dir (if empty): .vibe/skills/db
+  remove dir (if empty): .vibe/skills
+  remove dir (if empty): .vibe
+  remove dir (if empty): .trae/skills/helper
+  remove dir (if empty): .trae/skills/db
+  remove dir (if empty): .trae/skills
+  remove dir (if empty): .trae
+  remove dir (if empty): .takt/facets/policies
+  remove dir (if empty): .takt/facets/personas
+  remove dir (if empty): .takt/facets/knowledge
+  remove dir (if empty): .takt/facets/instructions
+  remove dir (if empty): .takt/facets
+  remove dir (if empty): .takt
+  remove dir (if empty): .snowflake/cortex/skills/helper
+  remove dir (if empty): .snowflake/cortex/skills/db
+  remove dir (if empty): .snowflake/cortex/skills
+  remove dir (if empty): .snowflake/cortex/agents
+  remove dir (if empty): .snowflake/cortex
+  remove dir (if empty): .snowflake
+  remove dir (if empty): .rovodev/subagents
+  remove dir (if empty): .rovodev/skills/helper
+  remove dir (if empty): .rovodev/skills/db
+  remove dir (if empty): .rovodev/skills
+  remove dir (if empty): .rovodev
+  remove dir (if empty): .roo/skills/helper
+  remove dir (if empty): .roo/skills/db
+  remove dir (if empty): .roo/skills
+  remove dir (if empty): .roo/rules
+  remove dir (if empty): .roo/commands
+  remove dir (if empty): .roo
+  remove dir (if empty): .reasonix/skills/helper
+  remove dir (if empty): .reasonix/skills/db
+  remove dir (if empty): .reasonix/skills/buddy
+  remove dir (if empty): .reasonix/skills
+  remove dir (if empty): .reasonix/commands
+  remove dir (if empty): .reasonix
+  remove dir (if empty): .qwen/skills/helper
+  remove dir (if empty): .qwen/skills/db
+  remove dir (if empty): .qwen/skills
+  remove dir (if empty): .qwen/rules
+  remove dir (if empty): .qwen/commands
+  remove dir (if empty): .qwen/agents
+  remove dir (if empty): .qwen
+  remove dir (if empty): .qoder/skills/helper
+  remove dir (if empty): .qoder/skills/db
+  remove dir (if empty): .qoder/skills
+  remove dir (if empty): .qoder/rules
+  remove dir (if empty): .qoder/commands
+  remove dir (if empty): .qoder/agents
+  remove dir (if empty): .qoder
+  remove dir (if empty): .pi/agent/skills/helper
+  remove dir (if empty): .pi/agent/skills/db
+  remove dir (if empty): .pi/agent/skills
+  remove dir (if empty): .pi/agent/prompts
+  remove dir (if empty): .pi/agent/extensions
+  remove dir (if empty): .pi/agent/agents
+  remove dir (if empty): .pi/agent
+  remove dir (if empty): .pi
+  remove dir (if empty): .openclaw/workspace
+  remove dir (if empty): .openclaw
+  remove dir (if empty): .omp/agent/skills/helper
+  remove dir (if empty): .omp/agent/skills/db
+  remove dir (if empty): .omp/agent/skills
+  remove dir (if empty): .omp/agent/rules
+  remove dir (if empty): .omp/agent/commands
+  remove dir (if empty): .omp/agent/agents
+  remove dir (if empty): .omp/agent
+  remove dir (if empty): .omp
+  remove dir (if empty): .letta/skills/helper
+  remove dir (if empty): .letta/skills/db
+  remove dir (if empty): .letta/skills
+  remove dir (if empty): .letta/commands
+  remove dir (if empty): .letta/agents
+  remove dir (if empty): .letta
+  remove dir (if empty): .kiro/steering
+  remove dir (if empty): .kiro/skills/helper
+  remove dir (if empty): .kiro/skills/db
+  remove dir (if empty): .kiro/skills
+  remove dir (if empty): .kiro/prompts
+  remove dir (if empty): .kiro/hooks
+  remove dir (if empty): .kiro/agents
+  remove dir (if empty): .kiro
+  remove dir (if empty): .kimi-code/skills/helper
+  remove dir (if empty): .kimi-code/skills/db
+  remove dir (if empty): .kimi-code/skills
+  remove dir (if empty): .kimi-code/agents
+  remove dir (if empty): .kimi-code
+  remove dir (if empty): .kilo/skills/helper
+  remove dir (if empty): .kilo/skills/db
+  remove dir (if empty): .kilo/skills
+  remove dir (if empty): .kilo/rules
+  remove dir (if empty): .kilo
+  remove dir (if empty): .junie/skills/helper
+  remove dir (if empty): .junie/skills/db
+  remove dir (if empty): .junie/skills
+  remove dir (if empty): .junie/commands
+  remove dir (if empty): .junie/agents
+  remove dir (if empty): .junie
+  remove dir (if empty): .hermes/skills/helper
+  remove dir (if empty): .hermes/skills/db
+  remove dir (if empty): .hermes/skills
+  remove dir (if empty): .hermes
+  remove dir (if empty): .grok/skills/helper
+  remove dir (if empty): .grok/skills/db
+  remove dir (if empty): .grok/skills
+  remove dir (if empty): .grok/rules
+  remove dir (if empty): .grok/hooks
+  remove dir (if empty): .grok/commands
+  remove dir (if empty): .grok/agents
+  remove dir (if empty): .grok
+  remove dir (if empty): .gitlab/duo/commands
+  remove dir (if empty): .gitlab/duo
+  remove dir (if empty): .gitlab
+  remove dir (if empty): .gemini/config/skills/helper
+  remove dir (if empty): .gemini/config/skills/db
+  remove dir (if empty): .gemini/config/skills
+  remove dir (if empty): .gemini/config/agents
+  remove dir (if empty): .gemini/config
+  remove dir (if empty): .gemini/agents
+  remove dir (if empty): .gemini
+  remove dir (if empty): .factory/skills/helper
+  remove dir (if empty): .factory/skills/db
+  remove dir (if empty): .factory/skills
+  remove dir (if empty): .factory/droids
+  remove dir (if empty): .factory/commands
+  remove dir (if empty): .factory
+  remove dir (if empty): .dsh/skills/helper
+  remove dir (if empty): .dsh/skills/db
+  remove dir (if empty): .dsh/skills
+  remove dir (if empty): .dsh
+  remove dir (if empty): .deepagents/agent/skills/helper
+  remove dir (if empty): .deepagents/agent/skills/db
+  remove dir (if empty): .deepagents/agent/skills
+  remove dir (if empty): .deepagents/agent/agents/buddy
+  remove dir (if empty): .deepagents/agent/agents
+  remove dir (if empty): .deepagents/agent
+  remove dir (if empty): .deepagents
+  remove dir (if empty): .cursor/commands
+  remove dir (if empty): .cursor/agents
+  remove dir (if empty): .cursor
+  remove dir (if empty): .copilot/skills/helper
+  remove dir (if empty): .copilot/skills/db
+  remove dir (if empty): .copilot/skills
+  remove dir (if empty): .copilot/instructions
+  remove dir (if empty): .copilot/hooks
+  remove dir (if empty): .copilot/agents
+  remove dir (if empty): .copilot
+  remove dir (if empty): .config/zed
+  remove dir (if empty): .config/poolside/skills/helper
+  remove dir (if empty): .config/poolside/skills/db
+  remove dir (if empty): .config/poolside/skills
+  remove dir (if empty): .config/poolside
+  remove dir (if empty): .config/opencode/skills/helper
+  remove dir (if empty): .config/opencode/skills/db
+  remove dir (if empty): .config/opencode/skills
+  remove dir (if empty): .config/opencode/plugins
+  remove dir (if empty): .config/opencode/agents
+  remove dir (if empty): .config/opencode
+  remove dir (if empty): .config/muse/skills/helper
+  remove dir (if empty): .config/muse/skills/db
+  remove dir (if empty): .config/muse/skills
+  remove dir (if empty): .config/muse
+  remove dir (if empty): .config/mimocode/skills/helper
+  remove dir (if empty): .config/mimocode/skills/db
+  remove dir (if empty): .config/mimocode/skills
+  remove dir (if empty): .config/mimocode/plugins
+  remove dir (if empty): .config/mimocode/commands
+  remove dir (if empty): .config/mimocode/agents
+  remove dir (if empty): .config/mimocode
+  remove dir (if empty): .config/kilo/plugins
+  remove dir (if empty): .config/kilo/commands
+  remove dir (if empty): .config/kilo/agents
+  remove dir (if empty): .config/kilo
+  remove dir (if empty): .config/goose/agents
+  remove dir (if empty): .config/goose
+  remove dir (if empty): .config/devin/skills/helper
+  remove dir (if empty): .config/devin/skills/db
+  remove dir (if empty): .config/devin/skills
+  remove dir (if empty): .config/devin/agents
+  remove dir (if empty): .config/devin
+  remove dir (if empty): .config/crush/skills/helper
+  remove dir (if empty): .config/crush/skills/db
+  remove dir (if empty): .config/crush/skills
+  remove dir (if empty): .config/crush
+  remove dir (if empty): .config/amp/plugins
+  remove dir (if empty): .config/amp
+  remove dir (if empty): .config/agents/skills/helper
+  remove dir (if empty): .config/agents/skills/db
+  remove dir (if empty): .config/agents/skills
+  remove dir (if empty): .config/agents
+  remove dir (if empty): .commandcode/skills/helper
+  remove dir (if empty): .commandcode/skills/db
+  remove dir (if empty): .commandcode/skills
+  remove dir (if empty): .commandcode/commands
+  remove dir (if empty): .commandcode/agents
+  remove dir (if empty): .commandcode
+  remove dir (if empty): .codex/rules
+  remove dir (if empty): .codex/agents
+  remove dir (if empty): .codex
+  remove dir (if empty): .codewhale/skills/helper
+  remove dir (if empty): .codewhale/skills/db
+  remove dir (if empty): .codewhale/skills
+  remove dir (if empty): .codewhale/commands
+  remove dir (if empty): .codewhale
+  remove dir (if empty): .codebuddy/skills/helper
+  remove dir (if empty): .codebuddy/skills/db
+  remove dir (if empty): .codebuddy/skills
+  remove dir (if empty): .codebuddy/rules
+  remove dir (if empty): .codebuddy/commands
+  remove dir (if empty): .codebuddy/agents
+  remove dir (if empty): .codebuddy
+  remove dir (if empty): .cline/skills/helper
+  remove dir (if empty): .cline/skills/db
+  remove dir (if empty): .cline/skills
+  remove dir (if empty): .cline/agents
+  remove dir (if empty): .cline
+  remove dir (if empty): .claude/skills/helper
+  remove dir (if empty): .claude/skills/db
+  remove dir (if empty): .claude/skills
+  remove dir (if empty): .claude/rules
+  remove dir (if empty): .claude/agents
+  remove dir (if empty): .bob/skills/helper
+  remove dir (if empty): .bob/skills/db
+  remove dir (if empty): .bob/skills
+  remove dir (if empty): .bob/settings
+  remove dir (if empty): .bob/rules
+  remove dir (if empty): .bob/commands
+  remove dir (if empty): .bob
+  remove dir (if empty): .augment/skills/helper
+  remove dir (if empty): .augment/skills/db
+  remove dir (if empty): .augment/skills
+  remove dir (if empty): .augment/rules
+  remove dir (if empty): .augment/commands
+  remove dir (if empty): .augment/agents
+  remove dir (if empty): .augment
+  remove dir (if empty): .agents/skills/helper
+  remove dir (if empty): .agents/skills/db
+  remove dir (if empty): .agents/skills
+  remove dir (if empty): .agents/plugins/ai-rulez/hooks
+  remove dir (if empty): .agents/plugins/ai-rulez
+  remove dir (if empty): .agents/plugins
+  remove dir (if empty): .agents
+  remove manifest: .config/ai-rulez/.generated-manifest.json
+  remove local manifest: .config/ai-rulez/.generated-manifest.local.json
 --- stderr
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
-INFO  Clean plan profile=default
-INFO    remove file: .agents/AGENTS.md
-INFO    remove file: .agents/plugins/ai-rulez/hooks/hooks.json
-INFO    remove file: .agents/skills/db/SKILL.md
-INFO    remove file: .agents/skills/helper/SKILL.md
-INFO    remove file: .augment/agents/buddy.md
-INFO    remove file: .augment/rules/be.md
-INFO    remove file: .augment/rules/mine.md
-INFO    remove file: .augment/settings.json
-INFO    remove file: .augment/skills/db/SKILL.md
-INFO    remove file: .augment/skills/helper/SKILL.md
-INFO    remove file: .bob/AGENTS.md
-INFO    remove file: .bob/rules/be.md
-INFO    remove file: .bob/rules/mine.md
-INFO    remove file: .bob/settings/settings.json
-INFO    remove file: .bob/skills/db/SKILL.md
-INFO    remove file: .bob/skills/helper/SKILL.md
-INFO    remove file: .claude/agents/buddy.md
-INFO    remove file: .claude/rules/be.md
-INFO    remove file: .claude/rules/mine.md
-INFO    remove file: .claude/skills/db/SKILL.md
-INFO    remove file: .claude/skills/helper/SKILL.md
-INFO    remove file: .cline/agents/buddy.yaml
-INFO    remove file: .cline/skills/db/SKILL.md
-INFO    remove file: .cline/skills/helper/SKILL.md
-INFO    remove file: .codebuddy/CODEBUDDY.md
-INFO    remove file: .codebuddy/agents/buddy.md
-INFO    remove file: .codebuddy/rules/be.md
-INFO    remove file: .codebuddy/rules/mine.md
-INFO    remove file: .codebuddy/settings.json
-INFO    remove file: .codebuddy/skills/db/SKILL.md
-INFO    remove file: .codebuddy/skills/helper/SKILL.md
-INFO    remove file: .codewhale/AGENTS.md
-INFO    remove file: .codewhale/skills/db/SKILL.md
-INFO    remove file: .codewhale/skills/helper/SKILL.md
-INFO    remove file: .codex/AGENTS.md
-INFO    remove file: .codex/agents/buddy.toml
-INFO    remove file: .codex/hooks.json
-INFO    remove file: .codex/rules/ai-rulez.rules
-INFO    remove file: .commandcode/AGENTS.md
-INFO    remove file: .commandcode/agents/buddy.md
-INFO    remove file: .commandcode/settings.json
-INFO    remove file: .commandcode/skills/db/SKILL.md
-INFO    remove file: .commandcode/skills/helper/SKILL.md
-INFO    remove file: .config/agents/skills/db/SKILL.md
-INFO    remove file: .config/agents/skills/helper/SKILL.md
-INFO    remove file: .config/amp/AGENTS.md
-INFO    remove file: .config/amp/plugins/ai-rulez-hooks.ts
-INFO    remove file: .config/crush/CRUSH.md
-INFO    remove file: .config/crush/skills/db/SKILL.md
-INFO    remove file: .config/crush/skills/helper/SKILL.md
-INFO    remove file: .config/devin/agents/buddy.md
-INFO    remove file: .config/devin/config.json
-INFO    remove file: .config/devin/skills/db/SKILL.md
-INFO    remove file: .config/devin/skills/helper/SKILL.md
-INFO    remove file: .config/goose/.goosehints
-INFO    remove file: .config/goose/agents/buddy.md
-INFO    remove file: .config/kilo/AGENTS.md
-INFO    remove file: .config/kilo/agents/buddy.md
-INFO    remove file: .config/kilo/kilo.jsonc
-INFO    remove file: .config/kilo/plugins/ai-rulez-hooks.js
-INFO    remove file: .config/mimocode/AGENTS.md
-INFO    remove file: .config/mimocode/agents/buddy.md
-INFO    remove file: .config/mimocode/mimocode.jsonc
-INFO    remove file: .config/mimocode/plugins/ai-rulez-hooks.js
-INFO    remove file: .config/mimocode/skills/db/SKILL.md
-INFO    remove file: .config/mimocode/skills/helper/SKILL.md
-INFO    remove file: .config/muse/skills/db/SKILL.md
-INFO    remove file: .config/muse/skills/helper/SKILL.md
-INFO    remove file: .config/opencode/AGENTS.md
-INFO    remove file: .config/opencode/agents/buddy.md
-INFO    remove file: .config/opencode/opencode.json
-INFO    remove file: .config/opencode/plugins/ai-rulez-hooks.js
-INFO    remove file: .config/opencode/skills/db/SKILL.md
-INFO    remove file: .config/opencode/skills/helper/SKILL.md
-INFO    remove file: .config/poolside/AGENTS.md
-INFO    remove file: .config/poolside/settings.yaml
-INFO    remove file: .config/poolside/skills/db/SKILL.md
-INFO    remove file: .config/poolside/skills/helper/SKILL.md
-INFO    remove file: .config/zed/AGENTS.md
-INFO    remove file: .config/zed/settings.json
-INFO    remove file: .copilot/agents/buddy.agent.md
-INFO    remove file: .copilot/copilot-instructions.md
-INFO    remove file: .copilot/hooks/ai-rulez.json
-INFO    remove file: .copilot/instructions/be.instructions.md
-INFO    remove file: .copilot/instructions/mine.instructions.md
-INFO    remove file: .copilot/skills/db/SKILL.md
-INFO    remove file: .copilot/skills/helper/SKILL.md
-INFO    remove file: .cursor/agents/buddy.md
-INFO    remove file: .cursor/hooks.json
-INFO    remove file: .deepagents/agent/AGENTS.md
-INFO    remove file: .deepagents/agent/agents/buddy/AGENTS.md
-INFO    remove file: .deepagents/agent/skills/db/SKILL.md
-INFO    remove file: .deepagents/agent/skills/helper/SKILL.md
-INFO    remove file: .deepagents/hooks.json
-INFO    remove file: .dsh/AGENTS.md
-INFO    remove file: .dsh/skills/db/SKILL.md
-INFO    remove file: .dsh/skills/helper/SKILL.md
-INFO    remove file: .factory/AGENTS.md
-INFO    remove file: .factory/droids/buddy.md
-INFO    remove file: .factory/hooks.json
-INFO    remove file: .factory/skills/db/SKILL.md
-INFO    remove file: .factory/skills/helper/SKILL.md
-INFO    remove file: .gemini/GEMINI.md
-INFO    remove file: .gemini/agents/buddy.md
-INFO    remove file: .gemini/config/agents/buddy.md
-INFO    remove file: .gemini/config/skills/db/SKILL.md
-INFO    remove file: .gemini/config/skills/helper/SKILL.md
-INFO    remove file: .gemini/settings.json
-INFO    remove file: .gitlab/duo/chat-rules.md
-INFO    remove file: .gitlab/duo/hooks.json
-INFO    remove file: .grok/AGENTS.md
-INFO    remove file: .grok/agents/buddy.md
-INFO    remove file: .grok/config.toml
-INFO    remove file: .grok/hooks/ai-rulez.json
-INFO    remove file: .grok/rules/be.md
-INFO    remove file: .grok/rules/mine.md
-INFO    remove file: .grok/skills/db/SKILL.md
-INFO    remove file: .grok/skills/helper/SKILL.md
-INFO    remove file: .hermes/config.yaml
-INFO    remove file: .hermes/skills/db/SKILL.md
-INFO    remove file: .hermes/skills/helper/SKILL.md
-INFO    remove file: .junie/AGENTS.md
-INFO    remove file: .junie/agents/buddy.md
-INFO    remove file: .junie/config.json
-INFO    remove file: .junie/skills/db/SKILL.md
-INFO    remove file: .junie/skills/helper/SKILL.md
-INFO    remove file: .kilo/rules/be.md
-INFO    remove file: .kilo/rules/mine.md
-INFO    remove file: .kilo/skills/db/SKILL.md
-INFO    remove file: .kilo/skills/helper/SKILL.md
-INFO    remove file: .kimi-code/AGENTS.md
-INFO    remove file: .kimi-code/agents/buddy.md
-INFO    remove file: .kimi-code/config.toml
-INFO    remove file: .kimi-code/skills/db/SKILL.md
-INFO    remove file: .kimi-code/skills/helper/SKILL.md
-INFO    remove file: .kiro/agents/buddy.md
-INFO    remove file: .kiro/hooks/ai-rulez.json
-INFO    remove file: .kiro/skills/db/SKILL.md
-INFO    remove file: .kiro/skills/helper/SKILL.md
-INFO    remove file: .kiro/steering/AGENTS.md
-INFO    remove file: .kiro/steering/be.md
-INFO    remove file: .kiro/steering/mine.md
-INFO    remove file: .letta/agents/buddy.md
-INFO    remove file: .letta/settings.json
-INFO    remove file: .letta/skills/db/SKILL.md
-INFO    remove file: .letta/skills/helper/SKILL.md
-INFO    remove file: .omp/agent/AGENTS.md
-INFO    remove file: .omp/agent/agents/buddy.md
-INFO    remove file: .omp/agent/config.yml
-INFO    remove file: .omp/agent/rules/be.md
-INFO    remove file: .omp/agent/rules/mine.md
-INFO    remove file: .omp/agent/skills/db/SKILL.md
-INFO    remove file: .omp/agent/skills/helper/SKILL.md
-INFO    remove file: .openclaw/workspace/AGENTS.md
-INFO    remove file: .pi/agent/AGENTS.md
-INFO    remove file: .pi/agent/agents/buddy.md
-INFO    remove file: .pi/agent/extensions/ai-rulez-hooks.ts
-INFO    remove file: .pi/agent/skills/db/SKILL.md
-INFO    remove file: .pi/agent/skills/helper/SKILL.md
-INFO    remove file: .qoder/AGENTS.md
-INFO    remove file: .qoder/agents/buddy.md
-INFO    remove file: .qoder/rules/be.md
-INFO    remove file: .qoder/rules/mine.md
-INFO    remove file: .qoder/settings.json
-INFO    remove file: .qoder/skills/db/SKILL.md
-INFO    remove file: .qoder/skills/helper/SKILL.md
-INFO    remove file: .qwen/QWEN.md
-INFO    remove file: .qwen/agents/buddy.md
-INFO    remove file: .qwen/rules/be.md
-INFO    remove file: .qwen/rules/mine.md
-INFO    remove file: .qwen/settings.json
-INFO    remove file: .qwen/skills/db/SKILL.md
-INFO    remove file: .qwen/skills/helper/SKILL.md
-INFO    remove file: .reasonix/REASONIX.md
-INFO    remove file: .reasonix/settings.json
-INFO    remove file: .reasonix/skills/buddy/SKILL.md
-INFO    remove file: .reasonix/skills/db/SKILL.md
-INFO    remove file: .reasonix/skills/helper/SKILL.md
-INFO    remove file: .roo/rules/AGENTS.md
-INFO    remove file: .roo/skills/db/SKILL.md
-INFO    remove file: .roo/skills/helper/SKILL.md
-INFO    remove file: .rovodev/AGENTS.md
-INFO    remove file: .rovodev/skills/db/SKILL.md
-INFO    remove file: .rovodev/skills/helper/SKILL.md
-INFO    remove file: .rovodev/subagents/buddy.md
-INFO    remove file: .snowflake/cortex/agents/buddy.md
-INFO    remove file: .snowflake/cortex/hooks.json
-INFO    remove file: .snowflake/cortex/skills/db/SKILL.md
-INFO    remove file: .snowflake/cortex/skills/helper/SKILL.md
-INFO    remove file: .takt/facets/knowledge/helper.md
-INFO    remove file: .takt/facets/personas/buddy.md
-INFO    remove file: .takt/facets/policies/be.md
-INFO    remove file: .takt/facets/policies/context-me.md
-INFO    remove file: .takt/facets/policies/mine.md
-INFO    remove file: .trae/skills/db/SKILL.md
-INFO    remove file: .trae/skills/helper/SKILL.md
-INFO    remove file: .vibe/AGENTS.md
-INFO    remove file: .vibe/config.toml
-INFO    remove file: .vibe/skills/db/SKILL.md
-INFO    remove file: .vibe/skills/helper/SKILL.md
-INFO    remove file: .warp/skills/db/SKILL.md
-INFO    remove file: .warp/skills/helper/SKILL.md
-INFO    remove file: .zcode/AGENTS.md
-INFO    remove file: .zcode/agents/buddy.md
-INFO    remove file: .zcode/cli/config.json
-INFO    remove file: .zcode/skills/db/SKILL.md
-INFO    remove file: .zcode/skills/helper/SKILL.md
-INFO    remove file: Documents/Cline/Hooks/TaskStart
-INFO    remove file: Documents/Cline/Rules/be.md
-INFO    remove file: Documents/Cline/Rules/context-me.md
-INFO    remove file: Documents/Cline/Rules/mine.md
-INFO    remove ai-rulez keys from: .claude/settings.json
-INFO    remove dir (if empty): Documents/Cline/Rules
-INFO    remove dir (if empty): Documents/Cline/Hooks
-INFO    remove dir (if empty): Documents/Cline
-INFO    remove dir (if empty): Documents
-INFO    remove dir (if empty): .zcode/skills/helper
-INFO    remove dir (if empty): .zcode/skills/db
-INFO    remove dir (if empty): .zcode/skills
-INFO    remove dir (if empty): .zcode/commands
-INFO    remove dir (if empty): .zcode/cli
-INFO    remove dir (if empty): .zcode/agents
-INFO    remove dir (if empty): .zcode
-INFO    remove dir (if empty): .warp/skills/helper
-INFO    remove dir (if empty): .warp/skills/db
-INFO    remove dir (if empty): .warp/skills
-INFO    remove dir (if empty): .warp
-INFO    remove dir (if empty): .vibe/skills/helper
-INFO    remove dir (if empty): .vibe/skills/db
-INFO    remove dir (if empty): .vibe/skills
-INFO    remove dir (if empty): .vibe
-INFO    remove dir (if empty): .trae/skills/helper
-INFO    remove dir (if empty): .trae/skills/db
-INFO    remove dir (if empty): .trae/skills
-INFO    remove dir (if empty): .trae
-INFO    remove dir (if empty): .takt/facets/policies
-INFO    remove dir (if empty): .takt/facets/personas
-INFO    remove dir (if empty): .takt/facets/knowledge
-INFO    remove dir (if empty): .takt/facets/instructions
-INFO    remove dir (if empty): .takt/facets
-INFO    remove dir (if empty): .takt
-INFO    remove dir (if empty): .snowflake/cortex/skills/helper
-INFO    remove dir (if empty): .snowflake/cortex/skills/db
-INFO    remove dir (if empty): .snowflake/cortex/skills
-INFO    remove dir (if empty): .snowflake/cortex/agents
-INFO    remove dir (if empty): .snowflake/cortex
-INFO    remove dir (if empty): .snowflake
-INFO    remove dir (if empty): .rovodev/subagents
-INFO    remove dir (if empty): .rovodev/skills/helper
-INFO    remove dir (if empty): .rovodev/skills/db
-INFO    remove dir (if empty): .rovodev/skills
-INFO    remove dir (if empty): .rovodev
-INFO    remove dir (if empty): .roo/skills/helper
-INFO    remove dir (if empty): .roo/skills/db
-INFO    remove dir (if empty): .roo/skills
-INFO    remove dir (if empty): .roo/rules
-INFO    remove dir (if empty): .roo/commands
-INFO    remove dir (if empty): .roo
-INFO    remove dir (if empty): .reasonix/skills/helper
-INFO    remove dir (if empty): .reasonix/skills/db
-INFO    remove dir (if empty): .reasonix/skills/buddy
-INFO    remove dir (if empty): .reasonix/skills
-INFO    remove dir (if empty): .reasonix/commands
-INFO    remove dir (if empty): .reasonix
-INFO    remove dir (if empty): .qwen/skills/helper
-INFO    remove dir (if empty): .qwen/skills/db
-INFO    remove dir (if empty): .qwen/skills
-INFO    remove dir (if empty): .qwen/rules
-INFO    remove dir (if empty): .qwen/commands
-INFO    remove dir (if empty): .qwen/agents
-INFO    remove dir (if empty): .qwen
-INFO    remove dir (if empty): .qoder/skills/helper
-INFO    remove dir (if empty): .qoder/skills/db
-INFO    remove dir (if empty): .qoder/skills
-INFO    remove dir (if empty): .qoder/rules
-INFO    remove dir (if empty): .qoder/commands
-INFO    remove dir (if empty): .qoder/agents
-INFO    remove dir (if empty): .qoder
-INFO    remove dir (if empty): .pi/agent/skills/helper
-INFO    remove dir (if empty): .pi/agent/skills/db
-INFO    remove dir (if empty): .pi/agent/skills
-INFO    remove dir (if empty): .pi/agent/prompts
-INFO    remove dir (if empty): .pi/agent/extensions
-INFO    remove dir (if empty): .pi/agent/agents
-INFO    remove dir (if empty): .pi/agent
-INFO    remove dir (if empty): .pi
-INFO    remove dir (if empty): .openclaw/workspace
-INFO    remove dir (if empty): .openclaw
-INFO    remove dir (if empty): .omp/agent/skills/helper
-INFO    remove dir (if empty): .omp/agent/skills/db
-INFO    remove dir (if empty): .omp/agent/skills
-INFO    remove dir (if empty): .omp/agent/rules
-INFO    remove dir (if empty): .omp/agent/commands
-INFO    remove dir (if empty): .omp/agent/agents
-INFO    remove dir (if empty): .omp/agent
-INFO    remove dir (if empty): .omp
-INFO    remove dir (if empty): .letta/skills/helper
-INFO    remove dir (if empty): .letta/skills/db
-INFO    remove dir (if empty): .letta/skills
-INFO    remove dir (if empty): .letta/commands
-INFO    remove dir (if empty): .letta/agents
-INFO    remove dir (if empty): .letta
-INFO    remove dir (if empty): .kiro/steering
-INFO    remove dir (if empty): .kiro/skills/helper
-INFO    remove dir (if empty): .kiro/skills/db
-INFO    remove dir (if empty): .kiro/skills
-INFO    remove dir (if empty): .kiro/prompts
-INFO    remove dir (if empty): .kiro/hooks
-INFO    remove dir (if empty): .kiro/agents
-INFO    remove dir (if empty): .kiro
-INFO    remove dir (if empty): .kimi-code/skills/helper
-INFO    remove dir (if empty): .kimi-code/skills/db
-INFO    remove dir (if empty): .kimi-code/skills
-INFO    remove dir (if empty): .kimi-code/agents
-INFO    remove dir (if empty): .kimi-code
-INFO    remove dir (if empty): .kilo/skills/helper
-INFO    remove dir (if empty): .kilo/skills/db
-INFO    remove dir (if empty): .kilo/skills
-INFO    remove dir (if empty): .kilo/rules
-INFO    remove dir (if empty): .kilo
-INFO    remove dir (if empty): .junie/skills/helper
-INFO    remove dir (if empty): .junie/skills/db
-INFO    remove dir (if empty): .junie/skills
-INFO    remove dir (if empty): .junie/commands
-INFO    remove dir (if empty): .junie/agents
-INFO    remove dir (if empty): .junie
-INFO    remove dir (if empty): .hermes/skills/helper
-INFO    remove dir (if empty): .hermes/skills/db
-INFO    remove dir (if empty): .hermes/skills
-INFO    remove dir (if empty): .hermes
-INFO    remove dir (if empty): .grok/skills/helper
-INFO    remove dir (if empty): .grok/skills/db
-INFO    remove dir (if empty): .grok/skills
-INFO    remove dir (if empty): .grok/rules
-INFO    remove dir (if empty): .grok/hooks
-INFO    remove dir (if empty): .grok/commands
-INFO    remove dir (if empty): .grok/agents
-INFO    remove dir (if empty): .grok
-INFO    remove dir (if empty): .gitlab/duo/commands
-INFO    remove dir (if empty): .gitlab/duo
-INFO    remove dir (if empty): .gitlab
-INFO    remove dir (if empty): .gemini/config/skills/helper
-INFO    remove dir (if empty): .gemini/config/skills/db
-INFO    remove dir (if empty): .gemini/config/skills
-INFO    remove dir (if empty): .gemini/config/agents
-INFO    remove dir (if empty): .gemini/config
-INFO    remove dir (if empty): .gemini/agents
-INFO    remove dir (if empty): .gemini
-INFO    remove dir (if empty): .factory/skills/helper
-INFO    remove dir (if empty): .factory/skills/db
-INFO    remove dir (if empty): .factory/skills
-INFO    remove dir (if empty): .factory/droids
-INFO    remove dir (if empty): .factory/commands
-INFO    remove dir (if empty): .factory
-INFO    remove dir (if empty): .dsh/skills/helper
-INFO    remove dir (if empty): .dsh/skills/db
-INFO    remove dir (if empty): .dsh/skills
-INFO    remove dir (if empty): .dsh
-INFO    remove dir (if empty): .deepagents/agent/skills/helper
-INFO    remove dir (if empty): .deepagents/agent/skills/db
-INFO    remove dir (if empty): .deepagents/agent/skills
-INFO    remove dir (if empty): .deepagents/agent/agents/buddy
-INFO    remove dir (if empty): .deepagents/agent/agents
-INFO    remove dir (if empty): .deepagents/agent
-INFO    remove dir (if empty): .deepagents
-INFO    remove dir (if empty): .cursor/commands
-INFO    remove dir (if empty): .cursor/agents
-INFO    remove dir (if empty): .cursor
-INFO    remove dir (if empty): .copilot/skills/helper
-INFO    remove dir (if empty): .copilot/skills/db
-INFO    remove dir (if empty): .copilot/skills
-INFO    remove dir (if empty): .copilot/instructions
-INFO    remove dir (if empty): .copilot/hooks
-INFO    remove dir (if empty): .copilot/agents
-INFO    remove dir (if empty): .copilot
-INFO    remove dir (if empty): .config/zed
-INFO    remove dir (if empty): .config/poolside/skills/helper
-INFO    remove dir (if empty): .config/poolside/skills/db
-INFO    remove dir (if empty): .config/poolside/skills
-INFO    remove dir (if empty): .config/poolside
-INFO    remove dir (if empty): .config/opencode/skills/helper
-INFO    remove dir (if empty): .config/opencode/skills/db
-INFO    remove dir (if empty): .config/opencode/skills
-INFO    remove dir (if empty): .config/opencode/plugins
-INFO    remove dir (if empty): .config/opencode/agents
-INFO    remove dir (if empty): .config/opencode
-INFO    remove dir (if empty): .config/muse/skills/helper
-INFO    remove dir (if empty): .config/muse/skills/db
-INFO    remove dir (if empty): .config/muse/skills
-INFO    remove dir (if empty): .config/muse
-INFO    remove dir (if empty): .config/mimocode/skills/helper
-INFO    remove dir (if empty): .config/mimocode/skills/db
-INFO    remove dir (if empty): .config/mimocode/skills
-INFO    remove dir (if empty): .config/mimocode/plugins
-INFO    remove dir (if empty): .config/mimocode/commands
-INFO    remove dir (if empty): .config/mimocode/agents
-INFO    remove dir (if empty): .config/mimocode
-INFO    remove dir (if empty): .config/kilo/plugins
-INFO    remove dir (if empty): .config/kilo/commands
-INFO    remove dir (if empty): .config/kilo/agents
-INFO    remove dir (if empty): .config/kilo
-INFO    remove dir (if empty): .config/goose/agents
-INFO    remove dir (if empty): .config/goose
-INFO    remove dir (if empty): .config/devin/skills/helper
-INFO    remove dir (if empty): .config/devin/skills/db
-INFO    remove dir (if empty): .config/devin/skills
-INFO    remove dir (if empty): .config/devin/agents
-INFO    remove dir (if empty): .config/devin
-INFO    remove dir (if empty): .config/crush/skills/helper
-INFO    remove dir (if empty): .config/crush/skills/db
-INFO    remove dir (if empty): .config/crush/skills
-INFO    remove dir (if empty): .config/crush
-INFO    remove dir (if empty): .config/amp/plugins
-INFO    remove dir (if empty): .config/amp
-INFO    remove dir (if empty): .config/agents/skills/helper
-INFO    remove dir (if empty): .config/agents/skills/db
-INFO    remove dir (if empty): .config/agents/skills
-INFO    remove dir (if empty): .config/agents
-INFO    remove dir (if empty): .commandcode/skills/helper
-INFO    remove dir (if empty): .commandcode/skills/db
-INFO    remove dir (if empty): .commandcode/skills
-INFO    remove dir (if empty): .commandcode/commands
-INFO    remove dir (if empty): .commandcode/agents
-INFO    remove dir (if empty): .commandcode
-INFO    remove dir (if empty): .codex/rules
-INFO    remove dir (if empty): .codex/agents
-INFO    remove dir (if empty): .codex
-INFO    remove dir (if empty): .codewhale/skills/helper
-INFO    remove dir (if empty): .codewhale/skills/db
-INFO    remove dir (if empty): .codewhale/skills
-INFO    remove dir (if empty): .codewhale/commands
-INFO    remove dir (if empty): .codewhale
-INFO    remove dir (if empty): .codebuddy/skills/helper
-INFO    remove dir (if empty): .codebuddy/skills/db
-INFO    remove dir (if empty): .codebuddy/skills
-INFO    remove dir (if empty): .codebuddy/rules
-INFO    remove dir (if empty): .codebuddy/commands
-INFO    remove dir (if empty): .codebuddy/agents
-INFO    remove dir (if empty): .codebuddy
-INFO    remove dir (if empty): .cline/skills/helper
-INFO    remove dir (if empty): .cline/skills/db
-INFO    remove dir (if empty): .cline/skills
-INFO    remove dir (if empty): .cline/agents
-INFO    remove dir (if empty): .cline
-INFO    remove dir (if empty): .claude/skills/helper
-INFO    remove dir (if empty): .claude/skills/db
-INFO    remove dir (if empty): .claude/skills
-INFO    remove dir (if empty): .claude/rules
-INFO    remove dir (if empty): .claude/agents
-INFO    remove dir (if empty): .bob/skills/helper
-INFO    remove dir (if empty): .bob/skills/db
-INFO    remove dir (if empty): .bob/skills
-INFO    remove dir (if empty): .bob/settings
-INFO    remove dir (if empty): .bob/rules
-INFO    remove dir (if empty): .bob/commands
-INFO    remove dir (if empty): .bob
-INFO    remove dir (if empty): .augment/skills/helper
-INFO    remove dir (if empty): .augment/skills/db
-INFO    remove dir (if empty): .augment/skills
-INFO    remove dir (if empty): .augment/rules
-INFO    remove dir (if empty): .augment/commands
-INFO    remove dir (if empty): .augment/agents
-INFO    remove dir (if empty): .augment
-INFO    remove dir (if empty): .agents/skills/helper
-INFO    remove dir (if empty): .agents/skills/db
-INFO    remove dir (if empty): .agents/skills
-INFO    remove dir (if empty): .agents/plugins/ai-rulez/hooks
-INFO    remove dir (if empty): .agents/plugins/ai-rulez
-INFO    remove dir (if empty): .agents/plugins
-INFO    remove dir (if empty): .agents
-INFO    remove manifest: .config/ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .config/ai-rulez/.generated-manifest.local.json
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
-INFO  Removed user-level generated files files=211 directories=258
+Removed user-level generated files: 211 files, 258 directories
 --- project tree
 (no change)
 --- home tree

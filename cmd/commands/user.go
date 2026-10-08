@@ -177,7 +177,7 @@ func runUserClean(out render.Out) error {
 	if cleanDryRun {
 		return writeCleanResult(out, cfg.BaseDir, plan, true, "Dry run: no files were removed")
 	}
-	if cleanFormat != formatJSON {
+	if !out.JSON() {
 		printCleanPlan(out.Stdout(), cfg.BaseDir, plan)
 	}
 	if err := confirmRemovalUnlessYes(cleanForce, "", fmt.Sprintf("%d generated file(s) in %s", len(plan.Files), cfg.BaseDir), "Clean user-level files"); err != nil {
@@ -187,7 +187,7 @@ func runUserClean(out render.Out) error {
 	if _, err := gen.Clean(profile, opts); err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
-	if cleanFormat == formatJSON {
+	if out.JSON() {
 		return writeCleanDocument(out.Stdout(), cfg.BaseDir, plan, false)
 	}
 	out.Info("Removed user-level generated files: %d files, %d directories\n", len(plan.Files), len(plan.Dirs))

@@ -15,12 +15,22 @@ type Out struct {
 	stdout io.Writer
 	stderr io.Writer
 	quiet  bool
+	format string
 }
 
 // New returns an Out over the two streams. quiet suppresses Info only.
 func New(stdout, stderr io.Writer, quiet bool) Out {
 	return Out{stdout: stdout, stderr: stderr, quiet: quiet}
 }
+
+// WithFormat returns o carrying the --format the command was asked for.
+func (o Out) WithFormat(format string) Out {
+	o.format = format
+	return o
+}
+
+// JSON reports whether the command was asked for --format json.
+func (o Out) JSON() bool { return o.format == "json" }
 
 // Stdout is the stream results are written to.
 func (o Out) Stdout() io.Writer { return o.stdout }

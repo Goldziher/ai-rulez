@@ -111,34 +111,34 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .bob/commands/build.md
+  remove file: .bob/commands/ship.md
+  remove file: .bob/mcp.json
+  remove file: .bob/rules/always.md
+  remove file: .bob/rules/auto.md
+  remove file: .bob/rules/manual.md
+  remove file: .bob/rules/typescript.md
+  remove file: .bob/settings.json
+  remove file: .bob/skills/deployer/SKILL.md
+  remove file: .bob/skills/reviewer/SKILL.md
+  remove file: .bob/skills/reviewer/references/checklist.md
+  remove file: .bob/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove dir (if empty): .bob/skills/reviewer/scripts
+  remove dir (if empty): .bob/skills/reviewer/references
+  remove dir (if empty): .bob/skills/reviewer
+  remove dir (if empty): .bob/skills/deployer
+  remove dir (if empty): .bob/skills
+  remove dir (if empty): .bob/rules
+  remove dir (if empty): .bob/commands
+  remove dir (if empty): .bob
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .bob/commands/build.md
-INFO    remove file: .bob/commands/ship.md
-INFO    remove file: .bob/mcp.json
-INFO    remove file: .bob/rules/always.md
-INFO    remove file: .bob/rules/auto.md
-INFO    remove file: .bob/rules/manual.md
-INFO    remove file: .bob/rules/typescript.md
-INFO    remove file: .bob/settings.json
-INFO    remove file: .bob/skills/deployer/SKILL.md
-INFO    remove file: .bob/skills/reviewer/SKILL.md
-INFO    remove file: .bob/skills/reviewer/references/checklist.md
-INFO    remove file: .bob/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .bob/skills/reviewer/scripts
-INFO    remove dir (if empty): .bob/skills/reviewer/references
-INFO    remove dir (if empty): .bob/skills/reviewer
-INFO    remove dir (if empty): .bob/skills/deployer
-INFO    remove dir (if empty): .bob/skills
-INFO    remove dir (if empty): .bob/rules
-INFO    remove dir (if empty): .bob/commands
-INFO    remove dir (if empty): .bob
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=14 directories=8
+Removed generated files: 14 files, 8 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

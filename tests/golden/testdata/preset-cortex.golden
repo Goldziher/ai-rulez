@@ -102,28 +102,28 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .cortex/agents/architect.md
+  remove file: .cortex/agents/tester.md
+  remove file: .cortex/settings.json
+  remove file: .cortex/skills/deployer/SKILL.md
+  remove file: .cortex/skills/reviewer/SKILL.md
+  remove file: .cortex/skills/reviewer/references/checklist.md
+  remove file: .cortex/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove dir (if empty): .cortex/skills/reviewer/scripts
+  remove dir (if empty): .cortex/skills/reviewer/references
+  remove dir (if empty): .cortex/skills/reviewer
+  remove dir (if empty): .cortex/skills/deployer
+  remove dir (if empty): .cortex/skills
+  remove dir (if empty): .cortex/agents
+  remove dir (if empty): .cortex
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .cortex/agents/architect.md
-INFO    remove file: .cortex/agents/tester.md
-INFO    remove file: .cortex/settings.json
-INFO    remove file: .cortex/skills/deployer/SKILL.md
-INFO    remove file: .cortex/skills/reviewer/SKILL.md
-INFO    remove file: .cortex/skills/reviewer/references/checklist.md
-INFO    remove file: .cortex/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .cortex/skills/reviewer/scripts
-INFO    remove dir (if empty): .cortex/skills/reviewer/references
-INFO    remove dir (if empty): .cortex/skills/reviewer
-INFO    remove dir (if empty): .cortex/skills/deployer
-INFO    remove dir (if empty): .cortex/skills
-INFO    remove dir (if empty): .cortex/agents
-INFO    remove dir (if empty): .cortex
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=9 directories=7
+Removed generated files: 9 files, 7 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

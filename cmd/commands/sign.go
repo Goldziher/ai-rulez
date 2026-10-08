@@ -46,7 +46,6 @@ var (
 	signTLog        bool
 	signEmbedItems  bool
 	signOutput      string
-	signJSON        bool
 	signInteractive bool
 	signBundle      string
 	signSkill       string
@@ -114,8 +113,12 @@ Run it after the final "ai-rulez lock": any change to the lock invalidates the
 signature. Exit codes: 0 signed, 1 the command could not run, 2 the lock is
 stale (its tree does not match its entries).`,
 	Args: cobra.MaximumNArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
-		return exitStatus(runSign(cmdContext(), args, nil))
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmdContext()
+		if outFor(cmd).JSON() {
+			ctx = withSignRecorder(ctx)
+		}
+		return exitStatus(runSign(ctx, args, nil))
 	},
 }
 
@@ -145,7 +148,7 @@ func init() {
 	f.BoolVar(&signEmbedItems, "embed-items", false, "Put the pinned item ids and digests in the statement (ids can be sensitive in a private repository)")
 	f.StringVar(&signOutput, "output", "", "Write the bundle here instead of next to the lock")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
-	addJSONFormat(f, &signJSON, "")
+	addFormatFlag(f, new(string), formatText, formatText, formatText, formatJSON)
 }
 
 func validateSignFlags() error {
@@ -252,10 +255,9 @@ func loadSignLock(ctx context.Context, args []string) (*config.Config, *lockfile
 // runSign signs the lock of the project at args[0] (or the current directory)
 // and returns the exit code.
 func runSign(ctx context.Context, args []string, env ambient.Env) int {
-	signed = nil
 	code := signOne(ctx, args, env)
-	if signJSON && code == 0 {
-		if err := jsondoc.Write(os.Stdout, map[string]any{"status": "signed", "signed": signed}); err != nil {
+	if rec := signRecorderFrom(ctx); rec != nil && code == 0 {
+		if err := jsondoc.Write(os.Stdout, map[string]any{"status": "signed", "signed": rec.entries}); err != nil {
 			renderStderr(err)
 			return exitFailure
 		}
@@ -263,14 +265,26 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	return code
 }
 
-// signed collects what one run signed, for the --format json document.
-var signed []map[string]any
+// signRecorder collects what one run signed, for the --format json document. It
+// travels in the run's context: its presence means --format json.
+type signRecorder struct{ entries []map[string]any }
+
+type signRecorderKey struct{}
+
+func withSignRecorder(ctx context.Context) context.Context {
+	return context.WithValue(ctx, signRecorderKey{}, &signRecorder{})
+}
+
+func signRecorderFrom(ctx context.Context) *signRecorder {
+	rec, _ := ctx.Value(signRecorderKey{}).(*signRecorder) //nolint:errcheck // absent means text output
+	return rec
+}
 
 // reportSigned announces one signed subject: a success line on stderr, or with
 // --format json an entry of the document runSign prints on stdout.
-func reportSigned(msg string, entry map[string]any, logArgs ...any) {
-	if signJSON {
-		signed = append(signed, entry)
+func reportSigned(ctx context.Context, msg string, entry map[string]any, logArgs ...any) {
+	if rec := signRecorderFrom(ctx); rec != nil {
+		rec.entries = append(rec.entries, entry)
 		return
 	}
 	logger.Success(msg, logArgs...)
@@ -325,7 +339,7 @@ func signOne(ctx context.Context, args []string, env ambient.Env) int {
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
 	subject := signingSubject(lock)
-	reportSigned("Signed "+lockfile.FileName, map[string]any{"kind": "lock", "path": lockfile.FileName, "signer": signerLabel(info), "subject": subject, "bundle": out},
+	reportSigned(ctx, "Signed "+lockfile.FileName, map[string]any{"kind": "lock", "path": lockfile.FileName, "signer": signerLabel(info), "subject": subject, "bundle": out},
 		"signer", signerLabel(info), "subject", subject, "bundle", out)
 	return 0
 }

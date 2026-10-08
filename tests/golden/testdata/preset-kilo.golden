@@ -113,39 +113,39 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .kilo/agents/architect.md
+  remove file: .kilo/agents/tester.md
+  remove file: .kilo/commands/build.md
+  remove file: .kilo/commands/ship.md
+  remove file: .kilo/plugins/ai-rulez-hooks.js
+  remove file: .kilo/rules/always.md
+  remove file: .kilo/rules/auto.md
+  remove file: .kilo/rules/manual.md
+  remove file: .kilo/rules/typescript.md
+  remove file: .kilo/skills/deployer/SKILL.md
+  remove file: .kilo/skills/reviewer/SKILL.md
+  remove file: .kilo/skills/reviewer/references/checklist.md
+  remove file: .kilo/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove file: REVIEW.md
+  remove file: kilo.jsonc
+  remove dir (if empty): .kilo/skills/reviewer/scripts
+  remove dir (if empty): .kilo/skills/reviewer/references
+  remove dir (if empty): .kilo/skills/reviewer
+  remove dir (if empty): .kilo/skills/deployer
+  remove dir (if empty): .kilo/skills
+  remove dir (if empty): .kilo/rules
+  remove dir (if empty): .kilo/plugins
+  remove dir (if empty): .kilo/commands
+  remove dir (if empty): .kilo/agents
+  remove dir (if empty): .kilo
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .kilo/agents/architect.md
-INFO    remove file: .kilo/agents/tester.md
-INFO    remove file: .kilo/commands/build.md
-INFO    remove file: .kilo/commands/ship.md
-INFO    remove file: .kilo/plugins/ai-rulez-hooks.js
-INFO    remove file: .kilo/rules/always.md
-INFO    remove file: .kilo/rules/auto.md
-INFO    remove file: .kilo/rules/manual.md
-INFO    remove file: .kilo/rules/typescript.md
-INFO    remove file: .kilo/skills/deployer/SKILL.md
-INFO    remove file: .kilo/skills/reviewer/SKILL.md
-INFO    remove file: .kilo/skills/reviewer/references/checklist.md
-INFO    remove file: .kilo/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove file: REVIEW.md
-INFO    remove file: kilo.jsonc
-INFO    remove dir (if empty): .kilo/skills/reviewer/scripts
-INFO    remove dir (if empty): .kilo/skills/reviewer/references
-INFO    remove dir (if empty): .kilo/skills/reviewer
-INFO    remove dir (if empty): .kilo/skills/deployer
-INFO    remove dir (if empty): .kilo/skills
-INFO    remove dir (if empty): .kilo/rules
-INFO    remove dir (if empty): .kilo/plugins
-INFO    remove dir (if empty): .kilo/commands
-INFO    remove dir (if empty): .kilo/agents
-INFO    remove dir (if empty): .kilo
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=17 directories=10
+Removed generated files: 17 files, 10 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

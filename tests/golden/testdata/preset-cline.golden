@@ -115,38 +115,38 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .cline/agents/architect.yaml
+  remove file: .cline/agents/tester.yaml
+  remove file: .cline/skills/deployer/SKILL.md
+  remove file: .cline/skills/reviewer/SKILL.md
+  remove file: .cline/skills/reviewer/references/checklist.md
+  remove file: .cline/skills/reviewer/scripts/run.sh
+  remove file: .clinerules/always.md
+  remove file: .clinerules/auto.md
+  remove file: .clinerules/context-architecture.md
+  remove file: .clinerules/context-overview.md
+  remove file: .clinerules/hooks/TaskStart
+  remove file: .clinerules/manual.md
+  remove file: .clinerules/typescript.md
+  remove file: .clinerules/workflows/build.md
+  remove file: .clinerules/workflows/ship.md
+  remove file: .mcp.json
+  remove dir (if empty): .clinerules/workflows
+  remove dir (if empty): .clinerules/hooks
+  remove dir (if empty): .clinerules
+  remove dir (if empty): .cline/skills/reviewer/scripts
+  remove dir (if empty): .cline/skills/reviewer/references
+  remove dir (if empty): .cline/skills/reviewer
+  remove dir (if empty): .cline/skills/deployer
+  remove dir (if empty): .cline/skills
+  remove dir (if empty): .cline/agents
+  remove dir (if empty): .cline
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .cline/agents/architect.yaml
-INFO    remove file: .cline/agents/tester.yaml
-INFO    remove file: .cline/skills/deployer/SKILL.md
-INFO    remove file: .cline/skills/reviewer/SKILL.md
-INFO    remove file: .cline/skills/reviewer/references/checklist.md
-INFO    remove file: .cline/skills/reviewer/scripts/run.sh
-INFO    remove file: .clinerules/always.md
-INFO    remove file: .clinerules/auto.md
-INFO    remove file: .clinerules/context-architecture.md
-INFO    remove file: .clinerules/context-overview.md
-INFO    remove file: .clinerules/hooks/TaskStart
-INFO    remove file: .clinerules/manual.md
-INFO    remove file: .clinerules/typescript.md
-INFO    remove file: .clinerules/workflows/build.md
-INFO    remove file: .clinerules/workflows/ship.md
-INFO    remove file: .mcp.json
-INFO    remove dir (if empty): .clinerules/workflows
-INFO    remove dir (if empty): .clinerules/hooks
-INFO    remove dir (if empty): .clinerules
-INFO    remove dir (if empty): .cline/skills/reviewer/scripts
-INFO    remove dir (if empty): .cline/skills/reviewer/references
-INFO    remove dir (if empty): .cline/skills/reviewer
-INFO    remove dir (if empty): .cline/skills/deployer
-INFO    remove dir (if empty): .cline/skills
-INFO    remove dir (if empty): .cline/agents
-INFO    remove dir (if empty): .cline
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=16 directories=10
+Removed generated files: 16 files, 10 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

@@ -111,39 +111,39 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .kiro/agents/architect.md
+  remove file: .kiro/agents/tester.md
+  remove file: .kiro/hooks/ai-rulez.json
+  remove file: .kiro/prompts/build.md
+  remove file: .kiro/prompts/ship.md
+  remove file: .kiro/settings/mcp.json
+  remove file: .kiro/skills/deployer/SKILL.md
+  remove file: .kiro/skills/reviewer/SKILL.md
+  remove file: .kiro/skills/reviewer/references/checklist.md
+  remove file: .kiro/skills/reviewer/scripts/run.sh
+  remove file: .kiro/steering/always.md
+  remove file: .kiro/steering/auto.md
+  remove file: .kiro/steering/manual.md
+  remove file: .kiro/steering/typescript.md
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove dir (if empty): .kiro/steering
+  remove dir (if empty): .kiro/skills/reviewer/scripts
+  remove dir (if empty): .kiro/skills/reviewer/references
+  remove dir (if empty): .kiro/skills/reviewer
+  remove dir (if empty): .kiro/skills/deployer
+  remove dir (if empty): .kiro/skills
+  remove dir (if empty): .kiro/settings
+  remove dir (if empty): .kiro/prompts
+  remove dir (if empty): .kiro/hooks
+  remove dir (if empty): .kiro/agents
+  remove dir (if empty): .kiro
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .kiro/agents/architect.md
-INFO    remove file: .kiro/agents/tester.md
-INFO    remove file: .kiro/hooks/ai-rulez.json
-INFO    remove file: .kiro/prompts/build.md
-INFO    remove file: .kiro/prompts/ship.md
-INFO    remove file: .kiro/settings/mcp.json
-INFO    remove file: .kiro/skills/deployer/SKILL.md
-INFO    remove file: .kiro/skills/reviewer/SKILL.md
-INFO    remove file: .kiro/skills/reviewer/references/checklist.md
-INFO    remove file: .kiro/skills/reviewer/scripts/run.sh
-INFO    remove file: .kiro/steering/always.md
-INFO    remove file: .kiro/steering/auto.md
-INFO    remove file: .kiro/steering/manual.md
-INFO    remove file: .kiro/steering/typescript.md
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .kiro/steering
-INFO    remove dir (if empty): .kiro/skills/reviewer/scripts
-INFO    remove dir (if empty): .kiro/skills/reviewer/references
-INFO    remove dir (if empty): .kiro/skills/reviewer
-INFO    remove dir (if empty): .kiro/skills/deployer
-INFO    remove dir (if empty): .kiro/skills
-INFO    remove dir (if empty): .kiro/settings
-INFO    remove dir (if empty): .kiro/prompts
-INFO    remove dir (if empty): .kiro/hooks
-INFO    remove dir (if empty): .kiro/agents
-INFO    remove dir (if empty): .kiro
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=16 directories=11
+Removed generated files: 16 files, 11 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

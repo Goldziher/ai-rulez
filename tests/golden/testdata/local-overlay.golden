@@ -701,6 +701,197 @@ local overlay: .ai-rulez/config.local.toml
 ## step 8: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .agents/skills/build/SKILL.md
+  remove file: .agents/skills/build/agents/openai.yaml
+  remove file: .agents/skills/deployer/SKILL.md
+  remove file: .agents/skills/quick/SKILL.md
+  remove file: .agents/skills/quick/agents/openai.yaml
+  remove file: .agents/skills/reviewer/SKILL.md
+  remove file: .agents/skills/reviewer/references/checklist.md
+  remove file: .agents/skills/reviewer/scripts/run.sh
+  remove file: .agents/skills/scratch/SKILL.md
+  remove file: .agents/skills/ship/SKILL.md
+  remove file: .agents/skills/ship/agents/openai.yaml
+  remove file: .claude/agents/architect.md
+  remove file: .claude/agents/helper.md
+  remove file: .claude/agents/tester.md
+  remove file: .claude/rules/always.md
+  remove file: .claude/rules/auto.md
+  remove file: .claude/rules/lab.local.md
+  remove file: .claude/rules/manual.md
+  remove file: .claude/rules/mine.local.md
+  remove file: .claude/rules/targeted.md
+  remove file: .claude/rules/typescript.md
+  remove file: .claude/settings.json
+  remove file: .claude/skills/build/SKILL.md
+  remove file: .claude/skills/deployer/SKILL.md
+  remove file: .claude/skills/quick/SKILL.md
+  remove file: .claude/skills/reviewer/SKILL.md
+  remove file: .claude/skills/reviewer/references/checklist.md
+  remove file: .claude/skills/reviewer/scripts/run.sh
+  remove file: .claude/skills/scratch/SKILL.md
+  remove file: .claude/skills/ship/SKILL.md
+  remove file: .codex/agents/architect.toml
+  remove file: .codex/agents/helper.toml
+  remove file: .codex/agents/tester.toml
+  remove file: .codex/config.toml
+  remove file: .codex/hooks.json
+  remove file: .codex/rules/ai-rulez.rules
+  remove file: .cursor/BUGBOT.md
+  remove file: .cursor/agents/architect.md
+  remove file: .cursor/agents/helper.md
+  remove file: .cursor/agents/tester.md
+  remove file: .cursor/cli.json
+  remove file: .cursor/commands/build.md
+  remove file: .cursor/commands/quick.md
+  remove file: .cursor/commands/ship.md
+  remove file: .cursor/hooks.json
+  remove file: .cursor/mcp.json
+  remove file: .cursor/rules/always.mdc
+  remove file: .cursor/rules/auto.mdc
+  remove file: .cursor/rules/context-architecture.mdc
+  remove file: .cursor/rules/context-overview.mdc
+  remove file: .cursor/rules/lab.local.mdc
+  remove file: .cursor/rules/manual.mdc
+  remove file: .cursor/rules/mine.local.mdc
+  remove file: .cursor/rules/targeted.mdc
+  remove file: .cursor/rules/typescript.mdc
+  remove file: .gemini/agents/architect.md
+  remove file: .gemini/agents/helper.md
+  remove file: .gemini/agents/tester.md
+  remove file: .gemini/settings.json
+  remove file: .github/agents/architect.agent.md
+  remove file: .github/agents/helper.agent.md
+  remove file: .github/agents/tester.agent.md
+  remove file: .github/copilot-instructions.md
+  remove file: .github/hooks/ai-rulez.json
+  remove file: .github/instructions/ai-rulez.local.instructions.md
+  remove file: .github/instructions/always.instructions.md
+  remove file: .github/instructions/lab.local.instructions.md
+  remove file: .github/instructions/mine.local.instructions.md
+  remove file: .github/instructions/typescript.instructions.md
+  remove file: .github/prompts/build.prompt.md
+  remove file: .github/prompts/quick.prompt.md
+  remove file: .github/prompts/ship.prompt.md
+  remove file: .github/skills/deployer/SKILL.md
+  remove file: .github/skills/reviewer/SKILL.md
+  remove file: .github/skills/reviewer/references/checklist.md
+  remove file: .github/skills/reviewer/scripts/run.sh
+  remove file: .github/skills/scratch/SKILL.md
+  remove file: .kilo/agents/architect.md
+  remove file: .kilo/agents/helper.md
+  remove file: .kilo/agents/tester.md
+  remove file: .kilo/commands/build.md
+  remove file: .kilo/commands/quick.md
+  remove file: .kilo/commands/ship.md
+  remove file: .kilo/plugins/ai-rulez-hooks.js
+  remove file: .kilo/rules/always.md
+  remove file: .kilo/rules/auto.md
+  remove file: .kilo/rules/lab.local.md
+  remove file: .kilo/rules/manual.md
+  remove file: .kilo/rules/mine.local.md
+  remove file: .kilo/rules/typescript.md
+  remove file: .kilo/skills/deployer/SKILL.md
+  remove file: .kilo/skills/reviewer/SKILL.md
+  remove file: .kilo/skills/reviewer/references/checklist.md
+  remove file: .kilo/skills/reviewer/scripts/run.sh
+  remove file: .kilo/skills/scratch/SKILL.md
+  remove file: .mcp.json
+  remove file: .opencode/agents/architect.md
+  remove file: .opencode/agents/helper.md
+  remove file: .opencode/agents/tester.md
+  remove file: .opencode/commands/build.md
+  remove file: .opencode/commands/quick.md
+  remove file: .opencode/commands/ship.md
+  remove file: .opencode/plugins/ai-rulez-hooks.js
+  remove file: .opencode/skills/deployer/SKILL.md
+  remove file: .opencode/skills/reviewer/SKILL.md
+  remove file: .opencode/skills/reviewer/references/checklist.md
+  remove file: .opencode/skills/reviewer/scripts/run.sh
+  remove file: .opencode/skills/scratch/SKILL.md
+  remove file: .vscode/mcp.json
+  remove file: .vscode/settings.json
+  remove file: AGENTS.local.md
+  remove file: AGENTS.md
+  remove file: AGENTS.override.md
+  remove file: CLAUDE.local.md
+  remove file: CLAUDE.md
+  remove file: GEMINI.local.md
+  remove file: GEMINI.md
+  remove file: REVIEW.md
+  remove file: kilo.jsonc
+  remove file: opencode.json
+  remove dir (if empty): .vscode
+  remove dir (if empty): .opencode/skills/scratch
+  remove dir (if empty): .opencode/skills/reviewer/scripts
+  remove dir (if empty): .opencode/skills/reviewer/references
+  remove dir (if empty): .opencode/skills/reviewer
+  remove dir (if empty): .opencode/skills/deployer
+  remove dir (if empty): .opencode/skills
+  remove dir (if empty): .opencode/plugins
+  remove dir (if empty): .opencode/commands
+  remove dir (if empty): .opencode/agents
+  remove dir (if empty): .opencode
+  remove dir (if empty): .kilo/skills/scratch
+  remove dir (if empty): .kilo/skills/reviewer/scripts
+  remove dir (if empty): .kilo/skills/reviewer/references
+  remove dir (if empty): .kilo/skills/reviewer
+  remove dir (if empty): .kilo/skills/deployer
+  remove dir (if empty): .kilo/skills
+  remove dir (if empty): .kilo/rules
+  remove dir (if empty): .kilo/plugins
+  remove dir (if empty): .kilo/commands
+  remove dir (if empty): .kilo/agents
+  remove dir (if empty): .kilo
+  remove dir (if empty): .github/skills/scratch
+  remove dir (if empty): .github/skills/reviewer/scripts
+  remove dir (if empty): .github/skills/reviewer/references
+  remove dir (if empty): .github/skills/reviewer
+  remove dir (if empty): .github/skills/deployer
+  remove dir (if empty): .github/skills
+  remove dir (if empty): .github/prompts
+  remove dir (if empty): .github/instructions
+  remove dir (if empty): .github/hooks
+  remove dir (if empty): .github/agents
+  remove dir (if empty): .github
+  remove dir (if empty): .gemini/agents
+  remove dir (if empty): .gemini
+  remove dir (if empty): .cursor/rules
+  remove dir (if empty): .cursor/commands
+  remove dir (if empty): .cursor/agents
+  remove dir (if empty): .cursor
+  remove dir (if empty): .codex/rules
+  remove dir (if empty): .codex/agents
+  remove dir (if empty): .codex
+  remove dir (if empty): .claude/skills/ship
+  remove dir (if empty): .claude/skills/scratch
+  remove dir (if empty): .claude/skills/reviewer/scripts
+  remove dir (if empty): .claude/skills/reviewer/references
+  remove dir (if empty): .claude/skills/reviewer
+  remove dir (if empty): .claude/skills/quick
+  remove dir (if empty): .claude/skills/deployer
+  remove dir (if empty): .claude/skills/build
+  remove dir (if empty): .claude/skills
+  remove dir (if empty): .claude/rules
+  remove dir (if empty): .claude/agents
+  remove dir (if empty): .claude
+  remove dir (if empty): .agents/skills/ship/agents
+  remove dir (if empty): .agents/skills/ship
+  remove dir (if empty): .agents/skills/scratch
+  remove dir (if empty): .agents/skills/reviewer/scripts
+  remove dir (if empty): .agents/skills/reviewer/references
+  remove dir (if empty): .agents/skills/reviewer
+  remove dir (if empty): .agents/skills/quick/agents
+  remove dir (if empty): .agents/skills/quick
+  remove dir (if empty): .agents/skills/deployer
+  remove dir (if empty): .agents/skills/build/agents
+  remove dir (if empty): .agents/skills/build
+  remove dir (if empty): .agents/skills
+  remove dir (if empty): .agents
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
 WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
@@ -711,197 +902,6 @@ WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 WARN  Machine-local skills, agents, commands or checks have no per-item output for this preset and were not written preset=gemini items=command quick
-INFO  Clean plan profile=default
-INFO    remove file: .agents/skills/build/SKILL.md
-INFO    remove file: .agents/skills/build/agents/openai.yaml
-INFO    remove file: .agents/skills/deployer/SKILL.md
-INFO    remove file: .agents/skills/quick/SKILL.md
-INFO    remove file: .agents/skills/quick/agents/openai.yaml
-INFO    remove file: .agents/skills/reviewer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/references/checklist.md
-INFO    remove file: .agents/skills/reviewer/scripts/run.sh
-INFO    remove file: .agents/skills/scratch/SKILL.md
-INFO    remove file: .agents/skills/ship/SKILL.md
-INFO    remove file: .agents/skills/ship/agents/openai.yaml
-INFO    remove file: .claude/agents/architect.md
-INFO    remove file: .claude/agents/helper.md
-INFO    remove file: .claude/agents/tester.md
-INFO    remove file: .claude/rules/always.md
-INFO    remove file: .claude/rules/auto.md
-INFO    remove file: .claude/rules/lab.local.md
-INFO    remove file: .claude/rules/manual.md
-INFO    remove file: .claude/rules/mine.local.md
-INFO    remove file: .claude/rules/targeted.md
-INFO    remove file: .claude/rules/typescript.md
-INFO    remove file: .claude/settings.json
-INFO    remove file: .claude/skills/build/SKILL.md
-INFO    remove file: .claude/skills/deployer/SKILL.md
-INFO    remove file: .claude/skills/quick/SKILL.md
-INFO    remove file: .claude/skills/reviewer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/references/checklist.md
-INFO    remove file: .claude/skills/reviewer/scripts/run.sh
-INFO    remove file: .claude/skills/scratch/SKILL.md
-INFO    remove file: .claude/skills/ship/SKILL.md
-INFO    remove file: .codex/agents/architect.toml
-INFO    remove file: .codex/agents/helper.toml
-INFO    remove file: .codex/agents/tester.toml
-INFO    remove file: .codex/config.toml
-INFO    remove file: .codex/hooks.json
-INFO    remove file: .codex/rules/ai-rulez.rules
-INFO    remove file: .cursor/BUGBOT.md
-INFO    remove file: .cursor/agents/architect.md
-INFO    remove file: .cursor/agents/helper.md
-INFO    remove file: .cursor/agents/tester.md
-INFO    remove file: .cursor/cli.json
-INFO    remove file: .cursor/commands/build.md
-INFO    remove file: .cursor/commands/quick.md
-INFO    remove file: .cursor/commands/ship.md
-INFO    remove file: .cursor/hooks.json
-INFO    remove file: .cursor/mcp.json
-INFO    remove file: .cursor/rules/always.mdc
-INFO    remove file: .cursor/rules/auto.mdc
-INFO    remove file: .cursor/rules/context-architecture.mdc
-INFO    remove file: .cursor/rules/context-overview.mdc
-INFO    remove file: .cursor/rules/lab.local.mdc
-INFO    remove file: .cursor/rules/manual.mdc
-INFO    remove file: .cursor/rules/mine.local.mdc
-INFO    remove file: .cursor/rules/targeted.mdc
-INFO    remove file: .cursor/rules/typescript.mdc
-INFO    remove file: .gemini/agents/architect.md
-INFO    remove file: .gemini/agents/helper.md
-INFO    remove file: .gemini/agents/tester.md
-INFO    remove file: .gemini/settings.json
-INFO    remove file: .github/agents/architect.agent.md
-INFO    remove file: .github/agents/helper.agent.md
-INFO    remove file: .github/agents/tester.agent.md
-INFO    remove file: .github/copilot-instructions.md
-INFO    remove file: .github/hooks/ai-rulez.json
-INFO    remove file: .github/instructions/ai-rulez.local.instructions.md
-INFO    remove file: .github/instructions/always.instructions.md
-INFO    remove file: .github/instructions/lab.local.instructions.md
-INFO    remove file: .github/instructions/mine.local.instructions.md
-INFO    remove file: .github/instructions/typescript.instructions.md
-INFO    remove file: .github/prompts/build.prompt.md
-INFO    remove file: .github/prompts/quick.prompt.md
-INFO    remove file: .github/prompts/ship.prompt.md
-INFO    remove file: .github/skills/deployer/SKILL.md
-INFO    remove file: .github/skills/reviewer/SKILL.md
-INFO    remove file: .github/skills/reviewer/references/checklist.md
-INFO    remove file: .github/skills/reviewer/scripts/run.sh
-INFO    remove file: .github/skills/scratch/SKILL.md
-INFO    remove file: .kilo/agents/architect.md
-INFO    remove file: .kilo/agents/helper.md
-INFO    remove file: .kilo/agents/tester.md
-INFO    remove file: .kilo/commands/build.md
-INFO    remove file: .kilo/commands/quick.md
-INFO    remove file: .kilo/commands/ship.md
-INFO    remove file: .kilo/plugins/ai-rulez-hooks.js
-INFO    remove file: .kilo/rules/always.md
-INFO    remove file: .kilo/rules/auto.md
-INFO    remove file: .kilo/rules/lab.local.md
-INFO    remove file: .kilo/rules/manual.md
-INFO    remove file: .kilo/rules/mine.local.md
-INFO    remove file: .kilo/rules/typescript.md
-INFO    remove file: .kilo/skills/deployer/SKILL.md
-INFO    remove file: .kilo/skills/reviewer/SKILL.md
-INFO    remove file: .kilo/skills/reviewer/references/checklist.md
-INFO    remove file: .kilo/skills/reviewer/scripts/run.sh
-INFO    remove file: .kilo/skills/scratch/SKILL.md
-INFO    remove file: .mcp.json
-INFO    remove file: .opencode/agents/architect.md
-INFO    remove file: .opencode/agents/helper.md
-INFO    remove file: .opencode/agents/tester.md
-INFO    remove file: .opencode/commands/build.md
-INFO    remove file: .opencode/commands/quick.md
-INFO    remove file: .opencode/commands/ship.md
-INFO    remove file: .opencode/plugins/ai-rulez-hooks.js
-INFO    remove file: .opencode/skills/deployer/SKILL.md
-INFO    remove file: .opencode/skills/reviewer/SKILL.md
-INFO    remove file: .opencode/skills/reviewer/references/checklist.md
-INFO    remove file: .opencode/skills/reviewer/scripts/run.sh
-INFO    remove file: .opencode/skills/scratch/SKILL.md
-INFO    remove file: .vscode/mcp.json
-INFO    remove file: .vscode/settings.json
-INFO    remove file: AGENTS.local.md
-INFO    remove file: AGENTS.md
-INFO    remove file: AGENTS.override.md
-INFO    remove file: CLAUDE.local.md
-INFO    remove file: CLAUDE.md
-INFO    remove file: GEMINI.local.md
-INFO    remove file: GEMINI.md
-INFO    remove file: REVIEW.md
-INFO    remove file: kilo.jsonc
-INFO    remove file: opencode.json
-INFO    remove dir (if empty): .vscode
-INFO    remove dir (if empty): .opencode/skills/scratch
-INFO    remove dir (if empty): .opencode/skills/reviewer/scripts
-INFO    remove dir (if empty): .opencode/skills/reviewer/references
-INFO    remove dir (if empty): .opencode/skills/reviewer
-INFO    remove dir (if empty): .opencode/skills/deployer
-INFO    remove dir (if empty): .opencode/skills
-INFO    remove dir (if empty): .opencode/plugins
-INFO    remove dir (if empty): .opencode/commands
-INFO    remove dir (if empty): .opencode/agents
-INFO    remove dir (if empty): .opencode
-INFO    remove dir (if empty): .kilo/skills/scratch
-INFO    remove dir (if empty): .kilo/skills/reviewer/scripts
-INFO    remove dir (if empty): .kilo/skills/reviewer/references
-INFO    remove dir (if empty): .kilo/skills/reviewer
-INFO    remove dir (if empty): .kilo/skills/deployer
-INFO    remove dir (if empty): .kilo/skills
-INFO    remove dir (if empty): .kilo/rules
-INFO    remove dir (if empty): .kilo/plugins
-INFO    remove dir (if empty): .kilo/commands
-INFO    remove dir (if empty): .kilo/agents
-INFO    remove dir (if empty): .kilo
-INFO    remove dir (if empty): .github/skills/scratch
-INFO    remove dir (if empty): .github/skills/reviewer/scripts
-INFO    remove dir (if empty): .github/skills/reviewer/references
-INFO    remove dir (if empty): .github/skills/reviewer
-INFO    remove dir (if empty): .github/skills/deployer
-INFO    remove dir (if empty): .github/skills
-INFO    remove dir (if empty): .github/prompts
-INFO    remove dir (if empty): .github/instructions
-INFO    remove dir (if empty): .github/hooks
-INFO    remove dir (if empty): .github/agents
-INFO    remove dir (if empty): .github
-INFO    remove dir (if empty): .gemini/agents
-INFO    remove dir (if empty): .gemini
-INFO    remove dir (if empty): .cursor/rules
-INFO    remove dir (if empty): .cursor/commands
-INFO    remove dir (if empty): .cursor/agents
-INFO    remove dir (if empty): .cursor
-INFO    remove dir (if empty): .codex/rules
-INFO    remove dir (if empty): .codex/agents
-INFO    remove dir (if empty): .codex
-INFO    remove dir (if empty): .claude/skills/ship
-INFO    remove dir (if empty): .claude/skills/scratch
-INFO    remove dir (if empty): .claude/skills/reviewer/scripts
-INFO    remove dir (if empty): .claude/skills/reviewer/references
-INFO    remove dir (if empty): .claude/skills/reviewer
-INFO    remove dir (if empty): .claude/skills/quick
-INFO    remove dir (if empty): .claude/skills/deployer
-INFO    remove dir (if empty): .claude/skills/build
-INFO    remove dir (if empty): .claude/skills
-INFO    remove dir (if empty): .claude/rules
-INFO    remove dir (if empty): .claude/agents
-INFO    remove dir (if empty): .claude
-INFO    remove dir (if empty): .agents/skills/ship/agents
-INFO    remove dir (if empty): .agents/skills/ship
-INFO    remove dir (if empty): .agents/skills/scratch
-INFO    remove dir (if empty): .agents/skills/reviewer/scripts
-INFO    remove dir (if empty): .agents/skills/reviewer/references
-INFO    remove dir (if empty): .agents/skills/reviewer
-INFO    remove dir (if empty): .agents/skills/quick/agents
-INFO    remove dir (if empty): .agents/skills/quick
-INFO    remove dir (if empty): .agents/skills/deployer
-INFO    remove dir (if empty): .agents/skills/build/agents
-INFO    remove dir (if empty): .agents/skills/build
-INFO    remove dir (if empty): .agents/skills
-INFO    remove dir (if empty): .agents
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 WARN  Machine-local content has no output for this preset and was not written preset=cursor items=context lab, context notes
 WARN  Machine-local content has no output for this preset and was not written preset=kilo items=context lab, context notes
@@ -910,7 +910,7 @@ WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 WARN  Machine-local skills, agents, commands or checks have no per-item output for this preset and were not written preset=gemini items=command quick
-INFO  Removed generated files files=120 directories=67
+Removed generated files: 120 files, 67 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

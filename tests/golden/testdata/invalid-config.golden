@@ -18,7 +18,6 @@ Available presets: [aiassistant amp antigravity augment baz bob claude cline cod
 exit: 1
 --- stdout
 --- stderr
-ERROR Configuration failed schema validation path=$ROOT/.ai-rulez/config.toml
 Error: unknown built-in preset: "not-a-preset"
 
 Hint: Use a valid built-in preset name
@@ -32,7 +31,6 @@ Available presets: [aiassistant amp antigravity augment baz bob claude cline cod
 exit: 1
 --- stdout
 --- stderr
-ERROR Configuration failed schema validation path=$ROOT/.ai-rulez/config.toml
 Error: unknown built-in preset: "not-a-preset"
 
 Hint: Use a valid built-in preset name

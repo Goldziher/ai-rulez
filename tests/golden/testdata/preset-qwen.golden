@@ -108,37 +108,37 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .qwen/agents/architect.md
+  remove file: .qwen/agents/tester.md
+  remove file: .qwen/commands/build.md
+  remove file: .qwen/commands/ship.md
+  remove file: .qwen/review-rules.md
+  remove file: .qwen/rules/always.md
+  remove file: .qwen/rules/auto.md
+  remove file: .qwen/rules/manual.md
+  remove file: .qwen/rules/typescript.md
+  remove file: .qwen/settings.json
+  remove file: .qwen/skills/deployer/SKILL.md
+  remove file: .qwen/skills/reviewer/SKILL.md
+  remove file: .qwen/skills/reviewer/references/checklist.md
+  remove file: .qwen/skills/reviewer/scripts/run.sh
+  remove file: QWEN.md
+  remove dir (if empty): .qwen/skills/reviewer/scripts
+  remove dir (if empty): .qwen/skills/reviewer/references
+  remove dir (if empty): .qwen/skills/reviewer
+  remove dir (if empty): .qwen/skills/deployer
+  remove dir (if empty): .qwen/skills
+  remove dir (if empty): .qwen/rules
+  remove dir (if empty): .qwen/commands
+  remove dir (if empty): .qwen/agents
+  remove dir (if empty): .qwen
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .qwen/agents/architect.md
-INFO    remove file: .qwen/agents/tester.md
-INFO    remove file: .qwen/commands/build.md
-INFO    remove file: .qwen/commands/ship.md
-INFO    remove file: .qwen/review-rules.md
-INFO    remove file: .qwen/rules/always.md
-INFO    remove file: .qwen/rules/auto.md
-INFO    remove file: .qwen/rules/manual.md
-INFO    remove file: .qwen/rules/typescript.md
-INFO    remove file: .qwen/settings.json
-INFO    remove file: .qwen/skills/deployer/SKILL.md
-INFO    remove file: .qwen/skills/reviewer/SKILL.md
-INFO    remove file: .qwen/skills/reviewer/references/checklist.md
-INFO    remove file: .qwen/skills/reviewer/scripts/run.sh
-INFO    remove file: QWEN.md
-INFO    remove dir (if empty): .qwen/skills/reviewer/scripts
-INFO    remove dir (if empty): .qwen/skills/reviewer/references
-INFO    remove dir (if empty): .qwen/skills/reviewer
-INFO    remove dir (if empty): .qwen/skills/deployer
-INFO    remove dir (if empty): .qwen/skills
-INFO    remove dir (if empty): .qwen/rules
-INFO    remove dir (if empty): .qwen/commands
-INFO    remove dir (if empty): .qwen/agents
-INFO    remove dir (if empty): .qwen
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=16 directories=9
+Removed generated files: 16 files, 9 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755
