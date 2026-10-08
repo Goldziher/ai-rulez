@@ -1,13 +1,10 @@
 package commands
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +41,7 @@ For git sources, you can specify:
 By default, all content types (rules, context, skills) are included.
 Use --include to specify which types: rules,context,skills`,
 	Args: cobra.ExactArgs(2),
-	Run:  runIncludeAdd,
+	RunE: runIncludeAdd,
 }
 
 var includeRemoveCmd = &cobra.Command{
@@ -54,7 +51,7 @@ var includeRemoveCmd = &cobra.Command{
 
 Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runIncludeRemove,
+	RunE: runIncludeRemove,
 }
 
 var includeListCmd = &cobra.Command{
@@ -62,7 +59,7 @@ var includeListCmd = &cobra.Command{
 	Short: "List all includes",
 	Long:  `List all configured include sources.` + localListHint,
 	Args:  cobra.NoArgs,
-	Run:   runIncludeList,
+	RunE:  runIncludeList,
 }
 
 func init() {
@@ -87,7 +84,7 @@ func init() {
 	addJSONFormat(includeListCmd.Flags(), &includeJSON, "j")
 }
 
-func runIncludeAdd(cmd *cobra.Command, args []string) {
+func runIncludeAdd(cmd *cobra.Command, args []string) error {
 	name := args[0]
 	source := args[1]
 
@@ -105,7 +102,7 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 	if includeLocal {
 		op = op.Local()
@@ -122,56 +119,49 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 	}
 
 	if err := op.AddInclude(ctx, req); err != nil {
-		fatal("Failed to add include", err)
+		return failMsg("Failed to add include", err)
 	}
 
-	logger.Info("Include added successfully",
-		"name", name,
-		"source", incl.RedactURL(source),
-	)
+	return nil
 }
 
-func runIncludeRemove(cmd *cobra.Command, args []string) {
+func runIncludeRemove(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-	confirmRemovalUnlessYes(includeForce, "include", name, "Operation canceled")
+	if err := confirmRemovalUnlessYes(includeForce, "include", name, "Operation canceled"); err != nil {
+		return fail(err)
+	}
 
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 	if includeLocal {
 		op = op.Local()
 	}
 
 	if err := op.RemoveInclude(ctx, name); err != nil {
-		fatal("Failed to remove include", err)
+		return failMsg("Failed to remove include", err)
 	}
 
-	logger.Info("Include removed successfully", "name", name)
+	return nil
 }
 
-func runIncludeList(cmd *cobra.Command, args []string) {
+func runIncludeList(cmd *cobra.Command, _ []string) error {
+	out := outFor(cmd)
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 
 	includes, err := op.ListIncludes(ctx)
 	if err != nil {
-		fatal("Failed to list includes", err)
-	}
-
-	if len(includes) == 0 && !includeJSON {
-		logger.Info("No includes found")
-		logLocalEntriesHint("includes")
-		return
+		return failMsg("Failed to list includes", err)
 	}
 
 	if includeJSON {
-		// Output as JSON
 		output := make([]map[string]interface{}, len(includes))
 		for i, inc := range includes {
 			output[i] = map[string]interface{}{
@@ -180,19 +170,18 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 				keyType:   inc.Type,
 			}
 		}
-		data, err := jsondoc.Marshal(output)
-		if err != nil {
-			fatal("Failed to marshal JSON", err)
-		}
-		fmt.Print(string(data))
-	} else {
-		// Output as human-readable table
-		logger.Info("Includes:")
-		for _, inc := range includes {
-			sourceInfo := fmt.Sprintf("[%s]", inc.Type)
-			logger.Info(fmt.Sprintf("  • %s %s", inc.Name, sourceInfo))
-			logger.Debug(fmt.Sprintf("    Source: %s", incl.RedactURL(inc.Source)))
-		}
-		logLocalEntriesHint("includes")
+		return writeListJSON(out.Stdout(), output)
 	}
+	if len(includes) == 0 {
+		out.Info("No includes found\n")
+		logLocalEntriesHint("includes")
+		return nil
+	}
+	out.Result("Includes:\n")
+	for _, inc := range includes {
+		out.Result("  • %s [%s]\n", inc.Name, inc.Type)
+		out.Result("    Source: %s\n", incl.RedactURL(inc.Source))
+	}
+	logLocalEntriesHint("includes")
+	return nil
 }

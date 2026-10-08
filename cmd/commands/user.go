@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/render"
 )
 
 var (
@@ -160,7 +161,7 @@ func printUserPlan(home string, plan *generator.UserPlan) {
 }
 
 // runUserClean handles `clean --user`.
-func runUserClean() error {
+func runUserClean(out render.Out) error {
 	gen, cfg, err := newUserGenerator(cmdContext())
 	if err != nil {
 		return err
@@ -171,13 +172,13 @@ func runUserClean() error {
 		return err //nolint:wrapcheck // already contextual
 	}
 	if plan.Empty() {
-		logger.Success("Nothing to clean: no user-level generated files found", "profile", plan.Profile)
-		return nil
+		return writeCleanResult(out, cfg.BaseDir, plan, cleanDryRun, "Nothing to clean: no user-level generated files found")
 	}
-	printCleanPlan(cfg.BaseDir, plan)
 	if cleanDryRun {
-		logger.Info("Dry run: no files were removed")
-		return nil
+		return writeCleanResult(out, cfg.BaseDir, plan, true, "Dry run: no files were removed")
+	}
+	if cleanFormat != formatJSON {
+		printCleanPlan(out.Stdout(), cfg.BaseDir, plan)
 	}
 	if err := confirmRemovalUnlessYes(cleanForce, "", fmt.Sprintf("%d generated file(s) in %s", len(plan.Files), cfg.BaseDir), "Clean user-level files"); err != nil {
 		return err
@@ -186,7 +187,10 @@ func runUserClean() error {
 	if _, err := gen.Clean(profile, opts); err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
-	logger.Success("Removed user-level generated files", "files", len(plan.Files), "directories", len(plan.Dirs))
+	if cleanFormat == formatJSON {
+		return writeCleanDocument(out.Stdout(), cfg.BaseDir, plan, false)
+	}
+	out.Info("Removed user-level generated files: %d files, %d directories\n", len(plan.Files), len(plan.Dirs))
 	return nil
 }
 
@@ -212,18 +216,13 @@ func handleUserGenerate(args []string) bool {
 }
 
 // handleUserClean runs `clean --user` when the flag is set and reports whether it
-// did, exiting non-zero on failure.
-func handleUserClean(args []string) bool {
+// did, with the error it ended with.
+func handleUserClean(out render.Out, args []string) (bool, error) {
 	if !userScope {
-		return false
+		return false, nil
 	}
 	if len(args) > 0 {
-		fmtError(oops.Errorf("--user cannot be combined with a config-file argument; use --config to choose the user config"))
-		os.Exit(1)
+		return true, fail(oops.Errorf("--user cannot be combined with a config-file argument; use --config to choose the user config"))
 	}
-	if err := runUserClean(); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-	return true
+	return true, fail(runUserClean(out))
 }

@@ -3,14 +3,14 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +32,7 @@ With --placement, print where every skill and command ends up: core (generated
 into the assistants' own directories) or plugin-only (shipped by plugins), with
 the plugins that bundle it and a flag on plugin-only items nobody can reach.`,
 	Args: cobra.NoArgs,
-	Run:  runListRoot,
+	RunE: runListRoot,
 }
 
 var listRulesCmd = &cobra.Command{
@@ -42,7 +42,7 @@ var listRulesCmd = &cobra.Command{
 
 You can filter by domain using --domain flag.`,
 	Args: cobra.NoArgs,
-	Run:  runListRules,
+	RunE: runListRules,
 }
 
 var listContextCmd = &cobra.Command{
@@ -52,7 +52,7 @@ var listContextCmd = &cobra.Command{
 
 You can filter by domain using --domain flag.`,
 	Args: cobra.NoArgs,
-	Run:  runListContext,
+	RunE: runListContext,
 }
 
 var listSkillsCmd = &cobra.Command{
@@ -62,21 +62,25 @@ var listSkillsCmd = &cobra.Command{
 
 You can filter by domain using --domain flag.`,
 	Args: cobra.NoArgs,
-	Run:  runListSkills,
+	RunE: runListSkills,
 }
 
 var listAgentsCmd = &cobra.Command{
 	Use:   crud.ContentTypeAgents,
 	Short: "List all agents",
 	Args:  cobra.NoArgs,
-	Run:   func(_ *cobra.Command, _ []string) { runListItems(crud.ContentTypeAgents, "Agents", "agents") },
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return runListItems(cmd, crud.ContentTypeAgents, "Agents", "agents")
+	},
 }
 
 var listCommandsCmd = &cobra.Command{
 	Use:   crud.ContentTypeCommands,
 	Short: "List all commands",
 	Args:  cobra.NoArgs,
-	Run:   func(_ *cobra.Command, _ []string) { runListItems(crud.ContentTypeCommands, "Commands", "commands") },
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return runListItems(cmd, crud.ContentTypeCommands, "Commands", "commands")
+	},
 }
 
 var listChecksCmd = &cobra.Command{
@@ -84,7 +88,9 @@ var listChecksCmd = &cobra.Command{
 	Aliases: []string{"check"},
 	Short:   "List all code-review checks",
 	Args:    cobra.NoArgs,
-	Run:     func(_ *cobra.Command, _ []string) { runListItems(crud.ContentTypeChecks, "Checks", "checks") },
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return runListItems(cmd, crud.ContentTypeChecks, "Checks", "checks")
+	},
 }
 
 func init() {
@@ -106,83 +112,20 @@ func init() {
 	ListCmd.AddCommand(listSkillsCmd)
 }
 
-func runListRules(cmd *cobra.Command, args []string) {
-	ctx := cmdContext()
-	op, err := newContentOperator(listLocal)
-	if err != nil {
-		fatal("Failed to create CRUD operator", err)
-	}
-
-	loadListedConfig(ctx)
-	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeRules)
-	if err != nil {
-		fatal("Failed to list rules", err)
-	}
-
-	if len(files) == 0 && !listJSON {
-		logger.Info("No rules found")
-		return
-	}
-
-	if listJSON {
-		outputListJSON(crud.ContentTypeRules, files)
-	} else {
-		outputListTable("Rules", files)
-	}
+func runListRules(cmd *cobra.Command, _ []string) error {
+	return runListItems(cmd, crud.ContentTypeRules, "Rules", "rules")
 }
 
-func runListContext(cmd *cobra.Command, args []string) {
-	ctx := cmdContext()
-	op, err := newContentOperator(listLocal)
-	if err != nil {
-		fatal("Failed to create CRUD operator", err)
-	}
-
-	loadListedConfig(ctx)
-	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeContext)
-	if err != nil {
-		fatal("Failed to list context", err)
-	}
-
-	if len(files) == 0 && !listJSON {
-		logger.Info("No context files found")
-		return
-	}
-
-	if listJSON {
-		outputListJSON(crud.ContentTypeContext, files)
-	} else {
-		outputListTable("Context", files)
-	}
+func runListContext(cmd *cobra.Command, _ []string) error {
+	return runListItems(cmd, crud.ContentTypeContext, "Context", "context files")
 }
 
-func runListSkills(cmd *cobra.Command, args []string) {
-	ctx := cmdContext()
-	op, err := newContentOperator(listLocal)
-	if err != nil {
-		fatal("Failed to create CRUD operator", err)
-	}
-
-	loadListedConfig(ctx)
-	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeSkills)
-	if err != nil {
-		fatal("Failed to list skills", err)
-	}
-
-	if len(files) == 0 && !listJSON {
-		logger.Info("No skills found")
-		return
-	}
-
-	if listJSON {
-		outputListJSON(crud.ContentTypeSkills, files)
-	} else {
-		outputListTable("Skills", files)
-	}
+func runListSkills(cmd *cobra.Command, _ []string) error {
+	return runListItems(cmd, crud.ContentTypeSkills, "Skills", "skills")
 }
 
-// outputListJSON outputs file list as JSON
-func outputListJSON(fileType string, files []crud.FileInfo) {
+// outputListJSON writes the file list as a JSON document to w.
+func outputListJSON(w io.Writer, files []crud.FileInfo) error {
 	output := make([]map[string]interface{}, len(files))
 	for i, file := range files {
 		output[i] = map[string]interface{}{
@@ -196,16 +139,16 @@ func outputListJSON(fileType string, files []crud.FileInfo) {
 	}
 	data, err := jsondoc.Marshal(output)
 	if err != nil {
-		fatal("Failed to marshal JSON", err)
+		return failMsg("Failed to marshal JSON", err)
 	}
-	fmt.Print(string(data))
+	_, err = w.Write(data)
+	return err //nolint:wrapcheck // a write failure
 }
 
-// outputListTable outputs file list as human-readable table
-func outputListTable(title string, files []crud.FileInfo) {
-	logger.Info(fmt.Sprintf("%s:", title))
+// outputListTable writes the file list, grouped by domain, as a human-readable table to w.
+func outputListTable(w io.Writer, title string, files []crud.FileInfo) {
+	writef(w, "%s:\n", title)
 
-	// Group by domain
 	byDomain := make(map[string][]crud.FileInfo)
 	for _, file := range files {
 		if file.Domain == "" {
@@ -214,11 +157,15 @@ func outputListTable(title string, files []crud.FileInfo) {
 			byDomain[file.Domain] = append(byDomain[file.Domain], file)
 		}
 	}
+	domains := make([]string, 0, len(byDomain))
+	for d := range byDomain {
+		domains = append(domains, d)
+	}
+	sort.Strings(domains)
 
-	// Output grouped by domain
-	for domain, domainFiles := range byDomain {
-		logger.Info(fmt.Sprintf("  %s:", domain))
-		for _, file := range domainFiles {
+	for _, domain := range domains {
+		writef(w, "  %s:\n", domain)
+		for _, file := range byDomain[domain] {
 			info := fmt.Sprintf("    • %s", file.Name)
 			if file.Priority != "" {
 				info += fmt.Sprintf(" [%s]", file.Priority)
@@ -226,81 +173,88 @@ func outputListTable(title string, files []crud.FileInfo) {
 			if len(file.Targets) > 0 {
 				info += fmt.Sprintf(" (targets: %v)", file.Targets)
 			}
-			logger.Info(info)
+			writeln(w, info)
 		}
 	}
 }
 
-func runListItems(ftype, title, noun string) {
+// runListItems lists one content type. The list is the command's result and
+// goes to stdout, so -q never hides it; "none found" is a diagnostic.
+func runListItems(cmd *cobra.Command, ftype, title, noun string) error {
+	out := outFor(cmd)
+	ctx := cmdContext()
 	op, err := newContentOperator(listLocal)
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
-	loadListedConfig(cmdContext())
-	files, err := op.ListFiles(cmdContext(), listDomain, ftype)
+	if err := loadListedConfig(ctx); err != nil {
+		return err
+	}
+	files, err := op.ListFiles(ctx, listDomain, ftype)
 	if err != nil {
-		logger.Error("Failed to list "+noun, "error", err)
-		os.Exit(1)
-	}
-	if len(files) == 0 && !listJSON {
-		logger.Info("No " + noun + " found")
-		return
+		return failMsg("Failed to list "+noun, err)
 	}
 	if listJSON {
-		outputListJSON(ftype, files)
-	} else {
-		outputListTable(title, files)
+		return outputListJSON(out.Stdout(), files)
 	}
+	if len(files) == 0 {
+		out.Info("No %s found\n", noun)
+		return nil
+	}
+	outputListTable(out.Stdout(), title, files)
+	return nil
 }
 
-// loadListedConfig loads the project before a listing and exits 1 when the
+// loadListedConfig loads the project before a listing and fails (exit 1) when the
 // configuration does not load (a syntax error, a V2/V3 config file), the code
 // every other command uses for it. The lists read the content tree only; an
 // include that cannot be resolved (nothing cached, no network is used) is not an
 // error here but a warning from the load, which says what the listing leaves out.
 // The machine-local tree (--local) gets the check without the include warnings.
-func loadListedConfig(ctx context.Context) {
+func loadListedConfig(ctx context.Context) error {
 	ctx = config.WithOfflineIncludes(config.WithUnresolvedIncludesTolerated(ctx))
 	opts := []config.LoadOption{config.WithoutLocal()}
 	if listLocal {
 		opts = append(opts, config.WithoutRemote())
 	}
 	if _, err := loadConfigForCommand(ctx, nil, opts...); err != nil {
-		fatal("Failed to load config", err)
+		return failMsg("Failed to load config", err)
 	}
+	return nil
 }
 
-func runListRoot(cmd *cobra.Command, _ []string) {
+func runListRoot(cmd *cobra.Command, _ []string) error {
 	if !listPlacement {
 		// Nothing was asked for: say what can be listed, as an error, not as a
 		// help page a script cannot tell from success.
-		fmt.Fprintf(os.Stderr, "Error: specify what to list: rules, context, skills, agents, commands or checks\n\nUsage:\n  %s <rules|context|skills|agents|commands|checks> [flags]\n\nRun \"%s --help\" for details and examples\n",
-			cmd.CommandPath(), cmd.CommandPath())
-		os.Exit(1)
+		return fail(fmt.Errorf("specify what to list: rules, context, skills, agents, commands or checks\n\nUsage:\n  %s <rules|context|skills|agents|commands|checks> [flags]\n\nRun \"%s --help\" for details and examples", //nolint:err113 // a user-facing usage message
+			cmd.CommandPath(), cmd.CommandPath()))
 	}
+	out := outFor(cmd)
 	cfg, err := loadConfigForCommand(cmdContext(), nil, pluginLoadOptions(true)...)
 	if err != nil {
-		fatal("Failed to load config", err)
+		return failMsg("Failed to load config", err)
 	}
 	report, err := generator.NewGenerator(cfg).PlacementReport(listProfile)
 	if err != nil {
-		fatal("Failed to resolve placement", err)
+		return failMsg("Failed to resolve placement", err)
 	}
 	if listJSON {
 		data, _ := jsondoc.Marshal(report) //nolint:errcheck // plain structs always marshal
-		fmt.Print(string(data))
-		return
+		out.Result("%s", data)
+		return nil
 	}
-	printPlacementReport(report)
+	printPlacementReport(out.Stdout(), report)
+	return nil
 }
 
-func printPlacementReport(report *generator.PlacementReport) {
-	fmt.Printf("Placement for profile %q\n\n", report.Profile)
+func printPlacementReport(w io.Writer, report *generator.PlacementReport) {
+	writef(w, "Placement for profile %q\n\n", report.Profile)
 	if len(report.Items) == 0 {
-		fmt.Println("No skills or commands.")
+		writeln(w, "No skills or commands.")
 		return
 	}
-	fmt.Printf("%-8s %-32s %-16s %-7s %s\n", "TYPE", "NAME", "DOMAIN", "WHERE", "PLUGINS")
+	writef(w, "%-8s %-32s %-16s %-7s %s\n", "TYPE", "NAME", "DOMAIN", "WHERE", "PLUGINS")
 	for _, it := range report.Items {
 		domain := it.Domain
 		if domain == "" {
@@ -310,12 +264,12 @@ func printPlacementReport(report *generator.PlacementReport) {
 		if len(it.Plugins) > 0 {
 			plugins = strings.Join(it.Plugins, ", ")
 		}
-		fmt.Printf("%-8s %-32s %-16s %-7s %s\n", it.Type, it.Name, domain, it.Destination, plugins)
+		writef(w, "%-8s %-32s %-16s %-7s %s\n", it.Type, it.Name, domain, it.Destination, plugins)
 	}
 	if issues := report.Issues(); len(issues) > 0 {
-		fmt.Println()
+		writeln(w)
 		for _, it := range issues {
-			fmt.Printf("warning: %s %q is plugin-only but %s\n", it.Type, it.Name, it.Issue)
+			writef(w, "warning: %s %q is plugin-only but %s\n", it.Type, it.Name, it.Issue)
 		}
 	}
 }
