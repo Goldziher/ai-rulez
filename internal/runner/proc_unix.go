@@ -63,7 +63,15 @@ type procTree struct {
 	markID       uint64
 	stop         chan struct{}
 	done         chan struct{}
+	// short marks a trusted, short-lived command: no watcher polls the process
+	// table while it runs, and the sweep after it ends reads the table once
+	// when nothing is left. The run token and marker descriptor still find a
+	// helper that detached.
+	short bool
 }
+
+// shortLived marks the tree's command as trusted and short-lived (see Spec.ShortLived).
+func (t *procTree) shortLived() { t.short = true }
 
 // configure starts the child in a new session (which is also a new process
 // group) and makes cancellation kill the whole tree, so a scanner's helpers die
@@ -101,6 +109,12 @@ func (t *procTree) attach(cmd *exec.Cmd) {
 		t.markW = nil
 	}
 	if cmd.Process == nil {
+		return
+	}
+	if t.short {
+		t.mu.Lock()
+		t.root = cmd.Process.Pid
+		t.mu.Unlock()
 		return
 	}
 	table, err := processTable()
@@ -223,11 +237,19 @@ func (t *procTree) kill(cmd *exec.Cmd) {
 	if t.root == 0 {
 		t.root = cmd.Process.Pid // canceled before attach: the group kill below still applies
 	}
-	if table, err := processTable(); err == nil {
-		t.collect(table)
+	table, tableErr := processTable()
+	var members []procEntry
+	if tableErr == nil {
+		if t.short {
+			t.adoptCarriers(table)
+		}
+		members = t.collect(table)
 	}
 	if !t.rootReused {
 		_ = syscall.Kill(-t.root, syscall.SIGKILL) //nolint:errcheck // ESRCH when nothing is left
+	}
+	if t.short && tableErr == nil && len(members) == 0 {
+		return // nothing of the run is left: one read of the table was enough
 	}
 	stopped := map[int]bool{}
 	for range stopRounds {
