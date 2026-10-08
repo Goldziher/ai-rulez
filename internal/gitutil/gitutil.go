@@ -36,10 +36,11 @@ var maxIgnoreFileSize int64 = 100 << 20
 // could not run or exited non-zero.
 func (g Git) run(ctx context.Context, dir string, stdin []byte, args ...string) (out []byte, exitCode int, err error) {
 	res := g.runner().Run(ctx, runner.Spec{
-		Argv:    append([]string{gitProgram}, gitArgs(dir, args)...),
-		Env:     Env(nil),
-		Stdin:   stdin,
-		Timeout: commandTimeout,
+		Argv:       append([]string{gitProgram}, gitArgs(dir, args)...),
+		Env:        Env(nil),
+		Stdin:      stdin,
+		Timeout:    commandTimeout,
+		ShortLived: true,
 	})
 	switch res.Status {
 	case runner.StatusOK:
