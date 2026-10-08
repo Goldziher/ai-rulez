@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -55,21 +54,27 @@ var removeAgentCmd = &cobra.Command{
 	Use:   "agent <name>",
 	Short: "Remove an agent",
 	Args:  cobra.ExactArgs(1),
-	Run:   func(_ *cobra.Command, args []string) { runRemoveItem(args[0], crud.ContentTypeAgents, "agent") },
+	Run: func(_ *cobra.Command, args []string) {
+		runRemoveItem(args[0], crud.ContentTypeAgents, "agent", "agent")
+	},
 }
 
 var removeCommandCmd = &cobra.Command{
 	Use:   "command <name>",
 	Short: "Remove a command",
 	Args:  cobra.ExactArgs(1),
-	Run:   func(_ *cobra.Command, args []string) { runRemoveItem(args[0], crud.ContentTypeCommands, "command") },
+	Run: func(_ *cobra.Command, args []string) {
+		runRemoveItem(args[0], crud.ContentTypeCommands, "command", "command")
+	},
 }
 
 var removeCheckCmd = &cobra.Command{
 	Use:   "check <name>",
 	Short: "Remove a code-review check",
 	Args:  cobra.ExactArgs(1),
-	Run:   func(_ *cobra.Command, args []string) { runRemoveItem(args[0], crud.ContentTypeChecks, "check") },
+	Run: func(_ *cobra.Command, args []string) {
+		runRemoveItem(args[0], crud.ContentTypeChecks, "check", "check")
+	},
 }
 
 func init() {
@@ -77,10 +82,10 @@ func init() {
 	RemoveCmd.AddCommand(removeCommandCmd)
 	RemoveCmd.AddCommand(removeCheckCmd)
 	removeCheckCmd.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
-	removeCheckCmd.Flags().BoolVarP(&removeForce, "yes", "y", false, "Skip confirmation prompts")
+	addYesFlag(removeCheckCmd.Flags(), &removeForce, "Skip confirmation prompts")
 	for _, c := range []*cobra.Command{removeRuleCmd, removeContextCmd, removeSkillCmd, removeAgentCmd, removeCommandCmd} {
 		c.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
-		c.Flags().BoolVarP(&removeForce, "yes", "y", false, "Skip confirmation prompts")
+		addYesFlag(c.Flags(), &removeForce, "Skip confirmation prompts")
 		c.Flags().BoolVar(&removeLocal, "local", false, "Remove from the machine-local tree (.ai-rulez/local/)")
 	}
 	RemoveCmd.AddCommand(removeRuleCmd)
@@ -88,115 +93,32 @@ func init() {
 	RemoveCmd.AddCommand(removeSkillCmd)
 }
 
-func runRemoveRule(cmd *cobra.Command, args []string) {
-	name := args[0]
-
-	// Confirm removal unless --yes is specified
-	if !removeForce {
-		resourceName := fmt.Sprintf("rule %s", name)
-		if removeDomain != "" {
-			resourceName = fmt.Sprintf("rule %s in domain %s", name, removeDomain)
-		}
-		if !confirmRemoval("", resourceName) {
-			exitDeclined("Operation canceled")
-			return
-		}
-	}
-
-	ctx := cmdContext()
-	op, err := newContentOperator(removeLocal)
-	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
-	}
-
-	if err := op.RemoveFile(ctx, removeDomain, "rules", name); err != nil {
-		logger.Error("Failed to remove rule", "error", err)
-		os.Exit(1)
-	}
-
-	logger.Info("Rule removed successfully", "name", name)
+func runRemoveRule(_ *cobra.Command, args []string) {
+	runRemoveItem(args[0], "rules", "rule", "Rule")
 }
 
-func runRemoveContext(cmd *cobra.Command, args []string) {
-	name := args[0]
-
-	// Confirm removal unless --yes is specified
-	if !removeForce {
-		resourceName := fmt.Sprintf("context %s", name)
-		if removeDomain != "" {
-			resourceName = fmt.Sprintf("context %s in domain %s", name, removeDomain)
-		}
-		if !confirmRemoval("", resourceName) {
-			exitDeclined("Operation canceled")
-			return
-		}
-	}
-
-	ctx := cmdContext()
-	op, err := newContentOperator(removeLocal)
-	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
-	}
-
-	if err := op.RemoveFile(ctx, removeDomain, "context", name); err != nil {
-		logger.Error("Failed to remove context", "error", err)
-		os.Exit(1)
-	}
-
-	logger.Info("Context removed successfully", "name", name)
+func runRemoveContext(_ *cobra.Command, args []string) {
+	runRemoveItem(args[0], "context", "context", "Context")
 }
 
-func runRemoveSkill(cmd *cobra.Command, args []string) {
-	name := args[0]
-
-	// Confirm removal unless --yes is specified
-	if !removeForce {
-		resourceName := fmt.Sprintf("skill %s", name)
-		if removeDomain != "" {
-			resourceName = fmt.Sprintf("skill %s in domain %s", name, removeDomain)
-		}
-		if !confirmRemoval("", resourceName) {
-			exitDeclined("Operation canceled")
-			return
-		}
-	}
-
-	ctx := cmdContext()
-	op, err := newContentOperator(removeLocal)
-	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
-	}
-
-	if err := op.RemoveFile(ctx, removeDomain, "skills", name); err != nil {
-		logger.Error("Failed to remove skill", "error", err)
-		os.Exit(1)
-	}
-
-	logger.Info("Skill removed successfully", "name", name)
+func runRemoveSkill(_ *cobra.Command, args []string) {
+	runRemoveItem(args[0], "skills", "skill", "Skill")
 }
 
-func runRemoveItem(name, ftype, label string) {
-	if !removeForce {
-		resourceName := fmt.Sprintf("%s %s", label, name)
-		if removeDomain != "" {
-			resourceName = fmt.Sprintf("%s %s in domain %s", label, name, removeDomain)
-		}
-		if !confirmRemoval("", resourceName) {
-			exitDeclined("Operation canceled")
-			return
-		}
+// runRemoveItem removes the content file name of type ftype after confirmation.
+// label names the item in the prompt and errors, doneLabel in the success line.
+func runRemoveItem(name, ftype, label, doneLabel string) {
+	resourceName := fmt.Sprintf("%s %s", label, name)
+	if removeDomain != "" {
+		resourceName = fmt.Sprintf("%s %s in domain %s", label, name, removeDomain)
 	}
+	confirmRemovalUnlessYes(removeForce, "", resourceName, "Operation canceled")
 	op, err := newContentOperator(removeLocal)
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	if err := op.RemoveFile(cmdContext(), removeDomain, ftype, name); err != nil {
-		logger.Error("Failed to remove "+label, "error", err)
-		os.Exit(1)
+		fatal("Failed to remove "+label, err)
 	}
-	logger.Info(label+" removed successfully", "name", name)
+	logger.Info(doneLabel+" removed successfully", "name", name)
 }

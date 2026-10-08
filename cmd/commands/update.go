@@ -1,10 +1,8 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 
 	"github.com/samber/oops"
@@ -15,10 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
-	"github.com/Goldziher/ai-rulez/v5/internal/semver"
 	"github.com/Goldziher/ai-rulez/v5/internal/tagresolve"
-	"github.com/Goldziher/ai-rulez/v5/internal/versionpatch"
 )
 
 // UpdateSchemaVersion versions the JSON of `update --format json`.
@@ -123,17 +118,6 @@ type updateItem struct {
 
 // scanSummary is the security scan (AR001-AR009) of a tree about to be pinned.
 type scanSummary = lockrun.ScanSummary
-
-// majorItem is one source with a newer major version than its constraint allows.
-type majorItem struct {
-	Kind   string `json:"kind"`
-	Name   string `json:"name"`
-	From   string `json:"from"`
-	To     string `json:"to"`
-	Latest string `json:"latest"`
-	// Written is true when --write-config rewrote the version line.
-	Written bool `json:"written,omitempty"`
-}
 
 // updateReport is the JSON document of `update --format json`.
 type updateReport struct {
@@ -396,122 +380,6 @@ func scanTreeDir(cfg *config.Config, name, dir string, accept bool) *scanSummary
 	return lockrun.ScanTree(cfg, name, dir, accept)
 }
 
-// majorUpdate is `update --major`: it lists the sources that have a newer major
-// version than their constraint allows and, with --write-config, takes it.
-func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs []versionSrc, rows []tagresolve.Row, report *updateReport) int {
-	report.Major = append(report.Major, majorItems(srcs, rows)...)
-	sortMajor(report.Major)
-	if len(report.Major) == 0 || !updateWriteConfig || updateDryRun {
-		return finishUpdate(report, 0)
-	}
-	original, mode, err := patchMajor(cfg, report.Major)
-	if err != nil {
-		fmtError(err)
-		return 1
-	}
-	rollback := func() {
-		if rerr := safefs.WriteFileAtomicMode(filepath.Join(cfg.ConfigDir, configFileTOML), original, mode); rerr != nil {
-			fmtError(oops.Wrapf(rerr, "restore config.toml; it still holds the new version constraints"))
-		}
-		for i := range report.Major {
-			report.Major[i].Written = false
-		}
-	}
-	// The pins follow the new constraints: evaluate again against the patched config.
-	fresh, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
-	if err != nil {
-		rollback()
-		fmtError(err)
-		return 1
-	}
-	names := map[string]bool{}
-	for _, m := range report.Major {
-		names[m.Name] = true
-	}
-	srcs2 := versionSources(fresh, updateKind, names)
-	rows2, err := evaluateSources(cmdContext(), srcs2, current)
-	if err != nil {
-		rollback()
-		fmtError(err)
-		return 1
-	}
-	code := planAndApply(path, fresh, current, srcs2, rows2, report)
-	if code != 0 {
-		rollback() // before the report is printed, so it never claims a write that was undone
-	}
-	return finishUpdate(report, code)
-}
-
-// majorItems lists the sources whose latest tag is a newer major than their
-// constraint allows, with the constraint that would take it.
-func majorItems(srcs []versionSrc, rows []tagresolve.Row) []majorItem {
-	var out []majorItem
-	for i := range rows {
-		row := &rows[i]
-		if !row.MajorAvailable || row.Latest == nil || blockedStatus(row.Status) {
-			continue
-		}
-		if to, ok := majorConstraint(row.Latest.Tag, srcs[i].want.TagPrefix); ok {
-			out = append(out, majorItem{Kind: row.Kind, Name: row.Name, From: row.Constraint, To: to, Latest: row.Latest.Tag})
-		}
-	}
-	return out
-}
-
-// sortMajor orders the major items by kind, then name.
-func sortMajor(items []majorItem) {
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].Kind != items[j].Kind {
-			return items[i].Kind < items[j].Kind
-		}
-		return items[i].Name < items[j].Name
-	})
-}
-
-// blockedStatus reports the statuses where a constraint cannot be trusted enough to rewrite it.
-func blockedStatus(status string) bool {
-	switch status {
-	case tagresolve.StatusTagMoved, tagresolve.StatusUnsatisfied, tagresolve.StatusInvalid:
-		return true
-	}
-	return false
-}
-
-// majorConstraint is the constraint that takes the major version of tag: "^2.0" for v2.3.1.
-func majorConstraint(tag, prefix string) (string, bool) {
-	v, ok := semver.ParseTag(tag, prefix)
-	if !ok {
-		return "", false
-	}
-	return fmt.Sprintf("^%d.0", v.Major), true
-}
-
-// patchMajor rewrites the version line of every item in config.toml (only that
-// value changes) and returns the original bytes and mode for a rollback. The
-// file keeps its permission bits: it is the project's file, not a private one.
-func patchMajor(cfg *config.Config, items []majorItem) (original []byte, mode os.FileMode, err error) {
-	file := filepath.Join(cfg.ConfigDir, configFileTOML)
-	original, mode, err = safefs.ReadRegularKeepMode(file)
-	if err != nil {
-		return nil, 0, oops.With("path", file).Wrapf(err, "read config.toml")
-	}
-	patched := original
-	tables := map[string]string{lockfile.KindInclude: "includes", lockfile.KindSkill: "installed_skills", lockfile.KindSource: "skill_sources"}
-	for _, it := range items {
-		patched, err = versionpatch.SetConstraint(patched, tables[it.Kind], it.Name, it.To)
-		if err != nil {
-			return nil, 0, oops.With("source", it.Name).Wrapf(err, "cannot update the constraint of %s %q", it.Kind, it.Name)
-		}
-	}
-	if err := safefs.WriteFileAtomicMode(file, patched, mode); err != nil {
-		return nil, 0, oops.With("path", file).Wrapf(err, "write config.toml")
-	}
-	for i := range items {
-		items[i].Written = true
-	}
-	return original, mode, nil
-}
-
 func entryCommit(lock *lockfile.File, row tagresolve.Row) string {
 	if e := lock.Find(row.Kind, row.Name); e != nil {
 		return e.Commit
@@ -539,119 +407,4 @@ func hashTree(dirOf func(string) string, commit string) map[string]string {
 		return map[string]string{}
 	}
 	return hashes
-}
-
-func finishUpdate(rep *updateReport, code int) int {
-	sort.Slice(rep.Updates, func(i, j int) bool {
-		if rep.Updates[i].Kind != rep.Updates[j].Kind {
-			return rep.Updates[i].Kind < rep.Updates[j].Kind
-		}
-		return rep.Updates[i].Name < rep.Updates[j].Name
-	})
-	if updateFormat == formatJSON {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(rep); err != nil {
-			fmtError(oops.Wrapf(err, "write the report"))
-			return 1
-		}
-		return code
-	}
-	writeUpdateText(rep)
-	return code
-}
-
-// writeUpdateItem prints one update and reports whether its scan refused it.
-func writeUpdateItem(u *updateItem) (refused bool) {
-	from := "(unlocked)"
-	if u.From != nil {
-		from = u.From.Tag
-	}
-	fmt.Printf("%s %s: %s -> %s (%s)\n", u.Kind, u.Name, from, u.To.Tag, shortSHA(u.To.Commit))
-	if u.Released != "" {
-		fmt.Printf("  released %s (%s)\n", u.Released, u.ReleasedFrom)
-	}
-	for _, h := range u.Held {
-		fmt.Printf("  %s\n", safeText(h.String()))
-	}
-	for _, f := range u.Files {
-		fmt.Printf("  %s  %s\n", f.Change, f.Path)
-	}
-	if u.DigestOld != u.DigestNew {
-		fmt.Printf("  tree %s -> %s\n", u.DigestOld, u.DigestNew)
-	}
-	if u.Scan != nil {
-		writeScanText(*u)
-		refused = u.Scan.Refused
-	}
-	fmt.Println("  run `ai-rulez generate`, then `ai-rulez lock` (it refreshes the output pins and the served-skill pins, which stay stale until then)")
-	return refused
-}
-
-func writeUpdateText(rep *updateReport) {
-	verb := "updated"
-	if rep.DryRun {
-		verb = "would update"
-	}
-	refused := 0
-	for i := range rep.Updates {
-		if writeUpdateItem(&rep.Updates[i]) {
-			refused++
-		}
-	}
-	for _, m := range rep.Major {
-		switch {
-		case m.Written:
-			fmt.Printf("%s %s: wrote version = %q to config.toml (was %q; latest %s)\n", m.Kind, m.Name, m.To, m.From, m.Latest)
-		default:
-			fmt.Printf("%s %s: newer major %s: version = %q (now %q); `update --major --write-config` applies it\n", m.Kind, m.Name, m.Latest, m.To, m.From)
-		}
-	}
-	for i := range rep.Blocked {
-		r := &rep.Blocked[i]
-		fmt.Fprintf(os.Stderr, "refused %s %s: %s %s\n", r.Kind, r.Name, r.Code, r.Note)
-	}
-	for i := range rep.Unchanged {
-		r := &rep.Unchanged[i]
-		if r.Downgrade {
-			fmt.Printf("%s %s: %s\n", r.Kind, r.Name, r.Note)
-		}
-		for _, h := range r.Held {
-			fmt.Printf("%s %s: %s\n", r.Kind, r.Name, safeText(h.String()))
-		}
-	}
-	for _, n := range rep.Notes {
-		fmt.Println(n)
-	}
-	switch {
-	case len(rep.Blocked) > 0:
-		fmt.Fprintln(os.Stderr, "nothing was written")
-	case refused > 0:
-		fmt.Fprintf(os.Stderr, "refused %d source(s): the security scan of the new tree has error findings; review them, then pass --accept-findings. Nothing was written\n", refused)
-	case len(rep.Updates) > 0:
-		fmt.Printf("%s %d source(s)\n", verb, len(rep.Updates))
-	case len(rep.Major) == 0:
-		fmt.Println("everything is up to date within its constraints")
-	}
-}
-
-// writeScanText prints the scan result of one update; the text of a finding is
-// untrusted content, so it is printed escaped.
-func writeScanText(u updateItem) {
-	sc := u.Scan
-	switch {
-	case sc.Errors == 0 && sc.Warnings == 0:
-		fmt.Println("  scan: 0 findings")
-	default:
-		fmt.Printf("  scan: %d error(s), %d warning(s)\n", sc.Errors, sc.Warnings)
-	}
-	for _, f := range sc.Findings {
-		fmt.Printf("    %s %s %s:%d %s\n", f.Code, f.Severity, safeText(f.File), f.Line, safeText(f.Message))
-	}
-	if sc.Note != "" {
-		fmt.Printf("  scan note: %s\n", safeText(sc.Note))
-	}
-	if sc.Accepted {
-		fmt.Println("  scan findings accepted with --accept-findings")
-	}
 }

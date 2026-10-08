@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -290,9 +289,7 @@ func runReportUsage(out io.Writer, logPath string) error {
 		return err
 	}
 	if reportJSON {
-		encoder := json.NewEncoder(out)
-		encoder.SetIndent("", "  ")
-		return oops.Wrapf(encoder.Encode(usageReportJSON{Report: report, Items: items}), "encode usage report")
+		return oops.Wrapf(writeRawJSON(out, usageReportJSON{Report: report, Items: items}), "encode usage report")
 	}
 	writeUsageReport(reportWriter{out}, report)
 	if items != nil {

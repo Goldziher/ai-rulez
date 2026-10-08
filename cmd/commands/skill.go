@@ -105,7 +105,7 @@ func init() {
 	}
 
 	// Flags for skill remove
-	skillRemoveCmd.Flags().BoolVarP(&skillForce, "yes", "y", false, "Skip confirmation prompts")
+	addYesFlag(skillRemoveCmd.Flags(), &skillForce, "Skip confirmation prompts")
 
 	// Flags for skill list
 	addJSONFormat(skillListCmd.Flags(), &skillJSON, "j")
@@ -117,8 +117,7 @@ func runSkillInstall(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	if skillLocal {
 		op = op.Local()
@@ -132,8 +131,7 @@ func runSkillInstall(cmd *cobra.Command, args []string) {
 	}
 
 	if err := op.InstallSkill(ctx, req); err != nil {
-		logger.Error("Failed to install skill", "error", err)
-		os.Exit(1)
+		fatal("Failed to install skill", err)
 	}
 
 	logger.Info("Skill installed successfully",
@@ -145,26 +143,19 @@ func runSkillInstall(cmd *cobra.Command, args []string) {
 func runSkillRemove(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	if !skillForce {
-		if !confirmRemoval("installed skill", name) {
-			exitDeclined("Operation canceled")
-			return
-		}
-	}
+	confirmRemovalUnlessYes(skillForce, "installed skill", name, "Operation canceled")
 
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	if skillLocal {
 		op = op.Local()
 	}
 
 	if err := op.UninstallSkill(ctx, name); err != nil {
-		logger.Error("Failed to remove installed skill", "error", err)
-		os.Exit(1)
+		fatal("Failed to remove installed skill", err)
 	}
 
 	logger.Info("Skill removed successfully", "name", name)
@@ -174,14 +165,12 @@ func runSkillList(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	skills, err := op.ListInstalledSkills(ctx)
 	if err != nil {
-		logger.Error("Failed to list installed skills", "error", err)
-		os.Exit(1)
+		fatal("Failed to list installed skills", err)
 	}
 
 	if len(skills) == 0 && !skillJSON {
@@ -203,8 +192,7 @@ func runSkillList(cmd *cobra.Command, args []string) {
 		}
 		data, err := jsondoc.Marshal(output)
 		if err != nil {
-			logger.Error("Failed to marshal JSON", "error", err)
-			os.Exit(1)
+			fatal("Failed to marshal JSON", err)
 		}
 		fmt.Print(string(data))
 	} else {
