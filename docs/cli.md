@@ -2405,6 +2405,10 @@ ai-rulez migrate v5 [--dry-run] [--check] [--adopt-defaults] [--write] [--recurs
 The result is decoded with the v5 loader before anything is written; a project that would not load is reported with
 its error and left untouched. Running `migrate v5` on a migrated project changes nothing.
 
+`ai-rulez migrate okf` converts the `.ai-rulez/` tree of the project in the current directory to an
+[OKF bundle](okf.md) in place: `type`, `title` and `x-ai-rulez` frontmatter on every concept, an `index.md` per
+directory, bodies untouched. It is idempotent and takes `--dry-run`, `--check`, `--config-dir` and `--format text|json`.
+
 **Exit codes:** `0` migrated or nothing to do, `1` a project could not be migrated (or an unsupported target),
 `2` `--check` found a project that needs migration.
 
