@@ -14,9 +14,19 @@ type BenchSize struct {
 	Files int // content files under .ai-rulez (rules, context, skills, agents, commands)
 }
 
-// BenchSizes are the small/medium/large trees every table-driven benchmark runs.
+// BenchLargeEnv, when set to 1, adds the 2000-file "large" size to BenchSizes.
+// It is off by default: a large project costs seconds per operation in the
+// benchmarks that start git, so the default run keeps to small and medium.
+const BenchLargeEnv = "AI_RULEZ_BENCH_LARGE"
+
+// BenchSizes are the synthetic project sizes every table-driven benchmark runs:
+// small (10 files) and medium (200), plus large (2000) with BenchLargeEnv=1.
 func BenchSizes() []BenchSize {
-	return []BenchSize{{"small", 10}, {"medium", 200}, {"large", 2000}}
+	sizes := []BenchSize{{"small", 10}, {"medium", 200}}
+	if os.Getenv(BenchLargeEnv) == "1" {
+		sizes = append(sizes, BenchSize{"large", 2000})
+	}
+	return sizes
 }
 
 // BenchTreeOptions tunes BuildBenchTree.
