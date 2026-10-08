@@ -48,7 +48,10 @@ func TestReplaceConfigDir(t *testing.T) {
 				return
 			}
 			require.Len(t, entries, 2, "a successful import keeps the previous directory as a backup")
-			assert.FileExists(t, filepath.Join(dir, entries[0].Name(), "stale.md"))
+			backups, globErr := filepath.Glob(filepath.Join(dir, ".ai-rulez.bak-*"))
+			require.NoError(t, globErr)
+			require.Len(t, backups, 1)
+			assert.FileExists(t, filepath.Join(backups[0], "stale.md"))
 		})
 	}
 }
