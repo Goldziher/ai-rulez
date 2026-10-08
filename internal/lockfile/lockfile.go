@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync/atomic"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
@@ -183,6 +184,13 @@ func Parse(data []byte) (*File, error) {
 	return &f, nil
 }
 
+// reads counts the lock files read from disk, so a test can assert that a
+// caller loads the lock once rather than once per item.
+var reads atomic.Int64
+
+// Reads is the number of lock files read from disk by this process so far.
+func Reads() int64 { return reads.Load() }
+
 func read(configDir string) (*File, error) {
 	// A symlinked lock is refused rather than followed, as the write side replaces
 	// it: reading through a link would let the lock be pointed at another file.
@@ -196,6 +204,7 @@ func read(configDir string) (*File, error) {
 			Wrapf(err, "read lock file")
 	}
 	defer file.Close() //nolint:errcheck // read-only
+	reads.Add(1)
 	data, err := io.ReadAll(file)
 	if err != nil {
 		return nil, oops.With("path", Path(configDir)).Wrapf(err, "read lock file")
