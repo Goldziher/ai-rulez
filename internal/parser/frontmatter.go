@@ -6,6 +6,8 @@ import (
 
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // Metadata represents frontmatter metadata parsed from markdown files
@@ -32,34 +34,13 @@ func ParseFrontmatter(content string) (*Metadata, string, error) {
 	// A UTF-8 byte order mark before the opening --- is not part of the content.
 	normalizedContent := normalizeLFLineEndings(strings.TrimPrefix(content, "\ufeff"))
 
-	// Check if content starts with ---
-	if !strings.HasPrefix(normalizedContent, "---\n") {
+	block := frontmatter.SplitString(normalizedContent)
+	// A document shorter than three lines ("---\n---") is never frontmatter.
+	if !block.Closed || strings.Count(normalizedContent, "\n") < 2 {
+		// Not frontmatter, or never closed: treat as regular content.
 		return nil, normalizedContent, nil
 	}
-
-	// Find the closing ---
-	lines := strings.Split(normalizedContent, "\n")
-	if len(lines) < 3 {
-		return nil, normalizedContent, nil
-	}
-
-	endIdx := -1
-	for i := 1; i < len(lines); i++ {
-		line := strings.TrimSpace(lines[i])
-		if line == "---" {
-			endIdx = i
-			break
-		}
-	}
-
-	if endIdx == -1 {
-		// No closing ---, treat as regular content
-		return nil, normalizedContent, nil
-	}
-
-	// Extract frontmatter YAML
-	frontmatterLines := lines[1:endIdx]
-	frontmatterYAML := strings.Join(frontmatterLines, "\n")
+	frontmatterYAML := strings.TrimSuffix(block.Raw, "\n")
 
 	// Parse frontmatter - return error instead of silently ignoring (fixes issue #4)
 	var metadata Metadata
@@ -71,8 +52,7 @@ func ParseFrontmatter(content string) (*Metadata, string, error) {
 	}
 
 	// Extract actual content (after frontmatter)
-	actualContent := strings.Join(lines[endIdx+1:], "\n")
-	actualContent = strings.TrimPrefix(actualContent, "\n")
+	actualContent := strings.TrimPrefix(block.Body, "\n")
 
 	return &metadata, actualContent, nil
 }

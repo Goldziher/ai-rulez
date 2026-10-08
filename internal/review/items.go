@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
@@ -133,26 +134,16 @@ func (it Item) WithText(text string) Item {
 // splitFrontmatter separates a leading ---/--- YAML block from the body. A
 // missing or malformed block yields an empty map and the whole text.
 func splitFrontmatter(raw string) (meta map[string]any, body string) {
-	text := strings.TrimPrefix(raw, "\xef\xbb\xbf")
-	text = strings.ReplaceAll(text, "\r\n", "\n")
-	rest, ok := strings.CutPrefix(text, "---\n")
-	if !ok {
+	text := strings.ReplaceAll(strings.TrimPrefix(raw, "\xef\xbb\xbf"), "\r\n", "\n")
+	block := frontmatter.SplitString(text)
+	if !block.Closed {
 		return map[string]any{}, text
-	}
-	block, body, found := strings.Cut(rest, "\n---")
-	if !found {
-		return map[string]any{}, text
-	}
-	if nl := strings.IndexByte(body, '\n'); nl >= 0 {
-		body = body[nl+1:]
-	} else {
-		body = ""
 	}
 	fm := map[string]any{}
-	if err := yaml.Unmarshal([]byte(block), &fm); err != nil || fm == nil {
+	if err := yaml.Unmarshal([]byte(block.Raw), &fm); err != nil || fm == nil {
 		return map[string]any{}, text
 	}
-	return fm, body
+	return fm, block.Body
 }
 
 // TextDigest is the digest an item carries for its file text ("sha256:<hex>").
@@ -168,19 +159,15 @@ func textDigest(text string) string {
 // file has no well-formed one (the same rule splitFrontmatter applies).
 func frontmatterBlock(raw string) string {
 	text := strings.ReplaceAll(strings.TrimPrefix(raw, "\xef\xbb\xbf"), "\r\n", "\n")
-	rest, ok := strings.CutPrefix(text, "---\n")
-	if !ok {
-		return ""
-	}
-	block, _, found := strings.Cut(rest, "\n---")
-	if !found {
+	block := frontmatter.SplitString(text)
+	if !block.Closed {
 		return ""
 	}
 	fm := map[string]any{}
-	if err := yaml.Unmarshal([]byte(block), &fm); err != nil || fm == nil {
+	if err := yaml.Unmarshal([]byte(block.Raw), &fm); err != nil || fm == nil {
 		return ""
 	}
-	return block
+	return strings.TrimSuffix(block.Raw, "\n")
 }
 
 // Selected filters items by the command-line selectors: an id, a name, or a
