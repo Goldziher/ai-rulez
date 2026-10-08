@@ -44,7 +44,6 @@ func newLockFixture(t *testing.T) *lockFixture {
 	t.Helper()
 	isolateHome(t)
 	lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false
-	ResetObserved()
 	t.Cleanup(func() { lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false })
 
 	remote := t.TempDir()
@@ -96,7 +95,6 @@ func ruleBody(cfg *config.Config) string {
 func (f *lockFixture) writeLock(t *testing.T) *lockfile.File {
 	t.Helper()
 	lockPolicy.Mode = LockRefresh
-	ResetObserved()
 	cfg, err := f.load(t)
 	require.NoError(t, err)
 	lockPolicy.Mode = LockAuto
@@ -139,7 +137,6 @@ func TestLock_RefreshRepinsOnlyTheNamedEntry(t *testing.T) {
 
 	lockPolicy.Mode = LockRefresh
 	lockPolicy.Refresh = func(kind, name string) bool { return kind == lockfile.KindInclude && name == "shared" }
-	ResetObserved()
 	cfg, err := f.load(t)
 	require.NoError(t, err)
 	after, problems := BuildLock(cfg, before)

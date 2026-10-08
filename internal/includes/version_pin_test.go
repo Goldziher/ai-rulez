@@ -69,7 +69,6 @@ func resetPolicy(t *testing.T) {
 	reset := func() {
 		lockPolicy.Mode, lockPolicy.Refresh, lockPolicy.Offline = LockAuto, nil, false
 		lockPolicy.VersionPolicy = config.VersionPolicy{}
-		ResetObserved()
 	}
 	reset()
 	t.Cleanup(reset)
@@ -85,7 +84,6 @@ func (f *versionFixture) refresh(t *testing.T, current *lockfile.File) (*lockfil
 	t.Helper()
 	lockPolicy.Mode = LockRefresh
 	lockPolicy.Refresh = nil
-	ResetObserved()
 	defer func() { lockPolicy.Mode = LockAuto }()
 	cfg, err := f.load(t)
 	require.NoError(t, err)
@@ -264,7 +262,6 @@ func TestVersionPin_NeedsTheNetworkToResolve(t *testing.T) {
 	f := newVersionFixture(t, `version = "^1"`, `ref = "main"`)
 	lockPolicy.Offline = true
 	lockPolicy.Mode = LockRefresh
-	ResetObserved()
 
 	cfg, err := f.load(t)
 	require.NoError(t, err)
