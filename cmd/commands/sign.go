@@ -21,6 +21,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 const (
@@ -138,8 +139,8 @@ func init() {
 	f.BoolVar(&signKeyless, "keyless", false, "Sign with a short-lived Fulcio certificate and log the signature in Rekor (network; public log)")
 	f.StringVar(&signTokenEnv, "identity-token-env", "", "With --keyless: environment variable holding the OIDC token (default: the GitHub Actions runtime token)")
 	f.BoolVar(&signInteractive, "interactive", false, "With --keyless: open a browser for the OIDC login when no token is available")
-	f.StringVar(&signFulcioURL, "fulcio-url", "", "With --keyless: Fulcio URL (default "+signing.DefaultFulcioURL+")")
-	f.StringVar(&signRekorURL, "rekor-url", "", "Rekor URL for --keyless or --tlog (default "+signing.DefaultRekorURL+")")
+	f.StringVar(&signFulcioURL, "fulcio-url", "", "With --keyless: Fulcio URL (default "+sigstore.DefaultFulcioURL+")")
+	f.StringVar(&signRekorURL, "rekor-url", "", "Rekor URL for --keyless or --tlog (default "+sigstore.DefaultRekorURL+")")
 	f.BoolVar(&signTLog, "tlog", false, "With --key: also record the signature in the Rekor transparency log (network; public log)")
 	f.BoolVar(&signEmbedItems, "embed-items", false, "Put the pinned item ids and digests in the statement (ids can be sensitive in a private repository)")
 	f.StringVar(&signOutput, "output", "", "Write the bundle here instead of next to the lock")
@@ -341,16 +342,16 @@ func writeBundle(path string, data []byte) error {
 func newSigner(ctx context.Context, env ambient.Env) (signing.Signer, error) {
 	if signKeyless {
 		fmt.Fprintln(os.Stderr, "keyless signing: your OIDC identity, the certificate and the subject digest go to a transparency log that is public unless --rekor-url names another one")
-		tok, err := signing.ResolveIDToken(ctx, env, signTokenEnv, signInteractive)
+		tok, err := sigstore.ResolveIDToken(ctx, env, signTokenEnv, signInteractive)
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already contextual
 		}
-		return signing.NewKeylessSigner(signing.KeylessOptions{IDToken: tok, FulcioURL: signFulcioURL, RekorURL: signRekorURL})
+		return sigstore.NewKeylessSigner(sigstore.KeylessOptions{IDToken: tok, FulcioURL: signFulcioURL, RekorURL: signRekorURL})
 	}
-	var ks *signing.KeySigner
-	if signing.IsKMSRef(signKey) {
+	var ks *sigstore.KeySigner
+	if sigstore.IsKMSRef(signKey) {
 		var err error
-		if ks, err = signing.LoadKMSSigner(ctx, signKey); err != nil {
+		if ks, err = sigstore.LoadKMSSigner(ctx, signKey); err != nil {
 			return nil, err //nolint:wrapcheck // already contextual
 		}
 	} else {
@@ -358,7 +359,7 @@ func newSigner(ctx context.Context, env ambient.Env) (signing.Signer, error) {
 		if err != nil {
 			return nil, err
 		}
-		if ks, err = signing.LoadKeySigner(data, []byte(keyPassword(env))); err != nil {
+		if ks, err = sigstore.LoadKeySigner(data, []byte(keyPassword(env))); err != nil {
 			return nil, oops.With("path", signKey).Wrap(err)
 		}
 	}
@@ -372,7 +373,7 @@ func exportPublicKey(s signing.Signer) error {
 	if signPublicOut == "" {
 		return nil
 	}
-	ks, ok := s.(*signing.KeySigner)
+	ks, ok := s.(*sigstore.KeySigner)
 	if !ok {
 		return oops.Errorf("--public-key-out applies to --key")
 	}

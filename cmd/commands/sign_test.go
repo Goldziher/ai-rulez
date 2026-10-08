@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 // signFixture is a locked project that trusts one key, with the private key
@@ -47,7 +48,7 @@ func newSignFixture(t *testing.T, signingTable string) *signFixture {
 	resetSigningFlags(t)
 	resetLockViewFlags(t)
 	root := lockProject(t, signingTable)
-	priv, pub, err := signing.GenerateKeyPair(nil)
+	priv, pub, err := sigstore.GenerateKeyPair(nil)
 	require.NoError(t, err)
 	f := &signFixture{root: root, privKey: filepath.Join(t.TempDir(), "release.key"), pubKey: filepath.Join(root, "keys", "release.pub")}
 	require.NoError(t, os.WriteFile(f.privKey, priv, 0o600))
@@ -129,7 +130,7 @@ func TestVerifyAttestationFailures(t *testing.T) {
 		}, exitDrift, "AR724", attestationInvalid},
 		{"untrusted key", signingKeyTable, func(t *testing.T, f *signFixture) {
 			require.Equal(t, 0, f.sign(t))
-			_, other, err := signing.GenerateKeyPair(nil)
+			_, other, err := sigstore.GenerateKeyPair(nil)
 			require.NoError(t, err)
 			require.NoError(t, os.WriteFile(f.pubKey, other, 0o644))
 		}, exitDrift, "AR722", attestationInvalid},
@@ -200,7 +201,7 @@ func signAt(t *testing.T, f *signFixture, ahead time.Duration) []byte {
 	t.Helper()
 	priv, err := os.ReadFile(f.privKey)
 	require.NoError(t, err)
-	signer, err := signing.LoadKeySigner(priv, nil)
+	signer, err := sigstore.LoadKeySigner(priv, nil)
 	require.NoError(t, err)
 	lock, err := lockfile.Load(filepath.Join(f.root, ".ai-rulez"))
 	require.NoError(t, err)
