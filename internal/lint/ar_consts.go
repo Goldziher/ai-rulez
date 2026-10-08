@@ -15,6 +15,7 @@ const (
 	keyKeywords        = "keywords"
 	keyMCPServers      = "mcpServers"
 	keyMetadata        = "metadata"
+	keyType            = "type"
 	keyUserInvocable   = "user-invocable"
 	keyName            = "name"
 	keyLicense         = "license"
@@ -23,6 +24,8 @@ const (
 	keyDisallowedTools = "disallowed-tools"
 
 	cmdDocker = "docker"
+	cmdCurl   = "curl"
+	cmdWget   = "wget"
 	cmdNPM    = "npm"
 	cmdExec   = "exec"
 	cmdPip    = "pip"

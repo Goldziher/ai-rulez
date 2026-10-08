@@ -36,8 +36,10 @@ func (v *verifier) tlog() signing.TLogMode {
 
 // trustedRoot is the configured root, nil when there is none.
 func (v *verifier) trustedRoot() root.TrustedMaterial {
-	tm, _ := v.TrustedRoot.(root.TrustedMaterial)
-	return tm
+	if tm, ok := v.TrustedRoot.(root.TrustedMaterial); ok {
+		return tm
+	}
+	return nil
 }
 
 // Verify checks a DSSE bundle offline and returns the signed payload. Failures
@@ -277,7 +279,7 @@ func (*Engine) Inspect(data []byte) (signing.SignerInfo, error) {
 }
 
 // MessageDigest implements signing.Backend.
-func (*Engine) MessageDigest(data []byte) ([]byte, bool, error) {
+func (*Engine) MessageDigest(data []byte) (digest []byte, isSHA256 bool, err error) {
 	b, err := parseBundle(data)
 	if err != nil {
 		return nil, false, err

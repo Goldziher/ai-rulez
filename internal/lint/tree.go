@@ -135,7 +135,9 @@ func (t *Tree) Rel(abs string) string {
 // and again, so the answer is kept for the life of the runner.
 func (r *runner) rel(abs string) string {
 	if v, ok := r.relMemo.Load(abs); ok {
-		return v.(string)
+		if s, isString := v.(string); isString {
+			return s
+		}
 	}
 	rel := r.tree.Rel(abs)
 	r.relMemo.Store(abs, rel)
