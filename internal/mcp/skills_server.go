@@ -70,7 +70,7 @@ func NewSkillServerWith(version string, catalog *Catalog, opts ServeOptions) *Se
 		&sdkmcp.Implementation{Name: "ai-rulez-skills", Title: "AI-Rulez Skills", Version: version},
 		&sdkmcp.ServerOptions{Capabilities: caps, Instructions: skillServerInstructions},
 	)
-	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware())
+	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware(mcpServer))
 
 	srv := &Server{mcpServer: mcpServer, version: version, catalog: catalog, serve: newServeState(opts)}
 	mcpServer.AddReceivingMiddleware(srv.unknownResourceMiddleware())
