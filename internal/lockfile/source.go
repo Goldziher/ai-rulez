@@ -1,10 +1,11 @@
 package lockfile
 
 import (
-	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"net/url"
 	"path/filepath"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 )
 
 // gitURLSchemes are the URL schemes git can fetch from. Anything else with a
