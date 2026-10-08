@@ -38,7 +38,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez eval calibrate-estimate` | Propose cost-estimate assumptions measured from recorded runs ([details](evals.md#calibrating-the-estimate)) |
 | `ai-rulez review` / `rubric`    | Score skills against a rubric: offline, or with an LLM judge (`--semantic`), calibration, a calibrated gate and `review fix` ([details](#review-commands)) |
 | `ai-rulez improve`              | (experimental) Improve a skill with an external optimizer behind a held-out eval gate ([Improve](improve.md)) |
-| `ai-rulez telemetry`            | Opt-in usage log, feedback, reports, item-load telemetry and OTLP export ([details](#usage-commands)) |
+| `ai-rulez telemetry`            | Opt-in usage log, feedback, reports, item-load telemetry and OTLP export ([details](#telemetry-commands)) |
 | `ai-rulez export okf` / `import okf` / `okf validate` | Open Knowledge Format bundles ([details](#okf-commands)) |
 | `ai-rulez llm`                  | Inspect the `[llm]` setup ([details](#llm-commands)) |
 | `ai-rulez version`              | Show version                                        |
@@ -2305,7 +2305,7 @@ With `--external`, the scanners of `[[lint.external]]` also run (see [External s
 | `--write-baseline --reason <text>` | Accept every current scanner finding in `.ai-rulez/scanner-baseline.json` and exit as if clean; `--reason` is required |
 | `--scanner-baseline <file>` | Use another scanner baseline file |
 | `--show-suppressed` | Also show results the scanner marked suppressed, as `info` |
-| `--no-scan-cache` | Ignore and do not update the [scanner result cache](strict-validation.md#result-cache-and-dry-run) |
+| `--no-scan-cache` | Ignore and do not update the [scanner result cache](strict-validation.md#result-cache-and-dry-runs) |
 | `--dry-run` | Print each scanner's command (stage paths as `<stage>`), isolation, environment variable names, staged files and cache state, and start nothing; exit `0` |
 
 `[lint.scanner_policy]`, the embedded profiles and presets, process isolation, the result cache and the lock records are described in [Strict validation](strict-validation.md#policy-presets-and-profiles). The `scan` command accepts `--dry-run` only with `--external`.
