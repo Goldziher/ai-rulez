@@ -86,7 +86,17 @@ const (
 	fileEscapes
 	fileNotRegular
 	fileUnreadable
+	fileTooLarge
 )
+
+// maxFileBytes caps one file read from a plugin, like the native importers
+// (internal/importer/fsread.go). maxTotalBytes caps everything one Import reads;
+// it is a variable so tests can lower it.
+const maxFileBytes = 2 << 20
+
+var maxTotalBytes int64 = 64 << 20
+
+var errTooLarge = fmt.Errorf("file is larger than the %d MiB limit", maxFileBytes>>20)
 
 // statResolved resolves name and reports what it designates.
 func statResolved(fsys fs.FS, name string) (string, fileState, error) {
@@ -114,6 +124,9 @@ func readResolved(fsys fs.FS, name string) ([]byte, fileState, error) {
 	res, state, err := statResolved(fsys, name)
 	if state != fileOK {
 		return nil, state, err
+	}
+	if info, err := fs.Stat(fsys, res); err == nil && info.Size() > maxFileBytes {
+		return nil, fileTooLarge, errTooLarge
 	}
 	data, err := fs.ReadFile(fsys, res)
 	if err != nil {
