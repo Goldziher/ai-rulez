@@ -38,7 +38,6 @@
     ".claude/agents/governance-architect.md",
     ".claude/agents/security-auditor.md",
     ".claude/agents/test-writer.md",
-    ".claude/plugins.json",
     ".claude/rules/agent-workflow.md",
     ".claude/rules/atomic-commits.md",
     ".claude/rules/branch-hygiene.md",
@@ -94,7 +93,6 @@
     ".codex/agents/security-auditor.toml",
     ".codex/agents/test-writer.toml",
     ".codex/config.toml",
-    ".codex/plugins.json",
     ".hermes.md",
     ".mcp.json",
     ".opencode/agents/code-reviewer.md",
@@ -130,5 +128,10 @@
     "AGENTS.md",
     "CLAUDE.md",
     "opencode.json"
-  ]
+  ],
+  "merged": {
+    ".codex/config.toml": [],
+    ".mcp.json": [],
+    "opencode.json": []
+  }
 }
