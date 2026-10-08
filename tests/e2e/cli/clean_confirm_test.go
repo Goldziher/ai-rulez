@@ -52,3 +52,22 @@ func TestDeclinedConfirmationExitsNonZero(t *testing.T) {
 	assert.Equal(t, exitCannot, remove.ExitCode, remove.Stdout+remove.Stderr)
 	assert.FileExists(t, filepath.Join(dir, ".ai-rulez", "rules", "style.md"))
 }
+
+func TestCleanDoesNotWarnAboutAFileTheLastRunRemoved(t *testing.T) {
+	dir := cleanProject(t)
+	agents := filepath.Join(dir, "AGENTS.md")
+	f, err := os.OpenFile(agents, os.O_APPEND|os.O_WRONLY, 0o644)
+	require.NoError(t, err)
+	_, err = f.WriteString("my hand edit\n")
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+	first := testutil.RunCLI(t, dir, "clean", "--yes")
+	require.Equal(t, 0, first.ExitCode, first.Stderr)
+	require.NoFileExists(t, filepath.Join(dir, "CLAUDE.md"), "the first run removed it")
+
+	second := testutil.RunCLI(t, dir, "clean", "--yes", "--include-edited")
+
+	assert.Equal(t, 0, second.ExitCode, second.Stderr)
+	assert.NotContains(t, second.Stdout+second.Stderr, "CLAUDE.md", "a file that is gone is not kept")
+	assert.NoFileExists(t, agents)
+}
