@@ -54,7 +54,7 @@ func (r *runner) scanBody(it *item, d doc) {
 }
 
 func (r *runner) existsAbs(abs string) bool {
-	if rel := r.tree.Rel(abs); rel != "" {
+	if rel := r.rel(abs); rel != "" {
 		return r.tree.Exists(rel)
 	}
 	_, err := os.Stat(abs)

@@ -129,6 +129,18 @@ func (t *Tree) Rel(abs string) string {
 	return filepath.ToSlash(rel)
 }
 
+// rel is Tree.Rel for the files of one run. Resolving a path walks its symlinks
+// (a stat per component), and a run asks for the same few thousand paths again
+// and again, so the answer is kept for the life of the runner.
+func (r *runner) rel(abs string) string {
+	if v, ok := r.relMemo.Load(abs); ok {
+		return v.(string)
+	}
+	rel := r.tree.Rel(abs)
+	r.relMemo.Store(abs, rel)
+	return rel
+}
+
 // Paths lists every indexed file.
 func (t *Tree) Paths() []string {
 	out := make([]string, 0, len(t.files))
