@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/pricing"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // PriceTableVersion identifies the built-in price table (internal/pricing, shared
@@ -71,31 +72,15 @@ func (p Pricing) Cost(model string, u Usage) (usd float64, known bool) {
 	return (float64(u.PromptTokens)*pr.InPerMTok + float64(u.CompletionTokens)*pr.OutPerMTok) / 1e6, true
 }
 
-// BytesPerTokenEstimate is the divisor behind EstimateTokens. English prose runs
-// near four bytes per token and dense code or non-Latin text near one to three,
-// so three bytes per token overestimates typical input and never undercounts a
-// CJK rune (three bytes, about one token).
-const BytesPerTokenEstimate = 3
-
-// EstimateTokens approximates the token count of text from its UTF-8 length
-// (one token per BytesPerTokenEstimate bytes, rounded up). It is deliberately
-// conservative, for budget decisions only; it is not a tokenizer.
-func EstimateTokens(text string) int {
-	if text == "" {
-		return 0
-	}
-	return (len(text) + BytesPerTokenEstimate - 1) / BytesPerTokenEstimate
-}
-
 // EstimatePromptTokens approximates the prompt size of a chat request,
 // including a small per-message framing overhead.
 func EstimatePromptTokens(req ChatRequest) int {
 	total := 3
 	for _, m := range req.Messages {
-		total += EstimateTokens(m.Content) + 4
+		total += tokens.Estimate(m.Content) + 4
 	}
 	if req.ResponseFormat != nil {
-		total += EstimateTokens(req.ResponseFormat.Name) + EstimateTokens(mustJSON(req.ResponseFormat.Schema)) + 16
+		total += tokens.Estimate(req.ResponseFormat.Name) + tokens.Estimate(mustJSON(req.ResponseFormat.Schema)) + 16
 	}
 	return total
 }

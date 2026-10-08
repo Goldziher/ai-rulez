@@ -9,7 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // Defaults of the spend ceilings when neither a flag nor [review] sets them.
@@ -250,7 +250,7 @@ func planItem(in EstimateInput, r *ItemResult, system string) (EgressItem, []Pro
 		built := buildCall(callSpec{rb: rb, system: system, item: sendView(r.Item, r.Redacted), group: group, dims: dims, sibs: sibs, content: in.Content, vote: 1, stub: true})
 		call := EgressCall{
 			Group: group, Dimensions: dimIDs(dims), Bytes: len(built.User),
-			InputTokens:  llm.EstimateTokens(system) + llm.EstimateTokens(built.User) + callOverheadTokens,
+			InputTokens:  tokens.Estimate(system) + tokens.Estimate(built.User) + callOverheadTokens,
 			OutputTokens: rb.Limits.MaxOutputTokens,
 		}
 		if call.OutputTokens == 0 {
@@ -338,7 +338,7 @@ func shortlist(pool []Item, it Item, n int) []Item {
 // truncateBody keeps the head and tail of a body longer than maxTokens. The cuts
 // land on rune boundaries and invalid bytes become U+FFFD, in one linear pass.
 func truncateBody(body string, maxTokens int) (string, bool) {
-	limit := maxTokens * llm.BytesPerTokenEstimate
+	limit := maxTokens * tokens.BudgetBytesPerToken
 	if maxTokens <= 0 || len(body) <= limit {
 		return body, false
 	}
