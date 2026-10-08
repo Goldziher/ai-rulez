@@ -10517,7 +10517,7 @@ an llms.txt file has a heading other than the H1 title and H2 section names, or 
 
 ##### AR9P3 llmstxt-link-entry-invalid
 
-an llms.txt file-list section has content that is not a list entry holding a `[name](url)` link
+an llms.txt file-list section has content that is not a list entry holding a [name](url) link
 
 - Default severity: `error`
 - Analyzer: `llmstxt` (scope `item`)
@@ -13486,11 +13486,11 @@ to LF. Exit code 2 when the repository loosens the policy (the same code `genera
   `validate --show-policy`; `validate --strict` reports each attempt as an `AR74x` finding. The severity floor and
   required codes are enforced inside the lint run, so a floored finding cannot be demoted by a lint profile.
 - `generate` refuses to run on a configuration that loosens the policy, and so does each root of `generate
-  --recursive` and `validate --recursive`. With `--recursive`, `validate` exits `2`; `generate` reports the failed
-  roots and exits `1`.
-- `lock` refuses to write `ai-rulez.lock` for such a configuration (exit `1`, naming the `AR740` lines), and
-  `lock --check` reports a mismatch (exit `2`). `doctor` and `doctor --policy` do not report `AR740`; run `validate`
-  to see it.
+  --recursive` and `validate --recursive`. Loosening is exit `2` everywhere: when every failed root loosened the
+  policy (or drifted from the lock) a recursive run exits `2`, and `1` when some root failed for another reason.
+- `lock` refuses to write `ai-rulez.lock` for such a configuration (exit `2`, naming the `AR740` lines), and
+  `lock --check` reports a mismatch (exit `2`). `doctor` and `doctor --policy` report each attempt as an `AR740`
+  error finding in the `policy` check (a warning under `--policy-mode warn`) and exit `2`.
 - The MCP servers: `mcp --serve-skills` fails to start on a configuration that loosens the policy, and the
   `generate_outputs` and `validate_config` tools of `mcp` refuse it (`validate_config` answers `valid: false`).
 - No suppression hides a protected code: for every code in `required_codes` or raised by `severity_floor` (and
@@ -22735,6 +22735,8 @@ These flags work with all commands:
 | `--help` / `-h`    | boolean | Show help for a command                                                         |
 | `--version` / `-v` | boolean | Print `ai-rulez version <version>` (root command only; same as `ai-rulez version`) |
 
+`-n` is the shorthand of `--config-dir` (the configuration directory name, `.ai-rulez` by default) on every command that takes it, not of a dry-run: use `-d` / `--dry-run` where it exists (`generate`, `clean`) and spell `--dry-run` out elsewhere. `--config-dir` is not a global flag: each command lists it with its own flags.
+
 Every command that can print JSON takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal. Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--yes -y`,
 `--priority -p`, `--targets -t`, `--content -c`, `--description -s`, `--path -p`,
 and `--ref -r`.
@@ -22793,7 +22795,7 @@ Every command follows one contract (`lock` adds `3`, see [Lock file](lockfile.md
 | ---- | ------- |
 | 0    | Success |
 | 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand, a V2/V3 config file (see [Configuration Detection](#configuration-detection)), a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no manifest |
-| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --strict` refusing a served skill the security scan refuses; `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `migrate v5 --check` finding a project to migrate; `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file; `generate`, `validate` and `validate --show-policy` finding that the configuration loosens the [organization policy](policy.md) |
+| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --strict` refusing a served skill the security scan refuses; `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `migrate v5 --check` finding a project to migrate; `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file; `generate`, `validate`, `validate --show-policy`, `lock`, their `--recursive` forms and `doctor` finding that the configuration loosens the [organization policy](policy.md) |
 | 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --strict` exits 2 instead) |
 
 When a command covers several roots (`--recursive`), the most severe code wins: `1`, then `2`, then `3`.

@@ -36,6 +36,7 @@ global cmd/commands/add.go 13
 global cmd/commands/approve.go 20
 global cmd/commands/approve_assure.go 1
 global cmd/commands/approve_online.go 2
+global cmd/commands/arg_errors.go 1
 global cmd/commands/builtins.go 5
 global cmd/commands/catalog.go 20
 global cmd/commands/catalog_diff.go 4
@@ -108,7 +109,7 @@ global cmd/commands/validate_changed.go 4
 global cmd/commands/validate_explain.go 1
 global cmd/commands/validate_fix.go 3
 global cmd/commands/validate_sbom.go 1
-global cmd/commands/validate_strict.go 15
+global cmd/commands/validate_strict.go 16
 global cmd/commands/validate_worktree.go 1
 global cmd/commands/verifiers.go 19
 global cmd/commands/verifiers_calibrate.go 3
@@ -305,6 +306,7 @@ global internal/llm/judge.go 1
 global internal/llm/native.go 2
 global internal/llmstxt/docsite.go 2
 global internal/llmstxt/render.go 2
+global internal/lockfile/lockfile.go 1
 global internal/lockfile/source.go 1
 global internal/logger/logger.go 3
 global internal/mcp/handlers/project.go 2
@@ -357,7 +359,7 @@ global internal/telemetry/otlp.go 1
 global internal/telemetry/template.go 1
 global internal/templates/init_config.go 1
 global internal/testutil/cienv.go 1
-global internal/tokens/counter.go 1
+global internal/tokens/counter.go 2
 global internal/toolnames/toolnames.go 2
 global internal/usage/feedback.go 1
 global internal/usage/lock.go 2
