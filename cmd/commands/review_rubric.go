@@ -2,7 +2,6 @@ package commands
 
 import (
 	"io"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -60,7 +59,7 @@ Exit status: 0 when clean, 2 when there are findings, 1 when a rubric could not 
 			return err
 		}
 		if found {
-			os.Exit(exitRubricFindings)
+			return exitStatus(exitRubricFindings)
 		}
 		return nil
 	},

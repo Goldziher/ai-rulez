@@ -17,7 +17,7 @@ func finishUpdate(rep *updateReport, code int) int {
 	})
 	if updateFormat == formatJSON {
 		if err := writeRawJSON(os.Stdout, rep); err != nil {
-			fmtError(oops.Wrapf(err, "write the report"))
+			renderStderr(oops.Wrapf(err, "write the report"))
 			return 1
 		}
 		return code

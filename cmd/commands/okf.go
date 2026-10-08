@@ -69,10 +69,8 @@ AR9B0-AR9B9. The bundle does not need to come from ai-rulez.
 Exit codes: 0 no findings at --fail-on or above, 2 findings, 1 the bundle could
 not be read.`,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		if code := runOKFValidate(watchParentContext(cmd), args[0], os.Stdout); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(runOKFValidate(watchParentContext(cmd), args[0], os.Stdout))
 	},
 }
 
@@ -100,10 +98,8 @@ contents of that directory, but only when it is empty or already an OKF bundle.
 The okf preset ("presets = [\"claude\", \"okf\"]") runs the same export inside
 generate, so the bundle stays in sync and generate --check detects drift.`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		if code := runOKFExport(watchParentContext(cmd), args, os.Stdout); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(runOKFExport(watchParentContext(cmd), args, os.Stdout))
 	},
 }
 
@@ -133,10 +129,8 @@ are rejected. Use --dry-run to see what would happen.
 Exit codes: 0 done, 2 refused (security findings) or files skipped because they
 differ, 1 the bundle could not be read.`,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		if code := runOKFImport(watchParentContext(cmd), args[0], os.Stdout); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(runOKFImport(watchParentContext(cmd), args[0], os.Stdout))
 	},
 }
 
@@ -189,23 +183,23 @@ func runOKFValidate(ctx context.Context, spec string, out io.Writer) int {
 	switch okfFormat {
 	case "", formatText, formatJSON:
 	default:
-		fmtError(oops.Errorf("unknown --format %q (use text or json)", okfFormat))
+		renderStderr(oops.Errorf("unknown --format %q (use text or json)", okfFormat))
 		return exitOKFCannotRun
 	}
 	failOn := okf.Severity(okfFailOn)
 	if okfFailOn != okfFailNone && failOn != okf.SeverityError && failOn != okf.SeverityWarning && failOn != okf.SeverityInfo {
-		fmtError(oops.Errorf("unknown --fail-on %q (use error, warning, info or none)", okfFailOn))
+		renderStderr(oops.Errorf("unknown --fail-on %q (use error, warning, info or none)", okfFailOn))
 		return exitOKFCannotRun
 	}
 	b, cleanup, err := loadBundle(ctx, spec)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	defer cleanup()
 	findings := append(b.CheckRoot(), b.Validate()...)
 	if err := writeOKFFindings(out, spec, b, findings, okfFormat == formatJSON); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	if okfFailOn != okfFailNone && okfFails(findings, failOn) {
@@ -267,26 +261,26 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 	cfg, err := loadConfigForCommand(ctx, args, config.WithoutLocal())
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	if err := cfg.Validate(); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	opts, err := okfExportOptions(cfg)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	tree, err := okfExportTree(cfg)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	res, err := okfbridge.Export(tree, opts)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	dir := okfOut
@@ -300,7 +294,7 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 	if okfCheck {
 		drift, err := okf.Compare(dir, res.Files)
 		if err != nil {
-			fmtError(err)
+			renderStderr(err)
 			return exitOKFCannotRun
 		}
 		if drift.Empty() {
@@ -312,7 +306,7 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 		return exitOKFProblems
 	}
 	if err := okf.WriteFiles(dir, res.Files, true); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	w.printf("Wrote %d files to %s (%s)\n", len(res.Files), dir, kindCounts(res.Counts))
@@ -380,7 +374,7 @@ func kindCounts(counts map[okfbridge.Kind]int) string {
 func runOKFImport(ctx context.Context, spec string, out io.Writer) int {
 	into, err := parseImportInto()
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	targetDir := configDir
@@ -389,16 +383,16 @@ func runOKFImport(ctx context.Context, spec string, out io.Writer) int {
 	}
 	absTarget, err := filepath.Abs(targetDir)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	if info, statErr := os.Stat(absTarget); statErr != nil || !info.IsDir() {
-		fmtError(oops.Hint("Run `ai-rulez init` first, or pass --config-dir.").Errorf("%s does not exist", targetDir))
+		renderStderr(oops.Hint("Run `ai-rulez init` first, or pass --config-dir.").Errorf("%s does not exist", targetDir))
 		return exitOKFCannotRun
 	}
 	b, cleanup, err := loadBundle(ctx, spec)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	defer cleanup()
@@ -410,11 +404,11 @@ func runOKFImport(ctx context.Context, spec string, out io.Writer) int {
 	})
 	var secErr *okfbridge.SecurityError
 	if err != nil && res == nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	}
 	if writeErr := writeOKFImport(out, spec, targetDir, res); writeErr != nil {
-		fmtError(writeErr)
+		renderStderr(writeErr)
 		return exitOKFCannotRun
 	}
 	switch {
@@ -422,7 +416,7 @@ func runOKFImport(ctx context.Context, spec string, out io.Writer) int {
 		fmt.Fprintln(os.Stderr, err)
 		return exitOKFProblems
 	case err != nil:
-		fmtError(err)
+		renderStderr(err)
 		return exitOKFCannotRun
 	case res.Count(okfbridge.StatusConflict) > 0:
 		fmt.Fprintf(os.Stderr, "%d files exist and differ; nothing was overwritten (use --force)\n", res.Count(okfbridge.StatusConflict))

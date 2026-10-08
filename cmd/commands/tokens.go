@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -46,15 +45,15 @@ Counts are approximations — Claude's tokenizer is not published — and cover 
 what ai-rulez generates. The agent harness adds a fixed floor of its own that
 ai-rulez cannot see, so no figure here predicts a session total.`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		overBudget, err := runTokens(cmd.OutOrStdout(), args)
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if overBudget {
-			os.Exit(budgetExceededExitCode)
+			return exitStatus(budgetExceededExitCode)
 		}
+		return nil
 	},
 }
 
