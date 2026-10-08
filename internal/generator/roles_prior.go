@@ -116,21 +116,7 @@ func (g *Generator) ReconcileRoleSkillOverrides() error {
 		return nil
 	}
 	claims := g.previousMergedClaims()[settingsRel]
-	changed := false
-
-	for _, skill := range sortedStringKeys(want) {
-		had, present := doc[skill]
-		if !present || claimedSkill(claims, skill) || jsonEqualString(had, want[skill]) {
-			continue
-		}
-		role := g.Role()
-		g.log().Warn("Role "+role+" sets skillOverrides."+skill+" = "+want[skill]+" over the value you wrote in "+settingsRel+
-			" ("+string(had)+"); it is put back when the role no longer sets this skill", "role", role, "skill", skill)
-		if _, kept := ledger.Prior[skill]; !kept {
-			ledger.Prior[skill] = had
-			changed = true
-		}
-	}
+	changed := g.rememberOverriddenValues(doc, want, claims, ledger)
 
 	var restore []string
 	for _, skill := range sortedRawKeys(ledger.Prior) {
@@ -158,6 +144,26 @@ func (g *Generator) ReconcileRoleSkillOverrides() error {
 		return nil
 	}
 	return g.writeRoleLedger(ledger)
+}
+
+// rememberOverriddenValues warns about each hand-written skillOverrides value the
+// role replaces and records it in the ledger; it reports whether the ledger grew.
+func (g *Generator) rememberOverriddenValues(doc map[string]json.RawMessage, want map[string]string, claims []jsonmerge.Claim, ledger roleLedger) bool {
+	changed := false
+	for _, skill := range sortedStringKeys(want) {
+		had, present := doc[skill]
+		if !present || claimedSkill(claims, skill) || jsonEqualString(had, want[skill]) {
+			continue
+		}
+		role := g.Role()
+		g.log().Warn("Role "+role+" sets skillOverrides."+skill+" = "+want[skill]+" over the value you wrote in "+settingsRel+
+			" ("+string(had)+"); it is put back when the role no longer sets this skill", "role", role, "skill", skill)
+		if _, kept := ledger.Prior[skill]; !kept {
+			ledger.Prior[skill] = had
+			changed = true
+		}
+	}
+	return changed
 }
 
 // restoreSkillOverride puts prior back as skillOverrides.<skill> when the
