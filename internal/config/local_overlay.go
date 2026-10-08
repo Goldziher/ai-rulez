@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -24,6 +25,9 @@ type LocalOverlay struct {
 	// Doc is the normalized overlay document as decoded from disk. Treat it as
 	// read-only.
 	Doc map[string]any
+	// Tracked is true when git tracks the overlay file. A committed overlay came
+	// from the repository, not from this machine, so it gets no machine-local trust.
+	Tracked bool
 }
 
 // HasLocalInputs reports whether any machine-local input (overlay file or
@@ -129,6 +133,10 @@ func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string,
 		Path: localPath,
 		Doc:  normalizeConfigDocKeys(localDoc),
 	}
+	if isGitTracked(filepath.Dir(localPath), localPath) {
+		out.LocalOverlay.Tracked = true
+		cfg.Warn("config.local overlay is tracked by git, so it is repository content: its local includes get the same project-containment check as config.toml", "path", localPath)
+	}
 	return out, nil
 }
 
@@ -218,4 +226,16 @@ func errMergedConfigWrite() error {
 	return oops.
 		Hint("Load with config.WithoutLocal() to modify the shared config").
 		Errorf("refusing to write a configuration merged with a local overlay")
+}
+
+// isGitTracked reports whether git tracks file, asking git from dir. A missing
+// git binary, a directory outside a repository or a virtual path all read as
+// untracked.
+func isGitTracked(dir, file string) bool {
+	if !filepath.IsAbs(file) {
+		return false
+	}
+	cmd := exec.Command("git", "-C", dir, "ls-files", "--error-unmatch", "--", file) //nolint:gosec // fixed program, the path is an argument
+	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
+	return cmd.Run() == nil
 }
