@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("a = 1979-05-27T07:32:00Z\n")

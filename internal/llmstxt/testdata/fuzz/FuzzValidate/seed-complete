@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("# Title\n\n> Summary.\n\n## Docs\n\n- [A](https://example.com/a): note\n")
