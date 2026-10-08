@@ -2,13 +2,14 @@ package plugin
 
 import (
 	"encoding/json"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // StalePluginDirs lists the generated plugin directories under
@@ -142,7 +143,7 @@ func readRootFile(root *os.Root, rel string) ([]byte, error) {
 		return nil, err //nolint:wrapcheck // callers wrap with the path
 	}
 	defer f.Close() //nolint:errcheck // read only
-	return io.ReadAll(io.LimitReader(f, maxProvenanceFileBytes))
+	return safefs.ReadLimited(f, maxProvenanceFileBytes)
 }
 
 // maxProvenanceFileBytes bounds one generated file read to verify its hash.
