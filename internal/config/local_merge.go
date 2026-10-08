@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/samber/oops"
@@ -116,7 +117,7 @@ func MergeConfigDocs(shared, local map[string]any) (merged map[string]any, warni
 		delete(loc, "signing")
 		warnings = append(warnings, "ignored [signing] in the local config: the signing policy is shared and cannot be overridden per machine")
 	}
-	for _, key := range sortedKeys(loc) {
+	for _, key := range slices.Sorted(maps.Keys(loc)) {
 		w, err := mergeTopLevelKey(merged, loc[key], key)
 		if err != nil {
 			return nil, nil, err
@@ -129,7 +130,7 @@ func MergeConfigDocs(shared, local map[string]any) (merged map[string]any, warni
 func checkUnknownLocalKeys(loc map[string]any) error {
 	known := knownConfigDocKeys()
 	var unknown []string
-	for _, k := range sortedKeys(loc) {
+	for _, k := range slices.Sorted(maps.Keys(loc)) {
 		if !known[k] {
 			unknown = append(unknown, k)
 		}
@@ -138,7 +139,7 @@ func checkUnknownLocalKeys(loc map[string]any) error {
 		return nil
 	}
 	return oops.
-		Hint("Check for typos; valid keys: "+strings.Join(sortedKeys(known), ", ")).
+		Hint("Check for typos; valid keys: "+strings.Join(slices.Sorted(maps.Keys(known)), ", ")).
 		Errorf("unknown key(s) in local config: %s", strings.Join(unknown, ", "))
 }
 
@@ -232,7 +233,7 @@ func mergeValue(shared, local any) any {
 
 // mergeMaps merges local into shared in place (callers pass deep copies).
 func mergeMaps(shared, local map[string]any) map[string]any {
-	for _, k := range sortedKeys(local) {
+	for _, k := range slices.Sorted(maps.Keys(local)) {
 		shared[k] = mergeValue(shared[k], local[k])
 	}
 	return shared
@@ -255,7 +256,7 @@ func listOf(side, key string, v any, present bool) ([]any, error) {
 // entryDesc describes a list entry by position and key names only.
 func entryDesc(listKey string, idx int, e any) string {
 	if m, ok := e.(map[string]any); ok {
-		return fmt.Sprintf("%s entry #%d (keys: %s)", listKey, idx+1, strings.Join(sortedKeys(m), ", "))
+		return fmt.Sprintf("%s entry #%d (keys: %s)", listKey, idx+1, strings.Join(slices.Sorted(maps.Keys(m)), ", "))
 	}
 	return fmt.Sprintf("%s entry #%d (type %T)", listKey, idx+1, e)
 }
@@ -631,15 +632,6 @@ func asList(v any) []any {
 		return out
 	}
 	return nil
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func deepCopyMap(m map[string]any) map[string]any {

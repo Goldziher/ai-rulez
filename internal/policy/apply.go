@@ -2,6 +2,7 @@ package policy
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -249,7 +250,7 @@ func (a *applier) severities() {
 // severityOverrides holds [lint.severity] to the policy: a required rule cannot
 // be turned off, and a floored rule cannot go below its floor.
 func (a *applier) severityOverrides(pol Lint, required map[string]bool, lc *config.LintConfig) {
-	for _, key := range sortedKeys(lc.Severity) {
+	for _, key := range slices.Sorted(maps.Keys(lc.Severity)) {
 		code, ok := lint.ResolveCode(key)
 		if !ok {
 			continue

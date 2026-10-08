@@ -2,8 +2,10 @@ package review
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -85,7 +87,7 @@ func writeGolden(t *testing.T, cases []goldenCase) string {
 
 func flow(m map[string]string) string {
 	var parts []string
-	for _, k := range sortedKeys(m) {
+	for _, k := range slices.Sorted(maps.Keys(m)) {
 		parts = append(parts, k+": "+m[k])
 	}
 	return "{" + strings.Join(parts, ", ") + "}"

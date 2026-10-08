@@ -6,7 +6,6 @@ package evalimport
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
@@ -179,14 +178,4 @@ func lenOf(v any) int {
 		return len(t)
 	}
 	return 0
-}
-
-// sortedKeys returns the keys of m in order.
-func sortedKeys(m map[string]any) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

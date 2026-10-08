@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 // Two loads of one remote at different commits share a cache directory: each
@@ -18,15 +19,15 @@ func TestConcurrentFetchesOfOneRemoteAtDifferentCommits(t *testing.T) {
 	// Arrange
 	isolateHome(t)
 	remote := t.TempDir()
-	git(t, remote, "init", "-q", "-b", "main")
+	testutil.Git(t, remote, "init", "-q", "-b", "main")
 	rule := filepath.Join(remote, ".ai-rulez", "rules", "shared.md")
 	writeTestFile(t, rule, "# Shared\n\nversion one\n")
-	git(t, remote, "add", "-A")
-	git(t, remote, "commit", "-qm", "one")
-	first := git(t, remote, "rev-parse", "HEAD")
+	testutil.Git(t, remote, "add", "-A")
+	testutil.Git(t, remote, "commit", "-qm", "one")
+	first := testutil.Git(t, remote, "rev-parse", "HEAD")
 	writeTestFile(t, rule, "# Shared\n\nversion two\n")
-	git(t, remote, "commit", "-qam", "two")
-	second := git(t, remote, "rev-parse", "HEAD")
+	testutil.Git(t, remote, "commit", "-qam", "two")
+	second := testutil.Git(t, remote, "rev-parse", "HEAD")
 	require.NotEqual(t, first, second)
 	base := t.TempDir()
 
