@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -202,9 +201,7 @@ func reportApprovalChecks(out io.Writer, results []approvalCheckResult, online b
 		if results == nil {
 			results = []approvalCheckResult{}
 		}
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(approvalCheckReport{SchemaVersion: verifyApprovalsReportVersion, Online: online, Results: results}); err != nil {
+		if err := writeRawJSON(out, approvalCheckReport{SchemaVersion: verifyApprovalsReportVersion, Online: online, Results: results}); err != nil {
 			fmtError(oops.Wrapf(err, "write the report"))
 			return 1
 		}

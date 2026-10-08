@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
@@ -60,7 +59,7 @@ func init() {
 	domainAddCmd.Flags().StringVarP(&domainDescription, "description", "s", "", "Domain description")
 
 	// Add flags to domain remove command
-	domainRemoveCmd.Flags().BoolVarP(&domainForce, "yes", "y", false, "Skip confirmation prompts")
+	addYesFlag(domainRemoveCmd.Flags(), &domainForce, "Skip confirmation prompts")
 
 	// Add flags to domain list command
 	addJSONFormat(domainListCmd.Flags(), &domainJSON, "j")
@@ -72,8 +71,7 @@ func runDomainAdd(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	req := &crud.AddDomainRequest{
@@ -83,8 +81,7 @@ func runDomainAdd(cmd *cobra.Command, args []string) {
 
 	result, err := op.AddDomain(ctx, req)
 	if err != nil {
-		logger.Error("Failed to add domain", "error", err)
-		os.Exit(1)
+		fatal("Failed to add domain", err)
 	}
 
 	logger.Info("Domain added successfully",
@@ -99,24 +96,16 @@ func runDomainAdd(cmd *cobra.Command, args []string) {
 func runDomainRemove(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	// Confirm removal unless --yes is specified
-	if !domainForce {
-		if !confirmRemoval("domain", name) {
-			exitDeclined("Operation canceled")
-			return
-		}
-	}
+	confirmRemovalUnlessYes(domainForce, "domain", name, "Operation canceled")
 
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	if err := op.RemoveDomain(ctx, name); err != nil {
-		logger.Error("Failed to remove domain", "error", err)
-		os.Exit(1)
+		fatal("Failed to remove domain", err)
 	}
 
 	logger.Info("Domain removed successfully", "name", name)
@@ -126,15 +115,13 @@ func runDomainList(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	loadListedConfig(ctx)
 
 	domains, err := op.ListDomains(ctx)
 	if err != nil {
-		logger.Error("Failed to list domains", "error", err)
-		os.Exit(1)
+		fatal("Failed to list domains", err)
 	}
 
 	if len(domains) == 0 && !domainJSON {
@@ -154,8 +141,7 @@ func runDomainList(cmd *cobra.Command, args []string) {
 		}
 		data, err := jsondoc.Marshal(output)
 		if err != nil {
-			logger.Error("Failed to marshal JSON", "error", err)
-			os.Exit(1)
+			fatal("Failed to marshal JSON", err)
 		}
 		fmt.Print(string(data))
 	} else {
