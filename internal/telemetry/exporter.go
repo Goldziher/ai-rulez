@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"math/rand/v2"
 	"net"
 	"net/http"
@@ -313,6 +314,9 @@ func parseRetryAfter(value string) time.Duration {
 func parseRetryAfterAt(value string, now time.Time) time.Duration {
 	value = strings.TrimSpace(value)
 	if seconds, err := strconv.Atoi(value); err == nil && seconds > 0 {
+		if seconds > int(math.MaxInt64/int64(time.Second)) {
+			return time.Duration(math.MaxInt64)
+		}
 		return time.Duration(seconds) * time.Second
 	}
 	if when, err := http.ParseTime(value); err == nil {
