@@ -17,6 +17,7 @@ package tokens
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -93,13 +94,67 @@ func (c cl100kCounter) Count(text string) int {
 	if text == "" {
 		return 0
 	}
-	count, err := cl100kOnce().Count(text)
+	count, err := countBounded(text)
 	if err != nil {
 		logger.Std().Warn("cl100k_base tokenizer failed, falling back to a byte-ratio estimate",
 			"error", err, "bytes", len(text))
 		return ByteRatio(EstimateBytesPerToken).Count(text)
 	}
 	return count
+}
+
+// maxExactLineBytes bounds the BPE work: the encoder is quadratic in the length
+// of an unbroken run, so a line longer than this (minified or hostile input) is
+// estimated by byte ratio instead. Text with no such line is counted exactly.
+const maxExactLineBytes = 8 * 1024
+
+// countBounded counts text exactly unless some line exceeds maxExactLineBytes;
+// those lines alone fall back to the byte-ratio estimate.
+func countBounded(text string) (int, error) {
+	encoder := cl100kOnce()
+	if !hasLongLine(text) {
+		return encoder.Count(text) //nolint:wrapcheck // the tokenizer error is handled by the caller
+	}
+	total, runStart, lineStart := 0, 0, 0
+	flush := func(end int) error {
+		if end > runStart {
+			n, err := encoder.Count(text[runStart:end])
+			if err != nil {
+				return err //nolint:wrapcheck // handled by the caller
+			}
+			total += n
+		}
+		return nil
+	}
+	for lineStart < len(text) {
+		lineEnd := len(text)
+		if i := strings.IndexByte(text[lineStart:], '\n'); i >= 0 {
+			lineEnd = lineStart + i + 1
+		}
+		if lineEnd-lineStart > maxExactLineBytes {
+			if err := flush(lineStart); err != nil {
+				return 0, err
+			}
+			total += ByteRatio(EstimateBytesPerToken).Count(text[lineStart:lineEnd])
+			runStart = lineEnd
+		}
+		lineStart = lineEnd
+	}
+	if err := flush(len(text)); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func hasLongLine(text string) bool {
+	for len(text) > maxExactLineBytes {
+		i := strings.IndexByte(text, '\n')
+		if i < 0 || i >= maxExactLineBytes {
+			return true
+		}
+		text = text[i+1:]
+	}
+	return false
 }
 
 type byteRatioCounter struct {
