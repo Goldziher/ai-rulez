@@ -110,15 +110,13 @@ func runListRules(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := newContentOperator(listLocal)
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	loadListedConfig(ctx)
 	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeRules)
 	if err != nil {
-		logger.Error("Failed to list rules", "error", err)
-		os.Exit(1)
+		fatal("Failed to list rules", err)
 	}
 
 	if len(files) == 0 && !listJSON {
@@ -137,15 +135,13 @@ func runListContext(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := newContentOperator(listLocal)
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	loadListedConfig(ctx)
 	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeContext)
 	if err != nil {
-		logger.Error("Failed to list context", "error", err)
-		os.Exit(1)
+		fatal("Failed to list context", err)
 	}
 
 	if len(files) == 0 && !listJSON {
@@ -164,15 +160,13 @@ func runListSkills(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := newContentOperator(listLocal)
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	loadListedConfig(ctx)
 	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeSkills)
 	if err != nil {
-		logger.Error("Failed to list skills", "error", err)
-		os.Exit(1)
+		fatal("Failed to list skills", err)
 	}
 
 	if len(files) == 0 && !listJSON {
@@ -202,8 +196,7 @@ func outputListJSON(fileType string, files []crud.FileInfo) {
 	}
 	data, err := jsondoc.Marshal(output)
 	if err != nil {
-		logger.Error("Failed to marshal JSON", "error", err)
-		os.Exit(1)
+		fatal("Failed to marshal JSON", err)
 	}
 	fmt.Print(string(data))
 }
@@ -241,8 +234,7 @@ func outputListTable(title string, files []crud.FileInfo) {
 func runListItems(ftype, title, noun string) {
 	op, err := newContentOperator(listLocal)
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	loadListedConfig(cmdContext())
 	files, err := op.ListFiles(cmdContext(), listDomain, ftype)
@@ -274,8 +266,7 @@ func loadListedConfig(ctx context.Context) {
 		opts = append(opts, config.WithoutRemote())
 	}
 	if _, err := loadConfigForCommand(ctx, nil, opts...); err != nil {
-		logger.Error("Failed to load config", "error", err)
-		os.Exit(1)
+		fatal("Failed to load config", err)
 	}
 }
 
@@ -288,13 +279,11 @@ func runListRoot(cmd *cobra.Command, _ []string) {
 	}
 	cfg, err := loadConfigForCommand(cmdContext(), nil, pluginLoadOptions(true)...)
 	if err != nil {
-		logger.Error("Failed to load config", "error", err)
-		os.Exit(1)
+		fatal("Failed to load config", err)
 	}
 	report, err := generator.NewGenerator(cfg).PlacementReport(listProfile)
 	if err != nil {
-		logger.Error("Failed to resolve placement", "error", err)
-		os.Exit(1)
+		fatal("Failed to resolve placement", err)
 	}
 	if listJSON {
 		data, _ := jsondoc.Marshal(report) //nolint:errcheck // plain structs always marshal

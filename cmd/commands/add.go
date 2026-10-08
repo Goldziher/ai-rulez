@@ -144,8 +144,7 @@ func runAddRule(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := newContentOperator(addLocal)
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	req := &crud.AddFileRequest{
@@ -159,8 +158,7 @@ func runAddRule(cmd *cobra.Command, args []string) {
 
 	result, err := op.AddRule(ctx, req)
 	if err != nil {
-		logger.Error("Failed to add rule", "error", err)
-		os.Exit(1)
+		fatal("Failed to add rule", err)
 	}
 
 	output := map[string]interface{}{
@@ -184,8 +182,7 @@ func runAddContext(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := newContentOperator(addLocal)
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	req := &crud.AddFileRequest{
@@ -198,8 +195,7 @@ func runAddContext(cmd *cobra.Command, args []string) {
 
 	result, err := op.AddContext(ctx, req)
 	if err != nil {
-		logger.Error("Failed to add context", "error", err)
-		os.Exit(1)
+		fatal("Failed to add context", err)
 	}
 
 	output := map[string]interface{}{
@@ -223,8 +219,7 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := newContentOperator(addLocal)
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	// For skills, we need to handle the skill-specific format
@@ -239,8 +234,7 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 
 	result, err := op.AddSkill(ctx, req)
 	if err != nil {
-		logger.Error("Failed to add skill", "error", err)
-		os.Exit(1)
+		fatal("Failed to add skill", err)
 	}
 
 	output := map[string]interface{}{
@@ -275,8 +269,7 @@ func runAddItem(name, ftype, label string,
 ) {
 	op, err := newContentOperator(addLocal)
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	result, err := add(op, cmdContext(), &crud.AddFileRequest{
 		Domain: addDomain, Type: ftype, Name: name, Description: addDesc, Content: addContent,
