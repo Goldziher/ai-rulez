@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
@@ -82,7 +81,7 @@ func init() {
 	includeAddCmd.Flags().StringVarP(&includeInstallTo, "install-to", "t", "", "Installation path (optional)")
 
 	// Add flags for include remove
-	includeRemoveCmd.Flags().BoolVarP(&includeForce, "yes", "y", false, "Skip confirmation prompts")
+	addYesFlag(includeRemoveCmd.Flags(), &includeForce, "Skip confirmation prompts")
 
 	// Add flags for include list
 	addJSONFormat(includeListCmd.Flags(), &includeJSON, "j")
@@ -106,8 +105,7 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	if includeLocal {
 		op = op.Local()
@@ -124,8 +122,7 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 	}
 
 	if err := op.AddInclude(ctx, req); err != nil {
-		logger.Error("Failed to add include", "error", err)
-		os.Exit(1)
+		fatal("Failed to add include", err)
 	}
 
 	logger.Info("Include added successfully",
@@ -137,27 +134,19 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 func runIncludeRemove(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	// Confirm removal unless --yes is specified
-	if !includeForce {
-		if !confirmRemoval("include", name) {
-			exitDeclined("Operation canceled")
-			return
-		}
-	}
+	confirmRemovalUnlessYes(includeForce, "include", name, "Operation canceled")
 
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 	if includeLocal {
 		op = op.Local()
 	}
 
 	if err := op.RemoveInclude(ctx, name); err != nil {
-		logger.Error("Failed to remove include", "error", err)
-		os.Exit(1)
+		fatal("Failed to remove include", err)
 	}
 
 	logger.Info("Include removed successfully", "name", name)
@@ -167,14 +156,12 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		logger.Error("Failed to create CRUD operator", "error", err)
-		os.Exit(1)
+		fatal("Failed to create CRUD operator", err)
 	}
 
 	includes, err := op.ListIncludes(ctx)
 	if err != nil {
-		logger.Error("Failed to list includes", "error", err)
-		os.Exit(1)
+		fatal("Failed to list includes", err)
 	}
 
 	if len(includes) == 0 && !includeJSON {
@@ -195,8 +182,7 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 		}
 		data, err := jsondoc.Marshal(output)
 		if err != nil {
-			logger.Error("Failed to marshal JSON", "error", err)
-			os.Exit(1)
+			fatal("Failed to marshal JSON", err)
 		}
 		fmt.Print(string(data))
 	} else {
