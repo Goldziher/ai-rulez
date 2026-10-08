@@ -6,147 +6,26 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
-
-// JSON-schema literals used by tool schema builders.
-const (
-	jsonTypeString = "string"
-	jsonKeyType    = "type"
-)
-
-type handlerFunc func(context.Context, *handlers.ToolRequest) (*sdkmcp.CallToolResult, error)
-
-type toolSchemaBuilder struct {
-	properties map[string]any
-	required   []string
-}
-
-func newSchemaBuilder() *toolSchemaBuilder {
-	return &toolSchemaBuilder{
-		properties: map[string]any{},
-	}
-}
-
-func (b *toolSchemaBuilder) String(name, description string, required bool) *toolSchemaBuilder {
-	prop := map[string]any{
-		jsonKeyType: jsonTypeString,
-	}
-	if description != "" {
-		prop["description"] = description
-	}
-	b.properties[name] = prop
-	if required {
-		b.required = append(b.required, name)
-	}
-	return b
-}
-
-func (b *toolSchemaBuilder) StringArray(name, description string, required bool) *toolSchemaBuilder {
-	prop := map[string]any{
-		jsonKeyType: "array",
-		"items":     map[string]any{jsonKeyType: jsonTypeString},
-	}
-	if description != "" {
-		prop["description"] = description
-	}
-	b.properties[name] = prop
-	if required {
-		b.required = append(b.required, name)
-	}
-	return b
-}
-
-func (b *toolSchemaBuilder) Boolean(name, description string, required bool) *toolSchemaBuilder {
-	prop := map[string]any{
-		jsonKeyType: "boolean",
-	}
-	if description != "" {
-		prop["description"] = description
-	}
-	b.properties[name] = prop
-	if required {
-		b.required = append(b.required, name)
-	}
-	return b
-}
-
-func (b *toolSchemaBuilder) Number(name, description string, required bool) *toolSchemaBuilder {
-	prop := map[string]any{
-		jsonKeyType: "number",
-	}
-	if description != "" {
-		prop["description"] = description
-	}
-	b.properties[name] = prop
-	if required {
-		b.required = append(b.required, name)
-	}
-	return b
-}
-
-func (b *toolSchemaBuilder) Object(name, description string, required bool) *toolSchemaBuilder {
-	prop := map[string]any{
-		jsonKeyType:            "object",
-		"additionalProperties": map[string]any{jsonKeyType: jsonTypeString},
-	}
-	if description != "" {
-		prop["description"] = description
-	}
-	b.properties[name] = prop
-	if required {
-		b.required = append(b.required, name)
-	}
-	return b
-}
-
-func (b *toolSchemaBuilder) Enum(name, description string, values []string, required bool) *toolSchemaBuilder {
-	enumValues := make([]any, len(values))
-	for i, v := range values {
-		enumValues[i] = v
-	}
-	prop := map[string]any{
-		jsonKeyType: jsonTypeString,
-		"enum":      enumValues,
-	}
-	if description != "" {
-		prop["description"] = description
-	}
-	b.properties[name] = prop
-	if required {
-		b.required = append(b.required, name)
-	}
-	return b
-}
-
-// WorkingDirectory adds the standard working_directory parameter to all CRUD tools
-func (b *toolSchemaBuilder) WorkingDirectory() *toolSchemaBuilder {
-	return b.String("working_directory", "Working directory path (defaults to current directory, useful for polyrepo setups)", false)
-}
-
-func (b *toolSchemaBuilder) Build() map[string]any {
-	schema := map[string]any{
-		jsonKeyType:  "object",
-		"properties": b.properties,
-	}
-	if len(b.required) > 0 {
-		schema["required"] = b.required
-	}
-	return schema
-}
 
 // boolPtr returns a pointer to a bool value, used for optional annotation hints.
 func boolPtr(b bool) *bool {
 	return &b
 }
 
+// Every tool acts on the local project tree only, so none is open-world.
+
 // readOnlyAnnotations returns tool annotations marking a tool as read-only and non-destructive.
 func readOnlyAnnotations() *sdkmcp.ToolAnnotations {
 	return &sdkmcp.ToolAnnotations{
 		ReadOnlyHint:    true,
 		DestructiveHint: boolPtr(false),
+		IdempotentHint:  true,
+		OpenWorldHint:   boolPtr(false),
 	}
 }
 
@@ -154,6 +33,7 @@ func readOnlyAnnotations() *sdkmcp.ToolAnnotations {
 func destructiveAnnotations() *sdkmcp.ToolAnnotations {
 	return &sdkmcp.ToolAnnotations{
 		DestructiveHint: boolPtr(true),
+		OpenWorldHint:   boolPtr(false),
 	}
 }
 
@@ -163,6 +43,7 @@ func destructiveAnnotations() *sdkmcp.ToolAnnotations {
 func additiveAnnotations() *sdkmcp.ToolAnnotations {
 	return &sdkmcp.ToolAnnotations{
 		DestructiveHint: boolPtr(false),
+		OpenWorldHint:   boolPtr(false),
 	}
 }
 
@@ -172,42 +53,23 @@ func idempotentAnnotations() *sdkmcp.ToolAnnotations {
 	return &sdkmcp.ToolAnnotations{
 		DestructiveHint: boolPtr(false),
 		IdempotentHint:  true,
+		OpenWorldHint:   boolPtr(false),
 	}
 }
 
-func newTool(name, description string, builder *toolSchemaBuilder) *sdkmcp.Tool {
-	var schema map[string]any
-	if builder != nil {
-		schema = builder.Build()
-	} else {
-		schema = newSchemaBuilder().Build()
-	}
-	return &sdkmcp.Tool{
-		Name:        name,
-		Description: description,
-		InputSchema: schema,
-	}
+var priorityValues = []string{"critical", "high", "medium", "low", "minimal"}
+
+// severityValues are the severity levels a check takes.
+var severityValues = []string{"low", "medium", "high", "critical"}
+
+// failOnValues are the thresholds `validate --fail-on` accepts.
+func failOnValues() []string {
+	return []string{string(lint.SeverityError), string(lint.SeverityWarning), string(lint.SeverityInfo), "none"}
 }
 
-func newAnnotatedTool(name, description string, builder *toolSchemaBuilder, annotations *sdkmcp.ToolAnnotations) *sdkmcp.Tool {
-	tool := newTool(name, description, builder)
-	tool.Annotations = annotations
-	return tool
-}
-
-func (s *Server) addTool(tool *sdkmcp.Tool, handler handlerFunc) {
-	if tool.InputSchema == nil {
-		tool.InputSchema = newSchemaBuilder().Build()
-	}
-
-	sdkmcp.AddTool(s.mcpServer, tool, func(ctx context.Context, req *sdkmcp.CallToolRequest, input map[string]any) (*sdkmcp.CallToolResult, any, error) {
-		wrapper := handlers.NewToolRequest(req, input)
-		res, err := handler(ctx, wrapper)
-		if err == nil && (res == nil || !res.IsError) {
-			s.emitToolTelemetry(ctx, tool.Name, wrapper)
-		}
-		return res, nil, err
-	})
+// enumsOf is the enum restriction of one string property.
+func enumsOf(property string, values []string) map[string][]string {
+	return map[string][]string{property: values}
 }
 
 func (s *Server) registerTools() {
@@ -217,114 +79,58 @@ func (s *Server) registerTools() {
 }
 
 func (s *Server) registerProjectTools() {
-	s.addTool(
-		newAnnotatedTool("generate_outputs", "Generate output files from the current configuration, respecting includes and extends",
-			newSchemaBuilder().
-				String("config_file", "Path to the root configuration file (optional)", false).
-				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
-				Boolean("dry_run", "Preview changes without writing files", false).
-				Boolean("recursive", "Generate for all subdirectories containing .ai-rulez/", false).
-				Boolean("no_local", "Ignore the machine-local config.local.* overlay and local/ content (the teammate view)", false).
-				WorkingDirectory(),
-			idempotentAnnotations(),
-		),
-		handlers.GenerateOutputsHandler,
-	)
+	addTool[generateIn](s, toolSpec{
+		name: "generate_outputs", title: "Generate Outputs",
+		description: "Generate output files from the current configuration, respecting includes and extends",
+		annotations: idempotentAnnotations(), output: generateOut{},
+	}, handlers.GenerateOutputsHandler)
 
-	s.addTool(
-		newAnnotatedTool("clean_outputs", "Remove the files produced by generate (the inverse of generate_outputs): generated assistant files, the generated manifest, and the ai-rulez managed .gitignore block. The .ai-rulez/ source tree is never touched.",
-			newSchemaBuilder().
-				String("config_file", "Path to the root configuration file (optional)", false).
-				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
-				Boolean("dry_run", "Preview what would be removed without deleting", false).
-				Boolean("keep_gitignore", "Leave the ai-rulez managed block in .gitignore", false).
-				Boolean("keep_manifest", "Leave the generated manifest in place", false).
-				WorkingDirectory(),
-			destructiveAnnotations(),
-		),
-		handlers.CleanOutputsHandler,
-	)
+	addTool[cleanIn](s, toolSpec{
+		name: "clean_outputs", title: "Clean Generated Outputs",
+		description: "Remove the files produced by generate (the inverse of generate_outputs): generated assistant files, the generated manifest, and the ai-rulez managed .gitignore block. The .ai-rulez/ source tree is never touched.",
+		annotations: destructiveAnnotations(), output: cleanOut{},
+	}, handlers.CleanOutputsHandler)
 
-	s.addTool(
-		newAnnotatedTool("validate_config", "Validate the configuration file, including all includes",
-			newSchemaBuilder().
-				String("config_file", "Path to the root configuration file to validate (optional)", false).
-				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
-				Boolean("no_local", "Validate without the machine-local config.local.* overlay", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ValidateConfigHandler,
-	)
+	addTool[validateIn](s, toolSpec{
+		name: "validate_config", title: "Validate Configuration",
+		description: "Validate the configuration and lint its content with the same checks as `ai-rulez validate`: schema, structure, includes, policy, then every lint analyzer. Returns the verdict, warnings, errors and the full findings document. An invalid configuration, or findings at or above fail_on, is an error result. Read-only.",
+		annotations: readOnlyAnnotations(), output: validateOut{},
+		enums: map[string][]string{"fail_on": failOnValues(), "lint_profile": lint.ProfileNames()},
+	}, handlers.ValidateConfigWith(s.validator))
 
-	s.addTool(
-		newAnnotatedTool("doctor", "Run read-only diagnostics: config validity, preset names, generated-output drift, gitignore coverage, shared settings documents, MCP env placeholders, hook scripts, lock file, and tool binaries. Returns findings by severity (error, warning, info).",
-			newSchemaBuilder().
-				String("config_file", "Path to the root configuration file (optional)", false).
-				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
-				String("profile", "Profile to render for the drift and gitignore checks", false).
-				Boolean("strict", "Treat warnings as failures in the ok field", false).
-				Boolean("no_local", "Ignore the machine-local config.local.* overlay and local/ content", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.DoctorHandler,
-	)
+	addTool[doctorIn](s, toolSpec{
+		name: "doctor", title: "Run Diagnostics",
+		description: "Run read-only diagnostics: config validity, preset names, generated-output drift, gitignore coverage, shared settings documents, MCP env placeholders, hook scripts, lock file, and tool binaries. Returns findings by severity (error, warning, info).",
+		annotations: readOnlyAnnotations(), output: doctorOut{},
+	}, handlers.DoctorHandler)
 
-	s.addTool(
-		newAnnotatedTool("run_verifiers", "Evaluate the deterministic repo checks declared as [[verifiers]] (file exists/absent, glob counts, regex present/absent, JSON/YAML/TOML key values, generated output in sync) and the rule-linked specs under .ai-rulez/verifiers/ (paired files, all/any/not). Read-only: nothing is executed or sent to a model, so a command predicate reports error (AR9H3, refused) and an llm verifier reports skipped (AR9H4), never pass. Returns one pass/fail/error/skipped/inactive/not_applicable result per verifier (inactive: outside the active profile or role) with its findings and the rule it enforces.",
-			newSchemaBuilder().
-				String("config_file", "Path to the root configuration file (optional)", false).
-				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
-				String("name", "Comma-separated verifier names to run (default: all)", false).
-				Boolean("strict", "Treat failing warning-severity verifiers as failures in the ok field", false).
-				String("since", "Evaluate only files changed since the merge base of this git revision and HEAD (plus uncommitted and untracked); a missing revision is an error", false).
-				Boolean("staged", "Evaluate only staged changes", false).
-				String("rule", "Run only the verifiers that enforce this rule, skill, agent or command", false).
-				Boolean("no_local", "Ignore the machine-local config.local.* overlay and local/ content", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.RunVerifiersHandler,
-	)
+	addTool[verifiersIn](s, toolSpec{
+		name: "run_verifiers", title: "Run Verifiers",
+		description: "Evaluate the deterministic repo checks declared as [[verifiers]] (file exists/absent, glob counts, regex present/absent, JSON/YAML/TOML key values, generated output in sync) and the rule-linked specs under .ai-rulez/verifiers/ (paired files, all/any/not). Read-only: nothing is executed or sent to a model, so a command predicate reports error (AR9H3, refused) and an llm verifier reports skipped (AR9H4), never pass. Returns one pass/fail/error/skipped/inactive/not_applicable result per verifier (inactive: outside the active profile or role) with its findings and the rule it enforces.",
+		annotations: readOnlyAnnotations(), output: verifiersOut{},
+	}, handlers.RunVerifiersHandler)
 
 	s.registerGovernanceTools()
 
-	s.addTool(
-		newAnnotatedTool("init_project", "Initialize a new ai-rulez project in the current directory",
-			newSchemaBuilder().
-				String("project_name", "The name for the new project", false).
-				StringArray("providers", "A list of providers to enable (e.g., ['claude', 'cursor'])", false).
-				Boolean("with_agents", "Include sample agent configurations", false).
-				Boolean("all_providers", "Enable all supported providers", false).
-				Boolean("popular_providers", "Enable a curated list of popular providers", false).
-				WorkingDirectory(),
-			additiveAnnotations(),
-		),
-		handlers.InitProjectHandler,
-	)
+	addTool[initIn](s, toolSpec{
+		name: "init_project", title: "Initialize Project",
+		description: "Initialize a new ai-rulez project in the current directory. Refuses to overwrite an existing configuration.",
+		annotations: additiveAnnotations(), output: initOut{},
+	}, handlers.InitProjectHandler)
 }
 
 func (s *Server) registerUtilityTools() {
-	s.addTool(
-		newAnnotatedTool("get_version", "Get the ai-rulez version", nil, readOnlyAnnotations()),
-		handlers.GetVersionHandler(s.version),
-	)
+	addTool[noArgs](s, toolSpec{
+		name: "get_version", title: "Get Version", description: "Get the ai-rulez version",
+		annotations: readOnlyAnnotations(), output: versionOut{},
+	}, handlers.GetVersionHandler(s.version))
 
-	s.addTool(
-		newAnnotatedTool("show_builtin", "Show the full content of a builtin domain (rules, context, skills)",
-			newSchemaBuilder().
-				String("name", "Builtin domain name (e.g., security, rust, typescript)", true),
-			readOnlyAnnotations(),
-		),
-		handlers.ShowBuiltinHandler,
-	)
+	addTool[showBuiltinIn](s, toolSpec{
+		name: "show_builtin", title: "Show Builtin Domain",
+		description: "Show the full content of a builtin domain (rules, context, skills)",
+		annotations: readOnlyAnnotations(), output: builtinOut{},
+	}, handlers.ShowBuiltinHandler)
 }
-
-var priorityValues = []string{"critical", "high", "medium", "low", "minimal"}
-
-// severityValues are the severity levels a check takes.
-var severityValues = []string{"low", "medium", "high", "critical"}
 
 func (s *Server) registerCRUDTools() {
 	s.registerCRUDDomainTools()
@@ -340,516 +146,261 @@ func (s *Server) registerCRUDTools() {
 
 // registerCRUDDomainTools adds the domain tools.
 func (s *Server) registerCRUDDomainTools() {
-	s.addTool(
-		newAnnotatedTool("create_domain", "Create a new domain with subdirectories for rules, context, and skills",
-			newSchemaBuilder().
-				String("name", "Domain name (alphanumeric and underscores, 1-50 characters)", true).
-				String("description", "Optional domain description", false).
-				WorkingDirectory(),
-			additiveAnnotations(),
-		),
-		handlers.CreateDomainHandler,
-	)
+	addTool[createDomainIn](s, toolSpec{
+		name: "create_domain", title: "Create Domain",
+		description: "Create a new domain with subdirectories for rules, context, and skills",
+		annotations: additiveAnnotations(), output: mutationOut{},
+	}, handlers.CreateDomainHandler)
 
-	s.addTool(
-		newAnnotatedTool("delete_domain", "Delete a domain and all its contents",
-			newSchemaBuilder().
-				String("name", "Domain name to delete", true).
-				WorkingDirectory(),
-			destructiveAnnotations(),
-		),
-		handlers.DeleteDomainHandler,
-	)
+	addTool[nameIn](s, toolSpec{
+		name: "delete_domain", title: "Delete Domain",
+		description: "Delete a domain and all its contents",
+		annotations: destructiveAnnotations(), output: mutationOut{},
+	}, handlers.DeleteDomainHandler)
 
-	s.addTool(
-		newAnnotatedTool("list_domains", "List all domains in the .ai-rulez directory",
-			newSchemaBuilder().WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ListDomainsHandler,
-	)
+	addTool[workDirArg](s, toolSpec{
+		name: "list_domains", title: "List Domains",
+		description: "List all domains in the .ai-rulez directory",
+		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
+	}, handlers.ListDomainsHandler)
 }
 
 // registerCRUDRuleTools adds the rule tools.
 func (s *Server) registerCRUDRuleTools() {
-	s.addTool(
-		newAnnotatedTool("create_rule", "Create a new rule file with optional YAML frontmatter",
-			newSchemaBuilder().
-				String("name", "Rule filename without .md extension", true).
-				String("content", "Markdown content with optional YAML frontmatter", false).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Enum("priority", "Priority level", priorityValues, false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			additiveAnnotations(),
-		),
-		handlers.CreateRuleHandler,
-	)
+	addTool[contentCreateIn](s, toolSpec{
+		name: "create_rule", title: "Create Rule",
+		description: "Create a new rule file with optional YAML frontmatter",
+		annotations: additiveAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
+	}, handlers.CreateRuleHandler)
 
-	s.addTool(
-		newAnnotatedTool("read_rule", "Read the content of a rule file",
-			newSchemaBuilder().
-				String("name", "Rule filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ReadRuleHandler,
-	)
+	addTool[contentRefIn](s, toolSpec{
+		name: "read_rule", title: "Read Rule", description: "Read the content of a rule file",
+		annotations: readOnlyAnnotations(), output: readOut{}, readsConfig: true,
+	}, handlers.ReadRuleHandler)
 
-	s.addTool(
-		newAnnotatedTool("update_rule", "Update an existing rule file atomically",
-			newSchemaBuilder().
-				String("name", "Rule filename without .md extension", true).
-				String("content", "New markdown content", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Enum("priority", "Priority level", priorityValues, false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			idempotentAnnotations(),
-		),
-		handlers.UpdateRuleHandler,
-	)
+	addTool[contentUpdateIn](s, toolSpec{
+		name: "update_rule", title: "Update Rule", description: "Update an existing rule file atomically",
+		annotations: idempotentAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
+	}, handlers.UpdateRuleHandler)
 
-	s.addTool(
-		newAnnotatedTool("delete_rule", "Delete a rule file",
-			newSchemaBuilder().
-				String("name", "Rule filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			destructiveAnnotations(),
-		),
-		handlers.DeleteRuleHandler,
-	)
+	addTool[contentRefIn](s, toolSpec{
+		name: "delete_rule", title: "Delete Rule", description: "Delete a rule file",
+		annotations: destructiveAnnotations(), output: mutationOut{},
+	}, handlers.DeleteRuleHandler)
 
-	s.addTool(
-		newAnnotatedTool("list_rules", "List all rules in the root or a specific domain",
-			newSchemaBuilder().
-				String("domain", "Domain name (optional, lists root rules if not specified)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ListRulesHandler,
-	)
+	addTool[contentListIn](s, toolSpec{
+		name: "list_rules", title: "List Rules", description: "List all rules in the root or a specific domain",
+		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
+	}, handlers.ListRulesHandler)
 }
 
 // registerCRUDCheckTools adds the check tools.
 func (s *Server) registerCRUDCheckTools() {
-	s.addTool(
-		newAnnotatedTool("create_check", "Create a new code-review check file (.ai-rulez/checks/<name>.md)",
-			newSchemaBuilder().
-				String("name", "Check filename without .md extension (letters, digits, '.', '_', '-')", true).
-				String("content", "Markdown body, or a full file with YAML frontmatter", false).
-				String("description", "Short summary of the check", false).
-				Enum("severity", "Severity level", severityValues, false).
-				StringArray("tools", "Tool names the check may use", false).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				StringArray("targets", "Target providers (e.g., cursor, kilo)", false).
-				WorkingDirectory(),
-			additiveAnnotations(),
-		),
-		handlers.CreateCheckHandler,
-	)
+	addTool[checkCreateIn](s, toolSpec{
+		name: "create_check", title: "Create Check",
+		description: "Create a new code-review check file (.ai-rulez/checks/<name>.md)",
+		annotations: additiveAnnotations(), output: mutationOut{}, enums: enumsOf("severity", severityValues),
+	}, handlers.CreateCheckHandler)
 
-	s.addTool(
-		newAnnotatedTool("read_check", "Read the content of a check file",
-			newSchemaBuilder().
-				String("name", "Check filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ReadCheckHandler,
-	)
+	addTool[checkRefIn](s, toolSpec{
+		name: "read_check", title: "Read Check", description: "Read the content of a check file",
+		annotations: readOnlyAnnotations(), output: readOut{}, readsConfig: true,
+	}, handlers.ReadCheckHandler)
 
-	s.addTool(
-		newAnnotatedTool("update_check", "Update an existing check file atomically: give content, a field (description, severity, tools, targets), or both",
-			newSchemaBuilder().
-				String("name", "Check filename without .md extension", true).
-				String("content", "New markdown body (the existing frontmatter is kept), or a full file with YAML frontmatter. Optional when a field below is given", false).
-				String("description", "Short summary of the check; given fields are set on the existing frontmatter", false).
-				Enum("severity", "Severity level", severityValues, false).
-				StringArray("tools", "Tool names the check may use", false).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				StringArray("targets", "Target presets or path globs (e.g., cursor, kilo, src/**)", false).
-				WorkingDirectory(),
-			idempotentAnnotations(),
-		),
-		handlers.UpdateCheckHandler,
-	)
+	addTool[checkUpdateIn](s, toolSpec{
+		name: "update_check", title: "Update Check",
+		description: "Update an existing check file atomically: give content, a field (description, severity, tools, targets), or both",
+		annotations: idempotentAnnotations(), output: mutationOut{}, enums: enumsOf("severity", severityValues),
+	}, handlers.UpdateCheckHandler)
 
-	s.addTool(
-		newAnnotatedTool("delete_check", "Delete a check file",
-			newSchemaBuilder().
-				String("name", "Check filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				WorkingDirectory(),
-			destructiveAnnotations(),
-		),
-		handlers.DeleteCheckHandler,
-	)
+	addTool[checkRefIn](s, toolSpec{
+		name: "delete_check", title: "Delete Check", description: "Delete a check file",
+		annotations: destructiveAnnotations(), output: mutationOut{},
+	}, handlers.DeleteCheckHandler)
 
-	s.addTool(
-		newAnnotatedTool("list_checks", "List all checks in the root or a specific domain",
-			newSchemaBuilder().
-				String("domain", "Domain name (optional, lists root checks if not specified)", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ListChecksHandler,
-	)
+	addTool[checkListIn](s, toolSpec{
+		name: "list_checks", title: "List Checks", description: "List all checks in the root or a specific domain",
+		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
+	}, handlers.ListChecksHandler)
 }
 
 // registerCRUDContextTools adds the context tools.
 func (s *Server) registerCRUDContextTools() {
-	s.addTool(
-		newAnnotatedTool("create_context", "Create a new context file with optional YAML frontmatter",
-			newSchemaBuilder().
-				String("name", "Context filename without .md extension", true).
-				String("content", "Markdown content with optional YAML frontmatter", false).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Enum("priority", "Priority level", priorityValues, false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			additiveAnnotations(),
-		),
-		handlers.CreateContextHandler,
-	)
+	addTool[contentCreateIn](s, toolSpec{
+		name: "create_context", title: "Create Context",
+		description: "Create a new context file with optional YAML frontmatter",
+		annotations: additiveAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
+	}, handlers.CreateContextHandler)
 
-	s.addTool(
-		newAnnotatedTool("read_context", "Read the content of a context file",
-			newSchemaBuilder().
-				String("name", "Context filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ReadContextHandler,
-	)
+	addTool[contentRefIn](s, toolSpec{
+		name: "read_context", title: "Read Context", description: "Read the content of a context file",
+		annotations: readOnlyAnnotations(), output: readOut{}, readsConfig: true,
+	}, handlers.ReadContextHandler)
 
-	s.addTool(
-		newAnnotatedTool("update_context", "Update an existing context file atomically",
-			newSchemaBuilder().
-				String("name", "Context filename without .md extension", true).
-				String("content", "New markdown content", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Enum("priority", "Priority level", priorityValues, false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			idempotentAnnotations(),
-		),
-		handlers.UpdateContextHandler,
-	)
+	addTool[contentUpdateIn](s, toolSpec{
+		name: "update_context", title: "Update Context", description: "Update an existing context file atomically",
+		annotations: idempotentAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
+	}, handlers.UpdateContextHandler)
 
-	s.addTool(
-		newAnnotatedTool("delete_context", "Delete a context file",
-			newSchemaBuilder().
-				String("name", "Context filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			destructiveAnnotations(),
-		),
-		handlers.DeleteContextHandler,
-	)
+	addTool[contentRefIn](s, toolSpec{
+		name: "delete_context", title: "Delete Context", description: "Delete a context file",
+		annotations: destructiveAnnotations(), output: mutationOut{},
+	}, handlers.DeleteContextHandler)
 
-	s.addTool(
-		newAnnotatedTool("list_context", "List all context files in the root or a specific domain with summaries",
-			newSchemaBuilder().
-				String("domain", "Domain name (optional, lists root context if not specified)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ListContextsHandler,
-	)
+	addTool[contentListIn](s, toolSpec{
+		name: "list_context", title: "List Context",
+		description: "List all context files in the root or a specific domain with summaries",
+		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
+	}, handlers.ListContextsHandler)
 }
 
 // registerCRUDSkillTools adds the skill tools.
 func (s *Server) registerCRUDSkillTools() {
-	s.addTool(
-		newAnnotatedTool("create_skill", "Create a new skill file with optional YAML frontmatter",
-			newSchemaBuilder().
-				String("name", "Skill filename without .md extension", true).
-				String("content", "Markdown content with optional YAML frontmatter", false).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Enum("priority", "Priority level", priorityValues, false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			additiveAnnotations(),
-		),
-		handlers.CreateSkillHandler,
-	)
+	addTool[contentCreateIn](s, toolSpec{
+		name: "create_skill", title: "Create Skill",
+		description: "Create a new skill file with optional YAML frontmatter",
+		annotations: additiveAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
+	}, handlers.CreateSkillHandler)
 
-	s.addTool(
-		newAnnotatedTool("read_skill", "Read the content of a skill file",
-			newSchemaBuilder().
-				String("name", "Skill filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ReadSkillHandler,
-	)
+	addTool[contentRefIn](s, toolSpec{
+		name: "read_skill", title: "Read Skill", description: "Read the content of a skill file",
+		annotations: readOnlyAnnotations(), output: readOut{}, readsConfig: true,
+	}, handlers.ReadSkillHandler)
 
-	s.addTool(
-		newAnnotatedTool("update_skill", "Update an existing skill file atomically",
-			newSchemaBuilder().
-				String("name", "Skill filename without .md extension", true).
-				String("content", "New markdown content", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Enum("priority", "Priority level", priorityValues, false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			idempotentAnnotations(),
-		),
-		handlers.UpdateSkillHandler,
-	)
+	addTool[contentUpdateIn](s, toolSpec{
+		name: "update_skill", title: "Update Skill", description: "Update an existing skill file atomically",
+		annotations: idempotentAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
+	}, handlers.UpdateSkillHandler)
 
-	s.addTool(
-		newAnnotatedTool("delete_skill", "Delete a skill file",
-			newSchemaBuilder().
-				String("name", "Skill filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			destructiveAnnotations(),
-		),
-		handlers.DeleteSkillHandler,
-	)
+	addTool[contentRefIn](s, toolSpec{
+		name: "delete_skill", title: "Delete Skill", description: "Delete a skill file",
+		annotations: destructiveAnnotations(), output: mutationOut{},
+	}, handlers.DeleteSkillHandler)
 
-	s.addTool(
-		newAnnotatedTool("list_skills", "List all skill files in the root or a specific domain",
-			newSchemaBuilder().
-				String("domain", "Domain name (optional, lists root skills if not specified)", false).
-				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ListSkillsHandler,
-	)
+	addTool[contentListIn](s, toolSpec{
+		name: "list_skills", title: "List Skills", description: "List all skill files in the root or a specific domain",
+		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
+	}, handlers.ListSkillsHandler)
 }
 
 // registerCRUDIncludeTools adds the include tools.
 func (s *Server) registerCRUDIncludeTools() {
-	s.addTool(
-		newAnnotatedTool("add_include", "Add a new include source (git URL or local path) to the configuration",
-			newSchemaBuilder().
-				String("name", "Include name (unique identifier)", true).
-				String("source", "Git URL or local filesystem path", true).
-				String("path", "Path within git repository (git sources only)", false).
-				String("ref", "Git reference: branch, tag, or commit hash (git sources only)", false).
-				StringArray("include", "Content types to include: rules, context, skills, agents, commands", false).
-				Enum("merge_strategy", "Merge strategy", []string{"local-override", "include-override", "error"}, false).
-				String("install_to", "Installation target path (optional)", false).
-				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
-				WorkingDirectory(),
-			additiveAnnotations(),
-		),
-		handlers.AddIncludeHandler,
-	)
+	addTool[addIncludeIn](s, toolSpec{
+		name: "add_include", title: "Add Include",
+		description: "Add a new include source (git URL or local path) to the configuration",
+		annotations: additiveAnnotations(), output: mutationOut{},
+		enums: map[string][]string{"merge_strategy": {"local-override", "include-override", "error"}},
+	}, handlers.AddIncludeHandler)
 
-	s.addTool(
-		newAnnotatedTool("remove_include", "Remove an include source from the configuration",
-			newSchemaBuilder().
-				String("name", "Include name to remove", true).
-				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
-				WorkingDirectory(),
-			destructiveAnnotations(),
-		),
-		handlers.RemoveIncludeHandler,
-	)
+	addTool[overlayNameIn](s, toolSpec{
+		name: "remove_include", title: "Remove Include",
+		description: "Remove an include source from the configuration",
+		annotations: destructiveAnnotations(), output: mutationOut{},
+	}, handlers.RemoveIncludeHandler)
 
-	s.addTool(
-		newAnnotatedTool("list_includes", "List all include sources in the configuration",
-			newSchemaBuilder().WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ListIncludesHandler,
-	)
+	addTool[workDirArg](s, toolSpec{
+		name: "list_includes", title: "List Includes",
+		description: "List all include sources in the configuration",
+		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
+	}, handlers.ListIncludesHandler)
 }
 
 // registerCRUDInstalledSkillTools adds the installed skill tools.
 func (s *Server) registerCRUDInstalledSkillTools() {
-	s.addTool(
-		newAnnotatedTool("install_skill", "Install a named skill from a git repository or local path",
-			newSchemaBuilder().
-				String("name", "Skill name (unique identifier)", true).
-				String("source", "Git URL or local filesystem path", true).
-				String("path", "Path within repo to skill directory (defaults to skills/<name>)", false).
-				String("ref", "Git reference: branch, tag, or commit hash", false).
-				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
-				WorkingDirectory(),
-			additiveAnnotations(),
-		),
-		handlers.InstallSkillHandler,
-	)
+	addTool[installSkillIn](s, toolSpec{
+		name: "install_skill", title: "Install Skill",
+		description: "Install a named skill from a git repository or local path",
+		annotations: additiveAnnotations(), output: mutationOut{},
+	}, handlers.InstallSkillHandler)
 
-	s.addTool(
-		newAnnotatedTool("uninstall_skill", "Remove an installed skill from the configuration",
-			newSchemaBuilder().
-				String("name", "Skill name to remove", true).
-				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
-				WorkingDirectory(),
-			destructiveAnnotations(),
-		),
-		handlers.UninstallSkillHandler,
-	)
+	addTool[overlayNameIn](s, toolSpec{
+		name: "uninstall_skill", title: "Uninstall Skill",
+		description: "Remove an installed skill from the configuration",
+		annotations: destructiveAnnotations(), output: mutationOut{},
+	}, handlers.UninstallSkillHandler)
 
-	s.addTool(
-		newAnnotatedTool("list_installed_skills", "List all installed skills",
-			newSchemaBuilder().WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ListInstalledSkillsHandler,
-	)
+	addTool[workDirArg](s, toolSpec{
+		name: "list_installed_skills", title: "List Installed Skills",
+		description: "List all installed skills",
+		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
+	}, handlers.ListInstalledSkillsHandler)
 }
 
 // registerCRUDConfigTools adds the config tools.
 func (s *Server) registerCRUDConfigTools() {
-	s.addTool(
-		newAnnotatedTool("read_config", "Read the current project configuration and return its fields as structured JSON",
-			newSchemaBuilder().
-				WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ReadConfigHandler,
-	)
+	addTool[workDirArg](s, toolSpec{
+		name: "read_config", title: "Read Configuration",
+		description: "Read the current project configuration and return its fields as structured JSON",
+		annotations: readOnlyAnnotations(), output: configOut{},
+	}, handlers.ReadConfigHandler)
 
-	s.addTool(
-		newAnnotatedTool("update_config", "Update specific fields in the project configuration",
-			newSchemaBuilder().
-				String("name", "Project name", false).
-				String("description", "Project description", false).
-				StringArray("builtins", "List of builtin names to enable (replaces current builtins setting)", false).
-				Boolean("gitignore", "Whether to update .gitignore when generating outputs", false).
-				Boolean("agents_md", "Render always-on rules and context once into a shared AGENTS.md and skills once into .agents/skills for tools that read them", false).
-				String("default_effort", "Default reasoning effort for Claude Code subagents (low, medium, high, xhigh, max, inherit). Empty string clears the default.", false).
-				Object("default_effort_by_preset", "Per-preset reasoning effort override (e.g. {\"codex\": \"high\", \"claude\": \"xhigh\"}). Each value must be one of low, medium, high, xhigh, max, inherit. Pass {} to clear.", false).
-				String("rules_mode", "Default rules output mode: split (one file per rule, default) or inline (rules embedded in the root file). Empty string clears it.", false).
-				Object("rules_mode_by_preset", "Per-preset rules mode override (e.g. {\"claude\": \"split\", \"cursor\": \"inline\"}). Each value must be split or inline. Pass {} to clear.", false).
-				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
-				WorkingDirectory(),
-			idempotentAnnotations(),
-		),
-		handlers.UpdateConfigHandler,
-	)
+	addTool[updateConfigIn](s, toolSpec{
+		name: "update_config", title: "Update Configuration",
+		description: "Update specific fields in the project configuration",
+		annotations: idempotentAnnotations(), output: configOut{},
+	}, handlers.UpdateConfigHandler)
 }
 
 // registerCRUDProfileTools adds the profile tools.
 func (s *Server) registerCRUDProfileTools() {
-	s.addTool(
-		newAnnotatedTool("add_profile", "Create a new profile with a set of domains",
-			newSchemaBuilder().
-				String("name", "Profile name (unique identifier)", true).
-				StringArray("domains", "List of domain names to include in the profile. A builtin pack is referenced as 'builtin:<name>' and is scoped to this profile.", true).
-				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
-				WorkingDirectory(),
-			additiveAnnotations(),
-		),
-		handlers.AddProfileHandler,
-	)
+	addTool[addProfileIn](s, toolSpec{
+		name: "add_profile", title: "Add Profile",
+		description: "Create a new profile with a set of domains",
+		annotations: additiveAnnotations(), output: mutationOut{},
+	}, handlers.AddProfileHandler)
 
-	s.addTool(
-		newAnnotatedTool("remove_profile", "Remove a profile from the configuration",
-			newSchemaBuilder().
-				String("name", "Profile name to remove", true).
-				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
-				WorkingDirectory(),
-			destructiveAnnotations(),
-		),
-		handlers.RemoveProfileHandler,
-	)
+	addTool[overlayNameIn](s, toolSpec{
+		name: "remove_profile", title: "Remove Profile",
+		description: "Remove a profile from the configuration",
+		annotations: destructiveAnnotations(), output: mutationOut{},
+	}, handlers.RemoveProfileHandler)
 
-	s.addTool(
-		newAnnotatedTool("set_default_profile", "Set a profile as the default",
-			newSchemaBuilder().
-				String("name", "Profile name to set as default", true).
-				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
-				WorkingDirectory(),
-			idempotentAnnotations(),
-		),
-		handlers.SetDefaultProfileHandler,
-	)
+	addTool[overlayNameIn](s, toolSpec{
+		name: "set_default_profile", title: "Set Default Profile",
+		description: "Set a profile as the default",
+		annotations: idempotentAnnotations(), output: mutationOut{},
+	}, handlers.SetDefaultProfileHandler)
 
-	s.addTool(
-		newAnnotatedTool("list_profiles", "List all profiles in the configuration",
-			newSchemaBuilder().WorkingDirectory(),
-			readOnlyAnnotations(),
-		),
-		handlers.ListProfilesHandler,
-	)
+	addTool[workDirArg](s, toolSpec{
+		name: "list_profiles", title: "List Profiles",
+		description: "List all profiles in the configuration",
+		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
+	}, handlers.ListProfilesHandler)
 }
 
 // registerGovernanceTools adds the read-only roles, lock and catalog tools. They
 // never write and never use the network: remote includes resolve from the local
 // cache only. Mutating lock operations (lock, update) stay CLI-only.
 func (s *Server) registerGovernanceTools() {
-	common := func(b *toolSchemaBuilder) *toolSchemaBuilder {
-		return b.
-			String("config_file", "Path to the root configuration file (optional)", false).
-			String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
-			Boolean("no_local", "Ignore the machine-local config.local.* overlay and local/ content", false).
-			WorkingDirectory()
-	}
+	addTool[listRolesIn](s, toolSpec{
+		name: "list_roles", title: "List Roles",
+		description: "List the [[roles]] with their item counts and token estimates: the roles.json manifest (roles list --format json). Read-only, offline.",
+		annotations: readOnlyAnnotations(), output: rolesOut{},
+	}, handlers.ListRolesHandler)
 
-	s.addTool(
-		newAnnotatedTool("list_roles", "List the [[roles]] with their item counts and token estimates: the roles.json manifest (roles list --format json). Read-only, offline.",
-			common(newSchemaBuilder()),
-			readOnlyAnnotations(),
-		),
-		handlers.ListRolesHandler,
-	)
+	addTool[resolveRoleIn](s, toolSpec{
+		name: "resolve_role", title: "Resolve Role",
+		description: "Resolve what a person holding a role gets: the items it keeps with sizes, skill modes and delivery (roles resolve <role> --format json). Read-only, offline; the item list is capped at limit.",
+		annotations: readOnlyAnnotations(), output: resolveRoleOut{},
+	}, handlers.ResolveRoleHandler)
 
-	s.addTool(
-		newAnnotatedTool("resolve_role", "Resolve what a person holding a role gets: the items it keeps with sizes, skill modes and delivery (roles resolve <role> --format json). Read-only, offline; the item list is capped at limit.",
-			common(newSchemaBuilder().
-				String("role", "Role name (see list_roles)", true).
-				Number("limit", "Maximum items returned (default 200, max 1000); the totals always count every item", false)),
-			readOnlyAnnotations(),
-		),
-		handlers.ResolveRoleHandler,
-	)
+	addTool[lockStatusIn](s, toolSpec{
+		name: "lock_status", title: "Lock Status",
+		description: "Compare ai-rulez.lock with the sources, outputs, skill sources and served skills, without fetching anything (lock --check --format json). Read-only, offline; lock and update stay CLI-only. A project with no lock file is an error, as in the CLI.",
+		annotations: readOnlyAnnotations(), output: lockStatusOut{},
+		enums: map[string][]string{"kind": govview.LockKinds},
+	}, handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
+		extras := make([]ServeSetup, 0, len(views))
+		for _, v := range views {
+			extras = append(extras, ServeSetup{Role: v.Role, Profile: v.Profile, Preset: v.Targets, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
+		}
+		return DynamicLockChanges(ctx, cfg, lock, s.version, extras...)
+	}))
 
-	s.addTool(
-		newAnnotatedTool("lock_status", "Compare ai-rulez.lock with the sources, outputs, skill sources and served skills, without fetching anything (lock --check --format json). Read-only, offline; lock and update stay CLI-only.",
-			common(newSchemaBuilder().
-				Enum("kind", "List only the changes of this kind (default: all); in_sync still covers the whole lock", govview.LockKinds, false).
-				String("profile", "Profile whose outputs are compared (default: the profile recorded in the lock); also selects the serve view", false).
-				String("role", "Compare only this role's outputs and also check the skills it serves, as a view of their own (lock --role)", false).
-				String("targets", "Also check the view that serves this preset's rendering of the skills (lock --targets)", false).
-				Boolean("include_static", "Also check the view that serves static skills too (lock --include-static)", false).
-				StringArray("sources", "Also check the view with these extra skill sources (lock --source)", false)),
-			readOnlyAnnotations(),
-		),
-		handlers.LockStatusHandler(s.version, func(ctx context.Context, cfg *config.Config, lock *lockfile.File, views []handlers.LockView) []contentlock.Change {
-			extras := make([]ServeSetup, 0, len(views))
-			for _, v := range views {
-				extras = append(extras, ServeSetup{Role: v.Role, Profile: v.Profile, Preset: v.Targets, IncludeStatic: v.IncludeStatic, Sources: v.Sources})
-			}
-			return DynamicLockChanges(ctx, cfg, lock, s.version, extras...)
-		}),
-	)
-
-	s.addTool(
-		newAnnotatedTool("catalog", "List every rule, skill, agent, command and context file with owner, version, tokens, digest, roles and lock status (catalog --format json). Read-only, offline; capped at limit items.",
-			common(newSchemaBuilder().
-				Enum("kind", "Only items of this kind (default: all)", append(append([]string(nil), config.RoleKinds...), contentlock.KindContext), false).
-				String("role", "Only items this role keeps (see list_roles)", false).
-				Number("limit", "Maximum items returned (default 200, max 1000); total_items and truncated report a cut", false)),
-			readOnlyAnnotations(),
-		),
-		handlers.CatalogHandler(s.version),
-	)
+	addTool[catalogIn](s, toolSpec{
+		name: "catalog", title: "Catalog",
+		description: "List every rule, skill, agent, command and context file with owner, version, tokens, digest, roles and lock status (catalog --format json). Read-only, offline; capped at limit items.",
+		annotations: readOnlyAnnotations(), output: catalogOut{},
+		enums: map[string][]string{"kind": append(append([]string(nil), config.RoleKinds...), contentlock.KindContext)},
+	}, handlers.CatalogHandler(s.version))
 }
