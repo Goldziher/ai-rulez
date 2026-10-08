@@ -19,7 +19,7 @@ The claim is "standards compliant": each format ai-rulez names is checked agains
 
 | Section | What you do | Start with |
 | ------- | ----------- | ---------- |
-| **Author** | Write rules, context, skills, agents and checks as markdown; organize them with domains, profiles, roles and includes. [OKF](okf.md) is the native knowledge format. | [Configuration](configuration.md), [Rules](rules.md), [Skill frontmatter](skills.md) |
+| **Author** | Write rules, context, skills, agents and checks as markdown; organize them with domains, profiles, roles and includes. `.ai-rulez/` is an [OKF](okf.md) bundle: OKF is the internal format, and `init`, `add` and the MCP tools write it. A pre-OKF tree still loads, with a deprecation notice, until v6; `ai-rulez migrate okf` converts it. | [Configuration](configuration.md), [Rules](rules.md), [Skill frontmatter](skills.md) |
 | **Generate** | Render native files for 52 harnesses, per project or per user, with hooks and permissions translated for each. | [Supported harnesses](harnesses.md), [AGENTS.md](agents-md.md), [User-level configuration](user-scope.md) |
 | **Bundle and publish** | Package plugin bundles, Agent Plugins and ARD manifests, then release them to GitHub, npm, OCI and marketplaces. | [Authoring plugins](plugins.md), [Agent Plugins](agent-plugins.md), [ARD](ard.md), [Publish](publish.md) |
 | **Validate** | Content and security checks with stable `AR` codes, deterministic verifiers and the per-standard validators. | [Strict validation](strict-validation.md), [Verifiers](verifiers.md) |
