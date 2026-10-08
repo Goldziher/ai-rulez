@@ -146,6 +146,7 @@ func init() {
 	exportOKFCmd.Flags().StringVar(&okfIndexStyle, "index-style", "", "index.md scheme: body (OKF 0.2 listing, default) or frontmatter (title, version, entries); default: okf.index_style")
 	exportOKFCmd.Flags().BoolVar(&okfCheck, "check", false, "Write nothing; exit 2 when the bundle on disk differs")
 	exportOKFCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	addFormatFlag(exportOKFCmd.Flags(), &okfFormat, formatText, formatText, formatText, formatJSON)
 	ExportCmd.AddCommand(exportOKFCmd)
 
 	importOKFCmd.Flags().StringVar(&okfInto, "into", "", "Force every concept into one kind: rules, context or skills")
@@ -259,6 +260,10 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 }
 
 func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
+	if err := checkFormatFlag(okfFormat); err != nil {
+		renderStderr(err)
+		return exitOKFCannotRun
+	}
 	cfg, err := loadConfigForCommand(ctx, args, config.WithoutLocal())
 	if err != nil {
 		renderStderr(err)
@@ -297,6 +302,9 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 			renderStderr(err)
 			return exitOKFCannotRun
 		}
+		if okfFormat == formatJSON {
+			return writeOKFExportJSON(out, map[string]any{"status": okfExportStatus(drift.Empty()), "dir": dir, "files": len(res.Files), "drift": drift}, drift.Empty())
+		}
 		if drift.Empty() {
 			w.printf("%s is up to date (%d files)\n", dir, len(res.Files))
 			return 0
@@ -309,7 +317,34 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 		renderStderr(err)
 		return exitOKFCannotRun
 	}
+	if okfFormat == formatJSON {
+		paths := make([]string, 0, len(res.Files))
+		for _, f := range res.Files {
+			paths = append(paths, f.Path)
+		}
+		return writeOKFExportJSON(out, map[string]any{"status": "written", "dir": dir, "files": paths, "count": len(paths), "counts": res.Counts}, true)
+	}
 	w.printf("Wrote %d files to %s (%s)\n", len(res.Files), dir, kindCounts(res.Counts))
+	return 0
+}
+
+func okfExportStatus(upToDate bool) string {
+	if upToDate {
+		return "up_to_date"
+	}
+	return "drift"
+}
+
+// writeOKFExportJSON prints the export document and returns the exit code: 0
+// when ok, else the findings code of --check.
+func writeOKFExportJSON(out io.Writer, doc map[string]any, ok bool) int {
+	if err := jsondoc.Write(out, doc); err != nil {
+		renderStderr(err)
+		return exitOKFCannotRun
+	}
+	if !ok {
+		return exitOKFProblems
+	}
 	return 0
 }
 
