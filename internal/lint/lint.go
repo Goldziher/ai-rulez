@@ -16,6 +16,7 @@ import (
 	procrunner "github.com/Goldziher/ai-rulez/v5/internal/runner"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/ard"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
@@ -175,6 +176,7 @@ type runner struct {
 	opts           Options
 	drift          []PluginDrift
 	agentPlugins   []AgentPluginFinding
+	ard            []ard.Finding
 	delivery       []DeliveryFinding
 	verifiers      []VerifierFinding
 	lockDrift      []LockDrift
@@ -332,6 +334,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.unit(unitOf("imported", AnalyzerSecurity), r.scanImported)
 	r.unit(unitOf("plugin-drift", AnalyzerPlugin), r.checkPluginDrift)
 	r.unit(unitOf("agent-plugins", AnalyzerPlugin), r.checkAgentPlugins)
+	r.unit(unitOf("ard", AnalyzerPlugin), r.checkARD)
 	r.unit(unitOf("eval-runner", AnalyzerEvals), r.checkEvalRunner)
 	r.unit(unitOf("roles", AnalyzerRoles), r.checkRoles)
 	r.unit(unitOf("lock-drift", AnalyzerLock), r.checkLockDrift)
