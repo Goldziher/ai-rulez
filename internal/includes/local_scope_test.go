@@ -26,8 +26,8 @@ func TestResolver_CreateSource_LocalIncludeStaysInsideProject(t *testing.T) {
 	overlay := &config.LocalOverlay{Doc: map[string]any{"includes": []any{map[string]any{"name": "x", "source": "../victim"}}}}
 
 	tests := []struct {
-		name    string
-		source  string
+		name     string
+		source   string
 		cfg      *config.Config
 		wantErr  bool
 		wantPath string
