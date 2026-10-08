@@ -1,7 +1,6 @@
 package evals
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"gopkg.in/yaml.v3"
@@ -363,7 +364,7 @@ func relativeProblems(configDir string, problems []Problem) []Problem {
 	root := filepath.Dir(configDir)
 	out := make([]Problem, len(problems))
 	for i, p := range problems {
-		if rel, err := filepath.Rel(root, p.File); err == nil && within(root, p.File) {
+		if rel, err := filepath.Rel(root, p.File); err == nil && safefs.Within(root, p.File) {
 			p.File = filepath.ToSlash(rel)
 		}
 		out[i] = p
@@ -425,17 +426,12 @@ func readSkillDoc(skill *Skill) (skillsearch.Doc, error) {
 
 // frontmatterOf returns the YAML frontmatter of a markdown file; none is an empty map.
 func frontmatterOf(data []byte) (map[string]any, error) {
-	text := strings.ReplaceAll(string(data), "\r\n", "\n")
+	block := frontmatter.Split(data)
 	front := map[string]any{}
-	rest, ok := strings.CutPrefix(text, "---\n")
-	if !ok {
+	if !block.Closed {
 		return front, nil
 	}
-	end := strings.Index(rest, "\n---")
-	if end < 0 {
-		return front, nil
-	}
-	if err := yaml.NewDecoder(bytes.NewReader([]byte(rest[:end]))).Decode(&front); err != nil && !errors.Is(err, io.EOF) {
+	if err := yaml.NewDecoder(strings.NewReader(block.Raw)).Decode(&front); err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
 	}
 	if front == nil {

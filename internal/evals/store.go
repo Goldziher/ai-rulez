@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // StoreFileName is the results store's file name inside the config directory.
@@ -229,22 +231,8 @@ func (s *Store) Save(path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return fmt.Errorf("create %s: %w", filepath.Dir(path), err)
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".eval-results-*")
-	if err != nil {
-		return fmt.Errorf("write eval results: %w", err)
-	}
-	defer os.Remove(tmp.Name()) //nolint:errcheck // best-effort cleanup after a rename
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close() //nolint:errcheck // the write error is the one to report
-		return fmt.Errorf("write eval results: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("write eval results: %w", err)
-	}
-	if err := os.Chmod(tmp.Name(), 0o644); err != nil { //nolint:gosec // committed file, world-readable like the skills index
-		return fmt.Errorf("write eval results: %w", err)
-	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
+	// Committed file, world-readable like the skills index.
+	if err := gitutil.WriteFileAtomic(path, data, 0o644); err != nil {
 		return fmt.Errorf("write eval results: %w", err)
 	}
 	return nil

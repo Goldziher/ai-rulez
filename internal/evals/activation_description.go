@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // maxDescriptionBytes bounds a candidate description (--description-from).
@@ -106,19 +108,15 @@ func withCandidateDescription(opts *ActivationOptions, scratch string) (*Activat
 // withDescription returns SKILL.md text with its frontmatter description set,
 // the other keys and the body kept (a file without frontmatter gets one).
 func withDescription(data []byte, desc string) ([]byte, error) {
-	text := strings.ReplaceAll(string(data), "\r\n", "\n")
-	rest, hasFront := strings.CutPrefix(text, "---\n")
+	block := frontmatter.Split(data)
 	var front, body string
-	if hasFront {
-		end := strings.Index(rest, "\n---")
-		if end < 0 {
+	if block.Present {
+		if !block.Closed {
 			return nil, errors.New("unterminated frontmatter")
 		}
-		front = rest[:end]
-		body = strings.TrimPrefix(rest[end+len("\n---"):], "\n")
-	} else {
-		body = text
+		front = block.Raw
 	}
+	body = strings.ReplaceAll(block.Body, "\r\n", "\n")
 	var doc yaml.Node
 	if err := yaml.NewDecoder(strings.NewReader(front)).Decode(&doc); err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("frontmatter: %w", err)

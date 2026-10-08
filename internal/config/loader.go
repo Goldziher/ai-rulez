@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -17,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
@@ -87,7 +87,7 @@ func projectBaseDir(configDir string) string {
 // machine-local override outside the project).
 func relConfigDirName(baseDir, configDir string) string {
 	rel, err := filepath.Rel(baseDir, configDir)
-	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || rel == "." || safefs.RelEscapes(rel) {
 		return filepath.Base(configDir)
 	}
 	return filepath.ToSlash(rel)

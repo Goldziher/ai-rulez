@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // rulesync `sources` (declarative sources, `rulesync install`): git repositories
@@ -101,7 +103,7 @@ func (b *rulesyncPlanner) readRulesyncLock() map[string]string {
 		return out
 	}
 	for k, v := range doc.Sources {
-		if fullSHA.MatchString(v.ResolvedRef) {
+		if gitutil.IsCommitSHA(v.ResolvedRef) {
 			out[k] = v.ResolvedRef
 		}
 	}

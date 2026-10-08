@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
 )
 
@@ -73,23 +74,11 @@ func ValidateCheckTargets(targets []string) error {
 // body loses the one blank line that conventionally follows the closing fence.
 func splitFrontmatter(content string) (fm, body string, has bool) {
 	content = strings.ReplaceAll(content, "\r\n", "\n")
-	rest, ok := strings.CutPrefix(content, "---\n")
-	if !ok {
-		return "", content, false
+	block := frontmatter.SplitString(content)
+	if !block.Closed {
+		return "", content, false // never closed: not frontmatter
 	}
-	switch {
-	case strings.HasPrefix(rest, "---\n"):
-		return "", strings.TrimPrefix(rest[len("---\n"):], "\n"), true
-	case rest == "---":
-		return "", "", true
-	}
-	if idx := strings.Index(rest, "\n---\n"); idx >= 0 {
-		return rest[:idx+1], strings.TrimPrefix(rest[idx+len("\n---\n"):], "\n"), true
-	}
-	if fmText, found := strings.CutSuffix(rest, "\n---"); found {
-		return fmText + "\n", "", true
-	}
-	return "", content, false // never closed: not frontmatter
+	return block.Raw, strings.TrimPrefix(block.Body, "\n"), true
 }
 
 // frontmatterMapping parses frontmatter text into a mapping node, keeping key

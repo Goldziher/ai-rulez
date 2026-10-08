@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
 	"github.com/Goldziher/ai-rulez/v5/internal/roles"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 )
 
@@ -103,7 +104,7 @@ var sharedTopLevelDirs = map[string]bool{
 
 func (m *outputMatcher) add(rel string, dir bool) {
 	rel = strings.Trim(filepath.ToSlash(filepath.Clean(rel)), "/")
-	if rel == "" || rel == "." || strings.HasPrefix(rel, "..") {
+	if rel == "" || rel == "." || safefs.RelEscapes(rel) {
 		return
 	}
 	m.exact[rel] = true
