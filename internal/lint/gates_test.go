@@ -26,17 +26,17 @@ func gateCorpus() []string {
 
 // execFindingUngated is execFinding without the literal pre-checks.
 func execFindingUngated(line string) (msg string, spans [][]int) {
-	for _, re := range []*regexp.Regexp{pipeToShellRe, pipeToInterpRe, procSubstRe} {
+	for _, re := range []*regexp.Regexp{pipeToShellRe(), pipeToInterpRe(), procSubstRe()} {
 		spans = append(spans, re.FindAllStringIndex(line, -1)...)
 	}
 	if len(spans) > 0 {
 		return "downloads and runs code in one step (curl | sh)", spans
 	}
-	if spans = base64ExecRe.FindAllStringIndex(line, -1); len(spans) > 0 {
+	if spans = base64ExecRe().FindAllStringIndex(line, -1); len(spans) > 0 {
 		return "decodes a base64 payload and executes it", spans
 	}
-	if evalRe.MatchString(line) && !evalBenignRe.MatchString(line) {
-		return "evaluates dynamic text (eval)", evalRe.FindAllStringIndex(line, -1)
+	if evalRe().MatchString(line) && !evalBenignRe().MatchString(line) {
+		return "evaluates dynamic text (eval)", evalRe().FindAllStringIndex(line, -1)
 	}
 	return "", nil
 }

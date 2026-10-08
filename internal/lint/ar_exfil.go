@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // Codes for the exfiltration and transport rules.
@@ -54,28 +55,46 @@ func (t *scanText) logicalLines() []scanLine {
 }
 
 var (
-	netCmdRe    = regexp.MustCompile(`(?i)(?:^|[\s;&|(` + "`" + `])(?:curl|wget|xh|nc|ncat|netcat|scp|rsync|iwr|irm|invoke-webrequest|invoke-restmethod)\s`)
-	httpieRe    = regexp.MustCompile(`(?:^|[\s;&|(])https?\s+(?:-\S+\s+)*(?:GET|POST|PUT|PATCH|DELETE)\s`)
-	secretVarRe = regexp.MustCompile(`\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?`)
-	secretName  = regexp.MustCompile(`(?i)(?:^|_)(?:secret|token|api_?key|passw(?:or)?d|private_?key|access_?key|secret_?key|credentials?|auth)$|^(?:DATABASE_URL|DB_URL|DB_PASSWORD)$|^AWS_SECRET`)
-	headerArgRe = regexp.MustCompile(`(?i)(?:-H|--header)\s*("[^"]*"|'[^']*')|(?:-u|--user)\s+\S+|--oauth2-bearer\s+\S+`)
+	netCmdRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)(?:^|[\s;&|(` + "`" + `])(?:curl|wget|xh|nc|ncat|netcat|scp|rsync|iwr|irm|invoke-webrequest|invoke-restmethod)\s`)
+	})
+	httpieRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?:^|[\s;&|(])https?\s+(?:-\S+\s+)*(?:GET|POST|PUT|PATCH|DELETE)\s`)
+	})
+	secretVarRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?`) })
+	secretName  = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)(?:^|_)(?:secret|token|api_?key|passw(?:or)?d|private_?key|access_?key|secret_?key|credentials?|auth)$|^(?:DATABASE_URL|DB_URL|DB_PASSWORD)$|^AWS_SECRET`)
+	})
+	headerArgRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)(?:-H|--header)\s*("[^"]*"|'[^']*')|(?:-u|--user)\s+\S+|--oauth2-bearer\s+\S+`)
+	})
 	credPathPat = `(?:\.ssh\b|\.aws\b|\.netrc|\.git-credentials|\.npmrc|\.kube\b|\.gnupg\b|\.docker/config|/\.env\b|/etc/shadow)`
-	envDumpRe   = regexp.MustCompile(`(?i)(?:^|[\s;&|(])(?:curl|wget|nc|ncat|xh)\b[^\n]*(?:\$\(\s*(?:env|printenv|set)\s*\)|` + "`" + `\s*(?:env|printenv)\s*` + "`" + `|@-?\s*<\(\s*(?:env|printenv)|\$\(\s*cat\s+\S*(?:\.ssh/|\.aws/|\.netrc|\.git-credentials|\.npmrc|\.kube/|/\.env\b)\S*\s*\))`)
-	envPipeRe   = regexp.MustCompile(`(?i)(?:(?:^|[\s;&(])(?:env|printenv)|(?:^|[\s;&(])(?:cat|tar|zip|7z|7za|gpg|base64|openssl|gzip|bzip2|xz|zstd|cpio)\s[^|\n]*` + credPathPat + `\S*)\s*(?:\|[^|\n]*)*\|\s*(?:curl|wget|nc|ncat|xh)\b`)
-	dnsExfilRe  = regexp.MustCompile(`^(?:dig|nslookup|host)\s+(?:[+@-]\S*\s+)*\S*\$\(([^)]*)`)
-	dnsTickRe   = regexp.MustCompile(`^(?:dig|nslookup|host)\s+(?:[+@-]\S*\s+)*\S*` + "`" + `([^` + "`" + `]*)`)
+	envDumpRe   = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)(?:^|[\s;&|(])(?:curl|wget|nc|ncat|xh)\b[^\n]*(?:\$\(\s*(?:env|printenv|set)\s*\)|` + "`" + `\s*(?:env|printenv)\s*` + "`" + `|@-?\s*<\(\s*(?:env|printenv)|\$\(\s*cat\s+\S*(?:\.ssh/|\.aws/|\.netrc|\.git-credentials|\.npmrc|\.kube/|/\.env\b)\S*\s*\))`)
+	})
+	envPipeRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)(?:(?:^|[\s;&(])(?:env|printenv)|(?:^|[\s;&(])(?:cat|tar|zip|7z|7za|gpg|base64|openssl|gzip|bzip2|xz|zstd|cpio)\s[^|\n]*` + credPathPat + `\S*)\s*(?:\|[^|\n]*)*\|\s*(?:curl|wget|nc|ncat|xh)\b`)
+	})
+	dnsExfilRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^(?:dig|nslookup|host)\s+(?:[+@-]\S*\s+)*\S*\$\(([^)]*)`)
+	})
+	dnsTickRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^(?:dig|nslookup|host)\s+(?:[+@-]\S*\s+)*\S*` + "`" + `([^` + "`" + `]*)`)
+	})
 	// dnsPayloadRe is what makes a substitution inside a DNS lookup an
 	// exfiltration channel: it reads a file, dumps the environment, encodes
 	// data or expands a secret variable. $(hostname) is just a lookup.
-	dnsPayloadRe = regexp.MustCompile(`(?i)\b(?:cat|head|tail|base64|xxd|od|hexdump|env|printenv|curl|wget|openssl|gpg)\b|<\s*\S|` + credPathPat + `|\$\{?[A-Za-z_]`)
-	dnsStartRe   = regexp.MustCompile(`^(?:dig|nslookup|host)\s`)
+	dnsPayloadRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:cat|head|tail|base64|xxd|od|hexdump|env|printenv|curl|wget|openssl|gpg)\b|<\s*\S|` + credPathPat + `|\$\{?[A-Za-z_]`)
+	})
+	dnsStartRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(?:dig|nslookup|host)\s`) })
 )
 
 // secretVars lists the secret-looking environment variables a line references.
 func secretVars(line string) []string {
 	var out []string
-	for _, m := range secretVarRe.FindAllStringSubmatch(line, -1) {
-		if secretName.MatchString(m[1]) {
+	for _, m := range secretVarRe().FindAllStringSubmatch(line, -1) {
+		if secretName().MatchString(m[1]) {
 			out = append(out, m[1])
 		}
 	}
@@ -85,11 +104,11 @@ func secretVars(line string) []string {
 // dnsCarriesPayload reports whether a dig, nslookup or host segment builds the
 // queried name from a substitution that reads a file, the environment or a secret.
 func dnsCarriesPayload(seg string, backticks bool) bool {
-	if m := dnsExfilRe.FindStringSubmatch(seg); len(m) > 1 && dnsPayloadRe.MatchString(m[1]) {
+	if m := dnsExfilRe().FindStringSubmatch(seg); len(m) > 1 && dnsPayloadRe().MatchString(m[1]) {
 		return true
 	}
 	if backticks {
-		if m := dnsTickRe.FindStringSubmatch(seg); len(m) > 1 && dnsPayloadRe.MatchString(m[1]) {
+		if m := dnsTickRe().FindStringSubmatch(seg); len(m) > 1 && dnsPayloadRe().MatchString(m[1]) {
 			return true
 		}
 	}
@@ -115,25 +134,25 @@ func scanExfilCommands(r *runner, t *scanText) {
 		if !mayExfil(text) {
 			continue
 		}
-		network := netCmdRe.MatchString(text) || httpieRe.MatchString(text)
+		network := netCmdRe().MatchString(text) || httpieRe().MatchString(text)
 		switch {
 		case network && len(secretVars(text)) > 0:
 			if r.allHostsAllowed(text) {
 				continue
 			}
-			rest := headerArgRe.ReplaceAllString(text, " ")
+			rest := headerArgRe().ReplaceAllString(text, " ")
 			if len(secretVars(rest)) == 0 {
 				r.addSev(SeverityWarning, CodeExfilCommand, t.abs, l.No, "sends $%s in an authentication header to a host that is not in lint.security.allowed_hosts; confirm the destination", secretVars(text)[0])
 			} else {
 				r.add(CodeExfilCommand, t.abs, l.No, "sends the secret $%s to a remote host in a URL or body", secretVars(rest)[0])
 			}
-		case envDumpRe.MatchString(text), envPipeRe.MatchString(text):
+		case envDumpRe().MatchString(text), envPipeRe().MatchString(text):
 			if r.allHostsAllowed(text) {
 				continue
 			}
 			r.add(CodeExfilCommand, t.abs, l.No, "sends the environment or a credential file to a remote host")
 		default:
-			for _, seg := range t.commandSegmentsWith(l, dnsStartRe, pipeSegSplitRe) {
+			for _, seg := range t.commandSegmentsWith(l, dnsStartRe(), pipeSegSplitRe()) {
 				if dnsCarriesPayload(seg, t.shellLike(l)) {
 					r.add(CodeExfilCommand, t.abs, l.No, "builds a DNS lookup from command output, a classic exfiltration channel")
 					break
@@ -144,7 +163,7 @@ func scanExfilCommands(r *runner, t *scanText) {
 }
 
 var (
-	imageURLRe = regexp.MustCompile(`!\[[^\]]*\]\(\s*<?(https?://[^)\s>]+)`)
+	imageURLRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`!\[[^\]]*\]\(\s*<?(https?://[^)\s>]+)`) })
 	badgeHosts = []string{"img.shields.io", "badgen.net", "codecov.io", "*.codecov.io", "badge.fury.io", "*.travis-ci.com", "*.travis-ci.org", "api.codacy.com", "sonarcloud.io", "coveralls.io", "circleci.com", "*.githubusercontent.com", "camo.githubusercontent.com", "github.com", "gitlab.com", "readthedocs.org", "*.readthedocs.io"}
 )
 
@@ -153,7 +172,7 @@ func scanImageExfil(r *runner, t *scanText) {
 		if !t.prose(l) {
 			continue
 		}
-		for _, m := range imageURLRe.FindAllStringSubmatch(l.Text, -1) {
+		for _, m := range imageURLRe().FindAllStringSubmatch(l.Text, -1) {
 			u, err := url.Parse(m[1])
 			if err != nil || u.RawQuery == "" {
 				continue
@@ -171,9 +190,13 @@ func scanImageExfil(r *runner, t *scanText) {
 }
 
 var (
-	dataLinkRe = regexp.MustCompile(`(?i)\]\(\s*<?(data:[^)\s>]*|javascript:[^)]*|vbscript:[^)]*)`)
-	dataRefRe  = regexp.MustCompile(`(?i)^\s{0,3}\[[^\]\n]+\]:\s*<?(data:\S*|javascript:\S*)`)
-	smallImgRe = regexp.MustCompile(`(?i)^data:image/(?:png|gif|jpe?g|webp);base64,`)
+	dataLinkRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\]\(\s*<?(data:[^)\s>]*|javascript:[^)]*|vbscript:[^)]*)`)
+	})
+	dataRefRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)^\s{0,3}\[[^\]\n]+\]:\s*<?(data:\S*|javascript:\S*)`)
+	})
+	smallImgRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)^data:image/(?:png|gif|jpe?g|webp);base64,`) })
 )
 
 // maxInlineImage is the largest base64 image payload treated as a harmless icon.
@@ -184,13 +207,13 @@ func scanDataURIs(r *runner, t *scanText) {
 		if !t.prose(l) {
 			continue
 		}
-		matches := dataLinkRe.FindAllStringSubmatch(l.Text, -1)
-		if m := dataRefRe.FindStringSubmatch(l.Text); m != nil {
+		matches := dataLinkRe().FindAllStringSubmatch(l.Text, -1)
+		if m := dataRefRe().FindStringSubmatch(l.Text); m != nil {
 			matches = append(matches, m)
 		}
 		for _, m := range matches {
 			target := m[1]
-			if smallImgRe.MatchString(target) && len(target) <= maxInlineImage {
+			if smallImgRe().MatchString(target) && len(target) <= maxInlineImage {
 				continue
 			}
 			scheme, _, _ := strings.Cut(target, ":")
@@ -200,7 +223,9 @@ func scanDataURIs(r *runner, t *scanText) {
 }
 
 var (
-	ipURLRe     = regexp.MustCompile(`(?i)\bhttps?://(\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?\b`)
+	ipURLRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\bhttps?://(\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?\b`)
+	})
 	testNetNets = []string{"192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24"}
 )
 
@@ -225,7 +250,7 @@ func scanRawIPs(r *runner, t *scanText) {
 		if l.Front || l.Neg {
 			continue
 		}
-		for _, m := range ipURLRe.FindAllStringSubmatch(l.Text, -1) {
+		for _, m := range ipURLRe().FindAllStringSubmatch(l.Text, -1) {
 			if publicIPv4(m[1]) {
 				r.add(CodeRawIPURL, t.abs, l.No, "URL points at the public address %s instead of a host name", m[1])
 			}
@@ -235,7 +260,7 @@ func scanRawIPs(r *runner, t *scanText) {
 
 var (
 	fetchCmdRe = newGatedRe(`(?i)\b(?:curl|wget|git\s+clone|git\s+remote\s+add|pip3?\s+install|npm\s+(?:install|i|config)|iwr|invoke-webrequest|invoke-restmethod)\b`, true, "curl", "wget", "git ", "pip", "npm", "iwr", "invoke-")
-	httpURLRe  = regexp.MustCompile(`(?i)\bhttp://([^\s/:"'<>)\]$]+)(?::\d+)?`)
+	httpURLRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)\bhttp://([^\s/:"'<>)\]$]+)(?::\d+)?`) })
 )
 
 func scanInsecureHTTP(r *runner, t *scanText) {
@@ -243,7 +268,7 @@ func scanInsecureHTTP(r *runner, t *scanText) {
 		if l.Front || l.Neg || !fetchCmdRe.MatchString(l.Text) {
 			continue
 		}
-		for _, m := range httpURLRe.FindAllStringSubmatch(l.Text, -1) {
+		for _, m := range httpURLRe().FindAllStringSubmatch(l.Text, -1) {
 			host := strings.ToLower(m[1])
 			if lo, priv := hostClass(host); lo || priv || !strings.Contains(host, ".") {
 				continue
@@ -293,7 +318,9 @@ func checkInsecureConfig(r *runner) {
 }
 
 var (
-	escapeRe     = regexp.MustCompile(`(?:\\x[0-9a-fA-F]{2}){4,}|(?:\\u[0-9a-fA-F]{4}){4,}`)
+	escapeRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?:\\x[0-9a-fA-F]{2}){4,}|(?:\\u[0-9a-fA-F]{4}){4,}`)
+	})
 	escapeSkipFn = map[string]bool{"regex": true, "regexp": true, "js": true, "javascript": true, "ts": true, "typescript": true, "json": true, "c": true, "cpp": true, "go": true, "rust": true, "java": true}
 	escapeSkipEx = map[string]bool{".js": true, ".ts": true, ".json": true, ".c": true, ".h": true, ".go": true, ".rs": true, ".java": true, ".mjs": true, ".cjs": true}
 )
@@ -306,7 +333,7 @@ func scanEscapes(r *runner, t *scanText) {
 		if l.Front || l.Neg || (l.Fenced && escapeSkipFn[l.Lang]) {
 			continue
 		}
-		if (strings.Contains(l.Text, `\x`) || strings.Contains(l.Text, `\u`)) && escapeRe.MatchString(l.Text) {
+		if (strings.Contains(l.Text, `\x`) || strings.Contains(l.Text, `\u`)) && escapeRe().MatchString(l.Text) {
 			r.add(CodeEscapeObfuscated, t.abs, l.No, "a run of character escapes spells out text a reviewer cannot read; write the string plainly")
 		}
 	}
