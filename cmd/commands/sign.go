@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
@@ -45,6 +46,7 @@ var (
 	signTLog        bool
 	signEmbedItems  bool
 	signOutput      string
+	signJSON        bool
 	signInteractive bool
 	signBundle      string
 	signSkill       string
@@ -143,6 +145,7 @@ func init() {
 	f.BoolVar(&signEmbedItems, "embed-items", false, "Put the pinned item ids and digests in the statement (ids can be sensitive in a private repository)")
 	f.StringVar(&signOutput, "output", "", "Write the bundle here instead of next to the lock")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	addJSONFormat(f, &signJSON, "")
 }
 
 func validateSignFlags() error {
@@ -249,6 +252,31 @@ func loadSignLock(ctx context.Context, args []string) (*config.Config, *lockfile
 // runSign signs the lock of the project at args[0] (or the current directory)
 // and returns the exit code.
 func runSign(ctx context.Context, args []string, env ambient.Env) int {
+	signed = nil
+	code := signOne(ctx, args, env)
+	if signJSON && code == 0 {
+		if err := jsondoc.Write(os.Stdout, map[string]any{"status": "signed", "signed": signed}); err != nil {
+			renderStderr(err)
+			return exitFailure
+		}
+	}
+	return code
+}
+
+// signed collects what one run signed, for the --format json document.
+var signed []map[string]any
+
+// reportSigned announces one signed subject: a success line on stderr, or with
+// --format json an entry of the document runSign prints on stdout.
+func reportSigned(msg string, entry map[string]any, logArgs ...any) {
+	if signJSON {
+		signed = append(signed, entry)
+		return
+	}
+	logger.Success(msg, logArgs...)
+}
+
+func signOne(ctx context.Context, args []string, env ambient.Env) int {
 	if err := validateSignFlags(); err != nil {
 		renderStderr(err)
 		return 1
@@ -297,7 +325,8 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
 	subject := signingSubject(lock)
-	logger.Success("Signed "+lockfile.FileName, "signer", signerLabel(info), "subject", subject, "bundle", out)
+	reportSigned("Signed "+lockfile.FileName, map[string]any{"kind": "lock", "path": lockfile.FileName, "signer": signerLabel(info), "subject": subject, "bundle": out},
+		"signer", signerLabel(info), "subject", subject, "bundle", out)
 	return 0
 }
 
