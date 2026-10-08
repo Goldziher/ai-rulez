@@ -303,7 +303,7 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 			return exitOKFCannotRun
 		}
 		if okfFormat == formatJSON {
-			return writeOKFExportJSON(out, map[string]any{"status": okfExportStatus(drift.Empty()), "dir": dir, "files": len(res.Files), "drift": drift}, drift.Empty())
+			return writeOKFExportJSON(out, map[string]any{keyStatus: okfExportStatus(drift.Empty()), "dir": dir, "files": len(res.Files), statusDrift: drift}, drift.Empty())
 		}
 		if drift.Empty() {
 			w.printf("%s is up to date (%d files)\n", dir, len(res.Files))
@@ -332,7 +332,7 @@ func okfExportStatus(upToDate bool) string {
 	if upToDate {
 		return "up_to_date"
 	}
-	return "drift"
+	return statusDrift
 }
 
 // writeOKFExportJSON prints the export document and returns the exit code: 0

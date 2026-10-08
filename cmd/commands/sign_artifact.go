@@ -65,8 +65,8 @@ func runSignArtifact(ctx context.Context, env ambient.Env) int {
 		digest = "sha256:" + fs.DigestHex
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
-	reportSigned(ctx, "Signed "+subject, map[string]any{"kind": subject, "path": target, "signer": signerLabel(info), "subject": digest, "bundle": out},
-		"path", target, "signer", signerLabel(info), "subject", digest, "bundle", out)
+	reportSigned(ctx, "Signed "+subject, map[string]any{keyKind: subject, keyPath: target, keySigner: signerLabel(info), keySubject: digest, keyBundle: out},
+		"path", target, "signer", signerLabel(info), "subject", digest, keyBundle, out)
 	if signProvenance {
 		return signProvenanceFor(ctx, signer, ts, meta, env, out)
 	}
@@ -120,7 +120,7 @@ func signProvenanceFor(ctx context.Context, signer signing.Signer, ts signing.Tr
 		renderStderr(err)
 		return 1
 	}
-	reportSigned(ctx, "Signed SLSA provenance", map[string]any{"kind": "provenance", "builder": in.BuilderID, "bundle": out},
+	reportSigned(ctx, "Signed SLSA provenance", map[string]any{keyKind: "provenance", "builder": in.BuilderID, keyBundle: out},
 		"builder", in.BuilderID, "bundle", out)
 	return 0
 }

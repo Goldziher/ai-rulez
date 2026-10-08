@@ -144,15 +144,15 @@ func commandFormat(cmd *cobra.Command) string {
 
 // renderError is the one text rendering of a failure.
 func renderError(w io.Writer, err error) {
-	fmt.Fprintf(w, "Error: %s\n", errorText(err))
+	writef(w, "Error: %s\n", errorText(err))
 	if details := errorDetails(err); len(details) > 0 {
-		fmt.Fprintf(w, "\nValidation errors:\n")
+		writef(w, "\nValidation errors:\n")
 		for _, d := range details {
-			fmt.Fprintf(w, "  - %s\n", d)
+			writef(w, "  - %s\n", d)
 		}
 	}
 	if hint := errorHintOf(err); hint != "" {
-		fmt.Fprintf(w, "\nHint: %s\n", hint)
+		writef(w, "\nHint: %s\n", hint)
 	}
 }
 
