@@ -9,6 +9,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // maxSymlinkHops bounds how many links one write path may traverse, matching the
@@ -105,7 +106,7 @@ func resolveWriteTarget(p string, hops *int) (out string, link bool, err error) 
 func (g *Generator) inGitDir(abs string) bool {
 	for _, root := range g.writeRoots() {
 		rel, err := filepath.Rel(root, abs)
-		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if err != nil || safefs.RelEscapes(rel) {
 			continue
 		}
 		for _, seg := range strings.Split(filepath.ToSlash(rel), "/") {

@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // contentIndex finds the loaded file behind a lock item.
@@ -68,7 +69,7 @@ func (x *contentIndex) rel(p string) (string, bool) {
 		return filepath.ToSlash(p), true
 	}
 	r, err := filepath.Rel(x.configDir, p)
-	if err != nil || r == ".." || strings.HasPrefix(r, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(r) {
 		return "", false
 	}
 	return filepath.ToSlash(r), true

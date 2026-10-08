@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // maxCaseFileBytes bounds one case file, prompt file or fixture source.
@@ -168,7 +170,7 @@ func (c *Case) resolve(root string) []Problem {
 			return "", false // already reported by validation
 		}
 		full := filepath.Join(c.ResolvedDir, filepath.FromSlash(rel))
-		if !within(root, full) {
+		if !safefs.Within(root, full) {
 			fail("%q points outside %s", rel, root)
 			return "", false
 		}
@@ -209,11 +211,6 @@ func (c *Case) resolve(root string) []Problem {
 	return problems
 }
 
-func within(root, target string) bool {
-	rel, err := filepath.Rel(root, target)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
-}
-
 // resolvedInside reports whether target, after resolving every symlink in both
 // paths, lies inside root. Either path that cannot be resolved is outside.
 func resolvedInside(root, target string) bool {
@@ -225,7 +222,7 @@ func resolvedInside(root, target string) bool {
 	if err != nil {
 		return false
 	}
-	return within(realRoot, realTarget)
+	return safefs.Within(realRoot, realTarget)
 }
 
 func readBounded(file string) ([]byte, error) {

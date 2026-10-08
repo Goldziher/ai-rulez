@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -109,7 +110,7 @@ func appliedOutside(applied []lint.FixApplied, root string) int {
 	for _, a := range applied {
 		for _, target := range a.Targets {
 			rel, err := filepath.Rel(root, gitutil.Resolve(target))
-			if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			if err != nil || safefs.RelEscapes(rel) {
 				n++
 				break
 			}

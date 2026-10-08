@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // ApplyContent bounds the hooks and MCP servers that the content delivered by
@@ -87,7 +88,7 @@ func (c *contentApplier) imported(path string) bool {
 	// A configuration loaded from a relative directory carries relative paths:
 	// compare absolute forms so none of them reads as "not imported".
 	path = absPath(path)
-	if c.cfg.ConfigDir == "" || !within(absPath(c.cfg.ConfigDir), path) {
+	if c.cfg.ConfigDir == "" || !safefs.Within(absPath(c.cfg.ConfigDir), path) {
 		return true
 	}
 	for i := range c.cfg.Includes {
@@ -100,7 +101,7 @@ func (c *contentApplier) imported(path string) bool {
 			root = filepath.Join(c.cfg.BaseDir, root)
 		}
 		root = absPath(root)
-		if within(root, path) && !within(absPath(c.cfg.ConfigDir), root) {
+		if safefs.Within(root, path) && !safefs.Within(absPath(c.cfg.ConfigDir), root) {
 			return true
 		}
 	}
@@ -116,11 +117,6 @@ func absPath(p string) string {
 
 func isRemoteSource(src string) bool {
 	return strings.Contains(src, "://") || strings.HasPrefix(src, "git@") || strings.HasPrefix(src, "git+")
-}
-
-func within(dir, path string) bool {
-	rel, err := filepath.Rel(filepath.Clean(dir), filepath.Clean(path))
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 func (c *contentApplier) report(f *config.ContentFile, key, format string, args ...any) {

@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/Goldziher/ai-rulez/v5/internal/usage"
 )
@@ -480,7 +481,7 @@ func (a *lintAttribution) overview(reason string) CatalogLint {
 		if !filepath.IsAbs(abs) {
 			abs = filepath.Join(a.cwd, filepath.FromSlash(abs))
 		}
-		if rel, err := filepath.Rel(a.baseAbs, abs); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if rel, err := filepath.Rel(a.baseAbs, abs); err == nil && !safefs.RelEscapes(rel) {
 			pf.File = filepath.ToSlash(rel)
 		}
 		out.Unattributed = append(out.Unattributed, pf)

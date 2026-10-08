@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // VerifyProvenance verifies every generated output recorded in a plugin
@@ -70,7 +72,7 @@ func safeOutputPath(baseDir, relativePath string) (string, error) {
 		return "", oops.With("path", relativePath).Errorf("invalid plugin provenance output path")
 	}
 	cleanPath := filepath.Clean(filepath.FromSlash(relativePath))
-	if cleanPath == ".." || strings.HasPrefix(cleanPath, ".."+string(filepath.Separator)) {
+	if safefs.RelEscapes(cleanPath) {
 		return "", oops.With("path", relativePath).Errorf("plugin provenance output escapes bundle root")
 	}
 	return filepath.Join(baseDir, cleanPath), nil

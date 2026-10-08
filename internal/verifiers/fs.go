@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/verifiers/vspec"
 	"github.com/samber/oops"
 )
@@ -19,7 +20,7 @@ import (
 // cleanRel normalizes a repo-relative path and refuses one that leaves the root.
 func cleanRel(rel string) (string, error) {
 	clean := filepath.Clean(filepath.FromSlash(rel))
-	if filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+	if filepath.IsAbs(clean) || safefs.RelEscapes(clean) {
 		return "", oops.Errorf("path %q is outside the project", rel)
 	}
 	return clean, nil
@@ -35,11 +36,6 @@ func (e *Env) realRoot() (string, error) {
 		}
 	}
 	return e.rootReal, e.rootErr
-}
-
-func within(root, p string) bool {
-	rel, err := filepath.Rel(root, p)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 func isMissing(err error) bool {
@@ -87,7 +83,7 @@ func (e *Env) stat(ctx context.Context, rel string) (resolved string, exists boo
 			}
 			return "", false, oops.Wrapf(err, "resolve %s", rel)
 		}
-		if !within(root, target) {
+		if !safefs.Within(root, target) {
 			return "", false, oops.Errorf("%s resolves outside the project", rel)
 		}
 		cur = target

@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/zeebo/blake3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Item identifies a loaded instruction file.
@@ -76,7 +78,7 @@ func relativeTo(root, path string) (string, bool) {
 	}
 	for _, pair := range [][2]string{{root, path}, {resolve(root), resolve(path)}} {
 		rel, err := filepath.Rel(pair[0], pair[1])
-		if err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if err == nil && rel != "." && !safefs.RelEscapes(rel) {
 			return filepath.ToSlash(rel), true
 		}
 	}

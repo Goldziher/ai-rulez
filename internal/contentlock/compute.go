@@ -13,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Item kinds recorded in the lock, besides the role-selectable ones.
@@ -229,7 +230,7 @@ func (c *collector) relToConfig(p string) (string, bool) {
 		return filepath.ToSlash(p), true
 	}
 	rel, err := filepath.Rel(c.cfg.ConfigDir, p)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(rel) {
 		return "", false
 	}
 	return filepath.ToSlash(rel), true
