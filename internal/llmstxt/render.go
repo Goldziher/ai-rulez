@@ -131,6 +131,13 @@ func RenderFull(title, summary string, pages []Page) string {
 // setextRe matches a setext underline: a run of = or - (up to three spaces of indent).
 var setextRe = regexp.MustCompile(`^ {0,3}(=+|-+)[ \t]*$`)
 
+// isSetextText reports whether line can be the text of a setext heading.
+func isSetextText(line string) bool {
+	t := strings.TrimSpace(line)
+	return t != "" && fenceMarker(line) == "" && !headingRe.MatchString(line) && !setextRe.MatchString(line) &&
+		!strings.HasPrefix(line, "    ") && !strings.HasPrefix(line, "\t") && !listItemRe.MatchString(t) && !strings.HasPrefix(t, ">")
+}
+
 // atxFromSetext rewrites setext headings (a text line over a === or --- line) as
 // ATX headings so demote can see them. Fenced code is left alone; a paragraph
 // line that looks like a list item, quote or indented code is not a heading text.
@@ -151,9 +158,7 @@ func atxFromSetext(lines []string) {
 		}
 		m := setextRe.FindStringSubmatch(line)
 		prev := lines[i-1]
-		if m == nil || strings.TrimSpace(prev) == "" || fenceMarker(prev) != "" || headingRe.MatchString(prev) ||
-			strings.HasPrefix(prev, "    ") || strings.HasPrefix(prev, "\t") || setextRe.MatchString(prev) ||
-			listItemRe.MatchString(strings.TrimSpace(prev)) || strings.HasPrefix(strings.TrimSpace(prev), ">") {
+		if m == nil || !isSetextText(prev) {
 			continue
 		}
 		level := "#"
