@@ -351,6 +351,12 @@ phase_recursive() {
 		cd "$parent/$d" || fail "no work dir"
 		prep_hermetic || finish
 	done
+	# Fixture trees hold deliberately invalid configurations (old versions,
+	# renamed tables); they are test data, not projects, so leave them out of
+	# the recursive scan. Only the private copies are touched.
+	for d in main wt; do
+		find "$parent/$d" -type d \( -name testdata -o -name fixtures \) -prune -exec rm -rf {} + 2>/dev/null
+	done
 	cd "$parent" || fail "no work dir"
 	ar generate -r --offline
 	expect_rc 0 "generate -r over a checkout and its worktree"
