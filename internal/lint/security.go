@@ -40,15 +40,17 @@ var builtinSecrets = func() []secretPattern {
 // mix letters and digits so placeholders such as "your-key-here" pass.
 var genericCredential = secretpat.GenericCredential
 
-var injectionPhrases = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)\bignore\s+(?:all\s+|any\s+|the\s+)?(?:previous|prior|above|earlier|preceding)\s+(?:instructions?|prompts?|rules?|directions?|context)\b`),
-	regexp.MustCompile(`(?i)\bdisregard\s+(?:all\s+|any\s+|the\s+)?(?:previous|prior|above|earlier|system|safety)\b`),
-	regexp.MustCompile(`(?i)\bforget\s+(?:everything|all)\s+(?:you|above|previous)\b`),
-	regexp.MustCompile(`(?i)\b(?:do\s+not|don'?t|never)\s+(?:tell|inform|mention|reveal|show)\s+(?:this\s+to\s+)?the\s+user\b`),
-	regexp.MustCompile(`(?i)\bwithout\s+(?:telling|informing|notifying|asking)\s+the\s+user\b`),
-	regexp.MustCompile(`(?i)\b(?:reveal|print|output|repeat)\s+(?:your\s+)?(?:system\s+prompt|hidden\s+instructions)\b`),
-	regexp.MustCompile(`(?i)\byou\s+are\s+now\s+(?:in\s+)?(?:developer|dan|god|jailbreak)\b`),
-	regexp.MustCompile(`(?i)\boverride\s+(?:your\s+)?(?:safety|system|security)\s+(?:instructions?|rules?|guidelines?|prompt)\b`),
+// injectionPhrases are the instruction-override phrasings, each behind the
+// literals every match contains (see gatedRe).
+var injectionPhrases = []gatedRe{
+	newGatedRe(`(?i)\bignore\s+(?:all\s+|any\s+|the\s+)?(?:previous|prior|above|earlier|preceding)\s+(?:instructions?|prompts?|rules?|directions?|context)\b`, true, "ignore"),
+	newGatedRe(`(?i)\bdisregard\s+(?:all\s+|any\s+|the\s+)?(?:previous|prior|above|earlier|system|safety)\b`, true, "disregard"),
+	newGatedRe(`(?i)\bforget\s+(?:everything|all)\s+(?:you|above|previous)\b`, true, "forget"),
+	newGatedRe(`(?i)\b(?:do\s+not|don'?t|never)\s+(?:tell|inform|mention|reveal|show)\s+(?:this\s+to\s+)?the\s+user\b`, true, "user"),
+	newGatedRe(`(?i)\bwithout\s+(?:telling|informing|notifying|asking)\s+the\s+user\b`, true, "without"),
+	newGatedRe(`(?i)\b(?:reveal|print|output|repeat)\s+(?:your\s+)?(?:system\s+prompt|hidden\s+instructions)\b`, true, "prompt", "instructions"),
+	newGatedRe(`(?i)\byou\s+are\s+now\s+(?:in\s+)?(?:developer|dan|god|jailbreak)\b`, true, "now"),
+	newGatedRe(`(?i)\boverride\s+(?:your\s+)?(?:safety|system|security)\s+(?:instructions?|rules?|guidelines?|prompt)\b`, true, "override"),
 }
 
 var (
@@ -67,10 +69,13 @@ var (
 	base64ExecRe    = regexp.MustCompile(`(?i)base64\s+(?:-d|-D|--decode)\b.*\|\s*(?:sudo\s+)?(?:ba|z|da)?sh\b|\bexec\s*\(\s*(?:base64\.)?b64decode`)
 	writeOutsideRe  = regexp.MustCompile(`(?:>>?|\btee(?:\s+-a)?)\s*(?:~/|\$HOME/|\$\{HOME\}/|/etc/|/usr/|/opt/|/var/|/root/)`)
 	chmod777Re      = regexp.MustCompile(`\bchmod\s+(?:-R\s+)?(?:0?777|a\+rwx)\b`)
-	blobRe          = regexp.MustCompile(`[A-Za-z0-9+/]{200,}={0,2}`)
+	blobRe          = regexp.MustCompile(`[A-Za-z0-9+/]{200,}={0,2}`) // a match is at least blobMinLen bytes
 	urlRe           = regexp.MustCompile(`(?i)\bhttps?://([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)(?::\d+)?`)
 	broadBashToolRe = regexp.MustCompile(`^Bash\(\s*\*+(?::\*+)?\s*\)$`)
 )
+
+// blobMinLen is the shortest line blobRe can match.
+const blobMinLen = 200
 
 // hiddenRunes are the code points that make text invisible or reorder it.
 var hiddenRunes = map[rune]string{
@@ -153,7 +158,7 @@ func (r *runner) securityScan(abs, raw string) {
 		r.scanInjection(abs, no, line)
 		r.scanShell(abs, no, line, describesRisk(st, i))
 		r.scanHosts(abs, no, line)
-		if blobRe.MatchString(line) {
+		if len(line) >= blobMinLen && blobRe.MatchString(line) {
 			r.add(CodeEncodedBlob, abs, no, "line holds a base64-like blob of 200 or more characters that a reviewer cannot read")
 		}
 	}
@@ -296,13 +301,13 @@ func hasLetterAndDigit(s string) bool {
 }
 
 // injectionRes is the built-in and configured injection phrases, compiled once per run.
-func (r *runner) injectionRes() []*regexp.Regexp {
+func (r *runner) injectionRes() []gatedRe {
 	r.injOnce.Do(func() {
 		ruleTables() // a family adds its phrases when the registry is built
 		res := injectionPhrases
 		for _, p := range r.security().InjectionPhrases {
 			if p = strings.TrimSpace(p); p != "" {
-				res = append(res[:len(res):len(res)], regexp.MustCompile(`(?i)`+regexp.QuoteMeta(p)))
+				res = append(res[:len(res):len(res)], newGatedRe(`(?i)`+regexp.QuoteMeta(p), true))
 			}
 		}
 		r.injRes = res
@@ -412,18 +417,23 @@ func describesRisk(st *scanText, i int) bool {
 }
 
 // execFinding returns the AR005 message and the spans of the first exec
-// pattern that matches the line.
+// pattern that matches the line. Each pattern only runs on a line that holds a
+// literal every one of its matches contains (see containsAnyFold).
 func execFinding(line string) (msg string, spans [][]int) {
-	for _, re := range []*regexp.Regexp{pipeToShellRe, pipeToInterpRe, procSubstRe} {
-		spans = append(spans, re.FindAllStringIndex(line, -1)...)
+	if containsAnyFold(line, []string{"curl", "wget"}) {
+		for _, re := range []*regexp.Regexp{pipeToShellRe, pipeToInterpRe, procSubstRe} {
+			spans = append(spans, re.FindAllStringIndex(line, -1)...)
+		}
 	}
 	if len(spans) > 0 {
 		return "downloads and runs code in one step (curl | sh)", spans
 	}
-	if spans = base64ExecRe.FindAllStringIndex(line, -1); len(spans) > 0 {
-		return "decodes a base64 payload and executes it", spans
+	if containsAnyFold(line, []string{"base64", "b64decode"}) {
+		if spans = base64ExecRe.FindAllStringIndex(line, -1); len(spans) > 0 {
+			return "decodes a base64 payload and executes it", spans
+		}
 	}
-	if evalRe.MatchString(line) && !evalBenignRe.MatchString(line) {
+	if containsAnyFold(line, []string{"eval"}) && evalRe.MatchString(line) && !evalBenignRe.MatchString(line) {
 		return "evaluates dynamic text (eval)", evalRe.FindAllStringIndex(line, -1)
 	}
 	return "", nil
@@ -448,10 +458,12 @@ func (r *runner) scanShell(abs string, no int, line string, prose bool) {
 		}
 	}
 	r.scanCredentialAccess(abs, no, line)
-	if m := writeOutsideRe.FindString(line); m != "" {
-		r.add(CodeShellAccess, abs, no, "writes outside the project (%s...)", strings.TrimSpace(m))
+	if strings.Contains(line, ">") || strings.Contains(line, "tee") { // what writeOutsideRe starts from
+		if m := writeOutsideRe.FindString(line); m != "" {
+			r.add(CodeShellAccess, abs, no, "writes outside the project (%s...)", strings.TrimSpace(m))
+		}
 	}
-	if chmod777Re.MatchString(line) {
+	if strings.Contains(line, "chmod") && chmod777Re.MatchString(line) {
 		r.add(CodeShellAccess, abs, no, "makes files world-writable (chmod 777)")
 	}
 }
