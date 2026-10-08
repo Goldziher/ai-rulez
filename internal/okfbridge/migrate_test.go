@@ -1,6 +1,7 @@
 package okfbridge
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,7 +60,7 @@ func TestMigrateDirConvertsAndIsIdempotent(t *testing.T) {
 	dir := writeTree(t, migrateFixture())
 	before := readTree(t, dir)
 
-	changes, err := MigrateDir(dir, MigrateOptions{})
+	changes, err := MigrateDir(context.Background(), dir, MigrateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,17 +77,17 @@ func TestMigrateDirConvertsAndIsIdempotent(t *testing.T) {
 		t.Fatal("dry run reported nothing to do")
 	}
 
-	if _, err := MigrateDir(dir, MigrateOptions{Write: true}); err != nil {
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	migrated := readTree(t, dir)
-	if _, err := MigrateDir(dir, MigrateOptions{Write: true}); err != nil {
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	if again := readTree(t, dir); !equalTrees(migrated, again) {
 		t.Fatalf("second run changed the tree:\n%v\n%v", migrated, again)
 	}
-	again, err := MigrateDir(dir, MigrateOptions{})
+	again, err := MigrateDir(context.Background(), dir, MigrateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +135,7 @@ func TestMigrateDirConvertsAndIsIdempotent(t *testing.T) {
 func TestMigrateDirMatchesExport(t *testing.T) {
 	files := migrateFixture()
 	dir := writeTree(t, files)
-	if _, err := MigrateDir(dir, MigrateOptions{Write: true}); err != nil {
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	tree, err := config.ScanContentTree(dir)
@@ -159,7 +160,7 @@ func TestMigrateDirMatchesExport(t *testing.T) {
 
 func TestMigratedTreeValidates(t *testing.T) {
 	dir := writeTree(t, migrateFixture())
-	if _, err := MigrateDir(dir, MigrateOptions{Write: true}); err != nil {
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	b, err := okf.Load(os.DirFS(dir))
@@ -175,7 +176,7 @@ func TestMigratedTreeValidates(t *testing.T) {
 
 func TestMigrateDirSkipsUnclosedFrontmatter(t *testing.T) {
 	dir := writeTree(t, map[string]string{"rules/bad.md": "---\npriority: high\nno close\n"})
-	changes, err := MigrateDir(dir, MigrateOptions{Write: true})
+	changes, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true})
 	if err != nil {
 		t.Fatal(err)
 	}

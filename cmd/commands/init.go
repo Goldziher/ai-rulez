@@ -22,7 +22,6 @@ var (
 	fromFlag         string
 	setupHooks       bool
 	autoYes          bool
-	initForce        bool
 	initConfigDirArg string
 )
 
@@ -42,7 +41,7 @@ func init() {
 	InitCmd.Flags().StringVarP(&fromFlag, "from", "F", "", "Import from existing tool files with convert: importer names or project paths (e.g., 'auto', 'rulesync', '.claude,.cursor')")
 	InitCmd.Flags().BoolVarP(&setupHooks, "setup-hooks", "H", false, "Automatically configure git hooks for ai-rulez validation")
 	addYesFlag(InitCmd.Flags(), &autoYes, "Automatically answer yes to prompts (never replaces an existing configuration directory; see --force)")
-	InitCmd.Flags().BoolVar(&initForce, "force", false, "Replace an existing configuration directory; the old one is kept as <dir>.bak-<timestamp>")
+	InitCmd.Flags().Bool("force", false, "Replace an existing configuration directory; the old one is kept as <dir>.bak-<timestamp>")
 	InitCmd.Flags().StringVar(&initConfigDirArg, "config-dir", "", "Configuration directory to create (default: .ai-rulez; use .config/ai-rulez for the .config/ convention)")
 }
 
@@ -72,7 +71,7 @@ func runInit(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	if err := prepareExistingConfigDir(configDir); err != nil {
+	if err := prepareExistingConfigDir(cmd, configDir); err != nil {
 		fatal("Refusing to replace the existing configuration directory", err)
 	}
 
@@ -106,7 +105,7 @@ func runInit(cmd *cobra.Command, args []string) {
 	}
 
 	// The configuration directory is an OKF bundle: index.md files list its content.
-	if err := okfbridge.RefreshIndexes(configDir); err != nil {
+	if err := okfbridge.RefreshIndexes(watchParentContext(cmd), configDir); err != nil {
 		fatal("Failed to write the index.md files", err)
 	}
 
@@ -122,12 +121,12 @@ func runInit(cmd *cobra.Command, args []string) {
 // first. --yes only skips prompts, so scripts cannot destroy authored content by
 // accident, and the MCP init_project tool refuses in the same situation. An
 // import keeps the old directory until the new one is written (replaceConfigDir).
-func prepareExistingConfigDir(configDir string) error {
+func prepareExistingConfigDir(cmd *cobra.Command, configDir string) error {
 	if _, err := os.Stat(configDir); err != nil {
 		return nil //nolint:nilerr // nothing there: nothing to protect
 	}
 	logger.Info(configDir + "/ directory already exists")
-	if !initForce && !shouldOverwriteConfig(configDir+"/") {
+	if !initForceFlag(cmd) && !shouldOverwriteConfig(configDir+"/") {
 		return oops.
 			Hint("Pass --force to replace it (the old directory is kept as "+configDir+".bak-<timestamp>), or remove or rename it. --yes only skips prompts.").
 			Errorf("%s/ already exists", configDir)
@@ -141,6 +140,12 @@ func prepareExistingConfigDir(configDir string) error {
 	}
 	logger.Info("Existing " + configDir + "/ directory moved to " + backup)
 	return nil
+}
+
+// initForceFlag reports whether init was given --force.
+func initForceFlag(cmd *cobra.Command) bool {
+	force, err := cmd.Flags().GetBool("force")
+	return err == nil && force
 }
 
 // backupConfigDir moves configDir aside to <configDir>.bak-<timestamp> and

@@ -2,6 +2,7 @@ package okfbridge
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,8 +49,8 @@ type MigrateOptions struct {
 // body of a file is kept byte for byte and the loader maps the frontmatter back,
 // so the generated output does not change. A file that already carries
 // x-ai-rulez is left alone, which makes the migration idempotent.
-func MigrateDir(configDir string, opts MigrateOptions) ([]MigrateChange, error) {
-	tree, err := config.ScanContentTree(configDir)
+func MigrateDir(ctx context.Context, configDir string, opts MigrateOptions) ([]MigrateChange, error) {
+	tree, err := config.ScanContentTreeContext(ctx, configDir)
 	if err != nil {
 		return nil, oops.Wrapf(err, "read %s", configDir)
 	}

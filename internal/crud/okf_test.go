@@ -21,7 +21,7 @@ func okfProject(t *testing.T) (*crud.OperatorImpl, string) {
 	t.Helper()
 	dir := setupTestProject(t)
 	cfgDir := filepath.Join(dir, ".ai-rulez")
-	require.NoError(t, okfbridge.RefreshIndexes(cfgDir))
+	require.NoError(t, okfbridge.RefreshIndexes(t.Context(), cfgDir))
 	op, err := crud.NewOperator(dir)
 	require.NoError(t, err)
 	return op, cfgDir
