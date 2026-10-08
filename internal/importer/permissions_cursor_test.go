@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -125,7 +126,7 @@ func TestCursorImport_DenyReachesOpencode(t *testing.T) {
 func TestCursorImport_GeneratedRulesAreNotReimported(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		".ai-rulez/config.toml": "version = \"5.0\"\nname = \"gen\"\npresets = [\"cursor\"]\n\n" +
 			"[permissions]\ndeny = [\"Bash(rm -rf:*)\", \"Bash(sudo)\"]\n",
 		".ai-rulez/rules/style.md": "---\ndescription: style\n---\nUse tabs.\n",

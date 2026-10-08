@@ -14,6 +14,7 @@ import (
 	"testing/fstest"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/kaptinlin/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -356,15 +357,6 @@ func TestSkillsLock_VersionAndInvalid(t *testing.T) {
 
 // --- Convert end to end ---
 
-func writeTree(t *testing.T, dir string, files map[string]string) {
-	t.Helper()
-	for p, c := range files {
-		full := filepath.Join(dir, filepath.FromSlash(p))
-		require.NoError(t, os.MkdirAll(filepath.Dir(full), 0o755))
-		require.NoError(t, os.WriteFile(full, []byte(c), 0o644))
-	}
-}
-
 func snapshot(t *testing.T, dir string) map[string]string {
 	t.Helper()
 	out := map[string]string{}
@@ -390,7 +382,7 @@ var sampleProject = map[string]string{
 
 func TestConvert_DryRunWritesNothing(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, sampleProject)
+	testutil.WriteTree(t, dir, sampleProject)
 	before := snapshot(t, dir)
 
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir})
@@ -414,7 +406,7 @@ func filePaths(r *Report) []string {
 
 func TestConvert_WriteIsIdempotentAndLeavesSourceAlone(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, sampleProject)
+	testutil.WriteTree(t, dir, sampleProject)
 
 	first, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
 	require.NoError(t, err)
@@ -438,8 +430,8 @@ func TestConvert_WriteIsIdempotentAndLeavesSourceAlone(t *testing.T) {
 
 func TestConvert_ConflictNeedsForce(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, sampleProject)
-	writeTree(t, dir, map[string]string{".ai-rulez/rules/ts.md": "mine\n", ".ai-rulez/config.toml": "version = \"5.0\"\nname = \"mine\"\npresets = [\"codex\"]\n"})
+	testutil.WriteTree(t, dir, sampleProject)
+	testutil.WriteTree(t, dir, map[string]string{".ai-rulez/rules/ts.md": "mine\n", ".ai-rulez/config.toml": "version = \"5.0\"\nname = \"mine\"\npresets = [\"codex\"]\n"})
 	before := snapshot(t, dir)
 
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
@@ -462,8 +454,8 @@ func TestConvert_ConflictNeedsForce(t *testing.T) {
 
 func TestConvert_DomainKeepsExistingTree(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, sampleProject)
-	writeTree(t, dir, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"mine\"\npresets = [\"claude\"]\n", ".ai-rulez/rules/ts.md": "mine\n"})
+	testutil.WriteTree(t, dir, sampleProject)
+	testutil.WriteTree(t, dir, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"mine\"\npresets = [\"claude\"]\n", ".ai-rulez/rules/ts.md": "mine\n"})
 
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, Domain: "imported"})
 
@@ -475,7 +467,7 @@ func TestConvert_DomainKeepsExistingTree(t *testing.T) {
 
 func TestConvert_SecurityScanBlocksWrite(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"CLAUDE.md": "Deploy with key AKIAIOSFODNN7EXAMPLE and ghp_" + strings.Repeat("a", 36) + "\n",
 	})
 
@@ -491,7 +483,7 @@ func TestConvert_SecurityScanBlocksWrite(t *testing.T) {
 
 func TestConvert_SkillsLockWithNativeSkipsTrackedSkills(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"skills-lock.json":              lockV1,
 		".agents/skills/alpha/SKILL.md": "---\ndescription: a\n---\nA\n",
 		".agents/skills/mine/SKILL.md":  "---\ndescription: m\n---\nM\n",
@@ -523,7 +515,7 @@ func TestConvert_UnknownImporter(t *testing.T) {
 
 func TestReport_JSONIsDeterministicAndCounted(t *testing.T) {
 	dir := t.TempDir()
-	writeTree(t, dir, sampleProject)
+	testutil.WriteTree(t, dir, sampleProject)
 
 	run := func() []byte {
 		report, err := Convert(context.Background(), ConvertOptions{Source: "." + "", Into: ".ai-rulez"})
@@ -628,8 +620,8 @@ func TestReport_ConformsToSchema(t *testing.T) {
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	writeTree(t, dir, sampleProject)
-	writeTree(t, dir, map[string]string{"GEMINI.md": "@AGENTS.md\n"})
+	testutil.WriteTree(t, dir, sampleProject)
+	testutil.WriteTree(t, dir, map[string]string{"GEMINI.md": "@AGENTS.md\n"})
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir})
 	require.NoError(t, err)
 	var buf bytes.Buffer

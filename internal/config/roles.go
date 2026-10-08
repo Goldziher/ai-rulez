@@ -2,9 +2,11 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -645,7 +647,7 @@ func (c *Config) resolveRole(name string, strict bool) (*ResolvedRole, error) {
 	}
 	for _, kind := range RoleKinds {
 		add(kind, "", treeFiles(tree, kind))
-		for _, dn := range sortedKeys(tree.Domains) {
+		for _, dn := range slices.Sorted(maps.Keys(tree.Domains)) {
 			add(kind, dn, treeFiles(&ContentTree{Rules: tree.Domains[dn].Rules, Skills: tree.Domains[dn].Skills,
 				Agents: tree.Domains[dn].Agents, Commands: tree.Domains[dn].Commands, Checks: tree.Domains[dn].Checks}, kind))
 		}
@@ -720,7 +722,7 @@ func (c *Config) AllItems() []RoleItem {
 	}
 	for _, kind := range RoleKinds {
 		add(kind, "", treeFiles(c.Content, kind))
-		for _, dn := range sortedKeys(c.Content.Domains) {
+		for _, dn := range slices.Sorted(maps.Keys(c.Content.Domains)) {
 			d := c.Content.Domains[dn]
 			add(kind, dn, treeFiles(&ContentTree{Rules: d.Rules, Skills: d.Skills, Agents: d.Agents, Commands: d.Commands, Checks: d.Checks}, kind))
 		}
@@ -781,7 +783,7 @@ func roleSkillModeCollisions(res *ResolvedRole) []RoleProblem {
 		}
 	}
 	var out []RoleProblem
-	for _, id := range sortedKeys(byID) {
+	for _, id := range slices.Sorted(maps.Keys(byID)) {
 		modes := byID[id]
 		if len(modes) < 2 {
 			continue
@@ -839,12 +841,12 @@ func (c *Config) roleReferenceProblems(flat *FlatRole, all []RoleItem) []RolePro
 			}
 		}
 	}
-	for _, p := range sortedKeys(flat.SkillMode) {
+	for _, p := range slices.Sorted(maps.Keys(flat.SkillMode)) {
 		if msg := c.unmatchedEntry(flat.Name, "skill_mode", RoleKindSkill, p, selectedDomains, all); msg != "" {
 			add("%s", msg)
 		}
 	}
-	for _, p := range sortedKeys(flat.Delivery) {
+	for _, p := range slices.Sorted(maps.Keys(flat.Delivery)) {
 		if msg := c.unmatchedEntry(flat.Name, "delivery", RoleKindSkill, p, selectedDomains, all); msg != "" {
 			add("%s", msg)
 		}
