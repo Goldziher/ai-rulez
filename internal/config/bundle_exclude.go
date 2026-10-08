@@ -3,10 +3,12 @@ package config
 import (
 	"bytes"
 	"context"
+	"os"
 	"path"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -37,6 +39,12 @@ type bundleFilter struct {
 // newBundleFilter builds the filter for one skill or command root. marker is the
 // item's entry file (SKILL.md, COMMAND.md).
 func newBundleFilter(ctx context.Context, git gitutil.Git, log logger.Logger, root, marker string, extra []string) *bundleFilter {
+	return newBundleFilterWith(ctx, git, log, root, marker, extra, nil)
+}
+
+// newBundleFilterWith is newBundleFilter answering the git question from the
+// snapshots when given, so the items of one parent directory share two git calls.
+func newBundleFilterWith(ctx context.Context, git gitutil.Git, log logger.Logger, root, marker string, extra []string, snaps *bundleSnapshots) *bundleFilter {
 	patterns := make([]string, 0, len(DefaultBundleExcludes)+len(extra))
 	patterns = append(patterns, DefaultBundleExcludes...)
 	for _, p := range extra {
@@ -44,7 +52,125 @@ func newBundleFilter(ctx context.Context, git gitutil.Git, log logger.Logger, ro
 			patterns = append(patterns, p)
 		}
 	}
-	return &bundleFilter{patterns: patterns, log: logger.Or(log), visible: gitVisibleFiles(ctx, git, logger.Or(log), root, marker)}
+	log = logger.Or(log)
+	var visible map[string]bool
+	if snaps != nil {
+		visible = snaps.visible(ctx, git, log, root, marker)
+	} else {
+		visible = gitVisibleFiles(ctx, git, log, root, marker)
+	}
+	return &bundleFilter{patterns: patterns, log: log, visible: visible}
+}
+
+// bundleSnapshots answers gitVisibleFiles for many sibling items from one
+// `git ls-files` and one batched `git check-ignore` per parent directory,
+// instead of two git processes per item. The answers are those the per-item
+// calls would give: an item that is itself a repository (or a symlink) is asked
+// on its own, because git run inside it sees another work tree.
+type bundleSnapshots struct {
+	mu sync.Mutex
+	by map[snapshotKey]*parentSnapshot
+}
+
+type snapshotKey struct{ parent, marker string }
+
+// parentSnapshot is what git says about the children of one directory.
+type parentSnapshot struct {
+	// ignored holds the children whose entry file git ignores.
+	ignored map[string]bool
+	// files maps a child to the child-relative slash paths git considers part
+	// of the project. Nil when git could not list the directory.
+	files map[string]map[string]bool
+	// probed are the children the ignore batch covered.
+	probed map[string]bool
+}
+
+func (b *bundleSnapshots) visible(ctx context.Context, git gitutil.Git, log logger.Logger, root, marker string) map[string]bool {
+	root = filepath.Clean(root)
+	if standsAlone(root) {
+		return gitVisibleFiles(ctx, git, log, root, marker)
+	}
+	parent, name := filepath.Dir(root), filepath.Base(root)
+	snap := b.snapshot(ctx, git, log, parent, marker)
+	if !snap.probed[name] {
+		return gitVisibleFiles(ctx, git, log, root, marker)
+	}
+	if snap.ignored[name] || len(snap.files[name]) == 0 {
+		return nil
+	}
+	return snap.files[name]
+}
+
+// standsAlone reports whether git run inside root may see a different work tree
+// than git run in its parent: root is a symlink or holds its own .git.
+func standsAlone(root string) bool {
+	if info, err := os.Lstat(root); err != nil || info.Mode()&os.ModeSymlink != 0 {
+		return true
+	}
+	_, err := os.Lstat(filepath.Join(root, gitDirName))
+	return err == nil
+}
+
+func (b *bundleSnapshots) snapshot(ctx context.Context, git gitutil.Git, log logger.Logger, parent, marker string) *parentSnapshot {
+	key := snapshotKey{parent, marker}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if snap, ok := b.by[key]; ok {
+		return snap
+	}
+	snap := takeSnapshot(ctx, git, log, parent, marker)
+	if b.by == nil {
+		b.by = make(map[snapshotKey]*parentSnapshot)
+	}
+	b.by[key] = snap
+	return snap
+}
+
+func takeSnapshot(ctx context.Context, git gitutil.Git, log logger.Logger, parent, marker string) *parentSnapshot {
+	snap := &parentSnapshot{ignored: map[string]bool{}, files: map[string]map[string]bool{}, probed: map[string]bool{}}
+	entries, err := os.ReadDir(parent)
+	if err != nil {
+		return snap
+	}
+	var stdin bytes.Buffer
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		stdin.WriteString(e.Name() + "/" + marker)
+		stdin.WriteByte(0)
+		snap.probed[e.Name()] = true
+	}
+	if stdin.Len() == 0 {
+		return snap
+	}
+	// Exit 0/1: some/none of the entry files are ignored (the whole item is);
+	// 128: not a repo. Neither is an answer by itself, as in the per-item case.
+	if res := git.ExecStdin(ctx, parent, stdin.Bytes(), 0, "check-ignore", "--no-index", "--stdin", "-z"); res.Status == runner.StatusOK {
+		for _, p := range bytes.Split(res.Stdout, []byte{0}) {
+			if name, _, ok := strings.Cut(filepath.ToSlash(string(p)), "/"); ok {
+				snap.ignored[name] = true
+			}
+		}
+	}
+	res := git.Exec(ctx, parent, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".")
+	if err := gitutil.ResultErr(res); err != nil {
+		if res.Status != runner.StatusUnavailable {
+			log.Debug("git ls-files unavailable, bundling without .gitignore", "path", parent, "error", err)
+		}
+		return snap
+	}
+	for _, p := range bytes.Split(res.Stdout, []byte{0}) {
+		name, rel, ok := strings.Cut(filepath.ToSlash(string(p)), "/")
+		if !ok || rel == "" {
+			continue
+		}
+		if snap.files[name] == nil {
+			snap.files[name] = make(map[string]bool)
+		}
+		snap.files[name][rel] = true
+	}
+	return snap
 }
 
 // gitVisibleFiles lists the files under root that git would not ignore, or nil
