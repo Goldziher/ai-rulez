@@ -10,8 +10,10 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/render"
 )
 
 // Exit codes of the drift checks (`generate --check` and `verify`): 0 means the
@@ -64,7 +66,7 @@ func driftLoadOptions(mode driftMode) []config.LoadOption {
 
 // checkConfigDrift runs the drift check for one loaded config and prints the
 // differing files. It returns how many differ.
-func checkConfigDrift(cfg *config.Config, mode driftMode) (differing, blocked int, err error) {
+func checkConfigDrift(cfg *config.Config, mode driftMode, rep *driftReport) (differing, blocked int, err error) {
 	gen := generator.NewGenerator(cfg)
 	gen.SetContext(cmdContext())
 	gen.SetAllowLocalDrift(allowLocalDrift)
@@ -88,12 +90,46 @@ func checkConfigDrift(cfg *config.Config, mode driftMode) (differing, blocked in
 		if d.Kind == generator.DriftBlocked {
 			blocked++
 		}
-		fmt.Printf("%s: %s\n", d.Kind, displayDriftPath(cfg, d.Path))
+		rep.add(d.Kind, displayDriftPath(cfg, d.Path))
 	}
 	if len(drift) == 0 && mode == driftManifest {
 		progress.PrintlnIfNotQuiet(fmt.Sprintf("verified %d generated file(s) against their Content-Hash", checked))
 	}
 	return len(drift), blocked, nil
+}
+
+// driftReport collects what a drift check found. The differing files are the
+// command's result: they print on stdout as "kind: path" lines, or, for
+// `generate --check --format json`, as one document written when the check ends.
+type driftReport struct {
+	out   render.Out
+	json  bool
+	items []driftItem
+}
+
+type driftItem struct {
+	Kind string `json:"kind"`
+	Path string `json:"path"`
+}
+
+// driftDocument is the `generate --check --format json` document.
+type driftDocument struct {
+	Status    string      `json:"status"`
+	Roots     int         `json:"roots"`
+	Blocked   int         `json:"blocked"`
+	Differing []driftItem `json:"differing"`
+}
+
+func newDriftReport(mode driftMode) *driftReport {
+	return &driftReport{out: defaultOut(), json: mode == driftRender && generateFormat == formatJSON}
+}
+
+func (r *driftReport) add(kind generator.DriftKind, path string) {
+	if r.json {
+		r.items = append(r.items, driftItem{Kind: string(kind), Path: path})
+		return
+	}
+	r.out.Result("%s: %s\n", kind, path)
 }
 
 // displayDriftPath shows a project-relative path relative to the working
@@ -126,35 +162,39 @@ func runDriftCheck(args []string, isRecursive bool, mode driftMode) int {
 // drift (exit 2), any other gate error as a failure (exit 1).
 func runDriftCheckGated(args []string, isRecursive bool, mode driftMode, gate func(*config.Config) error) int {
 	fix := "run `ai-rulez generate` and commit the result"
+	rep := newDriftReport(mode)
 	if isRecursive {
-		return runRecursiveDrift(mode, fix, gate)
+		return runRecursiveDrift(rep, mode, fix, gate)
 	}
 	cfg, err := loadConfigForCommand(cmdContext(), args, driftLoadOptions(mode)...)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		if gate != nil && errors.Is(err, config.ErrLockViolation) {
 			return exitDrift // remote content disagrees with the lock: drift, not a tool failure
 		}
 		return 1
 	}
 	if err := cfg.Validate(); err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	gateDrift, gateErr := runGate(gate, cfg)
 	if gateErr {
 		return 1
 	}
-	applyGenerateOverrides(cfg)
-	n, blocked, err := checkConfigDrift(cfg, mode)
+	if err := applyGenerateOverrides(cfg); err != nil {
+		renderError(os.Stderr, err)
+		return 1
+	}
+	n, blocked, err := checkConfigDrift(cfg, mode, rep)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	if gateDrift {
 		return exitDrift
 	}
-	return finishDrift(n, blocked, 1, fix)
+	return finishDrift(rep, n, blocked, 1, fix)
 }
 
 // runGate runs the gate on cfg and reports whether it found lock drift or failed.
@@ -166,14 +206,14 @@ func runGate(gate func(*config.Config) error, cfg *config.Config) (drift, failed
 	if err == nil {
 		return false, false
 	}
-	fmtError(err)
+	renderError(os.Stderr, err)
 	if isLockedDrift(err) {
 		return true, false
 	}
 	return false, true
 }
 
-func runRecursiveDrift(mode driftMode, fix string, gate func(*config.Config) error) int {
+func runRecursiveDrift(rep *driftReport, mode driftMode, fix string, gate func(*config.Config) error) int {
 	paths := findConfigFilesRecursively()
 	if len(paths) == 0 {
 		progress.PrintlnIfNotQuiet("No configuration files found")
@@ -186,7 +226,7 @@ func runRecursiveDrift(mode driftMode, fix string, gate func(*config.Config) err
 			err = cfg.Validate()
 		}
 		if err != nil {
-			fmtError(oops.With("config", path).Wrapf(err, "load configuration"))
+			renderError(os.Stderr, oops.With("config", path).Wrapf(err, "load configuration"))
 			if gate != nil && errors.Is(err, config.ErrLockViolation) {
 				gateDrift++
 			} else {
@@ -202,10 +242,14 @@ func runRecursiveDrift(mode driftMode, fix string, gate func(*config.Config) err
 		if drift {
 			gateDrift++
 		}
-		applyGenerateOverrides(cfg)
-		n, blocked, err := checkConfigDrift(cfg, mode)
+		if err := applyGenerateOverrides(cfg); err != nil {
+			renderError(os.Stderr, oops.With("config", path).Wrapf(err, "check generated files"))
+			failed++
+			continue
+		}
+		n, blocked, err := checkConfigDrift(cfg, mode, rep)
 		if err != nil {
-			fmtError(oops.With("config", path).Wrapf(err, "check generated files"))
+			renderError(os.Stderr, oops.With("config", path).Wrapf(err, "check generated files"))
 			failed++
 			continue
 		}
@@ -218,10 +262,21 @@ func runRecursiveDrift(mode driftMode, fix string, gate func(*config.Config) err
 	if total == 0 && gateDrift > 0 {
 		return exitDrift
 	}
-	return finishDrift(total, totalBlocked, len(paths), fix)
+	return finishDrift(rep, total, totalBlocked, len(paths), fix)
 }
 
-func finishDrift(differing, blocked, roots int, fix string) int {
+func finishDrift(rep *driftReport, differing, blocked, roots int, fix string) int {
+	if rep.json {
+		status := "ok"
+		if differing > 0 {
+			status = "drift"
+		}
+		items := rep.items
+		if items == nil {
+			items = []driftItem{}
+		}
+		_ = jsondoc.Write(rep.out.Stdout(), driftDocument{Status: status, Roots: roots, Blocked: blocked, Differing: items}) //nolint:errcheck // stdout write failure has nowhere to be reported
+	}
 	if differing == 0 {
 		logger.Success("Generated files are up to date", "roots", roots)
 		return 0
