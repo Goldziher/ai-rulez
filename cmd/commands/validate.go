@@ -118,7 +118,11 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 			}
 		}
 
-		logger.Success("Configuration is valid", "path", cfg.ConfigDir)
+		// A strict run defers malformed frontmatter to the AR306 finding below, which
+		// would contradict a success line printed here.
+		if len(cfg.MalformedFrontmatterPaths()) == 0 {
+			logger.Success("Configuration is valid", "path", cfg.ConfigDir)
+		}
 		warnWorktreeMarketplace(cfg)
 		if validateStrict {
 			if code := runStrictSingle(cfg); code != 0 {
@@ -265,6 +269,9 @@ func validateConfigFile(configPath string) (*config.Config, error) {
 // key, instead of the raw "- - additionalProperties: ..." list. An error the
 // findings do not explain is returned unchanged.
 func schemaFailure(cfg *config.Config, err error) error {
+	if perr := config.UnknownPresetError(cfg); perr != nil {
+		return perr // a preset typo: one line and a suggestion, not the schema's alternatives
+	}
 	findings, ferr := config.SchemaFindings(cfg)
 	if ferr != nil || len(findings) == 0 {
 		return err
