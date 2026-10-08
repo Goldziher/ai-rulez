@@ -24,7 +24,7 @@ var (
 // MigrateCmd migrates a 4.x project to the 5.0 format.
 var MigrateCmd = &cobra.Command{
 	Use:   "migrate v5",
-	Short: "Migrate a 4.x configuration to the 5.0 format",
+	Short: "Migrate a 4.x configuration to the 5.0 format, or a content tree to OKF",
 	Long: `Rewrite a 4.x project for ai-rulez 5.0.
 
 Only 4.x is migrated. A 2.x or 3.x project must first be migrated to 4.0 with
@@ -37,8 +37,15 @@ becomes [lint.ratchet], and the 4.x defaults v5 changes (agents_md, the managed
 unless --adopt-defaults is given.
 
 Exit codes: 0 migrated or nothing to do, 1 a project could not be migrated,
-2 --check found a project that still needs migration.`,
-	Example: `  ai-rulez migrate v5 --dry-run
+2 --check found a project that still needs migration.
+
+"migrate okf" converts the .ai-rulez/ content tree, in place, to an OKF bundle:
+each file gains type, title and x-ai-rulez frontmatter (its former frontmatter
+moves under x-ai-rulez.metadata) and every directory gets an index.md. Bodies
+are kept byte for byte and the generated output does not change. It is
+idempotent; --dry-run and --check write nothing.`,
+	Example: `  ai-rulez migrate okf --dry-run
+  ai-rulez migrate v5 --dry-run
   ai-rulez migrate v5
   ai-rulez migrate v5 --recursive --check --format json`,
 	Args: cobra.ExactArgs(1),
@@ -59,10 +66,13 @@ func init() {
 }
 
 func runMigrate(out io.Writer, target string) int {
+	if strings.EqualFold(target, migrateOKFTarget) {
+		return runMigrateOKFChecked(out)
+	}
 	switch strings.TrimPrefix(strings.ToLower(target), "v") {
 	case "5", "5.0":
 	default:
-		fmtError(fmt.Errorf("unsupported migration target %q: the only target is v5 (run `ai-rulez migrate v5`)", target))
+		fmtError(fmt.Errorf("unsupported migration target %q: use v5 or okf (run `ai-rulez migrate v5`)", target))
 		return 1
 	}
 	if migrateFormat != formatText && migrateFormat != formatJSON {
@@ -100,6 +110,14 @@ func runMigrate(out io.Writer, target string) int {
 		return exitDrift
 	}
 	return 0
+}
+
+func runMigrateOKFChecked(out io.Writer) int {
+	if migrateFormat != formatText && migrateFormat != formatJSON {
+		fmtError(fmt.Errorf("unsupported --format %q: use text or json", migrateFormat))
+		return 1
+	}
+	return runMigrateOKF(cmdContext(), out)
 }
 
 func printMigrateReport(out io.Writer, r *migrate.Report) {
