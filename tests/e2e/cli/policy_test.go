@@ -258,3 +258,25 @@ exempt = ["rule:*"]
 	s.Contains(list.Stdout, "alice@example.org")
 	s.Contains(list.Stdout, `"status": "missing"`, "the exempt glob did not remove the policy floor")
 }
+
+// TestEveryCommandGivesALooseningConfigurationExitTwo pins the one contract:
+// a configuration that loosens the policy is exit 2 from generate, validate,
+// lock, lock --check, their --recursive forms and doctor.
+func (s *PolicyCLITestSuite) TestEveryCommandGivesALooseningConfigurationExitTwo() {
+	s.config("[lock]\nenforce = false\n")
+	for _, args := range [][]string{
+		{"generate"},
+		{"validate"},
+		{"validate", "--show-policy"},
+		{"lock"},
+		{"lock", "--check"},
+		{"generate", "--recursive"},
+		{"validate", "--recursive"},
+		{"doctor"},
+	} {
+		res := s.run(nil, append(append([]string{}, args...), "--policy", s.policy)...)
+		s.Equal(2, res.ExitCode, "%v: %s%s", args, res.Stdout, res.Stderr)
+	}
+	doctor := s.run(nil, "doctor", "--policy", s.policy)
+	s.Contains(doctor.Stdout, "AR740")
+}
