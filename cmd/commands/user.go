@@ -179,9 +179,8 @@ func runUserClean() error {
 		logger.Info("Dry run: no files were removed")
 		return nil
 	}
-	if !cleanForce && !confirmRemoval("", fmt.Sprintf("%d generated file(s) in %s", len(plan.Files), cfg.BaseDir)) {
-		logger.Info("Aborted: nothing removed")
-		return nil
+	if err := confirmRemovalUnlessYes(cleanForce, "", fmt.Sprintf("%d generated file(s) in %s", len(plan.Files), cfg.BaseDir), "Clean user-level files"); err != nil {
+		return err
 	}
 	opts.DryRun = false
 	if _, err := gen.Clean(profile, opts); err != nil {
