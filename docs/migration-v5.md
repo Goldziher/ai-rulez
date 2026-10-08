@@ -3,6 +3,26 @@
 This page collects the breaking changes of the v5 release and what `ai-rulez migrate v5` does about each. The
 detail of every change is in the [changelog](CHANGELOG.md).
 
+v5 also changes what ai-rulez is: a standards-compliant lifecycle tool for agent knowledge and capabilities (author,
+generate, bundle, validate, govern, publish). Nothing in your 4.x configuration needs to change for that; the positioning
+decides which formats the tool generates and checks. [Standards](standards.md) carries the pinned spec versions and test
+status. In short:
+
+| Standard | Status | Generate / bundle | Lint / validate |
+| -------- | ------ | ----------------- | --------------- |
+| OKF (Open Knowledge Format, v0.2) | supported | `export okf`, the `okf` preset | `okf validate` |
+| Agent Plugins | supported | `generate --plugin`, `publish --emit agent-plugins` | `validate --strict` |
+| ARD (Agentic Resource Discovery) | supported | `publish --emit ard` | `validate` |
+| Agent Skills | supported | `generate` | `validate` (partial) |
+| AGENTS.md | supported | `generate` | `validate` |
+| llms.txt | supported | the `llms-txt` preset | `validate` |
+| MCP server config | supported | `generate` | `validate` (partial) |
+| MCP server card | planned | not generated | none |
+| CycloneDX / SPDX SBOM | supported | `sbom` | `sbom --check` |
+| in-toto / DSSE / Sigstore | supported | `sign` | `verify --attestation` |
+| OpenTelemetry (OTLP) | supported | `telemetry export --to otlp` | not applicable |
+| "Agent bundle" | planned | spec to be confirmed | spec to be confirmed |
+
 ## Upgrade in four steps
 
 1. Commit or stash your work, then preview: `ai-rulez migrate v5 --dry-run` prints the change list and writes nothing.
