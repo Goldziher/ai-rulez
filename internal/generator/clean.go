@@ -368,7 +368,7 @@ func (g *Generator) gitignoreHasManagedBlock() bool {
 	if err != nil {
 		return false
 	}
-	return contains(string(data), gitignore.BeginMarker)
+	return strings.Contains(string(data), gitignore.BeginMarker)
 }
 
 // stripGitignoreManagedBlock removes the ai-rulez fenced block from .gitignore,
@@ -387,7 +387,7 @@ func (g *Generator) stripGitignoreManagedBlock() error {
 	// Machine-local files (the config.local.* overlay, its lock, the local/ tree)
 	// stay ignored: clean removes generated outputs, not the secrets beside them.
 	keep := ""
-	if patterns := g.localGitignorePatternsOnDisk(); len(patterns) > 0 && contains(string(data), gitignore.BeginMarker) {
+	if patterns := g.localGitignorePatternsOnDisk(); len(patterns) > 0 && strings.Contains(string(data), gitignore.BeginMarker) {
 		keep = gitignore.BeginMarker + "\n" + strings.Join(patterns, "\n") + "\n" + gitignore.EndMarker + "\n"
 	}
 	stripped := strings.TrimRight(gitignore.ReplaceFencedBlock(string(data), keep), "\n")
