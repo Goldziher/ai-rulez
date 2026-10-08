@@ -29,7 +29,7 @@ func TestTelemetryRecordAndReport_EndToEnd(t *testing.T) {
 
 	info, err := os.Stat(env.log)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	assertFileMode(t, info, 0o600, "owner-only")
 
 	// The existing skill report is unchanged by item events in the same log.
 	index := filepath.Join(env.root, "idx.json")
