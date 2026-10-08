@@ -36,8 +36,8 @@ cd "$proj"
 # names the project through the symlink, which is how a build tool or a
 # subshell with a scrubbed environment reaches it.
 if out="$(env -u PWD "$BIN" generate --offline 2>&1)"; then
-	echo "OK: include accepted"
-	exit 0
+  echo "OK: include accepted"
+  exit 0
 fi
 printf '%s\n' "$out" | tail -n 3
 echo "REPRODUCED: an include inside the project was rejected as outside it"
