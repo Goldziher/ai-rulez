@@ -4,7 +4,7 @@
 
 # ai-rulez
 
-Directory-based AI governance for development teams.
+The standards-compliant lifecycle tool for agent knowledge and capabilities.
 
 [![PyPI Version](https://img.shields.io/pypi/v/ai-rulez)](https://pypi.org/project/ai-rulez/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/ai-rulez)](https://pypi.org/project/ai-rulez/)
@@ -15,7 +15,7 @@ Directory-based AI governance for development teams.
 
 ## What is ai-rulez?
 
-ai-rulez organizes your AI assistant rules, context, and domain-specific guidance in a single `.ai-rulez/` directory. Write once, generate native configurations for Claude, Cursor, Devin, Copilot, Gemini, and more.
+ai-rulez keeps your rules, context, skills, agents and MCP servers in one `.ai-rulez/` source of truth and takes them through the lifecycle: author, generate native configs for 52 harnesses, bundle (OKF, Agent Plugins, ARD), lint and validate against each standard, govern (lock, approvals, Sigstore signing, policy, SBOM) and publish. Standards and their status: [docs/standards](https://goldziher.github.io/ai-rulez/standards/).
 
 **Key features:**
 
