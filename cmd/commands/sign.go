@@ -2,8 +2,8 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/url"
 	"os"
@@ -404,12 +404,12 @@ func readKeyFile(path string) ([]byte, error) {
 		return nil, oops.With("path", path).Wrapf(err, "read the signing key")
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	data, err := io.ReadAll(io.LimitReader(f, maxSigningKeyBytes+1))
+	data, err := safefs.ReadLimited(f, maxSigningKeyBytes)
+	if errors.Is(err, safefs.ErrTooLarge) {
+		return nil, oops.With("path", path).Errorf("the signing key file is too large")
+	}
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "read the signing key")
-	}
-	if len(data) > maxSigningKeyBytes {
-		return nil, oops.With("path", path).Errorf("the signing key file is too large")
 	}
 	return data, nil
 }

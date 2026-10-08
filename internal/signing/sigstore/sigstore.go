@@ -16,7 +16,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"path"
 	"regexp"
@@ -31,6 +30,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // This file builds Sigstore bundles: it signs the content, asks Fulcio for a
@@ -133,7 +133,7 @@ func (c serviceClient) do(ctx context.Context, build func() (*http.Request, erro
 		if err != nil {
 			return answer{}, err
 		}
-		body, err := io.ReadAll(io.LimitReader(resp.Body, maxServiceBody))
+		body, err := safefs.ReadLimited(resp.Body, maxServiceBody)
 		_ = resp.Body.Close()
 		if err != nil {
 			return answer{}, err

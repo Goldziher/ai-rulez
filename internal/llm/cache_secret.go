@@ -11,6 +11,7 @@ import (
 	"runtime"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Cache location and secret. They live in the user's directories, outside the
@@ -219,7 +220,10 @@ func readSecret(path string) ([]byte, error) {
 	if runtime.GOOS != "windows" && opened.Mode().Perm()&0o077 != 0 {
 		return nil, errors.New("secret file is accessible by group or others")
 	}
-	b, err := io.ReadAll(io.LimitReader(f, cacheSecretBytes+1))
+	b, err := safefs.ReadLimited(f, cacheSecretBytes)
+	if errors.Is(err, safefs.ErrTooLarge) {
+		return nil, errors.New("secret file has the wrong length")
+	}
 	if err != nil {
 		return nil, err
 	}
