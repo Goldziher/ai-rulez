@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 )
 
 // Frontmatter key and metadata type names used more than once.
@@ -68,7 +69,8 @@ func (r *runner) knownKeys(kind string) map[string]bool {
 			}
 		}
 	}
-	add(specKeys, ownKeys, r.lc.AllowedKeys)
+	// type, title and x-ai-rulez are the OKF layer of a concept (see "migrate okf").
+	add(specKeys, ownKeys, r.lc.AllowedKeys, []string{"type", "title", okf.ExtensionKey})
 	switch kind {
 	case kindSkill, kindCommand:
 		add(claudeSkillKeys)
