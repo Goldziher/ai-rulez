@@ -1,0 +1,56 @@
+// Package render separates what a command produces from what it says about
+// producing it. A command's result (a list, a plan, a report, a created path)
+// goes to stdout in the requested format; progress, warnings, errors and hints
+// go to stderr. -q removes only the progress and informational lines of the
+// second stream: it never hides a result.
+package render
+
+import (
+	"fmt"
+	"io"
+)
+
+// Out is the pair of streams a command writes to.
+type Out struct {
+	stdout io.Writer
+	stderr io.Writer
+	quiet  bool
+}
+
+// New returns an Out over the two streams. quiet suppresses Info only.
+func New(stdout, stderr io.Writer, quiet bool) Out {
+	return Out{stdout: stdout, stderr: stderr, quiet: quiet}
+}
+
+// Stdout is the stream results are written to.
+func (o Out) Stdout() io.Writer { return o.stdout }
+
+// Stderr is the stream diagnostics are written to.
+func (o Out) Stderr() io.Writer { return o.stderr }
+
+// Quiet reports whether -q is in effect.
+func (o Out) Quiet() bool { return o.quiet }
+
+// Result writes a formatted part of the command's result to stdout. It is never
+// suppressed.
+func (o Out) Result(format string, args ...any) {
+	fmt.Fprintf(o.stdout, format, args...)
+}
+
+// Resultln writes a line of the command's result to stdout.
+func (o Out) Resultln(args ...any) {
+	fmt.Fprintln(o.stdout, args...)
+}
+
+// Info writes a progress or confirmation line to stderr unless -q is set.
+func (o Out) Info(format string, args ...any) {
+	if o.quiet {
+		return
+	}
+	fmt.Fprintf(o.stderr, format, args...)
+}
+
+// Warn writes a warning to stderr; -q does not hide it.
+func (o Out) Warn(format string, args ...any) {
+	fmt.Fprintf(o.stderr, format, args...)
+}
