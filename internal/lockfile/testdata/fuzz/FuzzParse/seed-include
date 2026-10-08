@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("version = 1\n[[include]]\nname = \"a\"\nsource = \"https://example.com/a\"\ncommit = \"c\"\ndigest = \"sha256:1\"\n")
