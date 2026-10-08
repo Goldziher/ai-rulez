@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 var localRootProject = map[string]string{
@@ -20,7 +22,7 @@ var localRootProject = map[string]string{
 func TestConvert_LocalRootRuleGoesToTheLocalTree(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, localRootProject)
+	testutil.WriteTree(t, dir, localRootProject)
 
 	// Act
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
@@ -41,7 +43,7 @@ func TestConvert_LocalTreeIsOwnerOnlyAndGitignored(t *testing.T) {
 	}
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, localRootProject)
+	testutil.WriteTree(t, dir, localRootProject)
 
 	// Act
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
@@ -65,7 +67,7 @@ func TestConvert_LocalTreeIsOwnerOnlyAndGitignored(t *testing.T) {
 func TestConvert_LocalTreeFollowsTheDomain(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, localRootProject)
+	testutil.WriteTree(t, dir, localRootProject)
 
 	// Act
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, Domain: "mine"})
@@ -80,7 +82,7 @@ func TestConvert_LocalTreeFollowsTheDomain(t *testing.T) {
 func TestConvert_NoLocalContentLeavesGitignoreAlone(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, sampleProject)
+	testutil.WriteTree(t, dir, sampleProject)
 
 	// Act
 	_, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
@@ -94,7 +96,7 @@ func TestConvert_NoLocalContentLeavesGitignoreAlone(t *testing.T) {
 func TestConvert_LocalRootSecretIsStillBlocked(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		".rulesync/rules/me.md": "---\nlocalRoot: true\n---\nKey: ghp_abcdefghijklmnopqrstuvwxyz0123456789\n",
 	})
 

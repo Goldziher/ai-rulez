@@ -2,9 +2,11 @@ package agentplugins
 
 import (
 	"fmt"
+	"maps"
 	"net/netip"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -121,7 +123,7 @@ func stdioToWire(s MCPServer) (wireServer, []issue) {
 			"command %q is written as %q: clients resolve ./ paths against the plugin root and expand no placeholder in command",
 			s.Command, ws.Command)})
 	}
-	for _, k := range sortedKeys(s.Env) {
+	for _, k := range slices.Sorted(maps.Keys(s.Env)) {
 		v := s.Env[k]
 		if v == "${"+k+"}" {
 			issues = append(issues, issue{CodePlaceholderRewritten, SeverityWarning, fmt.Sprintf(
@@ -158,7 +160,7 @@ func checkStdio(ws wireServer, m checkMode) []issue {
 	for i, a := range ws.Args {
 		issues = append(issues, placeholderIssues(m, fmt.Sprintf("args[%d]", i), a)...)
 	}
-	for _, k := range sortedKeys(ws.Env) {
+	for _, k := range slices.Sorted(maps.Keys(ws.Env)) {
 		if k == "PLUGIN_ROOT" || k == "PLUGIN_DATA" {
 			issues = append(issues, invalid("env must not set %s; the client supplies it", k))
 			continue
@@ -251,7 +253,7 @@ func checkRemote(ws wireServer, m checkMode) []issue {
 		issues = append(issues, invalid("%s", msg))
 	}
 	seen := map[string]string{}
-	for _, name := range sortedKeys(ws.Headers) {
+	for _, name := range slices.Sorted(maps.Keys(ws.Headers)) {
 		value := ws.Headers[name]
 		lower := strings.ToLower(name)
 		switch {

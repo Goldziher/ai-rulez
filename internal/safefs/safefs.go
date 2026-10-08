@@ -280,3 +280,15 @@ func EnsureParent(path string) error {
 	}
 	return oops.Wrapf(root.Close(), "close directory")
 }
+
+// IsFile reports whether path exists and is not a directory.
+func IsFile(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+// IsRegular reports whether path is a regular file itself, not a symlink to one.
+func IsRegular(path string) bool {
+	info, err := os.Lstat(path)
+	return err == nil && info.Mode().IsRegular()
+}
