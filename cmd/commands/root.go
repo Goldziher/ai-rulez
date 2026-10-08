@@ -106,6 +106,8 @@ func init() {
 	RootCmd.AddCommand(SearchCmd)
 	RootCmd.AddCommand(PublishCmd)
 	RootCmd.AddCommand(ReviewCmd, RubricCmd)
+
+	applyHelpExamples()
 }
 
 func initConfig() {
