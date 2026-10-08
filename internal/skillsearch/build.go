@@ -12,6 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/samber/oops"
 )
 
@@ -106,7 +107,7 @@ func PlanBuild(items []Item, o *BuildOptions) *Plan {
 		}
 		p.ToEmbed++
 		p.Bytes += len(text)
-		p.EstTokens += llm.EstimateTokens(text)
+		p.EstTokens += tokens.Estimate(text)
 		p.todo = append(p.todo, i)
 	}
 	return p
