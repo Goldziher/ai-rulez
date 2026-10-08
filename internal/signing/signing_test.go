@@ -1,8 +1,11 @@
-package signing
+package signing_test
 
 import (
 	"context"
 	"encoding/json"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore/fakesigstore"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +15,6 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 )
@@ -221,14 +223,14 @@ func TestKeylessLockWithVirtualSigstore(t *testing.T) {
 		identity = "https://github.com/example/ai-config/.github/workflows/release.yml@refs/heads/main"
 		issuer   = "https://token.actions.githubusercontent.com"
 	)
-	fs := newFakeSigstore(t, identity, issuer)
-	trusted := fs.trustedRoot()
+	fs := fakesigstore.New(t, identity, issuer)
+	trusted := fs.TrustedRoot()
 	lock := testLock(t, nil)
 	st, err := LockStatement(lock, LockMeta{Version: "5", Repository: "repo", Now: time.Now()})
 	require.NoError(t, err)
 	payload, err := st.Marshal()
 	require.NoError(t, err)
-	data := fs.bundle(payload)
+	data := fs.Bundle(payload)
 	trustFor := func(e TrustEntry) TrustSet { e.Subject = SubjectLock; return TrustSet{Entries: []TrustEntry{e}} }
 
 	tests := []struct {
@@ -273,16 +275,16 @@ func TestKeylessLockWithVirtualSigstore(t *testing.T) {
 }
 
 func TestKeylessSignatureForOtherRootFails(t *testing.T) {
-	fs := newFakeSigstore(t, "id", "iss")
-	other := newFakeSigstore(t, "id", "iss")
+	fs := fakesigstore.New(t, "id", "iss")
+	other := fakesigstore.New(t, "id", "iss")
 	lock := testLock(t, nil)
 	st, err := LockStatement(lock, LockMeta{Now: time.Now()})
 	require.NoError(t, err)
 	payload, err := st.Marshal()
 	require.NoError(t, err)
-	data := fs.bundle(payload)
+	data := fs.Bundle(payload)
 
-	_, err = (&Verifier{TrustedRoot: other.trustedRoot(), TLog: TLogRequired}).Verify(data)
+	_, err = (&Verifier{TrustedRoot: other.TrustedRoot(), TLog: TLogRequired}).Verify(data)
 
 	require.Error(t, err)
 	assert.Equal(t, CodeInvalid, CodeOf(err))
@@ -347,13 +349,11 @@ func blobBundle(t *testing.T, privPEM []byte, lock *lockfile.File) []byte {
 	t.Helper()
 	kp, err := ParsePrivateKey(privPEM, nil)
 	require.NoError(t, err)
-	subject, err := lockSubjectOf(lock)
+	subject, err := LockSubjectOf(lock)
 	require.NoError(t, err)
 	statement, err := subject.Statement().JSON()
 	require.NoError(t, err)
-	pb, err := buildBundle(context.Background(), &PlainData{Data: statement}, kp, nil, "", nil)
-	require.NoError(t, err)
-	data, err := protojson.Marshal(pb)
+	data, err := (&KeySigner{Key: kp}).SignBlob(context.Background(), statement)
 	require.NoError(t, err)
 	return data
 }

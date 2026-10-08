@@ -9,13 +9,14 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 func TestApprove_ForbidSelfApprovalUsesTheIdentityAKeyIsMappedTo(t *testing.T) {
 	// Arrange: the trusted approval key belongs to t@example.com, who also committed the change
 	table := "forbid_self_approval = true\n\n[signing]\n[[signing.trust]]\nsubject = \"approval\"\nkey_file = \"keys/dave.pub\"\nreviewer = \"t@example.com\"\n"
 	root := approveProject(t, table)
-	_, pub, err := signing.GenerateKeyPair(nil)
+	_, pub, err := sigstore.GenerateKeyPair(nil)
 	require.NoError(t, err)
 	writeFile(t, filepath.Join(root, "keys", "dave.pub"), string(pub))
 	key, err := signing.ParsePublicKey(pub)
