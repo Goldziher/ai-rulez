@@ -335,7 +335,7 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 		combined.Ratchet = append(combined.Ratchet, e...)
 	}
 	if err := writeReport(combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	code = 0
@@ -360,7 +360,7 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 // the run ends here with code (--update-baseline, or an error).
 func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, code int, done bool) {
 	fail := func(err error) ([][]lint.RatchetExcess, int, bool) {
-		fmtError(err)
+		renderStderr(err)
 		return nil, 1, true
 	}
 	if validateUpdateBaseline {
@@ -445,12 +445,12 @@ func checkAllowEgress(cfgs ...*config.Config) error {
 
 func runStrictSingle(cfg *config.Config) int {
 	if err := checkAllowEgress(cfg); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	report, err := strictLint(cmdContext(), cfg)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	return reportStrict([]*lint.Report{report}, []*config.Config{cfg})

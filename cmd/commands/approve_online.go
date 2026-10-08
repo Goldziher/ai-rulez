@@ -81,12 +81,12 @@ func runVerifyApprovals(args []string, out io.Writer) int {
 	}
 	env, err := loadApproveEnvAt(path)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	results, err := env.checkApprovals(cmdContext(), verifyOnline)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	return reportApprovalChecks(out, results, verifyOnline)
@@ -202,7 +202,7 @@ func reportApprovalChecks(out io.Writer, results []approvalCheckResult, online b
 			results = []approvalCheckResult{}
 		}
 		if err := writeRawJSON(out, approvalCheckReport{SchemaVersion: verifyApprovalsReportVersion, Online: online, Results: results}); err != nil {
-			fmtError(oops.Wrapf(err, "write the report"))
+			renderStderr(oops.Wrapf(err, "write the report"))
 			return 1
 		}
 		return code

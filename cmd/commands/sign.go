@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
@@ -45,6 +46,7 @@ var (
 	signTLog        bool
 	signEmbedItems  bool
 	signOutput      string
+	signJSON        bool
 	signInteractive bool
 	signBundle      string
 	signSkill       string
@@ -112,10 +114,8 @@ Run it after the final "ai-rulez lock": any change to the lock invalidates the
 signature. Exit codes: 0 signed, 1 the command could not run, 2 the lock is
 stale (its tree does not match its entries).`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
-		if code := runSign(cmdContext(), args, nil); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(_ *cobra.Command, args []string) error {
+		return exitStatus(runSign(cmdContext(), args, nil))
 	},
 }
 
@@ -145,6 +145,7 @@ func init() {
 	f.BoolVar(&signEmbedItems, "embed-items", false, "Put the pinned item ids and digests in the statement (ids can be sensitive in a private repository)")
 	f.StringVar(&signOutput, "output", "", "Write the bundle here instead of next to the lock")
 	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	addJSONFormat(f, &signJSON, "")
 }
 
 func validateSignFlags() error {
@@ -251,8 +252,33 @@ func loadSignLock(ctx context.Context, args []string) (*config.Config, *lockfile
 // runSign signs the lock of the project at args[0] (or the current directory)
 // and returns the exit code.
 func runSign(ctx context.Context, args []string, env ambient.Env) int {
+	signed = nil
+	code := signOne(ctx, args, env)
+	if signJSON && code == 0 {
+		if err := jsondoc.Write(os.Stdout, map[string]any{"status": "signed", "signed": signed}); err != nil {
+			renderStderr(err)
+			return exitFailure
+		}
+	}
+	return code
+}
+
+// signed collects what one run signed, for the --format json document.
+var signed []map[string]any
+
+// reportSigned announces one signed subject: a success line on stderr, or with
+// --format json an entry of the document runSign prints on stdout.
+func reportSigned(msg string, entry map[string]any, logArgs ...any) {
+	if signJSON {
+		signed = append(signed, entry)
+		return
+	}
+	logger.Success(msg, logArgs...)
+}
+
+func signOne(ctx context.Context, args []string, env ambient.Env) int {
 	if err := validateSignFlags(); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if signPolicy != "" {
@@ -263,23 +289,23 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	}
 	cfg, lock, err := loadSignLock(ctx, args)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	meta := signing.LockMeta{Version: Version, Now: time.Now(), EmbedItems: signEmbedItems}
 	meta.Repository, meta.Ref = detectRepo(ctx, cfg.BaseDir, env)
 	signer, err := newSigner(ctx, env)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if err := exportPublicKey(signer); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	bundle, err := signing.SignLock(ctx, signer, lock, meta)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		if signing.CodeOf(err) == signing.CodeSubjectMismatch {
 			return exitDrift
 		}
@@ -290,16 +316,17 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 		out = filepath.Join(cfg.ConfigDir, filepath.FromSlash(attestationName(cfg)))
 	}
 	if out, err = appendTarget(out); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if err := writeBundle(out, bundle); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
 	subject := signingSubject(lock)
-	logger.Success("Signed "+lockfile.FileName, "signer", signerLabel(info), "subject", subject, "bundle", out)
+	reportSigned("Signed "+lockfile.FileName, map[string]any{"kind": "lock", "path": lockfile.FileName, "signer": signerLabel(info), "subject": subject, "bundle": out},
+		"signer", signerLabel(info), "subject", subject, "bundle", out)
 	return 0
 }
 

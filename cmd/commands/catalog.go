@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"slices"
 	"strings"
 	"text/tabwriter"
@@ -82,16 +81,16 @@ file they name.`,
   ai-rulez catalog --html site/ --check
   ai-rulez catalog --html site/ --with-eval --with-usage`,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		catalogExcerptSet = cmd.Flags().Changed("include-excerpt")
 		catalogIndexableSet = cmd.Flags().Changed("indexable")
 		catalogPageSizeSet = cmd.Flags().Changed("max-items-per-page")
 		catalogMarkdownSet = cmd.Flags().Changed("render-markdown")
 		err := runCatalog(cmd.OutOrStdout())
 		if errors.Is(err, errCatalogDrift) {
-			os.Exit(exitCatalogDrift)
+			return failWithCode(exitCatalogDrift, err)
 		}
-		exitOn(err)
+		return fail(err)
 	},
 }
 

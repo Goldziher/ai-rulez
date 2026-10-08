@@ -103,10 +103,8 @@ index build stopped early.`,
   ai-rulez search --from-evals --out result.json
   ai-rulez search --eval search-cases.yaml --baseline result.json --max-flips 0`,
 	Args: cobra.ArbitraryArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		if code := runSearch(cmd, cmd.OutOrStdout(), cmd.ErrOrStderr(), args); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(runSearch(cmd, cmd.OutOrStdout(), cmd.ErrOrStderr(), args))
 	},
 }
 
@@ -218,13 +216,13 @@ func runSearch(cmd *cobra.Command, out, errOut io.Writer, args []string) int {
 	}
 	if isSearchSubcommand(args) && searchFlags.eval == "" && !searchFlags.fromEvals {
 		if err := checkSubcommandFlags(cmd, args[0]); err != nil {
-			fmtError(err)
+			renderStderr(err)
 			return 1
 		}
 		return runSearchSubcommand(ctx, out, errOut, args[0])
 	}
 	if err := checkSearchFlags(cmd, args); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	evalMode := searchFlags.eval != "" || searchFlags.fromEvals
@@ -234,7 +232,7 @@ func runSearch(cmd *cobra.Command, out, errOut io.Writer, args []string) int {
 	}
 	env, err := newSearchEnv(ctx, mode)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if evalMode {
@@ -354,7 +352,7 @@ func runSearchQuery(ctx context.Context, out, errOut io.Writer, env *searchEnv, 
 	ranker, release, err := env.ranker(mode != skillsearch.ModeLexical)
 	defer release()
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	res := ranker.Search(ctx, query)
@@ -448,7 +446,7 @@ func writeJSONFile(path string, v any) error {
 // emit turns a write error into the failing exit status.
 func emit(err error) int {
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	return 0
