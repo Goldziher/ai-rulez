@@ -188,18 +188,17 @@ func (c *evalCtx) regexFiles(p *RegexPred) ([]string, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "invalid files glob")
 	}
+	excl, err := compileGlobs(c.spec.Exclude)
+	if err != nil {
+		excl = nil // an invalid exclude glob excludes nothing
+	}
 	var out []string
 	for _, f := range c.env.scope.tree {
-		if g.Match(f) && !matchesExcluded(c.spec, f) {
+		if g.Match(f) && !matchesAny(excl, f) {
 			out = append(out, f)
 		}
 	}
 	return out, nil
-}
-
-func matchesExcluded(sp *Spec, f string) bool {
-	excl, err := compileGlobs(sp.Exclude)
-	return err == nil && matchesAny(excl, f)
 }
 
 func (c *evalCtx) evalRegex(ctx context.Context, p *RegexPred, forbid bool) (evalOut, error) {

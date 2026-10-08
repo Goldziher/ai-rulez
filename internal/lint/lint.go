@@ -136,7 +136,10 @@ type runner struct {
 	mcpOnce      sync.Once
 	fakeTagOnce  sync.Once
 	injOnce      sync.Once
-	injRes       []*regexp.Regexp
+	secOnce      sync.Once
+	secRes       []secretPattern
+	relMemo      sync.Map // absolute path -> tree-relative path, see rel
+	injRes       []gatedRe
 	fakeTagRe    *regexp.Regexp
 	mcpEffective []config.MCPServer
 	lc           config.LintConfig
@@ -560,7 +563,7 @@ func (r *runner) pathIgnored(abs string) bool {
 	if len(r.ignorePaths) == 0 {
 		return false
 	}
-	cands := []string{r.tree.Rel(abs)}
+	cands := []string{r.rel(abs)}
 	if rel := r.configRel(abs); rel != "" {
 		cands = append(cands, rel)
 	}
