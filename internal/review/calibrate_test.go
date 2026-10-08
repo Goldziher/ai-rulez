@@ -51,7 +51,7 @@ func tenCases() []goldenCase {
 	return out
 }
 
-func writeGolden(t *testing.T, cases []goldenCase) string {
+func writeGolden(t testing.TB, cases []goldenCase) string {
 	t.Helper()
 	base := t.TempDir()
 	write := func(rel, text string) {
