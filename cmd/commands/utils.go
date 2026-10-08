@@ -31,14 +31,11 @@ func newContentOperator(local bool) (*crud.OperatorImpl, error) {
 // --yes nor confirmable because there is no terminal to ask.
 var ErrNeedsYes = errors.New("needs --yes")
 
-// stdinInteractive reports whether standard input is a terminal; tests replace it.
-var stdinInteractive = func() bool {
+// stdinInteractive reports whether standard input is a terminal.
+func stdinInteractive() bool {
 	stat, err := os.Stdin.Stat()
 	return err == nil && stat.Mode()&os.ModeCharDevice != 0
 }
-
-// confirmInput is where an interactive confirmation reads its answer from.
-var confirmInput io.Reader = os.Stdin
 
 // confirm is the one confirmation of every destructive command. yes (--yes)
 // confirms without asking. Otherwise it asks on stderr, so piped stdout stays
@@ -91,7 +88,7 @@ func readYesNo(prompt string) bool {
 	fmt.Fprint(os.Stderr, prompt)
 
 	var response string
-	if _, err := fmt.Fscanln(confirmInput, &response); err != nil && err.Error() != "unexpected newline" {
+	if _, err := fmt.Fscanln(os.Stdin, &response); err != nil && err.Error() != "unexpected newline" {
 		return false
 	}
 

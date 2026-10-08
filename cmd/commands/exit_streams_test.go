@@ -71,8 +71,8 @@ func TestGenerateCheck_JSONFormatEmitsOneDocumentWithTheDrift(t *testing.T) {
 	require.Equal(t, 0, writeLockAt("", "", nil))
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "# Style\nUse tabs.\n")
 	t.Chdir(root)
-	generateFormat = formatJSON
-	t.Cleanup(func() { generateFormat = "" })
+	RootCmd.Annotations[activeFormatKey] = formatJSON
+	t.Cleanup(func() { delete(RootCmd.Annotations, activeFormatKey) })
 
 	var code int
 	stdout, _ := capture(t, func() { code = generateCheckCode(nil) })

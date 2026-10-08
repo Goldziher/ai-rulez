@@ -109,32 +109,32 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .reasonix/commands/build.md
+  remove file: .reasonix/commands/ship.md
+  remove file: .reasonix/settings.json
+  remove file: .reasonix/skills/architect/SKILL.md
+  remove file: .reasonix/skills/deployer/SKILL.md
+  remove file: .reasonix/skills/reviewer/SKILL.md
+  remove file: .reasonix/skills/reviewer/references/checklist.md
+  remove file: .reasonix/skills/reviewer/scripts/run.sh
+  remove file: .reasonix/skills/tester/SKILL.md
+  remove file: REASONIX.md
+  remove dir (if empty): .reasonix/skills/tester
+  remove dir (if empty): .reasonix/skills/reviewer/scripts
+  remove dir (if empty): .reasonix/skills/reviewer/references
+  remove dir (if empty): .reasonix/skills/reviewer
+  remove dir (if empty): .reasonix/skills/deployer
+  remove dir (if empty): .reasonix/skills/architect
+  remove dir (if empty): .reasonix/skills
+  remove dir (if empty): .reasonix/commands
+  remove dir (if empty): .reasonix
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .reasonix/commands/build.md
-INFO    remove file: .reasonix/commands/ship.md
-INFO    remove file: .reasonix/settings.json
-INFO    remove file: .reasonix/skills/architect/SKILL.md
-INFO    remove file: .reasonix/skills/deployer/SKILL.md
-INFO    remove file: .reasonix/skills/reviewer/SKILL.md
-INFO    remove file: .reasonix/skills/reviewer/references/checklist.md
-INFO    remove file: .reasonix/skills/reviewer/scripts/run.sh
-INFO    remove file: .reasonix/skills/tester/SKILL.md
-INFO    remove file: REASONIX.md
-INFO    remove dir (if empty): .reasonix/skills/tester
-INFO    remove dir (if empty): .reasonix/skills/reviewer/scripts
-INFO    remove dir (if empty): .reasonix/skills/reviewer/references
-INFO    remove dir (if empty): .reasonix/skills/reviewer
-INFO    remove dir (if empty): .reasonix/skills/deployer
-INFO    remove dir (if empty): .reasonix/skills/architect
-INFO    remove dir (if empty): .reasonix/skills
-INFO    remove dir (if empty): .reasonix/commands
-INFO    remove dir (if empty): .reasonix
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=11 directories=9
+Removed generated files: 11 files, 9 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

@@ -17,7 +17,6 @@ var (
 	cleanIncludeEdited bool
 	cleanKeepGitignore bool
 	cleanKeepManifest  bool
-	cleanFormat        string
 )
 
 var CleanCmd = &cobra.Command{
@@ -48,15 +47,12 @@ func init() {
 	CleanCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	CleanCmd.Flags().BoolVar(&userScope, "user", false, "Remove the files 'generate --user' wrote into the home directories, as recorded in the user manifest")
 	CleanCmd.Flags().BoolVar(&cleanKeepGitignore, "keep-gitignore", false, "Leave the ai-rulez managed block in .gitignore in place")
-	addFormatFlag(CleanCmd.Flags(), &cleanFormat, formatText, formatText, formatText, formatJSON)
+	addFormatFlag(CleanCmd.Flags(), new(string), formatText, formatText, formatText, formatJSON)
 	CleanCmd.Flags().BoolVar(&cleanKeepManifest, "keep-manifest", false, "Leave the generated manifest in place")
 }
 
 func runClean(cmd *cobra.Command, args []string) error {
 	ctx := cmdContext()
-	if err := checkFormatFlag(cleanFormat); err != nil {
-		return fail(err)
-	}
 	out := outFor(cmd)
 
 	if handled, err := handleUserClean(out, args); handled {
@@ -84,7 +80,7 @@ func runClean(cmd *cobra.Command, args []string) error {
 	if cleanDryRun {
 		return writeCleanResult(out, cfg.BaseDir, plan, true, "Dry run: no files were removed")
 	}
-	if cleanFormat != formatJSON {
+	if !out.JSON() {
 		printCleanPlan(out.Stdout(), cfg.BaseDir, plan)
 	}
 
@@ -98,7 +94,7 @@ func runClean(cmd *cobra.Command, args []string) error {
 		return failMsg("Failed to clean generated files", err)
 	}
 
-	if cleanFormat == formatJSON {
+	if out.JSON() {
 		return writeCleanDocument(out.Stdout(), cfg.BaseDir, plan, false)
 	}
 	out.Info("Removed generated files: %d files, %d directories\n", len(plan.Files), len(plan.Dirs))
@@ -108,7 +104,7 @@ func runClean(cmd *cobra.Command, args []string) error {
 // writeCleanResult prints the plan of a run that removes nothing (a dry run, or
 // an empty plan) as the command's result and a note on stderr.
 func writeCleanResult(out render.Out, baseDir string, plan *generator.CleanPlan, dryRun bool, note string) error {
-	if cleanFormat == formatJSON {
+	if out.JSON() {
 		return writeCleanDocument(out.Stdout(), baseDir, plan, dryRun)
 	}
 	if !plan.Empty() {

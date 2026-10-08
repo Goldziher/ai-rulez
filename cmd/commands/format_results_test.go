@@ -11,7 +11,7 @@ import (
 )
 
 func TestVersionFormatJSON(t *testing.T) {
-	t.Cleanup(func() { versionJSON = false })
+	t.Cleanup(func() { _ = VersionCmd.Flags().Set("format", "text") }) //nolint:errcheck // restoring the default
 	var out bytes.Buffer
 	VersionCmd.SetOut(&out)
 	t.Cleanup(func() { VersionCmd.SetOut(nil) })
@@ -36,11 +36,11 @@ func TestVersionTextStaysOneLine(t *testing.T) {
 
 func TestSignFormatJSON(t *testing.T) {
 	f := newSignFixture(t, signingKeyTable)
-	signLock, signKey, signJSON = true, f.privKey, true
-	defer func() { signLock, signKey, signJSON = false, "", false }()
+	signLock, signKey = true, f.privKey
+	defer func() { signLock, signKey = false, "" }()
 
 	var code int
-	stdout, _ := capture(t, func() { code = runSign(context.Background(), nil, nil) })
+	stdout, _ := capture(t, func() { code = runSign(withSignRecorder(context.Background()), nil, nil) })
 
 	require.Equal(t, 0, code)
 	var doc struct {

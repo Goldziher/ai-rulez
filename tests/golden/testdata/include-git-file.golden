@@ -145,10 +145,10 @@ INFO  Wrote lock file path=$ROOT/.ai-rulez/ai-rulez.lock
 ## step 4: ai-rulez lock --check
 exit: 0
 --- stdout
+Lock file is up to date ($ROOT/.ai-rulez)
 --- stderr
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
-INFO  Lock file is up to date config=$ROOT/.ai-rulez
 --- project tree
 (no change)
 --- home tree

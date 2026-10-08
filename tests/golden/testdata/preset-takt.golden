@@ -108,31 +108,31 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .takt/facets/instructions/build.md
+  remove file: .takt/facets/instructions/ship.md
+  remove file: .takt/facets/knowledge/deployer.md
+  remove file: .takt/facets/knowledge/reviewer.md
+  remove file: .takt/facets/personas/architect.md
+  remove file: .takt/facets/personas/tester.md
+  remove file: .takt/facets/policies/always.md
+  remove file: .takt/facets/policies/auto.md
+  remove file: .takt/facets/policies/context-architecture.md
+  remove file: .takt/facets/policies/context-overview.md
+  remove file: .takt/facets/policies/manual.md
+  remove file: .takt/facets/policies/typescript.md
+  remove dir (if empty): .takt/facets/policies
+  remove dir (if empty): .takt/facets/personas
+  remove dir (if empty): .takt/facets/knowledge
+  remove dir (if empty): .takt/facets/instructions
+  remove dir (if empty): .takt/facets
+  remove dir (if empty): .takt
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .takt/facets/instructions/build.md
-INFO    remove file: .takt/facets/instructions/ship.md
-INFO    remove file: .takt/facets/knowledge/deployer.md
-INFO    remove file: .takt/facets/knowledge/reviewer.md
-INFO    remove file: .takt/facets/personas/architect.md
-INFO    remove file: .takt/facets/personas/tester.md
-INFO    remove file: .takt/facets/policies/always.md
-INFO    remove file: .takt/facets/policies/auto.md
-INFO    remove file: .takt/facets/policies/context-architecture.md
-INFO    remove file: .takt/facets/policies/context-overview.md
-INFO    remove file: .takt/facets/policies/manual.md
-INFO    remove file: .takt/facets/policies/typescript.md
-INFO    remove dir (if empty): .takt/facets/policies
-INFO    remove dir (if empty): .takt/facets/personas
-INFO    remove dir (if empty): .takt/facets/knowledge
-INFO    remove dir (if empty): .takt/facets/instructions
-INFO    remove dir (if empty): .takt/facets
-INFO    remove dir (if empty): .takt
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=13 directories=6
+Removed generated files: 13 files, 6 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755
