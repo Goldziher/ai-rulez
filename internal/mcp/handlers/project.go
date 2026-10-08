@@ -795,7 +795,7 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		return ToolError(fmt.Errorf("failed to write config file: %w", err))
 	}
 	// The configuration directory is an OKF bundle: the root index.md marks it.
-	if err := okfbridge.RefreshIndexes(aiRulesDir); err != nil {
+	if err := okfbridge.RefreshIndexes(ctx, aiRulesDir); err != nil {
 		return ToolError(fmt.Errorf("failed to write the index.md files: %w", err))
 	}
 
