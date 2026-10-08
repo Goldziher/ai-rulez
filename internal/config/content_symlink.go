@@ -210,10 +210,29 @@ func sensitiveTarget(root, target string) string {
 	if slices.ContainsFunc(segments, func(seg string) bool { return strings.EqualFold(seg, ".git") }) {
 		return "inside .git"
 	}
-	if isSecretFileName(segments[len(segments)-1]) {
+	if isSecretFileName(segments[len(segments)-1]) || isSecretPath(segments) {
 		return "a file that holds credentials"
 	}
 	return ""
+}
+
+// secretDirFiles maps a credential directory to the file names in it that hold
+// credentials.
+var secretDirFiles = map[string][]string{
+	".docker": {"config.json"},
+	".kube":   {"config"},
+	".aws":    {"credentials", "config"},
+}
+
+// isSecretPath reports whether the path (as slash-split segments, lower-cased
+// here) is a credential file that only its directory identifies.
+func isSecretPath(segments []string) bool {
+	if len(segments) < 2 {
+		return false
+	}
+	name := strings.ToLower(segments[len(segments)-1])
+	dir := strings.ToLower(segments[len(segments)-2])
+	return slices.Contains(secretDirFiles[dir], name)
 }
 
 // secretFileNames are files that conventionally hold credentials.
@@ -225,7 +244,15 @@ var secretFileNames = map[string]bool{
 
 func isSecretFileName(name string) bool {
 	lower := strings.ToLower(name)
-	if secretFileNames[lower] {
+	if secretFileNames[lower] || strings.HasPrefix(lower, "config.local.") {
+		return true
+	}
+	for _, key := range []string{"id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"} {
+		if strings.HasPrefix(lower, key) && !strings.HasSuffix(lower, ".pub") {
+			return true
+		}
+	}
+	if strings.HasSuffix(lower, ".tfstate") || strings.HasSuffix(lower, ".tfstate.backup") {
 		return true
 	}
 	if rest, ok := strings.CutPrefix(lower, ".env."); ok {
