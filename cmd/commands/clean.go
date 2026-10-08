@@ -40,7 +40,7 @@ removes them too.`,
 
 func init() {
 	CleanCmd.Flags().BoolVarP(&cleanDryRun, "dry-run", "d", false, "Show what would be removed without deleting anything")
-	CleanCmd.Flags().BoolVarP(&cleanForce, "yes", "y", false, "Skip the confirmation prompt")
+	addYesFlag(CleanCmd.Flags(), &cleanForce, "Skip the confirmation prompt")
 	CleanCmd.Flags().BoolVar(&cleanIncludeEdited, "include-edited", false, "Also remove generated files whose body was edited by hand (otherwise they are kept with a warning)")
 	CleanCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile whose outputs to remove, or a comma-separated list to compose several (default: from config or 'default')")
 	CleanCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
@@ -86,13 +86,8 @@ func runClean(_ *cobra.Command, args []string) {
 		return
 	}
 
-	if !cleanForce {
-		total := len(plan.Files) + len(plan.Dirs)
-		if !confirmRemoval("", fmt.Sprintf("%d generated file(s) and %d generated director(ies)", len(plan.Files), len(plan.Dirs))) {
-			exitDeclined(fmt.Sprintf("Aborted (%d candidates)", total))
-			return
-		}
-	}
+	confirmRemovalUnlessYes(cleanForce, "", fmt.Sprintf("%d generated file(s) and %d generated director(ies)", len(plan.Files), len(plan.Dirs)),
+		fmt.Sprintf("Aborted (%d candidates)", len(plan.Files)+len(plan.Dirs)))
 
 	opts.DryRun = false
 	if _, err := gen.Clean(profile, opts); err != nil {

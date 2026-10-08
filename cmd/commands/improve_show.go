@@ -105,6 +105,6 @@ func init() {
 	}
 	improveCleanCmd.Flags().BoolVar(&improveCleanFlags.all, "all", false, "Delete every saved run")
 	improveCleanCmd.Flags().BoolVar(&improveCleanFlags.dryRun, "dry-run", false, "List the runs that would be deleted; delete nothing")
-	improveCleanCmd.Flags().BoolVarP(&improveFlags.yes, "yes", "y", false, "Delete --all without the confirmation prompt")
+	addYesFlag(improveCleanCmd.Flags(), &improveFlags.yes, "Delete --all without the confirmation prompt")
 	ImproveCmd.AddCommand(improveShowCmd, improveCleanCmd)
 }
