@@ -7,7 +7,7 @@ exit: 1
 Error: unknown built-in preset: "not-a-preset"
 
 Hint: Use a valid built-in preset name
-Available presets: [aiassistant amp antigravity augment baz bob claude cline codebuddy codebuff codewhale codex commandcode copilot copilot-cli cortex crush cursor deepagents devin dsh factory gemini gitlab-duo goose grok hermes junie kilo kimi kiro letta mcp mimocode muse okf omp openclaw opencode pi poolside qoder qwen reasonix replit rovodev takt trae vibe warp xum zcode zed zoocode]
+Available presets: [aiassistant amp antigravity augment baz bob claude cline codebuddy codebuff codewhale codex commandcode copilot copilot-cli cortex crush cursor deepagents devin dsh factory gemini gitlab-duo goose grok hermes junie kilo kimi kiro letta llms-txt mcp mimocode muse okf omp openclaw opencode pi poolside qoder qwen reasonix replit rovodev takt trae vibe warp xum zcode zed zoocode]
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/config.toml file 0644 84 7507201cfda77f1b215ff343a202cda8f2bda8d3b65ad784a0aac4901d775480
@@ -23,7 +23,7 @@ Error: configuration has 4 unknown or invalid key(s) in $ROOT/.ai-rulez/config.t
 
 Validation errors:
   - $ROOT/.ai-rulez/config.toml: presets.1.oneOf: Value does not match the oneOf schema
-  - $ROOT/.ai-rulez/config.toml: presets.1.enum: Value not-a-preset should be one of the allowed values: claude, cursor, gemini, copilot, devin, cline, codex, amp, junie, opencode, hermes, antigravity, xum, pi, baz, mcp, aiassistant, augment, bob, codebuddy, codebuff, codewhale, commandcode, copilot-cli, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, grok, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, poolside, qoder, qwen, reasonix, replit, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode, okf
+  - $ROOT/.ai-rulez/config.toml: presets.1.enum: Value not-a-preset should be one of the allowed values: claude, cursor, gemini, copilot, devin, cline, codex, amp, junie, opencode, hermes, antigravity, xum, pi, baz, mcp, aiassistant, augment, bob, codebuddy, codebuff, codewhale, commandcode, copilot-cli, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, grok, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, poolside, qoder, qwen, reasonix, replit, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode, okf, llms-txt
   - $ROOT/.ai-rulez/config.toml: presets.1.type: Value is string but should be object
   - $ROOT/.ai-rulez/config.toml: presets.1.not: Value should not match the not schema
 
@@ -42,7 +42,7 @@ Error: configuration has 4 unknown or invalid key(s) in $ROOT/.ai-rulez/config.t
 
 Validation errors:
   - $ROOT/.ai-rulez/config.toml: presets.1.oneOf: Value does not match the oneOf schema
-  - $ROOT/.ai-rulez/config.toml: presets.1.enum: Value not-a-preset should be one of the allowed values: claude, cursor, gemini, copilot, devin, cline, codex, amp, junie, opencode, hermes, antigravity, xum, pi, baz, mcp, aiassistant, augment, bob, codebuddy, codebuff, codewhale, commandcode, copilot-cli, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, grok, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, poolside, qoder, qwen, reasonix, replit, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode, okf
+  - $ROOT/.ai-rulez/config.toml: presets.1.enum: Value not-a-preset should be one of the allowed values: claude, cursor, gemini, copilot, devin, cline, codex, amp, junie, opencode, hermes, antigravity, xum, pi, baz, mcp, aiassistant, augment, bob, codebuddy, codebuff, codewhale, commandcode, copilot-cli, cortex, crush, deepagents, dsh, factory, gitlab-duo, goose, grok, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, poolside, qoder, qwen, reasonix, replit, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode, okf, llms-txt
   - $ROOT/.ai-rulez/config.toml: presets.1.type: Value is string but should be object
   - $ROOT/.ai-rulez/config.toml: presets.1.not: Value should not match the not schema
 
