@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
@@ -312,35 +311,6 @@ func parseMCPEnvOverrides(values []string) map[string]string {
 	return out
 }
 
-// exitCodeFor is the exit code of a failed command: 2 for a role that names
-// something that does not exist (AR971) or a configuration that loosens the
-// organization policy, the code `validate` gives findings, else 1.
-func exitCodeFor(err error) int {
-	if errors.Is(err, config.ErrRoleReference) || errors.Is(err, config.ErrPolicyLoosens) {
-		return 2
-	}
-	return 1
-}
-
-func fmtError(err error) {
-	if oopsErr, ok := oops.AsOops(err); ok {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-
-		if details, ok := oopsErr.Context()["errors"].([]string); ok && len(details) > 0 {
-			fmt.Fprintf(os.Stderr, "\nValidation errors:\n")
-			for _, e := range details {
-				fmt.Fprintf(os.Stderr, "  - %s\n", e)
-			}
-		}
-
-		if hint := errorHint(oopsErr); hint != "" {
-			fmt.Fprintf(os.Stderr, "\nHint: %s\n", hint)
-		}
-	} else {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-	}
-}
-
 // checkGenerateCheckFlags rejects flags that make no sense with --check, which
 // must never write.
 func checkGenerateCheckFlags() error {
@@ -446,13 +416,11 @@ func applyRole(gen *generator.Generator) error {
 }
 
 // FormatError renders err for the terminal: the error text, then the oops hint
-// when the error carries one.
+// when the error carries one. The CLI itself prints through renderError.
 func FormatError(err error) string {
-	text := err.Error()
-	if oopsErr, ok := oops.AsOops(err); ok {
-		if hint := errorHint(oopsErr); hint != "" {
-			text += "\n\nHint: " + hint
-		}
+	text := errorText(err)
+	if hint := errorHintOf(err); hint != "" {
+		text += "\n\nHint: " + hint
 	}
 	return text
 }
