@@ -5,10 +5,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/hooks"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -20,6 +22,7 @@ var (
 	fromFlag         string
 	setupHooks       bool
 	autoYes          bool
+	initForce        bool
 	initConfigDirArg string
 )
 
@@ -38,7 +41,8 @@ func init() {
 	InitCmd.Flags().BoolVarP(&skipContentFlag, "skip-content", "s", false, "Skip creating example content files")
 	InitCmd.Flags().StringVarP(&fromFlag, "from", "F", "", "Import from existing tool files with convert: importer names or project paths (e.g., 'auto', 'rulesync', '.claude,.cursor')")
 	InitCmd.Flags().BoolVarP(&setupHooks, "setup-hooks", "H", false, "Automatically configure git hooks for ai-rulez validation")
-	addYesFlag(InitCmd.Flags(), &autoYes, "Automatically answer yes to prompts")
+	addYesFlag(InitCmd.Flags(), &autoYes, "Automatically answer yes to prompts (never replaces an existing configuration directory; see --force)")
+	InitCmd.Flags().BoolVar(&initForce, "force", false, "Replace an existing configuration directory; the old one is kept as <dir>.bak-<timestamp>")
 	InitCmd.Flags().StringVar(&initConfigDirArg, "config-dir", "", "Configuration directory to create (default: .ai-rulez; use .config/ai-rulez for the .config/ convention)")
 }
 
@@ -68,7 +72,9 @@ func runInit(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	confirmExistingConfigDir(configDir)
+	if err := prepareExistingConfigDir(configDir); err != nil {
+		fatal("Refusing to replace the existing configuration directory", err)
+	}
 
 	// Handle --from flag for importing from existing tool files
 	if fromFlag != "" {
@@ -99,32 +105,59 @@ func runInit(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	// The configuration directory is an OKF bundle: index.md files list its content.
+	if err := okfbridge.RefreshIndexes(configDir); err != nil {
+		fatal("Failed to write the index.md files", err)
+	}
+
 	displaySuccessMessage(projectName, configDir)
 	if abs, err := filepath.Abs(configDir); err == nil {
 		noteHandWrittenFiles(filepath.Dir(abs))
 	}
 }
 
-// confirmExistingConfigDir asks before replacing an existing configuration
-// directory and exits when the user declines. An import keeps the old directory
-// until the new one is written; anything else starts from nothing.
-func confirmExistingConfigDir(configDir string) {
+// prepareExistingConfigDir makes room for a new configuration directory. An
+// existing one is never deleted: it is replaced only after --force or an
+// interactive yes, and an init that scaffolds moves it to <dir>.bak-<timestamp>
+// first. --yes only skips prompts, so scripts cannot destroy authored content by
+// accident, and the MCP init_project tool refuses in the same situation. An
+// import keeps the old directory until the new one is written (replaceConfigDir).
+func prepareExistingConfigDir(configDir string) error {
 	if _, err := os.Stat(configDir); err != nil {
-		return
+		return nil //nolint:nilerr // nothing there: nothing to protect
 	}
 	logger.Info(configDir + "/ directory already exists")
-	if !shouldOverwriteConfig(configDir + "/") {
-		logger.Info("Operation canceled. Remove or rename the existing directory to initialize a new configuration")
-		os.Exit(1)
+	if !initForce && !shouldOverwriteConfig(configDir+"/") {
+		return oops.
+			Hint("Pass --force to replace it (the old directory is kept as "+configDir+".bak-<timestamp>), or remove or rename it. --yes only skips prompts.").
+			Errorf("%s/ already exists", configDir)
 	}
 	if fromFlag != "" {
-		return
+		return nil
 	}
-	if err := os.RemoveAll(configDir); err != nil {
-		logger.Error("Failed to remove existing "+configDir+"/ directory", "error", err)
-		os.Exit(1)
+	backup, err := backupConfigDir(configDir, time.Now())
+	if err != nil {
+		return err
 	}
-	logger.Info("Existing " + configDir + "/ directory removed")
+	logger.Info("Existing " + configDir + "/ directory moved to " + backup)
+	return nil
+}
+
+// backupConfigDir moves configDir aside to <configDir>.bak-<timestamp> and
+// returns the new path.
+func backupConfigDir(configDir string, now time.Time) (string, error) {
+	base := configDir + ".bak-" + now.Format("20060102-150405")
+	backup := base
+	for n := 2; ; n++ {
+		if _, err := os.Lstat(backup); os.IsNotExist(err) {
+			break
+		}
+		backup = fmt.Sprintf("%s-%d", base, n)
+	}
+	if err := os.Rename(configDir, backup); err != nil {
+		return "", oops.Wrapf(err, "move the existing %s/ directory to %s", configDir, backup)
+	}
+	return backup, nil
 }
 
 // nativeRootFiles are the root files generate writes and refuses to overwrite
@@ -226,7 +259,7 @@ func createExampleContent(configDir string) error {
 			return fmt.Errorf("failed to create skill directory %s: %w", skillID, err)
 		}
 
-		if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(content), 0o644); err != nil {
+		if err := writeConceptFile(filepath.Join(skillDir, "SKILL.md"), okfbridge.KindSkill, skillID, content); err != nil {
 			return fmt.Errorf("failed to write example skill %s: %w", skillID, err)
 		}
 
@@ -248,7 +281,7 @@ Follow these coding standards:
 - Handle errors explicitly, never silently
 `
 
-	if err := os.WriteFile(filepath.Join(configDir, "rules", "code-quality.md"), []byte(ruleContent), 0o644); err != nil {
+	if err := writeConceptFile(filepath.Join(configDir, "rules", "code-quality.md"), okfbridge.KindRule, "code-quality", ruleContent); err != nil {
 		return fmt.Errorf("failed to write example rule: %w", err)
 	}
 
@@ -275,7 +308,7 @@ This project follows a modular architecture with clear separation of concerns.
 - Clear separation between business logic and infrastructure
 `
 
-	if err := os.WriteFile(filepath.Join(configDir, "context", "architecture.md"), []byte(contextContent), 0o644); err != nil {
+	if err := writeConceptFile(filepath.Join(configDir, "context", "architecture.md"), okfbridge.KindContext, "architecture", contextContent); err != nil {
 		return fmt.Errorf("failed to write example context: %w", err)
 	}
 
@@ -362,6 +395,16 @@ Use this skill when working in a project that is managed by AI-Rulez.
 	return nil
 }
 
+// writeConceptFile writes content, in the native layout, as the OKF concept the
+// source writers store.
+func writeConceptFile(path string, kind okfbridge.Kind, id, content string) error {
+	data, err := okfbridge.RenderConcept(kind, "", id, []byte(content))
+	if err != nil {
+		return fmt.Errorf("render %s as an OKF concept: %w", id, err)
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
 // parseDomains parses the comma-separated domains flag
 func parseDomains(domainsStr string) []string {
 	parts := strings.Split(domainsStr, ",")
@@ -431,13 +474,9 @@ func getProjectName(args []string) string {
 }
 
 func shouldOverwriteConfig(filename string) bool {
-	// Only an explicit --yes authorizes deleting an existing directory; a CI or
-	// NO_INTERACTIVE environment alone must never destroy user content.
-	if autoYes {
-		logger.Info("Auto-overwriting existing configuration directory (--yes)")
-		return true
-	}
-
+	// Only an interactive yes (or --force, handled by the caller) authorizes
+	// replacing an existing directory: neither --yes nor a CI or NO_INTERACTIVE
+	// environment may.
 	stat, err := os.Stdin.Stat()
 	if err != nil {
 		logger.Info("Cannot prompt for input, canceling operation")
@@ -448,7 +487,7 @@ func shouldOverwriteConfig(filename string) bool {
 		return false
 	}
 
-	fmt.Printf("Overwrite existing directory '%s'? (y/N): ", filename)
+	fmt.Printf("Replace existing directory '%s' (it is kept as a backup)? (y/N): ", filename)
 
 	var response string
 	_, err = fmt.Scanln(&response)
@@ -482,18 +521,16 @@ func handleHooksSetup() {
 }
 
 // replaceConfigDir runs write with configDir cleared, keeping the old directory
-// aside until write succeeds: a failed import puts it back instead of leaving the
-// project without a configuration.
+// aside as <configDir>.bak-<timestamp>: a failed import puts it back instead of
+// leaving the project without a configuration, and a successful one leaves it
+// as the backup.
 func replaceConfigDir(configDir string, write func() error) error {
 	if _, err := os.Stat(configDir); err != nil {
 		return write()
 	}
-	backup := fmt.Sprintf("%s.replaced-%d", configDir, os.Getpid())
-	if err := os.RemoveAll(backup); err != nil {
-		return oops.Wrapf(err, "clear %s", backup)
-	}
-	if err := os.Rename(configDir, backup); err != nil {
-		return oops.Wrapf(err, "move aside the existing %s/ directory", configDir)
+	backup, err := backupConfigDir(configDir, time.Now())
+	if err != nil {
+		return err
 	}
 	if err := write(); err != nil {
 		if rmErr := os.RemoveAll(configDir); rmErr != nil {
@@ -504,10 +541,6 @@ func replaceConfigDir(configDir string, write func() error) error {
 		}
 		return err
 	}
-	if err := os.RemoveAll(backup); err != nil {
-		logger.Warn("Could not remove the previous configuration directory", "path", backup, "error", err)
-	} else {
-		logger.Info("Existing " + configDir + "/ directory replaced")
-	}
+	logger.Info("Existing " + configDir + "/ directory replaced; the previous one is kept in " + backup)
 	return nil
 }

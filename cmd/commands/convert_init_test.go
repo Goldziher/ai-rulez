@@ -28,8 +28,8 @@ func initFromProject(t *testing.T) string {
 
 func setInitFlags(t *testing.T, from string) {
 	t.Helper()
-	fromFlag, autoYes, initConfigDirArg = from, true, ""
-	t.Cleanup(func() { fromFlag, autoYes, initConfigDirArg = "", false, "" })
+	fromFlag, autoYes, initForce, initConfigDirArg = from, true, true, ""
+	t.Cleanup(func() { fromFlag, autoYes, initForce, initConfigDirArg = "", false, false, "" })
 }
 
 func TestInitFrom_RunsConvert(t *testing.T) {
