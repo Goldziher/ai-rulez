@@ -113,6 +113,17 @@ func TestEveryRunnableCommandUsesRunE(t *testing.T) {
 	})
 }
 
+// resetFormatFlags puts every --format back to its default: flag values outlive
+// an in-process execution, and a stale "json" would change what the next one renders.
+func resetFormatFlags() {
+	walkCommands(RootCmd, func(c *cobra.Command) {
+		if f := c.Flags().Lookup("format"); f != nil {
+			_ = f.Value.Set(f.DefValue) //nolint:errcheck // the default is always accepted
+			f.Changed = false
+		}
+	})
+}
+
 // commandState is what the table test overrides on a command, to restore after.
 type commandState struct {
 	runE        func(*cobra.Command, []string) error
@@ -194,6 +205,8 @@ func TestEveryCommandRendersEveryErrorClassTheSameWay(t *testing.T) {
 					// Arrange
 					state := neutralize(leaf, func(*cobra.Command, []string) error { return tc.err })
 					t.Cleanup(func() { state.restore(leaf) })
+					resetFormatFlags()
+					t.Cleanup(resetFormatFlags)
 					args := append([]string{}, path...)
 					if format != "" {
 						args = append(args, "--format", format)
@@ -217,7 +230,11 @@ func TestEveryCommandRendersEveryErrorClassTheSameWay(t *testing.T) {
 					// Assert
 					assert.Equal(t, tc.wantCode, code)
 					assert.Equal(t, tc.wantStderr, stderr.String())
-					if format == formatJSON && tc.wantMsg != "" {
+					effective := format
+					if f := leaf.Flags().Lookup("format"); f != nil && effective == "" {
+						effective = f.DefValue
+					}
+					if effective == formatJSON && tc.wantMsg != "" {
 						var doc map[string]any
 						require.NoError(t, json.Unmarshal(stdout.Bytes(), &doc), stdout.String())
 						assert.Equal(t, "error", doc["status"])
@@ -236,6 +253,8 @@ func TestEveryCommandRendersEveryErrorClassTheSameWay(t *testing.T) {
 func TestUsageErrorsRenderLikeEveryOtherError(t *testing.T) {
 	for _, args := range [][]string{{"generate", "--no-such-flag"}, {"lock", "bogus-subcommand-xyz", "extra"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			resetFormatFlags()
+			t.Cleanup(resetFormatFlags)
 			var discard, stdout, stderr bytes.Buffer
 			RootCmd.SetOut(&discard)
 			RootCmd.SetErr(&discard)
