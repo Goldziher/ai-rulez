@@ -22,7 +22,7 @@ func IsLegacyLayout(configDir string) bool {
 	if info, err := os.Stat(filepath.Join(configDir, okfRootIndex)); err == nil && !info.IsDir() {
 		return false
 	}
-	for _, dir := range []string{"rules", "context", "skills", "agents", "commands", "checks", "domains"} {
+	for _, dir := range []string{rulesDir, contextDir, skillsDir, agentsDir, commandsDir, checksDir, domainsDir} {
 		if holdsContent(filepath.Join(configDir, dir)) {
 			return true
 		}
