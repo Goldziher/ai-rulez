@@ -89,6 +89,24 @@ task check      # go vet + golangci-lint
 task test:all   # unit + platform + e2e
 ```
 
+### Updating golden files
+
+A golden-file test fails with a diff when its output changes on purpose. Rewrite the files, then review the diff before committing:
+
+```bash
+task test:golden:update
+```
+
+Most packages read `UPDATE_GOLDEN=1`; the task sets it and reruns those packages. The other regeneration switches are per test and documented in the failure message:
+
+| Variable or flag | Rewrites | Run |
+| --- | --- | --- |
+| `UPDATE_GOLDEN=1` | golden files of the packages above | `UPDATE_GOLDEN=1 go test ./path/to/pkg` |
+| `-update-tokens-golden` | the tokens report golden | `go test ./internal/generator -run Golden_TokenReportJSON -update-tokens-golden` |
+| `UPDATE_DOCS=1` | generated tables in `docs/` | `UPDATE_DOCS=1 go test ./internal/lint -run TestRuleReferenceDoc` |
+| `UPDATE_SCHEMA=1`, `UPDATE_LOCAL_SCHEMA=1` | preset enums and the local schema in `schema/` | `UPDATE_SCHEMA=1 go test ./schema -run TestPresetEnums` |
+| `UPDATE_ALLOWLIST=1` | the architecture-lint allowlist | `UPDATE_ALLOWLIST=1 go test ./tests/archlint` |
+
 ### Commit Messages
 
 We use [Conventional Commits](https://www.conventionalcommits.org/). This is required for our automated release process.
