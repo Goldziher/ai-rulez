@@ -2,6 +2,7 @@ package lint
 
 import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/secretpat"
 )
 
 // ScanText applies the security rules (AR0xx) with default settings to one text
@@ -23,9 +24,12 @@ func ScanText(file, text string, opts ...Option) []Finding {
 // assignments with a long mixed value) and returns the pattern name.
 func DetectSecret(s string) (string, bool) {
 	for _, p := range builtinSecrets {
-		if p.re.MatchString(s) {
+		if p.mayMatch(s) && p.re.MatchString(s) {
 			return p.name, true
 		}
+	}
+	if !secretpat.MayHaveGenericCredential(s) {
+		return "", false
 	}
 	for _, m := range genericCredential.FindAllStringSubmatch(s, -1) {
 		if hasLetterAndDigit(m[1]) {

@@ -1,6 +1,10 @@
 package lint
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/secretpat"
+)
 
 // Codes of the model-judged review feature (docs/review.md). AR9G is the review
 // block of the allocation table in docs/strict-validation.md. Phase 0 (no model
@@ -97,7 +101,12 @@ const secretRedaction = "[REDACTED:" + CodeSecretDetected + "]"
 // then re-scans the masked text and withholds the item if anything is left.
 func RedactSecrets(s string) string {
 	for _, p := range builtinSecrets {
-		s = p.re.ReplaceAllString(s, secretRedaction)
+		if p.mayMatch(s) {
+			s = p.re.ReplaceAllString(s, secretRedaction)
+		}
+	}
+	if !secretpat.MayHaveGenericCredential(s) {
+		return s
 	}
 	return genericCredential.ReplaceAllStringFunc(s, func(m string) string {
 		if sub := genericCredential.FindStringSubmatch(m); len(sub) > 1 && hasLetterAndDigit(sub[1]) {
