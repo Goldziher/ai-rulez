@@ -29,7 +29,7 @@ func TestLoadBoundsTheHooksAnIncludeDelivers(t *testing.T) {
 	enforcer := NewEnforcer(func() DiscoverOptions { return DiscoverOptions{Flag: policyFile, Env: ambient.MapEnv{}} })
 
 	// Act
-	cfg, err := config.LoadConfig(context.Background(), root, config.WithResolvers(includes.Resolvers("")), config.WithPolicy(enforcer))
+	cfg, err := config.LoadConfig(context.Background(), root, config.WithResolvers(includes.Resolvers("", nil)), config.WithPolicy(enforcer))
 
 	// Assert
 	require.NoError(t, err)
