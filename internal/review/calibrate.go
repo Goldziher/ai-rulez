@@ -678,25 +678,40 @@ func CompareCalibration(old, cur *CalibrationRecord) Drift {
 			d.Regressions = append(d.Regressions, fmt.Sprintf("the %s digest changed (%s -> %s): the committed record measured something else, recalibrate and commit it", c.name, c.was, c.now))
 		}
 	}
+	d.Regressions = append(d.Regressions, dimensionRegressions(old, cur)...)
+	if cur.Status != CalPass {
+		d.Regressions = append(d.Regressions, "the judge no longer meets the calibration thresholds")
+	}
+	d.Changed = changedCases(old, cur)
+	d.Failed = len(d.Regressions) > 0
+	return d
+}
+
+// dimensionRegressions lists the dimensions that got worse between two records.
+func dimensionRegressions(old, cur *CalibrationRecord) []string {
+	var out []string
 	for _, id := range sortedKeys(old.Dimensions) {
 		o := old.Dimensions[id]
 		n, ok := cur.Dimensions[id]
 		if !ok {
 			if o.Status == CalPass {
-				d.Regressions = append(d.Regressions, fmt.Sprintf("%s: calibrated before and missing now", id))
+				out = append(out, fmt.Sprintf("%s: calibrated before and missing now", id))
 			}
 			continue
 		}
 		if o.Kappa-n.Kappa > KappaDriftTolerance {
-			d.Regressions = append(d.Regressions, fmt.Sprintf("%s: kappa fell from %.2f to %.2f (more than %.2f)", id, o.Kappa, n.Kappa, KappaDriftTolerance))
+			out = append(out, fmt.Sprintf("%s: kappa fell from %.2f to %.2f (more than %.2f)", id, o.Kappa, n.Kappa, KappaDriftTolerance))
 		}
 		if o.Status == CalPass && n.Status != CalPass {
-			d.Regressions = append(d.Regressions, fmt.Sprintf("%s: was %s, now %s (%s)", id, o.Status, n.Status, strings.Join(n.Misses, "; ")))
+			out = append(out, fmt.Sprintf("%s: was %s, now %s (%s)", id, o.Status, n.Status, strings.Join(n.Misses, "; ")))
 		}
 	}
-	if cur.Status != CalPass {
-		d.Regressions = append(d.Regressions, "the judge no longer meets the calibration thresholds")
-	}
+	return out
+}
+
+// changedCases lists the golden cases whose verdict differs between two records.
+func changedCases(old, cur *CalibrationRecord) []CaseChange {
+	var out []CaseChange
 	for _, cid := range sortedKeys(cur.Cases) {
 		oldCase, ok := old.Cases[cid]
 		if !ok {
@@ -704,12 +719,11 @@ func CompareCalibration(old, cur *CalibrationRecord) Drift {
 		}
 		for _, dim := range sortedKeys(cur.Cases[cid]) {
 			if was, had := oldCase[dim]; had && was != cur.Cases[cid][dim] {
-				d.Changed = append(d.Changed, CaseChange{Case: cid, Dimension: dim, Was: was, Now: cur.Cases[cid][dim]})
+				out = append(out, CaseChange{Case: cid, Dimension: dim, Was: was, Now: cur.Cases[cid][dim]})
 			}
 		}
 	}
-	d.Failed = len(d.Regressions) > 0
-	return d
+	return out
 }
 
 // ModelAgreement is how often two models gave the same verdict, and their kappa.

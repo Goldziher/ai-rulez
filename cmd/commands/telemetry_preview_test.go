@@ -24,7 +24,7 @@ func resetPreviewFlags(t *testing.T) {
 func recordSkillLoads(t *testing.T, env telemetryEnv, skills ...string) {
 	t.Helper()
 	for _, skill := range skills {
-		event := `{"hook_event_name":"PreToolUse","tool_name":"Skill","tool_input":{"skill":"` + skill + `"},"session_id":"s1","cwd":"` + env.root + `"}`
+		event := `{"hook_event_name":"PreToolUse","tool_name":"Skill","tool_input":{"skill":"` + skill + `"},"session_id":"s1","cwd":"` + jsonPath(env.root) + `"}`
 		require.NoError(t, runUsageRecord(strings.NewReader(event)))
 	}
 }
@@ -96,7 +96,7 @@ func TestTelemetryPreview_ReadsTheOutboxWhenExportIsActiveAndMakesNoRequest(t *t
 	require.NoError(t, runTelemetryPreview(&out))
 
 	text := out.String()
-	assert.Contains(t, text, "source: outbox .ai-rulez/local/"+telemetry.OutboxFileName)
+	assert.Contains(t, text, "source: outbox "+filepath.Join(".ai-rulez", "local", telemetry.OutboxFileName))
 	assert.Contains(t, text, "export: on")
 	assert.Contains(t, text, "POST "+server.URL+"/otlp/v1/logs")
 	assert.Zero(t, hits.Load(), "a preview opens no connection")

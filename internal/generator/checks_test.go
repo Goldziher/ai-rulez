@@ -237,7 +237,7 @@ func TestChecks_FactoryAggregateCollidesWithUserSkill(t *testing.T) {
 
 	// Assert
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), ".factory/skills/review-guidelines/SKILL.md")
+	assert.Contains(t, err.Error(), filepath.FromSlash(".factory/skills/review-guidelines/SKILL.md"))
 }
 
 func TestChecks_OutputsAreNotGitignored(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -91,6 +92,9 @@ func TestFakeChromeProcess(t *testing.T) {
 
 func startFakeBrowser(t *testing.T) *browser {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the protocol pipes are inherited file descriptors 3 and 4, which Windows cannot pass to a child")
+	}
 	t.Setenv(fakeChromeEnv, "1")
 	exe, err := os.Executable()
 	require.NoError(t, err)

@@ -110,12 +110,18 @@ func TestUser_EveryPresetMapsOrIsReportedUnsupported(t *testing.T) {
 	assert.Greater(t, supported, 40, "most presets document a user scope")
 }
 
+// absProbe makes a slash path absolute on the current OS: on Windows it gets the
+// temp directory's drive, since a bare "/home/probe" is not absolute there.
+func absProbe(p string) string {
+	return filepath.VolumeName(os.TempDir()) + filepath.FromSlash(p)
+}
+
 // TestUser_HomeEnvOverrides relocates every tool home that has a variable and
 // checks the files follow it, and that clean takes them out of it again.
 func TestUser_HomeEnvOverrides(t *testing.T) {
 	var relocatable []string
 	for _, name := range config.IndividualPresetNames() {
-		layout, err := userscope.Resolve(name, "/home/probe", func(string) string { return "/tools/probe" })
+		layout, err := userscope.Resolve(name, absProbe("/home/probe"), func(string) string { return absProbe("/tools/probe") })
 		if err == nil && layout.RelocatedHome != "" {
 			relocatable = append(relocatable, name)
 		}
@@ -210,7 +216,7 @@ func snapshotHome(t *testing.T, root string) (files map[string]string, dirs []st
 // created must be empty or gone.
 func TestUser_GenerateThenCleanRestoresHome(t *testing.T) {
 	quietWarnings(t)
-	layouts, _, err := userscope.All("/home/probe", noEnv)
+	layouts, _, err := userscope.All(absProbe("/home/probe"), noEnv)
 	require.NoError(t, err)
 	names := userscope.Supported(layouts)
 	require.Greater(t, len(names), 40)

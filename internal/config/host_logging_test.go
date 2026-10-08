@@ -1,6 +1,7 @@
 package config
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -54,10 +55,10 @@ func TestTwoProjectsInOneProcessKeepSeparateWarnings(t *testing.T) {
 				got := warnLines(rec)
 				assert.Len(t, got, 1, "%v", got)
 				assert.Equal(t, 1, countContaining(got, "invalid glob in targets"), "validating twice warns once: %v", got)
-				assert.Contains(t, got[0], "/virtual/"+tt.projects[i], "the warning names this project's files")
+				assert.Contains(t, got[0], filepath.FromSlash("/virtual/"+tt.projects[i]), "the warning names this project's files")
 				for j, other := range recs {
 					if j != i && tt.projects[i] != tt.projects[j] {
-						assert.NotContains(t, other.String(), "/virtual/"+tt.projects[i], "project %s leaked into %s", tt.projects[i], tt.projects[j])
+						assert.NotContains(t, other.String(), filepath.FromSlash("/virtual/"+tt.projects[i]), "project %s leaked into %s", tt.projects[i], tt.projects[j])
 					}
 				}
 			}
@@ -90,5 +91,5 @@ func TestMalformedFrontmatterIsReportedToTheHostLogger(t *testing.T) {
 	require.Len(t, cfg.Content.Rules, 1)
 	assert.True(t, cfg.Content.Rules[0].MalformedFrontmatter)
 	require.Len(t, rec.Level("WARN"), 1)
-	assert.Contains(t, rec.String(), "/virtual/fm/.ai-rulez/rules/broken.md")
+	assert.Contains(t, rec.String(), filepath.FromSlash("/virtual/fm/.ai-rulez/rules/broken.md"))
 }
