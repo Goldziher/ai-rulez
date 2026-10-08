@@ -179,9 +179,13 @@ func (s commandState) restore(c *cobra.Command) {
 // the exit code of the class, and under --format json the error document on
 // stdout.
 func TestEveryCommandRendersEveryErrorClassTheSameWay(t *testing.T) {
+	// Wrap the commands first, so restoring a command's Args and RunE restores the wrapped ones.
+	requireKnownSubcommands(RootCmd)
+	explainArgErrors(RootCmd)
+	trackActiveCommand(RootCmd)
 	var leaves []*cobra.Command
 	walkCommands(RootCmd, func(c *cobra.Command) {
-		if c.RunE != nil && !c.DisableFlagParsing && c.Name() != "help" {
+		if c.RunE != nil && c.Annotations[groupOnlyMarker] == "" && !c.DisableFlagParsing && c.Name() != "help" {
 			leaves = append(leaves, c)
 		}
 	})

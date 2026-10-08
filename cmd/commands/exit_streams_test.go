@@ -15,7 +15,7 @@ import (
 func setQuiet(t *testing.T) {
 	t.Helper()
 	viper.Set("quiet", true)
-	t.Cleanup(func() { viper.Set("quiet", false) })
+	t.Cleanup(func() { viper.Set("quiet", nil) })
 }
 
 func TestLockCheck_DriftReportIsOnStdoutAndSurvivesQuiet(t *testing.T) {
