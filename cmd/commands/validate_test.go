@@ -20,7 +20,7 @@ func TestValidateCommandSupport(t *testing.T) {
 		// Verify that validate command is capable of detecting configs
 		// This is done via config.DetectConfigVersion() which is tested separately
 		assert.NotNil(t, commands.ValidateCmd)
-		assert.NotNil(t, commands.ValidateCmd.Run)
+		assert.NotNil(t, commands.ValidateCmd.RunE)
 	})
 
 	t.Run("ValidationLogic", func(t *testing.T) {
