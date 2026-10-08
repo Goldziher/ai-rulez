@@ -88,7 +88,7 @@ func newItem(kind, domain string, cf config.ContentFile, configDir string, rel f
 		id = kind + ":" + domain + "/" + name
 	}
 	relToConfig, err := filepath.Rel(configDir, abs)
-	owned := err == nil && !strings.HasPrefix(relToConfig, "..") && !strings.Contains(cf.Path, "://")
+	owned := err == nil && !safefs.RelEscapes(relToConfig) && !strings.Contains(cf.Path, "://")
 	it := Item{ID: id, Kind: kind, Name: name, Domain: domain, Owned: owned, Abs: abs}
 	if rel != nil {
 		it.Path = rel(abs)

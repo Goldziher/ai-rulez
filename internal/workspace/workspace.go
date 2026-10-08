@@ -16,8 +16,9 @@ import (
 	"errors"
 	"io/fs"
 	"path/filepath"
-	"strings"
 	"testing/fstest"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // ErrOutside reports a path that is not below the workspace root, or a symlink
@@ -148,7 +149,7 @@ func Rel(ws Workspace, abs string) (string, error) {
 		if rel == "." {
 			return ".", nil
 		}
-		if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		if safefs.RelEscapes(rel) || filepath.IsAbs(rel) {
 			continue
 		}
 		return filepath.ToSlash(rel), nil

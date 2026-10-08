@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // SiblingSurface is the activation surface the sibling guard uses: the offline
@@ -240,9 +241,9 @@ func copySibling(s *evals.Skill, dir, dst, configDir string) error {
 	}
 	for _, ev := range s.EvalDirs {
 		target := filepath.Join(dst, "evals")
-		if rel, err := filepath.Rel(s.Dir, ev); err == nil && !strings.HasPrefix(rel, "..") {
+		if rel, err := filepath.Rel(s.Dir, ev); err == nil && !safefs.RelEscapes(rel) {
 			target = filepath.Join(dst, rel)
-		} else if rel, err := filepath.Rel(filepath.Join(configDir, evals.ProjectEvalsDir), ev); err == nil && !strings.HasPrefix(rel, "..") {
+		} else if rel, err := filepath.Rel(filepath.Join(configDir, evals.ProjectEvalsDir), ev); err == nil && !safefs.RelEscapes(rel) {
 			target = filepath.Join(dir, evals.ProjectEvalsDir, rel)
 		}
 		if err := copyRegularTree(ev, target); err != nil {

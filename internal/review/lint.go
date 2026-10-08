@@ -18,6 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Problem is one defect of a rubric, golden or calibration file (AR9G8).
@@ -504,7 +505,7 @@ func Findings(problems []Problem, cwd string) []lint.Finding {
 	for _, p := range problems {
 		file := p.File
 		if cwd != "" {
-			if rel, err := filepath.Rel(cwd, file); err == nil && !strings.HasPrefix(rel, "..") {
+			if rel, err := filepath.Rel(cwd, file); err == nil && !safefs.RelEscapes(rel) {
 				file = rel
 			}
 		}

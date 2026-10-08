@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // GradeOptions configures local grading of assertions.
@@ -184,7 +185,7 @@ func inWorkDir(workDir, rel string) (string, bool) {
 		return "", false
 	}
 	full := filepath.Join(workDir, filepath.FromSlash(rel))
-	if !within(workDir, full) {
+	if !safefs.Within(workDir, full) {
 		return "", false
 	}
 	probe := full

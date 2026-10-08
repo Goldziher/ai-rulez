@@ -5,12 +5,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
 
@@ -208,7 +208,7 @@ func checkInsideProject(cfg *config.Config, baseDir, field, name, path string) e
 	abs = realPath(v, abs)
 	project := realPath(v, baseDir)
 	rel, err := filepath.Rel(project, abs)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+	if err != nil || safefs.RelEscapes(rel) || filepath.IsAbs(rel) {
 		return oops.With("name", name).With("path", abs).With("project", project).
 			Hint("Put the path in config.local.toml (machine-local, not committed), declare the include in your user config, or copy the content into the project").
 			Wrapf(config.ErrIncludeOutsideProject, "include %q: local path %s is outside the project %s; a local include in the project config must stay inside the project", name, abs, project)
