@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
@@ -505,7 +506,7 @@ func readBounded(path string, limit int64) ([]byte, error) {
 		return nil, err //nolint:wrapcheck // the caller ignores the cause
 	}
 	defer f.Close() //nolint:errcheck // read only
-	return io.ReadAll(io.LimitReader(f, limit))
+	return safefs.ReadLimited(f, limit)
 }
 
 // commit stages the skill, the lock and the eval results and commits them.

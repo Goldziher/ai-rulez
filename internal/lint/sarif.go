@@ -15,6 +15,7 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/secretpat"
 )
 
@@ -428,7 +429,7 @@ func resolveScannerPath(raw, root string) (abs string, ok bool) {
 	}
 	p = filepath.Clean(filepath.FromSlash(p))
 	for _, base := range scannerRoots(root) {
-		if rel, err := filepath.Rel(base, p); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if rel, err := filepath.Rel(base, p); err == nil && !safefs.RelEscapes(rel) {
 			return p, true
 		}
 	}

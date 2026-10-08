@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -327,22 +328,8 @@ func writeFile(path string, data []byte, force bool) error {
 		}
 		return f.Close()
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".import-*")
-	if err != nil {
-		return fmt.Errorf("write %s: %w", path, err)
-	}
-	defer os.Remove(tmp.Name()) //nolint:errcheck // best-effort cleanup after a rename
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close() //nolint:errcheck // the write error is the one to report
-		return fmt.Errorf("write %s: %w", path, err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("write %s: %w", path, err)
-	}
-	if err := os.Chmod(tmp.Name(), 0o644); err != nil { //nolint:gosec // a committed case file, world-readable like the others
-		return fmt.Errorf("write %s: %w", path, err)
-	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
+	// A committed case file, world-readable like the others.
+	if err := gitutil.WriteFileAtomic(path, data, 0o644); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	return nil

@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/samber/oops"
 )
 
@@ -169,7 +170,7 @@ func skillResourceFiles(outputs []config.OutputFile, dir string) []ServedSkillFi
 			continue
 		}
 		rel, err := filepath.Rel(dir, res.Path)
-		if err != nil || strings.HasPrefix(rel, "..") || rel == skillEntryFile {
+		if err != nil || safefs.RelEscapes(rel) || rel == skillEntryFile {
 			continue
 		}
 		files = append(files, ServedSkillFile{RelPath: filepath.ToSlash(rel), Content: res.RawContent})
@@ -316,7 +317,7 @@ func includeContains(baseDir string, inc *config.IncludeConfig, dir string) bool
 
 func outsideRoot(baseDir, p string) bool {
 	rel, err := filepath.Rel(baseDir, p)
-	return err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	return err != nil || safefs.RelEscapes(rel)
 }
 
 // inIncludeRoot reports whether p lies in the directory an include resolves to:
@@ -355,7 +356,7 @@ func relSource(baseDir, p string) string {
 	if p == "" || baseDir == "" || !filepath.IsAbs(p) {
 		return filepath.ToSlash(p)
 	}
-	if rel, err := filepath.Rel(baseDir, p); err == nil && !strings.HasPrefix(rel, "..") {
+	if rel, err := filepath.Rel(baseDir, p); err == nil && !safefs.RelEscapes(rel) {
 		return path.Clean(filepath.ToSlash(rel))
 	}
 	return filepath.ToSlash(p)

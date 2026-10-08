@@ -79,7 +79,7 @@ func (p *Pipeline) HandleHook(ctx context.Context, in io.Reader, options HookOpt
 	if !p.Settings.RecordActive() {
 		return nil, nil // nothing is recorded: do not read or parse the harness's input
 	}
-	data, err := io.ReadAll(io.LimitReader(in, hookInputLimit))
+	data, err := safefs.ReadLimited(in, hookInputLimit)
 	if err != nil {
 		return nil, oops.Wrapf(err, "read hook event")
 	}

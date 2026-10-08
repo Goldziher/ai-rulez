@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/Goldziher/ai-rulez/v5/schema"
 )
@@ -198,7 +199,7 @@ func hashPath(path string, cfg *config.Config) string {
 			continue
 		}
 		rel, err := filepath.Rel(root, path)
-		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if err != nil || safefs.RelEscapes(rel) {
 			continue
 		}
 		return filepath.ToSlash(rel)

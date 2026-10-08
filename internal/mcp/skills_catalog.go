@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -312,17 +313,15 @@ func mimeFor(rel string, content []byte) string {
 
 // parseFrontmatter decodes the leading YAML frontmatter block of a SKILL.md.
 func parseFrontmatter(content []byte) (map[string]any, error) {
-	text := strings.ReplaceAll(string(content), "\r\n", "\n")
-	if !strings.HasPrefix(text, "---\n") {
+	block := frontmatter.Split(content)
+	if !block.Present {
 		return nil, oops.Errorf("SKILL.md must begin with YAML frontmatter")
 	}
-	rest := text[len("---\n"):]
-	end := strings.Index(rest, "\n---")
-	if end < 0 {
+	if !block.Closed {
 		return nil, oops.Errorf("SKILL.md frontmatter is not closed")
 	}
 	front := map[string]any{}
-	if err := yaml.Unmarshal([]byte(rest[:end]), &front); err != nil {
+	if err := yaml.Unmarshal([]byte(block.Raw), &front); err != nil {
 		return nil, err //nolint:wrapcheck // wrapped by the caller
 	}
 	return front, nil

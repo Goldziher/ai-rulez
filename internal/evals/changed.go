@@ -8,6 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // GitFunc runs git in dir and returns its standard output. Tests replace it.
@@ -79,11 +80,11 @@ func ChangedSkills(run GitFunc, repoDir, base string, skills []Skill) (map[strin
 // resolvedWithin compares after resolving symlinks in the directory, since
 // git reports the real top-level path (on macOS /private/var vs /var).
 func resolvedWithin(root, file string) bool {
-	if within(root, file) {
+	if safefs.Within(root, file) {
 		return true
 	}
 	if resolved, err := filepath.EvalSymlinks(root); err == nil {
-		return within(resolved, file)
+		return safefs.Within(resolved, file)
 	}
 	return false
 }

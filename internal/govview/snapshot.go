@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -40,8 +39,6 @@ type snapshotLimits struct {
 }
 
 var defaultSnapshotLimits = snapshotLimits{files: snapshotMaxFiles, fileSize: snapshotMaxFileSize, total: snapshotMaxTotal}
-
-var commitRE = regexp.MustCompile(`^[0-9a-f]{40}([0-9a-f]{24})?$`)
 
 // RevisionSnapshot says what ExtractRevision wrote.
 type RevisionSnapshot struct {
@@ -123,7 +120,7 @@ func extractRevision(ctx context.Context, lim snapshotLimits, dir, rev, rel, des
 func resolveCommit(ctx context.Context, git gitutil.Git, top, rev string) (string, error) {
 	res := git.Exec(ctx, top, nil, "rev-parse", "--verify", "--quiet", "--end-of-options", rev+"^{commit}")
 	commit := strings.TrimSpace(string(res.Stdout))
-	if gitutil.ResultErr(res) != nil || !commitRE.MatchString(commit) {
+	if gitutil.ResultErr(res) != nil || !gitutil.IsCommitSHA(commit) {
 		return "", oops.Hint("check `git rev-parse --verify "+rev+"`; a shallow clone may lack the revision").
 			Errorf("revision %q does not exist in this repository", rev)
 	}

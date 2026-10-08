@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // MarketplaceDir is the dist directory of the pinned marketplace indexes.
@@ -20,7 +22,6 @@ const claudeIndexPath = ".claude-plugin/marketplace.json"
 
 var (
 	channelPattern = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
-	commitPattern  = regexp.MustCompile(`^[0-9a-f]{40}$`)
 	refPattern     = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)
 )
 
@@ -69,7 +70,7 @@ type pinnedSource struct {
 // state of the repository instead of whatever the default branch holds. Every
 // other field of an entry, and of the index, is kept.
 func PinIndex(p Pin, commit string) ([]byte, error) {
-	if !commitPattern.MatchString(commit) {
+	if !gitutil.IsCommitSHA(commit) {
 		return nil, newError(CodeSource, ExitGate, "commit the changes first; a pinned index names a commit",
 			"the source tree has no commit to pin the marketplace to")
 	}

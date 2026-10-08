@@ -15,6 +15,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/semver"
 	"github.com/samber/oops"
 )
@@ -268,7 +269,7 @@ func (st *scannerStage) lookup(raw, base string) (string, bool) {
 	}
 	for _, root := range scannerRoots(st.root) {
 		rel, err := filepath.Rel(root, p)
-		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if err != nil || safefs.RelEscapes(rel) {
 			continue
 		}
 		rel = filepath.ToSlash(rel)

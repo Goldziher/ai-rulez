@@ -1,7 +1,6 @@
 package agentplugins
 
 import (
-	"bytes"
 	"fmt"
 	"maps"
 	"slices"
@@ -9,6 +8,8 @@ import (
 	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
+
+	fmsplit "github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // Agent Skills frontmatter limits (https://agentskills.io/specification).
@@ -103,28 +104,18 @@ func checkSkillFields(dir string, fm map[string]any) []skillIssue {
 
 // frontmatter parses the YAML block between the leading "---" lines.
 func frontmatter(doc []byte) (map[string]any, error) {
-	doc = bytes.ReplaceAll(doc, []byte("\r\n"), []byte("\n"))
-	rest, ok := bytes.CutPrefix(doc, []byte("---\n"))
-	if !ok {
+	block := fmsplit.Split(doc)
+	if !block.Present {
 		return nil, fmt.Errorf("SKILL.md must start with a YAML frontmatter block")
 	}
-	var block []byte
-	if !bytes.HasPrefix(rest, []byte("---\n")) && !bytes.Equal(rest, []byte("---")) {
-		end := bytes.Index(rest, []byte("\n---\n"))
-		switch {
-		case end >= 0:
-		case bytes.HasSuffix(rest, []byte("\n---")):
-			end = len(rest) - len("\n---")
-		default:
-			return nil, fmt.Errorf("SKILL.md frontmatter is not terminated by ---")
-		}
-		block = rest[:end]
+	if !block.Closed {
+		return nil, fmt.Errorf("SKILL.md frontmatter is not terminated by ---")
 	}
-	fm := map[string]any{}
-	if err := yaml.Unmarshal(block, &fm); err != nil {
+	out := map[string]any{}
+	if err := yaml.Unmarshal([]byte(block.Raw), &out); err != nil {
 		return nil, fmt.Errorf("SKILL.md frontmatter is not valid YAML: %w", err)
 	}
-	return fm, nil
+	return out, nil
 }
 
 func stringMap(v any) bool {
