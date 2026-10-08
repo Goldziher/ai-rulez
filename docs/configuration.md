@@ -1538,6 +1538,18 @@ Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-l
 | `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB), `max_clone_files` (default 20000; each entry counts as at least 4 KiB toward `max_clone_bytes`; `AI_RULEZ_MAX_CLONE_FILES` sets it globally): skills served from a git repository or directory. A source over a limit is an error. |
 | `[lock] enforce` | The skills server refuses a served skill whose digest is not pinned in `ai-rulez.lock`. |
 
+### `[ard]`
+
+The [Agentic Resource Discovery](ard.md) manifest written by `publish --emit ard`. Optional.
+
+| Key | Meaning |
+| --- | ------- |
+| `publisher` | Required. Fully qualified domain name the identifiers are anchored to. |
+| `namespace` | Required. Identifier segment between publisher and name; colons separate sub-segments. |
+| `base_url` | https location of `skills/<name>/SKILL.md` (written next to `ard.json`). |
+| `plugin_type` | Media type of plugin entries. |
+| `queries` | `representativeQueries` (1 to 5 each) by resource name. |
+
 ### `[publish]`
 
 What [`ai-rulez publish`](publish.md) ships and its policy gates. All optional; it has no credential keys.
