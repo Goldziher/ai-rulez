@@ -1,6 +1,9 @@
 package llmstxt
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // Link is one entry of a file-list section.
 type Link struct {
@@ -63,7 +66,7 @@ func writeSection(sb *strings.Builder, s Section) {
 	sb.WriteString("\n## " + oneLine(s.Name) + "\n\n")
 	for _, l := range s.Links {
 		sb.WriteString("- [" + escapeTitle(oneLine(l.Title)) + "](" + escapeTarget(l.URL) + ")")
-		if note := oneLine(l.Note); note != "" {
+		if note := escapeText(oneLine(l.Note)); note != "" {
 			sb.WriteString(": " + note)
 		}
 		sb.WriteString("\n")
@@ -73,11 +76,18 @@ func writeSection(sb *strings.Builder, s Section) {
 // oneLine collapses all whitespace runs to single spaces.
 func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 
-var titleEscaper = strings.NewReplacer(`\`, `\\`, "[", `\[`, "]", `\]`)
+// textEscaper backslash-escapes the characters that start a link, an image or
+// raw HTML, so untrusted text renders as text.
+var textEscaper = strings.NewReplacer(`\`, `\\`, "[", `\[`, "]", `\]`, "<", `\<`, ">", `\>`, "!", `\!`)
 
-func escapeTitle(s string) string { return titleEscaper.Replace(s) }
+func escapeTitle(s string) string { return textEscaper.Replace(oneLine(s)) }
 
-var targetEscaper = strings.NewReplacer(" ", "%20", "(", "%28", ")", "%29", "\t", "%09")
+func escapeText(s string) string { return textEscaper.Replace(s) }
+
+var targetEscaper = strings.NewReplacer(
+	" ", "%20", "(", "%28", ")", "%29", "\t", "%09", "\n", "%0A", "\r", "%0D", "<", "%3C", ">", "%3E",
+	"\v", "%0B", "\f", "%0C",
+)
 
 func escapeTarget(s string) string {
 	return targetEscaper.Replace(strings.TrimSpace(s))
@@ -118,8 +128,51 @@ func RenderFull(title, summary string, pages []Page) string {
 	return sb.String()
 }
 
+// setextRe matches a setext underline: a run of = or - (up to three spaces of indent).
+var setextRe = regexp.MustCompile(`^ {0,3}(=+|-+)[ \t]*$`)
+
+// isSetextText reports whether line can be the text of a setext heading.
+func isSetextText(line string) bool {
+	t := strings.TrimSpace(line)
+	return t != "" && fenceMarker(line) == "" && !headingRe.MatchString(line) && !setextRe.MatchString(line) &&
+		!strings.HasPrefix(line, "    ") && !strings.HasPrefix(line, "\t") && !listItemRe.MatchString(t) && !strings.HasPrefix(t, ">")
+}
+
+// atxFromSetext rewrites setext headings (a text line over a === or --- line) as
+// ATX headings so demote can see them. Fenced code is left alone; a paragraph
+// line that looks like a list item, quote or indented code is not a heading text.
+func atxFromSetext(lines []string) {
+	fence := ""
+	for i, line := range lines {
+		if marker := fenceMarker(line); marker != "" {
+			switch {
+			case fence == "":
+				fence = marker
+			case marker == fence:
+				fence = ""
+			}
+			continue
+		}
+		if fence != "" || i == 0 {
+			continue
+		}
+		m := setextRe.FindStringSubmatch(line)
+		prev := lines[i-1]
+		if m == nil || !isSetextText(prev) {
+			continue
+		}
+		level := "#"
+		if m[1][0] == '-' {
+			level = "##"
+		}
+		lines[i-1] = level + " " + strings.TrimSpace(prev)
+		lines[i] = ""
+	}
+}
+
 func demote(body string) string {
 	lines := strings.Split(body, "\n")
+	atxFromSetext(lines)
 	fence := ""
 	for i, line := range lines {
 		if marker := fenceMarker(line); marker != "" {
