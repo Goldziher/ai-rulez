@@ -268,13 +268,14 @@ func (r *runner) scanSecrets(abs string, no int, line string) {
 // customSecrets compiles the configured patterns; an invalid one was already
 // reported by ValidateSettings and is skipped here.
 func (r *runner) customSecrets() []secretPattern {
-	var out []secretPattern
-	for _, p := range r.security().SecretPatterns {
-		if re, err := regexp.Compile(p.Regex); err == nil {
-			out = append(out, secretPattern{name: p.Name, re: re})
+	r.secOnce.Do(func() {
+		for _, p := range r.security().SecretPatterns {
+			if re, err := regexp.Compile(p.Regex); err == nil {
+				r.secRes = append(r.secRes, secretPattern{name: p.Name, re: re})
+			}
 		}
-	}
-	return out
+	})
+	return r.secRes
 }
 
 // maskSecret keeps enough of a match to find it and never prints the rest, so a
