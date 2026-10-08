@@ -1,6 +1,7 @@
 package okfbridge
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,7 +63,7 @@ func TestRenderedFilesExportByteForByte(t *testing.T) {
 	put("rules/go.md", KindRule, "", "go", "---\npriority: high\n---\n# Go\n")
 	put("skills/review/SKILL.md", KindSkill, "", "review", "---\ndescription: \"Reviews code\"\npriority: medium\n---\n# Review\n")
 	put("domains/web/context/ui.md", KindContext, "web", "ui", "# UI\n")
-	if err := RefreshIndexes(dir); err != nil {
+	if err := RefreshIndexes(context.Background(), dir); err != nil {
 		t.Fatal(err)
 	}
 	tree, err := config.ScanContentTree(dir)
@@ -86,7 +87,7 @@ func TestRenderedFilesExportByteForByte(t *testing.T) {
 
 func TestRefreshIndexesListsContentAndDropsStaleOnes(t *testing.T) {
 	dir := writeTree(t, map[string]string{})
-	if err := RefreshIndexes(dir); err != nil {
+	if err := RefreshIndexes(context.Background(), dir); err != nil {
 		t.Fatal(err)
 	}
 	root, err := os.ReadFile(filepath.Join(dir, "index.md"))
@@ -104,7 +105,7 @@ func TestRefreshIndexesListsContentAndDropsStaleOnes(t *testing.T) {
 	if err := os.WriteFile(rule, data, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := RefreshIndexes(dir); err != nil {
+	if err := RefreshIndexes(context.Background(), dir); err != nil {
 		t.Fatal(err)
 	}
 	if got := readTree(t, dir)["rules/index.md"]; !strings.Contains(got, "[A](a.md)") {
@@ -113,7 +114,7 @@ func TestRefreshIndexesListsContentAndDropsStaleOnes(t *testing.T) {
 	if err := os.Remove(rule); err != nil {
 		t.Fatal(err)
 	}
-	if err := RefreshIndexes(dir); err != nil {
+	if err := RefreshIndexes(context.Background(), dir); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "rules", "index.md")); !os.IsNotExist(err) {

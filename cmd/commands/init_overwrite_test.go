@@ -3,6 +3,7 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -52,9 +53,10 @@ func TestShouldOverwriteConfigIgnoresYesFlag(t *testing.T) {
 
 func setForce(t *testing.T, yes, force bool) {
 	t.Helper()
-	oldYes, oldForce, oldFrom := autoYes, initForce, fromFlag
-	autoYes, initForce, fromFlag = yes, force, ""
-	t.Cleanup(func() { autoYes, initForce, fromFlag = oldYes, oldForce, oldFrom })
+	oldYes, oldFrom := autoYes, fromFlag
+	autoYes, fromFlag = yes, ""
+	setForceFlag(t, force)
+	t.Cleanup(func() { autoYes, fromFlag = oldYes, oldFrom })
 }
 
 func existingConfig(t *testing.T) (dir, configDir string) {
@@ -72,7 +74,7 @@ func TestInitYesRefusesToReplaceAnExistingDirectory(t *testing.T) {
 	setForce(t, true, false)
 	withPipeStdin(t, "")
 
-	err := prepareExistingConfigDir(configDir)
+	err := prepareExistingConfigDir(InitCmd, configDir)
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "already exists")
@@ -83,7 +85,7 @@ func TestInitForceMovesTheExistingDirectoryToABackup(t *testing.T) {
 	dir, configDir := existingConfig(t)
 	setForce(t, false, true)
 
-	require.NoError(t, prepareExistingConfigDir(configDir))
+	require.NoError(t, prepareExistingConfigDir(InitCmd, configDir))
 
 	assert.NoDirExists(t, configDir)
 	backups, err := filepath.Glob(filepath.Join(dir, ".ai-rulez.bak-*"))
@@ -99,7 +101,7 @@ func TestInitWithoutAnExistingDirectoryNeedsNoForce(t *testing.T) {
 	chdir(t, dir)
 	setForce(t, false, false)
 
-	assert.NoError(t, prepareExistingConfigDir(filepath.Join(dir, ".ai-rulez")))
+	assert.NoError(t, prepareExistingConfigDir(InitCmd, filepath.Join(dir, ".ai-rulez")))
 }
 
 func TestBackupConfigDirNeverOverwritesAnEarlierBackup(t *testing.T) {
@@ -116,4 +118,11 @@ func TestBackupConfigDirNeverOverwritesAnEarlierBackup(t *testing.T) {
 	assert.NotEqual(t, got[0], got[1])
 	assert.DirExists(t, got[0])
 	assert.DirExists(t, got[1])
+}
+
+func setForceFlag(t *testing.T, force bool) {
+	t.Helper()
+	old := initForceFlag(InitCmd)
+	require.NoError(t, InitCmd.Flags().Set("force", strconv.FormatBool(force)))
+	t.Cleanup(func() { _ = InitCmd.Flags().Set("force", strconv.FormatBool(old)) })
 }
