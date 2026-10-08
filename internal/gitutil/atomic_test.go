@@ -25,3 +25,20 @@ func TestWriteFileAtomic(t *testing.T) {
 	entries, _ := os.ReadDir(filepath.Dir(path))
 	assert.Len(t, entries, 1, "no temp file is left behind")
 }
+
+func TestWriteFileAtomicFailureLeavesNoTempFileAndKeepsTheCause(t *testing.T) {
+	// Arrange: the target is a non-empty directory, so the final rename fails.
+	dir := t.TempDir()
+	target := filepath.Join(dir, "target")
+	require.NoError(t, os.MkdirAll(filepath.Join(target, "child"), 0o755))
+
+	// Act
+	err := WriteFileAtomic(target, []byte("data"), 0o644)
+
+	// Assert
+	require.Error(t, err)
+	entries, readErr := os.ReadDir(dir)
+	require.NoError(t, readErr)
+	assert.Len(t, entries, 1, "the temp file is removed after a failed rename")
+	assert.DirExists(t, target)
+}

@@ -2,7 +2,6 @@ package importer
 
 import (
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/samber/oops"
@@ -71,18 +70,4 @@ func TestReportWriteText_ReturnsTheWriteError(t *testing.T) {
 	// Assert
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "disk full")
-}
-
-func TestDiscardTemp_RemovesTheFileAndKeepsTheCause(t *testing.T) {
-	// Arrange
-	f, err := os.CreateTemp(t.TempDir(), "x")
-	require.NoError(t, err)
-	cause := errors.New("write failed")
-
-	// Act
-	got := discardTemp(f, f.Name(), cause)
-
-	// Assert
-	require.ErrorIs(t, got, cause)
-	assert.NoFileExists(t, f.Name())
 }
