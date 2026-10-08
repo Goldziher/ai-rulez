@@ -43,9 +43,14 @@ func resetFlags(c *cobra.Command) {
 		if !f.Changed {
 			return
 		}
-		if sv, ok := f.Value.(pflag.SliceValue); ok {
+		_, isFormat := f.Annotations[formatValuesAnnotation]
+		switch sv, isSlice := f.Value.(pflag.SliceValue); {
+		case isSlice:
 			_ = sv.Replace(nil)
-		} else {
+		case isFormat && f.Value.Set("") == nil:
+			// addFormatFlag shows "text" as the default, but the variable's real default is empty.
+			// Restoring "text" would leave validate --format set, which only --strict accepts.
+		default:
 			_ = f.Value.Set(f.DefValue)
 		}
 		f.Changed = false
