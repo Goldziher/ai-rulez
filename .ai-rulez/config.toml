@@ -1,6 +1,6 @@
 version = "5.0"
 name = "AI-Rulez"
-description = "AI-powered development governance CLI and multi-runtime tooling."
+description = "Standards-compliant lifecycle tool for agent knowledge and capabilities."
 gitignore = true
 
 presets = ["claude", "codex", "hermes", "opencode"]

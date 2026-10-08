@@ -13,9 +13,20 @@ targets:
 
 # AI-Rulez Overview
 
-AI-Rulez centralizes AI assistant governance in the `.ai-rulez/` directory and generates tool-specific outputs
-for 52 built-in harness presets, including Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, Devin, and Kilo
-(`docs/harnesses.md` has the per-preset feature matrix).
+AI-Rulez is a standards-compliant lifecycle tool for agent knowledge and capabilities. It keeps rules, context, skills,
+agents, commands, hooks, permissions and MCP servers in one source of truth, `.ai-rulez/`, and takes them through
+author -> generate -> bundle -> lint/validate -> govern -> publish.
+
+- Author: `.ai-rulez/` markdown and `config.toml`; OKF (Open Knowledge Format) is the native knowledge format.
+- Generate: native files for 52 built-in harness presets, including Claude Code, Cursor, Codex, Copilot, Gemini CLI,
+  OpenCode, Devin, and Kilo (`docs/harnesses.md` has the per-preset feature matrix).
+- Bundle and publish: plugin bundles, Agent Plugins, ARD manifests and OKF bundles (`generate --plugin`, `export okf`,
+  `publish`).
+- Validate: `validate`, `scan` and `okf validate` with stable `AR` codes and each standard's own schema or rules.
+- Govern: `ai-rulez.lock`, approvals, Sigstore signing, organization policy and SBOM.
+- Standards named as supported must be generated, validated and conformance-tested; `docs/standards.md` carries the
+  pinned spec versions and test status, and the README marks unimplemented ones "planned". Do not claim conformance
+  ahead of the matching implementation and test.
 
 Key concepts:
 
