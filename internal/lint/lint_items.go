@@ -82,6 +82,9 @@ func (r *runner) checkDescription(it *item, d doc) {
 	}
 	desc := r.description(it)
 	line := d.lineOf("description", 1)
+	if desc == "" && it.cf.MalformedFrontmatter {
+		return // AR306 reports the unreadable block; the description is not missing
+	}
 	if desc == "" {
 		r.add(CodeDescriptionMissing, it.abs, 1, "%s %q has no description in its frontmatter", it.kind, itemID(it.kind, it.cf))
 		return

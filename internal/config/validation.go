@@ -307,6 +307,26 @@ func (c *Config) validateMalformedFrontmatter() error {
 		return nil
 	}
 
+	bad := c.MalformedFrontmatterPaths()
+	if len(bad) == 0 {
+		return nil
+	}
+	problems := make([]string, 0, len(bad))
+	for _, p := range bad {
+		problems = append(problems, FrontmatterProblem(p))
+	}
+	return oops.
+		With("paths", bad).
+		Hint("Check for unquoted values containing ': ' in the frontmatter block, e.g. description: key: value").
+		Errorf("%s malformed YAML frontmatter in %d file(s):\n  %s", CodeFrontmatterMalformed, len(bad), strings.Join(problems, "\n  "))
+}
+
+// MalformedFrontmatterPaths lists the content files whose frontmatter block
+// could not be parsed.
+func (c *Config) MalformedFrontmatterPaths() []string {
+	if c.Content == nil {
+		return nil
+	}
 	var bad []string
 	visit := func(files []ContentFile) {
 		for i := range files {
@@ -334,14 +354,7 @@ func (c *Config) validateMalformedFrontmatter() error {
 		visit(domain.Checks)
 	}
 
-	if len(bad) == 0 {
-		return nil
-	}
-
-	return oops.
-		With("paths", bad).
-		With("hint", "Check for unquoted values containing ': ' in the frontmatter block, e.g. description: key: value").
-		Errorf("malformed YAML frontmatter in %d file(s): %q", len(bad), bad)
+	return bad
 }
 
 // validateSkillDescriptions checks that every skill carries a description.
@@ -369,7 +382,8 @@ func (c *Config) validateSkillDescriptions() error {
 func (c *Config) validateSkillSlice(skills []ContentFile, scope string) error {
 	for i := range skills {
 		skill := &skills[i]
-		if SkillDescription(skill.Metadata) != "" {
+		// A malformed block is reported as such (AR306); its description is unreadable, not missing.
+		if skill.MalformedFrontmatter || SkillDescription(skill.Metadata) != "" {
 			continue
 		}
 
@@ -471,6 +485,8 @@ func validateBuiltInPreset(preset *Preset, index int) error {
 	hint := fmt.Sprintf("Use a valid built-in preset name\nAvailable presets: %s", getBuiltInPresetNames())
 	if note, removed := removedPresetHints[preset.BuiltIn]; removed {
 		hint = note + "\n" + hint
+	} else if near := nearestKey(preset.BuiltIn, AllPresetNames()); near != "" {
+		hint = fmt.Sprintf("did you mean %q?\n", near) + hint
 	}
 	return oops.
 		With("field", fmt.Sprintf("presets[%d]", index)).
@@ -478,6 +494,22 @@ func validateBuiltInPreset(preset *Preset, index int) error {
 		With("available_presets", getBuiltInPresetNames()).
 		Hint(hint).
 		Errorf("unknown built-in preset: %q%s", preset.BuiltIn, removedPresetSuffix(preset.BuiltIn))
+}
+
+// UnknownPresetError is the error for the first built-in preset of cfg that does
+// not exist, with the closest name when there is one; nil when every built-in
+// preset is known. A schema check reports the same typo as a dump of the preset
+// schema's alternatives, which this explains in one line.
+func UnknownPresetError(cfg *Config) error {
+	for i := range cfg.Presets {
+		p := &cfg.Presets[i]
+		if p.IsBuiltIn() {
+			if err := validateBuiltInPreset(p, i); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // validateProviderPreset checks a custom preset backed by a declarative provider spec.

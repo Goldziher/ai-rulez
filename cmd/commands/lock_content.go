@@ -52,6 +52,10 @@ func loadForLockCheckContext(ctx context.Context, path string) (cfg *config.Conf
 
 var loadWithCacheFallback = govview.LoadWithCacheFallback
 
+// lockMissingLine is the drift line of `generate --locked` or `--frozen` run
+// without an ai-rulez.lock.
+const lockMissingLine = lockfile.FileName + " is missing and --locked/--frozen require it"
+
 // verifyLockedSources is the content half of `generate --locked`: when the lock
 // pins authored content, every source must still match it. The lock is read, never
 // written. It returns the differing sources, one line each.
@@ -64,7 +68,7 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 		return []string{msg}, nil
 	}
 	if lock == nil && (generateLocked || generateFrozen) {
-		return []string{lockfile.FileName + " is missing and --locked/--frozen require it; run `ai-rulez lock`"}, nil
+		return []string{lockMissingLine}, nil
 	}
 	if lock == nil || !lock.HasContentPins() {
 		if cfg.LockEnforced() {

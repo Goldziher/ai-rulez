@@ -62,6 +62,7 @@ func (s Severity) rank() int {
 // Check names, stable for JSON consumers.
 const (
 	CheckConfig    = "config"
+	CheckPolicy    = "policy"
 	CheckPresets   = "presets"
 	CheckDrift     = "drift"
 	CheckGitignore = "gitignore"
@@ -153,6 +154,7 @@ func Run(ctx context.Context, o Options) *Report {
 	}
 	checks := []check{
 		checkConfig,
+		checkPolicy,
 		checkPresets,
 		checkMCPEnv,
 		checkDrift,
