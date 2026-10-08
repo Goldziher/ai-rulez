@@ -22,6 +22,8 @@ const (
 	ardDefaultGit = "github.com"
 	ardRawHost    = "raw.githubusercontent.com"
 	ardAgentTag   = "agent-plugins"
+	ardStdio      = "stdio"
+	ardHTTP       = "streamable-http"
 	ardMaxQueries = ard.MaxQueries
 )
 
@@ -231,19 +233,19 @@ func roundRobin(skills []ARDSkill, perName map[string][]string) []string {
 func ardServerCard(s *ARDServer) (map[string]any, error) {
 	transport := map[string]any{}
 	switch strings.ToLower(s.Transport) {
-	case "", "stdio":
-		transport["type"] = "stdio"
+	case "", ardStdio:
+		transport["type"] = ardStdio
 		if s.URL != "" {
-			transport["type"] = "streamable-http"
+			transport["type"] = ardHTTP
 		}
-	case "http", "streamable-http":
-		transport["type"] = "streamable-http"
+	case "http", ardHTTP:
+		transport["type"] = ardHTTP
 	case "sse":
 		transport["type"] = "sse"
 	default:
 		return nil, oops.Errorf("%s: MCP server %q has the unknown transport %q", ard.CodeEntry, s.Name, s.Transport)
 	}
-	if transport["type"] == "stdio" {
+	if transport["type"] == ardStdio {
 		if s.Command != "" {
 			transport["command"] = s.Command
 		}
