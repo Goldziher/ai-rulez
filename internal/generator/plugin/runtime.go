@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -83,6 +84,7 @@ func GenerateMember(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 // identical, so keeping the first is safe.
 func renderRuntimes(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
+	var kept map[string]bool // skills the Agent Plugins library packaged, when that runtime is requested
 	for _, runtime := range m.Runtimes {
 		renderer, ok := rendererFor(runtime)
 		if !ok {
@@ -93,9 +95,53 @@ func renderRuntimes(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		if err != nil {
 			return nil, oops.With("runtime", runtime).Wrapf(err, "render plugin runtime")
 		}
+		if runtime == config.PluginRuntimeAgentPlugins {
+			kept = packagedSkills(outs, baseDir)
+		}
 		outputs = append(outputs, outs...)
 	}
+	if kept != nil {
+		outputs = dropUnpackagedSkills(outputs, kept, baseDir)
+	}
 	return dedupeByPath(outputs), nil
+}
+
+// packagedSkills returns the names of the skills in an Agent Plugins bundle.
+func packagedSkills(outs []config.OutputFile, baseDir string) map[string]bool {
+	kept := map[string]bool{}
+	for _, o := range outs {
+		if name, rest, ok := rootSkillPath(o.Path, baseDir); ok && rest == "SKILL.md" {
+			kept[name] = true
+		}
+	}
+	return kept
+}
+
+// dropUnpackagedSkills removes the root skills/ files of every skill the Agent
+// Plugins library dropped (name mismatch, missing description), so a runtime that
+// shares skills/ cannot bring them back.
+func dropUnpackagedSkills(outputs []config.OutputFile, kept map[string]bool, baseDir string) []config.OutputFile {
+	out := outputs[:0:0]
+	for _, o := range outputs {
+		if name, _, ok := rootSkillPath(o.Path, baseDir); ok && !kept[name] {
+			continue
+		}
+		out = append(out, o)
+	}
+	return out
+}
+
+// rootSkillPath splits baseDir/skills/<name>/<rest> into name and rest.
+func rootSkillPath(p, baseDir string) (name, rest string, ok bool) {
+	rel, err := filepath.Rel(baseDir, p)
+	if err != nil {
+		return "", "", false
+	}
+	after, found := strings.CutPrefix(filepath.ToSlash(rel), "skills/")
+	if !found {
+		return "", "", false
+	}
+	return strings.Cut(after, "/")
 }
 
 // dedupeByPath returns outputs with duplicate paths removed, keeping the first
