@@ -144,3 +144,18 @@ func TestRequiredLockFindings(t *testing.T) {
 	cfg.Signing.Require = nil
 	assert.Empty(t, RequiredLockFindings(cfg, nil, testNow), "nothing is required")
 }
+
+func TestReadBundleFilesRefusesAnAttestationOverTheLimit(t *testing.T) {
+	// Arrange
+	path := filepath.Join(t.TempDir(), "ai-rulez.lock.sigstore.json")
+	require.NoError(t, os.WriteFile(path, []byte(strings.Repeat(" ", MaxBundleBytes+1)), 0o600))
+
+	// Act
+	_, err := ReadBundleFiles(path)
+
+	// Assert
+	var se *Error
+	require.ErrorAs(t, err, &se)
+	assert.Equal(t, CodeInvalid, se.Code)
+	assert.Contains(t, err.Error(), "size limit")
+}
