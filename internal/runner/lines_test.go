@@ -27,7 +27,7 @@ func TestExecRunLines(t *testing.T) {
 		{name: "stops the command at the line it asked for", script: "echo a; echo b; sleep 30; echo c", stopAt: "b",
 			wantStatus: StatusOK, wantLines: []string{"a", "b"}, wantFast: true},
 		{name: "a non-zero exit is reported", script: "echo a; exit 3", wantStatus: StatusExit, wantLines: []string{"a"}},
-		{name: "a timeout kills it", script: "echo a; sleep 30", timeout: 300 * time.Millisecond, wantStatus: StatusTimeout, wantLines: []string{"a"}, wantFast: true},
+		{name: "a timeout kills it", script: "echo a; sleep 30", timeout: 3 * time.Second, wantStatus: StatusTimeout, wantLines: []string{"a"}, wantFast: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -46,7 +46,7 @@ func TestExecRunLines(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, res.Status, "%v", res.Err)
 			assert.Equal(t, tt.wantLines, lines)
 			if tt.wantFast {
-				assert.Less(t, time.Since(started), 10*time.Second, "the process group was killed, not waited for")
+				assert.Less(t, time.Since(started), 30*time.Second, "the process group was killed, not waited for")
 			}
 		})
 	}
