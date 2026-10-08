@@ -10,7 +10,7 @@
 
 - [Installation](https://goldziher.github.io/ai-rulez/installation/): Install ai-rulez using your preferred package manager.
 - [Quick Start](https://goldziher.github.io/ai-rulez/quick-start/): Get AI-Rulez running in 5 minutes.
-- [Standards](https://goldziher.github.io/ai-rulez/standards/): Placeholder for the conformance page owned by feat/r5-conf.
+- [Standards](https://goldziher.github.io/ai-rulez/standards/): ai-rulez claims conformance with a standard only when a passing test backs the claim.
 - [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/): This page collects the breaking changes of the v5 release and what ai-rulez migrate v5 does about each.
 
 ## Author
@@ -74,9 +74,11 @@
 - [Skill Search](https://goldziher.github.io/ai-rulez/search/): ai-rulez search ranks the skills your project serves against a query, with the same ranker as the findskill tool of mcp --serve-skills, and measures that ranking against labeled queries.
 - [Review](https://goldziher.github.io/ai-rulez/review/): ai-rulez review scores skills, agents and commands against a rubric you own.
 - [LLM Access](https://goldziher.github.io/ai-rulez/llm/): internal/llm.Client is the one Go interface for reaching a language model, so the provider, the cost controls and the privacy rules live in one place.
+- [Performance](https://goldziher.github.io/ai-rulez/performance/): How ai-rulez is benchmarked, how a regression is caught, and what the optimization passes changed.
 
 ## Reference
 
+- [Standards](https://goldziher.github.io/ai-rulez/standards/): ai-rulez claims conformance with a standard only when a passing test backs the claim.
 - [CLI Commands](https://goldziher.github.io/ai-rulez/cli/): All AI-Rulez CLI commands and flags.
 - [Schema](https://goldziher.github.io/ai-rulez/schema/): The ai-rulez configuration is validated against a formal JSON Schema to provide editor support like autocompletion and real-time validation.
 - [Embedding (Go API)](https://goldziher.github.io/ai-rulez/embedding/): github.com/Goldziher/ai-rulez/v5/pkg/airulez loads a project, validates it, plans or applies a generate run and writes or checks its lock from Go, inside a process that may serve many projects at...

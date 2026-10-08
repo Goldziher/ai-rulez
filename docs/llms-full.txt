@@ -507,7 +507,38 @@ Continue along the lifecycle:
 
 Source: https://goldziher.github.io/ai-rulez/standards/
 
-Placeholder for the conformance page owned by feat/r5-conf.
+ai-rulez claims conformance with a standard only when a passing test backs the claim. Every test named here is in
+[`tests/conformance`](https://github.com/Goldziher/ai-rulez/tree/main/tests/conformance) and runs with `go test ./...`. It
+validates a golden or freshly generated document against the standard's own schema, vendored and pinned under
+`tests/conformance/schemas`, with no network access. The README in that directory says how to refresh a schema.
+
+Status values:
+
+- **conformant**: our output validates against the standard's official machine-readable schema in a test.
+- **partial**: tested, but the standard has no official schema (the test transcribes its written rules), or only part of
+  what we emit is covered. The gaps column says what is missing.
+- **planned**: implemented or intended, with no conformance test yet.
+
+| Standard | Pinned version | Status | What we generate and validate | Test | Known gaps |
+| --- | --- | --- | --- | --- | --- |
+| [Agent Plugins](https://agent-plugins.org) | 1.0.0 (published, default) and 1.1.0 (working draft); [schema repo](https://github.com/agentplugins/agent-plugins-spec) at `ff8ab5e` | conformant | `plugin.json`, `mcp.json` and `skills/` from `generate --plugin`; read back and checked by `validate` ([page](agent-plugins.md)) | `TestAgentPluginsGoldenConformsToTheOfficialSchemas`, `TestAgentPluginsGeneratedByTheCLIConformToTheOfficialSchemas` | The official name pattern uses a lookahead RE2 cannot compile; the test applies the same rule in Go. Extension namespaces are not schema-checked beyond the base manifest. |
+| [ARD](https://agenticresourcediscovery.org/) | 0.91 (proposal); [ard-spec](https://github.com/ards-project/ard-spec) at `b76f235` | conformant | `ard.json` from `publish --emit ard`; entry and manifest schema plus the URN grammar ([page](ard.md)) | `TestARDManifestGoldenConformsToTheEntrySchema`, `TestARDValidatorAcceptsTheGoldenAndNamesItsSpecVersion` | The spec is a proposal; media types and term names can change. The plugin entry type is an ai-rulez vendor type. The golden comes from the in-package model, not a release. |
+| [llms.txt](https://llmstxt.org/) | No versioned release; format as published at llmstxt.org | partial | `llms.txt` and `llms-full.txt` from the `llms-txt` preset, and for the docs site ([page](llms-txt.md)) | `TestGeneratedLLMSTxtFollowsTheFormat`, `TestPublishedDocsSiteLLMSTxtFollowsTheFormat` | No official schema. The test transcribes the format (H1, optional blockquote, H2 link lists). `llms-full.txt` is checked for its H1 only; the format does not define it. |
+| [Agent Skills](https://agentskills.io/specification) | No versioned release; specification as published at agentskills.io | partial | `SKILL.md` for every skill, with its resources, under `.claude/skills`, `.agents/skills` and `skills/` ([page](skills.md)) | `TestGeneratedSkillsFollowTheAgentSkillsSpecification`, plus the skill checks in the Agent Plugins tests | No official schema. The test transcribes the frontmatter rules (name, description, compatibility, license, metadata, allowed-tools). Resource layout is not checked. |
+| [AGENTS.md](https://agents.md) | No versioned release | partial | `AGENTS.md` at the project root ([page](agents-md.md)) | `TestGeneratedAgentsMDIsPlainMarkdownAtTheRoot` | The format has no schema and no required fields. The test checks that the file is plain Markdown at the root with the project's guidance. Nested `AGENTS.md` files in monorepos are not covered. |
+| MCP server configuration | The `mcp.json` schema of Agent Plugins 1.0.0 and 1.1.0 | partial | `mcp.json` (stdio, streamable-http and sse servers) | `TestMCPServerEntriesUseTheSchemaTransportTypes`, plus the `mcp.json` schema check in the Agent Plugins tests | The per-harness files (`.mcp.json`, `.codex/config.toml` and others) follow each tool's own format and are not validated against a schema here. |
+| MCP server card | None pinned | planned | Embedded as `application/mcp-server-card+json` entries in `ard.json` | None | No official card schema is vendored; the card shape is only checked as part of the ARD entry. |
+| [CycloneDX](https://cyclonedx.org/) | 1.6 | conformant | `ai-rulez sbom` ([page](sbom.md)) | `TestCycloneDXOutputConformsToTheOfficial16Schema` | The test validates structure. NTIA minimum-element and license-expression policy checks are not run. |
+| [SPDX](https://spdx.dev/) | 2.3 (JSON) | conformant | `ai-rulez sbom --format spdx-json` | `TestSPDXOutputConformsToTheOfficial23Schema` | Structure only. The in-package tests also check unique identifiers and resolving relationships. |
+| [in-toto Statement](https://github.com/in-toto/attestation) and [DSSE](https://github.com/secure-systems-lab/dsse) | Statement v1; DSSE v1 | partial | Signed statements inside Sigstore bundles from `ai-rulez sign`; `verify` checks them ([page](signing.md)) | `TestSignedStatementIsADSSEEnvelopeOverAnInTotoStatement` | Neither project publishes a JSON Schema, so the vendored schemas are hand-written from the specifications. Sigstore bundle structure and certificate chains are covered by `internal/signing` tests, not by a conformance schema. The `v0.1` statement type is accepted on verification only. |
+| OKF | v0.2 | not covered here | Native format ([page](okf.md)) | `internal/okf` | Tracked in [#281](https://github.com/Goldziher/ai-rulez/issues/281). |
+| OpenTelemetry (OTLP) | n/a | not covered here | Export only ([page](telemetry.md)) | n/a | No document we write is validated against an OTLP schema. |
+
+#### Reading a status
+
+A conformant status says the documents the tests produce validate. It does not say every possible configuration does:
+the tests use representative projects (rules, context, skills, stdio and remote MCP servers). A schema accepting a
+document also does not mean a given client will load it; the per-harness behaviour is in [harness traps](harness-traps.md).
 
 ## Migrating to v5
 
@@ -22087,6 +22118,137 @@ v, err := llm.Judge(ctx, client, rubric, transcript)   // v.Score in [0,1], v.Ra
 ```
 
 `llm.Judge` uses structured output at temperature 0 and `llm.JudgePromptVersion` as the cache version. It asks for at least `llm.DefaultJudgeCompletionTokens` (2048) completion tokens, because a reasoning model spends its thinking out of that budget before the verdict (`JudgeOptions.MinCompletionTokens` raises it). Change the judge prompt or schema and bump that constant. The transcript is sent as data between two marker lines that carry a token derived from the request's own content (so the transcript cannot predict or close it), and the system prompt tells the model to ignore instructions inside it. The reply must be exactly one JSON object with both `score` (in [0,1]) and `rationale`; anything else is a provider error, and a reply that fails that check is never written to the cache (a cached one is treated as a miss). Before sending, the rubric and transcript are scanned for secret-looking text (bearer tokens, `sk-...`, `AKIA...`, `api_key=...`, and every credential shape the security scan `AR001` recognises, such as `AIza...`, `ghp_...`, `xoxb-...` and private key blocks); `Judge` refuses when it finds any, and `llm.JudgeWith(..., llm.JudgeOptions{RedactSecrets: true})` sends them masked instead. The scan is a pattern match, not a guarantee. A feature must treat `errors.Is(err, llm.ErrNetworkDisabled)` as "refuse with a clear message" and `llm.ErrDryRun` as "skipped". In tests use `llm.NewFake()` (deterministic, no network) and `llm.Wrap(fake, cfg, opts)` to get the real middleware around it.
+
+## Performance
+
+Source: https://goldziher.github.io/ai-rulez/performance/
+
+How ai-rulez is benchmarked, how a regression is caught, and what the optimization passes changed.
+
+#### Running the benchmarks
+
+Every benchmark that reads a project builds a synthetic one in a temporary directory
+(`internal/testutil.BuildBenchTree`): rules, context, skills, agents and commands with frontmatter and prose, plus
+a git repository when the code under test asks git questions. Nothing touches the network.
+
+| Size   | Content files | Runs by default |
+| ------ | ------------- | --------------- |
+| small  | 10            | yes             |
+| medium | 200           | yes             |
+| large  | 2000          | with `AI_RULEZ_BENCH_LARGE=1` |
+
+```bash
+task test:benchmark                 # every benchmark, small and medium
+task test:benchmark:large           # adds the 2000-file project, one iteration each
+go test ./internal/lint -run '^$' -bench RunFull -benchmem -cpuprofile cpu.out
+go tool pprof -top -cum cpu.out
+```
+
+| Package | Benchmarks |
+| ------- | ---------- |
+| `internal/parser` | `ParseFrontmatter` (no/small/rich/CRLF/long body), `ParseFrontmatterBatch` |
+| `internal/tokens` | `Estimate`, `Count` (cl100k and byte ratio, prose and long-line input) |
+| `internal/config` | `LoadConfig` |
+| `internal/includes` | `LoadWithLocalInclude` |
+| `internal/lint` | `LoadTree`, `RunFull`, `Analyzers` (each analyzer alone), `SecretScan` (`DetectSecret`, `RedactSecrets`, `ScanText`), `SecretScanLongLine`, `SecretScanCustomPatterns`, `RunSkillTree`, `AnalyzerSelection` |
+| `internal/contentlock` | `Compute`, `BuildAndCompare` (lock digest, then verify) |
+| `internal/lockfile` | `SaveLoad` |
+| `internal/generator` | `Generate` (full and idempotent no-op), `GenerateLLMsTxt`, `Clean` (remove and dry run), `CheckDrift`, `SecretGate` |
+| `internal/review` | `Score` (collect and score), `Calibrate` |
+| `internal/mcp` | `ProjectTools` (tool dispatch), `SkillServer` (catalog build, `search_skills`, `load_skill`) |
+| `internal/verifiers` | `RegexFiles` |
+| `cmd/commands` | `Lock` (write and check), `PublishDryRun` (bundle, agent-plugins, ard), `OKF` (export, validate) |
+
+#### Regression tracking
+
+`scripts/bench.sh` runs a curated subset (benchmarks that start no process and do not fsync, so they measure the code
+and not the machine) with `-count=6` and compares the median time/op of each benchmark with
+`scripts/bench-baseline.txt`. It exits 1 when any benchmark is more than 25% slower. When `benchstat` is installed
+(or the machine is online, through `go run golang.org/x/perf/cmd/benchstat@latest`) its report is printed too.
+
+```bash
+scripts/bench.sh            # run, compare, fail on a >25% regression
+scripts/bench.sh --update   # re-record the baseline on this machine
+```
+
+Time per operation depends on the CPU, so the gate only applies when the baseline was recorded on the same CPU model
+as the run (the `cpu:` line of the output). Otherwise, or when there is no baseline, it prints a warning and exits 0.
+The CI `Benchmarks` job runs the script after the full benchmark run and uploads `bench-subset.txt`; to make the gate
+bite on the CI runners, commit that artifact as `scripts/bench-baseline.txt`.
+
+#### Optimization passes
+
+Numbers are time/op and B/op on an Apple M5 Pro that was running other builds at the same time (load average near
+50), taken as alternating runs of test binaries built from the commits below, so the ratios are reliable and the
+absolute values are not. Behavior is unchanged: the golden tests and every existing test pass, and each change that
+could alter a result has a test comparing it with the code it replaced.
+
+| Path (benchmark) | Change | Before | After |
+| ---------------- | ------ | ------ | ----- |
+| Credential scan of clean text, 37 KB (`lint SecretScan/DetectSecret/clean/large`) | each credential pattern runs only on text holding one of its literals | 6.1 ms | 0.30 ms (20x) |
+| Credential redaction of clean text (`SecretScan/RedactSecrets/clean/large`) | same gate in `secretpat.Redact` and `lint.RedactSecrets` | 6.1 ms, 0.9 MB | 0.28 ms, 0 B |
+| Redaction of text holding secrets (`SecretScan/RedactSecrets/dirty/large`) | same gate | 6.1 ms, 0.9 MB | 2.5 ms, 0.33 MB |
+| Security scan of one text (`SecretScan/ScanText/clean/large`) | credential gate, then literal gates on the shell-exec (`curl`, `wget`, `base64`, `eval`, `chmod`, `>`) and instruction-override patterns | 29 ms | 7.6 ms (3.8x) |
+| Same scan, allocations | ASCII-only lines skip the rune conversion and seen-set of the hidden-character scan | 1.33 MB | 1.18 MB (-11%) |
+| Configured secret patterns, 400 lines x 2 patterns (`SecretScanCustomPatterns`) | compiled once per run, not once per scanned line | 12 ms, 7.7 MB | 8 ms, 1.1 MB |
+| Lint of 200 content files (`lint RunFull/medium`) | all of the above, tree-relative paths memoized per run, backtick-token prose check only for path-like tokens | 570-660 ms, 53.5 MB, 667k allocs | 265-335 ms, 47.1 MB, 617k allocs |
+| Frontmatter parse of a 570 KB document (`parser ParseFrontmatter/longbody`) | find the closing marker by scanning instead of splitting and re-joining the document | 83.6 us, 228 KB | 10.2 us, 7 KB (8x) |
+| Frontmatter parse of 200 documents (`ParseFrontmatterBatch/medium`) | same | 1.29 ms, 2.09 MB | 1.0 ms, 1.59 MB |
+| Any-file verifier regex, 1000-file tree (`verifiers RegexFiles/medium`) | exclude globs compiled once per predicate, not once per matching file | 13.2 ms, 19.8 MB, 174k allocs | 1.3 ms, 61 KB, 238 allocs (10x) |
+
+The shell and instruction-override pre-checks compare ASCII literals without case in place and treat U+017F and
+U+212A as the `s` and `k` the patterns' case folding makes them, so a line the pattern would match always reaches it.
+
+#### What dominates elsewhere
+
+These were measured and not changed here.
+
+- **Process spawns per content file.** Loading a project with 200 skills took 91 s on the loaded machine before the
+  branch that batches `git ls-files` and `git check-ignore` per directory (0.5 s with it). The remaining
+  wall time of `generate`, `clean`, `lock` and `publish` on 200 to 2000 files is mostly git (`rev-parse`,
+  `ls-files`) and file-system calls; their CPU time is a small share.
+- **Token counting.** cl100k counting of the prompt text is the largest allocator in a lint run (about a third of
+  the bytes, in `regexp2` match objects); the memo that removes it is part of the same separate branch.
+- **Repeated loads.** `lock --check` and `publish --dry-run` load the configuration three to four times and run the
+  security scan again for the served skills. Sharing one load is a larger refactor than this pass.
+- **Publish at scale.** `publish --dry-run` on 2000 files allocates about 2.5 GB over 11 million objects.
+
+## Standards Conformance
+
+Source: https://goldziher.github.io/ai-rulez/standards/
+
+ai-rulez claims conformance with a standard only when a passing test backs the claim. Every test named here is in
+[`tests/conformance`](https://github.com/Goldziher/ai-rulez/tree/main/tests/conformance) and runs with `go test ./...`. It
+validates a golden or freshly generated document against the standard's own schema, vendored and pinned under
+`tests/conformance/schemas`, with no network access. The README in that directory says how to refresh a schema.
+
+Status values:
+
+- **conformant**: our output validates against the standard's official machine-readable schema in a test.
+- **partial**: tested, but the standard has no official schema (the test transcribes its written rules), or only part of
+  what we emit is covered. The gaps column says what is missing.
+- **planned**: implemented or intended, with no conformance test yet.
+
+| Standard | Pinned version | Status | What we generate and validate | Test | Known gaps |
+| --- | --- | --- | --- | --- | --- |
+| [Agent Plugins](https://agent-plugins.org) | 1.0.0 (published, default) and 1.1.0 (working draft); [schema repo](https://github.com/agentplugins/agent-plugins-spec) at `ff8ab5e` | conformant | `plugin.json`, `mcp.json` and `skills/` from `generate --plugin`; read back and checked by `validate` ([page](agent-plugins.md)) | `TestAgentPluginsGoldenConformsToTheOfficialSchemas`, `TestAgentPluginsGeneratedByTheCLIConformToTheOfficialSchemas` | The official name pattern uses a lookahead RE2 cannot compile; the test applies the same rule in Go. Extension namespaces are not schema-checked beyond the base manifest. |
+| [ARD](https://agenticresourcediscovery.org/) | 0.91 (proposal); [ard-spec](https://github.com/ards-project/ard-spec) at `b76f235` | conformant | `ard.json` from `publish --emit ard`; entry and manifest schema plus the URN grammar ([page](ard.md)) | `TestARDManifestGoldenConformsToTheEntrySchema`, `TestARDValidatorAcceptsTheGoldenAndNamesItsSpecVersion` | The spec is a proposal; media types and term names can change. The plugin entry type is an ai-rulez vendor type. The golden comes from the in-package model, not a release. |
+| [llms.txt](https://llmstxt.org/) | No versioned release; format as published at llmstxt.org | partial | `llms.txt` and `llms-full.txt` from the `llms-txt` preset, and for the docs site ([page](llms-txt.md)) | `TestGeneratedLLMSTxtFollowsTheFormat`, `TestPublishedDocsSiteLLMSTxtFollowsTheFormat` | No official schema. The test transcribes the format (H1, optional blockquote, H2 link lists). `llms-full.txt` is checked for its H1 only; the format does not define it. |
+| [Agent Skills](https://agentskills.io/specification) | No versioned release; specification as published at agentskills.io | partial | `SKILL.md` for every skill, with its resources, under `.claude/skills`, `.agents/skills` and `skills/` ([page](skills.md)) | `TestGeneratedSkillsFollowTheAgentSkillsSpecification`, plus the skill checks in the Agent Plugins tests | No official schema. The test transcribes the frontmatter rules (name, description, compatibility, license, metadata, allowed-tools). Resource layout is not checked. |
+| [AGENTS.md](https://agents.md) | No versioned release | partial | `AGENTS.md` at the project root ([page](agents-md.md)) | `TestGeneratedAgentsMDIsPlainMarkdownAtTheRoot` | The format has no schema and no required fields. The test checks that the file is plain Markdown at the root with the project's guidance. Nested `AGENTS.md` files in monorepos are not covered. |
+| MCP server configuration | The `mcp.json` schema of Agent Plugins 1.0.0 and 1.1.0 | partial | `mcp.json` (stdio, streamable-http and sse servers) | `TestMCPServerEntriesUseTheSchemaTransportTypes`, plus the `mcp.json` schema check in the Agent Plugins tests | The per-harness files (`.mcp.json`, `.codex/config.toml` and others) follow each tool's own format and are not validated against a schema here. |
+| MCP server card | None pinned | planned | Embedded as `application/mcp-server-card+json` entries in `ard.json` | None | No official card schema is vendored; the card shape is only checked as part of the ARD entry. |
+| [CycloneDX](https://cyclonedx.org/) | 1.6 | conformant | `ai-rulez sbom` ([page](sbom.md)) | `TestCycloneDXOutputConformsToTheOfficial16Schema` | The test validates structure. NTIA minimum-element and license-expression policy checks are not run. |
+| [SPDX](https://spdx.dev/) | 2.3 (JSON) | conformant | `ai-rulez sbom --format spdx-json` | `TestSPDXOutputConformsToTheOfficial23Schema` | Structure only. The in-package tests also check unique identifiers and resolving relationships. |
+| [in-toto Statement](https://github.com/in-toto/attestation) and [DSSE](https://github.com/secure-systems-lab/dsse) | Statement v1; DSSE v1 | partial | Signed statements inside Sigstore bundles from `ai-rulez sign`; `verify` checks them ([page](signing.md)) | `TestSignedStatementIsADSSEEnvelopeOverAnInTotoStatement` | Neither project publishes a JSON Schema, so the vendored schemas are hand-written from the specifications. Sigstore bundle structure and certificate chains are covered by `internal/signing` tests, not by a conformance schema. The `v0.1` statement type is accepted on verification only. |
+| OKF | v0.2 | not covered here | Native format ([page](okf.md)) | `internal/okf` | Tracked in [#281](https://github.com/Goldziher/ai-rulez/issues/281). |
+| OpenTelemetry (OTLP) | n/a | not covered here | Export only ([page](telemetry.md)) | n/a | No document we write is validated against an OTLP schema. |
+
+#### Reading a status
+
+A conformant status says the documents the tests produce validate. It does not say every possible configuration does:
+the tests use representative projects (rules, context, skills, stdio and remote MCP servers). A schema accepting a
+document also does not mean a given client will load it; the per-harness behaviour is in [harness traps](harness-traps.md).
 
 ## CLI Commands
 
