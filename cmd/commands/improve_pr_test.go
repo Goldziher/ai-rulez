@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -25,6 +26,9 @@ func readTestFile(t *testing.T, p string) string {
 }
 
 func TestImprovePR_OpensAPullRequestWithAFakeGH(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the fake gh is a POSIX shell script")
+	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}

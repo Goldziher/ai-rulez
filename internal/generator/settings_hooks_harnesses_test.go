@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -93,7 +94,7 @@ func TestGenerate_HookHarnesses(t *testing.T) {
 
 			body := readProjectFile(t, root, rel)
 			assert.Contains(t, body, "guard-marker")
-			if preset == "cline" {
+			if preset == "cline" && runtime.GOOS != "windows" { // Windows has no executable bit
 				info, err := os.Stat(filepath.Join(root, filepath.FromSlash(rel)))
 				require.NoError(t, err)
 				assert.NotZero(t, info.Mode().Perm()&0o100, "a Cline hook script is executable")

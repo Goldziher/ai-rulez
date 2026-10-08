@@ -307,7 +307,7 @@ func (c *Config) validateMalformedFrontmatter() error {
 	visit := func(files []ContentFile) {
 		for i := range files {
 			if files[i].MalformedFrontmatter {
-				bad = append(bad, files[i].Path)
+				bad = append(bad, filepath.ToSlash(files[i].Path))
 			}
 		}
 	}
