@@ -319,26 +319,29 @@ func failOnFor(cfg *config.Config) string {
 	return failOnError
 }
 
-// reportStrict prints the combined report and returns the process exit code.
-// Each root is judged against its own threshold, so one root's [lint] fail_on
-// never silences or tightens another's.
-func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
-	if scannerDryRun() {
-		return 0 // the scanner plan was printed; nothing ran, so there is no report
-	}
-	excess, code, done := prepareReports(reports, cfgs)
-	if done {
-		return code
+// strictVerdict is the judgement of a strict run: the combined report and the
+// exit code it earns (0, or exitStrictFindings when a threshold, a ratchet or
+// --strict-baseline fails it).
+type strictVerdict struct {
+	combined lint.Combined
+	code     int
+}
+
+// judgeStrict runs the steps between linting and printing (baseline, fixes,
+// budgets, narrowing, risk) and decides whether the findings fail the run. Each
+// root is judged against its own threshold, so one root's [lint] fail_on never
+// silences or tightens another's. done is true when the run ends before a
+// report exists (--update-baseline).
+func judgeStrict(reports []*lint.Report, cfgs []*config.Config) (verdict strictVerdict, done bool, err error) {
+	excess, done, err := prepareReportsErr(reports, cfgs)
+	if err != nil || done {
+		return strictVerdict{}, done, err
 	}
 	combined := lint.Combine(reports)
 	for _, e := range excess {
 		combined.Ratchet = append(combined.Ratchet, e...)
 	}
-	if err := writeReport(combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
-		fmtError(err)
-		return 1
-	}
-	code = 0
+	code := 0
 	for i, report := range reports {
 		cfg := cfgAt(cfgs, i)
 		if lint.FailedWithExcess(report.Findings, failOnFor(cfg), ratchetFor(cfg), excess[i]) {
@@ -348,34 +351,61 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 	if baselineBlocks(reports) {
 		code = exitStrictFindings
 	}
-	return code
+	return strictVerdict{combined: combined, code: code}, false, nil
 }
 
-// prepareReports runs the steps between linting and printing, in the order that
-// keeps each one honest: the baseline against every finding first (so stale
+// reportStrict prints the combined report and returns the process exit code.
+func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
+	if scannerDryRun() {
+		return 0 // the scanner plan was printed; nothing ran, so there is no report
+	}
+	verdict, done, err := judgeStrict(reports, cfgs)
+	if err != nil {
+		fmtError(err)
+		return 1
+	}
+	if done {
+		return 0
+	}
+	if err := writeReport(verdict.combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
+		fmtError(err)
+		return 1
+	}
+	return verdict.code
+}
+
+// prepareReports is prepareReportsErr for callers that print and exit: it
+// reports an error on stderr and returns exit code 1 with done set.
+func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, code int, done bool) {
+	excess, done, err := prepareReportsErr(reports, cfgs)
+	if err != nil {
+		fmtError(err)
+		return nil, 1, true
+	}
+	return excess, 0, done
+}
+
+// prepareReportsErr runs the steps between linting and printing, in the order
+// that keeps each one honest: the baseline against every finding first (so stale
 // entries are judged on the full set and accepted findings are never fixed),
 // then fixes (scoped like the report, so fixed findings leave it), budgets on
 // the full set, and only then the views that narrow the report (analyzer
 // filter, changed-only) and the risk score of what is shown. done is true when
-// the run ends here with code (--update-baseline, or an error).
-func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, code int, done bool) {
-	fail := func(err error) ([][]lint.RatchetExcess, int, bool) {
-		fmtError(err)
-		return nil, 1, true
-	}
+// the run ends here (--update-baseline).
+func prepareReportsErr(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, done bool, err error) {
 	if validateUpdateBaseline {
 		if err := updateBaselines(reports, cfgs); err != nil {
-			return fail(err)
+			return nil, true, err
 		}
-		return nil, 0, true
+		return nil, true, nil
 	}
 	if err := applyBaselines(reports, cfgs); err != nil {
-		return fail(err)
+		return nil, true, err
 	}
 	reportRefusedRatchet(reports, cfgs)
 	if fixRequested() {
 		if err := applyFixes(reports, cfgs); err != nil {
-			return fail(err)
+			return nil, true, err
 		}
 	}
 	excess = make([][]lint.RatchetExcess, len(reports))
@@ -383,7 +413,7 @@ func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]l
 		excess[i] = ratchetFor(cfgAt(cfgs, i)).Excess(report.Findings)
 	}
 	if err := narrowToChanged(reports, cfgs); err != nil {
-		return fail(err)
+		return nil, true, err
 	}
 	for i, report := range reports {
 		var rc *config.LintRisk
@@ -393,7 +423,7 @@ func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]l
 		risk := lint.ComputeRisk(report.Findings, lint.RiskWeightsFrom(rc))
 		report.Risk = &risk
 	}
-	return excess, 0, false
+	return excess, false, nil
 }
 
 // structuredFormat reports whether the format must be the only thing on stdout.
