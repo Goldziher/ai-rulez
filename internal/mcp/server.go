@@ -53,7 +53,7 @@ func NewServer(version string) *Server {
 		Instructions: serverInstructions,
 	})
 
-	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware())
+	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware(mcpServer))
 
 	srv := &Server{
 		mcpServer: mcpServer,
