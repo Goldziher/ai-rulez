@@ -39,7 +39,7 @@ func approvalFindingsFor(ctx context.Context, cfg *config.Config) []lint.Approva
 	return append(out, selfApprovalFindings(ctx, cfg, lock, validateApprovalsBase, lockRel)...)
 }
 
-func approvalStatusFindings(ctx context.Context, cfg *config.Config) []lint.ApprovalFinding {
+func approvalStatusFindings(ctx context.Context, cfg *config.Config) []lint.ApprovalFinding { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	policy := approval.PolicyOfContext(ctx, cfg)
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	lockRel := filepath.ToSlash(filepath.Join(relToBase(cfg, cfg.ConfigDir), lockfile.FileName))

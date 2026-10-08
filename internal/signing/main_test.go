@@ -1,10 +1,11 @@
 package signing_test
 
 import (
-	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
-	. "github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 	"os"
 	"testing"
+
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )

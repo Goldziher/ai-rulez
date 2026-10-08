@@ -160,7 +160,7 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts 
 			Errorf("%s exists but is not a directory", configDirName)
 	}
 
-	config, err := loadConfigFile(v, configDir, lo)
+	config, err := loadConfigFile(v, configDir, lo) //nolint:contextcheck // the overlay tracking probe is a bounded local git call with its own timeout
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 			Errorf("%s is a local overlay, not a main config", filepath.Base(absPath))
 	}
 
-	cfg, err := loadConfigFilePath(v, absPath, lo)
+	cfg, err := loadConfigFilePath(v, absPath, lo) //nolint:contextcheck // the overlay tracking probe is a bounded local git call with its own timeout
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func loadConfigFromDir(ctx context.Context, v workspace.View, absPath string, lo
 		return nil, newLegacyConfigError(legacy)
 	}
 	if hasConfigFile(v, absPath) {
-		cfg, loadErr := loadConfigFile(v, absPath, lo)
+		cfg, loadErr := loadConfigFile(v, absPath, lo) //nolint:contextcheck // the overlay tracking probe is a bounded local git call with its own timeout
 		if loadErr != nil {
 			return nil, loadErr
 		}
