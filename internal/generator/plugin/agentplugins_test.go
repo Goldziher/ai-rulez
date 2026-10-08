@@ -167,3 +167,25 @@ func TestRenderAgentPlugins_IsDeterministic(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerate_ClaudeDoesNotReAddSkillsAgentPluginsDropped(t *testing.T) {
+	good := writeSkill(t, "good", "---\nname: good\ndescription: Fine.\n---\n", map[string]string{"scripts/run.sh": "#!/bin/sh\n"})
+	bare := writeSkill(t, "bare", "---\nname: bare\n---\nbody\n", map[string]string{"notes.md": "n\n"})
+	baseDir := t.TempDir()
+	outputs, err := Generate(&Manifest{
+		Name: "acme", Version: "1.0.0", Skills: []config.ContentFile{good, bare},
+		Runtimes: []string{config.PluginRuntimeAgentPlugins, config.PluginRuntimeClaude},
+	}, baseDir)
+	require.NoError(t, err)
+	var paths []string
+	for _, o := range outputs {
+		rel, err := filepath.Rel(baseDir, o.Path)
+		require.NoError(t, err)
+		paths = append(paths, filepath.ToSlash(rel))
+	}
+	assert.Contains(t, paths, "skills/good/SKILL.md")
+	assert.Contains(t, paths, "skills/good/scripts/run.sh")
+	for _, p := range paths {
+		assert.NotContains(t, p, "skills/bare", "the claude runtime must not re-add a dropped skill")
+	}
+}
