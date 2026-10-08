@@ -61,6 +61,8 @@ type Admission struct {
 	// Authored holds the skill:<name> items of the skills authored in the
 	// project (authoredSkillItems); nil skips the authored-item gate.
 	Authored map[string]lockfile.Item
+	// policy memoises the [governance] policy across the skills of one Admit.
+	policy *admissionPolicy
 }
 
 // Admit returns a catalog holding only the admitted skills. Refused skills are
@@ -75,6 +77,7 @@ func (c *Catalog) Admit(a Admission) *Catalog {
 	for name, r := range c.refused {
 		out.refused[name] = r
 	}
+	a.policy = &admissionPolicy{}
 	for _, skill := range c.skills {
 		cp := *skill
 		r := a.check(&cp)

@@ -43,6 +43,9 @@ func configure(cmd *exec.Cmd) *procTree {
 	return t
 }
 
+// shortLived is a no-op: the job object tracks the tree without polling.
+func (t *procTree) shortLived() {}
+
 // attach assigns the started child to the job. A grandchild spawned in the
 // instant before this call escapes the job; that window is accepted.
 func (t *procTree) attach(cmd *exec.Cmd) {

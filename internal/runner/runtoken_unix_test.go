@@ -83,10 +83,13 @@ func TestRunKillsADetachedSystemBinary(t *testing.T) {
 		name    string
 		timeout time.Duration
 		hold    string
+		short   bool
 		want    Status
 	}{
-		{"at the timeout", time.Second, "30", StatusTimeout},
-		{"after a clean exit", 10 * time.Second, "0.5", StatusOK},
+		{"at the timeout", time.Second, "30", false, StatusTimeout},
+		{"after a clean exit", 10 * time.Second, "0.5", false, StatusOK},
+		{"short-lived at the timeout", time.Second, "30", true, StatusTimeout},
+		{"short-lived after a clean exit", 10 * time.Second, "0.5", true, StatusOK},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -95,7 +98,7 @@ func TestRunKillsADetachedSystemBinary(t *testing.T) {
 			spawn := "perl -e 'use POSIX; fork and exit; POSIX::setsid(); " +
 				"exec(\"/bin/sh\",\"-c\",\"sleep 3; : > " + marker + "\")' & sleep " + tt.hold
 			// Act
-			res := Run(context.Background(), Spec{Argv: []string{"/bin/sh", "-c", spawn}, InheritEnv: true, Timeout: tt.timeout})
+			res := Run(context.Background(), Spec{Argv: []string{"/bin/sh", "-c", spawn}, InheritEnv: true, Timeout: tt.timeout, ShortLived: tt.short})
 			// Assert
 			if res.Status != tt.want {
 				t.Fatalf("status = %s (%v), want %s", res.Status, res.Err, tt.want)

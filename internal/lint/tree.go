@@ -206,6 +206,8 @@ func (l *Loader) Load(base string) (*Tree, error) {
 // LoadContext returns the tree for the repository containing base, with the git
 // probes bounded by ctx.
 func (l *Loader) LoadContext(ctx context.Context, base string) (*Tree, error) {
+	// The probes below ask the same structural questions of base twice.
+	ctx = gitutil.WithMemo(ctx)
 	if l.cache == nil {
 		l.cache = map[string]*Tree{}
 	}
