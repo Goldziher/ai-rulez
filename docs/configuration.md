@@ -560,8 +560,7 @@ Tool support, per-preset file lists, the duplication trade-off, `targets`, scope
 
 Where the `codex` preset writes skills, relative to the project root. The default is `.agents/skills`, the
 directory Codex documents for repository skills (it scans `.agents/skills` from the working directory up to the
-repository root; `.codex/skills` is not read). Releases before 4.24 wrote `.codex/skills`; set it back to keep that
-location:
+repository root; `.codex/skills` is not read). Set it to `.codex/skills` to write there instead:
 
 ```toml
 codex_skills_dir = ".codex/skills"  # Default: ".agents/skills"
@@ -811,6 +810,69 @@ enabled = true             # defaults to true
     Codex entry yourself; ai-rulez does not write `.codex/config.toml` plugin entries because it owns that file
     outright. Delete the files an earlier version left behind. The Copilot
     `enabledPlugins` settings syntax is not shown in the vendor documentation, so it is not generated.
+
+### `plugin`
+
+The **producer** block: packaging metadata for a distributable plugin bundle (`generate --plugin`, `publish`,
+`--emit agent-plugins`). Skills, commands and agents come from the content tree; this block only names and describes
+the package. `name` and `version` are required. See [Authoring Plugins](plugins.md) and
+[Agent Plugins](agent-plugins.md).
+
+```toml
+[plugin]
+name = "acme.tools"            # required
+version = "1.2.0"              # required, semantic version
+description = "Acme review tooling."
+runtimes = ["agent-plugins"]   # default: all runtimes
+spec = "1.1.0"                 # Agent Plugins version: "1.0.0" (default) or "1.1.0"
+```
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `name`, `version` | required | Package name and semantic version |
+| `display_name`, `description`, `homepage`, `repository`, `license`, `category`, `brand_color`, `icon`, `logo` | empty | Manifest metadata |
+| `keywords`, `tags` | empty | Search terms |
+| `runtimes` | all | Runtimes to build: `claude`, `cursor`, `codex`, `gemini`, `kimi`, `opencode`, `factory`, `hermes`, `agent-plugins`, `copilot` |
+| `spec` | `1.0.0` | Agent Plugins specification of the `agent-plugins`, `copilot` and root-layout `codex` packages: `1.0.0` or `1.1.0` |
+| `content_root` | content tree | Project-relative directory holding plugin-only `skills/`, `commands/` and `agents/` |
+| `include_domains` | none | Domains (names or globs) whose skills, commands and agents are bundled; a root item wins over a same-named domain item |
+| `include_evals` | `false` | Bundle each skill's `evals/` directory and the project-level `evals/` tree |
+
+Sub-tables: `[plugin.author]` (`name`, `email`, `url`), `[[plugin.mcp]]`, `[[plugin.hooks]]`, `[plugin.statusline]`,
+`[plugin.codex]` (`manifest` = `legacy`, `root` or `both`; `marketplace`), `[plugin.cursor]`, `[plugin.gemini]`,
+`[plugin.kimi]`, `[plugin.hermes]` and `[plugin.interface]`.
+
+#### `plugin.interface`
+
+The rich UI block of the Codex and Kimi manifests (the Codex root layout writes it under
+`extensions["com.openai"].interface`, keys sorted). No key is required and unknown keys are rejected.
+
+| Key | Type |
+| --- | --- |
+| `display_name`, `short_description`, `long_description` | string |
+| `developer_name`, `category` | string |
+| `capabilities`, `default_prompt`, `screenshots` | list of strings |
+| `website_url`, `privacy_policy_url`, `terms_of_service_url` | string |
+| `brand_color`, `composer_icon`, `logo`, `logo_dark` | string |
+
+### `llms_txt`
+
+Controls the `llms.txt` written by the opt-in `llms-txt` preset and linted by `validate --strict` (`AR9P0` to
+`AR9P6`). The table has no effect without the preset. See [llms.txt](llms-txt.md).
+
+```toml
+presets = ["llms-txt"]
+
+[llms_txt]
+dir = ""                                     # default: the project root
+title = "Acme"                               # default: name
+summary = "Acme coding rules."               # default: description
+full = true                                  # also write llms-full.txt (default: false)
+include = ["rules", "context", "skills"]     # default; also agents, commands
+```
+
+`agents` and `commands` are listed in the `Optional` section. `dir` must not be inside `.git` or the configuration
+directory.
 
 ### `marketplaces`
 
@@ -1174,7 +1236,7 @@ mode = "split"           # split (default) | inline
 claude = "inline"
 ```
 
-- **`rules.mode`**: `split` (the default since 4.22.0) writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file, moving only path-scoped rules to the folder.
+- **`rules.mode`**: `split` (the default) writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file, moving only path-scoped rules to the folder.
 - **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
 - **`rules.baz_scoped`**: `nested` (the default) writes the path-scoped rules and context of the `baz` preset to the `AGENTS.md` of the directory their globs point into; `root` keeps them in the root `AGENTS.md`. See [Baz](baz.md).
 
