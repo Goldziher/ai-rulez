@@ -94,10 +94,8 @@ means warning), 2 at least one failed (even if another could not be evaluated),
 1 the run could not complete and nothing failed: the configuration does not load or
 validate, a --name is unknown, or a verifier could not be evaluated.`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		if code := runVerifiers(watchParentContext(cmd), args, os.Stdout); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(runVerifiers(watchParentContext(cmd), args, os.Stdout))
 	},
 }
 
@@ -106,10 +104,8 @@ var VerifiersExplainCmd = &cobra.Command{
 	Use:   "explain <name> [config-file]",
 	Short: "Explain what a verifier checks, the rule it enforces and how to fix it",
 	Args:  cobra.RangeArgs(1, 2),
-	Run: func(cmd *cobra.Command, args []string) {
-		if code := explainVerifier(watchParentContext(cmd), args[0], args[1:], os.Stdout); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(explainVerifier(watchParentContext(cmd), args[0], args[1:], os.Stdout))
 	},
 }
 
@@ -123,10 +119,8 @@ changed files count as entirely added; git and the real project are never touche
 
 Exit codes: 0 every example produced its expected outcome, 2 one did not (or a
 declaration is invalid), 1 the configuration does not load or a name is unknown.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		if code := testVerifiers(watchParentContext(cmd), args, os.Stdout); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(testVerifiers(watchParentContext(cmd), args, os.Stdout))
 	},
 }
 
@@ -135,10 +129,8 @@ var VerifiersListCmd = &cobra.Command{
 	Use:   "list [config-file]",
 	Short: "List the declared verifiers",
 	Args:  cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		if code := listVerifiers(watchParentContext(cmd), args, os.Stdout); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(listVerifiers(watchParentContext(cmd), args, os.Stdout))
 	},
 }
 
@@ -190,17 +182,17 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 
 	cfg, err := loadVerifierConfig(ctx, args)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitVerifiersCannotRun
 	}
 	opts, format, failOn, err := verifierRunOptions()
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitVerifiersCannotRun
 	}
 	applyVerifierProfile(cfg)
 	if verifiersMaxCost < 0 {
-		fmtError(oops.Errorf("--max-cost must not be negative"))
+		renderStderr(oops.Errorf("--max-cost must not be negative"))
 		return exitVerifiersCannotRun
 	}
 	// The user's [llm] settings are read only when an llm verifier will run, so a
@@ -208,14 +200,14 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 	if verifiers.UsesLLM(cfg, opts) {
 		var releaseLLM func()
 		if opts.LLM, releaseLLM, err = verifierLLMOptions(ctx, cfg); err != nil {
-			fmtError(err)
+			renderStderr(err)
 			return exitVerifiersCannotRun
 		}
 		defer releaseLLM()
 	}
 	report := verifiers.Run(ctx, cfg, opts)
 	if report.Err != nil {
-		fmtError(report.Err)
+		renderStderr(report.Err)
 		return exitVerifiersCannotRun
 	}
 	var buf bytes.Buffer
@@ -233,7 +225,7 @@ func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		err = emitReport(out, buf.Bytes())
 	}
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitVerifiersCannotRun
 	}
 	// A failure outranks a verifier that could not be evaluated: the failure is
@@ -314,11 +306,11 @@ func emitReport(out io.Writer, data []byte) error {
 func explainVerifier(ctx context.Context, name string, args []string, out io.Writer) int {
 	cfg, err := loadVerifierConfig(ctx, args)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitVerifiersCannotRun
 	}
 	if err := verifiers.Explain(out, cfg, name); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitVerifiersCannotRun
 	}
 	return 0
@@ -328,12 +320,12 @@ func explainVerifier(ctx context.Context, name string, args []string, out io.Wri
 func testVerifiers(ctx context.Context, names []string, out io.Writer) int {
 	cfg, err := loadVerifierConfig(ctx, nil)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitVerifiersCannotRun
 	}
 	report, err := verifiers.RunExamplesWith(ctx, cfg, names, verifiers.Options{AllowExec: allowExec()})
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitVerifiersCannotRun
 	}
 	var sb strings.Builder
@@ -367,7 +359,7 @@ func testVerifiers(ctx context.Context, names []string, out io.Writer) int {
 		sb.WriteString("no examples: " + strings.Join(report.Untested, ", ") + "\n")
 	}
 	if _, err := io.WriteString(out, sb.String()); err != nil {
-		fmtError(oops.Wrapf(err, "write test report"))
+		renderStderr(oops.Wrapf(err, "write test report"))
 		return exitVerifiersCannotRun
 	}
 	if report.Failed() {
@@ -380,13 +372,13 @@ func testVerifiers(ctx context.Context, names []string, out io.Writer) int {
 func listVerifiers(ctx context.Context, args []string, out io.Writer) int {
 	cfg, err := loadVerifierConfig(ctx, args)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitVerifiersCannotRun
 	}
 	rows := verifiers.List(cfg)
 	if verifiersListJSON {
 		if err := writeJSON(out, rows); err != nil {
-			fmtError(err)
+			renderStderr(err)
 			return exitVerifiersCannotRun
 		}
 		return 0
@@ -405,7 +397,7 @@ func listVerifiers(ctx context.Context, args []string, out io.Writer) int {
 		_, _ = io.WriteString(tw, r.Name+"\t"+r.Type+"\t"+r.Severity+"\t"+target+"\t"+r.Description+"\n") //nolint:errcheck // flushed below
 	}
 	if err := tw.Flush(); err != nil {
-		fmtError(oops.Wrapf(err, "write verifiers list"))
+		renderStderr(oops.Wrapf(err, "write verifiers list"))
 		return exitVerifiersCannotRun
 	}
 	return 0
