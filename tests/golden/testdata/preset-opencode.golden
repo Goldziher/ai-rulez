@@ -110,35 +110,35 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .opencode/agents/architect.md
+  remove file: .opencode/agents/tester.md
+  remove file: .opencode/commands/build.md
+  remove file: .opencode/commands/ship.md
+  remove file: .opencode/plugins/ai-rulez-hooks.js
+  remove file: .opencode/skills/deployer/SKILL.md
+  remove file: .opencode/skills/reviewer/SKILL.md
+  remove file: .opencode/skills/reviewer/references/checklist.md
+  remove file: .opencode/skills/reviewer/scripts/run.sh
+  remove file: AGENTS.md
+  remove file: opencode.json
+  remove dir (if empty): .opencode/skills/reviewer/scripts
+  remove dir (if empty): .opencode/skills/reviewer/references
+  remove dir (if empty): .opencode/skills/reviewer
+  remove dir (if empty): .opencode/skills/deployer
+  remove dir (if empty): .opencode/skills
+  remove dir (if empty): .opencode/plugins
+  remove dir (if empty): .opencode/commands
+  remove dir (if empty): .opencode/agents
+  remove dir (if empty): .opencode
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .opencode/agents/architect.md
-INFO    remove file: .opencode/agents/tester.md
-INFO    remove file: .opencode/commands/build.md
-INFO    remove file: .opencode/commands/ship.md
-INFO    remove file: .opencode/plugins/ai-rulez-hooks.js
-INFO    remove file: .opencode/skills/deployer/SKILL.md
-INFO    remove file: .opencode/skills/reviewer/SKILL.md
-INFO    remove file: .opencode/skills/reviewer/references/checklist.md
-INFO    remove file: .opencode/skills/reviewer/scripts/run.sh
-INFO    remove file: AGENTS.md
-INFO    remove file: opencode.json
-INFO    remove dir (if empty): .opencode/skills/reviewer/scripts
-INFO    remove dir (if empty): .opencode/skills/reviewer/references
-INFO    remove dir (if empty): .opencode/skills/reviewer
-INFO    remove dir (if empty): .opencode/skills/deployer
-INFO    remove dir (if empty): .opencode/skills
-INFO    remove dir (if empty): .opencode/plugins
-INFO    remove dir (if empty): .opencode/commands
-INFO    remove dir (if empty): .opencode/agents
-INFO    remove dir (if empty): .opencode
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-INFO  Removed generated files files=12 directories=9
+Removed generated files: 12 files, 9 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

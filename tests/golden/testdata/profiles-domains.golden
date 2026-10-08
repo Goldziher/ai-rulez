@@ -512,14 +512,14 @@ Use 'default' for the built-in profile (all content when no profiles are defined
 ## step 7: ai-rulez list rules
 exit: 0
 --- stdout
+Rules:
+  (root):
+    • always [critical]
+    • auto
+    • manual [low]
+    • targeted (targets: [claude cursor])
+    • typescript [high]
 --- stderr
-INFO  Rules:
-INFO    (root):
-INFO      • always [critical]
-INFO      • auto
-INFO      • manual [low]
-INFO      • targeted (targets: [claude cursor])
-INFO      • typescript [high]
 --- project tree
 (no change)
 --- home tree
@@ -528,10 +528,10 @@ INFO      • typescript [high]
 ## step 8: ai-rulez domain list
 exit: 0
 --- stdout
+Domains:
+  • backend
+  • frontend
 --- stderr
-INFO  Domains:
-INFO    • backend
-INFO    • frontend
 --- project tree
 (no change)
 --- home tree
@@ -540,11 +540,14 @@ INFO    • frontend
 ## step 9: ai-rulez profile list
 exit: 0
 --- stdout
+Profiles:
+  • backend
+    Domains: [backend]
+  • frontend
+    Domains: [frontend]
+  • full
+    Domains: [backend frontend]
 --- stderr
-INFO  Profiles:
-INFO    • backend
-INFO    • frontend
-INFO    • full
 --- project tree
 .agents/ dir 0755
 .agents/skills/ dir 0755

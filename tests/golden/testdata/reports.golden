@@ -965,14 +965,14 @@ exit: 0
 ## step 6: ai-rulez list rules
 exit: 0
 --- stdout
+Rules:
+  (root):
+    • always [critical]
+    • auto
+    • manual [low]
+    • targeted (targets: [claude cursor])
+    • typescript [high]
 --- stderr
-INFO  Rules:
-INFO    (root):
-INFO      • always [critical]
-INFO      • auto
-INFO      • manual [low]
-INFO      • targeted (targets: [claude cursor])
-INFO      • typescript [high]
 --- project tree
 (no change)
 --- home tree
@@ -981,11 +981,11 @@ INFO      • typescript [high]
 ## step 7: ai-rulez list skills
 exit: 0
 --- stdout
+Skills:
+  (root):
+    • deployer
+    • reviewer
 --- stderr
-INFO  Skills:
-INFO    (root):
-INFO      • deployer
-INFO      • reviewer
 --- project tree
 (no change)
 --- home tree
@@ -994,11 +994,11 @@ INFO      • reviewer
 ## step 8: ai-rulez list checks
 exit: 0
 --- stdout
+Checks:
+  (root):
+    • security
+    • style
 --- stderr
-INFO  Checks:
-INFO    (root):
-INFO      • security
-INFO      • style
 --- project tree
 (no change)
 --- home tree

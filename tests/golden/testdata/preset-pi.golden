@@ -108,34 +108,34 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .agents/skills/deployer/SKILL.md
+  remove file: .agents/skills/reviewer/SKILL.md
+  remove file: .agents/skills/reviewer/references/checklist.md
+  remove file: .agents/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: .pi/agents/architect.md
+  remove file: .pi/agents/tester.md
+  remove file: .pi/extensions/ai-rulez-hooks.ts
+  remove file: .pi/mcp.json
+  remove file: .pi/prompts/build.md
+  remove file: .pi/prompts/ship.md
+  remove file: AGENTS.md
+  remove dir (if empty): .pi/prompts
+  remove dir (if empty): .pi/extensions
+  remove dir (if empty): .pi/agents
+  remove dir (if empty): .pi
+  remove dir (if empty): .agents/skills/reviewer/scripts
+  remove dir (if empty): .agents/skills/reviewer/references
+  remove dir (if empty): .agents/skills/reviewer
+  remove dir (if empty): .agents/skills/deployer
+  remove dir (if empty): .agents/skills
+  remove dir (if empty): .agents
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .agents/skills/deployer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/references/checklist.md
-INFO    remove file: .agents/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: .pi/agents/architect.md
-INFO    remove file: .pi/agents/tester.md
-INFO    remove file: .pi/extensions/ai-rulez-hooks.ts
-INFO    remove file: .pi/mcp.json
-INFO    remove file: .pi/prompts/build.md
-INFO    remove file: .pi/prompts/ship.md
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .pi/prompts
-INFO    remove dir (if empty): .pi/extensions
-INFO    remove dir (if empty): .pi/agents
-INFO    remove dir (if empty): .pi
-INFO    remove dir (if empty): .agents/skills/reviewer/scripts
-INFO    remove dir (if empty): .agents/skills/reviewer/references
-INFO    remove dir (if empty): .agents/skills/reviewer
-INFO    remove dir (if empty): .agents/skills/deployer
-INFO    remove dir (if empty): .agents/skills
-INFO    remove dir (if empty): .agents
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=12 directories=10
+Removed generated files: 12 files, 10 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

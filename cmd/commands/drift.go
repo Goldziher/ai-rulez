@@ -121,7 +121,7 @@ type driftDocument struct {
 }
 
 func newDriftReport(mode driftMode) *driftReport {
-	return &driftReport{out: defaultOut(), json: mode == driftRender && generateFormat == formatJSON}
+	return &driftReport{out: defaultOut(), json: mode == driftRender && defaultOut().JSON()}
 }
 
 // writeJSON writes the --format json document; it does nothing for text.

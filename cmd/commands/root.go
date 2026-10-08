@@ -22,6 +22,8 @@ var (
 var RootCmd = &cobra.Command{
 	Use:   "ai-rulez",
 	Short: "Lightning-fast CLI tool for managing AI assistant rules",
+	// Annotations carries the state of the running command (see exit_report.go).
+	Annotations: map[string]string{},
 	Long: `ai-rulez is a lightning-fast CLI tool for managing AI assistant rules
 across multiple platforms including Claude, Cursor, Devin, GitHub Copilot,
 and more. It provides a unified configuration format with support for remote
