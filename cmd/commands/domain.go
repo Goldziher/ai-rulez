@@ -1,10 +1,7 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
-	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +26,7 @@ var domainAddCmd = &cobra.Command{
 This creates a domain directory structure with rules, context, and skills subdirectories.
 Domains allow you to organize rules, context, and skills by functional areas or teams.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runDomainAdd,
+	RunE: runDomainAdd,
 }
 
 var domainRemoveCmd = &cobra.Command{
@@ -39,7 +36,7 @@ var domainRemoveCmd = &cobra.Command{
 
 Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runDomainRemove,
+	RunE: runDomainRemove,
 }
 
 var domainListCmd = &cobra.Command{
@@ -47,7 +44,7 @@ var domainListCmd = &cobra.Command{
 	Short: "List all domains",
 	Long:  `List all domains in your .ai-rulez/ configuration.`,
 	Args:  cobra.NoArgs,
-	Run:   runDomainList,
+	RunE:  runDomainList,
 }
 
 func init() {
@@ -65,13 +62,13 @@ func init() {
 	addJSONFormat(domainListCmd.Flags(), &domainJSON, "j")
 }
 
-func runDomainAdd(cmd *cobra.Command, args []string) {
+func runDomainAdd(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 
 	req := &crud.AddDomainRequest{
@@ -81,56 +78,56 @@ func runDomainAdd(cmd *cobra.Command, args []string) {
 
 	result, err := op.AddDomain(ctx, req)
 	if err != nil {
-		fatal("Failed to add domain", err)
+		return failMsg("Failed to add domain", err)
 	}
 
-	logger.Info("Domain added successfully",
-		"name", result.Name,
-		"path", result.Path,
-	)
+	logger.Info("Domain added successfully", "name", result.Name)
 	if result.Description != "" {
 		logger.Debug("Domain description", "description", result.Description)
 	}
+	// The created path is the result, so a script can capture it.
+	outFor(cmd).Resultln(result.Path)
+	return nil
 }
 
-func runDomainRemove(cmd *cobra.Command, args []string) {
+func runDomainRemove(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-	confirmRemovalUnlessYes(domainForce, "domain", name, "Operation canceled")
+	if err := confirmRemovalUnlessYes(domainForce, "domain", name, "Operation canceled"); err != nil {
+		return fail(err)
+	}
 
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 
 	if err := op.RemoveDomain(ctx, name); err != nil {
-		fatal("Failed to remove domain", err)
+		return failMsg("Failed to remove domain", err)
 	}
 
 	logger.Info("Domain removed successfully", "name", name)
+	return nil
 }
 
-func runDomainList(cmd *cobra.Command, args []string) {
+func runDomainList(cmd *cobra.Command, _ []string) error {
+	out := outFor(cmd)
 	ctx := cmdContext()
 	op, err := crud.NewOperator(".")
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
-	loadListedConfig(ctx)
+	if err := loadListedConfig(ctx); err != nil {
+		return err
+	}
 
 	domains, err := op.ListDomains(ctx)
 	if err != nil {
-		fatal("Failed to list domains", err)
-	}
-
-	if len(domains) == 0 && !domainJSON {
-		logger.Info("No domains found")
-		return
+		return failMsg("Failed to list domains", err)
 	}
 
 	if domainJSON {
-		// Output as JSON
 		output := make([]map[string]interface{}, len(domains))
 		for i, domain := range domains {
 			output[i] = map[string]interface{}{
@@ -139,19 +136,18 @@ func runDomainList(cmd *cobra.Command, args []string) {
 				"description": domain.Description,
 			}
 		}
-		data, err := jsondoc.Marshal(output)
-		if err != nil {
-			fatal("Failed to marshal JSON", err)
-		}
-		fmt.Print(string(data))
-	} else {
-		// Output as human-readable table
-		logger.Info("Domains:")
-		for _, domain := range domains {
-			logger.Info(fmt.Sprintf("  • %s", domain.Name))
-			if domain.Description != "" {
-				logger.Debug(fmt.Sprintf("    Description: %s", domain.Description))
-			}
+		return writeListJSON(out.Stdout(), output)
+	}
+	if len(domains) == 0 {
+		out.Info("No domains found\n")
+		return nil
+	}
+	out.Result("Domains:\n")
+	for _, domain := range domains {
+		out.Result("  • %s\n", domain.Name)
+		if domain.Description != "" {
+			out.Result("    Description: %s\n", domain.Description)
 		}
 	}
+	return nil
 }
