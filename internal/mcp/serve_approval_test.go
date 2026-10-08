@@ -104,3 +104,23 @@ func TestAdmit_NoLockWhilePinningIsNotRefused(t *testing.T) {
 	_, refused := cat.Refusal("clean")
 	assert.False(t, refused, "the lock command must be able to pin what it will then ask to have approved")
 }
+
+// TestAdmit_ReadsTheLockOncePerAdmit pins the cost of the governance policy:
+// it parses the lock file, so it must be read once per Admit, not once per skill.
+func TestAdmit_ReadsTheLockOncePerAdmit(t *testing.T) {
+	// Arrange
+	base := scanCatalog(t, nil)
+	require.Greater(t, len(base.Skills()), 1)
+	dir := t.TempDir()
+	lock := &lockfile.File{Version: lockfile.Version}
+	require.NoError(t, lockfile.Save(dir, lock))
+	cfg := &config.Config{ConfigDir: dir, Governance: &config.GovernanceConfig{RequireApproval: []string{"kind:served"}}}
+
+	// Act
+	before := lockfile.Reads()
+	base.Admit(Admission{Config: cfg, Lock: lock})
+	reads := lockfile.Reads() - before
+
+	// Assert
+	assert.Equal(t, int64(1), reads, "reads for %d skills", len(base.Skills()))
+}
