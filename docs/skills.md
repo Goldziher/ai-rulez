@@ -2,8 +2,7 @@
 
 A skill is `.ai-rulez/skills/<id>/SKILL.md`: YAML frontmatter followed by the instructions. `generate` carries the
 frontmatter into each preset's skill directory **with its original types**. A nested `metadata:` map stays a map,
-`disable-model-invocation: true` stays a boolean, and `last_verified: 2026-10-01` stays a date. Versions before 4.25.0
-wrote `metadata: map[owner:team-a ...]`, `"true"` and `2026-10-01 00:00:00 +0000 UTC`.
+`disable-model-invocation: true` stays a boolean, and `last_verified: 2026-10-01` stays a date.
 
 ```yaml
 ---
@@ -56,8 +55,7 @@ and ignores unknown fields; the [Agent Skills specification](https://agentskills
 `yes`, `no`, `on`, `off`, `1` and `0` are accepted and written as a boolean.
 
 - **Default**: a skill is user-invocable (Claude Code's default), so the key is not written and the skill appears in
-  the `/` menu. Before 4.25.0 the `claude` preset wrote `user-invocable: false` on every skill, which, now that the key
-  is spelled correctly, hid all skills from the menu.
+  the `/` menu.
 - **Hide all skills from the menu**: `[claude.skills] hide_from_menu = true` writes `user-invocable: false` on skills that
   do not set the key. A skill with its own `user-invocable: true` stays visible.
 - **Commands** are rendered as skills and keep `user-invocable: true` unless the command sets the key.
