@@ -42,7 +42,7 @@ func runVerifySelf(exe string, env ambient.Env, out io.Writer) int {
 	if exe == "" {
 		var err error
 		if exe, err = selfExecutable(); err != nil {
-			fmtError(err)
+			renderError(os.Stderr, err)
 			return 1
 		}
 	}
@@ -59,7 +59,7 @@ func runVerifySelf(exe string, env ambient.Env, out io.Writer) int {
 			}
 			return code
 		}
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	res := artifactSuccess(signing.SubjectRelease, rep.Attestation, "sha256:"+rep.Digest, rep.ArtifactReport, now)
