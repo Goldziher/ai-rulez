@@ -30,7 +30,7 @@ func TestPathMissingPrecision(t *testing.T) {
 		{"negated: there is no", "There is no `src/e2e-generator`; generation is done elsewhere.", 0},
 		{"negated: was removed", "(An older `src/mock-server` was removed; only the task text mentions it.)", 0},
 		{"negated: decommissioned", "The dead path is decommissioned with `src/llm-gateway`.", 0},
-		{"placeholder date", "Spill detail into `src/log/YYYY-MM-DD.md` and keep the summary short.", 0},
+		{"placeholder() date", "Spill detail into `src/log/YYYY-MM-DD.md` and keep the summary short.", 0},
 		{"alternative: or under", "Place it in `src/queries/lang.rs` (or under `src/extract/queries/`, matching the layout).", 1},
 		{"build artifact: target dir", "`task build` builds the binary at `src/target/release/server`.", 0},
 		{"build artifact: venv", "The e2e venv at `src/python/.venv` keeps a stale extension.", 0},

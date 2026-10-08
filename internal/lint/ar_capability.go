@@ -79,7 +79,7 @@ func (p capProfile) describe() string {
 
 // classify adds the commands of one shell line to the profile.
 func (p *capProfile) classify(line string) {
-	for _, seg := range segSplitRe.Split(stripShellComment(line), -1) {
+	for _, seg := range segSplitRe().Split(stripShellComment(line), -1) {
 		words := shellWords(strings.TrimSpace(seg))
 		if len(words) > 0 && words[0] == cmdSudo {
 			p.counts[tierPrivilege]++

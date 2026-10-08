@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 
@@ -55,23 +56,41 @@ var injectionPhrases = []gatedRe{
 
 var (
 	// An unclosed <!-- runs to the end of the file in CommonMark, so it hides text too.
-	htmlCommentRe  = regexp.MustCompile(`(?s)<!--(.*?)(?:-->|\z)`)
-	imperativeRe   = regexp.MustCompile(`(?i)\b(?:curl|wget|eval|sudo|exfiltrate|secretly|silently|execute)\b|\brun\s*:`)
-	pipeToShellRe  = regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?(?:ba|z|da|k)?sh\b`)
-	pipeToInterpRe = regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+)?(?:python3?|perl|ruby|node)\b`)
-	procSubstRe    = regexp.MustCompile(`(?i)(?:\b(?:ba|z)?sh|\bsource|\.)\s+<\(\s*(?:curl|wget)\b`)
+	htmlCommentRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?s)<!--(.*?)(?:-->|\z)`) })
+	imperativeRe  = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:curl|wget|eval|sudo|exfiltrate|secretly|silently|execute)\b|\brun\s*:`)
+	})
+	pipeToShellRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?(?:ba|z|da|k)?sh\b`)
+	})
+	pipeToInterpRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+)?(?:python3?|perl|ruby|node)\b`)
+	})
+	procSubstRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)(?:\b(?:ba|z)?sh|\bsource|\.)\s+<\(\s*(?:curl|wget)\b`)
+	})
 	// evalRe matches a call eval(...), or the shell builtin in command position
 	// (line start, after ; & | ( { ` $( then do else) followed by an argument. A
 	// word after another command (`playwright-cli eval "document.title"`) is a
 	// subcommand, not the builtin.
-	evalRe          = regexp.MustCompile("(?i)(?:^|[^\\w.'\"`])eval\\s*\\(|(?:^|[;&|({`]|\\$\\(|\\b(?:then|do|else))\\s*(?:[-*>]\\s+)*(?:\\$\\s+)?eval\\s+[\"'$`]")
-	evalBenignRe    = regexp.MustCompile(`(?i)\beval\s+"?\$\(\s*(?:ssh-agent|pyenv|rbenv|nodenv|direnv|brew\s+shellenv|fnm|starship|zoxide|mise|rtx|asdf|opam|thefuck)\b`)
-	base64ExecRe    = regexp.MustCompile(`(?i)base64\s+(?:-d|-D|--decode)\b.*\|\s*(?:sudo\s+)?(?:ba|z|da)?sh\b|\bexec\s*\(\s*(?:base64\.)?b64decode`)
-	writeOutsideRe  = regexp.MustCompile(`(?:>>?|\btee(?:\s+-a)?)\s*(?:~/|\$HOME/|\$\{HOME\}/|/etc/|/usr/|/opt/|/var/|/root/)`)
-	chmod777Re      = regexp.MustCompile(`\bchmod\s+(?:-R\s+)?(?:0?777|a\+rwx)\b`)
-	blobRe          = regexp.MustCompile(`[A-Za-z0-9+/]{200,}={0,2}`) // a match is at least blobMinLen bytes
-	urlRe           = regexp.MustCompile(`(?i)\bhttps?://([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)(?::\d+)?`)
-	broadBashToolRe = regexp.MustCompile(`^Bash\(\s*\*+(?::\*+)?\s*\)$`)
+	evalRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile("(?i)(?:^|[^\\w.'\"`])eval\\s*\\(|(?:^|[;&|({`]|\\$\\(|\\b(?:then|do|else))\\s*(?:[-*>]\\s+)*(?:\\$\\s+)?eval\\s+[\"'$`]")
+	})
+	evalBenignRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\beval\s+"?\$\(\s*(?:ssh-agent|pyenv|rbenv|nodenv|direnv|brew\s+shellenv|fnm|starship|zoxide|mise|rtx|asdf|opam|thefuck)\b`)
+	})
+	base64ExecRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)base64\s+(?:-d|-D|--decode)\b.*\|\s*(?:sudo\s+)?(?:ba|z|da)?sh\b|\bexec\s*\(\s*(?:base64\.)?b64decode`)
+	})
+	writeOutsideRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?:>>?|\btee(?:\s+-a)?)\s*(?:~/|\$HOME/|\$\{HOME\}/|/etc/|/usr/|/opt/|/var/|/root/)`)
+	})
+	chmod777Re = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\bchmod\s+(?:-R\s+)?(?:0?777|a\+rwx)\b`) })
+	blobRe     = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[A-Za-z0-9+/]{200,}={0,2}`) }) // a match is at least blobMinLen bytes
+	urlRe      = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\bhttps?://([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)(?::\d+)?`)
+	})
+	broadBashToolRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^Bash\(\s*\*+(?::\*+)?\s*\)$`) })
 )
 
 // blobMinLen is the shortest line blobRe can match.
@@ -158,7 +177,7 @@ func (r *runner) securityScan(abs, raw string) {
 		r.scanInjection(abs, no, line)
 		r.scanShell(abs, no, line, describesRisk(st, i))
 		r.scanHosts(abs, no, line)
-		if len(line) >= blobMinLen && blobRe.MatchString(line) {
+		if len(line) >= blobMinLen && blobRe().MatchString(line) {
 			r.add(CodeEncodedBlob, abs, no, "line holds a base64-like blob of 200 or more characters that a reviewer cannot read")
 		}
 	}
@@ -329,12 +348,12 @@ func (r *runner) scanInjection(abs string, no int, line string) {
 // comment is invisible in rendered markdown but is read by the model.
 func (r *runner) scanComments(abs, raw string) {
 	line, from := 1, 0 // matches come in order, so count newlines once across the text
-	for _, m := range htmlCommentRe.FindAllStringSubmatchIndex(raw, -1) {
+	for _, m := range htmlCommentRe().FindAllStringSubmatchIndex(raw, -1) {
 		body := raw[m[2]:m[3]]
 		if strings.Contains(body, "ai-rulez-lint-ignore") {
 			continue
 		}
-		suspicious := imperativeRe.MatchString(body)
+		suspicious := imperativeRe().MatchString(body)
 		for _, re := range r.injectionRes() {
 			if re.MatchString(body) {
 				suspicious = true
@@ -352,16 +371,22 @@ var (
 	// governingNegRe is a negation that can directly govern a command span.
 	// Words that merely sit somewhere on the line ("bad", "wrong", a warning
 	// sign) do not count: they say nothing about the command.
-	governingNegRe = regexp.MustCompile(`(?i)\b(?:never|don'?t|do\s+not|must\s+not|should\s+not|shouldn'?t|cannot|can'?t|avoid|instead\s+of|rather\s+than|forbidden|prohibit\w*|disallow\w*|refuse\w*|reject\w*|banned|ban)\b|❌|⛔|🚫`)
+	governingNegRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:never|don'?t|do\s+not|must\s+not|should\s+not|shouldn'?t|cannot|can'?t|avoid|instead\s+of|rather\s+than|forbidden|prohibit\w*|disallow\w*|refuse\w*|reject\w*|banned|ban)\b|❌|⛔|🚫`)
+	})
 	// imperativeMarkerRe is a word that turns the span into something to do.
-	imperativeMarkerRe = regexp.MustCompile(`(?i)\b(?:run|execute|paste|install|required|first|then|before|use)\b`)
+	imperativeMarkerRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:run|execute|paste|install|required|first|then|before|use)\b`)
+	})
 	// unsafeAfterRe reads a trailing verdict: "curl | sh is unsafe".
-	unsafeAfterRe = regexp.MustCompile(`(?i)^[\s)\x60'"]*(?:is|are|was|were)\s+(?:\w+\s+){0,2}?(?:unsafe|dangerous|insecure|risky|harmful|malicious|bad|an?\s+anti-?patterns?)\b`)
-	clauseEndRe   = regexp.MustCompile(`[.;:!?]`)
+	unsafeAfterRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)^[\s)\x60'"]*(?:is|are|was|were)\s+(?:\w+\s+){0,2}?(?:unsafe|dangerous|insecure|risky|harmful|malicious|bad|an?\s+anti-?patterns?)\b`)
+	})
+	clauseEndRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[.;:!?]`) })
 	// bareDownloaderRe is the shorthand "curl | sh" (flags at most): it names the
 	// technique but downloads nothing, so prose that uses it as a label is no
 	// instruction. Any URL, variable or other argument makes it a real command.
-	bareDownloaderRe = regexp.MustCompile(`(?i)^(?:curl|wget)(?:\s+-\S+)*\s*\|`)
+	bareDownloaderRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)^(?:curl|wget)(?:\s+-\S+)*\s*\|`) })
 )
 
 // negLeadWords is how far a negation may sit before the span it governs.
@@ -376,21 +401,21 @@ const negLeadWords = 6
 // clause, is reported.
 func governedSpan(line string, start, end int) bool {
 	clause := line[:start]
-	if loc := clauseEndRe.FindAllStringIndex(clause, -1); len(loc) > 0 {
+	if loc := clauseEndRe().FindAllStringIndex(clause, -1); len(loc) > 0 {
 		clause = clause[loc[len(loc)-1][1]:]
 	}
 	clause = strings.TrimRight(clause, " \t`'\"(")
 	if negatedVerbOnly(clause) {
 		return true
 	}
-	return !imperativeMarkerRe.MatchString(clause) && unsafeAfterRe.MatchString(line[end:])
+	return !imperativeMarkerRe().MatchString(clause) && unsafeAfterRe().MatchString(line[end:])
 }
 
 // negatedVerbOnly reports whether the last negation of the clause sits within
 // negLeadWords words of its end and the only imperative marker after it is the
 // word right behind the negation.
 func negatedVerbOnly(clause string) bool {
-	locs := governingNegRe.FindAllStringIndex(clause, -1)
+	locs := governingNegRe().FindAllStringIndex(clause, -1)
 	if len(locs) == 0 {
 		return false
 	}
@@ -399,7 +424,7 @@ func negatedVerbOnly(clause string) bool {
 		return false
 	}
 	for i, w := range between {
-		if i > 0 && imperativeMarkerRe.MatchString(w) {
+		if i > 0 && imperativeMarkerRe().MatchString(w) {
 			return false
 		}
 	}
@@ -422,7 +447,7 @@ func describesRisk(st *scanText, i int) bool {
 // literal every one of its matches contains (see containsAnyFold).
 func execFinding(line string) (msg string, spans [][]int) {
 	if containsAnyFold(line, []string{"curl", "wget"}) {
-		for _, re := range []*regexp.Regexp{pipeToShellRe, pipeToInterpRe, procSubstRe} {
+		for _, re := range []*regexp.Regexp{pipeToShellRe(), pipeToInterpRe(), procSubstRe()} {
 			spans = append(spans, re.FindAllStringIndex(line, -1)...)
 		}
 	}
@@ -430,12 +455,12 @@ func execFinding(line string) (msg string, spans [][]int) {
 		return "downloads and runs code in one step (curl | sh)", spans
 	}
 	if containsAnyFold(line, []string{"base64", "b64decode"}) {
-		if spans = base64ExecRe.FindAllStringIndex(line, -1); len(spans) > 0 {
+		if spans = base64ExecRe().FindAllStringIndex(line, -1); len(spans) > 0 {
 			return "decodes a base64 payload and executes it", spans
 		}
 	}
-	if containsAnyFold(line, []string{"eval"}) && evalRe.MatchString(line) && !evalBenignRe.MatchString(line) {
-		return "evaluates dynamic text (eval)", evalRe.FindAllStringIndex(line, -1)
+	if containsAnyFold(line, []string{"eval"}) && evalRe().MatchString(line) && !evalBenignRe().MatchString(line) {
+		return "evaluates dynamic text (eval)", evalRe().FindAllStringIndex(line, -1)
 	}
 	return "", nil
 }
@@ -447,7 +472,7 @@ func (r *runner) scanShell(abs string, no int, line string, prose bool) {
 	if msg, spans := execFinding(line); msg != "" {
 		report := !prose
 		for _, sp := range spans {
-			if prose && bareDownloaderRe.MatchString(line[sp[0]:sp[1]]) {
+			if prose && bareDownloaderRe().MatchString(line[sp[0]:sp[1]]) {
 				continue
 			}
 			if !governedSpan(line, sp[0], sp[1]) {
@@ -459,12 +484,12 @@ func (r *runner) scanShell(abs string, no int, line string, prose bool) {
 		}
 	}
 	r.scanCredentialAccess(abs, no, line)
-	if strings.Contains(line, ">") || strings.Contains(line, "tee") { // what writeOutsideRe starts from
-		if m := writeOutsideRe.FindString(line); m != "" {
+	if strings.Contains(line, ">") || strings.Contains(line, "tee") { // what writeOutsideRe() starts from
+		if m := writeOutsideRe().FindString(line); m != "" {
 			r.add(CodeShellAccess, abs, no, "writes outside the project (%s...)", strings.TrimSpace(m))
 		}
 	}
-	if strings.Contains(line, "chmod") && chmod777Re.MatchString(line) {
+	if strings.Contains(line, "chmod") && chmod777Re().MatchString(line) {
 		r.add(CodeShellAccess, abs, no, "makes files world-writable (chmod 777)")
 	}
 }
@@ -474,7 +499,7 @@ func (r *runner) scanHosts(abs string, no int, line string) {
 	if len(allowed) == 0 {
 		return
 	}
-	for _, m := range urlRe.FindAllStringSubmatch(line, -1) {
+	for _, m := range urlRe().FindAllStringSubmatch(line, -1) {
 		host := strings.ToLower(m[1])
 		if host == hostLocalhost || host == "127.0.0.1" || hostAllowed(host, allowed) {
 			continue
@@ -520,7 +545,7 @@ func (r *runner) checkToolBreadth(it *item, fm frontmatter) {
 }
 
 func broadTool(tool string) bool {
-	return tool == "*" || tool == "Bash" || broadBashToolRe.MatchString(tool)
+	return tool == "*" || tool == "Bash" || broadBashToolRe().MatchString(tool)
 }
 
 // splitTools splits an allowed-tools value (a list, or a string separated by

@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
@@ -639,35 +640,37 @@ func (r FixResult) DropFixed(rep *Report, dry bool) {
 	rep.Findings = kept
 }
 
-var fmKeyLineRe = regexp.MustCompile(`^(\s*)(["']?)([^:"'\s]+)(["']?)(\s*:.*)$`)
+var fmKeyLineRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(\s*)(["']?)([^:"'\s]+)(["']?)(\s*:.*)$`) })
 
 // renameKeyLine returns line with its frontmatter key replaced, or false when
 // the line does not start with that key.
 func renameKeyLine(line, from, to string) (string, bool) {
-	m := fmKeyLineRe.FindStringSubmatch(line)
+	m := fmKeyLineRe().FindStringSubmatch(line)
 	if len(m) == 0 || m[3] != from {
 		return "", false
 	}
 	return m[1] + m[2] + to + m[4] + m[5], true
 }
 
-var fmNameLineRe = regexp.MustCompile(`^(\s*name\s*:\s*)(["']?)([^"'#]*?)(["']?)(\s*(?:#.*)?)$`)
+var fmNameLineRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`^(\s*name\s*:\s*)(["']?)([^"'#]*?)(["']?)(\s*(?:#.*)?)$`)
+})
 
 // renameNameLine returns a frontmatter `name:` line with the value replaced.
 func renameNameLine(line, to string) (string, bool) {
-	m := fmNameLineRe.FindStringSubmatch(line)
+	m := fmNameLineRe().FindStringSubmatch(line)
 	if len(m) == 0 || m[2] != m[4] {
 		return "", false
 	}
 	return m[1] + m[2] + to + m[4] + m[5], true
 }
 
-var nonNameRe = regexp.MustCompile(`[^a-z0-9]+`)
+var nonNameRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[^a-z0-9]+`) })
 
 // normalizeSkillName converts a name to lowercase letters, digits and single
 // hyphens, at most 64 characters; "" when nothing usable remains.
 func normalizeSkillName(name string) string {
-	n := strings.Trim(nonNameRe.ReplaceAllString(strings.ToLower(name), "-"), "-")
+	n := strings.Trim(nonNameRe().ReplaceAllString(strings.ToLower(name), "-"), "-")
 	if len(n) > maxSkillNameLen {
 		n = strings.Trim(n[:maxSkillNameLen], "-")
 	}
@@ -682,7 +685,7 @@ func chmodFix(abs string) *Fix {
 // renameSkillFix is the unsafe fix for AR804: rewrite the frontmatter name. It
 // is unsafe because the name is how the skill is invoked and referenced.
 func (r *runner) renameSkillFix(it *item, d doc, line int, to, from string) *Fix {
-	if to == "" || to == from || !skillNameRe.MatchString(to) || line < 1 || line > len(d.lines) {
+	if to == "" || to == from || !skillNameRe().MatchString(to) || line < 1 || line > len(d.lines) {
 		return nil
 	}
 	newLine, ok := renameNameLine(d.lines[line-1], to)

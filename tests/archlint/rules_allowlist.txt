@@ -127,7 +127,7 @@ global internal/agentplugins/schema.go 6
 global internal/agentplugins/skillmd.go 1
 global internal/approval/owners.go 1
 global internal/ard/build.go 1
-global internal/ard/schema.go 2
+global internal/ard/schema.go 1
 global internal/ard/validate.go 1
 global internal/builtins/builtins.go 3
 global internal/catalogsite/render.go 3
@@ -220,7 +220,7 @@ global internal/generator/rulefiles/targets.go 3
 global internal/generator/secret_outputs.go 1
 global internal/generator/settings/harness.go 6
 global internal/generator/settings/hooks_cline.go 1
-global internal/generator/settings/hooks_dialects.go 6
+global internal/generator/settings/hooks_dialects.go 5
 global internal/generator/settings/permissions.go 2
 global internal/generator/settings/permissions_claudestyle.go 5
 global internal/generator/settings/permissions_codex.go 1
@@ -359,7 +359,7 @@ global internal/telemetry/otlp.go 1
 global internal/telemetry/template.go 1
 global internal/templates/init_config.go 1
 global internal/testutil/cienv.go 1
-global internal/tokens/counter.go 2
+global internal/tokens/counter.go 1
 global internal/toolnames/toolnames.go 2
 global internal/usage/feedback.go 1
 global internal/usage/lock.go 2
