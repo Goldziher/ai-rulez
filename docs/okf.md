@@ -334,6 +334,14 @@ resources, agents, commands, checks, domains). The tests check this, and that a 
 `acme_retail` example) imports, exports and still validates. What does not survive: key order and comments inside a
 source file's frontmatter (the export normalizes them), and a source file that is empty after its frontmatter.
 
+### The native tree
+
+`ai-rulez migrate okf` turns `.ai-rulez/` itself into a bundle: the frontmatter of every concept moves under
+`x-ai-rulez.metadata`, `type` and `title` are added, and each directory gets an `index.md` (the root one names
+`okf_version`). The loader maps `x-ai-rulez.metadata` back onto the native fields, treats `type`, `title` and
+`x-ai-rulez` as reserved, and ignores generated `index.md`/`log.md` listings, so generated output does not change.
+`validate` runs `okf validate` on such a tree. See [Migrating to v5](migration-v5.md#okf-is-the-format-of-ai-rulez).
+
 ## CLI
 
 See [CLI commands](cli.md#okf-commands) for every flag.
@@ -342,6 +350,7 @@ See [CLI commands](cli.md#okf-commands) for every flag.
 | --- | --- |
 | `ai-rulez export okf [--out dir] [--profile p \| --role r] [--include kinds] [--index-style body\|frontmatter] [--check]` | Write (or compare) the bundle. `--role` exports the slice of content a [role](roles.md) selects (domains, per-kind selectors, `extends`, checks included), the same slice `generate --role` renders; it excludes `--profile` |
 | `ai-rulez import okf <dir\|git-url[@ref][#subdir]> [--into kind] [--domain d] [--dry-run] [--force]` | Bundle to `.ai-rulez/` sources |
+| `ai-rulez migrate okf [--dry-run] [--check]` | Convert `.ai-rulez/` in place to an OKF bundle (idempotent) |
 | `ai-rulez okf validate <dir\|git-url> [--format json] [--fail-on sev]` | Lint any bundle |
 | `ai-rulez generate` / `generate --check` | Write / compare the bundle when the `okf` preset is on |
 | `ai-rulez validate`, `ai-rulez doctor` | Report `AR9B*` findings for the configured bundle |

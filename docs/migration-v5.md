@@ -191,6 +191,35 @@ The changes below came with the same release; none is touched by `migrate v5`.
 | The `compression` option is gone (it was a no-op since v3.13) | Delete it; a config that still sets it loads and `generate` warns about the unknown key, but `validate` and `generate --strict` fail |
 
 
+## OKF is the format of `.ai-rulez/`
+
+`.ai-rulez/` is becoming an [OKF](okf.md) bundle: each concept carries `type`, `title` and `x-ai-rulez` frontmatter and
+every directory has an `index.md`. The current layout keeps loading during the deprecation window, so nothing breaks
+and nothing needs to change on upgrade. To convert a project:
+
+```bash
+ai-rulez migrate okf --dry-run   # list what would change
+ai-rulez migrate okf             # convert in place; run it again and nothing changes
+ai-rulez generate --check        # the generated files are byte-identical
+```
+
+`migrate okf` moves the frontmatter of each rule, context file, skill, agent, command and check under
+`x-ai-rulez.metadata`, adds `type` (`Decision` for rules, `Concept` for context, `Playbook` for skills, `Reference`
+otherwise; an existing `type` or `title` is kept) and writes the `index.md` files. Bodies are not touched, and neither
+are skill and command resources (`references/`, `scripts/`, `assets/`). A file with an unclosed frontmatter block is
+skipped and reported. `--check` exits 2 while a tree still needs migration.
+
+Things to know:
+
+- `type`, `title` and `x-ai-rulez` are reserved frontmatter keys. A native file that used `type` or `title` as its own
+  key no longer sees it as metadata.
+- `index.md` and `log.md` that only list entries (headings, bullet links) are listings, not content. A rule that happens
+  to be called `index` with prose in it is still a rule.
+- `validate` runs `okf validate` on a tree that has a root `index.md` and reports the `AR9B*` findings, failing at
+  `--fail-on` (default `error`).
+- Not yet: `add`, `init` and the MCP CRUD tools still write the native layout, and a custom `title` is not restored by
+  `export okf` from a migrated tree.
+
 ## `init --from`
 
 `init --from` now runs `convert --write` with its sources: importer names (`auto`, `native`, `rulesync`, ...) or the
