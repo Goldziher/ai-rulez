@@ -44,12 +44,12 @@ func (o Out) Quiet() bool { return o.quiet }
 // Result writes a formatted part of the command's result to stdout. It is never
 // suppressed.
 func (o Out) Result(format string, args ...any) {
-	fmt.Fprintf(o.stdout, format, args...)
+	write(o.stdout, format, args...)
 }
 
 // Resultln writes a line of the command's result to stdout.
 func (o Out) Resultln(args ...any) {
-	fmt.Fprintln(o.stdout, args...)
+	_, _ = fmt.Fprintln(o.stdout, args...) //nolint:errcheck // nowhere to report a closed stdout
 }
 
 // Info writes a progress or confirmation line to stderr unless -q is set.
@@ -57,10 +57,15 @@ func (o Out) Info(format string, args ...any) {
 	if o.quiet {
 		return
 	}
-	fmt.Fprintf(o.stderr, format, args...)
+	write(o.stderr, format, args...)
 }
 
 // Warn writes a warning to stderr; -q does not hide it.
 func (o Out) Warn(format string, args ...any) {
-	fmt.Fprintf(o.stderr, format, args...)
+	write(o.stderr, format, args...)
+}
+
+// write prints to a stream that has nowhere to report its own failure.
+func write(w io.Writer, format string, args ...any) {
+	_, _ = fmt.Fprintf(w, format, args...) //nolint:errcheck // nowhere to report a closed stream
 }
