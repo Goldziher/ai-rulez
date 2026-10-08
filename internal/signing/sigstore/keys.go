@@ -1,22 +1,19 @@
-package signing
+package sigstore
 
 import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/pem"
 
 	"github.com/samber/oops"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
 
 // KeyPair is a signing key (ECDSA P-256, P-384, P-521 or ed25519): a long-lived
@@ -31,6 +28,9 @@ type KeyPair struct {
 // algorithmOf maps a public key to the Sigstore algorithm that signs with it.
 // RSA is refused: ai-rulez keys are ECDSA or ed25519.
 func algorithmOf(pub crypto.PublicKey) (protocommon.PublicKeyDetails, error) {
+	if err := signing.CheckKeyType(pub); err != nil {
+		return 0, err
+	}
 	switch k := pub.(type) {
 	case *ecdsa.PublicKey:
 		switch k.Curve {
@@ -38,36 +38,12 @@ func algorithmOf(pub crypto.PublicKey) (protocommon.PublicKeyDetails, error) {
 			return protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256, nil
 		case elliptic.P384():
 			return protocommon.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384, nil
-		case elliptic.P521():
+		default:
 			return protocommon.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512, nil
 		}
-		return 0, oops.Errorf("unsupported ECDSA curve %s (use P-256, P-384 or P-521)", k.Curve.Params().Name)
-	case ed25519.PublicKey:
+	default:
 		return protocommon.PublicKeyDetails_PKIX_ED25519, nil
 	}
-	return 0, oops.Errorf("unsupported key type %T (use an ECDSA or ed25519 key)", pub)
-}
-
-// Fingerprint returns "sha256:<hex>" of the key's DER SubjectPublicKeyInfo: the
-// identifier trust entries and results use for a key.
-func Fingerprint(pub crypto.PublicKey) (string, error) {
-	der, err := x509.MarshalPKIXPublicKey(pub)
-	if err != nil {
-		return "", oops.Wrapf(err, "encode the public key")
-	}
-	sum := sha256.Sum256(der)
-	return "sha256:" + hex.EncodeToString(sum[:]), nil
-}
-
-// hintOf is the hint a bundle carries for a key: base64 of the SHA-256 of its
-// DER public key, as cosign and sigstore-go write it.
-func hintOf(pub crypto.PublicKey) ([]byte, error) {
-	der, err := x509.MarshalPKIXPublicKey(pub)
-	if err != nil {
-		return nil, oops.Wrapf(err, "encode the public key")
-	}
-	sum := sha256.Sum256(der)
-	return []byte(base64.StdEncoding.EncodeToString(sum[:])), nil
 }
 
 // NewKeyPair wraps a private key. The key must be ECDSA or ed25519.
@@ -84,7 +60,7 @@ func NewKeyPair(priv crypto.PrivateKey) (*KeyPair, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "select the signing algorithm")
 	}
-	hint, err := hintOf(signer.Public())
+	hint, err := signing.KeyHint(signer.Public())
 	if err != nil {
 		return nil, err
 	}
@@ -137,18 +113,6 @@ func GenerateKeyPair(password []byte) (privPEM, pubPEM []byte, err error) {
 	return privPEM, pubPEM, nil
 }
 
-// ParsePublicKey reads a PEM public key (ECDSA or ed25519).
-func ParsePublicKey(pemBytes []byte) (crypto.PublicKey, error) {
-	pub, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
-	if err != nil {
-		return nil, oops.Wrapf(err, "read the public key")
-	}
-	if _, err := algorithmOf(pub); err != nil {
-		return nil, err
-	}
-	return pub, nil
-}
-
 // Key accessors used when building a bundle.
 
 // GetHashAlgorithm returns the digest algorithm the key signs.
@@ -183,7 +147,7 @@ func (k *KeyPair) GetPublicKeyPem() (string, error) {
 
 // Fingerprint returns the "sha256:<hex>" fingerprint of the public key.
 func (k *KeyPair) Fingerprint() string {
-	fp, err := Fingerprint(k.priv.Public())
+	fp, err := signing.Fingerprint(k.priv.Public())
 	if err != nil {
 		return ""
 	}

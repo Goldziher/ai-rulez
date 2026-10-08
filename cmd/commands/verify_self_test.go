@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 // selfFixture is a fake release binary with the provenance bundle its release ships.
@@ -30,9 +31,9 @@ func newSelfFixture(t *testing.T) selfFixture {
 	require.NoError(t, os.WriteFile(exe, []byte("release-binary"), 0o755))
 	fs, err := signing.ReadFileSubject(exe)
 	require.NoError(t, err)
-	priv, pubPEM, err := signing.GenerateKeyPair(nil)
+	priv, pubPEM, err := sigstore.GenerateKeyPair(nil)
 	require.NoError(t, err)
-	ks, err := signing.LoadKeySigner(priv, nil)
+	ks, err := sigstore.LoadKeySigner(priv, nil)
 	require.NoError(t, err)
 	st, err := signing.NewStatement(signing.PredicateSLSA, []signing.Subject{{Name: "ai-rulez", Digest: map[string]string{"sha256": fs.DigestHex}}}, signing.SLSAProvenance{
 		BuildDefinition: signing.SLSABuildDefinition{BuildType: "https://actions.github.io/buildtypes/workflow/v1", ExternalParameters: map[string]any{}},

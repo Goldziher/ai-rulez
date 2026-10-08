@@ -1,14 +1,11 @@
 package signing
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
 	"strings"
 	"time"
 
 	"github.com/samber/oops"
-	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
@@ -250,22 +247,6 @@ func verifyLockBundle(data []byte, lock *lockfile.File, p LockPolicy) (*Result, 
 		return nil, LockPredicate{}, err
 	}
 	return res, LockPredicate{HashVersion: subject.HashVersion, Tree: subject.Tree, ApprovalsDigest: subject.ApprovalsDigest, Scope: subject.Scope, OutputsPinned: subject.OutputsPinned}, nil
-}
-
-// blobCovers reports AR724 when the digest a message-signature bundle signed is
-// not the SHA-256 of artifact, so a lock that changed after signing is told
-// apart from a forged signature.
-func blobCovers(data, artifact []byte) error {
-	b, err := parseBundle(data)
-	if err != nil {
-		return err
-	}
-	md := b.GetMessageSignature().GetMessageDigest()
-	sum := sha256.Sum256(artifact)
-	if md != nil && md.Algorithm == protocommon.HashAlgorithm_SHA2_256 && !bytes.Equal(md.Digest, sum[:]) {
-		return Errorf(CodeSubjectMismatch, "%s changed since it was signed: the signed statement differs from the one recomputed from the lock", lockfile.FileName)
-	}
-	return nil
 }
 
 // Commit records the signing time of an accepted report in the rollback state.

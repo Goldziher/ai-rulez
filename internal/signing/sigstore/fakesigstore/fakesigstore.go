@@ -1,4 +1,6 @@
-package signing
+// Package fakesigstore is an in-process Fulcio and Rekor for tests of code that
+// signs or verifies Sigstore bundles.
+package fakesigstore
 
 import (
 	"context"
@@ -24,89 +26,91 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// fakeSigstore is an in-process Fulcio and Rekor v1 that speak the HTTP APIs the
+// Fake is an in-process Fulcio and Rekor v1 that speak the HTTP APIs the
 // keyless signer uses, plus the trusted root that verifies what they issue. The
 // leaf certificates carry no signed certificate timestamp, so the root lists no
 // CT log.
-type fakeSigstore struct {
+type Fake struct {
 	t                        *testing.T
-	identity, issuer, token  string
-	caKey, logKey            *ecdsa.PrivateKey
-	caCert                   *x509.Certificate
-	logID                    []byte
-	fulcio, rekor            *httptest.Server
-	mu                       sync.Mutex
-	entries                  map[string][]byte // uuid -> response entry JSON
-	fulcioCalls, rekorCalls  int
-	rekorFailures            int  // answer HTTP 503 this many times first
-	conflict                 bool // answer HTTP 409 and serve the entry by UUID
-	wrongKind, wrongCertKey  bool
-	lastAuth, lastProposed   string
-	lastProofSubjectVerified bool
+	Identity, Issuer, Token  string
+	CaKey, LogKey            *ecdsa.PrivateKey
+	CaCert                   *x509.Certificate
+	LogID                    []byte
+	Fulcio, Rekor            *httptest.Server
+	Mu                       sync.Mutex
+	Entries                  map[string][]byte // uuid -> response entry JSON
+	FulcioCalls, RekorCalls  int
+	RekorFailures            int  // answer HTTP 503 this many times first
+	Conflict                 bool // answer HTTP 409 and serve the entry by UUID
+	WrongKind, WrongCertKey  bool
+	LastAuth, LastProposed   string
+	LastProofSubjectVerified bool
 }
 
-func newFakeSigstore(t *testing.T, identity, issuer string) *fakeSigstore {
+// New starts a fake for a certificate naming identity and issuer.
+func New(t *testing.T, identity, issuer string) *Fake {
 	t.Helper()
-	f := &fakeSigstore{t: t, identity: identity, issuer: issuer, entries: map[string][]byte{}}
+	f := &Fake{t: t, Identity: identity, Issuer: issuer, Entries: map[string][]byte{}}
 	var err error
-	f.caKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	f.CaKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
-	f.logKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	f.LogKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 	tmpl := &x509.Certificate{
 		SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "fake fulcio"},
 		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(24 * time.Hour),
 		IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign,
 	}
-	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, f.caKey.Public(), f.caKey)
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, f.CaKey.Public(), f.CaKey)
 	require.NoError(t, err)
-	f.caCert, err = x509.ParseCertificate(der)
+	f.CaCert, err = x509.ParseCertificate(der)
 	require.NoError(t, err)
-	logDER, err := x509.MarshalPKIXPublicKey(f.logKey.Public())
+	logDER, err := x509.MarshalPKIXPublicKey(f.LogKey.Public())
 	require.NoError(t, err)
 	sum := sha256.Sum256(logDER)
-	f.logID = sum[:]
+	f.LogID = sum[:]
 	claims, err := json.Marshal(map[string]string{"sub": identity, "iss": issuer})
 	require.NoError(t, err)
-	f.token = "e30." + base64.RawURLEncoding.EncodeToString(claims) + ".c2ln"
-	f.fulcio = httptest.NewServer(http.HandlerFunc(f.serveFulcio))
-	f.rekor = httptest.NewServer(http.HandlerFunc(f.serveRekor))
-	t.Cleanup(f.fulcio.Close)
-	t.Cleanup(f.rekor.Close)
+	f.Token = "e30." + base64.RawURLEncoding.EncodeToString(claims) + ".c2ln"
+	f.Fulcio = httptest.NewServer(http.HandlerFunc(f.serveFulcio))
+	f.Rekor = httptest.NewServer(http.HandlerFunc(f.serveRekor))
+	t.Cleanup(f.Fulcio.Close)
+	t.Cleanup(f.Rekor.Close)
 	return f
 }
 
-// signer is a keyless signer pointed at the fake services, with no retry delay.
-func (f *fakeSigstore) signer() *KeylessSigner {
+// Signer is a keyless signer pointed at the fake services, with no retry delay.
+func (f *Fake) Signer() *sigstore.KeylessSigner {
 	f.t.Helper()
-	s, err := NewKeylessSigner(KeylessOptions{IDToken: f.token, FulcioURL: f.fulcio.URL, RekorURL: f.rekor.URL})
+	s, err := sigstore.NewKeylessSigner(sigstore.KeylessOptions{IDToken: f.Token, FulcioURL: f.Fulcio.URL, RekorURL: f.Rekor.URL, RetryBackoff: time.Millisecond})
 	require.NoError(f.t, err)
-	s.backoff = time.Millisecond
 	return s
 }
 
-// bundle signs payload as an in-toto DSSE envelope and returns the bundle JSON.
-func (f *fakeSigstore) bundle(payload []byte) []byte {
+// Bundle signs payload as an in-toto DSSE envelope and returns the bundle JSON.
+func (f *Fake) Bundle(payload []byte) []byte {
 	f.t.Helper()
-	pb, err := f.signer().Bundle(context.Background(), &DSSEData{Data: payload, PayloadType: PayloadTypeInToto})
+	pb, err := f.Signer().Bundle(context.Background(), &sigstore.DSSEData{Data: payload, PayloadType: signing.PayloadTypeInToto})
 	require.NoError(f.t, err)
 	data, err := protojson.Marshal(pb)
 	require.NoError(f.t, err)
 	return data
 }
 
-// trustedRoot verifies the fake's certificates and log entries.
-func (f *fakeSigstore) trustedRoot() root.TrustedMaterial {
+// TrustedRoot verifies the fake's certificates and log entries.
+func (f *Fake) TrustedRoot() root.TrustedMaterial {
 	return &fakeRoot{
-		ca: &root.FulcioCertificateAuthority{Root: f.caCert, ValidityPeriodStart: f.caCert.NotBefore, ValidityPeriodEnd: f.caCert.NotAfter},
-		logs: map[string]*root.TransparencyLog{hex.EncodeToString(f.logID): {
-			BaseURL: f.rekor.URL, ID: f.logID, ValidityPeriodStart: time.Now().Add(-time.Hour),
-			HashFunc: crypto.SHA256, PublicKey: f.logKey.Public(), SignatureHashFunc: crypto.SHA256,
+		ca: &root.FulcioCertificateAuthority{Root: f.CaCert, ValidityPeriodStart: f.CaCert.NotBefore, ValidityPeriodEnd: f.CaCert.NotAfter},
+		logs: map[string]*root.TransparencyLog{hex.EncodeToString(f.LogID): {
+			BaseURL: f.Rekor.URL, ID: f.LogID, ValidityPeriodStart: time.Now().Add(-time.Hour),
+			HashFunc: crypto.SHA256, PublicKey: f.LogKey.Public(), SignatureHashFunc: crypto.SHA256,
 		}},
 	}
 }
@@ -123,16 +127,16 @@ func (r *fakeRoot) FulcioCertificateAuthorities() []root.CertificateAuthority {
 
 func (r *fakeRoot) RekorLogs() map[string]*root.TransparencyLog { return r.logs }
 
-func (f *fakeSigstore) serveFulcio(w http.ResponseWriter, r *http.Request) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.fulcioCalls++
-	f.lastAuth = r.Header.Get("Authorization")
+func (f *Fake) serveFulcio(w http.ResponseWriter, r *http.Request) {
+	f.Mu.Lock()
+	defer f.Mu.Unlock()
+	f.FulcioCalls++
+	f.LastAuth = r.Header.Get("Authorization")
 	if r.Method != http.MethodPost || r.URL.Path != "/api/v2/signingCert" {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	if f.lastAuth != "Bearer "+f.token {
+	if f.LastAuth != "Bearer "+f.Token {
 		http.Error(w, "bad token", http.StatusUnauthorized)
 		return
 	}
@@ -141,57 +145,57 @@ func (f *fakeSigstore) serveFulcio(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	pub, err := ParsePublicKey([]byte(req.PublicKeyRequest.PublicKey.Content))
+	pub, err := signing.ParsePublicKey([]byte(req.PublicKeyRequest.PublicKey.Content))
 	if err != nil {
 		http.Error(w, "bad key", http.StatusBadRequest)
 		return
 	}
 	proof, err := base64.StdEncoding.DecodeString(req.PublicKeyRequest.ProofOfPossession)
-	digest := sha256.Sum256([]byte(f.identity))
+	digest := sha256.Sum256([]byte(f.Identity))
 	ecPub, ok := pub.(*ecdsa.PublicKey)
-	f.lastProofSubjectVerified = err == nil && ok && ecdsa.VerifyASN1(ecPub, digest[:], proof)
-	if !f.lastProofSubjectVerified {
+	f.LastProofSubjectVerified = err == nil && ok && ecdsa.VerifyASN1(ecPub, digest[:], proof)
+	if !f.LastProofSubjectVerified {
 		http.Error(w, "bad proof of possession", http.StatusBadRequest)
 		return
 	}
 	certPub := pub
-	if f.wrongCertKey {
+	if f.WrongCertKey {
 		other, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		certPub = other.Public()
 	}
-	issuerExt, _ := asn1.Marshal(f.issuer)
+	issuerExt, _ := asn1.Marshal(f.Issuer)
 	leaf := &x509.Certificate{
-		SerialNumber: big.NewInt(time.Now().UnixNano()), EmailAddresses: []string{f.identity},
+		SerialNumber: big.NewInt(time.Now().UnixNano()), EmailAddresses: []string{f.Identity},
 		NotBefore: time.Now().Add(-time.Minute), NotAfter: time.Now().Add(10 * time.Minute),
 		KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
 		ExtraExtensions: []pkix.Extension{
-			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1}, Value: []byte(f.issuer)},
+			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1}, Value: []byte(f.Issuer)},
 			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 8}, Value: issuerExt},
 		},
 	}
-	der, err := x509.CreateCertificate(rand.Reader, leaf, f.caCert, certPub, f.caKey)
+	der, err := x509.CreateCertificate(rand.Reader, leaf, f.CaCert, certPub, f.CaKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	chain := []string{
 		string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})),
-		string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: f.caCert.Raw})),
+		string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: f.CaCert.Raw})),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(map[string]any{"signedCertificateEmbeddedSct": map[string]any{"chain": map[string]any{"certificates": chain}}})
 }
 
-func (f *fakeSigstore) serveRekor(w http.ResponseWriter, r *http.Request) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.rekorCalls++
+func (f *Fake) serveRekor(w http.ResponseWriter, r *http.Request) {
+	f.Mu.Lock()
+	defer f.Mu.Unlock()
+	f.RekorCalls++
 	const prefix = "/api/v1/log/entries"
 	switch {
 	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, prefix+"/"):
 		uuid := strings.TrimPrefix(r.URL.Path, prefix+"/")
-		entry, ok := f.entries[uuid]
+		entry, ok := f.Entries[uuid]
 		if !ok {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
@@ -202,22 +206,22 @@ func (f *fakeSigstore) serveRekor(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	if f.rekorFailures > 0 {
-		f.rekorFailures--
+	if f.RekorFailures > 0 {
+		f.RekorFailures--
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
 	}
 	raw, _ := io.ReadAll(r.Body)
-	f.lastProposed = string(raw)
-	body, err := canonicalEntry(raw, f.wrongKind)
+	f.LastProposed = string(raw)
+	body, err := canonicalEntry(raw, f.WrongKind)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	index := int64(len(f.entries))
+	index := int64(len(f.Entries))
 	integrated := time.Now().Unix()
 	b64 := base64.StdEncoding.EncodeToString(body)
-	logID := hex.EncodeToString(f.logID)
+	logID := hex.EncodeToString(f.LogID)
 	set, err := f.signSET(b64, integrated, logID, index)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -242,8 +246,8 @@ func (f *fakeSigstore) serveRekor(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	uuid := hex.EncodeToString(leaf[:])
-	f.entries[uuid] = entry
-	if f.conflict {
+	f.Entries[uuid] = entry
+	if f.Conflict {
 		w.Header().Set("Location", prefix+"/"+uuid)
 		http.Error(w, "an equivalent entry already exists", http.StatusConflict)
 		return
@@ -252,15 +256,15 @@ func (f *fakeSigstore) serveRekor(w http.ResponseWriter, r *http.Request) {
 }
 
 // signCheckpoint returns a Rekor v1 signed tree head for a one-leaf tree.
-func (f *fakeSigstore) signCheckpoint(rootHash []byte) (string, error) {
+func (f *Fake) signCheckpoint(rootHash []byte) (string, error) {
 	const origin = "rekor.test - 1"
 	body := fmt.Sprintf("%s\n1\n%s\n", origin, base64.StdEncoding.EncodeToString(rootHash))
 	sum := sha256.Sum256([]byte(body))
-	sig, err := ecdsa.SignASN1(rand.Reader, f.logKey, sum[:])
+	sig, err := ecdsa.SignASN1(rand.Reader, f.LogKey, sum[:])
 	if err != nil {
 		return "", err
 	}
-	der, err := x509.MarshalPKIXPublicKey(f.logKey.Public())
+	der, err := x509.MarshalPKIXPublicKey(f.LogKey.Public())
 	if err != nil {
 		return "", err
 	}
@@ -271,7 +275,7 @@ func (f *fakeSigstore) signCheckpoint(rootHash []byte) (string, error) {
 
 // signSET signs the inclusion promise: the canonical JSON (keys sorted) of the
 // body, integrated time, log ID and log index.
-func (f *fakeSigstore) signSET(body string, integrated int64, logID string, index int64) ([]byte, error) {
+func (f *Fake) signSET(body string, integrated int64, logID string, index int64) ([]byte, error) {
 	payload, err := json.Marshal(struct {
 		Body           string `json:"body"`
 		IntegratedTime int64  `json:"integratedTime"`
@@ -282,7 +286,7 @@ func (f *fakeSigstore) signSET(body string, integrated int64, logID string, inde
 		return nil, err
 	}
 	sum := sha256.Sum256(payload)
-	return ecdsa.SignASN1(rand.Reader, f.logKey, sum[:])
+	return ecdsa.SignASN1(rand.Reader, f.LogKey, sum[:])
 }
 
 // canonicalEntry turns a proposed entry into the body Rekor logs: a dsse entry
@@ -335,4 +339,25 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// fulcioRequest is the body of a Fulcio v2 signingCert request.
+type fulcioRequest struct {
+	PublicKeyRequest struct {
+		PublicKey struct {
+			Algorithm string `json:"algorithm"`
+			Content   string `json:"content"`
+		} `json:"publicKey"`
+		ProofOfPossession string `json:"proofOfPossession"`
+	} `json:"publicKeyRequest"`
+}
+
+type dsseJSONSignature struct {
+	Sig []byte `json:"sig,omitempty"`
+}
+
+type dsseJSON struct {
+	Payload     []byte              `json:"payload,omitempty"`
+	PayloadType string              `json:"payloadType,omitempty"`
+	Signatures  []dsseJSONSignature `json:"signatures,omitempty"`
 }

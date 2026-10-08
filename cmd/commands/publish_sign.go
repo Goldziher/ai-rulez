@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/samber/oops"
-	"github.com/sigstore/sigstore-go/pkg/root"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/approval"
@@ -19,6 +18,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	"github.com/Goldziher/ai-rulez/v5/internal/sbom"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 // validatePublishSignFlags checks the signing flags of `publish`.
@@ -48,17 +48,17 @@ func publishSigner(ctx context.Context, env ambient.Env) (signing.Signer, error)
 	switch {
 	case publishSignKeyless:
 		fmt.Fprintln(os.Stderr, "keyless signing: your OIDC identity, the certificate and the archive digest go to a transparency log that is public unless --rekor-url names another one")
-		tok, err := signing.ResolveIDToken(ctx, env, publishSignTokenEnv, publishSignInteractive)
+		tok, err := sigstore.ResolveIDToken(ctx, env, publishSignTokenEnv, publishSignInteractive)
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already contextual
 		}
-		return signing.NewKeylessSigner(signing.KeylessOptions{IDToken: tok, FulcioURL: publishFulcioURL, RekorURL: publishRekorURL})
+		return sigstore.NewKeylessSigner(sigstore.KeylessOptions{IDToken: tok, FulcioURL: publishFulcioURL, RekorURL: publishRekorURL})
 	case publishSignKey != "":
 		data, err := readKeyFile(publishSignKey)
 		if err != nil {
 			return nil, err
 		}
-		ks, err := signing.LoadKeySigner(data, []byte(publishKeyPassword(env)))
+		ks, err := sigstore.LoadKeySigner(data, []byte(publishKeyPassword(env)))
 		if err != nil {
 			return nil, oops.With("path", publishSignKey).Wrap(err)
 		}
@@ -201,7 +201,7 @@ func publishVerifyOptions(env ambient.Env) (publish.VerifyOptions, error) {
 		if err != nil {
 			return o, err
 		}
-		tr, err := root.NewTrustedRootFromJSON(data)
+		tr, err := signing.LoadTrustedRoot(data)
 		if err != nil {
 			return o, oops.With("path", publishVerifyRoot).Wrapf(err, "the trusted root is not valid")
 		}
@@ -215,7 +215,7 @@ func publishVerifyOptions(env ambient.Env) (publish.VerifyOptions, error) {
 }
 
 // cachedTrustedRoot reads the root `ai-rulez trust update` cached, or nil.
-func cachedTrustedRoot(env ambient.Env) root.TrustedMaterial {
+func cachedTrustedRoot(env ambient.Env) signing.TrustedMaterial {
 	dir, err := config.CacheDirIn(env, "sigstore")
 	if err != nil {
 		return nil
@@ -224,7 +224,7 @@ func cachedTrustedRoot(env ambient.Env) root.TrustedMaterial {
 	if err != nil {
 		return nil
 	}
-	tr, err := root.NewTrustedRootFromJSON(data)
+	tr, err := signing.LoadTrustedRoot(data)
 	if err != nil {
 		return nil
 	}

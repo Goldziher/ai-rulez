@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 func TestSkillSignatureGate(t *testing.T) {
@@ -29,7 +29,7 @@ func TestSkillSignatureGate(t *testing.T) {
 			t.Setenv("XDG_STATE_HOME", filepath.Join(root, "state"))
 			t.Setenv("XDG_CONFIG_HOME", filepath.Join(root, "config"))
 			t.Setenv("XDG_CACHE_HOME", filepath.Join(root, "cache"))
-			_, pub, err := signing.GenerateKeyPair(nil)
+			_, pub, err := sigstore.GenerateKeyPair(nil)
 			require.NoError(t, err)
 			dir := filepath.Join(root, ".ai-rulez", "skills", "deploy")
 			require.NoError(t, os.MkdirAll(dir, 0o755))
