@@ -1,10 +1,16 @@
 ---
-priority: medium
-targets:
-  - CLAUDE.md
-  - GEMINI.md
-  - AGENTS.md
-  - .hermes.md
+type: Decision
+title: Documentation And Samples
+x-ai-rulez:
+  kind: rule
+  id: documentation-and-samples
+  metadata:
+    priority: medium
+    targets:
+      - CLAUDE.md
+      - GEMINI.md
+      - AGENTS.md
+      - .hermes.md
 ---
 
 # Documentation and Samples

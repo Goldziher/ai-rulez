@@ -1,14 +1,20 @@
 ---
-priority: high
-summary: High-level overview of config, profiles, presets, includes, and typical AI-Rulez workflows.
-targets:
-  - CLAUDE.md
-  - GEMINI.md
-  - .cursor/rules/*
-  - .devin/*
-  - .github/copilot-instructions.md
-  - AGENTS.md
-  - .hermes.md
+type: Concept
+title: Tool Overview
+x-ai-rulez:
+  kind: context
+  id: tool-overview
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - GEMINI.md
+      - .cursor/rules/*
+      - .devin/*
+      - .github/copilot-instructions.md
+      - AGENTS.md
+      - .hermes.md
+    summary: High-level overview of config, profiles, presets, includes, and typical AI-Rulez workflows.
 ---
 
 # AI-Rulez Overview

@@ -1,8 +1,15 @@
 ---
-priority: medium
-aliases: [b]
-usage: "/build"
-description: "Build the project"
+type: Reference
+title: Build
+description: Build the project
+x-ai-rulez:
+  kind: command
+  id: build
+  metadata:
+    priority: medium
+    aliases:
+      - b
+    usage: /build
 ---
 
 # Build

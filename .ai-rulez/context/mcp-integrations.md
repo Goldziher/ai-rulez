@@ -1,12 +1,18 @@
 ---
-priority: medium
-summary: MCP server configuration and integrations exposing read, CRUD, generate, and validate operations.
-targets:
-  - CLAUDE.md
-  - GEMINI.md
-  - .cursor/rules/*
-  - AGENTS.md
-  - .hermes.md
+type: Concept
+title: Mcp Integrations
+x-ai-rulez:
+  kind: context
+  id: mcp-integrations
+  metadata:
+    priority: medium
+    targets:
+      - CLAUDE.md
+      - GEMINI.md
+      - .cursor/rules/*
+      - AGENTS.md
+      - .hermes.md
+    summary: MCP server configuration and integrations exposing read, CRUD, generate, and validate operations.
 ---
 
 # MCP Server and Integrations

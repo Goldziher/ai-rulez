@@ -1,5 +1,11 @@
 ---
-priority: high
+type: Concept
+title: Poly
+x-ai-rulez:
+  kind: context
+  id: poly
+  metadata:
+    priority: high
 ---
 
 # poly
