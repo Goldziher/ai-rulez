@@ -12,8 +12,8 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/Goldziher/ai-rulez/v5/internal/render"
 )
@@ -105,11 +105,17 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctx := cmdContext()
 	cfg, err := loadGenerateConfig(args)
 	if err != nil {
 		return err
 	}
+	return generateLoaded(cmd, cfg)
+}
+
+// generateLoaded is the single-project run once its configuration is loaded and
+// checked: overrides, gates, preflight, then the plan, the preview or the write.
+func generateLoaded(cmd *cobra.Command, cfg *config.Config) error {
+	ctx := cmdContext()
 	if err := applyGenerateOverrides(cfg); err != nil {
 		return fail(err)
 	}
@@ -158,8 +164,11 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// statusDryRun is the status of a generate --dry-run document.
+const statusDryRun = "dry_run"
+
 // generateDocument is the `--format json` document of a generate run that wrote
-// (status "generated") or previewed (status "dry_run", with the plan lines).
+// (status "generated") or previewed (status statusDryRun, with the plan lines).
 type generateDocument struct {
 	Status       string   `json:"status"`
 	FilesWritten int      `json:"files_written"`
@@ -262,7 +271,7 @@ func printDryRun(gen *generator.Generator, indent string) error {
 		return err //nolint:wrapcheck // already contextual
 	}
 	if generateFormat == formatJSON {
-		if err := writeGenerateDocument(out, generateDocument{Status: "dry_run", Plan: plan}); err != nil {
+		if err := writeGenerateDocument(out, generateDocument{Status: statusDryRun, Plan: plan}); err != nil {
 			return err
 		}
 		return gen.DryRunBlocked()
@@ -282,7 +291,7 @@ func runPluginGenerate(out render.Out, gen *generator.Generator) error {
 			return fail(err)
 		}
 		if generateFormat == formatJSON {
-			return fail(writeGenerateDocument(out, generateDocument{Status: "dry_run", Plan: plan}))
+			return fail(writeGenerateDocument(out, generateDocument{Status: statusDryRun, Plan: plan}))
 		}
 		for _, line := range plan {
 			out.Resultln(line)
