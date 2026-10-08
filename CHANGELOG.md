@@ -8,6 +8,30 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 This becomes 5.0.0. Upgrade steps for every item under Breaking are in [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/).
 
+### Positioning
+
+v5 repositions ai-rulez as a standards-compliant lifecycle tool for agent knowledge and capabilities: author in one
+source of truth, generate for every harness, bundle and publish to the open formats, lint and validate against each
+standard's own schema, and govern through signing, approvals and policy. The README, the documentation site
+(organized as Author, Generate, Bundle and publish, Validate, Govern, Operate) and the package metadata follow that
+story. "Planned" means the code does not yet generate and validate the standard; pinned spec versions and conformance
+test status are in [Standards](https://goldziher.github.io/ai-rulez/standards/).
+
+| Standard | Status | Generate / bundle | Lint / validate |
+| -------- | ------ | ----------------- | --------------- |
+| OKF (Open Knowledge Format, v0.2) | supported | `export okf`, the `okf` preset | `okf validate` |
+| Agent Plugins | supported | `generate --plugin`, `publish --emit agent-plugins` | `validate --strict` |
+| ARD (Agentic Resource Discovery) | supported | `publish --emit ard` | `validate` |
+| Agent Skills | supported | `generate` | `validate` (partial) |
+| AGENTS.md | supported | `generate` | `validate` |
+| llms.txt | supported | the `llms-txt` preset | `validate` |
+| MCP server config | supported | `generate` | `validate` (partial) |
+| MCP server card | planned | not generated | none |
+| CycloneDX / SPDX SBOM | supported | `sbom` | `sbom --check` |
+| in-toto / DSSE / Sigstore | supported | `sign` | `verify --attestation` |
+| OpenTelemetry (OTLP) | supported | `telemetry export --to otlp` | not applicable |
+| "Agent bundle" | planned | spec to be confirmed | spec to be confirmed |
+
 ### Breaking
 
 Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles each change below where it is mechanical. See [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/).
