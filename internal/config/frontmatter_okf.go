@@ -34,7 +34,7 @@ func IsOKFReservedKey(key string) bool {
 // entries of x-ai-rulez.metadata are hoisted to the top level, so typed
 // fields, Extra and the typed extra nodes are filled exactly as they are for
 // the native layout. Frontmatter without a reserved key is returned unchanged.
-func normalizeOKFFrontmatter(frontmatterYAML string) string {
+func normalizeOKFFrontmatter(frontmatterYAML string) string { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	if !strings.Contains(frontmatterYAML, okfKeyType) &&
 		!strings.Contains(frontmatterYAML, okfKeyTitle) &&
 		!strings.Contains(frontmatterYAML, okfKeyExtension) {

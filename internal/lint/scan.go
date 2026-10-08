@@ -242,7 +242,7 @@ func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[
 var (
 	listMarkerRe = regexp.MustCompile(`^(?:[-*+>]|\d+[.)])\s+`)
 	invokeWords  = map[string]bool{
-		"run": true, "runs": true, "invoke": true, "invokes": true, "type": true, "use": true,
+		"run": true, "runs": true, "invoke": true, "invokes": true, keyType: true, "use": true,
 		"call": true, hookTypeCommand: true, "commands": true, "slash": true, "execute": true, "try": true, "via": true, "or": true, "then": true,
 	}
 )

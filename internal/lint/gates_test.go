@@ -70,7 +70,7 @@ func TestHiddenInSkipsASCIIOnly(t *testing.T) {
 			t.Errorf("hiddenIn(%q) = %v, want none", line, got)
 		}
 	}
-	if got := hiddenIn("zero​width", false); len(got) != 1 {
+	if got := hiddenIn("zero\u200bwidth", false); len(got) != 1 {
 		t.Errorf("zero-width space not reported: %v", got)
 	}
 }

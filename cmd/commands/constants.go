@@ -23,6 +23,7 @@ const (
 	answerYes     = "yes"
 	failOnError   = "error"
 	failOnWarning = "warning"
+	failOnInfo    = "info"
 	kindSkill     = "skill"
 	presetClaude  = "claude"
 	labelChanged  = "changed"

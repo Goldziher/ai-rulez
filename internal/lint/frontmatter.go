@@ -59,7 +59,7 @@ func (f *frontmatter) add(k, v *yaml.Node) {
 		val = nil
 	}
 	f.keys = append(f.keys, fmKey{Name: k.Value, Line: k.Line + 1, Value: val})
-	if k.Value == "metadata" && v.Kind == yaml.MappingNode {
+	if k.Value == keyMetadata && v.Kind == yaml.MappingNode {
 		f.meta = map[string]fmKey{}
 		for j := 0; j+1 < len(v.Content); j += 2 {
 			var mv any
@@ -78,7 +78,7 @@ func (f *frontmatter) addExtension(ext *yaml.Node) {
 	}
 	for i := 0; i+1 < len(ext.Content); i += 2 {
 		md := ext.Content[i+1]
-		if ext.Content[i].Value != "metadata" || md.Kind != yaml.MappingNode {
+		if ext.Content[i].Value != keyMetadata || md.Kind != yaml.MappingNode {
 			continue
 		}
 		for j := 0; j+1 < len(md.Content); j += 2 {
