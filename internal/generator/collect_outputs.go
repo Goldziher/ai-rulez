@@ -92,13 +92,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 		"agents", len(contentTree.Agents),
 		"domains", len(contentTree.Domains))
 
-	presets.WarnDuplicateContent(g.log(), contentTree)
-	g.warnUnbundledPluginOnly(contentTree)
-	g.warnIgnoredPlugins()
-	g.warnLegacyFiles()
-	for _, diagnostic := range settings.UnsupportedDiagnostics(g.config) {
-		g.config.Diag.Warn(diagnostic)
-	}
+	g.warnContentDiagnostics(contentTree)
 
 	// Collect MCP servers based on the resolved content tree and active profile
 	mcpServers := g.collectMCPServersForContent(contentTree, activeProfile)
@@ -140,23 +134,7 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 
 	applySharedOutputs(allOutputs, &tempCfg, contentTree)
 
-	// Auto-generate MCP output if servers exist. The MCP preset is now
-	// DSL-driven (internal/generator/providers/builtin/mcp.toml); fetch it
-	// from the registry rather than instantiating a hand-written generator.
-	if len(mcpServers) > 0 || g.config.HasSelfServer() {
-		mcpGen, err := g.config.Registry.Generator("mcp")
-		if err != nil {
-			g.log().Warn("Failed to resolve MCP preset generator", "error", err)
-		} else {
-			mcpOutputs, err := mcpGen.Generate(contentTree, g.config.BaseDir, &tempCfg)
-			if err != nil {
-				g.log().Warn("Failed to generate MCP output", "error", err)
-			} else if len(mcpOutputs) > 0 {
-				allOutputs["mcp"] = mcpOutputs
-				g.log().Debug("Auto-generated MCP output", "count", len(mcpOutputs))
-			}
-		}
-	}
+	g.appendAutoMCPOutput(allOutputs, contentTree, &tempCfg, len(mcpServers))
 
 	// Append machine-local root variants (CLAUDE.local.md, AGENTS.local.md, ...)
 	// keyed by preset so they flow through the same flatten/manifest/stale path:
@@ -167,6 +145,41 @@ func (g *Generator) renderPresets(profile string) (*presetRender, error) {
 	}
 
 	return &presetRender{byPreset: allOutputs, profile: activeProfile, content: contentTree, run: run}, nil
+}
+
+// warnContentDiagnostics reports duplicate content, plugin-only content outside
+// a plugin, ignored plugins, legacy files and unsupported settings.
+func (g *Generator) warnContentDiagnostics(contentTree *config.ContentTree) {
+	presets.WarnDuplicateContent(g.log(), contentTree)
+	g.warnUnbundledPluginOnly(contentTree)
+	g.warnIgnoredPlugins()
+	g.warnLegacyFiles()
+	for _, diagnostic := range settings.UnsupportedDiagnostics(g.config) {
+		g.config.Diag.Warn(diagnostic)
+	}
+}
+
+// appendAutoMCPOutput auto-generates the MCP output when servers exist. The MCP
+// preset is DSL-driven (internal/generator/providers/builtin/mcp.toml); it is
+// fetched from the registry rather than instantiated as a hand-written generator.
+func (g *Generator) appendAutoMCPOutput(allOutputs map[string][]config.OutputFile, contentTree *config.ContentTree, tempCfg *config.Config, serverCount int) {
+	if serverCount == 0 && !g.config.HasSelfServer() {
+		return
+	}
+	mcpGen, err := g.config.Registry.Generator("mcp")
+	if err != nil {
+		g.log().Warn("Failed to resolve MCP preset generator", "error", err)
+		return
+	}
+	mcpOutputs, err := mcpGen.Generate(contentTree, g.config.BaseDir, tempCfg)
+	if err != nil {
+		g.log().Warn("Failed to generate MCP output", "error", err)
+		return
+	}
+	if len(mcpOutputs) > 0 {
+		allOutputs["mcp"] = mcpOutputs
+		g.log().Debug("Auto-generated MCP output", "count", len(mcpOutputs))
+	}
 }
 
 // appendLocalOutputs renders the machine-local outputs of every configured
