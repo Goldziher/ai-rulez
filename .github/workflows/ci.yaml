@@ -386,6 +386,23 @@ jobs:
           path: benchmark-results.txt
           retention-days: 30
 
+      # The curated subset (-count=6) against scripts/bench-baseline.txt: fails on
+      # a time/op regression over 25%, warns (does not fail) when the baseline is
+      # missing or was recorded on another CPU model. To record a baseline for
+      # this runner, commit the uploaded bench-subset.txt as scripts/bench-baseline.txt.
+      - name: Benchmark regression check
+        env:
+          BENCH_OUT: bench-subset.txt
+        run: scripts/bench.sh
+
+      - name: Upload benchmark subset
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-subset
+          path: bench-subset.txt
+          retention-days: 30
+
   comprehensive-test:
     name: Comprehensive Test Suite - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
