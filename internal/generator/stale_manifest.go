@@ -4,27 +4,41 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"   // Register remaining legacy preset generators
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles" // Register remaining legacy preset generators
 )
 
 // keepForRole marks the previously generated files a role run must not clean as
 // still wanted. A role renders one person's slice, not the project, and the
 // committed OKF bundle documents the whole project.
 func (g *Generator) keepForRole(previous []string, next map[string]bool) {
-	if g.role == nil || !g.config.OKFEnabled() {
+	if g.role == nil && !rulefiles.InScope(g.config) {
 		return
 	}
-	dir := strings.Trim(filepath.ToSlash(g.config.OKFDir()), "/")
-	if dir == "" || dir == "." {
-		return
+	if g.role != nil && g.config.OKFEnabled() {
+		if dir := strings.Trim(filepath.ToSlash(g.config.OKFDir()), "/"); dir != "" && dir != "." {
+			for _, rel := range previous {
+				if strings.HasPrefix(rel, dir+"/") {
+					next[rel] = true
+				}
+			}
+		}
 	}
-	for _, rel := range previous {
-		if strings.HasPrefix(rel, dir+"/") {
+	// The llms.txt files document the whole project and a role or scope run
+	// does not write them; keeping them out of `next` would delete them.
+	llmsDir := strings.Trim(filepath.ToSlash(g.config.LLMsTxtDir()), "/")
+	for _, name := range []string{presets.LLMsTxtFileName, presets.LLMsTxtFullFileName} {
+		rel := name
+		if llmsDir != "" && llmsDir != "." {
+			rel = llmsDir + "/" + name
+		}
+		if slices.Contains(previous, rel) {
 			next[rel] = true
 		}
 	}
