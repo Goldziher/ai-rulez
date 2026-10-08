@@ -32,7 +32,9 @@ type LLMsTxtPresetGenerator struct{}
 func (g *LLMsTxtPresetGenerator) GetName() string { return config.PresetLLMsTxt }
 
 func (g *LLMsTxtPresetGenerator) GetOutputPaths(baseDir string) []string {
-	return []string{filepath.Join(baseDir, LLMsTxtFileName)}
+	// The configured dir is not known here; the stale matcher accepts these
+	// names in any directory.
+	return []string{filepath.Join(baseDir, LLMsTxtFileName), filepath.Join(baseDir, LLMsTxtFullFileName)}
 }
 
 func (g *LLMsTxtPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
