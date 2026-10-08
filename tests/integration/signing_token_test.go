@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
-	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 // actionsTokenServer imitates the GitHub Actions ID-token endpoint over TLS.
@@ -122,7 +122,7 @@ func TestResolveIDToken(t *testing.T) {
 			env := ambient.MapEnv{Vars: tt.env(srv.srv.URL), Home: t.TempDir()}
 
 			// Act
-			got, err := signing.ResolveIDToken(context.Background(), env, tt.tokenEnv, false)
+			got, err := sigstore.ResolveIDToken(context.Background(), env, tt.tokenEnv, false)
 
 			// Assert
 			if tt.wantErr != "" {

@@ -20,7 +20,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
-	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 var (
@@ -243,8 +243,8 @@ func addPublishSignFlags(f interface {
 	f.BoolVar(&publishSignKeyless, "sign-keyless", false, "Sign with a short-lived Fulcio certificate and log the signature in Rekor (network; public log)")
 	f.StringVar(&publishSignTokenEnv, "sign-token-env", "", "With --sign-keyless: environment variable holding the OIDC token (default: the GitHub Actions runtime token)")
 	f.BoolVar(&publishSignInteractive, "sign-interactive", false, "With --sign-keyless: open a browser for the OIDC login when no token is available")
-	f.StringVar(&publishFulcioURL, "fulcio-url", "", "With --sign-keyless: Fulcio URL (default "+signing.DefaultFulcioURL+")")
-	f.StringVar(&publishRekorURL, "rekor-url", "", "Rekor URL for --sign-keyless or --sign-tlog (default "+signing.DefaultRekorURL+")")
+	f.StringVar(&publishFulcioURL, "fulcio-url", "", "With --sign-keyless: Fulcio URL (default "+sigstore.DefaultFulcioURL+")")
+	f.StringVar(&publishRekorURL, "rekor-url", "", "Rekor URL for --sign-keyless or --sign-tlog (default "+sigstore.DefaultRekorURL+")")
 	f.BoolVar(&publishSignTLog, "sign-tlog", false, "With --sign-key: also record the signature in the Rekor transparency log (network; public log)")
 }
 

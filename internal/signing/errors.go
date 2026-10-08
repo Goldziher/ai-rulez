@@ -46,6 +46,11 @@ func Errorf(code, format string, args ...any) *Error {
 	return &Error{Code: code, Reason: fmt.Sprintf(format, args...)}
 }
 
+// Wrap builds an Error that wraps err.
+func Wrap(code string, err error, format string, args ...any) *Error {
+	return wrap(code, err, format, args...)
+}
+
 func wrap(code string, err error, format string, args ...any) *Error {
 	return &Error{Code: code, Reason: fmt.Sprintf(format, args...), Err: err}
 }

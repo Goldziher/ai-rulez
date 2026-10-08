@@ -49,6 +49,7 @@ var exempt = []string{
 	"internal/agents/",
 	"internal/watch/",
 	"internal/testutil/",
+	"internal/signing/sigstore/fakesigstore/",
 	// The CLI log adapter reads NO_COLOR and TERM to decide whether to color; it
 	// is the bottom layer every other package logs through, so it cannot take an Env.
 	"internal/logger/",

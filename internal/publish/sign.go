@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/samber/oops"
-	"github.com/sigstore/sigstore-go/pkg/root"
-	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
@@ -106,13 +104,9 @@ func SignRelease(ctx context.Context, s signing.Signer, req SignRequest) (*SignR
 // archive, the form `cosign sign-blob --bundle` writes and `cosign verify-blob
 // --bundle` reads, so cosign can verify a release signed here.
 func SignArchive(ctx context.Context, s signing.Signer, archive []byte) (*SignResult, error) {
-	pb, err := s.Bundle(ctx, &signing.PlainData{Data: archive})
+	bundle, err := s.SignBlob(ctx, archive)
 	if err != nil {
 		return nil, oops.Wrapf(err, "sign the release archive")
-	}
-	bundle, err := protojson.Marshal(pb)
-	if err != nil {
-		return nil, oops.Wrapf(err, "encode the signature bundle")
 	}
 	info, err := signing.Inspect(bundle)
 	if err != nil {
@@ -128,7 +122,7 @@ type VerifyOptions struct {
 	// Identities are trusted certificate identities (keyless bundles).
 	Identities []signing.TrustEntry
 	// TrustedRoot verifies certificates and transparency log entries; nil for key bundles without a log.
-	TrustedRoot root.TrustedMaterial
+	TrustedRoot signing.TrustedMaterial
 	// TLog is the transparency-log policy; empty means "required" for keyless
 	// bundles and "off" when only keys are trusted.
 	TLog signing.TLogMode

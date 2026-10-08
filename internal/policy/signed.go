@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sigstore/sigstore-go/pkg/root"
-
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
@@ -218,7 +216,7 @@ func firstNonEmpty(vals ...string) string {
 
 // loadTrustedRoot reads the named trusted root, else the one `trust update`
 // cached; nil when there is none (key signatures need no root).
-func loadTrustedRoot(env ambient.Env, path string) (root.TrustedMaterial, error) {
+func loadTrustedRoot(env ambient.Env, path string) (signing.TrustedMaterial, error) {
 	explicit := path != ""
 	if !explicit {
 		dir, err := config.CacheDirIn(env, "sigstore")
@@ -234,7 +232,7 @@ func loadTrustedRoot(env ambient.Env, path string) (root.TrustedMaterial, error)
 	if err != nil {
 		return nil, &SignatureError{Path: path, Err: fmt.Errorf("cannot read the trusted root: %w", err)}
 	}
-	tr, err := root.NewTrustedRootFromJSON(data)
+	tr, err := signing.LoadTrustedRoot(data)
 	if err != nil {
 		return nil, &SignatureError{Path: path, Err: fmt.Errorf("the trusted root is not valid: %w", err)}
 	}
