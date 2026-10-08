@@ -46,10 +46,8 @@ Doctor never uses the network or writes the include cache: includes and
 installed skills are not resolved, so the drift check is skipped when a project
 declares them (run generate --check for that).`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		if code := runDoctor(watchParentContext(cmd), args, os.Stdout); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(runDoctor(watchParentContext(cmd), args, cmd.OutOrStdout()))
 	},
 }
 
@@ -82,7 +80,7 @@ func runDoctor(ctx context.Context, args []string, out io.Writer) int {
 		err = doctor.WriteText(out, report)
 	}
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return exitDoctorCannotRun
 	}
 	if report.Unloadable {
