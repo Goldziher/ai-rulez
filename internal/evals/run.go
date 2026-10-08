@@ -456,6 +456,19 @@ func exhausted(limit, spent float64) bool {
 	return limit > 0 && round(limit-spent) <= 0
 }
 
+// availableSkills lists the skills, for the error of an unknown name.
+func availableSkills(all []Skill) string {
+	if len(all) == 0 {
+		return "the configuration has no skills"
+	}
+	ids := make([]string, 0, len(all))
+	for _, s := range all {
+		ids = append(ids, s.ID)
+	}
+	sort.Strings(ids)
+	return "available skills: " + strings.Join(ids, ", ")
+}
+
 func selectSkills(all []Skill, ids []string) ([]Skill, error) {
 	if len(ids) == 0 {
 		return all, nil
@@ -471,7 +484,7 @@ func selectSkills(all []Skill, ids []string) ([]Skill, error) {
 	for _, id := range sorted {
 		s, ok := byID[id]
 		if !ok {
-			return nil, fmt.Errorf("unknown skill %q", id)
+			return nil, fmt.Errorf("unknown skill %q: %s", id, availableSkills(all))
 		}
 		if !seen[id] {
 			seen[id] = true

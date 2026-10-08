@@ -29,8 +29,12 @@ func requireKnownSubcommands(root *cobra.Command) {
 
 func unknownSubcommandError(cmd *cobra.Command, arg string) error {
 	msg := fmt.Sprintf("unknown command %q for %q", arg, cmd.CommandPath())
+	if cmd.SuggestionsMinimumDistance <= 0 {
+		cmd.SuggestionsMinimumDistance = 2 // cobra applies its default only on its own lookup path
+	}
 	if suggestions := cmd.SuggestionsFor(arg); len(suggestions) > 0 {
 		msg += "\n\nDid you mean this?\n\t" + strings.Join(suggestions, "\n\t")
 	}
+	msg += fmt.Sprintf("\n\nRun \"%s --help\" to see the available commands", cmd.CommandPath())
 	return fmt.Errorf("%s", msg) //nolint:err113 // a user-facing usage message
 }

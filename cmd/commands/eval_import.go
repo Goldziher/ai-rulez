@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
@@ -128,7 +129,14 @@ func importOutDir(cmd *cobra.Command) (string, error) {
 			return filepath.Join(skills[i].Dir, "evals"), nil
 		}
 	}
-	return "", oops.Errorf("unknown skill %q", flags.skill)
+	ids := make([]string, 0, len(skills))
+	for i := range skills {
+		ids = append(ids, skills[i].ID)
+	}
+	if len(ids) == 0 {
+		return "", oops.Errorf("unknown skill %q: the configuration has no skills", flags.skill)
+	}
+	return "", oops.Errorf("unknown skill %q: available skills: %s", flags.skill, strings.Join(ids, ", "))
 }
 
 // writeImportReport writes the JSON report to path.
