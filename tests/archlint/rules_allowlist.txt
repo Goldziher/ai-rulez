@@ -4,7 +4,7 @@ background cmd/commands/policy.go 1
 background internal/approval/owners.go 1
 background internal/approval/policy.go 1
 background internal/config/load_options.go 1
-background internal/config/loader.go 4
+background internal/config/loader_scan.go 4
 background internal/config/skill_resources.go 1
 background internal/evals/changed.go 1
 background internal/evals/grade.go 1
@@ -153,8 +153,9 @@ global internal/config/sensitive.go 2
 global internal/config/settings_authoring.go 2
 global internal/config/shared_outputs.go 2
 global internal/config/skill_resources.go 1
-global internal/config/types.go 5
+global internal/config/types.go 2
 global internal/config/types_governance.go 2
+global internal/config/types_presets.go 3
 global internal/config/types_publish.go 1
 global internal/config/types_signing.go 2
 global internal/config/types_telemetry.go 1
@@ -275,7 +276,8 @@ global internal/lint/external_stage.go 4
 global internal/lint/followups.go 7
 global internal/lint/hook_launcher.go 2
 global internal/lint/inherit.go 1
-global internal/lint/lint.go 4
+global internal/lint/lint.go 3
+global internal/lint/lint_items.go 1
 global internal/lint/llm_config.go 1
 global internal/lint/pins.go 3
 global internal/lint/policycodes.go 1
