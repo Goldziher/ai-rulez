@@ -21,8 +21,8 @@ func TestTelemetryRecordAndReport_EndToEnd(t *testing.T) {
 		t.Helper()
 		require.NoError(t, runTelemetryRecord(hookInput(env.root, fields)))
 	}
-	feed(`"hook_event_name":"InstructionsLoaded","file_path":"` + env.root + `/CLAUDE.md","memory_type":"Project","load_reason":"session_start"`)
-	feed(`"hook_event_name":"InstructionsLoaded","file_path":"` + env.root + `/.claude/rules/atomic-commits.md","memory_type":"Project","load_reason":"path_glob_match"`)
+	feed(`"hook_event_name":"InstructionsLoaded","file_path":"` + jsonPath(env.root) + `/CLAUDE.md","memory_type":"Project","load_reason":"session_start"`)
+	feed(`"hook_event_name":"InstructionsLoaded","file_path":"` + jsonPath(env.root) + `/.claude/rules/atomic-commits.md","memory_type":"Project","load_reason":"path_glob_match"`)
 	feed(`"hook_event_name":"SubagentStart","agent_id":"a1","agent_type":"code-reviewer"`)
 	feed(`"hook_event_name":"SubagentStop","agent_id":"a1","agent_type":"code-reviewer"`)
 	feed(`"hook_event_name":"Notification"`)

@@ -573,6 +573,9 @@ func TestPR_AFailingGenerate(t *testing.T) {
 
 func TestPR_StagesTheLockOfAConfigDirectoryNotNamedLikeItsParent(t *testing.T) {
 	// Arrange: the config directory is .config/ai-rulez, so its base name is not its path below the project.
+	if runtime.GOOS == "windows" {
+		t.Skip("the fake ai-rulez is a POSIX shell script")
+	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}

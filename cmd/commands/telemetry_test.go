@@ -83,7 +83,7 @@ func TestTelemetryHook_PrintsAndWritesTheTemplate(t *testing.T) {
 
 func TestTelemetryRecord_DisabledWritesNothing(t *testing.T) {
 	env := setupTelemetry(t, "", "")
-	require.NoError(t, runTelemetryRecord(hookInput(env.root, `"hook_event_name":"InstructionsLoaded","file_path":"`+env.root+`/CLAUDE.md","memory_type":"Project","load_reason":"session_start"`)))
+	require.NoError(t, runTelemetryRecord(hookInput(env.root, `"hook_event_name":"InstructionsLoaded","file_path":"`+jsonPath(env.root)+`/CLAUDE.md","memory_type":"Project","load_reason":"session_start"`)))
 	_, err := os.Stat(env.log)
 	assert.True(t, os.IsNotExist(err))
 	_, err = os.Stat(filepath.Join(env.root, ".ai-rulez", "local"))

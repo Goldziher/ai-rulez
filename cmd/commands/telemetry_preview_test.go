@@ -96,7 +96,7 @@ func TestTelemetryPreview_ReadsTheOutboxWhenExportIsActiveAndMakesNoRequest(t *t
 	require.NoError(t, runTelemetryPreview(&out))
 
 	text := out.String()
-	assert.Contains(t, text, "source: outbox .ai-rulez/local/"+telemetry.OutboxFileName)
+	assert.Contains(t, text, "source: outbox "+filepath.Join(".ai-rulez", "local", telemetry.OutboxFileName))
 	assert.Contains(t, text, "export: on")
 	assert.Contains(t, text, "POST "+server.URL+"/otlp/v1/logs")
 	assert.Zero(t, hits.Load(), "a preview opens no connection")
