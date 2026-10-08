@@ -97,7 +97,7 @@ func (s *ApproveCLITestSuite) TestApproveStaleAndEnforcement() {
 	s.Contains(strict.Stdout, "AR710")
 	check := s.run("lock", "--check")
 	s.Equal(2, check.ExitCode)
-	s.Contains(check.Stderr, "include:shared")
+	s.Contains(check.Stdout, "include:shared")
 	s.Equal(2, s.run("generate", "--locked").ExitCode)
 
 	// Without --yes a script cannot approve.
@@ -126,7 +126,7 @@ func (s *ApproveCLITestSuite) TestApproveStaleAndEnforcement() {
 	stale := s.strict()
 	s.Equal(2, stale.ExitCode)
 	s.Contains(stale.Stdout, "AR711")
-	s.Contains(s.run("lock", "--check").Stderr, "AR711")
+	s.Contains(s.run("lock", "--check").Stdout, "AR711")
 	s.Equal(2, s.run("generate", "--locked").ExitCode)
 
 	// lock --diff --format json carries the approval scope.
@@ -178,7 +178,7 @@ enforce = true
 	s.Contains(locked.Stderr+locked.Stdout, "AR710")
 	check := s.run("lock", "--check")
 	s.Equal(2, check.ExitCode, check.Stdout)
-	s.Contains(check.Stderr, "AR710")
+	s.Contains(check.Stdout, "AR710")
 	strict := s.strict()
 	s.Equal(2, strict.ExitCode)
 	s.Contains(strict.Stdout, "AR710")
