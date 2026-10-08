@@ -107,33 +107,33 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .mimocode/agents/architect.md
+  remove file: .mimocode/agents/tester.md
+  remove file: .mimocode/commands/build.md
+  remove file: .mimocode/commands/ship.md
+  remove file: .mimocode/mimocode.jsonc
+  remove file: .mimocode/plugins/ai-rulez-hooks.js
+  remove file: .mimocode/skills/deployer/SKILL.md
+  remove file: .mimocode/skills/reviewer/SKILL.md
+  remove file: .mimocode/skills/reviewer/references/checklist.md
+  remove file: .mimocode/skills/reviewer/scripts/run.sh
+  remove file: AGENTS.md
+  remove dir (if empty): .mimocode/skills/reviewer/scripts
+  remove dir (if empty): .mimocode/skills/reviewer/references
+  remove dir (if empty): .mimocode/skills/reviewer
+  remove dir (if empty): .mimocode/skills/deployer
+  remove dir (if empty): .mimocode/skills
+  remove dir (if empty): .mimocode/plugins
+  remove dir (if empty): .mimocode/commands
+  remove dir (if empty): .mimocode/agents
+  remove dir (if empty): .mimocode
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .mimocode/agents/architect.md
-INFO    remove file: .mimocode/agents/tester.md
-INFO    remove file: .mimocode/commands/build.md
-INFO    remove file: .mimocode/commands/ship.md
-INFO    remove file: .mimocode/mimocode.jsonc
-INFO    remove file: .mimocode/plugins/ai-rulez-hooks.js
-INFO    remove file: .mimocode/skills/deployer/SKILL.md
-INFO    remove file: .mimocode/skills/reviewer/SKILL.md
-INFO    remove file: .mimocode/skills/reviewer/references/checklist.md
-INFO    remove file: .mimocode/skills/reviewer/scripts/run.sh
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .mimocode/skills/reviewer/scripts
-INFO    remove dir (if empty): .mimocode/skills/reviewer/references
-INFO    remove dir (if empty): .mimocode/skills/reviewer
-INFO    remove dir (if empty): .mimocode/skills/deployer
-INFO    remove dir (if empty): .mimocode/skills
-INFO    remove dir (if empty): .mimocode/plugins
-INFO    remove dir (if empty): .mimocode/commands
-INFO    remove dir (if empty): .mimocode/agents
-INFO    remove dir (if empty): .mimocode
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=12 directories=9
+Removed generated files: 12 files, 9 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

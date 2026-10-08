@@ -108,36 +108,36 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .qoder/agents/architect.md
+  remove file: .qoder/agents/tester.md
+  remove file: .qoder/commands/build.md
+  remove file: .qoder/commands/ship.md
+  remove file: .qoder/rules/always.md
+  remove file: .qoder/rules/auto.md
+  remove file: .qoder/rules/manual.md
+  remove file: .qoder/rules/typescript.md
+  remove file: .qoder/settings.json
+  remove file: .qoder/skills/deployer/SKILL.md
+  remove file: .qoder/skills/reviewer/SKILL.md
+  remove file: .qoder/skills/reviewer/references/checklist.md
+  remove file: .qoder/skills/reviewer/scripts/run.sh
+  remove file: AGENTS.md
+  remove dir (if empty): .qoder/skills/reviewer/scripts
+  remove dir (if empty): .qoder/skills/reviewer/references
+  remove dir (if empty): .qoder/skills/reviewer
+  remove dir (if empty): .qoder/skills/deployer
+  remove dir (if empty): .qoder/skills
+  remove dir (if empty): .qoder/rules
+  remove dir (if empty): .qoder/commands
+  remove dir (if empty): .qoder/agents
+  remove dir (if empty): .qoder
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .qoder/agents/architect.md
-INFO    remove file: .qoder/agents/tester.md
-INFO    remove file: .qoder/commands/build.md
-INFO    remove file: .qoder/commands/ship.md
-INFO    remove file: .qoder/rules/always.md
-INFO    remove file: .qoder/rules/auto.md
-INFO    remove file: .qoder/rules/manual.md
-INFO    remove file: .qoder/rules/typescript.md
-INFO    remove file: .qoder/settings.json
-INFO    remove file: .qoder/skills/deployer/SKILL.md
-INFO    remove file: .qoder/skills/reviewer/SKILL.md
-INFO    remove file: .qoder/skills/reviewer/references/checklist.md
-INFO    remove file: .qoder/skills/reviewer/scripts/run.sh
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .qoder/skills/reviewer/scripts
-INFO    remove dir (if empty): .qoder/skills/reviewer/references
-INFO    remove dir (if empty): .qoder/skills/reviewer
-INFO    remove dir (if empty): .qoder/skills/deployer
-INFO    remove dir (if empty): .qoder/skills
-INFO    remove dir (if empty): .qoder/rules
-INFO    remove dir (if empty): .qoder/commands
-INFO    remove dir (if empty): .qoder/agents
-INFO    remove dir (if empty): .qoder
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=15 directories=9
+Removed generated files: 15 files, 9 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

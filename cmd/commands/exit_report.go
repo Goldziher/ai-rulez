@@ -6,29 +6,33 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// activeCommand is the command whose RunE is running, so a helper that reports
-// its own failure (and returns an exit code) knows which --format was asked for.
-var (
-	activeCommand        *cobra.Command
-	errorDocumentWritten bool
+// The state of the running command lives on the root command's annotations, not
+// in package variables: the --format it was asked for and whether an error
+// document was already written.
+const (
+	activeFormatKey  = "ai-rulez-active-format"
+	errorDocWritten  = "ai-rulez-error-document-written"
+	runTrackedMarker = "ai-rulez-run-tracked"
 )
 
-// trackedRunE records which commands already report their active state.
-var trackedRunE = map[*cobra.Command]bool{}
-
-// trackActiveCommand wraps every RunE so activeCommand names the running
-// command. Wrapping twice (a test calls execute repeatedly) is a no-op.
+// trackActiveCommand wraps every RunE so the root knows which --format the
+// running command was asked for. Wrapping twice (a test calls execute
+// repeatedly) is a no-op.
 func trackActiveCommand(root *cobra.Command) {
 	for _, c := range root.Commands() {
 		trackActiveCommand(c)
 	}
-	if root.RunE == nil || trackedRunE[root] {
+	if root.RunE == nil || root.Annotations[runTrackedMarker] != "" {
 		return
 	}
-	trackedRunE[root] = true
+	if root.Annotations == nil {
+		root.Annotations = map[string]string{}
+	}
+	root.Annotations[runTrackedMarker] = "1"
 	original := root.RunE
 	root.RunE = func(cmd *cobra.Command, args []string) error {
-		activeCommand, errorDocumentWritten = cmd, false
+		RootCmd.Annotations[activeFormatKey] = commandFormat(cmd)
+		delete(RootCmd.Annotations, errorDocWritten)
 		return original(cmd, args)
 	}
 }
@@ -40,8 +44,8 @@ func trackActiveCommand(root *cobra.Command) {
 // itself returns fail(err) instead.
 func renderStderr(err error) {
 	renderError(os.Stderr, err)
-	if commandFormat(activeCommand) == formatJSON && !errorDocumentWritten {
-		errorDocumentWritten = true
+	if RootCmd.Annotations[activeFormatKey] == formatJSON && RootCmd.Annotations[errorDocWritten] == "" {
+		RootCmd.Annotations[errorDocWritten] = "1"
 		_ = writeErrorDocument(os.Stdout, err, exitCodeFor(err)) //nolint:errcheck // the error is already reported on stderr
 	}
 }

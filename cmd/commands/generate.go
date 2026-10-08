@@ -37,7 +37,6 @@ var (
 	generateFrozen     bool
 	generateRole       string
 	generateEmitPlan   string
-	generateFormat     string
 )
 
 var GenerateCmd = &cobra.Command{
@@ -72,7 +71,7 @@ func init() {
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnvFiles, "env-file", "E", nil, "Dotenv file for MCP env placeholders (repeatable)")
 	GenerateCmd.Flags().StringVar(&generateEmitPlan, "emit-plan", "",
 		"Write the generation plan (every file that would be written, merged or removed, with digests; no secrets) as JSON to FILE ('-' for stdout) and apply nothing; see schema/plan.schema.json")
-	addFormatFlag(GenerateCmd.Flags(), &generateFormat, "", formatText, formatText, formatJSON)
+	addFormatFlag(GenerateCmd.Flags(), new(string), "", formatText, formatText, formatJSON)
 	GenerateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	GenerateCmd.Flags().BoolVar(&allowLocalDrift, "allow-local-drift", false,
 		"Write output even when machine-local config would change files shared with the team")
@@ -86,14 +85,11 @@ func init() {
 }
 
 func runGenerate(cmd *cobra.Command, args []string) error {
-	progress.SetQuiet(viper.GetBool("quiet") || generateFormat == formatJSON)
+	progress.SetQuiet(viper.GetBool("quiet") || outFor(cmd).JSON())
 
 	// The lock policy of every load this run makes (before any config loading).
 	applyLockFlags()
 
-	if err := checkFormatFlag(generateFormat); err != nil {
-		return fail(err)
-	}
 	if err := checkRoleFlags(); err != nil {
 		return fail(err)
 	}
@@ -158,7 +154,7 @@ func generateLoaded(cmd *cobra.Command, cfg *config.Config) error {
 	if err != nil {
 		return fail(err)
 	}
-	if generateFormat == formatJSON {
+	if out.JSON() {
 		return fail(writeGenerateDocument(out, generateDocument{Status: "generated", FilesWritten: written}))
 	}
 	return nil
@@ -270,7 +266,7 @@ func printDryRun(gen *generator.Generator, indent string) error {
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
-	if generateFormat == formatJSON {
+	if out.JSON() {
 		if err := writeGenerateDocument(out, generateDocument{Status: statusDryRun, Plan: plan}); err != nil {
 			return err
 		}
@@ -290,7 +286,7 @@ func runPluginGenerate(out render.Out, gen *generator.Generator) error {
 		if err != nil {
 			return fail(err)
 		}
-		if generateFormat == formatJSON {
+		if out.JSON() {
 			return fail(writeGenerateDocument(out, generateDocument{Status: statusDryRun, Plan: plan}))
 		}
 		for _, line := range plan {

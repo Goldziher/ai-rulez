@@ -120,7 +120,7 @@ func generatedProject(t *testing.T) {
 	require.NoError(t, generator.NewGenerator(cfg).Generate("default"))
 	chdir(t, dir)
 	prev := cleanDryRun
-	t.Cleanup(func() { cleanDryRun, cleanFormat = prev, "" })
+	t.Cleanup(func() { cleanDryRun = prev; _ = CleanCmd.Flags().Set("format", "text") }) //nolint:errcheck // restoring the default
 	cleanDryRun = true
 }
 
@@ -168,7 +168,7 @@ func TestCleanDryRunPlanGoesToStdoutAndSurvivesQuiet(t *testing.T) {
 
 func TestCleanFormatJSONPlan(t *testing.T) {
 	generatedProject(t)
-	cleanFormat = formatJSON
+	require.NoError(t, CleanCmd.Flags().Set("format", "json"))
 
 	stdout, _, err := runWithBuffers(t, CleanCmd)
 
@@ -190,11 +190,13 @@ func TestCleanFormatJSONPlan(t *testing.T) {
 func TestCleanNeedsYesWithoutTerminal(t *testing.T) {
 	generatedProject(t)
 	cleanDryRun = false
-	prevCheck := stdinInteractive
-	stdinInteractive = func() bool { return false }
-	t.Cleanup(func() { stdinInteractive = prevCheck })
+	pipeRead, pipeWrite, err := os.Pipe() // a pipe is not a terminal
+	require.NoError(t, err)
+	prevStdin := os.Stdin
+	os.Stdin = pipeRead
+	t.Cleanup(func() { os.Stdin = prevStdin; _ = pipeRead.Close(); _ = pipeWrite.Close() }) //nolint:errcheck // test cleanup
 
-	_, _, err := runWithBuffers(t, CleanCmd)
+	_, _, err = runWithBuffers(t, CleanCmd)
 
 	require.ErrorIs(t, err, ErrNeedsYes)
 	assert.Equal(t, exitFailure, exitCodeFor(err))

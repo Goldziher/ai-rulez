@@ -1810,755 +1810,755 @@ INFO  Generated files are up to date roots=1
 ## step 6: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .agents/agents/architect.md
+  remove file: .agents/agents/tester.md
+  remove file: .agents/checks/security.md
+  remove file: .agents/checks/style.md
+  remove file: .agents/commands/build.md
+  remove file: .agents/commands/ship.md
+  remove file: .agents/hooks.json
+  remove file: .agents/plugins/ai-rulez/hooks/hooks.json
+  remove file: .agents/skills/build/SKILL.md
+  remove file: .agents/skills/build/agents/openai.yaml
+  remove file: .agents/skills/deployer/SKILL.md
+  remove file: .agents/skills/reviewer/SKILL.md
+  remove file: .agents/skills/reviewer/references/checklist.md
+  remove file: .agents/skills/reviewer/scripts/run.sh
+  remove file: .agents/skills/ship/SKILL.md
+  remove file: .agents/skills/ship/agents/openai.yaml
+  remove file: .aiassistant/rules/always.md
+  remove file: .aiassistant/rules/auto.md
+  remove file: .aiassistant/rules/context-architecture.md
+  remove file: .aiassistant/rules/context-overview.md
+  remove file: .aiassistant/rules/manual.md
+  remove file: .aiassistant/rules/typescript.md
+  remove file: .amp/plugins/ai-rulez-hooks.ts
+  remove file: .augment/agents/architect.md
+  remove file: .augment/agents/tester.md
+  remove file: .augment/code_review_guidelines.yaml
+  remove file: .augment/commands/build.md
+  remove file: .augment/commands/ship.md
+  remove file: .augment/rules/always.md
+  remove file: .augment/rules/auto.md
+  remove file: .augment/rules/manual.md
+  remove file: .augment/rules/typescript.md
+  remove file: .augment/settings.json
+  remove file: .augment/skills/deployer/SKILL.md
+  remove file: .augment/skills/reviewer/SKILL.md
+  remove file: .augment/skills/reviewer/references/checklist.md
+  remove file: .augment/skills/reviewer/scripts/run.sh
+  remove file: .bob/commands/build.md
+  remove file: .bob/commands/ship.md
+  remove file: .bob/rules/always.md
+  remove file: .bob/rules/auto.md
+  remove file: .bob/rules/manual.md
+  remove file: .bob/rules/typescript.md
+  remove file: .bob/settings.json
+  remove file: .bob/skills/deployer/SKILL.md
+  remove file: .bob/skills/reviewer/SKILL.md
+  remove file: .bob/skills/reviewer/references/checklist.md
+  remove file: .bob/skills/reviewer/scripts/run.sh
+  remove file: .claude/agents/architect.md
+  remove file: .claude/agents/tester.md
+  remove file: .claude/rules/always.md
+  remove file: .claude/rules/auto.md
+  remove file: .claude/rules/manual.md
+  remove file: .claude/rules/targeted.md
+  remove file: .claude/rules/typescript.md
+  remove file: .claude/settings.json
+  remove file: .claude/skills/build/SKILL.md
+  remove file: .claude/skills/deployer/SKILL.md
+  remove file: .claude/skills/reviewer/SKILL.md
+  remove file: .claude/skills/reviewer/references/checklist.md
+  remove file: .claude/skills/reviewer/scripts/run.sh
+  remove file: .claude/skills/ship/SKILL.md
+  remove file: .cline/agents/architect.yaml
+  remove file: .cline/agents/tester.yaml
+  remove file: .cline/skills/deployer/SKILL.md
+  remove file: .cline/skills/reviewer/SKILL.md
+  remove file: .cline/skills/reviewer/references/checklist.md
+  remove file: .cline/skills/reviewer/scripts/run.sh
+  remove file: .clinerules/always.md
+  remove file: .clinerules/auto.md
+  remove file: .clinerules/context-architecture.md
+  remove file: .clinerules/context-overview.md
+  remove file: .clinerules/hooks/TaskStart
+  remove file: .clinerules/manual.md
+  remove file: .clinerules/typescript.md
+  remove file: .clinerules/workflows/build.md
+  remove file: .clinerules/workflows/ship.md
+  remove file: .codebuddy/agents/architect.md
+  remove file: .codebuddy/agents/tester.md
+  remove file: .codebuddy/commands/build.md
+  remove file: .codebuddy/commands/ship.md
+  remove file: .codebuddy/rules/always.md
+  remove file: .codebuddy/rules/auto.md
+  remove file: .codebuddy/rules/manual.md
+  remove file: .codebuddy/rules/typescript.md
+  remove file: .codebuddy/settings.json
+  remove file: .codebuddy/skills/deployer/SKILL.md
+  remove file: .codebuddy/skills/reviewer/SKILL.md
+  remove file: .codebuddy/skills/reviewer/references/checklist.md
+  remove file: .codebuddy/skills/reviewer/scripts/run.sh
+  remove file: .codewhale/commands/build.md
+  remove file: .codewhale/commands/ship.md
+  remove file: .codewhale/rules/always.md
+  remove file: .codewhale/rules/auto.md
+  remove file: .codewhale/rules/manual.md
+  remove file: .codewhale/rules/typescript.md
+  remove file: .codewhale/skills/deployer/SKILL.md
+  remove file: .codewhale/skills/reviewer/SKILL.md
+  remove file: .codewhale/skills/reviewer/references/checklist.md
+  remove file: .codewhale/skills/reviewer/scripts/run.sh
+  remove file: .codex/agents/architect.toml
+  remove file: .codex/agents/tester.toml
+  remove file: .codex/hooks.json
+  remove file: .codex/rules/ai-rulez.rules
+  remove file: .commandcode/agents/architect.md
+  remove file: .commandcode/agents/tester.md
+  remove file: .commandcode/commands/build.md
+  remove file: .commandcode/commands/ship.md
+  remove file: .commandcode/settings.json
+  remove file: .commandcode/skills/deployer/SKILL.md
+  remove file: .commandcode/skills/reviewer/SKILL.md
+  remove file: .commandcode/skills/reviewer/references/checklist.md
+  remove file: .commandcode/skills/reviewer/scripts/run.sh
+  remove file: .commands/build.md
+  remove file: .commands/ship.md
+  remove file: .cortex/agents/architect.md
+  remove file: .cortex/agents/tester.md
+  remove file: .cortex/settings.json
+  remove file: .cortex/skills/deployer/SKILL.md
+  remove file: .cortex/skills/reviewer/SKILL.md
+  remove file: .cortex/skills/reviewer/references/checklist.md
+  remove file: .cortex/skills/reviewer/scripts/run.sh
+  remove file: .crush/skills/deployer/SKILL.md
+  remove file: .crush/skills/reviewer/SKILL.md
+  remove file: .crush/skills/reviewer/references/checklist.md
+  remove file: .crush/skills/reviewer/scripts/run.sh
+  remove file: .cursor/BUGBOT.md
+  remove file: .cursor/agents/architect.md
+  remove file: .cursor/agents/tester.md
+  remove file: .cursor/cli.json
+  remove file: .cursor/commands/build.md
+  remove file: .cursor/commands/ship.md
+  remove file: .cursor/hooks.json
+  remove file: .cursor/rules/always.mdc
+  remove file: .cursor/rules/auto.mdc
+  remove file: .cursor/rules/context-architecture.mdc
+  remove file: .cursor/rules/context-overview.mdc
+  remove file: .cursor/rules/manual.mdc
+  remove file: .cursor/rules/targeted.mdc
+  remove file: .cursor/rules/typescript.mdc
+  remove file: .deepagents/agents/architect/AGENTS.md
+  remove file: .deepagents/agents/tester/AGENTS.md
+  remove file: .deepagents/hooks.json
+  remove file: .deepagents/skills/deployer/SKILL.md
+  remove file: .deepagents/skills/reviewer/SKILL.md
+  remove file: .deepagents/skills/reviewer/references/checklist.md
+  remove file: .deepagents/skills/reviewer/scripts/run.sh
+  remove file: .devin/agents/architect.md
+  remove file: .devin/agents/tester.md
+  remove file: .devin/config.json
+  remove file: .devin/hooks.v1.json
+  remove file: .devin/rules/always.md
+  remove file: .devin/rules/auto.md
+  remove file: .devin/rules/context-architecture.md
+  remove file: .devin/rules/context-overview.md
+  remove file: .devin/rules/manual.md
+  remove file: .devin/rules/typescript.md
+  remove file: .devin/skills/build/SKILL.md
+  remove file: .devin/skills/deployer/SKILL.md
+  remove file: .devin/skills/reviewer/SKILL.md
+  remove file: .devin/skills/reviewer/references/checklist.md
+  remove file: .devin/skills/reviewer/scripts/run.sh
+  remove file: .devin/skills/ship/SKILL.md
+  remove file: .dsh/skills/deployer/SKILL.md
+  remove file: .dsh/skills/reviewer/SKILL.md
+  remove file: .dsh/skills/reviewer/references/checklist.md
+  remove file: .dsh/skills/reviewer/scripts/run.sh
+  remove file: .factory/commands/build.md
+  remove file: .factory/commands/ship.md
+  remove file: .factory/droids/architect.md
+  remove file: .factory/droids/tester.md
+  remove file: .factory/hooks.json
+  remove file: .factory/skills/deployer/SKILL.md
+  remove file: .factory/skills/review-guidelines/SKILL.md
+  remove file: .factory/skills/reviewer/SKILL.md
+  remove file: .factory/skills/reviewer/references/checklist.md
+  remove file: .factory/skills/reviewer/scripts/run.sh
+  remove file: .gemini/agents/architect.md
+  remove file: .gemini/agents/tester.md
+  remove file: .gemini/settings.json
+  remove file: .github/agents/architect.agent.md
+  remove file: .github/agents/tester.agent.md
+  remove file: .github/copilot-instructions.md
+  remove file: .github/copilot/settings.json
+  remove file: .github/hooks/ai-rulez.json
+  remove file: .github/instructions/always.instructions.md
+  remove file: .github/instructions/typescript.instructions.md
+  remove file: .github/prompts/build.prompt.md
+  remove file: .github/prompts/ship.prompt.md
+  remove file: .github/skills/deployer/SKILL.md
+  remove file: .github/skills/reviewer/SKILL.md
+  remove file: .github/skills/reviewer/references/checklist.md
+  remove file: .github/skills/reviewer/scripts/run.sh
+  remove file: .gitlab/duo/chat-rules.md
+  remove file: .gitlab/duo/hooks.json
+  remove file: .gitlab/duo/mr-review-instructions.yaml
+  remove file: .goose/agents/architect.md
+  remove file: .goose/agents/tester.md
+  remove file: .goosehints
+  remove file: .grok/agents/architect.md
+  remove file: .grok/agents/tester.md
+  remove file: .grok/commands/build.md
+  remove file: .grok/commands/ship.md
+  remove file: .grok/config.toml
+  remove file: .grok/hooks/ai-rulez.json
+  remove file: .grok/rules/always.md
+  remove file: .grok/rules/auto.md
+  remove file: .grok/rules/manual.md
+  remove file: .grok/rules/typescript.md
+  remove file: .grok/skills/deployer/SKILL.md
+  remove file: .grok/skills/reviewer/SKILL.md
+  remove file: .grok/skills/reviewer/references/checklist.md
+  remove file: .grok/skills/reviewer/scripts/run.sh
+  remove file: .hermes.md
+  remove file: .junie/agents/architect.md
+  remove file: .junie/agents/tester.md
+  remove file: .junie/commands/build.md
+  remove file: .junie/commands/ship.md
+  remove file: .junie/rules/always.md
+  remove file: .junie/rules/auto.md
+  remove file: .junie/rules/manual.md
+  remove file: .junie/rules/typescript.md
+  remove file: .junie/skills/deployer/SKILL.md
+  remove file: .junie/skills/reviewer/SKILL.md
+  remove file: .junie/skills/reviewer/references/checklist.md
+  remove file: .junie/skills/reviewer/scripts/run.sh
+  remove file: .kilo/agents/architect.md
+  remove file: .kilo/agents/tester.md
+  remove file: .kilo/commands/build.md
+  remove file: .kilo/commands/ship.md
+  remove file: .kilo/plugins/ai-rulez-hooks.js
+  remove file: .kilo/rules/always.md
+  remove file: .kilo/rules/auto.md
+  remove file: .kilo/rules/manual.md
+  remove file: .kilo/rules/typescript.md
+  remove file: .kilo/skills/deployer/SKILL.md
+  remove file: .kilo/skills/reviewer/SKILL.md
+  remove file: .kilo/skills/reviewer/references/checklist.md
+  remove file: .kilo/skills/reviewer/scripts/run.sh
+  remove file: .kimi-code/agents/architect.md
+  remove file: .kimi-code/agents/tester.md
+  remove file: .kimi-code/skills/deployer/SKILL.md
+  remove file: .kimi-code/skills/reviewer/SKILL.md
+  remove file: .kimi-code/skills/reviewer/references/checklist.md
+  remove file: .kimi-code/skills/reviewer/scripts/run.sh
+  remove file: .kiro/agents/architect.md
+  remove file: .kiro/agents/tester.md
+  remove file: .kiro/hooks/ai-rulez.json
+  remove file: .kiro/prompts/build.md
+  remove file: .kiro/prompts/ship.md
+  remove file: .kiro/skills/deployer/SKILL.md
+  remove file: .kiro/skills/reviewer/SKILL.md
+  remove file: .kiro/skills/reviewer/references/checklist.md
+  remove file: .kiro/skills/reviewer/scripts/run.sh
+  remove file: .kiro/steering/always.md
+  remove file: .kiro/steering/auto.md
+  remove file: .kiro/steering/manual.md
+  remove file: .kiro/steering/typescript.md
+  remove file: .letta/agents/architect.md
+  remove file: .letta/agents/tester.md
+  remove file: .letta/settings.json
+  remove file: .mimocode/agents/architect.md
+  remove file: .mimocode/agents/tester.md
+  remove file: .mimocode/commands/build.md
+  remove file: .mimocode/commands/ship.md
+  remove file: .mimocode/mimocode.jsonc
+  remove file: .mimocode/plugins/ai-rulez-hooks.js
+  remove file: .mimocode/skills/deployer/SKILL.md
+  remove file: .mimocode/skills/reviewer/SKILL.md
+  remove file: .mimocode/skills/reviewer/references/checklist.md
+  remove file: .mimocode/skills/reviewer/scripts/run.sh
+  remove file: .omp/agents/architect.md
+  remove file: .omp/agents/tester.md
+  remove file: .omp/commands/build.md
+  remove file: .omp/commands/ship.md
+  remove file: .omp/config.yml
+  remove file: .omp/rules/always.md
+  remove file: .omp/rules/auto.md
+  remove file: .omp/rules/manual.md
+  remove file: .omp/rules/typescript.md
+  remove file: .omp/skills/deployer/SKILL.md
+  remove file: .omp/skills/reviewer/SKILL.md
+  remove file: .omp/skills/reviewer/references/checklist.md
+  remove file: .omp/skills/reviewer/scripts/run.sh
+  remove file: .opencode/agents/architect.md
+  remove file: .opencode/agents/tester.md
+  remove file: .opencode/commands/build.md
+  remove file: .opencode/commands/ship.md
+  remove file: .opencode/plugins/ai-rulez-hooks.js
+  remove file: .opencode/skills/deployer/SKILL.md
+  remove file: .opencode/skills/reviewer/SKILL.md
+  remove file: .opencode/skills/reviewer/references/checklist.md
+  remove file: .opencode/skills/reviewer/scripts/run.sh
+  remove file: .pi/agents/architect.md
+  remove file: .pi/agents/tester.md
+  remove file: .pi/extensions/ai-rulez-hooks.ts
+  remove file: .pi/prompts/build.md
+  remove file: .pi/prompts/ship.md
+  remove file: .poolside/settings.yaml
+  remove file: .poolside/skills/deployer/SKILL.md
+  remove file: .poolside/skills/reviewer/SKILL.md
+  remove file: .poolside/skills/reviewer/references/checklist.md
+  remove file: .poolside/skills/reviewer/scripts/run.sh
+  remove file: .qoder/agents/architect.md
+  remove file: .qoder/agents/tester.md
+  remove file: .qoder/commands/build.md
+  remove file: .qoder/commands/ship.md
+  remove file: .qoder/rules/always.md
+  remove file: .qoder/rules/auto.md
+  remove file: .qoder/rules/manual.md
+  remove file: .qoder/rules/typescript.md
+  remove file: .qoder/settings.json
+  remove file: .qoder/skills/deployer/SKILL.md
+  remove file: .qoder/skills/reviewer/SKILL.md
+  remove file: .qoder/skills/reviewer/references/checklist.md
+  remove file: .qoder/skills/reviewer/scripts/run.sh
+  remove file: .qwen/agents/architect.md
+  remove file: .qwen/agents/tester.md
+  remove file: .qwen/commands/build.md
+  remove file: .qwen/commands/ship.md
+  remove file: .qwen/review-rules.md
+  remove file: .qwen/rules/always.md
+  remove file: .qwen/rules/auto.md
+  remove file: .qwen/rules/manual.md
+  remove file: .qwen/rules/typescript.md
+  remove file: .qwen/settings.json
+  remove file: .qwen/skills/deployer/SKILL.md
+  remove file: .qwen/skills/reviewer/SKILL.md
+  remove file: .qwen/skills/reviewer/references/checklist.md
+  remove file: .qwen/skills/reviewer/scripts/run.sh
+  remove file: .reasonix/commands/build.md
+  remove file: .reasonix/commands/ship.md
+  remove file: .reasonix/settings.json
+  remove file: .reasonix/skills/architect/SKILL.md
+  remove file: .reasonix/skills/deployer/SKILL.md
+  remove file: .reasonix/skills/reviewer/SKILL.md
+  remove file: .reasonix/skills/reviewer/references/checklist.md
+  remove file: .reasonix/skills/reviewer/scripts/run.sh
+  remove file: .reasonix/skills/tester/SKILL.md
+  remove file: .roo/commands/build.md
+  remove file: .roo/commands/ship.md
+  remove file: .roo/skills/deployer/SKILL.md
+  remove file: .roo/skills/reviewer/SKILL.md
+  remove file: .roo/skills/reviewer/references/checklist.md
+  remove file: .roo/skills/reviewer/scripts/run.sh
+  remove file: .rovodev/.review-agent.md
+  remove file: .rovodev/skills/deployer/SKILL.md
+  remove file: .rovodev/skills/reviewer/SKILL.md
+  remove file: .rovodev/skills/reviewer/references/checklist.md
+  remove file: .rovodev/skills/reviewer/scripts/run.sh
+  remove file: .rovodev/subagents/architect.md
+  remove file: .rovodev/subagents/tester.md
+  remove file: .rules
+  remove file: .takt/facets/instructions/build.md
+  remove file: .takt/facets/instructions/ship.md
+  remove file: .takt/facets/knowledge/deployer.md
+  remove file: .takt/facets/knowledge/reviewer.md
+  remove file: .takt/facets/personas/architect.md
+  remove file: .takt/facets/personas/tester.md
+  remove file: .takt/facets/policies/always.md
+  remove file: .takt/facets/policies/auto.md
+  remove file: .takt/facets/policies/context-architecture.md
+  remove file: .takt/facets/policies/context-overview.md
+  remove file: .takt/facets/policies/manual.md
+  remove file: .takt/facets/policies/typescript.md
+  remove file: .trae/rules/always.md
+  remove file: .trae/rules/auto.md
+  remove file: .trae/rules/context-architecture.md
+  remove file: .trae/rules/context-overview.md
+  remove file: .trae/rules/manual.md
+  remove file: .trae/rules/typescript.md
+  remove file: .trae/skills/deployer/SKILL.md
+  remove file: .trae/skills/reviewer/SKILL.md
+  remove file: .trae/skills/reviewer/references/checklist.md
+  remove file: .trae/skills/reviewer/scripts/run.sh
+  remove file: .vibe/config.toml
+  remove file: .vibe/hooks.toml
+  remove file: .vibe/skills/deployer/SKILL.md
+  remove file: .vibe/skills/reviewer/SKILL.md
+  remove file: .vibe/skills/reviewer/references/checklist.md
+  remove file: .vibe/skills/reviewer/scripts/run.sh
+  remove file: .vscode/settings.json
+  remove file: .warp/skills/build/SKILL.md
+  remove file: .warp/skills/deployer/SKILL.md
+  remove file: .warp/skills/reviewer/SKILL.md
+  remove file: .warp/skills/reviewer/references/checklist.md
+  remove file: .warp/skills/reviewer/scripts/run.sh
+  remove file: .warp/skills/ship/SKILL.md
+  remove file: .xum/agents/architect.md
+  remove file: .xum/agents/tester.md
+  remove file: .xum/skills/deployer/SKILL.md
+  remove file: .xum/skills/reviewer/SKILL.md
+  remove file: .xum/skills/reviewer/references/checklist.md
+  remove file: .xum/skills/reviewer/scripts/run.sh
+  remove file: .zcode/agents/architect.md
+  remove file: .zcode/agents/tester.md
+  remove file: .zcode/commands/build.md
+  remove file: .zcode/commands/ship.md
+  remove file: .zcode/skills/deployer/SKILL.md
+  remove file: .zcode/skills/reviewer/SKILL.md
+  remove file: .zcode/skills/reviewer/references/checklist.md
+  remove file: .zcode/skills/reviewer/scripts/run.sh
+  remove file: AGENTS.md
+  remove file: CLAUDE.md
+  remove file: CODEBUDDY.md
+  remove file: CRUSH.md
+  remove file: GEMINI.md
+  remove file: QWEN.md
+  remove file: REASONIX.md
+  remove file: REVIEW.md
+  remove file: crush.json
+  remove file: kilo.jsonc
+  remove file: opencode.json
+  remove file: replit.md
+  remove dir (if empty): .zed
+  remove dir (if empty): .zcode/skills/reviewer/scripts
+  remove dir (if empty): .zcode/skills/reviewer/references
+  remove dir (if empty): .zcode/skills/reviewer
+  remove dir (if empty): .zcode/skills/deployer
+  remove dir (if empty): .zcode/skills
+  remove dir (if empty): .zcode/commands
+  remove dir (if empty): .zcode/agents
+  remove dir (if empty): .zcode
+  remove dir (if empty): .xum/skills/reviewer/scripts
+  remove dir (if empty): .xum/skills/reviewer/references
+  remove dir (if empty): .xum/skills/reviewer
+  remove dir (if empty): .xum/skills/deployer
+  remove dir (if empty): .xum/skills
+  remove dir (if empty): .xum/agents
+  remove dir (if empty): .xum
+  remove dir (if empty): .warp/skills/ship
+  remove dir (if empty): .warp/skills/reviewer/scripts
+  remove dir (if empty): .warp/skills/reviewer/references
+  remove dir (if empty): .warp/skills/reviewer
+  remove dir (if empty): .warp/skills/deployer
+  remove dir (if empty): .warp/skills/build
+  remove dir (if empty): .warp/skills
+  remove dir (if empty): .warp
+  remove dir (if empty): .vscode
+  remove dir (if empty): .vibe/skills/reviewer/scripts
+  remove dir (if empty): .vibe/skills/reviewer/references
+  remove dir (if empty): .vibe/skills/reviewer
+  remove dir (if empty): .vibe/skills/deployer
+  remove dir (if empty): .vibe/skills
+  remove dir (if empty): .vibe
+  remove dir (if empty): .trae/skills/reviewer/scripts
+  remove dir (if empty): .trae/skills/reviewer/references
+  remove dir (if empty): .trae/skills/reviewer
+  remove dir (if empty): .trae/skills/deployer
+  remove dir (if empty): .trae/skills
+  remove dir (if empty): .trae/rules
+  remove dir (if empty): .trae
+  remove dir (if empty): .takt/facets/policies
+  remove dir (if empty): .takt/facets/personas
+  remove dir (if empty): .takt/facets/knowledge
+  remove dir (if empty): .takt/facets/instructions
+  remove dir (if empty): .takt/facets
+  remove dir (if empty): .takt
+  remove dir (if empty): .rovodev/subagents
+  remove dir (if empty): .rovodev/skills/reviewer/scripts
+  remove dir (if empty): .rovodev/skills/reviewer/references
+  remove dir (if empty): .rovodev/skills/reviewer
+  remove dir (if empty): .rovodev/skills/deployer
+  remove dir (if empty): .rovodev/skills
+  remove dir (if empty): .rovodev
+  remove dir (if empty): .roo/skills/reviewer/scripts
+  remove dir (if empty): .roo/skills/reviewer/references
+  remove dir (if empty): .roo/skills/reviewer
+  remove dir (if empty): .roo/skills/deployer
+  remove dir (if empty): .roo/skills
+  remove dir (if empty): .roo/commands
+  remove dir (if empty): .roo
+  remove dir (if empty): .reasonix/skills/tester
+  remove dir (if empty): .reasonix/skills/reviewer/scripts
+  remove dir (if empty): .reasonix/skills/reviewer/references
+  remove dir (if empty): .reasonix/skills/reviewer
+  remove dir (if empty): .reasonix/skills/deployer
+  remove dir (if empty): .reasonix/skills/architect
+  remove dir (if empty): .reasonix/skills
+  remove dir (if empty): .reasonix/commands
+  remove dir (if empty): .reasonix
+  remove dir (if empty): .qwen/skills/reviewer/scripts
+  remove dir (if empty): .qwen/skills/reviewer/references
+  remove dir (if empty): .qwen/skills/reviewer
+  remove dir (if empty): .qwen/skills/deployer
+  remove dir (if empty): .qwen/skills
+  remove dir (if empty): .qwen/rules
+  remove dir (if empty): .qwen/commands
+  remove dir (if empty): .qwen/agents
+  remove dir (if empty): .qwen
+  remove dir (if empty): .qoder/skills/reviewer/scripts
+  remove dir (if empty): .qoder/skills/reviewer/references
+  remove dir (if empty): .qoder/skills/reviewer
+  remove dir (if empty): .qoder/skills/deployer
+  remove dir (if empty): .qoder/skills
+  remove dir (if empty): .qoder/rules
+  remove dir (if empty): .qoder/commands
+  remove dir (if empty): .qoder/agents
+  remove dir (if empty): .qoder
+  remove dir (if empty): .poolside/skills/reviewer/scripts
+  remove dir (if empty): .poolside/skills/reviewer/references
+  remove dir (if empty): .poolside/skills/reviewer
+  remove dir (if empty): .poolside/skills/deployer
+  remove dir (if empty): .poolside/skills
+  remove dir (if empty): .poolside
+  remove dir (if empty): .pi/prompts
+  remove dir (if empty): .pi/extensions
+  remove dir (if empty): .pi/agents
+  remove dir (if empty): .pi
+  remove dir (if empty): .opencode/skills/reviewer/scripts
+  remove dir (if empty): .opencode/skills/reviewer/references
+  remove dir (if empty): .opencode/skills/reviewer
+  remove dir (if empty): .opencode/skills/deployer
+  remove dir (if empty): .opencode/skills
+  remove dir (if empty): .opencode/plugins
+  remove dir (if empty): .opencode/commands
+  remove dir (if empty): .opencode/agents
+  remove dir (if empty): .opencode
+  remove dir (if empty): .omp/skills/reviewer/scripts
+  remove dir (if empty): .omp/skills/reviewer/references
+  remove dir (if empty): .omp/skills/reviewer
+  remove dir (if empty): .omp/skills/deployer
+  remove dir (if empty): .omp/skills
+  remove dir (if empty): .omp/rules
+  remove dir (if empty): .omp/commands
+  remove dir (if empty): .omp/agents
+  remove dir (if empty): .omp
+  remove dir (if empty): .mimocode/skills/reviewer/scripts
+  remove dir (if empty): .mimocode/skills/reviewer/references
+  remove dir (if empty): .mimocode/skills/reviewer
+  remove dir (if empty): .mimocode/skills/deployer
+  remove dir (if empty): .mimocode/skills
+  remove dir (if empty): .mimocode/plugins
+  remove dir (if empty): .mimocode/commands
+  remove dir (if empty): .mimocode/agents
+  remove dir (if empty): .mimocode
+  remove dir (if empty): .letta/agents
+  remove dir (if empty): .letta
+  remove dir (if empty): .kiro/steering
+  remove dir (if empty): .kiro/skills/reviewer/scripts
+  remove dir (if empty): .kiro/skills/reviewer/references
+  remove dir (if empty): .kiro/skills/reviewer
+  remove dir (if empty): .kiro/skills/deployer
+  remove dir (if empty): .kiro/skills
+  remove dir (if empty): .kiro/prompts
+  remove dir (if empty): .kiro/hooks
+  remove dir (if empty): .kiro/agents
+  remove dir (if empty): .kiro
+  remove dir (if empty): .kimi-code/skills/reviewer/scripts
+  remove dir (if empty): .kimi-code/skills/reviewer/references
+  remove dir (if empty): .kimi-code/skills/reviewer
+  remove dir (if empty): .kimi-code/skills/deployer
+  remove dir (if empty): .kimi-code/skills
+  remove dir (if empty): .kimi-code/agents
+  remove dir (if empty): .kimi-code
+  remove dir (if empty): .kilo/skills/reviewer/scripts
+  remove dir (if empty): .kilo/skills/reviewer/references
+  remove dir (if empty): .kilo/skills/reviewer
+  remove dir (if empty): .kilo/skills/deployer
+  remove dir (if empty): .kilo/skills
+  remove dir (if empty): .kilo/rules
+  remove dir (if empty): .kilo/plugins
+  remove dir (if empty): .kilo/commands
+  remove dir (if empty): .kilo/agents
+  remove dir (if empty): .kilo
+  remove dir (if empty): .junie/skills/reviewer/scripts
+  remove dir (if empty): .junie/skills/reviewer/references
+  remove dir (if empty): .junie/skills/reviewer
+  remove dir (if empty): .junie/skills/deployer
+  remove dir (if empty): .junie/skills
+  remove dir (if empty): .junie/rules
+  remove dir (if empty): .junie/commands
+  remove dir (if empty): .junie/agents
+  remove dir (if empty): .junie
+  remove dir (if empty): .grok/skills/reviewer/scripts
+  remove dir (if empty): .grok/skills/reviewer/references
+  remove dir (if empty): .grok/skills/reviewer
+  remove dir (if empty): .grok/skills/deployer
+  remove dir (if empty): .grok/skills
+  remove dir (if empty): .grok/rules
+  remove dir (if empty): .grok/hooks
+  remove dir (if empty): .grok/commands
+  remove dir (if empty): .grok/agents
+  remove dir (if empty): .grok
+  remove dir (if empty): .goose/agents
+  remove dir (if empty): .goose
+  remove dir (if empty): .gitlab/duo
+  remove dir (if empty): .gitlab
+  remove dir (if empty): .github/skills/reviewer/scripts
+  remove dir (if empty): .github/skills/reviewer/references
+  remove dir (if empty): .github/skills/reviewer
+  remove dir (if empty): .github/skills/deployer
+  remove dir (if empty): .github/skills
+  remove dir (if empty): .github/prompts
+  remove dir (if empty): .github/instructions
+  remove dir (if empty): .github/hooks
+  remove dir (if empty): .github/copilot
+  remove dir (if empty): .github/agents
+  remove dir (if empty): .github
+  remove dir (if empty): .gemini/agents
+  remove dir (if empty): .gemini
+  remove dir (if empty): .factory/skills/reviewer/scripts
+  remove dir (if empty): .factory/skills/reviewer/references
+  remove dir (if empty): .factory/skills/reviewer
+  remove dir (if empty): .factory/skills/review-guidelines
+  remove dir (if empty): .factory/skills/deployer
+  remove dir (if empty): .factory/skills
+  remove dir (if empty): .factory/droids
+  remove dir (if empty): .factory/commands
+  remove dir (if empty): .factory
+  remove dir (if empty): .dsh/skills/reviewer/scripts
+  remove dir (if empty): .dsh/skills/reviewer/references
+  remove dir (if empty): .dsh/skills/reviewer
+  remove dir (if empty): .dsh/skills/deployer
+  remove dir (if empty): .dsh/skills
+  remove dir (if empty): .dsh
+  remove dir (if empty): .devin/skills/ship
+  remove dir (if empty): .devin/skills/reviewer/scripts
+  remove dir (if empty): .devin/skills/reviewer/references
+  remove dir (if empty): .devin/skills/reviewer
+  remove dir (if empty): .devin/skills/deployer
+  remove dir (if empty): .devin/skills/build
+  remove dir (if empty): .devin/skills
+  remove dir (if empty): .devin/rules
+  remove dir (if empty): .devin/agents
+  remove dir (if empty): .devin
+  remove dir (if empty): .deepagents/skills/reviewer/scripts
+  remove dir (if empty): .deepagents/skills/reviewer/references
+  remove dir (if empty): .deepagents/skills/reviewer
+  remove dir (if empty): .deepagents/skills/deployer
+  remove dir (if empty): .deepagents/skills
+  remove dir (if empty): .deepagents/agents/tester
+  remove dir (if empty): .deepagents/agents/architect
+  remove dir (if empty): .deepagents/agents
+  remove dir (if empty): .deepagents
+  remove dir (if empty): .cursor/rules
+  remove dir (if empty): .cursor/commands
+  remove dir (if empty): .cursor/agents
+  remove dir (if empty): .cursor
+  remove dir (if empty): .crush/skills/reviewer/scripts
+  remove dir (if empty): .crush/skills/reviewer/references
+  remove dir (if empty): .crush/skills/reviewer
+  remove dir (if empty): .crush/skills/deployer
+  remove dir (if empty): .crush/skills
+  remove dir (if empty): .crush
+  remove dir (if empty): .cortex/skills/reviewer/scripts
+  remove dir (if empty): .cortex/skills/reviewer/references
+  remove dir (if empty): .cortex/skills/reviewer
+  remove dir (if empty): .cortex/skills/deployer
+  remove dir (if empty): .cortex/skills
+  remove dir (if empty): .cortex/agents
+  remove dir (if empty): .cortex
+  remove dir (if empty): .commands
+  remove dir (if empty): .commandcode/skills/reviewer/scripts
+  remove dir (if empty): .commandcode/skills/reviewer/references
+  remove dir (if empty): .commandcode/skills/reviewer
+  remove dir (if empty): .commandcode/skills/deployer
+  remove dir (if empty): .commandcode/skills
+  remove dir (if empty): .commandcode/commands
+  remove dir (if empty): .commandcode/agents
+  remove dir (if empty): .commandcode
+  remove dir (if empty): .codex/rules
+  remove dir (if empty): .codex/agents
+  remove dir (if empty): .codex
+  remove dir (if empty): .codewhale/skills/reviewer/scripts
+  remove dir (if empty): .codewhale/skills/reviewer/references
+  remove dir (if empty): .codewhale/skills/reviewer
+  remove dir (if empty): .codewhale/skills/deployer
+  remove dir (if empty): .codewhale/skills
+  remove dir (if empty): .codewhale/rules
+  remove dir (if empty): .codewhale/commands
+  remove dir (if empty): .codewhale
+  remove dir (if empty): .codebuddy/skills/reviewer/scripts
+  remove dir (if empty): .codebuddy/skills/reviewer/references
+  remove dir (if empty): .codebuddy/skills/reviewer
+  remove dir (if empty): .codebuddy/skills/deployer
+  remove dir (if empty): .codebuddy/skills
+  remove dir (if empty): .codebuddy/rules
+  remove dir (if empty): .codebuddy/commands
+  remove dir (if empty): .codebuddy/agents
+  remove dir (if empty): .codebuddy
+  remove dir (if empty): .clinerules/workflows
+  remove dir (if empty): .clinerules/hooks
+  remove dir (if empty): .clinerules
+  remove dir (if empty): .cline/skills/reviewer/scripts
+  remove dir (if empty): .cline/skills/reviewer/references
+  remove dir (if empty): .cline/skills/reviewer
+  remove dir (if empty): .cline/skills/deployer
+  remove dir (if empty): .cline/skills
+  remove dir (if empty): .cline/agents
+  remove dir (if empty): .cline
+  remove dir (if empty): .claude/skills/ship
+  remove dir (if empty): .claude/skills/reviewer/scripts
+  remove dir (if empty): .claude/skills/reviewer/references
+  remove dir (if empty): .claude/skills/reviewer
+  remove dir (if empty): .claude/skills/deployer
+  remove dir (if empty): .claude/skills/build
+  remove dir (if empty): .claude/skills
+  remove dir (if empty): .claude/rules
+  remove dir (if empty): .claude/agents
+  remove dir (if empty): .claude
+  remove dir (if empty): .bob/skills/reviewer/scripts
+  remove dir (if empty): .bob/skills/reviewer/references
+  remove dir (if empty): .bob/skills/reviewer
+  remove dir (if empty): .bob/skills/deployer
+  remove dir (if empty): .bob/skills
+  remove dir (if empty): .bob/rules
+  remove dir (if empty): .bob/commands
+  remove dir (if empty): .bob
+  remove dir (if empty): .augment/skills/reviewer/scripts
+  remove dir (if empty): .augment/skills/reviewer/references
+  remove dir (if empty): .augment/skills/reviewer
+  remove dir (if empty): .augment/skills/deployer
+  remove dir (if empty): .augment/skills
+  remove dir (if empty): .augment/rules
+  remove dir (if empty): .augment/commands
+  remove dir (if empty): .augment/agents
+  remove dir (if empty): .augment
+  remove dir (if empty): .amp/plugins
+  remove dir (if empty): .amp
+  remove dir (if empty): .aiassistant/rules
+  remove dir (if empty): .aiassistant
+  remove dir (if empty): .agents/skills/ship/agents
+  remove dir (if empty): .agents/skills/ship
+  remove dir (if empty): .agents/skills/reviewer/scripts
+  remove dir (if empty): .agents/skills/reviewer/references
+  remove dir (if empty): .agents/skills/reviewer
+  remove dir (if empty): .agents/skills/deployer
+  remove dir (if empty): .agents/skills/build/agents
+  remove dir (if empty): .agents/skills/build
+  remove dir (if empty): .agents/skills
+  remove dir (if empty): .agents/plugins/ai-rulez/hooks
+  remove dir (if empty): .agents/plugins/ai-rulez
+  remove dir (if empty): .agents/plugins
+  remove dir (if empty): .agents/commands
+  remove dir (if empty): .agents/checks
+  remove dir (if empty): .agents/agents
+  remove dir (if empty): .agents
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
 WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-INFO  Clean plan profile=default
-INFO    remove file: .agents/agents/architect.md
-INFO    remove file: .agents/agents/tester.md
-INFO    remove file: .agents/checks/security.md
-INFO    remove file: .agents/checks/style.md
-INFO    remove file: .agents/commands/build.md
-INFO    remove file: .agents/commands/ship.md
-INFO    remove file: .agents/hooks.json
-INFO    remove file: .agents/plugins/ai-rulez/hooks/hooks.json
-INFO    remove file: .agents/skills/build/SKILL.md
-INFO    remove file: .agents/skills/build/agents/openai.yaml
-INFO    remove file: .agents/skills/deployer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/references/checklist.md
-INFO    remove file: .agents/skills/reviewer/scripts/run.sh
-INFO    remove file: .agents/skills/ship/SKILL.md
-INFO    remove file: .agents/skills/ship/agents/openai.yaml
-INFO    remove file: .aiassistant/rules/always.md
-INFO    remove file: .aiassistant/rules/auto.md
-INFO    remove file: .aiassistant/rules/context-architecture.md
-INFO    remove file: .aiassistant/rules/context-overview.md
-INFO    remove file: .aiassistant/rules/manual.md
-INFO    remove file: .aiassistant/rules/typescript.md
-INFO    remove file: .amp/plugins/ai-rulez-hooks.ts
-INFO    remove file: .augment/agents/architect.md
-INFO    remove file: .augment/agents/tester.md
-INFO    remove file: .augment/code_review_guidelines.yaml
-INFO    remove file: .augment/commands/build.md
-INFO    remove file: .augment/commands/ship.md
-INFO    remove file: .augment/rules/always.md
-INFO    remove file: .augment/rules/auto.md
-INFO    remove file: .augment/rules/manual.md
-INFO    remove file: .augment/rules/typescript.md
-INFO    remove file: .augment/settings.json
-INFO    remove file: .augment/skills/deployer/SKILL.md
-INFO    remove file: .augment/skills/reviewer/SKILL.md
-INFO    remove file: .augment/skills/reviewer/references/checklist.md
-INFO    remove file: .augment/skills/reviewer/scripts/run.sh
-INFO    remove file: .bob/commands/build.md
-INFO    remove file: .bob/commands/ship.md
-INFO    remove file: .bob/rules/always.md
-INFO    remove file: .bob/rules/auto.md
-INFO    remove file: .bob/rules/manual.md
-INFO    remove file: .bob/rules/typescript.md
-INFO    remove file: .bob/settings.json
-INFO    remove file: .bob/skills/deployer/SKILL.md
-INFO    remove file: .bob/skills/reviewer/SKILL.md
-INFO    remove file: .bob/skills/reviewer/references/checklist.md
-INFO    remove file: .bob/skills/reviewer/scripts/run.sh
-INFO    remove file: .claude/agents/architect.md
-INFO    remove file: .claude/agents/tester.md
-INFO    remove file: .claude/rules/always.md
-INFO    remove file: .claude/rules/auto.md
-INFO    remove file: .claude/rules/manual.md
-INFO    remove file: .claude/rules/targeted.md
-INFO    remove file: .claude/rules/typescript.md
-INFO    remove file: .claude/settings.json
-INFO    remove file: .claude/skills/build/SKILL.md
-INFO    remove file: .claude/skills/deployer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/references/checklist.md
-INFO    remove file: .claude/skills/reviewer/scripts/run.sh
-INFO    remove file: .claude/skills/ship/SKILL.md
-INFO    remove file: .cline/agents/architect.yaml
-INFO    remove file: .cline/agents/tester.yaml
-INFO    remove file: .cline/skills/deployer/SKILL.md
-INFO    remove file: .cline/skills/reviewer/SKILL.md
-INFO    remove file: .cline/skills/reviewer/references/checklist.md
-INFO    remove file: .cline/skills/reviewer/scripts/run.sh
-INFO    remove file: .clinerules/always.md
-INFO    remove file: .clinerules/auto.md
-INFO    remove file: .clinerules/context-architecture.md
-INFO    remove file: .clinerules/context-overview.md
-INFO    remove file: .clinerules/hooks/TaskStart
-INFO    remove file: .clinerules/manual.md
-INFO    remove file: .clinerules/typescript.md
-INFO    remove file: .clinerules/workflows/build.md
-INFO    remove file: .clinerules/workflows/ship.md
-INFO    remove file: .codebuddy/agents/architect.md
-INFO    remove file: .codebuddy/agents/tester.md
-INFO    remove file: .codebuddy/commands/build.md
-INFO    remove file: .codebuddy/commands/ship.md
-INFO    remove file: .codebuddy/rules/always.md
-INFO    remove file: .codebuddy/rules/auto.md
-INFO    remove file: .codebuddy/rules/manual.md
-INFO    remove file: .codebuddy/rules/typescript.md
-INFO    remove file: .codebuddy/settings.json
-INFO    remove file: .codebuddy/skills/deployer/SKILL.md
-INFO    remove file: .codebuddy/skills/reviewer/SKILL.md
-INFO    remove file: .codebuddy/skills/reviewer/references/checklist.md
-INFO    remove file: .codebuddy/skills/reviewer/scripts/run.sh
-INFO    remove file: .codewhale/commands/build.md
-INFO    remove file: .codewhale/commands/ship.md
-INFO    remove file: .codewhale/rules/always.md
-INFO    remove file: .codewhale/rules/auto.md
-INFO    remove file: .codewhale/rules/manual.md
-INFO    remove file: .codewhale/rules/typescript.md
-INFO    remove file: .codewhale/skills/deployer/SKILL.md
-INFO    remove file: .codewhale/skills/reviewer/SKILL.md
-INFO    remove file: .codewhale/skills/reviewer/references/checklist.md
-INFO    remove file: .codewhale/skills/reviewer/scripts/run.sh
-INFO    remove file: .codex/agents/architect.toml
-INFO    remove file: .codex/agents/tester.toml
-INFO    remove file: .codex/hooks.json
-INFO    remove file: .codex/rules/ai-rulez.rules
-INFO    remove file: .commandcode/agents/architect.md
-INFO    remove file: .commandcode/agents/tester.md
-INFO    remove file: .commandcode/commands/build.md
-INFO    remove file: .commandcode/commands/ship.md
-INFO    remove file: .commandcode/settings.json
-INFO    remove file: .commandcode/skills/deployer/SKILL.md
-INFO    remove file: .commandcode/skills/reviewer/SKILL.md
-INFO    remove file: .commandcode/skills/reviewer/references/checklist.md
-INFO    remove file: .commandcode/skills/reviewer/scripts/run.sh
-INFO    remove file: .commands/build.md
-INFO    remove file: .commands/ship.md
-INFO    remove file: .cortex/agents/architect.md
-INFO    remove file: .cortex/agents/tester.md
-INFO    remove file: .cortex/settings.json
-INFO    remove file: .cortex/skills/deployer/SKILL.md
-INFO    remove file: .cortex/skills/reviewer/SKILL.md
-INFO    remove file: .cortex/skills/reviewer/references/checklist.md
-INFO    remove file: .cortex/skills/reviewer/scripts/run.sh
-INFO    remove file: .crush/skills/deployer/SKILL.md
-INFO    remove file: .crush/skills/reviewer/SKILL.md
-INFO    remove file: .crush/skills/reviewer/references/checklist.md
-INFO    remove file: .crush/skills/reviewer/scripts/run.sh
-INFO    remove file: .cursor/BUGBOT.md
-INFO    remove file: .cursor/agents/architect.md
-INFO    remove file: .cursor/agents/tester.md
-INFO    remove file: .cursor/cli.json
-INFO    remove file: .cursor/commands/build.md
-INFO    remove file: .cursor/commands/ship.md
-INFO    remove file: .cursor/hooks.json
-INFO    remove file: .cursor/rules/always.mdc
-INFO    remove file: .cursor/rules/auto.mdc
-INFO    remove file: .cursor/rules/context-architecture.mdc
-INFO    remove file: .cursor/rules/context-overview.mdc
-INFO    remove file: .cursor/rules/manual.mdc
-INFO    remove file: .cursor/rules/targeted.mdc
-INFO    remove file: .cursor/rules/typescript.mdc
-INFO    remove file: .deepagents/agents/architect/AGENTS.md
-INFO    remove file: .deepagents/agents/tester/AGENTS.md
-INFO    remove file: .deepagents/hooks.json
-INFO    remove file: .deepagents/skills/deployer/SKILL.md
-INFO    remove file: .deepagents/skills/reviewer/SKILL.md
-INFO    remove file: .deepagents/skills/reviewer/references/checklist.md
-INFO    remove file: .deepagents/skills/reviewer/scripts/run.sh
-INFO    remove file: .devin/agents/architect.md
-INFO    remove file: .devin/agents/tester.md
-INFO    remove file: .devin/config.json
-INFO    remove file: .devin/hooks.v1.json
-INFO    remove file: .devin/rules/always.md
-INFO    remove file: .devin/rules/auto.md
-INFO    remove file: .devin/rules/context-architecture.md
-INFO    remove file: .devin/rules/context-overview.md
-INFO    remove file: .devin/rules/manual.md
-INFO    remove file: .devin/rules/typescript.md
-INFO    remove file: .devin/skills/build/SKILL.md
-INFO    remove file: .devin/skills/deployer/SKILL.md
-INFO    remove file: .devin/skills/reviewer/SKILL.md
-INFO    remove file: .devin/skills/reviewer/references/checklist.md
-INFO    remove file: .devin/skills/reviewer/scripts/run.sh
-INFO    remove file: .devin/skills/ship/SKILL.md
-INFO    remove file: .dsh/skills/deployer/SKILL.md
-INFO    remove file: .dsh/skills/reviewer/SKILL.md
-INFO    remove file: .dsh/skills/reviewer/references/checklist.md
-INFO    remove file: .dsh/skills/reviewer/scripts/run.sh
-INFO    remove file: .factory/commands/build.md
-INFO    remove file: .factory/commands/ship.md
-INFO    remove file: .factory/droids/architect.md
-INFO    remove file: .factory/droids/tester.md
-INFO    remove file: .factory/hooks.json
-INFO    remove file: .factory/skills/deployer/SKILL.md
-INFO    remove file: .factory/skills/review-guidelines/SKILL.md
-INFO    remove file: .factory/skills/reviewer/SKILL.md
-INFO    remove file: .factory/skills/reviewer/references/checklist.md
-INFO    remove file: .factory/skills/reviewer/scripts/run.sh
-INFO    remove file: .gemini/agents/architect.md
-INFO    remove file: .gemini/agents/tester.md
-INFO    remove file: .gemini/settings.json
-INFO    remove file: .github/agents/architect.agent.md
-INFO    remove file: .github/agents/tester.agent.md
-INFO    remove file: .github/copilot-instructions.md
-INFO    remove file: .github/copilot/settings.json
-INFO    remove file: .github/hooks/ai-rulez.json
-INFO    remove file: .github/instructions/always.instructions.md
-INFO    remove file: .github/instructions/typescript.instructions.md
-INFO    remove file: .github/prompts/build.prompt.md
-INFO    remove file: .github/prompts/ship.prompt.md
-INFO    remove file: .github/skills/deployer/SKILL.md
-INFO    remove file: .github/skills/reviewer/SKILL.md
-INFO    remove file: .github/skills/reviewer/references/checklist.md
-INFO    remove file: .github/skills/reviewer/scripts/run.sh
-INFO    remove file: .gitlab/duo/chat-rules.md
-INFO    remove file: .gitlab/duo/hooks.json
-INFO    remove file: .gitlab/duo/mr-review-instructions.yaml
-INFO    remove file: .goose/agents/architect.md
-INFO    remove file: .goose/agents/tester.md
-INFO    remove file: .goosehints
-INFO    remove file: .grok/agents/architect.md
-INFO    remove file: .grok/agents/tester.md
-INFO    remove file: .grok/commands/build.md
-INFO    remove file: .grok/commands/ship.md
-INFO    remove file: .grok/config.toml
-INFO    remove file: .grok/hooks/ai-rulez.json
-INFO    remove file: .grok/rules/always.md
-INFO    remove file: .grok/rules/auto.md
-INFO    remove file: .grok/rules/manual.md
-INFO    remove file: .grok/rules/typescript.md
-INFO    remove file: .grok/skills/deployer/SKILL.md
-INFO    remove file: .grok/skills/reviewer/SKILL.md
-INFO    remove file: .grok/skills/reviewer/references/checklist.md
-INFO    remove file: .grok/skills/reviewer/scripts/run.sh
-INFO    remove file: .hermes.md
-INFO    remove file: .junie/agents/architect.md
-INFO    remove file: .junie/agents/tester.md
-INFO    remove file: .junie/commands/build.md
-INFO    remove file: .junie/commands/ship.md
-INFO    remove file: .junie/rules/always.md
-INFO    remove file: .junie/rules/auto.md
-INFO    remove file: .junie/rules/manual.md
-INFO    remove file: .junie/rules/typescript.md
-INFO    remove file: .junie/skills/deployer/SKILL.md
-INFO    remove file: .junie/skills/reviewer/SKILL.md
-INFO    remove file: .junie/skills/reviewer/references/checklist.md
-INFO    remove file: .junie/skills/reviewer/scripts/run.sh
-INFO    remove file: .kilo/agents/architect.md
-INFO    remove file: .kilo/agents/tester.md
-INFO    remove file: .kilo/commands/build.md
-INFO    remove file: .kilo/commands/ship.md
-INFO    remove file: .kilo/plugins/ai-rulez-hooks.js
-INFO    remove file: .kilo/rules/always.md
-INFO    remove file: .kilo/rules/auto.md
-INFO    remove file: .kilo/rules/manual.md
-INFO    remove file: .kilo/rules/typescript.md
-INFO    remove file: .kilo/skills/deployer/SKILL.md
-INFO    remove file: .kilo/skills/reviewer/SKILL.md
-INFO    remove file: .kilo/skills/reviewer/references/checklist.md
-INFO    remove file: .kilo/skills/reviewer/scripts/run.sh
-INFO    remove file: .kimi-code/agents/architect.md
-INFO    remove file: .kimi-code/agents/tester.md
-INFO    remove file: .kimi-code/skills/deployer/SKILL.md
-INFO    remove file: .kimi-code/skills/reviewer/SKILL.md
-INFO    remove file: .kimi-code/skills/reviewer/references/checklist.md
-INFO    remove file: .kimi-code/skills/reviewer/scripts/run.sh
-INFO    remove file: .kiro/agents/architect.md
-INFO    remove file: .kiro/agents/tester.md
-INFO    remove file: .kiro/hooks/ai-rulez.json
-INFO    remove file: .kiro/prompts/build.md
-INFO    remove file: .kiro/prompts/ship.md
-INFO    remove file: .kiro/skills/deployer/SKILL.md
-INFO    remove file: .kiro/skills/reviewer/SKILL.md
-INFO    remove file: .kiro/skills/reviewer/references/checklist.md
-INFO    remove file: .kiro/skills/reviewer/scripts/run.sh
-INFO    remove file: .kiro/steering/always.md
-INFO    remove file: .kiro/steering/auto.md
-INFO    remove file: .kiro/steering/manual.md
-INFO    remove file: .kiro/steering/typescript.md
-INFO    remove file: .letta/agents/architect.md
-INFO    remove file: .letta/agents/tester.md
-INFO    remove file: .letta/settings.json
-INFO    remove file: .mimocode/agents/architect.md
-INFO    remove file: .mimocode/agents/tester.md
-INFO    remove file: .mimocode/commands/build.md
-INFO    remove file: .mimocode/commands/ship.md
-INFO    remove file: .mimocode/mimocode.jsonc
-INFO    remove file: .mimocode/plugins/ai-rulez-hooks.js
-INFO    remove file: .mimocode/skills/deployer/SKILL.md
-INFO    remove file: .mimocode/skills/reviewer/SKILL.md
-INFO    remove file: .mimocode/skills/reviewer/references/checklist.md
-INFO    remove file: .mimocode/skills/reviewer/scripts/run.sh
-INFO    remove file: .omp/agents/architect.md
-INFO    remove file: .omp/agents/tester.md
-INFO    remove file: .omp/commands/build.md
-INFO    remove file: .omp/commands/ship.md
-INFO    remove file: .omp/config.yml
-INFO    remove file: .omp/rules/always.md
-INFO    remove file: .omp/rules/auto.md
-INFO    remove file: .omp/rules/manual.md
-INFO    remove file: .omp/rules/typescript.md
-INFO    remove file: .omp/skills/deployer/SKILL.md
-INFO    remove file: .omp/skills/reviewer/SKILL.md
-INFO    remove file: .omp/skills/reviewer/references/checklist.md
-INFO    remove file: .omp/skills/reviewer/scripts/run.sh
-INFO    remove file: .opencode/agents/architect.md
-INFO    remove file: .opencode/agents/tester.md
-INFO    remove file: .opencode/commands/build.md
-INFO    remove file: .opencode/commands/ship.md
-INFO    remove file: .opencode/plugins/ai-rulez-hooks.js
-INFO    remove file: .opencode/skills/deployer/SKILL.md
-INFO    remove file: .opencode/skills/reviewer/SKILL.md
-INFO    remove file: .opencode/skills/reviewer/references/checklist.md
-INFO    remove file: .opencode/skills/reviewer/scripts/run.sh
-INFO    remove file: .pi/agents/architect.md
-INFO    remove file: .pi/agents/tester.md
-INFO    remove file: .pi/extensions/ai-rulez-hooks.ts
-INFO    remove file: .pi/prompts/build.md
-INFO    remove file: .pi/prompts/ship.md
-INFO    remove file: .poolside/settings.yaml
-INFO    remove file: .poolside/skills/deployer/SKILL.md
-INFO    remove file: .poolside/skills/reviewer/SKILL.md
-INFO    remove file: .poolside/skills/reviewer/references/checklist.md
-INFO    remove file: .poolside/skills/reviewer/scripts/run.sh
-INFO    remove file: .qoder/agents/architect.md
-INFO    remove file: .qoder/agents/tester.md
-INFO    remove file: .qoder/commands/build.md
-INFO    remove file: .qoder/commands/ship.md
-INFO    remove file: .qoder/rules/always.md
-INFO    remove file: .qoder/rules/auto.md
-INFO    remove file: .qoder/rules/manual.md
-INFO    remove file: .qoder/rules/typescript.md
-INFO    remove file: .qoder/settings.json
-INFO    remove file: .qoder/skills/deployer/SKILL.md
-INFO    remove file: .qoder/skills/reviewer/SKILL.md
-INFO    remove file: .qoder/skills/reviewer/references/checklist.md
-INFO    remove file: .qoder/skills/reviewer/scripts/run.sh
-INFO    remove file: .qwen/agents/architect.md
-INFO    remove file: .qwen/agents/tester.md
-INFO    remove file: .qwen/commands/build.md
-INFO    remove file: .qwen/commands/ship.md
-INFO    remove file: .qwen/review-rules.md
-INFO    remove file: .qwen/rules/always.md
-INFO    remove file: .qwen/rules/auto.md
-INFO    remove file: .qwen/rules/manual.md
-INFO    remove file: .qwen/rules/typescript.md
-INFO    remove file: .qwen/settings.json
-INFO    remove file: .qwen/skills/deployer/SKILL.md
-INFO    remove file: .qwen/skills/reviewer/SKILL.md
-INFO    remove file: .qwen/skills/reviewer/references/checklist.md
-INFO    remove file: .qwen/skills/reviewer/scripts/run.sh
-INFO    remove file: .reasonix/commands/build.md
-INFO    remove file: .reasonix/commands/ship.md
-INFO    remove file: .reasonix/settings.json
-INFO    remove file: .reasonix/skills/architect/SKILL.md
-INFO    remove file: .reasonix/skills/deployer/SKILL.md
-INFO    remove file: .reasonix/skills/reviewer/SKILL.md
-INFO    remove file: .reasonix/skills/reviewer/references/checklist.md
-INFO    remove file: .reasonix/skills/reviewer/scripts/run.sh
-INFO    remove file: .reasonix/skills/tester/SKILL.md
-INFO    remove file: .roo/commands/build.md
-INFO    remove file: .roo/commands/ship.md
-INFO    remove file: .roo/skills/deployer/SKILL.md
-INFO    remove file: .roo/skills/reviewer/SKILL.md
-INFO    remove file: .roo/skills/reviewer/references/checklist.md
-INFO    remove file: .roo/skills/reviewer/scripts/run.sh
-INFO    remove file: .rovodev/.review-agent.md
-INFO    remove file: .rovodev/skills/deployer/SKILL.md
-INFO    remove file: .rovodev/skills/reviewer/SKILL.md
-INFO    remove file: .rovodev/skills/reviewer/references/checklist.md
-INFO    remove file: .rovodev/skills/reviewer/scripts/run.sh
-INFO    remove file: .rovodev/subagents/architect.md
-INFO    remove file: .rovodev/subagents/tester.md
-INFO    remove file: .rules
-INFO    remove file: .takt/facets/instructions/build.md
-INFO    remove file: .takt/facets/instructions/ship.md
-INFO    remove file: .takt/facets/knowledge/deployer.md
-INFO    remove file: .takt/facets/knowledge/reviewer.md
-INFO    remove file: .takt/facets/personas/architect.md
-INFO    remove file: .takt/facets/personas/tester.md
-INFO    remove file: .takt/facets/policies/always.md
-INFO    remove file: .takt/facets/policies/auto.md
-INFO    remove file: .takt/facets/policies/context-architecture.md
-INFO    remove file: .takt/facets/policies/context-overview.md
-INFO    remove file: .takt/facets/policies/manual.md
-INFO    remove file: .takt/facets/policies/typescript.md
-INFO    remove file: .trae/rules/always.md
-INFO    remove file: .trae/rules/auto.md
-INFO    remove file: .trae/rules/context-architecture.md
-INFO    remove file: .trae/rules/context-overview.md
-INFO    remove file: .trae/rules/manual.md
-INFO    remove file: .trae/rules/typescript.md
-INFO    remove file: .trae/skills/deployer/SKILL.md
-INFO    remove file: .trae/skills/reviewer/SKILL.md
-INFO    remove file: .trae/skills/reviewer/references/checklist.md
-INFO    remove file: .trae/skills/reviewer/scripts/run.sh
-INFO    remove file: .vibe/config.toml
-INFO    remove file: .vibe/hooks.toml
-INFO    remove file: .vibe/skills/deployer/SKILL.md
-INFO    remove file: .vibe/skills/reviewer/SKILL.md
-INFO    remove file: .vibe/skills/reviewer/references/checklist.md
-INFO    remove file: .vibe/skills/reviewer/scripts/run.sh
-INFO    remove file: .vscode/settings.json
-INFO    remove file: .warp/skills/build/SKILL.md
-INFO    remove file: .warp/skills/deployer/SKILL.md
-INFO    remove file: .warp/skills/reviewer/SKILL.md
-INFO    remove file: .warp/skills/reviewer/references/checklist.md
-INFO    remove file: .warp/skills/reviewer/scripts/run.sh
-INFO    remove file: .warp/skills/ship/SKILL.md
-INFO    remove file: .xum/agents/architect.md
-INFO    remove file: .xum/agents/tester.md
-INFO    remove file: .xum/skills/deployer/SKILL.md
-INFO    remove file: .xum/skills/reviewer/SKILL.md
-INFO    remove file: .xum/skills/reviewer/references/checklist.md
-INFO    remove file: .xum/skills/reviewer/scripts/run.sh
-INFO    remove file: .zcode/agents/architect.md
-INFO    remove file: .zcode/agents/tester.md
-INFO    remove file: .zcode/commands/build.md
-INFO    remove file: .zcode/commands/ship.md
-INFO    remove file: .zcode/skills/deployer/SKILL.md
-INFO    remove file: .zcode/skills/reviewer/SKILL.md
-INFO    remove file: .zcode/skills/reviewer/references/checklist.md
-INFO    remove file: .zcode/skills/reviewer/scripts/run.sh
-INFO    remove file: AGENTS.md
-INFO    remove file: CLAUDE.md
-INFO    remove file: CODEBUDDY.md
-INFO    remove file: CRUSH.md
-INFO    remove file: GEMINI.md
-INFO    remove file: QWEN.md
-INFO    remove file: REASONIX.md
-INFO    remove file: REVIEW.md
-INFO    remove file: crush.json
-INFO    remove file: kilo.jsonc
-INFO    remove file: opencode.json
-INFO    remove file: replit.md
-INFO    remove dir (if empty): .zed
-INFO    remove dir (if empty): .zcode/skills/reviewer/scripts
-INFO    remove dir (if empty): .zcode/skills/reviewer/references
-INFO    remove dir (if empty): .zcode/skills/reviewer
-INFO    remove dir (if empty): .zcode/skills/deployer
-INFO    remove dir (if empty): .zcode/skills
-INFO    remove dir (if empty): .zcode/commands
-INFO    remove dir (if empty): .zcode/agents
-INFO    remove dir (if empty): .zcode
-INFO    remove dir (if empty): .xum/skills/reviewer/scripts
-INFO    remove dir (if empty): .xum/skills/reviewer/references
-INFO    remove dir (if empty): .xum/skills/reviewer
-INFO    remove dir (if empty): .xum/skills/deployer
-INFO    remove dir (if empty): .xum/skills
-INFO    remove dir (if empty): .xum/agents
-INFO    remove dir (if empty): .xum
-INFO    remove dir (if empty): .warp/skills/ship
-INFO    remove dir (if empty): .warp/skills/reviewer/scripts
-INFO    remove dir (if empty): .warp/skills/reviewer/references
-INFO    remove dir (if empty): .warp/skills/reviewer
-INFO    remove dir (if empty): .warp/skills/deployer
-INFO    remove dir (if empty): .warp/skills/build
-INFO    remove dir (if empty): .warp/skills
-INFO    remove dir (if empty): .warp
-INFO    remove dir (if empty): .vscode
-INFO    remove dir (if empty): .vibe/skills/reviewer/scripts
-INFO    remove dir (if empty): .vibe/skills/reviewer/references
-INFO    remove dir (if empty): .vibe/skills/reviewer
-INFO    remove dir (if empty): .vibe/skills/deployer
-INFO    remove dir (if empty): .vibe/skills
-INFO    remove dir (if empty): .vibe
-INFO    remove dir (if empty): .trae/skills/reviewer/scripts
-INFO    remove dir (if empty): .trae/skills/reviewer/references
-INFO    remove dir (if empty): .trae/skills/reviewer
-INFO    remove dir (if empty): .trae/skills/deployer
-INFO    remove dir (if empty): .trae/skills
-INFO    remove dir (if empty): .trae/rules
-INFO    remove dir (if empty): .trae
-INFO    remove dir (if empty): .takt/facets/policies
-INFO    remove dir (if empty): .takt/facets/personas
-INFO    remove dir (if empty): .takt/facets/knowledge
-INFO    remove dir (if empty): .takt/facets/instructions
-INFO    remove dir (if empty): .takt/facets
-INFO    remove dir (if empty): .takt
-INFO    remove dir (if empty): .rovodev/subagents
-INFO    remove dir (if empty): .rovodev/skills/reviewer/scripts
-INFO    remove dir (if empty): .rovodev/skills/reviewer/references
-INFO    remove dir (if empty): .rovodev/skills/reviewer
-INFO    remove dir (if empty): .rovodev/skills/deployer
-INFO    remove dir (if empty): .rovodev/skills
-INFO    remove dir (if empty): .rovodev
-INFO    remove dir (if empty): .roo/skills/reviewer/scripts
-INFO    remove dir (if empty): .roo/skills/reviewer/references
-INFO    remove dir (if empty): .roo/skills/reviewer
-INFO    remove dir (if empty): .roo/skills/deployer
-INFO    remove dir (if empty): .roo/skills
-INFO    remove dir (if empty): .roo/commands
-INFO    remove dir (if empty): .roo
-INFO    remove dir (if empty): .reasonix/skills/tester
-INFO    remove dir (if empty): .reasonix/skills/reviewer/scripts
-INFO    remove dir (if empty): .reasonix/skills/reviewer/references
-INFO    remove dir (if empty): .reasonix/skills/reviewer
-INFO    remove dir (if empty): .reasonix/skills/deployer
-INFO    remove dir (if empty): .reasonix/skills/architect
-INFO    remove dir (if empty): .reasonix/skills
-INFO    remove dir (if empty): .reasonix/commands
-INFO    remove dir (if empty): .reasonix
-INFO    remove dir (if empty): .qwen/skills/reviewer/scripts
-INFO    remove dir (if empty): .qwen/skills/reviewer/references
-INFO    remove dir (if empty): .qwen/skills/reviewer
-INFO    remove dir (if empty): .qwen/skills/deployer
-INFO    remove dir (if empty): .qwen/skills
-INFO    remove dir (if empty): .qwen/rules
-INFO    remove dir (if empty): .qwen/commands
-INFO    remove dir (if empty): .qwen/agents
-INFO    remove dir (if empty): .qwen
-INFO    remove dir (if empty): .qoder/skills/reviewer/scripts
-INFO    remove dir (if empty): .qoder/skills/reviewer/references
-INFO    remove dir (if empty): .qoder/skills/reviewer
-INFO    remove dir (if empty): .qoder/skills/deployer
-INFO    remove dir (if empty): .qoder/skills
-INFO    remove dir (if empty): .qoder/rules
-INFO    remove dir (if empty): .qoder/commands
-INFO    remove dir (if empty): .qoder/agents
-INFO    remove dir (if empty): .qoder
-INFO    remove dir (if empty): .poolside/skills/reviewer/scripts
-INFO    remove dir (if empty): .poolside/skills/reviewer/references
-INFO    remove dir (if empty): .poolside/skills/reviewer
-INFO    remove dir (if empty): .poolside/skills/deployer
-INFO    remove dir (if empty): .poolside/skills
-INFO    remove dir (if empty): .poolside
-INFO    remove dir (if empty): .pi/prompts
-INFO    remove dir (if empty): .pi/extensions
-INFO    remove dir (if empty): .pi/agents
-INFO    remove dir (if empty): .pi
-INFO    remove dir (if empty): .opencode/skills/reviewer/scripts
-INFO    remove dir (if empty): .opencode/skills/reviewer/references
-INFO    remove dir (if empty): .opencode/skills/reviewer
-INFO    remove dir (if empty): .opencode/skills/deployer
-INFO    remove dir (if empty): .opencode/skills
-INFO    remove dir (if empty): .opencode/plugins
-INFO    remove dir (if empty): .opencode/commands
-INFO    remove dir (if empty): .opencode/agents
-INFO    remove dir (if empty): .opencode
-INFO    remove dir (if empty): .omp/skills/reviewer/scripts
-INFO    remove dir (if empty): .omp/skills/reviewer/references
-INFO    remove dir (if empty): .omp/skills/reviewer
-INFO    remove dir (if empty): .omp/skills/deployer
-INFO    remove dir (if empty): .omp/skills
-INFO    remove dir (if empty): .omp/rules
-INFO    remove dir (if empty): .omp/commands
-INFO    remove dir (if empty): .omp/agents
-INFO    remove dir (if empty): .omp
-INFO    remove dir (if empty): .mimocode/skills/reviewer/scripts
-INFO    remove dir (if empty): .mimocode/skills/reviewer/references
-INFO    remove dir (if empty): .mimocode/skills/reviewer
-INFO    remove dir (if empty): .mimocode/skills/deployer
-INFO    remove dir (if empty): .mimocode/skills
-INFO    remove dir (if empty): .mimocode/plugins
-INFO    remove dir (if empty): .mimocode/commands
-INFO    remove dir (if empty): .mimocode/agents
-INFO    remove dir (if empty): .mimocode
-INFO    remove dir (if empty): .letta/agents
-INFO    remove dir (if empty): .letta
-INFO    remove dir (if empty): .kiro/steering
-INFO    remove dir (if empty): .kiro/skills/reviewer/scripts
-INFO    remove dir (if empty): .kiro/skills/reviewer/references
-INFO    remove dir (if empty): .kiro/skills/reviewer
-INFO    remove dir (if empty): .kiro/skills/deployer
-INFO    remove dir (if empty): .kiro/skills
-INFO    remove dir (if empty): .kiro/prompts
-INFO    remove dir (if empty): .kiro/hooks
-INFO    remove dir (if empty): .kiro/agents
-INFO    remove dir (if empty): .kiro
-INFO    remove dir (if empty): .kimi-code/skills/reviewer/scripts
-INFO    remove dir (if empty): .kimi-code/skills/reviewer/references
-INFO    remove dir (if empty): .kimi-code/skills/reviewer
-INFO    remove dir (if empty): .kimi-code/skills/deployer
-INFO    remove dir (if empty): .kimi-code/skills
-INFO    remove dir (if empty): .kimi-code/agents
-INFO    remove dir (if empty): .kimi-code
-INFO    remove dir (if empty): .kilo/skills/reviewer/scripts
-INFO    remove dir (if empty): .kilo/skills/reviewer/references
-INFO    remove dir (if empty): .kilo/skills/reviewer
-INFO    remove dir (if empty): .kilo/skills/deployer
-INFO    remove dir (if empty): .kilo/skills
-INFO    remove dir (if empty): .kilo/rules
-INFO    remove dir (if empty): .kilo/plugins
-INFO    remove dir (if empty): .kilo/commands
-INFO    remove dir (if empty): .kilo/agents
-INFO    remove dir (if empty): .kilo
-INFO    remove dir (if empty): .junie/skills/reviewer/scripts
-INFO    remove dir (if empty): .junie/skills/reviewer/references
-INFO    remove dir (if empty): .junie/skills/reviewer
-INFO    remove dir (if empty): .junie/skills/deployer
-INFO    remove dir (if empty): .junie/skills
-INFO    remove dir (if empty): .junie/rules
-INFO    remove dir (if empty): .junie/commands
-INFO    remove dir (if empty): .junie/agents
-INFO    remove dir (if empty): .junie
-INFO    remove dir (if empty): .grok/skills/reviewer/scripts
-INFO    remove dir (if empty): .grok/skills/reviewer/references
-INFO    remove dir (if empty): .grok/skills/reviewer
-INFO    remove dir (if empty): .grok/skills/deployer
-INFO    remove dir (if empty): .grok/skills
-INFO    remove dir (if empty): .grok/rules
-INFO    remove dir (if empty): .grok/hooks
-INFO    remove dir (if empty): .grok/commands
-INFO    remove dir (if empty): .grok/agents
-INFO    remove dir (if empty): .grok
-INFO    remove dir (if empty): .goose/agents
-INFO    remove dir (if empty): .goose
-INFO    remove dir (if empty): .gitlab/duo
-INFO    remove dir (if empty): .gitlab
-INFO    remove dir (if empty): .github/skills/reviewer/scripts
-INFO    remove dir (if empty): .github/skills/reviewer/references
-INFO    remove dir (if empty): .github/skills/reviewer
-INFO    remove dir (if empty): .github/skills/deployer
-INFO    remove dir (if empty): .github/skills
-INFO    remove dir (if empty): .github/prompts
-INFO    remove dir (if empty): .github/instructions
-INFO    remove dir (if empty): .github/hooks
-INFO    remove dir (if empty): .github/copilot
-INFO    remove dir (if empty): .github/agents
-INFO    remove dir (if empty): .github
-INFO    remove dir (if empty): .gemini/agents
-INFO    remove dir (if empty): .gemini
-INFO    remove dir (if empty): .factory/skills/reviewer/scripts
-INFO    remove dir (if empty): .factory/skills/reviewer/references
-INFO    remove dir (if empty): .factory/skills/reviewer
-INFO    remove dir (if empty): .factory/skills/review-guidelines
-INFO    remove dir (if empty): .factory/skills/deployer
-INFO    remove dir (if empty): .factory/skills
-INFO    remove dir (if empty): .factory/droids
-INFO    remove dir (if empty): .factory/commands
-INFO    remove dir (if empty): .factory
-INFO    remove dir (if empty): .dsh/skills/reviewer/scripts
-INFO    remove dir (if empty): .dsh/skills/reviewer/references
-INFO    remove dir (if empty): .dsh/skills/reviewer
-INFO    remove dir (if empty): .dsh/skills/deployer
-INFO    remove dir (if empty): .dsh/skills
-INFO    remove dir (if empty): .dsh
-INFO    remove dir (if empty): .devin/skills/ship
-INFO    remove dir (if empty): .devin/skills/reviewer/scripts
-INFO    remove dir (if empty): .devin/skills/reviewer/references
-INFO    remove dir (if empty): .devin/skills/reviewer
-INFO    remove dir (if empty): .devin/skills/deployer
-INFO    remove dir (if empty): .devin/skills/build
-INFO    remove dir (if empty): .devin/skills
-INFO    remove dir (if empty): .devin/rules
-INFO    remove dir (if empty): .devin/agents
-INFO    remove dir (if empty): .devin
-INFO    remove dir (if empty): .deepagents/skills/reviewer/scripts
-INFO    remove dir (if empty): .deepagents/skills/reviewer/references
-INFO    remove dir (if empty): .deepagents/skills/reviewer
-INFO    remove dir (if empty): .deepagents/skills/deployer
-INFO    remove dir (if empty): .deepagents/skills
-INFO    remove dir (if empty): .deepagents/agents/tester
-INFO    remove dir (if empty): .deepagents/agents/architect
-INFO    remove dir (if empty): .deepagents/agents
-INFO    remove dir (if empty): .deepagents
-INFO    remove dir (if empty): .cursor/rules
-INFO    remove dir (if empty): .cursor/commands
-INFO    remove dir (if empty): .cursor/agents
-INFO    remove dir (if empty): .cursor
-INFO    remove dir (if empty): .crush/skills/reviewer/scripts
-INFO    remove dir (if empty): .crush/skills/reviewer/references
-INFO    remove dir (if empty): .crush/skills/reviewer
-INFO    remove dir (if empty): .crush/skills/deployer
-INFO    remove dir (if empty): .crush/skills
-INFO    remove dir (if empty): .crush
-INFO    remove dir (if empty): .cortex/skills/reviewer/scripts
-INFO    remove dir (if empty): .cortex/skills/reviewer/references
-INFO    remove dir (if empty): .cortex/skills/reviewer
-INFO    remove dir (if empty): .cortex/skills/deployer
-INFO    remove dir (if empty): .cortex/skills
-INFO    remove dir (if empty): .cortex/agents
-INFO    remove dir (if empty): .cortex
-INFO    remove dir (if empty): .commands
-INFO    remove dir (if empty): .commandcode/skills/reviewer/scripts
-INFO    remove dir (if empty): .commandcode/skills/reviewer/references
-INFO    remove dir (if empty): .commandcode/skills/reviewer
-INFO    remove dir (if empty): .commandcode/skills/deployer
-INFO    remove dir (if empty): .commandcode/skills
-INFO    remove dir (if empty): .commandcode/commands
-INFO    remove dir (if empty): .commandcode/agents
-INFO    remove dir (if empty): .commandcode
-INFO    remove dir (if empty): .codex/rules
-INFO    remove dir (if empty): .codex/agents
-INFO    remove dir (if empty): .codex
-INFO    remove dir (if empty): .codewhale/skills/reviewer/scripts
-INFO    remove dir (if empty): .codewhale/skills/reviewer/references
-INFO    remove dir (if empty): .codewhale/skills/reviewer
-INFO    remove dir (if empty): .codewhale/skills/deployer
-INFO    remove dir (if empty): .codewhale/skills
-INFO    remove dir (if empty): .codewhale/rules
-INFO    remove dir (if empty): .codewhale/commands
-INFO    remove dir (if empty): .codewhale
-INFO    remove dir (if empty): .codebuddy/skills/reviewer/scripts
-INFO    remove dir (if empty): .codebuddy/skills/reviewer/references
-INFO    remove dir (if empty): .codebuddy/skills/reviewer
-INFO    remove dir (if empty): .codebuddy/skills/deployer
-INFO    remove dir (if empty): .codebuddy/skills
-INFO    remove dir (if empty): .codebuddy/rules
-INFO    remove dir (if empty): .codebuddy/commands
-INFO    remove dir (if empty): .codebuddy/agents
-INFO    remove dir (if empty): .codebuddy
-INFO    remove dir (if empty): .clinerules/workflows
-INFO    remove dir (if empty): .clinerules/hooks
-INFO    remove dir (if empty): .clinerules
-INFO    remove dir (if empty): .cline/skills/reviewer/scripts
-INFO    remove dir (if empty): .cline/skills/reviewer/references
-INFO    remove dir (if empty): .cline/skills/reviewer
-INFO    remove dir (if empty): .cline/skills/deployer
-INFO    remove dir (if empty): .cline/skills
-INFO    remove dir (if empty): .cline/agents
-INFO    remove dir (if empty): .cline
-INFO    remove dir (if empty): .claude/skills/ship
-INFO    remove dir (if empty): .claude/skills/reviewer/scripts
-INFO    remove dir (if empty): .claude/skills/reviewer/references
-INFO    remove dir (if empty): .claude/skills/reviewer
-INFO    remove dir (if empty): .claude/skills/deployer
-INFO    remove dir (if empty): .claude/skills/build
-INFO    remove dir (if empty): .claude/skills
-INFO    remove dir (if empty): .claude/rules
-INFO    remove dir (if empty): .claude/agents
-INFO    remove dir (if empty): .claude
-INFO    remove dir (if empty): .bob/skills/reviewer/scripts
-INFO    remove dir (if empty): .bob/skills/reviewer/references
-INFO    remove dir (if empty): .bob/skills/reviewer
-INFO    remove dir (if empty): .bob/skills/deployer
-INFO    remove dir (if empty): .bob/skills
-INFO    remove dir (if empty): .bob/rules
-INFO    remove dir (if empty): .bob/commands
-INFO    remove dir (if empty): .bob
-INFO    remove dir (if empty): .augment/skills/reviewer/scripts
-INFO    remove dir (if empty): .augment/skills/reviewer/references
-INFO    remove dir (if empty): .augment/skills/reviewer
-INFO    remove dir (if empty): .augment/skills/deployer
-INFO    remove dir (if empty): .augment/skills
-INFO    remove dir (if empty): .augment/rules
-INFO    remove dir (if empty): .augment/commands
-INFO    remove dir (if empty): .augment/agents
-INFO    remove dir (if empty): .augment
-INFO    remove dir (if empty): .amp/plugins
-INFO    remove dir (if empty): .amp
-INFO    remove dir (if empty): .aiassistant/rules
-INFO    remove dir (if empty): .aiassistant
-INFO    remove dir (if empty): .agents/skills/ship/agents
-INFO    remove dir (if empty): .agents/skills/ship
-INFO    remove dir (if empty): .agents/skills/reviewer/scripts
-INFO    remove dir (if empty): .agents/skills/reviewer/references
-INFO    remove dir (if empty): .agents/skills/reviewer
-INFO    remove dir (if empty): .agents/skills/deployer
-INFO    remove dir (if empty): .agents/skills/build/agents
-INFO    remove dir (if empty): .agents/skills/build
-INFO    remove dir (if empty): .agents/skills
-INFO    remove dir (if empty): .agents/plugins/ai-rulez/hooks
-INFO    remove dir (if empty): .agents/plugins/ai-rulez
-INFO    remove dir (if empty): .agents/plugins
-INFO    remove dir (if empty): .agents/commands
-INFO    remove dir (if empty): .agents/checks
-INFO    remove dir (if empty): .agents/agents
-INFO    remove dir (if empty): .agents
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-INFO  Removed generated files files=414 directories=324
+Removed generated files: 414 files, 324 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755
