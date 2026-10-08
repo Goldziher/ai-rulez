@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -41,6 +42,9 @@ type prWorld struct {
 
 func newPRWorld(t *testing.T) *prWorld {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the fake gh and ai-rulez are POSIX shell scripts")
+	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
@@ -569,6 +573,9 @@ func TestPR_AFailingGenerate(t *testing.T) {
 
 func TestPR_StagesTheLockOfAConfigDirectoryNotNamedLikeItsParent(t *testing.T) {
 	// Arrange: the config directory is .config/ai-rulez, so its base name is not its path below the project.
+	if runtime.GOOS == "windows" {
+		t.Skip("the fake ai-rulez is a POSIX shell script")
+	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
