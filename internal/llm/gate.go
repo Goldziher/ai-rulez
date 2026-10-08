@@ -7,6 +7,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // NetworkDisabledMessage is the text every refused call carries.
@@ -101,12 +103,12 @@ func (d *DryRun) Embed(_ context.Context, req EmbedRequest) (EmbedResponse, erro
 	if req.Model == "" {
 		req.Model = d.EmbedModel
 	}
-	tokens := 0
+	total := 0
 	for _, s := range req.Input {
-		tokens += EstimateTokens(s)
+		total += tokens.Estimate(s)
 	}
-	cost, known := d.Pricing.Cost(req.Model, Usage{PromptTokens: tokens})
-	printf(d.Out, "dry-run embed: %s\n  estimated tokens: %d, %s\n", req.Summary(), tokens, costText(cost, known))
+	cost, known := d.Pricing.Cost(req.Model, Usage{PromptTokens: total})
+	printf(d.Out, "dry-run embed: %s\n  estimated tokens: %d, %s\n", req.Summary(), total, costText(cost, known))
 	return EmbedResponse{}, &Error{Kind: KindDryRun, Message: "dry run: nothing was sent"}
 }
 
