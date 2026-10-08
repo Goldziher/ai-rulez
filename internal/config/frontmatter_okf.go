@@ -158,3 +158,22 @@ func IsOKFListing(data []byte) bool {
 	}
 	return listed
 }
+
+// okfIdentity returns the top-level `type` and `title` scalars of an OKF
+// concept's frontmatter, empty when absent or not scalar.
+func okfIdentity(frontmatterYAML string) (typ, title string) {
+	if !strings.Contains(frontmatterYAML, okfKeyType) && !strings.Contains(frontmatterYAML, okfKeyTitle) {
+		return "", ""
+	}
+	var fm map[string]yaml.Node
+	if err := yaml.Unmarshal([]byte(frontmatterYAML), &fm); err != nil {
+		return "", ""
+	}
+	scalar := func(key string) string {
+		if n, ok := fm[key]; ok && n.Kind == yaml.ScalarNode {
+			return strings.TrimSpace(n.Value)
+		}
+		return ""
+	}
+	return scalar(okfKeyType), scalar(okfKeyTitle)
+}
