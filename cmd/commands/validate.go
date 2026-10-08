@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -184,6 +185,7 @@ func runRecursiveValidate() int {
 	}
 
 	var failed []string
+	loosened := 0 // failures that are a policy loosening, which exits 2 like a single root
 	var reports []*lint.Report
 	var cfgs []*config.Config
 	if len(validateAllowEgress) > 0 {
@@ -204,6 +206,9 @@ func runRecursiveValidate() int {
 			fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
 			fmtError(err)
 			failed = append(failed, configPath)
+			if errors.Is(err, config.ErrPolicyLoosens) {
+				loosened++
+			}
 			continue
 		}
 		progress.PrintIfNotQuiet("✅ %s\n", configPath)
@@ -229,6 +234,9 @@ func runRecursiveValidate() int {
 
 	if len(failed) > 0 {
 		fmt.Fprintf(os.Stderr, "\n❌ %d of %d config(s) invalid\n", len(failed), len(configFiles))
+		if loosened == len(failed) {
+			return exitCodeFor(config.ErrPolicyLoosens)
+		}
 		return 1
 	}
 	progress.PrintIfNotQuiet("\nAll %d config(s) are valid\n", len(configFiles))
