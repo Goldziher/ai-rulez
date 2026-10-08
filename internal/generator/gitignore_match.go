@@ -2,13 +2,14 @@ package generator
 
 import (
 	"path/filepath"
+	"strings"
 )
 
 func gitignorePatterns(content string) []string {
 	var patterns []string
-	for _, line := range splitLines(content) {
-		trimmed := trimSpace(line)
-		if trimmed == "" || hasPrefix(trimmed, "#") {
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
 		}
 		patterns = append(patterns, trimmed)
@@ -34,12 +35,12 @@ func matchesPattern(filename, pattern string) bool {
 	}
 
 	// Directory pattern
-	if hasSuffix(pattern, "/") {
+	if strings.HasSuffix(pattern, "/") {
 		return matchesDirectory(filename, pattern)
 	}
 
 	// Glob pattern
-	if contains(pattern, "*") || contains(pattern, "?") {
+	if strings.Contains(pattern, "*") || strings.Contains(pattern, "?") {
 		if matched, _ := filepath.Match(pattern, filename); matched {
 			return true
 		}
@@ -50,15 +51,15 @@ func matchesPattern(filename, pattern string) bool {
 	}
 
 	// Absolute pattern
-	if hasPrefix(pattern, "/") {
-		return filename == trimPrefix(pattern, "/")
+	if strings.HasPrefix(pattern, "/") {
+		return filename == strings.TrimPrefix(pattern, "/")
 	}
 
 	// Substring match
 	return filename == pattern ||
-		hasSuffix(filename, "/"+pattern) ||
-		contains(filename, "/"+pattern+"/") ||
-		contains(filename, pattern)
+		strings.HasSuffix(filename, "/"+pattern) ||
+		strings.Contains(filename, "/"+pattern+"/") ||
+		strings.Contains(filename, pattern)
 }
 
 // matchesDirectory checks if filename matches a directory pattern.
@@ -70,8 +71,8 @@ func matchesPattern(filename, pattern string) bool {
 // Trailing slashes and the leading anchor are notation, not path segments, so
 // both sides are normalised before comparing.
 func matchesDirectory(filename, pattern string) bool {
-	dirPrefix := trimPrefix(trimSuffix(pattern, "/"), "/")
-	candidate := trimPrefix(trimSuffix(filename, "/"), "/")
+	dirPrefix := strings.TrimPrefix(strings.TrimSuffix(pattern, "/"), "/")
+	candidate := strings.TrimPrefix(strings.TrimSuffix(filename, "/"), "/")
 
-	return candidate == dirPrefix || hasPrefix(candidate, dirPrefix+"/")
+	return candidate == dirPrefix || strings.HasPrefix(candidate, dirPrefix+"/")
 }
