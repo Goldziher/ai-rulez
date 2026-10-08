@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -41,6 +42,9 @@ type prWorld struct {
 
 func newPRWorld(t *testing.T) *prWorld {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the fake gh and ai-rulez are POSIX shell scripts")
+	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
