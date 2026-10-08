@@ -29,7 +29,8 @@ type Metadata struct {
 // Returns error if frontmatter is present but malformed (non-silent failure)
 func ParseFrontmatter(content string) (*Metadata, string, error) {
 	// Normalize line endings: CRLF -> LF (fixes Windows CRLF issue #8)
-	normalizedContent := normalizeLFLineEndings(content)
+	// A UTF-8 byte order mark before the opening --- is not part of the content.
+	normalizedContent := normalizeLFLineEndings(strings.TrimPrefix(content, "\ufeff"))
 
 	// Check if content starts with ---
 	if !strings.HasPrefix(normalizedContent, "---\n") {
