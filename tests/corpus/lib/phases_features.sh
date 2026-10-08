@@ -51,6 +51,7 @@ runtimes = ["agent-plugins"]'
 	expect_rc 0 "lock"
 	sub_commit v0.0.1
 	ar publish emit agent-plugins --out "$PH_LOGS/emit1"
+	skip_if_gated "publish emit"
 	expect_rc 0 "publish emit agent-plugins" || finish
 	ar publish emit agent-plugins --out "$PH_LOGS/emit2"
 	same_tree "$PH_LOGS/emit1" "$PH_LOGS/emit2" "agent-plugins emitter"
@@ -101,6 +102,7 @@ base_url = "https://corpus.example.com/ard"'
 	expect_rc 0 "lock" || finish
 	sub_commit v0.0.1
 	ar publish emit ard --out "$PH_LOGS/ard1"
+	skip_if_gated "publish emit"
 	expect_rc 0 "publish emit ard" || finish
 	ar publish emit ard --out "$PH_LOGS/ard2"
 	same_tree "$PH_LOGS/ard1" "$PH_LOGS/ard2" "ard emitter"

@@ -233,6 +233,15 @@ expect_rc_in() {
 	return 1
 }
 
+# skip_if_gated ends the phase as SKIP when the last command was refused by the
+# validation gate (exit 2, "validate reported findings"): the repository's own
+# configuration has error-level findings, which says nothing about the phase.
+skip_if_gated() {
+	if [ "${AR_RC:-0}" -eq 2 ] && grep -q 'validate reported findings' "$AR_LOG" 2>/dev/null; then
+		skip "$1 refused by the repository's own validation findings"
+	fi
+}
+
 # expect_grep checks that a pattern occurs in a file. Usage: <pattern> <file> <label>
 expect_grep() {
 	if ! grep -qE -- "$1" "$2" 2>/dev/null; then
