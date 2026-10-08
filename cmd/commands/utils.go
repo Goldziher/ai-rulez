@@ -9,11 +9,8 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
-	"github.com/Goldziher/ai-rulez/v5/internal/render"
 	"github.com/samber/oops"
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 // newContentOperator opens the CRUD operator for the current directory. With
@@ -111,13 +108,6 @@ func workingDir() string {
 		return ""
 	}
 	return wd
-}
-
-// outFor is the result/diagnostic writer pair of a running command: results go
-// to its stdout, diagnostics to its stderr, and -q hides only the information
-// lines of the latter.
-func outFor(cmd *cobra.Command) render.Out {
-	return render.New(cmd.OutOrStdout(), cmd.ErrOrStderr(), viper.GetBool("quiet"))
 }
 
 // writeListJSON writes items, the result of a list command, as a versioned JSON

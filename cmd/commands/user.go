@@ -198,23 +198,6 @@ func runUserClean(out render.Out) error {
 // (a pipe, CI) answers no.
 func confirmProceed(question string) bool { return askYesNo(question + " (y/N): ") }
 
-// handleUserGenerate runs `generate --user` when the flag is set and reports
-// whether it did, exiting non-zero on failure.
-func handleUserGenerate(args []string) bool {
-	if !userScope {
-		return false
-	}
-	if recursive || pluginMode || len(args) > 0 {
-		fmtError(oops.Errorf("--user cannot be combined with --recursive, --plugin or a config-file argument; use --config to choose the user config"))
-		os.Exit(1)
-	}
-	if err := runUserGenerate(cmdContext()); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-	return true
-}
-
 // handleUserClean runs `clean --user` when the flag is set and reports whether it
 // did, with the error it ended with.
 func handleUserClean(out render.Out, args []string) (bool, error) {
