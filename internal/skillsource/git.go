@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -14,8 +13,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/samber/oops"
 )
-
-var fullSHA = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // refHEAD names the remote's default branch.
 const refHEAD = "HEAD"
@@ -72,7 +69,7 @@ func lsRemote(ctx context.Context, url, ref string) (commit, kind string, err er
 			return "", "", oops.With("url", includes.RedactURL(url)).Wrapf(err, "resolve default branch")
 		}
 		sha, _, _ := strings.Cut(out, "\t")
-		if !fullSHA.MatchString(sha) {
+		if !gitutil.IsCommitSHA(sha) {
 			return "", "", oops.With("url", includes.RedactURL(url)).Errorf("remote has no HEAD")
 		}
 		return sha, kindHead, nil
@@ -124,7 +121,7 @@ func fetchCommit(ctx context.Context, req cloneRequest, dest string) error {
 	if err := checkRemote(req.url, req.ref); err != nil {
 		return err
 	}
-	if !lockCommit.MatchString(req.commit) {
+	if !gitutil.IsCommitSHA(req.commit) {
 		return oops.Errorf("refusing to fetch %q: not a full commit SHA", req.commit)
 	}
 	if err := os.MkdirAll(dest, 0o755); err != nil {
