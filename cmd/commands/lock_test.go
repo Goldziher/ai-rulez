@@ -116,15 +116,15 @@ func TestLockCheckNamesSourceAndOutputChanges(t *testing.T) {
 	require.NoError(t, os.Remove(filepath.Join(root, ".ai-rulez", "skills", "deploy", "references", "api.md")))
 
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
+	report, _ := capture(t, func() { code = checkLockAt("") })
 	assert.Equal(t, exitDrift, code)
-	assert.Contains(t, stderr, "source changed")
-	assert.Contains(t, stderr, "rule style")
-	assert.Contains(t, stderr, "source added")
-	assert.Contains(t, stderr, "rule fresh")
-	assert.Contains(t, stderr, "skill deploy")
-	assert.Contains(t, stderr, "output changed")
-	assert.Contains(t, stderr, ".claude/rules/style.md")
+	assert.Contains(t, report, "source changed")
+	assert.Contains(t, report, "rule style")
+	assert.Contains(t, report, "source added")
+	assert.Contains(t, report, "rule fresh")
+	assert.Contains(t, report, "skill deploy")
+	assert.Contains(t, report, "output changed")
+	assert.Contains(t, report, ".claude/rules/style.md")
 
 	// --diff reports the same and exits 0; json is machine readable
 	lockDiffFlag, lockFormat = true, formatJSON
@@ -150,9 +150,9 @@ func TestLockCheckRejectsDowngradedLock(t *testing.T) {
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "# Style\nchanged\n")
 	writeFile(t, filepath.Join(root, ".ai-rulez", lockfile.FileName), "version = 1\n")
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
+	report, _ := capture(t, func() { code = checkLockAt("") })
 	assert.Equal(t, exitDrift, code, "a downgraded lock must fail the check")
-	assert.Contains(t, stderr, "no content pins")
+	assert.Contains(t, report, "no content pins")
 }
 
 func TestLockCheckWithLegacyLock(t *testing.T) {
@@ -160,9 +160,9 @@ func TestLockCheckWithLegacyLock(t *testing.T) {
 	legacy := filepath.Join(root, ".ai-rulez", lockfile.FileName)
 	writeFile(t, legacy, "version = 1\n")
 	var legacyCode int
-	_, legacyErr := capture(t, func() { legacyCode = checkLockAt("") })
+	report, _ := capture(t, func() { legacyCode = checkLockAt("") })
 	assert.Equal(t, exitDrift, legacyCode, "a lock without content pins must not pass a check, enforce or not")
-	assert.Contains(t, legacyErr, "no content pins")
+	assert.Contains(t, report, "no content pins")
 
 	lock, err := lockfile.Load(filepath.Join(root, ".ai-rulez"))
 	require.NoError(t, err)
@@ -170,9 +170,9 @@ func TestLockCheckWithLegacyLock(t *testing.T) {
 
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig+"[lock]\nenforce = true\n")
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
+	report, _ = capture(t, func() { code = checkLockAt("") })
 	assert.Equal(t, exitDrift, code)
-	assert.Contains(t, stderr, "no content pins")
+	assert.Contains(t, report, "no content pins")
 }
 
 func TestLockContentOnlyKeepsRemoteEntries(t *testing.T) {
