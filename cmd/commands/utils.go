@@ -7,6 +7,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/spf13/pflag"
 )
 
 // newContentOperator opens the CRUD operator for the current directory. With
@@ -42,6 +43,30 @@ func confirmRemoval(resourceType, resourceName string) bool {
 func exitDeclined(what string) {
 	logger.Error(what+": not confirmed, nothing was changed", "hint", "pass --yes to skip the confirmation prompt (required in non-interactive shells)")
 	os.Exit(1)
+}
+
+// fatal logs msg with err and exits 1: the failure path of the content-editing
+// commands, which report through the logger rather than an error document.
+func fatal(msg string, err error) {
+	logger.Error(msg, "error", err)
+	os.Exit(1)
+}
+
+// confirmRemovalUnlessYes asks for confirmation before a removal unless yes is
+// set, and exits 1 through exitDeclined when the user does not confirm.
+func confirmRemovalUnlessYes(yes bool, resourceType, resourceName, declined string) {
+	if yes {
+		return
+	}
+	if !confirmRemoval(resourceType, resourceName) {
+		exitDeclined(declined)
+	}
+}
+
+// addYesFlag registers the shared --yes/-y flag; usage is the command's own
+// help text.
+func addYesFlag(fs *pflag.FlagSet, dst *bool, usage string) {
+	fs.BoolVarP(dst, "yes", "y", false, usage)
 }
 
 // askYesNo prints prompt and reads a yes/no answer from an interactive terminal;
