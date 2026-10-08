@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"io"
 	"os"
 
@@ -45,4 +46,12 @@ func exitOnFormat(format string, err error) {
 		fmtErrorFormat(format, err)
 		os.Exit(1)
 	}
+}
+
+// writeRawJSON encodes doc to w as two-space-indented JSON exactly as the
+// report documents carry it (their own schema_version member, HTML escaping on).
+func writeRawJSON(w io.Writer, doc any) error {
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(doc)
 }
