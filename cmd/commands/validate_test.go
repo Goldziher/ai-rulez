@@ -31,3 +31,11 @@ func TestValidateCommandSupport(t *testing.T) {
 		// This is verified by code inspection in validate.go lines 33-44
 	})
 }
+
+func TestValidateHasAnOfflineFlag(t *testing.T) {
+	flag := commands.ValidateCmd.Flags().Lookup("offline")
+
+	if assert.NotNil(t, flag) {
+		assert.Equal(t, "false", flag.DefValue)
+	}
+}
