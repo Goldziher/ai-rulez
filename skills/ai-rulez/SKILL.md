@@ -1,11 +1,12 @@
 ---
 name: ai-rulez
 description: >-
-  Manage AI assistant governance rules across 52 harnesses (Claude Code,
-  Cursor, Codex, Copilot, Gemini CLI, OpenCode, Devin, and more) using
-  ai-rulez. Use when configuring rules, context, skills, checks, hooks,
-  permissions, domains, profiles, includes, plugins, or generating
-  tool-specific outputs.
+  Standards-compliant lifecycle tool for agent knowledge and capabilities:
+  author in .ai-rulez/, generate for 52 harnesses (Claude Code, Cursor, Codex,
+  Copilot, Gemini CLI, OpenCode, Devin, and more), bundle (OKF, Agent Plugins,
+  ARD), validate, govern (lock, approvals, signing, SBOM) and publish. Use when
+  configuring rules, context, skills, checks, hooks, permissions, domains,
+  profiles, includes, plugins, or generating tool-specific outputs.
 license: MIT
 metadata:
   author: Goldziher
@@ -13,9 +14,9 @@ metadata:
   repository: https://github.com/Goldziher/ai-rulez
 ---
 
-# AI-Rulez Governance
+# AI-Rulez
 
-AI-Rulez centralizes AI assistant governance in a config directory (default `.ai-rulez/`) and generates tool-specific outputs for 52 built-in harness presets (Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, Devin, and others).
+AI-Rulez is a standards-compliant lifecycle tool for agent knowledge and capabilities. It keeps one source of truth in a config directory (default `.ai-rulez/`) and takes it through author, generate (52 built-in harness presets: Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, Devin, and others), bundle (OKF, Agent Plugins, ARD), lint and validate, govern (lock, approvals, Sigstore signing, policy, SBOM) and publish.
 
 Use this skill when:
 
@@ -64,6 +65,22 @@ ai-rulez validate
 # Read-only diagnostics: drift, removed presets, missing tools
 ai-rulez doctor
 ```
+
+## Lifecycle commands
+
+```bash
+ai-rulez generate --plugin              # bundle: plugin bundles from the [plugin] block
+ai-rulez export okf                     # bundle: an OKF bundle of the knowledge
+ai-rulez validate --strict              # validate: warnings fail
+ai-rulez okf validate docs/okf          # validate: any OKF bundle
+ai-rulez lock                           # govern: pin includes, skills and content
+ai-rulez sign --lock                    # govern: Sigstore attestation of the lock
+ai-rulez sbom -o ai-bom.cdx.json        # govern: CycloneDX SBOM
+ai-rulez publish --dry-run              # publish: preview release artifacts
+```
+
+Supported and planned standards, with pinned versions and test status, are in
+https://goldziher.github.io/ai-rulez/standards/.
 
 ## Configuration Structure
 
