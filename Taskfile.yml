@@ -100,6 +100,14 @@ tasks:
     cmds:
       - go test -timeout 30m ./cmd/... ./internal/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/... ./tests/archlint/...
 
+  test:golden:update:
+    desc: "Rewrite golden files (UPDATE_GOLDEN=1) in every package that has them, then the tokens golden; review the diff"
+    env:
+      UPDATE_GOLDEN: "1"
+    cmds:
+      - go test -count=1 ./cmd/commands/ ./internal/lint/ ./internal/evals/evalimport/ ./internal/importer/ ./internal/mcp/ ./internal/okfbridge/ ./internal/generator/... ./internal/publish/... ./internal/migrate/ ./internal/agentplugins/ ./internal/telemetry/ ./internal/ard/ ./internal/policy/ ./tests/golden/ ./tests/archlint/
+      - go test -count=1 ./internal/generator -run Golden_TokenReportJSON -update-tokens-golden
+
   test:verbose:
     desc: "Run all tests with verbose output"
     cmds:
