@@ -37,6 +37,8 @@ type contentScanner struct {
 	// git answers which files a work tree ignores (bundle filtering); the zero
 	// value runs real git.
 	git gitutil.Git
+	// snapshots shares git's answers among the items of one directory.
+	snapshots bundleSnapshots
 	// log receives what the scan reports. nil: refusals are only recorded, never
 	// printed (see refuse). A host that injected a logger gets everything there.
 	log logger.Logger
