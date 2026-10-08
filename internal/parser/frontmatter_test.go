@@ -367,3 +367,13 @@ func TestScanLinesPreservingEmpty(t *testing.T) {
 	assert.Equal(t, "", lines[1])
 	assert.Equal(t, "line3", lines[2])
 }
+
+func TestParseFrontmatter_ToleratesBOM(t *testing.T) {
+	meta, body, err := ParseFrontmatter("\ufeff---\npriority: high\n---\nbody\n")
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, meta) {
+		assert.Equal(t, "high", meta.Priority)
+	}
+	assert.Equal(t, "body\n", body)
+}
