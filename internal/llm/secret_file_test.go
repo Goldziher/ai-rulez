@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestLoadSecretFileCreatesAndReusesPrivateSecret(t *testing.T) {
@@ -89,17 +91,12 @@ func TestLoadSecretFileReplacesAnUnusableSecret(t *testing.T) {
 }
 
 func TestLoadSecretFileRefusesASymlink(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("symlinks need privileges on Windows")
-	}
 	// Arrange
 	dir := t.TempDir()
 	target := filepath.Join(dir, "target")
 	writeFile(t, target, bytes.Repeat([]byte{9}, cacheSecretBytes), 0o600)
 	link := filepath.Join(dir, "key")
-	if err := os.Symlink(target, link); err != nil {
-		t.Fatal(err)
-	}
+	testutil.SymlinkOrSkip(t, target, link)
 
 	// Act
 	_, err := LoadSecretFile(link)

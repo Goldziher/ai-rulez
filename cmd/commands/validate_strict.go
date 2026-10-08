@@ -87,7 +87,7 @@ func checkFlagValues() error {
 		return err
 	}
 	switch validateFailOn {
-	case "", failOnError, failOnWarning, "info", valueNone:
+	case "", failOnError, failOnWarning, failOnInfo, valueNone:
 	default:
 		return oops.Errorf("unknown --fail-on %q (use error, warning, info or none)", validateFailOn)
 	}
@@ -214,7 +214,7 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 
 // governanceLintOptions are the findings strict lint takes from outside the
 // content tree: plugin version drift, delivery, lock drift, approvals and signing.
-func governanceLintOptions(ctx context.Context, cfg *config.Config, sel []string) []lint.Option {
+func governanceLintOptions(ctx context.Context, cfg *config.Config, sel []string) []lint.Option { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	var opts []lint.Option
 	if (cfg.Plugin != nil || cfg.Marketplace != nil) && !skipPluginDrift && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
 		drift, driftErr := generator.NewGenerator(cfg).PluginVersionDrift("")

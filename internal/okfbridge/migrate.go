@@ -116,7 +116,7 @@ func migrateItem(configDir string, it *sourceItem, claim func(string) string, op
 	fm, _ := okf.SplitFrontmatter(data)
 	if fm.Err != nil {
 		change.Action, change.Detail = ActionSkipped, fm.Err.Error()
-		return change, nil, nil
+		return change, nil, nil //nolint:nilerr // a malformed frontmatter is reported as a skipped change, not a failure
 	}
 	it.typ, it.title = fm.Scalar(keyType), fm.Scalar(keyTitle)
 	it.keepName = true
