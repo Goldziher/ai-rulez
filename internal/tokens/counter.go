@@ -16,6 +16,7 @@
 package tokens
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"sync"
 
@@ -93,7 +94,17 @@ func (c cl100kCounter) Count(text string) int {
 	if text == "" {
 		return 0
 	}
+	var key countKey
+	if len(text) >= minCachedBytes {
+		key = countKey{encoding: CounterCL100KBase, sum: sha256.Sum256([]byte(text))}
+		if count, ok := cl100kCache.get(key); ok {
+			return count
+		}
+	}
 	count, err := cl100kOnce().Count(text)
+	if err == nil && len(text) >= minCachedBytes {
+		cl100kCache.put(key, count)
+	}
 	if err != nil {
 		logger.Std().Warn("cl100k_base tokenizer failed, falling back to a byte-ratio estimate",
 			"error", err, "bytes", len(text))
@@ -101,6 +112,59 @@ func (c cl100kCounter) Count(text string) int {
 	}
 	return count
 }
+
+// Counting is the dominant cost of cost, tokens and catalog runs, which count
+// the same text several times. Counts are memoised by a hash of the text and the
+// encoding; texts shorter than minCachedBytes are cheaper to count than to hash.
+const (
+	minCachedBytes = 256
+	// maxCachedCounts bounds the memo: 32 bytes of key plus an int and the
+	// encoding name per entry, evicted oldest first.
+	maxCachedCounts = 8192
+)
+
+type countKey struct {
+	encoding string
+	sum      [sha256.Size]byte
+}
+
+// countCache is a bounded FIFO map of token counts, safe for concurrent use.
+type countCache struct {
+	mu    sync.Mutex
+	limit int
+	m     map[countKey]int
+	order []countKey
+	next  int
+}
+
+func newCountCache(limit int) *countCache {
+	return &countCache{limit: limit, m: make(map[countKey]int)}
+}
+
+func (c *countCache) get(k countKey) (int, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n, ok := c.m[k]
+	return n, ok
+}
+
+func (c *countCache) put(k countKey, n int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.m[k]; ok {
+		return
+	}
+	if len(c.order) < c.limit {
+		c.order = append(c.order, k)
+	} else {
+		delete(c.m, c.order[c.next])
+		c.order[c.next] = k
+		c.next = (c.next + 1) % c.limit
+	}
+	c.m[k] = n
+}
+
+var cl100kCache = newCountCache(maxCachedCounts)
 
 type byteRatioCounter struct {
 	bytesPerToken float64
