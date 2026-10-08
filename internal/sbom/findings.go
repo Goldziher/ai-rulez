@@ -56,7 +56,6 @@ func sortFindings(f []Finding) {
 var (
 	exactSemver = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$`)
 	exactPEP440 = regexp.MustCompile(`^\d+(\.\d+)+([.-]?(a|b|rc|post|dev)\d*)*$`)
-	commitSHA   = regexp.MustCompile(`^[0-9a-f]{40}([0-9a-f]{24})?$`)
 )
 
 // exactVersion reports whether v names one release of a package of the given

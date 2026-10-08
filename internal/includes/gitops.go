@@ -23,15 +23,11 @@ import (
 
 const refHead = "HEAD"
 
-// fullSHAPattern matches a full 40-hex-char commit SHA. Used by isFullSHA to
-// decide whether a `ref` pins an absolute commit rather than a branch/tag.
-var fullSHAPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
-
 // isFullSHA reports whether ref is a full commit SHA. A full SHA can never be
 // advertised by `git ls-remote` (only refs are), and `git clone --branch`
 // cannot resolve one either — both need special handling (#167).
 func isFullSHA(ref string) bool {
-	return fullSHAPattern.MatchString(ref)
+	return gitutil.IsCommitSHA(ref)
 }
 
 var (

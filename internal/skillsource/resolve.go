@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
@@ -201,7 +201,7 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 	if covered && entry.Commit == "" {
 		covered = false
 	}
-	if covered && !lockCommit.MatchString(entry.Commit) {
+	if covered && !gitutil.IsCommitSHA(entry.Commit) {
 		return nil, oops.Wrapf(errors.Join(config.ErrLockViolation, errLockCommit),
 			"skill source %q: the lock's commit %q is not a full hexadecimal commit SHA; run `ai-rulez lock`", spec.Name, entry.Commit)
 	}
@@ -278,7 +278,7 @@ func materialize(ctx context.Context, spec Spec, q treeRequest) (*Resolved, erro
 			}
 		}
 	}
-	if err != nil || q.covered || !fullSHA.MatchString(spec.Ref) {
+	if err != nil || q.covered || !gitutil.IsCommitSHA(spec.Ref) {
 		return res, err
 	}
 	return m.verifyUnlocked(ctx, res)
@@ -332,11 +332,11 @@ func pickCommit(ctx context.Context, spec Spec, opts Options, q commitSearch) (c
 	}
 	switch {
 	case q.covered:
-		if fullSHA.MatchString(spec.Ref) && spec.Ref != q.entry.Commit {
+		if gitutil.IsCommitSHA(spec.Ref) && spec.Ref != q.entry.Commit {
 			return "", "", tag, errLock(spec, "ref is pinned to %s but the lock records commit %s; run `ai-rulez lock`", spec.Ref, q.entry.Commit)
 		}
 		return q.entry.Commit, kindFor(spec.Ref), tag, nil
-	case fullSHA.MatchString(spec.Ref):
+	case gitutil.IsCommitSHA(spec.Ref):
 		return spec.Ref, kindSHA, tag, nil
 	case q.offline:
 		if commit = readRef(q.repoDir, spec.Ref); commit == "" {
@@ -370,10 +370,6 @@ func pickVersion(ctx context.Context, spec Spec, opts Options, q commitSearch, w
 
 var errDigest = errors.New("content digest mismatch")
 
-// lockCommit is the only shape a lock's commit may have: it becomes a cache path
-// component, so anything else (a path traversal) is a violation, never a path.
-var lockCommit = regexp.MustCompile(`^([0-9a-f]{40}|[0-9a-f]{64})$`)
-
 var errLockCommit = errors.New("invalid commit in the lock")
 
 func finish(ctx context.Context, spec Spec, treeDir, commit, kind string, entry *lockfile.Entry, covered bool) (*Resolved, error) {
@@ -397,7 +393,7 @@ func finish(ctx context.Context, spec Spec, treeDir, commit, kind string, entry 
 	}
 	res := &Resolved{
 		Spec: spec, Dir: dir, Commit: commit, Digest: digest, RefKind: kind,
-		Locked: covered, Pinned: covered || fullSHA.MatchString(spec.Ref),
+		Locked: covered, Pinned: covered || gitutil.IsCommitSHA(spec.Ref),
 	}
 	res.Skills, err = Discover(ctx, spec, dir)
 	return res, err
@@ -457,7 +453,7 @@ func kindFor(ref string) string {
 	switch {
 	case ref == "" || ref == refHEAD:
 		return kindHead
-	case fullSHA.MatchString(ref):
+	case gitutil.IsCommitSHA(ref):
 		return kindSHA
 	}
 	return kindTag // the exact kind is unknown without the network; both clone the same way
@@ -500,7 +496,7 @@ func readRef(repoDir, ref string) string {
 	}
 	// The index is a cache file anyone with write access to the cache may edit,
 	// and the commit becomes a cache path component: hold it to the lock's shape.
-	if commit := m[refLabel(ref)]; lockCommit.MatchString(commit) {
+	if commit := m[refLabel(ref)]; gitutil.IsCommitSHA(commit) {
 		return commit
 	}
 	return ""
@@ -562,7 +558,7 @@ func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir
 			problems = append(problems, Problem{spec.Name, "not covered by the lock"})
 		case !entry.Covers(spec.Want()):
 			problems = append(problems, Problem{spec.Name, "lock is stale: url, path or ref changed since it was written"})
-		case spec.IsGit() && !lockCommit.MatchString(entry.Commit):
+		case spec.IsGit() && !gitutil.IsCommitSHA(entry.Commit):
 			problems = append(problems, Problem{spec.Name, fmt.Sprintf("the lock's commit %q is not a full hexadecimal commit SHA", entry.Commit)})
 		case spec.IsGit():
 			if p := cachedDigestProblem(&spec, entry, cacheDir); p != nil {
@@ -609,7 +605,7 @@ func ListTags(ctx context.Context, spec Spec) ([]tagresolve.RawTag, error) {
 // CachedTreeDir is the cached tree of commit of a git source ("" when it is not cached).
 func CachedTreeDir(spec Spec, commit string, cacheDir string) string {
 	root, err := cacheRoot(cacheDir)
-	if err != nil || !lockCommit.MatchString(commit) {
+	if err != nil || !gitutil.IsCommitSHA(commit) {
 		return ""
 	}
 	dir := cacheTree(root, spec.URL, commit, spec.Path)
