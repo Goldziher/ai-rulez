@@ -268,16 +268,11 @@ func signingRequiredLines(cfg *config.Config) ([]string, error) {
 	return lines, nil
 }
 
-// checkLockSignatureAt is the attestation half of `lock --check`: 0 when nothing
+// checkLockSignatureFor is the attestation half of `lock --check`: 0 when nothing
 // is required or the attestation verifies, exitDrift when it does not (AR720 to
-// AR727), 1 when the policy cannot be built. A configuration that cannot be
-// loaded is not this check's finding: checkLockContentAt has already reported it
-// with its own exit code.
-func checkLockSignatureAt(path string) int {
-	cfg, _, err := loadForLockCheck(path)
-	if err != nil {
-		return 0
-	}
+// AR727), 1 when the policy cannot be built. It runs over the configuration the
+// check loaded; one that cannot be loaded is the content check's finding.
+func checkLockSignatureFor(cfg *config.Config) int {
 	lines, err := signingRequiredLines(cfg)
 	if err != nil {
 		fmtError(err)

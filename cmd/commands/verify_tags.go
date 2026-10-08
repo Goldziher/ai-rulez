@@ -102,16 +102,9 @@ func reportTagFindings(findings []tagFinding) (failing bool) {
 	return failing
 }
 
-// verifyTagsAt is the `lock --check --verify-tags` step: exit 2 for a moved tag, 1 when the remote cannot be read.
-func verifyTagsAt(path string) int {
-	cfg, _, err := loadForLockCheck(path)
-	if err != nil {
-		if errors.Is(err, config.ErrLockViolation) {
-			return exitDrift // the content check reported it already (fetched content disagrees with the lock)
-		}
-		fmtError(err)
-		return 1
-	}
+// verifyTagsFor is the `lock --check --verify-tags` step over the configuration the check loaded: exit 2 for a
+// moved tag, 1 when the remote cannot be read.
+func verifyTagsFor(cfg *config.Config) int {
 	want, err := verifyTagsWanted(cfg, lockVerifyTags)
 	if err != nil {
 		fmtError(err)

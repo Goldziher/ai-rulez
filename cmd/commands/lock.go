@@ -386,17 +386,22 @@ func lockProfileFor(lock *lockfile.File) string {
 // checkLockAt is `lock --check`: the content comparison, then the attestation
 // check when [signing] require names the lock.
 func checkLockAt(path string) int {
-	code, upToDate := checkLockContentAt(path)
-	if code == 1 {
+	// One load serves the content comparison, the tag check and the signature
+	// check: each of them used to load the configuration again.
+	cfg, remoteSkipped, err := loadForLockCheck(path)
+	code, upToDate := checkLockContent(cfg, remoteSkipped, err)
+	if code == 1 || err != nil {
+		// A configuration that cannot be loaded is the content check's finding
+		// (exit 1, or drift for a lock violation); the other checks add nothing.
 		return code
 	}
-	// verifyTagsAt decides whether to ask the remotes: --verify-tags or [lock] verify_tags.
-	c := verifyTagsAt(path)
+	// verifyTagsFor decides whether to ask the remotes: --verify-tags or [lock] verify_tags.
+	c := verifyTagsFor(cfg)
 	if c == 1 {
 		return c
 	}
 	code = worstExit(code, c)
-	code = worstExit(code, checkLockSignatureAt(path))
+	code = worstExit(code, checkLockSignatureFor(cfg))
 	if code == 0 && upToDate != nil {
 		upToDate()
 	}
@@ -408,6 +413,12 @@ func checkLockAt(path string) int {
 // "up to date" is never printed before a signature failure.
 func checkLockContentAt(path string) (code int, report func()) {
 	cfg, remoteSkipped, err := loadForLockCheck(path)
+	return checkLockContent(cfg, remoteSkipped, err)
+}
+
+// checkLockContent is checkLockContentAt over a configuration already loaded
+// for the check (cfg, remoteSkipped and err are loadForLockCheck's results).
+func checkLockContent(cfg *config.Config, remoteSkipped bool, err error) (code int, report func()) {
 	if err != nil {
 		fmtErrorFormat(lockFormat, err)
 		if errors.Is(err, config.ErrLockViolation) {
