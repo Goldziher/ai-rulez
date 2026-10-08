@@ -1,11 +1,17 @@
 ---
-priority: high
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
-  - AGENTS.md
-  - .hermes.md
+type: Decision
+title: Cross Runtime Distribution
+x-ai-rulez:
+  kind: rule
+  id: cross-runtime-distribution
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
+      - AGENTS.md
+      - .hermes.md
 ---
 
 # Cross Runtime Distribution

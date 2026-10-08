@@ -1,12 +1,18 @@
 ---
-priority: high
-summary: Repository structure covering CLI, wrappers, documentation, schemas, and test organization.
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
-  - AGENTS.md
-  - .hermes.md
+type: Concept
+title: Workspace Layout
+x-ai-rulez:
+  kind: context
+  id: workspace-layout
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
+      - AGENTS.md
+      - .hermes.md
+    summary: Repository structure covering CLI, wrappers, documentation, schemas, and test organization.
 ---
 
 # Workspace Layout

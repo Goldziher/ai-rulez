@@ -1,8 +1,15 @@
 ---
-priority: high
-aliases: [t]
-usage: "/test"
-description: "Run the project test suite and report results"
+type: Reference
+title: Test
+description: Run the project test suite and report results
+x-ai-rulez:
+  kind: command
+  id: test
+  metadata:
+    priority: high
+    aliases:
+      - t
+    usage: /test
 ---
 
 # Test
