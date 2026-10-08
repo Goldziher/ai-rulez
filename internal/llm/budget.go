@@ -7,6 +7,8 @@ import (
 	"math"
 	"net/http"
 	"sync"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // Limits are the spend caps of one run. Zero means unlimited for that axis.
@@ -259,11 +261,11 @@ func chargeable(reported, worst Usage) Usage {
 
 func (c *budgetClient) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error) {
 	model := firstNonEmpty(req.Model, c.embedModel)
-	tokens := 0
+	total := 0
 	for _, s := range req.Input {
-		tokens += EstimateTokens(s)
+		total += tokens.Estimate(s)
 	}
-	worst := Usage{PromptTokens: tokens}
+	worst := Usage{PromptTokens: total}
 	res, err := c.b.reserve(model, worst)
 	if err != nil {
 		return EmbedResponse{}, err
