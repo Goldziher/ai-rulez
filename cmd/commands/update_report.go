@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -17,9 +16,7 @@ func finishUpdate(rep *updateReport, code int) int {
 		return rep.Updates[i].Name < rep.Updates[j].Name
 	})
 	if updateFormat == formatJSON {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(rep); err != nil {
+		if err := writeRawJSON(os.Stdout, rep); err != nil {
 			fmtError(oops.Wrapf(err, "write the report"))
 			return 1
 		}

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -194,9 +193,7 @@ func reportAttestation(out io.Writer, r attestationResult, _ time.Time) int {
 	}
 	if verifyFormat == formatJSON {
 		doc := attestationReport{SchemaVersion: attestationReportVersion, Results: []attestationResult{r}}
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(doc); err != nil {
+		if err := writeRawJSON(out, doc); err != nil {
 			fmtError(oops.Wrapf(err, "write the report"))
 			return 1
 		}

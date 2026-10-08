@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -150,9 +149,7 @@ func (e *approveEnv) list(out io.Writer) error {
 	}
 	doc := e.listDoc()
 	if approveFormat == formatJSON {
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		return enc.Encode(doc)
+		return writeRawJSON(out, doc)
 	}
 	if len(doc.Items) == 0 && len(doc.Orphans) == 0 {
 		if !e.policy.Active() {
