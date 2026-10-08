@@ -6,6 +6,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -282,10 +283,10 @@ func fillFromConsent(s *Settings, c *Consent) {
 
 func (s *Settings) addBlocking(problems ...string) {
 	for _, problem := range problems {
-		if !contains(s.blocking, problem) {
+		if !slices.Contains(s.blocking, problem) {
 			s.blocking = append(s.blocking, problem)
 		}
-		if !contains(s.Problems, problem) {
+		if !slices.Contains(s.Problems, problem) {
 			s.Problems = append(s.Problems, problem)
 		}
 	}
@@ -465,15 +466,6 @@ func splitList(v string) []string {
 		}
 	}
 	return out
-}
-
-func contains(list []string, want string) bool {
-	for _, item := range list {
-		if item == want {
-			return true
-		}
-	}
-	return false
 }
 
 // LoadUser reads the [telemetry] table of the user config file. A missing file

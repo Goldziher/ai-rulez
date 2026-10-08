@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -105,7 +106,7 @@ func permissionItems(cfg *config.Config, presets []string) []Item {
 // ANTHROPIC_BASE_URL and the like change what every session runs and talks to),
 // plugin enablement and marketplace registration.
 func claudeSettingsItems(cfg *config.Config, presets []string) []Item {
-	if !contains(presets, config.HarnessClaude) {
+	if !slices.Contains(presets, config.HarnessClaude) {
 		return nil
 	}
 	where := []string{config.HarnessClaude}
@@ -226,15 +227,6 @@ func presetNames(cfg *config.Config) []string {
 	}
 	sort.Strings(names)
 	return names
-}
-
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 func joinCommand(command string, args []string) string {

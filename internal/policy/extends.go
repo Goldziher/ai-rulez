@@ -211,7 +211,7 @@ func (r *loosenings) sources(parent, child Policy) {
 }
 
 func (r *loosenings) lint(parent, child Lint) {
-	for _, code := range sortedKeys(child.SeverityFloor) {
+	for _, code := range slices.Sorted(maps.Keys(child.SeverityFloor)) {
 		if p, ok := parent.SeverityFloor[code]; ok && severityRank[child.SeverityFloor[code]] < severityRank[p] {
 			r.add("lint.severity_floor."+code, "%q is below the parent's %q", child.SeverityFloor[code], p)
 		}

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -237,7 +238,7 @@ func TestConvert_TesslEndToEnd(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 	root := ".tessl/plugins/acme/tools/"
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"tessl.json":                       `{"mode":"vendored","dependencies":{"acme/tools":{"version":"1.0.0"}}}`,
 		root + "skills/deploy/SKILL.md":    tesslSkillFile("deploy"),
 		root + "evals/basic/task.md":       "Deploy.\n",

@@ -33,7 +33,7 @@ func TestCollectImported_StaysInsideTheProject(t *testing.T) {
 			secret := filepath.Join(outside, "secret.md")
 			require.NoError(t, os.WriteFile(secret, []byte("secret\n"), 0o600))
 			project := t.TempDir()
-			writeTree(t, project, map[string]string{"CLAUDE.md": "root\n", ".claude/rules/a.md": "rule\n"})
+			testutil.WriteTree(t, project, map[string]string{"CLAUDE.md": "root\n", ".claude/rules/a.md": "rule\n"})
 			if tt.link != "" {
 				target := secret
 				if tt.link == ".claude/skills" {

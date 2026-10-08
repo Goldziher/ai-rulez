@@ -252,7 +252,7 @@ func evalMode(ctx context.Context, ranker *Ranker, run *modeRun, mode string) (*
 			neg := NegativeResult{ID: c.ID, Tags: c.Tags, Avoid: c.Avoid, Degraded: sr.Degraded, hasAvoid: len(c.Avoid) > 0, TopSim: sr.TopSim, Abstained: sr.Abstained}
 			if len(ranked) > 0 {
 				neg.Top, neg.TopScore = ranked[0], scores[0]
-				neg.Violated = len(ranked) > 0 && contains(c.Avoid, ranked[0])
+				neg.Violated = len(ranked) > 0 && slices.Contains(c.Avoid, ranked[0])
 			}
 			mr.Negatives = append(mr.Negatives, neg)
 			continue
@@ -399,15 +399,6 @@ func resolveScopes(env *EvalEnv, f *CaseFile) (map[string]func(int) bool, error)
 	return scopes, nil
 }
 
-func contains(list []string, s string) bool {
-	for _, x := range list {
-		if x == s {
-			return true
-		}
-	}
-	return false
-}
-
 func scoreCase(c *Case, ranked []string, k int) CaseResult {
 	want := map[string]int{}
 	graded := false
@@ -443,7 +434,7 @@ func scoreCase(c *Case, ranked []string, k int) CaseResult {
 			out.top1 = 1
 		}
 	}
-	out.Violated = len(ranked) > 0 && contains(c.Avoid, ranked[0])
+	out.Violated = len(ranked) > 0 && slices.Contains(c.Avoid, ranked[0])
 	return out
 }
 

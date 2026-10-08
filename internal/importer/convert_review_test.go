@@ -66,8 +66,8 @@ func TestConvert_MergesExistingConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			dir := t.TempDir()
-			writeTree(t, dir, sampleProject)
-			writeTree(t, dir, map[string]string{".ai-rulez/config.toml": existing})
+			testutil.WriteTree(t, dir, sampleProject)
+			testutil.WriteTree(t, dir, map[string]string{".ai-rulez/config.toml": existing})
 
 			// Act
 			report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, Force: tt.force})
@@ -97,7 +97,7 @@ func TestConvert_MergesExistingConfig(t *testing.T) {
 func TestConvert_MergeAppendsNewServersAndSkills(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"skills-lock.json":      lockV1,
 		".mcp.json":             `{"mcpServers":{"fresh":{"command":"npx","args":["x"]}}}`,
 		".ai-rulez/config.toml": "version = \"5.0\"\nname = \"mine\"\npresets = [\"claude\"]\n\n[[mcp_servers]]\nname = \"gh\"\ncommand = \"g\"\n",
@@ -117,9 +117,9 @@ func TestConvert_MergeAppendsNewServersAndSkills(t *testing.T) {
 func TestConvert_V3ConfigIsLeftAlone(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, sampleProject)
+	testutil.WriteTree(t, dir, sampleProject)
 	yamlCfg := "version: \"5.0\"\nname: mine\npresets: [claude]\n"
-	writeTree(t, dir, map[string]string{".ai-rulez/config.yaml": yamlCfg})
+	testutil.WriteTree(t, dir, map[string]string{".ai-rulez/config.yaml": yamlCfg})
 
 	// Act
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, Force: true})
@@ -136,8 +136,8 @@ func TestConvert_V3ConfigIsLeftAlone(t *testing.T) {
 func TestConvert_UnparsableConfigStopsTheRun(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, sampleProject)
-	writeTree(t, dir, map[string]string{".ai-rulez/config.toml": "this is = = not toml ["})
+	testutil.WriteTree(t, dir, sampleProject)
+	testutil.WriteTree(t, dir, map[string]string{".ai-rulez/config.toml": "this is = = not toml ["})
 	before := snapshot(t, dir)
 
 	// Act
@@ -297,7 +297,7 @@ func TestConvert_ScanCoversConfigToml(t *testing.T) {
 	// Arrange: the description is copied into config.toml, where only the
 	// config scan can see it.
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{".mcp.json": `{"mcpServers":{"s":{"command":"x","description":"deploy key ` + awsKey + `"}}}`})
+	testutil.WriteTree(t, dir, map[string]string{".mcp.json": `{"mcpServers":{"s":{"command":"x","description":"deploy key ` + awsKey + `"}}}`})
 
 	// Act
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})
@@ -319,7 +319,7 @@ func TestConvert_ScanCoversConfigToml(t *testing.T) {
 func TestConvert_DryRunReportsSecurityEvenWhenValidationFails(t *testing.T) {
 	// Arrange: a skill and a command with one name collide on their output id.
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		".claude/skills/dup/SKILL.md": "---\nname: dup\ndescription: d\n---\nBody\n",
 		".claude/commands/dup.md":     "Command body\n",
 		"CLAUDE.md":                   "key " + awsKey + "\n",
@@ -338,7 +338,7 @@ func TestConvert_DryRunReportsSecurityEvenWhenValidationFails(t *testing.T) {
 func TestConvert_SecurityScanIgnoresInlineSuppression(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{"CLAUDE.md": "<!-- ai-rulez-lint-ignore AR001 -->\nkey " + awsKey + "\n"})
+	testutil.WriteTree(t, dir, map[string]string{"CLAUDE.md": "<!-- ai-rulez-lint-ignore AR001 -->\nkey " + awsKey + "\n"})
 
 	// Act
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir})
@@ -442,7 +442,7 @@ func TestNativePlan_SkipsGeneratedMarkersEverywhere(t *testing.T) {
 func generatedProject(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		".ai-rulez/config.toml":                "version = \"5.0\"\nname = \"gen\"\npresets = [\"claude\", \"cursor\", \"copilot\", \"gemini\"]\n",
 		".ai-rulez/rules/style.md":             "---\ndescription: style\n---\nUse tabs.\n",
 		".ai-rulez/context/overview.md":        "Overview text.\n",
@@ -495,7 +495,7 @@ func TestConvert_GeneratedTreeIsNotReimported(t *testing.T) {
 func TestConvert_AutoRunsAllDetectedImporters(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"skills-lock.json":              lockV1,
 		".agents/skills/alpha/SKILL.md": "---\ndescription: a\n---\nA\n",
 		".agents/skills/mine/SKILL.md":  "---\ndescription: m\n---\nM\n",
@@ -591,8 +591,8 @@ func TestConvert_RefusesSymlinkedTargets(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			dir, outside := t.TempDir(), t.TempDir()
-			writeTree(t, dir, map[string]string{"CLAUDE.md": "# Project\n"})
-			writeTree(t, outside, map[string]string{"victim": "keep\n"})
+			testutil.WriteTree(t, dir, map[string]string{"CLAUDE.md": "# Project\n"})
+			testutil.WriteTree(t, outside, map[string]string{"victim": "keep\n"})
 			tt.setup(t, dir, outside)
 
 			// Act
@@ -609,7 +609,7 @@ func TestConvert_RefusesSymlinkedTargets(t *testing.T) {
 func TestConvert_RollbackRemovesCreatedDirectories(t *testing.T) {
 	// Arrange: a directory sits where the skill file must go, so the last write fails.
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		"CLAUDE.md":                    "# Project\n",
 		".claude/skills/lint/SKILL.md": "---\ndescription: l\n---\nL\n",
 	})
@@ -843,7 +843,7 @@ func TestNativePlan_LenientFrontmatterIsReported(t *testing.T) {
 func TestConvert_ScanFindingsPointAtTheSource(t *testing.T) {
 	// Arrange: the key sits on line 5 of CLAUDE.md, whatever line it has in the planned tree.
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{"CLAUDE.md": "# Project\n\nSome text.\n\nkey " + awsKey + "\n"})
+	testutil.WriteTree(t, dir, map[string]string{"CLAUDE.md": "# Project\n\nSome text.\n\nkey " + awsKey + "\n"})
 
 	// Act
 	report, err := Convert(context.Background(), ConvertOptions{Source: dir})
@@ -879,7 +879,7 @@ func TestConvert_AllowFindingsLetsACodeThrough(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			dir := t.TempDir()
-			writeTree(t, dir, map[string]string{"CLAUDE.md": "# Project\n\nkey " + awsKey + "\n"})
+			testutil.WriteTree(t, dir, map[string]string{"CLAUDE.md": "# Project\n\nkey " + awsKey + "\n"})
 
 			// Act
 			report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true, AllowFindings: tt.allow})
@@ -906,7 +906,7 @@ func TestConvert_ProseAboutCurlPipeBashIsNotBlocked(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			dir := t.TempDir()
-			writeTree(t, dir, map[string]string{"CLAUDE.md": tt.body})
+			testutil.WriteTree(t, dir, map[string]string{"CLAUDE.md": tt.body})
 
 			// Act
 			report, err := Convert(context.Background(), ConvertOptions{Source: dir, Write: true})

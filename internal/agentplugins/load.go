@@ -121,7 +121,7 @@ func (l *loader) manifest() (*schemaSet, Metadata, map[string]map[string]any) {
 		l.reject(CodeUnsupportedSpec, "%v", err)
 		return nil, Metadata{}, nil
 	}
-	for _, key := range sortedKeys(doc) {
+	for _, key := range slices.Sorted(maps.Keys(doc)) {
 		if !slices.Contains(manifestFields, key) {
 			l.add(CodeManifestUnknownField, SeverityWarning, manifestFile,
 				"unknown top-level field %q is ignored; client-specific data belongs under extensions", key)
@@ -172,7 +172,7 @@ func (l *loader) decodeManifest(data []byte, extObject bool) (meta Metadata, ext
 	dec.UseNumber()
 	_ = dec.Decode(&raw) //nolint:errcheck // the schema requires an object of objects
 	ext = map[string]map[string]any{}
-	for _, ns := range sortedKeys(raw) {
+	for _, ns := range slices.Sorted(maps.Keys(raw)) {
 		if !ValidNamespace(ns) {
 			l.add(CodeNamespaceInvalid, SeverityWarning, manifestFile,
 				"extensions key %q is not a reverse-domain namespace and is not imported", ns)
@@ -309,7 +309,7 @@ func (l *loader) mcp(set *schemaSet) []MCPServer {
 		return nil
 	}
 	var out []MCPServer
-	for _, name := range sortedKeys(servers) {
+	for _, name := range slices.Sorted(maps.Keys(servers)) {
 		if s, ok := l.server(set, id, name, servers[name]); ok {
 			out = append(out, s)
 		}

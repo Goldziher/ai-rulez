@@ -1,6 +1,9 @@
 package config
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 )
@@ -39,7 +42,7 @@ func swappedLintTables(path string, doc map[string]any) error {
 		if !ok {
 			continue
 		}
-		for _, key := range sortedKeys(table) {
+		for _, key := range slices.Sorted(maps.Keys(table)) {
 			if _, isTable := table[key].(map[string]any); isTable {
 				return oops.With("path", path).
 					Hint("[lint.ratchet] maps a rule code or name to a number, for example AR201 = 1; size limits go in "+lintBudgetsPath).
@@ -52,7 +55,7 @@ func swappedLintTables(path string, doc map[string]any) error {
 	if !ok {
 		return nil
 	}
-	for _, key := range sortedKeys(budgets) {
+	for _, key := range slices.Sorted(maps.Keys(budgets)) {
 		if _, isTable := budgets[key].(map[string]any); !isTable {
 			return oops.With("path", path).
 				Hint("[lint.budgets.<kind>] sets max_lines and max_tokens for one content kind (rule, context, skill, agent, command); ratcheted findings go in "+lintRatchetPath).

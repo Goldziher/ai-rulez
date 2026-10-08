@@ -3,7 +3,6 @@ package lint
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 	"slices"
@@ -11,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // CodeHookSchema reports hook declarations that load but will not behave as
@@ -75,7 +75,7 @@ func checkHookSchema(r *runner) {
 // and every tracked plugin hooks/hooks.json.
 func (r *runner) hookJSONFiles() []string {
 	var files []string
-	if p := filepath.Join(r.rootAbs(), ".claude", "settings.json"); fileExists(p) {
+	if p := filepath.Join(r.rootAbs(), ".claude", "settings.json"); safefs.IsFile(p) {
 		files = append(files, p)
 	}
 	for _, rel := range r.tree.Paths() {
@@ -85,11 +85,6 @@ func (r *runner) hookJSONFiles() []string {
 	}
 	sort.Strings(files)
 	return files
-}
-
-func fileExists(p string) bool {
-	info, err := os.Stat(p)
-	return err == nil && !info.IsDir()
 }
 
 // realMatcher reports whether a hook matcher narrows anything: an empty

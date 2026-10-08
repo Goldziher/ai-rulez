@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -108,7 +110,7 @@ func (u *RunUsage) Add(o RunUsage) {
 
 // ResolvedModels lists the model ids the provider reported, most used first.
 func (u RunUsage) ResolvedModels() []string {
-	ids := sortedKeys(u.Models)
+	ids := slices.Sorted(maps.Keys(u.Models))
 	sort.SliceStable(ids, func(i, j int) bool { return u.Models[ids[i]] > u.Models[ids[j]] })
 	return ids
 }
