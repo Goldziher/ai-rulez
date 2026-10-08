@@ -112,7 +112,7 @@ func (s *scriptedJudge) callsFor(item string) []scriptedCall {
 }
 
 // newClient wraps a fake backend in the real middleware (cache, budget, gate) with the network on.
-func newClient(t *testing.T, s *scriptedJudge, cfg llm.Config) (llm.Client, *llm.Fake) {
+func newClient(t testing.TB, s *scriptedJudge, cfg llm.Config) (llm.Client, *llm.Fake) {
 	t.Helper()
 	fake := llm.NewFake()
 	fake.ChatFunc = s.chat
