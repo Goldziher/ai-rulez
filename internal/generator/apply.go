@@ -2,7 +2,6 @@ package generator
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 
 	"github.com/samber/oops"
@@ -263,7 +262,7 @@ func (dryRunApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	}
 	lines = append(lines, g.planLines(flatOutputs)...)
 	for _, stale := range g.retiredFiles(flatOutputs) {
-		lines = append(lines, "delete-stale: "+filepath.ToSlash(g.convertToRelativePath(stale)))
+		lines = append(lines, "delete-stale: "+g.convertToRelativePath(stale))
 	}
 	for _, edit := range g.planUnmerge(flatOutputs, false) {
 		if edit.delete {

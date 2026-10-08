@@ -72,6 +72,8 @@ func RemoveGeneratedPluginDir(dir string) (kept []string, err error) {
 	if err := root.Remove(provenanceFileName); err != nil && !os.IsNotExist(err) {
 		return nil, oops.With("path", sidecarPath).Wrapf(err, "remove plugin provenance")
 	}
+	// Windows cannot remove a directory while a handle on it is open.
+	_ = root.Close() //nolint:errcheck // the deferred Close covers the early returns; a second one is harmless
 	pruneEmptyDirs(dir)
 	kept, err = filesUnder(dir)
 	if err != nil {
