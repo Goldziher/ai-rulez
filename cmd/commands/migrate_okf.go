@@ -44,7 +44,7 @@ func runMigrateOKF(ctx context.Context, out io.Writer) int {
 		return 1
 	}
 	write := !migrateDryRun && !migrateCheck
-	changes, err := okfbridge.MigrateDir(cfg.ConfigDir, okfbridge.MigrateOptions{Write: write})
+	changes, err := okfbridge.MigrateDir(cfg.ConfigDir, okfbridge.MigrateOptions{Write: write}) //nolint:contextcheck // the content scan is local and bounded; it takes no context
 	if err != nil {
 		fmtError(err)
 		return 1

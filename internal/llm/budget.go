@@ -128,15 +128,15 @@ func (r *reservation) fail(err error) {
 	r.release(r.worst.Total(), r.cost)
 }
 
-func (r *reservation) release(tokens int, cost float64) {
+func (r *reservation) release(spentTokens int, cost float64) {
 	r.b.mu.Lock()
 	defer r.b.mu.Unlock()
 	r.b.reserved.Tokens -= r.worst.Total()
 	r.b.reserved.CostUSD -= r.cost
-	r.b.spent.Tokens += tokens
+	r.b.spent.Tokens += spentTokens
 	r.b.spent.CostUSD += cost
 	if r.sub != nil {
-		r.sub.tokens += tokens
+		r.sub.tokens += spentTokens
 		r.sub.cost += cost
 		r.sub.calls++
 	}

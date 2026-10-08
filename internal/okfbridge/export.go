@@ -273,7 +273,7 @@ func titleOf(fields []okf.Field) string {
 
 // conceptFields builds the frontmatter of an item's concept and returns its
 // description for the index.
-func conceptFields(it sourceItem, id string) (fields []okf.Field, description string, err error) {
+func conceptFields(it sourceItem, id string) (fields []okf.Field, description string, err error) { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	okfExtra, meta := splitMetadata(it.cf.Metadata)
 	if it.kind == KindSkill && !it.keepName {
 		meta = dropDerivedName(meta, id)

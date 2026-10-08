@@ -1,11 +1,12 @@
 package signing_test
 
 import (
-	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
