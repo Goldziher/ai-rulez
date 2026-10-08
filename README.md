@@ -5,7 +5,7 @@
 <h1 align="center">ai-rulez</h1>
 
 <p align="center">
-  <strong>A complete development workflow for AI coding tools</strong>
+  <strong>The standards-compliant lifecycle tool for agent knowledge and capabilities: author, generate, bundle, validate, govern, publish</strong>
 </p>
 
 <p align="center">
@@ -21,20 +21,55 @@
   <a href="https://goldziher.github.io/ai-rulez/examples/"><strong>Examples</strong></a>
 </p>
 
+
 ---
 
-## The Problem
+## What it is
 
-Every AI coding tool wants its own config: Claude needs `CLAUDE.md`, Cursor wants `.cursor/rules/`, Copilot expects `.github/copilot-instructions.md`. Each has different formats, frontmatter, and directory conventions. If you use more than one tool, you're maintaining duplicate rules that inevitably drift apart.
+ai-rulez is a standards-compliant lifecycle tool for agent knowledge and capabilities. You keep rules, context, skills,
+agents, commands, hooks, permissions and MCP servers in one source of truth, `.ai-rulez/`, and ai-rulez takes them
+through the whole lifecycle:
 
-## The Solution
+```text
+author  ->  generate  ->  bundle  ->  lint / validate  ->  govern  ->  publish
+```
 
-Write your rules, context, skills, agents, commands, and checks once in `.ai-rulez/`. Run `generate`. Get native configs for every tool you use.
+| Stage | What happens | Commands | Docs |
+| ----- | ------------ | -------- | ---- |
+| **Author** | Rules, context, skills, agents, commands and checks as markdown in `.ai-rulez/`, with domains, profiles, roles and includes. [OKF](docs/okf.md) is the native knowledge format. | `init`, `add`, `convert`, `import` | [Author](docs/configuration.md) |
+| **Generate** | Native files for 52 harnesses (Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, Devin, Kilo and more), per project or per user. | `generate`, `doctor`, `clean` | [Harnesses](docs/harnesses.md) |
+| **Bundle** | Distributable plugin bundles, an Agent Plugins package, an OKF bundle, an ARD manifest, `AGENTS.md` and `llms.txt`. | `generate --plugin`, `export okf` | [Plugins](docs/plugins.md) |
+| **Lint and validate** | Content and security checks with stable `AR` codes, plus each standard's own schema or rules. | `validate`, `scan`, `okf validate`, `verify` | [Validate](docs/strict-validation.md) |
+| **Govern** | A content-pinning lock, reviewer approvals, Sigstore signing, an organization policy and an SBOM. | `lock`, `approve`, `sign`, `verify --attestation`, `sbom` | [Trust model](docs/trust-model.md) |
+| **Publish** | Reproducible, checksummed release artifacts to GitHub releases, npm, OCI and marketplaces. | `publish` | [Publish](docs/publish.md) |
 
-## Quick Start
+## Standards
+
+The claim is "standards compliant", so each format ai-rulez names is generated or bundled from the same sources and
+checked against that standard's own schema or rules. A standard is marked **supported** when the code generates it and
+validates it today, and **planned** when it does not yet.
+[docs/standards.md](docs/standards.md) carries the pinned spec version, the conformance test suite and the known gaps for
+each row, and is the source of truth for test status.
+
+| Standard | Status | Generate / bundle | Lint / validate |
+| -------- | ------ | ----------------- | --------------- |
+| [OKF](docs/okf.md) (Open Knowledge Format, v0.2), the native format | supported | `export okf`, the `okf` preset | `okf validate` |
+| [Agent Plugins](docs/agent-plugins.md) (agent-plugins.org) | supported | `generate --plugin`, `publish --emit agent-plugins` | `validate --strict` (AR9O codes) |
+| [ARD](docs/ard.md) (Agentic Resource Discovery, a proposal) | supported | `publish --emit ard` | `validate` (entry schema, URN grammar) |
+| [Agent Skills](docs/skills.md) (agentskills.io) | supported | `generate` | `validate` (frontmatter checks; partial) |
+| [AGENTS.md](docs/agents-md.md) | supported | `generate` | `validate` |
+| [llms.txt](docs/llms-txt.md) | supported | the `llms-txt` preset | `validate` |
+| MCP server config | supported | `generate` | `validate` (partial) |
+| MCP server card | planned | not generated | none |
+| [CycloneDX / SPDX SBOM](docs/sbom.md) | supported | `sbom` | `sbom --check` |
+| [in-toto / DSSE / Sigstore](docs/signing.md) | supported | `sign` | `verify --attestation` |
+| [OpenTelemetry (OTLP)](docs/telemetry.md) | supported | `telemetry export --to otlp` | not applicable |
+| "Agent bundle" | planned | spec to be confirmed | spec to be confirmed |
+
+## Quick start
 
 ```bash
-npx ai-rulez@latest init                # scaffold .ai-rulez/ with config.toml
+npx ai-rulez@latest init                 # author: scaffold .ai-rulez/ with config.toml
 ```
 
 ```toml
@@ -43,291 +78,72 @@ presets = ["claude", "cursor", "codex", "copilot", "gemini"]   # any of the 52 h
 ```
 
 ```bash
-npx ai-rulez@latest generate            # write native files for each preset
-npx ai-rulez@latest generate --watch    # regenerate on every change to .ai-rulez/
-npx ai-rulez@latest doctor              # read-only diagnostics: drift, removed presets, missing tools
-npx ai-rulez@latest generate --user     # same, for your home directory (~/.claude, ~/.codex, ...)
+npx ai-rulez@latest generate             # generate: write native files for each preset
+npx ai-rulez@latest validate --strict    # validate: content and security checks, warnings fail
+npx ai-rulez@latest lock                 # govern: pin includes, skills and authored content in ai-rulez.lock
+npx ai-rulez@latest export okf           # bundle: an OKF bundle of your knowledge in docs/okf
 ```
 
-Prefer the project-level [`.config/` convention](https://github.com/pi0/config-dir)? `ai-rulez` auto-discovers `.config/ai-rulez/` as well, and `ai-rulez init --config-dir .config/ai-rulez` scaffolds it.
-
-ai-rulez generates correct, tool-native output for **52 harnesses**, among them Claude Code, Cursor, Codex, GitHub Copilot and Copilot CLI, Gemini CLI, OpenCode, Kilo Code, Devin, Cline, Amp, Junie, Antigravity, Qwen Code, Factory Droid, goose, Kiro, Zed, Warp and pi. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats, tool and model names. The [harness matrix](docs/harnesses.md) lists every preset with the features it supports: rules folder, skills, agents, commands, MCP, hooks, permissions, checks and user scope. Where a harness cannot express something, ai-rulez skips it with a warning and never approximates.
-
-For a tool that isn't built in, a custom preset can point at a declarative **provider spec** (`provider = ".ai-rulez/providers/my-tool.toml"`) and get the same full feature set as a built-in — root instructions file, skills/agents/commands, per-agent frontmatter, and MCP sidecars. See [Custom Presets](docs/configuration.md#provider-backed-presets-full-parity).
-
-`AGENTS.md` and `.agents/skills/` are written once for the tools that read them (Codex, Cursor, Copilot, Gemini, Claude through an `@AGENTS.md` shim, and more) instead of one copy per tool. Set `agents_md = false` for per-tool files. See [docs/agents-md.md](docs/agents-md.md).
-
-Need the same knowledge outside coding agents? `ai-rulez export okf` writes rules, context and skills as an [Open Knowledge Format](docs/okf.md) bundle (the `okf` preset keeps it in sync on every `generate`), `ai-rulez import okf <dir|git-url>` turns an existing OKF bundle into `.ai-rulez/` sources, and `ai-rulez okf validate` lints any bundle. See [docs/okf.md](docs/okf.md).
-
-## What's new in v5
-
-v5 is a major release. Coming from 4.x, run `ai-rulez migrate v5 --dry-run`, then `ai-rulez migrate v5`: it rewrites `config.toml` in place (comments kept), converts YAML and JSON configs to TOML, merges legacy `mcp.*` files, and pins the 4.x defaults so your generated files do not move. The full list, with before and after, is in [Migrating to v5](docs/migration-v5.md).
-
-- **Config `version = "5.0"`.** YAML configs are no longer loaded; `migrate` reads 4.x only (2.x and 3.x go through ai-rulez 4.x first).
-- **New defaults:** `agents_md = true` (one canonical `AGENTS.md`), content-only `Content-Hash` headers, and no managed `.gitignore` block unless you ask for it.
-- **`validate` runs the content checks by default**; `--config-only` skips them and `--strict` makes warnings fail.
-- **One command namespace for usage data:** `telemetry hook|record|feedback|report`, replacing `usage ...` and `report ...`.
-- **One flag vocabulary and one exit-code contract** (0 ok, 1 could not run, 2 findings or drift); `--format json` everywhere, with `schema_version` in every JSON document and schemas under [`schema/`](docs/schema.md).
-- **Safer supply chain:** a content-pinning `ai-rulez.lock` that enforces itself, `https`-only remotes, scanned imports and one [trust model](docs/trust-model.md) for everything that can reach the network.
-
-## Beyond Instructions
-
-| Feature | What it does | Docs |
-| ------- | ------------ | ---- |
-| **Hooks** | One top-level `[[hooks]]` list, rendered into the native hooks file of 36 harnesses (or a generated plugin module for OpenCode, Kilo, MiMo Code, pi and Amp), with matchers translated to each tool's names | [settings](docs/settings.md) |
-| **Permissions** | One `[permissions]` allow/ask/deny list translated for 24 harnesses; a rule a tool cannot express is skipped and an unenforced deny is reported, never widened | [permissions](docs/permissions.md) |
-| **Checks** | Code-review guidelines in `.ai-rulez/checks/` for Cursor Bugbot, Kilo, Qwen Code, Factory, Rovo Dev, Amp, Augment and GitLab Duo | [checks](docs/checks.md) |
-| **User scope** | `generate --user` writes a personal config into the per-user directories of 47 harnesses and `clean --user` takes it back | [user-scope](docs/user-scope.md) |
-| **Merges** | JSON, JSONC, TOML and YAML settings files you also edit are merged key by key; your keys and comments survive `generate` and `clean` | [configuration](docs/configuration.md#settings-document-merge-behavior) |
-| **Native MCP env references** | A `${VAR}` placeholder is written as the tool's own reference where it expands one, so no secret lands in the file | [configuration](docs/configuration.md#mcp_servers) |
-| **Watch and doctor** | `generate --watch` regenerates on save; `ai-rulez doctor` reports drift, removed presets, unresolved placeholders and missing tools | [CLI](docs/cli.md) |
-| **Lock and updates** | `ai-rulez lock` pins remote includes, installed skills, skill sources, authored content and outputs by commit and sha256; `generate --locked` is the CI mode, `version = "^1.2"` ranges are moved by `ai-rulez update` | [lock file](docs/lockfile.md) |
-| **Governance and release** | `ai-rulez approve` records reviewer approvals in the lock, `sign` and `verify --attestation` sign and check it with Sigstore, an organization policy sets tighten-only floors, and `publish` packages the plugin bundle into reproducible, signed release artifacts | [approvals](docs/approvals.md), [signing](docs/signing.md), [policy](docs/policy.md), [publish](docs/publish.md) |
-| **Dynamic skills and roles** | `delivery = "served"` skills are loaded on demand through `ai-rulez mcp --serve-skills` (`find_skill`, `load_skill`) instead of written to every harness; `[[roles]]` render a slice of the content per job | [MCP server](docs/mcp-server.md#dynamic-skill-loading), [roles](docs/roles.md) |
-| **Validation and verifiers** | `validate` and `scan` run deep content and security checks with stable `AR` codes; `[[verifiers]]` run deterministic repo checks (`--since`, SARIF, JUnit); `[guard]` blocks agent edits to generated files | [strict validation](docs/strict-validation.md), [verifiers](docs/verifiers.md) |
-| **Inventory** | `ai-rulez sbom` (CycloneDX or SPDX), `catalog` (JSON or a static site), `tokens`, `cost` and `search` report what the configuration contains and costs; `convert` imports existing tool files, rulesync, APM, Tessl and OKF projects | [SBOM](docs/sbom.md), [catalog](docs/catalog.md), [CLI](docs/cli.md) |
-
-## Generate Plugins, Not Just Config
-
-ai-rulez doesn't only write config into _your_ repo — it also packages your project as **distributable plugins**. Run `ai-rulez generate --plugin` and the same `.ai-rulez/` source (skills, commands, agents, MCP servers) becomes installable **plugin bundles and a marketplace index** for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes Agent. An opt-in **Agent Plugins** runtime (`runtimes = ["agent-plugins"]`) additionally emits portable [Agent Plugins 1.0.0](https://agent-plugins.org) packages.
+Day-to-day:
 
 ```bash
-ai-rulez generate --plugin           # write plugin bundles + marketplace.json
-ai-rulez generate --plugin --dry-run # preview
-ai-rulez verify --plugin             # prove committed output matches its sources
+ai-rulez generate --watch                # regenerate on every change to .ai-rulez/
+ai-rulez generate --check                # CI: exit 2 when committed outputs differ from the sources
+ai-rulez doctor                          # read-only diagnostics: drift, removed presets, missing tools
+ai-rulez generate --user                 # the same, for your home directory (~/.claude, ~/.codex, ...)
 ```
 
-Write MCP launch commands and hooks once with the canonical `${PLUGIN_ROOT}` variable — a hook either runs a command already on the consumer’s machine or bundles a project script into the plugin’s `hooks/` directory, so it works in a fresh clone — and each runtime gets its own manifest with the variable and hook format rewritten to fit. Hermes generation emits both a project plugin and a buildable Python entry-point package. Use `plugin.content_root` to keep distributable skills separate from contributor governance. Supports single-plugin repos and monorepos (`[marketplace].members`), plus a Claude statusline passthrough. Re-running `generate --plugin` prunes files a previous run generated that no longer have a source, and keeps anything you edited. See [Authoring Plugins](docs/plugins.md).
+Prefer the project-level [`.config/` convention](https://github.com/pi0/config-dir)? ai-rulez also discovers
+`.config/ai-rulez/`, and `ai-rulez init --config-dir .config/ai-rulez` scaffolds it.
 
-## What Ships Out of the Box
+## Bundle and publish
 
-ai-rulez isn't just a config generator. It ships with **33 builtin domains** containing opinionated rules, skills, agents, and workflows that establish a professional development baseline immediately.
-
-### Auto-Included Domains
-
-Set `builtins` in your config — `true` for every domain, or a list to pick — and these seven come along
-without being named, unless you exclude one with `!`. Omit the `builtins` field entirely and no builtin
-content is loaded at all.
-
-Each one ships **always-on content** (rules, or context such as the agent roster) that is read on every
-request — rules in `.claude/rules/` under the default split mode (inlined into `CLAUDE.md` with
-`[rules] mode = "inline"`), context and the agent roster in `CLAUDE.md` — and some also ship
-**on-demand skills**, whose body costs nothing until the assistant loads it.
-
-| Domain               | Always-on rules                                                                                                            | On-demand skills                        |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| **ai-governance**    | No AI signatures in commits. Concise communication. Read before write. Minimal changes. Systematic debugging. Verification before claiming success. Critical review of subagent output. Reasoning stated for non-obvious decisions. | —                                       |
-| **git-workflow**     | Atomic commits. Conventional commit messages. Safe operations. Branch hygiene.                                             | —                                       |
-| **security**         | Secrets handling. Input validation. Least privilege.                                                                       | `owasp-quick-reference`, `dependency-awareness` |
-| **token-efficiency** | Context preservation. Output awareness.                                                                                    | `task-runner`, `incremental-approach`   |
-| **testing**          | Tests ship with the behaviour change; failing test before a bug fix; full suite before committing.                         | `tdd-workflow`, `testing-conventions`   |
-| **code-quality**     | —                                                                                                                          | `code-quality-standards`, `error-handling` |
-| **agent-delegation** | Multi-agent coordination and delegation patterns (emitted as context).                                                      | —                                       |
-
-### Builtin Agents
-
-Specialized agents ready to use as subagents:
-
-| Agent                | Domain        | Model  | What it does                                                                     |
-| -------------------- | ------------- | ------ | -------------------------------------------------------------------------------- |
-| **code-reviewer**      | ai-governance     | sonnet | Reviews changes for correctness, security, and conventions. Reports by severity. |
-| **test-writer**        | testing           | sonnet | Writes tests following strict TDD. Fails first, then implements.                 |
-| **security-auditor**   | security          | sonnet | Audits dependencies, scans for CVEs, reviews input validation.                   |
-| **docs-writer**        | ai-governance     | sonnet | Writes clear, concise documentation. No fluff.                                   |
-| **devops-engineer**    | cicd              | sonnet | CI/CD pipelines, GitHub Actions, Docker, deployment automation.                  |
-| **release-engineer**   | cicd              | sonnet | Version management, changelogs, multi-registry publishing.                       |
-| **ffi-engineer**       | polyglot-bindings | sonnet | Native FFI and cross-language binding work.                                      |
-| **polyglot-architect** | polyglot-bindings | opus   | Cross-language architecture and binding design.                                  |
-
-### Opt-in Domains
-
-Enable these based on your stack:
-
-**Languages** (10): `rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`, `r`
-
-**Bindings** (10): `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`, `jni-rs`, `extendr`, `cgo`, `vite-plus`
-
-**Operational**: `cicd`, `docker`, `observability`, `documentation`, `polyglot-bindings`, `default-commands`
-
-```toml
-# .ai-rulez/config.toml
-builtins = ["rust", "python", "pyo3", "cicd", "docker", "default-commands"]
-```
-
-Anything scoped to one technology or one activity is emitted as an **on-demand Agent Skill**
-(`.claude/skills/<id>/SKILL.md`) rather than inlined into `CLAUDE.md`, so the always-loaded file stays
-small and the guidance arrives only when it is relevant: every language and binding domain,
-`polyglot-bindings`, `security`'s OWASP and dependency references, all of `code-quality`, most of
-`testing`, `token-efficiency`'s `task-runner` and `incremental-approach`, and the whole of `docker` and
-`observability`. What stays inline is behavioural governance that has to land before the first file is
-read — `ai-governance`, `git-workflow`, `security`'s secrets and boundary rules, and the one `testing`
-rule that says tests ship with the change. `!domain` and `!domain/name` exclusions work for skill
-entries too, so an exclusion written against a rule keeps working after it becomes a skill.
-
-## Content Types
-
-| Type         | Purpose                        | Example                                |
-| ------------ | ------------------------------ | -------------------------------------- |
-| **Rules**    | What AI must/must not do       | Security standards, coding conventions |
-| **Context**  | What AI should know            | Architecture docs, domain knowledge    |
-| **Skills**   | Reusable prompts and workflows | Deployment checklist, review protocol  |
-| **Agents**   | Specialized AI personas        | Code reviewer, performance engineer    |
-| **Commands** | Slash commands across tools    | `/review`, `/deploy`, `/test`          |
-| **Checks**   | Code-review guidelines         | Security review, performance review    |
-
-## Organization at Scale
-
-ai-rulez scales from solo projects to large organizations:
-
-**Domains** — Group content by feature, language, or team:
-
-```text
-.ai-rulez/domains/backend/rules/
-.ai-rulez/domains/frontend/rules/
-```
-
-**Profiles** — Generate different configs for different audiences:
-
-```toml
-[profiles]
-backend = ["backend", "database"]
-frontend = ["frontend", "ui"]
-```
-
-**Remote Includes** — Share rules across repositories:
-
-```toml
-[[includes]]
-name = "company-standards"
-source = "https://github.com/company/ai-rules.git"
-merge_strategy = "local-override"
-```
-
-Include sources can use a bare/flattened layout — expose `rules/`, `context/`, `skills/`, `agents/`
-directly (at the repo root or a sub-path via `path = "modules/core"`) with no `.ai-rulez/` wrapper.
-Recommended for shared, skill-first modules.
-
-**Native rules folders** — Rules are written to each tool's own rules folder (`.claude/rules`, `.cursor/rules`, `.github/instructions`, `.devin/rules`, ...) with native `paths`/`globs` frontmatter, so path-scoped rules load only when relevant. `split` is the default since 4.22.0; set `[rules] mode = "inline"` to keep rules in the root files. See [docs/rules.md](docs/rules.md).
-
-**Local configuration** — Personal, machine-local content and settings that never get committed:
+Bundling and publishing need a `[plugin]` block (`name`, `version` and `description`) in `config.toml`:
 
 ```bash
-ai-rulez add rule my-scratch-notes --local   # → .ai-rulez/local/rules/, generates .claude/rules/my-scratch-notes.local.md
-ai-rulez local set presets '["codex", "!cursor"]'   # → .ai-rulez/config.local.toml overlay
+ai-rulez generate --plugin               # plugin bundles and a marketplace index from the [plugin] block
+ai-rulez export okf                      # an OKF bundle of your rules, context and skills (docs/okf)
+ai-rulez publish --emit agent-plugins --emit ard --dry-run
+ai-rulez publish --to github-release --execute --yes
 ```
 
-`.ai-rulez/local/`, the `config.local.toml` overlay and the generated `*.local.*` outputs are gitignored
-unconditionally, and `generate` refuses to let local config change tracked shared files (use
-`--no-local` for the teammate view). See [docs/local-overrides.md](docs/local-overrides.md).
+`publish` runs a preflight first (`validate --strict`, `lock --check`, `verify --plugin`, a secret scan and the policy
+gates), writes a byte-reproducible tar.gz with `SHA256SUMS`, and uploads only when you pass `--execute --yes`. See
+[Publish](docs/publish.md) and [Authoring plugins](docs/plugins.md).
 
-**Reasoning effort across providers** — Tune how hard each AI tool thinks:
-
-```yaml
-# .ai-rulez/agents/security-reviewer.md
----
-name: security-reviewer
-description: Reviews code for security regressions
-effort: high
----
-```
-
-```toml
-# .ai-rulez/config.toml
-[defaults]
-effort = "medium"  # global default for every supported preset
-
-[defaults.effort_by_preset]
-codex = "high"     # overrides the global default for Codex
-claude = "xhigh"   # …and for Claude
-```
-
-Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. ai-rulez emits the right field per preset:
-
-- **Claude** — `effort` in `.claude/agents/*.md` frontmatter (per-agent)
-- **Codex** — `model_reasoning_effort` in `.codex/config.toml` and `.codex/agents/*.toml`
-- **Amp** — `amp.anthropic.effort` in `.amp/settings.json` (global)
-- **Devin** — `reasoning_effort` in `.devin/agents/*.md` frontmatter (per-agent)
-- **Opencode** — `variant` in `.opencode/agents/*.md` frontmatter (per-agent); a separate key beside the agent's `provider/model`
-- **Xum** — `ai.thinkingLevel` in `.xum/agents/*.md` frontmatter (per-agent)
-- **pi** — `thinking` in `.pi/agents/*.md` frontmatter (per-agent)
-
-Each preset maps the value to its own vocabulary; tools without a documented config surface (Cursor, Copilot, Gemini, etc.) are silently skipped. See [docs/configuration.md](docs/configuration.md#defaults) for the full mapping table.
-
-**Per-preset model selection for subagents** — Model strings differ per provider, so the same agent can declare a different model for each preset it targets:
-
-```yaml
-# .ai-rulez/agents/research-helper.md
----
-name: research-helper
-description: Multi-provider research subagent
-claude_model: opus
-copilot_model: gpt-5
-cursor_model: claude-3.7-sonnet
----
-```
-
-```toml
-# .ai-rulez/config.toml — project-wide defaults
-[defaults.model_by_preset]
-claude = "sonnet"   # used when an agent doesn't set its own claude_model
-copilot = "gpt-5"
-```
-
-Per-agent `<preset>_model` wins over `defaults.model_by_preset`; the legacy single `model:` field on an agent is the lowest-priority fallback for backward compatibility.
-
-**Installed Skills** — Pull reusable skills from external repos:
-
-```toml
-[[installed_skills]]
-name = "kreuzberg"
-source = "https://github.com/kreuzberg-dev/kreuzberg"
-```
-
-**Committing generated output** — every generated file carries a `Content-Hash` and a `Source-Hash` line. `Source-Hash` covers the whole source set, so editing one skill rewrites a line in every generated file. If you commit the output, keep headers stable:
-
-```toml
-[header]
-hashes = "content"   # "full" (default) | "content" (Content-Hash only) | "none"
-```
-
-**Roles** — map a job to the slice of the shared content a person needs, and render it for them. ai-rulez never does identity; an external tool (or you) picks the role name:
-
-```toml
-[[roles]]
-name = "backend-engineer"
-domains = ["shared", "backend"]
-[roles.skills]
-exclude = ["deploy-*"]
-[roles.skill_mode]
-"review-*" = "name-only"      # becomes Claude Code skillOverrides
-```
+## Validate
 
 ```bash
-ai-rulez roles list --format json
-ai-rulez generate --user --role backend-engineer
+ai-rulez validate                        # config plus content checks, exit 2 on findings
+ai-rulez validate --explain AR001        # what a rule checks and how to suppress it
+ai-rulez validate --format sarif --output ai-rulez.sarif
+ai-rulez okf validate docs/okf           # lint any OKF bundle, ai-rulez's or a third party's
+ai-rulez verify                          # generated files still match their headers
 ```
 
-See [Roles](docs/roles.md).
+## Govern
 
-**Supply-chain lock** — `ai-rulez lock` pins remote includes and skills by commit, and every rule, skill (with its scripts), hook and role plus the generated outputs by `sha256`. `lock --check` names each difference, `lock --diff --format json` feeds pull request review, `generate --locked` refuses a source that changed without a reviewed lock update. See [Lock file](docs/lockfile.md).
-
-## MCP Server
-
-ai-rulez includes a built-in MCP server (read, CRUD, generate, validate, doctor and verifier tools) that lets AI assistants manage their own governance. Add rules, update context, generate configs — all programmatically.
-
-```toml
-[[mcp_servers]]
-name = "ai-rulez"
-command = "npx"
-args = ["-y", "ai-rulez@latest", "mcp"]
+```bash
+ai-rulez lock                            # pin remote includes, installed skills and authored content
+ai-rulez approve --list                  # what still needs a reviewer's approval
+ai-rulez sign --lock                     # a Sigstore bundle (DSSE over an in-toto statement) for the lock
+ai-rulez verify --attestation            # check it offline against the [signing] policy
+ai-rulez sbom -o ai-bom.cdx.json         # CycloneDX 1.6 (or --format spdx-json)
 ```
 
-Or let `generate` add it for you. With `[mcp] self_server = true` the entry is merged into the project `.mcp.json`, pinned to the running ai-rulez version, without touching hand-authored servers or `.claude/settings.json`:
+An organization [policy](docs/policy.md) sets tighten-only floors a repository cannot loosen. See the
+[trust model](docs/trust-model.md).
 
-```toml
-[mcp]
-self_server = true
-```
+## Operate
+
+- **MCP server.** `ai-rulez mcp` lets an assistant manage the configuration; with `--serve-skills` it serves skills on
+  demand. See [MCP server](docs/mcp-server.md).
+- **Telemetry.** Item-load records with an optional OTLP export. See [telemetry](docs/telemetry.md).
+- **Evals and improve.** `ai-rulez eval` scores skills; `improve` (experimental) optimizes them behind a held-out eval
+  gate. See [evals](docs/evals.md) and [improve](docs/improve.md).
+- **Cost and inventory.** `tokens`, `cost`, `catalog` and `search` report what the configuration contains and costs.
+
+Existing project on 4.x? Run `ai-rulez migrate v5 --dry-run`, then see [Migrating to v5](docs/migration-v5.md).
 
 ## Installation
 
