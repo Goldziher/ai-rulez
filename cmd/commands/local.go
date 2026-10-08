@@ -80,17 +80,17 @@ var localInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create a commented config.local skeleton",
 	Args:  cobra.NoArgs,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		path, created, err := config.InitLocalOverlayAt(localConfigDir())
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if !created {
 			fmt.Printf("Local overlay already exists: %s\n", path)
-			return
+			return nil
 		}
 		fmt.Printf("Created %s (gitignored)\n", path)
+		return nil
 	},
 }
 
@@ -103,23 +103,20 @@ Values are withheld by default: only keys known to hold no credentials (name, de
 default, presets, profiles, defaults, rules, header, builtins, transport, enabled, ...) are
 printed; all others show their key path with <redacted>. Pass --reveal to print everything.`,
 	Args: cobra.NoArgs,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		overlay, changes, err := config.DescribeLocalOverlayAt(localConfigDir())
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if overlay == nil {
 			if localShowJSON {
-				fmtError(jsondoc.Write(os.Stdout, map[string]any{"overlay": nil, "changes": []any{}}))
-				return
+				return fail(jsondoc.Write(os.Stdout, map[string]any{"overlay": nil, "changes": []any{}}))
 			}
 			fmt.Println("No local overlay. Run 'ai-rulez local init' to create one.")
-			return
+			return nil
 		}
 		if localShowJSON {
-			printOverlayJSON(overlay, changes)
-			return
+			return fail(printOverlayJSON(overlay, changes))
 		}
 		fmt.Printf("local overlay: %s\n", overlay.Path)
 		for _, c := range changes {
@@ -131,6 +128,7 @@ printed; all others show their key path with <redacted>. Pass --reveal to print 
 			}
 			fmt.Printf("  %s: %s -> %s\n", c.Path, shownValue(c.Shared, c.HasShared, hide), shownValue(c.Local, true, hide))
 		}
+		return nil
 	},
 }
 
@@ -153,11 +151,10 @@ Examples:
   ai-rulez local set mcp_servers.github.command npx
   printf %s "$TOKEN" | ai-rulez local set mcp_servers.github.env.GITHUB_TOKEN --stdin`,
 	Args: cobra.RangeArgs(1, 2),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		path, err := config.ParseLocalPath(args[0])
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		file, err := editLocal(func(doc *config.LocalDoc) error {
 			raw, err := localSetValue(cmd, args)
@@ -167,10 +164,10 @@ Examples:
 			return doc.Set(path, parseLocalValue(path, raw, localSetString || localSetStdin))
 		})
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		logger.Info("Local overlay updated", "key", args[0], "file", file)
+		return nil
 	},
 }
 
@@ -178,11 +175,10 @@ var localUnsetCmd = &cobra.Command{
 	Use:   "unset <path>",
 	Short: "Remove a key from the local overlay",
 	Args:  cobra.ExactArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		path, err := config.ParseLocalPath(args[0])
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		file, err := editLocal(func(doc *config.LocalDoc) error {
 			if !doc.Exists() {
@@ -191,10 +187,10 @@ var localUnsetCmd = &cobra.Command{
 			return doc.Unset(path)
 		})
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		logger.Info("Local overlay updated", "removed", args[0], "file", file)
+		return nil
 	},
 }
 
@@ -217,13 +213,13 @@ var localPathCmd = &cobra.Command{
 	Use:   "path",
 	Short: "Print the local overlay file path",
 	Args:  cobra.NoArgs,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		doc, err := config.ViewLocalDocAt(localConfigDir())
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		fmt.Println(doc.Path)
+		return nil
 	},
 }
 
@@ -324,7 +320,7 @@ func shownValue(v any, present, redacted bool) string {
 	return strings.TrimSpace(string(data))
 }
 
-func printOverlayJSON(overlay *config.LocalOverlay, changes []config.OverlayChange) {
+func printOverlayJSON(overlay *config.LocalOverlay, changes []config.OverlayChange) error {
 	items := make([]map[string]any, 0, len(changes))
 	for _, c := range changes {
 		item := map[string]any{keyPath: c.Path, "redacted": c.Redacted, "shared_set": c.HasShared}
@@ -345,8 +341,5 @@ func printOverlayJSON(overlay *config.LocalOverlay, changes []config.OverlayChan
 		}
 		items = append(items, item)
 	}
-	if err := jsondoc.Write(os.Stdout, map[string]any{keyPath: overlay.Path, "changes": items}); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
+	return jsondoc.Write(os.Stdout, map[string]any{keyPath: overlay.Path, "changes": items})
 }

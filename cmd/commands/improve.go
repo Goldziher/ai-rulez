@@ -106,7 +106,7 @@ experiments. Exit status: 0 candidate accepted, 2 no acceptable candidate, 1 ref
 			return err
 		}
 		if noCandidate {
-			os.Exit(exitImproveNoCandidate)
+			return exitStatus(exitImproveNoCandidate)
 		}
 		return nil
 	},
