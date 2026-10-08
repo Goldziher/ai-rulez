@@ -242,6 +242,9 @@ func (g *Generator) cleanKeepsFile(output config.OutputFile, abs string, opts Cl
 	// user's own (a CLAUDE.md that `convert` imported and generate has not yet
 	// replaced), and being at the path proves nothing.
 	if !g.userMode && !g.projectFileIsOurs(abs, output) {
+		if _, err := os.Lstat(abs); err != nil {
+			return true // already gone (an earlier run removed it): nothing to keep, nothing to warn about
+		}
 		g.warnOnce("Keeping "+g.relSlash(abs)+": nothing shows ai-rulez wrote it",
 			"hint", g.keepReason(abs)+"; delete it by hand if it is not needed")
 		return true
