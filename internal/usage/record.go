@@ -175,7 +175,7 @@ type RecordOptions struct {
 // appends one log line to the configured sinks. It returns the entry written, or
 // nil when the event was not a skill invocation.
 func Record(in io.Reader, options RecordOptions) (*Entry, error) {
-	data, err := io.ReadAll(io.LimitReader(in, 4<<20))
+	data, err := safefs.ReadLimited(in, 4<<20)
 	if err != nil {
 		return nil, oops.Wrapf(err, "read hook event")
 	}
