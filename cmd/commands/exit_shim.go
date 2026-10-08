@@ -24,3 +24,10 @@ func fatal(msg string, err error) {
 	renderError(os.Stderr, failMsg(msg, err))
 	os.Exit(1)
 }
+
+func exitOn(err error) {
+	if err != nil {
+		renderError(os.Stderr, err)
+		os.Exit(exitCodeFor(err))
+	}
+}
