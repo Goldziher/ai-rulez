@@ -116,7 +116,7 @@ allow_network plus a model in the user config; --grader-max-cost caps its spend,
 			return err
 		}
 		if failed {
-			os.Exit(exitEvalFailed)
+			return exitStatus(exitEvalFailed)
 		}
 		return nil
 	},

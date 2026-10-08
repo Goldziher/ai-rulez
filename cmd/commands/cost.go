@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/cost"
@@ -35,15 +34,15 @@ biggest offenders.
 
 Counts are approximations (Claude's tokenizer is not published).`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		exceeded, err := runCost(cmd, args)
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if exceeded {
-			os.Exit(budgetExceededExitCode)
+			return exitStatus(budgetExceededExitCode)
 		}
+		return nil
 	},
 }
 
