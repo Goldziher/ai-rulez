@@ -2,9 +2,9 @@ package govview
 
 import (
 	"context"
-
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/samber/oops"
@@ -192,18 +192,22 @@ const KindContent = "content"
 // LockKinds lists the values FilterChanges accepts.
 var LockKinds = []string{lockfile.KindInclude, lockfile.KindSkill, lockfile.KindSource, lockfile.KindServed, KindContent}
 
+// CheckKind rejects a kind FilterChanges does not know; empty is allowed.
+func CheckKind(kind string) error {
+	if kind == "" || slices.Contains(LockKinds, kind) {
+		return nil
+	}
+	return oops.Errorf("unknown kind %q (use %s)", kind, strings.Join(LockKinds, ", "))
+}
+
 // FilterChanges keeps the changes of one kind (see LockKinds); empty keeps all.
 // The diff's in_sync stays that of the whole comparison.
 func FilterChanges(diff *contentlock.Diff, kind string) error {
 	if kind == "" {
 		return nil
 	}
-	known := false
-	for _, k := range LockKinds {
-		known = known || k == kind
-	}
-	if !known {
-		return oops.Errorf("unknown kind %q (use %s)", kind, strings.Join(LockKinds, ", "))
+	if err := CheckKind(kind); err != nil {
+		return err
 	}
 	kept := []contentlock.Change{}
 	for i := range diff.Changes {
