@@ -65,7 +65,7 @@ func TestDryRun_ListsTheConvertedCommandItRemoves(t *testing.T) {
 
 	// Assert
 	require.NoError(t, err)
-	assert.Contains(t, lines, "delete-stale: .claude/commands/daily.md")
+	assert.Contains(t, lines, "delete-stale: "+filepath.FromSlash(".claude/commands/daily.md"))
 	assert.FileExists(t, original, "a dry run writes nothing")
 }
 

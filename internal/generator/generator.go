@@ -440,14 +440,14 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	lines := make([]string, 0, len(outputs)+1)
 	lines = append(lines, "plugin bundle:")
 	for _, output := range outputs {
-		lines = append(lines, "write-file: "+g.convertToRelativePath(g.absOutputPath(output.Path)))
+		lines = append(lines, "write-file: "+filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path))))
 	}
 	stale, err := g.stalePluginDirs()
 	if err != nil {
 		return nil, err
 	}
 	for _, dir := range stale {
-		lines = append(lines, "delete-stale: "+g.convertToRelativePath(dir))
+		lines = append(lines, "delete-stale: "+filepath.ToSlash(g.convertToRelativePath(dir)))
 	}
 	obsolete, err := g.planPluginPrune(outputs)
 	if err != nil {
@@ -907,7 +907,7 @@ func (g *Generator) planLines(outputs []config.OutputFile) []string {
 			continue
 		}
 		if output.IsDir {
-			lines = append(lines, "create-dir: "+filepath.ToSlash(relPath))
+			lines = append(lines, "create-dir: "+relPath)
 			continue
 		}
 		if g.linkedOutputs[filepath.ToSlash(relPath)] {
@@ -918,11 +918,11 @@ func (g *Generator) planLines(outputs []config.OutputFile) []string {
 		switch {
 		case !compared:
 		case rewrite:
-			lines = append(lines, "write-file: "+filepath.ToSlash(relPath))
+			lines = append(lines, "write-file: "+relPath)
 		case kind == DriftEdited:
-			lines = append(lines, "edited: "+filepath.ToSlash(relPath))
+			lines = append(lines, "edited: "+relPath)
 		default:
-			lines = append(lines, "unchanged: "+filepath.ToSlash(relPath))
+			lines = append(lines, "unchanged: "+relPath)
 		}
 	}
 	return lines
