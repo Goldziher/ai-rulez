@@ -20,6 +20,7 @@ import (
 // to the hook's repository. Do not add a non-test file here.
 var directGitTestAllowList = map[string]bool{
 	"internal/config/bundle_exclude_test.go":          true,
+	"internal/config/local_overlay_tracked_test.go":   true,
 	"internal/doctor/doctor_test.go":                  true,
 	"internal/generator/generic_sidecars_e2e_test.go": true,
 	"internal/generator/gitignore_matrix_test.go":     true,

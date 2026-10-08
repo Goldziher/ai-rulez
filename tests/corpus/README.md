@@ -84,7 +84,7 @@ git or https (`[[includes]]`, `[[installed_skills]]`, `[[skill_sources]]`).
 
 ## Layout
 
-```
+```text
 run.sh                 entry point: arguments, snapshots, summary
 lib/common.sh          results, the hermetic ai-rulez wrapper, the phase runner
 lib/repo.sh            snapshots, config probes, prep helpers

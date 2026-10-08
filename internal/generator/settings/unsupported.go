@@ -15,7 +15,7 @@ import (
 // allow-list mechanism, or one whose format is not verified against vendor
 // documentation. User-level-only permission harnesses are named in a project run.
 // The `mcp`, `okf` and `llms-txt` presets are not harnesses and are ignored. The result is sorted.
-func UnsupportedDiagnostics(cfg *config.Config) []string {
+func UnsupportedDiagnostics(cfg *config.Config) []string { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	if cfg == nil {
 		return nil
 	}

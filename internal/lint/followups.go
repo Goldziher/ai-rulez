@@ -37,7 +37,7 @@ var now = ambient.Clock(nil).Now
 // Agent Skills specification, the Claude Code skill and subagent references,
 // and the keys ai-rulez itself reads from frontmatter.
 var (
-	specKeys = []string{"name", keyDescription, "license", "compatibility", "metadata", "allowed-tools"}
+	specKeys = []string{"name", keyDescription, "license", "compatibility", keyMetadata, "allowed-tools"}
 	// claudeSkillKeys are the documented Claude Code skill and command keys.
 	claudeSkillKeys = []string{
 		"when_to_use", "argument-hint", "arguments", "disable-model-invocation", "user-invocable",
@@ -71,7 +71,7 @@ func (r *runner) knownKeys(kind string) map[string]bool {
 		}
 	}
 	// type, title and x-ai-rulez are the OKF layer of a concept (see "migrate okf").
-	add(specKeys, ownKeys, r.lc.AllowedKeys, []string{"type", "title", okf.ExtensionKey})
+	add(specKeys, ownKeys, r.lc.AllowedKeys, []string{keyType, "title", okf.ExtensionKey})
 	switch kind {
 	case kindSkill, kindCommand:
 		add(claudeSkillKeys)
