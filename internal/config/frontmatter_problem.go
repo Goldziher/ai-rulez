@@ -12,6 +12,9 @@ import (
 // is reported under by `validate`.
 const CodeFrontmatterMalformed = "AR306"
 
+// frontmatterFence is the line that opens and closes a frontmatter block.
+const frontmatterFence = "---"
+
 // FrontmatterProblem says why the frontmatter of the file at path cannot be used,
 // as "path:line: reason". The loader only records that a block was unusable; this
 // reads the file again to find the line and the parser's own error. It never
@@ -24,13 +27,13 @@ func FrontmatterProblem(path string) string {
 	lines := strings.Split(string(data), "\n")
 	end := -1
 	for i := 1; i < len(lines); i++ {
-		if strings.TrimSpace(lines[i]) == "---" {
+		if strings.TrimSpace(lines[i]) == frontmatterFence {
 			end = i
 			break
 		}
 	}
 	if end == -1 {
-		return path + ":1: the frontmatter opened with --- never closes with ---"
+		return path + ":1: the frontmatter opened with " + frontmatterFence + " never closes with " + frontmatterFence
 	}
 	var out map[string]any
 	err = yaml.Unmarshal([]byte(strings.Join(lines[1:end], "\n")), &out)
