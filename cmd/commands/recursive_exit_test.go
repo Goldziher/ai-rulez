@@ -132,7 +132,8 @@ func TestValidateCmd_HonoursQuietFlag(t *testing.T) {
 	t.Cleanup(func() { viper.Set("quiet", false) })
 	validateRecursive = true
 
-	_ = ValidateCmd.RunE(ValidateCmd, nil)
+	err := ValidateCmd.RunE(ValidateCmd, nil)
+	t.Logf("RunE: %v", err)
 
 	if !progress.IsQuiet() {
 		t.Error("validate must apply --quiet to progress output")
