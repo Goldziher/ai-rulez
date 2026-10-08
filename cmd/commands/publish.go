@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -127,12 +126,12 @@ LockTree, LockDigest, Files; function: json) into <dist>/emit/.
 
 Exit codes: 0 done, 1 the run could not complete, 2 a gate failed.`,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 		if ctx == nil {
 			ctx = cmdContext()
 		}
-		exitPublish(runPublish(ctx, cmd.OutOrStdout()))
+		return publishFailure(runPublish(ctx, cmd.OutOrStdout()))
 	},
 }
 
@@ -156,12 +155,12 @@ signature (with --trusted-root, else the root "ai-rulez trust update" cached).
 
 Exit codes: 0 verified, 1 the directory cannot be read, 2 a mismatch.`,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		if ctx == nil {
 			ctx = cmdContext()
 		}
-		exitPublish(runPublishVerify(ctx, cmd.OutOrStdout(), args[0]))
+		return publishFailure(runPublishVerify(ctx, cmd.OutOrStdout(), args[0]))
 	},
 }
 
@@ -176,13 +175,13 @@ Emitters: cursor-team-marketplace, agent-plugins and ard (verified), port,
 aws-agent-registry and kiro-steering (experimental: they need --experimental and carry no vendor
 schema to test against).`,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		if ctx == nil {
 			ctx = cmdContext()
 		}
 		publishEmit = []string{args[0]}
-		exitPublish(runPublishEmit(ctx, cmd.OutOrStdout(), args[0]))
+		return publishFailure(runPublishEmit(ctx, cmd.OutOrStdout(), args[0]))
 	},
 }
 
@@ -248,21 +247,17 @@ func addPublishSignFlags(f interface {
 	f.BoolVar(&publishSignTLog, "sign-tlog", false, "With --sign-key: also record the signature in the Rekor transparency log (network; public log)")
 }
 
-// exitPublish prints err and exits with the status it carries.
-func exitPublish(err error) {
+// publishFailure turns err into the command's failure: a publish.Error carries
+// its own exit status and hint, any other error exits 1.
+func publishFailure(err error) error {
 	if err == nil {
-		return
+		return nil
 	}
 	var pe *publish.Error
 	if errors.As(err, &pe) {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", pe.Error())
-		if pe.Hint != "" {
-			fmt.Fprintf(os.Stderr, "\nHint: %s\n", pe.Hint)
-		}
-		os.Exit(pe.Exit)
+		return failWithCode(pe.Exit, oops.Hint(pe.Hint).Errorf("%s", pe.Error()))
 	}
-	fmtError(err)
-	os.Exit(1)
+	return failWithCode(exitFailure, err)
 }
 
 func checkPublishFlags() error {

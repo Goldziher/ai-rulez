@@ -112,10 +112,8 @@ Run it after the final "ai-rulez lock": any change to the lock invalidates the
 signature. Exit codes: 0 signed, 1 the command could not run, 2 the lock is
 stale (its tree does not match its entries).`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
-		if code := runSign(cmdContext(), args, nil); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(_ *cobra.Command, args []string) error {
+		return exitStatus(runSign(cmdContext(), args, nil))
 	},
 }
 
@@ -252,7 +250,7 @@ func loadSignLock(ctx context.Context, args []string) (*config.Config, *lockfile
 // and returns the exit code.
 func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	if err := validateSignFlags(); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if signPolicy != "" {
@@ -263,23 +261,23 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 	}
 	cfg, lock, err := loadSignLock(ctx, args)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	meta := signing.LockMeta{Version: Version, Now: time.Now(), EmbedItems: signEmbedItems}
 	meta.Repository, meta.Ref = detectRepo(ctx, cfg.BaseDir, env)
 	signer, err := newSigner(ctx, env)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if err := exportPublicKey(signer); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	bundle, err := signing.SignLock(ctx, signer, lock, meta)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		if signing.CodeOf(err) == signing.CodeSubjectMismatch {
 			return exitDrift
 		}
@@ -290,11 +288,11 @@ func runSign(ctx context.Context, args []string, env ambient.Env) int {
 		out = filepath.Join(cfg.ConfigDir, filepath.FromSlash(attestationName(cfg)))
 	}
 	if out, err = appendTarget(out); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if err := writeBundle(out, bundle); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
