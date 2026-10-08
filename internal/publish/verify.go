@@ -21,6 +21,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/publish/oci"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // maxVerifyBytes caps what verify reads: each dist file and the total
@@ -631,7 +632,7 @@ func readArchiveManifests(data []byte) ([]FileEntry, map[string][]byte, error) {
 			return nil, nil, oops.Errorf("archive exceeds the %d byte verification limit", maxVerifyBytes)
 		}
 		total += hdr.Size
-		body, err := io.ReadAll(io.LimitReader(tr, hdr.Size+1))
+		body, err := safefs.ReadLimited(tr, hdr.Size)
 		if err != nil || int64(len(body)) != hdr.Size {
 			return nil, nil, oops.Errorf("archive entry %q is truncated", hdr.Name)
 		}
@@ -654,7 +655,7 @@ func readRegular(path string) ([]byte, error) {
 	if info.Size() > maxVerifyBytes {
 		return nil, oops.Errorf("%s exceeds the %d byte verification limit", filepath.Base(path), maxVerifyBytes)
 	}
-	data, err := os.ReadFile(path) //nolint:gosec // an explicit dist directory chosen by the caller
+	data, err := safefs.ReadFileLimited(path, maxVerifyBytes)
 	return data, oops.Wrap(err)
 }
 

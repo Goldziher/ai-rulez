@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -87,7 +86,7 @@ func skillText(cfg *config.Config, f *config.ContentFile) string {
 	if !filepath.IsAbs(p) {
 		p = filepath.Join(cfg.BaseDir, p)
 	}
-	if data, err := os.ReadFile(p); err == nil { //nolint:gosec // the project's own skill file
+	if data, err := safefs.ReadFileLimited(p, maxPublishInputBytes); err == nil { // the project's own skill file
 		return string(data)
 	}
 	return f.Content

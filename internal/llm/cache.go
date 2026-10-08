@@ -8,10 +8,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // CacheVersion is bumped when the on-disk entry format or key derivation changes.
@@ -118,14 +119,7 @@ func readCapped(p string) ([]byte, error) {
 		return nil, err
 	}
 	defer f.Close()
-	b, err := io.ReadAll(io.LimitReader(f, maxCacheEntryBytes+1))
-	if err != nil {
-		return nil, err
-	}
-	if len(b) > maxCacheEntryBytes {
-		return nil, errors.New("cache entry too large")
-	}
-	return b, nil
+	return safefs.ReadLimited(f, maxCacheEntryBytes) //nolint:wrapcheck // the caller drops the entry on any error
 }
 
 func (c *Cache) store(key string, v any) {

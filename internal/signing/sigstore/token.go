@@ -3,7 +3,6 @@ package sigstore
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 const (
@@ -74,7 +74,7 @@ func githubToken(ctx context.Context, client *http.Client, requestURL, requestTo
 		return "", oops.Wrapf(err, "request the GitHub Actions identity token")
 	}
 	defer resp.Body.Close() //nolint:errcheck // read-only
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxTokenBody))
+	body, err := safefs.ReadLimited(resp.Body, maxTokenBody)
 	if err != nil {
 		return "", oops.Wrapf(err, "read the GitHub Actions identity token")
 	}
