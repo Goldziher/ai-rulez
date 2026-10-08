@@ -410,7 +410,7 @@ func envNameFor(key string) string {
 
 func matchesBuiltinSecret(v string) bool {
 	for _, p := range builtinSecrets {
-		if p.re.MatchString(v) {
+		if p.mayMatch(v) && p.re.MatchString(v) {
 			return true
 		}
 	}

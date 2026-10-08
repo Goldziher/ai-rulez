@@ -230,7 +230,7 @@ func (r *runner) checkScripts(it *item) {
 		}
 		abs := filepath.Join(it.itemDir, filepath.FromSlash(res.RelPath))
 		exe, known := res.Mode&0o111 != 0, true
-		if rel := r.tree.Rel(abs); rel != "" {
+		if rel := r.rel(abs); rel != "" {
 			if e, k := r.tree.Executable(rel); k {
 				exe, known = e, k
 			}

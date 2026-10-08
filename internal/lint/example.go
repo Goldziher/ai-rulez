@@ -118,7 +118,7 @@ func (r *runner) examplePath(abs string) bool {
 	if len(r.exampleGlobs) == 0 {
 		return false
 	}
-	cands := []string{r.tree.Rel(abs)}
+	cands := []string{r.rel(abs)}
 	cands = append(cands, r.configRel(abs))
 	for _, c := range cands {
 		for _, g := range r.exampleGlobs {
