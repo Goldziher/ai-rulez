@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // NativeClient is the byte-level surface of the liter-llm binding as this
@@ -301,7 +303,7 @@ func (l *literLLM) embedEach(ctx context.Context, model string, req EmbedRequest
 		}
 		var res *reservation
 		if out.Requests > 0 {
-			if res, err = sub.reserve(Usage{PromptTokens: EstimateTokens(in)}); err != nil {
+			if res, err = sub.reserve(Usage{PromptTokens: tokens.Estimate(in)}); err != nil {
 				return failed(err)
 			}
 		}

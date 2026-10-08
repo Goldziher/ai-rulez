@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // collapsingNative answers every embed with one vector, like Gemini's native route behind
@@ -79,7 +81,7 @@ func TestEmbedFallbackShouldChargeTheRequestsMadeBeforeAFailure(t *testing.T) {
 	b := NewBudget(Limits{MaxCalls: 100}, NewPricing(Config{}))
 	c := WithBudget(l, b, "gemini/m", "gemini/e")
 	in := embedInputs(5)
-	failedWorst := EstimateTokens(in[2])
+	failedWorst := tokens.Estimate(in[2])
 
 	// Act
 	_, err := c.Embed(context.Background(), EmbedRequest{Input: in})
