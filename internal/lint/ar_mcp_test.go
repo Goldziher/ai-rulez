@@ -68,7 +68,7 @@ func TestMCPSecretsAR015(t *testing.T) {
 		{name: "literal env by key name", files: mcpJSON(`{"a":{"command":"node","env":{"API_KEY":"s3cr3t-value-123"}}}`), want: []string{"AR015:.mcp.json:1"}},
 		{name: "env reference is fine", files: mcpJSON(`{"a":{"command":"node","env":{"GITHUB_TOKEN":"${GITHUB_TOKEN}","API_KEY":"$API_KEY"}}}`), absent: []string{"AR015"}},
 		{name: "non secret env", files: mcpJSON(`{"a":{"command":"node","env":{"LOG_LEVEL":"debug","AUTH_URL":"https://auth.example.com/login","TOKEN_FILE":"/run/secrets/token"}}}`), absent: []string{"AR015"}},
-		{name: "placeholder", files: mcpJSON(`{"a":{"command":"node","env":{"API_KEY":"your-api-key-here","TOKEN":"xxxxxxxx"}}}`), absent: []string{"AR015"}},
+		{name: "placeholder()", files: mcpJSON(`{"a":{"command":"node","env":{"API_KEY":"your-api-key-here","TOKEN":"xxxxxxxx"}}}`), absent: []string{"AR015"}},
 		{name: "literal authorization header", files: mcpJSON(`{"a":{"type":"http","url":"https://x.test/mcp","headers":{"Authorization":"Bearer abcdef1234567890abcdef"}}}`), want: []string{"AR015:.mcp.json:1"}},
 		{name: "header reference", files: mcpJSON(`{"a":{"type":"http","url":"https://x.test/mcp","headers":{"Authorization":"Bearer ${TOKEN}","X-Api-Key":"${env:KEY}"}}}`), absent: []string{"AR015"}},
 		{name: "token flag", files: mcpJSON(`{"a":{"command":"node","args":["s.js","--api-key","abcdef1234567890"]}}`), want: []string{"AR015:.mcp.json:1"}},

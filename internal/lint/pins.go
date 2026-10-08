@@ -4,6 +4,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // shellWords splits a command line into words, honoring single and double quotes.
@@ -41,11 +42,13 @@ func shellWords(s string) []string {
 }
 
 var (
-	versionPinRe = regexp.MustCompile(`^(?:==|=|@)?[v=]?[\^~]?\d`)
-	hexRefRe     = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
+	versionPinRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(?:==|=|@)?[v=]?[\^~]?\d`) })
+	hexRefRe     = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[0-9a-f]{7,40}$`) })
 	// versionRangeRe matches an npm version that selects a range, not a release:
 	// ^1.2.0, ~1.2, >=1, 1, 1.2, 1.x, *.
-	versionRangeRe = regexp.MustCompile(`^(?:(?:[\^~]|>=?|<=?)\s*v?\d.*|[*xX]|v?\d+(?:\.(?:\d+|[xX*]))?(?:\.[xX*])?)$`)
+	versionRangeRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^(?:(?:[\^~]|>=?|<=?)\s*v?\d.*|[*xX]|v?\d+(?:\.(?:\d+|[xX*]))?(?:\.[xX*])?)$`)
+	})
 )
 
 // pinOf splits "pkg@1.2.3" / "@scope/pkg@1.2.3" into name and version ("" when none).
@@ -63,7 +66,7 @@ func gitShorthandProblem(spec string) (why string, isShorthand bool) {
 	if !ok || (host != FormatGitHub && host != "gitlab" && host != "bitbucket") {
 		return "", false
 	}
-	if _, ref, has := strings.Cut(rest, "#"); has && (hexRefRe.MatchString(ref) || versionPinRe.MatchString(ref)) {
+	if _, ref, has := strings.Cut(rest, "#"); has && (hexRefRe().MatchString(ref) || versionPinRe().MatchString(ref)) {
 		return "", true
 	}
 	return "the " + host + " shorthand has no #<commit> pin, so it follows the default branch", true
@@ -81,13 +84,13 @@ func npmPinProblem(spec string) string {
 	}
 	_, ver := pinOf(spec)
 	switch {
-	case versionRangeRe.MatchString(ver):
+	case versionRangeRe().MatchString(ver):
 		return "@" + ver + " is a moving version range"
 	case strings.ContainsAny(ver, "<>${}"):
-		return "" // a placeholder in documentation
+		return "" // a placeholder() in documentation
 	case ver == "":
 		return whyNoVersionPinned
-	case versionPinRe.MatchString(ver):
+	case versionPinRe().MatchString(ver):
 		return ""
 	default:
 		return "@" + ver + " is a moving tag"
@@ -108,7 +111,7 @@ func pythonPinProblem(spec string) string {
 			if j := strings.IndexAny(ref, "#?"); j >= 0 {
 				ref = ref[:j]
 			}
-			if hexRefRe.MatchString(ref) || versionPinRe.MatchString(ref) {
+			if hexRefRe().MatchString(ref) || versionPinRe().MatchString(ref) {
 				return ""
 			}
 			return "the git ref @" + ref + " is a moving ref"
@@ -119,7 +122,7 @@ func pythonPinProblem(spec string) string {
 		return "it installs from a URL"
 	}
 	if _, ver := pinOf(spec); ver != "" { // uvx pkg@1.2.3 / pkg@latest
-		if versionPinRe.MatchString(ver) {
+		if versionPinRe().MatchString(ver) {
 			return ""
 		}
 		return "@" + ver + " is a moving tag"

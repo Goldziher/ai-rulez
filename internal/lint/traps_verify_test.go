@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -48,19 +49,21 @@ func repoMaxTableAgeDays() int {
 }
 
 var (
-	tagRe   = regexp.MustCompile(`(?s)<[^>]*>`)
-	spaceRe = regexp.MustCompile(`\s+`)
+	tagRe   = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?s)<[^>]*>`) })
+	spaceRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\s+`) })
 )
 
 // inlineTagRe matches elements that format a run of text without separating
 // words, so a page that wraps part of a word in one still contains the quote.
-var inlineTagRe = regexp.MustCompile(`(?is)</?(code|a|span|em|strong|b|i|u|kbd|mark|small|sub|sup)(\s[^>]*)?>`)
+var inlineTagRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?is)</?(code|a|span|em|strong|b|i|u|kbd|mark|small|sub|sup)(\s[^>]*)?>`)
+})
 
 func normaliseQuote(s string) string {
-	s = inlineTagRe.ReplaceAllString(s, "")
-	s = tagRe.ReplaceAllString(s, " ")
+	s = inlineTagRe().ReplaceAllString(s, "")
+	s = tagRe().ReplaceAllString(s, " ")
 	s = strings.NewReplacer("`", "", "*", "", "’", "'", "&#x27;", "'", "&quot;", `"`, "&amp;", "&", " ", " ").Replace(s)
-	return strings.ToLower(spaceRe.ReplaceAllString(s, " "))
+	return strings.ToLower(spaceRe().ReplaceAllString(s, " "))
 }
 
 type quoteRow struct{ id, source, quote string }

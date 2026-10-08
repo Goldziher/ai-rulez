@@ -268,9 +268,9 @@ func TestStagedConfigProblems(t *testing.T) {
 		want string
 	}{
 		{"unknown input", "egress = false\ninputs = [\"everything\"]\n", `inputs "everything"`},
-		{"placeholder without inputs", "egress = false\nargs = \"{stage}\"\n", "needs inputs"},
-		{"unknown placeholder", "egress = false\ninputs = [\"skills\"]\nargs = \"{nope}\"\n", "unknown placeholder {nope}"},
-		{"list placeholder inside a word", "egress = false\ninputs = [\"skills\"]\nargs = \"--in={files}\"\n", "argument on its own"},
+		{"placeholder() without inputs", "egress = false\nargs = \"{stage}\"\n", "needs inputs"},
+		{"unknown placeholder()", "egress = false\ninputs = [\"skills\"]\nargs = \"{nope}\"\n", "unknown placeholder() {nope}"},
+		{"list placeholder() inside a word", "egress = false\ninputs = [\"skills\"]\nargs = \"--in={files}\"\n", "argument on its own"},
 		{"bad severity_map value", "egress = false\nseverity_map = { \"X*\" = \"scary\" }\n", "severity_map"},
 		{"bad max_severity", "egress = false\nmax_severity = \"huge\"\n", "max_severity"},
 	}

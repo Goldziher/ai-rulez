@@ -7,20 +7,27 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 var (
 	// "`name` skill", "`name` agent", "`name` rule": hyphenated names only, since
 	// a bare word in backticks before "skill" is usually prose.
-	nameAfterRe  = regexp.MustCompile("`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`\\s+(skill|subagent|agent|rule)s?\\b")
-	nameBeforeRe = regexp.MustCompile("\\b(skill|subagent|agent)\\s+`([a-z][a-z0-9_-]*)`")
-	slashRe      = regexp.MustCompile(`(?:^|[\s(])/([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?:[\s,;:)]|\.(?:\s|$)|$)`)
-	tickSlashRe  = regexp.MustCompile(`^/([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?:\s|$)`)
-	skillCallRe  = regexp.MustCompile(`\bSkill\(\s*["']?([a-z][a-z0-9-]*)["']?\s*\)`)
-	subagentRe   = regexp.MustCompile(`\bsubagent_type["']?\s*[:=]\s*["']([a-z][a-z0-9-]*)["']`)
-	skillRelRe   = regexp.MustCompile(`^(references|scripts|assets)/`)
-	extRe        = regexp.MustCompile(`^\.[A-Za-z0-9]{1,6}$`)
-	fragLineRe   = regexp.MustCompile(`^L\d+`)
+	nameAfterRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile("`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`\\s+(skill|subagent|agent|rule)s?\\b")
+	})
+	nameBeforeRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile("\\b(skill|subagent|agent)\\s+`([a-z][a-z0-9_-]*)`") })
+	slashRe      = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?:^|[\s(])/([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?:[\s,;:)]|\.(?:\s|$)|$)`)
+	})
+	tickSlashRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^/([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?:\s|$)`) })
+	skillCallRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\bSkill\(\s*["']?([a-z][a-z0-9-]*)["']?\s*\)`) })
+	subagentRe  = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`\bsubagent_type["']?\s*[:=]\s*["']([a-z][a-z0-9-]*)["']`)
+	})
+	skillRelRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(references|scripts|assets)/`) })
+	extRe      = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\.[A-Za-z0-9]{1,6}$`) })
+	fragLineRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^L\d+`) })
 )
 
 func looksPlaceholder(name string) bool {
@@ -42,9 +49,9 @@ func (r *runner) scanBody(it *item, d doc) {
 		for _, target := range linkTargets(l.Plain) {
 			r.checkLink(it, l.No, target)
 		}
-		for _, m := range backtickRe.FindAllStringSubmatchIndex(l.Text, -1) {
+		for _, m := range backtickRe().FindAllStringSubmatchIndex(l.Text, -1) {
 			tok := l.Text[m[2]:m[3]]
-			if tickSlashRe.MatchString(strings.TrimSpace(tok)) && !slashInvocation(l.Text[:m[0]]) {
+			if tickSlashRe().MatchString(strings.TrimSpace(tok)) && !slashInvocation(l.Text[:m[0]]) {
 				continue // `/api-docs` in prose is a route, not a command
 			}
 			r.checkToken(it, l.No, tok, func() bool { return r.pathNotAClaim(l.Text, prev, m[2], m[3]) })
@@ -62,7 +69,7 @@ func (r *runner) existsAbs(abs string) bool {
 }
 
 func (r *runner) checkLink(it *item, line int, target string) {
-	if target == "" || schemeRe.MatchString(target) || strings.HasPrefix(target, "//") {
+	if target == "" || schemeRe().MatchString(target) || strings.HasPrefix(target, "//") {
 		return
 	}
 	pathPart, frag, _ := strings.Cut(target, "#")
@@ -107,7 +114,7 @@ func (r *runner) checkLink(it *item, line int, target string) {
 }
 
 func (r *runner) checkAnchor(it *item, line int, file, frag, target string) {
-	if frag == "" || fragLineRe.MatchString(frag) || !strings.HasSuffix(strings.ToLower(file), ".md") {
+	if frag == "" || fragLineRe().MatchString(frag) || !strings.HasSuffix(strings.ToLower(file), ".md") {
 		return
 	}
 	var raw string
@@ -133,11 +140,11 @@ func (r *runner) checkAnchor(it *item, line int, file, frag, target string) {
 // regular expressions, so it is only asked for a token that looks like a path.
 func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() bool) {
 	tok = strings.TrimSpace(tok)
-	if m := tickSlashRe.FindStringSubmatch(tok); m != nil {
+	if m := tickSlashRe().FindStringSubmatch(tok); m != nil {
 		r.requireName(it, line, m[1], kindCommand, r.commands, r.skills)
 		return
 	}
-	tok = lineSuffixRe.ReplaceAllString(strings.TrimRight(tok, ".,;:"), "")
+	tok = lineSuffixRe().ReplaceAllString(strings.TrimRight(tok, ".,;:"), "")
 	if !pathLike(tok) {
 		return
 	}
@@ -145,7 +152,7 @@ func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() boo
 	if notAClaim() {
 		return
 	}
-	if m := skillRelRe.FindString(tok); m != "" {
+	if m := skillRelRe().FindString(tok); m != "" {
 		if r.checkSkillRelative(it, line, tok, m) {
 			return
 		}
@@ -169,14 +176,14 @@ func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() boo
 // pathLike filters out tokens that are prose, placeholders, URLs, bazel labels,
 // absolute or parent-relative paths, or dotted symbols such as helpers.run_async.
 func pathLike(tok string) bool {
-	if tok == "" || strings.Contains(tok, ":") || placeholder.MatchString(tok) {
+	if tok == "" || strings.Contains(tok, ":") || placeholder().MatchString(tok) {
 		return false
 	}
 	if strings.HasPrefix(tok, "~") || strings.HasPrefix(tok, "/") || strings.HasPrefix(tok, "../") {
 		return false
 	}
 	ext := path.Ext(tok)
-	return ext == "" || extRe.MatchString(ext)
+	return ext == "" || extRe().MatchString(ext)
 }
 
 func (r *runner) allowed(tok string) bool {
@@ -240,7 +247,7 @@ func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[
 }
 
 var (
-	listMarkerRe = regexp.MustCompile(`^(?:[-*+>]|\d+[.)])\s+`)
+	listMarkerRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(?:[-*+>]|\d+[.)])\s+`) })
 	invokeWords  = map[string]bool{
 		"run": true, "runs": true, "invoke": true, "invokes": true, "type": true, "use": true,
 		"call": true, hookTypeCommand: true, "commands": true, "slash": true, "execute": true, "try": true, "via": true, "or": true, "then": true,
@@ -253,8 +260,8 @@ var (
 // route or a URL path, which must not be reported as a missing command.
 func slashInvocation(before string) bool {
 	before = strings.TrimSpace(before)
-	for listMarkerRe.MatchString(before + " ") {
-		before = strings.TrimSpace(listMarkerRe.ReplaceAllString(before+" ", ""))
+	for listMarkerRe().MatchString(before + " ") {
+		before = strings.TrimSpace(listMarkerRe().ReplaceAllString(before+" ", ""))
 	}
 	if before == "" {
 		return true
@@ -265,7 +272,7 @@ func slashInvocation(before string) bool {
 }
 
 func (r *runner) checkNames(it *item, l bodyLine) {
-	for _, m := range nameAfterRe.FindAllStringSubmatch(l.Text, -1) {
+	for _, m := range nameAfterRe().FindAllStringSubmatch(l.Text, -1) {
 		switch m[2] {
 		case "skill":
 			r.requireName(it, l.No, m[1], "skill", r.skills, r.commands)
@@ -275,23 +282,23 @@ func (r *runner) checkNames(it *item, l bodyLine) {
 			r.requireName(it, l.No, m[1], "agent", r.agents)
 		}
 	}
-	for _, m := range nameBeforeRe.FindAllStringSubmatch(l.Text, -1) {
+	for _, m := range nameBeforeRe().FindAllStringSubmatch(l.Text, -1) {
 		if m[1] == "skill" {
 			r.requireName(it, l.No, m[2], "skill", r.skills, r.commands)
 		} else {
 			r.requireName(it, l.No, m[2], "agent", r.agents)
 		}
 	}
-	for _, m := range slashRe.FindAllStringSubmatchIndex(l.Plain, -1) {
+	for _, m := range slashRe().FindAllStringSubmatchIndex(l.Plain, -1) {
 		if !slashInvocation(l.Plain[:m[2]-1]) {
 			continue // "GET /user-profile" is a route, not a command
 		}
 		r.requireName(it, l.No, l.Plain[m[2]:m[3]], kindCommand, r.commands, r.skills)
 	}
-	for _, m := range skillCallRe.FindAllStringSubmatch(l.Text, -1) {
+	for _, m := range skillCallRe().FindAllStringSubmatch(l.Text, -1) {
 		r.requireName(it, l.No, m[1], "skill", r.skills, r.commands)
 	}
-	for _, m := range subagentRe.FindAllStringSubmatch(l.Text, -1) {
+	for _, m := range subagentRe().FindAllStringSubmatch(l.Text, -1) {
 		r.requireName(it, l.No, m[1], "agent", r.agents)
 	}
 }

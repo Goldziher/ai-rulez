@@ -3,6 +3,7 @@ package lint
 import (
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // Codes for the markdown shape checks. Both have a safe fix (`validate --fix`).
@@ -35,7 +36,7 @@ func registerArMarkdown(s *ruleSet) {
 func unclosedFence(d doc) (run string, line int, open bool) {
 	var cur string
 	for i := d.bodyStart; i < len(d.lines); i++ {
-		m := fenceRe.FindStringSubmatch(d.lines[i])
+		m := fenceRe().FindStringSubmatch(d.lines[i])
 		if m == nil {
 			continue
 		}
@@ -80,7 +81,9 @@ func (r *runner) checkMarkdownShape(it *item, d doc, raw string) {
 	}
 }
 
-var quotedBoolRe = regexp.MustCompile(`(?i)^(\s*[^:]+:\s*)(["'])(true|false)(["'])(\s*(?:#.*)?)$`)
+var quotedBoolRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?i)^(\s*[^:]+:\s*)(["'])(true|false)(["'])(\s*(?:#.*)?)$`)
+})
 
 // boolCoercion is the fix for a boolean frontmatter key written as a quoted
 // string: the same line with the value unquoted. nil when the line is not that
@@ -90,7 +93,7 @@ func boolCoercion(it *item, d doc, k fmKey) *Fix {
 		return nil
 	}
 	line := d.lines[k.Line-1]
-	m := quotedBoolRe.FindStringSubmatch(line)
+	m := quotedBoolRe().FindStringSubmatch(line)
 	if len(m) == 0 || m[2] != m[4] || !strings.Contains(m[1], k.Name) {
 		return nil
 	}

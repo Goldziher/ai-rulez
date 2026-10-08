@@ -59,7 +59,7 @@ func registerAgentPlugins(s *ruleSet) {
 		RuleInfo{CodeAgentPluginManifest, "agent-plugins-manifest-invalid", SeverityError, "plugin.json is missing or does not match the Agent Plugins schema, names an unsupported spec version, or carries an invalid extension namespace"},
 		RuleInfo{CodeAgentPluginSkill, "agent-plugins-skill-invalid", SeverityError, "a skill of the Agent Plugins package breaks the Agent Skills rules (name, description, frontmatter) or sits outside skills/<name>/SKILL.md, so clients skip it"},
 		RuleInfo{CodeAgentPluginMCP, "agent-plugins-mcp-invalid", SeverityError, "mcp.json or one of its servers does not match the Agent Plugins schema or section 7.2 (command, url, headers), so clients skip it"},
-		RuleInfo{CodeAgentPluginPlaceholder, "agent-plugins-placeholder-unsupported", SeverityError, "an MCP server uses a ${VAR} placeholder; Agent Plugins clients expand only ${PLUGIN_ROOT} and ${PLUGIN_DATA}, in args, env values and cwd"},
+		RuleInfo{CodeAgentPluginPlaceholder, "agent-plugins-placeholder()-unsupported", SeverityError, "an MCP server uses a ${VAR} placeholder(); Agent Plugins clients expand only ${PLUGIN_ROOT} and ${PLUGIN_DATA}, in args, env values and cwd"},
 		RuleInfo{CodeAgentPluginDropped, "agent-plugins-content-dropped", SeverityWarning, "a field or server the Agent Plugins package cannot carry was not packaged: a disabled server, or command, args, env and cwd on a remote server"},
 		RuleInfo{CodeAgentPluginUnsafe, "agent-plugins-package-unsafe", SeverityError, "a file or link of the Agent Plugins package resolves outside the plugin root or cannot be read"},
 	)
@@ -80,7 +80,7 @@ func registerAgentPlugins(s *ruleSet) {
 			Good: "`command = \"npx\"`, `args = [\"-y\", \"server\"]`, and an `https://` url",
 		},
 		CodeAgentPluginPlaceholder: {
-			Why:  "Agent Plugins expands only ${PLUGIN_ROOT} and ${PLUGIN_DATA}. A ${API_KEY} placeholder would reach the server as that literal text, so ai-rulez drops the server instead of packaging a launch that cannot work.",
+			Why:  "Agent Plugins expands only ${PLUGIN_ROOT} and ${PLUGIN_DATA}. A ${API_KEY} placeholder() would reach the server as that literal text, so ai-rulez drops the server instead of packaging a launch that cannot work.",
 			Bad:  "`args = [\"--key\", \"${API_KEY}\"]` in a plugin MCP server",
 			Good: "Let the server read API_KEY from its environment (an `env` entry `API_KEY = \"${API_KEY}\"` is omitted and left to the client), or use ${PLUGIN_ROOT}/${PLUGIN_DATA}",
 		},

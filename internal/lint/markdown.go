@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // doc is one source file split into lines, with the frontmatter located.
@@ -47,9 +48,9 @@ type bodyLine struct {
 }
 
 var (
-	fenceRe    = regexp.MustCompile("^\\s{0,3}(`{3,}|~{3,})(.*)$")
-	codeSpanRe = regexp.MustCompile("`[^`\n]*`")
-	headingRe  = regexp.MustCompile(`^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$`)
+	fenceRe    = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile("^\\s{0,3}(`{3,}|~{3,})(.*)$") })
+	codeSpanRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile("`[^`\n]*`") })
+	headingRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$`) })
 )
 
 func (d doc) body() []bodyLine {
@@ -57,7 +58,7 @@ func (d doc) body() []bodyLine {
 	var open string // the opening fence run while inside a fenced block
 	for i := d.bodyStart; i < len(d.lines); i++ {
 		line := d.lines[i]
-		if m := fenceRe.FindStringSubmatch(line); m != nil {
+		if m := fenceRe().FindStringSubmatch(line); m != nil {
 			run, info := m[1], strings.TrimSpace(m[2])
 			switch {
 			case open == "":
@@ -73,7 +74,7 @@ func (d doc) body() []bodyLine {
 		if open != "" {
 			continue
 		}
-		plain := codeSpanRe.ReplaceAllStringFunc(line, func(s string) string { return strings.Repeat(" ", len(s)) })
+		plain := codeSpanRe().ReplaceAllStringFunc(line, func(s string) string { return strings.Repeat(" ", len(s)) })
 		out = append(out, bodyLine{No: i + 1, Text: line, Plain: plain})
 	}
 	return out
@@ -85,7 +86,7 @@ func headingSlugs(raw string) map[string]struct{} {
 	seen := map[string]int{}
 	d := parseDoc(raw)
 	for _, l := range d.body() {
-		m := headingRe.FindStringSubmatch(l.Text)
+		m := headingRe().FindStringSubmatch(l.Text)
 		if m == nil {
 			continue
 		}
@@ -100,30 +101,32 @@ func headingSlugs(raw string) map[string]struct{} {
 	return slugs
 }
 
-var slugDropRe = regexp.MustCompile(`[^\p{L}\p{N}\s_-]`)
+var slugDropRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[^\p{L}\p{N}\s_-]`) })
 
 func slugify(heading string) string {
 	s := strings.ToLower(strings.TrimSpace(heading))
-	s = slugDropRe.ReplaceAllString(s, "")
+	s = slugDropRe().ReplaceAllString(s, "")
 	return strings.ReplaceAll(s, " ", "-")
 }
 
 var (
-	inlineLinkRe = regexp.MustCompile(`!?\[[^\]\n]*\]\(\s*(<[^>\n]+>|[^)\s]+)(?:\s+"[^"\n]*")?\s*\)`)
-	refLinkRe    = regexp.MustCompile(`^\s{0,3}\[[^\]\n]+\]:\s*(\S+)`)
-	backtickRe   = regexp.MustCompile("`([^`\n]+)`")
-	schemeRe     = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
-	lineSuffixRe = regexp.MustCompile(`:\d+(?:[-:]\d+)*$`)
-	placeholder  = regexp.MustCompile(`[<>{}$*?\[\]|\\\s"'=;&()]|\.{3}|\bXXX\b|\bYOUR_`)
+	inlineLinkRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`!?\[[^\]\n]*\]\(\s*(<[^>\n]+>|[^)\s]+)(?:\s+"[^"\n]*")?\s*\)`)
+	})
+	refLinkRe    = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\s{0,3}\[[^\]\n]+\]:\s*(\S+)`) })
+	backtickRe   = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile("`([^`\n]+)`") })
+	schemeRe     = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`) })
+	lineSuffixRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`:\d+(?:[-:]\d+)*$`) })
+	placeholder  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[<>{}$*?\[\]|\\\s"'=;&()]|\.{3}|\bXXX\b|\bYOUR_`) })
 )
 
 // linkTargets lists the link destinations on a prose line.
 func linkTargets(plain string) []string {
 	var out []string
-	for _, m := range inlineLinkRe.FindAllStringSubmatch(plain, -1) {
+	for _, m := range inlineLinkRe().FindAllStringSubmatch(plain, -1) {
 		out = append(out, strings.Trim(m[1], "<>"))
 	}
-	if m := refLinkRe.FindStringSubmatch(plain); m != nil {
+	if m := refLinkRe().FindStringSubmatch(plain); m != nil {
 		out = append(out, strings.Trim(m[1], "<>"))
 	}
 	return out

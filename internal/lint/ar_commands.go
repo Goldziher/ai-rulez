@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
@@ -22,20 +23,28 @@ func registerArCommands(s *ruleSet) {
 }
 
 var (
-	npmRunRe      = regexp.MustCompile(`^(?:npm|pnpm|yarn|bun)\s+run(?:-script)?\s+(?:--silent\s+|-s\s+|--if-present\s+)*([A-Za-z0-9][A-Za-z0-9:_.@/-]*)`)
-	makeRe        = regexp.MustCompile(`^make\s+(.+)$`)
-	taskRe        = regexp.MustCompile(`^(?:task|go-task)\s+([a-z][A-Za-z0-9:_.-]*)`)
-	justRe        = regexp.MustCompile(`^just\s+([A-Za-z_][A-Za-z0-9_:-]*)`)
-	pytestMarkRe  = regexp.MustCompile(`^(?:python3?\s+-m\s+)?pytest\b.*?\s-m\s*(?:"([^"]*)"|'([^']*)'|(\S+))`)
-	scopedFlagRe  = regexp.MustCompile(`(?:^|\s)(?:--prefix|--workspaces?|--filter|-w|-C|--directory|-f|--file|--justfile|--taskfile|-t|-d|--dir|--cwd)(?:[=\s]|$)|\bcd\s`)
-	placeholderRe = regexp.MustCompile(`[<>${}*|\\]|\.{3}|\bXXX\b|\bNAME\b`)
-	makeTargetRe  = regexp.MustCompile(`^([A-Za-z0-9_][A-Za-z0-9_.%/ -]*?)\s*:(?:[^=]|$)`)
-	justRecipeRe  = regexp.MustCompile(`^@?([A-Za-z_][A-Za-z0-9_-]*)\b[^:=\n]*:(?:[^=]|$)`)
-	markerLineRe  = regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?::.*)?$`)
-	addMarkerRe   = regexp.MustCompile(`addinivalue_line\(\s*["']markers["']\s*,\s*["']\s*([A-Za-z_][A-Za-z0-9_]*)`)
-	usedMarkerRe  = regexp.MustCompile(`\bpytest\.mark\.([A-Za-z_][A-Za-z0-9_]*)`)
-	markerWordRe  = regexp.MustCompile(`[A-Za-z_][A-Za-z0-9_]*`)
-	targetTokenRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+	npmRunRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^(?:npm|pnpm|yarn|bun)\s+run(?:-script)?\s+(?:--silent\s+|-s\s+|--if-present\s+)*([A-Za-z0-9][A-Za-z0-9:_.@/-]*)`)
+	})
+	makeRe       = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^make\s+(.+)$`) })
+	taskRe       = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(?:task|go-task)\s+([a-z][A-Za-z0-9:_.-]*)`) })
+	justRe       = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^just\s+([A-Za-z_][A-Za-z0-9_:-]*)`) })
+	pytestMarkRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^(?:python3?\s+-m\s+)?pytest\b.*?\s-m\s*(?:"([^"]*)"|'([^']*)'|(\S+))`)
+	})
+	scopedFlagRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?:^|\s)(?:--prefix|--workspaces?|--filter|-w|-C|--directory|-f|--file|--justfile|--taskfile|-t|-d|--dir|--cwd)(?:[=\s]|$)|\bcd\s`)
+	})
+	placeholderRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[<>${}*|\\]|\.{3}|\bXXX\b|\bNAME\b`) })
+	makeTargetRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^([A-Za-z0-9_][A-Za-z0-9_.%/ -]*?)\s*:(?:[^=]|$)`) })
+	justRecipeRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^@?([A-Za-z_][A-Za-z0-9_-]*)\b[^:=\n]*:(?:[^=]|$)`) })
+	markerLineRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?::.*)?$`) })
+	addMarkerRe   = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`addinivalue_line\(\s*["']markers["']\s*,\s*["']\s*([A-Za-z_][A-Za-z0-9_]*)`)
+	})
+	usedMarkerRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\bpytest\.mark\.([A-Za-z_][A-Za-z0-9_]*)`) })
+	markerWordRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[A-Za-z_][A-Za-z0-9_]*`) })
+	targetTokenRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[A-Za-z0-9_-]+$`) })
 )
 
 var pytestBuiltinMarks = map[string]bool{
@@ -136,7 +145,7 @@ func (m *manifests) readMakefile(top, rel string) { //nolint:gocyclo // linear c
 			}
 			continue
 		}
-		if mm := makeTargetRe.FindStringSubmatch(head); mm != nil {
+		if mm := makeTargetRe().FindStringSubmatch(head); mm != nil {
 			for _, t := range strings.Fields(mm[1]) {
 				if strings.ContainsAny(t, "$%(") {
 					m.dynMake = true
@@ -180,7 +189,7 @@ func (m *manifests) readJustfile(top, rel string) {
 				m.recipes[f[1]] = true
 			}
 		default:
-			if mm := justRecipeRe.FindStringSubmatch(line); mm != nil {
+			if mm := justRecipeRe().FindStringSubmatch(line); mm != nil {
 				m.recipes[mm[1]] = true
 			}
 		}
@@ -204,7 +213,7 @@ func (m *manifests) readPyproject(top, rel string) {
 		m.hasPyt = true
 	}
 	for _, mk := range doc.Tool.Pytest.Ini.Markers {
-		if w := markerWordRe.FindString(mk); w != "" {
+		if w := markerWordRe().FindString(mk); w != "" {
 			m.markers[w] = true
 		}
 	}
@@ -229,14 +238,14 @@ func (m *manifests) readIni(top, rel string) {
 		if rest, ok := strings.CutPrefix(trim, "markers"); ok {
 			inMarkers = true
 			if _, val, has := strings.Cut(rest, "="); has && strings.TrimSpace(val) != "" {
-				if w := markerWordRe.FindString(val); w != "" {
+				if w := markerWordRe().FindString(val); w != "" {
 					m.markers[w] = true
 				}
 			}
 			continue
 		}
 		if inMarkers && (strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t")) {
-			if mm := markerLineRe.FindStringSubmatch(line); mm != nil {
+			if mm := markerLineRe().FindStringSubmatch(line); mm != nil {
 				m.markers[mm[1]] = true
 			}
 			continue
@@ -270,10 +279,10 @@ func (m *manifests) readPythonMarkers(top string, pyFiles []string) {
 		if !strings.Contains(text, "pytest") {
 			continue
 		}
-		for _, mm := range addMarkerRe.FindAllStringSubmatch(text, -1) {
+		for _, mm := range addMarkerRe().FindAllStringSubmatch(text, -1) {
 			m.markers[mm[1]] = true
 		}
-		for _, mm := range usedMarkerRe.FindAllStringSubmatch(text, -1) {
+		for _, mm := range usedMarkerRe().FindAllStringSubmatch(text, -1) {
 			m.markers[mm[1]] = true
 		}
 	}
@@ -297,9 +306,9 @@ func checkDeadCommands(r *runner) {
 			continue
 		}
 		for _, l := range d.body() {
-			for _, mm := range backtickRe.FindAllStringSubmatch(l.Text, -1) {
+			for _, mm := range backtickRe().FindAllStringSubmatch(l.Text, -1) {
 				span := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(mm[1]), "$ "))
-				if span == "" || placeholderRe.MatchString(span) {
+				if span == "" || placeholderRe().MatchString(span) {
 					continue
 				}
 				r.checkCommandSpan(it, l.No, span, manifest)
@@ -309,48 +318,48 @@ func checkDeadCommands(r *runner) {
 }
 
 func (r *runner) checkCommandSpan(it *item, line int, span string, manifest func() *manifests) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
-	if mm := pytestMarkRe.FindStringSubmatch(span); mm != nil {
+	if mm := pytestMarkRe().FindStringSubmatch(span); mm != nil {
 		expr := mm[1] + mm[2] + mm[3]
 		m := manifest()
 		if !m.hasPyt {
 			return
 		}
-		for _, w := range markerWordRe.FindAllString(expr, -1) {
+		for _, w := range markerWordRe().FindAllString(expr, -1) {
 			if !pytestBuiltinMarks[w] && !m.markers[w] {
 				r.add(CodeCommandMissing, it.abs, line, "`pytest -m` names the marker %q, which no pytest configuration or test registers", w)
 			}
 		}
 		return
 	}
-	if scopedFlagRe.MatchString(span) {
+	if scopedFlagRe().MatchString(span) {
 		return
 	}
 	switch {
-	case npmRunRe.MatchString(span):
-		name := npmRunRe.FindStringSubmatch(span)[1]
+	case npmRunRe().MatchString(span):
+		name := npmRunRe().FindStringSubmatch(span)[1]
 		if m := manifest(); m.hasNPM && !m.scripts[name] {
 			r.add(CodeCommandMissing, it.abs, line, "`%s`: no package.json defines a script named %q", span, name)
 		}
-	case makeRe.MatchString(span):
+	case makeRe().MatchString(span):
 		m := manifest()
 		if !m.hasMake || m.dynMake {
 			return
 		}
-		for _, tok := range strings.Fields(makeRe.FindStringSubmatch(span)[1]) {
-			if strings.HasPrefix(tok, "-") || strings.Contains(tok, "=") || !targetTokenRe.MatchString(tok) {
+		for _, tok := range strings.Fields(makeRe().FindStringSubmatch(span)[1]) {
+			if strings.HasPrefix(tok, "-") || strings.Contains(tok, "=") || !targetTokenRe().MatchString(tok) {
 				continue
 			}
 			if !m.targets[tok] {
 				r.add(CodeCommandMissing, it.abs, line, "`%s`: no Makefile defines the target %q", span, tok)
 			}
 		}
-	case taskRe.MatchString(span):
-		name := taskRe.FindStringSubmatch(span)[1]
+	case taskRe().MatchString(span):
+		name := taskRe().FindStringSubmatch(span)[1]
 		if m := manifest(); m.hasTask && !m.tasks[name] && (!m.taskNS || !strings.Contains(name, ":")) {
 			r.add(CodeCommandMissing, it.abs, line, "`%s`: no Taskfile defines the task %q", span, name)
 		}
-	case justRe.MatchString(span):
-		name := justRe.FindStringSubmatch(span)[1]
+	case justRe().MatchString(span):
+		name := justRe().FindStringSubmatch(span)[1]
 		if m := manifest(); m.hasJust && !m.recipes[name] && (!m.justMods || !strings.Contains(name, "::")) {
 			r.add(CodeCommandMissing, it.abs, line, "`%s`: no justfile defines the recipe %q", span, name)
 		}
