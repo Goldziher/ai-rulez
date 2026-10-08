@@ -52,8 +52,8 @@ release:
 
 brews:
   - name: ai-rulez
-    description: "⚡ Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
-    homepage: "https://github.com/Goldziher/ai-rulez"
+    description: "Standards-compliant lifecycle tool for agent knowledge and capabilities: author, generate, bundle, validate, govern, publish"
+    homepage: "https://goldziher.github.io/ai-rulez/"
     license: "MIT"
     repository:
       owner: Goldziher
