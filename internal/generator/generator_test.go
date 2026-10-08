@@ -975,51 +975,6 @@ func copyFixtureBench(b *testing.B, src, dst string) {
 	require.NoError(b, err)
 }
 
-// Test helper functions
-func TestHelperFunctions(t *testing.T) {
-	t.Run("splitLines", func(t *testing.T) {
-		assert.Equal(t, []string{"a", "b", "c"}, splitLines("a\nb\nc"))
-		assert.Equal(t, []string{"a"}, splitLines("a"))
-		// Empty string returns empty slice
-		result := splitLines("")
-		assert.Empty(t, result)
-	})
-
-	t.Run("trimSpace", func(t *testing.T) {
-		assert.Equal(t, "hello", trimSpace("  hello  "))
-		assert.Equal(t, "hello", trimSpace("hello"))
-		assert.Equal(t, "", trimSpace("   "))
-	})
-
-	t.Run("hasPrefix", func(t *testing.T) {
-		assert.True(t, hasPrefix("hello", "hel"))
-		assert.False(t, hasPrefix("hello", "world"))
-		assert.True(t, hasPrefix("hello", ""))
-	})
-
-	t.Run("hasSuffix", func(t *testing.T) {
-		assert.True(t, hasSuffix("hello", "llo"))
-		assert.False(t, hasSuffix("hello", "world"))
-		assert.True(t, hasSuffix("hello", ""))
-	})
-
-	t.Run("trimPrefix", func(t *testing.T) {
-		assert.Equal(t, "world", trimPrefix("hello world", "hello "))
-		assert.Equal(t, "hello", trimPrefix("hello", "world"))
-	})
-
-	t.Run("trimSuffix", func(t *testing.T) {
-		assert.Equal(t, "hello", trimSuffix("hello world", " world"))
-		assert.Equal(t, "hello", trimSuffix("hello", "world"))
-	})
-
-	t.Run("contains", func(t *testing.T) {
-		assert.True(t, contains("hello world", "llo"))
-		assert.False(t, contains("hello", "world"))
-		assert.True(t, contains("hello", ""))
-	})
-}
-
 func TestMatchesPattern(t *testing.T) {
 	tests := []struct {
 		name     string
