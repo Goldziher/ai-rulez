@@ -20,6 +20,60 @@ type sessionInitState struct {
 	initialized bool
 }
 
+// initTracker holds the per-session handshake state of tolerantInitializeMiddleware.
+// An entry lives until its session ends, so a long-lived process serving many
+// sessions does not accumulate state or pin finished ServerSessions.
+type initTracker struct {
+	// server lists the live sessions; nil disables the sweep (unit tests that
+	// drive the middleware without a server).
+	server   *sdkmcp.Server
+	mu       sync.Mutex
+	sessions map[*sdkmcp.ServerSession]*sessionInitState
+}
+
+func newInitTracker(server *sdkmcp.Server) *initTracker {
+	return &initTracker{server: server, sessions: make(map[*sdkmcp.ServerSession]*sessionInitState)}
+}
+
+// size is the number of sessions currently tracked.
+func (t *initTracker) size() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.sessions)
+}
+
+// state returns the tracked state for the request's session, creating it on
+// first use. Creating one first drops the state of sessions that have ended: the
+// SDK has no close hook, but it removes a session from Sessions() when its
+// connection closes, and a session is listed from before its first message.
+// Callers must hold t.mu.
+func (t *initTracker) state(request sdkmcp.Request) *sessionInitState {
+	session, _ := request.GetSession().(*sdkmcp.ServerSession) //nolint:errcheck // a nil session is a valid key
+	tracked, ok := t.sessions[session]
+	if !ok {
+		t.sweep()
+		tracked = &sessionInitState{}
+		t.sessions[session] = tracked
+	}
+	return tracked
+}
+
+// sweep forgets sessions the server no longer lists.
+func (t *initTracker) sweep() {
+	if t.server == nil {
+		return
+	}
+	live := make(map[*sdkmcp.ServerSession]bool)
+	for session := range t.server.Sessions() {
+		live[session] = true
+	}
+	for session := range t.sessions {
+		if session != nil && !live[session] {
+			delete(t.sessions, session)
+		}
+	}
+}
+
 // tolerantInitializeMiddleware makes the server tolerate a repeated
 // initialization handshake on an already-established session.
 //
@@ -34,32 +88,18 @@ type sessionInitState struct {
 // Receiving middleware wraps the terminal method handler, so short-circuiting
 // here means the duplicate never reaches the SDK and the session state stays
 // untouched.
-func tolerantInitializeMiddleware() sdkmcp.Middleware {
-	var (
-		mu       sync.Mutex
-		sessions = make(map[*sdkmcp.ServerSession]*sessionInitState)
-	)
+func tolerantInitializeMiddleware(server *sdkmcp.Server) sdkmcp.Middleware {
+	return newInitTracker(server).middleware()
+}
 
-	// state returns the tracked state for the request's session, creating it on
-	// first use. Callers must hold mu.
-	state := func(request sdkmcp.Request) *sessionInitState {
-		session, _ := request.GetSession().(*sdkmcp.ServerSession) //nolint:errcheck // a nil session is a valid key
-		tracked, ok := sessions[session]
-		if !ok {
-			tracked = &sessionInitState{}
-			sessions[session] = tracked
-		}
-		return tracked
-	}
-
+func (t *initTracker) middleware() sdkmcp.Middleware {
 	return func(next sdkmcp.MethodHandler) sdkmcp.MethodHandler {
 		return func(ctx context.Context, method string, request sdkmcp.Request) (sdkmcp.Result, error) {
 			switch method {
 			case methodInitialize:
-				mu.Lock()
-				tracked := state(request)
-				cached := tracked.result
-				mu.Unlock()
+				t.mu.Lock()
+				cached := t.state(request).result
+				t.mu.Unlock()
 
 				// A repeat gets the result of the original negotiation. The SDK's
 				// version negotiation is unexported, so re-negotiating a different
@@ -74,16 +114,16 @@ func tolerantInitializeMiddleware() sdkmcp.Middleware {
 					return nil, err
 				}
 				if initializeResult, ok := result.(*sdkmcp.InitializeResult); ok {
-					mu.Lock()
-					state(request).result = initializeResult
-					mu.Unlock()
+					t.mu.Lock()
+					t.state(request).result = initializeResult
+					t.mu.Unlock()
 				}
 				return result, nil
 
 			case notificationInitialized:
-				mu.Lock()
-				seen := state(request).initialized
-				mu.Unlock()
+				t.mu.Lock()
+				seen := t.state(request).initialized
+				t.mu.Unlock()
 
 				if seen {
 					return nil, nil
@@ -96,9 +136,9 @@ func tolerantInitializeMiddleware() sdkmcp.Middleware {
 				// Only a notification the SDK accepted establishes the session, so a
 				// rejected one (e.g. arriving before `initialize`) must not suppress
 				// the real notification that follows.
-				mu.Lock()
-				state(request).initialized = true
-				mu.Unlock()
+				t.mu.Lock()
+				t.state(request).initialized = true
+				t.mu.Unlock()
 				return result, nil
 
 			default:
