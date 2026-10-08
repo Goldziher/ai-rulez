@@ -180,7 +180,7 @@ func generateOnce(ctx context.Context, args []string, loadOpts ...config.LoadOpt
 		return cfg, err //nolint:wrapcheck // already contextual
 	}
 	applyGenerateOverrides(cfg)
-	if err := importGate(cfg); err != nil {
+	if err := importGate(cfg); err != nil { //nolint:contextcheck // the secret scan builds its own command context
 		return cfg, err
 	}
 	gen := generator.NewGenerator(cfg)

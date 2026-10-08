@@ -130,7 +130,7 @@ func configHookProblems(groups []config.HookGroup) []hookProblem {
 		out = append(out, eventProblems(g.Event, matcher, hasIf)...)
 		for _, a := range g.Hooks {
 			if a.Type != "" && !slices.Contains(hookHandlerTypes, a.Type) {
-				out = append(out, hookProblem{"type", g.Event, quoteNeedle(g.Event), fmt.Sprintf("%s hook has unknown type %q (use %s)", g.Event, a.Type, strings.Join(hookHandlerTypes, ", "))})
+				out = append(out, hookProblem{keyType, g.Event, quoteNeedle(g.Event), fmt.Sprintf("%s hook has unknown type %q (use %s)", g.Event, a.Type, strings.Join(hookHandlerTypes, ", "))})
 			}
 			if a.Timeout < 0 || a.Timeout > maxHookTimeout {
 				out = append(out, hookProblem{"timeout", g.Event, "timeout", fmt.Sprintf("%s hook timeout %d is not between 1 and %d seconds", g.Event, a.Timeout, maxHookTimeout)})
@@ -208,7 +208,7 @@ func jsonHandlerProblems(event string, h map[string]json.RawMessage) []hookProbl
 	add := func(kind, needle, format string, args ...any) {
 		out = append(out, hookProblem{kind, event, needle, fmt.Sprintf(format, args...)})
 	}
-	typ, hasType := jsonString(h, "type")
+	typ, hasType := jsonString(h, keyType)
 	needleOf := func(key string) string {
 		if _, ok := h[key]; ok {
 			return quoteNeedle(key)
@@ -217,9 +217,9 @@ func jsonHandlerProblems(event string, h map[string]json.RawMessage) []hookProbl
 	}
 	switch {
 	case !hasType || typ == "":
-		add("type", quoteNeedle(event), "a %s handler has no \"type\" (use %s)", event, strings.Join(hookHandlerTypes, ", "))
+		add(keyType, quoteNeedle(event), "a %s handler has no \"type\" (use %s)", event, strings.Join(hookHandlerTypes, ", "))
 	case !slices.Contains(hookHandlerTypes, typ):
-		add("type", needleOf("type"), "a %s handler has unknown type %q (use %s)", event, typ, strings.Join(hookHandlerTypes, ", "))
+		add(keyType, needleOf(keyType), "a %s handler has unknown type %q (use %s)", event, typ, strings.Join(hookHandlerTypes, ", "))
 	default:
 		field := map[string]string{hookTypeCommand: hookTypeCommand, transportHTTP: "url", hookTypePrompt: hookTypePrompt, hookTypeAgent: hookTypePrompt, "mcp_tool": "tool"}[typ]
 		if v, has := jsonString(h, field); !has || strings.TrimSpace(v) == "" {

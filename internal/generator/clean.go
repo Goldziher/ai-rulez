@@ -214,7 +214,7 @@ func (g *Generator) cleanLeavesMerged(output config.OutputFile, abs string) bool
 
 // cleanKeepsFile reports whether clean must keep the generated file at abs,
 // warning when the reason is worth telling the user.
-func (g *Generator) cleanKeepsFile(output config.OutputFile, abs string, opts CleanOptions) bool {
+func (g *Generator) cleanKeepsFile(output config.OutputFile, abs string, opts CleanOptions) bool { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	if !g.userMode && isSymlink(abs) {
 		g.warnOnce("Keeping " + g.relSlash(abs) + ": it is a symlink, and links are the user's to remove")
 		return true
@@ -244,7 +244,7 @@ func (g *Generator) cleanKeepsFile(output config.OutputFile, abs string, opts Cl
 	// replaced), and being at the path proves nothing.
 	// --include-edited extends that to a file the manifest lists whose edits
 	// took away the proof (a banner-less output such as llms.txt).
-	if !g.userMode && !g.projectFileIsOurs(abs, output) && !(opts.RemoveEdited && g.manifestListsFile(abs)) {
+	if !g.userMode && !g.projectFileIsOurs(abs, output) && (!opts.RemoveEdited || !g.manifestListsFile(abs)) {
 		if _, err := os.Lstat(abs); err != nil {
 			return true // already gone (an earlier run removed it): nothing to keep, nothing to warn about
 		}

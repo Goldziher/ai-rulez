@@ -31,7 +31,7 @@ func BenchSizes() []BenchSize {
 
 // BenchTreeOptions tunes BuildBenchTree.
 type BenchTreeOptions struct {
-	// Git initialises a repository and stages the tree.
+	// Git initializes a repository and stages the tree.
 	Git bool
 	// Presets overrides the default preset list.
 	Presets []string

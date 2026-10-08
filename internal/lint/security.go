@@ -421,7 +421,7 @@ func describesRisk(st *scanText, i int) bool {
 // pattern that matches the line. Each pattern only runs on a line that holds a
 // literal every one of its matches contains (see containsAnyFold).
 func execFinding(line string) (msg string, spans [][]int) {
-	if containsAnyFold(line, []string{"curl", "wget"}) {
+	if containsAnyFold(line, []string{cmdCurl, cmdWget}) {
 		for _, re := range []*regexp.Regexp{pipeToShellRe, pipeToInterpRe, procSubstRe} {
 			spans = append(spans, re.FindAllStringIndex(line, -1)...)
 		}

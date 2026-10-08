@@ -2,14 +2,15 @@ package signing_test
 
 import (
 	"context"
-	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
-	. "github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
-	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore/fakesigstore"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
+
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore/fakesigstore"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
