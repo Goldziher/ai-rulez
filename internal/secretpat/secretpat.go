@@ -15,9 +15,18 @@ type Pattern struct {
 }
 
 // Builtin is the credential shapes the security scan recognizes.
+//
+// The minimum lengths are deliberately strict: a detector that blocks a commit
+// must not flag a placeholder, so a GitHub token needs the 36 characters real
+// ones carry. The redaction layers that sit in front of a model, a log or a
+// publish step (llm.RedactSecrets, publish.Redact, preflight) are deliberately
+// more eager (a GitHub token from 20 characters, an sk- key from 8): hiding a
+// false positive costs nothing, leaking a true one does. They therefore also run
+// this list, and the two never need the same numbers.
 var Builtin = []Pattern{
 	{"AWS access key id", regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`)},
 	{"GitHub token", regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{36,}\b`)},
+	{"npm access token", regexp.MustCompile(`\bnpm_[A-Za-z0-9]{36}\b`)},
 	{"GitHub fine-grained token", regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{22,}\b`)},
 	{"Slack token", regexp.MustCompile(`\bxox[abprs]-[A-Za-z0-9-]{10,}\b`)},
 	{"Google API key", regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{35}\b`)},
