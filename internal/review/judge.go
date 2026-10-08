@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand/v2"
-	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -437,16 +436,6 @@ func orderFor(dims []Dimension, sibs []Item, vote int, seed string) ([]Dimension
 		r.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
 	}
 	return d, s
-}
-
-// sortedKeys returns the keys of m in order.
-func sortedKeys[V any](m map[string]V) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
 }
 
 // requestFor turns a rendered call into a model request.

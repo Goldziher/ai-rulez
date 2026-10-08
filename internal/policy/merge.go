@@ -3,7 +3,6 @@ package policy
 import (
 	"cmp"
 	"slices"
-	"sort"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
@@ -202,13 +201,4 @@ func strongerAssurance(a, b string) string {
 		return b
 	}
 	return a
-}
-
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

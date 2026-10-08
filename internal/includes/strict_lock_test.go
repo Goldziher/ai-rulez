@@ -72,8 +72,8 @@ func TestRemoteIncludeSymlinkIsNeverFollowed(t *testing.T) {
 	secret := filepath.Join(t.TempDir(), "secret.md")
 	writeTestFile(t, secret, "# Secret\n\nlocal file\n")
 	testutil.SymlinkOrSkip(t, secret, filepath.Join(f.remote, ".ai-rulez", "rules", "leak.md"))
-	git(t, f.remote, "add", "-A")
-	git(t, f.remote, "commit", "-qm", "add symlink")
+	testutil.Git(t, f.remote, "add", "-A")
+	testutil.Git(t, f.remote, "commit", "-qm", "add symlink")
 
 	cfg, err := f.load(t)
 	require.NoError(t, err)

@@ -3,8 +3,10 @@ package review
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -627,12 +629,12 @@ func rateMisses(c *Calibration, dimID string, dc DimCalibration, predicted, posi
 // have been measured.
 func probeMisses(measured map[string]float64, declared map[string]bool, minProbe float64) []string {
 	var misses []string
-	for _, p := range sortedKeys(measured) {
+	for _, p := range slices.Sorted(maps.Keys(measured)) {
 		if v := measured[p]; v < minProbe {
 			misses = append(misses, fmt.Sprintf("probe %s %.2f below %.2f", p, v, minProbe))
 		}
 	}
-	for _, p := range sortedKeys(declared) {
+	for _, p := range slices.Sorted(maps.Keys(declared)) {
 		if _, ok := measured[p]; !ok {
 			misses = append(misses, fmt.Sprintf("probe %s was declared but never measured", p))
 		}
@@ -678,7 +680,7 @@ func CompareCalibration(old, cur *CalibrationRecord) Drift {
 			d.Regressions = append(d.Regressions, fmt.Sprintf("the %s digest changed (%s -> %s): the committed record measured something else, recalibrate and commit it", c.name, c.was, c.now))
 		}
 	}
-	for _, id := range sortedKeys(old.Dimensions) {
+	for _, id := range slices.Sorted(maps.Keys(old.Dimensions)) {
 		o := old.Dimensions[id]
 		n, ok := cur.Dimensions[id]
 		if !ok {
@@ -697,12 +699,12 @@ func CompareCalibration(old, cur *CalibrationRecord) Drift {
 	if cur.Status != CalPass {
 		d.Regressions = append(d.Regressions, "the judge no longer meets the calibration thresholds")
 	}
-	for _, cid := range sortedKeys(cur.Cases) {
+	for _, cid := range slices.Sorted(maps.Keys(cur.Cases)) {
 		oldCase, ok := old.Cases[cid]
 		if !ok {
 			continue
 		}
-		for _, dim := range sortedKeys(cur.Cases[cid]) {
+		for _, dim := range slices.Sorted(maps.Keys(cur.Cases[cid])) {
 			if was, had := oldCase[dim]; had && was != cur.Cases[cid][dim] {
 				d.Changed = append(d.Changed, CaseChange{Case: cid, Dimension: dim, Was: was, Now: cur.Cases[cid][dim]})
 			}
@@ -756,7 +758,7 @@ func CompareModels(models []string, tables []map[string]map[string]string, dims 
 			items[item] = true
 		}
 	}
-	for _, item := range sortedKeys(items) {
+	for _, item := range slices.Sorted(maps.Keys(items)) {
 		for _, dim := range dims {
 			verdicts := map[string]string{}
 			distinct := map[string]bool{}
