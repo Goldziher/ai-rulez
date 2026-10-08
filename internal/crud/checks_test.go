@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -80,6 +81,7 @@ func TestChecks_RejectsUnsafeNames(t *testing.T) {
 // frontmatterOf splits a check file into its parsed frontmatter and body.
 func frontmatterOf(t *testing.T, content string) (map[string]any, string) {
 	t.Helper()
+	content = config.NativeContent(content) // a stored check is an OKF concept
 	require.True(t, strings.HasPrefix(content, "---\n"), content)
 	rest := strings.TrimPrefix(content, "---\n")
 	fmText, body, found := strings.Cut(rest, "\n---\n")
