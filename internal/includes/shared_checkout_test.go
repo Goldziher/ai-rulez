@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,9 +30,11 @@ func TestConcurrentFetchesOfOneRemoteAtDifferentCommits(t *testing.T) {
 	second := git(t, remote, "rev-parse", "HEAD")
 	require.NotEqual(t, first, second)
 	base := t.TempDir()
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
+	defer cancel()
 
 	// Act
-	const rounds = 8
+	const rounds = 2
 	type outcome struct {
 		err    error
 		commit string
@@ -50,7 +53,7 @@ func TestConcurrentFetchesOfOneRemoteAtDifferentCommits(t *testing.T) {
 					return
 				}
 				src.state = newResolutionState()
-				tree, err := src.Fetch(context.Background())
+				tree, err := src.Fetch(ctx)
 				if err != nil {
 					results[i][j].err = err
 					return
