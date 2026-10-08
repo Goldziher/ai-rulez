@@ -28,16 +28,17 @@ func TestResolver_CreateSource_LocalIncludeStaysInsideProject(t *testing.T) {
 	tests := []struct {
 		name    string
 		source  string
-		cfg     *config.Config
-		wantErr bool
+		cfg      *config.Config
+		wantErr  bool
+		wantPath string
 	}{
-		{"relative inside", "shared", &config.Config{}, false},
-		{"dot-dot outside", "../victim", &config.Config{}, true},
-		{"absolute outside", victim, &config.Config{}, true},
-		{"symlink inside pointing outside", "link", &config.Config{}, true},
-		{"absolute inside", filepath.Join(project, "shared"), &config.Config{}, false},
-		{"outside allowed from the local overlay", "../victim", &config.Config{LocalOverlay: overlay}, false},
-		{"outside allowed in user scope", "../victim", &config.Config{UserScope: true}, false},
+		{"relative inside", "shared", &config.Config{}, false, "shared"},
+		{"dot-dot outside", "../victim", &config.Config{}, true, ""},
+		{"absolute outside", victim, &config.Config{}, true, ""},
+		{"symlink inside pointing outside", "link", &config.Config{}, true, ""},
+		{"absolute inside", filepath.Join(project, "shared"), &config.Config{}, false, filepath.Join(project, "shared")},
+		{"outside allowed from the local overlay", "../victim", &config.Config{LocalOverlay: overlay}, false, "../victim"},
+		{"outside allowed in user scope", "../victim", &config.Config{UserScope: true}, false, "../victim"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -45,7 +46,7 @@ func TestResolver_CreateSource_LocalIncludeStaysInsideProject(t *testing.T) {
 			r := &Resolver{baseDir: project, cfg: tt.cfg}
 
 			// Act
-			_, err := r.createSource(t.Context(), &config.IncludeConfig{Name: "x", Source: tt.source})
+			src, err := r.createSource(t.Context(), &config.IncludeConfig{Name: "x", Source: tt.source})
 
 			// Assert
 			if tt.wantErr {
@@ -53,7 +54,11 @@ func TestResolver_CreateSource_LocalIncludeStaysInsideProject(t *testing.T) {
 				assert.Contains(t, err.Error(), "outside the project")
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
+			require.NotNil(t, src, "an allowed local include yields a source")
+			assert.Equal(t, SourceTypeLocal, src.GetType())
+			assert.Equal(t, "x", src.GetName())
+			assert.Equal(t, tt.wantPath, src.(*LocalSource).path, "the source reads the path the include names")
 		})
 	}
 }
@@ -145,16 +150,17 @@ func TestResolver_CreateSource_FileURLStaysInsideProject(t *testing.T) {
 			r := &Resolver{baseDir: project, cfg: tt.cfg}
 
 			// Act
-			_, err := r.createSource(t.Context(), &config.IncludeConfig{Name: "x", Source: tt.source})
+			src, err := r.createSource(t.Context(), &config.IncludeConfig{Name: "x", Source: tt.source})
 
 			// Assert
 			if tt.wantErr {
 				require.ErrorIs(t, err, config.ErrIncludeOutsideProject)
 				return
 			}
-			if err != nil {
-				assert.NotContains(t, err.Error(), "outside the project")
-			}
+			require.NoError(t, err)
+			require.NotNil(t, src, "an allowed file url yields a source")
+			assert.Equal(t, SourceTypeGit, src.GetType())
+			assert.Equal(t, "x", src.GetName())
 		})
 	}
 }
