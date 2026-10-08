@@ -1,6 +1,7 @@
-package signing
+package signing_test
 
 import (
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
 	"testing"
 
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"

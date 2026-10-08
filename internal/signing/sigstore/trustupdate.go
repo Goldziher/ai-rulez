@@ -1,4 +1,4 @@
-package signing
+package sigstore
 
 import (
 	"path/filepath"
@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
 
 // UpdateTrustedRoot fetches the public-good Sigstore trusted root over TUF (the
@@ -30,7 +31,7 @@ func UpdateTrustedRoot(env ambient.Env) (string, error) {
 	if err != nil {
 		return "", oops.Wrapf(err, "encode the trusted root")
 	}
-	path := filepath.Join(dir, TrustedRootFile)
+	path := filepath.Join(dir, signing.TrustedRootFile)
 	if err := safefs.WriteFileAtomic(path, data); err != nil {
 		return "", oops.Wrap(err)
 	}

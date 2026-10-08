@@ -25,7 +25,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
-	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
@@ -558,7 +558,7 @@ func TestPublishVerify_RejectsNeitherDirectoryNorReference(t *testing.T) {
 
 func writeSigningKeys(t *testing.T) (priv, pub string) {
 	t.Helper()
-	privPEM, pubPEM, err := signing.GenerateKeyPair([]byte("pw"))
+	privPEM, pubPEM, err := sigstore.GenerateKeyPair([]byte("pw"))
 	require.NoError(t, err)
 	dir := t.TempDir()
 	priv, pub = filepath.Join(dir, "release.key"), filepath.Join(dir, "release.pub")

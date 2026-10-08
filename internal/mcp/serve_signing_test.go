@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 func isolateUserDirs(t *testing.T) {
@@ -29,15 +30,15 @@ func isolateUserDirs(t *testing.T) {
 
 // signer is a publisher key pair whose public half is written into the project.
 type signer struct {
-	ks     *signing.KeySigner
+	ks     *sigstore.KeySigner
 	pubPEM []byte
 }
 
 func newSigner(t *testing.T) signer {
 	t.Helper()
-	priv, pub, err := signing.GenerateKeyPair(nil)
+	priv, pub, err := sigstore.GenerateKeyPair(nil)
 	require.NoError(t, err)
-	ks, err := signing.LoadKeySigner(priv, nil)
+	ks, err := sigstore.LoadKeySigner(priv, nil)
 	require.NoError(t, err)
 	return signer{ks: ks, pubPEM: pub}
 }

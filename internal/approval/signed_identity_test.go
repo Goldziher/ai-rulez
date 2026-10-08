@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 var signedDigest = "sha256:" + strings.Repeat("ab", 32)
@@ -36,9 +37,9 @@ func signedProject(t *testing.T, reviewers ...string) (*config.Config, []approva
 	cfg := &config.Config{BaseDir: dir, ConfigDir: dir, Signing: &config.SigningConfig{}}
 	keys := make([]approvalKey, 0, len(reviewers))
 	for i, reviewer := range reviewers {
-		priv, pub, err := signing.GenerateKeyPair(nil)
+		priv, pub, err := sigstore.GenerateKeyPair(nil)
 		require.NoError(t, err)
-		s, err := signing.LoadKeySigner(priv, nil)
+		s, err := sigstore.LoadKeySigner(priv, nil)
 		require.NoError(t, err)
 		name := fmt.Sprintf("k%d.pub", i)
 		require.NoError(t, os.WriteFile(filepath.Join(dir, name), pub, 0o600))
