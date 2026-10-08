@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/Goldziher/ai-rulez/v5/internal/preflight"
 	"github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
@@ -725,36 +726,33 @@ var curatedPresets = []string{
 	presetAmp, presetCodex, presetCline,
 }
 
-func getPresetsFromProviders(providers []interface{}, allProviders, popularProviders bool) []string {
-	if allProviders {
-		return append([]string(nil), curatedPresets...)
+func getPresetsFromProviders(providers []interface{}, allProviders, popularProviders bool) ([]string, error) {
+	if allProviders || popularProviders {
+		return append([]string(nil), curatedPresets...), nil
 	}
-	if popularProviders {
-		return append([]string(nil), curatedPresets...)
+
+	known := map[string]bool{}
+	for _, preset := range curatedPresets {
+		known[preset] = true
 	}
 
 	var presets []string
-
-	providerMap := map[string]string{
-		presetClaude:  presetClaude,
-		presetCursor:  presetCursor,
-		presetDevin:   presetDevin,
-		presetCopilot: presetCopilot,
-		presetGemini:  presetGemini,
-		presetAmp:     presetAmp,
-		presetCodex:   presetCodex,
-		presetCline:   presetCline,
-	}
-
+	var unknown []string
 	for _, p := range providers {
-		if provider, ok := p.(string); ok {
-			if preset, exists := providerMap[provider]; exists {
-				presets = append(presets, preset)
-			}
+		provider, ok := p.(string)
+		switch {
+		case ok && known[provider]:
+			presets = append(presets, provider)
+		case ok:
+			unknown = append(unknown, provider)
+		default:
+			unknown = append(unknown, fmt.Sprintf("%v", p))
 		}
 	}
-
-	return presets
+	if len(unknown) > 0 {
+		return nil, fmt.Errorf("unknown provider(s): %s (supported: %s)", strings.Join(unknown, ", "), strings.Join(curatedPresets, ", "))
+	}
+	return presets, nil
 }
 
 func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
@@ -777,7 +775,10 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		providers = providersSlice
 	}
 
-	presets := getPresetsFromProviders(providers, allProviders, popularProviders)
+	presets, err := getPresetsFromProviders(providers, allProviders, popularProviders)
+	if err != nil {
+		return ToolError(err)
+	}
 
 	// The same V4 TOML layout `ai-rulez init` creates.
 	aiRulesDir := filepath.Join(baseDir, ".ai-rulez")
@@ -792,6 +793,10 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 	}
 	if err := os.WriteFile(configPath, []byte(templates.InitConfigTOML(projectName, presets)), 0o644); err != nil {
 		return ToolError(fmt.Errorf("failed to write config file: %w", err))
+	}
+	// The configuration directory is an OKF bundle: the root index.md marks it.
+	if err := okfbridge.RefreshIndexes(aiRulesDir); err != nil {
+		return ToolError(fmt.Errorf("failed to write the index.md files: %w", err))
 	}
 
 	return ToolSuccess(map[string]interface{}{
