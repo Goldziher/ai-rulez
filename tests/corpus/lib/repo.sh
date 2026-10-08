@@ -114,7 +114,8 @@ prep_v5() {
 	local v
 	v="$(cfg_version)"
 	if [ -n "$v" ] && [ "$v" -lt 5 ]; then
-		ar migrate v5
+		# --recursive: monorepo members carry their own 4.x configs.
+		ar migrate v5 --recursive
 		if [ "$AR_RC" -ne 0 ]; then
 			fail_note "prep: migrate v5 exit $AR_RC ($(last_msg))"
 			return 1
