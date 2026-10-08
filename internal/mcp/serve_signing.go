@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
 )
@@ -192,22 +193,19 @@ func sameSkillMarkdown(signed, served []byte) bool {
 
 func withoutNameLine(content []byte) []byte {
 	text := strings.ReplaceAll(string(content), "\r\n", "\n")
-	rest, ok := strings.CutPrefix(text, "---\n")
-	if !ok {
+	block := frontmatter.SplitString(text)
+	raw := strings.TrimSuffix(block.Raw, "\n")
+	if !block.Closed || raw == "" {
 		return []byte(text)
 	}
-	end := strings.Index(rest, "\n---")
-	if end < 0 {
-		return []byte(text)
-	}
-	lines := strings.Split(rest[:end], "\n")
+	lines := strings.Split(raw, "\n")
 	kept := lines[:0]
 	for _, l := range lines {
 		if !strings.HasPrefix(l, "name:") {
 			kept = append(kept, l)
 		}
 	}
-	return []byte("---\n" + strings.Join(kept, "\n") + rest[end:])
+	return []byte("---\n" + strings.Join(kept, "\n") + text[len("---\n")+len(raw):])
 }
 
 // skillOrigins locates the directories of the remote skills of a build: skill

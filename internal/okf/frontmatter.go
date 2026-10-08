@@ -6,6 +6,8 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,25 +26,17 @@ type Frontmatter struct {
 // closing delimiter must be a line that is exactly ---, so a horizontal rule in
 // the body is never mistaken for it. A UTF-8 BOM and CRLF line ends are tolerated.
 func SplitFrontmatter(src []byte) (fm Frontmatter, body string) {
-	src = bytes.TrimPrefix(src, []byte("\xef\xbb\xbf"))
-	text := string(src)
-	first, rest, ok := strings.Cut(text, "\n")
-	if !ok || strings.TrimRight(first, "\r") != "---" {
-		return Frontmatter{}, text
+	b := frontmatter.Split(src)
+	switch {
+	case !b.Present:
+		return Frontmatter{}, b.Body
+	case !b.Closed:
+		// No closing delimiter: the file has no usable frontmatter.
+		return Frontmatter{Present: true, Err: oops.Errorf("frontmatter block is not closed with ---")}, b.Body
 	}
-	lines := strings.Split(rest, "\n")
-	var block strings.Builder
-	for i, line := range lines {
-		if strings.TrimRight(line, "\r") == "---" {
-			fm = parseBlock(block.String())
-			fm.Present = true
-			return fm, trimSeparator(strings.Join(lines[i+1:], "\n"))
-		}
-		block.WriteString(strings.TrimRight(line, "\r"))
-		block.WriteByte('\n')
-	}
-	// No closing delimiter: the file has no usable frontmatter.
-	return Frontmatter{Present: true, Err: oops.Errorf("frontmatter block is not closed with ---")}, text
+	fm = parseBlock(b.Raw)
+	fm.Present = true
+	return fm, trimSeparator(b.Body)
 }
 
 func parseBlock(block string) Frontmatter {

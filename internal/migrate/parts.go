@@ -13,6 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // commandRewrites renames CLI invocations that moved in v5, inside the hook,
@@ -296,13 +297,12 @@ func planFrontmatter(p *plan, dir string, write bool) error { //nolint:gocyclo /
 // splitFrontmatter splits a markdown file into its frontmatter block (through
 // the closing delimiter line) and the rest.
 func splitFrontmatter(text string) (fm, rest string, ok bool) {
-	if !strings.HasPrefix(text, "---\n") {
+	block := frontmatter.SplitString(text)
+	if !block.Closed {
 		return "", "", false
 	}
-	end := strings.Index(text[4:], "\n---")
-	if end < 0 {
-		return "", "", false
-	}
-	cut := 4 + end + 4
-	return text[:cut], text[cut:], true
+	// Head and Tail are lossless; only a leading BOM is dropped by Split, so put
+	// it back to keep the file byte-identical outside the renamed keys.
+	bom := text[:len(text)-len(block.Head)-len(block.Tail)]
+	return bom + block.Head, block.Tail, true
 }
