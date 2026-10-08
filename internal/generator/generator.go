@@ -3,6 +3,7 @@ package generator
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/samber/oops"
@@ -220,7 +221,7 @@ func (g *Generator) removeStaleGitignoreBlock() {
 		return
 	}
 	content := string(data)
-	if !contains(content, gitignore.BeginMarker) && !contains(content, gitignore.OldHeader) {
+	if !strings.Contains(content, gitignore.BeginMarker) && !strings.Contains(content, gitignore.OldHeader) {
 		return
 	}
 	if err := g.dropGitignoreBlock(gitignorePath, content); err != nil {

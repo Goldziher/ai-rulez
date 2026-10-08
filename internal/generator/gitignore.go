@@ -281,8 +281,8 @@ func (g *Generator) relativeToBase(abs string) (string, error) {
 func (g *Generator) shouldSkipPath(relPath string) bool {
 	configDir := g.configDirName()
 	return relPath == configDir ||
-		hasPrefix(relPath, configDir+"/") ||
-		hasPrefix(relPath, configDir+"\\")
+		strings.HasPrefix(relPath, configDir+"/") ||
+		strings.HasPrefix(relPath, configDir+"\\")
 }
 
 func (g *Generator) configDirName() string {
@@ -347,7 +347,7 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 // existingContent, rather than leaving an empty fence behind when nothing is
 // left to add.
 func (g *Generator) dropGitignoreBlock(gitignorePath, existingContent string) error {
-	if !contains(existingContent, gitignore.BeginMarker) && !contains(existingContent, gitignore.OldHeader) {
+	if !strings.Contains(existingContent, gitignore.BeginMarker) && !strings.Contains(existingContent, gitignore.OldHeader) {
 		return nil
 	}
 	safePath, _, guardErr := g.guardWrite(gitignorePath)
@@ -368,15 +368,15 @@ func gitignoreWithBlock(existingContent string, paths []string) string {
 	fencedBlock.WriteString(gitignore.EndMarker + "\n")
 
 	switch {
-	case contains(existingContent, gitignore.BeginMarker):
+	case strings.Contains(existingContent, gitignore.BeginMarker):
 		return gitignore.ReplaceFencedBlock(existingContent, fencedBlock.String())
-	case contains(existingContent, gitignore.OldHeader):
+	case strings.Contains(existingContent, gitignore.OldHeader):
 		return gitignore.ReplaceOldHeaderBlock(existingContent, fencedBlock.String())
 	case existingContent == "":
 		return fencedBlock.String()
 	}
 	newContent := existingContent
-	if !hasSuffix(newContent, "\n") {
+	if !strings.HasSuffix(newContent, "\n") {
 		newContent += "\n"
 	}
 	return newContent + "\n" + fencedBlock.String()
