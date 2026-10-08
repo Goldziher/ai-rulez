@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -131,8 +132,7 @@ func kindLabel(k Kind) string {
 // ".config/ai-rulez/…"), or the base name when the file lies elsewhere.
 func sourceLabel(p string, cfg *config.Config) string {
 	if cfg != nil && cfg.ConfigDir != "" && p != "" {
-		if rel, err := filepath.Rel(cfg.ConfigDir, p); err == nil && rel != ".." &&
-			!strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if rel, err := filepath.Rel(cfg.ConfigDir, p); err == nil && !safefs.RelEscapes(rel) {
 			name := cfg.ConfigDirName
 			if name == "" {
 				name = filepath.Base(cfg.ConfigDir)

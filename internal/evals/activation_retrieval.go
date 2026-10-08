@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsearch"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"gopkg.in/yaml.v3"
@@ -363,7 +364,7 @@ func relativeProblems(configDir string, problems []Problem) []Problem {
 	root := filepath.Dir(configDir)
 	out := make([]Problem, len(problems))
 	for i, p := range problems {
-		if rel, err := filepath.Rel(root, p.File); err == nil && within(root, p.File) {
+		if rel, err := filepath.Rel(root, p.File); err == nil && safefs.Within(root, p.File) {
 			p.File = filepath.ToSlash(rel)
 		}
 		out[i] = p

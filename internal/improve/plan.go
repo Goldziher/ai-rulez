@@ -18,6 +18,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
@@ -372,7 +373,7 @@ func (p *Plan) loadSkill() error {
 	p.OrigTokens = p.Opts.Counter.Count(string(skillMD.Data))
 	p.Constraints = ConstraintsFor(p.OrigTokens, p.Opts.MaxSkillGrowth, p.Opts.AllowFrontmatter, p.Opts.AllowScripts)
 	rel, err := filepath.Rel(p.Opts.RepoDir, p.Skill.Dir)
-	if err != nil || strings.HasPrefix(rel, "..") {
+	if err != nil || safefs.RelEscapes(rel) {
 		rel, err = filepath.Rel(filepath.Dir(p.Opts.ConfigDir), p.Skill.Dir)
 		if err != nil {
 			return fmt.Errorf("locate skill: %w", err)

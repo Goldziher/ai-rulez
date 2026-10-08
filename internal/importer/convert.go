@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/utils"
 	"github.com/samber/oops"
 )
@@ -791,7 +792,7 @@ func quoteAll(in []string) []string {
 // exists must be a real directory or file, for every path convert would write.
 func checkTargets(abs, intoAbs string, files map[string][]byte) error {
 	base := abs
-	if rel, err := filepath.Rel(abs, intoAbs); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if rel, err := filepath.Rel(abs, intoAbs); err != nil || safefs.RelEscapes(rel) {
 		base = filepath.Dir(intoAbs)
 	}
 	rels := make([]string, 0, len(files)+1)
@@ -868,7 +869,7 @@ func discardTemp(open *os.File, name string, err error) error {
 // relInside returns target relative to base, and false when it is not below base.
 func relInside(base, target string) (string, bool) {
 	rel, err := filepath.Rel(base, target)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || safefs.RelEscapes(rel) {
 		return "", false
 	}
 	return rel, true

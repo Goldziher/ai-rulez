@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles" // Register remaining legacy preset generators
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // keepForRole marks the previously generated files a role run must not clean as
@@ -246,7 +247,7 @@ func isUnderBaseDir(baseDir, path string) bool {
 	if err != nil {
 		return false
 	}
-	return rel == "." || (!strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != "..")
+	return rel == "." || (!safefs.RelEscapes(rel))
 }
 
 func (g *Generator) removeStaleManifestFiles(files []string) {
