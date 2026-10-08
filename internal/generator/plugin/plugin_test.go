@@ -64,7 +64,7 @@ func TestGenerate_ClaudeManifest(t *testing.T) {
 	require.NoError(t, json.Unmarshal(claudeOut.RawContent, &doc))
 
 	assert.Equal(t, "basemind", doc["name"])
-	assert.Equal(t, "Basemind", doc["displayName"])
+	assert.NotContains(t, doc, "displayName", "the Claude Code plugin schema has no displayName; validate flags it as AR963")
 	assert.Equal(t, "0.19.2", doc["version"])
 	assert.Equal(t, "MIT", doc["license"])
 
