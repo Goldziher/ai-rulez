@@ -32,7 +32,7 @@ func TestVersionPolicy_ConcurrentLoadsKeepTheirOwnPolicy(t *testing.T) {
 	keep := config.LockPolicy{Mode: config.LockRefresh}
 	refresh := func(project string, policy config.LockPolicy) (string, []string, error) {
 		cfg, err := config.LoadConfig(context.Background(), project,
-			config.WithResolvers(Resolvers("")), config.WithLockPolicy(policy), config.WithoutLocal())
+			config.WithResolvers(Resolvers("", nil)), config.WithLockPolicy(policy), config.WithoutLocal())
 		if err != nil {
 			return "", nil, err //nolint:wrapcheck // test helper
 		}

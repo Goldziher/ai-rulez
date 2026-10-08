@@ -19,7 +19,6 @@ func enforceProject(t *testing.T, lockTable string) {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
 	cliLockPolicy = config.LockPolicy{}
-	includes.ResetObserved()
 	t.Cleanup(func() { cliLockPolicy = config.LockPolicy{} })
 	root := lockProject(t, lockTable)
 	require.Equal(t, 0, writeLockAt("", "", nil))
