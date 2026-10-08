@@ -1,4 +1,4 @@
-package signing
+package sigstore
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
 
 // Public-good Sigstore endpoints, used by keyless signing unless overridden.
@@ -18,31 +20,41 @@ const (
 	defaultRetries   = 2
 )
 
-// Signer turns a DSSE payload into a Sigstore bundle.
-type Signer interface {
-	// Bundle signs content and returns the bundle.
-	Bundle(ctx context.Context, content Content) (*protobundle.Bundle, error)
-}
-
-// SignStatement signs an in-toto statement as a DSSE envelope and returns the
-// Sigstore bundle as JSON. Every feature that signs something (the lock,
-// approvals, an SBOM, a policy) defines a predicate type and calls this.
-// sigstore-go verifies in-toto payloads only, so there is no raw-payload variant.
-func SignStatement(ctx context.Context, s Signer, st *Statement) ([]byte, error) {
-	payload, err := st.Marshal()
+// signDSSE signs payload as a DSSE envelope with s and returns the bundle JSON.
+func signDSSE(ctx context.Context, s bundler, payload []byte, payloadType string) ([]byte, error) {
+	pb, err := s.Bundle(ctx, &DSSEData{Data: payload, PayloadType: payloadType})
 	if err != nil {
 		return nil, err
 	}
-	pb, err := s.Bundle(ctx, &DSSEData{Data: payload, PayloadType: PayloadTypeInToto})
+	return encodeBundle(pb)
+}
+
+// signBlob signs data as is with s and returns the bundle JSON.
+func signBlob(ctx context.Context, s bundler, data []byte) ([]byte, error) {
+	pb, err := s.Bundle(ctx, &PlainData{Data: data})
 	if err != nil {
-		return nil, oops.Wrapf(err, "sign the attestation")
+		return nil, err
 	}
+	return encodeBundle(pb)
+}
+
+func encodeBundle(pb *protobundle.Bundle) ([]byte, error) {
 	data, err := protojson.Marshal(pb)
 	if err != nil {
 		return nil, oops.Wrapf(err, "encode the bundle")
 	}
 	return data, nil
 }
+
+// bundler builds a Sigstore bundle for content.
+type bundler interface {
+	Bundle(ctx context.Context, content Content) (*protobundle.Bundle, error)
+}
+
+var (
+	_ signing.Signer = (*KeySigner)(nil)
+	_ signing.Signer = (*KeylessSigner)(nil)
+)
 
 // KeySigner signs with a long-lived key. It works offline unless TLog is set.
 type KeySigner struct {
@@ -61,7 +73,17 @@ func LoadKeySigner(pemBytes, password []byte) (*KeySigner, error) {
 	return &KeySigner{Key: kp}, nil
 }
 
-// Bundle implements Signer.
+// SignDSSE implements signing.Signer.
+func (k *KeySigner) SignDSSE(ctx context.Context, payload []byte, payloadType string) ([]byte, error) {
+	return signDSSE(ctx, k, payload, payloadType)
+}
+
+// SignBlob implements signing.Signer.
+func (k *KeySigner) SignBlob(ctx context.Context, data []byte) ([]byte, error) {
+	return signBlob(ctx, k, data)
+}
+
+// Bundle signs content and returns the bundle.
 func (k *KeySigner) Bundle(ctx context.Context, content Content) (*protobundle.Bundle, error) {
 	var rekor *rekorClient
 	if k.TLog {
@@ -77,14 +99,15 @@ type KeylessOptions struct {
 	// FulcioURL and RekorURL default to the public-good instances.
 	FulcioURL string
 	RekorURL  string
+	// RetryBackoff overrides the delay before the first retry of a service call.
+	// Zero keeps the default.
+	RetryBackoff time.Duration
 }
 
 // KeylessSigner signs with an ephemeral key certified by Fulcio and logs the
 // signature in Rekor. The token, certificate and subject digest leave the machine.
 type KeylessSigner struct {
 	opts KeylessOptions
-	// backoff overrides the delay before the first retry (tests).
-	backoff time.Duration
 }
 
 // NewKeylessSigner validates the options.
@@ -98,7 +121,17 @@ func NewKeylessSigner(opts KeylessOptions) (*KeylessSigner, error) {
 	return &KeylessSigner{opts: opts}, nil
 }
 
-// Bundle implements Signer.
+// SignDSSE implements signing.Signer.
+func (k *KeylessSigner) SignDSSE(ctx context.Context, payload []byte, payloadType string) ([]byte, error) {
+	return signDSSE(ctx, k, payload, payloadType)
+}
+
+// SignBlob implements signing.Signer.
+func (k *KeylessSigner) SignBlob(ctx context.Context, data []byte) ([]byte, error) {
+	return signBlob(ctx, k, data)
+}
+
+// Bundle signs content and returns the bundle.
 func (k *KeylessSigner) Bundle(ctx context.Context, content Content) (*protobundle.Bundle, error) {
 	kp, err := newEphemeralKeyPair()
 	if err != nil {
@@ -106,8 +139,8 @@ func (k *KeylessSigner) Bundle(ctx context.Context, content Content) (*protobund
 	}
 	fulcio := &fulcioClient{newServiceClient(k.opts.FulcioURL)}
 	rekor := newRekor(k.opts.RekorURL)
-	if k.backoff > 0 {
-		fulcio.backoff, rekor.backoff = k.backoff, k.backoff
+	if k.opts.RetryBackoff > 0 {
+		fulcio.backoff, rekor.backoff = k.opts.RetryBackoff, k.opts.RetryBackoff
 	}
 	return buildBundle(ctx, content, kp, fulcio, k.opts.IDToken, rekor)
 }
@@ -121,12 +154,12 @@ func newRekor(url string) *rekorClient {
 
 // parseBundle decodes bundle JSON with the size bound applied.
 func parseBundle(data []byte) (*bundle.Bundle, error) {
-	if len(data) > MaxBundleBytes {
-		return nil, Errorf(CodeInvalid, "the bundle is larger than %d bytes", MaxBundleBytes)
+	if len(data) > signing.MaxBundleBytes {
+		return nil, signing.Errorf(signing.CodeInvalid, "the bundle is larger than %d bytes", signing.MaxBundleBytes)
 	}
 	b := &bundle.Bundle{Bundle: new(protobundle.Bundle)}
 	if err := b.UnmarshalJSON(data); err != nil {
-		return nil, wrap(CodeInvalid, err, "the file is not a Sigstore bundle")
+		return nil, signing.Wrap(signing.CodeInvalid, err, "the file is not a Sigstore bundle")
 	}
 	return b, nil
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/publish/emit"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish/oci"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 const commit40 = "0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e0f3e"
@@ -733,9 +734,9 @@ func TestVerify_RejectsATamperedOCIManifest(t *testing.T) {
 
 func keyPair(t *testing.T) (signing.Signer, VerifyOptions) {
 	t.Helper()
-	priv, pub, err := signing.GenerateKeyPair([]byte("pw"))
+	priv, pub, err := sigstore.GenerateKeyPair([]byte("pw"))
 	require.NoError(t, err)
-	signer, err := signing.LoadKeySigner(priv, []byte("pw"))
+	signer, err := sigstore.LoadKeySigner(priv, []byte("pw"))
 	require.NoError(t, err)
 	key, err := signing.ParsePublicKey(pub)
 	require.NoError(t, err)

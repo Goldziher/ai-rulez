@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/samber/oops"
-	"github.com/sigstore/sigstore-go/pkg/root"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -334,7 +333,7 @@ func trustEntryOf(baseDir string, t *config.SigningTrust) (TrustEntry, error) {
 // trusted_root (inside the project), else the user cache's. A named root that is
 // missing is an error; the cached default is optional (nil when absent), since
 // key bundles do not need it.
-func loadTrustedRoot(cfg *config.Config, o VerifyOptions) (root.TrustedMaterial, error) {
+func loadTrustedRoot(cfg *config.Config, o VerifyOptions) (TrustedMaterial, error) {
 	var data []byte
 	var err error
 	switch {
@@ -361,7 +360,7 @@ func loadTrustedRoot(cfg *config.Config, o VerifyOptions) (root.TrustedMaterial,
 			return nil, wrap(CodeRootUnavailable, err, "cannot read the cached trusted root")
 		}
 	}
-	tr, err := root.NewTrustedRootFromJSON(data)
+	tr, err := LoadTrustedRoot(data)
 	if err != nil {
 		return nil, wrap(CodeRootUnavailable, err, "the trusted root is not valid")
 	}

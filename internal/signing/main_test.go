@@ -1,6 +1,8 @@
-package signing
+package signing_test
 
 import (
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 	"os"
 	"testing"
 
@@ -9,5 +11,6 @@ import (
 
 func TestMain(m *testing.M) {
 	testutil.CeilGit()
+	UseBackend(New())
 	os.Exit(m.Run())
 }
