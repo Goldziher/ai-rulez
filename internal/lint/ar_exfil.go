@@ -99,7 +99,7 @@ func dnsCarriesPayload(seg string, backticks bool) bool {
 // exfilWords are the command names any AR014 shape needs on its line (a
 // network tool, env/printenv as a producer, or a DNS client, or httpie); the PowerShell
 // cmdlets are matched case-insensitively.
-var exfilWords = []string{"curl", "wget", "xh", "nc", "ncat", "netcat", "scp", "rsync", "iwr", "irm", "invoke-webrequest", "invoke-restmethod", "dig", "nslookup", "host"}
+var exfilWords = []string{cmdCurl, cmdWget, "xh", "nc", "ncat", "netcat", "scp", "rsync", "iwr", "irm", "invoke-webrequest", "invoke-restmethod", "dig", "nslookup", "host"}
 
 func mayExfil(text string) bool {
 	low := strings.ToLower(text)
@@ -234,7 +234,7 @@ func scanRawIPs(r *runner, t *scanText) {
 }
 
 var (
-	fetchCmdRe = newGatedRe(`(?i)\b(?:curl|wget|git\s+clone|git\s+remote\s+add|pip3?\s+install|npm\s+(?:install|i|config)|iwr|invoke-webrequest|invoke-restmethod)\b`, true, "curl", "wget", "git ", "pip", "npm", "iwr", "invoke-")
+	fetchCmdRe = newGatedRe(`(?i)\b(?:curl|wget|git\s+clone|git\s+remote\s+add|pip3?\s+install|npm\s+(?:install|i|config)|iwr|invoke-webrequest|invoke-restmethod)\b`, true, cmdCurl, "wget", "git ", "pip", "npm", "iwr", "invoke-")
 	httpURLRe  = regexp.MustCompile(`(?i)\bhttp://([^\s/:"'<>)\]$]+)(?::\d+)?`)
 )
 

@@ -80,7 +80,7 @@ ai-rulez publish --dry-run              # publish: preview release artifacts
 ```
 
 Supported and planned standards, with pinned versions and test status, are in
-https://goldziher.github.io/ai-rulez/standards/.
+<https://goldziher.github.io/ai-rulez/standards/>.
 
 ## Configuration Structure
 
