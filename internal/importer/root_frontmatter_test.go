@@ -19,17 +19,18 @@ func TestNativePlan_RootFileFrontmatterKeys(t *testing.T) {
 		wantBody     string
 	}{
 		{
-			name:        "unknown keys move under metadata",
-			claude:      "---\ntitle: Operating contract\napplies_to: the repo\nupdated: 2026-08-10\n---\n\n# CLAUDE.md\n\nBody.\n",
-			wantMeta:    []string{"title", "applies_to", "updated"},
-			wantAbsent:  []string{"title:", "applies_to:", "updated:"},
-			wantFinding: true,
-			wantBody:    "Body.",
+			name:         "unknown keys move under metadata",
+			claude:       "---\ntitle: Operating contract\napplies_to: the repo\nupdated: 2026-08-10\n---\n\n# CLAUDE.md\n\nBody.\n",
+			wantMeta:     []string{"applies_to", "updated"},
+			wantTopLevel: []string{"title"}, // title is part of the OKF layer lint accepts
+			wantAbsent:   []string{"applies_to:", "updated:"},
+			wantFinding:  true,
+			wantBody:     "Body.",
 		},
 		{
 			name:         "known keys stay and an existing metadata map is extended",
-			claude:       "---\ndescription: Repo contract\nmetadata:\n  owner: me\ntitle: T\n---\nBody.\n",
-			wantMeta:     []string{"owner", "title"},
+			claude:       "---\ndescription: Repo contract\nmetadata:\n  owner: me\napplies_to: T\n---\nBody.\n",
+			wantMeta:     []string{"owner", "applies_to"},
 			wantTopLevel: []string{"description"},
 			wantFinding:  true,
 			wantBody:     "Body.",
