@@ -139,7 +139,7 @@ var (
 // unpinned git requirement, and (allowDocker) docker run of an untagged image.
 // needYes makes npx count only with -y/--yes (an interactive npx asks first);
 // a moving @tag is reported either way.
-func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
+func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) {
 	for len(argv) > 0 && (strings.Contains(argv[0], "=") && !strings.HasPrefix(argv[0], "-")) { // VAR=value prefix
 		argv = argv[1:]
 	}
@@ -149,59 +149,107 @@ func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) {
 	if len(argv) == 0 {
 		return "", ""
 	}
-	cmd := path.Base(argv[0])
-	args := argv[1:]
-	switch cmd {
-	case toolNpx, "bunx", "pnpx":
-		return npxProblem(args, needYes && cmd == toolNpx)
-	case toolPnpm, toolYarn, toolBun:
-		if len(args) > 0 && (args[0] == "dlx" || args[0] == "x") {
-			return npxProblem(args[1:], false)
-		}
-	case cmdNPM:
-		if len(args) > 0 && (args[0] == cmdExec || args[0] == "x") {
-			return npxProblem(args[1:], needYes)
-		}
-	case toolUvx:
-		return uvxProblem(args)
-	case "uv":
-		if len(args) > 1 && args[0] == "tool" && args[1] == wordRun {
-			return uvxProblem(args[2:])
-		}
-		if len(args) > 0 && args[0] == "x" {
-			return uvxProblem(args[1:])
-		}
-		if len(args) > 1 && args[0] == cmdPip && args[1] == wordInstall {
-			return pipProblem(args[2:])
-		}
-	case toolPipx:
-		if len(args) > 0 && args[0] == wordRun {
-			return pipxRunProblem(args[1:])
-		}
-	case cmdPip, "pip3":
-		if len(args) > 0 && args[0] == wordInstall {
-			return pipProblem(args[1:])
-		}
-	case toolPython, "python3":
-		if len(args) > 2 && args[0] == "-m" && args[1] == cmdPip && args[2] == wordInstall {
-			return pipProblem(args[3:])
-		}
-	case "go":
-		if len(args) > 1 && (args[0] == wordRun || args[0] == wordInstall) {
-			for _, a := range args[1:] {
-				if strings.HasPrefix(a, "-") {
-					continue
-				}
-				if _, ver := pinOf(a); ver == "latest" || ver == "master" || ver == "main" {
-					return a, "@" + ver + " is a moving ref"
-				}
-				break
+	check, ok := pinCheckers[path.Base(argv[0])]
+	if !ok {
+		return "", ""
+	}
+	return check(path.Base(argv[0]), argv[1:], needYes, allowDocker)
+}
+
+// pinChecker checks the arguments that follow a launcher's name; cmd is the
+// launcher name, since several names share one checker.
+type pinChecker func(cmd string, args []string, needYes, allowDocker bool) (pkg, reason string)
+
+var pinCheckers = map[string]pinChecker{
+	toolNpx:    npxLauncher,
+	"bunx":     npxLauncher,
+	"pnpx":     npxLauncher,
+	toolPnpm:   dlxLauncher,
+	toolYarn:   dlxLauncher,
+	toolBun:    dlxLauncher,
+	cmdNPM:     npmLauncher,
+	toolUvx:    func(_ string, args []string, _, _ bool) (string, string) { return uvxProblem(args) },
+	"uv":       uvLauncher,
+	toolPipx:   pipxLauncher,
+	cmdPip:     pipLauncher,
+	"pip3":     pipLauncher,
+	toolPython: pythonLauncher,
+	"python3":  pythonLauncher,
+	"go":       goLauncher,
+	cmdDocker:  dockerLauncher,
+	"podman":   dockerLauncher,
+}
+
+func npxLauncher(cmd string, args []string, needYes, _ bool) (string, string) {
+	return npxProblem(args, needYes && cmd == toolNpx)
+}
+
+func dlxLauncher(_ string, args []string, _, _ bool) (string, string) {
+	if len(args) > 0 && (args[0] == "dlx" || args[0] == "x") {
+		return npxProblem(args[1:], false)
+	}
+	return "", ""
+}
+
+func npmLauncher(_ string, args []string, needYes, _ bool) (string, string) {
+	if len(args) > 0 && (args[0] == cmdExec || args[0] == "x") {
+		return npxProblem(args[1:], needYes)
+	}
+	return "", ""
+}
+
+func uvLauncher(_ string, args []string, _, _ bool) (string, string) {
+	if len(args) > 1 && args[0] == "tool" && args[1] == wordRun {
+		return uvxProblem(args[2:])
+	}
+	if len(args) > 0 && args[0] == "x" {
+		return uvxProblem(args[1:])
+	}
+	if len(args) > 1 && args[0] == cmdPip && args[1] == wordInstall {
+		return pipProblem(args[2:])
+	}
+	return "", ""
+}
+
+func pipxLauncher(_ string, args []string, _, _ bool) (string, string) {
+	if len(args) > 0 && args[0] == wordRun {
+		return pipxRunProblem(args[1:])
+	}
+	return "", ""
+}
+
+func pipLauncher(_ string, args []string, _, _ bool) (string, string) {
+	if len(args) > 0 && args[0] == wordInstall {
+		return pipProblem(args[1:])
+	}
+	return "", ""
+}
+
+func pythonLauncher(_ string, args []string, _, _ bool) (string, string) {
+	if len(args) > 2 && args[0] == "-m" && args[1] == cmdPip && args[2] == wordInstall {
+		return pipProblem(args[3:])
+	}
+	return "", ""
+}
+
+func goLauncher(_ string, args []string, _, _ bool) (string, string) {
+	if len(args) > 1 && (args[0] == wordRun || args[0] == wordInstall) {
+		for _, a := range args[1:] {
+			if strings.HasPrefix(a, "-") {
+				continue
 			}
+			if _, ver := pinOf(a); ver == "latest" || ver == "master" || ver == "main" {
+				return a, "@" + ver + " is a moving ref"
+			}
+			break
 		}
-	case cmdDocker, "podman":
-		if allowDocker {
-			return dockerProblem(args)
-		}
+	}
+	return "", ""
+}
+
+func dockerLauncher(_ string, args []string, _, allowDocker bool) (string, string) {
+	if allowDocker {
+		return dockerProblem(args)
 	}
 	return "", ""
 }
