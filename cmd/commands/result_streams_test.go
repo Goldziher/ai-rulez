@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -26,12 +25,6 @@ func runWithBuffers(t *testing.T, cmd *cobra.Command) (stdout, stderr string, er
 	t.Cleanup(func() { cmd.SetOut(nil); cmd.SetErr(nil) })
 	err = cmd.RunE(cmd, nil)
 	return out.String(), errBuf.String(), err
-}
-
-func setQuiet(t *testing.T) {
-	t.Helper()
-	viper.Set("quiet", true)
-	t.Cleanup(func() { viper.Set("quiet", false) })
 }
 
 func listFixture(t *testing.T) {
