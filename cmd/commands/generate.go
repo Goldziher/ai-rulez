@@ -13,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 )
@@ -95,7 +96,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	ctx := cmdContext()
+	// One memo per run: the repository questions the load and the generator ask are answered once.
+	ctx := gitutil.WithMemo(cmdContext())
 	cfg := loadGenerateConfig(args)
 	applyGenerateOverrides(cfg)
 	warnFrontmatter(cfg)

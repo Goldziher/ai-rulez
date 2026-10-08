@@ -14,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/forge"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
@@ -386,10 +387,18 @@ func lockProfileFor(lock *lockfile.File) string {
 // checkLockAt is `lock --check`: the content comparison, then the attestation
 // check when [signing] require names the lock.
 func checkLockAt(path string) int {
+	return checkLockAtContext(cmdContext(), path)
+}
+
+// checkLockAtContext is checkLockAt under ctx. The check asks git the same
+// structural questions of the same directories many times, so it runs on a
+// context that remembers the answers for the length of this one check.
+func checkLockAtContext(ctx context.Context, path string) int {
+	ctx = gitutil.WithMemo(ctx)
 	// One load serves the content comparison, the tag check and the signature
 	// check: each of them used to load the configuration again.
-	cfg, remoteSkipped, err := loadForLockCheck(path)
-	code, upToDate := checkLockContent(cfg, remoteSkipped, err)
+	cfg, remoteSkipped, err := loadForLockCheckContext(ctx, path)
+	code, upToDate := checkLockContent(ctx, cfg, remoteSkipped, err)
 	if code == 1 || err != nil {
 		// A configuration that cannot be loaded is the content check's finding
 		// (exit 1, or drift for a lock violation); the other checks add nothing.
@@ -413,12 +422,12 @@ func checkLockAt(path string) int {
 // "up to date" is never printed before a signature failure.
 func checkLockContentAt(path string) (code int, report func()) {
 	cfg, remoteSkipped, err := loadForLockCheck(path)
-	return checkLockContent(cfg, remoteSkipped, err)
+	return checkLockContent(cmdContext(), cfg, remoteSkipped, err)
 }
 
 // checkLockContent is checkLockContentAt over a configuration already loaded
 // for the check (cfg, remoteSkipped and err are loadForLockCheck's results).
-func checkLockContent(cfg *config.Config, remoteSkipped bool, err error) (code int, report func()) {
+func checkLockContent(ctx context.Context, cfg *config.Config, remoteSkipped bool, err error) (code int, report func()) {
 	if err != nil {
 		fmtErrorFormat(lockFormat, err)
 		if errors.Is(err, config.ErrLockViolation) {
@@ -432,7 +441,7 @@ func checkLockContent(cfg *config.Config, remoteSkipped bool, err error) (code i
 		fmtErrorFormat(lockFormat, oops.Hint("run `ai-rulez lock` to create it").Errorf("no %s in %s: nothing to check", lockfile.FileName, cfg.ConfigDir))
 		return 1, nil
 	}
-	diff, err := govview.CheckLockRoles(cmdContext(), cfg, remoteSkipped, lockProfile, Version, dynamicLockChanges, govview.RoleSelection{Only: lockRoleNames()})
+	diff, err := govview.CheckLockRoles(ctx, cfg, remoteSkipped, lockProfile, Version, dynamicLockChanges, govview.RoleSelection{Only: lockRoleNames()})
 	if err != nil {
 		fmtErrorFormat(lockFormat, err)
 		return 1, nil

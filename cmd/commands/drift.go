@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 )
@@ -66,7 +67,7 @@ func driftLoadOptions(mode driftMode) []config.LoadOption {
 // differing files. It returns how many differ.
 func checkConfigDrift(cfg *config.Config, mode driftMode) (differing, blocked int, err error) {
 	gen := generator.NewGenerator(cfg)
-	gen.SetContext(cmdContext())
+	gen.SetContext(gitutil.WithMemo(cmdContext()))
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetOverwriteUnowned(generateForce)
 	if err := applyRole(gen); err != nil {
