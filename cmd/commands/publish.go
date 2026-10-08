@@ -11,6 +11,7 @@ import (
 
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
@@ -18,6 +19,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
+	"github.com/Goldziher/ai-rulez/v5/internal/render"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
@@ -498,7 +500,7 @@ func publishPreflight(cfg *config.Config) (*verifiedBundle, error) {
 		return nil, err
 	}
 	logger.Info("preflight: validate --strict ok")
-	if code := checkLockAt(""); code != 0 {
+	if code := checkLockOut("", render.New(os.Stderr, os.Stderr, viper.GetBool("quiet"))); code != 0 {
 		exit := publish.ExitFailed
 		if code == exitDrift {
 			exit = publish.ExitGate
