@@ -86,3 +86,16 @@ func TestPinnedDefaultsKeepTheLegacyGitignoreBlock(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, legacy, string(got), "gitignore = true is pinned, so the block is still wanted")
 }
+
+func TestWritePreservesCRLFLineEndings(t *testing.T) {
+	root, dir := writeProject(t, "version = \"4.0\"\r\nname = \"x\"\r\npresets = [\"claude\"]\r\n", nil)
+
+	res, err := migrate.Run(migrate.Options{Root: root, Write: true})
+	require.NoError(t, err)
+	require.False(t, res.Failed(), "%+v", res.Projects)
+
+	got, err := os.ReadFile(filepath.Join(dir, "config.toml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(got), "\r\n")
+	assert.NotRegexp(t, "[^\r]\n", string(got), "a bare LF in a CRLF file")
+}
