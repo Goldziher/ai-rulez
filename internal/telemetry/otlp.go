@@ -466,7 +466,7 @@ func (ag *aggregator) evalGauges(fallbackNano string) []otlpMetric {
 		{MetricEvalRecall, "How often the skill activated when it was needed (recall)", func(e *Event) *float64 { return e.TriggerRecall }},
 		{MetricEvalAblation, "Pass-rate gain with the skill against without it", func(e *Event) *float64 { return e.AblationDelta }},
 	}
-	keys := sortedKeys(ag.evals)
+	keys := slices.Sorted(maps.Keys(ag.evals))
 	var out []otlpMetric
 	for _, sc := range scores {
 		var points []gaugePoint
@@ -515,7 +515,7 @@ func sumMetric(name, desc string, buckets map[string]*bucket, startNano, nowNano
 	if len(buckets) == 0 {
 		return otlpMetric{}, false
 	}
-	keys := sortedKeys(buckets)
+	keys := slices.Sorted(maps.Keys(buckets))
 	points := make([]numberPoint, 0, len(keys))
 	for _, k := range keys {
 		points = append(points, numberPoint{Attributes: buckets[k].attrs, StartTimeUnixNano: startNano, TimeUnixNano: nowNano, AsInt: strconv.FormatInt(buckets[k].count, 10)})
@@ -527,7 +527,7 @@ func (ag *aggregator) histogramMetric(startNano, nowNano string) (otlpMetric, bo
 	if len(ag.durations) == 0 {
 		return otlpMetric{}, false
 	}
-	keys := sortedKeys(ag.durations)
+	keys := slices.Sorted(maps.Keys(ag.durations))
 	points := make([]histogramPoint, 0, len(keys))
 	for _, k := range keys {
 		h := ag.durations[k]
@@ -577,15 +577,6 @@ func (en *Encoder) EncodeMetrics(events []Event, now time.Time) ([]byte, error) 
 		}},
 	}}}
 	return json.Marshal(req)
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 // Sampled reports whether an event is inside the export sample. The decision is

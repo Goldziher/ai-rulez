@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -98,7 +99,7 @@ func retireStale(log logger.Logger, root *os.Root, previous, next map[string]str
 	res *WriteResult,
 ) map[string]string {
 	final := maps.Clone(next)
-	for _, old := range sortedKeys(previous) {
+	for _, old := range slices.Sorted(maps.Keys(previous)) {
 		if _, keep := next[old]; keep {
 			continue
 		}
@@ -119,15 +120,6 @@ func retireStale(log logger.Logger, root *os.Root, previous, next map[string]str
 	return final
 }
 
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
 func digestOf(data []byte) string {
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
@@ -136,7 +128,7 @@ func digestOf(data []byte) string {
 func writeMarker(root *os.Root, entries map[string]string) error {
 	var b strings.Builder
 	b.WriteString(markerHeader)
-	for _, p := range sortedKeys(entries) {
+	for _, p := range slices.Sorted(maps.Keys(entries)) {
 		if sum := entries[p]; sum != "" {
 			b.WriteString(sum + " ")
 		}

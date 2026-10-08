@@ -1,8 +1,10 @@
 package okf
 
 import (
+	"maps"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -166,7 +168,7 @@ func BuildIndexes(concepts []IndexInput, labels DirLabel, style string) map[stri
 		own := byDir[dir]
 		sort.Slice(own, func(i, j int) bool { return own[i].Path < own[j].Path })
 		if style == StyleFrontmatter {
-			out[name] = frontmatterIndex(dir, own, sortedKeys(subdirs[dir]), labels)
+			out[name] = frontmatterIndex(dir, own, slices.Sorted(maps.Keys(subdirs[dir])), labels)
 			continue
 		}
 		var b strings.Builder
@@ -180,7 +182,7 @@ func BuildIndexes(concepts []IndexInput, labels DirLabel, style string) map[stri
 			}
 			b.WriteString("\n")
 		}
-		if subs := sortedKeys(subdirs[dir]); len(subs) > 0 {
+		if subs := slices.Sorted(maps.Keys(subdirs[dir])); len(subs) > 0 {
 			b.WriteString("# Subdirectories\n\n")
 			for _, s := range subs {
 				writeEntry(&b, path.Base(s), path.Base(s)+"/"+IndexFile, labels[s])
@@ -246,13 +248,4 @@ func escapeTitle(t string) string {
 // description render as a link or as HTML in the index listing.
 func escapeText(t string) string {
 	return strings.NewReplacer("[", "\\[", "]", "\\]", "<", "\\<", ">", "\\>").Replace(t)
-}
-
-func sortedKeys(m map[string]bool) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
 }

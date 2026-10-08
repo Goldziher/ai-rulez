@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -373,7 +375,7 @@ func compareVerdicts(targets map[string]bool, before, after map[string]string) s
 			return fmt.Sprintf("the judge still rates %s %s (was %s)", dim, after[dim], before[dim])
 		}
 	}
-	for _, dim := range sortedKeys(before) {
+	for _, dim := range slices.Sorted(maps.Keys(before)) {
 		if targets[dim] {
 			continue
 		}

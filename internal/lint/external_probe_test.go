@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/sandbox"
 )
 
@@ -60,7 +61,7 @@ func TestProbeScannerVersionHonoursIsolation(t *testing.T) {
 			version, err := ProbeScannerVersion(context.Background(), ScannerInfo{Path: bin, Isolation: tt.isolation})
 			// Assert
 			assert.Equal(t, tt.wantErr, err != nil)
-			assert.Equal(t, tt.wantRan, fileExists(marker))
+			assert.Equal(t, tt.wantRan, safefs.IsFile(marker))
 			if tt.wantRan {
 				assert.Equal(t, "doctor-scan 2.0.1", version)
 			}
