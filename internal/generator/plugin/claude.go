@@ -8,9 +8,10 @@ import (
 
 // claudeManifest is the shape of .claude-plugin/plugin.json. Claude auto-discovers
 // bundled skills/commands/agents by convention, so no "skills" key is emitted.
+// The Claude Code schema has no displayName, so none is written: `validate`
+// (AR963) flags unknown fields.
 type claudeManifest struct {
 	Name        string              `json:"name"`
-	DisplayName string              `json:"displayName,omitempty"`
 	Description string              `json:"description,omitempty"`
 	Version     string              `json:"version"`
 	Author      *config.Author      `json:"author,omitempty"`
@@ -24,7 +25,6 @@ type claudeManifest struct {
 func renderClaude(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	doc := claudeManifest{
 		Name:        m.Name,
-		DisplayName: m.DisplayName,
 		Description: m.Description,
 		Version:     m.Version,
 		Author:      m.Author,
