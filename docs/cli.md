@@ -1050,7 +1050,6 @@ enables `claude`. Add the harnesses you use to `presets`; all 52 and what each s
 
 | Flag        | Type    | Description           |
 | ----------- | ------- | --------------------- |
-| `--verbose` | boolean | Enable verbose output |
 | `--debug`   | boolean | Enable debug output   |
 
 **Examples:**
@@ -2456,6 +2455,7 @@ These flags work with all commands:
 | Flag               | Type    | Description                                                                     |
 | ------------------ | ------- | ------------------------------------------------------------------------------- |
 | `--config` / `-C`  | string  | Config file path (auto-discovered if not specified)                             |
+| `--config-dir`     | string  | Configuration directory name (default `.ai-rulez`, then `.config/ai-rulez`); commands that declare their own `--config-dir` / `-n` keep it |
 | `--token` / `-T`   | string  | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
 | `--policy`         | string  | [Organization policy](policy.md) file (tighten-only); also `AI_RULEZ_POLICY` and the managed path |
 | `--policy-digest`  | string  | The digest (`sha256:<hex>`) the `--policy` file or URL must have; a URL policy is never loaded without one (`AR741`) |
@@ -2468,15 +2468,14 @@ These flags work with all commands:
 | `--policy-trusted-root` | string | Sigstore trusted root file for keyless policy signatures |
 | `--policy-trust-tofu` | boolean | Record the digest of an unpinned `--policy` URL once, in a terminal only |
 | `--policy-mode`    | string  | `enforce` (default) or `warn`: with `warn` a repository that loosens the [policy](policy.md) is reported as warnings and the run does not fail; the policy values are still enforced |
-| `--verbose` / `-V` | boolean | Enable verbose output                                                           |
-| `--debug` / `-D`   | boolean | Enable debug output                                                             |
-| `--quiet` / `-q`   | boolean | Suppress progress bars and non-essential output                                 |
+| `--debug` / `-D`   | boolean | Enable debug output (or `AI_RULEZ_DEBUG=1`)                                     |
+| `--quiet` / `-q`   | boolean | Suppress progress and informational lines on stderr (or `AI_RULEZ_QUIET=1`); results, warnings and errors stay |
 | `--help` / `-h`    | boolean | Show help for a command                                                         |
 | `--version` / `-v` | boolean | Print `ai-rulez version <version>` (root command only; same as `ai-rulez version`) |
 
-`-n` is the shorthand of `--config-dir` (the configuration directory name, `.ai-rulez` by default) on every command that takes it, not of a dry-run: use `-d` / `--dry-run` where it exists (`generate`, `clean`) and spell `--dry-run` out elsewhere. `--config-dir` is not a global flag: each command lists it with its own flags.
+`-n` is the shorthand of `--config-dir` (the configuration directory name, `.ai-rulez` by default) on every command that takes it, not of a dry-run: use `-d` / `--dry-run` where it exists (`generate`, `clean`) and spell `--dry-run` out elsewhere.
 
-Every command that can print JSON takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal. Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--yes -y`,
+Every command that prints a result takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--format` is the encoding of the report; `generate`, `clean`, `sign`, `export okf` and `version` take it as well as the reporting commands. `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal. Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--yes -y`,
 `--priority -p`, `--targets -t`, `--content -c`, `--description -s`, `--path -p`,
 and `--ref -r`.
 
@@ -2499,6 +2498,76 @@ Show help for init:
 ```bash
 ai-rulez init --help
 ```
+
+## Environment Variables
+
+The CLI reads only variables with the `AI_RULEZ_` prefix for its own settings (plus the conventional `NO_COLOR`,
+`TERM`, `DO_NOT_TRACK`, `XDG_*`, `GITHUB_TOKEN`/`GH_TOKEN` and the variable a config names with `api_key_env`).
+A bare `DEBUG`, `QUIET` or `VERBOSE` in the environment has no effect (v4 and the early v5 builds read them), and
+no `~/.ai-rulez.*` file is read. A flag always wins over its variable; a variable wins over the user config file;
+a repository config cannot set any of them, which is why the credential and network switches are environment-only.
+Boolean variables accept `1`/`true` and `0`/`false`. A test fails when the code reads an `AI_RULEZ_*` name that is not
+in these tables.
+
+**Global switches and flags**
+
+| Variable | Flag | Meaning |
+| -------- | ---- | ------- |
+| `AI_RULEZ_DEBUG` | `--debug` | Debug logging on stderr |
+| `AI_RULEZ_QUIET` | `--quiet` | Hide progress and information lines (results, warnings, errors stay) |
+| `AI_RULEZ_GIT_TOKEN` | `--token` / `-T` | Git access token for private includes and skill sources |
+| `AI_RULEZ_GIT_TOKEN_HOSTS` | | Comma-separated hosts the git token may be sent to (default `github.com`) |
+| `AI_RULEZ_FORGE_HOSTS` | | Comma-separated hosts the forge API client may contact (default `github.com`); `GITHUB_TOKEN` / `GH_TOKEN` supply its token |
+| `AI_RULEZ_REPO_ROOT` | `--repo-root` | Repository root for validation and scans |
+| `AI_RULEZ_STRICT` | `generate --strict` | Fail on unknown or invalid configuration keys instead of warning |
+| `AI_RULEZ_ACK_COMMANDS` | `--yes` | Silence the summary of commands a configuration will run |
+| `AI_RULEZ_VERIFIERS_ALLOW_EXEC` | `verifiers run --allow-exec` | Let `command` verifier predicates run programs |
+| `AI_RULEZ_ALLOW_FILE_URLS` | | `1` lets a `file://` git source outside the project resolve from the project config |
+| `AI_RULEZ_MAX_CLONE_BYTES`, `AI_RULEZ_MAX_CLONE_FILES` | `mcp --serve-skills` clone limits | Largest git skill source clone (default 256 MiB, 20000 files) for sources that set no `max_clone_bytes` / `max_clone_files` |
+| `AI_RULEZ_HOME` | | Extra directory `improve pr` allows its worktree commands to write and forwards to them |
+| `AI_RULEZ_TODAY` | `--today` | Pin "today" (`YYYY-MM-DD`) for baseline expiry, for reproducible runs |
+| `AI_RULEZ_EVAL_DATE` | `eval run --date` | Date recorded in eval results |
+
+**Organization policy** (see [Organization policy](policy.md))
+
+| Variable | Flag |
+| -------- | ---- |
+| `AI_RULEZ_POLICY` | `--policy` |
+| `AI_RULEZ_POLICY_DIGEST` | `--policy-digest` |
+| `AI_RULEZ_POLICY_OFFLINE` | `--policy-offline` |
+| `AI_RULEZ_POLICY_MAX_STALE` | `--policy-max-stale` |
+| `AI_RULEZ_POLICY_REQUIRE_SIGNED` | `--policy-require-signed` |
+| `AI_RULEZ_POLICY_SIGNER_KEY` | `--policy-signer-key` |
+| `AI_RULEZ_POLICY_SIGNER_IDENTITY`, `AI_RULEZ_POLICY_SIGNER_ISSUER` | `--policy-signer-identity`, `--policy-signer-issuer` |
+| `AI_RULEZ_POLICY_TRUSTED_ROOT` | `--policy-trusted-root` |
+
+**LLM** (see [LLM configuration](llm.md); an environment value wins over the user config file, and a repository config cannot set the network or key switches)
+
+`AI_RULEZ_LLM_PROVIDER`, `AI_RULEZ_LLM_MODEL`, `AI_RULEZ_LLM_BACKEND`, `AI_RULEZ_LLM_BASE_URL`,
+`AI_RULEZ_LLM_API_KEY_ENV`, `AI_RULEZ_LLM_EMBEDDING_MODEL`, `AI_RULEZ_LLM_MAX_COST_USD`, `AI_RULEZ_LLM_MAX_TOKENS`,
+`AI_RULEZ_LLM_MAX_CALLS`, `AI_RULEZ_LLM_TIMEOUT_SECONDS`, `AI_RULEZ_LLM_CACHE`, `AI_RULEZ_LLM_ALLOW_NETWORK`,
+`AI_RULEZ_LLM_ALLOW_PLAIN_HTTP`, `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS`. Review: `AI_RULEZ_REVIEW_ALLOWED_HOSTS`.
+Search: `AI_RULEZ_SEARCH_MODE` (overrides `[search] mode`), `AI_RULEZ_SEARCH_LOG_QUERIES` (turns the query log on or off).
+
+**Telemetry** (see [Telemetry](telemetry.md); user scope only; `DO_NOT_TRACK=1` and `AI_RULEZ_TELEMETRY=off` always win)
+
+`AI_RULEZ_TELEMETRY`, `AI_RULEZ_TELEMETRY_ENDPOINT`, `AI_RULEZ_TELEMETRY_PROTOCOL`, `AI_RULEZ_TELEMETRY_ALLOW_NETWORK`,
+`AI_RULEZ_TELEMETRY_HEADERS_ENV`, `AI_RULEZ_TELEMETRY_SERVICE_NAME`, `AI_RULEZ_TELEMETRY_SAMPLE`,
+`AI_RULEZ_TELEMETRY_INCLUDE_PATHS`, `AI_RULEZ_TELEMETRY_INCLUDE_SESSION`, `AI_RULEZ_TELEMETRY_SALT_FILE`,
+`AI_RULEZ_TELEMETRY_RESOURCE`, `AI_RULEZ_USAGE_SALT` (session-hash salt, beats `--salt-file`), `AI_RULEZ_ROLE`
+(role recorded when `--role` is not given).
+
+**Approvals, signing and SBOM**
+
+| Variable | Meaning |
+| -------- | ------- |
+| `AI_RULEZ_REVIEWER` | Default reviewer recorded by `approve` (else the git `user.email`) |
+| `AI_RULEZ_SIGNING_KEY_PASSWORD` | Password of a `--key` signing key (then `COSIGN_PASSWORD`); `--key-password-env` names another variable |
+| `AI_RULEZ_SBOM_REDACT_KEY` | Key for the salted hash `sbom --redact-reviewers` uses |
+
+**Set by ai-rulez for the programs it starts** (do not set these yourself): `AI_RULEZ_RUN_TOKEN`,
+`AI_RULEZ_EVAL_PROTOCOL`, `AI_RULEZ_EVAL_SKILL`, `AI_RULEZ_EVAL_MODE` (eval runner commands),
+`AI_RULEZ_IMPROVE_PROTOCOL` (improve runner commands).
 
 ## Configuration Detection
 
@@ -2538,6 +2607,34 @@ Every command follows one contract (`lock` adds `3`, see [Lock file](lockfile.md
 | 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --strict` exits 2 instead) |
 
 When a command covers several roots (`--recursive`), the most severe code wins: `1`, then `2`, then `3`.
+
+### Output streams, `-q` and errors
+
+One contract for every command, enforced by tests over the whole command tree:
+
+- **stdout is the result**: a list, a plan, a report, a created path, in the requested `--format`. It is never
+  suppressed, so `ai-rulez list rules -q`, `clean --dry-run -q` and `lock --check -q` still print their result.
+  Under `--format json` stdout carries exactly one JSON document, including on failure (below).
+- **stderr is everything else**: progress, confirmations ("Rule added"), warnings, errors and hints. Prompts
+  (`Are you sure ...? (y/N)`) are written to stderr, so piped stdout stays clean.
+- **`-q` / `AI_RULEZ_QUIET=1` removes progress, information and success lines only.** Warnings, errors, hints and
+  every result stay. `-D` / `AI_RULEZ_DEBUG=1` adds debug lines; if both are set, debug wins.
+- **One error rendering.** Every failure, from any command or from flag parsing, prints `Error: <message>` on
+  stderr, then the `Validation errors:` list when there is one, then `Hint: <hint>` when there is one. Usage errors
+  (unknown flag, wrong argument count, unknown subcommand) are failures of the same kind and exit `1`.
+- **JSON error document.** With `--format json` the same failure also writes this document to stdout, so a consumer
+  that parses stdout always gets JSON:
+
+  ```json
+  {"schema_version": 1, "status": "error", "error": "no ai-rulez directory found", "hint": "Run 'ai-rulez init'", "exit_code": 1}
+  ```
+
+  A command that already printed its own report before ending with exit `2` (findings, drift) adds no error text and
+  no extra document.
+- **Destructive commands** (`clean`, every `remove`) ask on a terminal and otherwise refuse with exit `1` and the
+  hint `pass --yes to skip the confirmation prompt (required in non-interactive shells)`.
+- Exit codes are set in one place: commands return an error and `main` exits. The `0`/`1`/`2`/`3` table above is the
+  whole contract; there is no other exit status.
 
 The contract is covered by a table test over the built binary (`tests/e2e/cli/exit_codes_test.go`), so a
 CI step can rely on it: `0` pass, `2` fix the content, `1` fix the setup.
