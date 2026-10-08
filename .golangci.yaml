@@ -206,10 +206,6 @@ linters:
           - errcheck
         source: "element\\.\\(\\*config\\."
 
-      - path: cmd/commands/crud/generic_factory.go
-        linters:
-          - gocyclo
-
       - path: internal/templates/
         linters:
           - goconst
