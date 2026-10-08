@@ -70,7 +70,7 @@ func TestRemoteLoadHonoursAnEnforcedLock(t *testing.T) {
 
 			// Act
 			p, err := airulez.Load(context.Background(), airulez.Options{Workspace: ws, Remote: true, Runner: &execRunner{},
-				Env: airulez.MapEnv{Home: home, Vars: map[string]string{"HOME": home, "XDG_CACHE_HOME": filepath.Join(home, ".cache")}}})
+				Env: airulez.MapEnv{Home: home, Vars: map[string]string{"HOME": home, "XDG_CACHE_HOME": filepath.Join(home, ".cache"), "AI_RULEZ_ALLOW_FILE_URLS": "1"}}})
 
 			// Assert
 			if tt.violation {
