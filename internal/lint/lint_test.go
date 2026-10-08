@@ -110,7 +110,7 @@ func fixture(extraConfig string) map[string]string {
 		".ai-rulez/rules/scoped.md": "---\npaths:\n  - \"src/**/*.py\"\n  - \"nothing/**\"\n---\n# Scoped\n",
 		".ai-rulez/rules/linky.md": "# Linky\n" +
 			"[ok](../context/c.md) [bad](missing.md) [anchor](../context/c.md#nope) [good](../context/c.md#real-heading)\n" +
-			"Path `src/a.py` and `src/gone.py` and `docs/<placeholder>.md`.\n" +
+			"Path `src/a.py` and `src/gone.py` and `docs/<placeholder()>.md`.\n" +
 			"Use the `ghost-skill` skill or `/ghost-cmd` or skill `alpha`.\n" +
 			"```\n[fenced](nope.md) `src/fenced-missing.py`\n```\n" +
 			"<!-- ai-rulez-lint-ignore: AR401 -->\n`src/ignored-missing.py`\n",
@@ -162,7 +162,7 @@ func TestRunDetectsBrokenContent(t *testing.T) {
 
 	// Things that must NOT be reported.
 	if n := countCode(fs, CodePathMissing); n != 1 {
-		t.Errorf("want exactly 1 path-missing (fenced, placeholder and ignored paths excluded), got %d:\n%s", n, dump(fs))
+		t.Errorf("want exactly 1 path-missing (fenced, placeholder() and ignored paths excluded), got %d:\n%s", n, dump(fs))
 	}
 	if n := countCode(fs, CodeLinkUnresolved); n != 1 {
 		t.Errorf("want exactly 1 link-unresolved (fenced link excluded), got %d", n)

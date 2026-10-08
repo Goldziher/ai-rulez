@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // CodeImportInvalid reports a Claude memory `@path` import that cannot load.
@@ -20,7 +21,7 @@ func registerArImports(s *ruleSet) {
 }
 
 var (
-	importRe  = regexp.MustCompile(`(?:^|[\s(\[])@([^\s)\]>"'` + "`" + `]+)`)
+	importRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?:^|[\s(\[])@([^\s)\]>"'` + "`" + `]+)`) })
 	importExt = map[string]bool{".md": true, ".mdc": true, ".mdx": true, ".txt": true, ".markdown": true, ".json": true, ".yaml": true, ".yml": true, ".toml": true, ".rst": true}
 )
 
@@ -34,9 +35,9 @@ type importRef struct {
 func importsIn(d doc) []importRef {
 	var out []importRef
 	for _, l := range d.body() {
-		for _, m := range importRe.FindAllStringSubmatch(l.Plain, -1) {
+		for _, m := range importRe().FindAllStringSubmatch(l.Plain, -1) {
 			p := strings.TrimRight(m[1], ".,;:!?")
-			if p == "" || strings.Contains(p, "@") || strings.HasPrefix(p, "~") || strings.HasPrefix(p, "/") || strings.Contains(p, "://") || placeholderRe.MatchString(p) {
+			if p == "" || strings.Contains(p, "@") || strings.HasPrefix(p, "~") || strings.HasPrefix(p, "/") || strings.Contains(p, "://") || placeholderRe().MatchString(p) {
 				continue // home and absolute imports depend on the machine
 			}
 			if !strings.HasPrefix(p, "./") && !strings.HasPrefix(p, "../") && !importExt[strings.ToLower(filepath.Ext(p))] {

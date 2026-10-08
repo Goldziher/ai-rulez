@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	procrunner "github.com/Goldziher/ai-rulez/v5/internal/runner"
 
@@ -80,7 +81,9 @@ func (r *runner) commandResolves(cmd string) bool {
 	return err == nil
 }
 
-var projectVarRe = regexp.MustCompile(`(?:\$\{CLAUDE_PROJECT_DIR\}|\$CLAUDE_PROJECT_DIR)"?/([^\s"';&|)]+)`)
+var projectVarRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?:\$\{CLAUDE_PROJECT_DIR\}|\$CLAUDE_PROJECT_DIR)"?/([^\s"';&|)]+)`)
+})
 
 type hookFile struct {
 	Hooks map[string][]struct {
@@ -123,7 +126,7 @@ func (r *runner) checkHooks(baseAbs string) {
 func (r *runner) checkHookCommand(settings, event, command string) {
 	r.checkLauncherScripts(settings, event, command)
 	trimmed := strings.TrimLeft(command, `"' `)
-	for _, m := range projectVarRe.FindAllStringSubmatchIndex(command, -1) {
+	for _, m := range projectVarRe().FindAllStringSubmatchIndex(command, -1) {
 		rel := command[m[2]:m[3]]
 		line := hookLine(r.docs[settings], rel)
 		found := ""
