@@ -65,7 +65,9 @@ func helpExamples() map[*cobra.Command]string {
 	}
 }
 
-func init() {
+// applyHelpExamples attaches the examples; root.go's init calls it once every
+// command variable exists.
+func applyHelpExamples() {
 	for cmd, example := range helpExamples() {
 		cmd.Example = example
 	}
