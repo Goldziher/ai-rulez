@@ -37,19 +37,19 @@ SUBSET='
 '
 
 run_subset() {
-	: >"$OUT"
-	while read -r pkg regexp; do
-		[ -n "$pkg" ] || continue
-		echo "== $pkg $regexp" >&2
-		go test "$pkg" -run '^$' -bench "$regexp" -benchmem -count="$COUNT" -timeout "$TIMEOUT" | tee -a "$OUT"
-	done <<<"$SUBSET"
+  : >"$OUT"
+  while read -r pkg regexp; do
+    [ -n "$pkg" ] || continue
+    echo "== $pkg $regexp" >&2
+    go test "$pkg" -run '^$' -bench "$regexp" -benchmem -count="$COUNT" -timeout "$TIMEOUT" | tee -a "$OUT"
+  done <<<"$SUBSET"
 }
 
 cpu_of() { awk -F': ' '/^cpu:/ {print $2; exit}' "$1"; }
 
 # median_table FILE prints "name median_ns" lines.
 median_table() {
-	awk '
+  awk '
 		/^Benchmark/ && /ns\/op/ {
 			name = $1; sub(/-[0-9]+$/, "", name)
 			for (i = 2; i <= NF; i++) if ($i == "ns/op") { n[name]++; v[name, n[name]] = $(i - 1) + 0 }
@@ -66,30 +66,30 @@ median_table() {
 }
 
 show_benchstat() {
-	if command -v benchstat >/dev/null 2>&1; then
-		benchstat "$BASELINE" "$OUT" || true
-	elif command -v curl >/dev/null 2>&1 && curl -fsS --max-time 3 -o /dev/null https://proxy.golang.org; then
-		go run golang.org/x/perf/cmd/benchstat@latest "$BASELINE" "$OUT" || true
-	else
-		echo "benchstat not installed and offline: skipping its report" >&2
-	fi
+  if command -v benchstat >/dev/null 2>&1; then
+    benchstat "$BASELINE" "$OUT" || true
+  elif command -v curl >/dev/null 2>&1 && curl -fsS --max-time 3 -o /dev/null https://proxy.golang.org; then
+    go run golang.org/x/perf/cmd/benchstat@latest "$BASELINE" "$OUT" || true
+  else
+    echo "benchstat not installed and offline: skipping its report" >&2
+  fi
 }
 
 run_subset
 
 if [ "${1:-}" = "--update" ]; then
-	cp "$OUT" "$BASELINE"
-	echo "baseline written to $BASELINE (cpu: $(cpu_of "$BASELINE"))"
-	exit 0
+  cp "$OUT" "$BASELINE"
+  echo "baseline written to $BASELINE (cpu: $(cpu_of "$BASELINE"))"
+  exit 0
 fi
 
 if [ ! -s "$BASELINE" ]; then
-	echo "::warning::no benchmark baseline at $BASELINE; run scripts/bench.sh --update to record one"
-	exit 0
+  echo "::warning::no benchmark baseline at $BASELINE; run scripts/bench.sh --update to record one"
+  exit 0
 fi
 if [ "$(cpu_of "$BASELINE")" != "$(cpu_of "$OUT")" ]; then
-	echo "::warning::baseline was recorded on '$(cpu_of "$BASELINE")' and this run is on '$(cpu_of "$OUT")'; time/op is not comparable, regression gate skipped"
-	exit 0
+  echo "::warning::baseline was recorded on '$(cpu_of "$BASELINE")' and this run is on '$(cpu_of "$OUT")'; time/op is not comparable, regression gate skipped"
+  exit 0
 fi
 
 show_benchstat
