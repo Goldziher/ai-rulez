@@ -75,7 +75,7 @@ markdown, a skill's `SKILL.md` and references) does not change the digest and ne
 other non-text files are hashed byte for byte ([lockfile.md](lockfile.md#hashing-scheme)), so converting their line
 endings does. A served skill's digest ignores the generated `Content-Hash`, `Source-Hash` and `Generated` header
 lines, which would otherwise move with a CRLF-only edit. A remote source that moves to a new commit with an identical tree keeps its
-approval. `ai-rulez lock` keeps every approval: stale ones stay until the content is approved again or `--prune` removes
+approval. `ai-rulez lock` keeps every approval: stale ones stay until the content is approved again or `ai-rulez approve --prune` removes
 them; a full re-lock drops, with a warning (`AR715`), approvals of content that no longer exists. A renamed item must
 be approved again under its new name. Items are pinned whatever the lock's profile (it only selects the pinned outputs), so relocking under another
 profile or running `approve --prune` keeps the approval of an item that only some profile renders.
