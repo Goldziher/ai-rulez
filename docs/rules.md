@@ -107,7 +107,7 @@ claude = "inline"
 copilot = "split"
 ```
 
-Since 4.22.0 the default is `split`. To keep the previous behaviour, set `mode = "inline"` globally, or opt out for single presets with `mode_by_preset`.
+The default is `split`. For inline rules, set `mode = "inline"` globally, or opt out for single presets with `mode_by_preset`.
 
 | Mode     | Rules folder receives                  | Root file keeps                          |
 | -------- | -------------------------------------- | ---------------------------------------- |

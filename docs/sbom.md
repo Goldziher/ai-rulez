@@ -236,5 +236,5 @@ digests are pinned in a test, so updating one is a reviewed change. Any CycloneD
   is installed, and is marked as heuristic.
 - **Settings pins**: the `mcp-servers` settings pin is omitted (secrets), every other settings pin is listed.
 - **Findings** (`AR750`-`AR753`) are reported by `sbom` and by `validate`; see
-  [In `validate`](#in-validate-strict).
+  [In `validate`](#in-validate).
 - **Not offered**: `--include-builtins`, `--redact-hosts`, `--spec-version`, a `[sbom]` config table and `sbom --sign`.
