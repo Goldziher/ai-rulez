@@ -109,7 +109,7 @@ func runVerifyAttestation(args []string, env ambient.Env, out io.Writer) int {
 		return runVerifyArtifact(args, env, out)
 	}
 	if err := validateVerifyAttestationFlags(); err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	path := ""
@@ -118,7 +118,7 @@ func runVerifyAttestation(args []string, env ambient.Env, out io.Writer) int {
 	}
 	cfg, _, err := loadForLockCheck(path)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	now := time.Now()
@@ -130,7 +130,7 @@ func runVerifyAttestation(args []string, env ambient.Env, out io.Writer) int {
 		if code := signing.CodeOf(err); code != "" {
 			return reportAttestation(out, failedResult(check, err), now)
 		}
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	for _, w := range check.Warnings {
@@ -194,7 +194,7 @@ func reportAttestation(out io.Writer, r attestationResult, _ time.Time) int {
 	if verifyFormat == formatJSON {
 		doc := attestationReport{SchemaVersion: attestationReportVersion, Results: []attestationResult{r}}
 		if err := writeRawJSON(out, doc); err != nil {
-			fmtError(oops.Wrapf(err, "write the report"))
+			renderError(os.Stderr, oops.Wrapf(err, "write the report"))
 			return 1
 		}
 		return code
@@ -280,7 +280,7 @@ func checkLockSignatureAt(path string) int {
 	}
 	lines, err := signingRequiredLines(cfg)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	if len(lines) == 0 {
