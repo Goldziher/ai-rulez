@@ -40,3 +40,6 @@ func (op *OperatorImpl) isBundle() bool {
 	info, err := os.Stat(filepath.Join(op.aiRulezDir, okf.IndexFile))
 	return err == nil && !info.IsDir()
 }
+
+// ConfigDir is the configuration directory the operator writes to.
+func (op *OperatorImpl) ConfigDir() string { return op.aiRulezDir }
