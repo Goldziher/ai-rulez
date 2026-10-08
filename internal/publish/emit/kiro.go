@@ -8,6 +8,8 @@ import (
 
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 const kiroSteeringDir = ".kiro/steering/"
@@ -158,13 +160,9 @@ func steeringFile(front map[string]any, body string) ([]byte, error) {
 
 func stripFrontMatter(body string) string {
 	text := strings.ReplaceAll(body, "\r\n", "\n")
-	rest, ok := strings.CutPrefix(text, "---\n")
-	if !ok {
+	block := frontmatter.SplitString(text)
+	if !block.Closed {
 		return text
 	}
-	_, after, ok := strings.Cut(rest, "\n---")
-	if !ok {
-		return text
-	}
-	return strings.TrimLeft(strings.TrimPrefix(after, "\n"), "\n")
+	return strings.TrimLeft(block.Body, "\n")
 }

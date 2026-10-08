@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
@@ -248,25 +249,15 @@ var activationFrontmatterKeys = map[string]bool{"name": true, frontmatterDescrip
 // indented continuation lines) of a SKILL.md frontmatter, and the body unchanged.
 func stripSkillFrontmatter(text string) string {
 	norm := strings.ReplaceAll(text, "\r\n", "\n")
-	if !strings.HasPrefix(norm, "---\n") {
+	block := frontmatter.SplitString(norm)
+	if !block.Closed {
 		return norm
 	}
-	rest := strings.TrimPrefix(norm, "---\n")
 	var front []string
-	body := ""
-	closed := false
-	for rest != "" {
-		line, tail, _ := strings.Cut(rest, "\n")
-		rest = tail
-		if strings.TrimRight(line, " \t") == "---" {
-			body, closed = rest, true
-			break
-		}
-		front = append(front, line)
+	if block.Raw != "" {
+		front = strings.Split(strings.TrimSuffix(block.Raw, "\n"), "\n")
 	}
-	if !closed {
-		return norm
-	}
+	body := block.Body
 	var kept []string
 	keep := false
 	for _, line := range front {

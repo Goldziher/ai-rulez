@@ -14,6 +14,8 @@ import (
 
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // Emitter statuses. An experimental emitter writes a format that is documented
@@ -184,17 +186,12 @@ func Skills(files []File) []Doc {
 
 // frontMatter reads the top-level string values of a leading YAML block.
 func frontMatter(data []byte) map[string]string {
-	text := strings.ReplaceAll(string(data), "\r\n", "\n")
-	rest, ok := strings.CutPrefix(text, "---\n")
-	if !ok {
-		return nil
-	}
-	block, _, ok := strings.Cut(rest, "\n---")
-	if !ok {
+	block := frontmatter.Split(data)
+	if !block.Closed {
 		return nil
 	}
 	var raw map[string]any
-	if err := yaml.Unmarshal([]byte(block), &raw); err != nil {
+	if err := yaml.Unmarshal([]byte(block.Raw), &raw); err != nil {
 		return nil
 	}
 	out := map[string]string{}
