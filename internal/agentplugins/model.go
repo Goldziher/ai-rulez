@@ -115,6 +115,7 @@ const (
 	CodeCredentialHeader     = "credential-header"
 	CodeFieldIgnored         = "field-ignored"
 	CodePathEscape           = "path-escape"
+	CodeFileTooLarge         = "file-too-large"
 	CodeUnreadable           = "unreadable"
 )
 
