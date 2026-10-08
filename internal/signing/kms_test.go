@@ -1,10 +1,12 @@
-package signing
+package signing_test
 
 import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 	"os"
 	"path/filepath"
 	"testing"

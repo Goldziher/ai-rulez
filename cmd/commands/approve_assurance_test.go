@@ -14,7 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/approval"
 	"github.com/Goldziher/ai-rulez/v5/internal/forge"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
-	"github.com/Goldziher/ai-rulez/v5/internal/signing"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
 )
 
 const signedGovernance = "\nmin_assurance = \"signed\"\n\n[[signing.trust]]\nsubject = \"approval\"\nkey_file = \"keys/approver.pub\"\n"
@@ -23,7 +23,7 @@ const signedGovernance = "\nmin_assurance = \"signed\"\n\n[[signing.trust]]\nsub
 // it) and returns the path of the private key, kept outside the project.
 func approverKey(t *testing.T, root string) string {
 	t.Helper()
-	priv, pub, err := signing.GenerateKeyPair(nil)
+	priv, pub, err := sigstore.GenerateKeyPair(nil)
 	require.NoError(t, err)
 	writeFile(t, filepath.Join(root, "keys", "approver.pub"), string(pub))
 	keyPath := filepath.Join(t.TempDir(), "approver.key")

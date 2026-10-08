@@ -1,7 +1,10 @@
-package signing
+package signing_test
 
 import (
 	"context"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing"
+	. "github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore"
+	"github.com/Goldziher/ai-rulez/v5/internal/signing/sigstore/fakesigstore"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -382,7 +385,7 @@ func TestThresholdCountsPeopleNotKeys(t *testing.T) {
 	setUserDirs(t)
 	lock := testLock(t, nil)
 	const issuer = "https://accounts.example.org"
-	fs := newFakeSigstore(t, "alice@example.org", issuer)
+	fs := fakesigstore.New(t, "alice@example.org", issuer)
 	payload := func() []byte {
 		st, err := LockStatement(lock, LockMeta{Version: "5", Now: time.Now()})
 		require.NoError(t, err)
@@ -402,7 +405,7 @@ func TestThresholdCountsPeopleNotKeys(t *testing.T) {
 	anon1, byAnon1 := keyed("")
 	anon2, byAnon2 := keyed("")
 	keyless := TrustEntry{Subject: SubjectLock, Identity: "alice@example.org", Issuer: issuer}
-	byKeyless := fs.bundle(payload())
+	byKeyless := fs.Bundle(payload())
 
 	tests := []struct {
 		name     string
@@ -419,7 +422,7 @@ func TestThresholdCountsPeopleNotKeys(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			trust := TrustSet{Entries: tt.trust}
-			policy := LockPolicy{Verifier: Verifier{TrustedRoot: fs.trustedRoot(), Keys: trust.Keys(SubjectLock), TLog: TLogOptional}, Trust: trust, Threshold: 2, Now: time.Now()}
+			policy := LockPolicy{Verifier: Verifier{TrustedRoot: fs.TrustedRoot(), Keys: trust.Keys(SubjectLock), TLog: TLogOptional}, Trust: trust, Threshold: 2, Now: time.Now()}
 
 			// Act
 			_, err := VerifyLockSet(tt.bundles, lock, policy)
