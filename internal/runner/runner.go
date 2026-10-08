@@ -69,6 +69,12 @@ type Spec struct {
 	// MaxOutput caps each of stdout and stderr in bytes; zero means DefaultMaxOutput. Output past the
 	// cap is discarded (the child is not blocked) and reported through Result.*Truncated.
 	MaxOutput int64
+	// ShortLived marks a trusted command that finishes quickly and does not
+	// detach helpers on purpose (git). The runner then skips the descendant
+	// watcher and reads the process table once after the command instead of
+	// several times; the group kill, run token and marker descriptor still
+	// apply. Never set it for scanners, verifiers or evaluated commands.
+	ShortLived bool
 }
 
 // Result is what a run produced. Apart from Duration, it is a pure function of
@@ -121,6 +127,9 @@ func Run(ctx context.Context, spec Spec) Result {
 	stdout, stderr := &capBuffer{limit: limit}, &capBuffer{limit: limit}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
 	tree := configure(cmd)
+	if spec.ShortLived {
+		tree.shortLived()
+	}
 	defer tree.close()
 	cmd.WaitDelay = killGrace
 
