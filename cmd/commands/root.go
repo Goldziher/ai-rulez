@@ -51,6 +51,7 @@ func execute() (*cobra.Command, error) {
 	RootCmd.SetVersionTemplate("ai-rulez version {{.Version}}\n")
 	requireKnownSubcommands(RootCmd)
 	explainArgErrors(RootCmd)
+	trackActiveCommand(RootCmd)
 	return RootCmd.ExecuteContextC(cmdContext())
 }
 
