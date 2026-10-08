@@ -272,10 +272,11 @@ func loadListedConfig(ctx context.Context) {
 
 func runListRoot(cmd *cobra.Command, _ []string) {
 	if !listPlacement {
-		if err := cmd.Help(); err != nil {
-			logger.Error("Failed to print help", "error", err)
-		}
-		return
+		// Nothing was asked for: say what can be listed, as an error, not as a
+		// help page a script cannot tell from success.
+		fmt.Fprintf(os.Stderr, "Error: specify what to list: rules, context, skills, agents, commands or checks\n\nUsage:\n  %s <rules|context|skills|agents|commands|checks> [flags]\n\nRun \"%s --help\" for details and examples\n",
+			cmd.CommandPath(), cmd.CommandPath())
+		os.Exit(1)
 	}
 	cfg, err := loadConfigForCommand(cmdContext(), nil, pluginLoadOptions(true)...)
 	if err != nil {

@@ -333,7 +333,7 @@ func fmtError(err error) {
 			}
 		}
 
-		if hint := oopsErr.Hint(); hint != "" {
+		if hint := errorHint(oopsErr); hint != "" {
 			fmt.Fprintf(os.Stderr, "\nHint: %s\n", hint)
 		}
 	} else {
@@ -450,9 +450,20 @@ func applyRole(gen *generator.Generator) error {
 func FormatError(err error) string {
 	text := err.Error()
 	if oopsErr, ok := oops.AsOops(err); ok {
-		if hint := oopsErr.Hint(); hint != "" {
+		if hint := errorHint(oopsErr); hint != "" {
 			text += "\n\nHint: " + hint
 		}
 	}
 	return text
+}
+
+// errorHint is the hint of an error as printed. An unknown profile in a
+// configuration that declares none reads "No profiles are declared", not an
+// empty list.
+func errorHint(err oops.OopsError) string {
+	hint := err.Hint()
+	if names, ok := err.Context()["available_profiles"].([]string); ok && len(names) == 0 {
+		hint = strings.Replace(hint, "Available profiles: []", "No profiles are declared in this configuration.", 1)
+	}
+	return hint
 }
