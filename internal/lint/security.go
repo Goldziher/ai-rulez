@@ -17,6 +17,13 @@ import (
 type secretPattern struct {
 	name string
 	re   *regexp.Regexp
+	// stems are literals every match contains; nil runs the pattern on every text.
+	stems []string
+}
+
+// mayMatch reports whether s holds a stem of p.
+func (p secretPattern) mayMatch(s string) bool {
+	return p.stems == nil || containsAnyStem(s, false, p.stems)
 }
 
 // builtinSecrets are the credential shapes shared with the model layer's refuse-to-send check
@@ -24,7 +31,7 @@ type secretPattern struct {
 var builtinSecrets = func() []secretPattern {
 	out := make([]secretPattern, 0, len(secretpat.Builtin))
 	for _, p := range secretpat.Builtin {
-		out = append(out, secretPattern{name: p.Name, re: p.Re})
+		out = append(out, secretPattern{name: p.Name, re: p.Re, stems: p.Stems})
 	}
 	return out
 }()
@@ -232,13 +239,18 @@ func (r *runner) scanSecrets(abs string, no int, line string) {
 		r.add(CodeSecretDetected, abs, no, "looks like a %s (%s)", name, maskSecret(match))
 	}
 	for _, p := range builtinSecrets {
+		if !p.mayMatch(line) {
+			continue
+		}
 		if m := p.re.FindString(line); m != "" {
 			hit(p.name, m)
 		}
 	}
-	for _, m := range genericCredential.FindAllStringSubmatch(line, -1) {
-		if hasLetterAndDigit(m[1]) {
-			hit("hard-coded credential", m[1])
+	if secretpat.MayHaveGenericCredential(line) {
+		for _, m := range genericCredential.FindAllStringSubmatch(line, -1) {
+			if hasLetterAndDigit(m[1]) {
+				hit("hard-coded credential", m[1])
+			}
 		}
 	}
 	for _, p := range r.customSecrets() {
