@@ -62,7 +62,25 @@ type loader struct {
 	spec     string
 	rejected bool
 	findings []Finding
+	// total is the bytes read so far, bounded by maxTotalBytes.
+	total int64
 }
+
+// readResolved reads name like the package-level readResolved and charges the
+// bytes to the total cap; past the cap nothing more is read.
+func (l *loader) readResolved(name string) ([]byte, fileState, error) {
+	if l.total >= maxTotalBytes {
+		return nil, fileTooLarge, errTotalCap
+	}
+	data, state, err := readResolved(l.fsys, name)
+	l.total += int64(len(data))
+	if l.total > maxTotalBytes {
+		return nil, fileTooLarge, errTotalCap
+	}
+	return data, state, err
+}
+
+var errTotalCap = fmt.Errorf("total input exceeds the %d MiB limit", maxTotalBytes>>20)
 
 func (l *loader) add(code string, sev Severity, at, format string, a ...any) {
 	l.findings = append(l.findings, Finding{Code: code, Severity: sev, Path: at, Message: fmt.Sprintf(format, a...)})
@@ -88,7 +106,7 @@ func (l *loader) load() *Plugin {
 // manifest loads plugin.json; any failure other than an unknown field or a
 // non-object extensions rejects the plugin (§5.2, §8.1).
 func (l *loader) manifest() (*schemaSet, Metadata, map[string]map[string]any) {
-	data, state, err := readResolved(l.fsys, manifestFile)
+	data, state, err := l.readResolved(manifestFile)
 	switch state {
 	case fileOK:
 	case fileAbsent:
@@ -230,7 +248,7 @@ func (l *loader) skill(dirPath, name string) (Skill, bool) {
 		return Skill{}, false // a file under skills/ is not a skill
 	}
 	mdAt := at + "/" + skillFile
-	data, state, err := readResolved(l.fsys, path.Join(dir, skillFile))
+	data, state, err := l.readResolved(path.Join(dir, skillFile))
 	switch state {
 	case fileOK:
 	case fileAbsent:
@@ -266,7 +284,7 @@ func (l *loader) skill(dirPath, name string) (Skill, bool) {
 // mcp loads mcp.json (§7.2.2): a document problem disables MCP, an entry
 // problem skips that server.
 func (l *loader) mcp(set *schemaSet) []MCPServer {
-	data, state, err := readResolved(l.fsys, mcpFile)
+	data, state, err := l.readResolved(mcpFile)
 	switch state {
 	case fileOK:
 	case fileAbsent:
@@ -473,7 +491,16 @@ func (l *loader) readTree(root, at string, skip func(rel string) bool) map[strin
 		case d.Type()&fs.ModeSymlink != 0:
 			l.readLinked(files, p, rel, where)
 		case d.Type().IsRegular():
+			if info, err := d.Info(); err == nil && info.Size() > maxFileBytes {
+				l.add(CodeFileTooLarge, SeverityWarning, where, "%v; it is not read", errTooLarge)
+				return nil
+			}
+			if l.total+fileSize(d) > maxTotalBytes {
+				l.add(CodeFileTooLarge, SeverityWarning, where, "%v; it is not read", errTotalCap)
+				return nil
+			}
 			data, err := fs.ReadFile(l.fsys, p)
+			l.total += int64(len(data))
 			if err != nil {
 				l.add(CodeUnreadable, SeverityError, where, "read: %v", err)
 				return nil
@@ -494,7 +521,7 @@ func (l *loader) readTree(root, at string, skip func(rel string) bool) map[strin
 }
 
 func (l *loader) readLinked(files map[string][]byte, p, rel, where string) {
-	data, state, err := readResolved(l.fsys, p)
+	data, state, err := l.readResolved(p)
 	switch state {
 	case fileOK:
 		files[rel] = data
@@ -504,7 +531,18 @@ func (l *loader) readLinked(files map[string][]byte, p, rel, where string) {
 		l.add(CodeUnreadable, SeverityWarning, where, "symbolic link target does not exist; it is not read")
 	case fileNotRegular:
 		l.add(CodeUnreadable, SeverityWarning, where, "symbolic link to a directory is not followed")
+	case fileTooLarge:
+		l.add(CodeFileTooLarge, SeverityWarning, where, "%v; it is not read", err)
 	default:
 		l.add(CodeUnreadable, SeverityError, where, "read: %v", err)
 	}
+}
+
+// fileSize is the size d reports, or 0 when it cannot be stat'ed.
+func fileSize(d fs.DirEntry) int64 {
+	info, err := d.Info()
+	if err != nil {
+		return 0
+	}
+	return info.Size()
 }
