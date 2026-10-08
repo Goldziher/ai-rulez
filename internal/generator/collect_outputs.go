@@ -201,37 +201,47 @@ func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile
 			continue
 		}
 		done[name] = true
-		generator, err := g.config.Registry.Generator(preset.BuiltIn)
-		if err != nil {
-			g.log().Debug("Skipping local outputs for unknown preset", "preset", name, "error", err)
-			continue
+		if err := g.appendLocalPresetOutputs(allOutputs, name, preset.BuiltIn, local, allRules, allContext, cfg); err != nil {
+			return err
 		}
-		rules := allRules
-		if provider, ok := generator.(config.LocalRuleProvider); ok {
-			var files []config.OutputFile
-			files, rules, err = provider.LocalRuleOutputs(allRules, g.config.BaseDir, cfg)
-			if err != nil {
-				return oops.With("preset", name).Wrapf(err, "render local rule files")
-			}
-			allOutputs[name] = append(allOutputs[name], files...)
-		}
-		if len(rules) == 0 && len(allContext) == 0 {
-			continue
-		}
-		root, ok, err := g.localRootOutput(generator, local, rules, cfg)
-		if err != nil {
-			return oops.With("preset", name).Wrapf(err, "render local root file")
-		}
-		if !ok {
-			if !readsAgentsOverride(g.config, name) {
-				g.warnDroppedLocal(name, rules, allContext)
-			}
-			continue
-		}
-		allOutputs[name] = append(allOutputs[name], root)
 	}
 	g.appendAgentsOverride(allOutputs, local, allRules, cfg)
 	return g.appendLocalItemOutputs(allOutputs, cfg, local)
+}
+
+// appendLocalPresetOutputs renders the machine-local rule files and root file
+// for one built-in preset into allOutputs[name]. A preset the registry does not
+// know is skipped.
+func (g *Generator) appendLocalPresetOutputs(allOutputs map[string][]config.OutputFile, name string, builtIn string, local *config.ContentTree, allRules, allContext []config.ContentFile, cfg *config.Config) error {
+	generator, err := g.config.Registry.Generator(builtIn)
+	if err != nil {
+		g.log().Debug("Skipping local outputs for unknown preset", "preset", name, "error", err)
+		return nil
+	}
+	rules := allRules
+	if provider, ok := generator.(config.LocalRuleProvider); ok {
+		var files []config.OutputFile
+		files, rules, err = provider.LocalRuleOutputs(allRules, g.config.BaseDir, cfg)
+		if err != nil {
+			return oops.With("preset", name).Wrapf(err, "render local rule files")
+		}
+		allOutputs[name] = append(allOutputs[name], files...)
+	}
+	if len(rules) == 0 && len(allContext) == 0 {
+		return nil
+	}
+	root, ok, err := g.localRootOutput(generator, local, rules, cfg)
+	if err != nil {
+		return oops.With("preset", name).Wrapf(err, "render local root file")
+	}
+	if !ok {
+		if !readsAgentsOverride(g.config, name) {
+			g.warnDroppedLocal(name, rules, allContext)
+		}
+		return nil
+	}
+	allOutputs[name] = append(allOutputs[name], root)
+	return nil
 }
 
 // readsAgentsOverride reports whether a built-in preset loads AGENTS.override.md
