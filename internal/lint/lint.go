@@ -136,6 +136,8 @@ type runner struct {
 	mcpOnce      sync.Once
 	fakeTagOnce  sync.Once
 	injOnce      sync.Once
+	secOnce      sync.Once
+	secRes       []secretPattern
 	injRes       []gatedRe
 	fakeTagRe    *regexp.Regexp
 	mcpEffective []config.MCPServer
