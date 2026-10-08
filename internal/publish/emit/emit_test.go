@@ -365,3 +365,45 @@ func TestSkills_ReadsTheFrontMatterAndFallsBackToTheDirectory(t *testing.T) {
 	assert.Equal(t, "Deploy the service safely.", got[0].Description)
 	assert.Equal(t, "plain", got[1].Name)
 }
+
+func TestValidRel(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"a.md", true}, {"skills/a/SKILL.md", true}, {".claude-plugin/plugin.json", true},
+		{"", false}, {"/etc/passwd", false}, {"..", false}, {"../a", false}, {"a/../b", false},
+		{"a/./b", false}, {"a//b", false}, {"a/", false}, {`a\b`, false}, {"..\\a", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			// Act
+			got := validRel(tt.path)
+
+			// Assert
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestFinishRefusesUnsafeAndDuplicatePaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		files []File
+		want  string
+	}{
+		{"escape", []File{{Path: "../x"}}, "unsafe path"},
+		{"absolute", []File{{Path: "/x"}}, "unsafe path"},
+		{"duplicate", []File{{Path: "a"}, {Path: "a"}}, "twice"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			_, err := finish(tt.files)
+
+			// Assert
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.want)
+		})
+	}
+}
