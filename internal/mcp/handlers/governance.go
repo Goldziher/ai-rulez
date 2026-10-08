@@ -146,9 +146,18 @@ func LockStatusHandler(version string, dynamic DynamicLockChanges) func(ctx cont
 		if role != "" {
 			only = []string{role}
 		}
+		if err := govview.CheckKind(kind); err != nil {
+			return ToolError(err)
+		}
 		cfg, skipped, _, err := loadOffline(ctx, request, true)
 		if err != nil {
 			return ToolError(err)
+		}
+		// A project that was never locked has nothing to verify: reporting it in
+		// sync would be a lie. Under [lock] enforce the missing lock is a drift
+		// finding from the comparison below.
+		if lock, loadErr := lockfile.Load(cfg.ConfigDir); loadErr == nil && lock == nil && !cfg.LockEnforced() {
+			return ToolError(oops.Hint("run `ai-rulez lock` to create it").Errorf("no %s in %s: nothing to check", lockfile.FileName, cfg.ConfigDir))
 		}
 		var changes govview.DynamicChanges
 		if dynamic != nil {
