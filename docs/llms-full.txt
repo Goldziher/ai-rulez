@@ -1152,8 +1152,7 @@ Tool support, per-preset file lists, the duplication trade-off, `targets`, scope
 
 Where the `codex` preset writes skills, relative to the project root. The default is `.agents/skills`, the
 directory Codex documents for repository skills (it scans `.agents/skills` from the working directory up to the
-repository root; `.codex/skills` is not read). Releases before 4.24 wrote `.codex/skills`; set it back to keep that
-location:
+repository root; `.codex/skills` is not read). Set it to `.codex/skills` to write there instead:
 
 ```toml
 codex_skills_dir = ".codex/skills"  # Default: ".agents/skills"
@@ -1403,6 +1402,69 @@ enabled = true             # defaults to true
     Codex entry yourself; ai-rulez does not write `.codex/config.toml` plugin entries because it owns that file
     outright. Delete the files an earlier version left behind. The Copilot
     `enabledPlugins` settings syntax is not shown in the vendor documentation, so it is not generated.
+
+##### `plugin`
+
+The **producer** block: packaging metadata for a distributable plugin bundle (`generate --plugin`, `publish`,
+`--emit agent-plugins`). Skills, commands and agents come from the content tree; this block only names and describes
+the package. `name` and `version` are required. See [Authoring Plugins](plugins.md) and
+[Agent Plugins](agent-plugins.md).
+
+```toml
+[plugin]
+name = "acme.tools"            # required
+version = "1.2.0"              # required, semantic version
+description = "Acme review tooling."
+runtimes = ["agent-plugins"]   # default: all runtimes
+spec = "1.1.0"                 # Agent Plugins version: "1.0.0" (default) or "1.1.0"
+```
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `name`, `version` | required | Package name and semantic version |
+| `display_name`, `description`, `homepage`, `repository`, `license`, `category`, `brand_color`, `icon`, `logo` | empty | Manifest metadata |
+| `keywords`, `tags` | empty | Search terms |
+| `runtimes` | all | Runtimes to build: `claude`, `cursor`, `codex`, `gemini`, `kimi`, `opencode`, `factory`, `hermes`, `agent-plugins`, `copilot` |
+| `spec` | `1.0.0` | Agent Plugins specification of the `agent-plugins`, `copilot` and root-layout `codex` packages: `1.0.0` or `1.1.0` |
+| `content_root` | content tree | Project-relative directory holding plugin-only `skills/`, `commands/` and `agents/` |
+| `include_domains` | none | Domains (names or globs) whose skills, commands and agents are bundled; a root item wins over a same-named domain item |
+| `include_evals` | `false` | Bundle each skill's `evals/` directory and the project-level `evals/` tree |
+
+Sub-tables: `[plugin.author]` (`name`, `email`, `url`), `[[plugin.mcp]]`, `[[plugin.hooks]]`, `[plugin.statusline]`,
+`[plugin.codex]` (`manifest` = `legacy`, `root` or `both`; `marketplace`), `[plugin.cursor]`, `[plugin.gemini]`,
+`[plugin.kimi]`, `[plugin.hermes]` and `[plugin.interface]`.
+
+###### `plugin.interface`
+
+The rich UI block of the Codex and Kimi manifests (the Codex root layout writes it under
+`extensions["com.openai"].interface`, keys sorted). No key is required and unknown keys are rejected.
+
+| Key | Type |
+| --- | --- |
+| `display_name`, `short_description`, `long_description` | string |
+| `developer_name`, `category` | string |
+| `capabilities`, `default_prompt`, `screenshots` | list of strings |
+| `website_url`, `privacy_policy_url`, `terms_of_service_url` | string |
+| `brand_color`, `composer_icon`, `logo`, `logo_dark` | string |
+
+##### `llms_txt`
+
+Controls the `llms.txt` written by the opt-in `llms-txt` preset and linted by `validate --strict` (`AR9P0` to
+`AR9P6`). The table has no effect without the preset. See [llms.txt](llms-txt.md).
+
+```toml
+presets = ["llms-txt"]
+
+[llms_txt]
+dir = ""                                     # default: the project root
+title = "Acme"                               # default: name
+summary = "Acme coding rules."               # default: description
+full = true                                  # also write llms-full.txt (default: false)
+include = ["rules", "context", "skills"]     # default; also agents, commands
+```
+
+`agents` and `commands` are listed in the `Optional` section. `dir` must not be inside `.git` or the configuration
+directory.
 
 ##### `marketplaces`
 
@@ -1766,7 +1828,7 @@ mode = "split"           # split (default) | inline
 claude = "inline"
 ```
 
-- **`rules.mode`**: `split` (the default since 4.22.0) writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file, moving only path-scoped rules to the folder.
+- **`rules.mode`**: `split` (the default) writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file, moving only path-scoped rules to the folder.
 - **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
 - **`rules.baz_scoped`**: `nested` (the default) writes the path-scoped rules and context of the `baz` preset to the `AGENTS.md` of the directory their globs point into; `root` keeps them in the root `AGENTS.md`. See [Baz](baz.md).
 
@@ -3270,7 +3332,7 @@ claude = "inline"
 copilot = "split"
 ```
 
-Since 4.22.0 the default is `split`. To keep the previous behaviour, set `mode = "inline"` globally, or opt out for single presets with `mode_by_preset`.
+The default is `split`. For inline rules, set `mode = "inline"` globally, or opt out for single presets with `mode_by_preset`.
 
 | Mode     | Rules folder receives                  | Root file keeps                          |
 | -------- | -------------------------------------- | ---------------------------------------- |
@@ -4765,8 +4827,13 @@ Includes can be:
     A local path (or `local_override`) in the project's committed config must resolve inside the project, after
     symlinks are resolved: a repository could otherwise name `../victim` or `~/.config` and have that content
     written into its generated outputs. A path outside the project stops loading with an error naming it (it is not skipped with a warning). Set it in the
-    machine-local overlay (`config.local.toml`), declare the include in your user config (`generate --user`), or use a
-    git include instead. The examples below that use `../` or an absolute path need one of these.
+    machine-local overlay (`config.local.toml`) or declare the include in your user config (`generate --user`). The
+    examples below that use `../` or an absolute path need one of these.
+
+    A `file://` git URL is a local path too and follows the same rule, for includes and `skill_sources`: it must name
+    a repository inside the project, unless it comes from the machine-local overlay or the user config. A remote git
+    URL (`https://`, `ssh://`, `git@host:path`) is not affected. To let a project config use `file://` repositories
+    elsewhere on your machine, set `AI_RULEZ_ALLOW_FILE_URLS=1` in your own environment.
 
 ##### Examples
 
@@ -6341,8 +6408,7 @@ Source: https://goldziher.github.io/ai-rulez/skills/
 
 A skill is `.ai-rulez/skills/<id>/SKILL.md`: YAML frontmatter followed by the instructions. `generate` carries the
 frontmatter into each preset's skill directory **with its original types**. A nested `metadata:` map stays a map,
-`disable-model-invocation: true` stays a boolean, and `last_verified: 2026-10-01` stays a date. Versions before 4.25.0
-wrote `metadata: map[owner:team-a ...]`, `"true"` and `2026-10-01 00:00:00 +0000 UTC`.
+`disable-model-invocation: true` stays a boolean, and `last_verified: 2026-10-01` stays a date.
 
 ```yaml
 ---
@@ -6395,8 +6461,7 @@ and ignores unknown fields; the [Agent Skills specification](https://agentskills
 `yes`, `no`, `on`, `off`, `1` and `0` are accepted and written as a boolean.
 
 - **Default**: a skill is user-invocable (Claude Code's default), so the key is not written and the skill appears in
-  the `/` menu. Before 4.25.0 the `claude` preset wrote `user-invocable: false` on every skill, which, now that the key
-  is spelled correctly, hid all skills from the menu.
+  the `/` menu.
 - **Hide all skills from the menu**: `[claude.skills] hide_from_menu = true` writes `user-invocable: false` on skills that
   do not set the key. A skill with its own `user-invocable: true` stays visible.
 - **Commands** are rendered as skills and keep `user-invocable: true` unless the command sets the key.
@@ -6696,7 +6761,7 @@ with you or carrying overlay content in the local manifest.
 `config.local.toml` sits next to `config.toml`. It is merged onto the
 shared config in memory at load time and is never written into the shared config. A V3
 `config.local.yaml`, `.yml` or `.json` is no longer read and fails the load (see
-[Migrating to v5](migration-v5.md#v2-and-v3-configs)). The overlay is skipped for plugin bundles
+[Migrating to v5](migration-v5.md#upgrade-in-four-steps)). The overlay is skipped for plugin bundles
 (`generate --plugin`), which are distributable.
 
 Create one with `ai-rulez local init`, or let `local set`, `--local` and the MCP `local: true` flag
@@ -7942,7 +8007,7 @@ A scanner without `inputs` runs in the project root and cannot be confined: `req
 leaves it as it was. A scanner that writes to a path outside its scratch directory (a cache under the real home, a
 shell here-document that uses `/tmp`) fails under isolation: point it at `TMPDIR`/`HOME`, or set `isolation = "none"`.
 
-##### Result cache and `--dry-run`
+##### Result cache and dry runs
 
 The result of a staged `egress = false` scanner is cached under `~/.cache/ai-rulez/scan/<project>` and reused while
 the staged content, the scanner binary (path, size, modification time), its command line, its mapping keys
@@ -10452,7 +10517,7 @@ an llms.txt file has a heading other than the H1 title and H2 section names, or 
 
 ##### AR9P3 llmstxt-link-entry-invalid
 
-an llms.txt file-list section has content that is not a list entry holding a [name](url) link
+an llms.txt file-list section has content that is not a list entry holding a `[name](url)` link
 
 - Default severity: `error`
 - Analyzer: `llmstxt` (scope `item`)
@@ -11940,7 +12005,7 @@ markdown, a skill's `SKILL.md` and references) does not change the digest and ne
 other non-text files are hashed byte for byte ([lockfile.md](lockfile.md#hashing-scheme)), so converting their line
 endings does. A served skill's digest ignores the generated `Content-Hash`, `Source-Hash` and `Generated` header
 lines, which would otherwise move with a CRLF-only edit. A remote source that moves to a new commit with an identical tree keeps its
-approval. `ai-rulez lock` keeps every approval: stale ones stay until the content is approved again or `--prune` removes
+approval. `ai-rulez lock` keeps every approval: stale ones stay until the content is approved again or `ai-rulez approve --prune` removes
 them; a full re-lock drops, with a warning (`AR715`), approvals of content that no longer exists. A renamed item must
 be approved again under its new name. Items are pinned whatever the lock's profile (it only selects the pinned outputs), so relocking under another
 profile or running `approve --prune` keeps the approval of an item that only some profile renders.
@@ -12584,7 +12649,7 @@ digests are pinned in a test, so updating one is a reviewed change. Any CycloneD
   is installed, and is marked as heuristic.
 - **Settings pins**: the `mcp-servers` settings pin is omitted (secrets), every other settings pin is listed.
 - **Findings** (`AR750`-`AR753`) are reported by `sbom` and by `validate`; see
-  [In `validate`](#in-validate-strict).
+  [In `validate`](#in-validate).
 - **Not offered**: `--include-builtins`, `--redact-hosts`, `--spec-version`, a `[sbom]` config table and `sbom --sign`.
 
 ## Publish
@@ -13416,12 +13481,16 @@ to LF. Exit code 2 when the repository loosens the policy (the same code `genera
 
 #### What honors the policy
 
-- `validate` and `validate`: the clamp is applied at load. `--strict` reports each attempt as an `AR74x`
-  finding and exits `2` (the findings are errors); plain `validate` fails with the same lines and exits `1`, as do
-  `generate` and `validate --show-policy`. The severity floor and required codes are enforced inside the
-  lint run, so a floored finding cannot be demoted by a lint profile.
+- `generate`, `validate` and `validate --show-policy`: the clamp is applied at load. A configuration that loosens the
+  policy exits `2` from `generate`, from `validate` (with or without `--strict` or `--config-only`) and from
+  `validate --show-policy`; `validate --strict` reports each attempt as an `AR74x` finding. The severity floor and
+  required codes are enforced inside the lint run, so a floored finding cannot be demoted by a lint profile.
 - `generate` refuses to run on a configuration that loosens the policy, and so does each root of `generate
-  --recursive` and `validate --recursive`; a root that fails is reported and the exit code is 1.
+  --recursive` and `validate --recursive`. With `--recursive`, `validate` exits `2`; `generate` reports the failed
+  roots and exits `1`.
+- `lock` refuses to write `ai-rulez.lock` for such a configuration (exit `1`, naming the `AR740` lines), and
+  `lock --check` reports a mismatch (exit `2`). `doctor` and `doctor --policy` do not report `AR740`; run `validate`
+  to see it.
 - The MCP servers: `mcp --serve-skills` fails to start on a configuration that loosens the policy, and the
   `generate_outputs` and `validate_config` tools of `mcp` refuse it (`validate_config` answers `valid: false`).
 - No suppression hides a protected code: for every code in `required_codes` or raised by `severity_floor` (and
@@ -20234,7 +20303,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez eval calibrate-estimate` | Propose cost-estimate assumptions measured from recorded runs ([details](evals.md#calibrating-the-estimate)) |
 | `ai-rulez review` / `rubric`    | Score skills against a rubric: offline, or with an LLM judge (`--semantic`), calibration, a calibrated gate and `review fix` ([details](#review-commands)) |
 | `ai-rulez improve`              | (experimental) Improve a skill with an external optimizer behind a held-out eval gate ([Improve](improve.md)) |
-| `ai-rulez telemetry`            | Opt-in usage log, feedback, reports, item-load telemetry and OTLP export ([details](#usage-commands)) |
+| `ai-rulez telemetry`            | Opt-in usage log, feedback, reports, item-load telemetry and OTLP export ([details](#telemetry-commands)) |
 | `ai-rulez export okf` / `import okf` / `okf validate` | Open Knowledge Format bundles ([details](#okf-commands)) |
 | `ai-rulez llm`                  | Inspect the `[llm]` setup ([details](#llm-commands)) |
 | `ai-rulez version`              | Show version                                        |
@@ -22501,7 +22570,7 @@ With `--external`, the scanners of `[[lint.external]]` also run (see [External s
 | `--write-baseline --reason <text>` | Accept every current scanner finding in `.ai-rulez/scanner-baseline.json` and exit as if clean; `--reason` is required |
 | `--scanner-baseline <file>` | Use another scanner baseline file |
 | `--show-suppressed` | Also show results the scanner marked suppressed, as `info` |
-| `--no-scan-cache` | Ignore and do not update the [scanner result cache](strict-validation.md#result-cache-and-dry-run) |
+| `--no-scan-cache` | Ignore and do not update the [scanner result cache](strict-validation.md#result-cache-and-dry-runs) |
 | `--dry-run` | Print each scanner's command (stage paths as `<stage>`), isolation, environment variable names, staged files and cache state, and start nothing; exit `0` |
 
 `[lint.scanner_policy]`, the embedded profiles and presets, process isolation, the result cache and the lock records are described in [Strict validation](strict-validation.md#policy-presets-and-profiles). The `scan` command accepts `--dry-run` only with `--external`.
@@ -24867,7 +24936,7 @@ The changes below came with the same release; none is touched by `migrate v5`.
 | Custom preset and provider output paths are validated | Remove `..`, absolute and `.git` paths |
 | `lock` and `update` scan every remote tree they pin to something new | Fix error findings, or pass `--accept-findings` after reviewing them |
 | `generate` refuses an existing file it did not write (a hand-written `CLAUDE.md`) and never writes through a symlinked output | Run `ai-rulez convert --write` to import the file (the first `generate` then replaces it), move it, or pass `generate --force`; see [Existing files](cli.md#existing-files-generate-will-not-overwrite) |
-| `init --from` runs through `convert --write` | Expect one context item per root file (`convert --split-headings` splits it); see [`init --from`](#init-from) |
+| `init --from` runs through `convert --write` | Expect one context item per root file (`convert --split-headings` splits it); see [`init --from`](cli.md#init---from) |
 | `generate --check` reports `blocked:` for a shared file a machine-local input would change | Commit or drop the local change, or run `generate --allow-local-drift` |
 | The forge client (release dates, review-linked approvals) has its own host allowlist | GitHub Enterprise: set `AI_RULEZ_FORGE_HOSTS` |
 | An organization policy at the managed path is read automatically | None unless the machine has one; see [Organization policy](#organization-policy) |
