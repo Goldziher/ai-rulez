@@ -2,6 +2,7 @@ package crud
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -254,12 +255,24 @@ func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name stri
 	// Check if file/skill exists
 	if !op.filesMgr.FileOrSkillExists(domain, ftype, name) {
 		filePath := op.filesMgr.GetFilePath(domain, ftype, name)
+		hint := "Check the name; nothing of that name exists."
+		if files, err := op.ListFiles(ctx, domain, ftype); err == nil {
+			names := make([]string, 0, len(files))
+			for i := range files {
+				names = append(names, files[i].Name)
+			}
+			if len(names) > 0 {
+				hint = fmt.Sprintf("Existing %s: %s", ftype, strings.Join(names, ", "))
+			} else {
+				hint = fmt.Sprintf("There are no %s to remove.", ftype)
+			}
+		}
 		return oops.
 			With("path", filePath).
 			With("type", ftype).
 			With("name", name).
-			Hint("The file/skill does not exist.").
-			Errorf("file not found")
+			Hint(hint).
+			Errorf("%s %q not found: no such file or skill at %s", ftype, name, filePath)
 	}
 
 	// Delete file or skill directory
