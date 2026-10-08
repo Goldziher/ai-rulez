@@ -3,6 +3,7 @@ package agentplugins
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -57,7 +58,7 @@ func checkSkill(dir string, skillMD []byte) []skillIssue {
 		return []skillIssue{{true, err.Error()}}
 	}
 	issues := checkSkillFields(dir, fm)
-	for _, key := range sortedKeys(fm) {
+	for _, key := range slices.Sorted(maps.Keys(fm)) {
 		if !slices.Contains(skillFields, key) {
 			issues = append(issues, skillIssue{false, fmt.Sprintf(
 				"frontmatter field %q is not defined by Agent Skills; other clients may ignore it", key)})

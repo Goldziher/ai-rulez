@@ -3,8 +3,10 @@ package sbom
 import (
 	"crypto/sha1" //nolint:gosec // UUIDv5 is defined over SHA-1; it is an identifier, not a security hash
 	"fmt"
+	"maps"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -373,10 +375,10 @@ func (b *builder) mcpEntries() ([]Component, []Service) {
 		}
 		if s.URL != "" {
 			if len(s.Env) > 0 {
-				props = append(props, prop("env-keys", strings.Join(sortedKeys(s.Env), ",")))
+				props = append(props, prop("env-keys", strings.Join(slices.Sorted(maps.Keys(s.Env)), ",")))
 			}
 			if len(s.Headers) > 0 {
-				props = append(props, prop("header-keys", strings.Join(sortedKeys(s.Headers), ",")))
+				props = append(props, prop("header-keys", strings.Join(slices.Sorted(maps.Keys(s.Headers)), ",")))
 			}
 			svc := Service{BOMRef: "ai-rulez:mcp:" + s.Name, Name: s.Name, Authenticated: len(s.Headers) > 0, TrustBoundary: true}
 			if endpoint, ok := redactEndpoint(s.URL); ok {
@@ -391,7 +393,7 @@ func (b *builder) mcpEntries() ([]Component, []Service) {
 			props = append(props, prop("mcp-command", filepath.Base(strings.ReplaceAll(s.Command, `\`, "/"))))
 		}
 		if len(s.Env) > 0 {
-			props = append(props, prop("env-keys", strings.Join(sortedKeys(s.Env), ",")))
+			props = append(props, prop("env-keys", strings.Join(slices.Sorted(maps.Keys(s.Env)), ",")))
 		}
 		props = append(props, b.coordinates(&comp, &s)...)
 		comp.Properties = sortProps(props)
@@ -584,15 +586,6 @@ func uniqueSorted(in []string, drop string) []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func sortedCopy(in []string) []string {

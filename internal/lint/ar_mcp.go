@@ -357,7 +357,7 @@ func (r *runner) checkMCPSecrets(s *mcpServer, lines []string, at int) { //nolin
 		}
 		r.add(CodeSecretInConfig, s.file, line, "MCP server %q: %s %q holds a literal credential; reference an environment variable instead (for example \"${%s}\")", s.name, where, key, envNameFor(key))
 	}
-	for _, k := range sortedKeys(s.env) {
+	for _, k := range slices.Sorted(maps.Keys(s.env)) {
 		v := s.env[k]
 		if !literalSecret(v) {
 			continue
@@ -366,7 +366,7 @@ func (r *runner) checkMCPSecrets(s *mcpServer, lines []string, at int) { //nolin
 			report(keyEnv, k)
 		}
 	}
-	for _, k := range sortedKeys(s.headers) {
+	for _, k := range slices.Sorted(maps.Keys(s.headers)) {
 		v := strings.TrimSpace(s.headers[k])
 		if m := authSchemeRe.FindStringSubmatch(v); m != nil {
 			v = m[1]
@@ -417,15 +417,6 @@ func matchesBuiltinSecret(v string) bool {
 	return false
 }
 
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
 // checkSettingsSecrets looks for literal credentials in the project
 // .claude/settings.json: the top-level env block and the headers of http hooks.
 func (r *runner) checkSettingsSecrets() { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
@@ -448,7 +439,7 @@ func (r *runner) checkSettingsSecrets() { //nolint:gocyclo // linear checks over
 			env[k] = sv
 		}
 	}
-	for _, k := range sortedKeys(env) {
+	for _, k := range slices.Sorted(maps.Keys(env)) {
 		v := env[k]
 		if literalSecret(v) && ((secretKeyRe.MatchString(k) && !notSecretKeyRe.MatchString(k) && len(v) >= 8) || matchesBuiltinSecret(v)) {
 			r.add(CodeSecretInConfig, file, lineContaining(lines, quoteNeedle(k)), "settings env %q holds a literal credential; keep it in your shell environment or settings.local.json instead", k)
@@ -470,7 +461,7 @@ func (r *runner) checkSettingsSecrets() { //nolint:gocyclo // linear checks over
 				if raw, ok := h["headers"]; !ok || json.Unmarshal(raw, &headers) != nil {
 					continue
 				}
-				for _, k := range sortedKeys(headers) {
+				for _, k := range slices.Sorted(maps.Keys(headers)) {
 					v := strings.TrimSpace(headers[k])
 					if m := authSchemeRe.FindStringSubmatch(v); m != nil {
 						v = m[1]

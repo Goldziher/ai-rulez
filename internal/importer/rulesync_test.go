@@ -569,7 +569,7 @@ func TestRulesyncPlan_SymlinksAreNotFollowed(t *testing.T) {
 	dir := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "secret.md")
 	require.NoError(t, os.WriteFile(outside, []byte("outside\n"), 0o644))
-	writeTree(t, dir, map[string]string{".rulesync/rules/ok.md": "Fine.\n"})
+	testutil.WriteTree(t, dir, map[string]string{".rulesync/rules/ok.md": "Fine.\n"})
 	testutil.SymlinkOrSkip(t, outside, filepath.Join(dir, ".rulesync", "rules", "link.md"))
 
 	// Act
@@ -681,7 +681,7 @@ func TestConvert_RulesyncWrittenTreeLoadsAndValidates(t *testing.T) {
 func TestConvert_RulesyncSecretBlocksTheWrite(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	writeTree(t, dir, map[string]string{
+	testutil.WriteTree(t, dir, map[string]string{
 		".rulesync/rules/deploy.md": "Deploy with " + awsKey + " and " + ghToken + "\n",
 	})
 
