@@ -449,3 +449,24 @@ func TestStrictApprovalFindingsRequireALockWhenApprovalsAreRequired(t *testing.T
 	require.NotEmpty(t, findings)
 	assert.Contains(t, findings[0].Message, lockfile.FileName)
 }
+
+func TestGenerateLockedWithoutALockSaysSoOnce(t *testing.T) {
+	lockProject(t, "")
+	cfg, err := loadForLock("")
+	require.NoError(t, err)
+	generateLocked = true
+	t.Cleanup(func() { generateLocked = false })
+
+	err = enforceLockedContent(cfg)
+	require.ErrorIs(t, err, errLockedSourceDrift, "still exit 2")
+	msg := err.Error()
+	assert.Contains(t, msg, "ai-rulez.lock is missing")
+	assert.NotContains(t, msg, "differs", "a missing lock is not a content difference")
+	assert.NotContains(t, msg, "does not match")
+	var hint string
+	if oe, ok := oops.AsOops(err); ok {
+		hint = oe.Hint()
+	}
+	assert.Contains(t, hint, "`ai-rulez lock`")
+	assert.NotContains(t, hint, "lock --diff", "--diff cannot work without a lock")
+}

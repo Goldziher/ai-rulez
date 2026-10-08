@@ -15,6 +15,14 @@ import (
 // content no longer matches ai-rulez.lock.
 var errLockedSourceDrift = errors.New("authored content differs from " + "ai-rulez.lock")
 
+// lockMissingError is the refusal of `generate --locked` or `--frozen` without a
+// lock. It is lock drift (exit 2) but not a content difference, so it does not
+// say "authored content differs" or suggest `lock --diff`, which needs a lock.
+type lockMissingError struct{}
+
+func (lockMissingError) Error() string        { return lockMissingLine }
+func (lockMissingError) Is(target error) bool { return target == errLockedSourceDrift }
+
 // errLockedSignature marks a `generate --locked` refusal because [signing]
 // require is not met by the lock attestation (AR720 to AR727). Re-locking does not
 // fix it: it changes the lock and invalidates the signature.
@@ -84,6 +92,8 @@ func enforceLockedContentFor(cfg *config.Config, check bool) error {
 	switch {
 	case len(lines) == 0 && len(signLines) == 0:
 		return nil
+	case len(lines) == 1 && lines[0] == lockMissingLine && len(signLines) == 0:
+		return oops.Hint("Create it with `ai-rulez lock`").Wrap(lockMissingError{})
 	case len(drift) == 0 && len(approvals) > 0:
 		// Nothing drifted: running `lock` would not help, approving does.
 		return oops.Hint("Review each item named above, then run `ai-rulez approve <item>`").
