@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -44,8 +45,22 @@ func setupTelemetry(t *testing.T, repoToml, userToml string) telemetryEnv {
 	return telemetryEnv{root: root, xdg: xdg, log: filepath.Join(root, ".ai-rulez", "local", "usage.jsonl"), spawns: &spawns}
 }
 
+// assertFileMode checks the permission bits of info; Windows reports 0o666 for
+// every file, so the check does not apply there.
+func assertFileMode(t *testing.T, info os.FileInfo, want os.FileMode, msg string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		return
+	}
+	assert.Equal(t, want, info.Mode().Perm(), msg)
+}
+
+// jsonPath escapes a filesystem path for a JSON string literal (Windows paths
+// carry backslashes).
+func jsonPath(p string) string { return strings.ReplaceAll(p, `\`, `\\`) }
+
 func hookInput(root, fields string) *bytes.Reader {
-	return bytes.NewReader([]byte(`{"session_id":"s1","cwd":"` + root + `",` + fields + `}`))
+	return bytes.NewReader([]byte(`{"session_id":"s1","cwd":"` + jsonPath(root) + `",` + fields + `}`))
 }
 
 func TestTelemetryHook_PrintsAndWritesTheTemplate(t *testing.T) {
@@ -80,12 +95,12 @@ func TestUsageRecord_ForwardsSkillLoadsToTheSpoolOnlyWhenUserScopeAllows(t *test
 	skillEvent := `{"hook_event_name":"PreToolUse","tool_name":"Skill","tool_input":{"skill":"git-workflow"},"session_id":"s1","cwd":"ROOT"}`
 
 	env := setupTelemetry(t, "\n[telemetry]\nenabled = true\n", "")
-	require.NoError(t, runUsageRecord(strings.NewReader(strings.ReplaceAll(skillEvent, "ROOT", env.root))))
+	require.NoError(t, runUsageRecord(strings.NewReader(strings.ReplaceAll(skillEvent, "ROOT", jsonPath(env.root)))))
 	_, err := os.Stat(filepath.Join(env.root, ".ai-rulez", "local", telemetry.OutboxFileName))
 	assert.True(t, os.IsNotExist(err), "repo config alone exports nothing")
 
 	env = setupTelemetry(t, "", user)
-	require.NoError(t, runUsageRecord(strings.NewReader(strings.ReplaceAll(skillEvent, "ROOT", env.root))))
+	require.NoError(t, runUsageRecord(strings.NewReader(strings.ReplaceAll(skillEvent, "ROOT", jsonPath(env.root)))))
 	spool := &telemetry.Spool{Dir: filepath.Join(env.root, ".ai-rulez", "local")}
 	events, _, err := spool.Pending()
 	require.NoError(t, err)

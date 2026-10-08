@@ -35,7 +35,7 @@ func TestSignPolicyWritesASidecarThePolicyLoaderVerifies(t *testing.T) {
 	require.Equal(t, 0, code)
 	info, err := os.Stat(file + ".sigstore.json")
 	require.NoError(t, err, "the signature goes next to the policy")
-	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm(), "a policy signature is public")
+	assertFileMode(t, info, 0o644, "a policy signature is public")
 	load := func() error {
 		_, err := policy.Discover(policy.DiscoverOptions{
 			Flag: file, Env: ambient.MapEnv{Vars: map[string]string{}, Home: t.TempDir()},

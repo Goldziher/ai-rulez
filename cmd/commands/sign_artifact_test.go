@@ -76,7 +76,7 @@ func TestSignAndVerifyBundleWithProvenance(t *testing.T) {
 	for _, name := range []string{signing.SidecarName, signing.ProvenanceSidecarName} {
 		info, err := os.Stat(filepath.Join(f.bundle, name))
 		require.NoError(t, err, name)
-		assert.Equal(t, os.FileMode(0o644), info.Mode().Perm(), "attestations are public")
+		assertFileMode(t, info, 0o644, "attestations are public")
 	}
 
 	code, stdout, _ := f.verifyWith(t, func() { verifyBundleDir, verifyRequireProvenance = f.bundle, true })

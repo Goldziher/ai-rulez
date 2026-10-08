@@ -158,7 +158,7 @@ func (g *Generator) appendTypedOutputs(outputs []config.OutputFile, content *con
 					if outputs[i].Path == aggregated.Path {
 						return nil, oops.With("preset", g.Spec.Name, "path", aggregated.Path).
 							Hint("Rename the skill or the check; both render to this file").
-							Errorf("the aggregate %s output %s collides with another generated file", typ, aggregated.Path)
+							Errorf("the aggregate %s output %s collides with another generated file", typ, filepath.ToSlash(aggregated.Path))
 					}
 				}
 				outputs = append(outputs, *aggregated)
