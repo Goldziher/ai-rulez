@@ -38,6 +38,7 @@ func TestResolver_CreateSource_LocalIncludeStaysInsideProject(t *testing.T) {
 		{"symlink inside pointing outside", "link", &config.Config{}, true, ""},
 		{"absolute inside", filepath.Join(project, "shared"), &config.Config{}, false, filepath.Join(project, "shared")},
 		{"outside allowed from the local overlay", "../victim", &config.Config{LocalOverlay: overlay}, false, "../victim"},
+		{"outside refused from a git-tracked local overlay", "../victim", &config.Config{LocalOverlay: &config.LocalOverlay{Tracked: true, Doc: overlay.Doc}}, true, ""},
 		{"outside allowed in user scope", "../victim", &config.Config{UserScope: true}, false, "../victim"},
 	}
 	for _, tt := range tests {

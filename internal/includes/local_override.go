@@ -29,9 +29,10 @@ func overlaySetsLocalOverride(cfg *config.Config, listKey, name string) bool {
 }
 
 // overlaySetsField reports whether the machine-local overlay sets field on the
-// named entry of listKey.
+// named entry of listKey. An overlay that git tracks is repository content and
+// never counts: a hostile repo could commit one.
 func overlaySetsField(cfg *config.Config, listKey, name, field string) bool {
-	if cfg == nil || cfg.LocalOverlay == nil {
+	if cfg == nil || cfg.LocalOverlay == nil || cfg.LocalOverlay.Tracked {
 		return false
 	}
 	list, ok := cfg.LocalOverlay.Doc[listKey].([]any)
