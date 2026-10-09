@@ -56,6 +56,13 @@ func complete(t *testing.T, args ...string) (words []string, directive string) {
 		RootCmd.SetErr(nil)
 		RootCmd.SetArgs(nil)
 		walkCommands(RootCmd, resetFlags)
+		// cobra adds its request and help commands to the tree when Execute runs and
+		// leaves them there; the other tests walk the tree and expect only ours.
+		for _, c := range RootCmd.Commands() {
+			if strings.HasPrefix(c.Name(), "__") || c.Name() == "help" {
+				RootCmd.RemoveCommand(c)
+			}
+		}
 	})
 	require.NoError(t, Execute())
 	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
@@ -243,5 +250,52 @@ func TestEnumFlagsAreRegisteredForCompletion(t *testing.T) {
 			}
 		})
 		assert.Positive(t, seen, name)
+	}
+}
+
+func TestCompletionSpecParses(t *testing.T) {
+	rules := parseCompletionSpec(`
+enum  fail-on = error warning
+enum  fail-on@convert = dropped
+names domain@import okf = -
+dirs  config-dir root
+args  remove rule = first content:rules
+`)
+
+	values, ok := rules.lookup("enum", "fail-on", "validate")
+	assert.True(t, ok)
+	assert.Equal(t, []string{"error", "warning"}, values)
+	values, _ = rules.lookup("enum", "fail-on", "convert")
+	assert.Equal(t, []string{"dropped"}, values, "a rule for the command beats the one for the flag")
+	values, ok = rules.lookup("names", "domain", "import okf")
+	assert.True(t, ok)
+	assert.Equal(t, []string{"-"}, values)
+	assert.Equal(t, []string{"config-dir", "root"}, rules["dirs"][""])
+	assert.Equal(t, []string{"first", "content:rules"}, rules["args"]["remove rule"])
+}
+
+// Every command a spec rule names exists, so a renamed command cannot leave a dead rule behind.
+func TestCompletionSpecNamesRealCommandsAndFlags(t *testing.T) {
+	rules := parseCompletionSpec(completionSpec)
+	for path := range rules["args"] {
+		cmd, _, err := RootCmd.Find(strings.Fields(path))
+		require.NoError(t, err, path)
+		assert.Equal(t, "ai-rulez "+path, cmd.CommandPath(), "args rule %q names no command", path)
+		assert.NotNil(t, cmd.ValidArgsFunction, path)
+	}
+	for _, directive := range []string{"enum", "names"} {
+		for key := range rules[directive] {
+			flag, path, scoped := strings.Cut(key, "@")
+			if !scoped {
+				var found bool
+				walkCommands(RootCmd, func(c *cobra.Command) { found = found || c.LocalFlags().Lookup(flag) != nil })
+				assert.True(t, found, "%s rule %q names no flag", directive, key)
+				continue
+			}
+			cmd, _, err := RootCmd.Find(strings.Fields(path))
+			require.NoError(t, err, key)
+			assert.Equal(t, "ai-rulez "+path, cmd.CommandPath(), "%s rule %q names no command", directive, key)
+			assert.NotNil(t, cmd.LocalFlags().Lookup(flag), "%s rule %q: %s has no --%s", directive, key, path, flag)
+		}
 	}
 }

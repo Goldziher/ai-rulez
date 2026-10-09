@@ -80,6 +80,7 @@
 
 - [Standards](https://goldziher.github.io/ai-rulez/standards/): ai-rulez claims conformance with a standard only when a passing test backs the claim.
 - [CLI Commands](https://goldziher.github.io/ai-rulez/cli/): All AI-Rulez CLI commands and flags.
+- [CLI Command Reference](https://goldziher.github.io/ai-rulez/cli-reference/): Every command, with its usage, aliases, examples and flags, generated from the binary's own command tree.
 - [Schema](https://goldziher.github.io/ai-rulez/schema/): The ai-rulez configuration is validated against a formal JSON Schema to provide editor support like autocompletion and real-time validation.
 - [Embedding (Go API)](https://goldziher.github.io/ai-rulez/embedding/): github.com/Goldziher/ai-rulez/v5/pkg/airulez loads a project, validates it, plans or applies a generate run and writes or checks its lock from Go, inside a process that may serve many projects at...
 
