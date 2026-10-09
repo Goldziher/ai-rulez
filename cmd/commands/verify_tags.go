@@ -104,7 +104,7 @@ func reportTagFindings(findings []tagFinding) (failing bool) {
 
 // verifyTagsFor is the `lock --check --verify-tags` step over the configuration the check loaded: exit 2 for a
 // moved tag, 1 when the remote cannot be read.
-func verifyTagsFor(cfg *config.Config) int {
+func verifyTagsFor(ctx context.Context, cfg *config.Config) int {
 	want, err := verifyTagsWanted(cfg, lockVerifyTags)
 	if err != nil {
 		fmtError(err)
@@ -118,7 +118,7 @@ func verifyTagsFor(cfg *config.Config) int {
 		fmtError(err)
 		return 1
 	}
-	findings, err := verifyPinnedTags(cmdContext(), cfg, lock)
+	findings, err := verifyPinnedTags(ctx, cfg, lock)
 	if err != nil {
 		fmtError(err)
 		return 1
