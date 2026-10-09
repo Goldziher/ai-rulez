@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -17,14 +16,27 @@ var (
 	migrateWrite         bool
 	migrateRecursive     bool
 	migrateFormat        string
-	migrateConfigDir     string
 )
 
-// MigrateCmd migrates a 4.x project to the 5.0 format.
+// MigrateCmd groups the migrations: one subcommand per target.
 var MigrateCmd = &cobra.Command{
-	Use:   "migrate v5",
+	Use:   "migrate",
 	Short: "Migrate a 4.x configuration to the 5.0 format, or a content tree to OKF",
-	Long: `Rewrite a 4.x project for ai-rulez 5.0.
+	Long: `Migrate a project: "migrate v5" rewrites a 4.x configuration for ai-rulez 5.0,
+"migrate okf" converts the content tree to an OKF bundle.
+
+Exit codes: 0 migrated or nothing to do, 1 a project could not be migrated,
+2 --check found a project that still needs migration.`,
+	Example: `  ai-rulez migrate v5 --dry-run
+  ai-rulez migrate v5 --recursive --check --format json
+  ai-rulez migrate okf --dry-run`,
+}
+
+func newMigrateV5Cmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "v5",
+		Short: "Migrate a 4.x configuration to the 5.0 format",
+		Long: `Rewrite a 4.x project for ai-rulez 5.0.
 
 Only 4.x is migrated. A 2.x or 3.x project must first be migrated to 4.0 with
 ai-rulez 4.x.
@@ -36,44 +48,51 @@ becomes [lint.ratchet], and the 4.x defaults v5 changes (agents_md, the managed
 unless --adopt-defaults is given.
 
 Exit codes: 0 migrated or nothing to do, 1 a project could not be migrated,
-2 --check found a project that still needs migration.
-
-"migrate okf" converts the .ai-rulez/ content tree, in place, to an OKF bundle:
-each file gains type, title and x-ai-rulez frontmatter (its former frontmatter
-moves under x-ai-rulez.metadata) and every directory gets an index.md. Bodies
-are kept byte for byte and the generated output does not change. It is
-idempotent; --dry-run and --check write nothing.`,
-	Example: `  ai-rulez migrate okf --dry-run
-  ai-rulez migrate v5 --dry-run
+2 --check found a project that still needs migration.`,
+		Example: `  ai-rulez migrate v5 --dry-run
   ai-rulez migrate v5
   ai-rulez migrate v5 --recursive --check --format json`,
-	Args: cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return exitStatus(runMigrate(cmd.OutOrStdout(), args[0]))
-	},
-}
-
-func init() {
-	flags := MigrateCmd.Flags()
-	flags.BoolVar(&migrateDryRun, "dry-run", false, "show the change list without writing anything")
-	flags.BoolVar(&migrateCheck, "check", false, "write nothing and exit 2 when a project still needs migration")
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return exitStatus(runMigrateV5(cmd.OutOrStdout()))
+		},
+	}
+	flags := cmd.Flags()
 	flags.BoolVar(&migrateAdoptDefaults, "adopt-defaults", false, "take the v5 defaults instead of pinning the 4.x ones")
 	flags.BoolVar(&migrateWrite, "write", false, "also rewrite frontmatter aliases in .ai-rulez markdown files")
 	flags.BoolVar(&migrateRecursive, "recursive", false, "migrate every project found below the current directory")
-	flags.StringVar(&migrateFormat, "format", formatText, "output format: text or json")
-	flags.StringVar(&migrateConfigDir, "config-dir", "", "config directory name to migrate (default .ai-rulez, then .config/ai-rulez)")
+	return cmd
 }
 
-func runMigrate(out io.Writer, target string) int {
-	if strings.EqualFold(target, migrateOKFTarget) {
-		return runMigrateOKFChecked(out)
+func newMigrateOKFCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   migrateOKFTarget,
+		Short: "Convert the .ai-rulez/ content tree to an OKF bundle, in place",
+		Long: `Convert the .ai-rulez/ content tree, in place, to an OKF bundle: each file gains
+type, title and x-ai-rulez frontmatter (its former frontmatter moves under
+x-ai-rulez.metadata) and every directory gets an index.md. Bodies are kept byte
+for byte and the generated output does not change. It is idempotent; --dry-run
+and --check write nothing.`,
+		Example: `  ai-rulez migrate okf --dry-run
+  ai-rulez migrate okf --check --format json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return exitStatus(runMigrateOKFChecked(cmd.OutOrStdout()))
+		},
 	}
-	switch strings.TrimPrefix(strings.ToLower(target), "v") {
-	case "5", "5.0":
-	default:
-		renderStderr(fmt.Errorf("unsupported migration target %q: use v5 or okf (run `ai-rulez migrate v5`)", target))
-		return 1
-	}
+}
+
+func init() {
+	MigrateCmd.AddCommand(newMigrateV5Cmd(), newMigrateOKFCmd())
+	flags := MigrateCmd.PersistentFlags()
+	flags.BoolVar(&migrateDryRun, "dry-run", false, "show the change list without writing anything")
+	flags.BoolVar(&migrateCheck, "check", false, "write nothing and exit 2 when a project still needs migration")
+	addFormatFlag(flags, &migrateFormat, formatText, formatText, formatText, formatJSON)
+}
+
+// runMigrateV5 migrates the 4.x project(s) below the working directory and
+// returns the process exit code. --config-dir (global) names the directory.
+func runMigrateV5(out io.Writer) int {
 	if migrateFormat != formatText && migrateFormat != formatJSON {
 		renderStderr(fmt.Errorf("unsupported --format %q: use text or json", migrateFormat))
 		return 1
@@ -81,7 +100,7 @@ func runMigrate(out io.Writer, target string) int {
 
 	report, err := migrate.Run(migrate.Options{
 		Root:          ".",
-		ConfigDirName: migrateConfigDir,
+		ConfigDirName: configDir,
 		Recursive:     migrateRecursive,
 		DryRun:        migrateDryRun,
 		Check:         migrateCheck,

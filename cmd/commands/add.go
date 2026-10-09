@@ -2,12 +2,9 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +22,11 @@ const addLocalUsage = "Write to .ai-rulez/local/ as a machine-local item (gitign
 var AddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add content to your rules",
-	Long:  `Add rules, context, or skills to your .ai-rulez/ configuration.`,
+	Long: `Add rules, context, skills, agents, commands or checks to your .ai-rulez/ configuration.
+
+The path of the created file is printed on stdout; --format json prints a document
+with the type, name, domain and path instead. Names are kebab-case file names
+without the .md extension and without spaces.`,
 }
 
 var addRuleCmd = &cobra.Command{
@@ -92,193 +93,114 @@ review tools that support them. Frontmatter: description, severity
 }
 
 func init() {
-	AddCmd.AddCommand(addAgentCmd)
-	AddCmd.AddCommand(addCommandCmd)
-	AddCmd.AddCommand(addCheckCmd)
-	for _, c := range []*cobra.Command{addAgentCmd, addCommandCmd} {
+	AddCmd.AddCommand(addRuleCmd, addContextCmd, addSkillCmd, addAgentCmd, addCommandCmd, addCheckCmd)
+	for _, c := range []*cobra.Command{addRuleCmd, addContextCmd, addSkillCmd, addAgentCmd, addCommandCmd, addCheckCmd} {
 		c.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
-		c.Flags().StringVarP(&addDesc, "description", "s", "", "Description")
 		c.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
-		c.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
+		addResultFormat(c.Flags())
 	}
 	// Checks are shared review guidance: there is no machine-local check tree.
-	addCheckCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
-	addCheckCmd.Flags().StringVarP(&addDesc, "description", "s", "", "Description")
-	addCheckCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
-	AddCmd.AddCommand(addRuleCmd)
-	AddCmd.AddCommand(addContextCmd)
-	AddCmd.AddCommand(addSkillCmd)
-
-	// Common flags for all add commands
-	addRuleCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
-	addRuleCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low|minimal")
-	addRuleCmd.Flags().StringVarP(&addTargets, "targets", "t", "", "Comma-separated list of target providers (e.g., claude,cursor)")
-	addRuleCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
-	addRuleCmd.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
-
-	addContextCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
-	addContextCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low|minimal")
-	addContextCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
-	addContextCmd.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
-
-	addSkillCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
-	addSkillCmd.Flags().StringVarP(&addDesc, "description", "s", "", "Skill description")
-	addSkillCmd.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
-	addSkillCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
+	for _, c := range []*cobra.Command{addRuleCmd, addContextCmd, addSkillCmd, addAgentCmd, addCommandCmd} {
+		c.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
+	}
+	for _, c := range []*cobra.Command{addSkillCmd, addAgentCmd, addCommandCmd, addCheckCmd} {
+		c.Flags().StringVarP(&addDesc, "description", "s", "", "Description")
+	}
+	for _, c := range []*cobra.Command{addRuleCmd, addContextCmd, addSkillCmd} {
+		c.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low|minimal")
+		c.Flags().StringVarP(&addTargets, "targets", "t", "", "Comma-separated target providers or path globs (e.g. claude,cursor)")
+	}
+	addCheckCmd.Flags().String("severity", "", "Severity: low|medium|high|critical")
+	addCheckCmd.Flags().String("tools", "", "Comma-separated review tools the check is for")
+	addCheckCmd.Flags().StringVarP(&addTargets, "targets", "t", "", "Comma-separated target presets, paths or globs the check applies to")
 }
 
 func runAddRule(cmd *cobra.Command, args []string) error {
-	name := args[0]
-
-	// Parse targets
-	var targets []string
-	if addTargets != "" {
-		for _, t := range strings.Split(addTargets, ",") {
-			if t = strings.TrimSpace(t); t != "" {
-				targets = append(targets, t)
-			}
-		}
-	}
-
-	ctx := cmdContext()
-	op, err := newWritingOperator(addLocal)
-	if err != nil {
-		return failMsg("Failed to create CRUD operator", err)
-	}
-
-	req := &crud.AddFileRequest{
-		Domain:   addDomain,
-		Type:     crud.ContentTypeRules,
-		Name:     name,
-		Content:  addContent,
-		Priority: addPriority,
-		Targets:  targets,
-	}
-
-	result, err := op.AddRule(ctx, req)
-	if err != nil {
-		return failMsg("Failed to add rule", err)
-	}
-
-	output := map[string]interface{}{
-		keySuccess: true,
-		keyType:    "rule",
-		keyName:    result.Name,
-		keyPath:    result.FullPath,
-	}
-	if result.Domain != "" {
-		output["domain"] = result.Domain
-	}
-
-	jsonOutput, _ := json.MarshalIndent(output, "", "  ")
-	logger.Info(fmt.Sprintf("Rule added successfully: %s", result.FullPath))
-	logger.Debug(string(jsonOutput))
-	return nil
+	return runAddItem(cmd, args[0], crud.ContentTypeRules, "rule", (*crud.OperatorImpl).AddRule)
 }
 
 func runAddContext(cmd *cobra.Command, args []string) error {
-	name := args[0]
-
-	ctx := cmdContext()
-	op, err := newWritingOperator(addLocal)
-	if err != nil {
-		return failMsg("Failed to create CRUD operator", err)
-	}
-
-	req := &crud.AddFileRequest{
-		Domain:   addDomain,
-		Type:     crud.ContentTypeContext,
-		Name:     name,
-		Content:  addContent,
-		Priority: addPriority,
-	}
-
-	result, err := op.AddContext(ctx, req)
-	if err != nil {
-		return failMsg("Failed to add context", err)
-	}
-
-	output := map[string]interface{}{
-		keySuccess: true,
-		keyType:    crud.ContentTypeContext,
-		keyName:    result.Name,
-		keyPath:    result.FullPath,
-	}
-	if result.Domain != "" {
-		output["domain"] = result.Domain
-	}
-
-	jsonOutput, _ := json.MarshalIndent(output, "", "  ")
-	logger.Info(fmt.Sprintf("Context added successfully: %s", result.FullPath))
-	logger.Debug(string(jsonOutput))
-	return nil
+	return runAddItem(cmd, args[0], crud.ContentTypeContext, "context", (*crud.OperatorImpl).AddContext)
 }
 
 func runAddSkill(cmd *cobra.Command, args []string) error {
-	name := args[0]
-
-	ctx := cmdContext()
-	op, err := newWritingOperator(addLocal)
-	if err != nil {
-		return failMsg("Failed to create CRUD operator", err)
-	}
-
-	// For skills, we need to handle the skill-specific format
-	// Skills use a different structure (directory with SKILL.md)
-	req := &crud.AddFileRequest{
-		Domain:      addDomain,
-		Type:        crud.ContentTypeSkills,
-		Name:        name,
-		Description: addDesc,
-		Content:     addContent,
-	}
-
-	result, err := op.AddSkill(ctx, req)
-	if err != nil {
-		return failMsg("Failed to add skill", err)
-	}
-
-	output := map[string]interface{}{
-		keySuccess: true,
-		keyType:    kindSkill,
-		keyName:    result.Name,
-		keyPath:    result.FullPath,
-	}
-	if result.Domain != "" {
-		output["domain"] = result.Domain
-	}
-
-	jsonOutput, _ := json.MarshalIndent(output, "", "  ")
-	logger.Info(fmt.Sprintf("Skill added successfully: %s", result.FullPath))
-	logger.Debug(string(jsonOutput))
-	return nil
+	return runAddItem(cmd, args[0], crud.ContentTypeSkills, "skill", (*crud.OperatorImpl).AddSkill)
 }
 
 func runAddAgent(cmd *cobra.Command, args []string) error {
-	return runAddItem(args[0], crud.ContentTypeAgents, "agent", (*crud.OperatorImpl).AddAgent)
+	return runAddItem(cmd, args[0], crud.ContentTypeAgents, "agent", (*crud.OperatorImpl).AddAgent)
 }
 
 func runAddCommand(cmd *cobra.Command, args []string) error {
-	return runAddItem(args[0], crud.ContentTypeCommands, "command", (*crud.OperatorImpl).AddCommand)
+	return runAddItem(cmd, args[0], crud.ContentTypeCommands, "command", (*crud.OperatorImpl).AddCommand)
 }
 
 func runAddCheck(cmd *cobra.Command, args []string) error {
-	return runAddItem(args[0], crud.ContentTypeChecks, "check", (*crud.OperatorImpl).AddCheck)
+	return runAddItem(cmd, args[0], crud.ContentTypeChecks, "check", (*crud.OperatorImpl).AddCheck)
 }
 
-func runAddItem(name, ftype, label string,
+// splitList splits a comma-separated flag value, dropping blanks.
+func splitList(value string) []string {
+	var out []string
+	for _, v := range strings.Split(value, ",") {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// runAddItem creates one content item and reports its path: on stdout, or as the
+// change document under --format json. The confirmation sentence goes to stderr.
+func runAddItem(cmd *cobra.Command, name, ftype, label string,
 	add func(*crud.OperatorImpl, context.Context, *crud.AddFileRequest) (*crud.FileResult, error),
 ) error {
+	out := outFor(cmd)
 	op, err := newWritingOperator(addLocal)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
 	}
-	result, err := add(op, cmdContext(), &crud.AddFileRequest{
+	req := &crud.AddFileRequest{
 		Domain: addDomain, Type: ftype, Name: name, Description: addDesc, Content: addContent,
-	})
+		Priority: addPriority, Targets: splitList(addTargets),
+	}
+	if ftype == crud.ContentTypeChecks {
+		req.Priority, req.Targets = "", nil
+		if err := buildCheckRequest(cmd, req); err != nil {
+			return failMsg("Failed to add check", err)
+		}
+	}
+	result, err := add(op, cmdContext(), req)
 	if err != nil {
 		return failMsg("Failed to add "+label, err)
 	}
-	logger.Info(fmt.Sprintf("%s added successfully: %s", strings.ToUpper(label[:1])+label[1:], result.FullPath))
+	out.Info("%s added successfully\n", strings.ToUpper(label[:1])+label[1:])
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusCreated, Type: label, Name: result.Name, Domain: result.Domain,
+		Path: result.FullPath, Local: addLocal,
+	}, true)
+}
+
+// buildCheckRequest folds --severity, --tools and --targets into the check's
+// frontmatter, validated by the same code the MCP create_check tool uses.
+func buildCheckRequest(cmd *cobra.Command, req *crud.AddFileRequest) error {
+	severity, _ := cmd.Flags().GetString("severity") //nolint:errcheck // the flag is registered in init
+	tools, _ := cmd.Flags().GetString("tools")       //nolint:errcheck // the flag is registered in init
+	return foldCheckFields(req, severity, splitList(tools), splitList(addTargets))
+}
+
+func foldCheckFields(req *crud.AddFileRequest, severity string, tools, targets []string) error {
+	if severity == "" && len(tools) == 0 && len(targets) == 0 {
+		return nil
+	}
+	body := req.Content
+	if body == "" {
+		body = crud.GenerateCheckTemplate(req.Name, req.Description)
+	}
+	content, err := crud.BuildCheckContent(body, req.Description, severity, tools, targets)
+	if err != nil {
+		return err //nolint:wrapcheck // already contextual
+	}
+	req.Content = content
 	return nil
 }
