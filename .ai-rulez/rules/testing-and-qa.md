@@ -14,7 +14,7 @@ x-ai-rulez:
       - .hermes.md
 ---
 
-# Testing and QA
+## Testing and QA
 
 - Prefer table-driven Go tests with clear Arrange/Act/Assert phases.
 - Cover failure paths around file IO, CLI flags, concurrency, and external integrations.

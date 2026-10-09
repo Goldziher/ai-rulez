@@ -16,7 +16,7 @@ x-ai-rulez:
     summary: Core commands (init, generate, validate, lock, verifiers, mcp), exit codes and CRUD helpers for managing configuration.
 ---
 
-# CLI and CRUD Commands
+## CLI and CRUD Commands
 
 Core commands:
 

@@ -17,7 +17,7 @@ x-ai-rulez:
     summary: High-level overview of config, profiles, presets, includes, and typical AI-Rulez workflows.
 ---
 
-# AI-Rulez Overview
+## AI-Rulez Overview
 
 AI-Rulez is a standards-compliant lifecycle tool for agent knowledge and capabilities. It keeps rules, context, skills,
 agents, commands, hooks, permissions and MCP servers in one source of truth, `.ai-rulez/`, and takes them through

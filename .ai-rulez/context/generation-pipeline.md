@@ -15,7 +15,7 @@ x-ai-rulez:
     summary: Config loading, profile resolution, preset generation, and output rendering workflow.
 ---
 
-# Generation Pipeline
+## Generation Pipeline
 
 - `internal/config` loads `.ai-rulez/config.toml`, scans content trees, and resolves includes.
 - `internal/generator` selects profiles, collects MCP servers, and renders presets.

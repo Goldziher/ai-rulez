@@ -12,7 +12,7 @@ x-ai-rulez:
       - .github/copilot-instructions.md
 ---
 
-# Capability Delivery Checklist
+## Capability Delivery Checklist
 
 - Capture an implementation plan and accompanying tests before touching code.
 - Update docs, schema, and multi-runtime wrappers in the same change set.
