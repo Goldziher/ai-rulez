@@ -21,7 +21,7 @@ func resetVerifiersFlags(t *testing.T) {
 	reset := func() {
 		verifiersStrict, verifiersNames, verifiersProfile, noLocal, configDir = false, nil, "", false, ""
 		verifiersSince, verifiersStaged, verifiersAll, verifiersRule, verifiersFormat = "", false, false, "", ""
-		verifiersFailOn, verifiersOut, verifiersDead, verifiersListJSON, verifiersExec, verifiersRole = "", "", false, false, false, ""
+		verifiersFailOn, verifiersOut, verifiersDead, verifiersJSON, verifiersExec, verifiersRole = "", "", false, false, false, ""
 		verifiersAllowLLM, verifiersMaxCost, verifiersEstimate = false, defaultVerifiersMaxCost, false
 	}
 	reset()
@@ -332,7 +332,7 @@ func TestListVerifiers_ShowsSpecsAndJSON(t *testing.T) {
 	var text, js bytes.Buffer
 
 	listVerifiers(context.Background(), nil, &text)
-	verifiersListJSON = true
+	verifiersJSON = true
 	listVerifiers(context.Background(), nil, &js)
 
 	if !strings.Contains(text.String(), "rule:database") {

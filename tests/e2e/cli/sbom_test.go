@@ -52,7 +52,7 @@ func (s *SBOMCLITestSuite) TestOutputIsIdenticalAcrossRunsAndWritesFiles() {
 func (s *SBOMCLITestSuite) TestRejectsUnknownFormat() {
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "sbom", "--type", "xml")
 
-	result.AssertOutputContains(s.T(), "unknown --format")
+	result.AssertOutputContains(s.T(), "unknown --type")
 }
 
 func (s *SBOMCLITestSuite) TestSPDXFormat() {
