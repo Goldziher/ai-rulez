@@ -21,6 +21,7 @@ var improvePRFlags struct {
 	draft    bool
 	noPush   bool
 	runEvals bool
+	allowNet bool
 	evalArgs []string
 	envPass  []string
 }
@@ -59,7 +60,9 @@ The worktree is removed afterwards; the branch stays. Commits skip git hooks. Re
 
 With --isolation auto|require (or [improve] isolation) the commands run in the worktree run under the process
 sandbox: writable only below the worktree, the user cache, ai-rulez's state directory and the temp directory, with
-the network on (generate and lock fetch remote includes; eval run calls a model). require refuses (AR9J7) when no
+the network cut for generate and lock (--allow-network lifts it for remote includes that are not cached; eval run keeps
+the network, it calls a model). Every git command runs with a scrubbed environment and no hooks, and only the push
+keeps the transport credentials (SSH agent, askpass). require refuses (AR9J7) when no
 backend works. A harness that keeps its state elsewhere needs --isolation none for --run-evals.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -92,7 +95,7 @@ backend works. A harness that keeps its state elsewhere needs --isolation none f
 		opts := &improve.PROptions{
 			ConfigDir: configDirAbs, RepoDir: repo, RunID: args[0], Base: improvePRFlags.base, Remote: improvePRFlags.remote,
 			Draft: improvePRFlags.draft, NoPush: improvePRFlags.noPush, Yes: improveFlags.yes, Confirm: confirmProceed, Out: out,
-			Git: gitutil.Git{}, Exec: runner.Exec{}, RunEvals: improvePRFlags.runEvals, EvalArgs: improvePRFlags.evalArgs,
+			Git: gitutil.Git{}, Exec: runner.Exec{}, RunEvals: improvePRFlags.runEvals, AllowNetwork: improvePRFlags.allowNet, EvalArgs: improvePRFlags.evalArgs,
 			GHEnv: runner.ScrubEnv(os.Environ(), ghEnvPass, []string{"GH_PROMPT_DISABLED=1", "GH_NO_UPDATE_NOTIFIER=1"}),
 			Env:   improvePRChildEnv(os.Environ(), improvePRFlags.envPass), AllowScripts: improveFlags.allowScripts, AllowFrontmatter: improveFlags.allowFrontmatter,
 			Isolation: isolation,
@@ -139,6 +142,7 @@ func init() {
 	f.StringVar(&improvePRFlags.remote, "remote", improve.DefaultRemote, "Remote to push the branch to")
 	f.BoolVar(&improvePRFlags.draft, "draft", false, "Open the pull request as a draft")
 	f.BoolVar(&improvePRFlags.noPush, "no-push", false, "Commit on the branch only: no push, no pull request")
+	f.BoolVar(&improvePRFlags.allowNet, "allow-network", false, "Under --isolation, leave the network on for generate and lock (remote includes not yet cached); eval run keeps it")
 	f.BoolVar(&improvePRFlags.runEvals, "run-evals", false, "Also run eval run <skill> with --changed-only in the worktree (calls the eval runner and costs money)")
 	f.StringArrayVar(&improvePRFlags.evalArgs, "eval-arg", nil, "Extra argument for eval run with --run-evals, for example --eval-arg=--max-cost=2; repeatable")
 	f.StringSliceVar(&improvePRFlags.envPass, "env-pass", nil, "Environment variable names forwarded to the ai-rulez commands run in the worktree (all others are scrubbed); eval run needs its model credentials here")

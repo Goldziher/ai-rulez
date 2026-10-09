@@ -37,11 +37,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2 (pin actions by commit; update with Dependabot)
         with:
           fetch-depth: 0
 
       - name: Install
+        # pin both versions (npm install -g ai-rulez@X.Y.Z ...) once you have chosen them
         run: npm install -g ai-rulez @anthropic-ai/claude-code
 
       - name: Configure the optimizer's model (user scope)

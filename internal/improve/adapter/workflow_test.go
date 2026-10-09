@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,4 +53,21 @@ func TestRepairWorkflowTemplate_IsListedAsATemplateNotAnAdapter(t *testing.T) {
 	}
 	assert.True(t, found)
 	assert.False(t, IsRunnable(RepairWorkflow))
+}
+
+func TestRepairWorkflowTemplate_PinsEveryActionToACommit(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	text, ok := Template(RepairWorkflow)
+	require.True(t, ok)
+
+	// Act
+	uses := regexp.MustCompile(`(?m)^\s*-?\s*uses:\s*(\S+)`).FindAllStringSubmatch(text, -1)
+
+	// Assert
+	require.NotEmpty(t, uses)
+	pinned := regexp.MustCompile(`^[\w.-]+/[\w./-]+@[0-9a-f]{40}$`)
+	for _, u := range uses {
+		assert.Regexp(t, pinned, u[1], "an action must be pinned to a full commit SHA")
+	}
 }
