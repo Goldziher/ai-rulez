@@ -200,12 +200,12 @@ type FileResult struct {
 
 // FileInfo represents information about a file
 type FileInfo struct {
-	Name     string   // File name (without extension)
-	Path     string   // Full path to file
-	Type     string   // File type (rules, context, skills)
-	Domain   string   // Domain name (empty if root)
-	Priority string   // Priority level from metadata
-	Targets  []string // Target providers from metadata
+	Name     string   `json:"name"`               // File name (without extension)
+	Path     string   `json:"path"`               // Full path to file
+	Type     string   `json:"type"`               // File type (rules, context, skills)
+	Domain   string   `json:"domain,omitempty"`   // Domain name (empty if root)
+	Priority string   `json:"priority,omitempty"` // Priority level from metadata
+	Targets  []string `json:"targets,omitempty"`  // Target providers from metadata
 }
 
 // DefaultPriority returns the default priority if not specified
