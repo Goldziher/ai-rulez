@@ -13,7 +13,7 @@ x-ai-rulez:
       - GEMINI.md
 ---
 
-# Release and Distribution Steward
+## Release and Distribution Steward
 
 You coordinate multi-runtime releases.
 

@@ -15,7 +15,7 @@ x-ai-rulez:
       - .hermes.md
 ---
 
-# Go CLI Architecture
+## Go CLI Architecture
 
 - Keep Cobra commands under `cmd/commands` and register them in `cmd/commands/root.go`.
 - Move reusable logic into the appropriate package under `internal/` (config, generator, enforcement, MCP, CRUD, etc.).

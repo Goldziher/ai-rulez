@@ -12,7 +12,7 @@ x-ai-rulez:
     usage: /review
 ---
 
-# Review
+## Review
 
 Review all staged and unstaged changes in the current repository.
 
