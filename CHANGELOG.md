@@ -80,6 +80,10 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **Eval results are signed per user**: `eval run` signs each record with `eval-results.key`; a record without a valid signature (committed from another machine, edited) is `unverified`, re-run instead of replayed and ignored by `AR997`, `AR998`, `telemetry report evals` and `telemetry report`. CI has no key and must use `eval run --force`.
 - **Usage log version 3**: lines carry `digest`, `digest_scheme` and `event_id`, and `session` is a salted hash instead of the raw harness session id. Version 1 and 2 logs still read.
 - **`schema/catalog.schema.json` describes catalog version 2**; the version 1 schema moved to `schema/catalog.v1.schema.json` (version 1 stays the default of `catalog --format json`).
+- **BREAKING: MCP tool arguments are validated against typed schemas.** Every tool's input schema is now inferred from a typed argument struct with `additionalProperties: false`: an unknown argument, a wrong type (`"local": "yes"`, a number for a string), a value outside an enum or a missing required argument is an error result instead of being coerced or ignored. Numeric arguments (`limit`, `offset`, `budget_bytes`) are integers.
+- **BREAKING: MCP failures are error results.** `validate_config` returned `{"valid": false}` as a success; it is now an error result (`isError: true`) with the same document in `structuredContent`. The list and read tools (`list_rules`, `read_rule`, ...) fail on a configuration that does not load, as `ai-rulez list` exits 1, instead of returning an empty list; `lock_status` on a project without a lock fails ("nothing to check") instead of reporting `in_sync: true`; `doctor` fails when the configuration cannot be read.
+- **BREAKING: MCP `working_directory`, `config_file` and `config_dir` are confined to the directory the server was started in.** Pass `mcp --root <dir>` to choose another root or `mcp --allow-any-dir` to lift the check. A call without `working_directory` uses the root.
+- **BREAKING: the authoring MCP server no longer advertises `tools.listChanged`** (its tool set is fixed).
 
 ### Added
 
@@ -224,6 +228,9 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **Harness traps**: `AR9C5` and `AR9C6` (Kiro custom agents and steering), project trap rows in `.ai-rulez/traps/*.toml` (`AR9CA`), `AR9C9` for a Kilo `REVIEW.md` over 10,000 characters, and `validate --strict --fix` renames a misspelt frontmatter key (`AR9C7`) in hand-written skill and agent files.
 - **Configurable lint heuristics**: `[lint.security] directive_tags` and `trusted_orgs`, `[lint.capability] max_network_commands` and `[lint.load_budgets]` (defaults unchanged).
 - **`ai-rulez --version`** prints the version.
+- **MCP tools return structured output.** Every tool declares an `outputSchema` and returns `structuredContent` plus the same JSON as a text block; every tool has a `title` and the full annotation set (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint: false`). Registration uses the SDK's typed `AddTool`. See `docs/mcp-server.md`.
+- **`validate_config` runs the lint of `ai-rulez validate`.** It shares the CLI's code path (schema, overlay, includes, every analyzer, baseline, ratchets and the fail-on judgement) and returns real `warnings`, `errors`, `findings`, `summary` and `risk`. New arguments `fail_on`, `strict`, `config_only`, `lint_profile` and `analyzers` mirror the flags.
+- **`mcp --root` and `mcp --allow-any-dir`** set the directory the authoring tools may use.
 
 ### Changed
 
@@ -389,6 +396,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **Served-skill metadata is bounded** in `mcp --serve-skills`: a hostile skill could return an unbounded description, keyword list or file list through `find_skill`, `list_skill_resources` and `skills/list` (the session budget charges only file content). Descriptions are cut to 1024 bytes, keywords, triggers and frontmatter lists to 64 entries, `load_skill` and `skills/list` list at most 200 files per skill, and `list_skill_resources` pages with `offset`.
 - **Offline skill-source resolution validates the remembered commit**: a value in the cache's `refs.json` that is not a 40 or 64 hex commit id is treated as never resolved instead of becoming a cache path, and the index is written atomically.
 - **A skill-source skill can no longer reuse the name of a static project skill**: the collision check now covers every project skill, not only those the server serves.
+- **MCP server leaked a map entry per session.** The re-initialize tolerance kept the state of every session it had seen; it now forgets finished sessions. The server also logs the SDK's warnings and errors to stderr and sets an explicit page size.
 
 ### Security
 

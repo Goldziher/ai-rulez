@@ -138,11 +138,11 @@ func TestLockStatusHandler(t *testing.T) {
 	dir := governanceProject(t, "")
 	h := LockStatusHandler("test", nil)
 
-	t.Run("no lock is in sync unless enforced", func(t *testing.T) {
-		res, doc := callGov(t, h, dir, nil)
-		require.False(t, res.IsError, textOf(t, res))
-		assert.Equal(t, true, doc["in_sync"])
-		assert.Equal(t, []any{}, doc["changes"])
+	t.Run("no lock is an error unless enforced, as in the CLI", func(t *testing.T) {
+		res, _ := callGov(t, h, dir, nil)
+		require.True(t, res.IsError, "a project that was never locked has nothing to verify, so in_sync would be a lie")
+		assert.Contains(t, textOf(t, res), "nothing to check")
+		assert.Contains(t, textOf(t, res), "ai-rulez lock")
 	})
 	t.Run("unknown kind is a tool error", func(t *testing.T) {
 		res, _ := callGov(t, h, dir, map[string]any{"kind": "nope"})
@@ -179,7 +179,9 @@ func TestGovernanceTools_NeverFetch(t *testing.T) {
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	t.Setenv("HTTP_PROXY", proxy.URL)
 	t.Setenv("HTTPS_PROXY", proxy.URL)
-	dir := governanceProject(t, "\n[[includes]]\nname = \"shared\"\nsource = \"https://example.invalid/shared.git\"\nref = \"main\"\n")
+	const sharedInclude = "\n[[includes]]\nname = \"shared\"\nsource = \"https://example.invalid/shared.git\"\nref = \"main\"\n"
+	dir := governanceProject(t, sharedInclude)
+	enforcedDir := governanceProject(t, sharedInclude+"\n[lock]\nenforce = true\n")
 
 	// Control: a load that is allowed to fetch does reach git.
 	_, _ = loadWithResolvers(context.Background(), dir) //nolint:errcheck // a failed include fetch is only a warning
@@ -200,7 +202,11 @@ func TestGovernanceTools_NeverFetch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Act
-			res, _ := callGov(t, tt.h, dir, tt.args)
+			project := dir
+			if tt.name == "lock_status" {
+				project = enforcedDir // a project without a lock is an error unless the lock is enforced
+			}
+			res, _ := callGov(t, tt.h, project, tt.args)
 
 			// Assert
 			require.False(t, res.IsError, textOf(t, res))
