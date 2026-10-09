@@ -99,13 +99,12 @@ func init() {
 	LockCmd.Flags().BoolVar(&lockOffline, "offline", false, "With --outdated: refuse to run (it needs the network); use --check to verify the lock offline")
 	LockCmd.Flags().BoolVar(&lockAcceptFindings, "accept-findings", false, "Pin a source although the security scan of its new tree has error findings (review them first)")
 	LockCmd.Flags().BoolVar(&lockSubject, "subject", false, "Print the lock-subject digest and statement (the thing to sign); reads the lock only")
-	LockCmd.Flags().StringVar(&lockSubjectOutput, "output", "", "With --subject: write the JSON statement to this file")
+	specOutput.String(LockCmd.Flags(), &lockSubjectOutput, "With --subject: write the JSON statement to this file")
 	addFormatFlag(LockCmd.Flags(), &lockFormat, "", formatText, formatText, formatJSON) // of --check, --diff, --outdated and --subject
-	LockCmd.Flags().StringVar(&lockProfile, "profile", "", "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
-	LockCmd.Flags().BoolVarP(&lockRecursive, "recursive", "r", false, "Process every configuration found recursively")
+	specProfile.String(LockCmd.Flags(), &lockProfile, "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
+	specRecursive.Bool(LockCmd.Flags(), &lockRecursive, "Process every configuration found recursively")
 	LockCmd.Flags().BoolVar(&lockRoles, "roles", false, "Also pin the rendered outputs of every role (roles with pin = true are always pinned)")
 	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source or served entries")
-	LockCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 
 // checkLockContentOnlyFlags refuses --content-only together with a selection of
@@ -228,7 +227,7 @@ func runLockFor(kind string, names []string) int {
 		code = worstExit(code, c)
 	}
 	if len(lockUnpinned) > 0 {
-		fmt.Fprintf(os.Stderr, "%d served skill(s) were left unpinned because the security scan refuses them; fix them, or use --strict to fail instead\n", len(lockUnpinned))
+		fmt.Fprintf(os.Stderr, "%d served skill(s) were left unpinned because the security scan refuses them; fix them, or use --refuse-findings to fail instead\n", len(lockUnpinned))
 	}
 	return code
 }
@@ -272,7 +271,7 @@ func loadForLockContext(ctx context.Context, path string, opts ...config.LoadOpt
 	if path != "" {
 		return loadProjectFile(ctx, path, opts...)
 	}
-	return loadConfigForCommand(ctx, nil, opts...)
+	return loadConfigForCommand(ctx, opts...)
 }
 
 // writeLockAt is writeLockAtContext without a caller's context.

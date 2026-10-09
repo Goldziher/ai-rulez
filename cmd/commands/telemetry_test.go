@@ -38,7 +38,7 @@ func setupTelemetry(t *testing.T, repoToml, userToml string) telemetryEnv {
 	telemetrySpawn = func() error { spawns++; return nil }
 	t.Cleanup(func() {
 		telemetrySpawn = previous
-		telHarness, telRole, telRoot, telConfigDir, telFormat, telOutput, telJSON, reportItems = "", "", "", "", "json", "", false, false
+		telHarness, telRole, telRoot, telFormat, telOutput, telJSON, reportItems = "", "", "", "json", "", false, false
 		usageLog, usageIndex, telHarness, telRole, usageSalt, reportJSON, reportEvals, reportFeedback = "", "", "", "", "", false, "", ""
 		configDir = ""
 	})

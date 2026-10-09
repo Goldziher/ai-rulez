@@ -44,7 +44,7 @@ func checkGenerateWatchFlags() error {
 
 // runGenerateWatch generates once, then again whenever the configuration or its
 // sources change, until interrupted.
-func runGenerateWatch(parent context.Context, args []string) error {
+func runGenerateWatch(parent context.Context) error {
 	if err := checkGenerateWatchFlags(); err != nil {
 		return err
 	}
@@ -55,12 +55,12 @@ func runGenerateWatch(parent context.Context, args []string) error {
 	// warning about the project once, not on every change.
 	collector := diag.New(nil)
 	var last *config.Config // the most recent successfully loaded configuration
-	outputs := newGeneratedOutputFilter(initialConfigDir(args))
+	outputs := newGeneratedOutputFilter(initialConfigDir())
 	run := func(ctx context.Context, triggers []string) error {
 		if changed := changedPaths(triggers); len(changed) > 0 {
 			logger.Info("Change detected, regenerating", "changed", describeTriggers(changed))
 		}
-		cfg, err := generateOnce(ctx, args, config.WithCollector(collector))
+		cfg, err := generateOnce(ctx, config.WithCollector(collector))
 		if cfg != nil {
 			last = cfg
 			outputs.refresh(cfg)
@@ -76,7 +76,7 @@ func runGenerateWatch(parent context.Context, args []string) error {
 		logger.Warn("Generation failed; still watching for changes")
 	}
 	return watch.Watch(ctx, watch.Options{
-		Targets: func() []watch.Target { return watchTargets(last, args) },
+		Targets: func() []watch.Target { return watchTargets(last) },
 		Ignore:  func(path string) bool { return watchIgnore(path) || outputs.ignore(path) },
 		Run:     run,
 		OnError: onError,
@@ -159,8 +159,8 @@ func (f *generatedOutputFilter) ignore(path string) bool {
 // initialConfigDir is the directory a watch started with these arguments will
 // watch, before any configuration is loaded: the directory of the targets that
 // are not a single file.
-func initialConfigDir(args []string) string {
-	for _, t := range fallbackTargets(args) {
+func initialConfigDir() string {
+	for _, t := range fallbackTargets() {
 		if !t.File {
 			return t.Path
 		}
@@ -171,8 +171,8 @@ func initialConfigDir(args []string) string {
 // generateOnce is the single-root path of `generate`, returning errors rather
 // than exiting. The configuration is returned (when it loaded) so the caller
 // can derive what to watch.
-func generateOnce(ctx context.Context, args []string, loadOpts ...config.LoadOption) (*config.Config, error) {
-	cfg, err := loadConfigForCommand(ctx, args, loadOpts...)
+func generateOnce(ctx context.Context, loadOpts ...config.LoadOption) (*config.Config, error) {
+	cfg, err := loadConfigForCommand(ctx, loadOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -230,22 +230,19 @@ func watchIgnore(path string) bool {
 // watchTargets lists what to watch: the configuration directory and the local-path include sources. With no
 // loaded configuration it falls back to discovery so a config that is broken at
 // start still gets watched.
-func watchTargets(cfg *config.Config, args []string) []watch.Target {
+func watchTargets(cfg *config.Config) []watch.Target {
 	var targets []watch.Target
 	if cfg != nil && cfg.ConfigDir != "" {
 		targets = append(targets, watch.Target{Path: cfg.ConfigDir})
 		targets = append(targets, includeTargets(cfg)...)
 		return targets
 	}
-	return fallbackTargets(args)
+	return fallbackTargets()
 }
 
 // fallbackTargets resolves the config location without loading it.
-func fallbackTargets(args []string) []watch.Target {
-	switch {
-	case len(args) > 0:
-		return []watch.Target{{Path: args[0], File: true}}
-	case cfgFile != "":
+func fallbackTargets() []watch.Target {
+	if cfgFile != "" {
 		return []watch.Target{{Path: cfgFile, File: true}}
 	}
 	name := configDir

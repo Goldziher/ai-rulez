@@ -376,8 +376,7 @@ func init() {
 	addUsageExportOTLPFlags(usageExportCmd)
 	usageExportCmd.Flags().StringVar(&usageExportFile, "file", "", "Destination path (or pass it as the argument)")
 	usageExportCmd.Flags().StringVar(&usageLog, "log", "", "Usage log to export (default <config dir>/local/usage.jsonl)")
-	usageExportCmd.Flags().BoolVar(&usageExportDryRun, "dry-run", false, "Encode the log and report the result without writing the file (--to otlp: without queueing or sending)")
-	usageExportCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specDryRun.Bool(usageExportCmd.Flags(), &usageExportDryRun, "Encode the log and report the result without writing the file (--to otlp: without queueing or sending)")
 	if err := usageExportCmd.MarkFlagRequired("to"); err != nil {
 		panic(err)
 	}
@@ -387,7 +386,6 @@ func init() {
 	telemetryFeedbackCmd.Flags().StringVar(&feedbackNote, "note-file", "", "File whose text is kept as a local note (never logged or hashed)")
 	telemetryFeedbackCmd.Flags().StringVar(&usageLog, "log", "", "Feedback log to append to (default .ai-rulez/local/feedback.jsonl)")
 	telemetryFeedbackCmd.Flags().StringVar(&usageIndex, "index", "", "Skills index used to resolve the current hash")
-	telemetryFeedbackCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	if err := telemetryFeedbackCmd.MarkFlagRequired("kind"); err != nil {
 		panic(err)
 	}
@@ -395,5 +393,4 @@ func init() {
 	telemetryReportCmd.Flags().StringVar(&reportFeedback, "feedback", "", "Feedback log to join (default feedback.jsonl beside the usage log, when present)")
 	telemetryReportCmd.Flags().StringVar(&reportEvals, "evals", "", "Eval results to join (default <config dir>/eval-results.json, when present)")
 	addJSONFormat(telemetryReportCmd.Flags(), &reportJSON, "")
-	telemetryReportCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }

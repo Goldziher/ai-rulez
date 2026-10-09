@@ -10,5 +10,5 @@ import (
 func TestVerifyCommand(t *testing.T) {
 	assert.NotNil(t, commands.VerifyCmd.Flags().Lookup("plugin"))
 	assert.NotNil(t, commands.VerifyCmd.Flags().Lookup("if-configured"))
-	assert.Equal(t, "r", commands.VerifyCmd.Flags().Lookup("recursive").Shorthand)
+	assert.Empty(t, commands.VerifyCmd.Flags().Lookup("recursive").Shorthand)
 }

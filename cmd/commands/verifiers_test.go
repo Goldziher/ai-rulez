@@ -57,7 +57,7 @@ func TestRunVerifiers_ExitCodes(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			got := runVerifiers(context.Background(), nil, &out)
+			got := runVerifiers(context.Background(), &out)
 
 			if got != tt.want {
 				t.Errorf("exit code = %d, want %d\n%s", got, tt.want, out.String())
@@ -79,7 +79,7 @@ func TestListVerifiers(t *testing.T) {
 	chdir(t, root)
 	var out bytes.Buffer
 
-	got := listVerifiers(context.Background(), nil, &out)
+	got := listVerifiers(context.Background(), &out)
 
 	if got != 0 {
 		t.Fatalf("exit code = %d\n%s", got, out.String())
@@ -101,7 +101,7 @@ func TestRunVerifiers_FailureOutranksCannotRun(t *testing.T) {
 	chdir(t, root)
 	var out bytes.Buffer
 
-	got := runVerifiers(context.Background(), nil, &out)
+	got := runVerifiers(context.Background(), &out)
 
 	if got != exitVerifiersFindings {
 		t.Errorf("exit code = %d, want %d (a failure must not be hidden by an error)\n%s", got, exitVerifiersFindings, out.String())
@@ -119,7 +119,7 @@ func TestVerifiersListAndValidate_SurfaceConfigErrors(t *testing.T) {
 	chdir(t, root)
 	var out bytes.Buffer
 
-	if got := listVerifiers(context.Background(), nil, &out); got != exitVerifiersCannotRun {
+	if got := listVerifiers(context.Background(), &out); got != exitVerifiersCannotRun {
 		t.Errorf("list exit code = %d, want %d for a verifier with an inapplicable field", got, exitVerifiersCannotRun)
 	}
 }
@@ -177,7 +177,7 @@ func TestRunVerifiers_SpecFormatsAndFailOn(t *testing.T) {
 			verifiersFormat, verifiersFailOn, verifiersStrict = tt.format, tt.failOn, tt.strict
 			var out bytes.Buffer
 
-			got := runVerifiers(context.Background(), nil, &out)
+			got := runVerifiers(context.Background(), &out)
 
 			if got != tt.want {
 				t.Errorf("exit code = %d, want %d\n%s", got, tt.want, out.String())
@@ -205,7 +205,7 @@ func TestRunVerifiers_RejectsBadFlags(t *testing.T) {
 			chdir(t, specProjectRoot(t))
 			tt.setup()
 
-			got := runVerifiers(context.Background(), nil, &bytes.Buffer{})
+			got := runVerifiers(context.Background(), &bytes.Buffer{})
 
 			if got != exitVerifiersCannotRun {
 				t.Errorf("exit code = %d, want %d", got, exitVerifiersCannotRun)
@@ -226,7 +226,7 @@ func TestRunVerifiers_SinceMissingBaseExitsOne(t *testing.T) {
 	verifiersSince = "no-such-base"
 	var out bytes.Buffer
 
-	got := runVerifiers(context.Background(), nil, &out)
+	got := runVerifiers(context.Background(), &out)
 
 	if got != exitVerifiersCannotRun {
 		t.Errorf("exit code = %d, want %d (a missing base must not pass)\n%s", got, exitVerifiersCannotRun, out.String())
@@ -240,7 +240,7 @@ func TestRunVerifiers_OutWritesTheReportToAFile(t *testing.T) {
 	verifiersFormat, verifiersOut = "sarif", target
 	var out bytes.Buffer
 
-	got := runVerifiers(context.Background(), nil, &out)
+	got := runVerifiers(context.Background(), &out)
 
 	data, err := os.ReadFile(target)
 	if err != nil {
@@ -257,8 +257,8 @@ func TestTestAndExplainVerifiers(t *testing.T) {
 	var testOut, explainOut bytes.Buffer
 
 	gotTest := testVerifiers(context.Background(), nil, &testOut)
-	gotExplain := explainVerifier(context.Background(), "has-down", nil, &explainOut)
-	gotUnknown := explainVerifier(context.Background(), "nope", nil, &bytes.Buffer{})
+	gotExplain := explainVerifier(context.Background(), "has-down", &explainOut)
+	gotUnknown := explainVerifier(context.Background(), "nope", &bytes.Buffer{})
 
 	if gotTest != 0 || !strings.Contains(testOut.String(), "2 of 2 examples passed") {
 		t.Errorf("test exit %d:\n%s", gotTest, testOut.String())
@@ -301,9 +301,9 @@ func TestListVerifiers_ShowsSpecsAndJSON(t *testing.T) {
 	chdir(t, specProjectRoot(t))
 	var text, js bytes.Buffer
 
-	listVerifiers(context.Background(), nil, &text)
+	listVerifiers(context.Background(), &text)
 	verifiersListJSON = true
-	listVerifiers(context.Background(), nil, &js)
+	listVerifiers(context.Background(), &js)
 
 	if !strings.Contains(text.String(), "rule:database") {
 		t.Errorf("list should show the enforced rule:\n%s", text.String())
@@ -323,7 +323,7 @@ func TestRunVerifiers_JSONFollowsTheSchema(t *testing.T) {
 	verifiersFormat = "json"
 	var out bytes.Buffer
 
-	runVerifiers(context.Background(), nil, &out)
+	runVerifiers(context.Background(), &out)
 
 	validateAgainst(t, "../../schema/verifiers-report.schema.json", out.Bytes())
 }
@@ -363,7 +363,7 @@ func TestRunVerifiers_CommandNeedsAllowExec(t *testing.T) {
 			verifiersExec = tt.flag
 			var out bytes.Buffer
 
-			got := runVerifiers(context.Background(), nil, &out)
+			got := runVerifiers(context.Background(), &out)
 
 			if got != tt.want {
 				t.Errorf("exit code = %d, want %d\n%s", got, tt.want, out.String())

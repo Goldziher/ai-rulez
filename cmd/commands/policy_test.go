@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -43,11 +44,14 @@ func TestPolicyGate(t *testing.T) {
 	}
 }
 
-func TestPolicyFlagIsGlobalAndShowPolicyIsOnValidate(t *testing.T) {
-	assert.NotNil(t, RootCmd.PersistentFlags().Lookup("policy"))
-	for _, name := range []string{"policy-mode", "policy-digest", "policy-offline", "policy-max-stale", "policy-trust-tofu", "discover-org", "policy-require-signed", "policy-signer-key", "policy-signer-identity", "policy-signer-issuer", "policy-trusted-root"} {
-		assert.NotNil(t, RootCmd.PersistentFlags().Lookup(name), name)
+func TestPolicyFlagsAreOnTheCommandsThatEvaluatePolicyAndShowPolicyIsOnValidate(t *testing.T) {
+	assert.Nil(t, RootCmd.PersistentFlags().Lookup("policy"), "the policy flags are not global")
+	for _, cmd := range []*cobra.Command{GenerateCmd, ValidateCmd, ScanCmd, LockCmd, DoctorCmd, VerifyCmd, MCPCmd, SBOMCmd, ApproveCmd, TokensCmd, CostCmd, PublishCmd, UpdateCmd, CatalogCmd} {
+		for _, name := range []string{"policy", "policy-mode", "policy-digest", "policy-offline", "policy-max-stale", "policy-trust-tofu", "discover-org", "policy-require-signed", "policy-signer-key", "policy-signer-identity", "policy-signer-issuer", "policy-trusted-root"} {
+			assert.NotNil(t, cmd.Flags().Lookup(name), "%s --%s", cmd.Name(), name)
+		}
 	}
+	assert.Nil(t, ListCmd.Flags().Lookup("policy"))
 	assert.NotNil(t, ValidateCmd.Flags().Lookup("show-policy"))
 }
 
@@ -59,7 +63,7 @@ func TestShowPolicyWithoutPolicyPrintsNone(t *testing.T) {
 	t.Cleanup(func() { policyFlag = old })
 	var out bytes.Buffer
 	// Act
-	code := runShowPolicy(t.Context(), nil, &out)
+	code := runShowPolicy(t.Context(), &out)
 	// Assert
 	assert.Equal(t, 0, code)
 	assert.Contains(t, out.String(), "policy: none")

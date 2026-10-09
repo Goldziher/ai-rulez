@@ -51,7 +51,7 @@ var searchSubFlagNames = map[string][]string{
 
 func init() {
 	f := SearchCmd.Flags()
-	f.BoolVar(&searchSubFlags.dryRun, "dry-run", false, "With 'search index': show the provider, the number of texts and bytes and an estimate; send nothing")
+	specDryRun.Bool(f, &searchSubFlags.dryRun, "With 'search index': show the provider, the number of texts and bytes and an estimate; send nothing")
 	f.BoolVar(&searchSubFlags.rebuild, "rebuild", false, "With 'search index': re-embed every skill, ignoring the existing index")
 	f.StringSliceVar(&searchSubFlags.items, "items", nil, "With 'search index': also re-embed these skills (by name) although their text did not change; skills that changed or have no vector are embedded anyway")
 	f.IntVar(&searchSubFlags.minCount, "min-count", 1, "With 'search mine': keep a query only when it was followed by the same skill at least this many times")

@@ -29,7 +29,7 @@ func applyValidateQuiet() {
 }
 
 var ValidateCmd = &cobra.Command{
-	Use:   "validate [config-file]",
+	Use:   "validate",
 	Short: "Validate AI rules configuration and content",
 	Long: `Validate an AI rules configuration for syntax errors, schema compliance and
 structural issues, then run the content checks: globs that match nothing, dead
@@ -42,7 +42,7 @@ warnings fail the run (the same as --fail-on warning).
 Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 2 findings at or above --fail-on (default error).`,
 	Aliases: []string{"val"},
-	Args:    cobra.MaximumNArgs(1),
+	Args:    cobra.NoArgs,
 	PreRunE: func(*cobra.Command, []string) error { return validatePreRun() },
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmdContext()
@@ -50,7 +50,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 			return fail(runExplain(cmd.OutOrStdout(), validateExplain, validateFormat))
 		}
 		if validateShowPolicy {
-			return exitStatus(runShowPolicy(ctx, args, cmd.OutOrStdout()))
+			return exitStatus(runShowPolicy(ctx, cmd.OutOrStdout()))
 		}
 		if err := checkStrictFlags(); err != nil {
 			return fail(err)
@@ -62,13 +62,10 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		applyValidateQuiet()
 
 		if validateRecursive {
-			if len(args) > 0 {
-				return fail(oops.Errorf("validate --recursive does not take a config file argument"))
-			}
 			return exitStatus(runRecursiveValidate())
 		}
 
-		cfg, err := loadConfigForCommand(ctx, args, config.WithFrontmatterErrors())
+		cfg, err := loadConfigForCommand(ctx, config.WithFrontmatterErrors())
 		if err != nil {
 			return fail(err)
 		}
@@ -125,7 +122,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 }
 
 func init() {
-	ValidateCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Validate every configuration file found recursively")
+	specRecursive.Bool(ValidateCmd.Flags(), &validateRecursive, "Validate every configuration file found recursively")
 	ValidateCmd.Flags().BoolVar(&validateOffline, "offline", false, "Skip fetching remote includes, use cached content only (as generate --offline)")
 	ValidateCmd.Flags().BoolVar(&validateConfigOnly, "config-only", false, "Check the configuration file only and skip the content checks")
 	ValidateCmd.Flags().BoolVar(&validateWarnings, "strict", false, "Fail on warnings as well as errors (the same as --fail-on warning)")
@@ -136,15 +133,14 @@ func init() {
 	addFormatFlag(ValidateCmd.Flags(), &validateFormat, "", formatText, lint.Formats()...) // --format implies --strict
 	ValidateCmd.Flags().StringVar(&validateLintProfile, "lint-profile", "", "Lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile)")
 	ValidateCmd.Flags().StringSliceVar(&validateAnalyzers, "analyzer", nil, "Run only these analyzers (repeatable or comma-separated; replaces [lint] analyzers): "+strings.Join(lint.AnalyzerNames(), ", "))
-	ValidateCmd.Flags().StringVar(&validateOutput, "output", "", "Write the report to this file instead of stdout")
+	specOutput.String(ValidateCmd.Flags(), &validateOutput, "Write the report to this file instead of stdout")
 	ValidateCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest severity that exits 2: error (default), warning, info or none")
 	ValidateCmd.Flags().StringVar(&validateExplain, "explain", "", "Print what a rule (code or name, for example AR001) checks, why, examples and how to suppress it, then exit")
 	addBaselineFlags(ValidateCmd)
 	addChangedFlags(ValidateCmd)
 	addFixFlags(ValidateCmd)
-	ValidateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
+	specNoLocal.Bool(ValidateCmd.Flags(), &noLocal, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	ValidateCmd.Flags().StringVar(&validateRepoRoot, "repo-root", "", "Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory)")
-	ValidateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 
 // validatePreRun resolves --config-only and --strict into the internal state.
@@ -364,7 +360,7 @@ func isEntryNamePath(path string) bool {
 // ScanCmd runs the security checks only: strict validation restricted to the
 // AR0xx rules, with the same flags, output and exit codes.
 var ScanCmd = &cobra.Command{
-	Use:   "scan [config-file]",
+	Use:   "scan",
 	Short: "Scan skills, rules and scripts for secrets, hidden text, injection and risky shell",
 	Long: `Run the deterministic security checks of "validate" on their own:
 secret patterns, hidden or bidirectional characters, prompt-injection phrases,
@@ -376,7 +372,7 @@ as programs (those that declare egress = true also need --allow-egress).
 
 Configure it in [lint] and [lint.security]. Exit codes: 0 clean, 1 the
 configuration could not be loaded, 2 findings at or above --fail-on.`,
-	Args: cobra.MaximumNArgs(1),
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		validateStrict, strictSecurityOnly = true, true
 		return ValidateCmd.RunE(cmd, args)
@@ -384,16 +380,15 @@ configuration could not be loaded, 2 findings at or above --fail-on.`,
 }
 
 func init() {
-	ScanCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Scan every configuration file found recursively")
+	specRecursive.Bool(ScanCmd.Flags(), &validateRecursive, "Scan every configuration file found recursively")
 	ScanCmd.Flags().BoolVar(&validateExtern, "external", false, "Also run the scanners configured in [[lint.external]] and merge their findings")
 	ScanCmd.Flags().StringSliceVar(&validateAllowEgress, "allow-egress", nil, "With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable)")
 	addFormatFlag(ScanCmd.Flags(), &validateFormat, "", formatText, lint.Formats()...)
 	ScanCmd.Flags().StringVar(&validateLintProfile, "lint-profile", "", "Lint preset: default, strict or permissive (overrides [lint] profile)")
-	ScanCmd.Flags().StringVar(&validateOutput, "output", "", "Write the report to this file instead of stdout")
+	specOutput.String(ScanCmd.Flags(), &validateOutput, "Write the report to this file instead of stdout")
 	ScanCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest severity that exits 2: error (default), warning, info or none")
 	addBaselineFlags(ScanCmd)
 	addChangedFlags(ScanCmd)
-	ScanCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
+	specNoLocal.Bool(ScanCmd.Flags(), &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
 	ScanCmd.Flags().StringVar(&validateRepoRoot, "repo-root", "", "Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory)")
-	ScanCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }

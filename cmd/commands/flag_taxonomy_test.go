@@ -34,7 +34,7 @@ var universalShorthands = map[string]string{
 // carry the --policy-* flags (the command path, without the binary name).
 var policyCommands = map[string]bool{
 	"generate": true, "validate": true, "scan": true, "lock": true, "doctor": true,
-	"verify": true, "catalog": true, "mcp": true, "sbom": true, "sign": true,
+	"verify": true, "catalog": true, "mcp": true, "sbom": true, "approve": true,
 	"tokens": true, "cost": true, "publish": true, "update": true,
 }
 
@@ -42,22 +42,20 @@ var policyCommands = map[string]bool{
 // warning; elsewhere the flag has a specific name (--strict-config,
 // --refuse-findings).
 var strictCommands = map[string]bool{
-	"validate": true, "scan": true, "doctor": true, "verifiers run": true,
+	"validate": true, "doctor": true, "verifiers run": true,
+}
+
+// knownTypeClashes are flags that mean a switch on one command and a value on
+// another. They predate the taxonomy and are owned by the report commands; a new
+// clash is a failure, and an entry goes when its flag is renamed.
+var knownTypeClashes = map[string]bool{
+	"deny": true, "explain": true, "items": true, "sbom": true, "write-baseline": true,
 }
 
 var outSpelling = regexp.MustCompile(`--out($|[^a-z-])`)
 
-type ownedFlag struct {
-	cmd  *cobra.Command
-	flag *pflag.Flag
-}
-
 func commandName(cmd *cobra.Command) string {
 	return strings.TrimSpace(strings.TrimPrefix(cmd.CommandPath(), RootCmd.Name()))
-}
-
-func isPolicyFlag(name string) bool {
-	return name == "policy" || name == "discover-org" || strings.HasPrefix(name, "policy-")
 }
 
 // walkOwnFlags visits every flag a command defines itself, not the ones it
@@ -131,6 +129,17 @@ func TestFlagTaxonomyShorthands(t *testing.T) {
 func TestFlagTaxonomyOneMeaningPerName(t *testing.T) {
 	// Arrange
 	type meaning struct{ typ, short, first string }
+	// kind groups the value types: a repeatable string flag and a plain one take
+	// the same kind of value, a bool takes none.
+	kind := func(typ string) string {
+		switch {
+		case typ == "bool":
+			return "switch"
+		case strings.HasPrefix(typ, "int") || strings.HasPrefix(typ, "float") || typ == "duration":
+			return "number"
+		}
+		return "text"
+	}
 	byName := map[string]meaning{}
 	var problems []string
 	walkOwnFlags(t, func(cmd *cobra.Command, f *pflag.Flag) {
@@ -141,8 +150,7 @@ func TestFlagTaxonomyOneMeaningPerName(t *testing.T) {
 			byName[f.Name] = here
 			return
 		}
-		sliceish := func(s string) bool { return strings.HasSuffix(s, "Slice") || strings.HasSuffix(s, "Array") }
-		if prev.typ != here.typ && !(sliceish(prev.typ) && sliceish(here.typ)) {
+		if kind(prev.typ) != kind(here.typ) && !knownTypeClashes[f.Name] {
 			problems = append(problems, "--"+f.Name+" is "+prev.typ+" on "+prev.first+" but "+here.typ+" on "+here.first)
 		}
 		if prev.short != here.short {
@@ -150,11 +158,11 @@ func TestFlagTaxonomyOneMeaningPerName(t *testing.T) {
 		}
 	})
 	// A command never offers two spellings of one flag.
-	synonyms := [][2]string{{"out", "output"}, {"config", "config-dir"}, {"out", "output-dir"}}
+	synonyms := [][2]string{{"out", "output"}, {"out", "output-dir"}, {"output", "output-dir"}}
 	var walk func(cmd *cobra.Command)
 	walk = func(cmd *cobra.Command) {
 		for _, pair := range synonyms {
-			if cmd.Flags().Lookup(pair[0]) != nil && cmd.Flags().Lookup(pair[1]) != nil && cmd != RootCmd {
+			if cmd.Flags().Lookup(pair[0]) != nil && cmd.Flags().Lookup(pair[1]) != nil {
 				problems = append(problems, commandName(cmd)+": both --"+pair[0]+" and --"+pair[1])
 			}
 		}
@@ -290,5 +298,55 @@ func TestFlagTaxonomyStrictMeaning(t *testing.T) {
 	if len(problems) > 0 {
 		sort.Strings(problems)
 		t.Fatalf("--strict has one meaning:\n%s", strings.Join(problems, "\n"))
+	}
+}
+
+func TestRemovedFlagHints(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"out names the directory spelling", []string{"export", "okf", "--out", "x"}, "--output-dir"},
+		{"out names the file spelling", []string{"verifiers", "run", "--out", "x"}, "--output (a file)"},
+		{"generate strict", []string{"generate", "--strict"}, "--strict-config"},
+		{"lock strict", []string{"lock", "--strict"}, "--refuse-findings"},
+		{"policy flag off a command that never evaluates policy", []string{"list", "rules", "--policy", "p.toml"}, "AI_RULEZ_POLICY"},
+		{"a removed shorthand", []string{"generate", "-p", "x"}, "short flags were removed"},
+		{"the old config-dir shorthand", []string{"list", "rules", "-n", "x"}, "--dry-run"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cmd, _, err := RootCmd.Find(tt.args)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Act
+			err = cmd.ParseFlags(tt.args[len(strings.Fields(cmd.CommandPath()))-1:])
+			got := cmd.FlagErrorFunc()(cmd, err)
+
+			// Assert
+			if hint := errorHintOf(got); !strings.Contains(hint, tt.want) {
+				t.Fatalf("hint = %q, want it to mention %q (error %v)", hint, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPositionalArgumentGetsTheDashCHint(t *testing.T) {
+	// Arrange
+	root := &cobra.Command{Use: "ai-rulez"}
+	sub := &cobra.Command{Use: "validate", Args: cobra.NoArgs, RunE: func(*cobra.Command, []string) error { return nil }}
+	root.AddCommand(sub)
+	explainArgErrors(root)
+
+	// Act
+	err := sub.Args(sub, []string{"path/.ai-rulez"})
+
+	// Assert
+	if err == nil || !strings.Contains(errorHintOf(err), "-C path/.ai-rulez") {
+		t.Fatalf("error = %v, hint = %q", err, errorHintOf(err))
 	}
 }

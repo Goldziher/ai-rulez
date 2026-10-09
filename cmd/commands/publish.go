@@ -172,7 +172,7 @@ var publishEmitCmd = &cobra.Command{
 	Use:   "emit <emitter>",
 	Short: "Write only the files of one emitter, without a release",
 	Long: `Run preflight, build the release in memory and write only the files of one
-emitter to --out (default emit/<emitter>). Nothing is uploaded and no dist
+emitter to --output-dir (default emit/<emitter>). Nothing is uploaded and no dist
 directory is written; use it to review or commit what a channel needs.
 
 Emitters: cursor-team-marketplace, agent-plugins and ard (verified), port,
@@ -206,16 +206,15 @@ func init() {
 	f.StringVar(&publishOCIRef, "oci-ref", "", "Repository for --to oci, host/path without a tag (default: [publish.oci] ref)")
 	f.StringVar(&publishNPMScope, "npm-scope", "", "npm scope for --to npm, such as @acme (default: [publish.npm] scope)")
 	f.BoolVar(&publishPublic, "public", false, "With --to npm: publish with public access (default restricted)")
-	f.BoolVar(&publishDryRun, "dry-run", false, "Run preflight and print the artifacts and commands without writing or running anything")
+	specDryRun.Bool(f, &publishDryRun, "Run preflight and print the artifacts and commands without writing or running anything")
 	f.BoolVar(&publishExecute, "execute", false, "Run the upload (needs --to and --yes)")
-	f.BoolVar(&publishYes, "yes", false, "Confirm --execute without a prompt")
+	specYes.Bool(f, &publishYes, "Confirm --execute without a prompt")
 	f.StringVar(&publishConfirmReg, "confirm-registry", "", "With --to npm: the registry URL [publish.npm] names, confirming it may receive your npm credentials (required for a registry other than the public one)")
-	f.BoolVar(&publishForce, "force", false, "With --execute, replace the assets of an existing GitHub release or the artifact an existing OCI tag points at, instead of refusing")
+	specForce.Bool(f, &publishForce, "With --execute, replace the assets of an existing GitHub release or the artifact an existing OCI tag points at, instead of refusing")
 	f.BoolVar(&publishAllowDirty, "allow-dirty", false, "Publish from a tree with uncommitted changes or no commit")
 	f.StringArrayVar(&publishTemplates, "template", nil, "Render this text/template into <dist>/emit/ (repeatable)")
 	addPublishSignFlags(f)
-	f.StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specProfile.String(f, &profile, "Profile used to generate the plugin bundle")
 	addFormatFlag(f, &publishFormat, formatText, formatText, formatText, formatJSON)
 
 	v := publishVerifyCmd.Flags()
@@ -227,12 +226,11 @@ func init() {
 	addFormatFlag(v, &publishFormat, formatText, formatText, formatText, formatJSON)
 
 	e := publishEmitCmd.Flags()
-	e.StringVar(&publishEmitOut, "out", "", "Directory to write the emitter's files to (default emit/<emitter>)")
+	specOutputDir.String(e, &publishEmitOut, "Directory to write the emitter's files to (default emit/<emitter>)")
 	e.BoolVar(&publishExperimental, "experimental", false, "Allow an emitter whose format is not verified against vendor documentation")
 	e.StringArrayVar(&publishRuntimes, "runtime", nil, "Use only these plugin runtimes")
 	e.StringVar(&publishChannel, "channel", "", "Release channel")
-	e.StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
-	e.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specProfile.String(e, &profile, "Profile used to generate the plugin bundle")
 	e.BoolVar(&publishAllowDirty, "allow-dirty", false, "Run from a tree with uncommitted changes or no commit")
 	PublishCmd.AddCommand(publishVerifyCmd, publishEmitCmd)
 }
@@ -333,7 +331,7 @@ func runPublish(ctx context.Context, out io.Writer) error {
 }
 
 // runPublishEmit is `publish emit`: the release is built in memory and only the
-// files of one emitter are written, to --out.
+// files of one emitter are written, to --output-dir.
 func runPublishEmit(ctx context.Context, out io.Writer, name string) error {
 	return runPublishWith(ctx, out, name)
 }
@@ -344,7 +342,7 @@ func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 	}
 	// One memo for the run: the load, the gates and the release build ask git the same structural questions.
 	ctx = gitutil.WithMemo(ctx)
-	cfg, err := loadConfigForCommand(ctx, nil, config.WithoutLocal())
+	cfg, err := loadConfigForCommand(ctx, config.WithoutLocal())
 	if err != nil {
 		return err
 	}

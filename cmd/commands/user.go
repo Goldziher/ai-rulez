@@ -200,12 +200,9 @@ func confirmProceed(question string) bool { return askYesNo(question + " (y/N): 
 
 // handleUserClean runs `clean --user` when the flag is set and reports whether it
 // did, with the error it ended with.
-func handleUserClean(out render.Out, args []string) (bool, error) {
+func handleUserClean(out render.Out) (bool, error) {
 	if !userScope {
 		return false, nil
-	}
-	if len(args) > 0 {
-		return true, fail(oops.Errorf("--user cannot be combined with a config-file argument; use --config to choose the user config"))
 	}
 	return true, fail(runUserClean(out))
 }

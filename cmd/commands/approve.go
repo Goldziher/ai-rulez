@@ -127,14 +127,13 @@ func init() {
 	f.StringVar(&approveReason, "reason", "", "With --deny: why the digest is denied (stored in the lock; scanned for secrets)")
 	f.StringVar(&approveBase, "base", "", "With [governance] forbid_self_approval: count authors of changes since this revision (default: the branch's upstream)")
 	f.BoolVar(&approvePrune, "prune", false, "Remove approvals of content that no longer exists or whose digest changed")
-	f.BoolVar(&approveYes, "yes", false, "Do not ask for confirmation (required without a terminal)")
+	specYes.Bool(f, &approveYes, "Do not ask for confirmation (required without a terminal)")
 	f.StringSliceVar(&approveAccept, "accept", nil, "Accept this scan finding code (repeatable); stored with the approval")
 	f.StringVar(&approveReviewer, "reviewer", "", "Reviewer to record (default: $AI_RULEZ_REVIEWER, else git user.email)")
 	f.StringVar(&approveNote, "note", "", "Free-text note stored with the approval (scanned for secrets)")
 	f.StringVar(&approveExpires, "expires", "", "Expiry date YYYY-MM-DD (default: today + [governance] max_age, else none)")
 	f.StringVar(&approveAt, "at", "", "Approval time (RFC 3339 or YYYY-MM-DD) for reproducible runs (default: SOURCE_DATE_EPOCH, else now)")
 	addFormatFlag(f, &approveFormat, "", formatText, formatText, formatJSON) // of --list
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 
 // approveReviewerPattern bounds what is written to the committed lock as a reviewer.

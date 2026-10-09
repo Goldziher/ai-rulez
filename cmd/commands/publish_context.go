@@ -459,7 +459,7 @@ func (pc *publishContext) pinFor(tag string) (*publish.Pin, error) {
 	return &publish.Pin{Index: index, IndexRoot: indexRoot, RepoPath: repoPath, Repo: pc.repo, Ref: ref}, nil
 }
 
-// writeEmitOnly writes the files of one emitter to --out (default emit/<name>).
+// writeEmitOnly writes the files of one emitter to --output-dir (default emit/<name>).
 func (pc *publishContext) writeEmitOnly(out interface{ Write([]byte) (int, error) }, d *publish.Dist, name string) error {
 	dir := publishEmitOut
 	if dir == "" {
@@ -476,7 +476,7 @@ func (pc *publishContext) writeEmitOnly(out interface{ Write([]byte) (int, error
 		return publish.Errorf(publish.CodeConfig, publish.ExitFailed, "", "emitter %s produced no files", name)
 	}
 	if entries, err := os.ReadDir(dir); err == nil && len(entries) > 0 {
-		return publish.Errorf(publish.CodeBundleUnsafe, publish.ExitFailed, "choose an empty --out directory", "%s is not empty", dir)
+		return publish.Errorf(publish.CodeBundleUnsafe, publish.ExitFailed, "choose an empty --output-dir directory", "%s is not empty", dir)
 	}
 	warnAll(d.Warnings)
 	slices.Sort(paths)

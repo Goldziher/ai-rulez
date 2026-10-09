@@ -25,7 +25,6 @@ the rubric in use (--rubric, else [review] rubric, else builtin:skill-quality).`
 
 func init() {
 	reviewExplainCmd.Flags().StringVar(&reviewFlags.rubric, "rubric", "", "Rubric whose definitions to print (default [review] rubric, else builtin:skill-quality)")
-	reviewExplainCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 
 func runReviewExplain(cmd *cobra.Command, code string) error {
@@ -62,7 +61,7 @@ func runReviewExplain(cmd *cobra.Command, code string) error {
 // explainRubric loads the rubric to print definitions from; nil when it cannot be loaded (the
 // explanation of the code itself still prints).
 func explainRubric(cmd *cobra.Command) *rv.Rubric {
-	cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+	cfg, err := loadConfigForCommand(commandContext(cmd))
 	if err != nil {
 		rb, _ := rv.Load("", reviewFlags.rubric) //nolint:errcheck // built-in fallback
 		return rb

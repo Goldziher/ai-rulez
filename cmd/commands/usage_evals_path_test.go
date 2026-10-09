@@ -29,6 +29,7 @@ func TestDefaultEvalStorePath_FollowsRootAndConfigDirNotTheWorkingDirectory(t *t
 	// Act / Assert
 	assert.Equal(t, evals.DefaultStorePath(filepath.Join(env.root, ".ai-rulez")), defaultEvalStorePath())
 
-	telConfigDir = "custom"
+	configDir = "custom"
+	t.Cleanup(func() { configDir = "" })
 	assert.Equal(t, evals.DefaultStorePath(filepath.Join(env.root, "custom")), defaultEvalStorePath())
 }

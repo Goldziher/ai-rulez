@@ -92,10 +92,9 @@ func init() {
 	f.BoolVar(&calibrateFlags.noProbes, "no-probes", false, "Skip the metamorphic probes")
 	f.BoolVar(&calibrateFlags.noWrite, "no-write", false, "Do not write the record")
 	f.StringVar(&calibrateFlags.compare, "compare", "", "Compare with this calibration record and fail on drift (writes nothing)")
-	f.StringVar(&calibrateFlags.out, "out", "", "Write the record here instead of the rubric's calibration.json")
+	specOutput.String(f, &calibrateFlags.out, "Write the record here instead of the rubric's calibration.json")
 	addFormatFlag(f, &calibrateFlags.format, formatText, formatText, formatText, formatJSON)
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
-	f.BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
+	specNoLocal.Bool(f, &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
 }
 
 // calibrationOutput is the JSON of a calibration run.
@@ -172,7 +171,7 @@ func validateCalibrateFlags(cmd *cobra.Command) error {
 
 // loadCalibrationInputs loads the configuration, the rubric and its golden cases.
 func loadCalibrationInputs(cmd *cobra.Command) (*config.Config, *rv.Rubric, *rv.GoldenSet, error) {
-	cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+	cfg, err := loadConfigForCommand(commandContext(cmd))
 	if err != nil {
 		return nil, nil, nil, err
 	}

@@ -19,7 +19,7 @@ var (
 
 // CostCmd reports which content items cost the most context.
 var CostCmd = &cobra.Command{
-	Use:   "cost [config-file]",
+	Use:   "cost",
 	Short: "Report which skills, rules and context cost the most prompt tokens",
 	Long: `Report the context cost of the configured content: what is paid on every request
 (always loaded: rule and context bodies, and the name and description of every
@@ -33,9 +33,9 @@ per-runtime breakdown and "cost" to find what to trim. --budget and
 biggest offenders.
 
 Counts are approximations (Claude's tokenizer is not published).`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		exceeded, err := runCost(cmd, args)
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		exceeded, err := runCost(cmd)
 		if err != nil {
 			return fail(err)
 		}
@@ -51,15 +51,14 @@ func init() {
 	addFormatFlag(f, &costFormat, formatText, formatText, formatText, formatJSON, "markdown")
 	f.StringVar(&costTarget, "target", "", "Preset whose runtime totals to report (default: the runtime with the largest always-loaded surface)")
 	f.IntVar(&costTop, "top", 10, "How many top offenders to list")
-	f.IntVarP(&costBudget, "budget", "b", 0, "Exit 2 when the always-loaded tokens of the target exceed this ceiling")
+	f.IntVar(&costBudget, "budget", 0, "Exit 2 when the always-loaded tokens of the target exceed this ceiling")
 	f.IntVar(&costOnDemandBudget, "on-demand-budget", 0, "Exit 2 when the on-demand tokens of the target exceed this ceiling")
-	f.BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
-	f.StringVarP(&profile, "profile", "p", "", "Profile to report on, or a comma-separated list to compose several")
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specNoLocal.Bool(f, &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
+	specProfile.String(f, &profile, "Profile to report on, or a comma-separated list to compose several")
 	f.StringVar(&tokensTokenizer, "tokenizer", tokens.CounterCL100KBase, "Token counter to use: "+strings.Join(tokens.Names(), " or "))
 }
 
-func runCost(cmd *cobra.Command, args []string) (exceeded bool, err error) {
+func runCost(cmd *cobra.Command) (exceeded bool, err error) {
 	switch costFormat {
 	case cost.FormatText, cost.FormatJSON, cost.FormatMarkdown:
 	default:
@@ -69,7 +68,7 @@ func runCost(cmd *cobra.Command, args []string) (exceeded bool, err error) {
 	if err != nil {
 		return false, oops.Hint("Accepted values: "+strings.Join(tokens.Names(), ", ")).Wrapf(err, "select tokenizer")
 	}
-	cfg, err := loadConfigForCommand(cmdContext(), args)
+	cfg, err := loadConfigForCommand(cmdContext())
 	if err != nil {
 		return false, err
 	}

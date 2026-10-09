@@ -59,7 +59,7 @@ var (
 
 // SignCmd signs the lock-subject statement into a Sigstore bundle.
 var SignCmd = &cobra.Command{
-	Use:   "sign [config-file]",
+	Use:   "sign",
 	Short: "Sign the lock, a plugin bundle, a skill or an SBOM into a Sigstore bundle",
 	Long: `Sign one subject into a Sigstore bundle: a DSSE envelope over an in-toto statement.
 
@@ -75,7 +75,7 @@ var SignCmd = &cobra.Command{
                                        against [[signing.trust]] entries with subject = "skill"
   ai-rulez sign --sbom <file>          any SBOM file (ai-rulez sbom, SPDX, CycloneDX),
                                        written to <file>.sigstore.json
-  ai-rulez sign --policy <file>        an organization policy file, written to
+  ai-rulez sign --org-policy <file>    an organization policy file, written to
                                        <file>.sigstore.json, where the policy loader looks
                                        (--policy-signer-key / --policy-signer-identity, see
                                        docs/policy.md); it is refused unless the file parses
@@ -112,13 +112,13 @@ browser. Use key mode for a private repository you do not want logged.
 Run it after the final "ai-rulez lock": any change to the lock invalidates the
 signature. Exit codes: 0 signed, 1 the command could not run, 2 the lock is
 stale (its tree does not match its entries).`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmdContext()
 		if outFor(cmd).JSON() {
 			ctx = withSignRecorder(ctx)
 		}
-		return exitStatus(runSign(ctx, args, nil))
+		return exitStatus(runSign(ctx, nil))
 	},
 }
 
@@ -132,7 +132,7 @@ func init() {
 	f.StringVar(&signBundle, "bundle", "", "Sign the plugin bundle directory (tree digest of its files) into <dir>/.ai-rulez.sigstore.json")
 	f.StringVar(&signSkill, "skill", "", "Sign a skill directory a publisher ships into <dir>/.ai-rulez.sigstore.json")
 	f.StringVar(&signSBOM, "sbom", "", "Sign an SBOM file into <file>.sigstore.json")
-	f.StringVar(&signPolicy, "policy", "", "Sign an organization policy file into <file>.sigstore.json")
+	f.StringVar(&signPolicy, "org-policy", "", "Sign an organization policy file into <file>.sigstore.json")
 	f.BoolVar(&signProvenance, "provenance", false, "With --bundle: also write a SLSA v1 provenance statement (.ai-rulez.provenance.sigstore.json); it is the signer's own account of the build")
 	f.StringVar(&signBuilderID, "builder-id", "", "With --provenance: the builder id to record (default: the GitHub Actions workflow reference, else ai-rulez's own)")
 	f.BoolVar(&signAppend, "append", false, "Write a co-signature file next to the existing attestation instead of replacing it (for [signing] thresholds)")
@@ -146,8 +146,7 @@ func init() {
 	f.StringVar(&signRekorURL, "rekor-url", "", "Rekor URL for --keyless or --tlog (default "+sigstore.DefaultRekorURL+")")
 	f.BoolVar(&signTLog, "tlog", false, "With --key: also record the signature in the Rekor transparency log (network; public log)")
 	f.BoolVar(&signEmbedItems, "embed-items", false, "Put the pinned item ids and digests in the statement (ids can be sensitive in a private repository)")
-	f.StringVar(&signOutput, "output", "", "Write the bundle here instead of next to the lock")
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specOutput.String(f, &signOutput, "Write the bundle here instead of next to the lock")
 	addFormatFlag(f, new(string), formatText, formatText, formatText, formatJSON)
 }
 
@@ -235,13 +234,9 @@ func checkSigstoreURL(flag, raw string) error {
 	return oops.Hint("use an https:// URL").Errorf("%s %q must be https (plain http is allowed only for localhost)", flag, raw)
 }
 
-// loadSignLock loads the project at args[0] (or the current directory) and its lock.
-func loadSignLock(ctx context.Context, args []string) (*config.Config, *lockfile.File, error) {
-	path := ""
-	if len(args) > 0 {
-		path = args[0]
-	}
-	cfg, _, err := loadForLockCheckContext(ctx, path)
+// loadSignLock loads the project -C/--config-dir selects (or the current directory) and its lock.
+func loadSignLock(ctx context.Context) (*config.Config, *lockfile.File, error) {
+	cfg, _, err := loadForLockCheckContext(ctx, "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -252,10 +247,10 @@ func loadSignLock(ctx context.Context, args []string) (*config.Config, *lockfile
 	return cfg, lock, nil
 }
 
-// runSign signs the lock of the project at args[0] (or the current directory)
+// runSign signs the lock of the project -C/--config-dir selects (or the current directory)
 // and returns the exit code.
-func runSign(ctx context.Context, args []string, env ambient.Env) int {
-	code := signOne(ctx, args, env)
+func runSign(ctx context.Context, env ambient.Env) int {
+	code := signOne(ctx, env)
 	if rec := signRecorderFrom(ctx); rec != nil && code == 0 {
 		if err := jsondoc.Write(os.Stdout, map[string]any{keyStatus: "signed", "signed": rec.entries}); err != nil {
 			renderStderr(err)
@@ -290,7 +285,7 @@ func reportSigned(ctx context.Context, msg string, entry map[string]any, logArgs
 	logger.Success(msg, logArgs...)
 }
 
-func signOne(ctx context.Context, args []string, env ambient.Env) int {
+func signOne(ctx context.Context, env ambient.Env) int {
 	if err := validateSignFlags(); err != nil {
 		renderStderr(err)
 		return 1
@@ -301,7 +296,7 @@ func signOne(ctx context.Context, args []string, env ambient.Env) int {
 	if signBundle != "" || signSkill != "" || signSBOM != "" {
 		return runSignArtifact(ctx, env)
 	}
-	cfg, lock, err := loadSignLock(ctx, args)
+	cfg, lock, err := loadSignLock(ctx)
 	if err != nil {
 		renderStderr(err)
 		return 1
