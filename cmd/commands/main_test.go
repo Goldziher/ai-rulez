@@ -12,5 +12,6 @@ import (
 func TestMain(m *testing.M) {
 	testutil.CeilGit()
 	signing.UseBackend(sigstore.New())
+	prepareCommandTree(RootCmd)
 	os.Exit(m.Run())
 }

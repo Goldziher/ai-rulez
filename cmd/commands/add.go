@@ -42,7 +42,7 @@ You can specify domain, priority level, and target providers.`,
 
 var addContextCmd = &cobra.Command{
 	Use:   "context <name>",
-	Short: "Add new context",
+	Short: "Add a new context file",
 	Long: `Add a new context file with optional metadata.
 
 Context provides background information, architecture details, or project-specific information.`,
