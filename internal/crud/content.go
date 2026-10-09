@@ -10,6 +10,8 @@ import (
 
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // AddRule creates a new rule file in the root or domain rules directory
@@ -300,6 +302,10 @@ func (op *OperatorImpl) RequireContent(ctx context.Context, domain, ftype, name 
 		}
 	}
 
+	if err := op.filesMgr.Confined(op.filesMgr.GetFilePath(domain, ftype, name)); err != nil {
+		return err
+	}
+
 	// Check if file/skill exists
 	if !op.filesMgr.FileOrSkillExists(domain, ftype, name) {
 		filePath := op.filesMgr.GetFilePath(domain, ftype, name)
@@ -312,7 +318,7 @@ func (op *OperatorImpl) RequireContent(ctx context.Context, domain, ftype, name 
 			if len(names) > 0 {
 				hint = fmt.Sprintf("Existing %s: %s", ftype, strings.Join(names, ", "))
 			} else {
-				hint = fmt.Sprintf("There are no %s to remove.", ftype)
+				hint = fmt.Sprintf("There are no %s yet.", ftype)
 			}
 		}
 		return oops.
@@ -410,6 +416,9 @@ func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]Fil
 	if !op.filesMgr.PathExists(dirPath) {
 		return []FileInfo{}, nil
 	}
+	if err := op.filesMgr.Confined(dirPath); err != nil {
+		return nil, err
+	}
 
 	var fileInfos []FileInfo
 
@@ -425,8 +434,8 @@ func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]Fil
 		for _, skillName := range subdirs {
 			skillPath := filepath.Join(dirPath, skillName, "SKILL.md")
 
-			// Only include if SKILL.md exists
-			if op.filesMgr.PathExists(skillPath) {
+			// Only include if SKILL.md exists and is not a link
+			if op.filesMgr.PathExists(skillPath) && op.filesMgr.Confined(skillPath) == nil {
 				priority, targets := extractMetadata(skillPath)
 				fileInfos = append(fileInfos, FileInfo{
 					Name:     skillName,
@@ -449,6 +458,9 @@ func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]Fil
 
 		for _, fileName := range files {
 			filePath := filepath.Join(dirPath, fileName)
+			if op.filesMgr.isGeneratedListing(filePath) {
+				continue // the generated index.md or log.md is not content
+			}
 			name := strings.TrimSuffix(fileName, ".md")
 
 			priority, targets := extractMetadata(filePath)
@@ -479,11 +491,10 @@ func (op *OperatorImpl) UpdateFile(ctx context.Context, domain, ftype, name, con
 		return nil, err
 	}
 
-	if priority == "" {
-		priority = PriorityDefault
-	}
-	if err := ValidatePriority(priority); err != nil {
-		return nil, err
+	if priority != "" {
+		if err := ValidatePriority(priority); err != nil {
+			return nil, err
+		}
 	}
 	if err := ValidateTargets(targets); err != nil {
 		return nil, err
@@ -506,12 +517,6 @@ func (op *OperatorImpl) UpdateFile(ctx context.Context, domain, ftype, name, con
 		return nil, ErrFileNotFound
 	}
 
-	// Build content with frontmatter
-	if content != "" && !strings.HasPrefix(content, "---") {
-		content = GenerateFrontmatter(priority, targets) + content
-	}
-	content = EnsureTrailingNewline(content)
-
 	// Get path and write atomically (temp+rename)
 	var filePath string
 	if ftype == ContentTypeSkills {
@@ -520,10 +525,20 @@ func (op *OperatorImpl) UpdateFile(ctx context.Context, domain, ftype, name, con
 		filePath = op.filesMgr.GetFilePath(domain, ftype, name)
 	}
 
-	previous := ""
-	if prev, err := op.filesMgr.ReadFile(filePath); err == nil {
-		previous = prev
+	previous, err := op.filesMgr.ReadFile(filePath)
+	if err != nil {
+		return nil, err
 	}
+
+	// Bare content keeps the frontmatter the file had (priority, targets,
+	// description, anything else); only the flags that were given change it.
+	if content != "" && !strings.HasPrefix(content, "---") {
+		if content, err = withKeptFrontmatter(previous, content, priority, targets); err != nil {
+			return nil, err
+		}
+	}
+	content = EnsureTrailingNewline(content)
+
 	if err := op.overwriteConcept(ctx, filePath, ftype, domain, name, content, previous); err != nil {
 		return nil, err
 	}
@@ -540,6 +555,9 @@ func (op *OperatorImpl) UpdateFile(ctx context.Context, domain, ftype, name, con
 // demand: machine-local domains are private scratch space with no other way to
 // be declared.
 func (op *OperatorImpl) requireDomain(name string) error {
+	if err := op.filesMgr.Confined(op.filesMgr.GetDomainPath(name)); err != nil {
+		return err
+	}
 	if op.filesMgr.DomainExists(name) {
 		return nil
 	}
@@ -632,4 +650,36 @@ func (op *OperatorImpl) overwriteConcept(ctx context.Context, path, ftype, domai
 		return err
 	}
 	return op.refreshIndexes(ctx)
+}
+
+// withKeptFrontmatter puts body under the frontmatter of previous, with priority
+// and targets set when given. A previous without frontmatter gets the generated
+// default.
+func withKeptFrontmatter(previous, body, priority string, targets []string) (string, error) {
+	fmText, _, has := splitFrontmatter(config.NativeContent(previous))
+	if !has {
+		if priority == "" {
+			priority = PriorityDefault
+		}
+		return GenerateFrontmatter(priority, targets) + body, nil
+	}
+	mapping, err := frontmatterMapping(fmText)
+	if err != nil {
+		return "", err
+	}
+	if priority != "" {
+		if err := setFrontmatterKey(mapping, "priority", priority); err != nil {
+			return "", err
+		}
+	}
+	if len(targets) > 0 {
+		if err := setFrontmatterKey(mapping, "targets", NormalizeTargets(targets)); err != nil {
+			return "", err
+		}
+	}
+	head, err := renderFrontmatter(mapping)
+	if err != nil {
+		return "", err
+	}
+	return head + body, nil
 }
