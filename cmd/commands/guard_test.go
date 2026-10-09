@@ -46,10 +46,10 @@ func TestRunGuard(t *testing.T) {
 	}
 }
 
-func TestGuardCmd_IsRegisteredAndHidden(t *testing.T) {
+func TestGuardCmd_IsRegisteredAndListed(t *testing.T) {
 	cmd, _, err := RootCmd.Find([]string{"guard"})
 
 	require.NoError(t, err)
 	assert.Same(t, GuardCmd, cmd)
-	assert.True(t, cmd.Hidden)
+	assert.False(t, cmd.Hidden, "guard is a documented command, listed in --help")
 }

@@ -27,7 +27,8 @@ Profiles are named collections of domains that can be used during generation.
 For example: ai-rulez profile add backend backend-services database
             ai-rulez profile add frontend frontend-ui frontend-api
 
-Use --set-default to make this profile the default for generation.`,
+Use --set-default to make this profile the default for generation. --format json
+prints a document with the name, domains and the config file that was changed.`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: runProfileAdd,
 }
@@ -69,6 +70,10 @@ func init() {
 		c.Flags().BoolVar(&profileLocal, "local", false, localFlagUsage)
 	}
 
+	for _, c := range []*cobra.Command{profileAddCmd, profileRemoveCmd, profileSetDefaultCmd} {
+		addResultFormat(c.Flags())
+	}
+
 	// Add flags for profile add
 	profileAddCmd.Flags().BoolVarP(&profileSetDefault, "set-default", "s", false, "Set this profile as the default")
 
@@ -79,17 +84,28 @@ func init() {
 	addJSONFormat(profileListCmd.Flags(), &profileJSON, "j")
 }
 
+// profileOperator opens the operator for the profile commands: the shared
+// config, or the machine-local overlay with --local.
+func profileOperator() (*crud.OperatorImpl, error) {
+	op, err := newContentOperator(false)
+	if err != nil {
+		return nil, failMsg("Failed to create CRUD operator", err)
+	}
+	if profileLocal {
+		op = op.Local()
+	}
+	return op, nil
+}
+
 func runProfileAdd(cmd *cobra.Command, args []string) error {
+	out := outFor(cmd)
 	name := args[0]
 	domains := args[1:]
 
 	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := profileOperator()
 	if err != nil {
-		return failMsg("Failed to create CRUD operator", err)
-	}
-	if profileLocal {
-		op = op.Local()
+		return err
 	}
 
 	if err := op.AddProfile(ctx, name, domains); err != nil {
@@ -102,55 +118,52 @@ func runProfileAdd(cmd *cobra.Command, args []string) error {
 			return failMsg("Failed to set default profile", err)
 		}
 	}
-	return nil
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusCreated, Type: "profile", Name: name, Domains: domains,
+		Default: profileSetDefault, Path: op.ConfigFile(), Local: profileLocal,
+	}, false)
 }
 
 func runProfileRemove(cmd *cobra.Command, args []string) error {
+	out := outFor(cmd)
 	name := args[0]
 
 	if err := confirmRemovalUnlessYes(profileForce, "profile", name, "Operation canceled"); err != nil {
 		return fail(err)
 	}
 
-	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := profileOperator()
 	if err != nil {
-		return failMsg("Failed to create CRUD operator", err)
+		return err
 	}
-	if profileLocal {
-		op = op.Local()
-	}
-
-	if err := op.RemoveProfile(ctx, name); err != nil {
+	if err := op.RemoveProfile(cmdContext(), name); err != nil {
 		return failMsg("Failed to remove profile", err)
 	}
-
-	return nil
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusRemoved, Type: "profile", Name: name, Path: op.ConfigFile(), Local: profileLocal,
+	}, false)
 }
 
 func runProfileSetDefault(cmd *cobra.Command, args []string) error {
+	out := outFor(cmd)
 	name := args[0]
 
-	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := profileOperator()
 	if err != nil {
-		return failMsg("Failed to create CRUD operator", err)
+		return err
 	}
-	if profileLocal {
-		op = op.Local()
-	}
-
-	if err := op.SetDefaultProfile(ctx, name); err != nil {
+	if err := op.SetDefaultProfile(cmdContext(), name); err != nil {
 		return failMsg("Failed to set default profile", err)
 	}
-
-	return nil
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusUpdated, Type: "profile", Name: name, Default: true, Path: op.ConfigFile(), Local: profileLocal,
+	}, false)
 }
 
 func runProfileList(cmd *cobra.Command, _ []string) error {
 	out := outFor(cmd)
 	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(false)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
 	}

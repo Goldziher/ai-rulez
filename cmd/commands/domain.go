@@ -2,7 +2,6 @@ package commands
 
 import (
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +22,9 @@ var domainAddCmd = &cobra.Command{
 	Short: "Add a new domain",
 	Long: `Add a new domain with optional description.
 
+The path of the created directory is printed on stdout; --format json prints a
+document with the name and path instead.
+
 This creates a domain directory structure with rules, context, and skills subdirectories.
 Domains allow you to organize rules, context, and skills by functional areas or teams.`,
 	Args: cobra.ExactArgs(1),
@@ -34,7 +36,9 @@ var domainRemoveCmd = &cobra.Command{
 	Short: "Remove a domain",
 	Long: `Remove a domain and all its contents.
 
-Use --yes to skip confirmation prompts.`,
+A domain that a profile still lists is not removed: remove the profile (or the
+domain from it) first. Use --yes to skip confirmation prompts. The removed path is
+printed on stdout; --format json prints a document with the name and path instead.`,
 	Args: cobra.ExactArgs(1),
 	RunE: runDomainRemove,
 }
@@ -54,6 +58,8 @@ func init() {
 
 	// Add flags to domain add command
 	domainAddCmd.Flags().StringVarP(&domainDescription, "description", "s", "", "Domain description")
+	addResultFormat(domainAddCmd.Flags())
+	addResultFormat(domainRemoveCmd.Flags())
 
 	// Add flags to domain remove command
 	addYesFlag(domainRemoveCmd.Flags(), &domainForce, "Skip confirmation prompts")
@@ -63,58 +69,57 @@ func init() {
 }
 
 func runDomainAdd(cmd *cobra.Command, args []string) error {
-	name := args[0]
-
-	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	out := outFor(cmd)
+	op, err := newContentOperator(false)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
 	}
 
-	req := &crud.AddDomainRequest{
-		Name:        name,
+	result, err := op.AddDomain(cmdContext(), &crud.AddDomainRequest{
+		Name:        args[0],
 		Description: domainDescription,
-	}
-
-	result, err := op.AddDomain(ctx, req)
+	})
 	if err != nil {
 		return failMsg("Failed to add domain", err)
 	}
 
-	logger.Info("Domain added successfully", "name", result.Name)
-	if result.Description != "" {
-		logger.Debug("Domain description", "description", result.Description)
-	}
-	// The created path is the result, so a script can capture it.
-	outFor(cmd).Resultln(result.Path)
-	return nil
+	out.Info("Domain added successfully\n")
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusCreated, Type: "domain", Name: result.Name, Path: result.Path,
+	}, true)
 }
 
 func runDomainRemove(cmd *cobra.Command, args []string) error {
+	out := outFor(cmd)
 	name := args[0]
-
-	if err := confirmRemovalUnlessYes(domainForce, "domain", name, "Operation canceled"); err != nil {
-		return fail(err)
-	}
-
 	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(false)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
 	}
-
+	// Refuse before asking: a missing domain or one a profile still lists is no
+	// question for the user.
+	if err := op.CheckDomainRemovable(ctx, name); err != nil {
+		return failMsg("Failed to remove domain", err)
+	}
+	if err := confirmRemovalUnlessYes(domainForce, "domain", name, "Operation canceled"); err != nil {
+		return fail(err)
+	}
+	path := op.DomainPath(name)
 	if err := op.RemoveDomain(ctx, name); err != nil {
 		return failMsg("Failed to remove domain", err)
 	}
 
-	logger.Info("Domain removed successfully", "name", name)
-	return nil
+	out.Info("Domain removed successfully\n")
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusRemoved, Type: "domain", Name: name, Path: path,
+	}, true)
 }
 
 func runDomainList(cmd *cobra.Command, _ []string) error {
 	out := outFor(cmd)
 	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(false)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
 	}
