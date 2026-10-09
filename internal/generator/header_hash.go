@@ -207,6 +207,16 @@ func injectHashesIn(rd *config.RulesDirSet, content, outputPath, contentHash, so
 	ext := strings.ToLower(filepath.Ext(outputPath))
 
 	hashBlock := func(linePrefix string) string { return hashLines(linePrefix, contentHash, sourceHash) }
+	// Content that uses CRLF gets CRLF hash lines, so the file never mixes line
+	// endings. LF content is untouched. (The rules-folder banner below comes from
+	// a template and is always LF.)
+	eol := "\n"
+	if firstLineIsCRLF(content) {
+		eol = "\r\n"
+	}
+	hashBlockEOL := func(linePrefix string) string {
+		return strings.ReplaceAll(hashBlock(linePrefix), "\n", eol)
+	}
 
 	// 0. Native rules folders: the tools' frontmatter parsers are not documented
 	// to tolerate YAML comments (a failed parse can turn a scoped rule global or
@@ -221,15 +231,18 @@ func injectHashesIn(rd *config.RulesDirSet, content, outputPath, contentHash, so
 	if block := frontmatter.SplitString(content); block.Closed {
 		// closeIdx is the line break that ends the last line before the closing fence.
 		closeIdx := len(content) - len(block.Head) - len(block.Tail) + strings.LastIndex(block.Head, "\n")
-		return content[:closeIdx] + "\n" + hashBlock("# ") + content[closeIdx:]
+		if eol == "\r\n" && closeIdx > 0 && content[closeIdx-1] == '\r' {
+			closeIdx-- // the break is CRLF: insert before its CR
+		}
+		return content[:closeIdx] + eol + hashBlockEOL("# ") + content[closeIdx:]
 	}
 
 	// 2. HTML comment banner — only for true markdown/HTML extensions.
 	switch ext {
 	case ".md", ".markdown", ".mdx", ".html":
-		marker := "\n-->\n"
+		marker := eol + "-->" + eol
 		if idx := strings.Index(content, marker); idx >= 0 {
-			return content[:idx] + "\n" + hashBlock("") + marker + content[idx+len(marker):]
+			return content[:idx] + eol + hashBlockEOL("") + marker + content[idx+len(marker):]
 		}
 		return content
 	}
@@ -253,7 +266,14 @@ func injectHashesIn(rd *config.RulesDirSet, content, outputPath, contentHash, so
 			continue
 		}
 		if strings.TrimSpace(line) == "" && i > 0 {
+			// Each element is one line of the file, which the join below ends with LF;
+			// a CRLF file's lines keep their CR.
 			hashLines := strings.Split(hashBlock(prefix), "\n")
+			if eol == "\r\n" {
+				for j := range hashLines {
+					hashLines[j] += "\r"
+				}
+			}
 			result := make([]string, 0, len(lines)+len(hashLines))
 			result = append(result, lines[:i]...)
 			result = append(result, hashLines...)
@@ -263,6 +283,12 @@ func injectHashesIn(rd *config.RulesDirSet, content, outputPath, contentHash, so
 		break
 	}
 	return content
+}
+
+// firstLineIsCRLF reports whether the first line of content ends with CRLF.
+func firstLineIsCRLF(content string) bool {
+	first, _, found := strings.Cut(content, "\n")
+	return found && strings.HasSuffix(first, "\r")
 }
 
 // isLineComment reports whether line starts a #, // or ; comment.
