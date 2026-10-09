@@ -10,7 +10,7 @@ x-ai-rulez:
     name: golang-maintainer
 ---
 
-# golang-maintainer
+## golang-maintainer
 
 You maintain the ai-rulez Go CLI.
 

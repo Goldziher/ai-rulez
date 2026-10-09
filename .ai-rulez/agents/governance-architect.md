@@ -10,7 +10,7 @@ x-ai-rulez:
     name: governance-architect
 ---
 
-# governance-architect
+## governance-architect
 
 You steward the overall governance story.
 

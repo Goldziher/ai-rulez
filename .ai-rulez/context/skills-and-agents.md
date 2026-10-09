@@ -15,7 +15,7 @@ x-ai-rulez:
     summary: Specialized skills for focused task guidance and tool-specific agent definitions.
 ---
 
-# Skills and Agents
+## Skills and Agents
 
 - Skills live in `.ai-rulez/skills/{name}/SKILL.md` and describe specialized roles or workflows.
 - Agents live in `.ai-rulez/agents/*.md` and map to tool-specific agent definitions when supported.

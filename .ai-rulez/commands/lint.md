@@ -12,7 +12,7 @@ x-ai-rulez:
     usage: /lint
 ---
 
-# Lint
+## Lint
 
 Run all linters and formatters using poly.
 

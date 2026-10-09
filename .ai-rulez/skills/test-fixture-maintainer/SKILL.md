@@ -13,7 +13,7 @@ x-ai-rulez:
       - GEMINI.md
 ---
 
-# Test and Fixture Maintainer
+## Test and Fixture Maintainer
 
 You focus on reliable test coverage.
 

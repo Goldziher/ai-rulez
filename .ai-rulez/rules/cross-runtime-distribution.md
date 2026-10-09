@@ -14,7 +14,7 @@ x-ai-rulez:
       - .hermes.md
 ---
 
-# Cross Runtime Distribution
+## Cross Runtime Distribution
 
 - Keep Go, npm, and PyPI entry points aligned when you add or rename capabilities.
 - Update documentation in `docs/`, `release/`, and `README.md` when CLI surface changes.
