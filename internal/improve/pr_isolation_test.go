@@ -76,7 +76,7 @@ func TestPR_ConfinesTheWorktreeCommands(t *testing.T) {
 	require.Len(t, rec.argvs, 1, "generate (the project has no lock)")
 	for _, argv := range rec.argvs {
 		assert.Equal(t, "/usr/bin/bwrap", argv[0], "the command runs under the sandbox tool")
-		assert.NotContains(t, argv, "--unshare-net", "generate and lock fetch remote includes, so the network stays on")
+		assert.Contains(t, argv, "--unshare-net", "generate and lock run without the network unless asked")
 		cut := indexOf(argv, "--")
 		require.Positive(t, cut)
 		assert.Equal(t, []string{self}, argv[cut+1:cut+2])
@@ -96,6 +96,8 @@ func TestPR_ConfinesTheWorktreeCommands(t *testing.T) {
 	assert.True(t, res.Isolation.Confined)
 	assert.Equal(t, "bwrap", res.Isolation.Backend)
 	assert.Contains(t, w.out.String(), "bwrap sandbox: writes only inside the worktree")
+	assert.Contains(t, w.out.String(), "no network", "the statement names the network policy")
+	assert.True(t, res.Isolation.NoNetwork)
 	assert.True(t, res.Isolation.NoWrites)
 }
 
