@@ -72,6 +72,10 @@ type PROptions struct {
 	Isolation sandbox.Mode
 	// Sandbox is the confinement backend; nil uses the system's.
 	Sandbox *sandbox.Sandbox
+	// AllowNetwork leaves the network on for generate and lock under a confining sandbox, for a project whose
+	// remote includes are not yet cached. Without it they run with the network cut; eval run (which calls a
+	// model) keeps it, because the caller asked for it with RunEvals.
+	AllowNetwork bool
 }
 
 // PRResult says what PR did.
@@ -113,6 +117,9 @@ func branchName(skill, digest string) string {
 // installed, pushes and opens the pull request with fixed gh arguments. improve pr itself makes no network
 // call; the generate and lock it runs may fetch remote includes. The change is never approved: the pull request says so.
 func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
+	hardened := *opts
+	hardened.Git = hardenedGit(opts.Git, runner.Environ())
+	opts = &hardened
 	opts.applyDefaults()
 	p, err := loadPRRun(opts)
 	if err != nil {
@@ -159,7 +166,7 @@ func PR(ctx context.Context, opts *PROptions) (res *PRResult, err error) {
 	res = &PRResult{Branch: branch, Base: base, BodyFile: bodyFile}
 	if confinement != nil {
 		res.Isolation = &confinement.report
-		if _, err = fmt.Fprintln(opts.Out, confinement.line()); err != nil {
+		if _, err = fmt.Fprintln(opts.Out, confinement.line(opts.AllowNetwork)); err != nil {
 			return nil, err
 		}
 	}
@@ -398,14 +405,14 @@ func (p *prRun) refresh(ctx context.Context, opts *PROptions, projDir, relProjec
 		steps = append(steps, []string{"lock"})
 	}
 	if opts.RunEvals {
-		steps = append(steps, append([]string{"eval", "run", p.report.Skill, "--changed-only"}, opts.EvalArgs...))
+		steps = append(steps, append([]string{stepEval, "run", p.report.Skill, "--changed-only"}, opts.EvalArgs...))
 	} else if _, err := fmt.Fprintf(opts.Out, "note: eval results were not refreshed (they cost model calls): run `ai-rulez eval run %s --changed-only` on the branch, or pass --run-evals\n", p.report.Skill); err != nil {
 		return err
 	}
 	run := runner.Or(opts.Exec)
 	for _, args := range steps {
 		argv := append(append([]string(nil), opts.Self...), args...)
-		argv, err := p.confinement.wrap(argv, projDir, opts.Env)
+		argv, err := p.confinement.wrap(argv, projDir, opts.Env, opts.AllowNetwork || args[0] == stepEval)
 		if err != nil {
 			return refuse(CodeIsolationUnavailable, "cannot confine `ai-rulez %s`: %s", strings.Join(args, " "), Sanitize(err.Error(), 300))
 		}
@@ -428,8 +435,12 @@ func (p *prRun) refresh(ctx context.Context, opts *PROptions, projDir, relProjec
 	return nil
 }
 
-// stepGenerate is the ai-rulez subcommand that refreshes the generated outputs in the worktree.
-const stepGenerate = "generate"
+// stepGenerate is the ai-rulez subcommand that refreshes the generated outputs in the worktree; stepEval is
+// the one that calls a model.
+const (
+	stepGenerate = "generate"
+	stepEval     = "eval"
+)
 
 // manifestName is the file `generate` writes next to the config to list the outputs it made.
 const manifestName = ".generated-manifest.json"
@@ -691,8 +702,9 @@ func safeWriteBody(path, body string) error {
 
 // prConfinement is the sandbox the worktree commands run under.
 type prConfinement struct {
-	sb     *sandbox.Sandbox
-	report IsolationReport
+	sb      *sandbox.Sandbox
+	report  IsolationReport
+	network bool // some wrapped command kept the network
 }
 
 // resolvePRIsolation decides, before anything is created, whether the worktree commands are confined. require
@@ -727,7 +739,7 @@ func resolvePRIsolation(ctx context.Context, opts *PROptions) (*prConfinement, e
 }
 
 // line is the one-line statement of what the confinement enforces.
-func (c *prConfinement) line() string {
+func (c *prConfinement) line(allowNetwork bool) string {
 	if c.sb == nil {
 		return "isolation: none (no backend)"
 	}
@@ -735,14 +747,18 @@ func (c *prConfinement) line() string {
 	if c.report.NoWrites {
 		writes = "writes only inside the worktree, the cache and the temp directory"
 	}
-	return fmt.Sprintf("isolation: %s sandbox: %s, network allowed (generate and lock fetch remote includes); reads are not restricted", c.report.Backend, writes)
+	network := "no network for generate and lock (eval run keeps it; --allow-network lifts the cut)"
+	if allowNetwork {
+		network = "network allowed (--allow-network)"
+	}
+	return fmt.Sprintf("isolation: %s sandbox: %s, %s; reads are not restricted", c.report.Backend, writes, network)
 }
 
 // wrap puts argv under the sandbox: writable below the worktree's project directory, the user cache, ai-rulez's
-// own state directory and the temp directory (where they exist), with the network on because generate and lock
-// fetch remote includes and eval run calls a model. A harness that keeps state elsewhere under eval run needs
+// own state directory and the temp directory (where they exist). The network is on only when network says so:
+// generate and lock fetch nothing unless the caller allowed it, eval run calls a model. A harness that keeps state elsewhere under eval run needs
 // --isolation none. A nil or unconfined c returns argv unchanged.
-func (c *prConfinement) wrap(argv []string, projDir string, env []string) ([]string, error) {
+func (c *prConfinement) wrap(argv []string, projDir string, env []string, network bool) ([]string, error) {
 	if c == nil || c.sb == nil {
 		return argv, nil
 	}
@@ -750,11 +766,12 @@ func (c *prConfinement) wrap(argv []string, projDir string, env []string) ([]str
 	if bin, err := runner.LookPath(cmd[0]); err == nil && filepath.IsAbs(bin) {
 		cmd[0] = bin
 	}
-	w, err := c.sb.Wrap(sandbox.Spec{WriteDirs: prWriteDirs(projDir, env), AllowNetwork: true}, cmd)
+	w, err := c.sb.Wrap(sandbox.Spec{WriteDirs: prWriteDirs(projDir, env), AllowNetwork: network}, cmd)
 	if err != nil {
 		return nil, fmt.Errorf("apply isolation: %w", err)
 	}
-	c.report.NoNetwork, c.report.NoWrites = w.NoNetwork, w.NoWrites
+	c.network = c.network || !w.NoNetwork
+	c.report.NoNetwork, c.report.NoWrites = !c.network, w.NoWrites
 	return w.Argv, nil
 }
 
