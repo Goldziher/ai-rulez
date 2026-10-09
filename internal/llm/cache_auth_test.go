@@ -174,15 +174,15 @@ func TestCacheIgnoresSymlinkedEntry(t *testing.T) {
 	}
 }
 
-func TestCacheIdentityChangesWithBackendHostKeyAndPrices(t *testing.T) {
-	base := Config{Provider: "openai", BaseURL: "https://gw.example/v1", APIKeyEnv: "KEY_A", Backend: BackendOpenAICompat}
+func TestCacheIdentityChangesWithHostKeyAndPrices(t *testing.T) {
+	base := Config{Provider: "openai", BaseURL: "https://gw.example/v1", APIKeyEnv: "KEY_A"}
 	variants := map[string]func(*Config){
-		"base":    func(*Config) {},
-		"host":    func(c *Config) { c.BaseURL = "https://gw2.example/v1" },
-		"scheme":  func(c *Config) { c.BaseURL = "http://gw.example/v1" },
-		"keyenv":  func(c *Config) { c.APIKeyEnv = "KEY_B" },
-		"backend": func(c *Config) { c.Backend = BackendLiterLLM },
-		"prices":  func(c *Config) { c.PriceInputPerMTok = 1 },
+		"base":     func(*Config) {},
+		"host":     func(c *Config) { c.BaseURL = "https://gw2.example/v1" },
+		"scheme":   func(c *Config) { c.BaseURL = "http://gw.example/v1" },
+		"keyenv":   func(c *Config) { c.APIKeyEnv = "KEY_B" },
+		"provider": func(c *Config) { c.Provider = "gemini" },
+		"prices":   func(c *Config) { c.PriceInputPerMTok = 1 },
 	}
 	seen := map[string]string{}
 	for name, mod := range variants {

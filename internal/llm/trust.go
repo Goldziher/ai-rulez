@@ -66,7 +66,6 @@ func Resolve(repo, user *Config) (cfg Config, ignored []string) {
 	}
 	fill(&merged.Provider, cfg.Provider)
 	fill(&merged.Model, cfg.Model)
-	fill(&merged.Backend, cfg.Backend)
 	fill(&merged.EmbeddingModel, cfg.EmbeddingModel)
 	if merged.Cache == nil {
 		merged.Cache = cfg.Cache

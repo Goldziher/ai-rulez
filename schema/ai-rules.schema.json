@@ -1814,14 +1814,9 @@
       "properties": {
         "provider": {
           "type": "string",
-          "description": "Provider prefix for provider/model routing (used by the literllm backend)."
+          "description": "Provider prefix for provider/model routing (liter-llm routes on it)."
         },
         "model": { "type": "string", "description": "Chat model name." },
-        "backend": {
-          "type": "string",
-          "enum": ["auto", "openaicompat", "literllm"],
-          "description": "auto picks literllm when compiled in (-tags literllm), else openaicompat."
-        },
         "base_url": {
           "type": "string",
           "description": "API root of an OpenAI-compatible endpoint, e.g. an in-VPC gateway. No credentials or query string."

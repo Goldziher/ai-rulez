@@ -79,7 +79,7 @@ func TestRepositoryNaNCostShouldNotLiftTheUserCap(t *testing.T) {
 		t.Fatalf("toml: %v", err)
 	}
 	cfg, _ := Resolve(doc.LLM, &Config{AllowNetwork: true, MaxCostUSD: 0.01, Model: "gpt-4o", Provider: "openai"})
-	m := Wrap(NewFake(), cfg, Options{NoCache: true, Retry: &RetryPolicy{}})
+	m := Wrap(NewFake(), cfg, Options{NoCache: true})
 
 	// Act
 	_, err := m.Chat(context.Background(), ChatRequest{Messages: []Message{{Role: RoleUser, Content: string(make([]byte, 300_000))}}, MaxTokens: 4000})

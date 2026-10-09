@@ -303,7 +303,6 @@ global internal/lint/traps_limits.go 1
 global internal/lint/traps_plan.go 2
 global internal/lint/units.go 1
 global internal/llm/judge.go 1
-global internal/llm/native.go 2
 global internal/llmstxt/docsite.go 2
 global internal/llmstxt/render.go 2
 global internal/lockfile/lockfile.go 1
@@ -433,7 +432,6 @@ init cmd/commands/verifiers_suggest.go 1
 init cmd/commands/verify.go 1
 init cmd/commands/verify_tags.go 1
 init internal/contentlock/approval_scope.go 1
-init internal/llm/native_literllm.go 1
 init internal/publish/emit/agentplugins.go 1
 init internal/publish/emit/ard.go 1
 init internal/publish/emit/aws.go 1

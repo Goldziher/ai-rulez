@@ -14,10 +14,9 @@ func TestResolved_MaxBatch(t *testing.T) {
 		llm  string
 		want int
 	}{
-		{"liter-llm to gemini cannot batch", "provider = \"gemini\"\nbackend = \"literllm\"\n", 1},
-		{"liter-llm with a prefixed gemini model cannot batch", "backend = \"literllm\"\n", 1},
-		{"the openai-compatible gemini endpoint batches", "provider = \"gemini\"\nbackend = \"openaicompat\"\n", 0},
-		{"liter-llm to another provider batches", "provider = \"openai\"\nbackend = \"literllm\"\n", 0},
+		{"liter-llm to gemini cannot batch", "provider = \"gemini\"\n", 1},
+		{"liter-llm with a prefixed gemini model cannot batch", "", 1},
+		{"liter-llm to another provider batches", "provider = \"openai\"\n", 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

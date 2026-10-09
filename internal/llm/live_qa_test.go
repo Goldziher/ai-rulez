@@ -198,7 +198,7 @@ func TestLiveCacheTamperedPlantedAndSymlinkedEntriesMiss(t *testing.T) {
 	}
 }
 
-func liveChatModelFor(string) string { return liveConfig(BackendOpenAICompat).FullModel() }
+func liveChatModelFor(string) string { return liveConfig(liveBackend).FullModel() }
 
 func TestLiveCacheLooseSecretFileIsReplacedAndOldEntriesMiss(t *testing.T) {
 	for _, backend := range liveBackends(t) {

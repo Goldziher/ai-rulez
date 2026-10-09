@@ -3,7 +3,6 @@ package llm
 import (
 	"bytes"
 	"errors"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -145,48 +144,28 @@ func writeFile(t *testing.T, path string, data []byte, mode os.FileMode) {
 	}
 }
 
-func TestScrubURLErrorDropsTheURLAndRedactsSecrets(t *testing.T) {
+func TestScrubDropsKeysAndURLQueries(t *testing.T) {
 	const token = "ghp_abcdefghijklmnopqrstuvwxyz0123456789"
+	l := &literLLM{key: "plain-key-value-1234"}
 	tests := []struct {
 		name        string
-		err         error
+		in          string
 		wantContain string
 		forbid      []string
 	}{
-		{
-			name:        "url.Error keeps only the cause",
-			err:         &url.Error{Op: "Post", URL: "https://api.example.com/v1/chat?key=sk-live-secret123456", Err: errors.New("connection refused")},
-			wantContain: "connection refused",
-			forbid:      []string{"api.example.com", "sk-live-secret123456", "Post"},
-		},
-		{
-			name:        "secret inside the cause is redacted",
-			err:         &url.Error{Op: "Get", URL: "https://x.example", Err: errors.New("bad header Authorization: Bearer " + token)},
-			wantContain: "bad header",
-			forbid:      []string{token},
-		},
-		{
-			name:        "plain error is redacted too",
-			err:         errors.New("dial failed using " + token),
-			wantContain: "dial failed",
-			forbid:      []string{token},
-		},
-		{
-			name:        "wrapped url.Error is unwrapped",
-			err:         errors.Join(errors.New("outer"), &url.Error{Op: "Post", URL: "https://host.example/path?token=abc", Err: errors.New("timeout")}),
-			wantContain: "timeout",
-			forbid:      []string{"host.example", "token=abc"},
-		},
+		{"query token is dropped", "POST https://api.example.com/v1/chat?key=abc123secret failed: connection refused", "connection refused", []string{"abc123secret", "key="}},
+		{"configured key is removed by value", "bad header for plain-key-value-1234", "bad header", []string{"plain-key-value-1234"}},
+		{"key-shaped text is redacted", "dial failed using " + token, "dial failed", []string{token}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := scrubURLError(tt.err)
+			got := l.scrub(tt.in)
 			if !strings.Contains(got, tt.wantContain) {
-				t.Errorf("scrubURLError = %q, want it to contain %q", got, tt.wantContain)
+				t.Errorf("scrub = %q, want it to contain %q", got, tt.wantContain)
 			}
 			for _, f := range tt.forbid {
 				if strings.Contains(got, f) {
-					t.Errorf("scrubURLError = %q, must not contain %q", got, f)
+					t.Errorf("scrub = %q, must not contain %q", got, f)
 				}
 			}
 		})

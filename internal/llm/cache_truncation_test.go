@@ -25,7 +25,7 @@ func TestCacheSkipsTruncatedFilteredAndEmptyReplies(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			backend := &replyClient{reply: reply}
-			m := Wrap(backend, allowed(Config{Model: "gpt-4o-mini"}), Options{ConfigDir: t.TempDir(), Retry: &RetryPolicy{}})
+			m := Wrap(backend, allowed(Config{Model: "gpt-4o-mini"}), Options{ConfigDir: t.TempDir()})
 			for range 2 {
 				if _, err := m.Chat(context.Background(), chatReq("q")); err != nil {
 					t.Fatal(err)
@@ -37,7 +37,7 @@ func TestCacheSkipsTruncatedFilteredAndEmptyReplies(t *testing.T) {
 		})
 	}
 	backend := &replyClient{reply: ChatResponse{Text: "done", FinishReason: "stop"}}
-	m := Wrap(backend, allowed(Config{Model: "gpt-4o-mini"}), Options{ConfigDir: t.TempDir(), Retry: &RetryPolicy{}})
+	m := Wrap(backend, allowed(Config{Model: "gpt-4o-mini"}), Options{ConfigDir: t.TempDir()})
 	for range 2 {
 		if _, err := m.Chat(context.Background(), chatReq("q")); err != nil {
 			t.Fatal(err)
@@ -51,23 +51,16 @@ func TestCacheSkipsTruncatedFilteredAndEmptyReplies(t *testing.T) {
 func TestCacheKeyCoversTheInjectedCompletionCap(t *testing.T) {
 	dir := t.TempDir()
 	backend := &replyClient{reply: ChatResponse{Text: "done", FinishReason: "stop"}}
-	capped := Wrap(backend, allowed(Config{Model: "gpt-4o-mini", MaxCalls: 10}), Options{ConfigDir: dir, Retry: &RetryPolicy{}})
+	capped := Wrap(backend, allowed(Config{Model: "gpt-4o-mini", MaxCalls: 10}), Options{ConfigDir: dir})
 	if _, err := capped.Chat(context.Background(), chatReq("q")); err != nil {
 		t.Fatal(err)
 	}
-	uncapped := Wrap(backend, allowed(Config{Model: "gpt-4o-mini"}), Options{ConfigDir: dir, Retry: &RetryPolicy{}})
+	uncapped := Wrap(backend, allowed(Config{Model: "gpt-4o-mini"}), Options{ConfigDir: dir})
 	resp, err := uncapped.Chat(context.Background(), chatReq("q"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp.Cached || backend.calls != 2 {
 		t.Fatalf("a reply made under the injected cap must not serve an uncapped run: cached=%v calls=%d", resp.Cached, backend.calls)
-	}
-}
-
-func TestDecodeChatCarriesFinishReason(t *testing.T) {
-	resp, err := decodeChat([]byte(`{"model":"m","choices":[{"message":{"content":"x"},"finish_reason":"length"}]}`), Pricing{}, "m")
-	if err != nil || resp.FinishReason != "length" {
-		t.Fatalf("finish reason lost: %+v %v", resp, err)
 	}
 }
