@@ -36,12 +36,7 @@ Sources can be:
   - Local paths: /path/to/local/repo
 
 By default, the skill is expected at skills/<name>/ within the source.
-Use --path to override.
-
-Examples:
-  ai-rulez skill install kreuzberg --source https://github.com/kreuzberg-dev/kreuzberg
-  ai-rulez skill install ai-rulez --source https://github.com/Goldziher/ai-rulez
-  ai-rulez skill install my-skill --source ./local-repo --path custom/path`,
+Use --path to override.`,
 	Args: cobra.ExactArgs(1),
 	RunE: runSkillInstall,
 }
