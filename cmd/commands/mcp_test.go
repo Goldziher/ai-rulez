@@ -15,7 +15,9 @@ func TestMCPCommand(t *testing.T) {
 
 	flags := commands.MCPCmd.Flags()
 
-	transportFlag := flags.Lookup("transport")
-	assert.NotNil(t, transportFlag)
-	assert.True(t, transportFlag.Hidden)
+	// stdio is the only transport; flags for a websocket one would be dead.
+	for _, dead := range []string{"transport", "address", "port"} {
+		assert.Nil(t, flags.Lookup(dead), "--%s configures a transport that does not exist", dead)
+	}
+	assert.NotNil(t, flags.Lookup("serve-skills"))
 }
