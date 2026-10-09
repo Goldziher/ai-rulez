@@ -21,7 +21,7 @@ const (
 var generateStrict bool
 
 func init() {
-	GenerateCmd.Flags().BoolVar(&generateStrict, "strict", false,
+	GenerateCmd.Flags().BoolVar(&generateStrict, "strict-config", false,
 		"Fail on unknown or invalid configuration keys instead of warning (env AI_RULEZ_STRICT=1)")
 }
 
@@ -81,13 +81,13 @@ func checkConfigSchema(cfg *config.Config, strict bool) error {
 	}
 	if strict {
 		return oops.With("errors", lines).
-			Hint("Fix the keys above, or run generate without --strict to only warn about them").
+			Hint("Fix the keys above, or run generate without --strict-config to only warn about them").
 			Errorf("configuration has %d unknown or invalid key(s)", len(lines))
 	}
 	for _, line := range lines {
 		logger.Warn("Configuration problem: " + line)
 	}
-	logger.Warn("These keys have no effect; `ai-rulez validate` fails on them, `generate --strict` (or AI_RULEZ_STRICT=1) does too")
+	logger.Warn("These keys have no effect; `ai-rulez validate` fails on them, `generate --strict-config` (or AI_RULEZ_STRICT=1) does too")
 	return nil
 }
 

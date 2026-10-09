@@ -141,7 +141,7 @@ func init() {
 	f.StringVar(&evalFlags.surface, "surface", "", "With --mode activation: retrieval (offline find_skill ranking, free) or native (a runner that declares the activation capability and the native surface)")
 	f.StringVar(&evalFlags.scope, "scope", evals.ScopeDomain, "With --mode activation: the skills that compete for a prompt: domain (the skill's domain plus root skills) or all")
 	f.StringVar(&evalFlags.descriptionFrom, "description-from", "", "With --mode activation and one skill: measure the description in this file instead of the skill's own, for this run only (nothing is recorded, the source is not edited)")
-	addFormatFlag(f, &evalFlags.format, evals.FormatMarkdown, evals.FormatMarkdown, evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit)
+	addFormatFlag(f, &evalFlags.format, evals.FormatText, evals.FormatText, evals.FormatText, evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit)
 	f.StringVar(&evalFlags.out, "out", "", "Write the report to <dir>/eval-report.<ext> instead of standard output")
 	f.Float64Var(&evalFlags.maxCost, "max-cost", 0, "Advisory run-wide spend cap in USD (finite, >= 0; 0 means no limit): refuse to start when the estimate exceeds it, skip skills once spend reaches it, warn when a runner overshoots the budget it was given; a runner that reports no cost is assumed to have spent the whole budget")
 	f.StringVar(&evalFlags.maxCostMode, "max-cost-mode", "", "Estimate figure that must fit under --max-cost before a run starts: expected (default for case runs) or high (default for --mode activation)")
@@ -256,9 +256,9 @@ func thresholdGiven(cmd *cobra.Command) bool {
 // costs nothing.
 func validateEvalFlags(cmd *cobra.Command) error {
 	switch evalFlags.format {
-	case evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit:
+	case evals.FormatText, evals.FormatJSON, evals.FormatMarkdown, evals.FormatJUnit:
 	default:
-		return oops.Errorf("unknown --format %q (use json, markdown or junit)", evalFlags.format)
+		return oops.Errorf("unknown --format %q (use text, json, markdown or junit)", evalFlags.format)
 	}
 	for name, value := range map[string]float64{"--max-cost": evalFlags.maxCost, "--price-in": evalFlags.priceIn, "--price-out": evalFlags.priceOut} {
 		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 {

@@ -106,7 +106,6 @@ func authoringCapabilities() []Capability {
 func contentCapabilities() []Capability {
 	const (
 		targetsNote = "the CLI takes a comma-separated string of providers; the tool takes an array"
-		frontmatter = "the CLI sets this in the frontmatter of --content"
 	)
 	var caps []Capability
 	for _, kind := range []struct {
@@ -119,14 +118,12 @@ func contentCapabilities() []Capability {
 		{name: "rule", plural: "rules", local: true,
 			add: []FlagPair{{Flag: "priority"}, {Flag: "targets", TypeNote: targetsNote}}},
 		{name: "context", plural: "context", local: true,
-			add:      []FlagPair{{Flag: "priority"}},
-			toolArgs: []Exclusion{{Names: []string{"targets"}, Reason: frontmatter}}},
+			add: []FlagPair{{Flag: "priority"}, {Flag: "targets", TypeNote: targetsNote}}},
 		{name: "skill", plural: "skills", local: true,
-			add:      []FlagPair{{Flag: "description"}},
-			toolArgs: []Exclusion{{Names: []string{"priority", "targets"}, Reason: frontmatter}}},
+			add: []FlagPair{{Flag: "description"}, {Flag: "priority"}, {Flag: "targets", TypeNote: targetsNote}}},
 		{name: "check", plural: "checks",
-			add:      []FlagPair{{Flag: "description"}},
-			toolArgs: []Exclusion{{Names: []string{"severity", "targets", "tools"}, Reason: frontmatter}}},
+			add: []FlagPair{{Flag: "description"}, {Flag: "severity"}, {Flag: "targets", TypeNote: targetsNote},
+				{Flag: "tools", TypeNote: targetsNote}}},
 		{name: "agent", plural: "agents", local: true, add: []FlagPair{{Flag: "description"}}},
 		{name: "command", plural: "commands", local: true, add: []FlagPair{{Flag: "description"}}},
 	} {
@@ -155,14 +152,18 @@ func itemCapabilities(name, plural string, local bool, addFlags []FlagPair, tool
 		Flags: append([]FlagPair{{Flag: "domain"}}, localFlag...),
 	}
 	read := Capability{
-		ID: name + "-read", Kind: MCPOnly, Tool: "read_" + name,
-		Reason: "the command line reads an item body with an editor or cat; a tool client has no filesystem",
+		ID: name + "-read", Kind: Paired, CLI: []string{"show " + name}, Tool: "read_" + name,
+		Flags: append([]FlagPair{{Flag: "domain"}}, localFlag...),
 	}
 	update := Capability{
 		ID: name + "-update", Kind: MCPOnly, Tool: "update_" + name,
-		Reason: "the command line edits an item body in an editor; a tool client replaces the content in one atomic call",
+		Reason: "`edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call",
 	}
-	return []Capability{create, list, remove, read, update}
+	edit := Capability{
+		ID: name + "-edit", Kind: CLIOnly, CLI: []string{"edit " + name},
+		Reason: "partial field edits and stdin input; update_" + name + " is the whole-item replacement for a tool client",
+	}
+	return []Capability{create, list, remove, read, update, edit}
 }
 
 func buildCapabilities() []Capability {
@@ -174,7 +175,7 @@ func buildCapabilities() []Capability {
 			CLIFlags: []Exclusion{
 				{Names: []string{"watch", "if-configured"}, Reason: "process-bound or hook-bound: a tool call returns once"},
 				{Names: []string{"emit-plan"}, Reason: "writes the plan to a file or stdout; generate_outputs dry_run returns the plan in the result"},
-				{Names: []string{"locked", "frozen", "verify-tags", "allow-local-drift", "force", "strict"},
+				{Names: []string{"locked", "frozen", "verify-tags", "allow-local-drift", "force", "strict-config"},
 					Reason: "gates that turn drift into an exit code or overwrite files; an agent runs generate_outputs check for drift and never forces"},
 				{Names: []string{"env", "env-file"}, Reason: "pass secrets from the caller's environment; a tool call must not accept them"},
 				{Names: []string{"user", "plugin", "gitignore"}, Reason: "write outside the project tree or into user scope; not exposed to tools"},
@@ -257,10 +258,11 @@ func reportCapabilities() []Capability {
 		},
 		{
 			ID: "sbom", Kind: Paired, CLI: []string{"sbom"}, Tool: "sbom", Behavior: "sbom",
-			Flags: []FlagPair{{Flag: "format"}, {Flag: "files"}, {Flag: "profile"}, {Flag: "role"}, {Flag: "include-outputs"},
+			Flags: []FlagPair{{Flag: "type"}, {Flag: "files"}, {Flag: "profile"}, {Flag: "role"}, {Flag: "include-outputs"},
 				{Flag: "no-approvals"}},
 			CLIFlags: []Exclusion{
 				{Names: []string{"output", "check"}, Reason: "writes or compares a file; the tool returns the document"},
+				{Names: []string{"format"}, Reason: "selects text or json for the command's report; the tool always returns structured content"},
 				{Names: []string{"online"}, Reason: "contacts remote sources; tools read the lock and the cache only"},
 				{Names: []string{"verify", "redact-reviewers"}, Reason: "need the signing backend or a secret from the caller's environment"},
 				{Names: []string{"require-lock", "strict-pins"}, Reason: "CI gates that turn a finding into exit 2; the document carries the findings"},
@@ -361,7 +363,7 @@ func cliOnlyCapabilities() []Capability {
 			"verify"),
 		only("update", "moves pinned remote sources to newer tags over the network and rewrites the lock", "update", "skill update"),
 		only("convert-migrate", "one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview",
-			"convert", "migrate"),
+			"convert", "migrate *"),
 		only("okf-export-import", "write a whole bundle or import a foreign one into the tree", "export okf", "import okf"),
 		only("publish", "builds and signs distribution artifacts and may push them", "publish *"),
 		only("eval-improve", "run models and harness subprocesses and spend money", "eval *", "improve *"),

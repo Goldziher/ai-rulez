@@ -143,8 +143,8 @@ render_reports() {
   local d="$1" fmt
   mkdir -p "$d"
   for fmt in cyclonedx spdx-json; do
-    ar sbom --format "$fmt" --files skills -o "$d/sbom-$fmt.json"
-    expect_rc 0 "sbom --format $fmt"
+    ar sbom --type "$fmt" --files skills -o "$d/sbom-$fmt.json"
+    expect_rc 0 "sbom --type $fmt"
   done
   ar_to "$d/catalog.json" catalog --format json --schema-version 2
   expect_rc 0 "catalog --format json"

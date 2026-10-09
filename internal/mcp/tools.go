@@ -65,6 +65,9 @@ var priorityValues = []string{"critical", "high", "medium", "low", "minimal"}
 // severityValues are the severity levels a check takes.
 var severityValues = []string{"low", "medium", "high", "critical"}
 
+// mergeStrategyError is the include merge strategy that fails on a conflict.
+const mergeStrategyError = "error"
+
 // failOnValues are the thresholds `validate --fail-on` accepts.
 func failOnValues() []string {
 	return []string{string(lint.SeverityError), string(lint.SeverityWarning), string(lint.SeverityInfo), "none"}
@@ -351,7 +354,7 @@ func (s *Server) registerCRUDIncludeTools() {
 		name: "add_include", title: "Add Include",
 		description: "Add a new include source (git URL or local path) to the configuration",
 		annotations: additiveAnnotations(), output: mutationOut{},
-		enums: map[string][]string{"merge_strategy": {"local-override", "include-override", "error"}},
+		enums: enumsOf("merge_strategy", []string{"local-override", "include-override", mergeStrategyError}),
 	}, handlers.AddIncludeHandler)
 
 	addTool[overlayNameIn](s, toolSpec{
@@ -490,14 +493,14 @@ func (s *Server) registerReportTools() {
 		name: "sbom", title: "Software Bill of Materials",
 		description: "Return the bill of materials of the AI configuration as CycloneDX 1.6 or SPDX 2.3 JSON (sbom): authored items, remote includes and skill sources with their pins, MCP servers. Reproducible, built from the lock and the cache without the network and without the machine-local overlay. Read-only; writing and signing stay on the command line.",
 		annotations: readOnlyAnnotations(), output: sbomOut{}, readsConfig: true,
-		enums: map[string][]string{"format": {sbom.FormatCycloneDX, sbom.FormatSPDXJSON}, "files": {sbom.FilesNone, sbom.FilesSkills, sbom.FilesAll}},
+		enums: map[string][]string{"type": {sbom.FormatCycloneDX, sbom.FormatSPDXJSON}, "files": {sbom.FilesNone, sbom.FilesSkills, sbom.FilesAll}},
 	}, handlers.SBOMHandler(s.version))
 
 	addTool[okfValidateIn](s, toolSpec{
 		name: "okf_validate", title: "Validate OKF Bundle",
 		description: "Check an OKF (Open Knowledge Format) bundle directory against the OKF v0.2 conformance rules and the hygiene checks AR9B0-AR9B9 (okf validate --format json). Local directories only. Findings at or above fail_on are an error result carrying the document.",
 		annotations: readOnlyAnnotations(), output: okfValidateOut{},
-		enums: map[string][]string{"fail_on": {"error", "warning", "info", "none"}},
+		enums: enumsOf("fail_on", failOnValues()),
 	}, handlers.OKFValidateHandler)
 
 	addTool[approvalsStatusIn](s, toolSpec{

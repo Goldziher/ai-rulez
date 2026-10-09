@@ -120,7 +120,7 @@ func TestMinReleaseAge_OutdatedAndUpdateReportTheHeldTag(t *testing.T) {
 	// lock --outdated lists the held tag, and the report validates.
 	lockOutdated, lockFormat = true, formatJSON
 	var code int
-	stdout := captureStdout(t, func() { code = outdatedAt("", "", nil) })
+	stdout := captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
 	require.Equal(t, 0, code)
 	validateAgainst(t, "../../schema/lock-outdated.schema.json", []byte(stdout))
 	var rep tagresolve.Report
@@ -133,17 +133,17 @@ func TestMinReleaseAge_OutdatedAndUpdateReportTheHeldTag(t *testing.T) {
 	assert.Equal(t, "v1.2.0", row.Held[0].Tag)
 	assert.Equal(t, 1, rep.Summary.HeldBack)
 	lockFormat = ""
-	text := captureStdout(t, func() { _ = outdatedAt("", "", nil) })
+	text := captureStdout(t, func() { _ = reported(outdatedAt("", "", nil)) })
 	assert.Contains(t, text, "AR733 v1.2.0 held back")
 
 	// update says so and moves nothing.
 	updateFormat = formatJSON
-	stdout = captureStdout(t, func() { code = runUpdate(nil) })
+	stdout = captureStdout(t, func() { code = reported(runUpdate(nil)) })
 	require.Equal(t, 0, code)
 	validateAgainst(t, "../../schema/update.schema.json", []byte(stdout))
 	assert.Equal(t, "v1.1.0", f.lock().Find(lockfile.KindInclude, "shared").Tag)
 	updateFormat = ""
-	text, _ = capture(t, func() { code = runUpdate(nil) })
+	text, _ = capture(t, func() { code = reported(runUpdate(nil)) })
 	assert.Equal(t, 0, code)
 	assert.Contains(t, text, "AR733 v1.2.0 held back")
 }
@@ -156,7 +156,7 @@ func TestMinReleaseAge_PerSourceValueOverridesTheLockDefault(t *testing.T) {
 	// "0" on the source switches the gate off for it.
 	f.setConfig(strings.Replace(f.config(), `version = "^1"`, `version = "^1"`+"\nmin_release_age = \"0\"", 1))
 	var code int
-	_, _ = capture(t, func() { code = runUpdate(nil) })
+	_, _ = capture(t, func() { code = reported(runUpdate(nil)) })
 
 	require.Equal(t, 0, code)
 	e := f.lock().Find(lockfile.KindInclude, "shared")
@@ -229,7 +229,7 @@ func TestOutdatedSeverityOptIn(t *testing.T) {
 
 			// Act
 			var code int
-			stdout := captureStdout(t, func() { code = outdatedAt("", "", nil) })
+			stdout := captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
 
 			// Assert
 			assert.Equal(t, tt.wantCode, code)

@@ -188,6 +188,31 @@ func TestPublish_EmitSubcommandWritesOnlyTheEmitterFiles(t *testing.T) {
 	assert.NoDirExists(t, filepath.Join(root, "dist"), "no release directory is written")
 }
 
+func TestPublish_EmitSubcommandFormatJSONListsTheFiles(t *testing.T) {
+	publishProject(t)
+	publishEmit, publishExperimental, publishFormat = []string{"kiro-steering"}, true, formatJSON
+	t.Cleanup(func() { publishFormat = "" })
+	publishEmitOut = filepath.Join(t.TempDir(), "kiro")
+	var out strings.Builder
+
+	var err error
+	_, _ = capture(t, func() { err = runPublishEmit(context.Background(), &out, "kiro-steering") })
+
+	require.NoError(t, err)
+	var doc struct {
+		SchemaVersion int      `json:"schema_version"`
+		Emitter       string   `json:"emitter"`
+		Out           string   `json:"out"`
+		Files         []string `json:"files"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(out.String()), &doc), out.String())
+	assert.Equal(t, 1, doc.SchemaVersion)
+	assert.Equal(t, "kiro-steering", doc.Emitter)
+	assert.Equal(t, publishEmitOut, doc.Out)
+	assert.Contains(t, doc.Files, filepath.Join(publishEmitOut, "distribution.json"))
+	assert.NotContains(t, out.String(), "wrote ")
+}
+
 func TestPublish_EmitSubcommandIgnoresTheSignaturePolicy(t *testing.T) {
 	root := publishProject(t)
 	reconfigure(t, root, publishProjectConfig+"\n[publish]\nrequire_signature = true\n")

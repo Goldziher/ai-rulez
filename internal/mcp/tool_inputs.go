@@ -342,7 +342,7 @@ type costReportIn struct {
 type sbomIn struct {
 	ConfigFile     string `json:"config_file,omitempty" jsonschema:"Path to the root configuration file (optional)"`
 	ConfigDir      string `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
-	Format         string `json:"format,omitempty" jsonschema:"Document format: cyclonedx (CycloneDX 1.6, default) or spdx-json (SPDX 2.3)"`
+	Type           string `json:"type,omitempty" jsonschema:"Document type: cyclonedx (CycloneDX 1.6, default) or spdx-json (SPDX 2.3)"`
 	Files          string `json:"files,omitempty" jsonschema:"List the files of items with their plain SHA-256: none (default), skills or all"`
 	Profile        string `json:"profile,omitempty" jsonschema:"Describe only this profile's domains"`
 	Role           string `json:"role,omitempty" jsonschema:"Describe only the items this role keeps"`

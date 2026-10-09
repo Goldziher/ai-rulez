@@ -185,6 +185,23 @@ hashes = "full"
   on stderr, and the replace prompt is on stderr too. `init --config-dir` is the global flag.
 - **MCP `init_project` honors `with_agents`** (it creates `agents/code-reviewer.md`; the flag was accepted and ignored).
 
+- **Report commands share one flag vocabulary and one JSON contract.** *Migrate:* rename the flags below; read the
+  [JSON contracts](cli.md#json-contracts) for the documents.
+
+  | 4.x / earlier 5.0 build | 5.0 |
+  | --- | --- |
+  | `sbom --format cyclonedx\|spdx-json` | `sbom --type cyclonedx\|spdx-json` (`--format` is `text\|json`, the report of a gate, `--check` or `-o`) |
+  | `telemetry hook --format json\|toml` | `telemetry hook --syntax json\|toml` |
+  | `eval run` printed Markdown by default | `eval run` prints `text` by default; pass `--format markdown` to keep the old output |
+  | `lock --strict` | `lock --refuse-findings` |
+  | `generate --strict` | `generate --strict-config` (`--strict` now only ever means "warnings fail": `validate`, `doctor`, `verifiers run`) |
+  | `verify` (generated files against their `Content-Hash`) | `generate --check`. `verify` now checks only signatures, approvals and plugin provenance (`--attestation`, `--approvals`, `--self`, `--plugin`); a bare `verify` exits 1 and names `generate --check` |
+  | `publish verify --format json` printed the bare result of a single dist directory | always `{"schema_version": 1, "results": [...]}` |
+
+  `--format json` is also new on `publish emit`, `verifiers explain` and `verifiers test`, and `verify --plugin`.
+  `roles list --format json` prints `"roles": []` instead of `null` when no role is defined, and `scanners doctor`
+  without a configured scanner says so instead of printing nothing. A failure under `--format json` prints the
+  [error document](cli.md#json-contracts) for every command; the schema of every report is published in `schema/`.
 - **Exit codes follow one contract**: 0 ok, 1 the command could not run (or the configuration is invalid or an older
   version), 2 findings or drift. See [the CLI reference](cli.md#exit-codes). `lock` keeps its documented codes.
 
@@ -268,7 +285,7 @@ The changes below came with the same release; none is touched by `migrate v5`.
 | An organization policy at the managed path is read automatically | None unless the machine has one; see [Organization policy](#organization-policy) |
 | Review-linked approvals count only reviews of the final head by members or named approvers; `max_age` is a ceiling | Re-run `approve --from-github-review` after new pushes; see [Approvals](#approvals) |
 | Go APIs under `internal/` changed; `pkg/airulez` is the supported API | See [Go API](#go-api) |
-| The `compression` option is gone (it was a no-op since v3.13) | Delete it; a config that still sets it loads and `generate` warns about the unknown key, but `validate` and `generate --strict` fail |
+| The `compression` option is gone (it was a no-op since v3.13) | Delete it; a config that still sets it loads and `generate` warns about the unknown key, but `validate` and `generate --strict-config` fail |
 
 
 ## OKF is the format of `.ai-rulez/`
@@ -344,7 +361,7 @@ local sources are reported as `needs-action` instead of being cloned.
   `generate` or `clean` while it is still the value ai-rulez wrote. The settings file is written only when
   `[claude.settings]` manage, `[[hooks]]`, `[permissions]` or `[claude.settings.managed]` apply.
 - **`generate` warns about unknown config keys** in `config.toml` and `config.local.toml`, naming the nearest known
-  key. `generate --strict` (or `AI_RULEZ_STRICT=1`) fails instead. `validate` fails on them as before.
+  key. `generate --strict-config` (or `AI_RULEZ_STRICT=1`) fails instead. `validate` fails on them as before.
 - **`generate` summarises new or changed commands**: hook commands, command-based MCP servers, `[permissions]
   allow` rules, `[claude.settings.managed] env`, plugin enablement and `http`/`prompt` hooks that are new since the
   previous run on this machine (all of them in a fresh clone), printed even with `--quiet`. It only warns. Pass
@@ -412,7 +429,7 @@ local sources are reported as `needs-action` instead of being cloned.
 - **The lock digest ignores the project-wide `Source-Hash` header**, so editing an unrelated file no longer changes
   the digest of a served skill.
 - **A served skill the security scan refuses no longer stops `lock`.** It is left unpinned, `lock` exits `3`, and
-  `lock --strict` restores the fail-without-writing behavior.
+  `lock --refuse-findings` restores the fail-without-writing behavior.
 - **`lock` and `update` scan what they pin.** Every remote tree pinned to something new is scanned (`AR001`-`AR009`)
   first; an error finding refuses the pin (exit `2`, nothing written) unless `--accept-findings`.
 - **`generate --check` classifies machine-local inputs like `generate`.** With a `config.local.*` overlay or `local/`
@@ -431,7 +448,7 @@ need to match `2`.
 | `generate` | Written | Failed to load, validate or generate (any root with `--recursive`) | `--check` found drift; `--locked`/`--frozen` source differs from the lock; recursive run where every failure is lock drift | |
 | `validate` | Valid | Invalid configuration | `--strict`: findings at or above `--fail-on` | |
 | `scan` | Clean | Cannot run | Findings at or above `--fail-on` | |
-| `verify` | Verified | Cannot run (no manifest) | Files differ | |
+| `verify` | Verified | Cannot run (no mode given, no trusted signer, no trusted root) | A signature, approval or plugin bundle failed verification | |
 | `lock` | Written or verified | Cannot run; `--check` with no `ai-rulez.lock`; unknown name | `--check` found drift (also a lock without content pins, or no lock under `enforce`); `--outdated` moved tag or unsatisfiable constraint; `--fail-on-outdated` | Lock written, served skills left unpinned by the scan |
 | `update` | Done or nothing to do | Cannot run | A source was refused (`AR730`, `AR731`, `AR732`); nothing written | |
 | `doctor` | No errors | Configuration does not load | An error (or, with `--strict`, a warning) | |

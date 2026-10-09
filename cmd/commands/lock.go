@@ -215,9 +215,9 @@ func runLockFor(kind string, names []string) int {
 		var c int
 		switch {
 		case lockSubject:
-			c = lockSubjectAt(path)
+			c = lockRootCode(lockSubjectAt(path))
 		case lockOutdated:
-			c = outdatedAt(path, kind, names)
+			c = lockRootCode(outdatedAt(path, kind, names))
 		case lockCheck:
 			c = checkLockAt(path)
 		case lockDiffFlag:
@@ -228,9 +228,18 @@ func runLockFor(kind string, names []string) int {
 		code = worstExit(code, c)
 	}
 	if len(lockUnpinned) > 0 {
-		fmt.Fprintf(os.Stderr, "%d served skill(s) were left unpinned because the security scan refuses them; fix them, or use --strict to fail instead\n", len(lockUnpinned))
+		fmt.Fprintf(os.Stderr, "%d served skill(s) were left unpinned because the security scan refuses them; fix them, or use --refuse-findings to fail instead\n", len(lockUnpinned))
 	}
 	return code
+}
+
+// lockRootCode renders the failure of one root's step and returns the exit code
+// of it: a --recursive run goes on with the other roots and ends with the worst.
+func lockRootCode(err error) int {
+	if err == nil {
+		return exitOK
+	}
+	return ReportError(os.Stdout, os.Stderr, lockFormat, err)
 }
 
 // lockWarnings is the warning collector the loads of the root being locked
@@ -407,7 +416,7 @@ func checkLockOutContext(ctx context.Context, path string, out render.Out) int {
 		return code
 	}
 	// verifyTagsFor decides whether to ask the remotes: --verify-tags or [lock] verify_tags.
-	c := verifyTagsFor(ctx, cfg)
+	c := lockRootCode(verifyTagsFor(ctx, cfg))
 	if c == 1 {
 		return c
 	}

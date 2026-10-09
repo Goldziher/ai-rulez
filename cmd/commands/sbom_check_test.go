@@ -40,12 +40,12 @@ func TestSBOMCheck_JudgesApprovalsAtTheTimeOfTheCommittedDocument(t *testing.T) 
 	t.Cleanup(func() { sbomNow = time.Now })
 	sbomNow = func() time.Time { return time.Date(2026, 3, 2, 0, 0, 0, 0, time.UTC) }
 	var out, errOut = new(bytes.Buffer), new(bytes.Buffer)
-	require.Equal(t, 0, runSBOM(out, errOut, sbomFlags{format: "cyclonedx", output: committed, timestamp: stamp}, true), errOut.String())
+	require.Equal(t, 0, codeOf(runSBOM(out, errOut, sbomFlags{docType: "cyclonedx", output: committed, timestamp: stamp}, true)), errOut.String())
 
 	// Act: the check runs after the approval expired
 	sbomNow = func() time.Time { return time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC) }
 	out, errOut = new(bytes.Buffer), new(bytes.Buffer)
-	code := runSBOM(out, errOut, sbomFlags{format: "cyclonedx", output: committed, timestamp: stamp, check: true}, true)
+	code := codeOf(runSBOM(out, errOut, sbomFlags{docType: "cyclonedx", output: committed, timestamp: stamp, check: true}, true))
 
 	// Assert
 	assert.Equal(t, 0, code, errOut.String())

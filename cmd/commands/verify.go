@@ -5,7 +5,9 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/render"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -18,14 +20,14 @@ var verifyIfGenerated bool
 // VerifyCmd verifies generated artifacts without modifying them.
 var VerifyCmd = &cobra.Command{
 	Use:   "verify [config-file]",
-	Short: "Verify generated artifacts",
+	Short: "Verify attestations, approvals and plugin provenance",
 	Long: `Verify generated files without modifying them.
 
-Without --plugin, every file in the generated manifest must exist and still match
-the Content-Hash in its own header, which catches hand edits and deleted files
-offline. Use "generate --check" to also catch sources that changed since the last
-generate. With --plugin, generated plugin bundles are checked against their
-provenance hashes.
+verify checks signatures and provenance. It does not report drift: run
+"ai-rulez generate --check" to find generated files that differ from their
+sources (hand edits, deleted files and sources that changed since the last
+generate). With --plugin, generated plugin bundles are checked against their
+provenance hashes (--format json prints {schema_version, status, configs}).
 
 With --attestation, verify instead checks the Sigstore bundle that "ai-rulez sign
 --lock" wrote against the lock and the [signing] policy, offline: the signature,
@@ -48,9 +50,10 @@ against their attestations and the [[signing.trust]] entries for approvals, offl
 --online also asks the forge whether each review-linked approval still holds. See
 docs/approvals.md.
 
-Exit codes: 0 verified, 1 the check could not run, 2 generated files differ (with
---attestation: the attestation failed verification; with --approvals: an approval
-no longer holds).`,
+Exit codes: 0 verified, 1 the check could not run (also a bare "verify" with no
+mode), 2 verification failed (--plugin: the bundle differs from its provenance;
+--attestation: the attestation failed verification; --approvals: an approval no
+longer holds).`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := rejectApprovalFlags(cmd); err != nil {
@@ -78,10 +81,11 @@ no longer holds).`,
 			if verifyIfConfigured || verifyIfGenerated {
 				return fail(oops.Errorf("--if-configured and --if-generated only apply to --plugin"))
 			}
-			return exitStatus(runDriftCheck(args, verifyRecursive, driftManifest))
+			return fail(errVerifyNeedsMode)
 		}
+		out := outFor(cmd)
 		if verifyRecursive {
-			return runRecursivePluginVerify()
+			return finishPluginVerify(out, runRecursivePluginVerify())
 		}
 		cfg, err := loadConfigForCommand(cmdContext(), args, config.WithoutLocal())
 		if err != nil {
@@ -92,18 +96,63 @@ no longer holds).`,
 		}
 		if verifyIfConfigured && !cfg.HasPluginAuthoring() {
 			logger.Info("Skipping plugin verification: no plugin authoring configuration")
-			return nil
+			return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifySkipped, Configs: 0})
 		}
 		if err := generator.NewGenerator(cfg).VerifyPlugin(profile); err != nil {
 			if verifyIfGenerated && errors.Is(err, generator.ErrPluginNotGenerated) {
 				logger.Info("Skipping plugin verification: the plugin bundle has not been generated")
-				return nil
+				return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifySkipped, Configs: 1})
 			}
-			return failWithCode(pluginVerifyExitCode(err), err)
+			return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifyDrift, Configs: 1, err: failWithCode(pluginVerifyExitCode(err), err)})
 		}
 		logger.Success("Generated plugin artifacts are valid", "path", cfg.BaseDir)
-		return nil
+		return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifyOK, Configs: 1})
 	},
+}
+
+// errVerifyNeedsMode ends a `verify` that names nothing to verify. verify used to
+// compare the generated files with their own Content-Hash; that is drift, and
+// `generate --check` reports it (and more: sources that changed since).
+var errVerifyNeedsMode = oops.Hint("run `ai-rulez generate --check` to find generated files that differ from their sources; verify checks signatures and provenance: --attestation, --approvals, --self or --plugin").
+	Errorf("verify no longer checks generated files for drift")
+
+// The status of a `verify --plugin` run.
+const (
+	pluginVerifyOK      = "ok"
+	pluginVerifySkipped = "skipped"
+	pluginVerifyDrift   = "drift"
+)
+
+// pluginVerifyDoc is the `verify --plugin --format json` document
+// (schema/verify-plugin.schema.json). err is the failure of the run, if any.
+type pluginVerifyDoc struct {
+	SchemaVersion int    `json:"schema_version"`
+	Status        string `json:"status"`
+	Configs       int    `json:"configs"`
+	Error         string `json:"error,omitempty"`
+	err           error
+}
+
+// finishPluginVerify prints the --format json document of a plugin verification
+// and returns its outcome. A bundle that drifted is a result, so the document is
+// written and the failure reported once on stderr; any other failure is for the
+// root renderer.
+func finishPluginVerify(out render.Out, doc pluginVerifyDoc) error {
+	if !out.JSON() || (doc.err != nil && exitCodeFor(doc.err) != exitFindings) {
+		return doc.err
+	}
+	doc.SchemaVersion = 1
+	if doc.err != nil {
+		doc.Error = errorText(doc.err)
+	}
+	if err := jsondoc.Write(out.Stdout(), doc); err != nil {
+		return fail(err)
+	}
+	if doc.err != nil {
+		renderError(out.Stderr(), doc.err)
+		return exitStatus(exitCodeFor(doc.err))
+	}
+	return nil
 }
 
 // pluginVerifyExitCode is 2 when the bundle differs from its sources and 1 when
