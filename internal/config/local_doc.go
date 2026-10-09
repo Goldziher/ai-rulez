@@ -227,7 +227,7 @@ func openLocalDoc(configDir, mainConfigFile string, lock bool) (*LocalDoc, error
 	if lock && mainConfigFile == "" {
 		return nil, oops.Hint("Run 'ai-rulez init' first").Errorf("no main config file found in %s", configDir)
 	}
-	baseDir := projectBaseDir(configDir)
+	baseDir := ProjectBaseDir(configDir)
 	d := &LocalDoc{
 		configDir: configDir, mainFile: mainConfigFile,
 		baseDir: baseDir, configDirName: filepath.ToSlash(relConfigDirName(baseDir, configDir)),
@@ -564,7 +564,7 @@ func overlayGitignorePatterns(configDirName string) []string {
 // lock and temp files, and the local/ content tree. Writers of any of them
 // ensure these before writing.
 func LocalGitignorePatterns(configDir string) []string {
-	name := filepath.ToSlash(relConfigDirName(projectBaseDir(configDir), configDir))
+	name := filepath.ToSlash(relConfigDirName(ProjectBaseDir(configDir), configDir))
 	return append(overlayGitignorePatterns(name), name+"/"+localDir+"/")
 }
 

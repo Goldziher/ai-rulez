@@ -11,18 +11,18 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/hooks"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
+	"github.com/Goldziher/ai-rulez/v5/internal/render"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
 
 var (
-	domainsFlag      string
-	skipContentFlag  bool
-	fromFlag         string
-	setupHooks       bool
-	autoYes          bool
-	initConfigDirArg string
+	domainsFlag     string
+	skipContentFlag bool
+	fromFlag        string
+	setupHooks      bool
+	autoYes         bool
 )
 
 var InitCmd = &cobra.Command{
@@ -30,7 +30,13 @@ var InitCmd = &cobra.Command{
 	Short: "Initialize a new AI rules configuration",
 	Long: `Initialize a new AI rules configuration for your project.
 This creates a .ai-rulez/ directory structure with configuration files,
-rules, context, and skills for your selected AI assistants.`,
+rules, context, and skills for your selected AI assistants.
+
+The global --config-dir names the directory to create (default .ai-rulez; use
+.config/ai-rulez for the .config/ convention). An existing directory is never
+deleted: --force moves it aside to <dir>.bak-<timestamp> first, and --yes only
+skips prompts. The created directory is printed on stdout; --format json prints
+a document with its path and the project name instead.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runInit,
 }
@@ -42,14 +48,14 @@ func init() {
 	InitCmd.Flags().BoolVarP(&setupHooks, "setup-hooks", "H", false, "Automatically configure git hooks for ai-rulez validation")
 	addYesFlag(InitCmd.Flags(), &autoYes, "Automatically answer yes to prompts (never replaces an existing configuration directory; see --force)")
 	InitCmd.Flags().Bool("force", false, "Replace an existing configuration directory; the old one is kept as <dir>.bak-<timestamp>")
-	InitCmd.Flags().StringVar(&initConfigDirArg, "config-dir", "", "Configuration directory to create (default: .ai-rulez; use .config/ai-rulez for the .config/ convention)")
+	addResultFormat(InitCmd.Flags())
 }
 
-// initConfigDir returns the configuration directory to scaffold: the
+// initConfigDir returns the configuration directory to scaffold: the global
 // --config-dir value when set (e.g. ".config/ai-rulez"), else ".ai-rulez".
 func initConfigDir() string {
-	if initConfigDirArg != "" {
-		return filepath.Clean(filepath.FromSlash(initConfigDirArg))
+	if configDir != "" {
+		return filepath.Clean(filepath.FromSlash(configDir))
 	}
 	return ".ai-rulez"
 }
@@ -109,11 +115,14 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return failMsg("Failed to write the index.md files", err)
 	}
 
-	displaySuccessMessage(projectName, configDir)
+	out := outFor(cmd)
+	displaySuccessMessage(out, projectName, configDir)
 	if abs, err := filepath.Abs(configDir); err == nil {
 		noteHandWrittenFiles(filepath.Dir(abs))
 	}
-	return nil
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusCreated, Type: "config", Name: projectName, Path: configDir,
+	}, true)
 }
 
 // prepareExistingConfigDir makes room for a new configuration directory. An
@@ -426,41 +435,38 @@ func parseDomains(domainsStr string) []string {
 	return domains
 }
 
-// displaySuccessMessage displays a success message after initialization
-func displaySuccessMessage(projectName, configDir string) {
-	logger.Info("✅ Created "+configDir+"/ directory structure", "project", projectName)
-	logger.Info("\nDirectory structure:")
-	logger.Info("  " + configDir + "/")
-
-	configFilename := configFileTOML
-
-	logger.Info(fmt.Sprintf("  ├── %s", configFilename))
-	logger.Info("  ├── rules/         # Base rules (always included)")
-	logger.Info("  ├── context/       # Base context (always included)")
-	logger.Info("  ├── skills/        # Base skills (always included)")
-	logger.Info("  ├── agents/        # Base agents (always included)")
-	logger.Info("  └── domains/       # Domain-specific content")
+// displaySuccessMessage tells what init created and what to do next. It is
+// progress, not a result: it goes to stderr and -q removes it.
+func displaySuccessMessage(out render.Out, projectName, configDir string) {
+	out.Info("Created %s/ for %s\n\n", configDir, projectName)
+	out.Info("Directory structure:\n")
+	out.Info("  %s/\n", configDir)
+	out.Info("  ├── %s\n", configFileTOML)
+	out.Info("  ├── rules/         # Base rules (always included)\n")
+	out.Info("  ├── context/       # Base context (always included)\n")
+	out.Info("  ├── skills/        # Base skills (always included)\n")
+	out.Info("  ├── agents/        # Base agents (always included)\n")
+	out.Info("  └── domains/       # Domain-specific content\n")
 
 	if !skipContentFlag {
-		logger.Info("\nExample content created:")
-		logger.Info("  - rules/code-quality.md")
-		logger.Info("  - context/architecture.md")
-		logger.Info("  - skills/code-reviewer/SKILL.md")
-		logger.Info("  - skills/ai-rulez/SKILL.md")
+		out.Info("\nExample content created:\n")
+		out.Info("  - rules/code-quality.md\n")
+		out.Info("  - context/architecture.md\n")
+		out.Info("  - skills/code-reviewer/SKILL.md\n")
+		out.Info("  - skills/ai-rulez/SKILL.md\n")
 	}
 
 	if domainsFlag != "" {
-		domains := parseDomains(domainsFlag)
-		logger.Info("\nDomain directories created:")
-		for _, domain := range domains {
-			logger.Info(fmt.Sprintf("  - domains/%s/", domain))
+		out.Info("\nDomain directories created:\n")
+		for _, domain := range parseDomains(domainsFlag) {
+			out.Info("  - domains/%s/\n", domain)
 		}
 	}
 
-	logger.Info("\nNext steps:")
-	logger.Info(fmt.Sprintf("  1. Edit %s/%s to customize presets, profiles, and MCP servers", configDir, configFilename))
-	logger.Info("  2. Add your rules, context, skills, and agents to the appropriate directories")
-	logger.Info("  3. Run 'ai-rulez generate' to create tool-specific outputs")
+	out.Info("\nNext steps:\n")
+	out.Info("  1. Edit %s/%s to customize presets, profiles, and MCP servers\n", configDir, configFileTOML)
+	out.Info("  2. Add your rules, context, skills, and agents to the appropriate directories\n")
+	out.Info("  3. Run 'ai-rulez generate' to create tool-specific outputs\n")
 
 	if setupHooks {
 		handleHooksSetup()
@@ -482,28 +488,9 @@ func getProjectName(args []string) string {
 func shouldOverwriteConfig(filename string) bool {
 	// Only an interactive yes (or --force, handled by the caller) authorizes
 	// replacing an existing directory: neither --yes nor a CI or NO_INTERACTIVE
-	// environment may.
-	stat, err := os.Stdin.Stat()
-	if err != nil {
-		logger.Info("Cannot prompt for input, canceling operation")
-		return false
-	}
-	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		logger.Info("Non-interactive terminal, canceling operation")
-		return false
-	}
-
-	fmt.Printf("Replace existing directory '%s' (it is kept as a backup)? (y/N): ", filename)
-
-	var response string
-	_, err = fmt.Scanln(&response)
-	if err != nil && err.Error() != "unexpected newline" {
-		logger.Info("Failed to read input, canceling operation")
-		return false
-	}
-
-	response = strings.ToLower(strings.TrimSpace(response))
-	return response == "y" || response == answerYes
+	// environment may. The prompt is on stderr; a pipe or CI answers no, and the
+	// caller's error names --force.
+	return askYesNo(fmt.Sprintf("Replace existing directory '%s' (it is kept as a backup)? (y/N): ", filename))
 }
 
 func handleHooksSetup() {

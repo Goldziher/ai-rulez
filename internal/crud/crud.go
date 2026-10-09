@@ -8,6 +8,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/samber/oops"
 )
 
@@ -63,6 +64,7 @@ type Operator interface {
 type OperatorImpl struct {
 	baseDir    string // project directory that owns the config directory
 	aiRulezDir string // config directory: .ai-rulez/ or .config/ai-rulez/
+	dirName    string // slash-separated aiRulezDir below baseDir when chosen explicitly (NewOperatorAt); "" means discover
 	filesMgr   *FileManager
 	local      bool        // route config mutations to the config.local.* overlay (see Local)
 	env        ambient.Env // environment for ~ and $VAR in local include paths; nil is the real one
@@ -110,6 +112,48 @@ func NewOperator(baseDir string) (*OperatorImpl, error) {
 		aiRulezDir: aiRulezDir,
 		filesMgr:   NewFileManager(aiRulezDir),
 	}, nil
+}
+
+// NewOperatorAt creates an Operator for exactly the config directory configDir
+// (any name, absolute or relative), the one a global --config-dir or -C names.
+// Nothing is discovered: a project with several config directories is
+// disambiguated by the caller. The project directory is the one that owns it,
+// skipping the generic .config/ wrapper.
+func NewOperatorAt(configDir string) (*OperatorImpl, error) {
+	abs, err := filepath.Abs(configDir)
+	if err != nil {
+		return nil, oops.With("path", configDir).Wrapf(err, "resolve config directory")
+	}
+	if info, statErr := os.Stat(abs); statErr != nil || !info.IsDir() {
+		if statErr == nil {
+			statErr = oops.Errorf("not a directory")
+		}
+		return nil, oops.
+			With("path", abs).
+			Hint("Check --config-dir / -C, or run 'ai-rulez init' to create the directory structure.").
+			Wrapf(statErr, "config directory not found")
+	}
+	base := config.ProjectBaseDir(abs)
+	rel, err := filepath.Rel(base, abs)
+	if err != nil {
+		return nil, oops.With("path", abs).Wrapf(err, "resolve config directory")
+	}
+	return &OperatorImpl{
+		baseDir:    base,
+		aiRulezDir: abs,
+		dirName:    filepath.ToSlash(rel),
+		filesMgr:   NewFileManager(abs),
+	}, nil
+}
+
+// load reads the project's configuration from the operator's config directory:
+// the explicit one when the operator was opened with NewOperatorAt, else the
+// discovered one under baseDir.
+func (op *OperatorImpl) load(ctx context.Context, opts ...config.LoadOption) (*config.Config, error) {
+	if op.dirName != "" {
+		return project.LoadDir(ctx, op.baseDir, op.dirName, opts...) //nolint:wrapcheck // already contextual
+	}
+	return project.Load(ctx, op.baseDir, opts...) //nolint:wrapcheck // already contextual
 }
 
 // Request and Response Types
