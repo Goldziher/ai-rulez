@@ -33,7 +33,7 @@ func helpExamples() map[*cobra.Command]string {
   ai-rulez approve --diff include:shared
   ai-rulez approve include:shared --reviewer alice@example.org --note "read run.sh" --yes
   ai-rulez approve --revoke include:shared`,
-		VerifyCmd: `  ai-rulez verify
+		VerifyCmd: `  ai-rulez verify --plugin
   ai-rulez verify --approvals
   ai-rulez verify --attestation
   ai-rulez verify --self`,

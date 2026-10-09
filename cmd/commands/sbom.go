@@ -27,9 +27,9 @@ const (
 // sbomFlags are the flags of `ai-rulez sbom`.
 type sbomFlags struct {
 	format, docType, output, files, profile, role, timestamp string
-	online, includeOutputs, noApprovals             bool
-	redactReviewers, verify                         bool
-	requireLock, strictPins, check                  bool
+	online, includeOutputs, noApprovals                      bool
+	redactReviewers, verify                                  bool
+	requireLock, strictPins, check                           bool
 }
 
 var sbomOpts sbomFlags
