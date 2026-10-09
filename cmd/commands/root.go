@@ -52,6 +52,7 @@ func execute() (*cobra.Command, error) {
 	RootCmd.Version = Version
 	RootCmd.SetVersionTemplate("ai-rulez version {{.Version}}\n")
 	requireKnownSubcommands(RootCmd)
+	prepareCommandTree(RootCmd)
 	explainArgErrors(RootCmd)
 	trackActiveCommand(RootCmd)
 	return RootCmd.ExecuteContextC(cmdContext())
@@ -126,8 +127,17 @@ func init() {
 	RootCmd.AddCommand(PublishCmd)
 	RootCmd.AddCommand(ReviewCmd, RubricCmd)
 	RootCmd.AddCommand(NewShowCmd(), NewEditCmd())
+}
 
-	applyHelpExamples()
+// prepareCommandTree finishes the command tree once every init function has
+// registered its commands and flags: it adds cobra's `completion` command (which
+// cobra otherwise adds on first use), attaches the help examples and wires the
+// shell completions. Execute calls it; so do the tests and the docs generator
+// that walk the tree. It is idempotent.
+func prepareCommandTree(root *cobra.Command) {
+	root.InitDefaultCompletionCmd()
+	applyHelpExamples(root)
+	registerCompletions(root)
 }
 
 func initConfig() {
