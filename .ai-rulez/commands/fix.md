@@ -12,7 +12,7 @@ x-ai-rulez:
     usage: /fix
 ---
 
-# Fix
+## Fix
 
 Automatically fix as many issues as possible:
 

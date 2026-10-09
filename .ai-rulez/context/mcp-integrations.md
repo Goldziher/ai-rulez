@@ -15,7 +15,7 @@ x-ai-rulez:
     summary: MCP server configuration and integrations exposing read, CRUD, generate, and validate operations.
 ---
 
-# MCP Server and Integrations
+## MCP Server and Integrations
 
 - MCP server configuration lives inline in `.ai-rulez/config.toml` as `[[mcp_servers]]` entries.
 - Separate `.ai-rulez/mcp.yaml`, `mcp.toml` and `mcp.json` files are no longer read; declare servers as `[[mcp_servers]]`.

@@ -15,7 +15,7 @@ x-ai-rulez:
     summary: External includes from git or local paths with configurable merge strategies.
 ---
 
-# Includes and Merging
+## Includes and Merging
 
 `.ai-rulez/config.toml` can reference external includes to share rules and context.
 
