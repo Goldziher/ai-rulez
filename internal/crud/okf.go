@@ -43,3 +43,13 @@ func (op *OperatorImpl) isBundle() bool {
 
 // ConfigDir is the configuration directory the operator writes to.
 func (op *OperatorImpl) ConfigDir() string { return op.aiRulezDir }
+
+// ConfigFile is the file the profile, include and installed-skill operations
+// write: the shared config.toml, or the machine-local overlay for a Local
+// operator.
+func (op *OperatorImpl) ConfigFile() string {
+	if op.local {
+		return filepath.Join(op.aiRulezDir, "config.local.toml")
+	}
+	return filepath.Join(op.aiRulezDir, "config.toml")
+}

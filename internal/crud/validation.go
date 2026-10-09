@@ -131,6 +131,13 @@ func ValidateNewFileName(name string) error {
 			Hint("Pass the name without the .md extension; it is added for you.").
 			Errorf("file name must not end in .md: %s", name)
 	}
+	if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "-") {
+		return oops.
+			With("field", "file_name").
+			With("value", name).
+			Hint("Start the name with a letter or digit: a leading '.' hides the file and a leading '-' reads as a flag.").
+			Errorf("file name must not start with %q: %s", name[:1], name)
+	}
 	if strings.IndexFunc(name, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 {
 		return oops.
 			With("field", "file_name").
@@ -186,6 +193,7 @@ func ValidatePriority(priority string) error {
 		"high":          true,
 		PriorityDefault: true,
 		"low":           true,
+		"minimal":       true,
 		"":              true, // Empty is allowed (defaults to medium)
 	}
 
@@ -193,7 +201,7 @@ func ValidatePriority(priority string) error {
 		return oops.
 			With("field", "priority").
 			With("value", priority).
-			Hint("Valid priorities: critical, high, medium, low (or leave empty for medium).").
+			Hint("Valid priorities: critical, high, medium, low, minimal (or leave empty for medium).").
 			Errorf("invalid priority level: %s", priority)
 	}
 

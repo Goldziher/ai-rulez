@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
@@ -31,6 +30,9 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 	}
 
 	if err := ValidatePriority(req.DefaultPriority()); err != nil {
+		return nil, err
+	}
+	if err := ValidateTargets(req.Targets); err != nil {
 		return nil, err
 	}
 
@@ -99,6 +101,9 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 	}
 
 	if err := ValidatePriority(req.DefaultPriority()); err != nil {
+		return nil, err
+	}
+	if err := ValidateTargets(req.Targets); err != nil {
 		return nil, err
 	}
 
@@ -173,6 +178,9 @@ func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*Fil
 	if err := ValidatePriority(req.DefaultPriority()); err != nil {
 		return nil, err
 	}
+	if err := ValidateTargets(req.Targets); err != nil {
+		return nil, err
+	}
 
 	// Validate domain if specified
 	if req.Domain != "" {
@@ -196,7 +204,12 @@ func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*Fil
 
 	// Generate content if not provided
 	content := req.Content
-	description := config.SkillDescriptionOrFallback(req.Description, req.Name)
+	description := strings.TrimSpace(req.Description)
+	if description == "" {
+		// A scaffold must pass `validate` as written: AR802 wants at least
+		// 20 characters, which the bare name never reaches.
+		description = fmt.Sprintf("Describe what the %s skill does and when an assistant should use it", req.Name)
+	}
 	if content == "" {
 		content = GenerateSkillTemplate(req.Name, description, req.DefaultPriority(), req.Targets, "")
 	} else if !strings.HasPrefix(content, "---") {
@@ -227,8 +240,43 @@ func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*Fil
 	}, nil
 }
 
+// ContentPath is what RemoveFile deletes for the item: the file, or the whole
+// directory for a skill. It does not check that the item exists.
+func (op *OperatorImpl) ContentPath(domain, ftype, name string) string {
+	if ftype == ContentTypeSkills {
+		return filepath.Join(op.filesMgr.GetSkillsPath(domain), name)
+	}
+	return op.filesMgr.GetFilePath(domain, ftype, name)
+}
+
 // RemoveFile deletes a file or skill directory
 func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name string) error {
+	if err := op.RequireContent(ctx, domain, ftype, name); err != nil {
+		return err
+	}
+
+	// Delete file or skill directory
+	if ftype == ContentTypeSkills {
+		// Delete skill directory
+		skillDir := filepath.Join(op.filesMgr.GetSkillsPath(domain), name)
+		if err := op.filesMgr.DeleteDirectory(skillDir); err != nil {
+			return err
+		}
+	} else {
+		// Delete file
+		filePath := op.filesMgr.GetFilePath(domain, ftype, name)
+		if err := op.filesMgr.DeleteFile(filePath); err != nil {
+			return err
+		}
+	}
+
+	return op.refreshIndexes(ctx)
+}
+
+// RequireContent reports why the item cannot be read, changed or removed (a bad name, an unknown
+// domain, nothing of that name) without touching anything. A caller asks it
+// before it asks the user to confirm a removal or reads the item.
+func (op *OperatorImpl) RequireContent(ctx context.Context, domain, ftype, name string) error {
 	// Validate inputs
 	if err := ValidateFileName(name); err != nil {
 		return err
@@ -275,22 +323,7 @@ func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name stri
 			Errorf("%s %q not found: no such file or skill at %s", ftype, name, filePath)
 	}
 
-	// Delete file or skill directory
-	if ftype == ContentTypeSkills {
-		// Delete skill directory
-		skillDir := filepath.Join(op.filesMgr.GetSkillsPath(domain), name)
-		if err := op.filesMgr.DeleteDirectory(skillDir); err != nil {
-			return err
-		}
-	} else {
-		// Delete file
-		filePath := op.filesMgr.GetFilePath(domain, ftype, name)
-		if err := op.filesMgr.DeleteFile(filePath); err != nil {
-			return err
-		}
-	}
-
-	return op.refreshIndexes(ctx)
+	return nil
 }
 
 // ListFiles returns information about all files of a specific type
@@ -450,6 +483,9 @@ func (op *OperatorImpl) UpdateFile(ctx context.Context, domain, ftype, name, con
 		priority = PriorityDefault
 	}
 	if err := ValidatePriority(priority); err != nil {
+		return nil, err
+	}
+	if err := ValidateTargets(targets); err != nil {
 		return nil, err
 	}
 
