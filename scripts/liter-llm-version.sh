@@ -3,13 +3,12 @@
 #
 # go.mod is the single source of truth: the native static library fetched at release time is the
 # asset of the same release as the Go binding. Every go.mod in the repo that requires a
-# github.com/xberg-io/liter-llm module (the root module and internal/llm/literllm) must agree; a
-# disagreement fails instead of silently picking one.
+# github.com/xberg-io/liter-llm module must agree; a disagreement fails instead of silently
+# picking one.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 mods=("$root/go.mod")
-[ -f "$root/internal/llm/literllm/go.mod" ] && mods+=("$root/internal/llm/literllm/go.mod")
 
 versions=""
 for mod in "${mods[@]}"; do
