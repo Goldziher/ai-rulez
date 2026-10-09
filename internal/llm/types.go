@@ -2,9 +2,8 @@
 //
 // Features that need a model (rubric graders, semantic review, embeddings,
 // verifiers) depend on Client and never on a provider SDK. New builds a Client
-// from the [llm] config: a backend (pure-Go OpenAI-compatible HTTP, or the
-// optional liter-llm binding behind the literllm build tag) wrapped in
-// middleware for the network gate, cache, retries, budget and redaction.
+// from the [llm] config: the liter-llm binding (providers, retries, errors and prices come from it)
+// wrapped in middleware for the network gate, cache, budget and redaction.
 //
 // Nothing here calls out unless the config sets allow_network = true. Prompts
 // and API keys are never logged.
@@ -67,6 +66,9 @@ type ChatRequest struct {
 type Usage struct {
 	PromptTokens     int `json:"prompt_tokens"`
 	CompletionTokens int `json:"completion_tokens"`
+	// CachedTokens is the part of PromptTokens the provider served from its prompt cache (billed
+	// at the cache-read rate); 0 when unreported.
+	CachedTokens int `json:"cached_tokens,omitempty"`
 }
 
 // Total returns prompt plus completion tokens.

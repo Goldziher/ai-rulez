@@ -16,13 +16,6 @@ import (
 // CodeConfigInvalid is the strict-validation code for a bad [llm] table.
 const CodeConfigInvalid = "AR9L0"
 
-// Backend names accepted in config.
-const (
-	BackendAuto         = "auto"
-	BackendOpenAICompat = "openaicompat"
-	BackendLiterLLM     = "literllm"
-)
-
 // URL schemes accepted in [llm] base_url.
 const (
 	schemeHTTP  = "http"
@@ -34,12 +27,10 @@ const (
 //
 //nolint:tagliatelle // config keys are snake_case by project convention
 type Config struct {
-	// Provider is the provider prefix for `provider/model` routing (used by the literllm backend).
+	// Provider is the provider prefix for `provider/model` routing.
 	Provider string `yaml:"provider,omitempty" json:"provider,omitempty" toml:"provider,omitempty"`
-	// Model is the chat model, sent verbatim by openaicompat and as provider/model by literllm.
+	// Model is the chat model, sent to liter-llm as provider/model.
 	Model string `yaml:"model,omitempty" json:"model,omitempty" toml:"model,omitempty"`
-	// Backend is auto, openaicompat or literllm. Empty means auto.
-	Backend string `yaml:"backend,omitempty" json:"backend,omitempty" toml:"backend,omitempty"`
 	// BaseURL is the API root, e.g. https://gateway.internal/v1.
 	BaseURL string `yaml:"base_url,omitempty" json:"base_url,omitempty" toml:"base_url,omitempty"`
 	// APIKeyEnv names the environment variable holding the API key. Never the key itself.
@@ -168,7 +159,6 @@ func (c *Config) applyStringOverrides(getenv func(string) string) {
 	if envValue(getenv, "EMBEDDING_MODEL") != "" {
 		c.repoEmbedRoute = false
 	}
-	setIf("BACKEND", &c.Backend)
 	setIf("BASE_URL", &c.BaseURL)
 	setIf("API_KEY_ENV", &c.APIKeyEnv)
 	setIf("EMBEDDING_MODEL", &c.EmbeddingModel)
@@ -271,11 +261,6 @@ func looksLikeSecret(v string) bool {
 // returns one message per problem. Every message belongs to AR9L0.
 func (c Config) Validate() []string {
 	var out []string
-	switch c.Backend {
-	case "", BackendAuto, BackendOpenAICompat, BackendLiterLLM:
-	default:
-		out = append(out, "backend is not one of auto, openaicompat, literllm")
-	}
 	out = append(out, c.validateAPIKeyEnv()...)
 	out = append(out, c.validateBaseURL()...)
 	out = append(out, c.validatePlainHTTP()...)
