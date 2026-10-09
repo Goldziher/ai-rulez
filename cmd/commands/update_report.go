@@ -8,7 +8,8 @@ import (
 	"github.com/samber/oops"
 )
 
-func finishUpdate(rep *updateReport, code int) int {
+// finishUpdate prints the report and returns outcome, the result of the update.
+func finishUpdate(rep *updateReport, outcome error) error {
 	sort.Slice(rep.Updates, func(i, j int) bool {
 		if rep.Updates[i].Kind != rep.Updates[j].Kind {
 			return rep.Updates[i].Kind < rep.Updates[j].Kind
@@ -17,13 +18,12 @@ func finishUpdate(rep *updateReport, code int) int {
 	})
 	if updateFormat == formatJSON {
 		if err := writeRawJSON(os.Stdout, rep); err != nil {
-			renderStderr(oops.Wrapf(err, "write the report"))
-			return 1
+			return fail(oops.Wrapf(err, "write the report"))
 		}
-		return code
+		return outcome
 	}
 	writeUpdateText(rep)
-	return code
+	return outcome
 }
 
 // writeUpdateItem prints one update and reports whether its scan refused it.
