@@ -62,7 +62,7 @@ func telemetryProject(t *testing.T) string {
 }
 
 func TestTelemetry_ReadAndListToolsEmitMCPEvents(t *testing.T) {
-	srv := NewServer("test")
+	srv := NewServer("test", WithAnyDirectory())
 	rec := &fakeRecorder{}
 	srv.SetTelemetry(rec, TelemetryOptions{Harness: "claude", Role: "backend", Session: "5b1c0e9a7d3f2a64"})
 	session := connect(t, srv)
@@ -91,7 +91,7 @@ func TestTelemetry_ReadAndListToolsEmitMCPEvents(t *testing.T) {
 }
 
 func TestTelemetry_FailedCallsAndDisabledTelemetryEmitNothing(t *testing.T) {
-	srv := NewServer("test")
+	srv := NewServer("test", WithAnyDirectory())
 	rec := &fakeRecorder{}
 	srv.SetTelemetry(rec, TelemetryOptions{})
 	session := connect(t, srv)
@@ -103,7 +103,7 @@ func TestTelemetry_FailedCallsAndDisabledTelemetryEmitNothing(t *testing.T) {
 	assert.Empty(t, rec.snapshot(), "a failed read and a write are not loads")
 
 	// With telemetry never set, the same calls behave as before and nothing panics.
-	plain := connect(t, NewServer("test"))
+	plain := connect(t, NewServer("test", WithAnyDirectory()))
 	assert.False(t, call(t, plain, "read_rule", map[string]any{"name": "atomic-commits", "working_directory": dir}).IsError)
 
 	// Setting a nil recorder turns it off again.

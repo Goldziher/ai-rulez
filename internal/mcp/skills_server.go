@@ -68,9 +68,9 @@ func NewSkillServerWith(version string, catalog *Catalog, opts ServeOptions) *Se
 	caps.AddExtension(SkillsExtensionID, map[string]any{"directoryRead": true})
 	mcpServer := sdkmcp.NewServer(
 		&sdkmcp.Implementation{Name: "ai-rulez-skills", Title: "AI-Rulez Skills", Version: version},
-		&sdkmcp.ServerOptions{Capabilities: caps, Instructions: skillServerInstructions},
+		&sdkmcp.ServerOptions{Capabilities: caps, Instructions: skillServerInstructions, Logger: sdkLogger(), PageSize: pageSize},
 	)
-	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware())
+	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware(mcpServer))
 
 	srv := &Server{mcpServer: mcpServer, version: version, catalog: catalog, serve: newServeState(opts)}
 	mcpServer.AddReceivingMiddleware(srv.unknownResourceMiddleware())
@@ -139,30 +139,21 @@ func (s *Server) unknownResourceMiddleware() sdkmcp.Middleware {
 }
 
 func (s *Server) registerSkillTools() {
-	s.addTool(
-		newAnnotatedTool("search_skills", "Search the served skills by name, keywords and description (lexical ranking). An empty query lists every skill.",
-			newSchemaBuilder().
-				String("query", "Words to look for; empty lists all skills", false).
-				Number("limit", fmt.Sprintf("Maximum results (default %d, max %d)", defaultSearchLimit, maxSearchLimit), false).
-				String("domain", "Only skills owned by this domain ('root' for skills in no domain)", false),
-			readOnlyAnnotations(),
-		),
-		s.searchSkillsHandler,
-	)
-	s.addTool(
-		newAnnotatedTool("get_skill", "Load one skill: its SKILL.md text, provenance, and the digest of every file",
-			newSchemaBuilder().String("name", "Skill name or the skill:// URI of its SKILL.md", true),
-			readOnlyAnnotations(),
-		),
-		s.getSkillHandler,
-	)
-	s.addTool(
-		newAnnotatedTool("read_skill_file", "Read a supporting file of a served skill by its skill:// URI",
-			newSchemaBuilder().String("uri", "skill://<name>/<path> URI from get_skill or skills/list", true),
-			readOnlyAnnotations(),
-		),
-		s.readSkillFileHandler,
-	)
+	addTool[searchSkillsIn](s, toolSpec{
+		name: "search_skills", title: "Search Skills",
+		description: "Search the served skills by name, keywords and description (lexical ranking). An empty query lists every skill.",
+		annotations: readOnlyAnnotations(), output: skillSearchOut{},
+	}, s.searchSkillsHandler)
+	addTool[getSkillIn](s, toolSpec{
+		name: "get_skill", title: "Get Skill",
+		description: "Load one skill: its SKILL.md text, provenance, and the digest of every file",
+		annotations: readOnlyAnnotations(), output: skillOut{},
+	}, s.getSkillHandler)
+	addTool[readSkillFileIn](s, toolSpec{
+		name: "read_skill_file", title: "Read Skill File",
+		description: "Read a supporting file of a served skill by its skill:// URI",
+		annotations: readOnlyAnnotations(), output: skillOut{},
+	}, s.readSkillFileHandler)
 }
 
 func (s *Server) searchSkillsHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {

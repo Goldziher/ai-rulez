@@ -21,38 +21,21 @@ const (
 )
 
 func (s *Server) registerServeTools() {
-	s.addTool(
-		newAnnotatedTool(toolFindSkill,
-			"Find skills for a task. Returns ranked matches (name, description, score) over skill names, triggers, keywords and descriptions; load one with load_skill. Call this before starting work in an unfamiliar area.",
-			newSchemaBuilder().
-				String("task", "What you are about to do, in a sentence", true).
-				Number("limit", fmt.Sprintf("Maximum results (default %d, max %d)", defaultFindLimit, maxFindLimit), false).
-				String("role", "Rank the skills of this role first (default: the server's role)", false),
-			readOnlyAnnotations(),
-		),
-		s.findSkillHandler,
-	)
-	s.addTool(
-		newAnnotatedTool(toolLoadSkill,
-			"Load a skill: its SKILL.md (or one supporting file via path), provenance with digests, and an index of the skill's other files. Each session has a byte budget.",
-			newSchemaBuilder().
-				String("name", "Skill name from find_skill", true).
-				String("path", "File inside the skill, for example references/FORMS.md (default SKILL.md)", false).
-				Number("budget_bytes", "Return at most this many bytes of the file (default: the whole file)", false),
-			readOnlyAnnotations(),
-		),
-		s.loadSkillHandler,
-	)
-	s.addTool(
-		newAnnotatedTool(toolListSkillResources,
-			"List the files of a skill (references, scripts, assets) with size and digest, without loading them",
-			newSchemaBuilder().
-				String("name", "Skill name from find_skill", true).
-				Number("offset", fmt.Sprintf("Index of the first file to list (at most %d files are listed per call; see next_offset)", maxListedResources), false),
-			readOnlyAnnotations(),
-		),
-		s.listSkillResourcesHandler,
-	)
+	addTool[findSkillIn](s, toolSpec{
+		name: toolFindSkill, title: "Find Skill",
+		description: "Find skills for a task. Returns ranked matches (name, description, score) over skill names, triggers, keywords and descriptions; load one with load_skill. Call this before starting work in an unfamiliar area.",
+		annotations: readOnlyAnnotations(), output: skillSearchOut{},
+	}, s.findSkillHandler)
+	addTool[loadSkillIn](s, toolSpec{
+		name: toolLoadSkill, title: "Load Skill",
+		description: "Load a skill: its SKILL.md (or one supporting file via path), provenance with digests, and an index of the skill's other files. Each session has a byte budget.",
+		annotations: readOnlyAnnotations(), output: skillOut{},
+	}, s.loadSkillHandler)
+	addTool[listSkillResourcesIn](s, toolSpec{
+		name: toolListSkillResources, title: "List Skill Resources",
+		description: fmt.Sprintf("List the files of a skill (references, scripts, assets) with size and digest, without loading them; at most %d files are listed per call, see next_offset", maxListedResources),
+		annotations: readOnlyAnnotations(), output: skillOut{},
+	}, s.listSkillResourcesHandler)
 }
 
 func (s *Server) findSkillHandler(ctx context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
