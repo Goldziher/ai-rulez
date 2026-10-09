@@ -98,6 +98,9 @@ func init() {
 		logger.Debug("Failed to mark source flag as required", "error", err)
 	}
 
+	addResultFormat(skillInstallCmd.Flags())
+	addResultFormat(skillRemoveCmd.Flags())
+
 	// Flags for skill remove
 	addYesFlag(skillRemoveCmd.Flags(), &skillForce, "Skip confirmation prompts")
 
@@ -108,13 +111,11 @@ func init() {
 func runSkillInstall(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
+	out := outFor(cmd)
 	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(skillLocal)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
-	}
-	if skillLocal {
-		op = op.Local()
 	}
 
 	req := &crud.InstallSkillRequest{
@@ -128,7 +129,10 @@ func runSkillInstall(cmd *cobra.Command, args []string) error {
 		return failMsg("Failed to install skill", err)
 	}
 
-	return nil
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusCreated, Type: "installed_skill", Name: name, Source: incl.RedactURL(skillSource),
+		Path: op.ConfigFile(), Local: skillLocal,
+	}, false)
 }
 
 func runSkillRemove(cmd *cobra.Command, args []string) error {
@@ -138,26 +142,26 @@ func runSkillRemove(cmd *cobra.Command, args []string) error {
 		return fail(err)
 	}
 
+	out := outFor(cmd)
 	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(skillLocal)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
-	}
-	if skillLocal {
-		op = op.Local()
 	}
 
 	if err := op.UninstallSkill(ctx, name); err != nil {
 		return failMsg("Failed to remove installed skill", err)
 	}
 
-	return nil
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusRemoved, Type: "installed_skill", Name: name, Path: op.ConfigFile(), Local: skillLocal,
+	}, false)
 }
 
 func runSkillList(cmd *cobra.Command, _ []string) error {
 	out := outFor(cmd)
 	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(false)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
 	}

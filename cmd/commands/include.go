@@ -77,6 +77,9 @@ func init() {
 	includeAddCmd.Flags().StringVarP(&includeMergeStrat, "merge-strategy", "m", "", "Merge strategy: local-override (default), include-override, or error")
 	includeAddCmd.Flags().StringVarP(&includeInstallTo, "install-to", "t", "", "Installation path (optional)")
 
+	addResultFormat(includeAddCmd.Flags())
+	addResultFormat(includeRemoveCmd.Flags())
+
 	// Add flags for include remove
 	addYesFlag(includeRemoveCmd.Flags(), &includeForce, "Skip confirmation prompts")
 
@@ -99,13 +102,11 @@ func runIncludeAdd(cmd *cobra.Command, args []string) error {
 		includeList = []string{crud.ContentTypeRules, crud.ContentTypeContext, crud.ContentTypeSkills}
 	}
 
+	out := outFor(cmd)
 	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(includeLocal)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
-	}
-	if includeLocal {
-		op = op.Local()
 	}
 
 	req := &crud.AddIncludeRequest{
@@ -122,7 +123,10 @@ func runIncludeAdd(cmd *cobra.Command, args []string) error {
 		return failMsg("Failed to add include", err)
 	}
 
-	return nil
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusCreated, Type: "include", Name: name, Source: incl.RedactURL(source),
+		Path: op.ConfigFile(), Local: includeLocal,
+	}, false)
 }
 
 func runIncludeRemove(cmd *cobra.Command, args []string) error {
@@ -132,26 +136,26 @@ func runIncludeRemove(cmd *cobra.Command, args []string) error {
 		return fail(err)
 	}
 
+	out := outFor(cmd)
 	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(includeLocal)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
-	}
-	if includeLocal {
-		op = op.Local()
 	}
 
 	if err := op.RemoveInclude(ctx, name); err != nil {
 		return failMsg("Failed to remove include", err)
 	}
 
-	return nil
+	return reportChange(out, out.JSON(), changeResult{
+		Status: statusRemoved, Type: "include", Name: name, Path: op.ConfigFile(), Local: includeLocal,
+	}, false)
 }
 
 func runIncludeList(cmd *cobra.Command, _ []string) error {
 	out := outFor(cmd)
 	ctx := cmdContext()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(false)
 	if err != nil {
 		return failMsg("Failed to create CRUD operator", err)
 	}

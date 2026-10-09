@@ -33,6 +33,7 @@ const (
 	failOnWarning = "warning"
 	failOnInfo    = "info"
 	kindSkill     = "skill"
+	kindCommand   = "command"
 	presetClaude  = "claude"
 	labelChanged  = "changed"
 )

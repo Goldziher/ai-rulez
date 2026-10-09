@@ -9,11 +9,11 @@ import (
 )
 
 // GuardCmd is the PreToolUse hook that `[guard] generated = true` adds to each
-// harness. It is hidden: people never run it, the harness does.
+// harness. The harness runs it, but it is a documented command a person can try
+// by piping a payload into it, so it is listed in the help.
 var GuardCmd = &cobra.Command{
-	Use:    "guard",
-	Short:  "Block agent edits to generated files (PreToolUse hook)",
-	Hidden: true,
+	Use:   "guard",
+	Short: "Block agent edits to generated files (PreToolUse hook)",
 	Long: `Read a harness PreToolUse hook payload on stdin and block the tool call when it
 edits a file ai-rulez generated.
 

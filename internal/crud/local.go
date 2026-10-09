@@ -41,7 +41,13 @@ const localContentDir = "local"
 func (op *OperatorImpl) IsLocal() bool { return op.local }
 
 func (op *OperatorImpl) openLocalDoc() (*config.LocalDoc, error) {
-	doc, err := config.OpenLocalDocInDir(op.baseDir)
+	var doc *config.LocalDoc
+	var err error
+	if op.dirName != "" {
+		doc, err = config.OpenLocalDocAt(op.aiRulezDir)
+	} else {
+		doc, err = config.OpenLocalDocInDir(op.baseDir)
+	}
 	if err != nil {
 		return nil, oops.With("base_dir", op.baseDir).Wrapf(err, "open local config")
 	}
@@ -51,7 +57,7 @@ func (op *OperatorImpl) openLocalDoc() (*config.LocalDoc, error) {
 // loadMerged loads the shared config plus the local overlay, for existence
 // checks that must see both layers.
 func (op *OperatorImpl) loadMerged(ctx context.Context) (*config.Config, error) {
-	cfg, err := project.Load(config.WithOfflineIncludes(ctx), op.baseDir)
+	cfg, err := op.load(config.WithOfflineIncludes(ctx))
 	if err != nil {
 		return nil, oops.With("base_dir", op.baseDir).Wrapf(err, "load config")
 	}
@@ -59,7 +65,7 @@ func (op *OperatorImpl) loadMerged(ctx context.Context) (*config.Config, error) 
 }
 
 func (op *OperatorImpl) loadShared(ctx context.Context) (*config.Config, error) {
-	cfg, err := project.Load(config.WithOfflineIncludes(ctx), op.baseDir, config.WithoutLocal())
+	cfg, err := op.load(config.WithOfflineIncludes(ctx), config.WithoutLocal())
 	if err != nil {
 		return nil, oops.With("base_dir", op.baseDir).Wrapf(err, "load config")
 	}

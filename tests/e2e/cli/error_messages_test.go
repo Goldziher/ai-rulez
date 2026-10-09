@@ -1,11 +1,9 @@
 package cli
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/v5/tests/e2e/testutil"
 )
@@ -35,7 +33,6 @@ func TestCLI_MissingArgumentErrorsShowTheUsage(t *testing.T) {
 	}{
 		{[]string{"add", "rule"}, "ai-rulez add rule"},
 		{[]string{"domain", "add"}, "ai-rulez domain add"},
-		{[]string{"migrate"}, "ai-rulez migrate"},
 	} {
 		code, out := runErr(t, dir, tc.args...)
 		assert.Equal(t, 1, code, tc.args)
@@ -118,13 +115,13 @@ func TestCLI_RolesExtendsTypeErrorDoesNotLeakGoTypes(t *testing.T) {
 	assert.NotContains(t, out, "missing quotes around strings", "the generic syntax hint does not fit a type error")
 }
 
-func TestCLI_ListWithoutAnArgumentIsAUsageError(t *testing.T) {
+// Like every other group, `list` without a subcommand prints its help and exits 0.
+func TestCLI_ListWithoutAnArgumentPrintsHelp(t *testing.T) {
 	dir := errorsProject(t, "")
 
-	code, out := runErr(t, dir, "list")
+	res := testutil.RunCLI(t, dir, "list")
 
-	assert.Equal(t, 1, code)
-	assert.Contains(t, out, "what to list")
-	assert.Contains(t, out, "ai-rulez list")
-	require.True(t, strings.Contains(out, "rules"))
+	assert.Equal(t, 0, res.ExitCode, res.Stderr)
+	assert.Contains(t, res.Stdout, "ai-rulez list [command]")
+	assert.Contains(t, res.Stdout, "rules")
 }

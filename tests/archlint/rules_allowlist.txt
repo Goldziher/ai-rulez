@@ -58,7 +58,7 @@ global cmd/commands/improve_adapter.go 5
 global cmd/commands/improve_pr.go 3
 global cmd/commands/improve_show.go 3
 global cmd/commands/include.go 12
-global cmd/commands/init.go 8
+global cmd/commands/init.go 7
 global cmd/commands/list.go 12
 global cmd/commands/llm.go 6
 global cmd/commands/local.go 11
@@ -69,7 +69,7 @@ global cmd/commands/lock_outdated.go 3
 global cmd/commands/lock_pin_scan.go 1
 global cmd/commands/mcp.go 1
 global cmd/commands/mcp_serve.go 1
-global cmd/commands/migrate.go 8
+global cmd/commands/migrate.go 7
 global cmd/commands/okf.go 18
 global cmd/commands/policy.go 16
 global cmd/commands/profile.go 9
