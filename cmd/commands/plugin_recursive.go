@@ -63,37 +63,37 @@ func selectRecursivePluginConfigs(paths []string) ([]string, error) {
 	return selected, nil
 }
 
-func runRecursivePluginVerify() error {
+func runRecursivePluginVerify() pluginVerifyDoc {
 	if !verifyPlugin {
-		return fail(oops.Errorf("verify --recursive requires --plugin"))
+		return pluginVerifyDoc{err: fail(oops.Errorf("verify --recursive requires --plugin"))}
 	}
 	paths, err := selectRecursivePluginConfigs(findConfigFilesRecursively())
 	if err != nil {
-		return fail(err)
+		return pluginVerifyDoc{err: fail(err)}
 	}
 	if len(paths) == 0 {
 		if verifyIfConfigured {
 			logger.Info("Skipping plugin verification: no plugin authoring configuration")
-			return nil
+			return pluginVerifyDoc{Status: pluginVerifySkipped}
 		}
-		return fail(oops.Errorf("no plugin authoring configuration found"))
+		return pluginVerifyDoc{err: fail(oops.Errorf("no plugin authoring configuration found"))}
 	}
 	for _, path := range paths {
 		cfg, err := loadProjectFile(cmdContext(), path, config.WithoutLocal())
 		if err != nil {
-			return fail(err)
+			return pluginVerifyDoc{err: fail(err)}
 		}
 		if err := cfg.Validate(); err != nil {
-			return fail(err)
+			return pluginVerifyDoc{err: fail(err)}
 		}
 		if err := generator.NewGenerator(cfg).VerifyPlugin(profile); err != nil {
 			if verifyIfGenerated && errors.Is(err, generator.ErrPluginNotGenerated) {
 				logger.Info("Skipping plugin verification: the plugin bundle has not been generated", "config", path)
 				continue
 			}
-			return failWithCode(pluginVerifyExitCode(err), oops.With("config", path).Wrapf(err, "verify plugin outputs"))
+			return pluginVerifyDoc{Status: pluginVerifyDrift, Configs: len(paths), err: failWithCode(pluginVerifyExitCode(err), oops.With("config", path).Wrapf(err, "verify plugin outputs"))}
 		}
 	}
 	logger.Success("Generated plugin artifacts are valid", "configs", len(paths))
-	return nil
+	return pluginVerifyDoc{Status: pluginVerifyOK, Configs: len(paths)}
 }

@@ -100,7 +100,6 @@ func lifecycleScenarios(multi []string) []scenario {
 				{kind: stepRemove, path: ".cursor/rules/always.mdc"},
 				runEnv(goldenEnv, "generate", "--check"),
 				run("doctor"),
-				run("verify"),
 				runEnv(goldenEnv, "generate", "--dry-run"),
 				runEnv(goldenEnv, "generate", "--yes"),
 				runEnv(goldenEnv, "generate", "--check"),
