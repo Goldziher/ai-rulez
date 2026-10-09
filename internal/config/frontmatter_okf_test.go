@@ -106,3 +106,29 @@ func TestProseIndexFileStaysContent(t *testing.T) {
 		t.Fatalf("a rule named index was dropped: %+v", tree.Rules)
 	}
 }
+
+// NativeContent uses the shared frontmatter splitter, so it agrees with the
+// loader about a BOM, an opener or closer with trailing spaces, and CRLF.
+func TestNativeContentSharesTheFrontmatterSplitter(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"BOM before the fence", "\xef\xbb\xbf---\ntype: Rule\ntitle: T\npriority: high\n---\nbody\n", "---\npriority: high\n---\nbody\n"},
+		{"opener with trailing space", "--- \ntype: Rule\ntitle: T\npriority: high\n---\nbody\n", "---\npriority: high\n---\nbody\n"},
+		{"closer with trailing space", "---\ntype: Rule\ntitle: T\npriority: high\n--- \nbody\n", "---\npriority: high\n---\nbody\n"},
+		{"CRLF", "---\r\ntype: Rule\r\ntitle: T\r\npriority: high\r\n---\r\nbody\r\n", "---\npriority: high\n---\nbody\r\n"},
+		{"only reserved keys leaves an empty mapping", "---\ntype: Rule\ntitle: T\n---\nbody\n", "---\n{}\n---\nbody\n"},
+		{"no frontmatter", "# Title\n", "# Title\n"},
+		{"unclosed block is returned as it is", "---\ntype: Rule\nbody\n", "---\ntype: Rule\nbody\n"},
+		{"a table rule does not close the block", "---\ntype: Rule\npriority: high\n---\nbody\n\n---\nnot closing\n", "---\npriority: high\n---\nbody\n\n---\nnot closing\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NativeContent(tt.in); got != tt.want {
+				t.Fatalf("NativeContent(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
