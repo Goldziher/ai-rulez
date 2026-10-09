@@ -72,7 +72,10 @@ func (r *RunReport) writeText(w io.Writer) error {
 	}
 	b.WriteString("\n")
 	tw := tabwriter.NewWriter(&b, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(tw, "SKILL\tSTATUS\tCASES\tPASS\tPRECISION\tRECALL\tABLATION\tTOKENS\tCOST")
+	row := func(format string, args ...any) {
+		_, _ = fmt.Fprintf(tw, format, args...) //nolint:errcheck // the tabwriter writes to a strings.Builder, which cannot fail
+	}
+	row("SKILL\tSTATUS\tCASES\tPASS\tPRECISION\tRECALL\tABLATION\tTOKENS\tCOST\n")
 	for i := range r.Skills {
 		s := &r.Skills[i]
 		if s.Status == RunNoCases || s.Status == RunNotChanged {
@@ -83,11 +86,11 @@ func (r *RunReport) writeText(w io.Writer) error {
 			if s.Estimate != nil {
 				cost = fmt.Sprintf("~$%.2f", s.Estimate.CostUSD)
 			}
-			fmt.Fprintf(tw, "%s\t%s\t%d\t-\t-\t-\t-\t-\t%s\n", s.ID, s.Status, s.CaseCount, cost)
+			row("%s\t%s\t%d\t-\t-\t-\t-\t-\t%s\n", s.ID, s.Status, s.CaseCount, cost)
 			continue
 		}
 		sc := s.Score
-		fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\t%s\t%d\t$%.2f\n", s.ID, statusLabel(s), sc.Scored,
+		row("%s\t%s\t%d\t%s\t%s\t%s\t%s\t%d\t$%.2f\n", s.ID, statusLabel(s), sc.Scored,
 			Percent(&sc.PassRate), Percent(sc.TriggerPrecision), Percent(sc.TriggerRecall), deltaText(sc.AblationDelta), sc.SkillTokens, sc.CostUSD)
 	}
 	if err := tw.Flush(); err != nil {
