@@ -21,10 +21,13 @@ type flatKind struct {
 	add              func(*crud.OperatorImpl, context.Context, *crud.AddFileRequest) (*crud.FileResult, error)
 }
 
-var (
-	agentKind   = flatKind{ftype: crud.ContentTypeAgents, singular: "agent", plural: "agents", add: (*crud.OperatorImpl).AddAgent}
-	commandKind = flatKind{ftype: crud.ContentTypeCommands, singular: "command", plural: "commands", add: (*crud.OperatorImpl).AddCommand}
-)
+func agentKind() flatKind {
+	return flatKind{ftype: crud.ContentTypeAgents, singular: "agent", plural: "agents", add: (*crud.OperatorImpl).AddAgent}
+}
+
+func commandKind() flatKind {
+	return flatKind{ftype: crud.ContentTypeCommands, singular: "command", plural: "commands", add: (*crud.OperatorImpl).AddCommand}
+}
 
 func (k flatKind) create(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
 	op, err := contentOperator(request)
@@ -114,16 +117,35 @@ func capitalize(s string) string {
 }
 
 // Handlers of the agent and command tools.
-var (
-	CreateAgentHandler = agentKind.create
-	ReadAgentHandler   = agentKind.read
-	UpdateAgentHandler = agentKind.update
-	DeleteAgentHandler = agentKind.remove
-	ListAgentsHandler  = agentKind.list
 
-	CreateCommandHandler = commandKind.create
-	ReadCommandHandler   = commandKind.read
-	UpdateCommandHandler = commandKind.update
-	DeleteCommandHandler = commandKind.remove
-	ListCommandsHandler  = commandKind.list
-)
+func CreateAgentHandler(ctx context.Context, r *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	return agentKind().create(ctx, r)
+}
+func ReadAgentHandler(ctx context.Context, r *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	return agentKind().read(ctx, r)
+}
+func UpdateAgentHandler(ctx context.Context, r *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	return agentKind().update(ctx, r)
+}
+func DeleteAgentHandler(ctx context.Context, r *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	return agentKind().remove(ctx, r)
+}
+func ListAgentsHandler(ctx context.Context, r *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	return agentKind().list(ctx, r)
+}
+
+func CreateCommandHandler(ctx context.Context, r *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	return commandKind().create(ctx, r)
+}
+func ReadCommandHandler(ctx context.Context, r *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	return commandKind().read(ctx, r)
+}
+func UpdateCommandHandler(ctx context.Context, r *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	return commandKind().update(ctx, r)
+}
+func DeleteCommandHandler(ctx context.Context, r *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	return commandKind().remove(ctx, r)
+}
+func ListCommandsHandler(ctx context.Context, r *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	return commandKind().list(ctx, r)
+}
