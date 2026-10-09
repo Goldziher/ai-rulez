@@ -191,54 +191,6 @@ func responseText(response *MCPResponse) string {
 	return strings.Join(parts, "\n")
 }
 
-func (r *MCPResponse) GetParsedResult(t *testing.T) map[string]interface{} {
-	t.Helper()
-
-	parsed, err := r.GetParsedContent()
-	require.NoError(t, err, "Failed to parse response content")
-
-	return parsed
-}
-
-func (r *MCPResponse) GetParsedContent() (map[string]interface{}, error) {
-	if r.Result == nil || len(r.Result.Content) == 0 {
-		return nil, fmt.Errorf("no content in response")
-	}
-
-	textContent := r.Result.Content[0].Text
-
-	var parsed map[string]interface{}
-	if err := json.Unmarshal([]byte(textContent), &parsed); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON content: %w", err)
-	}
-
-	return parsed, nil
-}
-
-func (r *MCPResponse) GetParsedArray() ([]interface{}, error) {
-	if r.Result == nil || len(r.Result.Content) == 0 {
-		return nil, fmt.Errorf("no content in response")
-	}
-
-	textContent := r.Result.Content[0].Text
-
-	var parsed []interface{}
-	if err := json.Unmarshal([]byte(textContent), &parsed); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON array content: %w", err)
-	}
-
-	return parsed, nil
-}
-
-func (r *MCPResponse) GetParsedArrayResult(t *testing.T) []interface{} {
-	t.Helper()
-
-	parsed, err := r.GetParsedArray()
-	require.NoError(t, err, "Failed to parse response array content")
-
-	return parsed
-}
-
 func (r *MCPResponse) AssertToolSuccess(t *testing.T) {
 	t.Helper()
 
