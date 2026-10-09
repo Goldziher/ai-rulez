@@ -4,11 +4,13 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func writeTree(t *testing.T, files map[string]string) string {
@@ -200,4 +202,125 @@ func equalTrees(a, b map[string]string) bool {
 		}
 	}
 	return true
+}
+
+func TestMigrateDirRefusesReservedNamesAndChangesNothing(t *testing.T) {
+	for _, write := range []bool{false, true} {
+		dir := writeTree(t, map[string]string{
+			"rules/index.md":     "real rule\n",
+			"rules/other.md":     "# Other\n",
+			"context/log.md":     "---\nsummary: mine\n---\n\nmy log\n",
+			"rules/Index.md.bak": "unrelated\n",
+		})
+		before := readTree(t, dir)
+
+		_, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: write, BackupDir: dir + ".bak"})
+
+		if err == nil {
+			t.Fatalf("write=%v: expected a refusal", write)
+		}
+		for _, want := range []string{"rules/index.md", "context/log.md"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("write=%v: error does not name %s: %v", write, want, err)
+			}
+		}
+		if got := readTree(t, dir); !equalTrees(before, got) {
+			t.Fatalf("write=%v: the tree changed:\n%v\n%v", write, before, got)
+		}
+		if _, statErr := os.Stat(dir + ".bak"); statErr == nil {
+			t.Errorf("write=%v: a backup was taken for a refused migration", write)
+		}
+		// Idempotent: the same refusal, still nothing changed.
+		if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: write}); err == nil {
+			t.Errorf("write=%v: the second run did not refuse", write)
+		}
+		if got := readTree(t, dir); !equalTrees(before, got) {
+			t.Fatalf("write=%v: the second run changed the tree", write)
+		}
+	}
+}
+
+func TestMigrateDirAfterRenamingTheReservedRule(t *testing.T) {
+	dir := writeTree(t, map[string]string{"rules/index-notes.md": "real rule\n", "rules/other.md": "# Other\n"})
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true}); err != nil {
+		t.Fatal(err)
+	}
+	first := readTree(t, dir)
+	if !strings.Contains(first["rules/index-notes.md"], "real rule") {
+		t.Fatalf("rule text lost:\n%s", first["rules/index-notes.md"])
+	}
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true}); err != nil {
+		t.Fatalf("second run: %v", err)
+	}
+	if again := readTree(t, dir); !equalTrees(first, again) {
+		t.Fatal("second run changed the tree")
+	}
+}
+
+func TestMigrateDirBacksUpWhatItRewritesAndLeavesNoTempFiles(t *testing.T) {
+	files := map[string]string{"rules/go.md": "---\npriority: high\n---\n\n# Go\n", "rules/plain.md": "# Plain\n"}
+	dir := writeTree(t, files)
+	if err := os.Chmod(filepath.Join(dir, "rules/go.md"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	backup := filepath.Join(t.TempDir(), "bak")
+
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true, BackupDir: backup}); err != nil {
+		t.Fatal(err)
+	}
+
+	saved := readTree(t, backup)
+	for rel, want := range files {
+		if saved[rel] != want {
+			t.Errorf("backup of %s = %q, want %q", rel, saved[rel], want)
+		}
+	}
+	if readTree(t, dir)["rules/go.md"] == files["rules/go.md"] {
+		t.Error("the file was not migrated")
+	}
+	if runtime.GOOS != "windows" {
+		if info, err := os.Stat(filepath.Join(dir, "rules/go.md")); err != nil || info.Mode().Perm() != 0o600 {
+			t.Errorf("mode not kept: %v %v", info, err)
+		}
+	}
+	for rel := range readTree(t, dir) {
+		if strings.HasSuffix(rel, ".tmp") {
+			t.Errorf("temporary file left behind: %s", rel)
+		}
+	}
+	// An idempotent second run has nothing to rewrite, so it takes no backup.
+	again := filepath.Join(t.TempDir(), "bak2")
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true, BackupDir: again}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(again); err == nil {
+		t.Error("a no-op run created a backup")
+	}
+}
+
+func TestMigrateDirReportsSymlinksAsSkippedAndNeverRewritesThem(t *testing.T) {
+	dir := writeTree(t, map[string]string{"rules/real.md": "# Real\n"})
+	outside := writeTree(t, map[string]string{"secret.md": "# Secret\n"})
+	testutil.SymlinkOrSkip(t, filepath.Join(outside, "secret.md"), filepath.Join(dir, "rules", "link.md"))
+
+	changes, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	skipped := ""
+	for _, c := range changes {
+		if c.Action == ActionSkipped {
+			skipped += c.Path + ";"
+		}
+	}
+	if skipped != "rules/link.md;" {
+		t.Errorf("skipped = %q", skipped)
+	}
+	if got := readTree(t, outside)["secret.md"]; got != "# Secret\n" {
+		t.Errorf("the symlink target was rewritten: %q", got)
+	}
+	if info, err := os.Lstat(filepath.Join(dir, "rules", "link.md")); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Error("the symlink was replaced")
+	}
 }

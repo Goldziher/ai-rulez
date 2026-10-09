@@ -103,6 +103,17 @@ func TestOKFNativeTreeGeneratesTheSameOutput(t *testing.T) {
 			okfDir, okfHome := okfProject(t, files)
 
 			okfRun(t, okfDir, okfHome, "migrate", "okf")
+			// The migration keeps the originals it rewrote next to .ai-rulez/; they are not project content.
+			backups, err := filepath.Glob(filepath.Join(okfDir, ".ai-rulez.bak-okf-*"))
+			if err != nil || len(backups) != 1 {
+				t.Fatalf("expected one backup of the migrated files, got %v (%v)", backups, err)
+			}
+			if saved, err := os.ReadFile(filepath.Join(backups[0], "rules", "always.md")); err != nil || strings.Contains(string(saved), "x-ai-rulez:") {
+				t.Fatalf("the backup does not hold the original rule: %q (%v)", saved, err)
+			}
+			if err := os.RemoveAll(backups[0]); err != nil {
+				t.Fatal(err)
+			}
 			migrated := treeSnapshot(t, okfDir)
 			if migrated[".ai-rulez/index.md"] == "" || !strings.Contains(migrated[".ai-rulez/rules/always.md"], "x-ai-rulez:") {
 				t.Fatalf("the tree was not converted:\n%v", migrated[".ai-rulez/rules/always.md"])

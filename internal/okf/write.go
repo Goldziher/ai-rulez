@@ -2,6 +2,7 @@ package okf
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io/fs"
 	"os"
@@ -12,6 +13,15 @@ import (
 
 	"github.com/samber/oops"
 )
+
+// ManifestFile is the hidden file an export keeps at the bundle root: the paths
+// it wrote. A later export prunes only those, so it never deletes a file it did
+// not write itself.
+const ManifestFile = ".okf-export.json"
+
+type manifest struct {
+	Files []string `json:"files"`
+}
 
 // File is one file of a bundle to write.
 type File struct {
@@ -89,7 +99,7 @@ func Compare(dir string, files []File) (Drift, error) {
 		if relErr != nil {
 			return relErr
 		}
-		if rel = filepath.ToSlash(rel); !want[rel] {
+		if rel = filepath.ToSlash(rel); !want[rel] && rel != ManifestFile {
 			d.Extra = append(d.Extra, rel)
 		}
 		return nil
@@ -117,6 +127,9 @@ func LooksLikeBundle(dir string) bool {
 // WriteFiles writes files into dir, creating it. Writes cannot escape dir, even
 // through symlinks. With prune, files of a previous export that are no longer in
 // the set are removed; that is refused unless dir is empty or already a bundle.
+// Only files an earlier export recorded in its manifest are removed: a file the
+// export did not write is never deleted, and a directory with no manifest is
+// not pruned at all.
 func WriteFiles(dir string, files []File, prune bool) error {
 	for _, f := range files {
 		if err := ValidatePath(f.Path); err != nil {
@@ -144,7 +157,46 @@ func WriteFiles(dir string, files []File, prune bool) error {
 	if !prune {
 		return nil
 	}
-	return removeExtras(root, dir, files)
+	if err := removeExtras(root, dir, files); err != nil {
+		return err
+	}
+	return writeManifest(root, files)
+}
+
+// readManifest returns the paths a previous export recorded; none when there is
+// no usable manifest. An entry that is not a safe bundle path is dropped.
+func readManifest(root *os.Root) map[string]bool {
+	data, err := root.ReadFile(ManifestFile)
+	if err != nil {
+		return nil
+	}
+	var m manifest
+	if json.Unmarshal(data, &m) != nil {
+		return nil
+	}
+	written := make(map[string]bool, len(m.Files))
+	for _, p := range m.Files {
+		if ValidatePath(p) == nil && p != ManifestFile {
+			written[p] = true
+		}
+	}
+	return written
+}
+
+func writeManifest(root *os.Root, files []File) error {
+	m := manifest{Files: make([]string, 0, len(files))}
+	for _, f := range files {
+		m.Files = append(m.Files, f.Path)
+	}
+	sort.Strings(m.Files)
+	data, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return oops.Wrapf(err, "encode %s", ManifestFile)
+	}
+	if err := root.WriteFile(ManifestFile, append(data, '\n'), 0o644); err != nil {
+		return oops.Wrapf(err, "write %s", ManifestFile)
+	}
+	return nil
 }
 
 func checkPrunable(dir string) error {
@@ -169,12 +221,18 @@ func removeExtras(root *os.Root, dir string, files []File) error {
 	if err != nil {
 		return err
 	}
+	written := readManifest(root)
+	var removed []string
 	for _, extra := range drift.Extra {
+		if !written[extra] {
+			continue
+		}
 		if err := root.Remove(extra); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return oops.Wrapf(err, "remove %s", extra)
 		}
+		removed = append(removed, extra)
 	}
-	return pruneEmptyDirs(dir, drift.Extra)
+	return pruneEmptyDirs(dir, removed)
 }
 
 func writeOne(root *os.Root, f File) error {
