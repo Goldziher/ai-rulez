@@ -342,6 +342,21 @@ source file's frontmatter (the export normalizes them), and a source file that i
 `x-ai-rulez` as reserved, and ignores generated `index.md`/`log.md` listings, so generated output does not change.
 `validate` runs `okf validate` on such a tree. `init`, `add`, `remove` and the MCP CRUD tools write this form: a new concept gets `type`, `title` and `x-ai-rulez`, and the `index.md` files are refreshed when the tree is a bundle (it has a root `index.md`); `export okf` of such a tree reproduces it byte for byte. A tree without a root `index.md` is the legacy layout: it still loads, with a deprecation notice, until v6. See [Migrating to v5](migration-v5.md#okf-is-the-format-of-ai-rulez).
 
+### What `migrate okf` will and will not touch
+
+- **Reserved names.** OKF reserves `index.md` and `log.md` for generated listings. If a rule, context file, agent or
+  other item of yours has one of those names (`rules/index.md`, `context/log.md`), the migration refuses before it
+  writes anything, names the files and exits 1. Rename them (for example to `index-notes.md`) and run it again; the
+  migration never moves or overwrites such a file, so a refused run leaves the tree exactly as it was and can be repeated.
+- **Backup and atomic writes.** Every file is written atomically (a temporary file renamed over the target, mode kept),
+  after the originals of the files it rewrites were copied to `<config dir>.bak-okf-<timestamp>/` (same relative paths;
+  reported in the summary and as `backup_dir` in JSON). A run with nothing to rewrite takes no backup. `--dry-run` and
+  `--check` write nothing.
+- **Symlinks.** A symlinked rule, context file or directory is never followed or rewritten. It is listed as
+  `[skipped]` with the number in the summary, and the run exits 1 (also for a file whose frontmatter does not parse),
+  because the file needs your hand: replace the link with the real file, or migrate its target. A `--dry-run` reports
+  skipped files but exits 0; `--check` exits 2 when files still need migrating, else 1 when files were skipped.
+
 ## CLI
 
 See [CLI commands](cli.md#okf-commands) for every flag.
@@ -380,6 +395,12 @@ item merged in from an include (its source file is outside your `.ai-rulez/` dir
 project's own content; `export okf` names the number skipped on stderr. The bundle is committed documentation: `gitignore = true`
 never ignores it, and files are written verbatim with no generated-by banner. `generate --check` and `doctor` report a
 hand-edited, missing or stale bundle file as drift, and `generate` removes concept files whose source is gone.
+
+`export okf` keeps a hidden manifest, `.okf-export.json`, at the bundle root listing the files it wrote, and only ever
+removes files named there: a file you added to the directory, or a bundle exported before the manifest existed, is
+never pruned (an old export's stale files stay until you delete them; `--check` lists them as `extra`). `--out` is
+refused, with exit 1 and no change, when it is, contains or lies inside the configuration directory (symlinks
+resolved), or when it holds a `config.toml`, an `ai-rulez.lock` or a `local/` directory.
 
 ## OKF bundles as sources
 
