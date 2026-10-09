@@ -24,7 +24,7 @@ func resetEvalFlags(t *testing.T) {
 		evalFlags.harness, evalFlags.runner, evalFlags.runnerCommand = "claude", "", ""
 		evalFlags.claudeBin, evalFlags.runnerArgs, evalFlags.runs = "claude", nil, 0
 		evalFlags.codexBin, evalFlags.maxCostMode = "codex", ""
-		evalFlags.ablation, evalFlags.dryRun, evalFlags.format = false, false, evals.FormatMarkdown
+		evalFlags.ablation, evalFlags.dryRun, evalFlags.format = false, false, evals.FormatText
 		evalFlags.out, evalFlags.maxCost, evalFlags.date = "", 0, ""
 		evalFlags.changedOnly, evalFlags.base, evalFlags.force = false, "HEAD", false
 		evalFlags.threshold, evalFlags.allowExec, evalFlags.noWrite = 1, false, false
@@ -162,6 +162,21 @@ func TestEvalRun_OutDirAndFormats(t *testing.T) {
 	evalFlags.format = "yaml"
 	_, err = runEval(evalRunCmd, nil)
 	assert.ErrorContains(t, err, "unknown --format")
+}
+
+func TestEvalRun_FormatDefaultsToText(t *testing.T) {
+	resetEvalFlags(t)
+	evalProject(t)
+	evalFlags.runnerCommand = writeRunnerScript(t, goodReply)
+	var out bytes.Buffer
+	evalRunCmd.SetOut(&out)
+
+	_, err := runEval(evalRunCmd, nil)
+
+	require.NoError(t, err)
+	assert.Contains(t, out.String(), "SKILL")
+	assert.NotContains(t, out.String(), "| Skill |")
+	assert.Equal(t, evals.FormatText, evalRunCmd.Flags().Lookup("format").DefValue)
 }
 
 func TestEvalRun_RunnerSelection(t *testing.T) {
