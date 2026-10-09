@@ -71,6 +71,10 @@ type configOut struct {
 // generateOut is the result of generate_outputs.
 type generateOut struct {
 	Message     string   `json:"message,omitempty" jsonschema:"Human-readable summary"`
+	Status      string   `json:"status,omitempty" jsonschema:"With check: ok or drift"`
+	Roots       any      `json:"roots,omitempty" jsonschema:"With check: how many roots were compared"`
+	Blocked     int      `json:"blocked,omitempty" jsonschema:"With check: differing files generate would refuse to overwrite"`
+	Differing   []any    `json:"differing,omitempty" jsonschema:"With check: the generated files that differ, with kind and path"`
 	NewCommands []string `json:"new_commands,omitempty" jsonschema:"Hook and MCP commands written for the first time, for review"`
 	Results     []any    `json:"results,omitempty" jsonschema:"One entry per project (recursive runs)"`
 	Plan        any      `json:"plan,omitempty" jsonschema:"The planned changes of a dry run"`
@@ -178,4 +182,80 @@ type skillOut struct {
 	Truncated  bool           `json:"truncated,omitempty" jsonschema:"True when the content or list was cut"`
 	Resources  []any          `json:"resources,omitempty" jsonschema:"Supporting files"`
 	Provenance map[string]any `json:"provenance,omitempty" jsonschema:"Where the skill came from and whether the lock vouches for it"`
+}
+
+// Report documents mirror the CLI's --format json output.
+
+type tokenReportOut struct {
+	Profile        string         `json:"profile,omitempty" jsonschema:"Profile reported on, or role:<name> for a role report"`
+	Role           string         `json:"role,omitempty" jsonschema:"Role reported on"`
+	Tokenizer      map[string]any `json:"tokenizer,omitempty" jsonschema:"The token counter used"`
+	HeadlinePreset string         `json:"headline_preset,omitempty" jsonschema:"Runtime with the largest always-loaded surface"`
+	HeadlineAlways int            `json:"headline_always,omitempty" jsonschema:"Always-loaded tokens of the headline runtime, listing included"`
+	Runtimes       []any          `json:"runtimes,omitempty" jsonschema:"Per-runtime token surface split by when it is loaded"`
+	Domains        []any          `json:"domains,omitempty" jsonschema:"Per-domain tokens"`
+	Budget         map[string]any `json:"budget,omitempty" jsonschema:"The budget check, when a budget was given"`
+	Notes          []string       `json:"notes,omitempty" jsonschema:"Scope and caveats of the counts"`
+	Items          []any          `json:"items,omitempty" jsonschema:"One report per target when several were asked for"`
+	SchemaVersion  int            `json:"schema_version,omitempty" jsonschema:"Version of this document"`
+}
+
+type costReportOut struct {
+	SchemaVersion int    `json:"schema_version,omitempty" jsonschema:"Version of this document"`
+	Profile       string `json:"profile,omitempty" jsonschema:"Profile reported on"`
+	Target        string `json:"target,omitempty" jsonschema:"Preset whose runtime totals are reported"`
+	Tokenizer     string `json:"tokenizer,omitempty" jsonschema:"The token counter used"`
+	Always        int    `json:"always" jsonschema:"Always-loaded tokens of the target"`
+	Conditional   int    `json:"conditional" jsonschema:"Conditionally loaded tokens of the target"`
+	OnDemand      int    `json:"on_demand" jsonschema:"On-demand tokens of the target"`
+	Items         []any  `json:"items,omitempty" jsonschema:"Every item with its token costs, most expensive first"`
+	TopAlways     []any  `json:"top_always,omitempty" jsonschema:"Biggest always-loaded offenders"`
+	TopOnDemand   []any  `json:"top_on_demand,omitempty" jsonschema:"Biggest on-demand offenders"`
+}
+
+type okfValidateOut struct {
+	SchemaVersion int    `json:"schema_version,omitempty" jsonschema:"Version of this document"`
+	Bundle        string `json:"bundle,omitempty" jsonschema:"The bundle directory as given"`
+	OKFSpec       string `json:"okf_spec,omitempty" jsonschema:"OKF specification version checked against"`
+	Concepts      int    `json:"concepts" jsonschema:"Number of concepts in the bundle"`
+	IndexStyle    string `json:"index_style,omitempty" jsonschema:"Index scheme of the bundle: body or frontmatter"`
+	Findings      []any  `json:"findings,omitempty" jsonschema:"Findings with code, name, severity, path, line and message"`
+}
+
+type approvalsStatusOut struct {
+	SchemaVersion int            `json:"schema_version,omitempty" jsonschema:"Version of this document"`
+	Policy        map[string]any `json:"policy,omitempty" jsonschema:"The governance policy the list was judged against"`
+	Items         []any          `json:"items,omitempty" jsonschema:"Pinned items with their approval status"`
+	Orphans       []any          `json:"orphans,omitempty" jsonschema:"Approvals whose content no longer exists"`
+	Summary       map[string]int `json:"summary,omitempty" jsonschema:"Counts by status"`
+}
+
+type policyShowOut struct {
+	SchemaVersion int               `json:"schema_version,omitempty" jsonschema:"Version of this document"`
+	Mode          string            `json:"mode,omitempty" jsonschema:"warn when the policy only warns"`
+	Layers        []any             `json:"layers,omitempty" jsonschema:"The policy layers, lowest first, with origin and digest"`
+	Effective     map[string]any    `json:"effective,omitempty" jsonschema:"The merged policy"`
+	Provenance    map[string]string `json:"provenance,omitempty" jsonschema:"Which layer set each key"`
+	Overrides     map[string]any    `json:"overrides,omitempty" jsonschema:"What the configuration tried to loosen"`
+	Violations    []any             `json:"violations,omitempty" jsonschema:"Policy violations of this configuration"`
+}
+
+type builtinsListOut struct {
+	Builtins []any `json:"builtins,omitempty" jsonschema:"Builtin domains with category and description"`
+	Count    int   `json:"count" jsonschema:"Number of builtin domains"`
+}
+
+type verifiersListOut struct {
+	Verifiers []any `json:"verifiers,omitempty" jsonschema:"Declared verifiers with type, severity and the rule they enforce"`
+	Count     int   `json:"count" jsonschema:"Number of verifiers"`
+}
+
+// sbomOut is the bill of materials: a CycloneDX or SPDX document. Its shape is
+// owned by those specifications, so only the identifying fields are described.
+type sbomOut struct {
+	BOMFormat   string `json:"bomFormat,omitempty" jsonschema:"CycloneDX: the format name"`
+	SpecVersion string `json:"specVersion,omitempty" jsonschema:"CycloneDX: the specification version"`
+	SPDXVersion string `json:"spdxVersion,omitempty" jsonschema:"SPDX: the specification version"`
+	Components  []any  `json:"components,omitempty" jsonschema:"CycloneDX: the components"`
+	Packages    []any  `json:"packages,omitempty" jsonschema:"SPDX: the packages"`
 }

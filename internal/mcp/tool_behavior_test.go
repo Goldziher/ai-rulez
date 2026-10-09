@@ -114,6 +114,15 @@ func TestReaderToolsFailOnMalformedConfig(t *testing.T) {
 		"lock_status":           {},
 		"run_verifiers":         {},
 		"generate_outputs":      {},
+		"list_agents":           {},
+		"list_commands":         {},
+		"read_agent":            {"name": "x"},
+		"read_command":          {"name": "x"},
+		"token_report":          {},
+		"cost_report":           {},
+		"sbom":                  {},
+		"approvals_status":      {},
+		"list_verifiers":        {},
 	}
 	for tool, args := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -255,5 +264,9 @@ func TestServerCapabilitiesAndMetadata(t *testing.T) {
 
 	require.NotNil(t, caps.Tools)
 	assert.False(t, caps.Tools.ListChanged, "the tool set is fixed, so tools/list_changed is not promised")
-	assert.Nil(t, caps.Resources, "the authoring server serves no resources")
+	require.NotNil(t, caps.Prompts, "the authoring server offers prompts")
+	assert.False(t, caps.Prompts.ListChanged, "the prompt set is fixed")
+	require.NotNil(t, caps.Resources, "the authoring server serves config, catalog and item resources")
+	assert.False(t, caps.Resources.ListChanged, "the resource list is fixed; item contents are read on demand")
+	assert.False(t, caps.Resources.Subscribe)
 }

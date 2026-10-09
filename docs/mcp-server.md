@@ -121,7 +121,11 @@ When enabled, the MCP server provides your AI assistant with access to your conf
   the hook, MCP, env, plugin and allow-rule commands the run newly wrote are returned as `new_commands` (and written to
   stderr); an unchanged run omits the field. See [Configuration](configuration.md#checks-generate-runs-before-it-writes)
 - **Validate Configuration**: Check configuration validity and report errors
-- **CRUD Operations**: Create, read, update, and delete domains, rules, context, skills, includes, and profiles
+- **CRUD Operations**: Create, read, update, and delete domains, rules, context, skills, agents, commands, includes, and profiles
+- **Reports**: Read-only twins of `scan`, `tokens`, `cost`, `sbom`, `okf validate`, `approve --list` and
+  `validate --show-policy`, which return the document the command prints with `--format json`
+- **Prompts and resources**: `author-skill`, `add-rule`, `review-config` and `trim-context` prompts, and
+  `ai-rulez://config`, `ai-rulez://catalog` and `ai-rulez://{kind}/{name}` resources
 
 The MCP server enables AI assistants to:
 
@@ -131,6 +135,140 @@ The MCP server enables AI assistants to:
 4. **Validate changes** before committing
 
 This approach ensures your configuration remains auditable and version-controlled, while allowing AI assistants to help you manage it efficiently.
+
+## CLI and MCP parity
+
+The command line and the MCP tools are two views of one engine, and a table in the source decides which
+capability lives where. Every runnable command and every tool belongs to exactly one row of
+`internal/parity/capabilities.go`, either paired with its counterpart or left on one side with a stated reason.
+`go test ./tests/parity` walks the real Cobra tree and lists the real tools of both servers through an in-memory
+client, and fails when:
+
+- a command or a tool is in no row, or a row names a command or tool that does not exist;
+- a one-sided row has no reason;
+- a paired command and tool differ in an input: each flag must have a tool argument of the same JSON type, enum and
+  required-ness, or sit in an explicit, justified exclusion (and the other way round);
+- a read-only pair, run on one fixture project, gives different documents. `validate`, `scan`, `tokens`, `cost`,
+  `sbom`, `okf validate`, `lock --check`, `approve --list`, `validate --show-policy` and `search` are compared field for
+  field, with each justified difference written next to the check.
+
+The tables below are generated from the same rows (`go test ./tests/parity -run TestDocsMatchTheTable -update-docs`
+rewrites them), and the test fails when they are stale.
+
+<!-- parity:begin -->
+
+**On both sides.** The command and the tool run the same library code. Rows marked *compared* are also run on one fixture by the parity test, which checks the command's `--format json` document and the tool's `structuredContent` field for field.
+
+| Command | MCP tool | Server | Compared |
+| ------- | -------- | ------ | -------- |
+| `add agent` | `create_agent` | authoring |  |
+| `list agents` | `list_agents` | authoring |  |
+| `remove agent` | `delete_agent` | authoring |  |
+| `approve --list` | `approvals_status` | authoring | yes |
+| `builtins list` | `list_builtins` | authoring |  |
+| `builtins show` | `show_builtin` | authoring |  |
+| `catalog` | `catalog` | authoring |  |
+| `add check` | `create_check` | authoring |  |
+| `list checks` | `list_checks` | authoring |  |
+| `remove check` | `delete_check` | authoring |  |
+| `clean` | `clean_outputs` | authoring |  |
+| `add command` | `create_command` | authoring |  |
+| `list commands` | `list_commands` | authoring |  |
+| `remove command` | `delete_command` | authoring |  |
+| `add context` | `create_context` | authoring |  |
+| `list context` | `list_context` | authoring |  |
+| `remove context` | `delete_context` | authoring |  |
+| `cost` | `cost_report` | authoring | yes |
+| `doctor` | `doctor` | authoring |  |
+| `domain add` | `create_domain` | authoring |  |
+| `domain list` | `list_domains` | authoring |  |
+| `domain remove` | `delete_domain` | authoring |  |
+| `generate` | `generate_outputs` | authoring |  |
+| `include add` | `add_include` | authoring |  |
+| `include list` | `list_includes` | authoring |  |
+| `include remove` | `remove_include` | authoring |  |
+| `init` | `init_project` | authoring |  |
+| `skill install` | `install_skill` | authoring |  |
+| `skill list` | `list_installed_skills` | authoring |  |
+| `skill remove` | `uninstall_skill` | authoring |  |
+| `lock --check` | `lock_status` | authoring | yes |
+| `okf validate` | `okf_validate` | authoring | yes |
+| `validate --show-policy` | `policy_show` | authoring | yes |
+| `profile add` | `add_profile` | authoring |  |
+| `profile list` | `list_profiles` | authoring |  |
+| `profile remove` | `remove_profile` | authoring |  |
+| `profile set-default` | `set_default_profile` | authoring |  |
+| `roles list` | `list_roles` | authoring |  |
+| `roles resolve` | `resolve_role` | authoring |  |
+| `add rule` | `create_rule` | authoring |  |
+| `list rules` | `list_rules` | authoring |  |
+| `remove rule` | `delete_rule` | authoring |  |
+| `sbom` | `sbom` | authoring | yes |
+| `scan` | `scan_content` | authoring | yes |
+| `search` | `find_skill` | skills | yes |
+| `add skill` | `create_skill` | authoring |  |
+| `list skills` | `list_skills` | authoring |  |
+| `remove skill` | `delete_skill` | authoring |  |
+| `tokens` | `token_report` | authoring | yes |
+| `validate` | `validate_config` | authoring | yes |
+| `verifiers list` | `list_verifiers` | authoring |  |
+| `verifiers run` | `run_verifiers` | authoring |  |
+| `version` | `get_version` | authoring |  |
+
+**Only on the command line**, deliberately. These write trust, spend money, use the network or credentials, prompt, or run for the length of a process.
+
+| Command | Why it is not a tool |
+| ------- | -------------------- |
+| `approve` | approving, revoking, denying and signing are identity-bound human attestations; an agent must not make them |
+| `catalog diff` | compares two catalogs through git subprocesses |
+| `convert`, `migrate` | one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview |
+| `eval *`, `improve *` | run models and harness subprocesses and spend money |
+| `guard` | a hook entry point the harness calls on tool use |
+| `list` | prints where skills and commands land per harness; generate_outputs dry_run returns the same plan |
+| `llm *` | model credentials and cost estimates for network calls |
+| `local *` | the machine-local overlay is per developer; tools reach it through the local argument of the item tools and update_config |
+| `lock` | writes the lock, the trust anchor of the project, after network pinning and scan acceptance; an agent must not mint trust |
+| `mcp` | starts the MCP server itself |
+| `export okf`, `import okf` | write a whole bundle or import a foreign one into the tree |
+| `publish *` | builds and signs distribution artifacts and may push them |
+| `review *`, `rubric *` | spends model tokens in its default mode; the offline heuristics are not exposed yet |
+| `roles show` | a presentation of one role; resolve_role returns what the role keeps |
+| `scanners *` | run external scanner programs, possibly with egress |
+| `sign`, `trust update` | signs with a key, an OIDC identity or a transparency log: credentials and egress |
+| `telemetry *` | consent and network egress of usage data |
+| `skill update`, `update` | moves pinned remote sources to newer tags over the network and rewrites the lock |
+| `verifiers calibrate`, `verifiers explain`, `verifiers suggest`, `verifiers test` | calibrate, suggest and test run models or programs; explain prints the help text of a verifier |
+| `verify` | verifies signatures, attestations and downloaded artifacts with the signing backend; the drift half is generate_outputs check and doctor |
+
+**Only on MCP**, deliberately.
+
+| MCP tool | Server | Why it has no command |
+| -------- | ------ | --------------------- |
+| `read_agent` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
+| `update_agent` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
+| `read_check` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
+| `update_check` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
+| `read_command` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
+| `update_command` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
+| `read_config` | authoring | the command line reads config.toml with an editor or cat; a tool client has no filesystem, so it reads the parsed settings here |
+| `update_config` | authoring | the command line edits config.toml directly or through `local set`; a tool client needs a typed edit that keeps comments and ordering |
+| `read_context` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
+| `update_context` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
+| `get_skill` | skills | returns a served skill with provenance and digests to a client that only speaks tools |
+| `list_skill_resources` | skills | lists the files of a served skill for a client that has no skill:// resource support |
+| `load_skill` | skills | reads one served skill file under the session budget; the CLI reads the file from disk |
+| `read_skill_file` | skills | reads a supporting file of a served skill by its skill:// URI |
+| `read_rule` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
+| `update_rule` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
+| `search_skills` | skills | lexical listing for a client that only speaks tools; the ranker the CLI `search` shares is find_skill |
+| `read_skill` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
+| `update_skill` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
+
+<!-- parity:end -->
+
+Added a command or a tool? The first parity test failure names the row to add.
+
+---
 
 ## Serving Skills (`--serve-skills`)
 
@@ -610,7 +748,7 @@ The server provides Claude with access to read and modify your configuration, wh
 
 ## MCP Tools Reference
 
-The ai-rulez MCP server exposes 47 tools for programmatic configuration management. These tools allow AI assistants to initialize projects, generate and clean outputs, validate configuration, inspect builtins, and create, read, update, and delete configuration elements.
+The ai-rulez MCP server exposes 66 tools for programmatic configuration management. These tools allow AI assistants to initialize projects, generate and clean outputs, validate configuration, inspect builtins, and create, read, update, and delete configuration elements.
 
 Every tool below accepts an optional `working_directory` parameter (the directory to operate in),
 except the two utility tools `get_version` and `show_builtin`. The per-tool parameter lists below
@@ -637,8 +775,8 @@ shared view, or fix the reported paths.
 
 **Metadata.** Every tool has a human `title` and annotations: `readOnlyHint`, `destructiveHint` and `idempotentHint`
 describe what it writes, and `openWorldHint` is `false` on all of them (they act on the local project tree only).
-Read-only tools (`list_*`, `read_*`, `validate_config`, `doctor`, `run_verifiers`, `get_version`, `show_builtin`, the
-governance tools and the skills-serving tools) never write.
+Read-only tools (`list_*`, `read_*`, `validate_config`, `scan_content`, `doctor`, `run_verifiers`, `get_version`,
+`show_builtin`, the report tools, the governance tools and the skills-serving tools) never write.
 
 **Arguments.** Input schemas are inferred from typed argument structs and enforced before a handler runs: an
 unknown argument, a wrong type (`"local": "yes"`), a value outside an enum or a missing required argument is an
@@ -659,8 +797,13 @@ started in. A call without `working_directory` uses that directory; a relative o
 followed before the check. Start the server with `mcp --root <dir>` to confine it elsewhere, or with
 `mcp --allow-any-dir` to lift the check. The skills-serving mode takes no directory argument.
 
-**Capabilities.** The authoring server advertises `tools` without `listChanged` (its tool set is fixed), pages lists
-at 100 entries, and sends the SDK's warnings and errors to stderr.
+**Capabilities.** The authoring server advertises `tools`, `prompts` and `resources`, none with `listChanged` (their
+sets are fixed), pages lists at 100 entries, and sends the SDK's warnings and errors to stderr. Its lists carry a
+cache hint (`ttlMs` five minutes, `public`); resource reads are never cacheable, since the project can change between
+two reads. The skills-serving server's hints are `private`, one minute, and zero under live reload.
+
+**Progress and cancellation.** Long calls (`generate_outputs` with `recursive`, `token_report` over several targets)
+send `notifications/progress` when the request carries a progress token, and stop when the client cancels the request.
 
 ### Response keys
 
@@ -678,9 +821,16 @@ Generate output files from the current configuration.
 - `config_file` (optional, string): Path to the root configuration file
 - `config_dir` (optional, string): Configuration directory name (default: `.ai-rulez`)
 - `dry_run` (optional, boolean): Preview changes without writing files
+- `check` (optional, boolean): Write nothing and report the generated files that differ from what the sources render (`generate --check`). The result is `{"status", "roots", "blocked", "differing": [{"kind", "path"}]}`, and drift is an error result, as the command exits 2
+- `offline` (optional, boolean): Never use the network; includes and installed skills come from the lock and the cache (`--offline`)
+- `profile` (optional, string): Profile to generate, or a comma-separated list to compose several (`--profile`)
+- `role` (optional, string): Generate the slice of content a role selects (`--role`); mutually exclusive with `profile`
 - `recursive` (optional, boolean): Generate for all subdirectories containing `.ai-rulez/`
 - `no_local` (optional, boolean): Ignore the machine-local `config.local.*` overlay and `local/` content (the view a teammate sees)
 - `working_directory` (optional, string): Directory to operate in
+
+A call that supports progress (the client sends a progress token) reports one notification per project in a
+`recursive` run, and a cancelled call stops before the next project.
 
 #### `clean_outputs`
 
@@ -1330,6 +1480,59 @@ List all profiles in the configuration.
 ```
 
 ---
+
+### Agent and Command Tools
+
+Agents and commands are flat markdown files whose frontmatter carries their own settings, so these tools take no
+`priority` or `targets`. They mirror `add|remove|list agent|command`.
+
+| Tool | Does | Parameters |
+| ---- | ---- | ---------- |
+| `create_agent`, `create_command` | Create the file; a template is written when `content` is empty | `name` (required), `description`, `content`, `domain`, `local` |
+| `read_agent`, `read_command` | Read the content | `name` (required), `domain`, `local` |
+| `update_agent`, `update_command` | Replace the content as given, atomically | `name` and `content` (required), `domain`, `local` |
+| `delete_agent`, `delete_command` | Delete the file | `name` (required), `domain`, `local` |
+| `list_agents`, `list_commands` | List the files of the root or a domain | `domain`, `local` |
+
+### Report Tools
+
+Read-only twins of commands. Each returns the document the command prints with `--format json`, built by the same
+library code; none writes, and none uses the network (remote content comes from the lock and the cache). A gate the
+command turns into exit 2 (an exceeded budget, a finding at `fail_on`) is an error result that still carries the
+document in `structuredContent`.
+
+| Tool | Command | Parameters beyond `working_directory`, `config_file`, `config_dir`, `no_local` |
+| ---- | ------- | -------- |
+| `scan_content` | `scan` | `fail_on`, `lint_profile`. The security checks only: secrets, hidden text, injection phrases, risky shell, unpinned sources. The result is the document of `validate_config` |
+| `token_report` | `tokens` | `profile`, `role`, `by_role`, `compare_profiles`, `tokenizer`, `budget`. One target answers with the report, several with `{"schema_version", "items"}` |
+| `cost_report` | `cost` | `profile`, `target`, `top`, `tokenizer`, `budget`, `on_demand_budget` |
+| `sbom` | `sbom` | `format` (`cyclonedx`, `spdx-json`), `files`, `profile`, `role`, `include_outputs`, `no_approvals`. The reproducible document, without the machine-local overlay; writing (`-o`), `--check`, `--verify` and the CI gates stay on the command line |
+| `okf_validate` | `okf validate` | `bundle` (required, a directory under the project), `fail_on`. A git URL is refused |
+| `approvals_status` | `approve --list` | `all`. What needs approval and its status. Approving, revoking and signing are human decisions and stay on the command line |
+| `policy_show` | `validate --show-policy` | The policy layers, the merged policy, where each key came from and what the configuration tried to loosen |
+| `list_verifiers` | `verifiers list` | The declared verifiers |
+| `list_builtins` | `builtins list` | The builtin domains and whether each is auto-included |
+
+### Prompts
+
+| Prompt | Arguments | Expands to |
+| ------ | --------- | ---------- |
+| `author-skill` | `name`, `purpose` | Draft a skill, create it, then check it with `scan_content`, `validate_config` and `cost_report` |
+| `add-rule` | `name`, `guideline`, `priority` | Check for an existing rule, then create or update one and validate |
+| `review-config` | `focus` | Run the read-only checks and summarize what to fix, changing nothing |
+| `trim-context` | `budget` | Find the biggest always-loaded items and propose edits before applying them |
+
+### Resources
+
+| URI | Content |
+| --- | ------- |
+| `ai-rulez://config` | The parsed settings (`read_config`) |
+| `ai-rulez://catalog` | The content catalog (`catalog`) |
+| `ai-rulez://{kind}/{name}` | The markdown of one root item; `kind` is `rules`, `context`, `skills`, `checks`, `agents` or `commands` |
+| `ai-rulez://domains/{domain}/{kind}/{name}` | The same for an item of a domain |
+
+Resources are read-only, confined like the tools to the directory the server was started in, and an unknown URI is a
+resource-not-found error.
 
 ### Governance Tools
 

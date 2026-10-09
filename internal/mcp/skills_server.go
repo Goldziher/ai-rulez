@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync/atomic"
+	"time"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
@@ -66,14 +67,19 @@ func NewSkillServerWith(version string, catalog *Catalog, opts ServeOptions) *Se
 		Resources: &sdkmcp.ResourceCapabilities{ListChanged: true},
 	}
 	caps.AddExtension(SkillsExtensionID, map[string]any{"directoryRead": true})
+	srv := &Server{version: version, catalog: catalog, serve: newServeState(opts)}
 	mcpServer := sdkmcp.NewServer(
 		&sdkmcp.Implementation{Name: "ai-rulez-skills", Title: "AI-Rulez Skills", Version: version},
-		&sdkmcp.ServerOptions{Capabilities: caps, Instructions: skillServerInstructions, Logger: sdkLogger(), PageSize: pageSize},
+		&sdkmcp.ServerOptions{
+			Capabilities: caps, Instructions: skillServerInstructions, Logger: sdkLogger(), PageSize: pageSize,
+			SetCacheable: srv.servingCacheable,
+		},
 	)
+	srv.mcpServer = mcpServer
 	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware(mcpServer))
 
-	srv := &Server{mcpServer: mcpServer, version: version, catalog: catalog, serve: newServeState(opts)}
 	mcpServer.AddReceivingMiddleware(srv.unknownResourceMiddleware())
+	srv.registerSkillsExtension()
 	srv.registerSkillResources()
 	srv.registerSkillTools()
 	srv.registerServeTools()
@@ -276,56 +282,128 @@ func skillEntry(s *CatalogSkill, limit int) map[string]any {
 	return entry
 }
 
-// WrapTransport returns a transport that answers skills/list and skills/get
-// itself. The Go SDK dispatches only the methods it knows and rejects others
-// before middleware runs, so the extension's two custom methods have to be
-// served at the JSON-RPC layer; everything else passes through untouched.
-func (s *Server) WrapTransport(inner sdkmcp.Transport) sdkmcp.Transport {
-	if s.cat() == nil {
-		return GuardLifecycle(inner)
+// registerSkillsExtension serves the extension's three methods (skills/list,
+// skills/get and the optional resources/directory/read) through the SDK's custom
+// method support, so they pass the SDK's lifecycle checks, its middleware and its
+// parameter decoding like every other method.
+func (s *Server) registerSkillsExtension() {
+	must := func(err error) {
+		if err != nil {
+			panic(fmt.Sprintf("registering the skills extension: %v", err))
+		}
 	}
-	return &skillsTransport{inner: inner, srv: s}
+	must(sdkmcp.AddReceivingCustomMethod(s.mcpServer, methodSkillsList,
+		func(context.Context, *sdkmcp.ServerSession, *skillsParams) (*skillsListResult, error) {
+			entries := make([]map[string]any, 0, len(s.cat().skills))
+			for _, skill := range s.cat().skills {
+				entries = append(entries, skillEntry(skill, maxListedResources))
+			}
+			return &skillsListResult{ResultType: resultTypeComplete, Skills: entries}, nil
+		}))
+	must(sdkmcp.AddReceivingCustomMethod(s.mcpServer, methodSkillsGet,
+		func(_ context.Context, _ *sdkmcp.ServerSession, p *skillsParams) (*skillsGetResult, error) {
+			uri := p.uriOrEmpty()
+			skill, ok := s.cat().byURI[uri]
+			if !ok {
+				return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("not a served skill: %q", uri)}
+			}
+			return &skillsGetResult{ResultType: resultTypeComplete, Skill: skillEntry(skill, 0)}, nil
+		}))
+	must(sdkmcp.AddReceivingCustomMethod(s.mcpServer, methodDirectoryRead,
+		func(_ context.Context, _ *sdkmcp.ServerSession, p *skillsParams) (*directoryResult, error) {
+			uri := p.uriOrEmpty()
+			children, ok := s.cat().directoryChildren(uri)
+			if !ok {
+				return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("not a directory resource: %q", uri)}
+			}
+			return &directoryResult{ResultType: resultTypeComplete, Resources: children}, nil
+		}))
+}
+
+// skillsParams are the parameters of the extension methods; skills/list takes none.
+type skillsParams struct {
+	sdkmcp.ParamsBase
+	URI string `json:"uri,omitempty"`
+}
+
+func (p *skillsParams) uriOrEmpty() string {
+	if p == nil {
+		return ""
+	}
+	return p.URI
+}
+
+type skillsListResult struct {
+	sdkmcp.ResultBase
+	ResultType string           `json:"resultType"`
+	Skills     []map[string]any `json:"skills"`
+}
+
+type skillsGetResult struct {
+	sdkmcp.ResultBase
+	ResultType string         `json:"resultType"`
+	Skill      map[string]any `json:"skill"`
+}
+
+type directoryResult struct {
+	sdkmcp.ResultBase
+	ResultType string           `json:"resultType"`
+	Resources  []map[string]any `json:"resources"`
+}
+
+// WrapTransport guards the lifecycle of the connection; see GuardLifecycle. The
+// skills methods need no wrapping: they are registered on the server.
+func (s *Server) WrapTransport(inner sdkmcp.Transport) sdkmcp.Transport {
+	return GuardLifecycle(inner)
 }
 
 // GuardLifecycle returns a transport that refuses a request sent before
-// initialize with -32600 instead of the SDK's error code 0. It serves no
-// extension methods; the plain `ai-rulez mcp` server uses it.
+// initialize with -32600. The SDK refuses it too, but with error code 0, which is
+// not a JSON-RPC code; this is the one place that rewrites it, and it can go once
+// the SDK answers with -32600 itself.
 func GuardLifecycle(inner sdkmcp.Transport) sdkmcp.Transport {
-	return &skillsTransport{inner: inner}
+	return &lifecycleTransport{inner: inner}
 }
 
-type skillsTransport struct {
+type lifecycleTransport struct {
 	inner sdkmcp.Transport
-	srv   *Server
 }
 
-func (t *skillsTransport) Connect(ctx context.Context) (sdkmcp.Connection, error) {
+func (t *lifecycleTransport) Connect(ctx context.Context) (sdkmcp.Connection, error) {
 	conn, err := t.inner.Connect(ctx)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // transport errors pass through unchanged
 	}
-	return &skillsConn{Connection: conn, srv: t.srv}, nil
+	return &lifecycleConn{Connection: conn}, nil
 }
 
-type skillsConn struct {
+type lifecycleConn struct {
 	sdkmcp.Connection
-	srv *Server
-	// initialized is set once an initialize request passed to the SDK: the
-	// extension methods are answered here, below the SDK's lifecycle check, so
-	// they apply the same rule (no call before initialize) themselves.
+	// initialized is set once an initialize request passed to the SDK.
 	initialized atomic.Bool
 }
 
 // methodPing is the one request MCP allows before initialize besides initialize itself.
 const methodPing = "ping"
 
-// newProtocolVersion is the first protocol version whose requests carry their
+// sessionlessProtocol is the first protocol version whose requests carry their
 // own protocol version in _meta and need no initialize (SEP-2575).
-const newProtocolVersion = "2026-07-28"
+const sessionlessProtocol = "2026-07-28"
+
+// protocolAtLeast compares two protocol versions, which are dates: a version
+// that is not one is older than any.
+func protocolAtLeast(version, minimum string) bool {
+	v, err := time.Parse(time.DateOnly, version)
+	if err != nil {
+		return false
+	}
+	m, err := time.Parse(time.DateOnly, minimum)
+	return err == nil && !v.Before(m)
+}
 
 // mayAnswer reports whether a request may be answered: after initialize, or
 // when it carries the per-request protocol version of the sessionless protocol.
-func (c *skillsConn) mayAnswer(params json.RawMessage) bool {
+func (c *lifecycleConn) mayAnswer(params json.RawMessage) bool {
 	if c.initialized.Load() {
 		return true
 	}
@@ -336,33 +414,10 @@ func (c *skillsConn) mayAnswer(params json.RawMessage) bool {
 		return false
 	}
 	version, ok := p.Meta[sdkmcp.MetaKeyProtocolVersion].(string)
-	return ok && version >= newProtocolVersion
+	return ok && protocolAtLeast(version, sessionlessProtocol)
 }
 
-// answerEarly returns the response to a skills method, or to any other request
-// sent before initialize, and nil for a request the SDK should handle.
-func (c *skillsConn) answerEarly(req *jsonrpc.Request) *jsonrpc.Response {
-	ours := c.srv != nil && (req.Method == methodSkillsList || req.Method == methodSkillsGet || req.Method == methodDirectoryRead)
-	// The SDK answers any other request sent before initialize with error code 0,
-	// which is not a JSON-RPC code; refuse it here with the code skills/list uses.
-	early := !ours && req.Method != methodInitialize && req.Method != methodPing && !c.mayAnswer(req.Params)
-	if !ours && !early {
-		return nil
-	}
-	resp := &jsonrpc.Response{ID: req.ID}
-	if !c.mayAnswer(req.Params) {
-		resp.Error = &jsonrpc.Error{Code: jsonrpc.CodeInvalidRequest, Message: fmt.Sprintf("method %q is invalid during session initialization", req.Method)}
-	} else if result, rpcErr := c.srv.cat().handleSkillsMethod(req.Method, req.Params); rpcErr != nil {
-		resp.Error = rpcErr
-	} else if raw, mErr := json.Marshal(result); mErr != nil {
-		resp.Error = &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: mErr.Error()}
-	} else {
-		resp.Result = raw
-	}
-	return resp
-}
-
-func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
+func (c *lifecycleConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 	for {
 		msg, err := c.Connection.Read(ctx)
 		if err != nil {
@@ -372,58 +427,16 @@ func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 		if ok && req.Method == methodInitialize {
 			c.initialized.Store(true)
 		}
-		if !ok || !req.ID.IsValid() {
+		if !ok || !req.ID.IsValid() || req.Method == methodInitialize || req.Method == methodPing || c.mayAnswer(req.Params) {
 			return msg, nil
 		}
-		resp := c.answerEarly(req)
-		if resp == nil {
-			return msg, nil
-		}
+		resp := &jsonrpc.Response{ID: req.ID, Error: &jsonrpc.Error{
+			Code: jsonrpc.CodeInvalidRequest, Message: fmt.Sprintf("method %q is invalid during session initialization", req.Method),
+		}}
 		if err := c.Write(ctx, resp); err != nil {
 			return nil, err //nolint:wrapcheck // transport errors pass through unchanged
 		}
 	}
-}
-
-// handleSkillsMethod computes the result of skills/list or skills/get.
-func (c *Catalog) handleSkillsMethod(method string, params json.RawMessage) (result map[string]any, rpcErr *jsonrpc.Error) {
-	switch method {
-	case methodSkillsList:
-		entries := make([]map[string]any, 0, len(c.skills))
-		for _, s := range c.skills {
-			entries = append(entries, skillEntry(s, maxListedResources))
-		}
-		return map[string]any{keyResultType: resultTypeComplete, "skills": entries}, nil
-	case methodSkillsGet:
-		var p struct {
-			URI string `json:"uri"`
-		}
-		if len(params) > 0 {
-			if err := json.Unmarshal(params, &p); err != nil {
-				return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "params.uri must be a string"}
-			}
-		}
-		skill, ok := c.byURI[p.URI]
-		if !ok {
-			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("not a served skill: %q", p.URI)}
-		}
-		return map[string]any{keyResultType: resultTypeComplete, "skill": skillEntry(skill, 0)}, nil
-	case methodDirectoryRead:
-		var p struct {
-			URI string `json:"uri"`
-		}
-		if len(params) > 0 {
-			if err := json.Unmarshal(params, &p); err != nil {
-				return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "params.uri must be a string"}
-			}
-		}
-		children, ok := c.directoryChildren(p.URI)
-		if !ok {
-			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("not a directory resource: %q", p.URI)}
-		}
-		return map[string]any{keyResultType: resultTypeComplete, keyResources: children}, nil
-	}
-	return nil, &jsonrpc.Error{Code: jsonrpc.CodeMethodNotFound, Message: "method not found"}
 }
 
 // directoryChildren lists the direct children of a directory inside the served
