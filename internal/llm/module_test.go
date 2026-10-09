@@ -3,6 +3,8 @@ package llm
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -36,4 +38,17 @@ func TestLiterLLMBridgeModulePathMatchesImport(t *testing.T) {
 	work, err := os.ReadFile(filepath.Join("..", "..", "literllm.work"))
 	require.NoError(t, err)
 	assert.Contains(t, string(work), "./internal/llm/literllm")
+}
+
+// liter-llm 2.2.0 is the first release that counts Gemini thinking tokens in the usage it returns
+// (upstream #253); the budget no longer charges the completion cap on those routes, so an older
+// pin would silently under-report Gemini spend.
+func TestLiterLLMBridgePinCountsGeminiThinkingTokens(t *testing.T) {
+	mod, err := os.ReadFile(filepath.Join("literllm", "go.mod"))
+	require.NoError(t, err)
+	m := regexp.MustCompile(`github.com/xberg-io/liter-llm/packages/go/v2 v(\d+)\.(\d+)\.(\d+)`).FindStringSubmatch(string(mod))
+	require.NotNil(t, m, "go.mod must require the liter-llm binding")
+	major, _ := strconv.Atoi(m[1])
+	minor, _ := strconv.Atoi(m[2])
+	assert.True(t, major > 2 || (major == 2 && minor >= 2), "liter-llm %s.%s.%s predates the Gemini thinking-token fix (v2.2.0)", m[1], m[2], m[3])
 }
