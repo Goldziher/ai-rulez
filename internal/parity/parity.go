@@ -76,9 +76,9 @@ type Capability struct {
 	CLIFlags []Exclusion
 	// ToolArgs are tool arguments with no flag.
 	ToolArgs []Exclusion
-	// Behaviour names the behaviour check that runs both sides on one fixture and
+	// Behavior names the behavior check that runs both sides on one fixture and
 	// compares their documents; empty when there is none.
-	Behaviour string
+	Behavior string
 }
 
 // ServerOrDefault is the capability's MCP surface.
@@ -111,8 +111,8 @@ func GlobalToolArgs() []Exclusion {
 // ByTool indexes capabilities by tool and server.
 func ByTool(caps []Capability) map[Server]map[string]Capability {
 	out := map[Server]map[string]Capability{Authoring: {}, Skills: {}}
-	for _, c := range caps {
-		if c.Tool != "" {
+	for i := range caps {
+		if c := caps[i]; c.Tool != "" {
 			out[c.ServerOrDefault()][c.Tool] = c
 		}
 	}

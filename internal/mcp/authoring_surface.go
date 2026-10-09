@@ -8,12 +8,16 @@ import (
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
 )
 
 // The authoring server offers more than tools: prompts for the common
 // authoring jobs, and read-only resources so a client can open a rule, a skill
 // or the configuration by URI without calling a tool.
+
+// roleAssistant marks a resource as meant for the model.
+const roleAssistant sdkmcp.Role = "assistant"
 
 const (
 	resourceScheme  = "ai-rulez://"
@@ -37,22 +41,22 @@ func (s *Server) registerAuthoringResources() {
 	s.mcpServer.AddResource(&sdkmcp.Resource{
 		URI: uriConfig, Name: "config", Title: "Project Configuration", MIMEType: mimeJSON,
 		Description: "The parsed settings of the project: name, presets, profiles, builtins, includes (read_config)",
-		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{"assistant"}, Priority: 0.8},
+		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.8},
 	}, s.readAuthoringResource)
 	s.mcpServer.AddResource(&sdkmcp.Resource{
 		URI: uriCatalog, Name: "catalog", Title: "Content Catalog", MIMEType: mimeJSON,
 		Description: "Every rule, skill, agent, command and context file with owner, tokens and digest (catalog)",
-		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{"assistant"}, Priority: 0.6},
+		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.6},
 	}, s.readAuthoringResource)
 	s.mcpServer.AddResourceTemplate(&sdkmcp.ResourceTemplate{
 		URITemplate: uriItemTemplate, Name: "item", Title: "Project Item", MIMEType: mimeMarkdown,
 		Description: "One item of the root: ai-rulez://{kind}/{name}, kind being rules, context, skills, checks, agents or commands",
-		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{"assistant"}, Priority: 0.7},
+		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.7},
 	}, s.readAuthoringResource)
 	s.mcpServer.AddResourceTemplate(&sdkmcp.ResourceTemplate{
 		URITemplate: uriDomainItem, Name: "domain-item", Title: "Domain Item", MIMEType: mimeMarkdown,
 		Description: "One item of a domain: ai-rulez://domains/{domain}/{kind}/{name}",
-		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{"assistant"}, Priority: 0.7},
+		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.7},
 	}, s.readAuthoringResource)
 	s.mcpServer.AddReceivingMiddleware(s.unknownAuthoringResourceMiddleware())
 }
@@ -217,7 +221,7 @@ Do not call generate_outputs until I say so.`, a["name"], a["purpose"], a["name"
 			text: func(a map[string]string) string {
 				priority := a["priority"]
 				if priority == "" {
-					priority = "medium"
+					priority = crud.PriorityDefault
 				}
 				return fmt.Sprintf(`Add the rule %q: %s
 
