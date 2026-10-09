@@ -34,9 +34,8 @@ By default clean lists what it will delete and asks for confirmation; use --yes
 to skip the prompt (required in non-interactive shells; declining exits 1) or --dry-run
 to preview. Generated files you edited by hand are kept with a warning; --include-edited
 removes them too.`,
-	Aliases: []string{"clear"},
-	Args:    cobra.MaximumNArgs(1),
-	RunE:    runClean,
+	Args: cobra.MaximumNArgs(1),
+	RunE: runClean,
 }
 
 func init() {

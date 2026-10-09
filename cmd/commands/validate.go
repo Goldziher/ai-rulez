@@ -41,7 +41,7 @@ warnings fail the run (the same as --fail-on warning).
 
 Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 2 findings at or above --fail-on (default error).`,
-	Aliases: []string{"val", "v", "check"},
+	Aliases: []string{"val"},
 	Args:    cobra.MaximumNArgs(1),
 	PreRunE: func(*cobra.Command, []string) error { return validatePreRun() },
 	RunE: func(cmd *cobra.Command, args []string) error {
