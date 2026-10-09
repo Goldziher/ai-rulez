@@ -10,7 +10,19 @@
     "schema_version": { "const": 1 },
     "status": { "enum": ["created", "removed", "updated"] },
     "type": {
-      "enum": ["rule", "context", "skill", "agent", "command", "check", "domain", "profile", "include", "installed_skill", "config"]
+      "enum": [
+        "rule",
+        "context",
+        "skill",
+        "agent",
+        "command",
+        "check",
+        "domain",
+        "profile",
+        "include",
+        "installed_skill",
+        "config"
+      ]
     },
     "name": { "type": "string" },
     "domain": { "type": "string", "description": "The domain of the item; omitted for root content." },

@@ -72,7 +72,7 @@ write to the `config.local.*` overlay. See [Local Configuration](local-overrides
 
 AI-Rulez provides CRUD commands to programmatically modify your `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills/agents/commands, manage includes, and organize profiles.
 
-#### Results, `--format json` and which project
+### Results, `--format json` and which project
 
 Every command below prints its *result* on stdout and its confirmation sentence on stderr, so a script can
 capture the result and `-q` only silences the sentence. `add`, `remove`, `edit` and `domain add|remove` print the
