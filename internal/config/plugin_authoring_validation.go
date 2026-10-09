@@ -45,6 +45,9 @@ func (c *Config) validatePluginAuthoring() error {
 	if err := validatePluginPaths(p); err != nil {
 		return err
 	}
+	if err := validateHermesDependencies(p); err != nil {
+		return err
+	}
 	if err := validatePluginRuntimeRules(p); err != nil {
 		return err
 	}

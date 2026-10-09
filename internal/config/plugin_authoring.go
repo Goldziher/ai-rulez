@@ -363,6 +363,9 @@ type HermesExtras struct {
 	// RequiresPython is the Python requirement for the generated wheel.
 	// Empty defaults to >=3.11.
 	RequiresPython string `yaml:"requires_python,omitempty" json:"requires_python,omitempty" toml:"requires_python,omitempty"` //nolint:tagliatelle
+	// Dependencies are PEP 508 requirements installed with the Hermes plugin.
+	// Empty leaves both the wheel and project plugin dependency-free.
+	Dependencies []string `yaml:"dependencies,omitempty" json:"dependencies,omitempty" toml:"dependencies,omitempty"`
 }
 
 // MarketplaceAuthoring describes the marketplace index emitted for a plugin (or
