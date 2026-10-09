@@ -1,13 +1,13 @@
 package commands
 
 import (
-	"fmt"
 	"io"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
+	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
 
@@ -101,7 +101,7 @@ func runBuiltinsShow(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
 	if !builtins.IsValid(name) {
-		return fail(fmt.Errorf("unknown builtin domain: %s", name)) //nolint:err113 // user-facing
+		return fail(oops.Hint("Run 'ai-rulez builtins list' to see the built-in domains.").Errorf("unknown builtin domain: %s", name))
 	}
 
 	entries, err := builtins.LoadDomainContent(name)

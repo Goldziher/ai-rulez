@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/change-result.schema.json",
+  "title": "ai-rulez change result",
+  "description": "Output of `--format json` of add, remove, edit, init, domain add|remove, profile add|remove|set-default, include add|remove and skill install|remove: what was created, removed or rewritten.",
+  "type": "object",
+  "required": ["schema_version", "status", "type", "name"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "status": { "enum": ["created", "removed", "updated"] },
+    "type": {
+      "enum": ["rule", "context", "skill", "agent", "command", "check", "domain", "profile", "include", "installed_skill", "config"]
+    },
+    "name": { "type": "string" },
+    "domain": { "type": "string", "description": "The domain of the item; omitted for root content." },
+    "path": {
+      "type": "string",
+      "description": "The file or directory created, removed or rewritten, relative to the working directory when below it. For a profile, include or installed skill: the config file holding the entry."
+    },
+    "source": { "type": "string", "description": "The source of an include or installed skill, credentials redacted." },
+    "domains": { "type": "array", "items": { "type": "string" }, "description": "The domains of a created profile." },
+    "default": { "type": "boolean", "description": "The profile is (now) the default profile." },
+    "local": { "type": "boolean", "description": "The change went to the machine-local layer (--local)." }
+  }
+}

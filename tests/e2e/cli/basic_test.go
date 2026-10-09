@@ -72,12 +72,12 @@ func (s *BasicCLITestSuite) TestMCPHelp() {
 
 func (s *BasicCLITestSuite) TestAddHelp() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "--help")
-	result.AssertStdoutContains(s.T(), "Add rules, context, or skills")
+	result.AssertStdoutContains(s.T(), "Add rules, context, skills")
 }
 
 func (s *BasicCLITestSuite) TestRemoveHelp() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "--help")
-	result.AssertStdoutContains(s.T(), "Remove rules, context, or skills")
+	result.AssertStdoutContains(s.T(), "Remove rules, context, skills")
 }
 
 func (s *BasicCLITestSuite) TestListHelp() {
