@@ -208,10 +208,10 @@ func bootstrapBase(absPath string) string {
 		return filepath.Dir(absPath)
 	}
 	if !info.IsDir() {
-		return projectBaseDir(filepath.Dir(absPath))
+		return ProjectBaseDir(filepath.Dir(absPath))
 	}
 	if st, err := os.Stat(filepath.Join(absPath, configTOMLFilename)); err == nil && !st.IsDir() {
-		return projectBaseDir(absPath)
+		return ProjectBaseDir(absPath)
 	}
 	return absPath
 }
