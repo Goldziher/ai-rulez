@@ -138,23 +138,23 @@ func displayDriftPath(cfg *config.Config, rel string) string {
 	return filepath.ToSlash(out)
 }
 
-// runDriftCheck checks a single root (args) or every root under the working
+// runDriftCheck checks a single root (-C/--config-dir or discovery) or every root under the working
 // directory (recursive) and returns the process exit code.
-func runDriftCheck(args []string, isRecursive bool) int {
-	return runDriftCheckGated(args, isRecursive, nil)
+func runDriftCheck(isRecursive bool) int {
+	return runDriftCheckGated(isRecursive, nil)
 }
 
 // runDriftCheckGated is runDriftCheck with a gate run on every loaded config
 // before its generated files are compared, so one load serves both. A gate error
 // that is lock drift (see isLockedDrift) counts as
 // drift (exit 2), any other gate error as a failure (exit 1).
-func runDriftCheckGated(args []string, isRecursive bool, gate func(*config.Config) error) int {
+func runDriftCheckGated(isRecursive bool, gate func(*config.Config) error) int {
 	fix := "run `ai-rulez generate` and commit the result"
 	rep := newDriftReport()
 	if isRecursive {
 		return runRecursiveDrift(rep, fix, gate)
 	}
-	cfg, err := loadConfigForCommand(cmdContext(), args, driftLoadOptions()...)
+	cfg, err := loadConfigForCommand(cmdContext(), driftLoadOptions()...)
 	if err != nil {
 		renderError(os.Stderr, err)
 		if gate != nil && errors.Is(err, config.ErrLockViolation) {

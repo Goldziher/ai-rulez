@@ -98,7 +98,7 @@ func init() {
 	addFormatFlag(CatalogCmd.Flags(), &catalogFormat, "", formatText, formatText, formatJSON)
 	CatalogCmd.Flags().IntVar(&catalogSchemaFlag, "schema-version", govview.CatalogSchemaVersion, "JSON schema version: 1 or 2")
 	CatalogCmd.Flags().StringVar(&catalogHTMLDir, "html", "", "Write a static website of the catalog into this directory")
-	CatalogCmd.Flags().StringVar(&catalogRole, "role", "", "With --html: keep only the items this role keeps")
+	specRole.String(CatalogCmd.Flags(), &catalogRole, "With --html: keep only the items this role keeps")
 	CatalogCmd.Flags().BoolVar(&catalogExcerpt, "include-excerpt", true, "Include a body excerpt of each item (version 2 JSON and --html); --indexable turns it off unless this flag is set")
 	CatalogCmd.Flags().BoolVar(&catalogIndexable, "indexable", false, "With --html: let search engines index the site (no robots.txt, no noindex)")
 	CatalogCmd.Flags().IntVar(&catalogPageSize, "max-items-per-page", 0, "With --html: overview rows per page (default: [catalog] max_items_per_page, else 200)")
@@ -112,8 +112,7 @@ func init() {
 	CatalogCmd.Flags().StringVar(&catalogWithUsage, "with-usage", "", "Add each skill's use count from a usage log (default file: <config dir>/local/usage.jsonl)")
 	CatalogCmd.Flags().Lookup("with-eval").NoOptDefVal = catalogDefaultInput
 	CatalogCmd.Flags().Lookup("with-usage").NoOptDefVal = catalogDefaultInput
-	CatalogCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
-	CatalogCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specNoLocal.Bool(CatalogCmd.Flags(), &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
 }
 
 // The catalog documents are built by internal/govview, which the MCP tools share.
@@ -180,7 +179,7 @@ func runCatalog(out io.Writer) error {
 		return err
 	}
 	ctx := cmdContext()
-	cfg, err := loadConfigForCommand(ctx, nil)
+	cfg, err := loadConfigForCommand(ctx)
 	if err != nil {
 		return err
 	}

@@ -94,17 +94,17 @@ var listChecksCmd = &cobra.Command{
 
 func init() {
 	ListCmd.Flags().BoolVar(&listPlacement, "placement", false, "Report where each skill and command is placed: core or plugin-only, and which plugins bundle it")
-	ListCmd.Flags().StringVarP(&listProfile, "profile", "p", "", "Profile for --placement (default: from config or 'default')")
+	specProfile.String(ListCmd.Flags(), &listProfile, "Profile for --placement (default: from config or 'default')")
 	addJSONFormat(ListCmd.Flags(), &listJSON, "j")
 	ListCmd.AddCommand(listAgentsCmd)
 	ListCmd.AddCommand(listCommandsCmd)
 	ListCmd.AddCommand(listChecksCmd)
-	listChecksCmd.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
+	specDomain.String(listChecksCmd.Flags(), &listDomain, "Filter by domain (shows all if not specified)")
 	addJSONFormat(listChecksCmd.Flags(), &listJSON, "j")
 	for _, c := range []*cobra.Command{listRulesCmd, listContextCmd, listSkillsCmd, listAgentsCmd, listCommandsCmd} {
-		c.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
+		specDomain.String(c.Flags(), &listDomain, "Filter by domain (shows all if not specified)")
 		addJSONFormat(c.Flags(), &listJSON, "j")
-		c.Flags().BoolVar(&listLocal, "local", false, "List the machine-local tree (.ai-rulez/local/)")
+		specLocal.Bool(c.Flags(), &listLocal, "List the machine-local tree (.ai-rulez/local/)")
 	}
 	ListCmd.AddCommand(listRulesCmd)
 	ListCmd.AddCommand(listContextCmd)
@@ -216,7 +216,7 @@ func loadListedConfig(ctx context.Context) error {
 	if listLocal {
 		opts = append(opts, config.WithoutRemote())
 	}
-	if _, err := loadConfigForCommand(ctx, nil, opts...); err != nil {
+	if _, err := loadConfigForCommand(ctx, opts...); err != nil {
 		return failMsg("Failed to load config", err)
 	}
 	return nil
@@ -228,7 +228,7 @@ func runListRoot(cmd *cobra.Command, _ []string) error {
 		return cmd.Help()
 	}
 	out := outFor(cmd)
-	cfg, err := loadConfigForCommand(cmdContext(), nil, pluginLoadOptions(true)...)
+	cfg, err := loadConfigForCommand(cmdContext(), pluginLoadOptions(true)...)
 	if err != nil {
 		return failMsg("Failed to load config", err)
 	}

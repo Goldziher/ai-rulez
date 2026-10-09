@@ -4,10 +4,7 @@
   "title": "ai-rulez publish verify",
   "description": "Output of `ai-rulez publish verify <dir|oci-ref> --format json`: one result per dist directory (a multi-plugin dist verifies every plugin and the aggregate). Exit 2 when a result has problems.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "results"
-  ],
+  "required": ["schema_version", "results"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -17,10 +14,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "files",
-          "problems"
-        ],
+        "required": ["files", "problems"],
         "additionalProperties": false,
         "properties": {
           "dir": {
@@ -37,11 +31,7 @@
             "minimum": 0
           },
           "signature": {
-            "enum": [
-              "none",
-              "unverified",
-              "verified"
-            ]
+            "enum": ["none", "unverified", "verified"]
           },
           "signer": {
             "type": "string"
@@ -50,10 +40,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "path",
-                "message"
-              ],
+              "required": ["path", "message"],
               "properties": {
                 "path": {
                   "type": "string"

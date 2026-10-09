@@ -4,15 +4,7 @@
   "title": "ai-rulez verifiers test",
   "description": "Output of `ai-rulez verifiers test --format json`: the outcome of the self-test examples. Exit 2 when ok is false.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "ok",
-    "passed",
-    "total",
-    "results",
-    "untested",
-    "problems"
-  ],
+  "required": ["schema_version", "ok", "passed", "total", "results", "untested", "problems"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -33,13 +25,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "verifier",
-          "example",
-          "want",
-          "got",
-          "ok"
-        ],
+        "required": ["verifier", "example", "want", "got", "ok"],
         "additionalProperties": false,
         "properties": {
           "verifier": {
@@ -73,10 +59,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "code",
-          "message"
-        ],
+        "required": ["code", "message"],
         "additionalProperties": false,
         "properties": {
           "code": {

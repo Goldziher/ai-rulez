@@ -243,7 +243,7 @@ recorded in the manifest, so a committed index shows where its vectors came from
 ai-rulez search --eval search-cases.yaml
 ai-rulez search --eval search-cases.yaml --min top1=0.6,mrr=0.7
 ai-rulez search --eval search-cases.yaml --mode lexical,hybrid     # side by side, with paired intervals
-ai-rulez search --eval search-cases.yaml --out result.json
+ai-rulez search --eval search-cases.yaml --output result.json
 ai-rulez search --eval search-cases.yaml --baseline result.json --max-flips 0
 ai-rulez search --from-evals                                        # cases derived from the skills' eval cases
 ```
@@ -306,7 +306,7 @@ cannot tell you. A vector mode that fell back to lexical for any case (no networ
 (exit 1), never a pass, because the numbers would not measure the ranker asked for.
 
 `--format json` prints [`search-eval.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/search-eval.v1.schema.json),
-which is also what `--out` writes and a later `--baseline` reads. The top-level cases, tags, intervals, misses and
+which is also what `--output` writes and a later `--baseline` reads. The top-level cases, tags, intervals, misses and
 negatives are those of the primary `mode`; `by_mode` holds every mode. Each case records `rank` (null when not
 retrieved) and `hit`.
 
@@ -317,7 +317,7 @@ retrieved) and `hit`.
 
 With a small set one case moves `top1` by several points, so prefer the flip count to a raw floor. Cases present in
 only one of the two runs are not compared. A baseline must come from the same primary
-mode and the same `--k`; otherwise the run is refused (exit 1). `--out` is not written when the embeddings were
+mode and the same `--k`; otherwise the run is refused (exit 1). `--output` is not written when the embeddings were
 degraded, so a fallback run cannot become a baseline.
 
 Exit codes: `0` every gate passed, `1` the command could not run (bad flags, invalid cases file, unknown skill,
@@ -334,7 +334,7 @@ loaded, to `<config dir>/local/search-queries.jsonl` (mode 0600, gitignored, nev
 session ids hashed). `search mine` turns it into cases:
 
 ```bash
-ai-rulez search mine --out mined-cases.yaml    # a query followed in its session by loading S expects S
+ai-rulez search mine --output mined-cases.yaml    # a query followed in its session by loading S expects S
 ai-rulez search mine --min-count 2 --purge     # keep queries seen twice with the same skill; delete the log
 ```
 

@@ -178,7 +178,7 @@ func BenchmarkOKF(b *testing.B) {
 			quiet(b, func() {
 				for range b.N {
 					var out bytes.Buffer
-					if code := codeOf(runOKFExport(context.Background(), nil, &out)); code != 0 {
+					if code := codeOf(runOKFExport(context.Background(), &out)); code != 0 {
 						b.Fatalf("okf export exited %d: %s", code, out.String())
 					}
 				}
@@ -187,7 +187,7 @@ func BenchmarkOKF(b *testing.B) {
 		b.Run("validate/"+s.Name, func(b *testing.B) {
 			root := benchCommandProject(b, s.Files, "", false)
 			var out bytes.Buffer
-			if code := codeOf(runOKFExport(context.Background(), nil, &out)); code != 0 {
+			if code := codeOf(runOKFExport(context.Background(), &out)); code != 0 {
 				b.Fatalf("okf export exited %d: %s", code, out.String())
 			}
 			bundle := filepath.Join(root, "docs", "okf")

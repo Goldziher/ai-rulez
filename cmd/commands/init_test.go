@@ -25,10 +25,10 @@ func TestInitCommand(t *testing.T) {
 	assert.NotNil(t, flags.Lookup("from"))
 	assert.NotNil(t, flags.Lookup("setup-hooks"))
 	assert.NotNil(t, flags.Lookup("yes"))
-	assert.Equal(t, "d", flags.Lookup("domains").Shorthand)
-	assert.Equal(t, "s", flags.Lookup("skip-content").Shorthand)
-	assert.Equal(t, "F", flags.Lookup("from").Shorthand)
-	assert.Equal(t, "H", flags.Lookup("setup-hooks").Shorthand)
+	assert.Empty(t, flags.Lookup("domains").Shorthand)
+	assert.Empty(t, flags.Lookup("skip-content").Shorthand)
+	assert.Empty(t, flags.Lookup("from").Shorthand)
+	assert.Empty(t, flags.Lookup("setup-hooks").Shorthand)
 	assert.Equal(t, "y", flags.Lookup("yes").Shorthand)
 }
 

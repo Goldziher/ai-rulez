@@ -84,12 +84,12 @@ var removeCheckCmd = &cobra.Command{
 func init() {
 	RemoveCmd.AddCommand(removeRuleCmd, removeContextCmd, removeSkillCmd, removeAgentCmd, removeCommandCmd, removeCheckCmd)
 	for _, c := range []*cobra.Command{removeRuleCmd, removeContextCmd, removeSkillCmd, removeAgentCmd, removeCommandCmd, removeCheckCmd} {
-		c.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
+		specDomain.String(c.Flags(), &removeDomain, "Domain name (optional, searches root if not specified)")
 		addYesFlag(c.Flags(), &removeForce, "Skip confirmation prompts")
 		addResultFormat(c.Flags())
 	}
 	for _, c := range []*cobra.Command{removeRuleCmd, removeContextCmd, removeSkillCmd, removeAgentCmd, removeCommandCmd} {
-		c.Flags().BoolVar(&removeLocal, "local", false, "Remove from the machine-local tree (.ai-rulez/local/)")
+		specLocal.Bool(c.Flags(), &removeLocal, "Remove from the machine-local tree (.ai-rulez/local/)")
 	}
 }
 
