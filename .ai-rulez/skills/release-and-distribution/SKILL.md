@@ -1,10 +1,16 @@
 ---
-description: "Use when preparing a release, bumping versions across root.go, package.json and pyproject.toml, or changing the npm and PyPI wrappers in release/, the changelog, or distribution assets."
-priority: high
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
+type: Playbook
+title: Release And Distribution
+description: Use when preparing a release, bumping versions across root.go, package.json and pyproject.toml, or changing the npm and PyPI wrappers in release/, the changelog, or distribution assets.
+x-ai-rulez:
+  kind: skill
+  id: release-and-distribution
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
 ---
 
 # Release and Distribution Steward

@@ -142,7 +142,7 @@ func runAddRule(cmd *cobra.Command, args []string) {
 	}
 
 	ctx := cmdContext()
-	op, err := newContentOperator(addLocal)
+	op, err := newWritingOperator(addLocal)
 	if err != nil {
 		fatal("Failed to create CRUD operator", err)
 	}
@@ -180,7 +180,7 @@ func runAddContext(cmd *cobra.Command, args []string) {
 	name := args[0]
 
 	ctx := cmdContext()
-	op, err := newContentOperator(addLocal)
+	op, err := newWritingOperator(addLocal)
 	if err != nil {
 		fatal("Failed to create CRUD operator", err)
 	}
@@ -217,7 +217,7 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 	name := args[0]
 
 	ctx := cmdContext()
-	op, err := newContentOperator(addLocal)
+	op, err := newWritingOperator(addLocal)
 	if err != nil {
 		fatal("Failed to create CRUD operator", err)
 	}
@@ -267,7 +267,7 @@ func runAddCheck(cmd *cobra.Command, args []string) {
 func runAddItem(name, ftype, label string,
 	add func(*crud.OperatorImpl, context.Context, *crud.AddFileRequest) (*crud.FileResult, error),
 ) {
-	op, err := newContentOperator(addLocal)
+	op, err := newWritingOperator(addLocal)
 	if err != nil {
 		fatal("Failed to create CRUD operator", err)
 	}

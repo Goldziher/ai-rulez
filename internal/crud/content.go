@@ -26,7 +26,7 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 	req.Type = ContentTypeRules
 
 	// Validate inputs
-	if err := ValidateFileName(req.Name); err != nil {
+	if err := ValidateNewFileName(req.Name); err != nil {
 		return nil, err
 	}
 
@@ -69,7 +69,7 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 	// Get file path and write
 	filePath := op.filesMgr.GetFilePath(req.Domain, ContentTypeRules, req.Name)
 
-	if err := op.filesMgr.WriteFile(filePath, content); err != nil {
+	if err := op.writeConcept(ctx, filePath, ContentTypeRules, req.Domain, req.Name, content); err != nil {
 		return nil, err
 	}
 
@@ -94,7 +94,7 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 	req.Type = ContentTypeContext
 
 	// Validate inputs
-	if err := ValidateFileName(req.Name); err != nil {
+	if err := ValidateNewFileName(req.Name); err != nil {
 		return nil, err
 	}
 
@@ -137,7 +137,7 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 	// Get file path and write
 	filePath := op.filesMgr.GetFilePath(req.Domain, ContentTypeContext, req.Name)
 
-	if err := op.filesMgr.WriteFile(filePath, content); err != nil {
+	if err := op.writeConcept(ctx, filePath, ContentTypeContext, req.Domain, req.Name, content); err != nil {
 		return nil, err
 	}
 
@@ -215,7 +215,7 @@ func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*Fil
 
 	// Write SKILL.md file
 	skillFile := filepath.Join(skillDir, "SKILL.md")
-	if err := op.filesMgr.WriteFile(skillFile, content); err != nil {
+	if err := op.writeConcept(ctx, skillFile, ContentTypeSkills, req.Domain, req.Name, content); err != nil {
 		return nil, err
 	}
 
@@ -290,7 +290,7 @@ func (op *OperatorImpl) RemoveFile(ctx context.Context, domain, ftype, name stri
 		}
 	}
 
-	return nil
+	return op.refreshIndexes(ctx)
 }
 
 // ListFiles returns information about all files of a specific type
@@ -441,7 +441,7 @@ func (op *OperatorImpl) ReadFileContent(path string) (string, error) {
 // UpdateFile atomically updates an existing file's content.
 // Unlike the delete-then-create pattern, this uses WriteFile (temp+rename)
 // so the old content is never lost if the write fails.
-func (op *OperatorImpl) UpdateFile(_ context.Context, domain, ftype, name, content, priority string, targets []string) (*FileResult, error) {
+func (op *OperatorImpl) UpdateFile(ctx context.Context, domain, ftype, name, content, priority string, targets []string) (*FileResult, error) {
 	if err := ValidateFileName(name); err != nil {
 		return nil, err
 	}
@@ -484,7 +484,11 @@ func (op *OperatorImpl) UpdateFile(_ context.Context, domain, ftype, name, conte
 		filePath = op.filesMgr.GetFilePath(domain, ftype, name)
 	}
 
-	if err := op.filesMgr.WriteFileOverwrite(filePath, content); err != nil {
+	previous := ""
+	if prev, err := op.filesMgr.ReadFile(filePath); err == nil {
+		previous = prev
+	}
+	if err := op.overwriteConcept(ctx, filePath, ftype, domain, name, content, previous); err != nil {
 		return nil, err
 	}
 
@@ -510,27 +514,27 @@ func (op *OperatorImpl) requireDomain(name string) error {
 }
 
 // AddAgent creates a new agent file in the root or domain agents directory.
-func (op *OperatorImpl) AddAgent(_ context.Context, req *AddFileRequest) (*FileResult, error) {
-	return op.addFlatItem(req, ContentTypeAgents, func(r *AddFileRequest) string {
+func (op *OperatorImpl) AddAgent(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
+	return op.addFlatItem(ctx, req, ContentTypeAgents, func(r *AddFileRequest) string {
 		return GenerateAgentTemplate(r.Name, r.Description)
 	})
 }
 
 // AddCommand creates a new command file in the root or domain commands directory.
-func (op *OperatorImpl) AddCommand(_ context.Context, req *AddFileRequest) (*FileResult, error) {
-	return op.addFlatItem(req, ContentTypeCommands, func(r *AddFileRequest) string {
+func (op *OperatorImpl) AddCommand(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
+	return op.addFlatItem(ctx, req, ContentTypeCommands, func(r *AddFileRequest) string {
 		return GenerateCommandTemplate(r.Name, r.Description)
 	})
 }
 
 // AddCheck creates a new check file in the root or domain checks directory.
-func (op *OperatorImpl) AddCheck(_ context.Context, req *AddFileRequest) (*FileResult, error) {
+func (op *OperatorImpl) AddCheck(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
 	if req != nil {
 		if err := ValidateCheckName(req.Name); err != nil {
 			return nil, err
 		}
 	}
-	return op.addFlatItem(req, ContentTypeChecks, func(r *AddFileRequest) string {
+	return op.addFlatItem(ctx, req, ContentTypeChecks, func(r *AddFileRequest) string {
 		return GenerateCheckTemplate(r.Name, r.Description)
 	})
 }
@@ -538,12 +542,12 @@ func (op *OperatorImpl) AddCheck(_ context.Context, req *AddFileRequest) (*FileR
 // addFlatItem writes a flat markdown content file (agent or command). Content
 // supplied without frontmatter is written as given, since agent and command
 // frontmatter carries no priority or targets of its own to generate.
-func (op *OperatorImpl) addFlatItem(req *AddFileRequest, ftype string, template func(*AddFileRequest) string) (*FileResult, error) {
+func (op *OperatorImpl) addFlatItem(ctx context.Context, req *AddFileRequest, ftype string, template func(*AddFileRequest) string) (*FileResult, error) {
 	if req == nil {
 		return nil, oops.Hint("AddFileRequest cannot be nil").Errorf("invalid request")
 	}
 	req.Type = ftype
-	if err := ValidateFileName(req.Name); err != nil {
+	if err := ValidateNewFileName(req.Name); err != nil {
 		return nil, err
 	}
 	if req.Domain != "" {
@@ -563,8 +567,33 @@ func (op *OperatorImpl) addFlatItem(req *AddFileRequest, ftype string, template 
 	if content == "" {
 		content = template(req)
 	}
-	if err := op.filesMgr.WriteFile(filePath, EnsureTrailingNewline(content)); err != nil {
+	if err := op.writeConcept(ctx, filePath, ftype, req.Domain, req.Name, EnsureTrailingNewline(content)); err != nil {
 		return nil, err
 	}
 	return &FileResult{Name: req.Name, FullPath: filePath, Type: ftype, Domain: req.Domain}, nil
+}
+
+// writeConcept stores a new content file as an OKF concept and refreshes the indexes.
+func (op *OperatorImpl) writeConcept(ctx context.Context, path, ftype, domain, name, content string) error {
+	concept, err := op.concept(ftype, domain, name, content, "")
+	if err != nil {
+		return err
+	}
+	if err := op.filesMgr.WriteFile(path, concept); err != nil {
+		return err
+	}
+	return op.refreshIndexes(ctx)
+}
+
+// overwriteConcept replaces an existing content file with an OKF concept, keeping
+// the type and title of previous, and refreshes the indexes.
+func (op *OperatorImpl) overwriteConcept(ctx context.Context, path, ftype, domain, name, content, previous string) error {
+	concept, err := op.concept(ftype, domain, name, content, previous)
+	if err != nil {
+		return err
+	}
+	if err := op.filesMgr.WriteFileOverwrite(path, concept); err != nil {
+		return err
+	}
+	return op.refreshIndexes(ctx)
 }

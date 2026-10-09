@@ -113,7 +113,7 @@ func runRemoveItem(name, ftype, label, doneLabel string) {
 		resourceName = fmt.Sprintf("%s %s in domain %s", label, name, removeDomain)
 	}
 	confirmRemovalUnlessYes(removeForce, "", resourceName, "Operation canceled")
-	op, err := newContentOperator(removeLocal)
+	op, err := newWritingOperator(removeLocal)
 	if err != nil {
 		fatal("Failed to create CRUD operator", err)
 	}

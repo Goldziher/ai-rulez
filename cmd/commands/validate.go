@@ -22,6 +22,12 @@ import (
 
 var validateRecursive bool
 
+// applyValidateQuiet silences progress output when --quiet is set or the
+// output is structured: JSON must be the only thing on stdout.
+func applyValidateQuiet() {
+	progress.SetQuiet(viper.GetBool("quiet") || structuredFormat(validateFormat))
+}
+
 var ValidateCmd = &cobra.Command{
 	Use:   "validate [config-file]",
 	Short: "Validate AI rules configuration and content",
@@ -59,7 +65,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 			os.Exit(1)
 		}
 		// JSON output must be the only thing on stdout.
-		progress.SetQuiet(viper.GetBool("quiet") || structuredFormat(validateFormat))
+		applyValidateQuiet()
 
 		if validateRecursive {
 			if len(args) > 0 {
