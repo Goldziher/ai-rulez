@@ -72,8 +72,9 @@ func applyLogLevel() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "C", "", "config file (default is to auto-discover)")
-	RootCmd.PersistentFlags().StringVar(&configDir, "config-dir", "", "Configuration directory name (default: .ai-rulez, then .config/ai-rulez)")
+	RootCmd.SetFlagErrorFunc(flagErrorWithHint)
+	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "C", "", "Configuration directory (such as .ai-rulez) or file to use instead of discovering one; the one way to name it, no command takes it as an argument")
+	specConfigDir.String(RootCmd.PersistentFlags(), &configDir)
 	RootCmd.PersistentFlags().BoolP("debug", "D", false, "enable debug output (or AI_RULEZ_DEBUG=1)")
 	RootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress progress and informational output on stderr; results, warnings and errors stay (or AI_RULEZ_QUIET=1)")
 	RootCmd.PersistentFlags().StringVarP(&gitToken, "token", "T", "", "Git access token for private repositories (or use AI_RULEZ_GIT_TOKEN env var)")

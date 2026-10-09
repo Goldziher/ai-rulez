@@ -63,8 +63,7 @@ var rolesResolveCmd = &cobra.Command{
 
 func init() {
 	addFormatFlag(RolesCmd.PersistentFlags(), &rolesFormat, "", formatText, formatText, formatJSON)
-	RolesCmd.PersistentFlags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
-	RolesCmd.PersistentFlags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specNoLocal.Bool(RolesCmd.PersistentFlags(), &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
 	RolesCmd.AddCommand(rolesListCmd, rolesShowCmd, rolesResolveCmd)
 }
 
@@ -72,7 +71,7 @@ func loadRolesConfig() (*config.Config, error) {
 	if err := checkFormatFlag(rolesFormat); err != nil {
 		return nil, err
 	}
-	cfg, err := loadConfigForCommand(cmdContext(), nil)
+	cfg, err := loadConfigForCommand(cmdContext())
 	if err != nil {
 		return nil, err
 	}

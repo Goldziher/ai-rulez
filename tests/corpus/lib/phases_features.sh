@@ -50,10 +50,10 @@ runtimes = ["agent-plugins"]'
   ar lock
   expect_rc 0 "lock"
   sub_commit v0.0.1
-  ar publish emit agent-plugins --out "$PH_LOGS/emit1"
+  ar publish emit agent-plugins --output-dir "$PH_LOGS/emit1"
   skip_if_gated "publish emit"
   expect_rc 0 "publish emit agent-plugins" || finish
-  ar publish emit agent-plugins --out "$PH_LOGS/emit2"
+  ar publish emit agent-plugins --output-dir "$PH_LOGS/emit2"
   same_tree "$PH_LOGS/emit1" "$PH_LOGS/emit2" "agent-plugins emitter"
   [ -f "$PH_LOGS/emit1/$name/plugin.json" ] || fail_note "emitter wrote no $name/plugin.json"
   # Round trip: read the emitted package back with convert and rebuild it.
@@ -101,10 +101,10 @@ base_url = "https://corpus.example.com/ard"'
   ar lock
   expect_rc 0 "lock" || finish
   sub_commit v0.0.1
-  ar publish emit ard --out "$PH_LOGS/ard1"
+  ar publish emit ard --output-dir "$PH_LOGS/ard1"
   skip_if_gated "publish emit"
   expect_rc 0 "publish emit ard" || finish
-  ar publish emit ard --out "$PH_LOGS/ard2"
+  ar publish emit ard --output-dir "$PH_LOGS/ard2"
   same_tree "$PH_LOGS/ard1" "$PH_LOGS/ard2" "ard emitter"
   local manifest="$PH_LOGS/ard1/ard.json" n
   jq -e . "$manifest" >/dev/null 2>&1 || fail "ard.json is not JSON"

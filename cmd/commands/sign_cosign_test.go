@@ -58,7 +58,7 @@ func TestCosignInterop(t *testing.T) {
 	t.Run("ai-rulez sign verifies with cosign verify-blob-attestation", func(t *testing.T) {
 		signLock, signKey = true, f.privKey
 		t.Setenv(signPasswordEnv, password)
-		require.Equal(t, 0, func() int { var c int; capture(t, func() { c = runSign(context.Background(), nil, nil) }); return c }())
+		require.Equal(t, 0, func() int { var c int; capture(t, func() { c = runSign(context.Background(), nil) }); return c }())
 		signLock, signKey = false, ""
 
 		runCosign(t, nil, "verify-blob-attestation", "--bundle", f.bundle(), "--key", f.pubKey,

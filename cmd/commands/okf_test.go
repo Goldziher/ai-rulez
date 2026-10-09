@@ -41,7 +41,7 @@ func exportRun(t *testing.T, check bool) (int, string) {
 	okfCheck = check
 	defer func() { okfCheck = false }()
 	var out bytes.Buffer
-	code := runOKFExport(context.Background(), nil, &out)
+	code := runOKFExport(context.Background(), &out)
 	return code, out.String()
 }
 
@@ -248,7 +248,7 @@ func TestDoctorReportsOKFBundleProblems(t *testing.T) {
 	writeFile(t, filepath.Join(root, "docs", "okf", "rules", "notype.md"), "plain text\n")
 	t.Cleanup(func() { doctorStrict, doctorJSON, doctorProfile = false, false, "" })
 	var out bytes.Buffer
-	code := runDoctor(context.Background(), nil, &out)
+	code := runDoctor(context.Background(), &out)
 	assert.Equal(t, exitDoctorFindings, code, out.String())
 	assert.Contains(t, out.String(), "AR9B1")
 }

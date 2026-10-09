@@ -69,7 +69,6 @@ catalogs differ.`,
 func init() {
 	addFormatFlag(catalogDiffCmd.Flags(), &catalogDiffFormat, "", formatText, formatText, formatJSON)
 	catalogDiffCmd.Flags().BoolVar(&catalogDiffExitCode, "exit-code", false, "Exit 2 when the catalogs differ")
-	catalogDiffCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	CatalogCmd.AddCommand(catalogDiffCmd)
 }
 
@@ -89,7 +88,7 @@ func (p *catalogDiffProject) load(ctx context.Context) (*config.Config, error) {
 	if p.cfg != nil {
 		return p.cfg, nil
 	}
-	cfg, err := loadConfigForCommand(ctx, nil, config.WithoutRemote(), config.WithoutLocal())
+	cfg, err := loadConfigForCommand(ctx, config.WithoutRemote(), config.WithoutLocal())
 	if err != nil {
 		return nil, err
 	}

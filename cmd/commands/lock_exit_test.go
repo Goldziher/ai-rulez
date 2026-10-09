@@ -101,7 +101,7 @@ func TestGenerateCheck_EnforcedLockGatesPlainCheck(t *testing.T) {
 				require.Equal(t, 0, runRecursiveGenerate(), "regenerate")
 			}
 			var got int
-			_, _ = capture(t, func() { got = generateCheckCode(nil) })
+			_, _ = capture(t, func() { got = generateCheckCode() })
 			assert.Equal(t, tt.want, got)
 		})
 	}

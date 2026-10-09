@@ -81,7 +81,7 @@ func TestWatchTargets(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := watchTargets(tt.cfg, nil)
+			got := watchTargets(tt.cfg)
 			if len(got) != len(tt.want) {
 				t.Fatalf("targets = %v, want %v", got, tt.want)
 			}
@@ -97,7 +97,7 @@ func TestWatchTargets(t *testing.T) {
 func TestWatchTargets_FallbackWithoutConfig(t *testing.T) {
 	resetWatchFlags(t)
 	chdir(t, t.TempDir())
-	got := watchTargets(nil, nil)
+	got := watchTargets(nil)
 	if len(got) != 1 || got[0].Path != defaultConfigDirName || got[0].File {
 		t.Errorf("fallback targets = %v, want the %s directory", got, defaultConfigDirName)
 	}
@@ -143,7 +143,7 @@ func TestRunGenerateWatch_RegeneratesAndSurvivesBrokenConfig(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- runGenerateWatch(ctx, nil) }()
+	go func() { done <- runGenerateWatch(ctx) }()
 
 	waitFile := func(path string, contains string) {
 		t.Helper()

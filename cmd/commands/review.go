@@ -117,19 +117,17 @@ func init() {
 	f.StringVar(&reviewFlags.baseline, "baseline", "", "Hide the findings in this baseline (or earlier --format json report); report and gate only new ones")
 	f.StringVar(&reviewFlags.writeBaseline, "write-baseline", "", "Write a baseline of the findings of this run to this file")
 	f.StringVar(&reviewFlags.since, "since", "", "Only items changed since this git revision (committed, staged, unstaged and untracked)")
-	f.StringVar(&reviewFlags.role, "role", "", "Review the content slice of this role (see 'ai-rulez roles list')")
-	f.StringVar(&reviewFlags.profile, "profile", "", "Review the content of this profile (or a comma-separated list)")
+	specRole.String(f, &reviewFlags.role, "Review the content slice of this role (see 'ai-rulez roles list')")
+	specProfile.String(f, &reviewFlags.profile, "Review the content of this profile (or a comma-separated list)")
 	f.IntVar(&reviewFlags.concurrency, "concurrency", 0, "Items judged at once (default 4, at most 16)")
 	f.BoolVar(&reviewFlags.noCache, "no-cache", false, "Do not read or write the model response cache")
 	f.StringVar(&reviewFlags.cacheDir, "cache-dir", "", "Response cache directory (default the user cache directory of this project)")
 	f.BoolVar(&reviewFlags.includeImports, "include-imports", false, "Also review content from includes, installed skills and builtins")
 	addFormatFlag(f, &reviewFlags.format, formatText, formatText, rv.Formats()...)
-	f.StringVar(&reviewFlags.out, "out", "", "Write the report to this file instead of standard output")
-	f.BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specOutput.String(f, &reviewFlags.out, "Write the report to this file instead of standard output")
+	specNoLocal.Bool(f, &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
 
 	addFormatFlag(RubricCmd.PersistentFlags(), &rubricFormat, formatText, formatText, rv.Formats()...)
-	RubricCmd.PersistentFlags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	RubricCmd.AddCommand(rubricListCmd, rubricShowCmd, rubricLintCmd)
 	ReviewCmd.AddCommand(reviewCalibrateCmd, reviewFixCmd, reviewExplainCmd)
 }
@@ -202,7 +200,7 @@ type reviewContext struct {
 // by --role, --profile and --since.
 func loadReview(cmd *cobra.Command, args []string) (*reviewContext, error) {
 	ctx := commandContext(cmd)
-	cfg, err := loadConfigForCommand(ctx, nil)
+	cfg, err := loadConfigForCommand(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +371,7 @@ func planWith(rc *reviewContext, res *rv.Results, lc llm.Config, resolved config
 	})
 }
 
-// writeReview renders the report in the chosen format to --out or out.
+// writeReview renders the report in the chosen format to --output or out.
 func writeReview(out io.Writer, report *rv.Report, rb *rv.Rubric, res *rv.Results) error {
 	w, closeFn, err := reportDestination(out, reviewFlags.out)
 	if err != nil {
@@ -394,7 +392,7 @@ func writeReview(out io.Writer, report *rv.Report, rb *rv.Rubric, res *rv.Result
 	return werr
 }
 
-// reportDestination opens --out, or returns out.
+// reportDestination opens --output, or returns out.
 func reportDestination(out io.Writer, path string) (io.Writer, func() error, error) {
 	if path == "" {
 		return out, func() error { return nil }, nil

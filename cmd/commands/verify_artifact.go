@@ -70,7 +70,7 @@ func signingConfigFor(path string, flagsTrust bool) (*config.Config, error) {
 // runVerifyArtifact verifies the attestation of a plugin bundle, a published skill
 // or an SBOM file, offline. Exit codes as for the lock: 0 verified, 1 the check
 // could not run, 2 verification failed.
-func runVerifyArtifact(args []string, env ambient.Env, out io.Writer) int {
+func runVerifyArtifact(env ambient.Env, out io.Writer) int {
 	subject, target, err := verifyArtifactSubject()
 	if err == nil {
 		err = validateVerifyArtifactFlags(subject)
@@ -79,11 +79,7 @@ func runVerifyArtifact(args []string, env ambient.Env, out io.Writer) int {
 		renderError(os.Stderr, err)
 		return 1
 	}
-	path := ""
-	if len(args) > 0 {
-		path = args[0]
-	}
-	cfg, err := signingConfigFor(path, len(verifyPublicKeys) > 0 || verifyIdentity != "")
+	cfg, err := signingConfigFor("", len(verifyPublicKeys) > 0 || verifyIdentity != "")
 	if err != nil {
 		renderError(os.Stderr, err)
 		return 1

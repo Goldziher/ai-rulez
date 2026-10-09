@@ -79,7 +79,7 @@ paired predicate and all/any/not combinators live in .ai-rulez/verifiers/*.toml
 
 // VerifiersRunCmd evaluates the verifiers.
 var VerifiersRunCmd = &cobra.Command{
-	Use:   "run [config-file]",
+	Use:   "run",
 	Short: "Evaluate the verifiers and report pass or fail for each",
 	Long: `Evaluate every [[verifiers]] entry (or only those named with --name) and print a
 table, or JSON with --format json.
@@ -87,25 +87,25 @@ table, or JSON with --format json.
 --since REV evaluates only the files changed since the merge base of REV and HEAD
 (plus uncommitted and untracked files); --staged only what is staged. A base that does
 not exist or share history with HEAD (a shallow clone) is an error, never a pass.
-Formats: text (default), json, sarif and junit; --out writes the report to a file.
+Formats: text (default), json, sarif and junit; --output writes the report to a file.
 
 Exit codes: 0 no verifier failed at the --fail-on severity (error by default; --strict
 means warning), 2 at least one failed (even if another could not be evaluated),
 1 the run could not complete and nothing failed: the configuration does not load or
 validate, a --name is unknown, or a verifier could not be evaluated.`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return exitStatus(runVerifiers(watchParentContext(cmd), args, os.Stdout))
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return exitStatus(runVerifiers(watchParentContext(cmd), os.Stdout))
 	},
 }
 
 // VerifiersExplainCmd describes one verifier.
 var VerifiersExplainCmd = &cobra.Command{
-	Use:   "explain <name> [config-file]",
+	Use:   "explain <name>",
 	Short: "Explain what a verifier checks, the rule it enforces and how to fix it",
-	Args:  cobra.RangeArgs(1, 2),
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return exitStatus(explainVerifier(watchParentContext(cmd), args[0], args[1:], os.Stdout))
+		return exitStatus(explainVerifier(watchParentContext(cmd), args[0], os.Stdout))
 	},
 }
 
@@ -126,11 +126,11 @@ declaration is invalid), 1 the configuration does not load or a name is unknown.
 
 // VerifiersListCmd lists the declared verifiers without evaluating them.
 var VerifiersListCmd = &cobra.Command{
-	Use:   "list [config-file]",
+	Use:   cmdUseList,
 	Short: "List the declared verifiers",
-	Args:  cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return exitStatus(listVerifiers(watchParentContext(cmd), args, os.Stdout))
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return exitStatus(listVerifiers(watchParentContext(cmd), os.Stdout))
 	},
 }
 
@@ -138,16 +138,16 @@ func init() {
 	VerifiersCmd.AddCommand(VerifiersRunCmd, VerifiersListCmd, VerifiersExplainCmd, VerifiersTestCmd)
 	VerifiersRunCmd.Flags().BoolVar(&verifiersStrict, "strict", false, "Also exit non-zero when a warning-severity verifier fails")
 	VerifiersRunCmd.Flags().StringSliceVar(&verifiersNames, "name", nil, "Run only the named verifier (repeatable)")
-	VerifiersRunCmd.Flags().StringVarP(&verifiersProfile, "profile", "p", "", "Active profile: sets the profile of generated_in_sync verifiers that name none, and which rules count as active (default: from config)")
+	specProfile.String(VerifiersRunCmd.Flags(), &verifiersProfile, "Active profile: sets the profile of generated_in_sync verifiers that name none, and which rules count as active (default: from config)")
 	f := VerifiersRunCmd.Flags()
-	f.StringVar(&verifiersRole, "role", "", "Active role: verifiers whose rule or skill the role does not keep are reported inactive")
+	specRole.String(f, &verifiersRole, "Active role: verifiers whose rule or skill the role does not keep are reported inactive")
 	f.StringVar(&verifiersSince, "since", "", "Evaluate only files changed since the merge base of REV and HEAD (plus uncommitted and untracked)")
 	f.BoolVar(&verifiersStaged, "staged", false, "Evaluate only staged changes")
 	f.BoolVar(&verifiersAll, "all", false, "Evaluate every file (the default)")
 	f.StringVar(&verifiersRule, "rule", "", "Run only the verifiers that enforce this rule, skill, agent or command")
 	addFormatFlag(f, &verifiersFormat, "", formatText, formatText, formatJSON, "sarif", "junit")
 	f.StringVar(&verifiersFailOn, "fail-on", "", "Lowest failing severity: error (default), warning, info or none")
-	f.StringVar(&verifiersOut, "out", "", "Write the report to this file instead of stdout")
+	specOutput.String(f, &verifiersOut, "Write the report to this file instead of stdout")
 	f.BoolVar(&verifiersDead, "strict-applicability", false, "Report a verifier whose when_changed matches no file (AR9H5)")
 	f.BoolVar(&verifiersExec, "allow-exec", false, "Let command predicates run a program (or set "+verifiersAllowExecEnv+"=1); never implied by another flag")
 	f.BoolVar(&verifiersAllowLLM, "allow-llm", false, "Evaluate llm verifiers: sends the changed lines to the configured model (needs allow_network in the user config)")
@@ -157,14 +157,13 @@ func init() {
 	VerifiersTestCmd.Flags().BoolVar(&verifiersExec, "allow-exec", false, "Let command predicates of the examples run a program (or set "+verifiersAllowExecEnv+"=1)")
 	addJSONFormat(VerifiersListCmd.Flags(), &verifiersListJSON, "")
 	for _, c := range []*cobra.Command{VerifiersRunCmd, VerifiersListCmd, VerifiersExplainCmd, VerifiersTestCmd} {
-		c.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
-		c.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+		specNoLocal.Bool(c.Flags(), &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
 	}
 }
 
 // loadVerifierConfig loads and validates the configuration for the verifiers commands.
-func loadVerifierConfig(ctx context.Context, args []string) (*config.Config, error) {
-	cfg, err := loadConfigForCommand(ctx, args)
+func loadVerifierConfig(ctx context.Context) (*config.Config, error) {
+	cfg, err := loadConfigForCommand(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -176,11 +175,11 @@ func loadVerifierConfig(ctx context.Context, args []string) (*config.Config, err
 
 // runVerifiers evaluates the verifiers, prints the report to out and returns
 // the process exit code.
-func runVerifiers(ctx context.Context, args []string, out io.Writer) int {
+func runVerifiers(ctx context.Context, out io.Writer) int {
 	progress.SetQuiet(true) // keep stdout to the report, so --format json stays parseable
 	defer progress.SetQuiet(false)
 
-	cfg, err := loadVerifierConfig(ctx, args)
+	cfg, err := loadVerifierConfig(ctx)
 	if err != nil {
 		renderStderr(err)
 		return exitVerifiersCannotRun
@@ -293,7 +292,7 @@ func verifierRunOptions() (opts verifiers.Options, format, failOn string, err er
 	}, format, failOn, nil
 }
 
-// emitReport writes the report to --out (atomically) or to out.
+// emitReport writes the report to --output (atomically) or to out.
 func emitReport(out io.Writer, data []byte) error {
 	if verifiersOut == "" {
 		_, err := out.Write(data)
@@ -303,8 +302,8 @@ func emitReport(out io.Writer, data []byte) error {
 }
 
 // explainVerifier prints what a verifier checks.
-func explainVerifier(ctx context.Context, name string, args []string, out io.Writer) int {
-	cfg, err := loadVerifierConfig(ctx, args)
+func explainVerifier(ctx context.Context, name string, out io.Writer) int {
+	cfg, err := loadVerifierConfig(ctx)
 	if err != nil {
 		renderStderr(err)
 		return exitVerifiersCannotRun
@@ -318,7 +317,7 @@ func explainVerifier(ctx context.Context, name string, args []string, out io.Wri
 
 // testVerifiers runs the self-test examples and prints one line per example.
 func testVerifiers(ctx context.Context, names []string, out io.Writer) int {
-	cfg, err := loadVerifierConfig(ctx, nil)
+	cfg, err := loadVerifierConfig(ctx)
 	if err != nil {
 		renderStderr(err)
 		return exitVerifiersCannotRun
@@ -369,8 +368,8 @@ func testVerifiers(ctx context.Context, names []string, out io.Writer) int {
 }
 
 // listVerifiers prints the declared verifiers.
-func listVerifiers(ctx context.Context, args []string, out io.Writer) int {
-	cfg, err := loadVerifierConfig(ctx, args)
+func listVerifiers(ctx context.Context, out io.Writer) int {
+	cfg, err := loadVerifierConfig(ctx)
 	if err != nil {
 		renderStderr(err)
 		return exitVerifiersCannotRun

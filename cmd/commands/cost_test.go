@@ -23,7 +23,8 @@ func runCostOn(t *testing.T, root string) (string, bool, error) {
 	t.Helper()
 	var out bytes.Buffer
 	CostCmd.SetOut(&out)
-	exceeded, err := runCost(CostCmd, []string{filepath.Join(root, ".ai-rulez", "config.toml")})
+	useConfigFile(t, filepath.Join(root, ".ai-rulez", "config.toml"))
+	exceeded, err := runCost(CostCmd)
 	return out.String(), exceeded, err
 }
 

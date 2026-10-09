@@ -6,6 +6,7 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"path/filepath"
 	"testing"
 
@@ -20,6 +21,14 @@ func tokensFixturePath(t *testing.T) string {
 	path, err := filepath.Abs(filepath.Join("..", "..", "tests", "fixtures", "config", "tokens", ".ai-rulez", "config.toml"))
 	require.NoError(t, err)
 	return path
+}
+
+// runTokensAt runs the report on the tokens fixture, selected with the global
+// --config the way a user does.
+func runTokensAt(t *testing.T, out io.Writer) (bool, error) {
+	t.Helper()
+	useConfigFile(t, tokensFixturePath(t))
+	return runTokens(out)
 }
 
 // resetTokensFlags restores the package-level flag values between cases, which
@@ -45,10 +54,9 @@ func resetTokensFlags(t *testing.T) {
 func TestTokensCommand_FlagSurface(t *testing.T) {
 	flags := TokensCmd.Flags()
 	for name, shorthand := range map[string]string{
-		"format":     "",
-		"budget":     "b",
-		"profile":    "p",
-		"config-dir": "n",
+		"format":  "",
+		"budget":  "",
+		"profile": "",
 	} {
 		flag := flags.Lookup(name)
 		require.NotNil(t, flag, "tokens is missing --%s", name)
@@ -64,7 +72,7 @@ func TestRunTokens_TextReport(t *testing.T) {
 	profile = "backend"
 
 	var out bytes.Buffer
-	overBudget, err := runTokens(&out, []string{tokensFixturePath(t)})
+	overBudget, err := runTokensAt(t, &out)
 	require.NoError(t, err)
 	assert.False(t, overBudget)
 
@@ -97,7 +105,7 @@ func TestRunTokens_Budget(t *testing.T) {
 			tokensBudget = tt.budget
 
 			var out bytes.Buffer
-			overBudget, err := runTokens(&out, []string{tokensFixturePath(t)})
+			overBudget, err := runTokensAt(t, &out)
 			require.NoError(t, err)
 			assert.Equal(t, tt.overBudget, overBudget)
 			assert.Contains(t, out.String(), tt.contains)
@@ -111,7 +119,7 @@ func TestRunTokens_JSON(t *testing.T) {
 	tokensJSON = true
 
 	var out bytes.Buffer
-	_, err := runTokens(&out, []string{tokensFixturePath(t)})
+	_, err := runTokensAt(t, &out)
 	require.NoError(t, err)
 
 	var report map[string]any
@@ -131,7 +139,7 @@ func TestRunTokens_CompareProfiles(t *testing.T) {
 	tokensJSON = true
 
 	var out bytes.Buffer
-	_, err := runTokens(&out, []string{tokensFixturePath(t)})
+	_, err := runTokensAt(t, &out)
 	require.NoError(t, err)
 
 	var doc struct {
@@ -155,7 +163,7 @@ func TestRunTokens_CompareProfilesTable(t *testing.T) {
 	tokensCompareProfiles = []string{"backend", "frontend"}
 
 	var out bytes.Buffer
-	_, err := runTokens(&out, []string{tokensFixturePath(t)})
+	_, err := runTokensAt(t, &out)
 	require.NoError(t, err)
 
 	table := out.String()
@@ -175,7 +183,7 @@ func TestRunTokens_CompareComposedProfiles(t *testing.T) {
 	tokensJSON = true
 
 	var out bytes.Buffer
-	_, err := runTokens(&out, []string{tokensFixturePath(t)})
+	_, err := runTokensAt(t, &out)
 	require.NoError(t, err)
 
 	var doc struct {
@@ -208,7 +216,7 @@ func TestRunTokens_RejectsUnknownTokenizer(t *testing.T) {
 	resetTokensFlags(t)
 	tokensTokenizer = "gpt-9"
 
-	_, err := runTokens(&bytes.Buffer{}, []string{tokensFixturePath(t)})
+	_, err := runTokensAt(t, &bytes.Buffer{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "gpt-9")
 }
@@ -240,7 +248,7 @@ func TestRunTokens_BudgetGatesTheListing(t *testing.T) {
 	tokensJSON = true
 
 	var out bytes.Buffer
-	_, err := runTokens(&out, []string{tokensFixturePath(t)})
+	_, err := runTokensAt(t, &out)
 	require.NoError(t, err)
 	var report struct {
 		HeadlineAlways       int `json:"headline_always"`
@@ -255,7 +263,7 @@ func TestRunTokens_BudgetGatesTheListing(t *testing.T) {
 	profile = "backend"
 	tokensBudget = report.HeadlineAlwaysLegacy + 1
 	out.Reset()
-	overBudget, err := runTokens(&out, []string{tokensFixturePath(t)})
+	overBudget, err := runTokensAt(t, &out)
 	require.NoError(t, err)
 	assert.True(t, overBudget, "only the listing pushes the total over the ceiling")
 	assert.Contains(t, out.String(), "Over budget")

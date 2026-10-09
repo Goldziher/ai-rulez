@@ -126,7 +126,7 @@ policy: edits to scripts/ and assets/ need --allow-scripts, frontmatter changes 
 		ctx, stop := signal.NotifyContext(commandContext(cmd), os.Interrupt)
 		defer stop()
 		reportWriter{cmd.ErrOrStderr()}.printf("%s\n", improveExperimental)
-		cfg, err := loadConfigForCommand(ctx, nil)
+		cfg, err := loadConfigForCommand(ctx)
 		if err != nil {
 			return err
 		}
@@ -179,8 +179,8 @@ func init() {
 	f.BoolVar(&improveFlags.allowScripts, "allow-scripts", false, "Let the optimizer change scripts/ and assets/ and reference scripts")
 	f.StringSliceVar(&improveFlags.envPass, "env-pass", nil, "Environment variable names forwarded to the optimizer (credential-like names need --egress)")
 	f.StringSliceVar(&improveFlags.egress, "egress", nil, "Hosts the optimizer sends data to: printed in the consent summary and recorded; not enforced")
-	f.BoolVarP(&improveFlags.yes, "yes", "y", false, "Skip the consent prompt (CI); on apply, skip the confirmation")
-	f.BoolVar(&improveFlags.dryRun, "dry-run", false, "Print the plan, split, estimate and egress; run nothing and write nothing")
+	specYes.Bool(f, &improveFlags.yes, "Skip the consent prompt (CI); on apply, skip the confirmation")
+	specDryRun.Bool(f, &improveFlags.dryRun, "Print the plan, split, estimate and egress; run nothing and write nothing")
 	f.BoolVar(&improveFlags.stopAtFirstAccept, "stop-at-first-accept", false, "Stop after the first accepted round instead of using every round")
 	f.BoolVar(&improveFlags.allowExec, "allow-exec", false, "Run command_exit assertions of the cases (they execute commands from the case files)")
 	addFormatFlag(f, &improveFlags.format, formatText, formatText, formatText, formatJSON)
@@ -196,7 +196,6 @@ func init() {
 	f.BoolVar(&improveFlags.allowSameModel, "allow-same-model", false, "builtin:review-fix: let the fixer and the judge be the same model (self-preference risk)")
 	f.BoolVar(&improveFlags.siblingNative, "sibling-native", false, "Also run the sibling trigger guard on the harness's model (costs money, counted against --max-cost); the free offline guard always runs")
 	f.IntVar(&improveFlags.siblingRuns, "sibling-runs", improve.DefaultSiblingRuns, "With --sibling-native: repetitions of each sibling trigger prompt")
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	addYesFlag(improveApplyCmd.Flags(), &improveFlags.yes, "Write without the confirmation prompt")
 	improveApplyCmd.Flags().BoolVar(&improveFlags.allowScripts, "allow-scripts", false, "Allow the candidate to change scripts/ and assets/ and reference scripts")
 	improveApplyCmd.Flags().BoolVar(&improveFlags.allowFrontmatter, "allow-frontmatter", false, "Allow the candidate to change allowed-tools, model and disable-model-invocation")
@@ -212,7 +211,7 @@ func runImprove(cmd *cobra.Command, skill string) (noCandidate bool, err error) 
 	if err := checkFormatFlag(improveFlags.format); err != nil {
 		return false, err
 	}
-	cfg, err := loadConfigForCommand(ctx, nil)
+	cfg, err := loadConfigForCommand(ctx)
 	if err != nil {
 		return false, err
 	}

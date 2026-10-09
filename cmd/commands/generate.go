@@ -41,43 +41,41 @@ var (
 )
 
 var GenerateCmd = &cobra.Command{
-	Use:   "generate [config-file]",
+	Use:   "generate",
 	Short: "Generate AI assistant rule files from configuration",
 	Long: `Generate AI assistant rule files based on the configuration.
 This will create markdown files for various AI assistants like Claude,
 Cursor, Devin, etc. based on your configuration.`,
 	Aliases: []string{"gen"},
-	Args:    cobra.MaximumNArgs(1),
+	Args:    cobra.NoArgs,
 	RunE:    runGenerate,
 }
 
 func init() {
-	GenerateCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Show what would be generated without writing files")
+	specDryRun.Bool(GenerateCmd.Flags(), &dryRun, "Show what would be generated without writing files")
 	GenerateCmd.Flags().BoolVar(&generateCheck, "check", false,
 		"Verify the committed output matches the sources without writing: list differing files and exit 2 on drift (for CI)")
-	GenerateCmd.Flags().BoolVarP(&generateWatch, "watch", "w", false,
+	GenerateCmd.Flags().BoolVar(&generateWatch, "watch", false,
 		"Generate, then watch the configuration directory and local include sources and regenerate on every change (Ctrl-C to stop)")
 	GenerateCmd.Flags().BoolVar(&generateLocked, "locked", false,
 		"Require ai-rulez.lock to cover every remote include and installed skill and fetch exactly the pinned commits (for CI)")
 	GenerateCmd.Flags().BoolVar(&generateFrozen, "frozen", false,
 		"Like --locked, and never use the network: resolve only from the local cache, verified against the lock")
-	GenerateCmd.Flags().BoolVarP(&updateGitignore, "gitignore", "i", false, "Update .gitignore files to include generated output patterns")
-	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
-	GenerateCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to generate, or a comma-separated list to compose several (default: from config or 'default')")
+	GenerateCmd.Flags().BoolVar(&updateGitignore, "gitignore", false, "Update .gitignore files to include generated output patterns")
+	specRecursive.Bool(GenerateCmd.Flags(), &recursive, "Find and process configuration files recursively")
+	specProfile.String(GenerateCmd.Flags(), &profile, "Profile to generate, or a comma-separated list to compose several (default: from config or 'default')")
 	GenerateCmd.Flags().StringVar(&generateRole, flagRole, "",
 		"Generate the slice of content a role selects instead of a profile (see 'ai-rulez roles list'); mutually exclusive with --profile")
 	GenerateCmd.Flags().BoolVar(&noFetch, "offline", false, "Skip fetching remote includes, use cached content only")
-	GenerateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
-	GenerateCmd.Flags().StringArrayVarP(&mcpEnv, "env", "e", nil, "MCP env override in KEY=VALUE form (repeatable)")
-	GenerateCmd.Flags().StringArrayVarP(&mcpEnvFiles, "env-file", "E", nil, "Dotenv file for MCP env placeholders (repeatable)")
+	GenerateCmd.Flags().StringArrayVar(&mcpEnv, "env", nil, "MCP env override in KEY=VALUE form (repeatable)")
+	GenerateCmd.Flags().StringArrayVar(&mcpEnvFiles, "env-file", nil, "Dotenv file for MCP env placeholders (repeatable)")
 	GenerateCmd.Flags().StringVar(&generateEmitPlan, "emit-plan", "",
 		"Write the generation plan (every file that would be written, merged or removed, with digests; no secrets) as JSON to FILE ('-' for stdout) and apply nothing; see schema/plan.schema.json")
 	addFormatFlag(GenerateCmd.Flags(), new(string), "", formatText, formatText, formatJSON)
-	GenerateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
+	specNoLocal.Bool(GenerateCmd.Flags(), &noLocal, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	GenerateCmd.Flags().BoolVar(&allowLocalDrift, "allow-local-drift", false,
 		"Write output even when machine-local config would change files shared with the team")
-	GenerateCmd.Flags().BoolVar(&generateForce, "force", false,
-		"Overwrite an existing file ai-rulez cannot prove it wrote (a hand-written CLAUDE.md); without it generate refuses that file and exits 1")
+	specForce.Bool(GenerateCmd.Flags(), &generateForce, "Overwrite an existing file ai-rulez cannot prove it wrote (a hand-written CLAUDE.md); without it generate refuses that file and exits 1")
 	GenerateCmd.Flags().BoolVar(&userScope, "user", false,
 		"Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent")
 	addYesFlag(GenerateCmd.Flags(), &assumeYes, "With --user: write without the confirmation prompt; always: do not warn about new hook and MCP commands")
@@ -85,7 +83,7 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&pluginIfConfigured, "if-configured", false, "Skip plugin generation when no plugin authoring configuration is present")
 }
 
-func runGenerate(cmd *cobra.Command, args []string) error {
+func runGenerate(cmd *cobra.Command, _ []string) error {
 	progress.SetQuiet(viper.GetBool("quiet") || outFor(cmd).JSON())
 
 	// The lock policy of every load this run makes (before any config loading).
@@ -98,13 +96,13 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return fail(err)
 	}
 
-	if ran, err := runOtherGenerateMode(cmd, args); ran {
+	if ran, err := runOtherGenerateMode(cmd); ran {
 		return err
 	}
 
 	// One memo per run: the repository questions the load and the generator ask are answered once.
 	ctx := gitutil.WithMemo(cmdContext())
-	cfg, err := loadGenerateConfig(ctx, args)
+	cfg, err := loadGenerateConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -179,15 +177,15 @@ func writeGenerateDocument(out render.Out, doc generateDocument) error {
 
 // runOtherGenerateMode runs --watch, --check, --user and --recursive, which do
 // not take the single-project path, and reports whether one of them ran.
-func runOtherGenerateMode(cmd *cobra.Command, args []string) (bool, error) {
+func runOtherGenerateMode(cmd *cobra.Command) (bool, error) {
 	switch {
 	case generateWatch:
-		return true, fail(runGenerateWatch(watchParentContext(cmd), args))
+		return true, fail(runGenerateWatch(watchParentContext(cmd)))
 	case generateCheck:
-		return true, runGenerateCheck(args)
+		return true, runGenerateCheck()
 	}
 	if userScope {
-		return true, runGenerateUser(args)
+		return true, runGenerateUser()
 	}
 	if recursive {
 		return true, exitStatus(runRecursiveGenerate())
@@ -196,17 +194,17 @@ func runOtherGenerateMode(cmd *cobra.Command, args []string) (bool, error) {
 }
 
 // runGenerateUser is `generate --user`.
-func runGenerateUser(args []string) error {
-	if recursive || pluginMode || len(args) > 0 {
-		return fail(oops.Errorf("--user cannot be combined with --recursive, --plugin or a config-file argument; use --config to choose the user config"))
+func runGenerateUser() error {
+	if recursive || pluginMode {
+		return fail(oops.Errorf("--user cannot be combined with --recursive or --plugin; use --config to choose the user config"))
 	}
 	return fail(runUserGenerate(cmdContext()))
 }
 
 // loadGenerateConfig loads, policy-checks and validates the project and enforces
 // the lock; any failure carries its exit code.
-func loadGenerateConfig(ctx context.Context, args []string) (*config.Config, error) {
-	cfg, err := loadConfigForCommand(ctx, args, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
+func loadGenerateConfig(ctx context.Context) (*config.Config, error) {
+	cfg, err := loadConfigForCommand(ctx, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
 	if err != nil {
 		if (generateLocked || generateFrozen) && errors.Is(err, config.ErrLockViolation) {
 			return nil, failWithCode(exitDrift, err) // a missing or disagreeing lock is drift, the same code as a changed source
@@ -299,12 +297,12 @@ func runPluginGenerate(out render.Out, gen *generator.Generator) error {
 	return fail(gen.GeneratePlugin(profile))
 }
 
-func loadConfigForCommand(ctx context.Context, args []string, opts ...config.LoadOption) (*config.Config, error) {
+// loadConfigForCommand loads the project the global -C/--config or --config-dir
+// selects, else the one discovered in the working directory. A command takes no
+// config path argument.
+func loadConfigForCommand(ctx context.Context, opts ...config.LoadOption) (*config.Config, error) {
 	if noLocal {
 		opts = append(opts, config.WithoutLocal())
-	}
-	if len(args) > 0 {
-		return loadProjectFile(ctx, args[0], opts...)
 	}
 	if cfgFile != "" {
 		return loadProjectFile(ctx, cfgFile, opts...)
@@ -389,8 +387,8 @@ func applyLockFlags() {
 }
 
 // runGenerateCheck runs `generate --check` and returns its exit code as an error.
-func runGenerateCheck(args []string) error {
-	return exitStatus(generateCheckCode(args))
+func runGenerateCheck() error {
+	return exitStatus(generateCheckCode())
 }
 
 // generateCheckCode is `generate --check`: it first requires the sources to
@@ -398,12 +396,12 @@ func runGenerateCheck(args []string) error {
 // (a lock exists and [lock] enforce is not false), the same gate `generate`
 // applies before writing, then compares the generated files. Each root is
 // loaded once for both.
-func generateCheckCode(args []string) int {
+func generateCheckCode() int {
 	if err := checkGenerateCheckFlags(); err != nil {
 		renderError(os.Stderr, err)
 		return exitFailure
 	}
-	return runDriftCheckGated(args, recursive, driftRender, func(cfg *config.Config) error {
+	return runDriftCheckGated(recursive, driftRender, func(cfg *config.Config) error {
 		return enforceLockedContentFor(cfg, true)
 	})
 }
