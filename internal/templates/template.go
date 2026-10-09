@@ -38,16 +38,15 @@ type ContentHasher struct{ h *blake3.Hasher }
 func NewContentHasher() *ContentHasher { return &ContentHasher{h: blake3.New()} }
 
 // WriteString adds s to the hashed text.
-func (c *ContentHasher) WriteString(s string) { _, _ = c.h.WriteString(s) }
+func (c *ContentHasher) WriteString(s string) { _, _ = c.h.WriteString(s) } //nolint:errcheck // a hash never fails
 
-// Write adds p to the hashed text; it never fails.
-func (c *ContentHasher) Write(p []byte) (int, error) { return c.h.Write(p) } //nolint:wrapcheck // a hash never fails
-
-// WriteByte adds b to the hashed text; it never fails.
-func (c *ContentHasher) WriteByte(b byte) error {
-	_, err := c.h.Write([]byte{b})
-	return err //nolint:wrapcheck // a hash never fails
+// Printf adds the formatted text to the hashed text.
+func (c *ContentHasher) Printf(format string, args ...any) {
+	_, _ = fmt.Fprintf(c.h, format, args...) //nolint:errcheck // a hash never fails
 }
+
+// WriteBytes adds p to the hashed text.
+func (c *ContentHasher) WriteBytes(p []byte) { _, _ = c.h.Write(p) } //nolint:errcheck // a hash never fails
 
 // Sum returns the digest in the format of HashContent.
 func (c *ContentHasher) Sum() string { return fmt.Sprintf("blake3:%x", c.h.Sum(nil)) }
