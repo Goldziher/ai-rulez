@@ -125,6 +125,7 @@ func init() {
 	RootCmd.AddCommand(SearchCmd)
 	RootCmd.AddCommand(PublishCmd)
 	RootCmd.AddCommand(ReviewCmd, RubricCmd)
+	RootCmd.AddCommand(NewShowCmd(), NewEditCmd())
 
 	applyHelpExamples()
 }
