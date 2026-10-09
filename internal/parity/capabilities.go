@@ -1,3 +1,4 @@
+//nolint:goconst // a table names the same flags, commands and tools in many rows
 package parity
 
 // Capabilities is the table. It is a function so no package state can be
@@ -187,13 +188,13 @@ func buildCapabilities() []Capability {
 			},
 		},
 		{
-			ID: "validate", Kind: Paired, CLI: []string{"validate"}, Tool: "validate_config", Behaviour: "validate",
+			ID: "validate", Kind: Paired, CLI: []string{"validate"}, Tool: "validate_config", Behavior: "validate",
 			Flags: []FlagPair{{Flag: "fail-on"}, {Flag: "strict"}, {Flag: "config-only"}, {Flag: "lint-profile"},
 				{Flag: "analyzer", Arg: "analyzers"}, {Flag: "no-local"}},
 			CLIFlags: lintCLIFlags(true),
 		},
 		{
-			ID: "scan", Kind: Paired, CLI: []string{"scan"}, Tool: "scan_content", Behaviour: "scan",
+			ID: "scan", Kind: Paired, CLI: []string{"scan"}, Tool: "scan_content", Behavior: "scan",
 			Flags:    []FlagPair{{Flag: "fail-on"}, {Flag: "lint-profile"}, {Flag: "no-local"}},
 			CLIFlags: lintCLIFlags(false),
 		},
@@ -245,17 +246,17 @@ func lintCLIFlags(withFix bool) []Exclusion {
 func reportCapabilities() []Capability {
 	return []Capability{
 		{
-			ID: "tokens", Kind: Paired, CLI: []string{"tokens"}, Tool: "token_report", Behaviour: "tokens",
+			ID: "tokens", Kind: Paired, CLI: []string{"tokens"}, Tool: "token_report", Behavior: "tokens",
 			Flags: []FlagPair{{Flag: "profile"}, {Flag: "role"}, {Flag: "by-role"}, {Flag: "compare-profiles"}, {Flag: "tokenizer"},
 				{Flag: "budget"}, {Flag: "no-local"}},
 		},
 		{
-			ID: "cost", Kind: Paired, CLI: []string{"cost"}, Tool: "cost_report", Behaviour: "cost",
+			ID: "cost", Kind: Paired, CLI: []string{"cost"}, Tool: "cost_report", Behavior: "cost",
 			Flags: []FlagPair{{Flag: "profile"}, {Flag: "target"}, {Flag: "top"}, {Flag: "budget"}, {Flag: "on-demand-budget"},
 				{Flag: "tokenizer"}, {Flag: "no-local"}},
 		},
 		{
-			ID: "sbom", Kind: Paired, CLI: []string{"sbom"}, Tool: "sbom", Behaviour: "sbom",
+			ID: "sbom", Kind: Paired, CLI: []string{"sbom"}, Tool: "sbom", Behavior: "sbom",
 			Flags: []FlagPair{{Flag: "format"}, {Flag: "files"}, {Flag: "profile"}, {Flag: "role"}, {Flag: "include-outputs"},
 				{Flag: "no-approvals"}},
 			CLIFlags: []Exclusion{
@@ -267,7 +268,7 @@ func reportCapabilities() []Capability {
 			},
 		},
 		{
-			ID: "okf-validate", Kind: Paired, CLI: []string{"okf validate"}, Tool: "okf_validate", Behaviour: "okf-validate",
+			ID: "okf-validate", Kind: Paired, CLI: []string{"okf validate"}, Tool: "okf_validate", Behavior: "okf-validate",
 			Flags: []FlagPair{{Flag: "fail-on"}},
 			ToolArgs: []Exclusion{
 				{Names: []string{"bundle"}, Reason: "the CLI takes the bundle as a positional argument; the tool reads a local directory only, never a git URL"},
@@ -302,17 +303,17 @@ func reportCapabilities() []Capability {
 func governanceCapabilities() []Capability {
 	return []Capability{
 		{
-			ID: "lock-check", Kind: Paired, CLI: []string{"lock"}, Mode: "check", Tool: "lock_status", Behaviour: "lock-check",
+			ID: "lock-check", Kind: Paired, CLI: []string{"lock"}, Mode: "check", Tool: "lock_status", Behavior: "lock-check",
 			ToolArgs: []Exclusion{noLocalToolArg()},
 			Flags: []FlagPair{{Flag: "kind", EnumNote: "the usage text of --kind lists the refresh kinds; with --check it also filters by content"}, {Flag: "profile"}, {Flag: "role"}, {Flag: "targets"}, {Flag: "include-static"},
 				{Flag: "source", Arg: "sources"}},
 		},
 		{
-			ID: "approvals-status", Kind: Paired, CLI: []string{"approve"}, Mode: "list", Tool: "approvals_status", Behaviour: "approvals",
+			ID: "approvals-status", Kind: Paired, CLI: []string{"approve"}, Mode: "list", Tool: "approvals_status", Behavior: "approvals",
 			Flags: []FlagPair{{Flag: "all"}},
 		},
 		{
-			ID: "policy-show", Kind: Paired, CLI: []string{"validate"}, Mode: "show-policy", Tool: "policy_show", Behaviour: "policy",
+			ID: "policy-show", Kind: Paired, CLI: []string{"validate"}, Mode: "show-policy", Tool: "policy_show", Behavior: "policy",
 			Flags: []FlagPair{{Flag: "no-local"}},
 		},
 	}
@@ -321,7 +322,7 @@ func governanceCapabilities() []Capability {
 func servingCapabilities() []Capability {
 	return []Capability{
 		{
-			ID: "search", Kind: Paired, CLI: []string{"search"}, Tool: "find_skill", Server: Skills, Behaviour: "search",
+			ID: "search", Kind: Paired, CLI: []string{"search"}, Tool: "find_skill", Server: Skills, Behavior: "search",
 			Flags: []FlagPair{{Flag: "limit"}, {Flag: "role"}},
 			CLIFlags: []Exclusion{
 				{Names: []string{"mode", "explain", "eval", "from-evals", "k", "baseline", "out", "min", "max-flips", "dry-run", "rebuild", "items", "min-count", "purge"},
