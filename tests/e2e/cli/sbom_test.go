@@ -29,7 +29,7 @@ func (s *SBOMCLITestSuite) TearDownSuite() {
 }
 
 func (s *SBOMCLITestSuite) TestPrintsCycloneDXToStdout() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "sbom", "--format", "cyclonedx")
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "sbom", "--type", "cyclonedx")
 
 	var doc map[string]any
 	s.Require().NoError(json.Unmarshal([]byte(result.Stdout), &doc))
@@ -50,13 +50,13 @@ func (s *SBOMCLITestSuite) TestOutputIsIdenticalAcrossRunsAndWritesFiles() {
 }
 
 func (s *SBOMCLITestSuite) TestRejectsUnknownFormat() {
-	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "sbom", "--format", "xml")
+	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "sbom", "--type", "xml")
 
 	result.AssertOutputContains(s.T(), "unknown --format")
 }
 
 func (s *SBOMCLITestSuite) TestSPDXFormat() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "sbom", "--format", "spdx-json")
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "sbom", "--type", "spdx-json")
 
 	s.Contains(result.Stdout, `"spdxVersion": "SPDX-2.3"`)
 }
