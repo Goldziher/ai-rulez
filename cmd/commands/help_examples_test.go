@@ -36,20 +36,42 @@ func splitExample(line string) []string {
 	return words
 }
 
-// resetFlags puts every flag a parse touched back to its default, so parsing an
-// example leaves no state for the tests that follow.
+// initialFlagValues holds every flag's value before any test parses one (taken
+// in TestMain). A flag's DefValue is not always its initial value: addFormatFlag
+// shows "text" while some commands start empty, so resetFlags restores from here.
+var initialFlagValues = map[*pflag.Flag][]string{}
+
+// snapshotFlagValues records the current value of every flag in the tree.
+func snapshotFlagValues(root *cobra.Command) {
+	record := func(f *pflag.Flag) {
+		if _, seen := initialFlagValues[f]; seen {
+			return
+		}
+		if sv, isSlice := f.Value.(pflag.SliceValue); isSlice {
+			initialFlagValues[f] = append([]string{}, sv.GetSlice()...)
+			return
+		}
+		initialFlagValues[f] = []string{f.Value.String()}
+	}
+	walkCommands(root, func(c *cobra.Command) {
+		c.Flags().VisitAll(record)
+		c.PersistentFlags().VisitAll(record)
+	})
+}
+
+// resetFlags puts every flag a parse touched back to its initial value, so
+// parsing an example leaves no state for the tests that follow.
 func resetFlags(c *cobra.Command) {
 	reset := func(f *pflag.Flag) {
 		if !f.Changed {
 			return
 		}
-		_, isFormat := f.Annotations[formatValuesAnnotation]
+		initial, known := initialFlagValues[f]
 		switch sv, isSlice := f.Value.(pflag.SliceValue); {
 		case isSlice:
-			_ = sv.Replace(nil)
-		case isFormat && f.Value.Set("") == nil:
-			// addFormatFlag shows "text" as the default, but the variable's real default is empty.
-			// Restoring "text" would leave validate --format set, which only --strict accepts.
+			_ = sv.Replace(initial)
+		case known:
+			_ = f.Value.Set(initial[0])
 		default:
 			_ = f.Value.Set(f.DefValue)
 		}
