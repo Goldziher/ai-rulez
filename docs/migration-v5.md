@@ -155,6 +155,41 @@ hashes = "full"
   default). `generate --no-fetch` / `-f` is now `--offline`, as on `mcp`. The confirmation skip of `clean` and of
   `remove` / `domain remove` / `profile remove` / `include remove` / `skill remove` is now `--yes` / `-y`
   (it was `--force`). `convert --force`, `eval run --force` and `import okf --force` (overwrite) are unchanged.
+- **Flag taxonomy sweep.** There are seven shorthands and each means one thing everywhere: `-C` `--config`,
+  `-D` `--debug`, `-T` `--token`, `-q` `--quiet`, `-y` `--yes`, `-n` `--dry-run` and `-o` `--output`. Every other
+  shorthand is removed, and a removed spelling is an unknown flag whose error names its replacement. Old to new:
+
+  | 4.x | 5.0 |
+  | --- | --- |
+  | `-n <dir>` (`--config-dir`, on most commands) | `--config-dir <dir>`, global, no shorthand; `-n` is now `--dry-run` |
+  | `-d` (`--dry-run` on `generate` and `clean`) | `-n` / `--dry-run` (every command with `--dry-run` has `-n`) |
+  | `-p` (`--profile`) | `--profile` |
+  | `-p` (`--priority` on `add` and `edit`) | `--priority` |
+  | `-p` (`--path` on `include add` and `skill install`) | `--path` |
+  | `-d` (`--domain` on `add`, `edit`, `show`, `remove`, `list`) | `--domain` |
+  | `-d` (`--domains` on `init`) | `--domains` |
+  | `-s` (`--description`, `--source`, `--skip-content`, `--set-default`) | the long flag |
+  | `-c` (`--content`), `-t` (`--targets`, `--install-to`), `-m` (`--merge-strategy`), `-b` (`--budget`) | the long flag |
+  | `-r` (`--recursive`, `--ref`), `-i` (`--gitignore`, `--include`), `-w` (`--watch`) | the long flag |
+  | `-e` / `-E` (`--env`, `--env-file`), `-F` (`--from`), `-H` (`--setup-hooks`) | the long flag |
+  | `export okf --out dir` / `-o dir` | `export okf --output-dir dir` |
+  | `eval run --out dir`, `eval import --out dir`, `publish emit --out dir` | `--output-dir dir` |
+  | `review --out f`, `review fix --out f`, `review calibrate --out f`, `search --out f`, `verifiers run --out f` | `--output f` / `-o f` |
+  | `generate --strict` (unknown configuration keys fail) | `generate --strict-config` (env `AI_RULEZ_STRICT=1` unchanged) |
+  | `lock --strict` (a refused served skill fails) | `lock --refuse-findings` |
+  | `sign --policy <file>` (sign an organization policy) | `sign --org-policy <file>`; `--policy` is the policy to evaluate |
+  | `ai-rulez validate path/.ai-rulez` and every other `[config-file]` argument | `ai-rulez -C path/.ai-rulez validate` |
+  | `--policy*` and `--discover-org` accepted by every command | only on the commands that evaluate policy |
+
+  `--strict` is now the shortcut of `--fail-on warning` and exists on `validate`, `doctor` and `verifiers run` only;
+  `--check` always means compare, write nothing, exit 2 on a difference. The positional config path is gone from
+  `generate`, `validate`, `scan`, `clean`, `doctor`, `tokens`, `cost`, `sign`, `verify`, `export okf`, `llm doctor`,
+  `scanners list` and `verifiers run|list|explain`: `-C <path>` takes a config directory or file and `--config-dir`
+  names the directory below the working directory, both global, so a command given a stray argument fails with the
+  `-C` spelling in the hint. The `--policy`, `--policy-*` and `--discover-org` flags are on `generate`, `validate`,
+  `scan`, `lock`, `doctor`, `verify`, `catalog`, `mcp`, `sbom`, `approve`, `tokens`, `cost`, `publish` and `update`;
+  elsewhere use `AI_RULEZ_POLICY` and the managed policy path, which every command honors. See
+  [Flag conventions](cli.md#flag-conventions).
 - **Removed deprecated flags:** `generate --update-gitignore` (use `--gitignore`), `--no-configure-cli-mcp` / `-M`
   and `--skip-cli-mcp` / `-S` (they had no effect).
 - **The content commands report what they changed.** `add`, `remove`, `domain add|remove` and `edit` print the created,
@@ -268,7 +303,7 @@ The changes below came with the same release; none is touched by `migrate v5`.
 | An organization policy at the managed path is read automatically | None unless the machine has one; see [Organization policy](#organization-policy) |
 | Review-linked approvals count only reviews of the final head by members or named approvers; `max_age` is a ceiling | Re-run `approve --from-github-review` after new pushes; see [Approvals](#approvals) |
 | Go APIs under `internal/` changed; `pkg/airulez` is the supported API | See [Go API](#go-api) |
-| The `compression` option is gone (it was a no-op since v3.13) | Delete it; a config that still sets it loads and `generate` warns about the unknown key, but `validate` and `generate --strict` fail |
+| The `compression` option is gone (it was a no-op since v3.13) | Delete it; a config that still sets it loads and `generate` warns about the unknown key, but `validate` and `generate --strict-config` fail |
 
 
 ## OKF is the format of `.ai-rulez/`
@@ -344,7 +379,7 @@ local sources are reported as `needs-action` instead of being cloned.
   `generate` or `clean` while it is still the value ai-rulez wrote. The settings file is written only when
   `[claude.settings]` manage, `[[hooks]]`, `[permissions]` or `[claude.settings.managed]` apply.
 - **`generate` warns about unknown config keys** in `config.toml` and `config.local.toml`, naming the nearest known
-  key. `generate --strict` (or `AI_RULEZ_STRICT=1`) fails instead. `validate` fails on them as before.
+  key. `generate --strict-config` (or `AI_RULEZ_STRICT=1`) fails instead. `validate` fails on them as before.
 - **`generate` summarises new or changed commands**: hook commands, command-based MCP servers, `[permissions]
   allow` rules, `[claude.settings.managed] env`, plugin enablement and `http`/`prompt` hooks that are new since the
   previous run on this machine (all of them in a fresh clone), printed even with `--quiet`. It only warns. Pass
@@ -412,7 +447,7 @@ local sources are reported as `needs-action` instead of being cloned.
 - **The lock digest ignores the project-wide `Source-Hash` header**, so editing an unrelated file no longer changes
   the digest of a served skill.
 - **A served skill the security scan refuses no longer stops `lock`.** It is left unpinned, `lock` exits `3`, and
-  `lock --strict` restores the fail-without-writing behavior.
+  `lock --refuse-findings` restores the fail-without-writing behavior.
 - **`lock` and `update` scan what they pin.** Every remote tree pinned to something new is scanned (`AR001`-`AR009`)
   first; an error finding refuses the pin (exit `2`, nothing written) unless `--accept-findings`.
 - **`generate --check` classifies machine-local inputs like `generate`.** With a `config.local.*` overlay or `local/`

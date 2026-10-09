@@ -49,7 +49,7 @@ ai-rulez verifiers run --name readme    # only the named verifier (repeatable)
 ai-rulez verifiers run --since origin/main   # only what changed since the merge base
 ai-rulez verifiers run --staged         # only what is staged (pre-commit)
 ai-rulez verifiers run --rule database  # only verifiers that enforce this rule or skill
-ai-rulez verifiers run --format sarif --out verifiers.sarif   # also junit, json, text
+ai-rulez verifiers run --format sarif --output verifiers.sarif   # also junit, json, text
 ai-rulez verifiers run --allow-exec     # also run `command` predicates (trusted refs only)
 ai-rulez verifiers run --allow-llm --max-cost 0.25   # also evaluate `llm` checklists (sends the changed lines to the model)
 ai-rulez verifiers run --estimate       # what the llm verifiers would send and cost; calls nothing
@@ -288,7 +288,7 @@ AR9H1 new-endpoints-have-tests (rule "api-conventions", .ai-rulez/rules/api-conv
 | `sarif` | SARIF 2.1.0: `ruleId` is `AR9H1/<verifier id>`, the location is the subject file, `relatedLocations` is the declaring rule (with the anchor line), `properties.rule` is the rule id, and `partialFingerprints` hashes verifier, path and normalised matched text so a line shift keeps the identity. A flat verifier has no code, so its `ruleId` is the verifier name; its results are located at the offending file (and line for `forbid`) and the rule text is the verifier's description |
 | `junit` | one suite per rule (`rule:<id>`, `skill:<id>`, or `config` for a flat verifier), one case per verifier and subject; invalid declarations are `error`, `not_applicable` is `skipped`. A failure below the `--fail-on` threshold (a warning without `--strict`) is a passing case with the text in `system-out`, so the report agrees with the exit code |
 
-`--out FILE` writes the report there (atomically) instead of stdout. `--fail-on error|warning|info|none` sets the
+`--output FILE` writes the report there (atomically) instead of stdout. `--fail-on error|warning|info|none` sets the
 lowest failing severity (`--strict` is `--fail-on warning`); exit codes are unchanged.
 
 ### Codes

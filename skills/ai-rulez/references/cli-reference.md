@@ -40,7 +40,7 @@ Flags:
 - `--env, -e KEY=VALUE` — MCP env override; repeatable
 - `--env-file, -E <path>` — Dotenv file for MCP placeholders; repeatable
 - `--no-local` — Ignore the machine-local `config.local.*` overlay and `local/` content
-- `--strict` — Fail on unknown or invalid config keys instead of warning (env `AI_RULEZ_STRICT=1`)
+- `--strict-config` — Fail on unknown or invalid config keys instead of warning (env `AI_RULEZ_STRICT=1`)
 - `--yes, -y` — With `--user`, skip the confirmation; always, silence the summary of new hook and MCP commands (env `AI_RULEZ_ACK_COMMANDS=1`)
 - `--plugin` — Generate distributable plugin bundles and a marketplace index from the `[plugin]` block
 - `--if-configured` — With `--plugin`, skip successfully when plugin authoring is not configured
@@ -88,7 +88,7 @@ Check generated files against their `Content-Hash` offline (`--plugin` for plugi
 
 Open Knowledge Format (OKF v0.2) support, see `docs/okf.md`.
 
-- `ai-rulez export okf [--out <dir>] [--profile <p>] [--include rules,context,skills,agents,commands,checks] [--check]` — write the content as a deterministic OKF bundle (default `okf.dir`, `docs/okf`); `--check` writes nothing and exits 2 on drift
+- `ai-rulez export okf [--output-dir <dir>] [--profile <p>] [--include rules,context,skills,agents,commands,checks] [--check]` — write the content as a deterministic OKF bundle (default `okf.dir`, `docs/okf`); `--check` writes nothing and exits 2 on drift
 - `ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain <d>] [--dry-run] [--force]` — convert a bundle into `.ai-rulez/` sources; never overwrites without `--force`, scans imported text (AR001-AR011) first
 - `ai-rulez okf validate <dir|git-url> [--format json] [--fail-on error|warning|info|none]` — lint any bundle (AR9B0-AR9B9)
 
@@ -167,7 +167,7 @@ Commands that print JSON take `--format text|json`; `--json` was removed in v5.
 ## Roles, Lock and Catalog
 
 - `ai-rulez roles list|show <name>|resolve <name> [--format json]` — Inspect `[[roles]]`; `list --format json` is the `roles.json` manifest
-- `ai-rulez lock [name...]` — Pin remote includes, installed skills, skill sources, authored content and outputs in `ai-rulez.lock`. Flags: `--check` (offline, exit 2 and names each difference; exit 1 with no lock file), `--diff`, `--subject [--output <file>]`, `--outdated [--fail-on-outdated]`, `--content-only`, `--format text|json` (with `--check`, `--diff`, `--outdated`, `--subject`), `--kind include|skill|source|served`, `--profile`, `--role`, `--include-static`, `--source`, `--strict`, `--recursive`. Exit `3`: served skills left unpinned by the security scan
+- `ai-rulez lock [name...]` — Pin remote includes, installed skills, skill sources, authored content and outputs in `ai-rulez.lock`. Flags: `--check` (offline, exit 2 and names each difference; exit 1 with no lock file), `--diff`, `--subject [--output <file>]`, `--outdated [--fail-on-outdated]`, `--content-only`, `--format text|json` (with `--check`, `--diff`, `--outdated`, `--subject`), `--kind include|skill|source|served`, `--profile`, `--role`, `--include-static`, `--source`, `--refuse-findings`, `--recursive`. Exit `3`: served skills left unpinned by the security scan
 - `ai-rulez update [name...] [--dry-run] [--allow-downgrade] [--accept-moved-tag] [--kind include|skill|source] [--format json]` — Move `version` range pins to the newest allowed tag
 - `ai-rulez catalog [--format json] [--schema-version 1|2]` — Items with owner, version, tokens, roles and lock status; `--html <dir>` writes a static site (`--role`, `--include-excerpt`, `--indexable`, `--clean`, `--base-title`, `--allow-findings AR001`)
 - `ai-rulez sbom [--format cyclonedx] [--online] [-o <file>]` — CycloneDX 1.6 bill of materials
@@ -175,8 +175,8 @@ Commands that print JSON take `--format text|json`; `--json` was removed in v5.
 
 ## Verification, Search and Evals
 
-- `ai-rulez verifiers run|list|explain|test` — Deterministic repo checks from `[[verifiers]]` and `.ai-rulez/verifiers/*.toml`; `run` takes `--since <rev>`, `--staged`, `--all`, `--rule`, `--name`, `--format text|json|sarif|junit`, `--out`, `--fail-on`, `--strict`, `--strict-applicability`
-- `ai-rulez search <query> [--limit <n>] [--format json]` ranks the skills a skills server would serve (same selection flags as `mcp --serve-skills`); `search --eval <cases.yaml> [--k] [--min] [--baseline] [--max-flips] [--out]` measures the ranking
+- `ai-rulez verifiers run|list|explain|test` — Deterministic repo checks from `[[verifiers]]` and `.ai-rulez/verifiers/*.toml`; `run` takes `--since <rev>`, `--staged`, `--all`, `--rule`, `--name`, `--format text|json|sarif|junit`, `--output`, `--fail-on`, `--strict`, `--strict-applicability`
+- `ai-rulez search <query> [--limit <n>] [--format json]` ranks the skills a skills server would serve (same selection flags as `mcp --serve-skills`); `search --eval <cases.yaml> [--k] [--min] [--baseline] [--max-flips] [--output]` measures the ranking
 - `ai-rulez eval run [skill...]` — Run skill evals through a runner and score them (`--harness`, `--runner`, `--runner-command`, `--ablation`, `--dry-run`, `--max-cost`, `--changed-only`, `--force`, `--threshold`, `--format json|markdown|junit`); results are signed per user, so CI needs `--force`
 - `ai-rulez telemetry hook|record|export|feedback`, `ai-rulez telemetry hook|record|flush|preview|doctor`, `ai-rulez telemetry report|evals` — Opt-in, identifier-only usage and item-load telemetry
 - `ai-rulez llm doctor [--ping]` / `llm estimate <file>` — Inspect `[llm]` access without calling a model
