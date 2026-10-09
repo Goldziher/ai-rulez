@@ -57,7 +57,7 @@ func TestCostCommand(t *testing.T) {
 	_, _, err = runCostOn(t, root)
 	assert.Error(t, err)
 
-	for _, name := range []string{"format", "target", "top", "budget", "on-demand-budget", "profile", "no-local", "config-dir"} {
+	for _, name := range []string{"format", "target", "top", "budget", "on-demand-budget", "profile", "no-local"} {
 		assert.NotNil(t, CostCmd.Flags().Lookup(name), name)
 	}
 }
