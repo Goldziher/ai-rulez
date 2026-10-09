@@ -2688,6 +2688,15 @@
             "requires_python": {
               "type": "string",
               "description": "Python requirement for the generated Hermes wheel (default: >=3.11)"
+            },
+            "dependencies": {
+              "type": "array",
+              "description": "PEP 508 requirements for the generated Hermes wheel and project plugin. Direct references (name @ url) are rejected because Hermes does not install them.",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
             }
           },
           "additionalProperties": false
