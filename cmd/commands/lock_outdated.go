@@ -111,20 +111,17 @@ func evaluateSources(ctx context.Context, srcs []versionSrc, lock *lockfile.File
 }
 
 // outdatedAt prints which sources have newer tags than their pins.
-func outdatedAt(path string, kind string, names []string) int {
+func outdatedAt(path string, kind string, names []string) error {
 	if err := requireOnline("lock --outdated"); err != nil {
-		renderError(os.Stderr, err)
-		return 1
+		return fail(err)
 	}
 	cfg, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
 	if err != nil {
-		renderError(os.Stderr, err)
-		return 1
+		return fail(err)
 	}
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
-		renderError(os.Stderr, err)
-		return 1
+		return fail(err)
 	}
 	wanted := map[string]bool{}
 	for _, n := range names {
@@ -133,13 +130,11 @@ func outdatedAt(path string, kind string, names []string) int {
 	defer installReleaseGateFor(cfg)()
 	srcs := versionSources(cfg, kind, wanted)
 	if err := checkNamesMatched(srcs, wanted); err != nil {
-		renderError(os.Stderr, err)
-		return 1
+		return fail(err)
 	}
 	rows, err := evaluateSources(cmdContext(), srcs, lock)
 	if err != nil {
-		renderError(os.Stderr, err)
-		return 1
+		return fail(err)
 	}
 	report := tagresolve.NewReport(rows)
 	report.MarkOutdated(lintSeverityOf(cfg, tagresolve.CodeOutdated, "source-outdated"))
@@ -149,8 +144,7 @@ func outdatedAt(path string, kind string, names []string) int {
 		err = report.WriteText(os.Stdout)
 	}
 	if err != nil {
-		renderError(os.Stderr, oops.Wrapf(err, "write the report"))
-		return 1
+		return fail(oops.Wrapf(err, "write the report"))
 	}
 	return outdatedExit(report)
 }
@@ -169,11 +163,11 @@ func lintSeverityOf(cfg *config.Config, code, name string) string {
 	return ""
 }
 
-// outdatedExit: 2 for an error finding (a moved tag, an unresolvable constraint)
+// outdatedExit is the verdict of --outdated: 2 for an error finding (a moved tag, an unresolvable constraint)
 // and, with --fail-on-outdated, for any allowed update; else 0.
-func outdatedExit(r *tagresolve.Report) int {
+func outdatedExit(r *tagresolve.Report) error {
 	if r.Failing() || (lockFailOnOutdated && r.Summary.Updatable > 0) {
-		return exitDrift
+		return exitStatus(exitFindings)
 	}
-	return 0
+	return nil
 }
