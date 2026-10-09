@@ -7,7 +7,7 @@ local log works with no network, and a repository can never turn on network expo
 
 ```console
 ai-rulez telemetry hook              # hooks that record loads (merge into .claude/settings.json)
-ai-rulez telemetry hook --format toml   # the same as [[hooks]] for config.toml; generate writes them
+ai-rulez telemetry hook --syntax toml   # the same as [[hooks]] for config.toml; generate writes them
 ai-rulez telemetry enable --endpoint https://collector.example.org:4318   # consent, stored per user
 ai-rulez telemetry status            # on or off, consent, pending events, failed flushes
 ai-rulez telemetry disable           # withdraw consent
@@ -228,7 +228,7 @@ async = true
 timeout = 5
 ```
 
-`ai-rulez telemetry hook --format toml` prints these three groups plus the two skill groups (`PreToolUse` on `Skill`
+`ai-rulez telemetry hook --syntax toml` prints these three groups plus the two skill groups (`PreToolUse` on `Skill`
 and `UserPromptExpansion`, running `telemetry record`). `telemetry record` prints nothing on stdout, exits 0 on every
 error, ignores events it does not handle, and does nothing when telemetry is off (not even creating the salt file).
 The role comes from `--role` or `$AI_RULEZ_ROLE`.
