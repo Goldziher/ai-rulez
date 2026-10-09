@@ -99,7 +99,7 @@ The okf preset ("presets = [\"claude\", \"okf\"]") runs the same export inside
 generate, so the bundle stays in sync and generate --check detects drift.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return exitStatus(runOKFExport(watchParentContext(cmd), args, os.Stdout))
+		return runOKFExport(watchParentContext(cmd), args, os.Stdout)
 	},
 }
 
@@ -259,34 +259,30 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 	return nil
 }
 
-func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
+// runOKFExport exports the bundle (or, with --check, compares it) and returns nil,
+// an ExitError with exitFindings for a bundle that differs, or the failure.
+func runOKFExport(ctx context.Context, args []string, out io.Writer) error {
 	if err := checkFormatFlag(okfFormat); err != nil {
-		renderStderr(err)
-		return exitOKFCannotRun
+		return fail(err)
 	}
 	cfg, err := loadConfigForCommand(ctx, args, config.WithoutLocal())
 	if err != nil {
-		renderStderr(err)
-		return exitOKFCannotRun
+		return fail(err)
 	}
 	if err := cfg.Validate(); err != nil {
-		renderStderr(err)
-		return exitOKFCannotRun
+		return fail(err)
 	}
 	opts, err := okfExportOptions(cfg)
 	if err != nil {
-		renderStderr(err)
-		return exitOKFCannotRun
+		return fail(err)
 	}
 	tree, err := okfExportTree(cfg)
 	if err != nil {
-		renderStderr(err)
-		return exitOKFCannotRun
+		return fail(err)
 	}
 	res, err := okfbridge.Export(tree, opts)
 	if err != nil {
-		renderStderr(err)
-		return exitOKFCannotRun
+		return fail(err)
 	}
 	dir := okfOut
 	if dir == "" {
@@ -299,23 +295,21 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 	if okfCheck {
 		drift, err := okf.Compare(dir, res.Files)
 		if err != nil {
-			renderStderr(err)
-			return exitOKFCannotRun
+			return fail(err)
 		}
 		if okfFormat == formatJSON {
 			return writeOKFExportJSON(out, map[string]any{keyStatus: okfExportStatus(drift.Empty()), "dir": dir, "files": len(res.Files), statusDrift: drift}, drift.Empty())
 		}
 		if drift.Empty() {
 			w.printf("%s is up to date (%d files)\n", dir, len(res.Files))
-			return 0
+			return nil
 		}
 		printOKFDrift(w, drift)
 		w.printf("%s differs from the sources; run ai-rulez export okf (or generate) to update it\n", dir)
-		return exitOKFProblems
+		return exitStatus(exitOKFProblems)
 	}
 	if err := okf.WriteFiles(dir, res.Files, true); err != nil {
-		renderStderr(err)
-		return exitOKFCannotRun
+		return fail(err)
 	}
 	if okfFormat == formatJSON {
 		paths := make([]string, 0, len(res.Files))
@@ -325,7 +319,7 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 		return writeOKFExportJSON(out, map[string]any{"status": "written", "dir": dir, "files": paths, "count": len(paths), "counts": res.Counts}, true)
 	}
 	w.printf("Wrote %d files to %s (%s)\n", len(res.Files), dir, kindCounts(res.Counts))
-	return 0
+	return nil
 }
 
 func okfExportStatus(upToDate bool) string {
@@ -335,17 +329,16 @@ func okfExportStatus(upToDate bool) string {
 	return statusDrift
 }
 
-// writeOKFExportJSON prints the export document and returns the exit code: 0
-// when ok, else the findings code of --check.
-func writeOKFExportJSON(out io.Writer, doc map[string]any, ok bool) int {
+// writeOKFExportJSON prints the export document and returns nil when ok, else
+// the findings exit of --check.
+func writeOKFExportJSON(out io.Writer, doc map[string]any, ok bool) error {
 	if err := jsondoc.Write(out, doc); err != nil {
-		renderStderr(err)
-		return exitOKFCannotRun
+		return fail(err)
 	}
 	if !ok {
-		return exitOKFProblems
+		return exitStatus(exitOKFProblems)
 	}
-	return 0
+	return nil
 }
 
 // okfExportOptions resolves the kinds and the index style from the flags, then the config.

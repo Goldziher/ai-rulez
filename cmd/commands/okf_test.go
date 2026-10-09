@@ -41,7 +41,7 @@ func exportRun(t *testing.T, check bool) (int, string) {
 	okfCheck = check
 	defer func() { okfCheck = false }()
 	var out bytes.Buffer
-	code := runOKFExport(context.Background(), nil, &out)
+	code := codeOf(runOKFExport(context.Background(), nil, &out))
 	return code, out.String()
 }
 

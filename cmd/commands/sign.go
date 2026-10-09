@@ -118,7 +118,7 @@ stale (its tree does not match its entries).`,
 		if outFor(cmd).JSON() {
 			ctx = withSignRecorder(ctx)
 		}
-		return exitStatus(runSign(ctx, args, nil))
+		return runSign(ctx, args, nil)
 	},
 }
 
@@ -253,16 +253,17 @@ func loadSignLock(ctx context.Context, args []string) (*config.Config, *lockfile
 }
 
 // runSign signs the lock of the project at args[0] (or the current directory)
-// and returns the exit code.
-func runSign(ctx context.Context, args []string, env ambient.Env) int {
-	code := signOne(ctx, args, env)
-	if rec := signRecorderFrom(ctx); rec != nil && code == 0 {
+// and returns nil, or the failure with its exit code.
+func runSign(ctx context.Context, args []string, env ambient.Env) error {
+	if err := signOne(ctx, args, env); err != nil {
+		return err
+	}
+	if rec := signRecorderFrom(ctx); rec != nil {
 		if err := jsondoc.Write(os.Stdout, map[string]any{keyStatus: "signed", "signed": rec.entries}); err != nil {
-			renderStderr(err)
-			return exitFailure
+			return fail(err)
 		}
 	}
-	return code
+	return nil
 }
 
 // signRecorder collects what one run signed, for the --format json document. It
@@ -290,10 +291,9 @@ func reportSigned(ctx context.Context, msg string, entry map[string]any, logArgs
 	logger.Success(msg, logArgs...)
 }
 
-func signOne(ctx context.Context, args []string, env ambient.Env) int {
+func signOne(ctx context.Context, args []string, env ambient.Env) error {
 	if err := validateSignFlags(); err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	if signPolicy != "" {
 		return runSignPolicy(ctx, env)
@@ -303,45 +303,39 @@ func signOne(ctx context.Context, args []string, env ambient.Env) int {
 	}
 	cfg, lock, err := loadSignLock(ctx, args)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	meta := signing.LockMeta{Version: Version, Now: time.Now(), EmbedItems: signEmbedItems}
 	meta.Repository, meta.Ref = detectRepo(ctx, cfg.BaseDir, env)
 	signer, err := newSigner(ctx, env)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	if err := exportPublicKey(signer); err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	bundle, err := signing.SignLock(ctx, signer, lock, meta)
 	if err != nil {
-		renderStderr(err)
 		if signing.CodeOf(err) == signing.CodeSubjectMismatch {
-			return exitDrift
+			return failWithCode(exitFindings, err)
 		}
-		return 1
+		return fail(err)
 	}
 	out := signOutput
 	if out == "" {
 		out = filepath.Join(cfg.ConfigDir, filepath.FromSlash(attestationName(cfg)))
 	}
 	if out, err = appendTarget(out); err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	if err := writeBundle(out, bundle); err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
 	subject := signingSubject(lock)
 	reportSigned(ctx, "Signed "+lockfile.FileName, map[string]any{keyKind: kindLock, keyPath: lockfile.FileName, keySigner: signerLabel(info), keySubject: subject, keyBundle: out},
 		"signer", signerLabel(info), "subject", subject, "bundle", out)
-	return 0
+	return nil
 }
 
 func attestationName(cfg *config.Config) string {
