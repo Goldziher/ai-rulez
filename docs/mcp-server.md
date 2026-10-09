@@ -732,7 +732,7 @@ to overwrite an existing configuration.
 
 - `project_name` (optional, string): Project name
 - `providers` (optional, array): Providers to enable, such as `claude` or `cursor`
-- `with_agents` (optional, boolean): Accepted for compatibility; `agents/` is always created
+- `with_agents` (optional, boolean): Also create a sample agent, `agents/code-reviewer.md`. `agents/` itself is always created.
 - `all_providers` (optional, boolean): Enable the curated set of tool presets
 - `popular_providers` (optional, boolean): Same curated set — a shortcut for `all_providers`
 - `working_directory` (optional, string): Directory to operate in

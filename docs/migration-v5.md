@@ -157,6 +157,34 @@ hashes = "full"
   (it was `--force`). `convert --force`, `eval run --force` and `import okf --force` (overwrite) are unchanged.
 - **Removed deprecated flags:** `generate --update-gitignore` (use `--gitignore`), `--no-configure-cli-mcp` / `-M`
   and `--skip-cli-mcp` / `-S` (they had no effect).
+- **The content commands report what they changed.** `add`, `remove`, `domain add|remove` and `edit` print the created,
+  removed or rewritten path alone on a line of stdout (the "added successfully" sentence is on stderr and `-q`
+  hides it), and `add`, `remove`, `edit`, `domain`, `profile`, `include` and `skill install|remove` take
+  `--format json` for a `{"status", "type", "name", "path", ...}` document (schema `schema/change-result.schema.json`).
+  *Migrate:* scripts that scraped the `INFO ... successfully` lines read the path from stdout or use `--format json`.
+- **`show` and `edit` complete the verbs** (`list`, `show`, `add`, `edit`, `remove`): `ai-rulez show rule style`,
+  `ai-rulez edit rule style --content ...`. They are the CLI side of the MCP `read_*` and `update_*` tools.
+- **Group commands print help.** `ai-rulez list` with no subcommand used to exit 1 with "specify what to list"; like
+  `add`, `remove`, `domain`, `profile`, `include`, `skill`, `builtins` and `migrate` it now prints its help and exits 0.
+- **Stricter content names and values** (also for the MCP tools): a name must not end in `.md`, contain whitespace or
+  start with `.` or `-`; `--targets` must be preset names, paths or globs (`--targets claude,bogus` is an error);
+  `minimal` is a valid `--priority`, as the flag help always said. `remove` checks the item exists before it asks
+  to confirm. `domain remove` refuses while a profile lists the domain (it used to leave a dangling profile).
+  `add skill` without `--description` writes a placeholder that passes `validate` (it was the bare name, which
+  failed AR802). *Migrate:* rename files that violate the rules; `validate` flags them.
+- **`migrate` has real subcommands.** `ai-rulez migrate v5` and `ai-rulez migrate okf` are unchanged as command
+  lines, but are now subcommands: `migrate` alone prints help, `migrate v4` or `migrate banana` is an unknown
+  command, and `migrate v5` / `migrate okf` list in shell completion. `--dry-run`, `--check` and `--format` work
+  before or after the target; `--adopt-defaults`, `--write` and `--recursive` belong to `v5` and `okf` rejects them.
+  The spellings `migrate 5`, `migrate V5` and `migrate v5.0` are gone.
+- **Removed aliases and dead flags.** The aliases `g` (of `generate`), `clear` (of `clean`), `v` and `check` (of
+  `validate`) and `check` (of `list checks`) are removed; use the full names (`gen` and `val` stay). The hidden,
+  never-implemented `mcp --transport`, `--address` and `--port` are removed (the server is stdio only).
+- **`guard` is listed in `--help`.** It stays a hook the harness runs.
+- **`init` prints the created directory** on stdout (and takes `--format json`); its file listing and next steps are
+  on stderr, and the replace prompt is on stderr too. `init --config-dir` is the global flag.
+- **MCP `init_project` honors `with_agents`** (it creates `agents/code-reviewer.md`; the flag was accepted and ignored).
+
 - **Exit codes follow one contract**: 0 ok, 1 the command could not run (or the configuration is invalid or an older
   version), 2 findings or drift. See [the CLI reference](cli.md#exit-codes). `lock` keeps its documented codes.
 
@@ -184,9 +212,11 @@ hashes = "full"
 - **`~/.ai-rulez.{toml,yaml,json}` and `./.ai-rulez.*` are no longer read** by the root command. They were never used
   for settings; the lookup only printed "Using config file".
 - **`--verbose` / `-V` is removed** (it did nothing beyond that line). Use `--debug` / `-D`.
-- **`--config-dir` is a global flag.** Commands that declare their own `--config-dir` / `-n` keep it; the content
-  commands (`add`, `remove`, `list`, `domain`, `profile`, `include`, `skill`) still auto-detect `.ai-rulez`, then
-  `.config/ai-rulez`.
+- **`--config-dir` is a global flag.** Commands that declare their own `--config-dir` / `-n` keep it. `init` and
+  `migrate` no longer declare one: they read the global flag. The content commands (`add`, `remove`, `show`, `edit`,
+  `list`, `domain`, `profile`, `include`, `skill`) honor the global `--config-dir <name>` and `-C <dir>` (they used to
+  ignore both and only auto-detect `.ai-rulez`, then `.config/ai-rulez`). *Migrate:* a script that passed
+  `--config-dir` to one of them and relied on it being ignored now acts on that directory.
 - **`--format text|json` on more commands:** `generate` (`--check`, `--dry-run`, the summary), `clean`, `sign`,
   `export okf` and `version`.
 

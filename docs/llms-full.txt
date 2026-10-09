@@ -701,6 +701,34 @@ hashes = "full"
   (it was `--force`). `convert --force`, `eval run --force` and `import okf --force` (overwrite) are unchanged.
 - **Removed deprecated flags:** `generate --update-gitignore` (use `--gitignore`), `--no-configure-cli-mcp` / `-M`
   and `--skip-cli-mcp` / `-S` (they had no effect).
+- **The content commands report what they changed.** `add`, `remove`, `domain add|remove` and `edit` print the created,
+  removed or rewritten path alone on a line of stdout (the "added successfully" sentence is on stderr and `-q`
+  hides it), and `add`, `remove`, `edit`, `domain`, `profile`, `include` and `skill install|remove` take
+  `--format json` for a `{"status", "type", "name", "path", ...}` document (schema `schema/change-result.schema.json`).
+  *Migrate:* scripts that scraped the `INFO ... successfully` lines read the path from stdout or use `--format json`.
+- **`show` and `edit` complete the verbs** (`list`, `show`, `add`, `edit`, `remove`): `ai-rulez show rule style`,
+  `ai-rulez edit rule style --content ...`. They are the CLI side of the MCP `read_*` and `update_*` tools.
+- **Group commands print help.** `ai-rulez list` with no subcommand used to exit 1 with "specify what to list"; like
+  `add`, `remove`, `domain`, `profile`, `include`, `skill`, `builtins` and `migrate` it now prints its help and exits 0.
+- **Stricter content names and values** (also for the MCP tools): a name must not end in `.md`, contain whitespace or
+  start with `.` or `-`; `--targets` must be preset names, paths or globs (`--targets claude,bogus` is an error);
+  `minimal` is a valid `--priority`, as the flag help always said. `remove` checks the item exists before it asks
+  to confirm. `domain remove` refuses while a profile lists the domain (it used to leave a dangling profile).
+  `add skill` without `--description` writes a placeholder that passes `validate` (it was the bare name, which
+  failed AR802). *Migrate:* rename files that violate the rules; `validate` flags them.
+- **`migrate` has real subcommands.** `ai-rulez migrate v5` and `ai-rulez migrate okf` are unchanged as command
+  lines, but are now subcommands: `migrate` alone prints help, `migrate v4` or `migrate banana` is an unknown
+  command, and `migrate v5` / `migrate okf` list in shell completion. `--dry-run`, `--check` and `--format` work
+  before or after the target; `--adopt-defaults`, `--write` and `--recursive` belong to `v5` and `okf` rejects them.
+  The spellings `migrate 5`, `migrate V5` and `migrate v5.0` are gone.
+- **Removed aliases and dead flags.** The aliases `g` (of `generate`), `clear` (of `clean`), `v` and `check` (of
+  `validate`) and `check` (of `list checks`) are removed; use the full names (`gen` and `val` stay). The hidden,
+  never-implemented `mcp --transport`, `--address` and `--port` are removed (the server is stdio only).
+- **`guard` is listed in `--help`.** It stays a hook the harness runs.
+- **`init` prints the created directory** on stdout (and takes `--format json`); its file listing and next steps are
+  on stderr, and the replace prompt is on stderr too. `init --config-dir` is the global flag.
+- **MCP `init_project` honors `with_agents`** (it creates `agents/code-reviewer.md`; the flag was accepted and ignored).
+
 - **Exit codes follow one contract**: 0 ok, 1 the command could not run (or the configuration is invalid or an older
   version), 2 findings or drift. See [the CLI reference](cli.md#exit-codes). `lock` keeps its documented codes.
 
@@ -728,9 +756,11 @@ hashes = "full"
 - **`~/.ai-rulez.{toml,yaml,json}` and `./.ai-rulez.*` are no longer read** by the root command. They were never used
   for settings; the lookup only printed "Using config file".
 - **`--verbose` / `-V` is removed** (it did nothing beyond that line). Use `--debug` / `-D`.
-- **`--config-dir` is a global flag.** Commands that declare their own `--config-dir` / `-n` keep it; the content
-  commands (`add`, `remove`, `list`, `domain`, `profile`, `include`, `skill`) still auto-detect `.ai-rulez`, then
-  `.config/ai-rulez`.
+- **`--config-dir` is a global flag.** Commands that declare their own `--config-dir` / `-n` keep it. `init` and
+  `migrate` no longer declare one: they read the global flag. The content commands (`add`, `remove`, `show`, `edit`,
+  `list`, `domain`, `profile`, `include`, `skill`) honor the global `--config-dir <name>` and `-C <dir>` (they used to
+  ignore both and only auto-detect `.ai-rulez`, then `.config/ai-rulez`). *Migrate:* a script that passed
+  `--config-dir` to one of them and relied on it being ignored now acts on that directory.
 - **`--format text|json` on more commands:** `generate` (`--check`, `--dry-run`, the summary), `clean`, `sign`,
   `export okf` and `version`.
 
@@ -10057,6 +10087,28 @@ a safe project-relative source:
 source = "plugin/hermes.py"
 ```
 
+Declare Python dependencies in the same authoring block:
+
+```toml
+[plugin.hermes]
+dependencies = ["example-tool[cli]", "httpx>=0.28; python_version >= '3.11'"]
+```
+
+Each entry must be a valid PEP 508 requirement that names a package from an index.
+Package extras, version constraints, and environment markers are supported.
+Direct references (`name @ url`) are rejected, because Hermes does not install them
+for directory plugins. Invalid requirements are rejected during configuration validation,
+before generation.
+The generator preserves the authored strings in the wheel's `project.dependencies`
+and in `python_dependencies` in both Hermes plugin manifests.
+An omitted or empty list leaves the outputs dependency-free.
+
+Installing the built wheel lets the Python installer resolve these dependencies.
+For a directory plugin, Hermes handles the manifest's dependency declaration through
+its normal dependency-consent flow. Neither generation nor importing the adapter
+installs packages. A Python dependency does not install browser binaries, credentials,
+or other external prerequisites; document those separately.
+
 By default, plugin payload comes from the resolved ai-rulez content tree. To keep
 distributable content separate from developer governance, set a safe project-relative
 content root containing `skills/`, `commands/`, and `agents/`:
@@ -18430,7 +18482,7 @@ to overwrite an existing configuration.
 
 - `project_name` (optional, string): Project name
 - `providers` (optional, array): Providers to enable, such as `claude` or `cursor`
-- `with_agents` (optional, boolean): Accepted for compatibility; `agents/` is always created
+- `with_agents` (optional, boolean): Also create a sample agent, `agents/code-reviewer.md`. `agents/` itself is always created.
 - `all_providers` (optional, boolean): Enable the curated set of tool presets
 - `popular_providers` (optional, boolean): Same curated set — a shortcut for `all_providers`
 - `working_directory` (optional, string): Directory to operate in
@@ -22391,12 +22443,12 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez sbom`                 | CycloneDX 1.6 or SPDX 2.3 bill of materials of the AI configuration ([SBOM](sbom.md)) |
 | `ai-rulez publish`              | Deterministic, checksummed release artifacts of the plugin bundle, optionally signed; `--to github-release\|npm\|oci --execute --yes` uploads ([Publish](publish.md)) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
-| `ai-rulez guard`                | Hidden PreToolUse hook that blocks agent edits to generated files ([details](#guard-command)) |
+| `ai-rulez guard`                | PreToolUse hook that blocks agent edits to generated files; run by the harness ([details](#guard-command)) |
 | `ai-rulez llm doctor` / `llm estimate` | Inspect the `[llm]` model-access setup and estimate prompt cost, without calling a model ([details](llm.md)) |
 | `ai-rulez verifiers run/list/explain/test/calibrate/suggest` | Run the deterministic repo checks declared as `[[verifiers]]` or under `.ai-rulez/verifiers/` ([details](#verifiers-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez scanners list/doctor` | Inspect the `[[lint.external]]` scanners ([details](#scan-command)) |
-| `ai-rulez migrate v5`           | Migrate a 4.x project to 5.0 ([details](#migrate-command)) |
+| `ai-rulez migrate v5` / `migrate okf` | Migrate a 4.x project to 5.0, or the content tree to OKF ([details](#migrate-command)) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
 | `ai-rulez search`               | Rank skills against a query (lexical or hybrid with embeddings); `index`, `status`, `mine`; `--eval` measures the ranking ([details](#search-command)) |
 | `ai-rulez eval run`             | Run skill evals and score them ([details](#eval-commands)) |
@@ -22413,7 +22465,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez builtins list`        | List available built-in domains                     |
 | `ai-rulez builtins show <name>` | Show bundled content for a built-in domain          |
 
-Aliases: `generate` → `gen`, `g`; `clean` → `clear`; `validate` → `val`, `v`, `check`.
+Aliases: `generate` → `gen`; `validate` → `val`. (`g`, `clear`, `v` and `check` were removed in 5.0; `list check` is `list checks`.)
 
 ##### CRUD Commands (Configuration Management)
 
@@ -22423,6 +22475,8 @@ Aliases: `generate` → `gen`, `g`; `clean` → `clear`; `validate` → `val`, `
 | `ai-rulez add rule/context/skill/agent/command/check` | Create content files |
 | `ai-rulez remove rule/context/skill/agent/command/check` | Delete content files |
 | `ai-rulez list rules/context/skills/agents/commands/checks` | List content files |
+| `ai-rulez show rule/context/skill/agent/command/check` | Print one content file |
+| `ai-rulez edit rule/context/skill/agent/command/check` | Replace the content of one file |
 | `ai-rulez include add/remove/list`                | Manage external includes |
 | `ai-rulez skill install/remove/list/update`       | Manage installed skills; `update` re-pins them in `ai-rulez.lock` |
 | `ai-rulez profile add/remove/list`                | Manage profiles          |
@@ -22436,12 +22490,56 @@ write to the `config.local.*` overlay. See [Local Configuration](local-overrides
 
 AI-Rulez provides CRUD commands to programmatically modify your `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills/agents/commands, manage includes, and organize profiles.
 
+###### Results, `--format json` and which project
+
+Every command below prints its *result* on stdout and its confirmation sentence on stderr, so a script can
+capture the result and `-q` only silences the sentence. `add`, `remove`, `edit` and `domain add|remove` print the
+path they created, removed or rewrote, alone on a line (relative to the working directory when below it).
+`profile`, `include` and `skill install|remove` change an entry in the config file, so they print nothing in
+text mode.
+
+`--format json` is accepted by `add`, `remove`, `edit`, `show`, `domain add|remove`, `profile add|remove|set-default`,
+`include add|remove` and `skill install|remove`, and prints one versioned document
+([schema](https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/change-result.schema.json)):
+
+```json
+{"schema_version": 1, "status": "created", "type": "rule", "name": "style", "domain": "backend", "path": ".ai-rulez/rules/style.md"}
+```
+
+| Field | Meaning |
+| ----- | ------- |
+| `status` | `created`, `removed` or `updated` |
+| `type` | `rule`, `context`, `skill`, `agent`, `command`, `check`, `domain`, `profile`, `include`, `installed_skill` or `config` (`init`) |
+| `name`, `domain` | The item and its domain (omitted for root content) |
+| `path` | The file or directory created, removed or rewritten; for a profile, include or installed skill, the config file holding the entry (`config.local.toml` with `--local`) |
+| `source`, `domains`, `default`, `local` | Present when they apply (an include's or skill's redacted source, a profile's domains and default flag, `--local`) |
+
+`list` and `show` print their own documents. A failure under `--format json` is the standard error document.
+
+The global `--config-dir <name>` (a directory below the working directory, or an absolute path) and `-C <dir>`
+(a config directory, or a file inside one) select the project these commands act on, exactly as for `generate`.
+Without them the directory is discovered: `.ai-rulez/`, then `.config/ai-rulez/`.
+
+`ai-rulez add`, `remove`, `list`, `show`, `edit`, `domain`, `profile`, `include`, `skill` and `builtins` without a
+subcommand print their help and exit 0; an unknown subcommand exits 1.
+
+Names are file names: no `/`, no whitespace, no leading `.` or `-` and no trailing `.md` (the extension is added);
+domains and skills use letters, digits, `_` and `-`. `--priority` is `critical|high|medium|low|minimal`;
+`--targets` takes preset names, paths or globs and rejects an unknown word. `remove` checks that the item exists
+before it asks for confirmation. `domain remove` refuses while a profile still lists the domain (remove the profile
+first). A new skill without `--description` gets a placeholder that passes `validate`.
+
 `add agent` and `add command` take `--domain`/`-d`, `--description`/`-s`, `--content`/`-c` and
 `--local`. `remove agent|command` and `list agents|commands` take the same flags as their rule/skill
 counterparts.
 
 `add check`, `remove check` and `list checks` manage code-review guidelines (see [Checks](checks.md));
-they take `--domain`/`-d` (and `--description`/`-s`, `--content`/`-c` for `add`; `--yes`/`-y` for `remove`) but have no `--local`.
+they take `--domain`/`-d` (and `--description`/`-s`, `--content`/`-c`, `--severity low|medium|high|critical`, `--tools a,b` and `--targets` for `add`; `--yes`/`-y` for `remove`) but have no `--local`.
+
+`ai-rulez show <kind> <name>` prints the file as it is on disk (`--format json` adds the path). `ai-rulez edit <kind> <name>`
+replaces the content atomically: `--content <text>` (use `-` for stdin), `--priority` and `--targets` for rules, context
+and skills; for a check, content without frontmatter replaces only the body and `--description`, `--severity`,
+`--tools` and `--targets` are set on its frontmatter. Both take `--domain`/`-d`, and `--local` except for checks.
 
 `ai-rulez list --placement [--profile <name>]` prints where every skill and command ends up (core or plugin-only),
 the plugins that bundle it, and flags plugin-only items nothing makes reachable.
@@ -23402,7 +23500,9 @@ ai-rulez init [project-name] [flags]
 | `--setup-hooks` / `-H`  | boolean | false   | Configure Git hooks after initialization                             |
 | `--yes` / `-y`          | boolean | false   | Automatically answer yes to prompts (never replaces an existing directory) |
 | `--force`               | boolean | false   | Replace an existing configuration directory; the old one is kept as `<dir>.bak-<timestamp>` |
-| `--config-dir`          | string  | `.ai-rulez` | Directory to scaffold; use `.config/ai-rulez` for the `.config/` convention |
+| `--format`              | string  | text    | `json` prints `{"status": "created", "type": "config", "name": <project>, "path": <dir>}` |
+
+The global `--config-dir` (default `.ai-rulez`; use `.config/ai-rulez` for the `.config/` convention) names the directory to scaffold. The created directory is printed on stdout; the file listing and next steps go to stderr, where `-q` hides them. The replace prompt is on stderr.
 
 `--setup-hooks` detects an existing lefthook, pre-commit, or husky setup and adds ai-rulez to it in
 place; if none of the three is present it logs a message and does nothing rather than failing. The two YAML configurations (`lefthook.yml`,
@@ -23797,7 +23897,7 @@ or invalid generated outputs still fail verification.
 
 ##### `ai-rulez guard`
 
-Hidden command that harnesses run, not people. `generate` adds it as a `PreToolUse` hook when `[guard] generated = true` ([Settings](settings.md#guard)). It reads the hook payload (JSON) on stdin and checks the file the tool call edits against `.ai-rulez/.generated-manifest.json` and `.generated-manifest.local.json`.
+The harness runs this command, not people, but it is a normal listed command you can try by piping a payload into it. `generate` adds it as a `PreToolUse` hook when `[guard] generated = true` ([Settings](settings.md#guard)). It reads the hook payload (JSON) on stdin and checks the file the tool call edits against `.ai-rulez/.generated-manifest.json` and `.generated-manifest.local.json`.
 
 Exit codes: `2` the call edits a generated file (the reason, with the source to edit, is on stderr); `0` everything else, including files merged into a settings document, paths outside the project, read-only tools and a payload that cannot be parsed. The guard fails open.
 
@@ -24740,7 +24840,11 @@ ai-rulez llm estimate <file> [--max-output <tokens>] [--format text|json]
 
 #### Migrate Command
 
-##### `ai-rulez migrate v5`
+##### `ai-rulez migrate v5` and `ai-rulez migrate okf`
+
+`migrate` has one subcommand per target; `migrate` alone prints its help and an unknown target (`migrate v4`) is an
+unknown command. `migrate okf` converts the `.ai-rulez/` content tree, in place, to an OKF bundle (see
+[OKF](okf.md)); it takes `--dry-run`, `--check` and `--format`, and nothing else. The rest of this section is `migrate v5`.
 
 Rewrite a 4.x project for ai-rulez 5.0. `migrate` reads 4.x only: a 2.x or 3.x project must first be migrated to
 4.0 with ai-rulez 4.x. The full list of breaking changes and the before/after of each is in
@@ -24749,7 +24853,7 @@ Rewrite a 4.x project for ai-rulez 5.0. `migrate` reads 4.x only: a 2.x or 3.x p
 **Syntax:**
 
 ```bash
-ai-rulez migrate v5 [--dry-run] [--check] [--adopt-defaults] [--write] [--recursive] [--config-dir name] [--format text|json]
+ai-rulez migrate v5 [--dry-run] [--check] [--adopt-defaults] [--write] [--recursive] [--format text|json]
 ```
 
 **Flags:**
@@ -24759,7 +24863,7 @@ ai-rulez migrate v5 [--dry-run] [--check] [--adopt-defaults] [--write] [--recurs
 - `--adopt-defaults`: do not pin the 4.x defaults (`agents_md = false`, `gitignore = true`, `[header] hashes = "full"`); take the v5 ones.
 - `--write`: also rewrite the deprecated frontmatter spellings `permission_mode` and `user_invocable` in the markdown sources.
 - `--recursive`: migrate every project found below the current directory.
-- `--config-dir`: migrate one config directory name instead of `.ai-rulez` (then `.config/ai-rulez`).
+- The global `--config-dir`: migrate one config directory name instead of `.ai-rulez` (then `.config/ai-rulez`).
 - `--format json`: a machine-readable report with `schema_version`, one entry per project and a summary.
 
 **What It Does (per project):**
