@@ -35,7 +35,7 @@ ai-rulez never calls a model unless [llm] allow_network = true. See docs/llm.md.
 }
 
 var llmDoctorCmd = &cobra.Command{
-	Use:   "doctor [config-file]",
+	Use:   cmdUseDoctor,
 	Short: "Print the resolved LLM setup, optionally with one 1-token call",
 	Long: `Print the resolved backend, model, base_url host (never the key), whether the key
 variable is set (never its value), whether network use is allowed, and the cache directory.
@@ -43,9 +43,9 @@ Environment overrides (AI_RULEZ_LLM_*) are applied.
 
 --ping makes one 1-token health call. It refuses unless allow_network is true. The same
 information appears as the "llm" section of "ai-rulez doctor".`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return fail(runLLMDoctor(watchParentContext(cmd), args, cmd.OutOrStdout()))
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return fail(runLLMDoctor(watchParentContext(cmd), cmd.OutOrStdout()))
 	},
 }
 
@@ -64,16 +64,15 @@ price_output_per_mtok. Nothing is sent. An unknown model prints "cost unknown".`
 func init() {
 	LLMCmd.AddCommand(llmDoctorCmd, llmEstimateCmd)
 	addJSONFormat(LLMCmd.PersistentFlags(), &llmJSON, "")
-	LLMCmd.PersistentFlags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay")
-	LLMCmd.PersistentFlags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specNoLocal.Bool(LLMCmd.PersistentFlags(), &noLocal, "Ignore the machine-local config.local.* overlay")
 	llmDoctorCmd.Flags().BoolVar(&llmPing, "ping", false, "Make one 1-token call (needs allow_network = true)")
 	llmEstimateCmd.Flags().IntVar(&llmMaxOutput, "max-output", llm.DefaultCompletionCap, "Completion tokens to assume")
 }
 
 // loadLLMConfig returns the effective [llm] setup (trust rule and env overrides applied),
 // the user-scope-only repository keys that were ignored, and the config directory.
-func loadLLMConfig(ctx context.Context, args []string, projectOptional bool) (lc llm.Config, ignored []string, dir string, err error) {
-	cfg, loadErr := loadConfigForCommand(ctx, args, config.WithoutRemote())
+func loadLLMConfig(ctx context.Context, projectOptional bool) (lc llm.Config, ignored []string, dir string, err error) {
+	cfg, loadErr := loadConfigForCommand(ctx, config.WithoutRemote())
 	if loadErr != nil {
 		if !projectOptional {
 			return llm.Config{}, nil, "", loadErr
@@ -87,8 +86,8 @@ func loadLLMConfig(ctx context.Context, args []string, projectOptional bool) (lc
 	return res.Config, res.Ignored, dir, err
 }
 
-func runLLMDoctor(ctx context.Context, args []string, out io.Writer) error {
-	lc, ignored, dir, err := loadLLMConfig(ctx, args, false)
+func runLLMDoctor(ctx context.Context, out io.Writer) error {
+	lc, ignored, dir, err := loadLLMConfig(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -137,7 +136,7 @@ func runLLMEstimate(ctx context.Context, path string, out io.Writer) error {
 		return oops.Wrapf(err, "read %s", path)
 	}
 	// estimate works without a project, but a broken [llm] table, user config or AI_RULEZ_LLM_* value is an error.
-	lc, _, _, err := loadLLMConfig(ctx, nil, true)
+	lc, _, _, err := loadLLMConfig(ctx, true)
 	if err != nil {
 		return err
 	}

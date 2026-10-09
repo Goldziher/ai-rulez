@@ -67,15 +67,15 @@ func init() {
 	IncludeCmd.AddCommand(includeRemoveCmd)
 	IncludeCmd.AddCommand(includeListCmd)
 
-	includeAddCmd.Flags().BoolVar(&includeLocal, "local", false, localFlagUsage)
-	includeRemoveCmd.Flags().BoolVar(&includeLocal, "local", false, localFlagUsage)
+	specLocal.Bool(includeAddCmd.Flags(), &includeLocal, localFlagUsage)
+	specLocal.Bool(includeRemoveCmd.Flags(), &includeLocal, localFlagUsage)
 
 	// Add flags for include add
-	includeAddCmd.Flags().StringVarP(&includePath, "path", "p", "", "Subdirectory within git repository (git only)")
-	includeAddCmd.Flags().StringVarP(&includeRef, "ref", "r", "", "Branch, tag, or commit to use (git only)")
-	includeAddCmd.Flags().StringVarP(&includeTypes, "include", "i", "rules,context,skills", "Content types to include (comma-separated)")
-	includeAddCmd.Flags().StringVarP(&includeMergeStrat, "merge-strategy", "m", "", "Merge strategy: local-override (default), include-override, or error")
-	includeAddCmd.Flags().StringVarP(&includeInstallTo, "install-to", "t", "", "Installation path (optional)")
+	includeAddCmd.Flags().StringVar(&includePath, "path", "", "Subdirectory within git repository (git only)")
+	includeAddCmd.Flags().StringVar(&includeRef, "ref", "", "Branch, tag, or commit to use (git only)")
+	includeAddCmd.Flags().StringVar(&includeTypes, "include", "rules,context,skills", "Content types to include (comma-separated)")
+	includeAddCmd.Flags().StringVar(&includeMergeStrat, "merge-strategy", "", "Merge strategy: local-override (default), include-override, or error")
+	includeAddCmd.Flags().StringVar(&includeInstallTo, "install-to", "", "Installation path (optional)")
 
 	addResultFormat(includeAddCmd.Flags())
 	addResultFormat(includeRemoveCmd.Flags())

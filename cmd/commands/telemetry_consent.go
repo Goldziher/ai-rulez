@@ -238,7 +238,6 @@ func init() {
 	f.BoolVar(&telEnableBackfill, "backfill", false, "Also export the events already in the usage log")
 	for _, c := range []*cobra.Command{telemetryEnableCmd, telemetryDisableCmd, telemetryStatusCmd} {
 		c.Flags().StringVar(&telRoot, "root", "", "Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory)")
-		c.Flags().StringVarP(&telConfigDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	}
 	addJSONFormat(telemetryStatusCmd.Flags(), &telStatusJSON, "j")
 }

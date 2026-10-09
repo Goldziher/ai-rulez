@@ -35,7 +35,7 @@ type migrateOKFSummary struct {
 // runMigrateOKF converts the content tree of the project in the current
 // directory to an OKF bundle. It returns the process exit code.
 func runMigrateOKF(ctx context.Context, out io.Writer) int {
-	cfg, err := loadConfigForCommand(ctx, nil, config.WithoutLocal())
+	cfg, err := loadConfigForCommand(ctx, config.WithoutLocal())
 	if err != nil {
 		renderStderr(err)
 		return 1

@@ -103,7 +103,7 @@ func TestApprove_SignedApprovalRoundTrip(t *testing.T) {
 	resetApproveFlags()
 	verifyApprovals = true
 	var vcode int
-	vout, verr := capture(t, func() { vcode = runVerifyApprovals(nil, os.Stdout) })
+	vout, verr := capture(t, func() { vcode = runVerifyApprovals(os.Stdout) })
 	assert.Equal(t, 0, vcode, verr)
 	assert.Contains(t, vout, "OK    signed")
 
@@ -111,7 +111,7 @@ func TestApprove_SignedApprovalRoundTrip(t *testing.T) {
 	require.NoError(t, os.WriteFile(bundlePath, []byte(`{"mediaType":"x"}`), 0o644))
 	texts = findingTexts(t)
 	assert.True(t, findingFor(texts, "AR718"), "%v", texts)
-	_, verr = capture(t, func() { vcode = runVerifyApprovals(nil, os.Stdout) })
+	_, verr = capture(t, func() { vcode = runVerifyApprovals(os.Stdout) })
 	assert.Equal(t, exitDrift, vcode)
 	assert.Contains(t, verr, "AR718")
 }
@@ -439,7 +439,7 @@ func TestVerifyApprovals_OnlineReChecksReviewLinkedApprovals(t *testing.T) {
 		approveForge = func() forge.Client { return fake }
 		verifyApprovals, verifyOnline, verifyFormat = true, online, format
 		var code int
-		stdout, stderr := capture(t, func() { code = runVerifyApprovals(nil, os.Stdout) })
+		stdout, stderr := capture(t, func() { code = runVerifyApprovals(os.Stdout) })
 		return code, stdout, stderr
 	}
 

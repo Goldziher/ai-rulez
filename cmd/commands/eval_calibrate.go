@@ -38,7 +38,6 @@ func init() {
 	f.StringVar(&evalCalibrateFlags.model, "model", "", "Only runs of this model")
 	f.IntVar(&evalCalibrateFlags.minSamples, "min-samples", evals.DefaultMinSamples, "Runs a group needs before its proposal is not marked low-confidence")
 	addFormatFlag(f, &evalCalibrateFlags.format, formatText, formatText, formatText, formatJSON)
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	EvalCmd.AddCommand(evalCalibrateCmd)
 }
 
@@ -50,7 +49,7 @@ func runEvalCalibrate(cmd *cobra.Command) error {
 	if flags.format != formatText && flags.format != formatJSON {
 		return oops.Errorf("unknown --format %q (use text or json)", flags.format)
 	}
-	cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+	cfg, err := loadConfigForCommand(commandContext(cmd))
 	if err != nil {
 		return err
 	}
