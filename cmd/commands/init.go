@@ -32,7 +32,7 @@ var InitCmd = &cobra.Command{
 This creates a .ai-rulez/ directory structure with configuration files,
 rules, context, and skills for your selected AI assistants.`,
 	Args: cobra.MaximumNArgs(1),
-	Run:  runInit,
+	RunE: runInit,
 }
 
 func init() {
@@ -54,7 +54,7 @@ func initConfigDir() string {
 	return ".ai-rulez"
 }
 
-func runInit(cmd *cobra.Command, args []string) {
+func runInit(cmd *cobra.Command, args []string) error {
 	projectName := getProjectName(args)
 	configDir := initConfigDir()
 
@@ -64,55 +64,56 @@ func runInit(cmd *cobra.Command, args []string) {
 	if fromFlag != "" {
 		var err error
 		if workingDir, err = os.Getwd(); err != nil {
-			fatal("Failed to get working directory", err)
+			return failMsg("Failed to get working directory", err)
 		}
 		if err := previewInitImport(watchParentContext(cmd), workingDir); err != nil {
-			fatal("Failed to import from sources", err)
+			return failMsg("Failed to import from sources", err)
 		}
 	}
 
 	if err := prepareExistingConfigDir(cmd, configDir); err != nil {
-		fatal("Refusing to replace the existing configuration directory", err)
+		return failMsg("Refusing to replace the existing configuration directory", err)
 	}
 
 	// Handle --from flag for importing from existing tool files
 	if fromFlag != "" {
 		err := replaceConfigDir(configDir, func() error { return runInitImport(watchParentContext(cmd), workingDir, configDir) })
 		if err != nil {
-			fatal("Failed to import from sources", err)
+			return failMsg("Failed to import from sources", err)
 		}
-		return
+		return nil
 	}
 
 	// Create directory structure
 	if err := createStructure(projectName, configDir); err != nil {
-		fatal("Failed to create structure", err)
+		return failMsg("Failed to create structure", err)
 	}
 
 	// Create domain directories if specified
 	if domainsFlag != "" {
 		domains := parseDomains(domainsFlag)
 		if err := createDomainDirectories(domains, configDir); err != nil {
-			fatal("Failed to create domain directories", err)
+			return failMsg("Failed to create domain directories", err)
 		}
 	}
 
 	// Create example content unless --skip-content is specified
 	if !skipContentFlag {
 		if err := createExampleContent(configDir); err != nil {
-			fatal("Failed to create example content", err)
+			return failMsg("Failed to create example content", err)
 		}
 	}
 
 	// The configuration directory is an OKF bundle: index.md files list its content.
 	if err := okfbridge.RefreshIndexes(watchParentContext(cmd), configDir); err != nil {
-		fatal("Failed to write the index.md files", err)
+		return failMsg("Failed to write the index.md files", err)
 	}
 
 	displaySuccessMessage(projectName, configDir)
 	if abs, err := filepath.Abs(configDir); err == nil {
 		noteHandWrittenFiles(filepath.Dir(abs))
 	}
+	return nil
 }
 
 // prepareExistingConfigDir makes room for a new configuration directory. An

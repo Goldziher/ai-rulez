@@ -320,10 +320,10 @@ func (s *GenerateCLITestSuite) TestGenerateWithSchemaInvalidConfig() {
 	result.AssertStderrContains(s.T(), "Error")
 }
 
-func (s *GenerateCLITestSuite) TestGenerateVerboseOutput() {
+func (s *GenerateCLITestSuite) TestGenerateDebugOutput() {
 	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate", "--verbose")
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate", "--debug")
 
 	result.AssertOutputContains(s.T(), "Generation complete")
 }

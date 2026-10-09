@@ -42,20 +42,16 @@ PATH, and what it needs to run. Nothing is executed: the commands come from the
 repository, so they run only with "scan --external".`,
 	Args:    cobra.MaximumNArgs(1),
 	PreRunE: checkScannersFormat,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		infos, err := loadScanners(cmd.Context(), args)
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if scannersFormat == formatJSON {
-			if err := writeScannersJSON(os.Stdout, infos, false, nil); err != nil {
-				fmtError(err)
-				os.Exit(1)
-			}
-			return
+			return fail(writeScannersJSON(os.Stdout, infos, false, nil))
 		}
 		writeScannerList(os.Stdout, infos)
+		return nil
 	},
 }
 
@@ -76,10 +72,8 @@ one is not installed, is misconfigured, or has a network flag on an egress = fal
 entry, 1 when the configuration cannot be loaded or a name is unknown.`,
 	Args:    cobra.ArbitraryArgs,
 	PreRunE: checkScannersFormat,
-	Run: func(cmd *cobra.Command, args []string) {
-		if code := runScannersDoctor(cmd.Context(), args, os.Stdout); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(runScannersDoctor(cmd.Context(), args, os.Stdout))
 	},
 }
 
@@ -151,18 +145,18 @@ func presetColumn(s lint.ScannerInfo) string {
 // runScannersDoctor checks the named scanners and returns the exit code.
 func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 	if len(args) == 0 && !scannersAll {
-		fmtError(oops.Hint("Name a scanner, or pass --all to check every one").Errorf("doctor needs a scanner name or --all"))
+		renderStderr(oops.Hint("Name a scanner, or pass --all to check every one").Errorf("doctor needs a scanner name or --all"))
 		return 1
 	}
 	// Every argument is a scanner name, so the configuration is found by discovery, --config or --config-dir.
 	infos, err := loadScanners(ctx, nil)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	selected, unknown := selectScanners(infos, args, scannersAll)
 	if len(unknown) > 0 {
-		fmtError(oops.Errorf("unknown scanner %s (configured: %s)", strings.Join(unknown, ", "), scannerNames(infos)))
+		renderStderr(oops.Errorf("unknown scanner %s (configured: %s)", strings.Join(unknown, ", "), scannerNames(infos)))
 		return 1
 	}
 	if scannersFormat == formatJSON {
@@ -173,7 +167,7 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 			}
 		}
 		if err := writeScannersJSON(out, selected, true, versions); err != nil {
-			fmtError(err)
+			renderStderr(err)
 			return 1
 		}
 		for i := range selected {

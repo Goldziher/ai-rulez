@@ -101,7 +101,7 @@ approvers and approvers_from. Verify them later with
 Exit codes: 0 ok; 1 the command could not run or refused; 2 --verify-base found
 an approval added together with its content.`,
 	Args: cobra.ArbitraryArgs,
-	Run:  runApprove,
+	RunE: runApprove,
 }
 
 func init() {
@@ -141,14 +141,11 @@ var approveReviewerPattern = regexp.MustCompile(`^[^\x00-\x1f\x7f]{1,200}$`)
 
 var approveCodePattern = regexp.MustCompile(`^AR[0-9A-Z]{3,4}$`)
 
-func runApprove(_ *cobra.Command, args []string) {
+func runApprove(_ *cobra.Command, args []string) error {
 	if err := validateApproveFlags(args); err != nil {
-		fmtError(err)
-		os.Exit(1)
+		return fail(err)
 	}
-	if code := approveRun(os.Stdout, args); code != 0 {
-		os.Exit(code)
-	}
+	return exitStatus(approveRun(os.Stdout, args))
 }
 
 func validateApproveFlags(args []string) error {
@@ -249,7 +246,7 @@ func loadApproveEnvAt(path string) (*approveEnv, error) {
 func approveRun(out io.Writer, args []string) int {
 	env, err := loadApproveEnv()
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	switch {
@@ -257,7 +254,7 @@ func approveRun(out io.Writer, args []string) int {
 		var code int
 		code, err = env.verifyBase(out, approveVerifyBase)
 		if err != nil {
-			fmtError(err)
+			renderStderr(err)
 		}
 		return code
 	case approveList:
@@ -272,7 +269,7 @@ func approveRun(out io.Writer, args []string) int {
 		err = env.approve(out, args)
 	}
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	return 0

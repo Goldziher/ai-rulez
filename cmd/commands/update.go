@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"sort"
 
 	"github.com/samber/oops"
@@ -75,10 +74,8 @@ a range pin as it is; use "update" to move it.
 Exit codes: 0 done (or nothing to do); 1 the command could not run (network,
 tool error); 2 a source was refused (AR732, AR730, AR731, scan findings) and
 nothing was written.`,
-	Run: func(_ *cobra.Command, args []string) {
-		if code := runUpdate(args); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(_ *cobra.Command, args []string) error {
+		return exitStatus(runUpdate(args))
 	},
 }
 
@@ -138,21 +135,21 @@ type moveTo struct {
 
 func runUpdate(names []string) int {
 	if updateKind != "" && updateKind != lockfile.KindInclude && updateKind != lockfile.KindSkill && updateKind != lockfile.KindSource {
-		fmtError(oops.Errorf("unknown --kind %q (use include, skill or source)", updateKind))
+		renderStderr(oops.Errorf("unknown --kind %q (use include, skill or source)", updateKind))
 		return 1
 	}
 	if updateWriteConfig && !updateMajor {
-		fmtError(oops.Hint("config.toml is edited only to take a new major version: `ai-rulez update --major --write-config`").
+		renderStderr(oops.Hint("config.toml is edited only to take a new major version: `ai-rulez update --major --write-config`").
 			Errorf("--write-config needs --major"))
 		return 1
 	}
 	if err := checkFormatFlag(updateFormat); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	lockOffline = updateOffline
 	if err := requireOnline("update"); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	return updateAt("", updateKind, names)
@@ -171,13 +168,13 @@ func updateAt(path, kind string, names []string) int {
 	ctx := cmdContext()
 	cfg, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	defer installReleaseGateFor(cfg)()
 	current, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	wanted := map[string]bool{}
@@ -186,12 +183,12 @@ func updateAt(path, kind string, names []string) int {
 	}
 	srcs := versionSources(cfg, kind, wanted)
 	if err := checkNamesMatched(srcs, wanted); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	rows, err := evaluateSources(ctx, srcs, current)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	report := &updateReport{SchemaVersion: UpdateSchemaVersion, DryRun: updateDryRun, Updates: []updateItem{}, moves: map[string]*moveTo{}}
@@ -214,7 +211,7 @@ func planAndApply(path string, cfg *config.Config, current *lockfile.File, srcs 
 	}
 	refused, err := applyUpdates(path, cfg, current, srcs, report)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if refused {

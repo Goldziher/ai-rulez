@@ -76,7 +76,7 @@ func runVerifyArtifact(args []string, env ambient.Env, out io.Writer) int {
 		err = validateVerifyArtifactFlags(subject)
 	}
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	path := ""
@@ -85,7 +85,7 @@ func runVerifyArtifact(args []string, env ambient.Env, out io.Writer) int {
 	}
 	cfg, err := signingConfigFor(path, len(verifyPublicKeys) > 0 || verifyIdentity != "")
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	now := time.Now()
@@ -97,7 +97,7 @@ func runVerifyArtifact(args []string, env ambient.Env, out io.Writer) int {
 		if signing.CodeOf(err) != "" {
 			return reportAttestation(out, artifactFailure(subject, "", err), now)
 		}
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	for _, w := range check.Warnings {
@@ -141,7 +141,7 @@ func verifyArtifactWith(out io.Writer, check *signing.ArtifactCheck, subject, ta
 		}
 	}
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	if verifyAttFile != "" {

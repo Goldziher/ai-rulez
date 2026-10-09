@@ -109,38 +109,38 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .claude/agents/architect.md
+  remove file: .claude/agents/tester.md
+  remove file: .claude/rules/always.md
+  remove file: .claude/rules/auto.md
+  remove file: .claude/rules/manual.md
+  remove file: .claude/rules/targeted.md
+  remove file: .claude/rules/typescript.md
+  remove file: .claude/settings.json
+  remove file: .claude/skills/build/SKILL.md
+  remove file: .claude/skills/deployer/SKILL.md
+  remove file: .claude/skills/reviewer/SKILL.md
+  remove file: .claude/skills/reviewer/references/checklist.md
+  remove file: .claude/skills/reviewer/scripts/run.sh
+  remove file: .claude/skills/ship/SKILL.md
+  remove file: .mcp.json
+  remove file: CLAUDE.md
+  remove dir (if empty): .claude/skills/ship
+  remove dir (if empty): .claude/skills/reviewer/scripts
+  remove dir (if empty): .claude/skills/reviewer/references
+  remove dir (if empty): .claude/skills/reviewer
+  remove dir (if empty): .claude/skills/deployer
+  remove dir (if empty): .claude/skills/build
+  remove dir (if empty): .claude/skills
+  remove dir (if empty): .claude/rules
+  remove dir (if empty): .claude/agents
+  remove dir (if empty): .claude
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .claude/agents/architect.md
-INFO    remove file: .claude/agents/tester.md
-INFO    remove file: .claude/rules/always.md
-INFO    remove file: .claude/rules/auto.md
-INFO    remove file: .claude/rules/manual.md
-INFO    remove file: .claude/rules/targeted.md
-INFO    remove file: .claude/rules/typescript.md
-INFO    remove file: .claude/settings.json
-INFO    remove file: .claude/skills/build/SKILL.md
-INFO    remove file: .claude/skills/deployer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/references/checklist.md
-INFO    remove file: .claude/skills/reviewer/scripts/run.sh
-INFO    remove file: .claude/skills/ship/SKILL.md
-INFO    remove file: .mcp.json
-INFO    remove file: CLAUDE.md
-INFO    remove dir (if empty): .claude/skills/ship
-INFO    remove dir (if empty): .claude/skills/reviewer/scripts
-INFO    remove dir (if empty): .claude/skills/reviewer/references
-INFO    remove dir (if empty): .claude/skills/reviewer
-INFO    remove dir (if empty): .claude/skills/deployer
-INFO    remove dir (if empty): .claude/skills/build
-INFO    remove dir (if empty): .claude/skills
-INFO    remove dir (if empty): .claude/rules
-INFO    remove dir (if empty): .claude/agents
-INFO    remove dir (if empty): .claude
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=16 directories=10
+Removed generated files: 16 files, 10 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

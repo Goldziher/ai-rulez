@@ -11,13 +11,20 @@ import (
 // action of its own) reject an unknown subcommand. Without it cobra prints the
 // group's help and exits 0 for `ai-rulez telemetry bogus`, which a script cannot
 // tell from success. With no argument the help still shows.
+// groupOnlyMarker is set on a group command whose only action is the unknown-subcommand check.
+const groupOnlyMarker = "ai-rulez-group-only"
+
 func requireKnownSubcommands(root *cobra.Command) {
 	for _, c := range root.Commands() {
 		requireKnownSubcommands(c)
 	}
-	if !root.HasSubCommands() || root.Runnable() {
+	if !root.HasSubCommands() || (root.Runnable() && root.Annotations[groupOnlyMarker] == "") {
 		return
 	}
+	if root.Annotations == nil {
+		root.Annotations = map[string]string{}
+	}
+	root.Annotations[groupOnlyMarker] = "1"
 	root.Args = cobra.ArbitraryArgs
 	root.RunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {

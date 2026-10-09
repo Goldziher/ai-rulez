@@ -16,32 +16,32 @@ import (
 func lockSubjectAt(path string) int {
 	cfg, _, err := loadForLockCheck(path)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	if lock == nil || !lock.HasContentPins() {
-		fmtError(oops.Hint("Run `ai-rulez lock` first").Errorf("%s has no content pins to sign", lockfile.FileName))
+		renderError(os.Stderr, oops.Hint("Run `ai-rulez lock` first").Errorf("%s has no content pins to sign", lockfile.FileName))
 		return 1
 	}
 	subject := contentlock.SubjectOf(lock)
 	if lock.Tree != subject.Tree {
-		fmtError(oops.Hint("Run `ai-rulez lock` to rewrite it").Errorf("the tree digest of %s does not match its entries (edited by hand?); refusing to compute a subject", lockfile.FileName))
+		renderError(os.Stderr, oops.Hint("Run `ai-rulez lock` to rewrite it").Errorf("the tree digest of %s does not match its entries (edited by hand?); refusing to compute a subject", lockfile.FileName))
 		return exitDrift
 	}
 	statement := subject.Statement()
 	data, err := statement.JSON()
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	if lockSubjectOutput != "" {
 		if err := os.WriteFile(lockSubjectOutput, data, 0o644); err != nil { //nolint:gosec // a public statement, signed next to the lock
-			fmtError(oops.With("path", lockSubjectOutput).Wrapf(err, "write lock subject"))
+			renderError(os.Stderr, oops.With("path", lockSubjectOutput).Wrapf(err, "write lock subject"))
 			return 1
 		}
 		fmt.Fprintf(os.Stderr, "wrote %s\n", lockSubjectOutput)
@@ -56,7 +56,7 @@ func lockSubjectAt(path string) int {
 		_, err = fmt.Println(statement.Text())
 	}
 	if err != nil {
-		fmtError(oops.Wrapf(err, "write lock subject"))
+		renderError(os.Stderr, oops.Wrapf(err, "write lock subject"))
 		return 1
 	}
 	return 0
