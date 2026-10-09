@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
@@ -390,16 +391,37 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 	})
 }
 
-func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
-	baseDir := workingDir(request)
-	dryRun := request.GetBool("dry_run", false)
-	recursive := request.GetBool("recursive", false)
+// generateOptions are the selectors of generate_outputs; each is the flag of
+// `ai-rulez generate` of the same name.
+type generateOptions struct {
+	dryRun, check, offline bool
+	profile, role          string
+}
 
-	if recursive {
-		return generateRecursive(ctx, request, baseDir, dryRun)
+func generateOptionsOf(request *ToolRequest) (generateOptions, error) {
+	o := generateOptions{
+		dryRun: request.GetBool("dry_run", false), check: request.GetBool("check", false), offline: request.GetBool("offline", false),
+		profile: request.GetString("profile", ""), role: request.GetString("role", ""),
 	}
+	if o.role != "" && o.profile != "" {
+		return o, oops.Hint("A role replaces the profile selection; pass only one").Errorf("role and profile are mutually exclusive")
+	}
+	if o.check && o.dryRun {
+		return o, oops.Hint("check compares the outputs on disk; dry_run previews a write").Errorf("check and dry_run are mutually exclusive")
+	}
+	return o, nil
+}
 
-	return generateForDirectory(ctx, request, baseDir, dryRun)
+func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
+	opts, err := generateOptionsOf(request)
+	if err != nil {
+		return ToolError(err)
+	}
+	baseDir := workingDir(request)
+	if request.GetBool("recursive", false) {
+		return generateRecursive(ctx, request, baseDir, opts)
+	}
+	return generateForDirectory(ctx, request, baseDir, opts)
 }
 
 var recursiveConfigFiles = []string{"config.toml"}
@@ -498,7 +520,7 @@ func projectDirAbove(path, configDirName string) string {
 	return dir
 }
 
-func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (*mcp.CallToolResult, error) {
+func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string, opts generateOptions) (*mcp.CallToolResult, error) {
 	absBase, err := filepath.Abs(baseDir)
 	if err != nil {
 		return ToolError(fmt.Errorf("failed to resolve base directory: %w", err))
@@ -520,41 +542,75 @@ func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string
 	}
 
 	results := make([]map[string]interface{}, 0, len(dirs))
-	for _, dir := range dirs {
-		results = append(results, runGenerateForDir(ctx, request, dir, dryRun))
+	drift := false
+	for i, dir := range dirs {
+		if err := ctx.Err(); err != nil {
+			return ToolError(fmt.Errorf("recursive generation stopped after %d of %d directories: %w", i, len(dirs), err))
+		}
+		Progress(ctx, float64(i), float64(len(dirs)), dir)
+		entry := runGenerateForDir(ctx, request, dir, opts)
+		drift = drift || entry["status"] == statusDrift
+		results = append(results, entry)
 	}
 
-	return ToolSuccess(map[string]interface{}{
+	doc := map[string]interface{}{
 		keyMessage: fmt.Sprintf("Recursive generation completed for %d directories", len(dirs)),
 		"results":  results,
-	})
+	}
+	if opts.check {
+		doc[keyMessage] = fmt.Sprintf("Checked %d directories", len(dirs))
+		doc["roots"] = len(dirs)
+		doc["status"] = statusOK
+		if drift {
+			doc["status"] = statusDrift
+			return toolErrorDocument(doc)
+		}
+	}
+	return ToolSuccess(doc)
 }
 
-func runGenerateForDir(ctx context.Context, request *ToolRequest, dir string, dryRun bool) map[string]interface{} {
+func runGenerateForDir(ctx context.Context, request *ToolRequest, dir string, opts generateOptions) map[string]interface{} {
 	entry := map[string]interface{}{"directory": dir}
-	payload, err := generateDirectory(ctx, request, dir, dryRun)
+	payload, err := generateDirectory(ctx, request, dir, opts)
 	if err != nil {
 		entry["error"] = err.Error()
 		return entry
 	}
 	entry[keySuccess] = true
+	if status, ok := payload["status"]; ok {
+		entry["status"] = status
+		entry["differing"] = payload["differing"]
+	}
+	if plan, ok := payload["plan"]; ok {
+		entry["plan"] = plan
+	}
 	if commands, ok := payload["new_commands"]; ok {
 		entry["new_commands"] = commands
 	}
 	return entry
 }
 
-func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (*mcp.CallToolResult, error) {
-	payload, err := generateDirectory(ctx, request, baseDir, dryRun)
+func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir string, opts generateOptions) (*mcp.CallToolResult, error) {
+	payload, err := generateDirectory(ctx, request, baseDir, opts)
 	if err != nil {
 		return ToolError(err)
+	}
+	if payload["status"] == statusDrift {
+		return toolErrorDocument(payload)
 	}
 	return ToolSuccess(payload)
 }
 
-func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (map[string]interface{}, error) {
+// Statuses of generate_outputs check, the same words `generate --check --format json` uses.
+const (
+	statusOK    = "ok"
+	statusDrift = "drift"
+)
+
+func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string, opts generateOptions) (map[string]interface{}, error) {
 	// generate_outputs writes outputs: an enforced lock is required, as by `generate`.
-	cfg, err := loadProjectConfigWith(ctx, request, baseDir, config.WithLockPolicy(config.LockPolicy{RequireWhenEnforced: true}))
+	cfg, err := loadProjectConfigWith(ctx, request, baseDir,
+		config.WithLockPolicy(config.LockPolicy{RequireWhenEnforced: true, Offline: opts.offline}))
 	if err != nil {
 		return nil, err
 	}
@@ -566,8 +622,16 @@ func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string
 	}
 	gen := generator.NewGenerator(cfg)
 	gen.SetContext(ctx)
-	if dryRun {
-		plan, err := gen.DryRun("")
+	if opts.role != "" {
+		if err := gen.SetRole(opts.role); err != nil {
+			return nil, err //nolint:wrapcheck // already contextual
+		}
+	}
+	if opts.check {
+		return checkDrift(gen, cfg, opts.profile)
+	}
+	if opts.dryRun {
+		plan, err := gen.DryRun(opts.profile)
 		if err != nil {
 			return nil, err //nolint:wrapcheck // already contextual
 		}
@@ -580,7 +644,7 @@ func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string
 	// There is no terminal to warn over MCP: the commands this run makes the
 	// harnesses run go into the tool result and to stderr (stdout is the protocol).
 	newCommands := preflight.NewCommands(cfg, false)
-	if err := gen.Generate(""); err != nil {
+	if err := gen.Generate(opts.profile); err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
 	preflight.Remember(cfg)
@@ -594,6 +658,38 @@ func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string
 		result["new_commands"] = newCommands
 	}
 	return result, nil
+}
+
+// driftItem is one generated file that differs from what the sources render.
+type driftItem struct {
+	Kind string `json:"kind"`
+	Path string `json:"path"`
+}
+
+// checkDrift is `generate --check`: it compares the generated files with what
+// the sources render and writes nothing. The document has the keys of
+// `generate --check --format json` (status, roots, blocked, differing).
+func checkDrift(gen *generator.Generator, cfg *config.Config, profile string) (map[string]interface{}, error) {
+	drift, err := gen.CheckDrift(profile)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // already contextual
+	}
+	differing := make([]driftItem, 0, len(drift))
+	blocked := 0
+	for _, d := range drift {
+		if d.Kind == generator.DriftBlocked {
+			blocked++
+		}
+		differing = append(differing, driftItem{Kind: string(d.Kind), Path: relPathList(cfg.BaseDir, []string{d.Path})[0]})
+	}
+	status, message := statusOK, "Generated files are up to date"
+	if len(differing) > 0 {
+		status, message = statusDrift, fmt.Sprintf("%d generated file(s) differ from their sources; run generate_outputs", len(differing))
+	}
+	return map[string]interface{}{
+		keyMessage: message, keyConfig: cfg.ConfigDir,
+		"status": status, "roots": 1, "blocked": blocked, "differing": differing,
+	}, nil
 }
 
 // CleanOutputsHandler removes the files produced by generate for the project in

@@ -7,101 +7,24 @@ import (
 	"text/tabwriter"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/approval"
+	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 	"github.com/samber/oops"
 )
 
 // ApproveListSchemaVersion versions the JSON of `approve --list --format json`.
-const ApproveListSchemaVersion = 1
+const ApproveListSchemaVersion = govview.ApprovalListSchemaVersion
 
-type approveListDoc struct {
-	SchemaVersion int                 `json:"schema_version"`
-	Policy        approveListPolicy   `json:"policy"`
-	Items         []approveListItem   `json:"items"`
-	Orphans       []approveListOrphan `json:"orphans"`
-	Summary       map[string]int      `json:"summary"`
-}
+type (
+	approveListDoc  = govview.ApprovalListDoc
+	approveListItem = govview.ApprovalListItem
+)
 
-type approveListPolicy struct {
-	RequireApproval []string `json:"require_approval"`
-	Exempt          []string `json:"exempt"`
-	MinApprovers    int      `json:"min_approvers"`
-	Approvers       []string `json:"approvers"`
-	Enforce         bool     `json:"enforce"`
-	MinAssurance    string   `json:"min_assurance,omitempty"`
-	ApproversFrom   string   `json:"approvers_from,omitempty"`
-	ForbidSelf      bool     `json:"forbid_self_approval,omitempty"`
-}
-
-type approveListItem struct {
-	Ref            string   `json:"ref"`
-	Kind           string   `json:"kind"`
-	ID             string   `json:"id"`
-	Domain         string   `json:"domain,omitempty"`
-	Digest         string   `json:"digest"`
-	Required       bool     `json:"required"`
-	Status         string   `json:"status"`
-	Code           string   `json:"code,omitempty"`
-	Reviewers      []string `json:"reviewers"`
-	Assurance      string   `json:"assurance,omitempty"`
-	Expires        string   `json:"expires,omitempty"`
-	ApprovedDigest string   `json:"approved_digest,omitempty"`
-	Detail         string   `json:"detail,omitempty"`
-}
-
-type approveListOrphan struct {
-	Kind     string `json:"kind"`
-	ID       string `json:"id"`
-	Domain   string `json:"domain,omitempty"`
-	Digest   string `json:"digest"`
-	Reviewer string `json:"reviewer"`
-}
-
-func emptyIfNil(in []string) []string {
-	if in == nil {
-		return []string{}
-	}
-	return in
-}
-
+// listDoc is the document the approvals_status tool returns as well.
 func (e *approveEnv) listDoc() *approveListDoc {
-	p := e.policy
-	doc := &approveListDoc{
-		SchemaVersion: ApproveListSchemaVersion,
-		Policy: approveListPolicy{RequireApproval: emptyIfNil(p.Selectors), Exempt: emptyIfNil(p.Exempt), MinApprovers: max(p.MinApprovers, 1),
-			Approvers: emptyIfNil(p.Approvers), Enforce: p.Enforce, MinAssurance: p.MinAssurance, ApproversFrom: e.approversFrom(), ForbidSelf: p.ForbidSelf},
-		Items: []approveListItem{}, Orphans: []approveListOrphan{}, Summary: map[string]int{},
-	}
-	hasRecord := map[string]bool{}
-	for i := range e.lock.Approval {
-		a := &e.lock.Approval[i]
-		hasRecord[a.ItemKey()] = true
-	}
-	results := e.policy.EvaluateAll(e.lock.Approval, e.subjects, e.now)
-	for i := range results {
-		r := &results[i]
-		if !r.Required && !approveAll && !hasRecord[r.Key()] {
-			continue
-		}
-		who := r.Reviewers
-		if len(who) == 0 {
-			who = r.Recorded // an expired or unauthorized row still says who approved it
-		}
-		doc.Items = append(doc.Items, approveListItem{
-			Ref: r.Ref(), Kind: r.Kind, ID: r.ID, Domain: r.Domain, Digest: r.Digest, Required: r.Required, Status: r.Status,
-			Code: approval.CodeOf(r.Status), Reviewers: emptyIfNil(who), Assurance: r.Assurance, Expires: r.Expires, ApprovedDigest: r.ApprovedDigest,
-			Detail: safeText(r.Detail),
-		})
-		if r.Required {
-			doc.Summary["required"]++
-			doc.Summary[r.Status]++
-		}
-	}
-	orphans := approval.Orphans(e.lock.Approval, e.subjects)
-	for i := range orphans {
-		a := &orphans[i]
-		doc.Orphans = append(doc.Orphans, approveListOrphan{Kind: a.Kind, ID: a.ID, Domain: a.Domain, Digest: a.Digest, Reviewer: a.Reviewer})
-	}
-	return doc
+	return govview.BuildApprovalList(govview.ApprovalListInput{
+		Policy: e.policy, Lock: e.lock, Subjects: e.subjects, Now: e.now,
+		ApproversFrom: e.approversFrom(), All: approveAll, Safe: safeText,
+	})
 }
 
 func shortDigest(d string) string {

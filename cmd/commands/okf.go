@@ -28,7 +28,7 @@ const (
 	exitOKFCannotRun = 1
 )
 
-const okfFailNone = "none"
+const okfFailNone = okf.FailNone
 
 // okfIndexNone labels a bundle that has no index style yet, and okfDriftChanged the changed group of a drift report.
 const (
@@ -198,7 +198,7 @@ func runOKFValidate(ctx context.Context, spec string, out io.Writer) int {
 		return exitOKFCannotRun
 	}
 	defer cleanup()
-	findings := append(b.CheckRoot(), b.Validate()...)
+	findings := okf.Check(b)
 	if err := writeOKFFindings(out, spec, b, findings, okfFormat == formatJSON); err != nil {
 		renderStderr(err)
 		return exitOKFCannotRun
@@ -209,25 +209,8 @@ func runOKFValidate(ctx context.Context, spec string, out io.Writer) int {
 	return 0
 }
 
-func okfRank(s okf.Severity) int {
-	switch s {
-	case okf.SeverityError:
-		return 3
-	case okf.SeverityWarning:
-		return 2
-	case okf.SeverityInfo:
-		return 1
-	}
-	return 0
-}
-
 func okfFails(findings []okf.Finding, threshold okf.Severity) bool {
-	for i := range findings {
-		if okfRank(findings[i].Severity) >= okfRank(threshold) {
-			return true
-		}
-	}
-	return false
+	return okf.Fails(findings, threshold)
 }
 
 func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.Finding, asJSON bool) error {
@@ -235,10 +218,7 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 		findings = []okf.Finding{}
 	}
 	if asJSON {
-		return jsondoc.Write(out, map[string]any{
-			"bundle": spec, "okf_spec": okf.SpecVersion,
-			"concepts": len(b.Concepts), "index_style": b.IndexStyle(), "findings": findings,
-		})
+		return jsondoc.Write(out, okf.ValidationDocument(spec, b, findings))
 	}
 	w := reportWriter{out}
 	counts := map[okf.Severity]int{}
