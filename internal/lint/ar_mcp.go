@@ -11,6 +11,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
@@ -175,7 +176,7 @@ func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocycl
 	return out
 }
 
-var mcpNameRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+var mcpNameRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[A-Za-z0-9_-]+$`) })
 
 func effectiveTransport(s *mcpServer) string {
 	t := strings.ToLower(s.transport)
@@ -286,7 +287,7 @@ func (r *runner) checkMCPShape(s *mcpServer, at int, byName map[string][]*mcpSer
 	default:
 		bad("unknown transport %q (use stdio, http or sse)", s.transport)
 	}
-	if !mcpNameRe.MatchString(s.name) {
+	if !mcpNameRe().MatchString(s.name) {
 		info("the name has characters outside letters, digits, _ and -; Claude Code rewrites them in the mcp__<server>__<tool> names, so allowed-tools entries must use the rewritten name")
 	}
 	if dup := byName[s.file+"\x00"+strings.ToLower(s.name)]; len(dup) > 1 && dup[0].file == s.file && dup[0].name == s.name && s.name != "" {
@@ -326,21 +327,35 @@ func pythonPackageName(spec string) string {
 }
 
 var (
-	secretKeyRe      = regexp.MustCompile(`(?i)(secret|token|passw(?:or)?d|passwd|credential|api[_-]?key|apikey|private[_-]?key|access[_-]?key|auth|bearer|cookie|session)`)
-	notSecretKeyRe   = regexp.MustCompile(`(?i)(?:_|-|^)(?:url|uri|path|file|dir|host|port|user|username|region|id|enabled|mode|type|scheme|endpoint|name|version|prefix|timeout)$`)
-	headerSecretRe   = regexp.MustCompile(`(?i)^(?:authorization|proxy-authorization|cookie|x-api-key|api-key|apikey|x-auth-token|x-access-token|x-[a-z0-9-]*(?:token|key|secret|password))$`)
-	envRefRe         = regexp.MustCompile(`\$\{?[A-Za-z_][A-Za-z0-9_:-]*\}?|\{env:[^}]+\}|%[A-Za-z_][A-Za-z0-9_]*%|\$\(|<[^>]+>|\{\{[^}]+\}\}`)
-	placeholderValRe = regexp.MustCompile(`(?i)^(?:your[-_ ].*|.*[-_]here|x{3,}|\*{3,}|changeme|replace[-_ ]?me|todo|example|redacted|none|null|true|false|\d{1,6})$`)
-	authSchemeRe     = regexp.MustCompile(`(?i)^(?:bearer|basic|token|apikey|digest)\s+(.*)$`)
-	flagSecretRe     = regexp.MustCompile(`(?i)^--?(?:[a-z-]*(?:token|secret|password|passwd|api-?key|apikey|auth)[a-z-]*)(?:=(.*))?$`)
-	urlCredRe        = regexp.MustCompile(`(?i)://[^/\s:@]+:([^/\s@]+)@|[?&](?:api[_-]?key|apikey|token|access[_-]?token|key|secret|password|auth)=([^&\s]+)`)
+	secretKeyRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)(secret|token|passw(?:or)?d|passwd|credential|api[_-]?key|apikey|private[_-]?key|access[_-]?key|auth|bearer|cookie|session)`)
+	})
+	notSecretKeyRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)(?:_|-|^)(?:url|uri|path|file|dir|host|port|user|username|region|id|enabled|mode|type|scheme|endpoint|name|version|prefix|timeout)$`)
+	})
+	headerSecretRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)^(?:authorization|proxy-authorization|cookie|x-api-key|api-key|apikey|x-auth-token|x-access-token|x-[a-z0-9-]*(?:token|key|secret|password))$`)
+	})
+	envRefRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`\$\{?[A-Za-z_][A-Za-z0-9_:-]*\}?|\{env:[^}]+\}|%[A-Za-z_][A-Za-z0-9_]*%|\$\(|<[^>]+>|\{\{[^}]+\}\}`)
+	})
+	placeholderValRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)^(?:your[-_ ].*|.*[-_]here|x{3,}|\*{3,}|changeme|replace[-_ ]?me|todo|example|redacted|none|null|true|false|\d{1,6})$`)
+	})
+	authSchemeRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)^(?:bearer|basic|token|apikey|digest)\s+(.*)$`) })
+	flagSecretRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)^--?(?:[a-z-]*(?:token|secret|password|passwd|api-?key|apikey|auth)[a-z-]*)(?:=(.*))?$`)
+	})
+	urlCredRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)://[^/\s:@]+:([^/\s@]+)@|[?&](?:api[_-]?key|apikey|token|access[_-]?token|key|secret|password|auth)=([^&\s]+)`)
+	})
 )
 
 // literalSecret reports whether value is a literal credential rather than a
 // reference or placeholder.
 func literalSecret(value string) bool {
 	v := strings.TrimSpace(value)
-	if v == "" || envRefRe.MatchString(v) || placeholderValRe.MatchString(v) {
+	if v == "" || envRefRe().MatchString(v) || placeholderValRe().MatchString(v) {
 		return false
 	}
 	return true
@@ -362,24 +377,24 @@ func (r *runner) checkMCPSecrets(s *mcpServer, lines []string, at int) { //nolin
 		if !literalSecret(v) {
 			continue
 		}
-		if (secretKeyRe.MatchString(k) && !notSecretKeyRe.MatchString(k) && len(v) >= 8) || matchesBuiltinSecret(v) {
+		if (secretKeyRe().MatchString(k) && !notSecretKeyRe().MatchString(k) && len(v) >= 8) || matchesBuiltinSecret(v) {
 			report(keyEnv, k)
 		}
 	}
 	for _, k := range slices.Sorted(maps.Keys(s.headers)) {
 		v := strings.TrimSpace(s.headers[k])
-		if m := authSchemeRe.FindStringSubmatch(v); m != nil {
+		if m := authSchemeRe().FindStringSubmatch(v); m != nil {
 			v = m[1]
 		}
 		if !literalSecret(v) {
 			continue
 		}
-		if (headerSecretRe.MatchString(k) && len(v) >= 8) || matchesBuiltinSecret(v) {
+		if (headerSecretRe().MatchString(k) && len(v) >= 8) || matchesBuiltinSecret(v) {
 			report("header", k)
 		}
 	}
 	for i, a := range s.args {
-		if m := flagSecretRe.FindStringSubmatch(a); m != nil {
+		if m := flagSecretRe().FindStringSubmatch(a); m != nil {
 			val := m[1]
 			if val == "" && !strings.Contains(a, "=") && i+1 < len(s.args) {
 				val = s.args[i+1]
@@ -393,7 +408,7 @@ func (r *runner) checkMCPSecrets(s *mcpServer, lines []string, at int) { //nolin
 			report("argument", "#"+fmt.Sprint(i+1))
 		}
 	}
-	if m := urlCredRe.FindStringSubmatch(s.url); m != nil {
+	if m := urlCredRe().FindStringSubmatch(s.url); m != nil {
 		if v := m[1] + m[2]; literalSecret(v) && len(v) >= 6 {
 			report("url", "url")
 		}
@@ -441,7 +456,7 @@ func (r *runner) checkSettingsSecrets() { //nolint:gocyclo // linear checks over
 	}
 	for _, k := range slices.Sorted(maps.Keys(env)) {
 		v := env[k]
-		if literalSecret(v) && ((secretKeyRe.MatchString(k) && !notSecretKeyRe.MatchString(k) && len(v) >= 8) || matchesBuiltinSecret(v)) {
+		if literalSecret(v) && ((secretKeyRe().MatchString(k) && !notSecretKeyRe().MatchString(k) && len(v) >= 8) || matchesBuiltinSecret(v)) {
 			r.add(CodeSecretInConfig, file, lineContaining(lines, quoteNeedle(k)), "settings env %q holds a literal credential; keep it in your shell environment or settings.local.json instead", k)
 		}
 	}
@@ -463,10 +478,10 @@ func (r *runner) checkSettingsSecrets() { //nolint:gocyclo // linear checks over
 				}
 				for _, k := range slices.Sorted(maps.Keys(headers)) {
 					v := strings.TrimSpace(headers[k])
-					if m := authSchemeRe.FindStringSubmatch(v); m != nil {
+					if m := authSchemeRe().FindStringSubmatch(v); m != nil {
 						v = m[1]
 					}
-					if literalSecret(v) && ((headerSecretRe.MatchString(k) && len(v) >= 8) || matchesBuiltinSecret(v)) {
+					if literalSecret(v) && ((headerSecretRe().MatchString(k) && len(v) >= 8) || matchesBuiltinSecret(v)) {
 						r.add(CodeSecretInConfig, file, lineContaining(lines, quoteNeedle(k)), "%s hook header %q holds a literal credential; reference an environment variable instead", e, k)
 					}
 				}

@@ -5,14 +5,17 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 var (
-	skillNameRe = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
-	useWhenRe   = regexp.MustCompile(`(?i)\b(use|used|invoke|trigger)\b.*\b(when|before|after|for|whenever|if)\b|\bwhen\b|\bwhenever\b|\bload\s+(?:this\s+\w+\s+)?(?:for|before|when|whenever|after|if)\b|\buse\s+(?:this\s+\w+\s+|\w+\s+)?(?:as|any\s?time|anytime)\b`)
+	skillNameRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`) })
+	useWhenRe   = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(use|used|invoke|trigger)\b.*\b(when|before|after|for|whenever|if)\b|\bwhen\b|\bwhenever\b|\bload\s+(?:this\s+\w+\s+)?(?:for|before|when|whenever|after|if)\b|\buse\s+(?:this\s+\w+\s+|\w+\s+)?(?:as|any\s?time|anytime)\b`)
+	})
 )
 
 func (r *runner) checkItem(it *item) {
@@ -104,7 +107,7 @@ func (r *runner) checkDescription(it *item, d doc) {
 		r.add(CodeDescriptionLength, it.abs, line, "description is %d characters, above the maximum of %d", n, maxLen)
 	}
 	// A command is invoked by name, so it has no trigger to state.
-	if it.kind != kindCommand && !useWhenRe.MatchString(desc) {
+	if it.kind != kindCommand && !useWhenRe().MatchString(desc) {
 		r.add(CodeDescriptionStyle, it.abs, line, "description does not say when to use this %s (e.g. \"Use when ...\")", it.kind)
 	}
 }
@@ -190,7 +193,7 @@ func (r *runner) checkSkillName(it *item, d doc) {
 	}
 	line := d.lineOf("name", 1)
 	switch {
-	case !skillNameRe.MatchString(name) || len(name) > maxSkillNameLen:
+	case !skillNameRe().MatchString(name) || len(name) > maxSkillNameLen:
 		r.addFix(r.renameSkillFix(it, d, line, normalizeSkillName(name), name), CodeSkillNameInvalid, it.abs, line,
 			"skill name %q must be lowercase letters, digits and single hyphens, at most %d characters", name, maxSkillNameLen)
 	case name != config.SkillID(it.cf):
@@ -303,11 +306,11 @@ func compareDescriptions(a, b descEntry, threshold float64) (string, bool) {
 
 var stopwords = map[string]bool{"the": true, "and": true, "for": true, "with": true, "use": true, "when": true, "this": true, "that": true, "from": true, "are": true, "you": true, "your": true, "any": true, "into": true}
 
-var wordRe = regexp.MustCompile(`[a-z0-9]{3,}`)
+var wordRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[a-z0-9]{3,}`) })
 
 func descTokens(s string) map[string]struct{} {
 	out := map[string]struct{}{}
-	for _, w := range wordRe.FindAllString(strings.ToLower(s), -1) {
+	for _, w := range wordRe().FindAllString(strings.ToLower(s), -1) {
 		if !stopwords[w] {
 			out[w] = struct{}{}
 		}

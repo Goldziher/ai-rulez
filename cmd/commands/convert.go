@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 
@@ -150,7 +151,7 @@ func stdoutIsTerminal() bool {
 	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
 
-var allowCodeRe = regexp.MustCompile(`(?i)^AR[0-9A-Z]{3,4}$`)
+var allowCodeRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)^AR[0-9A-Z]{3,4}$`) })
 
 // checkConvertFlags rejects flag combinations convert cannot honor.
 func checkConvertFlags(interactive bool) error {
@@ -165,7 +166,7 @@ func checkConvertFlags(interactive bool) error {
 		return oops.Errorf("--lock pins what was written: it needs --write")
 	}
 	for _, c := range convertAllowFindings {
-		if !allowCodeRe.MatchString(strings.TrimSpace(c)) {
+		if !allowCodeRe().MatchString(strings.TrimSpace(c)) {
 			return oops.Errorf("invalid --allow-findings code %q (expected a rule code such as AR001)", c)
 		}
 	}

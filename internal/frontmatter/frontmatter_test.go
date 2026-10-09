@@ -63,3 +63,19 @@ func TestTrimSeparator(t *testing.T) {
 		}
 	}
 }
+
+func TestClosingLineAgreesWithSplit(t *testing.T) {
+	for _, in := range []string{
+		"", "# Title\n", "---\na: 1\n---\nbody\n", "\xef\xbb\xbf---\na: 1\n---\nx", "---\r\na: 1\r\n---\r\nx\r\n",
+		"---\n---\nbody\n", "---\na: 1\n---", "---\na: 1\nbody\n", "---", "\n---\na: 1\n---\n", "---\na: 1\n ---\n", "---\na: 1\n--- \nx",
+	} {
+		b := SplitString(in)
+		line, ok := ClosingLine(in)
+		if ok != b.Closed {
+			t.Errorf("%q: ClosingLine ok = %v, Split closed = %v", in, ok, b.Closed)
+		}
+		if ok && line != b.BodyLine-1 {
+			t.Errorf("%q: ClosingLine = %d, Split body line = %d", in, line, b.BodyLine)
+		}
+	}
+}

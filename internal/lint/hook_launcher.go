@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // launcher describes how an interpreter takes its script: the flags that make
@@ -40,14 +41,14 @@ func set(items ...string) map[string]bool {
 }
 
 var (
-	versionedInterpRe = regexp.MustCompile(`^(python|ruby|perl|node)[0-9.]+$`)
-	envAssignRe       = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=`)
+	versionedInterpRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(python|ruby|perl|node)[0-9.]+$`) })
+	envAssignRe       = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=`) })
 )
 
 // interpreterOf maps a command word to a launcher key (python3.12 is python).
 func interpreterOf(word string) string {
 	base := filepath.Base(word)
-	if m := versionedInterpRe.FindStringSubmatch(base); m != nil {
+	if m := versionedInterpRe().FindStringSubmatch(base); m != nil {
 		base = m[1]
 	}
 	if base == "python3" {
@@ -68,9 +69,9 @@ func launcherScript(words []string) string {
 	for i < len(words) {
 		w := words[i]
 		switch {
-		case envAssignRe.MatchString(w):
+		case envAssignRe().MatchString(w):
 		case filepath.Base(w) == "env":
-			for i+1 < len(words) && (strings.HasPrefix(words[i+1], "-") || envAssignRe.MatchString(words[i+1])) {
+			for i+1 < len(words) && (strings.HasPrefix(words[i+1], "-") || envAssignRe().MatchString(words[i+1])) {
 				i++
 				if words[i] == "-u" || words[i] == "-C" || words[i] == "-S" {
 					i++
@@ -137,7 +138,7 @@ func resolvable(s string) string {
 // that does not exist. The execute bit is not checked: an interpreter reads the
 // file whatever its mode.
 func (r *runner) checkLauncherScripts(file, event, command string) {
-	for _, seg := range segSplitRe.Split(stripShellComment(command), -1) {
+	for _, seg := range segSplitRe().Split(stripShellComment(command), -1) {
 		script := launcherScript(shellWords(strings.TrimSpace(seg)))
 		if script == "" {
 			continue

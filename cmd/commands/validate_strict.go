@@ -216,15 +216,21 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 // content tree: plugin version drift, delivery, lock drift, approvals and signing.
 func governanceLintOptions(ctx context.Context, cfg *config.Config, sel []string) []lint.Option { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	var opts []lint.Option
+	// Both plugin checks ask git under the strict run's context, so they share its memo.
+	newGenerator := func() *generator.Generator {
+		gen := generator.NewGenerator(cfg)
+		gen.SetContext(ctx)
+		return gen
+	}
 	if (cfg.Plugin != nil || cfg.Marketplace != nil) && !skipPluginDrift && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
-		drift, driftErr := generator.NewGenerator(cfg).PluginVersionDrift("")
+		drift, driftErr := newGenerator().PluginVersionDrift("")
 		if driftErr != nil {
 			logger.Warn("Skipped the plugin version drift check", "error", driftErr)
 		}
 		opts = append(opts, lint.WithPluginDrift(drift))
 	}
 	if cfg.Plugin != nil && !skipPluginDrift && lint.AnalyzerSelected(sel, lint.AnalyzerPlugin) {
-		found, apErr := generator.NewGenerator(cfg).AgentPluginFindings("")
+		found, apErr := newGenerator().AgentPluginFindings("")
 		if apErr != nil {
 			logger.Warn("Skipped the Agent Plugins package check", "error", apErr)
 		}
