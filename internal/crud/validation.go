@@ -131,6 +131,13 @@ func ValidateNewFileName(name string) error {
 			Hint("Pass the name without the .md extension; it is added for you.").
 			Errorf("file name must not end in .md: %s", name)
 	}
+	if lower := strings.ToLower(name); lower == "index" || lower == "log" {
+		return oops.
+			With("field", "file_name").
+			With("value", name).
+			Hint("index.md and log.md are the listings ai-rulez generates for a bundle; choose a different name.").
+			Errorf("file name is reserved: %s", name)
+	}
 	if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "-") {
 		return oops.
 			With("field", "file_name").

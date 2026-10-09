@@ -31,6 +31,10 @@ type FileManager struct {
 	guard func() error
 	// private makes new files owner-only (0600) and new directories 0700.
 	private bool
+	// root is the configuration directory the confinement check starts from; ""
+	// means aiRulezDir. The machine-local tree sets it to the directory above
+	// its own, so a symlinked local/ is caught too.
+	root string
 }
 
 // NewFileManager creates a new FileManager for the given .ai-rulez directory
@@ -38,6 +42,60 @@ func NewFileManager(aiRulezDir string) *FileManager {
 	return &FileManager{
 		aiRulezDir: aiRulezDir,
 	}
+}
+
+// Confined reports an error when path is outside the configuration directory or
+// any component of it below the configuration directory is a symlink. Content is
+// read, written and deleted by path, and a link planted inside the tree would
+// otherwise carry the operation to wherever it points. Components that do not
+// exist yet are fine. The configuration directory itself may be reached through
+// a link: only what lies below it is checked.
+func (fm *FileManager) Confined(path string) error {
+	root := fm.root
+	if root == "" {
+		root = fm.aiRulezDir
+	}
+	rel, err := filepath.Rel(root, path)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return oops.With("path", path).Hint("Only files inside the configuration directory can be changed.").
+			Errorf("%s is outside the configuration directory", path)
+	}
+	cur := root
+	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+		if part == "." || part == "" {
+			continue
+		}
+		cur = filepath.Join(cur, part)
+		info, err := os.Lstat(cur)
+		if os.IsNotExist(err) {
+			return nil
+		}
+		if err != nil {
+			return oops.With("path", cur).Wrapf(err, "inspect path")
+		}
+		if info.Mode()&(os.ModeSymlink|os.ModeIrregular) != 0 {
+			return oops.With("path", cur).
+				Hint("Replace the symlink with a real directory or file, or remove it; ai-rulez does not follow links inside the configuration directory.").
+				Errorf("%s is a symlink: refusing to follow it", cur)
+		}
+	}
+	return nil
+}
+
+// isGeneratedListing reports whether path is the index.md or log.md that
+// "migrate okf" generates: a listing, not content. A file of that name that holds
+// prose is still content.
+func (fm *FileManager) isGeneratedListing(path string) bool {
+	switch strings.ToLower(filepath.Base(path)) {
+	case "index.md", "log.md":
+	default:
+		return false
+	}
+	if fm.Confined(path) != nil {
+		return false
+	}
+	data, err := os.ReadFile(path) //nolint:gosec // G304: confined to the configuration directory above
+	return err == nil && config.IsOKFListing(data)
 }
 
 // PathExists checks if a path exists
@@ -54,6 +112,9 @@ func (fm *FileManager) IsDirectory(path string) bool {
 
 // CreateDirectory creates a directory with all parent directories
 func (fm *FileManager) CreateDirectory(path string) error {
+	if err := fm.Confined(path); err != nil {
+		return err
+	}
 	if fm.guard != nil {
 		if err := fm.guard(); err != nil {
 			return err
@@ -74,6 +135,9 @@ func (fm *FileManager) CreateDirectory(path string) error {
 
 // DeleteDirectory recursively deletes a directory
 func (fm *FileManager) DeleteDirectory(path string) error {
+	if err := fm.Confined(path); err != nil {
+		return err
+	}
 	if !fm.PathExists(path) {
 		return oops.
 			With("path", path).
@@ -116,6 +180,9 @@ func (fm *FileManager) WriteFileOverwrite(path string, content string) error {
 // overwrites the destination if it exists, so callers that must not clobber an
 // existing file guard with PathExists before calling.
 func (fm *FileManager) writeFileAtomic(path string, content string) error {
+	if err := fm.Confined(path); err != nil {
+		return err
+	}
 	// Ensure parent directory exists
 	dir := filepath.Dir(path)
 	if err := fm.CreateDirectory(dir); err != nil {
@@ -140,6 +207,9 @@ func (fm *FileManager) writeFileAtomic(path string, content string) error {
 
 // ReadFile reads file contents
 func (fm *FileManager) ReadFile(path string) (string, error) {
+	if err := fm.Confined(path); err != nil {
+		return "", err
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -157,6 +227,9 @@ func (fm *FileManager) ReadFile(path string) (string, error) {
 
 // DeleteFile deletes a file
 func (fm *FileManager) DeleteFile(path string) error {
+	if err := fm.Confined(path); err != nil {
+		return err
+	}
 	if !fm.PathExists(path) {
 		return oops.
 			With("path", path).
@@ -199,6 +272,9 @@ func (fm *FileManager) ListMarkdownFiles(path string) ([]string, error) {
 
 	var files []string
 	for _, entry := range entries {
+		if entry.Type()&(os.ModeSymlink|os.ModeIrregular) != 0 {
+			continue // a link is never followed, so it is not listed
+		}
 		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
 			files = append(files, entry.Name())
 		}
@@ -338,7 +414,7 @@ func (fm *FileManager) FileOrSkillExists(domain, ftype, name string) bool {
 	}
 
 	filePath := fm.GetFilePath(domain, ftype, name)
-	return fm.PathExists(filePath)
+	return fm.PathExists(filePath) && !fm.isGeneratedListing(filePath)
 }
 
 // MakeFileName converts a name to a valid filename (removes extension if present)
