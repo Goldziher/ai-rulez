@@ -1621,11 +1621,6 @@
           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
           "type": "string"
         },
-        "backend": {
-          "description": "auto picks literllm when compiled in (-tags literllm), else openaicompat.",
-          "enum": ["auto", "openaicompat", "literllm"],
-          "type": "string"
-        },
         "base_url": {
           "description": "API root of an OpenAI-compatible endpoint, e.g. an in-VPC gateway. No credentials or query string.",
           "type": "string"
@@ -1680,7 +1675,7 @@
           "type": "number"
         },
         "provider": {
-          "description": "Provider prefix for provider/model routing (used by the literllm backend).",
+          "description": "Provider prefix for provider/model routing (liter-llm routes on it).",
           "type": "string"
         },
         "timeout_seconds": {

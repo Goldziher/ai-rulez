@@ -30,7 +30,7 @@ model = "gpt-4o-mini"
 		t.Fatalf("want an unset-key warning and a summary, got %+v", got)
 	}
 
-	bad := project(t, map[string]string{".ai-rulez/config.toml": baseConfig + "\n[llm]\nbackend = \"nope\"\n"})
+	bad := project(t, map[string]string{".ai-rulez/config.toml": baseConfig + "\n[llm]\napi_key_env = \"my key\"\n"})
 	if f := byCheck(run(t, bad), CheckLLM); len(f) == 0 || f[0].Severity != SeverityError || !strings.Contains(f[0].Message, "AR9L0") {
 		t.Fatalf("invalid [llm] must be an AR9L0 error, got %+v", f)
 	}
@@ -45,7 +45,7 @@ model = "gpt-4o-mini"
 func isolateLLM(t *testing.T) {
 	t.Helper()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	for _, k := range []string{"PROVIDER", "MODEL", "BACKEND", "BASE_URL", "API_KEY_ENV", "EMBEDDING_MODEL", "MAX_COST_USD", "MAX_TOKENS", "MAX_CALLS", "TIMEOUT_SECONDS", "CACHE", "ALLOW_NETWORK"} {
+	for _, k := range []string{"PROVIDER", "MODEL", "BASE_URL", "API_KEY_ENV", "EMBEDDING_MODEL", "MAX_COST_USD", "MAX_TOKENS", "MAX_CALLS", "TIMEOUT_SECONDS", "CACHE", "ALLOW_NETWORK"} {
 		t.Setenv("AI_RULEZ_LLM_"+k, "")
 	}
 }

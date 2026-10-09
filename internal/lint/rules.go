@@ -182,7 +182,7 @@ var baseRegistry = []RuleInfo{
 	{CodeRoleUnreachable, "role-unreachable-dependency", SeverityWarning, "a kept item lists a skill in its skills: frontmatter that the role drops or hides from the model"},
 	{CodeLockSourceDrift, "lock-source-drift", SeverityError, "an authored item differs from the content pinned in ai-rulez.lock (raised only when a lock exists and [lock] enforce = true)"},
 	{CodeLockOutputDrift, "lock-output-drift", SeverityError, "a generated output differs from the digest pinned in ai-rulez.lock (raised only when a lock exists and [lock] enforce = true)"},
-	{CodeLLMConfigInvalid, "llm-config-invalid", SeverityError, "the [llm] table is invalid: unknown backend, a literal secret instead of an api_key_env variable name, credentials in base_url, or a negative limit"},
+	{CodeLLMConfigInvalid, "llm-config-invalid", SeverityError, "the [llm] table is invalid: a literal secret instead of an api_key_env variable name, credentials in base_url, or a negative limit"},
 	{CodeLLMUntrustedKey, "llm-untrusted-key", SeverityWarning, "a repository [llm] table sets allow_network, base_url, api_key_env or a price override, which only the user config file and AI_RULEZ_LLM_* may set; the value is ignored"},
 }
 
