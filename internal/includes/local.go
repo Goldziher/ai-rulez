@@ -216,6 +216,14 @@ func checkInsideProject(cfg *config.Config, baseDir, field, name, path string) e
 	return nil
 }
 
+// CheckLocalInsideProject is the check the resolver applies to a local include
+// the project config declares: its source must resolve inside the project at
+// baseDir. "include add" runs it before it writes the include, so the project
+// cannot be left unloadable by an entry the loader would refuse.
+func CheckLocalInsideProject(baseDir, name, source string) error {
+	return checkInsideProject(nil, baseDir, "source", name, source)
+}
+
 // viewFor is the view the project of cfg is read through; without a config it is
 // the real directory dir.
 func viewFor(cfg *config.Config, dir string) workspace.View {
