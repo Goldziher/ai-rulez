@@ -279,8 +279,9 @@ func (n *tappedNative) ChatJSON(ctx context.Context, req []byte) ([]byte, error)
 	return out, err
 }
 
-// A thinking model bills its thinking tokens at the output rate but leaves them out of
-// completion_tokens; the budget must charge what the provider's total_tokens says (RV-LLM-1).
+// A thinking model bills its thinking tokens at the output rate. Gemini leaves them out of its own
+// completion_tokens; the budget must charge what the provider's total_tokens says (RV-LLM-1). liter-llm
+// 2.2.0 and later put them in completion_tokens and total_tokens, so both backends settle on the real usage.
 // One gemini-2.5-flash call per backend, well under $0.01.
 func TestLiveThinkingTokensAreCharged(t *testing.T) {
 	for _, backend := range liveBackends(t) {
@@ -323,14 +324,6 @@ func TestLiveThinkingTokensAreCharged(t *testing.T) {
 				tap.prompt, tap.total, resp.Usage, resp.CostUSD, want, m.Spent())
 			if tap.total == 0 || !known {
 				t.Fatalf("no provider total_tokens seen (total=%d) or no price (known=%v)", tap.total, known)
-			}
-			if backend == BackendLiterLLM {
-				// liter-llm's Gemini route hides the thinking tokens even from total_tokens, so the
-				// call is charged its completion cap, the upper bound of what was billed.
-				if resp.Usage.CompletionTokens != 800 || resp.Usage.PromptTokens != tap.prompt || m.Spent().Tokens != tap.prompt+800 {
-					t.Errorf("charged %+v (spent %d), want prompt %d plus the 800-token cap", resp.Usage, m.Spent().Tokens, tap.prompt)
-				}
-				return
 			}
 			if resp.Usage.Total() != tap.total || m.Spent().Tokens != tap.total {
 				t.Errorf("charged %d tokens (spent %d), want the provider's total_tokens %d", resp.Usage.Total(), m.Spent().Tokens, tap.total)
