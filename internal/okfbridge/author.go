@@ -77,8 +77,10 @@ func RenderConceptKeeping(kind Kind, domain, id string, data, previous []byte) (
 
 // RefreshIndexes rewrites the index.md files of a configuration directory so they
 // list its current content, and removes generated indexes of directories that
-// no longer hold any. Concept files are not touched. It is what the source
-// writers (add, remove, init, the MCP tools) call after a change.
+// no longer hold any. Concept files are not touched. An index.md that holds
+// prose rather than a generated listing is copied to <configDir>.bak-okf-<time>
+// before it is overwritten. It is what the source writers (add, remove, init,
+// the MCP tools) call after a change.
 func RefreshIndexes(ctx context.Context, configDir string) error {
 	tree, err := config.ScanContentTreeContext(ctx, configDir)
 	if err != nil {
