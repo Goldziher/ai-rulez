@@ -23,7 +23,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/tests/e2e/testutil"
 )
 
-// fixtureFiles is the project every behaviour check runs on. It has a security
+// fixtureFiles is the project every behavior check runs on. It has a security
 // finding (an injection phrase in a rule), a lint finding (a short agent
 // description), a skill, a rule that needs approval and a lock, so each report
 // has something in it.
@@ -119,10 +119,10 @@ func servingSession(t *testing.T, dir string) *sdkmcp.ClientSession {
 // difference is a top-level key one side's document has and the other's does not.
 type difference map[string]string
 
-// behaviour runs a command and a tool on the same project and compares what
+// behavior runs a command and a tool on the same project and compares what
 // they say.
-type behaviour struct {
-	// name is the Behaviour of the capability this checks.
+type behavior struct {
+	// name is the Behavior of the capability this checks.
 	name string
 	// cli is the command line, ending in --format json.
 	cli []string
@@ -143,7 +143,7 @@ type behaviour struct {
 // differences lists, per top-level key, where the two documents disagree once
 // the justified differences are set aside. It is empty when they are equal
 // field for field.
-func (b behaviour) differences(t *testing.T, cli, tool map[string]any) []string {
+func (b behavior) differences(t *testing.T, cli, tool map[string]any) []string {
 	t.Helper()
 	cli, tool = cloneMap(cli), cloneMap(tool)
 	for path, reason := range b.cliOnly {
@@ -223,7 +223,7 @@ func cloneMap(in map[string]any) map[string]any {
 	return out
 }
 
-func (b behaviour) run(t *testing.T, dir string, authoring *sdkmcp.ClientSession) {
+func (b behavior) run(t *testing.T, dir string, authoring *sdkmcp.ClientSession) {
 	t.Helper()
 	res := testutil.RunCLI(t, dir, b.cli...)
 	require.Equal(t, b.cliExit, res.ExitCode, "exit code of %v\nstdout: %s\nstderr: %s", b.cli, res.Stdout, res.Stderr)
@@ -247,9 +247,9 @@ func (b behaviour) run(t *testing.T, dir string, authoring *sdkmcp.ClientSession
 	}
 }
 
-// behaviours are the read-only pairs checked end to end.
-func behaviours() []behaviour {
-	return []behaviour{
+// behaviors are the read-only pairs checked end to end.
+func behaviors() []behavior {
+	return []behavior{
 		{
 			name: "validate", cli: []string{"validate", "--format", "json"}, cliExit: 2,
 			tool: "validate_config", toolError: true,
@@ -305,21 +305,21 @@ func behaviours() []behaviour {
 	}
 }
 
-// Every behaviour named in the table has a check here, and every check is named in the table.
-func TestEveryBehaviourInTheTableHasACheck(t *testing.T) {
+// Every behavior named in the table has a check here, and every check is named in the table.
+func TestEveryBehaviorInTheTableHasACheck(t *testing.T) {
 	declared := map[string]bool{}
 	for _, c := range parity.Capabilities() {
-		if c.Behaviour != "" {
-			declared[c.Behaviour] = true
+		if c.Behavior != "" {
+			declared[c.Behavior] = true
 		}
 	}
 	checked := map[string]bool{}
-	for _, b := range behaviours() {
+	for _, b := range behaviors() {
 		checked[b.name] = true
 	}
 	assert.Equal(t, declared, checked)
 	for _, required := range []string{"validate", "scan", "tokens", "search", "lock-check", "okf-validate"} {
-		assert.True(t, declared[required], "the read-only pair %q must have a behaviour check", required)
+		assert.True(t, declared[required], "the read-only pair %q must have a behavior check", required)
 	}
 }
 
@@ -327,14 +327,14 @@ func TestEveryBehaviourInTheTableHasACheck(t *testing.T) {
 func TestCommandsAndToolsAgreeOnTheSameProject(t *testing.T) {
 	dir := writeFixture(t)
 	authoring := authoringSession(t)
-	for _, b := range behaviours() {
+	for _, b := range behaviors() {
 		t.Run(b.name, func(t *testing.T) { b.run(t, dir, authoring) })
 	}
 }
 
 // The comparison must be able to fail, and a justified difference must be the only thing it lets through.
 func TestTheComparisonCatchesADifference(t *testing.T) {
-	b := behaviour{name: "x", cliOnly: difference{"results.*.rank": "the command numbers the list"}}
+	b := behavior{name: "x", cliOnly: difference{"results.*.rank": "the command numbers the list"}}
 	cli := map[string]any{"count": 1.0, "results": []any{map[string]any{"name": "a", "rank": 1.0}}}
 
 	assert.Empty(t, b.differences(t, cli, map[string]any{"count": 1.0, "results": []any{map[string]any{"name": "a"}}}))

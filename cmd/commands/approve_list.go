@@ -15,9 +15,8 @@ import (
 const ApproveListSchemaVersion = govview.ApprovalListSchemaVersion
 
 type (
-	approveListDoc    = govview.ApprovalListDoc
-	approveListItem   = govview.ApprovalListItem
-	approveListOrphan = govview.ApprovalListOrphan
+	approveListDoc  = govview.ApprovalListDoc
+	approveListItem = govview.ApprovalListItem
 )
 
 // listDoc is the document the approvals_status tool returns as well.

@@ -34,7 +34,7 @@ func TestProtocolVersionsCompareAsDates(t *testing.T) {
 // request carries its protocol version in _meta. The SDK serves it, so the guard
 // and the tolerant-initialize middleware must let it through, and keep refusing
 // anything that does not name that version. This also pins sessionlessProtocol
-// to the SDK's behaviour.
+// to the SDK's behavior.
 func TestSessionlessRequestsNeedNoInitialize(t *testing.T) {
 	cat, err := BuildCatalog("p", "claude", testServed(), SkillFilter{})
 	require.NoError(t, err)
