@@ -8,10 +8,10 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
-// PriceTableVersion identifies the built-in price table (internal/pricing, shared
-// with the eval estimate). It is part of the cache identity, so a cost recorded
-// under old prices is never replayed under new ones.
-const PriceTableVersion = pricing.Version
+// PriceTableVersion identifies the built-in price source (liter-llm's catalog plus
+// internal/pricing's floors, shared with the eval estimate). It is part of the cache
+// identity, so a cost recorded under old prices is never replayed under new ones.
+func PriceTableVersion() string { return pricing.Version() }
 
 // Pricing resolves prices for a model.
 type Pricing struct {
@@ -44,7 +44,7 @@ func (p Pricing) identity() string {
 	if p.override {
 		return fmt.Sprintf("override:%g:%g", p.input, p.output)
 	}
-	return "builtin:" + PriceTableVersion
+	return "builtin:" + PriceTableVersion()
 }
 
 // bareModel lowercases a model name and drops any provider prefix.
@@ -56,20 +56,14 @@ func bareModel(model string) string {
 	return name
 }
 
-func (p Pricing) lookup(model string) (pricing.Price, bool) {
-	if p.override && (p.overrideModel == "" || p.overrideModel == bareModel(model)) {
-		return pricing.Price{InPerMTok: p.input, OutPerMTok: p.output}, true
-	}
-	return pricing.Lookup(model)
-}
-
 // Cost estimates the cost of usage on model. known is false when no price exists.
+// The config override wins for the model it was written for; every other model is
+// priced by internal/pricing (the liter-llm catalog and fail-closed floors).
 func (p Pricing) Cost(model string, u Usage) (usd float64, known bool) {
-	pr, ok := p.lookup(model)
-	if !ok {
-		return 0, false
+	if p.override && (p.overrideModel == "" || p.overrideModel == bareModel(model)) {
+		return (float64(u.PromptTokens)*p.input + float64(u.CompletionTokens)*p.output) / 1e6, true
 	}
-	return (float64(u.PromptTokens)*pr.InPerMTok + float64(u.CompletionTokens)*pr.OutPerMTok) / 1e6, true
+	return pricing.Cost(model, pricing.Tokens{Prompt: u.PromptTokens, Cached: u.CachedTokens, Completion: u.CompletionTokens})
 }
 
 // EstimatePromptTokens approximates the prompt size of a chat request,

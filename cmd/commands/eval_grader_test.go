@@ -111,7 +111,7 @@ func TestEvalRun_BuiltinGraderEndToEndAgainstALocalModelServer(t *testing.T) {
 	var requests int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests++
-		body := `{"id":"x","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"{\"score\":0.95,\"rationale\":\"it says it deployed\"}"},"finish_reason":"stop"}],"usage":{"prompt_tokens":120,"completion_tokens":20,"total_tokens":140}}`
+		body := `{"id":"x","object":"chat.completion","created":1,"model":"gpt-4o-mini","choices":[{"index":0,"message":{"role":"assistant","content":"{\"score\":0.95,\"rationale\":\"it says it deployed\"}"},"finish_reason":"stop"}],"usage":{"prompt_tokens":120,"completion_tokens":20,"total_tokens":140}}`
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body)) //nolint:errcheck // test server
 	}))
@@ -121,7 +121,7 @@ func TestEvalRun_BuiltinGraderEndToEndAgainstALocalModelServer(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", xdg)
 	t.Setenv("LOCAL_GRADER_KEY", "not-a-real-key")
 	require.NoError(t, os.MkdirAll(filepath.Join(xdg, "ai-rulez"), 0o750))
-	userConfig := "[llm]\nprovider = \"openai\"\nmodel = \"gpt-4o-mini\"\nbackend = \"openaicompat\"\nallow_network = true\nallow_plain_http = true\n" +
+	userConfig := "[llm]\nprovider = \"openai\"\nmodel = \"gpt-4o-mini\"\nallow_network = true\nallow_plain_http = true\n" +
 		"plain_http_hosts = [\"" + server.Listener.Addr().String() + "\"]\nbase_url = \"" + server.URL + "/v1\"\napi_key_env = \"LOCAL_GRADER_KEY\"\ncache = false\n"
 	require.NoError(t, os.WriteFile(filepath.Join(xdg, "ai-rulez", "config.toml"), []byte(userConfig), 0o600))
 	reply := `{"version":1,"results":[{"case":"fires","arm":"with","triggered":true,"output":"I deployed the service.","cost_usd":0.01}]}`

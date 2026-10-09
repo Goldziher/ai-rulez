@@ -57,6 +57,7 @@ func newEmbedServer(t *testing.T) *embedServer {
 		}
 		s.texts = append(s.texts, req.Input...)
 		type item struct {
+			Object    string    `json:"object"`
 			Index     int       `json:"index"`
 			Embedding []float32 `json:"embedding"`
 		}
@@ -78,10 +79,10 @@ func newEmbedServer(t *testing.T) *embedServer {
 					v[len(embedConcepts)] += 0.05
 				}
 			}
-			data = append(data, item{i, v})
+			data = append(data, item{"embedding", i, v})
 			tokens += len(strings.Fields(text))
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": data, "model": "concepts", "usage": map[string]int{"prompt_tokens": tokens, "total_tokens": tokens}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"object": "list", "data": data, "model": "concepts", "usage": map[string]int{"prompt_tokens": tokens, "total_tokens": tokens}})
 	}))
 	t.Cleanup(s.Close)
 	return s
