@@ -55,7 +55,7 @@ func TestSBOMFindingsForComparesACommittedSBOMWithAFreshOne(t *testing.T) {
 	// Arrange: commit the SBOM, then change the configuration
 	root := lockProject(t, "")
 	var out, errOut bytes.Buffer
-	require.Equal(t, 0, runSBOM(&out, &errOut, sbomFlags{format: "cyclonedx", output: filepath.Join(root, "sbom.cdx.json")}, false))
+	require.Equal(t, 0, codeOf(runSBOM(&out, &errOut, sbomFlags{docType: "cyclonedx", output: filepath.Join(root, "sbom.cdx.json")}, false)))
 	require.NoError(t, os.WriteFile(filepath.Join(root, ".ai-rulez", "rules", "style.md"), []byte("# Style\nUse spaces.\n"), 0o644))
 	cfg := mustLoadConfig(t)
 
