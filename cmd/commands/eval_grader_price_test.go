@@ -19,7 +19,7 @@ func TestEvalRun_BuiltinGraderRefusesAModelItCannotPriceBeforeTheRunnerStarts(t 
 	t.Setenv("XDG_CONFIG_HOME", xdg)
 	t.Setenv("LOCAL_GRADER_KEY", "not-a-real-key")
 	require.NoError(t, os.MkdirAll(filepath.Join(xdg, "ai-rulez"), 0o750))
-	userConfig := "[llm]\nprovider = \"openai\"\nmodel = \"mystery-9\"\nbackend = \"openaicompat\"\nallow_network = true\napi_key_env = \"LOCAL_GRADER_KEY\"\n"
+	userConfig := "[llm]\nprovider = \"openai\"\nmodel = \"mystery-9\"\nallow_network = true\napi_key_env = \"LOCAL_GRADER_KEY\"\n"
 	require.NoError(t, os.WriteFile(filepath.Join(xdg, "ai-rulez", "config.toml"), []byte(userConfig), 0o600))
 	marker := filepath.Join(t.TempDir(), "started")
 	evalFlags.runnerCommand = "touch " + marker

@@ -2,29 +2,30 @@ package llm
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"sync/atomic"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
-// collapsingNative answers every embed with one vector, like Gemini's native route behind
-// liter-llm, and fails the request numbered failAt (1-based; 0 never fails).
-type collapsingNative struct {
-	calls  int
-	failAt int
-}
-
-func (c *collapsingNative) ChatJSON(context.Context, []byte) ([]byte, error) { return nil, nil }
-func (c *collapsingNative) Free()                                            {}
-func (c *collapsingNative) EmbedJSON(context.Context, []byte) ([]byte, error) {
-	c.calls++
-	if c.calls == c.failAt {
-		return nil, &stubNativeErr{variant: "ServiceUnavailable", msg: "down", status: 503}
-	}
-	return json.Marshal(map[string]any{"data": []any{map[string]any{"index": 0, "embedding": []float32{1, 0}}}, "usage": map[string]any{"prompt_tokens": 5}})
+// collapsingServer answers every embed with one vector, like Gemini's native route behind
+// liter-llm, and fails the request numbered failAt (1-based; 0 never fails). It returns the
+// client and the request counter.
+func collapsingServer(t *testing.T, failAt int32) (*literLLM, *atomic.Int32) {
+	t.Helper()
+	var calls atomic.Int32
+	srv := serve(t, func(w http.ResponseWriter, _ *http.Request) {
+		if calls.Add(1) == failAt {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprint(w, `{"error":{"message":"down"}}`)
+			return
+		}
+		fmt.Fprint(w, `{"object":"list","model":"e","data":[{"object":"embedding","index":0,"embedding":[1,0]}],"usage":{"prompt_tokens":5,"total_tokens":5}}`)
+	})
+	return newLocal(t, localConfig(srv, Config{Provider: "gemini", Model: "m", EmbeddingModel: "e", MaxRetries: -1}), nil), &calls
 }
 
 func embedInputs(n int) []string {
@@ -53,8 +54,7 @@ func TestEmbedFallbackShouldAdmitEveryRequestAgainstTheBudget(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// Arrange
-			n := &collapsingNative{}
-			l := &literLLM{native: n, provider: "gemini", model: "gemini/m", embedModel: "gemini/e"}
+			l, calls := collapsingServer(t, 0)
 			b := NewBudget(tc.limits, NewPricing(Config{}))
 			c := WithBudget(l, b, "gemini/m", "gemini/e")
 
@@ -65,8 +65,8 @@ func TestEmbedFallbackShouldAdmitEveryRequestAgainstTheBudget(t *testing.T) {
 			if (err != nil) != tc.wantErr || (err != nil && !errors.Is(err, ErrBudget)) {
 				t.Fatalf("err = %v, want budget error %v", err, tc.wantErr)
 			}
-			if n.calls != tc.wantRequests || b.Spent().Calls != tc.wantCalls {
-				t.Errorf("provider requests = %d, budget calls = %d; want %d and %d", n.calls, b.Spent().Calls, tc.wantRequests, tc.wantCalls)
+			if int(calls.Load()) != tc.wantRequests || b.Spent().Calls != tc.wantCalls {
+				t.Errorf("provider requests = %d, budget calls = %d; want %d and %d", calls.Load(), b.Spent().Calls, tc.wantRequests, tc.wantCalls)
 			}
 		})
 	}
@@ -76,8 +76,7 @@ func TestEmbedFallbackShouldAdmitEveryRequestAgainstTheBudget(t *testing.T) {
 // usage, plus the failed one's worst case, not just one estimate for the whole batch.
 func TestEmbedFallbackShouldChargeTheRequestsMadeBeforeAFailure(t *testing.T) {
 	// Arrange: the batch and two singles succeed (5 tokens each), the third single fails.
-	n := &collapsingNative{failAt: 4}
-	l := &literLLM{native: n, provider: "gemini", model: "gemini/m", embedModel: "gemini/e"}
+	l, _ := collapsingServer(t, 4)
 	b := NewBudget(Limits{MaxCalls: 100}, NewPricing(Config{}))
 	c := WithBudget(l, b, "gemini/m", "gemini/e")
 	in := embedInputs(5)

@@ -224,19 +224,18 @@ func TestQueryLogAndIndexPath(t *testing.T) {
 
 func TestRequestModel(t *testing.T) {
 	t.Parallel()
-	get := userConfig(t, "[llm]\nembedding_model = \"base\"\nprovider = \"gemini\"\nbackend = \"openaicompat\"\n")
+	get := userConfig(t, "[llm]\nembedding_model = \"base\"\nprovider = \"gemini\"\n")
 	plain, err := Resolve(projectConfig(nil), Options{Getenv: get})
 	require.NoError(t, err)
 	assert.Empty(t, plain.requestModel(), "no override: the client routes on embedding_model itself")
 
-	over, err := Resolve(projectConfig(&skillsearch.Config{Embeddings: &skillsearch.EmbeddingsConfig{Model: "other"}}), Options{Getenv: get})
+	routed, err := Resolve(projectConfig(&skillsearch.Config{Embeddings: &skillsearch.EmbeddingsConfig{Model: "other"}}), Options{Getenv: get})
 	require.NoError(t, err)
-	assert.Equal(t, "other", over.requestModel(), "openaicompat sends the override verbatim")
+	assert.Equal(t, "gemini/other", routed.requestModel(), "liter-llm routes on provider/model")
 
-	lit := userConfig(t, "[llm]\nembedding_model = \"base\"\nprovider = \"gemini\"\nbackend = \"literllm\"\n")
-	routed, err := Resolve(projectConfig(&skillsearch.Config{Embeddings: &skillsearch.EmbeddingsConfig{Model: "other"}}), Options{Getenv: lit})
+	prefixed, err := Resolve(projectConfig(&skillsearch.Config{Embeddings: &skillsearch.EmbeddingsConfig{Model: "openai/other"}}), Options{Getenv: get})
 	require.NoError(t, err)
-	assert.Equal(t, "gemini/other", routed.requestModel(), "literllm routes on provider/model")
+	assert.Equal(t, "openai/other", prefixed.requestModel(), "a model that names its provider is sent as written")
 }
 
 func TestResolve_UserScopeOwnsTheAbstentionThreshold(t *testing.T) {

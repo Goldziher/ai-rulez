@@ -2,8 +2,9 @@ package llm
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -58,13 +59,7 @@ func TestPlainHTTPOptInIsUserScopeOnlyAndReported(t *testing.T) {
 	}
 }
 
-func TestLiterLLMRefusesUserKeyWithRepoChosenProvider(t *testing.T) {
-	stubFactory := func(NativeConfig) (NativeClient, error) { return &stubNative{}, nil }
-	nativeMu.RLock()
-	previous := nativeFactory
-	nativeMu.RUnlock()
-	RegisterNative(stubFactory)
-	t.Cleanup(func() { RegisterNative(previous) })
+func TestRefusesUserKeyWithRepoChosenProvider(t *testing.T) {
 	getenv := func(string) string { return "sk-test-key-value" }
 
 	tests := []struct {
@@ -97,8 +92,10 @@ func TestLiterLLMRefusesUserKeyWithRepoChosenProvider(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			cfg.Backend = BackendLiterLLM
-			_, err = New(cfg, Options{Getenv: getenv})
+			m, err := New(cfg, Options{Getenv: getenv})
+			if m != nil {
+				t.Cleanup(func() { _ = m.Close() })
+			}
 			refused := err != nil && errors.Is(err, ErrConfig) && strings.Contains(err.Error(), "refusing to send the key")
 			if refused != tt.wantRefusal {
 				t.Fatalf("refused=%v, want %v (err=%v)", refused, tt.wantRefusal, err)
@@ -143,7 +140,8 @@ func TestBudgetChargesAmbiguousFailuresConservatively(t *testing.T) {
 
 // A request model chosen by the repository (verifier llm.model, [search.embeddings] model)
 // must not reroute the user's key to another provider: the literllm backend routes on the
-// provider/ prefix of the model it is given.
+// provider/ prefix of the model it is given. With a base_url liter-llm strips the
+// configured provider's prefix, so the wire model is the bare name.
 func TestLiterLLMShouldRefuseRequestModelRoutedToAnotherProvider(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -151,9 +149,9 @@ func TestLiterLLMShouldRefuseRequestModelRoutedToAnotherProvider(t *testing.T) {
 		wantModel string
 		wantErr   bool
 	}{
-		{"no override uses the configured model", "", "openai/gpt-4o-mini", false},
-		{"same provider prefix", "openai/gpt-4o", "openai/gpt-4o", false},
-		{"bare model is pinned to the configured provider", "gpt-4o", "openai/gpt-4o", false},
+		{"no override uses the configured model", "", "gpt-4o-mini", false},
+		{"same provider prefix", "openai/gpt-4o", "gpt-4o", false},
+		{"bare model is pinned to the configured provider", "gpt-4o", "gpt-4o", false},
 		{"other provider prefix is refused", "evil/gpt-4o", "", true},
 		{"nested prefix on another provider is refused", "evil/openai/gpt-4o", "", true},
 	}
@@ -162,20 +160,15 @@ func TestLiterLLMShouldRefuseRequestModelRoutedToAnotherProvider(t *testing.T) {
 			t.Run(kind+" "+tt.name, func(t *testing.T) {
 				// Arrange
 				var sent string
-				record := func(b []byte) ([]byte, error) {
-					var w struct {
-						Model string `json:"model"`
-					}
-					if err := json.Unmarshal(b, &w); err != nil {
-						return nil, err
-					}
-					sent = w.Model
+				srv := serve(t, func(w http.ResponseWriter, r *http.Request) {
+					sent, _ = readBody(r)["model"].(string)
 					if kind == "chat" {
-						return []byte(`{"model":"x","choices":[{"message":{"content":"ok"}}],"usage":{}}`), nil
+						fmt.Fprint(w, chatReply)
+						return
 					}
-					return []byte(`{"data":[{"index":0,"embedding":[1]}],"usage":{}}`), nil
-				}
-				l := &literLLM{native: &stubNative{chat: record, embed: record}, provider: "openai", model: "openai/gpt-4o-mini", embedModel: "openai/gpt-4o-mini"}
+					fmt.Fprint(w, `{"object":"list","model":"x","data":[{"object":"embedding","index":0,"embedding":[1]}],"usage":{"prompt_tokens":1,"total_tokens":1}}`)
+				})
+				l := newLocal(t, localConfig(srv, Config{Provider: "openai", Model: "gpt-4o-mini", EmbeddingModel: "gpt-4o-mini", MaxRetries: -1}), nil)
 
 				// Act
 				var err error
