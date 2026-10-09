@@ -14261,7 +14261,7 @@ a repository [telemetry] sets a key only user scope may set (allow_network, otlp
 
 ##### AR9L0 llm-config-invalid
 
-the [llm] table is invalid: unknown backend, a literal secret instead of an api_key_env variable name, credentials in base_url, or a negative limit
+the [llm] table is invalid: a literal secret instead of an api_key_env variable name, credentials in base_url, or a negative limit
 
 - Default severity: `error`
 - Analyzer: `config` (scope `bundle`)
