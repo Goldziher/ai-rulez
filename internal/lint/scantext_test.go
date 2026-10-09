@@ -29,7 +29,7 @@ func TestDetectSecret(t *testing.T) {
 	}{
 		{"github token", "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789", true},
 		{"assignment", `api_key = "abcdefghij1234567890abcd"`, true},
-		{"placeholder()", "your-key-here", false},
+		{"placeholder", "your-key-here", false},
 		{"plain", "debug", false},
 	}
 	for _, tt := range tests {
