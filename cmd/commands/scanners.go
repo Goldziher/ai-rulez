@@ -158,21 +158,7 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) error 
 		return fail(oops.Errorf("unknown scanner %s (configured: %s)", strings.Join(unknown, ", "), scannerNames(infos)))
 	}
 	if scannersFormat == formatJSON {
-		versions := map[string]string{}
-		for i := range selected {
-			if s := &selected[i]; s.Found() && scannersProbe {
-				versions[s.Name], _ = lint.ProbeScannerVersion(ctx, *s) //nolint:errcheck // a refused probe leaves the version empty
-			}
-		}
-		if err := writeScannersJSON(out, selected, true, versions); err != nil {
-			return fail(err)
-		}
-		for i := range selected {
-			if !selected[i].Healthy() {
-				return exitStatus(exitScannersUnhealthy)
-			}
-		}
-		return nil
+		return doctorScannersJSON(ctx, out, selected)
 	}
 	if len(selected) == 0 {
 		reportWriter{out}.printf("No scanners configured. Add a [[lint.external]] entry to .ai-rulez/config.toml.\n")
@@ -188,6 +174,25 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) error 
 		}
 	}
 	return exitStatus(code)
+}
+
+// doctorScannersJSON prints the --format json document of scanners doctor.
+func doctorScannersJSON(ctx context.Context, out io.Writer, selected []lint.ScannerInfo) error {
+	versions := map[string]string{}
+	for i := range selected {
+		if s := &selected[i]; s.Found() && scannersProbe {
+			versions[s.Name], _ = lint.ProbeScannerVersion(ctx, *s) //nolint:errcheck // a refused probe leaves the version empty
+		}
+	}
+	if err := writeScannersJSON(out, selected, true, versions); err != nil {
+		return fail(err)
+	}
+	for i := range selected {
+		if !selected[i].Healthy() {
+			return exitStatus(exitScannersUnhealthy)
+		}
+	}
+	return nil
 }
 
 func scannerNames(infos []lint.ScannerInfo) string {

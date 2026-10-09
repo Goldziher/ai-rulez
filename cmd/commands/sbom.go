@@ -263,32 +263,7 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) error {
 	}
 	docType, _ := sbom.NormalizeFormat(f.docType) //nolint:errcheck // validated above
 	run := sbomRun{out: out, errOut: errOut, json: f.format == formatJSON, docType: docType, output: f.output}
-	now := sbomNow()
-	if f.check {
-		// The approvals are judged at the time the committed document was made, so
-		// the check reports changed content, not an approval that expired since.
-		if at, ok := committedTime(f.output); ok {
-			now = at
-		}
-	}
-	stamp, err := documentTime(f.timestamp, timestampSet, os.Getenv(sourceDateEpochEnv), now)
-	if err != nil {
-		return fail(err)
-	}
-	cfg, err := loadSBOMConfig(f.online)
-	if err != nil {
-		return fail(err)
-	}
-	opts := sbom.Options{
-		Files: f.files, IncludeOutputs: f.includeOutputs, Profile: f.profile, Role: f.role,
-		NoApprovals: f.noApprovals, RedactReviewers: f.redactReviewers, RedactKey: os.Getenv(sbomRedactKeyEnv), Timestamp: stamp, Now: now,
-	}
-	if f.verify {
-		if opts.Signature, err = lockSignature(cfg); err != nil {
-			return fail(err)
-		}
-	}
-	bom, err := sbom.Build(cfg, Version, opts)
+	bom, err := buildSBOM(f, timestampSet)
 	if err != nil {
 		return fail(err)
 	}
@@ -315,6 +290,37 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) error {
 		return run.report(sbomStatusOK, nil, nil)
 	}
 	return nil
+}
+
+// buildSBOM loads the configuration and builds the bill of materials the flags
+// ask for.
+func buildSBOM(f sbomFlags, timestampSet bool) (*sbom.BOM, error) {
+	now := sbomNow()
+	if f.check {
+		// The approvals are judged at the time the committed document was made, so
+		// the check reports changed content, not an approval that expired since.
+		if at, ok := committedTime(f.output); ok {
+			now = at
+		}
+	}
+	stamp, err := documentTime(f.timestamp, timestampSet, os.Getenv(sourceDateEpochEnv), now)
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := loadSBOMConfig(f.online)
+	if err != nil {
+		return nil, err
+	}
+	opts := sbom.Options{
+		Files: f.files, IncludeOutputs: f.includeOutputs, Profile: f.profile, Role: f.role,
+		NoApprovals: f.noApprovals, RedactReviewers: f.redactReviewers, RedactKey: os.Getenv(sbomRedactKeyEnv), Timestamp: stamp, Now: now,
+	}
+	if f.verify {
+		if opts.Signature, err = lockSignature(cfg); err != nil {
+			return nil, err
+		}
+	}
+	return sbom.Build(cfg, Version, opts) //nolint:wrapcheck // already contextual
 }
 
 // gates applies --require-lock and --strict-pins.
