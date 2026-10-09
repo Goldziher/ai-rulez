@@ -17,7 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/render"
 )
 
-// Exit codes of the drift checks (`generate --check` and `verify`): 0 means the
+// Exit codes of the drift check (`generate --check`): 0 means the
 // generated files match, 1 means the check could not run (bad configuration, no
 // manifest), 2 means at least one generated file differs.
 const exitDrift = 2
@@ -46,28 +46,14 @@ func worstExit(a, b int) int {
 	return a
 }
 
-// driftMode selects how a config is checked.
-type driftMode int
-
-const (
-	// driftRender re-renders in memory and compares with the disk.
-	driftRender driftMode = iota
-	// driftManifest compares the manifest's files with their own Content-Hash.
-	driftManifest
-)
-
-// driftLoadOptions: the committed-manifest check never sees machine-local
-// files; the render check honors --no-local like generate does.
-func driftLoadOptions(mode driftMode) []config.LoadOption {
-	if mode == driftManifest {
-		return []config.LoadOption{config.WithoutLocal()}
-	}
+// driftLoadOptions honors --no-local like generate does.
+func driftLoadOptions() []config.LoadOption {
 	return pluginLoadOptions(false)
 }
 
 // checkConfigDrift runs the drift check for one loaded config and prints the
 // differing files. It returns how many differ.
-func checkConfigDrift(cfg *config.Config, mode driftMode, rep *driftReport) (differing, blocked int, err error) {
+func checkConfigDrift(cfg *config.Config, rep *driftReport) (differing, blocked int, err error) {
 	gen := generator.NewGenerator(cfg)
 	gen.SetContext(gitutil.WithMemo(cmdContext()))
 	gen.SetAllowLocalDrift(allowLocalDrift)
@@ -75,15 +61,7 @@ func checkConfigDrift(cfg *config.Config, mode driftMode, rep *driftReport) (dif
 	if err := applyRole(gen); err != nil {
 		return 0, 0, err
 	}
-	var (
-		drift   []generator.Drift
-		checked int
-	)
-	if mode == driftManifest {
-		drift, checked, err = gen.VerifyGenerated()
-	} else {
-		drift, err = gen.CheckDrift(profile)
-	}
+	drift, err := gen.CheckDrift(profile)
 	if err != nil {
 		return 0, 0, err //nolint:wrapcheck // already contextual
 	}
@@ -92,9 +70,6 @@ func checkConfigDrift(cfg *config.Config, mode driftMode, rep *driftReport) (dif
 			blocked++
 		}
 		rep.add(d.Kind, displayDriftPath(cfg, d.Path))
-	}
-	if len(drift) == 0 && mode == driftManifest {
-		progress.PrintlnIfNotQuiet(fmt.Sprintf("verified %d generated file(s) against their Content-Hash", checked))
 	}
 	return len(drift), blocked, nil
 }
@@ -121,8 +96,8 @@ type driftDocument struct {
 	Differing []driftItem `json:"differing"`
 }
 
-func newDriftReport(mode driftMode) *driftReport {
-	return &driftReport{out: defaultOut(), json: mode == driftRender && defaultOut().JSON()}
+func newDriftReport() *driftReport {
+	return &driftReport{out: defaultOut(), json: defaultOut().JSON()}
 }
 
 // writeJSON writes the --format json document; it does nothing for text.
@@ -165,21 +140,21 @@ func displayDriftPath(cfg *config.Config, rel string) string {
 
 // runDriftCheck checks a single root (args) or every root under the working
 // directory (recursive) and returns the process exit code.
-func runDriftCheck(args []string, isRecursive bool, mode driftMode) int {
-	return runDriftCheckGated(args, isRecursive, mode, nil)
+func runDriftCheck(args []string, isRecursive bool) int {
+	return runDriftCheckGated(args, isRecursive, nil)
 }
 
 // runDriftCheckGated is runDriftCheck with a gate run on every loaded config
 // before its generated files are compared, so one load serves both. A gate error
 // that is lock drift (see isLockedDrift) counts as
 // drift (exit 2), any other gate error as a failure (exit 1).
-func runDriftCheckGated(args []string, isRecursive bool, mode driftMode, gate func(*config.Config) error) int {
+func runDriftCheckGated(args []string, isRecursive bool, gate func(*config.Config) error) int {
 	fix := "run `ai-rulez generate` and commit the result"
-	rep := newDriftReport(mode)
+	rep := newDriftReport()
 	if isRecursive {
-		return runRecursiveDrift(rep, mode, fix, gate)
+		return runRecursiveDrift(rep, fix, gate)
 	}
-	cfg, err := loadConfigForCommand(cmdContext(), args, driftLoadOptions(mode)...)
+	cfg, err := loadConfigForCommand(cmdContext(), args, driftLoadOptions()...)
 	if err != nil {
 		renderError(os.Stderr, err)
 		if gate != nil && errors.Is(err, config.ErrLockViolation) {
@@ -199,7 +174,7 @@ func runDriftCheckGated(args []string, isRecursive bool, mode driftMode, gate fu
 		renderError(os.Stderr, err)
 		return 1
 	}
-	n, blocked, err := checkConfigDrift(cfg, mode, rep)
+	n, blocked, err := checkConfigDrift(cfg, rep)
 	if err != nil {
 		renderError(os.Stderr, err)
 		return 1
@@ -227,7 +202,7 @@ func runGate(gate func(*config.Config) error, cfg *config.Config) (drift, failed
 	return false, true
 }
 
-func runRecursiveDrift(rep *driftReport, mode driftMode, fix string, gate func(*config.Config) error) int {
+func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) error) int {
 	paths := findConfigFilesRecursively()
 	if len(paths) == 0 {
 		progress.PrintlnIfNotQuiet("No configuration files found")
@@ -235,7 +210,7 @@ func runRecursiveDrift(rep *driftReport, mode driftMode, fix string, gate func(*
 	}
 	total, totalBlocked, failed, gateDrift := 0, 0, 0, 0
 	for _, path := range paths {
-		cfg, err := loadProjectFile(cmdContext(), path, driftLoadOptions(mode)...)
+		cfg, err := loadProjectFile(cmdContext(), path, driftLoadOptions()...)
 		if err == nil {
 			err = cfg.Validate()
 		}
@@ -261,7 +236,7 @@ func runRecursiveDrift(rep *driftReport, mode driftMode, fix string, gate func(*
 			failed++
 			continue
 		}
-		n, blocked, err := checkConfigDrift(cfg, mode, rep)
+		n, blocked, err := checkConfigDrift(cfg, rep)
 		if err != nil {
 			renderError(os.Stderr, oops.With("config", path).Wrapf(err, "check generated files"))
 			failed++

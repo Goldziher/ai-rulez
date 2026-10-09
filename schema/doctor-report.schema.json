@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/doctor-report.schema.json",
+  "title": "ai-rulez doctor report",
+  "description": "Output of `ai-rulez doctor --format json`. Exit 2 when an error finding exists (a warning too with --strict).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "summary",
+    "findings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "root": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "error",
+        "warning",
+        "info"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warning": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "info": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "check",
+          "severity",
+          "message"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "enum": [
+              "config",
+              "policy",
+              "presets",
+              "drift",
+              "gitignore",
+              "documents",
+              "mcp-env",
+              "hooks",
+              "lock",
+              "includes",
+              "tools"
+            ]
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning",
+              "info"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

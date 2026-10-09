@@ -73,10 +73,10 @@ func HookTemplate(options TemplateOptions) ([]byte, error) {
 		format = FormatJSON
 	}
 	if format != FormatJSON && format != FormatTOML {
-		return nil, oops.Errorf("unknown template format %q (use json or toml)", format)
+		return nil, oops.Errorf("unknown --syntax %q (use json or toml)", format)
 	}
 	if format == FormatTOML && harness != usage.HarnessClaude {
-		return nil, oops.Errorf("the [[hooks]] snippet is generated for the claude harness only (codex and cursor use --format json)")
+		return nil, oops.Errorf("the [[hooks]] snippet is generated for the claude harness only (codex and cursor use --syntax json)")
 	}
 	base, err := usage.HookTemplate(usage.HookTemplateOptions{
 		Executable: options.Executable, Harness: harness, Role: options.Role,

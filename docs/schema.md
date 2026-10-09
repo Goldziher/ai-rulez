@@ -173,6 +173,23 @@ The schema files are available in the repository:
 | `schema/improve-report.schema.json` | JSON Schema | v1    | `report.json` of an experimental `ai-rulez improve` run (`improve-report/1`) |
 | `schema/verifiers-report.schema.json` | JSON Schema | v1  | `ai-rulez verifiers run --format json` and the MCP `run_verifiers` result; see [Verifiers](verifiers.md) |
 | `schema/verifiers-spec.schema.json` | JSON Schema | v1    | `.ai-rulez/verifiers/*.toml` declaration files; see [Verifiers](verifiers.md#rule-linked-verifiers) |
+| `schema/doctor-report.schema.json` | JSON Schema | v1 | `ai-rulez doctor --format json`: the findings by check and severity |
+| `schema/tokens-report.schema.json` | JSON Schema | v1 | `ai-rulez tokens --format json`: the cost of the generated files per runtime and domain |
+| `schema/scanners-list.schema.json` | JSON Schema | v1 | `ai-rulez scanners list --format json`: the configured external scanners |
+| `schema/scanners-doctor.schema.json` | JSON Schema | v1 | `ai-rulez scanners doctor --format json`: as `scanners list` plus the probed version |
+| `schema/roles-show.schema.json` | JSON Schema | v1 | `ai-rulez roles show <name> --format json`: the declared role, the effective role and its chain |
+| `schema/roles-resolve.schema.json` | JSON Schema | v1 | `ai-rulez roles resolve <name> --format json`: what a person holding the role gets |
+| `schema/sbom-report.schema.json` | JSON Schema | v1 | `ai-rulez sbom --format json` when the run reports instead of printing the document (a failed gate, `--check`, `-o`) |
+| `schema/verify-plugin.schema.json` | JSON Schema | v1 | `ai-rulez verify --plugin --format json`: whether the plugin bundles match their provenance |
+| `schema/publish-verify.schema.json` | JSON Schema | v1 | `ai-rulez publish verify --format json`: one result per dist directory |
+| `schema/publish-emit.schema.json` | JSON Schema | v1 | `ai-rulez publish emit <emitter> --format json`: the files the emitter wrote |
+| `schema/verifiers-list.schema.json` | JSON Schema | v1 | `ai-rulez verifiers list --format json`: the declared verifiers |
+| `schema/verifiers-test.schema.json` | JSON Schema | v1 | `ai-rulez verifiers test --format json`: the outcome of the self-test examples |
+| `schema/verifiers-explain.schema.json` | JSON Schema | v1 | `ai-rulez verifiers explain <name> --format json`: what one verifier checks |
+| `schema/export-okf.schema.json` | JSON Schema | v1 | `ai-rulez export okf --format json`: the files written, or the drift of `--check` |
+| `schema/sign-report.schema.json` | JSON Schema | v1 | `ai-rulez sign --format json`: what the run signed |
+| `schema/change-result.schema.json` | JSON Schema | v1 | `add`, `remove`, `edit`, `domain`, `profile`, `include`, `skill install\|remove` with `--format json`: what changed and where |
+| `schema/error-document.schema.json` | JSON Schema | v1 | What every command with a `--format` flag prints on stdout when it fails before it has a report; see [the CLI reference](cli.md#json-contracts) |
 | `schema/policy.schema.json` | JSON Schema | v1 | An organization policy file (`--policy`, `AI_RULEZ_POLICY`, managed path); see [Organization policy](policy.md) |
 | `schema/policy-effective.schema.json` | JSON Schema | v1 | `ai-rulez validate --show-policy --format json`: the policy layers, the effective policy with the origin of every value, and what the repository tried to loosen |
 

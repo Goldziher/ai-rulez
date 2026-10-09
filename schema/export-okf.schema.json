@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/export-okf.schema.json",
+  "title": "ai-rulez export okf",
+  "description": "Output of `ai-rulez export okf --format json`. After a write, status is written and files lists the paths. With --check, status is up_to_date or drift (exit 2) and drift lists the paths that are missing, changed or extra.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "dir"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "enum": [
+        "written",
+        "up_to_date",
+        "drift"
+      ]
+    },
+    "dir": {
+      "type": "string"
+    },
+    "files": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "integer",
+          "minimum": 0
+        }
+      ]
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "drift": {
+      "type": "object",
+      "properties": {
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "changed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "extra": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

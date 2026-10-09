@@ -75,7 +75,7 @@ Exit codes: 0 done (or nothing to do); 1 the command could not run (network,
 tool error); 2 a source was refused (AR732, AR730, AR731, scan findings) and
 nothing was written.`,
 	RunE: func(_ *cobra.Command, args []string) error {
-		return exitStatus(runUpdate(args))
+		return runUpdate(args)
 	},
 }
 
@@ -133,24 +133,20 @@ type moveTo struct {
 	src versionSrc
 }
 
-func runUpdate(names []string) int {
+func runUpdate(names []string) error {
 	if updateKind != "" && updateKind != lockfile.KindInclude && updateKind != lockfile.KindSkill && updateKind != lockfile.KindSource {
-		renderStderr(oops.Errorf("unknown --kind %q (use include, skill or source)", updateKind))
-		return 1
+		return fail(oops.Errorf("unknown --kind %q (use include, skill or source)", updateKind))
 	}
 	if updateWriteConfig && !updateMajor {
-		renderStderr(oops.Hint("config.toml is edited only to take a new major version: `ai-rulez update --major --write-config`").
+		return fail(oops.Hint("config.toml is edited only to take a new major version: `ai-rulez update --major --write-config`").
 			Errorf("--write-config needs --major"))
-		return 1
 	}
 	if err := checkFormatFlag(updateFormat); err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	lockOffline = updateOffline
 	if err := requireOnline("update"); err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	return updateAt("", updateKind, names)
 }
@@ -164,18 +160,16 @@ func updateRefreshFilter(moves map[string]*moveTo) func(kind, name string) bool 
 	return func(kind, name string) bool { return moves[moveKey(kind, name)] != nil }
 }
 
-func updateAt(path, kind string, names []string) int {
+func updateAt(path, kind string, names []string) error {
 	ctx := cmdContext()
 	cfg, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	defer installReleaseGateFor(cfg)()
 	current, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	wanted := map[string]bool{}
 	for _, n := range names {
@@ -183,13 +177,11 @@ func updateAt(path, kind string, names []string) int {
 	}
 	srcs := versionSources(cfg, kind, wanted)
 	if err := checkNamesMatched(srcs, wanted); err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	rows, err := evaluateSources(ctx, srcs, current)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	report := &updateReport{SchemaVersion: UpdateSchemaVersion, DryRun: updateDryRun, Updates: []updateItem{}, moves: map[string]*moveTo{}}
 	if updateMajor {
@@ -200,24 +192,24 @@ func updateAt(path, kind string, names []string) int {
 
 // planAndApply sorts the evaluated sources into moves, refusals and no-ops, then
 // writes the moves unless something is refused or this is a dry run. It returns
-// the exit code and leaves printing the report to the caller.
-func planAndApply(path string, cfg *config.Config, current *lockfile.File, srcs []versionSrc, rows []tagresolve.Row, report *updateReport) int {
+// nil, an exitFindings ExitError for a refusal, or the failure; printing the
+// report is left to the caller.
+func planAndApply(path string, cfg *config.Config, current *lockfile.File, srcs []versionSrc, rows []tagresolve.Row, report *updateReport) error {
 	planUpdates(report, srcs, rows)
 	if len(report.Blocked) > 0 {
-		return exitDrift
+		return exitStatus(exitFindings)
 	}
 	if len(report.moves) == 0 {
-		return 0
+		return nil
 	}
 	refused, err := applyUpdates(path, cfg, current, srcs, report)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	if refused {
-		return exitDrift
+		return exitStatus(exitFindings)
 	}
-	return 0
+	return nil
 }
 
 func checkNamesMatched(srcs []versionSrc, wanted map[string]bool) error {
