@@ -8,6 +8,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // sharedOutputsKey keys the shared outputs in the per-preset output map.
@@ -196,8 +197,8 @@ func (s skillTargets) keeps(preset, baseDir, path string, roots []string) bool {
 func underAny(path string, roots []string) bool {
 	path = cleanPath(path)
 	for _, root := range roots {
-		root = cleanPath(root)
-		if path == root || strings.HasPrefix(path, root+string(filepath.Separator)) {
+		// Within compares like the platform's file system does (case-insensitively on Windows).
+		if safefs.Within(cleanPath(root), path) {
 			return true
 		}
 	}

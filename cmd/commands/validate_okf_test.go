@@ -5,7 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 )
 
 func TestOKFTreePath(t *testing.T) {
@@ -44,4 +47,12 @@ func TestValidateOKFTreeOnlyRunsOnABundle(t *testing.T) {
 	if !ok || len(findings) == 0 {
 		t.Fatalf("a bundle with an untyped concept must report findings, got ok=%v %v", ok, findings)
 	}
+}
+
+func TestDemoteFrontmatterlessOnlyTouchesAMissingBlock(t *testing.T) {
+	missing := okf.NewFinding(okf.CodeTypeInvalid, "rules/a.md", 1, "no frontmatter block; every concept needs at least `type`")
+	assert.Equal(t, okf.SeverityWarning, demoteFrontmatterless(missing).Severity)
+
+	noType := okf.NewFinding(okf.CodeTypeInvalid, "rules/a.md", 1, "frontmatter has no non-empty `type`")
+	assert.Equal(t, okf.SeverityError, demoteFrontmatterless(noType).Severity)
 }

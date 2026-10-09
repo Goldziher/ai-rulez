@@ -17,6 +17,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/samber/oops"
+	"github.com/spf13/viper"
 )
 
 // Exit codes of the content checks of `validate`. 1 keeps its existing meaning
@@ -440,7 +441,7 @@ func structuredFormat(format string) bool {
 // writeReport prints the combined report in the chosen format, to --output
 // (written atomically) or stdout.
 func writeReport(combined lint.Combined, failOn string) error {
-	opts := lint.WriteOptions{Version: Version, FailOn: failOn}
+	opts := lint.WriteOptions{Version: Version, FailOn: failOn, Quiet: viper.GetBool("quiet")}
 	if validateOutput == "" {
 		return lint.Write(os.Stdout, validateFormat, combined, opts)
 	}
