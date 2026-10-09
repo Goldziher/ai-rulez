@@ -280,7 +280,7 @@ func ApprovalsStatusHandler(version string) func(context.Context, *ToolRequest) 
 			approvers = cfg.Governance.ApproversFrom
 		}
 		doc := govview.BuildApprovalList(govview.ApprovalListInput{
-			Policy: approval.PolicyOf(cfg), Lock: lock, Subjects: approval.SubjectsOf(lock, snap.Items),
+			Policy: approval.PolicyOfContext(ctx, cfg), Lock: lock, Subjects: approval.SubjectsOf(lock, snap.Items),
 			Now: govview.ApprovalNow(), ApproversFrom: approvers, All: request.GetBool("all", false), Safe: govview.SafeText,
 		})
 		return governanceResult(doc, skipped)

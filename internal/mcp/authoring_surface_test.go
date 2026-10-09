@@ -194,11 +194,11 @@ func TestRecursiveGenerateReportsProgressAndStopsOnCancel(t *testing.T) {
 
 	_, err = session.CallTool(callCtx, params)
 
-	require.Error(t, err, "the cancelled call does not complete")
+	require.Error(t, err, "the canceled call does not complete")
 	assert.GreaterOrEqual(t, int(seen.Load()), 2, "progress notifications arrived")
 	last := filepath.Join(root, fmt.Sprintf("svc%02d", projects-1), "CLAUDE.md")
 	assert.Never(t, func() bool {
 		_, statErr := os.Stat(last)
 		return statErr == nil
-	}, 3*time.Second, 100*time.Millisecond, "the server kept generating after the client cancelled")
+	}, 3*time.Second, 100*time.Millisecond, "the server kept generating after the client canceled")
 }
