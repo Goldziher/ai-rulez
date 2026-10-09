@@ -1,5 +1,12 @@
 name: Publish Packages
 
+# ai-rulez links the liter-llm native library through cgo, so every platform archive is built natively
+# on its own runner (no cross-compiling). Flow:
+#   meta -> create_release (DRAFT) -> build (one job per platform) -> checksums -> provenance
+#        -> finalize_release (promote the draft) -> publish_npm / publish_pypi / publish_homebrew
+# Every stage is idempotent: a rerun for the same tag redoes only what is missing. See
+# docs/maintainers/release.md.
+
 on:
   push:
     tags:
@@ -7,17 +14,24 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to publish (e.g., v2.3.1)"
+        description: "Release tag to publish (e.g., v2.3.1). Run the workflow from this tag's ref so provenance carries the tag identity."
         required: true
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Key on the resolved tag, not github.ref: a tag push and a workflow_dispatch rerun for the same
+  # tag carry different refs and would otherwise race. Never cancel a publish mid-flight: release
+  # promotion, npm and PyPI publishes are irreversible.
+  group: publish-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 # Least privilege by default; each job below asks for what it needs.
 permissions:
   contents: read
+
+env:
+  # Release archives every platform must contribute (windows/arm64 is not supported).
+  ARCHIVE_TARGETS: "linux_amd64 linux_arm64 darwin_amd64 darwin_arm64 windows_amd64"
 
 jobs:
   meta:
@@ -29,12 +43,13 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       python_version: ${{ steps.version.outputs.python_version }}
       tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
       npm_exists: ${{ steps.published.outputs.npm_exists }}
       pypi_exists: ${{ steps.published.outputs.pypi_exists }}
-      release_assets_exist: >-
-        ${{ steps.release_assets.outputs.release_assets_exist }}
-      provenance_exists: >-
-        ${{ steps.release_assets.outputs.provenance_exists }}
+      release_exists: ${{ steps.release_state.outputs.release_exists }}
+      release_draft: ${{ steps.release_state.outputs.release_draft }}
+      archives_complete: ${{ steps.release_state.outputs.archives_complete }}
+      provenance_complete: ${{ steps.release_state.outputs.provenance_complete }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -65,17 +80,32 @@ jobs:
           fi
 
           version="${tag#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "::error::tag $tag is not vX.Y.Z or vX.Y.Z-rc.N"
+            exit 1
+          fi
           python_version="$(echo "$version" | sed 's/-rc\.//g; s/-rc/rc/')"
+          prerelease=false
+          case "$version" in *-rc.*) prerelease=true ;; esac
 
           {
             echo "version=$version"
             echo "python_version=$python_version"
             echo "tag=$tag"
+            echo "prerelease=$prerelease"
           } >> "$GITHUB_OUTPUT"
 
           echo "Git tag: $tag"
           echo "npm version: $version"
           echo "Python version: $python_version"
+
+      # Every surface that carries the version must already equal the tag (bump with
+      # scripts/release-bump.sh set <version> before tagging), and the liter-llm native version
+      # must resolve unambiguously from go.mod.
+      - name: Verify version consistency across all surfaces
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/release-bump.sh check "$VERSION"
 
       - name: Detect already-published versions
         id: published
@@ -106,47 +136,123 @@ jobs:
           echo "  npm:  $npm_exists"
           echo "  PyPI: $pypi_exists"
 
-      - name: Detect existing GitHub release assets
-        id: release_assets
+      # A partial draft (some platforms failed or were cancelled) must report incomplete so the
+      # matrix reruns and heals the gaps; a published release missing only provenance reruns only
+      # the provenance job.
+      - name: Detect existing release state
+        id: release_state
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          tag="$TAG"
-          release_assets_exist=false
-          provenance_exists=false
+          set -euo pipefail
+          release_exists=false
+          release_draft=false
+          archives_complete=false
+          provenance_complete=false
 
-          if gh release view "$tag" >/dev/null 2>&1; then
-            count="$(
-              gh release view "$tag" --json assets --jq '.assets | length'
-            )"
-            if [ "${count:-0}" -gt 0 ]; then
-              release_assets_exist=true
-            fi
-            prov="$(
-              gh release view "$tag" --json assets \
-                --jq '[.assets[] | select(.name | endswith(".sigstore.json"))] | length'
-            )"
-            if [ "${prov:-0}" -gt 0 ]; then
-              provenance_exists=true
-            fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            release_exists=true
+            release_draft="$(gh release view "$TAG" --json isDraft --jq .isDraft)"
+            gh release view "$TAG" --json assets --jq '.assets[].name' > /tmp/have_assets.txt
+            archives_complete=true
+            provenance_complete=true
+            grep -qx "checksums.txt" /tmp/have_assets.txt || archives_complete=false
+            for target in $ARCHIVE_TARGETS; do
+              ext=tar.gz
+              case "$target" in windows_*) ext=zip ;; esac
+              name="ai-rulez_${VERSION}_${target}"
+              grep -qx "${name}.${ext}" /tmp/have_assets.txt || {
+                echo "  missing: ${name}.${ext}"
+                archives_complete=false
+              }
+              grep -qx "${name}.sigstore.json" /tmp/have_assets.txt || {
+                echo "  missing: ${name}.sigstore.json"
+                provenance_complete=false
+              }
+            done
           fi
 
           {
-            echo "release_assets_exist=$release_assets_exist"
-            echo "provenance_exists=$provenance_exists"
+            echo "release_exists=$release_exists"
+            echo "release_draft=$release_draft"
+            echo "archives_complete=$archives_complete"
+            echo "provenance_complete=$provenance_complete"
           } >> "$GITHUB_OUTPUT"
-          echo "GitHub release assets exist? $release_assets_exist"
-          echo "Provenance bundles exist? $provenance_exists"
+          echo "release exists=$release_exists draft=$release_draft archives=$archives_complete provenance=$provenance_complete"
 
-  release_assets:
-    name: Publish GitHub release assets
+  create_release:
+    name: Create draft GitHub release
     needs: meta
-    if: needs.meta.outputs.release_assets_exist != 'true'
+    if: needs.meta.outputs.archives_complete != 'true' || needs.meta.outputs.provenance_complete != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - name: Ensure the GitHub release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.meta.outputs.tag }}
+          PRERELEASE: ${{ needs.meta.outputs.prerelease }}
+          EXISTS: ${{ needs.meta.outputs.release_exists }}
+        run: |
+          set -euo pipefail
+          if [ "$EXISTS" = "true" ]; then
+            echo "Release $TAG already exists; reusing it."
+            exit 0
+          fi
+          flag=""
+          [ "$PRERELEASE" = "true" ] && flag="--prerelease"
+          # A DRAFT: assets are uploaded to it, but it stays invisible until finalize_release
+          # promotes it, which only runs after every archive, the checksums and the provenance exist.
+          # shellcheck disable=SC2086
+          gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag --draft $flag
+
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    needs: [meta, create_release]
+    if: needs.meta.outputs.archives_complete != 'true'
+    runs-on: ${{ matrix.os }}
+    # Linux builds run in Debian bookworm so the binary's glibc floor is 2.36 rather than whatever the
+    # runner image ships. The liter-llm native library is glibc-only (no musl).
+    container: ${{ matrix.image }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            os: ubuntu-latest
+            image: debian:bookworm
+          - goos: linux
+            goarch: arm64
+            os: ubuntu-24.04-arm
+            image: debian:bookworm
+          - goos: darwin
+            goarch: arm64
+            os: macos-14
+          - goos: darwin
+            goarch: amd64
+            os: macos-15-intel
+          - goos: windows
+            goarch: amd64
+            os: windows-latest
+    steps:
+      - name: Install build tools (Linux container)
+        if: matrix.goos == 'linux'
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential git curl ca-certificates binutils python3
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -164,32 +270,137 @@ jobs:
           go-version-file: "go.mod"
           cache: false
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean --skip=validate --parallelism 1 --timeout 60m
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+      - name: Show C toolchain
+        run: |
+          gcc --version || cc --version
+          go version
 
-  # One SLSA provenance statement over every release binary and archive, signed
-  # with this workflow's identity: `ai-rulez verify --self` checks the binary's
-  # sha256 against it (docs/signing.md). It attests the assets as published, so
-  # it also runs when release_assets was skipped because the release already
-  # exists: a rerun after a failed attestation creates the missing provenance.
+      - name: Package release archive
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          GOOS_GOARCH: ${{ matrix.goos }}/${{ matrix.goarch }}
+          WINDOWS_LINK: auto
+          OUT_DIR: dist
+        run: bash scripts/package-release.sh "$GOOS_GOARCH"
+
+      - name: Verify the binary is self-contained
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          set -euo pipefail
+          dir="$(mktemp -d)"
+          archive="dist/ai-rulez_${VERSION}_${GOOS}_${GOARCH}"
+          case "$GOOS" in
+            windows) py=python; command -v python >/dev/null || py=python3; "$py" -I -c 'import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "${archive}.zip" "$dir" ;;
+            *) tar -xzf "${archive}.tar.gz" -C "$dir" ;;
+          esac
+          echo "archive contents:"; ls -l "$dir"
+          case "$GOOS" in
+            darwin)
+              otool -L "$dir/ai-rulez"
+              if otool -L "$dir/ai-rulez" | grep -qi liter_llm_ffi; then
+                echo "::error::ai-rulez links the liter-llm shared library; it must be linked statically"
+                exit 1
+              fi
+              ;;
+            linux)
+              ldd "$dir/ai-rulez"
+              if ldd "$dir/ai-rulez" | grep -qi liter_llm_ffi; then
+                echo "::error::ai-rulez links the liter-llm shared library; it must be linked statically"
+                exit 1
+              fi
+              # Highest glibc symbol version required must not exceed the build image's (2.36).
+              max="$(objdump -T "$dir/ai-rulez" | grep -oE 'GLIBC_[0-9]+\.[0-9]+' | sort -V | tail -1 || true)"
+              echo "highest glibc symbol required: ${max:-none}"
+              if [ -n "$max" ] && [ "$(printf '%s\nGLIBC_2.36\n' "$max" | sort -V | tail -1)" != "GLIBC_2.36" ]; then
+                echo "::error::ai-rulez requires $max (> GLIBC_2.36)"
+                exit 1
+              fi
+              ;;
+            windows)
+              if [ -f "$dir/liter_llm_ffi.dll" ]; then
+                echo "::warning::Windows static link failed; archive ships liter_llm_ffi.dll beside ai-rulez.exe"
+              else
+                echo "Windows binary linked liter-llm statically"
+              fi
+              ;;
+          esac
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: archive-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/ai-rulez_*
+          if-no-files-found: error
+          retention-days: 7
+
+  checksums:
+    name: Checksums and upload
+    needs: [meta, build]
+    if: needs.meta.outputs.archives_complete != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download archives
+        uses: actions/download-artifact@v8
+        with:
+          pattern: archive-*
+          path: dist
+          merge-multiple: true
+
+      - name: Write checksums.txt
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd dist
+          # Exactly the expected archives, nothing missing, nothing extra.
+          expected=""
+          for target in $ARCHIVE_TARGETS; do
+            ext=tar.gz
+            case "$target" in windows_*) ext=zip ;; esac
+            expected+="ai-rulez_${VERSION}_${target}.${ext}"$'\n'
+          done
+          actual="$(find . -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)"
+          if [ "$(printf '%s' "$expected" | LC_ALL=C sort)" != "$actual" ]; then
+            echo "::error::unexpected archive set"
+            echo "expected:"; printf '%s' "$expected"
+            echo "actual:"; echo "$actual"
+            exit 1
+          fi
+          printf '%s' "$expected" | LC_ALL=C sort | xargs sha256sum > checksums.txt
+          cat checksums.txt
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # checksums.txt goes last: its presence marks the archive set as complete.
+          gh release upload "$TAG" dist/ai-rulez_* --clobber
+          gh release upload "$TAG" dist/checksums.txt --clobber
+
+  # One SLSA provenance statement over every release binary and archive, signed with this
+  # workflow's identity: `ai-rulez verify --self` checks the binary's sha256 against it
+  # (docs/signing.md). It attests the assets as published, so it also runs when the build was skipped
+  # because the release already has its archives: a rerun after a failed attestation creates the
+  # missing provenance.
   provenance:
     name: Attest build provenance
-    needs: [meta, release_assets]
+    needs: [meta, checksums]
     if: >-
       ${{
         !cancelled() &&
         needs.meta.result == 'success' &&
-        (needs.release_assets.result == 'success' ||
-         needs.release_assets.result == 'skipped') &&
-        (needs.release_assets.result == 'success' ||
-         needs.meta.outputs.provenance_exists != 'true')
+        (needs.checksums.result == 'success' ||
+         needs.checksums.result == 'skipped') &&
+        (needs.checksums.result == 'success' ||
+         needs.meta.outputs.provenance_complete != 'true')
       }}
     runs-on: ubuntu-latest
     permissions:
@@ -253,10 +464,56 @@ jobs:
           done
           gh release upload "$TAG" provenance/*.sigstore.json --clobber
 
+  # Promote the draft only now that archives, checksums and provenance are all attached, so a
+  # failed platform build can never leave a live release with missing binaries or checksums.
+  finalize_release:
+    name: Publish GitHub release
+    needs: [meta, provenance]
+    if: >-
+      ${{
+        !cancelled() &&
+        needs.meta.result == 'success' &&
+        (needs.provenance.result == 'success' ||
+         needs.provenance.result == 'skipped') &&
+        !(needs.meta.outputs.release_exists == 'true' &&
+          needs.meta.outputs.release_draft != 'true')
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Promote the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.meta.outputs.tag }}
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Refuse to publish an incomplete release.
+          gh release view "$TAG" --json assets --jq '.assets[].name' > have.txt
+          grep -qx checksums.txt have.txt
+          for target in $ARCHIVE_TARGETS; do
+            ext=tar.gz
+            case "$target" in windows_*) ext=zip ;; esac
+            grep -qx "ai-rulez_${VERSION}_${target}.${ext}" have.txt
+            grep -qx "ai-rulez_${VERSION}_${target}.sigstore.json" have.txt
+          done
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = "true" ]; then
+            gh release edit "$TAG" --draft=false
+          fi
+
   publish_npm:
     name: Publish npm
-    needs: meta
-    if: needs.meta.outputs.npm_exists != 'true'
+    needs: [meta, finalize_release]
+    if: >-
+      ${{
+        !cancelled() &&
+        needs.meta.result == 'success' &&
+        needs.meta.outputs.npm_exists != 'true' &&
+        (needs.finalize_release.result == 'success' ||
+         needs.finalize_release.result == 'skipped')
+      }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -285,14 +542,6 @@ jobs:
       - name: Copy README
         run: cp README.md release/npm/README.md
 
-      - name: Set version
-        env:
-          VERSION: ${{ needs.meta.outputs.version }}
-        run: |
-          cd release/npm
-          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
-          cat package.json | grep "\"version\""
-
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ""
@@ -300,6 +549,7 @@ jobs:
         run: |
           unset NODE_AUTH_TOKEN
           cd release/npm
+          # The meta job already proved package.json equals the tag.
           version="$RELEASE_VERSION"
           if [[ "$version" == *"-rc."* ]]; then
             npm_tag="beta"
@@ -311,8 +561,15 @@ jobs:
 
   publish_pypi:
     name: Publish PyPI
-    needs: meta
-    if: needs.meta.outputs.pypi_exists != 'true'
+    needs: [meta, finalize_release]
+    if: >-
+      ${{
+        !cancelled() &&
+        needs.meta.result == 'success' &&
+        needs.meta.outputs.pypi_exists != 'true' &&
+        (needs.finalize_release.result == 'success' ||
+         needs.finalize_release.result == 'skipped')
+      }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -341,9 +598,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install build
           cp README.md release/pypi/README.md
-          VERSION="$RELEASE_VERSION"
-          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" release/pypi/ai_rulez/__init__.py
-          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" release/pypi/__init__.py
           cd release/pypi
           python -m build
 
@@ -352,3 +606,45 @@ jobs:
         with:
           packages-dir: release/pypi/dist
           skip-existing: true
+
+  publish_homebrew:
+    name: Publish Homebrew formula
+    needs: [meta, finalize_release]
+    # Release candidates are not offered through Homebrew.
+    if: >-
+      ${{
+        !cancelled() &&
+        needs.meta.result == 'success' &&
+        needs.meta.outputs.prerelease != 'true' &&
+        (needs.finalize_release.result == 'success' ||
+         needs.finalize_release.result == 'skipped')
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: >-
+            ${{
+              github.event_name == 'workflow_dispatch' &&
+              github.event.inputs.tag ||
+              ''
+            }}
+
+      - name: Download checksums.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          gh release download "$TAG" --dir dist --pattern checksums.txt
+
+      - name: Render and push the formula
+        env:
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: bash scripts/update-homebrew-formula.sh "$VERSION" dist/checksums.txt --push

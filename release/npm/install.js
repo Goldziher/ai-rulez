@@ -388,6 +388,14 @@ async function install(isPostInstall = false) {
         fs.unlinkSync(binaryPath);
       }
       fs.renameSync(extractedPath, binaryPath);
+      // A Windows archive may ship liter_llm_ffi.dll beside ai-rulez.exe; the loader needs it there.
+      if (os === "windows") {
+        for (const name of fs.readdirSync(tempExtractDir)) {
+          if (name.toLowerCase().endsWith(".dll")) {
+            fs.renameSync(path.join(tempExtractDir, name), path.join(binDir, name));
+          }
+        }
+      }
     }
 
     fs.rmSync(tempExtractDir, { recursive: true, force: true });

@@ -142,7 +142,9 @@ if [ "$archive_ext" = tar.gz ]; then
   fi
   (cd "$stage" && tar "${tar_flags[@]}" -cf - "${files[@]}") | gzip -n -9 >"$out"
 else
-  python3 -I - "$stage" "$out" "${files[@]}" <<'PY'
+  py=python3
+  command -v python3 >/dev/null 2>&1 || py=python
+  "$py" -I - "$stage" "$out" "${files[@]}" <<'PY'
 import sys, zipfile
 stage, out, *names = sys.argv[1:]
 with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
