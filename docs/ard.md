@@ -28,7 +28,7 @@ domain name and a namespace or name outside letters, digits, `.`, `_` and `-`.
 
 ```bash
 ai-rulez publish --emit ard          # dist/emit/ard/ard.json, in the release
-ai-rulez publish emit ard --out ard  # only the manifest, without a release
+ai-rulez publish emit ard --output-dir ard  # only the manifest, without a release
 ```
 
 The emitter is also available as `[[publish.emitters]] name = "ard"`. Needs a committed project and a release tag, as every
