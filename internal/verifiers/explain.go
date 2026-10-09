@@ -26,6 +26,72 @@ func Explain(w io.Writer, cfg *config.Config, name string) error {
 	return oops.Hint("Run `ai-rulez verifiers list` to see the declared names.").Errorf("unknown verifier %q", name)
 }
 
+// ExplainTarget is the rule, skill, agent or command a verifier enforces.
+type ExplainTarget struct {
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
+	Path string `json:"path,omitempty"`
+	Line int    `json:"line,omitempty"`
+}
+
+// ExplainDoc is the machine-readable form of Explain.
+type ExplainDoc struct {
+	SchemaVersion int            `json:"schema_version"`
+	Name          string         `json:"name"`
+	Severity      string         `json:"severity"`
+	Type          string         `json:"type,omitempty"`
+	Description   string         `json:"description,omitempty"`
+	Enforces      *ExplainTarget `json:"enforces,omitempty"`
+	DeclaredIn    string         `json:"declared_in"`
+	WhenChanged   []string       `json:"when_changed"`
+	Exclude       []string       `json:"exclude"`
+	Message       string         `json:"message,omitempty"`
+	Fix           string         `json:"fix,omitempty"`
+	Examples      int            `json:"examples"`
+	// Text is the human-readable explanation Explain prints.
+	Text string `json:"text"`
+}
+
+// ExplainInfo describes a verifier as a document; it reads the declaration only.
+func ExplainInfo(cfg *config.Config, name string) (*ExplainDoc, error) {
+	var text strings.Builder
+	if err := Explain(&text, cfg, name); err != nil {
+		return nil, err
+	}
+	doc := &ExplainDoc{SchemaVersion: 1, Name: name, WhenChanged: []string{}, Exclude: []string{}, Text: text.String()}
+	specs, _ := LoadSpecs(cfg)
+	for i := range specs {
+		sp := &specs[i]
+		if sp.ID != name {
+			continue
+		}
+		t := resolveTarget(cfg, sp)
+		doc.Severity = sp.Severity
+		if doc.Severity == "" {
+			doc.Severity = severityWarning
+		}
+		doc.Description = sanitize(sp.Description)
+		doc.Enforces = &ExplainTarget{Kind: t.Kind, ID: sanitize(t.ID), Path: sanitize(t.Path), Line: t.Line}
+		doc.DeclaredIn = sanitize(sp.source)
+		doc.WhenChanged = append(doc.WhenChanged, sp.WhenChanged...)
+		doc.Exclude = append(doc.Exclude, sp.Exclude...)
+		doc.Message, doc.Fix, doc.Examples = sanitize(sp.Message), sanitize(sp.Fix), len(sp.Examples)
+		return doc, nil
+	}
+	for i := range cfg.Verifiers {
+		v := &cfg.Verifiers[i]
+		if v.IsSpec() || v.Name != name {
+			continue
+		}
+		doc.Severity = v.Severity
+		if doc.Severity == "" {
+			doc.Severity = severityError
+		}
+		doc.Type, doc.Description, doc.DeclaredIn = v.Type, sanitize(v.Description), "config.toml [[verifiers]]"
+	}
+	return doc, nil
+}
+
 func explainSpec(w io.Writer, cfg *config.Config, sp *Spec) error {
 	t := resolveTarget(cfg, sp)
 	sev := sp.Severity

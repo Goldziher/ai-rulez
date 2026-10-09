@@ -57,7 +57,7 @@ func TestCalibrateVerifiers(t *testing.T) {
 			var out bytes.Buffer
 
 			// Act
-			code := calibrateVerifiers(context.Background(), tt.args, &out)
+			code := reported(calibrateVerifiers(context.Background(), tt.args, &out))
 
 			// Assert
 			assert.Equal(t, tt.wantCode, code, out.String())
