@@ -1,12 +1,17 @@
 package commands
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/oops"
+	"github.com/spf13/viper"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 )
 
@@ -49,10 +54,27 @@ func okfTreeFindings(cfg *config.Config) (*okf.Bundle, []okf.Finding, bool) {
 	var out []okf.Finding
 	for _, f := range append(b.CheckRoot(), b.Validate()...) {
 		if okfTreePath(f.Path) && !okfResourceDirFinding(f) {
-			out = append(out, f)
+			out = append(out, demoteFrontmatterless(f))
 		}
 	}
 	return b, out, true
+}
+
+// okfNoFrontmatterPrefix starts the message okf.Validate gives a concept that has
+// no frontmatter block at all.
+const okfNoFrontmatterPrefix = "no frontmatter block"
+
+// demoteFrontmatterless turns the "needs a type" error for a file with no
+// frontmatter block into a warning. A rule or context file may be plain
+// markdown: generate, migrate and every other command accept it, so validate must
+// not fail the run for it (a block with a missing or unparseable type stays an
+// error). "migrate okf" adds the type.
+func demoteFrontmatterless(f okf.Finding) okf.Finding {
+	if f.Code == okf.CodeTypeInvalid && strings.HasPrefix(f.Message, okfNoFrontmatterPrefix) {
+		f.Severity = okf.SeverityWarning
+		f.Message += " (plain markdown is accepted; run `ai-rulez migrate okf` to add it)"
+	}
+	return f
 }
 
 // okfResourceDirFinding reports whether a finding asks an index to list a skill
@@ -87,25 +109,65 @@ func okfTreePath(p string) bool {
 	return true
 }
 
-// validateOKFTree reports the OKF findings of the project to w and returns true
-// when they reach the --fail-on threshold (error by default).
+// validateOKFTree reports the OKF findings of the project and returns true when
+// they reach the --fail-on threshold (error by default). Text goes to w. A
+// structured --format gets the OKF document on stdout (or --output) only when
+// the run fails here, since a clean run goes on to print the lint report.
 func validateOKFTree(cfg *config.Config, w io.Writer) bool {
 	b, findings, ok := okfTreeFindings(cfg)
 	if !ok {
 		return false
 	}
-	if err := writeOKFFindings(w, cfg.ConfigDir, b, findings, false); err != nil {
+	failed := validateFailOn != okfFailNone && okfFails(findings, okfFailThreshold())
+	if structuredFormat(validateFormat) {
+		if failed {
+			if err := writeOKFTreeJSON(cfg.ConfigDir, b, findings); err != nil {
+				renderStderr(err)
+			}
+		}
+		return failed
+	}
+	if err := writeOKFTreeText(w, cfg.ConfigDir, b, findings, viper.GetBool("quiet")); err != nil {
 		renderStderr(err)
 		return true
 	}
-	threshold := okf.SeverityError
+	return failed
+}
+
+func okfFailThreshold() okf.Severity {
 	switch validateFailOn {
 	case failOnWarning:
-		threshold = okf.SeverityWarning
+		return okf.SeverityWarning
 	case failOnInfo:
-		threshold = okf.SeverityInfo
-	case okfFailNone:
-		return false
+		return okf.SeverityInfo
 	}
-	return okfFails(findings, threshold)
+	return okf.SeverityError
+}
+
+// writeOKFTreeText prints the findings and, unless quiet, the summary line that
+// writeOKFFindings always ends with.
+func writeOKFTreeText(w io.Writer, dir string, b *okf.Bundle, findings []okf.Finding, quiet bool) error {
+	if !quiet {
+		return writeOKFFindings(w, dir, b, findings, false)
+	}
+	var buf bytes.Buffer
+	if err := writeOKFFindings(&buf, dir, b, findings, false); err != nil {
+		return err
+	}
+	lines := strings.SplitAfter(buf.String(), "\n")
+	// SplitAfter leaves an empty last element; the summary is the one before it.
+	_, err := io.WriteString(w, strings.Join(lines[:max(len(lines)-2, 0)], ""))
+	return err //nolint:wrapcheck // writer error
+}
+
+// writeOKFTreeJSON writes the OKF document to --output (atomically) or stdout.
+func writeOKFTreeJSON(dir string, b *okf.Bundle, findings []okf.Finding) error {
+	if validateOutput == "" {
+		return writeOKFFindings(os.Stdout, dir, b, findings, true)
+	}
+	var buf bytes.Buffer
+	if err := writeOKFFindings(&buf, dir, b, findings, true); err != nil {
+		return err
+	}
+	return oops.With("path", validateOutput).Wrapf(gitutil.WriteFileAtomic(validateOutput, buf.Bytes(), 0o644), "write report")
 }
