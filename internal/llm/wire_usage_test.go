@@ -85,41 +85,56 @@ func (b *backendFuncClient) Chat(ctx context.Context, req ChatRequest) (ChatResp
 	return b.fn(ctx, req)
 }
 
-// liter-llm's Gemini route reports neither the thinking tokens nor a total that holds them, so a
-// call on that route is charged its completion cap, the true upper bound (RV-LLM-1).
-func TestLiterLLMShouldChargeTheCapWhenTheRouteHidesThinking(t *testing.T) {
-	tests := []struct {
-		name           string
-		model          string
-		maxTokens      int
-		wantCompletion int
-	}{
-		{"gemini route is charged the cap", "gemini/gemini-2.5-flash", 800, 800},
-		{"vertex route is charged the cap", "vertex_ai/gemini-2.5-flash", 800, 800},
-		{"no cap keeps the reported usage", "gemini/gemini-2.5-flash", 0, 4},
-		{"other providers report their reasoning", "openai/o4-mini", 800, 4},
+// liter-llm 2.2.0 maps Gemini's usageMetadata with the thinking tokens inside completion_tokens
+// and total_tokens (upstream #253), so a call on any of its three Gemini routes is charged the
+// reported usage, not its completion cap. The body is what that mapping returns for
+// promptTokenCount 35, candidatesTokenCount 4, thoughtsTokenCount 403, totalTokenCount 442.
+func TestLiterLLMShouldChargeTheReportedUsageOnGeminiRoutes(t *testing.T) {
+	const reply = `{"choices":[{"message":{"content":"0.05"}}],"usage":{"prompt_tokens":35,"completion_tokens":407,"total_tokens":442,"completion_tokens_details":{"reasoning_tokens":403}}}`
+	for _, model := range []string{"gemini/gemini-2.5-flash", "google_ai/gemini-2.5-flash", "vertex_ai/gemini-2.5-flash"} {
+		for _, maxTokens := range []int{0, 800, 5000} {
+			t.Run(fmt.Sprintf("%s cap %d", model, maxTokens), func(t *testing.T) {
+				// Arrange
+				stub := &stubNative{chat: func([]byte) ([]byte, error) { return []byte(reply), nil }}
+				l := &literLLM{native: stub, provider: modelPrefix(model), model: model, pricing: NewPricing(Config{PriceInputPerMTok: 1, PriceOutputPerMTok: 1})}
+
+				// Act
+				resp, err := l.Chat(context.Background(), ChatRequest{MaxTokens: maxTokens, Messages: []Message{{Role: RoleUser, Content: "q"}}})
+
+				// Assert
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp.Usage.PromptTokens != 35 || resp.Usage.CompletionTokens != 407 {
+					t.Errorf("usage = %+v, want the reported prompt 35 and completion 407", resp.Usage)
+				}
+				if want := 442.0 / 1e6; resp.CostUSD != want || !resp.CostKnown {
+					t.Errorf("cost = %v (known %v), want %v", resp.CostUSD, resp.CostKnown, want)
+				}
+			})
+		}
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// Arrange
-			stub := &stubNative{chat: func([]byte) ([]byte, error) {
-				return []byte(`{"choices":[{"message":{"content":"0.05"}}],"usage":{"prompt_tokens":35,"completion_tokens":4,"total_tokens":39}}`), nil
-			}}
-			l := &literLLM{native: stub, provider: modelPrefix(tc.model), model: tc.model, pricing: NewPricing(Config{PriceInputPerMTok: 1, PriceOutputPerMTok: 1})}
+}
 
-			// Act
-			resp, err := l.Chat(context.Background(), ChatRequest{MaxTokens: tc.maxTokens, Messages: []Message{{Role: RoleUser, Content: "q"}}})
+// A successful reply with no usage at all still fails closed to the worst case.
+func TestBudgetShouldChargeTheCapWhenAGeminiReplyReportsNoUsage(t *testing.T) {
+	// Arrange
+	stub := &stubNative{chat: func([]byte) ([]byte, error) {
+		return []byte(`{"choices":[{"message":{"content":"0.05"}}]}`), nil
+	}}
+	model := "gemini/gemini-2.5-flash"
+	l := &literLLM{native: stub, provider: "gemini", model: model, pricing: NewPricing(Config{PriceInputPerMTok: 1, PriceOutputPerMTok: 1})}
+	cfg := Config{AllowNetwork: true, Model: model, MaxTokens: 3000, PriceInputPerMTok: 1, PriceOutputPerMTok: 1}
+	m := Wrap(l, cfg, Options{NoCache: true, Retry: &RetryPolicy{}})
 
-			// Assert
-			if err != nil {
-				t.Fatal(err)
-			}
-			if resp.Usage.CompletionTokens != tc.wantCompletion || resp.Usage.PromptTokens != 35 {
-				t.Errorf("usage = %+v, want completion %d", resp.Usage, tc.wantCompletion)
-			}
-			if want := float64(35+tc.wantCompletion) / 1e6; resp.CostUSD != want || !resp.CostKnown {
-				t.Errorf("cost = %v (known %v), want %v", resp.CostUSD, resp.CostKnown, want)
-			}
-		})
+	// Act
+	_, err := m.Chat(context.Background(), ChatRequest{MaxTokens: 800, Messages: []Message{{Role: RoleUser, Content: "q"}}})
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := m.Spent().Tokens; got < 800 {
+		t.Errorf("spent %d tokens, want at least the 800-token cap when no usage is reported", got)
 	}
 }

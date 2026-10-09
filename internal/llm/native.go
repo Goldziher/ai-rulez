@@ -212,25 +212,7 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 	if len(out) == 0 {
 		return ChatResponse{}, errEmptyNative
 	}
-	resp, err := decodeChat(out, l.pricing, model)
-	if err == nil && req.MaxTokens > 0 && hidesThinking(model) && resp.Usage.CompletionTokens < req.MaxTokens {
-		// The thinking tokens are billed but not reported. Gemini counts them against the completion
-		// cap, so the cap is the true upper bound: charge it rather than the visible answer alone.
-		resp.Usage.CompletionTokens = req.MaxTokens
-		resp.CostUSD, resp.CostKnown = l.pricing.Cost(resp.Model, resp.Usage)
-	}
-	return resp, err
-}
-
-// hidesThinking reports whether liter-llm's route for model leaves Gemini's thinking tokens out of
-// the usage it returns (liter-llm 2.1.4 maps usageMetadata without thoughtsTokenCount, so even
-// total_tokens omits them). The openaicompat backend reads them from total_tokens instead.
-func hidesThinking(model string) bool {
-	switch modelPrefix(model) {
-	case "gemini", "google_ai", "vertex_ai":
-		return true
-	}
-	return false
+	return decodeChat(out, l.pricing, model)
 }
 
 func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error) {
