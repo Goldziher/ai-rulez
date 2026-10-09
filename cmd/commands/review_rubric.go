@@ -66,7 +66,7 @@ Exit status: 0 when clean, 2 when there are findings, 1 when a rubric could not 
 }
 
 func runRubricList(cmd *cobra.Command, out io.Writer) error {
-	cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+	cfg, err := loadConfigForCommand(commandContext(cmd))
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func runRubricList(cmd *cobra.Command, out io.Writer) error {
 }
 
 func runRubricShow(cmd *cobra.Command, args []string, out io.Writer) error {
-	cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+	cfg, err := loadConfigForCommand(commandContext(cmd))
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func runRubricLint(cmd *cobra.Command, args []string, out io.Writer) (found bool
 	if !contains(rv.Formats(), rubricFormat) {
 		return false, oops.Errorf("unknown --format %q", rubricFormat)
 	}
-	cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+	cfg, err := loadConfigForCommand(commandContext(cmd))
 	if err != nil {
 		return false, err
 	}

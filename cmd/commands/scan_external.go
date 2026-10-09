@@ -27,7 +27,7 @@ func init() {
 		f.StringVar(&scanScannerBaseline, "scanner-baseline", "", "With --external, the scanner baseline file (default: [lint.scanner_policy] baseline, else <config dir>/"+lint.ScannerBaselineFile+")")
 		f.BoolVar(&scanNoCache, "no-scan-cache", false, "With --external, ignore and do not update the scanner result cache")
 	}
-	ScanCmd.Flags().BoolVar(&validateDryRun, "dry-run", false, "With --external, print what each scanner would run (command, staged files, environment names, isolation, cache state) and start nothing")
+	specDryRun.Bool(ScanCmd.Flags(), &validateDryRun, "With --external, print what each scanner would run (command, staged files, environment names, isolation, cache state) and start nothing")
 }
 
 // scannerFlagsSet reports whether a flag that only means something with

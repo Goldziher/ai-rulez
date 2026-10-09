@@ -51,7 +51,7 @@ func TestGenerateCheck_LockedFlagsRequireTheLockToMatch(t *testing.T) {
 
 			// Act
 			var got int
-			_, _ = capture(t, func() { got = generateCheckCode(nil) })
+			_, _ = capture(t, func() { got = generateCheckCode() })
 
 			// Assert
 			assert.Equal(t, tt.want, got)
@@ -67,7 +67,7 @@ func TestGenerateCheck_LockedPassesWhenTheLockMatches(t *testing.T) {
 	generateLocked = true
 
 	var got int
-	_, _ = capture(t, func() { got = generateCheckCode(nil) })
+	_, _ = capture(t, func() { got = generateCheckCode() })
 
 	assert.Equal(t, 0, got)
 }

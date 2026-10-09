@@ -58,14 +58,13 @@ func init() {
 	f.Float64Var(&verifiersMaxCost, "max-cost", defaultVerifiersMaxCost, "Most the call may cost in USD (0 removes this cap; [llm] limits still apply)")
 	f.BoolVar(&verifiersEstimate, "estimate", false, "Print what would be sent and the cost bound, and call nothing")
 	addJSONFormat(f, &suggestFormat, "")
-	f.BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specNoLocal.Bool(f, &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
 }
 
 // suggestVerifiers runs `verifiers suggest` and returns the exit code: 0 the
 // run completed (even with no proposal), 1 it could not run.
 func suggestVerifiers(ctx context.Context, id string, out io.Writer) int {
-	cfg, err := loadVerifierConfig(ctx, nil)
+	cfg, err := loadVerifierConfig(ctx)
 	if err != nil {
 		renderStderr(err)
 		return exitVerifiersCannotRun

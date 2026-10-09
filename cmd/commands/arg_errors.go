@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
 
@@ -32,6 +33,8 @@ func explainArgErrors(root *cobra.Command) {
 		switch {
 		case strings.HasPrefix(text, "unknown command ") && cmd.HasSubCommands() && len(args) > 0:
 			return unknownSubcommandError(cmd, args[0])
+		case strings.HasPrefix(text, "unknown command ") && len(args) > 0:
+			return unexpectedArgError(cmd, args[0])
 		case strings.HasPrefix(text, "accepts ") || strings.HasPrefix(text, "requires at least "):
 			return argCountError(cmd, args)
 		}
@@ -48,4 +51,11 @@ func argCountError(cmd *cobra.Command, args []string) error {
 	}
 	return fmt.Errorf("%s for %q\n\nUsage:\n  %s\n\nRun \"%s --help\" for details and examples", //nolint:err113 // a user-facing usage message
 		problem, cmd.CommandPath(), cmd.UseLine(), cmd.CommandPath())
+}
+
+// unexpectedArgError is the usage error of a command that takes no arguments
+// given one. Before v5 many commands took a config path; it is -C now.
+func unexpectedArgError(cmd *cobra.Command, arg string) error {
+	return oops.Hint("the project is chosen with -C <path> (or --config-dir), not an argument: ai-rulez -C "+arg+" "+strings.TrimPrefix(cmd.CommandPath(), RootCmd.Name()+" ")).
+		Errorf("unexpected argument %q for %q\n\nUsage:\n  %s", arg, cmd.CommandPath(), cmd.UseLine())
 }

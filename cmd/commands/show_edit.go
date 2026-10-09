@@ -49,10 +49,10 @@ func NewShowCmd() *cobra.Command {
 			Args:  cobra.ExactArgs(1),
 			RunE:  func(cmd *cobra.Command, args []string) error { return runShow(cmd, args[0], k, &opts) },
 		}
-		cmd.Flags().StringVarP(&opts.domain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
+		specDomain.String(cmd.Flags(), &opts.domain, "Domain name (optional, uses root if not specified)")
 		addResultFormat(cmd.Flags())
 		if k.ftype != crud.ContentTypeChecks {
-			cmd.Flags().BoolVar(&opts.local, "local", false, "Read from the machine-local tree (.ai-rulez/local/)")
+			specLocal.Bool(cmd.Flags(), &opts.local, "Read from the machine-local tree (.ai-rulez/local/)")
 		}
 		root.AddCommand(cmd)
 	}
@@ -82,21 +82,21 @@ file is printed on stdout; --format json prints a document instead.`,
 			RunE:  func(cmd *cobra.Command, args []string) error { return runEdit(cmd, args[0], k, &opts) },
 		}
 		flags := cmd.Flags()
-		flags.StringVarP(&opts.domain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
-		flags.StringVarP(&opts.content, "content", "c", "", "New content, or - to read it from stdin")
+		specDomain.String(flags, &opts.domain, "Domain name (optional, uses root if not specified)")
+		flags.StringVar(&opts.content, "content", "", "New content, or - to read it from stdin")
 		addResultFormat(flags)
 		if k.ftype != crud.ContentTypeChecks {
-			flags.BoolVar(&opts.local, "local", false, "Edit in the machine-local tree (.ai-rulez/local/)")
+			specLocal.Bool(flags, &opts.local, "Edit in the machine-local tree (.ai-rulez/local/)")
 		}
 		switch k.ftype {
 		case crud.ContentTypeRules, crud.ContentTypeContext, crud.ContentTypeSkills:
-			flags.StringVarP(&opts.priority, "priority", "p", "", "Priority level: critical|high|medium|low|minimal")
-			flags.StringVarP(&opts.targets, "targets", "t", "", "Comma-separated target providers or path globs")
+			flags.StringVar(&opts.priority, "priority", "", "Priority level: critical|high|medium|low|minimal")
+			specTargets.String(flags, &opts.targets, "Comma-separated target providers or path globs")
 		case crud.ContentTypeChecks:
-			flags.StringVarP(&opts.description, "description", "s", "", "Description")
+			flags.StringVar(&opts.description, "description", "", "Description")
 			flags.StringVar(&opts.severity, "severity", "", "Severity: low|medium|high|critical")
 			flags.StringVar(&opts.tools, "tools", "", "Comma-separated review tools")
-			flags.StringVarP(&opts.targets, "targets", "t", "", "Comma-separated target presets, paths or globs")
+			specTargets.String(flags, &opts.targets, "Comma-separated target presets, paths or globs")
 		}
 		root.AddCommand(cmd)
 	}
