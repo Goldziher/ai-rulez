@@ -23,3 +23,13 @@ func processTable() ([]procEntry, error) {
 	}
 	return out, nil
 }
+
+// processStart returns the start time of pid (same clock as procEntry.start)
+// from one kernel lookup, not a read of the whole table.
+func processStart(pid int) (int64, bool) {
+	kp, err := unix.SysctlKinfoProc("kern.proc.pid", pid)
+	if err != nil || int(kp.Proc.P_pid) != pid {
+		return 0, false
+	}
+	return kp.Proc.P_starttime.Sec*1_000_000 + int64(kp.Proc.P_starttime.Usec), true
+}
