@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
 )
 
 // Include merge strategies accepted by the include resolver. Kept in sync with
@@ -58,6 +59,11 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 	if err != nil {
 		return err
 	}
+	if sourceType == sourceTypeLocal {
+		if err := incl.CheckLocalInsideProject(op.baseDir, req.Name, req.Source); err != nil {
+			return err //nolint:wrapcheck // already contextual
+		}
+	}
 
 	// Create the include config entry
 	includeConfig := config.IncludeConfig{
@@ -80,10 +86,11 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 			Wrapf(err, "save config")
 	}
 
+	op.warnStoredCredentials("include", req.Source)
 	op.logger().Info(
 		"Include added successfully",
 		"name", req.Name,
-		"source", req.Source,
+		"source", incl.RedactURL(req.Source),
 		"type", sourceType,
 	)
 
@@ -105,46 +112,62 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 		return op.removeIncludeLocal(ctx, name)
 	}
 
-	baseDir := op.baseDir
-
-	// Load current config
-	cfg, err := op.load(config.WithUnresolvedIncludesTolerated(ctx), config.WithoutLocal())
-	if err != nil {
-		return oops.
-			With("base_dir", baseDir).
-			Wrapf(err, "load config")
-	}
-
-	// Find the include
-	foundIdx := -1
-	for i := range cfg.Includes {
-		inc := &cfg.Includes[i]
-		if inc.Name == name {
-			foundIdx = i
-			break
+	// The raw config.toml is edited, not the loaded project: an include that
+	// makes the project unloadable must still be removable.
+	err := op.editSharedConfig(func(cfg *config.Config) error {
+		for i := range cfg.Includes {
+			if cfg.Includes[i].Name == name {
+				cfg.Includes = append(cfg.Includes[:i], cfg.Includes[i+1:]...)
+				return nil
+			}
 		}
-	}
-
-	if foundIdx == -1 {
 		return oops.
 			With("name", name).
 			Hint("Use 'list includes' to see available includes").
 			Errorf("include '%s' not found", name)
-	}
-
-	// Remove from array
-	cfg.Includes = append(cfg.Includes[:foundIdx], cfg.Includes[foundIdx+1:]...)
-
-	// Save updated config
-	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
-		return oops.
-			With("config_dir", op.aiRulezDir).
-			Wrapf(err, "save config")
+	})
+	if err != nil {
+		return err
 	}
 
 	op.logger().Info("Include removed successfully", "name", name)
 
 	return nil
+}
+
+// editSharedConfig applies edit to the decoded config.toml of the shared layer
+// and saves it, without loading the project: no include is resolved and nothing
+// is fetched, so a configuration the loader refuses can still be repaired.
+func (op *OperatorImpl) editSharedConfig(edit func(cfg *config.Config) error) error {
+	path := filepath.Join(op.aiRulezDir, "config.toml")
+	data, err := os.ReadFile(path) //nolint:gosec // G304: the project's own config file
+	if err != nil {
+		return oops.With("path", path).Wrapf(err, "read config")
+	}
+	cfg, err := config.DecodeTOMLConfig(data, path)
+	if err != nil {
+		return oops.With("path", path).Wrapf(err, "decode config")
+	}
+	if err := edit(cfg); err != nil {
+		return err
+	}
+	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
+		return oops.
+			With("config_dir", op.aiRulezDir).
+			Wrapf(err, "save config")
+	}
+	return nil
+}
+
+// warnStoredCredentials warns when source carries a credential: it is written to
+// the config file as given.
+func (op *OperatorImpl) warnStoredCredentials(what, source string) {
+	if incl.RedactURL(source) == source {
+		return
+	}
+	op.logger().Warn("The "+what+" source contains a credential, which is stored in clear in "+filepath.Base(op.ConfigFile())+
+		"; prefer a git credential helper or an SSH key and keep the URL free of secrets",
+		"source", incl.RedactURL(source))
 }
 
 // ListIncludes returns all configured includes from the config
@@ -266,15 +289,16 @@ func isGitURL(source string) bool {
 
 // validateGitURL validates a git URL syntax
 func validateGitURL(gitURL string) error {
+	shown := incl.RedactURL(gitURL)
 	if strings.HasPrefix(strings.ToLower(gitURL), "http://") {
 		return oops.
-			With("url", gitURL).
+			With("url", shown).
 			Hint("Plain http:// is not accepted since ai-rulez 5; use https:// or git@host:path").
-			Errorf("insecure git URL %q", gitURL)
+			Errorf("insecure git URL %q", shown)
 	}
 	if !strings.HasPrefix(gitURL, "https://") && !strings.HasPrefix(gitURL, "git@") {
 		return oops.
-			With("url", gitURL).
+			With("url", shown).
 			Hint("Git URLs must start with 'https://' or 'git@'").
 			Errorf("invalid git URL format")
 	}
@@ -283,8 +307,8 @@ func validateGitURL(gitURL string) error {
 	if strings.HasPrefix(gitURL, "https://") {
 		if _, err := url.Parse(gitURL); err != nil {
 			return oops.
-				With("url", gitURL).
-				Wrapf(err, "parse git URL")
+				With("url", shown).
+				Errorf("parse git URL: %s", incl.RedactURL(err.Error()))
 		}
 	}
 
