@@ -236,7 +236,7 @@ ai-rulez eval run --runner-command ./my-runner --grader builtin --allow-llm --gr
 
 - **Consent.** Sending a transcript to a model is opt-in at every level: `--allow-llm`, and, from the user config or
   the environment (never the repository), `allow_network = true` and an `[llm]` model; see [LLM access](llm.md) for
-  the trust rule, the key and Gemini through the `literllm` backend. Without all of that the run is refused before any
+  the trust rule, the key and Gemini through liter-llm. Without all of that the run is refused before any
   case starts; `--dry-run` builds no client and sends nothing. `--grader-max-cost` (default $0.25) caps the grader's
   spend with the model layer's fail-closed budget; the spend also counts towards `--max-cost` and is reported as
   `grader_cost_usd`.
