@@ -379,6 +379,15 @@ func TestFormats_JUnitMarkdownJSON(t *testing.T) {
 	assert.Contains(t, md.String(), "| alpha | ran, failing | 3 |")
 	assert.Contains(t, md.String(), "`quiet`: skill triggered but should not have")
 
+	var txt strings.Builder
+	require.NoError(t, report.Write(&txt, FormatText))
+	assert.Contains(t, txt.String(), "SKILL")
+	assert.Contains(t, txt.String(), "alpha")
+	assert.Contains(t, txt.String(), "`quiet`: skill triggered but should not have")
+	assert.NotContains(t, txt.String(), "| alpha |", "text is not markdown")
+	assert.NotContains(t, txt.String(), "# Skill eval results")
+	assert.Equal(t, "txt", Extension(FormatText))
+
 	var js strings.Builder
 	require.NoError(t, report.Write(&js, FormatJSON))
 	assert.True(t, json.Valid([]byte(js.String())))
