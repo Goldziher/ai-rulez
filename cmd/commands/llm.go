@@ -37,7 +37,7 @@ ai-rulez never calls a model unless [llm] allow_network = true. See docs/llm.md.
 var llmDoctorCmd = &cobra.Command{
 	Use:   cmdUseDoctor,
 	Short: "Print the resolved LLM setup, optionally with one 1-token call",
-	Long: `Print the resolved backend, model, base_url host (never the key), whether the key
+	Long: `Print the liter-llm version, model, base_url host (never the key), whether the key
 variable is set (never its value), whether network use is allowed, and the cache directory.
 Environment overrides (AI_RULEZ_LLM_*) are applied.
 
@@ -53,7 +53,7 @@ var llmEstimateCmd = &cobra.Command{
 	Use:   "estimate <file>",
 	Short: "Estimate the tokens and cost of sending a file as a prompt (no call)",
 	Long: `Approximate the prompt tokens of <file> (a conservative estimate of one token per three bytes) and the worst-case
-cost with the configured model, from the built-in price table or [llm] price_input_per_mtok /
+cost with the configured model, from liter-llm's model catalog or [llm] price_input_per_mtok /
 price_output_per_mtok. Nothing is sent. An unknown model prints "cost unknown".`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
