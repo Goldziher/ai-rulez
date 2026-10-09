@@ -14,6 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/policy"
 	"github.com/Goldziher/ai-rulez/v5/internal/project"
 	"github.com/samber/oops"
+	"github.com/spf13/pflag"
 )
 
 // policyFlag is --policy: a policy file the organization owns (a CI step, a
@@ -116,31 +117,36 @@ func refusalsReported(cfg *config.Config, err error) (*config.Config, error) {
 // --policy-trust-tofu uses stdinIsTerminal (approve.go): it refuses to run in a
 // pipe or in CI, where nobody reviews the digest.
 
-func init() {
-	policyFlagSet.StringVar(&policyFlag, "policy", "",
+// registerPolicyFlags defines the --policy-* flags on set. Every command that
+// evaluates policy binds the same variables, so the flags mean the same everywhere.
+func registerPolicyFlags(set *pflag.FlagSet) {
+	set.StringVar(&policyFlag, "policy", "",
 		"Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md")
-	policyFlagSet.StringVar(&policyDigestFlag, "policy-digest", "",
+	set.StringVar(&policyDigestFlag, "policy-digest", "",
 		"The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741)")
-	policyFlagSet.BoolVar(&policyOfflineFlag, "policy-offline", false,
+	set.BoolVar(&policyOfflineFlag, "policy-offline", false,
 		"Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed")
-	policyFlagSet.StringVar(&policyMaxStaleFlag, "policy-max-stale", "",
+	set.StringVar(&policyMaxStaleFlag, "policy-max-stale", "",
 		"How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE)")
-	policyFlagSet.BoolVar(&discoverOrgFlag, "discover-org", false,
+	set.BoolVar(&discoverOrgFlag, "discover-org", false,
 		"Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md")
-	policyFlagSet.BoolVar(&policyRequireSignedFlag, "policy-require-signed", false,
+	set.BoolVar(&policyRequireSignedFlag, "policy-require-signed", false,
 		"Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1)")
-	policyFlagSet.StringSliceVar(&policySignerKeyFlag, "policy-signer-key", nil,
+	set.StringSliceVar(&policySignerKeyFlag, "policy-signer-key", nil,
 		"PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config)")
-	policyFlagSet.StringVar(&policySignerIDFlag, "policy-signer-identity", "",
+	set.StringVar(&policySignerIDFlag, "policy-signer-identity", "",
 		"Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing)")
-	policyFlagSet.StringVar(&policySignerIssuerFlag, "policy-signer-issuer", "",
+	set.StringVar(&policySignerIssuerFlag, "policy-signer-issuer", "",
 		"OIDC issuer of --policy-signer-identity")
-	policyFlagSet.StringVar(&policyTrustedRootFlag, "policy-trusted-root", "",
+	set.StringVar(&policyTrustedRootFlag, "policy-trusted-root", "",
 		"Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached)")
-	policyFlagSet.BoolVar(&policyTOFUFlag, "policy-trust-tofu", false,
+	set.BoolVar(&policyTOFUFlag, "policy-trust-tofu", false,
 		"Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards")
-	policyFlagSet.StringVar(&policyModeFlag, "policy-mode", "",
+	set.StringVar(&policyModeFlag, "policy-mode", "",
 		"How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced)")
+}
+
+func init() {
 	addPolicyFlags(GenerateCmd, ValidateCmd, ScanCmd, LockCmd, DoctorCmd, VerifyCmd, MCPCmd, SBOMCmd,
 		TokensCmd, CostCmd, PublishCmd, UpdateCmd, ApproveCmd)
 	addPersistentPolicyFlags(CatalogCmd)

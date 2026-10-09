@@ -15,6 +15,8 @@ import (
 var allowedShorthands = map[string]string{
 	"C": "config",
 	"D": "debug",
+	"h": "help", // cobra's own, added to a command the first time it runs or prints help
+	"v": "version",
 	"T": "token",
 	"n": "dry-run",
 	"o": "output",
@@ -101,7 +103,7 @@ func TestFlagTaxonomyShorthands(t *testing.T) {
 		where := commandName(cmd) + " --" + f.Name
 		if f.Shorthand != "" {
 			if want, ok := allowedShorthands[f.Shorthand]; !ok {
-				problems = append(problems, where+": -"+f.Shorthand+" is not one of the shorthands -C -D -T -n -o -q -y")
+				problems = append(problems, where+": -"+f.Shorthand+" is not one of the shorthands -C -D -T -h -n -o -q -v -y")
 			} else if want != f.Name {
 				problems = append(problems, where+": -"+f.Shorthand+" stands for --"+want)
 			}
