@@ -345,6 +345,8 @@ func runPublishWith(ctx context.Context, out io.Writer, emitOnly string) error {
 	if err := checkPublishFlags(); err != nil {
 		return err
 	}
+	// One memo for the run: the load, the gates and the release build ask git the same structural questions.
+	ctx = gitutil.WithMemo(ctx)
 	cfg, err := loadConfigForCommand(ctx, nil, config.WithoutLocal())
 	if err != nil {
 		return err
