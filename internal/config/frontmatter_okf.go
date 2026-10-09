@@ -182,23 +182,17 @@ func okfIdentity(frontmatterYAML string) (typ, title string) {
 // NativeContent returns a content file with its OKF frontmatter mapped onto the
 // native layout: `type`, `title` and `x-ai-rulez` are gone and the entries of
 // x-ai-rulez.metadata sit at the top level. It lets a writer edit ai-rulez fields
-// with the code that knows the native layout. Content without a frontmatter block
-// is returned as it is.
+// with the code that knows the native layout. The block is found by the shared
+// internal/frontmatter splitter (BOM, trailing spaces on a fence and CRLF as the
+// loader reads them). Content without a closed frontmatter block is returned as it is.
 func NativeContent(content string) string {
-	if !strings.HasPrefix(content, "---\n") && !strings.HasPrefix(content, "---\r\n") {
+	block := frontmatter.SplitString(content)
+	if !block.Closed {
 		return content
 	}
-	lines := strings.Split(content, "\n")
-	for i := 1; i < len(lines); i++ {
-		if strings.TrimSpace(lines[i]) != frontmatterFence {
-			continue
-		}
-		fm := normalizeOKFFrontmatter(strings.Join(lines[1:i], "\n"))
-		rest := strings.Join(lines[i+1:], "\n")
-		if strings.TrimSpace(fm) == "" {
-			return rest
-		}
-		return "---\n" + fm + "\n---\n" + rest
+	fm := normalizeOKFFrontmatter(strings.TrimSuffix(block.Raw, "\n"))
+	if strings.TrimSpace(fm) == "" {
+		return block.Body
 	}
-	return content
+	return "---\n" + fm + "\n---\n" + block.Body
 }
