@@ -12,6 +12,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 )
 
@@ -40,6 +41,18 @@ func (c MigrateChange) Pending() bool {
 type MigrateOptions struct {
 	// Write applies the changes; false only reports them.
 	Write bool
+	// BackupDir, when set with Write, receives a copy of every existing file the
+	// migration rewrites (same relative paths) before the first one is touched.
+	// Empty: no backup is taken.
+	BackupDir string
+}
+
+// plannedWrite is a file the migration will write once the whole plan is known.
+type plannedWrite struct {
+	rel  string
+	path string
+	data []byte
+	mode os.FileMode
 }
 
 // MigrateDir converts a configuration directory, in place, to an OKF bundle: each
@@ -49,6 +62,12 @@ type MigrateOptions struct {
 // body of a file is kept byte for byte and the loader maps the frontmatter back,
 // so the generated output does not change. A file that already carries
 // x-ai-rulez is left alone, which makes the migration idempotent.
+//
+// The migration is all-or-nothing in its planning: it refuses, before writing
+// anything, a rule, context file or other item whose own name is reserved in OKF
+// (index.md, log.md), because the generated listing would overwrite it. Symlinks
+// are never followed or rewritten; they are reported as skipped. Files are written
+// atomically, after the originals were copied to opts.BackupDir.
 func MigrateDir(ctx context.Context, configDir string, opts MigrateOptions) ([]MigrateChange, error) {
 	tree, err := config.ScanContentTreeContext(ctx, configDir)
 	if err != nil {
@@ -58,16 +77,24 @@ func MigrateDir(ctx context.Context, configDir string, opts MigrateOptions) ([]M
 	items := collectItems(tree, allKindSet(), configDir, res)
 
 	var changes []MigrateChange
+	var writes []plannedWrite
+	var reserved []string
 	var idx []okf.IndexInput
 	used := map[string]string{}
 	claim := func(p string) string { used[strings.ToLower(p)] = p; return p }
 	for i := range items {
 		it := items[i]
-		change, in, err := migrateItem(configDir, &it, claim, opts)
+		change, in, w, err := migrateItem(configDir, &it, claim)
 		if err != nil {
 			return nil, err
 		}
+		if isReservedName(change.Path) {
+			reserved = append(reserved, change.Path)
+		}
 		changes = append(changes, change)
+		if w != nil {
+			writes = append(writes, *w)
+		}
 		if len(in) == 0 {
 			continue
 		}
@@ -75,16 +102,116 @@ func MigrateDir(ctx context.Context, configDir string, opts MigrateOptions) ([]M
 		// copy them as they are, so they are not listed and get no index.
 		idx = append(idx, in[:1]...)
 	}
-	idxChanges, err := writeIndexes(configDir, idx, items, opts)
+	if len(reserved) > 0 {
+		sort.Strings(reserved)
+		return nil, oops.
+			Hint("Rename them (for example to index-notes.md) and run the migration again; nothing was changed").
+			Errorf("%s would be overwritten by the generated OKF listing: %s are reserved names in an OKF bundle", configDir, strings.Join(reserved, ", "))
+	}
+	idxChanges, idxWrites, err := planIndexes(configDir, idx, items)
 	if err != nil {
 		return nil, err
 	}
-	return append(changes, idxChanges...), nil
+	changes = append(changes, idxChanges...)
+	changes = append(changes, symlinkChanges(configDir)...)
+	if opts.Write {
+		if err := applyWrites(configDir, append(writes, idxWrites...), opts.BackupDir); err != nil {
+			return nil, err
+		}
+	}
+	return changes, nil
 }
 
-// writeIndexes renders the index.md of every directory of the bundle and writes
-// those that differ from what is on disk.
+// isReservedName reports whether the file name is one OKF reserves for generated listings.
+func isReservedName(rel string) bool {
+	switch strings.ToLower(filepath.Base(rel)) {
+	case okf.IndexFile, okf.LogFile:
+		return true
+	}
+	return false
+}
+
+// symlinkChanges reports every markdown file or directory in the content
+// directories that is a symlink: the migration never follows or rewrites one.
+func symlinkChanges(configDir string) []MigrateChange {
+	var changes []MigrateChange
+	dirs := []string{dirDomains}
+	for _, k := range AllKinds {
+		dirs = append(dirs, string(k))
+	}
+	for _, dir := range dirs {
+		_ = filepath.WalkDir(filepath.Join(configDir, dir), func(p string, d os.DirEntry, err error) error { //nolint:errcheck // a missing directory has no symlinks
+			if err != nil {
+				return nil //nolint:nilerr // unreadable entries are reported by the content scan
+			}
+			if d.Type()&os.ModeSymlink == 0 {
+				return nil
+			}
+			if info, statErr := os.Stat(p); !strings.HasSuffix(strings.ToLower(p), ".md") && (statErr != nil || !info.IsDir()) {
+				return nil //nolint:nilerr // a dangling non-markdown link is not content
+			}
+			rel, relErr := filepath.Rel(configDir, p)
+			if relErr != nil {
+				return nil //nolint:nilerr // cannot happen below configDir
+			}
+			changes = append(changes, MigrateChange{
+				Path: filepath.ToSlash(rel), Action: ActionSkipped,
+				Detail: "symlink is not followed; migrate its target by hand",
+			})
+			return nil
+		})
+	}
+	return changes
+}
+
+// applyWrites copies the existing originals to backupDir, then writes every file atomically.
+func applyWrites(configDir string, writes []plannedWrite, backupDir string) error {
+	if backupDir != "" {
+		for i := range writes {
+			orig, err := os.ReadFile(writes[i].path)
+			if os.IsNotExist(err) {
+				continue
+			}
+			if err != nil {
+				return oops.Wrapf(err, "read %s for backup", writes[i].path)
+			}
+			dst := filepath.Join(backupDir, filepath.FromSlash(writes[i].rel))
+			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil { //nolint:gosec // G301: a copy of the project's own files
+				return oops.Wrapf(err, "create %s", filepath.Dir(dst))
+			}
+			if err := gitutil.WriteFileAtomic(dst, orig, writes[i].mode); err != nil {
+				return oops.Wrapf(err, "back up %s", writes[i].rel)
+			}
+		}
+	}
+	for i := range writes {
+		if err := os.MkdirAll(filepath.Dir(writes[i].path), 0o755); err != nil { //nolint:gosec // G301: the project's content directory
+			return oops.Wrapf(err, "create %s", filepath.Dir(writes[i].path))
+		}
+		if err := gitutil.WriteFileAtomic(writes[i].path, writes[i].data, writes[i].mode); err != nil {
+			return oops.With("config_dir", configDir, "backup", backupDir).Wrapf(err, "write %s", writes[i].path)
+		}
+	}
+	return nil
+}
+
+// writeIndexes renders and writes the index.md files of a bundle.
 func writeIndexes(configDir string, idx []okf.IndexInput, items []sourceItem, opts MigrateOptions) ([]MigrateChange, error) {
+	changes, writes, err := planIndexes(configDir, idx, items)
+	if err != nil {
+		return nil, err
+	}
+	if opts.Write {
+		if err := applyWrites(configDir, writes, opts.BackupDir); err != nil {
+			return nil, err
+		}
+	}
+	return changes, nil
+}
+
+// planIndexes renders the index.md of every directory of the bundle and plans
+// those that differ from what is on disk.
+func planIndexes(configDir string, idx []okf.IndexInput, items []sourceItem) ([]MigrateChange, []plannedWrite, error) {
 	indexes := okf.BuildIndexes(idx, dirLabels(items), okf.StyleBody)
 	paths := make([]string, 0, len(indexes))
 	for p := range indexes {
@@ -92,14 +219,18 @@ func writeIndexes(configDir string, idx []okf.IndexInput, items []sourceItem, op
 	}
 	sort.Strings(paths)
 	var changes []MigrateChange
+	var writes []plannedWrite
 	for _, p := range paths {
-		change, err := migrateIndex(configDir, p, indexes[p], opts)
+		change, w, err := planIndex(configDir, p, indexes[p])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		changes = append(changes, change)
+		if w != nil {
+			writes = append(writes, *w)
+		}
 	}
-	return changes, nil
+	return changes, writes, nil
 }
 
 func allKindSet() map[Kind]bool {
@@ -110,38 +241,37 @@ func allKindSet() map[Kind]bool {
 	return set
 }
 
-func migrateItem(configDir string, it *sourceItem, claim func(string) string, opts MigrateOptions) (MigrateChange, []okf.IndexInput, error) {
+func migrateItem(configDir string, it *sourceItem, claim func(string) string) (MigrateChange, []okf.IndexInput, *plannedWrite, error) {
 	rel, err := filepath.Rel(configDir, it.cf.Path)
 	if err != nil {
-		return MigrateChange{}, nil, oops.Wrapf(err, "locate %s", it.cf.Path)
+		return MigrateChange{}, nil, nil, oops.Wrapf(err, "locate %s", it.cf.Path)
 	}
 	change := MigrateChange{Path: filepath.ToSlash(rel), Action: ActionUnchanged}
 	data, err := os.ReadFile(it.cf.Path)
 	if err != nil {
-		return MigrateChange{}, nil, oops.Wrapf(err, "read %s", it.cf.Path)
+		return MigrateChange{}, nil, nil, oops.Wrapf(err, "read %s", it.cf.Path)
 	}
 	raw, ok := splitRawFrontmatter(data)
 	if !ok {
 		change.Action, change.Detail = ActionSkipped, "frontmatter is not closed with ---"
-		return change, nil, nil
+		return change, nil, nil, nil
 	}
 	fm, _ := okf.SplitFrontmatter(data)
 	if fm.Err != nil {
 		change.Action, change.Detail = ActionSkipped, fm.Err.Error()
-		return change, nil, nil //nolint:nilerr // a malformed frontmatter is reported as a skipped change, not a failure
+		return change, nil, nil, nil //nolint:nilerr // a malformed frontmatter is reported as a skipped change, not a failure
 	}
 	it.typ, it.title = fm.Scalar(keyType), fm.Scalar(keyTitle)
 	it.keepName = true
-	id := itemID(it.kind, it.cf)
 	pieces, in, err := renderItem(*it, claim)
 	if err != nil {
-		return MigrateChange{}, nil, err
+		return MigrateChange{}, nil, nil, err
 	}
 	if pieces[0].file.Path != change.Path {
 		change.Detail = fmt.Sprintf("the bundle path would be %s", pieces[0].file.Path)
 	}
 	if fm.Lookup(okf.ExtensionKey) != nil {
-		return change, in, nil
+		return change, in, nil, nil
 	}
 	var out []byte
 	if raw.present {
@@ -150,42 +280,29 @@ func migrateItem(configDir string, it *sourceItem, claim func(string) string, op
 		out = append(append([]byte(nil), pieces[0].head...), data...)
 	}
 	change.Action = ActionConverted
-	if opts.Write {
-		if err := writeKeepingMode(it.cf.Path, out); err != nil {
-			return MigrateChange{}, nil, oops.With("id", id).Wrapf(err, "write %s", it.cf.Path)
-		}
-	}
-	return change, in, nil
-}
-
-func migrateIndex(configDir, rel string, data []byte, opts MigrateOptions) (MigrateChange, error) {
-	target := filepath.Join(configDir, filepath.FromSlash(rel))
-	change := MigrateChange{Path: rel, Action: ActionUnchanged}
-	existing, err := os.ReadFile(target)
-	if err == nil && bytes.Equal(existing, data) {
-		return change, nil
-	}
-	if err != nil && !os.IsNotExist(err) {
-		return MigrateChange{}, oops.Wrapf(err, "read %s", target)
-	}
-	change.Action = ActionIndex
-	if opts.Write {
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return MigrateChange{}, oops.Wrapf(err, "create %s", filepath.Dir(target))
-		}
-		if err := os.WriteFile(target, data, 0o644); err != nil {
-			return MigrateChange{}, oops.Wrapf(err, "write %s", target)
-		}
-	}
-	return change, nil
-}
-
-func writeKeepingMode(p string, data []byte) error {
 	mode := os.FileMode(0o644)
-	if info, err := os.Stat(p); err == nil {
+	if info, err := os.Stat(it.cf.Path); err == nil {
 		mode = info.Mode().Perm()
 	}
-	return os.WriteFile(p, data, mode)
+	return change, in, &plannedWrite{rel: change.Path, path: it.cf.Path, data: out, mode: mode}, nil
+}
+
+func planIndex(configDir, rel string, data []byte) (MigrateChange, *plannedWrite, error) {
+	target := filepath.Join(configDir, filepath.FromSlash(rel))
+	change := MigrateChange{Path: rel, Action: ActionUnchanged}
+	if info, err := os.Lstat(target); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		change.Action, change.Detail = ActionSkipped, "symlink is not followed; migrate its target by hand"
+		return change, nil, nil
+	}
+	existing, err := os.ReadFile(target)
+	if err == nil && bytes.Equal(existing, data) {
+		return change, nil, nil
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return MigrateChange{}, nil, oops.Wrapf(err, "read %s", target)
+	}
+	change.Action = ActionIndex
+	return change, &plannedWrite{rel: rel, path: target, data: data, mode: 0o644}, nil
 }
 
 // rawFrontmatter locates a file's frontmatter block.
