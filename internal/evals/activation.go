@@ -299,10 +299,10 @@ func (r *ActivationReport) Write(w io.Writer, format string) error {
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
 		return enc.Encode(r)
-	case FormatMarkdown:
+	case FormatText, FormatMarkdown:
 		return r.writeMarkdown(w)
 	}
-	return fmt.Errorf("activation results are written as json or markdown, not %q", format)
+	return fmt.Errorf("activation results are written as text, json or markdown, not %q", format)
 }
 
 func (r *ActivationReport) writeMarkdown(w io.Writer) error {

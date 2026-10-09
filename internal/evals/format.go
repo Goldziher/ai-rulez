@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 )
 
 // Output formats of `eval run`.
 const (
+	FormatText     = "text"
 	FormatJSON     = "json"
 	FormatMarkdown = "markdown"
 	FormatJUnit    = "junit"
@@ -19,6 +21,8 @@ const (
 // Write renders a run report in a format.
 func (r *RunReport) Write(w io.Writer, format string) error {
 	switch format {
+	case FormatText:
+		return r.writeText(w)
 	case FormatJSON:
 		return jsondoc.Write(w, r)
 	case FormatMarkdown:
@@ -26,18 +30,76 @@ func (r *RunReport) Write(w io.Writer, format string) error {
 	case FormatJUnit:
 		return r.writeJUnit(w)
 	}
-	return fmt.Errorf("unknown format %q (use json, markdown or junit)", format)
+	return fmt.Errorf("unknown format %q (use text, json, markdown or junit)", format)
 }
 
 // Extension is the file extension of a format.
 func Extension(format string) string {
 	switch format {
+	case FormatText:
+		return "txt"
 	case FormatMarkdown:
 		return "md"
 	case FormatJUnit:
 		return "xml"
 	}
 	return "json"
+}
+
+// writeText renders the run as plain text: a header, one aligned line per
+// skill and the problems under it.
+func (r *RunReport) writeText(w io.Writer) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Skill eval results: runner %#q, harness %#q, model %#q", r.Runner, r.Harness, r.Model)
+	if r.Date != "" {
+		fmt.Fprintf(&b, ", date %s", r.Date)
+	}
+	if r.Ablation {
+		b.WriteString(", ablation on")
+	}
+	b.WriteString("\n")
+	if r.DryRun {
+		e := r.Estimate
+		fmt.Fprintf(&b, "Dry run: %d agent runs, tokens in %s, out %s, estimated cost $%.2f (range $%.2f to $%.2f; a rough estimate).\n",
+			e.AgentRuns, tokenRange(e.InputTokensLow, e.InputTokens, e.InputTokensHigh), tokenRange(e.OutputTokensLow, e.OutputTokens, e.OutputTokensHigh),
+			e.CostUSD, e.CostLowUSD, e.CostHighUSD)
+		if r.PricedAs != "" {
+			fmt.Fprintf(&b, "No model was set, so the estimate is priced as %s; pass --model (or --price-in and --price-out) for the model you will run.\n", r.PricedAs)
+		}
+		if !r.PriceKnown {
+			b.WriteString("The model has no built-in price: the estimate uses the sonnet tier; pass --price-in and --price-out for a real figure.\n")
+		}
+	}
+	b.WriteString("\n")
+	tw := tabwriter.NewWriter(&b, 0, 4, 2, ' ', 0)
+	fmt.Fprintln(tw, "SKILL\tSTATUS\tCASES\tPASS\tPRECISION\tRECALL\tABLATION\tTOKENS\tCOST")
+	for i := range r.Skills {
+		s := &r.Skills[i]
+		if s.Status == RunNoCases || s.Status == RunNotChanged {
+			continue
+		}
+		if s.Score == nil {
+			cost := "-"
+			if s.Estimate != nil {
+				cost = fmt.Sprintf("~$%.2f", s.Estimate.CostUSD)
+			}
+			fmt.Fprintf(tw, "%s\t%s\t%d\t-\t-\t-\t-\t-\t%s\n", s.ID, s.Status, s.CaseCount, cost)
+			continue
+		}
+		sc := s.Score
+		fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\t%s\t%d\t$%.2f\n", s.ID, statusLabel(s), sc.Scored,
+			Percent(&sc.PassRate), Percent(sc.TriggerPrecision), Percent(sc.TriggerRecall), deltaText(sc.AblationDelta), sc.SkillTokens, sc.CostUSD)
+	}
+	if err := tw.Flush(); err != nil {
+		return err //nolint:wrapcheck // a strings.Builder does not fail
+	}
+	for i := range r.Skills {
+		if lines := problemLines(&r.Skills[i]); len(lines) > 0 {
+			fmt.Fprintf(&b, "\n%s\n%s\n", r.Skills[i].ID, strings.Join(lines, "\n"))
+		}
+	}
+	_, err := io.WriteString(w, b.String())
+	return err
 }
 
 func (r *RunReport) writeMarkdown(w io.Writer) error {
