@@ -13,5 +13,6 @@ func TestMain(m *testing.M) {
 	testutil.CeilGit()
 	signing.UseBackend(sigstore.New())
 	prepareCommandTree(RootCmd)
+	snapshotFlagValues(RootCmd)
 	os.Exit(m.Run())
 }
