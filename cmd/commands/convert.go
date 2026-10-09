@@ -115,10 +115,8 @@ foreign lock hash.
 Exit codes: 0 done, 1 could not run or would overwrite, 2 blocked by the scan or
 validation, or --fail-on matched.`,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, _ []string) {
-		if code := runConvert(watchParentContext(cmd), os.Stdout, stdoutIsTerminal()); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return exitStatus(runConvert(watchParentContext(cmd), os.Stdout, stdoutIsTerminal()))
 	},
 }
 
@@ -209,14 +207,14 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	defer progress.SetQuiet(false)
 
 	if err := checkFormatFlag(convertFormat); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitConvertCannotRun
 	}
 	if convertList {
 		return listImporters(out)
 	}
 	if err := checkConvertFlags(interactive); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitConvertCannotRun
 	}
 	write := convertWrite
@@ -224,7 +222,7 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 	report, err := importer.Convert(ctx, convertOptions(write))
 	if report != nil {
 		if werr := printConvertReport(out, report); werr != nil {
-			fmtError(werr)
+			renderStderr(werr)
 			return exitConvertCannotRun
 		}
 	}
@@ -233,7 +231,7 @@ func runConvert(ctx context.Context, out io.Writer, interactive bool) int {
 		return 0
 	}
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitConvertCannotRun
 	}
 	if report.Security.Blocked || report.Validation.Errors > 0 {
@@ -271,7 +269,7 @@ func reportNothingToConvert(out io.Writer, err error) {
 func lockConverted(ctx context.Context) int {
 	abs, err := filepath.Abs(convertSource)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitConvertCannotRun
 	}
 	into := convertInto
@@ -318,7 +316,7 @@ func printConvertReport(out io.Writer, report *importer.Report) error {
 func listImporters(out io.Writer) int {
 	detections, err := importer.Detect(convertSource)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitConvertCannotRun
 	}
 	if convertFormat == formatJSON {
@@ -337,7 +335,7 @@ func listImporters(out io.Writer) int {
 
 func writeJSONList(out io.Writer, detections []importer.Detection) int {
 	if err := jsondoc.Write(out, detections); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return exitConvertCannotRun
 	}
 	return 0

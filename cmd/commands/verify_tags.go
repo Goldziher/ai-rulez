@@ -109,12 +109,12 @@ func verifyTagsAt(path string) int {
 		if errors.Is(err, config.ErrLockViolation) {
 			return exitDrift // the content check reported it already (fetched content disagrees with the lock)
 		}
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	want, err := verifyTagsWanted(cfg, lockVerifyTags)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	if !want {
@@ -122,12 +122,12 @@ func verifyTagsAt(path string) int {
 	}
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	findings, err := verifyPinnedTags(cmdContext(), cfg, lock)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	if reportTagFindings(findings) {
@@ -161,16 +161,16 @@ func movedTagsErr(cfg *config.Config) error {
 	return nil
 }
 
-// exitOnMovedTags runs before anything is written and ends the process with
+// movedTagsFailure runs before anything is written and ends the process with
 // exitDrift when a pinned tag moved.
-func exitOnMovedTags(cfg *config.Config) {
+func movedTagsFailure(cfg *config.Config) error {
 	err := movedTagsErr(cfg)
 	switch {
 	case err == nil:
+		return nil
 	case errors.Is(err, errMovedTag):
-		os.Exit(exitDrift)
+		return exitStatus(exitDrift) // the moved tags are already printed
 	default:
-		fmtError(err)
-		os.Exit(1)
+		return failWithCode(exitFailure, err)
 	}
 }

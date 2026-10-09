@@ -106,19 +106,19 @@ func ctxOrBackground(ctx context.Context) context.Context {
 func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 	ctx = ctxOrBackground(ctx)
 	if err := checkFormatFlag(searchFlags.format); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	env, err := newSearchEnv(ctx, "")
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	emb, release, err := env.resolved.Embedder()
 	defer release()
 	if err != nil {
 		if !searchSubFlags.dryRun {
-			fmtError(err)
+			renderStderr(err)
 			return 1
 		}
 		// A dry run still reports the plan when no model is configured yet.
@@ -127,7 +127,7 @@ func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 	}
 	dir, err := env.resolved.IndexPath()
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	var old *skillsearch.Index
@@ -136,7 +136,7 @@ func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 	}
 	only, err := selectIndexItems(env)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	opts := &skillsearch.BuildOptions{
@@ -153,7 +153,7 @@ func runSearchIndex(ctx context.Context, out, errOut io.Writer) int {
 		return 0
 	}
 	if plan.ToEmbed > 0 && prov.Network && !env.resolved.LLM.AllowNetwork {
-		fmtError(oops.Hint("Set allow_network = true in the user config file ("+userConfigHint()+") or AI_RULEZ_LLM_ALLOW_NETWORK=1; 'search index --dry-run' shows what would be sent").
+		renderStderr(oops.Hint("Set allow_network = true in the user config file ("+userConfigHint()+") or AI_RULEZ_LLM_ALLOW_NETWORK=1; 'search index --dry-run' shows what would be sent").
 			Errorf("search index would send %d texts (%d bytes) to %s, but the network is disabled", plan.ToEmbed, plan.Bytes, prov.Host))
 		return 1
 	}
@@ -165,23 +165,23 @@ func buildAndWriteIndex(ctx context.Context, out, errOut io.Writer, env *searchE
 	sum := *sumPtr
 	release2, err := skillsearch.Lock(dir, nil)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	defer release2()
 	res, err := skillsearch.Build(ctx, env.items, opts)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	recordBuildResult(errOut, &sum, res)
 	if res.Index == nil {
-		fmtError(oops.Errorf("nothing was embedded: %s", sum.Stopped))
+		renderStderr(oops.Errorf("nothing was embedded: %s", sum.Stopped))
 		return 1
 	}
 	changed, err := writeIfChanged(dir, res.Index)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	sum.Written = changed
@@ -369,17 +369,17 @@ const (
 func runSearchStatus(ctx context.Context, out io.Writer) int {
 	ctx = ctxOrBackground(ctx)
 	if err := checkFormatFlag(searchFlags.format); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	env, err := newSearchEnv(ctx, "")
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	dir, err := env.resolved.IndexPath()
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	prov := env.resolved.Describe()
@@ -395,7 +395,7 @@ func runSearchStatus(ctx context.Context, out io.Writer) int {
 			doc.State, doc.Reason, doc.Hint = stateUnreadable, err.Error(), "rebuild with 'ai-rulez search index --rebuild'"
 		}
 	case err != nil:
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	default:
 		fillIndexStatus(&doc, idx, env, prov)
@@ -472,18 +472,18 @@ func printStatus(out io.Writer, d statusJSON) {
 func runSearchMine(ctx context.Context, out, errOut io.Writer) int {
 	ctx = ctxOrBackground(ctx)
 	if searchSubFlags.minCount < 1 {
-		fmtError(oops.Errorf("--min-count must be at least 1"))
+		renderStderr(oops.Errorf("--min-count must be at least 1"))
 		return 1
 	}
 	env, err := newSearchEnv(ctx, "")
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	path := skillsearch.LogPath(env.cfg.ConfigDir)
 	entries, err := skillsearch.ReadLog(path)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if len(entries) == 0 {
@@ -492,7 +492,7 @@ func runSearchMine(ctx context.Context, out, errOut io.Writer) int {
 	mined := skillsearch.Mine(entries, skillsearch.MineOptions{Known: skillsearch.IDs(env.items), MinCount: searchSubFlags.minCount})
 	raw, err := skillsearch.CasesYAML(0, mined.Cases)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if len(mined.Cases) == 0 {
@@ -500,18 +500,18 @@ func runSearchMine(ctx context.Context, out, errOut io.Writer) int {
 	}
 	if searchFlags.out != "" {
 		if err := os.WriteFile(searchFlags.out, raw, 0o644); err != nil { //nolint:gosec // a cases file the user asked for
-			fmtError(oops.Wrapf(err, "write %s", searchFlags.out))
+			renderStderr(oops.Wrapf(err, "write %s", searchFlags.out))
 			return 1
 		}
 	} else if _, err := out.Write(raw); err != nil {
-		fmtError(oops.Wrapf(err, "write cases"))
+		renderStderr(oops.Wrapf(err, "write cases"))
 		return 1
 	}
 	reportWriter{errOut}.printf("mined %d cases from %d distinct queries (%d never followed by a load, %d ambiguous, %d below --min-count); labels are weak: review before gating\n",
 		len(mined.Cases), mined.Queries, mined.Unlabelled, mined.Ambiguous, mined.Below)
 	if searchSubFlags.purge {
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			fmtError(oops.Wrapf(err, "delete the query log"))
+			renderStderr(oops.Wrapf(err, "delete the query log"))
 			return 1
 		}
 	}

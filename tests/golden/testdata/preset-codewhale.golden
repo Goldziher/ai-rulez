@@ -110,33 +110,33 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .codewhale/commands/build.md
+  remove file: .codewhale/commands/ship.md
+  remove file: .codewhale/mcp.json
+  remove file: .codewhale/rules/always.md
+  remove file: .codewhale/rules/auto.md
+  remove file: .codewhale/rules/manual.md
+  remove file: .codewhale/rules/typescript.md
+  remove file: .codewhale/skills/deployer/SKILL.md
+  remove file: .codewhale/skills/reviewer/SKILL.md
+  remove file: .codewhale/skills/reviewer/references/checklist.md
+  remove file: .codewhale/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove dir (if empty): .codewhale/skills/reviewer/scripts
+  remove dir (if empty): .codewhale/skills/reviewer/references
+  remove dir (if empty): .codewhale/skills/reviewer
+  remove dir (if empty): .codewhale/skills/deployer
+  remove dir (if empty): .codewhale/skills
+  remove dir (if empty): .codewhale/rules
+  remove dir (if empty): .codewhale/commands
+  remove dir (if empty): .codewhale
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .codewhale/commands/build.md
-INFO    remove file: .codewhale/commands/ship.md
-INFO    remove file: .codewhale/mcp.json
-INFO    remove file: .codewhale/rules/always.md
-INFO    remove file: .codewhale/rules/auto.md
-INFO    remove file: .codewhale/rules/manual.md
-INFO    remove file: .codewhale/rules/typescript.md
-INFO    remove file: .codewhale/skills/deployer/SKILL.md
-INFO    remove file: .codewhale/skills/reviewer/SKILL.md
-INFO    remove file: .codewhale/skills/reviewer/references/checklist.md
-INFO    remove file: .codewhale/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .codewhale/skills/reviewer/scripts
-INFO    remove dir (if empty): .codewhale/skills/reviewer/references
-INFO    remove dir (if empty): .codewhale/skills/reviewer
-INFO    remove dir (if empty): .codewhale/skills/deployer
-INFO    remove dir (if empty): .codewhale/skills
-INFO    remove dir (if empty): .codewhale/rules
-INFO    remove dir (if empty): .codewhale/commands
-INFO    remove dir (if empty): .codewhale
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=13 directories=8
+Removed generated files: 13 files, 8 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

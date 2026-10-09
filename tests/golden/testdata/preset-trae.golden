@@ -106,31 +106,31 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .trae/mcp.json
+  remove file: .trae/rules/always.md
+  remove file: .trae/rules/auto.md
+  remove file: .trae/rules/context-architecture.md
+  remove file: .trae/rules/context-overview.md
+  remove file: .trae/rules/manual.md
+  remove file: .trae/rules/typescript.md
+  remove file: .trae/skills/deployer/SKILL.md
+  remove file: .trae/skills/reviewer/SKILL.md
+  remove file: .trae/skills/reviewer/references/checklist.md
+  remove file: .trae/skills/reviewer/scripts/run.sh
+  remove dir (if empty): .trae/skills/reviewer/scripts
+  remove dir (if empty): .trae/skills/reviewer/references
+  remove dir (if empty): .trae/skills/reviewer
+  remove dir (if empty): .trae/skills/deployer
+  remove dir (if empty): .trae/skills
+  remove dir (if empty): .trae/rules
+  remove dir (if empty): .trae
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .trae/mcp.json
-INFO    remove file: .trae/rules/always.md
-INFO    remove file: .trae/rules/auto.md
-INFO    remove file: .trae/rules/context-architecture.md
-INFO    remove file: .trae/rules/context-overview.md
-INFO    remove file: .trae/rules/manual.md
-INFO    remove file: .trae/rules/typescript.md
-INFO    remove file: .trae/skills/deployer/SKILL.md
-INFO    remove file: .trae/skills/reviewer/SKILL.md
-INFO    remove file: .trae/skills/reviewer/references/checklist.md
-INFO    remove file: .trae/skills/reviewer/scripts/run.sh
-INFO    remove dir (if empty): .trae/skills/reviewer/scripts
-INFO    remove dir (if empty): .trae/skills/reviewer/references
-INFO    remove dir (if empty): .trae/skills/reviewer
-INFO    remove dir (if empty): .trae/skills/deployer
-INFO    remove dir (if empty): .trae/skills
-INFO    remove dir (if empty): .trae/rules
-INFO    remove dir (if empty): .trae
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=12 directories=7
+Removed generated files: 12 files, 7 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

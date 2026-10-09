@@ -63,7 +63,7 @@ func TestLocalShow_DefaultDenyAndReveal(t *testing.T) {
 			localShowJSON, localShowReveal = tt.json, tt.reveal
 
 			// Act
-			out := captureStdout(t, func() { localShowCmd.Run(localShowCmd, nil) })
+			out := captureStdout(t, func() { require.NoError(t, localShowCmd.RunE(localShowCmd, nil)) })
 
 			// Assert
 			for _, want := range tt.visible {
@@ -84,10 +84,10 @@ func TestLocalSet_StdinAndStringFlags(t *testing.T) {
 	// Act
 	localSetStdin = true
 	localSetCmd.SetIn(strings.NewReader("123_456\n"))
-	localSetCmd.Run(localSetCmd, []string{"mcp_servers.gh.env.GH_TOKEN"})
+	require.NoError(t, localSetCmd.RunE(localSetCmd, []string{"mcp_servers.gh.env.GH_TOKEN"}))
 	localSetStdin = false
 	localSetString = true
-	localSetCmd.Run(localSetCmd, []string{"description", "true"})
+	require.NoError(t, localSetCmd.RunE(localSetCmd, []string{"description", "true"}))
 
 	// Assert
 	local, err := os.ReadFile(filepath.Join(dir, "config.local.toml"))
@@ -113,7 +113,7 @@ func TestLocalShow_PresetsShowTheMergedResult(t *testing.T) {
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "config.local.toml"), []byte(tt.local+"\n"), 0o600))
 
 			// Act
-			out := captureStdout(t, func() { localShowCmd.Run(localShowCmd, nil) })
+			out := captureStdout(t, func() { require.NoError(t, localShowCmd.RunE(localShowCmd, nil)) })
 
 			// Assert
 			assert.Contains(t, out, "-> "+tt.want)

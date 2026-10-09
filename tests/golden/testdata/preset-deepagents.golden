@@ -108,31 +108,31 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .deepagents/.mcp.json
+  remove file: .deepagents/agents/architect/AGENTS.md
+  remove file: .deepagents/agents/tester/AGENTS.md
+  remove file: .deepagents/hooks.json
+  remove file: .deepagents/skills/deployer/SKILL.md
+  remove file: .deepagents/skills/reviewer/SKILL.md
+  remove file: .deepagents/skills/reviewer/references/checklist.md
+  remove file: .deepagents/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove dir (if empty): .deepagents/skills/reviewer/scripts
+  remove dir (if empty): .deepagents/skills/reviewer/references
+  remove dir (if empty): .deepagents/skills/reviewer
+  remove dir (if empty): .deepagents/skills/deployer
+  remove dir (if empty): .deepagents/skills
+  remove dir (if empty): .deepagents/agents/tester
+  remove dir (if empty): .deepagents/agents/architect
+  remove dir (if empty): .deepagents/agents
+  remove dir (if empty): .deepagents
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .deepagents/.mcp.json
-INFO    remove file: .deepagents/agents/architect/AGENTS.md
-INFO    remove file: .deepagents/agents/tester/AGENTS.md
-INFO    remove file: .deepagents/hooks.json
-INFO    remove file: .deepagents/skills/deployer/SKILL.md
-INFO    remove file: .deepagents/skills/reviewer/SKILL.md
-INFO    remove file: .deepagents/skills/reviewer/references/checklist.md
-INFO    remove file: .deepagents/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .deepagents/skills/reviewer/scripts
-INFO    remove dir (if empty): .deepagents/skills/reviewer/references
-INFO    remove dir (if empty): .deepagents/skills/reviewer
-INFO    remove dir (if empty): .deepagents/skills/deployer
-INFO    remove dir (if empty): .deepagents/skills
-INFO    remove dir (if empty): .deepagents/agents/tester
-INFO    remove dir (if empty): .deepagents/agents/architect
-INFO    remove dir (if empty): .deepagents/agents
-INFO    remove dir (if empty): .deepagents
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=10 directories=9
+Removed generated files: 10 files, 9 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

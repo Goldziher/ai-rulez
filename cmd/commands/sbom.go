@@ -74,10 +74,8 @@ Sign the document with "ai-rulez sign --sbom". The machine-local overlay
 (config.local.*, local/) is never included. Nothing is written unless
 --output is given. Exit codes: 0 ok, 1 could not run, 2 a gate failed.`,
 	Args: sbomArgs,
-	Run: func(cmd *cobra.Command, _ []string) {
-		if code := runSBOM(cmd.OutOrStdout(), cmd.ErrOrStderr(), sbomOpts, cmd.Flags().Changed("timestamp")); code != 0 {
-			os.Exit(code)
-		}
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return exitStatus(runSBOM(cmd.OutOrStdout(), cmd.ErrOrStderr(), sbomOpts, cmd.Flags().Changed("timestamp")))
 	},
 }
 
@@ -201,7 +199,7 @@ func loadSBOMConfig(online bool) (*config.Config, error) {
 // run, exitDrift when --require-lock, --strict-pins or --check fails.
 func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 	if err := f.validate(); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	format, _ := sbom.NormalizeFormat(f.format) //nolint:errcheck // validated above
@@ -215,12 +213,12 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 	}
 	stamp, err := documentTime(f.timestamp, timestampSet, os.Getenv(sourceDateEpochEnv), now)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	cfg, err := loadSBOMConfig(f.online)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	opts := sbom.Options{
@@ -229,13 +227,13 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 	}
 	if f.verify {
 		if opts.Signature, err = lockSignature(cfg); err != nil {
-			fmtError(err)
+			renderStderr(err)
 			return 1
 		}
 	}
 	bom, err := sbom.Build(cfg, Version, opts)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if code := sbomGates(errOut, f, bom); code != 0 {
@@ -243,7 +241,7 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 	}
 	var buf bytes.Buffer
 	if err := sbom.Render(&buf, bom, format); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	switch {
@@ -251,13 +249,13 @@ func runSBOM(out, errOut io.Writer, f sbomFlags, timestampSet bool) int {
 		return checkSBOM(out, errOut, f.output, buf.Bytes())
 	case f.output == "":
 		if _, err := out.Write(buf.Bytes()); err != nil {
-			fmtError(oops.Wrapf(err, "write sbom"))
+			renderStderr(oops.Wrapf(err, "write sbom"))
 			return 1
 		}
 		return 0
 	}
 	if err := os.WriteFile(f.output, buf.Bytes(), sbomFileMode); err != nil { //nolint:gosec // an SBOM is meant to be shared
-		fmtError(oops.With("path", f.output).Wrapf(err, "write sbom"))
+		renderStderr(oops.With("path", f.output).Wrapf(err, "write sbom"))
 		return 1
 	}
 	return 0
@@ -298,12 +296,12 @@ func checkSBOM(out, errOut io.Writer, path string, fresh []byte) int {
 		return exitDrift
 	}
 	if err != nil {
-		fmtError(oops.With("path", path).Wrapf(err, "read the committed sbom"))
+		renderStderr(oops.With("path", path).Wrapf(err, "read the committed sbom"))
 		return 1
 	}
 	diffs, err := sbom.Drift(committed, fresh)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if len(diffs) == 0 {

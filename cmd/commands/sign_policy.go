@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/policy"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 )
@@ -17,16 +16,16 @@ import (
 func runSignPolicy(ctx context.Context, env ambient.Env) int {
 	signer, err := newSigner(ctx, env)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if err := exportPublicKey(signer); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	bundle, err := policy.SignPolicyFile(ctx, signer, signPolicy, time.Now())
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	out := signOutput
@@ -34,14 +33,15 @@ func runSignPolicy(ctx context.Context, env ambient.Env) int {
 		out = signPolicy + policy.SidecarSuffix
 	}
 	if out, err = appendTarget(out); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if err := writeBundle(out, bundle); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	info, _ := signing.Inspect(bundle) //nolint:errcheck // display only
-	logger.Success("Signed policy", "path", signPolicy, "signer", signerLabel(info), "bundle", out)
+	reportSigned(ctx, "Signed policy", map[string]any{keyKind: "policy", keyPath: signPolicy, keySigner: signerLabel(info), keyBundle: out},
+		"path", signPolicy, "signer", signerLabel(info), "bundle", out)
 	return 0
 }

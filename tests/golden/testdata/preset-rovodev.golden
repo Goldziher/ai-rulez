@@ -105,28 +105,28 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .rovodev/.review-agent.md
+  remove file: .rovodev/skills/deployer/SKILL.md
+  remove file: .rovodev/skills/reviewer/SKILL.md
+  remove file: .rovodev/skills/reviewer/references/checklist.md
+  remove file: .rovodev/skills/reviewer/scripts/run.sh
+  remove file: .rovodev/subagents/architect.md
+  remove file: .rovodev/subagents/tester.md
+  remove file: AGENTS.md
+  remove dir (if empty): .rovodev/subagents
+  remove dir (if empty): .rovodev/skills/reviewer/scripts
+  remove dir (if empty): .rovodev/skills/reviewer/references
+  remove dir (if empty): .rovodev/skills/reviewer
+  remove dir (if empty): .rovodev/skills/deployer
+  remove dir (if empty): .rovodev/skills
+  remove dir (if empty): .rovodev
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .rovodev/.review-agent.md
-INFO    remove file: .rovodev/skills/deployer/SKILL.md
-INFO    remove file: .rovodev/skills/reviewer/SKILL.md
-INFO    remove file: .rovodev/skills/reviewer/references/checklist.md
-INFO    remove file: .rovodev/skills/reviewer/scripts/run.sh
-INFO    remove file: .rovodev/subagents/architect.md
-INFO    remove file: .rovodev/subagents/tester.md
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .rovodev/subagents
-INFO    remove dir (if empty): .rovodev/skills/reviewer/scripts
-INFO    remove dir (if empty): .rovodev/skills/reviewer/references
-INFO    remove dir (if empty): .rovodev/skills/reviewer
-INFO    remove dir (if empty): .rovodev/skills/deployer
-INFO    remove dir (if empty): .rovodev/skills
-INFO    remove dir (if empty): .rovodev
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=9 directories=7
+Removed generated files: 9 files, 7 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

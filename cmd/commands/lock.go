@@ -18,6 +18,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockrun"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/render"
 )
 
 var (
@@ -85,7 +86,7 @@ Exit codes: 0 ok; 1 the command could not run (a tool error); 2 --check found
 a stale lock (drift) or the pre-pin scan refused a tree; 3 the lock was written but served skills were left
 unpinned because the security scan refuses them. Over several roots
 (--recursive) the most severe code wins: 1, then 2, then 3.`,
-	Run: runLock,
+	RunE: runLock,
 }
 
 func init() {
@@ -126,14 +127,11 @@ func kindOrNames(kind string) string {
 	return kind
 }
 
-func runLock(_ *cobra.Command, args []string) {
+func runLock(_ *cobra.Command, args []string) error {
 	if err := validateLockFlags(args); err != nil {
-		fmtError(err)
-		os.Exit(1)
+		return fail(err)
 	}
-	if code := runLockFor(lockKind, args); code != 0 {
-		os.Exit(code)
-	}
+	return exitStatus(runLockFor(lockKind, args))
 }
 
 // validateLockFlags rejects flag combinations `lock` cannot honor.
@@ -290,7 +288,7 @@ func writeLockAtContext(ctx context.Context, path, kind string, names []string) 
 		if errors.As(err, &refused) && refused.Sources > 0 {
 			fmt.Fprintln(os.Stderr, refused.Error())
 		} else {
-			fmtError(err)
+			renderError(os.Stderr, err)
 		}
 		return lockrun.ExitCode(res, err)
 	}
@@ -385,8 +383,12 @@ func lockProfileFor(lock *lockfile.File) string {
 
 // checkLockAt is `lock --check`: the content comparison, then the attestation
 // check when [signing] require names the lock.
-func checkLockAt(path string) int {
-	code, upToDate := checkLockContentAt(path)
+func checkLockAt(path string) int { return checkLockOut(path, defaultOut()) }
+
+// checkLockOut is checkLockAt writing its report and verdict to out, for a caller
+// (publish) that embeds the check and keeps stdout for its own document.
+func checkLockOut(path string, out render.Out) int {
+	code, upToDate := checkLockContentAt(path, out)
 	if code == 1 {
 		return code
 	}
@@ -406,10 +408,10 @@ func checkLockAt(path string) int {
 // checkLockContentAt compares the lock with the sources. The second result is
 // the success report, run by the caller once every other check has passed too, so
 // "up to date" is never printed before a signature failure.
-func checkLockContentAt(path string) (code int, report func()) {
+func checkLockContentAt(path string, out render.Out) (code int, report func()) {
 	cfg, remoteSkipped, err := loadForLockCheck(path)
 	if err != nil {
-		fmtErrorFormat(lockFormat, err)
+		reportFailure(lockFormat, err)
 		if errors.Is(err, config.ErrLockViolation) {
 			return exitDrift, nil // fetched or cached remote content disagrees with the lock: drift, not a tool failure
 		}
@@ -418,18 +420,18 @@ func checkLockContentAt(path string) (code int, report func()) {
 	// A project that was never locked has nothing to verify: "up to date" would be a lie.
 	// Under [lock] enforce the missing lock is a drift finding (exit 2) from the comparison below.
 	if lock, loadErr := lockfile.Load(cfg.ConfigDir); loadErr == nil && lock == nil && !cfg.LockEnforced() {
-		fmtErrorFormat(lockFormat, oops.Hint("run `ai-rulez lock` to create it").Errorf("no %s in %s: nothing to check", lockfile.FileName, cfg.ConfigDir))
+		reportFailure(lockFormat, oops.Hint("run `ai-rulez lock` to create it").Errorf("no %s in %s: nothing to check", lockfile.FileName, cfg.ConfigDir))
 		return 1, nil
 	}
 	diff, err := govview.CheckLockRoles(cmdContext(), cfg, remoteSkipped, lockProfile, Version, dynamicLockChanges, govview.RoleSelection{Only: lockRoleNames()})
 	if err != nil {
-		fmtErrorFormat(lockFormat, err)
+		reportFailure(lockFormat, err)
 		return 1, nil
 	}
 	if lockFormat == formatJSON {
 		// The same document as the MCP lock_status tool; the exit code still gates.
 		if err := diff.WriteJSON(os.Stdout); err != nil {
-			fmtError(err)
+			renderError(os.Stderr, err)
 			return 1, nil
 		}
 		if !diff.InSync {
@@ -438,9 +440,10 @@ func checkLockContentAt(path string) (code int, report func()) {
 		return 0, nil
 	}
 	if !diff.InSync {
-		fmt.Fprintf(os.Stderr, "%s does not match %s:\n", lockfile.FileName, cfg.ConfigDir)
-		if werr := diff.WriteText(os.Stderr); werr != nil {
-			fmtError(werr)
+		// The drift report is the result of --check: stdout, so -q keeps it; the remedy is a diagnostic.
+		out.Result("%s does not match %s:\n", lockfile.FileName, cfg.ConfigDir)
+		if werr := diff.WriteText(out.Stdout()); werr != nil {
+			renderError(os.Stderr, werr)
 		}
 		fmt.Fprintln(os.Stderr, "run `ai-rulez lock` to refresh it (after reviewing the change with `ai-rulez lock --diff`)")
 		return exitDrift, nil
@@ -448,7 +451,8 @@ func checkLockContentAt(path string) (code int, report func()) {
 	for _, n := range diff.Notes {
 		logger.Info(n)
 	}
-	return 0, func() { logger.Success("Lock file is up to date", "config", cfg.ConfigDir) }
+	// The verdict is the result of --check: stdout, so -q keeps it.
+	return 0, func() { out.Result("Lock file is up to date (%s)\n", cfg.ConfigDir) }
 }
 
 // diffLockAt prints how the sources and outputs differ from the lock. It exits 0
@@ -456,17 +460,17 @@ func checkLockContentAt(path string) (code int, report func()) {
 func diffLockAt(path string) int {
 	cfg, remoteSkipped, err := loadForLockCheck(path)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	diff, err := lockDiff(cfg, lock, lockProfileFor(lock), remoteSkipped)
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	switch {
@@ -479,7 +483,7 @@ func diffLockAt(path string) int {
 		err = diff.WriteText(os.Stdout)
 	}
 	if err != nil {
-		fmtError(err)
+		renderError(os.Stderr, err)
 		return 1
 	}
 	return 0

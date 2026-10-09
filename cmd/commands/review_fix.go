@@ -64,10 +64,7 @@ had no safe fix, 1 when it could not run or a patch is stale.`,
 		if err != nil {
 			return err
 		}
-		if code != 0 {
-			os.Exit(code)
-		}
-		return nil
+		return exitStatus(code)
 	},
 }
 

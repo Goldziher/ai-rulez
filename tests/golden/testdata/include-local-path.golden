@@ -122,9 +122,10 @@ vendor/team/skills/tk/SKILL.md file 0644 46 acd7dbf49b6e2b291ea7ee6bcb125725c1d0
 ## step 2: ai-rulez include list
 exit: 0
 --- stdout
+Includes:
+  • team [local]
+    Source: ./vendor/team
 --- stderr
-INFO  Includes:
-INFO    • team [local]
 --- project tree
 .agents/ dir 0755
 .agents/skills/ dir 0755

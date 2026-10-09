@@ -54,12 +54,15 @@ catalogs differ.`,
   ai-rulez catalog diff v5.0.0 HEAD --format json
   ai-rulez catalog diff before.json after.json --exit-code`,
 	Args: cobra.RangeArgs(1, 2),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		identical, err := runCatalogDiff(watchParentContext(cmd), cmd.OutOrStdout(), args)
-		exitOn(err)
-		if catalogDiffExitCode && !identical {
-			os.Exit(exitCatalogDrift)
+		if err != nil {
+			return fail(err)
 		}
+		if catalogDiffExitCode && !identical {
+			return exitStatus(exitCatalogDrift)
+		}
+		return nil
 	},
 }
 

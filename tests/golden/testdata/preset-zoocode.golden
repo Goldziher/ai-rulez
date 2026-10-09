@@ -116,30 +116,30 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .roo/commands/build.md
+  remove file: .roo/commands/ship.md
+  remove file: .roo/mcp.json
+  remove file: .roo/skills/deployer/SKILL.md
+  remove file: .roo/skills/reviewer/SKILL.md
+  remove file: .roo/skills/reviewer/references/checklist.md
+  remove file: .roo/skills/reviewer/scripts/run.sh
+  remove file: .vscode/settings.json
+  remove file: AGENTS.md
+  remove dir (if empty): .vscode
+  remove dir (if empty): .roo/skills/reviewer/scripts
+  remove dir (if empty): .roo/skills/reviewer/references
+  remove dir (if empty): .roo/skills/reviewer
+  remove dir (if empty): .roo/skills/deployer
+  remove dir (if empty): .roo/skills
+  remove dir (if empty): .roo/commands
+  remove dir (if empty): .roo
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .roo/commands/build.md
-INFO    remove file: .roo/commands/ship.md
-INFO    remove file: .roo/mcp.json
-INFO    remove file: .roo/skills/deployer/SKILL.md
-INFO    remove file: .roo/skills/reviewer/SKILL.md
-INFO    remove file: .roo/skills/reviewer/references/checklist.md
-INFO    remove file: .roo/skills/reviewer/scripts/run.sh
-INFO    remove file: .vscode/settings.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .vscode
-INFO    remove dir (if empty): .roo/skills/reviewer/scripts
-INFO    remove dir (if empty): .roo/skills/reviewer/references
-INFO    remove dir (if empty): .roo/skills/reviewer
-INFO    remove dir (if empty): .roo/skills/deployer
-INFO    remove dir (if empty): .roo/skills
-INFO    remove dir (if empty): .roo/commands
-INFO    remove dir (if empty): .roo
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=10 directories=8
+Removed generated files: 10 files, 8 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

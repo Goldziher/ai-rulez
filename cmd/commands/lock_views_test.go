@@ -60,21 +60,21 @@ func TestLock_IncludeStaticViewIsPinnedCheckedAndRefreshed(t *testing.T) {
 	views := servedByView(t, root)
 	assert.ElementsMatch(t, views[""], views["static"])
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
-	assert.Equal(t, 0, code, stderr)
+	report, _ := capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, 0, code, report)
 
 	// A change to a skill of the view is reported once per view that serves it.
 	writeFile(t, filepath.Join(root, ".ai-rulez", "domains", "backend", "skills", "migrate", "SKILL.md"),
 		"---\nname: migrate\ndescription: Use when you need migrate, edited.\n---\nEdited.\n")
-	_, stderr = capture(t, func() { code = checkLockAt("") })
+	report, _ = capture(t, func() { code = checkLockAt("") })
 	assert.Equal(t, exitDrift, code)
-	assert.Contains(t, stderr, "(view static)")
+	assert.Contains(t, report, "(view static)")
 
 	// A plain `lock` keeps recorded views current without being told about them.
 	lockServeIncludeStatic = false
 	require.Equal(t, 0, writeLockAt("", "", nil))
-	_, stderr = capture(t, func() { code = checkLockAt("") })
-	assert.Equal(t, 0, code, stderr)
+	report, _ = capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, 0, code, report)
 	assert.Contains(t, servedByView(t, root), "static", "the recorded view stays pinned")
 }
 
@@ -92,8 +92,8 @@ func TestLock_TargetsViewIsPinnedAndChecked(t *testing.T) {
 	// Assert: the view is pinned under its own key and --check evaluates it.
 	assert.ElementsMatch(t, []string{"deploy", "migrate", "ui"}, servedByView(t, root)["targets:claude"])
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
-	assert.Equal(t, 0, code, stderr)
+	report, _ := capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, 0, code, report)
 }
 
 func TestLock_RemovedRoleViewIsDropped(t *testing.T) {

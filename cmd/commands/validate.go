@@ -44,45 +44,33 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 	Aliases: []string{"val", "v", "check"},
 	Args:    cobra.MaximumNArgs(1),
 	PreRunE: func(*cobra.Command, []string) error { return validatePreRun() },
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmdContext()
 		if validateExplain != "" {
-			if err := runExplain(cmd.OutOrStdout(), validateExplain, validateFormat); err != nil {
-				fmtError(err)
-				os.Exit(1)
-			}
-			return
+			return fail(runExplain(cmd.OutOrStdout(), validateExplain, validateFormat))
 		}
 		if validateShowPolicy {
-			os.Exit(runShowPolicy(ctx, args, cmd.OutOrStdout()))
+			return exitStatus(runShowPolicy(ctx, args, cmd.OutOrStdout()))
 		}
 		if err := checkStrictFlags(); err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if err := applyRepoRoot(); err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		// JSON output must be the only thing on stdout.
 		applyValidateQuiet()
 
 		if validateRecursive {
 			if len(args) > 0 {
-				fmtError(oops.Errorf("validate --recursive does not take a config file argument"))
-				os.Exit(1)
+				return fail(oops.Errorf("validate --recursive does not take a config file argument"))
 			}
-			if code := runRecursiveValidate(); code != 0 {
-				os.Exit(code)
-			}
-			return
+			return exitStatus(runRecursiveValidate())
 		}
 
 		cfg, err := loadConfigForCommand(ctx, args, config.WithFrontmatterErrors())
 		if err != nil {
-			logger.Error("Failed to load config")
-			fmtErrorFormat(validateFormat, err)
-			os.Exit(1)
+			return fail(err)
 		}
 
 		// Validate the raw file against the JSON schema first so a key the
@@ -90,16 +78,12 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		if cfg.ConfigFile != "" {
 			configPath := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
 			if err := schema.ValidateFile(configPath); err != nil {
-				logger.Error("Configuration failed schema validation", "path", configPath)
-				fmtError(schemaFailure(cfg, err))
-				os.Exit(1)
+				return fail(schemaFailure(cfg, err))
 			}
 		}
 
 		if err := validateLocalOverlay(cfg); err != nil {
-			logger.Error("Local overlay failed schema validation", "path", cfg.LocalOverlay.Path)
-			fmtError(schemaFailure(cfg, err))
-			os.Exit(1)
+			return fail(schemaFailure(cfg, err))
 		}
 		if cfg.LocalOverlay != nil {
 			progress.PrintIfNotQuiet("%s\n", localOverlaySummary(cfg))
@@ -107,21 +91,16 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 
 		cfg.DeferMalformedFrontmatter = validateStrict
 		if err := cfg.Validate(); err != nil {
-			logger.Error("Configuration validation failed", "path", cfg.ConfigDir)
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if err := checkLocalIncludes(cfg); err != nil {
-			logger.Error("Configuration validation failed", "path", cfg.ConfigDir)
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 
 		if !validateStrict {
 			// A strict run reports the same attempts as AR74x findings.
 			if err := policyGate(cfg); err != nil {
-				fmtError(err)
-				os.Exit(exitCodeFor(err))
+				return fail(err)
 			}
 		}
 
@@ -132,18 +111,16 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		}
 		warnWorktreeMarketplace(cfg)
 		if !validateConfigOnly && validateOKFTree(cfg, os.Stderr) {
-			os.Exit(exitOKFProblems)
+			return exitStatus(exitOKFProblems)
 		}
 		if validateStrict {
-			if code := runStrictSingle(cfg); code != 0 {
-				os.Exit(code)
-			}
-			return
+			return exitStatus(runStrictSingle(cfg))
 		}
 		presets.WarnDuplicateContent(cfg.Log(), cfg.Content)
 		warnUnpinned(cfg)
 		warnFrontmatter(cfg)
 		displayConfigurationSummary(cfg)
+		return nil
 	},
 }
 
@@ -209,7 +186,7 @@ func runRecursiveValidate() int {
 			}
 		}
 		if err := checkAllowEgress(all...); err != nil {
-			fmtError(err)
+			renderError(os.Stderr, err)
 			return 1
 		}
 	}
@@ -217,7 +194,7 @@ func runRecursiveValidate() int {
 		cfg, err := validateConfigFile(configPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
-			fmtError(err)
+			renderError(os.Stderr, err)
 			failed = append(failed, configPath)
 			if errors.Is(err, config.ErrPolicyLoosens) {
 				loosened++
@@ -233,7 +210,7 @@ func runRecursiveValidate() int {
 			report, lerr := strictLint(cmdContext(), cfg)
 			if lerr != nil {
 				fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
-				fmtError(lerr)
+				renderError(os.Stderr, lerr)
 				failed = append(failed, configPath)
 				continue
 			}
@@ -400,9 +377,9 @@ as programs (those that declare egress = true also need --allow-egress).
 Configure it in [lint] and [lint.security]. Exit codes: 0 clean, 1 the
 configuration could not be loaded, 2 findings at or above --fail-on.`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		validateStrict, strictSecurityOnly = true, true
-		ValidateCmd.Run(cmd, args)
+		return ValidateCmd.RunE(cmd, args)
 	},
 }
 

@@ -2,7 +2,6 @@ package commands
 
 import (
 	"errors"
-	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
@@ -53,67 +52,57 @@ Exit codes: 0 verified, 1 the check could not run, 2 generated files differ (wit
 --attestation: the attestation failed verification; with --approvals: an approval
 no longer holds).`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := rejectApprovalFlags(cmd); err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if err := checkVerifySelfFlags(cmd); err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if verifySelf {
-			os.Exit(runVerifySelf("", nil, cmd.OutOrStdout()))
+			return exitStatus(runVerifySelf("", nil, cmd.OutOrStdout()))
 		}
 		if verifyApprovals {
-			os.Exit(runVerifyApprovals(args, cmd.OutOrStdout()))
+			return exitStatus(runVerifyApprovals(args, cmd.OutOrStdout()))
 		}
 		if verifyArtifactMode() {
 			verifyAttestation = true // --bundle, --skill and --sbom imply --attestation
 		}
 		if err := rejectAttestationFlags(cmd); err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if verifyAttestation {
-			os.Exit(runVerifyAttestation(args, nil, cmd.OutOrStdout()))
+			return exitStatus(runVerifyAttestation(args, nil, cmd.OutOrStdout()))
 		}
 		if !verifyPlugin {
 			if verifyIfConfigured || verifyIfGenerated {
-				fmtError(oops.Errorf("--if-configured and --if-generated only apply to --plugin"))
-				os.Exit(1)
+				return fail(oops.Errorf("--if-configured and --if-generated only apply to --plugin"))
 			}
-			if code := runDriftCheck(args, verifyRecursive, driftManifest); code != 0 {
-				os.Exit(code)
-			}
-			return
+			return exitStatus(runDriftCheck(args, verifyRecursive, driftManifest))
 		}
 		if verifyRecursive {
-			runRecursivePluginVerify()
-			return
+			return runRecursivePluginVerify()
 		}
 		cfg, err := loadConfigForCommand(cmdContext(), args, config.WithoutLocal())
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if err := cfg.Validate(); err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if verifyIfConfigured && !cfg.HasPluginAuthoring() {
 			logger.Info("Skipping plugin verification: no plugin authoring configuration")
-			return
+			return nil
 		}
 		if err := generator.NewGenerator(cfg).VerifyPlugin(profile); err != nil {
 			if verifyIfGenerated && errors.Is(err, generator.ErrPluginNotGenerated) {
 				logger.Info("Skipping plugin verification: the plugin bundle has not been generated")
-				return
+				return nil
 			}
-			fmtError(err)
-			os.Exit(pluginVerifyExitCode(err))
+			return failWithCode(pluginVerifyExitCode(err), err)
 		}
 		logger.Success("Generated plugin artifacts are valid", "path", cfg.BaseDir)
+		return nil
 	},
 }
 
