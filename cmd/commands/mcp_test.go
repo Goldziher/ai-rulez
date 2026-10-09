@@ -15,7 +15,8 @@ func TestMCPCommand(t *testing.T) {
 
 	flags := commands.MCPCmd.Flags()
 
-	transportFlag := flags.Lookup("transport")
-	assert.NotNil(t, transportFlag)
-	assert.True(t, transportFlag.Hidden)
+	for _, dead := range []string{"transport", "address", "port"} {
+		assert.Nil(t, flags.Lookup(dead), "--%s was never read and is removed", dead)
+	}
+	assert.NotNil(t, flags.Lookup("serve-skills"))
 }

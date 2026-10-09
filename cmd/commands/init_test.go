@@ -18,13 +18,13 @@ func TestInitCommand(t *testing.T) {
 	flags := commands.InitCmd.Flags()
 
 	// Flags
-	assert.Nil(t, flags.Lookup("format"), "init writes config.toml only")
+	assert.NotNil(t, flags.Lookup("format"), "init prints its result as text or json")
+	assert.Nil(t, commands.InitCmd.LocalNonPersistentFlags().Lookup("config-dir"), "--config-dir is the global flag")
 	assert.NotNil(t, flags.Lookup("domains"))
 	assert.NotNil(t, flags.Lookup("skip-content"))
 	assert.NotNil(t, flags.Lookup("from"))
 	assert.NotNil(t, flags.Lookup("setup-hooks"))
 	assert.NotNil(t, flags.Lookup("yes"))
-	assert.NotNil(t, flags.Lookup("config-dir"))
 	assert.Equal(t, "d", flags.Lookup("domains").Shorthand)
 	assert.Equal(t, "s", flags.Lookup("skip-content").Shorthand)
 	assert.Equal(t, "F", flags.Lookup("from").Shorthand)
