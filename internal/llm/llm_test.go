@@ -3,13 +3,10 @@ package llm
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,13 +40,9 @@ func TestFakeIsDeterministic(t *testing.T) {
 	}
 }
 
-// allowed enables the network and pins the pure-Go backend, so the tests mean the
-// same thing in a -tags literllm build where auto would pick the native one.
+// allowed enables the network.
 func allowed(cfg Config) Config {
 	cfg.AllowNetwork = true
-	if cfg.Backend == "" {
-		cfg.Backend = BackendOpenAICompat
-	}
 	return cfg
 }
 
@@ -71,7 +64,7 @@ func TestBudgetFailsClosed(t *testing.T) {
 	ctx := context.Background()
 	t.Run("max_calls", func(t *testing.T) {
 		f := NewFake()
-		m := Wrap(f, allowed(Config{Model: "gpt-4o-mini", MaxCalls: 2, Cache: ptr(false)}), Options{Retry: &RetryPolicy{}})
+		m := Wrap(f, allowed(Config{Model: "gpt-4o-mini", MaxCalls: 2, Cache: ptr(false)}), Options{})
 		for i := range 2 {
 			if _, err := m.Chat(ctx, chatReq(fmt.Sprint(i))); err != nil {
 				t.Fatal(err)
@@ -148,7 +141,7 @@ func TestCacheHitMissAndVersionBump(t *testing.T) {
 	dir := t.TempDir()
 	f := NewFake()
 	cfg := allowed(Config{Model: "gpt-4o-mini", MaxCalls: 10})
-	m := Wrap(f, cfg, Options{ConfigDir: dir, Retry: &RetryPolicy{}})
+	m := Wrap(f, cfg, Options{ConfigDir: dir})
 
 	first, err := m.Chat(ctx, chatReq("same"))
 	if err != nil || first.Cached {
@@ -260,67 +253,6 @@ func (f *failing) Chat(context.Context, ChatRequest) (ChatResponse, error) {
 	return ChatResponse{}, f.err
 }
 
-func TestRetry(t *testing.T) {
-	ctx := context.Background()
-	var slept []time.Duration
-	policy := RetryPolicy{Retries: 3, Rand: func() float64 { return 1 }, Sleep: func(_ context.Context, d time.Duration) error { slept = append(slept, d); return nil }}
-
-	flaky := &flaky{failUntil: 2}
-	resp, err := WithRetry(flaky, policy).Chat(ctx, chatReq("x"))
-	if err != nil || resp.Text != "ok" || flaky.n != 3 || len(slept) != 2 {
-		t.Fatalf("resp=%+v err=%v calls=%d sleeps=%v", resp, err, flaky.n, slept)
-	}
-	if slept[1] <= slept[0] || slept[0] > 500*time.Millisecond {
-		t.Fatalf("backoff should grow and stay within the jitter ceiling: %v", slept)
-	}
-
-	for _, e := range []*Error{{Kind: KindAuth}, {Kind: KindContextLength}, {Kind: KindBudget}, {Kind: KindProvider, Status: 400}} {
-		f := &failing{err: e}
-		if _, err := WithRetry(f, policy).Chat(ctx, chatReq("x")); err == nil || f.calls.Load() != 1 {
-			t.Fatalf("%s must not be retried, calls=%d", e.Kind, f.calls.Load())
-		}
-	}
-
-	exhausted := &failing{err: &Error{Kind: KindRateLimit, Status: 429, RetryAfter: 2 * time.Second}}
-	slept = nil
-	if _, err := WithRetry(exhausted, policy).Chat(ctx, chatReq("x")); !errors.Is(err, ErrRateLimit) || exhausted.calls.Load() != 4 {
-		t.Fatalf("want 4 attempts then rate limit error, got %v after %d", err, exhausted.calls.Load())
-	}
-	if slept[0] != 2*time.Second {
-		t.Fatalf("Retry-After must be honored, slept %v", slept[0])
-	}
-
-	cctx, cancel := context.WithCancel(ctx)
-	cancel()
-	f := &failing{err: &Error{Kind: KindRateLimit}}
-	WithRetry(f, policy).Chat(cctx, chatReq("x"))
-	if f.calls.Load() != 1 {
-		t.Fatal("canceled context must stop retries")
-	}
-}
-
-type flaky struct {
-	Fake
-	failUntil, n int
-}
-
-func (f *flaky) Chat(context.Context, ChatRequest) (ChatResponse, error) {
-	f.n++
-	if f.n <= f.failUntil {
-		return ChatResponse{}, &Error{Kind: KindProvider, Status: 503, Message: "unavailable"}
-	}
-	return ChatResponse{Text: "ok"}, nil
-}
-
-func TestRetriesCountAgainstBudget(t *testing.T) {
-	f := &flaky{failUntil: 10}
-	m := Wrap(f, allowed(Config{Model: "gpt-4o-mini", MaxCalls: 2, Cache: ptr(false)}), Options{Retry: &RetryPolicy{Retries: 5, Sleep: func(context.Context, time.Duration) error { return nil }}})
-	_, err := m.Chat(context.Background(), chatReq("x"))
-	if !errors.Is(err, ErrBudget) || f.n != 2 {
-		t.Fatalf("retries must be bounded by max_calls: err=%v calls=%d", err, f.n)
-	}
-}
-
 func TestTimeout(t *testing.T) {
 	slow := &slowClient{}
 	c := withGate(slow, true, 0)
@@ -357,146 +289,6 @@ func TestDryRunSendsNothing(t *testing.T) {
 	}
 }
 
-func TestOpenAICompat(t *testing.T) {
-	var gotAuth, gotPath string
-	var gotBody map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotAuth, gotPath = r.Header.Get("Authorization"), r.URL.Path
-		gotBody = nil
-		_ = json.NewDecoder(r.Body).Decode(&gotBody)
-		switch {
-		case strings.HasSuffix(r.URL.Path, "/embeddings"):
-			fmt.Fprint(w, `{"model":"text-embedding-3-small","data":[{"index":1,"embedding":[3,4]},{"index":0,"embedding":[1,2]}],"usage":{"prompt_tokens":4,"total_tokens":4}}`)
-		default:
-			fmt.Fprint(w, `{"model":"gpt-4o-mini","choices":[{"message":{"role":"assistant","content":"{\"score\":0.5}"}}],"usage":{"prompt_tokens":1000000,"completion_tokens":1000000}}`)
-		}
-	}))
-	defer srv.Close()
-	env := map[string]string{"MY_KEY": "sk-live-very-secret-123456"}
-	opts := Options{Getenv: func(k string) string { return env[k] }, HTTPClient: srv.Client()}
-	cfg := allowed(Config{Model: "gpt-4o-mini", EmbeddingModel: "text-embedding-3-small", BaseURL: srv.URL + "/v1/", APIKeyEnv: "MY_KEY", Cache: ptr(false)})
-	m, err := New(cfg, opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer m.Close()
-
-	req := chatReq("grade this")
-	req.ResponseFormat = &JSONSchemaFormat{Name: "verdict", Schema: map[string]any{"type": "object"}}
-	req.MaxTokens = 50
-	resp, err := m.Chat(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if gotPath != "/v1/chat/completions" || gotAuth != "Bearer "+env["MY_KEY"] || gotBody["model"] != "gpt-4o-mini" || gotBody["max_tokens"] != float64(50) {
-		t.Fatalf("request: path=%s auth=%s body=%v", gotPath, gotAuth, gotBody)
-	}
-	rf := gotBody["response_format"].(map[string]any)
-	if rf["type"] != "json_schema" || rf["json_schema"].(map[string]any)["name"] != "verdict" {
-		t.Fatalf("response_format: %v", rf)
-	}
-	// 1M prompt + 1M completion tokens at gpt-4o-mini prices = $0.15 + $0.60
-	if resp.Text != `{"score":0.5}` || !resp.CostKnown || resp.CostUSD < 0.7499 || resp.CostUSD > 0.7501 || resp.Usage.PromptTokens != 1000000 {
-		t.Fatalf("response: %+v", resp)
-	}
-
-	emb, err := m.Embed(context.Background(), EmbedRequest{Input: []string{"a", "b"}})
-	if err != nil || gotPath != "/v1/embeddings" || fmt.Sprint(emb.Vectors) != "[[1 2] [3 4]]" {
-		t.Fatalf("embed: %v %v %s", emb, err, gotPath)
-	}
-	if _, err := m.Embed(context.Background(), EmbedRequest{Input: []string{"a", "b", "c"}}); !errors.Is(err, ErrProvider) {
-		t.Fatalf("count mismatch must be a provider error: %v", err)
-	}
-}
-
-func TestOpenAICompatErrors(t *testing.T) {
-	cases := []struct {
-		status  int
-		header  string
-		body    string
-		want    *Error
-		wantMsg string
-	}{
-		{401, "", `{"error":{"message":"Incorrect API key provided: sk-live-very-secret-123456"}}`, ErrAuth, ""},
-		{429, "3", `{"error":{"message":"slow down"}}`, ErrRateLimit, ""},
-		{400, "", `{"error":{"message":"This model's maximum context length is 8192 tokens","code":"context_length_exceeded"}}`, ErrContextLength, ""},
-		{503, "", `upstream down`, ErrProvider, "upstream down"},
-		{400, "", `{"error":{"message":"bad field"}}`, ErrProvider, "bad field"},
-	}
-	for _, tc := range cases {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			if tc.header != "" {
-				w.Header().Set("Retry-After", tc.header)
-			}
-			w.WriteHeader(tc.status)
-			fmt.Fprint(w, tc.body)
-		}))
-		cfg := allowed(Config{Model: "m", BaseURL: srv.URL, APIKeyEnv: "K", Cache: ptr(false), MaxRetries: -1})
-		m, err := New(cfg, Options{Getenv: func(string) string { return "sk-live-very-secret-123456" }, HTTPClient: srv.Client()})
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = m.Chat(context.Background(), chatReq("x"))
-		srv.Close()
-		var e *Error
-		if !errors.Is(err, tc.want) || !errors.As(err, &e) || e.Status != tc.status {
-			t.Fatalf("status %d: got %v", tc.status, err)
-		}
-		if strings.Contains(err.Error(), "very-secret") {
-			t.Fatalf("error leaks the key: %v", err)
-		}
-		if tc.wantMsg != "" && !strings.Contains(err.Error(), tc.wantMsg) {
-			t.Fatalf("message %q missing %q", err, tc.wantMsg)
-		}
-		if tc.status == 429 && e.RetryAfter != 3*time.Second {
-			t.Fatalf("retry-after: %v", e.RetryAfter)
-		}
-	}
-}
-
-func TestOpenAICompatRetriesTransient(t *testing.T) {
-	var n atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		if n.Add(1) < 3 {
-			w.WriteHeader(502)
-			return
-		}
-		fmt.Fprint(w, `{"choices":[{"message":{"content":"done"}}],"usage":{"prompt_tokens":1,"completion_tokens":1}}`)
-	}))
-	defer srv.Close()
-	m, _ := New(allowed(Config{Model: "m", BaseURL: srv.URL, Cache: ptr(false)}), Options{HTTPClient: srv.Client(), Retry: &RetryPolicy{Retries: 3, Sleep: func(context.Context, time.Duration) error { return nil }}})
-	resp, err := m.Chat(context.Background(), chatReq("x"))
-	if err != nil || resp.Text != "done" || n.Load() != 3 {
-		t.Fatalf("resp=%v err=%v attempts=%d", resp, err, n.Load())
-	}
-}
-
-func TestOpenAICompatConfigErrors(t *testing.T) {
-	if _, err := New(allowed(Config{Model: "m", APIKeyEnv: "UNSET_KEY_VAR", BaseURL: "https://x.example"}), Options{Getenv: func(string) string { return "" }}); !errors.Is(err, ErrAuth) || !strings.Contains(err.Error(), "UNSET_KEY_VAR") {
-		t.Fatalf("unset key var: %v", err)
-	}
-	if _, err := New(allowed(Config{Model: "m", Provider: "bedrock"}), Options{}); !errors.Is(err, ErrConfig) || !strings.Contains(err.Error(), "base_url") {
-		t.Fatalf("non-openai provider without base_url: %v", err)
-	}
-	if _, err := New(allowed(Config{Backend: BackendLiterLLM, Model: "m"}), Options{}); !NativeAvailable() && (!errors.Is(err, ErrConfig) || !strings.Contains(err.Error(), "-tags literllm")) {
-		t.Fatalf("literllm not compiled in: %v", err)
-	}
-	// keyless local endpoint (Ollama style): no api_key_env and a base_url means no auth header
-	var auth string
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth = r.Header.Get("Authorization")
-		fmt.Fprint(w, `{"choices":[{"message":{"content":"hi"}}]}`)
-	}))
-	defer srv.Close()
-	m, err := New(allowed(Config{Model: "llama3", BaseURL: srv.URL}), Options{HTTPClient: srv.Client()})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := m.Chat(context.Background(), chatReq("x")); err != nil || auth != "" {
-		t.Fatalf("keyless: err=%v auth=%q", err, auth)
-	}
-}
-
 func TestConfigValidation(t *testing.T) {
 	cases := []struct {
 		name string
@@ -504,8 +296,7 @@ func TestConfigValidation(t *testing.T) {
 		want string // substring of a problem; empty means valid
 	}{
 		{"empty is valid", Config{}, ""},
-		{"full valid", Config{Backend: "openaicompat", BaseURL: "https://gw.internal/v1", APIKeyEnv: "OPENAI_API_KEY", MaxCostUSD: 1}, ""},
-		{"unknown backend", Config{Backend: "litellm"}, "backend"},
+		{"full valid", Config{BaseURL: "https://gw.internal/v1", APIKeyEnv: "OPENAI_API_KEY", MaxCostUSD: 1}, ""},
 		{"literal openai key", Config{APIKeyEnv: "sk-proj-abc123def456ghi789"}, "literal API key"},
 		{"literal aws key", Config{APIKeyEnv: "AKIAIOSFODNN7EXAMPLE1"}, "literal API key"},
 		{"mixed-case blob", Config{APIKeyEnv: "aB3dE5fG7hI9jK1lM3nO5pQ7rS9"}, "literal API key"},
@@ -525,11 +316,11 @@ func TestConfigValidation(t *testing.T) {
 			t.Errorf("%s: want %q in %v", tc.name, tc.want, problems)
 		}
 	}
-	err := Config{Backend: "x"}.Err()
+	err := Config{APIKeyEnv: "my key"}.Err()
 	if err == nil || !strings.Contains(err.Error(), "AR9L0") || !errors.Is(err, ErrConfig) {
 		t.Fatalf("Err must carry AR9L0: %v", err)
 	}
-	if _, err := New(Config{Backend: "x", AllowNetwork: true}, Options{}); err == nil {
+	if _, err := New(Config{APIKeyEnv: "my key", AllowNetwork: true}, Options{}); err == nil {
 		t.Fatal("New must reject an invalid config")
 	}
 }
@@ -579,88 +370,6 @@ func TestJudge(t *testing.T) {
 	}
 }
 
-type stubNative struct {
-	chat, embed func([]byte) ([]byte, error)
-	freed       bool
-}
-
-func (s *stubNative) ChatJSON(_ context.Context, b []byte) ([]byte, error)  { return s.chat(b) }
-func (s *stubNative) EmbedJSON(_ context.Context, b []byte) ([]byte, error) { return s.embed(b) }
-func (s *stubNative) Free()                                                 { s.freed = true }
-
-// stubNativeErr is a typed native failure.
-type stubNativeErr struct {
-	variant    string
-	msg        string
-	status     int
-	transient  bool
-	retryAfter time.Duration
-}
-
-func (e *stubNativeErr) Error() string                   { return e.msg }
-func (e *stubNativeErr) NativeVariant() string           { return e.variant }
-func (e *stubNativeErr) NativeStatus() int               { return e.status }
-func (e *stubNativeErr) NativeTransient() bool           { return e.transient }
-func (e *stubNativeErr) NativeRetryAfter() time.Duration { return e.retryAfter }
-
-func TestLiterLLMAdapterWithStub(t *testing.T) {
-	stub := &stubNative{
-		chat: func(b []byte) ([]byte, error) {
-			var w wireChatRequest
-			if err := json.Unmarshal(b, &w); err != nil || w.Model != "openai/gpt-4o-mini" {
-				return nil, fmt.Errorf("bad request %s", b)
-			}
-			return []byte(`{"model":"gpt-4o-mini","choices":[{"message":{"content":[{"type":"text","text":"he"},{"type":"text","text":"llo"}]}}],"usage":{"prompt_tokens":3,"completion_tokens":2}}`), nil
-		},
-		embed: func([]byte) ([]byte, error) {
-			return nil, fmt.Errorf("embed: %w", &stubNativeErr{variant: "RateLimited", msg: "rate limited: slow down sk-abcdefghijklmnop", status: 429, transient: true})
-		},
-	}
-	nativeMu.RLock()
-	previous := nativeFactory
-	nativeMu.RUnlock()
-	RegisterNative(func(NativeConfig) (NativeClient, error) { return stub, nil })
-	t.Cleanup(func() { RegisterNative(previous) })
-	if !NativeAvailable() || ResolveBackend("auto") != BackendLiterLLM || ResolveBackend("openaicompat") != BackendOpenAICompat {
-		t.Fatal("auto must pick literllm when compiled in")
-	}
-	m, err := New(allowed(Config{Backend: BackendAuto, Provider: "openai", Model: "gpt-4o-mini", EmbeddingModel: "text-embedding-3-small", Cache: ptr(false)}), Options{Retry: &RetryPolicy{}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err := m.Chat(context.Background(), chatReq("hi"))
-	if err != nil || resp.Text != "hello" || resp.Usage.Total() != 5 {
-		t.Fatalf("%+v %v", resp, err)
-	}
-	_, err = m.Embed(context.Background(), EmbedRequest{Input: []string{"a"}})
-	if !errors.Is(err, ErrRateLimit) || strings.Contains(err.Error(), "abcdefghij") {
-		t.Fatalf("native errors must be classified and redacted: %v", err)
-	}
-	m.Close()
-	if !stub.freed {
-		t.Fatal("Close must free the native client")
-	}
-}
-
-func TestNativeCallHonoursContext(t *testing.T) {
-	// Arrange: a native client that, like liter-llm 2.1.3, returns the context error when ctx ends.
-	stub := &stubNative{chat: nil}
-	l := &literLLM{native: &ctxNative{stubNative: stub}, model: "m"}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
-	defer cancel()
-	// Act / Assert
-	if _, err := l.Chat(ctx, chatReq("x")); !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("want deadline, got %v", err)
-	}
-}
-
-type ctxNative struct{ *stubNative }
-
-func (c *ctxNative) ChatJSON(ctx context.Context, _ []byte) ([]byte, error) {
-	<-ctx.Done()
-	return nil, fmt.Errorf("native aborted: %w", ctx.Err())
-}
-
 func TestDiagnoseAndEstimate(t *testing.T) {
 	env := map[string]string{"MY_KEY": "sk-should-never-appear"}
 	cfg := Config{Provider: "openai", Model: "gpt-4o-mini", BaseURL: "https://gw.internal:8443/v1", APIKeyEnv: "MY_KEY", MaxCostUSD: 3}
@@ -700,51 +409,6 @@ func TestErrorKinds(t *testing.T) {
 	}
 }
 
-// Gemini's native route behind liter-llm answers a batch embed with one vector
-// whatever the batch size; the backend must still return one vector per input.
-func TestLiterLLMEmbedShouldFallBackToPerInputCallsWhenBatchIsCollapsed(t *testing.T) {
-	// Arrange
-	calls := 0
-	stub := &stubNative{embed: func(b []byte) ([]byte, error) {
-		calls++
-		var in struct {
-			Input []string `json:"input"`
-		}
-		if err := json.Unmarshal(b, &in); err != nil {
-			return nil, err
-		}
-		// Collapses to the first input, like the native Gemini route.
-		return []byte(fmt.Sprintf(`{"data":[{"index":0,"embedding":[%d,0]}],"usage":{"prompt_tokens":2}}`, len(in.Input[0]))), nil
-	}}
-	nativeMu.Lock()
-	prev := nativeFactory
-	nativeFactory = func(NativeConfig) (NativeClient, error) { return stub, nil }
-	nativeMu.Unlock()
-	t.Cleanup(func() { nativeMu.Lock(); nativeFactory = prev; nativeMu.Unlock() })
-	cfg := Config{Backend: BackendLiterLLM, Provider: "gemini", Model: "m", EmbeddingModel: "e", APIKeyEnv: "K", AllowNetwork: true, Cache: ptr(false)}
-	c, err := newLiterLLM(cfg, func(string) string { return "k" })
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Act
-	resp, err := c.Embed(context.Background(), EmbedRequest{Input: []string{"a", "bb", "ccc"}})
-
-	// Assert
-	if err != nil {
-		t.Fatalf("embed: %v", err)
-	}
-	if len(resp.Vectors) != 3 || resp.Vectors[0][0] != 1 || resp.Vectors[1][0] != 2 || resp.Vectors[2][0] != 3 {
-		t.Errorf("vectors = %v, want one per input in order", resp.Vectors)
-	}
-	if resp.Usage.PromptTokens != 8 || resp.Requests != 4 {
-		t.Errorf("usage = %+v requests = %d, want the 3 singles and the collapsed batch charged (8 tokens, 4 requests)", resp.Usage, resp.Requests)
-	}
-	if calls != 4 {
-		t.Errorf("native calls = %d, want 1 batch + 3 singles", calls)
-	}
-}
-
 func TestRedactSecretsShouldKeepEnvironmentLookupsAndMaskLiterals(t *testing.T) {
 	tests := []struct {
 		name, in string
@@ -776,48 +440,5 @@ func TestRedactSecretsShouldKeepEnvironmentLookupsAndMaskLiterals(t *testing.T) 
 				t.Errorf("RedactSecrets(%q) = %q, changed=%v want %v", tc.in, got, changed, tc.changed)
 			}
 		})
-	}
-}
-
-// Once a batch has come back collapsed, later batches skip the wasted batch request, and the
-// budget counts every provider request against max_calls.
-func TestLiterLLMEmbedShouldRememberCollapsedBatchesAndCountEveryRequest(t *testing.T) {
-	// Arrange
-	calls := 0
-	stub := &stubNative{embed: func(b []byte) ([]byte, error) {
-		calls++
-		var in struct {
-			Input []string `json:"input"`
-		}
-		if err := json.Unmarshal(b, &in); err != nil {
-			return nil, err
-		}
-		return []byte(`{"data":[{"index":0,"embedding":[1,0]}],"usage":{"prompt_tokens":2}}`), nil
-	}}
-	l := &literLLM{native: stub, provider: "gemini", model: "gemini/m", embedModel: "gemini/e"}
-	budget := NewBudget(Limits{MaxCalls: 100}, NewPricing(Config{}))
-	c := WithBudget(l, budget, "gemini/m", "gemini/e")
-	req := EmbedRequest{Input: []string{"a", "b", "c"}}
-
-	// Act
-	first, err1 := c.Embed(context.Background(), req)
-	callsAfterFirst := calls
-	second, err2 := c.Embed(context.Background(), req)
-
-	// Assert
-	if err1 != nil || err2 != nil {
-		t.Fatalf("embed: %v %v", err1, err2)
-	}
-	if callsAfterFirst != 4 || calls != 7 {
-		t.Errorf("native calls = %d after the first batch and %d after the second, want 4 and 7 (the second skips the batch request)", callsAfterFirst, calls)
-	}
-	if len(first.Vectors) != 3 || len(second.Vectors) != 3 {
-		t.Errorf("vectors = %d and %d, want 3 each", len(first.Vectors), len(second.Vectors))
-	}
-	if first.Usage.PromptTokens != 8 || second.Usage.PromptTokens != 6 {
-		t.Errorf("tokens = %d and %d, want 8 (the collapsed batch is charged) and 6", first.Usage.PromptTokens, second.Usage.PromptTokens)
-	}
-	if got := budget.Spent().Calls; got != 7 {
-		t.Errorf("budget calls = %d, want every provider request counted (7)", got)
 	}
 }

@@ -63,7 +63,6 @@ func TestRunChecksLLMConfig(t *testing.T) {
 	root := t.TempDir()
 	config := baseConfig + `
 [llm]
-backend = "litellm"
 api_key = "sk-literal-secret-value"
 api_key_env = "sk-proj-abc123def456ghi789"
 base_url = "https://user:pw@gw.example/v1"
@@ -81,7 +80,7 @@ base_url = "https://user:pw@gw.example/v1"
 			msgs += f.Message + "\n"
 		}
 	}
-	for _, want := range []string{"api_key holds a secret", "backend", "literal API key", "credentials"} {
+	for _, want := range []string{"api_key holds a secret", "literal API key", "credentials"} {
 		if !strings.Contains(msgs, want) {
 			t.Errorf("missing %q in:\n%s", want, msgs)
 		}

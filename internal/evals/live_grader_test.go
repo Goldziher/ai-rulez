@@ -22,8 +22,7 @@ import (
 // the project's config directory whose skills hold rubric cases. Optional:
 // AI_RULEZ_LIVE_SKILLS (comma-separated ids, default every skill with a rubric case),
 // AI_RULEZ_LIVE_OUT (directory for the JSON result), AI_RULEZ_LIVE_RUNS (default 2) and
-// AI_RULEZ_LIVE_CLAUDE_BUDGET (USD, default 0.60). Run it with -tags literllm to grade
-// through the literllm backend instead of the OpenAI-compatible one.
+// AI_RULEZ_LIVE_CLAUDE_BUDGET (USD, default 0.60).
 const (
 	liveGraderModel = "gemini-2.5-flash-lite"
 	liveGraderKey   = "GEMINI_API_KEY"
@@ -84,9 +83,6 @@ func TestLiveBuiltinGraderAgainstClaudeOwnGrading(t *testing.T) {
 	cfg := llm.Config{Provider: "gemini", Model: liveGraderModel, APIKeyEnv: liveGraderKey, AllowNetwork: true,
 		Cache: livePtr(false), MaxRetries: 2, TimeoutSeconds: 90, MaxCostUSD: 0.15,
 		PriceInputPerMTok: 0.10, PriceOutputPerMTok: 0.40} // list prices of gemini-2.5-flash-lite
-	if !llm.NativeAvailable() {
-		cfg.Backend, cfg.BaseURL = llm.BackendOpenAICompat, "https://generativelanguage.googleapis.com/v1beta/openai"
-	}
 	managed, err := llm.New(cfg, llm.Options{Getenv: os.Getenv})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = managed.Close() })
@@ -94,7 +90,7 @@ func TestLiveBuiltinGraderAgainstClaudeOwnGrading(t *testing.T) {
 
 	skills, err := FindSkills(configDir)
 	require.NoError(t, err)
-	report := &liveGraderReport{Backend: managed.Backend, GraderModel: liveGraderModel, PassMark: DefaultRubricMinScore}
+	report := &liveGraderReport{Backend: "literllm", GraderModel: liveGraderModel, PassMark: DefaultRubricMinScore}
 	var lastEvidence string
 	for i := range skills {
 		skill := &skills[i]

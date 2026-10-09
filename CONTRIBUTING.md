@@ -74,7 +74,8 @@ Here is the step-by-step process for adding CRUD operations for a new entity (e.
 The project uses [Task](https://taskfile.dev) for all build and test operations.
 
 ```bash
-# Build the binary to ./bin/ai-rulez
+# Build the binary to ./bin/ai-rulez, linking liter-llm statically as a release does
+# (downloads and sha256-verifies the library once; needs cgo and a C toolchain)
 task build
 
 # Run all unit tests
@@ -134,7 +135,7 @@ Releases are fully automated using GitHub Actions and are triggered when a new t
 
 ### How It Works
 
-1.  **Tag Push**: To create a new release, push a tag to `main` with the format `vX.Y.Z` (e.g., `v2.0.1`).
+1.  **Tag Push**: Bump every version surface with `scripts/release-bump.sh set X.Y.Z`, merge it, then push a tag with the format `vX.Y.Z` (e.g., `v2.0.1`).
 
     ```bash
     git tag v2.0.1
@@ -142,9 +143,10 @@ Releases are fully automated using GitHub Actions and are triggered when a new t
     ```
 
 2.  **CI/CD Pipeline**: The push event triggers the `.github/workflows/publish.yaml` workflow, which handles the entire release process:
-    - **GoReleaser**: Builds binaries for all supported platforms and creates a GitHub Release.
-    - **PyPI Publishing**: The Python package version in `release/pypi/ai_rulez/__init__.py` is automatically updated with the tag version, and the package is built and published to PyPI.
-    - **npm Publishing**: The `package.json` version is updated, and the package is published to npm.
+    - **Native builds**: Each platform archive is built on its own runner (cgo, with the liter-llm native library linked statically), checksummed, attested and attached to a GitHub Release. See [docs/maintainers/release.md](docs/maintainers/release.md).
+    - **Homebrew**: The formula in `Goldziher/homebrew-tap` is rendered from the release checksums.
+    - **PyPI Publishing**: The package is built and published to PyPI. Its version (`release/pypi/**/__init__.py`) must already equal the tag; run `scripts/release-bump.sh set <version>` before tagging.
+    - **npm Publishing**: The `release/npm/package.json` version must already equal the tag (same bump script); the package is published to npm.
 
 !!! danger "Do Not Release Manually"
 Manual releases are strongly discouraged. The CI pipeline is the single source of truth for versioning. Releasing locally will result in version mismatches (as the `__version__` string will not be updated) and should be avoided.
@@ -167,11 +169,11 @@ The npm package supports an **offline mode**: if platform-specific binaries are 
 ### Build and Publish
 
 ```bash
-# 1. Build binaries for target platforms (refer to .goreleaser.yaml for all platforms)
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o release/npm/bin/ai-rulez-linux-amd64 ./cmd/ai-rulez
-CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o release/npm/bin/ai-rulez-darwin-arm64 ./cmd/ai-rulez
-CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o release/npm/bin/ai-rulez-windows-amd64.exe ./cmd/ai-rulez
-# ... add more platforms as needed
+# 1. Build binaries natively on each target platform (cgo + the liter-llm static library; no cross-compiling).
+#    Supported: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64.
+eval "$(bash scripts/setup-liter-llm.sh)"   # exports CGO_ENABLED=1 and CGO_LDFLAGS (verified, static)
+go build -o release/npm/bin/ai-rulez-darwin-arm64 ./cmd/ai-rulez   # on a darwin/arm64 host
+# ... repeat on a host of each other platform (the Windows binary is named ai-rulez-windows-amd64.exe)
 
 # 2. (Optional) Modify package.json for your scope/version
 cd release/npm
