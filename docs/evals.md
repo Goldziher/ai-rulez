@@ -125,7 +125,7 @@ ai-rulez eval run deploy-staging --ablation         # one skill, also run it wit
 ai-rulez eval run --dry-run                         # what would run and roughly what it costs (--estimate is an alias)
 ai-rulez eval run --mode activation --surface retrieval   # does the right skill rank first? offline, free
 ai-rulez eval run --runner command --runner-command ./my-runner.sh --harness codex
-ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xml
+ai-rulez eval run --format junit --output-dir eval-report  # eval-report/eval-report.xml
 ```
 
 `eval run [skill...]` flags:
@@ -140,7 +140,7 @@ ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xm
 | `--ablation` | Also run every case without the skill and report the delta. |
 | `--dry-run`, `--estimate` | List what would run with an estimated cost range (low, expected, high). Calls no runner, writes nothing. `--estimate` is an alias. |
 | `--mode`, `--surface`, `--scope`, `--description-from` | `--mode activation` measures only whether the right skill is chosen; see [Activation mode](#activation-mode). |
-| `--format`, `--out dir` | `json`, `markdown` (default) or `junit`; with `--out` the report goes to `<dir>/eval-report.<md\|json\|xml>`. |
+| `--format`, `--output-dir dir` | `json`, `markdown` (default) or `junit`; with `--output-dir` the report goes to `<dir>/eval-report.<md\|json\|xml>`. |
 | `--max-cost USD` | Cost control, see [below](#cost-controls). |
 | `--date`, `$AI_RULEZ_EVAL_DATE` | The date recorded in the results. The clock is never read, so equal inputs give an equal file. |
 | `--changed-only`, `--base REF` | Only skills with files changed against `REF` (default `HEAD`; committed, uncommitted and untracked). |
@@ -545,7 +545,7 @@ cap skips the rest, as for case runs. `--timeout` bounds one skill's runner call
 
 ```bash
 ai-rulez eval import --from tessl ./scenarios/add-health-endpoint --skill http-service
-ai-rulez eval import --from tessl ./scenarios --out ./tmp-cases --dry-run --report import.json
+ai-rulez eval import --from tessl ./scenarios --output-dir ./tmp-cases --dry-run --report import.json
 ```
 
 `eval import` turns scenarios written for another tool into case files. It is offline: it reads local files only,
@@ -590,7 +590,7 @@ conservative (an unquoted value, two quoted values or a path that is absolute or
 never removes the criterion from the rubric, puts a `# lifted from criterion "<name>"` comment on each assertion and
 lists every lift in the report. It is off by default because a wrong lift silently changes what is graded.
 
-Output goes to `.ai-rulez/skills/<skill>/evals/` (`--skill`) or `--out`: `<id>.eval.yaml` with a provenance header
+Output goes to `.ai-rulez/skills/<skill>/evals/` (`--skill`) or `--output-dir`: `<id>.eval.yaml` with a provenance header
 (importer version and a sha256 of the input files), the task, and any fixture copies. The command prints what was
 mapped, assumed, lifted and left unmapped (`--format json` prints the same as JSON; `--report FILE` also writes it):
 
@@ -791,13 +791,13 @@ ai-rulez verify --plugin                   # exit non-zero if any bundled file d
 # Only the skills this change touched, with a JUnit report CI can display.
 ai-rulez eval run --changed-only --base origin/main \
     --ablation --max-cost 5 --date "$(date -u +%F)" \
-    --format junit --out eval-report --runner-arg --trust-plugin
+    --format junit --output-dir eval-report --runner-arg --trust-plugin
 ```
 
 - **Against the git diff.** `--changed-only --base origin/main` runs the skills that have a changed or untracked file
   below their directory or below `.ai-rulez/evals/<skill>/`. Make the base ref available (`git fetch origin main`, or a
   full-depth checkout). Without `--changed-only` every skill with cases is selected.
-- **JUnit.** `--format junit --out eval-report` writes `eval-report/eval-report.xml`: one suite per skill, one test case
+- **JUnit.** `--format junit --output-dir eval-report` writes `eval-report/eval-report.xml`: one suite per skill, one test case
   per eval case (near misses included), failures for failed cases, errors for runner errors and invalid case files,
   skipped for skipped or dry-run entries, and the scores as suite properties. The file has no timestamps or timings, so
   it is byte-stable. Point your CI's test reporter at it.
