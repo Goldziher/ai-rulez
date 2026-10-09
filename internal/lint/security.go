@@ -484,7 +484,7 @@ func (r *runner) scanShell(abs string, no int, line string, prose bool) {
 		}
 	}
 	r.scanCredentialAccess(abs, no, line)
-	if strings.Contains(line, ">") || strings.Contains(line, "tee") { // what writeOutsideRe() starts from
+	if strings.Contains(line, ">") || strings.Contains(line, "tee") { // what writeOutsideRe starts from
 		if m := writeOutsideRe().FindString(line); m != "" {
 			r.add(CodeShellAccess, abs, no, "writes outside the project (%s...)", strings.TrimSpace(m))
 		}

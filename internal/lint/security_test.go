@@ -54,7 +54,7 @@ func TestSecurityRules(t *testing.T) {
 		{name: "github token", md: skill("", "t ghp_abcdefghijklmnopqrstuvwxyz0123456789\n"), want: []string{"AR001:SKILL.md:5"}},
 		{name: "private key", md: skill("", "-----BEGIN RSA PRIVATE KEY-----\n"), want: []string{"AR001:SKILL.md:5"}},
 		{name: "generic credential with digits", md: skill("", "password = \"hunter2hunter2hunter2abc\"\n"), want: []string{"AR001:SKILL.md:5"}},
-		{name: "placeholder() credential is not a secret", md: skill("", "password = \"your-password-goes-here\"\nAKIA_PLACEHOLDER\n"), absent: []string{"AR001"}},
+		{name: "placeholder credential is not a secret", md: skill("", "password = \"your-password-goes-here\"\nAKIA_PLACEHOLDER\n"), absent: []string{"AR001"}},
 		{
 			name:   "custom secret pattern",
 			config: "\n[lint.security]\nsecret_patterns = [{ name = \"internal token\", regex = \"corp_[a-z0-9]{10}\" }]\n",
