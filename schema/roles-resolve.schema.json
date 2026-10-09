@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/roles-resolve.schema.json",
+  "title": "ai-rulez roles resolve",
+  "description": "Output of `ai-rulez roles resolve <name> --format json`: what a person holding the role gets, and what each skill_mode comes to on the configured harnesses. The item list is capped by --limit (total_items and truncated then appear).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "role",
+    "skill_modes",
+    "tokenizer"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "role": {
+      "type": "object",
+      "required": [
+        "name",
+        "domains",
+        "items",
+        "totals"
+      ]
+    },
+    "skill_modes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "mode"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "honoured": {
+            "type": "object"
+          },
+          "degraded": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "overridden": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "action": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tokenizer": {
+      "type": "string"
+    },
+    "total_items": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "truncated": {
+      "type": "boolean"
+    }
+  }
+}

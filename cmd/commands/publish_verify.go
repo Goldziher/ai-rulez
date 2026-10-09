@@ -2,13 +2,13 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	"github.com/samber/oops"
 )
@@ -117,16 +117,8 @@ func reportVerify(out io.Writer, results []verifyResult, target string) error {
 		problems += len(r.Problems)
 	}
 	if publishFormat == formatJSON {
-		var doc any = results[0].VerifyResult
-		if len(results) > 1 || results[0].Dir != "" {
-			doc = map[string]any{"results": results}
-		}
-		data, merr := json.MarshalIndent(doc, "", "  ")
-		if merr != nil {
-			return oops.Wrapf(merr, "encode result")
-		}
-		if _, werr := out.Write(append(data, '\n')); werr != nil {
-			return oops.Wrapf(werr, "write result")
+		if err := jsondoc.Write(out, map[string]any{"results": results}); err != nil {
+			return oops.Wrapf(err, "write result")
 		}
 	}
 	printVerifyResults(out, results)
