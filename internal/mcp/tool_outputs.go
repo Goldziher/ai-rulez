@@ -1,5 +1,7 @@
 package mcp
 
+import "github.com/Goldziher/ai-rulez/v5/internal/crud"
+
 // Result shapes. Each struct documents the structuredContent a tool returns and
 // is turned into the tool's outputSchema (see outputSchemaFor): every property
 // is optional, arrays may be null, and unlisted properties are allowed, so a
@@ -36,16 +38,23 @@ type readOut struct {
 // tool names (rules, checks, contexts, skills, domains, includes, ...).
 type listOut struct {
 	opBase
-	Domain          string `json:"domain,omitempty" jsonschema:"Domain that was listed (empty for root)"`
-	Count           int    `json:"count" jsonschema:"Number of items listed"`
-	Rules           []any  `json:"rules,omitempty" jsonschema:"Rules (list_rules)"`
-	Checks          []any  `json:"checks,omitempty" jsonschema:"Checks (list_checks)"`
-	Contexts        []any  `json:"contexts,omitempty" jsonschema:"Context files (list_context)"`
-	Skills          []any  `json:"skills,omitempty" jsonschema:"Skills (list_skills)"`
-	Domains         []any  `json:"domains,omitempty" jsonschema:"Domains (list_domains)"`
-	Includes        []any  `json:"includes,omitempty" jsonschema:"Includes (list_includes)"`
-	InstalledSkills []any  `json:"installed_skills,omitempty" jsonschema:"Installed skills (list_installed_skills)"`
-	Profiles        []any  `json:"profiles,omitempty" jsonschema:"Profiles (list_profiles)"`
+	Domain          string          `json:"domain,omitempty" jsonschema:"Domain that was listed (empty for root)"`
+	Count           int             `json:"count" jsonschema:"Number of items listed"`
+	Rules           []crud.FileInfo `json:"rules,omitempty" jsonschema:"Rules (list_rules)"`
+	Checks          []crud.FileInfo `json:"checks,omitempty" jsonschema:"Checks (list_checks)"`
+	Contexts        []contextEntry  `json:"contexts,omitempty" jsonschema:"Context files (list_context)"`
+	Skills          []crud.FileInfo `json:"skills,omitempty" jsonschema:"Skills (list_skills)"`
+	Domains         []any           `json:"domains,omitempty" jsonschema:"Domains (list_domains)"`
+	Includes        []any           `json:"includes,omitempty" jsonschema:"Includes (list_includes)"`
+	InstalledSkills []any           `json:"installed_skills,omitempty" jsonschema:"Installed skills (list_installed_skills)"`
+	Profiles        []any           `json:"profiles,omitempty" jsonschema:"Profiles (list_profiles)"`
+}
+
+// contextEntry is one item of list_context.
+type contextEntry struct {
+	Name    string `json:"name" jsonschema:"Context file name"`
+	Summary string `json:"summary,omitempty" jsonschema:"The summary the file declares in its frontmatter"`
+	Path    string `json:"path" jsonschema:"Path of the file"`
 }
 
 // configOut is the result of read_config and update_config.

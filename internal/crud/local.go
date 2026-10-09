@@ -26,6 +26,7 @@ func (op *OperatorImpl) Local() *OperatorImpl {
 	local.local = true
 	local.filesMgr = NewFileManager(filepath.Join(op.aiRulezDir, localContentDir))
 	local.filesMgr.private = true
+	local.filesMgr.root = op.aiRulezDir
 	// Content written here may hold secrets: fail closed unless the tree is
 	// ignored first.
 	local.filesMgr.guard = func() error {
