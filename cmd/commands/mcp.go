@@ -16,6 +16,12 @@ import (
 // flagServeDomain names the --domain flag of the skills server.
 const flagServeDomain = "domain"
 
+// Flags that set which directories the authoring tools may use.
+const (
+	flagMCPRoot     = "root"
+	flagAllowAnyDir = "allow-any-dir"
+)
+
 var MCPCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Start Model Context Protocol (MCP) server",
@@ -57,6 +63,13 @@ func runMCP(cmd *cobra.Command) error {
 			}
 		}
 	}
+	if serve {
+		for _, name := range []string{flagMCPRoot, flagAllowAnyDir} {
+			if cmd.Flags().Changed(name) {
+				return oops.Errorf("--%s applies to the authoring tools, which --serve-skills does not register", name)
+			}
+		}
+	}
 	var (
 		srv       *mcp.Server
 		transport = mcp.NewGuardedStdioTransport(os.Stdin, os.Stdout, nil)
@@ -68,7 +81,7 @@ func runMCP(cmd *cobra.Command) error {
 		}
 		transport = srv.WrapTransport(transport)
 	} else {
-		srv = mcp.NewServer(Version)
+		srv = mcp.NewServer(Version, authoringOptions(cmd)...)
 		transport = mcp.GuardLifecycle(transport)
 	}
 
@@ -78,6 +91,19 @@ func runMCP(cmd *cobra.Command) error {
 		return oops.Wrapf(err, "MCP: start MCP server")
 	}
 	return nil
+}
+
+// authoringOptions are the options of the authoring server: the lint engine of
+// `validate`, and the directory the tools are confined to.
+func authoringOptions(cmd *cobra.Command) []mcp.Option {
+	opts := []mcp.Option{mcp.WithValidator((&mcpValidator{}).validate), mcp.WithRoot(workingDir())}
+	if anyDir, _ := cmd.Flags().GetBool(flagAllowAnyDir); anyDir { //nolint:errcheck // the flag is registered in init
+		opts = append(opts, mcp.WithAnyDirectory())
+	}
+	if root, _ := cmd.Flags().GetString(flagMCPRoot); root != "" { //nolint:errcheck // the flag is registered in init
+		opts = append(opts, mcp.WithRoot(root))
+	}
+	return opts
 }
 
 // serveUntilDone runs the server until the client disconnects or ctx ends (a
@@ -106,6 +132,8 @@ func init() {
 	MCPCmd.Flags().StringSlice("allow", nil, "Only serve skills whose name matches one of these glob patterns (requires --serve-skills)")
 	MCPCmd.Flags().StringSlice("deny", nil, "Never serve skills whose name matches one of these glob patterns; wins over --allow (requires --serve-skills)")
 	registerDynamicServeFlags(MCPCmd)
+	MCPCmd.Flags().String(flagMCPRoot, "", "Directory the authoring tools may read and write; working_directory must lie inside it (default: the current directory)")
+	MCPCmd.Flags().Bool(flagAllowAnyDir, false, "Let the authoring tools use any working_directory, not only the root")
 	MCPCmd.Flags().String("transport", "stdio", "Transport method (stdio, websocket)")
 	MCPCmd.Flags().String("address", "", "Address to bind to (for websocket transport)")
 	MCPCmd.Flags().Int("port", 3000, "Port to bind to (for websocket transport)")

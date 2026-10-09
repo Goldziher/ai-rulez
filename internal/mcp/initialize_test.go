@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
@@ -53,7 +54,7 @@ func TestTolerantInitializeMiddleware(t *testing.T) {
 			ServerInfo:      &sdkmcp.Implementation{Name: "ai-rulez", Version: "4.11.2"},
 		}
 		next := &countingHandler{result: want}
-		handler := tolerantInitializeMiddleware()(next.handle)
+		handler := tolerantInitializeMiddleware(nil)(next.handle)
 
 		first, err := handler(context.Background(), methodInitialize, initializeRequest())
 		require.NoError(t, err)
@@ -69,7 +70,7 @@ func TestTolerantInitializeMiddleware(t *testing.T) {
 		t.Parallel()
 
 		next := &countingHandler{}
-		handler := tolerantInitializeMiddleware()(next.handle)
+		handler := tolerantInitializeMiddleware(nil)(next.handle)
 
 		_, err := handler(context.Background(), notificationInitialized, initializedRequest())
 		require.NoError(t, err)
@@ -84,7 +85,7 @@ func TestTolerantInitializeMiddleware(t *testing.T) {
 		t.Parallel()
 
 		next := &countingHandler{}
-		handler := tolerantInitializeMiddleware()(next.handle)
+		handler := tolerantInitializeMiddleware(nil)(next.handle)
 
 		for range 3 {
 			_, err := handler(context.Background(), "tools/list", initializeRequest())
@@ -100,7 +101,7 @@ func TestTolerantInitializeMiddleware(t *testing.T) {
 
 		wantErr := errors.New("bad protocol version")
 		next := &countingHandler{err: wantErr}
-		handler := tolerantInitializeMiddleware()(next.handle)
+		handler := tolerantInitializeMiddleware(nil)(next.handle)
 
 		_, err := handler(context.Background(), methodInitialize, initializeRequest())
 		require.ErrorIs(t, err, wantErr)
@@ -117,7 +118,7 @@ func TestTolerantInitializeMiddleware(t *testing.T) {
 		// must not count as the established handshake, or the real notification
 		// that follows would be dropped.
 		next := &countingHandler{err: errors.New(`"notifications/initialized" before "initialize"`)}
-		handler := tolerantInitializeMiddleware()(next.handle)
+		handler := tolerantInitializeMiddleware(nil)(next.handle)
 
 		_, err := handler(context.Background(), notificationInitialized, initializedRequest())
 		require.Error(t, err)
@@ -132,7 +133,7 @@ func TestTolerantInitializeMiddleware(t *testing.T) {
 		t.Parallel()
 
 		next := &countingHandler{result: &sdkmcp.InitializeResult{ProtocolVersion: "2025-06-18"}}
-		handler := tolerantInitializeMiddleware()(next.handle)
+		handler := tolerantInitializeMiddleware(nil)(next.handle)
 
 		sessionA := &sdkmcp.ServerRequest[*sdkmcp.InitializeParams]{
 			Session: &sdkmcp.ServerSession{},
@@ -150,4 +151,31 @@ func TestTolerantInitializeMiddleware(t *testing.T) {
 
 		assert.Equal(t, 2, next.calls, "a second session must initialize on its own, not read another session's cache")
 	})
+}
+
+// A session's handshake state must go away with the session: a long-lived
+// process that serves many connections otherwise grows without bound and keeps
+// every finished ServerSession reachable.
+func TestInitTracker_ForgetsClosedSessions(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	server := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "s", Version: "1"}, nil)
+	tracker := newInitTracker(server)
+	server.AddReceivingMiddleware(tracker.middleware())
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	// Act
+	for range 8 {
+		serverT, clientT := sdkmcp.NewInMemoryTransports()
+		go func() { _ = server.Run(ctx, serverT) }()
+		session, err := sdkmcp.NewClient(&sdkmcp.Implementation{Name: "c", Version: "1"}, nil).Connect(ctx, clientT, nil)
+		require.NoError(t, err)
+		require.NoError(t, session.Close())
+	}
+
+	// Assert: each new session swept the finished ones, so only the last remains
+	require.Eventually(t, func() bool { return tracker.size() <= 1 }, 10*time.Second, 10*time.Millisecond,
+		"finished sessions must leave the tracker, %d remain", tracker.size())
 }
