@@ -12,7 +12,7 @@ x-ai-rulez:
     usage: /test
 ---
 
-# Test
+## Test
 
 Run the project's test suite using the standard task runner.
 

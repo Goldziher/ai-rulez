@@ -15,7 +15,7 @@ x-ai-rulez:
     summary: Table-driven tests, fixtures, integration coverage, and deterministic testing practices.
 ---
 
-# Testing and Quality
+## Testing and Quality
 
 - Go unit tests use table-driven structure with Arrange/Act/Assert sections.
 - `tests/` holds fixtures, integration coverage, e2e CLI tests, and platform scenarios.

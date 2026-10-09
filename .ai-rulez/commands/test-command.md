@@ -20,11 +20,11 @@ x-ai-rulez:
     name: test
 ---
 
-# Test Command
+## Test Command
 
 This is a test command to verify the command generation system works correctly.
 
-## Instructions
+### Instructions
 
 When this command is invoked:
 
@@ -32,7 +32,7 @@ When this command is invoked:
 2. Check that the command appears in the appropriate preset outputs
 3. Validate that target filtering works correctly
 
-## Expected Behavior
+### Expected Behavior
 
 The command should be generated as:
 
