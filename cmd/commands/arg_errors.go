@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/samber/oops"
@@ -33,7 +34,7 @@ func explainArgErrors(root *cobra.Command) {
 		switch {
 		case strings.HasPrefix(text, "unknown command ") && cmd.HasSubCommands() && len(args) > 0:
 			return unknownSubcommandError(cmd, args[0])
-		case strings.HasPrefix(text, "unknown command ") && len(args) > 0:
+		case strings.HasPrefix(text, "unknown command ") && len(args) > 0 && looksLikeConfigPath(args[0]):
 			return unexpectedArgError(cmd, args[0])
 		case strings.HasPrefix(text, "accepts ") || strings.HasPrefix(text, "requires at least "):
 			return argCountError(cmd, args)
@@ -58,4 +59,17 @@ func argCountError(cmd *cobra.Command, args []string) error {
 func unexpectedArgError(cmd *cobra.Command, arg string) error {
 	return oops.Hint("the project is chosen with -C <path> (or --config-dir), not an argument: ai-rulez -C "+arg+" "+strings.TrimPrefix(cmd.CommandPath(), RootCmd.Name()+" ")).
 		Errorf("unexpected argument %q for %q\n\nUsage:\n  %s", arg, cmd.CommandPath(), cmd.UseLine())
+}
+
+// looksLikeConfigPath reports whether an unexpected argument is what the commands
+// that took a config path used to be given: a path or a config file name.
+func looksLikeConfigPath(arg string) bool {
+	if strings.ContainsAny(arg, `/\`) || strings.HasPrefix(arg, ".") {
+		return true
+	}
+	switch strings.ToLower(filepath.Ext(arg)) {
+	case ".toml", ".yaml", ".yml", ".json":
+		return true
+	}
+	return false
 }
