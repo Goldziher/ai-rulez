@@ -8,9 +8,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
@@ -43,8 +45,11 @@ type MigrateOptions struct {
 	Write bool
 	// BackupDir, when set with Write, receives a copy of every existing file the
 	// migration rewrites (same relative paths) before the first one is touched.
-	// Empty: no backup is taken.
+	// Empty: no backup is taken, except of an index.md holding prose that an
+	// index refresh replaces (see writeIndexes).
 	BackupDir string
+	// Clock dates that index backup; nil is the wall clock.
+	Clock ambient.Clock
 }
 
 // plannedWrite is a file the migration will write once the whole plan is known.
@@ -167,21 +172,8 @@ func symlinkChanges(configDir string) []MigrateChange {
 // applyWrites copies the existing originals to backupDir, then writes every file atomically.
 func applyWrites(configDir string, writes []plannedWrite, backupDir string) error {
 	if backupDir != "" {
-		for i := range writes {
-			orig, err := os.ReadFile(writes[i].path)
-			if os.IsNotExist(err) {
-				continue
-			}
-			if err != nil {
-				return oops.Wrapf(err, "read %s for backup", writes[i].path)
-			}
-			dst := filepath.Join(backupDir, filepath.FromSlash(writes[i].rel))
-			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil { //nolint:gosec // G301: a copy of the project's own files
-				return oops.Wrapf(err, "create %s", filepath.Dir(dst))
-			}
-			if err := gitutil.WriteFileAtomic(dst, orig, writes[i].mode); err != nil {
-				return oops.Wrapf(err, "back up %s", writes[i].rel)
-			}
+		if err := backupOriginals(writes, backupDir); err != nil {
+			return err
 		}
 	}
 	for i := range writes {
@@ -195,6 +187,34 @@ func applyWrites(configDir string, writes []plannedWrite, backupDir string) erro
 	return nil
 }
 
+// backupOriginals copies the existing file of every write to backupDir, under
+// the same relative path; a write that creates a file has nothing to copy.
+func backupOriginals(writes []plannedWrite, backupDir string) error {
+	for i := range writes {
+		orig, err := os.ReadFile(writes[i].path)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return oops.Wrapf(err, "read %s for backup", writes[i].path)
+		}
+		dst := filepath.Join(backupDir, filepath.FromSlash(writes[i].rel))
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil { //nolint:gosec // G301: a copy of the project's own files
+			return oops.Wrapf(err, "create %s", filepath.Dir(dst))
+		}
+		if err := gitutil.WriteFileAtomic(dst, orig, writes[i].mode); err != nil {
+			return oops.Wrapf(err, "back up %s", writes[i].rel)
+		}
+	}
+	return nil
+}
+
+// okfBackupDir is where a writer of configDir copies the originals it is about
+// to replace: <configDir>.bak-okf-<timestamp>, as `migrate okf` names it.
+func okfBackupDir(configDir string, now time.Time) string {
+	return configDir + ".bak-okf-" + now.Format("20060102-150405")
+}
+
 // writeIndexes renders and writes the index.md files of a bundle.
 func writeIndexes(configDir string, idx []okf.IndexInput, items []sourceItem, opts MigrateOptions) ([]MigrateChange, error) {
 	changes, writes, err := planIndexes(configDir, idx, items)
@@ -202,11 +222,34 @@ func writeIndexes(configDir string, idx []okf.IndexInput, items []sourceItem, op
 		return nil, err
 	}
 	if opts.Write {
-		if err := applyWrites(configDir, writes, opts.BackupDir); err != nil {
+		backupDir := opts.BackupDir
+		if backupDir == "" {
+			// A generated listing is rebuilt from the content and needs no copy,
+			// but an index.md that holds prose is the user's: keep it.
+			if prose := proseIndexes(writes); len(prose) > 0 {
+				if err := backupOriginals(prose, okfBackupDir(configDir, opts.Clock.Now())); err != nil {
+					return nil, err
+				}
+			}
+		}
+		if err := applyWrites(configDir, writes, backupDir); err != nil {
 			return nil, err
 		}
 	}
 	return changes, nil
+}
+
+// proseIndexes are the writes that would replace an index.md which is not a
+// generated OKF listing.
+func proseIndexes(writes []plannedWrite) []plannedWrite {
+	var out []plannedWrite
+	for i := range writes {
+		data, err := os.ReadFile(writes[i].path)
+		if err == nil && !config.IsOKFListing(data) {
+			out = append(out, writes[i])
+		}
+	}
+	return out
 }
 
 // planIndexes renders the index.md of every directory of the bundle and plans
