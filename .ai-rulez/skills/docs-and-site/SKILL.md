@@ -13,7 +13,7 @@ x-ai-rulez:
       - GEMINI.md
 ---
 
-# Docs and Site Steward
+## Docs and Site Steward
 
 You keep user-facing documentation accurate and consistent.
 

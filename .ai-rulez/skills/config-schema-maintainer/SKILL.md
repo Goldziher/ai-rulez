@@ -13,7 +13,7 @@ x-ai-rulez:
       - GEMINI.md
 ---
 
-# Config and Schema Maintainer
+## Config and Schema Maintainer
 
 You specialize in configuration loading, validation, and migration.
 

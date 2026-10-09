@@ -13,7 +13,7 @@ x-ai-rulez:
       - GEMINI.md
 ---
 
-# Core Workflows
+## Core Workflows
 
 1. Configuration loading reads `.ai-rulez/config.toml` via `internal/config`, scans content trees, and resolves includes.
 2. Generation uses declarative specs in `internal/generator/providers/builtin/` plus specialized generators in `internal/generator/presets`, with `internal/templates` rendering outputs and `internal/gitignore` updating ignore rules.

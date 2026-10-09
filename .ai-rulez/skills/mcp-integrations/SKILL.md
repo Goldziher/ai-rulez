@@ -13,7 +13,7 @@ x-ai-rulez:
       - .cursor/rules/*
 ---
 
-# MCP Integrations
+## MCP Integrations
 
 You maintain MCP server capabilities and configuration.
 
