@@ -17,7 +17,7 @@ x-ai-rulez:
     trigger: model_decision
 ---
 
-# Source-of-Truth Governance
+## Source-of-Truth Governance
 
 - Treat `.ai-rulez/config.toml` and the `.ai-rulez/` content tree as the canonical configuration for all AI tooling.
 - Modify source files first, then regenerate assistant outputs with `ai-rulez generate`.

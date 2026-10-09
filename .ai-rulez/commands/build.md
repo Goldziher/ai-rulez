@@ -12,7 +12,7 @@ x-ai-rulez:
     usage: /build
 ---
 
-# Build
+## Build
 
 Build the project using the standard task runner.
 

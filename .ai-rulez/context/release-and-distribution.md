@@ -15,7 +15,7 @@ x-ai-rulez:
     summary: Multi-channel distribution (Go, npm, PyPI, Homebrew) with aligned versioning.
 ---
 
-# Release and Distribution
+## Release and Distribution
 
 AI-Rulez ships through multiple channels:
 
