@@ -93,3 +93,15 @@ func TestManifestPath_IncludedItemsDoNotCarryMachinePaths(t *testing.T) {
 	assert.Equal(t, "included/rules/shared.md", manifestPath(tmp))
 	assert.Equal(t, "included/SKILL.md", manifestPath(filepath.Join(t.TempDir(), "SKILL.md")))
 }
+
+func TestManifestMarshal_NoRolesIsAnEmptyArray(t *testing.T) {
+	// Arrange
+	m := &Manifest{SchemaVersion: SchemaVersion, Tokenizer: "cl100k_base", Roles: []Role{}}
+
+	// Act
+	data, err := m.Marshal()
+
+	// Assert
+	require.NoError(t, err)
+	assert.Contains(t, string(data), `"roles": []`)
+}

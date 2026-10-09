@@ -107,18 +107,7 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 4: ai-rulez verify
-exit: 0
---- stdout
-verified 7 generated file(s) against their Content-Hash
---- stderr
-INFO  Generated files are up to date roots=1
---- project tree
-(no change)
---- home tree
-(no change)
-
-## step 5: ai-rulez clean --yes
+## step 4: ai-rulez clean --yes
 exit: 0
 --- stdout
 Clean plan (profile default)
