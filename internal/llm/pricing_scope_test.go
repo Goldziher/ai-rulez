@@ -18,7 +18,7 @@ func TestPriceOverrideAppliesOnlyToTheUsersModel(t *testing.T) {
 	// an unknown repo-chosen model under a cost cap is refused, not priced by the override
 	cfg, _ = Resolve(&Config{Model: "mystery"}, user)
 	b := &slowBackend{model: "mystery", usage: Usage{PromptTokens: 1, CompletionTokens: 1}}
-	m := Wrap(b, allowed(cfg), Options{Retry: &RetryPolicy{}})
+	m := Wrap(b, allowed(cfg), Options{})
 	if _, err := m.Chat(context.Background(), chatReq("x")); !errors.Is(err, ErrBudget) || b.calls.Load() != 0 {
 		t.Fatalf("unknown repo-chosen model under a cost cap must be refused: %v", err)
 	}

@@ -346,7 +346,7 @@ func TestImproveAdapters_ListsAndPrintsTemplates(t *testing.T) {
 }
 
 func TestImproveReviewFixAdapter_ResolvesFromUserConfigAndRefusesWithoutIt(t *testing.T) {
-	const userLLM = "[llm]\nprovider = \"openai\"\nmodel = \"judge-x\"\napi_key_env = \"IMPROVE_TEST_API_KEY\"\nbase_url = \"https://llm.example.test/v1\"\nallow_network = true\nbackend = \"openaicompat\"\n"
+	const userLLM = "[llm]\nprovider = \"openai\"\nmodel = \"judge-x\"\napi_key_env = \"IMPROVE_TEST_API_KEY\"\nbase_url = \"https://llm.example.test/v1\"\nallow_network = true\n"
 	tests := []struct {
 		name     string
 		userCfg  string

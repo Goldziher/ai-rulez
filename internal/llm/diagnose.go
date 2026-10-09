@@ -8,12 +8,13 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/pricing"
 )
 
 // Diagnosis is the resolved, secret-free view of the LLM setup.
 type Diagnosis struct {
-	Backend        string   `json:"backend"`
-	NativeCompiled bool     `json:"literllm_compiled"`
+	// LiterLLM is the version of the linked liter-llm binding (its catalog prices the calls).
+	LiterLLM       string   `json:"literllm"`
 	Provider       string   `json:"provider,omitempty"`
 	Model          string   `json:"model,omitempty"`
 	EmbeddingModel string   `json:"embedding_model,omitempty"`
@@ -40,8 +41,7 @@ func Diagnose(cfg Config, opts Options) Diagnosis {
 		getenv = ambient.GetenvFunc(opts.Env)
 	}
 	d := Diagnosis{
-		Backend:        ResolveBackend(cfg.Backend),
-		NativeCompiled: NativeAvailable(),
+		LiterLLM:       pricing.LiterLLMVersion(),
 		Provider:       cfg.Provider,
 		Model:          cfg.FullModel(),
 		EmbeddingModel: cfg.EmbeddingModel,
@@ -68,13 +68,10 @@ func Diagnose(cfg Config, opts Options) Diagnosis {
 	return d
 }
 
-// addBackendProblems reports what keeps the configured backend from making a call.
+// addBackendProblems reports what keeps the configured provider from making a call.
 func (d *Diagnosis) addBackendProblems(cfg Config) {
-	if routed := cfg.RoutingFromRepo(); len(routed) > 0 && d.Backend == BackendLiterLLM {
-		d.Problems = append(d.Problems, "the repository config chooses the provider ("+strings.Join(routed, ", ")+") but the key comes from user scope; the literllm backend refuses this, set them in user scope")
-	}
-	if d.Backend == BackendLiterLLM && !d.NativeCompiled {
-		d.Problems = append(d.Problems, "backend literllm is selected but not compiled in (build with -tags literllm)")
+	if routed := cfg.RoutingFromRepo(); len(routed) > 0 {
+		d.Problems = append(d.Problems, "the repository config chooses the provider ("+strings.Join(routed, ", ")+") but the key comes from user scope; liter-llm routing refuses this, set them in user scope")
 	}
 	if cfg.AllowNetwork && cfg.Model == "" {
 		d.Problems = append(d.Problems, "no model configured")
@@ -95,7 +92,7 @@ func (d Diagnosis) WriteText(w io.Writer) {
 	if d.CacheEnabled {
 		cache = d.CacheDir
 	}
-	printf(w, "backend:         %s (literllm compiled in: %v)\n", d.Backend, d.NativeCompiled)
+	printf(w, "liter-llm:       %s\n", d.LiterLLM)
 	printf(w, "model:           %s\n", orNone(d.Model))
 	printf(w, "embedding model: %s\n", orNone(d.EmbeddingModel))
 	printf(w, "base_url host:   %s\n", host)

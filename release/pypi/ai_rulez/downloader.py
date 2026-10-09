@@ -262,6 +262,16 @@ def download_and_verify_binary(url, dest_path, version):
                             raise RuntimeError(
                                 f"Binary '{binary_name}' not found in archive. Available files: {zip_ref.namelist()}"
                             )
+
+                        # A Windows archive may ship liter_llm_ffi.dll beside ai-rulez.exe.
+                        for member in zip_ref.namelist():
+                            if member.lower().endswith(".dll"):
+                                dll_path = os.path.join(
+                                    os.path.dirname(dest_path), os.path.basename(member)
+                                )
+                                with zip_ref.open(member) as dll_file:
+                                    with open(dll_path, "wb") as f:
+                                        f.write(dll_file.read())
                 else:
                     with tarfile.open(tmp_file_path, "r:gz") as tar:
                         binary_found = False
