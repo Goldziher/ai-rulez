@@ -116,7 +116,8 @@ func floorFor(name string) (Price, bool) {
 }
 
 // catalogPrice is the flat per-MTok price liter-llm lists for name. A model with
-// context tiers is priced at its dearest tier, so an estimate never undershoots.
+// context tiers is priced at its dearest tier, so an estimate never undershoots. A listing at
+// 0/0 is not a price (TODO(liter-llm#276): paid image, video and audio models carry it).
 func catalogPrice(name string) (Price, bool) {
 	info := lit.GetModelInfo(name)
 	if info == nil {
@@ -127,7 +128,7 @@ func catalogPrice(name string) (Price, bool) {
 		p.InPerMTok = max(p.InPerMTok, t.InputCostPerToken*1e6)
 		p.OutPerMTok = max(p.OutPerMTok, t.OutputCostPerToken*1e6)
 	}
-	return p, true
+	return p, p.InPerMTok > 0 || p.OutPerMTok > 0
 }
 
 // Lookup returns the flat price of a model. known is false when neither the
@@ -152,8 +153,10 @@ func Cost(model string, u Tokens) (usd float64, known bool) {
 	name := bare(model)
 	prompt, completion := uint64(max(u.Prompt, 0)), uint64(max(u.Completion, 0))
 	cached := uint64(max(u.Cached, 0))
-	if c := lit.CompletionCostWithCache(name, prompt, cached, completion); c != nil {
-		usd, known = *c, true
+	if _, listed := catalogPrice(name); listed {
+		if c := lit.CompletionCostWithCache(name, prompt, cached, completion); c != nil {
+			usd, known = *c, true
+		}
 	} else if p, ok := floorFor(name); ok {
 		usd, known = (float64(prompt)*p.InPerMTok+float64(completion)*p.OutPerMTok)/1e6, true
 	}
