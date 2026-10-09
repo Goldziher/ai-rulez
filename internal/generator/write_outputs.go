@@ -16,7 +16,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
 func (g *Generator) writeOutputs(outputs []config.OutputFile) error {
@@ -312,7 +311,7 @@ func containsBannerMarker(header string) bool {
 // output: the body plus the freshness lines the header hash mode asks for,
 // normalized to a single trailing newline.
 func (g *Generator) finalContent(output config.OutputFile) string {
-	contentHash := templates.HashContent(stripHeader(output.Content, output.Path))
+	contentHash := bodyHash(output)
 	sourceHash := g.sourceHashFor(output)
 	switch g.config.GetHeaderHashes() {
 	case config.HeaderHashesNone:
@@ -335,7 +334,7 @@ func (g *Generator) finalContent(output config.OutputFile) string {
 // in that comparison, otherwise every run would rewrite every file.
 func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, finalContent string) bool {
 	if g.config.GetHeaderHashes() == config.HeaderHashesFull && finalCarriesHash(finalContent) {
-		contentHash := templates.HashContent(stripHeader(output.Content, output.Path))
+		contentHash := bodyHash(output)
 		existingContentHash, existingSourceHash, legacy := g.scanHashes(absPath)
 		if legacy && g.config.InRulesDir(output.Path) {
 			// Hashes in the frontmatter are the pre-banner layout: rewrite once.
