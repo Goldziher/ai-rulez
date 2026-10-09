@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/error-document.schema.json",
+  "title": "ai-rulez error document",
+  "description": "What every command with a --format flag prints on stdout when it fails before it can produce its report (--format json). The same message is on stderr as text.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "error",
+    "exit_code"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "const": "error"
+    },
+    "error": {
+      "type": "string"
+    },
+    "hint": {
+      "type": "string"
+    },
+    "exit_code": {
+      "type": "integer",
+      "enum": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

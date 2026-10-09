@@ -204,7 +204,9 @@ func TestPublishVerifyE2E(t *testing.T) {
 
 	// Assert
 	require.Equal(t, 0, ok.ExitCode, ok.Stderr)
-	assert.Equal(t, []any{}, requireJSONDoc(t, ok)["problems"])
+	results, _ := requireJSONDoc(t, ok)["results"].([]any) //nolint:errcheck // asserted below
+	require.Len(t, results, 1)
+	assert.Equal(t, []any{}, results[0].(map[string]any)["problems"]) //nolint:forcetypeassert // test document shape
 	assert.Equal(t, 2, unsigned.ExitCode, unsigned.Stdout+unsigned.Stderr)
 	assert.Equal(t, 2, bad.ExitCode, bad.Stdout+bad.Stderr)
 	assert.Contains(t, bad.Stdout+bad.Stderr, "RELEASE_NOTES.md")

@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/verifiers-test.schema.json",
+  "title": "ai-rulez verifiers test",
+  "description": "Output of `ai-rulez verifiers test --format json`: the outcome of the self-test examples. Exit 2 when ok is false.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "ok",
+    "passed",
+    "total",
+    "results",
+    "untested",
+    "problems"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "passed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "verifier",
+          "example",
+          "want",
+          "got",
+          "ok"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "verifier": {
+            "type": "string"
+          },
+          "example": {
+            "type": "string"
+          },
+          "want": {
+            "type": "string"
+          },
+          "got": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "untested": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "problems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "const": "AR9H2"
+          },
+          "id": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

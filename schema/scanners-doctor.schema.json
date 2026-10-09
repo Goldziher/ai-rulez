@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/scanners-doctor.schema.json",
+  "title": "ai-rulez scanners doctor",
+  "description": "Output of `ai-rulez scanners doctor --format json`: as scanners list, plus the probed version of an installed scanner (with --external). Exit 2 when a scanner is unhealthy.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "scanners"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "scanners": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "command",
+          "found",
+          "egress",
+          "inputs",
+          "env_pass",
+          "timeout_seconds",
+          "problems",
+          "status",
+          "healthy",
+          "presets",
+          "from_preset",
+          "required",
+          "isolation"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "found": {
+            "type": "boolean"
+          },
+          "egress": {
+            "enum": [
+              "true",
+              "false",
+              "undeclared"
+            ]
+          },
+          "format": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env_pass": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timeout_seconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "egress_flag": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "healthy": {
+            "type": "boolean"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "presets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "from_preset": {
+            "type": "boolean"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "version_range": {
+            "type": "string"
+          },
+          "data_sent": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isolation": {
+            "type": "string"
+          },
+          "isolation_backend": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
