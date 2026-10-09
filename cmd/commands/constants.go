@@ -3,6 +3,7 @@ package commands
 // Cobra command "Use" strings shared across subcommands.
 const (
 	cmdUseList       = "list"
+	cmdUseDoctor     = "doctor"
 	cmdUseVersion    = "version"
 	cmdUseRemoveName = "remove <name>"
 )

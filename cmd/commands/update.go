@@ -81,7 +81,7 @@ nothing was written.`,
 
 func init() {
 	f := UpdateCmd.Flags()
-	f.BoolVar(&updateDryRun, "dry-run", false, "Show what would change and write nothing")
+	specDryRun.Bool(f, &updateDryRun, "Show what would change and write nothing")
 	f.BoolVar(&updateAllowDowngrade, "allow-downgrade", false, "Allow a tag with lower precedence than the pinned one")
 	f.BoolVar(&updateMajor, "major", false, "Handle only sources that have a newer major version: print the constraint that would take it")
 	f.BoolVar(&updateWriteConfig, "write-config", false, "With --major, rewrite the version line of those sources in config.toml and move their pins")
@@ -90,7 +90,6 @@ func init() {
 	f.StringVar(&updateKind, "kind", "", "Limit the update to include, skill or source")
 	addFormatFlag(f, &updateFormat, "", formatText, formatText, formatJSON)
 	f.BoolVar(&updateOffline, "offline", false, "Refuse to run: update reads the remote's tags")
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	RootCmd.AddCommand(UpdateCmd)
 }
 

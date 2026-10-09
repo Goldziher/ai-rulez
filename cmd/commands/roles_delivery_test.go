@@ -113,7 +113,7 @@ func TestTokensRoleCountsServedSkillsAsNotListed(t *testing.T) {
 	report := func(role string) (served []string, listing int) {
 		tokensRole = role
 		var out bytes.Buffer
-		_, err := runTokens(&out, nil)
+		_, err := runTokens(&out)
 		require.NoError(t, err)
 		var r struct {
 			ServedSkills []string `json:"served_skills"`

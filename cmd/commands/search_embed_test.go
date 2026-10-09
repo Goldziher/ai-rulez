@@ -375,7 +375,7 @@ func TestSearchEval_DegradedEmbeddingsAreNeverAPass(t *testing.T) {
 	setSearchFlag(t, "eval", writeCases(t, searchGoodCases))
 	setSearchFlag(t, "mode", "hybrid")
 	out := filepath.Join(t.TempDir(), "base.json")
-	setSearchFlag(t, "out", out)
+	setSearchFlag(t, "output", out)
 
 	code, _, errOut = execSearch(t)
 
@@ -447,7 +447,7 @@ func TestSearchMine_LabelsQueriesFromTheLog(t *testing.T) {
 `
 	require.NoError(t, os.WriteFile(logPath, []byte(lines), 0o600))
 	out := filepath.Join(t.TempDir(), "mined.yaml")
-	require.NoError(t, SearchCmd.Flags().Set("out", out))
+	require.NoError(t, SearchCmd.Flags().Set("output", out))
 	require.NoError(t, SearchCmd.Flags().Set("purge", "true"))
 	var o, e bytes.Buffer
 

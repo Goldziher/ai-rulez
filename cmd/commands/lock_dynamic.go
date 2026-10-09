@@ -11,7 +11,7 @@ import (
 )
 
 // exitUnpinned is the exit code of a `lock` that wrote the lock but left served
-// skills unpinned because the security scan refuses them (see --strict).
+// skills unpinned because the security scan refuses them (see --refuse-findings).
 const exitUnpinned = lockrun.ExitUnpinned
 
 // Flags that select the serve view `lock` pins besides the default one, the
@@ -30,8 +30,8 @@ var (
 
 func init() {
 	f := LockCmd.Flags()
-	f.StringVar(&lockServeRole, "role", "", "Also pin the skills this role serves, as a view of their own (see mcp --serve-skills --role)")
-	f.StringVar(&lockServeTargets, "targets", "", "Also pin the view that serves this preset's rendering of the skills (see mcp --serve-skills --targets)")
+	specRole.String(f, &lockServeRole, "Also pin the skills this role serves, as a view of their own (see mcp --serve-skills --role)")
+	specTargets.String(f, &lockServeTargets, "Also pin the view that serves this preset's rendering of the skills (see mcp --serve-skills --targets)")
 	f.BoolVar(&lockServeIncludeStatic, "include-static", false, "Also pin the view that serves static skills too (see mcp --serve-skills --include-static)")
 	f.StringArrayVar(&lockServeSources, "source", nil, "Also pin the view with this extra skill source, repeatable (see mcp --serve-skills --source)")
 	f.BoolVar(&lockStrict, "refuse-findings", false, "Fail without writing when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3)")
@@ -50,7 +50,7 @@ func knownLockKind(kind string) bool { return lockrun.KnownKind(kind) }
 // mergeDynamicLock refreshes the source and served pins of next (see
 // lockrun.MergeDynamic) with the serve-view flags, and collects the skills left
 // unpinned. scanOnly is true when every problem is a served skill the security
-// scan refuses under --strict: findings, which exit 2, not a failure to run.
+// scan refuses under --refuse-findings: findings, which exit 2, not a failure to run.
 func mergeDynamicLock(ctx context.Context, cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool) (problems []string, scanOnly bool) {
 	res := mergeDynamicViews(ctx, cfg, current, next, dynamicRun{kind: kind, wanted: wanted, extras: lockExtraViews(), strict: lockStrict})
 	lockUnpinned = append(lockUnpinned, res.unpinned...)

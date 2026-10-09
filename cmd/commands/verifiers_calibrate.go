@@ -51,13 +51,12 @@ func init() {
 	f.BoolVar(&verifiersEstimate, "estimate", false, "Print what would be sent and the cost bound, and call nothing")
 	f.BoolVar(&calibrateNoWrite, "no-write", false, "Print the measurement without writing the record")
 	addJSONFormat(f, &calibrateJSON, "")
-	f.BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specNoLocal.Bool(f, &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
 }
 
 // calibrateVerifiers runs `verifiers calibrate` and returns the exit code.
 func calibrateVerifiers(ctx context.Context, names []string, out io.Writer) error {
-	cfg, err := loadVerifierConfig(ctx, nil)
+	cfg, err := loadVerifierConfig(ctx)
 	if err != nil {
 		return fail(err)
 	}

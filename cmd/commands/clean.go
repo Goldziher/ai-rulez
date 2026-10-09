@@ -20,7 +20,7 @@ var (
 )
 
 var CleanCmd = &cobra.Command{
-	Use:   "clean [config-file]",
+	Use:   "clean",
 	Short: "Remove files produced by generate",
 	Long: `Remove the files and directories that 'generate' produced — the inverse
 of generate. This deletes the generated assistant outputs (CLAUDE.md, AGENTS.md,
@@ -34,31 +34,30 @@ By default clean lists what it will delete and asks for confirmation; use --yes
 to skip the prompt (required in non-interactive shells; declining exits 1) or --dry-run
 to preview. Generated files you edited by hand are kept with a warning; --include-edited
 removes them too.`,
-	Args: cobra.MaximumNArgs(1),
+	Args: cobra.NoArgs,
 	RunE: runClean,
 }
 
 func init() {
-	CleanCmd.Flags().BoolVarP(&cleanDryRun, "dry-run", "d", false, "Show what would be removed without deleting anything")
+	specDryRun.Bool(CleanCmd.Flags(), &cleanDryRun, "Show what would be removed without deleting anything")
 	addYesFlag(CleanCmd.Flags(), &cleanForce, "Skip the confirmation prompt")
 	CleanCmd.Flags().BoolVar(&cleanIncludeEdited, "include-edited", false, "Also remove generated files whose body was edited by hand (otherwise they are kept with a warning)")
-	CleanCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile whose outputs to remove, or a comma-separated list to compose several (default: from config or 'default')")
-	CleanCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specProfile.String(CleanCmd.Flags(), &profile, "Profile whose outputs to remove, or a comma-separated list to compose several (default: from config or 'default')")
 	CleanCmd.Flags().BoolVar(&userScope, "user", false, "Remove the files 'generate --user' wrote into the home directories, as recorded in the user manifest")
 	CleanCmd.Flags().BoolVar(&cleanKeepGitignore, "keep-gitignore", false, "Leave the ai-rulez managed block in .gitignore in place")
 	addFormatFlag(CleanCmd.Flags(), new(string), formatText, formatText, formatText, formatJSON)
 	CleanCmd.Flags().BoolVar(&cleanKeepManifest, "keep-manifest", false, "Leave the generated manifest in place")
 }
 
-func runClean(cmd *cobra.Command, args []string) error {
+func runClean(cmd *cobra.Command, _ []string) error {
 	ctx := cmdContext()
 	out := outFor(cmd)
 
-	if handled, err := handleUserClean(out, args); handled {
+	if handled, err := handleUserClean(out); handled {
 		return err
 	}
 
-	cfg, err := loadConfigForCommand(ctx, args)
+	cfg, err := loadConfigForCommand(ctx)
 	if err != nil {
 		return failMsg("Failed to load config", err)
 	}

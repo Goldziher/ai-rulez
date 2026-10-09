@@ -57,7 +57,7 @@ func init() {
 	DomainCmd.AddCommand(domainListCmd)
 
 	// Add flags to domain add command
-	domainAddCmd.Flags().StringVarP(&domainDescription, "description", "s", "", "Domain description")
+	domainAddCmd.Flags().StringVar(&domainDescription, "description", "", "Domain description")
 	addResultFormat(domainAddCmd.Flags())
 	addResultFormat(domainRemoveCmd.Flags())
 

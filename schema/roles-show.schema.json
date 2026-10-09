@@ -4,13 +4,7 @@
   "title": "ai-rulez roles show",
   "description": "Output of `ai-rulez roles show <name> --format json`: the declared role, the role after inheritance and the inheritance chain.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "declared",
-    "effective",
-    "chain",
-    "problems"
-  ],
+  "required": ["schema_version", "declared", "effective", "chain", "problems"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -32,11 +26,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "kind",
-          "role",
-          "message"
-        ],
+        "required": ["kind", "role", "message"],
         "additionalProperties": false,
         "properties": {
           "kind": {

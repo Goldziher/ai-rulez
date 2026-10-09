@@ -71,7 +71,7 @@ backend works. A harness that keeps its state elsewhere needs --isolation none f
 		if err := checkFormatFlag(improveFlags.format); err != nil {
 			return err
 		}
-		cfg, err := loadConfigForCommand(ctx, nil)
+		cfg, err := loadConfigForCommand(ctx)
 		if err != nil {
 			return err
 		}
@@ -146,10 +146,9 @@ func init() {
 	f.BoolVar(&improvePRFlags.runEvals, "run-evals", false, "Also run eval run <skill> with --changed-only in the worktree (calls the eval runner and costs money)")
 	f.StringArrayVar(&improvePRFlags.evalArgs, "eval-arg", nil, "Extra argument for eval run with --run-evals, for example --eval-arg=--max-cost=2; repeatable")
 	f.StringSliceVar(&improvePRFlags.envPass, "env-pass", nil, "Environment variable names forwarded to the ai-rulez commands run in the worktree (all others are scrubbed); eval run needs its model credentials here")
-	f.BoolVarP(&improveFlags.yes, "yes", "y", false, "Push and open the pull request without the confirmation prompt")
+	specYes.Bool(f, &improveFlags.yes, "Push and open the pull request without the confirmation prompt")
 	f.BoolVar(&improveFlags.allowScripts, "allow-scripts", false, "Allow the candidate to change scripts/ and assets/ and reference scripts")
 	f.BoolVar(&improveFlags.allowFrontmatter, "allow-frontmatter", false, "Allow the candidate to change allowed-tools, model and disable-model-invocation")
 	addFormatFlag(f, &improveFlags.format, formatText, formatText, formatText, formatJSON)
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	ImproveCmd.AddCommand(improvePRCmd)
 }

@@ -41,7 +41,7 @@ func TestRunDoctor_ExitCodes(t *testing.T) {
 			doctorStrict, doctorJSON = tt.strict, tt.json
 			var out bytes.Buffer
 
-			got := runDoctor(context.Background(), nil, &out)
+			got := runDoctor(context.Background(), &out)
 
 			if got != tt.want {
 				t.Errorf("exit code = %d, want %d\n%s", got, tt.want, out.String())
