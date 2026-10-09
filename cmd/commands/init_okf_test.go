@@ -27,7 +27,7 @@ func TestInitScaffoldsAnOKFBundle(t *testing.T) {
 	dir := t.TempDir()
 	chdir(t, dir)
 	setForce(t, false, false)
-	skipContentFlag, domainsFlag, initConfigDirArg = false, "", ""
+	skipContentFlag, domainsFlag, configDir = false, "", ""
 
 	runInit(InitCmd, []string{"demo"})
 
@@ -53,7 +53,7 @@ func TestInitSkipContentStillWritesTheRootIndex(t *testing.T) {
 	dir := t.TempDir()
 	chdir(t, dir)
 	setForce(t, false, false)
-	skipContentFlag, domainsFlag, initConfigDirArg = true, "", ""
+	skipContentFlag, domainsFlag, configDir = true, "", ""
 	t.Cleanup(func() { skipContentFlag = false })
 
 	runInit(InitCmd, []string{"demo"})
