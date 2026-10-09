@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
@@ -479,6 +480,7 @@ func (pc *publishContext) writeEmitOnly(out interface{ Write([]byte) (int, error
 	}
 	warnAll(d.Warnings)
 	slices.Sort(paths)
+	written := make([]string, 0, len(paths))
 	for _, p := range paths {
 		target := filepath.Join(dir, filepath.FromSlash(strings.TrimPrefix(p, prefix)))
 		if err := os.MkdirAll(filepath.Dir(target), 0o750); err != nil {
@@ -487,11 +489,25 @@ func (pc *publishContext) writeEmitOnly(out interface{ Write([]byte) (int, error
 		if err := os.WriteFile(target, d.Files[p], 0o644); err != nil { //nolint:gosec // emitter output is meant to be shared
 			return oops.With("path", target).Wrapf(err, "write emitter file")
 		}
+		written = append(written, target)
+		if publishFormat == formatJSON {
+			continue
+		}
 		if _, err := out.Write([]byte("wrote " + target + "\n")); err != nil {
 			return oops.Wrapf(err, "write result")
 		}
 	}
+	if publishFormat == formatJSON {
+		return jsondoc.Write(out, publishEmitDocument{Emitter: name, Out: dir, Files: written})
+	}
 	return nil
+}
+
+// publishEmitDocument is the `publish emit --format json` document.
+type publishEmitDocument struct {
+	Emitter string   `json:"emitter"`
+	Out     string   `json:"out"`
+	Files   []string `json:"files"`
 }
 
 // resolveVerifyTarget turns the argument of `publish verify` into a directory:
