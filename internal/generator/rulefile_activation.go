@@ -6,14 +6,10 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"gopkg.in/yaml.v3"
-)
-
-const (
-	frontmatterFence = "---"
-	byteOrderMark    = "\xef\xbb\xbf"
 )
 
 // ruleFileDialect is the frontmatter dialect a native rules folder speaks.
@@ -57,20 +53,11 @@ func dialectForPath(path string) ruleFileDialect {
 // ruleFileFrontmatter returns the parsed frontmatter of a generated rule file.
 // ok is false when the file has no parseable frontmatter block.
 func ruleFileFrontmatter(content string) (fields map[string]any, ok bool) {
-	rest := strings.TrimLeft(strings.TrimPrefix(content, byteOrderMark), " \t\r\n")
-	if !strings.HasPrefix(rest, frontmatterFence) {
+	block := frontmatter.SplitString(content)
+	if !block.Closed {
 		return nil, false
 	}
-	rest = strings.TrimPrefix(rest, frontmatterFence)
-	rest = strings.TrimLeft(rest, " \t")
-	if !strings.HasPrefix(rest, "\n") && !strings.HasPrefix(rest, "\r\n") {
-		return nil, false
-	}
-	end := strings.Index(rest, "\n"+frontmatterFence)
-	if end < 0 {
-		return nil, false
-	}
-	if err := yaml.Unmarshal([]byte(rest[:end]), &fields); err != nil {
+	if err := yaml.Unmarshal([]byte(block.Raw), &fields); err != nil {
 		return nil, false
 	}
 	if fields == nil {
@@ -156,22 +143,12 @@ func mappedFrontmatterFields(content, format string) map[string]any {
 		fields, _ := ruleFileFrontmatter(content)
 		return fields
 	}
-	rest := strings.TrimLeft(strings.TrimPrefix(content, byteOrderMark), " \t\r\n")
-	rest, ok := strings.CutPrefix(rest, frontmatterFence)
-	if !ok {
-		return nil
-	}
-	rest = strings.TrimLeft(rest, " \t")
-	rest, ok = strings.CutPrefix(rest, "\n")
-	if !ok {
-		return nil
-	}
-	end := strings.Index(rest, "\n"+frontmatterFence)
-	if end < 0 {
+	block := frontmatter.SplitString(content)
+	if !block.Closed {
 		return nil
 	}
 	fields := map[string]any{}
-	for _, line := range strings.Split(rest[:end], "\n") {
+	for _, line := range strings.Split(block.Raw, "\n") {
 		if key, value, found := strings.Cut(line, ":"); found {
 			fields[strings.TrimSpace(key)] = strings.TrimSpace(value)
 		}
