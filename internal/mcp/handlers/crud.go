@@ -242,7 +242,7 @@ func UpdateRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	name := request.GetString("name", "")
 	content := request.GetString("content", "")
 	domain := request.GetString("domain", "")
-	priority := request.GetString("priority", "medium")
+	priority := request.GetString("priority", "") // not given: the file keeps its own
 	targets := request.GetStringSlice("targets", nil)
 
 	result, err := op.UpdateFile(ctx, domain, "rules", name, content, priority, targets)
@@ -512,7 +512,7 @@ func UpdateContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	name := request.GetString("name", "")
 	content := request.GetString("content", "")
 	domain := request.GetString("domain", "")
-	priority := request.GetString("priority", "medium")
+	priority := request.GetString("priority", "") // not given: the file keeps its own
 	targets := request.GetStringSlice("targets", nil)
 
 	result, err := op.UpdateFile(ctx, domain, "context", name, content, priority, targets)
@@ -681,7 +681,7 @@ func UpdateSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 	name := request.GetString("name", "")
 	content := request.GetString("content", "")
 	domain := request.GetString("domain", "")
-	priority := request.GetString("priority", "medium")
+	priority := request.GetString("priority", "") // not given: the file keeps its own
 	targets := request.GetStringSlice("targets", nil)
 
 	result, err := op.UpdateFile(ctx, domain, "skills", name, content, priority, targets)
