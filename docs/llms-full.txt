@@ -18278,7 +18278,7 @@ The server provides Claude with access to read and modify your configuration, wh
 
 #### MCP Tools Reference
 
-The ai-rulez MCP server exposes 36 tools for programmatic configuration management. These tools allow AI assistants to initialize projects, generate and clean outputs, validate configuration, inspect builtins, and create, read, update, and delete configuration elements.
+The ai-rulez MCP server exposes 47 tools for programmatic configuration management. These tools allow AI assistants to initialize projects, generate and clean outputs, validate configuration, inspect builtins, and create, read, update, and delete configuration elements.
 
 Every tool below accepts an optional `working_directory` parameter (the directory to operate in),
 except the two utility tools `get_version` and `show_builtin`. The per-tool parameter lists below
@@ -18301,10 +18301,39 @@ The drift guard applies to `generate_outputs` too. `--allow-local-drift` is CLI-
 cannot write overlay-derived values over tracked shared files. Pass `no_local: true` to generate the
 shared view, or fix the reported paths.
 
+##### Tool metadata, arguments and results
+
+**Metadata.** Every tool has a human `title` and annotations: `readOnlyHint`, `destructiveHint` and `idempotentHint`
+describe what it writes, and `openWorldHint` is `false` on all of them (they act on the local project tree only).
+Read-only tools (`list_*`, `read_*`, `validate_config`, `doctor`, `run_verifiers`, `get_version`, `show_builtin`, the
+governance tools and the skills-serving tools) never write.
+
+**Arguments.** Input schemas are inferred from typed argument structs and enforced before a handler runs: an
+unknown argument, a wrong type (`"local": "yes"`), a value outside an enum or a missing required argument is an
+error result. Every schema sets `additionalProperties: false`.
+
+**Results.** Every tool declares an `outputSchema` and returns `structuredContent` (the parsed result) together with
+the same JSON as a text block, for clients that only read text. Output schemas list the stable fields only and allow
+others, so a result can gain a field without breaking validation.
+
+**Errors.** A failure is an error result (`isError: true`), never a success. That covers a configuration that does not
+load (every `list_*` and `read_*` tool, as `ai-rulez list` exits 1), an invalid configuration, findings that reach
+`fail_on`, a `lock_status` call on a project without a lock, `doctor` when the configuration cannot be read, and
+arguments that fail validation. The error text carries the CLI's hint; errors that are reports (`validate_config`,
+`doctor`) also return the report as `structuredContent`.
+
+**Confinement.** `working_directory`, `config_file` and `config_dir` must lie inside the directory the server was
+started in. A call without `working_directory` uses that directory; a relative one resolves against it; symlinks are
+followed before the check. Start the server with `mcp --root <dir>` to confine it elsewhere, or with
+`mcp --allow-any-dir` to lift the check. The skills-serving mode takes no directory argument.
+
+**Capabilities.** The authoring server advertises `tools` without `listChanged` (its tool set is fixed), pages lists
+at 100 entries, and sends the SDK's warnings and errors to stderr.
+
 ##### Response keys
 
-Responses of the list tools serialize Go structs without JSON tags, so item keys are capitalised
-(`Name`, `Path`), unlike the lower-case envelope keys (`success`, `operation`, `count`).
+Items in the list tools are the file records of the CRUD layer, so their keys are capitalised (`Name`, `Path`),
+unlike the lower-case envelope keys (`success`, `operation`, `count`).
 
 ##### Project and Utility Tools
 
@@ -18336,15 +18365,29 @@ Remove the files produced by `generate_outputs` (its inverse): the generated ass
 
 ###### `validate_config`
 
-Validate the configuration file, including all includes. A `config.local.*` overlay, when present, is
-also validated against the local schema (`schema/ai-rules-local.schema.json`). Errors are redacted:
-URL credentials and quoted source values are removed, since the merged config can contain local secrets.
+Validate the configuration with the same checks as [`ai-rulez validate`](cli.md): the configuration file against its
+schema, structural validation (including all includes), the organization policy, the `config.local.*` overlay against
+the local schema (`schema/ai-rules-local.schema.json`), and then every lint analyzer, with the baseline and ratchets
+the CLI applies. The tool and the command share one code path, so they report the same findings against the same
+threshold. Errors are redacted: URL credentials and quoted source values are removed, since the merged config can
+contain local secrets.
+
+The result is `{"valid", "fail_on", "config", "warnings", "errors", "roots", "findings", "summary", "risk"}`:
+`warnings` and `errors` are the findings of that severity as `file:line: CODE message`, and `findings`, `summary` and
+`risk` are the document of `validate --format json`. An invalid configuration, or findings at or above `fail_on`,
+is an error result (`isError: true`) with the same document in `structuredContent`; findings below the threshold are
+returned as warnings in a success result.
 
 **Parameters:**
 
 - `config_file` (optional, string): Path to the root configuration file
 - `config_dir` (optional, string): Configuration directory name (default: `.ai-rulez`)
 - `no_local` (optional, boolean): Validate without the machine-local overlay
+- `fail_on` (optional, string): Lowest severity that fails the call: `error` (default; or the `[lint]` setting), `warning`, `info` or `none` (`--fail-on`)
+- `strict` (optional, boolean): Fail on warnings too, the same as `fail_on: "warning"` (`--strict`)
+- `config_only` (optional, boolean): Check the configuration only and skip the content checks (`--config-only`)
+- `lint_profile` (optional, string): `default`, `strict` or `permissive` (`--lint-profile`)
+- `analyzers` (optional, string[]): Run only these analyzers (`--analyzer`)
 - `working_directory` (optional, string): Directory to operate in
 
 ###### `init_project`
@@ -18992,8 +19035,9 @@ What a person holding a role gets: the document of [`roles resolve`](roles.md), 
 ###### `lock_status`
 
 The comparison of `ai-rulez.lock` with the authored sources, the generated outputs, the skill sources and the served
-skills ([`lock --check`](lockfile.md)), following `schema/lock-diff.schema.json`. A project without a lock is in
-sync unless `[lock] enforce = true`.
+skills ([`lock --check`](lockfile.md)), following `schema/lock-diff.schema.json`. A project that was never locked
+is an error result ("nothing to check", with the hint to run `ai-rulez lock`), as `lock --check` exits 1; under
+`[lock] enforce = true` the missing lock is reported as drift instead.
 
 | Parameter | Type | Description |
 | --- | --- | --- |

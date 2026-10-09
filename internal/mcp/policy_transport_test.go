@@ -22,7 +22,7 @@ func TestMCPPolicyReachesHandlersOverARealTransport(t *testing.T) {
 	ctx, cancel := context.WithTimeout(config.WithPolicyContext(context.Background(), loosening{}), 30*time.Second)
 	t.Cleanup(cancel)
 	serverT, clientT := sdkmcp.NewInMemoryTransports()
-	srv := NewServer("test")
+	srv := NewServer("test", WithAnyDirectory())
 	go func() { _ = srv.GetMCPServer().Run(ctx, serverT) }()
 	session, err := sdkmcp.NewClient(&sdkmcp.Implementation{Name: "c", Version: "1"}, nil).Connect(ctx, clientT, nil)
 	require.NoError(t, err)
@@ -37,6 +37,7 @@ func TestMCPPolicyReachesHandlersOverARealTransport(t *testing.T) {
 
 	// Assert
 	assert.True(t, generated.IsError, "generate refuses a configuration that loosens the policy")
+	assert.True(t, validated.IsError, "a configuration that loosens the policy is an error result, never success")
 	require.NotEmpty(t, validated.Content)
 	text, ok := validated.Content[0].(*sdkmcp.TextContent)
 	require.True(t, ok)
