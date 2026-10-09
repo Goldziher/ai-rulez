@@ -171,25 +171,25 @@ func (r *runner) resourceOfServed(doc *item, served map[string]bool) bool {
 // forms the reference check (AR301) understands.
 func referencedNames(l bodyLine, served map[string]bool) []string {
 	found := map[string]bool{}
-	for _, m := range nameAfterRe.FindAllStringSubmatch(l.Text, -1) {
+	for _, m := range nameAfterRe().FindAllStringSubmatch(l.Text, -1) {
 		if m[2] == kindSkill {
 			found[m[1]] = true
 		}
 	}
-	for _, m := range nameBeforeRe.FindAllStringSubmatch(l.Text, -1) {
+	for _, m := range nameBeforeRe().FindAllStringSubmatch(l.Text, -1) {
 		if m[1] == kindSkill {
 			found[m[2]] = true
 		}
 	}
-	for _, m := range skillCallRe.FindAllStringSubmatch(l.Text, -1) {
+	for _, m := range skillCallRe().FindAllStringSubmatch(l.Text, -1) {
 		found[m[1]] = true
 	}
-	for _, m := range slashRe.FindAllStringSubmatchIndex(l.Plain, -1) {
+	for _, m := range slashRe().FindAllStringSubmatchIndex(l.Plain, -1) {
 		if slashInvocation(l.Plain[:m[2]-1]) {
 			found[l.Plain[m[2]:m[3]]] = true
 		}
 	}
-	for _, m := range backtickRe.FindAllStringSubmatch(l.Text, -1) {
+	for _, m := range backtickRe().FindAllStringSubmatch(l.Text, -1) {
 		found[strings.TrimPrefix(strings.TrimSpace(m[1]), "/")] = true
 	}
 	var out []string

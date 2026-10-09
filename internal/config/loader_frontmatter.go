@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // ParseFrontmatterPublic is the exported version of parseFrontmatter for use by other packages
@@ -23,56 +25,28 @@ func ParseFrontmatterChecked(content string) (metadata *Metadata, body string, m
 // hasUnclosedFrontmatter reports whether content opens a frontmatter block with
 // "---" and never closes it.
 func hasUnclosedFrontmatter(content string) bool {
-	if !strings.HasPrefix(content, "---\n") && !strings.HasPrefix(content, "---\r\n") {
-		return false
-	}
-	lines := strings.Split(content, "\n")
-	for _, line := range lines[1:] {
-		if strings.TrimSpace(line) == "---" {
-			return false
-		}
-	}
-	return true
+	b := frontmatter.SplitString(content)
+	return b.Present && !b.Closed
 }
 
 // parseFrontmatter parses optional YAML frontmatter from content.
 // Returns metadata (nil if none), the actual content (without frontmatter),
 // and a malformed flag set to true when a delimited frontmatter block was
 // present but its YAML was unparseable (e.g. unquoted values containing ": ").
+// Where the block ends is decided by internal/frontmatter.
 func parseFrontmatter(content string) (metadata *Metadata, body string, malformed bool) {
-	// Check if content starts with ---
-	if !strings.HasPrefix(content, "---\n") && !strings.HasPrefix(content, "---\r\n") {
-		return nil, content, false
-	}
-
-	// Find the closing ---
-	lines := strings.Split(content, "\n")
-	if len(lines) < 3 {
-		return nil, content, false
-	}
-
-	endIdx := -1
-	for i := 1; i < len(lines); i++ {
-		line := strings.TrimSpace(lines[i])
-		if line == "---" {
-			endIdx = i
-			break
-		}
-	}
-
-	if endIdx == -1 {
-		// No closing ---, treat as regular content
+	block := frontmatter.SplitString(content)
+	if !block.Closed {
+		// No frontmatter, or no closing ---: treat as regular content
 		return nil, content, false
 	}
 
 	// Extract frontmatter YAML
-	frontmatterLines := lines[1:endIdx]
-	frontmatterYAML := normalizeOKFFrontmatter(strings.Join(frontmatterLines, "\n"))
+	frontmatterYAML := normalizeOKFFrontmatter(strings.TrimSuffix(block.Raw, "\n"))
 
 	// Extract actual content (after the closing ---). Computed up front so a
 	// parse failure still strips the delimited block from the body.
-	body = strings.Join(lines[endIdx+1:], "\n")
-	body = strings.TrimPrefix(body, "\n")
+	body = frontmatter.TrimSeparator(block.Body)
 
 	// First try direct unmarshal into Metadata (works for simple key-value frontmatter)
 	var parsedMetadata Metadata
@@ -93,7 +67,7 @@ func parseFrontmatter(content string) (metadata *Metadata, body string, malforme
 	}
 
 	parsedMetadata.extraNodes = extraNodes(frontmatterYAML)
-	parsedMetadata.OKFType, parsedMetadata.OKFTitle = okfIdentity(strings.Join(frontmatterLines, "\n"))
+	parsedMetadata.OKFType, parsedMetadata.OKFTitle = okfIdentity(strings.TrimSuffix(block.Raw, "\n"))
 	metadata = &parsedMetadata
 	return metadata, body, false
 }

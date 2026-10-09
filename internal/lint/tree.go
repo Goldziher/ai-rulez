@@ -5,7 +5,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
@@ -22,6 +24,9 @@ type Tree struct {
 	files    map[string]uint32
 	dirs     map[string]struct{}
 	topNames map[string]struct{}
+	// sorted is the indexed paths in order, built on first use by HasPathPrefix.
+	sortedOnce sync.Once
+	sorted     []string
 }
 
 // LoadTree indexes the tracked files below the repository containing base.
@@ -151,6 +156,17 @@ func (t *Tree) Paths() []string {
 		out = append(out, f)
 	}
 	return out
+}
+
+// HasPathPrefix reports whether any indexed file starts with prefix. The paths
+// are sorted once, so each question is a binary search.
+func (t *Tree) HasPathPrefix(prefix string) bool {
+	t.sortedOnce.Do(func() {
+		t.sorted = t.Paths()
+		sort.Strings(t.sorted)
+	})
+	i := sort.SearchStrings(t.sorted, prefix)
+	return i < len(t.sorted) && strings.HasPrefix(t.sorted[i], prefix)
 }
 
 // IsTopLevel reports whether name is a top-level file or directory of the repo.

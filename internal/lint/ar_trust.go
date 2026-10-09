@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
@@ -31,12 +32,20 @@ func registerArTrust(s *ruleSet) {
 }
 
 var (
-	claimRe     = regexp.MustCompile(`\b(?:(?:made|created|published|maintained|authored|developed|built|provided|owned|supported)\s+by|by)\s+(@[A-Za-z0-9_-]+|[A-Z][a-z][\w&.-]*(?:\s+[A-Z][\w&.-]*){0,3})`)
-	authorityRe = regexp.MustCompile(`(?i)\b(official|verified|trusted|authorized|endorsed|certified)\b`)
-	orgSuffixRe = regexp.MustCompile(`(?i)\b(?:corp|corporation|inc|team|labs|co|ltd|llc|technologies|software|group)\b\.?`)
+	claimRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`\b(?:(?:made|created|published|maintained|authored|developed|built|provided|owned|supported)\s+by|by)\s+(@[A-Za-z0-9_-]+|[A-Z][a-z][\w&.-]*(?:\s+[A-Z][\w&.-]*){0,3})`)
+	})
+	authorityRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(official|verified|trusted|authorized|endorsed|certified)\b`)
+	})
+	orgSuffixRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)\b(?:corp|corporation|inc|team|labs|co|ltd|llc|technologies|software|group)\b\.?`)
+	})
 	// ownerRe pulls the owner out of a git source: github.com/owner/repo,
 	// https://host/owner/repo.git, git@host:owner/repo or owner/repo.
-	ownerRe = regexp.MustCompile(`^(?:(?:https?|ssh|git)://(?:[^@/]+@)?[^/]+/|git@[^:]+:|[a-z0-9.-]+\.[a-z]{2,}/)?([A-Za-z0-9_.-]+)/[A-Za-z0-9_.-]+`)
+	ownerRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^(?:(?:https?|ssh|git)://(?:[^@/]+@)?[^/]+/|git@[^:]+:|[a-z0-9.-]+\.[a-z]{2,}/)?([A-Za-z0-9_.-]+)/[A-Za-z0-9_.-]+`)
+	})
 
 	// trustedOrgs are organizations an "official" claim is believable for.
 	trustedOrgs = []string{
@@ -48,7 +57,7 @@ var (
 )
 
 func normalizeOrg(s string) string {
-	s = strings.ToLower(orgSuffixRe.ReplaceAllString(s, ""))
+	s = strings.ToLower(orgSuffixRe().ReplaceAllString(s, ""))
 	var b strings.Builder
 	for _, c := range s {
 		if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
@@ -64,7 +73,7 @@ func sourceOwner(source string) string {
 	if strings.HasPrefix(source, ".") || strings.HasPrefix(source, "/") || strings.HasPrefix(source, "~") || source == "" {
 		return ""
 	}
-	if m := ownerRe.FindStringSubmatch(source); m != nil {
+	if m := ownerRe().FindStringSubmatch(source); m != nil {
 		return m[1]
 	}
 	return ""
@@ -72,7 +81,7 @@ func sourceOwner(source string) string {
 
 // claimedPublisher returns the publisher the text credits itself to.
 func claimedPublisher(text string) string {
-	if m := claimRe.FindStringSubmatch(text); m != nil {
+	if m := claimRe().FindStringSubmatch(text); m != nil {
 		return strings.TrimPrefix(strings.TrimSpace(m[1]), "@")
 	}
 	return ""
@@ -114,8 +123,8 @@ func checkInstalledTrust(r *runner) { //nolint:gocyclo // linear checks over a d
 		if claimed := claimedPublisher(text); claimed != "" && !publisherMatches(claimed, owner) {
 			r.add(CodePublisherMismatch, cfgPath, at, "installed skill %q credits %q, but it is installed from %s/...; check that the skill is what it says it is", s.Name, claimed, owner)
 		}
-		if authorityRe.MatchString(text) && !inSet(r.trustedOrgList(), strings.ToLower(owner)) {
-			r.add(CodeAuthorityClaim, cfgPath, at, "installed skill %q describes itself as %q, but its source owner %q is not a known organization", s.Name, strings.ToLower(authorityRe.FindString(text)), owner)
+		if authorityRe().MatchString(text) && !inSet(r.trustedOrgList(), strings.ToLower(owner)) {
+			r.add(CodeAuthorityClaim, cfgPath, at, "installed skill %q describes itself as %q, but its source owner %q is not a known organization", s.Name, strings.ToLower(authorityRe().FindString(text)), owner)
 		}
 	}
 	r.checkIncludedTrust(cfgPath, lines)
@@ -177,8 +186,8 @@ func (r *runner) checkIncludedTrust(cfgPath string, lines []string) {
 		if claimed := claimedPublisher(text); claimed != "" && !publisherMatches(claimed, owner) {
 			r.add(CodePublisherMismatch, cfgPath, at, "%s credits %q, but the include is %s/...; check that the content is what it says it is", what, claimed, owner)
 		}
-		if authorityRe.MatchString(text) && !inSet(r.trustedOrgList(), strings.ToLower(owner)) {
-			r.add(CodeAuthorityClaim, cfgPath, at, "%s describes itself as %q, but its source owner %q is not a known organization", what, strings.ToLower(authorityRe.FindString(text)), owner)
+		if authorityRe().MatchString(text) && !inSet(r.trustedOrgList(), strings.ToLower(owner)) {
+			r.add(CodeAuthorityClaim, cfgPath, at, "%s describes itself as %q, but its source owner %q is not a known organization", what, strings.ToLower(authorityRe().FindString(text)), owner)
 		}
 	}
 }
