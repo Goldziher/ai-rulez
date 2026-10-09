@@ -38,9 +38,6 @@ func TestLiveGraderResistsAFakeFenceAndAGraderNote(t *testing.T) {
 			cfg := llm.Config{Provider: "gemini", Model: tt.model, APIKeyEnv: liveGraderKey, AllowNetwork: true,
 				Cache: livePtr(false), MaxRetries: 2, TimeoutSeconds: 120, MaxCostUSD: 0.05,
 				PriceInputPerMTok: tt.in, PriceOutputPerMTok: tt.out}
-			if !llm.NativeAvailable() {
-				cfg.Backend, cfg.BaseURL = llm.BackendOpenAICompat, "https://generativelanguage.googleapis.com/v1beta/openai"
-			}
 			managed, err := llm.New(cfg, llm.Options{Getenv: os.Getenv})
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = managed.Close() })

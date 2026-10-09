@@ -69,34 +69,10 @@ jobs:
           go-version: "1.27"
           cache: false
 
-      # -e: the literllm-tagged import of internal/llm/literllm is a separate
-      # module the default graph leaves out on purpose, so tidy cannot resolve it.
       - name: go.mod and go.sum are tidy
-        env:
-          GOWORK: "off"
         run: |
-          go mod tidy -e -diff
-          (cd tests/external && go mod tidy -e -diff)
-
-  literllm:
-    name: Native backend (-tags literllm)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-          cache: false
-
-      - name: Build and test with -tags literllm
-        env:
-          CGO_ENABLED: "1"
-        run: |
-          (cd internal/llm/literllm && GOWORK=off go test -tags literllm ./...)
-          GOWORK="$PWD/literllm.work" go build -tags literllm -o /dev/null ./cmd/ai-rulez
+          go mod tidy -diff
+          (cd tests/external && go mod tidy -diff)
 
   public-api:
     name: Public API (pkg/airulez)
@@ -112,6 +88,9 @@ jobs:
         with:
           go-version: "1.27"
           cache: false
+
+      - name: Set up liter-llm (static library, as a release links it)
+        uses: ./.github/actions/setup-liter-llm
 
       # tests/external is its own module: it imports ai-rulez as an outside
       # consumer would, so a break in what pkg/airulez exposes fails here.
@@ -163,6 +142,9 @@ jobs:
         with:
           go-version: "1.27"
           cache: false
+
+      - name: Set up liter-llm (static library, as a release links it)
+        uses: ./.github/actions/setup-liter-llm
 
       - name: Cache Go modules
         uses: actions/cache@v6
@@ -238,6 +220,9 @@ jobs:
           go-version: "1.27"
           cache: false
 
+      - name: Set up liter-llm (static library, as a release links it)
+        uses: ./.github/actions/setup-liter-llm
+
       - name: Cache Go modules
         uses: actions/cache@v6
         with:
@@ -287,6 +272,9 @@ jobs:
         with:
           go-version: "1.27"
           cache: false
+
+      - name: Set up liter-llm (static library, as a release links it)
+        uses: ./.github/actions/setup-liter-llm
 
       - name: Cache Go modules
         uses: actions/cache@v6
@@ -355,6 +343,9 @@ jobs:
           go-version: "1.27"
           cache: false
 
+      - name: Set up liter-llm (static library, as a release links it)
+        uses: ./.github/actions/setup-liter-llm
+
       - name: Cache Go modules
         uses: actions/cache@v6
         with:
@@ -422,6 +413,9 @@ jobs:
           go-version: "1.27"
           cache: false
 
+      - name: Set up liter-llm (static library, as a release links it)
+        uses: ./.github/actions/setup-liter-llm
+
       - name: Cache Go modules
         uses: actions/cache@v6
         with:
@@ -470,6 +464,9 @@ jobs:
         with:
           go-version: "1.27"
           cache: false
+
+      - name: Set up liter-llm (static library, as a release links it)
+        uses: ./.github/actions/setup-liter-llm
 
       - name: Cache Go modules
         uses: actions/cache@v6

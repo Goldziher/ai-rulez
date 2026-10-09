@@ -1,9 +1,11 @@
 package pricing
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLookup(t *testing.T) {
@@ -13,24 +15,23 @@ func TestLookup(t *testing.T) {
 		want      Price
 		wantKnown bool
 	}{
-		{"exact", "gpt-4o", Price{2.50, 10.00}, true},
-		{"longest prefix wins", "gpt-4o-mini-2024", Price{0.15, 0.60}, true},
-		{"provider prefix is dropped", "anthropic/claude-sonnet-4", Price{3, 15}, true},
-		{"case is ignored", "Claude-Opus-4", Price{15, 75}, true},
+		{"catalog row", "gpt-4o", Price{2.50, 10.00}, true},
+		{"catalog prefix fallback keeps a snapshot at the base price", "gpt-4o-mini-2024-07-18", Price{0.15, 0.60}, true},
+		{"provider prefix is dropped", "anthropic/claude-sonnet-5", Price{2, 10}, true},
+		{"gemini prefix is dropped (catalog misses it)", "gemini/gemini-2.5-flash-lite", Price{0.10, 0.40}, true},
+		{"case is ignored", "GPT-4O", Price{2.50, 10.00}, true},
 		{"short eval name", "haiku", Price{1, 5}, true},
-		{"gemini flash-lite beats flash by prefix", "gemini/gemini-2.5-flash-lite", Price{0.10, 0.40}, true},
-		{"gemini flash", "gemini-2.5-flash-preview", Price{0.30, 2.50}, true},
+		{"family floor", "claude-opus-4", Price{15, 75}, true},
 		{"gemini embedding", "gemini-embedding-001", Price{0.15, 0}, true},
 		{"unknown", "mystery", Price{}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Act
 			got, known := Lookup(tt.model)
 
-			// Assert
-			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.wantKnown, known)
+			assert.InDelta(t, tt.want.InPerMTok, got.InPerMTok, 1e-9)
+			assert.InDelta(t, tt.want.OutPerMTok, got.OutPerMTok, 1e-9)
 		})
 	}
 }
@@ -47,8 +48,40 @@ func TestClaudeVersionedPrices(t *testing.T) {
 	}
 	for model, want := range tests {
 		got, ok := Lookup(model)
-		if !ok || got != want {
-			t.Errorf("Lookup(%q) = %v, %v; want %v", model, got, ok, want)
-		}
+		require.True(t, ok, model)
+		assert.InDelta(t, want.InPerMTok, got.InPerMTok, 1e-9, model)
+		assert.InDelta(t, want.OutPerMTok, got.OutPerMTok, 1e-9, model)
+	}
+}
+
+func TestCostAppliesCacheReadRate(t *testing.T) {
+	full, known := Cost("gpt-4o", Tokens{Prompt: 1_000_000})
+	require.True(t, known)
+	cached, known := Cost("gpt-4o", Tokens{Prompt: 1_000_000, Cached: 1_000_000})
+	require.True(t, known)
+
+	assert.InDelta(t, 2.50, full, 1e-9)
+	assert.Less(t, cached, full, "cache-read tokens are billed at the discounted rate")
+}
+
+func TestCostFloorIsFlat(t *testing.T) {
+	got, known := Cost("sonnet", Tokens{Prompt: 1_000_000, Completion: 1_000_000})
+
+	assert.True(t, known)
+	assert.InDelta(t, 18.0, got, 1e-9)
+}
+
+func TestVersionNamesCatalogAndFloors(t *testing.T) {
+	assert.True(t, strings.HasPrefix(Version(), "literllm-"))
+	assert.Contains(t, Version(), "+floors-")
+}
+
+// A paid model listed at 0/0 would let any amount of use through a cost limit; it is unknown instead.
+func TestZeroPricedListingsAreUnknown(t *testing.T) {
+	for _, name := range []string{"gpt-image-1", "veo-3.1-generate-preview"} {
+		_, known := Lookup(name)
+		assert.False(t, known, name)
+		_, known = Cost(name, Tokens{Prompt: 1_000_000, Completion: 1_000_000})
+		assert.False(t, known, name)
 	}
 }

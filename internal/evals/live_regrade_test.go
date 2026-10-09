@@ -51,7 +51,7 @@ func TestLiveRegradeSavedTranscripts(t *testing.T) {
 	t.Cleanup(func() { _ = managed.Close() })
 	grader := &JudgeGrader{Client: managed, Model: model, Spent: func() float64 { return managed.Spent().CostUSD }}
 
-	out := &liveGraderReport{Backend: managed.Backend, GraderModel: model, PassMark: DefaultRubricMinScore}
+	out := &liveGraderReport{Backend: "literllm", GraderModel: model, PassMark: DefaultRubricMinScore}
 	for _, row := range report.Rows {
 		rubric, ok := rubrics[row.Skill+"/"+row.Case]
 		require.True(t, ok, "%s/%s", row.Skill, row.Case)
