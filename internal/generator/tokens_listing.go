@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"gopkg.in/yaml.v3"
 )
 
@@ -205,37 +206,14 @@ func itemNameFromPath(analysis *config.OutputAnalysis) string {
 // listingFrontmatter separates a leading YAML frontmatter block from the body. A
 // file without one, or with one that does not parse, has no fields.
 func listingFrontmatter(text string) (fields map[string]any, body string) {
-	trimmed := strings.TrimPrefix(text, "\ufeff")
-	if !strings.HasPrefix(trimmed, "---\n") && !strings.HasPrefix(trimmed, "---\r\n") {
+	block := frontmatter.SplitString(text)
+	if !block.Closed {
 		return nil, text
 	}
-	rest := trimmed[strings.Index(trimmed, "\n")+1:]
-	end := -1
-	for offset := 0; offset < len(rest); {
-		line := rest[offset:]
-		next := strings.Index(line, "\n")
-		if next < 0 {
-			next = len(line)
-		}
-		if strings.TrimRight(line[:next], "\r") == frontmatterFence {
-			end = offset
-			break
-		}
-		offset += next + 1
-	}
-	if end < 0 {
+	if err := yaml.Unmarshal([]byte(block.Raw), &fields); err != nil {
 		return nil, text
 	}
-	if err := yaml.Unmarshal([]byte(rest[:end]), &fields); err != nil {
-		return nil, text
-	}
-	body = rest[end:]
-	if newline := strings.Index(body, "\n"); newline >= 0 {
-		body = body[newline+1:]
-	} else {
-		body = ""
-	}
-	return fields, body
+	return fields, block.Body
 }
 
 func scalarString(value any) string {

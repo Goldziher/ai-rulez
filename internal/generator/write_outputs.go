@@ -13,6 +13,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
@@ -225,34 +226,19 @@ const extHTML = ".html"
 // bannerScanLimit bounds how much of a file the banner check reads.
 const bannerScanLimit = 16 * 1024
 
-// frontmatterEnd locates a leading YAML frontmatter block. open reports that
-// the content starts with a "---" line (LF or CRLF); end is the offset just past
-// the closing "---" line, or 0 when the block is not closed. One helper serves
-// the banner check, hash injection and header stripping, so files with CRLF line
-// endings (a checkout with autocrlf, an editor that converts them) are read the
-// same way as the LF files ai-rulez writes.
+// frontmatterEnd locates a leading YAML frontmatter block by the rules of
+// internal/frontmatter. open reports that the content starts with a fence line;
+// end is the offset just past the closing fence line (its terminator included),
+// or 0 when the block is not closed. One helper serves the banner check, hash
+// injection and header stripping, so files with CRLF line endings (a checkout
+// with autocrlf, an editor that converts them) are read the same way as the LF
+// files ai-rulez writes.
 func frontmatterEnd(s string) (end int, open bool) {
-	var first int
-	switch {
-	case strings.HasPrefix(s, "---\n"):
-		first = len("---\n")
-	case strings.HasPrefix(s, "---\r\n"):
-		first = len("---\r\n")
-	default:
-		return 0, false
+	block := frontmatter.SplitString(s)
+	if !block.Closed {
+		return 0, block.Present
 	}
-	for pos := first; pos < len(s); {
-		nl := strings.IndexByte(s[pos:], '\n')
-		line, next := s[pos:], len(s)
-		if nl >= 0 {
-			line, next = s[pos:pos+nl], pos+nl+1
-		}
-		if strings.TrimSuffix(line, "\r") == frontmatterFence {
-			return next, true
-		}
-		pos = next
-	}
-	return 0, true
+	return len(s) - len(block.Body), true
 }
 
 // skipEOL drops one or two line breaks (LF or CRLF) from the start of s: the
