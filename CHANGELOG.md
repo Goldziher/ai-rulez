@@ -240,7 +240,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 ### Changed
 
 - **LLM cache entries are version 3**: truncated or empty replies are no longer cached, and the key includes the effective token cap. Older entries are ignored and refilled.
-- **Pricing table `Version` is `2026-10-07.1`** (current Claude model prices); it is part of the LLM cache identity, so a cost recorded under old prices is not replayed.
+- **The price source is part of the LLM cache identity** (`literllm-<version>+floors-<n>`), so a cost recorded under old prices is not replayed.
 - **`[lint.ratchet]` replaces `[lint.budget]`** (tolerated findings per rule), so it no longer reads like `[lint.budgets.<kind>]` (size budgets). A pre-release spelling, `[lint.tolerate]`, is refused the same way. `[lint.budget.skill]` or `[lint.budgets] AR201 = 1` fail with a message naming the right table. The JSON key was `budgets_exceeded` at the time of this entry; it is now `ratchet_exceeded` (#243).
 - **Every command that prints JSON takes `--format text|json`** (plus its extra formats). `--json` stays as a hidden, deprecated alias that warns and maps to `--format json`; `verifiers run --json` with another `--format` is an error. An unknown `--format` value is rejected with one wording that lists the allowed values, and help shows the default the same way everywhere. `lock --format` is accepted only with `--check`, `--diff`, `--outdated` or `--subject`.
 - **`generate` checks `config.toml` and `config.local.toml` against the schema** and warns about unknown keys, naming the file and the nearest known key; `generate --strict` (or `AI_RULEZ_STRICT=1`) fails instead. `validate` schema errors suggest the closest key too (#242).
