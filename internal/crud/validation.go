@@ -52,6 +52,10 @@ func ValidateDomainName(name string) error {
 			Errorf("domain name is reserved: %s", name)
 	}
 
+	if err := checkNotDeviceName("domain_name", name); err != nil {
+		return err
+	}
+
 	// Match: alphanumeric, underscore, hyphen (must start and end with alphanumeric)
 	pattern := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$`)
 	if !pattern.MatchString(name) {
@@ -114,7 +118,7 @@ func ValidateFileName(name string) error {
 			Errorf("file name is reserved: %s", name)
 	}
 
-	return nil
+	return checkNotDeviceName("file_name", name)
 }
 
 // ValidateNewFileName validates the name of a file about to be created. On top of
