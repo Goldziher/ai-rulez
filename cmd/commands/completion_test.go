@@ -191,9 +191,9 @@ func TestCompletionOutsideAProjectOffersNothingAndDoesNotFail(t *testing.T) {
 func TestACommandWithoutArgumentsOffersNoFileNames(t *testing.T) {
 	completionProject(t)
 
-	words, directive := complete(t, "doctor", "--strict", "")
+	words, directive := complete(t, "okf", "validate", "")
 	_ = words
-	// doctor takes a config file: files are fine there
+	// okf validate takes a directory: files are fine there
 	assert.NotEqual(t, ":4", directive)
 
 	words, directive = complete(t, "roles", "list", "")
