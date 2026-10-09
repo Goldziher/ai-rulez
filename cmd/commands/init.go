@@ -77,7 +77,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if err := prepareExistingConfigDir(cmd, configDir); err != nil {
+	backup, err := prepareExistingConfigDir(cmd, configDir)
+	if err != nil {
 		return failMsg("Refusing to replace the existing configuration directory", err)
 	}
 
@@ -90,29 +91,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Create directory structure
-	if err := createStructure(projectName, configDir); err != nil {
-		return failMsg("Failed to create structure", err)
-	}
-
-	// Create domain directories if specified
-	if domainsFlag != "" {
-		domains := parseDomains(domainsFlag)
-		if err := createDomainDirectories(domains, configDir); err != nil {
-			return failMsg("Failed to create domain directories", err)
-		}
-	}
-
-	// Create example content unless --skip-content is specified
-	if !skipContentFlag {
-		if err := createExampleContent(configDir); err != nil {
-			return failMsg("Failed to create example content", err)
-		}
-	}
-
-	// The configuration directory is an OKF bundle: index.md files list its content.
-	if err := okfbridge.RefreshIndexes(watchParentContext(cmd), configDir); err != nil {
-		return failMsg("Failed to write the index.md files", err)
+	if msg, err := scaffoldConfigDir(cmd, projectName, configDir); err != nil {
+		// The old directory was moved aside by --force: put it back.
+		return failMsg(msg, restoreConfigDir(configDir, backup, err))
 	}
 
 	out := outFor(cmd)
@@ -125,31 +106,73 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}, true)
 }
 
+// scaffoldConfigDir writes the new configuration directory. On failure it
+// returns the message that names the step along with the error.
+func scaffoldConfigDir(cmd *cobra.Command, projectName, configDir string) (string, error) {
+	if err := createStructure(projectName, configDir); err != nil {
+		return "Failed to create structure", err
+	}
+	if domainsFlag != "" {
+		if err := createDomainDirectories(parseDomains(domainsFlag), configDir); err != nil {
+			return "Failed to create domain directories", err
+		}
+	}
+	if !skipContentFlag {
+		if err := createExampleContent(configDir); err != nil {
+			return "Failed to create example content", err
+		}
+	}
+	// The configuration directory is an OKF bundle: index.md files list its content.
+	if err := okfbridge.RefreshIndexes(watchParentContext(cmd), configDir); err != nil {
+		return "Failed to write the index.md files", err
+	}
+	return "", nil
+}
+
+// restoreConfigDir undoes a failed scaffold: it removes the partial directory
+// and moves the backup (when --force made one) back. It returns cause, annotated
+// when the restore itself failed.
+func restoreConfigDir(configDir, backup string, cause error) error {
+	if backup == "" {
+		return cause
+	}
+	if rmErr := os.RemoveAll(configDir); rmErr != nil {
+		return oops.Wrapf(cause, "init failed and the partial %s/ could not be removed, the previous one is in %s", configDir, backup)
+	}
+	if mvErr := os.Rename(backup, configDir); mvErr != nil {
+		return oops.Wrapf(cause, "init failed and the previous %s/ could not be restored from %s", configDir, backup)
+	}
+	logger.Info("Restored the previous " + configDir + "/ directory")
+	return cause
+}
+
 // prepareExistingConfigDir makes room for a new configuration directory. An
 // existing one is never deleted: it is replaced only after --force or an
 // interactive yes, and an init that scaffolds moves it to <dir>.bak-<timestamp>
 // first. --yes only skips prompts, so scripts cannot destroy authored content by
 // accident, and the MCP init_project tool refuses in the same situation. An
 // import keeps the old directory until the new one is written (replaceConfigDir).
-func prepareExistingConfigDir(cmd *cobra.Command, configDir string) error {
+// The returned path is the backup of a moved directory, or "" when none was
+// moved; a scaffold that fails afterwards puts it back (restoreConfigDir).
+func prepareExistingConfigDir(cmd *cobra.Command, configDir string) (string, error) {
 	if _, err := os.Stat(configDir); err != nil {
-		return nil //nolint:nilerr // nothing there: nothing to protect
+		return "", nil //nolint:nilerr // nothing there: nothing to protect
 	}
 	logger.Info(configDir + "/ directory already exists")
 	if !initForceFlag(cmd) && !shouldOverwriteConfig(configDir+"/") {
-		return oops.
+		return "", oops.
 			Hint("Pass --force to replace it (the old directory is kept as "+configDir+".bak-<timestamp>), or remove or rename it. --yes only skips prompts.").
 			Errorf("%s/ already exists", configDir)
 	}
 	if fromFlag != "" {
-		return nil
+		return "", nil
 	}
 	backup, err := backupConfigDir(configDir, time.Now())
 	if err != nil {
-		return err
+		return "", err
 	}
 	logger.Info("Existing " + configDir + "/ directory moved to " + backup)
-	return nil
+	return backup, nil
 }
 
 // initForceFlag reports whether init was given --force.
@@ -526,13 +549,7 @@ func replaceConfigDir(configDir string, write func() error) error {
 		return err
 	}
 	if err := write(); err != nil {
-		if rmErr := os.RemoveAll(configDir); rmErr != nil {
-			return oops.Wrapf(err, "import failed and the partial %s/ could not be removed, the previous one is in %s", configDir, backup)
-		}
-		if mvErr := os.Rename(backup, configDir); mvErr != nil {
-			return oops.Wrapf(err, "import failed and the previous %s/ could not be restored from %s", configDir, backup)
-		}
-		return err
+		return restoreConfigDir(configDir, backup, err)
 	}
 	logger.Info("Existing " + configDir + "/ directory replaced; the previous one is kept in " + backup)
 	return nil
