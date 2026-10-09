@@ -22453,7 +22453,7 @@ allow_plain_http = true
 plain_http_hosts = ["gateway.internal:8080"]   # required; matched exactly against base_url's host as written
 ```
 
-or `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP=1` with `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS=gateway.internal:8080`. A key is sent only to a host on the list. The match is exact and case-insensitive on `host` or `host:port` as it appears in `base_url`: an entry `gateway.internal` does not cover `http://gateway.internal:8080`, and `gateway.internal:8080` does not cover another port. Redirects to another host stay refused. `llm doctor` prints a warning while the opt-in is in use (the same warning is in `ai-rulez doctor`). The trade-off: the key and every prompt cross that network segment unencrypted, so anyone on the path can read or replay them. Prefer `https`, or a loopback tunnel (`ssh -L 8080:gateway.internal:8080`, then `base_url = "http://127.0.0.1:8080/v1"`, which needs no opt-in).
+or `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP=1` with `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS=gateway.internal:8080`. A key is sent only to a host on the list. The match is exact and case-insensitive on `host` or `host:port` as it appears in `base_url`: an entry `gateway.internal` does not cover `http://gateway.internal:8080`, and `gateway.internal:8080` does not cover another port. A redirect to another host drops the key but re-sends the prompt (see the redirect gap under "Data egress"). `llm doctor` prints a warning while the opt-in is in use (the same warning is in `ai-rulez doctor`). The trade-off: the key and every prompt cross that network segment unencrypted, so anyone on the path can read or replay them. Prefer `https`, or a loopback tunnel (`ssh -L 8080:gateway.internal:8080`, then `base_url = "http://127.0.0.1:8080/v1"`, which needs no opt-in).
 
 #### Commands
 
@@ -25611,7 +25611,7 @@ in these tables.
 
 **LLM** (see [LLM configuration](llm.md); an environment value wins over the user config file, and a repository config cannot set the network or key switches)
 
-`AI_RULEZ_LLM_PROVIDER`, `AI_RULEZ_LLM_MODEL`, `AI_RULEZ_LLM_BACKEND`, `AI_RULEZ_LLM_BASE_URL`,
+`AI_RULEZ_LLM_PROVIDER`, `AI_RULEZ_LLM_MODEL`, `AI_RULEZ_LLM_BASE_URL`,
 `AI_RULEZ_LLM_API_KEY_ENV`, `AI_RULEZ_LLM_EMBEDDING_MODEL`, `AI_RULEZ_LLM_MAX_COST_USD`, `AI_RULEZ_LLM_MAX_TOKENS`,
 `AI_RULEZ_LLM_MAX_CALLS`, `AI_RULEZ_LLM_TIMEOUT_SECONDS`, `AI_RULEZ_LLM_CACHE`, `AI_RULEZ_LLM_ALLOW_NETWORK`,
 `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP`, `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS`. Review: `AI_RULEZ_REVIEW_ALLOWED_HOSTS`.
