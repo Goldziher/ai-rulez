@@ -79,6 +79,26 @@ func (s *RecursiveGenerateSuite) TestRecursiveProcessesConfigConvention() {
 		"the .ai-rulez/ config should still be processed")
 }
 
+// A rule whose body is only its heading ends the shared AGENTS.md in an empty
+// section; generate --recursive followed by --check must still be clean.
+func (s *RecursiveGenerateSuite) TestRecursiveCheckIsCleanAfterGenerate() {
+	for _, name := range []string{"root", "svc"} {
+		dir := s.workingDir
+		if name != "root" {
+			dir = filepath.Join(s.workingDir, name)
+		}
+		s.writeMinimalConfig(dir, name)
+		s.Require().NoError(os.MkdirAll(filepath.Join(dir, ".ai-rulez", "rules"), 0o755))
+		testutil.WriteFile(s.T(), filepath.Join(dir, ".ai-rulez", "rules"), "atomic-commits.md", "# Atomic\n")
+	}
+
+	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate", "--recursive")
+	result := testutil.RunCLI(s.T(), s.workingDir, "generate", "--recursive", "--check")
+
+	s.Equal(0, result.ExitCode, result.Stdout+result.Stderr)
+	s.NotContains(result.Stdout+result.Stderr, "edited:")
+}
+
 func (s *RecursiveGenerateSuite) TestRecursiveProcessesAllConfigsAndPrunesNoise() {
 	// Real configs we expect to be processed.
 	for _, name := range []string{"alpha", "beta", "gamma", "delta"} {

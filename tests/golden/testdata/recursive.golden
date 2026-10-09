@@ -33,16 +33,14 @@ b/c/.cursor/agents/ dir 0755
 b/c/.cursor/commands/ dir 0755
 b/c/.cursor/rules/ dir 0755
 b/c/.cursor/rules/context-c.mdc file 0644 209 29b4dda6373d2a1999b3a1f60fcceedcea83e9dfb7b33c831f2462cfc6014e9c
-b/c/AGENTS.md file 0644 384 e244deeef01a17dc82ddfe97f6bae5ea33330f6f8a874fbf2e7057ed7c57db95
+b/c/AGENTS.md file 0644 384 516aa9950ff1a21e6eaf6ff4910b0ea16d8cd9bc3d76d02e1ee6ebe03481b815
 --- home tree
 (no change)
 
 ## step 2: ai-rulez -q generate --recursive --check
-exit: 2
+exit: 0
 --- stdout
-edited: b/c/AGENTS.md
 --- stderr
-1 generated file(s) differ from their sources; run `ai-rulez generate` and commit the result
 --- project tree
 a/ dir 0755
 a/.ai-rulez/ dir 0755
@@ -72,6 +70,6 @@ b/c/.cursor/agents/ dir 0755
 b/c/.cursor/commands/ dir 0755
 b/c/.cursor/rules/ dir 0755
 b/c/.cursor/rules/context-c.mdc file 0644 209 29b4dda6373d2a1999b3a1f60fcceedcea83e9dfb7b33c831f2462cfc6014e9c
-b/c/AGENTS.md file 0644 384 e244deeef01a17dc82ddfe97f6bae5ea33330f6f8a874fbf2e7057ed7c57db95
+b/c/AGENTS.md file 0644 384 516aa9950ff1a21e6eaf6ff4910b0ea16d8cd9bc3d76d02e1ee6ebe03481b815
 --- home tree
 (no change)

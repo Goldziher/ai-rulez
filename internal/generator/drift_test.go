@@ -190,6 +190,50 @@ func TestVerifyPlugin_TamperedBundleIsDrift(t *testing.T) {
 	assert.NotErrorIs(t, err, ErrPluginNotGenerated)
 }
 
+// A rule whose body is only its title heading renders as an empty section, and
+// when it is the last one the rendering ends in more blank lines than the file
+// keeps. Generate followed by --check must still be clean in every hash mode,
+// with the shared AGENTS.md (the default) or the per-tool root files, and with a
+// profile that pulls the same shape in from a domain.
+func TestCheckDrift_CleanAfterGenerateWhenTheLastSectionIsEmpty(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		domain bool
+	}{
+		{name: "agents_md default", config: "presets = [\"claude\"]\n"},
+		{name: "agents_md default, hashes full", config: "presets = [\"claude\", \"codex\"]\n" + hdr("full")},
+		{name: "per-tool root files", config: "presets = [\"claude\", \"codex\", \"gemini\"]\n" + v4Defaults},
+		{name: "per-tool root files, hashes full", config: "presets = [\"gemini\"]\n" + v4Defaults + hdr("full")},
+		{name: "domain profile", config: "presets = [\"claude\", \"codex\"]\ndefault = \"all\"\n\n[profiles]\nall = [\"backend\"]\n", domain: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			configDir := filepath.Join(dir, ".ai-rulez")
+			require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"),
+				[]byte("version = \"5.0\"\nname = \"t\"\n"+tt.config), 0o644))
+			rules := filepath.Join(configDir, "rules")
+			if tt.domain {
+				rules = filepath.Join(configDir, "domains", "backend", "rules")
+				require.NoError(t, os.MkdirAll(rules, 0o755))
+			}
+			require.NoError(t, os.WriteFile(filepath.Join(rules, "atomic-commits.md"), []byte("# Atomic\n"), 0o644))
+
+			require.NoError(t, loadHashesProject(t, dir).Generate(""))
+
+			got, err := loadHashesProject(t, dir).CheckDrift("")
+			require.NoError(t, err)
+			assert.Empty(t, got, "generate then --check must be clean")
+			drift, checked, err := loadHashesProject(t, dir).VerifyGenerated()
+			require.NoError(t, err)
+			assert.Empty(t, drift, "verify must accept what generate wrote")
+			assert.Positive(t, checked)
+		})
+	}
+}
+
 func appendTo(t *testing.T, path, text string) {
 	t.Helper()
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o644)
