@@ -1129,7 +1129,7 @@ ai-rulez generate [config-file] [flags]
 | `--if-configured`               | boolean | false         | With `--plugin`, skip successfully when plugin authoring is not configured                                                                              |
 | `--user`                        | boolean | false         | Generate the user config (`~/.config/ai-rulez`, or `--config <dir>`) into the home directories each harness reads; lists every path first (see [User-level configuration](user-scope.md)) |
 | `--yes` / `-y`                  | boolean | false         | With `--user`, write without the confirmation prompt (required in a non-interactive shell); always, do not warn about new hook and MCP commands (same as `AI_RULEZ_ACK_COMMANDS=1`) |
-| `--strict`                      | boolean | false         | Fail on unknown or invalid configuration keys instead of warning (env `AI_RULEZ_STRICT=1`). `generate` checks `config.toml` and `config.local.*` against the schema either way; this is not `validate` (deep content checks) |
+| `--strict-config`               | boolean | false         | Fail on unknown or invalid configuration keys instead of warning (env `AI_RULEZ_STRICT=1`). `generate` checks `config.toml` and `config.local.*` against the schema either way; this is not `validate` (deep content checks) |
 
 `--token` / `-T` is a global flag (see [Global Flags](#global-flags)); it is not generate-specific.
 `--update-gitignore`, `--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S` were removed in v5 (use `--gitignore`; the others had no effect).
@@ -1252,7 +1252,7 @@ The document follows [`schema/plan.schema.json`](schema.md):
 - `files`: every output sorted by path, with `action` (`write`, `merge` into a document the consumer owns, `mkdir`), `mode`, and the `size` and `sha256` of the content `generate` writes, minus the header's `Generated:` stamp and hash lines (so with `[header] hashes = "none"` and no timestamp the digest is that of the file on disk).
 - `removals`: files an earlier run recorded and this one no longer renders (`stale`), and documents ai-rulez takes its earlier entries out of (`unmerge`, `delete`).
 
-The plan is deterministic and holds no secret: MCP placeholders such as `${TOKEN}` stay as written, and an output that may carry a secret (`sensitive`), or whose content holds a credential the security scan detects, has no digest. It is conservative about that flag, so a plan may call a document sensitive that a real run finds clean. It reads the project the way a run does (the previous manifest, merged documents) and honours `--profile`, `--role` and `--no-local`; it runs the read-only part of the generate preflight (the schema check, `--strict`, and the role selection warnings) and records nothing, so a later run still warns about new commands. `--emit-plan` is refused with `--watch`, `--check`, `--user`, `--recursive` and `--plugin`, which never reach the plan or render something else. The plan lists neither the `.gitignore` update nor the `.ai-rulez/.generated-manifest.json` record `generate` writes: it covers rendered outputs and removals only.
+The plan is deterministic and holds no secret: MCP placeholders such as `${TOKEN}` stay as written, and an output that may carry a secret (`sensitive`), or whose content holds a credential the security scan detects, has no digest. It is conservative about that flag, so a plan may call a document sensitive that a real run finds clean. It reads the project the way a run does (the previous manifest, merged documents) and honours `--profile`, `--role` and `--no-local`; it runs the read-only part of the generate preflight (the schema check, `--strict-config`, and the role selection warnings) and records nothing, so a later run still warns about new commands. `--emit-plan` is refused with `--watch`, `--check`, `--user`, `--recursive` and `--plugin`, which never reach the plan or render something else. The plan lists neither the `.gitignore` update nor the `.ai-rulez/.generated-manifest.json` record `generate` writes: it covers rendered outputs and removals only.
 
 Design decisions:
 
@@ -1351,14 +1351,12 @@ ai-rulez clean --yes --keep-gitignore --keep-manifest
 
 ### `ai-rulez verify [config-path]`
 
-Verify generated files without modifying them.
-
-Without `--plugin`, every file listed in `.ai-rulez/.generated-manifest.json` must exist and still match the `Content-Hash` in its own header. This is fast and offline, and catches hand edits and deleted files; it does not re-render, so a source that changed since the last `generate` is caught by [`generate --check`](#detecting-drift) instead. Output and exit codes are the same (`0` verified, `1` cannot run, e.g. no manifest, `2` files differ). With `--plugin`, generated plugin bundles are checked against their provenance hashes.
+`verify` checks signatures, approvals and provenance: `--attestation` (and `--bundle`, `--skill`, `--sbom`), `--approvals`, `--self` and `--plugin`. It does not report drift. Run [`generate --check`](#detecting-drift) to find generated files that differ from their sources (hand edits, deleted files and sources that changed since the last `generate`). A bare `ai-rulez verify` names no mode and exits `1` with that pointer; it used to compare the generated files with their own `Content-Hash`, which `generate --check` also covers. With `--plugin`, generated plugin bundles are checked against their provenance hashes.
 
 **Syntax:**
 
 ```bash
-ai-rulez verify [config-path] [--plugin] [flags]
+ai-rulez verify [config-path] (--attestation | --approvals | --self | --plugin) [flags]
 ```
 
 **Flags:**
@@ -1385,7 +1383,7 @@ ai-rulez verify [config-path] [--plugin] [flags]
 | `--public-key`        | string  | none               | With `--attestation`: also trust this PEM public key (repeatable) |
 | `--identity` / `--issuer` | string | none            | With `--attestation`: also trust this certificate identity and its OIDC issuer |
 | `--no-state`          | boolean | false              | With `--attestation`: skip the per-user rollback state     |
-| `--format`            | string  | `text`             | With `--attestation` or `--approvals`: `text` or `json` (`schema/verify-attestation.schema.json`, `schema/verify-approvals.schema.json`) |
+| `--format`            | string  | `text`             | `text` or `json`: `schema/verify-attestation.schema.json` (`--attestation`, `--self`), `schema/verify-approvals.schema.json` (`--approvals`), `schema/verify-plugin.schema.json` (`--plugin`) |
 
 Verify the signed lock (exit `0` verified, `1` cannot run, `2` verification failed with an `AR720` to `AR727` code):
 
@@ -1418,7 +1416,7 @@ Verify every plugin producer and marketplace in a repository:
 ai-rulez verify --recursive --plugin --if-configured
 ```
 
-Exit codes: `0` the bundle matches its sources, `1` the check could not run (invalid configuration, no plugin configuration), `2` a bundle file is missing, stale, obsolete or fails its provenance hash.
+Exit codes: `0` the bundle matches its sources, `1` the check could not run (invalid configuration, no plugin configuration, no mode given), `2` a bundle file is missing, stale, obsolete or fails its provenance hash. `--plugin --format json` prints `{schema_version, status: ok|skipped|drift, configs}`; on drift the failure is also on stderr.
 
 When a `[plugin]` block exists but no bundle was generated, `verify --plugin` fails with `plugin bundle not generated; run `ai-rulez generate --plugin``. `--if-configured` only skips a project with no plugin configuration; add `--if-generated` to also skip until the bundle exists.
 
@@ -1469,7 +1467,7 @@ When outputs cannot be rendered at all (for example because an MCP placeholder i
 | Flag | Description |
 | --- | --- |
 | `--strict` | Also exit non-zero on warnings |
-| `--format text\|json` | `json` prints `{"root", "summary": {"error", "warning", "info"}, "findings": [{"check", "severity", "message", "path", "hint"}]}` instead of the table |
+| `--format text\|json` | `json` prints `{"schema_version", "root", "summary": {"error", "warning", "info"}, "findings": [{"check", "severity", "message", "path", "hint"}]}` (`schema/doctor-report.schema.json`) instead of the table |
 | `--profile` / `-p` | Profile rendered for the `drift` and `gitignore` checks |
 | `--no-local` | Ignore the machine-local overlay and `local/` content |
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
@@ -1520,9 +1518,9 @@ Run the read-only, deterministic repo checks declared as `[[verifiers]]` in `con
 
 ```bash
 ai-rulez verifiers run [config-file] [--since <rev> | --staged | --all] [--rule <id>] [--name <name>]... [--format text|json|sarif|junit] [--out <file>] [--fail-on error|warning|info|none] [--strict] [--strict-applicability] [--profile <name>] [--role <name>] [--allow-exec] [--allow-llm] [--gate-llm] [--max-cost <usd>] [--estimate] [--no-local] [--config-dir <name>]
-ai-rulez verifiers list [config-file] [--format json] [--no-local] [--config-dir <name>]
-ai-rulez verifiers explain <name> [config-file]
-ai-rulez verifiers test [name...] [--allow-exec]
+ai-rulez verifiers list [config-file] [--format text|json] [--no-local] [--config-dir <name>]
+ai-rulez verifiers explain <name> [config-file] [--format text|json]
+ai-rulez verifiers test [name...] [--allow-exec] [--format text|json]
 ai-rulez verifiers calibrate [name...] [--allow-llm] [--max-cost <usd>] [--estimate] [--no-write] [--format json]
 ai-rulez verifiers suggest <id> [--kind rule|skill|agent|command] [--max-proposals <n>] [--replay <n>] [--write] [--allow-llm] [--max-cost <usd>] [--estimate] [--format json]
 ```
@@ -1549,7 +1547,7 @@ ai-rulez verifiers suggest <id> [--kind rule|skill|agent|command] [--max-proposa
 | `--no-local` | Ignore the machine-local overlay and `local/` content |
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
 
-`list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`. `calibrate` measures the precision and recall of an `llm` verifier's `fail` verdict on its labeled examples and records it in `.ai-rulez/verifiers/calibration/<id>.json` (`--no-write` prints it only); `run --gate-llm` reads that record. `suggest` asks the model for candidate verifiers for a rule and prints the ones that pass deterministic checks; it never writes without `--write` (see [Verifiers](verifiers.md#suggesting-verifiers)). `[verifiers_settings]` holds the limits and policy (`max_timeout_s`, `max_file_bytes`, `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`).
+`--format json` of `list`, `explain` and `test` follows `schema/verifiers-list.schema.json`, `schema/verifiers-explain.schema.json` (the fields of the declaration plus the `text` that `explain` prints) and `schema/verifiers-test.schema.json` (`{ok, passed, total, results, untested, problems}`; exit `2` when `ok` is false). `list` prints what is declared (the rule or skill each verifier enforces, invalid declarations included) without evaluating it. `explain` prints what one verifier checks, the item it enforces, its scope and its fix. `test` runs the `[[verifiers.examples]]` of each spec offline (exit `0` all match, `2` one does not or a declaration is invalid, `1` the configuration does not load or a name is unknown). All commands (and `validate`) check the `config.toml` verifiers first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time. Invalid spec files are reported as `AR9H2`. `calibrate` measures the precision and recall of an `llm` verifier's `fail` verdict on its labeled examples and records it in `.ai-rulez/verifiers/calibration/<id>.json` (`--no-write` prints it only); `run --gate-llm` reads that record. `suggest` asks the model for candidate verifiers for a rule and prints the ones that pass deterministic checks; it never writes without `--write` (see [Verifiers](verifiers.md#suggesting-verifiers)). `[verifiers_settings]` holds the limits and policy (`max_timeout_s`, `max_file_bytes`, `require_examples`, `warn_dead`, `trust_exec_from`, `command_env`).
 
 Exit codes: `0` no verifier failed at the `--fail-on` severity, `2` at least one failed, even when another verifier could not be evaluated (a failure is never hidden behind exit `1`; the report shows both), `1` nothing failed but the run could not complete: the configuration does not load or validate, a `--name` is unknown, the `--since` base cannot be used, or a verifier could not be evaluated (status `error`). A failing `info` verifier never fails the run unless `--fail-on info`. The MCP server exposes the same run as the read-only `run_verifiers` tool (with `since`, `staged` and `rule` parameters); it does not resolve includes, so `generated_in_sync` reports `error` there for a project that declares includes or installed skills.
 
@@ -1734,7 +1732,7 @@ Opt-in usage and item-load telemetry, documented in [Usage telemetry](usage-tele
 
 ## Eval Commands
 
-Documented in [Evals](evals.md).
+Documented in [Evals](evals.md). `eval run --format` is `text` by default (a plain table, like every other command); `markdown`, `json` and `junit` are chosen on purpose.
 
 | Command | Purpose |
 | --- | --- |
@@ -2052,12 +2050,12 @@ the same commit is a hard failure). A source the lock does not cover is fetched 
 | `--targets <preset>` | Also pin the view that serves this preset's rendering of the skills (as `mcp --serve-skills --targets`) |
 | `--include-static` | Also pin the view that serves static skills too |
 | `--source <src>` | Also pin the view with this extra skill source (repeatable, as `mcp --serve-skills --source`). A view is recorded next to the default one as `[[served]]` entries with a `view` key, and a plain `lock` re-pins views recorded earlier |
-| `--strict` | Fail without writing (exit 2) when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3) |
+| `--refuse-findings` | Fail without writing (exit 2) when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3) |
 | `--kind include\|skill\|source\|served` | Limit a refresh to one kind |
 | `--recursive` / `-r` | Process every nested root |
 | `--config-dir` / `-n` | Configuration directory name for non-default layouts |
 
-Exit codes: `0` ok, `1` the command could not run (a tool error; also `--check` with no `ai-rulez.lock`, or an unknown name), `2` `--check` found drift (also a lock without content pins; with `[lock] enforce`, a missing lock too), or `--outdated` found a moved tag (`AR732`), a deleted one (`AR735`) or an unsatisfiable constraint (`AR730`), or `--strict` refused a served skill the security scan refuses (nothing written), `3` the lock was written but served skills were left unpinned because the security scan refuses them. Over several roots (`--recursive`) the most severe code wins: `1`, then `2`, then `3`.
+Exit codes: `0` ok, `1` the command could not run (a tool error; also `--check` with no `ai-rulez.lock`, or an unknown name), `2` `--check` found drift (also a lock without content pins; with `[lock] enforce`, a missing lock too), or `--outdated` found a moved tag (`AR732`), a deleted one (`AR735`) or an unsatisfiable constraint (`AR730`), or `--refuse-findings` refused a served skill the security scan refuses (nothing written), `3` the lock was written but served skills were left unpinned because the security scan refuses them. Over several roots (`--recursive`) the most severe code wins: `1`, then `2`, then `3`.
 
 CI: `generate --locked` fails when the lock is missing or does not cover a configured remote source, or when an
 authored source no longer matches the lock's content pins (exit 2); `generate --frozen` additionally never touches
@@ -2257,7 +2255,7 @@ See [Catalog](catalog.md).
 ```bash
 ai-rulez sbom [--type cyclonedx|spdx-json] [-o file] [--files none|skills|all] [--profile P] [--role R]
               [--include-outputs] [--no-approvals] [--redact-reviewers] [--verify] [--require-lock]
-              [--strict-pins] [--check] [--timestamp [RFC3339|now]] [--online] [-n config-dir]
+              [--strict-pins] [--check] [--timestamp [RFC3339|now]] [--online] [--format text|json] [-n config-dir]
 ```
 
 Print a CycloneDX 1.6 or SPDX 2.3 JSON bill of materials: authored items (with licenses, optionally their files with
@@ -2267,6 +2265,12 @@ with `--verify`, the lock attestation. Remote sources come from the lock and the
 The machine-local overlay is never included. Nothing is rendered; the only file written is `-o`. `--require-lock`,
 `--strict-pins` and `--check` (compare the committed `-o` file, which is never rewritten) exit 2 on failure (`AR752`,
 `AR750`/`AR751`, `AR753`). Sign the document with `ai-rulez sign --sbom`. See [SBOM](sbom.md).
+
+`--type` selects the document (`cyclonedx`, the default, or `spdx-json`; it was `--format`). `--format` is `text|json`
+like everywhere else and only changes the report of a run that has no document to print: a failed gate, `--check`, or a
+document written with `-o` print `{schema_version, status: ok|findings|drift, type, output, findings, differences}`
+(`schema/sbom-report.schema.json`) under `--format json`. Without `-o` stdout is the bill of materials, which is JSON
+either way.
 
 ## Publish Command
 
@@ -2280,7 +2284,7 @@ ai-rulez publish [--dist dist] [--to github-release|npm|oci] [--tag v1.4.0] [--r
                  [--runtime R]... [--only NAME]... [--since TAG] [--profile P]
                  [--dry-run | --execute --yes [--force]] [--allow-dirty] [--template file]... [--format text|json]
 ai-rulez publish verify <dir|oci-ref> [--key PUBLIC.pem]... [--identity ID --issuer URL] [--trusted-root file] [--require-signature] [--format text|json]
-ai-rulez publish emit <emitter> [--out dir] [--experimental] [--channel NAME] [--runtime R]... [--profile P] [--allow-dirty]
+ai-rulez publish emit <emitter> [--out dir] [--experimental] [--channel NAME] [--runtime R]... [--profile P] [--allow-dirty] [--format text|json]
 ```
 
 `--confirm-registry URL` is required with `--to npm --execute` when the committed `[publish.npm]` config names a registry other than the public one.
@@ -2295,6 +2299,8 @@ archive, `--sbom` ships the SBOM, `--marketplace` writes a Claude marketplace in
 publishes one bundle per plugin (`--only`). `publish verify` recomputes every digest of a dist directory (or a pulled OCI
 artifact) offline and verifies the signature against the keys or identity you name. Exit codes: 0 done, 1 could not
 complete, 2 a gate or verification failed. Codes `AR9N0`-`AR9N9`. See [Publish](publish.md).
+
+`--format json` of `publish verify` prints `{"schema_version": 1, "results": [...]}` with one result per dist directory, a single directory included (`schema/publish-verify.schema.json`); it used to print the bare result of a single directory. `publish emit --format json` prints `{schema_version, emitter, out, files}` instead of the `wrote <path>` lines (`schema/publish-emit.schema.json`).
 
 ## Scan Command
 
@@ -2526,7 +2532,7 @@ in these tables.
 | `AI_RULEZ_GIT_TOKEN_HOSTS` | | Comma-separated hosts the git token may be sent to (default `github.com`) |
 | `AI_RULEZ_FORGE_HOSTS` | | Comma-separated hosts the forge API client may contact (default `github.com`); `GITHUB_TOKEN` / `GH_TOKEN` supply its token |
 | `AI_RULEZ_REPO_ROOT` | `--repo-root` | Repository root for validation and scans |
-| `AI_RULEZ_STRICT` | `generate --strict` | Fail on unknown or invalid configuration keys instead of warning |
+| `AI_RULEZ_STRICT` | `generate --strict-config` | Fail on unknown or invalid configuration keys instead of warning |
 | `AI_RULEZ_ACK_COMMANDS` | `--yes` | Silence the summary of commands a configuration will run |
 | `AI_RULEZ_VERIFIERS_ALLOW_EXEC` | `verifiers run --allow-exec` | Let `command` verifier predicates run programs |
 | `AI_RULEZ_ALLOW_FILE_URLS` | | `1` lets a `file://` git source outside the project resolve from the project config |
@@ -2609,9 +2615,9 @@ Every command follows one contract (`lock` adds `3`, see [Lock file](lockfile.md
 | Code | Meaning |
 | ---- | ------- |
 | 0    | Success |
-| 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand, a V2/V3 config file (see [Configuration Detection](#configuration-detection)), a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no manifest |
-| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `verify`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --strict` refusing a served skill the security scan refuses; `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `migrate v5 --check` finding a project to migrate; `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file; `generate`, `validate`, `validate --show-policy`, `lock`, their `--recursive` forms and `doctor` finding that the configuration loosens the [organization policy](policy.md) |
-| 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --strict` exits 2 instead) |
+| 1    | The command could not run: configuration not found or invalid (`validate` included), bad flags, an unknown subcommand, a V2/V3 config file (see [Configuration Detection](#configuration-detection)), a tool or network error, `lock --check` with no `ai-rulez.lock`, `verify` with no mode |
+| 2    | The command ran and found something: `validate --strict` and `scan` findings at or above `--fail-on`; drift from `generate --check`, `export okf --check`, `lock --check` (also `--locked`/`--frozen` source drift); `lock --refuse-findings` refusing a served skill the security scan refuses; `lock --outdated` with a moved tag, a deleted tag or an unsatisfiable constraint (and any update with `--fail-on-outdated`); `update` refusing a source; `doctor` errors (warnings with `--strict`); `migrate v5 --check` finding a project to migrate; `verifiers run` or `verifiers test` failures; `eval run` below its threshold, erroring or with invalid cases; `tokens --budget` and `cost --budget` exceeded; `convert` blocked by the scan or `--fail-on`; `okf validate` findings and `import okf` refused or not overwriting; `search --eval` gate failed; `scanners doctor` finding a bad scanner; `guard` blocking an edit to a generated file; `generate`, `validate`, `validate --show-policy`, `lock`, their `--recursive` forms and `doctor` finding that the configuration loosens the [organization policy](policy.md) |
+| 3    | `lock` only: the lock was written, but served skills were left unpinned because the security scan refuses them (`lock --refuse-findings` exits 2 instead) |
 
 When a command covers several roots (`--recursive`), the most severe code wins: `1`, then `2`, then `3`.
 
@@ -2645,6 +2651,67 @@ One contract for every command, enforced by tests over the whole command tree:
 
 The contract is covered by a table test over the built binary (`tests/e2e/cli/exit_codes_test.go`), so a
 CI step can rely on it: `0` pass, `2` fix the content, `1` fix the setup.
+
+### JSON contracts
+
+`--format` is `text` or `json` on every command that prints a result; formats of another kind have their own flag
+(`sbom --type`, `telemetry hook --syntax`). Every JSON document is one object that starts with `"schema_version"`
+(an array result is wrapped as `{"schema_version": 1, "items": [...]}`), lists that are empty print `[]`, never
+`null`, and a change that breaks consumers bumps the version and the schema file. The schemas are published in
+[`schema/`](https://github.com/Goldziher/ai-rulez/tree/main/schema) and a test runs every command below and validates
+its output (`tests/e2e/cli/report_schemas_test.go`); another test fails when a report command prints JSON without an
+entry in this table (`schema.JSONContracts`).
+
+| Command | Schema |
+| ------- | ------ |
+| `ai-rulez validate --format json` | [`schema/validate-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/validate-report.schema.json) |
+| `ai-rulez scan --format json` | [`schema/validate-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/validate-report.schema.json) |
+| `ai-rulez doctor --format json` | [`schema/doctor-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/doctor-report.schema.json) |
+| `ai-rulez tokens --format json` | [`schema/tokens-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/tokens-report.schema.json) |
+| `ai-rulez cost --format json` | [`schema/cost-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/cost-report.schema.json) |
+| `ai-rulez catalog --format json` | [`schema/catalog.v1.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog.v1.schema.json) |
+| `ai-rulez catalog diff --format json` | [`schema/catalog-diff.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/catalog-diff.schema.json) |
+| `ai-rulez verify --attestation --format json` | [`schema/verify-attestation.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verify-attestation.schema.json) |
+| `ai-rulez verify --approvals --format json` | [`schema/verify-approvals.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verify-approvals.schema.json) |
+| `ai-rulez verify --plugin --format json` | [`schema/verify-plugin.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verify-plugin.schema.json) |
+| `ai-rulez lock --check --format json` | [`schema/lock-diff.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-diff.schema.json) |
+| `ai-rulez lock --diff --format json` | [`schema/lock-diff.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-diff.schema.json) |
+| `ai-rulez lock --outdated --format json` | [`schema/lock-outdated.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-outdated.schema.json) |
+| `ai-rulez lock --subject --format json` | [`schema/lock-subject.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/lock-subject.schema.json) |
+| `ai-rulez update --format json` | [`schema/update.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/update.schema.json) |
+| `ai-rulez sbom --format json` | [`schema/sbom-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/sbom-report.schema.json) |
+| `ai-rulez sign --format json` | [`schema/sign-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/sign-report.schema.json) |
+| `ai-rulez scanners list --format json` | [`schema/scanners-list.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/scanners-list.schema.json) |
+| `ai-rulez scanners doctor --format json` | [`schema/scanners-doctor.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/scanners-doctor.schema.json) |
+| `ai-rulez roles list --format json` | [`schema/roles-manifest.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/roles-manifest.schema.json) |
+| `ai-rulez roles show --format json` | [`schema/roles-show.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/roles-show.schema.json) |
+| `ai-rulez roles resolve --format json` | [`schema/roles-resolve.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/roles-resolve.schema.json) |
+| `ai-rulez verifiers run --format json` | [`schema/verifiers-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-report.schema.json) |
+| `ai-rulez verifiers list --format json` | [`schema/verifiers-list.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-list.schema.json) |
+| `ai-rulez verifiers test --format json` | [`schema/verifiers-test.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-test.schema.json) |
+| `ai-rulez verifiers explain --format json` | [`schema/verifiers-explain.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/verifiers-explain.schema.json) |
+| `ai-rulez export okf --format json` | [`schema/export-okf.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/export-okf.schema.json) |
+| `ai-rulez okf validate --format json` | [`schema/okf-validate.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/okf-validate.schema.json) |
+| `ai-rulez publish --format json` | [`schema/publish-plan.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/publish-plan.schema.json) |
+| `ai-rulez publish emit --format json` | [`schema/publish-emit.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/publish-emit.schema.json) |
+| `ai-rulez publish verify --format json` | [`schema/publish-verify.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/publish-verify.schema.json) |
+| `ai-rulez eval run --format json` | [`schema/eval-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/eval-report.schema.json) |
+
+A failure that happens before the report exists prints
+[`schema/error-document.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/error-document.schema.json)
+instead. Exit `2` with a report on stdout (findings, drift, a failed gate) adds no error document.
+
+### `--strict` and `--check`
+
+The two words each mean one thing in every command:
+
+| Flag | Meaning |
+| ---- | ------- |
+| `--check` | Compare with what is committed or recorded, write nothing, exit `2` on a difference: `generate --check`, `lock --check`, `sbom --check`, `export okf --check`, `migrate v5 --check` |
+| `--strict` | Warnings fail as well as errors, the same as `--fail-on warning`: `validate`, `doctor`, `verifiers run` |
+| `--strict-config` | `generate` only: an unknown or invalid configuration key fails instead of warning (it was `generate --strict`) |
+| `--refuse-findings` | `lock` only: fail without writing when the security scan refuses a served skill (it was `lock --strict`) |
+| `--strict-pins`, `--strict-baseline`, `--strict-applicability` | Name the one thing they make strict |
 
 ## Output Examples
 

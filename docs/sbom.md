@@ -14,6 +14,7 @@ ai-rulez sbom -o ai-bom.cdx.json --check                     # CI: fail when the
 | Flag | Meaning |
 | --- | --- |
 | `--type cyclonedx\|spdx-json` | Document type (default `cyclonedx`; `spdx` is accepted for `spdx-json`) |
+| `--format text\|json` | Report format of a run with no document to print (a failed gate, `--check`, or a write with `-o`); `json` prints `schema/sbom-report.schema.json`. The document itself is JSON either way |
 | `-o`, `--output file` | Write the document to a file instead of stdout |
 | `--files none\|skills\|all` | List the files of items with their plain SHA-256 (default `none`) |
 | `--profile name`, `--role name` | Describe one profile's or role's slice |
