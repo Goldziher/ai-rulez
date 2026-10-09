@@ -39,7 +39,7 @@ it reads local files only, never contacts a service, and treats the input as unt
                  fixtures become files. Every field that has no counterpart is listed as unmapped
                  (AR9A5, informational) with a hint where it belongs in ai-rulez.
 
-The cases are written to .ai-rulez/skills/<skill>/evals/ (--skill) or --out, as <id>.eval.yaml with
+The cases are written to .ai-rulez/skills/<skill>/evals/ (--skill) or --output-dir, as <id>.eval.yaml with
 the task beside it as <id>.task.md. Nothing is written unless every scenario maps, and an existing file
 is not overwritten without --force. --lift-assertions also turns criteria in a fixed phrasing ("The file
 "x" exists", "The output contains "y"") into deterministic assertions, never dropping the criterion from
@@ -53,14 +53,13 @@ func init() {
 	f := evalImportCmd.Flags()
 	f.StringVar(&evalImportFlags.from, "from", "", "Format of the input: tessl (required)")
 	f.StringVar(&evalImportFlags.skill, "skill", "", "Skill the cases belong to: they are written to its evals/ directory")
-	f.StringVar(&evalImportFlags.out, "out", "", "Directory to write the cases to (instead of the skill's evals/ directory)")
-	f.BoolVar(&evalImportFlags.dryRun, "dry-run", false, "Map and report; write nothing")
+	specOutputDir.String(f, &evalImportFlags.out, "Directory to write the cases to (instead of the skill's evals/ directory)")
+	specDryRun.Bool(f, &evalImportFlags.dryRun, "Map and report; write nothing")
 	f.BoolVar(&evalImportFlags.liftAssertions, "lift-assertions", false, "Turn criteria in a fixed phrasing into deterministic assertions (the criterion stays in the rubric)")
 	f.StringVar(&evalImportFlags.rubricMode, "rubric-mode", evalimport.RubricSingle, "single: one free-text rubric with the weights as text; items: rubric_items with the weights kept")
 	f.StringVar(&evalImportFlags.report, "report", "", "Also write the machine-readable report (JSON) to this file")
-	f.BoolVar(&evalImportFlags.force, "force", false, "Overwrite existing files")
+	specForce.Bool(f, &evalImportFlags.force, "Overwrite existing files")
 	addFormatFlag(f, &evalImportFlags.format, formatText, formatText, formatText, formatJSON)
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	EvalCmd.AddCommand(evalImportCmd)
 }
 
@@ -103,16 +102,16 @@ func runEvalImport(cmd *cobra.Command, paths []string) error {
 	return oops.Wrapf(runErr, "import scenarios")
 }
 
-// importOutDir resolves where the cases go: --out, else the skill's evals directory.
+// importOutDir resolves where the cases go: --output-dir, else the skill's evals directory.
 func importOutDir(cmd *cobra.Command) (string, error) {
 	flags := &evalImportFlags
 	if flags.out != "" {
 		return flags.out, nil
 	}
 	if flags.skill == "" {
-		return "", oops.Hint("Name the skill with --skill, or a directory with --out").Errorf("nowhere to write the cases")
+		return "", oops.Hint("Name the skill with --skill, or a directory with --output-dir").Errorf("nowhere to write the cases")
 	}
-	cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+	cfg, err := loadConfigForCommand(commandContext(cmd))
 	if err != nil {
 		return "", err
 	}

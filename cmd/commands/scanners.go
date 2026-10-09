@@ -35,15 +35,15 @@ starts a scanner to ask its version only with --external.`,
 
 // ScannersListCmd lists the configured scanners.
 var ScannersListCmd = &cobra.Command{
-	Use:   "list [config-file]",
+	Use:   cmdUseList,
 	Short: "List the configured scanners with their egress declaration and whether they are installed",
 	Long: `List every [[lint.external]] entry: its egress declaration, whether its binary is on
 PATH, and what it needs to run. Nothing is executed: the commands come from the
 repository, so they run only with "scan --external".`,
-	Args:    cobra.MaximumNArgs(1),
+	Args:    cobra.NoArgs,
 	PreRunE: checkScannersFormat,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		infos, err := loadScanners(cmd.Context(), args)
+		infos, err := loadScanners(cmd.Context())
 		if err != nil {
 			return fail(err)
 		}
@@ -83,14 +83,13 @@ func init() {
 	ScannersDoctorCmd.Flags().BoolVar(&scannersProbe, "external", false, "Start each checked scanner once with --version (it is a program the repository named)")
 	for _, c := range []*cobra.Command{ScannersListCmd, ScannersDoctorCmd} {
 		addFormatFlag(c.Flags(), &scannersFormat, formatText, formatText, formatText, formatJSON)
-		c.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
-		c.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+		specNoLocal.Bool(c.Flags(), &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
 	}
 }
 
 // loadScanners loads the configuration and inspects its scanners.
-func loadScanners(ctx context.Context, args []string) ([]lint.ScannerInfo, error) {
-	cfg, err := loadConfigForCommand(ctx, args)
+func loadScanners(ctx context.Context) ([]lint.ScannerInfo, error) {
+	cfg, err := loadConfigForCommand(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +148,7 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) error 
 		return fail(oops.Hint("Name a scanner, or pass --all to check every one").Errorf("doctor needs a scanner name or --all"))
 	}
 	// Every argument is a scanner name, so the configuration is found by discovery, --config or --config-dir.
-	infos, err := loadScanners(ctx, nil)
+	infos, err := loadScanners(ctx)
 	if err != nil {
 		return fail(err)
 	}

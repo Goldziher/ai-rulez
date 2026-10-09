@@ -91,10 +91,10 @@ func init() {
 	f.StringVar(&sbomOpts.docType, "type", formatCycloneDX, "Document type: cyclonedx (CycloneDX 1.6 JSON) or spdx-json (SPDX 2.3 JSON)")
 	addFormatFlag(f, &sbomOpts.format, "", formatText, formatText, formatJSON)
 	f.BoolVar(&sbomOpts.online, "online", false, "Allow contacting remote includes and skill sources (git ls-remote); by default only the lock and the cache are used")
-	f.StringVarP(&sbomOpts.output, "output", "o", "", "Write the document to this file instead of stdout")
+	specOutput.String(f, &sbomOpts.output, "Write the document to this file instead of stdout")
 	f.StringVar(&sbomOpts.files, "files", sbom.FilesNone, "List the files of items with their plain SHA-256: none, skills or all")
-	f.StringVar(&sbomOpts.profile, "profile", "", "Describe only this profile's domains")
-	f.StringVar(&sbomOpts.role, "role", "", "Describe only the items this role keeps")
+	specProfile.String(f, &sbomOpts.profile, "Describe only this profile's domains")
+	specRole.String(f, &sbomOpts.role, "Describe only the items this role keeps")
 	f.BoolVar(&sbomOpts.includeOutputs, "include-outputs", false, "List the generated output files with their output digest")
 	f.BoolVar(&sbomOpts.noApprovals, "no-approvals", false, "Leave the approval status of the items out")
 	f.BoolVar(&sbomOpts.redactReviewers, "redact-reviewers", false, "Replace reviewer identities with a salted hash")
@@ -104,7 +104,6 @@ func init() {
 	f.BoolVar(&sbomOpts.check, "check", false, "With --output: exit 2 when the committed SBOM differs from a fresh one")
 	f.StringVar(&sbomOpts.timestamp, "timestamp", "", "Record this time (RFC 3339, or \"now\"); SOURCE_DATE_EPOCH is honored when the flag is absent")
 	f.Lookup("timestamp").NoOptDefVal = "now"
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 
 func (f sbomFlags) validate() error {
@@ -193,7 +192,7 @@ func loadSBOMConfig(online bool) (*config.Config, error) {
 	if !online {
 		ctx = config.WithOfflineIncludes(ctx)
 	}
-	cfg, err := loadConfigForCommand(config.WithUnresolvedIncludesTolerated(ctx), nil, config.WithoutLocal())
+	cfg, err := loadConfigForCommand(config.WithUnresolvedIncludesTolerated(ctx), config.WithoutLocal())
 	if err != nil {
 		if !online {
 			err = oops.Hint("sbom reads remote sources from the lock and the cache only; run `ai-rulez generate` or `ai-rulez lock` to fill the cache, or pass --online").Wrap(err)

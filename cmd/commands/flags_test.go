@@ -10,34 +10,36 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestCRUDCommandShorthands pins the shorthand diet: -y is the only one the CRUD
+// commands keep (flag_taxonomy_test.go walks the whole tree).
 func TestCRUDCommandShorthands(t *testing.T) {
 	tests := []struct {
 		cmd   *cobra.Command
 		path  []string
 		flags map[string]string
 	}{
-		{commands.AddCmd, []string{"rule"}, map[string]string{"domain": "d", "priority": "p", "targets": "t", "content": "c"}},
-		{commands.AddCmd, []string{"context"}, map[string]string{"domain": "d", "priority": "p", "content": "c"}},
-		{commands.AddCmd, []string{"skill"}, map[string]string{"domain": "d", "description": "s", "content": "c"}},
-		{commands.RemoveCmd, []string{"rule"}, map[string]string{"domain": "d", "yes": "y"}},
-		{commands.ListCmd, []string{"rules"}, map[string]string{"domain": "d", "format": ""}},
-		{commands.DomainCmd, []string{"add"}, map[string]string{"description": "s"}},
+		{commands.AddCmd, []string{"rule"}, map[string]string{"domain": "", "priority": "", "targets": "", "content": ""}},
+		{commands.AddCmd, []string{"context"}, map[string]string{"domain": "", "priority": "", "content": ""}},
+		{commands.AddCmd, []string{"skill"}, map[string]string{"domain": "", "description": "", "content": ""}},
+		{commands.RemoveCmd, []string{"rule"}, map[string]string{"domain": "", "yes": "y"}},
+		{commands.ListCmd, []string{"rules"}, map[string]string{"domain": "", "format": ""}},
+		{commands.DomainCmd, []string{"add"}, map[string]string{"description": ""}},
 		{commands.DomainCmd, []string{"remove"}, map[string]string{"yes": "y"}},
 		{commands.DomainCmd, []string{"list"}, map[string]string{"format": ""}},
-		{commands.IncludeCmd, []string{"add"}, map[string]string{"path": "p", "ref": "r", "include": "i", "merge-strategy": "m", "install-to": "t"}},
+		{commands.IncludeCmd, []string{"add"}, map[string]string{"path": "", "ref": "", "include": "", "merge-strategy": "", "install-to": ""}},
 		{commands.IncludeCmd, []string{"remove"}, map[string]string{"yes": "y"}},
 		{commands.IncludeCmd, []string{"list"}, map[string]string{"format": ""}},
-		{commands.ProfileCmd, []string{"add"}, map[string]string{"set-default": "s"}},
+		{commands.ProfileCmd, []string{"add"}, map[string]string{"set-default": ""}},
 		{commands.ProfileCmd, []string{"remove"}, map[string]string{"yes": "y"}},
 		{commands.ProfileCmd, []string{"list"}, map[string]string{"format": ""}},
-		{commands.SkillCmd, []string{"install"}, map[string]string{"source": "s", "path": "p", "ref": "r"}},
+		{commands.SkillCmd, []string{"install"}, map[string]string{"source": "", "path": "", "ref": ""}},
 		{commands.SkillCmd, []string{"remove"}, map[string]string{"yes": "y"}},
 		{commands.SkillCmd, []string{"list"}, map[string]string{"format": ""}},
 		{commands.BuiltinsCmd, []string{"list"}, map[string]string{"format": ""}},
 		{commands.BuiltinsCmd, []string{"show"}, map[string]string{"format": ""}},
 		// tokens is not CRUD, but its shorthands have to stay consistent with the
 		// rest of the tree: --format for JSON, -p for profile, -n for the config dir.
-		{commands.TokensCmd, nil, map[string]string{"format": "", "budget": "b", "profile": "p", "config-dir": "n"}},
+		{commands.TokensCmd, nil, map[string]string{"format": "", "budget": "", "profile": "", "config-dir": ""}},
 	}
 
 	for _, tt := range tests {

@@ -92,7 +92,7 @@ A signature lets an organization publish a policy without every machine pinning 
 bundle next to the policy, as `<policy>.sigstore.json` (for a URL, at the same URL plus the suffix). Two forms verify:
 
 - a DSSE attestation over a policy statement (predicate `https://github.com/Goldziher/ai-rulez/attestations/policy/v1`,
-  subject `policy.toml` with the policy's digest), made with `ai-rulez sign --policy <file> --key <key>` (or `--keyless`; it refuses a file the loader would reject, and writes the bundle next to it), and
+  subject `policy.toml` with the policy's digest), made with `ai-rulez sign --org-policy <file> --key <key>` (or `--keyless`; it refuses a file the loader would reject, and writes the bundle next to it), and
 - a `cosign sign-blob --bundle policy.toml.sigstore.json policy.toml` message signature over the file's exact bytes.
 
 Who may sign comes from outside the repository, like the policy: `--policy-signer-key <pem>` (repeatable),

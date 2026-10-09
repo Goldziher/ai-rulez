@@ -150,7 +150,7 @@ render_reports() {
   expect_rc 0 "catalog --format json"
   ar catalog --html "$d/site"
   expect_rc 0 "catalog --html"
-  ar export okf --out "$d/okf"
+  ar export okf --output-dir "$d/okf"
   expect_rc 0 "export okf"
 }
 
@@ -168,7 +168,7 @@ phase_determinism() {
   same_tree "$base/out1" "$base/out2" "reports"
   ar okf validate "$base/out1/okf"
   expect_rc_in "okf validate" 0 2
-  ar export okf --out "$base/out1/okf" --check
+  ar export okf --output-dir "$base/out1/okf" --check
   expect_rc 0 "export okf --check on the fresh bundle"
   # The same sources in a second checkout at another path give the same bytes.
   fresh_copy "$base/b"

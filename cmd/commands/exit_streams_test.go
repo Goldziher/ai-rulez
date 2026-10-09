@@ -59,7 +59,7 @@ func TestGenerateCheck_DriftedFilesAreOnStdoutAndSurviveQuiet(t *testing.T) {
 	setQuiet(t)
 
 	var code int
-	stdout, stderr := capture(t, func() { code = generateCheckCode(nil) })
+	stdout, stderr := capture(t, func() { code = generateCheckCode() })
 
 	assert.Equal(t, exitDrift, code)
 	assert.Contains(t, stdout, "stale: ")
@@ -75,7 +75,7 @@ func TestGenerateCheck_JSONFormatEmitsOneDocumentWithTheDrift(t *testing.T) {
 	t.Cleanup(func() { delete(RootCmd.Annotations, activeFormatKey) })
 
 	var code int
-	stdout, _ := capture(t, func() { code = generateCheckCode(nil) })
+	stdout, _ := capture(t, func() { code = generateCheckCode() })
 
 	assert.Equal(t, exitDrift, code)
 	var doc driftDocument

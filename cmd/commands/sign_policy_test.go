@@ -29,7 +29,7 @@ func TestSignPolicyWritesASidecarThePolicyLoaderVerifies(t *testing.T) {
 
 	// Act
 	var code int
-	capture(t, func() { code = codeOf(runSign(context.Background(), nil, nil)) })
+	capture(t, func() { code = codeOf(runSign(context.Background(), nil)) })
 
 	// Assert
 	require.Equal(t, 0, code)
@@ -60,7 +60,7 @@ func TestSignPolicyRefusesWhatIsNotAPolicy(t *testing.T) {
 
 	// Act
 	var signErr error
-	capture(t, func() { signErr = runSign(context.Background(), nil, nil) })
+	capture(t, func() { signErr = runSign(context.Background(), nil) })
 
 	// Assert
 	assert.Equal(t, 1, codeOf(signErr))

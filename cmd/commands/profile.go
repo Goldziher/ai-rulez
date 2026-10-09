@@ -67,7 +67,7 @@ func init() {
 	ProfileCmd.AddCommand(profileListCmd)
 
 	for _, c := range []*cobra.Command{profileAddCmd, profileRemoveCmd, profileSetDefaultCmd} {
-		c.Flags().BoolVar(&profileLocal, "local", false, localFlagUsage)
+		specLocal.Bool(c.Flags(), &profileLocal, localFlagUsage)
 	}
 
 	for _, c := range []*cobra.Command{profileAddCmd, profileRemoveCmd, profileSetDefaultCmd} {
@@ -75,7 +75,7 @@ func init() {
 	}
 
 	// Add flags for profile add
-	profileAddCmd.Flags().BoolVarP(&profileSetDefault, "set-default", "s", false, "Set this profile as the default")
+	profileAddCmd.Flags().BoolVar(&profileSetDefault, "set-default", false, "Set this profile as the default")
 
 	// Add flags for profile remove
 	addYesFlag(profileRemoveCmd.Flags(), &profileForce, "Skip confirmation prompts")

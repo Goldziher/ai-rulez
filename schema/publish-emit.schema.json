@@ -4,12 +4,7 @@
   "title": "ai-rulez publish emit",
   "description": "Output of `ai-rulez publish emit <emitter> --format json`: the files the emitter wrote.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "emitter",
-    "out",
-    "files"
-  ],
+  "required": ["schema_version", "emitter", "out", "files"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {

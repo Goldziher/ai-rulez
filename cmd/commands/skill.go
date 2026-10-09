@@ -87,13 +87,13 @@ func init() {
 	SkillCmd.AddCommand(skillRemoveCmd)
 	SkillCmd.AddCommand(skillListCmd)
 
-	skillInstallCmd.Flags().BoolVar(&skillLocal, "local", false, localFlagUsage)
-	skillRemoveCmd.Flags().BoolVar(&skillLocal, "local", false, localFlagUsage)
+	specLocal.Bool(skillInstallCmd.Flags(), &skillLocal, localFlagUsage)
+	specLocal.Bool(skillRemoveCmd.Flags(), &skillLocal, localFlagUsage)
 
 	// Flags for skill install
-	skillInstallCmd.Flags().StringVarP(&skillSource, "source", "s", "", "Git URL or local path (required)")
-	skillInstallCmd.Flags().StringVarP(&skillPath, "path", "p", "", "Path within repo to skill directory (defaults to skills/<name>)")
-	skillInstallCmd.Flags().StringVarP(&skillRef, "ref", "r", "", "Git reference: branch, tag, or commit hash")
+	skillInstallCmd.Flags().StringVar(&skillSource, "source", "", "Git URL or local path (required)")
+	skillInstallCmd.Flags().StringVar(&skillPath, "path", "", "Path within repo to skill directory (defaults to skills/<name>)")
+	skillInstallCmd.Flags().StringVar(&skillRef, "ref", "", "Git reference: branch, tag, or commit hash")
 	if err := skillInstallCmd.MarkFlagRequired("source"); err != nil {
 		logger.Debug("Failed to mark source flag as required", "error", err)
 	}

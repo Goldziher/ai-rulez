@@ -74,12 +74,8 @@ func rejectApprovalFlags(cmd *cobra.Command) error {
 // still approves, and was made on this content). Records of content that has
 // changed are not checked: they no longer apply. Exit codes: 0 every checked
 // approval holds, 1 the check could not run, 2 an approval failed.
-func runVerifyApprovals(args []string, out io.Writer) int {
-	path := ""
-	if len(args) > 0 {
-		path = args[0]
-	}
-	env, err := loadApproveEnvAt(path)
+func runVerifyApprovals(out io.Writer) int {
+	env, err := loadApproveEnvAt("")
 	if err != nil {
 		renderStderr(err)
 		return 1

@@ -40,7 +40,7 @@ func TestSignFormatJSON(t *testing.T) {
 	defer func() { signLock, signKey = false, "" }()
 
 	var code int
-	stdout, _ := capture(t, func() { code = codeOf(runSign(withSignRecorder(context.Background()), nil, nil)) })
+	stdout, _ := capture(t, func() { code = codeOf(runSign(withSignRecorder(context.Background()), nil)) })
 
 	require.Equal(t, 0, code)
 	var doc struct {
@@ -60,7 +60,7 @@ func TestExportOKFFormatJSON(t *testing.T) {
 
 	var out bytes.Buffer
 	okfCheck = true
-	code := codeOf(runOKFExport(context.Background(), nil, &out))
+	code := codeOf(runOKFExport(context.Background(), &out))
 	okfCheck = false
 	assert.Equal(t, exitOKFProblems, code, "a missing bundle is drift")
 	var check struct {
@@ -74,7 +74,7 @@ func TestExportOKFFormatJSON(t *testing.T) {
 	assert.NotEmpty(t, check.Drift.Missing)
 
 	out.Reset()
-	code = codeOf(runOKFExport(context.Background(), nil, &out))
+	code = codeOf(runOKFExport(context.Background(), &out))
 	require.Equal(t, 0, code, out.String())
 	var written struct {
 		Status string   `json:"status"`
@@ -91,5 +91,5 @@ func TestExportOKFRejectsUnknownFormat(t *testing.T) {
 	okfProject(t)
 	okfFormat = "xml"
 	var out bytes.Buffer
-	assert.Equal(t, exitOKFCannotRun, codeOf(runOKFExport(context.Background(), nil, &out)))
+	assert.Equal(t, exitOKFCannotRun, codeOf(runOKFExport(context.Background(), &out)))
 }

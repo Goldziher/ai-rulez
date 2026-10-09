@@ -74,7 +74,7 @@ estimate first, --rebuild re-embeds everything, --items re-embeds some skills;
 only skills whose embedded text changed are sent, and a skill whose text looks
 like it holds a secret is withheld, AR9D3), 'search status' reports the index
 against the served skills without any network call, and 'search mine' turns the
-opt-in query log into candidate cases (--out, --min-count, --purge). To search
+opt-in query log into candidate cases (--output, --min-count, --purge). To search
 for one of those words, add another word.
 
 The embedding provider is [llm] (embedding_model, base_url, api_key_env and
@@ -88,7 +88,7 @@ graded cases, nDCG@k. --mode takes a comma-separated list (lexical, vector,
 hybrid, or all) to compare rankings on the same cases with paired intervals.
 --min fails the run when a metric is below a floor; --baseline <result.json>
 with --max-flips fails it when more cases went from found to missed than
-allowed. Save a run with --out and pass it as the next --baseline.
+allowed. Save a run with --output and pass it as the next --baseline.
 
 Exit codes: 0 success or all gates passed, 1 the command could not run (bad
 flags, invalid cases file AR9D2, no catalog), 2 a gate failed (AR9D4) or an
@@ -100,7 +100,7 @@ index build stopped early.`,
   ai-rulez search status
   ai-rulez search --eval search-cases.yaml --min top1=0.6,mrr=0.7
   ai-rulez search --eval search-cases.yaml --mode lexical,hybrid
-  ai-rulez search --from-evals --out result.json
+  ai-rulez search --from-evals --output result.json
   ai-rulez search --eval search-cases.yaml --baseline result.json --max-flips 0`,
 	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -111,8 +111,8 @@ index build stopped early.`,
 func init() {
 	pf := SearchCmd.PersistentFlags()
 	addFormatFlag(pf, &searchFlags.format, formatText, formatText, formatText, formatJSON)
-	pf.StringVar(&searchFlags.profile, "profile", "", "Profile whose skills to search (default: the configured default profile)")
-	pf.StringVar(&searchFlags.targets, "targets", "", "Preset whose rendering of the skills to search")
+	specProfile.String(pf, &searchFlags.profile, "Profile whose skills to search (default: the configured default profile)")
+	specTargets.String(pf, &searchFlags.targets, "Preset whose rendering of the skills to search")
 	pf.StringSliceVar(&searchFlags.domains, flagServeDomain, nil, "Only search skills of these domains; 'root' selects skills in no domain")
 	pf.StringSliceVar(&searchFlags.allow, "allow", nil, "Only search skills whose name matches one of these glob patterns")
 	pf.StringSliceVar(&searchFlags.deny, "deny", nil, "Never search skills whose name matches one of these glob patterns; wins over --allow")
@@ -130,14 +130,14 @@ func init() {
 	f.StringVar(&searchFlags.eval, "eval", "", "Evaluate the ranking against the labeled queries of this YAML file instead of running a query")
 	f.BoolVar(&searchFlags.fromEvals, "from-evals", false, "Evaluate with cases derived from the skills' eval-runner cases (alone, or added to --eval)")
 	f.IntVar(&searchFlags.k, "k", 0, "With --eval: cut-off of recall@k, hit@k and nDCG@k (default: the file's k, then 5)")
-	f.StringVar(&searchFlags.baseline, "baseline", "", "With --eval: a result file of an earlier run (--out) to compare against")
-	f.StringVar(&searchFlags.out, "out", "", "With --eval: also write the result as JSON to this file")
+	f.StringVar(&searchFlags.baseline, "baseline", "", "With --eval: a result file of an earlier run (--output) to compare against")
+	specOutput.String(f, &searchFlags.out, "With --eval: also write the result as JSON to this file")
 	f.StringVar(&searchFlags.min, "min", "", "With --eval: fail when a metric is below a floor, e.g. top1=0.6,mrr=0.7 (metrics: top1, recall, hit, mrr, ndcg)")
 	f.IntVar(&searchFlags.maxFlips, "max-flips", 0, "With --eval --baseline: fail when more cases than this went from found to missed")
 }
 
 // searchEvalOnlyFlags are the flags that only apply with --eval or --from-evals.
-var searchEvalOnlyFlags = []string{"k", "baseline", "out", "min", "max-flips"}
+var searchEvalOnlyFlags = []string{"k", "baseline", "output", "min", "max-flips"}
 
 // searchEnv is the catalog and the resolved search setup a search command works on.
 type searchEnv struct {
@@ -159,7 +159,7 @@ func newSearchEnv(ctx context.Context, mode string) (*searchEnv, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "search: build the skill catalog")
 	}
-	cfg, err := loadConfigForCommand(ctx, nil, config.WithoutRemote())
+	cfg, err := loadConfigForCommand(ctx, config.WithoutRemote())
 	if err != nil {
 		return nil, oops.Wrapf(err, "search: load the configuration")
 	}
@@ -254,7 +254,7 @@ func checkSubcommandFlags(cmd *cobra.Command, sub string) error {
 		}
 	}
 	if sub != searchSubMine {
-		others = append(others, "out")
+		others = append(others, "output")
 	}
 	for _, name := range others {
 		if cmd.Flags().Changed(name) {

@@ -64,11 +64,11 @@ Test content for custom config
 	result.AssertOutputContains(s.T(), "Generation complete")
 }
 
-func (s *GenerateCLITestSuite) TestGenerateWithPositionalConfigFileAndDryRun() {
+func (s *GenerateCLITestSuite) TestGenerateWithConfigFlagAndDryRun() {
 	configDir := filepath.Join(s.workingDir, ".rules")
 	s.NoError(os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "5.0"
-name = "positional-config"
+name = "config-file-generate"
 presets = ["codex"]
 gitignore = false
 `)
@@ -83,8 +83,9 @@ Generated from exact config path
 	result := testutil.RunCLIExpectSuccess(
 		s.T(),
 		s.workingDir,
-		"generate",
+		"-C",
 		filepath.Join(".rules", "config.toml"),
+		"generate",
 		"--dry-run",
 	)
 
