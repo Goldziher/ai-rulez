@@ -8,6 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/importer"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/samber/oops"
 )
 
@@ -58,6 +59,10 @@ func runInitImport(ctx context.Context, workingDir, configDir string) error {
 	}
 	if !report.Written {
 		return oops.Errorf("the imported content failed the security scan or validation; nothing was written")
+	}
+	// An import writes the native layout; the project starts out as an OKF bundle.
+	if _, err := okfbridge.MigrateDir(ctx, configDir, okfbridge.MigrateOptions{Write: true}); err != nil {
+		logger.Warn("Imported content could not be converted to an OKF bundle", "error", err, "hint", "run 'ai-rulez migrate okf'")
 	}
 	displayImportSuccessMessage(fromFlag, configDir)
 	return nil

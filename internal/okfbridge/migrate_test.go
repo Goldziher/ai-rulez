@@ -1,6 +1,7 @@
 package okfbridge
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,11 +48,11 @@ func migrateFixture() map[string]string {
 	return map[string]string{
 		"rules/go.md":                     "---\npriority: high\npaths: [\"**/*.go\"]\n---\n\n# Go\n\nWrap errors.\n",
 		"rules/plain.md":                  "# Plain\n\nNo frontmatter.\n",
-		"rules/typed.md":                  "---\ntype: Policy\ntitle: Custom Title\ndescription: Kept\nwhen_to_use: x\n---\nBody\n",
-		"context/overview.md":             "---\nsummary: One line\n---\nOverview\n",
-		"skills/review/SKILL.md":          "---\nname: review\ndescription: Reviews code\n---\n# Review\n",
+		"rules/typed.md":                  "---\ntype: Policy\ntitle: Custom Title\ndescription: Kept\nwhen_to_use: x\n---\n\nBody\n",
+		"context/overview.md":             "---\nsummary: One line\n---\n\nOverview\n",
+		"skills/review/SKILL.md":          "---\nname: review\ndescription: Reviews code\n---\n\n# Review\n",
 		"skills/review/references/doc.md": "# Doc\n",
-		"domains/web/rules/react.md":      "---\npriority: low\n---\nHooks.\n",
+		"domains/web/rules/react.md":      "---\npriority: low\n---\n\nHooks.\n",
 	}
 }
 
@@ -59,7 +60,7 @@ func TestMigrateDirConvertsAndIsIdempotent(t *testing.T) {
 	dir := writeTree(t, migrateFixture())
 	before := readTree(t, dir)
 
-	changes, err := MigrateDir(dir, MigrateOptions{})
+	changes, err := MigrateDir(context.Background(), dir, MigrateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,17 +77,17 @@ func TestMigrateDirConvertsAndIsIdempotent(t *testing.T) {
 		t.Fatal("dry run reported nothing to do")
 	}
 
-	if _, err := MigrateDir(dir, MigrateOptions{Write: true}); err != nil {
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	migrated := readTree(t, dir)
-	if _, err := MigrateDir(dir, MigrateOptions{Write: true}); err != nil {
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	if again := readTree(t, dir); !equalTrees(migrated, again) {
 		t.Fatalf("second run changed the tree:\n%v\n%v", migrated, again)
 	}
-	again, err := MigrateDir(dir, MigrateOptions{})
+	again, err := MigrateDir(context.Background(), dir, MigrateOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,9 +134,8 @@ func TestMigrateDirConvertsAndIsIdempotent(t *testing.T) {
 
 func TestMigrateDirMatchesExport(t *testing.T) {
 	files := migrateFixture()
-	delete(files, "rules/typed.md") // the loader drops a custom type and title, so export cannot restore them
 	dir := writeTree(t, files)
-	if _, err := MigrateDir(dir, MigrateOptions{Write: true}); err != nil {
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	tree, err := config.ScanContentTree(dir)
@@ -148,11 +148,11 @@ func TestMigrateDirMatchesExport(t *testing.T) {
 	}
 	migrated := readTree(t, dir)
 	for _, f := range res.Files {
-		// Skill indexes list resources; a migrated tree leaves them out.
-		if !strings.HasSuffix(f.Path, ".md") || strings.HasPrefix(f.Path, "skills/") {
+		// Skill indexes and resources are not part of a migrated tree.
+		if !strings.HasSuffix(f.Path, ".md") || (strings.HasPrefix(f.Path, "skills/") && !strings.HasSuffix(f.Path, "/SKILL.md")) {
 			continue
 		}
-		if got, ok := migrated[f.Path]; !ok || (strings.HasSuffix(f.Path, "index.md") && got != string(f.Data)) {
+		if got, ok := migrated[f.Path]; !ok || got != string(f.Data) {
 			t.Errorf("%s: migrated tree does not reproduce the export", f.Path)
 		}
 	}
@@ -160,7 +160,7 @@ func TestMigrateDirMatchesExport(t *testing.T) {
 
 func TestMigratedTreeValidates(t *testing.T) {
 	dir := writeTree(t, migrateFixture())
-	if _, err := MigrateDir(dir, MigrateOptions{Write: true}); err != nil {
+	if _, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	b, err := okf.Load(os.DirFS(dir))
@@ -176,7 +176,7 @@ func TestMigratedTreeValidates(t *testing.T) {
 
 func TestMigrateDirSkipsUnclosedFrontmatter(t *testing.T) {
 	dir := writeTree(t, map[string]string{"rules/bad.md": "---\npriority: high\nno close\n"})
-	changes, err := MigrateDir(dir, MigrateOptions{Write: true})
+	changes, err := MigrateDir(context.Background(), dir, MigrateOptions{Write: true})
 	if err != nil {
 		t.Fatal(err)
 	}

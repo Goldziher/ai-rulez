@@ -93,6 +93,7 @@ func parseFrontmatter(content string) (metadata *Metadata, body string, malforme
 	}
 
 	parsedMetadata.extraNodes = extraNodes(frontmatterYAML)
+	parsedMetadata.OKFType, parsedMetadata.OKFTitle = okfIdentity(strings.Join(frontmatterLines, "\n"))
 	metadata = &parsedMetadata
 	return metadata, body, false
 }

@@ -1,10 +1,16 @@
 ---
-description: "Use when changing config.toml fields or defaults, include resolution, domain or profile behavior, the JSON schemas in schema/, or the loader, validator and migration code in internal/config, internal/validator and internal/migration."
-priority: high
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
+type: Playbook
+title: Config Schema Maintainer
+description: Use when changing config.toml fields or defaults, include resolution, domain or profile behavior, the JSON schemas in schema/, or the loader, validator and migration code in internal/config, internal/validator and internal/migration.
+x-ai-rulez:
+  kind: skill
+  id: config-schema-maintainer
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
 ---
 
 # Config and Schema Maintainer

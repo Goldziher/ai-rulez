@@ -1006,13 +1006,15 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 #### `init --from`
 
-`ai-rulez init --from` runs `convert --write` with its sources: importer names (`auto`, `native`, `rulesync`, ...) or the project paths it always took (`.claude`, `.cursor`, `CLAUDE.md`), which limit the native importer to those paths. The sources are checked in a scratch directory first, so a source that cannot be imported, or a blocked scan, leaves an existing `.ai-rulez/` alone. When you confirm replacing an existing configuration directory (or pass `--yes`), it is moved aside to `<dir>.replaced-<pid>` while the import writes and restored if the write fails; it is deleted only after the import succeeded. Compared with the engine it replaced: a root file such as `CLAUDE.md` is one context item (`convert --split-headings` splits it), and MCP files, hooks and permissions are imported, with the report printed. [`import okf`](#ai-rulez-import-okf) stays as the direct entry point to the OKF mapping; `convert --from okf` is the same mapping with convert's report.
+`ai-rulez init --from` runs `convert --write` with its sources: importer names (`auto`, `native`, `rulesync`, ...) or the project paths it always took (`.claude`, `.cursor`, `CLAUDE.md`), which limit the native importer to those paths. The sources are checked in a scratch directory first, so a source that cannot be imported, or a blocked scan, leaves an existing `.ai-rulez/` alone. When you confirm replacing an existing configuration directory (or pass `--force`; `--yes` only skips prompts and never replaces one), it is moved aside to `<dir>.bak-<timestamp>` while the import writes and restored if the write fails; after a successful import it stays there as the backup. Compared with the engine it replaced: a root file such as `CLAUDE.md` is one context item (`convert --split-headings` splits it), and MCP files, hooks and permissions are imported, with the report printed. [`import okf`](#ai-rulez-import-okf) stays as the direct entry point to the OKF mapping; `convert --from okf` is the same mapping with convert's report.
 
 ## Initialization Command
 
 ### `ai-rulez init [project-name]`
 
-Initialize a new directory-based configuration. It writes `.ai-rulez/config.toml`.
+Initialize a new directory-based configuration. It writes `.ai-rulez/config.toml` and an OKF bundle around it: example concepts with `type`, `title` and `x-ai-rulez` frontmatter, and an `index.md` per directory (the root one names `okf_version`).
+
+An existing configuration directory is never deleted. `init` refuses unless you pass `--force` (or answer yes at the prompt), and then moves the old directory to `<dir>.bak-<timestamp>` first. `--yes` only skips prompts; it does not replace an existing directory.
 
 **Syntax:**
 
@@ -1032,7 +1034,8 @@ ai-rulez init [project-name] [flags]
 | `--skip-content` / `-s` | boolean | false   | Skip creating example content files                                  |
 | `--from` / `-F`         | string  | (none)  | Import from existing tool files, such as `auto` or `.claude,.cursor` |
 | `--setup-hooks` / `-H`  | boolean | false   | Configure Git hooks after initialization                             |
-| `--yes` / `-y`          | boolean | false   | Automatically answer yes to prompts                                  |
+| `--yes` / `-y`          | boolean | false   | Automatically answer yes to prompts (never replaces an existing directory) |
+| `--force`               | boolean | false   | Replace an existing configuration directory; the old one is kept as `<dir>.bak-<timestamp>` |
 | `--config-dir`          | string  | `.ai-rulez` | Directory to scaffold; use `.config/ai-rulez` for the `.config/` convention |
 
 `--setup-hooks` detects an existing lefthook, pre-commit, or husky setup and adds ai-rulez to it in

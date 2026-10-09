@@ -1,7 +1,13 @@
 ---
-name: golang-maintainer
+type: Reference
+title: Golang Maintainer
 description: Implements and maintains the Go CLI command tree and internal packages.
-model: sonnet
+x-ai-rulez:
+  kind: agent
+  id: golang-maintainer
+  metadata:
+    model: sonnet
+    name: golang-maintainer
 ---
 
 # golang-maintainer

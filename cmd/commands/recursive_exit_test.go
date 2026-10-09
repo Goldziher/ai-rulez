@@ -126,16 +126,27 @@ func TestRunRecursiveValidate_NoConfigs(t *testing.T) {
 }
 
 func TestValidateCmd_HonoursQuietFlag(t *testing.T) {
-	twoRoots(t, validRootConfig)
+	// ValidateCmd.Run exits the process on an invalid configuration, which takes
+	// the whole test binary down with it; the quiet handling is a function of its own.
 	progress.SetQuiet(false)
+	t.Cleanup(func() { progress.SetQuiet(false) })
+	oldFormat := validateFormat
+	validateFormat = ""
+	t.Cleanup(func() { validateFormat = oldFormat })
 	viper.Set("quiet", true)
 	t.Cleanup(func() { viper.Set("quiet", false) })
-	validateRecursive = true
 
-	ValidateCmd.Run(ValidateCmd, nil)
+	applyValidateQuiet()
 
 	if !progress.IsQuiet() {
 		t.Error("validate must apply --quiet to progress output")
+	}
+
+	viper.Set("quiet", false)
+	validateFormat = "json"
+	applyValidateQuiet()
+	if !progress.IsQuiet() {
+		t.Error("validate must keep progress off stdout for a structured format")
 	}
 }
 
