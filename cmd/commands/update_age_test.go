@@ -120,7 +120,7 @@ func TestMinReleaseAge_OutdatedAndUpdateReportTheHeldTag(t *testing.T) {
 	// lock --outdated lists the held tag, and the report validates.
 	lockOutdated, lockFormat = true, formatJSON
 	var code int
-	stdout := captureStdout(t, func() { code = outdatedAt("", "", nil) })
+	stdout := captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
 	require.Equal(t, 0, code)
 	validateAgainst(t, "../../schema/lock-outdated.schema.json", []byte(stdout))
 	var rep tagresolve.Report
@@ -133,7 +133,7 @@ func TestMinReleaseAge_OutdatedAndUpdateReportTheHeldTag(t *testing.T) {
 	assert.Equal(t, "v1.2.0", row.Held[0].Tag)
 	assert.Equal(t, 1, rep.Summary.HeldBack)
 	lockFormat = ""
-	text := captureStdout(t, func() { _ = outdatedAt("", "", nil) })
+	text := captureStdout(t, func() { _ = reported(outdatedAt("", "", nil)) })
 	assert.Contains(t, text, "AR733 v1.2.0 held back")
 
 	// update says so and moves nothing.
@@ -229,7 +229,7 @@ func TestOutdatedSeverityOptIn(t *testing.T) {
 
 			// Act
 			var code int
-			stdout := captureStdout(t, func() { code = outdatedAt("", "", nil) })
+			stdout := captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
 
 			// Assert
 			assert.Equal(t, tt.wantCode, code)
