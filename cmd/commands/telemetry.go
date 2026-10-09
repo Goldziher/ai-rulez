@@ -27,7 +27,7 @@ var (
 	telRole       string
 	telRoot       string
 	telConfigDir  string
-	telFormat     string
+	telSyntax     string
 	telExecutable string
 	telOutput     string
 	telBackground bool
@@ -78,13 +78,13 @@ var telemetryHookCmd = &cobra.Command{
 	Use:   "hook",
 	Short: "Print the hooks that record skill, rule, context and agent loads",
 	Long: `Print the hook configuration for a harness. For --harness claude (the default) the
-output is a "hooks" block for .claude/settings.json (--format json) or [[hooks]] groups for
-config.toml (--format toml), so "ai-rulez generate" writes them into .claude/settings.json and
+output is a "hooks" block for .claude/settings.json (--syntax json) or [[hooks]] groups for
+config.toml (--syntax toml), so "ai-rulez generate" writes them into .claude/settings.json and
 owns them. Handlers are async with a 5 second timeout: they only append to a local file.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		out, err := telemetry.HookTemplate(telemetry.TemplateOptions{
-			Executable: telExecutable, Harness: telHarness, Role: telRole, Format: telFormat,
+			Executable: telExecutable, Harness: telHarness, Role: telRole, Format: telSyntax,
 			LogPath: usageLog, SinkCommand: usageSinkCommand, IndexPath: usageIndex,
 		})
 		var unsupported *usage.UnsupportedHarnessError
@@ -447,7 +447,7 @@ func init() {
 		c.Flags().StringVarP(&telConfigDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	}
 	telemetryHookCmd.Flags().StringVar(&telExecutable, "executable", "ai-rulez", "Command the hook runs")
-	telemetryHookCmd.Flags().StringVar(&telFormat, "format", "json", "Output: json (a hooks block) or toml ([[hooks]] groups for config.toml)")
+	telemetryHookCmd.Flags().StringVar(&telSyntax, "syntax", "json", "Output syntax: json (a hooks block) or toml ([[hooks]] groups for config.toml)")
 	telemetryHookCmd.Flags().StringVarP(&telOutput, "output", "o", "", "Write the template to this file instead of stdout")
 	telemetryFlushCmd.Flags().BoolVar(&telBackground, "background", false, "Silent mode used by hooks: exit 0 whatever happens")
 	telemetryFlushCmd.Flags().DurationVar(&telTimeout, "timeout", 0, "Overall flush deadline (default 8s, at most 30s)")
