@@ -102,16 +102,9 @@ func reportTagFindings(findings []tagFinding) (failing bool) {
 	return failing
 }
 
-// verifyTagsAt is the `lock --check --verify-tags` step: exit 2 for a moved tag, 1 when the remote cannot be read.
-func verifyTagsAt(path string) int {
-	cfg, _, err := loadForLockCheck(path)
-	if err != nil {
-		if errors.Is(err, config.ErrLockViolation) {
-			return exitDrift // the content check reported it already (fetched content disagrees with the lock)
-		}
-		renderError(os.Stderr, err)
-		return 1
-	}
+// verifyTagsFor is the `lock --check --verify-tags` step over the configuration the check loaded: exit 2 for a
+// moved tag, 1 when the remote cannot be read.
+func verifyTagsFor(ctx context.Context, cfg *config.Config) int {
 	want, err := verifyTagsWanted(cfg, lockVerifyTags)
 	if err != nil {
 		renderError(os.Stderr, err)
@@ -125,7 +118,7 @@ func verifyTagsAt(path string) int {
 		renderError(os.Stderr, err)
 		return 1
 	}
-	findings, err := verifyPinnedTags(cmdContext(), cfg, lock)
+	findings, err := verifyPinnedTags(ctx, cfg, lock)
 	if err != nil {
 		renderError(os.Stderr, err)
 		return 1
@@ -142,7 +135,7 @@ var errMovedTag = errors.New("a pinned tag moved")
 // movedTagsErr is the `generate --verify-tags` gate for one root: nil when
 // nothing was asked or no pinned tag moved, errMovedTag (findings already
 // printed) when one did, any other error when the check could not run.
-func movedTagsErr(cfg *config.Config) error {
+func movedTagsErr(ctx context.Context, cfg *config.Config) error {
 	want, err := verifyTagsWanted(cfg, generateVerifyTags)
 	if err != nil || !want {
 		return err
@@ -151,7 +144,7 @@ func movedTagsErr(cfg *config.Config) error {
 	if err != nil {
 		return err //nolint:wrapcheck // already contextual
 	}
-	findings, err := verifyPinnedTags(cmdContext(), cfg, lock)
+	findings, err := verifyPinnedTags(ctx, cfg, lock)
 	if err != nil {
 		return err
 	}
@@ -163,8 +156,8 @@ func movedTagsErr(cfg *config.Config) error {
 
 // movedTagsFailure runs before anything is written and ends the process with
 // exitDrift when a pinned tag moved.
-func movedTagsFailure(cfg *config.Config) error {
-	err := movedTagsErr(cfg)
+func movedTagsFailure(ctx context.Context, cfg *config.Config) error {
+	err := movedTagsErr(ctx, cfg)
 	switch {
 	case err == nil:
 		return nil

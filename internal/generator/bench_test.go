@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
@@ -121,6 +122,14 @@ func BenchmarkSecretGate(b *testing.B) {
 		}
 		outputs := plan.Outputs
 		b.Run(s.Name, func(b *testing.B) {
+			b.ReportAllocs()
+			for range b.N {
+				gen.unignoredSecretOutputs(outputs)
+			}
+		})
+		// The context generate runs under remembers the repository questions.
+		b.Run(s.Name+"-memo", func(b *testing.B) {
+			gen.SetContext(gitutil.WithMemo(context.Background()))
 			b.ReportAllocs()
 			for range b.N {
 				gen.unignoredSecretOutputs(outputs)

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -12,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	pemit "github.com/Goldziher/ai-rulez/v5/internal/publish/emit"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // publishOptions are the [publish] table and the flags, merged: a flag wins
@@ -30,6 +30,10 @@ type publishOptions struct {
 	emitOptions      map[string]map[string]string
 	templates        []publish.Template
 }
+
+// maxPublishInputBytes bounds each file publish reads whole: a template, the lock,
+// a skill. A larger file is refused, not cut.
+const maxPublishInputBytes = 8 << 20
 
 // publishConfigError wraps a [publish] validation failure as AR9N6, and leaves
 // every other config error as it is.
@@ -127,7 +131,7 @@ func (o *publishOptions) collectEmitters(base string, p *config.PublishConfig) e
 		o.templates = append(o.templates, t)
 	}
 	for _, path := range publishTemplates {
-		body, err := os.ReadFile(path) //nolint:gosec // an explicit --template chosen by the user
+		body, err := safefs.ReadFileLimited(path, maxPublishInputBytes) // an explicit --template chosen by the user
 		if err != nil {
 			return oops.With("path", path).Wrapf(err, "read template")
 		}
@@ -149,7 +153,7 @@ func readProjectTemplate(base, rel, output string) (publish.Template, error) {
 	if err := publish.CheckTree(base, []string{filepath.ToSlash(filepath.Clean(rel))}); err != nil {
 		return publish.Template{}, publish.Errorf(publish.CodeBundleUnsafe, publish.ExitFailed, "", "template %s: %v", rel, err)
 	}
-	body, err := os.ReadFile(filepath.Join(base, filepath.FromSlash(rel))) //nolint:gosec // validated project-relative path
+	body, err := safefs.ReadFileLimited(filepath.Join(base, filepath.FromSlash(rel)), maxPublishInputBytes) // validated project-relative path
 	if err != nil {
 		return publish.Template{}, oops.With("path", rel).Wrapf(err, "read template")
 	}

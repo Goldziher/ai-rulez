@@ -22284,10 +22284,10 @@ go tool pprof -top -cum cpu.out
 | `internal/tokens` | `Estimate`, `Count` (cl100k and byte ratio, prose and long-line input) |
 | `internal/config` | `LoadConfig` |
 | `internal/includes` | `LoadWithLocalInclude` |
-| `internal/lint` | `LoadTree`, `RunFull`, `Analyzers` (each analyzer alone), `SecretScan` (`DetectSecret`, `RedactSecrets`, `ScanText`), `SecretScanLongLine`, `SecretScanCustomPatterns`, `RunSkillTree`, `AnalyzerSelection` |
+| `internal/lint` | `LoadTree`, `RunFull`, `Analyzers` (each analyzer alone), `SecretScan` (`DetectSecret`, `RedactSecrets`, `ScanText`), `SecretScanLongLine`, `SecretScanCustomPatterns`, `RunSkillTree`, `AnalyzerSelection`, `NumberedPrefixExists` |
 | `internal/contentlock` | `Compute`, `BuildAndCompare` (lock digest, then verify) |
 | `internal/lockfile` | `SaveLoad` |
-| `internal/generator` | `Generate` (full and idempotent no-op), `GenerateLLMsTxt`, `Clean` (remove and dry run), `CheckDrift`, `SecretGate` |
+| `internal/generator` | `Generate` (full and idempotent no-op), `GenerateLLMsTxt`, `Clean` (remove and dry run), `CheckDrift`, `SecretGate` (plain and `-memo`, the context `generate` runs under) |
 | `internal/review` | `Score` (collect and score), `Calibrate` |
 | `internal/mcp` | `ProjectTools` (tool dispatch), `SkillServer` (catalog build, `search_skills`, `load_skill`) |
 | `internal/verifiers` | `RegexFiles` |
@@ -22333,6 +22333,56 @@ could alter a result has a test comparing it with the code it replaced.
 The shell and instruction-override pre-checks compare ASCII literals without case in place and treat U+017F and
 U+212A as the `s` and `k` the patterns' case folding makes them, so a line the pattern would match always reaches it.
 
+##### Second pass: repeated loads, publish at scale, startup
+
+Same method as above, taken on a quieter machine (load average near 20): test binaries built from the commit before
+the pass and from the last commit of it, run back to back with `-benchtime=3x -count=2` (`1x` for the 2000-file
+project), so the ratios are reliable and the absolute values are not. Output is unchanged: `tests/golden` passes
+without edits.
+
+| Path (benchmark) | Change | Before | After |
+| ---------------- | ------ | ------ | ----- |
+| `lock --check`, 200 files (`commands Lock/check/medium`) | the configuration is loaded once and shared by the content comparison, the tag check and the signature check (it was loaded three times); one repository-question memo per check | 1.5 s, 71.4 MB, 274k allocs, 16 git processes | 0.45 s, 45.1 MB, 192k allocs, 10 git processes |
+| `lock --check`, 10 files (`Lock/check/small`) | same | 29 ms, 2.19 MB | 9.6 ms, 1.36 MB |
+| `lock --check`, 2000 files (`Lock/check/large`) | same | 596 MB, 2.24M allocs | 393 MB, 1.69M allocs |
+| `publish --dry-run`, 10 files (`PublishDryRun/bundle/small`) | the load is shared by the lock check, trap files are read at their size instead of into a 1 MiB buffer, the source hash is streamed into the digest, and one memo serves the whole run | 1.49 s, 49.6 MB, 27 git processes | 0.66 s, 37.7 MB, 22 git processes |
+| `publish --dry-run`, 200 files (`PublishDryRun/bundle/medium`) | same | 4.3 s, 280 MB, 770k allocs | 2.2 s, 152 MB, 656k allocs |
+| `publish --dry-run`, 2000 files (`PublishDryRun/bundle/large`) | same | 2.51 GB, 10.5M allocs | 1.36 GB, 9.89M allocs (-46% bytes) |
+| Numbered-path reference check (`lint NumberedPrefixExists`, 100 lookups over 20,000 paths) | the paths are sorted once per tree and each lookup is a binary search, instead of listing and scanning every path per numeric token | 181 ms, 33.2 MB | 0.04 ms, 4.9 KB |
+| Generator secret gate (`generator SecretGate/small`, `medium`) | `generate` runs it under a context that remembers `git rev-parse` answers, so the gate asks git once, not twice | 3.5 MB, 13.4k allocs; 3.7 MB, 15.0k allocs; 2 git processes | 1.9 MB, 7.4k allocs; 2.1 MB, 8.6k allocs; 1 git process |
+| Process start (`ai-rulez --version`, `GODEBUG=inittrace=1`) | package-level regular expressions of `lint`, `evalimport`, `cmd/commands` and `secretpat` compile on first use (`sync.OnceValue`) instead of at start | 11.7 MB allocated by package init (6.8 MB in ai-rulez packages) | 9.1 MB (4.2 MB) |
+
+What changed where:
+
+- `lock --check` and `publish --dry-run` load once and thread the result. The memo (`gitutil.WithMemo`) is attached to
+  the context of one `generate`, `drift`, `lock --check` or `publish` run and dies with it; it is never process-wide,
+  and the long-lived callers (the MCP server, the doctor, watch mode) do not get one. Questions about history
+  (`HEAD`, refs, file lists) are not memoized.
+- The 2.5 GB of `publish --dry-run` at 2000 files was mostly one allocation: the trap check read every candidate
+  file into a fresh 1 MiB buffer. The source hash text (built whole, hashed, dropped) and the repeated configuration
+  loads of the lock check were the next removable allocations.
+- Package-level regular expressions in the four packages are lazy. The `global` archlint rule treats a
+  `sync.OnceValue` the way it treats `regexp.MustCompile` (immutable in practice); the three existing
+  `OnceValue` globals (in `ard`, `tokens` and `generator/settings`) lose one allowlisted site each.
+
+Behavior that changed deliberately (everything else is byte-identical):
+
+- Frontmatter is split by `internal/frontmatter` in the config loader (`parseFrontmatter`,
+  `hasUnclosedFrontmatter`, `FrontmatterProblem`, `IsOKFListing`), in lint (`parseDoc`) and in the generator
+  (`frontmatterEnd`, hash injection, `listingFrontmatter`, `ruleFileFrontmatter`, `mappedFrontmatterFields`). Its
+  rules now apply to all of them: a UTF-8 BOM before the opening fence is ignored (the loader and the generator used
+  to treat the file as having no frontmatter); a fence may carry trailing spaces or tabs, and an indented `---`
+  is not a fence (the loader and lint used to trim both sides); the empty block `---`/`---` is a block (the loader
+  needed three lines); the blank line after a CRLF block is dropped from the body as it is after an LF block;
+  `ruleFileFrontmatter` no longer skips blank lines before the opening fence and no longer takes `---foo` for a
+  closing fence; hash injection into a block closed on its first line works. `internal/frontmatter.ClosingLine`
+  finds the closing line without building the block, so lint does not copy the YAML.
+- Readers now refuse input over their limit through `safefs.ReadLimited` instead of passing a cut one on: an
+  attestation file over `MaxBundleBytes` (AR721 at the read, not at the parse), the GitHub token and Sigstore
+  service responses over their caps, and the publish inputs (templates, the lock, skill files, dist files and
+  tar entries), the signing key, the LLM cache entry and secret. `safefs.ReadFileLimited` opens and reads with the same
+  bound.
+
 #### What dominates elsewhere
 
 These were measured and not changed here.
@@ -22343,9 +22393,16 @@ These were measured and not changed here.
   `ls-files`) and file-system calls; their CPU time is a small share.
 - **Token counting.** cl100k counting of the prompt text is the largest allocator in a lint run (about a third of
   the bytes, in `regexp2` match objects); the memo that removes it is part of the same separate branch.
-- **Repeated loads.** `lock --check` and `publish --dry-run` load the configuration three to four times and run the
-  security scan again for the served skills. Sharing one load is a larger refactor than this pass.
-- **Publish at scale.** `publish --dry-run` on 2000 files allocates about 2.5 GB over 11 million objects.
+- **Process-table sweep per spawn.** After each short git command, `runner`'s process-tree cleanup reads the whole
+  process table and the environment of every process of the user's that started after the command
+  (`adoptCarriers`, one `sysctl` each) to find a detached helper. In a CPU profile of `SecretGate` this is 68% of
+  the time and, on a machine with hundreds of processes, a large share of the allocations of a publish run: its cost
+  depends on the machine, not the project. It is security-relevant code and was not touched here.
+- **Served skills.** `lock --check` still builds the served-skill views twice (`mcp.DynamicLockChanges` loads the
+  configuration for each view and scans the skills); that code lives in `internal/mcp`.
+- **Publish at scale.** What remains of `publish --dry-run` at 2000 files (1.36 GB over 9.9 million objects) is the
+  strict lint run (about 60%, mostly cl100k token counting in `regexp2`, which the separate token memo branch
+  removes), the lock comparison and the served views.
 
 ## Standards Conformance
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
@@ -101,17 +102,18 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cfg, err := loadGenerateConfig(args)
+	// One memo per run: the repository questions the load and the generator ask are answered once.
+	ctx := gitutil.WithMemo(cmdContext())
+	cfg, err := loadGenerateConfig(ctx, args)
 	if err != nil {
 		return err
 	}
-	return generateLoaded(cmd, cfg)
+	return generateLoaded(ctx, cmd, cfg)
 }
 
 // generateLoaded is the single-project run once its configuration is loaded and
 // checked: overrides, gates, preflight, then the plan, the preview or the write.
-func generateLoaded(cmd *cobra.Command, cfg *config.Config) error {
-	ctx := cmdContext()
+func generateLoaded(ctx context.Context, cmd *cobra.Command, cfg *config.Config) error {
 	if err := applyGenerateOverrides(cfg); err != nil {
 		return fail(err)
 	}
@@ -203,8 +205,8 @@ func runGenerateUser(args []string) error {
 
 // loadGenerateConfig loads, policy-checks and validates the project and enforces
 // the lock; any failure carries its exit code.
-func loadGenerateConfig(args []string) (*config.Config, error) {
-	cfg, err := loadConfigForCommand(cmdContext(), args, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
+func loadGenerateConfig(ctx context.Context, args []string) (*config.Config, error) {
+	cfg, err := loadConfigForCommand(ctx, args, append(pluginLoadOptions(pluginMode), config.WithFrontmatterErrors())...)
 	if err != nil {
 		if (generateLocked || generateFrozen) && errors.Is(err, config.ErrLockViolation) {
 			return nil, failWithCode(exitDrift, err) // a missing or disagreeing lock is drift, the same code as a changed source
@@ -223,11 +225,11 @@ func loadGenerateConfig(args []string) (*config.Config, error) {
 		return nil, fail(err)
 	}
 
-	if err := lockedDriftError(enforceLockedContent(cfg)); err != nil {
+	if err := lockedDriftError(enforceLockedContent(cfg)); err != nil { //nolint:contextcheck // the lock check reads the policy and the lock from disk; it takes no context
 		return nil, err
 	}
 	// only with --verify-tags or [lock] verify_tags: a pinned tag that moved ends the run
-	if err := movedTagsFailure(cfg); err != nil {
+	if err := movedTagsFailure(ctx, cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil

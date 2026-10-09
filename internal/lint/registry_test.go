@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 )
 
-var codeFormatRe = regexp.MustCompile(`^AR[0-9A-Z]{3}$`)
+var codeFormatRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^AR[0-9A-Z]{3}$`) })
 
 func TestRegisteredCodesAreUniqueAndDocumented(t *testing.T) {
 	docs := ""
@@ -25,7 +26,7 @@ func TestRegisteredCodesAreUniqueAndDocumented(t *testing.T) {
 	}
 	codes, names := map[string]bool{}, map[string]bool{}
 	for _, r := range ruleTables().rules {
-		if !codeFormatRe.MatchString(r.Code) {
+		if !codeFormatRe().MatchString(r.Code) {
 			t.Errorf("code %q is not of the form ARxxx", r.Code)
 		}
 		if codes[r.Code] {
