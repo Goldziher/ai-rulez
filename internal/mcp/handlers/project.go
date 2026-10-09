@@ -10,6 +10,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
@@ -806,11 +807,31 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 	if err := okfbridge.RefreshIndexes(ctx, aiRulesDir); err != nil {
 		return ToolError(fmt.Errorf("failed to write the index.md files: %w", err))
 	}
+	if request.GetBool("with_agents", false) {
+		if err := addSampleAgent(ctx, baseDir); err != nil {
+			return ToolError(err)
+		}
+	}
 
 	return ToolSuccess(map[string]interface{}{
 		keyMessage: "Project initialized successfully",
 		keyPath:    configPath,
 	})
+}
+
+// addSampleAgent writes the sample agent init_project's with_agents asks for.
+func addSampleAgent(ctx context.Context, baseDir string) error {
+	op, err := crud.NewOperator(baseDir)
+	if err != nil {
+		return fmt.Errorf("failed to open the new project: %w", err)
+	}
+	if _, err := op.AddAgent(ctx, &crud.AddFileRequest{
+		Name:        "code-reviewer",
+		Description: "Reviews changes for quality, security and maintainability",
+	}); err != nil {
+		return fmt.Errorf("failed to create the sample agent: %w", err)
+	}
+	return nil
 }
 
 // existingConfigFile returns the config file already in dir, or "".
