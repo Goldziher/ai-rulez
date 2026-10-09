@@ -90,3 +90,23 @@ func TestListToolsUseLowerCaseKeysAndATypedSchema(t *testing.T) {
 		assert.Contains(t, string(schema), `"priority"`, "the rule items have a described shape")
 	}
 }
+
+func TestIncludeToolsRefuseOutsideSourcesAndRepairUnloadableConfigs(t *testing.T) {
+	t.Parallel()
+	dir := telemetryProject(t)
+	outside := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(outside, ".ai-rulez"), 0o750))
+	session := connect(t, NewServer("test", WithRoot(dir)))
+
+	res := call(t, session, "add_include", map[string]any{"working_directory": dir, "name": "out", "source": outside})
+	require.True(t, res.IsError, "an include outside the project is refused when it is added")
+	assert.Contains(t, textOfResult(t, res), "outside the project")
+
+	bad := "version = \"5.0\"\nname = \"t\"\n\n[[includes]]\nname = \"bad\"\nsource = \"" + filepath.ToSlash(outside) + "\"\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.toml"), []byte(bad), 0o600))
+	res = call(t, session, "remove_include", map[string]any{"working_directory": dir, "name": "bad"})
+	require.False(t, res.IsError, textOfResult(t, res))
+	data, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.toml"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "bad")
+}

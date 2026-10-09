@@ -6,6 +6,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
 )
 
 // InstallSkill adds a new installed skill entry to the config
@@ -55,9 +56,10 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 		return oops.With("config_dir", op.aiRulezDir).Wrapf(err, "save config")
 	}
 
+	op.warnStoredCredentials("skill", req.Source)
 	op.logger().Info("Skill installed successfully",
 		"name", req.Name,
-		"source", req.Source,
+		"source", incl.RedactURL(req.Source),
 		"type", sourceType,
 	)
 
@@ -79,32 +81,22 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 		return op.uninstallSkillLocal(ctx, name)
 	}
 
-	baseDir := op.baseDir
-
-	cfg, err := op.load(config.WithUnresolvedIncludesTolerated(ctx), config.WithoutLocal())
-	if err != nil {
-		return oops.With("base_dir", baseDir).Wrapf(err, "load config")
-	}
-
-	foundIdx := -1
-	for i := range cfg.InstalledSkills {
-		if cfg.InstalledSkills[i].Name == name {
-			foundIdx = i
-			break
+	// Edited on the raw config.toml, like RemoveInclude: a configuration the
+	// loader refuses must not keep a skill from being uninstalled.
+	err := op.editSharedConfig(func(cfg *config.Config) error {
+		for i := range cfg.InstalledSkills {
+			if cfg.InstalledSkills[i].Name == name {
+				cfg.InstalledSkills = append(cfg.InstalledSkills[:i], cfg.InstalledSkills[i+1:]...)
+				return nil
+			}
 		}
-	}
-
-	if foundIdx == -1 {
 		return oops.
 			With("name", name).
 			Hint("Use 'skill list' to see installed skills").
 			Errorf("installed skill '%s' not found", name)
-	}
-
-	cfg.InstalledSkills = append(cfg.InstalledSkills[:foundIdx], cfg.InstalledSkills[foundIdx+1:]...)
-
-	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
-		return oops.With("config_dir", op.aiRulezDir).Wrapf(err, "save config")
+	})
+	if err != nil {
+		return err
 	}
 
 	op.logger().Info("Skill uninstalled successfully", "name", name)
