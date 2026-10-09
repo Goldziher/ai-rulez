@@ -123,6 +123,13 @@ replaces the content atomically: `--content <text>` (use `-` for stdin), `--prio
 and skills; for a check, content without frontmatter replaces only the body and `--description`, `--severity`,
 `--tools` and `--targets` are set on its frontmatter. Both take `--domain`/`-d`, and `--local` except for checks.
 
+`edit` keeps what the file already declares: a rule, context file or skill rewritten with bare content keeps its
+priority, targets, description and every other frontmatter key, and `--priority` or `--targets` change only that
+field (the MCP `update_*` tools do the same). Content that starts with its own frontmatter replaces the whole file.
+Content is never read, written or deleted through a symlink inside the configuration directory, and `index` and `log`
+are reserved names: `index.md` and `log.md` are the listings `migrate okf` generates, so they are not rules, context
+files or agents.
+
 `ai-rulez list --placement [--profile <name>]` prints where every skill and command ends up (core or plugin-only),
 the plugins that bundle it, and flags plugin-only items nothing makes reachable.
 
@@ -605,6 +612,13 @@ ai-rulez include add <name> <source> [flags]
 - `--merge-strategy <strategy>` / `-m` (optional): Merge strategy: `local-override` (default), `include-override`, or `error`
 - `--install-to <path>` / `-t` (optional): Installation target path in `.ai-rulez/`
 - `--local` (optional): Add the include to the machine-local `config.local.*` overlay instead of the shared config
+
+A local source in the shared config must resolve inside the project, the same check the loader applies, so a path
+outside it is refused when it is added (use `--local` for a path that leaves the project). A URL with a credential
+(`https://user:token@host/...`) is stored as written in `config.toml`; ai-rulez warns and never prints the secret in
+its own output. Prefer a git credential helper or an SSH remote (`git@host:org/repo.git`) and keep the URL free of
+secrets. `include remove` and `skill remove` edit `config.toml` directly without loading the project, so an include
+that keeps the project from loading can always be removed.
 
 **Examples:**
 
