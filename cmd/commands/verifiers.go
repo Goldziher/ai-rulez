@@ -28,21 +28,21 @@ const (
 )
 
 var (
-	verifiersStrict   bool
-	verifiersNames    []string
-	verifiersProfile  string
-	verifiersSince    string
-	verifiersStaged   bool
-	verifiersAll      bool
-	verifiersRule     string
-	verifiersFormat   string
-	verifiersFailOn   string
-	verifiersOut      string
-	verifiersDead     bool
-	verifiersListJSON bool
+	verifiersStrict                         bool
+	verifiersNames                          []string
+	verifiersProfile                        string
+	verifiersSince                          string
+	verifiersStaged                         bool
+	verifiersAll                            bool
+	verifiersRule                           string
+	verifiersFormat                         string
+	verifiersFailOn                         string
+	verifiersOut                            string
+	verifiersDead                           bool
+	verifiersListJSON                       bool
 	verifiersExplainJSON, verifiersTestJSON bool
-	verifiersExec     bool
-	verifiersRole     string
+	verifiersExec                           bool
+	verifiersRole                           string
 )
 
 // verifiersAllowExecEnv is the CI spelling of --allow-exec.
