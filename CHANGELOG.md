@@ -302,6 +302,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 
 ### Fixed
 
+- **`generate --check` no longer reports a file `generate` just wrote as `edited`** when its rendering ends in an empty section, such as a last rule whose body is only its title heading (in `AGENTS.md`, `GEMINI.md` and the other root files). The Content-Hash was taken over every trailing blank line of the rendering while the check could only try three; it now caps the run at that bound, so the hashes of other files do not move.
 - **The git process cleanup no longer reads the environment of every process on the machine**: a short-lived run now records its root's start time, so the search for detached helpers covers only processes started since the command (10 ms to 0.03 ms per spawn on 850 processes, same guarantee).
 - **`validate` on an OKF bundle no longer says "Configuration is valid" and then exits 2.** The OKF verdict comes first, and with `--format json` a failing run writes the OKF document on stdout (or `--output`) instead of nothing. A rule or context file with no frontmatter block is plain markdown that `generate` accepts, so `validate` reports it as an `AR9B1` warning rather than an error.
 - **`validate -q`** no longer prints the OKF summary line or the `strict validation:` totals.
