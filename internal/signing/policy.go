@@ -12,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // maxKeyBytes bounds a key or trusted root file.
@@ -98,7 +99,7 @@ func readBundleFile(path string) ([]byte, error) {
 		return nil, wrap(CodeMissing, err, "cannot read the attestation at %s", path)
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	data, err := io.ReadAll(io.LimitReader(f, MaxBundleBytes+1))
+	data, err := safefs.ReadLimited(f, MaxBundleBytes)
 	if err != nil {
 		return nil, wrap(CodeInvalid, err, "cannot read the attestation at %s", path)
 	}
@@ -377,12 +378,12 @@ func readLimited(path string) ([]byte, error) {
 }
 
 func readAllLimited(r io.Reader) ([]byte, error) {
-	data, err := io.ReadAll(io.LimitReader(r, maxKeyBytes+1))
+	data, err := safefs.ReadLimited(r, maxKeyBytes)
+	if errors.Is(err, safefs.ErrTooLarge) {
+		return nil, errors.New("file is too large")
+	}
 	if err != nil {
 		return nil, err //nolint:wrapcheck // contextualized by the caller
-	}
-	if len(data) > maxKeyBytes {
-		return nil, errors.New("file is too large")
 	}
 	return data, nil
 }

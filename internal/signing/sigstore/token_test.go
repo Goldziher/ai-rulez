@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,6 +74,7 @@ func TestGitHubActionsToken(t *testing.T) {
 		{name: "endpoint refuses", status: http.StatusForbidden, body: `{}`, wantErr: "answered 403"},
 		{name: "no value", status: http.StatusOK, body: `{"value":"  "}`, wantErr: "returned no token"},
 		{name: "not JSON", status: http.StatusOK, body: `<html>`, wantErr: "returned no token"},
+		{name: "a body over the limit is refused, not cut", status: http.StatusOK, body: `{"value":"` + strings.Repeat("a", maxTokenBody) + `"}`, wantErr: "size limit"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

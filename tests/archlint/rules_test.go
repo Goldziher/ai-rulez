@@ -118,8 +118,9 @@ func selectorCalls(file *ast.File, importPath string, match func(name string) bo
 	return n
 }
 
-// sentinelValue reports whether a package-level initializer builds an error or
-// a compiled regular expression, which are immutable in practice.
+// sentinelValue reports whether a package-level initializer builds an error, a
+// compiled regular expression, or a sync.OnceValue that compiles one on first
+// use (lazy, and immutable in practice).
 func sentinelValue(e ast.Expr) bool {
 	call, ok := e.(*ast.CallExpr)
 	if !ok {
@@ -128,7 +129,7 @@ func sentinelValue(e ast.Expr) bool {
 	switch fn := call.Fun.(type) {
 	case *ast.SelectorExpr:
 		switch fn.Sel.Name {
-		case "New", "Errorf", "MustCompile", "Join":
+		case "New", "Errorf", "MustCompile", "Join", "OnceValue", "OnceValues":
 			return true
 		}
 	case *ast.Ident:

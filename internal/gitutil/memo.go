@@ -2,8 +2,11 @@ package gitutil
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"sync"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // Memo remembers the answers to the structural questions asked of a repository
@@ -19,7 +22,13 @@ type Memo struct {
 	m  map[memoKey]memoVal
 }
 
-type memoKey struct{ dir, args string }
+// memoKey names a question. The runner is part of it: two Git values over
+// different runners (a fake in a test, a different host) are not asking the same
+// repository, so they do not share answers.
+type memoKey struct {
+	dir, args string
+	runner    runner.Runner
+}
 
 type memoVal struct {
 	out []byte
@@ -44,6 +53,16 @@ func memoFrom(ctx context.Context) *Memo {
 	return m
 }
 
+// memoRunner is the runner as a map key. A runner whose dynamic type cannot be
+// compared (a func adapter) has no identity and shares one key with the others like it.
+func (g Git) memoRunner() runner.Runner {
+	r := g.runner()
+	if t := reflect.TypeOf(r); t == nil || !t.Comparable() {
+		return nil
+	}
+	return r
+}
+
 // revParse runs `git rev-parse args...` in dir, through the context's Memo when
 // it has one. Failures are remembered too: "not a repository" is an answer.
 func (g Git) revParse(ctx context.Context, dir string, args ...string) ([]byte, error) {
@@ -55,7 +74,7 @@ func (g Git) revParse(ctx context.Context, dir string, args ...string) ([]byte, 
 	if memo == nil {
 		return run()
 	}
-	key := memoKey{dir, strings.Join(args, "\x00")}
+	key := memoKey{dir: dir, args: strings.Join(args, "\x00"), runner: g.memoRunner()}
 	memo.mu.Lock()
 	v, ok := memo.m[key]
 	memo.mu.Unlock()

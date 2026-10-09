@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	proc "github.com/Goldziher/ai-rulez/v5/internal/runner"
@@ -24,8 +25,10 @@ func registerArPlugin(s *ruleSet) {
 }
 
 var (
-	kebabRe  = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
-	semverRe = regexp.MustCompile(`^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
+	kebabRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`) })
+	semverRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
+	})
 
 	pluginKeys = []string{
 		"$schema", keyName, "version", keyDescription, "author", "homepage", "repository", keyLicense, keyKeywords,
@@ -93,11 +96,11 @@ func (r *runner) checkPluginJSON(abs string) { //nolint:gocyclo // linear checks
 	}
 	if raw, has := m[keyName]; !has {
 		r.add(CodePluginManifest, abs, 1, "name is required")
-	} else if s, isStr := rawString(raw); !isStr || !kebabRe.MatchString(s) {
+	} else if s, isStr := rawString(raw); !isStr || !kebabRe().MatchString(s) {
 		bad(keyName, "must be a kebab-case string (lowercase letters, digits and hyphens, no spaces)")
 	}
 	if raw, has := m["version"]; has {
-		if s, isStr := rawString(raw); !isStr || !semverRe.MatchString(s) {
+		if s, isStr := rawString(raw); !isStr || !semverRe().MatchString(s) {
 			bad("version", "must be a semantic version string such as 1.2.3")
 		}
 	}
@@ -187,7 +190,7 @@ func (r *runner) checkMarketplaceJSON(abs string) { //nolint:gocyclo // linear c
 	at := func(needle string) int { return lineContaining(lines, needle) }
 	if raw, has := m[keyName]; !has {
 		r.add(CodePluginManifest, abs, 1, "name is required")
-	} else if s, isStr := rawString(raw); !isStr || !kebabRe.MatchString(s) {
+	} else if s, isStr := rawString(raw); !isStr || !kebabRe().MatchString(s) {
 		r.add(CodePluginManifest, abs, at(`"name"`), "name must be a kebab-case string")
 	} else if inSet(reservedMarketplaceNames, s) {
 		r.add(CodePluginManifest, abs, at(`"name"`), "the marketplace name %q is reserved for Anthropic", s)
@@ -207,7 +210,7 @@ func (r *runner) checkMarketplaceJSON(abs string) { //nolint:gocyclo // linear c
 		name, _ := rawString(p[keyName])
 		line := at(quoteNeedle(name))
 		switch {
-		case name == "" || !kebabRe.MatchString(name):
+		case name == "" || !kebabRe().MatchString(name):
 			r.add(CodePluginManifest, abs, at(`"plugins"`), "a plugin entry needs a kebab-case name")
 		case seen[name]:
 			r.add(CodePluginManifest, abs, line, "plugin %q is listed twice", name)
@@ -240,12 +243,12 @@ func (r *runner) checkMarketplaceJSON(abs string) { //nolint:gocyclo // linear c
 	}
 }
 
-var pluginRootRe = regexp.MustCompile(`\$\{?CLAUDE_PLUGIN_ROOT\}?`)
+var pluginRootRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\$\{?CLAUDE_PLUGIN_ROOT\}?`) })
 
 // unquotedPluginRoot reports whether a shell-form command uses the plugin root
 // outside double quotes; a plugin installed under a path with a space then splits.
 func unquotedPluginRoot(command string) bool {
-	for _, loc := range pluginRootRe.FindAllStringIndex(command, -1) {
+	for _, loc := range pluginRootRe().FindAllStringIndex(command, -1) {
 		inD, inS := false, false
 		for _, c := range command[:loc[0]] {
 			switch {

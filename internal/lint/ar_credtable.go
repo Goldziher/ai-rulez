@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // CodeUnknownDotdir reads a hidden directory of the home folder that no credential family names.
@@ -106,30 +107,32 @@ var credentialStems = []string{
 }
 
 var (
-	readVerbRe     = regexp.MustCompile(`(?i)(?:^|[\s(])(?:cat|head|tail|less|more|bat|tac|strings|base64|xxd|od|hexdump|grep|egrep|awk|sed|get-content|type)\s`)
-	copyVerbRe     = regexp.MustCompile(`(?:^|[\s(])(?:cp|ln|install|mv)\s`)
-	exfilVerbRe    = regexp.MustCompile(`(?:^|[\s(])(?:scp|rsync)\s`)
-	ddRe           = regexp.MustCompile(`\bdd\b[^|]*\bif=\s*$`)
-	redirectInRe   = regexp.MustCompile(`<\s*$`)
-	keychainCmdRe  = regexp.MustCompile(`\bsecurity\s+find-(?:generic|internet)-password\b`)
-	credSegSplitRe = regexp.MustCompile(`&&|\|\||[;|]|\$\(|\x60`)
+	readVerbRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)(?:^|[\s(])(?:cat|head|tail|less|more|bat|tac|strings|base64|xxd|od|hexdump|grep|egrep|awk|sed|get-content|type)\s`)
+	})
+	copyVerbRe     = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?:^|[\s(])(?:cp|ln|install|mv)\s`) })
+	exfilVerbRe    = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?:^|[\s(])(?:scp|rsync)\s`) })
+	ddRe           = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\bdd\b[^|]*\bif=\s*$`) })
+	redirectInRe   = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`<\s*$`) })
+	keychainCmdRe  = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\bsecurity\s+find-(?:generic|internet)-password\b`) })
+	credSegSplitRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`&&|\|\||[;|]|\$\(|\x60`) })
 )
 
 // accessMethod reports how the text before a credential path reaches it.
 func accessMethod(prefix string) string {
-	if loc := credSegSplitRe.FindAllStringIndex(prefix, -1); len(loc) > 0 {
+	if loc := credSegSplitRe().FindAllStringIndex(prefix, -1); len(loc) > 0 {
 		prefix = prefix[loc[len(loc)-1][1]:]
 	}
 	switch {
-	case ddRe.MatchString(prefix):
+	case ddRe().MatchString(prefix):
 		return methodDD
-	case redirectInRe.MatchString(prefix):
+	case redirectInRe().MatchString(prefix):
 		return methodRedirect
-	case exfilVerbRe.MatchString(prefix):
+	case exfilVerbRe().MatchString(prefix):
 		return methodExfil
-	case copyVerbRe.MatchString(prefix):
+	case copyVerbRe().MatchString(prefix):
 		return methodCopy
-	case readVerbRe.MatchString(prefix):
+	case readVerbRe().MatchString(prefix):
 		return methodRead
 	}
 	return ""
@@ -188,7 +191,7 @@ func detectCredentialAccess(line string) (credHit, bool) {
 // location. Merely naming a path (ls ~/.ssh, "the .env file holds secrets") is
 // not an access and is not reported.
 func (r *runner) scanCredentialAccess(abs string, no int, line string) {
-	if keychainCmdRe.MatchString(line) {
+	if keychainCmdRe().MatchString(line) {
 		r.add(CodeShellAccess, abs, no, "reads a password from the macOS keychain (security find-*-password)")
 		return
 	}
@@ -234,7 +237,7 @@ func methodVerb(method string) string {
 }
 
 var (
-	dotdirRe     = regexp.MustCompile(home + `/\.([A-Za-z0-9][A-Za-z0-9_-]*)/`)
+	dotdirRe     = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(home + `/\.([A-Za-z0-9][A-Za-z0-9_-]*)/`) })
 	benignDotdir = map[string]bool{
 		presetClaude: true, presetCursor: true, presetCodex: true, keyAgents: true, "cache": true, "local": true, "config": true, "gemini": true,
 		"windsurf": true, "vscode": true, cmdNPM: true, "nvm": true, "rustup": true, "pyenv": true, "rbenv": true, "bundle": true, "m2": true,
@@ -242,16 +245,18 @@ var (
 		"sdkman": true, "asdf": true, "mise": true, "rtx": true, toolPnpm: true, toolYarn: true, "ai-rulez": true, "basemind": true, "copilot": true,
 		"kiro": true, "continue": true, "cline": true, "roo": true, "amp": true, "opencode": true, "junie": true, "trae": true,
 	}
-	tableDotdirs = regexp.MustCompile(`^(?:ssh|aws|gnupg|kube|docker|azure|terraform\.d|gem|op|age|password-store|openvpn|vault-token)$`)
+	tableDotdirs = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^(?:ssh|aws|gnupg|kube|docker|azure|terraform\.d|gem|op|age|password-store|openvpn|vault-token)$`)
+	})
 )
 
 func (r *runner) scanUnknownDotdir(abs string, no int, line string) {
 	if r.sev[CodeUnknownDotdir] == SeverityOff {
 		return
 	}
-	for _, loc := range dotdirRe.FindAllStringSubmatchIndex(line, -1) {
+	for _, loc := range dotdirRe().FindAllStringSubmatchIndex(line, -1) {
 		dir := line[loc[2]:loc[3]]
-		if benignDotdir[dir] || tableDotdirs.MatchString(dir) {
+		if benignDotdir[dir] || tableDotdirs().MatchString(dir) {
 			continue
 		}
 		if accessMethod(line[:loc[0]]) == methodRead {
