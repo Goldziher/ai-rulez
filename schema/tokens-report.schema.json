@@ -4,14 +4,7 @@
   "title": "ai-rulez tokens report",
   "description": "Output of `ai-rulez tokens --format json`: what the generated files cost per runtime, split into always loaded, conditional and on demand.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "profile",
-    "tokenizer",
-    "runtimes",
-    "domains",
-    "notes"
-  ],
+  "required": ["schema_version", "profile", "tokenizer", "runtimes", "domains", "notes"],
   "properties": {
     "schema_version": {
       "const": 1
@@ -21,11 +14,7 @@
     },
     "tokenizer": {
       "type": "object",
-      "required": [
-        "name",
-        "approximate",
-        "estimate"
-      ],
+      "required": ["name", "approximate", "estimate"],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -62,13 +51,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "preset",
-          "files",
-          "always",
-          "conditional",
-          "on_demand"
-        ],
+        "required": ["preset", "files", "always", "conditional", "on_demand"],
         "properties": {
           "preset": {
             "type": "string"
@@ -129,12 +112,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "name",
-          "always",
-          "conditional",
-          "on_demand"
-        ],
+        "required": ["name", "always", "conditional", "on_demand"],
         "properties": {
           "name": {
             "type": "string"
@@ -164,12 +142,7 @@
   "definitions": {
     "entry": {
       "type": "object",
-      "required": [
-        "label",
-        "bucket",
-        "tokens",
-        "artifacts"
-      ],
+      "required": ["label", "bucket", "tokens", "artifacts"],
       "properties": {
         "label": {
           "type": "string"

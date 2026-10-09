@@ -4,33 +4,20 @@
   "title": "ai-rulez roles resolve",
   "description": "Output of `ai-rulez roles resolve <name> --format json`: what a person holding the role gets, and what each skill_mode comes to on the configured harnesses. The item list is capped by --limit (total_items and truncated then appear).",
   "type": "object",
-  "required": [
-    "schema_version",
-    "role",
-    "skill_modes",
-    "tokenizer"
-  ],
+  "required": ["schema_version", "role", "skill_modes", "tokenizer"],
   "properties": {
     "schema_version": {
       "const": 1
     },
     "role": {
       "type": "object",
-      "required": [
-        "name",
-        "domains",
-        "items",
-        "totals"
-      ]
+      "required": ["name", "domains", "items", "totals"]
     },
     "skill_modes": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "id",
-          "mode"
-        ],
+        "required": ["id", "mode"],
         "properties": {
           "domain": {
             "type": "string"

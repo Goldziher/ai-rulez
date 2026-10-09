@@ -94,7 +94,7 @@ global cmd/commands/search_index.go 2
 global cmd/commands/sign.go 20
 global cmd/commands/sign_trust.go 2
 global cmd/commands/skill.go 11
-global cmd/commands/telemetry.go 20
+global cmd/commands/telemetry.go 19
 global cmd/commands/telemetry_consent.go 9
 global cmd/commands/telemetry_report.go 1
 global cmd/commands/tokens.go 7

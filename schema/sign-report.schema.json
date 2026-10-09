@@ -4,11 +4,7 @@
   "title": "ai-rulez sign",
   "description": "Output of `ai-rulez sign --format json`: what the run signed.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "status",
-    "signed"
-  ],
+  "required": ["schema_version", "status", "signed"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -21,9 +17,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "kind"
-        ],
+        "required": ["kind"],
         "properties": {
           "kind": {
             "type": "string"

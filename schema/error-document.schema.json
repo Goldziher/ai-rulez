@@ -4,12 +4,7 @@
   "title": "ai-rulez error document",
   "description": "What every command with a --format flag prints on stdout when it fails before it can produce its report (--format json). The same message is on stderr as text.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "status",
-    "error",
-    "exit_code"
-  ],
+  "required": ["schema_version", "status", "error", "exit_code"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -26,11 +21,7 @@
     },
     "exit_code": {
       "type": "integer",
-      "enum": [
-        1,
-        2,
-        3
-      ]
+      "enum": [1, 2, 3]
     }
   }
 }

@@ -82,7 +82,7 @@ var ExportCmd = &cobra.Command{
 }
 
 var exportOKFCmd = &cobra.Command{
-	Use:   "okf [config-file]",
+	Use:   "okf",
 	Short: "Export rules, context, skills and more as an OKF bundle",
 	Long: `Write the project's content as an OKF v0.2 bundle: one concept per rule, context
 file, skill, agent, command and check, a root index.md with okf_version, and an
@@ -91,16 +91,16 @@ diffs cleanly in git. Links between exported items point at bundle paths.
 --index-style frontmatter writes index.md as title, version and entries in the
 frontmatter instead of the OKF 0.2 body listing (default, okf.index_style).
 
-Without --out the bundle goes to okf.dir (default docs/okf). --out replaces the
+Without --output-dir the bundle goes to okf.dir (default docs/okf). --output-dir replaces the
 contents of that directory, but only when it is empty or already an OKF bundle.
 --check writes nothing and exits 2 when the bundle on disk differs.
 --role exports only the content a role selects (see "ai-rulez roles list").
 
 The okf preset ("presets = [\"claude\", \"okf\"]") runs the same export inside
 generate, so the bundle stays in sync and generate --check detects drift.`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runOKFExport(watchParentContext(cmd), args, os.Stdout)
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return runOKFExport(watchParentContext(cmd), os.Stdout)
 	},
 }
 
@@ -140,22 +140,20 @@ func init() {
 	okfValidateCmd.Flags().StringVar(&okfFailOn, "fail-on", "error", "Lowest severity that fails the run: error, warning, info or none")
 	OKFCmd.AddCommand(okfValidateCmd)
 
-	exportOKFCmd.Flags().StringVarP(&okfOut, "out", "o", "", "Bundle directory (default: okf.dir, docs/okf)")
-	exportOKFCmd.Flags().StringVarP(&okfProfile, "profile", "p", "", "Profile to export (default: from config or 'default')")
-	exportOKFCmd.Flags().StringVar(&okfRole, "role", "", "Export the slice of content a role selects (see 'ai-rulez roles list'); mutually exclusive with --profile")
+	specOutputDir.String(exportOKFCmd.Flags(), &okfOut, "Bundle directory (default: okf.dir, docs/okf)")
+	specProfile.String(exportOKFCmd.Flags(), &okfProfile, "Profile to export (default: from config or 'default')")
+	specRole.String(exportOKFCmd.Flags(), &okfRole, "Export the slice of content a role selects (see 'ai-rulez roles list'); mutually exclusive with --profile")
 	exportOKFCmd.Flags().StringSliceVar(&okfInclude, "include", nil, "Kinds to export: rules,context,skills,agents,commands,checks (default: okf.include or all)")
 	exportOKFCmd.Flags().StringVar(&okfIndexStyle, "index-style", "", "index.md scheme: body (OKF 0.2 listing, default) or frontmatter (title, version, entries); default: okf.index_style")
 	exportOKFCmd.Flags().BoolVar(&okfCheck, "check", false, "Write nothing; exit 2 when the bundle on disk differs")
-	exportOKFCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	addFormatFlag(exportOKFCmd.Flags(), &okfFormat, formatText, formatText, formatText, formatJSON)
 	ExportCmd.AddCommand(exportOKFCmd)
 
 	importOKFCmd.Flags().StringVar(&okfInto, "into", "", "Force every concept into one kind: rules, context or skills")
-	importOKFCmd.Flags().StringVar(&okfDomain, "domain", "", "Place the imported content in this domain")
-	importOKFCmd.Flags().BoolVar(&okfDryRun, "dry-run", false, "Report what would happen without writing")
-	importOKFCmd.Flags().BoolVar(&okfForce, "force", false, "Overwrite files that exist and differ")
+	specDomain.String(importOKFCmd.Flags(), &okfDomain, "Place the imported content in this domain")
+	specDryRun.Bool(importOKFCmd.Flags(), &okfDryRun, "Report what would happen without writing")
+	specForce.Bool(importOKFCmd.Flags(), &okfForce, "Overwrite files that exist and differ")
 	addFormatFlag(importOKFCmd.Flags(), &okfFormat, formatText, formatText, formatText, formatJSON)
-	importOKFCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	ImportCmd.AddCommand(importOKFCmd)
 }
 
@@ -242,11 +240,11 @@ func writeOKFFindings(out io.Writer, spec string, b *okf.Bundle, findings []okf.
 
 // runOKFExport exports the bundle (or, with --check, compares it) and returns nil,
 // an ExitError with exitFindings for a bundle that differs, or the failure.
-func runOKFExport(ctx context.Context, args []string, out io.Writer) error {
+func runOKFExport(ctx context.Context, out io.Writer) error {
 	if err := checkFormatFlag(okfFormat); err != nil {
 		return fail(err)
 	}
-	cfg, err := loadConfigForCommand(ctx, args, config.WithoutLocal())
+	cfg, err := loadConfigForCommand(ctx, config.WithoutLocal())
 	if err != nil {
 		return fail(err)
 	}
@@ -510,7 +508,7 @@ func parseImportInto() (okfbridge.Kind, error) {
 // importLintConfig returns the project's [lint] settings for the pre-write
 // scan, or nil (defaults) when the configuration does not load.
 func importLintConfig(ctx context.Context) *config.LintConfig {
-	cfg, err := loadConfigForCommand(ctx, nil, config.WithoutLocal(), config.WithoutRemote())
+	cfg, err := loadConfigForCommand(ctx, config.WithoutLocal(), config.WithoutRemote())
 	if err != nil {
 		return nil
 	}
