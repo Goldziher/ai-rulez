@@ -67,7 +67,7 @@ func (f *signFixture) sign(t *testing.T) int {
 	signLock, signKey = true, f.privKey
 	defer func() { signLock, signKey = false, "" }()
 	var code int
-	capture(t, func() { code = runSign(context.Background(), nil, nil) })
+	capture(t, func() { code = runSign(context.Background(), nil) })
 	return code
 }
 
@@ -75,7 +75,7 @@ func (f *signFixture) verify(t *testing.T, format string) (code int, stdout, std
 	t.Helper()
 	verifyAttestation, verifyFormat = true, format
 	defer func() { verifyAttestation, verifyFormat = false, "" }()
-	stdout, stderr = capture(t, func() { code = runVerifyAttestation(nil, nil, os.Stdout) })
+	stdout, stderr = capture(t, func() { code = runVerifyAttestation(nil, os.Stdout) })
 	return code, stdout, stderr
 }
 

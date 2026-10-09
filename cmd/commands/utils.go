@@ -85,7 +85,7 @@ func removalPrompt(resourceType, resourceName string) string {
 // addYesFlag registers the shared --yes/-y flag; usage is the command's own
 // help text.
 func addYesFlag(fs *pflag.FlagSet, dst *bool, usage string) {
-	fs.BoolVarP(dst, "yes", "y", false, usage)
+	specYes.Bool(fs, dst, usage)
 }
 
 // askYesNo prints prompt on stderr and reads a yes/no answer from an

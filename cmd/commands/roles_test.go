@@ -116,7 +116,7 @@ func TestTokensByRole(t *testing.T) {
 	tokensByRole, tokensJSON = true, true
 	defer func() { tokensJSON = false }()
 	var out bytes.Buffer
-	_, err := runTokens(&out, nil)
+	_, err := runTokens(&out)
 	require.NoError(t, err)
 	var doc struct {
 		SchemaVersion int `json:"schema_version"`
@@ -134,12 +134,12 @@ func TestTokensByRole(t *testing.T) {
 
 	tokensByRole, tokensRole = false, "base"
 	out.Reset()
-	_, err = runTokens(&out, nil)
+	_, err = runTokens(&out)
 	require.NoError(t, err)
 	assert.Contains(t, out.String(), `"role": "base"`)
 
 	profile = "x"
-	_, err = runTokens(&out, nil)
+	_, err = runTokens(&out)
 	require.Error(t, err, "--role cannot be combined with --profile")
 }
 

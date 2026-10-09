@@ -46,7 +46,7 @@ func TestRunVerifiers_LLMVerifierIsSkippedVisiblyNotPassed(t *testing.T) {
 			tt.setup()
 			var out bytes.Buffer
 
-			got := runVerifiers(context.Background(), nil, &out)
+			got := runVerifiers(context.Background(), &out)
 
 			assert.Equal(t, 0, got, out.String())
 			assert.Contains(t, out.String(), "skipped")
@@ -62,7 +62,7 @@ func TestRunVerifiers_RepositoryConfigCannotTurnOnTheNetwork(t *testing.T) {
 	verifiersAllowLLM = true
 	var out bytes.Buffer
 
-	got := runVerifiers(context.Background(), nil, &out)
+	got := runVerifiers(context.Background(), &out)
 
 	assert.Equal(t, 0, got, out.String())
 	assert.Contains(t, out.String(), "allow_network is not enabled in the user config")
@@ -74,7 +74,7 @@ func TestRunVerifiers_EstimateCallsNothingAndPrintsTheManifest(t *testing.T) {
 	verifiersEstimate = true
 	var out bytes.Buffer
 
-	got := runVerifiers(context.Background(), nil, &out)
+	got := runVerifiers(context.Background(), &out)
 
 	assert.Equal(t, 0, got, out.String())
 	assert.Contains(t, out.String(), "estimate: 1 call(s) to gemini/gemini-2.5-flash")
@@ -104,7 +104,7 @@ func TestRunVerifiers_BrokenLLMSettingsOnlyMatterWhenAnLLMVerifierRuns(t *testin
 			var out bytes.Buffer
 
 			// Act
-			got := runVerifiers(context.Background(), nil, &out)
+			got := runVerifiers(context.Background(), &out)
 
 			// Assert
 			assert.Equal(t, tt.want, got, out.String())
@@ -120,7 +120,7 @@ func TestRunVerifiers_RejectsANegativeOrNonFiniteMaxCost(t *testing.T) {
 			verifiersMaxCost = v
 			var out bytes.Buffer
 
-			got := runVerifiers(context.Background(), nil, &out)
+			got := runVerifiers(context.Background(), &out)
 
 			assert.Equal(t, exitVerifiersCannotRun, got)
 		})
