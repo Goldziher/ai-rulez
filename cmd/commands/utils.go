@@ -13,11 +13,12 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// newContentOperator opens the CRUD operator for the current directory. With
+// newContentOperator opens the CRUD operator for the selected project (see
+// openOperator). With
 // local set, content operations work on the machine-local tree
 // (.ai-rulez/local/), which mirrors the shared layout.
 func newContentOperator(local bool) (*crud.OperatorImpl, error) {
-	op, err := crud.NewOperator(".")
+	op, err := openOperator()
 	if err != nil {
 		return nil, err
 	}

@@ -84,10 +84,9 @@ var listCommandsCmd = &cobra.Command{
 }
 
 var listChecksCmd = &cobra.Command{
-	Use:     crud.ContentTypeChecks,
-	Aliases: []string{"check"},
-	Short:   "List all code-review checks",
-	Args:    cobra.NoArgs,
+	Use:   crud.ContentTypeChecks,
+	Short: "List all code-review checks",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		return runListItems(cmd, crud.ContentTypeChecks, "Checks", "checks")
 	},
@@ -225,10 +224,8 @@ func loadListedConfig(ctx context.Context) error {
 
 func runListRoot(cmd *cobra.Command, _ []string) error {
 	if !listPlacement {
-		// Nothing was asked for: say what can be listed, as an error, not as a
-		// help page a script cannot tell from success.
-		return fail(fmt.Errorf("specify what to list: rules, context, skills, agents, commands or checks\n\nUsage:\n  %s <rules|context|skills|agents|commands|checks> [flags]\n\nRun \"%s --help\" for details and examples", //nolint:err113 // a user-facing usage message
-			cmd.CommandPath(), cmd.CommandPath()))
+		// Nothing was asked for: like every other group, say what can be listed.
+		return cmd.Help()
 	}
 	out := outFor(cmd)
 	cfg, err := loadConfigForCommand(cmdContext(), nil, pluginLoadOptions(true)...)
