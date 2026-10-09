@@ -652,44 +652,52 @@ func redactError(err error) string {
 	return incl.RedactURL(config.SanitizeDecodeError(err).Error())
 }
 
+// ValidateConfigHandler runs the structural checks of validate_config: the
+// load, structural validation, the organization policy and the machine-local
+// overlay schema. Anything it finds is an error result carrying the document
+// {"valid": false, "error": ...}; a clean configuration is a success result
+// with {"valid": true}. ValidateConfigWith adds the lint on top.
 func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
-	baseDir := workingDir(request)
-
-	// Validate config
-	cfg, err := loadProjectConfig(ctx, request, baseDir)
+	cfg, err := validateStructure(ctx, request)
 	if err != nil {
-		result := map[string]interface{}{
-			keyValid: false,
-			keyError: redactError(err),
-		}
-		return ToolSuccess(result)
+		return invalidConfig(err)
+	}
+	return ToolSuccess(map[string]interface{}{
+		keyValid:   true,
+		"warnings": []string{},
+		keyConfig:  cfg.ConfigDir,
+	})
+}
+
+// validateStructure loads the configuration and applies the structural checks.
+func validateStructure(ctx context.Context, request *ToolRequest) (*config.Config, error) {
+	cfg, err := loadProjectConfigWith(ctx, request, workingDir(request), config.WithFrontmatterErrors())
+	if err != nil {
+		return nil, err
 	}
 	if err := cfg.Validate(); err != nil {
-		result := map[string]interface{}{
-			keyValid: false,
-			keyError: redactError(err),
-		}
-		return ToolSuccess(result)
+		return nil, err //nolint:wrapcheck // already contextual
 	}
 	if err := config.CheckPolicy(cfg); err != nil {
-		return ToolSuccess(map[string]interface{}{
-			keyValid: false,
-			keyError: redactError(err),
-		})
+		return nil, err //nolint:wrapcheck // already contextual
 	}
 	if cfg.LocalOverlay != nil {
 		if err := schema.ValidateLocalFile(cfg.LocalOverlay.Path); err != nil {
-			return ToolSuccess(map[string]interface{}{
-				keyValid: false,
-				keyError: fmt.Sprintf("local overlay %s: %s", cfg.LocalOverlay.Path, redactError(err)),
-			})
+			return nil, fmt.Errorf("local overlay %s: %s", cfg.LocalOverlay.Path, redactError(err))
 		}
 	}
-	result := map[string]interface{}{
-		keyValid:   true,
-		"warnings": []string{},
+	return cfg, nil
+}
+
+// invalidConfig is the error result of a configuration that does not validate:
+// IsError is set so a client never reads it as success, and the text is the
+// {"valid": false, "error": ..., "hint": ...} document.
+func invalidConfig(err error) (*mcp.CallToolResult, error) {
+	doc := map[string]interface{}{keyValid: false, keyError: redactError(err)}
+	if hint := hintOf(err); hint != "" {
+		doc["hint"] = hint
 	}
-	return ToolSuccess(result)
+	return toolErrorDocument(doc)
 }
 
 func loadProjectConfig(ctx context.Context, request *ToolRequest, baseDir string) (*config.Config, error) {
