@@ -4,9 +4,13 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
+	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // AddDomain creates a new domain with subdirectories (rules, context, skills)
@@ -60,6 +64,19 @@ func (op *OperatorImpl) AddDomain(ctx context.Context, req *AddDomainRequest) (*
 
 // RemoveDomain deletes a domain directory and all its contents
 func (op *OperatorImpl) RemoveDomain(ctx context.Context, name string) error {
+	if err := op.CheckDomainRemovable(ctx, name); err != nil {
+		return err
+	}
+	// Delete domain directory
+	if err := op.filesMgr.DeleteDirectory(op.filesMgr.GetDomainPath(name)); err != nil {
+		return err
+	}
+	return op.refreshIndexes(ctx)
+}
+
+// CheckDomainRemovable reports why RemoveDomain would fail (a bad name, no such
+// domain, a profile that still lists it), without removing anything.
+func (op *OperatorImpl) CheckDomainRemovable(ctx context.Context, name string) error {
 	// Validate domain name
 	if err := ValidateDomainName(name); err != nil {
 		return err
@@ -73,13 +90,15 @@ func (op *OperatorImpl) RemoveDomain(ctx context.Context, name string) error {
 		}
 	}
 
-	domainPath := op.filesMgr.GetDomainPath(name)
-
-	// Delete domain directory
-	if err := op.filesMgr.DeleteDirectory(domainPath); err != nil {
-		return err
+	if users := op.profilesUsingDomain(ctx, name); len(users) > 0 {
+		return oops.
+			With("domain", name).
+			With("profiles", users).
+			Hint("Remove the profile or drop the domain from it first: 'ai-rulez profile remove "+users[0]+"'.").
+			Errorf("domain %q is still used by profile(s): %s", name, strings.Join(users, ", "))
 	}
-	return op.refreshIndexes(ctx)
+
+	return nil
 }
 
 // ListDomains scans the domains directory and returns information about all domains
@@ -126,3 +145,24 @@ func (op *OperatorImpl) ListDomains(ctx context.Context) ([]DomainInfo, error) {
 
 	return domains, nil
 }
+
+// profilesUsingDomain names the profiles of the shared config that list the
+// domain, sorted. A configuration that does not load names none: the removal is
+// not blocked by an unrelated problem, and `validate` reports it.
+func (op *OperatorImpl) profilesUsingDomain(ctx context.Context, domain string) []string {
+	cfg, err := op.load(config.WithUnresolvedIncludesTolerated(ctx), config.WithoutLocal())
+	if err != nil {
+		return nil
+	}
+	var users []string
+	for profile, domains := range cfg.Profiles {
+		if slices.Contains(domains, domain) {
+			users = append(users, profile)
+		}
+	}
+	sort.Strings(users)
+	return users
+}
+
+// DomainPath is the directory of the named domain, whether or not it exists.
+func (op *OperatorImpl) DomainPath(name string) string { return op.filesMgr.GetDomainPath(name) }
