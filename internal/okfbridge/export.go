@@ -125,7 +125,7 @@ func collectItems(tree *config.ContentTree, include map[Kind]bool, localDir stri
 					foreign++
 					continue
 				}
-				items = append(items, sourceItem{kind: k, domain: domain, cf: cf})
+				items = append(items, loadedItem(k, domain, cf))
 			}
 		}
 	}
@@ -156,6 +156,18 @@ func collectItems(tree *config.ContentTree, include map[Kind]bool, localDir stri
 		res.Notes = append(res.Notes, fmt.Sprintf("skipped %d item(s) merged in from includes: they are not this project's own content", foreign))
 	}
 	return items
+}
+
+// loadedItem is a source item as the loader read it. A file that declares an OKF
+// type or title keeps both, and its skill name stays in the metadata, so
+// exporting a migrated tree reproduces the tree.
+func loadedItem(k Kind, domain string, cf config.ContentFile) sourceItem {
+	it := sourceItem{kind: k, domain: domain, cf: cf}
+	if m := cf.Metadata; m != nil {
+		it.typ, it.title = m.OKFType, m.OKFTitle
+		it.keepName = m.OKFType != ""
+	}
+	return it
 }
 
 // isLocal reports whether a content file was read from localDir. Items without a

@@ -1,13 +1,19 @@
 ---
-priority: high
-summary: Core commands (init, generate, validate, lock, verifiers, mcp), exit codes and CRUD helpers for managing configuration.
-targets:
-  - CLAUDE.md
-  - GEMINI.md
-  - .cursor/rules/*
-  - .devin/*
-  - AGENTS.md
-  - .hermes.md
+type: Concept
+title: Cli And Crud
+x-ai-rulez:
+  kind: context
+  id: cli-and-crud
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - GEMINI.md
+      - .cursor/rules/*
+      - .devin/*
+      - AGENTS.md
+      - .hermes.md
+    summary: Core commands (init, generate, validate, lock, verifiers, mcp), exit codes and CRUD helpers for managing configuration.
 ---
 
 # CLI and CRUD Commands

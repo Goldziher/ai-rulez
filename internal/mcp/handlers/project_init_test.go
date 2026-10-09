@@ -71,3 +71,39 @@ func TestInitProjectHandler_RefusesToOverwriteAConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(raw), "keep")
 }
+
+func TestInitProjectHandler_RejectsUnknownProviders(t *testing.T) {
+	dir := t.TempDir()
+
+	res, err := InitProjectHandler(t.Context(), newRequestWithArgs(map[string]any{
+		"working_directory": dir,
+		"providers":         []any{"cursor", "bogus"},
+	}))
+
+	require.NoError(t, err)
+	require.True(t, res.IsError, "an unknown provider must not be dropped silently")
+	assert.Contains(t, textOf(t, res), "bogus")
+	assert.NoDirExists(t, filepath.Join(dir, ".ai-rulez"), "nothing is written when the request is invalid")
+}
+
+func TestInitProjectHandler_RejectsNonStringProviders(t *testing.T) {
+	res, err := InitProjectHandler(t.Context(), newRequestWithArgs(map[string]any{
+		"working_directory": t.TempDir(),
+		"providers":         []any{"cursor", 7},
+	}))
+
+	require.NoError(t, err)
+	require.True(t, res.IsError)
+}
+
+func TestInitProjectHandler_WritesTheRootIndex(t *testing.T) {
+	dir := t.TempDir()
+
+	res, err := InitProjectHandler(t.Context(), newRequestWithArgs(map[string]any{"working_directory": dir}))
+
+	require.NoError(t, err)
+	require.False(t, res.IsError, textOf(t, res))
+	root, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "index.md"))
+	require.NoError(t, err)
+	assert.Contains(t, string(root), "okf_version")
+}

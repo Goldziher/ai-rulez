@@ -115,6 +115,12 @@ type Metadata struct {
 	Paths []string          `yaml:"paths,omitempty" json:"paths,omitempty"`
 	Extra map[string]string `yaml:",inline" json:",inline"`
 
+	// OKFType and OKFTitle are the `type` and `title` an OKF concept declares.
+	// They carry nothing for ai-rulez; the loader keeps them so that an export
+	// of an OKF-shaped tree reproduces the type and title it was written with.
+	OKFType  string `yaml:"-" json:"-"`
+	OKFTitle string `yaml:"-" json:"-"`
+
 	// extraNodes holds the original, typed YAML value of every Extra key (nested
 	// maps, lists, booleans, numbers, dates). Extra keeps a string form for the
 	// lookups that only need text; generators emit the typed value through

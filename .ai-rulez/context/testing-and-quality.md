@@ -1,12 +1,18 @@
 ---
-priority: high
-summary: Table-driven tests, fixtures, integration coverage, and deterministic testing practices.
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
-  - AGENTS.md
-  - .hermes.md
+type: Concept
+title: Testing And Quality
+x-ai-rulez:
+  kind: context
+  id: testing-and-quality
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
+      - AGENTS.md
+      - .hermes.md
+    summary: Table-driven tests, fixtures, integration coverage, and deterministic testing practices.
 ---
 
 # Testing and Quality

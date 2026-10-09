@@ -1,11 +1,17 @@
 ---
-priority: high
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - .github/copilot-instructions.md
-  - AGENTS.md
-  - .hermes.md
+type: Decision
+title: Testing And Qa
+x-ai-rulez:
+  kind: rule
+  id: testing-and-qa
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - .github/copilot-instructions.md
+      - AGENTS.md
+      - .hermes.md
 ---
 
 # Testing and QA

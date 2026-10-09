@@ -1,12 +1,18 @@
 ---
-priority: high
-summary: Config loading, profile resolution, preset generation, and output rendering workflow.
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
-  - AGENTS.md
-  - .hermes.md
+type: Concept
+title: Generation Pipeline
+x-ai-rulez:
+  kind: context
+  id: generation-pipeline
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
+      - AGENTS.md
+      - .hermes.md
+    summary: Config loading, profile resolution, preset generation, and output rendering workflow.
 ---
 
 # Generation Pipeline

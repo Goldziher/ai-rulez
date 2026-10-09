@@ -158,3 +158,46 @@ func IsOKFListing(data []byte) bool {
 	}
 	return listed
 }
+
+// okfIdentity returns the top-level `type` and `title` scalars of an OKF
+// concept's frontmatter, empty when absent or not scalar.
+func okfIdentity(frontmatterYAML string) (typ, title string) {
+	if !strings.Contains(frontmatterYAML, okfKeyType) && !strings.Contains(frontmatterYAML, okfKeyTitle) {
+		return "", ""
+	}
+	var fm map[string]yaml.Node
+	if err := yaml.Unmarshal([]byte(frontmatterYAML), &fm); err != nil {
+		return "", ""
+	}
+	scalar := func(key string) string {
+		if n, ok := fm[key]; ok && n.Kind == yaml.ScalarNode {
+			return strings.TrimSpace(n.Value)
+		}
+		return ""
+	}
+	return scalar(okfKeyType), scalar(okfKeyTitle)
+}
+
+// NativeContent returns a content file with its OKF frontmatter mapped onto the
+// native layout: `type`, `title` and `x-ai-rulez` are gone and the entries of
+// x-ai-rulez.metadata sit at the top level. It lets a writer edit ai-rulez fields
+// with the code that knows the native layout. Content without a frontmatter block
+// is returned as it is.
+func NativeContent(content string) string {
+	if !strings.HasPrefix(content, "---\n") && !strings.HasPrefix(content, "---\r\n") {
+		return content
+	}
+	lines := strings.Split(content, "\n")
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) != frontmatterFence {
+			continue
+		}
+		fm := normalizeOKFFrontmatter(strings.Join(lines[1:i], "\n"))
+		rest := strings.Join(lines[i+1:], "\n")
+		if strings.TrimSpace(fm) == "" {
+			return rest
+		}
+		return "---\n" + fm + "\n---\n" + rest
+	}
+	return content
+}
