@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
@@ -9,6 +10,8 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
+	"github.com/Goldziher/ai-rulez/v5/internal/sbom"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -98,6 +101,13 @@ func (s *Server) registerProjectTools() {
 		enums: map[string][]string{"fail_on": failOnValues(), "lint_profile": lint.ProfileNames()},
 	}, handlers.ValidateConfigWith(s.validator))
 
+	addTool[scanIn](s, toolSpec{
+		name: "scan_content", title: "Scan Content",
+		description: "Run the deterministic security checks of `ai-rulez scan` on the configuration: secret patterns, hidden or bidirectional characters, prompt-injection phrases, risky shell, credential access and unpinned remote sources. Nothing is fetched or executed. Returns the findings document of validate_config; findings at or above fail_on are an error result. Read-only.",
+		annotations: readOnlyAnnotations(), output: validateOut{},
+		enums: map[string][]string{"fail_on": failOnValues(), "lint_profile": lint.ProfileNames()},
+	}, handlers.ScanContentWith(s.validator))
+
 	addTool[doctorIn](s, toolSpec{
 		name: "doctor", title: "Run Diagnostics",
 		description: "Run read-only diagnostics: config validity, preset names, generated-output drift, gitignore coverage, shared settings documents, MCP env placeholders, hook scripts, lock file, and tool binaries. Returns findings by severity (error, warning, info).",
@@ -111,6 +121,7 @@ func (s *Server) registerProjectTools() {
 	}, handlers.RunVerifiersHandler)
 
 	s.registerGovernanceTools()
+	s.registerReportTools()
 
 	addTool[initIn](s, toolSpec{
 		name: "init_project", title: "Initialize Project",
@@ -125,6 +136,12 @@ func (s *Server) registerUtilityTools() {
 		annotations: readOnlyAnnotations(), output: versionOut{},
 	}, handlers.GetVersionHandler(s.version))
 
+	addTool[noArgs](s, toolSpec{
+		name: "list_builtins", title: "List Builtin Domains",
+		description: "List the builtin domains that ship with ai-rulez, with category and whether each is auto-included (builtins list --format json)",
+		annotations: readOnlyAnnotations(), output: builtinsListOut{},
+	}, handlers.ListBuiltinsHandler)
+
 	addTool[showBuiltinIn](s, toolSpec{
 		name: "show_builtin", title: "Show Builtin Domain",
 		description: "Show the full content of a builtin domain (rules, context, skills)",
@@ -138,6 +155,7 @@ func (s *Server) registerCRUDTools() {
 	s.registerCRUDCheckTools()
 	s.registerCRUDContextTools()
 	s.registerCRUDSkillTools()
+	s.registerFlatContentTools()
 	s.registerCRUDIncludeTools()
 	s.registerCRUDInstalledSkillTools()
 	s.registerCRUDConfigTools()
@@ -256,7 +274,7 @@ func (s *Server) registerCRUDContextTools() {
 
 // registerCRUDSkillTools adds the skill tools.
 func (s *Server) registerCRUDSkillTools() {
-	addTool[contentCreateIn](s, toolSpec{
+	addTool[skillCreateIn](s, toolSpec{
 		name: "create_skill", title: "Create Skill",
 		description: "Create a new skill file with optional YAML frontmatter",
 		annotations: additiveAnnotations(), output: mutationOut{}, enums: enumsOf("priority", priorityValues),
@@ -281,6 +299,50 @@ func (s *Server) registerCRUDSkillTools() {
 		name: "list_skills", title: "List Skills", description: "List all skill files in the root or a specific domain",
 		annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
 	}, handlers.ListSkillsHandler)
+}
+
+// registerFlatContentTools adds the agent and command tools: flat markdown files
+// whose frontmatter carries their own settings.
+func (s *Server) registerFlatContentTools() {
+	for _, kind := range []struct {
+		singular, plural, title string
+		create, read, update    handlerFunc
+		remove, list            handlerFunc
+	}{
+		{"agent", "agents", "Agent", handlers.CreateAgentHandler, handlers.ReadAgentHandler, handlers.UpdateAgentHandler, handlers.DeleteAgentHandler, handlers.ListAgentsHandler},
+		{"command", "commands", "Command", handlers.CreateCommandHandler, handlers.ReadCommandHandler, handlers.UpdateCommandHandler, handlers.DeleteCommandHandler, handlers.ListCommandsHandler},
+	} {
+		addTool[flatCreateIn](s, toolSpec{
+			name: "create_" + kind.singular, title: "Create " + kind.title,
+			description: "Create a new " + kind.singular + " file in the root or a domain; a template is written when content is empty",
+			annotations: additiveAnnotations(), output: mutationOut{},
+		}, kind.create)
+		addTool[contentRefIn](s, toolSpec{
+			name: "read_" + kind.singular, title: "Read " + kind.title, description: "Read the content of " + indefinite(kind.singular) + " file",
+			annotations: readOnlyAnnotations(), output: readOut{}, readsConfig: true,
+		}, kind.read)
+		addTool[flatUpdateIn](s, toolSpec{
+			name: "update_" + kind.singular, title: "Update " + kind.title,
+			description: "Replace the content of an existing " + kind.singular + " atomically",
+			annotations: idempotentAnnotations(), output: mutationOut{},
+		}, kind.update)
+		addTool[contentRefIn](s, toolSpec{
+			name: "delete_" + kind.singular, title: "Delete " + kind.title, description: "Delete " + indefinite(kind.singular) + " file",
+			annotations: destructiveAnnotations(), output: mutationOut{},
+		}, kind.remove)
+		addTool[contentListIn](s, toolSpec{
+			name: "list_" + kind.plural, title: "List " + kind.title + "s",
+			description: "List all " + kind.singular + " files in the root or a specific domain",
+			annotations: readOnlyAnnotations(), output: listOut{}, readsConfig: true,
+		}, kind.list)
+	}
+}
+
+func indefinite(noun string) string {
+	if noun != "" && strings.ContainsRune("aeiou", rune(noun[0])) {
+		return "an " + noun
+	}
+	return "a " + noun
 }
 
 // registerCRUDIncludeTools adds the include tools.
@@ -403,4 +465,56 @@ func (s *Server) registerGovernanceTools() {
 		annotations: readOnlyAnnotations(), output: catalogOut{},
 		enums: map[string][]string{"kind": append(append([]string(nil), config.RoleKinds...), contentlock.KindContext)},
 	}, handlers.CatalogHandler(s.version))
+}
+
+// registerReportTools adds the read-only report tools: the twins of tokens, cost,
+// sbom, okf validate, approve --list and validate --show-policy. They run the
+// library code of the commands, never write and never use the network; the
+// writes and decisions around them (approve, sign, lock) stay CLI-only.
+func (s *Server) registerReportTools() {
+	addTool[tokenReportIn](s, toolSpec{
+		name: "token_report", title: "Token Report",
+		description: "Report the prompt-token cost of the generated outputs, split by when an agent loads it: always, conditionally or on demand (tokens --format json). Rendered in memory, offline; one target answers with the report, several with {items}. A headline over budget is an error result carrying the report.",
+		annotations: readOnlyAnnotations(), output: tokenReportOut{}, readsConfig: true,
+		enums: map[string][]string{"tokenizer": tokens.Names()},
+	}, handlers.TokenReportHandler)
+
+	addTool[costReportIn](s, toolSpec{
+		name: "cost_report", title: "Cost Report",
+		description: "Report which rules, context, skills, agents and commands cost the most prompt tokens, biggest first (cost --format json). Offline. Exceeding budget or on_demand_budget is an error result carrying the report.",
+		annotations: readOnlyAnnotations(), output: costReportOut{}, readsConfig: true,
+		enums: map[string][]string{"tokenizer": tokens.Names()},
+	}, handlers.CostReportHandler)
+
+	addTool[sbomIn](s, toolSpec{
+		name: "sbom", title: "Software Bill of Materials",
+		description: "Return the bill of materials of the AI configuration as CycloneDX 1.6 or SPDX 2.3 JSON (sbom): authored items, remote includes and skill sources with their pins, MCP servers. Reproducible, built from the lock and the cache without the network and without the machine-local overlay. Read-only; writing and signing stay on the command line.",
+		annotations: readOnlyAnnotations(), output: sbomOut{}, readsConfig: true,
+		enums: map[string][]string{"format": {sbom.FormatCycloneDX, sbom.FormatSPDXJSON}, "files": {sbom.FilesNone, sbom.FilesSkills, sbom.FilesAll}},
+	}, handlers.SBOMHandler(s.version))
+
+	addTool[okfValidateIn](s, toolSpec{
+		name: "okf_validate", title: "Validate OKF Bundle",
+		description: "Check an OKF (Open Knowledge Format) bundle directory against the OKF v0.2 conformance rules and the hygiene checks AR9B0-AR9B9 (okf validate --format json). Local directories only. Findings at or above fail_on are an error result carrying the document.",
+		annotations: readOnlyAnnotations(), output: okfValidateOut{},
+		enums: map[string][]string{"fail_on": {"error", "warning", "info", "none"}},
+	}, handlers.OKFValidateHandler)
+
+	addTool[approvalsStatusIn](s, toolSpec{
+		name: "approvals_status", title: "Approvals Status",
+		description: "List what needs approval under [governance] and its status: ok, stale, missing, expired, unauthorized, denied (approve --list --format json). Read-only and offline. Approving, revoking and signing stay on the command line: an agent must not make attestations.",
+		annotations: readOnlyAnnotations(), output: approvalsStatusOut{}, readsConfig: true,
+	}, handlers.ApprovalsStatusHandler(s.version))
+
+	addTool[policyShowIn](s, toolSpec{
+		name: "policy_show", title: "Show Organization Policy",
+		description: "Show the effective organization policy layers, the merged policy, where each key came from and what this configuration tried to loosen (validate --show-policy --format json). Read-only. A loosening attempt under an enforcing policy is an error result carrying the report.",
+		annotations: readOnlyAnnotations(), output: policyShowOut{},
+	}, handlers.PolicyShowWith(s.policyViewer))
+
+	addTool[verifiersListIn](s, toolSpec{
+		name: "list_verifiers", title: "List Verifiers",
+		description: "List the declared verifiers with type, severity and the rule each enforces (verifiers list --format json)",
+		annotations: readOnlyAnnotations(), output: verifiersListOut{}, readsConfig: true,
+	}, handlers.ListVerifiersHandler)
 }

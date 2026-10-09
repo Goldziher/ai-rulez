@@ -13,6 +13,7 @@ const (
 	argWorkingDirectory = "working_directory"
 	argConfigFile       = "config_file"
 	argConfigDir        = "config_dir"
+	argBundle           = "bundle"
 )
 
 // dirPolicy confines the directories a tool call may read or write. Without it
@@ -42,7 +43,7 @@ func (p dirPolicy) confine(args map[string]any) error {
 		return err
 	}
 	args[argWorkingDirectory] = base
-	for _, name := range []string{argConfigFile, argConfigDir} {
+	for _, name := range []string{argConfigFile, argConfigDir, argBundle} {
 		if v := stringArg(args, name); v != "" {
 			if _, err := p.check(name, v, base); err != nil {
 				return err
