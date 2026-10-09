@@ -360,8 +360,8 @@ MCP instead, so the agent pays for them only when it asks. Three pieces work tog
    over MCP (`served`), or both.
 2. **`generate`** leaves served skills out of every static tree and writes one small stub skill
    (`dynamic-skills`, about 100 tokens) that tells the agent to call `find_skill` and `load_skill`.
-3. **`ai-rulez mcp --serve-skills`** serves those skills with `find_skill`, `load_skill` and
-   `list_skill_resources`, scans each one before serving, can pin them in `ai-rulez.lock`, and reloads
+3. **`ai-rulez mcp --serve-skills`** serves those skills with `find_skill`, `load_skill`,
+   `list_skill_resources` (and the tool-only `search_skills`, `get_skill` and `read_skill_file`), scans each one before serving, can pin them in `ai-rulez.lock`, and reloads
    when their files change.
 
 ### Decision guide

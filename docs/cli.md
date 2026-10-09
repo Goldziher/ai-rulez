@@ -49,6 +49,170 @@ All AI-Rulez CLI commands and flags.
 
 Aliases: `generate` → `gen`; `validate` → `val`. (`g`, `clear`, `v` and `check` were removed in 5.0; `list check` is `list checks`.)
 
+
+### All Commands
+
+Every command in the binary, generated from the command tree (`task docs:cli`). The flags, defaults and examples of each are in the [Command Reference](cli-reference.md).
+
+<!-- BEGIN GENERATED: command-index (go run ./scripts/clidocs) -->
+
+| Command | Summary |
+| ------- | ------- |
+| `ai-rulez add` | Add content to your rules |
+| `ai-rulez add agent` | Add a new agent |
+| `ai-rulez add check` | Add a new code-review check |
+| `ai-rulez add command` | Add a new command |
+| `ai-rulez add context` | Add a new context file |
+| `ai-rulez add rule` | Add a new rule |
+| `ai-rulez add skill` | Add a new skill |
+| `ai-rulez approve` | Record that you reviewed content, bound to its digest, in ai-rulez.lock |
+| `ai-rulez builtins` | Manage built-in domains |
+| `ai-rulez builtins list` | List all available built-in domains |
+| `ai-rulez builtins show` | Show the full content of a built-in domain |
+| `ai-rulez catalog` | List every item with owner, version, tokens, roles and lock status, or a static site |
+| `ai-rulez catalog diff` | Compare two catalogs: JSON files or git revisions |
+| `ai-rulez clean` | Remove files produced by generate |
+| `ai-rulez completion` | Generate the autocompletion script for the specified shell |
+| `ai-rulez completion bash` | Generate the autocompletion script for bash |
+| `ai-rulez completion fish` | Generate the autocompletion script for fish |
+| `ai-rulez completion powershell` | Generate the autocompletion script for powershell |
+| `ai-rulez completion zsh` | Generate the autocompletion script for zsh |
+| `ai-rulez convert` | Convert existing AI tool files into an .ai-rulez/ tree |
+| `ai-rulez cost` | Report which skills, rules and context cost the most prompt tokens |
+| `ai-rulez doctor` | Diagnose the project's ai-rulez setup (read-only) |
+| `ai-rulez domain` | Manage domains |
+| `ai-rulez domain add` | Add a new domain |
+| `ai-rulez domain list` | List all domains |
+| `ai-rulez domain remove` | Remove a domain |
+| `ai-rulez edit` | Replace the content of a rule, context, skill, agent, command or check |
+| `ai-rulez edit agent` | Edit an agent |
+| `ai-rulez edit check` | Edit a code-review check |
+| `ai-rulez edit command` | Edit a command |
+| `ai-rulez edit context` | Edit a context file |
+| `ai-rulez edit rule` | Edit a rule |
+| `ai-rulez edit skill` | Edit a skill |
+| `ai-rulez eval` | Run skill evals and score them |
+| `ai-rulez eval calibrate-estimate` | Propose estimate assumptions measured from recorded eval runs |
+| `ai-rulez eval import` | Import eval scenarios from another tool as eval cases |
+| `ai-rulez eval run` | Run the eval cases of skills through a pluggable runner and score them |
+| `ai-rulez export` | Export ai-rulez content to another format |
+| `ai-rulez export okf` | Export rules, context, skills and more as an OKF bundle |
+| `ai-rulez generate` | Generate AI assistant rule files from configuration |
+| `ai-rulez guard` | Block agent edits to generated files (PreToolUse hook) |
+| `ai-rulez import` | Import content from another format into .ai-rulez/ |
+| `ai-rulez import okf` | Import an OKF bundle into .ai-rulez/ |
+| `ai-rulez improve` | (experimental) Improve skills with an external optimizer behind a held-out eval gate |
+| `ai-rulez improve adapters` | (experimental) List the bundled optimizer adapters, or print a template |
+| `ai-rulez improve apply` | (experimental) Write an accepted improve candidate into the skill (no commit) |
+| `ai-rulez improve clean` | (experimental) Delete saved improve runs |
+| `ai-rulez improve pr` | (experimental) Open a pull request for an accepted improve run from an isolated worktree |
+| `ai-rulez improve run` | (experimental) Run an external optimizer on a copy of a skill and gate its candidate |
+| `ai-rulez improve show` | (experimental) Show a saved improve run: decisions, scores, costs and the diff |
+| `ai-rulez include` | Manage includes |
+| `ai-rulez include add` | Add an include source |
+| `ai-rulez include list` | List all includes |
+| `ai-rulez include remove` | Remove an include source |
+| `ai-rulez init` | Initialize a new AI rules configuration |
+| `ai-rulez list` | List rules, context, and skills |
+| `ai-rulez list agents` | List all agents |
+| `ai-rulez list checks` | List all code-review checks |
+| `ai-rulez list commands` | List all commands |
+| `ai-rulez list context` | List all context files |
+| `ai-rulez list rules` | List all rules |
+| `ai-rulez list skills` | List all skills |
+| `ai-rulez llm` | Inspect the [llm] model-access configuration (read-only) |
+| `ai-rulez llm doctor` | Print the resolved LLM setup, optionally with one 1-token call |
+| `ai-rulez llm estimate` | Estimate the tokens and cost of sending a file as a prompt (no call) |
+| `ai-rulez local` | Manage the machine-local config overlay |
+| `ai-rulez local init` | Create a commented config.local skeleton |
+| `ai-rulez local path` | Print the local overlay file path |
+| `ai-rulez local set` | Set a key in the local overlay |
+| `ai-rulez local show` | Show what the local overlay overrides |
+| `ai-rulez local unset` | Remove a key from the local overlay |
+| `ai-rulez lock` | Pin remote includes, installed skills and authored content in ai-rulez.lock |
+| `ai-rulez mcp` | Start Model Context Protocol (MCP) server |
+| `ai-rulez migrate` | Migrate a 4.x configuration to the 5.0 format, or a content tree to OKF |
+| `ai-rulez migrate okf` | Convert the .ai-rulez/ content tree to an OKF bundle, in place |
+| `ai-rulez migrate v5` | Migrate a 4.x configuration to the 5.0 format |
+| `ai-rulez okf` | Work with OKF (Open Knowledge Format) bundles |
+| `ai-rulez okf validate` | Lint an OKF bundle (works on third-party bundles) |
+| `ai-rulez profile` | Manage profiles |
+| `ai-rulez profile add` | Add a new profile |
+| `ai-rulez profile list` | List all profiles |
+| `ai-rulez profile remove` | Remove a profile |
+| `ai-rulez profile set-default` | Set the default profile |
+| `ai-rulez publish` | Package the plugin bundle into deterministic, checksummed release artifacts |
+| `ai-rulez publish emit` | Write only the files of one emitter, without a release |
+| `ai-rulez publish verify` | Recompute the checksums, manifest, archive and signature of a release |
+| `ai-rulez remove` | Remove content from your rules |
+| `ai-rulez remove agent` | Remove an agent |
+| `ai-rulez remove check` | Remove a code-review check |
+| `ai-rulez remove command` | Remove a command |
+| `ai-rulez remove context` | Remove context |
+| `ai-rulez remove rule` | Remove a rule |
+| `ai-rulez remove skill` | Remove a skill |
+| `ai-rulez review` | Score skills, agents, commands and rules against a rubric, offline or with an LLM judge |
+| `ai-rulez review calibrate` | Measure the judge against a rubric's golden set (needed before gating) |
+| `ai-rulez review explain` | Explain a review code (AR9G0-AR9G9): what it means and how to fix it |
+| `ai-rulez review fix` | Propose a verified patch for the judge's findings; writes only when asked |
+| `ai-rulez roles` | List, inspect and resolve [[roles]] |
+| `ai-rulez roles list` | List the roles with their item counts and token estimates |
+| `ai-rulez roles resolve` | List the items a role keeps, with sizes and skill modes |
+| `ai-rulez roles show` | Show a role as declared and with its parent merged in |
+| `ai-rulez rubric` | List, show and lint review rubrics |
+| `ai-rulez rubric lint` | Check rubrics, golden files and calibration records (AR9G8) |
+| `ai-rulez rubric list` | List the built-in and project rubrics |
+| `ai-rulez rubric show` | Print a rubric's dimensions, weights and scoring formula |
+| `ai-rulez sbom` | Print a CycloneDX or SPDX software bill of materials of the AI configuration |
+| `ai-rulez scan` | Scan skills, rules and scripts for secrets, hidden text, injection and risky shell |
+| `ai-rulez scanners` | Inspect the external scanners configured in [[lint.external]] |
+| `ai-rulez scanners doctor` | Check named scanners: binary, version, egress, environment and configuration |
+| `ai-rulez scanners list` | List the configured scanners with their egress declaration and whether they are installed |
+| `ai-rulez search` | Rank the served skills against a query, build the embedding index, or evaluate the ranking |
+| `ai-rulez show` | Show the content of a rule, context, skill, agent, command or check |
+| `ai-rulez show agent` | Show an agent |
+| `ai-rulez show check` | Show a code-review check |
+| `ai-rulez show command` | Show a command |
+| `ai-rulez show context` | Show a context file |
+| `ai-rulez show rule` | Show a rule |
+| `ai-rulez show skill` | Show a skill |
+| `ai-rulez sign` | Sign the lock, a plugin bundle, a skill or an SBOM into a Sigstore bundle |
+| `ai-rulez skill` | Manage installed skills |
+| `ai-rulez skill install` | Install a named skill from a git repository or local path |
+| `ai-rulez skill list` | List all installed skills |
+| `ai-rulez skill remove` | Remove an installed skill |
+| `ai-rulez skill update` | Re-pin installed skills in ai-rulez.lock to their current remote commit |
+| `ai-rulez telemetry` | Item-load telemetry: record rule, agent and context loads; optional OTLP export |
+| `ai-rulez telemetry disable` | Withdraw telemetry consent |
+| `ai-rulez telemetry doctor` | Show the resolved telemetry configuration, consent state and buffer |
+| `ai-rulez telemetry enable` | Consent to sending telemetry to a collector (stored per user) |
+| `ai-rulez telemetry export` | Write the usage log as an OTLP JSON file, or push it to the collector |
+| `ai-rulez telemetry feedback` | Record that a skill misled you, is stale, wrong or great |
+| `ai-rulez telemetry flush` | Send the local outbox to the OTLP collector |
+| `ai-rulez telemetry hook` | Print the hooks that record skill, rule, context and agent loads |
+| `ai-rulez telemetry preview` | Print exactly what an export would send, without sending anything |
+| `ai-rulez telemetry prune` | Delete usage-log lines older than N days that were already exported |
+| `ai-rulez telemetry record` | Record one skill or item load from a hook event on stdin |
+| `ai-rulez telemetry report` | List never-used skills and skills edited since they were used |
+| `ai-rulez telemetry report evals` | Rank skills to prune or rewrite from eval scores joined with usage |
+| `ai-rulez telemetry status` | Show whether telemetry is on, who consented, and whether delivery works |
+| `ai-rulez tokens` | Report the prompt-token cost of generated artifacts |
+| `ai-rulez trust` | Manage the Sigstore trusted root used to verify keyless attestations |
+| `ai-rulez trust update` | Fetch the public-good Sigstore trusted root and cache it for offline verification |
+| `ai-rulez update` | Move the pins of sources that use a version constraint to the newest allowed tag |
+| `ai-rulez validate` | Validate AI rules configuration and content |
+| `ai-rulez verifiers` | Run the deterministic repo checks declared as [[verifiers]] |
+| `ai-rulez verifiers calibrate` | Measure how reliable an llm verifier's failures are, so it may gate |
+| `ai-rulez verifiers explain` | Explain what a verifier checks, the rule it enforces and how to fix it |
+| `ai-rulez verifiers list` | List the declared verifiers |
+| `ai-rulez verifiers run` | Evaluate the verifiers and report pass or fail for each |
+| `ai-rulez verifiers suggest` | Propose verifiers for a rule with a model (a dry run that prints and writes nothing) |
+| `ai-rulez verifiers test` | Run the self-test examples of the verifiers offline |
+| `ai-rulez verify` | Verify attestations, approvals and plugin provenance |
+| `ai-rulez version` | Print the version number of ai-rulez |
+
+<!-- END GENERATED: command-index -->
+
 ### CRUD Commands (Configuration Management)
 
 | Command                                           | Description              |
@@ -2504,7 +2668,8 @@ ai-rulez mcp --serve-skills [--profile <p> | --role <r>] [--source <src>] [--fro
 ```
 
 With `--serve-skills` the server is read-only and serves skills: `find_skill`, `load_skill`,
-`list_skill_resources` and the `skill://` resources. Flags of that mode: `--profile`, `--targets`, `--domain`,
+`list_skill_resources`, the tool-only `search_skills`, `get_skill` and `read_skill_file` (see
+[MCP Server](mcp-server.md#what-is-exposed)), and the `skill://` resources. Flags of that mode: `--profile`, `--targets`, `--domain`,
 `--allow`, `--deny`, `--source` (repeatable), `--role`, `--frozen`, `--offline`, `--include-static`,
 `--budget-bytes`, `--max-clone-bytes` (overrides `AI_RULEZ_MAX_CLONE_BYTES`), `--usage-log`, `--usage-sink`,
 `--no-watch`, `--reload-interval`. `--role` names a role of
@@ -2563,6 +2728,8 @@ shorthand, on a flag that redeclares a global one, and on a flag without usage t
 
 Every command that prints a result takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--format` is the encoding of the report; `generate`, `clean`, `sign`, `export okf` and `version` take it as well as the reporting commands. `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal.
 
+The commands without `--format` print no document: `completion`, `guard`, `mcp`, `local init|path|set|unset`, `review explain`, `skill update`, `trust update` and the `telemetry` subcommands that act (`enable`, `disable`, `export`, `feedback`, `flush`, `preview`, `prune`, `record`). Some commands accept `--format` only in some modes (`lock`, `verify`, `approve`); the [command reference](cli-reference.md) lists each command's own values.
+
 **Examples:**
 
 Generate with debug output:
@@ -2582,6 +2749,32 @@ Show help for init:
 ```bash
 ai-rulez init --help
 ```
+
+## Shell Completion
+
+`ai-rulez completion bash|zsh|fish|powershell` prints a completion script. Besides subcommands and flags it completes:
+
+- the values of enum flags: `--format`, `--fail-on`, `--severity`, `--priority`, `--lint-profile`, `--gate-level`, `--harness`, `--tokenizer`, `--mode`, `--to`, `--kind`, `--target` and the others whose help names a closed set of values;
+- names read from the project when you press TAB: rules, context, skills, agents, commands and checks (`remove rule <TAB>`, `show skill <TAB>`, `edit ...`; `--domain` narrows them), domains (`--domain`, `domain remove`), profiles (`--profile`, `profile remove`, `profile set-default`), roles (`--role`, `roles show`), includes (`include remove`), installed skills (`skill remove`, `skill update`) and built-in domains (`builtins show`);
+- no file names for a command that takes no argument.
+
+A completion never writes and never fails: outside a project, or with a configuration that does not load, it offers no names.
+
+```bash
+# bash (needs bash-completion)
+source <(ai-rulez completion bash)
+
+# zsh
+ai-rulez completion zsh > "${fpath[1]}/_ai-rulez"
+
+# fish
+ai-rulez completion fish > ~/.config/fish/completions/ai-rulez.fish
+
+# PowerShell
+ai-rulez completion powershell | Out-String | Invoke-Expression
+```
+
+Add the line to your shell profile (or write the file once) to load it in every session. The script asks the binary for candidates, so a completion always matches the installed version.
 
 ## Environment Variables
 

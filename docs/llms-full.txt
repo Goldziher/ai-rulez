@@ -18183,8 +18183,8 @@ MCP instead, so the agent pays for them only when it asks. Three pieces work tog
    over MCP (`served`), or both.
 2. **`generate`** leaves served skills out of every static tree and writes one small stub skill
    (`dynamic-skills`, about 100 tokens) that tells the agent to call `find_skill` and `load_skill`.
-3. **`ai-rulez mcp --serve-skills`** serves those skills with `find_skill`, `load_skill` and
-   `list_skill_resources`, scans each one before serving, can pin them in `ai-rulez.lock`, and reloads
+3. **`ai-rulez mcp --serve-skills`** serves those skills with `find_skill`, `load_skill`,
+   `list_skill_resources` (and the tool-only `search_skills`, `get_skill` and `read_skill_file`), scans each one before serving, can pin them in `ai-rulez.lock`, and reloads
    when their files change.
 
 ##### Decision guide
@@ -22847,6 +22847,170 @@ All AI-Rulez CLI commands and flags.
 
 Aliases: `generate` → `gen`; `validate` → `val`. (`g`, `clear`, `v` and `check` were removed in 5.0; `list check` is `list checks`.)
 
+
+##### All Commands
+
+Every command in the binary, generated from the command tree (`task docs:cli`). The flags, defaults and examples of each are in the [Command Reference](cli-reference.md).
+
+<!-- BEGIN GENERATED: command-index (go run ./scripts/clidocs) -->
+
+| Command | Summary |
+| ------- | ------- |
+| `ai-rulez add` | Add content to your rules |
+| `ai-rulez add agent` | Add a new agent |
+| `ai-rulez add check` | Add a new code-review check |
+| `ai-rulez add command` | Add a new command |
+| `ai-rulez add context` | Add a new context file |
+| `ai-rulez add rule` | Add a new rule |
+| `ai-rulez add skill` | Add a new skill |
+| `ai-rulez approve` | Record that you reviewed content, bound to its digest, in ai-rulez.lock |
+| `ai-rulez builtins` | Manage built-in domains |
+| `ai-rulez builtins list` | List all available built-in domains |
+| `ai-rulez builtins show` | Show the full content of a built-in domain |
+| `ai-rulez catalog` | List every item with owner, version, tokens, roles and lock status, or a static site |
+| `ai-rulez catalog diff` | Compare two catalogs: JSON files or git revisions |
+| `ai-rulez clean` | Remove files produced by generate |
+| `ai-rulez completion` | Generate the autocompletion script for the specified shell |
+| `ai-rulez completion bash` | Generate the autocompletion script for bash |
+| `ai-rulez completion fish` | Generate the autocompletion script for fish |
+| `ai-rulez completion powershell` | Generate the autocompletion script for powershell |
+| `ai-rulez completion zsh` | Generate the autocompletion script for zsh |
+| `ai-rulez convert` | Convert existing AI tool files into an .ai-rulez/ tree |
+| `ai-rulez cost` | Report which skills, rules and context cost the most prompt tokens |
+| `ai-rulez doctor` | Diagnose the project's ai-rulez setup (read-only) |
+| `ai-rulez domain` | Manage domains |
+| `ai-rulez domain add` | Add a new domain |
+| `ai-rulez domain list` | List all domains |
+| `ai-rulez domain remove` | Remove a domain |
+| `ai-rulez edit` | Replace the content of a rule, context, skill, agent, command or check |
+| `ai-rulez edit agent` | Edit an agent |
+| `ai-rulez edit check` | Edit a code-review check |
+| `ai-rulez edit command` | Edit a command |
+| `ai-rulez edit context` | Edit a context file |
+| `ai-rulez edit rule` | Edit a rule |
+| `ai-rulez edit skill` | Edit a skill |
+| `ai-rulez eval` | Run skill evals and score them |
+| `ai-rulez eval calibrate-estimate` | Propose estimate assumptions measured from recorded eval runs |
+| `ai-rulez eval import` | Import eval scenarios from another tool as eval cases |
+| `ai-rulez eval run` | Run the eval cases of skills through a pluggable runner and score them |
+| `ai-rulez export` | Export ai-rulez content to another format |
+| `ai-rulez export okf` | Export rules, context, skills and more as an OKF bundle |
+| `ai-rulez generate` | Generate AI assistant rule files from configuration |
+| `ai-rulez guard` | Block agent edits to generated files (PreToolUse hook) |
+| `ai-rulez import` | Import content from another format into .ai-rulez/ |
+| `ai-rulez import okf` | Import an OKF bundle into .ai-rulez/ |
+| `ai-rulez improve` | (experimental) Improve skills with an external optimizer behind a held-out eval gate |
+| `ai-rulez improve adapters` | (experimental) List the bundled optimizer adapters, or print a template |
+| `ai-rulez improve apply` | (experimental) Write an accepted improve candidate into the skill (no commit) |
+| `ai-rulez improve clean` | (experimental) Delete saved improve runs |
+| `ai-rulez improve pr` | (experimental) Open a pull request for an accepted improve run from an isolated worktree |
+| `ai-rulez improve run` | (experimental) Run an external optimizer on a copy of a skill and gate its candidate |
+| `ai-rulez improve show` | (experimental) Show a saved improve run: decisions, scores, costs and the diff |
+| `ai-rulez include` | Manage includes |
+| `ai-rulez include add` | Add an include source |
+| `ai-rulez include list` | List all includes |
+| `ai-rulez include remove` | Remove an include source |
+| `ai-rulez init` | Initialize a new AI rules configuration |
+| `ai-rulez list` | List rules, context, and skills |
+| `ai-rulez list agents` | List all agents |
+| `ai-rulez list checks` | List all code-review checks |
+| `ai-rulez list commands` | List all commands |
+| `ai-rulez list context` | List all context files |
+| `ai-rulez list rules` | List all rules |
+| `ai-rulez list skills` | List all skills |
+| `ai-rulez llm` | Inspect the [llm] model-access configuration (read-only) |
+| `ai-rulez llm doctor` | Print the resolved LLM setup, optionally with one 1-token call |
+| `ai-rulez llm estimate` | Estimate the tokens and cost of sending a file as a prompt (no call) |
+| `ai-rulez local` | Manage the machine-local config overlay |
+| `ai-rulez local init` | Create a commented config.local skeleton |
+| `ai-rulez local path` | Print the local overlay file path |
+| `ai-rulez local set` | Set a key in the local overlay |
+| `ai-rulez local show` | Show what the local overlay overrides |
+| `ai-rulez local unset` | Remove a key from the local overlay |
+| `ai-rulez lock` | Pin remote includes, installed skills and authored content in ai-rulez.lock |
+| `ai-rulez mcp` | Start Model Context Protocol (MCP) server |
+| `ai-rulez migrate` | Migrate a 4.x configuration to the 5.0 format, or a content tree to OKF |
+| `ai-rulez migrate okf` | Convert the .ai-rulez/ content tree to an OKF bundle, in place |
+| `ai-rulez migrate v5` | Migrate a 4.x configuration to the 5.0 format |
+| `ai-rulez okf` | Work with OKF (Open Knowledge Format) bundles |
+| `ai-rulez okf validate` | Lint an OKF bundle (works on third-party bundles) |
+| `ai-rulez profile` | Manage profiles |
+| `ai-rulez profile add` | Add a new profile |
+| `ai-rulez profile list` | List all profiles |
+| `ai-rulez profile remove` | Remove a profile |
+| `ai-rulez profile set-default` | Set the default profile |
+| `ai-rulez publish` | Package the plugin bundle into deterministic, checksummed release artifacts |
+| `ai-rulez publish emit` | Write only the files of one emitter, without a release |
+| `ai-rulez publish verify` | Recompute the checksums, manifest, archive and signature of a release |
+| `ai-rulez remove` | Remove content from your rules |
+| `ai-rulez remove agent` | Remove an agent |
+| `ai-rulez remove check` | Remove a code-review check |
+| `ai-rulez remove command` | Remove a command |
+| `ai-rulez remove context` | Remove context |
+| `ai-rulez remove rule` | Remove a rule |
+| `ai-rulez remove skill` | Remove a skill |
+| `ai-rulez review` | Score skills, agents, commands and rules against a rubric, offline or with an LLM judge |
+| `ai-rulez review calibrate` | Measure the judge against a rubric's golden set (needed before gating) |
+| `ai-rulez review explain` | Explain a review code (AR9G0-AR9G9): what it means and how to fix it |
+| `ai-rulez review fix` | Propose a verified patch for the judge's findings; writes only when asked |
+| `ai-rulez roles` | List, inspect and resolve [[roles]] |
+| `ai-rulez roles list` | List the roles with their item counts and token estimates |
+| `ai-rulez roles resolve` | List the items a role keeps, with sizes and skill modes |
+| `ai-rulez roles show` | Show a role as declared and with its parent merged in |
+| `ai-rulez rubric` | List, show and lint review rubrics |
+| `ai-rulez rubric lint` | Check rubrics, golden files and calibration records (AR9G8) |
+| `ai-rulez rubric list` | List the built-in and project rubrics |
+| `ai-rulez rubric show` | Print a rubric's dimensions, weights and scoring formula |
+| `ai-rulez sbom` | Print a CycloneDX or SPDX software bill of materials of the AI configuration |
+| `ai-rulez scan` | Scan skills, rules and scripts for secrets, hidden text, injection and risky shell |
+| `ai-rulez scanners` | Inspect the external scanners configured in [[lint.external]] |
+| `ai-rulez scanners doctor` | Check named scanners: binary, version, egress, environment and configuration |
+| `ai-rulez scanners list` | List the configured scanners with their egress declaration and whether they are installed |
+| `ai-rulez search` | Rank the served skills against a query, build the embedding index, or evaluate the ranking |
+| `ai-rulez show` | Show the content of a rule, context, skill, agent, command or check |
+| `ai-rulez show agent` | Show an agent |
+| `ai-rulez show check` | Show a code-review check |
+| `ai-rulez show command` | Show a command |
+| `ai-rulez show context` | Show a context file |
+| `ai-rulez show rule` | Show a rule |
+| `ai-rulez show skill` | Show a skill |
+| `ai-rulez sign` | Sign the lock, a plugin bundle, a skill or an SBOM into a Sigstore bundle |
+| `ai-rulez skill` | Manage installed skills |
+| `ai-rulez skill install` | Install a named skill from a git repository or local path |
+| `ai-rulez skill list` | List all installed skills |
+| `ai-rulez skill remove` | Remove an installed skill |
+| `ai-rulez skill update` | Re-pin installed skills in ai-rulez.lock to their current remote commit |
+| `ai-rulez telemetry` | Item-load telemetry: record rule, agent and context loads; optional OTLP export |
+| `ai-rulez telemetry disable` | Withdraw telemetry consent |
+| `ai-rulez telemetry doctor` | Show the resolved telemetry configuration, consent state and buffer |
+| `ai-rulez telemetry enable` | Consent to sending telemetry to a collector (stored per user) |
+| `ai-rulez telemetry export` | Write the usage log as an OTLP JSON file, or push it to the collector |
+| `ai-rulez telemetry feedback` | Record that a skill misled you, is stale, wrong or great |
+| `ai-rulez telemetry flush` | Send the local outbox to the OTLP collector |
+| `ai-rulez telemetry hook` | Print the hooks that record skill, rule, context and agent loads |
+| `ai-rulez telemetry preview` | Print exactly what an export would send, without sending anything |
+| `ai-rulez telemetry prune` | Delete usage-log lines older than N days that were already exported |
+| `ai-rulez telemetry record` | Record one skill or item load from a hook event on stdin |
+| `ai-rulez telemetry report` | List never-used skills and skills edited since they were used |
+| `ai-rulez telemetry report evals` | Rank skills to prune or rewrite from eval scores joined with usage |
+| `ai-rulez telemetry status` | Show whether telemetry is on, who consented, and whether delivery works |
+| `ai-rulez tokens` | Report the prompt-token cost of generated artifacts |
+| `ai-rulez trust` | Manage the Sigstore trusted root used to verify keyless attestations |
+| `ai-rulez trust update` | Fetch the public-good Sigstore trusted root and cache it for offline verification |
+| `ai-rulez update` | Move the pins of sources that use a version constraint to the newest allowed tag |
+| `ai-rulez validate` | Validate AI rules configuration and content |
+| `ai-rulez verifiers` | Run the deterministic repo checks declared as [[verifiers]] |
+| `ai-rulez verifiers calibrate` | Measure how reliable an llm verifier's failures are, so it may gate |
+| `ai-rulez verifiers explain` | Explain what a verifier checks, the rule it enforces and how to fix it |
+| `ai-rulez verifiers list` | List the declared verifiers |
+| `ai-rulez verifiers run` | Evaluate the verifiers and report pass or fail for each |
+| `ai-rulez verifiers suggest` | Propose verifiers for a rule with a model (a dry run that prints and writes nothing) |
+| `ai-rulez verifiers test` | Run the self-test examples of the verifiers offline |
+| `ai-rulez verify` | Verify attestations, approvals and plugin provenance |
+| `ai-rulez version` | Print the version number of ai-rulez |
+
+<!-- END GENERATED: command-index -->
+
 ##### CRUD Commands (Configuration Management)
 
 | Command                                           | Description              |
@@ -25302,7 +25466,8 @@ ai-rulez mcp --serve-skills [--profile <p> | --role <r>] [--source <src>] [--fro
 ```
 
 With `--serve-skills` the server is read-only and serves skills: `find_skill`, `load_skill`,
-`list_skill_resources` and the `skill://` resources. Flags of that mode: `--profile`, `--targets`, `--domain`,
+`list_skill_resources`, the tool-only `search_skills`, `get_skill` and `read_skill_file` (see
+[MCP Server](mcp-server.md#what-is-exposed)), and the `skill://` resources. Flags of that mode: `--profile`, `--targets`, `--domain`,
 `--allow`, `--deny`, `--source` (repeatable), `--role`, `--frozen`, `--offline`, `--include-static`,
 `--budget-bytes`, `--max-clone-bytes` (overrides `AI_RULEZ_MAX_CLONE_BYTES`), `--usage-log`, `--usage-sink`,
 `--no-watch`, `--reload-interval`. `--role` names a role of
@@ -25361,6 +25526,8 @@ shorthand, on a flag that redeclares a global one, and on a flag without usage t
 
 Every command that prints a result takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--format` is the encoding of the report; `generate`, `clean`, `sign`, `export okf` and `version` take it as well as the reporting commands. `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal.
 
+The commands without `--format` print no document: `completion`, `guard`, `mcp`, `local init|path|set|unset`, `review explain`, `skill update`, `trust update` and the `telemetry` subcommands that act (`enable`, `disable`, `export`, `feedback`, `flush`, `preview`, `prune`, `record`). Some commands accept `--format` only in some modes (`lock`, `verify`, `approve`); the [command reference](cli-reference.md) lists each command's own values.
+
 **Examples:**
 
 Generate with debug output:
@@ -25380,6 +25547,32 @@ Show help for init:
 ```bash
 ai-rulez init --help
 ```
+
+#### Shell Completion
+
+`ai-rulez completion bash|zsh|fish|powershell` prints a completion script. Besides subcommands and flags it completes:
+
+- the values of enum flags: `--format`, `--fail-on`, `--severity`, `--priority`, `--lint-profile`, `--gate-level`, `--harness`, `--tokenizer`, `--mode`, `--to`, `--kind`, `--target` and the others whose help names a closed set of values;
+- names read from the project when you press TAB: rules, context, skills, agents, commands and checks (`remove rule <TAB>`, `show skill <TAB>`, `edit ...`; `--domain` narrows them), domains (`--domain`, `domain remove`), profiles (`--profile`, `profile remove`, `profile set-default`), roles (`--role`, `roles show`), includes (`include remove`), installed skills (`skill remove`, `skill update`) and built-in domains (`builtins show`);
+- no file names for a command that takes no argument.
+
+A completion never writes and never fails: outside a project, or with a configuration that does not load, it offers no names.
+
+```bash
+# bash (needs bash-completion)
+source <(ai-rulez completion bash)
+
+# zsh
+ai-rulez completion zsh > "${fpath[1]}/_ai-rulez"
+
+# fish
+ai-rulez completion fish > ~/.config/fish/completions/ai-rulez.fish
+
+# PowerShell
+ai-rulez completion powershell | Out-String | Invoke-Expression
+```
+
+Add the line to your shell profile (or write the file once) to load it in every session. The script asks the binary for candidates, so a completion always matches the installed version.
 
 #### Environment Variables
 
@@ -25856,6 +26049,3801 @@ For more detailed documentation:
 - **[Configuration Reference](configuration.md)**: Config options
 - **[Quick Start](quick-start.md)**: Getting started
 - **[Domains & Profiles](domains.md)**: Team organization
+
+## CLI Command Reference
+
+Source: https://goldziher.github.io/ai-rulez/cli-reference/
+
+<!-- Generated by `go run ./scripts/clidocs` from the command tree. Do not edit; change the command and rerun. -->
+
+Every command, with its usage, aliases, examples and flags, generated from the
+binary's own command tree. The flags every command accepts (`--config`, `--config-dir`, `--debug`, `--quiet`, `--token` and the `--policy*` family) are in
+[Global Flags](cli.md#global-flags); the prose for each command is in the [CLI Reference](cli.md).
+
+#### `ai-rulez add`
+
+Add content to your rules
+
+```text
+ai-rulez add [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez add rule code-quality
+ai-rulez add rule api-design --domain backend --priority high
+ai-rulez add skill code-reviewer
+ai-rulez add rule my-scratch-notes --local
+```
+
+#### `ai-rulez add agent`
+
+Add a new agent
+
+```text
+ai-rulez add agent <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez add agent reviewer
+ai-rulez add agent release-manager --domain ops --description "Cuts releases"
+ai-rulez add agent my-agent --local
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | File content (uses template if not specified) |
+| `--description` | string |  | Description |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to .ai-rulez/local/ as a machine-local item (gitignored); combine with --domain for a local domain |
+
+#### `ai-rulez add check`
+
+Add a new code-review check
+
+```text
+ai-rulez add check <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez add check no-todos --severity medium
+ai-rulez add check sql-injection --domain backend --severity high --targets "src/**/*.go"
+ai-rulez add check secrets --description "No credentials in code" --tools claude
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | File content (uses template if not specified) |
+| `--description` | string |  | Description |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--severity` | string |  | Severity: low\|medium\|high\|critical |
+| `--targets` | string |  | Comma-separated target presets, paths or globs the check applies to |
+| `--tools` | string |  | Comma-separated review tools the check is for |
+
+#### `ai-rulez add command`
+
+Add a new command
+
+```text
+ai-rulez add command <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez add command deploy
+ai-rulez add command lint-all --domain backend --description "Run every linter"
+ai-rulez add command scratch --local
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | File content (uses template if not specified) |
+| `--description` | string |  | Description |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to .ai-rulez/local/ as a machine-local item (gitignored); combine with --domain for a local domain |
+
+#### `ai-rulez add context`
+
+Add a new context file
+
+```text
+ai-rulez add context <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez add context architecture
+ai-rulez add context api-notes --domain backend
+ai-rulez add context glossary --content "Tenant: one customer organization."
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | File content (uses template if not specified) |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to .ai-rulez/local/ as a machine-local item (gitignored); combine with --domain for a local domain |
+| `--priority` | string | `medium` | Priority level: critical\|high\|medium\|low\|minimal |
+| `--targets` | string |  | Comma-separated target providers or path globs (e.g. claude,cursor) |
+
+#### `ai-rulez add rule`
+
+Add a new rule
+
+```text
+ai-rulez add rule <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez add rule code-quality
+ai-rulez add rule api-design --domain backend --priority high
+ai-rulez add rule go-style --targets claude,cursor --content "Use gofmt."
+ai-rulez add rule my-scratch-notes --local
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | File content (uses template if not specified) |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to .ai-rulez/local/ as a machine-local item (gitignored); combine with --domain for a local domain |
+| `--priority` | string | `medium` | Priority level: critical\|high\|medium\|low\|minimal |
+| `--targets` | string |  | Comma-separated target providers or path globs (e.g. claude,cursor) |
+
+#### `ai-rulez add skill`
+
+Add a new skill
+
+```text
+ai-rulez add skill <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez add skill code-reviewer
+ai-rulez add skill db-migrations --domain backend --description "Write safe schema migrations"
+ai-rulez add skill my-helper --local
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | File content (uses template if not specified) |
+| `--description` | string |  | Description |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to .ai-rulez/local/ as a machine-local item (gitignored); combine with --domain for a local domain |
+| `--priority` | string | `medium` | Priority level: critical\|high\|medium\|low\|minimal |
+| `--targets` | string |  | Comma-separated target providers or path globs (e.g. claude,cursor) |
+
+#### `ai-rulez approve`
+
+Record that you reviewed content, bound to its digest, in ai-rulez.lock
+
+```text
+ai-rulez approve [item...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez approve --list
+ai-rulez approve --diff include:shared
+ai-rulez approve include:shared --reviewer alice@example.org --note "read run.sh" --yes
+ai-rulez approve --revoke include:shared
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--accept` | string list |  | Accept this scan finding code (repeatable); stored with the approval |
+| `--all` | bool |  | With --list: also list pinned content that needs no approval |
+| `--at` | string |  | Approval time (RFC 3339 or YYYY-MM-DD) for reproducible runs (default: SOURCE_DATE_EPOCH, else now) |
+| `--base` | string |  | With [governance] forbid_self_approval: count authors of changes since this revision (default: the branch's upstream) |
+| `--deny` | bool |  | With --revoke: also add the digest of the item to the deny list (AR717) |
+| `--diff` | bool |  | Show the files, scan findings and previous approval of the named items; writes nothing |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--expires` | string |  | Expiry date YYYY-MM-DD (default: today + [governance] max_age, else none) |
+| `--format` | string | `text` | Output format: text, json |
+| `--from-github-review` | int | `0` | Record review-linked approvals from the approving reviews of this pull request number (needs the network and a token) |
+| `--fulcio-url` | string |  | With --sign --keyless: Fulcio URL (default <https://fulcio.sigstore.dev>) |
+| `--identity-token-env` | string |  | With --sign --keyless: environment variable holding the OIDC token (default: the GitHub Actions runtime token) |
+| `--interactive` | bool |  | With --sign --keyless: open a browser for the OIDC login when no token is available |
+| `--key` | string |  | With --sign: PEM private key to sign with (ECDSA or ed25519; cosign keys work) |
+| `--key-password-env` | string |  | With --sign --key: environment variable holding the key password (default AI_RULEZ_SIGNING_KEY_PASSWORD, then COSIGN_PASSWORD) |
+| `--keyless` | bool |  | With --sign: Fulcio certificate and Rekor log entry (network; the log is public) |
+| `--list` | bool |  | List what needs approval and its status |
+| `--note` | string |  | Free-text note stored with the approval (scanned for secrets) |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--prune` | bool |  | Remove approvals of content that no longer exists or whose digest changed |
+| `--reason` | string |  | With --deny: why the digest is denied (stored in the lock; scanned for secrets) |
+| `--rekor-url` | string |  | With --sign: Rekor URL for --keyless or --tlog (default <https://rekor.sigstore.dev>) |
+| `--resolve-teams` | bool |  | Expand @org/team entries of approvers and CODEOWNERS from the forge (needs a token with read:org) |
+| `--reviewer` | string |  | Reviewer to record (default: $AI_RULEZ_REVIEWER, else git user.email) |
+| `--revoke` | bool |  | Remove the approvals of the named items (with --reviewer: only that reviewer's) |
+| `--sign` | bool |  | Sign the approval (DSSE attestation) with --key or --keyless; the signer's identity becomes the reviewer |
+| `--tlog` | bool |  | With --sign --key: also record the signature in the Rekor transparency log (network; public log) |
+| `--verify-base` | string |  | Report approvals added since this git revision for content that also changed since it (AR716); exit 2 when found; writes nothing |
+| `--yes` / `-y` | bool |  | Do not ask for confirmation (required without a terminal) |
+
+#### `ai-rulez builtins`
+
+Manage built-in domains
+
+```text
+ai-rulez builtins [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez builtins list
+ai-rulez builtins show security
+```
+
+#### `ai-rulez builtins list`
+
+List all available built-in domains
+
+```text
+ai-rulez builtins list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez builtins list
+ai-rulez builtins list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez builtins show`
+
+Show the full content of a built-in domain
+
+```text
+ai-rulez builtins show <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez builtins show security
+ai-rulez builtins show security --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez catalog`
+
+List every item with owner, version, tokens, roles and lock status, or a static site
+
+```text
+ai-rulez catalog [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez catalog --format json --schema-version 2
+ai-rulez catalog --html site/
+ai-rulez catalog --html site/ --role backend --clean
+ai-rulez catalog --html site/ --check
+ai-rulez catalog --html site/ --with-eval --with-usage
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-findings` | string list |  | With --html: publish despite findings of these codes (AR001: a secret in an item) |
+| `--base-title` | string |  | With --html: site title (default: AI-Rulez catalog) |
+| `--check` | bool |  | With --html: write nothing, exit 2 when the directory differs from the site that would be generated |
+| `--clean` | bool |  | With --html: remove files a previous run wrote that the site no longer has |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--format` | string | `text` | Output format: text, json |
+| `--html` | string |  | Write a static website of the catalog into this directory |
+| `--include-excerpt` | bool | `true` | Include a body excerpt of each item (version 2 JSON and --html); --indexable turns it off unless this flag is set |
+| `--indexable` | bool |  | With --html: let search engines index the site (no robots.txt, no noindex) |
+| `--max-items-per-page` | int | `0` | With --html: overview rows per page (default: [catalog] max_items_per_page, else 200) |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+| `--no-owners` | bool |  | Leave owner names out of the version 2 JSON and the site |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--render-markdown` | bool |  | With --html: render item excerpts as sanitized Markdown (no raw HTML; links shown as text) |
+| `--role` | string |  | With --html: keep only the items this role keeps |
+| `--schema-version` | int | `1` | JSON schema version: 1 or 2 |
+| `--with-eval` | string |  | Add each skill's recorded eval result (default file: <config dir>/eval-results.json) |
+| `--with-usage` | string |  | Add each skill's use count from a usage log (default file: <config dir>/local/usage.jsonl) |
+
+#### `ai-rulez catalog diff`
+
+Compare two catalogs: JSON files or git revisions
+
+```text
+ai-rulez catalog diff <from> [<to>] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez catalog diff main
+ai-rulez catalog diff v5.0.0 HEAD --format json
+ai-rulez catalog diff before.json after.json --exit-code
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--exit-code` | bool |  | Exit 2 when the catalogs differ |
+| `--format` | string | `text` | Output format: text, json |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+
+#### `ai-rulez clean`
+
+Remove files produced by generate
+
+```text
+ai-rulez clean [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez clean --dry-run
+ai-rulez clean --yes
+ai-rulez clean --profile backend --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--dry-run` / `-n` | bool |  | Show what would be removed without deleting anything |
+| `--format` | string | `text` | Output format: text, json |
+| `--include-edited` | bool |  | Also remove generated files whose body was edited by hand (otherwise they are kept with a warning) |
+| `--keep-gitignore` | bool |  | Leave the ai-rulez managed block in .gitignore in place |
+| `--keep-manifest` | bool |  | Leave the generated manifest in place |
+| `--profile` | string |  | Profile whose outputs to remove, or a comma-separated list to compose several (default: from config or 'default') |
+| `--user` | bool |  | Remove the files 'generate --user' wrote into the home directories, as recorded in the user manifest |
+| `--yes` / `-y` | bool |  | Skip the confirmation prompt |
+
+#### `ai-rulez completion`
+
+Generate the autocompletion script for the specified shell
+
+```text
+ai-rulez completion [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez completion bash
+ai-rulez completion zsh
+ai-rulez completion fish
+ai-rulez completion powershell
+```
+
+#### `ai-rulez completion bash`
+
+Generate the autocompletion script for bash
+
+```text
+ai-rulez completion bash
+```
+
+Examples:
+
+```bash
+source <(ai-rulez completion bash)
+ai-rulez completion bash > /etc/bash_completion.d/ai-rulez
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--no-descriptions` | bool |  | disable completion descriptions |
+
+#### `ai-rulez completion fish`
+
+Generate the autocompletion script for fish
+
+```text
+ai-rulez completion fish [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez completion fish | source
+ai-rulez completion fish > ~/.config/fish/completions/ai-rulez.fish
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--no-descriptions` | bool |  | disable completion descriptions |
+
+#### `ai-rulez completion powershell`
+
+Generate the autocompletion script for powershell
+
+```text
+ai-rulez completion powershell [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez completion powershell | Out-String | Invoke-Expression
+ai-rulez completion powershell > ai-rulez.ps1
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--no-descriptions` | bool |  | disable completion descriptions |
+
+#### `ai-rulez completion zsh`
+
+Generate the autocompletion script for zsh
+
+```text
+ai-rulez completion zsh [flags]
+```
+
+Examples:
+
+```bash
+source <(ai-rulez completion zsh)
+ai-rulez completion zsh > "${fpath[1]}/_ai-rulez"
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--no-descriptions` | bool |  | disable completion descriptions |
+
+#### `ai-rulez convert`
+
+Convert existing AI tool files into an .ai-rulez/ tree
+
+```text
+ai-rulez convert [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez convert --list
+ai-rulez convert --dry-run
+ai-rulez convert --write
+ai-rulez convert --from rulesync --dry-run
+ai-rulez convert --write --merge
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-findings` | string list |  | Write despite security findings of these codes (for example AR001, a secret in the source); they stay in the report. Discouraged |
+| `--best-effort` | bool |  | Import the known fields of an unrecognized format version |
+| `--delivery` | string |  | How the imported skills reach the agent: static, served or both ([skills] delivery, or the domain's with --domain) |
+| `--domain` | string |  | Put the imported content in this domain (safe next to an existing tree) |
+| `--dry-run` / `-n` | bool |  | Print the plan and report; write nothing |
+| `--enable-hooks` | bool |  | Write imported hooks as live [[hooks]]; without it they are a commented block you review first (a hook runs a command on your machine) |
+| `--enable-permissions` | bool |  | Write imported allow rules as live [permissions]; without it they are commented (an allow applies to every harness). Ask and deny rules are always live |
+| `--fail-on` | string list |  | Exit 2 when a finding has one of these statuses: approximated, dropped, needs-action, unsupported |
+| `--fetch` | bool |  | Read the remote git sources the input names (rulesync sources, APM dependencies that are not installed) over the network: https only, scanned before anything is written, skills pinned to the commit that was read. Without it nothing is fetched and each source is reported |
+| `--force` | bool |  | Overwrite existing content files that differ (config.toml is always merged, never replaced) |
+| `--format` | string | `text` | Output format: text, json |
+| `--from` | string list | `[auto]` | Importers to run: native, rulesync, apm, tessl, okf, skills-lock, agent-plugins or auto (every detected importer) |
+| `--into` | string | `.ai-rulez` | Config directory to write: relative to --source unless absolute; never written through a symlink |
+| `--keep-names` | bool |  | Never rename to resolve a name collision (between imported items, or with an existing file under --merge): report it instead |
+| `--list` | bool |  | List the importers and what each detects in --source |
+| `--lock` | bool |  | After writing, run ai-rulez lock on the converted config to pin remote sources, authored content and outputs (needs --write) |
+| `--merge` | bool |  | Add beside an existing tree without touching a file of it: an item whose file exists with other content is imported as NAME-imported (excludes --force) |
+| `--report` | string |  | Also write the report (in --format) to this file |
+| `--source` | string | `.` | Directory to read |
+| `--split-headings` | bool |  | Split root files such as CLAUDE.md into one context per H2 heading |
+| `--write` | bool |  | Write the converted tree |
+
+#### `ai-rulez cost`
+
+Report which skills, rules and context cost the most prompt tokens
+
+```text
+ai-rulez cost [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez cost
+ai-rulez cost --top 20
+ai-rulez cost --target claude --budget 8000
+ai-rulez cost --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--budget` | int | `0` | Exit 2 when the always-loaded tokens of the target exceed this ceiling |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--format` | string | `text` | Output format: text, json, markdown |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+| `--on-demand-budget` | int | `0` | Exit 2 when the on-demand tokens of the target exceed this ceiling |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--profile` | string |  | Profile to report on, or a comma-separated list to compose several |
+| `--target` | string |  | Preset whose runtime totals to report (default: the runtime with the largest always-loaded surface) |
+| `--tokenizer` | string | `cl100k_base` | Token counter to use: cl100k_base or estimate |
+| `--top` | int | `10` | How many top offenders to list |
+
+#### `ai-rulez doctor`
+
+Diagnose the project's ai-rulez setup (read-only)
+
+```text
+ai-rulez doctor [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez doctor
+ai-rulez doctor --strict
+ai-rulez doctor --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--profile` | string |  | Profile to render for the drift and gitignore checks (default: from config or 'default') |
+| `--strict` | bool |  | Also exit non-zero on warnings |
+
+#### `ai-rulez domain`
+
+Manage domains
+
+```text
+ai-rulez domain [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez domain add backend
+ai-rulez domain list
+ai-rulez domain remove backend --yes
+```
+
+#### `ai-rulez domain add`
+
+Add a new domain
+
+```text
+ai-rulez domain add <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez domain add backend
+ai-rulez domain add frontend --description "React application"
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--description` | string |  | Domain description |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez domain list`
+
+List all domains
+
+```text
+ai-rulez domain list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez domain list
+ai-rulez domain list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez domain remove`
+
+Remove a domain
+
+```text
+ai-rulez domain remove <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez domain remove backend
+ai-rulez domain remove backend --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez edit`
+
+Replace the content of a rule, context, skill, agent, command or check
+
+```text
+ai-rulez edit [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez edit rule code-quality --content "Prefer small functions."
+ai-rulez edit skill code-reviewer --domain backend --content "Review for races."
+ai-rulez edit rule code-quality --priority high
+```
+
+#### `ai-rulez edit agent`
+
+Edit an agent
+
+```text
+ai-rulez edit agent <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez edit agent reviewer --content "You review pull requests."
+ai-rulez edit agent release-manager --domain ops --local
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | New content, or - to read it from stdin |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Edit in the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez edit check`
+
+Edit a code-review check
+
+```text
+ai-rulez edit check <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez edit check no-todos --severity high
+ai-rulez edit check sql-injection --domain backend --targets "src/**/*.go"
+ai-rulez edit check secrets --description "No credentials in code"
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | New content, or - to read it from stdin |
+| `--description` | string |  | Description |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--severity` | string |  | Severity: low\|medium\|high\|critical |
+| `--targets` | string |  | Comma-separated target presets, paths or globs |
+| `--tools` | string |  | Comma-separated review tools |
+
+#### `ai-rulez edit command`
+
+Edit a command
+
+```text
+ai-rulez edit command <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez edit command deploy --content "Run the deploy script."
+ai-rulez edit command lint-all --domain backend --local
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | New content, or - to read it from stdin |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Edit in the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez edit context`
+
+Edit a context file
+
+```text
+ai-rulez edit context <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez edit context architecture --content "Services talk over Kafka."
+ai-rulez edit context api-notes --domain backend --priority high
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | New content, or - to read it from stdin |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Edit in the machine-local tree (.ai-rulez/local/) |
+| `--priority` | string |  | Priority level: critical\|high\|medium\|low\|minimal |
+| `--targets` | string |  | Comma-separated target providers or path globs |
+
+#### `ai-rulez edit rule`
+
+Edit a rule
+
+```text
+ai-rulez edit rule <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez edit rule code-quality --content "Prefer small functions."
+ai-rulez edit rule api-design --domain backend --priority high
+ai-rulez edit rule go-style --targets claude,cursor
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | New content, or - to read it from stdin |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Edit in the machine-local tree (.ai-rulez/local/) |
+| `--priority` | string |  | Priority level: critical\|high\|medium\|low\|minimal |
+| `--targets` | string |  | Comma-separated target providers or path globs |
+
+#### `ai-rulez edit skill`
+
+Edit a skill
+
+```text
+ai-rulez edit skill <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez edit skill code-reviewer --content "Review for data races."
+ai-rulez edit skill db-migrations --domain backend --priority high
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--content` | string |  | New content, or - to read it from stdin |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Edit in the machine-local tree (.ai-rulez/local/) |
+| `--priority` | string |  | Priority level: critical\|high\|medium\|low\|minimal |
+| `--targets` | string |  | Comma-separated target providers or path globs |
+
+#### `ai-rulez eval`
+
+Run skill evals and score them
+
+```text
+ai-rulez eval [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez eval run --estimate
+ai-rulez eval run code-reviewer --runner command --runner-command "./run-case.sh"
+ai-rulez eval import --from tessl ./scenarios --dry-run
+```
+
+#### `ai-rulez eval calibrate-estimate`
+
+Propose estimate assumptions measured from recorded eval runs
+
+```text
+ai-rulez eval calibrate-estimate [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez eval calibrate-estimate
+ai-rulez eval calibrate-estimate --harness claude --min-samples 5 --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--harness` | string |  | Only runs of this harness |
+| `--min-samples` | int | `3` | Runs a group needs before its proposal is not marked low-confidence |
+| `--model` | string |  | Only runs of this model |
+| `--results` | string |  | Results file (default <config dir>/eval-results.json) |
+
+#### `ai-rulez eval import`
+
+Import eval scenarios from another tool as eval cases
+
+```text
+ai-rulez eval import <path>... [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez eval import --from tessl ./scenarios --dry-run
+ai-rulez eval import --from tessl ./scenarios --skill code-reviewer --lift-assertions
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--dry-run` / `-n` | bool |  | Map and report; write nothing |
+| `--force` | bool |  | Overwrite existing files |
+| `--format` | string | `text` | Output format: text, json |
+| `--from` | string |  | Format of the input: tessl (required) |
+| `--lift-assertions` | bool |  | Turn criteria in a fixed phrasing into deterministic assertions (the criterion stays in the rubric) |
+| `--output-dir` | string |  | Directory to write the cases to (instead of the skill's evals/ directory) |
+| `--report` | string |  | Also write the machine-readable report (JSON) to this file |
+| `--rubric-mode` | string | `single` | single: one free-text rubric with the weights as text; items: rubric_items with the weights kept |
+| `--skill` | string |  | Skill the cases belong to: they are written to its evals/ directory |
+
+#### `ai-rulez eval run`
+
+Run the eval cases of skills through a pluggable runner and score them
+
+```text
+ai-rulez eval run [skill...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez eval run --estimate
+ai-rulez eval run code-reviewer --runner command --runner-command "./run-case.sh"
+ai-rulez eval run --mode activation --surface retrieval
+ai-rulez eval run code-reviewer --changed-only --max-cost 5
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--ablation` | bool |  | Also run every case without the skill and report the delta |
+| `--allow-exec` | bool |  | Run command_exit assertions (they execute commands from the case files) |
+| `--allow-llm` | bool |  | Agree that --grader builtin sends the runner's transcripts to the configured [llm] model (it also needs allow_network and a model in the user config) |
+| `--base` | string | `HEAD` | Git ref --changed-only compares the working tree against |
+| `--changed-only` | bool |  | Only skills with files changed against --base (git diff, plus untracked files) |
+| `--claude-bin` | string | `claude` | claude executable for the claude-plugin-eval and claude-native runners |
+| `--codex-bin` | string | `codex` | codex executable for the codex-native runner |
+| `--date` | string |  | Date recorded in the results (default $AI_RULEZ_EVAL_DATE; the clock is never read) |
+| `--description-from` | string |  | With --mode activation and one skill: measure the description in this file instead of the skill's own, for this run only (nothing is recorded, the source is not edited) |
+| `--dry-run` / `-n` | bool |  | List what would run with an estimated cost range; call no runner and write nothing |
+| `--estimate` | bool |  | Alias of --dry-run |
+| `--force` | bool |  | Ignore the result cache and re-run every selected skill |
+| `--format` | string | `text` | Output format: text, json, markdown, junit |
+| `--grader` | string | `runner` | Who grades a case's rubric: runner (whatever the runner provides) or builtin (the configured [llm] model judges the runner's transcript; needs --allow-llm) |
+| `--grader-max-cost` | number | `0.25` | Spend cap in USD for --grader builtin (0 keeps only the [llm] limits) |
+| `--harness` | string | `claude` | Harness the cases run against (recorded in the results) |
+| `--judge-model` | string |  | Grader model for claude-plugin-eval |
+| `--max-cost` | number | `0` | Advisory run-wide spend cap in USD (finite, >= 0; 0 means no limit): refuse to start when the estimate exceeds it, skip skills once spend reaches it, warn when a runner overshoots the budget it was given; a runner that reports no cost is assumed to have spent the whole budget |
+| `--max-cost-mode` | string |  | Estimate figure that must fit under --max-cost before a run starts: expected (default for case runs) or high (default for --mode activation) |
+| `--mode` | string | `cases` | What to measure: cases (full eval cases through a runner) or activation (only whether the right skill is chosen) |
+| `--model` | string |  | Model to run the cases with (cases may override it) |
+| `--no-write` | bool |  | Do not update the results file |
+| `--output-dir` | string |  | Write the report to <dir>/eval-report.<ext> instead of standard output |
+| `--price-in` | number | `0` | USD per million input tokens for the estimate (default by model tier) |
+| `--price-out` | number | `0` | USD per million output tokens for the estimate (default by model tier) |
+| `--results` | string |  | Results file (default <config dir>/eval-results.json) |
+| `--runner` | string |  | Runner: claude-plugin-eval, command, claude-native or codex-native (default claude-plugin-eval for the claude harness, command when --runner-command is set; claude-native or codex-native for --surface native) |
+| `--runner-arg` | string list |  | Extra argument for the claude-plugin-eval runner (for example --trust-plugin); repeatable |
+| `--runner-command` | string |  | Shell command for the command runner: receives the request JSON on stdin, prints the response JSON |
+| `--runs` | int | `0` | Runs per case: for claude-plugin-eval (default 3, always passed to claude explicitly) and per prompt for --surface native (default 5) |
+| `--scope` | string | `domain` | With --mode activation: the skills that compete for a prompt: domain (the skill's domain plus root skills) or all |
+| `--surface` | string |  | With --mode activation: retrieval (offline find_skill ranking, free) or native (a runner that declares the activation capability and the native surface) |
+| `--threshold` | number | `1` | Pass rate (0 to 1) a skill needs; 0 records scores without gating. Falls back to [lint.evals] min_pass_rate when not given |
+| `--timeout` | duration | `30m0s` | Time limit for one skill with either runner; the runner's whole process tree is killed when it ends |
+
+#### `ai-rulez export`
+
+Export ai-rulez content to another format
+
+```text
+ai-rulez export [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez export okf --output-dir ./bundle
+ai-rulez export okf --check
+```
+
+#### `ai-rulez export okf`
+
+Export rules, context, skills and more as an OKF bundle
+
+```text
+ai-rulez export okf [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez export okf --output-dir ./bundle
+ai-rulez export okf --role engineer --output-dir ./bundle
+ai-rulez export okf --profile backend --output-dir ./bundle --index-style frontmatter
+ai-rulez export okf --check
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--check` | bool |  | Write nothing; exit 2 when the bundle on disk differs |
+| `--format` | string | `text` | Output format: text, json |
+| `--include` | string list |  | Kinds to export: rules,context,skills,agents,commands,checks (default: okf.include or all) |
+| `--index-style` | string |  | index.md scheme: body (OKF 0.2 listing, default) or frontmatter (title, version, entries); default: okf.index_style |
+| `--output-dir` | string |  | Bundle directory (default: okf.dir, docs/okf) |
+| `--profile` | string |  | Profile to export (default: from config or 'default') |
+| `--role` | string |  | Export the slice of content a role selects (see 'ai-rulez roles list'); mutually exclusive with --profile |
+
+#### `ai-rulez generate`
+
+Generate AI assistant rule files from configuration
+
+```text
+ai-rulez generate [flags]
+```
+
+Aliases: `gen`
+
+Examples:
+
+```bash
+ai-rulez generate
+ai-rulez generate --dry-run
+ai-rulez generate --profile backend
+ai-rulez generate --check
+ai-rulez generate --recursive
+ai-rulez generate --locked
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-local-drift` | bool |  | Write output even when machine-local config would change files shared with the team |
+| `--check` | bool |  | Verify the committed output matches the sources without writing: list differing files and exit 2 on drift (for CI) |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--dry-run` / `-n` | bool |  | Show what would be generated without writing files |
+| `--emit-plan` | string |  | Write the generation plan (every file that would be written, merged or removed, with digests; no secrets) as JSON to FILE ('-' for stdout) and apply nothing; see schema/plan.schema.json |
+| `--env` | string list |  | MCP env override in KEY=VALUE form (repeatable) |
+| `--env-file` | string list |  | Dotenv file for MCP env placeholders (repeatable) |
+| `--force` | bool |  | Overwrite an existing file ai-rulez cannot prove it wrote (a hand-written CLAUDE.md); without it generate refuses that file and exits 1 |
+| `--format` | string | `text` | Output format: text, json |
+| `--frozen` | bool |  | Like --locked, and never use the network: resolve only from the local cache, verified against the lock |
+| `--gitignore` | bool |  | Update .gitignore files to include generated output patterns |
+| `--if-configured` | bool |  | Skip plugin generation when no plugin authoring configuration is present |
+| `--locked` | bool |  | Require ai-rulez.lock to cover every remote include and installed skill and fetch exactly the pinned commits (for CI) |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
+| `--offline` | bool |  | Skip fetching remote includes, use cached content only |
+| `--plugin` | bool |  | Generate distributable plugin bundles and a marketplace index from the [plugin] block |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--profile` | string |  | Profile to generate, or a comma-separated list to compose several (default: from config or 'default') |
+| `--recursive` | bool |  | Find and process configuration files recursively |
+| `--role` | string |  | Generate the slice of content a role selects instead of a profile (see 'ai-rulez roles list'); mutually exclusive with --profile |
+| `--strict-config` | bool |  | Fail on unknown or invalid configuration keys instead of warning (env AI_RULEZ_STRICT=1) |
+| `--user` | bool |  | Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent |
+| `--verify-tags` | bool |  | Ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735); needs the network (also [lock] verify_tags = true) |
+| `--watch` | bool |  | Generate, then watch the configuration directory and local include sources and regenerate on every change (Ctrl-C to stop) |
+| `--yes` / `-y` | bool |  | With --user: write without the confirmation prompt; always: do not warn about new hook and MCP commands |
+
+#### `ai-rulez guard`
+
+Block agent edits to generated files (PreToolUse hook)
+
+```text
+ai-rulez guard [flags]
+```
+
+Examples:
+
+```bash
+echo '{"tool_name":"Edit","tool_input":{"file_path":"CLAUDE.md"}}' | ai-rulez guard
+```
+
+#### `ai-rulez import`
+
+Import content from another format into .ai-rulez/
+
+```text
+ai-rulez import [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez import okf ./docs/okf --dry-run
+ai-rulez import okf ./docs/okf --into context --domain kb
+```
+
+#### `ai-rulez import okf`
+
+Import an OKF bundle into .ai-rulez/
+
+```text
+ai-rulez import okf <dir|git-url[@ref][#subdir]> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez import okf ./docs/okf --dry-run
+ai-rulez import okf https://github.com/acme/kb@v1.2.0#docs --domain kb
+ai-rulez import okf ./docs/okf --into context --force
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Place the imported content in this domain |
+| `--dry-run` / `-n` | bool |  | Report what would happen without writing |
+| `--force` | bool |  | Overwrite files that exist and differ |
+| `--format` | string | `text` | Output format: text, json |
+| `--into` | string |  | Force every concept into one kind: rules, context or skills |
+
+#### `ai-rulez improve`
+
+(experimental) Improve skills with an external optimizer behind a held-out eval gate
+
+```text
+ai-rulez improve [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez improve run code-reviewer --with "my-optimizer --skill {skill}" --dry-run
+ai-rulez improve show 20260101-code-reviewer
+ai-rulez improve apply 20260101-code-reviewer
+```
+
+#### `ai-rulez improve adapters`
+
+(experimental) List the bundled optimizer adapters, or print a template
+
+```text
+ai-rulez improve adapters [name] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez improve adapters
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez improve apply`
+
+(experimental) Write an accepted improve candidate into the skill (no commit)
+
+```text
+ai-rulez improve apply <run-id> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez improve apply 20260101-code-reviewer --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-frontmatter` | bool |  | Allow the candidate to change allowed-tools, model and disable-model-invocation |
+| `--allow-scripts` | bool |  | Allow the candidate to change scripts/ and assets/ and reference scripts |
+| `--format` | string | `text` | Output format: text, json |
+| `--yes` / `-y` | bool |  | Write without the confirmation prompt |
+
+#### `ai-rulez improve clean`
+
+(experimental) Delete saved improve runs
+
+```text
+ai-rulez improve clean [run-id] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez improve clean --dry-run
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--all` | bool |  | Delete every saved run |
+| `--dry-run` / `-n` | bool |  | List the runs that would be deleted; delete nothing |
+| `--format` | string | `text` | Output format: text, json |
+| `--yes` / `-y` | bool |  | Delete --all without the confirmation prompt |
+
+#### `ai-rulez improve pr`
+
+(experimental) Open a pull request for an accepted improve run from an isolated worktree
+
+```text
+ai-rulez improve pr <run-id> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez improve pr 20260101-code-reviewer --draft
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-frontmatter` | bool |  | Allow the candidate to change allowed-tools, model and disable-model-invocation |
+| `--allow-network` | bool |  | Under --isolation, leave the network on for generate and lock (remote includes not yet cached); eval run keeps it |
+| `--allow-scripts` | bool |  | Allow the candidate to change scripts/ and assets/ and reference scripts |
+| `--base` | string |  | Branch or commit the worktree starts from and the pull request targets (default: the current branch) |
+| `--draft` | bool |  | Open the pull request as a draft |
+| `--env-pass` | string list |  | Environment variable names forwarded to the ai-rulez commands run in the worktree (all others are scrubbed); eval run needs its model credentials here |
+| `--eval-arg` | string list |  | Extra argument for eval run with --run-evals, for example --eval-arg=--max-cost=2; repeatable |
+| `--format` | string | `text` | Output format: text, json |
+| `--isolation` | string |  | Confine the ai-rulez commands run in the worktree (generate, lock, eval run): none (default), auto (when a sandbox backend works) or require (refuse without one) |
+| `--no-push` | bool |  | Commit on the branch only: no push, no pull request |
+| `--remote` | string | `origin` | Remote to push the branch to |
+| `--run-evals` | bool |  | Also run eval run <skill> with --changed-only in the worktree (calls the eval runner and costs money) |
+| `--yes` / `-y` | bool |  | Push and open the pull request without the confirmation prompt |
+
+#### `ai-rulez improve run`
+
+(experimental) Run an external optimizer on a copy of a skill and gate its candidate
+
+```text
+ai-rulez improve run <skill> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez improve run code-reviewer --with "my-optimizer" --dry-run
+ai-rulez improve run code-reviewer --adapter gepa --max-rounds 3 --max-cost 10
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--adapter` | string |  | Bundled optimizer adapter, the same as --with builtin:NAME (see improve adapters) |
+| `--adapter-judge-model` | string |  | builtin:review-fix: model that judges and verifies (default [llm] model) |
+| `--adapter-model` | string |  | builtin:review-fix: model that writes the fix (default [review.fix] model); must differ from the judge |
+| `--allow-exec` | bool |  | Run command_exit assertions of the cases (they execute commands from the case files) |
+| `--allow-frontmatter` | bool |  | Let the optimizer change allowed-tools, model and disable-model-invocation (the name is always fixed) |
+| `--allow-same-model` | bool |  | builtin:review-fix: let the fixer and the judge be the same model (self-preference risk) |
+| `--allow-scripts` | bool |  | Let the optimizer change scripts/ and assets/ and reference scripts |
+| `--claude-bin` | string | `claude` | claude executable for the claude-plugin-eval runner |
+| `--date` | string |  | Date recorded in the report (default $AI_RULEZ_EVAL_DATE; the clock is never read) |
+| `--dry-run` / `-n` | bool |  | Print the plan, split, estimate and egress; run nothing and write nothing |
+| `--egress` | string list |  | Hosts the optimizer sends data to: printed in the consent summary and recorded; not enforced |
+| `--env-pass` | string list |  | Environment variable names forwarded to the optimizer (credential-like names need --egress) |
+| `--eval-timeout` | duration | `30m0s` | Time limit for one eval runner call |
+| `--format` | string | `text` | Output format: text, json |
+| `--harness` | string | `claude` | Harness the evals run against (recorded in the report) |
+| `--holdout-fraction` | number | `0.3` | Deterministic held-out fraction when no case carries the tag (0 to 1) |
+| `--holdout-tag` | string | `holdout` | Eval cases carrying this tag are held out |
+| `--isolation` | string |  | Confine the optimizer: none (default), auto (when a sandbox backend works) or require (refuse without one) |
+| `--judge-model` | string |  | Grader model for claude-plugin-eval |
+| `--max-cost` | number | `0` | Total spend ceiling in USD, required: measured eval cost plus the cost the optimizer reports |
+| `--max-holdout-evals` | int | `3` | Times the held-out set may be evaluated |
+| `--max-regressions` | int | `0` | Held-out cases allowed to flip from pass to fail |
+| `--max-rounds` | int | `3` | Optimizer invocations |
+| `--min-gain` | number | `0.05` | Held-out pass-rate gain (0 to 1) a candidate needs |
+| `--model` | string |  | Model the evals run with |
+| `--price-in` | number | `0` | USD per million input tokens for the estimate (default by model tier) |
+| `--price-out` | number | `0` | USD per million output tokens for the estimate (default by model tier) |
+| `--require-ci-above-zero` | bool |  | Also require the 95% bootstrap interval of the held-out gain to exclude zero |
+| `--runner-arg` | string list |  | Extra argument for the claude-plugin-eval runner; repeatable |
+| `--runner-command` | string |  | Shell command for the command eval runner (default: claude-plugin-eval for the claude harness) |
+| `--runs` | int | `3` | Eval runs per case and arm; the majority outcome counts |
+| `--sibling-native` | bool |  | Also run the sibling trigger guard on the harness's model (costs money, counted against --max-cost); the free offline guard always runs |
+| `--sibling-runs` | int | `3` | With --sibling-native: repetitions of each sibling trigger prompt |
+| `--stop-at-first-accept` | bool |  | Stop after the first accepted round instead of using every round |
+| `--timeout` | duration | `20m0s` | Time limit for one optimizer invocation; its whole process tree is killed when it ends |
+| `--trust-repo-optimizer` | bool |  | Use [improve] optimizer and env_pass from a repository config (they choose a command that runs on your machine) |
+| `--with` | string |  | Optimizer command, run without a shell: words separated by spaces, or a JSON array of strings |
+| `--yes` / `-y` | bool |  | Skip the consent prompt (CI); on apply, skip the confirmation |
+
+#### `ai-rulez improve show`
+
+(experimental) Show a saved improve run: decisions, scores, costs and the diff
+
+```text
+ai-rulez improve show <run-id> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez improve show 20260101-code-reviewer
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez include`
+
+Manage includes
+
+```text
+ai-rulez include [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez include add shared https://github.com/acme/rules
+ai-rulez include list
+ai-rulez include remove shared --yes
+```
+
+#### `ai-rulez include add`
+
+Add an include source
+
+```text
+ai-rulez include add <name> <source> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez include add shared https://github.com/acme/rules
+ai-rulez include add shared https://github.com/acme/rules --ref v1.2.0 --path rules
+ai-rulez include add shared ../shared-rules --merge-strategy local-override
+ai-rulez include add mine ../my-rules --local
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--include` | string | `rules,context,skills` | Content types to include (comma-separated) |
+| `--install-to` | string |  | Installation path (optional) |
+| `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
+| `--merge-strategy` | string |  | Merge strategy: local-override (default), include-override, or error |
+| `--path` | string |  | Subdirectory within git repository (git only) |
+| `--ref` | string |  | Branch, tag, or commit to use (git only) |
+
+#### `ai-rulez include list`
+
+List all includes
+
+```text
+ai-rulez include list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez include list
+ai-rulez include list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez include remove`
+
+Remove an include source
+
+```text
+ai-rulez include remove <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez include remove shared
+ai-rulez include remove shared --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez init`
+
+Initialize a new AI rules configuration
+
+```text
+ai-rulez init [project-name] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez init
+ai-rulez init my-project --yes
+ai-rulez init --from auto --yes
+ai-rulez init --domains backend,frontend --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domains` | string |  | Comma-separated list of domain directories to create |
+| `--force` | bool |  | Replace an existing configuration directory; the old one is kept as <dir>.bak-<timestamp> |
+| `--format` | string | `text` | Output format: text, json |
+| `--from` | string |  | Import from existing tool files with convert: importer names or project paths (e.g., 'auto', 'rulesync', '.claude,.cursor') |
+| `--setup-hooks` | bool |  | Automatically configure git hooks for ai-rulez validation |
+| `--skip-content` | bool |  | Skip creating example content files |
+| `--yes` / `-y` | bool |  | Automatically answer yes to prompts (never replaces an existing configuration directory; see --force) |
+
+#### `ai-rulez list`
+
+List rules, context, and skills
+
+```text
+ai-rulez list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez list rules
+ai-rulez list skills --domain backend
+ai-rulez list --placement
+ai-rulez list rules --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--placement` | bool |  | Report where each skill and command is placed: core or plugin-only, and which plugins bundle it |
+| `--profile` | string |  | Profile for --placement (default: from config or 'default') |
+
+#### `ai-rulez list agents`
+
+List all agents
+
+```text
+ai-rulez list agents [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez list agents
+ai-rulez list agents --domain ops --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Filter by domain (shows all if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | List the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez list checks`
+
+List all code-review checks
+
+```text
+ai-rulez list checks [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez list checks
+ai-rulez list checks --domain backend --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Filter by domain (shows all if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez list commands`
+
+List all commands
+
+```text
+ai-rulez list commands [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez list commands
+ai-rulez list commands --domain backend --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Filter by domain (shows all if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | List the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez list context`
+
+List all context files
+
+```text
+ai-rulez list context [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez list context
+ai-rulez list context --domain backend --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Filter by domain (shows all if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | List the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez list rules`
+
+List all rules
+
+```text
+ai-rulez list rules [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez list rules
+ai-rulez list rules --domain backend
+ai-rulez list rules --local
+ai-rulez list rules --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Filter by domain (shows all if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | List the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez list skills`
+
+List all skills
+
+```text
+ai-rulez list skills [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez list skills
+ai-rulez list skills --domain backend
+ai-rulez list skills --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Filter by domain (shows all if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | List the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez llm`
+
+Inspect the [llm] model-access configuration (read-only)
+
+```text
+ai-rulez llm [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez llm doctor
+ai-rulez llm estimate prompt.md
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
+
+#### `ai-rulez llm doctor`
+
+Print the resolved LLM setup, optionally with one 1-token call
+
+```text
+ai-rulez llm doctor [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez llm doctor
+ai-rulez llm doctor --ping
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--ping` | bool |  | Make one 1-token call (needs allow_network = true) |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
+
+#### `ai-rulez llm estimate`
+
+Estimate the tokens and cost of sending a file as a prompt (no call)
+
+```text
+ai-rulez llm estimate <file> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez llm estimate prompt.md
+ai-rulez llm estimate prompt.md --max-output 2000
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--max-output` | int | `1024` | Completion tokens to assume |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
+
+#### `ai-rulez local`
+
+Manage the machine-local config overlay
+
+```text
+ai-rulez local [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez local init
+ai-rulez local set default dev
+ai-rulez local show
+ai-rulez local unset default
+```
+
+#### `ai-rulez local init`
+
+Create a commented config.local skeleton
+
+```text
+ai-rulez local init [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez local init
+```
+
+#### `ai-rulez local path`
+
+Print the local overlay file path
+
+```text
+ai-rulez local path [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez local path
+```
+
+#### `ai-rulez local set`
+
+Set a key in the local overlay
+
+```text
+ai-rulez local set <path> [value] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez local set default dev
+ai-rulez local set 'presets' '["codex", "!cursor"]'
+ai-rulez local set mcp_servers.github.command npx
+printf %s "$TOKEN" | ai-rulez local set mcp_servers.github.env.GITHUB_TOKEN --stdin
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--stdin` | bool |  | Read the value (stored as a string) from standard input |
+| `--string` | bool |  | Store the value as a string without parsing it |
+
+#### `ai-rulez local show`
+
+Show what the local overlay overrides
+
+```text
+ai-rulez local show [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez local show
+ai-rulez local show --format json
+ai-rulez local show --reveal
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--reveal` | bool |  | Print values of keys that are withheld by default (may print secrets) |
+
+#### `ai-rulez local unset`
+
+Remove a key from the local overlay
+
+```text
+ai-rulez local unset <path> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez local unset default
+ai-rulez local unset mcp_servers.github
+```
+
+#### `ai-rulez lock`
+
+Pin remote includes, installed skills and authored content in ai-rulez.lock
+
+```text
+ai-rulez lock [name...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez lock
+ai-rulez lock --check
+ai-rulez lock --diff
+ai-rulez lock --outdated
+ai-rulez lock --content-only
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--accept-findings` | bool |  | Pin a source although the security scan of its new tree has error findings (review them first) |
+| `--check` | bool |  | Verify ai-rulez.lock against the configuration and cached content without writing or using the network |
+| `--content-only` | bool |  | Re-pin authored content and outputs only: no network, remote pins are kept |
+| `--diff` | bool |  | Show how the lock differs from the sources and outputs (for pull request review); exits 0 |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--fail-on-outdated` | bool |  | With --outdated: exit 2 when any source has an allowed update |
+| `--format` | string | `text` | Output format: text, json |
+| `--include-static` | bool |  | Also pin the view that serves static skills too (see mcp --serve-skills --include-static) |
+| `--kind` | string |  | Limit the refresh to include, skill, source or served entries |
+| `--offline` | bool |  | With --outdated: refuse to run (it needs the network); use --check to verify the lock offline |
+| `--outdated` | bool |  | Report sources whose version constraint allows a newer tag than the pinned one (uses the network, writes nothing) |
+| `--output` / `-o` | string |  | With --subject: write the JSON statement to this file |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--profile` | string |  | Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default) |
+| `--recursive` | bool |  | Process every configuration found recursively |
+| `--refuse-findings` | bool |  | Fail without writing when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3) |
+| `--role` | string |  | Also pin the skills this role serves, as a view of their own (see mcp --serve-skills --role) |
+| `--roles` | bool |  | Also pin the rendered outputs of every role (roles with pin = true are always pinned) |
+| `--source` | string list |  | Also pin the view with this extra skill source, repeatable (see mcp --serve-skills --source) |
+| `--subject` | bool |  | Print the lock-subject digest and statement (the thing to sign); reads the lock only |
+| `--targets` | string |  | Also pin the view that serves this preset's rendering of the skills (see mcp --serve-skills --targets) |
+| `--verify-tags` | bool |  | With --check: ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735); needs the network (also [lock] verify_tags = true) |
+
+#### `ai-rulez mcp`
+
+Start Model Context Protocol (MCP) server
+
+```text
+ai-rulez mcp [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez mcp
+ai-rulez mcp --serve-skills
+ai-rulez mcp --serve-skills --profile backend --no-watch
+ai-rulez mcp --allow list_rules --allow generate_outputs
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow` | string list |  | Only serve skills whose name matches one of these glob patterns (requires --serve-skills) |
+| `--allow-any-dir` | bool |  | Let the authoring tools use any working_directory, not only the root |
+| `--budget-bytes` | int | `0` | Bytes of skill content a session may read (load_skill, get_skill, read_skill_file, resources/read); 0 is the default (256 KiB), -1 removes the cap (requires --serve-skills) |
+| `--deny` | string list |  | Never serve skills whose name matches one of these glob patterns; wins over --allow (requires --serve-skills) |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--domain` | string list |  | Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills) |
+| `--frozen` | bool |  | Never use the network and require ai-rulez.lock to cover every remote include, installed skill and skill source (requires --serve-skills) |
+| `--include-static` | bool |  | Also serve skills whose delivery is static (requires --serve-skills) |
+| `--max-clone-bytes` | int | `0` | Largest git skill source clone in bytes for sources that set no max_clone_bytes; overrides AI_RULEZ_MAX_CLONE_BYTES; 0 uses the environment variable, then 256 MiB (requires --serve-skills) |
+| `--no-watch` | bool |  | Do not reload skills when their files change (requires --serve-skills) |
+| `--offline` | bool |  | Never use the network; use cached content (requires --serve-skills) |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--profile` | string |  | Profile whose skills to serve (default: the configured default profile; requires --serve-skills) |
+| `--reload-interval` | duration | `0s` | How often to check skill files for changes; default 2s (requires --serve-skills) |
+| `--role` | string |  | Serve only the skills of this role (see 'ai-rulez roles list'), with the delivery the role sets; it is also the default role of find_skill (requires --serve-skills) |
+| `--root` | string |  | Directory the authoring tools may read and write; working_directory must lie inside it (default: the current directory) |
+| `--serve-skills` | bool |  | Serve skills read-only over the MCP Skills extension instead of the authoring tools |
+| `--source` | string list |  | Serve the skills of a source, repeatable: [git+]<url>[@<tag\|commit>][#<subdir>] or a local directory (requires --serve-skills) |
+| `--targets` | string |  | Preset whose rendering of the skills to serve (default: first configured preset with skills; requires --serve-skills) |
+| `--usage-log` | string |  | Append one identifier-only JSON line per load_skill to this file (requires --serve-skills) |
+| `--usage-sink` | string |  | Shell command that receives each load_skill usage line on stdin (requires --serve-skills) |
+
+#### `ai-rulez migrate`
+
+Migrate a 4.x configuration to the 5.0 format, or a content tree to OKF
+
+```text
+ai-rulez migrate [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez migrate v5 --dry-run
+ai-rulez migrate v5 --recursive --check --format json
+ai-rulez migrate okf --dry-run
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--check` | bool |  | write nothing and exit 2 when a project still needs migration |
+| `--dry-run` / `-n` | bool |  | show the change list without writing anything |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez migrate okf`
+
+Convert the .ai-rulez/ content tree to an OKF bundle, in place
+
+```text
+ai-rulez migrate okf [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez migrate okf --dry-run
+ai-rulez migrate okf --check --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--check` | bool |  | write nothing and exit 2 when a project still needs migration |
+| `--dry-run` / `-n` | bool |  | show the change list without writing anything |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez migrate v5`
+
+Migrate a 4.x configuration to the 5.0 format
+
+```text
+ai-rulez migrate v5 [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez migrate v5 --dry-run
+ai-rulez migrate v5
+ai-rulez migrate v5 --recursive --check --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--adopt-defaults` | bool |  | take the v5 defaults instead of pinning the 4.x ones |
+| `--recursive` | bool |  | migrate every project found below the current directory |
+| `--write` | bool |  | also rewrite frontmatter aliases in .ai-rulez markdown files |
+| `--check` | bool |  | write nothing and exit 2 when a project still needs migration |
+| `--dry-run` / `-n` | bool |  | show the change list without writing anything |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez okf`
+
+Work with OKF (Open Knowledge Format) bundles
+
+```text
+ai-rulez okf [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez okf validate ./docs/okf
+ai-rulez okf validate https://github.com/acme/kb@v1.2.0#docs --fail-on warning
+```
+
+#### `ai-rulez okf validate`
+
+Lint an OKF bundle (works on third-party bundles)
+
+```text
+ai-rulez okf validate <dir|git-url[@ref][#subdir]> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez okf validate ./docs/okf
+ai-rulez okf validate ./docs/okf --fail-on warning
+ai-rulez okf validate https://github.com/acme/kb@v1.2.0#docs --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--fail-on` | string | `error` | Lowest severity that fails the run: error, warning, info or none |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez profile`
+
+Manage profiles
+
+```text
+ai-rulez profile [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez profile add backend backend shared
+ai-rulez profile set-default backend
+ai-rulez profile list
+```
+
+#### `ai-rulez profile add`
+
+Add a new profile
+
+```text
+ai-rulez profile add <name> <domain...> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez profile add backend backend shared
+ai-rulez profile add full backend frontend --set-default
+ai-rulez profile add mine backend --local
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
+| `--set-default` | bool |  | Set this profile as the default |
+
+#### `ai-rulez profile list`
+
+List all profiles
+
+```text
+ai-rulez profile list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez profile list
+ai-rulez profile list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez profile remove`
+
+Remove a profile
+
+```text
+ai-rulez profile remove <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez profile remove backend
+ai-rulez profile remove backend --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez profile set-default`
+
+Set the default profile
+
+```text
+ai-rulez profile set-default <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez profile set-default backend
+ai-rulez profile set-default full --local
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
+
+#### `ai-rulez publish`
+
+Package the plugin bundle into deterministic, checksummed release artifacts
+
+```text
+ai-rulez publish [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez publish --dry-run
+ai-rulez publish --marketplace --sbom
+ai-rulez publish --to github-release --execute --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-dirty` | bool |  | Publish from a tree with uncommitted changes or no commit |
+| `--channel` | string |  | Release channel: the pinned index directory (--marketplace) and the npm dist-tag |
+| `--confirm-registry` | string |  | With --to npm: the registry URL [publish.npm] names, confirming it may receive your npm credentials (required for a registry other than the public one) |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--dist` | string | `dist` | Directory the artifacts are written to |
+| `--dry-run` / `-n` | bool |  | Run preflight and print the artifacts and commands without writing or running anything |
+| `--emit` | string list |  | Run an emitter (repeatable): cursor-team-marketplace, agent-plugins, ard, port, aws-agent-registry, kiro-steering |
+| `--execute` | bool |  | Run the upload (needs --to and --yes) |
+| `--experimental` | bool |  | Allow emitters whose format is not verified against vendor documentation |
+| `--force` | bool |  | With --execute, replace the assets of an existing GitHub release or the artifact an existing OCI tag points at, instead of refusing |
+| `--format` | string | `text` | Output format: text, json |
+| `--fulcio-url` | string |  | With --sign-keyless: Fulcio URL (default <https://fulcio.sigstore.dev>) |
+| `--marketplace` | bool |  | Write a Claude marketplace index pinned to the release commit under marketplace/ |
+| `--npm-scope` | string |  | npm scope for --to npm, such as @acme (default: [publish.npm] scope) |
+| `--oci-ref` | string |  | Repository for --to oci, host/path without a tag (default: [publish.oci] ref) |
+| `--only` | string list |  | Multi-plugin: publish only the plugin with this name (repeatable) |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--profile` | string |  | Profile used to generate the plugin bundle |
+| `--public` | bool |  | With --to npm: publish with public access (default restricted) |
+| `--rekor-url` | string |  | Rekor URL for --sign-keyless or --sign-tlog (default <https://rekor.sigstore.dev>) |
+| `--repo` | string |  | OWNER/REPO of the release (default: [plugin] repository, else the origin remote) |
+| `--runtime` | string list |  | Publish only these plugin runtimes (repeatable; default: [publish] runtimes, else the [plugin] runtimes) |
+| `--sbom` | bool |  | Ship the project SBOM (CycloneDX) with the release |
+| `--sign-interactive` | bool |  | With --sign-keyless: open a browser for the OIDC login when no token is available |
+| `--sign-key` | string |  | Sign the archive with this PEM private key (ECDSA or ed25519; cosign keys work) |
+| `--sign-key-password-env` | string |  | Environment variable holding the key password (default AI_RULEZ_SIGNING_KEY_PASSWORD, then COSIGN_PASSWORD) |
+| `--sign-keyless` | bool |  | Sign with a short-lived Fulcio certificate and log the signature in Rekor (network; public log) |
+| `--sign-tlog` | bool |  | With --sign-key: also record the signature in the Rekor transparency log (network; public log) |
+| `--sign-token-env` | string |  | With --sign-keyless: environment variable holding the OIDC token (default: the GitHub Actions runtime token) |
+| `--since` | string |  | Tag whose lock the release notes diff against (default: the previous tag) |
+| `--tag` | string |  | Release tag (default: v<[plugin] version>); with github-release it must already exist on the remote |
+| `--template` | string list |  | Render this text/template into <dist>/emit/ (repeatable) |
+| `--to` | string |  | Upload target: github-release, npm or oci (default: build only) |
+| `--yes` / `-y` | bool |  | Confirm --execute without a prompt |
+
+#### `ai-rulez publish emit`
+
+Write only the files of one emitter, without a release
+
+```text
+ai-rulez publish emit <emitter> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez publish emit ard
+ai-rulez publish emit agent-plugins --output-dir dist/emit
+ai-rulez publish emit cursor-team-marketplace --profile backend
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-dirty` | bool |  | Run from a tree with uncommitted changes or no commit |
+| `--channel` | string |  | Release channel |
+| `--experimental` | bool |  | Allow an emitter whose format is not verified against vendor documentation |
+| `--format` | string | `text` | Output format: text, json |
+| `--output-dir` | string |  | Directory to write the emitter's files to (default emit/<emitter>) |
+| `--profile` | string |  | Profile used to generate the plugin bundle |
+| `--runtime` | string list |  | Use only these plugin runtimes |
+
+#### `ai-rulez publish verify`
+
+Recompute the checksums, manifest, archive and signature of a release
+
+```text
+ai-rulez publish verify <dir|oci-ref> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez publish verify dist
+ai-rulez publish verify dist --key cosign.pub --require-signature
+ai-rulez publish verify ghcr.io/acme/rules:1.0.0 --identity ci@acme.example --issuer https://token.actions.githubusercontent.com
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--identity` | string |  | Trusted certificate identity of a keyless signature (needs --issuer) |
+| `--issuer` | string |  | OIDC issuer of --identity |
+| `--key` | string list |  | Trusted PEM public key for the release signature (repeatable) |
+| `--require-signature` | bool |  | Fail an unsigned bundle, or one whose signer is not verified |
+| `--trusted-root` | string |  | Sigstore trusted root file (default: the root from ai-rulez trust update) |
+
+#### `ai-rulez remove`
+
+Remove content from your rules
+
+```text
+ai-rulez remove [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez remove rule code-quality
+ai-rulez remove rule api-design --domain backend
+ai-rulez remove skill code-reviewer --yes
+```
+
+#### `ai-rulez remove agent`
+
+Remove an agent
+
+```text
+ai-rulez remove agent <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez remove agent reviewer
+ai-rulez remove agent release-manager --domain ops --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, searches root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Remove from the machine-local tree (.ai-rulez/local/) |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez remove check`
+
+Remove a code-review check
+
+```text
+ai-rulez remove check <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez remove check no-todos
+ai-rulez remove check sql-injection --domain backend --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, searches root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez remove command`
+
+Remove a command
+
+```text
+ai-rulez remove command <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez remove command deploy
+ai-rulez remove command lint-all --domain backend --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, searches root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Remove from the machine-local tree (.ai-rulez/local/) |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez remove context`
+
+Remove context
+
+```text
+ai-rulez remove context <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez remove context architecture
+ai-rulez remove context api-notes --domain backend --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, searches root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Remove from the machine-local tree (.ai-rulez/local/) |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez remove rule`
+
+Remove a rule
+
+```text
+ai-rulez remove rule <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez remove rule code-quality
+ai-rulez remove rule api-design --domain backend
+ai-rulez remove rule my-scratch-notes --local --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, searches root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Remove from the machine-local tree (.ai-rulez/local/) |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez remove skill`
+
+Remove a skill
+
+```text
+ai-rulez remove skill <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez remove skill code-reviewer
+ai-rulez remove skill db-migrations --domain backend --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, searches root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Remove from the machine-local tree (.ai-rulez/local/) |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez review`
+
+Score skills, agents, commands and rules against a rubric, offline or with an LLM judge
+
+```text
+ai-rulez review [id|name|path...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez review
+ai-rulez review code-reviewer --semantic --estimate
+ai-rulez review --since main --gate
+ai-rulez review --format sarif --output review.sarif
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--baseline` | string |  | Hide the findings in this baseline (or earlier --format json report); report and gate only new ones |
+| `--cache-dir` | string |  | Response cache directory (default the user cache directory of this project) |
+| `--concurrency` | int | `0` | Items judged at once (default 4, at most 16) |
+| `--content` | string |  | What a judge receives: descriptions (name, description, frontmatter keys) or full (adds the frontmatter and body); default [review] content |
+| `--estimate` | bool |  | Print the egress manifest and cost range of a model-judged run; send nothing |
+| `--format` | string | `text` | Output format: text, json, sarif |
+| `--gate` | bool |  | Exit 2 on a stable fail verdict of a calibrated dimension; refused without a matching calibration record |
+| `--gate-level` | string |  | Lowest severity ceiling that gates: info, warning or error (default [review.gate] level, else warning) |
+| `--include-imports` | bool |  | Also review content from includes, installed skills and builtins |
+| `--k` | int | `0` | Most votes for a flagged dimension (default the rubric's votes.max) |
+| `--max-calls` | int | `0` | Call cap (default [review] max_calls, else 300) |
+| `--max-cost` | number | `0` | Spend cap in USD (default [review] max_cost_usd, else 0.50; 0 = unlimited) |
+| `--model` | string |  | Model to judge with or price (default [llm] model) |
+| `--models` | string |  | Comma-separated models to judge with and compare; the first is the primary |
+| `--no-cache` | bool |  | Do not read or write the model response cache |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+| `--output` / `-o` | string |  | Write the report to this file instead of standard output |
+| `--profile` | string |  | Review the content of this profile (or a comma-separated list) |
+| `--role` | string |  | Review the content slice of this role (see 'ai-rulez roles list') |
+| `--rubric` | string |  | Rubric id: builtin:<id> or a directory under .ai-rulez/rubrics (default [review] rubric, else builtin:skill-quality) |
+| `--semantic` | bool |  | Add the LLM judge (needs [llm] allow_network = true in user scope; findings are advisory) |
+| `--show-prompt` | bool |  | With --estimate, print the exact planned messages |
+| `--since` | string |  | Only items changed since this git revision (committed, staged, unstaged and untracked) |
+| `--write-baseline` | string |  | Write a baseline of the findings of this run to this file |
+
+#### `ai-rulez review calibrate`
+
+Measure the judge against a rubric's golden set (needed before gating)
+
+```text
+ai-rulez review calibrate [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez review calibrate --rubric skill --max-cost 2
+ai-rulez review calibrate --compare calibration.json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--compare` | string |  | Compare with this calibration record and fail on drift (writes nothing) |
+| `--concurrency` | int | `0` | Cases judged at once (default 4, at most 16) |
+| `--content` | string | `full` | Content the judge is calibrated with: full or descriptions (the record binds it) |
+| `--format` | string | `text` | Output format: text, json |
+| `--golden` | string |  | Directory with the golden cases (default the rubric directory) |
+| `--k` | int | `0` | Votes per dimension (default the rubric's votes.max) |
+| `--max-calls` | int | `0` | Call cap (default 1000) |
+| `--max-cost` | number | `0` | Spend cap in USD (default 2.00; 0 = unlimited) |
+| `--model` | string |  | Model to calibrate (default [llm] model) |
+| `--models` | string |  | Comma-separated models to calibrate and compare; writes no record |
+| `--no-cache` | bool |  | Do not read or write the response cache (variance runs) |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+| `--no-probes` | bool |  | Skip the metamorphic probes |
+| `--no-write` | bool |  | Do not write the record |
+| `--output` / `-o` | string |  | Write the record here instead of the rubric's calibration.json |
+| `--rubric` | string |  | Rubric id (default [review] rubric, else builtin:skill-quality) |
+
+#### `ai-rulez review explain`
+
+Explain a review code (AR9G0-AR9G9): what it means and how to fix it
+
+```text
+ai-rulez review explain CODE [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez review explain AR9G1
+ai-rulez review explain AR9G8
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--rubric` | string |  | Rubric whose definitions to print (default [review] rubric, else builtin:skill-quality) |
+
+#### `ai-rulez review fix`
+
+Propose a verified patch for the judge's findings; writes only when asked
+
+```text
+ai-rulez review fix [id|name|path...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez review fix code-reviewer
+ai-rulez review fix code-reviewer --patch fix.patch
+ai-rulez review fix --apply --max-cost 2
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-same-model` | bool |  | Let the fixer and the judge be the same model (self-preference risk) |
+| `--apply` | bool |  | Write the verified edits to the item files (they must be clean in git) |
+| `--concurrency` | int | `0` | Items judged at once (default 4, at most 16) |
+| `--content` | string | `full` | What the judge receives: full (default here: a fix needs the body) or descriptions |
+| `--finding` | string |  | Fix only the finding with this fingerprint (a prefix is enough) |
+| `--format` | string | `text` | Output format: text, json |
+| `--judge-model` | string |  | Model that judges and verifies (default [llm] model) |
+| `--k` | int | `0` | Votes of the judge (default the rubric's votes.max) |
+| `--max-calls` | int | `0` | Call cap (default [review] max_calls, else 300) |
+| `--max-cost` | number | `0` | Spend cap in USD (default [review] max_cost_usd, else 0.50; 0 = unlimited) |
+| `--model` | string |  | Model that writes the fix (default [review.fix] model); must differ from the judge |
+| `--no-cache` | bool |  | Do not read or write the model response cache |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+| `--output` / `-o` | string |  | Write the patch to this file instead of standard output |
+| `--patch` | string |  | Apply a patch written by an earlier run (verified; --apply writes it) |
+| `--profile` | string |  | Only the content of this profile |
+| `--role` | string |  | Only the content slice of this role |
+| `--rubric` | string |  | Rubric id (default [review] rubric, else builtin:skill-quality) |
+| `--since` | string |  | Only items changed since this git revision |
+
+#### `ai-rulez roles`
+
+List, inspect and resolve [[roles]]
+
+```text
+ai-rulez roles [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez roles list
+ai-rulez roles show engineer
+ai-rulez roles resolve engineer
+ai-rulez roles list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+
+#### `ai-rulez roles list`
+
+List the roles with their item counts and token estimates
+
+```text
+ai-rulez roles list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez roles list
+ai-rulez roles list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+
+#### `ai-rulez roles resolve`
+
+List the items a role keeps, with sizes and skill modes
+
+```text
+ai-rulez roles resolve <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez roles resolve engineer
+ai-rulez roles resolve engineer --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+
+#### `ai-rulez roles show`
+
+Show a role as declared and with its parent merged in
+
+```text
+ai-rulez roles show <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez roles show engineer
+ai-rulez roles show engineer --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+
+#### `ai-rulez rubric`
+
+List, show and lint review rubrics
+
+```text
+ai-rulez rubric [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez rubric list
+ai-rulez rubric show
+ai-rulez rubric lint
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json, sarif |
+
+#### `ai-rulez rubric lint`
+
+Check rubrics, golden files and calibration records (AR9G8)
+
+```text
+ai-rulez rubric lint [id...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez rubric lint
+ai-rulez rubric lint skill
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json, sarif |
+
+#### `ai-rulez rubric list`
+
+List the built-in and project rubrics
+
+```text
+ai-rulez rubric list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez rubric list
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json, sarif |
+
+#### `ai-rulez rubric show`
+
+Print a rubric's dimensions, weights and scoring formula
+
+```text
+ai-rulez rubric show [id] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez rubric show
+ai-rulez rubric show skill
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json, sarif |
+
+#### `ai-rulez sbom`
+
+Print a CycloneDX or SPDX software bill of materials of the AI configuration
+
+```text
+ai-rulez sbom [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez sbom
+ai-rulez sbom --format spdx-json --output sbom.spdx.json
+ai-rulez sbom --check
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--check` | bool |  | With --output: exit 2 when the committed SBOM differs from a fresh one |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--files` | string | `none` | List the files of items with their plain SHA-256: none, skills or all |
+| `--format` | string | `text` | Output format: text, json |
+| `--include-outputs` | bool |  | List the generated output files with their output digest |
+| `--no-approvals` | bool |  | Leave the approval status of the items out |
+| `--online` | bool |  | Allow contacting remote includes and skill sources (git ls-remote); by default only the lock and the cache are used |
+| `--output` / `-o` | string |  | Write the document to this file instead of stdout |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--profile` | string |  | Describe only this profile's domains |
+| `--redact-reviewers` | bool |  | Replace reviewer identities with a salted hash |
+| `--require-lock` | bool |  | Fail with exit 2 unless ai-rulez.lock is in sync with the sources |
+| `--role` | string |  | Describe only the items this role keeps |
+| `--strict-pins` | bool |  | Fail with exit 2 when an MCP package or remote source is not pinned to one release |
+| `--timestamp` | string |  | Record this time (RFC 3339, or "now"); SOURCE_DATE_EPOCH is honored when the flag is absent |
+| `--type` | string | `cyclonedx` | Document type: cyclonedx (CycloneDX 1.6 JSON) or spdx-json (SPDX 2.3 JSON) |
+| `--verify` | bool |  | Verify the lock attestation ([signing] trust) and record the result |
+
+#### `ai-rulez scan`
+
+Scan skills, rules and scripts for secrets, hidden text, injection and risky shell
+
+```text
+ai-rulez scan [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez scan
+ai-rulez scan --recursive
+ai-rulez scan --format sarif --output scan.sarif
+ai-rulez scan --changed --fail-on warning
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-egress` | string list |  | With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable) |
+| `--baseline` | string |  | Accept the findings recorded in this baseline file (default: <config dir>/lint-baseline.json when it exists); only new findings count toward the exit code |
+| `--baseline-reason` | string |  | With --update-baseline, the reason stored on new entries (required for security findings) |
+| `--changed` | bool |  | Shorthand for --since HEAD: only files with uncommitted or untracked changes |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--dry-run` / `-n` | bool |  | With --external, print what each scanner would run (command, staged files, environment names, isolation, cache state) and start nothing |
+| `--external` | bool |  | Also run the scanners configured in [[lint.external]] and merge their findings |
+| `--fail-on` | string |  | Lowest severity that exits 2: error (default), warning, info or none |
+| `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
+| `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile) |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+| `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
+| `--output` / `-o` | string |  | Write the report to this file instead of stdout |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--reason` | string |  | With --write-baseline, why the findings are accepted (stored on each new entry) |
+| `--recursive` | bool |  | Scan every configuration file found recursively |
+| `--repo-root` | string |  | Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory) |
+| `--scanner-baseline` | string |  | With --external, the scanner baseline file (default: [lint.scanner_policy] baseline, else <config dir>/scanner-baseline.json) |
+| `--show-suppressed` | bool |  | With --external, also show scanner results the tool marked suppressed, as info |
+| `--since` | string |  | Report only findings in files changed since this git revision (committed, staged, unstaged and untracked) and in files that refer to them; references are still resolved against the whole tree |
+| `--since-depth` | string | `1` | With --since or --changed, how many reference hops to follow from the changed files: a number or "all" for every file that depends on them, directly or not (findings are marked changed, dependent or transitive(n) in json) |
+| `--since-max-files` | int | `0` | With --since or --changed, report at most this many files besides the changed ones, nearest first (0: no cap) |
+| `--strict-baseline` | bool |  | Also fail (exit 2) when the baseline has stale or expired entries, so fixed findings must leave it |
+| `--update-baseline` | bool |  | Record every current finding in the baseline (keeping existing reasons and dropping stale entries) and exit 0 |
+| `--write-baseline` | bool |  | With --external, accept every current scanner finding in scanner-baseline.json (needs --reason) and exit as if they were clean |
+
+#### `ai-rulez scanners`
+
+Inspect the external scanners configured in [[lint.external]]
+
+```text
+ai-rulez scanners [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez scanners list
+ai-rulez scanners doctor --all
+```
+
+#### `ai-rulez scanners doctor`
+
+Check named scanners: binary, version, egress, environment and configuration
+
+```text
+ai-rulez scanners doctor <name>... | --all [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez scanners doctor --all
+ai-rulez scanners doctor semgrep
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--all` | bool |  | Check every configured scanner |
+| `--external` | bool |  | Start each checked scanner once with --version (it is a program the repository named) |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+
+#### `ai-rulez scanners list`
+
+List the configured scanners with their egress declaration and whether they are installed
+
+```text
+ai-rulez scanners list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez scanners list
+ai-rulez scanners list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+
+#### `ai-rulez search`
+
+Rank the served skills against a query, build the embedding index, or evaluate the ranking
+
+```text
+ai-rulez search <query> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez search "customer wants money back"
+ai-rulez search --mode hybrid --explain "customer wants money back"
+ai-rulez search --format json --limit 10 deploy staging
+ai-rulez search index --dry-run
+ai-rulez search status
+ai-rulez search --eval search-cases.yaml --min top1=0.6,mrr=0.7
+ai-rulez search --eval search-cases.yaml --mode lexical,hybrid
+ai-rulez search --from-evals --output result.json
+ai-rulez search --eval search-cases.yaml --baseline result.json --max-flips 0
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow` | string list |  | Only search skills whose name matches one of these glob patterns |
+| `--allow-exec` | bool |  | Honor [search.embeddings] command from the repository config (it runs a program; the user config needs no flag) |
+| `--baseline` | string |  | With --eval: a result file of an earlier run (--output) to compare against |
+| `--deny` | string list |  | Never search skills whose name matches one of these glob patterns; wins over --allow |
+| `--domain` | string list |  | Only search skills of these domains; 'root' selects skills in no domain |
+| `--dry-run` / `-n` | bool |  | With 'search index': show the provider, the number of texts and bytes and an estimate; send nothing |
+| `--eval` | string |  | Evaluate the ranking against the labeled queries of this YAML file instead of running a query |
+| `--explain` | bool |  | Show each skill's rank in the lexical and vector lists and how the query was embedded |
+| `--format` | string | `text` | Output format: text, json |
+| `--from-evals` | bool |  | Evaluate with cases derived from the skills' eval-runner cases (alone, or added to --eval) |
+| `--frozen` | bool |  | Never use the network and require ai-rulez.lock to cover every remote source |
+| `--include-static` | bool |  | Also search skills whose delivery is static |
+| `--items` | string list |  | With 'search index': also re-embed these skills (by name) although their text did not change; skills that changed or have no vector are embedded anyway |
+| `--k` | int | `0` | With --eval: cut-off of recall@k, hit@k and nDCG@k (default: the file's k, then 5) |
+| `--limit` | int | `5` | Maximum results (max 20) |
+| `--max-flips` | int | `0` | With --eval --baseline: fail when more cases than this went from found to missed |
+| `--min` | string |  | With --eval: fail when a metric is below a floor, e.g. top1=0.6,mrr=0.7 (metrics: top1, recall, hit, mrr, ndcg) |
+| `--min-count` | int | `1` | With 'search mine': keep a query only when it was followed by the same skill at least this many times |
+| `--mode` | string |  | Ranking: lexical, hybrid or vector (default: [search] mode, then lexical). With --eval a comma-separated list, or all |
+| `--offline` | bool |  | Never use the network; use cached content |
+| `--output` / `-o` | string |  | With --eval: also write the result as JSON to this file |
+| `--profile` | string |  | Profile whose skills to search (default: the configured default profile) |
+| `--purge` | bool |  | With 'search mine': delete the query log after reading it |
+| `--rebuild` | bool |  | With 'search index': re-embed every skill, ignoring the existing index |
+| `--role` | string |  | Search only the skills of this role (see 'ai-rulez roles list'); mutually exclusive with --profile |
+| `--source` | string list |  | Also search the skills of a source, repeatable: [git+]<url>[@<tag\|commit>][#<subdir>] or a local directory |
+| `--targets` | string |  | Preset whose rendering of the skills to search |
+
+#### `ai-rulez show`
+
+Show the content of a rule, context, skill, agent, command or check
+
+```text
+ai-rulez show [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez show rule code-quality
+ai-rulez show skill code-reviewer --domain backend
+ai-rulez show rule code-quality --format json
+```
+
+#### `ai-rulez show agent`
+
+Show an agent
+
+```text
+ai-rulez show agent <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez show agent reviewer
+ai-rulez show agent release-manager --domain ops
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Read from the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez show check`
+
+Show a code-review check
+
+```text
+ai-rulez show check <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez show check no-todos
+ai-rulez show check sql-injection --domain backend --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez show command`
+
+Show a command
+
+```text
+ai-rulez show command <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez show command deploy
+ai-rulez show command lint-all --domain backend
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Read from the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez show context`
+
+Show a context file
+
+```text
+ai-rulez show context <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez show context architecture
+ai-rulez show context api-notes --domain backend
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Read from the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez show rule`
+
+Show a rule
+
+```text
+ai-rulez show rule <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez show rule code-quality
+ai-rulez show rule api-design --domain backend
+ai-rulez show rule code-quality --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Read from the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez show skill`
+
+Show a skill
+
+```text
+ai-rulez show skill <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez show skill code-reviewer
+ai-rulez show skill db-migrations --domain backend --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--domain` | string |  | Domain name (optional, uses root if not specified) |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Read from the machine-local tree (.ai-rulez/local/) |
+
+#### `ai-rulez sign`
+
+Sign the lock, a plugin bundle, a skill or an SBOM into a Sigstore bundle
+
+```text
+ai-rulez sign [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez sign --lock --keyless
+ai-rulez sign --lock --key cosign.key --output ai-rulez.lock.sigstore.json
+ai-rulez sign --sbom sbom.cdx.json --keyless
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--append` | bool |  | Write a co-signature file next to the existing attestation instead of replacing it (for [signing] thresholds) |
+| `--builder-id` | string |  | With --provenance: the builder id to record (default: the GitHub Actions workflow reference, else ai-rulez's own) |
+| `--bundle` | string |  | Sign the plugin bundle directory (tree digest of its files) into <dir>/.ai-rulez.sigstore.json |
+| `--embed-items` | bool |  | Put the pinned item ids and digests in the statement (ids can be sensitive in a private repository) |
+| `--format` | string | `text` | Output format: text, json |
+| `--fulcio-url` | string |  | With --keyless: Fulcio URL (default <https://fulcio.sigstore.dev>) |
+| `--identity-token-env` | string |  | With --keyless: environment variable holding the OIDC token (default: the GitHub Actions runtime token) |
+| `--interactive` | bool |  | With --keyless: open a browser for the OIDC login when no token is available |
+| `--key` | string |  | PEM private key file, or a KMS key URI (awskms://, gcpkms://, azurekms://, hashivault://), to sign with |
+| `--key-password-env` | string |  | Environment variable holding the key password (default AI_RULEZ_SIGNING_KEY_PASSWORD, then COSIGN_PASSWORD) |
+| `--keyless` | bool |  | Sign with a short-lived Fulcio certificate and log the signature in Rekor (network; public log) |
+| `--lock` | bool |  | Sign the lock-subject statement of ai-rulez.lock |
+| `--org-policy` | string |  | Sign an organization policy file into <file>.sigstore.json |
+| `--output` / `-o` | string |  | Write the bundle here instead of next to the lock |
+| `--provenance` | bool |  | With --bundle: also write a SLSA v1 provenance statement (.ai-rulez.provenance.sigstore.json); it is the signer's own account of the build |
+| `--public-key-out` | string |  | With --key: write the signing key's PEM public key to this file |
+| `--rekor-url` | string |  | Rekor URL for --keyless or --tlog (default <https://rekor.sigstore.dev>) |
+| `--sbom` | string |  | Sign an SBOM file into <file>.sigstore.json |
+| `--skill` | string |  | Sign a skill directory a publisher ships into <dir>/.ai-rulez.sigstore.json |
+| `--tlog` | bool |  | With --key: also record the signature in the Rekor transparency log (network; public log) |
+
+#### `ai-rulez skill`
+
+Manage installed skills
+
+```text
+ai-rulez skill [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez skill install kreuzberg --source https://github.com/kreuzberg-dev/kreuzberg
+ai-rulez skill list
+ai-rulez skill update
+ai-rulez skill remove kreuzberg --yes
+```
+
+#### `ai-rulez skill install`
+
+Install a named skill from a git repository or local path
+
+```text
+ai-rulez skill install <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez skill install kreuzberg --source https://github.com/kreuzberg-dev/kreuzberg
+ai-rulez skill install ai-rulez --source https://github.com/Goldziher/ai-rulez
+ai-rulez skill install my-skill --source ./local-repo --path custom/path
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
+| `--path` | string |  | Path within repo to skill directory (defaults to skills/<name>) |
+| `--ref` | string |  | Git reference: branch, tag, or commit hash |
+| `--source` | string |  | Git URL or local path (required) |
+
+#### `ai-rulez skill list`
+
+List all installed skills
+
+```text
+ai-rulez skill list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez skill list
+ai-rulez skill list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+
+#### `ai-rulez skill remove`
+
+Remove an installed skill
+
+```text
+ai-rulez skill remove <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez skill remove kreuzberg
+ai-rulez skill remove kreuzberg --yes
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--local` | bool |  | Write to the machine-local config.local.* overlay instead of the shared config |
+| `--yes` / `-y` | bool |  | Skip confirmation prompts |
+
+#### `ai-rulez skill update`
+
+Re-pin installed skills in ai-rulez.lock to their current remote commit
+
+```text
+ai-rulez skill update [name...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez skill update
+ai-rulez skill update kreuzberg
+```
+
+#### `ai-rulez telemetry`
+
+Item-load telemetry: record rule, agent and context loads; optional OTLP export
+
+```text
+ai-rulez telemetry [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry status
+ai-rulez telemetry doctor
+ai-rulez telemetry preview --limit 2
+ai-rulez telemetry export --to file usage.ndjson
+```
+
+#### `ai-rulez telemetry disable`
+
+Withdraw telemetry consent
+
+```text
+ai-rulez telemetry disable [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry disable
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--root` | string |  | Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory) |
+
+#### `ai-rulez telemetry doctor`
+
+Show the resolved telemetry configuration, consent state and buffer
+
+```text
+ai-rulez telemetry doctor [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry doctor --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--root` | string |  | Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory) |
+
+#### `ai-rulez telemetry enable`
+
+Consent to sending telemetry to a collector (stored per user)
+
+```text
+ai-rulez telemetry enable [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry enable --endpoint https://otel.example.org:4318
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--backfill` | bool |  | Also export the events already in the usage log |
+| `--endpoint` | string |  | Collector endpoint, https (http only for loopback); for grpc host[:port] (default: the configured one) |
+| `--include-paths` | bool |  | Also export the repository-relative path of loaded items |
+| `--include-session` | bool |  | Also export the salted session hash (pseudonymous) |
+| `--protocol` | string |  | http/json (default), http/protobuf or grpc |
+| `--root` | string |  | Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory) |
+
+#### `ai-rulez telemetry export`
+
+Write the usage log as an OTLP JSON file, or push it to the collector
+
+```text
+ai-rulez telemetry export [path] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry export --to file usage.ndjson
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--all` | bool |  | With --to otlp, start from the beginning of the usage log instead of the export cursor |
+| `--dry-run` / `-n` | bool |  | Encode the log and report the result without writing the file (--to otlp: without queueing or sending) |
+| `--evals` | string |  | Eval results file for --with-evals (default <config dir>/eval-results.json) |
+| `--file` | string |  | Destination path (or pass it as the argument) |
+| `--log` | string |  | Usage log to export (default <config dir>/local/usage.jsonl) |
+| `--max-batches` | int | `10` | With --to otlp, stop after this many catch-up rounds of up to 2000 events |
+| `--to` | string |  | Destination kind: file or otlp (required) |
+| `--with-evals` | bool |  | Also export the recorded eval results (eval_result events and gauges); needs verified results |
+
+#### `ai-rulez telemetry feedback`
+
+Record that a skill misled you, is stale, wrong or great
+
+```text
+ai-rulez telemetry feedback <skill> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry feedback code-reviewer --kind stale
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--harness` | string |  | Harness the feedback is about (recorded as given) |
+| `--index` | string |  | Skills index used to resolve the current hash |
+| `--kind` | string |  | Feedback kind: misled, stale, wrong, great (required) |
+| `--log` | string |  | Feedback log to append to (default .ai-rulez/local/feedback.jsonl) |
+| `--note-file` | string |  | File whose text is kept as a local note (never logged or hashed) |
+| `--role` | string |  | Role active when the skill loaded, a role of [[roles]] (recorded as given) |
+
+#### `ai-rulez telemetry flush`
+
+Send the local outbox to the OTLP collector
+
+```text
+ai-rulez telemetry flush [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry flush --timeout 10s
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--background` | bool |  | Silent mode used by hooks: exit 0 whatever happens |
+| `--root` | string |  | Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory) |
+| `--timeout` | duration | `0s` | Overall flush deadline (default 8s, at most 30s) |
+
+#### `ai-rulez telemetry hook`
+
+Print the hooks that record skill, rule, context and agent loads
+
+```text
+ai-rulez telemetry hook [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry hook --harness claude
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--executable` | string | `ai-rulez` | Command the hook runs |
+| `--harness` | string |  | Harness: claude (default), codex or cursor |
+| `--index` | string |  | Skills index used to resolve content hashes |
+| `--log` | string |  | Usage log file to append skill loads to (default .ai-rulez/local/usage.jsonl) |
+| `--output` / `-o` | string |  | Write the template to this file instead of stdout |
+| `--role` | string |  | Role active in this session (recorded as given; else $AI_RULEZ_ROLE) |
+| `--sink-command` | string |  | Shell command that receives each usage log line on stdin |
+| `--syntax` | string | `json` | Output syntax: json (a hooks block) or toml ([[hooks]] groups for config.toml) |
+
+#### `ai-rulez telemetry preview`
+
+Print exactly what an export would send, without sending anything
+
+```text
+ai-rulez telemetry preview [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry preview --limit 2
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--limit` | int | `5` | Preview the first N events (0 for all) |
+| `--log` | string |  | Usage log to preview instead of the outbox (default <config dir>/local/usage.jsonl) |
+| `--root` | string |  | Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory) |
+| `--with-evals` | bool |  | Also preview the eval results that telemetry export --with-evals would send |
+
+#### `ai-rulez telemetry prune`
+
+Delete usage-log lines older than N days that were already exported
+
+```text
+ai-rulez telemetry prune [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry prune --keep-days 30 --dry-run
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--dry-run` / `-n` | bool |  | Report what would be removed without rewriting the log |
+| `--ignore-cursor` | bool |  | Prune by age alone, also lines not yet exported |
+| `--keep-days` | int | `0` | Keep lines from the last N days (required) |
+| `--log` | string |  | Usage log to prune (default <config dir>/local/usage.jsonl) |
+| `--root` | string |  | Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory) |
+
+#### `ai-rulez telemetry record`
+
+Record one skill or item load from a hook event on stdin
+
+```text
+ai-rulez telemetry record [flags]
+```
+
+Examples:
+
+```bash
+cat hook-event.json | ai-rulez telemetry record --harness claude
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--harness` | string |  | Harness: claude (default), codex or cursor |
+| `--index` | string |  | Skills index used to resolve content hashes |
+| `--log` | string |  | Usage log file to append skill loads to (default .ai-rulez/local/usage.jsonl) |
+| `--outcome` | string |  | Outcome to record for a skill load: loaded (default), used or abandoned |
+| `--role` | string |  | Role active in this session (recorded as given; else $AI_RULEZ_ROLE) |
+| `--root` | string |  | Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory) |
+| `--salt-file` | string |  | File holding the session-hash salt (default usage.salt beside the log; $AI_RULEZ_USAGE_SALT wins) |
+| `--served` | bool |  | Mark the skill load as served by the MCP server |
+| `--sink-command` | string |  | Shell command that receives each usage log line on stdin |
+
+#### `ai-rulez telemetry report`
+
+List never-used skills and skills edited since they were used
+
+```text
+ai-rulez telemetry report [log] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry report
+ai-rulez telemetry report --format json
+ai-rulez telemetry report evals --results results.json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--evals` | string |  | Eval results to join (default <config dir>/eval-results.json, when present) |
+| `--feedback` | string |  | Feedback log to join (default feedback.jsonl beside the usage log, when present) |
+| `--format` | string | `text` | Output format: text, json |
+| `--index` | string |  | Skills index to join against (default <config dir>/skills-index.json) |
+| `--items` | bool |  | Always include the rule, agent and context section (default: only when the log holds item events) |
+
+#### `ai-rulez telemetry report evals`
+
+Rank skills to prune or rewrite from eval scores joined with usage
+
+```text
+ai-rulez telemetry report evals [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry report evals --results results.json
+ai-rulez telemetry report evals --results results.json --min-pass-rate 0.8 --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--feedback` | string |  | Feedback log (default feedback.jsonl beside the first usage log, when present) |
+| `--format` | string | `text` | Output format: text, json |
+| `--from-otlp` | bool |  | Read every --usage file as OTLP JSON (telemetry export --to file output) instead of a native log |
+| `--min-pass-rate` | number | `0.8` | Pass rate below which a skill is a rewrite candidate |
+| `--min-trigger` | number | `0.8` | Trigger precision and recall below which a skill is a rewrite candidate |
+| `--results` | string |  | Eval results (default <config dir>/eval-results.json) |
+| `--usage` | string list |  | Usage log; repeat for several (default <config dir>/local/usage.jsonl, when present) |
+| `--usage-log` | string list |  | Same as --usage |
+
+#### `ai-rulez telemetry status`
+
+Show whether telemetry is on, who consented, and whether delivery works
+
+```text
+ai-rulez telemetry status [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez telemetry status
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--root` | string |  | Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory) |
+
+#### `ai-rulez tokens`
+
+Report the prompt-token cost of generated artifacts
+
+```text
+ai-rulez tokens [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez tokens
+ai-rulez tokens --budget 20000
+ai-rulez tokens --by-role
+ai-rulez tokens --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--budget` | int | `0` | Fail when the headline always-loaded count exceeds this ceiling |
+| `--by-role` | bool |  | Report every declared role as one column of a comparison table |
+| `--compare-profiles` | string list |  | Report this profile as one column of a comparison table; repeat per column |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--profile` | string |  | Profile to report on, or a comma-separated list to compose several |
+| `--role` | string |  | Report on this role's content slice instead of a profile (see 'ai-rulez roles list') |
+| `--tokenizer` | string | `cl100k_base` | Token counter to use: cl100k_base or estimate |
+
+#### `ai-rulez trust`
+
+Manage the Sigstore trusted root used to verify keyless attestations
+
+```text
+ai-rulez trust [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez trust update
+```
+
+#### `ai-rulez trust update`
+
+Fetch the public-good Sigstore trusted root and cache it for offline verification
+
+```text
+ai-rulez trust update [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez trust update
+```
+
+#### `ai-rulez update`
+
+Move the pins of sources that use a version constraint to the newest allowed tag
+
+```text
+ai-rulez update [name...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez update --dry-run
+ai-rulez update shared
+ai-rulez update --kind include --write-config
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--accept-findings` | bool |  | Write a pin although the security scan of the new tree has error findings (review them first) |
+| `--accept-moved-tag` | bool |  | Re-pin a tag that now points to another commit (AR732) after you reviewed it |
+| `--allow-downgrade` | bool |  | Allow a tag with lower precedence than the pinned one |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--dry-run` / `-n` | bool |  | Show what would change and write nothing |
+| `--format` | string | `text` | Output format: text, json |
+| `--kind` | string |  | Limit the update to include, skill or source |
+| `--major` | bool |  | Handle only sources that have a newer major version: print the constraint that would take it |
+| `--offline` | bool |  | Refuse to run: update reads the remote's tags |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--write-config` | bool |  | With --major, rewrite the version line of those sources in config.toml and move their pins |
+
+#### `ai-rulez validate`
+
+Validate AI rules configuration and content
+
+```text
+ai-rulez validate [flags]
+```
+
+Aliases: `val`
+
+Examples:
+
+```bash
+ai-rulez validate
+ai-rulez validate --strict
+ai-rulez validate --changed
+ai-rulez validate --explain AR001
+ai-rulez validate --format sarif --output ai-rulez.sarif
+ai-rulez validate --fix --dry-run
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-egress` | string list |  | With --external, allow the named [[lint.external]] scanners that declare egress = true to run (repeatable) |
+| `--analyzer` | string list |  | Run only these analyzers (repeatable or comma-separated; replaces [lint] analyzers): budgets, config, convert, delivery, descriptions, duplicates, evals, hooks, llmstxt, lock, mcp, metadata, okf, plugin, references, roles, search, security, traps, verifiers |
+| `--approvals-base` | string |  | Report approvals added since this git revision for content that also changed since it (AR716) |
+| `--baseline` | string |  | Accept the findings recorded in this baseline file (default: <config dir>/lint-baseline.json when it exists); only new findings count toward the exit code |
+| `--baseline-reason` | string |  | With --update-baseline, the reason stored on new entries (required for security findings) |
+| `--changed` | bool |  | Shorthand for --since HEAD: only files with uncommitted or untracked changes |
+| `--config-only` | bool |  | Check the configuration file only and skip the content checks |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--dry-run` / `-n` | bool |  | With --fix or --fix-unsafe, print the unified diff and change nothing |
+| `--explain` | string |  | Print what a rule (code or name, for example AR001) checks, why, examples and how to suppress it, then exit |
+| `--external` | bool |  | Also run the scanners configured in [[lint.external]] and merge their findings |
+| `--fail-on` | string |  | Lowest severity that exits 2: error (default), warning, info or none |
+| `--fix` | bool |  | Apply the safe automatic fixes to authored sources: executable bits (AR502, AR503, AR505), frontmatter key renames (AR303), quoted booleans (AR304), unclosed code fences (AR806) and missing final newlines (AR807). Harness trap fixes (AR9C7 and project AR9CA key-misspelled rows) also rewrite a misspelled frontmatter key in hand-written harness files outside .ai-rulez/. Never touches generated outputs or security findings |
+| `--fix-unsafe` | bool |  | Also apply fixes that can change meaning: skill name normalization (AR804). Implies --fix |
+| `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
+| `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile) |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
+| `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
+| `--offline` | bool |  | Skip fetching remote includes, use cached content only (as generate --offline) |
+| `--output` / `-o` | string |  | Write the report to this file instead of stdout |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--reason` | string |  | With --write-baseline, why the findings are accepted (stored on each new entry) |
+| `--recursive` | bool |  | Validate every configuration file found recursively |
+| `--repo-root` | string |  | Repository root that repo-relative paths and git-tracked globs resolve against (env AI_RULEZ_REPO_ROOT; default: the git toplevel, else the config's parent directory) |
+| `--scanner-baseline` | string |  | With --external, the scanner baseline file (default: [lint.scanner_policy] baseline, else <config dir>/scanner-baseline.json) |
+| `--show-policy` | bool |  | Print the effective organization policy with the origin of every value and what the repository tried to loosen (text, or JSON with --format json), then exit |
+| `--show-suppressed` | bool |  | With --external, also show scanner results the tool marked suppressed, as info |
+| `--since` | string |  | Report only findings in files changed since this git revision (committed, staged, unstaged and untracked) and in files that refer to them; references are still resolved against the whole tree |
+| `--since-depth` | string | `1` | With --since or --changed, how many reference hops to follow from the changed files: a number or "all" for every file that depends on them, directly or not (findings are marked changed, dependent or transitive(n) in json) |
+| `--since-max-files` | int | `0` | With --since or --changed, report at most this many files besides the changed ones, nearest first (0: no cap) |
+| `--strict` | bool |  | Fail on warnings as well as errors (the same as --fail-on warning) |
+| `--strict-baseline` | bool |  | Also fail (exit 2) when the baseline has stale or expired entries, so fixed findings must leave it |
+| `--update-baseline` | bool |  | Record every current finding in the baseline (keeping existing reasons and dropping stale entries) and exit 0 |
+| `--verifiers` | bool |  | Also evaluate the verifiers (never a command or a model) and report them as AR9H findings |
+| `--write-baseline` | bool |  | With --external, accept every current scanner finding in scanner-baseline.json (needs --reason) and exit as if they were clean |
+
+#### `ai-rulez verifiers`
+
+Run the deterministic repo checks declared as [[verifiers]]
+
+```text
+ai-rulez verifiers [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez verifiers list
+ai-rulez verifiers run
+ai-rulez verifiers test
+ai-rulez verifiers explain no-todos
+```
+
+#### `ai-rulez verifiers calibrate`
+
+Measure how reliable an llm verifier's failures are, so it may gate
+
+```text
+ai-rulez verifiers calibrate [name...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez verifiers calibrate --estimate
+ai-rulez verifiers calibrate no-vague-wording --allow-llm --max-cost 2
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-llm` | bool |  | Send the example files to the configured model (needs allow_network in the user config) |
+| `--estimate` | bool |  | Print what would be sent and the cost bound, and call nothing |
+| `--format` | string | `text` | Output format: text, json |
+| `--max-cost` | number | `0.5` | Most the run may cost in USD (0 removes this cap; [llm] limits still apply) |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+| `--no-write` | bool |  | Print the measurement without writing the record |
+
+#### `ai-rulez verifiers explain`
+
+Explain what a verifier checks, the rule it enforces and how to fix it
+
+```text
+ai-rulez verifiers explain <name> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez verifiers explain no-todos
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+
+#### `ai-rulez verifiers list`
+
+List the declared verifiers
+
+```text
+ai-rulez verifiers list [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez verifiers list
+ai-rulez verifiers list --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+
+#### `ai-rulez verifiers run`
+
+Evaluate the verifiers and report pass or fail for each
+
+```text
+ai-rulez verifiers run [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez verifiers run
+ai-rulez verifiers run --since main
+ai-rulez verifiers run --staged --fail-on warning
+ai-rulez verifiers run --format sarif --output verifiers.sarif
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--all` | bool |  | Evaluate every file (the default) |
+| `--allow-exec` | bool |  | Let command predicates run a program (or set AI_RULEZ_VERIFIERS_ALLOW_EXEC=1); never implied by another flag |
+| `--allow-llm` | bool |  | Evaluate llm verifiers: sends the changed lines to the configured model (needs allow_network in the user config) |
+| `--estimate` | bool |  | Print which files and how many bytes llm verifiers would send and the cost bound, and call nothing |
+| `--fail-on` | string |  | Lowest failing severity: error (default), warning, info or none |
+| `--format` | string | `text` | Output format: text, json, sarif, junit |
+| `--gate-llm` | bool |  | Let a failing llm verifier of error severity fail the run when its calibration record (verifiers calibrate) is current and meets the bar; otherwise every llm verdict stays a warning |
+| `--max-cost` | number | `0.5` | Most an llm verifier run may cost in USD (0 removes this cap; [llm] limits still apply) |
+| `--name` | string list |  | Run only the named verifier (repeatable) |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+| `--output` / `-o` | string |  | Write the report to this file instead of stdout |
+| `--profile` | string |  | Active profile: sets the profile of generated_in_sync verifiers that name none, and which rules count as active (default: from config) |
+| `--role` | string |  | Active role: verifiers whose rule or skill the role does not keep are reported inactive |
+| `--rule` | string |  | Run only the verifiers that enforce this rule, skill, agent or command |
+| `--since` | string |  | Evaluate only files changed since the merge base of REV and HEAD (plus uncommitted and untracked) |
+| `--staged` | bool |  | Evaluate only staged changes |
+| `--strict` | bool |  | Also exit non-zero when a warning-severity verifier fails |
+| `--strict-applicability` | bool |  | Report a verifier whose when_changed matches no file (AR9H5) |
+
+#### `ai-rulez verifiers suggest`
+
+Propose verifiers for a rule with a model (a dry run that prints and writes nothing)
+
+```text
+ai-rulez verifiers suggest <id> [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez verifiers suggest no-todos --allow-llm --estimate
+ai-rulez verifiers suggest no-todos --allow-llm --max-proposals 3
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-llm` | bool |  | Send the rule text and a repository summary to the configured model (needs allow_network in the user config) |
+| `--estimate` | bool |  | Print what would be sent and the cost bound, and call nothing |
+| `--format` | string | `text` | Output format: text, json |
+| `--kind` | string | `rule` | What the id names: rule, skill, agent or command |
+| `--max-cost` | number | `0.5` | Most the call may cost in USD (0 removes this cap; [llm] limits still apply) |
+| `--max-proposals` | int | `5` | Most candidates to ask for and keep |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+| `--replay` | int | `10` | Try each usable proposal on the last N merged diffs (first-parent history) and report how many it would have flagged; 0 turns it off, more than 100 is capped at 100 |
+| `--write` | bool |  | Save the usable proposals to .ai-rulez/verifiers/suggested-<id>.toml (never overwrites) |
+
+#### `ai-rulez verifiers test`
+
+Run the self-test examples of the verifiers offline
+
+```text
+ai-rulez verifiers test [name...] [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez verifiers test
+ai-rulez verifiers test no-todos
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--allow-exec` | bool |  | Let command predicates of the examples run a program (or set AI_RULEZ_VERIFIERS_ALLOW_EXEC=1) |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
+
+#### `ai-rulez verify`
+
+Verify attestations, approvals and plugin provenance
+
+```text
+ai-rulez verify [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez verify --plugin
+ai-rulez verify --approvals
+ai-rulez verify --attestation
+ai-rulez verify --self
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--approvals` | bool |  | Re-check the signed and review-linked approvals that apply to the current content |
+| `--attestation` | bool |  | Verify the signed lock (ai-rulez.lock.sigstore.json) offline against the [signing] policy |
+| `--attestation-file` | string |  | With --attestation: the bundle to verify (default: next to the lock) |
+| `--bundle` | string |  | Verify the attestation of this plugin bundle directory (implies --attestation) |
+| `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
+| `--format` | string | `text` | Output format: text, json |
+| `--identity` | string |  | With --attestation: also trust this certificate identity (needs --issuer) |
+| `--if-configured` | bool |  | Skip plugin verification when no plugin authoring configuration is present |
+| `--if-generated` | bool |  | Skip plugin verification when the plugin bundle has not been generated yet |
+| `--issuer` | string |  | With --attestation: the OIDC issuer of --identity |
+| `--lock` | bool |  | With --attestation: verify the lock attestation (the default and only subject) |
+| `--no-state` | bool |  | With --attestation: do not read or update the per-user rollback state |
+| `--online` | bool |  | With --approvals: also check review-linked approvals against the forge (needs the network and a token) |
+| `--plugin` | bool |  | Verify generated plugin bundles using provenance hashes |
+| `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
+| `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
+| `--policy-max-stale` | string |  | How long a cached copy of a URL policy may stand in for an unreachable URL, for example 7d or 168h; 0 allows none (default 7d, or AI_RULEZ_POLICY_MAX_STALE) |
+| `--policy-mode` | string |  | How a repository that loosens the organization policy is treated: enforce (default, the run fails) or warn (reported as warnings, for rollout; the policy values are still enforced) |
+| `--policy-offline` | bool |  | Load a URL policy from the user cache only (also AI_RULEZ_POLICY_OFFLINE=1); a cached copy older than --policy-max-stale fails closed |
+| `--policy-require-signed` | bool |  | Refuse a policy that has no valid signature (<policy>.sigstore.json next to it); needs a trusted signer (also AI_RULEZ_POLICY_REQUIRE_SIGNED=1) |
+| `--policy-signer-identity` | string |  | Certificate identity trusted to sign the policy, with --policy-signer-issuer (keyless signing) |
+| `--policy-signer-issuer` | string |  | OIDC issuer of --policy-signer-identity |
+| `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
+| `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
+| `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
+| `--profile` | string |  | Profile used to generate the plugin bundle |
+| `--public-key` | string list |  | With --attestation: also trust this PEM public key for the lock (repeatable) |
+| `--recursive` | bool |  | Verify plugin outputs for configurations recursively |
+| `--require-provenance` | bool |  | With --bundle: require a verified SLSA provenance statement next to the bundle attestation |
+| `--sbom` | string |  | Verify the attestation of this SBOM file (implies --attestation) |
+| `--self` | bool |  | Verify this ai-rulez binary against its release's Sigstore bundle (offline) |
+| `--skill` | string |  | Verify the publisher attestation of this skill directory (implies --attestation) |
+| `--source` | string |  | With --skill: the skill source or installed skill name, to apply [[signing.trust]] entries scoped by source |
+| `--trusted-root` | string |  | With --attestation: Sigstore trusted root file (default: [signing] trusted_root, else the cache of 'ai-rulez trust update') |
+
+#### `ai-rulez version`
+
+Print the version number of ai-rulez
+
+```text
+ai-rulez version [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez version
+ai-rulez version --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
 
 ## Schema
 

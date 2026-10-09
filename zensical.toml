@@ -76,6 +76,7 @@ nav = [
   { "Reference" = [
     { "Standards Conformance" = "standards.md" },
     { "CLI Commands" = "cli.md" },
+    { "CLI Command Reference" = "cli-reference.md" },
     { "Schema" = "schema.md" },
     { "Embedding (Go API)" = "embedding.md" },
   ] },

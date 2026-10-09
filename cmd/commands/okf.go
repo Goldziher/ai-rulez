@@ -79,6 +79,9 @@ not be read.`,
 var ExportCmd = &cobra.Command{
 	Use:   "export",
 	Short: "Export ai-rulez content to another format",
+	Long: `Write the content of the project in another format. "export okf" writes rules, context,
+skills, agents and commands as an Open Knowledge Format (OKF) bundle that other tools can
+read; the bundle is deterministic, so "export okf --check" works as a CI gate.`,
 }
 
 var exportOKFCmd = &cobra.Command{
@@ -108,6 +111,10 @@ generate, so the bundle stays in sync and generate --check detects drift.`,
 var ImportCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Import content from another format into .ai-rulez/",
+	Long: `Read content in another format into the project. "import okf" takes an OKF bundle from a
+directory or a git URL (optionally "@ref" and "#subdir") and writes its concepts as rules,
+context or skills. Use --dry-run to see what would be written; existing files are kept
+unless --force is given.`,
 }
 
 var importOKFCmd = &cobra.Command{
