@@ -21138,13 +21138,23 @@ even if the run itself used them. Files are written all or nothing.
 **Isolation.** `improve pr --isolation auto|require` (or `[improve] isolation`) runs `generate`, `lock` and `eval run` in the
 worktree under the same process sandbox: writable only below the worktree's project directory, ai-rulez's own
 subdirectories of the user cache (`~/.cache/ai-rulez`, `$XDG_CACHE_HOME/ai-rulez`) and data (`$XDG_DATA_HOME/ai-rulez`)
-roots, `AI_RULEZ_HOME` and the temp directory, where they exist (the two subdirectories are created), with the network
-left on because `generate` and `lock` fetch remote includes and `eval run` calls a model. The candidate is the
+roots, `AI_RULEZ_HOME` and the temp directory, where they exist (the two subdirectories are created). The network is
+cut for `generate` and `lock`; `--allow-network` leaves it on for a project whose remote includes are not cached yet, and
+`eval run` (`--run-evals`) keeps it because it calls a model. The candidate is the
 optimizer's text, and `eval run` lets an agent act on it, so a hostile candidate cannot write outside those
 directories. `require` refuses (`AR9J7`) before the worktree is made when no backend works; `auto` warns and runs
 unconfined. The result (`isolation` in `--format json`) and the first line printed name the backend and what it enforces.
-The version control and `gh` calls are never confined: they need your credentials. A harness that keeps state elsewhere
-(`~/.claude`, say) cannot run `--run-evals` confined; use `--isolation none` for that step.
+A harness that keeps state elsewhere (`~/.claude`, say) cannot run `--run-evals` confined; use `--isolation none` for that step.
+
+**What the pull request step runs, and with what.** Nothing goes through a shell: git and `gh` start with argument vectors,
+branch, remote and path arguments are checked for option injection, and commits skip hooks (`--no-verify`).
+Every git command also runs with `core.hooksPath` pointing at the null device and `core.fsmonitor=false`, so no
+hook of the repository runs for the worktree, add, commit or push. Git gets a scrubbed environment (the base set, its
+own configuration and the commit identity variables, never a model key or `GH_TOKEN`), and only the push adds the
+transport credentials it needs (`SSH_AUTH_SOCK`, `GIT_ASKPASS`, `SSH_ASKPASS`, `GIT_SSH`, `GIT_SSH_COMMAND`; an HTTPS
+credential helper is read from git's own configuration). `gh` gets its own scrubbed environment, and the
+`ai-rulez` children get the `--env-pass` names only. Every process is bounded: 30 minutes for each `ai-rulez` step, 2 minutes
+for `gh`, and the runner's ceiling for git. The push is the only step that reaches the network without being asked.
 
 The body states what changed, the held-out table with the interval and the wins and losses, the guards that held, cost,
 egress, the environment names forwarded, the description before and after, the optimizer's own words (untrusted: inside
@@ -24370,7 +24380,7 @@ Shows the diff of an accepted run and writes it into the skill after confirmatio
 
 - `improve show <run-id>`: the report of a saved run (rounds, held-out comparison with its bootstrap interval, sibling guard, costs) and the diff; `--format json` prints `improve-show/1`.
 - `improve clean [<run-id>|--all]`: delete saved runs (`--dry-run`, `--yes`).
-- `improve pr <run-id>`: branch and pull request from an isolated worktree (`--base`, `--remote`, `--draft`, `--no-push`, `--run-evals`, `--eval-arg`, `--env-pass`, `--isolation none|auto|require`, `--allow-frontmatter`, `--allow-scripts`, `--yes`); the ai-rulez commands it runs in the worktree get a scrubbed environment, so pass the eval runner's credentials by name with `--env-pass`. Refusals carry `AR9J8`.
+- `improve pr <run-id>`: branch and pull request from an isolated worktree (`--base`, `--remote`, `--draft`, `--no-push`, `--run-evals`, `--eval-arg`, `--env-pass`, `--isolation none|auto|require`, `--allow-network`, `--allow-frontmatter`, `--allow-scripts`, `--yes`); git runs scrubbed with no hooks and only the push keeps transport credentials; the ai-rulez commands it runs in the worktree get a scrubbed environment, so pass the eval runner's credentials by name with `--env-pass`. Refusals carry `AR9J8`.
 - `improve adapters [name]`: list the bundled optimizers, or print a template (`shell`, `research`, and `repair-workflow`, a scheduled GitHub Actions workflow that repairs skills after a model change).
 
 ##### `ai-rulez search --eval <cases.yaml>`
