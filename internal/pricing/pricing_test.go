@@ -75,3 +75,13 @@ func TestVersionNamesCatalogAndFloors(t *testing.T) {
 	assert.True(t, strings.HasPrefix(Version(), "literllm-"))
 	assert.Contains(t, Version(), "+floors-")
 }
+
+// A paid model listed at 0/0 would let any amount of use through a cost limit; it is unknown instead.
+func TestZeroPricedListingsAreUnknown(t *testing.T) {
+	for _, name := range []string{"gpt-image-1", "veo-3.1-generate-preview"} {
+		_, known := Lookup(name)
+		assert.False(t, known, name)
+		_, known = Cost(name, Tokens{Prompt: 1_000_000, Completion: 1_000_000})
+		assert.False(t, known, name)
+	}
+}
