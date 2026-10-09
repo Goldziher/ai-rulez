@@ -2,6 +2,7 @@ package gitutil
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"sync"
@@ -53,18 +54,22 @@ func memoFrom(ctx context.Context) *Memo {
 	return m
 }
 
-// memoRunner is the runner as a map key. A runner whose dynamic type cannot be
-// compared (a func adapter) has no identity and shares one key with the others like it.
-func (g Git) memoRunner() runner.Runner {
-	r := g.runner()
-	if t := reflect.TypeOf(r); t == nil || !t.Comparable() {
-		return nil
+// memoRunner returns the runner as a map key. ok is false for a runner without
+// an identity: a func adapter, or a value holding something that cannot be
+// compared (using it as a key would panic, or make unrelated runners share an
+// answer). Such a runner's questions are never memoised.
+func (g Git) memoRunner() (r runner.Runner, ok bool) {
+	r = g.runner()
+	if !reflect.ValueOf(r).Comparable() {
+		return nil, false
 	}
-	return r
+	return r, true
 }
 
 // revParse runs `git rev-parse args...` in dir, through the context's Memo when
-// it has one. Failures are remembered too: "not a repository" is an answer.
+// it has one. Failures are remembered too: "not a repository" is an answer. A
+// run cut short by the context's own cancellation or deadline is not: it says
+// nothing about the repository.
 func (g Git) revParse(ctx context.Context, dir string, args ...string) ([]byte, error) {
 	memo := memoFrom(ctx)
 	run := func() ([]byte, error) {
@@ -74,7 +79,11 @@ func (g Git) revParse(ctx context.Context, dir string, args ...string) ([]byte, 
 	if memo == nil {
 		return run()
 	}
-	key := memoKey{dir: dir, args: strings.Join(args, "\x00"), runner: g.memoRunner()}
+	r, ok := g.memoRunner()
+	if !ok {
+		return run()
+	}
+	key := memoKey{dir: dir, args: strings.Join(args, "\x00"), runner: r}
 	memo.mu.Lock()
 	v, ok := memo.m[key]
 	memo.mu.Unlock()
@@ -82,6 +91,9 @@ func (g Git) revParse(ctx context.Context, dir string, args ...string) ([]byte, 
 		return v.out, v.err
 	}
 	out, err := run()
+	if ctx.Err() != nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return out, err
+	}
 	memo.mu.Lock()
 	memo.m[key] = memoVal{out, err}
 	memo.mu.Unlock()

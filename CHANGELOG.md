@@ -303,6 +303,14 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 ### Fixed
 
 - **The git process cleanup no longer reads the environment of every process on the machine**: a short-lived run now records its root's start time, so the search for detached helpers covers only processes started since the command (10 ms to 0.03 ms per spawn on 850 processes, same guarantee).
+- **`validate` on an OKF bundle no longer says "Configuration is valid" and then exits 2.** The OKF verdict comes first, and with `--format json` a failing run writes the OKF document on stdout (or `--output`) instead of nothing. A rule or context file with no frontmatter block is plain markdown that `generate` accepts, so `validate` reports it as an `AR9B1` warning rather than an error.
+- **`validate -q`** no longer prints the OKF summary line or the `strict validation:` totals.
+- **`init --force` restores the previous configuration directory** when creating the new one fails, instead of leaving only the `.bak-<timestamp>` copy.
+- **`config.NativeContent` uses the shared frontmatter splitter**, so a BOM, a fence with trailing spaces and CRLF are read as the loader reads them.
+- **Generated header hashes keep the file's line ending**: a CRLF file gets CRLF `Content-Hash` lines, never a mix.
+- **`gitutil.Memo`** no longer panics on a runner that cannot be a map key, no longer shares answers between func-adapter runners, and does not remember a cancelled or timed-out question.
+- **Path containment for shared outputs compares like the file system** (case-insensitively on Windows), and the CRUD name checks reject the Windows device names `CON`, `PRN`, `AUX`, `NUL`, `COM1`-`COM9` and `LPT1`-`LPT9`.
+- **A lazily compiled regular expression that does not parse now fails the test run**: every `sync.OnceValue` regexp accessor is called in a test, and `tests/archlint` enforces it.
 - **The default `ai-rulez mcp` answers a request sent before `initialize` with `-32600`**, like `--serve-skills`, instead of error code 0.
 - **`validate --offline`** skips fetching remote includes, as `generate --offline` does, so `validate --config-only` works with an unreachable remote include.
 - **`migrate v5` keeps CRLF line endings** in `config.toml`; YAML frontmatter after a UTF-8 byte order mark is parsed as frontmatter.
