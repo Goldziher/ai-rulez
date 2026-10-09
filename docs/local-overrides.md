@@ -265,7 +265,7 @@ ai-rulez local show --format json
   `<redacted>`. `--reveal` prints everything and may print secrets.
 - **Safety.** Every write takes a file lock, ensures the ignore entries first, and validates the merged
   config. If validation fails the previous file is restored.
-- **Location.** The subcommands honour the global `--config` and `--config-dir` / `-n`.
+- **Location.** The subcommands honour the global `--config` and `--config-dir`.
 
 `profile list`, `include list` and `skill list` show the shared layer only and print how many local
 entries `config.local.*` adds. Use `local show` to see them.

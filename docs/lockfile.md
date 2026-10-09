@@ -177,7 +177,7 @@ joined by `+` (`role:backend+static`). The default view has no `view` key, so a 
 flags writes the same lock as before. A plain `ai-rulez lock` pins the default view, every role and every view the
 lock already records; `lock --role`, `--profile`, `--targets`, `--include-static` and `--source` add the view they name. The
 server and `lock --check` read the pins of the view they run with. A pin without a `view` also covers every view
-(locks written before views existed), but its digest must still match. `lock --strict` fails (exit 2, nothing written) when the security scan
+(locks written before views existed), but its digest must still match. `lock --refuse-findings` fails (exit 2, nothing written) when the security scan
 refuses a served skill; without it the skill is left unpinned, the rest is pinned and `lock` exits 3.
 A plugin source with no preset (a `[plugin]` configuration such as a marketplace member, whose skills ship in the
 bundles `generate --plugin` writes) has nothing to serve: `lock` pins its content and no served skills, and `lock -r`
