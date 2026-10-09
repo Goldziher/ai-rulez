@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // OKF (Open Knowledge Format) frontmatter keys the loader owns. A content file
@@ -133,17 +135,16 @@ func (s *contentScanner) isOKFListing(filePath string) bool {
 // and blank lines.
 func IsOKFListing(data []byte) bool {
 	text := strings.TrimPrefix(string(data), "\xef\xbb\xbf")
-	if strings.HasPrefix(text, "---\n") {
-		end := strings.Index(text[4:], "\n---")
-		if end < 0 {
+	if block := frontmatter.SplitString(text); block.Present {
+		if !block.Closed {
 			return false
 		}
-		for _, line := range strings.Split(text[4:4+end], "\n") {
+		for _, line := range strings.Split(block.Raw, "\n") {
 			if line = strings.TrimSpace(line); line != "" && !strings.HasPrefix(line, "okf_version:") {
 				return false
 			}
 		}
-		text = text[4+end+4:]
+		text = block.Body
 	}
 	listed := false
 	for _, line := range strings.Split(text, "\n") {
