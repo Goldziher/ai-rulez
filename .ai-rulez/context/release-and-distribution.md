@@ -1,12 +1,18 @@
 ---
-priority: high
-summary: Multi-channel distribution (Go, npm, PyPI, Homebrew) with aligned versioning.
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
-  - AGENTS.md
-  - .hermes.md
+type: Concept
+title: Release And Distribution
+x-ai-rulez:
+  kind: context
+  id: release-and-distribution
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
+      - AGENTS.md
+      - .hermes.md
+    summary: Multi-channel distribution (Go, npm, PyPI, Homebrew) with aligned versioning.
 ---
 
 # Release and Distribution

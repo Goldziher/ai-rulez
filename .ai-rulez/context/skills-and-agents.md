@@ -1,12 +1,18 @@
 ---
-priority: medium
-summary: Specialized skills for focused task guidance and tool-specific agent definitions.
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
-  - AGENTS.md
-  - .hermes.md
+type: Concept
+title: Skills And Agents
+x-ai-rulez:
+  kind: context
+  id: skills-and-agents
+  metadata:
+    priority: medium
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
+      - AGENTS.md
+      - .hermes.md
+    summary: Specialized skills for focused task guidance and tool-specific agent definitions.
 ---
 
 # Skills and Agents

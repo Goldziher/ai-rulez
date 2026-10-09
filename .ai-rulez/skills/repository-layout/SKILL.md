@@ -1,9 +1,15 @@
 ---
-description: "Use when you are unsure where code, docs, schemas, wrappers, or tests live in this repository, or need to pick the right directory before adding or moving files."
-priority: high
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
+type: Playbook
+title: Repository Layout
+description: Use when you are unsure where code, docs, schemas, wrappers, or tests live in this repository, or need to pick the right directory before adding or moving files.
+x-ai-rulez:
+  kind: skill
+  id: repository-layout
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
 ---
 
 # Repository Layout

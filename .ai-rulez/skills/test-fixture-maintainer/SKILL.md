@@ -1,10 +1,16 @@
 ---
-description: "Use when writing or fixing tests, updating fixtures under tests/, or adding integration or e2e coverage for generator, migration, CLI flags, or profile behavior."
-priority: high
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - GEMINI.md
+type: Playbook
+title: Test Fixture Maintainer
+description: Use when writing or fixing tests, updating fixtures under tests/, or adding integration or e2e coverage for generator, migration, CLI flags, or profile behavior.
+x-ai-rulez:
+  kind: skill
+  id: test-fixture-maintainer
+  metadata:
+    priority: high
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - GEMINI.md
 ---
 
 # Test and Fixture Maintainer

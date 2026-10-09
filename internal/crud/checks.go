@@ -226,7 +226,7 @@ func BuildCheckContent(body, description, severity string, tools, targets []stri
 // replaces only the body and the given fields are set on the existing
 // frontmatter; supplying neither content nor a field is an error, since there is
 // nothing to change.
-func (op *OperatorImpl) UpdateCheck(_ context.Context, domain, name, content string, contentGiven bool, f CheckFields) (*FileResult, error) {
+func (op *OperatorImpl) UpdateCheck(ctx context.Context, domain, name, content string, contentGiven bool, f CheckFields) (*FileResult, error) {
 	if err := ValidateCheckName(name); err != nil {
 		return nil, err
 	}
@@ -251,11 +251,11 @@ func (op *OperatorImpl) UpdateCheck(_ context.Context, domain, name, content str
 	if err != nil {
 		return nil, err
 	}
-	merged, err := MergeCheckContent(existing, content, contentGiven, f)
+	merged, err := MergeCheckContent(config.NativeContent(existing), content, contentGiven, f)
 	if err != nil {
 		return nil, fmt.Errorf("update check %q: %w", name, err)
 	}
-	if err := op.filesMgr.WriteFileOverwrite(filePath, EnsureTrailingNewline(merged)); err != nil {
+	if err := op.overwriteConcept(ctx, filePath, ContentTypeChecks, domain, name, EnsureTrailingNewline(merged), existing); err != nil {
 		return nil, err
 	}
 	return &FileResult{Name: name, FullPath: filePath, Type: ContentTypeChecks, Domain: domain}, nil
