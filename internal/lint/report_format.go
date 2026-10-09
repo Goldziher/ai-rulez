@@ -44,13 +44,16 @@ type WriteOptions struct {
 	Version string
 	// FailOn is the threshold JUnit uses to tell a failure from a skipped note.
 	FailOn string
+	// Quiet drops the text report's summary lines (the totals and the per-code
+	// tally); findings, ratchet and baseline lines stay.
+	Quiet bool
 }
 
 // Write prints c in the named format.
 func Write(w io.Writer, format string, c Combined, o WriteOptions) error {
 	switch format {
 	case "", FormatText:
-		return WriteText(w, c)
+		return writeText(w, c, o.Quiet)
 	case FormatJSON:
 		return WriteJSON(w, c)
 	case FormatSARIF:

@@ -1060,7 +1060,7 @@ A later entry of `inputRoots` overrides a same-named item of an earlier one (`ap
 
 Initialize a new directory-based configuration. It writes `.ai-rulez/config.toml` and an OKF bundle around it: example concepts with `type`, `title` and `x-ai-rulez` frontmatter, and an `index.md` per directory (the root one names `okf_version`).
 
-An existing configuration directory is never deleted. `init` refuses unless you pass `--force` (or answer yes at the prompt), and then moves the old directory to `<dir>.bak-<timestamp>` first. `--yes` only skips prompts; it does not replace an existing directory.
+An existing configuration directory is never deleted. `init` refuses unless you pass `--force` (or answer yes at the prompt), and then moves the old directory to `<dir>.bak-<timestamp>` first; if creating the new one fails, the old directory is moved back. `--yes` only skips prompts; it does not replace an existing directory.
 
 **Syntax:**
 
@@ -1967,6 +1967,8 @@ ai-rulez validate [config-path] [flags]
 | `--debug`             | boolean | Enable debug output                                  |
 
 Exit codes: `0` valid, `1` the configuration is invalid or could not be loaded, `2` findings at or above `--fail-on`.
+
+When the content tree is an OKF bundle (a root `index.md`, see `migrate okf`), `validate` also runs the OKF checks. "Configuration is valid" is printed only after they pass, so a run that exits `2` never says it; with `--format json` (or `--output`) that run writes the OKF document (`bundle`, `okf_spec`, `concepts`, `findings`) instead of the lint report, so a JSON consumer always gets a document. A rule or context file with no frontmatter block at all is plain native markdown: `generate` accepts it, so `validate` reports it as an `AR9B1` warning (run `migrate okf` to add the `type`) and `generate --check` stays clean; a frontmatter block without a `type`, or one that does not parse, is still an error. `-q` drops the summary lines (`N concepts, ...` and `strict validation: ...`); findings stay.
 
 **Examples:**
 

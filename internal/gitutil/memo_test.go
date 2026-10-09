@@ -13,12 +13,18 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
+// countingRunner counts the calls it forwards to a real process. A pointer is
+// comparable, so the Memo can tell it from any other runner.
+type countingRunner struct{ n atomic.Int64 }
+
+func (c *countingRunner) Run(ctx context.Context, spec runner.Spec) runner.Result {
+	c.n.Add(1)
+	return runner.Run(ctx, spec)
+}
+
 func countingGit() (Git, *atomic.Int64) {
-	var n atomic.Int64
-	return New(runner.Func(func(ctx context.Context, spec runner.Spec) runner.Result {
-		n.Add(1)
-		return runner.Run(ctx, spec)
-	})), &n
+	c := &countingRunner{}
+	return New(c), &c.n
 }
 
 func TestMemoAnswersRepeatedStructuralQuestionsWithOneCall(t *testing.T) {
@@ -87,4 +93,63 @@ func TestMemoDoesNotShareAnswersBetweenRunners(t *testing.T) {
 	assert.True(t, yes.IsRepoContext(ctx, "/repo"))
 	assert.False(t, no.IsRepoContext(ctx, "/repo"), "another runner is another repository as far as the memo knows")
 	assert.True(t, yes.IsRepoContext(ctx, "/repo"), "and the first one still has its own answer")
+}
+
+// opaqueRunner is comparable by type but holds an interface whose dynamic value
+// (a slice) is not: using it as a map key panics at run time.
+type opaqueRunner struct {
+	state any
+	calls *atomic.Int64
+}
+
+func (o opaqueRunner) Run(context.Context, runner.Spec) runner.Result {
+	o.calls.Add(1)
+	return runner.Result{Status: runner.StatusOK, Stdout: []byte("true\n")}
+}
+
+func TestMemoDoesNotPanicOnAnUncomparableRunner(t *testing.T) {
+	var calls atomic.Int64
+	g := New(opaqueRunner{state: []string{"x"}, calls: &calls})
+	ctx := WithMemo(t.Context())
+
+	assert.NotPanics(t, func() {
+		assert.True(t, g.IsRepoContext(ctx, "/repo"))
+		assert.True(t, g.IsRepoContext(ctx, "/repo"))
+	})
+	assert.Equal(t, int64(2), calls.Load(), "a runner without an identity is never memoised")
+}
+
+func TestMemoDoesNotShareAnswersBetweenFuncRunners(t *testing.T) {
+	answering := func(out string) Git {
+		return New(runner.Func(func(context.Context, runner.Spec) runner.Result {
+			return runner.Result{Status: runner.StatusOK, Stdout: []byte(out)}
+		}))
+	}
+	yes, no := answering("true\n"), answering("")
+	ctx := WithMemo(t.Context())
+
+	assert.True(t, yes.IsRepoContext(ctx, "/repo"))
+	assert.False(t, no.IsRepoContext(ctx, "/repo"), "two func adapters are two runners")
+	assert.True(t, yes.IsRepoContext(ctx, "/repo"))
+}
+
+func TestMemoDoesNotRememberACancelledQuestion(t *testing.T) {
+	g := New(&ctxRunner{})
+	memoCtx := WithMemo(t.Context())
+
+	canceled, cancel := context.WithCancel(memoCtx)
+	cancel()
+	assert.False(t, g.IsRepoContext(canceled, "/repo"), "a canceled run cannot answer")
+
+	assert.True(t, g.IsRepoContext(memoCtx, "/repo"), "the cancellation was not remembered for the live context")
+}
+
+// ctxRunner fails like a runner does when its context ends, and answers otherwise.
+type ctxRunner struct{}
+
+func (*ctxRunner) Run(ctx context.Context, _ runner.Spec) runner.Result {
+	if err := ctx.Err(); err != nil {
+		return runner.Result{Status: runner.StatusError, Err: err}
+	}
+	return runner.Result{Status: runner.StatusOK, Stdout: []byte("true\n")}
 }
