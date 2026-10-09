@@ -137,9 +137,9 @@ func TestMemoDoesNotRememberACancelledQuestion(t *testing.T) {
 	g := New(&ctxRunner{})
 	memoCtx := WithMemo(t.Context())
 
-	cancelled, cancel := context.WithCancel(memoCtx)
+	canceled, cancel := context.WithCancel(memoCtx)
 	cancel()
-	assert.False(t, g.IsRepoContext(cancelled, "/repo"), "a cancelled run cannot answer")
+	assert.False(t, g.IsRepoContext(canceled, "/repo"), "a canceled run cannot answer")
 
 	assert.True(t, g.IsRepoContext(memoCtx, "/repo"), "the cancellation was not remembered for the live context")
 }

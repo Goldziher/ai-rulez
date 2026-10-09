@@ -36,7 +36,7 @@ func TestEveryLazyRegexAccessorIsCalledInATest(t *testing.T) {
 	}
 }
 
-// lazyRegexVars lists the package-level vars initialised with
+// lazyRegexVars lists the package-level vars initialized with
 // sync.OnceValue(func() *regexp.Regexp {...}).
 func lazyRegexVars(file *ast.File) []string {
 	var out []string
