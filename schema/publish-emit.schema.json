@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/publish-emit.schema.json",
+  "title": "ai-rulez publish emit",
+  "description": "Output of `ai-rulez publish emit <emitter> --format json`: the files the emitter wrote.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "emitter",
+    "out",
+    "files"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "emitter": {
+      "type": "string"
+    },
+    "out": {
+      "type": "string"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

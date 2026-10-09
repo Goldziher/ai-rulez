@@ -40,7 +40,7 @@ Flags:
 - `--env, -e KEY=VALUE` — MCP env override; repeatable
 - `--env-file, -E <path>` — Dotenv file for MCP placeholders; repeatable
 - `--no-local` — Ignore the machine-local `config.local.*` overlay and `local/` content
-- `--strict` — Fail on unknown or invalid config keys instead of warning (env `AI_RULEZ_STRICT=1`)
+- `--strict-config` — Fail on unknown or invalid config keys instead of warning (env `AI_RULEZ_STRICT=1`)
 - `--yes, -y` — With `--user`, skip the confirmation; always, silence the summary of new hook and MCP commands (env `AI_RULEZ_ACK_COMMANDS=1`)
 - `--plugin` — Generate distributable plugin bundles and a marketplace index from the `[plugin]` block
 - `--if-configured` — With `--plugin`, skip successfully when plugin authoring is not configured
@@ -82,7 +82,7 @@ Exits 2 on errors (and warnings with `--strict`), 1 when the configuration canno
 
 ### `ai-rulez verify`
 
-Check generated files against their `Content-Hash` offline (`--plugin` for plugin bundles).
+Verify signatures and provenance: `--attestation`, `--approvals`, `--self`, `--plugin` (plugin bundles). Drift is `generate --check`; a bare `verify` exits 1 with that pointer.
 
 ### `ai-rulez export okf` / `import okf` / `okf validate`
 
@@ -167,10 +167,10 @@ Commands that print JSON take `--format text|json`; `--json` was removed in v5.
 ## Roles, Lock and Catalog
 
 - `ai-rulez roles list|show <name>|resolve <name> [--format json]` — Inspect `[[roles]]`; `list --format json` is the `roles.json` manifest
-- `ai-rulez lock [name...]` — Pin remote includes, installed skills, skill sources, authored content and outputs in `ai-rulez.lock`. Flags: `--check` (offline, exit 2 and names each difference; exit 1 with no lock file), `--diff`, `--subject [--output <file>]`, `--outdated [--fail-on-outdated]`, `--content-only`, `--format text|json` (with `--check`, `--diff`, `--outdated`, `--subject`), `--kind include|skill|source|served`, `--profile`, `--role`, `--include-static`, `--source`, `--strict`, `--recursive`. Exit `3`: served skills left unpinned by the security scan
+- `ai-rulez lock [name...]` — Pin remote includes, installed skills, skill sources, authored content and outputs in `ai-rulez.lock`. Flags: `--check` (offline, exit 2 and names each difference; exit 1 with no lock file), `--diff`, `--subject [--output <file>]`, `--outdated [--fail-on-outdated]`, `--content-only`, `--format text|json` (with `--check`, `--diff`, `--outdated`, `--subject`), `--kind include|skill|source|served`, `--profile`, `--role`, `--include-static`, `--source`, `--refuse-findings`, `--recursive`. Exit `3`: served skills left unpinned by the security scan
 - `ai-rulez update [name...] [--dry-run] [--allow-downgrade] [--accept-moved-tag] [--kind include|skill|source] [--format json]` — Move `version` range pins to the newest allowed tag
 - `ai-rulez catalog [--format json] [--schema-version 1|2]` — Items with owner, version, tokens, roles and lock status; `--html <dir>` writes a static site (`--role`, `--include-excerpt`, `--indexable`, `--clean`, `--base-title`, `--allow-findings AR001`)
-- `ai-rulez sbom [--format cyclonedx] [--online] [-o <file>]` — CycloneDX 1.6 bill of materials
+- `ai-rulez sbom [--type cyclonedx] [--online] [-o <file>]` — CycloneDX 1.6 bill of materials
 - `ai-rulez tokens [--role <name>] [--by-role] [--budget <n>] [--compare-profiles <p>] [--tokenizer ...] [--format json]` — Prompt-token surface per runtime; `ai-rulez cost [--target <preset>] [--top <n>] [--budget <n>] [--format text|json|markdown]` names the biggest offenders
 
 ## Verification, Search and Evals

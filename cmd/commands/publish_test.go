@@ -733,10 +733,15 @@ func TestPublishVerify_ReportsATamperedDist(t *testing.T) {
 
 	// Assert
 	requirePublishError(t, err, publish.CodeVerify, publish.ExitGate)
-	var res publish.VerifyResult
-	require.NoError(t, json.Unmarshal(out.Bytes(), &res))
-	require.NotEmpty(t, res.Problems)
-	assert.Equal(t, "ai-rulez.lock", res.Problems[0].Path)
+	var doc struct {
+		SchemaVersion int `json:"schema_version"`
+		Results       []publish.VerifyResult
+	}
+	require.NoError(t, json.Unmarshal(out.Bytes(), &doc))
+	assert.Equal(t, 1, doc.SchemaVersion)
+	require.Len(t, doc.Results, 1)
+	require.NotEmpty(t, doc.Results[0].Problems)
+	assert.Equal(t, "ai-rulez.lock", doc.Results[0].Problems[0].Path)
 }
 
 func TestPublishVerify_MissingDistIsExit1(t *testing.T) {

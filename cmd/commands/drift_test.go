@@ -11,18 +11,14 @@ import (
 func TestRunDriftCheck_ExitCodes(t *testing.T) {
 	tests := []struct {
 		name      string
-		mode      driftMode
 		recursive bool
 		edit      string // file (relative to the workspace) to tamper with
 		want      int
 	}{
-		{name: "render clean", mode: driftRender, want: 0},
-		{name: "render recursive clean", mode: driftRender, recursive: true, want: 0},
-		{name: "manifest clean", mode: driftManifest, want: 0},
-		{name: "render detects an edit", mode: driftRender, edit: "a/CLAUDE.md", want: exitDrift},
-		{name: "manifest detects an edit", mode: driftManifest, edit: "a/CLAUDE.md", want: exitDrift},
-		{name: "recursive finds drift in a nested root", mode: driftRender, recursive: true, edit: "b/CLAUDE.md", want: exitDrift},
-		{name: "recursive manifest finds drift in a nested root", mode: driftManifest, recursive: true, edit: "b/CLAUDE.md", want: exitDrift},
+		{name: "clean", want: 0},
+		{name: "recursive clean", recursive: true, want: 0},
+		{name: "detects an edit", edit: "a/CLAUDE.md", want: exitDrift},
+		{name: "recursive finds drift in a nested root", recursive: true, edit: "b/CLAUDE.md", want: exitDrift},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -45,7 +41,7 @@ func TestRunDriftCheck_ExitCodes(t *testing.T) {
 			if !tt.recursive {
 				args = []string{filepath.Join(root, "a", ".ai-rulez", "config.toml")}
 			}
-			if got := runDriftCheck(args, tt.recursive, tt.mode); got != tt.want {
+			if got := runDriftCheck(args, tt.recursive); got != tt.want {
 				t.Errorf("exit code = %d, want %d", got, tt.want)
 			}
 		})
@@ -54,7 +50,7 @@ func TestRunDriftCheck_ExitCodes(t *testing.T) {
 
 func TestRunDriftCheck_BrokenRootIsAnError(t *testing.T) {
 	twoRoots(t, brokenRootConfig)
-	if got := runDriftCheck(nil, true, driftRender); got != 1 {
+	if got := runDriftCheck(nil, true); got != 1 {
 		t.Errorf("exit code = %d, want 1 for an unloadable root", got)
 	}
 }

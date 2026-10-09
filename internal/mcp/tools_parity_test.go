@@ -185,7 +185,7 @@ func TestSBOMIsReproducibleAndReadOnly(t *testing.T) {
 
 	assert.Equal(t, textOfResult(t, first), textOfResult(t, second), "byte-identical across runs")
 	assert.Equal(t, "CycloneDX", structured(t, first)["bomFormat"])
-	spdx := call(t, session, "sbom", map[string]any{"working_directory": dir, "format": "spdx-json"})
+	spdx := call(t, session, "sbom", map[string]any{"working_directory": dir, "type": "spdx-json"})
 	require.False(t, spdx.IsError, textOfResult(t, spdx))
 	assert.NotEmpty(t, structured(t, spdx)["spdxVersion"])
 	assert.NoFileExists(t, filepath.Join(dir, ".ai-rulez", "ai-rulez.lock"), "sbom must not write the lock")

@@ -81,7 +81,7 @@ func TestUpdate_LockResolvesAndKeepsThenUpdateMoves(t *testing.T) {
 	// --dry-run reports the move and writes nothing.
 	updateDryRun, updateFormat = true, formatJSON
 	var code int
-	stdout := captureStdout(t, func() { code = runUpdate(nil) })
+	stdout := captureStdout(t, func() { code = reported(runUpdate(nil)) })
 	require.Equal(t, 0, code)
 	validateAgainst(t, "../../schema/update.schema.json", []byte(stdout))
 	var dry updateReport
@@ -95,7 +95,7 @@ func TestUpdate_LockResolvesAndKeepsThenUpdateMoves(t *testing.T) {
 
 	// The real update writes the lock, deterministically.
 	updateDryRun, updateFormat = false, ""
-	_, _ = capture(t, func() { code = runUpdate(nil) })
+	_, _ = capture(t, func() { code = reported(runUpdate(nil)) })
 	require.Equal(t, 0, code)
 	moved := f.lock().Find(lockfile.KindInclude, "shared")
 	assert.Equal(t, "v1.2.0", moved.Tag)
@@ -103,7 +103,7 @@ func TestUpdate_LockResolvesAndKeepsThenUpdateMoves(t *testing.T) {
 	assert.NotEqual(t, first.Digest, moved.Digest)
 
 	// Nothing left to do.
-	stdout, _ = capture(t, func() { code = runUpdate(nil) })
+	stdout, _ = capture(t, func() { code = reported(runUpdate(nil)) })
 	assert.Equal(t, 0, code)
 	assert.Contains(t, stdout, "up to date")
 }
@@ -114,7 +114,7 @@ func TestUpdate_OutdatedReportsAndGates(t *testing.T) {
 
 	lockOutdated, lockFormat = true, formatJSON
 	var code int
-	stdout := captureStdout(t, func() { code = outdatedAt("", "", nil) })
+	stdout := captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
 
 	assert.Equal(t, 0, code, "an allowed update does not fail by default")
 	validateAgainst(t, "../../schema/lock-outdated.schema.json", []byte(stdout))
@@ -129,7 +129,7 @@ func TestUpdate_OutdatedReportsAndGates(t *testing.T) {
 	assert.True(t, row.MajorAvailable)
 
 	lockFailOnOutdated = true
-	_ = captureStdout(t, func() { code = outdatedAt("", "", nil) })
+	_ = captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
 	assert.Equal(t, exitDrift, code, "--fail-on-outdated exits 2 on an allowed update")
 }
 
@@ -142,13 +142,13 @@ func TestUpdate_AMovedTagIsRefusedUntilAccepted(t *testing.T) {
 	// outdated flags it and exits 2 even without --fail-on-outdated.
 	lockOutdated, lockFormat = true, formatJSON
 	var code int
-	stdout := captureStdout(t, func() { code = outdatedAt("", "", nil) })
+	stdout := captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
 	assert.Equal(t, exitDrift, code)
 	assert.Contains(t, stdout, `"code": "AR732"`)
 	lockOutdated, lockFormat = false, ""
 
 	// update refuses and writes nothing.
-	_, stderr := capture(t, func() { code = runUpdate(nil) })
+	_, stderr := capture(t, func() { code = reported(runUpdate(nil)) })
 	assert.Equal(t, exitDrift, code)
 	assert.Contains(t, stderr, "AR732")
 	assert.Equal(t, was, f.lock().Find(lockfile.KindInclude, "shared").Commit)
@@ -160,7 +160,7 @@ func TestUpdate_AMovedTagIsRefusedUntilAccepted(t *testing.T) {
 
 	// --accept-moved-tag re-pins the tag at its new commit.
 	updateAcceptMoved = true
-	_, _ = capture(t, func() { code = runUpdate(nil) })
+	_, _ = capture(t, func() { code = reported(runUpdate(nil)) })
 	require.Equal(t, 0, code)
 	assert.Equal(t, evil, f.lock().Find(lockfile.KindInclude, "shared").Commit)
 }
@@ -170,7 +170,7 @@ func TestUpdate_DowngradeNeedsAFlag(t *testing.T) {
 	f.repo.DeleteTag("v1.1.0") // a truncated tag list: v1.0.0 is now the newest allowed tag
 
 	var code int
-	stdout, _ := capture(t, func() { code = runUpdate(nil) })
+	stdout, _ := capture(t, func() { code = reported(runUpdate(nil)) })
 	require.Equal(t, 0, code)
 	assert.Contains(t, stdout, "--allow-downgrade")
 	assert.Equal(t, "v1.1.0", f.lock().Find(lockfile.KindInclude, "shared").Tag)
@@ -181,7 +181,7 @@ func TestUpdate_UnsatisfiableConstraintIsRefused(t *testing.T) {
 	f.writeVersion(t, `version = "^7"`)
 
 	var code int
-	_, stderr := capture(t, func() { code = runUpdate(nil) })
+	_, stderr := capture(t, func() { code = reported(runUpdate(nil)) })
 
 	assert.Equal(t, exitDrift, code)
 	assert.Contains(t, stderr, "AR730")
@@ -210,7 +210,7 @@ func TestUpdate_UnknownNamesKindsAndOffline(t *testing.T) {
 			tt.setup()
 			var code int
 
-			_, stderr := capture(t, func() { code = runUpdate(tt.args) })
+			_, stderr := capture(t, func() { code = reported(runUpdate(tt.args)) })
 
 			assert.Equal(t, 1, code)
 			assert.Contains(t, stderr, tt.want)
@@ -223,7 +223,7 @@ func TestLockOutdated_OfflineRefuses(t *testing.T) {
 	lockOutdated, lockOffline = true, true
 
 	var code int
-	_, stderr := capture(t, func() { code = outdatedAt("", "", nil) })
+	_, stderr := capture(t, func() { code = reported(outdatedAt("", "", nil)) })
 
 	assert.Equal(t, 1, code)
 	assert.Contains(t, stderr, "lock --check")
@@ -235,7 +235,7 @@ func TestUpdate_AllowDowngradeMovesToTheLowerTag(t *testing.T) {
 	updateAllowDowngrade = true
 
 	var code int
-	_, _ = capture(t, func() { code = runUpdate(nil) })
+	_, _ = capture(t, func() { code = reported(runUpdate(nil)) })
 
 	require.Equal(t, 0, code)
 	assert.Equal(t, "v1.0.0", f.lock().Find(lockfile.KindInclude, "shared").Tag)
@@ -277,7 +277,7 @@ func TestLockOutdated_UnknownNameIsAnError(t *testing.T) {
 	lockOutdated, lockFormat = true, ""
 
 	var code int
-	_, stderr := capture(t, func() { code = outdatedAt("", "", []string{"nope"}) })
+	_, stderr := capture(t, func() { code = reported(outdatedAt("", "", []string{"nope"})) })
 
 	assert.Equal(t, 1, code)
 	assert.Contains(t, stderr, "not a remote include")

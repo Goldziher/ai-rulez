@@ -188,7 +188,7 @@ const costTopDefault = 10
 // without the machine-local overlay, as the command does by default.
 func SBOMHandler(version string) func(context.Context, *ToolRequest) (*sdkmcp.CallToolResult, error) {
 	return func(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-		format, err := sbom.NormalizeFormat(request.GetString("format", ""))
+		format, err := sbom.NormalizeFormat(request.GetString("type", ""))
 		if err != nil {
 			return ToolError(err)
 		}

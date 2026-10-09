@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/roles-show.schema.json",
+  "title": "ai-rulez roles show",
+  "description": "Output of `ai-rulez roles show <name> --format json`: the declared role, the role after inheritance and the inheritance chain.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "declared",
+    "effective",
+    "chain",
+    "problems"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "declared": {
+      "type": "object"
+    },
+    "effective": {
+      "type": "object"
+    },
+    "chain": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "problems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "role",
+          "message"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

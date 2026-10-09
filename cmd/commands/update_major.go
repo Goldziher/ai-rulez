@@ -28,16 +28,15 @@ type majorItem struct {
 
 // majorUpdate is `update --major`: it lists the sources that have a newer major
 // version than their constraint allows and, with --write-config, takes it.
-func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs []versionSrc, rows []tagresolve.Row, report *updateReport) int {
+func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs []versionSrc, rows []tagresolve.Row, report *updateReport) error {
 	report.Major = append(report.Major, majorItems(srcs, rows)...)
 	sortMajor(report.Major)
 	if len(report.Major) == 0 || !updateWriteConfig || updateDryRun {
-		return finishUpdate(report, 0)
+		return finishUpdate(report, nil)
 	}
 	original, mode, err := patchMajor(cfg, report.Major)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	rollback := func() {
 		if rerr := safefs.WriteFileAtomicMode(filepath.Join(cfg.ConfigDir, configFileTOML), original, mode); rerr != nil {
@@ -51,8 +50,7 @@ func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs [
 	fresh, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
 	if err != nil {
 		rollback()
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	names := map[string]bool{}
 	for _, m := range report.Major {
@@ -62,14 +60,13 @@ func majorUpdate(path string, cfg *config.Config, current *lockfile.File, srcs [
 	rows2, err := evaluateSources(cmdContext(), srcs2, current)
 	if err != nil {
 		rollback()
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
-	code := planAndApply(path, fresh, current, srcs2, rows2, report)
-	if code != 0 {
+	applied := planAndApply(path, fresh, current, srcs2, rows2, report)
+	if applied != nil {
 		rollback() // before the report is printed, so it never claims a write that was undone
 	}
-	return finishUpdate(report, code)
+	return finishUpdate(report, applied)
 }
 
 // majorItems lists the sources whose latest tag is a newer major than their

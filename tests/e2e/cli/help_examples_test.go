@@ -55,7 +55,6 @@ func TestCLI_ReadOnlyHelpExamplesRun(t *testing.T) {
 		"ai-rulez lock --check":                   true,
 		"ai-rulez lock --diff":                    true,
 		"ai-rulez lock --content-only":            true,
-		"ai-rulez verify":                         true,
 		"ai-rulez approve --list":                 true,
 		"ai-rulez convert --list":                 true,
 		"ai-rulez roles list":                     true,

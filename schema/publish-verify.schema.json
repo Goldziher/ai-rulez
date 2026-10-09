@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/publish-verify.schema.json",
+  "title": "ai-rulez publish verify",
+  "description": "Output of `ai-rulez publish verify <dir|oci-ref> --format json`: one result per dist directory (a multi-plugin dist verifies every plugin and the aggregate). Exit 2 when a result has problems.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "results"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "files",
+          "problems"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "dir": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "files": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "signature": {
+            "enum": [
+              "none",
+              "unverified",
+              "verified"
+            ]
+          },
+          "signer": {
+            "type": "string"
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "message"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
