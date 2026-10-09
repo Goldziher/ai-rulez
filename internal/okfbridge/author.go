@@ -26,7 +26,8 @@ func RenderConcept(kind Kind, domain, id string, data []byte) ([]byte, error) {
 
 // RenderConceptKeeping is RenderConcept for a rewrite of an existing file: the
 // `type` and `title` of previous, the file's former content, are kept unless
-// data declares its own.
+// data declares its own. When data is a bare body without frontmatter, all of
+// previous's metadata (priority, targets, description, other keys) is kept too.
 func RenderConceptKeeping(kind Kind, domain, id string, data, previous []byte) ([]byte, error) {
 	if fm, _ := okf.SplitFrontmatter(data); fm.Err == nil && fm.Lookup(okf.ExtensionKey) != nil {
 		return data, nil
@@ -34,6 +35,11 @@ func RenderConceptKeeping(kind Kind, domain, id string, data, previous []byte) (
 	md, body, malformed := config.ParseFrontmatterChecked(string(data))
 	if malformed {
 		return nil, oops.Hint("Fix the YAML between the --- lines.").Errorf("the frontmatter of %s %q is not valid YAML", kind, id)
+	}
+	prev, _, _ := config.ParseFrontmatterChecked(string(previous))
+	if md == nil && prev != nil {
+		// data is a bare body: the rewrite keeps everything the file declared.
+		md = prev
 	}
 	if kind == KindSkill {
 		if md == nil {
@@ -50,7 +56,7 @@ func RenderConceptKeeping(kind Kind, domain, id string, data, previous []byte) (
 	if md != nil {
 		it.typ, it.title = md.OKFType, md.OKFTitle
 	}
-	if prev, _, _ := config.ParseFrontmatterChecked(string(previous)); prev != nil {
+	if prev != nil {
 		if it.typ == "" {
 			it.typ = prev.OKFType
 		}
