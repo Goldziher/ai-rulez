@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // Argument names that point into the file system.
@@ -27,10 +28,12 @@ type dirPolicy struct {
 	anyDir bool
 }
 
-// confine checks a call's working_directory, config_file and config_dir against
-// the root and rewrites working_directory to the absolute directory the call
-// will use: the root when it is absent, the root-relative path when relative.
-// config_file and config_dir resolve against that directory, as the handlers do.
+// confine checks a call's working_directory, config_file, config_dir and bundle
+// against the root and rewrites each to the absolute, symlink-resolved path that
+// was checked: working_directory becomes the root when it is absent and resolves
+// against the root when relative; the others resolve against that directory, as
+// the handlers do. Handing on the resolved path rather than the one the caller
+// gave means a symlink swapped after the check cannot redirect the operation.
 func (p dirPolicy) confine(args map[string]any) error {
 	if p.anyDir {
 		return nil
@@ -45,16 +48,19 @@ func (p dirPolicy) confine(args map[string]any) error {
 	args[argWorkingDirectory] = base
 	for _, name := range []string{argConfigFile, argConfigDir, argBundle} {
 		if v := stringArg(args, name); v != "" {
-			if _, err := p.check(name, v, base); err != nil {
+			resolved, err := p.check(name, v, base)
+			if err != nil {
 				return err
 			}
+			args[name] = resolved
 		}
 	}
 	return nil
 }
 
 // check verifies that dir (joined to base when relative) is inside the root and
-// returns its absolute form. An empty dir means base.
+// returns its absolute form with symlinks resolved, which is what was judged.
+// An empty dir means base.
 func (p dirPolicy) check(arg, dir, base string) (string, error) {
 	target := base
 	if dir != "" {
@@ -67,24 +73,16 @@ func (p dirPolicy) check(arg, dir, base string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s %q: %w", arg, dir, err)
 	}
-	if !within(resolveExisting(p.root), resolveExisting(abs)) {
+	resolved := resolveExisting(abs)
+	if !safefs.Within(resolveExisting(p.root), resolved) {
 		return "", fmt.Errorf("%s %q is outside the directory this server is allowed to use (%s); start the server in the project, or pass --root or --allow-any-dir", arg, dir, p.root)
 	}
-	return abs, nil
+	return resolved, nil
 }
 
 func stringArg(args map[string]any, name string) string {
 	v, _ := args[name].(string) //nolint:errcheck // a missing or non-string argument is the empty default
 	return v
-}
-
-// within reports whether path is root or below it.
-func within(root, path string) bool {
-	rel, err := filepath.Rel(root, path)
-	if err != nil {
-		return false
-	}
-	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
 
 // resolveExisting resolves symlinks in the longest existing prefix of path, so

@@ -161,3 +161,49 @@ regex = "-- down"
 	require.NoError(t, sinceErr)
 	assert.True(t, since.IsError, "a base that does not resolve is an error, never a pass")
 }
+
+// run_verifiers is annotated read-only, so it must never start a program: a
+// command predicate is refused (AR9H3, status error) even when the CLI's
+// allow-exec environment variable is set, and nothing it names runs.
+func TestRunVerifiersHandler_RefusesCommandPredicates(t *testing.T) {
+	// Arrange
+	t.Setenv("AI_RULEZ_VERIFIERS_ALLOW_EXEC", "1")
+	dir := t.TempDir()
+	write := func(rel, content string) {
+		p := filepath.Join(dir, filepath.FromSlash(rel))
+		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
+		require.NoError(t, os.WriteFile(p, []byte(content), 0o600))
+	}
+	marker := filepath.Join(dir, "ran")
+	write(".ai-rulez/config.toml", "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
+	write(".ai-rulez/rules/database.md", "# Database\n\nChecked by a command.\n")
+	write("db/1.sql", "create\n")
+	write(".ai-rulez/verifiers/db.toml", `[[verifiers]]
+id = "runs-a-command"
+rule = "database"
+severity = "error"
+when_changed = ["db/*.sql"]
+[verifiers.require.command]
+argv = ["touch", "`+filepath.ToSlash(marker)+`"]
+`)
+
+	// Act
+	res, err := RunVerifiersHandler(context.Background(), newRequestWithArgs(map[string]any{"working_directory": dir}))
+
+	// Assert
+	require.NoError(t, err)
+	require.False(t, res.IsError, textOf(t, res))
+	var out struct {
+		OK      bool `json:"ok"`
+		Results []struct {
+			Status string `json:"status"`
+			Code   string `json:"code"`
+		} `json:"results"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(textOf(t, res)), &out))
+	assert.False(t, out.OK, "a refused command is never a pass")
+	require.Len(t, out.Results, 1)
+	assert.Equal(t, "error", out.Results[0].Status)
+	assert.Equal(t, "AR9H3", out.Results[0].Code)
+	assert.NoFileExists(t, marker, "the read-only tool started the command")
+}
