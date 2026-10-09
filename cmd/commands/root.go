@@ -129,6 +129,12 @@ func init() {
 	RootCmd.AddCommand(NewShowCmd(), NewEditCmd())
 }
 
+// CommandTree returns the finished command tree, for the tools that document it.
+func CommandTree() *cobra.Command {
+	prepareCommandTree(RootCmd)
+	return RootCmd
+}
+
 // prepareCommandTree finishes the command tree once every init function has
 // registered its commands and flags: it adds cobra's `completion` command (which
 // cobra otherwise adds on first use), attaches the help examples and wires the
