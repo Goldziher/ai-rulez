@@ -56,7 +56,7 @@ func (f *artifactFixture) signWith(t *testing.T, key string, set func()) int {
 		signKey, signBundle, signSkill, signSBOM, signProvenance, signAppend, signOutput = "", "", "", "", false, false, ""
 	}()
 	var code int
-	capture(t, func() { code = runSign(context.Background(), nil, nil) })
+	capture(t, func() { code = codeOf(runSign(context.Background(), nil, nil)) })
 	return code
 }
 
@@ -298,7 +298,7 @@ func TestSignWithAKMSKeyAndExportItsPublicKey(t *testing.T) {
 	t.Cleanup(func() { signKey, signBundle, signPublicOut = "", "", "" })
 
 	var code int
-	capture(t, func() { code = runSign(ctx, nil, nil) })
+	capture(t, func() { code = codeOf(runSign(ctx, nil, nil)) })
 
 	require.Equal(t, 0, code)
 	exported, err := os.ReadFile(pubOut)
