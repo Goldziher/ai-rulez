@@ -78,7 +78,7 @@ func runMCP(cmd *cobra.Command) error {
 		}
 		transport = srv.WrapTransport(transport)
 	} else {
-		srv = mcp.NewServer(Version, authoringOptions(cmd)...)
+		srv = NewAuthoringMCPServer(authoringOptions(cmd)...)
 		transport = mcp.GuardLifecycle(transport)
 	}
 
@@ -90,10 +90,11 @@ func runMCP(cmd *cobra.Command) error {
 	return nil
 }
 
-// authoringOptions are the options of the authoring server: the lint engine of
-// `validate`, and the directory the tools are confined to.
+// authoringOptions are the options of the authoring server that come from the
+// command line: the directory the tools are confined to (the engines are wired
+// by NewAuthoringMCPServer).
 func authoringOptions(cmd *cobra.Command) []mcp.Option {
-	opts := []mcp.Option{mcp.WithValidator((&mcpValidator{}).validate), mcp.WithRoot(workingDir())}
+	opts := []mcp.Option{mcp.WithRoot(workingDir())}
 	if anyDir, _ := cmd.Flags().GetBool(flagAllowAnyDir); anyDir { //nolint:errcheck // the flag is registered in init
 		opts = append(opts, mcp.WithAnyDirectory())
 	}

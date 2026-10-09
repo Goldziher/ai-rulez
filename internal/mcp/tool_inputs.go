@@ -34,6 +34,10 @@ type generateIn struct {
 	ConfigFile string `json:"config_file,omitempty" jsonschema:"Path to the root configuration file (optional)"`
 	ConfigDir  string `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
 	DryRun     bool   `json:"dry_run,omitempty" jsonschema:"Preview changes without writing files"`
+	Check      bool   `json:"check,omitempty" jsonschema:"Write nothing and report the generated files that differ from what the sources render (generate --check); a difference is an error result"`
+	Offline    bool   `json:"offline,omitempty" jsonschema:"Never use the network; remote includes and installed skills come from the lock and the cache (generate --offline)"`
+	Profile    string `json:"profile,omitempty" jsonschema:"Profile to generate, or a comma-separated list to compose several (default: from config or 'default')"`
+	Role       string `json:"role,omitempty" jsonschema:"Generate the slice of content a role selects instead of a profile (see list_roles); mutually exclusive with profile"`
 	Recursive  bool   `json:"recursive,omitempty" jsonschema:"Generate for all subdirectories containing .ai-rulez/"`
 	NoLocal    bool   `json:"no_local,omitempty" jsonschema:"Ignore the machine-local config.local.* overlay and local/ content (the teammate view)"`
 	workDirArg
@@ -57,6 +61,15 @@ type validateIn struct {
 	ConfigOnly  bool     `json:"config_only,omitempty" jsonschema:"Check the configuration file only and skip the content checks; the CLI's --config-only"`
 	LintProfile string   `json:"lint_profile,omitempty" jsonschema:"Lint preset: default, strict or permissive (overrides [lint] profile); the CLI's --lint-profile"`
 	Analyzers   []string `json:"analyzers,omitempty" jsonschema:"Run only these analyzers (replaces [lint] analyzers); the CLI's --analyzer"`
+	workDirArg
+}
+
+type scanIn struct {
+	ConfigFile  string `json:"config_file,omitempty" jsonschema:"Path to the root configuration file to scan (optional)"`
+	ConfigDir   string `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
+	NoLocal     bool   `json:"no_local,omitempty" jsonschema:"Scan without the machine-local config.local.* overlay and local/ content"`
+	FailOn      string `json:"fail_on,omitempty" jsonschema:"Lowest finding severity that makes the result an error: error (default), warning, info or none; the CLI's --fail-on"`
+	LintProfile string `json:"lint_profile,omitempty" jsonschema:"Lint preset: default, strict or permissive (overrides [lint] profile); the CLI's --lint-profile"`
 	workDirArg
 }
 
@@ -121,6 +134,11 @@ type contentCreateIn struct {
 	Targets  []string `json:"targets,omitempty" jsonschema:"Target providers (e.g., claude, cursor)"`
 	localArg
 	workDirArg
+}
+
+type skillCreateIn struct {
+	Description string `json:"description,omitempty" jsonschema:"Skill description for the SKILL.md frontmatter, used when content is empty"`
+	contentCreateIn
 }
 
 type contentUpdateIn struct {
@@ -291,4 +309,90 @@ type getSkillIn struct {
 
 type readSkillFileIn struct {
 	URI string `json:"uri" jsonschema:"skill://<name>/<path> URI from get_skill or skills/list"`
+}
+
+// Report tools.
+
+type tokenReportIn struct {
+	ConfigFile      string   `json:"config_file,omitempty" jsonschema:"Path to the root configuration file (optional)"`
+	ConfigDir       string   `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
+	NoLocal         bool     `json:"no_local,omitempty" jsonschema:"Ignore the machine-local config.local.* overlay and local/ content (the teammate view)"`
+	Profile         string   `json:"profile,omitempty" jsonschema:"Profile to report on, or a comma-separated list to compose several"`
+	Role            string   `json:"role,omitempty" jsonschema:"Report on this role's content slice instead of a profile (see list_roles)"`
+	ByRole          bool     `json:"by_role,omitempty" jsonschema:"Report every declared role as one entry of reports"`
+	CompareProfiles []string `json:"compare_profiles,omitempty" jsonschema:"Report each of these profiles as one entry of reports"`
+	Tokenizer       string   `json:"tokenizer,omitempty" jsonschema:"Token counter: cl100k_base (default) or estimate"`
+	Budget          int      `json:"budget,omitempty" jsonschema:"Make the result an error when the headline always-loaded count exceeds this ceiling"`
+	workDirArg
+}
+
+type costReportIn struct {
+	ConfigFile     string `json:"config_file,omitempty" jsonschema:"Path to the root configuration file (optional)"`
+	ConfigDir      string `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
+	NoLocal        bool   `json:"no_local,omitempty" jsonschema:"Ignore the machine-local config.local.* overlay and local/ content (the teammate view)"`
+	Profile        string `json:"profile,omitempty" jsonschema:"Profile to report on, or a comma-separated list to compose several"`
+	Target         string `json:"target,omitempty" jsonschema:"Preset whose runtime totals to report (default: the runtime with the largest always-loaded surface)"`
+	Top            int    `json:"top,omitempty" jsonschema:"How many top offenders to list (default 10)"`
+	Tokenizer      string `json:"tokenizer,omitempty" jsonschema:"Token counter: cl100k_base (default) or estimate"`
+	Budget         int    `json:"budget,omitempty" jsonschema:"Make the result an error when the always-loaded tokens of the target exceed this ceiling"`
+	OnDemandBudget int    `json:"on_demand_budget,omitempty" jsonschema:"Make the result an error when the on-demand tokens of the target exceed this ceiling"`
+	workDirArg
+}
+
+type sbomIn struct {
+	ConfigFile     string `json:"config_file,omitempty" jsonschema:"Path to the root configuration file (optional)"`
+	ConfigDir      string `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
+	Format         string `json:"format,omitempty" jsonschema:"Document format: cyclonedx (CycloneDX 1.6, default) or spdx-json (SPDX 2.3)"`
+	Files          string `json:"files,omitempty" jsonschema:"List the files of items with their plain SHA-256: none (default), skills or all"`
+	Profile        string `json:"profile,omitempty" jsonschema:"Describe only this profile's domains"`
+	Role           string `json:"role,omitempty" jsonschema:"Describe only the items this role keeps"`
+	IncludeOutputs bool   `json:"include_outputs,omitempty" jsonschema:"List the generated output files with their output digest"`
+	NoApprovals    bool   `json:"no_approvals,omitempty" jsonschema:"Leave the approval status of the items out"`
+	workDirArg
+}
+
+type okfValidateIn struct {
+	Bundle string `json:"bundle" jsonschema:"Directory of the OKF bundle, relative to working_directory (a git URL is refused: tools never use the network)"`
+	FailOn string `json:"fail_on,omitempty" jsonschema:"Lowest severity that makes the result an error: error (default), warning, info or none"`
+	workDirArg
+}
+
+type approvalsStatusIn struct {
+	ConfigFile string `json:"config_file,omitempty" jsonschema:"Path to the root configuration file (optional)"`
+	ConfigDir  string `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
+	All        bool   `json:"all,omitempty" jsonschema:"List every pinned item, not only those that need approval or have a record"`
+	workDirArg
+}
+
+type policyShowIn struct {
+	ConfigFile string `json:"config_file,omitempty" jsonschema:"Path to the root configuration file (optional)"`
+	ConfigDir  string `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
+	NoLocal    bool   `json:"no_local,omitempty" jsonschema:"Judge the configuration without the machine-local config.local.* overlay"`
+	workDirArg
+}
+
+type verifiersListIn struct {
+	ConfigFile string `json:"config_file,omitempty" jsonschema:"Path to the root configuration file (optional)"`
+	ConfigDir  string `json:"config_dir,omitempty" jsonschema:"Configuration directory name (default: .ai-rulez)"`
+	NoLocal    bool   `json:"no_local,omitempty" jsonschema:"Ignore the machine-local config.local.* overlay and local/ content"`
+	workDirArg
+}
+
+// Agent and command tools.
+
+type flatCreateIn struct {
+	Name        string `json:"name" jsonschema:"Item name: the filename without the .md extension"`
+	Description string `json:"description,omitempty" jsonschema:"Short description, used when content is empty"`
+	Content     string `json:"content,omitempty" jsonschema:"Markdown content with the frontmatter the kind needs; a template when empty"`
+	Domain      string `json:"domain,omitempty" jsonschema:"Domain name (optional, uses root if not specified)"`
+	localArg
+	workDirArg
+}
+
+type flatUpdateIn struct {
+	Name    string `json:"name" jsonschema:"Item name: the filename without the .md extension"`
+	Content string `json:"content" jsonschema:"New markdown content, written as given"`
+	Domain  string `json:"domain,omitempty" jsonschema:"Domain name (optional, uses root if not specified)"`
+	localArg
+	workDirArg
 }

@@ -154,33 +154,45 @@ func policyGate(cfg *config.Config) error {
 	return config.CheckPolicy(cfg) //nolint:wrapcheck // already contextual
 }
 
-// runShowPolicy prints the effective policy and returns the exit code.
-func runShowPolicy(ctx context.Context, args []string, out io.Writer) int {
+// policyReportFor describes the effective policy and what it did to cfg: the
+// report of `validate --show-policy`, which the policy_show tool returns as well.
+// cfg is nil when the configuration did not load; the policy is shown regardless.
+func policyReportFor(cfg *config.Config) (policy.Report, error) {
 	resolved, err := policyEnforcer.Load()
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return policy.Report{}, err //nolint:wrapcheck // already contextual
 	}
 	var result *policy.Result
-	cfg, lerr := loadConfigForCommand(ctx, args, config.WithoutRemote())
-	switch {
-	case lerr == nil:
+	if cfg != nil {
 		// The organization policy of the repository's owner, when discovery is on,
 		// is a layer of this repository only.
 		withOrg, oerr := policyEnforcer.LoadFor(cfg.BaseDir)
 		if oerr != nil {
-			renderStderr(oerr)
-			return 1
+			return policy.Report{}, oerr //nolint:wrapcheck // already contextual
 		}
 		resolved = withOrg
 		result = &policy.Result{Outcome: cfg.PolicyOutcome}
 		if cfg.PolicyOutcome != nil {
 			result.Accepted = cfg.PolicyOutcome.Accepted
 		}
-	case resolved != nil:
+	}
+	return policy.BuildReport(resolved, result), nil
+}
+
+// runShowPolicy prints the effective policy and returns the exit code.
+func runShowPolicy(ctx context.Context, args []string, out io.Writer) int {
+	cfg, lerr := loadConfigForCommand(ctx, args, config.WithoutRemote())
+	if lerr != nil {
+		cfg = nil
+	}
+	report, err := policyReportFor(cfg)
+	if err != nil {
+		renderStderr(err)
+		return 1
+	}
+	if lerr != nil && len(report.Layers) > 0 {
 		fmt.Fprintf(os.Stderr, "no configuration to compare with the policy: %v\n", lerr)
 	}
-	report := policy.BuildReport(resolved, result)
 	if structuredFormat(validateFormat) && validateFormat != formatJSON {
 		renderStderr(oops.Errorf("validate --show-policy supports --format text and json, not %q", validateFormat))
 		return 1

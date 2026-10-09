@@ -77,6 +77,7 @@ func mcpValidateFlags(p handlers.ValidateParams) error {
 func (v *mcpValidator) borrowFlags(p handlers.ValidateParams) (restore func()) {
 	savedFailOn, savedProfile, savedAnalyzers := validateFailOn, validateLintProfile, validateAnalyzers
 	savedStrict, savedConfigOnly, savedCache := validateStrict, validateConfigOnly, strictTreeCache
+	savedSecurity := strictSecurityOnly
 
 	validateFailOn, validateLintProfile, validateAnalyzers = p.FailOn, p.LintProfile, p.Analyzers
 	if p.Strict {
@@ -84,7 +85,9 @@ func (v *mcpValidator) borrowFlags(p handlers.ValidateParams) (restore func()) {
 	}
 	validateConfigOnly, validateStrict = p.ConfigOnly, !p.ConfigOnly
 	strictTreeCache = lint.Loader{}
+	strictSecurityOnly = p.SecurityOnly
 	return func() {
+		strictSecurityOnly = savedSecurity
 		validateFailOn, validateLintProfile, validateAnalyzers = savedFailOn, savedProfile, savedAnalyzers
 		validateStrict, validateConfigOnly, strictTreeCache = savedStrict, savedConfigOnly, savedCache
 	}
