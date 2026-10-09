@@ -118,7 +118,7 @@ ai-rulez validate                        # config plus content checks, exit 2 on
 ai-rulez validate --explain AR001        # what a rule checks and how to suppress it
 ai-rulez validate --format sarif --output ai-rulez.sarif
 ai-rulez okf validate docs/okf           # lint any OKF bundle, ai-rulez's or a third party's
-ai-rulez verify                          # generated files still match their headers
+ai-rulez generate --check                # generated files still match their sources
 ```
 
 ## Govern
