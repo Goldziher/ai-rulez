@@ -25,7 +25,7 @@ func TestLockSubject(t *testing.T) {
 
 	t.Run("text prints the digest and what it commits to", func(t *testing.T) {
 		var code int
-		stdout := captureStdout(t, func() { code = lockSubjectAt("") })
+		stdout := captureStdout(t, func() { code = reported(lockSubjectAt("")) })
 
 		assert.Equal(t, 0, code)
 		assert.Contains(t, stdout, want)
@@ -40,10 +40,10 @@ func TestLockSubject(t *testing.T) {
 		defer func() { lockSubjectOutput = "" }()
 
 		var code int
-		_, _ = capture(t, func() { code = lockSubjectAt("") })
+		_, _ = capture(t, func() { code = reported(lockSubjectAt("")) })
 		first, err := os.ReadFile(out)
 		require.NoError(t, err)
-		_, _ = capture(t, func() { code = lockSubjectAt("") })
+		_, _ = capture(t, func() { code = reported(lockSubjectAt("")) })
 		second, err := os.ReadFile(out)
 		require.NoError(t, err)
 
@@ -69,7 +69,7 @@ func TestLockSubject(t *testing.T) {
 		require.NoError(t, lockfile.Save(filepath.Join(root, ".ai-rulez"), &edited))
 
 		var code int
-		_, stderr := capture(t, func() { code = lockSubjectAt("") })
+		_, stderr := capture(t, func() { code = reported(lockSubjectAt("")) })
 
 		assert.Equal(t, exitDrift, code)
 		assert.Contains(t, stderr, "does not match its entries")
@@ -79,7 +79,7 @@ func TestLockSubject(t *testing.T) {
 		require.NoError(t, os.Remove(lockfile.Path(filepath.Join(root, ".ai-rulez"))))
 
 		var code int
-		_, stderr := capture(t, func() { code = lockSubjectAt("") })
+		_, stderr := capture(t, func() { code = reported(lockSubjectAt("")) })
 
 		assert.Equal(t, 1, code)
 		assert.Contains(t, stderr, "no content pins")

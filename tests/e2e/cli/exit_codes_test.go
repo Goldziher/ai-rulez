@@ -52,7 +52,7 @@ func (s *ExitCodeSuite) run(args ...string) int {
 
 func (s *ExitCodeSuite) TestNoConfigurationIsExitOne() {
 	for _, args := range []string{
-		"validate", "validate --config-only", "generate", "generate --check", "verify", "doctor", "tokens", "cost",
+		"validate", "validate --config-only", "generate", "generate --check", "verify --attestation", "doctor", "tokens", "cost",
 		"scan", "catalog", "roles list", "lock --check", "lock --diff", "okf validate",
 		"verifiers run", "migrate v5", "clean",
 	} {
@@ -62,7 +62,7 @@ func (s *ExitCodeSuite) TestNoConfigurationIsExitOne() {
 
 func (s *ExitCodeSuite) TestYAMLConfigurationIsExitOneWithTheMigrationHint() {
 	s.write(".ai-rulez/config.yaml", "version: \"4.0\"\nname: old\npresets: [claude]\n")
-	for _, args := range []string{"validate", "generate", "generate --check", "verify", "doctor"} {
+	for _, args := range []string{"validate", "generate", "generate --check", "verify --attestation", "doctor"} {
 		result := testutil.RunCLI(s.T(), s.dir, strings.Fields(args)...)
 		s.Equal(exitCannot, result.ExitCode, args)
 		s.Contains(result.Stdout+result.Stderr, "ai-rulez migrate v5", args)
@@ -82,7 +82,6 @@ func (s *ExitCodeSuite) TestValidProjectIsExitZero() {
 	s.Equal(exitOK, s.run("validate", "--config-only"))
 	s.Equal(exitOK, s.run("generate"))
 	s.Equal(exitOK, s.run("generate", "--check"))
-	s.Equal(exitOK, s.run("verify"))
 }
 
 func (s *ExitCodeSuite) TestContentFindingsAreExitTwoAndConfigOnlyIsExitZero() {
@@ -97,13 +96,19 @@ func (s *ExitCodeSuite) TestDriftIsExitTwo() {
 	s.Equal(exitOK, s.run("generate"))
 	s.write(".ai-rulez/rules/style.md", goodRule+"\nAnd spaces.\n")
 	s.Equal(exitFindings, s.run("generate", "--check"), "a changed source is drift")
-	s.Equal(exitOK, s.run("verify"), "verify compares generated files with their own Content-Hash, not with the sources")
 	s.Equal(exitOK, s.run("generate"))
 	generated := filepath.Join(s.dir, "AGENTS.md")
 	body, err := os.ReadFile(generated)
 	s.Require().NoError(err)
 	s.Require().NoError(os.WriteFile(generated, append(body, []byte("hand edit\n")...), 0o644))
-	s.Equal(exitFindings, s.run("verify"), "a hand-edited generated file is drift")
+	s.Equal(exitFindings, s.run("generate", "--check"), "a hand-edited generated file is drift")
+}
+
+func (s *ExitCodeSuite) TestVerifyWithoutAModePointsAtGenerateCheck() {
+	s.project(goodRule)
+	result := testutil.RunCLI(s.T(), s.dir, "verify")
+	s.Equal(exitCannot, result.ExitCode)
+	s.Contains(result.Stdout+result.Stderr, "generate --check")
 }
 
 func (s *ExitCodeSuite) TestMigrateCheckIsExitTwoUntilMigrated() {

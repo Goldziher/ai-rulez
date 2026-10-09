@@ -47,7 +47,7 @@ func validateActivationFlags() error {
 		return oops.Errorf("unknown --scope %q (use %s or %s)", evalFlags.scope, evals.ScopeDomain, evals.ScopeAll)
 	}
 	if evalFlags.format == evals.FormatJUnit {
-		return oops.Errorf("--mode activation writes json or markdown, not junit")
+		return oops.Errorf("--mode activation writes text, json or markdown, not junit")
 	}
 	switch evalFlags.surface {
 	case evals.SurfaceRetrieval, evals.SurfaceNative:

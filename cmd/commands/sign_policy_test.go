@@ -29,7 +29,7 @@ func TestSignPolicyWritesASidecarThePolicyLoaderVerifies(t *testing.T) {
 
 	// Act
 	var code int
-	capture(t, func() { code = runSign(context.Background(), nil, nil) })
+	capture(t, func() { code = codeOf(runSign(context.Background(), nil, nil)) })
 
 	// Assert
 	require.Equal(t, 0, code)
@@ -59,12 +59,12 @@ func TestSignPolicyRefusesWhatIsNotAPolicy(t *testing.T) {
 	t.Cleanup(func() { signPolicy = "" })
 
 	// Act
-	var code int
-	_, stderr := capture(t, func() { code = runSign(context.Background(), nil, nil) })
+	var signErr error
+	capture(t, func() { signErr = runSign(context.Background(), nil, nil) })
 
 	// Assert
-	assert.Equal(t, 1, code)
-	assert.Contains(t, stderr, "AR743")
+	assert.Equal(t, 1, codeOf(signErr))
+	assert.Contains(t, errorText(signErr), "AR743")
 	_, err := os.Stat(file + ".sigstore.json")
 	assert.True(t, os.IsNotExist(err), "nothing is signed that the loader would reject")
 }

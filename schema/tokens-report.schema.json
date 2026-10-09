@@ -1,0 +1,197 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/tokens-report.schema.json",
+  "title": "ai-rulez tokens report",
+  "description": "Output of `ai-rulez tokens --format json`: what the generated files cost per runtime, split into always loaded, conditional and on demand.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "profile",
+    "tokenizer",
+    "runtimes",
+    "domains",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "profile": {
+      "type": "string"
+    },
+    "tokenizer": {
+      "type": "object",
+      "required": [
+        "name",
+        "approximate",
+        "estimate"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "approximate": {
+          "type": "boolean"
+        },
+        "estimate": {
+          "type": "boolean"
+        }
+      }
+    },
+    "headline_preset": {
+      "type": "string"
+    },
+    "headline_always": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "headline_listing": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "headline_always_legacy": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "listing_entry_overhead": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "runtimes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "preset",
+          "files",
+          "always",
+          "conditional",
+          "on_demand"
+        ],
+        "properties": {
+          "preset": {
+            "type": "string"
+          },
+          "files": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "always": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "conditional": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "on_demand": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unmodeled": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "listing": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "listed_items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "always_legacy": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "conditional_legacy": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "detailed": {
+            "type": "boolean"
+          },
+          "root_files": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/entry"
+            }
+          }
+        }
+      }
+    },
+    "domains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "always",
+          "conditional",
+          "on_demand"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "always": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "conditional": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "on_demand": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "definitions": {
+    "entry": {
+      "type": "object",
+      "required": [
+        "label",
+        "bucket",
+        "tokens",
+        "artifacts"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "bucket": {
+          "type": "string"
+        },
+        "tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "artifacts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/entry"
+          }
+        }
+      }
+    }
+  }
+}

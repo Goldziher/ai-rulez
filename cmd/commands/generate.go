@@ -403,7 +403,7 @@ func generateCheckCode(args []string) int {
 		renderError(os.Stderr, err)
 		return exitFailure
 	}
-	return runDriftCheckGated(args, recursive, driftRender, func(cfg *config.Config) error {
+	return runDriftCheckGated(args, recursive, func(cfg *config.Config) error {
 		return enforceLockedContentFor(cfg, true)
 	})
 }

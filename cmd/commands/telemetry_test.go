@@ -38,7 +38,7 @@ func setupTelemetry(t *testing.T, repoToml, userToml string) telemetryEnv {
 	telemetrySpawn = func() error { spawns++; return nil }
 	t.Cleanup(func() {
 		telemetrySpawn = previous
-		telHarness, telRole, telRoot, telConfigDir, telFormat, telOutput, telJSON, reportItems = "", "", "", "", "json", "", false, false
+		telHarness, telRole, telRoot, telConfigDir, telSyntax, telOutput, telJSON, reportItems = "", "", "", "", "json", "", false, false
 		usageLog, usageIndex, telHarness, telRole, usageSalt, reportJSON, reportEvals, reportFeedback = "", "", "", "", "", false, "", ""
 		configDir = ""
 	})
@@ -67,14 +67,14 @@ func TestTelemetryHook_PrintsAndWritesTheTemplate(t *testing.T) {
 	setupTelemetry(t, "", "")
 	var out bytes.Buffer
 	telemetryHookCmd.SetOut(&out)
-	telFormat = "json"
+	telSyntax = "json"
 	require.NoError(t, telemetryHookCmd.RunE(telemetryHookCmd, nil))
 	assert.True(t, json.Valid(out.Bytes()))
 	for _, event := range []string{"InstructionsLoaded", "SubagentStart", "SubagentStop", "UserPromptExpansion"} {
 		assert.Contains(t, out.String(), event)
 	}
 
-	telFormat, telOutput = "toml", filepath.Join(t.TempDir(), "sub", "hooks.toml")
+	telSyntax, telOutput = "toml", filepath.Join(t.TempDir(), "sub", "hooks.toml")
 	require.NoError(t, telemetryHookCmd.RunE(telemetryHookCmd, nil))
 	written, err := os.ReadFile(telOutput)
 	require.NoError(t, err)

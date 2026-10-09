@@ -13,7 +13,7 @@ import (
 // runSignArtifact signs a plugin bundle (--bundle), a published skill (--skill)
 // or an SBOM file (--sbom) and returns the exit code. None of them needs a
 // project: a publisher signs a directory it ships.
-func runSignArtifact(ctx context.Context, env ambient.Env) int {
+func runSignArtifact(ctx context.Context, env ambient.Env) error {
 	subject, target := signSubject()
 	meta := signing.ArtifactMeta{Version: Version, Now: time.Now()}
 	repoDir := target
@@ -34,31 +34,25 @@ func runSignArtifact(ctx context.Context, env ambient.Env) int {
 		st, ts, er = signing.TreeStatement(subject, target, meta)
 	}
 	if er != nil {
-		renderStderr(er)
-		return 1
+		return fail(er)
 	}
 	out := artifactAttestationPath(subject, target)
 	if out, er = appendTarget(out); er != nil {
-		renderStderr(er)
-		return 1
+		return fail(er)
 	}
 	signer, err := newSigner(ctx, env)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	if err := exportPublicKey(signer); err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	bundle, err := signing.SignStatement(ctx, signer, st)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	if err := writeBundle(out, bundle); err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	digest := ts.Digest
 	if subject == signing.SubjectSBOM {
@@ -70,7 +64,7 @@ func runSignArtifact(ctx context.Context, env ambient.Env) int {
 	if signProvenance {
 		return signProvenanceFor(ctx, signer, ts, meta, env, out)
 	}
-	return 0
+	return nil
 }
 
 // signSubject returns the subject kind and path the flags name; validateSignFlags
@@ -100,29 +94,26 @@ func artifactAttestationPath(subject, target string) string {
 
 // signProvenanceFor writes the SLSA provenance statement of a signed bundle next
 // to its attestation.
-func signProvenanceFor(ctx context.Context, signer signing.Signer, ts signing.TreeSubject, meta signing.ArtifactMeta, env ambient.Env, attestation string) int {
+func signProvenanceFor(ctx context.Context, signer signing.Signer, ts signing.TreeSubject, meta signing.ArtifactMeta, env ambient.Env, attestation string) error {
 	in := signing.ProvenanceInput{
 		BuilderID: provenanceBuilder(env), Version: Version, Repository: meta.Repository, Ref: meta.Ref,
 		Commit: provenanceCommit(ctx, signBundle, env), InvocationID: provenanceInvocation(env), Now: meta.Now,
 	}
 	st, err := signing.ProvenanceStatement(ts, in)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	bundle, err := signing.SignStatement(ctx, signer, st)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	out := signing.ProvenanceSidecarFor(attestation)
 	if err := writeBundle(out, bundle); err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	reportSigned(ctx, "Signed SLSA provenance", map[string]any{keyKind: "provenance", "builder": in.BuilderID, keyBundle: out},
 		"builder", in.BuilderID, "bundle", out)
-	return 0
+	return nil
 }
 
 // provenanceBuilder is the builder id to record: --builder-id, else the GitHub

@@ -163,6 +163,7 @@ rewrites them), and the test fails when they are stale.
 | ------- | -------- | ------ | -------- |
 | `add agent` | `create_agent` | authoring |  |
 | `list agents` | `list_agents` | authoring |  |
+| `show agent` | `read_agent` | authoring |  |
 | `remove agent` | `delete_agent` | authoring |  |
 | `approve --list` | `approvals_status` | authoring | yes |
 | `builtins list` | `list_builtins` | authoring |  |
@@ -170,13 +171,16 @@ rewrites them), and the test fails when they are stale.
 | `catalog` | `catalog` | authoring |  |
 | `add check` | `create_check` | authoring |  |
 | `list checks` | `list_checks` | authoring |  |
+| `show check` | `read_check` | authoring |  |
 | `remove check` | `delete_check` | authoring |  |
 | `clean` | `clean_outputs` | authoring |  |
 | `add command` | `create_command` | authoring |  |
 | `list commands` | `list_commands` | authoring |  |
+| `show command` | `read_command` | authoring |  |
 | `remove command` | `delete_command` | authoring |  |
 | `add context` | `create_context` | authoring |  |
 | `list context` | `list_context` | authoring |  |
+| `show context` | `read_context` | authoring |  |
 | `remove context` | `delete_context` | authoring |  |
 | `cost` | `cost_report` | authoring | yes |
 | `doctor` | `doctor` | authoring |  |
@@ -202,12 +206,14 @@ rewrites them), and the test fails when they are stale.
 | `roles resolve` | `resolve_role` | authoring |  |
 | `add rule` | `create_rule` | authoring |  |
 | `list rules` | `list_rules` | authoring |  |
+| `show rule` | `read_rule` | authoring |  |
 | `remove rule` | `delete_rule` | authoring |  |
 | `sbom` | `sbom` | authoring | yes |
 | `scan` | `scan_content` | authoring | yes |
 | `search` | `find_skill` | skills | yes |
 | `add skill` | `create_skill` | authoring |  |
 | `list skills` | `list_skills` | authoring |  |
+| `show skill` | `read_skill` | authoring |  |
 | `remove skill` | `delete_skill` | authoring |  |
 | `tokens` | `token_report` | authoring | yes |
 | `validate` | `validate_config` | authoring | yes |
@@ -219,9 +225,13 @@ rewrites them), and the test fails when they are stale.
 
 | Command | Why it is not a tool |
 | ------- | -------------------- |
+| `edit agent` | partial field edits and stdin input; update_agent is the whole-item replacement for a tool client |
 | `approve` | approving, revoking, denying and signing are identity-bound human attestations; an agent must not make them |
 | `catalog diff` | compares two catalogs through git subprocesses |
-| `convert`, `migrate` | one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview |
+| `edit check` | partial field edits and stdin input; update_check is the whole-item replacement for a tool client |
+| `edit command` | partial field edits and stdin input; update_command is the whole-item replacement for a tool client |
+| `edit context` | partial field edits and stdin input; update_context is the whole-item replacement for a tool client |
+| `convert`, `migrate *` | one-shot conversions that read untrusted tool files and rewrite the tree; gated by --write or a preview |
 | `eval *`, `improve *` | run models and harness subprocesses and spend money |
 | `guard` | a hook entry point the harness calls on tool use |
 | `list` | prints where skills and commands land per harness; generate_outputs dry_run returns the same plan |
@@ -233,8 +243,10 @@ rewrites them), and the test fails when they are stale.
 | `publish *` | builds and signs distribution artifacts and may push them |
 | `review *`, `rubric *` | spends model tokens in its default mode; the offline heuristics are not exposed yet |
 | `roles show` | a presentation of one role; resolve_role returns what the role keeps |
+| `edit rule` | partial field edits and stdin input; update_rule is the whole-item replacement for a tool client |
 | `scanners *` | run external scanner programs, possibly with egress |
 | `sign`, `trust update` | signs with a key, an OIDC identity or a transparency log: credentials and egress |
+| `edit skill` | partial field edits and stdin input; update_skill is the whole-item replacement for a tool client |
 | `telemetry *` | consent and network egress of usage data |
 | `skill update`, `update` | moves pinned remote sources to newer tags over the network and rewrites the lock |
 | `verifiers calibrate`, `verifiers explain`, `verifiers suggest`, `verifiers test` | calibrate, suggest and test run models or programs; explain prints the help text of a verifier |
@@ -244,25 +256,19 @@ rewrites them), and the test fails when they are stale.
 
 | MCP tool | Server | Why it has no command |
 | -------- | ------ | --------------------- |
-| `read_agent` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
-| `update_agent` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
-| `read_check` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
-| `update_check` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
-| `read_command` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
-| `update_command` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
+| `update_agent` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
+| `update_check` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
+| `update_command` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
 | `read_config` | authoring | the command line reads config.toml with an editor or cat; a tool client has no filesystem, so it reads the parsed settings here |
 | `update_config` | authoring | the command line edits config.toml directly or through `local set`; a tool client needs a typed edit that keeps comments and ordering |
-| `read_context` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
-| `update_context` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
+| `update_context` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
 | `get_skill` | skills | returns a served skill with provenance and digests to a client that only speaks tools |
 | `list_skill_resources` | skills | lists the files of a served skill for a client that has no skill:// resource support |
 | `load_skill` | skills | reads one served skill file under the session budget; the CLI reads the file from disk |
 | `read_skill_file` | skills | reads a supporting file of a served skill by its skill:// URI |
-| `read_rule` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
-| `update_rule` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
+| `update_rule` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
 | `search_skills` | skills | lexical listing for a client that only speaks tools; the ranker the CLI `search` shares is find_skill |
-| `read_skill` | authoring | the command line reads an item body with an editor or cat; a tool client has no filesystem |
-| `update_skill` | authoring | the command line edits an item body in an editor; a tool client replaces the content in one atomic call |
+| `update_skill` | authoring | `edit` changes single fields (description, priority, targets) as well as the body, and reads the body from stdin; the tool replaces the whole item in one atomic call |
 
 <!-- parity:end -->
 
@@ -650,7 +656,7 @@ preset's rendering has its own pins, and `lock --targets <preset>` pins it.
 
 A skill the security scan refuses is not pinned. By default `lock` reports it, pins every other skill, writes the
 lock and exits 3; `validate --strict` lists the refused skills of skill sources with their scan code (`AR0xx`). With
-`lock --strict` any refusal stops `lock` from writing the lock. Either way a refused skill has to be fixed or
+`lock --refuse-findings` any refusal stops `lock` from writing the lock. Either way a refused skill has to be fixed or
 excluded before it can be served under enforcement.
 
 ### Usage telemetry
@@ -1506,7 +1512,7 @@ document in `structuredContent`.
 | `scan_content` | `scan` | `fail_on`, `lint_profile`. The security checks only: secrets, hidden text, injection phrases, risky shell, unpinned sources. The result is the document of `validate_config` |
 | `token_report` | `tokens` | `profile`, `role`, `by_role`, `compare_profiles`, `tokenizer`, `budget`. One target answers with the report, several with `{"schema_version", "items"}` |
 | `cost_report` | `cost` | `profile`, `target`, `top`, `tokenizer`, `budget`, `on_demand_budget` |
-| `sbom` | `sbom` | `format` (`cyclonedx`, `spdx-json`), `files`, `profile`, `role`, `include_outputs`, `no_approvals`. The reproducible document, without the machine-local overlay; writing (`-o`), `--check`, `--verify` and the CI gates stay on the command line |
+| `sbom` | `sbom` | `type` (`cyclonedx`, `spdx-json`), `files`, `profile`, `role`, `include_outputs`, `no_approvals`. The reproducible document, without the machine-local overlay; writing (`-o`), `--check`, `--verify` and the CI gates stay on the command line |
 | `okf_validate` | `okf validate` | `bundle` (required, a directory under the project), `fail_on`. A git URL is refused |
 | `approvals_status` | `approve --list` | `all`. What needs approval and its status. Approving, revoking and signing are human decisions and stay on the command line |
 | `policy_show` | `validate --show-policy` | The policy layers, the merged policy, where each key came from and what the configuration tried to loosen |

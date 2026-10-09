@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/sbom-report.schema.json",
+  "title": "ai-rulez sbom report",
+  "description": "Output of `ai-rulez sbom --format json` when the run reports instead of printing the bill of materials: a failed gate (--require-lock, --strict-pins), --check, or a document written with --output. Without --output the document on stdout is the CycloneDX or SPDX document itself.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "type",
+    "findings",
+    "differences"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "findings",
+        "drift"
+      ]
+    },
+    "type": {
+      "enum": [
+        "cyclonedx",
+        "spdx-json"
+      ]
+    },
+    "output": {
+      "type": "string"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "subject",
+          "message"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "pattern": "^AR7[0-9A-Z]{2}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "differences": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

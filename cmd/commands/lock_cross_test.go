@@ -180,7 +180,7 @@ func (fx *crossFixture) detect(t *testing.T) detections {
 		}
 	}
 	d.served = strings.Join(served, "\n")
-	d.drifting = runDriftCheck(nil, true, driftRender)
+	d.drifting = runDriftCheck(nil, true)
 	return d
 }
 

@@ -34,7 +34,7 @@ func init() {
 	f.StringVar(&lockServeTargets, "targets", "", "Also pin the view that serves this preset's rendering of the skills (see mcp --serve-skills --targets)")
 	f.BoolVar(&lockServeIncludeStatic, "include-static", false, "Also pin the view that serves static skills too (see mcp --serve-skills --include-static)")
 	f.StringArrayVar(&lockServeSources, "source", nil, "Also pin the view with this extra skill source, repeatable (see mcp --serve-skills --source)")
-	f.BoolVar(&lockStrict, "strict", false, "Fail without writing when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3)")
+	f.BoolVar(&lockStrict, "refuse-findings", false, "Fail without writing when the security scan refuses any served skill (default: leave that skill unpinned, pin the rest and exit 3)")
 }
 
 // lockExtraViews is the view the serve-view flags select, if any.

@@ -40,7 +40,7 @@ func TestSBOMVerifyRecordsTheLockAttestation(t *testing.T) {
 
 			// Act
 			var out, errOut bytes.Buffer
-			code := runSBOM(&out, &errOut, sbomFlags{format: "cyclonedx", verify: true}, false)
+			code := codeOf(runSBOM(&out, &errOut, sbomFlags{docType: "cyclonedx", verify: true}, false))
 
 			// Assert
 			require.Equal(t, 0, code, errOut.String())
@@ -72,7 +72,7 @@ func TestSBOMVerifyWithoutATrustedSignerCouldNotRun(t *testing.T) {
 
 	// Act
 	var out, errOut bytes.Buffer
-	code := runSBOM(&out, &errOut, sbomFlags{format: "cyclonedx", verify: true}, false)
+	code := codeOf(runSBOM(&out, &errOut, sbomFlags{docType: "cyclonedx", verify: true}, false))
 
 	// Assert
 	assert.Equal(t, 1, code)

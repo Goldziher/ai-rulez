@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/verifiers-explain.schema.json",
+  "title": "ai-rulez verifiers explain",
+  "description": "Output of `ai-rulez verifiers explain <name> --format json`: what a verifier checks, the item it enforces and how to fix a failure.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "name",
+    "severity",
+    "declared_in",
+    "when_changed",
+    "exclude",
+    "examples",
+    "text"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "error",
+        "warning",
+        "info"
+      ]
+    },
+    "type": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "enforces": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "declared_in": {
+      "type": "string"
+    },
+    "when_changed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "message": {
+      "type": "string"
+    },
+    "fix": {
+      "type": "string"
+    },
+    "examples": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "text": {
+      "type": "string"
+    }
+  }
+}
