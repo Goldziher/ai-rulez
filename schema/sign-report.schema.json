@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/sign-report.schema.json",
+  "title": "ai-rulez sign",
+  "description": "Output of `ai-rulez sign --format json`: what the run signed.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "signed"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "const": "signed"
+    },
+    "signed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "signer": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "bundle": {
+            "type": "string"
+          },
+          "builder": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

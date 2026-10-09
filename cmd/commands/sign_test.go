@@ -67,7 +67,7 @@ func (f *signFixture) sign(t *testing.T) int {
 	signLock, signKey = true, f.privKey
 	defer func() { signLock, signKey = false, "" }()
 	var code int
-	capture(t, func() { code = runSign(context.Background(), nil, nil) })
+	capture(t, func() { code = codeOf(runSign(context.Background(), nil, nil)) })
 	return code
 }
 

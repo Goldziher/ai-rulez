@@ -84,9 +84,6 @@ func rejectAttestationFlags(cmd *cobra.Command) error {
 			return oops.Errorf("--%s applies to --attestation", name)
 		}
 	}
-	if verifyFormat != "" {
-		return oops.Errorf("--format applies to --attestation")
-	}
 	return nil
 }
 

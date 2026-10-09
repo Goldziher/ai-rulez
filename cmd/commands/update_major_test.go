@@ -28,7 +28,7 @@ func runUpdateJSON(t *testing.T) (updateReport, int) {
 	t.Helper()
 	updateFormat = formatJSON
 	var code int
-	stdout := captureStdout(t, func() { code = runUpdate(nil) })
+	stdout := captureStdout(t, func() { code = reported(runUpdate(nil)) })
 	validateAgainst(t, "../../schema/update.schema.json", []byte(stdout))
 	var rep updateReport
 	require.NoError(t, json.Unmarshal([]byte(stdout), &rep), stdout)
@@ -53,7 +53,7 @@ func TestUpdateMajor_SuggestsAndWritesNothingWithoutWriteConfig(t *testing.T) {
 	assert.Equal(t, lockBefore, f.lock(), "the lock is untouched")
 
 	updateFormat = ""
-	stdout, _ := capture(t, func() { code = runUpdate(nil) })
+	stdout, _ := capture(t, func() { code = reported(runUpdate(nil)) })
 	assert.Equal(t, 0, code)
 	assert.Contains(t, stdout, `version = "^2.0"`)
 	assert.Contains(t, stdout, "--write-config")
@@ -101,7 +101,7 @@ func TestUpdate_WriteConfigNeedsMajor(t *testing.T) {
 	newMajorFixture(t)
 	updateWriteConfig = true
 	var code int
-	_, stderr := capture(t, func() { code = runUpdate(nil) })
+	_, stderr := capture(t, func() { code = reported(runUpdate(nil)) })
 	assert.Equal(t, 1, code)
 	assert.Contains(t, stderr, "--write-config needs --major")
 }
@@ -157,7 +157,7 @@ func TestUpdateMajor_RefusesToGuessWhenConfigCannotBePatched(t *testing.T) {
 
 	// Act
 	var code int
-	_, stderr := capture(t, func() { code = runUpdate(nil) })
+	_, stderr := capture(t, func() { code = reported(runUpdate(nil)) })
 
 	// Assert
 	assert.Equal(t, 1, code)
@@ -208,7 +208,7 @@ func TestUpdate_CleanTreeReportsZeroFindings(t *testing.T) {
 	f.setConfig(strings.Replace(f.config(), `version = "~1.0.0"`, `version = "^1"`, 1))
 	updateDryRun = true
 	var code int
-	text, _ := capture(t, func() { code = runUpdate(nil) })
+	text, _ := capture(t, func() { code = reported(runUpdate(nil)) })
 	require.Equal(t, 0, code)
 	assert.Contains(t, text, "scan: 0 findings")
 	updateDryRun = false

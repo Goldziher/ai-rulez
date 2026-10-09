@@ -175,7 +175,7 @@ func ItemOf(it *config.RoleItem, counter tokens.Counter) Item {
 // Marshal renders the manifest as indented JSON with a trailing newline.
 func (m *Manifest) Marshal() ([]byte, error) {
 	sorted := *m
-	sorted.Roles = append([]Role(nil), m.Roles...)
+	sorted.Roles = append([]Role{}, m.Roles...)
 	sort.SliceStable(sorted.Roles, func(i, j int) bool { return sorted.Roles[i].Name < sorted.Roles[j].Name })
 	data, err := json.MarshalIndent(sorted, "", "  ")
 	if err != nil {

@@ -20,7 +20,7 @@ const (
 	FilesAll    = "all"
 )
 
-// NormalizeFormat maps a --format value to FormatCycloneDX or FormatSPDXJSON.
+// NormalizeFormat maps a --type value to FormatCycloneDX or FormatSPDXJSON.
 func NormalizeFormat(format string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(format)) {
 	case "", FormatCycloneDX:
@@ -28,7 +28,7 @@ func NormalizeFormat(format string) (string, error) {
 	case FormatSPDXJSON, "spdx":
 		return FormatSPDXJSON, nil
 	}
-	return "", oops.Hint("use cyclonedx or spdx-json").Errorf("unknown --format %q", format)
+	return "", oops.Hint("use cyclonedx or spdx-json").Errorf("unknown --type %q", format)
 }
 
 // Signature is the outcome of verifying the lock attestation (`--verify`).

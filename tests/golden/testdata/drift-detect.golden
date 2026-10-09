@@ -147,19 +147,7 @@ info      tools    preset "cursor": cursor-agent or cursor not found on PATH; it
 --- home tree
 (no change)
 
-## step 6: ai-rulez verify
-exit: 2
---- stdout
-missing: .cursor/rules/always.mdc
-edited: CLAUDE.md
---- stderr
-2 generated file(s) differ from their sources; run `ai-rulez generate` and commit the result
---- project tree
-(no change)
---- home tree
-(no change)
-
-## step 7: ai-rulez generate --dry-run
+## step 6: ai-rulez generate --dry-run
 exit: 0
 --- stdout
 profile: default
@@ -227,7 +215,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- home tree
 (no change)
 
-## step 8: ai-rulez generate --yes
+## step 7: ai-rulez generate --yes
 exit: 0
 --- stdout
 --- stderr
@@ -243,7 +231,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- home tree
 (no change)
 
-## step 9: ai-rulez generate --check
+## step 8: ai-rulez generate --check
 exit: 0
 --- stdout
 --- stderr
@@ -255,13 +243,13 @@ INFO  Generated files are up to date roots=1
 --- home tree
 (no change)
 
-## step 10: append .ai-rulez/rules/always.md
+## step 9: append .ai-rulez/rules/always.md
 --- project tree
 ~ .ai-rulez/rules/always.md file 0644 67 900b231f934684dc3e40ec42b19e8df85eeeb1bc5adddfd55a0030776b37cd04
 --- home tree
 (no change)
 
-## step 11: ai-rulez generate --check
+## step 10: ai-rulez generate --check
 exit: 2
 --- stdout
 stale: .claude/rules/always.md
@@ -275,7 +263,7 @@ WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: 
 --- home tree
 (no change)
 
-## step 12: ai-rulez doctor --format json
+## step 11: ai-rulez doctor --format json
 exit: 0
 --- stdout
 {
