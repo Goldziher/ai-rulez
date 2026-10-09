@@ -45,7 +45,7 @@ func NewShowCmd() *cobra.Command {
 		var opts showOptions
 		cmd := &cobra.Command{
 			Use:   k.use + " <name>",
-			Short: "Show a " + k.name(),
+			Short: "Show " + withArticle(k.name()),
 			Args:  cobra.ExactArgs(1),
 			RunE:  func(cmd *cobra.Command, args []string) error { return runShow(cmd, args[0], k, &opts) },
 		}
@@ -77,7 +77,7 @@ file is printed on stdout; --format json prints a document instead.`,
 		var opts editOptions
 		cmd := &cobra.Command{
 			Use:   k.use + " <name>",
-			Short: "Edit a " + k.name(),
+			Short: "Edit " + withArticle(k.name()),
 			Args:  cobra.ExactArgs(1),
 			RunE:  func(cmd *cobra.Command, args []string) error { return runEdit(cmd, args[0], k, &opts) },
 		}
@@ -101,6 +101,14 @@ file is printed on stdout; --format json prints a document instead.`,
 		root.AddCommand(cmd)
 	}
 	return root
+}
+
+// withArticle puts "a" or "an" before a noun: "an agent", "a rule".
+func withArticle(noun string) string {
+	if strings.ContainsRune("aeiou", rune(noun[0])) {
+		return "an " + noun
+	}
+	return "a " + noun
 }
 
 type contentKind struct {
