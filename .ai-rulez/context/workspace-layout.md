@@ -15,7 +15,7 @@ x-ai-rulez:
     summary: Repository structure covering CLI, wrappers, documentation, schemas, and test organization.
 ---
 
-# Workspace Layout
+## Workspace Layout
 
 Key directories:
 
