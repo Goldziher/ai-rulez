@@ -175,7 +175,8 @@ directory is written; use it to review or commit what a channel needs.
 
 Emitters: cursor-team-marketplace, agent-plugins and ard (verified), port,
 aws-agent-registry and kiro-steering (experimental: they need --experimental and carry no vendor
-schema to test against).`,
+schema to test against). --format json prints {schema_version, emitter, out, files}
+(schema/publish-emit.schema.json) instead of the "wrote <path>" lines.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
@@ -232,6 +233,7 @@ func init() {
 	e.StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
 	e.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	e.BoolVar(&publishAllowDirty, "allow-dirty", false, "Run from a tree with uncommitted changes or no commit")
+	addFormatFlag(e, &publishFormat, formatText, formatText, formatText, formatJSON)
 	PublishCmd.AddCommand(publishVerifyCmd, publishEmitCmd)
 }
 

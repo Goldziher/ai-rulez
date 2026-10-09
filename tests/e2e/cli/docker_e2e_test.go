@@ -106,9 +106,11 @@ func TestDockerPublishOCIE2E(t *testing.T) {
 	assert.Equal(t, 1, clobber.ExitCode, "other content under an existing tag needs --force: %s", clobber.Stdout+clobber.Stderr)
 	assert.Contains(t, clobber.Stderr, "needs --force")
 	require.Equal(t, 0, verify.ExitCode, "stdout: %s\nstderr: %s", verify.Stdout, verify.Stderr)
-	doc := requireJSONDoc(t, verify)
-	assert.Equal(t, "acme", doc["name"])
-	assert.Equal(t, []any{}, doc["problems"])
+	results, _ := requireJSONDoc(t, verify)["results"].([]any) //nolint:errcheck // asserted below
+	require.Len(t, results, 1)
+	first, _ := results[0].(map[string]any) //nolint:errcheck // asserted below
+	assert.Equal(t, "acme", first["name"])
+	assert.Equal(t, []any{}, first["problems"])
 }
 
 const collectorConfig = `receivers:

@@ -73,7 +73,7 @@ entry, 1 when the configuration cannot be loaded or a name is unknown.`,
 	Args:    cobra.ArbitraryArgs,
 	PreRunE: checkScannersFormat,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return exitStatus(runScannersDoctor(cmd.Context(), args, os.Stdout))
+		return runScannersDoctor(cmd.Context(), args, os.Stdout)
 	},
 }
 
@@ -142,22 +142,20 @@ func presetColumn(s lint.ScannerInfo) string {
 	return strings.Join(s.Presets, ",")
 }
 
-// runScannersDoctor checks the named scanners and returns the exit code.
-func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
+// runScannersDoctor checks the named scanners. It returns nil, an ExitError with
+// exitScannersUnhealthy when one has a problem, or the failure.
+func runScannersDoctor(ctx context.Context, args []string, out io.Writer) error {
 	if len(args) == 0 && !scannersAll {
-		renderStderr(oops.Hint("Name a scanner, or pass --all to check every one").Errorf("doctor needs a scanner name or --all"))
-		return 1
+		return fail(oops.Hint("Name a scanner, or pass --all to check every one").Errorf("doctor needs a scanner name or --all"))
 	}
 	// Every argument is a scanner name, so the configuration is found by discovery, --config or --config-dir.
 	infos, err := loadScanners(ctx, nil)
 	if err != nil {
-		renderStderr(err)
-		return 1
+		return fail(err)
 	}
 	selected, unknown := selectScanners(infos, args, scannersAll)
 	if len(unknown) > 0 {
-		renderStderr(oops.Errorf("unknown scanner %s (configured: %s)", strings.Join(unknown, ", "), scannerNames(infos)))
-		return 1
+		return fail(oops.Errorf("unknown scanner %s (configured: %s)", strings.Join(unknown, ", "), scannerNames(infos)))
 	}
 	if scannersFormat == formatJSON {
 		versions := map[string]string{}
@@ -167,15 +165,18 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 			}
 		}
 		if err := writeScannersJSON(out, selected, true, versions); err != nil {
-			renderStderr(err)
-			return 1
+			return fail(err)
 		}
 		for i := range selected {
 			if !selected[i].Healthy() {
-				return exitScannersUnhealthy
+				return exitStatus(exitScannersUnhealthy)
 			}
 		}
-		return 0
+		return nil
+	}
+	if len(selected) == 0 {
+		reportWriter{out}.printf("No scanners configured. Add a [[lint.external]] entry to .ai-rulez/config.toml.\n")
+		return nil
 	}
 	code := 0
 	for i := range selected {
@@ -186,7 +187,7 @@ func runScannersDoctor(ctx context.Context, args []string, out io.Writer) int {
 			code = exitScannersUnhealthy
 		}
 	}
-	return code
+	return exitStatus(code)
 }
 
 func scannerNames(infos []lint.ScannerInfo) string {
