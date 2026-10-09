@@ -114,7 +114,7 @@ func TestUpdate_OutdatedReportsAndGates(t *testing.T) {
 
 	lockOutdated, lockFormat = true, formatJSON
 	var code int
-	stdout := captureStdout(t, func() { code = outdatedAt("", "", nil) })
+	stdout := captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
 
 	assert.Equal(t, 0, code, "an allowed update does not fail by default")
 	validateAgainst(t, "../../schema/lock-outdated.schema.json", []byte(stdout))
@@ -129,7 +129,7 @@ func TestUpdate_OutdatedReportsAndGates(t *testing.T) {
 	assert.True(t, row.MajorAvailable)
 
 	lockFailOnOutdated = true
-	_ = captureStdout(t, func() { code = outdatedAt("", "", nil) })
+	_ = captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
 	assert.Equal(t, exitDrift, code, "--fail-on-outdated exits 2 on an allowed update")
 }
 
@@ -142,7 +142,7 @@ func TestUpdate_AMovedTagIsRefusedUntilAccepted(t *testing.T) {
 	// outdated flags it and exits 2 even without --fail-on-outdated.
 	lockOutdated, lockFormat = true, formatJSON
 	var code int
-	stdout := captureStdout(t, func() { code = outdatedAt("", "", nil) })
+	stdout := captureStdout(t, func() { code = reported(outdatedAt("", "", nil)) })
 	assert.Equal(t, exitDrift, code)
 	assert.Contains(t, stdout, `"code": "AR732"`)
 	lockOutdated, lockFormat = false, ""
@@ -223,7 +223,7 @@ func TestLockOutdated_OfflineRefuses(t *testing.T) {
 	lockOutdated, lockOffline = true, true
 
 	var code int
-	_, stderr := capture(t, func() { code = outdatedAt("", "", nil) })
+	_, stderr := capture(t, func() { code = reported(outdatedAt("", "", nil)) })
 
 	assert.Equal(t, 1, code)
 	assert.Contains(t, stderr, "lock --check")
@@ -277,7 +277,7 @@ func TestLockOutdated_UnknownNameIsAnError(t *testing.T) {
 	lockOutdated, lockFormat = true, ""
 
 	var code int
-	_, stderr := capture(t, func() { code = outdatedAt("", "", []string{"nope"}) })
+	_, stderr := capture(t, func() { code = reported(outdatedAt("", "", []string{"nope"})) })
 
 	assert.Equal(t, 1, code)
 	assert.Contains(t, stderr, "not a remote include")

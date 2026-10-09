@@ -102,38 +102,34 @@ func reportTagFindings(findings []tagFinding) (failing bool) {
 	return failing
 }
 
-// verifyTagsAt is the `lock --check --verify-tags` step: exit 2 for a moved tag, 1 when the remote cannot be read.
-func verifyTagsAt(path string) int {
+// verifyTagsAt is the `lock --check --verify-tags` step: an exitFindings error for a moved tag, any other failure when the remote cannot be read.
+func verifyTagsAt(path string) error {
 	cfg, _, err := loadForLockCheck(path)
 	if err != nil {
 		if errors.Is(err, config.ErrLockViolation) {
-			return exitDrift // the content check reported it already (fetched content disagrees with the lock)
+			return exitStatus(exitFindings) // the content check reported it already (fetched content disagrees with the lock)
 		}
-		renderError(os.Stderr, err)
-		return 1
+		return fail(err)
 	}
 	want, err := verifyTagsWanted(cfg, lockVerifyTags)
 	if err != nil {
-		renderError(os.Stderr, err)
-		return 1
+		return fail(err)
 	}
 	if !want {
-		return 0
+		return nil
 	}
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
-		renderError(os.Stderr, err)
-		return 1
+		return fail(err)
 	}
 	findings, err := verifyPinnedTags(cmdContext(), cfg, lock)
 	if err != nil {
-		renderError(os.Stderr, err)
-		return 1
+		return fail(err)
 	}
 	if reportTagFindings(findings) {
-		return exitDrift
+		return exitStatus(exitFindings)
 	}
-	return 0
+	return nil
 }
 
 // errMovedTag marks a run stopped by a pinned tag that moved (drift, exit 2).
