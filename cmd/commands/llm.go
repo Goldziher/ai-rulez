@@ -28,7 +28,7 @@ var LLMCmd = &cobra.Command{
 	Short: "Inspect the [llm] model-access configuration (read-only)",
 	Long: `Inspect how ai-rulez would reach a language model.
 
-  ai-rulez llm doctor      print the resolved backend, model, endpoint host, network gate and cache
+  ai-rulez llm doctor      print the liter-llm version, model, endpoint host, network gate and cache
   ai-rulez llm estimate    estimate tokens and cost of sending a file, without calling anything
 
 ai-rulez never calls a model unless [llm] allow_network = true. See docs/llm.md.`,
