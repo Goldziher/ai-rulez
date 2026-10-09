@@ -224,3 +224,25 @@ func TestViewNamesARemovedRole(t *testing.T) {
 		})
 	}
 }
+
+// A lock run (ignoreLock) evaluates every view of one project: the config, the
+// lock and the authored-skill digests are loaded once and shared by the views,
+// not rebuilt for each.
+func TestBuildAll_IgnoringTheLockLoadsTheProjectOnce(t *testing.T) {
+	// Arrange
+	root := viewsProject(t)
+	lockAll(t, root, ServeSetup{IncludeStatic: true})
+	setup := &ServeSetup{WorkDir: root, NoWatch: true, Offline: true}
+
+	// Act
+	views, err := setup.buildAll(context.Background(), buildOptions{admit: true, ignoreLock: true}, []ServeSetup{{IncludeStatic: true}})
+
+	// Assert
+	require.NoError(t, err)
+	require.Len(t, views, 4)
+	require.NotNil(t, views[0].lock)
+	for _, v := range views[1:] {
+		assert.Same(t, views[0].cfg, v.cfg, "view %q loaded the config again", v.view)
+		assert.Same(t, views[0].lock, v.lock, "view %q read the lock again", v.view)
+	}
+}
