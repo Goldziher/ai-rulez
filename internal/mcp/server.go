@@ -33,6 +33,9 @@ type Server struct {
 	// validator runs the lint behind validate_config; the CLI supplies the
 	// engine of `ai-rulez validate` so both report the same findings.
 	validator handlers.Validator
+	// policyViewer builds the report of policy_show; the CLI supplies the policy
+	// discovery of `validate --show-policy`.
+	policyViewer handlers.PolicyViewer
 	// dirs confines the project directories the tools may touch.
 	dirs dirPolicy
 }
@@ -44,6 +47,12 @@ type Option func(*Server)
 // checks. Without it validate_config reports that it cannot lint.
 func WithValidator(v handlers.Validator) Option {
 	return func(s *Server) { s.validator = v }
+}
+
+// WithPolicyViewer sets the policy discovery policy_show reports from. Without it
+// policy_show reports that it cannot discover a policy.
+func WithPolicyViewer(v handlers.PolicyViewer) Option {
+	return func(s *Server) { s.policyViewer = v }
 }
 
 // WithRoot confines working_directory, config_file and config_dir to dir and

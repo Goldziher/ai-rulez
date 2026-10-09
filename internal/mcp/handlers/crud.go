@@ -648,12 +648,13 @@ func CreateSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 	targets := request.GetStringSlice("targets", nil)
 
 	req := &crud.AddFileRequest{
-		Domain:   domain,
-		Type:     "skills",
-		Name:     name,
-		Content:  content,
-		Priority: priority,
-		Targets:  targets,
+		Domain:      domain,
+		Type:        "skills",
+		Name:        name,
+		Content:     content,
+		Description: request.GetString("description", ""),
+		Priority:    priority,
+		Targets:     targets,
 	}
 
 	result, err := op.AddSkill(ctx, req)
