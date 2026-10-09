@@ -114,6 +114,15 @@ func TestReaderToolsFailOnMalformedConfig(t *testing.T) {
 		"lock_status":           {},
 		"run_verifiers":         {},
 		"generate_outputs":      {},
+		"list_agents":           {},
+		"list_commands":         {},
+		"read_agent":            {"name": "x"},
+		"read_command":          {"name": "x"},
+		"token_report":          {},
+		"cost_report":           {},
+		"sbom":                  {},
+		"approvals_status":      {},
+		"list_verifiers":        {},
 	}
 	for tool, args := range tools {
 		t.Run(tool, func(t *testing.T) {
