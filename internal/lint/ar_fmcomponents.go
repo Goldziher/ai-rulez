@@ -60,7 +60,7 @@ func checkFrontmatterHooks(r *runner, it *item, d doc, fm frontmatter) {
 		line := lineAfter(d.lines, k.Line, firstLine(h.command))
 		r.checkHookCommand(it.abs, h.event, h.command)
 		r.checkRelativeHookScript(it, h, line)
-		for _, seg := range segSplitRe.Split(stripShellComment(h.command), -1) {
+		for _, seg := range segSplitRe().Split(stripShellComment(h.command), -1) {
 			if pkg, why := pinProblem(shellWords(seg), true, false); pkg != "" {
 				r.add(CodeUnpinnedExec, it.abs, line, "%s hook runs %q without pinning it (%s); pin a version so a new release cannot change what runs", h.event, pkg, why)
 			}

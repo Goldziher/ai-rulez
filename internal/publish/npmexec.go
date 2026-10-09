@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 )
 
 // defaultNPMRegistry is the registry npm uses when nothing configures another.
@@ -455,7 +456,7 @@ func (snap *packageSnapshot) checkTarEntry(tr *tar.Reader, hdr *tar.Header, tota
 		return npmTarballError("exceeds the %d byte verification limit", maxVerifyBytes)
 	}
 	*total += hdr.Size
-	body, err := io.ReadAll(io.LimitReader(tr, hdr.Size+1))
+	body, err := safefs.ReadLimited(tr, hdr.Size)
 	if err != nil || int64(len(body)) != hdr.Size {
 		return npmTarballError("entry %q is truncated", name)
 	}

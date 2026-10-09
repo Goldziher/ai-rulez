@@ -3,6 +3,7 @@ package lint
 import (
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // Example regions let documentation show a risky command without tripping the
@@ -22,7 +23,7 @@ import (
 // exampleMarker is the comment that marks the next fenced block as an example.
 const exampleMarker = "ai-rulez-example"
 
-var exampleInfoRe = regexp.MustCompile(`(?i)(^|[\s,;:{="'])examples?($|[\s,;:}"'])`)
+var exampleInfoRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)(^|[\s,;:{="'])examples?($|[\s,;:}"'])`) })
 
 // exampleAware lists the rules that honor example regions.
 var exampleAware = map[string]bool{
@@ -45,7 +46,7 @@ func exampleLines(d doc) map[int]bool {
 	var open string
 	start := 0
 	for i, line := range d.lines {
-		m := fenceRe.FindStringSubmatch(line)
+		m := fenceRe().FindStringSubmatch(line)
 		if m == nil {
 			continue
 		}
@@ -79,7 +80,7 @@ func exampleLines(d doc) map[int]bool {
 // isExampleFence reports whether the fence opened at line idx is an example:
 // by its info string or by a marker comment on the previous non-blank line.
 func isExampleFence(d doc, idx int, info string) bool {
-	if exampleInfoRe.MatchString(info) {
+	if exampleInfoRe().MatchString(info) {
 		return true
 	}
 	for j := idx - 1; j >= 0; j-- {

@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
@@ -283,14 +284,14 @@ func (r *runner) labelPath(p string) string {
 }
 
 // includeCacheRE matches a file in the include cache, ".cache/ai-rulez/includes/<name>-<hash>/<path>".
-var includeCacheRE = regexp.MustCompile(`/ai-rulez/includes/([^/]+)-[0-9a-f]{12}/(.+)$`)
+var includeCacheRE = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`/ai-rulez/includes/([^/]+)-[0-9a-f]{12}/(.+)$`) })
 
 // includeCacheLabel names a file of a cached include by the include and the path
 // within it. The cache lives under the user's home directory, and a message that
 // carried that absolute path gave the same finding a different fingerprint on
 // every machine.
 func includeCacheLabel(p string) (string, bool) {
-	m := includeCacheRE.FindStringSubmatch(filepath.ToSlash(p))
+	m := includeCacheRE().FindStringSubmatch(filepath.ToSlash(p))
 	if m == nil {
 		return "", false
 	}
@@ -529,10 +530,10 @@ func validateSecurity(sec *config.LintSecurity) []string {
 	return problems
 }
 
-var directiveTagRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9._:-]*$`)
+var directiveTagRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[A-Za-z][A-Za-z0-9._:-]*$`) })
 
 // ValidDirectiveTag reports whether tag can be a [lint.security] directive_tags entry.
-func ValidDirectiveTag(tag string) bool { return directiveTagRe.MatchString(strings.TrimSpace(tag)) }
+func ValidDirectiveTag(tag string) bool { return directiveTagRe().MatchString(strings.TrimSpace(tag)) }
 
 func validateCapabilityAndLoadBudgets(lc *config.LintConfig) []string {
 	var problems []string

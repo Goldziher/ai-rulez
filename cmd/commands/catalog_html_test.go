@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/govview"
 )
 
-var quotedValue = regexp.MustCompile(`="[^"]*"`)
+var quotedValue = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`="[^"]*"`) })
 
 func resetCatalogFlags(t *testing.T) {
 	t.Helper()
@@ -203,7 +204,7 @@ func TestCatalogHTMLEscapesHostileSource(t *testing.T) {
 			assert.NotContainsf(t, page, bad, "%s", name)
 		}
 		assert.Equalf(t, 1, strings.Count(page, "<script"), "%s: only the local catalog.js script", name)
-		bare := quotedValue.ReplaceAllString(page, `=""`) // attribute values are data, not attributes
+		bare := quotedValue().ReplaceAllString(page, `=""`) // attribute values are data, not attributes
 		assert.NotRegexpf(t, `(?i)<[^>]*\s(on[a-z]+)\s*=`, bare, "%s: no event handler attribute", name)
 		assert.NotRegexpf(t, `(?i)(href|src)\s*=\s*["']?\s*(javascript|data|https?):`, page, "%s", name)
 	}

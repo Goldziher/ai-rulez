@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/samber/oops"
@@ -137,9 +138,9 @@ func init() {
 }
 
 // approveReviewerPattern bounds what is written to the committed lock as a reviewer.
-var approveReviewerPattern = regexp.MustCompile(`^[^\x00-\x1f\x7f]{1,200}$`)
+var approveReviewerPattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[^\x00-\x1f\x7f]{1,200}$`) })
 
-var approveCodePattern = regexp.MustCompile(`^AR[0-9A-Z]{3,4}$`)
+var approveCodePattern = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^AR[0-9A-Z]{3,4}$`) })
 
 func runApprove(_ *cobra.Command, args []string) error {
 	if err := validateApproveFlags(args); err != nil {
@@ -193,11 +194,11 @@ func validateApproveTargets(args []string) error {
 // validateApproveInputs checks the free-text flags: --accept, --reviewer, --note.
 func validateApproveInputs() error {
 	for _, code := range approveAccept {
-		if !approveCodePattern.MatchString(strings.ToUpper(code)) {
+		if !approveCodePattern().MatchString(strings.ToUpper(code)) {
 			return oops.Errorf("invalid --accept %q: expected a rule code such as AR005", code)
 		}
 	}
-	if approveReviewer != "" && !approveReviewerPattern.MatchString(approveReviewer) {
+	if approveReviewer != "" && !approveReviewerPattern().MatchString(approveReviewer) {
 		return oops.Errorf("invalid --reviewer: use a single line of at most 200 characters")
 	}
 	if len(approveNote) > 500 || strings.ContainsFunc(approveNote, isNoteControl) {
@@ -286,7 +287,7 @@ func (e *approveEnv) reviewer() (string, error) {
 	switch {
 	case r == "":
 		return "", oops.Hint("pass --reviewer, or set $AI_RULEZ_REVIEWER or git user.email").Errorf("no reviewer: cannot tell who is approving")
-	case !approveReviewerPattern.MatchString(r):
+	case !approveReviewerPattern().MatchString(r):
 		return "", oops.Errorf("the reviewer %q is not a single line of at most 200 characters", safeText(r))
 	}
 	return approval.NormalizeReviewer(r), nil

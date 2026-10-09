@@ -74,3 +74,17 @@ func TestRepoTopMatchesTheSeparateQuestions(t *testing.T) {
 	assert.NotEmpty(t, top)
 	assert.Equal(t, int64(1), n.Load())
 }
+
+func TestMemoDoesNotShareAnswersBetweenRunners(t *testing.T) {
+	answering := func(out string) Git {
+		return New(&runner.Fake{Handle: func(runner.Spec) runner.Result {
+			return runner.Result{Status: runner.StatusOK, Stdout: []byte(out)}
+		}})
+	}
+	yes, no := answering("true\n"), answering("")
+	ctx := WithMemo(t.Context())
+
+	assert.True(t, yes.IsRepoContext(ctx, "/repo"))
+	assert.False(t, no.IsRepoContext(ctx, "/repo"), "another runner is another repository as far as the memo knows")
+	assert.True(t, yes.IsRepoContext(ctx, "/repo"), "and the first one still has its own answer")
+}

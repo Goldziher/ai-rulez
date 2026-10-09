@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint/scanners"
@@ -58,7 +59,7 @@ const (
 )
 
 var (
-	stagePlaceholderRe = regexp.MustCompile(`\{[a-z_]+\}`)
+	stagePlaceholderRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\{[a-z_]+\}`) })
 	listHolders        = map[string]bool{phFiles: true, phSkillDirs: true}
 	allHolders         = map[string]bool{phStage: true, phRoot: true, phFiles: true, phSkillDirs: true, phOut: true, phTmp: true}
 )
@@ -72,7 +73,7 @@ func inputProblems(ex config.LintExternal) []string {
 		}
 	}
 	for _, arg := range ex.Command {
-		for _, ph := range stagePlaceholderRe.FindAllString(arg, -1) {
+		for _, ph := range stagePlaceholderRe().FindAllString(arg, -1) {
 			switch {
 			case !allHolders[ph]:
 				problems = append(problems, fmt.Sprintf("command has the unknown placeholder %s (use %s)", ph, "{stage}, {root}, {files}, {skill_dirs}, {out} or {tmp}"))
@@ -260,10 +261,10 @@ func (r *runner) stagePath(it *item) (skillDir, rel string) {
 	return skillDir, rel
 }
 
-var stageNameRe = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
+var stageNameRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`[^A-Za-z0-9._-]+`) })
 
 func sanitizeStageName(s string) string {
-	s = strings.Trim(stageNameRe.ReplaceAllString(s, "-"), "-.")
+	s = strings.Trim(stageNameRe().ReplaceAllString(s, "-"), "-.")
 	if s == "" {
 		return "item"
 	}
@@ -307,7 +308,9 @@ func (r *runner) mcpStageJSON() []byte {
 	return append(data, '\n')
 }
 
-var secretFlagRe = regexp.MustCompile(`(?i)^-{1,2}[\w-]*(?:token|key|secret|password|passwd|credential|auth)[\w-]*$`)
+var secretFlagRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`(?i)^-{1,2}[\w-]*(?:token|key|secret|password|passwd|credential|auth)[\w-]*$`)
+})
 
 // redactStageArgs masks secrets in server arguments: the value of a flag named
 // like a credential (`--api-key abc`, `--token=abc`) and any key-looking text.
@@ -319,12 +322,12 @@ func redactStageArgs(args []string) []string {
 	out := make([]string, len(args))
 	for i := 0; i < len(args); i++ {
 		a := args[i]
-		if name, _, hasValue := strings.Cut(a, "="); hasValue && secretFlagRe.MatchString(name) {
+		if name, _, hasValue := strings.Cut(a, "="); hasValue && secretFlagRe().MatchString(name) {
 			out[i] = name + "=" + masked
 			continue
 		}
 		out[i] = llm.RedactSecrets(a)
-		if secretFlagRe.MatchString(a) && i+1 < len(args) {
+		if secretFlagRe().MatchString(a) && i+1 < len(args) {
 			out[i+1] = masked
 			i++
 		}

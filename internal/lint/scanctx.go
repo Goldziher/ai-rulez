@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // scanLine is one line of a scanned text with the context the rules need.
@@ -75,7 +76,7 @@ func newScanText(r *runner, abs, raw string) *scanText { //nolint:gocyclo // lin
 			t.lines = append(t.lines, l)
 			continue
 		}
-		if m := fenceRe.FindStringSubmatch(text); m != nil {
+		if m := fenceRe().FindStringSubmatch(text); m != nil {
 			run, info := m[1], strings.TrimSpace(m[2])
 			switch {
 			case open == "":
@@ -104,10 +105,10 @@ func newScanText(r *runner, abs, raw string) *scanText { //nolint:gocyclo // lin
 			t.lines = append(t.lines, l)
 			continue
 		}
-		if m := headingRe.FindStringSubmatch(text); m != nil {
+		if m := headingRe().FindStringSubmatch(text); m != nil {
 			headingNeg = negRe.MatchString(m[2])
 		}
-		l.Plain = codeSpanRe.ReplaceAllStringFunc(text, func(s string) string { return strings.Repeat(" ", len(s)) })
+		l.Plain = codeSpanRe().ReplaceAllStringFunc(text, func(s string) string { return strings.Repeat(" ", len(s)) })
 		l.Neg = headingNeg || negRe.MatchString(text)
 		if strings.TrimSpace(text) != "" {
 			prev[0], prev[1] = prev[1], text
@@ -133,16 +134,16 @@ func (t *scanText) shellLike(l scanLine) bool {
 func (t *scanText) prose(l scanLine) bool { return t.md && !l.Fenced && !l.Front }
 
 var (
-	segSplitRe = regexp.MustCompile(`&&|\|\||[;|]|\$\(|\x60`)
+	segSplitRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`&&|\|\||[;|]|\$\(|\x60`) })
 	// pipeSegSplitRe splits only at command separators, keeping $( and backticks inside a word.
-	pipeSegSplitRe = regexp.MustCompile(`&&|\|\||[;|]`)
+	pipeSegSplitRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`&&|\|\||[;|]`) })
 )
 
 // commandSegments returns the command-shaped pieces of a line: every segment of
 // a shell line, the inline code spans of a prose line, and a prose line that
 // itself starts with one of the start words ("npx -y pkg" as a bare line).
 func (t *scanText) commandSegments(l scanLine, start *regexp.Regexp) []string {
-	return t.commandSegmentsWith(l, start, segSplitRe)
+	return t.commandSegmentsWith(l, start, segSplitRe())
 }
 
 // commandSegmentsWith is commandSegments with the separator pattern chosen by the caller.
@@ -152,10 +153,10 @@ func (t *scanText) commandSegmentsWith(l scanLine, start, split *regexp.Regexp) 
 	case t.shellLike(l):
 		src = []string{l.Text}
 	case t.prose(l):
-		for _, m := range backtickRe.FindAllStringSubmatch(l.Text, -1) {
+		for _, m := range backtickRe().FindAllStringSubmatch(l.Text, -1) {
 			src = append(src, m[1])
 		}
-		bare := strings.TrimSpace(listMarkerRe.ReplaceAllString(strings.TrimSpace(l.Text), ""))
+		bare := strings.TrimSpace(listMarkerRe().ReplaceAllString(strings.TrimSpace(l.Text), ""))
 		bare = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(bare, "$ "), "> "))
 		if start != nil && start.MatchString(bare) {
 			src = append(src, bare)
@@ -214,7 +215,7 @@ func inCIDR(ip net.IP, cidr string) bool {
 // urlHosts lists the hosts of the URLs on a line.
 func urlHosts(line string) []string {
 	var out []string
-	for _, m := range urlRe.FindAllStringSubmatch(line, -1) {
+	for _, m := range urlRe().FindAllStringSubmatch(line, -1) {
 		out = append(out, strings.ToLower(m[1]))
 	}
 	return out

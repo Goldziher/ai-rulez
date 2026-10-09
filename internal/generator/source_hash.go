@@ -2,7 +2,6 @@ package generator
 
 import (
 	"encoding/json"
-	"fmt"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -28,7 +27,7 @@ import (
 // encoding/json which sorts map keys. Paths are normalized by hashPath so the
 // checkout root never enters the hash.
 func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
-	var b strings.Builder
+	b := templates.NewContentHasher()
 	b.WriteString("schema=" + templates.GeneratorSchemaVersion + "\n")
 	b.WriteString("name=" + cfg.Name + "\n")
 	b.WriteString("description=" + cfg.Description + "\n")
@@ -37,7 +36,7 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 		b.WriteString("scope=" + cfg.Run.Scope.Path + "\n")
 	}
 	b.WriteString("header_style=" + cfg.GetHeaderStyle() + "\n")
-	_, _ = fmt.Fprintf(&b, "header_timestamp=%t\n", cfg.ShowHeaderTimestamp())
+	b.Printf("header_timestamp=%t\n", cfg.ShowHeaderTimestamp())
 
 	// Effective rules mode per enabled preset, sorted, so switching modes
 	// rewrites the affected files.
@@ -87,13 +86,13 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 		b.WriteString("plugin=" + string(pluginJSON) + "\n")
 	}
 
-	writeSourceContent(&b, cfg, content)
-	return templates.HashContent(b.String())
+	writeSourceContent(b, cfg, content)
+	return b.Sum()
 }
 
 // writeSourceContent writes every content category of the tree into a source
 // hash input.
-func writeSourceContent(b *strings.Builder, cfg *config.Config, content *config.ContentTree) {
+func writeSourceContent(b *templates.ContentHasher, cfg *config.Config, content *config.ContentTree) {
 	// Root content categories — slices already sorted by Name in the scanner
 	writeContentFiles(b, "root.rules", content.Rules, cfg)
 	writeContentFiles(b, "root.context", content.Context, cfg)
@@ -110,7 +109,7 @@ func writeSourceContent(b *strings.Builder, cfg *config.Config, content *config.
 	sort.Strings(domainNames)
 	for _, name := range domainNames {
 		domain := content.Domains[name]
-		_, _ = fmt.Fprintf(b, "domain:%s,builtin=%t,from_include=%t\n", name, domain.Builtin, domain.FromInclude)
+		b.Printf("domain:%s,builtin=%t,from_include=%t\n", name, domain.Builtin, domain.FromInclude)
 		writeContentFiles(b, "domain."+name+".rules", domain.Rules, cfg)
 		writeContentFiles(b, "domain."+name+".context", domain.Context, cfg)
 		writeContentFiles(b, "domain."+name+".skills", domain.Skills, cfg)
@@ -133,10 +132,10 @@ func writeSourceContent(b *strings.Builder, cfg *config.Config, content *config.
 func computeSharedSourceHash(cfg *config.Config, content *config.ContentTree, inlining config.AgentsMDInlining,
 	owners []string,
 ) string {
-	var b strings.Builder
+	b := templates.NewContentHasher()
 	b.WriteString("schema=" + templates.GeneratorSchemaVersion + "\n")
 	b.WriteString("shared=agents_md\n")
-	_, _ = fmt.Fprintf(&b, "inline_scoped=%t,inline_auto_manual=%t\n", inlining.Scoped, inlining.AutoManual)
+	b.Printf("inline_scoped=%t,inline_auto_manual=%t\n", inlining.Scoped, inlining.AutoManual)
 	if hasTargetedRulesOrContext(content) {
 		b.WriteString("agents_md_owners=" + strings.Join(slices.Sorted(slices.Values(owners)), ",") + "\n")
 	}
@@ -147,10 +146,10 @@ func computeSharedSourceHash(cfg *config.Config, content *config.ContentTree, in
 		b.WriteString("scope=" + cfg.Run.Scope.Path + "\n")
 	}
 	b.WriteString("header_style=" + cfg.GetHeaderStyle() + "\n")
-	_, _ = fmt.Fprintf(&b, "header_timestamp=%t\n", cfg.ShowHeaderTimestamp())
-	_, _ = fmt.Fprintf(&b, "compact=%t\n", cfg.IsCompact())
-	writeSourceContent(&b, cfg, content)
-	return templates.HashContent(b.String())
+	b.Printf("header_timestamp=%t\n", cfg.ShowHeaderTimestamp())
+	b.Printf("compact=%t\n", cfg.IsCompact())
+	writeSourceContent(b, cfg, content)
+	return b.Sum()
 }
 
 // hasTargetedRulesOrContext reports whether any rule or context item restricts
@@ -212,7 +211,7 @@ func hashPath(path string, cfg *config.Config) string {
 // Slices reach this function in the scanner's os.ReadDir order, which is
 // lexical by filename; include-merged trees are ordered by the include
 // resolver instead.
-func writeContentFiles(b *strings.Builder, label string, files []config.ContentFile, cfg *config.Config) {
+func writeContentFiles(b *templates.ContentHasher, label string, files []config.ContentFile, cfg *config.Config) {
 	for i := range files {
 		f := files[i]
 		b.WriteString(label + ":" + f.Name + "|path=" + hashPath(f.Path, cfg) + "|content=" + f.Content)
@@ -233,9 +232,9 @@ func writeContentFiles(b *strings.Builder, label string, files []config.ContentF
 		// whose body happened to contain `|res=ref:other:...` could be
 		// indistinguishable from two separate resources.
 		for _, r := range f.Resources {
-			fmt.Fprintf(b, "|res=%s:%s:len=%d:", r.Kind, r.RelPath, len(r.Content))
-			b.Write(r.Content)
+			b.Printf("|res=%s:%s:len=%d:", r.Kind, r.RelPath, len(r.Content))
+			b.WriteBytes(r.Content)
 		}
-		b.WriteByte('\n')
+		b.WriteString("\n")
 	}
 }

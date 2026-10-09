@@ -30,6 +30,27 @@ func HashContent(content string) string {
 	return fmt.Sprintf("blake3:%x", h)
 }
 
+// ContentHasher computes HashContent of a text written to it in pieces, without
+// holding the text: the same digest as HashContent of the pieces joined.
+type ContentHasher struct{ h *blake3.Hasher }
+
+// NewContentHasher starts an empty hash.
+func NewContentHasher() *ContentHasher { return &ContentHasher{h: blake3.New()} }
+
+// WriteString adds s to the hashed text.
+func (c *ContentHasher) WriteString(s string) { _, _ = c.h.WriteString(s) } //nolint:errcheck // a hash never fails
+
+// Printf adds the formatted text to the hashed text.
+func (c *ContentHasher) Printf(format string, args ...any) {
+	_, _ = fmt.Fprintf(c.h, format, args...) //nolint:errcheck // a hash never fails
+}
+
+// WriteBytes adds p to the hashed text.
+func (c *ContentHasher) WriteBytes(p []byte) { _, _ = c.h.Write(p) } //nolint:errcheck // a hash never fails
+
+// Sum returns the digest in the format of HashContent.
+func (c *ContentHasher) Sum() string { return fmt.Sprintf("blake3:%x", c.h.Sum(nil)) }
+
 // GeneratorSchemaVersion bumps when the rendering logic changes in a way that
 // would alter output for the same source inputs (e.g., template restructuring,
 // header layout changes, fixed bugs in serialization). Bumping invalidates all

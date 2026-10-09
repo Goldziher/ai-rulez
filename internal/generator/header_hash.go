@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 )
 
@@ -217,12 +218,10 @@ func injectHashesIn(rd *config.RulesDirSet, content, outputPath, contentHash, so
 	// 1. YAML frontmatter (skill/agent files): inject as YAML comment lines
 	// inside the frontmatter, before the closing "---". YAML parsers ignore
 	// comments, so consumers see the same parsed fields.
-	if strings.HasPrefix(content, "---\n") {
-		rest := content[len("---\n"):]
-		if idx := strings.Index(rest, "\n---\n"); idx >= 0 {
-			closeIdx := len("---\n") + idx
-			return content[:closeIdx] + "\n" + hashBlock("# ") + content[closeIdx:]
-		}
+	if block := frontmatter.SplitString(content); block.Closed {
+		// closeIdx is the line break that ends the last line before the closing fence.
+		closeIdx := len(content) - len(block.Head) - len(block.Tail) + strings.LastIndex(block.Head, "\n")
+		return content[:closeIdx] + "\n" + hashBlock("# ") + content[closeIdx:]
 	}
 
 	// 2. HTML comment banner — only for true markdown/HTML extensions.

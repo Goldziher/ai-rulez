@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // RuleDoc is the long-form explanation of one rule, printed by
@@ -305,10 +306,10 @@ func WriteExplanation(sb *strings.Builder, e Explanation) {
 	fmt.Fprintf(sb, "\nDocs: %s\n", e.DocsURL)
 }
 
-var codeRe = regexp.MustCompile(`^AR\d{3}$`)
+var codeRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^AR\d{3}$`) })
 
 // IsCode reports whether s has the shape of a rule code.
-func IsCode(s string) bool { return codeRe.MatchString(strings.ToUpper(strings.TrimSpace(s))) }
+func IsCode(s string) bool { return codeRe().MatchString(strings.ToUpper(strings.TrimSpace(s))) }
 
 const (
 	ruleRefBegin = "<!-- rules:begin (generated: UPDATE_DOCS=1 go test ./internal/lint -run TestRuleReferenceDoc) -->"

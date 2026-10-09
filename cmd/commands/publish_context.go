@@ -21,6 +21,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/publish"
 	pemit "github.com/Goldziher/ai-rulez/v5/internal/publish/emit"
 	"github.com/Goldziher/ai-rulez/v5/internal/publish/oci"
+	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/signing"
 	"github.com/Goldziher/ai-rulez/v5/internal/workspace"
 )
@@ -54,7 +55,7 @@ func (pc *publishContext) loadLock() error {
 	if err := publish.CheckTree(filepath.Dir(lockPath), []string{filepath.Base(lockPath)}); err != nil {
 		return publish.Errorf(publish.CodePreflight, publish.ExitGate, "run `ai-rulez lock`", "no usable %s: %v", lockfile.FileName, err)
 	}
-	raw, err := os.ReadFile(lockPath) //nolint:gosec // the project's own lock file
+	raw, err := safefs.ReadFileLimited(lockPath, maxPublishInputBytes) // the project's own lock file
 	if err != nil {
 		return oops.With("path", lockPath).Wrapf(err, "read lock file")
 	}

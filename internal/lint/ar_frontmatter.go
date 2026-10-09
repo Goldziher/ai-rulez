@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // Codes for the frontmatter value checks.
@@ -55,8 +56,12 @@ var boolKeys = map[string][]string{
 // vendorModelRe accepts the model IDs other harnesses use, so a subagent written
 // for another tool is not reported for a model this check cannot enumerate.
 var (
-	claudeModelRe = regexp.MustCompile(`^(?:claude-[a-z0-9.@_-]+|(?:[a-z]{2,6}\.)?anthropic\.claude-[a-z0-9.:_-]+|arn:\S+)(?:\[1m\])?$`)
-	vendorModelRe = regexp.MustCompile(`^(?:gpt-|o\d|gemini-|llama|mistral|codestral|grok|deepseek|qwen|kimi|glm-|command-)[a-z0-9.:_/-]*$`)
+	claudeModelRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^(?:claude-[a-z0-9.@_-]+|(?:[a-z]{2,6}\.)?anthropic\.claude-[a-z0-9.:_-]+|arn:\S+)(?:\[1m\])?$`)
+	})
+	vendorModelRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^(?:gpt-|o\d|gemini-|llama|mistral|codestral|grok|deepseek|qwen|kimi|glm-|command-)[a-z0-9.:_/-]*$`)
+	})
 )
 
 // checkFrontmatterMalformed reports an item whose frontmatter block the loader
@@ -162,7 +167,7 @@ func checkModelValue(k fmKey, bad func(fmKey, string, ...any)) {
 	switch {
 	case v == "":
 		bad(k, "is empty; use an alias such as sonnet, opus, haiku or inherit, or a full model ID")
-	case inSet(modelAliases, low) || claudeModelRe.MatchString(v) || vendorModelRe.MatchString(low) || strings.ContainsAny(v, "/:"):
+	case inSet(modelAliases, low) || claudeModelRe().MatchString(v) || vendorModelRe().MatchString(low) || strings.ContainsAny(v, "/:"):
 	case strings.ContainsAny(v, " \t"):
 		bad(k, "%q contains whitespace", v)
 	default:
@@ -205,7 +210,9 @@ var claudeTools = []string{
 	"TodoRead", "TodoWrite", "ToolSearch", "WebFetch", "WebSearch", "Workflow", "Write", "ScheduleWakeup", "PushNotification", "RemoteTrigger",
 }
 
-var mcpToolRe = regexp.MustCompile(`^mcp__[A-Za-z0-9_.-]+?(?:__(?:[A-Za-z0-9_.-]+|\*))?$`)
+var mcpToolRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile(`^mcp__[A-Za-z0-9_.-]+?(?:__(?:[A-Za-z0-9_.-]+|\*))?$`)
+})
 
 // toolKeys are the frontmatter keys that list tools, per content kind.
 var toolKeys = map[string][][2]string{ // {allow key, deny key}
@@ -268,7 +275,7 @@ func toolProblem(entry string, known map[string]bool) string {
 	case name == "*" || name == "":
 		return ""
 	case strings.HasPrefix(name, "mcp__"):
-		if !mcpToolRe.MatchString(name) {
+		if !mcpToolRe().MatchString(name) {
 			return fmt.Sprintf("%q is not a valid MCP tool name (mcp__<server>__<tool>)", entry)
 		}
 		return ""

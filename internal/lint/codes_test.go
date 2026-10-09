@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -145,7 +146,7 @@ func TestCodeBlocksAreAllocated(t *testing.T) {
 }
 
 // codeLiteral matches a string literal that is exactly one rule code.
-var codeLiteral = regexp.MustCompile(`^AR[0-9][0-9A-Z]{2}$`)
+var codeLiteral = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^AR[0-9][0-9A-Z]{2}$`) })
 
 // TestAllocatedBlocksCoverLiteralsInOtherPackages catches a code another
 // package declares (internal/okf, internal/mcp, internal/importer, ...) that the
@@ -177,7 +178,7 @@ func TestAllocatedBlocksCoverLiteralsInOtherPackages(t *testing.T) {
 					return true
 				}
 				code, _ := strconv.Unquote(lit.Value)
-				if !codeLiteral.MatchString(code) {
+				if !codeLiteral().MatchString(code) {
 					return true
 				}
 				found++

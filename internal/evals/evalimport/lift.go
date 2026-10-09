@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/evals"
 )
@@ -20,13 +21,21 @@ type lifted struct {
 var (
 	quoted = `["'` + "`" + `]([^"'` + "`" + `\n]{1,200})["'` + "`" + `]`
 	// file "x" exists / is created / is present
-	liftFileExists = regexp.MustCompile(`(?i)^(?:the\s+)?(?:file|path)\s+` + quoted + `\s+(?:exists|is\s+created|is\s+present|gets\s+created)\.?$`)
+	liftFileExists = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)^(?:the\s+)?(?:file|path)\s+` + quoted + `\s+(?:exists|is\s+created|is\s+present|gets\s+created)\.?$`)
+	})
 	// file "x" does not exist / is not created
-	liftFileAbsent = regexp.MustCompile(`(?i)^(?:the\s+)?(?:file|path)\s+` + quoted + `\s+(?:does\s+not\s+exist|is\s+not\s+created|is\s+absent)\.?$`)
+	liftFileAbsent = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)^(?:the\s+)?(?:file|path)\s+` + quoted + `\s+(?:does\s+not\s+exist|is\s+not\s+created|is\s+absent)\.?$`)
+	})
 	// the output/answer/response contains "y"
-	liftContains = regexp.MustCompile(`(?i)^(?:the\s+)?(?:output|answer|response|final\s+answer)\s+(?:contains|includes|mentions)\s+` + quoted + `\.?$`)
+	liftContains = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)^(?:the\s+)?(?:output|answer|response|final\s+answer)\s+(?:contains|includes|mentions)\s+` + quoted + `\.?$`)
+	})
 	// the output/answer/response does not contain "y"
-	liftNotContains = regexp.MustCompile(`(?i)^(?:the\s+)?(?:output|answer|response|final\s+answer)\s+(?:does\s+not|doesn'?t)\s+(?:contain|include|mention)\s+` + quoted + `\.?$`)
+	liftNotContains = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i)^(?:the\s+)?(?:output|answer|response|final\s+answer)\s+(?:does\s+not|doesn'?t)\s+(?:contain|include|mention)\s+` + quoted + `\.?$`)
+	})
 )
 
 // liftAssertions returns the assertions the criteria state in a fixed phrasing.
@@ -42,17 +51,17 @@ func liftAssertions(criteria []criterion) []lifted {
 }
 
 func liftOne(text string) (evals.Assertion, bool) {
-	if m := liftFileAbsent.FindStringSubmatch(text); len(m) > 1 && evals.CheckRelPath(m[1]) == "" {
+	if m := liftFileAbsent().FindStringSubmatch(text); len(m) > 1 && evals.CheckRelPath(m[1]) == "" {
 		no := false
 		return evals.Assertion{Type: evals.AssertFileExists, Path: m[1], Exists: &no}, true
 	}
-	if m := liftFileExists.FindStringSubmatch(text); len(m) > 1 && evals.CheckRelPath(m[1]) == "" {
+	if m := liftFileExists().FindStringSubmatch(text); len(m) > 1 && evals.CheckRelPath(m[1]) == "" {
 		return evals.Assertion{Type: evals.AssertFileExists, Path: m[1]}, true
 	}
-	if m := liftNotContains.FindStringSubmatch(text); m != nil {
+	if m := liftNotContains().FindStringSubmatch(text); m != nil {
 		return evals.Assertion{Type: evals.AssertNotContains, Value: m[1]}, true
 	}
-	if m := liftContains.FindStringSubmatch(text); m != nil {
+	if m := liftContains().FindStringSubmatch(text); m != nil {
 		return evals.Assertion{Type: evals.AssertContains, Value: m[1]}, true
 	}
 	return evals.Assertion{}, false

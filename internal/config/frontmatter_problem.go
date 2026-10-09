@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // CodeFrontmatterMalformed is the lint code (AR306) a malformed frontmatter block
@@ -24,19 +26,12 @@ func FrontmatterProblem(path string) string {
 	if err != nil {
 		return path + ":1: frontmatter cannot be parsed"
 	}
-	lines := strings.Split(string(data), "\n")
-	end := -1
-	for i := 1; i < len(lines); i++ {
-		if strings.TrimSpace(lines[i]) == frontmatterFence {
-			end = i
-			break
-		}
-	}
-	if end == -1 {
+	block := frontmatter.Split(data)
+	if !block.Closed {
 		return path + ":1: the frontmatter opened with " + frontmatterFence + " never closes with " + frontmatterFence
 	}
 	var out map[string]any
-	err = yaml.Unmarshal([]byte(strings.Join(lines[1:end], "\n")), &out)
+	err = yaml.Unmarshal([]byte(block.Raw), &out)
 	if err == nil {
 		return path + ":1: frontmatter is not a YAML mapping"
 	}
