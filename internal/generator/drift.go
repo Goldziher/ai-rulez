@@ -94,7 +94,11 @@ func (g *Generator) rawState(abs string, output config.OutputFile) DriftKind {
 	return ""
 }
 
-// maxHashedTrailingNewlines bounds the trailing-newline shapes bodyEdited tries.
+// maxHashedTrailingNewlines is the longest run of trailing newlines a
+// Content-Hash covers. The hash is taken before generate normalizes the file
+// to one trailing newline, so bodyEdited cannot see how many the rendering had
+// and tries every run up to this bound; bodyHash caps the run at the same bound
+// so that every hash it writes is one of those shapes.
 const maxHashedTrailingNewlines = 3
 
 // bodyEdited reports whether content, read from path, no longer matches the
@@ -111,13 +115,28 @@ func (g *Generator) bodyEdited(content, path string) bool {
 	return bodyEditedWith(stored, content, path)
 }
 
+// bodyHash is the Content-Hash of a rendered output: its body after the
+// header, with a run of trailing newlines longer than maxHashedTrailingNewlines
+// cut to that bound. A shorter run is hashed as rendered, so the hashes of
+// existing files do not move. Without the cap a body ending in a long run of
+// blank lines (an empty last section) could not be verified, and generate
+// --check reported the file generate had just written as edited.
+func bodyHash(output config.OutputFile) string {
+	body := stripHeader(output.Content, output.Path)
+	trimmed := strings.TrimRight(body, "\n")
+	if len(body)-len(trimmed) > maxHashedTrailingNewlines {
+		body = trimmed + strings.Repeat("\n", maxHashedTrailingNewlines)
+	}
+	return templates.HashContent(body)
+}
+
 func bodyEditedWith(stored, content, path string) bool {
 	if stored == "" {
 		return false
 	}
 	// The hash is taken before generate normalizes the file to one trailing
 	// newline, so any run of trailing newlines in the rendering may have been
-	// collapsed; accept the few shapes a renderer produces.
+	// collapsed; accept every run bodyHash can produce.
 	trimmed := strings.TrimRight(stripHeader(content, path), "\n")
 	for newlines := 0; newlines <= maxHashedTrailingNewlines; newlines++ {
 		if templates.HashContent(trimmed+strings.Repeat("\n", newlines)) == stored {
