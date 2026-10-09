@@ -126,6 +126,42 @@ Behavior that changed deliberately (everything else is byte-identical):
   tar entries), the signing key, the LLM cache entry and secret. `safefs.ReadFileLimited` opens and reads with the same
   bound.
 
+### Third pass: the process cleanup after each spawn
+
+`internal/runner` ends every run by killing what the command left behind. The guarantee, from the code and the
+tests (`TestRunKillsHelpersThatLeaveTheGroup`, `TestRunKillsADetachedSystemBinary`, `TestConcurrentRunsDoNotKillEachOther`):
+after `Run` returns, no process of the run is alive. That covers the process group, any descendant seen while the
+command ran (a helper that called `setsid` or `setpgid` is still a descendant), and a helper that detached and was
+reparented to init between two looks at the table, which is found by the run token every child inherits in its
+environment or by the write end of the marker pipe every child inherits as a descriptor (macOS withholds the
+environment of platform binaries, so there the descriptor is what finds them). It does not cover a helper that drops
+both the variable and the descriptor before detaching, and it must never touch a process of another run. On Windows
+the job object gives the guarantee without any table read.
+
+The cost was in the token and descriptor search (`adoptCarriers`): it skips processes older than the command's root
+(a descendant cannot be older than its ancestor), but a `Spec.ShortLived` run (every git call) does not read the
+process table at start, so it never learned the root's start time and the search covered every process of the user,
+one `sysctl` (macOS) or `/proc/<pid>/environ` read (Linux) each, after every spawn.
+
+Now a short-lived run reads the start time of its own root with a single lookup at attach (`processStart`: one
+`sysctl kern.proc.pid`, or one `/proc/<pid>/stat`), so the search covers only processes that started since the command,
+which is a handful. If that lookup fails the search is unbounded as before, so the guarantee is the same on every
+platform; nothing was weakened. The full (non-short) path already had the bound and is unchanged. Windows is unchanged.
+
+Measured on a loaded machine (load average 16 to 28, 850 processes), `go test -bench` of the runner and generator
+packages, test binaries built before and after and run back to back. Wall times are dominated by the fork cost under
+that load and are not reliable; the allocations and the isolated sweep are.
+
+| Path (benchmark) | Before | After |
+| ---------------- | ------ | ----- |
+| Sweep alone over the real table of 850 processes (`runner AdoptCarriers`) | 9.5 ms, 1.5 MB, 10k allocs | 0.02 to 0.04 ms, 544 B, 9 allocs |
+| One short-lived spawn with cleanup (`runner SpawnCleanup/short`) | 1.85 MB, 7.3k to 7.8k allocs | 0.78 MB, 300 to 420 allocs |
+| One full spawn with cleanup (`SpawnCleanup/full`) | unchanged | unchanged |
+| Secret gate, 10 files (`generator SecretGate/small`) | 4.2 to 4.5 MB, 18k to 19k allocs | 2.1 MB, 3.7k allocs |
+| Secret gate with the memo (`SecretGate/small-memo`) | 2.4 to 2.5 MB, 10k to 11k allocs | 0.9 to 1.2 MB, 0.8k to 2.4k allocs |
+
+The cost of the sweep now depends on how many processes start during the command, not on how many exist.
+
 ## What dominates elsewhere
 
 These were measured and not changed here.
@@ -136,11 +172,6 @@ These were measured and not changed here.
   `ls-files`) and file-system calls; their CPU time is a small share.
 - **Token counting.** cl100k counting of the prompt text is the largest allocator in a lint run (about a third of
   the bytes, in `regexp2` match objects); the memo that removes it is part of the same separate branch.
-- **Process-table sweep per spawn.** After each short git command, `runner`'s process-tree cleanup reads the whole
-  process table and the environment of every process of the user's that started after the command
-  (`adoptCarriers`, one `sysctl` each) to find a detached helper. In a CPU profile of `SecretGate` this is 68% of
-  the time and, on a machine with hundreds of processes, a large share of the allocations of a publish run: its cost
-  depends on the machine, not the project. It is security-relevant code and was not touched here.
 - **Served skills.** `lock --check` still builds the served-skill views twice (`mcp.DynamicLockChanges` loads the
   configuration for each view and scans the skills); that code lives in `internal/mcp`.
 - **Publish at scale.** What remains of `publish --dry-run` at 2000 files (1.36 GB over 9.9 million objects) is the

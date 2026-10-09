@@ -302,6 +302,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 
 ### Fixed
 
+- **The git process cleanup no longer reads the environment of every process on the machine**: a short-lived run now records its root's start time, so the search for detached helpers covers only processes started since the command (10 ms to 0.03 ms per spawn on 850 processes, same guarantee).
 - **The default `ai-rulez mcp` answers a request sent before `initialize` with `-32600`**, like `--serve-skills`, instead of error code 0.
 - **`validate --offline`** skips fetching remote includes, as `generate --offline` does, so `validate --config-only` works with an unreachable remote include.
 - **`migrate v5` keeps CRLF line endings** in `config.toml`; YAML frontmatter after a UTF-8 byte order mark is parsed as frontmatter.
