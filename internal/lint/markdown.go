@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	fmsplit "github.com/Goldziher/ai-rulez/v5/internal/frontmatter"
 )
 
 // doc is one source file split into lines, with the frontmatter located.
@@ -17,13 +19,9 @@ type doc struct {
 func parseDoc(raw string) doc {
 	raw = strings.ReplaceAll(raw, "\r\n", "\n")
 	d := doc{lines: strings.Split(raw, "\n")}
-	if len(d.lines) > 0 && strings.TrimSpace(d.lines[0]) == fenceFrontmatter {
-		for i := 1; i < len(d.lines); i++ {
-			if strings.TrimSpace(d.lines[i]) == fenceFrontmatter {
-				d.bodyStart = i + 1
-				break
-			}
-		}
+	// The closing fence's 1-based line number is the 0-based index of the first body line.
+	if line, ok := fmsplit.ClosingLine(raw); ok {
+		d.bodyStart = line
 	}
 	return d
 }
