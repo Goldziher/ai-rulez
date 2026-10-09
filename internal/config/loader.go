@@ -70,11 +70,11 @@ func resolveConfigDirName(v workspace.View, absDir string) string {
 	return ""
 }
 
-// projectBaseDir returns the project directory that owns configDir: the
+// ProjectBaseDir returns the project directory that owns configDir: the
 // directory containing the config directory. For the nested .config/ai-rulez/
 // layout it skips past the generic .config/ wrapper so generated outputs are
 // rooted in the project, not in .config/.
-func projectBaseDir(configDir string) string {
+func ProjectBaseDir(configDir string) string {
 	parent := filepath.Dir(configDir)
 	if filepath.Base(parent) == ".config" {
 		return filepath.Dir(parent)
@@ -214,7 +214,7 @@ func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*
 			Hint("Place config files inside a configuration directory such as .ai-rulez/config.toml, or pass a config directory path. This keeps generated outputs rooted in the project instead of the parent directory.").
 			Errorf("directory layout required for root-level config file")
 	}
-	return finishLoadConfig(ctx, v, cfg, projectBaseDir(configDir), configDir, lo)
+	return finishLoadConfig(ctx, v, cfg, ProjectBaseDir(configDir), configDir, lo)
 }
 
 // absoluteConfigPath resolves path against the workspace root when one is set,
@@ -251,7 +251,7 @@ func loadConfigFromDir(ctx context.Context, v workspace.View, absPath string, lo
 		if loadErr != nil {
 			return nil, loadErr
 		}
-		return finishLoadConfig(ctx, v, cfg, projectBaseDir(absPath), absPath, lo)
+		return finishLoadConfig(ctx, v, cfg, ProjectBaseDir(absPath), absPath, lo)
 	}
 	return LoadConfig(ctx, absPath, opts...)
 }

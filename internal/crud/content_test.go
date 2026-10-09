@@ -331,7 +331,7 @@ func TestAddSkill(t *testing.T) {
 
 				content, err := os.ReadFile(result.FullPath)
 				require.NoError(t, err)
-				assert.Contains(t, string(content), `description: code-review`)
+				assert.Contains(t, string(content), `description: Describe what the code-review skill does`)
 			},
 		},
 		{
@@ -370,7 +370,7 @@ func TestAddSkill(t *testing.T) {
 			checkFn: func(t *testing.T, result *crud.FileResult) {
 				content, err := os.ReadFile(result.FullPath)
 				require.NoError(t, err)
-				assert.Contains(t, string(content), `description: analysis-skill`)
+				assert.Contains(t, string(content), `description: Describe what the analysis-skill skill does`)
 				assert.Contains(t, string(content), "# Analysis Skill")
 			},
 		},
