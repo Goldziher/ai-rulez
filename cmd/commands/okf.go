@@ -288,25 +288,11 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) error {
 	if dir == "" {
 		dir = filepath.Join(cfg.BaseDir, filepath.FromSlash(cfg.OKFDir()))
 	}
-	w := reportWriter{out}
 	for _, note := range res.Notes {
 		fmt.Fprintln(os.Stderr, "note:", note)
 	}
 	if okfCheck {
-		drift, err := okf.Compare(dir, res.Files)
-		if err != nil {
-			return fail(err)
-		}
-		if okfFormat == formatJSON {
-			return writeOKFExportJSON(out, map[string]any{keyStatus: okfExportStatus(drift.Empty()), "dir": dir, "files": len(res.Files), statusDrift: drift}, drift.Empty())
-		}
-		if drift.Empty() {
-			w.printf("%s is up to date (%d files)\n", dir, len(res.Files))
-			return nil
-		}
-		printOKFDrift(w, drift)
-		w.printf("%s differs from the sources; run ai-rulez export okf (or generate) to update it\n", dir)
-		return exitStatus(exitOKFProblems)
+		return checkOKFExport(out, dir, res)
 	}
 	if err := okf.WriteFiles(dir, res.Files, true); err != nil {
 		return fail(err)
@@ -318,8 +304,28 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) error {
 		}
 		return writeOKFExportJSON(out, map[string]any{"status": "written", "dir": dir, "files": paths, "count": len(paths), "counts": res.Counts}, true)
 	}
-	w.printf("Wrote %d files to %s (%s)\n", len(res.Files), dir, kindCounts(res.Counts))
+	reportWriter{out}.printf("Wrote %d files to %s (%s)\n", len(res.Files), dir, kindCounts(res.Counts))
 	return nil
+}
+
+// checkOKFExport is `export okf --check`: it compares the bundle on disk with the
+// export and writes nothing.
+func checkOKFExport(out io.Writer, dir string, res *okfbridge.ExportResult) error {
+	w := reportWriter{out}
+	drift, err := okf.Compare(dir, res.Files)
+	if err != nil {
+		return fail(err)
+	}
+	if okfFormat == formatJSON {
+		return writeOKFExportJSON(out, map[string]any{keyStatus: okfExportStatus(drift.Empty()), "dir": dir, "files": len(res.Files), statusDrift: drift}, drift.Empty())
+	}
+	if drift.Empty() {
+		w.printf("%s is up to date (%d files)\n", dir, len(res.Files))
+		return nil
+	}
+	printOKFDrift(w, drift)
+	w.printf("%s differs from the sources; run ai-rulez export okf (or generate) to update it\n", dir)
+	return exitStatus(exitOKFProblems)
 }
 
 func okfExportStatus(upToDate bool) string {
