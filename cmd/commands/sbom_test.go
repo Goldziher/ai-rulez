@@ -59,7 +59,7 @@ func TestSBOMDoesNotTouchTheNetworkUnlessOnline(t *testing.T) {
 
 			// Act
 			var out, errOut bytes.Buffer
-			code := runSBOM(&out, &errOut, sbomFlags{format: formatCycloneDX, online: tt.online}, false)
+			code := codeOf(runSBOM(&out, &errOut, sbomFlags{docType: formatCycloneDX, online: tt.online}, false))
 
 			// Assert
 			require.Equal(t, 0, code, errOut.String())
@@ -105,7 +105,7 @@ func writeLock(t *testing.T, root string) {
 
 func runSBOMWith(f sbomFlags) (code int, out, errOut string) {
 	var o, e bytes.Buffer
-	code = runSBOM(&o, &e, f, false)
+	code = codeOf(runSBOM(&o, &e, f, false))
 	return code, o.String(), e.String()
 }
 
@@ -123,7 +123,7 @@ func TestSBOMFormats(t *testing.T) {
 			sbomProject(t, sbomBaseConfig, map[string]string{"rules/r.md": "# R\n"})
 
 			// Act
-			code, out, errOut := runSBOMWith(sbomFlags{format: tt.format})
+			code, out, errOut := runSBOMWith(sbomFlags{docType: tt.format})
 
 			// Assert
 			require.Equal(t, 0, code, errOut)
@@ -137,11 +137,11 @@ func TestSBOMRejectsBadFlags(t *testing.T) {
 		name string
 		f    sbomFlags
 	}{
-		{"unknown format", sbomFlags{format: "xml"}},
-		{"unknown files mode", sbomFlags{format: "cyclonedx", files: "some"}},
-		{"check needs output", sbomFlags{format: "cyclonedx", check: true}},
-		{"unknown profile", sbomFlags{format: "cyclonedx", profile: "nope"}},
-		{"unknown role", sbomFlags{format: "cyclonedx", role: "nope"}},
+		{"unknown format", sbomFlags{docType: "xml"}},
+		{"unknown files mode", sbomFlags{docType: "cyclonedx", files: "some"}},
+		{"check needs output", sbomFlags{docType: "cyclonedx", check: true}},
+		{"unknown profile", sbomFlags{docType: "cyclonedx", profile: "nope"}},
+		{"unknown role", sbomFlags{docType: "cyclonedx", role: "nope"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -181,7 +181,7 @@ func TestSBOMRequireLock(t *testing.T) {
 			}
 
 			// Act
-			code, out, errOut := runSBOMWith(sbomFlags{format: "cyclonedx", requireLock: true})
+			code, out, errOut := runSBOMWith(sbomFlags{docType: "cyclonedx", requireLock: true})
 
 			// Assert
 			assert.Equal(t, tt.wantCode, code, errOut)
@@ -214,7 +214,7 @@ func TestSBOMStrictPins(t *testing.T) {
 			sbomProject(t, sbomBaseConfig+"\n[[mcp_servers]]\nname = \"srv\"\n"+tt.servers, nil)
 
 			// Act
-			code, out, errOut := runSBOMWith(sbomFlags{format: "cyclonedx", strictPins: true})
+			code, out, errOut := runSBOMWith(sbomFlags{docType: "cyclonedx", strictPins: true})
 
 			// Assert
 			assert.Equal(t, tt.wantCode, code, errOut)
@@ -233,7 +233,7 @@ func TestSBOMCheck(t *testing.T) {
 	// Arrange
 	root := sbomProject(t, sbomBaseConfig, map[string]string{"rules/r.md": "# R\n"})
 	committed := filepath.Join(root, "sbom.cdx.json")
-	check := sbomFlags{format: "cyclonedx", output: committed, check: true}
+	check := sbomFlags{docType: "cyclonedx", output: committed, check: true}
 
 	// Act and assert, step by step: no file, written, in sync, drifted.
 	code, _, errOut := runSBOMWith(check)
@@ -241,7 +241,7 @@ func TestSBOMCheck(t *testing.T) {
 	assert.Contains(t, errOut, "AR753")
 	assert.Contains(t, errOut, "no committed SBOM")
 
-	code, _, errOut = runSBOMWith(sbomFlags{format: "cyclonedx", output: committed})
+	code, _, errOut = runSBOMWith(sbomFlags{docType: "cyclonedx", output: committed})
 	require.Equal(t, 0, code, errOut)
 
 	code, out, errOut := runSBOMWith(check)
@@ -264,7 +264,7 @@ func TestSBOMWritesOutputFile(t *testing.T) {
 	target := filepath.Join(root, "out.spdx.json")
 
 	// Act
-	code, out, errOut := runSBOMWith(sbomFlags{format: "spdx-json", output: target})
+	code, out, errOut := runSBOMWith(sbomFlags{docType: "spdx-json", output: target})
 
 	// Assert
 	require.Equal(t, 0, code, errOut)
@@ -317,7 +317,7 @@ func TestSBOMTimestampReachesBothFormats(t *testing.T) {
 	var out, errOut bytes.Buffer
 
 	// Act
-	code := runSBOM(&out, &errOut, sbomFlags{format: "spdx-json", timestamp: "2026-05-06T07:08:09Z"}, true)
+	code := codeOf(runSBOM(&out, &errOut, sbomFlags{docType: "spdx-json", timestamp: "2026-05-06T07:08:09Z"}, true))
 
 	// Assert
 	require.Equal(t, 0, code, errOut.String())

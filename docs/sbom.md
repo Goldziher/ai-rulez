@@ -6,14 +6,14 @@ supply chain; the SBOM lists it in the formats security tooling already ingests.
 
 ```bash
 ai-rulez sbom > ai-bom.cdx.json                              # CycloneDX 1.6
-ai-rulez sbom --format spdx-json -o ai-bom.spdx.json         # SPDX 2.3
+ai-rulez sbom --type spdx-json -o ai-bom.spdx.json         # SPDX 2.3
 ai-rulez sbom --files skills --role backend --require-lock   # a role's slice, files hashed, lock must match
 ai-rulez sbom -o ai-bom.cdx.json --check                     # CI: fail when the committed SBOM is stale
 ```
 
 | Flag | Meaning |
 | --- | --- |
-| `--format cyclonedx\|spdx-json` | Output format (default `cyclonedx`; `spdx` is accepted for `spdx-json`) |
+| `--type cyclonedx\|spdx-json` | Document type (default `cyclonedx`; `spdx` is accepted for `spdx-json`) |
 | `-o`, `--output file` | Write the document to a file instead of stdout |
 | `--files none\|skills\|all` | List the files of items with their plain SHA-256 (default `none`) |
 | `--profile name`, `--role name` | Describe one profile's or role's slice |

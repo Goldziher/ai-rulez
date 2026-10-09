@@ -128,7 +128,7 @@ ai-rulez lock                            # pin remote includes, installed skills
 ai-rulez approve --list                  # what still needs a reviewer's approval
 ai-rulez sign --lock                     # a Sigstore bundle (DSSE over an in-toto statement) for the lock
 ai-rulez verify --attestation            # check it offline against the [signing] policy
-ai-rulez sbom -o ai-bom.cdx.json         # CycloneDX 1.6 (or --format spdx-json)
+ai-rulez sbom -o ai-bom.cdx.json         # CycloneDX 1.6 (or --type spdx-json)
 ```
 
 An organization [policy](docs/policy.md) sets tighten-only floors a repository cannot loosen. See the
