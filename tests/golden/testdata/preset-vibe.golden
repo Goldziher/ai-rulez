@@ -109,26 +109,26 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .vibe/config.toml
+  remove file: .vibe/hooks.toml
+  remove file: .vibe/skills/deployer/SKILL.md
+  remove file: .vibe/skills/reviewer/SKILL.md
+  remove file: .vibe/skills/reviewer/references/checklist.md
+  remove file: .vibe/skills/reviewer/scripts/run.sh
+  remove file: AGENTS.md
+  remove dir (if empty): .vibe/skills/reviewer/scripts
+  remove dir (if empty): .vibe/skills/reviewer/references
+  remove dir (if empty): .vibe/skills/reviewer
+  remove dir (if empty): .vibe/skills/deployer
+  remove dir (if empty): .vibe/skills
+  remove dir (if empty): .vibe
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .vibe/config.toml
-INFO    remove file: .vibe/hooks.toml
-INFO    remove file: .vibe/skills/deployer/SKILL.md
-INFO    remove file: .vibe/skills/reviewer/SKILL.md
-INFO    remove file: .vibe/skills/reviewer/references/checklist.md
-INFO    remove file: .vibe/skills/reviewer/scripts/run.sh
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .vibe/skills/reviewer/scripts
-INFO    remove dir (if empty): .vibe/skills/reviewer/references
-INFO    remove dir (if empty): .vibe/skills/reviewer
-INFO    remove dir (if empty): .vibe/skills/deployer
-INFO    remove dir (if empty): .vibe/skills
-INFO    remove dir (if empty): .vibe
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=8 directories=6
+Removed generated files: 8 files, 6 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

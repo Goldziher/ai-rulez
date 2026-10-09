@@ -2,7 +2,6 @@ package commands
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"sort"
 
@@ -64,42 +63,37 @@ func selectRecursivePluginConfigs(paths []string) ([]string, error) {
 	return selected, nil
 }
 
-func runRecursivePluginVerify() {
+func runRecursivePluginVerify() error {
 	if !verifyPlugin {
-		fmtError(oops.Errorf("verify --recursive requires --plugin"))
-		os.Exit(1)
+		return fail(oops.Errorf("verify --recursive requires --plugin"))
 	}
 	paths, err := selectRecursivePluginConfigs(findConfigFilesRecursively())
 	if err != nil {
-		fmtError(err)
-		os.Exit(1)
+		return fail(err)
 	}
 	if len(paths) == 0 {
 		if verifyIfConfigured {
 			logger.Info("Skipping plugin verification: no plugin authoring configuration")
-			return
+			return nil
 		}
-		fmtError(oops.Errorf("no plugin authoring configuration found"))
-		os.Exit(1)
+		return fail(oops.Errorf("no plugin authoring configuration found"))
 	}
 	for _, path := range paths {
 		cfg, err := loadProjectFile(cmdContext(), path, config.WithoutLocal())
 		if err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if err := cfg.Validate(); err != nil {
-			fmtError(err)
-			os.Exit(1)
+			return fail(err)
 		}
 		if err := generator.NewGenerator(cfg).VerifyPlugin(profile); err != nil {
 			if verifyIfGenerated && errors.Is(err, generator.ErrPluginNotGenerated) {
 				logger.Info("Skipping plugin verification: the plugin bundle has not been generated", "config", path)
 				continue
 			}
-			fmtError(oops.With("config", path).Wrapf(err, "verify plugin outputs"))
-			os.Exit(pluginVerifyExitCode(err))
+			return failWithCode(pluginVerifyExitCode(err), oops.With("config", path).Wrapf(err, "verify plugin outputs"))
 		}
 	}
 	logger.Success("Generated plugin artifacts are valid", "configs", len(paths))
+	return nil
 }

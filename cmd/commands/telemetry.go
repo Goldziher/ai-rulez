@@ -117,10 +117,11 @@ event is ignored. The command prints nothing
 on standard output, never fails the session (errors go to standard error and the exit
 status stays 0) and never waits on the network.`,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		if err := runTelemetryRecord(cmd.InOrStdin()); err != nil {
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "ai-rulez telemetry record:", err) //nolint:errcheck // a hook must not fail on a closed stderr
 		}
+		return nil // a hook never fails the session
 	},
 }
 

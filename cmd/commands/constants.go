@@ -3,6 +3,7 @@ package commands
 // Cobra command "Use" strings shared across subcommands.
 const (
 	cmdUseList       = "list"
+	cmdUseVersion    = "version"
 	cmdUseRemoveName = "remove <name>"
 )
 
@@ -14,11 +15,18 @@ const (
 	keySource  = "source"
 	keyDesc    = "description"
 	keySuccess = "success"
+	keyBundle  = "bundle"
+	keyStatus  = "status"
+	keyKind    = "kind"
+	keySigner  = "signer"
+	keySubject = "subject"
+	kindLock   = "lock"
 )
 
 // Values that several commands compare against or print.
 const (
 	valueTrue     = "true"
+	statusDrift   = "drift"
 	valueNone     = "none"
 	answerYes     = "yes"
 	failOnError   = "error"

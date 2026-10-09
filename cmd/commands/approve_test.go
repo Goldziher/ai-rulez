@@ -149,9 +149,9 @@ func TestApprove_ContentChangeMakesTheApprovalStale(t *testing.T) {
 
 			// lock --check fails (governance enforce) and names the approval.
 			var code int
-			_, stderr := capture(t, func() { code = checkLockAt("") })
+			report, _ := capture(t, func() { code = checkLockAt("") })
 			assert.Equal(t, exitDrift, code)
-			assert.Contains(t, stderr, "approval")
+			assert.Contains(t, report, "approval")
 		})
 	}
 }

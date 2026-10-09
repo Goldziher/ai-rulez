@@ -114,37 +114,37 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .junie/agents/architect.md
+  remove file: .junie/agents/tester.md
+  remove file: .junie/commands/build.md
+  remove file: .junie/commands/ship.md
+  remove file: .junie/mcp/mcp.json
+  remove file: .junie/rules/always.md
+  remove file: .junie/rules/auto.md
+  remove file: .junie/rules/manual.md
+  remove file: .junie/rules/typescript.md
+  remove file: .junie/skills/deployer/SKILL.md
+  remove file: .junie/skills/reviewer/SKILL.md
+  remove file: .junie/skills/reviewer/references/checklist.md
+  remove file: .junie/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove dir (if empty): .junie/skills/reviewer/scripts
+  remove dir (if empty): .junie/skills/reviewer/references
+  remove dir (if empty): .junie/skills/reviewer
+  remove dir (if empty): .junie/skills/deployer
+  remove dir (if empty): .junie/skills
+  remove dir (if empty): .junie/rules
+  remove dir (if empty): .junie/mcp
+  remove dir (if empty): .junie/commands
+  remove dir (if empty): .junie/agents
+  remove dir (if empty): .junie
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .junie/agents/architect.md
-INFO    remove file: .junie/agents/tester.md
-INFO    remove file: .junie/commands/build.md
-INFO    remove file: .junie/commands/ship.md
-INFO    remove file: .junie/mcp/mcp.json
-INFO    remove file: .junie/rules/always.md
-INFO    remove file: .junie/rules/auto.md
-INFO    remove file: .junie/rules/manual.md
-INFO    remove file: .junie/rules/typescript.md
-INFO    remove file: .junie/skills/deployer/SKILL.md
-INFO    remove file: .junie/skills/reviewer/SKILL.md
-INFO    remove file: .junie/skills/reviewer/references/checklist.md
-INFO    remove file: .junie/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .junie/skills/reviewer/scripts
-INFO    remove dir (if empty): .junie/skills/reviewer/references
-INFO    remove dir (if empty): .junie/skills/reviewer
-INFO    remove dir (if empty): .junie/skills/deployer
-INFO    remove dir (if empty): .junie/skills
-INFO    remove dir (if empty): .junie/rules
-INFO    remove dir (if empty): .junie/mcp
-INFO    remove dir (if empty): .junie/commands
-INFO    remove dir (if empty): .junie/agents
-INFO    remove dir (if empty): .junie
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=15 directories=10
+Removed generated files: 15 files, 10 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

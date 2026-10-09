@@ -161,98 +161,98 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 ## step 3: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .agents/skills/deployer/SKILL.md
+  remove file: .agents/skills/reviewer/SKILL.md
+  remove file: .agents/skills/reviewer/references/checklist.md
+  remove file: .agents/skills/reviewer/scripts/run.sh
+  remove file: .claude/agents/architect.md
+  remove file: .claude/agents/tester.md
+  remove file: .claude/rules/always.ai-rulez.md
+  remove file: .claude/rules/auto.md
+  remove file: .claude/rules/manual.md
+  remove file: .claude/rules/targeted.md
+  remove file: .claude/rules/typescript.md
+  remove file: .claude/settings.json
+  remove file: .claude/skills/build/SKILL.md
+  remove file: .claude/skills/deployer/SKILL.md
+  remove file: .claude/skills/reviewer/SKILL.md
+  remove file: .claude/skills/reviewer/references/checklist.md
+  remove file: .claude/skills/reviewer/scripts/run.sh
+  remove file: .claude/skills/ship/SKILL.md
+  remove file: .cursor/BUGBOT.md
+  remove file: .cursor/agents/architect.md
+  remove file: .cursor/agents/tester.md
+  remove file: .cursor/cli.json
+  remove file: .cursor/commands/build.md
+  remove file: .cursor/commands/ship.md
+  remove file: .cursor/hooks.json
+  remove file: .cursor/mcp.json
+  remove file: .cursor/rules/always.mdc
+  remove file: .cursor/rules/auto.mdc
+  remove file: .cursor/rules/context-architecture.mdc
+  remove file: .cursor/rules/context-overview.mdc
+  remove file: .cursor/rules/manual.mdc
+  remove file: .cursor/rules/targeted.ai-rulez.mdc
+  remove file: .cursor/rules/typescript.mdc
+  remove file: .github/agents/architect.agent.md
+  remove file: .github/agents/tester.agent.md
+  remove file: .github/copilot-instructions.md
+  remove file: .github/hooks/ai-rulez.json
+  remove file: .github/instructions/always.instructions.md
+  remove file: .github/instructions/typescript.ai-rulez.instructions.md
+  remove file: .github/prompts/build.prompt.md
+  remove file: .github/prompts/ship.prompt.md
+  remove file: .github/skills/deployer/SKILL.md
+  remove file: .github/skills/reviewer/SKILL.md
+  remove file: .github/skills/reviewer/references/checklist.md
+  remove file: .github/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: .vscode/mcp.json
+  remove file: .vscode/settings.json
+  remove file: CLAUDE.md
+  remove dir (if empty): .vscode
+  remove dir (if empty): .github/skills/reviewer/scripts
+  remove dir (if empty): .github/skills/reviewer/references
+  remove dir (if empty): .github/skills/reviewer
+  remove dir (if empty): .github/skills/deployer
+  remove dir (if empty): .github/skills
+  remove dir (if empty): .github/prompts
+  remove dir (if empty): .github/instructions
+  remove dir (if empty): .github/hooks
+  remove dir (if empty): .github/agents
+  remove dir (if empty): .github
+  remove dir (if empty): .cursor/rules
+  remove dir (if empty): .cursor/commands
+  remove dir (if empty): .cursor/agents
+  remove dir (if empty): .cursor
+  remove dir (if empty): .claude/skills/ship
+  remove dir (if empty): .claude/skills/reviewer/scripts
+  remove dir (if empty): .claude/skills/reviewer/references
+  remove dir (if empty): .claude/skills/reviewer
+  remove dir (if empty): .claude/skills/deployer
+  remove dir (if empty): .claude/skills/build
+  remove dir (if empty): .claude/skills
+  remove dir (if empty): .claude/rules
+  remove dir (if empty): .claude/agents
+  remove dir (if empty): .claude
+  remove dir (if empty): .agents/skills/reviewer/scripts
+  remove dir (if empty): .agents/skills/reviewer/references
+  remove dir (if empty): .agents/skills/reviewer
+  remove dir (if empty): .agents/skills/deployer
+  remove dir (if empty): .agents/skills
+  remove dir (if empty): .agents
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
 WARN  A hand-written rule file has the same name as a generated rule; the generated rule was written under another name, rename one of them to silence this hand_written=$ROOT/.claude/rules/always.md generated=$ROOT/.claude/rules/always.ai-rulez.md
 WARN  A hand-written rule file has the same name as a generated rule; the generated rule was written under another name, rename one of them to silence this hand_written=$ROOT/.github/instructions/typescript.instructions.md generated=$ROOT/.github/instructions/typescript.ai-rulez.instructions.md
 WARN  A hand-written rule file has the same name as a generated rule; the generated rule was written under another name, rename one of them to silence this hand_written=$ROOT/.cursor/rules/targeted.mdc generated=$ROOT/.cursor/rules/targeted.ai-rulez.mdc
-INFO  Clean plan profile=default
-INFO    remove file: .agents/skills/deployer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/references/checklist.md
-INFO    remove file: .agents/skills/reviewer/scripts/run.sh
-INFO    remove file: .claude/agents/architect.md
-INFO    remove file: .claude/agents/tester.md
-INFO    remove file: .claude/rules/always.ai-rulez.md
-INFO    remove file: .claude/rules/auto.md
-INFO    remove file: .claude/rules/manual.md
-INFO    remove file: .claude/rules/targeted.md
-INFO    remove file: .claude/rules/typescript.md
-INFO    remove file: .claude/settings.json
-INFO    remove file: .claude/skills/build/SKILL.md
-INFO    remove file: .claude/skills/deployer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/references/checklist.md
-INFO    remove file: .claude/skills/reviewer/scripts/run.sh
-INFO    remove file: .claude/skills/ship/SKILL.md
-INFO    remove file: .cursor/BUGBOT.md
-INFO    remove file: .cursor/agents/architect.md
-INFO    remove file: .cursor/agents/tester.md
-INFO    remove file: .cursor/cli.json
-INFO    remove file: .cursor/commands/build.md
-INFO    remove file: .cursor/commands/ship.md
-INFO    remove file: .cursor/hooks.json
-INFO    remove file: .cursor/mcp.json
-INFO    remove file: .cursor/rules/always.mdc
-INFO    remove file: .cursor/rules/auto.mdc
-INFO    remove file: .cursor/rules/context-architecture.mdc
-INFO    remove file: .cursor/rules/context-overview.mdc
-INFO    remove file: .cursor/rules/manual.mdc
-INFO    remove file: .cursor/rules/targeted.ai-rulez.mdc
-INFO    remove file: .cursor/rules/typescript.mdc
-INFO    remove file: .github/agents/architect.agent.md
-INFO    remove file: .github/agents/tester.agent.md
-INFO    remove file: .github/copilot-instructions.md
-INFO    remove file: .github/hooks/ai-rulez.json
-INFO    remove file: .github/instructions/always.instructions.md
-INFO    remove file: .github/instructions/typescript.ai-rulez.instructions.md
-INFO    remove file: .github/prompts/build.prompt.md
-INFO    remove file: .github/prompts/ship.prompt.md
-INFO    remove file: .github/skills/deployer/SKILL.md
-INFO    remove file: .github/skills/reviewer/SKILL.md
-INFO    remove file: .github/skills/reviewer/references/checklist.md
-INFO    remove file: .github/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: .vscode/mcp.json
-INFO    remove file: .vscode/settings.json
-INFO    remove file: CLAUDE.md
-INFO    remove dir (if empty): .vscode
-INFO    remove dir (if empty): .github/skills/reviewer/scripts
-INFO    remove dir (if empty): .github/skills/reviewer/references
-INFO    remove dir (if empty): .github/skills/reviewer
-INFO    remove dir (if empty): .github/skills/deployer
-INFO    remove dir (if empty): .github/skills
-INFO    remove dir (if empty): .github/prompts
-INFO    remove dir (if empty): .github/instructions
-INFO    remove dir (if empty): .github/hooks
-INFO    remove dir (if empty): .github/agents
-INFO    remove dir (if empty): .github
-INFO    remove dir (if empty): .cursor/rules
-INFO    remove dir (if empty): .cursor/commands
-INFO    remove dir (if empty): .cursor/agents
-INFO    remove dir (if empty): .cursor
-INFO    remove dir (if empty): .claude/skills/ship
-INFO    remove dir (if empty): .claude/skills/reviewer/scripts
-INFO    remove dir (if empty): .claude/skills/reviewer/references
-INFO    remove dir (if empty): .claude/skills/reviewer
-INFO    remove dir (if empty): .claude/skills/deployer
-INFO    remove dir (if empty): .claude/skills/build
-INFO    remove dir (if empty): .claude/skills
-INFO    remove dir (if empty): .claude/rules
-INFO    remove dir (if empty): .claude/agents
-INFO    remove dir (if empty): .claude
-INFO    remove dir (if empty): .agents/skills/reviewer/scripts
-INFO    remove dir (if empty): .agents/skills/reviewer/references
-INFO    remove dir (if empty): .agents/skills/reviewer
-INFO    remove dir (if empty): .agents/skills/deployer
-INFO    remove dir (if empty): .agents/skills
-INFO    remove dir (if empty): .agents
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
 WARN  A hand-written rule file has the same name as a generated rule; the generated rule was written under another name, rename one of them to silence this hand_written=$ROOT/.claude/rules/always.md generated=$ROOT/.claude/rules/always.ai-rulez.md
 WARN  A hand-written rule file has the same name as a generated rule; the generated rule was written under another name, rename one of them to silence this hand_written=$ROOT/.github/instructions/typescript.instructions.md generated=$ROOT/.github/instructions/typescript.ai-rulez.instructions.md
 WARN  A hand-written rule file has the same name as a generated rule; the generated rule was written under another name, rename one of them to silence this hand_written=$ROOT/.cursor/rules/targeted.mdc generated=$ROOT/.cursor/rules/targeted.ai-rulez.mdc
-INFO  Removed generated files files=49 directories=31
+Removed generated files: 49 files, 31 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755
