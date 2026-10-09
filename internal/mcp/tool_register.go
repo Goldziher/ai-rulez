@@ -73,7 +73,7 @@ func addTool[In any](s *Server, spec toolSpec, handler handlerFunc) {
 			}
 		}
 		wrapper := handlers.NewToolRequest(req, args)
-		res, err := handler(ctx, wrapper)
+		res, err := handler(withProgress(ctx, req), wrapper)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -163,4 +163,22 @@ func outputSchemaFor(shape any) (*jsonschema.Schema, error) {
 		}
 	}
 	return schema, nil
+}
+
+// withProgress lets a long handler report progress when the client asked for it
+// with a progress token; otherwise it returns ctx unchanged.
+func withProgress(ctx context.Context, req *sdkmcp.CallToolRequest) context.Context {
+	if req == nil || req.Params == nil || req.Session == nil {
+		return ctx
+	}
+	token := req.Params.GetProgressToken()
+	if token == nil {
+		return ctx
+	}
+	return handlers.WithProgress(ctx, func(progress, total float64, message string) {
+		// A client that went away or stopped listening is not the tool's problem.
+		_ = req.Session.NotifyProgress(ctx, &sdkmcp.ProgressNotificationParams{ //nolint:errcheck // best-effort notification
+			ProgressToken: token, Progress: progress, Total: total, Message: message,
+		})
+	})
 }
