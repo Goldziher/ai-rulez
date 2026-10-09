@@ -87,7 +87,7 @@ func npmPinProblem(spec string) string {
 	case versionRangeRe().MatchString(ver):
 		return "@" + ver + " is a moving version range"
 	case strings.ContainsAny(ver, "<>${}"):
-		return "" // a placeholder() in documentation
+		return "" // a placeholder in documentation
 	case ver == "":
 		return whyNoVersionPinned
 	case versionPinRe().MatchString(ver):
