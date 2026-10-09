@@ -128,3 +128,42 @@ func TestRefreshIndexesListsContentAndDropsStaleOnes(t *testing.T) {
 		t.Fatalf("findings: %+v", f)
 	}
 }
+
+// An index.md that holds prose is the user's, not a generated listing: before
+// RefreshIndexes overwrites it, the original is copied to <dir>.bak-okf-<time>,
+// as `migrate okf` does. Generated listings are rewritten without a copy.
+func TestRefreshIndexesBacksUpAProseIndexBeforeOverwritingIt(t *testing.T) {
+	// Arrange
+	rule, err := RenderConcept(KindRule, "", "a", []byte("# A\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const prose = "# Rules\n\nNotes the team keeps here.\n"
+	dir := writeTree(t, map[string]string{"rules/a.md": string(rule), "rules/index.md": prose})
+
+	// Act
+	if err := RefreshIndexes(context.Background(), dir); err != nil {
+		t.Fatal(err)
+	}
+
+	// Assert
+	backups, err := filepath.Glob(dir + ".bak-okf-*")
+	if err != nil || len(backups) != 1 {
+		t.Fatalf("want one backup directory beside %s, got %v (err=%v)", dir, backups, err)
+	}
+	got, err := os.ReadFile(filepath.Join(backups[0], "rules", "index.md"))
+	if err != nil || string(got) != prose {
+		t.Fatalf("the prose index was not backed up: %q %v", got, err)
+	}
+	if _, err := os.Stat(filepath.Join(backups[0], "index.md")); !os.IsNotExist(err) {
+		t.Fatalf("a new generated listing has nothing to back up (err=%v)", err)
+	}
+
+	// A second refresh only rewrites generated listings: no new backup.
+	if err := RefreshIndexes(context.Background(), dir); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := filepath.Glob(dir + ".bak-okf-*"); len(again) != 1 {
+		t.Fatalf("a refresh over generated listings took a backup: %v", again)
+	}
+}
