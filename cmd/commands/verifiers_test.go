@@ -275,8 +275,8 @@ func TestTestAndExplainVerifiers(t *testing.T) {
 func TestTestAndExplainVerifiers_JSON(t *testing.T) {
 	resetVerifiersFlags(t)
 	chdir(t, specProjectRoot(t))
-	verifiersExplainJSON, verifiersTestJSON = true, true
-	t.Cleanup(func() { verifiersExplainJSON, verifiersTestJSON = false, false })
+	verifiersJSON = true
+	t.Cleanup(func() { verifiersJSON = false })
 	var testOut, explainOut bytes.Buffer
 
 	gotTest := reported(testVerifiers(context.Background(), nil, &testOut))
