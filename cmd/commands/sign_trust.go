@@ -13,6 +13,9 @@ import (
 var TrustCmd = &cobra.Command{
 	Use:   "trust",
 	Short: "Manage the Sigstore trusted root used to verify keyless attestations",
+	Long: `Manage the Sigstore trusted root that "verify" and "publish verify" use to check keyless
+signatures. "trust update" fetches the public-good trusted root once and caches it, so
+every later verification works offline.`,
 }
 
 // TrustUpdateCmd fetches the trusted root; it is the only network step of verification.
