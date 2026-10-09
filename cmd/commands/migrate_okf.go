@@ -3,6 +3,8 @@ package commands
 import (
 	"context"
 	"io"
+	"os"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
@@ -13,8 +15,10 @@ import (
 const migrateOKFTarget = "okf"
 
 type migrateOKFReport struct {
-	ConfigDir string                   `json:"config_dir"`
-	DryRun    bool                     `json:"dry_run"`
+	ConfigDir string `json:"config_dir"`
+	DryRun    bool   `json:"dry_run"`
+	// BackupDir holds copies of the files the migration rewrote; empty when none was taken.
+	BackupDir string                   `json:"backup_dir,omitempty"`
 	Changes   []migrateOKFChangeReport `json:"changes"`
 	Summary   migrateOKFSummary        `json:"summary"`
 }
@@ -41,12 +45,19 @@ func runMigrateOKF(ctx context.Context, out io.Writer) int {
 		return 1
 	}
 	write := !migrateDryRun && !migrateCheck
-	changes, err := okfbridge.MigrateDir(ctx, cfg.ConfigDir, okfbridge.MigrateOptions{Write: write})
+	backupDir := ""
+	if write {
+		backupDir = cfg.ConfigDir + ".bak-okf-" + time.Now().Format("20060102-150405")
+	}
+	changes, err := okfbridge.MigrateDir(ctx, cfg.ConfigDir, okfbridge.MigrateOptions{Write: write, BackupDir: backupDir})
 	if err != nil {
 		renderStderr(err)
 		return 1
 	}
 	report := migrateOKFReport{ConfigDir: cfg.ConfigDir, DryRun: !write, Changes: []migrateOKFChangeReport{}}
+	if _, statErr := os.Stat(backupDir); backupDir != "" && statErr == nil {
+		report.BackupDir = backupDir
+	}
 	pending := false
 	for _, c := range changes {
 		report.Changes = append(report.Changes, migrateOKFChangeReport{Path: c.Path, Action: c.Action, Detail: c.Detail})
@@ -73,6 +84,12 @@ func runMigrateOKF(ctx context.Context, out io.Writer) int {
 	if migrateCheck && pending {
 		return exitDrift
 	}
+	// A skipped file (a symlink, a frontmatter that does not parse) stays as it
+	// was and needs the user's hand, so a run that wrote or checked fails; a plain
+	// dry run only reports it.
+	if report.Summary.Skipped > 0 && (write || migrateCheck) {
+		return 1
+	}
 	return 0
 }
 
@@ -91,6 +108,12 @@ func printMigrateOKFReport(out io.Writer, r *migrateOKFReport) {
 	verb := "converted"
 	if r.DryRun {
 		verb = "would convert"
+	}
+	if r.BackupDir != "" {
+		w.printf("originals of the rewritten files were copied to %s\n", r.BackupDir)
+	}
+	if r.Summary.Skipped > 0 {
+		w.printf("%d files were skipped and left as they are; migrate them by hand (see above)\n", r.Summary.Skipped)
 	}
 	w.printf("%s %d, indexes %d, unchanged %d, skipped %d\n", verb, r.Summary.Converted, r.Summary.Indexes, r.Summary.Unchanged, r.Summary.Skipped)
 }
