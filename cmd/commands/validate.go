@@ -104,14 +104,15 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 			}
 		}
 
+		warnWorktreeMarketplace(cfg)
+		// The OKF verdict comes first: "valid" is never printed for a run that exits 2.
+		if !validateConfigOnly && validateOKFTree(cfg, os.Stderr) {
+			return exitStatus(exitOKFProblems)
+		}
 		// A strict run defers malformed frontmatter to the AR306 finding below, which
 		// would contradict a success line printed here.
 		if len(cfg.MalformedFrontmatterPaths()) == 0 {
 			logger.Success("Configuration is valid", "path", cfg.ConfigDir)
-		}
-		warnWorktreeMarketplace(cfg)
-		if !validateConfigOnly && validateOKFTree(cfg, os.Stderr) {
-			return exitStatus(exitOKFProblems)
 		}
 		if validateStrict {
 			return exitStatus(runStrictSingle(cfg))

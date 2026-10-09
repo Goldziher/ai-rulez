@@ -237,3 +237,16 @@ func TestAcceptedFindingsInEveryFormat(t *testing.T) {
 	require.NoError(t, xml.Unmarshal(render(t, FormatJUnit, c, WriteOptions{FailOn: "error"}), &s))
 	assert.Equal(t, 0, s.Failures, "the only error is accepted")
 }
+
+func TestTextQuietDropsOnlyTheSummaryLines(t *testing.T) {
+	var loud, quiet bytes.Buffer
+	require.NoError(t, Write(&loud, FormatText, sampleCombined(), WriteOptions{}))
+	require.NoError(t, Write(&quiet, FormatText, sampleCombined(), WriteOptions{Quiet: true}))
+	assert.Contains(t, loud.String(), "strict validation:")
+	assert.NotContains(t, quiet.String(), "strict validation:")
+	assert.Contains(t, quiet.String(), "AKIA****", "findings stay under --quiet")
+
+	quiet.Reset()
+	require.NoError(t, Write(&quiet, FormatText, Combine([]*Report{{Root: "."}}), WriteOptions{Quiet: true}))
+	assert.NotContains(t, quiet.String(), "strict validation:")
+}

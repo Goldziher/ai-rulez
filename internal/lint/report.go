@@ -135,6 +135,12 @@ func WriteJSON(w io.Writer, c Combined) error {
 // WriteText prints one line per finding (file:line: severity code name: message)
 // followed by a per-code tally.
 func WriteText(w io.Writer, c Combined) error {
+	return writeText(w, c, false)
+}
+
+// writeText is WriteText; quiet drops the "strict validation:" total and the
+// per-code tally.
+func writeText(w io.Writer, c Combined, quiet bool) error {
 	var sb strings.Builder
 	if c.Profile != "" {
 		p, _ := LookupProfile(c.Profile) //nolint:errcheck // set from a resolved profile
@@ -154,20 +160,24 @@ func WriteText(w io.Writer, c Combined) error {
 		}
 	}
 	if c.Summary.Total == 0 {
-		fmt.Fprintf(&sb, "strict validation: no findings in %d root(s)\n", len(c.Roots))
+		if !quiet {
+			fmt.Fprintf(&sb, "strict validation: no findings in %d root(s)\n", len(c.Roots))
+		}
 		writeBaselineText(&sb, c)
 		_, err := io.WriteString(w, sb.String())
 		return err //nolint:wrapcheck // writer error
 	}
-	codes := make([]string, 0, len(c.Summary.ByCode))
-	for code := range c.Summary.ByCode {
-		codes = append(codes, code)
-	}
-	sort.Strings(codes)
-	fmt.Fprintf(&sb, "\nstrict validation: %d error(s), %d warning(s), %d info across %d root(s)\n", c.Summary.Errors, c.Summary.Warnings, c.Summary.Infos, len(c.Roots))
-	for _, code := range codes {
-		rule, _ := lookupRule(code) //nolint:errcheck // codes come from findings
-		fmt.Fprintf(&sb, "  %s %-28s %d\n", code, rule.Name, c.Summary.ByCode[code])
+	if !quiet {
+		codes := make([]string, 0, len(c.Summary.ByCode))
+		for code := range c.Summary.ByCode {
+			codes = append(codes, code)
+		}
+		sort.Strings(codes)
+		fmt.Fprintf(&sb, "\nstrict validation: %d error(s), %d warning(s), %d info across %d root(s)\n", c.Summary.Errors, c.Summary.Warnings, c.Summary.Infos, len(c.Roots))
+		for _, code := range codes {
+			rule, _ := lookupRule(code) //nolint:errcheck // codes come from findings
+			fmt.Fprintf(&sb, "  %s %-28s %d\n", code, rule.Name, c.Summary.ByCode[code])
+		}
 	}
 	writeRiskText(&sb, c)
 	writeBaselineText(&sb, c)
