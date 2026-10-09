@@ -74,7 +74,7 @@ func TestInitYesRefusesToReplaceAnExistingDirectory(t *testing.T) {
 	setForce(t, true, false)
 	withPipeStdin(t, "")
 
-	err := prepareExistingConfigDir(InitCmd, configDir)
+	_, err := prepareExistingConfigDir(InitCmd, configDir)
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "already exists")
@@ -85,7 +85,8 @@ func TestInitForceMovesTheExistingDirectoryToABackup(t *testing.T) {
 	dir, configDir := existingConfig(t)
 	setForce(t, false, true)
 
-	require.NoError(t, prepareExistingConfigDir(InitCmd, configDir))
+	_, err := prepareExistingConfigDir(InitCmd, configDir)
+	require.NoError(t, err)
 
 	assert.NoDirExists(t, configDir)
 	backups, err := filepath.Glob(filepath.Join(dir, ".ai-rulez.bak-*"))
@@ -101,7 +102,9 @@ func TestInitWithoutAnExistingDirectoryNeedsNoForce(t *testing.T) {
 	chdir(t, dir)
 	setForce(t, false, false)
 
-	assert.NoError(t, prepareExistingConfigDir(InitCmd, filepath.Join(dir, ".ai-rulez")))
+	backup, err := prepareExistingConfigDir(InitCmd, filepath.Join(dir, ".ai-rulez"))
+	assert.NoError(t, err)
+	assert.Empty(t, backup)
 }
 
 func TestBackupConfigDirNeverOverwritesAnEarlierBackup(t *testing.T) {
@@ -125,4 +128,24 @@ func setForceFlag(t *testing.T, force bool) {
 	old := initForceFlag(InitCmd)
 	require.NoError(t, InitCmd.Flags().Set("force", strconv.FormatBool(force)))
 	t.Cleanup(func() { _ = InitCmd.Flags().Set("force", strconv.FormatBool(old)) })
+}
+
+// A scaffold that fails after --force moved the old directory aside puts it back.
+func TestInitForceRestoresTheOldDirectoryWhenScaffoldingFails(t *testing.T) {
+	dir, configDir := existingConfig(t)
+	setForce(t, false, true)
+	oldDomains, oldSkip := domainsFlag, skipContentFlag
+	t.Cleanup(func() { domainsFlag, skipContentFlag = oldDomains, oldSkip })
+	domainsFlag, skipContentFlag = "bad\x00domain", true // MkdirAll rejects a NUL byte after the structure exists
+
+	err := runInit(InitCmd, []string{"demo"})
+
+	require.Error(t, err)
+	data, readErr := os.ReadFile(filepath.Join(configDir, "rules", "mine.md"))
+	require.NoError(t, readErr, "the previous directory is back")
+	assert.Equal(t, "precious\n", string(data))
+	assert.NoFileExists(t, filepath.Join(configDir, "config.toml"), "no partial scaffold is left")
+	backups, globErr := filepath.Glob(filepath.Join(dir, ".ai-rulez.bak-*"))
+	require.NoError(t, globErr)
+	assert.Empty(t, backups, "the backup was moved back, not left behind")
 }
