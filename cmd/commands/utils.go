@@ -24,6 +24,18 @@ func newContentOperator(local bool) (*crud.OperatorImpl, error) {
 	return op, nil
 }
 
+// newWritingOperator is newContentOperator for the commands that change the
+// sources (add, remove): they also say when the tree is still the deprecated
+// legacy layout.
+func newWritingOperator(local bool) (*crud.OperatorImpl, error) {
+	op, err := newContentOperator(local)
+	if err != nil {
+		return nil, err
+	}
+	warnLegacyLayout(op.ConfigDir())
+	return op, nil
+}
+
 // confirmRemoval prompts the user to confirm a removal operation
 // Returns true if the user confirms, false otherwise
 // If resourceType is empty, uses resourceName as the full description

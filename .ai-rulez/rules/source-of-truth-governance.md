@@ -1,14 +1,20 @@
 ---
-priority: critical
-targets:
-  - CLAUDE.md
-  - .cursor/rules/*
-  - .devin/*
-  - .github/copilot-instructions.md
-  - AGENTS.md
-  - .hermes.md
-trigger: model_decision
+type: Decision
+title: Source Of Truth Governance
 description: Apply when working with AI tooling configuration
+x-ai-rulez:
+  kind: rule
+  id: source-of-truth-governance
+  metadata:
+    priority: critical
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - .devin/*
+      - .github/copilot-instructions.md
+      - AGENTS.md
+      - .hermes.md
+    trigger: model_decision
 ---
 
 # Source-of-Truth Governance

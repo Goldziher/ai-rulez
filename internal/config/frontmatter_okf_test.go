@@ -39,6 +39,10 @@ func TestOKFFrontmatterEqualsNative(t *testing.T) {
 	if nativeBody != okfBody {
 		t.Fatalf("body differs: %q vs %q", nativeBody, okfBody)
 	}
+	if okf.OKFType == "" || okf.OKFTitle == "" {
+		t.Errorf("type and title were dropped: %q %q", okf.OKFType, okf.OKFTitle)
+	}
+	okf.OKFType, okf.OKFTitle = "", ""
 	if !reflect.DeepEqual(native, okf) {
 		t.Fatalf("metadata differs\nnative: %#v\nokf:    %#v", native, okf)
 	}

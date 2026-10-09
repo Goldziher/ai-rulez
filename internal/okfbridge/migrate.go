@@ -2,6 +2,7 @@ package okfbridge
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,8 +49,8 @@ type MigrateOptions struct {
 // body of a file is kept byte for byte and the loader maps the frontmatter back,
 // so the generated output does not change. A file that already carries
 // x-ai-rulez is left alone, which makes the migration idempotent.
-func MigrateDir(configDir string, opts MigrateOptions) ([]MigrateChange, error) {
-	tree, err := config.ScanContentTree(configDir)
+func MigrateDir(ctx context.Context, configDir string, opts MigrateOptions) ([]MigrateChange, error) {
+	tree, err := config.ScanContentTreeContext(ctx, configDir)
 	if err != nil {
 		return nil, oops.Wrapf(err, "read %s", configDir)
 	}
@@ -74,12 +75,23 @@ func MigrateDir(configDir string, opts MigrateOptions) ([]MigrateChange, error) 
 		// copy them as they are, so they are not listed and get no index.
 		idx = append(idx, in[:1]...)
 	}
+	idxChanges, err := writeIndexes(configDir, idx, items, opts)
+	if err != nil {
+		return nil, err
+	}
+	return append(changes, idxChanges...), nil
+}
+
+// writeIndexes renders the index.md of every directory of the bundle and writes
+// those that differ from what is on disk.
+func writeIndexes(configDir string, idx []okf.IndexInput, items []sourceItem, opts MigrateOptions) ([]MigrateChange, error) {
 	indexes := okf.BuildIndexes(idx, dirLabels(items), okf.StyleBody)
 	paths := make([]string, 0, len(indexes))
 	for p := range indexes {
 		paths = append(paths, p)
 	}
 	sort.Strings(paths)
+	var changes []MigrateChange
 	for _, p := range paths {
 		change, err := migrateIndex(configDir, p, indexes[p], opts)
 		if err != nil {
