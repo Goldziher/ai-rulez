@@ -143,13 +143,7 @@ always strings. Use --string to force a string, or --stdin to read the
 value from standard input (keeps secrets out of shell history).
 
 A path segment containing a dot is written in brackets with double quotes:
-  ai-rulez local set 'mcp_servers["foo.bar"].command' npx
-
-Examples:
-  ai-rulez local set default dev
-  ai-rulez local set 'presets' '["codex", "!cursor"]'
-  ai-rulez local set mcp_servers.github.command npx
-  printf %s "$TOKEN" | ai-rulez local set mcp_servers.github.env.GITHUB_TOKEN --stdin`,
+  ai-rulez local set 'mcp_servers["foo.bar"].command' npx`,
 	Args: cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path, err := config.ParseLocalPath(args[0])

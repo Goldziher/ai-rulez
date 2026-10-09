@@ -228,6 +228,16 @@ tasks:
     cmds:
       - go run ./cmd/ai-rulez validate
 
+  docs:cli:
+    desc: "Regenerate docs/cli-reference.md and the command index of docs/cli.md from the Cobra command tree"
+    cmds:
+      - go run ./scripts/clidocs
+
+  docs:cli:check:
+    desc: "Fail when docs/cli-reference.md or the command index of docs/cli.md differ from the command tree"
+    cmds:
+      - go run ./scripts/clidocs --check
+
   docs:llms:
     desc: "Regenerate docs/llms.txt and docs/llms-full.txt from zensical.toml and docs/"
     cmds:

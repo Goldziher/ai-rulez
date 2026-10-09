@@ -78,6 +78,11 @@ var improveFlags struct {
 var ImproveCmd = &cobra.Command{
 	Use:   "improve",
 	Short: "(experimental) Improve skills with an external optimizer behind a held-out eval gate",
+	Long: `(experimental) Improve a skill with an optimizer you provide. "improve run" gives the
+optimizer a copy of the skill, accepts its candidate only when it beats the original on
+held-out eval cases, and saves the run; "improve show" prints a saved run, "improve apply"
+writes an accepted candidate into the skill (no commit), and "improve pr" opens a pull
+request for it. Nothing is written to the skill until you apply a run.`,
 }
 
 var improveRunCmd = &cobra.Command{
