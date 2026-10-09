@@ -15,6 +15,12 @@ import (
 // flagServeDomain names the --domain flag of the skills server.
 const flagServeDomain = "domain"
 
+// flagServeProfile and flagServeTargets name the --profile and --targets flags.
+const (
+	flagServeProfile = "profile"
+	flagServeTargets = "targets"
+)
+
 // Flags that set which directories the authoring tools may use.
 const (
 	flagMCPRoot     = "root"

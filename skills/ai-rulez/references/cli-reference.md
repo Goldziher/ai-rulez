@@ -88,7 +88,7 @@ Verify signatures and provenance: `--attestation`, `--approvals`, `--self`, `--p
 
 Open Knowledge Format (OKF v0.2) support, see `docs/okf.md`.
 
-- `ai-rulez export okf [--out <dir>] [--profile <p>] [--include rules,context,skills,agents,commands,checks] [--check]` — write the content as a deterministic OKF bundle (default `okf.dir`, `docs/okf`); `--check` writes nothing and exits 2 on drift
+- `ai-rulez export okf [--output-dir <dir>] [--profile <p>] [--include rules,context,skills,agents,commands,checks] [--check]` — write the content as a deterministic OKF bundle (default `okf.dir`, `docs/okf`); `--check` writes nothing and exits 2 on drift
 - `ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain <d>] [--dry-run] [--force]` — convert a bundle into `.ai-rulez/` sources; never overwrites without `--force`, scans imported text (AR001-AR011) first
 - `ai-rulez okf validate <dir|git-url> [--format json] [--fail-on error|warning|info|none]` — lint any bundle (AR9B0-AR9B9)
 
@@ -175,8 +175,8 @@ Commands that print JSON take `--format text|json`; `--json` was removed in v5.
 
 ## Verification, Search and Evals
 
-- `ai-rulez verifiers run|list|explain|test` — Deterministic repo checks from `[[verifiers]]` and `.ai-rulez/verifiers/*.toml`; `run` takes `--since <rev>`, `--staged`, `--all`, `--rule`, `--name`, `--format text|json|sarif|junit`, `--out`, `--fail-on`, `--strict`, `--strict-applicability`
-- `ai-rulez search <query> [--limit <n>] [--format json]` ranks the skills a skills server would serve (same selection flags as `mcp --serve-skills`); `search --eval <cases.yaml> [--k] [--min] [--baseline] [--max-flips] [--out]` measures the ranking
+- `ai-rulez verifiers run|list|explain|test` — Deterministic repo checks from `[[verifiers]]` and `.ai-rulez/verifiers/*.toml`; `run` takes `--since <rev>`, `--staged`, `--all`, `--rule`, `--name`, `--format text|json|sarif|junit`, `--output`, `--fail-on`, `--strict`, `--strict-applicability`
+- `ai-rulez search <query> [--limit <n>] [--format json]` ranks the skills a skills server would serve (same selection flags as `mcp --serve-skills`); `search --eval <cases.yaml> [--k] [--min] [--baseline] [--max-flips] [--output]` measures the ranking
 - `ai-rulez eval run [skill...]` — Run skill evals through a runner and score them (`--harness`, `--runner`, `--runner-command`, `--ablation`, `--dry-run`, `--max-cost`, `--changed-only`, `--force`, `--threshold`, `--format json|markdown|junit`); results are signed per user, so CI needs `--force`
 - `ai-rulez telemetry hook|record|export|feedback`, `ai-rulez telemetry hook|record|flush|preview|doctor`, `ai-rulez telemetry report|evals` — Opt-in, identifier-only usage and item-load telemetry
 - `ai-rulez llm doctor [--ping]` / `llm estimate <file>` — Inspect `[llm]` access without calling a model

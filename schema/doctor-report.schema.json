@@ -4,11 +4,7 @@
   "title": "ai-rulez doctor report",
   "description": "Output of `ai-rulez doctor --format json`. Exit 2 when an error finding exists (a warning too with --strict).",
   "type": "object",
-  "required": [
-    "schema_version",
-    "summary",
-    "findings"
-  ],
+  "required": ["schema_version", "summary", "findings"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -19,11 +15,7 @@
     },
     "summary": {
       "type": "object",
-      "required": [
-        "error",
-        "warning",
-        "info"
-      ],
+      "required": ["error", "warning", "info"],
       "additionalProperties": false,
       "properties": {
         "error": {
@@ -44,11 +36,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "check",
-          "severity",
-          "message"
-        ],
+        "required": ["check", "severity", "message"],
         "additionalProperties": false,
         "properties": {
           "check": {
@@ -67,11 +55,7 @@
             ]
           },
           "severity": {
-            "enum": [
-              "error",
-              "warning",
-              "info"
-            ]
+            "enum": ["error", "warning", "info"]
           },
           "message": {
             "type": "string"

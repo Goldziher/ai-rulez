@@ -73,7 +73,7 @@ func init() {
 	f.StringVar(&fixFlags.finding, "finding", "", "Fix only the finding with this fingerprint (a prefix is enough)")
 	f.StringVar(&fixFlags.model, "model", "", "Model that writes the fix (default [review.fix] model); must differ from the judge")
 	f.StringVar(&fixFlags.judgeModel, "judge-model", "", "Model that judges and verifies (default [llm] model)")
-	f.StringVar(&fixFlags.out, "out", "", "Write the patch to this file instead of standard output")
+	specOutput.String(f, &fixFlags.out, "Write the patch to this file instead of standard output")
 	f.BoolVar(&fixFlags.apply, "apply", false, "Write the verified edits to the item files (they must be clean in git)")
 	f.BoolVar(&fixFlags.allowSame, "allow-same-model", false, "Let the fixer and the judge be the same model (self-preference risk)")
 	f.BoolVar(&fixFlags.noCache, "no-cache", false, "Do not read or write the model response cache")
@@ -83,13 +83,12 @@ func init() {
 	f.StringVar(&reviewFlags.rubric, "rubric", "", "Rubric id (default [review] rubric, else builtin:skill-quality)")
 	f.StringVar(&fixFlags.content, "content", config.ReviewContentFull, "What the judge receives: full (default here: a fix needs the body) or descriptions")
 	f.StringVar(&reviewFlags.since, "since", "", "Only items changed since this git revision")
-	f.StringVar(&reviewFlags.role, "role", "", "Only the content slice of this role")
-	f.StringVar(&reviewFlags.profile, "profile", "", "Only the content of this profile")
+	specRole.String(f, &reviewFlags.role, "Only the content slice of this role")
+	specProfile.String(f, &reviewFlags.profile, "Only the content of this profile")
 	f.Float64Var(&reviewFlags.maxCost, "max-cost", 0, "Spend cap in USD (default [review] max_cost_usd, else 0.50; 0 = unlimited)")
 	f.IntVar(&reviewFlags.maxCalls, "max-calls", 0, "Call cap (default [review] max_calls, else 300)")
 	addFormatFlag(f, &fixFlags.format, formatText, formatText, formatText, formatJSON)
-	f.StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
-	f.BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
+	specNoLocal.Bool(f, &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
 }
 
 // fixOutput is the JSON of a fix run.

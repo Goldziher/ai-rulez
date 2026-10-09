@@ -4,22 +4,14 @@
   "title": "ai-rulez verify --plugin",
   "description": "Output of `ai-rulez verify --plugin --format json`: whether the generated plugin bundles match their provenance hashes. status is drift (exit 2) when a bundle differs; the error is also on stderr.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "status",
-    "configs"
-  ],
+  "required": ["schema_version", "status", "configs"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
       "const": 1
     },
     "status": {
-      "enum": [
-        "ok",
-        "skipped",
-        "drift"
-      ]
+      "enum": ["ok", "skipped", "drift"]
     },
     "configs": {
       "type": "integer",

@@ -280,7 +280,7 @@ against the labels and writes no record.
 
 ```console
 ai-rulez review fix [id|name|path...] [--finding FINGERPRINT] [--model FIXER] [--judge-model JUDGE]
-                    [--out fix.patch] [--apply] [--allow-same-model] [--patch fix.patch]
+                    [--output fix.patch] [--apply] [--allow-same-model] [--patch fix.patch]
 ```
 
 For each authored item with a stable judged finding, the fixer proposes **exact-text edits** (`old` must occur once in
@@ -299,7 +299,7 @@ first attempt, as untrusted data in a fence of its own, without control characte
    dimension better and no other dimension worse.
 
 Only authored content inside the configuration directory is touched: items from includes, installed skills, builtins,
-the machine-local overlay and generated outputs are reported as not fixable. The patch (to `--out` or standard output)
+the machine-local overlay and generated outputs are reported as not fixable. The patch (to `--output` or standard output)
 has a header with the item digest, the finding, the models and the rubric version, then a unified diff:
 
 ```text
@@ -457,7 +457,7 @@ set `[llm] price_input_per_mtok` and `price_output_per_mtok` in user scope.
 
 `--format text` (default), `json` (schema [review-report.schema.json](schema.md), `review-report/1`) or `sarif`.
 SARIF results use the dimension codes as rule ids, mark `advisory: true` and `origin: "lint-twin"` or `"llm-judge"`,
-and carry `aiRulezReviewFingerprint/v1`. `--out FILE` writes the report to a file. The JSON report adds, for a judged
+and carry `aiRulezReviewFingerprint/v1`. `--output FILE` writes the report to a file. The JSON report adds, for a judged
 run: `run` (calls, cached answers, tokens, cost, the cap, `incomplete` and the unjudged items, the requested and
 resolved models, `hallucinated_evidence`), `items[].semantic`, `findings[]`, `egress`, `calibration`, `gate`, `models`
 and `baseline`.

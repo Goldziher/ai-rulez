@@ -190,7 +190,7 @@ users register as a marketplace. `--channel` is also the npm dist-tag.
 
 An emitter renders the files a managed channel needs from the published plugin. It is a pure function: no network, no clock,
 no file system. `--emit NAME` (repeatable) or `[[publish.emitters]]` runs it into `emit/<name>/`;
-`ai-rulez publish emit NAME [--out dir]` writes only those files and no release. Output is byte-reproducible.
+`ai-rulez publish emit NAME [--output-dir dir]` writes only those files and no release. Output is byte-reproducible.
 
 | Emitter | Output | Status |
 | --- | --- | --- |

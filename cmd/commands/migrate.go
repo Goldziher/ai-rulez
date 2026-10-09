@@ -60,7 +60,7 @@ Exit codes: 0 migrated or nothing to do, 1 a project could not be migrated,
 	flags := cmd.Flags()
 	flags.BoolVar(&migrateAdoptDefaults, "adopt-defaults", false, "take the v5 defaults instead of pinning the 4.x ones")
 	flags.BoolVar(&migrateWrite, "write", false, "also rewrite frontmatter aliases in .ai-rulez markdown files")
-	flags.BoolVar(&migrateRecursive, "recursive", false, "migrate every project found below the current directory")
+	specRecursive.Bool(flags, &migrateRecursive, "migrate every project found below the current directory")
 	return cmd
 }
 
@@ -85,7 +85,7 @@ and --check write nothing.`,
 func init() {
 	MigrateCmd.AddCommand(newMigrateV5Cmd(), newMigrateOKFCmd())
 	flags := MigrateCmd.PersistentFlags()
-	flags.BoolVar(&migrateDryRun, "dry-run", false, "show the change list without writing anything")
+	specDryRun.Bool(flags, &migrateDryRun, "show the change list without writing anything")
 	flags.BoolVar(&migrateCheck, "check", false, "write nothing and exit 2 when a project still needs migration")
 	addFormatFlag(flags, &migrateFormat, formatText, formatText, formatText, formatJSON)
 }

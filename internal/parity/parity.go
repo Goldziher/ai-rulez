@@ -94,8 +94,8 @@ func GlobalCLIFlags() []Exclusion {
 	return []Exclusion{
 		{Names: []string{"format"}, Reason: "a tool always answers with one JSON document"},
 		{Names: []string{"yes"}, Reason: "a tool never prompts; destructive tools carry the destructive annotation"},
-		{Names: []string{"config", "debug", "quiet", "token", "policy", "policy-mode", "policy-digest", "policy-offline", "policy-max-stale",
-			"policy-tofu", "discover-org", "policy-require-signed", "policy-signer-key", "policy-signer-identity", "policy-signer-issuer", "policy-trusted-root"},
+		{Names: []string{"config", "config-dir", "debug", "quiet", "token", "policy", "policy-mode", "policy-digest", "policy-offline", "policy-max-stale",
+			"policy-trust-tofu", "discover-org", "policy-require-signed", "policy-signer-key", "policy-signer-identity", "policy-signer-issuer", "policy-trusted-root"},
 			Reason: "root flags of the process; the MCP server takes them once at start, and config_file is the tool-side config"},
 	}
 }
@@ -104,7 +104,7 @@ func GlobalCLIFlags() []Exclusion {
 func GlobalToolArgs() []Exclusion {
 	return []Exclusion{
 		{Names: []string{"working_directory"}, Reason: "a tool names its project directory; a command runs in the current directory"},
-		{Names: []string{"config_file"}, Reason: "the CLI takes the configuration through the root --config flag or a positional config-file"},
+		{Names: []string{"config_file"}, Reason: "the CLI takes the configuration through the root -C/--config or --config-dir flag"},
 	}
 }
 

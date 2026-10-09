@@ -23,7 +23,8 @@ func runCostOn(t *testing.T, root string) (string, bool, error) {
 	t.Helper()
 	var out bytes.Buffer
 	CostCmd.SetOut(&out)
-	exceeded, err := runCost(CostCmd, []string{filepath.Join(root, ".ai-rulez", "config.toml")})
+	useConfigFile(t, filepath.Join(root, ".ai-rulez", "config.toml"))
+	exceeded, err := runCost(CostCmd)
 	return out.String(), exceeded, err
 }
 
@@ -56,7 +57,7 @@ func TestCostCommand(t *testing.T) {
 	_, _, err = runCostOn(t, root)
 	assert.Error(t, err)
 
-	for _, name := range []string{"format", "target", "top", "budget", "on-demand-budget", "profile", "no-local", "config-dir"} {
+	for _, name := range []string{"format", "target", "top", "budget", "on-demand-budget", "profile", "no-local"} {
 		assert.NotNil(t, CostCmd.Flags().Lookup(name), name)
 	}
 }

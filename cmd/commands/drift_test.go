@@ -37,11 +37,10 @@ func TestRunDriftCheck_ExitCodes(t *testing.T) {
 				_ = f.Close()
 			}
 			progress.SetQuiet(true)
-			var args []string
 			if !tt.recursive {
-				args = []string{filepath.Join(root, "a", ".ai-rulez", "config.toml")}
+				useConfigFile(t, filepath.Join(root, "a", ".ai-rulez", "config.toml"))
 			}
-			if got := runDriftCheck(args, tt.recursive); got != tt.want {
+			if got := runDriftCheck(tt.recursive); got != tt.want {
 				t.Errorf("exit code = %d, want %d", got, tt.want)
 			}
 		})
@@ -50,7 +49,7 @@ func TestRunDriftCheck_ExitCodes(t *testing.T) {
 
 func TestRunDriftCheck_BrokenRootIsAnError(t *testing.T) {
 	twoRoots(t, brokenRootConfig)
-	if got := runDriftCheck(nil, true); got != 1 {
+	if got := runDriftCheck(true); got != 1 {
 		t.Errorf("exit code = %d, want 1 for an unloadable root", got)
 	}
 }

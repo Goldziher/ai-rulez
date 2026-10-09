@@ -60,7 +60,7 @@ func TestCosignInterop(t *testing.T) {
 		t.Setenv(signPasswordEnv, password)
 		require.Equal(t, 0, func() int {
 			var c int
-			capture(t, func() { c = codeOf(runSign(context.Background(), nil, nil)) })
+			capture(t, func() { c = codeOf(runSign(context.Background(), nil)) })
 			return c
 		}())
 		signLock, signKey = false, ""

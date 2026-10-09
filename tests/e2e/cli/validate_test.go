@@ -46,11 +46,11 @@ func (s *ValidateCLITestSuite) TestValidateValidConfigWithCustomPath() {
 	result.AssertOutputContains(s.T(), "valid")
 }
 
-func (s *ValidateCLITestSuite) TestValidateWithPositionalConfigFile() {
+func (s *ValidateCLITestSuite) TestValidateWithConfigFlagToAFile() {
 	configDir := filepath.Join(s.workingDir, ".rules")
 	s.NoError(os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "5.0"
-name = "positional-validate"
+name = "config-file-validate"
 presets = ["codex"]
 `)
 	testutil.WriteFile(s.T(), filepath.Join(configDir, "rules"), "test-rule.md", `---
@@ -59,7 +59,7 @@ priority: high
 # Test Rule
 `)
 
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", filepath.Join(".rules", "config.toml"))
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "-C", filepath.Join(".rules", "config.toml"), "validate")
 
 	result.AssertOutputContains(s.T(), "valid")
 }

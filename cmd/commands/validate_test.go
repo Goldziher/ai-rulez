@@ -10,7 +10,7 @@ import (
 
 func TestValidateCommand(t *testing.T) {
 	assert.NotNil(t, commands.ValidateCmd)
-	assert.Equal(t, "validate [config-file]", commands.ValidateCmd.Use)
+	assert.Equal(t, "validate", commands.ValidateCmd.Use)
 	assert.NotContains(t, commands.ValidateCmd.Aliases, "check", "check is reserved for compare-and-exit-2 flags")
 	assert.Contains(t, commands.ValidateCmd.Aliases, "val")
 }

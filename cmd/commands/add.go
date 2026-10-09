@@ -95,24 +95,24 @@ review tools that support them. Frontmatter: description, severity
 func init() {
 	AddCmd.AddCommand(addRuleCmd, addContextCmd, addSkillCmd, addAgentCmd, addCommandCmd, addCheckCmd)
 	for _, c := range []*cobra.Command{addRuleCmd, addContextCmd, addSkillCmd, addAgentCmd, addCommandCmd, addCheckCmd} {
-		c.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
-		c.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
+		specDomain.String(c.Flags(), &addDomain, "Domain name (optional, uses root if not specified)")
+		c.Flags().StringVar(&addContent, "content", "", "File content (uses template if not specified)")
 		addResultFormat(c.Flags())
 	}
 	// Checks are shared review guidance: there is no machine-local check tree.
 	for _, c := range []*cobra.Command{addRuleCmd, addContextCmd, addSkillCmd, addAgentCmd, addCommandCmd} {
-		c.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
+		specLocal.Bool(c.Flags(), &addLocal, addLocalUsage)
 	}
 	for _, c := range []*cobra.Command{addSkillCmd, addAgentCmd, addCommandCmd, addCheckCmd} {
-		c.Flags().StringVarP(&addDesc, "description", "s", "", "Description")
+		c.Flags().StringVar(&addDesc, "description", "", "Description")
 	}
 	for _, c := range []*cobra.Command{addRuleCmd, addContextCmd, addSkillCmd} {
-		c.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low|minimal")
-		c.Flags().StringVarP(&addTargets, "targets", "t", "", "Comma-separated target providers or path globs (e.g. claude,cursor)")
+		c.Flags().StringVar(&addPriority, "priority", "medium", "Priority level: critical|high|medium|low|minimal")
+		specTargets.String(c.Flags(), &addTargets, "Comma-separated target providers or path globs (e.g. claude,cursor)")
 	}
 	addCheckCmd.Flags().String("severity", "", "Severity: low|medium|high|critical")
 	addCheckCmd.Flags().String("tools", "", "Comma-separated review tools the check is for")
-	addCheckCmd.Flags().StringVarP(&addTargets, "targets", "t", "", "Comma-separated target presets, paths or globs the check applies to")
+	specTargets.String(addCheckCmd.Flags(), &addTargets, "Comma-separated target presets, paths or globs the check applies to")
 }
 
 func runAddRule(cmd *cobra.Command, args []string) error {

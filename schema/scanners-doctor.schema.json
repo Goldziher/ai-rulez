@@ -4,10 +4,7 @@
   "title": "ai-rulez scanners doctor",
   "description": "Output of `ai-rulez scanners doctor --format json`: as scanners list, plus the probed version of an installed scanner (with --external). Exit 2 when a scanner is unhealthy.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "scanners"
-  ],
+  "required": ["schema_version", "scanners"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -48,11 +45,7 @@
             "type": "boolean"
           },
           "egress": {
-            "enum": [
-              "true",
-              "false",
-              "undeclared"
-            ]
+            "enum": ["true", "false", "undeclared"]
           },
           "format": {
             "type": "string"

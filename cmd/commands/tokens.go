@@ -24,7 +24,7 @@ var (
 
 // TokensCmd reports the token surface of the generated configuration.
 var TokensCmd = &cobra.Command{
-	Use:   "tokens [config-file]",
+	Use:   "tokens",
 	Short: "Report the prompt-token cost of generated artifacts",
 	Long: `Report how many prompt tokens the generated configuration costs, split by
 when an agent loads it.
@@ -44,9 +44,9 @@ earlier name-only model reported.
 Counts are approximations — Claude's tokenizer is not published — and cover only
 what ai-rulez generates. The agent harness adds a fixed floor of its own that
 ai-rulez cannot see, so no figure here predicts a session total.`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		overBudget, err := runTokens(cmd.OutOrStdout(), args)
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		overBudget, err := runTokens(cmd.OutOrStdout())
 		if err != nil {
 			return fail(err)
 		}
@@ -58,9 +58,9 @@ ai-rulez cannot see, so no figure here predicts a session total.`,
 }
 
 func init() {
-	TokensCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
+	specNoLocal.Bool(TokensCmd.Flags(), &noLocal, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	addJSONFormat(TokensCmd.Flags(), &tokensJSON, "j")
-	TokensCmd.Flags().IntVarP(&tokensBudget, "budget", "b", 0,
+	TokensCmd.Flags().IntVar(&tokensBudget, "budget", 0,
 		"Fail when the headline always-loaded count exceeds this ceiling")
 	// StringArray, not StringSlice: a comma composes several profiles into one
 	// value, so it cannot also mean "next entry". Repeat the flag per column.
@@ -70,8 +70,7 @@ func init() {
 		"Token counter to use: "+strings.Join(tokens.Names(), " or "))
 	TokensCmd.Flags().StringVar(&tokensRole, flagRole, "", "Report on this role's content slice instead of a profile (see 'ai-rulez roles list')")
 	TokensCmd.Flags().BoolVar(&tokensByRole, "by-role", false, "Report every declared role as one column of a comparison table")
-	TokensCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to report on, or a comma-separated list to compose several")
-	TokensCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specProfile.String(TokensCmd.Flags(), &profile, "Profile to report on, or a comma-separated list to compose several")
 }
 
 // budgetExceededExitCode is returned when a report exceeds --budget. Distinct
@@ -81,13 +80,13 @@ const budgetExceededExitCode = 2
 // runTokens builds and writes the report. It returns whether a configured budget
 // was exceeded rather than exiting, so the behavior is testable without a
 // subprocess.
-func runTokens(out io.Writer, args []string) (overBudget bool, err error) {
+func runTokens(out io.Writer) (overBudget bool, err error) {
 	counter, err := tokens.New(tokensTokenizer)
 	if err != nil {
 		return false, oops.Hint("Accepted values: "+strings.Join(tokens.Names(), ", ")).Wrapf(err, "select tokenizer")
 	}
 
-	cfg, err := loadConfigForCommand(cmdContext(), args)
+	cfg, err := loadConfigForCommand(cmdContext())
 	if err != nil {
 		return false, err
 	}

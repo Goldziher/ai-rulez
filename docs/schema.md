@@ -164,7 +164,7 @@ The schema files are available in the repository:
 | `schema/verify-approvals.schema.json` | JSON Schema | v1 | `ai-rulez verify --approvals --format json`: the re-check of signed and review-linked approvals; see [Approvals](approvals.md#verifying-approvals) |
 | `schema/update.schema.json`       | JSON Schema | v1      | `ai-rulez update --format json`: the pins that move, or would with `--dry-run` |
 | `schema/search.v1.schema.json`    | JSON Schema | v1      | `ai-rulez search <query> --format json`: served skills ranked against a query (lexical or hybrid) |
-| `schema/search-eval.v1.schema.json` | JSON Schema | v1    | `ai-rulez search --eval <cases.yaml> --format json`, also the file `--out` writes |
+| `schema/search-eval.v1.schema.json` | JSON Schema | v1    | `ai-rulez search --eval <cases.yaml> --format json`, also the file `--output` writes |
 | `schema/convert-report.schema.json` | JSON Schema | v1    | `ai-rulez convert --format json`: every input construct as mapped, approximated or dropped |
 | `schema/publish-manifest.schema.json` | JSON Schema | v1    | `<name>-<version>.manifest.json` written by `ai-rulez publish`: the bundle's files, source, lock and digests |
 | `schema/publish-plan.schema.json` | JSON Schema | v1    | `publish-plan.json` (and `ai-rulez publish --format json`): artifacts with digests and the argv `--execute` would run |
@@ -215,7 +215,7 @@ Use the `ai-rulez validate` command to check your configuration against the sche
 ai-rulez validate
 
 # Validate a specific config.toml
-ai-rulez validate .ai-rulez/config.toml
+ai-rulez -C .ai-rulez/config.toml validate
 
 # Debug output
 ai-rulez validate --debug

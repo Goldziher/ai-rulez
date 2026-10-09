@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/search-eval.v1.schema.json",
   "title": "ai-rulez search --eval result",
-  "description": "Output of `ai-rulez search --eval <cases.yaml> --format json` (or `--from-evals`), also the file `--out` writes and a later run takes as `--baseline`.",
+  "description": "Output of `ai-rulez search --eval <cases.yaml> --format json` (or `--from-evals`), also the file `--output` writes and a later run takes as `--baseline`.",
   "type": "object",
   "required": ["schema_version", "k", "n", "n_negative", "modes", "ci95", "cases", "misses"],
   "additionalProperties": false,

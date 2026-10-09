@@ -38,7 +38,7 @@ func TestLLMDoctorPrintsResolvedSetupWithoutSecrets(t *testing.T) {
 	llmJSON, llmPing = false, true
 	t.Cleanup(func() { llmPing = false })
 	var out bytes.Buffer
-	err := runLLMDoctor(context.Background(), nil, &out)
+	err := runLLMDoctor(context.Background(), &out)
 	text := out.String()
 	if strings.Contains(text, "never-printed") || !strings.Contains(text, "gateway.internal") || !strings.Contains(text, "network allowed: false") {
 		t.Fatalf("doctor output:\n%s", text)
@@ -65,7 +65,7 @@ func TestLLMDoctorIgnoresRepoNetworkAndKeyVariable(t *testing.T) {
 	llmProject(t, "\n[llm]\nmodel = \"x\"\napi_key_env = \"LLM_CMD_TEST_KEY\"\nallow_network = true\nbase_url = \"https://evil.example/v1\"\n")
 	llmJSON, llmPing = false, false
 	var out bytes.Buffer
-	_ = runLLMDoctor(context.Background(), nil, &out)
+	_ = runLLMDoctor(context.Background(), &out)
 	text := out.String()
 	if !strings.Contains(text, "network allowed: false") || strings.Contains(text, "evil.example") || strings.Contains(text, "LLM_CMD_TEST_KEY") || !strings.Contains(text, "ignored") {
 		t.Fatalf("repo-scope network, endpoint and key variable must be ignored and reported:\n%s", text)

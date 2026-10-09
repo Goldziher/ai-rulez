@@ -210,7 +210,7 @@ func buildCapabilities() []Capability {
 			CLIFlags: []Exclusion{
 				{Names: []string{"allow-exec", "allow-llm", "gate-llm", "max-cost", "estimate"},
 					Reason: "running a verifier's program or a model judge is a human decision; the tool runs the deterministic subset"},
-				{Names: []string{"all", "out", "profile", "role", "fail-on", "strict-applicability"},
+				{Names: []string{"all", "output", "profile", "role", "fail-on", "strict-applicability"},
 					Reason: "report-shaping flags of the command line run; the tool reports every result in one document"},
 			},
 		},
@@ -327,7 +327,7 @@ func servingCapabilities() []Capability {
 			ID: "search", Kind: Paired, CLI: []string{"search"}, Tool: "find_skill", Server: Skills, Behavior: "search",
 			Flags: []FlagPair{{Flag: "limit"}, {Flag: "role"}},
 			CLIFlags: []Exclusion{
-				{Names: []string{"mode", "explain", "eval", "from-evals", "k", "baseline", "out", "min", "max-flips", "dry-run", "rebuild", "items", "min-count", "purge"},
+				{Names: []string{"mode", "explain", "eval", "from-evals", "k", "baseline", "output", "min", "max-flips", "dry-run", "rebuild", "items", "min-count", "purge"},
 					Reason: "embedding, evaluation and index maintenance modes spend network or write files; find_skill ranks with the configured mode"},
 				{Names: []string{"profile", "targets", "domain", "allow", "deny", "source", "include-static", "offline", "frozen", "allow-exec"},
 					Reason: "select the served catalog; a serve-mode server fixes them when it starts, so a tool call cannot widen what is served"},

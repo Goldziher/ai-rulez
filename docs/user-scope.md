@@ -70,8 +70,7 @@ ai-rulez generate --user --yes         # no prompt (required in a non-interactiv
 ai-rulez clean --user                  # remove exactly what generate --user wrote
 ```
 
-`--config <dir>` selects another user config. `--user` cannot be combined with `--recursive`, `--plugin` or
-a config-file argument. The full write list is printed before the first write, whatever the flags.
+`--config <dir>` selects another user config. `--user` cannot be combined with `--recursive` or `--plugin`. The full write list is printed before the first write, whatever the flags.
 
 ## Safety
 

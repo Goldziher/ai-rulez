@@ -31,7 +31,7 @@ user key is shown with a warning; improve apply and improve pr refuse it.`,
 		if err := checkFormatFlag(improveFlags.format); err != nil {
 			return err
 		}
-		cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+		cfg, err := loadConfigForCommand(commandContext(cmd))
 		if err != nil {
 			return err
 		}
@@ -68,7 +68,7 @@ Nothing outside that directory is touched; a run directory that is a symlink is 
 		if len(args) == 1 {
 			opts.RunID = args[0]
 		}
-		cfg, err := loadConfigForCommand(commandContext(cmd), nil)
+		cfg, err := loadConfigForCommand(commandContext(cmd))
 		if err != nil {
 			return err
 		}
@@ -101,10 +101,9 @@ Nothing outside that directory is touched; a run directory that is a symlink is 
 func init() {
 	for _, c := range []*cobra.Command{improveShowCmd, improveCleanCmd} {
 		addFormatFlag(c.Flags(), &improveFlags.format, formatText, formatText, formatText, formatJSON)
-		c.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	}
 	improveCleanCmd.Flags().BoolVar(&improveCleanFlags.all, "all", false, "Delete every saved run")
-	improveCleanCmd.Flags().BoolVar(&improveCleanFlags.dryRun, "dry-run", false, "List the runs that would be deleted; delete nothing")
+	specDryRun.Bool(improveCleanCmd.Flags(), &improveCleanFlags.dryRun, "List the runs that would be deleted; delete nothing")
 	addYesFlag(improveCleanCmd.Flags(), &improveFlags.yes, "Delete --all without the confirmation prompt")
 	ImproveCmd.AddCommand(improveShowCmd, improveCleanCmd)
 }

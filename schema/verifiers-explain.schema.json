@@ -4,16 +4,7 @@
   "title": "ai-rulez verifiers explain",
   "description": "Output of `ai-rulez verifiers explain <name> --format json`: what a verifier checks, the item it enforces and how to fix a failure.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "name",
-    "severity",
-    "declared_in",
-    "when_changed",
-    "exclude",
-    "examples",
-    "text"
-  ],
+  "required": ["schema_version", "name", "severity", "declared_in", "when_changed", "exclude", "examples", "text"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -23,11 +14,7 @@
       "type": "string"
     },
     "severity": {
-      "enum": [
-        "error",
-        "warning",
-        "info"
-      ]
+      "enum": ["error", "warning", "info"]
     },
     "type": {
       "type": "string"
@@ -37,10 +24,7 @@
     },
     "enforces": {
       "type": "object",
-      "required": [
-        "kind",
-        "id"
-      ],
+      "required": ["kind", "id"],
       "additionalProperties": false,
       "properties": {
         "kind": {

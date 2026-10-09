@@ -97,23 +97,19 @@ func validateVerifyAttestationFlags() error {
 	return checkFormatFlag(verifyFormat)
 }
 
-// runVerifyAttestation verifies the lock attestation of the project at args[0]
-// (or the current directory) offline. Exit codes: 0 verified, 1 the check could
+// runVerifyAttestation verifies the lock attestation of the project -C/--config-dir
+// selects (or the current directory) offline. Exit codes: 0 verified, 1 the check could
 // not run (unreadable lock, no trusted signer, no trusted root), 2 verification
 // failed.
-func runVerifyAttestation(args []string, env ambient.Env, out io.Writer) int {
+func runVerifyAttestation(env ambient.Env, out io.Writer) int {
 	if verifyArtifactMode() {
-		return runVerifyArtifact(args, env, out)
+		return runVerifyArtifact(env, out)
 	}
 	if err := validateVerifyAttestationFlags(); err != nil {
 		renderError(os.Stderr, err)
 		return 1
 	}
-	path := ""
-	if len(args) > 0 {
-		path = args[0]
-	}
-	cfg, _, err := loadForLockCheck(path)
+	cfg, _, err := loadForLockCheck("")
 	if err != nil {
 		renderError(os.Stderr, err)
 		return 1

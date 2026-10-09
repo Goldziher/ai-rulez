@@ -4,10 +4,7 @@
   "title": "ai-rulez verifiers list",
   "description": "Output of `ai-rulez verifiers list --format json`: the declared verifiers.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "items"
-  ],
+  "required": ["schema_version", "items"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -17,12 +14,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "name",
-          "type",
-          "severity",
-          "source"
-        ],
+        "required": ["name", "type", "severity", "source"],
         "additionalProperties": false,
         "properties": {
           "name": {
@@ -32,11 +24,7 @@
             "type": "string"
           },
           "severity": {
-            "enum": [
-              "error",
-              "warning",
-              "info"
-            ]
+            "enum": ["error", "warning", "info"]
           },
           "description": {
             "type": "string"

@@ -19,7 +19,7 @@ var verifyIfGenerated bool
 
 // VerifyCmd verifies generated artifacts without modifying them.
 var VerifyCmd = &cobra.Command{
-	Use:   "verify [config-file]",
+	Use:   "verify",
 	Short: "Verify attestations, approvals and plugin provenance",
 	Long: `Verify generated files without modifying them.
 
@@ -54,8 +54,8 @@ Exit codes: 0 verified, 1 the check could not run (also a bare "verify" with no
 mode), 2 verification failed (--plugin: the bundle differs from its provenance;
 --attestation: the attestation failed verification; --approvals: an approval no
 longer holds).`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		if err := rejectApprovalFlags(cmd); err != nil {
 			return fail(err)
 		}
@@ -66,7 +66,7 @@ longer holds).`,
 			return exitStatus(runVerifySelf("", nil, cmd.OutOrStdout()))
 		}
 		if verifyApprovals {
-			return exitStatus(runVerifyApprovals(args, cmd.OutOrStdout()))
+			return exitStatus(runVerifyApprovals(cmd.OutOrStdout()))
 		}
 		if verifyArtifactMode() {
 			verifyAttestation = true // --bundle, --skill and --sbom imply --attestation
@@ -75,7 +75,7 @@ longer holds).`,
 			return fail(err)
 		}
 		if verifyAttestation {
-			return exitStatus(runVerifyAttestation(args, nil, cmd.OutOrStdout()))
+			return exitStatus(runVerifyAttestation(nil, cmd.OutOrStdout()))
 		}
 		if !verifyPlugin {
 			if verifyIfConfigured || verifyIfGenerated {
@@ -87,7 +87,7 @@ longer holds).`,
 		if verifyRecursive {
 			return finishPluginVerify(out, runRecursivePluginVerify())
 		}
-		cfg, err := loadConfigForCommand(cmdContext(), args, config.WithoutLocal())
+		cfg, err := loadConfigForCommand(cmdContext(), config.WithoutLocal())
 		if err != nil {
 			return fail(err)
 		}
@@ -168,7 +168,7 @@ func init() {
 	VerifyCmd.Flags().BoolVar(&verifyPlugin, "plugin", false, "Verify generated plugin bundles using provenance hashes")
 	VerifyCmd.Flags().BoolVar(&verifyIfConfigured, "if-configured", false, "Skip plugin verification when no plugin authoring configuration is present")
 	VerifyCmd.Flags().BoolVar(&verifyIfGenerated, "if-generated", false, "Skip plugin verification when the plugin bundle has not been generated yet")
-	VerifyCmd.Flags().BoolVarP(&verifyRecursive, "recursive", "r", false, "Verify plugin outputs for configurations recursively")
+	specRecursive.Bool(VerifyCmd.Flags(), &verifyRecursive, "Verify plugin outputs for configurations recursively")
 	f := VerifyCmd.Flags()
 	f.BoolVar(&verifyAttestation, "attestation", false, "Verify the signed lock (ai-rulez.lock.sigstore.json) offline against the [signing] policy")
 	f.Bool("lock", false, "With --attestation: verify the lock attestation (the default and only subject)")
@@ -187,6 +187,5 @@ func init() {
 	f.StringVar(&verifySource, "source", "", "With --skill: the skill source or installed skill name, to apply [[signing.trust]] entries scoped by source")
 	f.BoolVar(&verifyRequireProvenance, "require-provenance", false, "With --bundle: require a verified SLSA provenance statement next to the bundle attestation")
 	addFormatFlag(f, &verifyFormat, "", formatText, formatText, formatJSON)
-	VerifyCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
-	VerifyCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	specProfile.String(VerifyCmd.Flags(), &profile, "Profile used to generate the plugin bundle")
 }

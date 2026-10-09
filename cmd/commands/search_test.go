@@ -216,7 +216,7 @@ func TestSearchEval_BaselineFlips(t *testing.T) {
 	passing := writeCases(t, "version: 1\ncases:\n  - {id: a, query: pull request, expect: [git-workflow]}\n  - {id: b, query: money back, expect: [refund-policy]}\n")
 	baseline := filepath.Join(t.TempDir(), "base.json")
 	setSearchFlag(t, "eval", passing)
-	setSearchFlag(t, "out", baseline)
+	setSearchFlag(t, "output", baseline)
 	code, _, errOut := execSearch(t)
 	require.Equal(t, 0, code, errOut)
 	_, err := os.Stat(baseline)
@@ -269,7 +269,7 @@ func TestSearchCmd_Registered(t *testing.T) {
 	cmd, _, err := RootCmd.Find([]string{"search"})
 	require.NoError(t, err)
 	assert.Equal(t, SearchCmd, cmd)
-	for _, name := range []string{"role", "profile", "source", "include-static", "eval", "min", "baseline", "max-flips", "out", "k", "format", "limit", "mode", "explain", "from-evals", "allow-exec"} {
+	for _, name := range []string{"role", "profile", "source", "include-static", "eval", "min", "baseline", "max-flips", "output", "k", "format", "limit", "mode", "explain", "from-evals", "allow-exec"} {
 		found := cmd.Flags().Lookup(name) != nil || cmd.PersistentFlags().Lookup(name) != nil
 		assert.True(t, found, "--%s", name)
 	}
@@ -282,7 +282,7 @@ func TestSearchEval_BaselineAtAnotherKIsRefused(t *testing.T) {
 	baseline := filepath.Join(t.TempDir(), "base.json")
 	setSearchFlag(t, "eval", cases)
 	setSearchFlag(t, "k", "3")
-	setSearchFlag(t, "out", baseline)
+	setSearchFlag(t, "output", baseline)
 	code, _, errOut := execSearch(t)
 	require.Equal(t, 0, code, errOut)
 

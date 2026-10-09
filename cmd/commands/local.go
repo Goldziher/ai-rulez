@@ -224,7 +224,6 @@ var localPathCmd = &cobra.Command{
 }
 
 func init() {
-	LocalCmd.PersistentFlags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	LocalCmd.AddCommand(localInitCmd, localShowCmd, localSetCmd, localUnsetCmd, localPathCmd)
 	addJSONFormat(localShowCmd.Flags(), &localShowJSON, "")
 	localShowCmd.Flags().BoolVar(&localShowReveal, "reveal", false, "Print values of keys that are withheld by default (may print secrets)")

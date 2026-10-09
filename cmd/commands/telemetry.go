@@ -26,7 +26,6 @@ var (
 	telHarness    string
 	telRole       string
 	telRoot       string
-	telConfigDir  string
 	telSyntax     string
 	telExecutable string
 	telOutput     string
@@ -345,9 +344,6 @@ func orNone(list []string) string {
 }
 
 func telemetryConfigDirName() string {
-	if telConfigDir != "" {
-		return telConfigDir
-	}
 	return configDirName()
 }
 
@@ -444,11 +440,10 @@ func init() {
 	}
 	for _, c := range []*cobra.Command{telemetryRecordCmd, telemetryFlushCmd, telemetryDoctorCmd, telemetryPreviewCmd} {
 		c.Flags().StringVar(&telRoot, "root", "", "Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory)")
-		c.Flags().StringVarP(&telConfigDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	}
 	telemetryHookCmd.Flags().StringVar(&telExecutable, "executable", "ai-rulez", "Command the hook runs")
 	telemetryHookCmd.Flags().StringVar(&telSyntax, "syntax", "json", "Output syntax: json (a hooks block) or toml ([[hooks]] groups for config.toml)")
-	telemetryHookCmd.Flags().StringVarP(&telOutput, "output", "o", "", "Write the template to this file instead of stdout")
+	specOutput.String(telemetryHookCmd.Flags(), &telOutput, "Write the template to this file instead of stdout")
 	telemetryFlushCmd.Flags().BoolVar(&telBackground, "background", false, "Silent mode used by hooks: exit 0 whatever happens")
 	telemetryFlushCmd.Flags().DurationVar(&telTimeout, "timeout", 0, "Overall flush deadline (default 8s, at most 30s)")
 	telemetryPreviewCmd.Flags().StringVar(&telLog, "log", "", "Usage log to preview instead of the outbox (default <config dir>/local/usage.jsonl)")

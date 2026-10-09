@@ -363,7 +363,7 @@ See [CLI commands](cli.md#okf-commands) for every flag.
 
 | Command | Does |
 | --- | --- |
-| `ai-rulez export okf [--out dir] [--profile p \| --role r] [--include kinds] [--index-style body\|frontmatter] [--check]` | Write (or compare) the bundle. `--role` exports the slice of content a [role](roles.md) selects (domains, per-kind selectors, `extends`, checks included), the same slice `generate --role` renders; it excludes `--profile` |
+| `ai-rulez export okf [--output-dir dir] [--profile p \| --role r] [--include kinds] [--index-style body\|frontmatter] [--check]` | Write (or compare) the bundle. `--role` exports the slice of content a [role](roles.md) selects (domains, per-kind selectors, `extends`, checks included), the same slice `generate --role` renders; it excludes `--profile` |
 | `ai-rulez import okf <dir\|git-url[@ref][#subdir]> [--into kind] [--domain d] [--dry-run] [--force]` | Bundle to `.ai-rulez/` sources |
 | `ai-rulez migrate okf [--dry-run] [--check]` | Convert `.ai-rulez/` in place to an OKF bundle (idempotent) |
 | `ai-rulez okf validate <dir\|git-url> [--format json] [--fail-on sev]` | Lint any bundle |
@@ -448,7 +448,7 @@ domain like other includes. Configure with `includes[].format`; the only value i
 ai-rulez generate --check                 # includes the okf preset: fails when docs/okf is stale
 ai-rulez validate                         # AR9B0-AR9B9 for the configured bundle
 ai-rulez okf validate docs/okf --fail-on warning --format json
-ai-rulez export okf --out /tmp/kb --check # compare without touching the repository
+ai-rulez export okf --output-dir /tmp/kb --check # compare without touching the repository
 ```
 
 Validate a third-party bundle before importing it:

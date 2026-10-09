@@ -88,11 +88,10 @@ func init() {
 	TelemetryCmd.AddCommand(usagePruneCmd)
 	f := usagePruneCmd.Flags()
 	f.IntVar(&usagePruneKeepDays, "keep-days", 0, "Keep lines from the last N days (required)")
-	f.BoolVar(&usagePruneDryRun, "dry-run", false, "Report what would be removed without rewriting the log")
+	specDryRun.Bool(f, &usagePruneDryRun, "Report what would be removed without rewriting the log")
 	f.BoolVar(&usagePruneIgnoreCursor, "ignore-cursor", false, "Prune by age alone, also lines not yet exported")
 	f.StringVar(&usageLog, "log", "", "Usage log to prune (default <config dir>/local/usage.jsonl)")
 	f.StringVar(&telRoot, "root", "", "Project root (default $CLAUDE_PROJECT_DIR, else the nearest directory holding the config directory)")
-	f.StringVarP(&telConfigDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	if err := usagePruneCmd.MarkFlagRequired("keep-days"); err != nil {
 		panic(err)
 	}

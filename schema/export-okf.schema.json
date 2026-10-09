@@ -4,21 +4,13 @@
   "title": "ai-rulez export okf",
   "description": "Output of `ai-rulez export okf --format json`. After a write, status is written and files lists the paths. With --check, status is up_to_date or drift (exit 2) and drift lists the paths that are missing, changed or extra.",
   "type": "object",
-  "required": [
-    "schema_version",
-    "status",
-    "dir"
-  ],
+  "required": ["schema_version", "status", "dir"],
   "properties": {
     "schema_version": {
       "const": 1
     },
     "status": {
-      "enum": [
-        "written",
-        "up_to_date",
-        "drift"
-      ]
+      "enum": ["written", "up_to_date", "drift"]
     },
     "dir": {
       "type": "string"
