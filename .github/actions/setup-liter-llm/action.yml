@@ -1,0 +1,36 @@
+name: Set up liter-llm native library
+description: >-
+  Downloads the liter-llm native static library pinned by go.mod, verifies its sha256, extracts only
+  the static library and exports CGO_ENABLED=1 and CGO_LDFLAGS for the rest of the job. Run after
+  checkout, before any go build/test/vet. Needs bash and curl (present on every GitHub-hosted runner).
+
+inputs:
+  mode:
+    description: "static (default) or dll (Windows only)"
+    required: false
+    default: static
+
+runs:
+  using: composite
+  steps:
+    - name: Cache the liter-llm download
+      uses: actions/cache@v6
+      with:
+        path: ${{ runner.temp }}/liter-llm
+        key: liter-llm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.mod') }}-${{ inputs.mode }}
+
+    - name: Fetch, verify and link-configure liter-llm
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        ACTION_PATH: ${{ github.action_path }}
+        CACHE_ROOT: ${{ runner.temp }}
+      run: |
+        set -euo pipefail
+        # action_path is <repo>/.github/actions/setup-liter-llm; the scripts live three levels up.
+        if command -v cygpath >/dev/null 2>&1; then
+          ACTION_PATH="$(cygpath -u "$ACTION_PATH")"
+          CACHE_ROOT="$(cygpath -u "$CACHE_ROOT")"
+        fi
+        script="$(cd "$ACTION_PATH/../../../scripts" && pwd)/setup-liter-llm.sh"
+        LITER_LLM_CACHE="$CACHE_ROOT/liter-llm" bash "$script" --mode "$MODE" --format github-env

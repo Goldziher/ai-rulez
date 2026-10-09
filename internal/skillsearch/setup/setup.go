@@ -324,9 +324,6 @@ func (r *Resolved) Embedder() (skillsearch.Embedder, func(), error) {
 // Gemini answers a batch with a single vector, so there each text goes alone (what batch_size = 1
 // did by hand) instead of paying for a collapsed batch first.
 func (r *Resolved) maxBatch() int {
-	if llm.ResolveBackend(r.LLM.Backend) != llm.BackendLiterLLM {
-		return 0
-	}
 	if r.LLM.Provider == "gemini" || strings.HasPrefix(r.Model, "gemini/") || strings.HasPrefix(r.LLM.EmbeddingModel, "gemini/") {
 		return 1
 	}
@@ -334,13 +331,13 @@ func (r *Resolved) maxBatch() int {
 }
 
 // requestModel is the model to put on the request: only a [search.embeddings] model
-// overrides [llm] embedding_model, and with the literllm backend it takes the provider
-// prefix that backend routes on.
+// overrides [llm] embedding_model, and it takes the provider
+// prefix liter-llm routes on.
 func (r *Resolved) requestModel() string {
 	if r.Model == r.LLM.EmbeddingModel {
 		return ""
 	}
-	if r.LLM.Provider != "" && !strings.Contains(r.Model, "/") && llm.ResolveBackend(r.LLM.Backend) == llm.BackendLiterLLM {
+	if r.LLM.Provider != "" && !strings.Contains(r.Model, "/") {
 		return r.LLM.Provider + "/" + r.Model
 	}
 	return r.Model

@@ -42,7 +42,7 @@ func checkLLM(_ context.Context, s *state) []Finding {
 		host = "provider default"
 	}
 	out = append(out, Finding{Check: CheckLLM, Severity: SeverityInfo,
-		Message: fmt.Sprintf("backend %s, model %s, endpoint %s, network allowed: %v", d.Backend, orDash(d.Model), host, d.AllowNetwork),
+		Message: fmt.Sprintf("liter-llm %s, model %s, endpoint %s, network allowed: %v", d.LiterLLM, orDash(d.Model), host, d.AllowNetwork),
 		Hint:    "`ai-rulez llm doctor --ping` makes one live call"})
 	return out
 }

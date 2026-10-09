@@ -30,7 +30,7 @@ func fakeChatServer(t *testing.T) (*httptest.Server, *atomic.Int32, *atomic.Valu
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, `{"id":"x","object":"chat.completion","model":"gpt-4o-mini","choices":[{"index":0,"message":{"role":"assistant","content":"pong"},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":1,"total_tokens":4}}`) //nolint:errcheck // test server
+		_, _ = io.WriteString(w, `{"id":"x","object":"chat.completion","created":1,"model":"gpt-4o-mini","choices":[{"index":0,"message":{"role":"assistant","content":"pong"},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":1,"total_tokens":4}}`) //nolint:errcheck // test server
 	}))
 	t.Cleanup(srv.Close)
 	return srv, calls, auth
@@ -43,7 +43,6 @@ func TestLLMCommandE2E(t *testing.T) {
 		"AI_RULEZ_LLM_BASE_URL":      srv.URL + "/v1",
 		"AI_RULEZ_LLM_MODEL":         "gpt-4o-mini",
 		"AI_RULEZ_LLM_PROVIDER":      "openai",
-		"AI_RULEZ_LLM_BACKEND":       "openaicompat",
 		"AI_RULEZ_LLM_API_KEY_ENV":   "E2E_LLM_KEY",
 		"E2E_LLM_KEY":                "sk-e2e-not-a-real-key-0000000000",
 	}
@@ -61,7 +60,7 @@ func TestLLMCommandE2E(t *testing.T) {
 				require.NoError(t, json.Unmarshal([]byte(stdout), &doc))
 				assert.Equal(t, false, doc["allow_network"])
 				assert.Equal(t, false, doc["api_key_set"])
-				assert.Equal(t, "openaicompat", doc["backend"])
+				assert.Regexp(t, `^v?\d+\.\d+\.\d+`, doc["literllm"])
 			},
 		},
 		{

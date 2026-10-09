@@ -1,14 +1,43 @@
-// Package pricing is the one built-in model price table. internal/llm prices
-// model calls with it and internal/evals prices eval runs and their estimates
-// with it, so a price is updated in one place and the two never drift.
+// Package pricing prices model calls and eval estimates. liter-llm's embedded
+// model catalog (GetModelInfo, CompletionCostWithCache) is the source of truth;
+// this package adds only the fail-closed corrections ai-rulez needs where that
+// catalog is missing a model or would charge less than the model really costs
+// (see floors and variantFloor). internal/llm prices calls with it and
+// internal/evals prices eval runs and their estimates with it, so a price
+// comes from one place.
 package pricing
 
-import "strings"
+import (
+	"runtime/debug"
+	"strings"
 
-// Version identifies the table. Bump it whenever a price changes: internal/llm
-// folds it into its cache identity, so a cost recorded under old prices is never
-// replayed under new ones.
-const Version = "2026-10-07.1"
+	lit "github.com/xberg-io/liter-llm/packages/go/v2"
+)
+
+// floorsRevision is bumped whenever floors or variantFloor change. Version folds
+// it into the llm cache identity, so a cost recorded under one set of prices is
+// never replayed under another.
+const floorsRevision = "1"
+
+const literLLMModule = "github.com/xberg-io/liter-llm/packages/go/v2"
+
+// Version identifies the price source: the liter-llm catalog shipped with the
+// linked binding plus the revision of this package's floors.
+func Version() string {
+	return "literllm-" + LiterLLMVersion() + "+floors-" + floorsRevision
+}
+
+// LiterLLMVersion is the version of the linked liter-llm binding module.
+func LiterLLMVersion() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, d := range info.Deps {
+			if d.Path == literLLMModule {
+				return d.Version
+			}
+		}
+	}
+	return "unknown"
+}
 
 // Price is a model price in USD per million tokens.
 type Price struct {
@@ -16,106 +45,123 @@ type Price struct {
 	OutPerMTok float64 `json:"out_per_mtok"`
 }
 
-// table is a small, approximate list for common models. It is a convenience for
-// budget estimates, not a billing source: prices change, and unknown models have
-// no entry. Keys are matched against the model name with any provider prefix
-// removed, longest prefix first. The Gemini rows are the paid-tier standard text
-// prices from https://ai.google.dev/gemini-api/docs/pricing, checked 2026-10-06
-// (gemini-embedding-001 is the figure documented for that model; the page now
-// lists its successor first, so re-check it when updating). The OpenAI rows and the Claude rows were
-// checked 2026-10-07 against developers.openai.com/api/docs/pricing and
-// platform.claude.com/docs/en/about-claude/pricing. The versioned Claude rows (the 4.5 and later Opus
-// models, Sonnet 5 and 5.5, Haiku 5.5) are the base prices; Haiku 5.5 is listed at its dearer
-// over-100,000-token tier, so an estimate never undershoots. A Claude model without a versioned row
-// (Opus 4.1 and earlier, Sonnet 4.x, Haiku 4.x) falls back to the family row, which keeps the old, dearer
-// price. The bare haiku, sonnet and opus keys are the short names eval cases and --model use and stay
-// at those conservative prices because they do not name a version.
-var table = map[string]Price{
-	"gpt-4o-mini":            {0.15, 0.60},
-	"gpt-4o":                 {2.50, 10.00},
-	"gpt-4.1-mini":           {0.40, 1.60},
-	"gpt-4.1":                {2.00, 8.00},
-	"text-embedding-3-small": {0.02, 0},
-	"text-embedding-3-large": {0.13, 0},
-	"gemini-2.5-flash-lite":  {0.10, 0.40},
-	"gemini-2.5-flash":       {0.30, 2.50},
-	"gemini-embedding-001":   {0.15, 0},
-	"claude-haiku-5-5":       {0.50, 2.50},
-	"claude-haiku":           {1.00, 5.00},
-	"claude-sonnet-5":        {2.00, 10.00},
-	"claude-sonnet":          {3.00, 15.00},
-	"claude-opus-5-5":        {4.00, 20.00},
-	"claude-opus-5":          {5.00, 25.00},
-	"claude-opus-4-8":        {5.00, 25.00},
-	"claude-opus-4-7":        {5.00, 25.00},
-	"claude-opus-4-6":        {5.00, 25.00},
-	"claude-opus-4-5":        {5.00, 25.00},
-	"claude-opus":            {15.00, 75.00},
-	"haiku":                  {1.00, 5.00},
-	"sonnet":                 {3.00, 15.00},
-	"opus":                   {15.00, 75.00},
+// Tokens is the usage a price is applied to. Cached is the part of Prompt the
+// provider served from its prompt cache (a subset of Prompt).
+type Tokens struct {
+	Prompt, Cached, Completion int
 }
 
-// Lookup returns the built-in price of a model. known is false when no entry
-// matches.
-//
-// The longest table key that prefixes the name wins. What follows the key must be
-// a plain snapshot suffix (a date, a version number, "latest" or "preview"); any
-// other suffix names a variant (realtime, audio, tts, image, ...) that may cost
-// more than the base model, so it is priced at the highest sibling instead.
-func Lookup(model string) (price Price, known bool) {
-	name := strings.ToLower(model)
+// floors are consulted only for a model liter-llm 2.2.0 has no catalog row for.
+// They are conservative ceilings kept at the old family prices (the short names
+// eval cases and --model use, and the Claude families the catalog lacks), not
+// billing facts, so an unlisted model never comes out cheaper than its family.
+// Keys are bare lowercase names matched by longest prefix. Each row stands
+// until liter-llm resolves its issue.
+var floors = map[string]Price{
+	// TODO(liter-llm#262): the catalog has no claude-haiku-5-5 row (listed at its dearer over-100k tier).
+	"claude-haiku-5-5": {0.50, 2.50},
+	// TODO(liter-llm#262): no family fallback rows (claude-opus-4-1, claude-sonnet-4, claude-3-5-haiku, ... are missing).
+	"claude-haiku":  {1.00, 5.00},
+	"claude-sonnet": {3.00, 15.00},
+	"claude-opus":   {15.00, 75.00},
+	// TODO(liter-llm#262): the short names eval cases and --model use are not model ids in the catalog.
+	"haiku":  {1.00, 5.00},
+	"sonnet": {3.00, 15.00},
+	"opus":   {15.00, 75.00},
+}
+
+// variantFloorIn and variantFloorOut are the least a gpt-* realtime, audio or tts variant is priced at.
+// TODO(liter-llm#260): the catalog resolves gpt-4o-mini-tts and gpt-4o-mini-realtime-preview to
+// the base gpt-4o-mini row by silent prefix fallback (0.15/0.60), which undercharges the variant.
+// Remove once GetModelInfo reports whether the match was exact.
+const (
+	variantFloorIn  = 2.50
+	variantFloorOut = 10.00
+)
+
+// bare lowercases a model name and drops any provider prefix.
+// TODO(liter-llm#260): GetModelInfo("gemini/gemini-2.5-flash") and "vertex_ai/..." find nothing
+// although the bare name is listed; only some provider prefixes resolve.
+func bare(model string) string {
+	name := strings.ToLower(strings.TrimSpace(model))
 	if i := strings.LastIndex(name, "/"); i >= 0 {
 		name = name[i+1:]
 	}
-	bestKey := ""
-	for prefix := range table {
-		if strings.HasPrefix(name, prefix) && len(prefix) > len(bestKey) {
-			bestKey = prefix
-		}
-	}
-	if bestKey == "" {
-		return Price{}, false
-	}
-	if plainSuffix(name[len(bestKey):]) {
-		return table[bestKey], true
-	}
-	return highestSibling(bestKey), true
+	return name
 }
 
-// plainSuffix reports whether rest only versions or dates the base model.
-func plainSuffix(rest string) bool {
-	if rest == "" {
-		return true
-	}
-	if rest[0] != '-' && rest[0] != '@' {
+func isVariant(name string) bool {
+	if !strings.HasPrefix(name, "gpt-") {
 		return false
 	}
-	for _, seg := range strings.FieldsFunc(rest, func(r rune) bool { return r == '-' || r == '@' || r == '.' || r == '_' }) {
-		if seg == "latest" || seg == "preview" || seg == "exp" {
-			continue
-		}
-		for _, r := range seg {
-			if r < '0' || r > '9' {
-				return false
-			}
+	for _, m := range []string{"realtime", "audio", "tts", "transcribe"} {
+		if strings.Contains(name, m) {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
-// highestSibling returns the dearest price among the chat models in key's family
-// (the part before its first dash). Embedding rows are not siblings of chat models.
-func highestSibling(key string) Price {
-	family, _, _ := strings.Cut(key, "-")
-	best := table[key]
-	for other, p := range table {
-		if strings.Contains(other, "embedding") {
-			continue
-		}
-		if f, _, _ := strings.Cut(other, "-"); f == family && p.InPerMTok+p.OutPerMTok > best.InPerMTok+best.OutPerMTok {
-			best = p
+func floorFor(name string) (Price, bool) {
+	best, found := "", false
+	for key := range floors {
+		if strings.HasPrefix(name, key) && len(key) > len(best) {
+			best, found = key, true
 		}
 	}
-	return best
+	if !found {
+		return Price{}, false
+	}
+	return floors[best], true
+}
+
+// catalogPrice is the flat per-MTok price liter-llm lists for name. A model with
+// context tiers is priced at its dearest tier, so an estimate never undershoots. A listing at
+// 0/0 is not a price (TODO(liter-llm#276): paid image, video and audio models carry it).
+func catalogPrice(name string) (Price, bool) {
+	info := lit.GetModelInfo(name)
+	if info == nil {
+		return Price{}, false
+	}
+	p := Price{InPerMTok: info.InputCostPerToken * 1e6, OutPerMTok: info.OutputCostPerToken * 1e6}
+	for _, t := range info.Tiers {
+		p.InPerMTok = max(p.InPerMTok, t.InputCostPerToken*1e6)
+		p.OutPerMTok = max(p.OutPerMTok, t.OutputCostPerToken*1e6)
+	}
+	return p, p.InPerMTok > 0 || p.OutPerMTok > 0
+}
+
+// Lookup returns the flat price of a model. known is false when neither the
+// catalog nor a floor has an entry.
+func Lookup(model string) (price Price, known bool) {
+	name := bare(model)
+	price, known = catalogPrice(name)
+	if !known {
+		price, known = floorFor(name)
+	}
+	if known && isVariant(name) {
+		price.InPerMTok = max(price.InPerMTok, variantFloorIn)
+		price.OutPerMTok = max(price.OutPerMTok, variantFloorOut)
+	}
+	return price, known
+}
+
+// Cost prices u on model in USD. Where the catalog lists the model it applies
+// the context tier and the cache-read rate for u.Cached; otherwise the floor
+// price is applied flat. known is false for a model nothing prices.
+func Cost(model string, u Tokens) (usd float64, known bool) {
+	name := bare(model)
+	prompt, completion := uint64(max(u.Prompt, 0)), uint64(max(u.Completion, 0))
+	cached := uint64(max(u.Cached, 0))
+	if _, listed := catalogPrice(name); listed {
+		if c := lit.CompletionCostWithCache(name, prompt, cached, completion); c != nil {
+			usd, known = *c, true
+		}
+	} else if p, ok := floorFor(name); ok {
+		usd, known = (float64(prompt)*p.InPerMTok+float64(completion)*p.OutPerMTok)/1e6, true
+	}
+	if known && isVariant(name) {
+		usd = max(usd, (float64(prompt)*variantFloorIn+float64(completion)*variantFloorOut)/1e6)
+	}
+	return usd, known
 }
