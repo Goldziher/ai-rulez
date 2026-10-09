@@ -125,13 +125,13 @@ func TestApprove_ApprovalsAreInsideTheLockSubject(t *testing.T) {
 	}
 	lockFormat = formatJSON
 	t.Cleanup(func() { lockFormat = "" })
-	out, _ := capture(t, func() { require.Equal(t, 0, lockSubjectAt("")) })
+	out, _ := capture(t, func() { require.Equal(t, 0, reported(lockSubjectAt(""))) })
 	require.NoError(t, json.Unmarshal([]byte(out), &before))
 
 	// Act
 	approveYes, approveReviewer = true, "alice@example.org"
 	require.Equal(t, 0, mustApprove(t, "rule:style"))
-	out, _ = capture(t, func() { require.Equal(t, 0, lockSubjectAt("")) })
+	out, _ = capture(t, func() { require.Equal(t, 0, reported(lockSubjectAt(""))) })
 	require.NoError(t, json.Unmarshal([]byte(out), &after))
 
 	// Assert
