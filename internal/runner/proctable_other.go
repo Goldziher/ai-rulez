@@ -24,3 +24,6 @@ func markerID(*os.File) (uint64, error) {
 
 // holdsMarker is not implemented here.
 func holdsMarker(int, uint64) bool { return false }
+
+// processStart is not implemented here.
+func processStart(int) (int64, bool) { return 0, false }
