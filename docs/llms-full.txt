@@ -10057,6 +10057,28 @@ a safe project-relative source:
 source = "plugin/hermes.py"
 ```
 
+Declare Python dependencies in the same authoring block:
+
+```toml
+[plugin.hermes]
+dependencies = ["example-tool[cli]", "httpx>=0.28; python_version >= '3.11'"]
+```
+
+Each entry must be a valid PEP 508 requirement that names a package from an index.
+Package extras, version constraints, and environment markers are supported.
+Direct references (`name @ url`) are rejected, because Hermes does not install them
+for directory plugins. Invalid requirements are rejected during configuration validation,
+before generation.
+The generator preserves the authored strings in the wheel's `project.dependencies`
+and in `python_dependencies` in both Hermes plugin manifests.
+An omitted or empty list leaves the outputs dependency-free.
+
+Installing the built wheel lets the Python installer resolve these dependencies.
+For a directory plugin, Hermes handles the manifest's dependency declaration through
+its normal dependency-consent flow. Neither generation nor importing the adapter
+installs packages. A Python dependency does not install browser binaries, credentials,
+or other external prerequisites; document those separately.
+
 By default, plugin payload comes from the resolved ai-rulez content tree. To keep
 distributable content separate from developer governance, set a safe project-relative
 content root containing `skills/`, `commands/`, and `agents/`:
@@ -15129,7 +15151,7 @@ which `generate --user` uses too). The `[llm]` and `[telemetry]` resolvers both 
 | --- | --- | --- | --- | --- |
 | `[llm] allow_network`, `base_url`, `api_key_env`, `allow_plain_http`, `plain_http_hosts`, `price_input_per_mtok`, `price_output_per_mtok` | **ignored**, reported by `llm doctor`, `doctor` and `AR9L1` | honoured (`AI_RULEZ_LLM_*` too) | - | environment, user file, repository (ignored), defaults |
 | `[llm] max_cost_usd`, `max_tokens`, `max_calls` | honoured, can only tighten (the lower non-zero value wins) | honoured | - | the lower of repository and user; the environment overrides both |
-| `[llm] provider`, `model`, `backend`, `cache`, `timeout_seconds`, `max_retries` | honoured; with the `literllm` backend a repository `provider`, a `provider/` prefix in `model` or `embedding_model`, or a per-request model (verifier `llm.model`, `[search.embeddings] model`) that names another provider cannot receive a user-scope API key (refused) | honoured | - | environment, user file, repository, defaults |
+| `[llm] provider`, `model`, `cache`, `timeout_seconds`, `max_retries` | honoured; a repository `provider`, a `provider/` prefix in `model` or `embedding_model`, or a per-request model (verifier `llm.model`, `[search.embeddings] model`) that names another provider cannot receive a user-scope API key (refused) | honoured | - | environment, user file, repository, defaults |
 | `[telemetry] allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env`, `service_name`, `include_paths`, `include_session`, `salt_file` | **ignored**, reported by `telemetry doctor` and `AR9K0` | honoured (`AI_RULEZ_TELEMETRY_*` too) | - | kill switches (`AI_RULEZ_TELEMETRY=off`, `DO_NOT_TRACK=1`), environment, user file, repository (ignored), defaults |
 | Telemetry consent record (`telemetry enable`, user config dir, mode 0600) | **never read as consent from the repository**: the record lives outside the project and a repository config cannot create or edit it | grants `allow_network` while it still matches the effective endpoint, protocol and exported field set; supplies the endpoint, protocol and the `include_paths`/`include_session` gates the user left unset | `telemetry enable` writes it, `telemetry disable` removes it | an environment `AI_RULEZ_TELEMETRY_ALLOW_NETWORK=0` refuses over the record, and an environment or user-file setting of `include_paths`/`include_session` is never overridden by it (an opt-out makes the record stale); kill switches and an organization policy win over it |
 | `[telemetry] enabled`, `sample` | honoured (a repository can at most switch on the local log) | honoured | - | as above |
@@ -20165,7 +20187,7 @@ ai-rulez eval run --runner-command ./my-runner --grader builtin --allow-llm --gr
 
 - **Consent.** Sending a transcript to a model is opt-in at every level: `--allow-llm`, and, from the user config or
   the environment (never the repository), `allow_network = true` and an `[llm]` model; see [LLM access](llm.md) for
-  the trust rule, the key and Gemini through the `literllm` backend. Without all of that the run is refused before any
+  the trust rule, the key and Gemini through liter-llm. Without all of that the run is refused before any
   case starts; `--dry-run` builds no client and sends nothing. `--grader-max-cost` (default $0.25) caps the grader's
   spend with the model layer's fail-closed budget; the spend also counts towards `--max-cost` and is reported as
   `grader_cost_usd`.
@@ -21174,7 +21196,7 @@ Source: https://goldziher.github.io/ai-rulez/search/
 tool of [`mcp --serve-skills`](mcp-server.md), and measures that ranking against labeled queries. By default it is
 lexical and deterministic: no query or skill text is sent anywhere and the same input always gives the same order.
 Optionally it is hybrid: the lexical list is fused with cosine similarity over embeddings you bring (an
-OpenAI-compatible endpoint, Gemini through `literllm`, a local server, or a command), so a paraphrase such as
+OpenAI-compatible endpoint, Gemini through liter-llm, a local server, or a command), so a paraphrase such as
 "customer wants money back" finds the skill described as "issue a refund".
 
 - [Searching](#searching)
@@ -21247,7 +21269,7 @@ weights     = { lexical = 1.0, vector = 1.0 }
 vector_min_sim = 0.0        # abstain below this cosine (0 = off); see Abstaining
 candidates  = 50            # per list, before fusion
 query_timeout_ms = 800      # the query embedding; on timeout the ranking is lexical
-batch_size  = 64            # texts per embedding call of `search index` (Gemini through literllm is sent one by one automatically)
+batch_size  = 64            # texts per embedding call of `search index` (Gemini is sent one by one automatically)
 index_dir   = "local/search"  # under the config dir; any directory outside local/ is meant to be committed
 dtype       = "float32"     # float32 | float16 (half the size)
 log_queries = false         # user scope only (user config file or AI_RULEZ_SEARCH_LOG_QUERIES=1); see Query mining
@@ -21519,8 +21541,8 @@ default is taken.
 
 - Default stays lexical, offline and deterministic. A hybrid or vector ranking always falls back to lexical
   with a `degraded` reason; it never fails a search or a `find_skill` call.
-- Embeddings go through `internal/llm` (one egress configuration, budget and gate), including the `literllm`
-  backend for Gemini and 170 other providers. The command provider is the escape hatch for anything else.
+- Embeddings go through `internal/llm` (one egress configuration, budget and gate), including liter-llm
+  for Gemini and 170 other providers. The command provider is the escape hatch for anything else.
 - The index is keyed by the SHA-256 of the exact embedded text, not by the skill digest, so an edit that does not
   change the embedded text is free. `search status` and `stale_vector` therefore call a skill stale when its
   embedded text changed (the design said "item digest"); a changed digest with the same text is reported as
@@ -22049,9 +22071,8 @@ Source: https://goldziher.github.io/ai-rulez/llm/
 ```toml
 # .ai-rulez/config.toml   (allow_network, base_url and api_key_env below only take effect from user scope, see "Trust rule")
 [llm]
-provider        = "openai"                 # provider prefix; the literllm backend routes on provider/model
+provider        = "openai"                 # provider prefix; liter-llm routes on provider/model
 model           = "gpt-4o-mini"
-backend         = "auto"                   # auto | openaicompat | literllm
 base_url        = "https://llm-gateway.internal.example/v1"   # optional; see "Data egress"
 api_key_env     = "OPENAI_API_KEY"         # the NAME of an environment variable, never a key
 embedding_model = "text-embedding-3-small"
@@ -22071,10 +22092,10 @@ A committed repository config is attacker-controlled input: cloning a repository
 | Key | Repository config and `config.local.*` | User config file / `AI_RULEZ_LLM_*` |
 | --- | --- | --- |
 | `allow_network`, `base_url`, `api_key_env`, `allow_plain_http`, `plain_http_hosts`, `price_input_per_mtok`, `price_output_per_mtok` | **ignored**, reported by `llm doctor`, `ai-rulez doctor` and strict finding `AR9L1` | honoured |
-| `provider`, `model`, `backend`, `embedding_model`, `cache`, `timeout_seconds`, `max_retries` | honoured, with one exception for the `literllm` backend (below) | honoured |
+| `provider`, `model`, `embedding_model`, `cache`, `timeout_seconds`, `max_retries` | honoured, with one exception for provider routing (below) | honoured |
 | `max_cost_usd`, `max_tokens`, `max_calls` | honoured, but can only tighten: the lower non-zero value of repository and user wins | honoured |
 
-**Provider routing and the key.** With the `literllm` backend the `provider` (or a `provider/` prefix in `model`) decides which service receives the request, and with it the API key. So when the key variable comes from user scope but the provider or model prefix comes only from the repository config, `literllm` refuses to start (`AR9L0`) and `llm doctor` reports it; set `provider` and `model` in the user config file or `AI_RULEZ_LLM_PROVIDER` / `AI_RULEZ_LLM_MODEL`. The check also applies when you have no user config file at all and configure the key only through `AI_RULEZ_LLM_*`: a repository `provider` or `model` prefix is still repository-chosen routing unless `AI_RULEZ_LLM_PROVIDER` / `AI_RULEZ_LLM_MODEL` set it. A repository `model` whose prefix equals the provider you configured in user scope is fine. A repository `embedding_model` with a `provider/` prefix is repository-chosen routing too. The refusal holds without `api_key_env` as well: liter-llm then reads the routed provider's own key variable (`OPENAI_API_KEY`, ...), so the repository would still pick which of your keys is sent and billed. The same rule covers a per-request model (a verifier's `llm.model`, `[search.embeddings] model`): the `literllm` backend sends a prefixed request model only when its prefix is the configured provider, pins a bare one to that provider, and otherwise refuses the call with `AR9L0` before anything is sent. The `openaicompat` backend sends the key only to the user-scope `base_url` (or the OpenAI default), so it is unaffected.
+**Provider routing and the key.** The `provider` (or a `provider/` prefix in `model`) decides which service receives the request, and with it the API key. So when the key variable comes from user scope but the provider or model prefix comes only from the repository config, ai-rulez refuses to start (`AR9L0`) and `llm doctor` reports it; set `provider` and `model` in the user config file or `AI_RULEZ_LLM_PROVIDER` / `AI_RULEZ_LLM_MODEL`. The check also applies when you have no user config file at all and configure the key only through `AI_RULEZ_LLM_*`: a repository `provider` or `model` prefix is still repository-chosen routing unless `AI_RULEZ_LLM_PROVIDER` / `AI_RULEZ_LLM_MODEL` set it. A repository `model` whose prefix equals the provider you configured in user scope is fine. A repository `embedding_model` with a `provider/` prefix is repository-chosen routing too. The refusal holds without `api_key_env` as well: liter-llm then reads the routed provider's own key variable (`OPENAI_API_KEY`, ...), so the repository would still pick which of your keys is sent and billed. The same rule covers a per-request model (a verifier's `llm.model`, `[search.embeddings] model`): ai-rulez sends a prefixed request model only when its prefix is the configured provider, pins a bare one to that provider, and otherwise refuses the call with `AR9L0` before anything is sent.
 
 See the [trust model](trust-model.md) for every knob that reaches the network or runs a process.
 
@@ -22095,7 +22116,7 @@ or export `AI_RULEZ_LLM_ALLOW_NETWORK=1` (and `_BASE_URL`, `_API_KEY_ENV`). Prec
 
 ##### Validation: `AR9L0 llm-config-invalid`
 
-`validate`, the JSON schema and `ai-rulez doctor` reject an unknown `backend`, a secret where a variable name belongs (`api_key = ...`, or a key-looking `api_key_env` such as `sk-proj-...` or `AKIA...`), credentials or a query string in `base_url`, plain `http://` to a non-loopback host when an API key is sent (use `https`; `localhost`, `127.0.0.1` and `::1` may use `http`; see "Plain-http gateways" for the explicit opt-in), `allow_plain_http` without `plain_http_hosts`, a `max_retries` above 10, a `timeout_seconds` above 3600, and negative or non-finite (`nan`, `inf`) limits and prices. A message never repeats the offending value, and `llm doctor`, `ai-rulez doctor` and the JSON report show `api_key_env` only when it is a valid variable name. The literal-secret key check (`api_key = ...`) covers both `config.toml` and `config.local.*`. A repository key the trust rule ignores is reported as `AR9L1`.
+`validate`, the JSON schema and `ai-rulez doctor` reject a secret where a variable name belongs (`api_key = ...`, or a key-looking `api_key_env` such as `sk-proj-...` or `AKIA...`), credentials or a query string in `base_url`, plain `http://` to a non-loopback host when an API key is sent (use `https`; `localhost`, `127.0.0.1` and `::1` may use `http`; see "Plain-http gateways" for the explicit opt-in), `allow_plain_http` without `plain_http_hosts`, a `max_retries` above 10, a `timeout_seconds` above 3600, and negative or non-finite (`nan`, `inf`) limits and prices. A message never repeats the offending value, and `llm doctor`, `ai-rulez doctor` and the JSON report show `api_key_env` only when it is a valid variable name. The literal-secret key check (`api_key = ...`) covers both `config.toml` and `config.local.*`. A repository key the trust rule ignores is reported as `AR9L1`.
 
 ##### Plain-http gateways
 
@@ -22115,7 +22136,7 @@ or `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP=1` with `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS=gateway
 #### Commands
 
 ```text
-ai-rulez llm doctor [--ping] [--format json]   resolved backend, model, base_url host (never the key),
+ai-rulez llm doctor [--ping] [--format json]   liter-llm version, model, base_url host (never the key),
                                         whether the key variable is set, network gate, cache dir, limits
 ai-rulez llm estimate <file>            approximate tokens and worst-case cost of sending the file; no call
 ```
@@ -22124,98 +22145,92 @@ ai-rulez llm estimate <file>            approximate tokens and worst-case cost o
 
 #### What it does for every call
 
-Outermost first: network gate and timeout, cache, retry, budget, backend.
+Outermost first: network gate and timeout, cache, budget, liter-llm (which retries inside the call).
 
-- **Budget, fail closed.** Before each provider call the guard reserves its worst case (estimated prompt plus completion cap) against `max_cost_usd`, `max_tokens` and `max_calls` in one atomic step, counting what calls still in flight hold, so concurrent calls cannot jointly overshoot a limit; it refuses if the worst case does not fit. When the call ends the reservation is replaced by the actual usage. A request without `max_tokens` gets a 1024-token completion cap while a budget is active. If a provider reports no usage, the worst case is charged. Thinking tokens count as completion: a reply is charged at least its `total_tokens` (Gemini leaves its thinking out of `completion_tokens` but bills it), and `completion_tokens_details.reasoning_tokens` larger than the completion is added to it. liter-llm's Gemini routes (`gemini/`, `google_ai/`, `vertex_ai/`) report no thinking tokens at all, so on the `literllm` backend such a call is charged its completion cap, an upper bound; use `openaicompat` for exact Gemini costs. A call is priced by the model you requested, never by the model name the provider reports (a reported name can only raise the price). With `max_cost_usd` set and no known price for the requested model, the call is refused. A rejection the provider documents as unbilled (HTTP 400, 401, 403, 404, 422, or an auth, config or budget error raised before anything was sent) releases its tokens and cost and keeps only the call count. Everything else may have run upstream, so the worst case stays charged: a 429, any 5xx (including a 504 gateway timeout), a timeout, a transport failure, an undecodable reply, a cancelled context. Retries count as calls. Cache hits cost nothing. Token counts are estimates from UTF-8 length (one token per three bytes), deliberately high.
-- **Cache.** Keyed by an endpoint identity (provider, base URL scheme, host and path, resolved backend, the name of the key variable, never its value, and the price table version or override), the model, the request and its `PromptVersion`, so changing the gateway, backend, key variable, prices, model or prompt version misses. Entries hold model output only. They live outside the repository, in the user cache directory `~/.cache/ai-rulez/llm/<project hash>/` (mode 0700, files 0600, written atomically), so nothing a checkout contains can plant one. Every entry carries an HMAC-SHA256 over identity, key and payload, computed with a per-user secret (`$XDG_CONFIG_HOME/ai-rulez/llm-cache.key`, else `~/.config/ai-rulez/llm-cache.key`; 32 random bytes, mode 0600, created on first use; the file must be a regular 0600 file in a directory that is not group- or world-writable, and a loose or symlinked file is replaced or refused; `XDG_CONFIG_HOME` is read from the environment, so do not set it from an untrusted `.envrc`). A modified, truncated, oversized, symlinked or planted entry fails the check, counts as a miss and is deleted; entry reads are size-capped. A missing or damaged secret is regenerated, which invalidates every older entry; if no secret can be stored the cache is off, never unauthenticated. A cache restored from CI (another job, an untrusted branch) is only valid when the secret matches, so a restored cache from a different secret simply misses. Opt out with `cache = false`, `AI_RULEZ_LLM_CACHE=0` or `NoCache` (on the options or a request).
-- **Retry.** Rate limits, 5xx and transport errors (for `literllm`, the `Network` and `InternalError` variants, and any variant liter-llm marks transient) retry with exponential backoff and full jitter, honouring `Retry-After` (capped at one hour and at the 30 s backoff ceiling). Authentication, context-length, budget and config errors and malformed replies never retry.
-- **Error classification.** The native binding returns flat `"[code] message"` strings; one function (`classifyNative`) maps them to typed errors, and a table-driven corpus test (`native_classify_test.go`) pins the real strings so a reworded upstream message fails CI. A message it does not recognise becomes a permanent provider error: never retried, and an error is never written to the cache. An empty reply with no error from the binding (upstream liter-llm #246) is a permanent error, never a success. Once liter-llm exposes typed errors (upstream #244) the adapter will classify by them and keep the text match as the fallback; no released version does yet, so there is no minimum version to require.
+- **Budget, fail closed.** Before each provider call the guard reserves its worst case (estimated prompt plus completion cap) against `max_cost_usd`, `max_tokens` and `max_calls` in one atomic step, counting what calls still in flight hold, so concurrent calls cannot jointly overshoot a limit; it refuses if the worst case does not fit. When the call ends the reservation is replaced by the actual usage. A request without `max_tokens` gets a 1024-token completion cap while a budget is active. If a provider reports no usage, the worst case is charged. Thinking tokens count as completion: a reply is charged at least its `total_tokens` (Gemini leaves its thinking out of `completion_tokens` but bills it), and `completion_tokens_details.reasoning_tokens` larger than the completion is added to it. liter-llm 2.2.0 and later (upstream #253) report Gemini's thinking tokens in `completion_tokens` and `total_tokens` on all three Gemini routes (`gemini/`, `google_ai/`, `vertex_ai/`), so a call settles on the real reported usage like any other; only a successful reply with no usage at all is charged the worst case. Older liter-llm builds drop `thoughtsTokenCount` and under-report Gemini spend, so keep the pin at v2.2.0 or later. A call is priced by the model you requested, never by the model name the provider reports (a reported name can only raise the price). With `max_cost_usd` set and no known price for the requested model, the call is refused. A rejection the provider documents as unbilled (HTTP 400, 401, 403, 404, 422, or an auth, config or budget error raised before anything was sent) releases its tokens and cost and keeps only the call count. Everything else may have run upstream, so the worst case stays charged: a 429, any 5xx (including a 504 gateway timeout), a timeout, a transport failure, an undecodable reply, a cancelled context. liter-llm's own retries happen inside one call: the budget reserves the worst case once, counts one call and settles on the usage of the reply that came back (an attempt the provider rejected is not billed; one that timed out may have been, which is why `max_retries` is capped at 10 and a timeout charges the worst case). Cache hits cost nothing. Token counts are estimates from UTF-8 length (one token per three bytes), deliberately high: liter-llm's own `CountTokens` downloads a tokenizer from the network on first use, so it is not used for a spend gate. Cached prompt tokens reported by the provider are priced at the cache-read rate.
+- **Cache.** Keyed by an endpoint identity (provider, base URL scheme, host and path, the name of the key variable, never its value, and the price table version or override), the model, the request and its `PromptVersion`, so changing the gateway, key variable, prices, model or prompt version misses. Entries hold model output only. They live outside the repository, in the user cache directory `~/.cache/ai-rulez/llm/<project hash>/` (mode 0700, files 0600, written atomically), so nothing a checkout contains can plant one. Every entry carries an HMAC-SHA256 over identity, key and payload, computed with a per-user secret (`$XDG_CONFIG_HOME/ai-rulez/llm-cache.key`, else `~/.config/ai-rulez/llm-cache.key`; 32 random bytes, mode 0600, created on first use; the file must be a regular 0600 file in a directory that is not group- or world-writable, and a loose or symlinked file is replaced or refused; `XDG_CONFIG_HOME` is read from the environment, so do not set it from an untrusted `.envrc`). A modified, truncated, oversized, symlinked or planted entry fails the check, counts as a miss and is deleted; entry reads are size-capped. A missing or damaged secret is regenerated, which invalidates every older entry; if no secret can be stored the cache is off, never unauthenticated. A cache restored from CI (another job, an untrusted branch) is only valid when the secret matches, so a restored cache from a different secret simply misses. Opt out with `cache = false`, `AI_RULEZ_LLM_CACHE=0` or `NoCache` (on the options or a request).
+- **Retry.** liter-llm retries 429, 500, 502, 503, 504 and 529 and transport failures up to `max_retries` times (default 3) with jittered exponential backoff, honouring `Retry-After` on 429 and 529. Authentication, context-length, budget and config errors, other 4xx rejections and malformed replies are never retried. A persistent 503 costs exactly 1 + `max_retries` requests (`retry_test.go`).
+- **Error classification.** liter-llm returns typed errors (variant sentinels, HTTP status, a transient flag, `Retry-After`); one method (`literLLM.classify`) maps them to `llm.Error` kinds by sentinel, never by message text, and a corpus test (`classify_test.go`) pins the behaviour through a local server so a changed upstream shape fails CI. Small shims cover what liter-llm gets wrong (`TODO(liter-llm#257)`, `#258`): an exhausted quota reported as a transient rate limit is permanent, Anthropic's "prompt is too long" is a context-length error. A failure that is not a liter-llm error is a permanent provider error, and an error is never written to the cache. An empty reply with no error is a permanent error, never a success.
 - **Typed errors.** `errors.Is(err, llm.ErrRateLimit | ErrAuth | ErrContextLength | ErrProvider | ErrBudget | ErrNetworkDisabled | ErrConfig | ErrTimeout)`; `*llm.Error` carries the HTTP status and `Retry-After`.
-- **Redaction.** Logs (`llm.WithLogging`) and dry-run output carry counts, sizes, a short content hash, usage and cost, never prompt or completion text and never keys. Provider error bodies are scrubbed of key-looking text before they enter an error. A value that is, in its entirety, an environment lookup (`os.environ["X"]`, `os.Getenv("X")`, `process.env.X`, `$X`, `${X}`) names a secret without holding one and is not masked; a lookup that carries a literal, such as `${X:-sk-...}`, is.
+- **Redaction.** Logs (`llm.WithLogging`) and dry-run output carry counts, sizes, a short content hash, usage and cost, never prompt or completion text and never keys. Provider error text is scrubbed before it enters an error: the configured key is removed by value, key-looking text is masked and a URL loses its query string (`TODO(liter-llm#259)`: liter-llm echoes both). A value that is, in its entirety, an environment lookup (`os.environ["X"]`, `os.Getenv("X")`, `process.env.X`, `$X`, `${X}`) names a secret without holding one and is not masked; a lookup that carries a literal, such as `${X:-sk-...}`, is.
 - **Dry run.** `Options.DryRun` returns a client that prints what would be sent (model, sizes, estimated tokens and cost; message text only with `ShowContent`) and returns `llm.ErrDryRun`.
 
 #### Data egress and residency
 
 When `allow_network` is true, the prompt text of each feature is sent to the configured endpoint. What that is depends on the caller. Today only `llm doctor --ping` sends anything (a one-token `ping`). For a future judge-style feature it would be a rubric and the transcript of an agent session, which can contain source code, file paths, tool output and anything a user typed. ai-rulez adds no other data, and never sends config files, keys or environment.
 
-To keep data inside your network, point `base_url` at a gateway you run (a LiteLLM proxy, a Bedrock or Azure OpenAI gateway in your VPC, Ollama or vLLM on an internal host) and use `api_key_env` for the gateway credential. The `openaicompat` backend speaks only the OpenAI chat and embeddings shapes and talks to the configured host alone: it never follows an HTTP redirect (a 3xx is a provider error), so a prompt is not re-sent to another host; `llm doctor` shows the host so a reviewer can check it. `base_url` must not embed credentials or a query string (`AR9L0`). The default endpoint (used only when `provider` is `openai` or empty and no `base_url` is set) is `https://api.openai.com/v1`. A key is sent only as an `Authorization: Bearer` header to that host, and only over `https` unless the host is loopback. `base_url`, `allow_network` and `api_key_env` are honoured only from user scope (see the trust rule above).
+To keep data inside your network, point `base_url` at a gateway you run (a LiteLLM proxy, a Bedrock or Azure OpenAI gateway in your VPC, Ollama or vLLM on an internal host) and use `api_key_env` for the gateway credential. `llm doctor` shows the host so a reviewer can check it. Known gap: liter-llm follows HTTP redirects and the Go binding has no switch to refuse them, so a gateway that answers 307 or 308 gets the prompt re-sent to the redirect target (the key is dropped on a cross-origin hop, the prompt is not). `TestRedirectsAreNotFollowed` documents it and is skipped until upstream exposes a no-redirect option (`TODO(liter-llm#269)`); only point `base_url` at a host you trust not to redirect. `base_url` must not embed credentials or a query string (`AR9L0`). The default endpoint (used only when `provider` is `openai` or empty and no `base_url` is set) is `https://api.openai.com/v1`. A key is sent only as an `Authorization: Bearer` header to that host, and only over `https` unless the host is loopback. `base_url`, `allow_network` and `api_key_env` are honoured only from user scope (see the trust rule above).
 
 Model-side retention and training terms are the provider's; check them before sending transcripts that contain private code.
 
 ##### Cost controls
 
-Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use `ai-rulez llm estimate <file>` to see what a prompt costs first (tokens are estimated at one per three UTF-8 bytes, which overestimates English text and holds for CJK). The built-in price table is small and approximate (OpenAI `gpt-4o`/`gpt-4.1` families and embeddings, Gemini `gemini-2.5-flash`, `gemini-2.5-flash-lite` and `gemini-embedding-001`, Claude families, with the current Opus, Sonnet and Haiku versions priced separately and older ones at the family price; last checked against the providers' price pages on 2026-10-07) and only for budget estimates; set `price_input_per_mtok` / `price_output_per_mtok` for anything else. Cost in responses is an estimate from that table, not a bill.
+Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use `ai-rulez llm estimate <file>` to see what a prompt costs first (tokens are estimated at one per three UTF-8 bytes, which overestimates English text and holds for CJK). Prices come from liter-llm's embedded model catalog (`GetModelInfo` and `CompletionCostWithCache`, with context tiers and cache-read rates), which is approximate and only for budget estimates; `internal/pricing` adds a few fail-closed floors (see "Price floors"). Set `price_input_per_mtok` / `price_output_per_mtok` for anything else. Cost in responses is an estimate from that table, not a bill.
 
-#### Backends
+#### liter-llm
 
-| Backend | Build | Notes |
+ai-rulez reaches every provider through [liter-llm](https://github.com/xberg-io/liter-llm), a Rust client with one interface for 174 providers (`provider/model` names, keys from the provider's environment variable). Its Go module is `github.com/xberg-io/liter-llm/packages/go/v2`, a cgo wrapper over the Rust library `libliter_llm_ffi`. It is a normal dependency of the root module and the only provider backend: there is no build tag, no nested module and no hand-written HTTP client. An OpenAI-compatible gateway, Azure, Ollama or vLLM is a `base_url`, which liter-llm treats as a generic OpenAI-compatible server (the `provider/` prefix named by `provider` is stripped from the model it sends).
+
+##### What liter-llm does and what ai-rulez keeps
+
+| Responsibility | Owner | Where |
 | --- | --- | --- |
-| `openaicompat` | always (pure Go, `net/http`) | chat (JSON-schema `response_format`), embeddings; no streaming; no new dependencies |
-| `literllm` | `-tags literllm`, cgo, separate module | experimental; same request/response shapes over the liter-llm FFI; 174 providers via `provider/model` |
+| Providers, routing by `provider/model`, wire formats, auth headers | liter-llm | `client.go` builds a typed `ChatCompletionRequest` |
+| Chat, embeddings, structured output (`response_format`) | liter-llm | JSON-schema output is native on OpenAI, emulated on Anthropic (upstream #265) |
+| Streaming, rate limits, in-flight limits, cooldown, tracing, cost tracking | liter-llm provides them | unused: ai-rulez makes sequential calls and keeps its own accounting |
+| Retries, jittered backoff, `Retry-After` | liter-llm (`max_retries`) | partly: no `Retry-After` on 503/529, no `retry-after-ms` (#257) |
+| Error taxonomy (typed variants, status, transient flag) | liter-llm, partly | `classify` maps it to `llm.Error`; shims for quota, Anthropic prompt-too-long, network code (#257, #258) |
+| Usage: prompt, completion, total, reasoning and cached tokens | liter-llm, partly | OpenAI and Gemini thinking tokens are right in 2.2.0 (#253); Gemini and Anthropic cache tokens are not (#254, #255). `usageOf` charges the largest of the reported figures |
+| Price catalog, `GetModelInfo`, context tiers, cache-read rate | liter-llm, partly | `internal/pricing` calls it first; floors only where it is missing or too cheap (below) |
+| Per-response cost | partly | the Go binding has `CompletionCostWithCache` only; `Pricing.Cost` applies a `price_*_per_mtok` override first |
+| Token counting | liter-llm provides `CountTokens`, but it downloads a tokenizer from the network on first use and fails for Gemini | not used: `internal/tokens` stays (offline, deterministic cl100k_base counts for reports; a conservative byte estimate for the spend gate) |
+| Budget | ai-rulez policy | liter-llm's budget is USD-only and charges after the fact; ours reserves the worst case on cost, tokens and calls and fails closed |
+| Response cache | ai-rulez policy | outside the repository, HMAC-authenticated per user (liter-llm's cache is in-memory or OpenDAL) |
+| Network gate, trust model (user-scope-only keys), routing/key check, dry run, judge, prompt redaction, `AR9L0` validation | ai-rulez policy | `gate.go`, `trust.go`, `redact.go`, `config.go` |
+| Response size limit | ai-rulez, partly | liter-llm cannot bound the body it reads; the decoded reply is capped at 32 MiB (#269) |
+| Redirect refusal | not provided | liter-llm follows redirects (#269), see "Data egress" |
 
-`backend = "auto"` picks `literllm` when it is compiled in and `openaicompat` otherwise. Choosing `literllm` in a binary without it is an `AR9L0` error that says how to build it.
+##### Price floors
 
-For `openaicompat` the `model` is sent verbatim (so a gateway sees exactly the name you configured); `provider` is used for cost lookup and for the `literllm` backend's `provider/model` routing.
+`GetModelInfo` is the price source. `internal/pricing` consults its own table only for a model the catalog has no entry for (the short names `haiku`, `sonnet`, `opus` that eval cases use, the `claude-haiku`, `claude-sonnet` and `claude-opus` families and `claude-haiku-5-5`, upstream #262) and raises the price of a `gpt-*` realtime, audio, tts or transcribe variant to the `gpt-4o` rates, because the catalog resolves those names to the cheaper base model by silent prefix fallback (#260). It also drops a provider prefix before the lookup, since `gemini/`, `google_ai/` and `vertex_ai/` names are not found by the catalog (#260). Every row carries a `TODO(liter-llm#NNN)` and is deleted when the issue is fixed. A model neither knows is unpriced, so a cost limit refuses it unless you set `price_input_per_mtok` and `price_output_per_mtok`. The price source is `literllm-<version>+floors-<revision>` and is part of the cache identity.
 
-#### The optional `literllm` backend
+##### Shims that remain
 
-[liter-llm](https://github.com/xberg-io/liter-llm) is a Rust client with one interface for 174 providers (`provider/model` names, keys from the provider's environment variable, its own cache, budget, rate limit and cost tracking). Its Go module is `github.com/xberg-io/liter-llm/packages/go/v2`, a cgo wrapper over the Rust library `libliter_llm_ffi`.
+Each is marked `TODO(liter-llm#NNN)` in the code.
 
-What ai-rulez relies on, ported to liter-llm 2.1.3 and checked against its release commit (`4ad174d`, built locally) on macOS arm64. `internal/llm/literllm/go.mod` requires v2.1.4, which has `ChatWithContext` and typed errors (v2.1.2 does not compile against this adapter). `task build:literllm` and the `literllm` CI job build and test with `-tags literllm`.
+- `internal/llm/client.go`: `embedEach` (Gemini batch embeddings come back with one vector, #268); `classify` quota and Anthropic prompt-too-long mapping (#257); `scrub` (#259); `needsMaxCompletionTokens`, which sends `max_completion_tokens` to OpenAI reasoning models (#264); the decoded-reply cap (#269).
+- `internal/pricing/pricing.go`: the floors above (#260, #262).
 
-- `CreateClient(apiKey, baseURL, timeoutSecs, maxRetries, modelHint)`, `ChatWithContext(ctx, req)`, `EmbedWithContext(ctx, req)` and `Free()`; request and response JSON is OpenAI-shaped, so the adapter reuses the same encoder and decoder as `openaicompat`. `response_format` with a JSON schema reaches the server. The configured `provider/model` is passed as the `modelHint`, which is what lets liter-llm strip the provider prefix when `base_url` is set.
-- Typed errors: `*literllm.Error` carries the variant (`Authentication`, `RateLimited`, `Timeout`, ...), HTTP status, a transient flag and `RetryAfter`. The adapter classifies by variant and never reads message text; a failure that is not typed is a permanent provider error.
-- Batch embeddings: Gemini's native route behind liter-llm answers a batch with a single vector whatever the batch size. The backend detects the wrong vector count, retries that batch as one request per input, and remembers it, so later batches go out one input per request without repeating the wasted batch call. The collapsed batch is still billed, so its tokens are added to the response. Every further request is admitted by the budget before it is sent (so `max_calls`, `max_tokens` and `max_cost_usd` stop the singles), and a failure partway charges the requests already made; set `[search] batch_size = 1` to avoid the first wasted request.
-- Nothing else: ai-rulez keeps its own cache, budget, retry and redaction so they behave the same for both backends (liter-llm's budget is USD-only and it does not return a per-response cost).
+##### Linking and distribution
 
-How it is linked, and why it is not in the default build:
+The binding is cgo over a Rust library, so a build needs `CGO_ENABLED=1`, a C toolchain and the native library. What links depends on who builds:
 
-- The binding's API exists only when cgo is on (its code is all `import "C"`), and it needs the native library at link time, so importing it would break `CGO_ENABLED=0` builds. The release tarball `liter-llm-go-v2.1.3-<platform>.tar.gz` holds `include/liter_llm.h`, the static `lib/libliter_llm_ffi.a` (about 169 MB on macOS arm64) and a dynamic library (about 22 MB).
-- ai-rulez therefore keeps the binding in a nested module, `internal/llm/literllm` (its `go.mod` is the only place the binding is required), and a file guarded by `//go:build literllm && cgo` in `internal/llm` that registers it. The main module's `go.mod` and `go.sum` never mention liter-llm, `go list -deps ./...` shows nothing from it, and `CGO_ENABLED=0 go build ./...` is unchanged.
-- The adapter is a thin shell over JSON: the request and response mapping and the error classification live in cgo-free code that the default tests cover with a stub `NativeClient`.
+- **Contributors** run `go build ./...`, `go test ./...` and `golangci-lint` with nothing to set up. The binding's module ships the shared library for every platform in its own `.lib/<platform>/` directory and its cgo directives point there with an absolute rpath, so the result runs on the machine that built it. That binary is not portable and nobody should ship it.
+- **Release builds** link the **static** archive (`libliter_llm_ffi.a`), which makes each binary one self-contained executable with no sidecar library and no cache directory. `scripts/setup-liter-llm.sh` downloads the release asset for the version pinned in `go.mod`, verifies its `.sha256` sidecar (it fails closed), extracts only `libliter_llm_ffi.a` and prints `CGO_LDFLAGS=-L<dir>`; a `-L` that comes first on the link line and holds no shared library makes `-lliter_llm_ffi` resolve to the archive. `task build` and `task test:release` do this, `scripts/package-release.sh` checks the result with `otool -L` / `ldd` (no `liter_llm` dependency), and CI sets it up with `.github/actions/setup-liter-llm`.
 
-##### Building a release with it
+A cgo `#cgo LDFLAGS` shim inside the repository cannot replace the environment variable: the binding's own `-L` and `-lliter_llm_ffi` come first on the link line and resolve to the shared library the module ships, so the binary keeps a load command for it (checked on macOS arm64; `-Wl,-dead_strip_dylibs`, which would drop it, is not allowed in `#cgo` flags). When liter-llm ships a static link mode of its own (upstream #267) the environment step goes away.
 
-1. Download the tarball for the target platform and verify it against the `.sha256` sidecar from the same release. Copy only `lib/libliter_llm_ffi.a` into an otherwise empty directory (if a dynamic library sits next to it, `-l` prefers that one).
-2. The repository ships `literllm.work`, a workspace file that uses both the root module and `internal/llm/literllm`. It is not named `go.work`, so ordinary builds never pick it up; select it with `GOWORK`. `GOWORK=$PWD/literllm.work go list -tags literllm ./internal/llm` checks that the wiring resolves.
+Verified on this repository's pinned v2.2.0:
 
-3. Build:
+| Platform | Result |
+| --- | --- |
+| macOS arm64 | static link, one 42 MB executable, `otool -L` lists system libraries only; tests pass |
+| Linux arm64 (glibc, Debian bookworm container) | static link, 43 MB, `ldd` lists libm, libgcc_s and libc only |
+| Linux x86_64, macOS x86_64 | same asset layout; built by the release workflow on native runners |
+| Windows x86_64 | not verifiable from a macOS host: the asset's static `.lib` is an MSVC archive while Go's cgo uses MinGW; the release workflow builds and smoke-tests it on a Windows runner and falls back to shipping `liter_llm_ffi.dll` beside `ai-rulez.exe` |
+| Windows arm64, Linux musl | no liter-llm asset (#267); they were never in the release matrix except musl-based container images, which now need the glibc binary |
 
-   ```sh
-   GOWORK=$PWD/literllm.work CGO_ENABLED=1 \
-     CGO_LDFLAGS="-L/path/to/static-lib-dir" \
-     go build -tags literllm -o ai-rulez ./cmd/ai-rulez
-   ```
-
-   Without `GOWORK=...` the bridge module is not part of the build and `-tags literllm` fails to resolve its import.
-
-The bridge module's own tests are compiled only with `-tags literllm` (and cgo), so a plain `go test ./...` inside
-`internal/llm/literllm` finds nothing to build or run when the binding or the static library is not available. To run
-them, set `CGO_LDFLAGS` as above and `go test -tags literllm ./...` from that directory.
-
-Since 2.1.3 the binding's cgo preamble declares the system libraries (macOS frameworks, `-lm -ldl -lpthread -lrt` on Linux), so `-L` is the only flag. Its own `-L` points at a bundled dynamic library; yours comes first, so the static one wins when it is the only `libliter_llm_ffi` in your directory.
-
-##### Verified and not verified
-
-Verified here, on macOS arm64 with the locally built 2.1.3 (`4ad174d`): the module compiles and links statically with `-L` alone (binary 81 MB against 42 MB for the default build, which is unchanged); the bridge module's tests pass against the real library (chat, embeddings, idempotent `Free`, use-after-`Free` returns an error, typed `Authentication` / `RateLimited` (with `Retry-After`) / `Timeout` errors, prompt cancellation through the context, provider-prefix stripping with a `base_url`); the `internal/llm` tests pass with `-tags literllm`; `llm doctor --ping` returns `ok` through both backends against Gemini.
-
-Live parity (`AI_RULEZ_LIVE_LLM=1 go test -tags literllm -run TestLive ./internal/llm`, needs `GEMINI_API_KEY`) against Gemini, `gemini-2.5-flash-lite` and `gemini-embedding-001`: chat, JSON-schema `response_format` and embeddings succeed on both backends (`openaicompat` through Google's OpenAI-compatible endpoint, `literllm` through its native Gemini route), and a bad key (Gemini answers HTTP 400, not 401, so both report a permanent `provider` error) and a 1 ms timeout (`timeout`, transient) are classified identically.
-
-Not verified: Linux, Windows and macOS x86_64 builds; providers other than Gemini; concurrent use of one client from several goroutines; running on a macOS older than the one the library was built on (2.1.3 pins the C objects to 11.0, not checked here).
-
-##### Limitations
-
-- **Binary size.** Linking it adds about 39 MB to a 42 MB CLI (81 MB total, macOS arm64). The release asset has no slim feature set (upstream #250 and #252 only changed the documentation).
-- **Provider schema dialects.** liter-llm translates `response_format` into the provider's native form, and Gemini's native API rejects `additionalProperties` in a schema (HTTP 400). ai-rulez's own schemas therefore leave it out and refuse extra fields when decoding the reply; a schema you pass through the library yourself must do the same for Gemini.
-- **Model prefix.** With a `base_url`, liter-llm strips only the `provider/` prefix named by the model hint (now the configured `provider`), so `provider = "openai"`, `model = "gpt-4o-mini"` reaches a strict server as `gpt-4o-mini`. Without a configured provider the model is sent verbatim.
-- **Platforms.** Release assets exist for macOS (arm64, x86_64), Linux glibc (x86_64, aarch64) and Windows (x86_64, aarch64); none for musl.
-- **Status: experimental.** The upstream issues the adapter worked around are fixed in 2.1.3 (#244 typed errors, #245 context cancellation, #246 no `(nil, nil)`, #247 and #248 static link and macOS deployment target, #249 prefix stripping, #250 to #252 docs and client config), and live parity with `openaicompat` passes for Gemini. It stays experimental because only macOS arm64 and only one provider have been exercised.
+Binary size grows by about 35 MB per platform. The release workflow, glibc floor and the wrappers (npm, PyPI, Homebrew) are described in [maintainers/release.md](maintainers/release.md).
 
 ##### Licensing
 
-liter-llm is MIT licensed (Copyright 2026 Kreuzberg, Inc.). The Go module is a wrapper around a Rust library whose dependency tree carries other licenses (its `deny.toml` allows Apache-2.0, MIT, BSD, ISC, Zlib, MPL-2.0, OpenSSL, among others), and its provider table is derived from LiteLLM's (MIT, attribution in liter-llm's `ATTRIBUTIONS.md`). A release that bundles the static library redistributes that code: ship the MIT notice and the third-party notices of the library (`cargo about` or the upstream attribution file) with the binary. The default build contains none of it.
+liter-llm is MIT licensed (Copyright 2026 Kreuzberg, Inc.). The Go module is a wrapper around a Rust library whose dependency tree carries other licenses (its `deny.toml` allows Apache-2.0, MIT, BSD, ISC, Zlib, MPL-2.0, OpenSSL, among others), and its provider table is derived from LiteLLM's (MIT, attribution in liter-llm's `ATTRIBUTIONS.md`). Every release binary now bundles that code: ship the MIT notice and the third-party notices of the library with it.
 
-Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.1.4`, in `internal/llm/literllm/go.mod` only. The adapter needs v2.1.3 or later.
+Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.2.0` in `go.mod`. v2.2.0 or later is required for exact Gemini thinking-token accounting (`module_test.go` pins it).
+
+##### Testing
+
+The `internal/llm` tests run the real liter-llm client against local `httptest` servers: no network and no key. With a `base_url` liter-llm treats every model as generic OpenAI-compatible, so provider-specific request and usage mappings (Gemini, Vertex, Bedrock) are liter-llm's own tests' job and cannot be reached from here (#256). The live tests (`AI_RULEZ_LIVE_LLM=1`, `GEMINI_API_KEY`) cover Gemini end to end and are not part of CI.
 
 #### Using it from a feature
 

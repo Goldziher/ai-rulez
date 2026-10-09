@@ -4,7 +4,7 @@
 tool of [`mcp --serve-skills`](mcp-server.md), and measures that ranking against labeled queries. By default it is
 lexical and deterministic: no query or skill text is sent anywhere and the same input always gives the same order.
 Optionally it is hybrid: the lexical list is fused with cosine similarity over embeddings you bring (an
-OpenAI-compatible endpoint, Gemini through `literllm`, a local server, or a command), so a paraphrase such as
+OpenAI-compatible endpoint, Gemini through liter-llm, a local server, or a command), so a paraphrase such as
 "customer wants money back" finds the skill described as "issue a refund".
 
 - [Searching](#searching)
@@ -77,7 +77,7 @@ weights     = { lexical = 1.0, vector = 1.0 }
 vector_min_sim = 0.0        # abstain below this cosine (0 = off); see Abstaining
 candidates  = 50            # per list, before fusion
 query_timeout_ms = 800      # the query embedding; on timeout the ranking is lexical
-batch_size  = 64            # texts per embedding call of `search index` (Gemini through literllm is sent one by one automatically)
+batch_size  = 64            # texts per embedding call of `search index` (Gemini is sent one by one automatically)
 index_dir   = "local/search"  # under the config dir; any directory outside local/ is meant to be committed
 dtype       = "float32"     # float32 | float16 (half the size)
 log_queries = false         # user scope only (user config file or AI_RULEZ_SEARCH_LOG_QUERIES=1); see Query mining
@@ -349,8 +349,8 @@ default is taken.
 
 - Default stays lexical, offline and deterministic. A hybrid or vector ranking always falls back to lexical
   with a `degraded` reason; it never fails a search or a `find_skill` call.
-- Embeddings go through `internal/llm` (one egress configuration, budget and gate), including the `literllm`
-  backend for Gemini and 170 other providers. The command provider is the escape hatch for anything else.
+- Embeddings go through `internal/llm` (one egress configuration, budget and gate), including liter-llm
+  for Gemini and 170 other providers. The command provider is the escape hatch for anything else.
 - The index is keyed by the SHA-256 of the exact embedded text, not by the skill digest, so an edit that does not
   change the embedded text is free. `search status` and `stale_vector` therefore call a skill stale when its
   embedded text changed (the design said "item digest"); a changed digest with the same text is reported as
