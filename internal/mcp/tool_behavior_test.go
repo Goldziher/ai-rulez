@@ -264,5 +264,9 @@ func TestServerCapabilitiesAndMetadata(t *testing.T) {
 
 	require.NotNil(t, caps.Tools)
 	assert.False(t, caps.Tools.ListChanged, "the tool set is fixed, so tools/list_changed is not promised")
-	assert.Nil(t, caps.Resources, "the authoring server serves no resources")
+	require.NotNil(t, caps.Prompts, "the authoring server offers prompts")
+	assert.False(t, caps.Prompts.ListChanged, "the prompt set is fixed")
+	require.NotNil(t, caps.Resources, "the authoring server serves config, catalog and item resources")
+	assert.False(t, caps.Resources.ListChanged, "the resource list is fixed; item contents are read on demand")
+	assert.False(t, caps.Resources.Subscribe)
 }

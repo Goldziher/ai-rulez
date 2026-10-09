@@ -106,11 +106,14 @@ func NewServer(version string, opts ...Option) *Server {
 		// Advertise tools explicitly rather than relying on inference. Setting
 		// Capabilities at all drops the SDK's default "logging" capability, which
 		// is deprecated as of protocol version 2026-07-28 and which this server
-		// never uses. The tool set is fixed at construction, so listChanged is
-		// not promised.
+		// never uses. The tool, prompt and resource sets are fixed at construction,
+		// so listChanged is not promised.
 		Capabilities: &sdkmcp.ServerCapabilities{
-			Tools: &sdkmcp.ToolCapabilities{},
+			Tools:     &sdkmcp.ToolCapabilities{},
+			Prompts:   &sdkmcp.PromptCapabilities{},
+			Resources: &sdkmcp.ResourceCapabilities{},
 		},
+		SetCacheable: authoringCacheable,
 		Instructions: serverInstructions,
 		Logger:       sdkLogger(),
 		PageSize:     pageSize,
@@ -129,6 +132,8 @@ func NewServer(version string, opts ...Option) *Server {
 	}
 
 	srv.registerTools()
+	srv.registerPrompts()
+	srv.registerAuthoringResources()
 	return srv
 }
 
