@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func resetOKFFlags(t *testing.T) {
@@ -472,4 +474,59 @@ func TestOKFImportJSONPrintsEmptyLists(t *testing.T) {
 		assert.NotEqual(t, "null", string(doc[key]), "%s must be a list", key)
 	}
 	assert.JSONEq(t, "[]", string(doc["security"]))
+}
+
+func TestOKFExportRefusesAnOutputThatOverlapsTheConfigDirectory(t *testing.T) {
+	root := okfProject(t)
+	cfgDir := filepath.Join(root, ".ai-rulez")
+	// A migrated config dir looks like a bundle, which the old guard accepted.
+	writeFile(t, filepath.Join(cfgDir, "index.md"), "---\nokf_version: \"0.2\"\n---\n")
+	writeFile(t, filepath.Join(cfgDir, "ai-rulez.lock"), "lock\n")
+	writeFile(t, filepath.Join(cfgDir, "local", "mine.md"), "local\n")
+	link := filepath.Join(root, "alias")
+	testutil.SymlinkOrSkip(t, cfgDir, link)
+
+	for name, out := range map[string]string{
+		"the config dir":          cfgDir,
+		"a directory inside it":   filepath.Join(cfgDir, "rules"),
+		"its parent":              root,
+		"a symlink to it":         link,
+		"a path through the link": filepath.Join(link, "rules"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			okfOut = out
+			code, _ := exportRun(t, false)
+			assert.Equal(t, exitOKFCannotRun, code)
+			assert.FileExists(t, filepath.Join(cfgDir, "config.toml"))
+			assert.FileExists(t, filepath.Join(cfgDir, "ai-rulez.lock"))
+			assert.FileExists(t, filepath.Join(cfgDir, "local", "mine.md"))
+			assert.FileExists(t, filepath.Join(cfgDir, "rules", "style.md"))
+		})
+	}
+}
+
+func TestOKFExportRefusesAnyDirectoryHoldingProjectFiles(t *testing.T) {
+	root := okfProject(t)
+	other := filepath.Join(root, "other")
+	writeFile(t, filepath.Join(other, "index.md"), "---\nokf_version: \"0.2\"\n---\n")
+	writeFile(t, filepath.Join(other, "config.toml"), "x = 1\n")
+	okfOut = other
+	code, _ := exportRun(t, false)
+	assert.Equal(t, exitOKFCannotRun, code)
+	assert.FileExists(t, filepath.Join(other, "config.toml"))
+}
+
+func TestOKFExportNeverDeletesAFileItDidNotWrite(t *testing.T) {
+	root := okfProject(t)
+	code, out := exportRun(t, false)
+	require.Equal(t, 0, code, out)
+	bundle := filepath.Join(root, "docs", "okf")
+	writeFile(t, filepath.Join(bundle, "NOTES.md"), "mine\n")
+	require.NoError(t, os.Remove(filepath.Join(root, ".ai-rulez", "context", "arch.md")))
+
+	code, out = exportRun(t, false)
+	require.Equal(t, 0, code, out)
+
+	assert.FileExists(t, filepath.Join(bundle, "NOTES.md"))
+	assert.NoFileExists(t, filepath.Join(bundle, "context", "arch.md"))
 }
