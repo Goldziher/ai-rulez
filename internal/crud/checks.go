@@ -42,6 +42,11 @@ func ValidateCheckSeverity(severity string) error {
 		Errorf("invalid severity %q: use one of %s", severity, strings.Join(config.CheckSeverities, ", "))
 }
 
+// ValidateTargets is ValidateCheckTargets for the targets of a rule, context or
+// skill: the same vocabulary, so a misspelled preset is rejected instead of
+// silently selecting no output.
+func ValidateTargets(targets []string) error { return ValidateCheckTargets(targets) }
+
 // ValidateCheckTargets accepts a preset name, "*" or "**", or a path or glob that
 // can match an output file (anything with a "/", a glob character or a file
 // extension). A bare word that is none of those, such as a misspelled preset, would
