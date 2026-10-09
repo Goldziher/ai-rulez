@@ -76,7 +76,7 @@ func inputProblems(ex config.LintExternal) []string {
 		for _, ph := range stagePlaceholderRe().FindAllString(arg, -1) {
 			switch {
 			case !allHolders[ph]:
-				problems = append(problems, fmt.Sprintf("command has the unknown placeholder() %s (use %s)", ph, "{stage}, {root}, {files}, {skill_dirs}, {out} or {tmp}"))
+				problems = append(problems, fmt.Sprintf("command has the unknown placeholder %s (use %s)", ph, "{stage}, {root}, {files}, {skill_dirs}, {out} or {tmp}"))
 			case len(ex.Inputs) == 0:
 				problems = append(problems, fmt.Sprintf("command uses %s, which needs inputs (the staged content)", ph))
 			case listHolders[ph] && arg != ph:
