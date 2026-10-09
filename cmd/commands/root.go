@@ -1,15 +1,17 @@
 package commands
 
 import (
-	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+// envPrefix is the prefix of every environment variable the CLI reads for its
+// own global settings.
+const envPrefix = "AI_RULEZ"
 
 var (
 	cfgFile  string
@@ -20,6 +22,8 @@ var (
 var RootCmd = &cobra.Command{
 	Use:   "ai-rulez",
 	Short: "Lightning-fast CLI tool for managing AI assistant rules",
+	// Annotations carries the state of the running command (see exit_report.go).
+	Annotations: map[string]string{},
 	Long: `ai-rulez is a lightning-fast CLI tool for managing AI assistant rules
 across multiple platforms including Claude, Cursor, Devin, GitHub Copilot,
 and more. It provides a unified configuration format with support for remote
@@ -28,37 +32,52 @@ includes, dynamic generation, and MCP server integration.`,
 	// main prints the returned error once; cobra's own "Error:" line would repeat it.
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-		switch {
-		case viper.GetBool("debug"):
-			logger.SetLevel(slog.LevelDebug)
-		case viper.GetBool("quiet"):
-			logger.SetLevel(slog.LevelError)
-		}
+		applyLogLevel()
 		return normalizeFormatFlags(cmd)
 	},
 }
 
+// Execute runs the CLI and returns the error the command ended with, unrendered.
+// Main is the entry point of the binary: it renders the error once and returns
+// the exit code.
 func Execute() error {
+	_, err := execute()
+	return err
+}
+
+// execute runs the CLI and returns the command that ran, which tells the error
+// renderer which --format the user asked for.
+func execute() (*cobra.Command, error) {
 	// main sets Version from the build after init has run.
 	RootCmd.Version = Version
 	RootCmd.SetVersionTemplate("ai-rulez version {{.Version}}\n")
 	requireKnownSubcommands(RootCmd)
 	explainArgErrors(RootCmd)
-	return RootCmd.ExecuteContext(cmdContext())
+	trackActiveCommand(RootCmd)
+	return RootCmd.ExecuteContextC(cmdContext())
+}
+
+// applyLogLevel sets the logger from --debug and --quiet (or AI_RULEZ_DEBUG and
+// AI_RULEZ_QUIET). -q drops progress, information and success lines; warnings,
+// errors, hints and every command result stay.
+func applyLogLevel() {
+	switch {
+	case viper.GetBool("debug"):
+		logger.SetLevel(slog.LevelDebug)
+	case viper.GetBool("quiet"):
+		logger.SetLevel(slog.LevelWarn)
+	}
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "C", "", "config file (default is to auto-discover)")
-	RootCmd.PersistentFlags().BoolP("verbose", "V", false, "enable verbose output")
-	RootCmd.PersistentFlags().BoolP("debug", "D", false, "enable debug output")
-	RootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress progress bars and non-essential output")
+	RootCmd.PersistentFlags().StringVar(&configDir, "config-dir", "", "Configuration directory name (default: .ai-rulez, then .config/ai-rulez)")
+	RootCmd.PersistentFlags().BoolP("debug", "D", false, "enable debug output (or AI_RULEZ_DEBUG=1)")
+	RootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress progress and informational output on stderr; results, warnings and errors stay (or AI_RULEZ_QUIET=1)")
 	RootCmd.PersistentFlags().StringVarP(&gitToken, "token", "T", "", "Git access token for private repositories (or use AI_RULEZ_GIT_TOKEN env var)")
 
-	if err := viper.BindPFlag("verbose", RootCmd.PersistentFlags().Lookup("verbose")); err != nil {
-		logger.Debug("Failed to bind verbose flag", "error", err)
-	}
 	if err := viper.BindPFlag("debug", RootCmd.PersistentFlags().Lookup("debug")); err != nil {
 		logger.Debug("Failed to bind debug flag", "error", err)
 	}
@@ -111,18 +130,11 @@ func init() {
 }
 
 func initConfig() {
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	} else {
-		home, err := os.UserHomeDir()
-		if err == nil {
-			viper.AddConfigPath(home)
-		}
-
-		viper.AddConfigPath(".")
-		viper.SetConfigName(".ai-rulez")
-	}
-
+	// Only AI_RULEZ_* variables are read (AI_RULEZ_DEBUG, AI_RULEZ_QUIET, ...):
+	// a bare DEBUG or QUIET in the environment of a CI image must not change
+	// what the tool prints. No configuration file is read for the CLI's own
+	// settings.
+	viper.SetEnvPrefix(envPrefix)
 	viper.AutomaticEnv()
 
 	// Bind git token from environment variable
@@ -131,10 +143,6 @@ func initConfig() {
 	}
 	if err := viper.BindPFlag("git_token", RootCmd.PersistentFlags().Lookup("token")); err != nil {
 		logger.Debug("Failed to bind git token flag", "error", err)
-	}
-
-	if err := viper.ReadInConfig(); err == nil && viper.GetBool("verbose") {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 }
 

@@ -108,31 +108,31 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .mcp.json
+  remove file: .zcode/agents/architect.md
+  remove file: .zcode/agents/tester.md
+  remove file: .zcode/commands/build.md
+  remove file: .zcode/commands/ship.md
+  remove file: .zcode/config.json
+  remove file: .zcode/skills/deployer/SKILL.md
+  remove file: .zcode/skills/reviewer/SKILL.md
+  remove file: .zcode/skills/reviewer/references/checklist.md
+  remove file: .zcode/skills/reviewer/scripts/run.sh
+  remove file: AGENTS.md
+  remove dir (if empty): .zcode/skills/reviewer/scripts
+  remove dir (if empty): .zcode/skills/reviewer/references
+  remove dir (if empty): .zcode/skills/reviewer
+  remove dir (if empty): .zcode/skills/deployer
+  remove dir (if empty): .zcode/skills
+  remove dir (if empty): .zcode/commands
+  remove dir (if empty): .zcode/agents
+  remove dir (if empty): .zcode
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .mcp.json
-INFO    remove file: .zcode/agents/architect.md
-INFO    remove file: .zcode/agents/tester.md
-INFO    remove file: .zcode/commands/build.md
-INFO    remove file: .zcode/commands/ship.md
-INFO    remove file: .zcode/config.json
-INFO    remove file: .zcode/skills/deployer/SKILL.md
-INFO    remove file: .zcode/skills/reviewer/SKILL.md
-INFO    remove file: .zcode/skills/reviewer/references/checklist.md
-INFO    remove file: .zcode/skills/reviewer/scripts/run.sh
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .zcode/skills/reviewer/scripts
-INFO    remove dir (if empty): .zcode/skills/reviewer/references
-INFO    remove dir (if empty): .zcode/skills/reviewer
-INFO    remove dir (if empty): .zcode/skills/deployer
-INFO    remove dir (if empty): .zcode/skills
-INFO    remove dir (if empty): .zcode/commands
-INFO    remove dir (if empty): .zcode/agents
-INFO    remove dir (if empty): .zcode
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=11 directories=8
+Removed generated files: 11 files, 8 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

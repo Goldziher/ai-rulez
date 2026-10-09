@@ -79,13 +79,13 @@ func TestLocalSetUnsetShow(t *testing.T) {
 	localPath := filepath.Join(dir, "config.local.toml")
 
 	// Act: set
-	localSetCmd.Run(localSetCmd, []string{"description", "mine"})
-	localSetCmd.Run(localSetCmd, []string{"presets", `["codex"]`})
-	localSetCmd.Run(localSetCmd, []string{"mcp_servers.gh.env.GH_TOKEN", "local-secret"})
-	localSetCmd.Run(localSetCmd, []string{
+	require.NoError(t, localSetCmd.RunE(localSetCmd, []string{"description", "mine"}))
+	require.NoError(t, localSetCmd.RunE(localSetCmd, []string{"presets", `["codex"]`}))
+	require.NoError(t, localSetCmd.RunE(localSetCmd, []string{"mcp_servers.gh.env.GH_TOKEN", "local-secret"}))
+	require.NoError(t, localSetCmd.RunE(localSetCmd, []string{
 		"mcp_servers.web",
 		`{ transport = "http", url = "https://example.com/mcp", headers = { Authorization = "Bearer abc" } }`,
-	})
+	}))
 
 	// Assert: the shared config is untouched and the overlay holds the values.
 	shared, err := os.ReadFile(filepath.Join(dir, "config.toml"))
@@ -100,7 +100,7 @@ func TestLocalSetUnsetShow(t *testing.T) {
 	for _, asJSON := range []bool{false, true} {
 		localShowJSON = asJSON
 		t.Cleanup(func() { localShowJSON = false })
-		out := captureStdout(t, func() { localShowCmd.Run(localShowCmd, nil) })
+		out := captureStdout(t, func() { require.NoError(t, localShowCmd.RunE(localShowCmd, nil)) })
 		localShowJSON = false
 		assert.Contains(t, out, "description")
 		assert.Contains(t, out, "<redacted>")
@@ -113,13 +113,13 @@ func TestLocalSetUnsetShow(t *testing.T) {
 	}
 
 	// unset removes the key
-	localUnsetCmd.Run(localUnsetCmd, []string{"description"})
+	require.NoError(t, localUnsetCmd.RunE(localUnsetCmd, []string{"description"}))
 	local, err = os.ReadFile(localPath)
 	require.NoError(t, err)
 	assert.NotContains(t, string(local), "description")
 
 	// path prints the overlay path
-	out := captureStdout(t, func() { localPathCmd.Run(localPathCmd, nil) })
+	out := captureStdout(t, func() { require.NoError(t, localPathCmd.RunE(localPathCmd, nil)) })
 	assert.Equal(t, filepath.Join(".ai-rulez", "config.local.toml")+"\n", out)
 }
 
@@ -128,8 +128,8 @@ func TestLocalInit(t *testing.T) {
 	dir := localProject(t)
 
 	// Act
-	first := captureStdout(t, func() { localInitCmd.Run(localInitCmd, nil) })
-	second := captureStdout(t, func() { localInitCmd.Run(localInitCmd, nil) })
+	first := captureStdout(t, func() { require.NoError(t, localInitCmd.RunE(localInitCmd, nil)) })
+	second := captureStdout(t, func() { require.NoError(t, localInitCmd.RunE(localInitCmd, nil)) })
 
 	// Assert
 	assert.Contains(t, first, "Created")

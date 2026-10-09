@@ -361,14 +361,14 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 	}
 	verdict, done, err := judgeStrict(reports, cfgs)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	if done {
 		return 0
 	}
 	if err := writeReport(verdict.combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	return verdict.code
@@ -379,7 +379,7 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, code int, done bool) {
 	excess, done, err := prepareReportsErr(reports, cfgs)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return nil, 1, true
 	}
 	return excess, 0, done
@@ -475,12 +475,12 @@ func checkAllowEgress(cfgs ...*config.Config) error {
 
 func runStrictSingle(cfg *config.Config) int {
 	if err := checkAllowEgress(cfg); err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	report, err := strictLint(cmdContext(), cfg)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	return reportStrict([]*lint.Report{report}, []*config.Config{cfg})

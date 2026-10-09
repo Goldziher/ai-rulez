@@ -45,8 +45,8 @@ func TestLock_OneFileHoldsContentPinsSourcesAndServedSkills(t *testing.T) {
 	assert.Equal(t, contentlock.TreeOf(lock), lock.Tree, "the tree digest covers sources and served skills too")
 
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
-	assert.Equal(t, 0, code, stderr)
+	report, _ := capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, 0, code, report)
 
 	cfg, err := loadForLock("")
 	require.NoError(t, err)
@@ -62,10 +62,10 @@ func TestLock_CheckAndDiffReportServedAndSourceDrift(t *testing.T) {
 	writeFile(t, filepath.Join(root, ".ai-rulez", "skills", "heavy", "SKILL.md"),
 		"---\nname: heavy\ndescription: Heavy served skill, edited. Use when it is heavy.\ndelivery: served\n---\nHEAVY2\n")
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
+	report, _ := capture(t, func() { code = checkLockAt("") })
 	assert.Equal(t, exitDrift, code)
-	assert.Contains(t, stderr, "skill heavy", "the authored source changed")
-	assert.Contains(t, stderr, "served heavy", "and the served digest no longer matches")
+	assert.Contains(t, report, "skill heavy", "the authored source changed")
+	assert.Contains(t, report, "served heavy", "and the served digest no longer matches")
 
 	lockDiffFlag, lockFormat = true, formatJSON
 	stdout, _ := capture(t, func() { code = diffLockAt("") })
@@ -76,14 +76,14 @@ func TestLock_CheckAndDiffReportServedAndSourceDrift(t *testing.T) {
 
 	// Re-locking brings everything back in sync, served digests included.
 	require.Equal(t, 0, writeLockAt("", "", nil))
-	_, stderr = capture(t, func() { code = checkLockAt("") })
-	assert.Equal(t, 0, code, stderr)
+	report, _ = capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, 0, code, report)
 
 	// A source's content changes: the source pin and the served skill both drift.
 	writeFile(t, filepath.Join(vendor, "pdf", "SKILL.md"), "---\nname: pdf\ndescription: Work with PDFs, changed\n---\n\n# pdf\n")
-	_, stderr = capture(t, func() { code = checkLockAt("") })
+	report, _ = capture(t, func() { code = checkLockAt("") })
 	assert.Equal(t, exitDrift, code)
-	assert.Contains(t, stderr, "vendor")
+	assert.Contains(t, report, "vendor")
 }
 
 func TestLock_HandEditedSourcePinBreaksTheTreeDigest(t *testing.T) {
@@ -101,9 +101,9 @@ func TestLock_HandEditedSourcePinBreaksTheTreeDigest(t *testing.T) {
 	assert.NotEqual(t, tree, contentlock.TreeOf(reloaded))
 
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
+	report, _ := capture(t, func() { code = checkLockAt("") })
 	assert.Equal(t, exitDrift, code)
-	assert.Contains(t, stderr, "tree digest")
+	assert.Contains(t, report, "tree digest")
 }
 
 func TestLock_Version1FileStillLoadsAndKeepsItsSourceAndServedEntries(t *testing.T) {
@@ -155,6 +155,6 @@ func TestLock_ContentOnlyRefreshesLocalServedDigestsOffline(t *testing.T) {
 
 	lockContentOnly = false
 	var code int
-	_, stderr := capture(t, func() { code = checkLockAt("") })
-	assert.Equal(t, 0, code, stderr)
+	report, _ := capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, 0, code, report)
 }

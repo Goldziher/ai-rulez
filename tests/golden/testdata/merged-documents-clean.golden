@@ -137,92 +137,92 @@ scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58
 ## step 2: ai-rulez clean --dry-run
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .agents/skills/build/SKILL.md
+  remove file: .agents/skills/build/agents/openai.yaml
+  remove file: .agents/skills/deployer/SKILL.md
+  remove file: .agents/skills/reviewer/SKILL.md
+  remove file: .agents/skills/reviewer/references/checklist.md
+  remove file: .agents/skills/reviewer/scripts/run.sh
+  remove file: .agents/skills/ship/SKILL.md
+  remove file: .agents/skills/ship/agents/openai.yaml
+  remove file: .claude/agents/architect.md
+  remove file: .claude/agents/tester.md
+  remove file: .claude/rules/always.md
+  remove file: .claude/rules/auto.md
+  remove file: .claude/rules/manual.md
+  remove file: .claude/rules/targeted.md
+  remove file: .claude/rules/typescript.md
+  remove file: .claude/skills/build/SKILL.md
+  remove file: .claude/skills/deployer/SKILL.md
+  remove file: .claude/skills/reviewer/SKILL.md
+  remove file: .claude/skills/reviewer/references/checklist.md
+  remove file: .claude/skills/reviewer/scripts/run.sh
+  remove file: .claude/skills/ship/SKILL.md
+  remove file: .codex/agents/architect.toml
+  remove file: .codex/agents/tester.toml
+  remove file: .codex/hooks.json
+  remove file: .codex/rules/ai-rulez.rules
+  remove file: .gemini/agents/architect.md
+  remove file: .gemini/agents/tester.md
+  remove file: .gemini/settings.json
+  remove file: .mcp.json
+  remove file: .opencode/agents/architect.md
+  remove file: .opencode/agents/tester.md
+  remove file: .opencode/commands/build.md
+  remove file: .opencode/commands/ship.md
+  remove file: .opencode/plugins/ai-rulez-hooks.js
+  remove file: .opencode/skills/deployer/SKILL.md
+  remove file: .opencode/skills/reviewer/SKILL.md
+  remove file: .opencode/skills/reviewer/references/checklist.md
+  remove file: .opencode/skills/reviewer/scripts/run.sh
+  remove file: AGENTS.md
+  remove file: CLAUDE.md
+  remove file: GEMINI.md
+  remove ai-rulez keys from: .claude/settings.json
+  remove ai-rulez keys from: .codex/config.toml
+  remove ai-rulez keys from: opencode.json
+  remove dir (if empty): .opencode/skills/reviewer/scripts
+  remove dir (if empty): .opencode/skills/reviewer/references
+  remove dir (if empty): .opencode/skills/reviewer
+  remove dir (if empty): .opencode/skills/deployer
+  remove dir (if empty): .opencode/skills
+  remove dir (if empty): .opencode/plugins
+  remove dir (if empty): .opencode/commands
+  remove dir (if empty): .opencode/agents
+  remove dir (if empty): .opencode
+  remove dir (if empty): .gemini/agents
+  remove dir (if empty): .gemini
+  remove dir (if empty): .codex/rules
+  remove dir (if empty): .codex/agents
+  remove dir (if empty): .codex
+  remove dir (if empty): .claude/skills/ship
+  remove dir (if empty): .claude/skills/reviewer/scripts
+  remove dir (if empty): .claude/skills/reviewer/references
+  remove dir (if empty): .claude/skills/reviewer
+  remove dir (if empty): .claude/skills/deployer
+  remove dir (if empty): .claude/skills/build
+  remove dir (if empty): .claude/skills
+  remove dir (if empty): .claude/rules
+  remove dir (if empty): .claude/agents
+  remove dir (if empty): .claude
+  remove dir (if empty): .agents/skills/ship/agents
+  remove dir (if empty): .agents/skills/ship
+  remove dir (if empty): .agents/skills/reviewer/scripts
+  remove dir (if empty): .agents/skills/reviewer/references
+  remove dir (if empty): .agents/skills/reviewer
+  remove dir (if empty): .agents/skills/deployer
+  remove dir (if empty): .agents/skills/build/agents
+  remove dir (if empty): .agents/skills/build
+  remove dir (if empty): .agents/skills
+  remove dir (if empty): .agents
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
-INFO  Clean plan profile=default
-INFO    remove file: .agents/skills/build/SKILL.md
-INFO    remove file: .agents/skills/build/agents/openai.yaml
-INFO    remove file: .agents/skills/deployer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/references/checklist.md
-INFO    remove file: .agents/skills/reviewer/scripts/run.sh
-INFO    remove file: .agents/skills/ship/SKILL.md
-INFO    remove file: .agents/skills/ship/agents/openai.yaml
-INFO    remove file: .claude/agents/architect.md
-INFO    remove file: .claude/agents/tester.md
-INFO    remove file: .claude/rules/always.md
-INFO    remove file: .claude/rules/auto.md
-INFO    remove file: .claude/rules/manual.md
-INFO    remove file: .claude/rules/targeted.md
-INFO    remove file: .claude/rules/typescript.md
-INFO    remove file: .claude/skills/build/SKILL.md
-INFO    remove file: .claude/skills/deployer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/references/checklist.md
-INFO    remove file: .claude/skills/reviewer/scripts/run.sh
-INFO    remove file: .claude/skills/ship/SKILL.md
-INFO    remove file: .codex/agents/architect.toml
-INFO    remove file: .codex/agents/tester.toml
-INFO    remove file: .codex/hooks.json
-INFO    remove file: .codex/rules/ai-rulez.rules
-INFO    remove file: .gemini/agents/architect.md
-INFO    remove file: .gemini/agents/tester.md
-INFO    remove file: .gemini/settings.json
-INFO    remove file: .mcp.json
-INFO    remove file: .opencode/agents/architect.md
-INFO    remove file: .opencode/agents/tester.md
-INFO    remove file: .opencode/commands/build.md
-INFO    remove file: .opencode/commands/ship.md
-INFO    remove file: .opencode/plugins/ai-rulez-hooks.js
-INFO    remove file: .opencode/skills/deployer/SKILL.md
-INFO    remove file: .opencode/skills/reviewer/SKILL.md
-INFO    remove file: .opencode/skills/reviewer/references/checklist.md
-INFO    remove file: .opencode/skills/reviewer/scripts/run.sh
-INFO    remove file: AGENTS.md
-INFO    remove file: CLAUDE.md
-INFO    remove file: GEMINI.md
-INFO    remove ai-rulez keys from: .claude/settings.json
-INFO    remove ai-rulez keys from: .codex/config.toml
-INFO    remove ai-rulez keys from: opencode.json
-INFO    remove dir (if empty): .opencode/skills/reviewer/scripts
-INFO    remove dir (if empty): .opencode/skills/reviewer/references
-INFO    remove dir (if empty): .opencode/skills/reviewer
-INFO    remove dir (if empty): .opencode/skills/deployer
-INFO    remove dir (if empty): .opencode/skills
-INFO    remove dir (if empty): .opencode/plugins
-INFO    remove dir (if empty): .opencode/commands
-INFO    remove dir (if empty): .opencode/agents
-INFO    remove dir (if empty): .opencode
-INFO    remove dir (if empty): .gemini/agents
-INFO    remove dir (if empty): .gemini
-INFO    remove dir (if empty): .codex/rules
-INFO    remove dir (if empty): .codex/agents
-INFO    remove dir (if empty): .codex
-INFO    remove dir (if empty): .claude/skills/ship
-INFO    remove dir (if empty): .claude/skills/reviewer/scripts
-INFO    remove dir (if empty): .claude/skills/reviewer/references
-INFO    remove dir (if empty): .claude/skills/reviewer
-INFO    remove dir (if empty): .claude/skills/deployer
-INFO    remove dir (if empty): .claude/skills/build
-INFO    remove dir (if empty): .claude/skills
-INFO    remove dir (if empty): .claude/rules
-INFO    remove dir (if empty): .claude/agents
-INFO    remove dir (if empty): .claude
-INFO    remove dir (if empty): .agents/skills/ship/agents
-INFO    remove dir (if empty): .agents/skills/ship
-INFO    remove dir (if empty): .agents/skills/reviewer/scripts
-INFO    remove dir (if empty): .agents/skills/reviewer/references
-INFO    remove dir (if empty): .agents/skills/reviewer
-INFO    remove dir (if empty): .agents/skills/deployer
-INFO    remove dir (if empty): .agents/skills/build/agents
-INFO    remove dir (if empty): .agents/skills/build
-INFO    remove dir (if empty): .agents/skills
-INFO    remove dir (if empty): .agents
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Dry run — no files were removed
+Dry run: no files were removed
 --- project tree
 (no change)
 --- home tree
@@ -231,93 +231,93 @@ INFO  Dry run — no files were removed
 ## step 3: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .agents/skills/build/SKILL.md
+  remove file: .agents/skills/build/agents/openai.yaml
+  remove file: .agents/skills/deployer/SKILL.md
+  remove file: .agents/skills/reviewer/SKILL.md
+  remove file: .agents/skills/reviewer/references/checklist.md
+  remove file: .agents/skills/reviewer/scripts/run.sh
+  remove file: .agents/skills/ship/SKILL.md
+  remove file: .agents/skills/ship/agents/openai.yaml
+  remove file: .claude/agents/architect.md
+  remove file: .claude/agents/tester.md
+  remove file: .claude/rules/always.md
+  remove file: .claude/rules/auto.md
+  remove file: .claude/rules/manual.md
+  remove file: .claude/rules/targeted.md
+  remove file: .claude/rules/typescript.md
+  remove file: .claude/skills/build/SKILL.md
+  remove file: .claude/skills/deployer/SKILL.md
+  remove file: .claude/skills/reviewer/SKILL.md
+  remove file: .claude/skills/reviewer/references/checklist.md
+  remove file: .claude/skills/reviewer/scripts/run.sh
+  remove file: .claude/skills/ship/SKILL.md
+  remove file: .codex/agents/architect.toml
+  remove file: .codex/agents/tester.toml
+  remove file: .codex/hooks.json
+  remove file: .codex/rules/ai-rulez.rules
+  remove file: .gemini/agents/architect.md
+  remove file: .gemini/agents/tester.md
+  remove file: .gemini/settings.json
+  remove file: .mcp.json
+  remove file: .opencode/agents/architect.md
+  remove file: .opencode/agents/tester.md
+  remove file: .opencode/commands/build.md
+  remove file: .opencode/commands/ship.md
+  remove file: .opencode/plugins/ai-rulez-hooks.js
+  remove file: .opencode/skills/deployer/SKILL.md
+  remove file: .opencode/skills/reviewer/SKILL.md
+  remove file: .opencode/skills/reviewer/references/checklist.md
+  remove file: .opencode/skills/reviewer/scripts/run.sh
+  remove file: AGENTS.md
+  remove file: CLAUDE.md
+  remove file: GEMINI.md
+  remove ai-rulez keys from: .claude/settings.json
+  remove ai-rulez keys from: .codex/config.toml
+  remove ai-rulez keys from: opencode.json
+  remove dir (if empty): .opencode/skills/reviewer/scripts
+  remove dir (if empty): .opencode/skills/reviewer/references
+  remove dir (if empty): .opencode/skills/reviewer
+  remove dir (if empty): .opencode/skills/deployer
+  remove dir (if empty): .opencode/skills
+  remove dir (if empty): .opencode/plugins
+  remove dir (if empty): .opencode/commands
+  remove dir (if empty): .opencode/agents
+  remove dir (if empty): .opencode
+  remove dir (if empty): .gemini/agents
+  remove dir (if empty): .gemini
+  remove dir (if empty): .codex/rules
+  remove dir (if empty): .codex/agents
+  remove dir (if empty): .codex
+  remove dir (if empty): .claude/skills/ship
+  remove dir (if empty): .claude/skills/reviewer/scripts
+  remove dir (if empty): .claude/skills/reviewer/references
+  remove dir (if empty): .claude/skills/reviewer
+  remove dir (if empty): .claude/skills/deployer
+  remove dir (if empty): .claude/skills/build
+  remove dir (if empty): .claude/skills
+  remove dir (if empty): .claude/rules
+  remove dir (if empty): .claude/agents
+  remove dir (if empty): .claude
+  remove dir (if empty): .agents/skills/ship/agents
+  remove dir (if empty): .agents/skills/ship
+  remove dir (if empty): .agents/skills/reviewer/scripts
+  remove dir (if empty): .agents/skills/reviewer/references
+  remove dir (if empty): .agents/skills/reviewer
+  remove dir (if empty): .agents/skills/deployer
+  remove dir (if empty): .agents/skills/build/agents
+  remove dir (if empty): .agents/skills/build
+  remove dir (if empty): .agents/skills
+  remove dir (if empty): .agents
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 WARN  Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model agent=architect model=sonnet hint=set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini
-INFO  Clean plan profile=default
-INFO    remove file: .agents/skills/build/SKILL.md
-INFO    remove file: .agents/skills/build/agents/openai.yaml
-INFO    remove file: .agents/skills/deployer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/references/checklist.md
-INFO    remove file: .agents/skills/reviewer/scripts/run.sh
-INFO    remove file: .agents/skills/ship/SKILL.md
-INFO    remove file: .agents/skills/ship/agents/openai.yaml
-INFO    remove file: .claude/agents/architect.md
-INFO    remove file: .claude/agents/tester.md
-INFO    remove file: .claude/rules/always.md
-INFO    remove file: .claude/rules/auto.md
-INFO    remove file: .claude/rules/manual.md
-INFO    remove file: .claude/rules/targeted.md
-INFO    remove file: .claude/rules/typescript.md
-INFO    remove file: .claude/skills/build/SKILL.md
-INFO    remove file: .claude/skills/deployer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/SKILL.md
-INFO    remove file: .claude/skills/reviewer/references/checklist.md
-INFO    remove file: .claude/skills/reviewer/scripts/run.sh
-INFO    remove file: .claude/skills/ship/SKILL.md
-INFO    remove file: .codex/agents/architect.toml
-INFO    remove file: .codex/agents/tester.toml
-INFO    remove file: .codex/hooks.json
-INFO    remove file: .codex/rules/ai-rulez.rules
-INFO    remove file: .gemini/agents/architect.md
-INFO    remove file: .gemini/agents/tester.md
-INFO    remove file: .gemini/settings.json
-INFO    remove file: .mcp.json
-INFO    remove file: .opencode/agents/architect.md
-INFO    remove file: .opencode/agents/tester.md
-INFO    remove file: .opencode/commands/build.md
-INFO    remove file: .opencode/commands/ship.md
-INFO    remove file: .opencode/plugins/ai-rulez-hooks.js
-INFO    remove file: .opencode/skills/deployer/SKILL.md
-INFO    remove file: .opencode/skills/reviewer/SKILL.md
-INFO    remove file: .opencode/skills/reviewer/references/checklist.md
-INFO    remove file: .opencode/skills/reviewer/scripts/run.sh
-INFO    remove file: AGENTS.md
-INFO    remove file: CLAUDE.md
-INFO    remove file: GEMINI.md
-INFO    remove ai-rulez keys from: .claude/settings.json
-INFO    remove ai-rulez keys from: .codex/config.toml
-INFO    remove ai-rulez keys from: opencode.json
-INFO    remove dir (if empty): .opencode/skills/reviewer/scripts
-INFO    remove dir (if empty): .opencode/skills/reviewer/references
-INFO    remove dir (if empty): .opencode/skills/reviewer
-INFO    remove dir (if empty): .opencode/skills/deployer
-INFO    remove dir (if empty): .opencode/skills
-INFO    remove dir (if empty): .opencode/plugins
-INFO    remove dir (if empty): .opencode/commands
-INFO    remove dir (if empty): .opencode/agents
-INFO    remove dir (if empty): .opencode
-INFO    remove dir (if empty): .gemini/agents
-INFO    remove dir (if empty): .gemini
-INFO    remove dir (if empty): .codex/rules
-INFO    remove dir (if empty): .codex/agents
-INFO    remove dir (if empty): .codex
-INFO    remove dir (if empty): .claude/skills/ship
-INFO    remove dir (if empty): .claude/skills/reviewer/scripts
-INFO    remove dir (if empty): .claude/skills/reviewer/references
-INFO    remove dir (if empty): .claude/skills/reviewer
-INFO    remove dir (if empty): .claude/skills/deployer
-INFO    remove dir (if empty): .claude/skills/build
-INFO    remove dir (if empty): .claude/skills
-INFO    remove dir (if empty): .claude/rules
-INFO    remove dir (if empty): .claude/agents
-INFO    remove dir (if empty): .claude
-INFO    remove dir (if empty): .agents/skills/ship/agents
-INFO    remove dir (if empty): .agents/skills/ship
-INFO    remove dir (if empty): .agents/skills/reviewer/scripts
-INFO    remove dir (if empty): .agents/skills/reviewer/references
-INFO    remove dir (if empty): .agents/skills/reviewer
-INFO    remove dir (if empty): .agents/skills/deployer
-INFO    remove dir (if empty): .agents/skills/build/agents
-INFO    remove dir (if empty): .agents/skills/build
-INFO    remove dir (if empty): .agents/skills
-INFO    remove dir (if empty): .agents
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-INFO  Removed generated files files=41 directories=34
+Removed generated files: 41 files, 34 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

@@ -40,13 +40,13 @@ func runMigrateOKF(ctx context.Context, out io.Writer) int {
 	cfg, err := loadConfigForCommand(ctx, nil, config.WithoutLocal())
 	configDir = prev
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	write := !migrateDryRun && !migrateCheck
 	changes, err := okfbridge.MigrateDir(ctx, cfg.ConfigDir, okfbridge.MigrateOptions{Write: write})
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	report := migrateOKFReport{ConfigDir: cfg.ConfigDir, DryRun: !write, Changes: []migrateOKFChangeReport{}}
@@ -67,7 +67,7 @@ func runMigrateOKF(ctx context.Context, out io.Writer) int {
 	}
 	if migrateFormat == formatJSON {
 		if err := writeRawJSON(out, report); err != nil {
-			fmtError(err)
+			renderStderr(err)
 			return 1
 		}
 	} else {

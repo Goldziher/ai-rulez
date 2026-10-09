@@ -84,7 +84,7 @@ func loadEvalCases(env *searchEnv) (*skillsearch.CaseFile, string, error) {
 func runSearchEval(ctx context.Context, out, errOut io.Writer, env *searchEnv) int {
 	res, err := measureSearchEval(ctx, errOut, env)
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	return reportSearchEval(out, errOut, res)
@@ -145,7 +145,7 @@ func measureSearchEval(ctx context.Context, errOut io.Writer, env *searchEnv) (*
 // reportSearchEval prints the result and returns the exit code.
 func reportSearchEval(out, errOut io.Writer, res *skillsearch.Result) int {
 	fail := func(err error) int {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 	degraded := degradedEvalMessage(res)
