@@ -43,7 +43,7 @@ no file content) to the model, so it needs --allow-llm and allow_network = true 
 user config. --estimate prints what would be sent and the cost bound, and calls nothing.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return exitStatus(suggestVerifiers(watchParentContext(cmd), args[0], os.Stdout))
+		return suggestVerifiers(watchParentContext(cmd), args[0], os.Stdout)
 	},
 }
 
@@ -64,54 +64,46 @@ func init() {
 
 // suggestVerifiers runs `verifiers suggest` and returns the exit code: 0 the
 // run completed (even with no proposal), 1 it could not run.
-func suggestVerifiers(ctx context.Context, id string, out io.Writer) int {
+func suggestVerifiers(ctx context.Context, id string, out io.Writer) error {
 	cfg, err := loadVerifierConfig(ctx, nil)
 	if err != nil {
-		renderStderr(err)
-		return exitVerifiersCannotRun
+		return fail(err)
 	}
 	switch suggestKind {
 	case "rule", improveKindSkill, "agent", "command":
 	default:
-		renderStderr(oops.Hint("Use rule, skill, agent or command.").Errorf("unknown --kind %q", suggestKind))
-		return exitVerifiersCannotRun
+		return fail(oops.Hint("Use rule, skill, agent or command.").Errorf("unknown --kind %q", suggestKind))
 	}
 	if suggestWrite && verifiersEstimate {
-		renderStderr(oops.Errorf("--write and --estimate cannot be combined: an estimate calls nothing, so there is nothing to write"))
-		return exitVerifiersCannotRun
+		return fail(oops.Errorf("--write and --estimate cannot be combined: an estimate calls nothing, so there is nothing to write"))
 	}
 	opts, release, err := verifierLLMOptions(ctx, cfg)
 	if err != nil {
-		renderStderr(err)
-		return exitVerifiersCannotRun
+		return fail(err)
 	}
 	defer release()
 	res, err := verifiers.Suggest(ctx, cfg, verifiers.SuggestOptions{Kind: suggestKind, ID: id, MaxProposals: suggestMaxProposals, Replay: suggestReplay, LLM: *opts})
 	if err != nil {
-		renderStderr(err)
-		return exitVerifiersCannotRun
+		return fail(err)
 	}
 	written := ""
 	if suggestWrite {
 		if len(res.Usable()) == 0 {
 			logger.Warn("--write: no usable proposal, nothing was written")
 		} else if written, err = verifiers.WriteSuggestions(cfg, res); err != nil {
-			renderStderr(err)
-			return exitVerifiersCannotRun
+			return fail(err)
 		}
 	}
 	if suggestFormat {
 		if err := writeJSON(out, res); err != nil {
-			renderStderr(err)
-			return exitVerifiersCannotRun
+			return fail(err)
 		}
-		return 0
+		return nil
 	}
 	if _, err := io.WriteString(out, renderSuggestion(res, written, suggestWrite)); err != nil {
-		renderStderr(oops.Wrapf(err, "write suggestions"))
-		return exitVerifiersCannotRun
+		return fail(oops.Wrapf(err, "write suggestions"))
 	}
-	return 0
+	return nil
 }
 
 func renderSuggestion(res *verifiers.SuggestResult, written string, wantWrite bool) string {

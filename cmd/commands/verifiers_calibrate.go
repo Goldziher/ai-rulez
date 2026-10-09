@@ -39,7 +39,7 @@ nothing. Exit codes: 0 every record passes, 2 at least one does not (it is still
 unless --no-write), 1 it could not run.`,
 		verifiers.CalibrationMinPrecision, verifiers.CalibrationMinExamples, verifiers.CalibrationMinPerClass, verifiers.CalibrationMinPerClass),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return exitStatus(calibrateVerifiers(watchParentContext(cmd), args, os.Stdout))
+		return calibrateVerifiers(watchParentContext(cmd), args, os.Stdout)
 	},
 }
 
@@ -56,26 +56,22 @@ func init() {
 }
 
 // calibrateVerifiers runs `verifiers calibrate` and returns the exit code.
-func calibrateVerifiers(ctx context.Context, names []string, out io.Writer) int {
+func calibrateVerifiers(ctx context.Context, names []string, out io.Writer) error {
 	cfg, err := loadVerifierConfig(ctx, nil)
 	if err != nil {
-		renderStderr(err)
-		return exitVerifiersCannotRun
+		return fail(err)
 	}
 	if calibrateNoWrite && verifiersEstimate {
-		renderStderr(oops.Errorf("--no-write and --estimate cannot be combined: an estimate calls nothing, so there is nothing to write"))
-		return exitVerifiersCannotRun
+		return fail(oops.Errorf("--no-write and --estimate cannot be combined: an estimate calls nothing, so there is nothing to write"))
 	}
 	opts, release, err := verifierLLMOptions(ctx, cfg)
 	if err != nil {
-		renderStderr(err)
-		return exitVerifiersCannotRun
+		return fail(err)
 	}
 	defer release()
 	rep, err := verifiers.Calibrate(ctx, cfg, verifiers.CalibrateOptions{Names: names, LLM: *opts, Now: cfg.Host.Now()})
 	if err != nil {
-		renderStderr(err)
-		return exitVerifiersCannotRun
+		return fail(err)
 	}
 	failed := false
 	for i := range rep.Records {
@@ -85,23 +81,20 @@ func calibrateVerifiers(ctx context.Context, names []string, out io.Writer) int 
 			continue
 		}
 		if err := verifiers.SaveCalibration(cfg, rec); err != nil {
-			renderStderr(err)
-			return exitVerifiersCannotRun
+			return fail(err)
 		}
 	}
 	if calibrateJSON {
 		if err := writeJSON(out, rep); err != nil {
-			renderStderr(err)
-			return exitVerifiersCannotRun
+			return fail(err)
 		}
 	} else if _, err := io.WriteString(out, renderCalibration(rep, !calibrateNoWrite)); err != nil {
-		renderStderr(oops.Wrapf(err, "write calibration report"))
-		return exitVerifiersCannotRun
+		return fail(oops.Wrapf(err, "write calibration report"))
 	}
 	if failed {
-		return exitVerifiersFindings
+		return exitStatus(exitVerifiersFindings)
 	}
-	return 0
+	return nil
 }
 
 func renderCalibration(rep *verifiers.CalibrationReport, written bool) string {
