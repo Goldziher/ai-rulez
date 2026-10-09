@@ -39,9 +39,8 @@ var (
 	verifiersFailOn                         string
 	verifiersOut                            string
 	verifiersDead                           bool
-	verifiersListJSON                       bool
-	verifiersExplainJSON, verifiersTestJSON bool
-	verifiersExec                           bool
+	verifiersJSON                       bool
+		verifiersExec                           bool
 	verifiersRole                           string
 )
 
@@ -156,9 +155,9 @@ func init() {
 	f.Float64Var(&verifiersMaxCost, "max-cost", defaultVerifiersMaxCost, "Most an llm verifier run may cost in USD (0 removes this cap; [llm] limits still apply)")
 	f.BoolVar(&verifiersEstimate, "estimate", false, "Print which files and how many bytes llm verifiers would send and the cost bound, and call nothing")
 	VerifiersTestCmd.Flags().BoolVar(&verifiersExec, "allow-exec", false, "Let command predicates of the examples run a program (or set "+verifiersAllowExecEnv+"=1)")
-	addJSONFormat(VerifiersListCmd.Flags(), &verifiersListJSON, "")
-	addJSONFormat(VerifiersExplainCmd.Flags(), &verifiersExplainJSON, "")
-	addJSONFormat(VerifiersTestCmd.Flags(), &verifiersTestJSON, "")
+	addJSONFormat(VerifiersListCmd.Flags(), &verifiersJSON, "")
+	addJSONFormat(VerifiersExplainCmd.Flags(), &verifiersJSON, "")
+	addJSONFormat(VerifiersTestCmd.Flags(), &verifiersJSON, "")
 	for _, c := range []*cobra.Command{VerifiersRunCmd, VerifiersListCmd, VerifiersExplainCmd, VerifiersTestCmd} {
 		c.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 		c.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
@@ -305,7 +304,7 @@ func explainVerifier(ctx context.Context, name string, args []string, out io.Wri
 	if err != nil {
 		return fail(err)
 	}
-	if verifiersExplainJSON {
+	if verifiersJSON {
 		doc, err := verifiers.ExplainInfo(cfg, name)
 		if err != nil {
 			return fail(err)
@@ -325,7 +324,7 @@ func testVerifiers(ctx context.Context, names []string, out io.Writer) error {
 	if err != nil {
 		return fail(err)
 	}
-	if verifiersTestJSON {
+	if verifiersJSON {
 		return writeVerifiersTestJSON(out, report)
 	}
 	var sb strings.Builder
@@ -413,7 +412,7 @@ func listVerifiers(ctx context.Context, args []string, out io.Writer) error {
 		return fail(err)
 	}
 	rows := verifiers.List(cfg)
-	if verifiersListJSON {
+	if verifiersJSON {
 		return fail(writeJSON(out, rows))
 	}
 	if len(rows) == 0 {
