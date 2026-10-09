@@ -2,6 +2,9 @@
 # https://github.com/lycheeverse/lychee
 
 exclude = [
+  # Schema files linked on main before they land there (404 until the PR merges)
+  "raw\\.githubusercontent\\.com/Goldziher/ai-rulez/main/schema/change-result\\.schema\\.json",
+
   # Localhost / loopback addresses
   "localhost",
   "127\\.0\\.0\\.1",
