@@ -66,6 +66,11 @@ var evalFlags struct {
 var EvalCmd = &cobra.Command{
 	Use:   "eval",
 	Short: "Run skill evals and score them",
+	Long: `Run the eval cases of your skills and score them. "eval run" runs the cases through a
+runner (a command you provide, or the Claude or Codex native runners) and records the
+results; "eval import" turns another tool's scenarios into eval cases; and
+"eval calibrate-estimate" measures the cost-estimate assumptions from recorded runs.
+"eval run --dry-run" lists what would run and an estimated cost without calling any runner.`,
 }
 
 var evalRunCmd = &cobra.Command{
