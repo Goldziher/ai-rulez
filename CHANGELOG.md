@@ -293,6 +293,9 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 
 ### Fixed
 
+- **`migrate okf` no longer destroys a rule or context file named `index` or `log`**: OKF reserves those names for generated listings, so the migration now refuses (exit 1, naming the files, nothing written) instead of overwriting `rules/index.md` and announcing a move that never happened. Rename the file and run it again.
+- **`migrate okf` writes atomically and keeps a backup**: the originals of the files it rewrites are copied to `<config dir>.bak-okf-<timestamp>/` first, symlinks are reported as `[skipped]` in the summary, and a run that skipped anything exits 1 (a dry run still exits 0).
+- **`export okf --out` can no longer delete your configuration**: an output that is, contains or lies inside the configuration directory (symlinks resolved), or that holds `config.toml`, `ai-rulez.lock` or `local/`, is refused; pruning removes only files a manifest (`.okf-export.json`) records the previous export wrote, never a file it did not write.
 - **The default `ai-rulez mcp` answers a request sent before `initialize` with `-32600`**, like `--serve-skills`, instead of error code 0.
 - **`validate --offline`** skips fetching remote includes, as `generate --offline` does, so `validate --config-only` works with an unreachable remote include.
 - **`migrate v5` keeps CRLF line endings** in `config.toml`; YAML frontmatter after a UTF-8 byte order mark is parsed as frontmatter.

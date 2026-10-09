@@ -472,3 +472,55 @@ func TestBuildIndexesEscapesDescriptions(t *testing.T) {
 	// Assert
 	assert.Equal(t, "# Concepts\n\n* [A](a.md) - see \\[x\\](http://evil.example) \\<b\\>bold\\</b\\>\n", string(out["rules/index.md"]))
 }
+
+func TestPruneOnlyRemovesFilesThePreviousExportWrote(t *testing.T) {
+	dir := t.TempDir()
+	index := File{Path: "index.md", Data: []byte("---\nokf_version: \"0.2\"\n---\n")}
+	mine := File{Path: "rules/mine.md", Data: []byte("x")}
+	require.NoError(t, WriteFiles(dir, []File{index, mine}, true))
+	// A file the user put into the bundle directory afterwards, and one that a
+	// bundle exported by an older version (no manifest) could not be told apart from.
+	require.NoError(t, os.WriteFile(dir+"/config.toml", []byte("[project]\n"), 0o644))
+	require.NoError(t, os.MkdirAll(dir+"/local", 0o755))
+	require.NoError(t, os.WriteFile(dir+"/local/secret.md", []byte("s"), 0o644))
+
+	require.NoError(t, WriteFiles(dir, []File{index}, true))
+
+	assert.NoFileExists(t, dir+"/rules/mine.md", "a file the export wrote is pruned")
+	assert.FileExists(t, dir+"/config.toml", "a file the export never wrote survives")
+	assert.FileExists(t, dir+"/local/secret.md")
+}
+
+func TestPruneWithoutManifestRemovesNothing(t *testing.T) {
+	dir := t.TempDir()
+	index := File{Path: "index.md", Data: []byte("---\nokf_version: \"0.2\"\n---\n")}
+	require.NoError(t, os.WriteFile(dir+"/index.md", index.Data, 0o644))
+	require.NoError(t, os.WriteFile(dir+"/ai-rulez.lock", []byte("lock"), 0o644))
+
+	require.NoError(t, WriteFiles(dir, []File{index}, true))
+
+	assert.FileExists(t, dir+"/ai-rulez.lock")
+}
+
+func TestCompareIgnoresTheExportManifest(t *testing.T) {
+	dir := t.TempDir()
+	files := []File{{Path: "index.md", Data: []byte("---\nokf_version: \"0.2\"\n---\n")}}
+	require.NoError(t, WriteFiles(dir, files, true))
+	require.FileExists(t, dir+"/"+ManifestFile)
+	d, err := Compare(dir, files)
+	require.NoError(t, err)
+	assert.True(t, d.Empty(), "%+v", d)
+}
+
+func TestPruneIgnoresUnsafeManifestEntries(t *testing.T) {
+	parent := t.TempDir()
+	dir := parent + "/bundle"
+	index := File{Path: "index.md", Data: []byte("---\nokf_version: \"0.2\"\n---\n")}
+	require.NoError(t, WriteFiles(dir, []File{index}, true))
+	require.NoError(t, os.WriteFile(parent+"/victim.txt", []byte("v"), 0o644))
+	require.NoError(t, os.WriteFile(dir+"/"+ManifestFile, []byte(`{"files":["../victim.txt","/etc/hosts"]}`), 0o644))
+
+	require.NoError(t, WriteFiles(dir, []File{index}, true))
+
+	assert.FileExists(t, parent+"/victim.txt")
+}

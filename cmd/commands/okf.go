@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -299,6 +300,10 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 	if okfCheck {
 		return runOKFExportCheck(out, dir, res.Files)
 	}
+	if err := checkExportTarget(dir, cfg.ConfigDir); err != nil {
+		renderStderr(err)
+		return exitOKFCannotRun
+	}
 	if err := okf.WriteFiles(dir, res.Files, true); err != nil {
 		renderStderr(err)
 		return exitOKFCannotRun
@@ -312,6 +317,59 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 	}
 	w.printf("Wrote %d files to %s (%s)\n", len(res.Files), dir, kindCounts(res.Counts))
 	return 0
+}
+
+const okfLockFile = "ai-rulez.lock"
+
+// checkExportTarget refuses an export directory that is, contains or lies inside
+// the configuration directory (compared with symlinks resolved), or that holds a
+// config.toml, an ai-rulez.lock or a local/ directory.
+func checkExportTarget(dir, cfgDir string) error {
+	target, cfg := resolveLenient(dir), resolveLenient(cfgDir)
+	if pathWithin(target, cfg) || pathWithin(cfg, target) {
+		return oops.
+			Hint("Choose a directory outside the configuration directory, such as docs/okf").
+			Errorf("refusing to export into %s: it overlaps the configuration directory %s", dir, cfgDir)
+	}
+	// These entries mark a directory as holding a project's configuration.
+	for _, name := range []string{"config.toml", okfLockFile, "local"} {
+		if _, err := os.Lstat(filepath.Join(target, name)); err == nil {
+			return oops.
+				Hint("Choose a directory that holds no ai-rulez configuration").
+				Errorf("refusing to export into %s: it holds %s", dir, name)
+		}
+	}
+	return nil
+}
+
+// resolveLenient makes p absolute and resolves symlinks in its longest existing
+// prefix, so a directory that does not exist yet is judged by where it would land.
+func resolveLenient(p string) string {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		abs = filepath.Clean(p)
+	}
+	rest := ""
+	for cur := abs; ; {
+		if resolved, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(resolved, rest)
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return abs
+		}
+		rest = filepath.Join(filepath.Base(cur), rest)
+		cur = parent
+	}
+}
+
+// pathWithin reports whether p is base or lies below it.
+func pathWithin(p, base string) bool {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		p, base = strings.ToLower(p), strings.ToLower(base) // case-insensitive file systems
+	}
+	rel, err := filepath.Rel(base, p)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // runOKFExportCheck compares the rendered files with dir and reports drift.
