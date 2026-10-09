@@ -52,3 +52,14 @@ func parseStat(pid int, data []byte) (procEntry, bool) {
 	p := procEntry{pid: pid, ppid: int(num(f[1])), pgid: int(num(f[2])), sid: int(num(f[3])), uid: -1, start: num(f[19])}
 	return p, p.ppid >= 0 && p.start >= 0
 }
+
+// processStart returns the start time of pid (same clock as procEntry.start)
+// from its own stat file, not a read of the whole table.
+func processStart(pid int) (int64, bool) {
+	data, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
+	if err != nil {
+		return 0, false
+	}
+	p, ok := parseStat(pid, data)
+	return p.start, ok
+}
