@@ -23851,7 +23851,7 @@ ai-rulez generate --profile frontend
 
 A symlinked output is never written through. `CLAUDE.md -> AGENTS.md` is accepted when `AGENTS.md` is itself generated in the same run: the link stays as you made it, `AGENTS.md` gets its own content, and the link is not recorded as generated (so `clean` leaves it). A link to anything else is refused, naming the link and its target; remove the link, or point it at a generated path.
 
-##### `ai-rulez clean [config-path]`
+##### `ai-rulez clean`
 
 Remove the files and directories that `generate` produced — the inverse of `generate`. This deletes the generated assistant outputs (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.claude/`, `.codex/`, generated skills, etc.), the generated manifest (`.ai-rulez/.generated-manifest.json`), the local manifest (`.ai-rulez/.generated-manifest.local.json`) and the local rule files recorded in it, this project's block in `.git/info/exclude`, and the ai-rulez managed block in `.gitignore`. The ignore entries for the `config.local.*` overlay and `.ai-rulez/local/` stay in `.gitignore`: `clean` removes generated outputs, not the machine-local sources beside them. The committed manifest is treated as untrusted (see [What ai-rulez may change](settings.md#what-ai-rulez-may-change)): `generate` and `clean` delete a manifest-listed file only when its path is one a preset writes and the file proves it is ai-rulez output (its `Content-Hash` matches its body, or its SHA-256 equals the `digests` entry this machine recorded in the gitignored local manifest for header-less files). Anything else is kept and reported in one `Stale files not removed` warning per reason that names the files; on a fresh clone a header-less stale file is therefore reported, not deleted. On an upgrade, the Claude MCP servers an older version wrote into a manifest-listed `.claude/settings.json` are taken out of it when they are exactly that rendering (they now live in `.mcp.json` only). A generated file whose body was edited by hand is kept with a warning unless `--include-edited` is given (`generate` rewrites it instead). The generated file that replaced an original `convert` imported (listed in `.ai-rulez/.converted.json`) is kept as well, even with `--include-edited`: the original text lives under `.ai-rulez/`, and removing it would leave neither; delete it by hand if you no longer want it. A symlink is never removed, whoever made it. A merged settings document (`.claude/settings.json`, `.mcp.json`, ...) is deleted only when this machine recorded writing it whole and its digest still matches; a document that existed before ai-rulez first wrote to it is never deleted. Neither `generate` nor `clean` removes a path whose parent directory resolves through a symlink outside the project. Manifests written by older versions have no digests, so their header-less leftovers stay until deleted by hand. In a project with a `[plugin]` block or a plugin marketplace, `clean` also removes the bundle `generate --plugin` wrote: each file whose bytes still equal what `generate --plugin` renders, and the folders that leaves empty; an edited bundle file is kept with a warning. `clean` has no `--recursive`: run it in each root. It never needs MCP secrets: unset `${VAR}` placeholders do not stop it. A git-tracked `.ai-rulez/.generated-manifest.local.json` is ignored by `generate` and kept by `clean`, with a warning to `git rm --cached` it.
 
@@ -23864,7 +23864,7 @@ By default `clean` lists what it will remove and asks for confirmation. In non-i
 **Syntax:**
 
 ```bash
-ai-rulez clean [config-path] [flags]
+ai-rulez clean [flags]
 ```
 
 **Flags:**
@@ -23900,7 +23900,7 @@ ai-rulez clean --yes --keep-gitignore --keep-manifest
 
 #### Verify Command
 
-##### `ai-rulez verify [config-path]`
+##### `ai-rulez verify`
 
 Verify generated files without modifying them.
 
@@ -23909,7 +23909,7 @@ Without `--plugin`, every file listed in `.ai-rulez/.generated-manifest.json` mu
 **Syntax:**
 
 ```bash
-ai-rulez verify [config-path] [--plugin] [flags]
+ai-rulez verify [--plugin] [flags]
 ```
 
 **Flags:**
@@ -24415,19 +24415,15 @@ Exit codes: 0 pass, 1 cannot run (bad flags, invalid cases file `AR9D2`, no cata
 
 #### Validation Command
 
-##### `ai-rulez validate [config-path]`
+##### `ai-rulez validate`
 
 Validate configuration without generating files.
 
 **Syntax:**
 
 ```bash
-ai-rulez validate [config-path] [flags]
+ai-rulez validate [flags]
 ```
-
-**Arguments:**
-
-- `[config-path]` (optional): Path to configuration file. If not provided, auto-detected.
 
 **Flags:**
 
@@ -24617,7 +24613,7 @@ The lock proves the bytes did not change since you reviewed them, not who publis
 
 #### Sign Command
 
-##### `ai-rulez sign [config-path]`
+##### `ai-rulez sign`
 
 Signs one subject into a Sigstore bundle (a DSSE envelope over an in-toto statement): the lock-subject statement of
 `ai-rulez.lock` (written next to the lock), a plugin bundle, a skill directory, an SBOM file or an organization policy. Verify it with
@@ -24843,7 +24839,7 @@ complete, 2 a gate or verification failed. Codes `AR9N0`-`AR9N9`. See [Publish](
 
 #### Scan Command
 
-##### `ai-rulez scan [config-path]`
+##### `ai-rulez scan`
 
 Security checks only, the `AR0xx` family of [strict validation](strict-validation.md#security-checks): secrets, hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, outbound hosts, unpinned remotes. Offline and deterministic. `scan` runs only the `security` analyzer, so hook and config findings (`AR504`, `AR9K0`, ...) belong to `validate`. Flags: `--recursive`, `--format text|json|sarif|github|junit|markdown`, `--output`, `--fail-on`, `--lint-profile`, `--external`, `--allow-egress`, `--baseline`, `--update-baseline`, `--baseline-reason`, `--strict-baseline`, `--changed`, `--since`, `--since-depth`, `--since-max-files`, `--repo-root`, `--no-local`, `--config-dir`. The baseline and changed-only flags mean the same as on [`validate`](#validation-command) (without needing `--strict`). Exit `0` clean, `1` cannot run, `2` findings at or above `--fail-on`.
 

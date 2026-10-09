@@ -352,3 +352,19 @@ func TestPositionalArgumentGetsTheDashCHint(t *testing.T) {
 		t.Fatalf("error = %v, hint = %q", err, errorHintOf(err))
 	}
 }
+
+func TestStrayWordArgumentKeepsCobrasUnknownCommandText(t *testing.T) {
+	// Arrange
+	root := &cobra.Command{Use: "ai-rulez"}
+	sub := &cobra.Command{Use: "mcp", Args: cobra.NoArgs, RunE: func(*cobra.Command, []string) error { return nil }}
+	root.AddCommand(sub)
+	explainArgErrors(root)
+
+	// Act
+	err := sub.Args(sub, []string{"bogus"})
+
+	// Assert
+	if err == nil || !strings.Contains(err.Error(), "unknown command") {
+		t.Fatalf("error = %v, want cobra's unknown command text for a word that is not a path", err)
+	}
+}
