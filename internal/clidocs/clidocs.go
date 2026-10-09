@@ -8,6 +8,7 @@ package clidocs
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -51,9 +52,14 @@ func commands(root *cobra.Command) []*cobra.Command {
 	return out
 }
 
+// bareURL matches a URL not already inside <...>, so cell can autolink it the way
+// the markdown formatter would (keeping the generated page formatter-stable).
+var bareURL = regexp.MustCompile(`(^|[\s(])(https?://[^\s)|<>]+)`)
+
 func cell(s string) string {
 	s = strings.ReplaceAll(s, "|", `\|`)
-	return strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\n", " ")
+	return bareURL.ReplaceAllString(s, "$1<$2>")
 }
 
 // Index renders the table of every command with its one-line summary.
