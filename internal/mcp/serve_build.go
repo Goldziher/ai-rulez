@@ -106,6 +106,8 @@ type built struct {
 	// readmit admits the same skills again at the current time, quietly; nil
 	// for a build made without admission.
 	readmit func() *Catalog
+	// project is what the build loaded, for the other views of a lock run.
+	project *loadedProject
 }
 
 // NewServer builds the catalog and the skills server around it. The caller runs
@@ -213,19 +215,46 @@ type buildOptions struct {
 	// used instead of resolving the configured sources again, so every view of one
 	// lock run sees the same commits.
 	reuse []*skillsource.Resolved
+	// project, when not nil, is the project an earlier build of the same run
+	// loaded; it is used instead of loading the config, the lock and the
+	// authored-skill digests again for every view.
+	project *loadedProject
 }
 
-func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error) {
+// loadedProject is what one build loads from the project and a lock run's views
+// share: they differ in role, profile and sources, never in the project.
+type loadedProject struct {
+	cfg  *config.Config
+	lock *lockfile.File
+	// authored are the authored-skill digests (nil until a build admits).
+	authored map[string]lockfile.Item
+}
+
+// loadProject loads the config and the lock of a build, or hands back the ones
+// an earlier build of the same run loaded.
+func (st *ServeSetup) loadProject(ctx context.Context, bo buildOptions) (*loadedProject, error) {
+	if bo.project != nil {
+		return bo.project, nil
+	}
 	cfg, err := st.loadConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var lock *lockfile.File
+	p := &loadedProject{cfg: cfg}
 	if cfg.ConfigDir != "" {
-		if lock, err = lockfile.Load(cfg.ConfigDir); err != nil {
+		if p.lock, err = lockfile.Load(cfg.ConfigDir); err != nil {
 			return nil, oops.Wrapf(err, "read %s", lockfile.FileName)
 		}
 	}
+	return p, nil
+}
+
+func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error) {
+	project, err := st.loadProject(ctx, bo)
+	if err != nil {
+		return nil, err
+	}
+	cfg, lock := project.cfg, project.lock
 	// A serving build refuses only the served skills the policy denies; the
 	// lock commands (ignoreLock) keep failing on them, so a denied pin is never
 	// silently dropped from the lock.
@@ -267,7 +296,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	if err != nil {
 		return nil, err
 	}
-	b := &built{cfg: cfg, lock: lock, view: st.ViewKey()}
+	b := &built{cfg: cfg, lock: lock, view: st.ViewKey(), project: project}
 	resolved, err := st.resolveSources(ctx, cfg, lock, specs, bo)
 	if err != nil {
 		return nil, err
@@ -738,6 +767,11 @@ func (st *ServeSetup) buildAll(ctx context.Context, bo buildOptions, extras []Se
 	if bo.reuse == nil {
 		bo.reuse = []*skillsource.Resolved{}
 	}
+	// A lock run reads neither the lock's served pins nor its policy denials per
+	// view, so every view can share the project the first one loaded.
+	if bo.ignoreLock {
+		bo.project = first.project
+	}
 	seen := map[string]bool{"": true}
 	build := func(view ServeSetup, strict bool) error {
 		key := view.ViewKey()
@@ -748,6 +782,10 @@ func (st *ServeSetup) buildAll(ctx context.Context, bo buildOptions, extras []Se
 		opts := bo
 		if len(view.Sources) > 0 {
 			opts.reuse, opts.refresh = nil, refresh
+			if first.cfg.ConfigDir == "" {
+				// Without a project, a view of --source skills loads its own stand-in.
+				opts.project = nil
+			}
 		}
 		b, err := view.build(ctx, opts)
 		if err != nil {

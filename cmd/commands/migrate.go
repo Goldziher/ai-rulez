@@ -72,7 +72,12 @@ func newMigrateOKFCmd() *cobra.Command {
 type, title and x-ai-rulez frontmatter (its former frontmatter moves under
 x-ai-rulez.metadata) and every directory gets an index.md. Bodies are kept byte
 for byte and the generated output does not change. It is idempotent; --dry-run
-and --check write nothing.`,
+and --check write nothing. A write first copies every file it rewrites to
+<dir>.bak-okf-<timestamp>/. A rule, context file or other item named index or
+log is refused (OKF reserves those names for generated listings) before anything
+is written. Exit codes: 0 done; 1 an error, a refused name, or a file that was
+skipped (a symlink, an unclosed frontmatter) on a write or --check; 2 --check
+found files that still need migrating.`,
 		Example: `  ai-rulez migrate okf --dry-run
   ai-rulez migrate okf --check --format json`,
 		Args: cobra.NoArgs,

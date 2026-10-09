@@ -6,6 +6,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 	"github.com/Goldziher/ai-rulez/v5/internal/verifiers"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/samber/oops"
@@ -26,7 +27,8 @@ func mcpDrift(cfg *config.Config, profile string) ([]string, error) {
 // .ai-rulez/verifiers/*.toml specs (`ai-rulez verifiers run`) and returns one
 // result per verifier; each result carries its findings and the rule it enforces.
 // since, staged and rule narrow the run like the CLI flags. It never
-// writes and never uses the network: includes are not resolved, so a
+// writes, never starts a program (a command predicate is refused, AR9H3) and
+// never uses the network: includes are not resolved, so a
 // generated_in_sync verifier of a project that declares them cannot be
 // evaluated here.
 func RunVerifiersHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
@@ -50,6 +52,10 @@ func RunVerifiersHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		Since:  request.GetString("since", ""),
 		Staged: request.GetBool("staged", false),
 		Rule:   request.GetString("rule", ""),
+		// The tool is read-only: command predicates are refused (AR9H3), and a
+		// runner that denies every start backs that refusal up.
+		AllowExec: false,
+		Runner:    runner.Deny{},
 	})
 	if report.Err != nil {
 		return ToolError(report.Err)
