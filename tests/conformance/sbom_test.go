@@ -52,7 +52,7 @@ func TestSPDXOutputConformsToTheOfficial23Schema(t *testing.T) {
 	dir := project(t, sbomFiles())
 
 	// Act
-	doc := run(t, dir, "sbom", "--format", "spdx-json", "--files", "all")
+	doc := run(t, dir, "sbom", "--type", "spdx-json", "--files", "all")
 
 	// Assert
 	requireValid(t, schema, doc)

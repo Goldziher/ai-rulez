@@ -2255,7 +2255,7 @@ See [Catalog](catalog.md).
 ### `ai-rulez sbom`
 
 ```bash
-ai-rulez sbom [--format cyclonedx|spdx-json] [-o file] [--files none|skills|all] [--profile P] [--role R]
+ai-rulez sbom [--type cyclonedx|spdx-json] [-o file] [--files none|skills|all] [--profile P] [--role R]
               [--include-outputs] [--no-approvals] [--redact-reviewers] [--verify] [--require-lock]
               [--strict-pins] [--check] [--timestamp [RFC3339|now]] [--online] [-n config-dir]
 ```
