@@ -297,21 +297,7 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 		fmt.Fprintln(os.Stderr, "note:", note)
 	}
 	if okfCheck {
-		drift, err := okf.Compare(dir, res.Files)
-		if err != nil {
-			renderStderr(err)
-			return exitOKFCannotRun
-		}
-		if okfFormat == formatJSON {
-			return writeOKFExportJSON(out, map[string]any{keyStatus: okfExportStatus(drift.Empty()), "dir": dir, "files": len(res.Files), statusDrift: drift}, drift.Empty())
-		}
-		if drift.Empty() {
-			w.printf("%s is up to date (%d files)\n", dir, len(res.Files))
-			return 0
-		}
-		printOKFDrift(w, drift)
-		w.printf("%s differs from the sources; run ai-rulez export okf (or generate) to update it\n", dir)
-		return exitOKFProblems
+		return runOKFExportCheck(out, dir, res.Files)
 	}
 	if err := okf.WriteFiles(dir, res.Files, true); err != nil {
 		renderStderr(err)
@@ -326,6 +312,26 @@ func runOKFExport(ctx context.Context, args []string, out io.Writer) int {
 	}
 	w.printf("Wrote %d files to %s (%s)\n", len(res.Files), dir, kindCounts(res.Counts))
 	return 0
+}
+
+// runOKFExportCheck compares the rendered files with dir and reports drift.
+func runOKFExportCheck(out io.Writer, dir string, files []okf.File) int {
+	w := reportWriter{out}
+	drift, err := okf.Compare(dir, files)
+	if err != nil {
+		renderStderr(err)
+		return exitOKFCannotRun
+	}
+	if okfFormat == formatJSON {
+		return writeOKFExportJSON(out, map[string]any{keyStatus: okfExportStatus(drift.Empty()), "dir": dir, "files": len(files), statusDrift: drift}, drift.Empty())
+	}
+	if drift.Empty() {
+		w.printf("%s is up to date (%d files)\n", dir, len(files))
+		return 0
+	}
+	printOKFDrift(w, drift)
+	w.printf("%s differs from the sources; run ai-rulez export okf (or generate) to update it\n", dir)
+	return exitOKFProblems
 }
 
 func okfExportStatus(upToDate bool) string {

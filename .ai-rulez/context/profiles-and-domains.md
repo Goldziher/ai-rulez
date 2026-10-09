@@ -15,7 +15,7 @@ x-ai-rulez:
     summary: Domain organization, profile configuration, and team-based output tailoring.
 ---
 
-# Profiles and Domains
+## Profiles and Domains
 
 - Root content under `.ai-rulez/rules`, `context`, `skills`, `agents`, and `commands` is always included.
 - Domain content lives under `.ai-rulez/domains/{name}/` and is included when the domain is in the active profile. Globally-active builtin domains and domains sourced from external includes (`FromInclude`) are always included regardless of the active profile.
