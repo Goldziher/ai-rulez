@@ -46,7 +46,7 @@ func TestInit_BasicStructure(t *testing.T) {
 	defer commands.InitCmd.Flags().Set("skip-content", "false")
 
 	// Run init command
-	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
+	_ = commands.InitCmd.RunE(commands.InitCmd, []string{"test-project"}) //nolint:errcheck // the test asserts on the files
 
 	// Assert basic structure was created
 	assert.DirExists(t, ".ai-rulez")
@@ -80,7 +80,7 @@ func TestInit_ConfigConventionDir(t *testing.T) {
 	defer commands.InitCmd.Flags().Set("config-dir", "")
 	defer commands.InitCmd.Flags().Set("skip-content", "false")
 
-	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
+	_ = commands.InitCmd.RunE(commands.InitCmd, []string{"test-project"}) //nolint:errcheck // the test asserts on the files
 
 	assert.DirExists(t, ".config/ai-rulez/rules")
 	assert.DirExists(t, ".config/ai-rulez/context")
@@ -105,7 +105,7 @@ func TestInit_WithDomains(t *testing.T) {
 	defer commands.InitCmd.Flags().Set("skip-content", "false")
 
 	// Run init command
-	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
+	_ = commands.InitCmd.RunE(commands.InitCmd, []string{"test-project"}) //nolint:errcheck // the test asserts on the files
 
 	// Assert domain directories were created
 	assert.DirExists(t, ".ai-rulez/domains/backend")
@@ -137,7 +137,7 @@ func TestInit_WithExampleContent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run init command (don't skip content)
-	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
+	_ = commands.InitCmd.RunE(commands.InitCmd, []string{"test-project"}) //nolint:errcheck // the test asserts on the files
 
 	// Assert example content files exist
 	assert.FileExists(t, ".ai-rulez/rules/code-quality.md")
@@ -184,7 +184,7 @@ func TestInit_SkipContent(t *testing.T) {
 	defer commands.InitCmd.Flags().Set("skip-content", "false")
 
 	// Run init command
-	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
+	_ = commands.InitCmd.RunE(commands.InitCmd, []string{"test-project"}) //nolint:errcheck // the test asserts on the files
 
 	// Assert structure exists but no example files
 	assert.DirExists(t, ".ai-rulez/rules")
@@ -213,7 +213,7 @@ func TestInit_ExampleMCPServersInlined(t *testing.T) {
 	defer commands.InitCmd.Flags().Set("skip-content", "false")
 
 	// Run init command
-	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
+	_ = commands.InitCmd.RunE(commands.InitCmd, []string{"test-project"}) //nolint:errcheck // the test asserts on the files
 
 	// Assert config.toml exists and contains commented MCP server example
 	assert.FileExists(t, ".ai-rulez/config.toml")
@@ -248,7 +248,7 @@ func TestInit_ProjectNameFromDirectory(t *testing.T) {
 	defer commands.InitCmd.Flags().Set("skip-content", "false")
 
 	// Run init command without project name argument
-	commands.InitCmd.Run(commands.InitCmd, []string{})
+	_ = commands.InitCmd.RunE(commands.InitCmd, []string{}) //nolint:errcheck // the test asserts on the files
 
 	// Read config and verify project name is directory name
 	content, err := os.ReadFile(".ai-rulez/config.toml")
@@ -272,7 +272,7 @@ func TestInit_DomainsWithSpaces(t *testing.T) {
 	defer commands.InitCmd.Flags().Set("skip-content", "false")
 
 	// Run init command
-	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
+	_ = commands.InitCmd.RunE(commands.InitCmd, []string{"test-project"}) //nolint:errcheck // the test asserts on the files
 
 	// Assert trimmed domain names were created
 	assert.DirExists(t, ".ai-rulez/domains/backend")

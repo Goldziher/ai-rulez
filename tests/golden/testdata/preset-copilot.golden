@@ -118,38 +118,38 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .github/agents/architect.agent.md
+  remove file: .github/agents/tester.agent.md
+  remove file: .github/copilot-instructions.md
+  remove file: .github/hooks/ai-rulez.json
+  remove file: .github/instructions/always.instructions.md
+  remove file: .github/instructions/typescript.instructions.md
+  remove file: .github/prompts/build.prompt.md
+  remove file: .github/prompts/ship.prompt.md
+  remove file: .github/skills/deployer/SKILL.md
+  remove file: .github/skills/reviewer/SKILL.md
+  remove file: .github/skills/reviewer/references/checklist.md
+  remove file: .github/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: .vscode/mcp.json
+  remove file: .vscode/settings.json
+  remove dir (if empty): .vscode
+  remove dir (if empty): .github/skills/reviewer/scripts
+  remove dir (if empty): .github/skills/reviewer/references
+  remove dir (if empty): .github/skills/reviewer
+  remove dir (if empty): .github/skills/deployer
+  remove dir (if empty): .github/skills
+  remove dir (if empty): .github/prompts
+  remove dir (if empty): .github/instructions
+  remove dir (if empty): .github/hooks
+  remove dir (if empty): .github/agents
+  remove dir (if empty): .github
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .github/agents/architect.agent.md
-INFO    remove file: .github/agents/tester.agent.md
-INFO    remove file: .github/copilot-instructions.md
-INFO    remove file: .github/hooks/ai-rulez.json
-INFO    remove file: .github/instructions/always.instructions.md
-INFO    remove file: .github/instructions/typescript.instructions.md
-INFO    remove file: .github/prompts/build.prompt.md
-INFO    remove file: .github/prompts/ship.prompt.md
-INFO    remove file: .github/skills/deployer/SKILL.md
-INFO    remove file: .github/skills/reviewer/SKILL.md
-INFO    remove file: .github/skills/reviewer/references/checklist.md
-INFO    remove file: .github/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: .vscode/mcp.json
-INFO    remove file: .vscode/settings.json
-INFO    remove dir (if empty): .vscode
-INFO    remove dir (if empty): .github/skills/reviewer/scripts
-INFO    remove dir (if empty): .github/skills/reviewer/references
-INFO    remove dir (if empty): .github/skills/reviewer
-INFO    remove dir (if empty): .github/skills/deployer
-INFO    remove dir (if empty): .github/skills
-INFO    remove dir (if empty): .github/prompts
-INFO    remove dir (if empty): .github/instructions
-INFO    remove dir (if empty): .github/hooks
-INFO    remove dir (if empty): .github/agents
-INFO    remove dir (if empty): .github
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=15 directories=11
+Removed generated files: 15 files, 11 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

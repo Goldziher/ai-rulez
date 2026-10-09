@@ -105,31 +105,31 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .commandcode/agents/architect.md
+  remove file: .commandcode/agents/tester.md
+  remove file: .commandcode/commands/build.md
+  remove file: .commandcode/commands/ship.md
+  remove file: .commandcode/settings.json
+  remove file: .commandcode/skills/deployer/SKILL.md
+  remove file: .commandcode/skills/reviewer/SKILL.md
+  remove file: .commandcode/skills/reviewer/references/checklist.md
+  remove file: .commandcode/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove dir (if empty): .commandcode/skills/reviewer/scripts
+  remove dir (if empty): .commandcode/skills/reviewer/references
+  remove dir (if empty): .commandcode/skills/reviewer
+  remove dir (if empty): .commandcode/skills/deployer
+  remove dir (if empty): .commandcode/skills
+  remove dir (if empty): .commandcode/commands
+  remove dir (if empty): .commandcode/agents
+  remove dir (if empty): .commandcode
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .commandcode/agents/architect.md
-INFO    remove file: .commandcode/agents/tester.md
-INFO    remove file: .commandcode/commands/build.md
-INFO    remove file: .commandcode/commands/ship.md
-INFO    remove file: .commandcode/settings.json
-INFO    remove file: .commandcode/skills/deployer/SKILL.md
-INFO    remove file: .commandcode/skills/reviewer/SKILL.md
-INFO    remove file: .commandcode/skills/reviewer/references/checklist.md
-INFO    remove file: .commandcode/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .commandcode/skills/reviewer/scripts
-INFO    remove dir (if empty): .commandcode/skills/reviewer/references
-INFO    remove dir (if empty): .commandcode/skills/reviewer
-INFO    remove dir (if empty): .commandcode/skills/deployer
-INFO    remove dir (if empty): .commandcode/skills
-INFO    remove dir (if empty): .commandcode/commands
-INFO    remove dir (if empty): .commandcode/agents
-INFO    remove dir (if empty): .commandcode
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=11 directories=8
+Removed generated files: 11 files, 8 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

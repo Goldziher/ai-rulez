@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/Goldziher/ai-rulez/v5/cmd/commands"
@@ -19,8 +18,7 @@ func main() {
 	// The Sigstore backend checks signatures; internal/signing does not link it itself.
 	signing.UseBackend(sigstore.New())
 
-	if err := commands.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, commands.FormatError(err))
-		os.Exit(1)
-	}
+	// Main renders a failure once and returns the exit code of the contract; this
+	// is the only os.Exit in the CLI.
+	os.Exit(commands.Main())
 }

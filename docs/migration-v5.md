@@ -160,6 +160,36 @@ hashes = "full"
 - **Exit codes follow one contract**: 0 ok, 1 the command could not run (or the configuration is invalid or an older
   version), 2 findings or drift. See [the CLI reference](cli.md#exit-codes). `lock` keeps its documented codes.
 
+### Output streams, errors and environment
+
+- **Results go to stdout, diagnostics to stderr, and `-q` never hides a result.** `list rules|context|skills|agents|commands|checks`,
+  `domain list`, `profile list`, `include list`, `skill list`, `clean --dry-run` and `lock --check` used to print through
+  the logger on stderr, so `-q` erased them. They now print on stdout. *Migrate:* scripts that read stderr for these
+  lists read stdout, or use `--format json`. `-q` now removes progress, information and success lines only; warnings,
+  errors and hints stay (it used to hide warnings too).
+- **One error rendering for every command.** `Error: <message>`, an optional `Validation errors:` list and
+  `Hint: <hint>` on stderr. The `ERROR Failed to <verb> ... error=... hint=...` log-style errors of the `add`, `remove`,
+  `list`, `domain`, `profile` and `include` family, the doubled `ERROR` plus `Error:` lines of `validate` and `scan`,
+  and the bare messages of `review`, `eval run` and `telemetry enable` are gone. Under `--format json` a failure also
+  writes `{"status": "error", "error": ..., "hint": ..., "exit_code": n}` to stdout (it carries `schema_version` like
+  every document). *Migrate:* scripts that grep stderr for the old wording match `Error:`; scripts that parse stdout
+  under `--format json` now always get a document.
+- **Exit codes are unchanged** (`0` ok, `1` could not run, usage errors included, `2` findings or drift, `3` `lock` only),
+  but are now produced in one place. A refused confirmation (`clean`, `remove`, `--yes` missing in a non-interactive
+  shell) exits `1`, as before; `generate --user --clean` declining a prompt used to exit `0` and now exits `1`.
+- **Confirmation prompts are written to stderr**, not stdout, so a piped stdout is never polluted.
+- **Unprefixed environment variables are ignored.** `DEBUG`, `QUIET` and `VERBOSE` used to change the CLI's output
+  (they were read by an unprefixed `AutomaticEnv`). Use `AI_RULEZ_DEBUG=1` / `AI_RULEZ_QUIET=1`.
+  `AI_RULEZ_*` variables are listed in [the CLI reference](cli.md#environment-variables).
+- **`~/.ai-rulez.{toml,yaml,json}` and `./.ai-rulez.*` are no longer read** by the root command. They were never used
+  for settings; the lookup only printed "Using config file".
+- **`--verbose` / `-V` is removed** (it did nothing beyond that line). Use `--debug` / `-D`.
+- **`--config-dir` is a global flag.** Commands that declare their own `--config-dir` / `-n` keep it; the content
+  commands (`add`, `remove`, `list`, `domain`, `profile`, `include`, `skill`) still auto-detect `.ai-rulez`, then
+  `.config/ai-rulez`.
+- **`--format text|json` on more commands:** `generate` (`--check`, `--dry-run`, the summary), `clean`, `sign`,
+  `export okf` and `version`.
+
 ### Outputs
 
 - **`[[plugins]]` no longer writes `.claude/plugins.json` or `.codex/plugins.json`.** No tool read them. The table

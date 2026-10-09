@@ -27,7 +27,7 @@ var removeRuleCmd = &cobra.Command{
 
 Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runRemoveRule,
+	RunE: runRemoveRule,
 }
 
 var removeContextCmd = &cobra.Command{
@@ -37,7 +37,7 @@ var removeContextCmd = &cobra.Command{
 
 Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runRemoveContext,
+	RunE: runRemoveContext,
 }
 
 var removeSkillCmd = &cobra.Command{
@@ -47,15 +47,15 @@ var removeSkillCmd = &cobra.Command{
 
 Use --yes to skip confirmation prompts.`,
 	Args: cobra.ExactArgs(1),
-	Run:  runRemoveSkill,
+	RunE: runRemoveSkill,
 }
 
 var removeAgentCmd = &cobra.Command{
 	Use:   "agent <name>",
 	Short: "Remove an agent",
 	Args:  cobra.ExactArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
-		runRemoveItem(args[0], crud.ContentTypeAgents, "agent", "agent")
+	RunE: func(_ *cobra.Command, args []string) error {
+		return runRemoveItem(args[0], crud.ContentTypeAgents, "agent", "agent")
 	},
 }
 
@@ -63,8 +63,8 @@ var removeCommandCmd = &cobra.Command{
 	Use:   "command <name>",
 	Short: "Remove a command",
 	Args:  cobra.ExactArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
-		runRemoveItem(args[0], crud.ContentTypeCommands, "command", "command")
+	RunE: func(_ *cobra.Command, args []string) error {
+		return runRemoveItem(args[0], crud.ContentTypeCommands, "command", "command")
 	},
 }
 
@@ -72,8 +72,8 @@ var removeCheckCmd = &cobra.Command{
 	Use:   "check <name>",
 	Short: "Remove a code-review check",
 	Args:  cobra.ExactArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
-		runRemoveItem(args[0], crud.ContentTypeChecks, "check", "check")
+	RunE: func(_ *cobra.Command, args []string) error {
+		return runRemoveItem(args[0], crud.ContentTypeChecks, "check", "check")
 	},
 }
 
@@ -93,32 +93,35 @@ func init() {
 	RemoveCmd.AddCommand(removeSkillCmd)
 }
 
-func runRemoveRule(_ *cobra.Command, args []string) {
-	runRemoveItem(args[0], "rules", "rule", "Rule")
+func runRemoveRule(_ *cobra.Command, args []string) error {
+	return runRemoveItem(args[0], "rules", "rule", "Rule")
 }
 
-func runRemoveContext(_ *cobra.Command, args []string) {
-	runRemoveItem(args[0], "context", "context", "Context")
+func runRemoveContext(_ *cobra.Command, args []string) error {
+	return runRemoveItem(args[0], "context", "context", "Context")
 }
 
-func runRemoveSkill(_ *cobra.Command, args []string) {
-	runRemoveItem(args[0], "skills", "skill", "Skill")
+func runRemoveSkill(_ *cobra.Command, args []string) error {
+	return runRemoveItem(args[0], "skills", "skill", "Skill")
 }
 
 // runRemoveItem removes the content file name of type ftype after confirmation.
 // label names the item in the prompt and errors, doneLabel in the success line.
-func runRemoveItem(name, ftype, label, doneLabel string) {
+func runRemoveItem(name, ftype, label, doneLabel string) error {
 	resourceName := fmt.Sprintf("%s %s", label, name)
 	if removeDomain != "" {
 		resourceName = fmt.Sprintf("%s %s in domain %s", label, name, removeDomain)
 	}
-	confirmRemovalUnlessYes(removeForce, "", resourceName, "Operation canceled")
+	if err := confirmRemovalUnlessYes(removeForce, "", resourceName, "Operation canceled"); err != nil {
+		return fail(err)
+	}
 	op, err := newWritingOperator(removeLocal)
 	if err != nil {
-		fatal("Failed to create CRUD operator", err)
+		return failMsg("Failed to create CRUD operator", err)
 	}
 	if err := op.RemoveFile(cmdContext(), removeDomain, ftype, name); err != nil {
-		fatal("Failed to remove "+label, err)
+		return failMsg("Failed to remove "+label, err)
 	}
 	logger.Info(doneLabel+" removed successfully", "name", name)
+	return nil
 }

@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strings"
 
@@ -74,10 +73,7 @@ judge passes, 2 when it does not (or drifted), 1 when it could not run.`,
 		if err != nil {
 			return err
 		}
-		if code != 0 {
-			os.Exit(code)
-		}
-		return nil
+		return exitStatus(code)
 	},
 }
 

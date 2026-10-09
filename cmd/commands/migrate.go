@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -49,8 +48,8 @@ idempotent; --dry-run and --check write nothing.`,
   ai-rulez migrate v5
   ai-rulez migrate v5 --recursive --check --format json`,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		os.Exit(runMigrate(cmd.OutOrStdout(), args[0]))
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return exitStatus(runMigrate(cmd.OutOrStdout(), args[0]))
 	},
 }
 
@@ -72,11 +71,11 @@ func runMigrate(out io.Writer, target string) int {
 	switch strings.TrimPrefix(strings.ToLower(target), "v") {
 	case "5", "5.0":
 	default:
-		fmtError(fmt.Errorf("unsupported migration target %q: use v5 or okf (run `ai-rulez migrate v5`)", target))
+		renderStderr(fmt.Errorf("unsupported migration target %q: use v5 or okf (run `ai-rulez migrate v5`)", target))
 		return 1
 	}
 	if migrateFormat != formatText && migrateFormat != formatJSON {
-		fmtError(fmt.Errorf("unsupported --format %q: use text or json", migrateFormat))
+		renderStderr(fmt.Errorf("unsupported --format %q: use text or json", migrateFormat))
 		return 1
 	}
 
@@ -90,13 +89,13 @@ func runMigrate(out io.Writer, target string) int {
 		Write:         migrateWrite,
 	})
 	if err != nil {
-		fmtError(err)
+		renderStderr(err)
 		return 1
 	}
 
 	if migrateFormat == formatJSON {
 		if err := writeRawJSON(out, report); err != nil {
-			fmtError(err)
+			renderStderr(err)
 			return 1
 		}
 	} else {
@@ -114,7 +113,7 @@ func runMigrate(out io.Writer, target string) int {
 
 func runMigrateOKFChecked(out io.Writer) int {
 	if migrateFormat != formatText && migrateFormat != formatJSON {
-		fmtError(fmt.Errorf("unsupported --format %q: use text or json", migrateFormat))
+		renderStderr(fmt.Errorf("unsupported --format %q: use text or json", migrateFormat))
 		return 1
 	}
 	return runMigrateOKF(cmdContext(), out)

@@ -112,40 +112,40 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .devin/agents/architect.md
+  remove file: .devin/agents/tester.md
+  remove file: .devin/config.json
+  remove file: .devin/hooks.v1.json
+  remove file: .devin/mcp_config.json
+  remove file: .devin/rules/always.md
+  remove file: .devin/rules/auto.md
+  remove file: .devin/rules/context-architecture.md
+  remove file: .devin/rules/context-overview.md
+  remove file: .devin/rules/manual.md
+  remove file: .devin/rules/typescript.md
+  remove file: .devin/skills/build/SKILL.md
+  remove file: .devin/skills/deployer/SKILL.md
+  remove file: .devin/skills/reviewer/SKILL.md
+  remove file: .devin/skills/reviewer/references/checklist.md
+  remove file: .devin/skills/reviewer/scripts/run.sh
+  remove file: .devin/skills/ship/SKILL.md
+  remove file: .mcp.json
+  remove dir (if empty): .devin/skills/ship
+  remove dir (if empty): .devin/skills/reviewer/scripts
+  remove dir (if empty): .devin/skills/reviewer/references
+  remove dir (if empty): .devin/skills/reviewer
+  remove dir (if empty): .devin/skills/deployer
+  remove dir (if empty): .devin/skills/build
+  remove dir (if empty): .devin/skills
+  remove dir (if empty): .devin/rules
+  remove dir (if empty): .devin/agents
+  remove dir (if empty): .devin
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .devin/agents/architect.md
-INFO    remove file: .devin/agents/tester.md
-INFO    remove file: .devin/config.json
-INFO    remove file: .devin/hooks.v1.json
-INFO    remove file: .devin/mcp_config.json
-INFO    remove file: .devin/rules/always.md
-INFO    remove file: .devin/rules/auto.md
-INFO    remove file: .devin/rules/context-architecture.md
-INFO    remove file: .devin/rules/context-overview.md
-INFO    remove file: .devin/rules/manual.md
-INFO    remove file: .devin/rules/typescript.md
-INFO    remove file: .devin/skills/build/SKILL.md
-INFO    remove file: .devin/skills/deployer/SKILL.md
-INFO    remove file: .devin/skills/reviewer/SKILL.md
-INFO    remove file: .devin/skills/reviewer/references/checklist.md
-INFO    remove file: .devin/skills/reviewer/scripts/run.sh
-INFO    remove file: .devin/skills/ship/SKILL.md
-INFO    remove file: .mcp.json
-INFO    remove dir (if empty): .devin/skills/ship
-INFO    remove dir (if empty): .devin/skills/reviewer/scripts
-INFO    remove dir (if empty): .devin/skills/reviewer/references
-INFO    remove dir (if empty): .devin/skills/reviewer
-INFO    remove dir (if empty): .devin/skills/deployer
-INFO    remove dir (if empty): .devin/skills/build
-INFO    remove dir (if empty): .devin/skills
-INFO    remove dir (if empty): .devin/rules
-INFO    remove dir (if empty): .devin/agents
-INFO    remove dir (if empty): .devin
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=18 directories=10
+Removed generated files: 18 files, 10 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

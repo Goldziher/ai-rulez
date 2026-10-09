@@ -35,12 +35,12 @@ func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
 
 	// Add a custom rule
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"Custom Workflow Rule",
+		"custom-workflow-rule",
 		"--content", "Custom workflow rule",
 		"--priority", "high")
 
 	// Verify rule was added
-	ruleFile := filepath.Join(s.workingDir, ".ai-rulez", "rules", "Custom Workflow Rule.md")
+	ruleFile := filepath.Join(s.workingDir, ".ai-rulez", "rules", "custom-workflow-rule.md")
 	s.True(testutil.FileExists(s.T(), ruleFile))
 
 	// Add a skill
@@ -79,22 +79,22 @@ presets = ["claude", "cursor"]
 
 	// Add rules for different providers
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"Claude Rule",
+		"claude-rule",
 		"--content", "Claude-specific rule")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"Cursor Rule",
+		"cursor-rule",
 		"--content", "Cursor-specific rule")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"Universal Rule",
+		"universal-rule",
 		"--content", "Universal rule for all providers")
 
 	// Verify rules were added
 	ruleDir := filepath.Join(s.workingDir, ".ai-rulez", "rules")
-	s.True(testutil.FileExists(s.T(), filepath.Join(ruleDir, "Claude Rule.md")))
-	s.True(testutil.FileExists(s.T(), filepath.Join(ruleDir, "Cursor Rule.md")))
-	s.True(testutil.FileExists(s.T(), filepath.Join(ruleDir, "Universal Rule.md")))
+	s.True(testutil.FileExists(s.T(), filepath.Join(ruleDir, "claude-rule.md")))
+	s.True(testutil.FileExists(s.T(), filepath.Join(ruleDir, "cursor-rule.md")))
+	s.True(testutil.FileExists(s.T(), filepath.Join(ruleDir, "universal-rule.md")))
 }
 
 func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
@@ -103,21 +103,21 @@ func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
 
 	// Add a new rule
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"CRUD Test Rule",
+		"crud-test-rule",
 		"--content", "CRUD test rule")
 	result.AssertOutputContains(s.T(), "Rule added successfully")
 
-	ruleFile := filepath.Join(s.workingDir, ".ai-rulez", "rules", "CRUD Test Rule.md")
+	ruleFile := filepath.Join(s.workingDir, ".ai-rulez", "rules", "crud-test-rule.md")
 	s.True(testutil.FileExists(s.T(), ruleFile))
 
 	content := testutil.ReadFile(s.T(), ruleFile)
 	s.Contains(content, "CRUD test rule")
 
 	// Update the rule by removing and re-adding with new content
-	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "rule", "CRUD Test Rule", "--yes")
+	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "rule", "crud-test-rule", "--yes")
 
 	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"CRUD Test Rule",
+		"crud-test-rule",
 		"--content", "Updated CRUD rule",
 		"--priority", "critical")
 	result.AssertOutputContains(s.T(), "Rule added successfully")
@@ -127,7 +127,7 @@ func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
 	s.Contains(content, "critical")
 
 	// Delete the rule
-	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "rule", "CRUD Test Rule", "--yes")
+	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "rule", "crud-test-rule", "--yes")
 	result.AssertOutputContains(s.T(), "Rule removed successfully")
 
 	s.False(testutil.FileExists(s.T(), ruleFile))
@@ -169,11 +169,11 @@ func (s *WorkflowsTestSuite) TestConfigEvolutionWorkflow() {
 
 	// Add context to the project
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "context",
-		"Project Guidelines",
+		"project-guidelines",
 		"--content", "Added after initial setup")
 
 	// Verify context was added
-	contextFile := filepath.Join(s.workingDir, ".ai-rulez", "context", "Project Guidelines.md")
+	contextFile := filepath.Join(s.workingDir, ".ai-rulez", "context", "project-guidelines.md")
 	s.True(testutil.FileExists(s.T(), contextFile))
 
 	contextContent := testutil.ReadFile(s.T(), contextFile)
@@ -181,11 +181,11 @@ func (s *WorkflowsTestSuite) TestConfigEvolutionWorkflow() {
 
 	// Add additional rule
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"Additional Rule",
+		"additional-rule",
 		"--content", "Additional rule for evolved config")
 
 	// Verify rule was added
-	ruleFile := filepath.Join(s.workingDir, ".ai-rulez", "rules", "Additional Rule.md")
+	ruleFile := filepath.Join(s.workingDir, ".ai-rulez", "rules", "additional-rule.md")
 	s.True(testutil.FileExists(s.T(), ruleFile))
 
 	ruleContent := testutil.ReadFile(s.T(), ruleFile)

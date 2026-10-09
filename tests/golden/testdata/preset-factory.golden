@@ -108,34 +108,34 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .factory/commands/build.md
+  remove file: .factory/commands/ship.md
+  remove file: .factory/droids/architect.md
+  remove file: .factory/droids/tester.md
+  remove file: .factory/hooks.json
+  remove file: .factory/mcp.json
+  remove file: .factory/skills/deployer/SKILL.md
+  remove file: .factory/skills/review-guidelines/SKILL.md
+  remove file: .factory/skills/reviewer/SKILL.md
+  remove file: .factory/skills/reviewer/references/checklist.md
+  remove file: .factory/skills/reviewer/scripts/run.sh
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove dir (if empty): .factory/skills/reviewer/scripts
+  remove dir (if empty): .factory/skills/reviewer/references
+  remove dir (if empty): .factory/skills/reviewer
+  remove dir (if empty): .factory/skills/review-guidelines
+  remove dir (if empty): .factory/skills/deployer
+  remove dir (if empty): .factory/skills
+  remove dir (if empty): .factory/droids
+  remove dir (if empty): .factory/commands
+  remove dir (if empty): .factory
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .factory/commands/build.md
-INFO    remove file: .factory/commands/ship.md
-INFO    remove file: .factory/droids/architect.md
-INFO    remove file: .factory/droids/tester.md
-INFO    remove file: .factory/hooks.json
-INFO    remove file: .factory/mcp.json
-INFO    remove file: .factory/skills/deployer/SKILL.md
-INFO    remove file: .factory/skills/review-guidelines/SKILL.md
-INFO    remove file: .factory/skills/reviewer/SKILL.md
-INFO    remove file: .factory/skills/reviewer/references/checklist.md
-INFO    remove file: .factory/skills/reviewer/scripts/run.sh
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .factory/skills/reviewer/scripts
-INFO    remove dir (if empty): .factory/skills/reviewer/references
-INFO    remove dir (if empty): .factory/skills/reviewer
-INFO    remove dir (if empty): .factory/skills/review-guidelines
-INFO    remove dir (if empty): .factory/skills/deployer
-INFO    remove dir (if empty): .factory/skills
-INFO    remove dir (if empty): .factory/droids
-INFO    remove dir (if empty): .factory/commands
-INFO    remove dir (if empty): .factory
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=13 directories=9
+Removed generated files: 13 files, 9 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

@@ -120,40 +120,40 @@ INFO  Generated files are up to date roots=1
 ## step 5: ai-rulez clean --yes
 exit: 0
 --- stdout
+Clean plan (profile default)
+  remove file: .agents/skills/build/SKILL.md
+  remove file: .agents/skills/build/agents/openai.yaml
+  remove file: .agents/skills/deployer/SKILL.md
+  remove file: .agents/skills/reviewer/SKILL.md
+  remove file: .agents/skills/reviewer/references/checklist.md
+  remove file: .agents/skills/reviewer/scripts/run.sh
+  remove file: .agents/skills/ship/SKILL.md
+  remove file: .agents/skills/ship/agents/openai.yaml
+  remove file: .codex/agents/architect.toml
+  remove file: .codex/agents/tester.toml
+  remove file: .codex/config.toml
+  remove file: .codex/hooks.json
+  remove file: .codex/rules/ai-rulez.rules
+  remove file: .mcp.json
+  remove file: AGENTS.md
+  remove dir (if empty): .codex/rules
+  remove dir (if empty): .codex/agents
+  remove dir (if empty): .codex
+  remove dir (if empty): .agents/skills/ship/agents
+  remove dir (if empty): .agents/skills/ship
+  remove dir (if empty): .agents/skills/reviewer/scripts
+  remove dir (if empty): .agents/skills/reviewer/references
+  remove dir (if empty): .agents/skills/reviewer
+  remove dir (if empty): .agents/skills/deployer
+  remove dir (if empty): .agents/skills/build/agents
+  remove dir (if empty): .agents/skills/build
+  remove dir (if empty): .agents/skills
+  remove dir (if empty): .agents
+  remove manifest: .ai-rulez/.generated-manifest.json
+  remove local manifest: .ai-rulez/.generated-manifest.local.json
+  strip ai-rulez block from .gitignore
 --- stderr
-INFO  Clean plan profile=default
-INFO    remove file: .agents/skills/build/SKILL.md
-INFO    remove file: .agents/skills/build/agents/openai.yaml
-INFO    remove file: .agents/skills/deployer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/SKILL.md
-INFO    remove file: .agents/skills/reviewer/references/checklist.md
-INFO    remove file: .agents/skills/reviewer/scripts/run.sh
-INFO    remove file: .agents/skills/ship/SKILL.md
-INFO    remove file: .agents/skills/ship/agents/openai.yaml
-INFO    remove file: .codex/agents/architect.toml
-INFO    remove file: .codex/agents/tester.toml
-INFO    remove file: .codex/config.toml
-INFO    remove file: .codex/hooks.json
-INFO    remove file: .codex/rules/ai-rulez.rules
-INFO    remove file: .mcp.json
-INFO    remove file: AGENTS.md
-INFO    remove dir (if empty): .codex/rules
-INFO    remove dir (if empty): .codex/agents
-INFO    remove dir (if empty): .codex
-INFO    remove dir (if empty): .agents/skills/ship/agents
-INFO    remove dir (if empty): .agents/skills/ship
-INFO    remove dir (if empty): .agents/skills/reviewer/scripts
-INFO    remove dir (if empty): .agents/skills/reviewer/references
-INFO    remove dir (if empty): .agents/skills/reviewer
-INFO    remove dir (if empty): .agents/skills/deployer
-INFO    remove dir (if empty): .agents/skills/build/agents
-INFO    remove dir (if empty): .agents/skills/build
-INFO    remove dir (if empty): .agents/skills
-INFO    remove dir (if empty): .agents
-INFO    remove manifest: .ai-rulez/.generated-manifest.json
-INFO    remove local manifest: .ai-rulez/.generated-manifest.local.json
-INFO    strip ai-rulez block from .gitignore
-INFO  Removed generated files files=15 directories=13
+Removed generated files: 15 files, 13 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755
