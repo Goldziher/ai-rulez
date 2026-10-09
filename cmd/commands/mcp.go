@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -132,17 +131,4 @@ func init() {
 	registerDynamicServeFlags(MCPCmd)
 	MCPCmd.Flags().String(flagMCPRoot, "", "Directory the authoring tools may read and write; working_directory must lie inside it (default: the current directory)")
 	MCPCmd.Flags().Bool(flagAllowAnyDir, false, "Let the authoring tools use any working_directory, not only the root")
-	MCPCmd.Flags().String("transport", "stdio", "Transport method (stdio, websocket)")
-	MCPCmd.Flags().String("address", "", "Address to bind to (for websocket transport)")
-	MCPCmd.Flags().Int("port", 3000, "Port to bind to (for websocket transport)")
-
-	if err := MCPCmd.Flags().MarkHidden("transport"); err != nil {
-		logger.Debug("Failed to hide transport flag", "error", err)
-	}
-	if err := MCPCmd.Flags().MarkHidden("address"); err != nil {
-		logger.Debug("Failed to hide address flag", "error", err)
-	}
-	if err := MCPCmd.Flags().MarkHidden("port"); err != nil {
-		logger.Debug("Failed to hide port flag", "error", err)
-	}
 }
