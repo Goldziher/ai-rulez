@@ -293,6 +293,12 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 
 ### Fixed
 
+- **Content is never read, written or deleted through a symlink inside the configuration directory.** `add`, `edit`, `show`, `remove` and the MCP `create_*`, `update_*`, `read_*` and `delete_*` tools refuse a symlinked domain, content directory, skill directory or content file, so a link can no longer carry a write to `/tmp/outdir` or a read to any readable file (also under `mcp --root`).
+- **`index` and `log` are reserved content names**: `add` refuses them, and `list`, `show`, `edit` and `remove` treat the generated `index.md` and `log.md` as listings, not as a rule; the "no rules to remove" hint on a missing item now reads "no rules yet".
+- **`list_*` MCP results use lower-case keys** (`name`, `path`, `type`, ...) and carry a typed output schema instead of `[]any`.
+- **`edit` and the MCP `update_*` tools keep the file's priority, targets, description and other frontmatter** when only the content is given; before they reset the priority to medium and dropped the targets and a skill's description (AR801).
+- **No log line prints a credentialed include or skill source**; `include add` and `skill install` warn that a credential in the URL is stored in `config.toml` (use a git credential helper or an SSH remote), and their errors are redacted too.
+- **`include add` / `add_include` refuse a local source outside the project** with the loader's own check, and **`include remove`, `skill remove` and the MCP `remove_include` / `uninstall_skill` edit `config.toml` without loading the project**, so a bad include can always be removed.
 - **The default `ai-rulez mcp` answers a request sent before `initialize` with `-32600`**, like `--serve-skills`, instead of error code 0.
 - **`validate --offline`** skips fetching remote includes, as `generate --offline` does, so `validate --config-only` works with an unreachable remote include.
 - **`migrate v5` keeps CRLF line endings** in `config.toml`; YAML frontmatter after a UTF-8 byte order mark is parsed as frontmatter.
