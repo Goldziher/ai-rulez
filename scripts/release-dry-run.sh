@@ -53,7 +53,9 @@ awk -v n="$name" '{p=$0; gsub(/^[ \t]+|[ \t]+$/, "", p); split(p, a, /[ \t]+/); 
 echo "==> archive layout"
 mkdir -p "$work/x"
 if [ "$ext" = zip ]; then
-  python3 -I -c 'import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$work/dist/$name" "$work/x"
+  py=python3
+  command -v python3 >/dev/null 2>&1 || py=python
+  "$py" -I -c 'import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$work/dist/$name" "$work/x"
 else
   tar -xzf "$work/dist/$name" -C "$work/x"
 fi
