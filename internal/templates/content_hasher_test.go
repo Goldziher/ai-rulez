@@ -18,8 +18,7 @@ func TestContentHasherMatchesHashContent(t *testing.T) {
 	}
 	h := NewContentHasher()
 	h.WriteString("a")
-	_, err := h.Write([]byte("b"))
-	assert.NoError(t, err)
-	assert.NoError(t, h.WriteByte('c'))
+	h.WriteBytes([]byte("b"))
+	h.Printf("%s", "c")
 	assert.Equal(t, HashContent("abc"), h.Sum())
 }
