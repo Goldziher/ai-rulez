@@ -68,6 +68,9 @@ type procTree struct {
 	// when nothing is left. The run token and marker descriptor still find a
 	// helper that detached.
 	short bool
+	// probe reports whether pid carries the run's token or marker; carries
+	// unless a test replaces it.
+	probe func(pid int) bool
 }
 
 // shortLived marks the tree's command as trusted and short-lived (see Spec.ShortLived).
@@ -82,6 +85,7 @@ func (t *procTree) shortLived() { t.short = true }
 // the tree is still recognized as the run's.
 func configure(cmd *exec.Cmd) *procTree {
 	t := &procTree{tracked: map[int]int64{}, checked: map[int]int64{}, token: newRunToken()}
+	t.probe = t.carries
 	if t.token != "" {
 		cmd.Env = withRunToken(cmd.Env, t.token)
 	}
@@ -112,8 +116,11 @@ func (t *procTree) attach(cmd *exec.Cmd) {
 		return
 	}
 	if t.short {
+		// One lookup of the root's own start time, not a read of the table: it
+		// bounds the sweep after the run to processes that started since.
+		start, _ := processStart(cmd.Process.Pid)
 		t.mu.Lock()
-		t.root = cmd.Process.Pid
+		t.root, t.rootStart = cmd.Process.Pid, start
 		t.mu.Unlock()
 		return
 	}
@@ -277,7 +284,9 @@ func (t *procTree) kill(cmd *exec.Cmd) {
 // adoptCarriers adds to tracked every process of table that carries this run's
 // token in its environment or holds the marker pipe: a helper that detached and
 // was reparented before the watcher saw it. Only the current user's processes
-// started no earlier than the root are searched, each once. The caller holds mu.
+// started no earlier than the root are searched, each once (a descendant cannot
+// be older than its ancestor; when the root's start time is unknown every
+// process is searched). The caller holds mu.
 func (t *procTree) adoptCarriers(table []procEntry) {
 	if t.token == "" && t.markID == 0 {
 		return
@@ -297,7 +306,7 @@ func (t *procTree) adoptCarriers(table []procEntry) {
 		if p.uid >= 0 && p.uid != uid {
 			continue
 		}
-		if t.carries(p.pid) {
+		if t.probe(p.pid) {
 			t.tracked[p.pid] = p.start
 		}
 	}
