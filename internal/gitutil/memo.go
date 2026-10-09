@@ -60,7 +60,7 @@ func memoFrom(ctx context.Context) *Memo {
 // answer). Such a runner's questions are never memoised.
 func (g Git) memoRunner() (r runner.Runner, ok bool) {
 	r = g.runner()
-	if r == nil || !reflect.ValueOf(r).Comparable() {
+	if !reflect.ValueOf(r).Comparable() {
 		return nil, false
 	}
 	return r, true
