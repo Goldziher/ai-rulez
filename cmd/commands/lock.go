@@ -405,7 +405,7 @@ func checkLockAtContext(ctx context.Context, path string) int {
 		return code
 	}
 	// verifyTagsFor decides whether to ask the remotes: --verify-tags or [lock] verify_tags.
-	c := verifyTagsFor(cfg)
+	c := verifyTagsFor(ctx, cfg)
 	if c == 1 {
 		return c
 	}
