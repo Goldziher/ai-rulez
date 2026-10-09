@@ -22,11 +22,11 @@ func TestOKFRoundTripE2E(t *testing.T) {
 	writeTree(t, dst, map[string]string{".ai-rulez/config.toml": "version = \"5.0\"\nname = \"dst\"\npresets = [\"claude\"]\n"})
 
 	// Act and Assert: export, then --check is clean, then drift exits 2.
-	exp := env.run(src, "export", "okf", "-o", bundle)
+	exp := env.run(src, "export", "okf", "--output-dir", bundle)
 	require.Equal(t, 0, exp.ExitCode, exp.Stderr)
 	assert.FileExists(t, filepath.Join(bundle, "index.md"))
 	assert.FileExists(t, filepath.Join(bundle, "skills", "deploy", "SKILL.md"))
-	clean := env.run(src, "export", "okf", "-o", bundle, "--check")
+	clean := env.run(src, "export", "okf", "--output-dir", bundle, "--check")
 	assert.Equal(t, 0, clean.ExitCode, clean.Stdout+clean.Stderr)
 
 	// Lint the bundle.
@@ -59,7 +59,7 @@ func TestOKFRoundTripE2E(t *testing.T) {
 	_, err = f.WriteString("\nhand edit\n")
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
-	drift := env.run(src, "export", "okf", "-o", bundle, "--check")
+	drift := env.run(src, "export", "okf", "--output-dir", bundle, "--check")
 	assert.Equal(t, 2, drift.ExitCode, drift.Stdout+drift.Stderr)
 }
 
