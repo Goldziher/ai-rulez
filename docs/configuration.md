@@ -44,17 +44,17 @@ prints a warning naming the file and the key, with the nearest known key when th
 WARN  Configuration problem: .ai-rulez/config.toml: unknown key "lock.enforc" (did you mean "enforce"?)
 ```
 
-`generate --strict`, or `AI_RULEZ_STRICT=1` in CI, fails with exit code 1 instead. `validate` and `generate` report
+`generate --strict-config`, or `AI_RULEZ_STRICT=1` in CI, fails with exit code 1 instead. `validate` and `generate` report
 the same unknown keys.
 
 `--strict` means something different on each command, and they do not imply one another:
 
 | Command | `--strict` adds |
 | --- | --- |
-| `generate --strict` | Schema check only: an unknown or invalid configuration key fails the run instead of warning. |
+| `generate --strict-config` | Schema check only: an unknown or invalid configuration key fails the run instead of warning. |
 | `validate` | Deep content checks (dead links and references, globs that match nothing, size and duplicate checks, findings `AR###`). Unknown keys already fail `validate` without it. |
 
-Run both in CI: `ai-rulez validate && ai-rulez generate --strict`.
+Run both in CI: `ai-rulez validate && ai-rulez generate --strict-config`.
 
 `generate` also lists the commands it is about to write that your tools will run: `[[hooks]]` commands (and the
 content digest of a hook `script` file, so a changed script behind the same path is listed again), `http` and `prompt`

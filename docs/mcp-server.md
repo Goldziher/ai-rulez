@@ -512,7 +512,7 @@ preset's rendering has its own pins, and `lock --targets <preset>` pins it.
 
 A skill the security scan refuses is not pinned. By default `lock` reports it, pins every other skill, writes the
 lock and exits 3; `validate --strict` lists the refused skills of skill sources with their scan code (`AR0xx`). With
-`lock --strict` any refusal stops `lock` from writing the lock. Either way a refused skill has to be fixed or
+`lock --refuse-findings` any refusal stops `lock` from writing the lock. Either way a refused skill has to be fixed or
 excluded before it can be served under enforcement.
 
 ### Usage telemetry
