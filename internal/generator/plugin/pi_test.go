@@ -28,9 +28,9 @@ func TestGeneratePiPackage(t *testing.T) {
 	assert.Equal(t, "@goldziher/pi-basemind", pkg["name"])
 	assert.Contains(t, pkg["keywords"], "pi-package")
 	assert.Equal(t, map[string]any{
-		"skills": []any{"./.pi/skills"}, "prompts": []any{"./.pi/prompts"},
+		"skills": []any{"./.pi/skills/basemind"}, "prompts": []any{"./.pi/prompts/basemind-check.md"},
 	}, pkg["pi"])
-	assert.Contains(t, pkg["files"], ".pi/")
+	assert.Contains(t, pkg["files"], ".pi/skills/basemind/SKILL.md")
 	skill := outputByPath(t, outputs, ".pi/skills/basemind/SKILL.md")
 	assert.Contains(t, string(skill.RawContent), "name: basemind")
 	assert.NotEmpty(t, outputByPath(t, outputs, ".pi/skills/basemind/references/usage.md").RawContent)
@@ -66,8 +66,8 @@ func TestGeneratePiAndOpenCodeComposePackage(t *testing.T) {
 		assert.Contains(t, pkg, "exports")
 		assert.Contains(t, pkg, "dependencies")
 		assert.Contains(t, pkg, "pi")
-		assert.Contains(t, pkg["files"], ".pi/")
-		assert.Contains(t, pkg["files"], ".opencode/")
+		assert.Contains(t, pkg["files"], ".pi/skills/basemind/SKILL.md")
+		assert.Contains(t, pkg["files"], ".opencode/plugins/basemind.js")
 		assert.Contains(t, pkg["keywords"], "pi-package")
 		if previous != nil {
 			assert.Equal(t, previous, data, "runtime order must not decide manifest contents")
