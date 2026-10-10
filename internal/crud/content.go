@@ -390,26 +390,9 @@ func extractMetadata(filePath string) (priority string, targets []string) {
 
 // listFilesInDirectory is a helper that lists files in a specific directory
 func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]FileInfo, error) {
-	var dirPath string
-
-	switch fileType {
-	case ContentTypeRules:
-		dirPath = op.filesMgr.GetRulesPath(domainName)
-	case ContentTypeContext:
-		dirPath = op.filesMgr.GetContextPath(domainName)
-	case ContentTypeSkills:
-		dirPath = op.filesMgr.GetSkillsPath(domainName)
-	case ContentTypeAgents:
-		dirPath = op.filesMgr.GetAgentsPath(domainName)
-	case ContentTypeCommands:
-		dirPath = op.filesMgr.GetCommandsPath(domainName)
-	case ContentTypeChecks:
-		dirPath = op.filesMgr.GetChecksPath(domainName)
-	default:
-		return nil, oops.
-			With("type", fileType).
-			Hint("Valid types: rules, context, skills, agents, commands, checks.").
-			Errorf("invalid file type: %s", fileType)
+	dirPath, err := op.contentDirPath(domainName, fileType)
+	if err != nil {
+		return nil, err
 	}
 
 	// If directory doesn't exist, return empty list
@@ -420,53 +403,57 @@ func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]Fil
 		return nil, err
 	}
 
-	var fileInfos []FileInfo
-
 	if fileType == ContentTypeSkills {
 		// For skills, list subdirectories (each skill is a directory with SKILL.md)
-		subdirs, err := op.filesMgr.ListSubdirectories(dirPath)
-		if err != nil {
-			return nil, err
-		}
+		return op.listSkillDirectories(domainName, fileType, dirPath)
+	}
+	// For rules and context, list .md files
+	return op.listMarkdownContent(domainName, fileType, dirPath)
+}
 
-		sort.Strings(subdirs)
+// contentDirPath maps a content type to the directory that holds it.
+func (op *OperatorImpl) contentDirPath(domainName, fileType string) (string, error) {
+	switch fileType {
+	case ContentTypeRules:
+		return op.filesMgr.GetRulesPath(domainName), nil
+	case ContentTypeContext:
+		return op.filesMgr.GetContextPath(domainName), nil
+	case ContentTypeSkills:
+		return op.filesMgr.GetSkillsPath(domainName), nil
+	case ContentTypeAgents:
+		return op.filesMgr.GetAgentsPath(domainName), nil
+	case ContentTypeCommands:
+		return op.filesMgr.GetCommandsPath(domainName), nil
+	case ContentTypeChecks:
+		return op.filesMgr.GetChecksPath(domainName), nil
+	default:
+		return "", oops.
+			With("type", fileType).
+			Hint("Valid types: rules, context, skills, agents, commands, checks.").
+			Errorf("invalid file type: %s", fileType)
+	}
+}
 
-		for _, skillName := range subdirs {
-			skillPath := filepath.Join(dirPath, skillName, "SKILL.md")
+// listSkillDirectories lists the skill subdirectories of dirPath, one FileInfo
+// per directory that holds a SKILL.md.
+func (op *OperatorImpl) listSkillDirectories(domainName, fileType, dirPath string) ([]FileInfo, error) {
+	subdirs, err := op.filesMgr.ListSubdirectories(dirPath)
+	if err != nil {
+		return nil, err
+	}
 
-			// Only include if SKILL.md exists and is not a link
-			if op.filesMgr.PathExists(skillPath) && op.filesMgr.Confined(skillPath) == nil {
-				priority, targets := extractMetadata(skillPath)
-				fileInfos = append(fileInfos, FileInfo{
-					Name:     skillName,
-					Path:     skillPath,
-					Type:     fileType,
-					Domain:   domainName,
-					Priority: priority,
-					Targets:  targets,
-				})
-			}
-		}
-	} else {
-		// For rules and context, list .md files
-		files, err := op.filesMgr.ListMarkdownFiles(dirPath)
-		if err != nil {
-			return nil, err
-		}
+	sort.Strings(subdirs)
 
-		sort.Strings(files)
+	var fileInfos []FileInfo
+	for _, skillName := range subdirs {
+		skillPath := filepath.Join(dirPath, skillName, "SKILL.md")
 
-		for _, fileName := range files {
-			filePath := filepath.Join(dirPath, fileName)
-			if op.filesMgr.isGeneratedListing(filePath) {
-				continue // the generated index.md or log.md is not content
-			}
-			name := strings.TrimSuffix(fileName, ".md")
-
-			priority, targets := extractMetadata(filePath)
+		// Only include if SKILL.md exists and is not a link
+		if op.filesMgr.PathExists(skillPath) && op.filesMgr.Confined(skillPath) == nil {
+			priority, targets := extractMetadata(skillPath)
 			fileInfos = append(fileInfos, FileInfo{
-				Name:     name,
-				Path:     filePath,
+				Name:     skillName,
+				Path:     skillPath,
 				Type:     fileType,
 				Domain:   domainName,
 				Priority: priority,
@@ -474,7 +461,36 @@ func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]Fil
 			})
 		}
 	}
+	return fileInfos, nil
+}
 
+// listMarkdownContent lists the .md files of dirPath as content files.
+func (op *OperatorImpl) listMarkdownContent(domainName, fileType, dirPath string) ([]FileInfo, error) {
+	files, err := op.filesMgr.ListMarkdownFiles(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Strings(files)
+
+	var fileInfos []FileInfo
+	for _, fileName := range files {
+		filePath := filepath.Join(dirPath, fileName)
+		if op.filesMgr.isGeneratedListing(filePath) {
+			continue // the generated index.md or log.md is not content
+		}
+		name := strings.TrimSuffix(fileName, ".md")
+
+		priority, targets := extractMetadata(filePath)
+		fileInfos = append(fileInfos, FileInfo{
+			Name:     name,
+			Path:     filePath,
+			Type:     fileType,
+			Domain:   domainName,
+			Priority: priority,
+			Targets:  targets,
+		})
+	}
 	return fileInfos, nil
 }
 
