@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/doctor"
 	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/spf13/cobra"
@@ -67,9 +66,7 @@ func runDoctor(ctx context.Context, out io.Writer) int {
 
 	report := doctor.Run(ctx, doctor.Options{
 		Profile: doctorProfile,
-		Load: func(ctx context.Context, opts ...config.LoadOption) (*config.Config, error) {
-			return loadConfigForCommand(ctx, opts...)
-		},
+		Load:    loadConfigForCommand,
 	})
 
 	var err error

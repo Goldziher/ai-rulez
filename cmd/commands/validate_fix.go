@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -34,7 +35,7 @@ func fixRequested() bool { return validateFix || validateFixUnsafe }
 
 // applyFixes runs the fixers over each report, prints a summary, and removes the
 // fixed findings from the reports so the exit code reflects what is left.
-func applyFixes(reports []*lint.Report, cfgs []*config.Config) error {
+func applyFixes(ctx context.Context, reports []*lint.Report, cfgs []*config.Config) error {
 	var totalApplied, totalOutside, totalSkipped int
 	var diffs strings.Builder
 	var skipped []lint.FixSkipped
@@ -47,7 +48,7 @@ func applyFixes(reports []*lint.Report, cfgs []*config.Config) error {
 			if err == nil {
 				opts.EditRoot = gitutil.Resolve(configDir)
 				opts.DiffRoot = opts.EditRoot
-				if top := gitutil.TopLevel(configDir); top != "" {
+				if top := (gitutil.Git{}).TopLevelContext(ctx, configDir); top != "" {
 					opts.DiffRoot = gitutil.Resolve(top)
 				}
 				// A fix outside .ai-rulez/ edits a hand-written harness file, which
@@ -71,11 +72,11 @@ func applyFixes(reports []*lint.Report, cfgs []*config.Config) error {
 				return ""
 			}
 		}
-		candidates, err := fixCandidates(r, cfg, changedCache)
+		candidates, err := fixCandidates(ctx, r, cfg, changedCache)
 		if err != nil {
 			return err
 		}
-		res, err := lint.ApplyFixes(candidates, opts)
+		res, err := lint.ApplyFixes(candidates, opts) //nolint:contextcheck // the fixers stage file modes through git without a caller context
 		if err != nil {
 			return oops.Wrapf(err, "apply fixes")
 		}
@@ -122,7 +123,7 @@ func appliedOutside(applied []lint.FixApplied, root string) int {
 // fixCandidates is the part of r the fixers may touch: the findings the report
 // would show, narrowed by --analyzer and, for --since/--changed, only those in
 // the changed files themselves (a file that merely refers to one is not edited).
-func fixCandidates(r *lint.Report, cfg *config.Config, cache map[string][]string) ([]lint.Finding, error) {
+func fixCandidates(ctx context.Context, r *lint.Report, cfg *config.Config, cache map[string][]string) ([]lint.Finding, error) {
 	scoped := &lint.Report{Findings: r.Findings}
 	lint.FilterAnalyzers(scoped, validateAnalyzers)
 	rev := changedRev()
@@ -132,7 +133,7 @@ func fixCandidates(r *lint.Report, cfg *config.Config, cache map[string][]string
 	if cfg == nil {
 		return nil, nil
 	}
-	changed, err := changedFiles(cfg, rev, cache)
+	changed, err := changedFiles(ctx, cfg, rev, cache)
 	if err != nil {
 		return nil, err
 	}

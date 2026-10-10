@@ -115,8 +115,8 @@ func generateLoaded(ctx context.Context, cmd *cobra.Command, cfg *config.Config)
 	if err := applyGenerateOverrides(cfg); err != nil {
 		return fail(err)
 	}
-	warnFrontmatter(cfg)
-	if err := importGate(cfg); err != nil {
+	warnFrontmatter(ctx, cfg)
+	if err := importGate(ctx, cfg); err != nil {
 		return fail(err)
 	}
 	if pluginMode && pluginIfConfigured && !cfg.HasPluginAuthoring() {
@@ -409,7 +409,7 @@ func generateCheckCode() int {
 // importGate scans imported content before anything is written, when
 // [lint.security] scan_imports is not "off". Every mode that writes runs it (the
 // in-repo run, plugin bundles and --user); only a dry run skips it.
-func importGate(cfg *config.Config) error {
+func importGate(ctx context.Context, cfg *config.Config) error {
 	if dryRun {
 		return nil
 	}
@@ -417,7 +417,7 @@ func importGate(cfg *config.Config) error {
 	if err := skillSignatureGate(cfg); err != nil {
 		return err
 	}
-	if err := authoredSecretGate(cfg); err != nil {
+	if err := authoredSecretGate(ctx, cfg); err != nil {
 		return err
 	}
 	return enforceScanImports(cfg)

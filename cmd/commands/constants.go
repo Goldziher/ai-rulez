@@ -47,3 +47,11 @@ const (
 // flagRole is the --role flag of generate, tokens, usage and mcp --serve-skills.
 // It always names a role of the project's [[roles]] (see `ai-rulez roles list`).
 const flagRole = "role"
+
+// flagLocal is the --local flag of the config mutators and names the local tree
+// (the machine-local config overlay and the local/ content directory).
+const flagLocal = "local"
+
+// kindInclude is the name of the include command and the kind its change
+// reports carry.
+const kindInclude = "include"

@@ -66,7 +66,7 @@ func (s flagSpec) def() flagDef {
 	case specForce:
 		return flagDef{"force", "", "Overwrite existing files"}
 	case specLocal:
-		return flagDef{"local", "", "Use the machine-local tree (.ai-rulez/local/)"}
+		return flagDef{flagLocal, "", "Use the machine-local tree (.ai-rulez/local/)"}
 	case specNoLocal:
 		return flagDef{"no-local", "", usageNoLocal}
 	case specConfigDir:

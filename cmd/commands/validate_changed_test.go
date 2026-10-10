@@ -45,7 +45,7 @@ func TestChangedOnlyNarrowsFindings(t *testing.T) {
 	run := func() lint.Combined {
 		strictTreeCache = lint.Loader{}
 		report := lintProject(t, cfg)
-		require.NoError(t, narrowToChanged([]*lint.Report{report}, []*config.Config{cfg}))
+		require.NoError(t, narrowToChanged(context.Background(), []*lint.Report{report}, []*config.Config{cfg}))
 		return lint.Combine([]*lint.Report{report})
 	}
 
@@ -168,7 +168,7 @@ func TestChangedOnlyFollowsTransitiveDependents(t *testing.T) {
 		strictTreeCache = lint.Loader{}
 		cfg := loadStrictProject(t, root)
 		report := lintProject(t, cfg)
-		require.NoError(t, narrowToChanged([]*lint.Report{report}, []*config.Config{cfg}))
+		require.NoError(t, narrowToChanged(context.Background(), []*lint.Report{report}, []*config.Config{cfg}))
 		return lint.Combine([]*lint.Report{report})
 	}
 	validateChanged = true
@@ -211,7 +211,7 @@ func TestChangedOnlyWithRepoRootNarrowerThanGitToplevel(t *testing.T) {
 	cfg := loadStrictProject(t, sub)
 	report, err := strictLint(context.Background(), cfg)
 	require.NoError(t, err)
-	require.NoError(t, narrowToChanged([]*lint.Report{report}, []*config.Config{cfg}))
+	require.NoError(t, narrowToChanged(context.Background(), []*lint.Report{report}, []*config.Config{cfg}))
 
 	files := map[string]bool{}
 	for i := range report.Findings {
