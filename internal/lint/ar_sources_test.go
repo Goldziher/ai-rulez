@@ -40,6 +40,12 @@ func TestCredentialInSourceURLAR035(t *testing.T) {
 			secret: "token",
 		},
 		{
+			name:   "include with a token in the query string",
+			config: "\n[[includes]]\nname = \"shared\"\nsource = \"https://github.com/o/r.git?access_token=ghp_abcdefghijklmnopqrstuvwxyz0123456789\"\n",
+			want:   true,
+			secret: "ghp_abcdefghijklmnopqrstuvwxyz0123456789",
+		},
+		{
 			name:   "plain https include",
 			config: "\n[[includes]]\nname = \"shared\"\nsource = \"https://github.com/o/r.git\"\n",
 			want:   false,

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/urlredact"
 	"github.com/samber/oops"
 )
 
@@ -97,6 +98,11 @@ func (s *SkillSourceConfig) Validate(index int) error {
 // validateGitArgsAndLimits rejects a url or ref git would read as an option and
 // negative limits.
 func (s *SkillSourceConfig) validateGitArgsAndLimits(field func(string) string) error {
+	if urlredact.HasCredentials(s.URL) {
+		return oops.With("field", field("url")).
+			Hint("Remove the credential from the URL and authenticate with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable (ai-rulez sends it as a scoped git header, never stored)").
+			Errorf("skill source %q url embeds a credential", s.Name)
+	}
 	if err := gitutil.CheckRemoteURL("url", strings.TrimPrefix(s.URL, "git+")); err != nil {
 		return oops.With("field", field("url")).Hint("A url or ref that starts with '-' would be read by git as an option").
 			Errorf("skill source %q: %s", s.Name, err.Error())
