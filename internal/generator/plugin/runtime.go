@@ -116,7 +116,7 @@ func renderRuntimes(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 func packagedSkills(outs []config.OutputFile, baseDir string) map[string]bool {
 	kept := map[string]bool{}
 	for _, o := range outs {
-		if name, rest, ok := rootSkillPath(o.Path, baseDir); ok && rest == "SKILL.md" {
+		if name, rest, ok := rootSkillPath(o.Path, baseDir); ok && rest == skillManifestName {
 			kept[name] = true
 		}
 	}
@@ -170,6 +170,9 @@ const (
 	rootVarCanonical = "${PLUGIN_ROOT}"
 	rootVarClaude    = "${CLAUDE_PLUGIN_ROOT}"
 	rootVarGemini    = "${extensionPath}"
+
+	// skillManifestName is the file that marks a skill directory.
+	skillManifestName = "SKILL.md"
 )
 
 // rewriteRoot rewrites the canonical ${PLUGIN_ROOT} launch variable to the form
