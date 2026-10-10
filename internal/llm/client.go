@@ -174,7 +174,11 @@ func (l *literLLM) scrub(msg string) string {
 
 // chatRequest renders req for model as a liter-llm chat request.
 func chatRequest(model string, req ChatRequest) lit.ChatCompletionRequest {
-	out := lit.ChatCompletionRequest{Model: model, Temperature: &req.Temperature}
+	out := lit.ChatCompletionRequest{Model: model}
+	// A reasoning model rejects any temperature but its default, so it is left unset.
+	if !isOpenAIReasoningModel(model) {
+		out.Temperature = &req.Temperature
+	}
 	switch {
 	case req.MaxTokens <= 0:
 	case needsMaxCompletionTokens(model):
@@ -200,11 +204,11 @@ func chatRequest(model string, req ChatRequest) lit.ChatCompletionRequest {
 	return out
 }
 
-// needsMaxCompletionTokens reports whether model is an OpenAI reasoning model, which rejects max_tokens.
-// liter-llm 2.2.3 renames max_tokens to max_completion_tokens for its own openai and azure providers,
-// but a base_url endpoint is served by its generic "custom" provider, which leaves the field alone.
-// TODO(liter-llm#264, partial in v2.2.3): still needed for base_url reasoning models.
-func needsMaxCompletionTokens(model string) bool {
+// isOpenAIReasoningModel reports whether model is an OpenAI reasoning model (the o*
+// and gpt-5 families) reached as the native openai provider or through a base_url. Such
+// a model rejects max_tokens (use max_completion_tokens) and any temperature but the
+// default.
+func isOpenAIReasoningModel(model string) bool {
 	if strings.Contains(model, "/") && modelPrefix(model) != "openai" {
 		return false
 	}
@@ -216,6 +220,12 @@ func needsMaxCompletionTokens(model string) bool {
 	}
 	return false
 }
+
+// needsMaxCompletionTokens reports whether model is an OpenAI reasoning model, which rejects max_tokens.
+// liter-llm 2.2.3 renames max_tokens to max_completion_tokens for its own openai and azure providers,
+// but a base_url endpoint is served by its generic "custom" provider, which leaves the field alone.
+// TODO(liter-llm#264, partial in v2.2.3): still needed for base_url reasoning models.
+func needsMaxCompletionTokens(model string) bool { return isOpenAIReasoningModel(model) }
 
 // usageOf is the billed usage of a reply. Some providers leave thinking tokens out of
 // completion_tokens but bill them at the output rate; they show only in total_tokens.
