@@ -41,7 +41,7 @@ func TestLocalOverlayTracked(t *testing.T) {
 			}
 
 			// Act
-			got := isGitTracked(dir, local)
+			got := isGitTracked(nil, dir, local)
 
 			// Assert
 			assert.Equal(t, tt.want, got)
