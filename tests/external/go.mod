@@ -33,7 +33,7 @@ require (
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f // indirect
 	github.com/teekennedy/goldmark-markdown v0.5.1 // indirect
 	github.com/tiktoken-go/tokenizer v0.8.1 // indirect
-	github.com/xberg-io/liter-llm/packages/go/v2 v2.2.0 // indirect
+	github.com/xberg-io/liter-llm/packages/go/v2 v2.2.3 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/goldmark v1.8.6 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
