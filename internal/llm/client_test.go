@@ -251,7 +251,7 @@ func TestLiterLLMKeylessEndpointSendsNoCredential(t *testing.T) {
 	})
 	l := newLocal(t, localConfig(srv, Config{Model: "llama3"}), nil)
 
-	// TODO(liter-llm#269): liter-llm sends an empty "Authorization: Bearer" header without a key; it carries no credential.
+	// liter-llm 2.2.2+ omits the Authorization header entirely when the key is empty.
 	if _, err := l.Chat(context.Background(), chatReq("x")); err != nil || strings.TrimSpace(strings.TrimPrefix(auth, "Bearer")) != "" {
 		t.Fatalf("keyless: err=%v auth=%q", err, auth)
 	}
@@ -314,26 +314,24 @@ func TestLiterLLMCloseIsIdempotentAndLaterCallsFail(t *testing.T) {
 	}
 }
 
-// embedServer answers every embeddings request with one vector, whatever the batch
-// size (like Gemini's route behind liter-llm), numbering the vector by the length of the
-// first input.
-func embedServer(t *testing.T, calls *atomic.Int32) *httptest.Server {
-	return serve(t, func(w http.ResponseWriter, r *http.Request) {
+// A batch embed returns one vector per input, in input order, whatever order the provider
+// reports them in.
+func TestLiterLLMEmbedShouldReturnOneVectorPerInputInOrder(t *testing.T) {
+	// Arrange: the server mirrors one vector per input, reversed.
+	var calls atomic.Int32
+	srv := serve(t, func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
 		var in struct {
 			Input []string `json:"input"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&in)
-		fmt.Fprintf(w, `{"object":"list","model":"e","data":[{"object":"embedding","index":0,"embedding":[%d,0]}],"usage":{"prompt_tokens":2,"total_tokens":2}}`, len(in.Input[0]))
+		parts := make([]string, len(in.Input))
+		for i := len(in.Input) - 1; i >= 0; i-- {
+			parts[len(in.Input)-1-i] = fmt.Sprintf(`{"object":"embedding","index":%d,"embedding":[%d,0]}`, i, len(in.Input[i]))
+		}
+		fmt.Fprintf(w, `{"object":"list","model":"e","data":[%s],"usage":{"prompt_tokens":2,"total_tokens":2}}`, strings.Join(parts, ","))
 	})
-}
-
-// Gemini's native route behind liter-llm answers a batch embed with one vector
-// whatever the batch size; the backend must still return one vector per input.
-func TestLiterLLMEmbedShouldFallBackToPerInputCallsWhenBatchIsCollapsed(t *testing.T) {
-	// Arrange
-	var calls atomic.Int32
-	l := newLocal(t, localConfig(embedServer(t, &calls), Config{Provider: "gemini", Model: "m", EmbeddingModel: "e"}), nil)
+	l := newLocal(t, localConfig(srv, Config{Provider: "openai", Model: "m", EmbeddingModel: "e"}), nil)
 
 	// Act
 	resp, err := l.Embed(context.Background(), EmbedRequest{Input: []string{"a", "bb", "ccc"}})
@@ -345,43 +343,30 @@ func TestLiterLLMEmbedShouldFallBackToPerInputCallsWhenBatchIsCollapsed(t *testi
 	if len(resp.Vectors) != 3 || resp.Vectors[0][0] != 1 || resp.Vectors[1][0] != 2 || resp.Vectors[2][0] != 3 {
 		t.Errorf("vectors = %v, want one per input in order", resp.Vectors)
 	}
-	if resp.Usage.PromptTokens != 8 || resp.Requests != 4 {
-		t.Errorf("usage = %+v requests = %d, want the 3 singles and the collapsed batch charged (8 tokens, 4 requests)", resp.Usage, resp.Requests)
-	}
-	if calls.Load() != 4 {
-		t.Errorf("requests = %d, want 1 batch + 3 singles", calls.Load())
+	if calls.Load() != 1 {
+		t.Errorf("provider requests = %d, want the batch sent once", calls.Load())
 	}
 }
 
-// Once a batch has come back collapsed, later batches skip the wasted batch request, and the
-// budget counts every provider request against max_calls.
-func TestLiterLLMEmbedShouldRememberCollapsedBatchesAndCountEveryRequest(t *testing.T) {
-	// Arrange
+// A backend that answers a batch with the wrong number of vectors is a permanent provider
+// error: ai-rulez must not paper over it by re-sending the batch one input at a time.
+func TestLiterLLMEmbedShouldNotSplitACollapsedBatch(t *testing.T) {
+	// Arrange: the server always answers with a single vector.
 	var calls atomic.Int32
-	l := newLocal(t, localConfig(embedServer(t, &calls), Config{Provider: "gemini", Model: "m", EmbeddingModel: "e"}), nil)
-	budget := NewBudget(Limits{MaxCalls: 100}, NewPricing(Config{}))
-	c := WithBudget(l, budget, "gemini/m", "gemini/e")
-	req := EmbedRequest{Input: []string{"a", "b", "c"}}
+	srv := serve(t, func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		fmt.Fprint(w, `{"object":"list","model":"e","data":[{"object":"embedding","index":0,"embedding":[1,0]}],"usage":{"prompt_tokens":2,"total_tokens":2}}`)
+	})
+	l := newLocal(t, localConfig(srv, Config{Provider: "openai", Model: "m", EmbeddingModel: "e"}), nil)
 
 	// Act
-	first, err1 := c.Embed(context.Background(), req)
-	callsAfterFirst := calls.Load()
-	second, err2 := c.Embed(context.Background(), req)
+	_, err := l.Embed(context.Background(), EmbedRequest{Input: []string{"a", "bb", "ccc"}})
 
 	// Assert
-	if err1 != nil || err2 != nil {
-		t.Fatalf("embed: %v %v", err1, err2)
+	if !errors.Is(err, ErrProvider) || IsTransient(err) {
+		t.Fatalf("a collapsed batch must be a permanent provider error: %v", err)
 	}
-	if callsAfterFirst != 4 || calls.Load() != 7 {
-		t.Errorf("requests = %d after the first batch and %d after the second, want 4 and 7 (the second skips the batch request)", callsAfterFirst, calls.Load())
-	}
-	if len(first.Vectors) != 3 || len(second.Vectors) != 3 {
-		t.Errorf("vectors = %d and %d, want 3 each", len(first.Vectors), len(second.Vectors))
-	}
-	if first.Usage.PromptTokens != 8 || second.Usage.PromptTokens != 6 {
-		t.Errorf("tokens = %d and %d, want 8 (the collapsed batch is charged) and 6", first.Usage.PromptTokens, second.Usage.PromptTokens)
-	}
-	if got := budget.Spent().Calls; got != 7 {
-		t.Errorf("budget calls = %d, want every provider request counted (7)", got)
+	if calls.Load() != 1 {
+		t.Errorf("provider requests = %d, want the batch sent once and not retried per input", calls.Load())
 	}
 }

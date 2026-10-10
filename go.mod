@@ -28,7 +28,7 @@ require (
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	github.com/teekennedy/goldmark-markdown v0.5.1
 	github.com/tiktoken-go/tokenizer v0.8.1
-	github.com/xberg-io/liter-llm/packages/go/v2 v2.2.0
+	github.com/xberg-io/liter-llm/packages/go/v2 v2.2.3
 	github.com/yuin/goldmark v1.8.6
 	github.com/zeebo/blake3 v0.2.4
 	go.opentelemetry.io/proto/otlp v1.11.1

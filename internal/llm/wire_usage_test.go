@@ -9,12 +9,14 @@ import (
 	lit "github.com/xberg-io/liter-llm/packages/go/v2"
 )
 
-// usageServer answers every chat request with a reply that reports usage verbatim.
+// usageServer answers every chat request with a reply that reports usage verbatim. The provider
+// is openai so a base_url endpoint stays the generic OpenAI-compatible route: the reply shape the
+// tests assert is OpenAI's, not Gemini's.
 func usageServer(t *testing.T, usage string) *literLLM {
 	t.Helper()
 	body := `{"id":"x","object":"chat.completion","created":1,"model":"gemini-2.5-flash","choices":[{"index":0,"message":{"role":"assistant","content":"0.05"},"finish_reason":"stop"}]` + usage + `}`
 	srv := serve(t, func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, body) })
-	return newLocal(t, localConfig(srv, Config{Provider: "gemini", Model: "gemini-2.5-flash", MaxRetries: -1, PriceInputPerMTok: 1, PriceOutputPerMTok: 1}), nil)
+	return newLocal(t, localConfig(srv, Config{Provider: "openai", Model: "gemini-2.5-flash", MaxRetries: -1, PriceInputPerMTok: 1, PriceOutputPerMTok: 1}), nil)
 }
 
 // Some providers report completion_tokens without the thinking tokens they bill at the output
