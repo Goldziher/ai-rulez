@@ -18702,6 +18702,7 @@ Generate output files from the current configuration.
 - `role` (optional, string): Generate the slice of content a role selects (`--role`); mutually exclusive with `profile`
 - `recursive` (optional, boolean): Generate for all subdirectories containing `.ai-rulez/`
 - `no_local` (optional, boolean): Ignore the machine-local `config.local.*` overlay and `local/` content (the view a teammate sees)
+- `no_self_mcp` (optional, boolean): Do not add ai-rulez's own MCP server to the generated MCP files (`--no-self-mcp`; the default is to add it)
 - `working_directory` (optional, string): Directory to operate in
 
 A call that supports progress (the client sends a progress token) reports one notification per project in a
