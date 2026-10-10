@@ -99,6 +99,12 @@ func binary(t *testing.T) string {
 			buildErr = fmt.Errorf("go build: %w\n%s", err, msg)
 			return
 		}
+		if runtime.GOOS == "windows" {
+			if err := stageNativeDLL(dir); err != nil {
+				buildErr = fmt.Errorf("stage the native library: %w", err)
+				return
+			}
+		}
 		if err := writeTools(filepath.Join(dir, "path")); err != nil {
 			buildErr = fmt.Errorf("stub tools: %w", err)
 			return
@@ -120,6 +126,49 @@ func binary(t *testing.T) string {
 func repoRoot() string {
 	wd, _ := os.Getwd() //nolint:errcheck // the test runs in its package directory
 	return filepath.Clean(filepath.Join(wd, "..", ".."))
+}
+
+// stageNativeDLL copies the liter-llm shared library beside the built CLI on
+// Windows. Every golden run gets a scrubbed PATH, so the Windows loader can only
+// find the DLL next to the executable; without it the CLI fails with 0xC0000135
+// (STATUS_DLL_NOT_FOUND) before it prints anything.
+func stageNativeDLL(dir string) error {
+	src := nativeDLL()
+	if src == "" {
+		return fmt.Errorf("liter_llm_ffi.dll not found: run scripts/setup-liter-llm.sh (it sets CGO_LDFLAGS=-L<dir>) or go mod download")
+	}
+	data, err := os.ReadFile(src) //nolint:gosec // a build artifact path
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, filepath.Base(src)), data, 0o644) //nolint:gosec // a build artifact
+}
+
+// nativeDLL locates liter_llm_ffi.dll to load at run time: first in the -L
+// directories of CGO_LDFLAGS, then in the Go module cache, then on PATH.
+func nativeDLL() string {
+	const name = "liter_llm_ffi.dll"
+	var dirs []string
+	for _, field := range strings.Fields(os.Getenv("CGO_LDFLAGS")) {
+		if d, ok := strings.CutPrefix(field, "-L"); ok && d != "" {
+			dirs = append(dirs, d)
+		}
+	}
+	if out, err := exec.Command("go", "env", "GOMODCACHE").Output(); err == nil { //nolint:gosec // fixed arguments
+		root := strings.TrimSpace(string(out))
+		pattern := filepath.Join(root, "github.com", "xberg-io", "liter-llm", "packages", "go", "v2@*", ".lib", "windows-x86_64", name)
+		if matches, _ := filepath.Glob(pattern); len(matches) > 0 {
+			dirs = append(dirs, filepath.Dir(matches[0]))
+		}
+	}
+	dirs = append(dirs, filepath.SplitList(os.Getenv("PATH"))...)
+	for _, d := range dirs {
+		p := filepath.Join(d, name)
+		if info, err := os.Stat(p); err == nil && !info.IsDir() {
+			return p
+		}
+	}
+	return ""
 }
 
 // stepKind is what a step does to the scratch project.
