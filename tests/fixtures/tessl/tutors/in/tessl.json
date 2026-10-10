@@ -1,0 +1,65 @@
+{
+  "name": "project",
+  "dependencies": {
+    "tessl/npm-eslint--compat": {
+      "version": "1.3.0"
+    },
+    "tessl/npm-supabase--supabase-js": {
+      "version": "2.57.0"
+    },
+    "tessl/npm-sveltejs--adapter-auto": {
+      "version": "6.1.0"
+    },
+    "tessl/npm-sveltejs--kit": {
+      "version": "2.37.0"
+    },
+    "tessl/npm-sveltejs--vite-plugin-svelte": {
+      "version": "6.1.0"
+    },
+    "tessl/npm-tailwindcss--forms": {
+      "version": "0.5.0"
+    },
+    "tessl/npm-tailwindcss--typography": {
+      "version": "0.5.0"
+    },
+    "tessl/npm-tailwindcss--vite": {
+      "version": "4.1.0"
+    },
+    "tessl/npm-eslint-config-prettier": {
+      "version": "10.1.0"
+    },
+    "tessl/npm-eslint-plugin-svelte": {
+      "version": "3.12.0"
+    },
+    "tessl/npm-eslint": {
+      "version": "9.34.0"
+    },
+    "tessl/npm-globals": {
+      "version": "16.3.0"
+    },
+    "tessl/npm-pdfjs-dist": {
+      "version": "5.4.0"
+    },
+    "tessl/npm-prettier-plugin-tailwindcss": {
+      "version": "0.6.0"
+    },
+    "tessl/npm-prettier": {
+      "version": "3.6.0"
+    },
+    "tessl/npm-svelte-check": {
+      "version": "4.0.0"
+    },
+    "tessl/npm-svelte": {
+      "version": "5.38.0"
+    },
+    "tessl/npm-tailwindcss": {
+      "version": "4.1.0"
+    },
+    "tessl/npm-typescript": {
+      "version": "5.9.0"
+    },
+    "tessl/npm-vite": {
+      "version": "7.1.0"
+    }
+  }
+}

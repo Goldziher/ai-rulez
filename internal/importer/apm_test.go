@@ -216,3 +216,33 @@ func TestAPMTargets(t *testing.T) {
 	assert.NotNil(t, findingFor(p, StatusUnsupported, "apm.yml", "target.bogus"))
 	assert.NotNil(t, findingFor(p, StatusNeedsAction, "apm.yml", "target"))
 }
+
+func TestAPMTargets_PluralList(t *testing.T) {
+	// Arrange: real consumer manifests write `targets:` (a list), not `target`.
+	p := planOf(t, apmImporter{}, mapFS(map[string]string{
+		"apm.yml": "targets:\n  - claude\n  - copilot\n",
+	}), Options{})
+
+	// Assert
+	assert.Equal(t, []string{"claude", "copilot"}, p.Presets)
+	assert.NotNil(t, findingFor(p, StatusMapped, "apm.yml", "targets.claude"))
+	assert.NotNil(t, findingFor(p, StatusMapped, "apm.yml", "targets.copilot"))
+}
+
+func TestLockRepoURL(t *testing.T) {
+	tests := []struct {
+		name, repo, host, want string
+	}{
+		{name: "bare owner/repo qualified by the host", repo: "jandedobbeleer/agentic", host: "github.com", want: "https://github.com/jandedobbeleer/agentic"},
+		{name: "bare owner/repo with no host is github", repo: "acme/skills", want: "https://github.com/acme/skills"},
+		{name: "full https url", repo: "https://github.com/acme/missing", want: "https://github.com/acme/missing"},
+		{name: "full https url drops .git", repo: "https://github.com/acme/x.git", want: "https://github.com/acme/x"},
+		{name: "host-qualified repo is not prefixed twice", repo: "gitlab.com/group/repo", host: "gitlab.com", want: "https://gitlab.com/group/repo"},
+		{name: "empty", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, lockRepoURL(tt.repo, tt.host))
+		})
+	}
+}
