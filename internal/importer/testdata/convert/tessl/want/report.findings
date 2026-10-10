@@ -11,4 +11,4 @@ mapped | .tessl/plugins/acme/release-tools/skills/release-notes | skill | skills
 approximated | .tessl/plugins/acme/style-guide |  |  | vendored copy of acme/style-guide@2.0.1 imported as local files; the registry link is not kept, so it no longer updates
 dropped | .tessl/plugins/acme/style-guide/docs |  |  | documentation is reference material Tessl serves to the agent; copy what it needs into context/ by hand
 mapped | .tessl/plugins/acme/style-guide/rules/naming.md | rule | rules/naming.md | 
-needs-action | tessl.json | dependencies.acme/not-installed |  | plugin acme/not-installed is not on disk under .tessl/plugins; run `tessl install` (or vendor it) and rerun, or point --source at a populated directory. Nothing is fetched from the registry
+needs-action | tessl.json | dependencies.acme/not-installed |  | tile acme/not-installed is not on disk under .tessl/tiles or .tessl/plugins; run `tessl install` (or vendor it) and rerun, or point --source at a populated directory. Nothing is fetched from the registry

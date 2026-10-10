@@ -16,21 +16,27 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Tessl: tessl.json lists the plugins a project depends on and how they are
-// installed (mode "managed": fetched on demand; "vendored": committed under
-// .tessl/plugins/<workspace>/<plugin>/). A plugin holds skills/, rules/, docs/,
-// evals/ and .tessl-plugin/plugin.json. The layout is read from the Tessl
-// documentation and is not verified against a release (see docs/cli.md); a
-// vendored plugin is imported from disk, a managed one that is not on disk is
-// reported, and nothing is ever fetched from the registry.
+// Tessl: tessl.json lists the tiles a project depends on and how they are
+// installed (mode "managed": fetched on demand; "vendored": committed on disk).
+// A consumer project keeps a vendored tile under .tessl/tiles/<workspace>/<name>/
+// with a tile.json (rules under a `steering` map, skills under a `skills` map and
+// optional docs), and the newer plugin source layout keeps a plugin under
+// .tessl/plugins/<workspace>/<plugin>/ with rules/, skills/, evals/ and a
+// .tessl-plugin/plugin.json. Both are imported from disk; a managed dependency
+// that is not on disk is reported and nothing is ever fetched from the registry.
+// The layout is read from the Tessl documentation and from real projects (see
+// tests/fixtures/tessl); a tile the importer cannot map is reported, not guessed.
 
 const (
 	tesslName       = "tessl"
 	tesslManifest   = "tessl.json"
 	tesslDir        = ".tessl"
 	tesslPluginsDir = ".tessl/plugins"
+	tesslTilesDir   = ".tessl/tiles"
 	tesslPluginMeta = ".tessl-plugin"
-	// maxTesslPlugins bounds how many vendored plugins are read.
+	tesslTileMeta   = "tile.json"
+	tesslEvalsDir   = "evals"
+	// maxTesslPlugins bounds how many vendored tiles or plugins are read.
 	maxTesslPlugins = 200
 	// evalSchemaVersion is the schema_version of an ai-rulez eval case file.
 	evalSchemaVersion = 1
@@ -41,7 +47,7 @@ type tesslImporter struct{}
 func (tesslImporter) Name() string { return tesslName }
 
 func (tesslImporter) Description() string {
-	return "Tessl project: tessl.json, vendored .tessl/plugins/ skills and rules, and eval scenarios as *.eval.yaml"
+	return "Tessl project: tessl.json, vendored .tessl/tiles and .tessl/plugins skills and rules, and eval scenarios as *.eval.yaml"
 }
 
 func (tesslImporter) Detect(fsys fs.FS) []string {
@@ -82,7 +88,7 @@ func (tesslImporter) Plan(fsys fs.FS, opt Options) (*Plan, error) {
 	for _, d := range deps {
 		if !imported[d.name] {
 			b.p.add(newFinding(StatusNeedsAction, tesslManifest, "dependencies."+d.name, "",
-				fmt.Sprintf("plugin %s is not on disk under %s; run `tessl install` (or vendor it) and rerun, or point --source at a populated directory. Nothing is fetched from the registry", d.name, tesslPluginsDir)))
+				fmt.Sprintf("tile %s is not on disk under %s or %s; run `tessl install` (or vendor it) and rerun, or point --source at a populated directory. Nothing is fetched from the registry", d.name, tesslTilesDir, tesslPluginsDir)))
 		}
 	}
 	if _, ok := r.exists(tesslPluginMeta); ok {
@@ -167,47 +173,52 @@ func (b *tesslPlanner) parseDependencies(raw json.RawMessage) []tesslDep {
 	return deps
 }
 
-// importVendored imports every plugin below .tessl/plugins/<workspace>/<plugin>
-// and returns the names ("workspace/plugin") that were found on disk.
+// importVendored imports every tile below .tessl/tiles/<workspace>/<name> and
+// every plugin below .tessl/plugins/<workspace>/<plugin>, and returns the names
+// ("workspace/name") that were found on disk.
 func (b *tesslPlanner) importVendored(deps []tesslDep) map[string]bool {
 	found := map[string]bool{}
-	if _, ok := b.r.exists(tesslPluginsDir); !ok {
-		return found
-	}
 	versions := map[string]string{}
 	for _, d := range deps {
 		versions[d.name] = d.version
 	}
 	count := 0
-	for _, ws := range b.r.dirEntries(tesslPluginsDir, b.onSkip) {
-		if !ws.IsDir() {
+	for _, base := range []string{tesslTilesDir, tesslPluginsDir} {
+		if _, ok := b.r.exists(base); !ok {
 			continue
 		}
-		for _, pl := range b.r.dirEntries(path.Join(tesslPluginsDir, ws.Name()), b.onSkip) {
-			if !pl.IsDir() || count >= maxTesslPlugins {
+		for _, ws := range b.r.dirEntries(base, b.onSkip) {
+			if !ws.IsDir() {
 				continue
 			}
-			name := ws.Name() + "/" + pl.Name()
-			root, ok := b.pluginRoot(path.Join(tesslPluginsDir, ws.Name(), pl.Name()), versions[name])
-			if !ok {
-				b.p.add(newFinding(StatusUnsupported, path.Join(tesslPluginsDir, ws.Name(), pl.Name()), "", "",
-					"no skills/, rules/ or evals/ found in this directory or in a version directory below it"))
-				continue
+			for _, pl := range b.r.dirEntries(path.Join(base, ws.Name()), b.onSkip) {
+				if !pl.IsDir() || count >= maxTesslPlugins {
+					continue
+				}
+				dir := path.Join(base, ws.Name(), pl.Name())
+				name := ws.Name() + "/" + pl.Name()
+				root, ok := b.pluginRoot(dir, versions[name])
+				if !ok {
+					b.p.add(newFinding(StatusUnsupported, dir, "", "",
+						"no tile.json, skills/, rules/ or evals/ found in this directory or in a version directory below it"))
+					continue
+				}
+				count++
+				found[name] = true
+				label := name
+				if v := versions[name]; v != "" {
+					label += "@" + v
+				}
+				b.importPlugin(root, label)
 			}
-			count++
-			found[name] = true
-			label := name
-			if v := versions[name]; v != "" {
-				label += "@" + v
-			}
-			b.importPlugin(root, label)
 		}
 	}
 	return found
 }
 
-// pluginRoot finds the directory that holds a plugin's content: the directory
-// itself, else its version directory (the one tessl.json names, or the only one).
+// pluginRoot finds the directory that holds a tile's or plugin's content: the
+// directory itself, else its version directory (the one tessl.json names, or the
+// only one).
 func (b *tesslPlanner) pluginRoot(dir, version string) (string, bool) {
 	if b.isPlugin(dir) {
 		return dir, true
@@ -230,7 +241,7 @@ func (b *tesslPlanner) pluginRoot(dir, version string) (string, bool) {
 }
 
 func (b *tesslPlanner) isPlugin(dir string) bool {
-	for _, marker := range []string{skillsDir, rulesDir, "evals", tesslPluginMeta} {
+	for _, marker := range []string{skillsDir, rulesDir, tesslEvalsDir, tesslPluginMeta, tesslTileMeta} {
 		if _, ok := b.r.exists(path.Join(dir, marker)); ok {
 			return true
 		}
@@ -238,8 +249,9 @@ func (b *tesslPlanner) isPlugin(dir string) bool {
 	return false
 }
 
-// importPlugin imports the content of one plugin rooted at root ("" for the
-// project itself).
+// importPlugin imports the content of one tile or plugin rooted at root ("" for
+// the project itself): the plugin-era skills/ and rules/ directories, the tile-era
+// tile.json steering and skills, evals and the metadata.
 func (b *tesslPlanner) importPlugin(root, label string) {
 	start := len(b.p.Items)
 	if root != "" {
@@ -251,9 +263,113 @@ func (b *tesslPlanner) importPlugin(root, label string) {
 	if sub := path.Join(root, rulesDir); b.exists(sub) {
 		b.n.importRules(b.p, b.r, sub, map[string]bool{}, b.onSkip)
 	}
+	var rootSkill bool
+	if root != "" { // a tile is always a subdirectory; the project root is not one
+		rootSkill = b.importTile(root)
+	}
 	b.importMeta(root)
 	b.importEvals(root, label, start)
-	b.reportOthers(root)
+	b.reportOthers(root, rootSkill)
+}
+
+// tesslTile is the subset of a tile's tile.json the importer reads. Rules live
+// under `steering` (name to a rule file) and skills under `skills` (name to a
+// SKILL.md path); docs and the rest of the metadata are not imported.
+type tesslTile struct {
+	Steering map[string]struct {
+		Rules string `json:"rules"`
+	} `json:"steering"`
+	Skills map[string]struct {
+		Path string `json:"path"`
+	} `json:"skills"`
+}
+
+// importTile imports the rules and skills a vendored tile names in its tile.json.
+// It reports whether a skill sits at the tile root: every other entry of such a
+// tile is one of that skill's resources, not a separate one. A tile need not keep
+// a rules/ or skills/ directory, so its manifests decide what to read.
+func (b *tesslPlanner) importTile(root string) (rootSkill bool) {
+	file := path.Join(root, tesslTileMeta)
+	if !b.exists(file) {
+		return false
+	}
+	data, err := b.r.read(file)
+	if err != nil {
+		b.p.add(newFinding(StatusDropped, file, "", "", skipReasonOr(err)))
+		return false
+	}
+	var tile tesslTile
+	if err := json.Unmarshal(trimBOM(data), &tile); err != nil {
+		b.p.add(newFinding(StatusUnsupported, file, "", "", "tile.json is not valid JSON: "+err.Error()))
+		return false
+	}
+	b.p.add(newFinding(StatusDropped, file, "", "",
+		"tile metadata (name, version, summary) describes the dependency, not this project; it is not written to config.toml"))
+	for _, name := range sortedKeys(tile.Steering) {
+		b.importTileRule(root, name, tile.Steering[name].Rules)
+	}
+	for _, name := range sortedKeys(tile.Skills) {
+		skillPath := tile.Skills[name].Path
+		b.importTileSkill(root, name, skillPath)
+		if checkSubpath(skillPath) == "" && path.Dir(path.Join(root, skillPath)) == root {
+			rootSkill = true
+		}
+	}
+	return rootSkill
+}
+
+// importTileRule imports one steering rule of a tile under its steering name.
+func (b *tesslPlanner) importTileRule(root, name, rules string) {
+	meta := path.Join(root, tesslTileMeta)
+	if rules == "" || checkSubpath(rules) != "" {
+		b.p.add(newFinding(StatusUnsupported, meta, "steering."+name, "", "the steering entry has no rule file inside the tile"))
+		return
+	}
+	file := path.Join(root, rules)
+	if !isMarkdown(file) {
+		b.p.add(newFinding(StatusUnsupported, file, "", "", "not a Markdown rule file"))
+		return
+	}
+	if !b.exists(file) {
+		b.p.add(newFinding(StatusNeedsAction, file, "", "", "the rule tile.json names is not on disk"))
+		return
+	}
+	ruleName, synth := safeName(name)
+	b.n.importRuleFile(b.p, b.r, file, ruleName, synth, false)
+}
+
+// importTileSkill imports one skill of a tile, named by its `skills` key.
+func (b *tesslPlanner) importTileSkill(root, name, skillPath string) {
+	meta := path.Join(root, tesslTileMeta)
+	if skillPath == "" || checkSubpath(skillPath) != "" || !strings.HasSuffix(skillPath, litSkillMD) {
+		b.p.add(newFinding(StatusUnsupported, meta, "skills."+name, "", "the skill entry needs a path to a SKILL.md inside the tile"))
+		return
+	}
+	file := path.Join(root, skillPath)
+	if !b.exists(file) {
+		b.p.add(newFinding(StatusNeedsAction, file, "", "", "the skill tile.json names is not on disk"))
+		return
+	}
+	b.n.importSkillDir(b.p, b.r, path.Dir(file), name, b.opt, b.onSkip, tesslTileRootSkip())
+}
+
+// tesslTileRootSkip lists the top-level entries of a tile that are not resources
+// of a SKILL.md kept at the tile root: the tile's own manifest and directories.
+// It is a function, not a package-level map, so it adds no mutable global.
+func tesslTileRootSkip() map[string]bool {
+	return map[string]bool{
+		skillsDir: true, rulesDir: true, tesslEvalsDir: true, "docs": true,
+		tesslPluginMeta: true, tesslTileMeta: true, "steering": true,
+	}
+}
+
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func (b *tesslPlanner) exists(p string) bool {
@@ -272,14 +388,18 @@ func (b *tesslPlanner) importMeta(root string) {
 		"plugin metadata (name, description, version) describes the dependency, not this project; it is recorded in the provenance finding and not written to config.toml"))
 }
 
-// tesslHandled are the entries of a plugin directory importPlugin reads.
-var tesslHandled = map[string]bool{skillsDir: true, rulesDir: true, "evals": true, tesslPluginMeta: true}
+// tesslHandled are the entries of a tile or plugin directory importPlugin reads.
+var tesslHandled = map[string]bool{
+	skillsDir: true, rulesDir: true, tesslEvalsDir: true, tesslPluginMeta: true,
+	"steering": true, tesslTileMeta: true,
+}
 
 // reportOthers reports the entries of a vendored plugin that are not read.
 // Documentation and the usual package files are named for what they are. The
 // project root, when it is itself a plugin, is only checked for docs/: its other
-// entries are the project's own.
-func (b *tesslPlanner) reportOthers(root string) {
+// entries are the project's own. When a skill sits at the tile root (rootSkill),
+// every remaining entry is one of its resources and is not reported.
+func (b *tesslPlanner) reportOthers(root string, rootSkill bool) {
 	dir := root
 	if dir == "" {
 		dir = "."
@@ -292,7 +412,7 @@ func (b *tesslPlanner) reportOthers(root string) {
 		case name == "docs":
 			b.p.add(newFinding(StatusDropped, path.Join(root, name), "", "",
 				"documentation is reference material Tessl serves to the agent; copy what it needs into context/ by hand"))
-		case root == "":
+		case root == "", rootSkill:
 		case strings.HasPrefix(lower, "readme"), strings.HasPrefix(lower, litLicense), strings.HasPrefix(lower, "changelog"):
 		default:
 			b.p.add(newFinding(StatusDropped, path.Join(root, name), "", "", "not a Tessl plugin entry the importer reads; ignored"))
@@ -304,7 +424,7 @@ func (b *tesslPlanner) reportOthers(root string) {
 // skill. Tessl evals belong to a plugin, not to one skill, so they go to the
 // plugin's only skill, else the skill named like the plugin, else the first.
 func (b *tesslPlanner) importEvals(root, label string, start int) {
-	dir := path.Join(root, "evals")
+	dir := path.Join(root, tesslEvalsDir)
 	if !b.exists(dir) {
 		return
 	}
