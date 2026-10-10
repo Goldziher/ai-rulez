@@ -1,14 +1,14 @@
 name: Set up liter-llm native library
 description: >-
-  Downloads the liter-llm native static library pinned by go.mod, verifies its sha256, extracts only
-  the static library and exports CGO_ENABLED=1 and CGO_LDFLAGS for the rest of the job. Run after
+  Downloads the liter-llm native library pinned by go.mod, verifies its sha256, extracts the static
+  library (or, on Windows, the DLL) and exports CGO_ENABLED=1 and CGO_LDFLAGS for the rest of the job. Run after
   checkout, before any go build/test/vet. Needs bash and curl (present on every GitHub-hosted runner).
 
 inputs:
   mode:
-    description: "static (default) or dll (Windows only)"
+    description: "auto (default), static, or dll (Windows). auto uses dll on Windows, static elsewhere"
     required: false
-    default: static
+    default: auto
 
 runs:
   using: composite
@@ -31,6 +31,15 @@ runs:
         if command -v cygpath >/dev/null 2>&1; then
           ACTION_PATH="$(cygpath -u "$ACTION_PATH")"
           CACHE_ROOT="$(cygpath -u "$CACHE_ROOT")"
+        fi
+        # auto links the static library everywhere except Windows, where the
+        # shipped static archive is MSVC-built and cannot link with Go's MinGW
+        # cgo; use the DLL there instead.
+        if [ "$MODE" = auto ]; then
+          case "$(uname -s)" in
+          MINGW* | MSYS* | CYGWIN*) MODE=dll ;;
+          *) MODE=static ;;
+          esac
         fi
         script="$(cd "$ACTION_PATH/../../../scripts" && pwd)/setup-liter-llm.sh"
         LITER_LLM_CACHE="$CACHE_ROOT/liter-llm" bash "$script" --mode "$MODE" --format github-env
