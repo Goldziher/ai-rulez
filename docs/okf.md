@@ -398,7 +398,7 @@ hand-edited, missing or stale bundle file as drift, and `generate` removes conce
 
 `export okf` keeps a hidden manifest, `.okf-export.json`, at the bundle root listing the files it wrote, and only ever
 removes files named there: a file you added to the directory, or a bundle exported before the manifest existed, is
-never pruned (an old export's stale files stay until you delete them; `--check` lists them as `extra`). `--out` is
+never pruned (an old export's stale files stay until you delete them; `--check` lists them as `extra`). `--output-dir` is
 refused, with exit 1 and no change, when it is, contains or lies inside the configuration directory (symlinks
 resolved), or when it holds a `config.toml`, an `ai-rulez.lock` or a `local/` directory.
 
