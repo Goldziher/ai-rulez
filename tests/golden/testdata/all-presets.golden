@@ -72,7 +72,7 @@ WARN  [[hooks]] not generated for zcode: zcode ignores project-level hooks, so t
 WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=amp rules_in_folder=augment, bob, codewhale, grok, junie, kilo, kiro, omp, qoder
 INFO  Generating with configuration profile=default
 INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
-INFO  Generation complete files=414
+INFO  Generation complete files=416
 WARN  4 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rule typescript, rules manual
 --- project tree
 .agents/ dir 0755
@@ -86,6 +86,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .agents/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
 .agents/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .agents/hooks.json file 0644 259 e87190d141b1e0a8c1c651170ff503c064f20c50682db87c47ad11f7c19832e3
+.agents/mcp_config.json file 0644 155 e491744d31f0827668b31d10d109d1b72404c167d44e9f9bfe0dcb680ba88add
 .agents/plugins/ dir 0755
 .agents/plugins/ai-rulez/ dir 0755
 .agents/plugins/ai-rulez/hooks/ dir 0755
@@ -108,8 +109,8 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 16693 64096ad39a80bf7f6c6ad86eaac62dae5b65abbe541c84d60af2880f7c3f74f7
-.ai-rulez/.generated-manifest.local.json file 0644 41375 cd92e75ae6f2ce89c9aade5abf236aade8c296b0fe4239aaf8e35364ba43c3e6
+.ai-rulez/.generated-manifest.json file 0644 16797 4082b84389a7fd947592f266191a700d98bc701bbe820a1750f2db2acb62da2a
+.ai-rulez/.generated-manifest.local.json file 0644 41969 a1bab4b2369ffae413429da56141ab7c5b88b1d032bbb32db2b1954cda1feb32
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -449,7 +450,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .github/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.gitignore file 0644 5428 54797031037d69b827e6e64c5dda9f7dda546e3143a81b3544a8cc6d86c8442b
+.gitignore file 0644 5462 19705587e0b8b9eb47a40e252e2e3e96194432dbbbfee5670d4ca8ab458747a2
 .gitlab/ dir 0755
 .gitlab/duo/ dir 0755
 .gitlab/duo/chat-rules.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
@@ -570,6 +571,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .letta/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
 .letta/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .letta/settings.json file 0644 632 f3137a7ad411777ec91c9fcaf8d4fc362b74a9470e63501aa2f319758ce0a7c1
+.mcp.json file 0644 178 f0eb854d41aaf4f67b335d410d50f4bde0cd0aa4a418eb039e97d0d41f55b27d
 .mimocode/ dir 0755
 .mimocode/agents/ dir 0755
 .mimocode/agents/architect.md file 0644 171 9f499ed05e385eabe95c1ab5dd938a3b426684117be8fd3e9e906ccec47c409c
@@ -922,7 +924,7 @@ WARN  [[hooks]] not generated for zcode: zcode ignores project-level hooks, so t
 WARN  Presets with a rules folder and presets without one write the same file ($ROOT/AGENTS.md); keeping the version that inlines every rule. Set agents_md = true or rules.mode = "inline" to share it path=$ROOT/AGENTS.md kept_from=amp rules_in_folder=augment, bob, codewhale, grok, junie, kilo, kiro, omp, qoder
 INFO  Generating with configuration profile=default
 INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
-INFO  Generation complete files=414
+INFO  Generation complete files=416
 WARN  4 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rule typescript, rules manual
 --- project tree
 (no change)
@@ -1033,6 +1035,7 @@ unchanged: .agents/checks/security.md
 unchanged: .agents/checks/style.md
 unchanged: .amp/plugins/ai-rulez-hooks.ts
 create-dir: .agents/agents
+unchanged: .agents/mcp_config.json
 unchanged: .agents/hooks.json
 unchanged: GEMINI.md
 create-dir: .agents/skills/build
@@ -1154,6 +1157,7 @@ unchanged: .codebuddy/agents/architect.md
 unchanged: .codebuddy/agents/tester.md
 unchanged: .codebuddy/commands/build.md
 unchanged: .codebuddy/commands/ship.md
+unchanged: .mcp.json
 unchanged: .codebuddy/settings.json
 create-dir: .codewhale
 create-dir: .codewhale/rules
@@ -1811,6 +1815,7 @@ Clean plan (profile default)
   remove file: .agents/commands/build.md
   remove file: .agents/commands/ship.md
   remove file: .agents/hooks.json
+  remove file: .agents/mcp_config.json
   remove file: .agents/plugins/ai-rulez/hooks/hooks.json
   remove file: .agents/skills/build/SKILL.md
   remove file: .agents/skills/build/agents/openai.yaml
@@ -2065,6 +2070,7 @@ Clean plan (profile default)
   remove file: .letta/agents/architect.md
   remove file: .letta/agents/tester.md
   remove file: .letta/settings.json
+  remove file: .mcp.json
   remove file: .mimocode/agents/architect.md
   remove file: .mimocode/agents/tester.md
   remove file: .mimocode/commands/build.md
@@ -2551,7 +2557,7 @@ WARN  Gemini CLI does not know Claude model aliases; omitting the model so the a
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-Removed generated files: 414 files, 324 directories
+Removed generated files: 416 files, 324 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

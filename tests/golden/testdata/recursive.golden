@@ -7,7 +7,8 @@ exit: 0
 --- project tree
 a/ dir 0755
 a/.ai-rulez/ dir 0755
-a/.ai-rulez/.generated-manifest.json file 0644 81 8e123772a43a717b36ca21591c1d91257553532b4cbcd450a929eb0831ee3fdd
+a/.ai-rulez/.generated-manifest.json file 0644 137 f3224e91c8edc264dc6f231b8e4e144f6aac41642b037baca661c1a0b7805c7c
+a/.ai-rulez/.generated-manifest.local.json file 0644 356 839b51a81c26aa328b17f6605a38e3a6ce6cc1feacdc3c541579f69358253188
 a/.ai-rulez/config.toml file 0644 66 c7900578e77e3ff47e78b5903722afcb86e593a69c9eebd9c2759e76cf9ee556
 a/.ai-rulez/rules/ dir 0755
 a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
@@ -16,13 +17,15 @@ a/.claude/agents/ dir 0755
 a/.claude/rules/ dir 0755
 a/.claude/rules/r.md file 0644 181 aa4fedc1c322acd66fcc805418112ba24b22af625733a4aa94c5ac418b5a51de
 a/.claude/skills/ dir 0755
+a/.mcp.json file 0644 178 f0eb854d41aaf4f67b335d410d50f4bde0cd0aa4a418eb039e97d0d41f55b27d
 a/CLAUDE.md file 0644 365 869f0bee912ea620930c88b8b458acf18a2feb4126f788cade17a6e37b82b4b7
 b/ dir 0755
 b/c/ dir 0755
 b/c/.agents/ dir 0755
 b/c/.agents/skills/ dir 0755
 b/c/.ai-rulez/ dir 0755
-b/c/.ai-rulez/.generated-manifest.json file 0644 90 c9ab323002bbdccef26e9010c7a7d70a25f393a7c3a5ba259b3a07ded343bd73
+b/c/.ai-rulez/.generated-manifest.json file 0644 146 5797054f6e8198b68e782429a26fa4a82b677b0c4b49a0c7fb926f0a2143487c
+b/c/.ai-rulez/.generated-manifest.local.json file 0644 356 839b51a81c26aa328b17f6605a38e3a6ce6cc1feacdc3c541579f69358253188
 b/c/.ai-rulez/config.toml file 0644 75 dad294c3b507bd1c225b10c2ec97eb319b5b85e420fea2cb5a094864b20b073f
 b/c/.ai-rulez/context/ dir 0755
 b/c/.ai-rulez/context/c.md file 0644 4 75893e6adce701bd6c7f089a8f29c6692506f182e8b6c8129e5708576261fa8a
@@ -33,6 +36,7 @@ b/c/.cursor/agents/ dir 0755
 b/c/.cursor/commands/ dir 0755
 b/c/.cursor/rules/ dir 0755
 b/c/.cursor/rules/context-c.mdc file 0644 209 29b4dda6373d2a1999b3a1f60fcceedcea83e9dfb7b33c831f2462cfc6014e9c
+b/c/.mcp.json file 0644 178 f0eb854d41aaf4f67b335d410d50f4bde0cd0aa4a418eb039e97d0d41f55b27d
 b/c/AGENTS.md file 0644 384 516aa9950ff1a21e6eaf6ff4910b0ea16d8cd9bc3d76d02e1ee6ebe03481b815
 --- home tree
 (no change)
@@ -44,7 +48,8 @@ exit: 0
 --- project tree
 a/ dir 0755
 a/.ai-rulez/ dir 0755
-a/.ai-rulez/.generated-manifest.json file 0644 81 8e123772a43a717b36ca21591c1d91257553532b4cbcd450a929eb0831ee3fdd
+a/.ai-rulez/.generated-manifest.json file 0644 137 f3224e91c8edc264dc6f231b8e4e144f6aac41642b037baca661c1a0b7805c7c
+a/.ai-rulez/.generated-manifest.local.json file 0644 356 839b51a81c26aa328b17f6605a38e3a6ce6cc1feacdc3c541579f69358253188
 a/.ai-rulez/config.toml file 0644 66 c7900578e77e3ff47e78b5903722afcb86e593a69c9eebd9c2759e76cf9ee556
 a/.ai-rulez/rules/ dir 0755
 a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
@@ -53,13 +58,15 @@ a/.claude/agents/ dir 0755
 a/.claude/rules/ dir 0755
 a/.claude/rules/r.md file 0644 181 aa4fedc1c322acd66fcc805418112ba24b22af625733a4aa94c5ac418b5a51de
 a/.claude/skills/ dir 0755
+a/.mcp.json file 0644 178 f0eb854d41aaf4f67b335d410d50f4bde0cd0aa4a418eb039e97d0d41f55b27d
 a/CLAUDE.md file 0644 365 869f0bee912ea620930c88b8b458acf18a2feb4126f788cade17a6e37b82b4b7
 b/ dir 0755
 b/c/ dir 0755
 b/c/.agents/ dir 0755
 b/c/.agents/skills/ dir 0755
 b/c/.ai-rulez/ dir 0755
-b/c/.ai-rulez/.generated-manifest.json file 0644 90 c9ab323002bbdccef26e9010c7a7d70a25f393a7c3a5ba259b3a07ded343bd73
+b/c/.ai-rulez/.generated-manifest.json file 0644 146 5797054f6e8198b68e782429a26fa4a82b677b0c4b49a0c7fb926f0a2143487c
+b/c/.ai-rulez/.generated-manifest.local.json file 0644 356 839b51a81c26aa328b17f6605a38e3a6ce6cc1feacdc3c541579f69358253188
 b/c/.ai-rulez/config.toml file 0644 75 dad294c3b507bd1c225b10c2ec97eb319b5b85e420fea2cb5a094864b20b073f
 b/c/.ai-rulez/context/ dir 0755
 b/c/.ai-rulez/context/c.md file 0644 4 75893e6adce701bd6c7f089a8f29c6692506f182e8b6c8129e5708576261fa8a
@@ -70,6 +77,7 @@ b/c/.cursor/agents/ dir 0755
 b/c/.cursor/commands/ dir 0755
 b/c/.cursor/rules/ dir 0755
 b/c/.cursor/rules/context-c.mdc file 0644 209 29b4dda6373d2a1999b3a1f60fcceedcea83e9dfb7b33c831f2462cfc6014e9c
+b/c/.mcp.json file 0644 178 f0eb854d41aaf4f67b335d410d50f4bde0cd0aa4a418eb039e97d0d41f55b27d
 b/c/AGENTS.md file 0644 384 516aa9950ff1a21e6eaf6ff4910b0ea16d8cd9bc3d76d02e1ee6ebe03481b815
 --- home tree
 (no change)

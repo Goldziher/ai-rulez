@@ -14,7 +14,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 376 b706c91c3dc0333509fd1871da7cf44393eb6f40056e59bbb65b2fe767fc18af
-.ai-rulez/.generated-manifest.local.json file 0644 1286 081d9570e792c8f1f37f49996973deb6eb3d13379058deb349c2c035df19e573
+.ai-rulez/.generated-manifest.local.json file 0644 1459 25a8999b6eecb42c0dd102e3b4a1426368a0b789f79285e445e58ed82f54a955
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -44,7 +44,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 236 10dd8ab40b1feaaf9648e0f571c382faf4f2ff71cec56568062009c8674574ee
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 .warp/ dir 0755
 .warp/.mcp.json file 0600 355 aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b
 .warp/skills/ dir 0755

@@ -138,6 +138,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.claude/settings.json (ai-rulez keys only)
   merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
   merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.commandcode/mcp.json (ai-rulez keys only)
   merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
   merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
   merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
@@ -148,6 +149,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
   merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
   merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.gemini/config/mcp_config.json (ai-rulez keys only)
   merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
   merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
   merge:   $HOME/.grok/config.toml (ai-rulez keys only)
@@ -165,7 +167,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
   merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
   skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
-  15 project-shaped output(s) have no documented user-level location and are not written
+  17 project-shaped output(s) have no documented user-level location and are not written
 --- stderr
 WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
 WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
@@ -352,6 +354,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.claude/settings.json (ai-rulez keys only)
   merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
   merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.commandcode/mcp.json (ai-rulez keys only)
   merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
   merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
   merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
@@ -362,6 +365,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
   merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
   merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.gemini/config/mcp_config.json (ai-rulez keys only)
   merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
   merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
   merge:   $HOME/.grok/config.toml (ai-rulez keys only)
@@ -379,7 +383,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
   merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
   skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
-  15 project-shaped output(s) have no documented user-level location and are not written
+  17 project-shaped output(s) have no documented user-level location and are not written
 --- stderr
 WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
 WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
@@ -419,7 +423,7 @@ WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are ena
 WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
 WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
 INFO  Generating user-level configuration profile=default home=$HOME
-INFO  User-level generation complete files=160
+INFO  User-level generation complete files=162
 --- project tree
 (no change)
 --- home tree
@@ -495,6 +499,7 @@ INFO  User-level generation complete files=160
 + .commandcode/agents/ dir 0755
 + .commandcode/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .commandcode/commands/ dir 0755
++ .commandcode/mcp.json file 0644 178 f0eb854d41aaf4f67b335d410d50f4bde0cd0aa4a418eb039e97d0d41f55b27d
 + .commandcode/settings.json file 0644 302 7a25e2ebf831ac932802e34cf13ef4e0c62f4ff1d6a237a549d0f006713dc2fc
 + .commandcode/skills/ dir 0755
 + .commandcode/skills/helper/ dir 0755
@@ -503,8 +508,8 @@ INFO  User-level generation complete files=160
 + .config/agents/skills/ dir 0755
 + .config/agents/skills/helper/ dir 0755
 + .config/agents/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
-+ .config/ai-rulez/.generated-manifest.json file 0644 11820 8bcd5fe40cc06f432c43d528a9ae6e10eb34bb24bcfd75125082f77d5c207ee4
-+ .config/ai-rulez/.generated-manifest.local.json file 0644 19430 871fcf0cf9e8e9f5041cb96aa62ada0dfeb5a589d65ddcaea94e67a21b56e18b
++ .config/ai-rulez/.generated-manifest.json file 0644 11962 640d0b6e8a6824ed2257ccf40bc5bf86b9487fde96855172c40837521019e4b7
++ .config/ai-rulez/.generated-manifest.local.json file 0644 20235 9493612c9af9447b2e2748169d4a604bdaf2046ba59e8ed7c05fe8ef7b2dd856
 + .config/amp/ dir 0755
 + .config/amp/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .config/amp/plugins/ dir 0755
@@ -614,6 +619,7 @@ INFO  User-level generation complete files=160
 + .gemini/config/ dir 0755
 + .gemini/config/agents/ dir 0755
 + .gemini/config/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
++ .gemini/config/mcp_config.json file 0644 155 e491744d31f0827668b31d10d109d1b72404c167d44e9f9bfe0dcb680ba88add
 + .gemini/config/skills/ dir 0755
 + .gemini/config/skills/helper/ dir 0755
 + .gemini/config/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
@@ -717,7 +723,7 @@ INFO  User-level generation complete files=160
 + .qoder/commands/ dir 0755
 + .qoder/rules/ dir 0755
 + .qoder/rules/mine.md file 0644 257 8ba5f03bd0ad69a816962c967731e40545b94bb920bef9fec8d13305fe93165e
-+ .qoder/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
++ .qoder/settings.json file 0644 475 d38ab474c8c769b12155ccb438d32596d60219dfe706d89227b8a032bf7ac870
 + .qoder/skills/ dir 0755
 + .qoder/skills/helper/ dir 0755
 + .qoder/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
@@ -943,6 +949,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.claude/settings.json (ai-rulez keys only)
   merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
   merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.commandcode/mcp.json (ai-rulez keys only)
   merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
   merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
   merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
@@ -953,6 +960,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
   merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
   merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.gemini/config/mcp_config.json (ai-rulez keys only)
   merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
   merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
   merge:   $HOME/.grok/config.toml (ai-rulez keys only)
@@ -970,7 +978,7 @@ user-level plan (profile default, home $HOME)
   merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
   merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
   skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
-  15 project-shaped output(s) have no documented user-level location and are not written
+  17 project-shaped output(s) have no documented user-level location and are not written
 --- stderr
 WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
 WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
@@ -1010,7 +1018,7 @@ WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are ena
 WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
 WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
 INFO  Generating user-level configuration profile=default home=$HOME
-INFO  User-level generation complete files=160
+INFO  User-level generation complete files=162
 --- project tree
 (no change)
 --- home tree
@@ -1207,6 +1215,7 @@ user-level plan (profile backend, home $HOME)
   merge:   $HOME/.claude/settings.json (ai-rulez keys only)
   merge:   $HOME/.codebuddy/settings.json (ai-rulez keys only)
   merge:   $HOME/.codex/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.commandcode/mcp.json (ai-rulez keys only)
   merge:   $HOME/.commandcode/settings.json (ai-rulez keys only)
   merge:   $HOME/.config/devin/config.json (ai-rulez keys only)
   merge:   $HOME/.config/kilo/kilo.jsonc (ai-rulez keys only)
@@ -1217,6 +1226,7 @@ user-level plan (profile backend, home $HOME)
   merge:   $HOME/.cursor/hooks.json (ai-rulez keys only)
   merge:   $HOME/.deepagents/hooks.json (ai-rulez keys only)
   merge:   $HOME/.factory/hooks.json (ai-rulez keys only)
+  merge:   $HOME/.gemini/config/mcp_config.json (ai-rulez keys only)
   merge:   $HOME/.gemini/settings.json (ai-rulez keys only)
   merge:   $HOME/.gitlab/duo/hooks.json (ai-rulez keys only)
   merge:   $HOME/.grok/config.toml (ai-rulez keys only)
@@ -1234,7 +1244,7 @@ user-level plan (profile backend, home $HOME)
   merge:   $HOME/.vibe/config.toml (ai-rulez keys only)
   merge:   $HOME/.zcode/cli/config.json (ai-rulez keys only)
   skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
-  20 project-shaped output(s) have no documented user-level location and are not written
+  22 project-shaped output(s) have no documented user-level location and are not written
 --- stderr
 WARN  preset aiassistant has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
 WARN  preset baz has no documented user-level location, so --user writes nothing for it (no vendor-documented user-level location is declared for it) hint=supported: amp, antigravity, augment, bob, claude, cline, codebuddy, codewhale, codex, commandcode, copilot, copilot-cli, cortex, crush, cursor, deepagents, devin, dsh, factory, gemini, gitlab-duo, goose, grok, hermes, junie, kilo, kimi, kiro, letta, mimocode, muse, omp, openclaw, opencode, pi, poolside, qoder, qwen, reasonix, rovodev, takt, trae, vibe, warp, zcode, zed, zoocode
@@ -1274,7 +1284,7 @@ WARN  [[hooks]] for gitlab-duo: Duo CLI ignores project hooks until they are ena
 WARN  [[hooks]] for grok: Grok only runs project hooks in a trusted folder (/hooks-trust or --trust)
 WARN  [[hooks]] not generated for vibe: the event SessionStart has no equivalent hint=restrict the group with targets, or remove it
 INFO  Generating user-level configuration profile=backend home=$HOME
-INFO  User-level generation complete files=213
+INFO  User-level generation complete files=215
 --- project tree
 (no change)
 --- home tree
@@ -1303,8 +1313,8 @@ INFO  User-level generation complete files=213
 + .commandcode/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .config/agents/skills/db/ dir 0755
 + .config/agents/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
-~ .config/ai-rulez/.generated-manifest.json file 0644 14693 6ea29bfde73bffb5ebc04d21f52c2cea05e3ea013680e439231dccafc28f92d2
-~ .config/ai-rulez/.generated-manifest.local.json file 0644 19534 9f1d6a109f74058947e3ed7a925c2adf42ab407008e8b0656f0a00fafaa108e7
+~ .config/ai-rulez/.generated-manifest.json file 0644 14835 5d0c9b15ce790eb34caa6de6aa24f55d63c823b5e7fb6025c33d8db910288bde
+~ .config/ai-rulez/.generated-manifest.local.json file 0644 20339 44abb140a4b3b9826f699c28f7f82dbce4704e1407f357616bda2b4406e88308
 ~ .config/amp/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 ~ .config/crush/CRUSH.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .config/crush/skills/db/ dir 0755
@@ -1440,6 +1450,7 @@ Clean plan (profile default)
   remove file: .codex/rules/ai-rulez.rules
   remove file: .commandcode/AGENTS.md
   remove file: .commandcode/agents/buddy.md
+  remove file: .commandcode/mcp.json
   remove file: .commandcode/settings.json
   remove file: .commandcode/skills/db/SKILL.md
   remove file: .commandcode/skills/helper/SKILL.md
@@ -1505,6 +1516,7 @@ Clean plan (profile default)
   remove file: .gemini/GEMINI.md
   remove file: .gemini/agents/buddy.md
   remove file: .gemini/config/agents/buddy.md
+  remove file: .gemini/config/mcp_config.json
   remove file: .gemini/config/skills/db/SKILL.md
   remove file: .gemini/config/skills/helper/SKILL.md
   remove file: .gemini/settings.json
@@ -1924,6 +1936,7 @@ Clean plan (profile default)
   remove file: .codex/rules/ai-rulez.rules
   remove file: .commandcode/AGENTS.md
   remove file: .commandcode/agents/buddy.md
+  remove file: .commandcode/mcp.json
   remove file: .commandcode/settings.json
   remove file: .commandcode/skills/db/SKILL.md
   remove file: .commandcode/skills/helper/SKILL.md
@@ -1989,6 +2002,7 @@ Clean plan (profile default)
   remove file: .gemini/GEMINI.md
   remove file: .gemini/agents/buddy.md
   remove file: .gemini/config/agents/buddy.md
+  remove file: .gemini/config/mcp_config.json
   remove file: .gemini/config/skills/db/SKILL.md
   remove file: .gemini/config/skills/helper/SKILL.md
   remove file: .gemini/settings.json
@@ -2359,7 +2373,7 @@ Clean plan (profile default)
 --- stderr
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
-Removed user-level generated files: 211 files, 258 directories
+Removed user-level generated files: 213 files, 258 directories
 --- project tree
 (no change)
 --- home tree

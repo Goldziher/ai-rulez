@@ -7,7 +7,7 @@ locked build  sha256:5e10c5e6f0fa6f31aa6153e92cf573c60956206438b3e63f7cbd2a43771
 locked deployer  sha256:208f31ab4e4383de261c2e2d13b9acd4aa8ce8bce0288f132b7d892279cc2c08
 locked reviewer  sha256:0acf41ff879036c70ea80f1659eaf6a83575c7afe707e4eac920b616979f63f3
 locked ship  sha256:2d9318d52196b1813e252b22eb0364eb383e66c2b0e60b4bc02cdb4b3a25224a
-pinned 19 item(s) and 35 output(s), tree sha256:68fee9b6d2766b56a58ba2a2d44890eb583487d0b0e7bc9564b6046482e427fa
+pinned 19 item(s) and 35 output(s), tree sha256:ea4ff8b92d3dc30d8e2f2b6e3c12f7a6cae36d21ad24d57acf7ff810f0f15aeb
 --- stderr
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
@@ -17,7 +17,7 @@ INFO  Wrote lock file path=$ROOT/.ai-rulez/ai-rulez.lock
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
-.ai-rulez/ai-rulez.lock file 0600 8330 f3e56aa66bc5dc3919d1ed1425481e13b53663e4f21a91df3007a8d5845bd526
+.ai-rulez/ai-rulez.lock file 0600 8330 3990461b97556ea5c19a4aa662f4be23cf7fb3c2c594f92463b10afa40b93634
 .ai-rulez/checks/ dir 0755
 .ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
 .ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
@@ -96,7 +96,7 @@ WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: 
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
-.ai-rulez/ai-rulez.lock file 0600 8330 f3e56aa66bc5dc3919d1ed1425481e13b53663e4f21a91df3007a8d5845bd526
+.ai-rulez/ai-rulez.lock file 0600 8330 3990461b97556ea5c19a4aa662f4be23cf7fb3c2c594f92463b10afa40b93634
 .ai-rulez/checks/ dir 0755
 .ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
 .ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36
