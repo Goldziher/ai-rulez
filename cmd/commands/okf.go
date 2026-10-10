@@ -310,7 +310,7 @@ func checkExportTarget(dir, cfgDir string) error {
 			Errorf("refusing to export into %s: it overlaps the configuration directory %s", dir, cfgDir)
 	}
 	// These entries mark a directory as holding a project's configuration.
-	for _, name := range []string{"config.toml", okfLockFile, "local"} {
+	for _, name := range []string{configFileTOML, okfLockFile, flagLocal} {
 		if _, err := os.Lstat(filepath.Join(target, name)); err == nil {
 			return oops.
 				Hint("Choose a directory that holds no ai-rulez configuration").

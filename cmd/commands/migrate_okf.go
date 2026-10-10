@@ -58,21 +58,7 @@ func runMigrateOKF(ctx context.Context, out io.Writer) int {
 	if _, statErr := os.Stat(backupDir); backupDir != "" && statErr == nil {
 		report.BackupDir = backupDir
 	}
-	pending := false
-	for _, c := range changes {
-		report.Changes = append(report.Changes, migrateOKFChangeReport{Path: c.Path, Action: c.Action, Detail: c.Detail})
-		pending = pending || c.Pending()
-		switch c.Action {
-		case okfbridge.ActionConverted:
-			report.Summary.Converted++
-		case okfbridge.ActionIndex:
-			report.Summary.Indexes++
-		case okfbridge.ActionSkipped:
-			report.Summary.Skipped++
-		default:
-			report.Summary.Unchanged++
-		}
-	}
+	pending := tallyMigrateOKFChanges(&report, changes)
 	if migrateFormat == formatJSON {
 		if err := writeRawJSON(out, report); err != nil {
 			renderStderr(err)
@@ -91,6 +77,28 @@ func runMigrateOKF(ctx context.Context, out io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// tallyMigrateOKFChanges folds the migration changes into the report's change
+// list and summary, and reports whether any change is still pending (a check
+// exits with drift when one is).
+func tallyMigrateOKFChanges(report *migrateOKFReport, changes []okfbridge.MigrateChange) bool {
+	pending := false
+	for _, c := range changes {
+		report.Changes = append(report.Changes, migrateOKFChangeReport{Path: c.Path, Action: c.Action, Detail: c.Detail})
+		pending = pending || c.Pending()
+		switch c.Action {
+		case okfbridge.ActionConverted:
+			report.Summary.Converted++
+		case okfbridge.ActionIndex:
+			report.Summary.Indexes++
+		case okfbridge.ActionSkipped:
+			report.Summary.Skipped++
+		default:
+			report.Summary.Unchanged++
+		}
+	}
+	return pending
 }
 
 func printMigrateOKFReport(out io.Writer, r *migrateOKFReport) {

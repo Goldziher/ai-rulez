@@ -12,7 +12,7 @@ var (
 )
 
 var DomainCmd = &cobra.Command{
-	Use:   "domain",
+	Use:   flagServeDomain,
 	Short: "Manage domains",
 	Long:  `Manage domains in your .ai-rulez/ configuration.`,
 }
@@ -85,7 +85,7 @@ func runDomainAdd(cmd *cobra.Command, args []string) error {
 
 	out.Info("Domain added successfully\n")
 	return reportChange(out, out.JSON(), changeResult{
-		Status: statusCreated, Type: "domain", Name: result.Name, Path: result.Path,
+		Status: statusCreated, Type: flagServeDomain, Name: result.Name, Path: result.Path,
 	}, true)
 }
 
@@ -112,7 +112,7 @@ func runDomainRemove(cmd *cobra.Command, args []string) error {
 
 	out.Info("Domain removed successfully\n")
 	return reportChange(out, out.JSON(), changeResult{
-		Status: statusRemoved, Type: "domain", Name: name, Path: path,
+		Status: statusRemoved, Type: flagServeDomain, Name: name, Path: path,
 	}, true)
 }
 

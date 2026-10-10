@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -69,7 +70,7 @@ func addChangedFlags(cmd *cobra.Command) {
 // narrowToChanged narrows each report to the changed files of its repository.
 // Baselines are applied before this so stale entries are judged against every
 // finding, not only the visible ones.
-func narrowToChanged(reports []*lint.Report, cfgs []*config.Config) error {
+func narrowToChanged(ctx context.Context, reports []*lint.Report, cfgs []*config.Config) error {
 	rev := changedRev()
 	if rev == "" {
 		return nil
@@ -84,7 +85,7 @@ func narrowToChanged(reports []*lint.Report, cfgs []*config.Config) error {
 		if cfg == nil {
 			continue
 		}
-		changed, err := changedFiles(cfg, rev, cache)
+		changed, err := changedFiles(ctx, cfg, rev, cache)
 		if err != nil {
 			return err
 		}
@@ -97,15 +98,15 @@ func narrowToChanged(reports []*lint.Report, cfgs []*config.Config) error {
 // changedFiles lists the files of cfg's lint tree changed since rev. Finding
 // paths are relative to that tree (which --repo-root may narrow below the git
 // toplevel), so the change set is rebased onto it. cache is keyed by tree top.
-func changedFiles(cfg *config.Config, rev string, cache map[string][]string) ([]string, error) {
-	tree, err := strictTreeCache.Load(cfg.BaseDir)
+func changedFiles(ctx context.Context, cfg *config.Config, rev string, cache map[string][]string) ([]string, error) {
+	tree, err := strictTreeCache.LoadContext(ctx, cfg.BaseDir)
 	if err != nil {
 		return nil, oops.Wrapf(err, "index repository files")
 	}
 	if changed, ok := cache[tree.Top]; ok {
 		return changed, nil
 	}
-	changed, err := changedInTree(tree.Top, rev)
+	changed, err := changedInTree(ctx, tree.Top, rev)
 	if err != nil {
 		return nil, err
 	}
@@ -118,12 +119,12 @@ func changedFiles(cfg *config.Config, rev string, cache map[string][]string) ([]
 // when --repo-root narrows the tree; paths outside treeTop are dropped. A
 // treeTop outside any git repository cannot be mapped and is an error, so the
 // gate never passes vacuously.
-func changedInTree(treeTop, rev string) ([]string, error) {
-	changed, err := gitutil.ChangedSince(treeTop, rev)
+func changedInTree(ctx context.Context, treeTop, rev string) ([]string, error) {
+	changed, err := gitutil.Git{}.ChangedSinceContext(ctx, treeTop, rev)
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
-	gitTop := gitutil.Resolve(gitutil.TopLevel(treeTop))
+	gitTop := gitutil.Resolve(gitutil.Git{}.TopLevelContext(ctx, treeTop))
 	prefix, err := filepath.Rel(gitTop, gitutil.Resolve(treeTop))
 	if err != nil || safefs.RelEscapes(prefix) {
 		return nil, oops.Errorf("cannot map the files changed since %s onto %s: it is outside the git repository %s", rev, treeTop, gitTop)

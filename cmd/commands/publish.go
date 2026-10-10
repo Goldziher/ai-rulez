@@ -545,7 +545,7 @@ func strictGate(ctx context.Context, cfg *config.Config) error {
 		return publish.Errorf(publish.CodePreflight, publish.ExitFailed, "", "validate --strict could not run: %v", err)
 	}
 	reports, cfgs := []*lint.Report{report}, []*config.Config{cfg}
-	excess, _, done := prepareReports(reports, cfgs)
+	excess, _, done := prepareReports(ctx, reports, cfgs)
 	if done {
 		return publish.Errorf(publish.CodePreflight, publish.ExitFailed, "", "validate --strict could not run")
 	}

@@ -13,7 +13,7 @@ var (
 )
 
 var ProfileCmd = &cobra.Command{
-	Use:   "profile",
+	Use:   flagServeProfile,
 	Short: "Manage profiles",
 	Long:  `Manage profiles in your .ai-rulez/ configuration.`,
 }
@@ -119,7 +119,7 @@ func runProfileAdd(cmd *cobra.Command, args []string) error {
 		}
 	}
 	return reportChange(out, out.JSON(), changeResult{
-		Status: statusCreated, Type: "profile", Name: name, Domains: domains,
+		Status: statusCreated, Type: flagServeProfile, Name: name, Domains: domains,
 		Default: profileSetDefault, Path: op.ConfigFile(), Local: profileLocal,
 	}, false)
 }
@@ -140,7 +140,7 @@ func runProfileRemove(cmd *cobra.Command, args []string) error {
 		return failMsg("Failed to remove profile", err)
 	}
 	return reportChange(out, out.JSON(), changeResult{
-		Status: statusRemoved, Type: "profile", Name: name, Path: op.ConfigFile(), Local: profileLocal,
+		Status: statusRemoved, Type: flagServeProfile, Name: name, Path: op.ConfigFile(), Local: profileLocal,
 	}, false)
 }
 
@@ -156,7 +156,7 @@ func runProfileSetDefault(cmd *cobra.Command, args []string) error {
 		return failMsg("Failed to set default profile", err)
 	}
 	return reportChange(out, out.JSON(), changeResult{
-		Status: statusUpdated, Type: "profile", Name: name, Default: true, Path: op.ConfigFile(), Local: profileLocal,
+		Status: statusUpdated, Type: flagServeProfile, Name: name, Default: true, Path: op.ConfigFile(), Local: profileLocal,
 	}, false)
 }
 
