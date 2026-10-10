@@ -1,252 +1,254 @@
-goos: darwin
-goarch: arm64
+goos: linux
+goarch: amd64
 pkg: github.com/Goldziher/ai-rulez/v5/internal/parser
-cpu: Apple M5 Pro
-BenchmarkParseFrontmatter/none-18         	11689269	       120.0 ns/op	31019.85 MB/s	       0 B/op	       0 allocs/op
-BenchmarkParseFrontmatter/none-18         	10372221	       130.8 ns/op	28469.17 MB/s	       0 B/op	       0 allocs/op
-BenchmarkParseFrontmatter/none-18         	11437975	       103.2 ns/op	36082.77 MB/s	       0 B/op	       0 allocs/op
-BenchmarkParseFrontmatter/none-18         	11943952	       105.0 ns/op	35444.11 MB/s	       0 B/op	       0 allocs/op
-BenchmarkParseFrontmatter/none-18         	12705465	        93.35 ns/op	39883.17 MB/s	       0 B/op	       0 allocs/op
-BenchmarkParseFrontmatter/none-18         	10607378	       105.2 ns/op	35405.53 MB/s	       0 B/op	       0 allocs/op
-BenchmarkParseFrontmatter/small-18        	  409622	      2762 ns/op	1356.06 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/small-18        	  538894	      2530 ns/op	1480.53 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/small-18        	  512275	      2160 ns/op	1734.65 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/small-18        	  573507	      2794 ns/op	1340.79 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/small-18        	  503221	      2597 ns/op	1442.53 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/small-18        	  385832	      2717 ns/op	1378.48 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/rich-18         	  113694	     10928 ns/op	 351.39 MB/s	   12600 B/op	     155 allocs/op
-BenchmarkParseFrontmatter/rich-18         	  133866	      9561 ns/op	 401.64 MB/s	   12600 B/op	     155 allocs/op
-BenchmarkParseFrontmatter/rich-18         	  114225	     10411 ns/op	 368.86 MB/s	   12600 B/op	     155 allocs/op
-BenchmarkParseFrontmatter/rich-18         	  132187	      9407 ns/op	 408.21 MB/s	   12600 B/op	     155 allocs/op
-BenchmarkParseFrontmatter/rich-18         	  123608	     11354 ns/op	 338.19 MB/s	   12600 B/op	     155 allocs/op
-BenchmarkParseFrontmatter/rich-18         	  117764	     10023 ns/op	 383.12 MB/s	   12600 B/op	     155 allocs/op
-BenchmarkParseFrontmatter/crlf-18         	  309842	      4401 ns/op	 860.99 MB/s	   11176 B/op	      42 allocs/op
-BenchmarkParseFrontmatter/crlf-18         	  314078	      4398 ns/op	 861.49 MB/s	   11176 B/op	      42 allocs/op
-BenchmarkParseFrontmatter/crlf-18         	  291558	      5126 ns/op	 739.19 MB/s	   11176 B/op	      42 allocs/op
-BenchmarkParseFrontmatter/crlf-18         	  224662	      6047 ns/op	 626.60 MB/s	   11176 B/op	      42 allocs/op
-BenchmarkParseFrontmatter/crlf-18         	  252884	      4573 ns/op	 828.51 MB/s	   11176 B/op	      42 allocs/op
-BenchmarkParseFrontmatter/crlf-18         	  295490	      5815 ns/op	 651.58 MB/s	   11176 B/op	      42 allocs/op
-BenchmarkParseFrontmatter/longbody-18     	  127549	      8977 ns/op	20737.90 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/longbody-18     	  132735	      8353 ns/op	22288.85 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/longbody-18     	  157689	      8737 ns/op	21309.51 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/longbody-18     	  129694	      9595 ns/op	19403.52 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/longbody-18     	  121471	      9052 ns/op	20566.54 MB/s	    7080 B/op	      41 allocs/op
-BenchmarkParseFrontmatter/longbody-18     	  140540	      8016 ns/op	23223.91 MB/s	    7080 B/op	      41 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor
+BenchmarkParseFrontmatter/none-4         	 6166149	       194.5 ns/op	19144.46 MB/s	       0 B/op	       0 allocs/op
+BenchmarkParseFrontmatter/none-4         	 6119084	       194.9 ns/op	19099.51 MB/s	       0 B/op	       0 allocs/op
+BenchmarkParseFrontmatter/none-4         	 6069775	       199.7 ns/op	18647.53 MB/s	       0 B/op	       0 allocs/op
+BenchmarkParseFrontmatter/none-4         	 5947861	       194.7 ns/op	19120.11 MB/s	       0 B/op	       0 allocs/op
+BenchmarkParseFrontmatter/none-4         	 6138139	       195.1 ns/op	19081.16 MB/s	       0 B/op	       0 allocs/op
+BenchmarkParseFrontmatter/none-4         	 6167067	       197.0 ns/op	18896.88 MB/s	       0 B/op	       0 allocs/op
+BenchmarkParseFrontmatter/small-4        	  215965	      5207 ns/op	 719.41 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/small-4        	  220179	      5267 ns/op	 711.17 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/small-4        	  223683	      5275 ns/op	 710.13 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/small-4        	  219752	      5274 ns/op	 710.24 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/small-4        	  228182	      5215 ns/op	 718.30 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/small-4        	  226878	      5215 ns/op	 718.29 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/rich-4         	   57933	     20774 ns/op	 184.85 MB/s	   12952 B/op	     159 allocs/op
+BenchmarkParseFrontmatter/rich-4         	   57312	     20777 ns/op	 184.82 MB/s	   12952 B/op	     159 allocs/op
+BenchmarkParseFrontmatter/rich-4         	   57138	     20819 ns/op	 184.45 MB/s	   12952 B/op	     159 allocs/op
+BenchmarkParseFrontmatter/rich-4         	   57726	     20793 ns/op	 184.67 MB/s	   12952 B/op	     159 allocs/op
+BenchmarkParseFrontmatter/rich-4         	   56947	     20752 ns/op	 185.04 MB/s	   12952 B/op	     159 allocs/op
+BenchmarkParseFrontmatter/rich-4         	   57246	     20976 ns/op	 183.07 MB/s	   12952 B/op	     159 allocs/op
+BenchmarkParseFrontmatter/crlf-4         	  145137	      7880 ns/op	 480.81 MB/s	   11192 B/op	      43 allocs/op
+BenchmarkParseFrontmatter/crlf-4         	  152359	      7866 ns/op	 481.72 MB/s	   11192 B/op	      43 allocs/op
+BenchmarkParseFrontmatter/crlf-4         	  151710	      7868 ns/op	 481.54 MB/s	   11192 B/op	      43 allocs/op
+BenchmarkParseFrontmatter/crlf-4         	  147765	      7860 ns/op	 482.03 MB/s	   11192 B/op	      43 allocs/op
+BenchmarkParseFrontmatter/crlf-4         	  149848	      8079 ns/op	 469.01 MB/s	   11192 B/op	      43 allocs/op
+BenchmarkParseFrontmatter/crlf-4         	  150356	      8011 ns/op	 472.98 MB/s	   11192 B/op	      43 allocs/op
+BenchmarkParseFrontmatter/longbody-4     	   76838	     15271 ns/op	12190.98 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/longbody-4     	   77752	     15261 ns/op	12199.54 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/longbody-4     	   77966	     15270 ns/op	12192.11 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/longbody-4     	   77227	     15262 ns/op	12198.09 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/longbody-4     	   77605	     15294 ns/op	12172.71 MB/s	    7096 B/op	      42 allocs/op
+BenchmarkParseFrontmatter/longbody-4     	   77815	     15185 ns/op	12260.46 MB/s	    7096 B/op	      42 allocs/op
 PASS
-ok  	github.com/Goldziher/ai-rulez/v5/internal/parser	46.245s
-goos: darwin
-goarch: arm64
+ok  	github.com/Goldziher/ai-rulez/v5/internal/parser	39.829s
+goos: linux
+goarch: amd64
 pkg: github.com/Goldziher/ai-rulez/v5/internal/tokens
-cpu: Apple M5 Pro
-BenchmarkCount/ratio/prose-small-18         	201627652	         6.061 ns/op	614295.47 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-small-18         	207350278	         5.771 ns/op	645099.99 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-small-18         	214427612	         5.719 ns/op	650958.37 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-small-18         	193814986	         6.247 ns/op	595990.62 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-small-18         	204337893	         5.784 ns/op	643621.17 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-small-18         	216605960	         5.846 ns/op	636879.94 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-large-18         	184661655	         5.930 ns/op	31393341.44 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-large-18         	203972029	         5.868 ns/op	31723579.52 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-large-18         	200508650	         6.712 ns/op	27732311.90 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-large-18         	196249976	         5.999 ns/op	31031303.48 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-large-18         	206906004	         5.954 ns/op	31266174.74 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/prose-large-18         	188836174	         6.751 ns/op	27573968.79 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-18           	180081385	         6.549 ns/op	20014812.89 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-18           	191341008	         6.554 ns/op	20000165.70 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-18           	159054594	         7.173 ns/op	18273025.11 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-18           	172543272	         6.729 ns/op	19479924.54 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-18           	179696906	         7.273 ns/op	18021208.44 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-18           	174762127	         6.488 ns/op	20202815.88 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-unicode-18   	192964629	         6.372 ns/op	18833805.89 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-unicode-18   	170282709	         6.676 ns/op	17973629.52 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-unicode-18   	187083678	         6.297 ns/op	19057960.95 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-unicode-18   	188603317	         6.113 ns/op	19630972.09 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-unicode-18   	175348934	         6.416 ns/op	18703862.05 MB/s	       0 B/op	       0 allocs/op
-BenchmarkCount/ratio/long-line-unicode-18   	179120806	         6.409 ns/op	18724675.61 MB/s	       0 B/op	       0 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor
+BenchmarkCount/ratio/prose-small-4         	77790040	        14.38 ns/op	258900.19 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-small-4         	83063077	        14.32 ns/op	260029.92 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-small-4         	83546806	        14.29 ns/op	260610.77 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-small-4         	83464191	        14.25 ns/op	261267.91 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-small-4         	82277901	        14.26 ns/op	261024.95 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-small-4         	83127356	        14.27 ns/op	260982.39 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-large-4         	83142526	        14.54 ns/op	12801977.38 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-large-4         	82035336	        14.25 ns/op	13063433.23 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-large-4         	82645327	        14.31 ns/op	13010751.23 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-large-4         	83977986	        14.30 ns/op	13020467.07 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-large-4         	84670880	        14.30 ns/op	13019436.68 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/prose-large-4         	80964190	        14.24 ns/op	13075228.49 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-4           	84907350	        14.28 ns/op	9181017.39 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-4           	83457550	        14.25 ns/op	9201010.85 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-4           	83214607	        14.31 ns/op	9162581.21 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-4           	83118459	        14.27 ns/op	9182531.85 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-4           	81230490	        14.28 ns/op	9180389.50 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-4           	83419945	        14.28 ns/op	9176625.50 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-unicode-4   	82856115	        14.28 ns/op	8400700.86 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-unicode-4   	84921212	        14.30 ns/op	8391325.22 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-unicode-4   	83800842	        14.30 ns/op	8391817.98 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-unicode-4   	81110143	        14.31 ns/op	8386589.22 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-unicode-4   	84998590	        14.28 ns/op	8401874.96 MB/s	       0 B/op	       0 allocs/op
+BenchmarkCount/ratio/long-line-unicode-4   	83866854	        14.30 ns/op	8393234.95 MB/s	       0 B/op	       0 allocs/op
 PASS
-ok  	github.com/Goldziher/ai-rulez/v5/internal/tokens	45.088s
-goos: darwin
-goarch: arm64
+ok  	github.com/Goldziher/ai-rulez/v5/internal/tokens	29.730s
+goos: linux
+goarch: amd64
 pkg: github.com/Goldziher/ai-rulez/v5/internal/lint
-cpu: Apple M5 Pro
-BenchmarkSecretScan/DetectSecret/clean/small-18         	   86734	     12650 ns/op	 147.12 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/small-18         	   86836	     13739 ns/op	 135.45 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/small-18         	   81252	     13587 ns/op	 136.97 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/small-18         	   82651	     14910 ns/op	 124.81 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/small-18         	   83229	     15033 ns/op	 123.79 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/small-18         	   82470	     13811 ns/op	 134.75 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/small-18        	   86138	     15748 ns/op	 118.18 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/small-18        	   80090	     16355 ns/op	 113.79 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/small-18        	   74584	     15520 ns/op	 119.91 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/small-18        	   90726	     15578 ns/op	 119.46 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/small-18        	   82537	     16311 ns/op	 114.09 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/small-18        	   78538	     14871 ns/op	 125.14 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/ScanText/clean/small-18             	    2418	    430820 ns/op	   4.32 MB/s	  100600 B/op	     521 allocs/op
-BenchmarkSecretScan/ScanText/clean/small-18             	    2640	    415352 ns/op	   4.48 MB/s	  101088 B/op	     521 allocs/op
-BenchmarkSecretScan/ScanText/clean/small-18             	    3153	    404422 ns/op	   4.60 MB/s	  100606 B/op	     521 allocs/op
-BenchmarkSecretScan/ScanText/clean/small-18             	    3486	    405671 ns/op	   4.59 MB/s	  100902 B/op	     521 allocs/op
-BenchmarkSecretScan/ScanText/clean/small-18             	    2824	    422142 ns/op	   4.41 MB/s	  100846 B/op	     521 allocs/op
-BenchmarkSecretScan/ScanText/clean/small-18             	    3469	    413609 ns/op	   4.50 MB/s	  100954 B/op	     521 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/large-18         	    3994	    315951 ns/op	 117.96 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/large-18         	    3914	    280729 ns/op	 132.76 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/large-18         	    5055	    281175 ns/op	 132.55 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/large-18         	    4036	    287690 ns/op	 129.55 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/large-18         	    4107	    305458 ns/op	 122.01 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/clean/large-18         	    4728	    271436 ns/op	 137.30 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/large-18        	    4312	    281318 ns/op	 132.48 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/large-18        	    4454	    272906 ns/op	 136.56 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/large-18        	    4101	    304805 ns/op	 122.27 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/large-18        	    3651	    298609 ns/op	 124.81 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/large-18        	    3902	    264075 ns/op	 141.13 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/clean/large-18        	    4603	    242639 ns/op	 153.60 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/ScanText/clean/large-18             	     189	   6874474 ns/op	   5.42 MB/s	 1081743 B/op	    8990 allocs/op
-BenchmarkSecretScan/ScanText/clean/large-18             	     174	   6457739 ns/op	   5.77 MB/s	 1080913 B/op	    8990 allocs/op
-BenchmarkSecretScan/ScanText/clean/large-18             	     187	   6497542 ns/op	   5.74 MB/s	 1080534 B/op	    8990 allocs/op
-BenchmarkSecretScan/ScanText/clean/large-18             	     153	   6660052 ns/op	   5.60 MB/s	 1078981 B/op	    8989 allocs/op
-BenchmarkSecretScan/ScanText/clean/large-18             	     169	   6392892 ns/op	   5.83 MB/s	 1081197 B/op	    8989 allocs/op
-BenchmarkSecretScan/ScanText/clean/large-18             	     196	   6623015 ns/op	   5.63 MB/s	 1081215 B/op	    8989 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/small-18         	   51446	     22774 ns/op	  90.72 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/small-18         	   54308	     24224 ns/op	  85.29 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/small-18         	   51280	     23274 ns/op	  88.77 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/small-18         	   52894	     23080 ns/op	  89.52 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/small-18         	   50937	     22308 ns/op	  92.61 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/small-18         	   54751	     21859 ns/op	  94.52 MB/s	       0 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/small-18        	    8740	    130992 ns/op	  15.77 MB/s	   19967 B/op	      15 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/small-18        	    9980	    129021 ns/op	  16.01 MB/s	   19953 B/op	      15 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/small-18        	    9796	    121936 ns/op	  16.94 MB/s	   19940 B/op	      15 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/small-18        	   10000	    126302 ns/op	  16.36 MB/s	   19976 B/op	      15 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/small-18        	    8682	    137863 ns/op	  14.99 MB/s	   19968 B/op	      15 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/small-18        	   10000	    125181 ns/op	  16.50 MB/s	   19987 B/op	      15 allocs/op
-BenchmarkSecretScan/ScanText/dirty/small-18             	    2478	    405720 ns/op	   5.09 MB/s	  109760 B/op	     660 allocs/op
-BenchmarkSecretScan/ScanText/dirty/small-18             	    2970	    480282 ns/op	   4.30 MB/s	  109176 B/op	     660 allocs/op
-BenchmarkSecretScan/ScanText/dirty/small-18             	    3121	    408393 ns/op	   5.06 MB/s	  109427 B/op	     660 allocs/op
-BenchmarkSecretScan/ScanText/dirty/small-18             	    3312	    396421 ns/op	   5.21 MB/s	  109442 B/op	     660 allocs/op
-BenchmarkSecretScan/ScanText/dirty/small-18             	    2982	    393086 ns/op	   5.26 MB/s	  109522 B/op	     660 allocs/op
-BenchmarkSecretScan/ScanText/dirty/small-18             	    2772	    428266 ns/op	   4.82 MB/s	  109358 B/op	     660 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/large-18         	    3025	    440254 ns/op	  85.12 MB/s	       2 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/large-18         	    2947	    426548 ns/op	  87.85 MB/s	       2 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/large-18         	    3028	    410457 ns/op	  91.30 MB/s	       2 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/large-18         	    2757	    438996 ns/op	  85.36 MB/s	       3 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/large-18         	    2773	    420448 ns/op	  89.13 MB/s	       3 B/op	       0 allocs/op
-BenchmarkSecretScan/DetectSecret/dirty/large-18         	    2754	    410729 ns/op	  91.24 MB/s	       3 B/op	       0 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/large-18        	     514	   2519085 ns/op	  14.88 MB/s	  331864 B/op	      16 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/large-18        	     480	   2396221 ns/op	  15.64 MB/s	  332145 B/op	      16 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/large-18        	     506	   2346635 ns/op	  15.97 MB/s	  331833 B/op	      16 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/large-18        	     489	   2457649 ns/op	  15.25 MB/s	  331913 B/op	      16 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/large-18        	     578	   2170512 ns/op	  17.27 MB/s	  332103 B/op	      16 allocs/op
-BenchmarkSecretScan/RedactSecrets/dirty/large-18        	     559	   2406542 ns/op	  15.57 MB/s	  332318 B/op	      17 allocs/op
-BenchmarkSecretScan/ScanText/dirty/large-18             	     172	   7003400 ns/op	   5.35 MB/s	 1091007 B/op	    9131 allocs/op
-BenchmarkSecretScan/ScanText/dirty/large-18             	     198	   6658652 ns/op	   5.63 MB/s	 1091754 B/op	    9132 allocs/op
-BenchmarkSecretScan/ScanText/dirty/large-18             	     183	   6454767 ns/op	   5.81 MB/s	 1092038 B/op	    9132 allocs/op
-BenchmarkSecretScan/ScanText/dirty/large-18             	     208	   6279112 ns/op	   5.97 MB/s	 1090064 B/op	    9131 allocs/op
-BenchmarkSecretScan/ScanText/dirty/large-18             	     186	   6694384 ns/op	   5.60 MB/s	 1092606 B/op	    9132 allocs/op
-BenchmarkSecretScan/ScanText/dirty/large-18             	     186	   6381349 ns/op	   5.87 MB/s	 1093501 B/op	    9132 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor
+BenchmarkSecretScan/DetectSecret/clean/small-4         	   73023	     16398 ns/op	 113.49 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/small-4         	   73114	     16397 ns/op	 113.49 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/small-4         	   73062	     16403 ns/op	 113.46 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/small-4         	   73173	     16404 ns/op	 113.45 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/small-4         	   72976	     16397 ns/op	 113.50 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/small-4         	   72944	     16445 ns/op	 113.17 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/small-4        	   72987	     16414 ns/op	 113.38 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/small-4        	   72867	     16442 ns/op	 113.18 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/small-4        	   73050	     16381 ns/op	 113.61 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/small-4        	   72934	     16386 ns/op	 113.57 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/small-4        	   73098	     16409 ns/op	 113.41 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/small-4        	   73064	     16379 ns/op	 113.62 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/ScanText/clean/small-4             	    1918	    637096 ns/op	   2.92 MB/s	  100014 B/op	     521 allocs/op
+BenchmarkSecretScan/ScanText/clean/small-4             	    1870	    629400 ns/op	   2.96 MB/s	  100028 B/op	     521 allocs/op
+BenchmarkSecretScan/ScanText/clean/small-4             	    1893	    626856 ns/op	   2.97 MB/s	   99872 B/op	     521 allocs/op
+BenchmarkSecretScan/ScanText/clean/small-4             	    1903	    629489 ns/op	   2.96 MB/s	   99964 B/op	     521 allocs/op
+BenchmarkSecretScan/ScanText/clean/small-4             	    1898	    625568 ns/op	   2.97 MB/s	   99947 B/op	     521 allocs/op
+BenchmarkSecretScan/ScanText/clean/small-4             	    1903	    624302 ns/op	   2.98 MB/s	   99845 B/op	     521 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/large-4         	    3735	    318065 ns/op	 117.17 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/large-4         	    3768	    317666 ns/op	 117.32 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/large-4         	    3769	    318369 ns/op	 117.06 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/large-4         	    3759	    318170 ns/op	 117.14 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/large-4         	    3776	    317821 ns/op	 117.26 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/clean/large-4         	    3764	    318338 ns/op	 117.07 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/large-4        	    3660	    318231 ns/op	 117.11 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/large-4        	    3769	    318410 ns/op	 117.05 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/large-4        	    3766	    318464 ns/op	 117.03 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/large-4        	    3769	    318079 ns/op	 117.17 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/large-4        	    3770	    317534 ns/op	 117.37 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/clean/large-4        	    3774	    318055 ns/op	 117.18 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/ScanText/clean/large-4             	     100	  10935110 ns/op	   3.41 MB/s	 1071511 B/op	    8989 allocs/op
+BenchmarkSecretScan/ScanText/clean/large-4             	     100	  10948651 ns/op	   3.40 MB/s	 1073823 B/op	    8990 allocs/op
+BenchmarkSecretScan/ScanText/clean/large-4             	     100	  10936358 ns/op	   3.41 MB/s	 1070552 B/op	    8989 allocs/op
+BenchmarkSecretScan/ScanText/clean/large-4             	     100	  10923356 ns/op	   3.41 MB/s	 1073521 B/op	    8989 allocs/op
+BenchmarkSecretScan/ScanText/clean/large-4             	     100	  10910552 ns/op	   3.42 MB/s	 1068926 B/op	    8988 allocs/op
+BenchmarkSecretScan/ScanText/clean/large-4             	     100	  10960269 ns/op	   3.40 MB/s	 1074262 B/op	    8990 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/small-4         	   28456	     42180 ns/op	  48.98 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/small-4         	   28572	     42228 ns/op	  48.92 MB/s	       1 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/small-4         	   28402	     42234 ns/op	  48.92 MB/s	       1 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/small-4         	   28600	     42008 ns/op	  49.18 MB/s	       1 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/small-4         	   28478	     42163 ns/op	  49.00 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/small-4         	   28496	     42084 ns/op	  49.09 MB/s	       1 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/small-4        	    5317	    223098 ns/op	   9.26 MB/s	   19872 B/op	      15 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/small-4        	    5281	    225204 ns/op	   9.17 MB/s	   19865 B/op	      15 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/small-4        	    5197	    223642 ns/op	   9.24 MB/s	   19880 B/op	      15 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/small-4        	    5268	    224198 ns/op	   9.22 MB/s	   19879 B/op	      15 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/small-4        	    5356	    222885 ns/op	   9.27 MB/s	   19872 B/op	      15 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/small-4        	    5120	    224685 ns/op	   9.20 MB/s	   19888 B/op	      15 allocs/op
+BenchmarkSecretScan/ScanText/dirty/small-4             	    1591	    747342 ns/op	   2.76 MB/s	  108355 B/op	     660 allocs/op
+BenchmarkSecretScan/ScanText/dirty/small-4             	    1606	    747242 ns/op	   2.76 MB/s	  108483 B/op	     660 allocs/op
+BenchmarkSecretScan/ScanText/dirty/small-4             	    1600	    748096 ns/op	   2.76 MB/s	  108557 B/op	     660 allocs/op
+BenchmarkSecretScan/ScanText/dirty/small-4             	    1572	    748952 ns/op	   2.76 MB/s	  108538 B/op	     660 allocs/op
+BenchmarkSecretScan/ScanText/dirty/small-4             	    1591	    753298 ns/op	   2.74 MB/s	  108522 B/op	     660 allocs/op
+BenchmarkSecretScan/ScanText/dirty/small-4             	    1563	    748207 ns/op	   2.76 MB/s	  108479 B/op	     660 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/large-4         	    1400	    858188 ns/op	  43.67 MB/s	       4 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/large-4         	    1400	    855461 ns/op	  43.81 MB/s	       4 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/large-4         	    1399	    854755 ns/op	  43.84 MB/s	       4 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/large-4         	    1400	    855751 ns/op	  43.79 MB/s	       0 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/large-4         	    1401	    854147 ns/op	  43.87 MB/s	       4 B/op	       0 allocs/op
+BenchmarkSecretScan/DetectSecret/dirty/large-4         	    1400	    860106 ns/op	  43.57 MB/s	       4 B/op	       0 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/large-4        	     268	   4446803 ns/op	   8.43 MB/s	  332009 B/op	      16 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/large-4        	     268	   4462233 ns/op	   8.40 MB/s	  331853 B/op	      16 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/large-4        	     270	   4442118 ns/op	   8.44 MB/s	  332186 B/op	      16 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/large-4        	     270	   4435942 ns/op	   8.45 MB/s	  332392 B/op	      16 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/large-4        	     270	   4440028 ns/op	   8.44 MB/s	  331931 B/op	      16 allocs/op
+BenchmarkSecretScan/RedactSecrets/dirty/large-4        	     268	   4442658 ns/op	   8.44 MB/s	  332399 B/op	      16 allocs/op
+BenchmarkSecretScan/ScanText/dirty/large-4             	     100	  11082660 ns/op	   3.38 MB/s	 1082324 B/op	    9132 allocs/op
+BenchmarkSecretScan/ScanText/dirty/large-4             	     100	  11078734 ns/op	   3.38 MB/s	 1081954 B/op	    9131 allocs/op
+BenchmarkSecretScan/ScanText/dirty/large-4             	     100	  11056234 ns/op	   3.39 MB/s	 1080976 B/op	    9131 allocs/op
+BenchmarkSecretScan/ScanText/dirty/large-4             	     100	  11033807 ns/op	   3.40 MB/s	 1081209 B/op	    9132 allocs/op
+BenchmarkSecretScan/ScanText/dirty/large-4             	     100	  11062317 ns/op	   3.39 MB/s	 1080106 B/op	    9131 allocs/op
+BenchmarkSecretScan/ScanText/dirty/large-4             	     100	  11054863 ns/op	   3.39 MB/s	 1082461 B/op	    9132 allocs/op
 PASS
-ok  	github.com/Goldziher/ai-rulez/v5/internal/lint	136.097s
-goos: darwin
-goarch: arm64
+ok  	github.com/Goldziher/ai-rulez/v5/internal/lint	94.323s
+goos: linux
+goarch: amd64
 pkg: github.com/Goldziher/ai-rulez/v5/internal/lint
-cpu: Apple M5 Pro
-BenchmarkRunFull/small-18         	      76	  14374925 ns/op	 2322860 B/op	   30243 allocs/op
-BenchmarkRunFull/small-18         	     100	  14875140 ns/op	 2327576 B/op	   30245 allocs/op
-BenchmarkRunFull/small-18         	     100	  13305884 ns/op	 2324610 B/op	   30245 allocs/op
-BenchmarkRunFull/small-18         	      81	  15114280 ns/op	 2328935 B/op	   30246 allocs/op
-BenchmarkRunFull/small-18         	     100	  12764341 ns/op	 2325683 B/op	   30245 allocs/op
-BenchmarkRunFull/small-18         	     100	  11954237 ns/op	 2329490 B/op	   30246 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor
+BenchmarkRunFull/small-4         	      96	  12342813 ns/op	 1120852 B/op	    9720 allocs/op
+BenchmarkRunFull/small-4         	      98	  12716144 ns/op	 1121154 B/op	    9719 allocs/op
+BenchmarkRunFull/small-4         	      93	  12641626 ns/op	 1122149 B/op	    9720 allocs/op
+BenchmarkRunFull/small-4         	      97	  12398036 ns/op	 1120017 B/op	    9720 allocs/op
+BenchmarkRunFull/small-4         	      97	  12303152 ns/op	 1120569 B/op	    9720 allocs/op
+BenchmarkRunFull/small-4         	      98	  12377344 ns/op	 1120045 B/op	    9719 allocs/op
 PASS
-ok  	github.com/Goldziher/ai-rulez/v5/internal/lint	33.099s
-goos: darwin
-goarch: arm64
+ok  	github.com/Goldziher/ai-rulez/v5/internal/lint	8.123s
+goos: linux
+goarch: amd64
 pkg: github.com/Goldziher/ai-rulez/v5/internal/contentlock
-cpu: Apple M5 Pro
-BenchmarkBuildAndCompare/Build/small-18         	  310120	      3385 ns/op	    7928 B/op	      39 allocs/op
-BenchmarkBuildAndCompare/Build/small-18         	  326912	      3179 ns/op	    7928 B/op	      39 allocs/op
-BenchmarkBuildAndCompare/Build/small-18         	  447900	      3590 ns/op	    7928 B/op	      39 allocs/op
-BenchmarkBuildAndCompare/Build/small-18         	  305440	      3684 ns/op	    7928 B/op	      39 allocs/op
-BenchmarkBuildAndCompare/Build/small-18         	  301305	      3565 ns/op	    7928 B/op	      39 allocs/op
-BenchmarkBuildAndCompare/Build/small-18         	  280027	      3700 ns/op	    7928 B/op	      39 allocs/op
-BenchmarkBuildAndCompare/Compare/small-18       	  204408	      6411 ns/op	   10064 B/op	      66 allocs/op
-BenchmarkBuildAndCompare/Compare/small-18       	  216541	      6044 ns/op	   10064 B/op	      66 allocs/op
-BenchmarkBuildAndCompare/Compare/small-18       	  209174	      5880 ns/op	   10064 B/op	      66 allocs/op
-BenchmarkBuildAndCompare/Compare/small-18       	  212485	      5934 ns/op	   10064 B/op	      66 allocs/op
-BenchmarkBuildAndCompare/Compare/small-18       	  221848	      6439 ns/op	   10064 B/op	      66 allocs/op
-BenchmarkBuildAndCompare/Compare/small-18       	  214278	      5868 ns/op	   10064 B/op	      66 allocs/op
-BenchmarkBuildAndCompare/Build/medium-18        	   22524	     52498 ns/op	  138584 B/op	     427 allocs/op
-BenchmarkBuildAndCompare/Build/medium-18        	   23536	     51027 ns/op	  138584 B/op	     427 allocs/op
-BenchmarkBuildAndCompare/Build/medium-18        	   25275	     52995 ns/op	  138584 B/op	     427 allocs/op
-BenchmarkBuildAndCompare/Build/medium-18        	   20344	     52805 ns/op	  138584 B/op	     427 allocs/op
-BenchmarkBuildAndCompare/Build/medium-18        	   22626	     52245 ns/op	  138584 B/op	     427 allocs/op
-BenchmarkBuildAndCompare/Build/medium-18        	   22338	     50875 ns/op	  138584 B/op	     427 allocs/op
-BenchmarkBuildAndCompare/Compare/medium-18      	   10000	    112640 ns/op	  211921 B/op	     850 allocs/op
-BenchmarkBuildAndCompare/Compare/medium-18      	   10000	    108427 ns/op	  211920 B/op	     850 allocs/op
-BenchmarkBuildAndCompare/Compare/medium-18      	   12079	    107778 ns/op	  211920 B/op	     850 allocs/op
-BenchmarkBuildAndCompare/Compare/medium-18      	   10000	    116463 ns/op	  211921 B/op	     850 allocs/op
-BenchmarkBuildAndCompare/Compare/medium-18      	   10000	    109802 ns/op	  211920 B/op	     850 allocs/op
-BenchmarkBuildAndCompare/Compare/medium-18      	   10000	    108546 ns/op	  211920 B/op	     850 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor
+BenchmarkBuildAndCompare/Build/small-4         	  229890	      5086 ns/op	    7928 B/op	      39 allocs/op
+BenchmarkBuildAndCompare/Build/small-4         	  241852	      5080 ns/op	    7928 B/op	      39 allocs/op
+BenchmarkBuildAndCompare/Build/small-4         	  225508	      5112 ns/op	    7928 B/op	      39 allocs/op
+BenchmarkBuildAndCompare/Build/small-4         	  235478	      6321 ns/op	    7928 B/op	      39 allocs/op
+BenchmarkBuildAndCompare/Build/small-4         	  207912	      5077 ns/op	    7928 B/op	      39 allocs/op
+BenchmarkBuildAndCompare/Build/small-4         	  226288	      5107 ns/op	    7928 B/op	      39 allocs/op
+BenchmarkBuildAndCompare/Compare/small-4       	  136915	      8605 ns/op	   10064 B/op	      66 allocs/op
+BenchmarkBuildAndCompare/Compare/small-4       	  138991	      8632 ns/op	   10064 B/op	      66 allocs/op
+BenchmarkBuildAndCompare/Compare/small-4       	  138044	      8656 ns/op	   10064 B/op	      66 allocs/op
+BenchmarkBuildAndCompare/Compare/small-4       	  132414	      8644 ns/op	   10064 B/op	      66 allocs/op
+BenchmarkBuildAndCompare/Compare/small-4       	  137418	      8643 ns/op	   10064 B/op	      66 allocs/op
+BenchmarkBuildAndCompare/Compare/small-4       	  135075	      8643 ns/op	   10064 B/op	      66 allocs/op
+BenchmarkBuildAndCompare/Build/medium-4        	   15574	     76438 ns/op	  138584 B/op	     427 allocs/op
+BenchmarkBuildAndCompare/Build/medium-4        	   15706	     75850 ns/op	  138584 B/op	     427 allocs/op
+BenchmarkBuildAndCompare/Build/medium-4        	   15711	     76062 ns/op	  138584 B/op	     427 allocs/op
+BenchmarkBuildAndCompare/Build/medium-4        	   15736	     76992 ns/op	  138584 B/op	     427 allocs/op
+BenchmarkBuildAndCompare/Build/medium-4        	   15951	     76064 ns/op	  138584 B/op	     427 allocs/op
+BenchmarkBuildAndCompare/Build/medium-4        	   15559	     76538 ns/op	  138584 B/op	     427 allocs/op
+BenchmarkBuildAndCompare/Compare/medium-4      	    7503	    156159 ns/op	  211920 B/op	     850 allocs/op
+BenchmarkBuildAndCompare/Compare/medium-4      	    7692	    157237 ns/op	  211920 B/op	     850 allocs/op
+BenchmarkBuildAndCompare/Compare/medium-4      	    7622	    159463 ns/op	  211920 B/op	     850 allocs/op
+BenchmarkBuildAndCompare/Compare/medium-4      	    7300	    154772 ns/op	  211920 B/op	     850 allocs/op
+BenchmarkBuildAndCompare/Compare/medium-4      	    7048	    157068 ns/op	  211920 B/op	     850 allocs/op
+BenchmarkBuildAndCompare/Compare/medium-4      	    7540	    155421 ns/op	  211920 B/op	     850 allocs/op
 PASS
-ok  	github.com/Goldziher/ai-rulez/v5/internal/contentlock	43.193s
-goos: darwin
-goarch: arm64
+ok  	github.com/Goldziher/ai-rulez/v5/internal/contentlock	35.200s
+goos: linux
+goarch: amd64
 pkg: github.com/Goldziher/ai-rulez/v5/internal/lockfile
-cpu: Apple M5 Pro
-BenchmarkSaveLoad/Load/small-18         	   48526	     29513 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/small-18         	   42878	     26868 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/small-18         	   47749	     24963 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/small-18         	   49833	     28683 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/small-18         	   44449	     27452 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/small-18         	   49366	     24763 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/medium-18        	   46532	     30022 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/medium-18        	   42435	     27349 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/medium-18        	   46654	     24237 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/medium-18        	   47469	     25513 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/medium-18        	   44181	     32797 ns/op	     448 B/op	       4 allocs/op
-BenchmarkSaveLoad/Load/medium-18        	   41367	     25154 ns/op	     448 B/op	       4 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor
+BenchmarkSaveLoad/Load/small-4         	  766396	      1530 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/small-4         	  742018	      1532 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/small-4         	  751347	      1520 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/small-4         	  722631	      1520 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/small-4         	  742225	      1521 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/small-4         	  741283	      1521 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/medium-4        	  730254	      1524 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/medium-4        	  695038	      1520 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/medium-4        	  738327	      1527 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/medium-4        	  690694	      1552 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/medium-4        	  733772	      1528 ns/op	     384 B/op	       4 allocs/op
+BenchmarkSaveLoad/Load/medium-4        	  736921	      1524 ns/op	     384 B/op	       4 allocs/op
 PASS
-ok  	github.com/Goldziher/ai-rulez/v5/internal/lockfile	19.090s
-goos: darwin
-goarch: arm64
+ok  	github.com/Goldziher/ai-rulez/v5/internal/lockfile	13.646s
+goos: linux
+goarch: amd64
 pkg: github.com/Goldziher/ai-rulez/v5/internal/review
-cpu: Apple M5 Pro
-BenchmarkScore/Run/small-18         	  394516	      2755 ns/op	    8208 B/op	      29 allocs/op
-BenchmarkScore/Run/small-18         	  380011	      2644 ns/op	    8208 B/op	      29 allocs/op
-BenchmarkScore/Run/small-18         	  518416	      2619 ns/op	    8208 B/op	      29 allocs/op
-BenchmarkScore/Run/small-18         	  467850	      2805 ns/op	    8208 B/op	      29 allocs/op
-BenchmarkScore/Run/small-18         	  508266	      2788 ns/op	    8208 B/op	      29 allocs/op
-BenchmarkScore/Run/small-18         	  455349	      2682 ns/op	    8208 B/op	      29 allocs/op
-BenchmarkScore/Run/medium-18        	     433	   2733652 ns/op	  393480 B/op	    1111 allocs/op
-BenchmarkScore/Run/medium-18        	     463	   2626453 ns/op	  393480 B/op	    1111 allocs/op
-BenchmarkScore/Run/medium-18        	     460	   2628573 ns/op	  393480 B/op	    1111 allocs/op
-BenchmarkScore/Run/medium-18        	     379	   2796500 ns/op	  393480 B/op	    1111 allocs/op
-BenchmarkScore/Run/medium-18        	     422	   2842631 ns/op	  393480 B/op	    1111 allocs/op
-BenchmarkScore/Run/medium-18        	     428	   2768689 ns/op	  393480 B/op	    1111 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor
+BenchmarkScore/Run/small-4         	  221770	      5280 ns/op	    8208 B/op	      29 allocs/op
+BenchmarkScore/Run/small-4         	  211522	      5272 ns/op	    8208 B/op	      29 allocs/op
+BenchmarkScore/Run/small-4         	  216920	      5253 ns/op	    8208 B/op	      29 allocs/op
+BenchmarkScore/Run/small-4         	  215745	      5249 ns/op	    8208 B/op	      29 allocs/op
+BenchmarkScore/Run/small-4         	  217512	      7062 ns/op	    8208 B/op	      29 allocs/op
+BenchmarkScore/Run/small-4         	  175182	      6134 ns/op	    8208 B/op	      29 allocs/op
+BenchmarkScore/Run/medium-4        	     314	   3804735 ns/op	  393480 B/op	    1111 allocs/op
+BenchmarkScore/Run/medium-4        	     302	   3824261 ns/op	  393480 B/op	    1111 allocs/op
+BenchmarkScore/Run/medium-4        	     309	   3922443 ns/op	  393480 B/op	    1111 allocs/op
+BenchmarkScore/Run/medium-4        	     310	   3875022 ns/op	  393480 B/op	    1111 allocs/op
+BenchmarkScore/Run/medium-4        	     297	   3963201 ns/op	  393480 B/op	    1111 allocs/op
+BenchmarkScore/Run/medium-4        	     315	   3873202 ns/op	  393480 B/op	    1111 allocs/op
 PASS
-ok  	github.com/Goldziher/ai-rulez/v5/internal/review	24.751s
-goos: darwin
-goarch: arm64
+ok  	github.com/Goldziher/ai-rulez/v5/internal/review	17.544s
+goos: linux
+goarch: amd64
 pkg: github.com/Goldziher/ai-rulez/v5/internal/review
-cpu: Apple M5 Pro
-BenchmarkCalibrate-18    	      37	  28840455 ns/op	 8635307 B/op	   41184 allocs/op
-BenchmarkCalibrate-18    	      37	  30402301 ns/op	 8653998 B/op	   41191 allocs/op
-BenchmarkCalibrate-18    	      32	  31948147 ns/op	 8726672 B/op	   41308 allocs/op
-BenchmarkCalibrate-18    	      37	  33556254 ns/op	 8628897 B/op	   41166 allocs/op
-BenchmarkCalibrate-18    	      37	  29801658 ns/op	 8664403 B/op	   41224 allocs/op
-BenchmarkCalibrate-18    	      40	  34913919 ns/op	 8618588 B/op	   41119 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor
+BenchmarkCalibrate-4   	      72	  16775984 ns/op	 8170019 B/op	   40603 allocs/op
+BenchmarkCalibrate-4   	      72	  16970408 ns/op	 8171083 B/op	   40599 allocs/op
+BenchmarkCalibrate-4   	      70	  16920258 ns/op	 8173010 B/op	   40608 allocs/op
+BenchmarkCalibrate-4   	      57	  22706422 ns/op	 8185406 B/op	   40668 allocs/op
+BenchmarkCalibrate-4   	      72	  17027066 ns/op	 8170672 B/op	   40603 allocs/op
+BenchmarkCalibrate-4   	      69	  16904459 ns/op	 8172639 B/op	   40607 allocs/op
 PASS
-ok  	github.com/Goldziher/ai-rulez/v5/internal/review	27.211s
-goos: darwin
-goarch: arm64
+ok  	github.com/Goldziher/ai-rulez/v5/internal/review	15.154s
+goos: linux
+goarch: amd64
 pkg: github.com/Goldziher/ai-rulez/v5/internal/mcp
-cpu: Apple M5 Pro
-BenchmarkSkillServer/BuildCatalog/small-18         	   13098	    104124 ns/op	  133752 B/op	    1213 allocs/op
-BenchmarkSkillServer/BuildCatalog/small-18         	   10000	    104767 ns/op	  133925 B/op	    1213 allocs/op
-BenchmarkSkillServer/BuildCatalog/small-18         	   10000	    104425 ns/op	  133719 B/op	    1213 allocs/op
-BenchmarkSkillServer/BuildCatalog/small-18         	   12345	    109702 ns/op	  133619 B/op	    1213 allocs/op
-BenchmarkSkillServer/BuildCatalog/small-18         	    9274	    114283 ns/op	  133835 B/op	    1213 allocs/op
-BenchmarkSkillServer/BuildCatalog/small-18         	   10000	    105212 ns/op	  133923 B/op	    1213 allocs/op
-BenchmarkSkillServer/BuildCatalog/medium-18        	     571	   2024459 ns/op	 2694870 B/op	   24049 allocs/op
-BenchmarkSkillServer/BuildCatalog/medium-18        	     600	   1994688 ns/op	 2694651 B/op	   24049 allocs/op
-BenchmarkSkillServer/BuildCatalog/medium-18        	     567	   2078671 ns/op	 2688005 B/op	   24048 allocs/op
-BenchmarkSkillServer/BuildCatalog/medium-18        	     595	   2030477 ns/op	 2692190 B/op	   24049 allocs/op
-BenchmarkSkillServer/BuildCatalog/medium-18        	     631	   1904414 ns/op	 2692366 B/op	   24049 allocs/op
-BenchmarkSkillServer/BuildCatalog/medium-18        	     601	   2075323 ns/op	 2690258 B/op	   24049 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor
+BenchmarkSkillServer/BuildCatalog/small-4         	    5646	    181337 ns/op	  134853 B/op	    1253 allocs/op
+BenchmarkSkillServer/BuildCatalog/small-4         	    6056	    182078 ns/op	  134884 B/op	    1253 allocs/op
+BenchmarkSkillServer/BuildCatalog/small-4         	    6370	    216939 ns/op	  134795 B/op	    1253 allocs/op
+BenchmarkSkillServer/BuildCatalog/small-4         	    4887	    216190 ns/op	  134946 B/op	    1253 allocs/op
+BenchmarkSkillServer/BuildCatalog/small-4         	    6181	    197970 ns/op	  134924 B/op	    1253 allocs/op
+BenchmarkSkillServer/BuildCatalog/small-4         	    6439	    181817 ns/op	  134984 B/op	    1253 allocs/op
+BenchmarkSkillServer/BuildCatalog/medium-4        	     330	   3622850 ns/op	 2718907 B/op	   24845 allocs/op
+BenchmarkSkillServer/BuildCatalog/medium-4        	     328	   3650827 ns/op	 2719364 B/op	   24845 allocs/op
+BenchmarkSkillServer/BuildCatalog/medium-4        	     330	   3626405 ns/op	 2720817 B/op	   24845 allocs/op
+BenchmarkSkillServer/BuildCatalog/medium-4        	     331	   3614164 ns/op	 2716830 B/op	   24845 allocs/op
+BenchmarkSkillServer/BuildCatalog/medium-4        	     327	   3648993 ns/op	 2718056 B/op	   24845 allocs/op
+BenchmarkSkillServer/BuildCatalog/medium-4        	     325	   3628862 ns/op	 2719073 B/op	   24845 allocs/op
+ERROR server run cancelled error=context canceled
+ERROR server run cancelled error=context canceled
 PASS
-ok  	github.com/Goldziher/ai-rulez/v5/internal/mcp	18.228s
+ok  	github.com/Goldziher/ai-rulez/v5/internal/mcp	16.548s
