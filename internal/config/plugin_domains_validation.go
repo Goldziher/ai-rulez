@@ -111,7 +111,7 @@ func (d *PluginDefaults) validate(field, marketplace string) error {
 	for _, r := range d.Runtimes {
 		if !isValidPluginRuntime(r) || seen[r] {
 			return oops.With("field", field+".runtimes").With("value", r).
-				Hint("Valid runtimes: claude, cursor, codex, gemini, kimi, opencode, factory, hermes, agent-plugins; no duplicates").
+				Hint("Valid runtimes: "+strings.Join(KnownPluginRuntimes, ", ")+"; no duplicates").
 				Errorf("marketplace %q has an invalid or duplicate runtime %q", marketplace, r)
 		}
 		seen[r] = true

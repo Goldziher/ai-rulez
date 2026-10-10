@@ -1,6 +1,7 @@
 package publish
 
 import (
+	"encoding/json"
 	"regexp"
 	"sort"
 	"strings"
@@ -26,6 +27,8 @@ const (
 	npmIgnoreScripts = "--ignore-scripts"
 	// npmManifest is the npm package manifest.
 	npmManifest = "package.json"
+	// A runtime manifest rewrite invalidates the generator's original sidecar.
+	npmGeneratedProvenance = ".ai-rulez-generated.json"
 )
 
 var (
@@ -169,15 +172,18 @@ type npmPublishCfg struct {
 
 // npmPackageFiles builds the package directory: the bundle files at its root
 // and a package.json whose files allow-list is the bundle's top-level entries.
-// A bundle that already ships a package.json (the opencode runtime does) cannot
-// become an npm package without overwriting it, so it is refused.
+// Runtime metadata is retained; release identity and publishing policy are owned
+// by the validated plan rather than an authored package's publishConfig.
 func npmPackageFiles(in Input, m Manifest, plan NPMPlan) (map[string][]byte, error) {
+	native, err := nativeNPMManifest(in.Files)
+	if err != nil {
+		return nil, err
+	}
 	top := map[string]bool{}
 	files := map[string][]byte{}
 	for _, f := range in.Files {
-		if f.Path == npmManifest {
-			return nil, newError(CodeConfig, ExitFailed, "drop the opencode runtime with --runtime, or publish to another target",
-				"the bundle already has a package.json; the npm target writes its own")
+		if f.Path == npmManifest || (native != nil && f.Path == npmGeneratedProvenance) {
+			continue
 		}
 		top[strings.SplitN(f.Path, "/", 2)[0]] = true
 		files[NPMPackageDir+"/"+f.Path] = f.Data
@@ -201,8 +207,59 @@ func npmPackageFiles(in Input, m Manifest, plan NPMPlan) (map[string][]byte, err
 	if err != nil {
 		return nil, err
 	}
+	data, err = mergeNativeNPMPackage(native, data)
+	if err != nil {
+		return nil, err
+	}
 	files[NPMPackageDir+"/package.json"] = data
 	return files, nil
+}
+
+func nativeNPMManifest(files []File) (map[string]json.RawMessage, error) {
+	for _, file := range files {
+		if file.Path == npmManifest {
+			return nativeNPMPackage(file.Data)
+		}
+	}
+	return nil, nil
+}
+
+func nativeNPMPackage(data []byte) (map[string]json.RawMessage, error) {
+	var pkg map[string]json.RawMessage
+	if err := json.Unmarshal(data, &pkg); err != nil {
+		return nil, newError(CodeConfig, ExitFailed, "fix the runtime manifest", "invalid package.json: %v", err)
+	}
+	if pkg == nil {
+		return nil, newError(CodeConfig, ExitFailed, "", "package.json must be an object")
+	}
+	if raw, exists := pkg["private"]; exists {
+		var private bool
+		if json.Unmarshal(raw, &private) != nil || string(raw) == "null" {
+			return nil, newError(CodeConfig, ExitFailed, "", "package.json private must be a boolean")
+		}
+		if private {
+			return nil, newError(CodeConfig, ExitFailed, "use a publishable plugin package", "package.json is private")
+		}
+	}
+	if _, exists := pkg["scripts"]; exists {
+		return nil, newError(CodeConfig, ExitFailed, "publish a runtime bundle without npm scripts",
+			"package.json scripts are not allowed in published plugin packages")
+	}
+	return pkg, nil
+}
+
+func mergeNativeNPMPackage(native map[string]json.RawMessage, planned []byte) ([]byte, error) {
+	if len(native) == 0 {
+		return planned, nil
+	}
+	var owned map[string]json.RawMessage
+	if err := json.Unmarshal(planned, &owned); err != nil {
+		return nil, oops.Wrapf(err, "parse planned npm metadata")
+	}
+	for key, value := range owned {
+		native[key] = value
+	}
+	return marshalJSON(native)
 }
 
 func npmMissing() error {

@@ -111,6 +111,10 @@ ai-rulez publish --to github-release --execute --yes
 gates), writes a byte-reproducible tar.gz with `SHA256SUMS`, and uploads only when you pass `--execute --yes`. See
 [Publish](docs/publish.md) and [Authoring plugins](docs/plugins.md).
 
+Pi packages are opt-in with `[plugin] runtimes = ["pi"]`: skills and prompt templates can be installed
+from Git or npm. Publishing to npm preserves Pi and OpenCode runtime metadata while using the
+configured scope and plugin name for the released package.
+
 ## Validate
 
 ```bash

@@ -38,6 +38,8 @@ func rendererFor(runtime string) (RuntimeRenderer, bool) {
 		return renderKimi, true
 	case config.PluginRuntimeOpenCode:
 		return renderOpenCode, true
+	case config.PluginRuntimePi:
+		return renderPi, true
 	}
 	return nil, false
 }
@@ -102,6 +104,10 @@ func renderRuntimes(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	}
 	if kept != nil {
 		outputs = dropUnpackagedSkills(outputs, kept, baseDir)
+	}
+	outputs, err := composeNPMPackages(outputs, baseDir)
+	if err != nil {
+		return nil, err
 	}
 	return dedupeByPath(outputs), nil
 }
