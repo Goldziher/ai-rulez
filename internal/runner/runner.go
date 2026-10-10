@@ -136,20 +136,28 @@ func Run(ctx context.Context, spec Spec) Result {
 	stdout, stderr := &capBuffer{limit: limit}, &capBuffer{limit: limit}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
 	// Keep the fork window, in which the marker write end is open here, to one
-	// run at a time (see runStartWindow).
+	// run at a time (see runStartWindow). The lock is released with defer, so a
+	// panic in configure or Start cannot leave it held and deadlock every later
+	// run; endStartWindow (which closes the marker write end) runs before it.
 	mu := runStartWindow()
-	mu.Lock()
-	tree := configure(cmd)
-	if spec.ShortLived {
-		tree.shortLived()
-	}
+	var tree *procTree
+	var (
+		start  time.Time
+		runErr error
+	)
+	func() {
+		mu.Lock()
+		defer mu.Unlock()
+		tree = configure(cmd)
+		if spec.ShortLived {
+			tree.shortLived()
+		}
+		cmd.WaitDelay = killGrace
+		start = time.Now()
+		runErr = cmd.Start()
+		tree.endStartWindow()
+	}()
 	defer tree.close()
-	cmd.WaitDelay = killGrace
-
-	start := time.Now()
-	runErr := cmd.Start()
-	tree.endStartWindow()
-	mu.Unlock()
 	if runErr == nil {
 		tree.attach(cmd)
 		runErr = cmd.Wait()
