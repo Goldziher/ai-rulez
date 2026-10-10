@@ -22,6 +22,11 @@ presets = ["%s"]
 gitignore = true
 agents_md = false
 
+# These local-content tests do not exercise MCP; keep the self server off so
+# .mcp.json does not add a shared merged document to every fixture.
+[mcp]
+self_server = false
+
 [header]
 hashes = "full"
 
