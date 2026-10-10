@@ -86,16 +86,17 @@ in flag order, with later files winning. Generation fails if a placeholder canno
 
 ### Generated Self-Entry (`[mcp] self_server`)
 
-Instead of declaring the ai-rulez server yourself, let `generate` add it to the project `.mcp.json`,
-pinned to the version of the ai-rulez binary that ran it:
+`generate` adds the ai-rulez server to the project `.mcp.json` **by default**, pinned to the version
+of the ai-rulez binary that ran it, so a project is MCP-ready out of the box. Turn it off with
+`self_server = false` or `generate --no-self-mcp`:
 
 ```toml
 [mcp]
-self_server = true
+self_server = false   # opt out; the default is true
 ```
 
-The entry is merged into an existing `.mcp.json`, so hand-authored servers survive, and
-`.claude/settings.json` is not touched (Claude Code reads project MCP servers from `.mcp.json` only). See [Configuration: `mcp`](configuration.md#mcp) for
+The entry is merged into an existing `.mcp.json`, so hand-authored servers survive and the file is
+ready for Claude Code (which reads project MCP servers from `.mcp.json`). See [Configuration: `mcp`](configuration.md#mcp) for
 `self_server_version`, `self_server_command`, and the interaction with `[[mcp_servers]]`.
 
 Generated MCP config files contain resolved values. If a value came from a placeholder, or if an env

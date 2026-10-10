@@ -246,11 +246,13 @@ type ScopeConfig struct {
 // MCPConfig holds project-level MCP generation options, as opposed to the
 // individual server definitions in [[mcp_servers]].
 type MCPConfig struct {
-	// SelfServer, when true, makes generation add ai-rulez's own MCP server
-	// (`npx -y ai-rulez@<version> mcp`) to the project .mcp.json. The entry is
-	// merged into the file, so hand-authored servers beside it survive, and no
-	// other MCP output (.claude/settings.json, ...) is touched.
-	SelfServer bool `yaml:"self_server,omitempty" json:"self_server,omitempty" toml:"self_server,omitempty"`
+	// SelfServer makes generation add ai-rulez's own MCP server
+	// (`npx -y ai-rulez@<version> mcp`) to the project .mcp.json. It defaults to
+	// true in v5, so a project gets the server out of the box; set it to false
+	// (or pass generate --no-self-mcp) to turn it off. The entry is merged into
+	// the file, so hand-authored servers beside it survive, and no other MCP
+	// output (.claude/settings.json, ...) is touched.
+	SelfServer *bool `yaml:"self_server,omitempty" json:"self_server,omitempty" toml:"self_server,omitempty"`
 
 	// SelfServerVersion pins the ai-rulez version the entry runs. Empty means
 	// the version of the running binary, or "latest" for a dev build.
@@ -262,9 +264,26 @@ type MCPConfig struct {
 	SelfServerCommand []string `yaml:"self_server_command,omitempty" json:"self_server_command,omitempty" toml:"self_server_command,omitempty"`
 }
 
-// HasSelfServer reports whether generation should add the ai-rulez MCP server.
+// HasSelfServer reports whether generation should add ai-rulez's own MCP server.
+// It is on by default: only an explicit self_server = false (or --no-self-mcp)
+// turns it off.
 func (c *Config) HasSelfServer() bool {
-	return c != nil && c.MCP != nil && c.MCP.SelfServer
+	if c == nil {
+		return false
+	}
+	if c.MCP == nil || c.MCP.SelfServer == nil {
+		return true
+	}
+	return *c.MCP.SelfServer
+}
+
+// SetSelfServer forces the self server on or off, overriding the default and any
+// configured value. The generate --no-self-mcp flag calls it.
+func (c *Config) SetSelfServer(on bool) {
+	if c.MCP == nil {
+		c.MCP = &MCPConfig{}
+	}
+	c.MCP.SelfServer = &on
 }
 
 // SelfMCPServerName is the key of the ai-rulez entry in generated MCP files.

@@ -929,9 +929,9 @@ func (c *Config) validateMCP() error {
 		return nil
 	}
 	m := c.MCP
-	if !m.SelfServer && (m.SelfServerVersion != "" || len(m.SelfServerCommand) > 0) {
+	if !c.HasSelfServer() && (m.SelfServerVersion != "" || len(m.SelfServerCommand) > 0) {
 		return oops.
-			Hint("Set `self_server = true` under [mcp], or remove self_server_version / self_server_command").
+			Hint("Remove `self_server = false` (the default is true), or remove self_server_version / self_server_command").
 			Errorf("mcp.self_server_version and mcp.self_server_command require mcp.self_server = true")
 	}
 	if len(m.SelfServerCommand) > 0 && strings.TrimSpace(m.SelfServerCommand[0]) == "" {

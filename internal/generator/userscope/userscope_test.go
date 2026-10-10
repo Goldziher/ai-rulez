@@ -111,6 +111,23 @@ func TestResolve_UnsupportedPresetsGiveReasons(t *testing.T) {
 
 // TestEveryPresetIsResolved: each built-in preset is either supported with
 // absolute destinations under the home directory or unsupported with a reason.
+// TestProjectMCPFileIsClassifiedAndDropped checks a provider that renders a
+// project MCP document with no user-level counterpart (codebuddy, reasonix)
+// classifies it at user scope and drops it: when the self server makes the
+// document render, a user-scope run is never left with an output of unknown
+// provenance.
+func TestProjectMCPFileIsClassifiedAndDropped(t *testing.T) {
+	for _, name := range []string{"codebuddy", "reasonix"} {
+		t.Run(name, func(t *testing.T) {
+			layout, err := userscope.Resolve(name, home, noEnv)
+			require.NoError(t, err)
+			row, ok := layout.Classify(".mcp.json")
+			require.True(t, ok, ".mcp.json is classified")
+			assert.Empty(t, row.To, ".mcp.json has no user-level destination")
+		})
+	}
+}
+
 func TestEveryPresetIsResolved(t *testing.T) {
 	layouts, unsupported, err := userscope.All(home, noEnv)
 	require.NoError(t, err)

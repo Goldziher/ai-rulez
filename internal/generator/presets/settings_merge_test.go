@@ -183,7 +183,7 @@ func TestAntigravityPreset_MCPConfig_PreservesHandAuthoredKeys(t *testing.T) {
 
 	assert.Equal(t, "npx", servers["configured"]["command"])
 	assert.Equal(t, []any{"-y", "configured-server"}, servers["configured"]["args"])
-	assert.NotContains(t, servers, "ai-rulez", "the self server is opt-in ([mcp] self_server)")
+	assert.Equal(t, "npx", servers["ai-rulez"]["command"], "the self server is on by default ([mcp] self_server)")
 }
 
 func TestAntigravityPreset_NoLongerWritesSettingsJSON(t *testing.T) {
@@ -196,16 +196,18 @@ func TestAntigravityPreset_NoLongerWritesSettingsJSON(t *testing.T) {
 	assert.False(t, found, "nothing reads .agents/settings.json")
 }
 
-func TestAntigravityPreset_MCPConfig_SkippedWithoutMCPServers(t *testing.T) {
+func TestAntigravityPreset_MCPConfig_SkippedWithoutMCPServersWhenSelfServerOff(t *testing.T) {
 	relPath := filepath.Join(".agents", "mcp_config.json")
 	baseDir := writeDocumentFixture(t, relPath, handAuthoredMCPDocument)
 
 	g := &AntigravityPresetGenerator{}
-	outputs, err := g.Generate(&config.ContentTree{}, baseDir, &config.Config{Name: "test-project"})
+	cfg := &config.Config{Name: "test-project"}
+	cfg.SetSelfServer(false)
+	outputs, err := g.Generate(&config.ContentTree{}, baseDir, cfg)
 	require.NoError(t, err)
 
 	_, found := findOutput(outputs, filepath.Join(baseDir, relPath))
-	assert.False(t, found, "no MCP servers configured, so no mcp_config.json output")
+	assert.False(t, found, "no MCP servers and self_server off, so no mcp_config.json output")
 
 	onDisk, readErr := os.ReadFile(filepath.Join(baseDir, relPath))
 	require.NoError(t, readErr)
@@ -225,7 +227,7 @@ func TestCursorPreset_MCPJSON_PreservesHandAuthoredKeys(t *testing.T) {
 	assert.Equal(t, "npx", servers["configured"]["command"])
 	assert.Equal(t, []any{"-y", "configured-server"}, servers["configured"]["args"])
 	assert.Equal(t, false, servers["configured"]["disabled"])
-	assert.NotContains(t, servers, "ai-rulez", "cursor does not self-register")
+	assert.Equal(t, "npx", servers["ai-rulez"]["command"], "the self server is written into the root .mcp.json by default")
 }
 
 func TestCopilotPreset_MCPJSON_PreservesHandAuthoredKeys(t *testing.T) {
@@ -241,7 +243,7 @@ func TestCopilotPreset_MCPJSON_PreservesHandAuthoredKeys(t *testing.T) {
 	assert.Equal(t, "npx", servers["configured"]["command"])
 	assert.Equal(t, []any{"-y", "configured-server"}, servers["configured"]["args"])
 	assert.Equal(t, false, servers["configured"]["disabled"])
-	assert.NotContains(t, servers, "ai-rulez", "copilot does not self-register")
+	assert.Equal(t, "npx", servers["ai-rulez"]["command"], "the self server is written into the root .mcp.json by default")
 }
 
 // TestLegacyPresets_JSONDocument_GreenfieldIsWhollyOwned pins the flag for the

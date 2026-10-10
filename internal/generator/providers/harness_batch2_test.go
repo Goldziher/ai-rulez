@@ -205,14 +205,28 @@ func TestBatch2_MCPExtras(t *testing.T) {
 		assert.NotContains(t, doc, "disabled")
 	})
 
+	t.Run("self server only without configured servers", func(t *testing.T) {
+		t.Parallel()
+		// qoder and commandcode read the shared root .mcp.json, which the
+		// default self server fills even with no configured servers.
+		for _, tc := range []struct{ preset, path string }{
+			{"qoder", ".mcp.json"}, {"commandcode", ".mcp.json"},
+		} {
+			doc := requireFile(t, batch2Generate(t, tc.preset, nil), tc.path).Content
+			assert.Contains(t, doc, `"ai-rulez"`, "%s registers the self server by default", tc.preset)
+		}
+	})
+
 	t.Run("no mcp document without servers", func(t *testing.T) {
 		t.Parallel()
+		off := &config.Config{Name: "demo"}
+		off.SetSelfServer(false)
 		for _, tc := range []struct{ preset, path string }{
 			{"mimocode", ".mimocode/mimocode.jsonc"}, {"qoder", ".mcp.json"}, {"bob", ".bob/mcp.json"},
 			{"grok", ".grok/config.toml"}, {"codewhale", ".codewhale/mcp.json"}, {"zcode", ".zcode/config.json"},
 			{"commandcode", ".mcp.json"},
 		} {
-			outputs := batch2Generate(t, tc.preset, nil)
+			outputs := batch2Generate(t, tc.preset, off)
 			assert.False(t, hasOutputPathSuffix(outputs, tc.path), "%s writes no MCP document without servers", tc.preset)
 		}
 	})

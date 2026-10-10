@@ -165,6 +165,8 @@ func build(preset string, project presets.ProjectLayout, global *presets.GlobalP
 	add(KindRules, project.RulesDir, global.RulesDir, true)
 	add(KindSkills, project.SkillsDir, global.SkillsDir, true)
 	add(KindAgents, project.AgentsDir, global.AgentsDir, true)
+	// An MCP document with no user-level counterpart is classified and dropped.
+	add(KindSettings, project.MCPFile, "", false)
 	// A tool that keeps commands in its skills folder (Claude Code) renders them
 	// there, and they leave with the skills.
 	if path.Clean(project.CommandsDir) != path.Clean(project.SkillsDir) {

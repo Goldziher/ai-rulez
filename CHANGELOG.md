@@ -102,6 +102,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **BREAKING: MCP `working_directory`, `config_file` and `config_dir` are confined to the directory the server was started in.** Pass `mcp --root <dir>` to choose another root or `mcp --allow-any-dir` to lift the check. A call without `working_directory` uses the root.
 - **BREAKING: the authoring MCP server no longer advertises `tools.listChanged`** (its tool set is fixed).
 - **BREAKING: `roles resolve --format json` spells the key `honored`**, not the British `honoured`, in each `skill_modes` entry; `schema/roles-resolve.schema.json` matches.
+- **BREAKING: `[mcp] self_server` defaults to `true`.** `generate` now adds the ai-rulez MCP server to the project `.mcp.json` (and each harness's own MCP file, such as `.agents/mcp_config.json`) out of the box; set `[mcp] self_server = false` or pass `generate --no-self-mcp` to opt out. The root `.mcp.json` is rendered identically by every writer (the `mcp` preset and the cursor/copilot writers), so enabling several `.mcp.json`-writing presets no longer diverges.
 
 ### Added
 

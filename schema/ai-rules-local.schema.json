@@ -1990,12 +1990,12 @@
       "description": "Project-level MCP generation options, distinct from the individual [[mcp_servers]] definitions.",
       "properties": {
         "self_server": {
-          "default": false,
-          "description": "Add ai-rulez's own MCP server (`npx -y ai-rulez@<version> mcp`) to the project .mcp.json. The entry is merged into the file, so hand-authored servers survive, and .claude/settings.json is not touched.",
+          "default": true,
+          "description": "Add ai-rulez's own MCP server (`npx -y ai-rulez@<version> mcp`) to the project .mcp.json. Defaults to true in v5, so a project gets the server out of the box; set it to false (or pass generate --no-self-mcp) to opt out. The entry is merged into the file, so hand-authored servers survive, and .claude/settings.json is not touched.",
           "type": "boolean"
         },
         "self_server_command": {
-          "description": "Replace the whole launch command (executable followed by its arguments), for example [\"ai-rulez\", \"mcp\"] for a locally installed binary. Mutually exclusive with self_server_version; requires self_server = true.",
+          "description": "Replace the whole launch command (executable followed by its arguments), for example [\"ai-rulez\", \"mcp\"] for a locally installed binary. Mutually exclusive with self_server_version; only applies while the self server is on (the default).",
           "items": {
             "type": "string"
           },
@@ -2003,7 +2003,7 @@
           "type": "array"
         },
         "self_server_version": {
-          "description": "Pin the ai-rulez version the entry runs (for example \"4.19.0\" or \"latest\"). Defaults to the version of the ai-rulez binary that runs generate, or \"latest\" for a dev build. Requires self_server = true.",
+          "description": "Pin the ai-rulez version the entry runs (for example \"4.19.0\" or \"latest\"). Defaults to the version of the ai-rulez binary that runs generate, or \"latest\" for a dev build. Only applies while the self server is on (the default).",
           "pattern": "^[^\\s@/]+$",
           "type": "string"
         }

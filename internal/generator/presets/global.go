@@ -46,6 +46,10 @@ type GlobalPaths struct {
 // scope maps an output below one of these onto the matching GlobalPaths field.
 type ProjectLayout struct {
 	RootFile, SkillsDir, AgentsDir, CommandsDir, RulesDir string
+	// MCPFile is the project-relative MCP document the preset renders when it has
+	// one and no user-level counterpart (.mcp.json for most providers). User scope
+	// classifies it and drops it rather than leaving it of unknown provenance.
+	MCPFile string
 }
 
 // ProjectLayoutProvider is implemented by every preset generator that can be

@@ -125,7 +125,7 @@ func TestGenerate_HandWrittenServersSurviveAndCleanRestoresTheOriginal(t *testin
 		name, preset, path string
 		servers            []string
 	}{
-		{"claude .mcp.json", "claude", ".mcp.json", nil},
+		{"claude .mcp.json", "claude", ".mcp.json", []string{"ai-rulez"}},
 		{"gemini settings", "gemini", ".gemini/settings.json", []string{"ai-rulez"}},
 	}
 	for _, tt := range tests {
@@ -198,14 +198,14 @@ func TestGenerate_RemovedServerLeavesAGeneratedDocumentThatItOwnsWhole(t *testin
 	root := t.TempDir()
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"cursor"}, "", mcpServerS1+mcpServerS2))
 	runAgentsMDGenerate(t, root)
-	require.Equal(t, []string{"s1", "s2"}, mcpServerNames(t, readAgentsMDFile(t, root, ".mcp.json"), "mcpServers"))
+	require.Equal(t, []string{"ai-rulez", "s1", "s2"}, mcpServerNames(t, readAgentsMDFile(t, root, ".mcp.json"), "mcpServers"))
 
 	// Act
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"cursor"}, "", mcpServerS2))
 	runAgentsMDGenerate(t, root)
 
 	// Assert
-	assert.Equal(t, []string{"s2"}, mcpServerNames(t, readAgentsMDFile(t, root, ".mcp.json"), "mcpServers"))
+	assert.Equal(t, []string{"ai-rulez", "s2"}, mcpServerNames(t, readAgentsMDFile(t, root, ".mcp.json"), "mcpServers"))
 }
 
 func TestGenerate_ServerOfTheSameNameIsOverwrittenByTheConfig(t *testing.T) {
