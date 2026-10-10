@@ -647,4 +647,4 @@ documented once, with a table of each knob's scope and precedence, in the [trust
 - [Hooks, permissions and settings keys](settings.md), [Permissions](permissions.md) and
   [User-level configuration](user-scope.md): top-level `[[hooks]]`, `[permissions]` and `generate --user`.
 - [Lock file](lockfile.md) and [Trust model](trust-model.md): the lock scheme and what a repository may set.
-- [Changelog](CHANGELOG.md#unreleased): the complete list for the unreleased version.
+- [Changelog](CHANGELOG.md): the complete list for 5.0.0.

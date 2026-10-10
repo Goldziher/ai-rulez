@@ -4,2083 +4,1008 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
-## [Unreleased]
+## [5.0.0] - 2026-10-10
 
-This becomes 5.0.0. Upgrade steps for every item under Breaking are in [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/).
+Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); upgrade steps are in [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/).
 
 ### Positioning
 
-v5 repositions ai-rulez as a standards-compliant lifecycle tool for agent knowledge and capabilities: author in one
-source of truth, generate for every harness, bundle and publish to the open formats, lint and validate against each
-standard's own schema, and govern through signing, approvals and policy. The README, the documentation site
-(organized as Author, Generate, Bundle and publish, Validate, Govern, Operate) and the package metadata follow that
-story. "Planned" means the code does not yet generate and validate the standard; pinned spec versions and conformance
-test status are in [Standards](https://goldziher.github.io/ai-rulez/standards/).
-
-| Standard | Status | Generate / bundle | Lint / validate |
-| -------- | ------ | ----------------- | --------------- |
-| OKF (Open Knowledge Format, v0.2) | supported | `export okf`, the `okf` preset | `okf validate` |
-| Agent Plugins | supported | `generate --plugin`, `publish --emit agent-plugins` | `validate --strict` |
-| ARD (Agentic Resource Discovery) | supported | `publish --emit ard` | `validate` |
-| Agent Skills | supported | `generate` | `validate` (partial) |
-| AGENTS.md | supported | `generate` | `validate` |
-| llms.txt | supported | the `llms-txt` preset | `validate` |
-| MCP server config | supported | `generate` | `validate` (partial) |
-| MCP server card | planned | not generated | none |
-| CycloneDX / SPDX SBOM | supported | `sbom` | `sbom --check` |
-| in-toto / DSSE / Sigstore | supported | `sign` | `verify --attestation` |
-| OpenTelemetry (OTLP) | supported | `telemetry export --to otlp` | not applicable |
-| "Agent bundle" | planned | spec to be confirmed | spec to be confirmed |
+v5 repositions ai-rulez as a standards-compliant lifecycle tool for agent knowledge and capabilities: author in one source of truth, generate for every harness, bundle and publish to the open formats, lint and validate against each standard's own schema, and govern through signing, approvals and policy. The README, the documentation site (organized as Author, Generate, Bundle and publish, Validate, Govern, Operate) and the package metadata follow that story. "Planned" means the code does not yet generate and validate the standard. Supported today: OKF (Open Knowledge Format v0.2), Agent Plugins, ARD, Agent Skills, AGENTS.md, llms.txt, MCP server config, CycloneDX/SPDX SBOM, in-toto/DSSE/Sigstore and OpenTelemetry (OTLP); the MCP server card and "agent bundle" are planned. Pinned spec versions and conformance status are in [Standards](https://goldziher.github.io/ai-rulez/standards/).
 
 ### Breaking
 
-Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles each change below where it is mechanical. See [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/).
-
-- **Report commands share one flag vocabulary and one JSON contract.** `sbom --format cyclonedx|spdx-json` is `sbom --type`, and `--format` is `text|json` (a failed gate, `--check` or a write with `-o` print `schema/sbom-report.schema.json`); `telemetry hook --format json|toml` is `--syntax`; `eval run` prints `text` by default (`--format markdown` keeps the old output); `lock --strict` is `--refuse-findings` and `generate --strict` is `--strict-config`, so `--strict` only ever means "warnings fail" and `--check` only ever means "compare". `publish verify --format json` always prints `{schema_version, results: [...]}`. `--format json` is new on `publish emit`, `verifiers explain` and `verifiers test`. Empty lists print `[]` (`roles list` printed `null`). Every report has a published schema under `schema/` and a test validates the output of each command against it; the table is in `docs/cli.md#json-contracts`.
-- **`verify` checks attestations and provenance only.** Drift is `generate --check`: it re-renders and also catches hand edits and deleted files. A bare `ai-rulez verify` exits 1 and names `generate --check`; `--attestation`, `--approvals`, `--self` and `--plugin` are unchanged (`verify --plugin --format json` is new).
-- **BREAKING: liter-llm is the only model backend, and builds need cgo.** Every model call (graders, semantic review, verifiers, embeddings, `llm doctor --ping`) goes through [liter-llm](https://github.com/xberg-io/liter-llm) 2.2.0, linked statically into the binary, so ai-rulez is built with `CGO_ENABLED=1` and a C toolchain (see [LLM access](https://goldziher.github.io/ai-rulez/llm/)). The pure-Go OpenAI-compatible client, its retry loop, error classifier and the hand-kept price table are gone: retries, the typed error taxonomy and prices come from liter-llm (`GetModelInfo`, `CompletionCostWithCache`), with a few fail-closed price floors in `internal/pricing` for models its catalog lacks or under-prices. The `[llm] backend` key and `AI_RULEZ_LLM_BACKEND` are removed (`validate` rejects the key as unknown); an OpenAI-compatible gateway is a `base_url`. `-tags literllm`, `literllm.work` and the nested `internal/llm/literllm` module are gone, as is the separate CI job. The release binaries grow by about 35 MB. Known gaps, tracked upstream in [liter-llm#269](https://github.com/xberg-io/liter-llm/issues/269): liter-llm follows HTTP redirects (the old client refused them) and cannot bound the response body it reads. To build from source run `task setup:llm` once.
-- **BREAKING: command results are on stdout, diagnostics on stderr, and `-q` never hides a result.** `list`, `domain list`, `profile list`, `include list`, `skill list`, `clean --dry-run` and `lock --check` printed through the logger on stderr; they print on stdout now. `-q` removes progress, information and success lines only (warnings, errors and hints stay). Read stdout, or use `--format json`.
-- **BREAKING: one error rendering and one exit path.** Every failure prints `Error: ...` (then validation errors and `Hint: ...`) on stderr, and under `--format json` also a `{"status": "error", ...}` document on stdout. Commands return errors; `os.Exit` is called only by `main`. The exit codes (0, 1, 2, 3) are unchanged; a declined `generate --user --clean` prompt now exits 1. Prompts are written to stderr.
-- **BREAKING: unprefixed `DEBUG`, `QUIET` and `VERBOSE` environment variables no longer change the CLI; use `AI_RULEZ_DEBUG` and `AI_RULEZ_QUIET`.** The `~/.ai-rulez.*` and `./.ai-rulez.*` lookup of the root command is removed, and so is `--verbose` / `-V` (use `--debug`).
-- **BREAKING: the content commands (`add`, `remove`, `domain`, `profile`, `include`, `skill`) print their result on stdout and take `--format json`.** `add`, `remove`, `edit` and `domain add|remove` print the created, removed or rewritten path; `--format json` prints `{"status", "type", "name", "path", ...}` ([schema](https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/change-result.schema.json)). The confirmation sentence is on stderr.
-- **BREAKING: the content commands honor the global `--config-dir` and `-C`** (they used to ignore both). New `show` and `edit` commands (`show rule style`, `edit rule style --content ...`) complete the `list`/`show`/`add`/`edit`/`remove` verbs; `add check` takes `--severity`, `--tools` and `--targets`.
-- **BREAKING: stricter names and values for content, in the CLI and the MCP tools.** A name must not end in `.md`, contain whitespace or start with `.` or `-`; `--targets` rejects an unknown word; `minimal` is accepted as a priority (the help always listed it); `remove` checks the item exists before asking to confirm; `domain remove` refuses while a profile lists the domain; `add skill` without a description scaffolds one that passes `validate`.
-- **BREAKING: one flag taxonomy.** The only shorthands are `-C` `-D` `-T` `-q` `-y` `-n` `-o`; `-n` is `--dry-run` everywhere (it was `--config-dir`, which has no shorthand and is declared once, globally, not per command) and every other shorthand (`-p -d -s -r -t -i -m -c -b -e -E -w -F -H`) is removed. `--out` is `--output` (a file) or `--output-dir` (a directory); `generate --strict` is `--strict-config`, `lock --strict` is `--refuse-findings` and `--strict` stays only on `validate`, `doctor` and `verifiers run`; `sign --policy` is `--org-policy`. No command takes a config path argument any more: `ai-rulez -C <path> validate` replaces `ai-rulez validate <path>`. The `--policy*` and `--discover-org` flags exist only on the commands that evaluate the organization policy. A removed spelling fails with a hint that names its replacement. A test walks the command tree and fails on a shorthand collision, a redeclared global flag, a flag without usage text and any `--out`. See [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/).
-- **BREAKING: a group command without a subcommand prints its help and exits 0** (`ai-rulez list` exited 1).
-- **BREAKING: `migrate` has real subcommands** (`migrate v5`, `migrate okf`): `migrate` alone prints help, the spellings `migrate 5` and `migrate v5.0` are gone, and `okf` rejects the `v5`-only flags.
-- **BREAKING: removed the aliases `g`, `clear`, `v`, `check` (of `validate` and of `list checks`) and the dead hidden `mcp --transport`, `--address` and `--port` flags.** `guard` is listed in `--help`.
-- `init` prints the created directory on stdout, takes `--format json`, writes its listing to stderr and uses the global `--config-dir`. MCP `init_project` creates a sample agent for `with_agents`.
-- `--config-dir` is a global flag. `generate`, `clean`, `sign`, `export okf` and `version` take `--format text|json`. The CLI reference lists every `AI_RULEZ_*` environment variable.
-- **BREAKING: config `version = "5.0"`.** A `4.x` config is rejected with `run ai-rulez migrate v5`; a `2.x`/`3.x` config with "install ai-rulez 4.x to migrate it to 4.0, then run `ai-rulez migrate v5`". `migrate` reads 4.x only.
-- **BREAKING: YAML and JSON configs are no longer loaded** (`config.yaml`, `config.yml`, `config.json`, `config.local.yaml`, `config.local.yml`, `config.local.json`); the error names the file and `ai-rulez migrate v5`. `migrate v5` converts them to `config.toml`, keeping keys, order and comments.
-- **BREAKING: `ai-rulez migrate v4` is removed**, with the 2.x/3.x to 4.0 migration code, its fixtures and docs. `migrate` takes one target, `v5`, with `--dry-run`, `--check`, `--adopt-defaults`, `--write`, `--recursive` and `--format json`.
-- **BREAKING: separate `mcp.toml`, `mcp.yaml`, `mcp.json` files are no longer read** and `schema/ai-rules-mcp.schema.json` is removed. `migrate v5` merges them into `[[mcp_servers]]`.
-- **BREAKING: `init --format yaml|json` is removed**; `init` writes `config.toml`.
-- **BREAKING: `agents_md = true` by default.** `AGENTS.md` is the canonical instruction file and `CLAUDE.md` imports it. Set `agents_md = false` for per-harness files. `migrate` pins `false` unless `--adopt-defaults`.
-- **BREAKING: generated headers carry only the per-file `Content-Hash` by default** (`[header] hashes = "content"`); the project-wide `Source-Hash` needs `hashes = "full"`. `migrate` pins `"full"`.
-- **BREAKING: the managed `.gitignore` block is opt-in** (`gitignore = true` or `generate --gitignore`). `migrate` pins `true`.
-- **BREAKING: `validate` runs the content checks by default.** `--config-only` restores the old config-only run; `--strict` now means warnings fail (`--fail-on warning`), as in `doctor` and `verifiers run`. `validate` can now exit 2 where it exited 0.
-- **BREAKING: `usage ...` and `report usage|evals` are folded into `telemetry ...`, with no aliases**: `telemetry hook|record|feedback|report [evals]`. `telemetry record` records skill loads and item loads. `migrate` rewrites the commands in `config.toml` hooks and verifiers.
-- **BREAKING: `[lint.budget]` and `[lint.tolerate]` are renamed `[lint.ratchet]`** (JSON `ratchet_exceeded`); `[lint.budgets.<kind>]` size limits keep their name. `migrate` renames the table.
-- **BREAKING: one flag vocabulary.** `--json`/`-j` is replaced by `--format json` on every command; `generate --no-fetch`/`-f` is `--offline`; the confirmation skip of `clean` and the `remove` commands is `--yes`/`-y` (was `--force`).
-- **BREAKING: `clean` keeps generated files you edited by hand unless `--include-edited` is passed, and `--yes` only skips the confirmation prompt.** An edited file is kept with a warning; `--yes` no longer removes it.
-- **BREAKING: a declined or non-interactive confirmation exits 1.** `clean` and the `remove` commands without `--yes` in a shell without a terminal (or after answering no) change nothing and exit 1 with a hint to pass `--yes`.
-- **`improve pr` confines what it runs**: every git command (worktree, add, commit, push) gets a scrubbed environment and runs no hook (`core.hooksPath` is the null device), and only the push keeps the transport credentials (`SSH_AUTH_SOCK`, `GIT_ASKPASS`, `SSH_ASKPASS`, `GIT_SSH`, `GIT_SSH_COMMAND`). Under `--isolation auto|require` the worktree `generate` and `lock` run with the network cut; the new `--allow-network` leaves it on for remote includes that are not cached, and `eval run` (`--run-evals`) keeps it. See `docs/improve.md`.
-- **The scheduled repair workflow template pins its actions** to a commit SHA (`ai-rulez improve adapters repair-workflow`), and a test keeps every `uses:` pinned.
-- **BREAKING: a configuration that loosens the organization policy (`AR740`) exits 2** from `generate`, `validate` (with or without `--strict` or `--config-only`) and `validate --show-policy`, instead of 1. `lock` (which refuses to write the lock), `lock --check`, recursive runs and `doctor` (which reports each attempt as an `AR740` finding in the `policy` check) exit 2 as well.
-- **BREAKING: malformed YAML frontmatter is a finding, `AR306` `frontmatter-malformed`.** `validate` reports it with exit 2; `generate` still stops with exit 1.
-- **BREAKING: `generate --locked` and `--frozen` fail closed without an `ai-rulez.lock`**: exit 2 with the hint to run `ai-rulez lock`, instead of generating unpinned.
-- **BREAKING: a `file://` git include or skill source in the committed config must name a repository inside the project**, like a local path. Allow other locations with `config.local.toml`, the user config, or `AI_RULEZ_ALLOW_FILE_URLS=1` in your own environment. See [Includes](https://goldziher.github.io/ai-rulez/includes/).
-- **BREAKING: `generate` refuses content symlinks that leave the project or point into `.git` or credential files, and stops on `AR001` secrets in authored content**, with exit 1.
-- **BREAKING: removed deprecated flags** `generate --update-gitignore`, `--no-configure-cli-mcp`/`-M` and `--skip-cli-mcp`/`-S`.
-- **BREAKING: `[[plugins]]` no longer writes `.claude/plugins.json` or `.codex/plugins.json`** (no tool reads them); `generate` warns that the table has no effect.
-- **BREAKING: every `--format json` document carries `schema_version`.** Lists (`list`, `domain list`, `profile list`, `include list`, `skill list`, `builtins list`) and multi-profile `tokens` return `{"schema_version": 1, "items": [...]}`, not a bare array. New schemas: `validate-report`, `cost-report`, `telemetry-doctor`, `eval-report`, `okf-validate`.
-- **Go module `github.com/Goldziher/ai-rulez/v5`**, and the CLI entry point moved to `cmd/ai-rulez`: install with `go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest`. npm, PyPI and Homebrew are unaffected.
-- **`windsurf` is renamed `devin`**: the preset, its output directory (`.windsurf/` is now `.devin/`) and the agent frontmatter key (`windsurf_model` is now `devin_model`). There is no alias; rename the preset in `config.toml` and the keys in agent files, and delete the old `.windsurf/` outputs. **The `continue-dev` preset (`.continue/rules/`) is removed** with no replacement. `doctor` reports both.
-- **Exit codes follow one contract**: `0` success, `1` the command could not run, `2` findings, drift or a failed gate, and `3` (`lock` only) served skills were left unpinned because the security scan refuses them. Over several roots (`--recursive`) the most severe code wins: `1`, then `2`, then `3`. `lock --check` with no `ai-rulez.lock` now exits 1 (`no ai-rulez.lock`; 2 under `[lock] enforce`) instead of reporting "up to date", and an unknown subcommand (`telemetry bogus`) exits 1.
-- **BREAKING: `ai-rulez --version` and `version` print to stdout** (they went to stderr), so `$(ai-rulez --version)` captures them. `mcp` with an unknown subcommand exits 1, and a config-load failure under `--format json` is a JSON error document.
-- **`[lock] enforce` defaults to true whenever `ai-rulez.lock` exists**: `enforce = false` opts out. `generate` refuses a remote include or installed skill the lock does not pin, `AR010` is an error, and the skills server refuses unpinned served skills. `lock --check` exit codes are unchanged.
-- **One hashing scheme for every lock pin**: remote includes, OKF includes, installed skills and skill sources are digested by `contentlock.DigestDir` (sha256, algorithm-prefixed, domain-separated, Merkle tree) like authored items and served skills; the second per-file digest (`lockfile.DigestDir`) is gone. Script files (`.sh`, `.bash`, `.zsh`, `.py`, `.js`, `.mjs`, `.cjs`, `.ts`) are hashed byte for byte instead of with CRLF normalization. A lock with another `version` is refused with the instruction to run `ai-rulez lock`.
-- **Locks written by earlier v5 builds read as stale once; run `ai-rulez lock`**: the `tree` digest now also covers the `source`, `ref` and `path` of remote entries and the `view` of served entries; `lock` pins the project scripts run by agent, skill and command frontmatter `hooks` and local-path includes (`local-include` items); include skills are recorded as `include:<name>/<path>`. A symlink inside a pinned tree is pinned by its link target (never followed).
-- **Plain `http://` and `git://` remotes are rejected** for includes, OKF includes, installed skills and skill sources: use `https://`, `ssh://`/`git@host:path` or a local path. `include add` refuses them too.
-- **The git token (`AI_RULEZ_GIT_TOKEN`, `--token`) goes only to `github.com`** or the hosts in `AI_RULEZ_GIT_TOKEN_HOSTS`, as a host-scoped header instead of inside the URL; other hosts get no token and a warning. Caches from earlier versions are scrubbed.
-- **A committed config cannot reach outside the project**: a local include (`source` or `local_override`) that resolves outside it is a fatal error (still allowed in `config.local.toml` and user scope); `local_override` in the committed config is refused under `generate --locked`, `--frozen` and an enforced lock; a local `[[skill_sources]]` path must resolve inside the project; custom preset `path`, provider spec paths, `okf.dir` and `marketplace.output_dir` are rejected when they contain `..`, are absolute, or name `.git`, `.ai-rulez`, `.hg` or `.svn`.
-- **Content symlinks**: a symlinked rule, context, agent, command, skill or check file or directory (and skill or command resources) in the project's own `.ai-rulez/` is followed only when its resolved target is inside the project; any other is refused with a warning shown even with `--quiet` and reported by `validate`. Symlinks in includes, installed skills, skill sources and OKF bundles are never followed.
-- **`[lint.security] scan_imports` is on by default**: `generate` scans imported content before writing and stops at error-level findings. `scan_imports = "off"` opts out. `AR012` (unpinned npx/uvx/pipx MCP packages) is an error under `[lock] enforce`, a warning otherwise.
-- **`ai-rulez scan` runs only the `security` analyzer**: hook and config findings (`AR504`, `AR9K0`, ...) no longer appear in its report.
-- **`lock` and `update` scan what they pin**: the security scan (`AR001`-`AR009`) runs over every remote tree pinned to something new, and error findings refuse the pin (exit 2, nothing written) unless `--accept-findings`.
-- **Staged external scanners run confined by default**: `[[lint.external]]` entries with `inputs` run under `isolation = "auto"`, which uses macOS `sandbox-exec`, Linux `bwrap` or `unshare` wherever one works (no network unless the scanner declares `egress = true`, no writes outside its scratch directory). A scanner that writes elsewhere now fails with `AR9E3`; point it at `TMPDIR`/`HOME` or set `isolation = "none"`.
-- **`init --from` runs through `convert --write`**: the same scan, validation and lossiness report; a root file such as `CLAUDE.md` becomes one context item (`convert --split-headings` splits it), and MCP files, hooks and permissions are imported too. An existing configuration directory is moved aside until the import is written and restored when the import fails. The legacy importer engine is removed.
-- **A lock that pins role outputs is written as `version = 2`**; a lock without role pins stays `version = 1`. A build that predates version 2 refuses such a lock instead of misreading the role pins.
-- **Claude Code MCP servers are written only to `.mcp.json`**: `.claude/settings.json` no longer receives `mcpServers`, so resolved MCP env values do not land in a committed file. A `mcpServers` entry an earlier version wrote there is removed on the next `generate` or `clean`. The file is written only when `[claude.settings]` manage, `[[hooks]]`, `[permissions]` or `[claude.settings.managed]` apply.
-- **`[telemetry] service_name` is user scope only** (user config file or `AI_RULEZ_TELEMETRY_SERVICE_NAME`); a repository value is ignored and reported (`AR9K1`, `telemetry doctor`).
-- **Eval results are signed per user**: `eval run` signs each record with `eval-results.key`; a record without a valid signature (committed from another machine, edited) is `unverified`, re-run instead of replayed and ignored by `AR997`, `AR998`, `telemetry report evals` and `telemetry report`. CI has no key and must use `eval run --force`.
-- **Usage log version 3**: lines carry `digest`, `digest_scheme` and `event_id`, and `session` is a salted hash instead of the raw harness session id. Version 1 and 2 logs still read.
-- **`schema/catalog.schema.json` describes catalog version 2**; the version 1 schema moved to `schema/catalog.v1.schema.json` (version 1 stays the default of `catalog --format json`).
-- **BREAKING: MCP tool arguments are validated against typed schemas.** Every tool's input schema is now inferred from a typed argument struct with `additionalProperties: false`: an unknown argument, a wrong type (`"local": "yes"`, a number for a string), a value outside an enum or a missing required argument is an error result instead of being coerced or ignored. Numeric arguments (`limit`, `offset`, `budget_bytes`) are integers.
-- **BREAKING: MCP failures are error results.** `validate_config` returned `{"valid": false}` as a success; it is now an error result (`isError: true`) with the same document in `structuredContent`. The list and read tools (`list_rules`, `read_rule`, ...) fail on a configuration that does not load, as `ai-rulez list` exits 1, instead of returning an empty list; `lock_status` on a project without a lock fails ("nothing to check") instead of reporting `in_sync: true`; `doctor` fails when the configuration cannot be read.
-- **BREAKING: MCP `working_directory`, `config_file` and `config_dir` are confined to the directory the server was started in.** Pass `mcp --root <dir>` to choose another root or `mcp --allow-any-dir` to lift the check. A call without `working_directory` uses the root.
-- **BREAKING: the authoring MCP server no longer advertises `tools.listChanged`** (its tool set is fixed).
-- **BREAKING: `roles resolve --format json` spells the key `honored`**, not the British `honoured`, in each `skill_modes` entry; `schema/roles-resolve.schema.json` matches.
-- **BREAKING: `[mcp] self_server` defaults to `true`.** `generate` now adds the ai-rulez MCP server to the project `.mcp.json` (and each harness's own MCP file, such as `.agents/mcp_config.json`) out of the box; set `[mcp] self_server = false` or pass `generate --no-self-mcp` to opt out. The root `.mcp.json` is rendered identically by every writer (the `mcp` preset and the cursor/copilot writers), so enabling several `.mcp.json`-writing presets no longer diverges.
+- **Config format is v5.** A `version = "5.0"` project is required; a 4.x config is rejected with `run ai-rulez migrate v5` and a 2.x/3.x config tells you to install ai-rulez 4.x first. YAML/JSON configs (`config.yaml`, `config.json`, local variants) and separate `mcp.toml`/`mcp.yaml`/`mcp.json` files are no longer read — `migrate v5` converts them to `config.toml` and `[[mcp_servers]]`. `migrate v4` and `init --format yaml|json` are removed, and `migrate` now has real subcommands (`migrate v5`, `migrate okf`; the `migrate 5` / `migrate v5.0` spellings are gone). See [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/).
+- **Go module is `github.com/Goldziher/ai-rulez/v5`**: install with `go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest`. npm, PyPI and Homebrew are unaffected.
+- **One flag taxonomy.** The only shorthands are `-C -D -T -q -y -n -o`; `-n` is `--dry-run` everywhere and `--config-dir` has no shorthand (declared once, globally). `--out` is `--output` (a file) or `--output-dir` (a directory); `generate --strict` is `--strict-config`, `lock --strict` is `--refuse-findings`, `sign --policy` is `--org-policy`; `--json`/`-j` is `--format json`; `generate --no-fetch` is `--offline`; the confirmation skip of `clean` and the `remove` commands is `--yes`/`-y`. No command takes a config path argument any more: use `ai-rulez -C <path> validate`. A removed spelling fails with a hint naming its replacement.
+- **Removed aliases and flags**: `g`, `clear`, `v`, `check`, the hidden `mcp --transport`/`--address`/`--port`, `--verbose`/`-V`, and the dead `generate --update-gitignore`, `--no-configure-cli-mcp`/`-M` and `--skip-cli-mcp`/`-S`. Unprefixed `DEBUG`, `QUIET` and `VERBOSE` no longer change the CLI; use `AI_RULEZ_DEBUG`/`AI_RULEZ_QUIET`. `guard` is now listed in `--help`.
+- **Command results go to stdout, diagnostics to stderr.** `list`, `domain|profile|include|skill list`, `clean --dry-run` and `lock --check` print their result on stdout; `-q` hides only progress and success lines. The content commands (`add`, `remove`, `domain`, `profile`, `include`, `skill`) print the created/removed/rewritten path on stdout, take `--format json`, honor the global `--config-dir`/`-C`, and gain the new `show` and `edit` verbs; `add check` takes `--severity`, `--tools` and `--targets`. `ai-rulez --version` and `version` print to stdout, and a group command with no subcommand prints help and exits 0 (was 1).
+- **One error rendering and one exit path.** Every failure prints `Error: ...` (then validation errors and a `Hint:`) on stderr and, under `--format json`, a `{"status":"error", ...}` document on stdout. Exit codes: `0` ok, `1` could not run, `2` findings/drift/failed gate, `3` (`lock` only) served skills left unpinned. A declined or non-interactive confirmation exits 1; prompts go to stderr.
+- **Report commands share one flag vocabulary and one JSON contract.** `sbom --format cyclonedx|spdx-json` is `sbom --type`; `--format` is `text|json`; `telemetry hook --format json|toml` is `--syntax`; `eval run` prints `text` by default (`--format markdown` keeps the old output). Every `--format json` document carries `schema_version`, and lists return `{"schema_version":1,"items":[...]}` instead of a bare array. Each report has a published schema under `schema/` (table in `docs/cli.md#json-contracts`).
+- **`verify` checks attestations and provenance only.** Drift is `generate --check`, which re-renders and also catches hand edits and deleted files; a bare `ai-rulez verify` exits 1 and names it.
+- **`validate` runs the content checks by default.** `--config-only` restores the old config-only run; `--strict` now means warnings fail (`--fail-on warning`), so `validate` can exit 2 where it exited 0. Malformed YAML frontmatter is a finding, `AR306 frontmatter-malformed` (`generate` still exits 1), and a configuration that loosens the organization policy (`AR740`) exits 2 from `generate`, `validate`, `lock`, recursive runs and `doctor` instead of 1.
+- **`generate --locked` and `--frozen` fail closed without an `ai-rulez.lock`** (exit 2, hint to run `ai-rulez lock`).
+- **`clean` keeps generated files you edited by hand** unless `--include-edited` is passed; `--yes` only skips the confirmation prompt.
+- **`usage ...` and `report usage|evals` fold into `telemetry ...`** with no aliases (`telemetry hook|record|feedback|report [evals]`); `[lint.budget]`/`[lint.tolerate]` are renamed `[lint.ratchet]` (JSON `ratchet_exceeded`), while `[lint.budgets.<kind>]` size limits keep their name.
+- **New defaults.** `agents_md = true`: `AGENTS.md` is canonical and `CLAUDE.md` imports it, with `agents_md = false` for per-harness files. Generated headers carry only the per-file `Content-Hash` (`[header] hashes = "full"` restores `Source-Hash`). The managed `.gitignore` block is opt-in (`gitignore = true` or `generate --gitignore`).
+- **`liter-llm` is the only model backend and builds need cgo.** Every model call goes through [liter-llm](https://github.com/xberg-io/liter-llm) 2.2.0, linked statically, so ai-rulez is built with `CGO_ENABLED=1` and a C toolchain; release binaries grow about 35 MB. The `[llm] backend` key and `AI_RULEZ_LLM_BACKEND` are gone (an OpenAI-compatible gateway is a `base_url`). Build from source with `task setup:llm` once.
+- **Stricter names and values for content, the CLI and the MCP tools.** A name must not end in `.md`, contain whitespace or start with `.` or `-`; `--targets` rejects unknown words; `remove` checks the item exists; `domain remove` refuses while a profile lists the domain; `add skill` without a description scaffolds one that passes `validate`.
+- **Locks.** `[lock] enforce` defaults to true whenever `ai-rulez.lock` exists; every pin uses one hashing scheme (sha256, algorithm-prefixed Merkle tree) and scripts are hashed byte for byte; a lock without content pins fails `--check`; a lock that pins role outputs is written `version = 2`. Locks written by earlier v5 builds read as stale once — run `ai-rulez lock`.
+- **Remote sources.** Plain `http://` and `git://` are rejected (use `https://`, `ssh://`/`git@host:path` or a local path); the git token (`AI_RULEZ_GIT_TOKEN`, `--token`) is sent only to `github.com` or the hosts in `AI_RULEZ_GIT_TOKEN_HOSTS`, as a host-scoped header rather than inside the URL.
+- **A committed config cannot reach outside the project**: a local include, skill-source path, custom preset `path`, provider spec path, `okf.dir` or `marketplace.output_dir` that escapes it (or names `.git`/`.ai-rulez`) is refused, and a `file://` include or skill source must name a repository inside the project (override with `config.local.toml`, the user config or `AI_RULEZ_ALLOW_FILE_URLS=1`). Content symlinks in the project's own `.ai-rulez/` are followed only when the target is inside the project; `generate` refuses symlinks that leave it or point into `.git` or credential files and stops on `AR001` secrets.
+- **Security scanning.** `[lint.security] scan_imports` is on by default (`generate` scans imported content and stops at error-level findings; `AR012` is an error under `[lock] enforce`); `ai-rulez scan` reports only the `security` analyzer; `lock` and `update` scan what they pin and refuse error findings unless `--accept-findings`; staged `[[lint.external]]` scanners run confined by default (`isolation = "auto"`, no network unless `egress = true`).
+- **`init --from` runs through `convert --write`** with the same scan, validation and lossiness report; an existing config directory is moved aside and restored if the import fails.
+- **Preset changes.** `windsurf` is renamed `devin` (the preset, its `.windsurf/` output directory and the `windsurf_model` frontmatter key; there is no alias — rename in `config.toml` and agent files and delete the old outputs), and the `continue-dev` preset is removed with no replacement (`doctor` reports both). `[[plugins]]` no longer writes `.claude/plugins.json` or `.codex/plugins.json` (no tool reads them; `generate` warns).
+- **Claude Code MCP servers are written only to `.mcp.json`**, so resolved MCP env values do not land in a committed settings file; an entry an earlier version wrote into `.claude/settings.json` is removed on the next `generate`/`clean`.
+- **User-scope and signed data.** `[telemetry] service_name` is user scope only (a repository value is ignored and reported as `AR9K1`). Eval results are signed per user (`eval-results.key`): an unsigned or edited record is `unverified`, re-run and ignored, and CI must use `eval run --force`. The usage log is version 3 (`digest`, `digest_scheme`, `event_id`, salted `session`), and `schema/catalog.schema.json` describes catalog version 2.
+- **MCP tools are stricter.** Arguments are validated against typed schemas (`additionalProperties: false`), so an unknown argument, wrong type, out-of-enum or missing required argument is an error result instead of being coerced; `validate_config` and other failures return `isError: true` instead of a success document; `working_directory`, `config_file` and `config_dir` are confined to the server's start directory (`mcp --root <dir>` to change it, `mcp --allow-any-dir` to lift it); the authoring server no longer advertises `tools.listChanged`; `roles resolve --format json` spells the key `honored`.
+- **`[mcp] self_server` defaults to `true`**: `generate` adds the ai-rulez MCP server to `.mcp.json` (and each harness's own MCP file); opt out with `[mcp] self_server = false` or `generate --no-self-mcp`.
+- **`improve pr` confines what it runs** (scrubbed git environment, no hooks, only the push keeps transport credentials; `--isolation` cuts the network for the worktree `generate`/`lock` and `--allow-network` leaves it on), and the scheduled repair workflow template pins its actions to a commit SHA.
 
 ### Added
 
-- **The command line and the MCP tools have a checked parity table.** `internal/parity/capabilities.go` puts every runnable command and every tool of both servers in one row: paired, `cli-only` or `mcp-only`, the one-sided rows with a reason. `go test ./tests/parity` walks the real Cobra tree and lists the real tools, and fails on an unmapped command or tool, a row naming something that does not exist, a missing reason, a flag and a tool argument that differ in name, type, enum or required-ness without a justified exclusion, and, for `validate`, `scan`, `tokens`, `cost`, `sbom`, `okf validate`, `lock --check`, `approve --list`, `validate --show-policy` and `search`, a difference between the command's `--format json` document and the tool's `structuredContent` on one fixture project. The capability tables in [the MCP guide](https://goldziher.github.io/ai-rulez/mcp-server/) are generated from the table.
-- **New MCP tools for what the command line already did**: `scan_content`, `token_report`, `cost_report`, `sbom`, `okf_validate`, `approvals_status` (read-only `approve --list`), `policy_show`, `list_verifiers`, `list_builtins`, and `create_`, `read_`, `update_`, `delete_` and `list_` for agents and commands. Each returns the document of its command; an exceeded budget or a finding at `fail_on` is an error result that still carries the document. Approving, revoking, signing, locking, evaluating, publishing and anything that prompts or uses the network stay CLI-only.
-- **`generate_outputs` takes `profile`, `role`, `check` and `offline`**, as `generate --profile`, `--role`, `--check` and `--offline` do. `check` writes nothing and returns the `generate --check --format json` document; drift is an error result. `create_skill` takes a `description`, as `add skill --description` does.
-- **MCP prompts and resources for the authoring server**: the prompts `author-skill`, `add-rule`, `review-config` and `trim-context`, the resources `ai-rulez://config` and `ai-rulez://catalog`, and the resource templates `ai-rulez://{kind}/{name}` and `ai-rulez://domains/{domain}/{kind}/{name}` for opening one item by URI. Lists carry cache hints (`ttlMs`, `cacheScope`); resource reads are never cacheable.
-- **Long MCP calls report progress and stop on cancel**: a recursive `generate_outputs` and a multi-target `token_report` send `notifications/progress` when the request carries a progress token and stop when the client cancels.
-- **Shell completion of values and names.** `ai-rulez completion bash|zsh|fish|powershell` now completes the values of enum flags (`--format`, `--fail-on`, `--severity`, `--priority`, `--lint-profile`, `--gate-level`, `--harness`, `--tokenizer`, `--mode`, `--to`, `--kind`, `--target`, ...) and the names in the project: rules, context, skills, agents, commands and checks (`remove|show|edit <type> <TAB>`, narrowed by `--domain`), domains, profiles (`--profile`), roles (`--role`), includes, installed skills and built-in domains. A command that takes no argument offers no file names. A completion reads the project when you press TAB and never writes or fails. See [Shell Completion](https://goldziher.github.io/ai-rulez/cli/#shell-completion).
-- **Examples for every command.** Every command and group, 130 in all (111 had none), shows an `Examples:` block in `--help`, and a test fails when a command is added without one. The test parses each example line against the real command tree, so an example cannot name a flag or subcommand that does not exist. Group commands (`eval`, `export`, `import`, `improve`, `trust`) have a `Long` description.
-- **Generated command reference.** `docs/cli-reference.md` lists every command with its usage, aliases, examples and flags (type, default, description), and `docs/cli.md` carries an "All Commands" index, both generated from the Cobra command tree by `task docs:cli` (`go run ./scripts/clidocs`; `--check` for CI). A test fails when either differs from the tree.
-- **The `.ai-rulez/` tree can be an OKF bundle (#281, stages 1-3).** The loader reads OKF concepts natively: `type`, `title` and `x-ai-rulez` are reserved keys (never `Metadata.Extra`, never AR303), and `x-ai-rulez.metadata` maps onto the native frontmatter before any generator or hash sees it, so a migrated tree generates byte-identical output. A generated `index.md` or `log.md` listing in a content directory is not content. `validate` runs `okf validate` on a tree that has a root `index.md` (the `AR9B*` findings, honoring `--fail-on`), and `ai-rulez migrate okf` (`--dry-run`, `--check`, `--format json`) converts a tree in place and idempotently, keeping bodies byte for byte. The legacy layout keeps loading.
-- **llms.txt** (#283). The opt-in `llms-txt` preset renders rules, context and skills as `llms.txt` (and, with `[llms_txt] full = true`, `llms-full.txt`), covered by `generate --check`; `validate --strict` lints it against the llms.txt format with the new codes `AR9P0` `llmstxt-title-missing`, `AR9P1` `llmstxt-summary-misplaced`, `AR9P2` `llmstxt-heading-invalid`, `AR9P3` `llmstxt-link-entry-invalid`, `AR9P4` `llmstxt-optional-misplaced`, `AR9P5` `llmstxt-section-duplicate-or-empty` and `AR9P6` `llmstxt-link-target-invalid`. The docs site publishes a generated `/llms.txt` and `/llms-full.txt`, checked for drift in the docs workflow (`task docs:llms`). See `docs/llms-txt.md`.
-- **Agentic Resource Discovery manifest (#280).** New `[ard]` table (`publisher`, `namespace`, `base_url`, `plugin_type`, `queries`) and `--emit ard` (also `publish emit ard`), which write a deterministic `ard.json` (spec v0.91, a proposal) for skills, MCP servers and the plugin, with representative queries from skill `triggers`/`representative_queries` and eval cases. `validate --strict` lints it as `AR9S0` `ard-manifest-invalid`, `AR9S1` `ard-identifier-invalid`, `AR9S2` `ard-entry-invalid`, `AR9S3` `ard-queries-out-of-range` (warning) and `AR9S4` `ard-not-declared`. `trustManifest` is deliberately omitted. See `docs/ard.md`.
-- **Agent Plugins packages (#279).** The `agent-plugins`, `copilot` and root-layout `codex` runtimes build their package with `internal/agentplugins`, which validates `plugin.json` and `mcp.json` against the vendored official schemas; `[plugin] spec = "1.1.0"` selects the draft version. A skill without a description and an MCP server with a `${VAR}` placeholder are no longer packaged. New `--emit agent-plugins` emitter, `convert --from agent-plugins`, and the codes `AR9O0` `agent-plugins-manifest-invalid`, `AR9O1` `agent-plugins-skill-invalid`, `AR9O2` `agent-plugins-mcp-invalid`, `AR9O3` `agent-plugins-placeholder-unsupported`, `AR9O4` `agent-plugins-content-dropped` (warning) and `AR9O5` `agent-plugins-package-unsafe` in `validate --strict` and `publish`. See `docs/agent-plugins.md`.
-
-- **Trust model page** (`docs/trust-model.md`): what a repository may set and what only user scope, the environment or a flag may enable, for every egress or privilege knob, with scope and precedence. The user config file path is now defined once (`config.UserConfigFile`) and shared by the `[llm]` and `[telemetry]` resolvers.
-
-- **Item-load telemetry and opt-in OTLP export** (off by default, identifier-only): `ai-rulez telemetry hook|record|flush|doctor` record which rules, agents, context files and skills a harness loaded (Claude Code `InstructionsLoaded`, `SubagentStart`, `SubagentStop`, plus the existing skill hooks; `ai-rulez mcp` read and list tools record `source=mcp` events) into the usage log and, when the user opts in, ship them as OTLP/HTTP JSON logs and delta metrics to a collector through a bounded 0600 offline outbox with batching, retry and backoff, without ever blocking the hook. New `[telemetry]` table (`enabled`, `allow_network`, `otlp_endpoint`, `otlp_protocol`, `headers_env` as env var names only, `service_name`, `sample`, `include_paths`, `include_session`, `salt_file`); a repository config and the local overlay can enable only local recording, never network export, the endpoint or credentials, which need the user config or `AI_RULEZ_TELEMETRY_*`; `AI_RULEZ_TELEMETRY=off` and `DO_NOT_TRACK=1` always win. `report usage` gains rule, agent and context sections: never-loaded rules, rules per session (median), load reasons, eval join (`--items`, `--format json`). New strict-validation rules `AR9K0 telemetry-config-invalid` and `AR9K1 telemetry-repo-key-ignored`. See `docs/telemetry.md`.
-- **Skill eval runner**: `ai-rulez eval run [skill...]` runs harness-neutral eval cases (`*.eval.yaml`/`.yml`/`.json` under `skills/<name>/evals/` or `.ai-rulez/evals/<name>/`; `schema/eval-case.schema.json`) through a pluggable runner and scores each skill: pass rate, trigger precision and recall over `expect_trigger` and `near_miss` cases, ablation delta (`--ablation`) and token cost. Ships a `claude plugin eval` adapter and a generic `command` runner (request JSON on stdin, response JSON on stdout) plus `--dry-run` with a cost estimate, `--max-cost`, `--changed-only`, `--format json|markdown|junit` and a digest-keyed result cache. Results go to a deterministic `.ai-rulez/eval-results.json` with the skill's sha256 digest. New strict-validation rules `AR996 eval-case-invalid`, `AR997 eval-stale` (`[lint.evals] require_fresh`), `AR998 eval-score-low` (`[lint.evals] min_pass_rate`) and `AR9A0 eval-results-invalid`. `ai-rulez report evals` joins scores with usage and feedback to recommend rewrite, prune, review or keep. See `docs/evals.md`.
-- **Usage log enrichment** (opt-in, identifier-only): log lines gain `v`, `outcome`, `served` and `role`; `session` is now a salted hash of the harness session id (16 hex digits, salt in `.ai-rulez/local/usage.salt`) instead of the raw id, and `ai-rulez usage record` takes `--harness`, `--outcome`, `--role`, `--served` and `--salt-file`. `ai-rulez usage feedback <skill> --kind misled|stale|wrong|great [--note-file]` writes an identifier-only feedback record; note text stays in `.ai-rulez/local/feedback-notes/` and never enters a log line, the index or any hash. `report usage` shows feedback counts and eval scores. `usage hook --harness codex|cursor` prints PreToolUse hook templates; other harnesses print a warning. Older log lines stay readable. See `docs/usage-telemetry.md`.
-- **Dynamic skill loading**: `delivery: static|served|both` on a skill (frontmatter), `[domains.<name>] delivery` and `[skills] delivery` choose whether a skill is written to the harness skill trees or served over MCP on demand. Served skills are left out of every static tree, one `dynamic-skills` stub skill tells the agent to call the new `find_skill`, `load_skill` and `list_skill_resources` tools, and a harness without MCP support keeps them as static files with a warning. `config.Config.EffectiveDelivery` resolves the precedence (skill, per-role override, domain, global) for the roles work to plug into. See `docs/mcp-server.md#dynamic-skill-loading`.
-- **`find_skill`, `load_skill`, `list_skill_resources`** in `ai-rulez mcp --serve-skills`: BM25 ranking over name, triggers, keywords and description (deterministic), a per-session byte budget (`--budget-bytes`, default 256 KiB), `--role` ranking, provenance with digests on every result, and `resources/list_changed` when skill files change. There is still no tool that writes.
-- **`[[skill_sources]]` and `--source`**: serve the skills of a git repository (`git+https://host/repo@v1.2.0#skills/`) or a directory with `include`/`exclude`, `name_prefix` and a scan `trust` level. Tags and commits are resolved to a commit and recorded in `ai-rulez.lock` (kinds `source` and `served`) with the existing `sha256` tree digest; a branch, or a tag the lock does not cover, is unpinned (`AR010`). `--frozen` and `--offline` never use the network; fetched trees are cached per commit.
-- **`[lock] enforce = true`** makes the skills server refuse a served skill whose digest differs from the lock (or that the lock does not pin), and every result returns the digest. The lock digest ignores the project-wide `Source-Hash` header.
-- **Every served skill is security-scanned** (`AR001` to `AR009`) before it is served; a finding at the skill's trust level blocks it.
-- **`load_skill` is recorded** by the usage recorder (identifier-only, `served: true`, opt-in via `--usage-log`, `--usage-sink` or `[usage] skills_index`).
-- **Strict validation `AR990` to `AR995`**: served skill named by static content, missing stub, static fallback for a harness without MCP, no `--serve-skills` server configured, invalid `delivery`, and served-skill lock mismatch. `AR010` now also covers `[[skill_sources]]`.
-- `ai-rulez lock --kind source|served`, and `lock --check` verifies the new entries without the network.
-- **Roles**: `[[roles]]` maps a job to a slice of the shared content: `domains`, per-kind `include` / `exclude` selectors (ids or `path.Match` globs, `domain/id` for one domain), one-level `extends`, a per-skill `skill_mode` and free-form `match` hints for an external identity tool. `[role_manifest] enabled = true` writes a deterministic `roles.json` (`schema/roles-manifest.schema.json`). Roles overlay in `config.local.*` like profiles. ai-rulez never does identity or auth. See `docs/roles.md`.
-- **`generate --role <name>`** (also `--user`, `--check`, `--dry-run`): renders a role instead of a profile; mutually exclusive with `--profile`. A role's `skill_mode` becomes Claude Code `skillOverrides`, merged key by key through the existing settings ownership (hand-written keys untouched, idempotent, `clean` takes back only what was claimed). Other presets are named in a warning; nothing is approximated.
-- **`roles list|show|resolve [--format json]`**, **`tokens --role <name>` / `--by-role`** and **`catalog --format json`** (items, owners, versions, tokens, digests, roles and lock status; `schema/catalog.schema.json`).
-- **Strict codes `AR971` `role-reference-unknown`, `AR972` `role-extends-invalid`, `AR973` `role-unreachable-dependency`.**
-- **Content lock**: `ai-rulez.lock` now also pins the ai-rulez version, every authored rule, context file, skill (with its resources), agent, command, hook, role and settings source, and the generated outputs, each as `sha256:<hex>` over the raw files with a `hash_version`, per-kind domain separation, LF normalization for a documented text allowlist and a top-level `tree` digest. Output digests ignore the `Generated:` stamp and the header hash lines. See `docs/lockfile.md` for the threat model, the scheme and test vectors. New package `internal/contentlock`.
-- **`lock --check`** now names each added, removed or changed item and whether the source or the output changed (exit 2). **`lock --diff [--format json]`** (`schema/lock-diff.schema.json`) and **`lock --content-only`** are new. **`generate --locked` / `--frozen`** also fail (exit 2) when an authored source differs from the lock. `generate` never rewrites the lock.
-- **`[lock]`** config (`enforce`, `include_outputs`, `scope`) and strict codes **`AR981` `lock-source-drift`** and **`AR982` `lock-output-drift`**, raised only when a lock exists and `enforce = true`. A lock without content pins fails `--check`.
-- **`ai-rulez convert`**: reads existing tool files and writes an equivalent `.ai-rulez/` tree with a lossiness report (`mapped`, `approximated`, `dropped`, `needs-action`, `unsupported`; text or `--format json` per `schema/convert-report.schema.json`; codes `AR9F1`-`AR9F5`, their own range apart from the `AR9E` scanner codes). The `native` importer derives its locations from the project layout of every built-in preset (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursor/rules`, `.github/instructions`, `.kiro/steering`, `.windsurf`, `.roo`, `.clinerules`, `.qwen`, `.junie`, `.agents/skills`, ...) and translates Cursor, Copilot, Kiro and Devin rule frontmatter; it also imports MCP files (literal credentials become `${VAR}` references). The `skills-lock` importer maps the Vercel skills CLI `skills-lock.json` (version 1) to `[[installed_skills]]` and never carries its `computedHash`. Nothing is written without `--write`, existing content files are never overwritten without `--force`, an existing `config.toml` is merged and never replaced (not even with `--force`), `--domain` imports beside an existing tree, a re-run is a no-op, and the planned tree is validated and security-scanned before anything is written. `--from auto` runs every detected importer (skills-lock first). Every MCP value (arguments such as `--api-key x` and `--token=x`, URL userinfo and credential query parameters, environment values whatever their key, headers, connection strings) is checked with the lint secret detectors and a literal secret becomes a `${VAR}` reference; the scan also covers `config.toml`, ignores inline suppression comments and runs when validation fails. skills-lock sources must be `https://`, `ssh://` or `git@host:` (no leading `-`, `ext::`, `file://`, embedded credentials), refs must not start with `-` and skill paths must not be absolute or contain `..`; the same field checks now apply to `installed_skills` at config load, and the git fetch commands pass `--` before the repository URL. Files generated by ai-rulez (banner, `Content-Hash` lines, the generate manifest) are not imported back, read errors become `dropped` findings, writes refuse symlinked parents and targets and roll back created directories, tool-specific agent, command and skill keys are reported (a Claude `tools` string becomes a list), a skill `name:` follows its renamed directory, non-ASCII names get a stable derived name, and code fences of any length or character no longer split `--split-headings` sections. See `docs/cli.md`.
-- **Runner and scanner hardening follow-ups**: a command that exits 0 while a backgrounded helper holds its stdout is a success with its output kept; the process group is killed after every run (a Job Object on Windows); a command found only through a relative `PATH` entry is `AR9E2`; JSON scanners with an empty list or `null` and a non-zero exit are `AR9E3`; SARIF `uriBaseId` and `originalUriBaseIds` are honoured, `file://` hosts other than `localhost` are rejected and backslashes are only separators on Windows; `egress = false` also catches single-dash flags, accepts `--flag=false` and parses `[::1]:8080`; long file lists are split across runs; the env scrub also treats `*_PAT`, `*_DSN`, `*_WEBHOOK_URL`, `COOKIE`, `SESSION` and `DATABASE_URL` as credentials. Harness traps: `RULE.md` folder rules are exempt from `AR9C1` and the older Copilot `coding-agent` value is accepted by `AR9C3`.
-- **Hardened runner for `[[lint.external]]` scanners** (`internal/runner`): every scanner run has a `timeout` (default 2 minutes, at most 15), a 32 MiB cap on stdout and stderr, and a process-group kill at the timeout. A new `egress` key declares whether scanned content can leave the machine: `egress = false` scrubs the environment to an allow-list (plus `env_pass`; proxy and credential-like names are rejected) and rejects known network flags (`--use-llm`, a non-loopback `--*-url`, ...), `egress = true` runs only with the new `--allow-egress=<name>` flag of `validate --strict --external` and `scan --external`. SARIF ingest now rejects a version other than 2.1.0, a run with `executionSuccessful = false` or an error notification, and an empty `runs` with a non-zero exit, drops suppressed results, normalises `file://`, percent-encoded and Windows paths (a path outside the project goes to `config.toml`), and sanitises and masks scanner text. New codes `AR9E0` (invalid config), `AR9E1` (egress undeclared, warning), `AR9E2` (scanner unavailable, warning), `AR9E3` (run failed) and `AR9E4` (egress blocked). Behavior change: a missing scanner binary and a failed run are now `AR9E2` and `AR9E3` instead of an error-level `AR011`; an entry without `egress` keeps the full environment and gets `AR9E1`. See `docs/strict-validation.md`.
-- **Harness trap lint** (`AR9C1`-`AR9C4`, `validate --strict`): files a harness silently ignores, driven by an embedded table (`internal/lint/traps.toml`) with a closed predicate vocabulary and, per trap, the vendor page, a verbatim quote, the verification date and a fix. Covers a non-`.mdc` file in `.cursor/rules`, a hand-written `.mdc` rule that only applies when @-mentioned, an invalid Copilot `excludeAgent`, and a file in `.github/instructions` not named `*.instructions.md`. Traps run only for configured presets or `[lint.traps] extra_harnesses`; a certainly-ignored file that ai-rulez generated is an error, a hand-written one a warning. JSON findings gain optional `harness`, `evidence`, `verified_on` and `hint`. See `docs/harness-traps.md`.
-- **`[[verifiers]]` and `ai-rulez verifiers run|list`**: deterministic, read-only repo checks declared in `config.toml`: `file_exists`, `file_absent`, `glob_count` (min/max), `regex` (required) and `forbid` (with `file:line`), `key_equals` for JSON, YAML and TOML keys, and `generated_in_sync`. Each has a severity (`error`, `warning`, `info`); results print as a table or `--format json`, with doctor's exit codes (0, 2 findings, 1 cannot run) and `--strict` for warnings. Local overlays merge entries by `name`, both schemas and validation cover the table, and the read-only `run_verifiers` MCP tool exposes the run. Verifiers are validated at load (globs and brace expansion, fields that do not apply, `key_equals` format and key, `generated_in_sync` profile); `forbid` and `regex` error on binary or over-5-MiB files instead of passing; `key_equals` keeps JSON numbers exact, distinguishes `null` from `""`, and takes `a\.b` and `["a.b"]` keys; path probes follow symlinks without leaving the project; printed names are sanitized; a failure outranks a verifier that could not run in the exit code (2 over 1); and the `run_verifiers` MCP tool runs the real `generated_in_sync` comparison (an error, never a pass, when includes are declared). A `command` predicate is reserved for a later release. See `docs/verifiers.md`.
-- **Gitignore coverage probe**: a directory or glob pattern counts as already ignored only when two dissimilar stand-in names (`generated-probe`, `x7q-probe.tmp`) are both ignored, so a narrow user rule such as `*.tmp` no longer hides a whole generated directory from the managed block.
-- **Obsolete generated plugin files are pruned**: `generate --plugin` deletes files a previous run generated inside a kept bundle (a removed skill, command or agent, for every runtime) when the previous provenance sidecar lists them, the new plan does not, and their content still matches the recorded hash, then prunes the directories left empty. Edited or unknown files, and paths through a symlink that leaves the project, are kept (edited ones with a warning). `--dry-run` prints `delete-stale:` / `keep-obsolete:` lines and `verify --plugin` fails on an obsolete generated file. See `docs/plugins.md`.
-- **`[permissions]` for every harness with a native permission surface**: the allow/ask/deny list of Claude Code rules is parsed once (tool plus specifier) and translated into Codex (`.codex/rules/ai-rulez.rules`), OpenCode, Kilo and MiMo Code (`permission`), Gemini (`tools.allowed`/`exclude`), Cursor (`.cursor/cli.json`), VS Code Copilot and Zoo Code (`.vscode/settings.json`), Copilot CLI (`allowedUrls`/`deniedUrls`), Devin, Qwen Code, CodeBuddy, Command Code, Qoder, Letta, Grok, Mistral Vibe, Poolside, oh-my-pi and Augment, and, with `--user`, Zed, Hermes and Kimi Code. Rules are owned one by one, so your own rules and comments in JSONC, TOML and YAML documents survive `generate` and `clean`. A rule a harness cannot express is skipped, never widened; a skipped deny is reported as `SECURITY: ... NOT enforced`. Presets without a documented permission file (`amp`, `pi`, `cline`, `kiro`, `factory`, ...) are named in a warning. Provider specs can declare `[[sidecars]] kind = "permissions"` with a `dialect`, and a sidecar can be `user_only`. See `docs/permissions.md`.
-- **`[[hooks]]` for twenty-six more harnesses**: `copilot-cli`, `factory`, `antigravity`, `qwen`, `augment`, `codebuddy`, `qoder`, `commandcode`, `letta`, `gitlab-duo`, `devin`, `grok`, `bob`, `cortex`, `goose`, `deepagents`, `crush`, `poolside`, `reasonix`, `kiro` and `vibe` get the top-level `[[hooks]]` in their native file (`.factory/hooks.json`, `.qwen/settings.json`, `.devin/hooks.v1.json`, `.kiro/hooks/ai-rulez.json`, `.vibe/hooks.toml`, `.poolside/settings.yaml`, `crush.json`, ...), and `junie`, `zcode`, `hermes` and `kimi`, whose vendors read hooks from the user config only, with `generate --user`. `cline` gets one generated executable per event in `.clinerules/hooks/` (`~/Documents/Cline/Hooks/` for `--user`). Event names, matcher semantics, handler fields and timeout units (seconds, milliseconds for Augment, Letta, Reasonix and ZCode) were read from each vendor's documentation, cited with dates in `docs/settings.md`; an event, matcher, handler type or script the vendor cannot express is skipped with a warning, never approximated. The documents are merged key by key like `.claude/settings.json` (hand-written hooks survive `generate` and `clean`, JSON, TOML and YAML alike; ownership is per hook element); a file ai-rulez wrote whole is gitignored. `targets` and `matchers` accept the new names.
-- **Provider specs: `kind = "hooks"` sidecars** render the top-level `[[hooks]]` through a `dialect` naming a harness (`[[sidecars]] kind = "hooks" dialect = "qwen" path = ".qwen/settings.json"`), default `emit_when = "has_hooks"`, with `global_path` for `--user`. Several generic sidecars that name one path (an `mcp` and a `hooks` sidecar of one settings file) are now merged into one document instead of the last one winning.
-- **`[[hooks]]` matchers are translated, not skipped**: a Claude Code matcher (`Bash`, `Edit|Write`, `^Bash$`, `mcp__github__.*`) is rewritten token by token into the tool names of `cursor`, `gemini`, `copilot`, `copilot-cli`, `factory`, `devin`, `kiro`, `goose`, `crush`, `cortex`, `poolside`, `vibe`, `augment` and `antigravity`, from vocabularies read from each vendor's documentation (cited with dates in `docs/settings.md`). A token without a documented name skips the group with a warning, never a partial translation; `matchers.<harness>` still wins. The vocabularies live in one package, `internal/toolnames`, which the plugin runtimes of `opencode`, `kilo`, `pi` and `amp` now share. Copilot and Copilot CLI hooks carry the vendor's optional `matcher` on `preToolUse` and `postToolUse` (previously a matcher skipped the group). Goose's shell tool is `shell`, not `developer__shell`.
-- **`[[hooks]]` for plugin-based harnesses**: `opencode`, `kilo`, `mimocode`, `pi` and `amp`, whose hooks are code rather than a settings file, render the top-level `[[hooks]]` into a generated plugin module (`.opencode/plugins/ai-rulez-hooks.js`, `.kilo/plugins/...`, `.mimocode/plugins/...`, `.pi/extensions/ai-rulez-hooks.ts`, `.amp/plugins/ai-rulez-hooks.ts`; the user-level plugin directories with `generate --user`). The module spawns each hook command with a Claude Code style JSON document on stdin, filters by `matcher` against the harness's tool names (Claude names mapped), honours `timeout`, and blocks a pre-tool call (and, in Pi, a prompt) on exit code 2. It is owned whole by ai-rulez, gitignored by file and removed by `clean`; hook commands are embedded as one Go-encoded JSON literal, never spliced into code. Events a harness cannot express are skipped with a warning. Provider specs gain a `hook_plugin` sidecar kind with a `flavor` (`opencode`, `opencode-v1`, `pi`, `amp`). See `docs/settings.md`.
-- **LLM access layer (`internal/llm`, `[llm]`)**: one `Client` interface (chat with JSON-schema output, embeddings) for the features that need a model (rubric graders, semantic review, embeddings, verifiers). Nothing calls out by default: `[llm] allow_network = false` refuses every call with a message naming the setting. Middleware adds a fail-closed budget (`max_cost_usd`, `max_tokens`, `max_calls`), a content-hash response cache under `.ai-rulez/local/llm-cache/` (`cache = false` or `AI_RULEZ_LLM_CACHE=0` opts out), timeouts, content-free logging and a dry-run mode; every call goes through liter-llm (see Breaking). API keys are read from the environment variable named by `api_key_env`; a literal key in config is rejected as `AR9L0 llm-config-invalid`. `ai-rulez llm doctor [--ping]` prints the resolved setup (also shown as the `llm` section of `ai-rulez doctor`), `ai-rulez llm estimate <file>` estimates tokens and cost offline, `AI_RULEZ_LLM_*` variables override the table and the user config file (`~/.config/ai-rulez/config.toml`) can opt in to `allow_network`, `base_url` and `api_key_env`, which a repository config cannot. See `docs/llm.md`.
-- **OKF (Open Knowledge Format) support**, pinned to spec v0.2 (`[okf] spec = "0.2"`). `ai-rulez export okf [--output-dir dir] [--profile p | --role r] [--include rules,context,skills,agents,commands,checks] [--check] [--config-dir n]` writes a deterministic, conformant bundle (sorted, no timestamps, `okf_version` in the root `index.md`, an `index.md` per directory); ai-rulez metadata rides in an `x-ai-rulez` frontmatter key so `export`, `import` and `export` again is byte-identical. The opt-in `okf` preset (`presets = ["claude", "okf"]`, `[okf] dir|include|spec`, default `docs/okf/`) keeps the bundle in sync on `generate` and reports drift in `generate --check`. `ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain d] [--dry-run] [--force]` maps concepts by `x-ai-rulez.kind` or by `type`, never overwrites without `--force`, is idempotent, rejects paths that leave the target, and scans the text with the AR001-AR011 security checks first, refusing at error level with nothing written. `ai-rulez okf validate <dir|git-url> [--format json] [--fail-on ...]` lints any bundle. New strict-validation codes `AR9B0`-`AR9B9` (also run by `doctor`). `[[includes]] format = "okf"` uses an OKF bundle (local or git) directly as a source, converted at load time and security-scanned. A git bundle is cached and pinned in `ai-rulez.lock` (commit and digest) like every git include, so `lock`, `lock --check`, `--locked`, `--frozen`, `[lock] enforce` and `AR010` apply, and its git commands run hardened (no hooks or credential helpers, scrubbed environment). See `docs/okf.md`.
-- **Thirty-two new strict-validation rules.** Content and config: `AR304` frontmatter values (effort, context, model, permissionMode, memory, shell, booleans, paths), `AR305` unknown tool names in `allowed-tools`/`tools` and tools both allowed and denied, `AR403` backticked `npm run`/`make`/`task`/`just`/`pytest -m` commands the repository does not define, `AR507` hook schema (unknown events, missing type or command, bad timeout, matcher or `if` on events that ignore them), `AR602` MCP config shape, `AR210` `@import` targets, cycles and depth, `AR963` plugin and marketplace manifests (optionally merged with `claude plugin validate --json` under `--external`), `AR964` harness load budgets from one versioned table, `AR805` empty bodies. Security: `AR012` unpinned MCP packages, `AR013` auto-invocation danger, `AR014` exfiltration commands, `AR015` literal credentials in MCP env/headers/settings, `AR016` image exfiltration, `AR017`/`AR018` fake directive labels and tags, `AR019` config tampering, `AR020` self-propagation, `AR021` unpinned package execution, `AR022` destructive commands, `AR023` escape obfuscation, `AR024` plain-http transport, `AR025` raw-IP URLs, `AR026` data:/javascript: links, `AR027` unknown dotdir reads (off), `AR028` credential taint flow, `AR029` stealth commands, `AR030`/`AR031` capability profiles and cross-skill chains, `AR032`/`AR033` publisher mismatch and authority claims for installed skills, `AR034` low analyzability. `AR006` is now a table of credential locations with access methods and tiers; `AR002`, `AR003`, `AR004` and `AR802` gain patterns. Rules register themselves from `init()`; a test checks that every code is unique and documented. See `docs/strict-validation.md`.
-- **`checks` content kind**: code-review guidelines in `.ai-rulez/checks/<name>.md` and `.ai-rulez/domains/<d>/checks/<name>.md` (frontmatter `description`, `severity` low|medium|high|critical, `tools`, `targets`), with `ai-rulez add|remove|list check`, the `create_check`, `read_check`, `update_check`, `delete_check` and `list_checks` MCP tools, includes (`include = ["checks"]`), profile and domain selection, and validation of names (`[A-Za-z0-9._-]`) and severity. Rendered to `.cursor/BUGBOT.md`, `REVIEW.md` (kilo), `.qwen/review-rules.md`, `.factory/skills/review-guidelines/SKILL.md`, `.rovodev/.review-agent.md`, `.agents/checks/<name>.md` (amp), and merged into `.augment/code_review_guidelines.yaml` and `.gitlab/duo/mr-review-instructions.yaml` through a new `checks` sidecar kind that owns only the areas or groups it renders. Provider specs gain frontmatter `renames`. See `docs/checks.md`.
-- **Check files are shared, not clobbered**: the aggregate check outputs (`.cursor/BUGBOT.md`, `REVIEW.md`, `.rovodev/.review-agent.md`, `.qwen/review-rules.md`, the factory `review-guidelines/SKILL.md`) hold a `<!-- ai-rulez:checks:begin -->` ... `<!-- ai-rulez:checks:end -->` block and keep everything outside it. A hand-written file gets the block appended, `generate` leaves your text alone, and `clean` (or removing the last check) removes only the block; the file is deleted only when ai-rulez created it and nothing else is in it. A file with unpaired markers is an error, not overwritten. The Cursor check file is skipped in user scope. A new `markdown` document format in the merge engine carries this.
-- **YAML check merges respect your entries**: an Augment area or GitLab group with a check's name that ai-rulez did not write (or that you edited since) is kept and the check is skipped with a warning; the GitLab `instructions` list keeps the source text, comments and key order of unchanged groups, and the YAML merge engine now replaces a block list element by element.
-- **Check names are validated at render time** (a name outside `[A-Za-z0-9._-]` is skipped with a warning; names differing only in case are one check), headings and file names use the sanitized name, and `REVIEW.md` over Kilo's 10,000-character limit warns. Machine-local checks are carried through the local per-item render and counted in scopes.
-- **`create_check` / `update_check`**: frontmatter is marshalled with a YAML encoder (no hand-built strings), `severity` and `targets` are validated (a misspelt preset is rejected), `update_check` accepts content, fields or both, rejects an empty update and keeps the existing frontmatter when given a body without one.
-- **`ai-rulez generate --watch`**: generates once, then regenerates when `.ai-rulez/` (recursively, new subdirectories and a re-created directory included), the local overlay, the config file or a local-path include changes. Changes are debounced for 300 ms, runs never overlap (a change during a run schedules one more), generated output and editor swap files are ignored, a config that fails to load is logged without stopping the watch, and SIGINT/SIGTERM stop it cleanly (a second Ctrl-C kills it), files recorded as generated never retrigger it, ignore rules apply below the watched root only, symlinked roots and directories are followed, removed includes are dropped, and a directory the OS cannot watch is reported once with a limit hint. Not combinable with `--dry-run`, `--check`, `--user`, `--plugin` or `--recursive`. `fsnotify` is now a direct dependency.
-- **`ai-rulez doctor [--strict] [--format text|json]`**: read-only diagnostics with `error`, `warning` and `info` findings: config validity, unknown or removed presets with a did-you-mean (`windsurf` is `devin`; `continue-dev` is gone), generated-output drift, generated paths git does not ignore, shared settings documents that no longer parse, unresolved MCP `${VAR}` placeholders, missing or non-executable hook scripts, `ai-rulez.lock` drift, and preset tools missing from `PATH`. Exits 2 on errors (and warnings with `--strict`) and 1 when the configuration cannot be loaded. It never uses the network or writes the include cache (includes are not resolved, so `drift` is skipped for projects that declare them), checks only MCP servers active in the selected profile, and stats hook scripts directly. Also exposed as the read-only `doctor` MCP tool, which redacts URL credentials from paths as well as messages.
-- **Role-driven delivery**: `[roles.delivery]` maps a skill id or glob (`domain/id` for one domain) to `static`, `served` or `both` and is inherited through `extends` like `skill_mode`. `generate --role` leaves the role's served skills out of the static trees and adds the `dynamic-skills` stub, `tokens --role` counts them as not listed (`served_skills`), `ai-rulez mcp --serve-skills --role <name>` serves only that role's skills with its delivery and scopes `find_skill` to it, and `roles resolve`, `roles.json` (`items[].delivery`, `totals.served_skills`, `totals.served_tokens`, `delivery`) and `catalog` (`items[].delivery`, `items[].role_delivery`) report it. The role resolver of the skills server is now the real one (`mcp.RolesFromConfig`); a role is no longer a profile name there. See `docs/roles.md#delivery`.
-- **One lock for everything**: `[[source]]` and `[[served]]` entries live in the same `ai-rulez.lock` as the content pins and are covered by its `tree` digest; `lock`, `lock --check`, `lock --diff` (new scope `served` in `schema/lock-diff.schema.json`), `lock --content-only`, `generate --locked`/`--frozen`, `validate --strict` and `[lock] enforce` all read it. A served-skill digest is a `sha256:` tree digest in the content-pin scheme (kind `served-skill`, header lines that change without the skill changing left out), implemented once in `internal/contentlock`; the skills server uses it for the digests it reports. `lock` also pins the skills that only a role serves.
-- **`checks` are a role-selectable, lockable kind**: `[roles.checks]` include/exclude selectors, `check` items in the content pins, `roles.json` and `catalog`.
-- **`doctor` compares authored content with the lock** (an error with `[lock] enforce = true`, a warning otherwise), and `generate --watch --role <name>` regenerates the role's slice.
-- **Domain content in plugin bundles**: `[plugin] include_domains` (names or globs) bundles the skills, commands and agents of those domains next to the root content. The default is unchanged (root only).
-- **Per-domain plugins**: `[marketplace.from_domains]` turns each domain into its own plugin, and `[[marketplace.plugins]]` declares plugins from domains and root content. `generate --plugin` writes `<output_dir>/plugins/<name>/` for each and one `.claude-plugin/marketplace.json` with relative sources. Entries can carry `version`, `category`, `keywords`, `defaultEnabled` and `relevance`. `verify --plugin` covers every plugin directory. See `docs/plugins.md`.
-- **Placement**: `[placement]` and a per-item `placement: core|plugin` frontmatter key keep skills and commands out of `.claude/skills` (plugin-only), with `honor_targets` applying frontmatter `targets` to skills. Default: every item is core, as before.
-- **Plugin keys in `.claude/settings.json`**: `[claude.settings] manage = true` owns `extraKnownMarketplaces.<marketplace>` and the listed `enabledPlugins` entries one by one through the existing settings merge, leaving every other key alone. Default off.
-- **Catalog skill**: `[marketplace.catalog_skill]` generates a skill that lists the plugins and how to enable them. Default off.
-- The local overlay and the schema accept `placement` and `claude`; provider specs accept the `placement_core` filter and the `has_mcp_servers_or_plugin_settings` sidecar predicate.
-- **`ai-rulez validate --strict`**: deep content validation that finds instructions that parse but do not work. Twenty checks with stable codes (`AR101`...`AR962`, plus the security family `AR001`-`AR011`) cover `paths`/`globs` that match no tracked file, unresolved relative links and anchors, references to skills, agents, rules and commands that do not exist, missing repo paths, hook files that are missing or not executable, skill scripts without the executable bit, MCP commands not on `PATH`, duplicate and near-duplicate descriptions, description and skill-name quality, size budgets and required frontmatter keys. Findings carry a severity and `file:line`; `--format json` prints them as JSON, `--recursive` lints every nested root, and exit status 2 (distinct from 1 for an invalid config) means findings at or above `--fail-on`. Severities, ignores, allow-lists, budgets and required metadata are configured in a new `[lint]` table, and one finding can be silenced with an `ai-rulez-lint-ignore` comment. See `docs/strict-validation.md`.
-- **`baz` preset** for the [Baz](https://baz.ai) reviewer, which has no repository config file and reads only instruction files from the default branch. It writes `AGENTS.md`, root-only `.agents/skills/` and `.claude/agents/` (neither next to `claude`, which already provides them), and no commands or `.claude/rules/`, which Baz does not read. Path-scoped rules and context go to the `AGENTS.md` of the directory their globs point into, where Baz scopes them; `rules.baz_scoped = "root"` keeps them in the root file. The root `AGENTS.md` stays identical across `baz`, `codex`, `opencode`, `amp`, `xum` and the shared `agents_md` file. See `docs/baz.md`.
-- **Native MCP, command and user-scope outputs for existing presets**: `cursor` writes `.cursor/mcp.json`; `copilot` writes `.vscode/mcp.json` (`servers`, with `type`); `devin` writes `.devin/mcp_config.json` and turns commands into user-invocable skills; `codex` merges `[mcp_servers.<name>]` tables into `.codex/config.toml`; `antigravity` writes `.agents/mcp_config.json` (`serverUrl`) and commands as `.agents/workflows/<id>.md`; `amp` writes `amp.mcpServers` into `.amp/settings.json`; `junie` writes `.junie/mcp/mcp.json` and `.junie/commands/<id>.md`; `pi` writes commands as `.pi/prompts/<id>.md`; `cline` writes commands as `.clinerules/workflows/<id>.md`; `opencode` writes commands as `.opencode/commands/<id>.md`. Every Go preset exposes its user-scope layout through `presets.GlobalOutputProvider`, matching the `[global]` block of provider specs.
-- **`.codex/config.toml` is a merged document**: ai-rulez owns `model_reasoning_effort` and the `mcp_servers` members it writes; the rest of the file, comments included, is left alone.
-- **`generate --check` and `verify`**: `generate --check` renders in memory and compares with the disk without writing, listing each file as `missing`, `stale`, `edited` (hand-edited: the body no longer matches its own `Content-Hash`) or `orphan`, and exits 2 on drift (`--recursive`, `--profile` and `--no-local` are honored). Bare `verify` checks every file in the generated manifest against its `Content-Hash` offline. `generate --dry-run` now distinguishes `unchanged:` and `edited:` files from `write-file:`. `verify --plugin` on a project whose bundle was never generated now says `plugin bundle not generated; run ai-rulez generate --plugin`, and `--if-generated` skips until the bundle exists.
-- **`ai-rulez.lock`**: `ai-rulez lock [name...]` (and `skill update`) records the resolved commit and a sha256 content digest of every git include and installed skill in `.ai-rulez/ai-rulez.lock`. With a lock, `generate` fetches the pinned commit and fails on a digest mismatch (`generate --locked` also fails on an uncovered source, `--frozen` never uses the network), `lock --check` verifies the lock against the config and cache offline, `validate` warns about unpinned remote sources and strict validation reports them as `AR010`.
-- **Security checks** `AR001`-`AR011` in strict validation and a dedicated `ai-rulez scan` command: secret patterns (built in plus `secret_patterns`), zero-width/bidi/tag characters, instruction-like HTML comments, prompt-injection phrases, `curl | sh`/`eval`/base64 execution, credential access and writes outside the project, unrestricted `allowed-tools`, an outbound host allow-list, long encoded blobs, and merged findings from `[[lint.external]]` scanners (`--external`, SARIF or JSON). `[lint.security] scan_imports` also scans includes and installed skills, and `generate` refuses to write them at level `error`. Configured under `[lint.security]`; see `docs/strict-validation.md`.
-- **Strict validation follow-ups**: `AR703 duplicate-collapsed` (with `allow_overrides`), `AR303 frontmatter-key-unknown` (with `allowed_keys`; pre-seeded from the Agent Skills specification and the Claude Code skill and subagent references), typed metadata rules `[lint.metadata.<key>]` (`date`, `enum`, `string`, `max_age_days`, `required`; `AR951`-`AR953`), and `AR954 superseded-by-missing`. `require_metadata` now also accepts a key set inside the Agent Skills `metadata` map.
-- **Skill frontmatter round-trips with its types**: `generate` keeps nested maps, lists, booleans, numbers and dates of skill frontmatter as written, instead of `metadata: map[...]`, `"true"` and `2026-10-01 00:00:00 +0000 UTC`. The Agent Skills specification fields (`license`, `compatibility`, `metadata`, `allowed-tools`) now reach the skill tree of every preset, not only Claude's. See `docs/skills.md`.
-- **Path-gated skills**: a skill-level `paths` (or `globs`) key is written for Claude Code and Cursor, which document it, and ignored by the other tools.
-- **Codex invocation policy**: `disable-model-invocation: true` on a skill writes `.agents/skills/<id>/agents/openai.yaml` with `policy.allow_implicit_invocation: false`. Cursor also receives `disable-model-invocation`.
-- **`[claude.skills] hide_from_menu`**: opt-in `user-invocable: false` on skills that do not set the key. Off by default.
-- **Codex `AGENTS.md` size warning**: `generate` and `tokens` warn when the `AGENTS.md` files Codex reads (root down to a directory) exceed `project_doc_max_bytes` (32 KiB by default), with the size and the largest sections. `[codex] project_doc_max_bytes` sets the limit (`0` disables the warning).
-- **`ai-rulez mcp --serve-skills`**: a read-only MCP server that serves the skills of a profile per the MCP Skills extension (SEP-2640): `skill://<name>/<file>` resources, the `skills/list` and `skills/get` methods with per-file sha256 digests and sizes, and `search_skills`, `get_skill` and `read_skill_file` tools with provenance (`digest`, `source`, `ref`, `pinned`). `--profile`, `--targets`, `--domain`, `--allow` and `--deny` choose what is exposed; the authoring tools are not registered in this mode. Served bytes equal the generated `SKILL.md` and resource files. The default `ai-rulez mcp` server is unchanged. See `docs/mcp-server.md`.
-- **Stale plugin directories are removed**: `generate --plugin` deletes the generated files of a domain plugin whose domain disappeared (only directories carrying ai-rulez's provenance sidecar; files it did not generate are kept), `--dry-run` lists `delete-stale:` lines, and `verify --plugin` fails while one exists.
-- **Worktree caveat for the managed marketplace**: `ai-rulez validate` warns once when the managed `extraKnownMarketplaces` directory source is relative and the project is in a linked git worktree.
-- **`ai-rulez list --placement`** prints where every skill and command ends up (core or plugin-only), the plugins that bundle it, and flags plugin-only items no enabled plugin or catalog skill makes reachable.
-- **`AR961 plugin-version-drift`** (`validate --strict`, warning): a generated plugin changed since `HEAD` but kept its version.
-- **Codex root `plugin.json`**: `[plugin.codex] manifest = "root" | "both"` writes the Agent Plugins root manifest Codex documents as preferred (interface under `extensions.com.openai`, fixed `skills/`, root `mcp.json`); `legacy` (`.codex-plugin/plugin.json`) stays the default. `[plugin.codex] marketplace = true` writes `.agents/plugins/marketplace.json` for a single-plugin repository.
-- **`copilot` plugin runtime** (opt-in): root `plugin.json`, `skills/`, `mcp.json`, `com.github.copilot/agents/<name>.agent.md` and `.github/plugin/marketplace.json` in the Agent Plugins 1.0 layout. Commands and hooks are not emitted (no documented format) and a warning says so.
-- **Cursor marketplace index** (opt-in): `[plugin.cursor] marketplace = true` and `[marketplace] cursor_index = true` write `.cursor-plugin/marketplace.json`.
-- **Gemini custom commands** (opt-in): `[plugin.gemini] commands = true` bundles commands as `commands/<name>.toml`.
-- `docs/plugins.md` lists, per runtime, the content types emitted with vendor links and the verification date.
-- **`ai-rulez tokens` counts the item listing**: every harness that lists skills, commands or agents at session start (`claude`, `codex`, `pi`, `gemini`, `opencode`, `devin`, `cline`, `junie`, `cursor`, `copilot`) gets a `skill listing` line, and `command listing` / `agent listing` where it lists those, costing each entry's name, description, path where included and an estimated 27 tokens of framing. The figure is calibrated against Claude Code (100 skills: 6,402 measured, 6,400 reported), is included in `always`, the headline and `--budget`, and skips `disable-model-invocation` items. Provider specs declare it with a `[listing]` table. New JSON fields: `listing`, `listed_items`, `truncated_descriptions`, `always_legacy`, `conditional_legacy` per runtime and `headline_listing`, `headline_always_legacy`, `listing_entry_overhead` on the report. See `docs/cli.md`.
-- **Evals support**: `skills/<name>/evals/` is a recognized directory (no "unrecognized subdirectory" warning) and is never written into per-tool skill trees. `[plugin] include_evals = true` bundles each skill's `evals/` and the optional project-level `.ai-rulez/evals/` tree (at `<bundle>/evals/`, or only `<skill>/` subtrees for per-domain plugins); `verify --plugin` covers them through the provenance sidecar. New strict-validation rule `AR962` (`evals-missing`, off by default) reports skills with no cases, enabled with `[lint.evals] require = true` or `[lint.severity]`, with `[lint.evals] allow` for exemptions. See `docs/evals.md`.
-- **Usage telemetry support** (opt-in, no network): `[usage] skills_index = true` makes `generate` write a byte-stable `.ai-rulez/skills-index.json` with one record per skill (id, domain, source, blake3 content hash of the authored skill, owner, version, outputs per preset). `ai-rulez usage hook` prints a Claude Code hooks block (`PreToolUse` on the Skill tool and `UserPromptExpansion`) that runs `ai-rulez usage record`, which appends an identifier-only JSON line (never prompts, arguments or contents) to a machine-local log or pipes it to a user-supplied `--sink-command`. `ai-rulez report usage <log>` joins a log with the index to list never-used skills, skills edited since they were used, and unknown ids. See `docs/usage-telemetry.md`.
-- **Hooks outside plugins**: top-level `[[hooks]]` (same `event`, `matcher` and `command`/`script` handlers as `[[plugin.hooks]]`, plus `targets` and per-harness `matchers`) render into `.claude/settings.json`, `.codex/hooks.json`, `.cursor/hooks.json`, `.gemini/settings.json` and `.github/hooks/ai-rulez.json`, using each harness's own event names, handler fields and timeout unit. A group a harness cannot express (an event it lacks, `if` or `async` where unsupported, a Claude matcher without a `matchers.<harness>` override) is skipped with a warning naming the reason, never approximated; presets without hook support are named in one warning. Hook groups are owned one by one, so hand-authored hooks in the same files survive `generate` and `clean`. Default: no hooks. See `docs/settings.md`.
-- **`[permissions]`** (`allow`, `ask`, `deny`) owns the listed rules of `.claude/settings.json` one by one; `validate` warns and `validate --strict` reports (`AR506`) an allow rule that permits every call of a tool. Other presets are named in a warning rather than silently skipped.
-- **`[claude.settings.managed]`** owns `env.<NAME>` and `skillOverrides.<skill>` entries of `.claude/settings.json` entry by entry, without `manage = true`.
-- **`validate --strict` checks `[[hooks]]` scripts in `config.toml`**: `AR504` (missing) and `AR505` (not executable), before any settings file is generated.
-- **User-level output**: `ai-rulez generate --user` renders a user config (`~/.config/ai-rulez`, `$XDG_CONFIG_HOME/ai-rulez` or `--config <dir>`, same schema as a project config, profiles select the role) into the per-user locations each preset declares: the `[global]` block of its provider spec, or `presets.GlobalOutputProvider` for a Go preset, so one declaration serves both the layout and `--user` and 47 presets are supported (`docs/user-scope.md` lists them; `aiassistant`, `baz`, `codebuff`, `replit` and `xum` have no user-level location and are reported with the reason). A tool's home variable (`CODEX_HOME`, `HERMES_HOME`, `DEEPAGENTS_HOME`, `KIMI_CODE_HOME`, `QWEN_HOME`, `VIBE_HOME`, `DSH_HOME`, ...) relocates its files when set to an absolute path, and a relative `$HOME` is refused. Project-only features (MCP servers, scopes, plugin, `agents_md`, `.local`, gitignore) do nothing at user level, while hooks, permissions and managed settings are merged into the tool's user settings document. It lists every path before writing and asks for confirmation (`--yes` skips it, `--dry-run` writes nothing), never replaces a file ai-rulez did not write, refuses symlinks that leave the home directory, merges shared settings documents key by key, records a manifest beside the user config, and `ai-rulez clean --user` removes exactly what was recorded. It warns when a skill would load twice (one harness reading two of the user directories, or the same name in the project). Opt-in: nothing is written to the home directory without `--user`. See `docs/user-scope.md`.
-- **Strict validation report formats**: `validate --strict --format text|json|sarif|github|junit|markdown` and `--output <file>` (written atomically). With a structured format stdout carries only the report. SARIF results carry `partialFingerprints`, `suppressions` for baselined findings and a `helpUri` per rule; `github` prints workflow annotations, `junit` writes JUnit XML and `markdown` a readable summary. Every finding has a line-independent `fingerprint` (`ar1:`), an `analyzer` and a `scope`.
-- **Baseline, budgets and the ratchet**: `--baseline <file>` (default `<config dir>/lint-baseline.json` when present), `--update-baseline` with `--baseline-reason` (required to accept a security finding), `--strict-baseline` (stale or expired entries exit 2) and per-entry `expires`; `[lint.ratchet]` tolerates up to N findings of a rule. Accepted findings stay visible but do not count toward the exit code. Exit codes: `0` clean, `1` invalid configuration or an unusable baseline or revision, `2` findings at or above `--fail-on`, over a budget, or (with `--strict-baseline`) a stale baseline.
-- **`validate --strict --fix` / `--fix-unsafe` / `--dry-run`**: safe fixes for executable bits (`AR502`, `AR503`, `AR505`) and frontmatter key renames (`AR303`); `--fix-unsafe` also normalizes skill names (`AR804`). Authored sources only, never generated outputs or security findings, never baselined findings, atomic and idempotent; `--dry-run` prints the unified diff.
-- **`--since <rev>` / `--changed`**: report only findings in files changed since a revision (diffed against its merge-base with `HEAD`; untracked files included) and in files that refer to them; the whole tree is still linted so references resolve.
-- **`--analyzer <names>`** narrows the report to analyzers (`security`, `references`, `hooks`, `mcp`, `duplicates`, `descriptions`, `budgets`, `metadata`, `plugin`); **`--lint-profile default|strict|permissive`** overrides `[lint] profile`; **`--repo-root`** (env `AI_RULEZ_REPO_ROOT`) sets where repository-relative paths resolve; **`validate --explain <rule>`** prints a rule's reference.
-- **Risk score**: the report carries an advisory per-item and overall risk score (`[lint.risk]` weights); it never changes the exit code.
-- **Example regions**: a fenced block tagged `example`, an `<!-- ai-rulez-example -->` comment or a `[lint] example_paths` glob stops `AR005`, `AR006` and `AR008` from reporting documented risky commands. Markers are author-controlled, like `ai-rulez-lint-ignore`, and are ignored in imported content; see the trust model in `docs/strict-validation.md`.
-- **`ai-rulez cost`**: reports the biggest context-cost offenders (always-loaded versus on-demand tokens) as text, JSON or Markdown; `--budget` and `--on-demand-budget` exit 2 when exceeded.
-
-- **Version constraints and `ai-rulez update`**: includes, installed skills and skill sources accept `version = "^1.2"` (npm-style ranges; `ref = "^1.2"` is shorthand), `tag_prefix` for monorepo tags and `include_prerelease`. The lock records the constraint as `ref` plus the resolved `tag`, `tag_object` and peeled `commit`; `lock` keeps a pin that still satisfies its range and `generate` never resolves a range. `ai-rulez lock --outdated [--format json] [--fail-on-outdated]` lists sources whose range allows a newer tag (`schema/lock-outdated.schema.json`), and `ai-rulez update [name...] [--dry-run] [--allow-downgrade] [--accept-moved-tag] [--kind] [--format json]` moves range pins to the newest allowed tag with a file-level summary (`schema/update.schema.json`); `skill update` keeps range pins. A tag that moved after it was pinned is refused (`AR732`) until `--accept-moved-tag` (also when the move looks like a downgrade, which then also needs `--allow-downgrade`), and `update` never selects a lower tag without `--allow-downgrade`. New codes `AR730` (constraint unsatisfiable), `AR731` (constraint invalid, or both `ref` and `version`), `AR732` (pinned tag moved) and `AR735` (pinned tag deleted, exit 2). A source pinned at a tag that is not a version reports `locked-non-version`. See `docs/lockfile.md`.
-- **`ai-rulez lock --subject [--format json] [--output file]`** prints the lock-subject digest (over the recomputed `tree`, an approvals slot, `hash_version`, `scope` and `outputs_pinned`) so the lock can be signed with `cosign sign-blob` and verified with `cosign verify-blob` (`schema/lock-subject.schema.json`, "Signing the lock" in `docs/lockfile.md`).
-- **`lock` pins a chosen serve view**: `--role`, `--profile`, `--include-static` and repeatable `--source` record a view as its own set of `[[served]]` entries (new optional `view` key); views recorded earlier are re-pinned by a plain `lock`, `lock --check` evaluates each of them, and `mcp --serve-skills --frozen` and `[lock] enforce` check the pins of the view the server starts with. `lock --refuse-findings` fails without writing when the scan refuses a served skill (#236). `lock --check --format json` prints the comparison as JSON (exit 2 on drift).
-- **Read-only MCP tools** `list_roles`, `resolve_role`, `lock_status` and `catalog` on the authoring server return the JSON of `roles list`, `roles resolve`, `lock --check` and `catalog`; they never write, never use the network (uncached remote includes are left out) and cap long item lists at `limit` (default 200, max 1000) (#252).
-- **`ai-rulez sbom --type cyclonedx`** prints a CycloneDX 1.6 JSON bill of materials: items (rules, context, skills, agents, commands, checks, hooks, roles), remote includes and skill sources with their pinned commit, and MCP servers (heuristic package URLs for npx, uvx, docker run and go run; remote servers as services, scheme and host only). Deterministic, no timestamp, no secrets; no network unless `--online` (`git ls-remote`). See `docs/sbom.md`.
-- **`ai-rulez catalog --html <dir>`** writes a static, self-contained website of the catalog: searchable overview, one page per item and role, lock and lint pages and `catalog.json`. It works from `file://`, makes no network request, escapes repository text, sets a strict Content-Security-Policy and gives the same bytes for the same input (`--role`, `--include-excerpt`, `--indexable`, `--clean`, `--base-title`, `--allow-findings`). It refuses a non-empty directory without the `.ai-rulez-catalog` marker, never follows a symlink out of the directory and refuses to publish an item the secret scanner (`AR001`) flagged unless `--allow-findings AR001`.
-- **`ai-rulez search <query>`** ranks the skills `mcp --serve-skills` would serve (same `--profile`, `--role`, `--source`, `--include-static` selection) with the lexical ranker `find_skill` uses; `--format json` follows `schema/search.v1.schema.json`. `search --eval <cases.yaml>` reports top-1, recall@k, hit@k and MRR with a bootstrap interval; `--min` sets floors, `--baseline` with `--max-flips` fails on cases that went from found to missed, `--output` saves the result. Exit 0 pass, 1 cannot run (`AR9D2` invalid cases), 2 gate failed (`AR9D4`). See `docs/search.md`.
-- **Verifiers grow**: `verifiers run --since <rev>` and `--staged` evaluate only changed files (a base that does not exist or share history with HEAD exits 1, never a vacuous pass); rule-linked verifiers in `.ai-rulez/verifiers/*.toml` (and inline `[[verifiers]]` without `type`) name the rule, skill, agent or command they enforce with `message`, `fix` and `when_changed`/`exclude` scope; new predicates `paired` and the combinators `all`, `any`, `not`, and `in = same-file | diff-added | any-file` on `regex`/`forbid`; `--format text|json|sarif|junit`, `--output`, `--fail-on`, `--rule`, `--all`, `--strict-applicability`; `verifiers explain <name>`, `verifiers test` (offline `[[verifiers.examples]]`); codes `AR9H1`, `AR9H2`, `AR9H5`; `schema/verifiers-report.schema.json` and `schema/verifiers-spec.schema.json`.
-- **External scanners**: `[[lint.external]] inputs` runs a scanner on a read-only staged copy of exactly the listed content with scratch `HOME`/`TMPDIR` and the placeholders `{stage}`, `{root}`, `{files}`, `{skill_dirs}`, `{out}`, `{tmp}` (MCP server arguments are masked and URLs lose userinfo and query); `severity_map` and `max_severity`; SARIF `security-severity`, rule levels, `ruleIndex`, `helpUri`, and fingerprints are read; stable `sc1:` fingerprints and `.ai-rulez/scanner-baseline.json` (`scan --external --write-baseline --reason`, `--scanner-baseline`, `--show-suppressed`); `AR9E5` baseline expired and `AR9E6` out-of-scope result; `ai-rulez scanners list|doctor [--format json]` (#219).
-- **`[guard] generated = true`** adds a built-in PreToolUse hook (Claude Code, Codex, Gemini CLI, Cursor, Factory, GitHub Copilot and Copilot CLI, including Factory's ApplyPatch) that runs the hidden `ai-rulez guard` command and blocks agent edits to generated files, pointing at the source under `.ai-rulez/`. Files ai-rulez only merges into are never blocked, payloads over 8 MiB or calls naming over 1000 files are blocked, and the guard fails open on malformed input; it is never added by `generate --user` (#254).
-- **Role skill modes on more harnesses**: a role's `skill_mode` renders as `disable-model-invocation: true` for `user-invocable-only` on Cursor and Copilot, `agents/openai.yaml` on Codex, and both keys for `off` on Copilot (per-harness table in `docs/roles.md`). `[role_manifest] skill_mode_fallback = "drop" | "serve"` decides what an `off` skill does when a harness cannot hide it (default `drop`); `roles resolve` (`skill_modes` in JSON) and `doctor` report the modes a configured harness does not honour. `generate --role` prints the `AR971` findings as warnings before generating (#251, #257).
-- **`validate --strict` improvements**: `[lint] analyzers` and `--analyzer` run only the selected analyzers (unknown names are rejected, baseline entries of analyzers that did not run are untouched; new analyzers `roles`, `lock`, `delivery`, `evals`, `okf`, `traps`, `config`, `convert`) (#245); `--since-depth N|all` and `--since-max-files N` follow references transitively, each finding carries a `hop` (#246); `--fix` repairs quoted booleans (`AR304`) and two new rules `AR806 fence-unclosed` and `AR807 final-newline-missing`, and its dry-run diff applies with `git apply` (#244); hooks and inline `mcpServers` in agent, skill and command frontmatter are linted like settings (`AR507`, `AR501`/`AR502`, `AR021`, `AR602`/`AR012`/`AR015`/`AR601`) and their scripts count as `--since` dependencies (#260); `AR9F0` to `AR9F5` (the `convert` codes) are registered for `--explain`; `docs/strict-validation.md` has a code range allocation table checked by a test (#253).
-- **Harness limits**: `AR9C8` (Claude skill `description` + `when_to_use` over 1,536 characters), `AR9C9` (Codex `AGENTS.md` chain over 32 KiB or `[codex] project_doc_max_bytes`, Devin rule file over 12,000 characters, Antigravity rule file over 24,000 bytes), `AR9C7` (frontmatter keys spelled as a variant of a documented key, such as `disable_model_invocation`), and `[lint.traps] max_table_age_days` with `AR9C0` for trap rows whose verification date is too old; `task harness:verify` lists every row with its source and date.
-- **OKF**: `import okf` rewrites links between imported concepts to the created files and `export okf` rewrites links between exported items to bundle paths (code is never touched; an unmatched link is `AR9B9`); `[okf] index_style = "body" | "frontmatter"` and `export okf --index-style` choose the `index.md` scheme and `okf validate`, `import okf` and `generate --check` handle both (#247, #248).
-- **`ai-rulez convert --from rulesync`** imports a rulesync project (`rulesync.jsonc` and `.rulesync/` rules, commands, subagents, skills, checks, `mcp.jsonc`) with the lossiness report; hooks, permissions, ignore files and remote sources are reported, never dropped silently (#223). `convert --allow-findings CODE` writes despite scan findings of that code (they stay in the report, marked allowed), and scan findings name the source file and line.
-- **Skill source clones are bounded**: git skill sources are partial clones, sparse-checked-out to `path`, capped at 256 MiB (`max_clone_bytes` per `[[skill_sources]]` entry, `AI_RULEZ_MAX_CLONE_BYTES` globally) and 20000 entries (`max_clone_files`, `AI_RULEZ_MAX_CLONE_FILES`; each entry counts at least 4 KiB toward the size cap). A clone over a cap fails and leaves nothing in the cache (#237). A cached tree of an unlocked, commit-pinned source is verified against a digest recorded beside it (#235).
-- **`[llm] allow_plain_http`** with a required `plain_http_hosts` allow-list (user scope or `AI_RULEZ_LLM_ALLOW_PLAIN_HTTP` / `AI_RULEZ_LLM_PLAIN_HTTP_HOSTS` only) lets an API key go over plain http to a listed non-loopback gateway; a repository config cannot set it (`AR9L1`), and `llm doctor` and `ai-rulez doctor` warn while it is in use (#240).
-- **Telemetry**: `[telemetry.resource]` (and `AI_RULEZ_TELEMETRY_RESOURCE`) sets extra OTLP resource attributes such as a team label (user scope only, at most 8 entries, reserved namespaces, shown by `telemetry doctor`; a repository value is `AR9K1`); `telemetry hook --harness codex|cursor` also records the documented subagent events; `ai-rulez telemetry preview` prints the exact OTLP requests an export would send without any network; `ai-rulez usage export --to file <path>` writes the usage log as OTLP JSON (`otlpjsonfile` receiver format), deterministic and identifier-only.
-- **One skill digest for usage, evals and the lock**: the skills index (`digest`), usage log lines (`digest`, `digest_scheme`, `event_id`) and eval results (`lock_digest`) carry the lock's skill item digest (`ai-rulez/skill/v1`), which never covered a top-level `evals/` directory, so lock digests are unchanged. `report evals` labels each skill's usage `exact`, `stale`, `legacy` or `none` against its eval record.
-- **Approvals** (#213): `ai-rulez approve <item...>` records a reviewer approval in `ai-rulez.lock`, bound to the content digest (`--list` with an `ASSURANCE` column, `--diff`, `--revoke`, `--prune`, `--accept <code>`, `--reviewer`, `--note`, `--reason`, `--expires`, `--yes`; `schema/approve-list.schema.json`). `[governance]` (`require_approval`, `exempt`, `min_approvers`, `approvers`, `max_age`, `enforce`, `min_assurance`, `forbid_self_approval`, `approvers_from`) chooses what needs approval and who counts; with `enforce`, `lock --check`, `generate --locked`, `validate --strict` and `mcp --serve-skills` refuse unapproved content, and a missing lock or one without content pins fails closed (`AR710`). `max_age` is a ceiling: an approval stops counting (`AR712`) after `approved_at` plus `max_age`, and `--expires` beyond it is refused; expiry follows the wall clock, not `SOURCE_DATE_EPOCH`. Reviewers are compared lower-cased. `approvers_from = "CODEOWNERS"` limits approval to the owners of an item's path (`[governance.teams]` maps teams offline, `approve --resolve-teams` reads them from the forge; an unresolvable owner authorizes nobody, `AR719`). `approve --from-github-review <pr>` records one `review-linked` approval per approving review, after checking through the forge that the review is on the pull request's final head, that the digest recomputed from the files at that commit matches, and that the reviewer is an `OWNER`, `MEMBER` or `COLLABORATOR` or is named by `approvers` or CODEOWNERS. `approve --sign` signs an approval as an in-toto statement (key or keyless; the allowlist is checked before a keyless signature reaches the public log). `verify --approvals [--online]` re-checks signed and review-linked approvals (`schema/verify-approvals.schema.json`). `approve --verify-base <rev>` and `validate --strict --approvals-base <rev>` report approvals added with the content they approve, self-approvals and approvals by non-owners at the base (`AR716`). `approve --revoke --deny --reason` adds a `[[deny]]` record: a denied digest cannot be approved, pinned or served (`AR717`, also when the lock cannot be read). Role outputs pinned in the lock are approval subjects (`kind:role-output`). The lock subject's `approvals_digest` covers every approval and deny record. Codes `AR710`-`AR719`. See `docs/approvals.md`.
-- **Organization policy** (#216): a tighten-only policy from outside the repository (`--policy <file|https-url@sha256:...>`, `AI_RULEZ_POLICY`, the managed path `/etc/ai-rulez/policy.toml`, `/Library/Application Support/ai-rulez/policy.toml` or `%ProgramData%\ai-rulez\policy.toml`, or `--discover-org` for `<owner>/.github`) bounds sources (`allowed_hosts`, `deny_hosts`, `require_pinned`, `min_release_age`, `deny_digests`), lint (`required_codes`, `severity_floor`, `max_findings`, `no_inline_ignore`, size budgets, the security and capability heuristics), `[lock]`, `[governance]`, `[signing]`, `[lint.scanner_policy]`, `[mcp]` (`allowed_commands`, `deny_transports`), `[hooks]` (`allow = false`, also for the frontmatter of included and installed items) and `[telemetry]`/`[llm]` network use. A repository value that loosens it is clamped and reported (`AR740`); inline ignores, baselines and `[lint.tolerate]` cannot hide required codes. URL policies are pinned by digest or recorded once with `--policy-trust-tofu`, cached for `--policy-max-stale` (default 7d) and fail closed afterwards (`AR741`, `AR742`); policies can `extends` up to 5 levels (`AR743`) and can be signed (`ai-rulez sign --policy`, `--policy-require-signed`, `AR746`, with rollback protection). `--policy-mode warn` reports violations as warnings for a rollout. `validate --show-policy` prints the effective policy and where each value comes from (`schema/policy-effective.schema.json`, `schema/policy.schema.json`). Codes `AR740`-`AR749`. See `docs/policy.md`.
-- **Signing** (#214, #263): `ai-rulez sign --lock|--bundle <dir>|--skill <dir>|--sbom <file>|--policy <file>` writes a Sigstore bundle (DSSE over an in-toto statement) with a key (PEM, cosign or KMS URI: `awskms://`, `gcpkms://`, `azurekms://`, `hashivault://`; `--tlog` adds a Rekor entry) or keyless (`--keyless`, Fulcio and the public Rekor log). `verify --attestation` verifies offline against the `[signing]` policy (`require`, `tlog`, `max_age`, `trusted_root`, `min_hash_version`, `[[signing.trust]]` per subject, `[signing.thresholds]` for k-of-n signers with `sign --append`, `require_provenance` and `builders` for SLSA provenance from `sign --bundle --provenance`), with a per-user rollback mark; it also accepts `cosign sign-blob` and `attest-blob` bundles. `[signing] require` names `lock`, `served` or `skill`: `lock --check`, `generate --locked` and `validate --strict` then fail on a missing or invalid lock attestation, `mcp --serve-skills` refuses unpinned served skills, and remote skills need a trusted publisher attestation (also checked by `generate` for installed skills). `ai-rulez trust update` caches the public-good trusted root. Codes `AR720`-`AR729`. See `docs/signing.md`.
-- **`ai-rulez verify --self`** verifies the running binary against the Sigstore SLSA provenance bundle of its release, pinned to the release workflow identity.
-- **`ai-rulez publish`** (#224): preflight (`validate --strict`, `lock --check`, `verify --plugin`, secret scan), then a byte-reproducible bundle archive, manifest, `SHA256SUMS`, lock copy and `publish-plan.json` in `dist/`; `--dry-run` writes nothing. Targets: `--to github-release` (through `gh`), `--to npm` (scoped package, `restricted` unless `--public`, isolated from a committed `.npmrc`, `--confirm-registry` for a registry the committed config chooses) and `--to oci` (oras-go, refuses to move a tag to another artifact without `--force`), all only with `--execute --yes`. `--sign-key`/`--sign-keyless` sign the archive and an attestation binding name, version, source, approvals and digests; `--sbom`, `--marketplace` with `--channel`, `--runtime`, `--only` for multi-plugin marketplaces, release notes from the lock diff since the previous tag, emitters (`cursor-team-marketplace`; `port`, `aws-agent-registry` and `kiro-steering` behind `--experimental`), `[publish] require_signature` and `require_approved`. `publish verify <dir|oci-ref>` recomputes everything offline and checks signatures with `--key` or `--identity`/`--issuer`. Codes `AR9N0`-`AR9N9`. See `docs/publish.md`.
-- **`ai-rulez review`** (#220, #269): scores skills, agents, commands and rules against a rubric (`builtin:skill-quality` or `.ai-rulez/rubrics/<id>/`; `ai-rulez rubric list|show|lint`). Offline by default, from the lint findings each dimension names; `--estimate` shows the egress manifest and cost range of a judged run. `review --semantic` adds an LLM judge (needs `[llm] allow_network` in user scope) with verbatim-quote evidence, votes (`--k`), caching, cost and call caps and `unstable` verdicts; items holding a credential or hidden characters are withheld whatever the lint configuration says. `review calibrate` measures the judge against a golden set and `review --semantic --gate` exits 2 only on stable fails of calibrated dimensions (`AR9G9` when the calibration is stale). `review fix [--patch] [--apply]` proposes validated edits to authored items only. `[review]` table, codes `AR9G0`-`AR9G9`. See `docs/review.md`.
-- **`ai-rulez improve`** (experimental, #227): `improve run <skill> --with CMD` runs an external optimizer on a throwaway copy behind a held-out eval gate (`--min-gain`, `--max-regressions`, `--max-rounds`, `--max-holdout-evals`, required `--max-cost`, bootstrap interval with `--require-ci-above-zero`, a sibling trigger guard, `--sibling-native`), optionally confined (`--isolation none|auto|require`); `improve apply` applies only a run whose report carries the per-user HMAC and is all-or-nothing; `improve pr` opens a pull request from an isolated worktree; `improve show`, `clean` and `adapters` (bundled `builtin:noop`, `builtin:review-fix`, and a repair workflow template). A repository `[improve]` table may only tighten the gate unless `--trust-repo-optimizer` (`AR9J6`). Codes `AR9J1`-`AR9J9`. See `docs/improve.md`.
-- **Hybrid skill search** (#271): `ai-rulez search index` builds a bring-your-own-embeddings index of the served skills (through `[llm]` or a `[search.embeddings] command` honoured only from user scope or with `--allow-exec`), `search status` reports it, and `[search] mode = "hybrid"` (or `--mode`) fuses it with BM25F; `[search] fusion` defaults to `auto` (cosine alone while every skill has a current vector, RRF otherwise) and `vector_min_sim` lets a ranking abstain. `find_skill` uses the same ranker and falls back to lexical with a `degraded` reason. The index is deterministic and can be committed. `search --eval` compares modes, adds nDCG, graded relevance, `avoid` cases and `--from-evals`; `[search] log_queries` (user scope only) and `search mine` turn real queries into cases. Codes `AR9D0`, `AR9D1`, `AR9D3`. See `docs/search.md`.
-- **Verifiers grow further**: the `command` predicate runs a program through the hardened runner only with `--allow-exec` (or `AI_RULEZ_VERIFIERS_ALLOW_EXEC=1`), never for imported verifiers unless their include is trusted and pinned; `llm` checklist predicates send added lines to the configured model with `--allow-llm`, stay advisory unless `verifiers calibrate` recorded a current calibration and `verifiers run --gate-llm` is set, and are skipped (`AR9H4`), never passed, when nothing can be sent; `verifiers suggest <id>` proposes verifiers for a rule and replays them over recent diffs (`--replay`); installed skills can ship data-only verifiers; `[verifiers_settings]`; verifier declarations are pinned in the lock (kind `verifier`); `validate --strict --verifiers` reports them as `AR9H*` findings. See `docs/verifiers.md`.
-- **Scanner policy and isolation** (#268): `[lint.scanner_policy]` (`preset`, `required`, `fail_on`, `baseline`, `isolation`, `allow_egress`), embedded scanner profiles (`agnix`, `claude-plugin-validate`, `cisco-skill-scanner`, `snyk-agent-scan`) and the `baseline` and `strict` presets; `[[lint.external]]` gains `profile`, `version` and `required`. Staged scanners run under `internal/sandbox` (`isolation = "auto"` notes `AR9E7` without a backend, `require` refuses to run unconfined), results of `egress = false` scanners are cached per user (`--no-scan-cache`), `scan --external --dry-run` shows what would run, and `lock` records `[[scan]]` results from the cache.
-- **SBOM follow-ups** (#266): `sbom --type spdx-json` (SPDX 2.3), `--files`, `--profile`, `--role`, `--include-outputs`, `--require-lock`, `--strict-pins`, `-o file --check` for drift, approval status and `--verify` of the lock attestation; `[[mcp_servers]] package` gives an explicit package URL. Codes `AR750`-`AR753`, also reported by `validate --strict`. Exit codes `0`, `1`, `2`.
-- **Catalog follow-ups** (#274): the JSON (version 2) and site list MCP servers (names only, never values) and skill dependency `edges` (an SVG graph page), `--with-eval` and `--with-usage` add recorded results, `catalog --html DIR --check` reports a stale site (exit 2), `catalog diff <from> [<to>]` compares two catalogs or revisions (`schema/catalog-diff.schema.json`), `--render-markdown` renders sanitized excerpts, and a `[catalog]` table holds the defaults.
-- **`convert` follow-ups**: imports hooks and permission rules (from rulesync and the settings files of Claude Code, Codex, Gemini, Cursor and Copilot; hooks and `allow` rules stay a commented block until `--enable-hooks`/`--enable-permissions`), `--from apm`, `--from tessl` (eval scenarios become eval cases) and `--from okf`; `--fetch` reads remote rulesync and APM sources over https only (other transports are reported as `needs-action`) and pins them to the commit read; `--merge`, `--keep-names`, `--delivery` and `--lock`; rulesync `localRoot` rules go to `.ai-rulez/local/context/`.
-- **Eval follow-ups** (#228, #277): `eval run --mode activation --surface retrieval` measures offline whether the right skill ranks first, and `--surface native` measures real activation in a harness (`claude-native`, `codex-native` runners, or a `command` runner that declares the `activation` capability), with Wilson intervals, confusion matrices and `--description-from` to try a candidate description; `eval import --from tessl`; `rubric_items` weighted checklists; `eval calibrate-estimate` and `[lint.evals.estimate]`; `--grader builtin` with `--allow-llm`; estimates are ranges (`--estimate` is an alias of `--dry-run`) from liter-llm's model catalog. Codes `AR9A1`-`AR9A5`.
-- **Telemetry consent** (#267): `telemetry enable --endpoint URL|status|disable` stores per-user consent for one collector; an export cursor over the usage log means nothing is sent twice and consent is not retroactive (`--backfill`); `usage export --to otlp`, `--with-evals` eval events and gauges, `report evals --from-otlp`, `usage prune --keep-days`; `otlp_protocol` accepts `http/protobuf` and `grpc`.
-- **Release-age and tag checks** (#264): `min_release_age` (per source or `[lock]`) holds back tags younger than the given age (`AR733`) with the release time from the forge, this machine's first sighting or, only when asked, the commit date; `lock --check --verify-tags`, `generate --verify-tags` and `[lock] verify_tags` ask the remotes whether a pinned tag moved or was deleted; `update --major [--write-config]`; `AR734 source-outdated` (off by default). `internal/forge` is a read-only GitHub client used for release dates and approvals; it sends the token only to `github.com` or the hosts in `AI_RULEZ_FORGE_HOSTS` (see `docs/forge.md`).
-- **Role output pins**: `[[roles]] pin = true` (or `lock --roles`) records a digest of each role's rendered outputs, checked by `lock --check [--role]`, `lock --diff` and `generate --check --locked --role`.
-- **`generate --emit-plan FILE`** writes the generation plan (every file written, merged or removed, with digests of the bytes `generate` writes and none for outputs holding a credential) as deterministic JSON and applies nothing (`schema/plan.schema.json`).
-- **`pkg/airulez`** (experimental): load a project from a directory, memory or a git commit, validate it, plan a generate run and apply it from Go, with no working directory, environment, clock or subprocess unless injected; the machine-local overlay is read only with `Options.WithLocal`. See `docs/embedding.md`.
-- **Skills server**: `--max-clone-bytes`, `--targets` as part of the served view (`lock --targets`), `resources/directory/read`, and `lock_status` takes the same view arguments as `lock --check`.
-- **Harness traps**: `AR9C5` and `AR9C6` (Kiro custom agents and steering), project trap rows in `.ai-rulez/traps/*.toml` (`AR9CA`), `AR9C9` for a Kilo `REVIEW.md` over 10,000 characters, and `validate --strict --fix` renames a misspelt frontmatter key (`AR9C7`) in hand-written skill and agent files.
-- **Configurable lint heuristics**: `[lint.security] directive_tags` and `trusted_orgs`, `[lint.capability] max_network_commands` and `[lint.load_budgets]` (defaults unchanged).
-- **`ai-rulez --version`** prints the version.
-- **MCP tools return structured output.** Every tool declares an `outputSchema` and returns `structuredContent` plus the same JSON as a text block; every tool has a `title` and the full annotation set (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint: false`). Registration uses the SDK's typed `AddTool`. See `docs/mcp-server.md`.
-- **`validate_config` runs the lint of `ai-rulez validate`.** It shares the CLI's code path (schema, overlay, includes, every analyzer, baseline, ratchets and the fail-on judgement) and returns real `warnings`, `errors`, `findings`, `summary` and `risk`. New arguments `fail_on`, `strict`, `config_only`, `lint_profile` and `analyzers` mirror the flags.
-- **`mcp --root` and `mcp --allow-any-dir`** set the directory the authoring tools may use.
+- **OKF (Open Knowledge Format, spec v0.2).** `export okf`, `import okf` and `okf validate` read and write deterministic bundles, `[[includes]] format = "okf"` uses one as a source, the opt-in `okf` preset keeps a bundle in sync with `generate`, and the `.ai-rulez/` tree itself can be an OKF bundle (`migrate okf`). See `docs/okf.md`.
+- **llms.txt** via the `llms-txt` preset (`llms.txt` and optional `llms-full.txt`), linted by `validate --strict`. See `docs/llms-txt.md`.
+- **Agentic Resource Discovery (ARD)** manifest (`[ard]`, `publish emit ard`); **Agent Plugins** packages (`generate --plugin`, `publish --emit agent-plugins`); **Pi** packages (`[plugin] runtimes = ["pi"]`). See `docs/ard.md`, `docs/agent-plugins.md`, `docs/plugins.md`.
+- **New MCP tools** for what the CLI already did (`scan_content`, `token_report`, `cost_report`, `sbom`, `okf_validate`, `approvals_status`, `policy_show`, `list_verifiers`, `list_builtins`, and agent/command CRUD); `generate_outputs` takes `profile`/`role`/`check`/`offline`; the authoring server gains prompts (`author-skill`, `add-rule`, `review-config`, `trim-context`), resources (`ai-rulez://config`, `ai-rulez://catalog`, item URIs) and cancellation. Approving, signing, locking, evaluating and publishing stay CLI-only.
+- **Shell completion** of enum values and project names (rules, context, skills, agents, commands, checks, domains, profiles, roles, includes), and a generated command reference (`docs/cli-reference.md`) with examples for every command.
+- **Dynamic skills and roles.** `delivery: static|served|both` lets `mcp --serve-skills` serve skills on demand with `find_skill`, `load_skill` and `list_skill_resources`; `[[roles]]` maps a job to a slice of the content with `generate --role`, `roles list|show|resolve` and a generated `roles.json`; skills can be served from a git repository or directory via `[[skill_sources]]`, pinned in the lock. See `docs/mcp-server.md`, `docs/roles.md`.
+- **Content lock.** `ai-rulez.lock` pins the version, every authored item, the generated outputs, remote sources and served skills, with `lock --check`, `lock --diff`, `lock --content-only`, `lock --subject`, `--locked`/`--frozen` and version-constraint pins moved by `ai-rulez update`. See `docs/lockfile.md`.
+- **`checks` content kind**: code-review guidelines in `.ai-rulez/checks/` rendered for the review tools that read a repository file, with a marker block that keeps your own text. See `docs/checks.md`.
+- **`generate --watch`** live regeneration, and **`generate --emit-plan FILE`** for a deterministic plan of every file.
+- **`ai-rulez doctor`**: read-only diagnostics (removed presets, drift, unresolved MCP placeholders, lock drift, missing tools), exit 2 on errors.
+- **Hooks and permissions across harnesses.** Top-level `[[hooks]]` and `[permissions]` are translated into each harness's native format and merged into your settings files key by key, so hand-written entries survive; matchers are translated by tool name; plugin-based harnesses (OpenCode, Kilo, MiMo Code, Pi, Amp) get a generated hook module. See `docs/settings.md`, `docs/permissions.md`.
+- **User-level output.** `generate --user` renders a user config into each preset's per-user locations and `clean --user` removes exactly that. See `docs/user-scope.md`.
+- **`validate --strict`**: deep content validation with stable `AR` codes, report formats (`text|json|sarif|github|junit|markdown`), baselines, budgets/ratchet, `--fix`, `--since`/`--changed`, `--analyzer`, a risk score and `--explain`. See `docs/strict-validation.md`.
+- **Security checks `AR001`-`AR011`** in strict validation and the dedicated `ai-rulez scan` command (secrets, hidden characters, prompt injection, credential access, unrestricted tools, an outbound host allow-list and merged `[[lint.external]]` results), plus harness trap lint. See `docs/harness-traps.md`.
+- **Reports and analysis**: `tokens` (prompt-token cost by load bucket, including the item listing), `cost` (context-cost offenders), `catalog` (`--format json` and a self-contained `--html` site), `sbom` (CycloneDX 1.6 and SPDX 2.3) and `search` (lexical plus an optional hybrid embeddings index). See `docs/sbom.md`, `docs/search.md`.
+- **Governance.** `approve` records reviewer approvals in the lock bound to the content digest, with `[governance]` policy (approvers, `min_approvers`, `CODEOWNERS`, expiry, sign, `approve --from-github-review`). `sign` writes Sigstore bundles (key, KMS or keyless) for the lock, bundles, skills, SBOM and policy, and `verify --attestation` checks them against `[signing]`; `verify --self` verifies the running binary against its release provenance. An organization policy from outside the repository (`--policy`, the managed path, `--discover-org`) bounds sources, lint, locking, governance, signing, scanners, MCP, hooks and network use, and `validate --show-policy` prints the effective policy. `publish` preflights, builds a reproducible archive and releases to GitHub, npm or OCI with `--execute --yes`. See `docs/signing.md`, `docs/policy.md`, `docs/publish.md`.
+- **`review`** scores items against a rubric (optional LLM judge with `--semantic`, calibration and a gate), and **`improve`** (experimental) runs an external optimizer behind a held-out eval gate. See `docs/review.md`, `docs/improve.md`.
+- **`eval run`** executes harness-neutral skill eval cases (pass rate, trigger precision/recall, ablation, token cost) with adapters and a result cache. See `docs/evals.md`.
+- **Telemetry** (opt-in, identifier-only): `telemetry hook|record|flush|doctor` and an OTLP/HTTP export through a bounded offline outbox, plus `report usage` sections for rules, agents and context. See `docs/telemetry.md`.
+- **`convert`** reads existing tool files into an equivalent `.ai-rulez/` tree with a lossiness report (native, rulesync, skills-lock, APM, Tessl and OKF importers), and `init --from` uses it.
+- **`pkg/airulez`** (experimental): load, validate, plan and apply a project from Go with no working directory, environment, clock or subprocess. See `docs/embedding.md`.
+- **Preset and plugin outputs**: the `baz` preset; native MCP, command and user-scope outputs for many existing presets; per-domain plugins and marketplaces (`[marketplace]`); `[placement]` to keep skills and commands plugin-only; `.codex/config.toml` merged as a document. See `docs/plugins.md`.
 
 ### Changed
 
-- **`validate_config` and `scan_content` show paths relative to the project directory** (as `validate` shows them relative to the directory it runs in) and carry the whole lint document, `schema_version`, `analyzers`, `baseline` and `ratchet_exceeded` included. They used to show absolute paths and only `roots`, `findings`, `summary` and `risk`.
-- **The Skills extension methods (`skills/list`, `skills/get`, `resources/directory/read`) run through the SDK's custom-method support** instead of a JSON-RPC wrapper around the transport: they pass the SDK's lifecycle check and middleware, and a malformed parameter is the SDK's invalid-params error. The one remaining transport wrapper turns the SDK's pre-initialize error (code 0) into -32600.
-- **LLM cache entries are version 3**: truncated or empty replies are no longer cached, and the key includes the effective token cap. Older entries are ignored and refilled.
-- **`[lint.ratchet]` replaces `[lint.budget]`** (tolerated findings per rule), so it no longer reads like `[lint.budgets.<kind>]` (size budgets). A pre-release spelling, `[lint.tolerate]`, is refused the same way. `[lint.budget.skill]` or `[lint.budgets] AR201 = 1` fail with a message naming the right table. The JSON key was `budgets_exceeded` at the time of this entry; it is now `ratchet_exceeded` (#243).
-- **Every command that prints JSON takes `--format text|json`** (plus its extra formats). The `--json`/`-j` alias is removed (it is now an unknown flag); an unknown `--format` value is rejected with one wording that lists the allowed values, and help shows the default the same way everywhere. `lock --format` is accepted only with `--check`, `--diff`, `--outdated` or `--subject`.
-- **`generate` checks `config.toml` and `config.local.toml` against the schema** and warns about unknown keys, naming the file and the nearest known key; `generate --strict-config` (or `AI_RULEZ_STRICT=1`) fails instead. `validate` schema errors suggest the closest key too (#242).
-- **`generate` prints a summary of new or changed commands**: hook commands, command-based MCP servers, `[claude.settings.managed] env`, plugin enablement and marketplace registration, `http`/`prompt` hooks, hook script content changes and `[permissions] allow` rules, new or changed since the previous run on this machine (all of them in a fresh clone), even with `--quiet`. It names the harnesses each is written for, escapes control and bidi characters and redacts credentials, lists a custom preset that writes a CI or tool-executed file (`.github/workflows/`, `Makefile`, ...) as `exec-file`, and only warns: `--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it. `generate --watch` prints it on every regeneration that changes a command; the MCP `generate_outputs` tool returns it as `new_commands`.
-- **`clean` keeps a generated file whose body was edited by hand** and warns; `clean --include-edited` removes it. Claims and digests live in the gitignored `.ai-rulez/.generated-manifest.local.json`; the committed manifest lists merged-document paths only.
-- **`lock` and `generate --check` exit codes are returned per run**, so `3` also works with `--recursive`. A served skill the security scan refuses no longer stops `lock` from pinning the others: it is reported and left unpinned, `lock` exits 3, and `validate --strict` lists refused skills of skill sources with their `AR0xx` code; `lock --refuse-findings` keeps the old fail-without-writing behavior (#236). `generate --check` verifies authored content against an enforced lock (a lock exists and `enforce` is not `false`), like `--locked`; `generate --check --locked|--frozen` requires the sources to match the lock. `lock` validates the configuration before writing.
-- **The lock records include and skill sources exactly as written in the config** (`git+https://...` is accepted for includes like for skill sources) and a `file://` source is machine-independent; locks written by earlier versions keep working until the next `lock`.
-- **`catalog --format json --schema-version 2`** adds per-item `ref`, `description`, `source`, `load_cost`, `lint` and `excerpt` plus project lint totals; version 1 stays the default.
-- **`scanners doctor` does not start scanner binaries** to read their version unless you pass `--external` (the consent `scan --external` needs); otherwise it prints "not probed (pass --external)". `scan --help` no longer claims nothing is executed.
-- **`usage record --sink-command` and `mcp --usage-sink`** time out after 3 seconds (process group killed), keep at most 64 KiB of output, and a failing sink no longer drops the entry; `--usage-sink` records carry the salted session and go through a bounded background queue. Generated hook commands shell-quote the executable path and every path argument (`--executable` is a path, not a command line).
-- **OKF**: `import okf` skips symlinks in a bundle with a warning (`AR9B8`) instead of refusing it; case-colliding paths are still refused.
-- **`convert --from auto` skips the `native` importer when a rulesync project is detected**, because its tool files are generated output; use `--from native,rulesync` to read both.
-- **Git skill sources with a `path`** are cached in a per-path directory (`tree-<hash>`); a tree cached by an older release is still used.
-- **A local-path include inside the project (`source = "./shared"`) is treated as remote content**: its skills are scanned at `trust = "error"` and locked as `include:<name>/<path>`; skills from any include are scanned like installed skills.
-- **The MCP `run_verifiers` tool** accepts `since`, `staged` and `rule`, and results gain `code`, `target`, `fix`, `findings` and a `not_applicable` status; existing fields are unchanged.
-- **The Antigravity rule-file soft warning** uses the documented 24,000 byte limit (was 24,576).
-
-- **Native tool and model names**: provider specs gain frontmatter `tool_names`, `tool_case`, `model_aliases` and `drop_bare_aliases`. `qwen` (`read_file`, `grep_search`, ...), `cortex` and `omp` (lower-case), `kiro` (`read`, `write`, `shell`, `web`) and `augment` (`view`, `str-replace-editor`, ...) translate Claude tool names and drop the ones they have no counterpart for; `rovodev` writes no `tools`; `qwen`, `cortex`, `kiro`, `augment`, `factory`, `kilo`, `mimocode`, `goose`, `deepagents`, `reasonix`, `qoder`, `rovodev`, `omp` and `cline` drop a bare Claude model alias (`sonnet`, `opus`, `haiku`) that is no model of theirs, so the agent inherits the session model. `antigravity` agents map the model onto `inherit`, `flash` or `pro`, map tools to `view_file`, `replace_file_content`, `grep_search` and `run_command`, and no longer write the Gemini CLI keys (`kind`, `temperature`, `max_turns`, `timeout_mins`).
-- **`antigravity`** writes commands as skills (`.agents/skills/<id>/SKILL.md`, explicit invocation only) because workflows retire on 2026-11-01, no longer writes `.agents/settings.json` (nothing reads it), and adds the `ai-rulez` MCP server only when `[mcp] self_server` is set, as every other preset does. An `ai-rulez` entry an earlier version wrote into `.agents/mcp_config.json` is taken back on the next `generate` unless `[mcp] self_server = true` is set to keep it. **`codex`** writes commands as skills in `.agents/skills` instead of `.codex/prompts`, which Codex does not read at project scope.
-- **`opencode`** writes MCP servers as `mcp.<name>` with `enabled` (the stable OpenCode shape, matching the provider dialect) instead of `mcp.servers.<name>` with `disabled`; members a previous run recorded under `mcp.servers` are removed.
-- **`cline`** writes agents as `.cline/agents/<id>.yaml` with `modelId` and a required `description`. **`zoocode`** inlines rules into `AGENTS.md` (no `.roo/rules` folder) and writes `type: streamable-http|sse` on remote MCP servers. **`amp`** no longer writes `.agents/agents`, which Amp does not read. **`junie`** commands use `$prompt` with `allowPromptArgument: true` instead of `$ARGUMENTS`. **`trae`** writes unquoted globs. **`codewhale`** marks SSE servers with `transport: "sse"`. **`augment`** keys remote MCP servers on `type`. **`goose`** writes only stdio servers to its plugin `.mcp.json` (a remote entry makes goose skip the document). **`pi`** leaves disabled MCP servers out instead of writing them as active. **`dsh`** loads `AGENTS.local.md`. **`kiro`** user scope uses `~/.kiro/prompts` and `~/.kiro/steering/AGENTS.md`. **`kilo`** leaves its project-relative `instructions` glob out of the user-scope `kilo.jsonc`.
-- **`codebuff`** now writes `AGENTS.md` (its knowledge file) and `.agents/skills`, and `letta` writes commands to `.commands/<id>.md`. `copilot` prompt files carry `description` frontmatter and `${input:args}` instead of `$ARGUMENTS`. `argument-hint` is written for `codebuddy`, `reasonix`, `qoder` and `letta` commands.
-- **Environment references instead of secrets**: a value that came from a `${VAR}` placeholder is handed to tools that expand references themselves: `codex` gets `bearer_token_env_var`, `env_http_headers` and `env_vars`, `cursor` gets `${env:VAR}` in `.cursor/mcp.json`, `codebuff` and `crush` get `$NAME` (only for a value that is exactly one placeholder: `$TOKEN_v2` would read another variable), `gemini`, `amp`, `pi`, `factory` and the root `.mcp.json` (`mcp`, `codebuddy`, `commandcode`, `reasonix`, `cursor`, `copilot`) get `${VAR}`, `opencode` and `kilo` get `{env:VAR}`, and `devin` gets `${env:VAR}` (#212). The root `.mcp.json` stays resolved while the `qoder` preset is active, which documents no expansion, and only upper-case names are written as references. `env_ref_syntax` of an `mcp` sidecar also accepts `braced` and `opencode_env`. A reference is written only for a placeholder resolved from the process environment; a value from `--env`, `--env-file`, `.env`, `${PROJECT_ROOT}` or an unresolved lenient placeholder is written resolved, as before. A config file that holds only references is not made owner-only. Other tools keep the resolved value.
-- **User scope**: `cursor` user skills are written to `~/.agents/skills`, shared with `codex`, `gemini` and `pi`. `clean --user` and the stale pass of `generate --user` remove directories they leave empty inside the content folders a preset owns (`~/.claude/skills/<id>`), never a tool's own top-level directory or the user config directory. Manifest entries are untrusted input in user scope: an entry that climbs with `..`, that no preset layout writes to, or whose directory resolves outside the home directory through a symlink is ignored, and a file that can carry a header is removed only while it still looks generated. A tool-home variable (`CODEX_HOME`, ...) that is `/`, the home directory or a directory above it is refused, and only configured presets can widen the writable scope. `codex_skills_dir` is honored by user scope, `cline` agents list tools by Cline's own names (`read_file`, `execute_command`, ...) and drop the rest, `cline` skill names are quoted when YAML needs it, and a command whose id collides with a skill (or another command) is reported instead of silently dropped for `codex` and `antigravity`. A provider `replace` table now rewrites in one pass, longest key first.
-- **`generate --dry-run`** marks files that are already current as `unchanged:` (and files you edited since the last run as `edited:`) instead of `write-file:`. Scripts that match on `write-file:` for every file need updating.
-- **A skill's `evals/` directory is no longer copied into plugin bundles by default.** Plugin bundling copied the whole skill directory, evals included; it now leaves `evals/` out unless `[plugin] include_evals = true`.
-- **`tokens` `always` and `headline_always` now include the item listing** and skill descriptions are no longer `conditional` for harnesses that list them, so `--budget` gates the number the prompt really carries and can start failing where it passed. The previous figures stay available as `always_legacy`, `conditional_legacy` and `headline_always_legacy`.
-- **The `codex` preset writes skills to `.agents/skills`** (the directory Codex documents; it does not read `.codex/skills`) instead of `.codex/skills`. The files previously written to `.codex/skills` are removed by the manifest-based cleanup on the next `generate`; hand-written files there are kept. Set `codex_skills_dir = ".codex/skills"` to keep the old location. With `agents_md` on, a skill that targets only `codex` is now written to `.agents/skills`, so other readers of that directory see it too.
-- **Presets writing one file must agree**: when two presets render different content to the same path, `generate` now fails and names the presets instead of keeping whichever sorts last. The one exception is a root `AGENTS.md` that omits rules because its tool reads them from a rules folder (`junie`, `kiro`, `kilo`, ...) next to presets that inline them: the complete file is kept, with a warning (set `agents_md = true` or `rules.mode = "inline"` to share it).
-- **Skill frontmatter of `amp`, `pi` and the other presets that write `.agents/skills`** now puts `name` first and quotes the description, matching `codex`, `cursor` and the shared `agents_md` tree (the `.agents/skills` files were written in two formats depending on which preset sorted last).
-- **`cursor`, `qoder` and `commandcode` write the root `.mcp.json`** in the shape of the `mcp` preset (`disabled` on every entry, `type` for remote servers), so every writer of that file agrees.
-- **`copilot-cli` lays out scoped instruction files like `copilot`** (`.github/instructions/<scope>/<rule>.instructions.md`), so both presets together no longer leave two copies of a rule.
-- **`generate --check` treats machine-local inputs like `generate`**: with a `config.local.*` overlay or `local/` content it no longer reports every output as `stale`, honours `--allow-local-drift`, and reports `blocked: <path>` (exit 2) for a shared file the local input would change that `generate` refuses to write. Files kept for a skipped overlay (`--no-local`) are not orphans.
-- **`convert --from auto` leaves the `native` importer out next to an APM or Tessl project**, as it does for rulesync.
-- **`AR032` and `AR033`** also check skills, agents and commands from git includes, not only installed skills.
-- **The MCP `init_project` tool** writes the `.ai-rulez/config.toml` layout `ai-rulez init` creates (it wrote a V2 `config.yaml`), refuses to overwrite an existing configuration and escapes the project name.
-- **Release binary size**: sigstore-go (about 11 MB), the KMS signers (about 10 MB) and the OTLP gRPC transport (about 6 MB) are linked in. Release builds verify module checksums (`GOSUMDB=off` removed).
-- **The engine is per load**: warnings go to the logger of the host (`pkg/airulez` `Options.Logger` or the CLI logger), the organization policy belongs to the load it is given to, and two projects in one process share no state (generate lock, warning collector, preset registry, include callbacks).
-- **Command `Short` descriptions** no longer name flags.
-- **liter-llm is pinned at v2.2.3** (was v2.2.0). The workarounds for the issues it has since fixed are gone: the one-request-per-input Gemini embedding fallback and the split-embedding budget bookkeeping, the exhausted-quota and Anthropic prompt-too-long error mappings (liter-llm now reports a quota variant and context length), the decoded-reply size check (the cap is passed to liter-llm as `max_response_bytes`), and the `gpt-*` realtime/audio/tts variant price floor (`GetModelInfo` now reports whether the price is known, so a 0/0 listing is unpriced). liter-llm refuses redirects itself since v2.2.2. See `docs/llm.md`.
-- **The live KMS job signs with a local Vault, not AWS**: `.github/workflows/live.yml` starts a throwaway Vault dev server in the job and signs with `hashivault://ai-rulez`, so a real KMS round trip runs with no account and no secret (the previous job skipped whenever the AWS credentials were unset). The recorded transcript is in `docs/signing.md`; any of the four sigstore KMS providers works.
+- `publish --to npm` preserves the runtime metadata (Pi resources, OpenCode entry points, dependencies, keywords, license) of the package it publishes while owning the name, version, `files` list and `publishConfig`.
+- `validate_config` and `scan_content` show project-relative paths and carry the whole lint document.
+- `generate` validates `config.toml` against the schema and warns about unknown keys (`--strict-config` or `AI_RULEZ_STRICT=1` fails), and prints a summary of new or changed commands (hook commands, MCP servers, managed env, plugin enablement, permissions) even with `--quiet` (`--yes` or `AI_RULEZ_ACK_COMMANDS=1` silences it).
+- `clean` keeps a generated file whose body was edited by hand and warns; `generate --dry-run` marks current files `unchanged:` and edited files `edited:`.
+- The lock and `generate --check` return exit codes per run, so `3` works with `--recursive`; a served skill the security scan refuses is reported and left unpinned (`lock` exits 3) unless `lock --refuse-findings`.
+- `tokens` counts the item listing for harnesses that list skills, commands or agents, so `--budget` gates the number the prompt really carries.
+- `liter-llm` is pinned at v2.2.3, and the LLM response cache is version 3.
+- Several presets write their native MCP, command and agent shapes more accurately (for example `opencode` uses `mcp.<name>` with `enabled`, `codex` writes skills to `.agents/skills`, the root `.mcp.json` follows the `mcp` preset shape, and `antigravity` writes commands as skills).
 
 ### Fixed
 
-- **`lock`, `lock --check` and the served-skill checks load the project once per run**: the config, `ai-rulez.lock` and the authored-skill digests are read for the default view and shared by every role and recorded view, instead of being loaded again for each, so load warnings are reported once.
-- **Refreshing OKF indexes keeps an `index.md` that holds prose**: `add`, `remove`, `init` and the MCP writers copy a hand-written `index.md` to `<config dir>.bak-okf-<timestamp>/` before replacing it with the generated listing, as `migrate okf` does; generated listings are rewritten without a copy. `migrate okf --help` now names the backup, the reserved `index`/`log` names and the exit codes.
-- **`generate --check` no longer reports a file `generate` just wrote as `edited`** when its rendering ends in an empty section, such as a last rule whose body is only its title heading (in `AGENTS.md`, `GEMINI.md` and the other root files). The Content-Hash was taken over every trailing blank line of the rendering while the check could only try three; it now caps the run at that bound, so the hashes of other files do not move.
-- **The git process cleanup no longer reads the environment of every process on the machine**: a short-lived run now records its root's start time, so the search for detached helpers covers only processes started since the command (10 ms to 0.03 ms per spawn on 850 processes, same guarantee).
-- **`validate` on an OKF bundle no longer says "Configuration is valid" and then exits 2.** The OKF verdict comes first, and with `--format json` a failing run writes the OKF document on stdout (or `--output`) instead of nothing. A rule or context file with no frontmatter block is plain markdown that `generate` accepts, so `validate` reports it as an `AR9B1` warning rather than an error.
-- **`validate -q`** no longer prints the OKF summary line or the `strict validation:` totals.
-- **`init --force` restores the previous configuration directory** when creating the new one fails, instead of leaving only the `.bak-<timestamp>` copy.
-- **`config.NativeContent` uses the shared frontmatter splitter**, so a BOM, a fence with trailing spaces and CRLF are read as the loader reads them.
-- **Generated header hashes keep the file's line ending**: a CRLF file gets CRLF `Content-Hash` lines, never a mix.
-- **`gitutil.Memo`** no longer panics on a runner that cannot be a map key, no longer shares answers between func-adapter runners, and does not remember a cancelled or timed-out question.
-- **Path containment for shared outputs compares like the file system** (case-insensitively on Windows), and the CRUD name checks reject the Windows device names `CON`, `PRN`, `AUX`, `NUL`, `COM1`-`COM9` and `LPT1`-`LPT9`.
-- **A lazily compiled regular expression that does not parse now fails the test run**: every `sync.OnceValue` regexp accessor is called in a test, and `tests/archlint` enforces it.
-- **Content is never read, written or deleted through a symlink inside the configuration directory.** `add`, `edit`, `show`, `remove` and the MCP `create_*`, `update_*`, `read_*` and `delete_*` tools refuse a symlinked domain, content directory, skill directory or content file, so a link can no longer carry a write to `/tmp/outdir` or a read to any readable file (also under `mcp --root`).
-- **`index` and `log` are reserved content names**: `add` refuses them, and `list`, `show`, `edit` and `remove` treat the generated `index.md` and `log.md` as listings, not as a rule; the "no rules to remove" hint on a missing item now reads "no rules yet".
-- **`list_*` MCP results use lower-case keys** (`name`, `path`, `type`, ...) and carry a typed output schema instead of `[]any`.
-- **`edit` and the MCP `update_*` tools keep the file's priority, targets, description and other frontmatter** when only the content is given; before they reset the priority to medium and dropped the targets and a skill's description (AR801).
-- **No log line prints a credentialed include or skill source**; `include add` and `skill install` warn that a credential in the URL is stored in `config.toml` (use a git credential helper or an SSH remote), and their errors are redacted too.
-- **`include add` / `add_include` refuse a local source outside the project** with the loader's own check, and **`include remove`, `skill remove` and the MCP `remove_include` / `uninstall_skill` edit `config.toml` without loading the project**, so a bad include can always be removed.
-- **`migrate okf` no longer destroys a rule or context file named `index` or `log`**: OKF reserves those names for generated listings, so the migration now refuses (exit 1, naming the files, nothing written) instead of overwriting `rules/index.md` and announcing a move that never happened. Rename the file and run it again.
-- **`migrate okf` writes atomically and keeps a backup**: the originals of the files it rewrites are copied to `<config dir>.bak-okf-<timestamp>/` first, symlinks are reported as `[skipped]` in the summary, and a run that skipped anything exits 1 (a dry run still exits 0).
-- **`export okf --output-dir` can no longer delete your configuration**: an output that is, contains or lies inside the configuration directory (symlinks resolved), or that holds `config.toml`, `ai-rulez.lock` or `local/`, is refused; pruning removes only files a manifest (`.okf-export.json`) records the previous export wrote, never a file it did not write.
-- **`docs/cli.md` no longer claims that `-n` and `--format` are on every command.** `-n` is `--dry-run` everywhere; `--config-dir` has no shorthand and is declared once, globally. The page lists the commands without `--format`. `edit agent` and `show agent` read "an agent", and the MCP tool lists name `search_skills`, `get_skill` and `read_skill_file` next to `find_skill`, `load_skill` and `list_skill_resources`.
-- **The default `ai-rulez mcp` answers a request sent before `initialize` with `-32600`**, like `--serve-skills`, instead of error code 0.
-- **`validate --offline`** skips fetching remote includes, as `generate --offline` does, so `validate --config-only` works with an unreachable remote include.
-- **`migrate v5` keeps CRLF line endings** in `config.toml`; YAML frontmatter after a UTF-8 byte order mark is parsed as frontmatter.
-- **`validate` and `tokens` no longer take minutes on one very long line**: a line over 8 KiB is counted by byte-ratio estimate instead of cl100k BPE, which is quadratic; text without such a line counts exactly as before.
-- **A huge `Retry-After` value in telemetry export** no longer overflows into a negative delay.
-- **`generate --role` exits 2 with `AR971`** when a role names a domain that does not exist; `roles list` exits 1 with the same message.
-- **Telemetry export retries HTTP 5xx and gRPC `Internal`/`Unknown`** and reads an HTTP-date `Retry-After`; an oversize line in the outbox is treated as corrupt and skipped instead of blocking the spool.
-- `clean` and `clean --dry-run` no longer need MCP secrets: unset `${VAR}` placeholders do not stop them.
-- `clean` restores merged YAML and TOML documents byte for byte when a leading comment is followed by a blank line.
-- `clean` keeps a git-tracked `.ai-rulez/.generated-manifest.local.json` and warns, as `generate` does.
-- Log output honours `NO_COLOR`, `TERM=dumb` and non-terminal stderr.
-- A `SKILL.md` whose frontmatter has no closing `---` is malformed (warning on load, `validate` fails, the skills server refuses it).
-- **OKF bundle loading has a total size budget** (256 MiB of markdown; the per-file limit alone allowed hundreds of gigabytes), and index checking no longer rescans every concept for each `index.md`, which made validation of a bundle with thousands of directories quadratic.
-- **`import okf` strips group and world write bits** from imported resources (a `0777` script in a bundle no longer lands world-writable) and redacts credentials in the `source` printed with `--format json`.
-- **`export okf --output-dir` only prunes a directory that is really a bundle**: the guard matched the text `okf_version` anywhere in `index.md`; it now requires the key in the frontmatter. `okf validate` prints `.` instead of an empty location for root findings.
-- **OKF concept titles derived from a non-ASCII file name** no longer split the first UTF-8 character.
-- **OKF index entries are percent-encoded**: a resource named `My File (1).md` produced an index link the parser could not read, so the exported bundle failed its own `AR9B0` / `AR9B4` checks.
-- **OKF documentation matches the code**: the type override is the `okf:` metadata map (there is no `okf_type` key), the config key is `[okf] spec`, `checks` appear in the layout and mapping, `export okf --role` / `--config-dir` and `import okf --config-dir` are documented, `import okf` says it can also create agents, commands and checks via `x-ai-rulez.kind`, and `AR9B8` is described by what it reports.
-- **OKF export, import, export is byte-identical again**: an import added `name` to a skill without one and the next export hoisted it into `x-ai-rulez.metadata` (a skill `name` equal to its id is no longer exported), and a resource such as `references/upper.MD` was wrapped a second time on every cycle (export now uses the same case-sensitive `.md` test as the loader, so it is carried verbatim).
-- **`import okf` / `validate okf` refuse a `#subdir` that is a symlink**: a fetched repository could point the bundle directory at host files (`sub -> /home/user/notes`) and have them imported. Every component of the subdirectory is now checked and a symlink is an error.
-- **OKF export skips content merged in from includes**: only include and builtin domains were skipped, so an include that added a root-level rule landed in the committed bundle as this project's own. Items whose source file is outside the project's `.ai-rulez/` directory are now skipped too, with a note.
-- **OKF export no longer loses a rule or context file named `index` or `log`**: the generated index overwrote it (and `generate` failed with two presets writing one path). Such items are written as `index_.md` / `log_.md`, like skill resources already were; the real name stays in `x-ai-rulez.id`, so the round trip is lossless.
-- **The `[okf]` table in a TOML config is honoured**: `dir`, `include` and `spec` were silently dropped by the TOML loader and writer (only YAML and JSON worked), so the bundle went to `docs/okf` regardless.
-- **OKF import scans every file it writes**: a file with an invalid UTF-8 byte was skipped by the `AR0xx` security scan and a file over 1 MiB too, so a hostile bundle could pad a payload past the scan. Invalid bytes are now dropped before scanning, and a file too large to scan is refused (`AR9B8`, error) with nothing written. Applies to `import okf`, `[[includes]] format = "okf"` and git includes.
-- **`export okf --prune` no longer touches `.git`**: only the directories emptied by removing stale files are pruned (dot-directories and unrelated empty directories are left alone), and a `.git` directory no longer counts as foreign content.
-- **`validate --strict` no longer fails open on a lock it cannot verify**: under `[lock] enforce = true` a corrupt lock, a newer `hash_version`, or a source that cannot be snapshotted is an `AR981` finding instead of a logged skip.
-- **A lock without content pins (one that pins only remote sources) no longer disables the content checks**: `lock --check` exits 2 on it whatever `enforce` says, `generate --locked` warns (and fails under `enforce`), and a lock with content pins must carry a `tree` digest.
-- **A hook `script` outside the project** no longer aborts `ai-rulez lock` with "invalid path in a digest tree"; it is reported as a `lock` change that keeps `lock --check` failing until the script is moved inside the project.
-- **File modes in digests no longer depend on the operating system**: on Windows the executable bit is taken from the git index (`100644` when git cannot say), on Linux and macOS from the file. Existing pins stay valid.
-- **`[[mcp_servers]]` are pinned at the source** (`settings` item `mcp-servers`); the docs now list the declared configuration that is covered only by the output pins (profiles, include and scoped configuration, plugin authoring).
-- **`generate --check` reports merged-settings keys a run would take back** (for example a role's `skillOverrides` when checking without `--role`).
-- **`lock --check` falls back to skipping remote includes only on a cache miss**, returns any other load error (such as a pin violation) unchanged, and fails under `enforce` when outputs could not be compared.
-- **`validate --strict` reports `AR971`** when a role keeps several skills with one id (in different domains) that resolve to different `skill_mode` values; `skillOverrides` is keyed by id.
-- **Lock and roles docs**: the `roles.json` example path, the same-key overwrite semantics of `skill_mode`, that a role is a content filter and not an access boundary, that the `tree` digest detects accidental edits and not tampering, that `.claude/settings.json` is pinned unless partly consumer-owned, and the CRLF caveat for script extensions.
-- **Eval runner and usage log review fixes**: `prompt_file` and `files[].source` are resolved through symlinks and refused when they land outside the eval directory (an eval directory symlinked out of the config directory is refused too); runs with errored cases are never cached, and the cache key now covers the runner's own settings, `--allow-exec` and the ai-rulez version; reported spend is the larger of the per-case sum and the runner's total, failed runner calls stop a `--max-cost` run, and negative or non-finite costs are rejected; `--max-cost`, `--price-in`, `--price-out` and `--threshold` are validated (`--threshold 0` now records without gating, a value above 1 is an error) and `--format` is checked before any paid work; results are saved after each skill, so Ctrl-C keeps finished skills; `--changed-only` resolves untracked files from the repository root and rejects an option-like `--base`; a timed-out runner or `command_exit` assertion takes its background processes with it; file assertions no longer follow symlinks out of the work directory or read unbounded files; the claude trigger grader matches the skill id as a whole name; `report evals` needs at least 3 ablation cases and a non-empty usage log before recommending a rewrite or prune; digests ignore OS junk and `results/` and hash symlink targets; a near-miss id that collides with an authored case id is `AR996`; invalid-case paths in reports are project-relative. The Codex and Cursor usage recorder counts only reads of `skills/<id>/SKILL.md` (read tools, `cat`, `head`, `sed` without `-i`, ...), not writes or `git add`; feedback note files are read with a size bound from regular files only and their directory is kept `0700`; an empty or loose-mode session salt file is repaired atomically.
-- **`.pi/` is no longer git-ignored as a whole** (#211): only the files and folders ai-rulez generates there (`.pi/agents/`, `.pi/prompts/`, `.pi/mcp.json`, the hook extension) are ignored, so a hand-written `.pi/settings.json` or `.pi/extensions/*.ts` stays tracked. A regression test pins it.
-- **A `[[hooks]]` group with no `[[hooks.hooks]]` action now warns**: a `command` written on the group itself is not read, so no harness got a hook (the Pi hook extension was not generated); `ai-rulez validate` rejected it, `generate` said nothing.
-- **User scope removes stale owned files**: files ai-rulez owns whole at a user-level destination whose extension carries no header (`~/.codex/rules/ai-rulez.rules`, hook plugin modules, Cline hook scripts, Copilot's `hooks/ai-rulez.json`) are now removed when their source leaves the configuration. A text file must still carry the generated banner; the Copilot JSON rests on the manifest.
-- **Hooks read commented configs**: the hooks merge reads a JSONC document (comments, trailing commas, BOM) through the tolerant decoder instead of treating it as empty, so existing user hooks and required keys (`version`, `hooks.enabled`) of a commented config are kept. A required key that holds another value (`hooks.enabled = false`) now warns that the hooks may not run.
-- **Presets sharing one document no longer conflict**: presets that write a merged document or the Copilot hooks file with different keys (Copilot and Copilot CLI with different `targets`) have their owned keys unioned and the document rendered once; plain files still require identical bytes.
-- **Hooks and permissions sidecars that own nothing leave the user's file alone**: when every hook group or rule is inapplicable to a harness, its existing settings file is no longer rewritten or registered as generated.
-- **Provider specs**: sidecars that merge into one path must agree on `global_path` and `format` (checked at load). The Qoder permissions sidecar now declares its `~/.qoder/settings.json` user-level path, which the shared document already used. `clean` recovers hooks and permissions of spec-declared documents and Devin's user-level `hooks` key when no ownership record exists.
-- Docs: handler-field lists (`async`, `args`, `if`), the `emit_when` defaults and the Devin and Qoder user-level permission files are corrected.
-- **Running inside a git hook no longer corrupts the repository**: the ignore-mirror `git -C <tmp> init` inherited the hook's `GIT_DIR`, re-initialised the hook's repository instead of the temp directory and, in a linked worktree, wrote `core.bare = true` into the shared config, breaking every git command in every worktree. Every git subprocess (`internal/gitutil`, include clones, bundle ignore listing, agent git history) now runs through one helper that drops `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES` and `GIT_NAMESPACE` from the inherited environment, as do `usage` sink commands.
-- **`verify --plugin` on a project whose bundle was never generated** prints `plugin bundle not generated; run ai-rulez generate --plugin` once (the message was repeated after a colon); `--if-generated` still skips it.
-- **Top-level `[[hooks]]` handler `type`**: `validate` (JSON schema) rejected `type = "prompt"` or `"http"` while `generate` accepted it and silently wrote a `command` handler. Both now reject any type other than `command` (or omitted).
-- **Unknown top-level config key** is reported by name (`Additional property 'bogus_key' does not match the schema`) instead of the literal `{property}` placeholder.
-- **`validate --strict --repo-root <dir>`** (env `AI_RULEZ_REPO_ROOT`; also on `scan`): a configuration checked out away from its repository no longer reports false `AR402` missing-resource and `AR101` glob errors for paths that exist in the real repository. The root defaults to the git toplevel, else the config's parent. `AR402` now names both bases it tried (the skill directory and the repo root).
-- **`AR301` false positive on kind words**: prose such as "the `test-writer` rules" or "the `test-writer` agent" no longer reports an unknown rule or agent when `test-writer` exists as another kind (rule, skill, agent, command or context); only a name no namespace defines is reported.
-- **Agent frontmatter reaches `.claude/agents/`**: `disallowedTools`, `permissionMode` (the legacy `permission_mode` is renamed to it), `memory`, `maxTurns`, `mcpServers`, `hooks`, `background`, `isolation`, `color`, `initialPrompt` and `omitClaudeMd` were silently dropped; they now pass through with their YAML types (lists, maps, booleans, numbers) in the `claude` preset only. `validate` and `generate` warn about an unknown agent frontmatter key with a did-you-mean, and `validate` warns about a `skills:` entry in any item that names no skill (an error under `--strict`, as `AR302`).
-- **Claude skills are user-invocable again by default**: the `claude` preset no longer writes the constant `user-invocable: false` on skills (which, with the key now spelled correctly, hid every skill from the `/` menu). The key is written only when the skill sets it or `[claude.skills] hide_from_menu` is on; an author-set `user-invocable` or `disable-model-invocation` is always honoured and written as a boolean. `argument-hint` is passed through on skills again and its "inert" warning was removed. Commands carry `user-invocable: true`, and a stale authored `user_invocable` key (the pre-4.24 spelling Claude Code ignores) is no longer passed through.
-- **Deprecated consumer files**: `generate` warns when `[[plugins]]` is set with the `claude` or `codex` preset, because `.claude/plugins.json` and `.codex/plugins.json` are read by neither tool. The files are still written.
-- **`docs/installed-skills.md`** said `references/*.md` are appended to the skill body; they are kept as separate files for both path and git sources.
-- **`lock` and enforcement scope**: `docs/mcp-server.md` states which serve views `lock` pins (the default view, every role, every view the lock already records, and the views chosen with `--role`, `--profile`, `--targets`, `--include-static` or `--source`), that a server started with flags whose view is not pinned refuses the skills it adds (`AR995`), and that a scan-refused skill is left unpinned (`lock` exits 3) unless `lock --refuse-findings` stops the write.
-- **Dynamic-skills docs overstated**: `docs/mcp-server.md` now states what is really scanned (text files up to 512 KiB; `AR989` for the rest), what the lock pins, that git credentials are not injected (private repositories need an `ssh` URL; the never-wired `Options.Token` is removed), and that `[[skill_sources]]` alone now gets the `dynamic-skills` stub and the `AR991`/`AR993` checks like served skills do.
-- **Skill sources are bounded**: a `[[skill_sources]]` entry may load at most `max_skills` skills (default 200) and `max_bytes` bytes of skill files (default 64 MiB), a skill at most 2000 files, and each git command is cut off after five minutes; a source over a limit is an error naming the key. A single file over 2 MiB is now dropped on its own with a warning instead of dropping its whole skill.
-- **Live reload gave up after one failed rebuild**: the watcher recorded the new fingerprint before rebuilding, so a rebuild that failed (a source unreachable for a moment) was never retried until another file changed. It now keeps the change pending and retries with a growing pause (up to a minute). Only usage logs (`.jsonl` under a `local/` directory, or `--usage-log`) are left out of the fingerprint; a `.jsonl` resource of a skill now triggers a reload.
-- **Session byte budget covered only `load_skill`**: `get_skill`, `read_skill_file` and `resources/read` now draw on the same per-session budget, and the server forgets the oldest session once 1024 are tracked. The `role` argument of `find_skill` only ranks; the restriction is the server's `--role`, which builds the catalog without the skills outside the role (documented).
-- **Skill-source name collisions aborted the server**: a source skill whose `name:` frontmatter differed from its directory could claim a name the project (or another source skill) already serves, and the duplicate made the whole catalog fail. A source skill is now always served under its directory name (with `name_prefix`), and the collision check uses the names the catalog actually uses, so the project skill wins and the source skill is skipped with a warning.
-- **Locked skill-source tags and branches that moved**: a source pinned by `ai-rulez.lock` is fetched by its commit SHA, so an empty cache (CI, a teammate) gets the locked content after the tag was force-moved or the branch advanced instead of failing with "the ref moved, retry". A server that refuses fetching by SHA is asked for the ref with its history; if the pinned commit is no longer reachable the fetch fails closed with a message saying so.
-- **`--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S`** did nothing (no CLI MCP configuration step exists). They are now hidden, deprecated no-ops that print a notice instead of silently accepting the flag.
-- **Skill and command resource bundling skips build artifacts**: `.venv*`, `venv`, `__pycache__`, `*.pyc`, `node_modules` and `.git` are never listed in `## Resources` or copied, files ignored by `.gitignore` are skipped when the project is in a git work tree, and the new `bundle_exclude` key adds patterns.
-- **`[llm]` trust rule**: `allow_network`, `base_url`, `api_key_env` and the price overrides are honoured only from the user config file or `AI_RULEZ_LLM_*`; a repository config or `config.local.*` that sets them is ignored and reported by `llm doctor`, `ai-rulez doctor` and the new strict finding `AR9L1` (`llm-untrusted-key`). Repository budgets can only tighten the user's. A cloned repository can no longer turn on network use or send an environment variable to a host it names.
-- **`[llm]` output never echoes a pasted key**: `llm doctor` (text, JSON), `ai-rulez doctor` and `AR9L0` messages omit an `api_key_env` that is not a valid variable name, and config errors no longer quote `model` or `AI_RULEZ_LLM_*` values.
-- **`[llm]` budget cannot be overshot by concurrent calls**: each call atomically reserves its worst-case tokens and cost before dispatch and settles with actual usage; a call is priced by the requested model (a provider-reported name can only raise the price); timeouts and transport failures stay charged at the worst case.
-- **`llm.Judge`** requires both `score` and `rationale` and rejects trailing data, never caches an invalid reply, fences the transcript between markers with a content-derived token and tells the model to ignore instructions inside it, and refuses rubrics or transcripts that contain secret-looking text unless `JudgeWith` is asked to redact them (`JudgePromptVersion` is now `judge/v2`).
-- **`[llm]` smaller fixes**: token estimates use UTF-8 bytes (one token per three bytes) so non-ASCII text is not undercounted; `max_retries` is capped at 10 and the backoff and `Retry-After` cannot overflow; malformed replies are not retried; the cache identity includes the URL scheme and key variable name; `AR9L0` secret-key detection also covers `config.local.*`; `llm estimate` reports a broken `[llm]` config instead of ignoring it.
-- **`validate --strict --changed`/`--since` no longer drops every finding when `--repo-root` is narrower than the git toplevel**: changed paths are rebased onto the lint tree, and a root outside any git repository is an error instead of an empty change set.
-- **`scan --update-baseline` and other narrowed runs no longer delete baseline entries they did not look for**: entries of rules the run does not check (non-security entries under `scan`, scanner entries without `--external`) are kept and never reported stale. `--update-baseline` is refused with `--fix`, `--analyzer`, `--lint-profile` and with one shared `--baseline` across several roots.
-- **`--fix` and `--fix-unsafe` apply the baseline first and respect `--analyzer` and `--since`/`--changed`**: a baseline-accepted finding is no longer rewritten, and only findings in scope are fixed.
-- **`--changed` keeps a duplicate description (`AR701`, `AR702`) and a collapsed duplicate (`AR703`) introduced against an unchanged file**; `--since` compares against the merge-base, so changes made only on the base branch do not count.
-- **`scan` reports only security findings**: hook-script, permission and LLM-config findings no longer leak past the security filter.
-- **A baselined oversize file (`AR901`, `AR902`) fires again once it has grown**: size findings now carry a 25%-step size bucket in their fingerprint (existing size entries need one `--update-baseline`).
-
-- **Every command error was printed twice**, and `ai-rulez --help` showed a literal `\n`; both fixed, exit codes unchanged. Unknown subcommands of group commands (`telemetry bogus`, `roles bogus`, ...) exit 1 with a suggestion.
-- **Rewriting `config.toml` (CRUD, MCP, convert) dropped the `[okf]` table**, and the `[okf]` table of a config (`dir`, `include`, `spec`) was ignored by `generate`; both are fixed.
-- **`clean` restores merged settings documents byte for byte** after any number of `generate` runs: one-line, minified or hand-formatted strict JSON (a nested `{ "allow": [...] }` is no longer re-indented, in project and `--user` scope), a missing final newline, an empty `[mcp_servers]` table, `mcp_servers: {}`, and a comment above an owned empty YAML mapping (no longer duplicated per run). A second `generate` no longer reflows a document that already holds the owned values, and `clean --user` after several `generate --user` runs keeps the original layout.
-- **Ownership of array elements is counted per copy**: an element identical to one you wrote by hand (OpenCode `instructions`, Gemini `context.fileName`, sidecar lists, GitLab Duo groups, Augment areas, settings arrays in JSON, JSONC, TOML and YAML) is never claimed, so `clean` leaves it and removes only as many copies as ai-rulez added.
-- **`clean --user`** removes the empty directories `generate --user` created (`~/.cursor`, `~/.pi`, ...) and leaves any directory that existed before; the user manifest records them in a `dirs` list.
-- **`generate` repairs a generated file whose body was hand-edited** (it was left in place and `--check` failed forever); `generate --role` logs the role instead of `profile=default`; `generate --watch` no longer regenerates on the `roles.json` or manifests its own run writes.
-- **The secret-output check decides from the rendered content**: only an MCP config file that holds a resolved secret must be gitignored (a merged `.cursor/BUGBOT.md` or a file that only references `${VAR}` no longer fails), and `.generated-manifest.local.json` is gitignored on the first `generate`; with `gitignore = true` the managed block always covers `.ai-rulez/local/`.
-- **The unresolved MCP env placeholder error** lists each server, key and `${VAR}` it could not resolve (names only).
-- **`[permissions]` with only deny rules** writes both `permissions.allow` and `permissions.deny` into `.cursor/cli.json`, as Cursor requires; an empty array ai-rulez created is owned and `clean` removes it, a hand-written `allow: []` is preserved.
-- **`roles.json` is built from the shared sources only**: roles in `config.local.toml` no longer appear in the committed manifest or make `generate --check` report drift (#234). A role's `skill_mode` no longer deletes a hand-written `skillOverrides` value (it is warned about when replaced and restored when the role stops setting it), and is not reported as honoured where the SKILL.md already sets a contradicting invocation key (#257).
-- **`catalog` reports the digest of every item sharing kind, domain and id** (the lock keys the second `id#2`) (#256), notes a role that cannot be built instead of omitting it, and strips excerpt frontmatter only when a line of exactly `---` closes it.
-- **Locking**: `generate --locked`/`--frozen` and an enforced lock fail when an include cannot be resolved instead of generating without it; recursive `generate` exits 2 (not 1) when every failure is lock drift; `ssh://` include URLs are git sources, not local paths; `lock`, `lock --check` and strict validation return the error when the shared configuration cannot be reloaded instead of comparing the overlay with the lock; `lock --check` reports a cached tree that cannot be digested, names an include missing from the cache (and no longer reports every output as removed), and `lock --outdated <unknown>` is an error; `validate` reports a local-path include that is missing or not a directory; file modes digest by the owner execute bit only (Windows reads git once per tree, bounded); the built-in guard hook is not pinned, so the lock does not change with the ai-rulez version; the first `lock` of a project with a git include records the commit on its served skills.
-- **Version constraints**: tags that differ only in build metadata get a note when a constraint resolves them; `latest` falls back to the allowed tag when every tag is a prerelease; `update` no longer hides a moved tag behind a downgrade.
-- **Eval fixes**: `claude-plugin-eval` honours `--timeout` (default 30m), kills the whole process tree, caps captured output, clears stale results first, always passes `--runs` explicitly and treats a timeout or interrupt as an error; a runner that reports no cost under `--max-cost` is assumed to have spent the whole budget; every file named in a runner command is part of the cache key (with shell quoting honoured), as are the `claude` binary's size and mtime; a timed-out command runner says `timed out after Xs`; a stored result is replayed only when its recorded skill and cases digests match the files on disk; a skill whose `SKILL.md` cannot be read fails its digest.
-- **Telemetry fixes**: the spool lock no longer has a takeover race, the flush lock goes stale after 60 s and a flush is capped at 30 s; flush retries only 429, 502, 503, 504 and network errors; `telemetry doctor` shows only variable-name-shaped `headers_env` entries (a pasted credential is `(invalid, hidden)` and never looked up); hooks skip subagent events without an `agent_type` and do not read stdin when recording is off; an overflowed timestamp exports as 0; `usage export` finds the default log from a subdirectory.
-- **Usage recording**: a Codex or Cursor skill load is no longer counted for an output redirect into a skill file (`cat x > skills/a/SKILL.md`) or non-shell tool text such as an `apply_patch` body, commands quoted inside another argument are ignored, and Windows backslash skill paths are recognised; two identical version 2 log lines stay two events.
-- **`[llm]` budget accounting** charges 429, 5xx and gateway timeouts at the worst case and treats only 400, 401, 403, 404 and 422 as free.
-- **Strict validation fixes**: `AR015` no longer reports `${VAR}` references in MCP env and headers as literal credentials; `AR991` does not ask for the stub on presets that render no skills; `AR303` knows check frontmatter keys and the context `summary` key; `AR005` ignores `eval` as a CLI subcommand argument; `AR101` no longer claims an `alwaysApply` rule never applies; `AR9C7` to `AR9C9` check generated, gitignored `.claude/skills` and `.claude/agents`; `scan`, `validate --strict` and external scanners cover `checks/` and `domains/*/checks/`; `--allow-egress` rejects names no `[[lint.external]]` declares; `--format markdown` escapes HTML and markdown; scanner results without a location go to `config.toml` and out-of-range lines are clamped; distinct SARIF results sharing a `primaryLocationLineHash` no longer collapse; a malformed `AI_RULEZ_TODAY` or `--today` is ignored with a warning; the schema-failure hint names `version = "5.0"` and TOML; `AR992` is reported once; `diff-added` verifiers and `--since` no longer pass silently when git uses `diff.noprefix`, `diff.mnemonicPrefix` or custom prefixes; `validate --repo-root` errors outside a git repository.
-- **Verifier output**: flat `[[verifiers]]` SARIF has locations, the verifier name as rule id and validates against SARIF 2.1.0, artifact URIs are escaped like the lint SARIF, a run-level error is a tool execution notification, and `--format junit` reports a failure below `--fail-on` as passing, matching the exit code.
-- **Skills server fixes**: malformed input (invalid JSON `-32700`, a non-JSON-RPC frame or a line over 16 MiB `-32600`, a `resources/read` URI with control characters) no longer stops `ai-rulez mcp` or `--serve-skills`; a skill with invalid frontmatter YAML is refused with the reason instead of served with keys dropped; a skill without a description is served under its name with a warning; an unknown `--domain` is an error and the "no skills are served" warning names the filter; `load_skill` returns the `uri` of the file and a `resources/read` refused by the session budget returns `-32600`; usage lines over stdio carry the salted session and each connection has its own budget; a skill named `dynamic-skills` in an active domain replaces the stub, and the stub names the `[[mcp_servers]]` entry that runs `--serve-skills`; `AR989` also covers project-authored served skills; `AR992` warns when a preset without MCP support sits next to `[[skill_sources]]`; live reload ignores the usage log and salt it writes and a new edit ends the retry pause; a `--usage-log` inside the config directory causes no spurious reload; `AR010` is not raised for a source that follows a covered `version` constraint, and `lock` and `update` do not warn about the commit they are about to pin; the SBOM, `skill list` and provenance report the constraint as the requested ref.
-- **Generated skill index**: a reference file with a very long first line no longer inflates the `SKILL.md` resource index (one sentence of at most 160 characters).
-- **OKF fixes**: `import okf` adds no name or description to skills of an export, so export, import, `export okf --check` is a fixed point; non-ASCII names are restored from `x-ai-rulez.id`; an unsafe `x-ai-rulez.domain` is reported; a concept named `index` or `log` no longer overwrites the directory index (stored as `index_.md` / `log_.md`); index descriptions are markdown-escaped; the `AR9B3`, `AR9B6` and `AR9B9` descriptions match the behavior.
-- **`convert` fixes**: `skills-lock` sources with a query string or fragment are refused and colliding sanitised names are reported; rulesync `inputRoots` of the wrong type, repeated or `.` are reported or refused; `--report` write failures are reported.
-- **`search` and eval metrics**: stemming of regular inflections is consistent (`find_skill` fixtures unchanged); `--eval --k` above 100 or negative is rejected and `--baseline` fails when evaluated at a different `--k`; the text report shows per-tag metrics and negative cases.
-- **`telemetry`/`usage` readers** refuse a symlinked outbox, state file or log; machine-local files are written only after the directories above them pass the symlink checks, and a state file over 1 MiB is an error instead of a silent truncation.
-- **Schemas and docs**: schemas use one `$id` host (`raw.githubusercontent.com`), the `codewhale` dialect is in `provider.schema.json` and builtin providers are validated against it in tests; `tokens` notes no longer name the removed `continue-dev` preset; flag usage strings no longer contain backquotes, so `--role` shows a sensible placeholder.
-- **Misc**: `copilot-cli` joins the guard harnesses and does not conflict with `copilot`; the "rules folder" `AGENTS.md` warning prints once per run and path; the kept-obsolete plugin file warning says whether the file is a symlink, behind a symlink or edited; `init --from` names a skipped symlink and its target; validation names a removed preset (`windsurf`, `continue-dev`) and reports a missing `version` key as missing instead of listing three schema errors.
-- **External scanner fixes**: the result cache key covers each `env_pass` value, the isolation mode and backend and the report-mapping version, and launcher scanners (`npx`, `uvx`, `pipx`) expire after 24 hours; one cancelled caller no longer turns off confinement for the rest of the process; `AR032`/`AR033` name the right include when two names share a prefix; `validate --strict --fix` no longer writes a key twice when both spellings are present; a trap scope such as `REVIEW.md` names a whole file; `scan --external` keeps scanner run findings (`AR9E2`-`AR9E4`).
-- **Telemetry and usage fixes**: catch-up and `usage prune` hold the spool lock end to end and `usage prune` takes an exclusive log lock, so events are neither queued twice nor lost; an environment opt-out (`AI_RULEZ_TELEMETRY_INCLUDE_PATHS=0`, `..._INCLUDE_SESSION=0`) beats the consent record; `report evals` no longer counts a supporting-file load as a use; OTLP files are read with a bounded line reader; `usage export --evals` with a missing file is an error.
-- **Search and LLM fixes**: Gemini embedding batches that collapse are retried one input per call and charged; `search --mode vector` ranks by cosine alone and reports `no_index` when no skill has a vector; `search --eval --baseline` refuses a baseline of another mode; `search --from-evals` keys cases by the skill's frontmatter name; the judge no longer refuses a transcript that only reads a secret from the environment and gets at least 2,048 completion tokens.
-- **Smaller fixes**: AR501 resolves the script passed to `sh`, `bash`, `python`, `node`, ... in hook commands; an agent whose `extends` target is missing is reported once per run; `generate --dry-run` lists skill resource directories in a stable order and `profile list` sorts by name; recursive runs and the MCP `generate_outputs` and `validate_config` tools refuse a configuration that loosens the organization policy; revision snapshots (`--since`, checks against a revision) keep the executable bit and ignore `export-ignore`/`export-subst`; marketplace members load through the root's workspace; the test suite no longer depends on a git repository around the temporary directory (`GIT_CEILING_DIRECTORIES` is honoured).
-- **`[llm]` price override no longer prices other models**: `price_input_per_mtok` and `price_output_per_mtok` apply only to the model set in user scope (user config file or `AI_RULEZ_LLM_MODEL`), so a repository-chosen model cannot be billed at a price written for another one; an unpriced model under `max_cost_usd` is refused.
-- **`[llm]` API key stays with the user's provider**: when user scope sets `api_key_env` without a `base_url`, a repository config can no longer choose the `provider`, or a model or embedding model under another provider's prefix (which routed the key to a different service); the dropped keys are reported by `llm doctor` and `ai-rulez doctor`.
-- **`[llm]` `timeout_seconds` is capped at 3600**: a huge value overflowed `time.Duration` and disabled the per-call timeout; `AR9L0` now rejects it.
-- **`[llm]` secret scrubbing recognises more credential shapes** (GitHub, GitLab, Google and Slack tokens, JWTs, PEM private-key headers, Basic credentials, temporary AWS keys) in provider errors and `Judge` refusals; it stays a best-effort detector.
-- **`[llm]` cost cap cannot be defeated by `max_cost_usd = nan`, `inf` or a negative value**: a repository value that is not a usable limit no longer replaces the user's cap (it counts as unset), and `AR9L0` and `AI_RULEZ_LLM_MAX_COST_USD` reject non-finite numbers and prices.
-- **`[llm]` budget ignores negative provider-reported usage**: a reply with a negative token count used to lower the spent total; it (like a missing report) is now charged at the worst case, and decoded usage is clamped to zero.
-- **`mcp --serve-skills` no longer rebuilds the catalog after every `load_skill`** when `--usage-log` points inside a watched directory: the live-reload fingerprint now skips the configured log (relative or absolute) and the `usage.salt` beside it, as the startup baseline already did.
-- **Served-skill metadata is bounded** in `mcp --serve-skills`: a hostile skill could return an unbounded description, keyword list or file list through `find_skill`, `list_skill_resources` and `skills/list` (the session budget charges only file content). Descriptions are cut to 1024 bytes, keywords, triggers and frontmatter lists to 64 entries, `load_skill` and `skills/list` list at most 200 files per skill, and `list_skill_resources` pages with `offset`.
-- **Offline skill-source resolution validates the remembered commit**: a value in the cache's `refs.json` that is not a 40 or 64 hex commit id is treated as never resolved instead of becoming a cache path, and the index is written atomically.
-- **A skill-source skill can no longer reuse the name of a static project skill**: the collision check now covers every project skill, not only those the server serves.
-- **MCP server leaked a map entry per session.** The re-initialize tolerance kept the state of every session it had seen; it now forgets finished sessions. The server also logs the SDK's warnings and errors to stderr and sets an explicit page size.
-- **The missing-content path is printed with forward slashes on Windows**: `remove`/`add` reported `.ai-rulez\rules\nope.md` instead of the portable `.ai-rulez/rules/nope.md`.
-- **The legacy-layout deprecation notice is emitted by every path that loads a tree**: it now also appears from `generate --recursive`, `validate --recursive` and `generate --watch`, not only the single-root (and `--check`) paths.
-- **An OpenAI reasoning model no longer rejects a request**: the temperature is omitted for the `o*` and `gpt-5` families (they accept only the provider default), as `max_tokens` was already switched to `max_completion_tokens` for them.
-
-### Security
-
-- **MCP `--root` confinement passes on the path it checked**: `working_directory`, `config_file`, `config_dir` and `bundle` are rewritten to the symlink-resolved path that was judged inside the root, so a link swapped between the check and the tool's use can no longer redirect the call outside it; containment uses the shared case-aware check.
-- **The `run_verifiers` MCP tool never starts a program**: command predicates are refused (AR9H3) even when `AI_RULEZ_VERIFIERS_ALLOW_EXEC` is set, backed by a runner that denies every start, as its read-only annotation promises.
-- **The committed generated manifest no longer licenses anything**: `generate` and `clean` delete a listed file only when its path is one a preset writes and its own `Content-Hash` (or the digest in the gitignored local manifest, for header-less files) proves ai-rulez wrote it, merged-document claims are honoured only for documents a preset merges into, and a merged settings document is deleted only when ai-rulez created it and its recorded digest still matches (one that existed before is never deleted). A forged claim can no longer strip permissions, env or allow keys from a hand-written `.claude/settings.json`. `.generated-manifest.local.json` itself is ignored with a warning when git tracks it, another user owns it or it is group or world writable (`generate` never writes a tracked one; run `git rm --cached`), and it stores merged array elements as digests, not values, so a resolved secret is never copied into it (a plain `equals` value from an older version is converted on read).
-- **`ai-rulez.lock` no longer pins resolved secrets or the checkout path**: `lock` renders MCP servers as written (`${VAR}`, `${PROJECT_ROOT}` unexpanded) and leaves out any output that still carries a secret, so `lock --check` passes after the variable changes and from another checkout. `lock` and `ai-rulez.lock` writes never follow a committed symlink or a linked parent, and commands that only read the lock refuse a symlinked one.
-- **`generate` and `clean` do not follow a symlinked output directory** (for example `.cursor/commands -> ../shared`), and removing a stale or obsolete plugin file never follows symlinks out of the plugin directory.
-- **Output paths cannot escape the project**: a repository can no longer make `generate` write `.git/config`, git hooks or files outside the project through a custom preset `path`, a provider spec path (`root.file`, `outputs.*.dir`, sidecars, directories), `okf.dir` or `marketplace.output_dir`; generation fails closed on any write outside the project or inside `.git`.
-- **The git token never leaves allowlisted hosts** (see Breaking), no longer appears in process arguments or a cached clone's `.git/config`, and `git://` is rejected like `http://`. Include cache directories are created `0700` and keyed by include name plus a hash of the URL (the installed-skill cache likewise, refilled through an atomically swapped temp directory), so projects cannot overwrite each other's caches.
-- **Imported content**: symlinks in includes, installed skills and OKF bundles are skipped, `init --from` never follows symlinks and skips files over 2 MiB, and repository content read at load time (configs, content files, skill and command resources, legacy MCP files) is capped at 8 MiB per file (an error, not a truncation). A local `[[skill_sources]]` path in the project config must resolve inside the project (`mcp --source <dir>` and user scope may point anywhere). Skills from `[[includes]]` and any skill file outside the project are scanned at the strict level, so an injection skill in a git include is no longer served.
-- **Secrets**: `qoder` (which documents no `${VAR}` expansion) next to a tool that reads references in the shared `.mcp.json` (`claude`, `cursor`, `copilot`, `codebuddy`, `commandcode`, `reasonix`) makes `generate` fail naming both presets instead of writing a resolved secret; `scanners doctor` and scanner staging never start repository-named binaries without consent or leak credential-looking MCP arguments; the SBOM emits remote MCP endpoints as scheme and host only; `ai-rulez doctor` and `telemetry doctor` never print a pasted credential.
-- **Machine-local files are never written or read through a symlink** (usage log, telemetry outbox and log, flush marker, `usage.salt`, including a symlinked `.ai-rulez` or `.ai-rulez/local` ancestor); the LLM cache secret must be a regular `0600` file in a directory not writable by group or others.
-- **`[llm]`**: a user configured only through `AI_RULEZ_LLM_*` no longer sends their key along a provider or model route chosen by the repository config; a user-scope key is never sent to a provider chosen only by the repository config (`[llm] provider`, or a `provider/` prefix in `model`).
-- **Eval results are signed per user** (see Breaking), and the cache key covers the content hash of the `--runner-command` program and the `claude` binary's size and mtime (#258).
-- **The guard hook** finds the project from the target file's directory as well as the cwd, folds case on macOS and Windows, reads Codex `apply_patch` command arrays and indented markers, and large patches are checked in milliseconds.
-- **`catalog --html --clean`** removes only site-shaped files whose bytes match the digest in the `.ai-rulez-catalog` marker, refuses a directory holding `.git` or `.ai-rulez`, and writes the marker first so an interrupted run does not leave the directory refused.
-- `generate` and `clean` no longer write through a symlink that leaves the project (or, with `--user`, the home directory and relocated tool homes): the output file, its manifest, `.gitignore` and every parent directory are resolved first, and a link resolving outside is refused with an error naming it. Symlinks that stay inside the project, such as `CLAUDE.md -> AGENTS.md`, keep working. File modes are no longer changed through a link.
-- **Hook `script` paths are validated and quoted**: `validate` rejects a `script` (in `[[hooks]]` and `[[plugin.hooks]]`) with any character outside `A-Za-z0-9._/-`, every generated shell line single-quotes the path (the root variable stays double-quoted so it expands), and a user-scope config directory is single-quoted with embedded quotes escaped, so a path with a space, `$(...)`, backtick or quote can no longer inject a command. A script that slips past validation is skipped with a warning.
-- **Permission translations no longer widen or bypass rules**: Augment and Zed allow regexes admit only arguments free of `;`, `&`, `|`, newlines, backticks, `$()` and redirections (a deny regex is written broader, anchored after separators for Augment); Zoo Code and Gemini allow prefixes end at a word boundary (`git `, not `git`), VS Code allows are anchored regexes; OpenCode, Kilo and MiMo Code skip allows with a single `*` or a home/absolute path and write denies for the root and every depth (`.env` and `**/.env`), warning when a home or absolute deny may not be enforced; WebFetch domains are lowercased and OpenCode-family denies cover URLs with a port.
-- **Hook plugin modules**: a `matcher` that Go and JavaScript do not read alike (unbalanced groups that escape the anchoring, inline flags, lookarounds, backreferences) skips its group at generation time with a warning instead of generating a matcher that matches nothing and silently disables a blocking hook. A module (OpenCode, Kilo, MiMo Code, Pi, Amp) is overwritten only while its first line is the ai-rulez banner; a hand-written plugin with the same name is left alone with a warning. The Amp `tool.call` handler's `allow` result is documented as the API's only non-rejecting value.
-- **Cline hook scripts**: ownership is decided by the marker on the line after the shebang (a hand-written script quoting it is never overwritten), each command runs in a `{ ...; }` group so `cd x && y` and trailing comments behave and failures propagate, and the input read is bounded to 16 MiB.
-- **Docs**: hook environment inheritance, fail-open semantics and the lossy permission translations are documented in `docs/settings.md` and `docs/permissions.md`.
-- **Lock-supplied commit as a path**: a `[[source]]` entry whose `commit` is not a full hex SHA (for example `../..`) is a lock violation instead of a cache path component; `lock --check` reports it.
-- **Skill-source cache location**: without a home directory the cache no longer falls back to the shared temp directory (an error asks for `HOME`), cache directories are created `0700`, each fetch uses its own checkout directory, and a second process storing the same commit is tolerated.
-- **Served-skill lock digest ignored any `Source-Hash:` line**: the digest normalization dropped every comment-like line starting with `Source-Hash:` (and the text after `Generated:`) in the first 40 lines of every served file, so a locked remote skill could carry changed text there without a digest change. It now ignores only a line that is exactly a generated hash (`Source-Hash: <algorithm>:<hex>`) or a generated date stamp, and files of a skill source are digested verbatim.
-- **Unscanned files were served**: the served-skill security scan skipped files with a NUL byte, invalid UTF-8 or over 512 KiB, but `load_skill` and `resources/read` returned them, so a payload behind a stray NUL or 600 KB of padding passed `trust = "error"`. The scan now reports them (`AR989 served-file-unscannable`); a file from a remote source (`trust = "error"`) that cannot be scanned is no longer served (listed in the provenance as `unserved_unscannable_files`, still covered by the lock digest), a `SKILL.md` that cannot be scanned refuses the skill, and project-authored skills (`trust = "warn"`) still serve them with the warning.
-- **Symlinked skill-source roots and paths**: a local source whose directory is a symlink is resolved and digested through the link (it used to hash nothing, so every such source shared one constant digest and the lock pinned nothing); a `path` of a git source that goes through a symlink is refused, as its target is outside what the digest and the scan cover. `contentlock.DigestDir` refuses a symlinked root; a symlink inside a tree is pinned by its link target.
-- **Git option injection through a source url or ref**: a `[[skill_sources]]` or `--source` url or ref starting with `-` (for example `--upload-pack=<command>`) ran a program on `mcp --serve-skills`, `lock` and `validate`. Such values are now rejected in configuration validation, `--source` parsing and at every git fetch (skill sources, git includes, OKF bundles); every fetch passes `--` before positional arguments, and skill-source and OKF fetches run with hooks, helpers and submodules off and only the https, ssh and file transports (`GIT_ALLOW_PROTOCOL`, `protocol.ext.allow=never`). Git includes never use `ext::`, and plain `http://` and `git://` sources are rejected.
-- **The forge token has its own allowlist**: release-date lookups and review-linked approvals send the GitHub token only to `github.com` or the hosts in `AI_RULEZ_FORGE_HOSTS`, not to every `AI_RULEZ_GIT_TOKEN_HOSTS` host, over https with no cross-host redirects. A forge release time is trusted only when the forge's tag commit equals the remote's, and `min_release_age_source = "auto"` never falls back to the forgeable commit date.
-- **Config and provider spec symlinks**: a symlinked `config.toml` or `config.local.toml` whose target is outside the repository root is refused at load, like a content symlink, and provider specs symlinked outside it are refused. Base-revision reads (approvals, lock at base, CODEOWNERS, release notes) fail closed on an unknown revision, a git failure or an oversized blob instead of reading as "no such file".
-- **Scanner confinement**: the scanner `--version` probe runs confined like the scan (refused under `isolation = "require"` without a backend), the macOS sandbox denies the LaunchServices and Apple Events services, bubblewrap adds `--new-session` and `--unshare-pid`, and external scanners and `gh` no longer inherit `SHELL` and `LOGNAME`. Trap fixes that edit hand-written files refuse symlinks and paths that leave the project.
-- **Model routing and redaction**: a per-request model (verifier `llm.model`, `[search.embeddings] model`) or repository `embedding_model` naming another provider can no longer reroute the user's LLM API key (`AR9L0`); secret redaction exempts only a value that is entirely an environment lookup (`${KEY:-sk-...}` is masked); the command embedder runs in its own process group and is bounded by its timeout.
-- **Credentials in a source URL are refused instead of stored**: `include add`, `skill install` and the MCP `add_include`/`install_skill` tools reject a URL whose userinfo (`https://user:token@host/...`) or credential query parameter (`?access_token=...`) carries a secret; a credentialed source already committed is a `validate --strict`/`scan` error (`AR035 credential-in-source-url`) and is refused when it loads, so the secret reaches neither `config.toml`, git's command line nor a clone's `.git/config`. Every message that would echo the URL redacts it.
+- `migrate v5` drops the rejected 4.x `[[skills]]` table, keeps CRLF in `config.toml` and preserves comments; `migrate okf` writes atomically with a backup and refuses to destroy a rule named `index` or `log`.
+- `validate` on an OKF bundle reports the OKF verdict before "Configuration is valid" and writes the OKF document under `--format json`; `-q` no longer prints the OKF summary or strict totals.
+- `generate --check` no longer reports a file `generate` just wrote as `edited`.
+- Content is never read, written or deleted through a symlink inside the configuration directory; `add`, `edit`, `show`, `remove` and the MCP CRUD tools refuse symlinked domains, directories and files.
+- `edit` and the MCP update tools keep an item's priority, targets, description and other frontmatter when only the content changes.
+- No log line or error prints a credentialed include or skill source; `include add` and `skill install` warn and redact.
+- `export okf --output-dir` can no longer delete your configuration, and `import okf` strips group/world-write bits and redacts credentials; OKF export, import, export is byte-identical.
+- Locking fails closed: an enforced lock fails when an include cannot be resolved, file modes in digests are OS-independent, and `validate --strict` reports `AR981` instead of skipping an unverifiable lock.
+- Running inside a git hook no longer corrupts the repository (every git subprocess drops `GIT_DIR` and the other inherited git variables).
+- `[llm]` trust and safety: `allow_network`, `base_url`, `api_key_env` and price overrides are honoured only from user scope, a pasted key is never echoed, the budget cannot be overshot by concurrent calls, and `timeout_seconds`/`max_cost_usd` reject unusable values.
+- The `mcp --serve-skills` server bounds served-skill metadata, applies the session budget to `get_skill`/`read_skill_file`/`resources/read`, handles skill-source name collisions, and fetches a locked commit by SHA even after a tag moves.
+- Hook merges read commented JSONC/TOML/YAML documents, and presets that share one document union their owned keys instead of conflicting.
 
 ### Removed
 
-- **The hidden `mcp --transport`, `--address` and `--port` flags**: they named a websocket transport that never existed; the server speaks stdio only.
-- **`ai-rulez migrate`, `init --format`, legacy `mcp.yaml`/`mcp.toml`/`mcp.json` loading and the V2/V3 config readers** (see Breaking).
-- **The `compression` option**, a no-op since v3.13: a config that still sets it gets the unknown-key warning from `generate`; `validate` and `generate --strict-config` fail on it.
-- **The legacy `init --from` importer engine**: `init --from` runs through `convert`.
-- **Go APIs**: the process-wide preset registry (`config.PresetRegistry`, `config.RegisterPreset`, `config.GetPresetGenerator`, `config.RegisterRulesDir`), `config.SetPolicyEnforcer` (pass `config.WithPolicy` to the load), `config.DetectConfigVersion`, `config.VersionDir`, `config.ConfigVersionV3`, `Config.IsV3`, `config.DecodeLegacyMCPFile`, `config.MigrateLocalOverlayToTOML` and `LocalOverlay.Format`. `config.LoadConfig` fails when the config declares includes or installed skills unless it is given `config.WithResolvers` (or `WithoutRemote`). `pkg/airulez` is the supported embedding API; its `Options.WithoutLocal` is replaced by the opt-in `Options.WithLocal`.
+- The hidden `mcp --transport`, `--address` and `--port` flags (the server speaks stdio only).
+- `ai-rulez migrate`, `init --format`, legacy `mcp.yaml`/`mcp.toml`/`mcp.json` loading and the V2/V3 config readers.
+- The `compression` option (a no-op since v3.13) and the legacy `init --from` importer engine.
+- The process-wide preset registry and other legacy Go APIs; `pkg/airulez` is the supported embedding API.
+
+### Security
+
+- MCP `--root` confinement runs on the symlink-resolved path it judged, so a link swapped between the check and the tool's use cannot redirect a call outside the root.
+- The `run_verifiers` MCP tool never starts a program (command predicates are refused even with `AI_RULEZ_VERIFIERS_ALLOW_EXEC` set).
+- The committed generated manifest no longer licenses anything: a forged claim cannot strip permissions, env or allow keys from your settings, and the local manifest stores array elements as digests rather than values.
+- `ai-rulez.lock` no longer pins resolved secrets or the checkout path, and lock writes never follow a committed or linked symlink.
+- Output paths cannot escape the project: a custom preset, provider spec, `okf.dir` or `marketplace.output_dir` can no longer make `generate` write outside the project or into `.git`, and symlinked output directories are not followed.
+- The git token never leaves allowlisted hosts and never appears in process arguments or a cached clone's `.git/config`; include and skill caches are `0700` and keyed by name plus a URL hash.
+- Imported content is scanned: symlinks in includes, installed skills and OKF bundles are skipped, files are size-capped, a local `[[skill_sources]]` path must resolve inside the project, and credentials in a source URL are refused (`AR035`).
+- Machine-local files are never written or read through a symlink, and the LLM cache secret must be a regular `0600` file.
+- Hook `script` paths are validated and shell-quoted, permission translations do not widen or bypass rules, and hook plugin matchers that Go and JavaScript read differently are skipped with a warning.
 
 ## [4.24.2] - 2026-10-04
 
 ### Fixed
 
-- **Provider test path helpers on Windows**: `requireFile`, `hasOutputPathSuffix`, `hasOutputPathContains` and `findOutput` normalized the output path to forward slashes but compared the suffix raw, so a `filepath.Join` suffix (backslashes on Windows) never matched, nor did a slash literal against a native path. Both sides are now normalized, so the assertions hold on every platform. Test-only; no generated output changes.
+- Internal/test-only fixes; no user-visible change.
 
 ## [4.24.1] - 2026-10-04
 
 ### Fixed
 
-- **pi preset tests on Windows**: the `pi` tests used `filepath.Join` suffixes against helpers that compared raw paths. They now use slash literals, consistent with the other provider tests. Superseded by the separator-agnostic helpers in 4.24.2.
+- Internal/test-only fixes; no user-visible change.
 
 ## [4.24.0] - 2026-10-04
 
 ### Added
 
-- **`pi` preset** (#210): generates project files for the [pi](https://pi.dev) coding agent. The preset writes a shared `AGENTS.md` (pi has no native rules folder, so every rule is inlined), skills to the pi-preferred `.agents/skills/<id>/SKILL.md`, subagent definitions to `.pi/agents/<id>.md` with `name`/`description`/`tools`/`model`/`thinking` frontmatter, and MCP servers to `.pi/mcp.json` (`mcpServers` with the stdio `command`/`args`/`env` form and the remote `url`/`headers`/`description` form; SSE is not supported). Resolved effort maps onto `thinking`, model onto `model`. `.pi/mcp.json` is a merged document: the configured servers are written one by one and a hand-authored sibling key survives. With `agents_md = true` the shared `.agents/skills` tree replaces the pi skills output, so no skill is ever written under `.pi`. `.pi/mcp.json` falls under the MCP secret guard (`0600`, must be git-ignored).
-- **Provider spec `frontmatter.effort_field`**: a declarative provider can now name the frontmatter key its resolved effort is written under (pi uses `thinking`); it defaults to `effort`.
-- **Provider sidecar `pi_mcp_json`**: emits a `{mcpServers: {...}}` document from the shared stdio/url MCP entry shape.
+- **`pi` preset** for the [pi](https://pi.dev) coding agent: a shared `AGENTS.md`, skills in `.agents/skills`, agents in `.pi/agents`, and MCP servers in `.pi/mcp.json`.
 
 ### Changed
 
-- **`AGENTS.md` is now shared by `pi` as well** (`codex`, `opencode`, `xum`, `amp`, `pi`): a frontmatter `targets` naming any of them selects the item for all, and the file renders identically whichever preset writes it last.
-- **Dependency updates**: `go.opentelemetry.io/otel` and `otel/trace` `1.46.0` → `1.47.0`, `github.com/dlclark/regexp2/v2` `2.8.0` → `2.8.2`, and the docs lockfile (`zensical`, `markupsafe`).
-- **Shared MCP entry builder**: the stdio/url MCP server shape used by pi and Gemini is now one helper (`presets.MCPServerEntry`), which Xum's `mcp.jsonc` entry builder also builds on.
+- `AGENTS.md` is now shared by `pi` alongside `codex`, `opencode`, `xum` and `amp`.
 
 ## [4.23.1] - 2026-10-03
 
 ### Added
 
-- **xum stdio MCP `env`** (#209): Xum's `mcp.jsonc` loader keeps only the command string of a stdio entry, so `env` is written as a POSIX shell assignment prefix (`GITHUB_TOKEN=... npx -y pkg`, keys sorted, values shell-quoted) instead of being dropped with a warning. Names that are not shell identifiers are skipped with a warning. Resolved secrets in it fall under the existing MCP secret guard (`0600`, must be git-ignored).
-- **v1 OpenCode plugin warning**: OpenCode v2 does not run v1 plugins and only logs the refusal to its server log. `generate` now warns, once per file and without failing, about a v1-shaped authored `.ai-rulez/opencode/index.js` and about v1-shaped local files in `.opencode/plugin(s)/` or in the `plugin`/`plugins` array of `opencode.json(c)` (local paths only), with a link to the migration guide. See `docs/plugins.md`.
-- **OpenCode plugin MCP servers and agent settings**: the generated OpenCode plugin now registers the bundle's MCP servers (`${PLUGIN_ROOT}` and `${VAR}` expand at runtime, nothing resolved is written to the package) and maps agent settings with the `opencode` preset's rules: provider-qualified `model` and variant pass through, bare aliases such as `sonnet` are omitted with one warning, plus `mode`, `hidden`, `temperature` and `top_p`. Both are emitted in `.opencode/ai-rulez-bundle.json`, and top-level paths an MCP server references through `${PLUGIN_ROOT}/<path>` (such as `scripts/`) are added to the generated `package.json` `files` list, with a warning when the path does not exist. A project server with `enabled = false` is bundled with `disabled: true` for OpenCode (other runtimes have no such flag, so a disabled server is bundled enabled for them and `generate` warns), and remote `headers` are still not bundled (warned). `docs/plugins.md` now lists the routes that load the plugin in OpenCode 2.0.20 (copying into `.opencode/plugins/`, or `"plugins": ["<dir>"]` with an `index.js` at the directory root; `main`/`exports` of the generated `package.json` are ignored for local directories) and notes that `${VAR}` in bundled MCP config is expanded from the OpenCode process environment, which a third-party plugin can read.
+- Xum stdio MCP `env` is written as a shell assignment prefix.
+- `generate` warns once about a v1-shaped OpenCode plugin (OpenCode v2 does not run it).
 
 ### Changed
 
-- **MCP servers in shared settings documents are owned one by one.** `.claude/settings.json`, `.gemini/settings.json`, `.mcp.json`, `.agents/settings.json`, `opencode.json` (`mcp.servers`) and `.xum/mcp.jsonc` used to have their whole `mcpServers` object replaced, which deleted servers you wrote by hand. `generate` now writes each configured server into the existing object, so a server whose name is not in `config.toml` survives `generate` and `clean`; a server dropped from the config is removed on the next `generate`. A hand-written server with the same name as a configured one is overwritten by the configured value. A document ai-rulez wrote whole behaves as before.
-- **A plugin `name` must match `^[a-z0-9][a-z0-9._-]*$` and contain no `..` for every runtime**, not only `agent-plugins`: it becomes a directory and file name and, for OpenCode, an identifier in generated source. Scoped (`@scope/x`), uppercase and slash-containing names are rejected by `validate`.
+- **MCP servers in shared settings documents are owned one by one**, so a server you wrote by hand survives `generate` and `clean`.
+- A plugin `name` must match `^[a-z0-9][a-z0-9._-]*$` and contain no `..` for every runtime.
 
 ### Fixed
 
-- **Codex plugin `.mcp.json`** is merged into the file already in the repository (server by server, claims recorded) instead of overwriting it.
-- **OpenCode plugin helper**: `$ARGUMENTS` in a command is replaced literally (`$&`, `$$` and `$1` in the prompt were interpreted), a command or agent file that cannot be read is skipped with a warning instead of aborting the registration, and skill and command names and descriptions come from `.opencode/ai-rulez-bundle.json`, so quoted or escaped YAML values are no longer mangled. The plugin id is written as a JavaScript string, and a `${PLUGIN_ROOT}\scripts\run.cmd` reference publishes `scripts/`.
-- **v1 OpenCode plugin detection** ignores comment markers inside string literals (`"src/**/*.js"`), recognizes v2 plugins whose `id` is a variable or shorthand and that also export helper functions, and reads `file://` plugin paths with URL parsing (drive letters, percent escapes).
-- **Merged-document housekeeping**: manifests are read once per run (a corrupt one is reported once), warnings the baseline and the real render both produce are printed once, an edited document is replaced through a temporary file and a rename, and the `AGENTS.override.md` warnings read correctly for one preset as for several.
-
-- **OpenCode plugin bundles**: the skills, commands and agents bundled under `.opencode/` were never discovered when the plugin was installed from npm, because OpenCode v2 only scans its own config directories. The generated entrypoint now registers them through the skill, command and agent transforms (`.opencode/ai-rulez-content.js`), and no longer imports `@opencode/plugin` at runtime, which failed to resolve for local plugins.
-- **Local content reaches each tool through a file it loads.** Several `*.local.md` files ai-rulez wrote for machine-local content were never read by their tools. Local context and inline local rules now go to:
-  - Gemini CLI: `GEMINI.local.md` is listed in `.gemini/settings.json` `context.fileName` (`["GEMINI.md", "GEMINI.local.md"]`, or `["AGENTS.md", "GEMINI.local.md"]` with `agents_md`). The document is now written without `[[mcp_servers]]` and whether or not local content exists, so a committed `.gemini/settings.json` gains this one entry. A `context.fileName` you wrote is kept and `GEMINI.local.md` is appended to it (and `AGENTS.md` under `agents_md`), a single string becoming a list, with no warning; a value that exactly equals one ai-rulez writes is its own with or without a manifest, which also fixes the `agents_md` toggle in a partly hand-written file and on a fresh clone.
-  - OpenCode: `opencode.json` `instructions` lists `AGENTS.local.md` (`./AGENTS.local.md` counts as the same entry), merged per entry with your own. `opencode.json` is now written without `[[mcp_servers]]`, and `$schema` is added only to a file ai-rulez creates, never to one you wrote.
-  - Codex, and Hermes with `agents_md`: a git-ignored `AGENTS.override.md` that repeats the `AGENTS.md` body that run wrote (without its banner, so a `[header] timestamp` does not rewrite it) and appends the local sections (both tools load it instead of `AGENTS.md`). A hand-written `AGENTS.override.md` is never overwritten or deleted; `generate` warns instead. Local content with no `AGENTS.md` to extend is reported.
-  - Junie and Antigravity: `.junie/rules/ai-rulez.local.md` and `.agents/rules/ai-rulez.local.md` (`trigger: always_on`). A local rule named `ai-rulez` is written as `ai-rulez-<hash>.local<ext>`. Junie reads `.junie/rules/` only on its `AGENTS.md` discovery path, not with a `.junie/AGENTS.md` or the legacy `.junie/guidelines.md` layout.
-  - Amp, and Hermes without `agents_md`, have no local file to load: nothing is written and `generate` warns once per preset.
-- **`clean` and preset or server removal leave no ai-rulez keys behind in hand-authored settings.** `.claude/settings.json`, `.gemini/settings.json`, `opencode.json`, `.mcp.json`, `.agents/settings.json` and `.xum/mcp.jsonc` that you share with ai-rulez were never edited by `clean`, and the entries ai-rulez merged stayed after a preset or MCP server was removed; an overlay server's resolved `Authorization` header could outlive the overlay in a hand-written `.claude/settings.json`. ai-rulez now records what it merged (server entries, array elements, scalars) with a digest of each value (never the value itself): in the local manifest for a document shared with you, in the committed manifest for one it wrote whole. `clean` removes exactly that, only while the value is still the one written; an entry you edited stays and is reported once. It deletes a file nothing else is left in, and `generate` removes what an earlier run claimed and the current config no longer produces, also after the overlay is deleted. A document without a record gets a fallback on `clean` only (never on `generate`): the servers the config names, when their value equals what the config renders, plus values ai-rulez writes itself. See `docs/local-overrides.md`.
-- **Commented `opencode.json` and `.gemini/settings.json` no longer stop `generate`.** Both tools accept comments; a document with comments or trailing commas is left untouched with a warning when only the `instructions` or `context.fileName` entry would be written. Writing MCP servers into one still fails with a hint, as before.
-- `clean` no longer prints the Gemini `context.fileName` advice, and `root.local_file` of a provider spec rejects backslashes, drive prefixes and the root file itself.
-- `AGENTS.local.md` (codex or amp only), `.hermes.local.md`, `.junie/guidelines.local.md` and Antigravity's `GEMINI.local.md` are no longer written; the first `generate` removes the ones an earlier version left, through the local manifest.
+- Local content reaches each tool through a file it loads (`GEMINI.local.md`, `AGENTS.local.md`, `AGENTS.override.md`, `.junie/rules/ai-rulez.local.md`, ...); the old non-working names are removed on upgrade.
+- `clean` leaves no ai-rulez keys behind in hand-authored settings documents.
 
 ## [4.23.0] - 2026-10-03
 
 ### Added
 
-- **`config.local.*` overlay**: a machine-local `config.local.{toml,yaml,yml,json}` beside the main config is merged onto it at load time (scalars local-wins, maps per key, `presets` as an ordered union with `"!name"` drops, named lists such as `mcp_servers` merged by name with `remove = true`). It is gitignored, validated against `schema/ai-rules-local.schema.json`, skipped for plugin bundles and never written back by config mutators. `validate` prints an overlay summary (key paths only).
-- **`ai-rulez local`** (`init`, `show`, `set`, `unset`, `path`) edits the overlay; `--local` on `profile`, `include` and `skill` (and `local: true` on the matching MCP tools) writes there instead of the shared config. `local show` withholds values outside a small type-checked allowlist unless `--reveal` is given, `local set --stdin` keeps secrets out of shell history, and names containing dots are addressed as `mcp_servers["foo.bar"].command`. Local profiles may use local domains.
-- **Local skills, agents, commands and domains**: `.ai-rulez/local/` mirrors the shared layout. Local domains follow the active profile, `targets` apply, and local items are written to the same per-item paths as shared ones (a name collision with a shared item is an error). Copilot gets `.github/instructions/ai-rulez.local.instructions.md` and Antigravity `GEMINI.local.md` for local context. `add`, `remove` and `list` take `--local` for every content type, and the MCP CRUD tools take `local: true`.
-- **Shared baseline and drift guard**: with local configuration present, `generate` also renders the shared view and classifies outputs as local-only, drift or suppressed. Drift on a tracked or unignored shared file stops generation (paths only, also in a non-zero `--dry-run`) unless `--allow-local-drift` is passed on the command line; MCP clients cannot bypass it. Local-only paths go to a per-project block in `.git/info/exclude`, a gitignored `.generated-manifest.local.json` tracks them so teammate-view runs never delete them, and shared outputs keep the shared `Source-Hash`. `--no-local` on `generate`, `validate` and `tokens` (MCP `no_local`) renders the teammate view and keeps the ignore entries of local files that exist. `generate` refuses, listing the paths, when a machine-local or secret-bearing output, the overlay or the `local/` tree would not be git-ignored once the ignore entries are written (for example because a `!` rule un-ignores it). `clean` removes every file the local manifest lists, even after the overlay was deleted.
-- **xum http/sse MCP servers** (#208): remote servers are written as `{transport, url, headers}` entries in `.xum/mcp.jsonc`, and disabled servers set `disabled: true`. The secret guard now also covers `.xum/mcp.jsonc`, which must be gitignored when it holds resolved header secrets.
-- **`agents_md = true`** (top-level, default `false`) renders the files several tools share once: one `AGENTS.md` (nested `<scope>/AGENTS.md` for `[[scopes]]`) with the always-on rules and context, and one `.agents/skills` tree, read by the `codex`, `opencode`, `amp`, `xum`, `claude` (through a `CLAUDE.md` shim), `gemini`, `antigravity`, `hermes`, `cursor`, `copilot`, `windsurf`, `cline`, `continue-dev` and `junie` presets. Tools with a rules folder keep their path-scoped, auto and manual rules there; root files that would shadow `AGENTS.md` are no longer written. With the flag off, output is unchanged from 4.22.2.
+- **`config.local.*` overlay** and `ai-rulez local` for machine-local configuration, plus local skills, agents, commands and domains under `.ai-rulez/local/`.
+- **`agents_md`**: renders one shared `AGENTS.md` and `.agents/skills` tree for many presets.
+- A shared baseline and drift guard: a teammate-view run never deletes your local outputs, and drift on a tracked shared file stops generation unless `--allow-local-drift`; `--no-local` renders the teammate view.
 
 ### Changed
 
-- **`.gitignore` management adds only what git does not already ignore**: `generate` checks each entry with `git check-ignore` against all ignore sources (with its own block left out, without touching your files) and skips entries you already ignore or have un-ignored with a `!` rule; the managed block is removed when empty. Machine-local and secret outputs you un-ignored stay out of the block with a warning. Outside a git repository every entry is still added. A `.gitignore` that is a symbolic link is never written through (git does not read it): all entries go to a per-project block in `.git/info/exclude` instead, and ignore files are read with a size limit, so a link to a device cannot hang `generate`.
-- **poly hook catalog**: `ai-rulez-validate`, `ai-rulez-generate` and `ai-rulez-recursive` pass `--no-local`, so hooks render the shared view and never fail on, or write, a developer's machine-local configuration.
-- **Config writes keep the file mode** of an existing config instead of resetting it to `0644`.
-- **MCP `add_include`** defaults `merge_strategy` to `local-override` (it previously sent a value validation rejected).
+- `.gitignore` management adds only what git does not already ignore.
 
 ### Fixed
 
-- **Gemini agents** are written to `.gemini/agents/<id>.md`, the only project location Gemini CLI loads subagents from; `.agents/agents/` was never read. The old files are removed on the next `generate` (files other tools still write there stay). Every agent now has the required `description` (a generic one when the source has none), and a bare Claude model alias (`sonnet`, `opus`, `haiku`) is omitted with a warning so the agent inherits the session model; `gemini_model` and `defaults.model_by_preset.gemini` are written as given.
-- **xum disabled stdio MCP servers** are written as `{transport: "stdio", command, disabled: true}` instead of an enabled command string, and a server with `env` warns that Xum's `mcp.jsonc` cannot set environment variables (Xum reads only the command string of a stdio entry).
+- Gemini agents are written to `.gemini/agents/`, the location Gemini CLI loads.
+- Xum disabled stdio MCP servers are written as disabled.
 
 ### Security
 
-- **Generated files that contain resolved MCP secrets** (`.mcp.json`, `.claude/settings.json`, ...) are written `0600`, and an existing world-readable file is tightened. Credentials in a server URL (user info, `?token=`-style query values), in secret-looking flags (names ending in `token`, `key`, `secret`, `password`, `auth` or `credential`; `--max-tokens`, `--api-key-file` and numeric values are not), in `Authorization: Bearer ...` args and in URL-valued args and env values count as secrets too, and `generate` refuses to write such a config unless it is git-ignored; the error lists every path.
-- **Include and skill sources** are logged and returned with URL credentials and query-string values redacted.
+- Generated files that contain resolved MCP secrets are written `0600`.
+- Include and skill sources are logged with URL credentials redacted.
 
 ## [4.22.2] - 2026-10-03
 
 ### Fixed
 
-- **Generator schema v8** forces a one-time rewrite of existing generated files.
-- **Cursor agents** are written to `.cursor/agents/<id>.md`, which Cursor reads; `.agents/agents/` is not a Cursor agent location. The old files are removed on the next `generate`. `readonly` and `is_background` are written as YAML booleans; unparsable values are omitted with a warning.
-- **OpenCode agents with a bare model alias** (`model: sonnet`, the Claude form) are no longer written as is. OpenCode needs `provider/model`: it silently dropped the whole agent file, or failed the session with `Model not found: sonnet/.`. `generate` now omits an unqualified model with a warning, so the agent inherits the session model; set `opencode_model` in the agent frontmatter or `defaults.model_by_preset.opencode` to pin one. Surrounding whitespace in a model value is trimmed for every preset.
-- **OpenCode agent variant** is written as a separate `variant:` key next to a plain `provider/model`, because markdown agents do not accept the `model#variant` form (only `opencode.json` does). A `#variant` in the source model is split off and wins over the configured effort.
-- **OpenCode agent `hidden`, `temperature` and `top_p`** are written as a boolean and top-level numbers instead of quoted strings (and no longer under `request.body`), which OpenCode rejected; unparsable values are omitted with a warning.
+- Generator schema v8 forces a one-time rewrite of existing generated files.
+- Cursor agents are written to `.cursor/agents/`.
+- OpenCode agent model, variant, `hidden`, `temperature` and `top_p` are written in the shapes OpenCode accepts (an unqualified model is omitted with a warning).
 
 ## [4.22.1] - 2026-10-03
 
 ### Fixed
 
-- **Cursor `globs`** is written as the bare comma list Cursor's own rule files use (`globs: **/*.go,**/*.ts`) instead of a quoted YAML string; unusual values keep the quotes. Windsurf, Antigravity and Copilot keep quoted values. Generated files are rewritten once on upgrade (generator schema v7).
-- **Negated globs (`!x`)** are dropped from the frontmatter of every dialect, not only Copilot, with a warning. A rule whose globs are all negated stays in the root file where the preset has one and is otherwise written as an always-on rule file.
-- **Junie `_Applies to: ..._` lines** format globs as code spans, so `_` and `*` in a glob are no longer read as emphasis.
-- **`AGENTS.md` is identical across `codex`, `opencode`, `xum` and `amp`**: the `amp` preset no longer includes context `summary` lines in `AGENTS.md`, which the other three never emitted, so the shared file renders the same whichever preset writes it.
-- **Scoped `auto` and `manual` rules** are written to the root rules folder without a path restriction, as before; `generate` now warns once per scope about it.
-- **`targets` naming a root file by its base name** (`copilot-instructions.md`, `guidelines.md`) now selects that preset's root file and rule files, like a rule file's base name does.
-- **`validate`** warns when a legacy always-on activation (`trigger: always_on`, `alwaysApply: true`) comes with `paths`, which are ignored.
-- Claude rule file names keep the case of the source name (changed in 4.22.0, for example `API-Design.md`); rename a source if you relied on lowercase names.
-- **Rules no longer vanish when a rule file name is taken**: a hand-written file such as `.claude/rules/testing.md` that collides with a generated rule is left alone and the rule is written to `testing.ai-rulez.md` (`<id>.ai-rulez.instructions.md` for Copilot) with a warning naming both. The renamed file is recorded in the manifest, gitignored per file, and removed once the collision is gone. `generate --dry-run` lists the renamed file and no longer lists files the overwrite guard skips. The `.ai-rulez` name is what the tool sees (for example `testing.ai-rulez` in the rule list), so rename the hand-written file if that matters.
-- **Rule names that map to the same file id no longer abort generation** (the previous behaviour): `api_style`/`api-style`, `Foo`/`foo` or `C++ style`/`C style` keep the first source, sorted by path relative to the config dir (includes sort as `include:<name>/<path>`), under the plain name, and the later ones get a `-<6 hex of sha1(that path)>` suffix, with a warning. The same applies to machine-local rules (`<id>-<hash>.local<ext>`). The suffix does not depend on the checkout location or the machine, but adding or removing a rule that sorts earlier can move the plain name to a different rule. Generation still fails if the suffixed name is also taken.
-- **Custom provider specs with `outputs.rules.split = true`** get the same protections as the built-in rules folders (overwrite guard, hashes in the banner, per-file gitignore), and `dir` is now required for them and must be a relative path inside the project.
-- **Provider specs without `split` that write into a rules folder** now carry a hash banner, so they are no longer rewritten on every run or mistaken for hand-written files.
-- **Ownership check for rule files** only trusts a generated-file banner at the top of the file (first comment after the frontmatter), not a marker quoted anywhere in the first 16 KB. Frontmatter delimiters with CRLF line endings are read the same as LF, and `.md` header stripping only removes a banner at the start of the file, so a `-->` in the body (for example fenced HTML) no longer changes the content hash.
+- Cursor `globs` is written as a bare comma list.
+- Negated globs (`!x`) are dropped from every dialect with a warning.
+- `AGENTS.md` is identical across `codex`, `opencode`, `xum` and `amp`.
+- Rules no longer vanish when a rule file name is taken (written as `<id>.ai-rulez.md`), and names that map to the same file id no longer abort generation (later ones get a stable suffix).
 
 ## [4.22.0] - 2026-10-02
 
 ### Added
 
-- **Copilot path-specific instructions**: path-scoped rules and context are written to `.github/instructions/*.instructions.md` with `applyTo` frontmatter (all rules with `[rules] mode = "split"`); the rest stay in `.github/copilot-instructions.md`.
-- **`[rules] mode` and `mode_by_preset`**: config for choosing `split` or `inline` rules output, globally or per preset, validated by `validate` and the JSON schema. MCP `update_config` accepts `rules_mode` and `rules_mode_by_preset`, and `read_config` returns both. The default is `split`, which writes every rule to the tool's native rules folder for presets that have one; `inline` keeps them in the root file.
-- **Rule `activation` frontmatter**: rules and context files can set `activation` to `always`, `glob`, `auto` or `manual`. `validate` rejects unknown values, `glob` without globs, `auto` without a description and `always` together with globs, and warns when a legacy `trigger` or `alwaysApply` contradicts it. Comma-separated `paths`/`globs` such as `paths: "src/**, docs/**"` now split into separate globs (commas inside `{}`, `[]` or escaped with a backslash are kept). An `activation` key is no longer passed through as an extra frontmatter field.
-- **Antigravity `.agents/rules`**: the antigravity preset writes rules as native rule files with `trigger`/`globs` frontmatter (top level only). The default `split` mode moves every rule there; `inline` moves only path-scoped rules. When the gemini preset is also enabled both write `GEMINI.md`, so rules stay inline unless `rules.mode_by_preset.antigravity` is set.
-- **Junie `.junie/rules`**: in the default `split` mode Junie writes each rule to `.junie/rules/<id>.md`; `inline` keeps everything in `.junie/guidelines.md`.
-- **Provider specs**: `outputs.rules` accepts `split`, `inline_filter` and `dialect` so a custom provider can opt in to split-aware rules output.
-- **Local rules as native rule files**: where a built-in preset routes rules to rule files, rules in `.ai-rulez/local/rules` become `<rulesdir>/<id>.local<ext>` (for example `.claude/rules/my-rule.local.md`) instead of landing in `CLAUDE.local.md`, so the tool loads them natively. Routing is the one shared rules use: every rule with `[rules] mode = "split"` (and always for Cursor, Windsurf, Cline and Continue), only path-scoped rules in inline mode for presets that scope rules, and Copilot still keeps auto, manual and negated-only rules inline. The files are gitignored through one `<rulesdir>/*.local.*` pattern, written only after that ignore entry is in place, and listed in a new gitignored `.ai-rulez/.generated-manifest.local.json` instead of the committed manifest, so a teammate's run never deletes them (`clean` removes them through it). Names matching `*.local.*` in a rules folder are reserved for ai-rulez local rules: an existing hand-written file with such a name is skipped with a warning. Local context still goes to the `.local` root file, and custom provider presets get no local rule files. Local rules and context a preset has no place for (for example local context with Cursor, or unscoped local rules with Copilot in inline mode) are not written and are reported in one warning per preset. New `config.LocalRuleProvider` hook.
+- Rule `activation` frontmatter (`always`, `glob`, `auto`, `manual`), plus `[rules] mode` and `mode_by_preset`.
+- Copilot path-specific instructions (`.github/instructions/*.instructions.md`).
+- Local rules written as native rule files.
 
 ### Changed
 
-- **BREAKING: rules are split into native rules folders by default**: the default `[rules] mode` is now `split`. Claude writes rules to `.claude/rules/*.md` (CLAUDE.md keeps context), Copilot to `.github/instructions/*.instructions.md` (auto and manual rules stay inline), Junie to `.junie/rules/` and Antigravity to `.agents/rules/` (inline when the gemini preset is also enabled). Set `[rules] mode = "inline"` (or `mode_by_preset`) to keep the previous layout. Stale inline content is removed on the next `generate`.
-- **`ai-rulez tokens` rule-file accounting**: path-scoped rule files count as conditional, manual rules as on-demand, and agent-requested rules split into an always-loaded description and an on-demand body, instead of all counting as always-loaded.
-- **Claude rule files**: path-scoped rule files in `.claude/rules` now carry a generated banner, and path-scoped context is written to `.claude/rules/context-*.md`. With `[rules] mode = "split"` Claude and Junie write every rule to their rules folder instead of the root file. Claude rule file names keep the rule name's case. Generated files are rewritten once on upgrade (generator schema v6). Rule names that differ only in case or collide after sanitizing (including a context file `x` against a rule `context-x`) now fail generation in every rules-folder preset instead of silently overwriting each other; the custom `directory` preset is not part of this check. Names with no ASCII letters or digits (for example CJK-only) get a stable `rule-<hash>` file name instead of failing.
-- **Scope shown for rules inlined into root files**: rules inlined into root files (`AGENTS.md`, `GEMINI.md`, ...) now state their path scope (`_Applies to: ..._`) or trigger description (`_When relevant: ..._`) instead of silently becoming global. `manual` rules still render as always-on and log one warning listing them.
-- **Rule files are processed like inline rules**: bodies in per-rule files (Cursor, Windsurf, Cline, Continue, Copilot, Antigravity, Claude) now have a leading H1 that repeats the rule name removed.
-- **Legacy Cursor `alwaysApply: false`** now means agent-requested (when a description is set) or manual (without one) instead of always-on.
-- **Rule-file freshness hashes** now live in the generated banner instead of the frontmatter, because the tools' frontmatter parsers are not documented to tolerate YAML comments. Rules-folder files written by earlier versions are rewritten once to move the hashes.
-- **Copilot**: `auto` and `manual` rules stay in `.github/copilot-instructions.md` instead of becoming instructions files without `applyTo`, which Copilot would not apply automatically. Negated globs (`!x`) are dropped from `applyTo` with a warning, and a rule whose globs are all negated stays in `copilot-instructions.md`.
-- **Antigravity**: explicitly splitting rules while the gemini preset is enabled warns that they load twice; the quiet default demotion is only logged at info level when it actually costs rule files.
-- **Scoped rule files go to the root rules folder**: for `[[scopes]]`, rules-folder presets (claude, cursor, copilot, windsurf, cline, continue-dev, antigravity, junie) no longer write `<scope>/.claude/rules`, `<scope>/.cursor/rules` and so on, which tools do not read. Scoped rule files, and scoped context that becomes a file, are written to the root folder as `<dir>/<scope-slug>/<id>` (Claude, Cursor, Copilot) or `<dir>/<scope-slug>--<id>` (Windsurf, Cline, Continue, Antigravity, Junie). Their globs are relative to the scope root and get the scope path as prefix; rules without globs, or with only negated globs, apply to `<scope>/**`; `auto` and `manual` rules keep their mode; a glob containing `..` (also inside braces) skips that rule for the scope with a warning. With `[rules] mode = "inline"` only path-scoped items move; the rest stays in the scope's root file. Rule files of the root and all scopes that map to the same path, or two scopes whose paths sanitize to the same slug, fail generation. Previously generated `<scope>/.../rules` files are removed on the next `generate`, and `clean` removes the emptied scope subfolders and lists them in `--dry-run`.
-- **Scopes no longer repeat root domains**: a scope renders only the domains of its profile that the root output does not already contain (builtin, include and root-profile domains are skipped), and a scope left empty writes no files. Scope paths are validated: relative, no `..`, no glob characters.
-- **Scoped inline remainders for Copilot and Junie**: these tools read their root file at the repository root only, so inline rules and context in a scope's copy are never loaded; `generate` warns and names them (see `docs/monorepo.md`).
-- **Activation warnings**: an unknown legacy `trigger` or `alwaysApply` value is reported by `validate` and `generate` as a warning naming the file; `trigger` is matched case-insensitively. The downgrade summary now covers every rules-folder preset.
-- **Frontmatter `targets` now restrict rule outputs**: they previously only applied to targeted sections, commands and skills, so a rule targeted at `CLAUDE.md` also landed in `.cursor/rules/`. A target now selects an output by preset name (case-insensitive), root file, file path or base name, directory prefix (`.cursor/rules/`), or glob. This applies to every rules-folder file (Claude, Junie, Copilot, Antigravity, Cursor, Windsurf, Cline, Continue) and to the inlined root files `CLAUDE.md`, `AGENTS.md` (codex, opencode, xum, amp), `GEMINI.md` (gemini, antigravity), `.hermes.md`, `.junie/guidelines.md`, `.github/copilot-instructions.md` and the `*.local.md` variants. A root file shared by several presets is selected by the name of any of them, so it stays identical whichever writes it. A rule targeted only at skill or agent files (for example `.claude/skills/*/SKILL.md`) no longer appears in any root file, and one targeted only at a rules folder (`.junie/rules/`) is written as a file even in `inline` mode (Junie and providers without `inline_filter` write no files in `inline` mode, so it is omitted there). Rules without `targets` are unaffected, and root files of unrelated presets that previously inlined everything lose the items targeted elsewhere.
-- **Target matching is unified**: one matcher now serves rule files, root files, skills/agents sections and provider filters. Paths compare case-insensitively, `\` and a leading `./` or `/` are accepted, `dir/*` and `dir/**` cover the whole directory tree, and a bare `*` or `**` matches every output. Malformed glob targets (such as `[x`) never match; `validate` and `generate` warn about them.
+- **BREAKING: rules are split into native rules folders by default** (`[rules] mode = "split"`): Claude writes `.claude/rules`, Copilot `.github/instructions`, Junie `.junie/rules` and Antigravity `.agents/rules`. Set `[rules] mode = "inline"` (or `mode_by_preset`) for the old layout.
+- Frontmatter `targets` now restrict rule outputs, and scoped rule files go to the root rules folder with the scope path as a prefix.
 
 ### Fixed
 
-- Include and skill-source git URLs no longer leak credentials (`https://TOKEN@host/...`) into `--debug` logs, error context or echoed git output; userinfo is shown as `<redacted>`.
-- Cline rules (`.clinerules/`) now honor `paths`/`globs`: scoped rules and context files get `paths` frontmatter, which was previously dropped.
-- Continue rules (`.continue/rules/`) now carry the `name` Continue requires, plus `globs`, `alwaysApply` or `description` according to the rule's activation.
-- Windsurf rules honor `paths`/`globs` and emit `globs:` instead of `glob:`. Untriggered rules are written as `trigger: always_on` (Windsurf treated them as manual), and context files now get frontmatter. Legacy `trigger`/`glob`/`description` keep working, and files over Windsurf's 12000-character limit log a warning.
-- **Cursor context rules were manual-only**: `context-<name>.mdc` files had no frontmatter, so Cursor never applied them automatically. They now get `alwaysApply: true`, or `globs` when path-scoped. Cursor rules and context are rendered by the shared rule-file renderer, so globs with braces such as `*.{ts,tsx}` are expanded (`*.ts,*.tsx`), which Cursor needs; rules with `activation: manual` get an explicit `alwaysApply: false`.
-- Generated rule files are gitignored per file (for example `.claude/rules/x.md`) instead of the whole rules folder, so hand-written rules in the same folder are no longer ignored.
-- `generate` no longer overwrites a hand-written rule file in a native rules folder that collides with a generated rule name. It warns and skips the file; rename one of them.
-- A legacy `trigger: glob` without globs, and `model_decision`/`auto` without a description, are written as manual instead of always-on. Cursor `auto` rules now carry an explicit `alwaysApply: false`.
-- Hash detection no longer gives up on frontmatter longer than 60 lines.
+- Include and skill-source URLs no longer leak credentials into logs or errors.
+- Cline, Continue and Windsurf rules honour `paths`/`globs`; Cursor context rules are applied automatically.
+- Generated rule files are gitignored per file, and a hand-written rule file is never overwritten.
 
 ## [4.21.0] - 2026-10-02
 
 ### Added
 
-- **`headers` on `[[mcp_servers]]`** (#206): remote (`http`/`sse`) servers can send HTTP headers, typically for auth, e.g. `headers = { Authorization = "Bearer ${TOKEN}" }`. Values resolve `${VAR}` placeholders like `env`, and every preset that renders remote servers (Claude `.mcp.json` and `.claude/settings.json`, Cursor, Copilot, Gemini, OpenCode, Antigravity) writes them as `headers`. A header holding a placeholder or a credential (`Authorization`, `Proxy-Authorization`, `Cookie`, or a sensitive name) is treated as a secret: redacted from the source hash, and generation refuses to write it into an MCP file that is not gitignored. `validate` rejects headers on stdio servers, invalid or case-duplicate header names, and values containing line breaks. Plugin bundles do not carry headers; `generate --plugin` warns per affected server and does not require header placeholders to resolve.
-- **`[header] hashes`**: chooses the freshness lines in generated headers. `"full"` (the default, unchanged) writes `Content-Hash` and `Source-Hash`; `"content"` keeps only the per-file `Content-Hash`; `"none"` writes neither. `Source-Hash` hashes the whole source set, so when generated output is committed, editing one skill rewrote a line in every generated skill, agent and `CLAUDE.md`, and concurrent branches conflicted. With `"content"` or `"none"` an edit changes only the outputs it feeds. In these modes `generate` skips a file only when it is byte-identical to what would be written (the `Generated:` text is ignored under `timestamp = true`), so header-only changes such as `[header] style` still re-render. `clean` and `verify --plugin` are unaffected. Switching modes re-renders every file once. Invalid values are rejected by `validate` and the JSON schema.
+- **`headers` on `[[mcp_servers]]`**: remote servers can send HTTP headers (`Authorization = "Bearer ${TOKEN}"`).
+- **`[header] hashes`** (`full`, `content`, `none`) chooses the freshness lines; `content` stops one edit from rewriting every generated file.
 
 ### Fixed
 
-- **Secret guard missed `opencode.json`**: MCP secrets resolved into `opencode.json` were written even when the file was not gitignored. It is now protected like `.mcp.json` and the other MCP settings files.
+- The secret guard now also covers `opencode.json`.
 
 ## [4.20.1] - 2026-10-02
 
 ### Fixed
 
-- **CRUD commands with `.config/ai-rulez/`** (#207): `add`, `remove`, `list`, `domain`, `profile`, `include`, `skill` and the MCP CRUD tools only looked for `.ai-rulez/` and failed with `.ai-rulez directory not found` in a project using the `.config/ai-rulez/` layout. They now resolve the config directory the same way `generate` and `validate` do. The MCP `update_config` tool likewise saved to a new `.ai-rulez/` instead of the directory it loaded, which then took precedence over `.config/ai-rulez/`.
+- CRUD commands and the MCP CRUD tools work in a project using the `.config/ai-rulez/` layout.
 
 ## [4.20.0] - 2026-10-02
 
 ### Added
 
-- **`[mcp] self_server`**: `generate` can now add ai-rulez's own MCP server
-  (`npx -y ai-rulez@<version> mcp`, `"type": "stdio"`) to the project `.mcp.json`. The entry is merged
-  into an existing file, so hand-authored servers survive, and `.claude/settings.json` is not touched.
-  The version defaults to the running binary (`latest` for a dev build); `self_server_version` pins it and
-  `self_server_command` replaces the launch command. Also adds the `has_mcp_json_entries` sidecar
-  predicate for provider specs.
-- **`validate --recursive` / `-r`**: validates every discovered config root and exits non-zero if any is invalid.
+- **`[mcp] self_server`**: `generate` can add ai-rulez's own MCP server to the project `.mcp.json`.
+- **`validate --recursive`** (`-r`).
 
 ### Fixed
 
-- **`generate --recursive` exit status**: a root that failed to load, validate, or generate was reported but the process still exited 0 (also with `--dry-run`). All roots are still processed and all errors printed, but the exit status is now 1 if any failed. Failures are also printed in quiet mode and are attributed to the right config when roots run concurrently.
-- **`clean` deleting merged settings documents**: `clean` removed a merged file such as `.mcp.json` or `.claude/settings.json` wholesale, taking hand-authored servers and settings with it. A merged document that holds content ai-rulez did not write is now left in place.
-- **`validate --quiet`**: `validate` ignored `--quiet`, so discovery progress and per-root success lines were still printed.
+- `generate --recursive` exits non-zero when any root fails.
+- `clean` no longer removes a merged settings document that holds content ai-rulez did not write.
+- `validate --quiet` is honored.
 
 ## [4.19.0] - 2026-10-02
 
 ### Added
 
-- **Project-level `.config/` convention**: configuration discovery now also accepts
-  `.config/ai-rulez/` (the [`.config` proposal](https://github.com/pi0/config-dir)) as a fallback to
-  the tool-specific `.ai-rulez/`. The CLI, recursive `generate`, MCP recursive discovery, generated
-  headers, and the managed `.gitignore` block all resolve the active config directory, and
-  `.ai-rulez/` still wins when both layouts exist at the same level. `ai-rulez init --config-dir
-  .config/ai-rulez` scaffolds the new layout.
+- Configuration discovery also accepts `.config/ai-rulez/` (the [`.config` proposal](https://github.com/pi0/config-dir)) as a fallback; `.ai-rulez/` still wins when both exist.
 
 ### Changed
 
-- **Generated headers follow the config directory**: banners now name the real source path
-  (`.config/ai-rulez/config.toml` and `.config/ai-rulez/rules/…`) instead of a hardcoded
-  `.ai-rulez/`. `GeneratorSchemaVersion` is bumped so `Source-Hash` values written by 4.18.0 no
-  longer match and every file is re-rendered once.
+- Generated headers name the real config directory.
 
 ## [4.18.0] - 2026-10-01
 
 ### Added
 
-- **Custom header text** (#203): `[header] text` accepts a multi-line string that replaces the banner
-  generated from `header.style`. Useful when the predefined prose does not match the environment — for
-  example the default banner recommends `npx`, but a project manages tools with `mise`. The text is
-  written verbatim, wrapped in the output's comment syntax, and still carries the `Content-Hash` /
-  `Source-Hash` freshness lines, so hash-based regeneration keeps working. `style` is ignored while
-  `text` is set.
+- **`[header] text`** replaces the generated banner with your own multi-line text while keeping the freshness lines.
 
 ### Fixed
 
-- **Rules and context render in priority order again** (#204): the generated files listed rules and
-  context alphabetically by name instead of by the documented `priority` frontmatter
-  (critical → high → medium → low → minimal, name breaking ties). The priority sort was dropped in
-  favor of alphabetical output for determinism; ordering is now priority desc with a name tie-break,
-  which is deterministic and matches the docs. Context gains the same ordering as rules.
-
-- **Regeneration is forced once** after the ordering fix: `GeneratorSchemaVersion` is bumped, so
-  `Source-Hash` values written by earlier versions no longer match and every file is re-rendered on
-  the next `ai-rulez generate`.
-
-- **Generated `opencode.json` stays a managed artifact**: the `opencode` preset now owns the top-level
-  `$schema` key alongside `mcp.servers`, and writes it into a freshly generated document. Previously a
-  generated `opencode.json` carried no `$schema`, so an editor that added one (or a user who did)
-  flipped the file to "partially owned", which drops it from the gitignore/manifest set and made every
-  `generate` disagree with the committed `.gitignore`. A file that adds real settings (`model`,
-  `mcp.timeout`, …) is still treated as the consumer's and preserved.
+- Rules and context render in priority order again (critical to minimal).
+- Regeneration is forced once after the ordering change.
+- A generated `opencode.json` stays a managed artifact (it owns `$schema`).
 
 ## [4.17.0] - 2026-09-30
 
 ### Added
 
-- **Path-scoped rules** (#199): a rule may declare `globs`/`paths` in its frontmatter (two spellings of the same path scope). A path-scoped rule is kept out of the root instructions file and delivered through the target tool's on-demand mechanism: `claude` emits `.claude/rules/<id>.md` with a `paths:` field (a new provider `outputs.rules` output plus a `path_scoped` filter), and `cursor` emits a `.mdc` with `globs:` and `alwaysApply: false`. Presets without a glob mechanism (for example `codex`) keep the rule inline. This lets one source keep `CLAUDE.md` small without a hand-maintained Claude-only copy.
-
-- **Cursor rule frontmatter** (#198): `.cursor/rules/*.mdc` now carry the frontmatter Cursor reads — `alwaysApply: true` for unscoped rules, or `globs:` with `alwaysApply: false` for path-scoped ones — plus the source `description` when set. Previously a generated rule had no frontmatter and was manual-`@`-mention-only.
-
-- **Profile-scoped MCP servers and installed skills** (#202): `[[mcp_servers]]` and `[[installed_skills]]` accept a `profiles` list. The server or skill is emitted only when the active profile names it; omitting `profiles` keeps today's include-everywhere behavior.
-
-- **`defaults.omit_agent_fields`** (#197): suppresses named agent frontmatter fields (`model`, `effort`, `tools`, `description`) for every preset, so an agent stays loadable in a tool where a field would be invalid — an unconfigured model or provider, or a tool name the tool does not recognize.
+- **Path-scoped rules** via `globs`/`paths` frontmatter (Claude `.claude/rules/<id>.md`, Cursor `.mdc` with `alwaysApply: false`).
+- Cursor rule frontmatter (`alwaysApply`/`globs`/`description`).
+- Profile-scoped `[[mcp_servers]]` and `[[installed_skills]]` (`profiles` list).
+- `defaults.omit_agent_fields`.
 
 ### Fixed
 
-- **Generated agents are spawnable as subagents** (#196, #200): the `opencode` preset now defaults an agent to `mode: all` instead of OpenCode's implicit primary-only, and the `xum` preset emits `subagent: {runnable: true}`. Both could be used as a primary only before.
-
-- **Scoped outputs no longer repeat the root content** (#201): a `[[scopes]]` file contained the root rules and context in addition to the scope's own; the target tools load a subdirectory `CLAUDE.md`/`AGENTS.md` on top of the root file, so this duplicated the always-loaded text. A scope now contains only its profile's domains.
-
-- **The `add_include` MCP tool schema** and the repo's own poly hook catalog were stale: the tool advertised the removed `default|override|append` merge values and an `mcp` content type, and the hook catalog listed the removed `enforce` command. Both corrected.
-
-- **Documentation**: a second full pass corrected invalid TOML examples, the go-install guidance (the module path has no `/v4` suffix, so `go install …@latest` resolved to 1.x), marketplace/render paths, and more.
+- Generated agents are spawnable as subagents (OpenCode `mode: all`, Xum `subagent.runnable`).
+- Scoped outputs no longer repeat the root content.
 
 ## [4.16.0] - 2026-09-30
 
 ### Added
 
-- **`${PROJECT_ROOT}` for MCP servers**: an MCP server's `command` or `args` may use the `${PROJECT_ROOT}` placeholder, resolved at generation time to the project root (the directory containing `.ai-rulez/`). It lets a server that requires an absolute path avoid a hardcoded, machine-specific one; `env` values resolve it too unless a real `PROJECT_ROOT` is supplied via `--env`, the process environment, or a dotenv file. Because it resolves to a machine-specific path, generated output carrying it must be gitignored or regenerated per machine. The source hash keeps the literal token, so it stays stable across checkout roots. (For Claude Code, `${CLAUDE_PROJECT_DIR:-.}` in `args` remains the portable native alternative and passes through unchanged.)
+- **`${PROJECT_ROOT}`** can be used in an MCP server's `command` or `args`, resolved at generation time.
 
 ### Fixed
 
-- **`ai-rulez validate` now checks the schema**: the raw config file is validated against `schema/ai-rules.schema.json` (TOML is converted to JSON first), so an unknown key or a value outside an enum is reported rather than silently dropped. V3 configs still get the structural checks only. The schema itself gained the consumer `plugins`/`marketplaces` arrays (previously rejected under `additionalProperties: false`), the correct includes enums (`commands`, `include-override`, `local_override`), the missing builtin names (`docker`, `cicd`, `observability`, `polyglot-bindings`, `vite-plus`), the TOML `schema`/`$comment` keys, and lost the dead deprecated `compression` property.
-
-- **`include add --merge-strategy` wrote a value the resolver rejected**: the CLI accepted `default|override|append` and stored the value verbatim, but the include resolver only accepts `local-override|include-override|error`, so an added include was silently skipped at generation. The CLI and CRUD layer now use the resolver's values (`local-override` is the default).
-
-- **The `popular` pseudo-preset**: it was not a registered built-in and had no generator, so MCP `init_project` with `popular_providers` wrote a config that failed validation. It now emits the curated provider set. `AllPresetNames`/`IndividualPresetNames` are derived from the built-in registry, so they include `opencode` and `mcp` and can no longer drift.
-
-- **Documentation audit**: corrected ~50 inaccuracies across `README.md` and `docs/` — stale preset output paths (`amp`→`AGENTS.md`/`.agents/`, `windsurf`→`.windsurf/`, `.cursorrules`→`.cursor/rules/`), V3-YAML examples labelled `config.toml`, the fictional custom-preset template-function reference (now describes the implemented `text/template` behavior and points at provider specs), wrong `[[plugins]]`/`[[marketplaces]]` fields, the `add skill --priority` example, exit codes, and more. The builtin-agent table, `go install` path, and builtins list in the shipped skill were also corrected.
+- `validate` checks the raw config against the JSON schema (unknown keys and bad enums are reported).
+- `include add --merge-strategy` accepts the values the resolver uses.
+- The `popular` pseudo-preset emits the curated provider set, and documentation was corrected.
 
 ## [4.15.0] - 2026-09-30
 
 ### Added
 
-- **Profile-scoped builtin domains** (#195): a profile's domain list may reference a builtin pack as `builtin:<name>` (e.g. `builtin:docker`). The pack is loaded for that profile only, instead of every profile. This works even when the root `builtins` field is absent or `false` — a profile reference is an explicit opt-in — and the `builtin:` prefix keeps the pack from colliding with a local domain of the same name. A pack the root `builtins` field already enables stays globally active rather than being downgraded. Validation and `profile add` accept the prefixed form and reject an unknown pack.
-
-- **OpenCode v2 preset output** (#194): the `opencode` preset emits a native v2 `opencode.json` with MCP servers under `mcp.servers` (`type` of `local`/`remote`, `disabled`, `command` as a single array, `environment` for stdio). The file is merged, so every other key in a hand-authored `opencode.json` — including a sibling `mcp.timeout` — is preserved. Agent frontmatter moves to the v2 shape: effort becomes a model `variant` joined as `model#variant`, `temperature`/`top_p` move under `request.body`, and the non-schema `name` key is dropped because the filename is the agent ID.
-
-- **OpenCode v2 plugin adapter** (#194): the plugin runtime now emits an OpenCode v2 plugin — `Plugin.define({ id, setup })` from `@opencode/plugin` — instead of the v1 function entrypoint that v2 refuses to run, and bundles the plugin's skills, commands, and agents under `.opencode/`.
+- **Profile-scoped builtin domains** (`builtin:<name>`, e.g. `builtin:docker` loads a pack for one profile only).
+- **OpenCode v2 preset output** (`opencode.json` with `mcp.servers`) and an OpenCode v2 plugin adapter.
 
 ### Changed
 
-- **Merged JSON documents can own a nested key path**: `jsonmerge` now supports `OwnedKey.Path`, letting a generator own `mcp.servers` while preserving sibling keys under the same ancestor, and the partially-owned check recurses to match.
+- Merged JSON documents can own a nested key path (for example `mcp.servers`).
 
 ## [4.14.1] - 2026-09-29
 
 ### Fixed
 
-- **Windows CI for the 4.14.0 test suite**: two new tests (`TestRenderAgentPlugins_ManifestSkillsAndMCP`, `TestGeneratePresets_ProviderBacked`) keyed outputs by a slash-normalized path but looked them up with a native `filepath.Join`, so they failed on Windows only. No runtime behavior changed; this patch supersedes the red `v4.14.0` tag with a green one.
+- Internal/test-only fixes; no runtime behavior changed.
 
 ## [4.14.0] - 2026-09-29
 
 ### Added
 
-- **`xum` built-in preset** (#190): generates project files for the [Xum](https://xum.coder.com) coding agent — a shared `AGENTS.md`, skills under `.xum/skills/<id>/SKILL.md`, agent definitions under `.xum/agents/<id>.md` with Xum's frontmatter shape (`ai.model`, `ai.thinkingLevel`, `tools.add`), and stdio MCP servers in `.xum/mcp.jsonc`. Effort tiers `xhigh`/`max` map to `high`, matching Xum's `thinkingLevel` vocabulary; remote (http/sse) MCP servers are skipped with a warning because Xum's command-string format is stdio-only.
-
-- **Provider-backed custom presets** (#191): a `[[presets]]` entry may set `provider = "<project-relative spec path>"` to reference a declarative [provider spec](https://github.com/Goldziher/ai-rulez/blob/main/schema/provider.schema.json) instead of a template. A provider spec carries the full built-in feature set — root instructions file, skills/agents/commands, per-agent frontmatter, effort/model, and MCP sidecars — so custom tools no longer stop at `markdown`/`directory`/`json`. The spec is validated at `validate`/generate time, must stay inside the project root, and its `name` must match the preset's. TOML configs now also accept custom and provider presets as inline tables (`presets = ["claude", { name = "my-tool", provider = "..." }]`), which they previously could not express at all.
-
-- **Agent Plugins 1.0.0 plugin runtime** (#193): the opt-in `agent-plugins` runtime packages a plugin in the portable [Agent Plugins standard](https://agent-plugins.org) form — a root `plugin.json`, a root `skills/` directory, and a root `mcp.json` using the standard's closed server variants (`stdio`, `streamable-http`, `sse`). It is not in the default runtime set, so existing bundles are unchanged; enable it with `runtimes = ["agent-plugins"]`. Authored plugin names are validated against the standard's grammar, and `${PLUGIN_ROOT}`-rooted MCP commands are rewritten to the plugin-relative `./` form the standard requires.
+- **`xum` preset** for the [Xum](https://xum.coder.com) coding agent (`AGENTS.md`, `.xum/skills`, `.xum/agents`, `.xum/mcp.jsonc`).
+- **Provider-backed custom presets**: a `[[presets]]` entry may reference a declarative provider spec instead of a template.
 
 ### Fixed
 
-- **CRUD commands wrote `config.yaml` into TOML-only projects** (#192): `skill install`/`remove`, `profile add`/`remove`/`set-default`, `include add`/`remove`, and the MCP `update_config` tool all rewrote the configuration through `SaveConfig`, which only knew about `config.yaml` and `config.json` and fell back to YAML when neither was present. On a V4 project (`config.toml`) this created a spurious `config.yaml` that the loader then shadowed, so the mutation was silently lost. `SaveConfig` now writes back in the file's actual format, preferring `config.toml`, then `config.yaml`/`config.yml`, then `config.json`. **Consequence**: TOML parsing does not round-trip comments, so a hand-commented `config.toml` loses those comments when a CRUD command rewrites it; the file keeps a standard header pointing at the documentation.
-
-### Changed
-
-- `ai-rulez migrate v4` now shares one TOML serializer with `SaveConfig`. The serializer previously flattened every preset to its name, which would have dropped custom/provider presets; it now emits built-in presets as strings and custom/provider presets as inline tables, and preserves all fields (including `defaults`, `scopes`, `compact`, `plugin`, and `marketplace`).
+- CRUD commands no longer write a spurious `config.yaml` into a TOML project (a mutation loses the comments of a hand-commented `config.toml`).
 
 ## [4.13.0] - 2026-09-27
 
 ### Added
 
-- **`ai-rulez tokens`**: reports the prompt-token cost of the generated configuration, split by when an agent actually loads it. Artifacts are measured as rendered strings in memory at the same seam `generate --dry-run` walks, so nothing is read back off disk and a stale or half-written output tree cannot corrupt the numbers. Output is grouped per runtime and then per bucket — `always` (the root instructions file, skill and command names, agent names and descriptions), `conditional` (skill and command descriptions, which some harness modes carry and others do not), `on demand` (bodies), and `unmodeled` (cost ai-rulez cannot see, such as the tool schemas an MCP manifest implies). The root file is broken down per section with rules and context listed individually, so an expensive one can be named; skill names, descriptions and bodies are separate lines, because a single per-file total hides which part is being paid for. Flags: `--json`/`-j`, `--budget`/`-b` (exit 2 when the headline is exceeded, distinct from 1 so a hook can tell over-budget from failure), `--compare-profiles` (renders several profiles in one process and prints a table), `--tokenizer` (`cl100k_base`, embedded, offline, no API key — or `estimate` for a byte ratio), plus the usual `--profile`/`-p` and `--config-dir`/`-n`. **The report states its own limits in its output**: counts are approximations because Claude's tokenizer is not published (`cl100k_base` measured 8% low against one real 19,230-byte instruction file); runtimes are not additive, since one session loads one root instructions file, so emitting both `CLAUDE.md` and `AGENTS.md` costs one of them and the headline is the largest single runtime rather than the sum; and ai-rulez counts only what it generates, never predicting a session total, because the harness's own system prompt, tool schemas and per-artifact overhead are invisible to it. Two consequences worth knowing: the per-file `Content-Hash` and `Source-Hash` lines cost about 76 tokens per artifact, because a blake3 hex digest is incompressible, and the `## Agents` roster in the root file duplicates every agent file's name and description.
-
-- **Composed profiles**: a profile value may name several profiles separated by commas — `--profile base,backend`, or `default = "base,backend"` in the config — and resolves to the de-duplicated union of their domains, ordered by first mention. This is what a shared baseline plus role-specific extras needs: one `base` profile everybody installs and one profile per role, instead of a hand-written profile for every base-and-role pair. A single name behaves exactly as before, including the built-in `default` fallback, which differs depending on whether any profiles are defined at all. An unknown element is an error naming that element rather than echoing the whole value, with the same available-profiles hint. Whitespace and empty elements are ignored (`base, backend` and `base,backend,` select the same two profiles); a value that is nothing but separators selects nothing and is reported as not found. Profile values list domains only — composition is one level deep, so there is no nesting and no cycle to detect — and a profile name may no longer contain a comma, since it could never be selected. Composition applies wherever a profile is named, including a `[[scopes]]` entry's `profile` and `ai-rulez tokens`. `tokens --compare-profiles` is now a repeatable flag rather than a comma-splitting list, because a comma composes: pass it once per column (`--compare-profiles base --compare-profiles base,backend`).
+- **`ai-rulez tokens`** reports the prompt-token cost of the configuration by load bucket (`always`, `conditional`, `on demand`, `unmodeled`), with `--budget`, `--compare-profiles` and a `--tokenizer`.
+- **Composed profiles**: `--profile base,backend` (or `default = "base,backend"`) resolves to the de-duplicated union of their domains.
 
 ### Changed
 
-- **The `Generated:` header line is now off by default.** Generated output is byte-reproducible unless a project asks for a per-run value: the same sources generate the same bytes, output can be verified by content hash, and `CLAUDE.md` and `AGENTS.md` — which the minimal header renders identically, since it carries no per-output field — can no longer disagree. They did before, because every preset called `time.Now()` for itself, so the two renders straddling a second boundary produced files differing in exactly that line; downstream completeness checks had to special-case it to compare them at all. `[header] timestamp = true` opts the line back in. **Upgrading**: the source hash already covered `header_timestamp`, so the first `generate` after upgrading rewrites every output once to drop the line, and runs after that are byte-stable; a project that wants the line must now say so. When it is enabled, one run resolves the timestamp once and stamps every file it writes with that value, and `SOURCE_DATE_EPOCH` pins it (an unparsable value is ignored in favour of the wall clock) so an opted-in project can still be reproducible.
-
-- **Builtin rules cut roughly in half, with narrow guidance moved to skills.** Everything in a builtin pack's `rules/` directory is concatenated into the generated root instruction file, so it is re-read on every request of every session; a skill costs its name until it is invoked.
-
-  Two scopes, both measured on the generated `CLAUDE.md`, and worth not confusing: **across the seven auto-included packs** — what a project gets without naming anything — 33 rules / 11,596 bytes become 18 rules / 5,351 bytes, a little over 1,500 tokens back per request at the ~3.9 bytes/token rate that generated instruction prose measures at. **Across all thirteen universal packs**, including the opt-in `docker` and `observability`, 40 rules / 14,421 bytes become 23 / 7,209 bytes. Neither figure is the other; the corresponding source `rules/` trees go 10,033 → 3,929 bytes and 12,365 → 5,342 bytes.
-
-  Seventeen rules stopped being rules. Fifteen were **moved into skills**, not deleted, because they only matter once you are already in a specific activity — writing a test, writing an error path, writing a Dockerfile — which is exactly what a skill's description is for:
-
-  - `code-quality`: `readability-first`, `complexity-limits`, `dead-code`, `avoid-duplication` and `anti-patterns` → the `code-quality-standards` skill; `error-handling` → the `error-handling` skill. The pack now ships skills only.
-  - `testing`: `tdd-workflow` → the `tdd-workflow` skill; `meaningful-assertions`, `test-independence`, `test-naming` and `testing-anti-patterns` → the `testing-conventions` skill. `test-alongside-code` stays a rule — "tests ship with the change" has to land before the change is written — and now points at both skills.
-  - `token-efficiency`: `task-runner` → the `task-runner` skill (it only applies to a repository with a `Taskfile.yaml`, so it was never universal); `incremental-approach` → the `incremental-approach` skill.
-  - `docker`: `container-standards` → a skill of the same name. `observability`: `observability-standards` → a skill of the same name. Neither pack is auto-included, but both were a single technology-scoped rule loaded unconditionally once opted into, and both packs now ship skills only.
-
-  `verify-before-acting` was **merged into** `verification-before-completion`, which said the same thing about the other end of the task; the state-checking clause (branch, working directory, running processes) is preserved in the survivor. `batch-operations` was merged into `incremental-approach`, losing only its instruction to issue independent tool calls in parallel, which every current agent harness already states in its own tool documentation. `branch-hygiene` lost "use descriptive branch names", which no project without its own naming convention benefits from and every project with one overrides.
-
-  **Existing `!domain/rule` exclusions keep working.** The per-item exclusion is keyed by name, not by content type, so `!testing/tdd-workflow` now suppresses the skill. The five converted rules that collapsed into `code-quality-standards` and the four that collapsed into `testing-conventions` no longer have individual keys.
-
-  **Eight new skill names are now claimed by builtin packs**: `code-quality-standards`, `error-handling`, `tdd-workflow`, `testing-conventions`, `task-runner`, `incremental-approach`, `container-standards` and `observability-standards`. These are names a project plausibly already uses for a skill of its own. A project skill with the same name as a builtin skill shadows it — that is the documented precedence, root content over builtins — so check for a collision if you enable one of these packs and a skill of yours stops behaving as written. Exclude the builtin with `!<domain>/<name>` to be explicit about which one you mean.
-
-- The eighteen surviving builtin rules were tightened: frontmatter-plus-heading wrappers around a single sentence removed, and duplicated guidance cut to one owner — `communication-style` no longer restates commit formatting (`git-workflow/commit-messages` owns it, and the contradiction between the two made downstream projects override one of them), `atomic-commits` no longer repeats the conventional-commit type list, and `output-awareness` keeps only what `communication-style` does not already say.
-
-- The README and `docs/configuration.md` descriptions of what each builtin pack contains now match the packs. Both listed rules that are skills, or had moved, and both claimed that `code-quality` and `testing` "remain inline" when `code-quality` no longer ships a rule at all. The universal-domain table in `docs/configuration.md` was also missing `agent-delegation`, `cicd`, `docker` and `observability`, and marked only `ai-governance` as auto-included when six others are.
-
-### Documentation
-
-- Documented how to drop the `## Agents` roster from the generated root instructions files: `builtins = ["!agent-delegation"]`. The roster renders only while the auto-included `agent-delegation` builtin domain is loaded, so excluding the domain removes the section from every root file — `CLAUDE.md`, `AGENTS.md` and the hand-written `codex`, `gemini` and `opencode` outputs alike — with no new configuration key. The per-agent files are still generated, so nothing is lost: the roster is a second copy of each agent's name and description in the one file that is read on every request, measured at roughly 1,100 always-loaded tokens on a 32-agent tree. `ai-rulez tokens` reports it as the `agents_delegation` line.
+- **The `Generated:` header line is now off by default** (output is byte-reproducible); `[header] timestamp = true` opts in.
+- **Builtin rules are roughly halved**, with narrow guidance (code-quality, testing, token-efficiency, docker, observability) moved into skills that load on demand.
 
 ### Fixed
 
-- Skills and commands now honour the documented source precedence (root > on-disk domain > include > builtin) instead of silently inverting it. Rules, context and agents were already deduplicated by name in precedence order; skills and commands never were, so two same-named items both rendered and both were written to the one name-derived output path (`.claude/skills/{id}/SKILL.md`) — leaving whichever the writer happened to reach last, which is the *lowest*-precedence copy. A project `.ai-rulez/skills/testing-conventions/` was therefore replaced wholesale, description and body, by a builtin pack's skill of that name, and a root skill lost to a domain skill, both with exit code 0 and no diagnostic. The lower-precedence copy is now dropped before rendering rather than overwritten after it, and `generate` and `validate` log `Duplicate skill collapsed` / `Duplicate command collapsed` naming the kept and dropped source paths. Shadowing a builtin with a project skill stays a supported pattern — it warns, it does not fail. `getAllDomainSkills` / `getAllDomainCommands` also switched from alphabetical domain order to precedence order, so which domain wins no longer depends on its name.
-- Corrected the domain-collision documentation, which claimed the domain version wins over root for rules and context, and illustrated it with a warning message no code emits (`docs/domains.md`, `docs/configuration.md`). Root wins, and has for as long as `allInlineRules` has been the collector; the domain-wins rule lived only in the `internal/scanner` package retired in 4.12.1, which nothing imported.
-- `generate` now removes the directories its own stale-file pass emptied. Narrowing a profile deleted the `SKILL.md` files the new profile no longer emits but left every `<id>/` directory standing — measured: 200 skills down to 62 left 138 empty directories — and an empty directory under `skills/` reads to a human, and to tooling that lists the directory, as a live skill that has lost its body. Only the ancestors of a file ai-rulez wrote are candidates, so the walk never leaves the generated output roots; it stops below the project root and refuses the `.ai-rulez/` source tree; and a directory holding any entry survives, so a hand-authored file in a skill's `references/`, `scripts/` or `assets/` keeps both that subdirectory and the skill directory above it. Directories a preset declares as outputs (`.codex/agents/`, `.codex/commands/`) are still created empty when there is nothing to put in them — they are current outputs, not leftovers.
-- `generate --recursive` reports a counted file total instead of `len(presets) * 3`. The estimate was wrong in both directions — one preset with three skills generates four files and was reported as three — and nothing measured it. `Generator.GenerateFiles` and `GeneratePluginFiles` return the number of files written, directories excluded; `Generate` and `GeneratePlugin` keep their signatures and delegate. Plugin generation reported `0` for the same summary and now reports its own count.
-- The README no longer claims the auto-included builtin domains "activate automatically, no configuration needed". Builtins load only when the `builtins` field is present in the config — `loadBuiltins` is gated on it — so a project that never sets the field, which is what `ai-rulez init` writes, gets no builtin rules, skills or agents at all. Auto-inclusion means "included without being named once builtins are on", not "on by default". `docs/configuration.md` stated this correctly in one place and is now explicit about the omitted-field case.
+- Skills and commands now honour source precedence (root > domain > include > builtin); the previous inversion silently dropped root and domain items.
+- `generate` removes the directories its own stale-file pass emptied.
 
 ## [4.12.1] - 2026-09-25
 
 ### Fixed
 
-- `generate` no longer deletes H1-like lines from inside fenced code blocks. The first-heading strip applied to rule and context bodies matched `# ` on any line, so a shell or Python comment opening a line inside a fence vanished from `CLAUDE.md` and `AGENTS.md` — silently, with a green exit code, and the only workaround was to never start a fenced line with `# `. Despite its name the pass also stripped every H1 rather than the first, because its guard cleared as soon as a non-blank line followed. It now tracks fenced regions (backtick and tilde, honouring the closing run length), strips a single heading, and leaves indented code blocks alone, since ATX allows at most three leading spaces. Skills were never affected — they pass their body through verbatim. (#188)
-- A merged settings document is no longer re-indented when its first key opens an object or array on the brace line. The indent was inferred from the first indented line, which in `{"permissions": {` / `"allow": []` is the nested member at four spaces rather than the two the document uses, so every hand-authored member came back at the wrong width — the whole-file diff the merge exists to avoid. Detection now tracks brace depth, ignoring braces inside strings, and reads the first line that opens a key at depth one.
-- A CRLF settings document keeps its line endings. Untouched members are re-emitted byte for byte, so their CRLFs survived, but the top level and the freshly rendered owned value were written with LF, leaving one document holding both.
+- `generate` no longer deletes H1-like lines from inside fenced code blocks.
+- A merged settings document keeps its indentation and CRLF line endings.
 
 ### Changed
 
-- Removed the unused `internal/scanner` package. Nothing imported it — content is scanned through `config.ScanContentTree` and profiles resolve through `Config.GetContentForProfile` — so it was a second, diverging copy of the same walk, and it mishandled the command directory form by dropping both items when a flat and a directory command collided in one source. `validate` reports that collision, which is why nothing depended on the broken path.
+- Removed the unused `internal/scanner` package.
 
 ## [4.12.0] - 2026-09-25
 
 ### Added
 
-- **Bundled hook scripts for plugins**: Plugin hooks now support a `script` field pointing at a project-relative file ai-rulez bundles into the plugin's `hooks/` directory. The rendered command points at the bundled copy through the installing runtime's plugin-root variable (`${CLAUDE_PLUGIN_ROOT}/hooks/<basename>` for Claude Code), enabling self-contained bootstrap hooks that work in a fresh clone before any generation has run. `Command` (for executables already in the consumer's environment) and `Script` (for bundled files) are mutually exclusive. Hook actions gained `args`, `timeout`, `if`, and `status_message` fields alongside the existing `command`, `type`, and `async` (`status_message` renders as the runtime's `statusMessage`). `if` takes a single permission rule such as `Bash(git *)` — not an expression — and Claude Code evaluates it only on the tool-use and permission events, so `validate` now warns when it appears on an event that ignores it, where the effect is a handler that never runs at all. An event name outside the known list (`KnownHookEvents`) produces a warning rather than an error, so a config written against a newer Claude Code keeps working on an older ai-rulez.
-- **Directory form for commands**: Commands may now be directories containing `COMMAND.md` plus a `references/` subdirectory for supporting material, mirroring the existing skill layout. The flat `commands/foo.md` form is unchanged. Command resources are passed through to generated output using the same progressive-disclosure model as skill resources.
+- **Bundled hook scripts for plugins** (`script` field) plus the hook action `args`, `timeout`, `if` and `status_message`.
+- **Directory form for commands** (`commands/<name>/COMMAND.md` with `references/`).
 
 ### Changed
 
-- **Settings documents are now merged, not overwritten** (issue #185): `.claude/settings.json`, `.mcp.json`, `.gemini/settings.json`, `.agents/settings.json` and `.amp/settings.json` are shared documents where ai-rulez owns specific top-level keys (`mcpServers`, or `amp.anthropic.effort`) and the consumer owns the rest. Generation now replaces only the owned keys and preserves every other member byte-for-byte, including the document's original indentation. **Consequence**: an MCP server a user added by hand inside the `mcpServers` object does NOT survive — the owned key is replaced wholesale. **JSONC not supported**: a document containing comments or trailing commas is not valid JSON, and generation now fails loudly with a hint naming the path, rather than silently stripping comments. **Gitignore behavior**: a document still holding keys ai-rulez does not own is treated as the user's file and is NOT added to the managed `.gitignore` block or deleted as stale. A document holding only ai-rulez's own keys is still gitignored (keeping resolved MCP secret values out of git). **Emission gating**: the `gemini` and `antigravity` presets no longer write their settings document on every run purely to self-register the ai-rulez MCP server — it is emitted only when the config declares MCP servers, so a project without `[[mcp_servers]]` keeps whatever is already at `.gemini/settings.json` / `.agents/settings.json` untouched. One consequence of that gating: removing the last `[[mcp_servers]]` entry leaves the previous run's `mcpServers` block on disk, because nothing is rendered to replace it and the file is never deleted. Delete the key by hand if the document should stop advertising those servers. **Upgrading**: a manifest written by 4.11.5 or earlier lists those two paths, because the presets wrote them unconditionally. The stale-output pass now recognizes every merged document — the ones declared by a provider sidecar spec and the ones rendered by a preset — so upgrading with no `[[mcp_servers]]` declared no longer deletes a hand-authored `.gemini/settings.json` or `.agents/settings.json`.
-- `ai-rulez init --setup-hooks` now fills in an empty `pre-commit:`, `commands:`, `repos:` or `hooks:` section rather than refusing the file. A key written with no value is legal YAML and a legal placeholder in both hook configs, but it parses as a null scalar, which the previous kind check rejected outright. A section holding a real value of the wrong type is still an error — and is now reported as one for `repos:` and `hooks:` too, where the value used to be silently overwritten.
-- Dependency sweep: `dustin/go-humanize` 1.0.1 → 1.1.0, `go.opentelemetry.io/otel` and `otel/trace` 1.45.0 → 1.46.0, `golang.org/x/net` 0.58.0 → 0.59.0, `golang.org/x/oauth2` 0.36.0 → 0.37.0, `golang.org/x/sys` 0.47.0 → 0.48.0, `golang.org/x/term` 0.45.0 → 0.46.0, `golang.org/x/time` 0.15.0 → 0.16.0. Every direct dependency was already current. The docs toolchain moves with it (`zensical` 0.0.57 → 0.0.65).
-- CI gained a `govulncheck` job. `poly.toml` recorded that one should exist, but it was never added, leaving `gosec` through golangci-lint as the only security tooling — SAST rather than CVE scanning of the dependency graph.
-- Corrected the preset and tool counts in the README and docs. There are 13 platform presets, not 20, and the MCP server exposes 36 tools, not "35+"; the README already listed all 13 by name, so "and more" promised presets that do not exist.
+- **Settings documents are merged, not overwritten** (`.claude/settings.json`, `.mcp.json`, `.gemini/settings.json`, `.agents/settings.json`, `.amp/settings.json`): ai-rulez owns specific keys and preserves the rest.
+- `.gitignore` lists the subdirectories ai-rulez writes (`.claude/skills/`) rather than whole assistant directories.
+- `init --setup-hooks` preserves comments, key order and indentation.
 
 ### Fixed
 
-- Skill and command subdirectories outside the canonical set (`references/`, `scripts/`, `assets/`) now emit a warning naming the item and the offending directory, so authors learn their content is not being included. Previously such directories were silently dropped (issue #183).
-- The managed `.gitignore` block now lists subdirectories ai-rulez writes (`.claude/skills/`, `.claude/agents/`) rather than whole assistant directories (`.claude/`). Ignoring the directory root made git silently skip tracked user files inside them, such as `.claude/settings.json` (issue #184).
-- `ai-rulez init --setup-hooks` now preserves comments, key order and the original indentation width in an existing `lefthook.yml` or `.pre-commit-config.yaml`, using `yaml.Node` for comment-preserving round-trips rather than unmarshaling to a plain map. Previously the whole file was reformatted: comments were dropped outright, and even once they survived, `yaml.Marshal`'s hardcoded four-space indent re-indented every line of a two-space document. Blank lines between entries are still lost, and padding that aligns trailing comments collapses to a single space — yaml.v3 does not model either (issue #186).
-- `ai-rulez init --setup-hooks` now emits the fields of the `lefthook.yml` command it adds in a fixed order. They were built from a Go map, whose iteration order is randomized, so every invocation reordered `glob`/`run`/`fail_text` and a CI check that regenerates and diffs could never be stable.
-- `ai-rulez init --setup-hooks` no longer corrupts a `.pre-commit-config.yaml` whose `rev` YAML resolves to a non-string type. An unquoted `rev: 24` parses as `!!int`, and yaml.v3 writes a node's parse-time tag out explicitly once it stops matching the value, so updating the revision in place produced `rev: !!int v4.11.5` — a document pre-commit rejects. The value node is now replaced wholesale, carrying its comments across.
-- `ai-rulez validate` now reports when a skill and a command share an output id. Skills and commands both render to `.claude/skills/{id}/SKILL.md` (differing only in the `user_invocable` constant), so a collision silently overwrites one with the other. The check pools root and every domain because the output layout has no domain segment.
-- `ai-rulez validate` now reports two skills, or two commands, in one directory that resolve to the same output id (`duplicate output ids`). The flat and directory forms of a command resolve identically, so `commands/deploy.md` alongside `commands/deploy/COMMAND.md` was the easy way to lose one of them silently. Unlike the cross-kind check this one pools nothing: root shadowing a domain is documented resolution, not a collision.
-- Domain content now shadows root content for a command written in the other form. Collision keys were the file basename for a flat command and the directory name for a directory one, so a root `commands/deploy.md` and a domain `commands/deploy/COMMAND.md` looked unrelated and were both emitted to `.claude/skills/deploy/SKILL.md`. Every collision map is now populated through the same key function that reads it.
-- Skill/agent frontmatter `argument-hint` no longer passes through to generated skills, where it was inert. It is relevant only to commands (`user_invocable=true`). A skill declaring it produces a warning suggesting the author move it to `commands/` instead.
-- A plugin passthrough source that resolves outside the project is refused. The path guards are lexical — they reject `..`, absolute paths and drive letters in the declared string — so a symlink defeated them: neither `bootstrap.sh` (linked at `~/.ssh/id_rsa`) nor `vendor/passwd` (where `vendor` links to `/etc`) contains a traversal sequence, and `os.Stat`/`os.ReadFile` follow the link. Passthrough bytes are published — they land in a bundle consumers install, and a hook script is executed by the installing runtime — so whoever built the bundle would have copied a local file into it. Symlinks that stay inside the project still work, and `validate` reports the escape before generation. (#187)
-- A merged settings document belonging to a `[[scopes]]` entry is no longer deleted as stale. The registries hold paths relative to a config's own base dir (`.mcp.json`) while a manifest entry is relative to the root config (`packages/api/.mcp.json`), and the guard matched exactly — so it protected the root document and deleted every scope's, which is the #185 data loss it exists to prevent. It now matches on the tail, the rule the merged-document registry already applied. (#187)
+- Non-canonical skill/command subdirectories warn; `validate` reports skill/command output-id collisions; a plugin passthrough source outside the project (including through a symlink) is refused.
 
 ## [4.11.5] - 2026-09-19
 
 ### Fixed
 
-- Skill includes pinned to a full commit SHA now resolve deterministically and fail closed, extending the 4.11.4 `GitSource` fix (#167) to `SkillGitSource`. A 40-hex pin is used verbatim and cloned by fetching the exact object instead of being passed through `ls-remote` (which cannot advertise raw commits) and silently degrading to cached content; the doomed `--branch` clone on refresh is gone too. A pin the remote cannot serve is an error, never a cache fallback. (#179)
-- Schema validation compiles with a fresh compiler per call. jsonschema 0.9.10 rejects re-registering a schema resource URI on an existing compiler, which broke the second in-process `ValidateWithSchema` call (e.g. the MCP server). The embedded schema only uses internal `$defs` refs; a per-call compiler also removes a shared-state race for concurrent validation. (#181)
+- Skill includes pinned to a full commit SHA resolve deterministically and fail closed.
+- Schema validation compiles with a fresh compiler per call.
 
 ### Changed
 
-- Go toolchain bumped to 1.27 across the module directive, CI `setup-go` versions, and the contribution guide, unblocking jsonschema 0.9.10. (#180)
-- Dependency upgrades: `kaptinlin/jsonschema` 0.9.8 → 0.9.10 (#168), `modelcontextprotocol/go-sdk` 1.7.0 → 1.8.0 (#171), `yuin/goldmark` 1.8.5 → 1.8.6 (#169), `golang.org/x/text` 0.41.0 → 0.42.0 (#172).
+- Go toolchain to 1.27 and dependency upgrades.
 
 ## [4.11.4] - 2026-09-18
 
 ### Fixed
 
-- `generate` splices the managed `.gitignore` block back in place instead of re-emitting it after any user entries that followed `# END ai-rulez`. A `BEGIN`/`END` region that was stripped, kept, and re-appended silently reordered the file; the block is now written exactly where the fence stood, leaving the suffix untouched. (#178)
-- `ai-rulez validate` now fails (nonzero exit) when a content file's frontmatter fails to parse. Previously the malformed file was loaded with nil metadata and validation passed, hiding bad content until a later failure; the error lists every offending path. (#175)
-- A skill whose frontmatter fails to parse is no longer dropped from generated output. It loads with nil metadata, which used to leave the generated `SKILL.md` without a `description` (invisible to the assistant); the documented name-as-description fallback now applies — the skill id is emitted as its description, matching a healthy skill's frontmatter. (#176)
-- Includes pinned to a full commit SHA now resolve deterministically and fail closed. A 40-hex `ref` was passed to `git ls-remote`, which cannot advertise raw commits, so pinned refs never matched the cache and silently fell back to stale cached content on any transient error. Full SHAs are now recognized, cloned by fetching the exact object, and cached under that SHA; a SHA the remote cannot serve is an error, never a cache fallback. (#167)
-
-### Changed
-
-- Workflow actions updated: `xberg-io/actions` reusable-validate v1.11.6 → v1 (now pinned to the `v1` major tag), and `astral-sh/setup-uv` v10.0.1 → v10.1.0. setup-uv stays pinned to a full semver tag because it stopped publishing major and minor tags at v8 as a supply-chain measure, so `@v10` does not resolve.
+- The managed `.gitignore` block is spliced back in place instead of being reordered.
+- `validate` fails on malformed content frontmatter, and a skill with malformed frontmatter is no longer dropped from output.
+- Includes pinned to a full commit SHA fail closed instead of falling back to stale cache.
 
 ## [4.11.3] - 2026-08-24
 
-### Fixed
-
-- `generate` is now reproducible across checkout paths. `computeSourceHash` folded the raw absolute `ContentFile.Path` into the source hash, so the same tree generated from two directories produced different `Source-Hash` values. The bodies were byte-identical, but the mismatch forced a rewrite and stamped a fresh `Generated:` timestamp, leaving clean-checkout CI drift checks permanently dirty. Paths are now normalized before hashing — relative to the config or base directory when in-tree, collapsed to their last two segments when not. The fallback also removes three cases the report did not cover: git includes cached under the user's home directory (so a laptop and a CI runner disagreed at the same commit), installed skills, and the randomly-named temp symlink used for bare include layouts (non-deterministic run to run on one machine). Normalizing through `filepath.ToSlash` additionally stops Windows and Linux disagreeing about the same tree. `GeneratorSchemaVersion` moves to `v3`, so every project regenerates once before the skip mechanism re-engages. (#166)
-- `ai-rulez mcp` no longer uses the deprecated `ServerOptions.HasTools`; tools are advertised through `Capabilities` with the same `{"listChanged":true}` value. Setting `Capabilities` suppresses the SDK's default `logging` capability, which is deprecated as of protocol version 2026-07-28 and which this server never emitted. This also unblocks the Lint job, which staticcheck's SA1019 had been failing on `main` since the SDK bump in 4.11.2.
-
 ### Added
 
-- `[header] timestamp = false` omits the `Generated:` line from all three header styles, for projects that commit their generated outputs and want no per-run value in the header at all. Defaults to `true`, so existing output is unchanged.
+- `[header] timestamp = false` omits the `Generated:` line.
 
-### Changed
+### Fixed
 
-- Dependencies updated: `samber/oops` 1.23.1, `golang.org/x/text` 0.41.0, with indirect bumps to `golang.org/x/net` 0.58.0, `golang.org/x/crypto` 0.55.0, and `go-json-experiment/json`; docs toolchain to zensical 0.0.57. `govulncheck` reports no known vulnerabilities.
-- Workflow actions updated: `golangci-lint-action` v7 → v9, `xberg-io/actions` reusable-validate v1.8.142 → v1.8.145, and `astral-sh/setup-uv` v6 → v10.0.1. setup-uv is pinned to a full semver tag because it stopped publishing major and minor tags at v8 as a supply-chain measure, so `@v10` does not resolve.
-- The JSON schema's `header.style` default now reads `minimal`, matching the code default since 4.9.
+- `generate` is reproducible across checkout paths.
 
 ## [4.11.2] - 2026-08-08
 
 ### Fixed
 
-- `ai-rulez mcp` no longer wedges when a host sends `initialize` twice on one stdio session. The MCP SDK treats initialization as a one-shot state machine, so a repeated `initialize` failed with `duplicate "initialize" received` (and a repeated `notifications/initialized` likewise), permanently breaking any host that retries or reconnects over a long-lived server process — Claude Code's MCP client, or an mcpm/fastmcp bridge shared between consumers. A repeated `initialize` is now answered with the result of the original negotiation and a repeated `notifications/initialized` is dropped, leaving the session intact. Because the SDK's version negotiation is internal, a re-initialize receives the protocol version agreed on first connect. (#158)
-
-### Changed
-
-- Dependencies updated: `kaptinlin/jsonschema` 0.9.8, `oklog/ulid` 2.1.2, OpenTelemetry 1.45.0, `go.yaml.in/yaml` 3.0.5; docs toolchain to zensical 0.0.53. The unused `tool github.com/evilmartians/lefthook` directive was dropped, removing 27 indirect modules from `go.mod` — the repo moved off lefthook to poly hooks and nothing imported it.
-- `task update` now updates the whole Go module graph plus `uv.lock`, and `task lint` runs the poly checks. Both previously invoked `prek` against a `.pre-commit-config.yaml` that no longer exists.
+- `ai-rulez mcp` no longer wedges when a host sends `initialize` twice on one stdio session.
 
 ## [4.11.1] - 2026-07-31
 
 ### Fixed
 
-- `generate` no longer inlines the full rules block into every generated `.claude/skills/<name>/SKILL.md` and `.claude/agents/<name>.md`. A rule targeting the `claude` preset name was matching any output under `.claude/`, so it was duplicated into every per-item skill/agent file; it now routes to `CLAUDE.md` only. Explicit path, directory, and glob targets are unaffected. (#156)
-- `generate` no longer emits a second, raw frontmatter block in a skill file when the source frontmatter fails to parse. Malformed YAML frontmatter (e.g. an unquoted value containing `": "`) was returned unstripped and re-emitted after the generated block; it is now stripped with a warning. The 14 builtin skills whose `description` contained an unquoted `": "` are quoted so their descriptions parse and populate the generated frontmatter. (#156)
+- `generate` no longer inlines the full rules block into every generated skill and agent file.
+- A skill whose source frontmatter fails to parse no longer emits a second raw frontmatter block.
 
 ## [4.11.0] - 2026-07-22
 
 ### Added
 
-- `ai-rulez clean` command: removes the files produced by `generate` (the inverse of `generate`) — the generated assistant outputs (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.claude/`, `.codex/`, generated skills, …), the generated manifest, and the ai-rulez managed `.gitignore` block. The `.ai-rulez/` source tree is never touched and generated directories are removed only once empty (files you authored inside them are kept). Lists targets and prompts for confirmation by default; `--dry-run` previews, `--force` skips the prompt, `--keep-gitignore` / `--keep-manifest` preserve those. Exposed over MCP as `clean_outputs`.
+- **`ai-rulez clean`** removes the files produced by `generate` (the inverse of `generate`), with `--dry-run`, `--force`, `--keep-gitignore` and `--keep-manifest`, exposed as the `clean_outputs` MCP tool.
 
 ### Fixed
 
-- MCP `update_rule` / `update_context` / `update_skill` no longer fail with `file already exists` when updating existing content. The update path used a create-only write primitive that refused to overwrite; it now uses an overwrite-capable atomic write. (#150)
+- MCP `update_rule`/`update_context`/`update_skill` no longer fail with `file already exists`.
 
 ## [4.10.0] - 2026-07-22
 
 ### Added
 
-- Local-override content: drop machine-local rules and context under `.ai-rulez/local/rules/` and `.ai-rulez/local/context/` and they are emitted only to per-preset `.local` root files (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `.junie/guidelines.local.md`, `.github/copilot-instructions.local.md`, …). Local content is kept strictly separate from committed output and both the `.local` files and the `.ai-rulez/local/` source directory are gitignored unconditionally (even when `gitignore = false`). New `--local` flag on `ai-rulez add rule` and `ai-rulez add context` writes there directly.
-- Bare/flattened include layout: included repositories no longer need to wrap their content in an `.ai-rulez/` directory; a flattened `rules/`, `context/`, `skills/` layout is now supported.
+- **Local-override content** under `.ai-rulez/local/` (rules and context), emitted only to per-preset `.local` files and gitignored, with `--local` on `add rule`/`add context`.
+- **Bare/flattened include layout**: included repositories no longer need an `.ai-rulez/` wrapper.
 
 ### Changed
 
-- Built-in language, binding, OWASP, and dependency-awareness conventions now emit as on-demand Agent Skills (`skills/<name>/SKILL.md`) instead of always-inlined rules/context, shrinking the generated `CLAUDE.md` (and peers) considerably. The agent loads them only when the relevant "Load when…" trigger applies.
-- Default header style is now `minimal` (was `detailed`), trimming ~37 lines of boilerplate from every generated root file while keeping the DO-NOT-EDIT warning plus the Content-Hash / Source-Hash provenance lines. `detailed` and `compact` remain available via `[header] style = "…"`.
+- Builtin language, binding, OWASP and dependency conventions now emit as on-demand skills instead of always-inlined rules, shrinking the generated root files.
+- The default header style is now `minimal`.
 
 ## [4.9.4] - 2026-07-12
 
 ### Changed
 
-- Built-in language and binding convention rules are now tool-agnostic. They describe idiomatic principles and quality bars rather than mandating one third-party stack: opinionated tools (e.g. `mypy`, `oxlint`, `oxfmt`, `structlog`, `vitest`) are now framed as examples, while canonical/official toolchains (`gofmt`, `cargo fmt`, `dotnet format`, `tsc`, `mix format`, …) are retained.
+- Builtin language and binding rules are tool-agnostic (opinionated tools are framed as examples).
 
 ### Fixed
 
-- Python builtin convention no longer references `Unknown` (a TypeScript type); it now recommends precise types, generics, or `typing.Protocol`.
-- Fixed typos in the vite+ builtin convention.
-
+- The Python builtin no longer references a TypeScript type, and vite+ typos are fixed.
 
 ## [4.9.3] - 2026-07-12
 
 ### Fixed
 
-- Reject Windows drive-relative plugin paths such as `C:outside` on every host platform.
+- Windows drive-relative plugin paths (`C:outside`) are rejected on every platform.
 
 ### Changed
 
-- Pin Poly catalog npx and uvx execution paths to the catalog release for reproducible hook runs.
+- Poly catalog npx/uvx execution paths are pinned for reproducible hooks.
 
 ## [4.9.2] - 2026-07-12
 
 ### Fixed
 
-- Validate plugin paths consistently across operating systems and use portable path assertions for Hermes and OpenCode output tests.
-
-### Changed
-
-- Split plugin authoring validation into focused checks to keep complexity within project limits.
+- Plugin path validation is consistent across operating systems.
 
 ## [4.9.1] - 2026-07-12
 
 ### Fixed
 
-- Use the ai-rulez `version` subcommand in Poly hook installation paths.
+- Poly hook installation paths use the `version` subcommand.
 
 ## [4.9.0] - 2026-07-12
 
 ### Added
 
-- Reusable `poly-hooks.toml` catalog with multiple selectable hooks, guarded npx, uvx, and system execution paths, explicit managed install commands, and parity with the pre-commit hook catalog.
-- Recursive plugin generation and verification with `--if-configured`, including atomic marketplace traversal without duplicate member work.
-- Plugin generation and verification hooks for both Poly and pre-commit, triggered by root or nested `.ai-rulez/` changes.
-
-### Changed
-
-- Poly consumers declare local or Git sources in `poly.toml` and can select non-mutating validation and plugin verification while keeping generation and auto-fix hooks opt-in.
+- Reusable `poly-hooks.toml` catalog with selectable hooks and guarded execution paths.
+- Recursive plugin generation and verification (`--if-configured`).
+- Plugin generation and verification hooks for Poly and pre-commit.
 
 ## [4.8.0] - 2026-07-12
 
 ### Added
 
-- Native Hermes Agent rules generation through the `hermes` preset and `.hermes.md` project context.
-- Hermes Agent project plugins and PyPI entry-point packages, with compatible `hermes`, `register`, and `__version__` exports.
-- Plugin-specific content through `plugin.content_root`, adapter reuse through `plugin.hermes.source`, and configurable Python compatibility through `plugin.hermes.requires_python`.
-- Generated plugin freshness and provenance verification with `ai-rulez verify --plugin`, including profile-aware rendering.
+- **Native Hermes Agent** generation (`hermes` preset, `.hermes.md`, project plugins and PyPI entry points).
+- `plugin.content_root`, `plugin.hermes.source` and `plugin.hermes.requires_python`.
+- `ai-rulez verify --plugin` for plugin freshness and provenance.
 
 ### Fixed
 
-- Preserve authored Markdown whitespace when inserting and verifying generated-file provenance headers.
-- Serialize Hermes Python package metadata safely and emit Claude marketplace files only when targeting Claude.
+- Authored Markdown whitespace is preserved around generated headers.
 
 ## [4.7.0] - 2026-07-11
 
 ### Added
 
-- Complete Codex plugin bundles with root MCP configuration, canonical marketplace metadata, recursive skill resources, and validated interface assets.
-- OpenCode plugin generation from `.ai-rulez/opencode/index.js`, including generated package metadata and a documented no-op scaffold when no adapter is authored.
-- Deterministic plugin provenance through generated-file headers and `.ai-rulez-generated.json` sidecars with BLAKE3 content and source hashes.
-
-### Fixed
-
-- Preserve nested skill resources and Codex interface metadata during plugin generation.
-- Emit runtime-safe relative MCP commands and strict JSON manifests without comment headers.
+- Complete Codex plugin bundles (root MCP config, marketplace metadata, recursive skill resources).
+- OpenCode plugin generation from `.ai-rulez/opencode/index.js`.
+- Deterministic plugin provenance (generated-file headers and `.ai-rulez-generated.json` sidecars).
 
 ## [4.6.0] - 2026-07-08
 
 ### Added
 
-- **Plugin & marketplace authoring** via `ai-rulez generate --plugin`: packages the project's skills, commands, agents, and MCP servers into distributable plugin bundles and a marketplace index for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, and Factory. A new `[plugin]` config block carries the packaging metadata (kept distinct from the consumer `[[plugins]]`/`[[marketplaces]]` install arrays), with hooks, a Claude status-line passthrough, a canonical `${PLUGIN_ROOT}` launch variable rewritten per runtime, and both single-plugin and monorepo (`[marketplace].members`) marketplaces.
-- Agent **`extends` directive**: an agent whose frontmatter sets `extends: <name>` inherits the body and frontmatter of a lower-precedence agent (the same name in a lower layer, or the named target) and appends its own body, with set frontmatter fields overriding the base and omitted fields inherited. Chains resolve across multiple layers (local extends include extends builtin); a missing base or an `extends` cycle degrades to a plain agent with the directive stripped.
-
-### Fixed
-
-- Agent precedence is now deterministic and matches rules/context: same-named agents collapse to the single highest-precedence definition (local > include > builtin) instead of a non-deterministic last-write-wins that depended on domain name ordering. The generated header agent count also reflects the deduplicated set.
+- **Plugin and marketplace authoring** via `ai-rulez generate --plugin` (Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory), with a `[plugin]` block, hooks, `${PLUGIN_ROOT}`, and single-plugin or monorepo marketplaces.
+- Agent **`extends`** directive: an agent inherits a lower-precedence agent's body and frontmatter and appends its own.
 
 ### Changed
 
-- Built-in agent default models: `docs-writer`, `devops-engineer`, and `release-engineer` now use `sonnet` (was `haiku`); `polyglot-architect` now uses `opus`.
+- Agent precedence is deterministic (same-named agents collapse to the highest-precedence definition).
 
 ## [4.5.0] - 2026-07-02
 
 ### Added
 
-- Rule and context **deduplication by name** with source precedence (root > on-disk domain > include > builtin). When the same name is defined by more than one source (for example a builtin `git-workflow` rule and an include redefining `commit-messages`), the generated output now includes it only once, and a warning is logged during `generate` and `validate` naming the kept and dropped sources.
-- `compact` config option: when `true`, generated inline rule sections omit the per-rule `**Priority:**` annotations to reduce output size.
-- Per-rule builtin exclusion via the `!domain/rule` syntax in the `builtins` array (e.g. `!git-workflow/commit-messages`), which drops a single builtin rule while keeping the rest of the domain.
-- MCP tool annotations for all write tools (create/add/update/set marked additive or idempotent rather than defaulting to destructive), plus server `Title` and initialization `Instructions` metadata.
-
-### Fixed
-
-- MCP server configuration for remote (`http`/`sse`) transports no longer emits an empty `command` or a `transport` key. Each preset now emits its tool-specific remote format: Claude `type` (#136, #137), Gemini `httpUrl`/`url`, Copilot `type`, Cursor `url`, and Antigravity `serverUrl`. Stdio servers are unchanged.
+- Rule and context **deduplication by name** with source precedence (root > domain > include > builtin).
+- `compact` option to omit per-rule priority annotations, and per-rule builtin exclusion (`!domain/rule`).
+- MCP tool annotations and server title/instructions.
 
 ### Changed
 
-- Migrated preset rendering to a declarative DSL provider system (Claude, Amp, Junie, and MCP specs), replacing the hand-written generators for those presets.
-- Migrated lint and format tooling from prek to poly.
-- Updated Go dependencies (`pelletier/go-toml/v2` 2.4.2, `kaptinlin/jsonschema` 0.9.2, `golang.org/x/text` 0.38, `golang.org/x/net` 0.56) and CI actions (`actions/checkout` v7, `actions/cache` v6).
+- Remote MCP servers are emitted in each tool's own format (no empty `command`/`transport`); stdio is unchanged.
+- Preset rendering moved to a declarative provider DSL, and lint/format moved to poly.
 
 ## [4.4.1] - 2026-06-07
 
 ### Fixed
 
-- `.ai-rulez/.generated-manifest.json` is now included in the managed `.gitignore` fence when `--gitignore` (or `gitignore: true` in config) is enabled. The manifest is rewritten on every `generate`; tracking it produced endless diff noise. Honours custom `config_dir` values.
-
-### Tests
-
-- Added end-to-end coverage for per-preset model overrides so the resolver chain (agent `<preset>_model` → `defaults.model_by_preset` → legacy `model:`) is exercised against real generated agent files for both Claude and Copilot.
+- `.ai-rulez/.generated-manifest.json` is gitignored when gitignore management is enabled.
 
 ## [4.4.0] - 2026-06-07
 
 ### Added
 
-- Per-preset model overrides for agents. Each preset now resolves its agent `model` value via `<preset>_model` frontmatter (e.g. `claude_model`, `copilot_model`, `cursor_model`) with `defaults.model_by_preset` as a project-wide fallback. The legacy single `model:` field remains supported as the lowest-priority fallback for backward compatibility.
+- Per-preset model overrides for agents (`<preset>_model`, e.g. `claude_model`) with `defaults.model_by_preset` as the fallback; the legacy `model:` still works.
 
 ### Fixed
 
-- The TOML config loader silently dropped the entire `[defaults]` table, so `effort_by_preset` from TOML configs never reached the generator. The new `model_by_preset` feature exposed the gap; both tables now load correctly.
-
-### Changed
-
-- Updated Go dependencies (`agentable/go-intl`, `go-json-experiment/json`, `kaptinlin/go-i18n`, `kaptinlin/jsonpointer`, `kaptinlin/jsonschema`, `kaptinlin/messageformat-go`) and pre-commit hooks (`kreuzberg-dev/pre-commit-hooks` 1.2.3 → 2.1.8, `gh-actions-updater` 0.1.5 → 0.1.6, `Goldziher/ai-rulez` self-reference 4.3.1 → 4.3.2). Go toolchain bumped from 1.26.3 to 1.26.4.
+- The TOML loader no longer drops the `[defaults]` table.
 
 ## [4.3.0] - 2026-05-30
 
 ### Added
 
-- Added `generate --gitignore` with `-i` shorthand; the old `--update-gitignore` flag remains as a deprecated compatibility alias.
-- Added collision-safe short flags across global, generate, CRUD, list, domain, profile, include, init, validate, and skill commands.
-- Added MCP environment placeholder resolution from repeated `--env KEY=VALUE`, process environment, `.env`, and explicit `--env-file` sources.
-
-### Changed
-
-- `.gitignore` generation now writes generated roots and directory patterns instead of per-file assistant output entries, while keeping generated `.github/` paths scoped to Copilot-owned files and directories.
+- `generate --gitignore` (with `-i`); the old `--update-gitignore` remains a deprecated alias.
+- Collision-safe short flags across commands.
+- MCP environment placeholder resolution from `--env`, the process environment, `.env` and `--env-file`.
 
 ### Fixed
 
-- Secret-bearing MCP outputs now fail generation when their generated path is not ignored, including scoped MCP config outputs.
-- Resolved MCP secret values are redacted before source hash calculation so generated metadata does not encode secret material.
-- Existing outside-fence `.gitignore` patterns are now interpreted semantically when deciding whether managed entries are already covered.
-
-### Tests
-
-- Added generator and CLI coverage for MCP env substitution, `.env` and `--env-file` loading, unresolved placeholders, secret safety errors, scoped MCP outputs, deprecated gitignore aliases, and shorthand flags.
+- Secret-bearing MCP outputs fail generation when their path is not gitignored, and resolved secrets are redacted before source-hash calculation.
 
 ## [4.2.2] - 2026-05-26
 
 ### Added
 
-- Added a `polyglot-bindings` builtin with Rust-core, native ABI, FFI ownership, cross-language error conversion, and binding parity guidance.
+- `polyglot-bindings` builtin (Rust-core, native ABI, FFI ownership, cross-language errors).
 
 ### Changed
 
-- Updated the TypeScript builtin to recommend `oxfmt` with `oxlint`.
-
-### Dependencies
-
-- Updated shared pre-commit hooks, `gh-actions-updater`, `github.com/modelcontextprotocol/go-sdk`, and related Go module dependencies.
+- The TypeScript builtin recommends `oxfmt` with `oxlint`.
 
 ## [4.2.1] - 2026-05-21
 
 ### Fixed
 
-- **Cursor skill frontmatter is now valid YAML**: generated `.agents/skills/*/SKILL.md`
-  files quote skill descriptions, so descriptions containing colons no longer
-  fail Codex skill loading.
-
-### Dependencies
-
-- Refreshed pre-commit hook revisions with `prek autoupdate`.
-- Updated Go module dependencies with `go get -u ./...` and `go mod tidy`.
+- Cursor/Codex skill descriptions are quoted, so descriptions containing colons load.
 
 ## [4.2.0] - 2026-05-21
 
 ### Added
 
-- **Manifest-scoped generation cleanup**: `ai-rulez generate` now writes `.generated-manifest.json` under the active config directory and deletes only stale files previously recorded in that manifest. Assistant directories such as `.claude/`, `.codex/`, `.cursor/`, `.gemini/`, `.windsurf/`, `.cline/`, `.agents/`, `.continue/`, `.opencode/`, and `.junie/` are no longer treated as fully owned.
-- **Real dry-run output**: `generate --dry-run` and MCP `generate_outputs` dry runs now report planned `create-dir`, `write-file`, and `delete-stale` entries without mutating the filesystem.
-- **Custom config directory support**: `generate --config-dir <name>`, `validate --config-dir <name>`, recursive generation, and MCP generation/validation can use configuration roots other than `.ai-rulez/`.
-- **Exact config path loading**: positional config paths and `--config <path>` now load that exact file or config directory. Root-level config files fail with a precise directory-layout error when they would otherwise make the parent directory the output root.
-- **Scoped subfolder outputs**: new `[[scopes]]` config entries generate subfolder-specific `AGENTS.md` and `CLAUDE.md` files with their own profile and preset selection, keeping root context separate from scoped context.
+- **Manifest-scoped generation cleanup**: `generate` deletes only files recorded in `.generated-manifest.json`.
+- **Real dry-run output** (`create-dir`, `write-file`, `delete-stale`) without touching the filesystem.
+- **Custom config directory** (`--config-dir`), exact config-path loading, and `[[scopes]]` subfolder outputs.
 
 ### Fixed
 
-- **User-owned files no longer get deleted**: hand-written settings, hooks, personal skills, and other files in assistant output directories are preserved during regeneration.
-- **CI Taskfile drift**: consolidated on `Taskfile.yml`, removed the lowercase duplicate, and added the workflow-referenced tasks: `test`, `test:platform`, `test:e2e`, `test:e2e:cli`, `test:e2e:mcp`, `test:e2e:integration`, `test:all`, and `test:benchmark`.
-- **`task format` no longer walks local caches**: the task now uses `go fmt ./...` instead of formatting every file below the repository root.
-
-### Changed
-
-- `.gitignore` generation now lists generated files individually instead of ignoring whole assistant directories.
-- MCP generation and validation now share the same config-loading semantics as the CLI.
-- Documentation, schema, and the bundled `ai-rulez` skill now describe custom config directories, scoped outputs, manifest cleanup, and current `[[mcp_servers]]` configuration.
-
-### Dependencies
-
-- Merged Dependabot updates for `github.com/pelletier/go-toml/v2`, `golang.org/x/text`, `github.com/kaptinlin/jsonschema`, and `pymdown-extensions`.
-
-### Tests
-
-- Added regression coverage for preserving user-owned assistant files, manifest-owned stale cleanup, exact config file loading, `--config`, `--config-dir`, dry-run behavior, and scoped subfolder outputs.
+- Hand-written files in assistant output directories are preserved during regeneration.
 
 ## [4.1.6] - 2026-05-03
 
 ### Changed
 
-- **Git fetches now use sparse checkout** — `ai-rulez` no longer downloads entire repository archives to resolve installed skills or remote includes. All git operations now run `git clone --depth 1 --filter=blob:none --sparse` and materialise only the required subtree (e.g. `skills/<name>/` or `.ai-rulez/`). This fixes the `"response body too large"` error that occurred when installing skills from large repositories, and dramatically reduces network and disk usage for all remote sources. **Requires git ≥ 2.25** (released January 2020).
-- **BLAKE3-based cache invalidation** — the time-based TTL (`.fetch_time` marker, 1-hour for includes) is replaced with a content-driven approach. On every `ai-rulez generate`, a fast `git ls-remote` call checks whether the remote HEAD SHA has changed; cached content is reused when the SHA matches and re-fetched only when it differs. Cached file content is hashed with BLAKE3 and stored in `.cache_meta.json` alongside each cached source. Skills always check the remote (no grace period); `--no-fetch` bypasses all network calls as before.
-
-### Removed
-
-- HTTP archive download path (`downloadAndExtract`, `buildArchiveURL`, `extractTarGz`, `extractZip`): replaced by sparse git clone.
-- Duplicate SSH clone helpers (`cloneViaGit`, `cloneViaGitForSkill`): replaced by the shared `sparseClone` primitive in the new `internal/includes/gitops.go`.
+- **Git fetches use sparse checkout** (`--depth 1 --filter=blob:none --sparse`), fixing "response body too large" and cutting network/disk use; requires git ≥ 2.25.
+- **BLAKE3-based cache invalidation** replaces the time-based TTL.
 
 ## [4.1.5] - 2026-05-02
 
 ### Changed
 
-- **Skill resources are no longer concatenated into `SKILL.md`.** A skill's `references/`, `scripts/`, and `assets/` subdirectories are now emitted as separate files under the rendered skill directory, matching the canonical Agent Skills layout used by Claude Code and OpenAI Codex. `SKILL.md` carries a `## Resources` index with relative-path links so the agent can read references on demand (progressive disclosure) instead of paying the full reference cost on every invocation. Reference descriptions are pulled from each file's `description` frontmatter or the first heading.
-  - Loader: `internal/includes/skill_source.go::ScanInstalledSkillDir` no longer inlines `references/*.md` (the deleted `readReferences` helper). Local skills under `.ai-rulez/skills/<name>/` now also pick up bundled resources via `internal/config/loader.go::scanSkills` — previously these subdirectories were ignored.
-  - Renderer: shared helpers `RenderSkillResourcesIndex`, `SkillResourceOutputs`, `InlineSkillResources` in `internal/generator/presets/skill_resources.go`. Applied across every preset that emits a skill directory (Claude, Codex, Cursor, Cline, Amp, Antigravity, Copilot, Gemini, Junie, Opencode, Windsurf). The single-file `continue.dev` preset keeps the inline-concat behaviour since it has no skill directory to read from.
-  - File mode (executable bit on `scripts/*.sh`) is preserved through generation.
-
-### Added
-
-- **`OutputFile.RawContent []byte` and `OutputFile.Mode os.FileMode`** in `internal/config/presets.go` — non-nil `RawContent` routes the file through a verbatim-write path that skips the AI-RULEZ banner, content/source-hash injection, and trailing-newline normalisation. Used for skill resource files where any added marker would corrupt the payload (Python scripts, binary assets) or break tooling that hashes the file.
-- **Idempotency on the raw-write path**: `internal/generator/generator.go::writeOutput` now compares existing bytes plus mode and skips the write/chmod when both match, so unchanged bundled assets don't dirty the working tree on every regeneration.
-- **`SkillResource` type and `ContentFile.Resources`** in `internal/config/types.go` carry `Kind` (`references`/`scripts`/`assets`), forward-slash-normalised `RelPath`, raw `Content` bytes, file `Mode`, and an optional `Description`.
-- **Stale-file cleanup for resource subdirectories**: `SkillResourceOutputs` emits each parent directory (including nested ones) as an `IsDir` output so `cleanManagedDirs` walks them on regeneration. Without this, a deleted `references/old-api.md` would persist forever in the rendered skill tree.
-- **Resource content is included in the source hash** (`writeContentFiles`), length-prefixed (`|res=<kind>:<relpath>:len=<n>:<bytes>`) so a reference body cannot spoof the inter-record delimiter to fake a second resource.
+- **Skill resources are no longer concatenated into `SKILL.md`**: `references/`, `scripts/` and `assets/` are emitted as separate files, and `SKILL.md` carries a `## Resources` index (progressive disclosure).
 
 ### Security
 
-- **Symlink guard in `internal/config/skill_resources.go`**: the resource loader uses `os.Lstat` on each kind directory and checks `d.Type()&os.ModeSymlink` on every walked entry. A malicious installed skill cannot exfiltrate host files (e.g. `references/evil.md → /etc/passwd`) or replace a kind directory with a symlink to an attacker-controlled tree. Symlinks are skipped with a `WARN` log.
-- **Defensive walk-up guard in `SkillResourceOutputs`**: an absolute `RelPath` (which `LoadSkillResources` cannot produce, but a future caller might) used to put the parent-directory walk into an infinite loop on `filepath.Dir`. Now `filepath.IsAbs` is checked before the walk.
-
-### Tests
-
-- `internal/config/skill_resources_test.go` — `LoadSkillResources` covering canonical layout, nested paths, frontmatter description extraction, scripts/assets handling, symlink-to-file rejection, symlinked-kind-directory rejection, symlinked subdirectory rejection, dangling symlinks, executable-bit preservation.
-- `internal/generator/presets/skill_resources_test.go` — `RenderSkillResourcesIndex`, `SkillResourceOutputs`, `InlineSkillResources`, `referenceDisplayName`, plus the absolute-path infinite-loop guard with a 2 s timeout sentinel.
-- `internal/generator/presets/claude_test.go::TestClaudePresetGenerator_PreservesSkillResourcesLayout` — end-to-end assertion that references stay separate from `SKILL.md`, scripts/assets round-trip via raw bytes, and the resource index is rendered.
-- `internal/generator/generator_test.go` — raw-write happy path (text, binary, parent-dir creation, mode preservation, mode fallback), raw-write idempotency using `os.Chtimes` sentinel mtime, mode-only changes still rewrite, content-only changes still rewrite. `TestGenerator_CleansStaleSkillResource` verifies a deleted reference is swept on regeneration. `TestComputeSourceHash_IncludesSkillResources` and `TestComputeSourceHash_ResistsResourceDelimiterCollision` lock down the source-hash format.
-- Updated `internal/includes/skill_source_test.go` and `internal/includes/skill_resolver_test.go` to assert on `Resources` rather than the deprecated inline-concat behaviour.
-
-### Migration
-
-No config or schema change. Existing skills regenerate on next `ai-rulez generate`. Generated `SKILL.md` files become smaller (reference bodies move out); new sibling files appear under each skill directory.
+- A malicious installed skill cannot follow a symlink out of its directory.
 
 ## [4.1.4] - 2026-05-01
 
 ### Fixed
 
-- **Flaky MCP e2e test client**: the per-test `MCPClient` was a single-line-per-request stdio reader with no JSON-RPC id matching, no notification handling, a fresh reader goroutine per call, and the default 64 KiB `bufio.Scanner` buffer. The `tools/list` response is already ~18 KiB on a single line and grows with the tool surface; any server-emitted notification interleaved with a response would be misparsed as the response and orphan the real one. After bumping `modelcontextprotocol/go-sdk v1.5.0 → v1.6.0` in v4.1.3, this manifested as `MCP request timed out` flakes on cold runs (`tests/e2e/testutil/mcp_client.go`).
-
-### Changed
-
-- **MCP e2e test client rewritten** for correctness:
-  - One persistent reader goroutine demuxes stdout into per-request response channels keyed by JSON-RPC id, so notifications cannot be misparsed as responses.
-  - Notifications (frames without an `id`) are silently discarded.
-  - JSON-RPC id key normalized via re-marshal so request and response sides format the same way (encoding/json's float64 round-trip for large nanosecond ids was the latent gotcha).
-  - `bufio.Scanner` buffer raised to 1 MiB.
-  - Per-RPC timeout standardized at 30 s with explicit `t.Fatalf` showing the method name and reader error on server-side exit.
-  - `Close()` now waits for the reader to drain so its goroutine doesn't outlive the test.
-- **Reverted v4.1.3's blind 5 s → 30 s timeout bump** as the cure: that bump only masked the underlying client fragility. With the rewrite the timeout is no longer the load-bearing fix.
+- Internal test-client rewrite; no user-visible change.
 
 ## [4.1.3] - 2026-04-30
 
 ### Fixed
 
-- **`generate --recursive` performance and robustness**: a recursive run on a polyglot monorepo could take ~2 minutes and abort on a single broken symlink (e.g. a stale Rust `target/debug/deps/lib*.rlib`). Two underlying defects in `cmd/commands/generate.go`:
-  - The walker had no skip list — it descended into `target/`, `node_modules/`, `.venv/`, `vendor/`, `dist/`, `.git/`, etc.
-  - The walk callback re-returned every `lstat` error fatally, so one bad symlink killed the entire run.
-- **Recursive discovery now ignores v2 flat configs**: only `.ai-rulez/config.{toml,yaml,yml,json}` is discovered by `--recursive`. The legacy v2 `ai-rulez.yaml` discovery path is removed (single-config `generate <file>` is unaffected).
-
-### Added
-
-- **Shared skip helper** at `internal/walkutil` covering VCS metadata, build outputs (`target`, `node_modules`, `vendor`, `dist`, `build`, `out`, `obj`, `bin`), language toolchain caches (`.venv`, `__pycache__`, `.tox`, `.gradle`, `.mvn`, …), editor caches, and any hidden directory other than `.ai-rulez`/`.github`. Reused from `cmd/commands/generate.go`, `internal/mcp/handlers/project.go`, and `internal/agents/context.go` so the same pruning applies to every recursive walk.
-- **Shared rule library detection**: a directory named `ai-rulez/` (no leading dot) that itself contains `config.{toml,yaml,yml,json}` at its root is treated as a shared library. Its entire subtree is pruned during recursive discovery, so nested `.ai-rulez/` module configs that exist only for inclusion by consumers are no longer (re-)generated for.
-- **Parallel multi-config processing**: `generate --recursive` now processes discovered configs concurrently with a `runtime.NumCPU()`-bounded worker pool. Each config has its own working directory and produces independent output.
-- **Concurrency-safe include cache**: `internal/includes` now serializes refresh of any one cache directory with a per-cacheDir mutex (double-checked, lock-free fast path) so parallel callers targeting the same shared include never race on `RemoveAll`/extract. Applies to both `GitSource.Fetch` and `SkillGitSource.Fetch`.
-- **Process-level scanned-tree memoization**: `ScanContentTree` results for a given cached `.ai-rulez/` directory are reused across consumers within the same process. In a monorepo where 18 configs each include the same 5 shared libraries, this cuts 90 redundant tree scans down to 5. Per-consumer include filters still apply via `filterContent`, which returns a new tree without mutating the cached one.
-
-### Performance
-
-- **`kreuzberg-dev` (24 `.ai-rulez/` dirs, 18 actual consumer configs, 5 shared library modules):** `generate --recursive --update-gitignore` went from ~2 minutes (failing on a stale `.rlib` symlink) to ~1 second steady-state. Cold full-tree generation completes in ~12 s.
-
-### Tests
-
-- `internal/walkutil/skip_test.go` — covers the shared skip predicate.
-- `cmd/commands/generate_recursive_test.go` — fixture-driven test covering pruned dirs, broken-symlink resilience, library-skip, and config-format priority (TOML over YAML over JSON).
-- `internal/includes/fetch_concurrency_test.go` — fetch-lock identity, concurrent access, scanned-tree cache round-trip / invalidation, race-detector stress.
-- `tests/e2e/cli/recursive_test.go` — end-to-end suite asserting (a) walker pruning of `node_modules`/`target`/`.venv`/`vendor`/`.cache`/`build`, (b) shared rule library subtree is skipped, (c) parallel and `GOMAXPROCS=1` runs produce byte-identical outputs.
-
-### README
-
-- New collapsible Installation section covering Homebrew, npx, npm -g, uvx, uv tool, pip/pipx, pre-commit hook, and lefthook setup.
+- **`generate --recursive` on a polyglot monorepo** no longer takes minutes or aborts on a broken symlink: it prunes build and cache directories, skips shared rule libraries, processes configs in parallel and memoizes tree scans (minutes to about a second, steady state).
 
 ## [4.1.2] - 2026-04-30
 
 ### Added
 
-- **Per-subagent reasoning effort for Codex**: Codex subagent TOML files (`.codex/agents/<id>.toml`) now emit `model_reasoning_effort` when an effort is resolved for that agent. Per-agent metadata wins over `.codex/config.toml`, which still carries the global default. Tracks the schema documented at <https://developers.openai.com/codex/subagents>.
-- **Per-subagent reasoning effort for Opencode**: Opencode agent files (`.opencode/agents/<id>.md`) now emit a `reasoningEffort` frontmatter field. Resolution: per-agent metadata → `defaults.effort_by_preset["opencode"]` → `defaults.effort`. `xhigh` and `max` map to `high` (Opencode tops at `high`); `inherit` is dropped.
-
-### Changed
-
-- Updated the per-preset effort support matrix in `docs/configuration.md` to reflect Codex per-agent support and Opencode per-agent support.
+- Per-subagent reasoning effort for Codex (`model_reasoning_effort`) and OpenCode (`reasoningEffort`).
 
 ## [4.1.1] - 2026-04-30
 
 ### Added
 
-- **Reasoning effort across multiple providers**: extends the v4.1.0 Claude-only effort support to Codex, Amp, and Windsurf.
-  - **Codex**: emits `.codex/config.toml` with `model_reasoning_effort` when an effort resolves. Global setting (Codex doesn't accept per-agent effort).
-  - **Amp**: emits `.amp/settings.json` with `amp.anthropic.effort`. Global setting; `xhigh` maps to `high` (Amp tops at `high`/`max`).
-  - **Windsurf**: emits `reasoning_effort` per-agent in `.windsurf/agents/<id>.md` frontmatter. `max` maps to `high`.
-  - **Claude**: refactored to share the same resolver path; behavior unchanged.
-- **`defaults.effort_by_preset`**: per-preset overrides that beat `defaults.effort`. Per-agent metadata still wins where the preset supports it. YAML/TOML key validated against the registered preset list.
-- **MCP `update_config` `default_effort_by_preset` parameter**: object-typed argument that lets MCP clients set or clear per-preset overrides. `read_config` always returns the field (possibly empty) for stable read-modify-write loops.
-
-### Notes
-
-- Cursor, Copilot, Gemini, Junie, Opencode, Antigravity, Cline, and Continue.dev expose effort behind UI toggles or in user-managed config files we don't generate. ai-rulez deliberately skips emission for them — guard tests lock that in. Configure effort in those tools' own settings instead.
-- See `docs/configuration.md` for the full per-preset mapping table.
+- Reasoning effort extended to Codex, Amp and Windsurf, with `defaults.effort_by_preset` and MCP `default_effort_by_preset`.
 
 ## [4.1.0] - 2026-04-29
 
 ### Added
 
-- **Reasoning effort on Claude Code subagents**: agent frontmatter now accepts an `effort` field (`low` | `medium` | `high` | `xhigh` | `max` | `inherit`) that ai-rulez emits into `.claude/agents/<name>.md`. Maps directly to Claude Code's adaptive thinking spec — available levels depend on the model.
-- **`defaults.effort` in `config.yaml` / `config.toml`**: top-level project default that propagates to every generated subagent which doesn't declare its own `effort`. Resolution order: per-agent → `defaults.effort` → omit.
-- **MCP `update_config` `default_effort` parameter**: lets MCP clients set or clear the project-wide default. `read_config` now always returns `default_effort` (possibly empty) so read-modify-write loops have a stable contract.
-- **Validation** for the new value set across config load, MCP `update_config`, and `ai-rulez validate` — invalid values fail with an actionable message naming the field and the offending value.
-
-### Notes
-
-- Other presets (Cursor, Windsurf, Copilot, Gemini, Antigravity, etc.) silently skip the `effort` field — they have no native equivalent yet. No-leak tests lock that in.
-- Claude Code's session-level effort remains a runtime setting (`/effort` slash command) — there is no static surface to render it into, so this release covers subagents only.
+- **Reasoning effort on Claude Code subagents** (`effort` frontmatter: low/medium/high/xhigh/max/inherit).
+- `defaults.effort` project default and MCP `default_effort`.
 
 ## [4.0.8] - 2026-04-27
 
-### Fixed
-
-- **Generation was non-deterministic across runs**: `content.Domains` is a Go map, and every preset that flattened domain rules/context/skills/agents/commands iterated it in randomized order. Two consecutive `generate` runs with identical sources produced different rule orderings in `CLAUDE.md`, `.github/copilot-instructions.md`, and every other multi-rule output, breaking pre-commit hook idempotency. Domain iteration is now sorted by name (`internal/generator/presets/helpers.go`).
-- **`tools` field corrupted into a Go slice string**: `Metadata.Extra map[string]string` could not hold YAML sequences — `tools: [Read, Grep, Glob]` was stringified via `fmt %v` to `"[Read Grep Glob]"` and emitted as `tools: '[Read Grep Glob]'`. Added typed `Tools`, `Skills`, `Keywords` fields on `Metadata`; YAML now round-trips as proper sequences in agent frontmatter across all presets (claude, amp, antigravity, cline, copilot, gemini, junie, windsurf).
-- **`mcp` preset rejected by validation**: `internal/generator/presets/mcp.go` registered an `mcp` preset generator, but `internal/config/types.go` `builtInPresets` didn't list it — configs that included `mcp` in their preset array failed with `unknown built-in preset: "mcp"`. Added to the map.
-- **Skip-on-content-hash never fired for files with both frontmatter and a banner**: windsurf rule files have YAML trigger frontmatter prepended to the standard generated-file banner. `stripHeader` only stripped one layer, so the banner's per-run timestamp leaked into the body hash and caused unnecessary rewrites every run. Now strips both layers.
-
 ### Added
 
-- **`Source-Hash` header line**: alongside the existing `Content-Hash`, every generated file now embeds a blake3 hash covering all profile-relevant inputs (config metadata, content tree, MCP servers, plus a generator schema version constant). The skip decision in `writeOutput` requires both hashes to match the values stored in the existing file — never re-hashes the on-disk body, so it's robust to formatters that may modify generated files post-write.
-- **Hash injection for YAML-frontmatter files**: skill and agent files (`.claude/skills/*/SKILL.md`, `.opencode/agents/*.md`, etc.) had no header to inject hashes into and were rewritten every run. Hashes now go in as YAML comment lines (`# Content-Hash:` / `# Source-Hash:`) inside the frontmatter, where YAML parsers ignore them.
+- **`Source-Hash` header line** and hash injection for YAML-frontmatter files (hashes as YAML comments).
 
 ### Changed
 
-- **Sort everything alphabetically by name**: scanner's `sortByPriority` replaced with `sortByName`; merged content slices re-sorted in `combineContentFiles`; typed list metadata (`Tools`/`Skills`/`Keywords`) sorted on load. Priority is preserved as metadata in the rule body and rendered next to the rule name. This is a behavior change — projects with mixed-priority rules will see one round of reordered output.
-- **Output normalized to a single trailing newline** at write time, so `end-of-file-fixer` and similar formatters don't modify files post-generation.
+- Output is sorted alphabetically by name and normalized to a single trailing newline (one round of reordered output).
+
+### Fixed
+
+- Generation is deterministic (domain iteration sorted); the `tools` list is no longer corrupted into a Go slice string; the `mcp` preset validates; skip-on-content-hash fires for frontmatter+banner files.
 
 ## [4.0.7] - 2026-04-27
 
 ### Fixed
 
-- **`.mcp.json` not asserted in managed gitignore fence**: `cursor`, `copilot`, and the auto-`mcp` preset all emit `.mcp.json` when MCP servers are configured, but no regression test confirmed the path actually landed in the `# BEGIN ai-rulez` block. Coverage added; behavior verified end-to-end across all preset combinations.
-- **Cross-fence gitignore duplication**: when a user already had a pattern (e.g. `.cursor/`, `CLAUDE.md`) listed manually outside the managed block, regenerate added the same line _inside_ the fence too. The writer now skips any pattern already present outside the fence.
-- **`--debug` flag did nothing**: registered on `RootCmd` but never propagated to the logger singleton. Added `logger.SetLevel` and a `PersistentPreRun` that lowers the level to `DEBUG` when `--debug` is set (and to `ERROR` for `--quiet`).
-- **`--update-gitignore` flag did nothing**: declared on `generate` but never read. Now forces `cfg.Gitignore = true` regardless of the config file value, matching the help text.
+- `--debug` and `--update-gitignore` now take effect.
+- `.gitignore` no longer duplicates a pattern already present outside the managed fence.
 
 ### Changed
 
-- **Demoted intentional-behavior warnings to debug**: scanner's `domain X file overrides root file` and `multiple domains have same file` were `WARN`-level on every legitimate domain override (documented design, not user error). Generator's `Output path conflict` likewise fired any time `cursor`+`copilot`+auto-`mcp` shared `.mcp.json` (also expected). All three are now `DEBUG`.
-- **Quieter generation output**: `Processing commands for Claude preset`, per-command `Checking command` / `Including command`, and `Scanned commands directory` are now `DEBUG`. Run with `--debug` to see them again.
+- Intentional-behavior warnings and verbose generation logs demoted to debug.
 
 ## [4.0.6] - 2026-04-25
 
 ### Fixed
 
-- **MCP schema rejected V4 configs**: `ai-rules-mcp.schema.json` only allowed version `"3.0"` — V4 configs failed validation. Now accepts both `"3.0"` and `"4.0"`.
-- **Generated file headers hardcoded `config.yaml`**: preset generators always wrote `Source: .ai-rulez/config.yaml` in output headers, even for TOML or JSON configs. Headers now reflect the actual config filename.
-
-### Changed
-
-- **Removed stale V3 naming across codebase**: `ValidateV3()` renamed to `Validate()`, `isV3ConfigFile()` to `isConfigFile()`, `DetectConfigVersion` returns `"dir"` instead of `"v3"`, test fixtures and helpers renamed to version-neutral names.
-- **Added `IsV4()` method** to `Config` for symmetry with `IsV3()`.
+- The MCP schema accepts V4 configs, and generated headers reflect the actual config filename.
 
 ## [4.0.5] - 2026-04-25
 
 ### Fixed
 
-- **Config discovery missing TOML**: `FindConfigFile` (used by MCP handlers) only searched for YAML/YML configs, ignoring `config.toml` (the V4 default) and `config.json`. TOML is now checked first.
-- **Recursive generate missed TOML configs**: `isV3ConfigFile` (used by `generate --recursive` and pre-commit hooks) did not match `config.toml` or `config.json`, so projects using the V4 default were silently skipped.
+- Config discovery finds `config.toml`/`config.json`, and recursive generation no longer skips them.
 
 ## [4.0.4] - 2026-04-25
 
 ### Fixed
 
-- **Pre-commit hooks broken for V3/V4 users**: file trigger patterns in `.pre-commit-hooks.yaml` only matched V2-style filenames — hooks never fired when `.ai-rulez/` directory content changed. Updated to `^\.ai-rulez/`.
-- **Stale versions across packages**: default download version in `run-ai-rulez.sh` was `v3.0.0`, `officialPreCommitRev` in `setup.go` was `v2.4.3`, lefthook glob was V2-only. All updated.
-- **Init templates generated old config version**: YAML and JSON templates used `version: "3.0"` while TOML correctly used `"4.0"`. All formats now default to `"4.0"`.
-- **PyPI wrapper version drift**: `release/pypi` `__version__` was stuck at `3.14.2`, causing binary download mismatches.
-- **Stale `ErrInvalidVersion` sentinel**: error message only mentioned `3.0`, now includes `4.0`.
-
-### Added
-
-- **Taskfile**: added `Taskfile.yml` with `setup`, `update`, `upgrade`, `set-version`, `build`, `test`, `lint`, `check`, and `clean` tasks. `set-version` updates all 8 version locations in one command.
-- **Hook unit tests**: added `internal/hooks/hooks_test.go` and `setup_test.go` covering detection, all three hook systems (lefthook, pre-commit, husky), idempotency, legacy pruning, and error paths.
+- Pre-commit hooks fire on `.ai-rulez/` changes, stale versions in scripts/wrappers are updated, and init templates default to config version 4.0.
 
 ## [4.0.3] - 2026-04-24
 
 ### Fixed
 
-- **Gitignore cleanup**: shared directories (e.g. `.github/`) now use subdirectory patterns (`.github/agents/`, `.github/skills/`) instead of listing every individual file. Nested paths deduplicated automatically.
-- **Stale binary**: builtin agents were generated by `GeneratePresets` but not written to disk when using a stale binary. Confirmed working with fresh build.
+- Gitignore uses subdirectory patterns for shared directories (for example `.github/agents/`).
 
 ## [4.0.2] - 2026-04-24
 
 ### Added
 
-- **Builtin agents**: code-reviewer, test-writer, security-auditor, docs-writer, devops-engineer, release-engineer — specialized agents shipped with the tool, ready to use as subagents.
-- **New rules** (adapted from superpowers patterns): verification-before-completion, systematic-debugging, testing-anti-patterns.
-- **Strengthened TDD rule**: iron law enforcement — wrote code before the test? Delete it, start over, no exceptions.
+- **Builtin agents** (code-reviewer, test-writer, security-auditor, docs-writer, devops-engineer, release-engineer) and new rules (verification-before-completion, systematic-debugging, testing-anti-patterns).
 
 ### Changed
 
-- **README redesigned**: value-first structure showing builtin capabilities, agents, and full development workflow.
-- **Package descriptions updated** across npm, PyPI, and GitHub to reflect complete workflow capabilities.
+- README redesigned around builtin capabilities and the development workflow.
 
 ## [4.0.1] - 2026-04-24
 
 ### Added
 
-- **New builtins**: `cicd` (pipeline standards, GitHub workflow), `docker` (container best practices), `observability` (logging, metrics, health checks).
-- **New ai-governance rules**: `no-ai-signatures` (no AI attribution in commits/PRs/code), `agent-workflow` (subagent delegation with mandatory critical review), `communication-style` (concise, no fluff/emojis/checklists).
-- **New testing rule**: `tdd-workflow` (TDD red-green-refactor, test type taxonomy).
-- **New code-quality rule**: `anti-patterns` (magic numbers, global state, composition over inheritance).
-- **Auto-include expanded**: `code-quality`, `testing`, `git-workflow`, `security`, `token-efficiency` are now auto-included by default alongside `ai-governance` and `agent-delegation`.
+- New builtins `cicd`, `docker`, `observability`; new rules `no-ai-signatures`, `agent-workflow`, `communication-style`, `tdd-workflow`, `anti-patterns`; more domains auto-included.
 
 ### Fixed
 
-- **`migrate v4` preserves MCP servers** from legacy `mcp.yaml` files — previously lost during migration.
-
-### Changed
-
-- **`token-efficiency/task-runner`** enriched with standard task naming conventions and lock file requirements.
+- `migrate v4` preserves MCP servers.
 
 ## [4.0.0] - 2026-04-23
 
-### Breaking Changes
+### Changed
 
-- **TOML is the default config format**: `ai-rulez init` now generates `config.toml` instead of `config.yaml`. Existing YAML configs continue to work.
-- **MCP servers are inline**: MCP servers are now configured in your main config file under `[[mcp_servers]]` instead of a separate `mcp.yaml`. Legacy `mcp.yaml` files are still loaded with a deprecation warning.
-- **V2 compatibility removed**: All V2 config types, migration code, validator, and generators have been removed. V3 YAML configs remain fully supported.
-- **Deprecated features removed**: `CompressionConfig`, `--skip-mcp` flag, `--auto-migrate` flag, `migrate v3` command.
+- **BREAKING: TOML is the default config format** (`init` writes `config.toml`); existing YAML configs still work.
+- **BREAKING: MCP servers are inline** under `[[mcp_servers]]` (legacy `mcp.yaml` still loads with a deprecation warning).
+- **BREAKING: V2 compatibility is removed** (config types, migration, validator, generators), along with the deprecated `CompressionConfig`, `--skip-mcp`, `--auto-migrate` and `migrate v3`.
 
 ### Added
 
-- **Agent generation for all presets**: Amp, Windsurf, Cline, and Continue.dev now generate agent files with YAML frontmatter.
-- **Context rendering for per-file presets**: Cursor, Windsurf, and Cline now render context as rule-like files.
-- **Claude MCP & plugins output**: `.claude/settings.json` (MCP servers) and `.claude/plugins.json` (plugin declarations).
-- **Cursor/Copilot MCP output**: `.mcp.json` generated when MCP servers are configured.
-- **Codex plugins & commands**: `.codex/plugins.json` and `.codex/commands/` output.
-- **Copilot command generation**: `.github/commands/` output for Copilot.
-- **Gemini/Antigravity user MCP servers**: Settings.json now includes user-configured servers alongside the hardcoded ai-rulez server.
-- **TOML config support**: Config loader tries TOML first, then YAML, then JSON.
-- **Plugins and marketplaces**: New `[[plugins]]` and `[[marketplaces]]` config sections for declaring tool extensions.
-- **`migrate v4` command**: Converts `config.yaml` to `config.toml`, inlines MCP servers, removes old files.
-- **Backward-compatible `mcp.yaml` loading**: Legacy separate MCP files are loaded with a deprecation warning.
-
-### Changed
-
-- **All V3 types renamed**: `ConfigV3` → `Config`, `ContentTreeV3` → `ContentTree`, `OutputFileV3` → `OutputFile`, etc.
-- **Schema files renamed**: `ai-rules-v3.schema.json` → `ai-rules.schema.json`, `ai-rules-v3-mcp.schema.json` → `ai-rules-mcp.schema.json`.
-- **Schema updated**: Accepts version `"3.0"` or `"4.0"`, adds `plugins` and `marketplaces` fields, removes deprecated `compression`.
-- **Documentation migrated to Zensical**: Replaces MkDocs with Zensical for documentation site generation.
-- **All documentation updated for V4**: TOML examples, inline MCP, plugins/marketplaces, updated CLI reference.
+- Agent generation for all presets, context rendering for per-file presets, Claude MCP/plugins output, Cursor/Copilot MCP, Codex plugins/commands, Copilot commands, TOML config support, `[[plugins]]`/`[[marketplaces]]` and `migrate v4`.
 
 ### Removed
 
-- V2 config types, loader, migration tool, validator, and generators (~3000 lines).
-- V1 and V2 JSON schemas.
-- V2 template rendering engine and builtin templates.
-- `CompressionConfig` (deprecated no-op).
-- Separate MCP file loading functions (replaced by inline config).
-- MkDocs configuration (`mkdocs.yaml`).
-- Generated documentation site (`site/`).
+- V2 types, loader, migration, validators and generators; V1/V2 schemas; the V2 template engine; MkDocs config and the generated `site/`.
 
 ## [3.14.2] - 2026-04-20
 
 ### Fixed
 
-- **Critical: generator deleting non-generated files in `.github/`**: `cleanManagedDirs` was treating `.github/` as a fully managed directory, deleting workflows, CODEOWNERS, issue templates and other user content during `generate`. Now skips shared directories that contain both generated and non-generated content.
+- **Critical: `generate` no longer deletes non-generated files in `.github/`** (workflows, CODEOWNERS, issue templates).
 
 ## [3.14.1] - 2026-04-20
 
 ### Fixed
 
-- **CI: missing Taskfile tasks**: Added `test:e2e`, `test:e2e:cli`, `test:e2e:mcp`, `test:e2e:integration`, `test:platform`, and `test:all` tasks that the CI/E2E workflows referenced but didn't exist.
-- **CI: golangci-lint-action**: Pinned to `@v7` (resolves `@latest` lookup failure), use `version: latest` for the binary.
-- **CI: stale test expectations**: Fixed `TestInitExistingConfig` (unset CI env to test non-interactive mode) and `TestValidateFailsWhenSkillDescriptionMissing` (updated to match 3.13.1 behavior change where missing description is a warning, not error).
-- **Windows test failures**: Fixed path separator issues in `TestAmpPresetGenerator_Generate_WithSkills` and `TestClinePresetGenerator_Generate_WithSkills` using `filepath.ToSlash`.
-- **Stale comment**: Fixed `git.go` cache directory comment (was `.ai-rulez/.remote-cache/`, actual is `~/.cache/ai-rulez/includes/`).
+- Added the CI/Taskfile tasks the workflows referenced, and fixed Windows path-separator tests.
 
 ## [3.14.0] - 2026-04-20
 
 ### Added
 
-- **Antigravity preset**: New `antigravity` built-in preset generating `GEMINI.md`, `.agents/settings.json`, and skills/agents to `.agents/skills/` and `.agents/agents/`.
-- **Gemini skills and agents**: Gemini preset now generates skill files to `.agents/skills/{id}/SKILL.md` and agent files to `.agents/agents/{name}.md` with YAML frontmatter.
-- **Cursor agents**: Cursor preset now generates agent files to `.agents/agents/{name}.md` with YAML frontmatter (name, description, model, readonly, is_background).
-- **Cursor skills moved to `.agents/`**: Cursor skills output moved from `.cursor/skills/` to `.agents/skills/` following the cross-agent standard.
-- **Codex subagents**: Codex preset now generates agent files to `.codex/agents/{name}.toml` in TOML format (name, description, developer_instructions).
-- **AMP skills**: AMP preset now generates skill files to `.agents/skills/{id}/SKILL.md`.
-- **Windsurf skills**: Windsurf preset now generates skill files to `.windsurf/skills/{id}/SKILL.md`.
-- **Copilot skills and agents**: Copilot preset now generates skill files to `.github/skills/{id}/SKILL.md` and agent files to `.github/agents/{name}.agent.md` with YAML frontmatter.
-- **Cline skills**: Cline preset now generates skill files to `.cline/skills/{id}/SKILL.md`.
-- **Junie skills and agents**: Junie preset now generates skill files to `.junie/skills/{id}/SKILL.md` and agent files to `.junie/agents/{name}.md` with YAML frontmatter.
-- **OpenCode skills and agents**: OpenCode preset now generates skill files to `.opencode/skills/{id}/SKILL.md` and agent files to `.opencode/agents/{name}.md` with YAML frontmatter.
-- **Output conflict detection**: Generator now warns when multiple presets write to the same file path, deduplicates directory entries, and uses last-write-wins for file conflicts.
-- **Vite+ builtin**: New `vite-plus` builtin for the unified TypeScript toolchain (oxlint, oxfmt, vitest, rolldown/tsdown, task caching).
-- **MCP read tools**: New `read_rule`, `read_context`, `read_skill` MCP tools for reading file content without filesystem fallback.
-- **MCP `working_directory` parameter**: All MCP CRUD and project tools now accept an optional `working_directory` parameter for polyrepo support.
-- **MCP enum constraints**: `priority` and `merge_strategy` fields now use JSON Schema `enum` constraints for better LLM tool use.
-- **MCP `read_config` / `update_config`**: New tools for reading and updating `config.yaml` fields (name, description, builtins, gitignore) via MCP.
-- **MCP `dry_run` / `recursive`**: `generate_outputs` now accepts `dry_run` (preview mode) and `recursive` (walk subdirectories) parameters.
-- **MCP annotations**: All tools now have `readOnlyHint`/`destructiveHint` annotations so clients can implement appropriate confirmation UX.
-- **`builtins show` command**: New `ai-rulez builtins show <name>` CLI command and `show_builtin` MCP tool to inspect builtin domain contents (rules, context, skills with priorities).
-- **Content hash**: Generated files include a `Content-Hash: blake3:<hex>` in the header. Files are skipped when the hash matches, eliminating timestamp-only diffs.
-- **Include cache TTL**: Git-based includes are cached for 1 hour instead of re-fetched every run. New `--no-fetch` flag for offline generation.
-
-### Changed
-
-- **Rust builtin**: Added Rust API Guidelines (naming conventions, trait implementations, type safety, builder pattern, sealed traits, rustdoc standards) and Rust Design Patterns reference.
-- **MCP atomic updates**: `update_rule`, `update_context`, `update_skill` now use atomic overwrite (temp+rename) instead of delete-then-create, preventing data loss on write failure.
-- **MCP `with_agents` parameter**: `init_project` now creates `.ai-rulez/agents/` directory when `with_agents` is true (previously silently ignored).
-- **MCP `list_context` unified**: Merged `list_context` and `list_contexts` into a single enriched endpoint returning summaries.
-- **MCP list metadata**: `list_rules`, `list_context`, and `list_skills` now populate `priority` and `targets` fields from YAML frontmatter.
-- **CLAUDE.md inlines all content**: Local project rules and contexts are now inlined in CLAUDE.md instead of using `@path` references, matching all other presets.
-- **Gitignore idempotent updates**: `.gitignore` now uses fenced `# BEGIN ai-rulez` / `# END ai-rulez` markers. Repeated `generate` runs replace the block instead of appending duplicates. Old-style `# AI Rules generated files` headers are auto-migrated.
+- **`antigravity` preset** (`GEMINI.md`, `.agents/settings.json`, skills/agents under `.agents/`).
+- Skills and agents for Gemini, Cursor, Codex, Amp, Windsurf, Copilot, Cline, Junie and OpenCode; Cursor skills moved to `.agents/skills`.
+- `vite-plus` builtin; MCP read tools; `working_directory`; enum constraints; `read_config`/`update_config`; `dry_run`/`recursive`; tool annotations; `builtins show`.
+- **Content hash** in generated headers (files skipped when unchanged) and an include cache TTL with `--no-fetch`.
+- Fenced, idempotent `.gitignore` updates.
 
 ## [3.13.1] - 2026-04-19
 
 ### Fixed
 
-- **Frontmatter parsing**: Fall back to raw map parsing when direct YAML unmarshal fails (e.g., SKILL.md files with nested `metadata:` objects). Nested values are stringified for the Extra map.
-- **Skill description validation**: Downgraded missing description from a fatal error to a warning. Uses skill name as fallback description instead of failing generation.
-- **Cache directory consistency**: Unified all cache locations to `~/.cache/ai-rulez/` (XDG convention) instead of mixing `os.UserCacheDir()` (`~/Library/Caches` on macOS) with `~/.cache/`.
-
-### Changed
-
-- **Module structure**: Restructured shared modules to use `.ai-rulez/` subdirectories, enabling remote includes via GitHub URLs without `local_override`.
-- **mdformat exclusion**: Excluded `.ai-rulez/` directories from mdformat pre-commit hook to prevent YAML frontmatter destruction.
-- **Enriched agents**: Improved devops-engineer, docs-writer, polyglot-architect, and code-reviewer agents with more detailed guidance.
+- Frontmatter parsing falls back to raw map parsing; a missing skill description is a warning; cache locations are unified under `~/.cache/ai-rulez/`.
 
 ## [3.13.0] - 2026-04-19
 
 ### Added
 
-- **Agent delegation builtin**: New `agent-delegation` auto-included builtin that renders an "## Agents" section in generated outputs (CLAUDE.md, AGENTS.md, GEMINI.md) listing all available subagents with their descriptions and delegation/parallelization instructions. Disable with `builtins: ["!agent-delegation"]`.
-- **New binding builtins**: `jni-rs` (Rust-Java/JVM), `extendr` (Rust-R), `cgo` (Go-C/Rust FFI).
-- **Token-efficiency rules**: Three new rules — `batch-operations`, `incremental-approach`, `context-preservation` — expanding the builtin from 2 to 5 rules.
-
-### Deprecated
-
-- **Compression**: The `compression` config option is now a no-op and will be removed in a future version. Existing configs with `compression` will still parse without error but emit a deprecation warning. The compression feature's stopword removal at moderate+ levels stripped meaning-critical words (negations, verbs, prepositions), making generated output ungrammatical and sometimes inverting meaning. Condense content at the source level instead.
-
-### Removed
-
-- **Compression package**: Deleted `internal/compression/` — all compression logic, stopword lists, semantic scoring, and hypernym replacement.
+- **`agent-delegation` builtin** (an `## Agents` roster in generated output, disable with `!agent-delegation`).
+- New binding builtins (`jni-rs`, `extendr`, `cgo`) and three token-efficiency rules.
 
 ### Changed
 
-- **Language builtins improved**: All 10 language convention files (Rust, Python, TypeScript, Go, Java, Ruby, PHP, Elixir, C#, R) restored to 11-14 bullets each with security scanning tools, benchmarking frameworks, build system guidance, and key language patterns.
-- **Binding builtins improved**: Fixed accuracy issues in PyO3 (`Py<T>` deprecation wording), Magnus (build tools), and ext-php-rs (error mapping, GC, async guidance).
-- **Universal builtins improved**: Rewrote `output-awareness` with concrete limits, restored `dependency-awareness` per-language tool list, rewrote OWASP context verb-first, sharpened `read-before-write` vs `verify-before-acting` distinction, improved `avoid-duplication` with concrete "three similar lines" guidance.
+- `compression` is a no-op and deprecated (its stopword removal made output ungrammatical); the compression package was removed.
 
 ## [3.12.0] - 2026-04-17
 
 ### Added
 
-- **Installed skills**: New `ai-rulez skill install/remove/list` commands for installing named skills from external git repos or local paths. Skills are fetched dynamically at generate time and included in outputs. Config field: `installed_skills` in config.yaml.
-- **MCP tools for installed skills**: `install_skill`, `uninstall_skill`, `list_installed_skills` MCP operations.
-- **Distributable ai-rulez skill**: `skills/ai-rulez/` folder at repo root with comprehensive SKILL.md and reference docs, installable by other projects.
-- **`installed_skills` JSON schema**: Schema validation for the new config section.
-- **llms.txt**: Added LLM-friendly documentation index at `docs/llms.txt`.
+- **Installed skills**: `ai-rulez skill install/remove/list`, fetched at generate time (`installed_skills` config, with MCP tools).
+- A distributable `ai-rulez` skill and `docs/llms.txt`.
 
 ### Fixed
 
-- **YAML config preservation**: `SaveConfigV3` now uses `yaml.Node` round-tripping to preserve field ordering, comments, and formatting when modifying config (e.g., `skill install`, `include add`). Previously, saving re-marshaled the entire config, losing comments and reordering fields.
-- **Stale cache invalidation**: Include and skill caches are now cleared before each fetch, preventing stale data from previous downloads from contaminating results.
-- **golangci-lint clean**: Extracted `sourceTypeGit`/`sourceTypeLocal` constants, fixed `gocritic` shadow and named result warnings.
-
-### Changed
-
-- **golangci-lint pinned in CI**: `golangci-lint-action@latest` with `version: v2.11.4` in CI workflow.
+- YAML config saving preserves ordering, comments and formatting, and include/skill caches are cleared before each fetch.
 
 ## [3.11.5] - 2026-04-15
 
 ### Fixed
 
-- **Claude preset: no headers in skills/agents/commands**: Generated header comments (`<!-- AI-RULEZ ... -->`) are no longer emitted in skill, agent, or command files. These files serve as prompts for Claude Code — header comments wasted tokens and injected confusing "DO NOT EDIT" instructions into the agent's system prompt. Headers are now only emitted in CLAUDE.md and equivalent top-level files.
+- The Claude preset emits no header comments in skill, agent or command files.
 
 ## [3.11.4] - 2026-04-15
 
-### Fixed
-
-- **Claude preset: frontmatter placement**: Skill, agent, and command files now emit YAML frontmatter (`---`) as the first line, before the generated header comment. Previously the HTML comment header was placed before frontmatter, preventing Claude Code from parsing it.
-- **Claude preset: skill frontmatter fields**: Skills now include `user_invocable` (false for domain skills, true for commands) and `description` in frontmatter. Removed ai-rulez internal fields (`priority`, `targets`) from Claude output.
-- **Include domain profiles (#97)**: `GetContentForProfile` now adds `FromInclude` and builtin domains before profile-specific domains, ensuring included domains are always available regardless of profile configuration. `mergeDomainInstall` now correctly sets `FromInclude=true` on new domains.
-- **Non-deterministic output**: `mergeContentFiles` with `baseWins=false` now iterates the include slice instead of a map, producing deterministic file ordering across regenerations.
-- **Lint**: Fixed `rangeValCopy` warnings in include CRUD operations and `gofmt` formatting in `IncludeConfig` struct.
-
 ### Added
 
-- **`local_override` for includes**: New `local_override` field on include configs allows using a local directory instead of fetching from git. If the local path exists, it is used; if not, the include falls back to the configured git source. Supports the `path` subdir field. Useful for developing shared rules locally before pushing.
-- **Minimal headers for skills/agents**: `StyleOverride` field on `TemplateData` allows preset generators to force a specific header style. Claude preset now uses "minimal" headers for skills and agents to reduce token waste.
+- **`local_override` for includes** (use a local directory instead of a git fetch), and minimal headers for skills/agents.
 
-### Changed
+### Fixed
 
-- **Profile domain warnings**: `warnMissingDomainReferences` now emits debug-level (not warn-level) messages when includes are configured and a referenced domain is missing, since the domain may exist in an include that failed to resolve.
+- Claude frontmatter is emitted as the first line; skills carry `user_invocable` and `description`; included domains are always available; output is deterministic.
 
 ## [3.11.3] - 2026-03-29
 
 ### Fixed
 
-- Includes: fail fast when includes are configured but the includes resolver isn't registered, preventing silent drops of included domains referenced by profiles.
-
-### Added
-
-- Integration coverage for profiles resolving domains delivered via includes, ensuring included domains stay visible to profile selection.
-
-### Changed
-
-- GolangCI-Lint now tracks the `latest` release in CI and pre-commit instead of a pinned version.
+- Includes fail fast when the resolver is not registered.
 
 ## [3.11.2] - 2026-03-25
 
 ### Fixed
 
-- **Gitignore: `.github/` directory no longer ignored**: The gitignore updater was adding `.github/` as a directory-level pattern because the copilot preset creates `.github/copilot-instructions.md`. This caused CI workflows and other `.github/` content to be ignored. Shared directories like `.github` are now excluded from directory-level patterns — only individual generated files inside them are gitignored.
-- **Gitignore: no more individual file paths**: Files inside fully-managed directories (e.g. `.claude/skills/foo/SKILL.md`) are no longer added individually to `.gitignore` — the parent directory pattern covers them.
+- `.github/` is no longer ignored as a directory, and files inside fully-managed directories are not listed individually.
 
 ## [3.11.1] - 2026-03-25
 
 ### Added
 
-- **R language builtin**: R conventions covering tidyverse style, testthat, roxygen2, CRAN compliance, and extendr/rextendr Rust FFI bindings
+- R language builtin (tidyverse, testthat, CRAN, extendr).
 
 ## [3.11.0] - 2026-03-25
 
 ### Fixed
 
-- **Include domain duplication** (issue #97): Include sources now use `ScanContentTree` instead of `scanner.ScanProfile`, preventing domain content from appearing twice in generated output
-- **Claude preset output bloat**: Skill, agent, and command-as-skill files no longer embed all rules and context; only explicitly targeted content is included (reduces `.claude/` from ~13MB to ~440KB on large projects)
-- **Stale file cleanup**: Generator now removes orphaned files from managed output directories (`.claude/skills/`, `.claude/agents/`) before writing new output
+- Include domains are no longer duplicated, Claude output shrinks from ~13 MB to ~440 KB, and stale files are cleaned before writing.
 
 ### Changed
 
-- **Rules rendered as `@` references**: Local project rules in CLAUDE.md now use `@path` lazy-loading references instead of full inlining, matching the existing context rendering pattern. Builtin and included rules remain inlined.
-- **Exported `ScanContentTree`**: `config.ScanContentTree()` is now public for use by include sources and external consumers
-- Context and rules rendering consolidated into shared `renderContentRef` helper
+- Local rules in `CLAUDE.md` use `@path` lazy-loading references.
 
 ## [3.10.0] - 2026-03-18
 
 ### Fixed
 
-- **Included skills validation**: Frontmatter parser now captures `description` and other extra fields from included skill files via YAML inline tag (issue #96)
-- **Included domains in profiles**: Include sources (git and local) now discover and scan domain directories, so consuming projects can reference included domains in profiles (issue #97)
-
-### Changed
-
-- Include domain discovery skips hidden directories (e.g. `.git`) in the `domains/` tree
+- Included skills expose their frontmatter, and included domains are discovered and usable in profiles.
 
 ## [3.9.0] - 2026-03-11
 
 ### Added
 
-- Root `.ai-rulez/commands/` documentation files for `build`, `fix`, `lint`, `review`, and `test`
-- Repository-managed `.pre-commit-config.yaml` with commit-message linting and `prek`-driven checks
+- Root command docs (`build`, `fix`, `lint`, `review`, `test`) and a repository-managed pre-commit config.
 
 ### Changed
 
-- Replaced `lefthook.yaml` with the `prek`/pre-commit toolchain across local workflows, CI wiring, and helper scripts
-- Refreshed command-generation, docs-site output, and test fixtures to match the new command docs and hook setup
-- Aligned Go/tooling dependencies and CI lint configuration with the current Go `1.26` toolchain
+- Replaced lefthook with the prek/pre-commit toolchain.
 
 ### Fixed
 
-- Codex skill generation now always emits `description` in `.codex/skills/*/SKILL.md`, falling back to the skill ID when needed
-- V3 validation now rejects source `SKILL.md` files that omit a non-empty `description`
-- Skill import, CRUD creation, and V2 section migration now synthesize valid skill descriptions so generated Codex skills always load
-- E2E test binary setup now uses a stable temp path, preventing later suites from inheriting deleted binaries
+- Codex skills always carry a `description`; V3 validation rejects a missing description; E2E test binary setup is stable.
 
 ## [3.8.3] - 2026-03-08
 
 ### Fixed
 
-- **GetContentForProfile**: Domain content from includes no longer duplicated into root-level slices; domains are now placed only in the Domains map for proper preset generation
-- **Includes resolver**: Added `FromInclude` field to `DomainV3` to track domains originating from external includes
+- Domain content from includes is no longer duplicated into root slices.
 
 ## [3.8.2] - 2026-03-08
 
 ### Fixed
 
-- **Claude preset**: Domain skills, agents, and commands are now properly collected and generated (previously only root-level content was processed)
-- **Builtins**: `default-commands` builtin (`/iterate`, `/parallelize`) now generates Claude skill files correctly
+- The Claude preset collects domain skills, agents and commands, and the `default-commands` builtin generates correctly.
 
 ### Changed
 
-- **Builtin language conventions**: All 9 language builtins expanded with explicit linting toolchain, SAST tools, coverage tools, benchmark tools, and package manager recommendations
-  - Rust: added `cargo-llvm-cov`, `cargo deny`, `cargo-machete`, `criterion`, `cargo-flamegraph`, `Cow`/`Arc`/`memchr`/SIMD guidance
-  - Python: added `bandit`, `hypothesis`, `uv` lockfile, `hatchling`/`maturin`, `pytest-benchmark`, `py-spy`/`scalene`
-  - TypeScript: added `oxlint`, `pnpm` preferred, `tsup`/`esbuild`, `socket.dev`/`snyk` supply chain
-  - Go: added `govulncheck`, `gosec`, specific `golangci-lint` linters, `benchstat`
-  - Java: added Gradle preference, `google-java-format`, `Error Prone`, `Checkstyle`, `SpotBugs`, `JaCoCo`, `JMH`
-  - Ruby: added `rubocop` plugins, `bundler-audit`, `brakeman`, `factory_bot`, `simplecov`
-  - PHP: added `PHP-CS-Fixer`, `Psalm`, `roave/security-advisories`, PSR-4 autoloading
-  - Elixir: added `excoveralls`, `sobelow`, `mix_audit`, `dialyxir`, `ExDoc`
-  - C#: added `StyleCop.Analyzers`, `Roslynator`, `coverlet`, `BenchmarkDotNet`, `ValueTask`
-- **Security builtin**: `dependency-awareness` rule expanded with per-language audit tool recommendations
-- **Token efficiency builtin**: Description updated from "RTK awareness" to "Output efficiency and task automation"
+- Language builtins expanded with linting, SAST, coverage and benchmark tooling.
 
 ## [3.8.1] - 2026-03-07
 
 ### Changed
 
-- **Token reduction**: Replaced simple compression system with kreuzberg-ported token reduction engine
-  - 5 reduction levels: `off`, `light`, `moderate`, `aggressive`, `maximum`
-  - Markdown-aware processing preserves headers, lists, tables, and code blocks
-  - Stopword removal with language support (English)
-  - Sentence scoring and selection for aggressive/maximum levels
-  - Semantic token scoring and hypernym compression for maximum level
-  - Backward-compatible: old level names (`none`/`minimal`/`standard`) auto-mapped
-- **Compression config**: New fields `preserve_markdown`, `preserve_code`, `language`; removed `remove_duplicates`, `use_abbreviations`, `preserve_formatting`
+- Replaced simple compression with a token-reduction engine (levels `off`/`light`/`moderate`/`aggressive`/`maximum`, markdown-aware).
 
 ### Fixed
 
-- **Includes**: Flat ai-rulez structure (rules/, context/ directly) now detected at sub-paths, not just at repository root
-- **Includes**: `findAIRulezDir()` and `findSourceDir()` both support flat structure at sub-paths for git sources
+- Flat ai-rulez structures are detected at sub-paths.
 
 ## [3.8.0] - 2026-03-07
 
 ### Added
 
-- **Built-in domains system**: 23 embedded content domains shipped with the binary via `//go:embed`
-  - 8 universal domains: `ai-governance` (auto-included), `security`, `git-workflow`, `code-quality`, `testing`, `token-efficiency`, `documentation`, `default-commands`
-  - 9 language domains: `rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`
-  - 6 binding domains: `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`
-- **`builtins` config field** with flexible syntax:
-  - `builtins: true` — enable all built-in domains
-  - `builtins: false` — disable all (including auto-includes)
-  - `builtins: [rust, python, security]` — enable specific domains
-  - `builtins: ["!ai-governance"]` — exclude auto-included domains
-- **`ai-rulez builtins list`** CLI command to show available built-in domains (supports `--json`)
-- **`/iterate` slash command** (via `default-commands` builtin): instructs LLM to work in implementation/review/adjustment cycles
-- **`/parallelize` slash command** (via `default-commands` builtin): instructs LLM to split tasks among subagents
-- `BuiltinsConfig` type with custom YAML/JSON marshaling supporting boolean and array formats
-- Builtins merge at lowest priority — local content and includes always override builtin content
-
-### Changed
-
-- Schema updated: `builtins` field added, preset enum updated with `codex`, `amp`, `junie`, `opencode`
+- **Built-in domains**: 23 embedded content domains shipped with the binary.
+- **`builtins` config field** (`true`/`false`/list/`!name`) and `ai-rulez builtins list`.
+- `/iterate` and `/parallelize` slash commands.
 
 ## [3.7.3] - 2026-02-19
 
 ### Fixed
 
-- Publish workflow now resolves Go from `go.mod` for GoReleaser (`go-version-file: "go.mod"`), preventing asset build failures when the module Go version advances
-
-### Changed
-
-- Contribution guide now requires Go `1.26+` and references the correct release workflow file (`.github/workflows/publish.yaml`)
+- The publish workflow resolves Go from `go.mod`.
 
 ## [3.7.2] - 2026-02-16
 
 ### Fixed
 
-- Claude preset skill rendering now respects frontmatter `targets` when embedding rules/context in `.claude/skills/*/SKILL.md`, preventing unrelated content leakage
-- npm installer now supports offline/private-registry bundled binaries (`bin/ai-rulez-{os}-{arch}`), using packaged binaries before attempting GitHub release downloads
+- Claude skill rendering respects frontmatter `targets`, and the npm installer supports offline/private-registry bundled binaries.
 
 ## [3.7.1] - 2026-02-16
 
 ### Fixed
 
-- Windsurf trigger frontmatter now safely YAML-quotes `description` and `glob` values, preventing malformed output when values include special characters
-- Windsurf invalid trigger warning now reflects the original unsupported trigger value before fallback
+- Windsurf trigger frontmatter safely quotes `description` and `glob`.
 
 ## [3.7.0] - 2026-02-16
 
-### Added
-
-- Contributor credit: merged PR [#83](https://github.com/Goldziher/ai-rulez/pull/83) by [@mnsami](https://github.com/mnsami)
-
 ### Fixed
 
-- Includes system now correctly includes agents in merged include content (PR #83)
-- Codex skill generation now always writes `description` in `.codex/skills/*/SKILL.md` frontmatter
-
-### Changed
-
-- Bumped Go toolchain target to `1.26` and aligned CI workflows
-- Bumped `golangci-lint` to `v2.9.0` across Taskfile, hooks, and CI
-- Updated Go, Node, and Python/docs dependencies to latest available versions
+- Includes now carry agents, and Codex skills always carry a `description`.
 
 ## [3.6.1] - 2026-01-07
 
 ### Fixed
 
-- Windows binary packaging - now uses `.zip` format instead of `.tar.gz` for Windows releases
+- Windows releases use `.zip` instead of `.tar.gz`.
 
 ## [3.6.0] - 2026-01-05
 
-### Preset Generator Skills/Commands Inlining Bug
-
-- **Claude**: Removed skills and commands from CLAUDE.md (77% size reduction - 14K lines to 3.2K lines)
-  - Skills now only generate to `.claude/skills/{skill-id}/SKILL.md`
-  - Commands now only generate to `.claude/skills/{command-id}/SKILL.md`
-- **Cursor**: Added missing skills and commands directory support
-  - Skills now generate to `.cursor/skills/{skill-id}/SKILL.md`
-  - Commands now generate to `.cursor/commands/{command}.md` (was `.cursor/rules/cmd-*.mdc`)
-- **Codex**: Removed skills inlining from AGENTS.md
-  - Skills now generate to `.codex/skills/{skill-id}/SKILL.md`
-  - AGENTS.md only contains Rules and Context
-- **Gemini**: Removed skills inlining from GEMINI.md
-- **Copilot**: Removed skills inlining from `.github/copilot-instructions.md`
-- **AMP**: Removed skills inlining from AGENTS.md
-- **OpenCode**: Removed skills inlining from AGENTS.md
-- **Junie**: Removed skills inlining from `.junie/guidelines.md`
-
 ### Changed
 
-- All preset generators now correctly separate skills into dedicated directories
-- Main preset files (CLAUDE.md, GEMINI.md, etc.) only contain Rules and Context
-- Skills are lazily loaded from separate files, reducing prompt token usage
+- Skills and commands are written to dedicated directories instead of inlined into root files across every preset (Claude's `CLAUDE.md` dropped ~77%, from 14K to 3.2K lines), reducing prompt tokens.
 
 ## [3.5.0] - 2026-01-04
 
-### V3-Native Command System
+### Added
 
-- File-based slash commands in `.ai-rulez/commands/` directory with YAML frontmatter
-- Profile-aware commands (root + domain-specific commands)
-- Commands generate to preset-specific formats:
-  - Claude: `.claude/skills/{command-name}/SKILL.md`
-  - Cursor: `.cursor/rules/cmd-{name}.mdc`
-  - Continue.dev: Entries in `.continue/prompts/ai_rulez_prompts.yaml`
-  - Support for all 18 presets
-- Command metadata: name, aliases, description, usage, shortcut, priority, category, targets
-- V2 command migration support via `ai-rulez migrate v3`
-
-#### Prompt Compression
-
-- Configurable compression levels: none, minimal, standard, aggressive
-- Simple optimizations without external dependencies:
-  - Whitespace removal (trailing spaces, excessive blank lines)
-  - Priority label compaction
-  - Abbreviations (aggressive mode)
-- Context optimization: summaries with @ links instead of full content (34% size reduction)
-- Compression stats logging during generation
-
-#### Context File Optimization
-
-- Required `summary` field in context frontmatter for concise descriptions
-- Context rendered as summaries with @ links to full files
-- MCP `list_contexts` tool added to list context files with names and summaries
-- Enables agents to fetch full context only when needed
+- **V3-native command system**: file-based slash commands in `.ai-rulez/commands/` with YAML frontmatter, profile-aware and rendered per preset (`migrate v3` for V2 commands).
+- Configurable prompt compression and context-file optimization (a required `summary`; context rendered as summaries with `@` links, ~34% smaller).
 
 ### Changed
 
-- Remote includes cache moved from `.remote-cache/` to system cache directory
-  - macOS: `~/Library/Caches/ai-rulez/includes/`
-  - Linux: `~/.cache/ai-rulez/includes/`
-  - Windows: `%LocalAppData%/ai-rulez/includes/`
-- Context files now require `summary` field in frontmatter
-- CLAUDE.md and other presets significantly smaller (9.5K vs 14K, 34% reduction)
+- Remote include cache moved to the system cache directory.
 
 ### Fixed
 
-- Include system now properly merges commands from remote sources
-- Scanner properly scans commands in root and domain directories
-- Default profile now includes commands in content tree
+- Includes merge commands from remote sources, and the default profile includes commands.
 
 ## 3.4.1 - 2026-01-03
 
 ### Added
 
-- SSH git clone support for private repositories - automatically uses `git clone` for SSH URLs (`git@...`, `ssh://...`)
-- Support for self-hosted GitLab instances and other GitLab-compatible git servers
-- Support for repositories where root IS the ai-rulez structure (no nested `.ai-rulez/` directory)
-- Automatic detection of repository structure (standard vs root-level)
-
-### Changed
-
-- Git includes now use native SSH cloning when SSH URLs are detected, leveraging existing SSH key configuration
-- Improved git include fetching to skip `.git` directory when copying repository content
-
-### Documentation
-
-- Added comprehensive SSH cloning documentation in docs/includes.md
-- Added repository structure support documentation
-- Added self-hosted GitLab examples and requirements
+- SSH git clone support for private repositories, self-hosted GitLab, and repositories whose root is the ai-rulez structure.
 
 ## 3.4.0 - 2026-01-03
 
 ### Added
 
-- Configurable header styles for generated files (detailed, compact, minimal)
-- CLAUDE.md generation to claude preset
-- Enhanced headers with AI-RULEZ explanation, folder structure, and MCP server usage instructions
-- Markdown formatting support using goldmark and goldmark-markdown
-- Markdown processor utilities to normalize embedded content (strip duplicate H1 headings, normalize blank lines)
-- Markdownlint configuration for generated files
-- Comprehensive documentation for header configuration in docs/configuration.md
-
-### Changed
-
-- All 11 presets now include enhanced headers with AI agent instructions
-- Generated markdown files now pass markdownlint validation
-- Headers now explain what ai-rulez is, the .ai-rulez folder structure, and how to use the MCP server
-- Embedded content processing removes duplicate headings and normalizes formatting
-
-### Dependencies
-
-- Added github.com/yuin/goldmark v1.7.13
-- Added github.com/teekennedy/goldmark-markdown v0.5.1
+- Configurable header styles (`detailed`/`compact`/`minimal`), `CLAUDE.md` generation, and markdown formatting with markdownlint compliance.
 
 ## 3.3.2 - 2026-01-02
 
 ### Fixed
 
-- SSH git URL conversion in includes system - now properly converts SSH URLs to HTTPS for archive downloads
-- Added support for multiple SSH URL formats: `git@host:owner/repo.git`, `ssh://git@host/owner/repo.git`
-- Updated validation to accept SSH URLs alongside HTTP/HTTPS URLs
-
-### Documentation
-
-- Added comprehensive examples for Git includes with SSH and HTTPS URLs in README
-- Updated includes documentation with supported Git URL formats and include options
+- SSH git URL conversion in includes, with multiple SSH URL formats accepted.
 
 ## 3.3.1 - 2025-12-31
 
 ### Fixed
 
-- SSH git URL detection in includes system - now properly detects `git@host:path` format URLs
-- Previously only HTTP/HTTPS URLs were recognized, causing SSH git URLs to be treated as local paths
+- SSH git URL detection (`git@host:path` was treated as a local path).
 
 ## 3.3.0 - 2025-12-31
 
 ### Fixed
 
-- Complete agents support in includes system
-- Add agents scanning support to includes and scanner
-
-### Changed
-
-- Bump actions/cache from 4 to 5
-- Bump actions/upload-artifact from 4 to 6
+- Complete agents support in the includes system.
 
 ## 3.2.2 - 2025-12-28
 
 ### Added
 
-- Init now creates root and domain agent directories by default
-- Generated MCP config now includes the ai-rulez MCP server
-
-### Fixed
-
-- MCP tool configs now render with structured MCP output for supported tools
-
-### Changed
-
-- Bumped golangci-lint to v2.7.2 in Taskfile and CI
+- `init` creates root and domain agent directories, and generated MCP config includes the ai-rulez server.
 
 ## 3.2.1 - 2025-12-28
 
 ### Fixed
 
-- Gitignore updates now use relative paths instead of absolute machine-specific paths
-- .ai-rulez directory is no longer added to .gitignore (source of truth should be tracked)
-- Added tests to verify gitignore path handling
+- Gitignore uses relative paths and no longer ignores `.ai-rulez/`.
 
 ## 3.2.0 - 2025-12-28
 
 ### Added
 
-- Full agent/subagent support in V3 configuration with `.ai-rulez/agents/` directory
-- Auto-migration feature in generate command (detects V2 configs and migrates automatically)
-- Interactive prompting for migration in terminal environments
-- Silent auto-migration in CI environments
-- `--auto-migrate` flag for explicit migration control
-- Agent metadata support (name, description, model, tools, permission_mode, skills)
-- Claude Code subagent format generation to `.claude/agents/`
-
-### Fixed
-
-- Migration mapping corrected: V2 sections → V3 skills, V2 agents → V3 agents
-- Agent model field now preserved in YAML frontmatter during migration
-- Backup directories automatically deleted on successful migration
-- V3→V2 conversion now uses correct agent source
-- Default profile now includes agents in generated content
-- Code quality improvements (removed unused functions, reduced cyclomatic complexity)
-
-### Changed
-
-- Dependencies updated to latest minor versions (19 packages upgraded)
-- Migration now creates proper directory structure for skills (skills/{id}/SKILL.md)
+- Full agent/subagent support in V3 (`.ai-rulez/agents/`), agent metadata, and Claude Code subagent output.
+- Auto-migration of V2 configs (interactive in a terminal, silent in CI; `--auto-migrate`).
 
 ## 3.1.0 - 2025-12-27
 
 ### Added
 
-- Migrate command for V2 to V3 configuration migration
-- Comprehensive test suite for migrate command (27 tests covering command structure, flags, and utility functions)
-- Integration test placeholder to prevent test runner errors
-
-### Fixed
-
-- Windows path separator issues in tests (content_test.go, validation_test.go, local_test.go)
-- Windows absolute path generation for cross-platform test compatibility
-- Test coverage for migrate command utilities (CopyDir, CreateBackup, detectV2Config)
+- `migrate` command for V2 to V3 configuration migration.
 
 ## 3.0.0 - 2025-12-27
 
 ### Added
 
-- Directory-based configuration system (`.ai-rulez/` directory structure)
-- CRUD operations via CLI commands (domain, add, remove, list, include, profile)
-- 22 MCP tools for AI assistant integration
-- Domain separation for organizing rules by team/area
-- Profile system for generating different configs for different teams
-- Includes system for composing from local packages or Git repositories
+- Directory-based configuration (`.ai-rulez/`), CRUD CLI commands, 22 MCP tools, domains, profiles and includes.
 
 ### Changed
 
-- **BREAKING**: Configuration format changed from single YAML to directory structure
-- **BREAKING**: Init command no longer uses AI agents for dynamic initialization
-- Documentation simplified and focused on V3 only
+- **BREAKING: configuration changed from a single YAML file to a directory structure**, and `init` no longer uses AI agents for dynamic initialization.
 
 ### Removed
 
-- **BREAKING**: Enforce command removed
-- **BREAKING**: V2 dynamic init with AI agents removed
-- V2 single-file YAML configuration support
+- **BREAKING: the `enforce` command and V2 dynamic init are removed**; single-file YAML support is dropped.
 
 ## 2.4.0 - 2025-10-22
 
 ### Fixed
 
-- CLI MCP interference with template-generated files
-- Output type values in AI-generated configurations
+- CLI MCP interference with template-generated files, and output type values in AI-generated configs.
 
 ## 2.3.0 - 2025-10-05
 
 ### Added
 
-- AI-powered rule enforcement system
-- Automatic gitignore management
-- Junie preset with lefthook configuration
+- AI-powered rule enforcement, automatic gitignore management, and the Junie preset.
 
 ## 2.2.0 - 2025-09-20
 
 ### Added
 
-- MCP file-based configuration system for Claude and other tools
+- MCP file-based configuration for Claude and other tools.
 
 ## 2.1.0 - 2025-08-20
 
 ### Added
 
-- CLI MCP integration for Claude
-- Improved init phase system
+- CLI MCP integration for Claude, and an improved init phase.
 
 ### Fixed
 
-- Cross-platform binary extensions for Windows support
-- Homebrew formula structure
+- Cross-platform binary extensions, and the Homebrew formula structure.
 
 ## 2.0.0 - 2025-07-30
 
-### Added
-
-- Schema v2 with priority enum system
-- Named target resolution for filter functions
-
 ### Changed
 
-- **BREAKING**: Updated schema to v2 with priority enum system
-- Unified section field naming to use 'name' instead of 'title'
+- **BREAKING: schema v2** with a priority enum, unified `name` (was `title`), and named target resolution.
 
 ## 1.6.0 - 2025-07-10
 
 ### Added
 
-- Target filtering and named targets support
+- Target filtering and named targets.
 
 ## 1.5.0 - 2025-06-25
 
 ### Added
 
-- Initial release with core configuration generation
-- Rule definition system
-- Template-based generator
+- Initial release: core configuration generation, the rule definition system and a template-based generator.
