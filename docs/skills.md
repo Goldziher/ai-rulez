@@ -30,6 +30,7 @@ and keys are sorted, so output is deterministic.
 | Key                                                      | Claude Code (`.claude/skills`)        | Cursor (`.agents/skills`) | Every other preset's skill tree                 |
 | -------------------------------------------------------- | ------------------------------------- | ------------------------- | ----------------------------------------------- |
 | `name`, `description`                                    | yes                                   | yes                       | yes                                             |
+| `delivery` (an ai-rulez key, see below)                  | no: removed before writing            | no                        | no                                              |
 | `license`, `compatibility`, `metadata`, `allowed-tools`  | yes                                   | yes                       | yes (the Agent Skills specification fields)     |
 | `paths` (or `globs`)                                     | yes, gates the skill to matching files | yes                      | no: no other tool documents a skill `paths` key |
 | `disable-model-invocation`                               | yes                                   | yes                       | Codex: `agents/openai.yaml`, see below          |
@@ -69,6 +70,27 @@ and ignores unknown fields; the [Agent Skills specification](https://agentskills
 
 `paths` (or `globs`) on a skill makes Claude Code and Cursor load it only when matching files are in play. Patterns use
 the same syntax as rule `paths`. The other tools ignore the key.
+
+## Dynamic loading (`delivery`)
+
+`delivery` decides how a skill reaches the agent: `static` (default) writes it into every harness skill tree, `served`
+leaves it out of the trees and serves it over MCP on demand, and `both` does both. It is an ai-rulez key: it is removed
+from the generated frontmatter and never carried into a skill tree.
+
+```yaml
+---
+name: db-migrations
+description: Plan and run database schema changes safely. Use when changing a table.
+delivery: served
+triggers: [schema change, alembic migration, add a column]
+---
+```
+
+The skill's own `delivery` wins. A role's `delivery`, `[domains.<name>] delivery` and `[skills] delivery` set the
+default otherwise, so a project can serve a whole domain or every skill and mark the few core skills `static`. A
+harness that cannot call MCP tools keeps served skills as static files (warning `AR992`), and served skills need an
+`[[mcp_servers]]` entry running `ai-rulez mcp --serve-skills` (warning `AR993`). See
+[Dynamic skill loading](mcp-server.md#dynamic-skill-loading).
 
 ## Size limits
 
