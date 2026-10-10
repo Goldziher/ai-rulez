@@ -25,6 +25,7 @@ func TestSourcesRefuseACredentialedURL(t *testing.T) {
 		{"user and password", "https://user:" + secret + "@github.com/o/r.git", true},
 		{"token as the user", "https://" + secret + "@github.com/o/r.git", true},
 		{"git+https with a credential", "git+https://user:token@git.example.com/o/r", true},
+		{"token in the query string", "https://github.com/o/r.git?access_token=" + secret, true},
 		{"plain https", "https://github.com/o/r.git", false},
 		{"scp-style ssh", "git@github.com:o/r.git", false},
 	}

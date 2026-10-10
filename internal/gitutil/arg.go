@@ -3,6 +3,8 @@ package gitutil
 import (
 	"fmt"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/urlredact"
 )
 
 // CheckArg rejects a value that would be read as a git option or that cannot be
@@ -10,14 +12,15 @@ import (
 // configuration file or a command line is data; one that starts with '-' (for
 // example `--upload-pack=<command>`) would make git run a program, so it is
 // refused before it reaches any git command line. Control characters (NUL,
-// newlines) are refused because they split arguments and config lines.
+// newlines) are refused because they split arguments and config lines. The value
+// is redacted in the message, so a credentialed URL is not re-exposed in a log.
 func CheckArg(what, value string) error {
 	if strings.HasPrefix(strings.TrimSpace(value), "-") {
-		return fmt.Errorf("%s %q starts with '-' and would be read as a git option", what, value)
+		return fmt.Errorf("%s %q starts with '-' and would be read as a git option", what, urlredact.URL(value))
 	}
 	for _, r := range value {
 		if r < 0x20 || r == 0x7f {
-			return fmt.Errorf("%s %q contains a control character", what, value)
+			return fmt.Errorf("%s %q contains a control character", what, urlredact.URL(value))
 		}
 	}
 	return nil
@@ -32,10 +35,10 @@ func CheckRemoteURL(what, value string) error {
 		return err
 	}
 	if strings.HasPrefix(strings.ToLower(strings.TrimPrefix(strings.TrimSpace(value), "git+")), "http://") {
-		return fmt.Errorf("%s %q uses plain http://, which is not accepted since ai-rulez 5: use https:// (or ssh://, git@host:path, file://)", what, value)
+		return fmt.Errorf("%s %q uses plain http://, which is not accepted since ai-rulez 5: use https:// (or ssh://, git@host:path, file://)", what, urlredact.URL(value))
 	}
 	if strings.HasPrefix(strings.ToLower(strings.TrimPrefix(strings.TrimSpace(value), "git+")), "git://") {
-		return fmt.Errorf("%s %q uses plain git://, which is unauthenticated and can be rewritten in transit and is not accepted since ai-rulez 5: use https:// (or ssh://, git@host:path, file://)", what, value)
+		return fmt.Errorf("%s %q uses plain git://, which is unauthenticated and can be rewritten in transit and is not accepted since ai-rulez 5: use https:// (or ssh://, git@host:path, file://)", what, urlredact.URL(value))
 	}
 	return nil
 }
