@@ -4,7 +4,7 @@
 exit: 1
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 Error: unresolved MCP env placeholders: local-tool.env.API_TOKEN references ${GOLDEN_TOKEN}; remote-tool.headers.Authorization references ${GOLDEN_TOKEN}
 
 Hint: Set missing values with --env KEY=VALUE, an environment variable, or .env
@@ -48,7 +48,7 @@ scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 INFO  Generating with configuration profile=default
@@ -121,7 +121,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 INFO  Generating with configuration profile=default
@@ -167,7 +167,7 @@ risk (advisory, never fails the run): critical (score 100/100)
   medium      8  .ai-rulez/agents/tester.md
   ... and 4 more item(s)
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 INFO  Configuration is valid path=$ROOT/.ai-rulez
 --- project tree
 (no change)

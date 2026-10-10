@@ -340,7 +340,7 @@ source file's frontmatter (the export normalizes them), and a source file that i
 `x-ai-rulez.metadata`, `type` and `title` are added, and each directory gets an `index.md` (the root one names
 `okf_version`). The loader maps `x-ai-rulez.metadata` back onto the native fields, treats `type`, `title` and
 `x-ai-rulez` as reserved, and ignores generated `index.md`/`log.md` listings, so generated output does not change.
-`validate` runs `okf validate` on such a tree. `init`, `add`, `remove` and the MCP CRUD tools write this form: a new concept gets `type`, `title` and `x-ai-rulez`, and the `index.md` files are refreshed when the tree is a bundle (it has a root `index.md`); `export okf` of such a tree reproduces it byte for byte. A tree without a root `index.md` is the legacy layout: it still loads, with a deprecation notice from `validate`, `generate` and `list`, until v6. See [Migrating to v5](migration-v5.md#okf-is-the-format-of-ai-rulez).
+`validate` runs `okf validate` on such a tree. `init`, `add`, `remove` and the MCP CRUD tools write this form: a new concept gets `type`, `title` and `x-ai-rulez`, and the `index.md` files are refreshed when the tree is a bundle (it has a root `index.md`); `export okf` of such a tree reproduces it byte for byte. A tree without a root `index.md` is the legacy layout: it still loads, with a deprecation notice from `validate`, `generate` and `list`. See [Migrating to v5](migration-v5.md#okf-is-the-format-of-ai-rulez).
 
 ### What `migrate okf` will and will not touch
 

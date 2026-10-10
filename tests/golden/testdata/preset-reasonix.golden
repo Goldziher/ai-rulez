@@ -4,7 +4,7 @@
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] are not generated for reasonix: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
 WARN  [[hooks]] not generated for reasonix: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.reasonix to the reasonix equivalent, or restrict the group with targets
 INFO  Generating with configuration profile=default
@@ -73,7 +73,7 @@ scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] are not generated for reasonix: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
 WARN  [[hooks]] not generated for reasonix: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.reasonix to the reasonix equivalent, or restrict the group with targets
 INFO  Generating with configuration profile=default
@@ -89,7 +89,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] are not generated for reasonix: ai-rulez translates them for augment, claude, codebuddy, codex, commandcode, copilot, copilot-cli, cursor, devin, gemini, grok, hermes, kilo, kimi, letta, mimocode, omp, opencode, poolside, qoder, qwen, vibe, zed, zoocode only; the others have no documented permission file (see docs/permissions.md), so their deny rules are NOT enforced
 WARN  [[hooks]] not generated for reasonix: the matcher "Bash" of the PreToolUse group names Claude Code tools hint=set matchers.reasonix to the reasonix equivalent, or restrict the group with targets
 INFO  Generated files are up to date roots=1

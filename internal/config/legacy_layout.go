@@ -12,12 +12,11 @@ const okfRootIndex = "index.md"
 
 // LegacyLayoutMessage is the deprecation notice for a configuration directory
 // that is not an OKF bundle yet.
-const LegacyLayoutMessage = "This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle"
+const LegacyLayoutMessage = "This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle"
 
 // IsLegacyLayout reports whether configDir still uses the pre-OKF layout: it
-// holds markdown content and has no root index.md. The loader reads that layout
-// during the deprecation window; the reader is removed in v6. A directory
-// without content has nothing to migrate.
+// holds markdown content and has no root index.md. A directory without content
+// has nothing to migrate.
 func IsLegacyLayout(configDir string) bool {
 	if info, err := os.Stat(filepath.Join(configDir, okfRootIndex)); err == nil && !info.IsDir() {
 		return false
