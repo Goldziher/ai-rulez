@@ -128,12 +128,12 @@ func outputListJSON(w io.Writer, files []crud.FileInfo) error {
 	output := make([]map[string]interface{}, len(files))
 	for i, file := range files {
 		output[i] = map[string]interface{}{
-			keyName:    file.Name,
-			keyType:    file.Type,
-			"domain":   file.Domain,
-			keyPath:    file.Path,
-			"priority": file.Priority,
-			"targets":  file.Targets,
+			keyName:         file.Name,
+			keyType:         file.Type,
+			flagServeDomain: file.Domain,
+			keyPath:         file.Path,
+			"priority":      file.Priority,
+			"targets":       file.Targets,
 		}
 	}
 	data, err := jsondoc.Marshal(output)

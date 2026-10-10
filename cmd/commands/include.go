@@ -20,7 +20,7 @@ var (
 )
 
 var IncludeCmd = &cobra.Command{
-	Use:   "include",
+	Use:   kindInclude,
 	Short: "Manage includes",
 	Long:  `Manage include sources in your .ai-rulez/ configuration.`,
 }
@@ -124,7 +124,7 @@ func runIncludeAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	return reportChange(out, out.JSON(), changeResult{
-		Status: statusCreated, Type: "include", Name: name, Source: incl.RedactURL(source),
+		Status: statusCreated, Type: kindInclude, Name: name, Source: incl.RedactURL(source),
 		Path: op.ConfigFile(), Local: includeLocal,
 	}, false)
 }
@@ -148,7 +148,7 @@ func runIncludeRemove(cmd *cobra.Command, args []string) error {
 	}
 
 	return reportChange(out, out.JSON(), changeResult{
-		Status: statusRemoved, Type: "include", Name: name, Path: op.ConfigFile(), Local: includeLocal,
+		Status: statusRemoved, Type: kindInclude, Name: name, Path: op.ConfigFile(), Local: includeLocal,
 	}, false)
 }
 

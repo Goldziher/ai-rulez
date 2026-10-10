@@ -58,7 +58,7 @@ func runMCP(cmd *cobra.Command) error {
 	defer stop()
 	serve, _ := cmd.Flags().GetBool("serve-skills") //nolint:errcheck // the flag is registered in init
 	if !serve {
-		serveOnly := append([]string{"profile", "targets", flagServeDomain, "allow", "deny"}, dynamicServeFlagNames...)
+		serveOnly := append([]string{flagServeProfile, flagServeTargets, flagServeDomain, "allow", "deny"}, dynamicServeFlagNames...)
 		for _, name := range serveOnly {
 			if cmd.Flags().Changed(name) {
 				return oops.Errorf("--%s requires --serve-skills", name)

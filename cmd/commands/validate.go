@@ -116,7 +116,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		}
 		presets.WarnDuplicateContent(cfg.Log(), cfg.Content)
 		warnUnpinned(cfg)
-		warnFrontmatter(cfg)
+		warnFrontmatter(ctx, cfg)
 		displayConfigurationSummary(cfg)
 		return nil
 	},
@@ -201,7 +201,7 @@ func runRecursiveValidate() int {
 		progress.PrintIfNotQuiet("✅ %s\n", configPath)
 		if !validateStrict {
 			warnUnpinned(cfg)
-			warnFrontmatter(cfg)
+			warnFrontmatter(cmdContext(), cfg)
 		}
 		if validateStrict {
 			report, lerr := strictLint(cmdContext(), cfg)
