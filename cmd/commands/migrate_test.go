@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -50,4 +51,48 @@ func TestMigrateCommand_ExitCodes(t *testing.T) {
 	require.NoError(t, MigrateCmd.PersistentFlags().Set("check", "false"))
 	assert.Equal(t, 0, runMigrateV5(os.Stderr))
 	assert.Equal(t, 0, runMigrateV5(os.Stderr), "second run has nothing to do")
+}
+
+func TestMigrateV5TargetsExplicitChildConfiguration(t *testing.T) {
+	for _, locator := range []string{
+		".ai-rulez", ".ai-rulez/config.toml", ".config/ai-rulez", ".config/ai-rulez/config.yaml",
+	} {
+		t.Run(locator, func(t *testing.T) {
+			parent := t.TempDir()
+			writeFile(t, filepath.Join(parent, ".ai-rulez/config.toml"), "version = \"5.0\"\nname = \"parent\"\n")
+			child := filepath.Join(parent, "plugin")
+			target := filepath.Join(child, locator)
+			dir := target
+			body := "version = \"4.0\"\nname = \"child\"\npresets = [\"claude\"]\n"
+			if filepath.Ext(target) != "" && filepath.Base(target) != ".ai-rulez" {
+				dir = filepath.Dir(target)
+			} else {
+				target = filepath.Join(target, "config.toml")
+			}
+			if filepath.Ext(target) == ".yaml" {
+				body = "version: '4.0'\nname: child\npresets: [claude]\n"
+			}
+			writeFile(t, target, body)
+			t.Chdir(parent)
+			oldConfig, oldDir, oldCheck := cfgFile, configDir, migrateCheck
+			oldFormat := migrateFormat
+			t.Cleanup(func() { cfgFile, configDir, migrateCheck, migrateFormat = oldConfig, oldDir, oldCheck, oldFormat })
+			require.NoError(t, RootCmd.PersistentFlags().Set("config", filepath.Join(child, locator)))
+			configDir, migrateCheck, migrateFormat = "", true, formatText
+			var output bytes.Buffer
+			assert.Equal(t, exitDrift, runMigrateV5(&output))
+			assert.Contains(t, output.String(), "would migrate 1, unchanged 0, errors 0")
+			got, err := os.ReadFile(target)
+			require.NoError(t, err)
+			assert.Equal(t, body, string(got), "--check must leave the selected config unchanged")
+			migrateCheck = false
+			assert.Equal(t, 0, runMigrateV5(&output))
+			got, err = os.ReadFile(filepath.Join(dir, "config.toml"))
+			require.NoError(t, err)
+			assert.Contains(t, string(got), `version = "5.0"`)
+			got, err = os.ReadFile(filepath.Join(parent, ".ai-rulez/config.toml"))
+			require.NoError(t, err)
+			assert.Equal(t, "version = \"5.0\"\nname = \"parent\"\n", string(got))
+		})
+	}
 }
