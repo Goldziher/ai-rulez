@@ -3,6 +3,9 @@ package commands
 import (
 	"fmt"
 	"io"
+	"path/filepath"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 
 	"github.com/spf13/cobra"
 
@@ -95,17 +98,27 @@ func init() {
 	addFormatFlag(flags, &migrateFormat, formatText, formatText, formatText, formatJSON)
 }
 
-// runMigrateV5 migrates the 4.x project(s) below the working directory and
-// returns the process exit code. --config-dir (global) names the directory.
+// runMigrateV5 honors --config and --config-dir without loading a v4 project through the v5 loader.
 func runMigrateV5(out io.Writer) int {
 	if migrateFormat != formatText && migrateFormat != formatJSON {
 		renderStderr(fmt.Errorf("unsupported --format %q: use text or json", migrateFormat))
 		return 1
 	}
 
+	root, directory := ".", configDir
+	if cfgFile != "" {
+		selected := config.ResolveLocalConfigDir(".", cfgFile, "")
+		root = config.ProjectBaseDir(selected)
+		var err error
+		directory, err = filepath.Rel(root, selected)
+		if err != nil {
+			renderStderr(err)
+			return 1
+		}
+	}
 	report, err := migrate.Run(migrate.Options{
-		Root:          ".",
-		ConfigDirName: configDir,
+		Root:          root,
+		ConfigDirName: directory,
 		Recursive:     migrateRecursive,
 		DryRun:        migrateDryRun,
 		Check:         migrateCheck,

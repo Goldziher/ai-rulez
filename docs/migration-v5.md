@@ -32,6 +32,16 @@ status. In short:
    does not ignore.
 4. Run `ai-rulez generate`, review the diff and commit the sources and outputs together.
 
+To migrate a child plugin from its repository root, select its config directory or file:
+
+```bash
+ai-rulez migrate v5 -C plugin/.ai-rulez --dry-run
+ai-rulez migrate v5 --config plugin/.ai-rulez/config.toml
+```
+
+`-C` / `--config` selects the project to migrate, including configs under `.config/ai-rulez/`.
+With `--recursive`, migration starts at the selected project root.
+
 `migrate` only reads a **4.x** project. A 2.x or 3.x project must first be migrated to 4.0 with ai-rulez 4.x
 (`npx ai-rulez@4 migrate v4`), then with `ai-rulez migrate v5`. Every v5 command that meets an older version stops
 with one actionable error: 2.x and 3.x say "install ai-rulez 4.x to migrate it to 4.0, then run `ai-rulez migrate
