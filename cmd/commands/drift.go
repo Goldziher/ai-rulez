@@ -166,6 +166,7 @@ func runDriftCheckGated(isRecursive bool, gate func(*config.Config) error) int {
 		renderError(os.Stderr, err)
 		return 1
 	}
+	warnLegacyLayout(cfg.ConfigDir)
 	gateDrift, gateErr := runGate(gate, cfg)
 	if gateErr {
 		return 1
@@ -223,6 +224,7 @@ func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) e
 			}
 			continue
 		}
+		warnLegacyLayout(cfg.ConfigDir)
 		drift, gateFailed := runGate(gate, cfg)
 		if gateFailed {
 			failed++

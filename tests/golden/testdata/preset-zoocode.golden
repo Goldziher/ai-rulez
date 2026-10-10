@@ -4,6 +4,7 @@
 exit: 0
 --- stdout
 --- stderr
+INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [[hooks]] are not generated for zoocode: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
 WARN  [permissions] ask rules are not generated for zoocode: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Read(./src/**)" not generated for zoocode: Zoo Code only has command allow and deny lists
@@ -73,6 +74,7 @@ scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58
 exit: 0
 --- stdout
 --- stderr
+INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [[hooks]] are not generated for zoocode: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
 WARN  [permissions] ask rules are not generated for zoocode: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Read(./src/**)" not generated for zoocode: Zoo Code only has command allow and deny lists
@@ -91,6 +93,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 exit: 0
 --- stdout
 --- stderr
+INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [[hooks]] are not generated for zoocode: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
 WARN  [permissions] ask rules are not generated for zoocode: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Read(./src/**)" not generated for zoocode: Zoo Code only has command allow and deny lists
