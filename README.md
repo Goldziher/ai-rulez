@@ -36,7 +36,7 @@ author  ->  generate  ->  bundle  ->  lint / validate  ->  govern  ->  publish
 
 | Stage | What happens | Commands | Docs |
 | ----- | ------------ | -------- | ---- |
-| **Author** | Rules, context, skills, agents, commands and checks as markdown in `.ai-rulez/`, with domains, profiles, roles and includes. `.ai-rulez/` is an [OKF](docs/okf.md) bundle: OKF is the internal format, and `init`, `add` and the MCP tools write it. A pre-OKF tree still loads, with a deprecation notice, until v6; `migrate okf` converts it. | `init`, `add`, `convert`, `import`, `migrate okf` | [Author](docs/configuration.md) |
+| **Author** | Rules, context, skills, agents, commands and checks as markdown in `.ai-rulez/`, with domains, profiles, roles and includes. `.ai-rulez/` is an [OKF](docs/okf.md) bundle: OKF is the internal format, and `init`, `add` and the MCP tools write it. A pre-OKF tree still loads, with a deprecation notice; `migrate okf` converts it. | `init`, `add`, `convert`, `import`, `migrate okf` | [Author](docs/configuration.md) |
 | **Generate** | Native files for 52 harnesses (Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, Devin, Kilo and more), per project or per user. | `generate`, `doctor`, `clean` | [Harnesses](docs/harnesses.md) |
 | **Bundle** | Distributable plugin bundles, an Agent Plugins package, an OKF bundle, an ARD manifest, `AGENTS.md` and `llms.txt`. | `generate --plugin`, `export okf` | [Plugins](docs/plugins.md) |
 | **Lint and validate** | Content and security checks with stable `AR` codes, plus each standard's own schema or rules. | `validate`, `scan`, `okf validate`, `verify` | [Validate](docs/strict-validation.md) |

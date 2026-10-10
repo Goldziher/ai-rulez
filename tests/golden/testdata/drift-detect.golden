@@ -4,7 +4,7 @@
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 INFO  Generating with configuration profile=default
@@ -122,7 +122,7 @@ exit: 2
 missing: .cursor/rules/always.mdc
 edited: CLAUDE.md
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 2 generated file(s) differ from their sources; run `ai-rulez generate` and commit the result
@@ -209,7 +209,7 @@ unchanged: .mcp.json
 unchanged: .cursor/cli.json
 unchanged: .cursor/hooks.json
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
@@ -222,7 +222,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 INFO  Generating with configuration profile=default
@@ -239,7 +239,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 INFO  Generated files are up to date roots=1
@@ -260,7 +260,7 @@ exit: 2
 stale: .claude/rules/always.md
 stale: .cursor/rules/always.mdc
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 2 generated file(s) differ from their sources; run `ai-rulez generate` and commit the result
