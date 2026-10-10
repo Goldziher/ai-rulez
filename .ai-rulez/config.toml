@@ -6,14 +6,6 @@ gitignore = true
 presets = ["claude", "codex", "hermes", "opencode"]
 
 builtins = ["go", "security", "git-workflow", "code-quality", "testing", "default-commands"]
-# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
-agents_md = false
-
-[[mcp_servers]]
-name = "ai-rulez"
-description = "Expose generation and enforcement to MCP-aware tools such as Claude and Gemini."
-command = "npx"
-args = ["-y", "ai-rulez@latest", "mcp"]
 
 [[marketplaces]]
 name = "basemind"
