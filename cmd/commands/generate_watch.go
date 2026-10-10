@@ -176,6 +176,7 @@ func generateOnce(ctx context.Context, loadOpts ...config.LoadOption) (*config.C
 	if err != nil {
 		return nil, err
 	}
+	warnLegacyLayout(cfg.ConfigDir)
 	if err := cfg.Validate(); err != nil {
 		return cfg, err //nolint:wrapcheck // already contextual
 	}

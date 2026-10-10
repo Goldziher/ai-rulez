@@ -238,6 +238,7 @@ func validateConfigFile(configPath string) (*config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	warnLegacyLayout(cfg.ConfigDir)
 	if err := schema.ValidateFile(configPath); err != nil {
 		return nil, schemaFailure(cfg, err)
 	}
