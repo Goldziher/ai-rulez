@@ -108,7 +108,7 @@ phase_plugin() {
   ar lock
   expect_rc 0 "lock"
   git_commit_all "$tag"
-  ar publish --dry-run --dist "$PH_LOGS/dist"
+  ar publish --dry-run --dist "$PH_LOGS/dist" --allow-dirty
   if [ "$AR_RC" -eq 2 ] && grep -q 'validate reported findings' "$AR_LOG"; then
     # The repository's own configuration carries error-level findings and
     # publish refuses on them: that is the gate working, not a failure.

@@ -265,7 +265,10 @@ merge_strategy = "local-override"'
   # A path that leaves the project must be refused, not followed.
   fresh_copy "$W.esc"
   mkdir -p "$W.outside/rules"
-  printf '# Out\n\nCORPUS-ESCAPE-MARKER\n' >"$W.outside/rules/out.md"
+  # A per-run marker, so the grep below cannot match this script's own source when the
+  # corpus runs against the ai-rulez repo (which vendors it).
+  escape_marker="CORPUS-ESCAPE-$$-MARKER"
+  printf '# Out\n\n%s\n' "$escape_marker" >"$W.outside/rules/out.md"
   cd "$W.esc" || fail "no work dir"
   prep_hermetic || finish
   cfg_append "[[includes]]
@@ -275,7 +278,7 @@ source = \"../$(basename "$W.outside")\""
   if [ "$AR_RC" -eq 0 ]; then
     fail_note "an include outside the project was accepted"
   fi
-  if grep -rqF CORPUS-ESCAPE-MARKER --exclude-dir=.git . 2>/dev/null; then
+  if grep -rqF "$escape_marker" --exclude-dir=.git . 2>/dev/null; then
     fail_note "content outside the project reached the outputs"
   fi
   cd "$W" || fail "no work dir"
@@ -363,16 +366,16 @@ phase_recursive() {
     find "$parent/$d" -type d \( -name testdata -o -name fixtures \) -prune -exec rm -rf {} + 2>/dev/null
   done
   cd "$parent" || fail "no work dir"
-  ar generate -r --offline
-  expect_rc 0 "generate -r over a checkout and its worktree"
+  ar generate --recursive --offline
+  expect_rc 0 "generate --recursive over a checkout and its worktree"
   for d in main wt; do
     if [ -z "$(ls "$parent/$d"/CLAUDE.md "$parent/$d"/AGENTS.md "$parent/$d"/.claude 2>/dev/null)" ]; then
       fail_note "no outputs written in $d"
     fi
   done
-  ar generate -r --offline --check
-  expect_rc 0 "generate -r --check"
-  ar validate -r
-  expect_rc_in "validate -r" 0 2
+  ar generate --recursive --offline --check
+  expect_rc 0 "generate --recursive --check"
+  ar validate --recursive
+  expect_rc_in "validate --recursive" 0 2
   finish "recursive run covered the checkout and its worktree"
 }
