@@ -468,7 +468,7 @@ Check that your domain is in the profile:
 
 ```bash
 # List available profiles
-ai-rulez validate --verbose
+ai-rulez validate --debug
 
 # Check config.toml (V4 is TOML: the section is [profiles])
 grep -A 5 '^\[profiles\]' .ai-rulez/config.toml
@@ -480,8 +480,8 @@ grep -A 5 '^\[profiles\]' .ai-rulez/config.toml
 # Validate configuration
 ai-rulez validate
 
-# Try generating with verbose output
-ai-rulez generate --profile backend --verbose
+# Try generating with debug output
+ai-rulez generate --profile backend --debug
 ```
 
 ### Domain Directory Not Recognized

@@ -133,7 +133,7 @@ ai-rulez eval run --format junit --output-dir eval-report  # eval-report/eval-re
 | Flag | Meaning |
 | --- | --- |
 | `--harness` | Harness the cases run against (default `claude`); recorded in the results. |
-| `--runner`, `--runner-command` | `claude-plugin-eval` or `command`. The default is `claude-plugin-eval` for the claude harness and `command` when `--runner-command` is set. |
+| `--runner`, `--runner-command` | `claude-plugin-eval`, `command`, `claude-native` or `codex-native`. The default is `claude-plugin-eval` for the claude harness and `command` when `--runner-command` is set; `claude-native` or `codex-native` for `--surface native`. |
 | `--claude-bin`, `--runner-arg`, `--runs`, `--judge-model` | `claude-plugin-eval` only: the executable, extra arguments (repeatable, for example `--runner-arg --trust-plugin`), runs per case, grader model. |
 | `--timeout` | Time limit for one skill with either runner (default 30m). When it ends the runner's whole process tree is killed (a process group on Unix); the output the runner may produce is capped (8 MiB for `claude`, 64 MiB for a `command` runner's answer). |
 | `--model` | Model for the cases. |
