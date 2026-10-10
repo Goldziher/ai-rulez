@@ -165,6 +165,12 @@ github-env)
     echo "CGO_ENABLED=1"
     echo "CGO_LDFLAGS=$ldflags"
   } >>"$GITHUB_ENV"
+  if [ "$mode" = dll ]; then
+    # Windows has no rpath: the test and build steps find the DLL on PATH.
+    : "${GITHUB_PATH:?--format github-env with dll mode needs GITHUB_PATH}"
+    printf '%s\n' "$libdir" >>"$GITHUB_PATH"
+    log "added $libdir to PATH (Windows DLL)"
+  fi
   log "exported CGO_ENABLED=1 CGO_LDFLAGS=$ldflags"
   ;;
 *)
