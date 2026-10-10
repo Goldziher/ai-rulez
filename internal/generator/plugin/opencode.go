@@ -60,24 +60,7 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		return nil, err
 	}
 
-	pkg, err := jsonOutput(filepath.Join(baseDir, "package.json"), openCodePackage{
-		Name:         openCodePackageName(m),
-		Version:      m.Version,
-		Description:  m.Description,
-		Keywords:     m.Keywords,
-		Homepage:     m.Homepage,
-		Repository:   openCodeRepository{Type: "git", URL: m.Repository},
-		License:      m.License,
-		Type:         "module",
-		Main:         filepath.ToSlash(entrypoint),
-		Exports:      map[string]string{".": "./" + filepath.ToSlash(entrypoint)},
-		Files:        openCodePublishedFiles(m),
-		Dependencies: map[string]string{"@opencode/plugin": openCodePluginDependency},
-	})
-	if err != nil {
-		return nil, err
-	}
-	outputs := []config.OutputFile{module, pkg}
+	outputs := []config.OutputFile{module}
 
 	// Bundle the plugin's skills, commands, and agents into the OpenCode v2
 	// discovery directories so the package is self-contained.
@@ -102,7 +85,28 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 			RawContent: openCodeContentHelper,
 		})
 	}
-	return outputs, nil
+	files, err := openCodePublishedFiles(m, baseDir, outputs)
+	if err != nil {
+		return nil, err
+	}
+	pkg, err := jsonOutput(filepath.Join(baseDir, "package.json"), openCodePackage{
+		Name:         openCodePackageName(m),
+		Version:      m.Version,
+		Description:  m.Description,
+		Keywords:     m.Keywords,
+		Homepage:     m.Homepage,
+		Repository:   openCodeRepository{Type: "git", URL: m.Repository},
+		License:      m.License,
+		Type:         "module",
+		Main:         filepath.ToSlash(entrypoint),
+		Exports:      map[string]string{".": "./" + filepath.ToSlash(entrypoint)},
+		Files:        files,
+		Dependencies: map[string]string{"@opencode/plugin": openCodePluginDependency},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return append([]config.OutputFile{module, pkg}, outputs[1:]...), nil
 }
 
 // openCodeBundle is the data the content helper registers at runtime: MCP
@@ -195,8 +199,12 @@ var pluginRootRef = regexp.MustCompile(`\$\{PLUGIN_ROOT\}[\\/]([^\s"'/\\]+)([\\/
 // ${PLUGIN_ROOT}, so a launcher such as scripts/run.sh is published with the
 // package. A referenced path missing from the source tree is warned about, not
 // listed.
-func openCodePublishedFiles(m *Manifest) []string {
-	files := []string{".opencode/", "assets/", "README.md"}
+func openCodePublishedFiles(m *Manifest, baseDir string, outputs []config.OutputFile) ([]string, error) {
+	generated, err := generatedPackagePaths(outputs, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	files := append([]string{"assets/", "README.md"}, generated...)
 	seen := map[string]bool{}
 	for _, server := range m.MCP {
 		refs := append([]string{server.Command, server.URL}, server.Args...)
@@ -226,8 +234,8 @@ func openCodePublishedFiles(m *Manifest) []string {
 			}
 		}
 	}
-	sort.Strings(files[3:])
-	return files
+	sort.Strings(files)
+	return files, nil
 }
 
 func openCodePackageName(m *Manifest) string {

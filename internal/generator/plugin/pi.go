@@ -38,15 +38,6 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if !slices.Contains(keywords, "pi-package") {
 		keywords = append(keywords, "pi-package")
 	}
-	pkg, err := jsonOutput(filepath.Join(baseDir, "package.json"), piPackage{
-		Name: name, Version: m.Version, Description: m.Description, Keywords: keywords,
-		Homepage: m.Homepage, Repository: openCodeRepository{Type: "git", URL: m.Repository},
-		License: m.License, Type: "module", Files: []string{".pi/", "assets/", "README.md"},
-		Pi: piResources{Skills: []string{"./.pi/skills"}, Prompts: []string{"./.pi/prompts"}},
-	})
-	if err != nil {
-		return nil, err
-	}
 	content, err := bundleContent(m, baseDir, contentLayout{Root: ".pi", Skills: true})
 	if err != nil {
 		return nil, err
@@ -55,10 +46,24 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if err != nil {
 		return nil, err
 	}
+	payload := append(content, prompts...)
+	files, err := generatedPackagePaths(payload, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	pkg, err := jsonOutput(filepath.Join(baseDir, "package.json"), piPackage{
+		Name: name, Version: m.Version, Description: m.Description, Keywords: keywords,
+		Homepage: m.Homepage, Repository: openCodeRepository{Type: "git", URL: m.Repository},
+		License: m.License, Type: "module", Files: append(files, "assets/", "README.md"),
+		Pi: piResourcePaths(files),
+	})
+	if err != nil {
+		return nil, err
+	}
 	if len(m.MCP)+len(m.Hooks)+len(m.Agents) > 0 || m.Statusline != nil {
 		m.log().Warn("Pi packages bundle skills and prompts only; MCP servers, hooks, agents and statuslines are skipped")
 	}
-	return append(append([]config.OutputFile{pkg}, content...), prompts...), nil
+	return append([]config.OutputFile{pkg}, payload...), nil
 }
 
 func piPrompts(m *Manifest, baseDir string) ([]config.OutputFile, error) {
@@ -81,4 +86,30 @@ func piPrompts(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		}
 	}
 	return prompts, nil
+}
+
+func piResourcePaths(files []string) piResources {
+	resources := piResources{Skills: []string{}, Prompts: []string{}}
+	for _, file := range files {
+		switch {
+		case filepath.ToSlash(filepath.Dir(filepath.Dir(file))) == ".pi/skills" && filepath.Base(file) == "SKILL.md":
+			resources.Skills = append(resources.Skills, "./"+filepath.ToSlash(filepath.Dir(file)))
+		case strings.HasPrefix(file, ".pi/prompts/") && strings.HasSuffix(file, ".md"):
+			resources.Prompts = append(resources.Prompts, "./"+file)
+		}
+	}
+	return resources
+}
+
+func generatedPackagePaths(outputs []config.OutputFile, baseDir string) ([]string, error) {
+	files := make([]string, 0, len(outputs))
+	for _, out := range outputs {
+		relative, err := filepath.Rel(baseDir, out.Path)
+		if err != nil {
+			return nil, oops.With("path", out.Path).Wrapf(err, "resolve generated package path")
+		}
+		files = append(files, filepath.ToSlash(relative))
+	}
+	slices.Sort(files)
+	return slices.Compact(files), nil
 }
