@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +25,7 @@ func TestDirPolicyConfinePassesTheResolvedPathOn(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(project, ".ai-rulez"), 0o750))
 	outside := t.TempDir()
 	link := filepath.Join(root, "link")
-	require.NoError(t, os.Symlink(project, link))
+	testutil.SymlinkOrSkip(t, project, link)
 	resolvedProject, err := filepath.EvalSymlinks(project)
 	require.NoError(t, err)
 	args := map[string]any{
@@ -36,7 +37,7 @@ func TestDirPolicyConfinePassesTheResolvedPathOn(t *testing.T) {
 	// Act
 	require.NoError(t, dirPolicy{root: root}.confine(args))
 	require.NoError(t, os.Remove(link))
-	require.NoError(t, os.Symlink(outside, link))
+	testutil.SymlinkOrSkip(t, outside, link)
 
 	// Assert
 	assert.Equal(t, resolvedProject, args[argWorkingDirectory])
