@@ -7,12 +7,9 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	lit "github.com/xberg-io/liter-llm/packages/go/v2"
-
-	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 // literLLM is the only provider backend: it adapts a liter-llm DefaultClient to
@@ -29,10 +26,6 @@ type literLLM struct {
 	model      string
 	embedModel string
 	pricing    Pricing
-	// perInput is set once a batch embed came back with the wrong number of vectors (Gemini's
-	// native route answers a batch with one). Later batches then go out one input per request
-	// instead of repeating the wasted batch call.
-	perInput atomic.Bool
 }
 
 var errClosed = permanentError("liter-llm client is closed")
@@ -66,7 +59,15 @@ func newLiterLLM(cfg Config, getenv func(string) string) (*literLLM, error) {
 		timeout = &secs
 	}
 	retries := uint32(min(max(cfg.Retries(), 0), MaxRetriesLimit)) //nolint:gosec // bounded to [0, MaxRetriesLimit]
-	c, err := lit.CreateClient(key, base, timeout, &retries, hint)
+	maxBytes := uint64(maxResponseBytes)
+	c, err := lit.CreateClientWithOptions(lit.ClientOptions{
+		APIKey:           key,
+		BaseURL:          base,
+		TimeoutSecs:      timeout,
+		MaxRetries:       &retries,
+		MaxResponseBytes: &maxBytes,
+		ModelHint:        hint,
+	})
 	if err != nil {
 		return nil, &Error{Kind: KindProvider, Message: "cannot create liter-llm client: " + RedactSecrets(err.Error())}
 	}
@@ -136,37 +137,34 @@ func (l *literLLM) classify(err error) error {
 	switch {
 	case errors.Is(err, lit.ErrAuthentication):
 		e.Kind = KindAuth
+	case errors.Is(err, lit.ErrProviderQuotaExceeded):
+		// An exhausted quota (liter-llm's own ProviderQuotaExceeded variant, code 120) is a
+		// billing condition, not a rate limit: no retry fixes it.
+		e.Kind = KindRateLimit
+		e.permanent = true
 	case errors.Is(err, lit.ErrRateLimited):
 		e.Kind = KindRateLimit
-		// TODO(liter-llm#257): an exhausted quota is reported as a transient rate limit, but no retry fixes it.
-		e.permanent = quotaExhausted(le.Message)
 	case errors.Is(err, lit.ErrContextWindowExceeded):
 		e.Kind = KindContextLength
 	case errors.Is(err, lit.ErrBudgetExceeded):
 		e.Kind = KindBudget
 	case errors.Is(err, lit.ErrTimeout):
 		e.Kind = KindTimeout
-	case errors.Is(err, lit.ErrBadRequest) && strings.Contains(strings.ToLower(le.Message), "prompt is too long"):
-		// TODO(liter-llm#257): Anthropic reports an over-long prompt as a plain bad request.
-		e.Kind = KindContextLength
 	default:
-		// BadRequest, NotFound, ContentPolicy, Serialization, ServerError, Network (empty Code, see
-		// liter-llm#258), ...: only what liter-llm itself marks transient is worth another attempt.
+		// BadRequest, NotFound, ContentPolicy, Serialization, ServerError, Network, ...: only
+		// what liter-llm itself marks transient is worth another attempt.
 		e.permanent = !le.IsTransient
 	}
 	return e
 }
 
-func quotaExhausted(msg string) bool {
-	m := strings.ToLower(msg)
-	return strings.Contains(m, "insufficient_quota") || strings.Contains(m, "exceeded your current quota")
-}
-
 var urlQueryRe = regexp.MustCompile(`(https?://[^\s?"']+)\?[^\s"']*`)
 
 // scrub removes what must not reach a message: the configured key by value, anything
-// key-shaped, and the query string of any URL.
-// TODO(liter-llm#259): liter-llm echoes a provider-returned key and the base_url query in errors.
+// key-shaped, and the query string of any URL. liter-llm redacts the configured secret
+// from a provider error body and drops the URL from a network error, but a provider can
+// still echo a bare key-shaped token or a URL with a query in an error body.
+// TODO(liter-llm#259, still missing in v2.2.3): neither is scrubbed upstream.
 func (l *literLLM) scrub(msg string) string {
 	if l.key != "" {
 		msg = strings.ReplaceAll(msg, l.key, "[redacted]")
@@ -203,7 +201,9 @@ func chatRequest(model string, req ChatRequest) lit.ChatCompletionRequest {
 }
 
 // needsMaxCompletionTokens reports whether model is an OpenAI reasoning model, which rejects max_tokens.
-// TODO(liter-llm#264): liter-llm sends max_tokens verbatim to every OpenAI model.
+// liter-llm 2.2.3 renames max_tokens to max_completion_tokens for its own openai and azure providers,
+// but a base_url endpoint is served by its generic "custom" provider, which leaves the field alone.
+// TODO(liter-llm#264, partial in v2.2.3): still needed for base_url reasoning models.
 func needsMaxCompletionTokens(model string) bool {
 	if strings.Contains(model, "/") && modelPrefix(model) != "openai" {
 		return false
@@ -275,9 +275,6 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 	if t, terr := choice.Message.Text(); terr == nil && t != nil {
 		text = *t
 	}
-	if len(text) > maxResponseBytes {
-		return ChatResponse{}, &Error{Kind: KindProvider, Message: "response too large", permanent: true}
-	}
 	respModel := firstNonEmpty(resp.Model, model)
 	usage := usageOf(resp.Usage)
 	cost, known := l.pricing.Cost(respModel, usage)
@@ -288,13 +285,9 @@ func (l *literLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, err
 	return out, nil
 }
 
-// maxResponseBytes bounds the text of one chat reply. liter-llm cannot bound the HTTP body it reads
-// (TODO(liter-llm#269): max_response_bytes is not reachable from the Go binding), so this
-// is checked on the decoded text, after the body has been read.
+// maxResponseBytes bounds the HTTP body liter-llm reads for one reply. It is passed as the
+// client's max_response_bytes, so an oversized body is refused while it is read.
 const maxResponseBytes = 32 << 20
-
-// errEmbedCount marks a reply with the wrong number of vectors.
-var errEmbedCount = errors.New("embedding count mismatch")
 
 func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error) {
 	model, err := l.requestModel(req.Model, l.embedModel)
@@ -307,49 +300,35 @@ func (l *literLLM) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, 
 	if len(req.Input) == 0 {
 		return EmbedResponse{Model: model}, nil
 	}
-	if len(req.Input) > 1 && l.perInput.Load() {
-		return l.embedEach(ctx, model, req, Usage{}, 0)
-	}
-	resp, raw, err := l.embedRaw(ctx, model, req.Input)
+	resp, err := l.embedRaw(ctx, model, req.Input)
 	if err != nil {
 		return EmbedResponse{}, err
 	}
-	out, err := l.embedResult(resp, model, len(req.Input))
-	if errors.Is(err, errEmbedCount) && len(req.Input) > 1 {
-		l.perInput.Store(true)
-		// The collapsed batch was still sent and billed: keep its usage and count it as a request.
-		return l.embedEach(ctx, model, req, raw, 1)
-	}
-	return out, err
+	return l.embedResult(resp, model, len(req.Input))
 }
 
-// embedRaw sends one embeddings request and returns the reply with the usage it reported.
-func (l *literLLM) embedRaw(ctx context.Context, model string, input []string) (*lit.EmbeddingResponse, Usage, error) {
+// embedRaw sends one embeddings request. liter-llm 2.2.3 preserves every input and returns one
+// vector per input on the Gemini and Vertex routes, so a single request always serves the batch.
+func (l *literLLM) embedRaw(ctx context.Context, model string, input []string) (*lit.EmbeddingResponse, error) {
 	in := []byte(mustJSON(input))
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	if l.client == nil {
-		return nil, Usage{}, errClosed
+		return nil, errClosed
 	}
 	resp, err := l.client.EmbedWithContext(ctx, lit.EmbeddingRequest{Model: model, Input: lit.EmbeddingInput(in)})
 	if err != nil {
-		return nil, Usage{}, l.classify(err)
+		return nil, l.classify(err)
 	}
 	if resp == nil {
-		return nil, Usage{}, permanentError("liter-llm returned an empty reply without an error")
+		return nil, permanentError("liter-llm returned an empty reply without an error")
 	}
-	var billed Usage
-	if resp.Usage != nil {
-		billed.PromptTokens = int(min(max(resp.Usage.PromptTokens, resp.Usage.TotalTokens), maxTokenCount))
-	}
-	return resp, billed, nil
+	return resp, nil
 }
 
 func (l *literLLM) embedResult(resp *lit.EmbeddingResponse, model string, want int) (EmbedResponse, error) {
 	if len(resp.Data) != want {
-		e := permanentError("got %d embeddings for %d inputs", len(resp.Data), want)
-		e.Cause = errEmbedCount
-		return EmbedResponse{}, e
+		return EmbedResponse{}, permanentError("got %d embeddings for %d inputs", len(resp.Data), want)
 	}
 	vecs := make([][]float32, want)
 	for _, d := range resp.Data {
@@ -365,56 +344,6 @@ func (l *literLLM) embedResult(resp *lit.EmbeddingResponse, model string, want i
 	}
 	cost, known := l.pricing.Cost(respModel, usage)
 	return EmbedResponse{Vectors: vecs, Model: respModel, Usage: usage, CostUSD: cost, CostKnown: known}, nil
-}
-
-// embedEach embeds the inputs one request at a time. Gemini's native route behind
-// liter-llm answers a batch with a single vector, so the batch is retried as
-// singles rather than failing or returning too few vectors. spent and requests
-// are what an already-sent batch cost, so the response charges and counts it.
-//
-// TODO(liter-llm#268): remove once a batch embedding returns one vector per input on every route.
-//
-// The caller's budget reservation covers the call's first request (the batch, or else the
-// first single); every further request is admitted by the budget before it is sent and charged
-// when it ends. On a failure the usage of a completed first request travels back in
-// firstBilled, so the budget charges what was billed rather than one estimate for the batch.
-func (l *literLLM) embedEach(ctx context.Context, model string, req EmbedRequest, spent Usage, requests int) (EmbedResponse, error) {
-	cost, known := l.pricing.Cost(model, spent)
-	out := EmbedResponse{Model: model, Usage: spent, CostUSD: cost, CostKnown: known || spent.Total() == 0, Requests: requests}
-	sub := subBudgetFrom(ctx)
-	var first *Usage
-	if requests > 0 {
-		first = &spent
-	}
-	failed := func(err error) (EmbedResponse, error) { return EmbedResponse{firstBilled: first}, err }
-	for _, in := range req.Input {
-		var res *reservation
-		var err error
-		if out.Requests > 0 {
-			if res, err = sub.reserve(Usage{PromptTokens: tokens.Estimate(in)}); err != nil {
-				return failed(err)
-			}
-		}
-		raw, _, err := l.embedRaw(ctx, model, []string{in})
-		var r EmbedResponse
-		if err == nil {
-			r, err = l.embedResult(raw, model, 1)
-		}
-		res.done(model, r.Usage, err)
-		if err != nil {
-			return failed(err)
-		}
-		if out.Requests == 0 {
-			first = &r.Usage
-		}
-		out.Vectors = append(out.Vectors, r.Vectors[0])
-		out.Usage.PromptTokens += r.Usage.PromptTokens
-		out.CostUSD += r.CostUSD
-		out.CostKnown = out.CostKnown && r.CostKnown
-		out.Model = r.Model
-		out.Requests++
-	}
-	return out, nil
 }
 
 // Close releases the native client once in-flight calls finish; it is idempotent.
