@@ -101,7 +101,7 @@ func agentPluginsModel(m *Manifest, content []config.OutputFile, baseDir string)
 			sk = &agentplugins.Skill{Name: name, Files: map[string][]byte{}}
 			skills[name] = sk
 		}
-		if inSkill == "SKILL.md" {
+		if inSkill == skillManifestName {
 			sk.SkillMD = data
 			continue
 		}

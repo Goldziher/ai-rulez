@@ -46,7 +46,7 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	payload := append(content, prompts...)
+	payload := append(append([]config.OutputFile(nil), content...), prompts...)
 	files, err := generatedPackagePaths(payload, baseDir)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func piResourcePaths(files []string) piResources {
 	resources := piResources{Skills: []string{}, Prompts: []string{}}
 	for _, file := range files {
 		switch {
-		case filepath.ToSlash(filepath.Dir(filepath.Dir(file))) == ".pi/skills" && filepath.Base(file) == "SKILL.md":
+		case filepath.ToSlash(filepath.Dir(filepath.Dir(file))) == ".pi/skills" && filepath.Base(file) == skillManifestName:
 			resources.Skills = append(resources.Skills, "./"+filepath.ToSlash(filepath.Dir(file)))
 		case strings.HasPrefix(file, ".pi/prompts/") && strings.HasSuffix(file, ".md"):
 			resources.Prompts = append(resources.Prompts, "./"+file)
