@@ -477,14 +477,58 @@ func TestBuild_NPMPlanAndPackage(t *testing.T) {
 	schemaValid(t, "publish-manifest.schema.json", d.Files["acme-1.4.0.manifest.json"])
 }
 
-func TestBuild_NPMRefusesABundleWithItsOwnPackageJSON(t *testing.T) {
+func TestBuild_NPMPreservesNativePackageJSON(t *testing.T) {
 	in := npmInput()
-	in.Files = append(in.Files, File{Path: "package.json", Data: []byte("{}")})
+	in.Files = append(in.Files, File{Path: "package.json", Data: []byte(`{
+		"name":"@original/native", "version":"0.1.0", "type":"module",
+		"main":".opencode/plugins/acme.js", "exports":{".":"./.opencode/plugins/acme.js"},
+		"dependencies":{"@opencode/plugin":"^2.0.20"}, "keywords":["pi-package"],
+		"pi":{"skills":["./.pi/skills"],"prompts":["./.pi/prompts"]},
+		"license":"MIT", "publishConfig":{"registry":"https://untrusted.example"}
+	}`)})
+	in.Files = append(in.Files, File{Path: ".ai-rulez-generated.json", Data: []byte(`{"source_hash":"original"}`)})
+	d, err := Build(in)
+	require.NoError(t, err)
+	var pkg map[string]any
+	require.NoError(t, json.Unmarshal(d.Files[NPMPackageDir+"/package.json"], &pkg))
+	assert.Equal(t, "@acme/acme", pkg["name"])
+	assert.Equal(t, "1.4.0", pkg["version"])
+	assert.Equal(t, ".opencode/plugins/acme.js", pkg["main"])
+	assert.Equal(t, map[string]any{".": "./.opencode/plugins/acme.js"}, pkg["exports"])
+	assert.Equal(t, map[string]any{"@opencode/plugin": "^2.0.20"}, pkg["dependencies"])
+	assert.Equal(t, []any{"pi-package"}, pkg["keywords"])
+	assert.Equal(t, "MIT", pkg["license"])
+	assert.Contains(t, pkg, "pi")
+	assert.Equal(t, map[string]any{"access": "restricted"}, pkg["publishConfig"])
+	assert.Contains(t, pkg, "ai-rulez")
+	assert.NotContains(t, d.Files, NPMPackageDir+"/.ai-rulez-generated.json",
+		"rewritten npm manifest cannot retain original generator provenance")
+	archive, err := readArchive(d.Files[d.Manifest.Bundle.File])
+	require.NoError(t, err)
+	var paths []string
+	for _, file := range archive {
+		paths = append(paths, file.Path)
+	}
+	assert.Contains(t, paths, ".ai-rulez-generated.json", "release archive retains generator provenance")
+}
 
-	_, err := Build(in)
-
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "already has a package.json")
+func TestBuild_NPMRejectsUnsafeNativeManifests(t *testing.T) {
+	for _, tt := range []struct{ name, body, message string }{
+		{"private", `{"private":true}`, "private"},
+		{"scripts", `{"scripts":{"install":"echo unexpected"}}`, "scripts"},
+		{"malformed", `{`, "package.json"},
+		{"null", `null`, "object"},
+		{"array", `[]`, "package.json"},
+		{"invalid private", `{"private":"true"}`, "private"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			in := npmInput()
+			in.Files = append(in.Files, File{Path: "package.json", Data: []byte(tt.body)})
+			_, err := Build(in)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.message)
+		})
+	}
 }
 
 func TestBuild_NPMNeedsAScope(t *testing.T) {

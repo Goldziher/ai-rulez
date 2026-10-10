@@ -167,7 +167,7 @@ func validatePluginRuntimes(p *PluginAuthoring) error {
 			return oops.
 				With("field", "plugin.runtimes").
 				With("value", r).
-				Hint("Valid runtimes: claude, cursor, codex, gemini, kimi, opencode, factory, hermes, agent-plugins, copilot").
+				Hint("Valid runtimes: "+strings.Join(KnownPluginRuntimes, ", ")).
 				Errorf("plugin %q lists unknown runtime %q", p.Name, r)
 		}
 		if seen[r] {

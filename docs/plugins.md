@@ -2,7 +2,7 @@
 
 `ai-rulez generate --plugin` packages your `.ai-rulez/` project into distributable
 **plugin bundles** and a **marketplace index** for the Claude, Cursor, Codex, Gemini,
-Kimi, OpenCode, Factory, and Hermes runtimes, plus the opt-in Agent Plugins 1.0.0 standard.
+Kimi, OpenCode, Factory, and Hermes runtimes, plus opt-in Pi, Copilot, and Agent Plugins packages.
 Where the normal `generate` writes in-repo
 assistant config, `--plugin` produces installable artifacts other people can add to
 their own tools — reaching users who never run ai-rulez.
@@ -66,6 +66,7 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 | OpenCode | `.opencode/plugins/<plugin-name>.js` (+ `package.json`, `.opencode/ai-rulez-content.js`, bundled `.opencode/{skills,commands,agents}/`) | OpenCode v2 `{ id, setup }` adapter; copies the authored entrypoint or emits a scaffold that registers the bundled content |
 | Factory  | `.factory-plugin/plugin.json`                           | metadata-only                                                    |
 | Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package         |
+| Pi | `package.json`, `.pi/skills/`, `.pi/prompts/` | skills and rendered prompt templates; opt-in |
 | Agent Plugins | `plugin.json`, `skills/`, `mcp.json`               | portable [Agent Plugins 1.0.0](https://agent-plugins.org) package; opt-in |
 | Copilot  | `plugin.json`, `skills/`, `mcp.json`, `com.github.copilot/agents/<name>.agent.md`, `.github/plugin/marketplace.json` | GitHub Copilot plugin in the Agent Plugins 1.0 layout; opt-in |
 
@@ -87,6 +88,7 @@ format for it (ai-rulez does not guess formats).
 | Codex | yes | - | - | - | yes | monorepo roots; single plugin opt-in (`[plugin.codex] marketplace`) | [build plugins](https://developers.openai.com/codex/plugins/build) |
 | Copilot | yes | - | yes | - | yes | yes (`.github/plugin/marketplace.json`) | [CLI plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference) |
 | Gemini | - | opt-in (`[plugin.gemini] commands`) | - | yes | yes | - | [extension reference](https://geminicli.com/docs/extensions/reference/), [custom commands](https://geminicli.com/docs/cli/custom-commands/) |
+| Pi | yes | prompt templates | - | - | - | - | [packages](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md) |
 | Agent Plugins | yes | - | - | - | yes | - | [agent-plugins.org](https://agent-plugins.org) |
 
 Kimi, OpenCode, Factory and Hermes are unchanged. Known gaps, all because the format is undocumented
@@ -139,9 +141,55 @@ optional `metadata`, `plugins[]` with `name` and a relative `source` directory).
 `prompt`, an optional `description`); the Claude-style `$ARGUMENTS` becomes Gemini's `{{args}}`. Shell
 (`!{...}`) and file (`@{...}`) injections are not translated.
 
-Content files (SKILL.md, commands, agents) are copied **verbatim** from your source
-into each runtime's directories — never re-rendered — so a bundled skill is identical
-to the authored one.
+Skills and their supporting assets are copied **verbatim** from your source. Commands are converted
+where the runtime needs another format, including Gemini commands and Pi prompt templates.
+
+### Pi packages
+
+Pi is opt-in; the eight default plugin runtimes are unchanged. Add it explicitly to your plugin:
+
+```toml
+[plugin]
+name = "my-tool"
+version = "1.0.0"
+description = "Skills and prompts for my tool."
+repository = "https://github.com/acme/my-tool"
+runtimes = ["pi"]
+```
+
+```bash
+ai-rulez generate --plugin
+ai-rulez verify --plugin
+pi install git:github.com/acme/my-tool
+```
+
+The package contains `.pi/skills/<name>/` with each skill's supporting assets and
+`.pi/prompts/<name>.md` rendered from authored commands, preserving supported Pi front matter.
+Its root `package.json` declares these resources and includes the `pi-package` keyword. For a
+GitHub repository, the generated name is `@<owner>/pi-<plugin-name>` (`@acme/pi-my-tool` above).
+Commit the generated bundle before installing it through Git; local packages also need no registry.
+
+With `runtimes = ["pi", "opencode"]`, both runtimes share one `package.json`: its name remains
+`@<owner>/opencode-<plugin-name>`, OpenCode's entry points and dependencies are retained, and Pi's
+resource metadata is added. Runtime order does not change the output.
+
+The Pi plugin generator bundles skills and prompts only. It does not generate extensions, MCP
+integration, agents, hooks, or statuslines; configured unsupported components produce a warning.
+The Pi project preset is separate and does not create an installable package.
+
+For npm distribution, the [publisher](publish.md#npm) uses `<configured-scope>/<plugin-name>`,
+replacing the generated name. For example:
+
+```bash
+ai-rulez publish --to npm --npm-scope @acme --public --dry-run
+# After reviewing the plan and completing publishing prerequisites:
+ai-rulez publish --to npm --npm-scope @acme --public --execute --yes
+pi install npm:@acme/my-tool
+```
+
+Publication to npm with `pi-package` enables discovery in the [Pi package catalog](https://pi.dev/packages).
+Git installation needs no registry. No Pi marketplace JSON is generated; Pi-only multi-plugin
+publishing is not supported by the current publisher, which requires a Claude marketplace index.
 
 ### OpenCode adapter
 
@@ -401,11 +449,11 @@ Event names must match a Claude Code lifecycle event (`SessionStart`, `Setup`, `
 ```toml
 [plugin]
 # ...
-runtimes = ["claude", "cursor"]   # omit to emit all supported runtimes
+runtimes = ["claude", "cursor"]   # omit to emit the eight default runtimes
 ```
 
-The `agent-plugins` runtime is **opt-in** and is not part of the default set, so
-adding it never changes existing bundles. Enable it explicitly:
+The `pi`, `copilot`, and `agent-plugins` runtimes are **opt-in**. The default set remains
+Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes. Enable Agent Plugins explicitly:
 
 ```toml
 [plugin]

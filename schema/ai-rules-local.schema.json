@@ -37,7 +37,8 @@
           "factory",
           "hermes",
           "agent-plugins",
-          "copilot"
+          "copilot",
+          "pi"
         ],
         "type": "string"
       },
@@ -2460,7 +2461,8 @@
               "factory",
               "hermes",
               "agent-plugins",
-              "copilot"
+              "copilot",
+              "pi"
             ],
             "type": "string"
           },
@@ -2780,7 +2782,8 @@
               "factory",
               "hermes",
               "agent-plugins",
-              "copilot"
+              "copilot",
+              "pi"
             ],
             "type": "string"
           },

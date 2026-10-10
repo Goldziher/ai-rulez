@@ -21,7 +21,8 @@ ai-rulez keeps your rules, context, skills, agents and MCP servers in one `.ai-r
 
 - **Directory-based** – One `.ai-rulez/` directory for all your AI tooling
 - **Multi-tool generation** – Generate configs for all major AI assistants from one source
-- **Plugin publishing** – `generate --plugin` packages the same source into distributable plugin bundles and a marketplace index (Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory)
+- **Plugin publishing** – `generate --plugin` packages the same source into distributable plugin bundles and runtime-specific marketplace indexes (Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, Hermes; opt-in Pi, Copilot, and Agent Plugins)
+- **Pi packages** – Opt in with `[plugin] runtimes = ["pi"]` to bundle skills and prompt templates for Git or npm installation; npm publishing preserves runtime metadata and uses `<configured-scope>/<plugin-name>`
 - **Domain separation** – Organize rules by backend, frontend, QA, or any domain
 - **Profiles** – Define profiles for different teams or use cases
 - **Includes** – Compose from local packages or Git repositories
