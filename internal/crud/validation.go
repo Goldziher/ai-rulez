@@ -11,6 +11,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
 )
 
 // Reserved domain names that should not be used
@@ -233,7 +234,7 @@ func ValidateIncludeSource(source string) error {
 		return oops.
 			With("field", "source").
 			Hint("Plain http:// is not accepted since ai-rulez 5; use https:// or git@host:path").
-			Errorf("insecure include source %q", source)
+			Errorf("insecure include source %q", incl.RedactURL(source))
 	}
 	if strings.HasPrefix(source, "https://") || strings.HasPrefix(source, "git@") {
 		return nil
@@ -251,9 +252,9 @@ func ValidateIncludeSource(source string) error {
 
 	return oops.
 		With("field", "source").
-		With("value", source).
+		With("value", incl.RedactURL(source)).
 		Hint("Source must be a valid git URL or existing/creatable local path.").
-		Errorf("invalid include source: %s", source)
+		Errorf("invalid include source: %s", incl.RedactURL(source))
 }
 
 // ValidateDescription validates a description string

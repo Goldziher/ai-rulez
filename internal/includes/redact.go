@@ -1,55 +1,15 @@
 package includes
 
 import (
-	"net/url"
-	"regexp"
-	"strings"
+	"github.com/Goldziher/ai-rulez/v5/internal/urlredact"
 )
 
-// userinfoRe matches the credentials in a URL's authority: scheme://user:pass@.
-// The password may itself contain "@", so the match runs to the last "@" before
-// the first "/", "?" or "#". scp-style remotes (git@host:owner/repo) have no scheme and are left alone.
-var userinfoRe = regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*://)[^/\s?#]+@`)
+// HasCredentials reports whether a git URL carries a credential (`user:token@`
+// or a credential query parameter) that must not be written to config.toml or
+// passed to git. See internal/urlredact.
+func HasCredentials(raw string) bool { return urlredact.HasCredentials(raw) }
 
-// queryRe matches the query string of a scheme://... URL (up to the fragment or
-// whitespace), where tokens such as ?access_token=... are commonly passed.
-var queryRe = regexp.MustCompile(`(?i)(\b[a-z][a-z0-9+.-]*://[^\s?#]*\?)([^\s#'"]*)`)
-
-const redactedValue = "<redacted>"
-
-// HasCredentials reports whether a git URL carries userinfo (a user name, a
-// user:password pair or a token) in its authority, so it would be written into
-// config.toml as a readable secret. Only http(s) URLs are checked: an ssh://
-// remote's user (git@host) is the login name, not a credential, and a scp-style
-// git@host:owner/repo has no scheme at all. A git+https:// prefix is accepted.
-func HasCredentials(raw string) bool {
-	u, err := url.Parse(strings.TrimPrefix(strings.TrimSpace(raw), "git+"))
-	if err != nil || u.User == nil {
-		return false
-	}
-	switch strings.ToLower(u.Scheme) {
-	case "http", "https":
-		return true
-	}
-	return false
-}
-
-// RedactURL hides URL userinfo (a user name, user:password or a token) and the
-// values of query-string parameters, so a repository address can be logged,
-// returned to a caller or put into an error context without leaking the
-// credential embedded in it. The rest of the URL, including parameter names, is
-// kept. It also cleans free text such as git output, which echoes the URL it was
-// given.
-func RedactURL(s string) string {
-	s = userinfoRe.ReplaceAllString(s, "${1}"+redactedValue+"@")
-	return queryRe.ReplaceAllStringFunc(s, func(m string) string {
-		parts := queryRe.FindStringSubmatch(m)
-		params := strings.Split(parts[2], "&")
-		for i, p := range params {
-			if name, _, ok := strings.Cut(p, "="); ok {
-				params[i] = name + "=" + redactedValue
-			}
-		}
-		return parts[1] + strings.Join(params, "&")
-	})
-}
+// RedactURL hides URL userinfo and the values of query-string parameters, so a
+// repository address can be logged, returned to a caller or put into an error
+// context without leaking the credential embedded in it. See internal/urlredact.
+func RedactURL(s string) string { return urlredact.URL(s) }

@@ -13,6 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/diag"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/urlredact"
 )
 
 // TokenHostsEnv names the environment variable that lists, comma separated, the
@@ -122,7 +123,7 @@ func warnTokenWithheld(ctx context.Context, repoURL string) {
 // .git/config. A cache whose config carries no credential is left untouched.
 func scrubLegacyCredentials(ctx context.Context, cacheDir, cleanURL string) {
 	cfg, err := os.ReadFile(filepath.Join(cacheDir, ".git", "config")) //nolint:gosec // our own cache directory
-	if err != nil || !userinfoRe.Match(cfg) {
+	if err != nil || !urlredact.HasUserinfo(string(cfg)) {
 		return
 	}
 	res := gitRun(ctx, cacheDir, gitEnvFor(ctx), "remote", "set-url", "origin", cleanURL)

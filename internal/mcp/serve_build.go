@@ -456,10 +456,10 @@ func (st *ServeSetup) sourceSpecs(cfg *config.Config) ([]skillsource.Spec, error
 	for _, arg := range st.Sources {
 		spec, err := skillsource.ParseArg(arg)
 		if err != nil {
-			return nil, oops.Wrapf(err, "--source %q", arg)
+			return nil, oops.Wrapf(err, "--source %q", includes.RedactURL(arg))
 		}
 		if seen[spec.Name] {
-			return nil, oops.Errorf("--source %q has the name %q, which another skill source already uses", arg, spec.Name)
+			return nil, oops.Errorf("--source %q has the name %q, which another skill source already uses", includes.RedactURL(arg), spec.Name)
 		}
 		seen[spec.Name] = true
 		specs = append(specs, spec)
