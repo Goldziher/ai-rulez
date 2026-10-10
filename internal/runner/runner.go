@@ -34,6 +34,15 @@ const (
 // It is a variable so tests can shorten it.
 var killGrace = 2 * time.Second
 
+// runStartWindow returns the process-wide lock that serializes the interval in
+// which a run's marker write end is open in this process (from configure until
+// just after Start). Another run that forks during that interval gives its child
+// a transient copy of the write end, and this run's sweep would then mistake
+// that child for one of its own detached helpers and kill it. Holding the lock
+// keeps only one run forking with a marker open at a time; runs still execute
+// concurrently afterwards. It is created once, so it is immutable in practice.
+var runStartWindow = sync.OnceValue(func() *sync.Mutex { return new(sync.Mutex) })
+
 // Status is the coarse outcome of a run.
 type Status string
 
@@ -126,6 +135,10 @@ func Run(ctx context.Context, spec Spec) Result {
 	}
 	stdout, stderr := &capBuffer{limit: limit}, &capBuffer{limit: limit}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
+	// Keep the fork window, in which the marker write end is open here, to one
+	// run at a time (see runStartWindow).
+	mu := runStartWindow()
+	mu.Lock()
 	tree := configure(cmd)
 	if spec.ShortLived {
 		tree.shortLived()
@@ -135,6 +148,8 @@ func Run(ctx context.Context, spec Spec) Result {
 
 	start := time.Now()
 	runErr := cmd.Start()
+	tree.endStartWindow()
+	mu.Unlock()
 	if runErr == nil {
 		tree.attach(cmd)
 		runErr = cmd.Wait()
