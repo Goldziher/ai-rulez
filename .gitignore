@@ -175,3 +175,5 @@ opencode.json
 .lycheecache
 benchmark-results.txt
 bench-subset.txt
+
+.codex/
