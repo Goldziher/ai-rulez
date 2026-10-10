@@ -256,6 +256,99 @@ func TestConvert_TesslEndToEnd(t *testing.T) {
 	assert.Contains(t, got, "skills/deploy/evals/basic.eval.yaml")
 }
 
+func TestTesslPlan_TileSteeringAndSkills(t *testing.T) {
+	// Arrange: the consumer tile layout: .tessl/tiles/<ws>/<name>/ with a tile.json
+	// whose steering map names rules and whose skills map names SKILL.md paths.
+	root := ".tessl/tiles/acme/deploy-tools/"
+	fsys := mapFS(map[string]string{
+		"tessl.json":                                      `{"dependencies":{"acme/deploy-tools":{"version":"1.0.0"}}}`,
+		root + "tile.json":                                `{"name":"acme/deploy-tools","version":"1.0.0","steering":{"naming":{"rules":"rules/naming.md"}},"skills":{"deploy-prod":{"path":"skills/deploy-prod/SKILL.md"}}}`,
+		root + "rules/naming.md":                          "---\ndescription: Naming\n---\nName it.\n",
+		root + "skills/deploy-prod/SKILL.md":              tesslSkillFile("deploy-prod"),
+		root + "skills/deploy-prod/references/runbook.md": "Runbook.\n",
+	})
+	// Act
+	p := planOf(t, tesslImporter{}, fsys, Options{})
+	// Assert
+	assert.Equal(t, []string{"rules/naming.md", "skills/deploy-prod/SKILL.md"}, itemRels(p))
+	assert.Contains(t, resourceOf(t, p, "deploy-prod", "references/runbook.md"), "Runbook.")
+	assert.NotNil(t, findingFor(p, StatusDropped, root+"tile.json", ""), "tile metadata is not written to config.toml")
+	assert.Nil(t, findingFor(p, StatusNeedsAction, "tessl.json", "dependencies.acme/deploy-tools"), "a listed tile that is on disk needs no action")
+}
+
+func TestTesslPlan_TileInAVersionDirectory(t *testing.T) {
+	base := ".tessl/tiles/acme/v/1.2.0/"
+	p := planOf(t, tesslImporter{}, mapFS(map[string]string{
+		"tessl.json":        `{"dependencies":{"acme/v":{"version":"1.2.0"}}}`,
+		base + "tile.json":  `{"steering":{"r":{"rules":"rules/r.md"}}}`,
+		base + "rules/r.md": "Rule.\n",
+	}), Options{})
+
+	assert.Equal(t, []string{"rules/r.md"}, itemRels(p))
+}
+
+func TestTesslPlan_RootSkillKeepsOnlyItsResources(t *testing.T) {
+	// Arrange: a tile whose SKILL.md sits at the tile root next to its own
+	// manifest, docs and eval scenarios. Only references/ belongs to the skill.
+	root := ".tessl/tiles/acme/tools/"
+	p := planOf(t, tesslImporter{}, mapFS(map[string]string{
+		"tessl.json":                 `{"dependencies":{"acme/tools":{"version":"1.0.0"}}}`,
+		root + "tile.json":           `{"skills":{"tools":{"path":"SKILL.md"}},"steering":{"r":{"rules":"rules/r.md"}}}`,
+		root + "SKILL.md":            tesslSkillFile("tools"),
+		root + "references/guide.md": "Guide.\n",
+		root + "rules/r.md":          "Rule.\n",
+		root + "evals/e/task.md":     "Do it.\n",
+		root + "docs/index.md":       "Docs.\n",
+	}), Options{})
+
+	// Act
+	var resources []string
+	for i := range p.Items {
+		if p.Items[i].Kind == KindSkill && p.Items[i].Name == "tools" {
+			for _, r := range p.Items[i].Resources {
+				resources = append(resources, r.Path)
+			}
+		}
+	}
+
+	// Assert
+	assert.Contains(t, resources, "references/guide.md")
+	assert.Contains(t, resources, "evals/e.eval.yaml", "the eval scenario is attached to the skill")
+	assert.NotContains(t, resources, "tile.json", "the tile manifest is not a skill resource")
+	assert.NotContains(t, resources, "rules/r.md", "a steering rule is imported on its own")
+	assert.NotContains(t, resources, "evals/e/task.md", "the raw scenario is not a skill resource")
+	assert.NotContains(t, resources, "docs/index.md", "documentation is not a skill resource")
+}
+
+func TestTesslPlan_TileMissingReferencedFilesNeedAction(t *testing.T) {
+	root := ".tessl/tiles/acme/x/"
+	p := planOf(t, tesslImporter{}, mapFS(map[string]string{
+		root + "tile.json": `{"steering":{"gone":{"rules":"rules/gone.md"}},"skills":{"s":{"path":"skills/s/SKILL.md"}}}`,
+	}), Options{})
+
+	assert.NotNil(t, findingFor(p, StatusNeedsAction, root+"rules/gone.md", ""))
+	assert.NotNil(t, findingFor(p, StatusNeedsAction, root+"skills/s/SKILL.md", ""))
+	assert.Empty(t, p.Items)
+}
+
+func TestTesslPlan_TileRejectsUnusableReferences(t *testing.T) {
+	root := ".tessl/tiles/acme/x/"
+	p := planOf(t, tesslImporter{}, mapFS(map[string]string{
+		root + "tile.json": `{"steering":{"bad":{"rules":"../x.md"}},"skills":{"s":{"path":"/etc/SKILL.md"}}}`,
+	}), Options{})
+
+	assert.NotNil(t, findingFor(p, StatusUnsupported, root+"tile.json", "steering.bad"))
+	assert.NotNil(t, findingFor(p, StatusUnsupported, root+"tile.json", "skills.s"))
+	assert.Empty(t, p.Items)
+}
+
+func TestTesslPlan_InvalidTileManifest(t *testing.T) {
+	root := ".tessl/tiles/acme/x/"
+	p := planOf(t, tesslImporter{}, mapFS(map[string]string{root + "tile.json": "{not json"}), Options{})
+
+	assert.NotNil(t, findingFor(p, StatusUnsupported, root+"tile.json", ""))
+}
+
 func TestRenderEvalFile_RefusesAnEmptyTask(t *testing.T) {
 	_, err := renderEvalFile(evalCase{id: "x", description: "d"})
 
