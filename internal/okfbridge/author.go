@@ -37,6 +37,24 @@ func RenderConceptKeeping(kind Kind, domain, id string, data, previous []byte) (
 		return nil, oops.Hint("Fix the YAML between the --- lines.").Errorf("the frontmatter of %s %q is not valid YAML", kind, id)
 	}
 	prev, _, _ := config.ParseFrontmatterChecked(string(previous))
+	md = keepingMetadata(kind, id, md, prev)
+	it := sourceItem{kind: kind, domain: domain, keepName: true, cf: config.ContentFile{Name: id, Content: body, Metadata: md}}
+	applyKeepingIdentity(&it, md, prev)
+	fields, _, err := conceptFields(it, id)
+	if err != nil {
+		return nil, err
+	}
+	head, err := okf.MarshalFrontmatter(fields)
+	if err != nil {
+		return nil, err
+	}
+	return append(append(head, '\n'), body...), nil
+}
+
+// keepingMetadata resolves the metadata a rewrite keeps: a bare body (no
+// frontmatter of its own) inherits everything the previous file declared, and a
+// skill's name is filled in from its id.
+func keepingMetadata(kind Kind, id string, md, prev *config.Metadata) *config.Metadata {
 	if md == nil && prev != nil {
 		// data is a bare body: the rewrite keeps everything the file declared.
 		md = prev
@@ -52,7 +70,12 @@ func RenderConceptKeeping(kind Kind, domain, id string, data, previous []byte) (
 			md.Extra[keyName] = id
 		}
 	}
-	it := sourceItem{kind: kind, domain: domain, keepName: true, cf: config.ContentFile{Name: id, Content: body, Metadata: md}}
+	return md
+}
+
+// applyKeepingIdentity fills it's type and title, preferring what metadata
+// declares and falling back to the previous file's values.
+func applyKeepingIdentity(it *sourceItem, md, prev *config.Metadata) {
 	if md != nil {
 		it.typ, it.title = md.OKFType, md.OKFTitle
 	}
@@ -64,15 +87,6 @@ func RenderConceptKeeping(kind Kind, domain, id string, data, previous []byte) (
 			it.title = prev.OKFTitle
 		}
 	}
-	fields, _, err := conceptFields(it, id)
-	if err != nil {
-		return nil, err
-	}
-	head, err := okf.MarshalFrontmatter(fields)
-	if err != nil {
-		return nil, err
-	}
-	return append(append(head, '\n'), body...), nil
 }
 
 // RefreshIndexes rewrites the index.md files of a configuration directory so they
