@@ -101,6 +101,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **BREAKING: MCP failures are error results.** `validate_config` returned `{"valid": false}` as a success; it is now an error result (`isError: true`) with the same document in `structuredContent`. The list and read tools (`list_rules`, `read_rule`, ...) fail on a configuration that does not load, as `ai-rulez list` exits 1, instead of returning an empty list; `lock_status` on a project without a lock fails ("nothing to check") instead of reporting `in_sync: true`; `doctor` fails when the configuration cannot be read.
 - **BREAKING: MCP `working_directory`, `config_file` and `config_dir` are confined to the directory the server was started in.** Pass `mcp --root <dir>` to choose another root or `mcp --allow-any-dir` to lift the check. A call without `working_directory` uses the root.
 - **BREAKING: the authoring MCP server no longer advertises `tools.listChanged`** (its tool set is fixed).
+- **BREAKING: `roles resolve --format json` spells the key `honored`**, not the British `honoured`, in each `skill_modes` entry; `schema/roles-resolve.schema.json` matches.
 
 ### Added
 
@@ -299,6 +300,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **Release binary size**: sigstore-go (about 11 MB), the KMS signers (about 10 MB) and the OTLP gRPC transport (about 6 MB) are linked in. Release builds verify module checksums (`GOSUMDB=off` removed).
 - **The engine is per load**: warnings go to the logger of the host (`pkg/airulez` `Options.Logger` or the CLI logger), the organization policy belongs to the load it is given to, and two projects in one process share no state (generate lock, warning collector, preset registry, include callbacks).
 - **Command `Short` descriptions** no longer name flags.
+- **liter-llm is pinned at v2.2.3** (was v2.2.0). The workarounds for the issues it has since fixed are gone: the one-request-per-input Gemini embedding fallback and the split-embedding budget bookkeeping, the exhausted-quota and Anthropic prompt-too-long error mappings (liter-llm now reports a quota variant and context length), the decoded-reply size check (the cap is passed to liter-llm as `max_response_bytes`), and the `gpt-*` realtime/audio/tts variant price floor (`GetModelInfo` now reports whether the price is known, so a 0/0 listing is unpriced). liter-llm refuses redirects itself since v2.2.2. See `docs/llm.md`.
 
 ### Fixed
 
@@ -440,6 +442,8 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **Offline skill-source resolution validates the remembered commit**: a value in the cache's `refs.json` that is not a 40 or 64 hex commit id is treated as never resolved instead of becoming a cache path, and the index is written atomically.
 - **A skill-source skill can no longer reuse the name of a static project skill**: the collision check now covers every project skill, not only those the server serves.
 - **MCP server leaked a map entry per session.** The re-initialize tolerance kept the state of every session it had seen; it now forgets finished sessions. The server also logs the SDK's warnings and errors to stderr and sets an explicit page size.
+- **The missing-content path is printed with forward slashes on Windows**: `remove`/`add` reported `.ai-rulez\rules\nope.md` instead of the portable `.ai-rulez/rules/nope.md`.
+- **The legacy-layout deprecation notice is emitted by every path that loads a tree**: it now also appears from `generate --recursive`, `validate --recursive` and `generate --watch`, not only the single-root (and `--check`) paths.
 
 ### Security
 
@@ -473,6 +477,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **Config and provider spec symlinks**: a symlinked `config.toml` or `config.local.toml` whose target is outside the repository root is refused at load, like a content symlink, and provider specs symlinked outside it are refused. Base-revision reads (approvals, lock at base, CODEOWNERS, release notes) fail closed on an unknown revision, a git failure or an oversized blob instead of reading as "no such file".
 - **Scanner confinement**: the scanner `--version` probe runs confined like the scan (refused under `isolation = "require"` without a backend), the macOS sandbox denies the LaunchServices and Apple Events services, bubblewrap adds `--new-session` and `--unshare-pid`, and external scanners and `gh` no longer inherit `SHELL` and `LOGNAME`. Trap fixes that edit hand-written files refuse symlinks and paths that leave the project.
 - **Model routing and redaction**: a per-request model (verifier `llm.model`, `[search.embeddings] model`) or repository `embedding_model` naming another provider can no longer reroute the user's LLM API key (`AR9L0`); secret redaction exempts only a value that is entirely an environment lookup (`${KEY:-sk-...}` is masked); the command embedder runs in its own process group and is bounded by its timeout.
+- **Credentials in a source URL are refused instead of stored**: `include add`, `skill install` and the MCP `add_include`/`install_skill` tools reject a URL whose userinfo (`https://user:token@host/...`) or credential query parameter (`?access_token=...`) carries a secret; a credentialed source already committed is a `validate --strict`/`scan` error (`AR035 credential-in-source-url`) and is refused when it loads, so the secret reaches neither `config.toml`, git's command line nor a clone's `.git/config`. Every message that would echo the URL redacts it.
 
 ### Removed
 
