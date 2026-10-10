@@ -554,6 +554,16 @@ func validateGitURL(urlStr string) error {
 		return oops.Errorf("repository URL cannot be empty")
 	}
 
+	// A credential in the URL would be stored in clear in config.toml and passed
+	// on git's command line (and into the clone's .git/config). Refuse it and
+	// point at the token that is kept out of both.
+	if HasCredentials(urlStr) {
+		return oops.
+			With("url", RedactURL(urlStr)).
+			Hint("Remove the credential from the URL and authenticate with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable (ai-rulez sends it as a scoped git header, never stored)").
+			Errorf("the source URL embeds a credential")
+	}
+
 	// Check for SSH URL format (git@host:owner/repo.git or ssh://git@host/owner/repo.git)
 	if strings.HasPrefix(urlStr, "git@") || strings.HasPrefix(urlStr, "ssh://") {
 		// SSH URLs are valid, they'll be normalized to HTTPS
