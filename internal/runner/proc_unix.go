@@ -106,12 +106,19 @@ func configure(cmd *exec.Cmd) *procTree {
 	return t
 }
 
-// attach starts watching the process table for the started child's descendants.
-func (t *procTree) attach(cmd *exec.Cmd) {
+// endStartWindow closes the marker's write end in this process once the child
+// has started, so a later run's fork cannot inherit it (see startWindow in
+// runner.go). The child keeps its own copy, which is what the sweep looks for.
+func (t *procTree) endStartWindow() {
 	if t.markW != nil {
 		_ = t.markW.Close() //nolint:errcheck // the child has its copy
 		t.markW = nil
 	}
+}
+
+// attach starts watching the process table for the started child's descendants.
+func (t *procTree) attach(cmd *exec.Cmd) {
+	t.endStartWindow()
 	if cmd.Process == nil {
 		return
 	}
