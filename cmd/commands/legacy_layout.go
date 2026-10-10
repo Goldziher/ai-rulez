@@ -6,9 +6,10 @@ import (
 )
 
 // warnLegacyLayout says, at info level, that configDir still uses the pre-OKF
-// layout (see "ai-rulez migrate okf"). The commands that write the sources (add,
-// remove) call it; generate and validate do not, so their output, which the
-// golden suite pins byte for byte, stays the same.
+// layout (see "ai-rulez migrate okf"). generate, validate and list call it, along
+// with the commands that write the sources (add, remove), so a user reading a
+// legacy tree is told once per command that it is deprecated; the notice is
+// removed with the legacy reader in v6.
 func warnLegacyLayout(configDir string) {
 	if config.IsLegacyLayout(configDir) {
 		logger.Info(config.LegacyLayoutMessage, "path", configDir)

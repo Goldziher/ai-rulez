@@ -4,6 +4,7 @@
 exit: 0
 --- stdout
 --- stderr
+INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  skill_mode name-only of skill reviewer in role engineer is not applied on codex: no documented per-skill setting; the skill stays listed there role=engineer skill=reviewer
 WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
 WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
@@ -129,6 +130,7 @@ scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58
 exit: 0
 --- stdout
 --- stderr
+INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
 WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
 WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
@@ -156,6 +158,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 exit: 0
 --- stdout
 --- stderr
+INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
 WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
 WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode) severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project

@@ -69,6 +69,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		if err != nil {
 			return fail(err)
 		}
+		warnLegacyLayout(cfg.ConfigDir)
 
 		// Validate the raw file against the JSON schema first so a key the
 		// struct would silently drop (and a value outside an enum) is reported.
