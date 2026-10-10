@@ -79,6 +79,15 @@ steps:
   - run: ai-rulez verify --attestation
 ```
 
+The round trip is checked end to end by the `live-sigstore-keyless` job in `.github/workflows/live.yml`, which runs on
+`workflow_dispatch` and a weekly schedule and is never part of PR CI. It mints the runner's OIDC token with the `sigstore`
+audience and runs `TestLiveKeylessRoundTrip` (`internal/signing/live_test.go`) against the Sigstore **staging** instance:
+`AI_RULEZ_LIVE_SIGSTORE_FULCIO=https://fulcio.sigstage.dev`, `AI_RULEZ_LIVE_SIGSTORE_REKOR=https://rekor.sigstage.dev`
+and a staging trusted root fetched over TUF into `AI_RULEZ_LIVE_SIGSTORE_ROOT`. The test needs no repository secret.
+Staging Fulcio must accept the GitHub Actions OIDC issuer (`https://token.actions.githubusercontent.com`); the test
+defaults to the public-good instances (`AI_RULEZ_LIVE_SIGSTORE_FULCIO`/`_REKOR` unset) and the public-good root from
+`trust update` (`_ROOT` unset), so point the job at the public-good endpoints if staging rejects that issuer.
+
 ## Policy
 
 `[signing]` in `.ai-rulez/config.toml` says who may sign and how fresh a signature must be:
@@ -304,7 +313,11 @@ trust it by file: `ai-rulez sign --lock --key awskms:///alias/release --public-k
 Binary size: the four providers add about 14 MB to an unstripped build (59.3 MB to 73.6 MB) and about 10 MB to a
 stripped release build (42.2 MB to 52.1 MB). That is under the 15 MB budget, so they are in every build rather than
 behind a build tag. Offline tests use sigstore's `fakekms://` provider; a live test runs only with `AI_RULEZ_LIVE_KMS=1`
-and `AI_RULEZ_LIVE_KMS_KEY=<key URI>`.
+and `AI_RULEZ_LIVE_KMS_KEY=<key URI>`. The `live-kms` job in `.github/workflows/live.yml` (on `workflow_dispatch` and a
+weekly schedule, never in PR CI) exercises it against a real AWS KMS key: it creates an ephemeral `ECC_NIST_P256`
+`SIGN_VERIFY` key and an alias, runs `TestLiveKMSRoundTrip`, then schedules the key for deletion. It reads the
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_REGION` repository secrets and skips the key steps when
+`AWS_ACCESS_KEY_ID` is unset, so the workflow passes without an AWS account.
 
 ## Verifying ai-rulez itself
 
@@ -315,6 +328,11 @@ the binary's `sha256`. The signer must be the release workflow, pinned in the bi
 - identity `^https://github\.com/Goldziher/ai-rulez/\.github/workflows/publish\.yaml@refs/tags/v[0-9][^/]*$`;
 - issuer `https://token.actions.githubusercontent.com`;
 - a transparency-log proof (required for a certificate identity).
+
+Because the identity names `refs/tags/...`, a release must be published from the tag's ref. The `publish.yaml` `meta`
+job enforces that for **workflow_dispatch**: a run that did not come from `refs/tags/<tag>` fails before anything is
+created, since `actions/attest-build-provenance` would otherwise sign `@refs/heads/...` and every binary would be
+rejected here. This is deliberate; the policy is not widened to accept branch refs.
 
 ```bash
 ai-rulez trust update                       # once: cache the public-good trusted root
@@ -427,4 +445,5 @@ policy, a bundle) pick a predicate type URI and reuse them.
 
 
 Live tests run only with `AI_RULEZ_LIVE_SIGSTORE=1` (keyless) or `AI_RULEZ_LIVE_KMS=1` (a cloud KMS key) and are never
-part of the default test run.
+part of the default test run. Both run in `.github/workflows/live.yml`, which is manual (`workflow_dispatch`) and weekly
+on a schedule, not part of PR CI; see its header for the repository secrets it expects.
