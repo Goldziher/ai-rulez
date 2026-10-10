@@ -56,7 +56,6 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 		return oops.With("config_dir", op.aiRulezDir).Wrapf(err, "save config")
 	}
 
-	op.warnStoredCredentials("skill", req.Source)
 	op.logger().Info("Skill installed successfully",
 		"name", req.Name,
 		"source", incl.RedactURL(req.Source),
@@ -153,7 +152,7 @@ func validateInstallSkillRequest(req *InstallSkillRequest) error {
 			Errorf("skill source is required")
 	}
 
-	return nil
+	return rejectCredentialedSource("skill", req.Source)
 }
 
 // validateSkillSource validates that the skill source is accessible
