@@ -112,6 +112,10 @@ func (r *reader) symlinkAt(p string) (link bool, at string, err error) {
 // exists reports whether p is a regular path inside the tree (not through a
 // symlink). A path that exists but cannot be inspected is recorded as a problem.
 func (r *reader) exists(p string) (isDir, ok bool) {
+	if !fs.ValidPath(p) {
+		r.note(p, skipError("path escapes the source directory"))
+		return false, false
+	}
 	link, at, err := r.symlinkAt(p)
 	if err != nil {
 		r.note(at, err)
@@ -173,6 +177,10 @@ func skipReason(err error) string {
 // dirEntries lists a directory, sorted, without symlink entries; skipped
 // entries are reported through onSkip.
 func (r *reader) dirEntries(dir string, onSkip func(name, reason string)) []fs.DirEntry {
+	if !fs.ValidPath(dir) {
+		r.note(dir, skipError("path escapes the source directory"))
+		return nil
+	}
 	link, at, err := r.symlinkAt(dir)
 	if err != nil {
 		r.note(at, err)
