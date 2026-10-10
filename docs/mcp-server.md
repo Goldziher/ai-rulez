@@ -334,7 +334,11 @@ are listed with their own digests.
 
 - The Go SDK dispatches only the methods it knows, so `skills/list` and `skills/get` are answered in a
   thin JSON-RPC layer in front of the SDK; everything else, including resources and tools, is served
-  by the SDK normally. The stdio transport is the only one `ai-rulez mcp` offers.
+  by the SDK normally. The stdio transport is the only one `ai-rulez mcp` offers: the harness launches the
+  server as a subprocess it already controls, so there is no port, TLS certificate or cross-origin policy to
+  operate. A streamable-HTTP transport (and elicitation, sampling and roots) is deliberately not offered; a
+  hosted deployment would need its own auth and CORS policy, and those capabilities wait on the 2026-07-28 spec
+  revision.
 - A malformed line never ends the session. Input that is not valid JSON gets `-32700`; a frame that is not a
   JSON-RPC 2.0 request (wrong or missing `jsonrpc`, an object or boolean `id`, an empty or invalid batch) gets
   `-32600`; a line over 16 MiB is dropped with `-32600`. The server keeps reading after each. A `resources/read`
@@ -1233,6 +1237,10 @@ Add a new include source (git URL or local path) to the configuration.
 - `install_to` (optional, string): Installation target path in .ai-rulez/
 - `local` (optional, boolean): Add the include to the `config.local.*` overlay instead of the shared config
 
+A `source` URL that carries a credential in its userinfo (`https://user:token@host/...`) is refused, like the CLI: it
+would be written in clear into `config.toml`. Use the git credential helper or the `AI_RULEZ_GIT_TOKEN` environment
+variable; a committed credential is reported by `validate`/`scan` as `AR035`.
+
 **Response:**
 
 ```json
@@ -1301,6 +1309,10 @@ Install a named skill from a git repository or local path.
 - `path` (optional, string): Path within repo to skill directory (defaults to `skills/<name>`)
 - `ref` (optional, string): Git reference (branch, tag, commit)
 - `local` (optional, boolean): Record the skill in the `config.local.*` overlay instead of the shared config
+
+A `source` URL that carries a credential in its userinfo (`https://user:token@host/...`) is refused, like the CLI: it
+would be written in clear into `config.toml`. Use the git credential helper or the `AI_RULEZ_GIT_TOKEN` environment
+variable; a committed credential is reported by `validate`/`scan` as `AR035`.
 
 **Response:**
 

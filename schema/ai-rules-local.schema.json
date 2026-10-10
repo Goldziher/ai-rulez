@@ -1035,7 +1035,7 @@
             "type": "boolean"
           },
           "source": {
-            "description": "Git repository URL (https://...) or local file path (absolute or relative)",
+            "description": "Git repository URL (https://...) or local file path (absolute or relative). A URL must not embed a credential (https://user:token@host/...): authenticate with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable instead; a committed credential is reported as AR035.",
             "type": "string"
           },
           "tag_prefix": {
@@ -1095,7 +1095,7 @@
             "type": "boolean"
           },
           "source": {
-            "description": "Git repository URL (https://...) or local file path",
+            "description": "Git repository URL (https://...) or local file path. A URL must not embed a credential (https://user:token@host/...): authenticate with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable instead; a committed credential is reported as AR035.",
             "minLength": 1,
             "type": "string"
           },
@@ -3500,7 +3500,7 @@
             "type": "string"
           },
           "url": {
-            "description": "A git URL (https, ssh, file; a leading git+ is accepted) or a local directory.",
+            "description": "A git URL (https, ssh, file; a leading git+ is accepted) or a local directory. A URL must not embed a credential (https://user:token@host/...): authenticate with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable instead; a committed credential is reported as AR035.",
             "type": "string"
           },
           "version": {

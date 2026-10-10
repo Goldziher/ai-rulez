@@ -1,6 +1,7 @@
 package includes
 
 import (
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -15,6 +16,23 @@ var userinfoRe = regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*://)[^/\s?#]+@`)
 var queryRe = regexp.MustCompile(`(?i)(\b[a-z][a-z0-9+.-]*://[^\s?#]*\?)([^\s#'"]*)`)
 
 const redactedValue = "<redacted>"
+
+// HasCredentials reports whether a git URL carries userinfo (a user name, a
+// user:password pair or a token) in its authority, so it would be written into
+// config.toml as a readable secret. Only http(s) URLs are checked: an ssh://
+// remote's user (git@host) is the login name, not a credential, and a scp-style
+// git@host:owner/repo has no scheme at all. A git+https:// prefix is accepted.
+func HasCredentials(raw string) bool {
+	u, err := url.Parse(strings.TrimPrefix(strings.TrimSpace(raw), "git+"))
+	if err != nil || u.User == nil {
+		return false
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "http", "https":
+		return true
+	}
+	return false
+}
 
 // RedactURL hides URL userinfo (a user name, user:password or a token) and the
 // values of query-string parameters, so a repository address can be logged,
