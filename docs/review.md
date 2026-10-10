@@ -12,7 +12,7 @@ follow-up [#269](https://github.com/Goldziher/ai-rulez/issues/269).
 - [How the offline score is built](#how-the-offline-score-is-built)
 - [Pre-filters](#pre-filters)
 - [Estimate and the egress manifest](#estimate-and-the-egress-manifest)
-- [The judge: `--semantic`](#the-judge---semantic)
+- [The judge: `--semantic`](#the-judge-semantic)
 - [Calibration and the gate](#calibration-and-the-gate)
 - [Drift and model comparison](#drift-and-model-comparison)
 - [`review fix`](#review-fix)

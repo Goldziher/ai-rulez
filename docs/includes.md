@@ -664,7 +664,7 @@ source = "/path/to/shared-rules/.ai-rulez"
 Includes are not recursive, so cycles cannot occur. Give each include a unique name: duplicate names are
 not rejected and are processed independently.
 
-If an include's content is missing from the output, run `ai-rulez validate --verbose`: a failed
+If an include's content is missing from the output, run `ai-rulez validate --debug`: a failed
 include is logged as `Failed to process include` and skipped (an error under `--locked`, `--frozen` or an enforced
 lock), and a `local_override` path that does not exist skips the include silently.
 
@@ -690,7 +690,7 @@ Your `.ai-rulez/rules/security.md` overrides every include.
 ```bash
 cat .ai-rulez/config.toml | grep includes
 ls -la ../shared-rules/.ai-rulez/
-ai-rulez validate --verbose
+ai-rulez validate --debug
 ```
 
 ## Migration Path
