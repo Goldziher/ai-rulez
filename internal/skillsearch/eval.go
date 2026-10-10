@@ -657,11 +657,11 @@ func LoadBaseline(path string) (*Result, error) {
 // flip would be an artifact of the flag.
 func (r *Result) CompareBaseline(base *Result) error {
 	if bm, rm := baselineMode(base.Mode), baselineMode(r.Mode); bm != rm {
-		return oops.Hint("rerun with --mode "+bm+", or save a new baseline with --out").
+		return oops.Hint("rerun with --mode "+bm+", or save a new baseline with --output-dir").
 			Errorf("the baseline was ranked in %s mode but this run uses %s", bm, rm)
 	}
 	if base.K != r.K {
-		return oops.Hint("rerun with --k "+strconv.Itoa(base.K)+", or save a new baseline with --out").
+		return oops.Hint("rerun with --k "+strconv.Itoa(base.K)+", or save a new baseline with --output-dir").
 			Errorf("the baseline was evaluated at k=%d but this run uses k=%d", base.K, r.K)
 	}
 	was := map[string]bool{}
