@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to publish (e.g., v2.3.1). Run the workflow from this tag's ref so provenance carries the tag identity."
+        description: "Release tag to publish (e.g., v2.3.1). The run MUST come from this tag's ref: the meta job fails otherwise, because provenance would otherwise carry a refs/heads/... identity that `ai-rulez verify --self` rejects."
         required: true
         type: string
 
@@ -61,6 +61,25 @@ jobs:
               github.event.inputs.tag ||
               ''
             }}
+
+      # actions/attest-build-provenance signs with this run's ref
+      # (`...publish.yaml@<github.ref>`). `ai-rulez verify --self` pins `refs/tags/v...`
+      # (internal/signing/self.go), so a workflow_dispatch run from a branch signs
+      # `@refs/heads/...` and every binary it publishes fails `verify --self`. Catch that here,
+      # before the release is created, rather than widening the policy to accept branches.
+      - name: Require the tag's ref for workflow_dispatch
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REF: ${{ github.ref }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          want="refs/tags/${INPUT_TAG}"
+          if [ "$REF" != "$want" ]; then
+            echo "::error::workflow_dispatch runs must come from the tag's ref: expected '$want' but this run is from '$REF'. Open 'Run workflow', pick this tag under 'Use workflow from' (not a branch), and dispatch again so provenance carries the tag identity."
+            exit 1
+          fi
+          echo "Dispatching $INPUT_TAG from $REF; provenance will carry the tag identity."
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7

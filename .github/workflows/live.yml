@@ -1,0 +1,257 @@
+name: Live verification
+
+# Live checks against real services and real credentials. They are slow, may
+# spend money and publish to a transparency log, so they are NOT part of PR CI:
+# this workflow runs only on workflow_dispatch and a weekly schedule. Every job
+# is `continue-on-error: false`, so a failure fails this run only.
+#
+# Jobs:
+#   live-llm                real provider calls through internal/llm and internal/evals.
+#   live-sigstore-keyless   keyless signing against the Sigstore staging instance.
+#   live-kms                signing with an ephemeral AWS KMS key.
+#
+# Repository secrets to set (Settings -> Secrets and variables -> Actions):
+#   GEMINI_API_KEY      live-llm  required by the live model tests (see internal/llm/live_test.go).
+#   ANTHROPIC_API_KEY   live-llm  optional, passed through for provider-parity runs. Unused today.
+#   OPENAI_API_KEY      live-llm  optional, passed through for provider-parity runs. Unused today.
+#   AWS_ACCESS_KEY_ID   live-kms  an account allowed to create and schedule deletion of a KMS key.
+#   AWS_SECRET_ACCESS_KEY live-kms paired with the above.
+#   AWS_REGION          live-kms  the region the KMS key is created in.
+# When AWS_ACCESS_KEY_ID is unset the live-kms key steps are skipped (see the
+# `if:` guards below) instead of failing the workflow.
+# live-sigstore-keyless needs no secret: it mints a short-lived OIDC token.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 04:00 UTC every Monday. Non-blocking, manual-only workflow otherwise.
+    - cron: "0 4 * * 1"
+
+concurrency:
+  group: live-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  live-llm:
+    name: Live LLM
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: false
+    env:
+      AI_RULEZ_LIVE_LLM: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.27"
+          cache: true
+
+      - name: Set up liter-llm (static library, as a release links it)
+        uses: ./.github/actions/setup-liter-llm
+
+      - name: Run the live LLM and eval tests
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_RULEZ_LIVE_OUT: ${{ runner.temp }}/live-llm-out
+        run: |
+          set -o pipefail
+          mkdir -p "$AI_RULEZ_LIVE_OUT"
+          go test -timeout 40m -v ./internal/llm/... ./internal/evals/... 2>&1 | tee "$RUNNER_TEMP/live-llm.log"
+
+      - name: Upload the transcripts and the test log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: live-llm
+          path: |
+            ${{ runner.temp }}/live-llm-out
+            ${{ runner.temp }}/live-llm.log
+          if-no-files-found: warn
+
+  live-sigstore-keyless:
+    name: Live Sigstore (keyless, staging)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: false
+    env:
+      AI_RULEZ_LIVE_SIGSTORE: "1"
+      # Staging Sigstore, so a run does not publish a permanent entry to the
+      # public-good log. Public-good would be https://fulcio.sigstore.dev and
+      # https://rekor.sigstore.dev (the defaults when these are unset).
+      AI_RULEZ_LIVE_SIGSTORE_FULCIO: "https://fulcio.sigstage.dev"
+      AI_RULEZ_LIVE_SIGSTORE_REKOR: "https://rekor.sigstage.dev"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.27"
+          cache: true
+
+      # IMPORTANT: staging Fulcio must be configured to accept the GitHub Actions
+      # OIDC issuer (https://token.actions.githubusercontent.com) for the
+      # "sigstore" audience, or the token exchange below is rejected. Verify with
+      # this run; if it is rejected, the fix is to point this job at the
+      # public-good instance instead (unset AI_RULEZ_LIVE_SIGSTORE_FULCIO/_REKOR
+      # and drop the root fetch step, which falls back to the public-good root
+      # over TUF). Do not leave a staging check that is known to fail.
+      - name: Mint the runner's OIDC token for Fulcio
+        run: |
+          response=$(curl -sS --fail \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sigstore")
+          token=$(jq -r '.value' <<<"$response")
+          if [ -z "$token" ] || [ "$token" = "null" ]; then
+            echo "::error::the OIDC endpoint returned no token"
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "AI_RULEZ_LIVE_SIGSTORE_TOKEN=$token" >> "$GITHUB_ENV"
+
+      # Fetch the staging trusted root through the pinned sigstore-go TUF client,
+      # so the root is the signed target of the staging repository rather than an
+      # unverified download. The embedded staging root is the TUF trust anchor.
+      # The path is exported as AI_RULEZ_LIVE_SIGSTORE_ROOT for the test below;
+      # leave it unset to fall back to the public-good root over TUF.
+      - name: Fetch the staging trusted root (TUF)
+        run: |
+          cat > "$RUNNER_TEMP/fetch-trusted-root.go" <<'EOF'
+          package main
+
+          import (
+          	"fmt"
+          	"os"
+
+          	"github.com/sigstore/sigstore-go/pkg/root"
+          	"github.com/sigstore/sigstore-go/pkg/tuf"
+          )
+
+          func main() {
+          	opts := tuf.DefaultOptions()
+          	opts.Root = tuf.StagingRoot()
+          	opts.RepositoryBaseURL = tuf.StagingMirror
+          	opts.CachePath = os.TempDir() + "/sigstore-tuf"
+          	tr, err := root.FetchTrustedRootWithOptions(opts)
+          	if err != nil {
+          		fmt.Fprintln(os.Stderr, "fetch trusted root:", err)
+          		os.Exit(1)
+          	}
+          	data, err := tr.MarshalJSON()
+          	if err != nil {
+          		fmt.Fprintln(os.Stderr, "encode trusted root:", err)
+          		os.Exit(1)
+          	}
+          	if err := os.WriteFile(os.Args[1], data, 0o600); err != nil {
+          		fmt.Fprintln(os.Stderr, "write trusted root:", err)
+          		os.Exit(1)
+          	}
+          }
+          EOF
+          root="$RUNNER_TEMP/staging_trusted_root.json"
+          go run "$RUNNER_TEMP/fetch-trusted-root.go" "$root"
+          echo "AI_RULEZ_LIVE_SIGSTORE_ROOT=$root" >> "$GITHUB_ENV"
+
+      - name: Run the keyless round trip
+        run: |
+          set -o pipefail
+          go test -timeout 15m -v ./internal/signing -run TestLiveKeylessRoundTrip 2>&1 | tee "$RUNNER_TEMP/live-sigstore.log"
+
+      - name: Record the result in the step summary
+        if: always()
+        run: |
+          {
+            echo "## Live keyless signing (staging)"
+            echo ""
+            echo "- Fulcio: \`https://fulcio.sigstage.dev\`"
+            echo "- Rekor: \`https://rekor.sigstage.dev\`"
+            echo "- Result: \`${{ job.status }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the test log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: live-sigstore-keyless
+          path: ${{ runner.temp }}/live-sigstore.log
+          if-no-files-found: warn
+
+  live-kms:
+    name: Live KMS (AWS, ephemeral key)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: false
+    env:
+      AI_RULEZ_LIVE_KMS: "1"
+      # From repository secrets. The AWS CLI reads these directly; the key steps
+      # are gated on env.AWS_ACCESS_KEY_ID, so the workflow passes (skipping the
+      # live test) when no AWS account is configured.
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.27"
+          cache: true
+
+      - name: Note the skip when AWS credentials are not set
+        if: env.AWS_ACCESS_KEY_ID == ''
+        run: echo "::notice::AWS_ACCESS_KEY_ID is not set; skipping the live KMS round trip."
+
+      - name: Create the ephemeral KMS key and alias
+        id: key
+        if: env.AWS_ACCESS_KEY_ID != ''
+        env:
+          # An alias unique to the run, so a leftover alias never collides.
+          ALIAS: alias/ai-rulez-live-${{ github.run_id }}
+        run: |
+          # An ECC_NIST_P256 sign/verify key: the cosign default and the only
+          # shape sigstore's KMS provider signs with.
+          key_id=$(aws kms create-key \
+            --description "ai-rulez live signing test (run ${{ github.run_id }})" \
+            --key-usage SIGN_VERIFY --key-spec ECC_NIST_P256 \
+            --query 'KeyMetadata.KeyId' --output text)
+          aws kms create-alias --alias-name "$ALIAS" --target-key-id "$key_id"
+          echo "key_id=$key_id" >> "$GITHUB_OUTPUT"
+          echo "AI_RULEZ_LIVE_KMS_KEY=awskms:///$ALIAS" >> "$GITHUB_ENV"
+
+      - name: Run the KMS round trip
+        if: env.AWS_ACCESS_KEY_ID != ''
+        run: |
+          set -o pipefail
+          go test -timeout 15m -v ./internal/signing -run TestLiveKMSRoundTrip 2>&1 | tee "$RUNNER_TEMP/live-kms.log"
+
+      - name: Schedule the key for deletion
+        if: always() && env.AWS_ACCESS_KEY_ID != ''
+        env:
+          ALIAS: alias/ai-rulez-live-${{ github.run_id }}
+        run: |
+          aws kms delete-alias --alias-name "$ALIAS" || true
+          if [ -n "${{ steps.key.outputs.key_id }}" ]; then
+            aws kms schedule-key-deletion \
+              --key-id "${{ steps.key.outputs.key_id }}" \
+              --pending-window-in-days 7
+          fi
+
+      - name: Upload the test log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: live-kms
+          path: ${{ runner.temp }}/live-kms.log
+          if-no-files-found: warn

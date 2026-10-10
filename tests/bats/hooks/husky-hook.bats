@@ -13,7 +13,11 @@ setup() {
   mkdir -p "$PROJECT/.husky"
   git -C "$PROJECT" init -q
   HOOK="$PROJECT/.husky/pre-commit"
-  xberg_stub_trace npx
+  # A self-contained stub, not xberg_stub_trace: the hook resolves npx from PATH, and a stub
+  # whose shebang re-resolves its interpreter can fall through to the host's node-based npx
+  # (the exit-139 crash). See ai_rulez_write_stub in helpers/common.bash.
+  ai_rulez_stub_trace npx
+  ai_rulez_stub_first npx
 }
 
 setup_hooks() {
@@ -31,6 +35,12 @@ husky_v8_layout() {
 
 @test "npx resolves to the stub before any host copy" {
   [ "$(command -v npx)" = "$XBERG_STUB_BIN/npx" ]
+
+  # The stub must start without a PATH lookup. An `env` shebang re-resolves its interpreter and
+  # is exactly how a stubbed npx once became the host's node-based npx (exit 139).
+  run head -n 1 "$XBERG_STUB_BIN/npx"
+  xberg_assert_status 0
+  xberg_assert_output "#!/bin/sh"
 }
 
 @test "a fresh hook is executable and validates through npx" {
@@ -48,7 +58,7 @@ husky_v8_layout() {
 @test "a failing validation fails the hook, so the commit is blocked" {
   husky_v8_layout
   setup_hooks
-  xberg_stub_exit npx 2
+  ai_rulez_stub_exit npx 2
 
   run "$HOOK"
 
@@ -59,7 +69,8 @@ husky_v8_layout() {
   printf 'npm test' >"$HOOK"
   chmod +x "$HOOK"
   setup_hooks
-  xberg_stub_trace npm
+  ai_rulez_stub_trace npm
+  ai_rulez_stub_first npm
 
   run sh -e "$HOOK"
 
