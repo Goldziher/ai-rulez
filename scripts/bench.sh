@@ -45,7 +45,7 @@ run_subset() {
   done <<<"$SUBSET"
 }
 
-cpu_of() { awk -F': ' '/^cpu:/ {print $2; exit}' "$1"; }
+cpu_of() { awk -F': ' '/^cpu:/ {gsub(/[ \t]+$/, "", $2); print $2; exit}' "$1"; }
 
 # median_table FILE prints "name median_ns" lines.
 median_table() {
