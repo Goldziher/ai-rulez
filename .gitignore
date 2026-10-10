@@ -165,11 +165,8 @@ testing/**/.mcp.json
 .ai-rulez/.generated-manifest.local.json
 .ai-rulez/local/
 .codex/agents/
-.codex/config.toml
-.hermes.md
 .opencode/agents/
 .opencode/commands/
-.opencode/skills/
 opencode.json
 # END ai-rulez
 
