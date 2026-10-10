@@ -61,14 +61,25 @@ func mergeNPMPackage(merged, pkg map[string]any) error {
 			continue
 		}
 		if key == "files" || key == "keywords" {
-			values := append([]any{}, previous.([]any)...)
-			for _, item := range value.([]any) {
+			previousList, previousOK := previous.([]any)
+			valueList, valueOK := value.([]any)
+			if !previousOK || !valueOK {
+				merged[key] = value
+				continue
+			}
+			values := append([]any{}, previousList...)
+			for _, item := range valueList {
 				if !slices.Contains(values, item) {
 					values = append(values, item)
 				}
 			}
 			slices.SortFunc(values, func(a, b any) int {
-				return strings.Compare(a.(string), b.(string))
+				as, aok := a.(string)
+				bs, bok := b.(string)
+				if !aok || !bok {
+					return 0
+				}
+				return strings.Compare(as, bs)
 			})
 			merged[key] = values
 			continue
