@@ -27,6 +27,13 @@ const (
 	LogFile   = "log.md"
 )
 
+// domainDescriptorFile is the per-domain DOMAIN.md a 4.x project carries; v5
+// reads a domain's content from its subdirectories, so it is not a concept.
+const (
+	domainDescriptorFile = "DOMAIN.md"
+	domainDescriptorDir  = "domains"
+)
+
 // Codes of the findings this package reports. They are part of the public
 // contract: never renumber or reuse one.
 const (
