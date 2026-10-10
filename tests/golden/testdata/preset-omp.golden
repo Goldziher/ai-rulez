@@ -4,7 +4,7 @@
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [[hooks]] are not generated for omp: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
 WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
 WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher
@@ -79,7 +79,7 @@ scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [[hooks]] are not generated for omp: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
 WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
 WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher
@@ -96,7 +96,7 @@ INFO  Generation complete files=16
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [[hooks]] are not generated for omp: ai-rulez renders hooks for claude, codex, cursor, gemini, copilot, copilot-cli, factory, antigravity, qwen, augment, codebuddy, qoder, commandcode, letta, gitlab-duo, devin, grok, bob, cortex, goose, deepagents, junie, zcode, crush, poolside, reasonix, hermes, kiro, vibe, kimi, cline, opencode, kilo, mimocode, pi, amp only
 WARN  SECURITY: [permissions] deny rule "Read(./.env)" is NOT enforced by omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
 WARN  [permissions] allow rule "Read(./src/**)" not generated for omp: oh-my-pi approves a whole tool; it has no per-path or per-domain matcher

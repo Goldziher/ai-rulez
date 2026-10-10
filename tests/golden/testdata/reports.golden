@@ -4,7 +4,7 @@
 exit: 0
 --- stdout
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
@@ -974,7 +974,7 @@ Rules:
     • targeted (targets: [claude cursor])
     • typescript [high]
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 --- project tree
 (no change)
 --- home tree
@@ -988,7 +988,7 @@ Skills:
     • deployer
     • reviewer
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 --- project tree
 (no change)
 --- home tree
@@ -1002,7 +1002,7 @@ Checks:
     • security
     • style
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 --- project tree
 (no change)
 --- home tree
@@ -1038,7 +1038,7 @@ risk (advisory, never fails the run): critical (score 100/100)
   medium      8  .ai-rulez/commands/build.md
   ... and 4 more item(s)
 --- stderr
-INFO  This configuration directory uses the legacy layout, which is deprecated and stops loading in v6; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 INFO  Configuration is valid path=$ROOT/.ai-rulez
 --- project tree
 (no change)
