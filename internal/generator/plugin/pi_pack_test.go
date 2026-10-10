@@ -97,3 +97,63 @@ func npmTarFiles(t *testing.T, path string) map[string][]byte {
 	}
 	return files
 }
+
+func TestPiPackageExcludesContributorResources(t *testing.T) {
+	npm, err := exec.LookPath("npm")
+	if err != nil {
+		t.Skip("npm is required for the real package integration test")
+	}
+	for _, runtimes := range [][]string{{"pi"}, {"pi", "opencode"}} {
+		t.Run(runtimes[len(runtimes)-1], func(t *testing.T) {
+			root := piPackageWithContributorFiles(t, runtimes)
+			cmd := exec.CommandContext(t.Context(), npm, "pack", "--ignore-scripts", "--json")
+			cmd.Dir = root
+			output, err := cmd.CombinedOutput()
+			require.NoError(t, err, "%s", output)
+			var packed []struct {
+				Filename string `json:"filename"`
+			}
+			require.NoError(t, json.Unmarshal(output, &packed))
+			require.Len(t, packed, 1)
+			files := npmTarFiles(t, filepath.Join(root, packed[0].Filename))
+			for _, name := range contributorPackagePaths {
+				_, exists := files["package/"+name]
+				assert.False(t, exists, "contributor content must not ship: %s", name)
+			}
+			var pkg piPackage
+			require.NoError(t, json.Unmarshal(files["package/package.json"], &pkg))
+			assert.Equal(t, []string{"./.pi/skills/basemind"}, pkg.Pi.Skills)
+			assert.Equal(t, []string{"./.pi/prompts/check.md"}, pkg.Pi.Prompts)
+			assert.NotEmpty(t, files["package/.pi/skills/basemind/references/usage.md"])
+			assert.NotEmpty(t, files["package/.pi/prompts/check.md"])
+		})
+	}
+}
+
+var contributorPackagePaths = []string{
+	".pi/agents/local.md", ".pi/mcp.json", ".pi/prompts/contributor.md",
+	".pi/skills/local-only/SKILL.md", ".opencode/plugins/local.js", ".opencode/package.json",
+}
+
+func piPackageWithContributorFiles(t *testing.T, runtimes []string) string {
+	t.Helper()
+	cfg, err := config.LoadConfig(t.Context(), fixtureDir)
+	require.NoError(t, err)
+	cfg.Plugin.Runtimes = runtimes
+	m, err := BuildManifest(cfg, cfg.Content)
+	require.NoError(t, err)
+	m.Commands = []config.ContentFile{{Name: "check", Content: "Check $ARGUMENTS."}}
+	root := t.TempDir()
+	outputs, err := Generate(m, root)
+	require.NoError(t, err)
+	for _, out := range outputs {
+		require.NoError(t, os.MkdirAll(filepath.Dir(out.Path), 0o755))
+		require.NoError(t, os.WriteFile(out.Path, out.RawContent, 0o644))
+	}
+	for _, name := range contributorPackagePaths {
+		path := filepath.Join(root, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte("contributor content"), 0o644))
+	}
+	return root
+}

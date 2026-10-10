@@ -325,7 +325,7 @@ func TestOpenCodePublishedFilesIncludeReferencedPaths(t *testing.T) {
 			name: "directory referenced by command",
 			mcp:  []config.PluginMCPLaunch{{Name: "s", Command: "${PLUGIN_ROOT}/scripts/run.sh", Transport: config.TransportStdio}},
 			tree: map[string]string{"scripts/run.sh": "#!/bin/sh\n"},
-			want: []string{".opencode/", "assets/", "README.md", "scripts/"},
+			want: []string{".opencode/ai-rulez-bundle.json", ".opencode/ai-rulez-content.js", ".opencode/plugins/p.js", "README.md", "assets/", "scripts/"},
 		},
 		{
 			name: "file at the top level, args and env, deduplicated",
@@ -334,13 +334,13 @@ func TestOpenCodePublishedFilesIncludeReferencedPaths(t *testing.T) {
 				Env: map[string]string{"CFG": "${PLUGIN_ROOT}/scripts/b"}, Transport: config.TransportStdio,
 			}},
 			tree: map[string]string{"server.js": "x", "scripts/a": "x", "scripts/b": "x"},
-			want: []string{".opencode/", "assets/", "README.md", "scripts/", "server.js"},
+			want: []string{".opencode/ai-rulez-bundle.json", ".opencode/ai-rulez-content.js", ".opencode/plugins/p.js", "README.md", "assets/", "scripts/", "server.js"},
 		},
 		{
 			name: "missing path is not listed",
 			mcp:  []config.PluginMCPLaunch{{Name: "s", Command: "${PLUGIN_ROOT}/bin/run", Transport: config.TransportStdio}},
 			tree: map[string]string{},
-			want: []string{".opencode/", "assets/", "README.md"},
+			want: []string{".opencode/ai-rulez-bundle.json", ".opencode/ai-rulez-content.js", ".opencode/plugins/p.js", "README.md", "assets/"},
 		},
 		{
 			name: "traversal and already-listed paths are ignored",
@@ -348,13 +348,13 @@ func TestOpenCodePublishedFilesIncludeReferencedPaths(t *testing.T) {
 				Name: "s", Command: "${PLUGIN_ROOT}/../etc/x", Args: []string{"${PLUGIN_ROOT}/assets/y"}, Transport: config.TransportStdio,
 			}},
 			tree: map[string]string{"assets/y": "x"},
-			want: []string{".opencode/", "assets/", "README.md"},
+			want: []string{".opencode/ai-rulez-bundle.json", ".opencode/ai-rulez-content.js", ".opencode/plugins/p.js", "README.md", "assets/"},
 		},
 		{
 			name: "remote url is scanned too",
 			mcp:  []config.PluginMCPLaunch{{Name: "s", Transport: config.TransportHTTP, URL: "file://${PLUGIN_ROOT}/sock/s"}},
 			tree: map[string]string{"sock/s": "x"},
-			want: []string{".opencode/", "assets/", "README.md", "sock/"},
+			want: []string{".opencode/ai-rulez-bundle.json", ".opencode/ai-rulez-content.js", ".opencode/plugins/p.js", "README.md", "assets/", "sock/"},
 		},
 	}
 	for _, tt := range tests {
