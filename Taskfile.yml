@@ -89,12 +89,12 @@ tasks:
   build:
     desc: "Build the CLI binary as a release does: liter-llm linked statically (plain `go build` links the shared library the module ships, which only runs on this machine)"
     cmds:
-      - bash -c 'eval "$(bash scripts/setup-liter-llm.sh)" && go build -ldflags="-s -w" -o bin/ai-rulez ./cmd/ai-rulez'
+      - bash -c 'if [ -z "${CGO_LDFLAGS:-}" ]; then eval "$(bash scripts/setup-liter-llm.sh)"; fi; go build -ldflags="-s -w" -o bin/ai-rulez ./cmd/ai-rulez'
 
   test:release:
     desc: "Run the model-layer tests against the static liter-llm library, the way CI does"
     cmds:
-      - bash -c 'eval "$(bash scripts/setup-liter-llm.sh)" && go test ./internal/llm/... ./internal/pricing/... ./internal/tokens/... ./cmd/...'
+      - bash -c 'if [ -z "${CGO_LDFLAGS:-}" ]; then eval "$(bash scripts/setup-liter-llm.sh)"; fi; go test ./internal/llm/... ./internal/pricing/... ./internal/tokens/... ./cmd/...'
 
   release:dry-run:
     desc: "Build this platform's release archive locally and check what the wrappers expect (see docs/maintainers/release.md)"
