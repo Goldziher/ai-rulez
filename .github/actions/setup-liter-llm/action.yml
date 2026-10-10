@@ -14,7 +14,7 @@ runs:
   using: composite
   steps:
     - name: Cache the liter-llm download
-      uses: actions/cache@v6
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: ${{ runner.temp }}/liter-llm
         key: liter-llm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.mod') }}-${{ inputs.mode }}
