@@ -41,25 +41,28 @@ func TestSourceOperationsNeverLogCredentials(t *testing.T) {
 	require.NoError(t, err)
 	op = op.WithLogger(log)
 
-	require.NoError(t, op.AddInclude(ctx, &crud.AddIncludeRequest{Name: "inc", Source: credentialedURL}))
-	require.NoError(t, op.InstallSkill(ctx, &crud.InstallSkillRequest{Name: "sk", Source: credentialedURL}))
-	require.NoError(t, op.RemoveInclude(ctx, "inc"))
-	require.NoError(t, op.UninstallSkill(ctx, "sk"))
+	// A credentialed source is refused, so the credential reaches neither the
+	// config file nor a log line.
+	require.Error(t, op.AddInclude(ctx, &crud.AddIncludeRequest{Name: "inc", Source: credentialedURL}))
+	require.Error(t, op.InstallSkill(ctx, &crud.InstallSkillRequest{Name: "sk", Source: credentialedURL}))
 
 	assert.NotContains(t, log.text(), "SECRETTOKEN")
 	assert.NotContains(t, log.text(), "SECRETQUERY")
 }
 
-func TestAddSourceWarnsThatCredentialsAreStored(t *testing.T) {
-	log := &recordingLogger{}
-	op, err := crud.NewOperator(setupTestProject(t))
+func TestAddSourceRefusesToStoreACredential(t *testing.T) {
+	base := setupTestProject(t)
+	op, err := crud.NewOperator(base)
 	require.NoError(t, err)
-	op = op.WithLogger(log)
 
-	require.NoError(t, op.AddInclude(context.Background(), &crud.AddIncludeRequest{Name: "inc", Source: credentialedURL}))
+	err = op.AddInclude(context.Background(), &crud.AddIncludeRequest{Name: "inc", Source: credentialedURL})
 
-	assert.Contains(t, log.text(), "warn")
-	assert.Contains(t, log.text(), "credential")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "embeds a credential")
+	data, readErr := os.ReadFile(filepath.Join(base, ".ai-rulez", "config.toml"))
+	require.NoError(t, readErr)
+	assert.NotContains(t, string(data), "SECRETTOKEN")
+	assert.NotContains(t, string(data), "SECRETQUERY")
 }
 
 func TestInvalidCredentialedSourceErrorsAreRedacted(t *testing.T) {

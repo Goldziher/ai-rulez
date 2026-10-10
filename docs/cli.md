@@ -778,11 +778,14 @@ ai-rulez include add <name> <source> [flags]
 - `--local` (optional): Add the include to the machine-local `config.local.*` overlay instead of the shared config
 
 A local source in the shared config must resolve inside the project, the same check the loader applies, so a path
-outside it is refused when it is added (use `--local` for a path that leaves the project). A URL with a credential
-(`https://user:token@host/...`) is stored as written in `config.toml`; ai-rulez warns and never prints the secret in
-its own output. Prefer a git credential helper or an SSH remote (`git@host:org/repo.git`) and keep the URL free of
-secrets. `include remove` and `skill remove` edit `config.toml` directly without loading the project, so an include
-that keeps the project from loading can always be removed.
+outside it is refused when it is added (use `--local` for a path that leaves the project). A URL with a credential in
+its userinfo (`https://user:token@host/...`) is refused: the credential would be written in clear into the committed
+`config.toml`, so `include add` and `skill install` stop with the URL redacted and never write the secret. Keep the URL
+free of secrets and authenticate with the git credential helper or the `AI_RULEZ_GIT_TOKEN` environment variable
+(sent as a scoped git header, never stored); an SSH remote (`git@host:org/repo.git`) carries no credential. An existing
+credentialed source is reported by `validate`/`scan` as `AR035` (see [Strict validation](strict-validation.md)).
+`include remove` and `skill remove` edit `config.toml` directly without loading the project, so an include that keeps
+the project from loading can always be removed.
 
 **Examples:**
 

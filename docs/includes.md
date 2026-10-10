@@ -315,6 +315,10 @@ Most Git hosting platforms that support Bearer token authentication will work wi
 #### Security Best Practices
 
 - **Never commit tokens** to your repository or configuration files
+- **Keep credentials out of the URL**: `ai-rulez include add` and `skill install` refuse a source like
+  `https://user:token@host/org/repo.git`, because it would be written in clear into `config.toml`. Use
+  `AI_RULEZ_GIT_TOKEN` or the git credential helper instead; `validate`/`scan` report an already committed
+  credentialed source as `AR035` (see [Strict validation](strict-validation.md))
 - **Use environment variables** in CI/CD pipelines (GitHub Actions secrets, GitLab CI/CD variables, etc.)
 - **Store tokens securely** using secret management systems (AWS Secrets Manager, HashiCorp Vault, etc.)
 - **Rotate tokens regularly** to limit exposure from potential leaks
