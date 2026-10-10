@@ -10,6 +10,8 @@ import (
 	"github.com/samber/oops"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/urlredact"
+
 	// The cloud providers register their key URI schemes (awskms://, gcpkms://,
 	// azurekms://, hashivault://) with the kms package when imported.
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
@@ -70,7 +72,10 @@ func redactKMSRef(ref string) string {
 // redactKMSError is err's text with the key reference's query string removed:
 // providers echo the reference they were given, and an option in it may be a token.
 func redactKMSError(ref string, err error) string {
-	return strings.ReplaceAll(err.Error(), ref, redactKMSRef(ref))
+	s := strings.ReplaceAll(err.Error(), ref, redactKMSRef(ref))
+	// Also mask any query string in the text: a provider may normalize or escape
+	// the reference, so the exact-substring replace above can miss it.
+	return urlredact.URL(s)
 }
 
 // cachedKeySigner answers Public from memory: the KMS crypto.Signer asks the
