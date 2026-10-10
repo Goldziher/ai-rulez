@@ -460,6 +460,9 @@ func TestGenerator_MCPAutoGeneration_NoServers(t *testing.T) {
 	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
+	// Turn the default-on self server off, so no auto MCP output is expected.
+	cfg.SetSelfServer(false)
+
 	// Create generator
 	gen := NewGenerator(cfg)
 
@@ -467,9 +470,31 @@ func TestGenerator_MCPAutoGeneration_NoServers(t *testing.T) {
 	err = gen.Generate("default")
 	require.NoError(t, err)
 
-	// Verify .mcp.json was NOT generated (no MCP servers configured)
+	// Verify .mcp.json was NOT generated (no MCP servers configured and self_server off)
 	mcpPath := filepath.Join(tempDir, ".mcp.json")
-	assert.NoFileExists(t, mcpPath, ".mcp.json should not be generated when no MCP servers exist")
+	assert.NoFileExists(t, mcpPath, ".mcp.json should not be generated when no MCP servers exist and self_server is off")
+}
+
+// TestGenerator_MCPAutoGeneration_SelfServerDefault pins the flip: with no
+// [[mcp_servers]], the default-on self server still produces .mcp.json.
+func TestGenerator_MCPAutoGeneration_SelfServerDefault(t *testing.T) {
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
+	tempDir := t.TempDir()
+	copyFixture(t, fixtureDir, tempDir)
+
+	ctx := context.Background()
+	cfg, err := config.LoadConfig(ctx, tempDir)
+	require.NoError(t, err)
+
+	gen := NewGenerator(cfg)
+	require.NoError(t, gen.Generate("default"))
+
+	mcpPath := filepath.Join(tempDir, ".mcp.json")
+	assert.FileExists(t, mcpPath, "the default self server auto-generates .mcp.json")
+
+	content, err := os.ReadFile(mcpPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), `"ai-rulez"`)
 }
 
 func TestGenerator_Gitignore_NoAbsolutePaths(t *testing.T) {

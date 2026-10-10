@@ -102,12 +102,22 @@ func (g *Generator) renderGenericSidecar(sc *SidecarSpec, cfg *config.Config, ou
 // file), in spec order, those whose predicate does not hold left out. It is
 // just sc when the document is not shared.
 func (g *Generator) sharedSidecars(sc *SidecarSpec, cfg *config.Config) []*SidecarSpec {
-	if !isMergedGenericSidecar(sc) {
+	if !isMergeableSidecar(sc) {
 		return []*SidecarSpec{sc}
 	}
+	// In user scope a sidecar lands at its global_path, so two sidecars with
+	// different project paths can share one user document (qoder: the root
+	// .mcp.json and .qoder/settings.json both write ~/.qoder/settings.json).
+	dest := func(s *SidecarSpec) string {
+		if cfg != nil && cfg.UserScope && s.GlobalPath != "" {
+			return "global:" + s.GlobalPath
+		}
+		return "path:" + s.Path
+	}
+	target := dest(sc)
 	var group []*SidecarSpec
 	for _, other := range g.Spec.Sidecars {
-		if other != nil && other.Path == sc.Path && isMergedGenericSidecar(other) &&
+		if other != nil && dest(other) == target && isMergeableSidecar(other) &&
 			g.evalPredicate(other.EmitWhen, cfg) && (!other.UserOnly || cfg.UserScope) {
 			group = append(group, other)
 		}
@@ -127,6 +137,15 @@ func isMergedGenericSidecar(sc *SidecarSpec) bool {
 		(sc.Kind != SidecarHooks || !settings.HookDialectOwnsFile(sc.Dialect))
 }
 
+// isMergeableSidecar reports whether the sidecar merges into a document that
+// another sidecar of the same spec may also write, so the two are rendered
+// together. It adds mcp_json, whose document format and owned keys are its own
+// but which can share a user-scope file with the generic kinds: qoder writes
+// both the root .mcp.json and .qoder/settings.json to ~/.qoder/settings.json.
+func isMergeableSidecar(sc *SidecarSpec) bool {
+	return sc.Kind == SidecarMCPJSON || isMergedGenericSidecar(sc)
+}
+
 // renderSidecarGroup merges the owned keys of several sidecars into their one
 // document: each merge starts from what is on disk, so rendering them one after
 // the other would keep only the last.
@@ -137,7 +156,7 @@ func (g *Generator) renderSidecarGroup(group []*SidecarSpec, cfg *config.Config,
 			return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).
 				Errorf("sidecars %q and %q merge into %s with different formats", group[0].Kind, sc.Kind, sc.Path)
 		}
-		keys, err := g.genericOwnedKeys(sc, cfg, outputPath)
+		keys, err := g.mergedSidecarOwnedKeys(sc, cfg, outputPath)
 		if err != nil {
 			return sidecarRender{}, err
 		}

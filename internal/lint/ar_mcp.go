@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 // Codes for the MCP configuration checks.
@@ -79,6 +80,9 @@ func (r *runner) mcpServers() []*mcpServer {
 			if gen := r.configMCPServer(srv.name); gen != nil && sameMCPServer(srv, gen) {
 				continue // a copy of what config.toml generates, which is checked at its source
 			}
+			if r.isGeneratedSelfServer(srv) {
+				continue // the ai-rulez self server, a generated artifact checked by the tool itself
+			}
 			out = append(out, srv)
 		}
 	}
@@ -113,6 +117,22 @@ func sameMCPServer(j *mcpServer, gen *config.MCPServer) bool {
 	return len(j.typeProblems) == 0 && j.command == gen.Command && j.url == gen.URL &&
 		effectiveTransport(j) == effectiveTransport(g) &&
 		slices.Equal(j.args, gen.Args) && maps.Equal(j.env, gen.Env) && maps.Equal(j.headers, gen.Headers)
+}
+
+// isGeneratedSelfServer reports whether srv is the ai-rulez self server that
+// generation writes into an MCP file. It is a generated artifact rather than
+// hand-authored content, so the pin, shape and secret checks skip it: a release
+// pins it to the running version, and a dev build resolves to ai-rulez@latest
+// on purpose. A project that turned the self server off leaves its file entry
+// hand-authored, and it is checked like any other.
+func (r *runner) isGeneratedSelfServer(srv *mcpServer) bool {
+	if srv.name != config.SelfMCPServerName || !r.cfg.HasSelfServer() {
+		return false
+	}
+	entry := r.cfg.SelfMCPServerEntry(schema.Version)
+	command, _ := entry[hookTypeCommand].(string)
+	args, _ := entry["args"].([]string)
+	return srv.command == command && slices.Equal(srv.args, args) && effectiveTransport(srv) == transportStdio
 }
 
 func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules

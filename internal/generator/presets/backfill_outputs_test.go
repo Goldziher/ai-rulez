@@ -85,8 +85,8 @@ func TestBackfill_MCPDocuments(t *testing.T) {
 		{
 			name: "antigravity writes .agents/mcp_config.json with serverUrl",
 			gen:  &AntigravityPresetGenerator{}, path: ".agents/mcp_config.json",
-			contains:   []string{`"mcpServers"`, `"serverUrl": "https://example.com/mcp"`},
-			notContain: []string{`"url"`, `"ai-rulez"`},
+			contains:   []string{`"mcpServers"`, `"serverUrl": "https://example.com/mcp"`, `"ai-rulez"`},
+			notContain: []string{`"url"`},
 		},
 		{
 			name: "codex merges mcp_servers tables into .codex/config.toml",
@@ -114,8 +114,9 @@ func TestBackfill_MCPDocuments(t *testing.T) {
 	}
 }
 
-func TestBackfill_NoMCPServersNoDocuments(t *testing.T) {
+func TestBackfill_NoMCPServersNoDocumentsWhenSelfServerOff(t *testing.T) {
 	cfg := &config.Config{Name: "proj"}
+	cfg.SetSelfServer(false)
 	for rel, gen := range map[string]config.PresetGenerator{
 		".cursor/mcp.json":        &CursorPresetGenerator{},
 		".vscode/mcp.json":        &CopilotPresetGenerator{},

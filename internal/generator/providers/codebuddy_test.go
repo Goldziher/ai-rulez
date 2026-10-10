@@ -59,8 +59,9 @@ func TestCodebuddy_MCP(t *testing.T) {
 
 	cfg := batchAConfig()
 	cfg.MCPServers = nil
+	cfg.SetSelfServer(false)
 	_, ok = outputByPath(batchAGenerate(t, "codebuddy", cfg), ".mcp.json")
-	assert.False(t, ok)
+	assert.False(t, ok, "no servers and self_server off writes no .mcp.json")
 }
 
 func TestCodebuddy_Global(t *testing.T) {

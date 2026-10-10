@@ -243,6 +243,17 @@ func mcpJSONOwnedKeys(cfg *config.Config, literal bool) []jsonmerge.OwnedKey {
 	return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: servers, Members: true}}
 }
 
+// mergedSidecarOwnedKeys is the owned keys of a sidecar that shares a merged
+// document with others: a generic kind through its format-agnostic renderer, or
+// mcp_json, whose document format is its own but which can share a user-scope
+// file with the generic kinds (qoder).
+func (g *Generator) mergedSidecarOwnedKeys(sc *SidecarSpec, cfg *config.Config, outputPath string) ([]jsonmerge.OwnedKey, error) {
+	if sc.Kind == SidecarMCPJSON {
+		return mcpJSONOwnedKeys(cfg, g.Spec != nil && presets.IsLiteralMCPJSONWriter(g.Spec.Name)), nil
+	}
+	return g.genericOwnedKeys(sc, cfg, outputPath)
+}
+
 // ampSettingsOwnedKeys decides what ai-rulez owns in .amp/settings.json: the
 // resolved global effort and, member by member, the MCP servers under the flat
 // "amp.mcpServers" key (the standard entry without the description Amp ignores).

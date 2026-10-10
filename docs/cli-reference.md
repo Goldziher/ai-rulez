@@ -1038,6 +1038,7 @@ ai-rulez generate --locked
 | `--if-configured` | bool |  | Skip plugin generation when no plugin authoring configuration is present |
 | `--locked` | bool |  | Require ai-rulez.lock to cover every remote include and installed skill and fetch exactly the pinned commits (for CI) |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
+| `--no-self-mcp` | bool |  | Do not add ai-rulez's own MCP server to the generated .mcp.json (the default is to add it) |
 | `--offline` | bool |  | Skip fetching remote includes, use cached content only |
 | `--plugin` | bool |  | Generate distributable plugin bundles and a marketplace index from the [plugin] block |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |

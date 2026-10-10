@@ -184,7 +184,10 @@ func TestCopilotPresetGenerator_renderMCPJSON(t *testing.T) {
 	err = json.Unmarshal([]byte(rendered.Body), &parsed)
 	require.NoError(t, err)
 	servers := parsed["mcpServers"].(map[string]interface{})
-	assert.Len(t, servers, 1)
+	assert.Len(t, servers, 2, "the declared server plus the default ai-rulez self server")
+
+	self := servers["ai-rulez"].(map[string]interface{})
+	assert.Equal(t, "npx", self["command"], "the self server is on by default")
 
 	stdio := servers["test-server"].(map[string]interface{})
 	assert.Equal(t, "npx", stdio["command"])

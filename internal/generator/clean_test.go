@@ -124,7 +124,7 @@ func TestGenerator_Clean_Idempotent(t *testing.T) {
 // clean: ai-rulez only contributed some of its keys.
 func TestGenerator_Clean_KeepsPartiallyOwnedMergedDocument(t *testing.T) {
 	tempDir, gen := setupGeneratedProject(t)
-	gen.config.MCP = &config.MCPConfig{SelfServer: true}
+	gen.config.MCP = &config.MCPConfig{}
 
 	mcpPath := filepath.Join(tempDir, ".mcp.json")
 	require.NoError(t, os.WriteFile(mcpPath, []byte(`{"mcpServers":{"mine":{"command":"x"}}}`+"\n"), 0o644))
