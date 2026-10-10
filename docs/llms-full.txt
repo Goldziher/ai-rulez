@@ -4384,7 +4384,7 @@ source file's frontmatter (the export normalizes them), and a source file that i
 `x-ai-rulez.metadata`, `type` and `title` are added, and each directory gets an `index.md` (the root one names
 `okf_version`). The loader maps `x-ai-rulez.metadata` back onto the native fields, treats `type`, `title` and
 `x-ai-rulez` as reserved, and ignores generated `index.md`/`log.md` listings, so generated output does not change.
-`validate` runs `okf validate` on such a tree. `init`, `add`, `remove` and the MCP CRUD tools write this form: a new concept gets `type`, `title` and `x-ai-rulez`, and the `index.md` files are refreshed when the tree is a bundle (it has a root `index.md`); `export okf` of such a tree reproduces it byte for byte. A tree without a root `index.md` is the legacy layout: it still loads, with a deprecation notice, until v6. See [Migrating to v5](migration-v5.md#okf-is-the-format-of-ai-rulez).
+`validate` runs `okf validate` on such a tree. `init`, `add`, `remove` and the MCP CRUD tools write this form: a new concept gets `type`, `title` and `x-ai-rulez`, and the `index.md` files are refreshed when the tree is a bundle (it has a root `index.md`); `export okf` of such a tree reproduces it byte for byte. A tree without a root `index.md` is the legacy layout: it still loads, with a deprecation notice from `validate`, `generate` and `list`, until v6. See [Migrating to v5](migration-v5.md#okf-is-the-format-of-ai-rulez).
 
 ##### What `migrate okf` will and will not touch
 
@@ -5718,6 +5718,10 @@ Most Git hosting platforms that support Bearer token authentication will work wi
 ###### Security Best Practices
 
 - **Never commit tokens** to your repository or configuration files
+- **Keep credentials out of the URL**: `ai-rulez include add` and `skill install` refuse a source like
+  `https://user:token@host/org/repo.git`, because it would be written in clear into `config.toml`. Use
+  `AI_RULEZ_GIT_TOKEN` or the git credential helper instead; `validate`/`scan` report an already committed
+  credentialed source as `AR035` (see [Strict validation](strict-validation.md))
 - **Use environment variables** in CI/CD pipelines (GitHub Actions secrets, GitLab CI/CD variables, etc.)
 - **Store tokens securely** using secret management systems (AWS Secrets Manager, HashiCorp Vault, etc.)
 - **Rotate tokens regularly** to limit exposure from potential leaks
@@ -6206,6 +6210,11 @@ Install a named skill.
 - `--path <dir>` (optional): Path within repo to skill directory
 - `--ref <ref>` (optional): Git ref (branch, tag, commit)
 - `--local` (optional): Record the skill in your gitignored `config.local.*` overlay instead of `config.toml`, so it applies on this machine only. See [Local Configuration](local-overrides.md)
+
+`skill install` refuses a `--source` URL that carries a credential in its userinfo (`https://user:token@host/...`):
+writing it would commit the secret to `config.toml` in clear. Keep the URL free of secrets and authenticate with the
+git credential helper or the `AI_RULEZ_GIT_TOKEN` environment variable; `validate`/`scan` report an already committed
+credentialed source as `AR035` (see [Strict validation](strict-validation.md)).
 
 **Examples:**
 
@@ -11364,7 +11373,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 
 | Range | Owner | Status |
 | --- | --- | --- |
-| `AR001`-`AR099` | Security: secrets, injection, shell, exfiltration, supply chain (`AR001`-`AR034` used) | allocated |
+| `AR001`-`AR099` | Security: secrets, injection, shell, exfiltration, supply chain (`AR001`-`AR035` used) | allocated |
 | `AR100`-`AR199` | Scope: glob matching (`AR101`) | allocated |
 | `AR200`-`AR299` | Links and imports (`AR201`, `AR202`, `AR210`) | allocated |
 | `AR300`-`AR399` | References and frontmatter (`AR301`-`AR306`) | allocated |
@@ -11634,7 +11643,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 
 | Analyzer | Rules |
 | --- | --- |
-| `security` | `AR001`-`AR034`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E7`, `AR9K1`, `AR9L1` |
+| `security` | `AR001`-`AR035`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E7`, `AR9K1`, `AR9L1` |
 | `references` | `AR101`, `AR201`, `AR202`, `AR210`, `AR301`-`AR306`, `AR401`-`AR403` |
 | `hooks` | `AR501`-`AR505`, `AR507` |
 | `mcp` | `AR601`, `AR602` |
@@ -12175,6 +12184,7 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR032 | `publisher-mismatch` | warning | An installed skill, or a skill, agent or command from a git include, whose name or description credits a publisher ("by Acme Corp", "made by @acme") that is not the owner of the repository in its `installed_skills` or `includes` `source` (compared loosely, ignoring `Corp`, `Inc`, `Team`, punctuation and case). Local sources are skipped. Reported on the entry in `config.toml`. A heuristic: only "by <Capitalised Name>" and "<verb> by" forms count, not "from CSV" |
 | AR033 | `authority-claim` | info | An installed skill, or content from a git include, whose description says *official*, *verified*, *trusted*, *authorized*, *endorsed* or *certified* while its source owner is not in a built-in list of well-known organizations (`anthropics`, `openai`, `github`, `vercel`, ...) or in `[lint.security] trusted_orgs`, which replaces that list. Local sources are skipped |
 | AR034 | `low-analyzability` | info | Less than 70% of the bytes in a skill directory could be scanned: binaries, archives, WebAssembly, images, files over 1 MiB and files with NUL bytes are opaque to the text rules. The message names the largest opaque files |
+| AR035 | `credential-in-source-url` | error | An `includes`, `installed_skills` or `[[skill_sources]]` URL carries a credential in its userinfo (`https://user:token@host/org/repo.git`), so the secret is committed to `config.toml` in clear. Reported on the entry; the URL is redacted in the message. `include add` and `skill install` refuse such a URL instead of writing it. Use the git credential helper or `AI_RULEZ_GIT_TOKEN` |
 | AR805 | `body-empty` | warning | A skill, agent, command or rule has frontmatter but nothing (or only whitespace) after it |
 | AR806 | `fence-unclosed` | warning | A fenced code block (```` ``` ```` or `~~~`) that is opened and never closed, so the rest of the file is read as code. Fixable: closes the fence at the end of the file |
 | AR807 | `final-newline-missing` | info | A content file whose last line has no newline. Fixable: adds one (CRLF files get CRLF) |
@@ -12558,6 +12568,16 @@ most of a skill directory is binary, archived or oversize, so the scan did not r
 - Why: When most of a skill directory is binary, archived or oversize, the scan did not read it, so a clean result means little.
 - Bad: A skill directory holding a 40 MB archive and a short SKILL.md
 - Good: Ship readable sources; keep binaries out of the skill
+
+##### AR035 credential-in-source-url
+
+an include, installed skill or [[skill_sources]] URL carries a credential in its userinfo, so the secret is committed to config.toml in clear
+
+- Default severity: `error`
+- Analyzer: `security` (scope `bundle`)
+- Why: A token embedded in a git URL is written into the committed config.toml, where everyone with repository access can read it; it can also reach the cached clone's config. The resolver redacts its own logs, but the file keeps the secret.
+- Bad: `source = "https://user:ghp_secret@github.com/org/repo.git"`
+- Good: A URL without userinfo, authenticated with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable
 
 ##### AR101 glob-no-match
 
@@ -16713,6 +16733,15 @@ steps:
   - run: ai-rulez verify --attestation
 ```
 
+The round trip is checked end to end by the `live-sigstore-keyless` job in `.github/workflows/live.yml`, which runs on
+`workflow_dispatch` and a weekly schedule and is never part of PR CI. It mints the runner's OIDC token with the `sigstore`
+audience and runs `TestLiveKeylessRoundTrip` (`internal/signing/live_test.go`) against the Sigstore **staging** instance:
+`AI_RULEZ_LIVE_SIGSTORE_FULCIO=https://fulcio.sigstage.dev`, `AI_RULEZ_LIVE_SIGSTORE_REKOR=https://rekor.sigstage.dev`
+and a staging trusted root fetched over TUF into `AI_RULEZ_LIVE_SIGSTORE_ROOT`. The test needs no repository secret.
+Staging Fulcio must accept the GitHub Actions OIDC issuer (`https://token.actions.githubusercontent.com`); the test
+defaults to the public-good instances (`AI_RULEZ_LIVE_SIGSTORE_FULCIO`/`_REKOR` unset) and the public-good root from
+`trust update` (`_ROOT` unset), so point the job at the public-good endpoints if staging rejects that issuer.
+
 #### Policy
 
 `[signing]` in `.ai-rulez/config.toml` says who may sign and how fresh a signature must be:
@@ -16938,7 +16967,11 @@ trust it by file: `ai-rulez sign --lock --key awskms:///alias/release --public-k
 Binary size: the four providers add about 14 MB to an unstripped build (59.3 MB to 73.6 MB) and about 10 MB to a
 stripped release build (42.2 MB to 52.1 MB). That is under the 15 MB budget, so they are in every build rather than
 behind a build tag. Offline tests use sigstore's `fakekms://` provider; a live test runs only with `AI_RULEZ_LIVE_KMS=1`
-and `AI_RULEZ_LIVE_KMS_KEY=<key URI>`.
+and `AI_RULEZ_LIVE_KMS_KEY=<key URI>`. The `live-kms` job in `.github/workflows/live.yml` (on `workflow_dispatch` and a
+weekly schedule, never in PR CI) exercises it against a real AWS KMS key: it creates an ephemeral `ECC_NIST_P256`
+`SIGN_VERIFY` key and an alias, runs `TestLiveKMSRoundTrip`, then schedules the key for deletion. It reads the
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_REGION` repository secrets and skips the key steps when
+`AWS_ACCESS_KEY_ID` is unset, so the workflow passes without an AWS account.
 
 #### Verifying ai-rulez itself
 
@@ -16949,6 +16982,11 @@ the binary's `sha256`. The signer must be the release workflow, pinned in the bi
 - identity `^https://github\.com/Goldziher/ai-rulez/\.github/workflows/publish\.yaml@refs/tags/v[0-9][^/]*$`;
 - issuer `https://token.actions.githubusercontent.com`;
 - a transparency-log proof (required for a certificate identity).
+
+Because the identity names `refs/tags/...`, a release must be published from the tag's ref. The `publish.yaml` `meta`
+job enforces that for **workflow_dispatch**: a run that did not come from `refs/tags/<tag>` fails before anything is
+created, since `actions/attest-build-provenance` would otherwise sign `@refs/heads/...` and every binary would be
+rejected here. This is deliberate; the policy is not widened to accept branch refs.
 
 ```bash
 ai-rulez trust update                       # once: cache the public-good trusted root
@@ -17061,7 +17099,8 @@ policy, a bundle) pick a predicate type URI and reuse them.
 
 
 Live tests run only with `AI_RULEZ_LIVE_SIGSTORE=1` (keyless) or `AI_RULEZ_LIVE_KMS=1` (a cloud KMS key) and are never
-part of the default test run.
+part of the default test run. Both run in `.github/workflows/live.yml`, which is manual (`workflow_dispatch`) and weekly
+on a schedule, not part of PR CI; see its header for the repository secrets it expects.
 
 ## Organization Policy
 
@@ -18157,7 +18196,11 @@ are listed with their own digests.
 
 - The Go SDK dispatches only the methods it knows, so `skills/list` and `skills/get` are answered in a
   thin JSON-RPC layer in front of the SDK; everything else, including resources and tools, is served
-  by the SDK normally. The stdio transport is the only one `ai-rulez mcp` offers.
+  by the SDK normally. The stdio transport is the only one `ai-rulez mcp` offers: the harness launches the
+  server as a subprocess it already controls, so there is no port, TLS certificate or cross-origin policy to
+  operate. A streamable-HTTP transport (and elicitation, sampling and roots) is deliberately not offered; a
+  hosted deployment would need its own auth and CORS policy, and those capabilities wait on the 2026-07-28 spec
+  revision.
 - A malformed line never ends the session. Input that is not valid JSON gets `-32700`; a frame that is not a
   JSON-RPC 2.0 request (wrong or missing `jsonrpc`, an object or boolean `id`, an empty or invalid batch) gets
   `-32600`; a line over 16 MiB is dropped with `-32600`. The server keeps reading after each. A `resources/read`
@@ -19056,6 +19099,10 @@ Add a new include source (git URL or local path) to the configuration.
 - `install_to` (optional, string): Installation target path in .ai-rulez/
 - `local` (optional, boolean): Add the include to the `config.local.*` overlay instead of the shared config
 
+A `source` URL that carries a credential in its userinfo (`https://user:token@host/...`) is refused, like the CLI: it
+would be written in clear into `config.toml`. Use the git credential helper or the `AI_RULEZ_GIT_TOKEN` environment
+variable; a committed credential is reported by `validate`/`scan` as `AR035`.
+
 **Response:**
 
 ```json
@@ -19124,6 +19171,10 @@ Install a named skill from a git repository or local path.
 - `path` (optional, string): Path within repo to skill directory (defaults to `skills/<name>`)
 - `ref` (optional, string): Git reference (branch, tag, commit)
 - `local` (optional, boolean): Record the skill in the `config.local.*` overlay instead of the shared config
+
+A `source` URL that carries a credential in its userinfo (`https://user:token@host/...`) is refused, like the CLI: it
+would be written in clear into `config.toml`. Use the git credential helper or the `AI_RULEZ_GIT_TOKEN` environment
+variable; a committed credential is reported by `validate`/`scan` as `AR035`.
 
 **Response:**
 
@@ -22552,7 +22603,7 @@ Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.2.0` in `go.mod`. 
 
 ##### Testing
 
-The `internal/llm` tests run the real liter-llm client against local `httptest` servers: no network and no key. With a `base_url` liter-llm treats every model as generic OpenAI-compatible, so provider-specific request and usage mappings (Gemini, Vertex, Bedrock) are liter-llm's own tests' job and cannot be reached from here (#256). The live tests (`AI_RULEZ_LIVE_LLM=1`, `GEMINI_API_KEY`) cover Gemini end to end and are not part of CI.
+The `internal/llm` tests run the real liter-llm client against local `httptest` servers: no network and no key. With a `base_url` liter-llm treats every model as generic OpenAI-compatible, so provider-specific request and usage mappings (Gemini, Vertex, Bedrock) are liter-llm's own tests' job and cannot be reached from here (#256). The live tests (`AI_RULEZ_LIVE_LLM=1`, `GEMINI_API_KEY`) cover Gemini end to end and are not part of PR CI; the `live-llm` job in `.github/workflows/live.yml` runs `go test ./internal/llm/... ./internal/evals/...` on `workflow_dispatch` and a weekly schedule. It needs the `GEMINI_API_KEY` repository secret (and optionally `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`, unused by the current tests), writes its transcripts to `AI_RULEZ_LIVE_OUT` and uploads them with the test log as an artifact.
 
 #### Using it from a feature
 
@@ -23569,11 +23620,14 @@ ai-rulez include add <name> <source> [flags]
 - `--local` (optional): Add the include to the machine-local `config.local.*` overlay instead of the shared config
 
 A local source in the shared config must resolve inside the project, the same check the loader applies, so a path
-outside it is refused when it is added (use `--local` for a path that leaves the project). A URL with a credential
-(`https://user:token@host/...`) is stored as written in `config.toml`; ai-rulez warns and never prints the secret in
-its own output. Prefer a git credential helper or an SSH remote (`git@host:org/repo.git`) and keep the URL free of
-secrets. `include remove` and `skill remove` edit `config.toml` directly without loading the project, so an include
-that keeps the project from loading can always be removed.
+outside it is refused when it is added (use `--local` for a path that leaves the project). A URL with a credential in
+its userinfo (`https://user:token@host/...`) is refused: the credential would be written in clear into the committed
+`config.toml`, so `include add` and `skill install` stop with the URL redacted and never write the secret. Keep the URL
+free of secrets and authenticate with the git credential helper or the `AI_RULEZ_GIT_TOKEN` environment variable
+(sent as a scoped git header, never stored); an SSH remote (`git@host:org/repo.git`) carries no credential. An existing
+credentialed source is reported by `validate`/`scan` as `AR035` (see [Strict validation](strict-validation.md)).
+`include remove` and `skill remove` edit `config.toml` directly without loading the project, so an include that keeps
+the project from loading can always be removed.
 
 **Examples:**
 
