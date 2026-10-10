@@ -8,10 +8,10 @@
 # script extracts ONLY the static library (or, in dll mode on Windows, only the DLL) into an
 # otherwise empty directory, and points cgo at it with CGO_LDFLAGS=-L<dir>.
 #
-# Usage: setup-liter-llm.sh [--platform P] [--mode static|dll] [--format export|github-env|dir]
+# Usage: setup-liter-llm.sh [--platform P] [--mode auto|static|dll] [--format export|github-env|dir]
 #   --platform  linux-x86_64 | linux-aarch64 | macos-arm64 | macos-x86_64 | windows-x86_64
 #               (default: the host)
-#   --mode      static (default) or dll (Windows only: ship liter_llm_ffi.dll beside ai-rulez.exe)
+#   --mode      auto (default: static, or dll on Windows), static, or dll (Windows only)
 #   --format    export      print `export CGO_LDFLAGS=...` (and CGO_ENABLED=1) for `eval`   (default)
 #               github-env  append CGO_ENABLED/CGO_LDFLAGS to $GITHUB_ENV
 #               dir         print only the library directory
@@ -22,7 +22,7 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-platform="" mode="static" format="export"
+platform="" mode="auto" format="export"
 while [ $# -gt 0 ]; do
   case "$1" in
   --platform)
@@ -71,6 +71,12 @@ linux-x86_64 | linux-aarch64 | macos-arm64 | macos-x86_64 | windows-x86_64) ;;
   ;;
 esac
 case "$mode" in
+auto)
+  # The Windows static archive is MSVC-built and cannot link with Go's MinGW
+  # cgo, so Windows links the released DLL instead; every other platform links
+  # the static archive.
+  if [ "$platform" = windows-x86_64 ]; then mode=dll; else mode=static; fi
+  ;;
 static) ;;
 dll)
   [ "$platform" = windows-x86_64 ] || {
@@ -168,8 +174,10 @@ github-env)
   if [ "$mode" = dll ]; then
     # Windows has no rpath: the test and build steps find the DLL on PATH.
     : "${GITHUB_PATH:?--format github-env with dll mode needs GITHUB_PATH}"
-    printf '%s\n' "$libdir" >>"$GITHUB_PATH"
-    log "added $libdir to PATH (Windows DLL)"
+    native="$libdir"
+    if command -v cygpath >/dev/null 2>&1; then native="$(cygpath -w "$libdir")"; fi
+    printf '%s\n' "$native" >>"$GITHUB_PATH"
+    log "added $native to PATH (Windows DLL)"
   fi
   log "exported CGO_ENABLED=1 CGO_LDFLAGS=$ldflags"
   ;;
