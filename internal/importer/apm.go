@@ -242,6 +242,10 @@ func (b *apmPlanner) importTarget(key string, v any) {
 		for _, e := range t {
 			names = append(names, fmt.Sprint(e))
 		}
+	default:
+		b.p.add(newFinding(StatusUnsupported, apmManifest, key, "presets",
+			fmt.Sprintf("%s must be a string or a list of target names", key)))
+		return
 	}
 	for _, n := range names {
 		n = strings.ToLower(strings.TrimSpace(n))
@@ -269,15 +273,20 @@ func (b *apmPlanner) importDependencies(v any) {
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		list := as[[]any](deps[k])
 		switch k {
-		case "apm":
-			for i, e := range list {
-				b.importDependency(fmt.Sprintf("dependencies.apm[%d]", i), e)
+		case "apm", "mcp":
+			list, ok := deps[k].([]any)
+			if !ok {
+				b.p.add(newFinding(StatusUnsupported, apmManifest, "dependencies."+k, "",
+					"dependencies."+k+" must be a list"))
+				continue
 			}
-		case "mcp":
 			for i, e := range list {
-				b.importMCPDependency(fmt.Sprintf("dependencies.mcp[%d]", i), e)
+				if k == "apm" {
+					b.importDependency(fmt.Sprintf("dependencies.apm[%d]", i), e)
+				} else {
+					b.importMCPDependency(fmt.Sprintf("dependencies.mcp[%d]", i), e)
+				}
 			}
 		default:
 			b.p.add(newFinding(StatusDropped, apmManifest, "dependencies."+k, "", "unknown dependency type"))
