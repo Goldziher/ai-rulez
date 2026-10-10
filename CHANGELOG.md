@@ -444,6 +444,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **MCP server leaked a map entry per session.** The re-initialize tolerance kept the state of every session it had seen; it now forgets finished sessions. The server also logs the SDK's warnings and errors to stderr and sets an explicit page size.
 - **The missing-content path is printed with forward slashes on Windows**: `remove`/`add` reported `.ai-rulez\rules\nope.md` instead of the portable `.ai-rulez/rules/nope.md`.
 - **The legacy-layout deprecation notice is emitted by every path that loads a tree**: it now also appears from `generate --recursive`, `validate --recursive` and `generate --watch`, not only the single-root (and `--check`) paths.
+- **An OpenAI reasoning model no longer rejects a request**: the temperature is omitted for the `o*` and `gpt-5` families (they accept only the provider default), as `max_tokens` was already switched to `max_completion_tokens` for them.
 
 ### Security
 
