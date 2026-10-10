@@ -28,7 +28,7 @@
           "mode": {
             "type": "string"
           },
-          "honoured": {
+          "honored": {
             "type": "object"
           },
           "degraded": {

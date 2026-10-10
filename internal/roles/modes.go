@@ -111,7 +111,7 @@ type SkillOutcome struct {
 	ID     string `json:"id"`
 	Mode   string `json:"mode"`
 	// Honored maps each harness that implements the mode to its mechanism.
-	Honored map[string]string `json:"honoured,omitempty"` //nolint:misspell // JSON key of the roles report, kept for existing consumers
+	Honored map[string]string `json:"honored,omitempty"`
 	// Degraded lists the harnesses that cannot implement it.
 	Degraded []string `json:"degraded,omitempty"`
 	// Overridden lists the harnesses whose mode is written to SKILL.md but that
