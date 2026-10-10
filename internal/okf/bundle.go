@@ -202,6 +202,12 @@ func Load(root fs.FS) (*Bundle, error) {
 }
 
 func (b *Bundle) add(p string, data []byte) {
+	// A 4.x project carries a per-domain DOMAIN.md beside the domain's content
+	// directories. v5 reads a domain's content from rules/, context/, skills/ ...
+	// and never this file, so it is not a concept and does not need a type.
+	if path.Base(p) == domainDescriptorFile && strings.HasPrefix(p, domainDescriptorDir+"/") {
+		return
+	}
 	fm, body := SplitFrontmatter(data)
 	offset := max(strings.Count(string(data), "\n")-strings.Count(body, "\n"), 0)
 	switch path.Base(p) {
