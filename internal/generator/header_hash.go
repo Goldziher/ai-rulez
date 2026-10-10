@@ -214,9 +214,6 @@ func injectHashesIn(rd *config.RulesDirSet, content, outputPath, contentHash, so
 	if firstLineIsCRLF(content) {
 		eol = "\r\n"
 	}
-	hashBlockEOL := func(linePrefix string) string {
-		return strings.ReplaceAll(hashBlock(linePrefix), "\n", eol)
-	}
 
 	// 0. Native rules folders: the tools' frontmatter parsers are not documented
 	// to tolerate YAML comments (a failed parse can turn a scoped rule global or
@@ -228,26 +225,50 @@ func injectHashesIn(rd *config.RulesDirSet, content, outputPath, contentHash, so
 	// 1. YAML frontmatter (skill/agent files): inject as YAML comment lines
 	// inside the frontmatter, before the closing "---". YAML parsers ignore
 	// comments, so consumers see the same parsed fields.
-	if block := frontmatter.SplitString(content); block.Closed {
-		// closeIdx is the line break that ends the last line before the closing fence.
-		closeIdx := len(content) - len(block.Head) - len(block.Tail) + strings.LastIndex(block.Head, "\n")
-		if eol == "\r\n" && closeIdx > 0 && content[closeIdx-1] == '\r' {
-			closeIdx-- // the break is CRLF: insert before its CR
-		}
-		return content[:closeIdx] + eol + hashBlockEOL("# ") + content[closeIdx:]
+	if out, ok := injectIntoFrontmatter(content, eol, hashBlock); ok {
+		return out
 	}
 
-	// 2. HTML comment banner — only for true markdown/HTML extensions.
+	// 2. HTML comment banner — only for true markdown/HTML extensions; 3.
+	// Line-prefix comments (yaml, ini, .mdc title-as-header, etc).
+	return injectIntoComments(content, ext, eol, hashBlock)
+}
+
+// injectIntoFrontmatter inserts the hash block as YAML comment lines inside the
+// frontmatter of content, before the closing fence. ok is false when content has
+// no closed frontmatter block.
+func injectIntoFrontmatter(content, eol string, hashBlock func(string) string) (string, bool) {
+	block := frontmatter.SplitString(content)
+	if !block.Closed {
+		return content, false
+	}
+	// closeIdx is the line break that ends the last line before the closing fence.
+	closeIdx := len(content) - len(block.Head) - len(block.Tail) + strings.LastIndex(block.Head, "\n")
+	if eol == "\r\n" && closeIdx > 0 && content[closeIdx-1] == '\r' {
+		closeIdx-- // the break is CRLF: insert before its CR
+	}
+	hashComment := strings.ReplaceAll(hashBlock("# "), "\n", eol)
+	return content[:closeIdx] + eol + hashComment + content[closeIdx:], true
+}
+
+// injectIntoComments inserts the hash block into the header of content: inside
+// an HTML banner for markdown/HTML, else as the leading line-comment block.
+// Only a comment block at the very start of the file is a header (the same shape
+// stripHeader removes). A "# heading" line deeper in the file, such as inside a
+// TOML multi-line string or a YAML block scalar, is body: hashes injected there
+// are never stripped, so the file would read as hand-edited.
+func injectIntoComments(content, ext, eol string, hashBlock func(string) string) string {
 	switch ext {
 	case ".md", ".markdown", ".mdx", ".html":
 		marker := eol + "-->" + eol
 		if idx := strings.Index(content, marker); idx >= 0 {
-			return content[:idx] + eol + hashBlockEOL("") + marker + content[idx+len(marker):]
+			hashComment := strings.ReplaceAll(hashBlock(""), "\n", eol)
+			return content[:idx] + eol + hashComment + marker + content[idx+len(marker):]
 		}
 		return content
 	}
 
-	// 3. Line-prefix comments (yaml, ini, .mdc title-as-header, etc).
+	// Line-prefix comments (yaml, ini, .mdc title-as-header, etc).
 	prefix := "# "
 	switch ext {
 	case ".json", ".jsonc", ".go", ".js", ".ts", ".tsx", ".jsx", ".java", ".c", ".cc", ".cpp", ".cs":
@@ -256,10 +277,6 @@ func injectHashesIn(rd *config.RulesDirSet, content, outputPath, contentHash, so
 		prefix = "; "
 	}
 
-	// Only a comment block at the very start of the file is a header (the same
-	// shape stripHeader removes). A "# heading" line deeper in the file, such as
-	// inside a TOML multi-line string or a YAML block scalar, is body: hashes
-	// injected there are never stripped, so the file would read as hand-edited.
 	lines := strings.Split(content, "\n")
 	for i, line := range lines {
 		if isLineComment(line) {
