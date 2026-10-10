@@ -135,7 +135,7 @@ func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string,
 		Path: localPath,
 		Doc:  normalizeConfigDocKeys(localDoc),
 	}
-	if isGitTracked(filepath.Dir(localPath), localPath) {
+	if isGitTracked(lo.runner, filepath.Dir(localPath), localPath) {
 		out.LocalOverlay.Tracked = true
 		cfg.Warn("config.local overlay is tracked by git, so it is repository content: its local includes get the same project-containment check as config.toml", "path", localPath)
 	}
@@ -230,14 +230,15 @@ func errMergedConfigWrite() error {
 		Errorf("refusing to write a configuration merged with a local overlay")
 }
 
-// isGitTracked reports whether git tracks file, asking git from dir. A missing
-// git binary, a directory outside a repository or a virtual path all read as
-// untracked.
-func isGitTracked(dir, file string) bool {
+// isGitTracked reports whether git tracks file, asking git from dir through r,
+// the load's runner, so a caller that denies processes never starts the real
+// git. A missing git binary, a directory outside a repository or a virtual path
+// all read as untracked.
+func isGitTracked(r runner.Runner, dir, file string) bool {
 	if !filepath.IsAbs(file) {
 		return false
 	}
-	res := runner.Run(context.Background(), runner.Spec{
+	res := runner.Or(r).Run(context.Background(), runner.Spec{
 		Argv:    []string{"git", "-C", dir, "ls-files", "--error-unmatch", "--", file},
 		Env:     []string{"GIT_OPTIONAL_LOCKS=0"},
 		Timeout: 10 * time.Second,
