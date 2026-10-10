@@ -301,6 +301,7 @@ Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); it handles
 - **The engine is per load**: warnings go to the logger of the host (`pkg/airulez` `Options.Logger` or the CLI logger), the organization policy belongs to the load it is given to, and two projects in one process share no state (generate lock, warning collector, preset registry, include callbacks).
 - **Command `Short` descriptions** no longer name flags.
 - **liter-llm is pinned at v2.2.3** (was v2.2.0). The workarounds for the issues it has since fixed are gone: the one-request-per-input Gemini embedding fallback and the split-embedding budget bookkeeping, the exhausted-quota and Anthropic prompt-too-long error mappings (liter-llm now reports a quota variant and context length), the decoded-reply size check (the cap is passed to liter-llm as `max_response_bytes`), and the `gpt-*` realtime/audio/tts variant price floor (`GetModelInfo` now reports whether the price is known, so a 0/0 listing is unpriced). liter-llm refuses redirects itself since v2.2.2. See `docs/llm.md`.
+- **The live KMS job signs with a local Vault, not AWS**: `.github/workflows/live.yml` starts a throwaway Vault dev server in the job and signs with `hashivault://ai-rulez`, so a real KMS round trip runs with no account and no secret (the previous job skipped whenever the AWS credentials were unset). The recorded transcript is in `docs/signing.md`; any of the four sigstore KMS providers works.
 
 ### Fixed
 

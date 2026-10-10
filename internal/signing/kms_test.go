@@ -119,6 +119,12 @@ func TestLiveKMSRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	policy := policyFor(SubjectBundle, 1, testSigner{pub: TrustEntry{Subject: SubjectBundle, Key: signer.Key.GetPublicKey()}})
 	policy.Now = time.Now()
-	_, err = VerifyArtifact([][]byte{data}, TreeExpectation(SubjectBundle, ts), policy)
-	assert.NoError(t, err)
+	rep, err := VerifyArtifact([][]byte{data}, TreeExpectation(SubjectBundle, ts), policy)
+	require.NoError(t, err)
+	fp, err := Fingerprint(signer.Key.GetPublicKey())
+	require.NoError(t, err)
+	// The transcript recorded in docs/signing.md: the key URI, the fingerprint the
+	// bundle names, and that the detached signature covers the tree statement.
+	t.Logf("live KMS round trip: ref=%s key=%s bundle-names=%s bytes=%d", ref, fp, rep.Result.Signer.KeyID, len(data))
+	assert.Equal(t, fp, rep.Result.Signer.KeyID, "the bundle names the KMS key by fingerprint")
 }

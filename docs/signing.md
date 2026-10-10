@@ -314,10 +314,12 @@ Binary size: the four providers add about 14 MB to an unstripped build (59.3 MB 
 stripped release build (42.2 MB to 52.1 MB). That is under the 15 MB budget, so they are in every build rather than
 behind a build tag. Offline tests use sigstore's `fakekms://` provider; a live test runs only with `AI_RULEZ_LIVE_KMS=1`
 and `AI_RULEZ_LIVE_KMS_KEY=<key URI>`. The `live-kms` job in `.github/workflows/live.yml` (on `workflow_dispatch` and a
-weekly schedule, never in PR CI) exercises it against a real AWS KMS key: it creates an ephemeral `ECC_NIST_P256`
-`SIGN_VERIFY` key and an alias, runs `TestLiveKMSRoundTrip`, then schedules the key for deletion. It reads the
-`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_REGION` repository secrets and skips the key steps when
-`AWS_ACCESS_KEY_ID` is unset, so the workflow passes without an AWS account.
+weekly schedule, never in PR CI) exercises it against a real KMS with **no account and no secret**: it starts a
+throwaway Vault dev server in the job, enables the transit engine, creates an `ecdsa-p256` key and runs
+`TestLiveKMSRoundTrip` with `hashivault://ai-rulez`. Recorded transcript (2026-10-10, `hashivault://ai-rulez`): the
+transit key `sha256:344bdb5b63a28a32475a64805677c3cee63f99b60ba19d12ec2aab639b104ee5` signed a 927-byte tree
+statement, the bundle named that same fingerprint, and verification passed offline. Any of the four providers works;
+`awskms://`, `gcpkms://` and `azurekms://` need cloud credentials, which is why the CI job uses Vault.
 
 ## Verifying ai-rulez itself
 
@@ -441,9 +443,9 @@ documentation lists the calls: `NewStatement`, `SignStatement` with a `KeySigner
 `TrustSet.Check`, `CheckFresh` and the HMAC-protected `State`. Features that sign something else (approvals, an SBOM, a
 policy, a bundle) pick a predicate type URI and reuse them.
 
-## Not done yet
+## Live tests
 
-
-Live tests run only with `AI_RULEZ_LIVE_SIGSTORE=1` (keyless) or `AI_RULEZ_LIVE_KMS=1` (a cloud KMS key) and are never
-part of the default test run. Both run in `.github/workflows/live.yml`, which is manual (`workflow_dispatch`) and weekly
-on a schedule, not part of PR CI; see its header for the repository secrets it expects.
+Live tests run only with `AI_RULEZ_LIVE_SIGSTORE=1` (keyless) or `AI_RULEZ_LIVE_KMS=1` (a real KMS key; the CI job uses
+a local Vault transit key, so no secret) and are never part of the default test run. Both run in
+`.github/workflows/live.yml`, which is manual (`workflow_dispatch`) and weekly on a schedule, not part of PR CI. The
+keyless and Vault jobs need no repository secret; see the workflow header for the keys the live-LLM job uses.
