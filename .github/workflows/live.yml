@@ -33,7 +33,6 @@ concurrency:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   live-llm:
@@ -82,6 +81,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     continue-on-error: false
+    permissions:
+      contents: read
+      id-token: write
     env:
       AI_RULEZ_LIVE_SIGSTORE: "1"
       # Staging Sigstore, so a run does not publish a permanent entry to the
