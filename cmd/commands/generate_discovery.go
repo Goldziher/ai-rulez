@@ -257,6 +257,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
+	warnLegacyLayout(cfg.ConfigDir)
 
 	// The organization policy applies to every root, not only a single one.
 	if err := policyGate(cfg); err != nil {
