@@ -308,7 +308,7 @@ func (op *OperatorImpl) RequireContent(ctx context.Context, domain, ftype, name 
 
 	// Check if file/skill exists
 	if !op.filesMgr.FileOrSkillExists(domain, ftype, name) {
-		filePath := op.filesMgr.GetFilePath(domain, ftype, name)
+		filePath := filepath.ToSlash(op.filesMgr.GetFilePath(domain, ftype, name))
 		hint := "Check the name; nothing of that name exists."
 		if files, err := op.ListFiles(ctx, domain, ftype); err == nil {
 			names := make([]string, 0, len(files))
