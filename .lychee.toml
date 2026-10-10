@@ -45,6 +45,9 @@ exclude = [
 
   # 404 until the conformance suite lands on main.
   "^https://github\\.com/Goldziher/ai-rulez/tree/main/tests/conformance$",
+
+  # The Fulcio API root is a signing service, not a web page: GET returns 404.
+  "^https://fulcio\\.sigstore\\.dev/?$",
 ]
 
 # llms-full.txt concatenates every docs page as plain text, so its placeholder
