@@ -86,7 +86,6 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 			Wrapf(err, "save config")
 	}
 
-	op.warnStoredCredentials("include", req.Source)
 	op.logger().Info(
 		"Include added successfully",
 		"name", req.Name,
@@ -159,15 +158,21 @@ func (op *OperatorImpl) editSharedConfig(edit func(cfg *config.Config) error) er
 	return nil
 }
 
-// warnStoredCredentials warns when source carries a credential: it is written to
-// the config file as given.
-func (op *OperatorImpl) warnStoredCredentials(what, source string) {
-	if incl.RedactURL(source) == source {
-		return
+// rejectCredentialedSource refuses a source whose URL embeds a credential in its
+// userinfo. Writing it would put the secret in clear in the committed
+// config.toml, where everyone with repository access can read it; the resolver
+// logs are redacted, but the file is not. The credential is taken from the
+// environment or the git credential helper instead, so it reaches neither the
+// config nor the clone's .git/config.
+func rejectCredentialedSource(what, source string) error {
+	if !incl.HasCredentials(source) {
+		return nil
 	}
-	op.logger().Warn("The "+what+" source contains a credential, which is stored in clear in "+filepath.Base(op.ConfigFile())+
-		"; prefer a git credential helper or an SSH key and keep the URL free of secrets",
-		"source", incl.RedactURL(source))
+	shown := incl.RedactURL(source)
+	return oops.
+		With("source", shown).
+		Hint("Remove the userinfo from the URL and authenticate with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable (ai-rulez sends it as a scoped git header, never stored)").
+		Errorf("%s source %q embeds a credential, which would be stored in clear in config.toml", what, shown)
 }
 
 // ListIncludes returns all configured includes from the config
@@ -223,6 +228,10 @@ func validateAddIncludeRequest(req *AddIncludeRequest) error {
 		return oops.
 			Hint("Provide a git URL (https:// or git@) or local path").
 			Errorf("include source is required")
+	}
+
+	if err := rejectCredentialedSource("include", req.Source); err != nil {
+		return err
 	}
 
 	// Validate include types if provided. These are the content kinds the

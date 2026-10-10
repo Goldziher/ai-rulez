@@ -72,6 +72,11 @@ Install a named skill.
 - `--ref <ref>` (optional): Git ref (branch, tag, commit)
 - `--local` (optional): Record the skill in your gitignored `config.local.*` overlay instead of `config.toml`, so it applies on this machine only. See [Local Configuration](local-overrides.md)
 
+`skill install` refuses a `--source` URL that carries a credential in its userinfo (`https://user:token@host/...`):
+writing it would commit the secret to `config.toml` in clear. Keep the URL free of secrets and authenticate with the
+git credential helper or the `AI_RULEZ_GIT_TOKEN` environment variable; `validate`/`scan` report an already committed
+credentialed source as `AR035` (see [Strict validation](strict-validation.md)).
+
 **Examples:**
 
 ```bash

@@ -244,7 +244,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 
 | Range | Owner | Status |
 | --- | --- | --- |
-| `AR001`-`AR099` | Security: secrets, injection, shell, exfiltration, supply chain (`AR001`-`AR034` used) | allocated |
+| `AR001`-`AR099` | Security: secrets, injection, shell, exfiltration, supply chain (`AR001`-`AR035` used) | allocated |
 | `AR100`-`AR199` | Scope: glob matching (`AR101`) | allocated |
 | `AR200`-`AR299` | Links and imports (`AR201`, `AR202`, `AR210`) | allocated |
 | `AR300`-`AR399` | References and frontmatter (`AR301`-`AR306`) | allocated |
@@ -514,7 +514,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 
 | Analyzer | Rules |
 | --- | --- |
-| `security` | `AR001`-`AR034`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E7`, `AR9K1`, `AR9L1` |
+| `security` | `AR001`-`AR035`, `AR506`, scanner egress and trust: `AR9E0`-`AR9E7`, `AR9K1`, `AR9L1` |
 | `references` | `AR101`, `AR201`, `AR202`, `AR210`, `AR301`-`AR306`, `AR401`-`AR403` |
 | `hooks` | `AR501`-`AR505`, `AR507` |
 | `mcp` | `AR601`, `AR602` |
@@ -1055,6 +1055,7 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR032 | `publisher-mismatch` | warning | An installed skill, or a skill, agent or command from a git include, whose name or description credits a publisher ("by Acme Corp", "made by @acme") that is not the owner of the repository in its `installed_skills` or `includes` `source` (compared loosely, ignoring `Corp`, `Inc`, `Team`, punctuation and case). Local sources are skipped. Reported on the entry in `config.toml`. A heuristic: only "by <Capitalised Name>" and "<verb> by" forms count, not "from CSV" |
 | AR033 | `authority-claim` | info | An installed skill, or content from a git include, whose description says *official*, *verified*, *trusted*, *authorized*, *endorsed* or *certified* while its source owner is not in a built-in list of well-known organizations (`anthropics`, `openai`, `github`, `vercel`, ...) or in `[lint.security] trusted_orgs`, which replaces that list. Local sources are skipped |
 | AR034 | `low-analyzability` | info | Less than 70% of the bytes in a skill directory could be scanned: binaries, archives, WebAssembly, images, files over 1 MiB and files with NUL bytes are opaque to the text rules. The message names the largest opaque files |
+| AR035 | `credential-in-source-url` | error | An `includes`, `installed_skills` or `[[skill_sources]]` URL carries a credential in its userinfo (`https://user:token@host/org/repo.git`), so the secret is committed to `config.toml` in clear. Reported on the entry; the URL is redacted in the message. `include add` and `skill install` refuse such a URL instead of writing it. Use the git credential helper or `AI_RULEZ_GIT_TOKEN` |
 | AR805 | `body-empty` | warning | A skill, agent, command or rule has frontmatter but nothing (or only whitespace) after it |
 | AR806 | `fence-unclosed` | warning | A fenced code block (```` ``` ```` or `~~~`) that is opened and never closed, so the rest of the file is read as code. Fixable: closes the fence at the end of the file |
 | AR807 | `final-newline-missing` | info | A content file whose last line has no newline. Fixable: adds one (CRLF files get CRLF) |
@@ -1438,6 +1439,16 @@ most of a skill directory is binary, archived or oversize, so the scan did not r
 - Why: When most of a skill directory is binary, archived or oversize, the scan did not read it, so a clean result means little.
 - Bad: A skill directory holding a 40 MB archive and a short SKILL.md
 - Good: Ship readable sources; keep binaries out of the skill
+
+### AR035 credential-in-source-url
+
+an include, installed skill or [[skill_sources]] URL carries a credential in its userinfo, so the secret is committed to config.toml in clear
+
+- Default severity: `error`
+- Analyzer: `security` (scope `bundle`)
+- Why: A token embedded in a git URL is written into the committed config.toml, where everyone with repository access can read it; it can also reach the cached clone's config. The resolver redacts its own logs, but the file keeps the secret.
+- Bad: `source = "https://user:ghp_secret@github.com/org/repo.git"`
+- Good: A URL without userinfo, authenticated with the git credential helper or the AI_RULEZ_GIT_TOKEN environment variable
 
 ### AR101 glob-no-match
 
