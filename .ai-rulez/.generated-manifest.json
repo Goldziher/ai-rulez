@@ -128,10 +128,5 @@
     "AGENTS.md",
     "CLAUDE.md",
     "opencode.json"
-  ],
-  "merged": {
-    ".codex/config.toml": [],
-    ".mcp.json": [],
-    "opencode.json": []
-  }
+  ]
 }
