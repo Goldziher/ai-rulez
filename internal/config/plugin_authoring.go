@@ -27,12 +27,12 @@ const (
 	PluginRuntimeHermes       = "hermes"
 	PluginRuntimeAgentPlugins = "agent-plugins"
 	PluginRuntimeCopilot      = "copilot"
+	PluginRuntimePi           = "pi"
 )
 
 // AllPluginRuntimes lists the runtimes emitted by default when a plugin does not
-// restrict Runtimes, in a stable order. PluginRuntimeAgentPlugins and
-// PluginRuntimeCopilot are deliberately excluded: they are opt-in via an explicit
-// runtimes = ["agent-plugins"] / ["copilot"] so adding them never changes
+// restrict Runtimes, in a stable order. Agent Plugins, Copilot and Pi are
+// deliberately excluded: they require an explicit runtimes list so adding them never changes
 // existing bundles' output.
 var AllPluginRuntimes = []string{
 	PluginRuntimeClaude,
@@ -47,7 +47,8 @@ var AllPluginRuntimes = []string{
 
 // KnownPluginRuntimes lists every runtime the generator can emit, including
 // opt-in ones. Used for validation and schema documentation.
-var KnownPluginRuntimes = append(append([]string{}, AllPluginRuntimes...), PluginRuntimeAgentPlugins, PluginRuntimeCopilot)
+var KnownPluginRuntimes = append(append([]string{}, AllPluginRuntimes...),
+	PluginRuntimeAgentPlugins, PluginRuntimeCopilot, PluginRuntimePi)
 
 // Author identifies a person or organization in plugin/marketplace metadata.
 type Author struct {

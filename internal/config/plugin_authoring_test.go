@@ -119,6 +119,10 @@ func TestResolvedRuntimes(t *testing.T) {
 		assert.NotContains(t, AllPluginRuntimes, PluginRuntimeAgentPlugins)
 		assert.Contains(t, KnownPluginRuntimes, PluginRuntimeAgentPlugins)
 	})
+	t.Run("Pi is opt-in only", func(t *testing.T) {
+		assert.NotContains(t, AllPluginRuntimes, "pi")
+		assert.Contains(t, KnownPluginRuntimes, "pi")
+	})
 }
 
 func TestValidatePluginAuthoring(t *testing.T) {
@@ -154,6 +158,7 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		{name: "unknown runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "bogus"} }, wantErr: "unknown runtime"},
 		{name: "duplicate runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "claude"} }, wantErr: "duplicate runtime"},
 		{name: "Hermes runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"hermes"} }},
+		{name: "Pi runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"pi"} }},
 		{name: "agent-plugins runtime valid name", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"agent-plugins"} }},
 		{name: "agent-plugins invalid name", mutate: func(p *PluginAuthoring) {
 			p.Name, p.Runtimes = "Bad_Name", []string{"agent-plugins"}

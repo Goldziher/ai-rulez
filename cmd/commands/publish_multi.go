@@ -95,6 +95,17 @@ func detectRuntimes(files []publish.File) []string {
 		if strings.HasPrefix(f.Path, ".hermes/plugins/") && !slices.Contains(out, config.PluginRuntimeHermes) {
 			out = append(out, config.PluginRuntimeHermes)
 		}
+		if strings.HasPrefix(f.Path, ".opencode/plugins/") && !slices.Contains(out, config.PluginRuntimeOpenCode) {
+			out = append(out, config.PluginRuntimeOpenCode)
+		}
+		if f.Path == "package.json" {
+			var pkg struct {
+				Pi map[string]json.RawMessage `json:"pi"`
+			}
+			if json.Unmarshal(f.Data, &pkg) == nil && pkg.Pi != nil {
+				out = append(out, config.PluginRuntimePi)
+			}
+		}
 	}
 	slices.Sort(out)
 	return out
