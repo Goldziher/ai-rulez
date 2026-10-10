@@ -286,7 +286,7 @@ and `tokens`) where a hook should see only the shared configuration, as a teamma
 not, `generate` still refuses to write local-derived changes into tracked shared files; never add
 `--allow-local-drift` to a hook. See [Poly hooks guide](docs/poly-hooks.md#machine-local-configuration-in-hooks).
 
-In a monorepo, `ai-rulez generate --recursive` and `ai-rulez validate --recursive` (`-r`) process every nested
+In a monorepo, `ai-rulez generate --recursive` and `ai-rulez validate --recursive` process every nested
 `.ai-rulez/` root, report all failures, and exit non-zero if any root failed.
 
 Or run `ai-rulez init --setup-hooks` while initializing a repo to wire hooks in automatically.

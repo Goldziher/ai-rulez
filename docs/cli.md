@@ -2129,7 +2129,6 @@ ai-rulez validate [flags]
 | `--analyzer`          | strings | Run only these analyzers (repeatable or comma separated; replaces `[lint] analyzers`; unknown names are rejected): `security`, `references`, `hooks`, `mcp`, `duplicates`, `descriptions`, `budgets`, `metadata`, `plugin`, `config`, `roles`, `lock`, `delivery`, `evals`, `okf`, `traps`, `convert`, `search`, `verifiers` |
 | `--lint-profile`      | string  | Lint preset `default`, `strict` or `permissive` (overrides `[lint] profile`; not the generation `--profile`) |
 | `--explain`           | string  | Print what a rule (code or name) checks, why, a bad and a good example, how to suppress it and its docs link, then exit (`--format json` for a record) |
-| `--verbose`           | boolean | Enable verbose output                                |
 | `--debug`             | boolean | Enable debug output                                  |
 
 Exit codes: `0` valid, `1` the configuration is invalid or could not be loaded, `2` findings at or above `--fail-on`.
@@ -2180,10 +2179,10 @@ Validate specific config file:
 ai-rulez -C .ai-rulez/config.toml validate
 ```
 
-With verbose output:
+With debug output:
 
 ```bash
-ai-rulez validate --verbose
+ai-rulez validate --debug
 ```
 
 ### What Gets Validated
@@ -2289,7 +2288,7 @@ The lock proves the bytes did not change since you reviewed them, not who publis
 
 Signs one subject into a Sigstore bundle (a DSSE envelope over an in-toto statement): the lock-subject statement of
 `ai-rulez.lock` (written next to the lock), a plugin bundle, a skill directory, an SBOM file or an organization policy. Verify it with
-[`verify --attestation`](#ai-rulez-verify-config-path). See [Signing](signing.md) for the policy, keyless and KMS
+[`verify --attestation`](#ai-rulez-verify). See [Signing](signing.md) for the policy, keyless and KMS
 signing, thresholds, SLSA provenance and cosign interoperability.
 
 ```bash
@@ -3046,7 +3045,7 @@ errors:
   - Profile "backend" references undefined domain "backend"
   - Preset "claude" not found
 
-Run 'ai-rulez validate --verbose' for details
+Run 'ai-rulez validate --debug' for details
 ```
 
 ## Common CRUD Workflows
@@ -3221,7 +3220,7 @@ ai-rulez generate --config /path/to/.ai-rulez/config.toml
 
 ```bash
 # List available profiles
-ai-rulez validate --verbose
+ai-rulez validate --debug
 
 # Use a valid profile name
 ai-rulez generate --profile backend

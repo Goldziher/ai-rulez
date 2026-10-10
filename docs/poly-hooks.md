@@ -47,7 +47,7 @@ refreshing a branch reference.
 
 | Hook                       | Command arguments                               | Purpose                                        |
 | -------------------------- | ----------------------------------------------- | ---------------------------------------------- |
-| `ai-rulez-validate`        | `generate --dry-run --no-local`                 | Validate generation without writing files      |
+| `ai-rulez-validate`        | `validate --recursive --no-local`               | Validate the configuration and content recursively |
 | `ai-rulez-generate`        | `generate --no-local`                           | Regenerate the root project                    |
 | `ai-rulez-recursive`       | `generate --recursive --no-local`               | Regenerate every project in a repository       |
 | `ai-rulez-plugin-generate` | `generate --recursive --plugin --if-configured` | Regenerate plugin producers and marketplaces   |
@@ -110,7 +110,7 @@ version = 1
 [[hooks]]
 id = "ai-rulez-validate"
 stages = ["pre-commit"]
-args = ["generate", "--dry-run", "--no-local"]
+args = ["validate", "--recursive", "--no-local"]
 files = [".ai-rulez/**", "**/.ai-rulez/**"]
 workspace = true
 pass_filenames = false

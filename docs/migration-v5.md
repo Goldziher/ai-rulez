@@ -314,7 +314,7 @@ The changes below came with the same release; none is touched by `migrate v5`.
 | Custom preset and provider output paths are validated | Remove `..`, absolute and `.git` paths |
 | `lock` and `update` scan every remote tree they pin to something new | Fix error findings, or pass `--accept-findings` after reviewing them |
 | `generate` refuses an existing file it did not write (a hand-written `CLAUDE.md`) and never writes through a symlinked output | Run `ai-rulez convert --write` to import the file (the first `generate` then replaces it), move it, or pass `generate --force`; see [Existing files](cli.md#existing-files-generate-will-not-overwrite) |
-| `init --from` runs through `convert --write` | Expect one context item per root file (`convert --split-headings` splits it); see [`init --from`](cli.md#init---from) |
+| `init --from` runs through `convert --write` | Expect one context item per root file (`convert --split-headings` splits it); see [`init --from`](cli.md#init-from) |
 | `generate --check` reports `blocked:` for a shared file a machine-local input would change | Commit or drop the local change, or run `generate --allow-local-drift` |
 | The forge client (release dates, review-linked approvals) has its own host allowlist | GitHub Enterprise: set `AI_RULEZ_FORGE_HOSTS` |
 | An organization policy at the managed path is read automatically | None unless the machine has one; see [Organization policy](#organization-policy) |
