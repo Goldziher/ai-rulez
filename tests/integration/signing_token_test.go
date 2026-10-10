@@ -102,11 +102,11 @@ func TestResolveIDToken(t *testing.T) {
 			wantRequest: true,
 		},
 		{
-			name: "an oversized answer is cut and rejected", status: http.StatusOK, body: `{"value":"` + strings.Repeat("a", 1<<17) + `"}`,
+			name: "an oversized answer is refused, not cut", status: http.StatusOK, body: `{"value":"` + strings.Repeat("a", 1<<17) + `"}`,
 			env: func(url string) map[string]string {
 				return map[string]string{"ACTIONS_ID_TOKEN_REQUEST_URL": url, "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "rt-secret-xyz"}
 			},
-			wantErr:     "returned no token",
+			wantErr:     "size limit",
 			wantRequest: true,
 		},
 		{
