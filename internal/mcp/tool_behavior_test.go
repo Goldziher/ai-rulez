@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/mcp/handlers"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -142,7 +143,7 @@ func TestWorkingDirectoryIsConfinedToTheRoot(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(project, ".ai-rulez", "rules"), 0o750))
 	require.NoError(t, os.WriteFile(filepath.Join(project, ".ai-rulez", "config.toml"), []byte("version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n"), 0o600))
 	outside := telemetryProject(t)
-	require.NoError(t, os.Symlink(outside, filepath.Join(root, "escape")))
+	testutil.SymlinkOrSkip(t, outside, filepath.Join(root, "escape"))
 	session := connect(t, NewServer("test", WithRoot(root)))
 
 	tests := []struct {
