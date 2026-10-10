@@ -32,6 +32,11 @@ var fixtureFiles = map[string]string{
 name = "fx"
 presets = ["claude"]
 
+[mcp]
+# The parity pairs check read-only reports on one project. A strict render writes
+# the self server into .mcp.json, which would perturb them; keep it out here.
+self_server = false
+
 [governance]
 require_approval = ["kind:rule"]
 `,

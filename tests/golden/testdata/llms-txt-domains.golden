@@ -7,12 +7,12 @@ exit: 0
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 INFO  Generating with configuration profile=default
 INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
-INFO  Generation complete files=16
+INFO  Generation complete files=17
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 636 354333481e80b7755aa9bf3d026c78bc42ea5e398607865c6c5b88c58f07b7dd
-.ai-rulez/.generated-manifest.local.json file 0644 1847 b2f627de52209e97dccb66587bcd8542d38329c8eae82ef78e9a5b518723661e
+.ai-rulez/.generated-manifest.json file 0644 674 5cf9619e79714547d6a0efc2577bfe493b956817cf2ce6231262be211cadd1e7
+.ai-rulez/.generated-manifest.local.json file 0644 2130 1cfeddbb9617de8efed4ce26545d5a0648f41d88cf94ec2279b50ba41f552e4e
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -83,7 +83,8 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .claude/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .claude/skills/ship/ dir 0755
 .claude/skills/ship/SKILL.md file 0644 172 d00e38bd921c5c70977ce66c9ad32e4d9e78b0c6a35472ce9d604a574264a018
-.gitignore file 0644 349 2ffb984e2683844a8cf8c22786762a2370eec69cfde95c61f6b2ba34adfa0bbd
+.gitignore file 0644 359 a983b4e2feda8526693650fe1b7ed2749b355ebced4a4dc1e66f79ca6709b03a
+.mcp.json file 0644 178 f0eb854d41aaf4f67b335d410d50f4bde0cd0aa4a418eb039e97d0d41f55b27d
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 docs/ dir 0755
 docs/llms.txt file 0644 985 238c74aefc193365fbbc2c5d2f22afe1facd86a94ea02e898df4cd482c6eee46
@@ -135,7 +136,7 @@ INFO  This configuration directory uses the pre-OKF layout, which is deprecated;
 INFO  Configuration is valid path=$ROOT/.ai-rulez
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 636 354333481e80b7755aa9bf3d026c78bc42ea5e398607865c6c5b88c58f07b7dd
+.ai-rulez/.generated-manifest.json file 0644 674 5cf9619e79714547d6a0efc2577bfe493b956817cf2ce6231262be211cadd1e7
 >>>>
 {
   "version": "1",
@@ -154,15 +155,17 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
     ".claude/skills/reviewer/references/checklist.md",
     ".claude/skills/reviewer/scripts/run.sh",
     ".claude/skills/ship/SKILL.md",
+    ".mcp.json",
     "CLAUDE.md",
     "docs/llms.txt"
   ],
   "merged": {
-    ".claude/settings.json": []
+    ".claude/settings.json": [],
+    ".mcp.json": []
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 1847 b2f627de52209e97dccb66587bcd8542d38329c8eae82ef78e9a5b518723661e
+.ai-rulez/.generated-manifest.local.json file 0644 2130 1cfeddbb9617de8efed4ce26545d5a0648f41d88cf94ec2279b50ba41f552e4e
 >>>>
 {
   "version": "1",
@@ -218,12 +221,22 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
           "d32001d08b7e0990e2ef5732ac51425f931e5ceedaff77f3c92d7d13db4ec72b"
         ]
       }
+    ],
+    ".mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "9af0bed0de5a24265f721234468805215656161d729ed568d3fd2c01018a9c0c"
+      }
     ]
   },
   "digests": {
     ".claude/settings.json": "0e293c7ca1d8c791d15dab4cebee34c2f5400d0bef14dec1304ce335f83447fe",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+    ".mcp.json": "4b59049a6ca6aa4aedcef6626aedff7613ac2813eb22ca1d1865c6f5efa14b31",
     "docs/llms.txt": "238c74aefc193365fbbc2c5d2f22afe1facd86a94ea02e898df4cd482c6eee46"
   }
 }
@@ -731,7 +744,7 @@ user-invocable: true
 
 Cut a release.
 <<<<
-.gitignore file 0644 349 2ffb984e2683844a8cf8c22786762a2370eec69cfde95c61f6b2ba34adfa0bbd
+.gitignore file 0644 359 a983b4e2feda8526693650fe1b7ed2749b355ebced4a4dc1e66f79ca6709b03a
 >>>>
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .ai-rulez/.generated-manifest.json
@@ -745,8 +758,25 @@ Cut a release.
 .claude/rules/typescript.md
 .claude/settings.json
 .claude/skills/
+.mcp.json
 CLAUDE.md
 # END ai-rulez
+<<<<
+.mcp.json file 0644 178 f0eb854d41aaf4f67b335d410d50f4bde0cd0aa4a418eb039e97d0d41f55b27d
+>>>>
+{
+  "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@$VERSION",
+        "mcp"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    }
+  }
+}
 <<<<
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 >>>>

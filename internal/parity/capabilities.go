@@ -171,7 +171,7 @@ func buildCapabilities() []Capability {
 		{
 			ID: "generate", Kind: Paired, CLI: []string{"generate"}, Tool: "generate_outputs",
 			Flags: []FlagPair{{Flag: "profile"}, {Flag: "role"}, {Flag: "check"}, {Flag: "offline"}, {Flag: "dry-run"},
-				{Flag: "recursive"}, {Flag: "no-local"}},
+				{Flag: "recursive"}, {Flag: "no-local"}, {Flag: "no-self-mcp"}},
 			CLIFlags: []Exclusion{
 				{Names: []string{"watch", "if-configured"}, Reason: "process-bound or hook-bound: a tool call returns once"},
 				{Names: []string{"emit-plan"}, Reason: "writes the plan to a file or stdout; generate_outputs dry_run returns the plan in the result"},

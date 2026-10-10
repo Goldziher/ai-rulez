@@ -12,7 +12,7 @@ INFO  Generation complete files=18
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 793 c7b70af909bd0b0979f0cead2c593a943ec54c46ad82feb619db1d5a14c41c48
-.ai-rulez/.generated-manifest.local.json file 0644 2714 4f72adb5905b95f01477d2bcb9d04f8879b6b0b33a54585c82fad77caded524a
+.ai-rulez/.generated-manifest.local.json file 0644 2887 dce4578eb4809c2e25ceeb60f82a48c2134ac4cd96d6f35acebbaead2f957bcf
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -69,7 +69,7 @@ INFO  Generation complete files=18
 .devin/skills/ship/ dir 0755
 .devin/skills/ship/SKILL.md file 0644 172 d8de428210d703724d88d1605e2981304ccaf07eef38d4d86417b6fb3a58ce19
 .gitignore file 0644 428 3516d0432bdbdcce23e94bf5d88eff86c5263f11cec00e133d1de4b8aa0cb923
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree

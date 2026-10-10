@@ -396,12 +396,14 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 type generateOptions struct {
 	dryRun, check, offline bool
 	profile, role          string
+	noSelfMCP              bool
 }
 
 func generateOptionsOf(request *ToolRequest) (generateOptions, error) {
 	o := generateOptions{
 		dryRun: request.GetBool("dry_run", false), check: request.GetBool("check", false), offline: request.GetBool("offline", false),
 		profile: request.GetString("profile", ""), role: request.GetString("role", ""),
+		noSelfMCP: request.GetBool("no_self_mcp", false),
 	}
 	if o.role != "" && o.profile != "" {
 		return o, oops.Hint("A role replaces the profile selection; pass only one").Errorf("role and profile are mutually exclusive")
@@ -616,6 +618,9 @@ func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string
 	}
 	if err := config.CheckPolicy(cfg); err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
+	}
+	if opts.noSelfMCP {
+		cfg.SetSelfServer(false) // the CLI's generate --no-self-mcp
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err //nolint:wrapcheck // already contextual

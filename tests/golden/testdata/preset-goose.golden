@@ -29,7 +29,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 503 3789e2299be29bc7f10f1ebef65ab21849c61be8dc4c5f23991f4c41aa4d5327
-.ai-rulez/.generated-manifest.local.json file 0644 1505 ab1cce53cbd82f892b745f1ed45eb9fa367efe8a0af35699e98d24db95631422
+.ai-rulez/.generated-manifest.local.json file 0644 1678 d0dcc978b5ade93c824885dd41a826c315a867a58049fb82590081a4290b4344
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -64,7 +64,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .goose/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa
 .goose/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .goosehints file 0644 800 8c33d106a8948844d2732d3e9518be7cb0da1155341dc81504f4c0c84b10615d
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree

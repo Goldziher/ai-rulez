@@ -38,7 +38,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 3130 fad794b09522a48b3854eab651008b2f5ef2f3b4e104005cab5bed7298456dd3
-.ai-rulez/.generated-manifest.local.json file 0644 9988 c2fbc8405f2f3822fd452bfb29886180ccaeacc68237bd09ad46ae3ad5bb3f4c
+.ai-rulez/.generated-manifest.local.json file 0644 10161 51a57b0e06320dcde4bb881b9e3184da70870f1cc71b1cbe1739c10952eda562
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -163,7 +163,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 1577 141603d4d8f8568cb3d8f32aa206bb5eff368eab26d89d2c4cb340598291eb07
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 .vscode/ dir 0755
 .vscode/mcp.json file 0600 397 c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7
 .vscode/settings.json file 0644 233 3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703

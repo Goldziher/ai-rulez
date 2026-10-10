@@ -24,7 +24,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1432 aa681753644d8842f776fbda595b270e2e9b53425fd94e5b5a8426518c54dc1d
-.ai-rulez/.generated-manifest.local.json file 0644 4871 13f4e3d8b2a674c3f696053af619c1119de5752fd9b0d6c142ff3f248147400a
+.ai-rulez/.generated-manifest.local.json file 0644 5044 6ee9cdceb087b014f1c98a1d21949b830a5f5428c802bc14897060595a47ed06
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -96,7 +96,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/manual.mdc file 0644 255 31f7d0d001109e013a53b81effd7b988f8c7d850fb5bc45edc69d18ee3656ccf
 .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
-.mcp.json file 0644 284 3787ef010d1b74fe9b445d3f86bac33847d72e904bb1e01df0dc09c3a64cef6b
+.mcp.json file 0644 437 ca2c270c7cf445dcf6e35c1111da2d5b9b5a1a533783dfb1f40f51d2920b4cb7
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
