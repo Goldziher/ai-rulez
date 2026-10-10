@@ -71,7 +71,8 @@ var apmMetadataKeys = map[string]bool{
 	"keywords": true, "tags": true, "homepage": true, "repository": true,
 }
 
-// apmTargets maps the `target` of apm.yml to the presets that write the same files.
+// apmTargets maps a `target` or `targets` entry of apm.yml to the presets that
+// write the same files.
 var apmTargets = map[string]string{
 	litCopilot: litCopilot, "vscode": litCopilot, litClaude: litClaude, litCursor: litCursor,
 	litOpencode: litOpencode, litCodex: litCodex, litGemini: litGemini, "windsurf": litDevin,
@@ -136,7 +137,10 @@ func (b *apmPlanner) readManifest() (map[string]any, error) {
 }
 
 // readLock reads apm.lock.yaml for the commits it resolved; the content hashes
-// are never carried (their scheme differs from the ai-rulez lock).
+// are never carried (their scheme differs from the ai-rulez lock). A dependency
+// the lock records with per-file hashes (deployed_file_hashes) needs no action:
+// ai-rulez recomputes them from the copied files. Only a legacy entry whose sole
+// hash is the aggregate content_hash is reported.
 func (b *apmPlanner) readLock() error {
 	for _, file := range []string{apmLockFile, rulesyncAPMLockFile} {
 		doc, ok, err := b.readYAML(file)
@@ -150,12 +154,13 @@ func (b *apmPlanner) readLock() error {
 		hashes := 0
 		for _, d := range deps {
 			m := as[map[string]any](d)
-			repo, commit := stringOf(m["repo_url"]), stringOf(m["resolved_commit"])
+			commit := stringOf(m["resolved_commit"])
+			repo := lockRepoURL(stringOf(m["repo_url"]), stringOf(m["host"]))
 			if repo == "" || !gitutil.IsCommitSHA(commit) {
 				continue
 			}
 			b.lock[lockKey(repo, stringOf(m["virtual_path"]))] = commit
-			if stringOf(m["content_hash"]) != "" {
+			if stringOf(m["content_hash"]) != "" && len(as[map[string]any](m["deployed_file_hashes"])) == 0 {
 				hashes++
 			}
 		}
@@ -165,6 +170,27 @@ func (b *apmPlanner) readLock() error {
 		}
 	}
 	return nil
+}
+
+// lockRepoURL turns a lock entry's repo_url into the canonical URL a parsed
+// dependency builds, so the commit lookup matches. A newer lock records a bare
+// owner/repo and a separate host field; an older one records a full https URL.
+func lockRepoURL(repo, host string) string {
+	repo = strings.TrimSpace(repo)
+	if repo == "" {
+		return ""
+	}
+	spec := repo
+	if !strings.Contains(repo, "://") && host != "" {
+		if head, _, _ := strings.Cut(repo, "/"); !strings.Contains(head, ".") {
+			spec = strings.TrimSuffix(host, "/") + "/" + repo
+		}
+	}
+	dep, reason := parseAPMString(spec)
+	if reason != "" {
+		return ""
+	}
+	return dep.url()
 }
 
 func lockKey(repoURL, virtualPath string) string {
@@ -192,8 +218,8 @@ func (b *apmPlanner) importManifest(doc map[string]any) {
 			b.p.add(newFinding(StatusDropped, apmManifest, k, "", "development dependencies are not imported; move the ones the project needs into dependencies and rerun"))
 		case k == "scripts":
 			b.p.add(newFinding(StatusDropped, apmManifest, k, "", "apm scripts run commands of the apm runtime; ai-rulez has no equivalent and imports none"))
-		case k == "target":
-			b.importTarget(doc[k])
+		case k == "target", k == litTargets:
+			b.importTarget(k, doc[k])
 		default:
 			b.p.add(newFinding(StatusDropped, apmManifest, k, "", "apm.yml key has no ai-rulez equivalent"))
 		}
@@ -204,7 +230,10 @@ func (b *apmPlanner) importManifest(doc map[string]any) {
 	}
 }
 
-func (b *apmPlanner) importTarget(v any) {
+// importTarget maps the `target` (a string or a list) or the newer `targets` list
+// of apm.yml to presets; key is the apm.yml key the entries came from, so the
+// findings name it.
+func (b *apmPlanner) importTarget(key string, v any) {
 	var names []string
 	switch t := v.(type) {
 	case string:
@@ -218,12 +247,12 @@ func (b *apmPlanner) importTarget(v any) {
 		n = strings.ToLower(strings.TrimSpace(n))
 		switch preset, ok := apmTargets[n]; {
 		case n == "all" || n == "":
-			b.p.add(newFinding(StatusNeedsAction, apmManifest, "target", "presets", "target all means every APM target; set `presets` in config.toml to the tools you use"))
+			b.p.add(newFinding(StatusNeedsAction, apmManifest, key, "presets", key+" all means every APM target; set `presets` in config.toml to the tools you use"))
 		case ok:
 			b.p.Presets = append(b.p.Presets, preset)
-			b.p.add(newFinding(StatusMapped, apmManifest, "target."+n, "presets."+preset, ""))
+			b.p.add(newFinding(StatusMapped, apmManifest, key+"."+n, "presets."+preset, ""))
 		default:
-			b.p.add(newFinding(StatusUnsupported, apmManifest, "target."+n, "", "no ai-rulez preset for this APM target"))
+			b.p.add(newFinding(StatusUnsupported, apmManifest, key+"."+n, "", "no ai-rulez preset for this APM target"))
 		}
 	}
 }
