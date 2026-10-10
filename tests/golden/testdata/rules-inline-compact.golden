@@ -144,7 +144,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 7614 164dec07b492721fa66791c4a3bf90fedb26d802957deef69f4823ec63646931
+.ai-rulez/.generated-manifest.local.json file 0644 7787 c3fa038c72b0e465f1a008467d8fd46a24445a377f519512b85f2f9a0ce7b02b
 >>>>
 {
   "version": "1",
@@ -297,6 +297,13 @@ echo review
       {
         "path": [
           "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "9af0bed0de5a24265f721234468805215656161d729ed568d3fd2c01018a9c0c"
+      },
+      {
+        "path": [
+          "mcpServers",
           "local-tool"
         ],
         "sum": "5941345de4e3c3620e53febdc7c79be7161fa71bad6e5b2b73a9d3f1d346c7d0"
@@ -383,7 +390,7 @@ echo review
     ".junie/mcp/mcp.json": "aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b",
     ".junie/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".junie/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".mcp.json": "893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4",
+    ".mcp.json": "cf753abedf1e02ccfd403d439d81645d2a7eb56fc2a40d14d15f78d2ce3a3813",
     ".vscode/mcp.json": "c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7",
     ".vscode/settings.json": "3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703"
   }
@@ -1361,10 +1368,19 @@ This skill bundles supporting files. Read them on demand when the task calls for
 #!/bin/sh
 echo review
 <<<<
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 >>>>
 {
   "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@$VERSION",
+        "mcp"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
     "local-tool": {
       "args": [
         "-y",

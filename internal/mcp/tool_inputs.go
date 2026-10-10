@@ -40,6 +40,7 @@ type generateIn struct {
 	Role       string `json:"role,omitempty" jsonschema:"Generate the slice of content a role selects instead of a profile (see list_roles); mutually exclusive with profile"`
 	Recursive  bool   `json:"recursive,omitempty" jsonschema:"Generate for all subdirectories containing .ai-rulez/"`
 	NoLocal    bool   `json:"no_local,omitempty" jsonschema:"Ignore the machine-local config.local.* overlay and local/ content (the teammate view)"`
+	NoSelfMCP  bool   `json:"no_self_mcp,omitempty" jsonschema:"Do not add ai-rulez's own MCP server to the generated MCP files (generate --no-self-mcp; the default is to add it)"`
 	workDirArg
 }
 

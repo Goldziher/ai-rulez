@@ -215,7 +215,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 20064 6cd3f5cf0f3c3c0af412500157b0b00586798d2e64e7f91d8ba9978113350f5a
+.ai-rulez/.generated-manifest.local.json file 0644 20260 3c10039157f81da7870e96d485591ce67fa35b3b66cf894112bc60df16eb85a4
 >>>>
 {
   "version": "1",
@@ -566,6 +566,14 @@ policy:
       {
         "path": [
           "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "9af0bed0de5a24265f721234468805215656161d729ed568d3fd2c01018a9c0c",
+        "local": true
+      },
+      {
+        "path": [
+          "mcpServers",
           "local-tool"
         ],
         "sum": "5941345de4e3c3620e53febdc7c79be7161fa71bad6e5b2b73a9d3f1d346c7d0",
@@ -879,7 +887,7 @@ policy:
     ".kilo/plugins/ai-rulez-hooks.js": "bb68fbfbf7ffa3c450175ddbb7968d668584e11f841be026454a06e40b29015c",
     ".kilo/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".kilo/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".mcp.json": "8c416c5b9bc31fc113d5b3694f7c21726cca98653b0b12c964fee621caea8334",
+    ".mcp.json": "0e43666185d236598794fd868caceac5c131d68dfb51cbbd91ce4ad8fe3914bb",
     ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
     ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".opencode/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
@@ -2802,10 +2810,19 @@ name: scratch
 
 # Scratch
 <<<<
-.mcp.json file 0600 571 8c416c5b9bc31fc113d5b3694f7c21726cca98653b0b12c964fee621caea8334
+.mcp.json file 0600 724 6bf1c9cff649bb2adb3209ad584f4184e3c4d3633762698698767ebb795cf868
 >>>>
 {
   "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@$VERSION",
+        "mcp"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
     "local-tool": {
       "args": [
         "-y",

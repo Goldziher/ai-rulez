@@ -45,7 +45,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2966 3771b0f4604ef7b80bc719bfca03e7870633bfb95435e812af404515ad717d6a
-.ai-rulez/.generated-manifest.local.json file 0644 12425 904c090ded81e7d4d709ff0eca944386a5d0d4f4471f5104432bc4b5ea4f570a
+.ai-rulez/.generated-manifest.local.json file 0644 12598 e50a507d1337a48e0a7ee973108fef895a07f3b3049ea78123d23c4276e1f2c0
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -153,7 +153,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 1206 84e44e460ce95cd918df0fd506075ba55cedfbc00884f7fae37823ba0eaf00a9
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
 .opencode/agents/architect.md file 0644 166 9dd8bf8ffed3a1f0224ae77627d154fded814856f2c25da1adaed71065ed0691
@@ -278,8 +278,8 @@ runtime cursor — 20 files
     agent bodies (2)                                             40
     skill resources (2)                                          16
     per-file provenance hashes (11)                             505
-  unmodeled                                                     570
-    sidecar documents (4)                                       516
+  unmodeled                                                     674
+    sidecar documents (4)                                       620
     unclassified outputs                                         54
 
 runtime copilot — 14 files
@@ -1080,7 +1080,7 @@ info      tools    preset "gemini": gemini not found on PATH; its files are stil
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2966 3771b0f4604ef7b80bc719bfca03e7870633bfb95435e812af404515ad717d6a
-.ai-rulez/.generated-manifest.local.json file 0644 12425 904c090ded81e7d4d709ff0eca944386a5d0d4f4471f5104432bc4b5ea4f570a
+.ai-rulez/.generated-manifest.local.json file 0644 12598 e50a507d1337a48e0a7ee973108fef895a07f3b3049ea78123d23c4276e1f2c0
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -1188,7 +1188,7 @@ info      tools    preset "gemini": gemini not found on PATH; its files are stil
 .github/skills/reviewer/scripts/ dir 0755
 .github/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 1206 84e44e460ce95cd918df0fd506075ba55cedfbc00884f7fae37823ba0eaf00a9
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
 .opencode/agents/architect.md file 0644 166 9dd8bf8ffed3a1f0224ae77627d154fded814856f2c25da1adaed71065ed0691

@@ -21,7 +21,7 @@ INFO  Generation complete files=3
 .cursor/mcp.json file 0644 142 df918292789796a7bce2eedc0ee9cadc1fd4cf7a953b7b2df9421632f1a78011
 .cursor/rules/ dir 0755
 .gitignore file 0644 280 bd975c1021f03081b4dbb2030bed7022db928cbd34ce7e6683d5064ccf61587f
-.mcp.json file 0644 167 67ab99799092b5f7170bd3ba53d77a318d58530da486026f8ab031b2630df85d
+.mcp.json file 0644 320 4e7cb608176bd71d326929a65d360563ce12a4b1e8d0a121f01b7b4d7cf8c061
 CLAUDE.md file 0644 371 c5322a73a67d6e8712f346c50503f3bc3472eaca8c11f2b77ce609b7a34521ef
 --- home tree
 (no change)
@@ -46,7 +46,7 @@ INFO  Generated files are up to date roots=1
 .cursor/mcp.json file 0644 142 df918292789796a7bce2eedc0ee9cadc1fd4cf7a953b7b2df9421632f1a78011
 .cursor/rules/ dir 0755
 .gitignore file 0644 280 bd975c1021f03081b4dbb2030bed7022db928cbd34ce7e6683d5064ccf61587f
-.mcp.json file 0644 167 67ab99799092b5f7170bd3ba53d77a318d58530da486026f8ab031b2630df85d
+.mcp.json file 0644 320 4e7cb608176bd71d326929a65d360563ce12a4b1e8d0a121f01b7b4d7cf8c061
 CLAUDE.md file 0644 371 c5322a73a67d6e8712f346c50503f3bc3472eaca8c11f2b77ce609b7a34521ef
 --- home tree
 (no change)

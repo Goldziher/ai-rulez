@@ -13,7 +13,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 643 73760c2360fe8f90bd1d04d30d6ffebf93ad6a3d88452c207864425088670697
-.ai-rulez/.generated-manifest.local.json file 0644 2929 011318d9f5e78c5ae453070a2abb89454dfa2f0a210848ea9b643cd977141a1f
+.ai-rulez/.generated-manifest.local.json file 0644 3102 1a9427ad34a8131467331dce8436fc7283bc0e24f640e8a30a628e4aa64842da
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -66,7 +66,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .kilo/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .kilo/skills/reviewer/scripts/ dir 0755
 .kilo/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 REVIEW.md file 0644 219 e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180
 kilo.jsonc file 0644 748 3c332bbb9f8168f9b622e6404d0145ddb3a24ea6874458d40c487921b0eeb7fa
