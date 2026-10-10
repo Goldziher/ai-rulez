@@ -216,9 +216,11 @@ func loadListedConfig(ctx context.Context) error {
 	if listLocal {
 		opts = append(opts, config.WithoutRemote())
 	}
-	if _, err := loadConfigForCommand(ctx, opts...); err != nil {
+	cfg, err := loadConfigForCommand(ctx, opts...)
+	if err != nil {
 		return failMsg("Failed to load config", err)
 	}
+	warnLegacyLayout(cfg.ConfigDir)
 	return nil
 }
 
@@ -232,6 +234,7 @@ func runListRoot(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return failMsg("Failed to load config", err)
 	}
+	warnLegacyLayout(cfg.ConfigDir)
 	report, err := generator.NewGenerator(cfg).PlacementReport(listProfile)
 	if err != nil {
 		return failMsg("Failed to resolve placement", err)

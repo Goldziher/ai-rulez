@@ -115,6 +115,7 @@ func generateLoaded(ctx context.Context, cmd *cobra.Command, cfg *config.Config)
 	if err := applyGenerateOverrides(cfg); err != nil {
 		return fail(err)
 	}
+	warnLegacyLayout(cfg.ConfigDir)
 	warnFrontmatter(ctx, cfg)
 	if err := importGate(ctx, cfg); err != nil {
 		return fail(err)
