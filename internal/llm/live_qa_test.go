@@ -298,9 +298,10 @@ func TestLiveBudgetMaxCallsAndUnknownPriceWithCostCap(t *testing.T) {
 			}
 
 			// A cost cap with a model the price table does not know must refuse, not guess.
-			cfg = liveConfig(backend)
-			cfg.MaxCostUSD = 0.5
-			m2, err := New(cfg, Options{Getenv: os.Getenv})
+			unknownCfg := liveConfig(backend)
+			unknownCfg.Model = "ai-rulez-unknown-model"
+			unknownCfg.MaxCostUSD = 0.5
+			m2, err := New(unknownCfg, Options{Getenv: os.Getenv})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -311,6 +312,7 @@ func TestLiveBudgetMaxCallsAndUnknownPriceWithCostCap(t *testing.T) {
 			}
 
 			// With a price override the cap works: tiny cap refuses the worst case, a larger one admits it.
+			cfg = liveConfig(backend)
 			cfg.PriceInputPerMTok, cfg.PriceOutputPerMTok = 0.1, 0.4
 			cfg.MaxCostUSD = 0.0000001
 			m3, _ := New(cfg, Options{Getenv: os.Getenv})

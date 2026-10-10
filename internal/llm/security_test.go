@@ -92,10 +92,10 @@ func TestRedirectsAreNotFollowed(t *testing.T) {
 
 	_, err = m.Chat(context.Background(), chatReq("private prompt"))
 
-	// TODO(liter-llm#269): liter-llm follows redirects and exposes no switch (its OutboundPolicy is not in the
-	// Go binding), so a 307/308 re-POSTs the prompt. Drop the skip when the binding can refuse redirects.
+	// liter-llm 2.2.2+ builds authenticated native clients with reqwest's redirect policy set to
+	// none, so a 307/308 is surfaced as a provider error, never re-POSTed to another host.
 	if otherHits.Load() != 0 {
-		t.Skipf("known gap: liter-llm re-POSTed the prompt to another host (%v)", otherBody.Load())
+		t.Fatalf("liter-llm re-POSTed the prompt to another host: %v", otherBody.Load())
 	}
 	if err == nil || !errors.Is(err, ErrProvider) {
 		t.Fatalf("a redirect must surface as a provider error, got %v", err)

@@ -1,8 +1,7 @@
 // Package pricing prices model calls and eval estimates. liter-llm's embedded
 // model catalog (GetModelInfo, CompletionCostWithCache) is the source of truth;
 // this package adds only the fail-closed corrections ai-rulez needs where that
-// catalog is missing a model or would charge less than the model really costs
-// (see floors and variantFloor). internal/llm prices calls with it and
+// catalog is missing a model (see floors). internal/llm prices calls with it and
 // internal/evals prices eval runs and their estimates with it, so a price
 // comes from one place.
 package pricing
@@ -14,10 +13,10 @@ import (
 	lit "github.com/xberg-io/liter-llm/packages/go/v2"
 )
 
-// floorsRevision is bumped whenever floors or variantFloor change. Version folds
-// it into the llm cache identity, so a cost recorded under one set of prices is
-// never replayed under another.
-const floorsRevision = "1"
+// floorsRevision is bumped whenever floors change. Version folds it into the llm
+// cache identity, so a cost recorded under one set of prices is never replayed
+// under another.
+const floorsRevision = "2"
 
 const literLLMModule = "github.com/xberg-io/liter-llm/packages/go/v2"
 
@@ -51,55 +50,36 @@ type Tokens struct {
 	Prompt, Cached, Completion int
 }
 
-// floors are consulted only for a model liter-llm 2.2.0 has no catalog row for.
+// floors are consulted only for a model liter-llm 2.2.3 has no catalog row for.
 // They are conservative ceilings kept at the old family prices (the short names
 // eval cases and --model use, and the Claude families the catalog lacks), not
 // billing facts, so an unlisted model never comes out cheaper than its family.
 // Keys are bare lowercase names matched by longest prefix. Each row stands
-// until liter-llm resolves its issue.
+// until the catalog lists the model.
 var floors = map[string]Price{
-	// TODO(liter-llm#262): the catalog has no claude-haiku-5-5 row (listed at its dearer over-100k tier).
-	"claude-haiku-5-5": {0.50, 2.50},
-	// TODO(liter-llm#262): no family fallback rows (claude-opus-4-1, claude-sonnet-4, claude-3-5-haiku, ... are missing).
+	// TODO(liter-llm#262, still missing in v2.2.3): bare claude-opus-4-1, claude-sonnet-4 and
+	// claude-3-5-haiku have no catalog row (the primary-provider bare registry carries only
+	// anthropic's newer families).
 	"claude-haiku":  {1.00, 5.00},
 	"claude-sonnet": {3.00, 15.00},
 	"claude-opus":   {15.00, 75.00},
-	// TODO(liter-llm#262): the short names eval cases and --model use are not model ids in the catalog.
+	// TODO(liter-llm#262, still missing in v2.2.3): the short names eval cases and --model use
+	// are not model ids in the catalog.
 	"haiku":  {1.00, 5.00},
 	"sonnet": {3.00, 15.00},
 	"opus":   {15.00, 75.00},
 }
 
-// variantFloorIn and variantFloorOut are the least a gpt-* realtime, audio or tts variant is priced at.
-// TODO(liter-llm#260): the catalog resolves gpt-4o-mini-tts and gpt-4o-mini-realtime-preview to
-// the base gpt-4o-mini row by silent prefix fallback (0.15/0.60), which undercharges the variant.
-// Remove once GetModelInfo reports whether the match was exact.
-const (
-	variantFloorIn  = 2.50
-	variantFloorOut = 10.00
-)
-
 // bare lowercases a model name and drops any provider prefix.
-// TODO(liter-llm#260): GetModelInfo("gemini/gemini-2.5-flash") and "vertex_ai/..." find nothing
-// although the bare name is listed; only some provider prefixes resolve.
+// TODO(liter-llm#260, still missing in v2.2.3): GetModelInfo("gemini/gemini-2.5-flash") and
+// "vertex_ai/..." find nothing although the bare name resolves, so the prefix is dropped before
+// the lookup.
 func bare(model string) string {
 	name := strings.ToLower(strings.TrimSpace(model))
 	if i := strings.LastIndex(name, "/"); i >= 0 {
 		name = name[i+1:]
 	}
 	return name
-}
-
-func isVariant(name string) bool {
-	if !strings.HasPrefix(name, "gpt-") {
-		return false
-	}
-	for _, m := range []string{"realtime", "audio", "tts", "transcribe"} {
-		if strings.Contains(name, m) {
-			return true
-		}
-	}
-	return false
 }
 
 func floorFor(name string) (Price, bool) {
@@ -116,11 +96,13 @@ func floorFor(name string) (Price, bool) {
 }
 
 // catalogPrice is the flat per-MTok price liter-llm lists for name. A model with
-// context tiers is priced at its dearest tier, so an estimate never undershoots. A listing at
-// 0/0 is not a price (TODO(liter-llm#276): paid image, video and audio models carry it).
+// context tiers is priced at its dearest tier, so an estimate never undershoots.
+// liter-llm 2.2.3 reports whether the per-token price is known: a paid model it
+// lists at 0/0 (image, video and audio models) is not a price and is treated as
+// unpriced (#276).
 func catalogPrice(name string) (Price, bool) {
 	info := lit.GetModelInfo(name)
-	if info == nil {
+	if info == nil || !info.PriceKnown {
 		return Price{}, false
 	}
 	p := Price{InPerMTok: info.InputCostPerToken * 1e6, OutPerMTok: info.OutputCostPerToken * 1e6}
@@ -128,7 +110,7 @@ func catalogPrice(name string) (Price, bool) {
 		p.InPerMTok = max(p.InPerMTok, t.InputCostPerToken*1e6)
 		p.OutPerMTok = max(p.OutPerMTok, t.OutputCostPerToken*1e6)
 	}
-	return p, p.InPerMTok > 0 || p.OutPerMTok > 0
+	return p, true
 }
 
 // Lookup returns the flat price of a model. known is false when neither the
@@ -138,10 +120,6 @@ func Lookup(model string) (price Price, known bool) {
 	price, known = catalogPrice(name)
 	if !known {
 		price, known = floorFor(name)
-	}
-	if known && isVariant(name) {
-		price.InPerMTok = max(price.InPerMTok, variantFloorIn)
-		price.OutPerMTok = max(price.OutPerMTok, variantFloorOut)
 	}
 	return price, known
 }
@@ -159,9 +137,6 @@ func Cost(model string, u Tokens) (usd float64, known bool) {
 		}
 	} else if p, ok := floorFor(name); ok {
 		usd, known = (float64(prompt)*p.InPerMTok+float64(completion)*p.OutPerMTok)/1e6, true
-	}
-	if known && isVariant(name) {
-		usd = max(usd, (float64(prompt)*variantFloorIn+float64(completion)*variantFloorOut)/1e6)
 	}
 	return usd, known
 }

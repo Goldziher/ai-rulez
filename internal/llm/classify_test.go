@@ -126,7 +126,8 @@ func TestClassifyUntypedErrorIsPermanent(t *testing.T) {
 	}
 }
 
-// The reply text is bounded after decoding; liter-llm cannot bound the body it reads.
+// The HTTP body of one reply is bounded by the client's max_response_bytes, so an oversized
+// body is refused while it is read, before the reply is decoded.
 func TestChatRefusesAnOversizedReply(t *testing.T) {
 	// Arrange
 	srv := serve(t, func(w http.ResponseWriter, _ *http.Request) {
@@ -139,8 +140,8 @@ func TestChatRefusesAnOversizedReply(t *testing.T) {
 
 	// Assert
 	var e *Error
-	if !errors.As(err, &e) || e.Message != "response too large" || IsTransient(err) {
-		t.Fatalf("err = %v, want a permanent response-too-large provider error", err)
+	if !errors.As(err, &e) || e.Kind != KindProvider || IsTransient(err) || !strings.Contains(e.Message, "configured limit") {
+		t.Fatalf("err = %v, want a permanent provider error refusing the oversized body", err)
 	}
 }
 
