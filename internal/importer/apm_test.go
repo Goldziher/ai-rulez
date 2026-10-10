@@ -246,3 +246,23 @@ func TestLockRepoURL(t *testing.T) {
 		})
 	}
 }
+
+// TestAPMPlan_MalformedTargetsAndDependenciesAreReported: a wrong-typed targets
+// or dependencies list is reported (unsupported), never silently dropped.
+func TestAPMPlan_MalformedTargetsAndDependenciesAreReported(t *testing.T) {
+	// Arrange
+	files := map[string]string{"apm.yml": "name: x\ntargets:\n  a: b\ndependencies:\n  apm: notalist\n  mcp: {k: v}\n"}
+	// Act
+	plan, err := apmImporter{}.Plan(mapFS(files), Options{})
+	// Assert
+	require.NoError(t, err)
+	unsupported := map[string]bool{}
+	for _, f := range plan.Findings {
+		if f.Status == StatusUnsupported {
+			unsupported[f.Field] = true
+		}
+	}
+	for _, field := range []string{"targets", "dependencies.apm", "dependencies.mcp"} {
+		assert.True(t, unsupported[field], "no unsupported finding for %q; findings: %+v", field, plan.Findings)
+	}
+}

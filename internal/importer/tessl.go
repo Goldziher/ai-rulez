@@ -223,7 +223,7 @@ func (b *tesslPlanner) pluginRoot(dir, version string) (string, bool) {
 	if b.isPlugin(dir) {
 		return dir, true
 	}
-	if version != "" {
+	if version != "" && checkSubpath(version) == "" {
 		if sub := path.Join(dir, version); b.isPlugin(sub) {
 			return sub, true
 		}
