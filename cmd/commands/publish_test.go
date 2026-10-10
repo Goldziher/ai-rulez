@@ -88,6 +88,10 @@ func publishProjectWith(t *testing.T, configTOML string) string {
 	require.NoError(t, err)
 	require.NoError(t, generator.NewGenerator(cfg).GeneratePlugin(""))
 	require.Equal(t, 0, writeLockAt("", "", nil), "lock")
+	// The default self server makes .mcp.json a merged document, so generation
+	// records machine-local merge claims in .generated-manifest.local.json. Real
+	// projects gitignore it; do the same so the committed tree stays clean.
+	writeFile(t, filepath.Join(root, ".gitignore"), ".ai-rulez/.generated-manifest.local.json\n")
 	publishGit(t, root, "init", "-q")
 	publishGit(t, root, "add", "-A")
 	publishGit(t, root, "commit", "-q", "-m", "init")

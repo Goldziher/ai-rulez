@@ -592,36 +592,36 @@ Project-level MCP generation options.
 
 ```toml
 [mcp]
-self_server = true                # add ai-rulez's own MCP server to .mcp.json
+self_server = true                # default; add ai-rulez's own MCP server to .mcp.json
 # self_server_version = "5.0.0"   # default: the running binary's version ("latest" for a dev build)
 # self_server_command = ["ai-rulez", "mcp"]  # replace the whole launch command instead of npx
 ```
 
 | Field                 | Description                                                                                                                                              |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `self_server`         | When `true`, `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@<version>", "mcp"]}` to the project `.mcp.json`. |
-| `self_server_version` | Version (or dist-tag) to pin. Defaults to the version of the ai-rulez binary running `generate`, or `latest` for a dev build. Needs `self_server`.       |
-| `self_server_command` | Executable followed by its arguments, replacing the npx launch. Mutually exclusive with `self_server_version`. Needs `self_server`.                      |
+| `self_server`         | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@<version>", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
+| `self_server_version` | Version (or dist-tag) to pin. Defaults to the version of the ai-rulez binary running `generate`, or `latest` for a dev build. Only applies while the self server is on. |
+| `self_server_command` | Executable followed by its arguments, replacing the npx launch. Mutually exclusive with `self_server_version`. Only applies while the self server is on.  |
 
 Behavior:
 
+- **On by default**: a project gets the `ai-rulez` MCP server without declaring anything;
+  `self_server = false` or `generate --no-self-mcp` turns it off.
 - **Merged, not replaced**: with `self_server` and no `[[mcp_servers]]`, ai-rulez owns only the
   `mcpServers.ai-rulez` entry. Other servers in an existing `.mcp.json` (and every other key)
   are preserved, so running `generate` twice produces no diff.
-- **Only `.mcp.json`**: `.claude/settings.json` and the other presets' MCP files are not written
-  for `self_server` alone, so hand-authored settings are never touched.
+- **Every MCP writer agrees**: the root `.mcp.json` is rendered identically by the `mcp` preset and
+  the cursor/copilot writers, and the `antigravity` preset adds the same entry to
+  `.agents/mcp_config.json`.
 - **With `[[mcp_servers]]`**: declared servers keep their existing behavior (ai-rulez owns the whole
   `mcpServers` object, see [Settings document merge behavior](#settings-document-merge-behavior)),
   and the ai-rulez entry is added to it unless you declare a server named `ai-rulez` yourself, which
   wins.
-- **Opt-in for every preset**: the `antigravity` preset adds the `ai-rulez` server to
-  `.agents/mcp_config.json` only when `self_server` is set, like every other preset. An entry an earlier version
-  wrote there is removed on the next `generate` unless `self_server = true` keeps it.
 - **Per root**: each config root decides independently, including under `generate --recursive`.
 - The pinned version changes when you upgrade ai-rulez, so the generated `.mcp.json` changes with it.
-- **Turning it off**: removing `self_server` stops ai-rulez from owning the entry but does not
-  delete it; remove `mcpServers.ai-rulez` from `.mcp.json` yourself. `ai-rulez clean` likewise leaves a
-  `.mcp.json` that holds hand-authored servers in place.
+- **Turning it off**: `self_server = false` (or `generate --no-self-mcp`) stops ai-rulez from owning
+  the entry but does not delete it; remove `mcpServers.ai-rulez` from `.mcp.json` yourself.
+  `ai-rulez clean` likewise leaves a `.mcp.json` that holds hand-authored servers in place.
 
 ### `mcp_servers`
 

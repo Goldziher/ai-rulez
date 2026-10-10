@@ -919,7 +919,7 @@ local sources are reported as `needs-action` instead of being cloned.
 | ------ | ------ |
 | `windsurf` is renamed `devin`. The output directory `.windsurf/` is now `.devin/` and the agent frontmatter key `windsurf_model` is now `devin_model`. There is no alias. | Rename the preset in `config.toml`, rename `windsurf_model` keys in agent files, and delete the old `.windsurf/` outputs. |
 | `continue-dev` is removed. It has no replacement. | Remove it from `presets`. `doctor` reports it as an error. |
-| `antigravity` no longer adds the `ai-rulez` MCP server on its own. | Set `[mcp] self_server = true` to keep it, as for every other preset. An entry an earlier version wrote into `.agents/mcp_config.json` is removed on the next `generate` unless you set it. |
+| `antigravity` no longer adds the `ai-rulez` MCP server on its own. | The `[mcp] self_server` default is now `true`, so `generate` adds the ai-rulez server to `.agents/mcp_config.json` and the root `.mcp.json` unless you set `[mcp] self_server = false` (or pass `--no-self-mcp`). |
 | `amp` no longer writes `.agents/agents`, which Amp does not read. | None. Agents are listed in `AGENTS.md`. `amp_model` has no effect. |
 | `codex` and `antigravity` write commands as skills (`.agents/skills/<id>/SKILL.md`) instead of `.codex/prompts` and workflows. | None. Files from the old layout are removed on `generate`. |
 | `codex` writes skills to `.agents/skills`, not `.codex/skills`. | Set `codex_skills_dir = ".codex/skills"` to keep the old location. |
@@ -1779,36 +1779,36 @@ Project-level MCP generation options.
 
 ```toml
 [mcp]
-self_server = true                # add ai-rulez's own MCP server to .mcp.json
+self_server = true                # default; add ai-rulez's own MCP server to .mcp.json
 # self_server_version = "5.0.0"   # default: the running binary's version ("latest" for a dev build)
 # self_server_command = ["ai-rulez", "mcp"]  # replace the whole launch command instead of npx
 ```
 
 | Field                 | Description                                                                                                                                              |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `self_server`         | When `true`, `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@<version>", "mcp"]}` to the project `.mcp.json`. |
-| `self_server_version` | Version (or dist-tag) to pin. Defaults to the version of the ai-rulez binary running `generate`, or `latest` for a dev build. Needs `self_server`.       |
-| `self_server_command` | Executable followed by its arguments, replacing the npx launch. Mutually exclusive with `self_server_version`. Needs `self_server`.                      |
+| `self_server`         | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@<version>", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
+| `self_server_version` | Version (or dist-tag) to pin. Defaults to the version of the ai-rulez binary running `generate`, or `latest` for a dev build. Only applies while the self server is on. |
+| `self_server_command` | Executable followed by its arguments, replacing the npx launch. Mutually exclusive with `self_server_version`. Only applies while the self server is on.  |
 
 Behavior:
 
+- **On by default**: a project gets the `ai-rulez` MCP server without declaring anything;
+  `self_server = false` or `generate --no-self-mcp` turns it off.
 - **Merged, not replaced**: with `self_server` and no `[[mcp_servers]]`, ai-rulez owns only the
   `mcpServers.ai-rulez` entry. Other servers in an existing `.mcp.json` (and every other key)
   are preserved, so running `generate` twice produces no diff.
-- **Only `.mcp.json`**: `.claude/settings.json` and the other presets' MCP files are not written
-  for `self_server` alone, so hand-authored settings are never touched.
+- **Every MCP writer agrees**: the root `.mcp.json` is rendered identically by the `mcp` preset and
+  the cursor/copilot writers, and the `antigravity` preset adds the same entry to
+  `.agents/mcp_config.json`.
 - **With `[[mcp_servers]]`**: declared servers keep their existing behavior (ai-rulez owns the whole
   `mcpServers` object, see [Settings document merge behavior](#settings-document-merge-behavior)),
   and the ai-rulez entry is added to it unless you declare a server named `ai-rulez` yourself, which
   wins.
-- **Opt-in for every preset**: the `antigravity` preset adds the `ai-rulez` server to
-  `.agents/mcp_config.json` only when `self_server` is set, like every other preset. An entry an earlier version
-  wrote there is removed on the next `generate` unless `self_server = true` keeps it.
 - **Per root**: each config root decides independently, including under `generate --recursive`.
 - The pinned version changes when you upgrade ai-rulez, so the generated `.mcp.json` changes with it.
-- **Turning it off**: removing `self_server` stops ai-rulez from owning the entry but does not
-  delete it; remove `mcpServers.ai-rulez` from `.mcp.json` yourself. `ai-rulez clean` likewise leaves a
-  `.mcp.json` that holds hand-authored servers in place.
+- **Turning it off**: `self_server = false` (or `generate --no-self-mcp`) stops ai-rulez from owning
+  the entry but does not delete it; remove `mcpServers.ai-rulez` from `.mcp.json` yourself.
+  `ai-rulez clean` likewise leaves a `.mcp.json` that holds hand-authored servers in place.
 
 ##### `mcp_servers`
 
@@ -17950,16 +17950,17 @@ in flag order, with later files winning. Generation fails if a placeholder canno
 
 ##### Generated Self-Entry (`[mcp] self_server`)
 
-Instead of declaring the ai-rulez server yourself, let `generate` add it to the project `.mcp.json`,
-pinned to the version of the ai-rulez binary that ran it:
+`generate` adds the ai-rulez server to the project `.mcp.json` **by default**, pinned to the version
+of the ai-rulez binary that ran it, so a project is MCP-ready out of the box. Turn it off with
+`self_server = false` or `generate --no-self-mcp`:
 
 ```toml
 [mcp]
-self_server = true
+self_server = false   # opt out; the default is true
 ```
 
-The entry is merged into an existing `.mcp.json`, so hand-authored servers survive, and
-`.claude/settings.json` is not touched (Claude Code reads project MCP servers from `.mcp.json` only). See [Configuration: `mcp`](configuration.md#mcp) for
+The entry is merged into an existing `.mcp.json`, so hand-authored servers survive and the file is
+ready for Claude Code (which reads project MCP servers from `.mcp.json`). See [Configuration: `mcp`](configuration.md#mcp) for
 `self_server_version`, `self_server_command`, and the interaction with `[[mcp_servers]]`.
 
 Generated MCP config files contain resolved values. If a value came from a placeholder, or if an env
@@ -27142,6 +27143,7 @@ ai-rulez generate --locked
 | `--if-configured` | bool |  | Skip plugin generation when no plugin authoring configuration is present |
 | `--locked` | bool |  | Require ai-rulez.lock to cover every remote include and installed skill and fetch exactly the pinned commits (for CI) |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
+| `--no-self-mcp` | bool |  | Do not add ai-rulez's own MCP server to the generated .mcp.json (the default is to add it) |
 | `--offline` | bool |  | Skip fetching remote includes, use cached content only |
 | `--plugin` | bool |  | Generate distributable plugin bundles and a marketplace index from the [plugin] block |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |

@@ -81,6 +81,14 @@ func (g *Generator) ProjectLayout() presets.ProjectLayout {
 	}
 	layout.SkillsDir, layout.AgentsDir, layout.CommandsDir, layout.RulesDir =
 		dir("skills"), dir("agents"), dir("commands"), dir("rules")
+	// A root MCP document with no user-level counterpart is still a project output
+	// (with the self server on, every MCP-writing preset emits one); record its
+	// path so user scope can classify it.
+	for _, sc := range g.Spec.Sidecars {
+		if sc != nil && sc.Kind == SidecarMCPJSON && sc.GlobalPath == "" && sc.GlobalMCPPath == "" && layout.MCPFile == "" {
+			layout.MCPFile = sc.Path
+		}
+	}
 	if layout.SkillsDir == "" && g.Spec.Outputs[OutputTypeSkills] == nil && g.Spec.Global != nil {
 		// A user-level skills store with no project counterpart: a user-scope run
 		// renders the skills at the store's own path (see userOnlyOutput).

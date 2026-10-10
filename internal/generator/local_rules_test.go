@@ -21,7 +21,7 @@ func localRuleProject(t *testing.T, preset, mode string) string {
 	t.Helper()
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, ".ai-rulez")
-	cfg := "version = \"5.0\"\nname = \"t\"\npresets = [\"" + preset + "\"]\ngitignore = true\nagents_md = false\n"
+	cfg := "version = \"5.0\"\nname = \"t\"\npresets = [\"" + preset + "\"]\ngitignore = true\nagents_md = false\n\n[mcp]\nself_server = false\n"
 	if mode != "" {
 		cfg += "\n[rules]\nmode = \"" + mode + "\"\n"
 	}

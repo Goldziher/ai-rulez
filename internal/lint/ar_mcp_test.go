@@ -129,6 +129,19 @@ func TestMCPJSONEntryWithTheNameOfAConfigServerIsChecked(t *testing.T) {
 	})
 }
 
+// TestMCPGeneratedSelfServerIsSkipped checks that the ai-rulez self server
+// generation writes (on by default) is treated as a generated artifact: the pin
+// check skips it, so a dev build's ai-rulez@latest does not fail validate. A
+// project that turns the self server off leaves a hand-authored entry, which is
+// checked like any other.
+func TestMCPGeneratedSelfServerIsSkipped(t *testing.T) {
+	entry := mcpJSON(`{"ai-rulez":{"command":"npx","args":["-y","ai-rulez@latest","mcp"],"type":"stdio"}}`)
+	runRuleCases(t, []ruleCase{
+		{name: "the generated self server is not flagged", files: entry, absent: []string{"AR012", "AR602"}},
+		{name: "with the self server off the entry is hand-authored and checked", config: "\n[mcp]\nself_server = false\n", files: entry, want: []string{"AR012:.mcp.json:1"}},
+	})
+}
+
 func TestMCPFindingsAreAnchoredOnTheServerDefinition(t *testing.T) {
 	cfg := "\ngitignore = true\n\n[[mcp_servers]]\nname = \"git\"\ncommand = \"npx\"\nargs = [\"-y\", \"pkg\"]\n\n[[mcp_servers]]\nname = \"a\"\ncommand = \"npx\"\nargs = [\"-y\", \"other\"]\n"
 	runRuleCases(t, []ruleCase{

@@ -375,7 +375,7 @@ local sources are reported as `needs-action` instead of being cloned.
 | ------ | ------ |
 | `windsurf` is renamed `devin`. The output directory `.windsurf/` is now `.devin/` and the agent frontmatter key `windsurf_model` is now `devin_model`. There is no alias. | Rename the preset in `config.toml`, rename `windsurf_model` keys in agent files, and delete the old `.windsurf/` outputs. |
 | `continue-dev` is removed. It has no replacement. | Remove it from `presets`. `doctor` reports it as an error. |
-| `antigravity` no longer adds the `ai-rulez` MCP server on its own. | Set `[mcp] self_server = true` to keep it, as for every other preset. An entry an earlier version wrote into `.agents/mcp_config.json` is removed on the next `generate` unless you set it. |
+| `antigravity` no longer adds the `ai-rulez` MCP server on its own. | The `[mcp] self_server` default is now `true`, so `generate` adds the ai-rulez server to `.agents/mcp_config.json` and the root `.mcp.json` unless you set `[mcp] self_server = false` (or pass `--no-self-mcp`). |
 | `amp` no longer writes `.agents/agents`, which Amp does not read. | None. Agents are listed in `AGENTS.md`. `amp_model` has no effect. |
 | `codex` and `antigravity` write commands as skills (`.agents/skills/<id>/SKILL.md`) instead of `.codex/prompts` and workflows. | None. Files from the old layout are removed on `generate`. |
 | `codex` writes skills to `.agents/skills`, not `.codex/skills`. | Set `codex_skills_dir = ".codex/skills"` to keep the old location. |

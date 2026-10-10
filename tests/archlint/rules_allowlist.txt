@@ -48,7 +48,7 @@ global cmd/commands/domain.go 7
 global cmd/commands/eval.go 3
 global cmd/commands/eval_calibrate.go 2
 global cmd/commands/eval_import.go 2
-global cmd/commands/generate.go 19
+global cmd/commands/generate.go 20
 global cmd/commands/generate_discovery.go 1
 global cmd/commands/generate_preflight.go 1
 global cmd/commands/generate_watch.go 1

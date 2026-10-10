@@ -36,9 +36,9 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir: "/test",
-			// No MCP servers in cfg, so no .agents/settings.json: .agents,
-			// .agents/skills, .agents/agents, GEMINI.md
-			wantOutputs: 4,
+			// The self server is on by default, so .agents/mcp_config.json is
+			// written alongside .agents, .agents/skills, .agents/agents, GEMINI.md
+			wantOutputs: 5,
 			wantErr:     false,
 		},
 		{
@@ -53,7 +53,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 6, // 4 base + skill dir + SKILL.md
+			wantOutputs: 7, // 5 base + skill dir + SKILL.md
 			wantErr:     false,
 		},
 		{
@@ -72,7 +72,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 5, // 4 base + agent .md
+			wantOutputs: 6, // 5 base + agent .md
 			wantErr:     false,
 		},
 		{
@@ -96,7 +96,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 7, // 4 base + skill dir + SKILL.md + agent .md
+			wantOutputs: 8, // 5 base + skill dir + SKILL.md + agent .md
 			wantErr:     false,
 		},
 	}
@@ -573,18 +573,19 @@ func TestAntigravityAgentFrontmatter(t *testing.T) {
 	}
 }
 
-func TestAntigravityMCPServers_SelfServerIsOptIn(t *testing.T) {
+func TestAntigravityMCPServers_SelfServerOnByDefault(t *testing.T) {
 	declared := map[string]*config.MCPServer{"x": {Command: "npx"}}
-	off := antigravityMCPServers(&config.Config{MCPServers: declared})
-	if _, ok := off["ai-rulez"]; ok {
-		t.Errorf("the ai-rulez server must not be written unless [mcp] self_server is set")
-	}
-	on := antigravityMCPServers(&config.Config{MCPServers: declared, MCP: &config.MCPConfig{SelfServer: true}})
+	on := antigravityMCPServers(&config.Config{MCPServers: declared, MCP: &config.MCPConfig{}})
 	self, ok := on["ai-rulez"].(map[string]any)
 	if !ok || self["command"] != "npx" {
-		t.Fatalf("self_server must add the ai-rulez entry, got %v", on["ai-rulez"])
+		t.Fatalf("the self server is on by default and must add the ai-rulez entry, got %v", on["ai-rulez"])
 	}
 	if _, typed := self["type"]; typed {
 		t.Errorf("Antigravity entries carry no type key")
+	}
+
+	off := antigravityMCPServers(&config.Config{MCPServers: declared, MCP: &config.MCPConfig{SelfServer: boolPtr(false)}})
+	if _, ok := off["ai-rulez"]; ok {
+		t.Errorf("an explicit [mcp] self_server = false must not write the ai-rulez server")
 	}
 }

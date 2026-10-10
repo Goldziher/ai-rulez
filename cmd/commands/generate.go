@@ -22,6 +22,7 @@ import (
 var (
 	dryRun             bool
 	updateGitignore    bool
+	noSelfMCP          bool
 	recursive          bool
 	noFetch            bool
 	profile            string
@@ -62,6 +63,7 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&generateFrozen, "frozen", false,
 		"Like --locked, and never use the network: resolve only from the local cache, verified against the lock")
 	GenerateCmd.Flags().BoolVar(&updateGitignore, "gitignore", false, "Update .gitignore files to include generated output patterns")
+	GenerateCmd.Flags().BoolVar(&noSelfMCP, "no-self-mcp", false, "Do not add ai-rulez's own MCP server to the generated .mcp.json (the default is to add it)")
 	specRecursive.Bool(GenerateCmd.Flags(), &recursive, "Find and process configuration files recursively")
 	specProfile.String(GenerateCmd.Flags(), &profile, "Profile to generate, or a comma-separated list to compose several (default: from config or 'default')")
 	GenerateCmd.Flags().StringVar(&generateRole, flagRole, "",
@@ -334,6 +336,9 @@ func applyGenerateOverrides(cfg *config.Config) error {
 	if updateGitignore {
 		enabled := true
 		cfg.Gitignore = &enabled
+	}
+	if noSelfMCP {
+		cfg.SetSelfServer(false)
 	}
 	if len(mcpEnv) > 0 {
 		overrides, err := parseMCPEnvOverrides(mcpEnv)

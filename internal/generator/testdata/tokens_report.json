@@ -6,21 +6,21 @@
     "estimate": false
   },
   "headline_preset": "claude",
-  "headline_always": 566,
+  "headline_always": 569,
   "headline_listing": 203,
-  "headline_always_legacy": 384,
+  "headline_always_legacy": 387,
   "listing_entry_overhead": 27,
   "runtimes": [
     {
       "preset": "claude",
       "files": 9,
-      "always": 566,
+      "always": 569,
       "conditional": 0,
-      "on_demand": 1096,
+      "on_demand": 1120,
       "unmodeled": 0,
       "listing": 203,
       "listed_items": 5,
-      "always_legacy": 384,
+      "always_legacy": 387,
       "conditional_legacy": 47,
       "detailed": true,
       "root_files": 1,
@@ -28,7 +28,7 @@
         {
           "label": "CLAUDE.md",
           "bucket": "always",
-          "tokens": 215,
+          "tokens": 218,
           "artifacts": 1,
           "children": [
             {
@@ -66,7 +66,7 @@
             {
               "label": "provenance hashes and section boundaries",
               "bucket": "always",
-              "tokens": 96,
+              "tokens": 99,
               "artifacts": 1
             }
           ]
@@ -194,8 +194,30 @@
         {
           "label": "per-file provenance hashes",
           "bucket": "on_demand",
-          "tokens": 662,
+          "tokens": 686,
           "artifacts": 8
+        }
+      ]
+    },
+    {
+      "preset": "mcp",
+      "files": 1,
+      "always": 0,
+      "conditional": 0,
+      "on_demand": 0,
+      "unmodeled": 59,
+      "listing": 0,
+      "listed_items": 0,
+      "always_legacy": 0,
+      "conditional_legacy": 0,
+      "detailed": false,
+      "root_files": 0,
+      "entries": [
+        {
+          "label": "sidecar documents",
+          "bucket": "unmodeled",
+          "tokens": 59,
+          "artifacts": 1
         }
       ]
     }
