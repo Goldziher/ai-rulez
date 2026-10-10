@@ -1201,7 +1201,8 @@
               "factory",
               "hermes",
               "agent-plugins",
-              "copilot"
+              "copilot",
+              "pi"
             ]
           },
           "description": "Restrict the published bundle to these plugin runtimes. Default: the [plugin] runtimes."
@@ -2451,7 +2452,8 @@
               "factory",
               "hermes",
               "agent-plugins",
-              "copilot"
+              "copilot",
+              "pi"
             ]
           }
         },
@@ -3279,7 +3281,8 @@
           "factory",
           "hermes",
           "agent-plugins",
-          "copilot"
+          "copilot",
+          "pi"
         ]
       }
     },
