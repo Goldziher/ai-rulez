@@ -87,6 +87,24 @@ func TestPinnedDefaultsKeepTheLegacyGitignoreBlock(t *testing.T) {
 	assert.Equal(t, legacy, string(got), "gitignore = true is pinned, so the block is still wanted")
 }
 
+func TestV4SkillsTableIsRemoved(t *testing.T) {
+	root, dir := writeProject(t, "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[[skills]]\nname = \"alpha\"\npath = \".ai-rulez/skills/alpha\"\n\n[[skills]]\nname = \"beta\"\npath = \".ai-rulez/skills/beta\"\n",
+		map[string]string{
+			"skills/alpha/SKILL.md": "---\nname: alpha\ndescription: d\n---\nBody\n",
+			"skills/beta/SKILL.md":  "---\nname: beta\ndescription: d\n---\nBody\n",
+		})
+
+	report, err := migrate.Run(migrate.Options{Root: root})
+
+	require.NoError(t, err)
+	require.False(t, report.Failed(), "%+v", report.Projects)
+	got, err := os.ReadFile(filepath.Join(dir, "config.toml"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(got), "[[skills]]", "the v5 config rejects it, so the migrator drops it")
+	assert.Contains(t, string(got), "version = \"5.0\"")
+	assert.Contains(t, string(got), "\nname = \"x\"")
+}
+
 func TestWritePreservesCRLFLineEndings(t *testing.T) {
 	root, dir := writeProject(t, "version = \"4.0\"\r\nname = \"x\"\r\npresets = [\"claude\"]\r\n", nil)
 

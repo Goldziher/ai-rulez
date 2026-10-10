@@ -480,3 +480,44 @@ func (d *tomlDoc) dropPreset(name string) int {
 	}
 	return n
 }
+
+// dropArrayTable removes every [[name]] array-of-table block (the header and the
+// key/value lines that belong to it) and returns how many blocks it removed. It
+// is how migrate v5 drops a v4 `[[skills]]` array, which v5 rejects: skills are
+// discovered from .ai-rulez/skills/<name>/SKILL.md.
+func (d *tomlDoc) dropArrayTable(name string) int {
+	drop := map[int]bool{}
+	blocks := 0
+	for i, s := range d.stmts {
+		if !s.header || !s.array || len(s.path) != 1 || s.path[0] != name {
+			continue
+		}
+		blocks++
+		for l := s.start; l < s.end; l++ {
+			drop[l] = true
+		}
+		for k := i + 1; k < len(d.stmts); k++ {
+			n := d.stmts[k]
+			if n.header {
+				break
+			}
+			if len(n.table) == 1 && n.table[0] == name {
+				for l := n.start; l < n.end; l++ {
+					drop[l] = true
+				}
+			}
+		}
+	}
+	if blocks == 0 {
+		return 0
+	}
+	kept := make([]string, 0, len(d.lines))
+	for l, line := range d.lines {
+		if !drop[l] {
+			kept = append(kept, line)
+		}
+	}
+	d.lines = kept
+	d.stmts = parseTOMLDoc(strings.Join(kept, "\n")).stmts
+	return blocks
+}
