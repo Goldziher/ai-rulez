@@ -165,7 +165,9 @@ pi install git:github.com/acme/my-tool
 
 The package contains `.pi/skills/<name>/` with each skill's supporting assets and
 `.pi/prompts/<name>.md` rendered from authored commands, preserving supported Pi front matter.
-Its root `package.json` declares these resources and includes the `pi-package` keyword. For a
+Its root `package.json` lists each generated skill directory and prompt file explicitly and includes
+the `pi-package` keyword. The npm `files` list includes the generated payload, so unrelated contributor
+files under `.pi/` or `.opencode/` are not bundled or loaded as Pi resources. For a
 GitHub repository, the generated name is `@<owner>/pi-<plugin-name>` (`@acme/pi-my-tool` above).
 Commit the generated bundle before installing it through Git; local packages also need no registry.
 

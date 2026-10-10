@@ -196,7 +196,9 @@ func TestOpenCodePublishedFilesSplitsOnBothSeparators(t *testing.T) {
 		MCP: []config.PluginMCPLaunch{{Name: "s", Command: `${PLUGIN_ROOT}\scripts\run.cmd`, Transport: config.TransportStdio}},
 	}
 
-	assert.Contains(t, openCodePublishedFiles(m), "scripts/")
+	files, err := openCodePublishedFiles(m, src, nil)
+	require.NoError(t, err)
+	assert.Contains(t, files, "scripts/")
 }
 
 func TestResolveMCPCarriesDisabledServers(t *testing.T) {
