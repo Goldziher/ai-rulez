@@ -41,6 +41,7 @@ const (
 	RuleCommand       = "command-rename"
 	RulePreset        = "preset-rename"
 	RuleGitignore     = "gitignore-block"
+	RuleSkills        = "skills-table"
 )
 
 // Options configures a migration run.
@@ -431,6 +432,9 @@ func planMainConfig(p *plan, dir string, doc *tomlDoc, oldVersion, srcName strin
 		if n := doc.replaceAll(rw.old, rw.new); n > 0 {
 			p.change(file, RuleCommand, "`"+rw.old+"` -> `"+rw.new+"` in "+plural(n, "line"))
 		}
+	}
+	if n := doc.dropArrayTable("skills"); n > 0 {
+		p.change(file, RuleSkills, "[[skills]] is not a config key in v5; skills under .ai-rulez/skills/<name>/SKILL.md are discovered, so "+plural(n, "[[skills]] block")+" removed")
 	}
 	if !opts.AdoptDefaults {
 		pinDefaults(p, doc, file)
