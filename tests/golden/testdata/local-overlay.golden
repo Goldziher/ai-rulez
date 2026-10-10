@@ -61,7 +61,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2859 854ac11bfa1fbb49e60375c9ab28ce37b4936b85c6a0f5a5c10995a1dade24ff
-.ai-rulez/.generated-manifest.local.json file 0644 18873 54552de3d82fbd523f89046f59b50b668ed50a5293ae88ab64d9742b8cb71d8f
+.ai-rulez/.generated-manifest.local.json file 0644 19069 db8f7467296e7e792c269aa21c0982ebbeb6807151231fca33e1c8d68710bc20
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -237,7 +237,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .kilo/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .kilo/skills/scratch/ dir 0755
 .kilo/skills/scratch/SKILL.md file 0644 148 8854c619aef7bbafc04d15c1ab364d8dda27925d4a7770a40620f9a580bfd582
-.mcp.json file 0600 571 8c416c5b9bc31fc113d5b3694f7c21726cca98653b0b12c964fee621caea8334
+.mcp.json file 0600 724 6bf1c9cff649bb2adb3209ad584f4184e3c4d3633762698698767ebb795cf868
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
 .opencode/agents/architect.md file 0644 166 9dd8bf8ffed3a1f0224ae77627d154fded814856f2c25da1adaed71065ed0691
@@ -418,7 +418,7 @@ INFO  Generation complete files=73
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 2966 3771b0f4604ef7b80bc719bfca03e7870633bfb95435e812af404515ad717d6a
-~ .ai-rulez/.generated-manifest.local.json file 0644 18367 f4ed09752b34ccc4cc0b28bdda5525c116f0c8bf2f3e7f69004a1963c19e521e
+~ .ai-rulez/.generated-manifest.local.json file 0644 18540 99428b34cf632b07e5deeed3298b93ab6d12d60fce070f040dd99b4e5aa3088d
 ~ .gitignore file 0644 1355 dab9a0bd97bffaf4e0847a13d4f646fe18f1ad0a3e7031e99fb2b453d4add6ee
 --- home tree
 (no change)

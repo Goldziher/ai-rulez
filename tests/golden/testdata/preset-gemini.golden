@@ -27,7 +27,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 421 af1ad8b35265feb4d84ae0c620efa8d5b4a718ba4d15ee5138814637070be3f4
-.ai-rulez/.generated-manifest.local.json file 0644 2473 719e0a64daf825c40aeae52d51421209822bbc77a37723f9d2389a0393a4d3df
+.ai-rulez/.generated-manifest.local.json file 0644 2646 75b1043e047497c603f4602a3e9cb9661b9122d6817986117d0b0b9acbd2b4ff
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -62,7 +62,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0644 1389 659f0f934bccba7146d22b21eab16153f7e229a9f00308a2e3476d75d9adf691
 .gitignore file 0644 235 e55c045d5fd39ee7265a26832ca7dbaa2716e10fe0670d55a639f31c3f114955
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 GEMINI.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb

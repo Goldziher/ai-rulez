@@ -22,7 +22,7 @@ INFO  Generation complete files=10
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 451 1d608c87127be4f4bd50f94da5219c7eb7c11bbc1ee3a0956863e649599ea44d
-.ai-rulez/.generated-manifest.local.json file 0644 2067 22946ac653a4155b861263d4e8aee0e90c9a2ad3a0e3ad9b53cb6e4099fb5b36
+.ai-rulez/.generated-manifest.local.json file 0644 2240 f4a59fe3274e783fef716ecd82082d9d8c53d2af0a44ace5116cb9de5cd50f3e
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -60,7 +60,7 @@ INFO  Generation complete files=10
 .letta/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
 .letta/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .letta/settings.json file 0644 632 f3137a7ad411777ec91c9fcaf8d4fc362b74a9470e63501aa2f319758ce0a7c1
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree

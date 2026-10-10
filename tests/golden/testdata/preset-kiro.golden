@@ -12,7 +12,7 @@ INFO  Generation complete files=16
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 637 78ed11a440ccc8d8a5e76142ee1af00b3c2e5bb490aaabc253c124b05f25f622
-.ai-rulez/.generated-manifest.local.json file 0644 2064 0d52950a4d1cd66b4b30440fc4952ffcb8948a312b2d051e4c8b2f9c8486f50e
+.ai-rulez/.generated-manifest.local.json file 0644 2237 2472f3c52b8c8dafd1358783a6e6c7e23e9999f47f358ad2745ae440850bdd29
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -67,7 +67,7 @@ INFO  Generation complete files=16
 .kiro/steering/auto.md file 0644 285 47f1cbb3072ae55fc92a89193fb51dd7207870b0e48c86a704d1055d15c64196
 .kiro/steering/manual.md file 0644 254 a9ef562d5e483332688c4644cdd446d30f19384692e66d97f991a745c3a058a5
 .kiro/steering/typescript.md file 0644 323 96df5cab46ee4766456b060d1091c230cf4f01a7be26f0fea7aa0472a6879b0a
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 AGENTS.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb

@@ -24,7 +24,7 @@ INFO  Generation complete files=12
 .ai/ dir 0755
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 541 6d0384a5c148ab071225e7552479ccf5ccdca66747e2cf96d00a1a822cf96bdb
-.ai-rulez/.generated-manifest.local.json file 0644 1292 47c677765a1af6f41adef01bfcd64270c16f2375ddc19f40def2dce81052072b
+.ai-rulez/.generated-manifest.local.json file 0644 1465 744d9bb7c2c2e90577fd02f876bb4743e5db49a971825254a8f252c389493267
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -64,7 +64,7 @@ INFO  Generation complete files=12
 .aiassistant/rules/manual.md file 0644 252 988e89bac7a662273831650c33214c75df4e5b0ae6ae9df6485bd0aa639b7846
 .aiassistant/rules/typescript.md file 0644 307 8bf3be196db4c22911f62d105d4b808179676c48697fe80ddf9597d8697229df
 .gitignore file 0644 429 aa84d730933fb554fae9820699ca2e7d74da924c38ab9c37de0fb3c63fdd0254
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree

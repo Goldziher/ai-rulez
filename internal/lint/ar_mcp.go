@@ -130,9 +130,22 @@ func (r *runner) isGeneratedSelfServer(srv *mcpServer) bool {
 		return false
 	}
 	entry := r.cfg.SelfMCPServerEntry(schema.Version)
-	command, _ := entry[hookTypeCommand].(string)
-	args, _ := entry["args"].([]string)
+	command, _ := asString(entry[hookTypeCommand])
+	args := asStrings(entry["args"])
 	return srv.command == command && slices.Equal(srv.args, args) && effectiveTransport(srv) == transportStdio
+}
+
+func asString(v any) (string, bool) {
+	s, ok := v.(string)
+	return s, ok
+}
+
+func asStrings(v any) []string {
+	s, ok := v.([]string)
+	if !ok {
+		return nil
+	}
+	return s
 }
 
 func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules

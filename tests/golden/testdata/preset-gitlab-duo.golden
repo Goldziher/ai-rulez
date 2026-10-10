@@ -19,7 +19,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .agents/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 382 6da4d2e0f160851200b8de3c6d38aba8879f37590d91f6240485a23565c5a62b
-.ai-rulez/.generated-manifest.local.json file 0644 1832 12f06fb4b4e9ff62f11d0f1cf0fb9df5dcabbd9022132482a85fd06854303007
+.ai-rulez/.generated-manifest.local.json file 0644 2005 f7b86379d0629d5564028be9ffddb301b72073fec4453ed063d04dc8cb5d6770
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -55,7 +55,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .gitlab/duo/hooks.json file 0644 187 53a26c27c7af59a081113f2767450025cd6ab3d66c33a8515309512c6f35159a
 .gitlab/duo/mcp.json file 0600 400 8c6daf79c1da0ec1f7989fce45109fddbf054dbba9dcee94c4036660f5cacaec
 .gitlab/duo/mr-review-instructions.yaml file 0644 155 dcb98b6b78eb935ccd09ffb91a4f54775cbfc9a67b175432b6f1320cba7417d5
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree

@@ -34,7 +34,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1773 8fb9068bf089eeaf151db53a8dc8d920c5c8bcf583c799b52398c462741090bc
-.ai-rulez/.generated-manifest.local.json file 0644 9968 ef9eb9ad3c53a6badf147d25fabaf5becee0034ee0cb8102305ea35d3496b5e3
+.ai-rulez/.generated-manifest.local.json file 0644 10141 00bf233b0498043d73e054e8b091bb17035b54bed0dfd144caca710ccabc2bab
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -114,7 +114,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0644 1389 a8976a9ca2d5045d4f36f46d7a275f5de5d705dd36e159471aafb5b9df38fe54
 .gitignore file 0644 716 a85b1986bda00faf1a97d98a358a62d20360a31a4a88f513e6d30c3147041729
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
 .opencode/agents/architect.md file 0644 166 9dd8bf8ffed3a1f0224ae77627d154fded814856f2c25da1adaed71065ed0691
@@ -330,7 +330,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 10438 26c12cf1b36e0238eb996135bc2dfd609eaa61042b998aa67cfe5f62bf357be3
+.ai-rulez/.generated-manifest.local.json file 0644 10611 1b669fc06e1db04bfed28ae4e7d6f368bcd8e60189171f8f5ea5f08d7a768e0e
 >>>>
 {
   "version": "1",
@@ -571,6 +571,13 @@ policy:
       {
         "path": [
           "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "9af0bed0de5a24265f721234468805215656161d729ed568d3fd2c01018a9c0c"
+      },
+      {
+        "path": [
+          "mcpServers",
           "local-tool"
         ],
         "sum": "5941345de4e3c3620e53febdc7c79be7161fa71bad6e5b2b73a9d3f1d346c7d0"
@@ -681,7 +688,7 @@ policy:
     ".cursor/hooks.json": "89544cb3897eddf9a660ea7f4780cb660e894a212ace9c041d10caf6cc74eda7",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
     ".gemini/settings.json": "2ea86027e79bde7ca66e400b769db6d7ca05018ef22b2f1952c35593a5bd33d4",
-    ".mcp.json": "893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4",
+    ".mcp.json": "cf753abedf1e02ccfd403d439d81645d2a7eb56fc2a40d14d15f78d2ce3a3813",
     ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
     ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".opencode/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
@@ -1609,10 +1616,19 @@ GEMINI.md
 opencode.json
 # END ai-rulez
 <<<<
-.mcp.json file 0644 419 893d9026bc75ab0203a11511e4c2fc6799157d0d9050b07422635291e2550ee4
+.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
 >>>>
 {
   "mcpServers": {
+    "ai-rulez": {
+      "args": [
+        "-y",
+        "ai-rulez@$VERSION",
+        "mcp"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
     "local-tool": {
       "args": [
         "-y",
