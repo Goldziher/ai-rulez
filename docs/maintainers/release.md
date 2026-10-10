@@ -36,7 +36,11 @@ The workflow does the rest:
 A failed platform build therefore leaves a hidden draft, never a live release with missing binaries.
 
 To run the workflow by hand, use **workflow_dispatch** with the tag, and choose the tag as the ref in "Use workflow
-from". Provenance is signed with the ref's identity, and `ai-rulez verify --self` pins `refs/tags/v...`.
+from". The `meta` job enforces this: when the dispatch did not come from `refs/tags/<tag>` it fails with a clear error
+and publishes nothing. Provenance is signed with the run's ref identity, `ai-rulez verify --self` pins `refs/tags/v...`,
+and a run from a branch would otherwise sign `refs/heads/...` and produce binaries every one of which fails
+`verify --self`. Reruns and the heal flow are unaffected: re-run from the tag's ref (or re-run the failed jobs of a tag
+push), and the same ref identity is carried.
 
 ## Platform matrix
 

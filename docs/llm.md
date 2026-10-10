@@ -168,7 +168,7 @@ Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.2.0` in `go.mod`. 
 
 ### Testing
 
-The `internal/llm` tests run the real liter-llm client against local `httptest` servers: no network and no key. With a `base_url` liter-llm treats every model as generic OpenAI-compatible, so provider-specific request and usage mappings (Gemini, Vertex, Bedrock) are liter-llm's own tests' job and cannot be reached from here (#256). The live tests (`AI_RULEZ_LIVE_LLM=1`, `GEMINI_API_KEY`) cover Gemini end to end and are not part of CI.
+The `internal/llm` tests run the real liter-llm client against local `httptest` servers: no network and no key. With a `base_url` liter-llm treats every model as generic OpenAI-compatible, so provider-specific request and usage mappings (Gemini, Vertex, Bedrock) are liter-llm's own tests' job and cannot be reached from here (#256). The live tests (`AI_RULEZ_LIVE_LLM=1`, `GEMINI_API_KEY`) cover Gemini end to end and are not part of PR CI; the `live-llm` job in `.github/workflows/live.yml` runs `go test ./internal/llm/... ./internal/evals/...` on `workflow_dispatch` and a weekly schedule. It needs the `GEMINI_API_KEY` repository secret (and optionally `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`, unused by the current tests), writes its transcripts to `AI_RULEZ_LIVE_OUT` and uploads them with the test log as an artifact.
 
 ## Using it from a feature
 
