@@ -340,7 +340,7 @@ type strictVerdict struct {
 // silences or tightens another's. done is true when the run ends before a
 // report exists (--update-baseline).
 func judgeStrict(reports []*lint.Report, cfgs []*config.Config) (verdict strictVerdict, done bool, err error) {
-	excess, done, err := prepareReportsErr(reports, cfgs)
+	excess, done, err := prepareReportsErr(cmdContext(), reports, cfgs)
 	if err != nil || done {
 		return strictVerdict{}, done, err
 	}
@@ -383,8 +383,8 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 
 // prepareReports is prepareReportsErr for callers that print and exit: it
 // reports an error on stderr and returns exit code 1 with done set.
-func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, code int, done bool) {
-	excess, done, err := prepareReportsErr(reports, cfgs)
+func prepareReports(ctx context.Context, reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, code int, done bool) {
+	excess, done, err := prepareReportsErr(ctx, reports, cfgs)
 	if err != nil {
 		renderStderr(err)
 		return nil, 1, true
@@ -399,7 +399,7 @@ func prepareReports(reports []*lint.Report, cfgs []*config.Config) (excess [][]l
 // the full set, and only then the views that narrow the report (analyzer
 // filter, changed-only) and the risk score of what is shown. done is true when
 // the run ends here (--update-baseline).
-func prepareReportsErr(reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, done bool, err error) {
+func prepareReportsErr(ctx context.Context, reports []*lint.Report, cfgs []*config.Config) (excess [][]lint.RatchetExcess, done bool, err error) {
 	if validateUpdateBaseline {
 		if err := updateBaselines(reports, cfgs); err != nil {
 			return nil, true, err
@@ -411,7 +411,7 @@ func prepareReportsErr(reports []*lint.Report, cfgs []*config.Config) (excess []
 	}
 	reportRefusedRatchet(reports, cfgs)
 	if fixRequested() {
-		if err := applyFixes(reports, cfgs); err != nil {
+		if err := applyFixes(ctx, reports, cfgs); err != nil {
 			return nil, true, err
 		}
 	}
@@ -419,7 +419,7 @@ func prepareReportsErr(reports []*lint.Report, cfgs []*config.Config) (excess []
 	for i, report := range reports {
 		excess[i] = ratchetFor(cfgAt(cfgs, i)).Excess(report.Findings)
 	}
-	if err := narrowToChanged(reports, cfgs); err != nil {
+	if err := narrowToChanged(ctx, reports, cfgs); err != nil {
 		return nil, true, err
 	}
 	for i, report := range reports {
@@ -511,11 +511,11 @@ func warnUnpinned(cfg *config.Config) {
 // warnFrontmatter logs the frontmatter problems that plain validate and generate
 // report without --strict: an agent key no tool reads (dropped silently
 // otherwise) and a skills: entry that names no skill.
-func warnFrontmatter(cfg *config.Config) {
+func warnFrontmatter(ctx context.Context, cfg *config.Config) {
 	if cfg == nil || cfg.Content == nil {
 		return
 	}
-	tree, err := strictTreeCache.Load(cfg.BaseDir)
+	tree, err := strictTreeCache.LoadContext(ctx, cfg.BaseDir)
 	if err != nil {
 		return
 	}
@@ -559,12 +559,12 @@ func enforceScanImports(cfg *config.Config) error {
 // committed or sent to a model, and content can reach them through a symlink or
 // a copy-paste. An inline ignore comment or a [lint] rule setting silences a
 // reviewed false positive, as it does for `validate --strict`.
-func authoredSecretGate(cfg *config.Config) error {
+func authoredSecretGate(ctx context.Context, cfg *config.Config) error {
 	if cfg.BaseDir == "" {
 		return nil
 	}
 	var loader lint.Loader
-	tree, err := loader.LoadContext(cmdContext(), cfg.BaseDir)
+	tree, err := loader.LoadContext(ctx, cfg.BaseDir)
 	if err != nil {
 		return oops.Wrapf(err, "index content for the secret scan")
 	}

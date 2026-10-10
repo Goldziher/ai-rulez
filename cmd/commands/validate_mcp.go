@@ -52,7 +52,7 @@ func (v *mcpValidator) validate(ctx context.Context, cfg *config.Config, p handl
 		return nil, err
 	}
 	reports, cfgs := []*lint.Report{report}, []*config.Config{cfg}
-	verdict, _, err := judgeStrict(reports, cfgs) //nolint:contextcheck // the shared baseline and fix steps take no context, as in the command
+	verdict, _, err := judgeStrict(reports, cfgs) //nolint:contextcheck // the baseline and fix steps run on the command context, not this request's
 	if err != nil {
 		return nil, err
 	}

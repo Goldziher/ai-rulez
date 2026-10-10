@@ -34,7 +34,7 @@ func TestImportGateRunsOnEveryWritingMode(t *testing.T) {
 			t.Cleanup(func() { pluginMode, dryRun = oldPlugin, oldDry })
 
 			// Act
-			err := importGate(cfg)
+			err := importGate(context.Background(), cfg)
 
 			// Assert
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -86,7 +86,7 @@ func TestImportGateRefusesASecretInAuthoredContent(t *testing.T) {
 			t.Cleanup(func() { dryRun = oldDry })
 
 			// Act
-			err = importGate(cfg)
+			err = importGate(context.Background(), cfg)
 
 			// Assert
 			if !tt.wantErr {

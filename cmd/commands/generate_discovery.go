@@ -283,7 +283,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
-	if err := importGate(cfg); err != nil {
+	if err := importGate(ctx, cfg); err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
 	}
