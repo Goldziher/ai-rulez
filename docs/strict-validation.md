@@ -3351,7 +3351,7 @@ an llms.txt file has a heading other than the H1 title and H2 section names, or 
 
 ### AR9P3 llmstxt-link-entry-invalid
 
-an llms.txt file-list section has content that is not a list entry holding a [name](url) link
+an llms.txt file-list section has content that is not a list entry holding a `[name](url)` link
 
 - Default severity: `error`
 - Analyzer: `llmstxt` (scope `item`)

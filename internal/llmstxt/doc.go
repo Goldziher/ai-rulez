@@ -47,7 +47,7 @@ func Rules() []Rule {
 		{CodeTitleMissing, "llmstxt-title-missing", SeverityError, "an llms.txt file does not start with a single H1 title"},
 		{CodeSummaryMisplaced, "llmstxt-summary-misplaced", SeverityWarning, "the llms.txt summary blockquote is empty or does not directly follow the H1 title"},
 		{CodeHeadingInvalid, "llmstxt-heading-invalid", SeverityError, "an llms.txt file has a heading other than the H1 title and H2 section names, or an H2 without a name"},
-		{CodeLinkEntryInvalid, "llmstxt-link-entry-invalid", SeverityError, "an llms.txt file-list section has content that is not a list entry holding a [name](url) link"},
+		{CodeLinkEntryInvalid, "llmstxt-link-entry-invalid", SeverityError, "an llms.txt file-list section has content that is not a list entry holding a `[name](url)` link"},
 		{CodeOptionalMisplaced, "llmstxt-optional-misplaced", SeverityWarning, "the llms.txt Optional section is not the last section"},
 		{CodeSectionDuplicateOrEmpty, "llmstxt-section-duplicate-or-empty", SeverityWarning, "an llms.txt section has no entries, or repeats the name of an earlier section"},
 		{CodeLinkTargetInvalid, "llmstxt-link-target-invalid", SeverityWarning, "an llms.txt link has an empty target"},
