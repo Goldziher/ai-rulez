@@ -147,7 +147,7 @@ func TestEveryJSONContractValidatesAgainstItsSchema(t *testing.T) {
 	require.Equal(t, 0, env.run(plugin, "publish").ExitCode)
 	runAll(plugin, []reportCase{
 		{"publish verify", []string{"publish", "verify", "dist"}, 0},
-		{"publish emit", []string{"publish", "emit", "kiro-steering", "--experimental", "--out", filepath.Join(t.TempDir(), "emit")}, 0},
+		{"publish emit", []string{"publish", "emit", "kiro-steering", "--experimental", "--output-dir", filepath.Join(t.TempDir(), "emit")}, 0},
 	})
 
 	for _, c := range schema.JSONContracts {
