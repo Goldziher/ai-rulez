@@ -67,6 +67,24 @@ func TestConformantMinimalBundle(t *testing.T) {
 	assert.Empty(t, b.Validate())
 }
 
+func TestDomainDescriptorIsNotAConcept(t *testing.T) {
+	// A 4.x project carries domains/<name>/DOMAIN.md beside the domain's content
+	// directories. v5 reads a domain's content from those directories and never
+	// this file, so the bundle does not require it to carry a type.
+	b := load(t, map[string]string{
+		"domains/api/rules/style.md": "---\ntype: Rule\n---\nbody\n",
+		"domains/api/DOMAIN.md":      "---\npriority: high\n---\n# API domain\n",
+	})
+	assert.NotContains(t, codes(b.Validate()), "AR9B1 domains/api/DOMAIN.md")
+}
+
+func TestRuleNamedDomainMdIsStillAConcept(t *testing.T) {
+	// Only the domain-descriptor path is skipped: a rule that happens to be named
+	// DOMAIN.md is still a concept and still needs a type.
+	b := load(t, map[string]string{"rules/DOMAIN.md": "# no frontmatter\n"})
+	assert.Contains(t, codes(b.Validate()), "AR9B1 rules/DOMAIN.md")
+}
+
 func TestToleratesUnknownTypeKeysAndMissingIndex(t *testing.T) {
 	b := load(t, map[string]string{
 		"a.md": "---\ntype: Totally Unknown\nweird: {x: 1}\nx-other: y\n---\nbody [gone](/missing.md)\n",
