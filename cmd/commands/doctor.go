@@ -19,9 +19,10 @@ const exitDoctorFindings = 2
 const exitDoctorCannotRun = 1
 
 var (
-	doctorStrict  bool
-	doctorJSON    bool
-	doctorProfile string
+	doctorStrict       bool
+	doctorJSON         bool
+	doctorProfile      string
+	doctorMCPUserScope bool
 )
 
 // DoctorCmd runs read-only diagnostics over the project.
@@ -34,6 +35,12 @@ removed continue-dev and windsurf presets), generated files match their sources,
 generated paths are git-ignored, shared settings documents still parse, MCP
 ${VAR} placeholders resolve, hook scripts exist and are executable, ai-rulez.lock
 matches the config, and the tool behind each preset is on PATH (info only).
+
+With --mcp-user-scope it also compares the project MCP servers with the
+same-named servers in a configured harness's user or local scope (for example
+~/.claude.json), naming both endpoints and the removal command, and reports
+generated servers that differ only by name while pointing at the same url. That
+check reads files outside the project, so it is off by default.
 
 Findings are errors, warnings or info.
 
@@ -55,6 +62,7 @@ func init() {
 	addJSONFormat(DoctorCmd.Flags(), &doctorJSON, "")
 	specProfile.String(DoctorCmd.Flags(), &doctorProfile, "Profile to render for the drift and gitignore checks (default: from config or 'default')")
 	specNoLocal.Bool(DoctorCmd.Flags(), &noLocal, "Ignore the machine-local config.local.* overlay and local/ content")
+	DoctorCmd.Flags().BoolVar(&doctorMCPUserScope, "mcp-user-scope", false, "Also check MCP servers against the configured harnesses' user and local scopes (reads files outside the project, for example ~/.claude.json); off by default")
 }
 
 // runDoctor runs the diagnostics, prints the report to out and returns the
@@ -65,8 +73,9 @@ func runDoctor(ctx context.Context, out io.Writer) int {
 	defer progress.SetQuiet(false)
 
 	report := doctor.Run(ctx, doctor.Options{
-		Profile: doctorProfile,
-		Load:    loadConfigForCommand,
+		Profile:     doctorProfile,
+		Load:        loadConfigForCommand,
+		ReadUserMCP: doctorMCPUserScope,
 	})
 
 	var err error
