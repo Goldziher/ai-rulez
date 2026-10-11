@@ -268,3 +268,70 @@ func TestRunTokens_BudgetGatesTheListing(t *testing.T) {
 	assert.True(t, overBudget, "only the listing pushes the total over the ceiling")
 	assert.Contains(t, out.String(), "Over budget")
 }
+
+// TestRunTokens_JSONAlwaysLoadedKey pins the stable key a CI budget gate reads.
+func TestRunTokens_JSONAlwaysLoadedKey(t *testing.T) {
+	resetTokensFlags(t)
+	profile = "backend"
+	tokensJSON = true
+
+	var out bytes.Buffer
+	_, err := runTokensAt(t, &out)
+	require.NoError(t, err)
+
+	var report struct {
+		HeadlineAlways int `json:"headline_always"`
+		AlwaysLoaded   int `json:"always_loaded"`
+	}
+	require.NoError(t, json.Unmarshal(out.Bytes(), &report))
+	assert.Equal(t, report.HeadlineAlways, report.AlwaysLoaded,
+		"always_loaded is the always-loaded headline under a fixed name")
+	assert.Positive(t, report.AlwaysLoaded)
+}
+
+// duplicateSkillProject writes a project whose root skill and domain skill share
+// a name, so generation collapses one and warns "Duplicate skill collapsed".
+func duplicateSkillProject(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), `version = "5.0"
+name = "dup"
+presets = ["claude"]
+default = "backend"
+
+[profiles]
+backend = ["backend"]
+`)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "skills", "dup", "SKILL.md"),
+		"---\nname: dup\ndescription: root copy\n---\nroot\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "domains", "backend", "skills", "dup", "SKILL.md"),
+		"---\nname: dup\ndescription: domain copy\n---\ndomain\n")
+	return filepath.Join(root, ".ai-rulez", "config.toml")
+}
+
+// TestRunTokens_JSONRoutesDiagnosticsToStderr: stdout must be exactly one JSON
+// document, so the duplicate-skill warning and the over-budget line go to stderr
+// where --format json is requested.
+func TestRunTokens_JSONRoutesDiagnosticsToStderr(t *testing.T) {
+	resetTokensFlags(t)
+	tokensJSON = true
+	tokensBudget = 1
+	useConfigFile(t, duplicateSkillProject(t))
+
+	var out bytes.Buffer
+	var overBudget bool
+	stderr := captureStderr(t, func() {
+		var err error
+		overBudget, err = runTokens(&out)
+		require.NoError(t, err)
+	})
+
+	var report map[string]any
+	require.NoError(t, json.Unmarshal(out.Bytes(), &report),
+		"stdout must be one parseable document: %s", out.String())
+	assert.True(t, overBudget)
+	assert.Contains(t, stderr, "Duplicate skill collapsed")
+	assert.Contains(t, stderr, "Over budget")
+	assert.NotContains(t, out.String(), "Duplicate skill collapsed")
+	assert.NotContains(t, out.String(), "Over budget")
+}
