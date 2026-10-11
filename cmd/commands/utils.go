@@ -9,9 +9,27 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/crud"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
+	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/samber/oops"
 	"github.com/spf13/pflag"
 )
+
+// stderrIsTerminal reports whether standard error is a terminal. The animated
+// progress bars write there, so a pipe, a log file or CI must not receive their
+// frames.
+func stderrIsTerminal() bool {
+	info, err := os.Stderr.Stat()
+	return err == nil && info.Mode()&os.ModeCharDevice != 0
+}
+
+// applyProgressMode sets the progress UI state for a command. The animated bars
+// and spinners draw only when the user did not ask for quiet, stderr is a
+// terminal and NO_COLOR is unset; the informational lines (PrintlnIfNotQuiet)
+// are unaffected by interactivity, so they still reach a redirected log.
+func applyProgressMode(quiet bool) {
+	progress.SetQuiet(quiet)
+	progress.SetInteractive(!quiet && stderrIsTerminal() && os.Getenv("NO_COLOR") == "")
+}
 
 // newContentOperator opens the CRUD operator for the selected project (see
 // openOperator). With

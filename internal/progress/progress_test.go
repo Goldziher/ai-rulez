@@ -3,6 +3,7 @@ package progress
 import (
 	"bytes"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -10,6 +11,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+// TestMain makes the suite see an interactive terminal, so the animated path is
+// exercised; a test that needs the non-interactive path calls SetInteractive(false).
+func TestMain(m *testing.M) {
+	SetInteractive(true)
+	os.Exit(m.Run())
+}
 
 func TestQuietMode(t *testing.T) {
 	t.Run("set and get quiet mode", func(t *testing.T) {

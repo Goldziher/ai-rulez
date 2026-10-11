@@ -326,7 +326,7 @@ global internal/policy/sections_mcp.go 1
 global internal/policy/sections_signing.go 2
 global internal/preflight/automation.go 2
 global internal/pricing/pricing.go 1
-global internal/progress/progress.go 3
+global internal/progress/progress.go 2
 global internal/publish/build.go 1
 global internal/publish/emit/emit.go 1
 global internal/publish/redact.go 1
