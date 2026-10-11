@@ -115,11 +115,13 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 	g.warnScopeLimits(cfg, plan)
 
 	if g.Spec.Root != nil && !g.rootReplacedByAgentsMD(cfg) {
-		rootOutput, err := g.renderRootFile(content, baseDir, cfg, plan)
+		rootOutput, emit, err := g.renderRootFile(content, baseDir, cfg, plan)
 		if err != nil {
 			return nil, fmt.Errorf("render root file: %w", err)
 		}
-		outputs = append(outputs, rootOutput)
+		if emit {
+			outputs = append(outputs, rootOutput)
+		}
 	}
 
 	ruleOutputs, err := g.renderRuleFiles(plan, content, baseDir, cfg)
@@ -959,7 +961,19 @@ const agentsMDImportLine = "@AGENTS.md"
 
 // renderRootFile composes the root instructions file (CLAUDE.md, AGENTS.md, ...)
 // from the spec.Root.Sections list. Closed-set dispatch on each section.
-func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, cfg *config.Config, plan *rulesPlan) (config.OutputFile, error) {
+//
+// It returns emit=false when the file would hold only the generated header — the
+// project name and description, with no rule, context, skill or agent behind
+// them. A plugin-authoring root delivers its content through the plugin, so a
+// root that kept a preset but declares no content writes no instruction file at
+// all, and the skip is reported so the preset list can be trimmed. A root with
+// any content, and any root that is not plugin-authoring, is unchanged.
+func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, cfg *config.Config, plan *rulesPlan) (out config.OutputFile, emit bool, err error) {
+	if content.IsEmpty() && cfg.HasPluginAuthoring() {
+		g.warnEmptyRootFile(cfg)
+		return config.OutputFile{}, false, nil
+	}
+
 	var b strings.Builder
 
 	rootRelPath := g.Spec.Root.File
@@ -1024,7 +1038,18 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 		Path:       outputPath,
 		Content:    rendered,
 		OmitsRules: len(plan.files) > 0 || len(plan.legacy) > 0,
-	}, nil
+	}, true, nil
+}
+
+// warnEmptyRootFile reports a root instruction file skipped because the content
+// tree it would render carries nothing. It names the file and the preset so the
+// empty root can be found and the preset list trimmed.
+func (g *Generator) warnEmptyRootFile(cfg *config.Config) {
+	cfg.Diag.Warn(
+		"Not writing "+g.Spec.Root.File+" for preset "+g.Spec.Name+": it would contain only the generated header",
+		"preset", g.Spec.Name, "root", g.Spec.Root.File, "project", cfg.Name,
+		"hint", "add rules, context, skills or agents, or remove the preset",
+	)
 }
 
 func countContent(content *config.ContentTree, plan *rulesPlan) (rules, agents int) {
