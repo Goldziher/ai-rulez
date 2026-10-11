@@ -19,11 +19,13 @@ import (
 // CommandNoContext) so the environment a git hook inherits cannot redirect git
 // to the hook's repository. Do not add a non-test file here.
 var directGitTestAllowList = map[string]bool{
+	"cmd/commands/generate_recursive_gitignore_test.go": true,
 	"internal/config/bundle_exclude_test.go":          true,
 	"internal/config/local_overlay_tracked_test.go":   true,
 	"internal/doctor/doctor_test.go":                  true,
 	"internal/generator/generic_sidecars_e2e_test.go": true,
 	"internal/generator/gitignore_matrix_test.go":     true,
+	"internal/generator/gitignore_recursive_test.go":  true,
 	"internal/generator/local_content_test.go":        true,
 	"internal/generator/local_drift_test.go":          true,
 	"internal/generator/local_ignore_verify_test.go":  true,
