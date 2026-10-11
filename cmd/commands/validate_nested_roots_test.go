@@ -31,11 +31,13 @@ func resetValidateFlags(t *testing.T) {
 	oldConfigOnly, oldWarnings, oldFailOn := validateConfigOnly, validateWarnings, validateFailOn
 	oldOutput, oldExplain, oldShowPolicy := validateOutput, validateExplain, validateShowPolicy
 	oldRepoRoot, oldNoLocal := validateRepoRoot, noLocal
+	oldMCPUserScope := validateMCPUserScope
 	t.Cleanup(func() {
 		validateRecursive, validateFormat, validateStrict = oldRecursive, oldFormat, oldStrict
 		validateConfigOnly, validateWarnings, validateFailOn = oldConfigOnly, oldWarnings, oldFailOn
 		validateOutput, validateExplain, validateShowPolicy = oldOutput, oldExplain, oldShowPolicy
 		validateRepoRoot, noLocal = oldRepoRoot, oldNoLocal
+		validateMCPUserScope = oldMCPUserScope
 		progress.SetQuiet(false)
 	})
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/doctor"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
@@ -55,6 +56,10 @@ var (
 	validateAnalyzers []string
 	// validateAllowEgress names the egress = true scanners allowed to run (--allow-egress).
 	validateAllowEgress []string
+	// validateMCPUserScope is --mcp-user-scope: also compare the project MCP
+	// servers with the configured harnesses' user and local scopes. It reads
+	// files outside the project, so it is off by default and needs --strict.
+	validateMCPUserScope bool
 	// strictSecurityOnly restricts strict validation to the security family (the scan command).
 	strictSecurityOnly bool
 	strictTreeCache    lint.Loader
@@ -65,13 +70,14 @@ var (
 func strictOnlyFlagSet() bool {
 	return validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" ||
 		fixRequested() || validateDryRun || validateLintProfile != "" || len(validateAnalyzers) > 0 ||
-		baselineFlagsSet() || changedRev() != "" || scannerFlagsSet() || validateApprovalsBase != "" || validateVerifiers
+		baselineFlagsSet() || changedRev() != "" || scannerFlagsSet() || validateApprovalsBase != "" || validateVerifiers ||
+		validateMCPUserScope
 }
 
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
 	if !validateStrict && strictOnlyFlagSet() {
-		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers and the baseline flags need the content checks: drop --config-only")
+		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed, --fix, --verifiers, --mcp-user-scope and the baseline flags need the content checks: drop --config-only")
 	}
 	if len(validateAllowEgress) > 0 && !validateExtern {
 		return oops.Errorf("--allow-egress requires --external")
@@ -207,10 +213,44 @@ func strictLint(ctx context.Context, cfg *config.Config) (*lint.Report, error) {
 		return nil, err
 	}
 	scanner = withScannerCache(scanner, cfg)
-	return lint.RunWith(cfg, tree, lint.Options{
+	report, err := lint.RunWith(cfg, tree, lint.Options{
 		SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress,
 		Scanner: scanner, Analyzers: validateAnalyzers, NeedDeps: changedRev() != "", Cwd: workingDir(),
 	}, opts...)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // already contextual
+	}
+	if validateMCPUserScope {
+		report.Findings = append(report.Findings, mcpUserScopeFindings(cfg)...)
+	}
+	return report, nil
+}
+
+// mcpUserScopeFindings runs the doctor's MCP scope check (--mcp-user-scope) and
+// turns its findings into lint findings, so a strict run reports and judges them
+// like any other. It reads user-scope files, which is why it is opt-in.
+func mcpUserScopeFindings(cfg *config.Config) []lint.Finding {
+	findings := doctor.MCPScopeFindings(cfg)
+	out := make([]lint.Finding, 0, len(findings))
+	for _, f := range findings {
+		file := f.Path
+		if file == "" {
+			file = filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
+		}
+		message := f.Message
+		if f.Hint != "" {
+			message += " Fix: " + f.Hint
+		}
+		out = append(out, lint.Finding{
+			Code:     lint.CodeMCPConfigInvalid,
+			Name:     "mcp-config-invalid",
+			Severity: lint.Severity(f.Severity),
+			File:     file,
+			Line:     1,
+			Message:  message,
+		})
+	}
+	return out
 }
 
 // governanceLintOptions are the findings strict lint takes from outside the
