@@ -512,6 +512,9 @@ func renderSharedMCPJSON(mcpPath string, cfg *config.Config) (jsonmerge.Result, 
 			if len(server.Headers) > 0 {
 				entry[keyHeaders] = server.Headers
 			}
+			if oauth := OAuthJSONEntry(server.OAuth); oauth != nil {
+				entry["oauth"] = oauth
+			}
 		default:
 			entry["type"] = config.TransportStdio
 			entry[keyCommand] = server.Command
