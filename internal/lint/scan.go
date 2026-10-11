@@ -96,6 +96,11 @@ func (r *runner) checkLink(it *item, line int, target string) {
 			cands = append(cands, filepath.Join(it.itemDir, filepath.FromSlash(pathPart)))
 		}
 		cands = append(cands, filepath.Join(r.rootAbs(), filepath.FromSlash(pathPart)))
+		// The content is emitted into each scope's root file, so a link written
+		// relative to the emitted file resolves from the scope directory.
+		for _, dir := range r.scopeDirs() {
+			cands = append(cands, filepath.Join(dir, filepath.FromSlash(pathPart)))
+		}
 		if r.tree.Explicit {
 			cands = append(cands, filepath.Join(r.tree.Top, filepath.FromSlash(pathPart)))
 		}
@@ -168,7 +173,7 @@ func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() boo
 	if r.baseRel != "" {
 		r.dep(it.abs, filepath.Join(r.tree.Top, filepath.FromSlash(r.baseRel), filepath.FromSlash(tok)))
 	}
-	if !r.existsRepo(tok) && !r.numberedPrefixExists(tok) {
+	if !r.existsRepo(tok) && !r.existsScope(tok) && !r.numberedPrefixExists(tok) {
 		r.add(CodePathMissing, it.abs, line, "path %q does not exist in the repository", path.Clean(tok))
 	}
 }
@@ -217,6 +222,39 @@ func (r *runner) checkSkillRelative(it *item, line int, tok, prefix string) bool
 // nested root, from that root's directory.
 func (r *runner) existsRepo(rel string) bool {
 	return r.tree.Exists(rel) || (r.baseRel != "" && r.tree.Exists(r.baseRel+"/"+rel))
+}
+
+// scopeDirs lists the directories the configuration's [[scopes]] emit into, as
+// absolute paths. A scope renders the root content into its own root file under
+// BaseDir/<scope.Path>, so a relative link in that content is written relative
+// to the scope directory, not to the source file. Empty without scopes.
+func (r *runner) scopeDirs() []string {
+	if len(r.cfg.Scopes) == 0 {
+		return nil
+	}
+	base := r.rootAbs()
+	out := make([]string, 0, len(r.cfg.Scopes))
+	for _, s := range r.cfg.Scopes {
+		if s.Path != "" {
+			out = append(out, filepath.Join(base, filepath.FromSlash(s.Path)))
+		}
+	}
+	return out
+}
+
+// existsScope reports whether rel exists under a scope's emitted directory,
+// which is where the root content lands when it is rendered into that scope.
+func (r *runner) existsScope(rel string) bool {
+	for _, dir := range r.cfg.Scopes {
+		if dir.Path == "" {
+			continue
+		}
+		c := path.Join(r.baseRel, filepath.ToSlash(dir.Path), rel)
+		if r.tree.Exists(c) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[string]bool) {
