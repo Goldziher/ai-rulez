@@ -3,14 +3,18 @@ package commands
 import (
 	"fmt"
 	"io"
+	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -77,9 +81,10 @@ func init() {
 // from 1 so a hook can tell "over budget" from "the command failed".
 const budgetExceededExitCode = 2
 
-// runTokens builds and writes the report. It returns whether a configured budget
-// was exceeded rather than exiting, so the behavior is testable without a
-// subprocess.
+// runTokens builds and writes the report. out carries the result; under
+// --format json every diagnostic goes to stderr instead, so out stays exactly
+// one parseable document. It returns whether a configured budget was exceeded
+// rather than exiting, so the behavior is testable without a subprocess.
 func runTokens(out io.Writer) (overBudget bool, err error) {
 	counter, err := tokens.New(tokensTokenizer)
 	if err != nil {
@@ -92,6 +97,13 @@ func runTokens(out io.Writer) (overBudget bool, err error) {
 	}
 	if err := cfg.Validate(); err != nil {
 		return false, err
+	}
+
+	if tokensJSON {
+		// stdout carries one JSON document, so every diagnostic goes to stderr:
+		// the generator's warnings through a host logger bound to stderr, and
+		// the over-budget line below.
+		cfg.Host.Log = logger.New(os.Stderr, tokensLogLevel())
 	}
 
 	targets, err := tokenTargets(cfg)
@@ -127,13 +139,30 @@ func runTokens(out io.Writer) (overBudget bool, err error) {
 
 	for _, report := range reports {
 		if report.Budget != nil && report.Budget.Exceeded {
-			reportWriter{out}.printf(
+			diagnostic := out
+			if tokensJSON {
+				diagnostic = os.Stderr
+			}
+			reportWriter{diagnostic}.printf(
 				"\nOver budget: profile %q always-loaded surface is %s tokens, ceiling is %s.\n",
 				report.Profile, humanCount(report.Budget.Actual), humanCount(report.Budget.Limit))
 			overBudget = true
 		}
 	}
 	return overBudget, nil
+}
+
+// tokensLogLevel mirrors applyLogLevel so a JSON report keeps the verbosity
+// --debug and -q asked for while its diagnostics go to stderr.
+func tokensLogLevel() slog.Level {
+	switch {
+	case viper.GetBool("debug"):
+		return slog.LevelDebug
+	case viper.GetBool("quiet"):
+		return slog.LevelWarn
+	default:
+		return slog.LevelInfo
+	}
 }
 
 // reportWriter formats the human-readable report. Write errors are dropped on
