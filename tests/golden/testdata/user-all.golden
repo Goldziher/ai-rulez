@@ -509,7 +509,7 @@ INFO  User-level generation complete files=162
 + .config/agents/skills/helper/ dir 0755
 + .config/agents/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
 + .config/ai-rulez/.generated-manifest.json file 0644 11962 640d0b6e8a6824ed2257ccf40bc5bf86b9487fde96855172c40837521019e4b7
-+ .config/ai-rulez/.generated-manifest.local.json file 0644 20235 7b2112f3dbaed93a55383c3c11365c02cdc384062ca1349844f72d81e9211c3b
++ .config/ai-rulez/.generated-manifest.local.json file 0644 20235 fec2a1865de3f7e60bf089380d00cec6668e386a25d8047195cd351c560e5d4f
 + .config/amp/ dir 0755
 + .config/amp/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .config/amp/plugins/ dir 0755
@@ -1314,7 +1314,7 @@ INFO  User-level generation complete files=215
 + .config/agents/skills/db/ dir 0755
 + .config/agents/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
 ~ .config/ai-rulez/.generated-manifest.json file 0644 14835 5d0c9b15ce790eb34caa6de6aa24f55d63c823b5e7fb6025c33d8db910288bde
-~ .config/ai-rulez/.generated-manifest.local.json file 0644 20339 f7b12fa54b47e4d593b81a58667dad4344e07af809729d9c59a66f6284fd1c8e
+~ .config/ai-rulez/.generated-manifest.local.json file 0644 20339 f12e62e27799a8de8c4a6922712d16122b4ef355b809962b0aa54b022479aa6e
 ~ .config/amp/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 ~ .config/crush/CRUSH.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 + .config/crush/skills/db/ dir 0755

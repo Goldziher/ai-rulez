@@ -38,7 +38,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-plan-before.json file 0644 8496 6ff77b0c04903784d1d14afb324e362e9ab70e191256e8a7d98706fdc451f06c
+plan-before.json file 0644 8496 81a2aac82b095d45a00e8c5f7ccb8aa2de62f79d35a6ae6412f2e02968bc28f0
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -303,7 +303,7 @@ exit: 0
       "action": "write",
       "mode": "0644",
       "size": 372,
-      "sha256": "26ebce3468ff5c1ce23a68089178c55adc1ead393c61d5a78a87a5f5a7c32101"
+      "sha256": "1849f271ad8e1dedfe497a3995b827494448d3fd33aa2b73b0c02b4a247abd53"
     },
     {
       "path": ".cursor/mcp.json",
@@ -412,8 +412,8 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 + .agents/skills/reviewer/scripts/ dir 0755
 + .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-+ .ai-rulez/.generated-manifest.json file 0644 1432 aa681753644d8842f776fbda595b270e2e9b53425fd94e5b5a8426518c54dc1d
-+ .ai-rulez/.generated-manifest.local.json file 0644 5038 791bd0c059959b633c7a2c23fa9b36d29e7a8b3b29de548bfe8daa9ae1d0a884
++ .ai-rulez/.generated-manifest.json file 0644 1924 f07181ece773545673eab478bf199165d4ffa10d7b6c56a84053fc0032d7c9aa
++ .ai-rulez/.generated-manifest.local.json file 0644 5038 399c74faa5912dded67029254579b804bcb1ce121ecae8e42b94cfc4ce900059
 + .claude/ dir 0755
 + .claude/agents/ dir 0755
 + .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
@@ -472,7 +472,7 @@ WARN  [permissions] ask rules are not generated for cursor: it has no ask list a
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
-+ plan-after.json file 0644 8496 6ff77b0c04903784d1d14afb324e362e9ab70e191256e8a7d98706fdc451f06c
++ plan-after.json file 0644 8496 81a2aac82b095d45a00e8c5f7ccb8aa2de62f79d35a6ae6412f2e02968bc28f0
 --- home tree
 (no change)
 
@@ -545,7 +545,7 @@ This skill bundles supporting files. Read them on demand when the task calls for
 echo review
 <<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1432 aa681753644d8842f776fbda595b270e2e9b53425fd94e5b5a8426518c54dc1d
+.ai-rulez/.generated-manifest.json file 0644 1924 f07181ece773545673eab478bf199165d4ffa10d7b6c56a84053fc0032d7c9aa
 >>>>
 {
   "version": "1",
@@ -593,10 +593,16 @@ echo review
     ".cursor/hooks.json": [],
     ".cursor/mcp.json": [],
     ".mcp.json": []
+  },
+  "assets": {
+    ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+    ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8"
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 5038 791bd0c059959b633c7a2c23fa9b36d29e7a8b3b29de548bfe8daa9ae1d0a884
+.ai-rulez/.generated-manifest.local.json file 0644 5038 399c74faa5912dded67029254579b804bcb1ce121ecae8e42b94cfc4ce900059
 >>>>
 {
   "version": "1",
@@ -609,8 +615,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "28c4c7e9da0b8c4f225a03db20208ec78f27a82565760bf3b281a8a409ab2f10",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "d61143beef0be0739ba78e8a724d51e6af2240a49bf4e0e7c37c6d5452466f3e"
         ]
       },
       {
@@ -698,7 +704,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "cf94b9cd148cc0db29c0753503652e3bd1f2d463be9e73fd9112301fb4afbdb4"
+          "bb2cc69b45745a36dfd33946b8031a56c6ceba497a1fb9cf94c2aa58222b0f9e"
         ]
       },
       {
@@ -733,7 +739,7 @@ echo review
           "mcpServers",
           "ai-rulez"
         ],
-        "sum": "bbdc4e1e95b90dfbb094d476faaf504198014a7fd8c5166787e30f16c80d89bd"
+        "sum": "127dd2e33ca1ccd1a336aa514700574d6c1ed37bdec9b80065eeb9ceec2de203"
       },
       {
         "path": [
@@ -754,16 +760,16 @@ echo review
   "digests": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".claude/settings.json": "88158a4a48aa69ede0170f16efaad6fe82c60e94f135730b89184b14811af651",
+    ".claude/settings.json": "21e1723dfdebfa75a462e33d50e7bbbf7798cfafea52ee10e724764788e5c2e9",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "26ebce3468ff5c1ce23a68089178c55adc1ead393c61d5a78a87a5f5a7c32101",
+    ".cursor/hooks.json": "1849f271ad8e1dedfe497a3995b827494448d3fd33aa2b73b0c02b4a247abd53",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".mcp.json": "7b2078ca5e5f2bd9896b5b7b6d802ca4bfdf66e6bf52c58b82a204a95b9e4018"
+    ".mcp.json": "133ca13006e2f09f14e6b4b8b812d33c8986a2e1321b551753d90a986d52c4a0"
   }
 }
 <<<<
@@ -1532,7 +1538,7 @@ The project overview.
 
 Layers and boundaries.
 <<<<
-plan-after.json file 0644 8496 6ff77b0c04903784d1d14afb324e362e9ab70e191256e8a7d98706fdc451f06c
+plan-after.json file 0644 8496 81a2aac82b095d45a00e8c5f7ccb8aa2de62f79d35a6ae6412f2e02968bc28f0
 >>>>
 {
   "schema": 1,
@@ -1790,7 +1796,7 @@ plan-after.json file 0644 8496 6ff77b0c04903784d1d14afb324e362e9ab70e191256e8a7d
       "action": "write",
       "mode": "0644",
       "size": 372,
-      "sha256": "26ebce3468ff5c1ce23a68089178c55adc1ead393c61d5a78a87a5f5a7c32101"
+      "sha256": "1849f271ad8e1dedfe497a3995b827494448d3fd33aa2b73b0c02b4a247abd53"
     },
     {
       "path": ".cursor/mcp.json",
@@ -1868,7 +1874,7 @@ plan-after.json file 0644 8496 6ff77b0c04903784d1d14afb324e362e9ab70e191256e8a7d
   "removals": []
 }
 <<<<
-plan-before.json file 0644 8496 6ff77b0c04903784d1d14afb324e362e9ab70e191256e8a7d98706fdc451f06c
+plan-before.json file 0644 8496 81a2aac82b095d45a00e8c5f7ccb8aa2de62f79d35a6ae6412f2e02968bc28f0
 >>>>
 {
   "schema": 1,
@@ -2126,7 +2132,7 @@ plan-before.json file 0644 8496 6ff77b0c04903784d1d14afb324e362e9ab70e191256e8a7
       "action": "write",
       "mode": "0644",
       "size": 372,
-      "sha256": "26ebce3468ff5c1ce23a68089178c55adc1ead393c61d5a78a87a5f5a7c32101"
+      "sha256": "1849f271ad8e1dedfe497a3995b827494448d3fd33aa2b73b0c02b4a247abd53"
     },
     {
       "path": ".cursor/mcp.json",

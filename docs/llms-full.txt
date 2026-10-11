@@ -1891,8 +1891,10 @@ Each entry supports:
 | `args`        | No       | Array of command arguments for local servers. Elements may contain `${PROJECT_ROOT}`. |
 | `env`         | No       | Environment variables as key-value pairs. Values may contain `${VAR}` placeholders. |
 | `transport`   | No       | `stdio`, `http`, or `sse`. Defaults to `stdio`.                                     |
+| `type`        | No       | The harness's `type` value (`stdio`, `http`, or `sse`), an alias of `transport`. When both are set they must agree; an unset `type` falls back to `transport`. |
 | `url`         | No       | Remote MCP server URL for `http` or `sse` transports.                               |
 | `headers`     | No       | HTTP headers for `http` or `sse` servers (e.g. auth). Values may contain `${VAR}` placeholders. |
+| `oauth`       | No       | Pre-registered OAuth client of a hosted (`http`/`sse`) server: `client_id`, `callback_port` (1–65535) and `scopes`. Rendered only by harnesses whose MCP format has an `oauth` block (Claude Code's `.mcp.json`, VS Code's `.vscode/mcp.json`, Codex's `.codex/config.toml`); a harness that cannot express it skips the server with a warning. |
 | `enabled`     | No       | Set to `false` to skip the server in generated MCP outputs. Defaults to `true`.     |
 | `profiles`    | No       | Restrict the server to the named profiles. Omit to include it in every profile.     |
 | `domain`      | No       | Restrict the server to a domain: it is included only when the active profile or role selects that domain. Omit to include it in every selection. |
@@ -1907,6 +1909,28 @@ transport = "http"
 url = "https://mcp.example.com/mcp"
 headers = { Authorization = "Bearer ${REMOTE_API_TOKEN}", X-Team = "platform" }
 ```
+
+A hosted server that needs a pre-registered OAuth client (Slack, for example) carries an `oauth` block. The
+`type` key is the same setting as `transport`, spelled the way a harness's file spells it:
+
+```toml
+[[mcp_servers]]
+name = "slack"
+type = "http"
+url = "https://mcp.slack.com/mcp"
+[mcp_servers.oauth]
+client_id = "1234567890.1234567890"
+callback_port = 8080
+scopes = ["channels:read", "chat:write"]
+```
+
+`oauth` is written as `{ "clientId": ..., "callbackPort": ..., "scopes": [...] }` in Claude Code's `.mcp.json`
+and VS Code's `.vscode/mcp.json`, and as an `[mcp_servers.<name>.oauth]` table with `client_id` and
+`callback_port` (plus a sibling `scopes` array) in Codex's `.codex/config.toml`. A harness whose MCP format
+has no `oauth` block (Gemini, OpenCode, Zed, ...) leaves the server out of its file and warns, rather than
+writing a server that could not authenticate. `oauth` requires a remote transport; a `client_id` is not
+required by `validate` (a callback-port-only block relies on dynamic client registration), but `scan` reports
+one that is missing as `AR602`.
 
 `headers` is rejected on a `stdio` server, header names must be valid HTTP tokens (and unique ignoring
 case), and values must not contain line breaks. Each preset writes them where its tool reads them
@@ -2481,6 +2505,9 @@ claude = "inline"
 - **`rules.mode`**: `split` (the default) writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file, moving only path-scoped rules to the folder.
 - **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
 - **`rules.baz_scoped`**: `nested` (the default) writes the path-scoped rules and context of the `baz` preset to the `AGENTS.md` of the directory their globs point into; `root` keeps them in the root `AGENTS.md`. See [Baz](baz.md).
+- **`rules.baz_default`**: `all` (the default) nests every path-scoped item into the Baz directory files; `none` nests only items whose `targets` select `baz`, leaving the rest in the root `AGENTS.md`.
+- **`rules.baz_dedupe`**: `true` writes an item whose globs point into several sibling directories under one parent once, to that parent's `AGENTS.md`, instead of one copy per directory. Default `false`.
+- **`rules.baz_budget`**: byte budget of the Baz `AGENTS.md` surface (root plus nested); `generate` warns when it is exceeded, naming the largest files. Default `0` (off).
 
 Set `mode = "inline"` to restore the pre-4.22.0 output. Per-tool output, fallbacks and caveats are in [Rules and native rules folders](rules.md).
 
@@ -3818,7 +3845,7 @@ What each preset writes:
 | `junie`                         | every rule in `.junie/rules/*.md`                                       | no rule files; everything in the root `AGENTS.md`          |
 | `cursor`, `devin`, `cline` | `.cursor/rules/*.mdc`, `.devin/rules`, `.clinerules`; `mode` has no effect | same |
 | `gemini`, `codex`, `opencode`, `amp`, `xum`, `pi`, `hermes` | rules inline, with `_Applies to:_` / `_When relevant:_` lines | same |
-| `baz`                           | rules inline in `AGENTS.md`; path-scoped ones in the `AGENTS.md` of their directory (`rules.baz_scoped`, see [Baz](baz.md)) | same |
+| `baz`                           | rules inline in `AGENTS.md`; path-scoped ones in the `AGENTS.md` of their directory (`rules.baz_scoped`, `baz_default`, `baz_dedupe`, `baz_budget`, see [Baz](baz.md)) | same |
 
 Custom provider presets follow `mode` when their `outputs.rules` sets `split`.
 
@@ -9822,6 +9849,9 @@ presets = ["claude", "baz"]
 
 [rules]
 baz_scoped = "nested"   # nested (default) | root
+baz_default = "all"     # all (default) | none
+baz_dedupe = false      # write a shared parent AGENTS.md when globs share one
+baz_budget = 0          # byte budget of the Baz AGENTS.md surface (0 = off)
 ```
 
 #### What Baz reads
@@ -9884,6 +9914,24 @@ presets write it, when:
 The root `AGENTS.md` lacks the items that moved, in every preset that writes it, so `codex`, the shared `agents_md` file
 and `baz` stay identical. The scope of a nested file is the whole directory, which can be wider than the glob (the
 `_Applies to:_` line keeps the exact globs for the reader).
+
+#### Narrowing, deduping and budgeting the nested surface
+
+One rule with many globs is copied into every directory those globs point into, so a large monorepo can grow a nested
+`AGENTS.md` per service. Three `[rules]` keys keep that surface under control; all three default to today's behaviour.
+
+- **`baz_default = "none"`** nests only items whose frontmatter `targets` select `baz`; an item with no targets is not
+  nested. It stays in the root `AGENTS.md`, which is shared with `codex`, `opencode`, `amp` and `xum` and is read by
+  Baz, so nothing is dropped — it is simply not duplicated into the directory files. The default `"all"` nests every
+  path-scoped item.
+- **`baz_dedupe = true`** writes an item whose globs point into several sibling directories under one parent once, to
+  that parent's `AGENTS.md` (for example `services/AGENTS.md` instead of `services/api/AGENTS.md` and
+  `services/web/AGENTS.md`). It is off by default, so the output is unchanged.
+- **`baz_budget = <bytes>`** makes `generate` warn when the total size of the Baz `AGENTS.md` surface (the root file
+  plus the nested ones) exceeds the budget, naming the largest files and the budget. It is advisory and never fails the
+  run. `0` disables it.
+
+The Claude surface is identical in every mode: only the Baz nested `AGENTS.md` files change.
 
 #### Using it with other presets
 
@@ -10814,13 +10862,45 @@ The `copilot` runtime and the `codex` runtime with `manifest = "root"` write the
 | `headers` | `headers` (remote servers) | plugin bundles do not carry project server headers today |
 | agents, commands, hooks | not written | they belong in a client's extension namespace, see [Extensions](#extensions) |
 | rules, context | not written | the `io.github.goldziher.ai-rulez` namespace is read on import |
+| `[plugin] include` | the matched files, at their relative path | globs relative to the content root; see [Bundling files](#bundling-files) |
+
+#### Bundling files
+
+The specification lets a package carry arbitrary files beside `plugin.json`, `mcp.json` and `skills/` (§4.2), and a stdio
+`command` may be a `./`-relative path into them (§7.2.1). `[plugin] include` is how ai-rulez ships such a file:
+
+```toml
+[plugin]
+name = "basemind"
+version = "0.19.2"
+description = "Code-map MCP server."
+runtimes = ["agent-plugins"]
+include = ["scripts/**"]
+
+[[plugin.mcp]]
+name = "basemind"
+command = "./scripts/mcp-launch.sh"
+args = ["serve"]
+```
+
+Each glob is matched against the plugin's content root — `[plugin] content_root` when set, otherwise the config directory
+(`.ai-rulez/`). `**` crosses directories, `*` and `?` do not, and a trailing `/` matches everything below the directory.
+A matched file is copied verbatim, keeping its relative path and its executable bit, and is recorded with its
+`Content-Hash` in `.ai-rulez-generated.json` like a skill, so `verify --plugin` reports a changed or missing included file
+as drift and `publish --emit agent-plugins` carries it. The manifest, `mcp.json`, the `skills/` tree and the provenance
+sidecar are never matched, so a broad glob cannot clobber the package. A glob that escapes the content root — absolute, a
+drive letter, or containing `..` — is refused at configuration load.
+
+Once an included file resolves a `./`-relative `command`, `validate --strict` stops reporting `AR9O2` for it; a command
+with no matching file keeps the warning.
 
 #### MCP servers
 
 The specification expands only `${PLUGIN_ROOT}` and `${PLUGIN_DATA}`, and only in `args`, `env` values and `cwd`.
 
 - `command` is one token: a bare name (`npx`) or a `./` path inside the plugin. A `${PLUGIN_ROOT}/bin/server` command is
-  rewritten to `./bin/server` (a lossless rewrite, reported as info).
+  rewritten to `./bin/server` (a lossless rewrite, reported as info). A `./` path that is not in the package is a warning
+  (`AR9O2`); ship the file with `[plugin] include` (see [Bundling files](#bundling-files)).
 - An `env` entry that only forwards a variable of the same name (`API_KEY = "${API_KEY}"`) is left out: no client
   expands it, so the client has to supply `API_KEY` itself. This is reported as `AR9O3` (warning).
 - Any other `${VAR}` (in `args`, `env`, `url`, `headers`) is rejected: the server is not packaged and the finding is an
@@ -11436,7 +11516,7 @@ stdout.
 | AR302 | `frontmatter-skill-unknown` | error | Frontmatter `skills:` lists a skill that does not exist |
 | AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
 | AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist. A path that exists under a `[[scopes]]` entry's emitted directory is resolved there too. Not reported when the text does not claim the path exists: negated or historical ("there is no", "was removed", "decommissioned", "empty"), an example ("e.g.", "such as", a glob in the same paragraph), an alternative ("or under"), a date or version placeholder (`YYYY-MM-DD`), a build or runtime artifact (`target/`, `.venv/`, `vendor/`, `node_modules/`, or text saying it is gitignored), a ref of another repository (`path @ branch`, or a table row or line naming an `owner/repo` slug), a container image reference (`namespace/name` with no file extension and an image-name underscore, e.g. `armis/sra_session_vnc`), or an ADR number whose file carries a title suffix (`adrs/0065` for `adrs/0065-license.md`) |
-| AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path is found neither relative to the skill or command directory nor relative to the repo root (see `--repo-root`). The same "not a claim" exemptions as AR401 apply (negated, example, another repository's table row) |
+| AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path is found neither relative to the skill or command directory nor relative to the repo root (see `--repo-root`). A path that names a sibling skill explicitly (`skills/<other>/references/x.md`, `.claude/skills/<other>/references/x.md`) is resolved against that skill's directory too. The same "not a claim" exemptions as AR401 apply (negated, example, another repository's table row) |
 | AR501 | `hook-missing` | error | A `.claude/settings.json` hook command, or a command in the `hooks` frontmatter of an agent, skill or command, runs a `$CLAUDE_PROJECT_DIR/...` file, or passes a script to `sh`, `bash`, `zsh`, `dash`, `python`, `node`, `ruby` or `perl` (frontmatter also a `./...` script, resolved against the project directory), that does not exist |
 | AR502 | `hook-not-executable` | error | That hook file is executed directly but lacks the executable bit (fixable) |
 | AR503 | `script-not-executable` | warning | A skill `scripts/` file with a shebang lacks the executable bit |
@@ -11488,9 +11568,9 @@ stdout.
 | AR9A3 | `activation-policy-conflict` | warning | An eval case contradicts the skill's invocation policy (`disable-model-invocation: true` or `allow_implicit_invocation: false`): it expects a trigger (`expect_trigger: true`) and can never pass, or expects none and can never fail (see [Evals](evals.md#linting-cases-and-results)) |
 | AR9A4 | `activation-prompt-names-skill` | off | A positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill; enable it with `[lint.severity] AR9A4 = "warning"` |
 | AR9A5 | `eval-import-unmapped` | info | Fields of an imported scenario with no counterpart in the case format; reported by `ai-rulez eval import`, never by `validate` (see [Evals](evals.md#importing-scenarios)) |
-| AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent `skills:` or command names a skill whose `delivery` is `served` by the same forms AR301 reads (`` `x` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `Procedure/reference: skill X`, `skills/x`, `.claude/skills/x/SKILL.md`); the harness cannot see it until the agent calls `find_skill`. A served skill naming a sibling served skill is not reported (a skill is loaded on demand), and `both` skills are static, so naming one is fine (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent `skills:` or command names a skill whose `delivery` is `served` by the same forms AR301 reads (`` `x` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `Procedure/reference: skill X`, `skills/x`, `.claude/skills/x/SKILL.md`) and the skills MCP call forms (`load_skill x`, `load_skill(x)`, `load_skill(name: "x")`, `get_skill x`, `read_skill_file x`); the harness cannot see it until the agent calls `find_skill`. A served skill naming a sibling served skill is not reported (a skill is loaded on demand), and `both` skills are static, so naming one is fine (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR991 | `delivery-stub-missing` | error | Skills are served but a configured harness that can call MCP has no `dynamic-skills` stub in its output (a skill of that name shadows it, or the preset renders no skills), so its agent is never told to call `find_skill` |
-| AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped) |
+| AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped). Not reported for a harness that writes no skill tree of its own (it reads another preset's tree, e.g. `baz` next to `claude`) |
 | AR993 | `served-no-server` | warning | Skills are served but no `[[mcp_servers]]` entry runs `ai-rulez mcp --serve-skills` |
 | AR994 | `delivery-invalid` | error | A skill's `delivery` frontmatter is not `static`, `served` or `both` (it is ignored and the skill keeps its inherited delivery) |
 | AR995 | `served-lock-mismatch` | error | `[lock] enforce = true` and a served skill is not pinned in `ai-rulez.lock` or its digest differs; the server refuses to serve it |
@@ -12939,9 +13019,9 @@ a skill references a references/, scripts/ or assets/ file it does not ship
 
 - Default severity: `error`
 - Analyzer: `references` (scope `file`)
-- Why: A skill that refers to references/, scripts/ or assets/ files it does not ship fails the moment the model follows the reference.
+- Why: A skill that refers to references/, scripts/ or assets/ files it does not ship fails the moment the model follows the reference. A path that names a sibling skill explicitly (`skills/<other>/references/x.md`, `.claude/skills/<other>/references/x.md`) is resolved against that skill's directory too, so one skill can point at another's file.
 - Bad: `Run scripts/build.sh` with no scripts/build.sh in the skill
-- Good: Add the file to the skill directory or fix the reference
+- Good: Add the file to the skill directory, name the sibling skill that ships it, or fix the reference
 
 ##### AR403 command-missing
 
@@ -13709,9 +13789,9 @@ an always-loaded rule, context, agent or command names a skill whose delivery is
 
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
-- Why: Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.
+- Why: Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. The pointer forms are the ones AR301 reads plus the skills MCP calls (`load_skill x`, `get_skill x`, `read_skill_file x`); a `load_skill` call or a file path reaches the skill at runtime, but the name still sits in always-loaded content. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.
 - Bad: A rule saying "run the `deploy` skill", or an agent `skills: [deploy]`, when `deploy` is served
-- Good: Tell the agent to call `find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree
+- Good: Tell the agent to call `load_skill`/`find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree
 
 ##### AR991 delivery-stub-missing
 
@@ -13729,7 +13809,7 @@ a harness without MCP support keeps served skills as static files (nothing is dr
 
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
-- Why: A harness without MCP support cannot fetch served skills, so they stay as static files.
+- Why: A harness without MCP support cannot fetch served skills, so they stay as static files. A harness that writes no skill tree of its own (it reads another preset's tree, e.g. `baz` next to `claude`) keeps nothing, so nothing is reported for it.
 - Bad: A served skill for a harness without MCP support
 - Good: Accept the static fallback or drop that harness
 
@@ -18214,7 +18294,23 @@ name = "remote-api"
 transport = "http"
 url = "https://mcp.example.com/mcp"
 headers = { Authorization = "Bearer ${REMOTE_API_TOKEN}" }
+
+[[mcp_servers]]
+name = "slack"
+type = "http"                      # the same setting as transport, spelled as the harness's `type`
+url = "https://mcp.slack.com/mcp"
+[mcp_servers.oauth]                # a pre-registered OAuth client (hosted servers)
+client_id = "1234567890.1234567890"
+callback_port = 8080
+scopes = ["channels:read", "chat:write"]
 ```
+
+`oauth` is translated to each harness that has an `oauth` block: Claude Code's `.mcp.json` and VS Code's
+`.vscode/mcp.json` get `{ "clientId", "callbackPort", "scopes" }`, and Codex's `.codex/config.toml` gets an
+`[mcp_servers.<name>.oauth]` table with `client_id` and `callback_port`. A harness that cannot express it
+skips the server with a warning instead of writing one that could not authenticate. `scan` reports an `oauth`
+block with no `client_id` and two same-named servers that resolve to different endpoints or transports
+(`AR602`).
 
 MCP env and header values may contain `${VAR}` placeholders. `ai-rulez generate` resolves them from repeated
 `--env KEY=VALUE` flags, process environment variables, then dotenv files. Placeholder names must
@@ -25124,6 +25220,32 @@ or trim descriptions. Provider specs declare the listing with a `[listing]` tabl
 which is distinct from `1` so a hook can tell "over budget" from "the command
 failed".
 
+###### JSON keys
+
+`--format json` prints one document (`schema/tokens-report.schema.json`) with the
+always-loaded figures a budget gate reads:
+
+| Key | Meaning |
+| --- | --- |
+| `headline_always` | Always-loaded tokens of the largest single runtime, listing included |
+| `always_loaded` | The same figure under a fixed, stable name; equal to `headline_always` |
+| `headline_listing` | The item listing's share of `headline_always` |
+| `headline_always_legacy` | The pre-listing model's figure for the same runtime |
+| `headline_preset` | The runtime the headline is taken from |
+| `runtimes[].always` | Per-runtime always-loaded surface, listing included |
+| `runtimes[].always_legacy` | Per-runtime pre-listing figure |
+
+The report is a result, so it goes to stdout; every diagnostic (the
+"Duplicate skill collapsed" warnings generation raises, and the over-budget line)
+goes to stderr under `--format json`, leaving stdout exactly one parseable
+document.
+
+When `agents_md` is on, a preset whose root file imports the shared `AGENTS.md`
+(claude's `CLAUDE.md` shim) follows that import: the runtime's always-loaded
+figure counts the `AGENTS.md` content under an `AGENTS.md (imported)` entry, not
+just the shim. The file is counted once per runtime, and runtimes are still not
+additive, so the headline stays the largest single runtime.
+
 ##### What the numbers are not
 
 - **Approximate.** Claude's tokenizer is not published. The default counter uses
@@ -25135,7 +25257,9 @@ failed".
   per-artifact overhead, neither of which ai-rulez can see.
 - **Not additive across runtimes.** One session loads one runtime's root
   instructions file, so emitting both `CLAUDE.md` and `AGENTS.md` costs one of
-  them. The headline is the largest single runtime, not the sum.
+  them. The headline is the largest single runtime, not the sum. A runtime whose
+  root file imports another (claude's `CLAUDE.md` importing `AGENTS.md`) does pay
+  for the imported file, counted once (see [JSON keys](#json-keys)).
 - **Noisy in the provenance lines.** A blake3 hex digest is incompressible, and two
   digests of the same length do not tokenize to the same count, so a few tokens per
   artifact move between two profiles for no reason you can act on.
@@ -26190,6 +26314,10 @@ entry in this table (`schema.JSONContracts`).
 | `ai-rulez publish emit --format json` | [`schema/publish-emit.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/publish-emit.schema.json) |
 | `ai-rulez publish verify --format json` | [`schema/publish-verify.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/publish-verify.schema.json) |
 | `ai-rulez eval run --format json` | [`schema/eval-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/eval-report.schema.json) |
+
+The tokens report carries `always_loaded` — the always-loaded headline under a
+fixed name, equal to `headline_always` — for a CI budget gate; the keys are
+documented under [`tokens`](#json-keys).
 
 A failure that happens before the report exists prints
 [`schema/error-document.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/error-document.schema.json)
@@ -30326,7 +30454,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`profiles`**: Named profiles specifying which domains to include
 - **`default`**: Default profile name
 - **`schema`**: URL of the JSON Schema, for editor support
-- **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `baz_scoped`; see [Rules](rules.md#rules-mode))
+- **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `baz_scoped`, `baz_default`, `baz_dedupe`, `baz_budget`; see [Rules](rules.md#rules-mode))
 - **`scopes`**: Additional scoped output roots. Their root files (`AGENTS.md`/`CLAUDE.md`) stay in the subfolder; rule files go to the root rules folders
 - **`gitignore`**: Whether to maintain the managed .gitignore block with generated output patterns (default: false)
 - **`includes`**: External content sources to merge
