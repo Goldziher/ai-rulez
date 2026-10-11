@@ -90,6 +90,14 @@ func TestValidate_RulesMode(t *testing.T) {
 		{"baz root", &RulesConfig{BazScoped: "root"}, ""},
 		{"baz unknown", &RulesConfig{BazScoped: "deep"}, `invalid baz_scoped value "deep"`},
 		{"baz case sensitive", &RulesConfig{BazScoped: "Root"}, `invalid baz_scoped value "Root"`},
+		{"baz_default all", &RulesConfig{BazDefault: "all"}, ""},
+		{"baz_default none", &RulesConfig{BazDefault: "none"}, ""},
+		{"baz_default unknown", &RulesConfig{BazDefault: "some"}, `invalid baz_default value "some"`},
+		{"baz_default case sensitive", &RulesConfig{BazDefault: "None"}, `invalid baz_default value "None"`},
+		{"baz_dedupe on", &RulesConfig{BazDedupe: true}, ""},
+		{"baz_budget positive", &RulesConfig{BazBudget: 2048}, ""},
+		{"baz_budget zero", &RulesConfig{BazBudget: 0}, ""},
+		{"baz_budget negative", &RulesConfig{BazBudget: -1}, "invalid baz_budget value -1"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -187,6 +195,82 @@ func TestBazScopedRules(t *testing.T) {
 			assert.Equal(t, tt.want, tt.cfg.BazScopedRules())
 		})
 	}
+}
+
+func TestBazDefaultRules(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *Config
+		want string
+	}{
+		{"nil config", nil, BazDefaultAll},
+		{"no rules block", &Config{}, BazDefaultAll},
+		{"empty rules block", &Config{Rules: &RulesConfig{}}, BazDefaultAll},
+		{"all", &Config{Rules: &RulesConfig{BazDefault: "all"}}, BazDefaultAll},
+		{"none", &Config{Rules: &RulesConfig{BazDefault: "none"}}, BazDefaultNone},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.cfg.BazDefaultRules())
+		})
+	}
+}
+
+func TestBazDedupeEnabled(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *Config
+		want bool
+	}{
+		{"nil config", nil, false},
+		{"no rules block", &Config{}, false},
+		{"empty rules block", &Config{Rules: &RulesConfig{}}, false},
+		{"off", &Config{Rules: &RulesConfig{BazDedupe: false}}, false},
+		{"on", &Config{Rules: &RulesConfig{BazDedupe: true}}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.cfg.BazDedupeEnabled())
+		})
+	}
+}
+
+func TestBazBudgetBytes(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *Config
+		want int
+	}{
+		{"nil config", nil, 0},
+		{"no rules block", &Config{}, 0},
+		{"empty rules block", &Config{Rules: &RulesConfig{}}, 0},
+		{"unset", &Config{Rules: &RulesConfig{BazBudget: 0}}, 0},
+		{"set", &Config{Rules: &RulesConfig{BazBudget: 4096}}, 4096},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.cfg.BazBudgetBytes())
+		})
+	}
+}
+
+func TestLoadConfig_BazRulesKeys(t *testing.T) {
+	baseDir := writeTOMLProject(t, `version = "5.0"
+name = "proj"
+presets = ["baz"]
+
+[rules]
+baz_scoped = "nested"
+baz_default = "none"
+baz_dedupe = true
+baz_budget = 4096
+`)
+	cfg, err := LoadConfig(context.Background(), baseDir)
+	require.NoError(t, err)
+	require.NotNil(t, cfg.Rules)
+	assert.Equal(t, BazDefaultNone, cfg.BazDefaultRules())
+	assert.True(t, cfg.BazDedupeEnabled())
+	assert.Equal(t, 4096, cfg.BazBudgetBytes())
 }
 
 func TestHasBuiltInPreset(t *testing.T) {
