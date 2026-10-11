@@ -136,10 +136,18 @@ func findingsOf(path string, err error) ([]SchemaFinding, error) {
 
 func unknownKey(file, parent, key string) SchemaFinding {
 	f := SchemaFinding{File: file, Path: parent, Key: key, Suggestion: nearestKey(key, knownKeys(parent))}
-	if parent != "" && slices.Contains(knownKeys(""), key) && !slices.Contains(knownKeys(parent), key) {
-		f.TopLevel = true
-	}
+	f.TopLevel = topLevelKeyOutsideItsTable(parent, key)
 	return f
+}
+
+// topLevelKeyOutsideItsTable reports whether key, read inside the table at
+// parent, is really a top-level key: TOML scoped it into [parent] because it was
+// written after that table's header, so the decoder silently dropped it. It is
+// false for a genuinely unknown key and for a key the table itself defines.
+func topLevelKeyOutsideItsTable(parent, key string) bool {
+	return parent != "" &&
+		slices.Contains(knownKeys(""), key) &&
+		!slices.Contains(knownKeys(parent), key)
 }
 
 // knownKeys lists the keys of the configuration table at the dotted path
