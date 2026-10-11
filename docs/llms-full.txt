@@ -600,7 +600,7 @@ v5`", 4.x says "run `ai-rulez migrate v5`".
 | `lint-ratchet` | `[lint.budget]` and `[lint.tolerate]` are renamed `[lint.ratchet]` (per-rule finding counts). `[lint.budgets.<kind>]` (size limits) is unchanged. |
 | `preset-rename` | The `windsurf` preset becomes `devin` (outputs move from `.windsurf/` to `.devin/`, delete the old directory) and the removed `continue-dev` preset is dropped. With `--write`, `windsurf_model` in agent frontmatter becomes `devin_model`. |
 | `mcp-merge` | A legacy `mcp.toml`, `mcp.yaml` or `mcp.json` (4.x read the first of them) is folded into `[[mcp_servers]]` of `config.toml` and removed. When `config.toml` already defines `mcp_servers`, nothing is merged: the file is left in place and the report warns, so you can move the servers over by hand. |
-| `pin-default` | The three defaults v5 changes are pinned to their 4.x value so the generated output does not move: `agents_md = false`, `gitignore = true` and `[header] hashes = "full"`. Each pin carries a comment; delete the line to take the v5 default. A key you already set is never touched. |
+| `pin-default` | The four defaults v5 changes are pinned to their 4.x value so the generated output does not move: `agents_md = false`, `gitignore = true`, `[header] hashes = "full"` and `[mcp] self_server = false`. Each pin carries a comment; delete the line to take the v5 default. A key you already set is never touched. |
 | `local-overlay` | `config.local.yaml`, `.yml` and `.json` become `config.local.toml` (mode 0600). |
 | `command-rename` | `ai-rulez usage ...` (`hook`, `record`, `feedback`, `export`, `prune`) and `ai-rulez report usage|evals` inside hook, verifier and script commands become `ai-rulez telemetry ...`. |
 | `frontmatter-alias` | The pre-4.24 frontmatter spellings `permission_mode` and `user_invocable` (Claude Code ignores them) become `permissionMode` and `user-invocable`. Without `--write` they are only reported; with it the markdown sources are rewritten. |
@@ -18146,7 +18146,9 @@ self_server = false   # opt out; the default is true
 ```
 
 The entry is merged into an existing `.mcp.json`, so hand-authored servers survive and the file is
-ready for Claude Code (which reads project MCP servers from `.mcp.json`). See [Configuration: `mcp`](configuration.md#mcp) for
+ready for Claude Code (which reads project MCP servers from `.mcp.json`). Every entry has the same
+shape: `"type": "stdio"` (or `http`/`sse`) and, only for a server turned off with `enabled = false`,
+`"disabled": true`. See [Configuration: `mcp`](configuration.md#mcp) for
 `self_server_version`, `self_server_command`, and the interaction with `[[mcp_servers]]`.
 
 Generated MCP config files contain resolved values. If a value came from a placeholder, or if an env
@@ -22978,6 +22980,40 @@ that load and are not reliable; the allocations and the isolated sweep are.
 
 The cost of the sweep now depends on how many processes start during the command, not on how many exist.
 
+##### Fourth pass: CPU of `generate` and `validate`
+
+v5.0.0 spent about four times the CPU of 4.23 in `generate` (and more in `validate`). A CPU profile (a temporary
+`pprof` hook, not committed) put about half of `generate` in the authored-content secret gate, which called
+`lint.RunWith` with `SecurityOnly` although it reads only AR001: every file went through the shell, injection,
+hidden-character, host and blob scans, and the markdown file was split into lines twice (`newScanText`, dominated by
+backtracking in `negRe`). `validate` paid the same duplicate splits plus unconditional regular expressions in the body
+scan.
+
+Measured on a 590-file, 2.6 MB project, user+sys CPU of the whole command, alternating runs of binaries built before
+and after (load average high; sys time is file I/O and did not change):
+
+| Command | user before | user after | user+sys before | user+sys after |
+| ------- | ----------- | ---------- | --------------- | -------------- |
+| `generate` | 1.40 s | 0.65 s | 3.3 to 3.6 s | 2.3 to 2.4 s |
+| `validate` | 1.9 s | 1.6 s | 3.6 s | 3.2 to 3.3 s |
+| `tokens` | 0.69 s | 0.69 s | 1.9 s | 1.9 s (unchanged) |
+
+Secret gate alone (`lint AuthoredSecretGate/medium`, 200 files): 106 to 161 ms, 13.0 MB, 115.6k allocs with the full
+security family; 33 ms, 2.9 MB, 20.4k allocs with `Options.SecretsOnly` (3 to 5x).
+
+- `Options.SecretsOnly` (with `SecurityOnly`) runs only the units that reach `securityScan` (item scan, resources,
+  imported content) and checks each line against the credential patterns alone. Inline ignores, severities,
+  `ignore`, `example_paths`, configured patterns and the imported-content level go through the same `add`, so the AR001
+  findings are identical (`TestSecretsOnlyMatchesSecurityOnly`).
+- `scanTextOf` memoizes the split text per file and content for the run (security scan, text scans, capability
+  profile); a `scanText` is never modified after it is built (`TestScanTextOfMemoizesPerFileAndText`).
+- The body scan skips link, backtick and name patterns on lines lacking a literal every match contains
+  (`TestBodyScanGatesAgreeWithThePatterns` compares gated and ungated results). `generate` output and
+  `validate`/`validate --strict`/`tokens` output on the benchmark project are byte-identical to the previous binary.
+
+`tokens` is dominated by cl100k counting and file reads, and was not changed (the token memo is the separate branch
+named below). What remains of `generate` is file I/O (loading, output safety checks, writes).
+
 #### What dominates elsewhere
 
 These were measured and not changed here.
@@ -24408,7 +24444,7 @@ Teams that commit generated files can gate CI on `generate --check`. It renders 
 | `missing: <path>` | A generated file is not on disk |
 | `stale: <path>` | The sources changed (or the rendering did); `generate` would rewrite it |
 | `edited: <path>` | The body no longer matches the `Content-Hash` in its own header: a hand edit; `generate` overwrites it, so the edit is lost |
-| `orphan: <path>` | Listed in the previous manifest, no longer rendered; `generate` would delete it |
+| `orphan: <path>` | Listed in the previous manifest, no longer rendered; `generate` would delete it. Without a manifest (CI, a fresh checkout) a generated file whose source was removed is still reported: a file under an output directory that carries a `Content-Hash` header and that no output emits is an orphan |
 | `blocked: <path>` | A machine-local input (overlay or `local/` tree) would change this file and `generate` refuses to write it because it is tracked or not git-ignored; the same refusal `generate` and `generate --dry-run` report. `--allow-local-drift` lifts it |
 
 With a machine-local overlay or `local/` content, `--check` classifies the outputs like `generate` does, so files that `generate` keeps for the local inputs and that are in sync are not reported. `--check` does not print the summary of rules whose activation a tool cannot express; `generate` prints it.
@@ -25763,7 +25799,7 @@ shorthand, on a flag that redeclares a global one, and on a flag without usage t
   have no effect, and `lock --refuse-findings` fails when the security scan refuses a served skill.
 - `--dry-run` / `-n` computes and reports, and writes nothing.
 
-Every command that prints a result takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--format` is the encoding of the report; `generate`, `clean`, `sign`, `export okf` and `version` take it as well as the reporting commands. `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal.
+Every command that prints a result takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--format` is the encoding of the report; `generate`, `clean`, `sign`, `export okf` and `version` take it as well as the reporting commands. `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal; the animated progress bars and spinners draw only when stderr is a terminal and `NO_COLOR` is unset, so redirected output (a log file, `$(...)`, CI) carries no frames, ANSI codes or carriage returns.
 
 The commands without `--format` print no document: `completion`, `guard`, `mcp`, `local init|path|set|unset`, `review explain`, `skill update`, `trust update` and the `telemetry` subcommands that act (`enable`, `disable`, `export`, `feedback`, `flush`, `preview`, `prune`, `record`). Some commands accept `--format` only in some modes (`lock`, `verify`, `approve`); the [command reference](cli-reference.md) lists each command's own values.
 
