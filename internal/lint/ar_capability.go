@@ -117,7 +117,7 @@ func (p *capProfile) classify(line string) {
 func (r *runner) itemProfile(it *item) capProfile {
 	var p capProfile
 	scan := func(abs, raw string) {
-		t := newScanText(r, abs, raw)
+		t := r.scanTextOf(abs, raw)
 		if !t.md && !isShellScript(t) {
 			return
 		}

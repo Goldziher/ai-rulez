@@ -154,7 +154,7 @@ func (r *runner) runTextScans(abs, raw string) {
 			continue
 		}
 		if t == nil {
-			t = newScanText(r, abs, raw)
+			t = r.scanTextOf(abs, raw)
 		}
 		r.unit(c.unit, func() { c.fn(r, t) })
 	}

@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Performance
+
+- **`generate` no longer runs the whole security family before writing.** Its secret gate read only AR001 but ran every security rule (shell, injection, hidden characters, hosts, blobs) over every file; it now runs the credential patterns alone, with the same AR001 findings. On a 590-file project, `generate` CPU (user) fell from 1.4 s to 0.65 s. `validate` builds the split text of each file once per run instead of up to three times and skips body-scan patterns on lines that cannot match (user CPU 1.9 s to 1.6 s). Output is unchanged.
+
 ### Fixed
 
 - **A skill, rule or agent file that cannot be loaded is reported.** A `SKILL.md` over the 8 MiB content limit (or any other read failure) was dropped from the output with no message from `generate` or `validate`; the scan now logs `failed to load skill file|content file|agent file` with the path, as it already did for commands.
