@@ -87,6 +87,9 @@ type Generator struct {
 	// role is the flattened role a `generate --role` run renders; nil otherwise.
 	// It replaces the profile selection (see roles.go).
 	role *config.RoleConfig
+	// roleOverrides is the skillOverrides the rendered role(s) set, captured at
+	// SetRoles so a composed role (which has no single declared name) works too.
+	roleOverrides map[string]string
 
 	// mu serializes the operations of this Generator: a watcher asks
 	// GeneratedPaths while a run is writing. Generators of different projects

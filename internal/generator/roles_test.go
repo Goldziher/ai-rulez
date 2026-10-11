@@ -135,6 +135,31 @@ func TestSetRoleUnknown(t *testing.T) {
 	assert.Contains(t, err.Error(), "ghost")
 }
 
+func TestGenerateComposedRoleUnionsContentAndSkillModes(t *testing.T) {
+	dir := rolesProject(t)
+
+	require.NoError(t, roleGenerator(t, dir, "backend,frontend").Generate(""))
+
+	assert.FileExists(t, filepath.Join(dir, ".claude", "skills", "migrate", "SKILL.md"))
+	assert.FileExists(t, filepath.Join(dir, ".claude", "skills", "deploy", "SKILL.md"))
+	assert.FileExists(t, filepath.Join(dir, ".claude", "skills", "ui", "SKILL.md"), "the union reaches frontend's domain")
+	assert.NoFileExists(t, filepath.Join(dir, ".claude", "skills", "deploy-prod", "SKILL.md"), "excluded by backend")
+
+	overrides, _ := readSettings(t, dir)["skillOverrides"].(map[string]any)
+	assert.Equal(t, "name-only", overrides["migrate"], "backend's exact id beats frontend's * glob")
+	assert.Equal(t, "off", overrides["deploy"], "backend's deploy* glob is more specific than frontend's *")
+	assert.Equal(t, "user-invocable-only", overrides["ui"], "only frontend covers ui")
+}
+
+func TestSetRoleCompositionUnknownMember(t *testing.T) {
+	dir := rolesProject(t)
+	cfg, err := config.LoadConfig(context.Background(), dir)
+	require.NoError(t, err)
+	err = NewGenerator(cfg).SetRole("backend,ghost")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "ghost")
+}
+
 func TestSetRoleDoesNotLeakOverridesIntoTheSharedConfig(t *testing.T) {
 	dir := rolesProject(t)
 	cfg, err := config.LoadConfig(context.Background(), dir)

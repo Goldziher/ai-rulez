@@ -65,9 +65,9 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&updateGitignore, "gitignore", false, "Update .gitignore files to include generated output patterns")
 	GenerateCmd.Flags().BoolVar(&noSelfMCP, "no-self-mcp", false, "Do not add ai-rulez's own MCP server to the generated .mcp.json (the default is to add it)")
 	specRecursive.Bool(GenerateCmd.Flags(), &recursive, "Find and process configuration files recursively")
-	specProfile.String(GenerateCmd.Flags(), &profile, "Profile to generate, or a comma-separated list to compose several (default: from config or 'default')")
+	specProfile.String(GenerateCmd.Flags(), &profile, "Profile to generate, or a comma-separated list to compose several (default: from config or 'default'; or AI_RULEZ_PROFILE)")
 	GenerateCmd.Flags().StringVar(&generateRole, flagRole, "",
-		"Generate the slice of content a role selects instead of a profile (see 'ai-rulez roles list'); mutually exclusive with --profile")
+		"Generate the slice of content a role selects instead of a profile, or a comma-separated list to compose several (the union); see 'ai-rulez roles resolve'; mutually exclusive with --profile (or AI_RULEZ_ROLE)")
 	GenerateCmd.Flags().BoolVar(&noFetch, "offline", false, "Skip fetching remote includes, use cached content only")
 	GenerateCmd.Flags().StringArrayVar(&mcpEnv, "env", nil, "MCP env override in KEY=VALUE form (repeatable)")
 	GenerateCmd.Flags().StringArrayVar(&mcpEnvFiles, "env-file", nil, "Dotenv file for MCP env placeholders (repeatable)")

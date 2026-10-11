@@ -75,16 +75,9 @@ func (g *Generator) writeRoleLedger(l roleLedger) error {
 }
 
 // roleSkillOverrides is the skillOverrides the role being rendered sets, empty
-// for a plain generate.
+// for a plain generate. It is captured at SetRoles so a composed role works.
 func (g *Generator) roleSkillOverrides() map[string]string {
-	if g.role == nil {
-		return nil
-	}
-	res, err := g.config.ResolveRole(g.role.Name)
-	if err != nil {
-		return nil
-	}
-	return res.SkillOverrides
+	return g.roleOverrides
 }
 
 func (g *Generator) rendersClaudeSettings() bool {

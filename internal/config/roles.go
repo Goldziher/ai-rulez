@@ -461,6 +461,13 @@ func (r *RoleConfig) SkillModeFor(domain, id string) (string, bool) {
 
 // bestMatch picks the entry of a selector map that applies to an item.
 func bestMatch(entries map[string]string, domain, id string) (string, bool) {
+	value, _, ok := bestMatchRank(entries, domain, id)
+	return value, ok
+}
+
+// bestMatchRank is bestMatch plus the rank of the entry it chose: a higher rank
+// is a more specific match (an exact id beats a glob, a longer glob a shorter).
+func bestMatchRank(entries map[string]string, domain, id string) (value string, rank int, ok bool) {
 	best, bestRank := "", -1
 	patterns := make([]string, 0, len(entries))
 	for p := range entries {
@@ -471,18 +478,18 @@ func bestMatch(entries map[string]string, domain, id string) (string, bool) {
 		if !matchRoleItem(p, domain, id) {
 			continue
 		}
-		rank := len(p)
+		r := len(p)
 		if p == id || p == domain+"/"+id {
-			rank += 1 << 20
+			r += 1 << 20
 		}
-		if rank > bestRank {
-			best, bestRank = p, rank
+		if r > bestRank {
+			best, bestRank = p, r
 		}
 	}
 	if bestRank < 0 {
-		return "", false
+		return "", 0, false
 	}
-	return entries[best], true
+	return entries[best], bestRank, true
 }
 
 // Keeps reports whether a flat role keeps the item of the given kind. domain is
@@ -605,8 +612,10 @@ func filterRoleFiles(flat *RoleConfig, kind, domain string, files []ContentFile)
 // A role that names a domain which does not exist is an error (ErrRoleReference,
 // AR971): resolving it anyway would render the role as "no content", the wrong
 // direction for a role that is meant to restrict access.
+// ResolveRole resolves a role into its effective item set. name may be a
+// comma-separated composition (see ResolveRoles).
 func (c *Config) ResolveRole(name string) (*ResolvedRole, error) {
-	return c.resolveRole(name, true)
+	return c.ResolveRoles(SplitRoleNames(name))
 }
 
 func (c *Config) resolveRole(name string, strict bool) (*ResolvedRole, error) {
@@ -619,6 +628,11 @@ func (c *Config) resolveRole(name string, strict bool) (*ResolvedRole, error) {
 			return nil, err
 		}
 	}
+	return c.resolveFlatRole(flat)
+}
+
+// resolveFlatRole turns an already-flattened role into its effective item set.
+func (c *Config) resolveFlatRole(flat *FlatRole) (*ResolvedRole, error) {
 	if c.Content == nil {
 		return nil, ErrNoContent
 	}
@@ -627,7 +641,7 @@ func (c *Config) resolveRole(name string, strict bool) (*ResolvedRole, error) {
 		return nil, err
 	}
 	res := &ResolvedRole{
-		Name: flat.Name, Description: flat.Description, Extends: flat.Extends, Match: role(c, name).Match,
+		Name: flat.Name, Description: flat.Description, Extends: flat.Extends, Match: flat.Match,
 		Domains: append([]string{}, flat.Domains...), flat: *flat,
 	}
 	res.DeliveryOverride = orEmpty(c.RoleDeliveryOverride(&flat.RoleConfig))
@@ -667,12 +681,173 @@ func (c *Config) resolveRole(name string, strict bool) (*ResolvedRole, error) {
 	return res, nil
 }
 
-func role(c *Config, name string) *RoleConfig {
-	r, _ := c.FindRole(name)
-	if r == nil {
-		return &RoleConfig{}
+// SplitRoleNames splits a comma-separated --role value into role names. Role
+// names never contain a comma, so composition is unambiguous. Whitespace and
+// empty elements are dropped and duplicates removed, preserving order.
+func SplitRoleNames(value string) []string {
+	if !strings.Contains(value, ",") {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			return nil
+		}
+		return []string{trimmed}
 	}
-	return r
+	names := dedupeRoleNames(strings.Split(value, ","))
+	if len(names) == 0 {
+		return nil
+	}
+	return names
+}
+
+// CanonicalRoleNames joins role names into the canonical composition name that
+// --role, the lock and the reports use (deduped, order preserved).
+func CanonicalRoleNames(names []string) string {
+	return strings.Join(dedupeRoleNames(names), ",")
+}
+
+func dedupeRoleNames(names []string) []string {
+	seen := map[string]bool{}
+	out := make([]string, 0, len(names))
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	return out
+}
+
+// ResolveRoles composes one or more roles into a single effective role: the
+// union of what each grants. A single name resolves exactly like ResolveRole.
+func (c *Config) ResolveRoles(names []string) (*ResolvedRole, error) {
+	names = dedupeRoleNames(names)
+	switch len(names) {
+	case 0:
+		return nil, oops.Hint("Pass one or more role names, comma-separated").Errorf("no role selected")
+	case 1:
+		return c.resolveRole(names[0], true)
+	}
+	parts := make([]*ResolvedRole, 0, len(names))
+	for _, name := range names {
+		res, err := c.resolveRole(name, true)
+		if err != nil {
+			return nil, err
+		}
+		parts = append(parts, res)
+	}
+	return c.composeRoles(names, parts)
+}
+
+type composedItemKey struct{ kind, domain, id string }
+
+// composeRoles unions already-resolved roles. Domains and kept items are the
+// union; a skill's skill_mode and delivery are chosen by specificity first and,
+// when two roles match a skill equally, the role listed later wins.
+func (c *Config) composeRoles(names []string, parts []*ResolvedRole) (*ResolvedRole, error) {
+	composed := &RoleConfig{Name: CanonicalRoleNames(names)}
+	order := composeRoleIdentity(composed, parts)
+	composeRoleSelectors(composed, parts, order)
+	return c.resolveFlatRole(&FlatRole{RoleConfig: *composed, Chain: names})
+}
+
+// composeRoleIdentity unions the domains, descriptions, match groups and kept
+// items of the roles into composed and returns the kept items in first-seen
+// order.
+func composeRoleIdentity(composed *RoleConfig, parts []*ResolvedRole) []composedItemKey {
+	match := &RoleMatch{}
+	var descriptions []string
+	var order []composedItemKey
+	seen := map[composedItemKey]bool{}
+	for _, part := range parts {
+		composed.Domains = unionStrings(composed.Domains, part.Domains)
+		if part.Description != "" {
+			descriptions = append(descriptions, part.Description)
+		}
+		if part.Match != nil {
+			match.Groups = unionStrings(match.Groups, part.Match.Groups)
+		}
+		for _, it := range part.Items {
+			key := composedItemKey{it.Kind, it.Domain, it.ID}
+			if !seen[key] {
+				seen[key] = true
+				order = append(order, key)
+			}
+		}
+	}
+	if len(descriptions) > 0 {
+		composed.Description = strings.Join(descriptions, "; ")
+	}
+	if len(match.Groups) > 0 {
+		composed.Match = match
+	}
+	return order
+}
+
+// composeRoleSelectors sets the composed role's per-kind include lists and its
+// per-skill skill_mode and delivery, choosing each skill's value by specificity
+// and then by the order the roles were listed.
+func composeRoleSelectors(composed *RoleConfig, parts []*ResolvedRole, order []composedItemKey) {
+	includes := map[string][]string{}
+	for _, key := range order {
+		includes[key.kind] = append(includes[key.kind], roleIncludeEntry(key.domain, key.id))
+	}
+	for _, kind := range RoleKinds {
+		if ids := includes[kind]; len(ids) > 0 {
+			composed.setSelector(kind, &RoleSelector{Include: ids})
+		}
+	}
+	modes := map[string]string{}
+	deliveries := map[string]string{}
+	for _, key := range order {
+		if key.kind != RoleKindSkill {
+			continue
+		}
+		mapKey := roleIncludeEntry(key.domain, key.id)
+		if mode, ok := bestAcrossRoles(parts, key.domain, key.id, func(p *ResolvedRole) map[string]string {
+			return p.Flat().SkillMode
+		}); ok {
+			modes[mapKey] = mode
+		}
+		if delivery, ok := bestAcrossRoles(parts, key.domain, key.id, func(p *ResolvedRole) map[string]string {
+			return p.Flat().Delivery
+		}); ok {
+			deliveries[mapKey] = delivery
+		}
+	}
+	if len(modes) > 0 {
+		composed.SkillMode = modes
+	}
+	if len(deliveries) > 0 {
+		composed.Delivery = deliveries
+	}
+}
+
+func roleIncludeEntry(domain, id string) string {
+	if domain == "" {
+		return id
+	}
+	return domain + "/" + id
+}
+
+// bestAcrossRoles picks the winning value of a per-skill selector map across
+// roles: a more specific match wins, and the role listed later breaks a tie.
+func bestAcrossRoles(parts []*ResolvedRole, domain, id string, selector func(*ResolvedRole) map[string]string) (string, bool) {
+	best, bestRank, bestIdx := "", -1, -1
+	for i, part := range parts {
+		value, rank, ok := bestMatchRank(selector(part), domain, id)
+		if !ok {
+			continue
+		}
+		if rank > bestRank || (rank == bestRank && i > bestIdx) {
+			best, bestRank, bestIdx = value, rank, i
+		}
+	}
+	if bestRank < 0 {
+		return "", false
+	}
+	return best, true
 }
 
 func kindOrder(kind string) int {
