@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- **Compose roles.** `--role` takes a comma-separated list, as do `roles show`, `roles resolve`, `tokens --role` and `mcp --serve-skills --serve-role`. A composition is the union of its members: the domains and items they keep are combined, and where two members set `skill_mode` or `delivery` for the same skill the more specific key wins and, on a tie, the role listed last. A composition is pinnable — `ai-rulez lock --role a,b` records the union under the canonical name `a,b`. See [Roles](https://goldziher.github.io/ai-rulez/roles/).
+- **`AI_RULEZ_PROFILE` and `AI_RULEZ_ROLE` select the active profile and role** when the matching flag is not given; an explicit flag always wins ([#309](https://github.com/Goldziher/ai-rulez/issues/309)).
+- **A `domain` field on `[[mcp_servers]]`, `[[installed_skills]]` and `[[skill_sources]]`** ties a remote or fetched resource to a domain, so a profile or a role selects it by domain exactly as it selects local content. `profiles` keeps working and is an additional filter ([#308](https://github.com/Goldziher/ai-rulez/issues/308)).
+- **`installed_skills` gains the `skill_sources` conveniences**: `include` and `exclude` select several skills from one repository with a single entry, `name_prefix` namespaces their names, and `trust` sets the repository-scoped scan level ([#310](https://github.com/Goldziher/ai-rulez/issues/310)).
+
+### Fixed
+
+- **A kept obsolete plugin file is no longer forgotten after regeneration.** An obsolete generated file you edited by hand is preserved with a warning, and `verify --plugin` now keeps failing while it exists, as documented, instead of passing once the provenance sidecar is rewritten ([#307](https://github.com/Goldziher/ai-rulez/issues/307)).
+
+### Documentation
+
+- Answer how [profiles and roles](https://goldziher.github.io/ai-rulez/roles/#profiles-vs-roles) differ, how [installed skills and skill sources](https://goldziher.github.io/ai-rulez/installed-skills/#installed-skills-vs-skill-sources) differ, and how to [compose roles](https://goldziher.github.io/ai-rulez/roles/#composing-roles).
+
 ## [5.0.0] - 2026-10-10
 
 Run `ai-rulez migrate v5` (`--dry-run` to preview, `--check` for CI); upgrade steps are in [Migrating to v5](https://goldziher.github.io/ai-rulez/migration-v5/).
