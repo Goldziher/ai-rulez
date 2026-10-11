@@ -3,6 +3,7 @@ package generator
 import (
 	"io/fs"
 	"os"
+	pathpkg "path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 )
@@ -203,6 +205,7 @@ func (g *Generator) VerifyGenerated() (drift []Drift, checked int, err error) {
 func (g *Generator) resetRunState() {
 	g.previousFiles = nil
 	g.manifests = nil
+	g.pluginOwned = nil
 	g.refusedOutputs, g.linkedOutputs = nil, nil
 }
 
@@ -225,6 +228,12 @@ func (g *Generator) orphanGeneratedFiles(outputs []config.OutputFile) []string {
 			return
 		}
 		seen[rel] = true
+		// A plugin bundle committed into the project tree carries the same
+		// generated header, but no preset output plans it: its own provenance
+		// sidecar owns it (#350 regression).
+		if g.pluginOwnedPath(rel) {
+			return
+		}
 		if g.cleanGeneratedLeftover(abs) {
 			orphans = append(orphans, rel)
 		}
@@ -341,6 +350,65 @@ func (g *Generator) cleanGeneratedLeftover(abs string) bool {
 	}
 	data, err := g.config.ReadExisting(abs)
 	return err == nil && !g.bodyEdited(string(data), abs)
+}
+
+// pluginOwnedPath reports whether rel is a file a plugin bundle's provenance
+// sidecar (plugin.ProvenanceFileName) declares. `generate --plugin` writes a
+// bundle into the project tree and stamps each comment-capable file with the
+// same Content-Hash header the generator writes, so a committed bundle is a
+// clean leftover by that test alone. The sidecar lists the bundle's own files,
+// which no preset output plans, so the orphan walk leaves them alone.
+func (g *Generator) pluginOwnedPath(rel string) bool {
+	for dir := pathpkg.Dir(rel); ; dir = pathpkg.Dir(dir) {
+		if owned := g.pluginSidecarOutputs(dir); owned != nil {
+			sub := rel
+			if dir != "." {
+				sub = strings.TrimPrefix(rel, dir+"/")
+			}
+			if owned[sub] {
+				return true
+			}
+		}
+		if dir == "." || dir == "/" {
+			return false
+		}
+	}
+}
+
+// pluginSidecarOutputs returns the set of bundle-relative paths the plugin
+// provenance sidecar in dir (project-root relative, "." for the root) declares,
+// or nil when dir holds no sidecar. Reads are cached per directory, since the
+// walk offers many files under one bundle.
+func (g *Generator) pluginSidecarOutputs(dir string) map[string]bool {
+	if owned, ok := g.pluginOwned[dir]; ok {
+		return owned
+	}
+	if g.pluginOwned == nil {
+		g.pluginOwned = map[string]map[string]bool{}
+	}
+	abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(dir), plugin.ProvenanceFileName)
+	owned := readPluginSidecarOutputs(abs)
+	g.pluginOwned[dir] = owned
+	return owned
+}
+
+// readPluginSidecarOutputs parses a plugin provenance sidecar and returns its
+// declared outputs, or nil when the file is absent or is not a provenance
+// document (a hand-written .ai-rulez-generated.json then claims nothing).
+func readPluginSidecarOutputs(abs string) map[string]bool {
+	data, err := os.ReadFile(abs)
+	if err != nil {
+		return nil
+	}
+	hashes, _, err := plugin.ProvenanceOutputs(data)
+	if err != nil || len(hashes) == 0 {
+		return nil
+	}
+	owned := make(map[string]bool, len(hashes))
+	for rel := range hashes {
+		owned[filepath.ToSlash(rel)] = true
+	}
+	return owned
 }
 
 // considerRootFiles offers each root-level file to consider.
