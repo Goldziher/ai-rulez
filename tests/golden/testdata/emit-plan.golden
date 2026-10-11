@@ -413,7 +413,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/reviewer/scripts/ dir 0755
 + .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + .ai-rulez/.generated-manifest.json file 0644 1432 aa681753644d8842f776fbda595b270e2e9b53425fd94e5b5a8426518c54dc1d
-+ .ai-rulez/.generated-manifest.local.json file 0644 5038 034839621b31297683943828f8bc31b7752a7d610e88da87fe349217b7bd6cfe
++ .ai-rulez/.generated-manifest.local.json file 0644 5038 791bd0c059959b633c7a2c23fa9b36d29e7a8b3b29de548bfe8daa9ae1d0a884
 + .claude/ dir 0755
 + .claude/agents/ dir 0755
 + .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
@@ -458,7 +458,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 + .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 + .gitignore file 0644 665 bfd5c18eab8afa93ed9bcda7f54f51c3d2f16465fad135caf0af97348df88c84
-+ .mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
++ .mcp.json file 0644 545 c89732ccf50547d490d916ff62233d8a37ff26c0ab68c517c7b79802ec586162
 + CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 --- home tree
 (no change)
@@ -596,7 +596,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 5038 034839621b31297683943828f8bc31b7752a7d610e88da87fe349217b7bd6cfe
+.ai-rulez/.generated-manifest.local.json file 0644 5038 791bd0c059959b633c7a2c23fa9b36d29e7a8b3b29de548bfe8daa9ae1d0a884
 >>>>
 {
   "version": "1",
@@ -740,14 +740,14 @@ echo review
           "mcpServers",
           "local-tool"
         ],
-        "sum": "5941345de4e3c3620e53febdc7c79be7161fa71bad6e5b2b73a9d3f1d346c7d0"
+        "sum": "0bcc35d5b1f17b0b11337107e218a0f74ac5995e178ac8b6985da18b8efd7b31"
       },
       {
         "path": [
           "mcpServers",
           "remote-tool"
         ],
-        "sum": "890460c2ae0a11f748037106fd4b6f3fc38f77abf1683795a17464ade804ae26"
+        "sum": "db8e864e4a772fdfea9095c33c06f85535e013cb42db5c8e262f9a31ef335221"
       }
     ]
   },
@@ -763,7 +763,7 @@ echo review
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
     ".cursor/hooks.json": "26ebce3468ff5c1ce23a68089178c55adc1ead393c61d5a78a87a5f5a7c32101",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".mcp.json": "05d20c542efe76616e4be5bb5869aa40aadd016cf1462872020b606933af092c"
+    ".mcp.json": "7b2078ca5e5f2bd9896b5b7b6d802ca4bfdf66e6bf52c58b82a204a95b9e4018"
   }
 }
 <<<<
@@ -1469,7 +1469,7 @@ Use strict mode.
 CLAUDE.md
 # END ai-rulez
 <<<<
-.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
+.mcp.json file 0644 545 c89732ccf50547d490d916ff62233d8a37ff26c0ab68c517c7b79802ec586162
 >>>>
 {
   "mcpServers": {
@@ -1488,13 +1488,12 @@ CLAUDE.md
         "golden-mcp"
       ],
       "command": "npx",
-      "disabled": false,
       "env": {
         "API_TOKEN": "${GOLDEN_TOKEN}"
-      }
+      },
+      "type": "stdio"
     },
     "remote-tool": {
-      "disabled": false,
       "headers": {
         "Authorization": "Bearer ${GOLDEN_TOKEN}"
       },

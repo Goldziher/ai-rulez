@@ -12,7 +12,7 @@ INFO  Generation complete files=15
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 577 938551eb48e6f4ef28e02c1930416ba68b28e62c2244b65071f6c992ea57b73c
-.ai-rulez/.generated-manifest.local.json file 0644 2301 f90db6ceb1dcc6759bb20d323ef1f883376f8c45220f5b185994033dc8099b2a
+.ai-rulez/.generated-manifest.local.json file 0644 2301 cbe250e8a82dc08047d52f9ccc118c6e7059c87d8cee7cc61f64736026fd7379
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -42,7 +42,7 @@ INFO  Generation complete files=15
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 368 5cd9466792565b824d7cf0f504d0055d5207378a514fc70779ac27b8e2a41adf
-.mcp.json file 0600 580 f3e095e1459ab524698aac4790ffc2940bbb2469e408279756c5f64e701f0283
+.mcp.json file 0600 553 b4e672e2633cc463f25b51f8610f0e8f50d405d81b0aa88c649c4949d221a279
 .qoder/ dir 0755
 .qoder/agents/ dir 0755
 .qoder/agents/architect.md file 0644 172 6b2bf079a5621813ddd835a1c3f63b7bd5083d6d4b405dcfb01a6dd394834dfa

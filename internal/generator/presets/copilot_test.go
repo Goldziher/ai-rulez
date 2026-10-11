@@ -191,8 +191,9 @@ func TestCopilotPresetGenerator_renderMCPJSON(t *testing.T) {
 
 	stdio := servers["test-server"].(map[string]interface{})
 	assert.Equal(t, "npx", stdio["command"])
-	assert.NotContains(t, stdio, "type")
+	assert.Equal(t, "stdio", stdio["type"], "a stdio entry carries the same type as the self server")
 	assert.NotContains(t, stdio, "transport")
+	assert.NotContains(t, stdio, "disabled", "an enabled server is written without disabled")
 }
 
 func TestCopilotPresetGenerator_renderMCPJSON_RemoteTransports(t *testing.T) {

@@ -226,7 +226,8 @@ func TestCursorPreset_MCPJSON_PreservesHandAuthoredKeys(t *testing.T) {
 
 	assert.Equal(t, "npx", servers["configured"]["command"])
 	assert.Equal(t, []any{"-y", "configured-server"}, servers["configured"]["args"])
-	assert.Equal(t, false, servers["configured"]["disabled"])
+	assert.Equal(t, "stdio", servers["configured"]["type"], "a stdio entry carries the same type as the self server")
+	assert.NotContains(t, servers["configured"], "disabled", "an enabled server is written without disabled")
 	assert.Equal(t, "npx", servers["ai-rulez"]["command"], "the self server is written into the root .mcp.json by default")
 }
 
@@ -242,7 +243,8 @@ func TestCopilotPreset_MCPJSON_PreservesHandAuthoredKeys(t *testing.T) {
 
 	assert.Equal(t, "npx", servers["configured"]["command"])
 	assert.Equal(t, []any{"-y", "configured-server"}, servers["configured"]["args"])
-	assert.Equal(t, false, servers["configured"]["disabled"])
+	assert.Equal(t, "stdio", servers["configured"]["type"], "a stdio entry carries the same type as the self server")
+	assert.NotContains(t, servers["configured"], "disabled", "an enabled server is written without disabled")
 	assert.Equal(t, "npx", servers["ai-rulez"]["command"], "the self server is written into the root .mcp.json by default")
 }
 

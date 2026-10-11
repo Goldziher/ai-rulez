@@ -215,7 +215,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 20260 dbae5282ce85285f97f87976cf6d49cd4296af525c76cb8506d5534f7145096e
+.ai-rulez/.generated-manifest.local.json file 0644 20260 e102a0a1f2c6bfce854257b33564c3d202963e2621b397e34bc594d60159d13d
 >>>>
 {
   "version": "1",
@@ -576,7 +576,7 @@ policy:
           "mcpServers",
           "local-tool"
         ],
-        "sum": "5941345de4e3c3620e53febdc7c79be7161fa71bad6e5b2b73a9d3f1d346c7d0",
+        "sum": "0bcc35d5b1f17b0b11337107e218a0f74ac5995e178ac8b6985da18b8efd7b31",
         "local": true
       },
       {
@@ -584,7 +584,7 @@ policy:
           "mcpServers",
           "personal"
         ],
-        "sum": "6b2d0a3b181b99170d9ec88ea0d37ee72b7b964225ebaaf539909639ba2c929e",
+        "sum": "34e537fedb2e4338ae03004d9f7d191dfbed69e2c5aa5cdf3b919d815a071651",
         "local": true
       },
       {
@@ -592,7 +592,7 @@ policy:
           "mcpServers",
           "remote-tool"
         ],
-        "sum": "890460c2ae0a11f748037106fd4b6f3fc38f77abf1683795a17464ade804ae26",
+        "sum": "db8e864e4a772fdfea9095c33c06f85535e013cb42db5c8e262f9a31ef335221",
         "local": true
       }
     ],
@@ -887,7 +887,7 @@ policy:
     ".kilo/plugins/ai-rulez-hooks.js": "bb68fbfbf7ffa3c450175ddbb7968d668584e11f841be026454a06e40b29015c",
     ".kilo/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".kilo/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".mcp.json": "6fa1d4cb481798d405a5991d36b1287aa9451defb8e6ce3498ca1ba31b302238",
+    ".mcp.json": "f5918e63c6e846469a7912cc642799bc4e5a48cb878654da993e10190eee6661",
     ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
     ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".opencode/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
@@ -2810,7 +2810,7 @@ name: scratch
 
 # Scratch
 <<<<
-.mcp.json file 0600 724 6bf1c9cff649bb2adb3209ad584f4184e3c4d3633762698698767ebb795cf868
+.mcp.json file 0600 695 720f3429ca55588041915c3200390455ed346f170ab2188e42072f4bf8b2dac8
 >>>>
 {
   "mcpServers": {
@@ -2829,10 +2829,10 @@ name: scratch
         "golden-mcp"
       ],
       "command": "npx",
-      "disabled": false,
       "env": {
         "API_TOKEN": "${GOLDEN_TOKEN}"
-      }
+      },
+      "type": "stdio"
     },
     "personal": {
       "args": [
@@ -2840,10 +2840,9 @@ name: scratch
         "${GOLDEN_TOKEN}"
       ],
       "command": "personal-mcp",
-      "disabled": false
+      "type": "stdio"
     },
     "remote-tool": {
-      "disabled": false,
       "headers": {
         "Authorization": "Bearer ${GOLDEN_TOKEN}"
       },
