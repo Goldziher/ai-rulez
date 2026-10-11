@@ -568,7 +568,7 @@ func authoredSecretGate(ctx context.Context, cfg *config.Config) error {
 	if err != nil {
 		return oops.Wrapf(err, "index content for the secret scan")
 	}
-	report, err := lint.RunWith(cfg, tree, lint.Options{SecurityOnly: true})
+	report, err := lint.RunWith(cfg, tree, lint.Options{SecurityOnly: true, SecretsOnly: true})
 	if err != nil {
 		return oops.Wrapf(err, "scan content for secrets")
 	}
