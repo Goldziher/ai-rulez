@@ -124,3 +124,98 @@ func TestResolveInstalledSkills_StampsEntryScope(t *testing.T) {
 		assert.Equal(t, config.TrustWarn, skills[i].Trust)
 	}
 }
+
+// An entry that selects skills with include and names no path discovers them
+// under the conventional "skills" directory, so `name` is only its label; an
+// exclude drops a match.
+func TestResolveInstalledSkills_IncludeWithoutPath(t *testing.T) {
+	// Arrange: the repository keeps its skills under skills/, as basemind does.
+	repo := t.TempDir()
+	for _, name := range []string{"basemind-cli", "basemind-code-search", "multi-agent-room", "unrelated"} {
+		writeSkill(t, filepath.Join(repo, "skills", name), name)
+	}
+	cfg := &config.Config{BaseDir: repo, InstalledSkills: []config.InstalledSkillConfig{{
+		Name:    "basemind-test",
+		Source:  repo,
+		Include: []string{"basemind*", "multi-agent-room", "unrelated"},
+		Exclude: []string{"unrelated"},
+	}}}
+
+	// Act
+	skills, err := ResolveInstalledSkills(context.Background(), cfg, "")
+
+	// Assert
+	require.NoError(t, err)
+	names := make([]string, len(skills))
+	for i := range skills {
+		names[i] = skills[i].Name
+	}
+	assert.Equal(t, []string{"basemind-cli", "basemind-code-search", "multi-agent-room"}, names)
+}
+
+// A single-skill entry without include keeps its "skills/<name>" behavior, even
+// though it names no path.
+func TestResolveInstalledSkills_SingleSkillWithoutInclude(t *testing.T) {
+	// Arrange
+	repo := t.TempDir()
+	writeSkill(t, filepath.Join(repo, "skills", "solo"), "solo")
+	cfg := &config.Config{BaseDir: repo, InstalledSkills: []config.InstalledSkillConfig{{
+		Name: "solo", Source: repo,
+	}}}
+
+	// Act
+	skills, err := ResolveInstalledSkills(context.Background(), cfg, "")
+
+	// Assert
+	require.NoError(t, err)
+	require.Len(t, skills, 1)
+	assert.Equal(t, "solo", skills[0].Name)
+}
+
+// A glob that matches nothing is reported, naming the entry and the directory,
+// instead of silently resolving no skills.
+func TestResolveInstalledSkills_IncludeMatchingNothing(t *testing.T) {
+	// Arrange
+	repo := t.TempDir()
+	writeSkill(t, filepath.Join(repo, "skills", "alpha"), "alpha")
+	cfg := &config.Config{BaseDir: repo, InstalledSkills: []config.InstalledSkillConfig{{
+		Name: "vendor", Source: repo, Include: []string{"ghost*"},
+	}}}
+
+	// Act
+	_, err := ResolveInstalledSkills(context.Background(), cfg, "")
+
+	// Assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "vendor")
+	assert.Contains(t, err.Error(), "ghost*")
+	assert.Contains(t, err.Error(), "no skill directory")
+}
+
+// A git entry that selects skills with include and names no path discovers them
+// under the repository's conventional "skills" directory, so generate resolves
+// them instead of looking for skills/<name> (#329).
+func TestResolveInstalledSkills_GitIncludeWithoutPath(t *testing.T) {
+	// Arrange
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, "skills/basemind-cli/SKILL.md", "---\nname: basemind-cli\n---\n# Basemind CLI\n")
+	commitFile(t, repoDir, "skills/multi-agent-room/SKILL.md", "---\nname: multi-agent-room\n---\n# Multi Agent Room\n")
+	commitFile(t, repoDir, "skills/unrelated/SKILL.md", "---\nname: unrelated\n---\n# Unrelated\n")
+	t.Setenv("HOME", t.TempDir()) // keep the fetch cache out of the real home
+	cfg := &config.Config{BaseDir: t.TempDir(), InstalledSkills: []config.InstalledSkillConfig{{
+		Name:    "basemind-test",
+		Source:  "file://" + repoDir,
+		Include: []string{"basemind*", "multi-agent-room"},
+	}}}
+
+	// Act
+	skills, err := ResolveInstalledSkills(context.Background(), cfg, "")
+
+	// Assert
+	require.NoError(t, err)
+	names := make([]string, len(skills))
+	for i := range skills {
+		names[i] = skills[i].Name
+	}
+	assert.Equal(t, []string{"basemind-cli", "multi-agent-room"}, names)
+}

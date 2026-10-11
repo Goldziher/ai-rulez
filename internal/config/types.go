@@ -847,10 +847,23 @@ type InstalledSkillConfig struct {
 	MinReleaseAge     string `yaml:"min_release_age,omitempty" json:"min_release_age,omitempty" toml:"min_release_age,omitempty"`          //nolint:tagliatelle
 }
 
-// GetPath returns the path within the repo, defaulting to "skills/<name>"
+// GetPath returns the path within the repo that holds the entry's skills. An
+// entry that selects several skills with include/exclude and names no path is a
+// directory of skill directories: it defaults to the conventional "skills"
+// directory, so `name` is only the entry's label. A single-skill entry keeps its
+// "skills/<name>" default.
 func (s *InstalledSkillConfig) GetPath() string {
 	if s.Path != "" {
 		return s.Path
 	}
-	return "skills/" + s.Name
+	if s.SelectsSeveral() {
+		return skillsDir
+	}
+	return skillsDir + "/" + s.Name
+}
+
+// SelectsSeveral reports whether the entry picks skills by include/exclude
+// rather than naming one skill directory with `name`.
+func (s *InstalledSkillConfig) SelectsSeveral() bool {
+	return len(s.Include) > 0 || len(s.Exclude) > 0
 }
