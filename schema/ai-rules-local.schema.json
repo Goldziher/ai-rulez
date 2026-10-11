@@ -2617,6 +2617,13 @@
         "icon": {
           "type": "string"
         },
+        "include": {
+          "description": "Globs relative to the plugin's content root of arbitrary files copied verbatim into the Agent Plugins package, keeping their relative path. A './'-relative MCP command can point at an included file (Agent Plugins 4.2, 7.2.1). Empty keeps the package to plugin.json, mcp.json and skills/.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "include_domains": {
           "description": "Domains (names or globs) whose skills, commands and agents are bundled next to the root content. Empty keeps the bundle root-only. A root item wins over a same-named domain item.",
           "items": {

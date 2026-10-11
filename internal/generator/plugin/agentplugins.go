@@ -125,6 +125,11 @@ func agentPluginsBuild(m *Manifest, baseDir string) (files map[string][]byte, co
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	includes, err := includeOutputs(m, baseDir)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	content = append(content, includes...)
 	model, err := agentPluginsModel(m, content, baseDir)
 	if err != nil {
 		return nil, nil, nil, err

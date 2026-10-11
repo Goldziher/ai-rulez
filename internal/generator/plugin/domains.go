@@ -298,6 +298,7 @@ func BuildDomainManifest(cfg *config.Config, p *PlannedPlugin) *Manifest {
 		m.Spec = root.Spec
 		m.Codex = root.Codex
 		m.Cursor = root.Cursor
+		m.Include = root.Include
 	}
 	if m.Market.Owner == nil {
 		m.Market.Owner = m.Author
