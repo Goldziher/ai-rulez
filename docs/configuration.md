@@ -417,6 +417,22 @@ Each profile specifies a list of domain names. When generating with a profile:
 3. Globally-active builtin domains and every domain sourced from an external include are always included, whatever the profile
 4. A builtin named as `builtin:<name>` in the profile is loaded for that profile only
 
+An entry may also be the wildcard `*`, which selects every domain the config knows, or an exclusion
+`!name`, which removes a domain from the selection. Resolution starts from the positive entries
+(expanding `*`), then removes the negated ones, so order does not matter and the result is
+deterministic. This is how a monorepo keeps most domains in the root output while a `[[scopes]]`
+subdirectory renders the rest:
+
+```toml
+[profiles]
+# Every domain except "s"; "s" is rendered only in its own scope.
+all-but-s = ["*", "!s"]
+```
+
+A profile made only of exclusions — `["!a"]` with no positive entry — is an error, because there is
+nothing to subtract from; write `["*", "!a"]` to select everything except `a`. An exclusion that
+names an unknown domain is a warning, exactly as an unknown positive name is, and is ignored.
+
 Several profiles can be selected at once by separating them with commas — `--profile
 base,backend`, or `default = "base,backend"` — which generates the union of their
 domains. A profile name may therefore not contain a comma, and a profile's value lists

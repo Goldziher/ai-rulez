@@ -4,12 +4,131 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
 )
 
 // ProfileSeparator separates the elements of a composed profile value, as in
 // "base,backend".
 const ProfileSeparator = ","
+
+// wildcardDomain is the profile domain entry that selects every domain the
+// config knows. It is only meaningful next to the positive entries a profile
+// already has, so it can be narrowed with negationPrefix exclusions.
+const wildcardDomain = "*"
+
+// negationPrefix marks a profile domain entry as an exclusion: "!name" removes
+// name from the domains the profile selects.
+const negationPrefix = "!"
+
+// isNegatedDomain reports whether a profile domain entry excludes a domain. A
+// lone prefix with no name is not an exclusion and is ignored during resolution.
+func isNegatedDomain(entry string) bool {
+	return strings.HasPrefix(entry, negationPrefix) && entry != negationPrefix
+}
+
+// negatedDomainName returns the entry with its exclusion prefix removed; a
+// positive entry is returned unchanged.
+func negatedDomainName(entry string) string {
+	return strings.TrimPrefix(entry, negationPrefix)
+}
+
+// hasPositiveDomainEntry reports whether a profile's domain list selects
+// anything: at least one entry that is not an exclusion. A list made only of
+// "!name" entries is invalid, because there is nothing to subtract from.
+func hasPositiveDomainEntry(entries []string) bool {
+	for _, entry := range entries {
+		if entry != "" && !isNegatedDomain(entry) {
+			return true
+		}
+	}
+	return false
+}
+
+// ResolveProfileDomains resolves a profile's domain entries against the domains
+// a config knows. Positive entries are kept in the order written, "*" expands to
+// every known domain (sorted, so the result is deterministic) and "!name"
+// entries are removed from the result. Exact names behave as before: an unknown
+// one is kept as written, so validation can warn about it and selection simply
+// ignores it.
+//
+// A list with exclusions but no positive entry is an error: there is nothing to
+// subtract from, so the author almost certainly meant to write "*" first.
+func ResolveProfileDomains(entries []string, knownDomains []string) ([]string, error) {
+	var positives, negations []string
+	for _, entry := range entries {
+		if entry == "" {
+			continue
+		}
+		if isNegatedDomain(entry) {
+			negations = append(negations, negatedDomainName(entry))
+			continue
+		}
+		positives = append(positives, entry)
+	}
+	if !hasPositiveDomainEntry(entries) && len(negations) > 0 {
+		return nil, oops.
+			With("domains", entries).
+			Hint(`A profile made only of exclusions has nothing to subtract from; start it with "*" to select every domain, then exclude the ones you do not want`).
+			Errorf("profile excludes domains but selects none")
+	}
+	if len(positives) == 0 {
+		return nil, nil
+	}
+
+	result := make([]string, 0, len(positives)+len(knownDomains))
+	seen := make(map[string]bool, len(positives)+len(knownDomains))
+	add := func(name string) {
+		if name == "" || seen[name] {
+			return
+		}
+		seen[name] = true
+		result = append(result, name)
+	}
+
+	sortedKnown := append([]string(nil), knownDomains...)
+	sort.Strings(sortedKnown)
+	for _, entry := range positives {
+		if entry == wildcardDomain {
+			for _, name := range sortedKnown {
+				add(name)
+			}
+			continue
+		}
+		add(entry)
+	}
+
+	if len(negations) == 0 {
+		return result, nil
+	}
+	excluded := make(map[string]bool, len(negations))
+	for _, name := range negations {
+		excluded[builtins.TrimRefPrefix(name)] = true
+	}
+	out := result[:0]
+	for _, name := range result {
+		if excluded[builtins.TrimRefPrefix(name)] {
+			continue
+		}
+		out = append(out, name)
+	}
+	return out, nil
+}
+
+// knownDomainNames returns the domain names a content tree knows, sorted so that
+// a wildcard expansion is deterministic. A nil tree knows no domains.
+func knownDomainNames(content *ContentTree) []string {
+	if content == nil {
+		return nil
+	}
+	names := make([]string, 0, len(content.Domains))
+	for name := range content.Domains {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
 
 // SplitProfileNames splits a profile value into its element names.
 //

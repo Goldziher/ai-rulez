@@ -3,9 +3,12 @@ package config_test
 import (
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 func TestSplitProfileNames(t *testing.T) {
@@ -222,4 +225,107 @@ func TestFilterContentFilesByProfile(t *testing.T) {
 		"an unset profile applies no restriction")
 	assert.Equal(t, []string{"everyone", "backend-only"}, got("base,backend"),
 		"a composed profile matches any of its elements")
+}
+
+func TestResolveProfileDomains(t *testing.T) {
+	known := []string{"api", "s", "web"}
+
+	tests := []struct {
+		name    string
+		entries []string
+		want    []string
+		wantErr string
+	}{
+		{name: "exact names are kept in order", entries: []string{"web", "api"}, want: []string{"web", "api"}},
+		{name: "unknown exact name is kept as written", entries: []string{"ghost"}, want: []string{"ghost"}},
+		{name: "wildcard expands to every known domain sorted", entries: []string{"*"}, want: []string{"api", "s", "web"}},
+		{name: "wildcard with an exclusion drops it", entries: []string{"*", "!s"}, want: []string{"api", "web"}},
+		{name: "order of positives and negations does not matter", entries: []string{"!s", "*"}, want: []string{"api", "web"}},
+		{name: "exclusion after an explicit positive", entries: []string{"api", "web", "!api"}, want: []string{"web"}},
+		{name: "unknown exclusion is ignored", entries: []string{"api", "!ghost"}, want: []string{"api"}},
+		{name: "wildcard de-duplicates a named positive", entries: []string{"web", "*"}, want: []string{"web", "api", "s"}},
+		{name: "exclusion of a builtin reference drops the bare domain", entries: []string{"*", "!builtin:api"}, want: []string{"s", "web"}},
+		{name: "only exclusions is an error", entries: []string{"!api"}, wantErr: "excludes domains but selects none"},
+		{name: "empty entries resolve to nothing", entries: nil, want: nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := config.ResolveProfileDomains(tt.entries, known)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestConfig_GetProfileDomains_Wildcard(t *testing.T) {
+	cfg := &config.Config{
+		Profiles: map[string][]string{
+			"everything": {"*"},
+			"all-but-s":  {"*", "!s"},
+			"exact":      {"api"},
+		},
+		Content: &config.ContentTree{Domains: map[string]*config.Domain{
+			"api": {}, "s": {}, "web": {},
+		}},
+	}
+
+	assert.Equal(t, []string{"api", "s", "web"}, cfg.GetProfileDomains("everything"))
+	assert.Equal(t, []string{"api", "web"}, cfg.GetProfileDomains("all-but-s"))
+	assert.Equal(t, []string{"api"}, cfg.GetProfileDomains("exact"), "an exact-name profile is unchanged")
+}
+
+func TestConfig_SelectContentForProfile_WildcardAndNegation(t *testing.T) {
+	tree := &config.ContentTree{Domains: map[string]*config.Domain{
+		"api": {Name: "api"}, "s": {Name: "s"}, "web": {Name: "web"},
+	}}
+	cfg := &config.Config{Profiles: map[string][]string{"all-but-s": {"*", "!s"}}}
+
+	selected, err := cfg.SelectContentForProfile(tree, "all-but-s")
+	require.NoError(t, err)
+
+	got := make([]string, 0, len(selected.Domains))
+	for name := range selected.Domains {
+		got = append(got, name)
+	}
+	assert.ElementsMatch(t, []string{"api", "web"}, got)
+}
+
+func TestConfig_Validate_PureNegationProfile(t *testing.T) {
+	cfg := &config.Config{
+		Version:  "5.0",
+		Name:     "p",
+		Presets:  []config.Preset{{BuiltIn: "claude"}},
+		Profiles: map[string][]string{"broken": {"!api"}},
+	}
+
+	err := cfg.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `profile "broken"`)
+	assert.Contains(t, err.Error(), "excludes domains but selects none")
+}
+
+func TestValidateWarnsUnknownNegatedProfileDomain(t *testing.T) {
+	// Arrange
+	rec := &testutil.LogRecorder{}
+	cfg := &config.Config{
+		Version:  "5.0",
+		Name:     "p",
+		Presets:  []config.Preset{{BuiltIn: "claude"}},
+		Host:     ambient.Host{Log: rec},
+		Profiles: map[string][]string{"all-but-ghost": {"*", "!ghost"}},
+		Content:  &config.ContentTree{Domains: map[string]*config.Domain{"api": {Name: "api"}}},
+	}
+
+	// Act
+	err := cfg.Validate()
+
+	// Assert
+	require.NoError(t, err, "an unknown negated name is a warning, not an error")
+	assert.Contains(t, rec.String(), "profile references non-existent domain")
 }
