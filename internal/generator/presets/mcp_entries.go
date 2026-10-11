@@ -24,6 +24,27 @@ func isRemoteServer(server *config.MCPServer) bool {
 	return t == config.TransportHTTP || t == config.TransportSSE
 }
 
+// OAuthJSONEntry returns the camelCase `oauth` block that a JSON MCP document
+// (Claude Code's .mcp.json, VS Code's mcp.json) reads: clientId, callbackPort
+// and scopes. It returns nil for a server without an oauth block, so a plain
+// server renders exactly as before.
+func OAuthJSONEntry(o *config.MCPOAuth) map[string]any {
+	if o.IsZero() {
+		return nil
+	}
+	entry := map[string]any{}
+	if o.ClientID != "" {
+		entry["clientId"] = o.ClientID
+	}
+	if o.CallbackPort != 0 {
+		entry["callbackPort"] = o.CallbackPort
+	}
+	if len(o.Scopes) > 0 {
+		entry["scopes"] = o.Scopes
+	}
+	return entry
+}
+
 // VSCodeMCPEntry is the .vscode/mcp.json entry (`servers.<name>`) with type
 // stdio|http|sse. VS Code cannot switch a server off, so a disabled server yields
 // nil and is left out of the document.
@@ -37,6 +58,9 @@ func VSCodeMCPEntry(server *config.MCPServer) map[string]any {
 		entry[keyURL] = server.URL
 		if len(server.Headers) > 0 {
 			entry[keyHeaders] = server.Headers
+		}
+		if oauth := OAuthJSONEntry(server.OAuth); oauth != nil {
+			entry["oauth"] = oauth
 		}
 		return entry
 	}
@@ -66,6 +90,7 @@ func CodexMCPEntry(server *config.MCPServer) map[string]any {
 	if isRemoteServer(server) {
 		entry[keyURL] = server.URL
 		codexHeaders(entry, server)
+		codexOAuth(entry, server)
 	} else {
 		entry[keyCommand] = server.Command
 		if len(server.Args) > 0 {
@@ -107,6 +132,28 @@ func codexHeaders(entry map[string]any, server *config.MCPServer) {
 	}
 }
 
+// codexOAuth writes the pre-registered OAuth client of a remote server into the
+// [mcp_servers.<name>.oauth] table Codex reads (client_id, callback_port), with
+// the requested scopes on the server's own `scopes` key.
+func codexOAuth(entry map[string]any, server *config.MCPServer) {
+	if server.OAuth.IsZero() {
+		return
+	}
+	oauth := map[string]any{}
+	if server.OAuth.ClientID != "" {
+		oauth["client_id"] = server.OAuth.ClientID
+	}
+	if server.OAuth.CallbackPort != 0 {
+		oauth["callback_port"] = server.OAuth.CallbackPort
+	}
+	if len(oauth) > 0 {
+		entry["oauth"] = oauth
+	}
+	if len(server.OAuth.Scopes) > 0 {
+		entry["scopes"] = server.OAuth.Scopes
+	}
+}
+
 // codexEnv writes the env of a stdio server: a value that is exactly ${KEY} for
 // its own key is forwarded by name (env_vars), the rest is written as env.
 func codexEnv(entry map[string]any, server *config.MCPServer) {
@@ -130,9 +177,11 @@ func codexEnv(entry map[string]any, server *config.MCPServer) {
 
 // nativeMCPEntry is the shared mcpServers entry (command/args/env or url/headers)
 // of the tools that read it natively, without the description they ignore. A
-// disabled server yields nil: none of these tools has a switch for it.
+// disabled server yields nil: none of these tools has a switch for it. A server
+// with an oauth block also yields nil: the shared shape has no oauth, so it is
+// left out (see mcpEntries) rather than written without the client it needs.
 func nativeMCPEntry(server *config.MCPServer) map[string]any {
-	if server == nil || !server.IsEnabled() {
+	if server == nil || !server.IsEnabled() || server.HasOAuth() {
 		return nil
 	}
 	entry := MCPServerEntry(server)
@@ -140,7 +189,9 @@ func nativeMCPEntry(server *config.MCPServer) map[string]any {
 	return entry
 }
 
-// mcpEntries renders every complete, expressible server through build, keyed by name.
+// mcpEntries renders every complete, expressible server through build, keyed by
+// name. A server carrying an oauth block that build cannot express is skipped
+// with a warning rather than written without the client it needs.
 func mcpEntries(cfg *config.Config, build func(*config.MCPServer) map[string]any) map[string]any {
 	entries := map[string]any{}
 	if cfg == nil {
@@ -153,9 +204,14 @@ func mcpEntries(cfg *config.Config, build func(*config.MCPServer) map[string]any
 		if isRemoteServer(server) && server.URL == "" || !isRemoteServer(server) && server.Command == "" {
 			continue
 		}
-		if entry := build(server); entry != nil {
-			entries[name] = entry
+		entry := build(server)
+		if entry == nil {
+			if server.IsEnabled() && server.HasOAuth() {
+				cfg.Diag.Warn("skipping MCP server that declares an oauth block: this tool has no oauth block, so a pre-registered client cannot be written", "server", name)
+			}
+			continue
 		}
+		entries[name] = entry
 	}
 	return entries
 }

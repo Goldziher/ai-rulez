@@ -132,9 +132,15 @@ func MCPServersByKey(cfg *config.Config) map[string]interface{} {
 		return servers
 	}
 	for name, server := range cfg.MCPServers {
-		if entry := MCPServerEntry(server); entry != nil {
-			servers[name] = BracedMCPEntry(entry, server)
+		entry := MCPServerEntry(server)
+		if entry == nil {
+			continue
 		}
+		if server.HasOAuth() {
+			cfg.Diag.Warn("skipping MCP server that declares an oauth block: this tool has no oauth block, so a pre-registered client cannot be written", "server", name)
+			continue
+		}
+		servers[name] = BracedMCPEntry(entry, server)
 	}
 	return servers
 }

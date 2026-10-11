@@ -43,6 +43,10 @@ type mcpServer struct {
 	url       string
 	env       map[string]string
 	headers   map[string]string
+	// oauth is true when the entry carries an oauth block; oauthClientID is the
+	// client_id (clientId) it names, empty when the block has none.
+	oauth         bool
+	oauthClientID string
 	// problems found while decoding (field types), JSON sources only.
 	typeProblems []string
 	disabled     bool
@@ -67,7 +71,11 @@ func (r *runner) mcpServers() []*mcpServer {
 		servers := r.effectiveMCPServers()
 		for i := range servers {
 			s := &servers[i]
-			out = append(out, &mcpServer{file: cfgPath, name: s.Name, transport: s.Transport, command: s.Command, args: s.Args, url: s.URL, env: s.Env, headers: s.Headers, disabled: !s.IsEnabled()})
+			out = append(out, &mcpServer{
+				file: cfgPath, name: s.Name, transport: writtenTransport(s),
+				command: s.Command, args: s.Args, url: s.URL, env: s.Env, headers: s.Headers,
+				oauth: s.HasOAuth(), oauthClientID: mcpOAuthClientID(s.OAuth), disabled: !s.IsEnabled(),
+			})
 		}
 	}
 	for _, f := range mcpJSONFiles {
@@ -113,9 +121,13 @@ func (r *runner) configMCPServer(name string) *config.MCPServer {
 // launch definition as the config.toml server of that name, so the file is a
 // generated copy. Any difference means the file was edited and is checked itself.
 func sameMCPServer(j *mcpServer, gen *config.MCPServer) bool {
-	g := &mcpServer{transport: gen.Transport, command: gen.Command, url: gen.URL}
+	g := &mcpServer{
+		transport: writtenTransport(gen), command: gen.Command, url: gen.URL,
+		oauth: gen.HasOAuth(), oauthClientID: mcpOAuthClientID(gen.OAuth),
+	}
 	return len(j.typeProblems) == 0 && j.command == gen.Command && j.url == gen.URL &&
 		effectiveTransport(j) == effectiveTransport(g) &&
+		j.oauth == g.oauth && j.oauthClientID == g.oauthClientID &&
 		slices.Equal(j.args, gen.Args) && maps.Equal(j.env, gen.Env) && maps.Equal(j.headers, gen.Headers)
 }
 
@@ -195,6 +207,10 @@ func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocycl
 				}
 			}
 		}
+		if raw, ok := f["oauth"]; ok {
+			s.oauth = true
+			s.oauthClientID = oauthClientIDFromJSON(raw)
+		}
 		if raw, ok := f["disabled"]; ok {
 			_ = json.Unmarshal(raw, &s.disabled) //nolint:errcheck // a non-boolean stays false
 		}
@@ -210,6 +226,40 @@ func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocycl
 }
 
 var mcpNameRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[A-Za-z0-9_-]+$`) })
+
+// writtenTransport is the transport as the author spelled it: `transport`, or
+// `type` when only that is set. Empty is left empty so effectiveTransport can
+// still infer http from a url, exactly as before `type` existed.
+func writtenTransport(s *config.MCPServer) string {
+	if s.Transport != "" {
+		return s.Transport
+	}
+	return s.Type
+}
+
+// mcpOAuthClientID is the client id of an oauth block, "" when there is none.
+func mcpOAuthClientID(o *config.MCPOAuth) string {
+	if o == nil {
+		return ""
+	}
+	return o.ClientID
+}
+
+// oauthClientIDFromJSON reads the client id out of a JSON oauth object, "" when
+// it names none. It accepts both spellings a harness may use.
+func oauthClientIDFromJSON(raw json.RawMessage) string {
+	var oauth map[string]json.RawMessage
+	if json.Unmarshal(raw, &oauth) != nil {
+		return ""
+	}
+	for _, k := range []string{"clientId", "client_id"} {
+		var id string
+		if cid, ok := oauth[k]; ok && json.Unmarshal(cid, &id) == nil {
+			return id
+		}
+	}
+	return ""
+}
 
 func effectiveTransport(s *mcpServer) string {
 	t := strings.ToLower(s.transport)
@@ -234,10 +284,15 @@ func (r *runner) checkMCPServers(servers []*mcpServer) {
 		return
 	}
 	byName := map[string][]*mcpServer{}
+	// byNameAcrossFiles groups the same name across sources, so a definition in
+	// config.toml and a divergent hand-authored copy in an MCP file are seen as
+	// one conflict.
+	byNameAcrossFiles := map[string][]*mcpServer{}
 	for _, s := range servers {
 		if !s.disabled {
 			key := s.file + "\x00" + strings.ToLower(s.name)
 			byName[key] = append(byName[key], s)
+			byNameAcrossFiles[strings.ToLower(s.name)] = append(byNameAcrossFiles[strings.ToLower(s.name)], s)
 		}
 	}
 	for _, s := range servers {
@@ -250,8 +305,49 @@ func (r *runner) checkMCPServers(servers []*mcpServer) {
 			at = s.line
 		}
 		r.checkMCPShape(s, at, byName)
+		r.checkMCPOAuth(s, at)
+		r.checkMCPConflicts(s, at, byNameAcrossFiles[strings.ToLower(s.name)])
 		r.checkMCPPins(s, at)
 		r.checkMCPSecrets(s, lines, at)
+	}
+}
+
+// checkMCPOAuth reports an oauth block on a hosted server that names no
+// client_id: a provider without dynamic client registration cannot authenticate
+// it, so the client must be pinned.
+func (r *runner) checkMCPOAuth(s *mcpServer, at int) {
+	if s.oauth && s.oauthClientID == "" && s.url != "" {
+		r.addSev(SeverityWarning, CodeMCPConfigInvalid, s.file, at,
+			"MCP server %q: declares an oauth block for a hosted server but names no client_id; a server that needs a pre-registered client must pin oauth.client_id, and a callback_port-only block relies on dynamic client registration", s.name)
+	}
+}
+
+// checkMCPConflicts reports a name that resolves to a different endpoint or
+// transport in another source: the same server name must not point at two
+// endpoints, since a harness reads one of them and silently ignores the other.
+// Only the entry that sorts first among the conflicting peers reports, so one
+// conflict yields one finding.
+func (r *runner) checkMCPConflicts(s *mcpServer, at int, peers []*mcpServer) {
+	var conflicting []*mcpServer
+	first := s
+	for _, other := range peers {
+		if other == s || other.file == s.file {
+			continue
+		}
+		if effectiveTransport(other) != effectiveTransport(s) || other.url != s.url || other.command != s.command {
+			conflicting = append(conflicting, other)
+			if other.file < first.file {
+				first = other
+			}
+		}
+	}
+	if len(conflicting) == 0 || first != s {
+		return
+	}
+	for _, other := range conflicting {
+		r.addSev(SeverityWarning, CodeMCPConfigInvalid, s.file, at,
+			"MCP server %q: conflicts with the definition in %s: the same name resolves to a different endpoint or transport, and a harness reads only one of them",
+			s.name, filepath.Base(other.file))
 	}
 }
 

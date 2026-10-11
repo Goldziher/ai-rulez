@@ -22,5 +22,10 @@ func (m MCPServer) Clone() MCPServer {
 		enabled := *m.Enabled
 		m.Enabled = &enabled
 	}
+	if m.OAuth != nil {
+		oauth := *m.OAuth
+		oauth.Scopes = slices.Clone(oauth.Scopes)
+		m.OAuth = &oauth
+	}
 	return m
 }
