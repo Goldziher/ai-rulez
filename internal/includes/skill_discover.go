@@ -10,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/samber/oops"
 )
 
 // discoverSkillDirs lists the skill directories an installed_skills entry
@@ -79,7 +80,9 @@ func selectedSkillDir(name string, include, exclude []string) bool {
 // entryName (so a path that names a skill directory behaves as before, the
 // prefix defaulting to the empty string). Otherwise each selected subdirectory
 // becomes a skill named namePrefix + the directory name. A skill that cannot be
-// read is skipped with a warning rather than failing the whole entry.
+// read is skipped with a warning rather than failing the whole entry. An entry
+// that asked for skills by glob but matched none is an error: silently resolving
+// nothing would drop the entry's outputs without a trace.
 func scanSelectedSkills(ctx context.Context, root, namePrefix, entryName string, include, exclude []string) ([]config.ContentFile, error) {
 	log := logger.FromContext(ctx)
 	if hasSkillMarker(root) {
@@ -89,8 +92,14 @@ func scanSelectedSkills(ctx context.Context, root, namePrefix, entryName string,
 		}
 		return []config.ContentFile{cf}, nil
 	}
+	dirs := discoverSkillDirs(root, include, exclude)
+	if len(dirs) == 0 && selectsSeveral(include, exclude) {
+		return nil, oops.
+			With("path", root).
+			Errorf("installed skill %q: no skill directory under %s matched include=%v exclude=%v", entryName, root, include, exclude)
+	}
 	var out []config.ContentFile
-	for _, dir := range discoverSkillDirs(root, include, exclude) {
+	for _, dir := range dirs {
 		cf, err := ScanInstalledSkillDir(ctx, dir, namePrefix+filepath.Base(dir))
 		if err != nil {
 			log.Warn("Skipping a skill in an installed skill entry", "path", dir, "error", err)
@@ -99,4 +108,10 @@ func scanSelectedSkills(ctx context.Context, root, namePrefix, entryName string,
 		out = append(out, cf)
 	}
 	return out, nil
+}
+
+// selectsSeveral reports whether an entry picks skills by glob (include/exclude)
+// rather than naming a single skill directory.
+func selectsSeveral(include, exclude []string) bool {
+	return len(include) > 0 || len(exclude) > 0
 }
