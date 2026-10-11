@@ -169,7 +169,9 @@ func validatePreRun() error {
 // runRecursiveValidate validates every discovered config, reports all failures,
 // and returns 1 if any config is invalid (0 otherwise, including when none exist).
 func runRecursiveValidate() int {
-	configFiles := findConfigFilesRecursively()
+	// The same discovery `generate --recursive` counts, so the two summaries
+	// agree on how many roots the tree holds.
+	configFiles := recursiveConfigRoots()
 	if len(configFiles) == 0 {
 		progress.PrintlnIfNotQuiet("No configuration files found")
 		return 0
@@ -229,6 +231,12 @@ func runRecursiveValidate() int {
 			return exitCodeFor(config.ErrPolicyLoosens)
 		}
 		return 1
+	}
+	if strictCode != 0 {
+		// The run exits non-zero on findings, so "all valid" would contradict it.
+		// The report above already listed them; this names the count checked.
+		fmt.Fprintf(os.Stderr, "\n❌ %d config(s) checked; findings were reported\n", len(configFiles))
+		return strictCode
 	}
 	progress.PrintIfNotQuiet("\nAll %d config(s) are valid\n", len(configFiles))
 	return strictCode
