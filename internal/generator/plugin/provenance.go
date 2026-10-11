@@ -29,6 +29,11 @@ type provenanceDocument struct {
 	SchemaVersion string                      `json:"schema_version"`
 	SourceHash    string                      `json:"source_hash"`
 	Outputs       map[string]provenanceOutput `json:"outputs"`
+	// Obsolete records generated files a run kept because they were edited (or
+	// cannot be deleted safely) but no longer plans. They stay owned, so later
+	// verify and generate runs keep reporting them until they are reconciled or
+	// deleted by hand.
+	Obsolete map[string]provenanceOutput `json:"obsolete,omitempty"`
 }
 
 // AddProvenance adds deterministic generated-file headers where the target
@@ -82,6 +87,51 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 		return nil, err
 	}
 	return append(decorated, sidecar), nil
+}
+
+// RetainObsolete carries the obsolete records of the previous sidecar, plus the
+// files a run newly kept, into the planned provenance sidecar. Later verify and
+// generate runs still recognize those files as ai-rulez-generated and keep
+// reporting them until they are reconciled into the sources or deleted by hand. A
+// record whose path the plan contains again is dropped. The planned sidecar is
+// returned unchanged when there is nothing to retain.
+func RetainObsolete(plannedSidecar, previousSidecar []byte, kept []Obsolete) ([]byte, error) {
+	var document provenanceDocument
+	if err := unmarshalProvenance(plannedSidecar, &document); err != nil {
+		return nil, err
+	}
+	records := make(map[string]provenanceOutput)
+	if len(previousSidecar) > 0 {
+		var previous provenanceDocument
+		if err := unmarshalProvenance(previousSidecar, &previous); err != nil {
+			return nil, err
+		}
+		for rel, recorded := range previous.Obsolete {
+			records[rel] = recorded
+		}
+	}
+	for _, item := range kept {
+		records[filepath.ToSlash(item.Rel)] = provenanceOutput{ContentHash: item.ContentHash}
+	}
+	for rel := range records {
+		if _, planned := document.Outputs[rel]; planned {
+			delete(records, rel)
+		}
+	}
+	if len(records) == 0 {
+		return plannedSidecar, nil
+	}
+	if document.Obsolete == nil {
+		document.Obsolete = make(map[string]provenanceOutput, len(records))
+	}
+	for rel, recorded := range records {
+		document.Obsolete[rel] = recorded
+	}
+	data, err := json.MarshalIndent(document, "", "  ")
+	if err != nil {
+		return nil, oops.Wrapf(err, "marshal plugin provenance")
+	}
+	return append(data, '\n'), nil
 }
 
 func outputBytes(output config.OutputFile) []byte {
