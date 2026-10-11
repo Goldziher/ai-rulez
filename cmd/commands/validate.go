@@ -103,6 +103,9 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		}
 
 		warnWorktreeMarketplace(cfg)
+		// A non-recursive run checks one root: name the nested roots it skips so a
+		// CI that omits --recursive does not silently pass over them.
+		warnNestedRootsNotChecked(cfg)
 		// The OKF verdict comes first: "valid" is never printed for a run that exits 2.
 		if !validateConfigOnly && validateOKFTree(cfg, os.Stderr) {
 			return exitStatus(exitOKFProblems)
@@ -229,6 +232,31 @@ func runRecursiveValidate() int {
 	}
 	progress.PrintIfNotQuiet("\nAll %d config(s) are valid\n", len(configFiles))
 	return strictCode
+}
+
+// warnNestedRootsNotChecked tells a non-recursive run how many other
+// configuration roots the working tree holds, so a CI that omits --recursive
+// does not silently pass over them. The notice goes through the progress stream
+// (PrintIfNotQuiet), so --quiet and a structured --format suppress it exactly as
+// they do the other notices, and the exit code is unchanged. --recursive never
+// calls it: that run checks every root.
+func warnNestedRootsNotChecked(cfg *config.Config) {
+	current := filepath.Clean(filepath.Join(cfg.ConfigDir, cfg.ConfigFile))
+	nested := 0
+	for _, path := range findConfigFilesRecursively() {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			continue
+		}
+		if filepath.Clean(abs) == current {
+			continue
+		}
+		nested++
+	}
+	if nested == 0 {
+		return
+	}
+	progress.PrintIfNotQuiet("%d nested root(s) not checked; run with --recursive\n", nested)
 }
 
 // validateConfigFile applies the same checks as single-root validate (schema,
