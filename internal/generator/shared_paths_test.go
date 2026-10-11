@@ -25,6 +25,12 @@ name = "remote"
 transport = "http"
 url = "https://example.com/mcp"
 description = "Remote server"
+
+# An oauth block every writer of .mcp.json must render the same way (#334).
+[mcp_servers.oauth]
+client_id = "cid"
+callback_port = 8080
+scopes = ["channels:read"]
 `
 
 // sharedPathsTypedSkill sets every skill key some preset writes to the shared
