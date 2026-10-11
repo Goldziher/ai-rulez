@@ -79,6 +79,14 @@ type LintConfig struct {
 	Evals *LintEvals `yaml:"evals,omitempty" json:"evals,omitempty" toml:"evals,omitempty"`
 	// Traps configures the harness trap checks (AR9C1...).
 	Traps *LintTraps `yaml:"traps,omitempty" json:"traps,omitempty" toml:"traps,omitempty"`
+	// AgentsMDOnly turns on the CLAUDE.md shadow check (AR9Q0): when AGENTS.md
+	// is canonical for Claude Code, every tracked CLAUDE.md, .claude/CLAUDE.md
+	// and CLAUDE.local.md that is not the generated "@AGENTS.md" shim is
+	// reported. Off by default, so existing projects are unchanged.
+	AgentsMDOnly bool `yaml:"agents_md_only,omitempty" json:"agents_md_only,omitempty" toml:"agents_md_only,omitempty"` //nolint:tagliatelle
+	// AgentsMDOnlyAllow lists path globs (relative to the config directory or
+	// the repo root) of CLAUDE.md files the check accepts as intentional islands.
+	AgentsMDOnlyAllow []string `yaml:"agents_md_only_allow,omitempty" json:"agents_md_only_allow,omitempty" toml:"agents_md_only_allow,omitempty"` //nolint:tagliatelle
 }
 
 // LintTraps configures the checks for files a harness silently ignores.
