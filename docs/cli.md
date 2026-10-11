@@ -1898,6 +1898,32 @@ or trim descriptions. Provider specs declare the listing with a `[listing]` tabl
 which is distinct from `1` so a hook can tell "over budget" from "the command
 failed".
 
+#### JSON keys
+
+`--format json` prints one document (`schema/tokens-report.schema.json`) with the
+always-loaded figures a budget gate reads:
+
+| Key | Meaning |
+| --- | --- |
+| `headline_always` | Always-loaded tokens of the largest single runtime, listing included |
+| `always_loaded` | The same figure under a fixed, stable name; equal to `headline_always` |
+| `headline_listing` | The item listing's share of `headline_always` |
+| `headline_always_legacy` | The pre-listing model's figure for the same runtime |
+| `headline_preset` | The runtime the headline is taken from |
+| `runtimes[].always` | Per-runtime always-loaded surface, listing included |
+| `runtimes[].always_legacy` | Per-runtime pre-listing figure |
+
+The report is a result, so it goes to stdout; every diagnostic (the
+"Duplicate skill collapsed" warnings generation raises, and the over-budget line)
+goes to stderr under `--format json`, leaving stdout exactly one parseable
+document.
+
+When `agents_md` is on, a preset whose root file imports the shared `AGENTS.md`
+(claude's `CLAUDE.md` shim) follows that import: the runtime's always-loaded
+figure counts the `AGENTS.md` content under an `AGENTS.md (imported)` entry, not
+just the shim. The file is counted once per runtime, and runtimes are still not
+additive, so the headline stays the largest single runtime.
+
 ### What the numbers are not
 
 - **Approximate.** Claude's tokenizer is not published. The default counter uses
@@ -1909,7 +1935,9 @@ failed".
   per-artifact overhead, neither of which ai-rulez can see.
 - **Not additive across runtimes.** One session loads one runtime's root
   instructions file, so emitting both `CLAUDE.md` and `AGENTS.md` costs one of
-  them. The headline is the largest single runtime, not the sum.
+  them. The headline is the largest single runtime, not the sum. A runtime whose
+  root file imports another (claude's `CLAUDE.md` importing `AGENTS.md`) does pay
+  for the imported file, counted once (see [JSON keys](#json-keys)).
 - **Noisy in the provenance lines.** A blake3 hex digest is incompressible, and two
   digests of the same length do not tokenize to the same count, so a few tokens per
   artifact move between two profiles for no reason you can act on.
@@ -2964,6 +2992,10 @@ entry in this table (`schema.JSONContracts`).
 | `ai-rulez publish emit --format json` | [`schema/publish-emit.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/publish-emit.schema.json) |
 | `ai-rulez publish verify --format json` | [`schema/publish-verify.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/publish-verify.schema.json) |
 | `ai-rulez eval run --format json` | [`schema/eval-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/eval-report.schema.json) |
+
+The tokens report carries `always_loaded` — the always-loaded headline under a
+fixed name, equal to `headline_always` — for a CI budget gate; the keys are
+documented under [`tokens`](#json-keys).
 
 A failure that happens before the report exists prints
 [`schema/error-document.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/error-document.schema.json)

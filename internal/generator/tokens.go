@@ -155,6 +155,10 @@ type TokenReport struct {
 	HeadlineAlways       int `json:"headline_always"`
 	HeadlineListing      int `json:"headline_listing"`
 	HeadlineAlwaysLegacy int `json:"headline_always_legacy"`
+	// AlwaysLoaded is HeadlineAlways under a fixed, stable key: the figure a CI
+	// budget gate reads. The two are always equal; HeadlineAlways is kept so a
+	// consumer written against the earlier key does not break.
+	AlwaysLoaded int `json:"always_loaded"`
 	// ListingEntryOverhead is the per-entry framing estimate, in tokens, added to
 	// every listed item. See ListingEntryOverheadTokens.
 	ListingEntryOverhead int `json:"listing_entry_overhead"`
@@ -216,6 +220,7 @@ func (g *Generator) TokenReport(options TokenReportOptions) (*TokenReport, error
 		finalPayload:  g.finalPayloadByPath(outputs),
 		domainByPath:  domainIndex(contentTree),
 		mappedFolders: providers.MappedRulesFolders(g.config),
+		agentsMD:      g.config.AgentsMD,
 	}
 
 	reportProfile := activeProfile
@@ -309,6 +314,10 @@ type reportBuilder struct {
 	// mappedFolders are the rules folders whose frontmatter an activation map
 	// declares, which the path-based dialects cannot classify.
 	mappedFolders []providers.MappedRulesFolder
+	// agentsMD is the resolved agents_md flag: when on, a preset that imports
+	// the shared AGENTS.md through its own root file pays for the imported
+	// content too, and the report counts it (see importedAgentsMDEntry).
+	agentsMD bool
 	// domains is keyed by runtime first, then by domain. Domain cost is tallied
 	// per runtime and reported for the headline one only: every runtime renders the
 	// same authored rules, so a single tally summed across all of them would
@@ -355,6 +364,7 @@ func (b *reportBuilder) build(analyses []*config.OutputAnalysis, report *TokenRe
 		report.HeadlineAlwaysLegacy = report.Runtimes[0].LegacyAlways
 		report.Domains = b.domainRows(runtimeKey(report.Runtimes[0].Preset, report.Runtimes[0].Scope))
 	}
+	report.AlwaysLoaded = report.HeadlineAlways
 }
 
 // runtimeKey identifies one provider's output in one scope.
@@ -415,6 +425,10 @@ func (b *reportBuilder) buildRuntime(group *runtimeGroup) RuntimeTokens {
 	for _, root := range group.roots {
 		runtime.Entries = append(runtime.Entries, b.rootEntry(root))
 		runtime.Detailed = runtime.Detailed || hasSectionDetail(root)
+	}
+
+	if imported, ok := b.importedAgentsMDEntry(group); ok {
+		runtime.Entries = append(runtime.Entries, imported)
 	}
 
 	runtime.Entries = append(runtime.Entries, b.ruleFileEntries(group.ruleFile)...)
@@ -606,6 +620,37 @@ func (b *reportBuilder) rootEntry(analysis *config.OutputAnalysis) Entry {
 		})
 	}
 	return entry
+}
+
+// importedAgentsMDEntry counts the shared AGENTS.md a preset imports through its
+// own root file. Claude Code reads CLAUDE.md, which with agents_md on is a shim
+// containing "@AGENTS.md"; following the import, the session pays for the shim
+// and the AGENTS.md content it pulls in, not the shim alone. The file is counted
+// once: a runtime that already carries it as a root (claude_md = "none", or a
+// preset that writes AGENTS.md itself) is left alone.
+func (b *reportBuilder) importedAgentsMDEntry(group *runtimeGroup) (Entry, bool) {
+	if !b.agentsMD {
+		return Entry{}, false
+	}
+	consumer, ok := config.SharedOutputConsumerFor(group.preset)
+	if !ok || !consumer.ImportsAgentsMD {
+		return Entry{}, false
+	}
+	path := filepath.Join(b.baseDir, filepath.FromSlash(group.scope), string(config.SharedAgentsMD))
+	for _, root := range group.roots {
+		if root.Path == path {
+			return Entry{}, false
+		}
+	}
+	payload, ok := b.finalPayload[path]
+	if !ok {
+		return Entry{}, false
+	}
+	count := b.counter.Count(payload)
+	if count == 0 {
+		return Entry{}, false
+	}
+	return Entry{Label: relativeLabel(path) + " (imported)", Bucket: BucketAlways, Tokens: count, Artifacts: 1}, true
 }
 
 // itemModel is the pre-listing loading model for a per-item artifact, kept to

@@ -4,7 +4,7 @@
   "title": "ai-rulez tokens report",
   "description": "Output of `ai-rulez tokens --format json`: what the generated files cost per runtime, split into always loaded, conditional and on demand.",
   "type": "object",
-  "required": ["schema_version", "profile", "tokenizer", "runtimes", "domains", "notes"],
+  "required": ["schema_version", "profile", "tokenizer", "runtimes", "domains", "notes", "always_loaded"],
   "properties": {
     "schema_version": {
       "const": 1
@@ -42,6 +42,11 @@
     "headline_always_legacy": {
       "type": "integer",
       "minimum": 0
+    },
+    "always_loaded": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The always-loaded headline under a fixed name; equal to headline_always. The figure a CI budget gate reads."
     },
     "listing_entry_overhead": {
       "type": "integer",
