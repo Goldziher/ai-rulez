@@ -47,6 +47,10 @@ name = "docs"
 transport = "http"
 url = "https://docs.example.com/mcp"
 
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[mcp]
+self_server = false
+
 [[mcp_servers]]
 name = "github"
 args = ["-y", "@modelcontextprotocol/server-github@1.2.3"]
