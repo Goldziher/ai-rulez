@@ -39,7 +39,7 @@ func writeCommittedManifest(t *testing.T, root string, files []string, merged ma
 	digests map[string]string) {
 	t.Helper()
 	require.NoError(t, writeManifestFileDirs(filepath.Join(root, ".ai-rulez", generatedManifestName),
-		files, merged, digests, nil))
+		files, merged, digests, nil, nil))
 }
 
 func TestGenerate_ForgedCommittedClaimKeepsHandWrittenDeny(t *testing.T) {

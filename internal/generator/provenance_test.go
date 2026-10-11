@@ -89,8 +89,8 @@ func TestOutputProvenance(t *testing.T) {
 			if tt.digest != "" {
 				digests[rel] = tt.digest
 			}
-			require.NoError(t, gen.writeManifest(gen.manifestPath(), files, nil, nil))
-			require.NoError(t, gen.writeManifest(gen.localManifestPath(), nil, nil, digests))
+			require.NoError(t, gen.writeManifest(gen.manifestPath(), files, nil, nil, nil))
+			require.NoError(t, gen.writeManifest(gen.localManifestPath(), nil, nil, digests, nil))
 
 			// Act
 			got := gen.outputProvenance(abs, rel, []byte(tt.content), tt.headerless)

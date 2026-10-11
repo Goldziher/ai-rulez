@@ -49,7 +49,7 @@ func TestGenerate_OverwritesAHeaderlessContentOutputAnOlderRunListed(t *testing.
 			name: "upgrade: the local manifest recorded no digests",
 			lose: func(t *testing.T, gen *Generator) {
 				t.Helper()
-				require.NoError(t, gen.writeManifest(gen.localManifestPath(), nil, nil, nil))
+				require.NoError(t, gen.writeManifest(gen.localManifestPath(), nil, nil, nil, nil))
 			},
 		},
 	}

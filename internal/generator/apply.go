@@ -342,19 +342,6 @@ func (checkApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		}
 		drift = append(drift, Drift{Path: edit.rel, Kind: kind})
 	}
-	// A generated file the plan no longer emits, with no manifest to name it (a
-	// fresh checkout or CI): its own Content-Hash header identifies it.
-	reported := make(map[string]bool, len(drift))
-	for i := range drift {
-		reported[drift[i].Path] = true
-	}
-	for _, orphan := range g.orphanGeneratedFiles(outputs) {
-		if reported[orphan] {
-			continue
-		}
-		reported[orphan] = true
-		drift = append(drift, Drift{Path: orphan, Kind: DriftOrphan})
-	}
 	sortDrift(drift)
 	return &ApplyResult{Drift: drift}, nil
 }
