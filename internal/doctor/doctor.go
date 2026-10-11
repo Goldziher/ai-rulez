@@ -68,6 +68,7 @@ const (
 	CheckGitignore = "gitignore"
 	CheckDocuments = "documents"
 	CheckMCPEnv    = "mcp-env"
+	CheckMCPScope  = "mcp-scope"
 	CheckHooks     = "hooks"
 	CheckLock      = "lock"
 	CheckIncludes  = "includes"
@@ -123,6 +124,10 @@ type Options struct {
 	Profile string
 	// LookPath resolves a binary on PATH; nil means exec.LookPath.
 	LookPath func(string) (string, error)
+	// ReadUserMCP runs the mcp-scope check, which reads the configured
+	// harnesses' user and local MCP files (for example ~/.claude.json) outside
+	// the project. It is off by default so a run never reads outside the project.
+	ReadUserMCP bool
 }
 
 // state is what the checks share.
@@ -157,6 +162,7 @@ func Run(ctx context.Context, o Options) *Report {
 		checkPolicy,
 		checkPresets,
 		checkMCPEnv,
+		checkMCPScope,
 		checkDrift,
 		checkGitignore,
 		checkDocuments,
