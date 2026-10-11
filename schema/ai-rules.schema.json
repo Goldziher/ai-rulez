@@ -2313,6 +2313,15 @@
           },
           "additionalProperties": false
         },
+        "agents_md_only": {
+          "type": "boolean",
+          "description": "Report (AR9Q0) every tracked CLAUDE.md, .claude/CLAUDE.md and CLAUDE.local.md that is not the generated \"@AGENTS.md\" shim, when AGENTS.md is canonical for Claude Code. Off by default."
+        },
+        "agents_md_only_allow": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Path globs (relative to the config directory or the repo root) of CLAUDE.md files AR9Q0 accepts as intentional islands."
+        },
         "evals": {
           "type": "object",
           "description": "evals-missing check (AR962): skills with no eval cases. A skill has cases when its evals/ directory or .ai-rulez/evals/<skill>/ holds a file.",

@@ -122,7 +122,7 @@ stdout.
 | AR9A3 | `activation-policy-conflict` | warning | An eval case contradicts the skill's invocation policy (`disable-model-invocation: true` or `allow_implicit_invocation: false`): it expects a trigger (`expect_trigger: true`) and can never pass, or expects none and can never fail (see [Evals](evals.md#linting-cases-and-results)) |
 | AR9A4 | `activation-prompt-names-skill` | off | A positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill; enable it with `[lint.severity] AR9A4 = "warning"` |
 | AR9A5 | `eval-import-unmapped` | info | Fields of an imported scenario with no counterpart in the case format; reported by `ai-rulez eval import`, never by `validate` (see [Evals](evals.md#importing-scenarios)) |
-| AR990 | `served-skill-referenced-statically` | warning | A static rule, context or skill names (`` `x` skill ``, `` `x` ``, `/x`, `Skill(x)`) a skill whose `delivery` is `served`; the harness cannot see it until the agent calls `find_skill`. `both` skills are static and are not reported (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent `skills:` or command names (`` `x` skill ``, `` `x` ``, `/x`, `Skill(x)`) a skill whose `delivery` is `served`; the harness cannot see it until the agent calls `find_skill`. A served skill naming a sibling served skill is not reported (a skill is loaded on demand), and `both` skills are static, so naming one is fine (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR991 | `delivery-stub-missing` | error | Skills are served but a configured harness that can call MCP has no `dynamic-skills` stub in its output (a skill of that name shadows it, or the preset renders no skills), so its agent is never told to call `find_skill` |
 | AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped) |
 | AR993 | `served-no-server` | warning | Skills are served but no `[[mcp_servers]]` entry runs `ai-rulez mcp --serve-skills` |
@@ -169,6 +169,7 @@ stdout.
 | AR9C8 | `claude-listing-truncated` | warning | A `.claude/skills/*/SKILL.md` whose `description` plus `when_to_use` is over 1,536 characters |
 | AR9C9 | `harness-limit-exceeded` | warning | A generated file past a documented harness limit: the Codex `AGENTS.md` chain (32 KiB or `[codex] project_doc_max_bytes`), a Devin rule file (12,000 characters), an Antigravity rule file (24,000 bytes), the root Kilo `REVIEW.md` (10,000 characters) |
 | AR9CA | `project-trap` | warning | A row of the project's own `.ai-rulez/traps/*.toml` matched a file, or a row is invalid |
+| AR9Q0 | `claude-md-shadows-agents-md` | off | `[lint] agents_md_only = true` asserts AGENTS.md is canonical for Claude Code, but a tracked `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` is not the generated `@AGENTS.md` shim and shadows the nearest AGENTS.md. Paths matching `agents_md_only_allow` are exempt, and a `--recursive` run lets each nested root report its own files |
 | AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
 | AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not set `egress`, so it runs with the full environment |
 | AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`, or its `--version` is outside `version`; it was not run (a notice, not an error; an error when the scanner is `required`, including one that no entry or preset provides) |
@@ -279,6 +280,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
 | `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N9` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
 | `AR9P0`-`AR9P9` | llms.txt files ([llms.txt](llms-txt.md); `AR9P0`-`AR9P6` used) | allocated |
+| `AR9Q0`-`AR9Q9` | Harness instruction files ([#318](https://github.com/Goldziher/ai-rulez/issues/318); `AR9Q0` used, reported by `validate --strict` when `[lint] agents_md_only` is set) | allocated |
 | `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
@@ -311,6 +313,8 @@ allow_paths = [".claude/**", "bazel-*/**"]   # repo paths that may be referenced
 known_names = ["superpowers-brainstorm"]     # skills/agents/rules/commands provided outside this tree
 allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing (AR703): "name" or "domain/name"
 allowed_keys = ["team"]                                 # extra frontmatter keys (AR303)
+agents_md_only = true              # AR9Q0: flag stray CLAUDE.md files when AGENTS.md is canonical for Claude Code
+agents_md_only_allow = ["products/em/backend/**"]   # CLAUDE.md islands the check accepts
 
 profile = "default"                # default | strict | permissive (see Profiles)
 
@@ -2332,13 +2336,13 @@ a skill file the server would serve is binary or larger than 512 KiB, so the sec
 
 ### AR990 served-skill-referenced-statically
 
-a static rule, context or skill names a skill whose delivery is served, which is not in the harness's skill tree
+an always-loaded rule, context, agent or command names a skill whose delivery is served, which is not in the harness's skill tree; a served skill naming a sibling served skill is fine
 
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
-- Why: A static item that names a served skill points at a file the harness never gets.
+- Why: Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.
 - Bad: A rule saying "run the `deploy` skill", or an agent `skills: [deploy]`, when `deploy` is served
-- Good: Tell the agent to call `find_skill`, or make the skill static
+- Good: Tell the agent to call `find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree
 
 ### AR991 delivery-stub-missing
 
@@ -3399,6 +3403,16 @@ an llms.txt link has an empty target
 - Why: A link with an empty target points nowhere.
 - Bad: `- [Guide]()`
 - Good: `- [Guide](docs/guide.md)`
+
+### AR9Q0 claude-md-shadows-agents-md
+
+AGENTS.md is canonical for Claude Code, but a tracked CLAUDE.md, .claude/CLAUDE.md or CLAUDE.local.md is not the generated shim and shadows the nearest AGENTS.md
+
+- Default severity: `off`
+- Analyzer: `traps` (scope `file`)
+- Why: Claude Code loads the nearest CLAUDE.md in preference to AGENTS.md, so a hand-authored CLAUDE.md silently replaces the instructions ai-rulez generated; CLAUDE.local.md shadows it for one developer only.
+- Bad: A hand-written CLAUDE.md next to the generated AGENTS.md
+- Good: Keep the generated CLAUDE.md shim (whose only body is @AGENTS.md), or list an intentional island in lint.agents_md_only_allow
 
 ### AR9S0 ard-manifest-invalid
 
