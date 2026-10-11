@@ -304,6 +304,8 @@ ai-rulez mcp --serve-skills --profile backend --targets claude --domain api --de
 The skill set is rendered once at start-up, in memory, by the same code as `generate`, so every
 `SKILL.md` and supporting file is byte-identical to what `generate` writes for the same profile and
 preset. Nothing is written. Edits are picked up by [live reload](#live-reload).
+The rendered and admitted catalog is also cached on disk, so a restart restores it instead of
+rendering and scanning every skill again ([Start-up cost and the catalog cache](#start-up-cost-and-the-catalog-cache)).
 When the filters remove every skill, the start-up warning names each filter and how many skills it leaves.
 
 ### What is exposed
@@ -470,6 +472,61 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 
 The serve-mode flags above (and `--profile`, `--targets`, `--domain`, `--allow`, `--deny`) are rejected without
 `--serve-skills`. The authoring tools are never registered in this mode: there is no tool that writes.
+
+### Start-up cost and the catalog cache
+
+Building the catalog renders every served skill and runs the security scan over it, which on a large
+monorepo (hundreds of skills, each with reference files) takes several seconds. The result is a
+function of the files the live reload fingerprints — the configuration directory, local includes, the
+organization policy files and local skill sources — and of the view's options (`--profile`, `--role`,
+`--targets`, `--domain`, `--allow`, `--deny`, `--include-static`, `--source`, `--frozen`, `--offline`),
+so it is cached on disk keyed by exactly those:
+
+- `~/.cache/ai-rulez/serve/<project-hash>/catalog.json` holds the rendered catalog; the project hash is
+  a sha256 of the configuration directory, so two checkouts never collide.
+- `~/.config/ai-rulez/serve-cache.key` (mode `0600`, created on first use) authenticates the entry.
+
+A restart whose content and view are unchanged restores the catalog **without rendering or scanning
+anything**; a content edit changes the fingerprint, so the entry is ignored and the catalog rebuilt.
+An entry that is missing, truncated, edited, symlinked or fails its authentication counts as a miss
+and is rebuilt, never served. Admission (approval expiry, signing key validity) is still re-judged on
+the usual one-minute timer after a restore, so an entry written before an approval expired does not
+serve that skill for longer than a fresh start would. The cache is skipped for a `lock` run's views and
+for a build whose inputs the fingerprint cannot see (a programmatic load option or an injected clock),
+and an entry over 64 MiB is not written; in those cases the server builds the catalog as before, only
+slower.
+
+#### Launchers and client timeouts
+
+A cold start through `npx -y ai-rulez@latest` downloads the package (about 30 MB) before the process
+even starts, and some clients time out at 30 s. Two things help:
+
+- **Run the installed binary, not `npx`.** Install once (`npm i -g ai-rulez`, `uv tool install ai-rulez`,
+  `go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest`, or a Homebrew tap) and point the
+  MCP entry at `ai-rulez` directly. If you must use `npx`, pin the version (`npx -y ai-rulez@5.0.0`)
+  so a cold start does not also resolve `latest`.
+
+  ```json
+  {
+    "mcpServers": {
+      "ai-rulez-skills": {
+        "command": "ai-rulez",
+        "args": ["mcp", "--serve-skills"]
+      }
+    }
+  }
+  ```
+
+- **Raise the client's connect timeout.** Claude Code reads `MCP_TIMEOUT` (milliseconds); `60000`
+  covers a cold build on a large repository:
+
+  ```bash
+  export MCP_TIMEOUT=60000
+  ```
+
+The disk cache removes the repeated cost on every later start. A long-lived shared daemon — one
+process per repository reused by every session, which would also remove the first build — is a
+possible follow-up and is not implemented yet.
 
 ### Tools
 

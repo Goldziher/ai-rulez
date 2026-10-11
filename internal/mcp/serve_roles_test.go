@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -113,26 +114,27 @@ func rolesProject(t *testing.T) string {
 func TestServeSetup_RoleServesOnlyWhatTheRoleDeliversServed(t *testing.T) {
 	root := rolesProject(t)
 	ctx := context.Background()
+	cache := filepath.Join(t.TempDir(), "cache")
 
-	full, err := (&ServeSetup{WorkDir: root, NoWatch: true}).build(ctx, buildOptions{admit: true})
+	full, err := (&ServeSetup{WorkDir: root, NoWatch: true, CacheDir: cache}).build(ctx, buildOptions{admit: true})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"git-workflow", "invoice-format", "refund-policy"}, catalogNames(full.catalog),
 		"no role and no project-wide delivery: every skill, as before")
 
-	b, err := (&ServeSetup{WorkDir: root, NoWatch: true, Role: "billing-agent"}).build(ctx, buildOptions{admit: true})
+	b, err := (&ServeSetup{WorkDir: root, NoWatch: true, CacheDir: cache, Role: "billing-agent"}).build(ctx, buildOptions{admit: true})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"refund-policy"}, catalogNames(b.catalog),
 		"the role delivers refund-policy as served; its other skills are static for it, and invoice-format is not its")
 
-	b, err = (&ServeSetup{WorkDir: root, NoWatch: true, Role: "billing-agent", IncludeStatic: true}).build(ctx, buildOptions{admit: true})
+	b, err = (&ServeSetup{WorkDir: root, NoWatch: true, CacheDir: cache, Role: "billing-agent", IncludeStatic: true}).build(ctx, buildOptions{admit: true})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"git-workflow", "refund-policy"}, catalogNames(b.catalog),
 		"--include-static adds the role's static skills, still minus what the role drops")
 
-	_, err = (&ServeSetup{WorkDir: root, NoWatch: true, Role: "nobody"}).build(ctx, buildOptions{admit: true})
+	_, err = (&ServeSetup{WorkDir: root, NoWatch: true, CacheDir: cache, Role: "nobody"}).build(ctx, buildOptions{admit: true})
 	require.ErrorContains(t, err, "nobody")
 
-	_, err = (&ServeSetup{WorkDir: root, NoWatch: true, Role: "billing-agent", Profile: "default"}).build(ctx, buildOptions{admit: true})
+	_, err = (&ServeSetup{WorkDir: root, NoWatch: true, CacheDir: cache, Role: "billing-agent", Profile: "default"}).build(ctx, buildOptions{admit: true})
 	require.ErrorContains(t, err, "mutually exclusive")
 }
 
