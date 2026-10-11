@@ -66,6 +66,22 @@ func findConfigFilesRecursively() []string {
 	return found.configs
 }
 
+// recursiveConfigRoots is the set of roots a recursive run covers, from the one
+// discovery both recursive commands share: the discovered config.toml files plus
+// the legacy V2/V3 config files `generate --recursive` refuses by name (and
+// `validate --recursive` reports as invalid). Keeping the two commands on this
+// function keeps their summaries' counts equal for the same tree.
+func recursiveConfigRoots() []string {
+	found, err := discoverConfigFiles()
+	if err != nil {
+		renderError(os.Stderr, err) // a failed walk still yields what it found; the error is not lost
+	}
+	roots := make([]string, 0, len(found.configs)+len(found.legacy))
+	roots = append(roots, found.configs...)
+	roots = append(roots, found.legacy...)
+	return roots
+}
+
 // discoveredConfigs is what the recursive walk found: the config.toml files
 // and the V2/V3 config files of config directories that have no config.toml.
 type discoveredConfigs struct {
@@ -414,7 +430,13 @@ func runRecursiveGenerate() int {
 		return 0
 	}
 
-	progress.PrintIfNotQuiet("Found %d configuration file(s)\n", len(configFiles))
+	// In plugin mode the set is narrowed to plugin producers, so the summary
+	// says what it counted instead of implying it covered every root.
+	label := ""
+	if pluginMode {
+		label = "plugin "
+	}
+	progress.PrintIfNotQuiet("Found %d %sconfiguration file(s)\n", len(configFiles), label)
 	totalGenerated, failed, drifted := processConfigFilesCounting(configFiles, sink)
 	// Consolidate the shared block only when every root generated: a root that
 	// failed left its earlier patterns in place, and rewriting the block to this
@@ -425,9 +447,9 @@ func runRecursiveGenerate() int {
 			logger.Warn("Failed to write the shared .gitignore block", "error", err)
 		}
 	}
-	progress.PrintIfNotQuiet("\n✅ Total: Generated %d file(s) from %d config(s)\n", totalGenerated, len(configFiles))
+	progress.PrintIfNotQuiet("\n✅ Total: Generated %d file(s) from %d %sconfig(s)\n", totalGenerated, len(configFiles), label)
 	if len(failed) > 0 {
-		fmt.Fprintf(os.Stderr, "\n❌ %d of %d config(s) failed:\n", len(failed), len(configFiles))
+		fmt.Fprintf(os.Stderr, "\n❌ %d of %d %sconfig(s) failed:\n", len(failed), len(configFiles), label)
 		for _, path := range failed {
 			fmt.Fprintf(os.Stderr, "  - %s\n", path)
 		}
