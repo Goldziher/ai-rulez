@@ -93,6 +93,40 @@ func TestSkillResourceMissingPrecision(t *testing.T) {
 	}
 }
 
+// AR402 accepts a resource path that names a sibling skill explicitly, so a
+// SKILL.md can point at another skill's file (#346). A bare references/ path is
+// still resolved against the current skill only.
+func TestSkillResourceMissing_SiblingSkillPaths(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want int
+	}{
+		{"harness path to a sibling's file", "See `.claude/skills/beta/references/service-reference.md`.", 0},
+		{"source path to a sibling's file", "See `skills/beta/references/service-reference.md`.", 0},
+		{"missing sibling file", "See `.claude/skills/beta/references/absent.md`.", 1},
+		{"the current skill's own path still resolves", "See `references/own.md`.", 0},
+		{"a bare path that is only in a sibling still reports", "See `references/service-reference.md`.", 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":                                 baseConfig,
+				".ai-rulez/skills/alpha/SKILL.md":                       "---\nname: alpha\ndescription: Deploy the billing service. Use when releasing billing changes to staging.\n---\n" + tt.body + "\n",
+				".ai-rulez/skills/alpha/references/own.md":              "# own\n",
+				".ai-rulez/skills/beta/SKILL.md":                        "---\nname: beta\ndescription: Beta skill for billing. Use when releasing billing changes to staging.\n---\nbody\n",
+				".ai-rulez/skills/beta/references/service-reference.md": "# ref\n",
+			})
+			gitAdd(t, root)
+			fs := lintDir(t, root)
+			if got := countCode(fs, CodeSkillResourceMissing); got != tt.want {
+				t.Errorf("AR402 count = %d, want %d:\n%s", got, tt.want, dump(fs))
+			}
+		})
+	}
+}
+
 func TestUnpinnedExecOwnPackagePrecision(t *testing.T) {
 	const cfg = "version = \"5.0\"\nname = \"gitfluff\"\npresets = [\"claude\"]\n"
 	tests := []struct {

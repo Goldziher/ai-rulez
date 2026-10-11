@@ -96,6 +96,7 @@ func TestRegexAccessorsCompile(t *testing.T) {
 		"makeTargetRe":       makeTargetRe,
 		"markerLineRe":       markerLineRe,
 		"markerWordRe":       markerWordRe,
+		"mcpCallRe":          mcpCallRe,
 		"mcpNameRe":          mcpNameRe,
 		"mcpToolRe":          mcpToolRe,
 		"mkfsRe":             mkfsRe,
@@ -140,6 +141,9 @@ func TestRegexAccessorsCompile(t *testing.T) {
 		"segSplitRe":         segSplitRe,
 		"semverRe":           semverRe,
 		"sentenceEndRe":      sentenceEndRe,
+
+		"siblingSkillResourceRe": siblingSkillResourceRe,
+
 		"skillCallRe":        skillCallRe,
 		"skillDirRe":         skillDirRe,
 		"skillNameRe":        skillNameRe,

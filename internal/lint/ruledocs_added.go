@@ -191,9 +191,9 @@ func registerRuledocsAdded(s *ruleSet) {
 			Good: "Regenerate with `ai-rulez generate`, then `ai-rulez lock`",
 		},
 		CodeServedReferencedStatically: {
-			Why:  "Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.",
+			Why:  "Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. The pointer forms are the ones AR301 reads plus the skills MCP calls (`load_skill x`, `get_skill x`, `read_skill_file x`); a `load_skill` call or a file path reaches the skill at runtime, but the name still sits in always-loaded content. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.",
 			Bad:  "A rule saying \"run the `deploy` skill\", or an agent `skills: [deploy]`, when `deploy` is served",
-			Good: "Tell the agent to call `find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree",
+			Good: "Tell the agent to call `load_skill`/`find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree",
 		},
 		CodeDeliveryStubMissing: {
 			Why:  "Without the dynamic-skills stub, the agent of an MCP-capable harness is never told that served skills exist.",
@@ -201,7 +201,7 @@ func registerRuledocsAdded(s *ruleSet) {
 			Good: "Generate the stub (the default) for harnesses that can call MCP",
 		},
 		CodeDeliveryStaticFallback: {
-			Why:  "A harness without MCP support cannot fetch served skills, so they stay as static files.",
+			Why:  "A harness without MCP support cannot fetch served skills, so they stay as static files. A harness that writes no skill tree of its own (it reads another preset's tree, e.g. `baz` next to `claude`) keeps nothing, so nothing is reported for it.",
 			Bad:  "A served skill for a harness without MCP support",
 			Good: "Accept the static fallback or drop that harness",
 		},
