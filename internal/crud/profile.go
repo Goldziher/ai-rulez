@@ -76,9 +76,19 @@ func (op *OperatorImpl) AddProfile(ctx context.Context, name string, domains []s
 
 // validateProfileDomains checks every domain a profile names. A "builtin:<name>"
 // element must name a real builtin pack; a bare name must exist in the content
-// tree.
+// tree. A wildcard entry is always valid, and an exclusion ("!name") is checked
+// as the name it excludes.
 func validateProfileDomains(cfg *config.Config, profile string, domains []string) error {
-	for _, domain := range domains {
+	// A list of exclusions with no positive entry selects nothing; reject it at
+	// authoring time, as validate and generate do.
+	if _, err := config.ResolveProfileDomains(domains, nil); err != nil {
+		return oops.With("profile", profile).Wrapf(err, "invalid profile domains")
+	}
+	for _, entry := range domains {
+		if entry == "" || entry == config.ProfileDomainWildcard {
+			continue
+		}
+		domain := strings.TrimPrefix(entry, config.ProfileDomainNegation)
 		if domain == "" {
 			continue
 		}
