@@ -105,7 +105,62 @@ func TestRenderOpenCodeGeneratesPackageFromMetadata(t *testing.T) {
 	assert.Equal(t, "git", repository["type"])
 	assert.Equal(t, "https://github.com/Xberg-IO/plugins", repository["url"])
 	deps := pkg["dependencies"].(map[string]any)
-	assert.Equal(t, "^2.0.20", deps["@opencode/plugin"], "v2 plugin package dependency")
+	assert.Equal(t, "^2.0.26", deps["@opencode/plugin"], "v2 plugin package dependency")
+}
+
+func TestRenderOpenCodeDependencyOverrideAndPackageManager(t *testing.T) {
+	tests := []struct {
+		name           string
+		override       string
+		packageManager string
+		wantDependency string
+		wantManager    string
+		wantManagerSet bool
+	}{
+		{
+			name:           "default dependency and no package manager",
+			wantDependency: "^2.0.26",
+		},
+		{
+			name:           "opencode_dependency overrides the default",
+			override:       "^2.1.0",
+			wantDependency: "^2.1.0",
+		},
+		{
+			name:           "package_manager emits packageManager",
+			packageManager: "pnpm@9.15.0",
+			wantDependency: "^2.0.26",
+			wantManager:    "pnpm@9.15.0",
+			wantManagerSet: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			m := &Manifest{
+				Name:               "test-plugin",
+				Version:            "1.2.3",
+				SourceDir:          t.TempDir(),
+				OpencodeDependency: tt.override,
+				PackageManager:     tt.packageManager,
+			}
+
+			// Act
+			outputs, err := renderOpenCode(m, "/out")
+			require.NoError(t, err)
+
+			// Assert
+			var pkg map[string]any
+			require.NoError(t, json.Unmarshal(outputs[1].RawContent, &pkg))
+			deps := pkg["dependencies"].(map[string]any)
+			assert.Equal(t, tt.wantDependency, deps["@opencode/plugin"])
+			if tt.wantManagerSet {
+				assert.Equal(t, tt.wantManager, pkg["packageManager"])
+			} else {
+				assert.NotContains(t, pkg, "packageManager", "unset package_manager must be omitted")
+			}
+		})
+	}
 }
 
 func TestRenderOpenCodeBundlesContent(t *testing.T) {

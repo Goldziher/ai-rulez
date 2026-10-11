@@ -42,6 +42,14 @@ type Manifest struct {
 	// means agentplugins.DefaultSpec.
 	Spec string
 
+	// PackageManager is emitted as packageManager in the OpenCode and Pi root
+	// package.json; empty omits the field.
+	PackageManager string
+
+	// OpencodeDependency overrides the "@opencode/plugin" dependency version in
+	// the OpenCode root package.json; empty uses the built-in default.
+	OpencodeDependency string
+
 	// Runtimes are the target runtimes to emit, already resolved (never empty).
 	Runtimes []string
 
@@ -143,9 +151,11 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 		Config:      cfg,
 		SourceDir:   cfg.BaseDir,
 
-		IncludeEvals: p.IncludeEvals,
-		EvalsDir:     evalsDir(cfg, p),
-		Include:      p.Include,
+		IncludeEvals:       p.IncludeEvals,
+		EvalsDir:           evalsDir(cfg, p),
+		Include:            p.Include,
+		PackageManager:     p.PackageManager,
+		OpencodeDependency: p.OpencodeDependency,
 	}
 
 	if content != nil {

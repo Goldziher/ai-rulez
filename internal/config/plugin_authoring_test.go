@@ -32,6 +32,8 @@ license = "MIT"
 keywords = ["mcp", "rag"]
 runtimes = ["claude", "cursor", "codex"]
 include = ["scripts/**", "assets/*.png"]
+package_manager = "pnpm@9.15.0"
+opencode_dependency = "^2.1.0"
 
 [plugin.author]
 name = "Na'aman Hirschfeld"
@@ -79,6 +81,8 @@ email = "nhirschfeld@gmail.com"
 	assert.Equal(t, []string{"mcp", "rag"}, cfg.Plugin.Keywords)
 	assert.Equal(t, []string{"claude", "cursor", "codex"}, cfg.Plugin.Runtimes)
 	assert.Equal(t, []string{"scripts/**", "assets/*.png"}, cfg.Plugin.Include)
+	assert.Equal(t, "pnpm@9.15.0", cfg.Plugin.PackageManager)
+	assert.Equal(t, "^2.1.0", cfg.Plugin.OpencodeDependency)
 
 	require.NotNil(t, cfg.Plugin.Author)
 	assert.Equal(t, "nhirschfeld@gmail.com", cfg.Plugin.Author.Email)
@@ -363,6 +367,31 @@ plugin:
   include: ["scripts/**"]
 `
 	require.NoError(t, schema.ValidateWithSchema([]byte(yamlConfig)))
+}
+
+// TestPluginPackageFields_SchemaAcceptsTheFields guards the plugin.package_manager
+// and plugin.opencode_dependency properties in schema/ai-rules.schema.json: a
+// config that uses them must not be flagged as an unknown key.
+func TestPluginPackageFields_SchemaAcceptsTheFields(t *testing.T) {
+	yamlConfig := `
+version: "5.0"
+name: basemind
+description: Code-map MCP server.
+plugin:
+  name: basemind
+  description: Full AI context layer over MCP.
+  version: 1.0.0
+  runtimes: [opencode]
+  package_manager: pnpm@9.15.0
+  opencode_dependency: "^2.1.0"
+`
+	require.NoError(t, schema.ValidateWithSchema([]byte(yamlConfig)))
+
+	var decoded Config
+	require.NoError(t, yaml.Unmarshal([]byte(yamlConfig), &decoded))
+	require.NotNil(t, decoded.Plugin)
+	assert.Equal(t, "pnpm@9.15.0", decoded.Plugin.PackageManager)
+	assert.Equal(t, "^2.1.0", decoded.Plugin.OpencodeDependency)
 }
 
 // hookProjectWithScript creates a project dir containing an executable bootstrap
