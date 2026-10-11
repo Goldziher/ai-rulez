@@ -86,3 +86,16 @@ func TestFoldGateSeesLongSAndKelvin(t *testing.T) {
 		t.Error("unrelated text must not pass")
 	}
 }
+
+func TestHiddenInAcceptsNonSymbolEmojiBases(t *testing.T) {
+	for _, line := range []string{"ℹ️ note", "‼️", "⁉️", "〰️", "〽️", "⚠️ warn", "1️⃣"} {
+		if got := hiddenIn(line, false); got != nil {
+			t.Errorf("hiddenIn(%q) = %v, want none", line, got)
+		}
+	}
+	for _, line := range []string{"a️", "ℂ️", "ℹ️️", "ℹ︎️"} {
+		if got := hiddenIn(line, false); len(got) == 0 {
+			t.Errorf("hiddenIn(%q) reported nothing, want a finding", line)
+		}
+	}
+}
