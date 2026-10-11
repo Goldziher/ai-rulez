@@ -49,7 +49,7 @@ func (r *runner) scanBody(it *item, d doc) {
 		for _, target := range linkTargets(l.Plain) {
 			r.checkLink(it, l.No, target)
 		}
-		for _, m := range backtickRe().FindAllStringSubmatchIndex(l.Text, -1) {
+		for _, m := range backtickMatches(l.Text) {
 			tok := l.Text[m[2]:m[3]]
 			if tickSlashRe().MatchString(strings.TrimSpace(tok)) && !slashInvocation(l.Text[:m[0]]) {
 				continue // `/api-docs` in prose is a route, not a command
@@ -271,7 +271,43 @@ func slashInvocation(before string) bool {
 	return invokeWords[last]
 }
 
+// backtickMatches is backtickRe's FindAllStringSubmatchIndex, which needs a
+// backtick to match at all.
+func backtickMatches(text string) [][]int {
+	if strings.IndexByte(text, '`') < 0 {
+		return nil
+	}
+	return backtickRe().FindAllStringSubmatchIndex(text, -1)
+}
+
+// checkNames reads the skill, rule, agent and command names a line mentions.
+// Each pattern runs only on a line holding a literal every one of its matches
+// contains.
 func (r *runner) checkNames(it *item, l bodyLine) {
+	tick := strings.IndexByte(l.Text, '`') >= 0
+	agentWord := strings.Contains(l.Text, "agent") || strings.Contains(l.Text, "skill") // "subagent" holds "agent"
+	if tick && (agentWord || strings.Contains(l.Text, "rule")) {
+		r.checkNamesAfter(it, l)
+	}
+	if tick && agentWord {
+		r.checkNamesBefore(it, l)
+	}
+	if strings.IndexByte(l.Plain, '/') >= 0 && strings.IndexByte(l.Plain, '-') >= 0 {
+		r.checkSlashNames(it, l)
+	}
+	if strings.Contains(l.Text, "Skill(") {
+		for _, m := range skillCallRe().FindAllStringSubmatch(l.Text, -1) {
+			r.requireName(it, l.No, m[1], "skill", r.skills, r.commands)
+		}
+	}
+	if strings.Contains(l.Text, "subagent_type") {
+		for _, m := range subagentRe().FindAllStringSubmatch(l.Text, -1) {
+			r.requireName(it, l.No, m[1], "agent", r.agents)
+		}
+	}
+}
+
+func (r *runner) checkNamesAfter(it *item, l bodyLine) {
 	for _, m := range nameAfterRe().FindAllStringSubmatch(l.Text, -1) {
 		switch m[2] {
 		case "skill":
@@ -282,6 +318,9 @@ func (r *runner) checkNames(it *item, l bodyLine) {
 			r.requireName(it, l.No, m[1], "agent", r.agents)
 		}
 	}
+}
+
+func (r *runner) checkNamesBefore(it *item, l bodyLine) {
 	for _, m := range nameBeforeRe().FindAllStringSubmatch(l.Text, -1) {
 		if m[1] == "skill" {
 			r.requireName(it, l.No, m[2], "skill", r.skills, r.commands)
@@ -289,16 +328,13 @@ func (r *runner) checkNames(it *item, l bodyLine) {
 			r.requireName(it, l.No, m[2], "agent", r.agents)
 		}
 	}
+}
+
+func (r *runner) checkSlashNames(it *item, l bodyLine) {
 	for _, m := range slashRe().FindAllStringSubmatchIndex(l.Plain, -1) {
 		if !slashInvocation(l.Plain[:m[2]-1]) {
 			continue // "GET /user-profile" is a route, not a command
 		}
 		r.requireName(it, l.No, l.Plain[m[2]:m[3]], kindCommand, r.commands, r.skills)
-	}
-	for _, m := range skillCallRe().FindAllStringSubmatch(l.Text, -1) {
-		r.requireName(it, l.No, m[1], "skill", r.skills, r.commands)
-	}
-	for _, m := range subagentRe().FindAllStringSubmatch(l.Text, -1) {
-		r.requireName(it, l.No, m[1], "agent", r.agents)
 	}
 }

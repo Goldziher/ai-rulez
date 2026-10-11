@@ -417,7 +417,9 @@ func (r *runner) scanImported() {
 		r.forceSev = importForceFor(it.cf.Trust, force)
 		r.securityScan(it.abs, raw)
 		if !it.isDoc {
-			r.checkToolBreadth(it, parseFrontmatterDoc(r.docs[it.abs]))
+			if !r.opts.SecretsOnly { // tool breadth never reports AR001
+				r.checkToolBreadth(it, parseFrontmatterDoc(r.docs[it.abs]))
+			}
 			imp := *it
 			imp.itemDir = filepath.Dir(it.abs)
 			r.scanResources(&imp)
