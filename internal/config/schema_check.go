@@ -144,8 +144,16 @@ func unknownKey(file, parent, key string) SchemaFinding {
 // parent, is really a top-level key: TOML scoped it into [parent] because it was
 // written after that table's header, so the decoder silently dropped it. It is
 // false for a genuinely unknown key and for a key the table itself defines.
+//
+// Only a top-level table (or an entry of a top-level table array, such as
+// [[mcp_servers]]) can swallow a top-level key: a key written after [rules]
+// becomes rules.<key>. A deeper nested table (an entry of [[plugin.mcp]], or
+// [claude.skills]) has its own fields, so a key it does not know is unknown to
+// that table, not a misplaced top-level key; advising "move it above the first
+// [table]" there would be wrong (#348).
 func topLevelKeyOutsideItsTable(parent, key string) bool {
 	return parent != "" &&
+		strings.Count(parent, ".") <= 1 &&
 		slices.Contains(knownKeys(""), key) &&
 		!slices.Contains(knownKeys(parent), key)
 }
