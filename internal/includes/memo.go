@@ -76,6 +76,22 @@ func (m *fetchMemo) fetchSkill(key string, fetch, again func() (config.ContentFi
 	return again()
 }
 
+// fetchSkills is fetchSkill for an installed_skills entry, whose one entry may
+// resolve to several skills. The whole result slice is memoized as one unit.
+func (m *fetchMemo) fetchSkills(key string, fetch, again func() ([]config.ContentFile, error)) ([]config.ContentFile, error) {
+	e := m.entry("skill:" + key)
+	var files []config.ContentFile
+	first := false
+	e.once.Do(func() {
+		first = true
+		files, e.err = fetch()
+	})
+	if first || e.err != nil {
+		return files, e.err
+	}
+	return again()
+}
+
 // memoKey identifies one configured source. It stays in memory and is never logged.
 func memoKey(baseDir string, source any, hasToken bool) string {
 	data, err := json.Marshal(source)

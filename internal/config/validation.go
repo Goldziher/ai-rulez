@@ -42,6 +42,7 @@ func (c *Config) Validate() error {
 
 	// Warn about missing domain references (non-fatal)
 	c.warnMissingDomainReferences()
+	c.warnMissingResourceDomains()
 
 	return nil
 }
@@ -721,6 +722,41 @@ func (c *Config) hasLocalDomain(domain string) bool {
 	}
 	_, ok := c.LocalContent.Domains[domain]
 	return ok
+}
+
+// warnMissingResourceDomains logs a warning for each remote or fetched resource
+// whose `domain` names no domain in the content tree (root content included).
+// It is non-fatal: a resource with an unknown domain is simply inactive, exactly
+// as an untagged one is global. Nothing is reported when no resource sets a
+// domain, so an existing configuration behaves identically.
+func (c *Config) warnMissingResourceDomains() {
+	if c.Content == nil {
+		return
+	}
+	known := func(domain string) bool {
+		if domain == "" {
+			return true
+		}
+		if _, ok := c.Content.Domains[domain]; ok {
+			return true
+		}
+		return c.hasLocalDomain(domain)
+	}
+	for i := range c.MCPServersRaw {
+		if d := c.MCPServersRaw[i].Domain; d != "" && !known(d) {
+			c.Warn("mcp server references non-existent domain", "server", c.MCPServersRaw[i].Name, "domain", d)
+		}
+	}
+	for i := range c.InstalledSkills {
+		if d := c.InstalledSkills[i].Domain; d != "" && !known(d) {
+			c.Warn("installed skill references non-existent domain", "skill", c.InstalledSkills[i].Name, "domain", d)
+		}
+	}
+	for i := range c.SkillSources {
+		if d := c.SkillSources[i].Domain; d != "" && !known(d) {
+			c.Warn("skill source references non-existent domain", "source", c.SkillSources[i].Name, "domain", d)
+		}
+	}
 }
 
 // getBuiltInPresetNames returns a list of built-in preset names

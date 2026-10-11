@@ -513,16 +513,17 @@ func selectProfileContent(cfg *config.Config, content *config.ContentTree, profi
 	return cfg.SelectContentForProfile(content, profile)
 }
 
-// collectMCPServersForContent collects the enabled root MCP servers active for
-// a profile. A server restricted with `profiles` is included only when the
-// active profile names it; an empty profile (no profiles configured) includes
-// every server.
+// collectMCPServersForContent collects the enabled root MCP servers active for a
+// profile. A server restricted with `profiles` is included only when the active
+// profile names it; a server restricted with `domain` is included only when the
+// selected content tree carries that domain. When both are set, both must pass.
+// An empty profile (no profiles configured) or an untagged server includes it.
 func (g *Generator) collectMCPServersForContent(content *config.ContentTree, profile string) map[string]*config.MCPServer {
 	collected := make(map[string]*config.MCPServer)
 
-	// Include root servers (if enabled and active for the profile)
+	// Include root servers (if enabled and active for the profile and domain)
 	for name, server := range g.config.MCPServers {
-		if server.IsEnabled() && config.ProfileMatches(profile, server.Profiles) {
+		if server.IsEnabled() && config.ProfileMatches(profile, server.Profiles) && config.DomainActive(server.Domain, content) {
 			collected[name] = server
 		}
 	}

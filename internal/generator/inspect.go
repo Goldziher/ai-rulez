@@ -131,11 +131,29 @@ type MissingMCPEnv struct {
 	Var    string
 }
 
+// activeContentForProfile is the content tree the profile selects, or the
+// config's tree when it carries none (a hand-built config): a nil tree means
+// only untagged MCP servers have an active domain.
+func (g *Generator) activeContentForProfile(profile string) (*config.ContentTree, error) {
+	if g.config.Content == nil {
+		return nil, nil
+	}
+	selected, err := g.getContentForProfile(profile)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // already contextual
+	}
+	return selected, nil
+}
+
 // MissingMCPEnv returns, sorted, the ${VAR} placeholders in the env and headers
 // of the enabled MCP servers active in profile ("" selects the default) that neither --env overrides, the process environment,
 // the dotenv files nor ${PROJECT_ROOT} can resolve. Nothing is modified.
 func (g *Generator) MissingMCPEnv(profile string) ([]MissingMCPEnv, error) {
 	active := g.resolveProfile(profile)
+	content, err := g.activeContentForProfile(active)
+	if err != nil {
+		return nil, err
+	}
 	dotenv, err := g.loadMCPDotenvValues()
 	if err != nil {
 		return nil, err
@@ -162,7 +180,7 @@ func (g *Generator) MissingMCPEnv(profile string) ([]MissingMCPEnv, error) {
 		}
 	}
 	for name, server := range g.config.MCPServers {
-		if server == nil || !server.IsEnabled() || !config.ProfileMatches(active, server.Profiles) {
+		if server == nil || !server.IsEnabled() || !config.ProfileMatches(active, server.Profiles) || !config.DomainActive(server.Domain, content) {
 			continue
 		}
 		check(name, "env", server.Env)
