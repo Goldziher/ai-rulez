@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [5.0.3] - 2026-10-11
+
+### Added
+
+- **A plugin can set its package manager and its OpenCode dependency.** `[plugin] package_manager` emits `packageManager` in the generated OpenCode/Pi root `package.json`, and `[plugin] opencode_dependency` overrides the `@opencode/plugin` constraint (default bumped to `^2.0.26`). The JSON serializer no longer escapes `&` as `\u0026` ([#350](https://github.com/Goldziher/ai-rulez/issues/350)).
+
+### Fixed
+
+- **The manifest-free orphan walk leaves a committed plugin bundle alone.** `generate --plugin` writes its bundle into the project tree with the same generated header the generator writes, so `generate --check` reported every bundle file as an orphan and `generate` deleted them; the walk now honours the bundle's `.ai-rulez-generated.json` provenance sidecar ([#350](https://github.com/Goldziher/ai-rulez/issues/350)).
+- **A hosted MCP server's `oauth` block reaches `.mcp.json` for the `copilot` and `cursor` presets.** Only the `mcp` sidecar wrote it, so `generate` failed with "presets write different content to the same path" whenever `copilot` or `cursor` was active ([#334](https://github.com/Goldziher/ai-rulez/issues/334)).
+- **A top-level key written after a `[[table]]` array header is a load error.** The swallowed-key check only descended `[table]` maps, so a key after `[[mcp_servers]]` was silently read as a key of the last element and ignored ([#344](https://github.com/Goldziher/ai-rulez/issues/344)).
+
 ## [5.0.2] - 2026-10-11
 
 ### Added
@@ -36,6 +48,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **A plugin-only root no longer writes a header-only instruction file.** A nested root that declares only `[plugin]`/`[[plugin.mcp]]` but keeps a preset wrote a `CLAUDE.md`/`AGENTS.md` holding nothing but the generated header; the root file and the shared `AGENTS.md` are now skipped with a warning naming the file and the preset ([#327](https://github.com/Goldziher/ai-rulez/issues/327)).
 - **`installed_skills` and `skill_sources` honor `include`/`exclude`.** An entry that selects skills by glob still resolved its root as a single skill directory, so `installed_skills` errored with `expected SKILL.md at skills/<name>` and `skill_sources` served nothing; when `include`/`exclude` is set and no path is given the entry is now a directory of skill directories, and a glob that matches nothing is reported ([#329](https://github.com/Goldziher/ai-rulez/issues/329), [#331](https://github.com/Goldziher/ai-rulez/issues/331)).
 - **`AR301` and `AR990` share one reference matcher.** `AR301` treated a backticked term followed by the plural noun "skills" as a pointer, so prose failed validation; `AR990` only saw backticked names, so the documented non-backticked pointer forms (`reference: skill x`, `skills/x`, `.claude/skills/x/SKILL.md`, `subagent_type: x`) went unreported. One matcher now backs both ([#335](https://github.com/Goldziher/ai-rulez/issues/335), [#339](https://github.com/Goldziher/ai-rulez/issues/339)).
+- **`AR990`, `AR992` and `AR402` no longer misfire.** `AR992` reported a preset that writes no skills tree (claude+baz) on every generate; `AR990` saw a bare backticked served-skill name but not a `load_skill` pointer in the same file; and `AR402` rejected a `references/` path that names a sibling skill's file. Each is now consistent with its own rule ([#342](https://github.com/Goldziher/ai-rulez/issues/342), [#343](https://github.com/Goldziher/ai-rulez/issues/343), [#346](https://github.com/Goldziher/ai-rulez/issues/346)).
 - **`AR990` fires only for always-loaded content.** A served skill naming a served sibling is not reported ([#319](https://github.com/Goldziher/ai-rulez/issues/319)).
 - **`AR201`/`AR401` resolve names from a scope's emitted directory**, so a container image tag in a scope is no longer a false positive ([#325](https://github.com/Goldziher/ai-rulez/issues/325)).
 - **`validate --recursive` reports findings in its summary and counts the same roots as `generate --recursive`.** It printed "All N config(s) are valid" while exiting 2, and counted a different root set ([#338](https://github.com/Goldziher/ai-rulez/issues/338)).

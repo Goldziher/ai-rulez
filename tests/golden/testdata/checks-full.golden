@@ -258,7 +258,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 14128 757b1d43c2ca8a0584a21421934ac02ed072561a5f8bad37ec84f34d3551d707
+.ai-rulez/.generated-manifest.local.json file 0644 14128 f38c51a45445e9c37d3596671dfc5270b630fd7883ed558ddedeb51ac2b2797d
 >>>>
 {
   "version": "1",
@@ -379,7 +379,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "bb2cc69b45745a36dfd33946b8031a56c6ceba497a1fb9cf94c2aa58222b0f9e"
+          "da5eb6f629a7ef6e308292007f8c3b82d2a4721036f8c5a1672e610645fec429"
         ]
       },
       {
@@ -414,8 +414,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b",
-          "e7637f8e5eb4b00251cddf5a2e10390ff559b4e27dce90985807d8b86fc29f91"
+          "719b0a97940f863ac6e326f69aefec6659306884cdd848d9941fd561958bb0b4",
+          "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b"
         ]
       },
       {
@@ -503,7 +503,7 @@ echo review
           "mcpServers",
           "ai-rulez"
         ],
-        "sum": "127dd2e33ca1ccd1a336aa514700574d6c1ed37bdec9b80065eeb9ceec2de203"
+        "sum": "a44bcaea90b5c52a6d75a49e49643a5255e1e66ea1f54be89e765fd8ffd8910e"
       },
       {
         "path": [
@@ -701,9 +701,9 @@ echo review
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "1849f271ad8e1dedfe497a3995b827494448d3fd33aa2b73b0c02b4a247abd53",
+    ".cursor/hooks.json": "8560817824784279c0901c445667932e190cead7d0de15ed9e34c39f838e4612",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".factory/hooks.json": "b8588aa831ecbf24d590ee62b4e033707e88dc349e223bf745a2d79ad74c99f4",
+    ".factory/hooks.json": "2423116fdd6ebaf9f5e3adf7e9e4178520d3a6b469bdbb43480bec755d06037c",
     ".factory/mcp.json": "df38b30a08918576faee0714e7d6b10f4d389e3cd9f1b7a03060de0b61564836",
     ".factory/skills/review-guidelines/SKILL.md": "490111025ca53fb35e3ff1bd282750a2dd22753c922517e8a1490bde9e1e81cc",
     ".factory/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
@@ -714,7 +714,7 @@ echo review
     ".kilo/plugins/ai-rulez-hooks.js": "bb68fbfbf7ffa3c450175ddbb7968d668584e11f841be026454a06e40b29015c",
     ".kilo/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".kilo/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".mcp.json": "133ca13006e2f09f14e6b4b8b812d33c8986a2e1321b551753d90a986d52c4a0",
+    ".mcp.json": "9a05a01d3aa10e2c2c04d0e17c7e95eaef3ec76477c6376ccf1e56bf85eaf096",
     ".qwen/review-rules.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".qwen/settings.json": "f1bdabdbddcd8eb55d674a1370ff07b6ea1e433f1158e2ab67f23039449a7fe6",
     ".qwen/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",

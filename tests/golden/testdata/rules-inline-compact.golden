@@ -154,7 +154,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 7787 40995e521ee8ffead771b8ed70d9fe2de78815d57a7a8797a14eb7e8bf52202c
+.ai-rulez/.generated-manifest.local.json file 0644 7787 42b28db96755af166d8a946983892379695fb000d6a8787ab55d0768ae95ace0
 >>>>
 {
   "version": "1",
@@ -167,8 +167,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "d61143beef0be0739ba78e8a724d51e6af2240a49bf4e0e7c37c6d5452466f3e"
+          "0539714869bd7d3ae91752cfc4445925d27ab4e57f98f1a3695956c0e1141edc",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
         ]
       },
       {
@@ -256,7 +256,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "bb2cc69b45745a36dfd33946b8031a56c6ceba497a1fb9cf94c2aa58222b0f9e"
+          "da5eb6f629a7ef6e308292007f8c3b82d2a4721036f8c5a1672e610645fec429"
         ]
       },
       {
@@ -309,7 +309,7 @@ echo review
           "mcpServers",
           "ai-rulez"
         ],
-        "sum": "127dd2e33ca1ccd1a336aa514700574d6c1ed37bdec9b80065eeb9ceec2de203"
+        "sum": "a44bcaea90b5c52a6d75a49e49643a5255e1e66ea1f54be89e765fd8ffd8910e"
       },
       {
         "path": [
@@ -385,22 +385,22 @@ echo review
   "digests": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".claude/settings.json": "21e1723dfdebfa75a462e33d50e7bbbf7798cfafea52ee10e724764788e5c2e9",
+    ".claude/settings.json": "8b4471dc488557587d3928caf9b5fb1bf5de997f4284b2613c2cea25fc43a751",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "1849f271ad8e1dedfe497a3995b827494448d3fd33aa2b73b0c02b4a247abd53",
+    ".cursor/hooks.json": "8560817824784279c0901c445667932e190cead7d0de15ed9e34c39f838e4612",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".github/hooks/ai-rulez.json": "0cc7b0082d63210f0002bbc051e327edefe4dc5797f7bfb4f7080c15f85272c8",
+    ".github/hooks/ai-rulez.json": "c405f324eed60bb79baf9a7ce0dac778096a2eb9983acdf1a797b61b4c49f167",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".junie/mcp/mcp.json": "aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b",
     ".junie/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".junie/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".mcp.json": "133ca13006e2f09f14e6b4b8b812d33c8986a2e1321b551753d90a986d52c4a0",
+    ".mcp.json": "9a05a01d3aa10e2c2c04d0e17c7e95eaef3ec76477c6376ccf1e56bf85eaf096",
     ".vscode/mcp.json": "c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7",
     ".vscode/settings.json": "3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703"
   }
