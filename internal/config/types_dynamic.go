@@ -94,3 +94,28 @@ type SkillSourceConfig struct {
 	// AI_RULEZ_MAX_CLONE_FILES or the default of 20000).
 	MaxCloneFiles int `yaml:"max_clone_files,omitempty" json:"max_clone_files,omitempty" toml:"max_clone_files,omitempty"` //nolint:tagliatelle
 }
+
+// GetPath returns the subdirectory of the source that holds its skill
+// directories. An entry that selects several skills with include/exclude and
+// names no path is a directory of skill directories: it defaults to the
+// conventional "skills" directory, so `name` is only the entry's label. Without
+// include/exclude, an empty path means the source root.
+func (s *SkillSourceConfig) GetPath() string {
+	if s.Path != "" {
+		return s.Path
+	}
+	if len(s.Include) > 0 || len(s.Exclude) > 0 {
+		return skillsDir
+	}
+	return ""
+}
+
+// applyResourcePathDefaults fills the effective path of a skill source that
+// selects several skills with include/exclude but names none, so `name` is only
+// the entry's label. It runs once, at load, so every consumer (lock, serve,
+// search) reads the same path.
+func (c *Config) applyResourcePathDefaults() {
+	for i := range c.SkillSources {
+		c.SkillSources[i].Path = c.SkillSources[i].GetPath()
+	}
+}

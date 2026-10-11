@@ -729,6 +729,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 	if err := renamedRatchetTable(path, raw.Lint); err != nil {
 		return nil, err
 	}
+	cfg.applyResourcePathDefaults()
 
 	return cfg, nil
 }
