@@ -41,7 +41,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1540 658ff1138b90f90ba76c4bb6d8a69a1c83f8ecdbd8ebc3dbbbb0971643d789a5
-.ai-rulez/.generated-manifest.local.json file 0644 7558 db60493c0064901abb2d147e29ee5daf36681344f9a2c7ed5e7a5df0aaa8d41a
+.ai-rulez/.generated-manifest.local.json file 0644 7558 6d14998c77b534f3301b6a8d8bb067edf26d5e5d8f6c3b2ec369541e1e0c3ab2
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -158,7 +158,7 @@ INFO  Generation complete files=27
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 933 c05d8d99f02ef679a52a230a054bb2a5c6972c0a886010b106f693ec5dde8a82
-~ .ai-rulez/.generated-manifest.local.json file 0644 4283 3ffeaa1970aebf675a1245b072510cae9c76d914c59ed82a2d79ae2adc219cc6
+~ .ai-rulez/.generated-manifest.local.json file 0644 4283 cfe961bec2f971c86377af330aca2347570b489f839df9ade2b0b9424e05461c
 ~ .codex/config.toml file 0644 33 c201fc5d26d46c99e143d7abcbf7bd1f7dc14a6a4aae954ef0b24bb9804cf17b
 ~ .gemini/settings.json file 0644 15 f9cba2c667a252e9deb800964f9f1685ca778865aabd54a46ca61f37b1c70e70
 ~ .gitignore file 0644 463 7e69dd3dcb7ac7f2eb11b1c271708dd72d9d399bede17e6ff69a7bf2f57fa2a3
@@ -282,7 +282,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
   ]
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 4283 3ffeaa1970aebf675a1245b072510cae9c76d914c59ed82a2d79ae2adc219cc6
+.ai-rulez/.generated-manifest.local.json file 0644 4283 cfe961bec2f971c86377af330aca2347570b489f839df9ade2b0b9424e05461c
 >>>>
 {
   "version": "1",
@@ -295,7 +295,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
           "PreToolUse"
         ],
         "elementSums": [
-          "54635121d8f6e71ad7bc18abf9f1ff33a3dc95673c6c6a75a639d654832c8081",
+          "28c4c7e9da0b8c4f225a03db20208ec78f27a82565760bf3b281a8a409ab2f10",
           "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
         ]
       },
@@ -345,7 +345,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
           "mcpServers",
           "ai-rulez"
         ],
-        "sum": "9af0bed0de5a24265f721234468805215656161d729ed568d3fd2c01018a9c0c"
+        "sum": "bbdc4e1e95b90dfbb094d476faaf504198014a7fd8c5166787e30f16c80d89bd"
       },
       {
         "path": [

@@ -13,7 +13,7 @@ INFO  Generation complete files=12
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 489 c9f8f1e85324296169f7a5700d6a6d28097cb3e7619f7cae26b772eb53b7ca16
-.ai-rulez/.generated-manifest.local.json file 0644 1457 956274a9a61d27a5e95003843dff021357bb13079e5cb719655ff35e69a041f9
+.ai-rulez/.generated-manifest.local.json file 0644 1457 a164fbd68d230365c47d600e3196cc8942e5bf965e8d1cf1a7c263d0e22e613f
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
