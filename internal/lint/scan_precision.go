@@ -33,7 +33,26 @@ var (
 	})
 	repoWordRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)\brepos?(?:sitory|sitories)?\b|github\.com/`) })
 	digitsRe   = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\d+$`) })
+	// imageRefRe matches a container image reference without a registry host or
+	// a tag/digest: a namespace and an image name, each a Docker image component
+	// (lower-case alphanumerics joined by ".", "_" or "-").
+	imageRefRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)+$`)
+	})
 )
+
+// imageRefToken reports whether tok is a container image reference rather than a
+// repository path. It has no file extension and the "namespace/name" shape of an
+// image, and its image name carries the underscore Docker names use, which a
+// repository path of this shape rarely does. An image tag names nothing in the
+// repository, so AR401 must not report it. A token with a file extension, or an
+// extension-less path without the image-name underscore, stays a path claim.
+func imageRefToken(tok string) bool {
+	if path.Ext(tok) != "" || !imageRefRe().MatchString(tok) {
+		return false
+	}
+	return strings.Contains(tok[strings.LastIndexByte(tok, '/')+1:], "_")
+}
 
 // buildDirs are directory names a build, an installer or a runtime creates and a
 // repository rarely tracks.
@@ -66,7 +85,7 @@ func (r *runner) pathNotAClaim(text, prev string, start, end int) bool {
 		return true
 	case strings.HasPrefix(strings.TrimPrefix(after, "`"), " @ ") || atRefRe().MatchString(strings.TrimPrefix(after, "`")):
 		return true // "charts/pro @ development" names a ref of another repository
-	case hasBuildDir(tok), r.otherRepoLine(text, prev, tok), globInParagraph(text, prev, tok):
+	case hasBuildDir(tok), r.otherRepoLine(text, prev, tok), globInParagraph(text, prev, tok), imageRefToken(tok):
 		return true
 	}
 	return false
