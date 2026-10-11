@@ -15,6 +15,10 @@ args = ["-y", "@modelcontextprotocol/server-filesystem@1.0.0", "."]
 [header]
 hashes = "full"
 
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[mcp]
+self_server = false
+
 [[mcp_servers]]
 name = "extra"
 transport = "http"
