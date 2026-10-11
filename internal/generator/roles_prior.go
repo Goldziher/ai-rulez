@@ -212,7 +212,7 @@ func (g *Generator) dropSkillClaim(skill string) error {
 		} else {
 			m.Merged[settingsRel] = kept
 		}
-		if err := g.writeManifest(path, m.Files, m.Merged, m.Digests); err != nil {
+		if err := g.writeManifest(path, m.Files, m.Merged, m.Digests, m.Assets); err != nil {
 			return oops.Wrapf(err, "update %s", filepath.Base(path))
 		}
 	}

@@ -119,6 +119,13 @@ type generatedManifest struct {
 	// its own (JSON, TOML, raw files). Deletion of such a file needs a digest
 	// match, so a forged entry cannot delete a file ai-rulez did not write.
 	Digests map[string]string `json:"digests,omitempty"`
+	// Assets records, for each bundled asset this run wrote, the SHA-256 of its
+	// bytes. A bundled asset (a skill's scripts/, references/ or assets/ file) is
+	// copied verbatim, so it carries no Content-Hash: the digest is its only
+	// proof. Stale cleanup removes a recorded asset only when it still matches
+	// its digest and its path is under a generated skills directory (#328); with
+	// no manifest a header-less asset is left alone.
+	Assets map[string]string `json:"assets,omitempty"`
 	// Dirs lists, in the user manifest only, the directories ai-rulez created
 	// below the home directory (slash paths relative to it), so clean removes
 	// those once empty and never one that existed before. Nil: not recorded.

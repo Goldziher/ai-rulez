@@ -24,7 +24,7 @@ func writeForgedLocalManifest(t *testing.T, root string) string {
 				"deny": []any{"Read(./.env)"}, "allow": []any{"Bash(ls)"}})},
 			{Path: []string{"env"}, Sum: jsonmerge.Digest(map[string]any{"A": "1"})},
 		},
-	}, nil, nil))
+	}, nil, nil, nil))
 	return path
 }
 
