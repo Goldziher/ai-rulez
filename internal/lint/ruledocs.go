@@ -130,9 +130,9 @@ var baseRuleDocs = map[string]RuleDoc{
 		Good: "Update the path, or list generated paths in lint.allow_paths",
 	},
 	CodeSkillResourceMissing: {
-		Why:  "A skill that refers to references/, scripts/ or assets/ files it does not ship fails the moment the model follows the reference.",
+		Why:  "A skill that refers to references/, scripts/ or assets/ files it does not ship fails the moment the model follows the reference. A path that names a sibling skill explicitly (`skills/<other>/references/x.md`, `.claude/skills/<other>/references/x.md`) is resolved against that skill's directory too, so one skill can point at another's file.",
 		Bad:  "`Run scripts/build.sh` with no scripts/build.sh in the skill",
-		Good: "Add the file to the skill directory or fix the reference",
+		Good: "Add the file to the skill directory, name the sibling skill that ships it, or fix the reference",
 	},
 	CodeHookMissing: {
 		Why:  "A hook whose command points at a missing file fails on every event it is registered for.",

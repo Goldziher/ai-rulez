@@ -79,6 +79,55 @@ func TestStrict_ServedSkillReferencedByPointerForms(t *testing.T) {
 	}
 }
 
+// AR990 reads a skills MCP call that names a served skill the same way as a bare
+// backticked name, so one form is not silent while the other fires for the same
+// skill (#343).
+func TestStrict_ServedSkillReferencedByMCPCall(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{"code-spanned load_skill call", "Run `load_skill heavy` for the migration steps."},
+		{"quoted load_skill name", `Run load_skill "heavy" for the steps.`},
+		{"load_skill name argument", `Run load_skill(name: "heavy") for the steps.`},
+		{"get_skill call", "Call get_skill(heavy) first."},
+		{"bare hyphenated load_skill call", "Run load_skill dev-cycle-procedure for the steps."},
+		{"bare backticked name", "Run the `heavy` skill."},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":                         baseConfig,
+				".ai-rulez/skills/heavy/SKILL.md":               "---\nname: heavy\ndescription: Heavy served skill for big migrations. Use when planning a schema migration.\ndelivery: served\n---\nHEAVY body.\n",
+				".ai-rulez/skills/dev-cycle-procedure/SKILL.md": "---\nname: dev-cycle-procedure\ndescription: The development cycle. Use when following the project workflow.\ndelivery: served\n---\nBODY.\n",
+				".ai-rulez/rules/use.md":                        "# Use\n\n" + tt.body + "\n",
+			})
+			gitAdd(t, root)
+
+			// Act
+			fs := lintDir(t, root)
+
+			// Assert
+			assert.True(t, has(fs, CodeServedReferencedStatically, "rules/use.md", 0), "%q must raise AR990:\n%s", tt.body, dump(fs))
+			assert.Contains(t, messages(fs, CodeServedReferencedStatically), "load_skill", "the message names the accepted pointer form")
+		})
+	}
+}
+
+// A bare tool name followed by prose is not a pointer: "load_skill returns" must
+// not read "returns" as a skill (#343).
+func TestReferenceUnknown_ProseAfterMCPToolNameStaysQuiet(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, precisionTree("load_skill returns the file; list_skill_resources lists the rest.", "", nil))
+	gitAdd(t, root)
+
+	fs := lintDir(t, root)
+
+	assert.Zero(t, countCode(fs, CodeReferenceUnknown), "%s", dump(fs))
+}
+
 // A served domain whose skills name each other must not raise AR990: the whole
 // domain stays served, and only content that is always loaded is reported
 // (#319).

@@ -200,7 +200,7 @@ func (c *Config) DeliveryFallbacks(tree *ContentTree) []DeliveryFallback {
 	seen := map[string]bool{}
 	for i := range c.Presets {
 		name := c.Presets[i].GetName()
-		if seen[name] || HarnessSupportsMCP(name) || name == string(PresetMCP) {
+		if seen[name] || HarnessSupportsMCP(name) || name == string(PresetMCP) || !c.writesSkillsTree(name) {
 			continue
 		}
 		seen[name] = true
@@ -208,6 +208,26 @@ func (c *Config) DeliveryFallbacks(tree *ContentTree) []DeliveryFallback {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Preset < out[j].Preset })
 	return out
+}
+
+// writesSkillsTree reports whether a configured preset actually writes a skills
+// directory, so AR992 is not raised for a harness that keeps none (#342). A
+// harness that reads another preset's tree (baz next to claude) writes nothing
+// of its own, so serving nothing to it is not a fallback to report.
+//
+// A built-in preset taking part in the shared outputs writes skills when it
+// reads the shared .agents/skills tree or keeps its own skills directory. Baz
+// writes .agents/skills itself unless claude already does. A custom or unknown
+// preset is not known to share, so it keeps the warning.
+func (c *Config) writesSkillsTree(preset string) bool {
+	if preset == string(PresetBaz) {
+		return !c.HasBuiltInPreset(string(PresetClaude))
+	}
+	consumer, ok := SharedOutputConsumerFor(preset)
+	if !ok {
+		return true
+	}
+	return consumer.Reads(SharedAgentSkills) || consumer.OwnSkillsDir != ""
 }
 
 // DefaultSkillsServerName is the server name docs register for `mcp --serve-skills`;
