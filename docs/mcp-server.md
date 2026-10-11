@@ -96,7 +96,9 @@ self_server = false   # opt out; the default is true
 ```
 
 The entry is merged into an existing `.mcp.json`, so hand-authored servers survive and the file is
-ready for Claude Code (which reads project MCP servers from `.mcp.json`). See [Configuration: `mcp`](configuration.md#mcp) for
+ready for Claude Code (which reads project MCP servers from `.mcp.json`). Every entry has the same
+shape: `"type": "stdio"` (or `http`/`sse`) and, only for a server turned off with `enabled = false`,
+`"disabled": true`. See [Configuration: `mcp`](configuration.md#mcp) for
 `self_server_version`, `self_server_command`, and the interaction with `[[mcp_servers]]`.
 
 Generated MCP config files contain resolved values. If a value came from a placeholder, or if an env
