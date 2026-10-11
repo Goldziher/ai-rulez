@@ -10864,6 +10864,28 @@ The `copilot` runtime and the `codex` runtime with `manifest = "root"` write the
 | rules, context | not written | the `io.github.goldziher.ai-rulez` namespace is read on import |
 | `[plugin] include` | the matched files, at their relative path | globs relative to the content root; see [Bundling files](#bundling-files) |
 
+#### OpenCode and Pi packages
+
+The `opencode` and `pi` runtimes write a root `package.json` that ai-rulez fully owns: `verify --plugin` compares it byte
+for byte, so a hand edit to any field is reported as drift. Two `[plugin]` keys tune the fields a consumer cannot
+otherwise change, and every other field (`name`, `version`, `description`, `repository`, `files`, `exports`, the Pi `pi`
+block, ...) is derived from the manifest.
+
+| ai-rulez | `package.json` | Notes |
+| --- | --- | --- |
+| `[plugin] package_manager` | `packageManager` | e.g. `"pnpm@9.15.0"`; omitted when unset |
+| `[plugin] opencode_dependency` | `dependencies["@opencode/plugin"]` | OpenCode only; unset uses the built-in default (`^2.0.26`) |
+
+```toml
+[plugin]
+name = "acme.tools"
+version = "1.2.0"
+description = "Acme review tooling."
+runtimes = ["opencode"]
+package_manager = "pnpm@9.15.0"
+opencode_dependency = "^2.1.0"
+```
+
 #### Bundling files
 
 The specification lets a package carry arbitrary files beside `plugin.json`, `mcp.json` and `skills/` (§4.2), and a stdio
