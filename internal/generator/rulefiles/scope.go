@@ -39,9 +39,10 @@ func InScope(cfg *config.Config) bool {
 	return cfg != nil && cfg.Run != nil && cfg.Run.Scope != nil
 }
 
-// RulesRoot is the directory rule files are written under: tools read rules
-// folders at the workspace root only, so a scope writes into the project root
-// rather than baseDir (the scope directory).
+// RulesRoot is the directory rule files are written under: rule-folder nesting
+// is not uniform across presets (Copilot reads its instructions at the
+// repository root only), so a scope writes into the project root rather than
+// baseDir (the scope directory), one placement every preset reads.
 func RulesRoot(cfg *config.Config, baseDir string) string {
 	if InScope(cfg) && cfg.Run.Scope.RootDir != "" {
 		return cfg.Run.Scope.RootDir
