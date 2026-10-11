@@ -53,6 +53,27 @@ func isMarkdownPath(abs string) bool {
 	return false
 }
 
+// scanTextOf is newScanText memoized per file for the run: the security scan,
+// the text scans and the capability profile of one item read the same text, and
+// a scanText is never modified after it is built.
+func (r *runner) scanTextOf(abs, raw string) *scanText {
+	raw = strings.ReplaceAll(raw, "\r\n", "\n")
+	if e, ok := r.scanTexts[abs]; ok && e.raw == raw {
+		return e.t
+	}
+	if r.scanTexts == nil {
+		r.scanTexts = map[string]cachedScanText{}
+	}
+	t := newScanText(r, abs, raw)
+	r.scanTexts[abs] = cachedScanText{raw: raw, t: t}
+	return t
+}
+
+type cachedScanText struct {
+	raw string
+	t   *scanText
+}
+
 func newScanText(r *runner, abs, raw string) *scanText { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	raw = strings.ReplaceAll(raw, "\r\n", "\n")
 	t := &scanText{abs: abs, raw: raw, md: isMarkdownPath(abs)}

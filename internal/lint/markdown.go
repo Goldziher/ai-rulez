@@ -121,6 +121,9 @@ var (
 // linkTargets lists the link destinations on a prose line.
 func linkTargets(plain string) []string {
 	var out []string
+	if !strings.Contains(plain, "](") && !strings.Contains(plain, "]:") {
+		return nil // both patterns need a closing bracket and a paren or colon after it
+	}
 	for _, m := range inlineLinkRe().FindAllStringSubmatch(plain, -1) {
 		out = append(out, strings.Trim(m[1], "<>"))
 	}
