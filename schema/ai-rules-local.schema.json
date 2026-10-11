@@ -1145,6 +1145,17 @@
       "additionalProperties": false,
       "description": "Settings for `ai-rulez validate` (deep content validation).",
       "properties": {
+        "agents_md_only": {
+          "description": "Report (AR9Q0) every tracked CLAUDE.md, .claude/CLAUDE.md and CLAUDE.local.md that is not the generated \"@AGENTS.md\" shim, when AGENTS.md is canonical for Claude Code. Off by default.",
+          "type": "boolean"
+        },
+        "agents_md_only_allow": {
+          "description": "Path globs (relative to the config directory or the repo root) of CLAUDE.md files AR9Q0 accepts as intentional islands.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "allow_overrides": {
           "description": "Content names (`name`) or domain-qualified names (`domain/name`) whose shadowing of another copy is intentional, so AR703 does not report them.",
           "items": {

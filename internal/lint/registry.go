@@ -42,6 +42,7 @@ func ruleFamilies() []func(*ruleSet) {
 	return []func(*ruleSet){
 		registerActivationcodes,
 		registerAgentPlugins,
+		registerAgentsMD,
 		registerARD,
 		registerApprovals,
 		registerArActivationCases,
