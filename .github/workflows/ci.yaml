@@ -109,7 +109,23 @@ jobs:
             exit 0
           fi
           go install golang.org/x/exp/cmd/gorelease@v0.0.0-20261005173118-76772065c9b0
-          gorelease -base="$base"
+          # gorelease passes the deprecated `go get -d`, which Go 1.27 rejects with a
+          # message it treats as failure, and its temporary load module omits the `go`
+          # directive, so the module graph is not pruned and a broken transitive go.mod
+          # (go-openapi/swag) breaks resolution. Shim `go` to drop -d and add the
+          # directive before the resolution runs.
+          export GORELEASE_REAL_GO="$(command -v go)"
+          shim="$(mktemp -d)"
+          cat > "$shim/go" <<'SHIM'
+          #!/usr/bin/env bash
+          if [ "$1" = get ] && [ -f go.mod ] && ! grep -qE '^go [0-9]' go.mod; then
+            printf '\ngo %s\n' "$("$GORELEASE_REAL_GO" env GOVERSION | sed 's/^go//')" >> go.mod
+          fi
+          args=(); for a in "$@"; do [ "$a" = -d ] || args+=("$a"); done
+          exec "$GORELEASE_REAL_GO" "${args[@]}"
+          SHIM
+          chmod +x "$shim/go"
+          PATH="$shim:$PATH" gorelease -base="$base"
 
   npm-wrapper:
     name: npm wrapper (Node 24)
