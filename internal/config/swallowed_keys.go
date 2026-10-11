@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -25,20 +26,45 @@ func swallowedTopLevelKeysTOML(path string, data []byte) error {
 // swallowedTopLevelKeys reports the first top-level key a known table swallowed.
 func swallowedTopLevelKeys(path string, doc map[string]any) error {
 	for _, table := range slices.Sorted(maps.Keys(doc)) {
-		body, ok := doc[table].(map[string]any)
-		if !ok || len(knownKeys(table)) == 0 {
-			continue // a list, a free-form map, or a table the config does not know
-		}
-		for _, key := range slices.Sorted(maps.Keys(body)) {
-			if !topLevelKeyOutsideItsTable(table, key) {
-				continue
+		switch body := doc[table].(type) {
+		case map[string]any:
+			if err := swallowedKeyIn(path, table, "["+table+"]", body); err != nil {
+				return err
 			}
-			return oops.With("path", path).
-				Hint(fmt.Sprintf("Move `%s` above the first [table], so TOML reads it as a top-level key "+
-					"instead of a key of [%s]", key, table)).
-				Errorf("`%s` is a top-level key but was written after [%s], so it was read as a key of that "+
-					"table and ignored; move `%s` above the first [table]", key, table, key)
+		case []any:
+			// A table array ([[mcp_servers]]): TOML reads a top-level key after
+			// the header as a key of the last element. The schema path already
+			// treats `mcp_servers.0` as a swallowing parent (#344).
+			for i, elem := range body {
+				entry, ok := elem.(map[string]any)
+				if !ok {
+					continue
+				}
+				parent := table + "." + strconv.Itoa(i)
+				if err := swallowedKeyIn(path, parent, "[["+table+"]]", entry); err != nil {
+					return err
+				}
+			}
 		}
+	}
+	return nil
+}
+
+// swallowedKeyIn reports the first top-level key the table at the dotted path
+// parent swallowed, naming it as display in the message.
+func swallowedKeyIn(path, parent, display string, body map[string]any) error {
+	if len(knownKeys(parent)) == 0 {
+		return nil // a free-form map, or a table the config does not know
+	}
+	for _, key := range slices.Sorted(maps.Keys(body)) {
+		if !topLevelKeyOutsideItsTable(parent, key) {
+			continue
+		}
+		return oops.With("path", path).
+			Hint(fmt.Sprintf("Move `%s` above the first [table], so TOML reads it as a top-level key "+
+				"instead of a key of %s", key, display)).
+			Errorf("`%s` is a top-level key but was written after %s, so it was read as a key of that "+
+				"table and ignored; move `%s` above the first [table]", key, display, key)
 	}
 	return nil
 }
