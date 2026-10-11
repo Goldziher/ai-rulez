@@ -3,6 +3,7 @@ package plugin
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -30,6 +31,27 @@ func TestAddProvenanceDecoratesCommentSafeFilesAndTracksJSON(t *testing.T) {
 	assert.Equal(t, provenanceSchema, sidecar.SchemaVersion)
 	assert.Len(t, sidecar.Outputs, 3)
 	assert.NotContains(t, sidecar.Outputs, provenanceFileName)
+}
+
+// #351: a body that already carries a generated header (a plugin whose content
+// root overlaps its output tree) is re-decorated in place, not stacked, so the
+// output is stable across runs and verify converges.
+func TestAddProvenanceRewritesAnExistingHeaderInsteadOfStacking(t *testing.T) {
+	baseDir := t.TempDir()
+	path := baseDir + "/skills/example/SKILL.md"
+	source := []byte("---\nname: example\n---\n\n# Example\n")
+
+	first, err := AddProvenance([]config.OutputFile{{Path: path, RawContent: source}}, baseDir)
+	require.NoError(t, err)
+	decorated := first[0].RawContent
+	assert.Equal(t, 1, strings.Count(string(decorated), "AI-RULEZ :: GENERATED FILE — DO NOT EDIT"))
+
+	second, err := AddProvenance([]config.OutputFile{{Path: path, RawContent: decorated}}, baseDir)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, strings.Count(string(second[0].RawContent), "AI-RULEZ :: GENERATED FILE — DO NOT EDIT"),
+		"a re-run rewrites the header instead of adding a second")
+	assert.Equal(t, decorated, second[0].RawContent, "a re-run leaves the file unchanged")
 }
 
 func TestAddProvenanceIsDeterministic(t *testing.T) {
