@@ -551,12 +551,38 @@ Quick reference:
 - `claude` keeps `CLAUDE.md` as a banner plus `@AGENTS.md`; `gemini` gets `AGENTS.md` added to `context.fileName` in
   `.gemini/settings.json`; `GEMINI.md`, `.hermes.md` and `.github/copilot-instructions.md`
   are not written.
+  Set [`[claude] claude_md = "none"`](#claude_md) to drop the `CLAUDE.md` shim and leave `AGENTS.md` as Claude's only file.
 - Skills with `targets`, machine-local files and agents, commands and MCP files stay per-preset.
 - If another preset (including a custom provider) also writes `AGENTS.md` or a file under `.agents/skills`, the
   shared output wins.
 
 Tool support, per-preset file lists, the duplication trade-off, `targets`, scopes and the on/off behavior are in
 [AGENTS.md and .agents/skills](agents-md.md).
+
+### `claude_md`
+
+Controls whether the `claude` preset writes its `CLAUDE.md` when `agents_md` is on. The default, `"shim"`, keeps the
+`CLAUDE.md` that imports `@AGENTS.md`; `"none"` omits it and writes only `AGENTS.md`. It is a key of the `[claude]`
+table, alongside `[claude.settings]` and `[claude.skills]`.
+
+```toml
+[claude]
+claude_md = "shim"  # Default: CLAUDE.md imports @AGENTS.md
+# claude_md = "none"  # Write only AGENTS.md; no CLAUDE.md at the root or in a scope
+```
+
+Claude Code reads `AGENTS.md` itself from **2.1.277** on, so `"none"` lets a repository use `AGENTS.md` as its only
+instruction file. With the option set, `generate` writes `AGENTS.md` (root and each `[[scopes]]` directory) and no
+`CLAUDE.md`, and it removes a `CLAUDE.md` a previous run generated — even when the generated manifest is gone, because
+the shim's own `Content-Hash` header proves ai-rulez wrote it. A hand-authored `CLAUDE.md` carries no such header and is
+left alone. `generate --check` reports a leftover generated shim as an `orphan`, and `clean` removes it.
+
+Shadowing caveats: Claude Code reads `AGENTS.md` only when no `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md`
+exists in the working directory or any ancestor. A hand-authored `CLAUDE.md` anywhere on that path, or a
+`CLAUDE.local.md` (which ai-rulez writes for machine-local content under `.ai-rulez/local/`), therefore shadows
+`AGENTS.md` and makes the option ineffective for that tree. Remove those files, or do not use machine-local content,
+if `AGENTS.md` must be the only instruction file. Nested `AGENTS.md` files are read lazily, when Claude Code works
+inside that directory.
 
 ### `codex_skills_dir`
 

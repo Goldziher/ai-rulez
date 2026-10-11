@@ -389,13 +389,19 @@ func (g *Generator) foldsAlwaysOnIntoAgentsMD(cfg *config.Config) bool {
 
 // rootReplacedByAgentsMD reports whether agents_md makes the shared AGENTS.md
 // stand in for this provider's root file, which is then not written at all
-// (hermes, junie). Claude keeps its root file as an import shim.
+// (hermes, junie). Claude keeps its root file as an import shim unless
+// claude_md = "none" asks for AGENTS.md alone.
 func (g *Generator) rootReplacedByAgentsMD(cfg *config.Config) bool {
 	if g.Spec.Root == nil || !cfg.ReadsSharedAgentsMD(g.Spec.Name) {
 		return false
 	}
 	consumer, _ := config.SharedOutputConsumerFor(g.Spec.Name)
-	return consumer.OwnRootFile != ""
+	if consumer.OwnRootFile != "" {
+		return true
+	}
+	// A claude shim omitted by claude_md = "none": Claude Code reads AGENTS.md
+	// itself, so there is no root file at all.
+	return consumer.ImportsAgentsMD && cfg.OmitsClaudeShim()
 }
 
 // importsAgentsMD reports whether the agents_md flag turns this provider's root
