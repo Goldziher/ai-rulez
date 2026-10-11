@@ -183,6 +183,7 @@ func decodeJSONDoc(doc map[string]any, path string) (*Config, error) {
 	if _, stated := doc["agents_md"]; !stated {
 		cfg.AgentsMD = true
 	}
+	cfg.applyResourcePathDefaults()
 	return &cfg, nil
 }
 

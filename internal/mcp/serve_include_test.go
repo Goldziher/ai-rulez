@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -133,4 +134,38 @@ func TestServeSetup_WatchRootsCoverLocalIncludes(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// A skill source that selects skills with include and names no path discovers
+// them under the conventional "skills" directory, serves them and indexes them
+// for search (#331).
+func TestServeSetup_SkillSourceIncludeWithoutPathIsServedAndSearchable(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "vendor/skills/basemind-cli/SKILL.md", skillFile("basemind-cli", "Basemind command line", ""))
+	writeFile(t, root, "vendor/skills/basemind-code-search/SKILL.md", skillFile("basemind-code-search", "Basemind code search", ""))
+	writeFile(t, root, "vendor/skills/multi-agent-room/SKILL.md", skillFile("multi-agent-room", "Multi agent room", ""))
+	writeFile(t, root, "vendor/skills/unrelated/SKILL.md", skillFile("unrelated", "Unrelated skill", ""))
+	configToml := fmt.Sprintf(`version = "5.0"
+name = "p"
+gitignore = false
+presets = ["claude"]
+
+[[skill_sources]]
+name = "basemind-test"
+url = "%s"
+trust = "warn"
+include = ["basemind*", "multi-agent-room"]
+`, filepath.ToSlash(filepath.Join(root, "vendor")))
+	writeFile(t, root, ".ai-rulez/config.toml", configToml)
+
+	// Act
+	srv := newServerFor(t, &ServeSetup{WorkDir: root})
+
+	// Assert: only the included skills are served.
+	assert.Equal(t, []string{"basemind-cli", "basemind-code-search", "multi-agent-room"}, catalogNames(srv.Catalog()))
+
+	// Assert: the served skills are indexed, so search finds them.
+	hits := srv.Catalog().Rank("basemind")
+	require.NotEmpty(t, hits)
+	assert.Equal(t, "basemind-cli", hits[0].Skill.Name)
 }
