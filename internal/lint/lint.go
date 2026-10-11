@@ -434,6 +434,9 @@ func (r *runner) resolveSettings() {
 	if r.lc.Evals != nil && r.lc.Evals.Require {
 		r.sev[CodeEvalsMissing] = SeverityWarning
 	}
+	if r.lc.AgentsMDOnly {
+		r.sev[CodeClaudeMDShadow] = SeverityWarning
+	}
 	r.evalSettings()
 	if r.cfg.LockEnforced() {
 		// An unpinned remote or MCP package is a hole in an enforced lock, not a hint.
