@@ -12,6 +12,26 @@ Use installed skills to:
 - Share team skills across projects without full includes
 - Distribute AI guidance alongside your library
 
+## Installed skills vs skill sources
+
+ai-rulez can reach a skill in another repository two ways, and they differ in *what lands where*.
+
+| | Installed skill (`[[installed_skills]]`) | Skill source (`[[skill_sources]]`) |
+| --- | --- | --- |
+| What it is | One named skill fetched at generate time | A repository whose skills are served on demand |
+| Where it goes | Written into the harness skill trees, like a local skill | Never written; served over MCP and found with `find_skill` |
+| Reaches the project as | A content file, so profiles and roles scope it | A served skill, so the [skills server](mcp-server.md#dynamic-skill-loading) and a role's `delivery` scope it |
+| Use it for | A skill the agent should always have in context | A catalog of skills the agent should find on demand |
+
+Both are pinned in `ai-rulez.lock` and scanned before they are used. Reach for an **installed skill** when the
+skill belongs in the agent's static context (a library's usage guide), and for a **skill source** when you want many
+skills available without paying their tokens up front (a vendor's whole skill catalog). Both select several skills
+from one repository (`include`/`exclude`), namespace their names (`name_prefix`) and set the scan level of what
+they import (`trust`).
+
+`ai-rulez skill install`, `list`, `update` and `remove` manage installed skills; skill sources are declared in
+`[[skill_sources]]` in `config.toml`.
+
 ## Quick Start
 
 ```bash
@@ -46,6 +66,16 @@ ref = "main"
 name = "custom-skill"
 source = "https://github.com/org/repo"
 path = "custom/skill/path"    # defaults to skills/<name>
+
+# One entry can install several skills from one repository.
+[[installed_skills]]
+name = "vendor"
+source = "https://github.com/org/skills"
+path = "skills"               # a directory of skill directories
+include = ["db-*", "api"]     # keep only these directory names
+exclude = ["*-wip"]           # drop these; exclude wins over include
+name_prefix = "vendor-"       # every resolved skill is named vendor-<dir>
+trust = "warn"                # only error-severity scan findings block generate
 ```
 
 ### Fields
@@ -54,10 +84,19 @@ path = "custom/skill/path"    # defaults to skills/<name>
 | ---------------- | -------- | ---------------------------------------------------------------- |
 | `name`           | Yes      | Unique skill name                                                |
 | `source`         | Yes      | Git URL or local path to the repository                          |
-| `path`           | No       | Path within repo to skill directory. Defaults to `skills/<name>` |
+| `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories. Defaults to `skills/<name>` |
 | `ref`            | No       | Git ref (branch, tag, or commit). Defaults to the repository's default branch (`HEAD`) |
 | `local_override` | No       | Local path override for development                              |
 | `profiles`       | No       | Restrict the skill to the named profiles. Omit to include it in every profile |
+| `domain`         | No       | Tie the skill to a domain so a profile or a role selects it by domain, exactly as it selects local content. Omit for global |
+| `include`        | No       | Keep only skills whose directory name matches one of these globs. Empty keeps every skill below `path` |
+| `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
+| `name_prefix`    | No       | Prepend this to every resolved skill name, so two entries cannot collide |
+| `trust`          | No       | Scan level of the imported skills: `error` (every finding counts, the default) or `warn` (only error-severity findings block) |
+
+One entry resolves to one skill when the directory `path` names holds a `SKILL.md`, and to the
+`SKILL.md`-bearing subdirectories of `path` otherwise, selected by `include`/`exclude` and named with
+`name_prefix`. A single-skill entry behaves exactly as it did before these fields existed.
 
 ## CLI Commands
 
