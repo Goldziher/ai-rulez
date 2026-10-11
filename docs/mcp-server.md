@@ -428,7 +428,8 @@ into generated frontmatter.
   served skill as a static file and gets no stub. Each such preset is named in a warning (`AR992`).
   Skills of `[[skill_sources]]` are served only, by design: they never reach a preset without MCP support
   (nothing is written for them), and `generate` and `validate --strict` warn (`AR992`) for each such preset
-  when `[[skill_sources]]` is configured.
+  when `[[skill_sources]]` is configured. See
+  [Installed skills vs skill sources](installed-skills.md#installed-skills-vs-skill-sources) to choose between them.
 - `ai-rulez mcp --serve-skills` renders the served skills itself; it never depends on the generated trees.
 
 ### Serving

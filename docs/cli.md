@@ -2794,6 +2794,8 @@ in these tables.
 | -------- | ---- | ------- |
 | `AI_RULEZ_DEBUG` | `--debug` | Debug logging on stderr |
 | `AI_RULEZ_QUIET` | `--quiet` | Hide progress and information lines (results, warnings, errors stay) |
+| `AI_RULEZ_PROFILE` | `--profile` | Active profile (or comma-separated composition) when the flag is not given |
+| `AI_RULEZ_ROLE` | `--role`, `mcp --serve-skills --serve-role` | Active role (or comma-separated composition) when the flag is not given |
 | `AI_RULEZ_GIT_TOKEN` | `--token` / `-T` | Git access token for private includes and skill sources |
 | `AI_RULEZ_GIT_TOKEN_HOSTS` | | Comma-separated hosts the git token may be sent to (default `github.com`) |
 | `AI_RULEZ_FORGE_HOSTS` | | Comma-separated hosts the forge API client may contact (default `github.com`); `GITHUB_TOKEN` / `GH_TOKEN` supply its token |

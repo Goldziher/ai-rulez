@@ -561,7 +561,9 @@ hash is deleted. An obsolete file you edited since, or one reached through a sym
 the project, is kept with a warning, and a file the sidecar never listed is never touched.
 `generate --plugin --dry-run` prints `delete-stale: <path>` for each deletion and
 `keep-obsolete: <path>` for each kept file, and `verify --plugin` fails with
-`obsolete generated plugin file` while such a file exists.
+`obsolete generated plugin file` while such a file exists. A kept file keeps its ownership
+record in the sidecar (its `obsolete` map), so later `generate` and `verify` runs still recognise
+and report it until you reconcile it into the sources or delete it by hand.
 
 #### Linked git worktrees
 

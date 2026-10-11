@@ -1618,13 +1618,15 @@ Several profiles can be selected at once by separating them with commas — `--p
 base,backend`, or `default = "base,backend"` — which generates the union of their
 domains. A profile name may therefore not contain a comma, and a profile's value lists
 domains only, never other profiles. See
-[Domains and Profiles](domains.md#composing-profiles).
+[Domains and Profiles](domains.md#composing-profiles) and, for how profiles differ from
+roles, [Profiles vs roles](roles.md#profiles-vs-roles).
 
 ##### `roles` and `role_manifest`
 
 `[[roles]]` maps a job to a slice of the content (domains, per-kind include/exclude selectors, inheritance, a
 per-skill `skill_mode` rendered as Claude Code `skillOverrides`), selected with `ai-rulez generate --role <name>`.
-`[role_manifest] enabled = true` writes `<config dir>/roles.json`; `skill_mode_fallback = "drop" | "serve"` says what an `off` skill does on a harness with no setting for it. See [Roles](roles.md).
+Like `--profile`, `--role` accepts a comma-separated list to compose several roles; see
+[Composing roles](roles.md#composing-roles). `[role_manifest] enabled = true` writes `<config dir>/roles.json`; `skill_mode_fallback = "drop" | "serve"` says what an `off` skill does on a harness with no setting for it. See [Roles](roles.md).
 
 ```toml
 [role_manifest]
@@ -1851,6 +1853,7 @@ Each entry supports:
 | `headers`     | No       | HTTP headers for `http` or `sse` servers (e.g. auth). Values may contain `${VAR}` placeholders. |
 | `enabled`     | No       | Set to `false` to skip the server in generated MCP outputs. Defaults to `true`.     |
 | `profiles`    | No       | Restrict the server to the named profiles. Omit to include it in every profile.     |
+| `domain`      | No       | Restrict the server to a domain: it is included only when the active profile or role selects that domain. Omit to include it in every selection. |
 
 Local `stdio` servers normally need `command`; remote `http` and `sse` servers normally use `url`,
 plus `headers` when the server needs auth:
@@ -2780,9 +2783,14 @@ Each entry supports:
 | ---------------- | -------- | ----------------------------------------------------------------- |
 | `name`           | Yes      | Unique skill identifier                                           |
 | `source`         | Yes      | Git URL or local path                                             |
-| `path`           | No       | Path within repo to skill directory (defaults to `skills/<name>`) |
+| `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories (defaults to `skills/<name>`) |
 | `ref`            | No       | Git ref (branch, tag, commit)                                     |
 | `local_override` | No       | Local path override for development                               |
+| `domain`         | No       | Tie the skill to a domain so profiles and roles select it by domain like local content. Omit for global. |
+| `include`        | No       | Keep only skills whose directory name matches one of these globs  |
+| `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
+| `name_prefix`    | No       | Prepend this to every resolved skill name                         |
+| `trust`          | No       | Scan level of the imported skills: `error` (default) or `warn`    |
 
 Manage via CLI: `ai-rulez skill install/remove/list`.
 
@@ -2794,7 +2802,7 @@ Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-l
 | --- | ------- |
 | `[skills] delivery` | Global default delivery: `static` (default), `served` or `both`. |
 | `[domains.<name>] delivery` | Default delivery of a domain's skills. A skill's `delivery` frontmatter wins. |
-| `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB), `max_clone_files` (default 20000; each entry counts as at least 4 KiB toward `max_clone_bytes`; `AI_RULEZ_MAX_CLONE_FILES` sets it globally): skills served from a git repository or directory. A source over a limit is an error. |
+| `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `domain` (served only when the active profile or role selects it), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB), `max_clone_files` (default 20000; each entry counts as at least 4 KiB toward `max_clone_bytes`; `AI_RULEZ_MAX_CLONE_FILES` sets it globally): skills served from a git repository or directory. A source over a limit is an error. |
 | `[lock] enforce` | The skills server refuses a served skill whose digest is not pinned in `ai-rulez.lock`. |
 
 ##### `[ard]`
@@ -5150,6 +5158,29 @@ a support agent get on their machine".
     `ai-rulez generate --user --role <name>`. The `match` hints on a role are inert strings that tool may read
     from `roles.json`; ai-rulez stores and republishes them and never interprets them.
 
+#### Profiles vs roles
+
+Both select a slice of the same content, so it is fair to ask whether profiles are still worth having. They are,
+because they answer different questions.
+
+| | Profile | Role |
+| --- | --- | --- |
+| Question | "what does this repository ship?" | "what does this person's job need?" |
+| Scope | the project or team | a person (identity decided elsewhere) |
+| Selected by | `--profile`, `[profiles]`, the default profile | `--role` |
+| Extra knobs | — | `skill_mode`, `delivery`, `match`, `pin` |
+| Compared by | `tokens --by-profile` | `tokens --by-role` |
+
+Reach for a profile when one checkout must emit several *project* variants — a backend service, a frontend app, a
+QA bundle — and that choice belongs in the repository. Reach for a role when the same content must be tailored to
+*different people* — a backend engineer, an on-call responder, a support agent — and the choice is made at
+generation time for that person. A profile is about what the artifact contains; a role is about what one holder
+sees. Many projects keep a profile for the repository's default and layer roles for the per-person variants.
+
+Each axis will meet where it should: **domains** are the shared vocabulary, profiles group domains for a project
+and roles group domains for a person. A profile also selects [installed skills](installed-skills.md) and MCP
+servers by their `profiles` field.
+
 #### Defining roles
 
 Roles are a `[[roles]]` array in `config.toml`. The optional manifest switch lives in a separate
@@ -5269,6 +5300,8 @@ ai-rulez roles list [--format json]           # every role with item counts and 
 ai-rulez roles show <name> [--format json]    # as declared, and with the parent merged in
 ai-rulez roles resolve <name> [--format json] # the items the role keeps, with sizes and skill modes
 
+# <name> may be a comma-separated composition (see Composing roles below)
+
 ai-rulez generate --role engineer             # project outputs for the role
 ai-rulez generate --user --role engineer      # user-level outputs (~/.claude, ~/.codex, ...)
 ai-rulez generate --check --role engineer     # drift check against the role's outputs
@@ -5283,6 +5316,29 @@ are built from the full content). A role replaces profile selection: the content
 domains and selectors through the same selection path profiles use, so everything downstream in the same run (outputs, the token
 report, the usage index) sees the role's slice. Installed skills scoped to profiles are not filtered by
 a role, and the machine-local `local/` tree is not narrowed.
+
+#### Composing roles
+
+`--role` takes a comma-separated list, as do `roles show`, `roles resolve`, `tokens --role` and
+`mcp --serve-skills --role`. A composition is the **union** of its members: the domains, skills, rules, agents and
+commands they keep are combined, and that union is what is rendered, served and counted.
+
+```bash
+ai-rulez generate --role engineer,oncall
+ai-rulez roles resolve engineer,oncall
+```
+
+Where two members set `skill_mode` or `delivery` for the same skill, the [within-role precedence](#skill_mode-precedence)
+applies first — a more specific key (an exact id, then a longer glob) wins — and when two keys are equally
+specific the role **listed last** wins. Order therefore matters, and a composition is named after its order:
+`engineer,oncall` and `oncall,engineer` are different, and reversing the list can change a mode.
+
+A composition is a value, not a `[[roles]]` entry: it cannot be extended, it need not be declared, and every member
+must exist (`validate` reports one that does not as `AR971`). A composition is **pinnable**:
+`ai-rulez lock --role engineer,oncall` records the union's rendered outputs under the canonical name
+`engineer,oncall`, and `generate --locked --role engineer,oncall` (or `lock --check`) compares them. Pinning one
+member with `pin = true` does not pin every composition that contains it, and pinning a composition does not pin
+its members.
 
 #### `skill_mode` becomes Claude Code `skillOverrides`
 
@@ -6183,6 +6239,26 @@ Use installed skills to:
 - Share team skills across projects without full includes
 - Distribute AI guidance alongside your library
 
+#### Installed skills vs skill sources
+
+ai-rulez can reach a skill in another repository two ways, and they differ in *what lands where*.
+
+| | Installed skill (`[[installed_skills]]`) | Skill source (`[[skill_sources]]`) |
+| --- | --- | --- |
+| What it is | One named skill fetched at generate time | A repository whose skills are served on demand |
+| Where it goes | Written into the harness skill trees, like a local skill | Never written; served over MCP and found with `find_skill` |
+| Reaches the project as | A content file, so profiles and roles scope it | A served skill, so the [skills server](mcp-server.md#dynamic-skill-loading) and a role's `delivery` scope it |
+| Use it for | A skill the agent should always have in context | A catalog of skills the agent should find on demand |
+
+Both are pinned in `ai-rulez.lock` and scanned before they are used. Reach for an **installed skill** when the
+skill belongs in the agent's static context (a library's usage guide), and for a **skill source** when you want many
+skills available without paying their tokens up front (a vendor's whole skill catalog). Both select several skills
+from one repository (`include`/`exclude`), namespace their names (`name_prefix`) and set the scan level of what
+they import (`trust`).
+
+`ai-rulez skill install`, `list`, `update` and `remove` manage installed skills; skill sources are declared in
+`[[skill_sources]]` in `config.toml`.
+
 #### Quick Start
 
 ```bash
@@ -6217,6 +6293,16 @@ ref = "main"
 name = "custom-skill"
 source = "https://github.com/org/repo"
 path = "custom/skill/path"    # defaults to skills/<name>
+
+# One entry can install several skills from one repository.
+[[installed_skills]]
+name = "vendor"
+source = "https://github.com/org/skills"
+path = "skills"               # a directory of skill directories
+include = ["db-*", "api"]     # keep only these directory names
+exclude = ["*-wip"]           # drop these; exclude wins over include
+name_prefix = "vendor-"       # every resolved skill is named vendor-<dir>
+trust = "warn"                # only error-severity scan findings block generate
 ```
 
 ##### Fields
@@ -6225,10 +6311,19 @@ path = "custom/skill/path"    # defaults to skills/<name>
 | ---------------- | -------- | ---------------------------------------------------------------- |
 | `name`           | Yes      | Unique skill name                                                |
 | `source`         | Yes      | Git URL or local path to the repository                          |
-| `path`           | No       | Path within repo to skill directory. Defaults to `skills/<name>` |
+| `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories. Defaults to `skills/<name>` |
 | `ref`            | No       | Git ref (branch, tag, or commit). Defaults to the repository's default branch (`HEAD`) |
 | `local_override` | No       | Local path override for development                              |
 | `profiles`       | No       | Restrict the skill to the named profiles. Omit to include it in every profile |
+| `domain`         | No       | Tie the skill to a domain so a profile or a role selects it by domain, exactly as it selects local content. Omit for global |
+| `include`        | No       | Keep only skills whose directory name matches one of these globs. Empty keeps every skill below `path` |
+| `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
+| `name_prefix`    | No       | Prepend this to every resolved skill name, so two entries cannot collide |
+| `trust`          | No       | Scan level of the imported skills: `error` (every finding counts, the default) or `warn` (only error-severity findings block) |
+
+One entry resolves to one skill when the directory `path` names holds a `SKILL.md`, and to the
+`SKILL.md`-bearing subdirectories of `path` otherwise, selected by `include`/`exclude` and named with
+`name_prefix`. A single-skill entry behaves exactly as it did before these fields existed.
 
 #### CLI Commands
 
@@ -10479,7 +10574,9 @@ hash is deleted. An obsolete file you edited since, or one reached through a sym
 the project, is kept with a warning, and a file the sidecar never listed is never touched.
 `generate --plugin --dry-run` prints `delete-stale: <path>` for each deletion and
 `keep-obsolete: <path>` for each kept file, and `verify --plugin` fails with
-`obsolete generated plugin file` while such a file exists.
+`obsolete generated plugin file` while such a file exists. A kept file keeps its ownership
+record in the sidecar (its `obsolete` map), so later `generate` and `verify` runs still recognise
+and report it until you reconcile it into the sources or delete it by hand.
 
 ###### Linked git worktrees
 
@@ -18381,7 +18478,8 @@ into generated frontmatter.
   served skill as a static file and gets no stub. Each such preset is named in a warning (`AR992`).
   Skills of `[[skill_sources]]` are served only, by design: they never reach a preset without MCP support
   (nothing is written for them), and `generate` and `validate --strict` warn (`AR992`) for each such preset
-  when `[[skill_sources]]` is configured.
+  when `[[skill_sources]]` is configured. See
+  [Installed skills vs skill sources](installed-skills.md#installed-skills-vs-skill-sources) to choose between them.
 - `ai-rulez mcp --serve-skills` renders the served skills itself; it never depends on the generated trees.
 
 ##### Serving
@@ -25731,6 +25829,8 @@ in these tables.
 | -------- | ---- | ------- |
 | `AI_RULEZ_DEBUG` | `--debug` | Debug logging on stderr |
 | `AI_RULEZ_QUIET` | `--quiet` | Hide progress and information lines (results, warnings, errors stay) |
+| `AI_RULEZ_PROFILE` | `--profile` | Active profile (or comma-separated composition) when the flag is not given |
+| `AI_RULEZ_ROLE` | `--role`, `mcp --serve-skills --serve-role` | Active role (or comma-separated composition) when the flag is not given |
 | `AI_RULEZ_GIT_TOKEN` | `--token` / `-T` | Git access token for private includes and skill sources |
 | `AI_RULEZ_GIT_TOKEN_HOSTS` | | Comma-separated hosts the git token may be sent to (default `github.com`) |
 | `AI_RULEZ_FORGE_HOSTS` | | Comma-separated hosts the forge API client may contact (default `github.com`); `GITHUB_TOKEN` / `GH_TOKEN` supply its token |
@@ -27247,9 +27347,9 @@ ai-rulez generate --locked
 | `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
 | `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
-| `--profile` | string |  | Profile to generate, or a comma-separated list to compose several (default: from config or 'default') |
+| `--profile` | string |  | Profile to generate, or a comma-separated list to compose several (default: from config or 'default'; or AI_RULEZ_PROFILE) |
 | `--recursive` | bool |  | Find and process configuration files recursively |
-| `--role` | string |  | Generate the slice of content a role selects instead of a profile (see 'ai-rulez roles list'); mutually exclusive with --profile |
+| `--role` | string |  | Generate the slice of content a role selects instead of a profile, or a comma-separated list to compose several (the union); see 'ai-rulez roles resolve'; mutually exclusive with --profile (or AI_RULEZ_ROLE) |
 | `--strict-config` | bool |  | Fail on unknown or invalid configuration keys instead of warning (env AI_RULEZ_STRICT=1) |
 | `--user` | bool |  | Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent |
 | `--verify-tags` | bool |  | Ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735); needs the network (also [lock] verify_tags = true) |
@@ -28011,7 +28111,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
 | `--profile` | string |  | Profile whose skills to serve (default: the configured default profile; requires --serve-skills) |
 | `--reload-interval` | duration | `0s` | How often to check skill files for changes; default 2s (requires --serve-skills) |
-| `--role` | string |  | Serve only the skills of this role (see 'ai-rulez roles list'), with the delivery the role sets; it is also the default role of find_skill (requires --serve-skills) |
+| `--role` | string |  | Serve only the skills of this role (see 'ai-rulez roles list'), with the delivery the role sets; it is also the default role of find_skill (or AI_RULEZ_ROLE; requires --serve-skills) |
 | `--root` | string |  | Directory the authoring tools may read and write; working_directory must lie inside it (default: the current directory) |
 | `--serve-skills` | bool |  | Serve skills read-only over the MCP Skills extension instead of the authoring tools |
 | `--source` | string list |  | Serve the skills of a source, repeatable: [git+]<url>[@<tag\|commit>][#<subdir>] or a local directory (requires --serve-skills) |
@@ -30085,11 +30185,16 @@ Which of these a repository may set, and which only the user config file or the 
 - **`mcp_servers[].command`**: Command to execute for local `stdio` servers (npx, uvx, ai-rulez, etc.)
 - **`mcp_servers[].args`**: Command arguments for local servers
 - **`mcp_servers[].profiles`**: Restrict the server to the named profiles
+- **`mcp_servers[].domain`**: Restrict the server to a domain; it is included only when the active profile or role selects that domain
 - **`mcp_servers[].transport`**: `stdio`, `http`, or `sse` (default: `stdio`)
 - **`mcp_servers[].url`**: Remote MCP URL for `http` or `sse` transports
 - **`mcp_servers[].headers`**: HTTP headers for `http`/`sse` servers; values may contain `${VAR}` placeholders resolved by `generate`
 - **`mcp_servers[].enabled`**: Set to `false` to omit the server from generated MCP outputs
 - **`mcp_servers[].env`**: Environment variables; values may contain `${VAR}` placeholders resolved by `generate`
+- **`installed_skills[].include` / `exclude`**: Globs over skill directory names that select several skills from one repository with one entry; `exclude` wins
+- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name
+- **`installed_skills[].trust`**: Scan level of the imported skills, `error` (default) or `warn`
+- **`installed_skills[].domain`**: Place the skill in a domain so a profile or a role selects it by domain
 
 MCP placeholder names must match `[A-Za-z_][A-Za-z0-9_]*`. Generation resolves them from
 `--env KEY=VALUE`, process env, then dotenv files. Secret-bearing MCP outputs must be gitignored

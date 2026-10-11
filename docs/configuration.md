@@ -421,13 +421,15 @@ Several profiles can be selected at once by separating them with commas — `--p
 base,backend`, or `default = "base,backend"` — which generates the union of their
 domains. A profile name may therefore not contain a comma, and a profile's value lists
 domains only, never other profiles. See
-[Domains and Profiles](domains.md#composing-profiles).
+[Domains and Profiles](domains.md#composing-profiles) and, for how profiles differ from
+roles, [Profiles vs roles](roles.md#profiles-vs-roles).
 
 ### `roles` and `role_manifest`
 
 `[[roles]]` maps a job to a slice of the content (domains, per-kind include/exclude selectors, inheritance, a
 per-skill `skill_mode` rendered as Claude Code `skillOverrides`), selected with `ai-rulez generate --role <name>`.
-`[role_manifest] enabled = true` writes `<config dir>/roles.json`; `skill_mode_fallback = "drop" | "serve"` says what an `off` skill does on a harness with no setting for it. See [Roles](roles.md).
+Like `--profile`, `--role` accepts a comma-separated list to compose several roles; see
+[Composing roles](roles.md#composing-roles). `[role_manifest] enabled = true` writes `<config dir>/roles.json`; `skill_mode_fallback = "drop" | "serve"` says what an `off` skill does on a harness with no setting for it. See [Roles](roles.md).
 
 ```toml
 [role_manifest]
@@ -654,6 +656,7 @@ Each entry supports:
 | `headers`     | No       | HTTP headers for `http` or `sse` servers (e.g. auth). Values may contain `${VAR}` placeholders. |
 | `enabled`     | No       | Set to `false` to skip the server in generated MCP outputs. Defaults to `true`.     |
 | `profiles`    | No       | Restrict the server to the named profiles. Omit to include it in every profile.     |
+| `domain`      | No       | Restrict the server to a domain: it is included only when the active profile or role selects that domain. Omit to include it in every selection. |
 
 Local `stdio` servers normally need `command`; remote `http` and `sse` servers normally use `url`,
 plus `headers` when the server needs auth:
@@ -1583,9 +1586,14 @@ Each entry supports:
 | ---------------- | -------- | ----------------------------------------------------------------- |
 | `name`           | Yes      | Unique skill identifier                                           |
 | `source`         | Yes      | Git URL or local path                                             |
-| `path`           | No       | Path within repo to skill directory (defaults to `skills/<name>`) |
+| `path`           | No       | Path within repo to the skill directory, or to a directory of skill directories (defaults to `skills/<name>`) |
 | `ref`            | No       | Git ref (branch, tag, commit)                                     |
 | `local_override` | No       | Local path override for development                               |
+| `domain`         | No       | Tie the skill to a domain so profiles and roles select it by domain like local content. Omit for global. |
+| `include`        | No       | Keep only skills whose directory name matches one of these globs  |
+| `exclude`        | No       | Drop skills whose directory name matches one of these globs; wins over `include` |
+| `name_prefix`    | No       | Prepend this to every resolved skill name                         |
+| `trust`          | No       | Scan level of the imported skills: `error` (default) or `warn`    |
 
 Manage via CLI: `ai-rulez skill install/remove/list`.
 
@@ -1597,7 +1605,7 @@ Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-l
 | --- | ------- |
 | `[skills] delivery` | Global default delivery: `static` (default), `served` or `both`. |
 | `[domains.<name>] delivery` | Default delivery of a domain's skills. A skill's `delivery` frontmatter wins. |
-| `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB), `max_clone_files` (default 20000; each entry counts as at least 4 KiB toward `max_clone_bytes`; `AI_RULEZ_MAX_CLONE_FILES` sets it globally): skills served from a git repository or directory. A source over a limit is an error. |
+| `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `domain` (served only when the active profile or role selects it), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB), `max_clone_files` (default 20000; each entry counts as at least 4 KiB toward `max_clone_bytes`; `AI_RULEZ_MAX_CLONE_FILES` sets it globally): skills served from a git repository or directory. A source over a limit is an error. |
 | `[lock] enforce` | The skills server refuses a served skill whose digest is not pinned in `ai-rulez.lock`. |
 
 ### `[ard]`

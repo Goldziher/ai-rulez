@@ -1052,9 +1052,9 @@ ai-rulez generate --locked
 | `--policy-signer-key` | string list |  | PEM public key trusted to sign the policy (repeatable; also AI_RULEZ_POLICY_SIGNER_KEY and [[policy.signers]] in the user config) |
 | `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
-| `--profile` | string |  | Profile to generate, or a comma-separated list to compose several (default: from config or 'default') |
+| `--profile` | string |  | Profile to generate, or a comma-separated list to compose several (default: from config or 'default'; or AI_RULEZ_PROFILE) |
 | `--recursive` | bool |  | Find and process configuration files recursively |
-| `--role` | string |  | Generate the slice of content a role selects instead of a profile (see 'ai-rulez roles list'); mutually exclusive with --profile |
+| `--role` | string |  | Generate the slice of content a role selects instead of a profile, or a comma-separated list to compose several (the union); see 'ai-rulez roles resolve'; mutually exclusive with --profile (or AI_RULEZ_ROLE) |
 | `--strict-config` | bool |  | Fail on unknown or invalid configuration keys instead of warning (env AI_RULEZ_STRICT=1) |
 | `--user` | bool |  | Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent |
 | `--verify-tags` | bool |  | Ask the remotes whether a tag pinned in ai-rulez.lock moved (AR732) or was deleted (AR735); needs the network (also [lock] verify_tags = true) |
@@ -1816,7 +1816,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
 | `--profile` | string |  | Profile whose skills to serve (default: the configured default profile; requires --serve-skills) |
 | `--reload-interval` | duration | `0s` | How often to check skill files for changes; default 2s (requires --serve-skills) |
-| `--role` | string |  | Serve only the skills of this role (see 'ai-rulez roles list'), with the delivery the role sets; it is also the default role of find_skill (requires --serve-skills) |
+| `--role` | string |  | Serve only the skills of this role (see 'ai-rulez roles list'), with the delivery the role sets; it is also the default role of find_skill (or AI_RULEZ_ROLE; requires --serve-skills) |
 | `--root` | string |  | Directory the authoring tools may read and write; working_directory must lie inside it (default: the current directory) |
 | `--serve-skills` | bool |  | Serve skills read-only over the MCP Skills extension instead of the authoring tools |
 | `--source` | string list |  | Serve the skills of a source, repeatable: [git+]<url>[@<tag\|commit>][#<subdir>] or a local directory (requires --serve-skills) |
