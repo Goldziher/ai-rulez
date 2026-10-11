@@ -251,6 +251,39 @@ func TestGenerate_ForgedAssetEntryDoesNotDeleteAUserFile(t *testing.T) {
 	assert.Equal(t, body, readFileString(t, mine))
 }
 
+// #350 regression: generate --plugin writes its bundle into the project tree
+// and stamps each file with the same generated header, so the manifest-free
+// orphan walk must neither report a committed bundle in --check nor delete it
+// in generate.
+func TestGenerate_LeavesACommittedPluginBundleAlone(t *testing.T) {
+	quietWarnings(t)
+	// Arrange: a root [plugin] whose skill carries a bundled reference asset.
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "skills", "alpha", "references"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(
+		"version = \"5.0\"\nname = \"bundle\"\ngitignore = false\npresets = [\"claude\"]\n\n"+
+			"[plugin]\nname = \"bundle\"\nversion = \"1.0.0\"\ndescription = \"d\"\nruntimes = [\"claude\"]\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "skills", "alpha", "SKILL.md"),
+		[]byte("---\nname: alpha\ndescription: Use alpha.\n---\n# alpha\n\nBody.\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "skills", "alpha", "references", "api.md"),
+		[]byte("# API\n\nReference.\n"), 0o644))
+	require.NoError(t, loadHashesProject(t, dir).GeneratePlugin(""))
+	bundled := filepath.Join(dir, "skills", "alpha", "references", "api.md")
+	require.FileExists(t, bundled)
+	freshWorktree(t, dir)
+
+	// Act: --check must not call the committed bundle file an orphan.
+	drift, err := loadHashesProject(t, dir).CheckDrift("")
+
+	// Assert
+	require.NoError(t, err)
+	assert.NotContains(t, drift, Drift{Path: "skills/alpha/references/api.md", Kind: DriftOrphan})
+	require.FileExists(t, bundled, "--check must not write")
+	require.NoError(t, loadHashesProject(t, dir).Generate(""))
+	assert.FileExists(t, bundled, "generate must not delete a committed plugin bundle")
+}
+
 // forgeManifestAssets sets the committed manifest's asset digests, the way a
 // hostile commit to .ai-rulez/.generated-manifest.json would.
 func forgeManifestAssets(t *testing.T, dir string, assets map[string]string) {
