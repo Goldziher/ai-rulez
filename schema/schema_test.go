@@ -111,6 +111,27 @@ mcp_servers:
 	})
 }
 
+// A resource may name the domain it belongs to: the schema accepts the `domain`
+// string on mcp_servers, installed_skills and skill_sources.
+func TestValidateWithSchema_ResourceDomains(t *testing.T) {
+	const head = "version: \"5.0\"\nname: \"test-project\"\npresets:\n  - claude\n"
+	cfg := head + `
+mcp_servers:
+  - name: srv
+    command: x
+    domain: billing
+installed_skills:
+  - name: sk
+    source: s
+    domain: billing
+skill_sources:
+  - name: src
+    url: x
+    domain: billing
+`
+	require.NoError(t, schema.ValidateWithSchema([]byte(cfg)))
+}
+
 func TestValidateWithSchema_Rules(t *testing.T) {
 	const head = "version: \"5.0\"\nname: \"test-project\"\npresets:\n  - claude\n"
 

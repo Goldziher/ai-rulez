@@ -454,6 +454,14 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config, resolve
 		profilesByName[config.InstalledSkills[i].Name] = config.InstalledSkills[i].Profiles
 	}
 
+	// Map each installed skill's domain, so a domain-tagged skill lands in that
+	// domain's Skills and profile/role selection include it exactly like a local
+	// domain skill.
+	domainByName := make(map[string]string, len(config.InstalledSkills))
+	for i := range config.InstalledSkills {
+		domainByName[config.InstalledSkills[i].Name] = config.InstalledSkills[i].Domain
+	}
+
 	// Merge: local skills win over installed skills
 	for i := range skills {
 		// Copy before setting Profiles: skills belongs to the resolver.
@@ -462,14 +470,41 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config, resolve
 			log.Warn("Installed skill name conflicts with local skill, skipping", "name", s.Name)
 			continue
 		}
-		s.Profiles = profilesByName[s.Name]
+		// A multi-skill entry stamps its own profiles and domain on every file
+		// it resolved; a resolver that did not stamp them falls back to the
+		// name-keyed maps (a single-skill entry, or a test double).
+		profiles, domain := installedSkillScope(s, profilesByName, domainByName)
+		s.Profiles = profiles
 		config.Content.ImportedVerifiers = append(config.Content.ImportedVerifiers, s.Verifiers...)
+		if domain != "" {
+			if d, ok := config.Content.Domains[domain]; ok {
+				d.Skills = append(d.Skills, s)
+				existingNames[s.Name] = true
+				continue
+			}
+			log.Warn("Installed skill names a domain that does not exist; placing it in the root content",
+				"name", s.Name, "domain", domain)
+		}
 		config.Content.Skills = append(config.Content.Skills, s)
 		existingNames[s.Name] = true
 	}
 
 	log.Debug("Successfully resolved installed skills", "count", len(skills))
 	return nil
+}
+
+// installedSkillScope returns the profile scope and domain a resolved installed
+// skill file carries: its own stamped values when the resolver set them, else the
+// entry-name lookups.
+func installedSkillScope(s ContentFile, profilesByName map[string][]string, domainByName map[string]string) (profiles []string, domain string) {
+	profiles, domain = s.Profiles, s.Domain
+	if profiles == nil {
+		profiles = profilesByName[s.Name]
+	}
+	if domain == "" {
+		domain = domainByName[s.Name]
+	}
+	return profiles, domain
 }
 
 // loadConfigFile loads config.toml from a config directory. A directory that

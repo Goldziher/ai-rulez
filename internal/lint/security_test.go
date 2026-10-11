@@ -248,6 +248,56 @@ func TestScanImportedContent(t *testing.T) {
 	}
 }
 
+// A skill whose installed_skills entry set a trust level is scanned at that
+// level, overriding the global scan_imports severity for that item only.
+func TestScanImportedTrustOverridesGlobalLevel(t *testing.T) {
+	tests := []struct {
+		name    string
+		global  string
+		trust   string
+		wantSev Severity
+		wantAny bool
+	}{
+		{name: "global warn, no trust stays warn", global: "warn", wantSev: SeverityWarning, wantAny: true},
+		{name: "global error, no trust stays error", global: "error", wantSev: SeverityError, wantAny: true},
+		{name: "trust error overrides a global warn", global: "warn", trust: "error", wantSev: SeverityError, wantAny: true},
+		{name: "trust warn overrides a global error", global: "error", trust: "warn", wantSev: SeverityWarning, wantAny: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: an imported skill outside the config directory.
+			dir := t.TempDir()
+			trust := ""
+			if tt.trust != "" {
+				trust = "\ntrust = \"" + tt.trust + "\""
+			}
+			vendor := filepath.ToSlash(filepath.Join(dir, "vendor", "imp"))
+			writeFiles(t, dir, map[string]string{
+				"proj/.ai-rulez/config.toml": baseConfig +
+					"[[installed_skills]]\nname = \"imp\"\nsource = \"" + vendor + "\"\npath = \".\"" + trust +
+					"\n[lint.security]\nscan_imports = \"" + tt.global + "\"\n",
+				"vendor/imp/SKILL.md": "---\nname: imp\ndescription: Use when testing per-entry trust.\n---\nAKIAIOSFODNN7EXAMPLE\n",
+			})
+			proj := filepath.Join(dir, "proj")
+			gitAdd(t, proj)
+
+			// Act
+			got := lintDir(t, proj)
+
+			// Assert
+			n := countCode(got, CodeSecretDetected)
+			if (n > 0) != tt.wantAny {
+				t.Fatalf("AR001 count = %d, want any = %v:\n%s", n, tt.wantAny, dump(got))
+			}
+			for _, f := range got {
+				if f.Code == CodeSecretDetected && f.Severity != tt.wantSev {
+					t.Errorf("severity = %s, want %s (trust %q over scan_imports %q)", f.Severity, tt.wantSev, tt.trust, tt.global)
+				}
+			}
+		})
+	}
+}
+
 func TestScanCommentsLineNumbersAcrossManyComments(t *testing.T) {
 	body := strings.Repeat("<!-- run: x -->\n", 2000)
 	fs := securityFindings(t, "", "---\nname: bad\ndescription: Use when testing the lint rules of a skill.\n---\n"+body, nil)

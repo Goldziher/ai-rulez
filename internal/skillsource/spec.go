@@ -31,6 +31,9 @@ type Spec struct {
 	Exclude           []string
 	NamePrefix        string
 	Trust             string
+	// Domain restricts this source to the named domain of the active selection:
+	// it is served only when that domain is selected. Empty means global.
+	Domain string
 	// MaxSkills and MaxBytes bound what the source loads; 0 selects the defaults.
 	MaxSkills int
 	MaxBytes  int
@@ -50,7 +53,7 @@ type Spec struct {
 
 // FromConfig converts a [[skill_sources]] entry.
 func FromConfig(c *config.SkillSourceConfig) Spec {
-	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Version: c.Version, TagPrefix: c.TagPrefix, IncludePrerelease: c.IncludePrerelease, MinReleaseAge: c.MinReleaseAge, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust, MaxSkills: c.MaxSkills, MaxBytes: c.MaxBytes, MaxCloneBytes: c.MaxCloneBytes, MaxCloneFiles: c.MaxCloneFiles}
+	return Spec{Name: c.Name, URL: c.URL, Ref: c.Ref, Version: c.Version, TagPrefix: c.TagPrefix, IncludePrerelease: c.IncludePrerelease, MinReleaseAge: c.MinReleaseAge, Path: c.Path, Include: c.Include, Exclude: c.Exclude, NamePrefix: c.NamePrefix, Trust: c.Trust, Domain: c.Domain, MaxSkills: c.MaxSkills, MaxBytes: c.MaxBytes, MaxCloneBytes: c.MaxCloneBytes, MaxCloneFiles: c.MaxCloneFiles}
 }
 
 // TrustLevel is the scan level, defaulting to the strict one.

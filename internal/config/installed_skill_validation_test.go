@@ -18,6 +18,13 @@ func TestValidateInstalledSkills(t *testing.T) {
 		{"absolute path", InstalledSkillConfig{Name: "a", Source: "https://h/r", Path: "/etc"}, true},
 		{"dotdot path", InstalledSkillConfig{Name: "a", Source: "https://h/r", Path: "skills/../../x"}, true},
 		{"missing name", InstalledSkillConfig{Source: "https://h/r"}, true},
+		{"trust error", InstalledSkillConfig{Name: "a", Source: "https://h/r", Trust: TrustError}, false},
+		{"trust warn", InstalledSkillConfig{Name: "a", Source: "https://h/r", Trust: TrustWarn}, false},
+		{"invalid trust", InstalledSkillConfig{Name: "a", Source: "https://h/r", Trust: "loud"}, true},
+		{"include globs", InstalledSkillConfig{Name: "a", Source: "https://h/r", Include: []string{"a*", "b?"}}, false},
+		{"exclude globs", InstalledSkillConfig{Name: "a", Source: "https://h/r", Exclude: []string{"*-wip"}}, false},
+		{"invalid include glob", InstalledSkillConfig{Name: "a", Source: "https://h/r", Include: []string{"[bad"}}, true},
+		{"invalid exclude glob", InstalledSkillConfig{Name: "a", Source: "https://h/r", Exclude: []string{"[bad"}}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

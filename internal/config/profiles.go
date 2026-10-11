@@ -110,6 +110,19 @@ func ProfileMatches(profile string, scoped []string) bool {
 	return false
 }
 
+// DomainActive reports whether a resource tagged with domain is active in a
+// content tree. An empty domain is global (always active). A non-empty domain is
+// active only when the (already-selected) tree carries it; a nil tree therefore
+// activates nothing but untagged resources. It is the shared predicate behind
+// every domain-tagged resource kind, so an MCP server, an installed skill and a
+// skill source all resolve their domain the same way.
+func DomainActive(domain string, content *ContentTree) bool {
+	if domain == "" {
+		return true
+	}
+	return content != nil && content.Domains[domain] != nil
+}
+
 // FilterContentFilesByProfile keeps the files active for a profile: those with
 // no profile restriction, plus those whose Profiles include one of the profile
 // value's elements.
