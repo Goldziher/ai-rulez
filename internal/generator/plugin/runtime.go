@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bytes"
 	"encoding/json"
 	"path/filepath"
 	"slices"
@@ -196,13 +197,17 @@ func rewriteRoot(s, runtime string) string {
 
 // jsonOutput marshals v to indented JSON with a trailing newline and returns an
 // OutputFile with RawContent so the writer emits it verbatim (no header banner).
+// HTML escaping is off, so "&" stays "&" instead of being rewritten to "\u0026";
+// the two-space indent and trailing newline match the rest of the generated JSON.
 func jsonOutput(path string, v any) (config.OutputFile, error) {
-	data, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(v); err != nil {
 		return config.OutputFile{}, oops.With("path", path).Wrapf(err, "marshal json")
 	}
-	data = append(data, '\n')
-	return config.OutputFile{Path: path, RawContent: data}, nil
+	return config.OutputFile{Path: path, RawContent: buf.Bytes()}, nil
 }
 
 // mcpEntry is one entry in a runtime manifest's inline mcpServers map.

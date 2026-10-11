@@ -158,7 +158,7 @@ func TestGolden_OpenCodeV2PluginAndContent(t *testing.T) {
 
 	pkg := parseJSON(t, out["package.json"])
 	deps := pkg["dependencies"].(map[string]any)
-	assert.Equal(t, "^2.0.20", deps["@opencode/plugin"], "v2 plugin package dependency")
+	assert.Equal(t, "^2.0.26", deps["@opencode/plugin"], "v2 plugin package dependency")
 
 	skill := string(out[".opencode/skills/basemind/SKILL.md"])
 	assert.Contains(t, skill, "name: basemind", "skill bundled verbatim")

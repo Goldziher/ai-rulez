@@ -2531,6 +2531,14 @@
         "name": {
           "type": "string"
         },
+        "opencode_dependency": {
+          "description": "Version range for the \"@opencode/plugin\" dependency in the OpenCode root package.json. Empty uses the built-in default.",
+          "type": "string"
+        },
+        "package_manager": {
+          "description": "Written as packageManager in the OpenCode and Pi root package.json (for example \"pnpm@9.15.0\"). Empty omits the field. The root package.json is generator-owned.",
+          "type": "string"
+        },
         "repository": {
           "type": "string"
         },

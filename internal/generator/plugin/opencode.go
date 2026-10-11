@@ -24,27 +24,29 @@ import (
 var openCodeContentHelper []byte
 
 const (
-	// openCodePluginDependency targets OpenCode 2's plugin package, which a v1
-	// plugin implementation cannot run against (#194).
-	openCodePluginDependency = "^2.0.20"
-	openCodeSourcePath       = ".ai-rulez/opencode/index.js"
-	openCodeHelperName       = "ai-rulez-content.js"
-	openCodeBundleName       = "ai-rulez-bundle.json"
+	// defaultOpenCodePluginDependency targets OpenCode 2's plugin package, which a
+	// v1 plugin implementation cannot run against (#194). [plugin]
+	// opencode_dependency overrides it.
+	defaultOpenCodePluginDependency = "^2.0.26"
+	openCodeSourcePath              = ".ai-rulez/opencode/index.js"
+	openCodeHelperName              = "ai-rulez-content.js"
+	openCodeBundleName              = "ai-rulez-bundle.json"
 )
 
 type openCodePackage struct {
-	Name         string             `json:"name"`
-	Version      string             `json:"version"`
-	Description  string             `json:"description,omitempty"`
-	Keywords     []string           `json:"keywords,omitempty"`
-	Homepage     string             `json:"homepage,omitempty"`
-	Repository   openCodeRepository `json:"repository"`
-	License      string             `json:"license,omitempty"`
-	Type         string             `json:"type"`
-	Main         string             `json:"main"`
-	Exports      map[string]string  `json:"exports"`
-	Files        []string           `json:"files"`
-	Dependencies map[string]string  `json:"dependencies"`
+	Name           string             `json:"name"`
+	Version        string             `json:"version"`
+	Description    string             `json:"description,omitempty"`
+	Keywords       []string           `json:"keywords,omitempty"`
+	Homepage       string             `json:"homepage,omitempty"`
+	Repository     openCodeRepository `json:"repository"`
+	License        string             `json:"license,omitempty"`
+	PackageManager string             `json:"packageManager,omitempty"`
+	Type           string             `json:"type"`
+	Main           string             `json:"main"`
+	Exports        map[string]string  `json:"exports"`
+	Files          []string           `json:"files"`
+	Dependencies   map[string]string  `json:"dependencies"`
 }
 
 type openCodeRepository struct {
@@ -90,18 +92,19 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		return nil, err
 	}
 	pkg, err := jsonOutput(filepath.Join(baseDir, "package.json"), openCodePackage{
-		Name:         openCodePackageName(m),
-		Version:      m.Version,
-		Description:  m.Description,
-		Keywords:     m.Keywords,
-		Homepage:     m.Homepage,
-		Repository:   openCodeRepository{Type: "git", URL: m.Repository},
-		License:      m.License,
-		Type:         "module",
-		Main:         filepath.ToSlash(entrypoint),
-		Exports:      map[string]string{".": "./" + filepath.ToSlash(entrypoint)},
-		Files:        files,
-		Dependencies: map[string]string{"@opencode/plugin": openCodePluginDependency},
+		Name:           openCodePackageName(m),
+		Version:        m.Version,
+		Description:    m.Description,
+		Keywords:       m.Keywords,
+		Homepage:       m.Homepage,
+		Repository:     openCodeRepository{Type: "git", URL: m.Repository},
+		License:        m.License,
+		PackageManager: m.PackageManager,
+		Type:           "module",
+		Main:           filepath.ToSlash(entrypoint),
+		Exports:        map[string]string{".": "./" + filepath.ToSlash(entrypoint)},
+		Files:          files,
+		Dependencies:   map[string]string{"@opencode/plugin": openCodeDependency(m)},
 	})
 	if err != nil {
 		return nil, err
@@ -236,6 +239,15 @@ func openCodePublishedFiles(m *Manifest, baseDir string, outputs []config.Output
 	}
 	sort.Strings(files)
 	return files, nil
+}
+
+// openCodeDependency returns the "@opencode/plugin" version range: the authored
+// [plugin] opencode_dependency when set, otherwise the built-in default.
+func openCodeDependency(m *Manifest) string {
+	if m.OpencodeDependency != "" {
+		return m.OpencodeDependency
+	}
+	return defaultOpenCodePluginDependency
 }
 
 func openCodePackageName(m *Manifest) string {

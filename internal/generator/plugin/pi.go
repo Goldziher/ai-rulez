@@ -11,16 +11,17 @@ import (
 )
 
 type piPackage struct {
-	Name        string             `json:"name"`
-	Version     string             `json:"version"`
-	Description string             `json:"description,omitempty"`
-	Keywords    []string           `json:"keywords"`
-	Homepage    string             `json:"homepage,omitempty"`
-	Repository  openCodeRepository `json:"repository"`
-	License     string             `json:"license,omitempty"`
-	Type        string             `json:"type"`
-	Files       []string           `json:"files"`
-	Pi          piResources        `json:"pi"`
+	Name           string             `json:"name"`
+	Version        string             `json:"version"`
+	Description    string             `json:"description,omitempty"`
+	Keywords       []string           `json:"keywords"`
+	Homepage       string             `json:"homepage,omitempty"`
+	Repository     openCodeRepository `json:"repository"`
+	License        string             `json:"license,omitempty"`
+	PackageManager string             `json:"packageManager,omitempty"`
+	Type           string             `json:"type"`
+	Files          []string           `json:"files"`
+	Pi             piResources        `json:"pi"`
 }
 
 type piResources struct {
@@ -54,8 +55,9 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	pkg, err := jsonOutput(filepath.Join(baseDir, "package.json"), piPackage{
 		Name: name, Version: m.Version, Description: m.Description, Keywords: keywords,
 		Homepage: m.Homepage, Repository: openCodeRepository{Type: "git", URL: m.Repository},
-		License: m.License, Type: "module", Files: append(files, "assets/", "README.md"),
-		Pi: piResourcePaths(files),
+		License: m.License, PackageManager: m.PackageManager, Type: "module",
+		Files: append(files, "assets/", "README.md"),
+		Pi:    piResourcePaths(files),
 	})
 	if err != nil {
 		return nil, err
