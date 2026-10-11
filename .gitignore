@@ -87,7 +87,6 @@ pip-delete-this-directory.txt
 node_modules/
 
 # Lockfiles & Logs
-pnpm-lock.yaml
 package-lock.json
 .pnpm-debug.log*
 

@@ -64,8 +64,8 @@ style = "detailed"            # detailed | compact | minimal
 
 [[mcp_servers]]
 name = "ai-rulez"
-command = "npx"
-args = ["-y", "ai-rulez@latest", "mcp"]
+command = "pnpm"
+args = ["dlx", "ai-rulez@latest", "mcp"]
 
 [[mcp_servers]]
 name = "grafana"

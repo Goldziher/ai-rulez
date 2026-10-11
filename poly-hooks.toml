@@ -9,10 +9,10 @@ workspace = true
 pass_filenames = false
 
 [[hooks.paths]]
-channel = "npx"
-check = "command -v npx"
-run = "npx -y ai-rulez@5.0.0"
-install = "npx -y ai-rulez@5.0.0 version"
+channel = "pnpm"
+check = "command -v pnpm"
+run = "pnpm dlx ai-rulez@5.0.0"
+install = "pnpm dlx ai-rulez@5.0.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
@@ -34,10 +34,10 @@ workspace = true
 pass_filenames = false
 
 [[hooks.paths]]
-channel = "npx"
-check = "command -v npx"
-run = "npx -y ai-rulez@5.0.0"
-install = "npx -y ai-rulez@5.0.0 version"
+channel = "pnpm"
+check = "command -v pnpm"
+run = "pnpm dlx ai-rulez@5.0.0"
+install = "pnpm dlx ai-rulez@5.0.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
@@ -59,10 +59,10 @@ workspace = true
 pass_filenames = false
 
 [[hooks.paths]]
-channel = "npx"
-check = "command -v npx"
-run = "npx -y ai-rulez@5.0.0"
-install = "npx -y ai-rulez@5.0.0 version"
+channel = "pnpm"
+check = "command -v pnpm"
+run = "pnpm dlx ai-rulez@5.0.0"
+install = "pnpm dlx ai-rulez@5.0.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
@@ -84,10 +84,10 @@ workspace = true
 pass_filenames = false
 
 [[hooks.paths]]
-channel = "npx"
-check = "command -v npx"
-run = "npx -y ai-rulez@5.0.0"
-install = "npx -y ai-rulez@5.0.0 version"
+channel = "pnpm"
+check = "command -v pnpm"
+run = "pnpm dlx ai-rulez@5.0.0"
+install = "pnpm dlx ai-rulez@5.0.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
@@ -109,10 +109,10 @@ workspace = true
 pass_filenames = false
 
 [[hooks.paths]]
-channel = "npx"
-check = "command -v npx"
-run = "npx -y ai-rulez@5.0.0"
-install = "npx -y ai-rulez@5.0.0 version"
+channel = "pnpm"
+check = "command -v pnpm"
+run = "pnpm dlx ai-rulez@5.0.0"
+install = "pnpm dlx ai-rulez@5.0.0 version"
 
 [[hooks.paths]]
 channel = "uvx"

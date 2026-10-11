@@ -28,7 +28,7 @@ The claim is "standards compliant": each format ai-rulez names is checked agains
 
 ## Get started
 
-1. [Install](installation.md) ai-rulez (`npx ai-rulez@latest` needs no install).
+1. [Install](installation.md) ai-rulez (`pnpm dlx ai-rulez@latest` needs no install).
 2. Follow the [Quick Start](quick-start.md): `ai-rulez init`, pick presets, `ai-rulez generate`.
 3. Run `ai-rulez validate --strict`, then commit `.ai-rulez/` together with the generated files.
 
