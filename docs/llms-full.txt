@@ -34,7 +34,7 @@ The claim is "standards compliant": each format ai-rulez names is checked agains
 
 #### Get started
 
-1. [Install](installation.md) ai-rulez (`npx ai-rulez@latest` needs no install).
+1. [Install](installation.md) ai-rulez (`pnpm dlx ai-rulez@latest` needs no install).
 2. Follow the [Quick Start](quick-start.md): `ai-rulez init`, pick presets, `ai-rulez generate`.
 3. Run `ai-rulez validate --strict`, then commit `.ai-rulez/` together with the generated files.
 
@@ -98,7 +98,7 @@ Install `ai-rulez` using your preferred package manager.
 
 === "npm"
     ```bash
-    npm install -g ai-rulez
+    pnpm add -g ai-rulez
     ```
 
 === "pip"
@@ -139,7 +139,7 @@ You can also run `ai-rulez` directly without a permanent installation.
 
 === "Node.js"
     ```bash
-    npx ai-rulez@latest --help
+    pnpm dlx ai-rulez@latest --help
     ```
 
 #### Shell Completion (Recommended)
@@ -1614,6 +1614,22 @@ Each profile specifies a list of domain names. When generating with a profile:
 3. Globally-active builtin domains and every domain sourced from an external include are always included, whatever the profile
 4. A builtin named as `builtin:<name>` in the profile is loaded for that profile only
 
+An entry may also be the wildcard `*`, which selects every domain the config knows, or an exclusion
+`!name`, which removes a domain from the selection. Resolution starts from the positive entries
+(expanding `*`), then removes the negated ones, so order does not matter and the result is
+deterministic. This is how a monorepo keeps most domains in the root output while a `[[scopes]]`
+subdirectory renders the rest:
+
+```toml
+[profiles]
+# Every domain except "s"; "s" is rendered only in its own scope.
+all-but-s = ["*", "!s"]
+```
+
+A profile made only of exclusions — `["!a"]` with no positive entry — is an error, because there is
+nothing to subtract from; write `["*", "!a"]` to select everything except `a`. An exclusion that
+names an unknown domain is a warning, exactly as an unknown positive name is, and is ignored.
+
 Several profiles can be selected at once by separating them with commas — `--profile
 base,backend`, or `default = "base,backend"` — which generates the union of their
 domains. A profile name may therefore not contain a comma, and a profile's value lists
@@ -1748,12 +1764,38 @@ Quick reference:
 - `claude` keeps `CLAUDE.md` as a banner plus `@AGENTS.md`; `gemini` gets `AGENTS.md` added to `context.fileName` in
   `.gemini/settings.json`; `GEMINI.md`, `.hermes.md` and `.github/copilot-instructions.md`
   are not written.
+  Set [`[claude] claude_md = "none"`](#claude_md) to drop the `CLAUDE.md` shim and leave `AGENTS.md` as Claude's only file.
 - Skills with `targets`, machine-local files and agents, commands and MCP files stay per-preset.
 - If another preset (including a custom provider) also writes `AGENTS.md` or a file under `.agents/skills`, the
   shared output wins.
 
 Tool support, per-preset file lists, the duplication trade-off, `targets`, scopes and the on/off behavior are in
 [AGENTS.md and .agents/skills](agents-md.md).
+
+##### `claude_md`
+
+Controls whether the `claude` preset writes its `CLAUDE.md` when `agents_md` is on. The default, `"shim"`, keeps the
+`CLAUDE.md` that imports `@AGENTS.md`; `"none"` omits it and writes only `AGENTS.md`. It is a key of the `[claude]`
+table, alongside `[claude.settings]` and `[claude.skills]`.
+
+```toml
+[claude]
+claude_md = "shim"  # Default: CLAUDE.md imports @AGENTS.md
+# claude_md = "none"  # Write only AGENTS.md; no CLAUDE.md at the root or in a scope
+```
+
+Claude Code reads `AGENTS.md` itself from **2.1.277** on, so `"none"` lets a repository use `AGENTS.md` as its only
+instruction file. With the option set, `generate` writes `AGENTS.md` (root and each `[[scopes]]` directory) and no
+`CLAUDE.md`, and it removes a `CLAUDE.md` a previous run generated — even when the generated manifest is gone, because
+the shim's own `Content-Hash` header proves ai-rulez wrote it. A hand-authored `CLAUDE.md` carries no such header and is
+left alone. `generate --check` reports a leftover generated shim as an `orphan`, and `clean` removes it.
+
+Shadowing caveats: Claude Code reads `AGENTS.md` only when no `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md`
+exists in the working directory or any ancestor. A hand-authored `CLAUDE.md` anywhere on that path, or a
+`CLAUDE.local.md` (which ai-rulez writes for machine-local content under `.ai-rulez/local/`), therefore shadows
+`AGENTS.md` and makes the option ineffective for that tree. Remove those files, or do not use machine-local content,
+if `AGENTS.md` must be the only instruction file. Nested `AGENTS.md` files are read lazily, when Claude Code works
+inside that directory.
 
 ##### `codex_skills_dir`
 
@@ -3976,6 +4018,13 @@ default otherwise, so a project can serve a whole domain or every skill and mark
 harness that cannot call MCP tools keeps served skills as static files (warning `AR992`), and served skills need an
 `[[mcp_servers]]` entry running `ai-rulez mcp --serve-skills` (warning `AR993`). See
 [Dynamic skill loading](mcp-server.md#dynamic-skill-loading).
+
+A `served` skill is delivered over MCP, so none of its files are written to a harness skill tree: a skill whose
+SKILL.md runs a bundled `scripts/` or `assets/` file by relative path cannot run it (`AR9R0` warns). Use
+`delivery: both` for a skill that ships such files, so the files stay on disk while other harnesses or roles still
+find the skill by search. And do not combine `both` with `disable-model-invocation: true` and point at the skill by
+name: the Skill tool refuses a disable-model-invocation skill, so the model declines the workflow (`AR9R1` warns);
+point at the file path or a `load_skill` call instead.
 
 #### Size limits
 
@@ -7368,7 +7417,7 @@ By combining domain organization with thoughtful profile design, you can create 
 
 #### Scoped Rule Files
 
-For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such as `CLAUDE.md` stay in the scope directory, but native rule files are written to the **root** rules folder, because tools read rules folders at the workspace root only. Each scope's files get the scope path as a qualifier and as a glob prefix:
+For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such as `CLAUDE.md` stay in the scope directory, but native rule files are written to the **root** rules folder. Rules-folder nesting is not uniform across presets: Copilot reads its instructions at the repository root only, while Claude Code discovers `.claude/rules/*.md` recursively — a nested `<dir>/.claude/rules/` rule loads, with its `paths` resolved relative to `<dir>` — and Antigravity reads `.agents/rules/` at any directory level. Nesting in the other presets is not verified. Writing every scope's rules to the root folder gives one placement that every preset with a rules folder reads, and the scope path as a qualifier and glob prefix keeps file names unique and each rule limited to the scope's files:
 
 | Preset | Scoped rule file for `packages/api`, rule `style` |
 | --- | --- |
@@ -7379,6 +7428,8 @@ For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such
 | Antigravity | `.agents/rules/packages-api--style.md` |
 
 Globs in a scope's rules are relative to the scope root: a rule with `paths: ["**/*.go"]` gets `packages/api/**/*.go`, and a rule without globs applies to `packages/api/**`. A rule with only negated globs also gets `packages/api/**`. A glob that climbs out of the scope with `..` (also inside braces) skips that rule for the scope with a warning. `auto` and `manual` rules keep their mode. With `[rules] mode = "inline"` only path-scoped items move to the root folder; everything else stays in the scope's root file. Two files that map to the same path (names compare case-insensitively) do not fail: the source that sorts later is written as `<id>-<6 hex>` with a warning (see [File names](rules.md#file-names)). Generation fails only when two scopes produce the same qualifier (for example `packages/api` and `packages-api`); rename one of the scope paths.
+
+Emitting a scope's `claude` rules into the scope's own `<dir>/.claude/rules/` instead of the root folder is a possible future change; today the root placement is uniform, because not every preset reads a nested rules folder.
 
 Limitations:
 
@@ -11379,12 +11430,12 @@ stdout.
 | AR010 | `unpinned-remote` | warning | A remote include, installed skill or `[[skill_sources]]` entry follows a moving ref and `ai-rulez.lock` does not pin it (a full commit SHA counts as pinned) |
 | AR011 | `external-finding` | warning | A finding from a `[[lint.external]]` scanner (its own severity is kept) |
 | AR101 | `glob-no-match` | error | A `paths`/`globs` pattern in a rule or context file matches no file tracked by git |
-| AR201 | `link-unresolved` | error | A relative markdown link (or image, or reference definition) points at a file that does not exist |
+| AR201 | `link-unresolved` | error | A relative markdown link (or image, or reference definition) points at a file that does not exist. A link in content a `[[scopes]]` entry renders is also resolved from that scope's directory, where the generated file is written |
 | AR202 | `anchor-unresolved` | warning | `file.md#anchor` where the target has no heading producing that anchor |
-| AR301 | `reference-unknown` | error | Prose names a skill, agent, rule or command that does not exist (`` `x-y` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `subagent_type: x`). The kind word is loose: a name that exists as any other kind (rule, skill, agent, command, context) is not reported. When the configuration declares `[[plugins]]` or `[[marketplaces]]`, or the file mentions a plugin, an unknown skill, agent or command may come from an installed plugin and is reported as `info` (unverifiable) instead of `error` |
+| AR301 | `reference-unknown` | error | Prose names a skill, agent, rule or command that does not exist (`` `x-y` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `subagent_type: x`, `Procedure/reference: skill X`, `skills/X`, `.claude/skills/X/SKILL.md`). Only a name used as a pointer counts: a backticked term followed by a plural kind noun (`` `disable-model-invocation` skills ``) is prose, not a reference. The kind word is loose: a name that exists as any other kind (rule, skill, agent, command, context) is not reported. When the configuration declares `[[plugins]]` or `[[marketplaces]]`, or the file mentions a plugin, an unknown skill, agent or command may come from an installed plugin and is reported as `info` (unverifiable) instead of `error` |
 | AR302 | `frontmatter-skill-unknown` | error | Frontmatter `skills:` lists a skill that does not exist |
 | AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
-| AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist. Not reported when the text does not claim the path exists: negated or historical ("there is no", "was removed", "decommissioned", "empty"), an example ("e.g.", "such as", a glob in the same paragraph), an alternative ("or under"), a date or version placeholder (`YYYY-MM-DD`), a build or runtime artifact (`target/`, `.venv/`, `vendor/`, `node_modules/`, or text saying it is gitignored), a ref of another repository (`path @ branch`, or a table row or line naming an `owner/repo` slug), or an ADR number whose file carries a title suffix (`adrs/0065` for `adrs/0065-license.md`) |
+| AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist. A path that exists under a `[[scopes]]` entry's emitted directory is resolved there too. Not reported when the text does not claim the path exists: negated or historical ("there is no", "was removed", "decommissioned", "empty"), an example ("e.g.", "such as", a glob in the same paragraph), an alternative ("or under"), a date or version placeholder (`YYYY-MM-DD`), a build or runtime artifact (`target/`, `.venv/`, `vendor/`, `node_modules/`, or text saying it is gitignored), a ref of another repository (`path @ branch`, or a table row or line naming an `owner/repo` slug), a container image reference (`namespace/name` with no file extension and an image-name underscore, e.g. `armis/sra_session_vnc`), or an ADR number whose file carries a title suffix (`adrs/0065` for `adrs/0065-license.md`) |
 | AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path is found neither relative to the skill or command directory nor relative to the repo root (see `--repo-root`). The same "not a claim" exemptions as AR401 apply (negated, example, another repository's table row) |
 | AR501 | `hook-missing` | error | A `.claude/settings.json` hook command, or a command in the `hooks` frontmatter of an agent, skill or command, runs a `$CLAUDE_PROJECT_DIR/...` file, or passes a script to `sh`, `bash`, `zsh`, `dash`, `python`, `node`, `ruby` or `perl` (frontmatter also a `./...` script, resolved against the project directory), that does not exist |
 | AR502 | `hook-not-executable` | error | That hook file is executed directly but lacks the executable bit (fixable) |
@@ -11437,13 +11488,15 @@ stdout.
 | AR9A3 | `activation-policy-conflict` | warning | An eval case contradicts the skill's invocation policy (`disable-model-invocation: true` or `allow_implicit_invocation: false`): it expects a trigger (`expect_trigger: true`) and can never pass, or expects none and can never fail (see [Evals](evals.md#linting-cases-and-results)) |
 | AR9A4 | `activation-prompt-names-skill` | off | A positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill; enable it with `[lint.severity] AR9A4 = "warning"` |
 | AR9A5 | `eval-import-unmapped` | info | Fields of an imported scenario with no counterpart in the case format; reported by `ai-rulez eval import`, never by `validate` (see [Evals](evals.md#importing-scenarios)) |
-| AR990 | `served-skill-referenced-statically` | warning | A static rule, context or skill names (`` `x` skill ``, `` `x` ``, `/x`, `Skill(x)`) a skill whose `delivery` is `served`; the harness cannot see it until the agent calls `find_skill`. `both` skills are static and are not reported (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent `skills:` or command names a skill whose `delivery` is `served` by the same forms AR301 reads (`` `x` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `Procedure/reference: skill X`, `skills/x`, `.claude/skills/x/SKILL.md`); the harness cannot see it until the agent calls `find_skill`. A served skill naming a sibling served skill is not reported (a skill is loaded on demand), and `both` skills are static, so naming one is fine (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR991 | `delivery-stub-missing` | error | Skills are served but a configured harness that can call MCP has no `dynamic-skills` stub in its output (a skill of that name shadows it, or the preset renders no skills), so its agent is never told to call `find_skill` |
 | AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped) |
 | AR993 | `served-no-server` | warning | Skills are served but no `[[mcp_servers]]` entry runs `ai-rulez mcp --serve-skills` |
 | AR994 | `delivery-invalid` | error | A skill's `delivery` frontmatter is not `static`, `served` or `both` (it is ignored and the skill keeps its inherited delivery) |
 | AR995 | `served-lock-mismatch` | error | `[lock] enforce = true` and a served skill is not pinned in `ai-rulez.lock` or its digest differs; the server refuses to serve it |
 | AR989 | `served-file-unscannable` | warning / error | A served skill file (authored skills included) is binary (a NUL byte, invalid UTF-8) or larger than 512 KiB, so the security scan cannot read it. For a remote source (`trust = "error"`) the file is not served; a `SKILL.md` that cannot be scanned is an error and the skill is refused |
+| AR9R0 | `served-skill-bundled-files` | warning | A served skill ships files under `scripts/` or `assets/`, which are not written to any harness's skill tree; a relative path into them (the form SKILL.md usually uses) resolves to nothing. `references/` are exempt (readable over MCP with `list_skill_resources`/`load_skill`). Set `delivery: both` to keep the files on disk (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR9R1 | `both-dmi-pointer` | warning | Always-loaded content points at a skill whose `delivery` is `both` and whose frontmatter sets `disable-model-invocation: true` (or `disable_model_invocation`), by a bare name or `Skill(...)`; the Skill tool refuses a DMI skill, so the model then declines the workflow. A file-path pointer and a `load_skill`/`find_skill` pointer are not reported (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR971 | `role-reference-unknown` | error | A `[[roles]]` entry lists a domain that does not exist, or an include, exclude or `skill_mode` entry that matches no item (or matches only in a domain the role does not select). See [Roles](roles.md) |
 | AR972 | `role-extends-invalid` | error | A role extends an unknown role, itself, or takes part in a cycle, or extends a role that itself extends another (inheritance is one level deep) |
 | AR973 | `role-unreachable-dependency` | warning | An item a role keeps lists a skill in its `skills:` frontmatter that the role drops, or hides from the model with `skill_mode` `off` or `user-invocable-only` |
@@ -11484,6 +11537,7 @@ stdout.
 | AR9C8 | `claude-listing-truncated` | warning | A `.claude/skills/*/SKILL.md` whose `description` plus `when_to_use` is over 1,536 characters |
 | AR9C9 | `harness-limit-exceeded` | warning | A generated file past a documented harness limit: the Codex `AGENTS.md` chain (32 KiB or `[codex] project_doc_max_bytes`), a Devin rule file (12,000 characters), an Antigravity rule file (24,000 bytes), the root Kilo `REVIEW.md` (10,000 characters) |
 | AR9CA | `project-trap` | warning | A row of the project's own `.ai-rulez/traps/*.toml` matched a file, or a row is invalid |
+| AR9Q0 | `claude-md-shadows-agents-md` | off | `[lint] agents_md_only = true` asserts AGENTS.md is canonical for Claude Code, but a tracked `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` is not the generated `@AGENTS.md` shim and shadows the nearest AGENTS.md. Paths matching `agents_md_only_allow` are exempt, and a `--recursive` run lets each nested root report its own files |
 | AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
 | AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not set `egress`, so it runs with the full environment |
 | AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`, or its `--version` is outside `version`; it was not run (a notice, not an error; an error when the scanner is `required`, including one that no entry or preset provides) |
@@ -11594,11 +11648,13 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9M0`-`AR9M9` | Catalog ([#225](https://github.com/Goldziher/ai-rulez/issues/225); `catalog` ships without findings, so no codes are registered) | reserved |
 | `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N9` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
 | `AR9P0`-`AR9P9` | llms.txt files ([llms.txt](llms-txt.md); `AR9P0`-`AR9P6` used) | allocated |
+| `AR9Q0`-`AR9Q9` | Harness instruction files ([#318](https://github.com/Goldziher/ai-rulez/issues/318); `AR9Q0` used, reported by `validate --strict` when `[lint] agents_md_only` is set) | allocated |
+| `AR9R0`-`AR9R9` | Served-skill on-disk traps ([#336](https://github.com/Goldziher/ai-rulez/issues/336), [#337](https://github.com/Goldziher/ai-rulez/issues/337); `AR9R0`, `AR9R1` used) | allocated |
 | `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
-Unlisted letters (`AR9I`, `AR9Q`, `AR9R`, `AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
+Unlisted letters (`AR9I`, `AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
 out of blocks that more than one design had claimed (review and catalog both asked for `AR9G`, publish for `AR9F`,
 a UI for `AR9H`).
 
@@ -11626,6 +11682,8 @@ allow_paths = [".claude/**", "bazel-*/**"]   # repo paths that may be referenced
 known_names = ["superpowers-brainstorm"]     # skills/agents/rules/commands provided outside this tree
 allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing (AR703): "name" or "domain/name"
 allowed_keys = ["team"]                                 # extra frontmatter keys (AR303)
+agents_md_only = true              # AR9Q0: flag stray CLAUDE.md files when AGENTS.md is canonical for Claude Code
+agents_md_only_allow = ["products/em/backend/**"]   # CLAUDE.md islands the check accepts
 
 profile = "default"                # default | strict | permissive (see Profiles)
 
@@ -11840,7 +11898,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `plugin` | `AR961`-`AR964` |
 | `roles` | `AR971`-`AR973` |
 | `lock` | `AR730`, `AR732`, `AR733`, `AR734`, `AR735`, `AR981`, `AR982`, `AR995` |
-| `delivery` | `AR989`-`AR994` |
+| `delivery` | `AR989`-`AR994`, `AR9R0`, `AR9R1` |
 | `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A5` |
 | `okf` | `AR9B0`-`AR9B9` |
 | `llmstxt` | `AR9P0`-`AR9P6` |
@@ -13647,13 +13705,13 @@ a skill file the server would serve is binary or larger than 512 KiB, so the sec
 
 ##### AR990 served-skill-referenced-statically
 
-a static rule, context or skill names a skill whose delivery is served, which is not in the harness's skill tree
+an always-loaded rule, context, agent or command names a skill whose delivery is served, which is not in the harness's skill tree; a served skill naming a sibling served skill is fine
 
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
-- Why: A static item that names a served skill points at a file the harness never gets.
+- Why: Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.
 - Bad: A rule saying "run the `deploy` skill", or an agent `skills: [deploy]`, when `deploy` is served
-- Good: Tell the agent to call `find_skill`, or make the skill static
+- Good: Tell the agent to call `find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree
 
 ##### AR991 delivery-stub-missing
 
@@ -14714,6 +14772,36 @@ an llms.txt link has an empty target
 - Why: A link with an empty target points nowhere.
 - Bad: `- [Guide]()`
 - Good: `- [Guide](docs/guide.md)`
+
+##### AR9Q0 claude-md-shadows-agents-md
+
+AGENTS.md is canonical for Claude Code, but a tracked CLAUDE.md, .claude/CLAUDE.md or CLAUDE.local.md is not the generated shim and shadows the nearest AGENTS.md
+
+- Default severity: `off`
+- Analyzer: `traps` (scope `file`)
+- Why: Claude Code loads the nearest CLAUDE.md in preference to AGENTS.md, so a hand-authored CLAUDE.md silently replaces the instructions ai-rulez generated; CLAUDE.local.md shadows it for one developer only.
+- Bad: A hand-written CLAUDE.md next to the generated AGENTS.md
+- Good: Keep the generated CLAUDE.md shim (whose only body is @AGENTS.md), or list an intentional island in lint.agents_md_only_allow
+
+##### AR9R0 served-skill-bundled-files
+
+a served skill ships scripts/ or assets/ that are not written to disk, so a relative path into them does not resolve; set delivery: both to keep them
+
+- Default severity: `warning`
+- Analyzer: `delivery` (scope `item`)
+- Why: A served skill is delivered over MCP, so none of its files are written to a harness skill tree. A relative path into a bundled `scripts/` or `assets/` file (the form SKILL.md usually uses) then resolves to nothing, and a script the skill tells the agent to run cannot be run.
+- Bad: A `served` skill whose SKILL.md says `run scripts/migrate.py`
+- Good: Set `delivery: both` so the files stay on disk, or read them through `list_skill_resources`/`load_skill`
+
+##### AR9R1 both-dmi-pointer
+
+always-loaded content points at a delivery: both skill whose frontmatter sets disable-model-invocation: true, by a bare name or Skill(...); the Skill tool refuses it and the model then declines the workflow
+
+- Default severity: `warning`
+- Analyzer: `delivery` (scope `item`)
+- Why: A `both` skill is on disk, but `disable-model-invocation: true` hides it from the Skill tool, which refuses it and tells the model not to replicate the workflow another way. A rule that points at it by name ("run the `x` skill", `Skill(x)`) leaves the model declining, even though it could read the file.
+- Bad: A rule saying "run the `deploy` skill" for a `both` skill with `disable-model-invocation: true`
+- Good: Point at the file path (`.claude/skills/deploy/SKILL.md`) or a `load_skill` call, or drop `disable-model-invocation`
 
 ##### AR9S0 ard-manifest-invalid
 
@@ -18354,6 +18442,8 @@ ai-rulez mcp --serve-skills --profile backend --targets claude --domain api --de
 The skill set is rendered once at start-up, in memory, by the same code as `generate`, so every
 `SKILL.md` and supporting file is byte-identical to what `generate` writes for the same profile and
 preset. Nothing is written. Edits are picked up by [live reload](#live-reload).
+The rendered and admitted catalog is also cached on disk, so a restart restores it instead of
+rendering and scanning every skill again ([Start-up cost and the catalog cache](#start-up-cost-and-the-catalog-cache)).
 When the filters remove every skill, the start-up warning names each filter and how many skills it leaves.
 
 ##### What is exposed
@@ -18427,9 +18517,9 @@ MCP instead, so the agent pays for them only when it asks. Three pieces work tog
 | -------------- | ---- |
 | `static` | A core convention the agent needs in nearly every session (code style, commit rules, the repository map). The listing costs a few tokens and it never depends on the model deciding to search. |
 | `served` | Domain skills used in some sessions: billing, migrations, a vendor API, incident response. The bulk of a large catalog. |
-| `both` | A skill that must always be visible to one harness but that other harnesses or roles should also find by search. |
+| `both` | A skill that ships `scripts/` or `assets/` the agent runs by relative path, or that must always be visible to one harness while other harnesses or roles find it by search. |
 
-Rules of thumb: serve domain skills, keep a handful of core convention skills static. Three caveats:
+Rules of thumb: serve domain skills, keep a handful of core convention skills static. Caveats:
 
 - **The model has to choose to call `find_skill`.** A served skill is invisible until it does. Write
   `description` and `triggers` for search (what the user is trying to do, in their words), and keep the skills
@@ -18438,7 +18528,17 @@ Rules of thumb: serve domain skills, keep a handful of core convention skills st
   skills as static files, with a warning (`AR992`), never silently dropped. Served skills also need an MCP
   server entry that runs `ai-rulez mcp --serve-skills` (`AR993` warns when there is none).
 - **Served skills are not in the context until loaded.** Nothing that is always loaded (a rule, a static skill)
-  can rely on them being there; `AR990` warns when static content names a served skill.
+  can rely on them being there; `AR990` warns when static content names a served skill, and says the file will
+  not be there when the pointer is a path.
+- **Bundled files need `delivery: both`.** A `served` skill's `scripts/` and `assets/` are never written to
+  disk, so a relative path into them (`scripts/foo.py`, the form SKILL.md usually uses) resolves to nothing;
+  `AR9R0` warns. Set `delivery: both` when SKILL.md tells the agent to run a bundled script, or reach the file
+  through `list_skill_resources`/`load_skill`. `references/` are readable over MCP either way.
+- **`disable-model-invocation` plus `both` is a trap.** `both` keeps the skill's file on disk, but
+  `disable-model-invocation: true` hides the skill from the Skill tool, which refuses it and tells the model not
+  to reproduce the workflow another way. A rule that points at it by name ("run the `x` skill", `Skill(x)`) then
+  leaves the model declining even though it could read the file; `AR9R1` warns. Point at the file path
+  (`.claude/skills/<id>/SKILL.md`) or a `load_skill` call, or drop `disable-model-invocation`.
 
 ##### Choosing the delivery
 
@@ -18520,6 +18620,61 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 
 The serve-mode flags above (and `--profile`, `--targets`, `--domain`, `--allow`, `--deny`) are rejected without
 `--serve-skills`. The authoring tools are never registered in this mode: there is no tool that writes.
+
+##### Start-up cost and the catalog cache
+
+Building the catalog renders every served skill and runs the security scan over it, which on a large
+monorepo (hundreds of skills, each with reference files) takes several seconds. The result is a
+function of the files the live reload fingerprints — the configuration directory, local includes, the
+organization policy files and local skill sources — and of the view's options (`--profile`, `--role`,
+`--targets`, `--domain`, `--allow`, `--deny`, `--include-static`, `--source`, `--frozen`, `--offline`),
+so it is cached on disk keyed by exactly those:
+
+- `~/.cache/ai-rulez/serve/<project-hash>/catalog.json` holds the rendered catalog; the project hash is
+  a sha256 of the configuration directory, so two checkouts never collide.
+- `~/.config/ai-rulez/serve-cache.key` (mode `0600`, created on first use) authenticates the entry.
+
+A restart whose content and view are unchanged restores the catalog **without rendering or scanning
+anything**; a content edit changes the fingerprint, so the entry is ignored and the catalog rebuilt.
+An entry that is missing, truncated, edited, symlinked or fails its authentication counts as a miss
+and is rebuilt, never served. Admission (approval expiry, signing key validity) is still re-judged on
+the usual one-minute timer after a restore, so an entry written before an approval expired does not
+serve that skill for longer than a fresh start would. The cache is skipped for a `lock` run's views and
+for a build whose inputs the fingerprint cannot see (a programmatic load option or an injected clock),
+and an entry over 64 MiB is not written; in those cases the server builds the catalog as before, only
+slower.
+
+###### Launchers and client timeouts
+
+A cold start through `npx -y ai-rulez@latest` downloads the package (about 30 MB) before the process
+even starts, and some clients time out at 30 s. Two things help:
+
+- **Run the installed binary, not `npx`.** Install once (`npm i -g ai-rulez`, `uv tool install ai-rulez`,
+  `go install github.com/Goldziher/ai-rulez/v5/cmd/ai-rulez@latest`, or a Homebrew tap) and point the
+  MCP entry at `ai-rulez` directly. If you must use `npx`, pin the version (`npx -y ai-rulez@5.0.0`)
+  so a cold start does not also resolve `latest`.
+
+  ```json
+  {
+    "mcpServers": {
+      "ai-rulez-skills": {
+        "command": "ai-rulez",
+        "args": ["mcp", "--serve-skills"]
+      }
+    }
+  }
+  ```
+
+- **Raise the client's connect timeout.** Claude Code reads `MCP_TIMEOUT` (milliseconds); `60000`
+  covers a cold build on a large repository:
+
+  ```bash
+  export MCP_TIMEOUT=60000
+  ```
+
+The disk cache removes the repeated cost on every later start. A long-lived shared daemon — one
+process per repository reused by every session, which would also remove the first build — is a
+possible follow-up and is not implemented yet.
 
 ##### Tools
 
@@ -26921,6 +27076,7 @@ ai-rulez doctor --format json
 | ---- | ---- | ------- | ----------- |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--format` | string | `text` | Output format: text, json |
+| `--mcp-user-scope` | bool |  | Also check MCP servers against the configured harnesses' user and local scopes (reads files outside the project, for example ~/.claude.json); off by default |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content |
 | `--policy` | string |  | Organization policy: a file, or an https URL pinned with @sha256:<hex> (tighten-only; also AI_RULEZ_POLICY and the managed path). A repository can only add restrictions to it; see docs/policy.md |
 | `--policy-digest` | string |  | The digest (sha256:<hex>) the --policy file or URL must have; a mismatch fails closed (AR741) |
@@ -29854,6 +30010,7 @@ ai-rulez validate --fix --dry-run
 | `--fix-unsafe` | bool |  | Also apply fixes that can change meaning: skill name normalization (AR804). Implies --fix |
 | `--format` | string | `text` | Output format: text, json, sarif, github, junit, markdown |
 | `--lint-profile` | string |  | Lint preset: default, strict or permissive (overrides [lint] profile; distinct from the generation --profile) |
+| `--mcp-user-scope` | bool |  | Also check MCP servers against the configured harnesses' user and local scopes (reads files outside the project, for example ~/.claude.json); needs --strict |
 | `--no-local` | bool |  | Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees) |
 | `--no-scan-cache` | bool |  | With --external, ignore and do not update the scanner result cache |
 | `--offline` | bool |  | Skip fetching remote includes, use cached content only (as generate --offline) |
