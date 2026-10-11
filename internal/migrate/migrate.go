@@ -457,7 +457,7 @@ func relFile(dir, name string) string {
 
 const pinNote = "# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default."
 
-// pinDefaults keeps the 4.x behavior of the three defaults v5 changes, unless
+// pinDefaults keeps the 4.x behavior of the four defaults v5 changes, unless
 // the file already states a value.
 func pinDefaults(p *plan, doc *tomlDoc, file string) {
 	if doc.rootKey("agents_md") < 0 {
@@ -480,6 +480,36 @@ func pinDefaults(p *plan, doc *tomlDoc, file string) {
 		doc.appendBlock(pinNote + "\n[header]\nhashes = \"full\"")
 		p.change(file, RulePinDefault, `[header] hashes = "full" (v5 default: "content", only the per-file Content-Hash)`)
 	}
+	pinSelfServer(p, doc, file)
+}
+
+// pinSelfServer keeps v5 from adding the ai-rulez MCP server to .mcp.json: 4.x
+// never wrote it, and in a monorepo it would appear in every nested root.
+func pinSelfServer(p *plan, doc *tomlDoc, file string) {
+	const note = `[mcp] self_server = false (v5 default: true, generate adds the ai-rulez MCP server to .mcp.json)`
+	mcp := []string{"mcp"}
+	switch {
+	case doc.hasTable(mcp):
+		if !doc.tableHas(mcp, "self_server") && !mcpInline(doc) {
+			if doc.addToTable(mcp, "self_server = false") {
+				p.change(file, RulePinDefault, note)
+			}
+		}
+	case !mcpInline(doc):
+		doc.appendBlock(pinNote + "\n[mcp]\nself_server = false")
+		p.change(file, RulePinDefault, note)
+	}
+}
+
+// mcpInline reports a root-level inline `mcp = {...}` or dotted `mcp.x = ...`
+// definition, which is left alone (the author set it).
+func mcpInline(doc *tomlDoc) bool {
+	for _, s := range doc.stmts {
+		if !s.header && len(s.table) == 0 && len(s.key) > 0 && s.key[0] == "mcp" {
+			return true
+		}
+	}
+	return false
 }
 
 // headerInline reports a root-level inline `header = {...}` or dotted

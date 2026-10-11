@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- **A skill, rule or agent file that cannot be loaded is reported.** A `SKILL.md` over the 8 MiB content limit (or any other read failure) was dropped from the output with no message from `generate` or `validate`; the scan now logs `failed to load skill file|content file|agent file` with the path, as it already did for commands.
+- **AR002 accepts the emoji presentation selector after U+2139, U+203C, U+2049, U+3030 and U+303D** (`ℹ️`, `‼️`, `⁉️`, `〰️`, `〽️`). They are letter or punctuation bases, which the rule rejected as a possible hidden payload.
+- **`migrate v5` pins `[mcp] self_server = false`**, so a migrated project no longer gains the ai-rulez MCP server in `.mcp.json` (once per nested root in a monorepo) until it opts in.
+
 ## [5.0.1] - 2026-10-11
 
 ### Added
