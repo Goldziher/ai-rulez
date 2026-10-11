@@ -2946,7 +2946,7 @@
         },
         "type": "array"
       },
-      "description": "Named profiles mapping profile names to lists of domain names. An element is either a local or included domain name, or a builtin pack written as `builtin:<name>` (e.g. `builtin:rust`). A builtin referenced this way is loaded only for the profiles that name it, rather than globally.",
+      "description": "Named profiles mapping profile names to lists of domain entries. An entry is a local or included domain name, a builtin pack written as `builtin:<name>` (e.g. `builtin:rust`, loaded only for the profiles that name it), `*` for every domain the config knows, or `!name` to exclude one. A profile made only of exclusions is invalid: start it with `*`.",
       "type": "object"
     },
     "publish": {
