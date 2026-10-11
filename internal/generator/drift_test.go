@@ -107,6 +107,27 @@ func TestCheckDrift(t *testing.T) {
 	}
 }
 
+// #313: without the manifest (a fresh checkout or CI), a generated file left
+// behind by a removed source is still reported by --check, because its own
+// Content-Hash header is the marker.
+func TestCheckDrift_ReportsOrphanWithoutTheManifest(t *testing.T) {
+	dir := hashesProject(t, v4Defaults+hdr("full"))
+	generateHashesProject(t, dir)
+
+	// A generated file copied to a name no source emits, and no manifest to name it.
+	src := filepath.Join(dir, ".claude", "skills", "alpha", "SKILL.md")
+	ghost := filepath.Join(dir, ".claude", "skills", "ghost", "SKILL.md")
+	require.NoError(t, os.MkdirAll(filepath.Dir(ghost), 0o755))
+	data, err := os.ReadFile(src)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(ghost, data, 0o644))
+	require.NoError(t, os.Remove(filepath.Join(dir, ".ai-rulez", generatedManifestName)))
+
+	drift, err := loadHashesProject(t, dir).CheckDrift("default")
+	require.NoError(t, err)
+	assert.Contains(t, drift, Drift{Path: ".claude/skills/ghost/SKILL.md", Kind: DriftOrphan})
+}
+
 func TestVerifyGenerated(t *testing.T) {
 	dir := hashesProject(t, "")
 	generateHashesProject(t, dir)

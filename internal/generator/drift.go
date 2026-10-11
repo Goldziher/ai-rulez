@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"io/fs"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -201,6 +203,78 @@ func (g *Generator) resetRunState() {
 	g.previousFiles = nil
 	g.manifests = nil
 	g.refusedOutputs, g.linkedOutputs = nil, nil
+}
+
+// orphanGeneratedFiles lists generated files (those carrying a Content-Hash
+// header) that no output in the plan emits. It is the manifest-free half of the
+// orphan check: on a fresh checkout or in CI there is no previous manifest, so a
+// file left behind by a removed source would otherwise pass `generate --check`.
+// It walks the top-level directories the plan writes into (never the whole
+// source tree) and reads only each candidate's header.
+func (g *Generator) orphanGeneratedFiles(outputs []config.OutputFile) []string {
+	planned := make(map[string]bool, len(outputs))
+	roots := map[string]bool{}
+	rootLevel := false
+	for i := range outputs {
+		rel := g.relSlash(g.absOutputPath(outputs[i].Path))
+		planned[rel] = true
+		if idx := strings.IndexByte(rel, '/'); idx > 0 {
+			roots[rel[:idx]] = true
+		} else {
+			rootLevel = true
+		}
+	}
+	seen := make(map[string]bool)
+	var orphans []string
+	consider := func(abs string) {
+		rel := g.relSlash(abs)
+		if planned[rel] || seen[rel] {
+			return
+		}
+		seen[rel] = true
+		if hash, _, _ := g.scanHashes(abs); hash != "" {
+			orphans = append(orphans, rel)
+		}
+	}
+	if rootLevel {
+		// A root-level output (AGENTS.md, .mcp.json): list the root files only.
+		entries, err := os.ReadDir(g.config.BaseDir)
+		if err == nil {
+			for _, e := range entries {
+				if !e.IsDir() {
+					consider(filepath.Join(g.config.BaseDir, e.Name()))
+				}
+			}
+		}
+	}
+	for root := range roots {
+		abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(root))
+		_ = filepath.WalkDir(abs, func(p string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				if skipOrphanWalk(d.Name()) {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			consider(p)
+			return nil
+		})
+	}
+	sort.Strings(orphans)
+	return orphans
+}
+
+// skipOrphanWalk names the directories an orphan walk never descends into: VCS
+// and dependency trees that hold no ai-rulez output.
+func skipOrphanWalk(name string) bool {
+	switch name {
+	case ".git", "node_modules", "vendor":
+		return true
+	}
+	return false
 }
 
 func (g *Generator) relSlash(abs string) string {
