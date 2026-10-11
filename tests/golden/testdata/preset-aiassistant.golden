@@ -23,8 +23,8 @@ INFO  Generation complete files=12
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai/ dir 0755
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 541 6d0384a5c148ab071225e7552479ccf5ccdca66747e2cf96d00a1a822cf96bdb
-.ai-rulez/.generated-manifest.local.json file 0644 1465 f56990b4fe511ef9f92696445279c29a5741add96cea1c66f910ccdb20756cd6
+.ai-rulez/.generated-manifest.json file 0644 796 8e39dddc6269a84400aa66b6205fe835b5352f10989e3bd401baa9f33fbb4b05
+.ai-rulez/.generated-manifest.local.json file 0644 1465 690d2a04c523baf6e927c53949496579c5be7840b4cbff978713288ca3686b16
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
