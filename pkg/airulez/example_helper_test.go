@@ -12,7 +12,9 @@ func tempProject() (string, error) {
 		return "", err //nolint:wrapcheck // example helper
 	}
 	files := map[string]string{
-		".ai-rulez/config.toml":    "version = \"5.0\"\nname = \"demo\"\npresets = [\"claude\"]\nagents_md = false\n",
+		// The self MCP server is off so the example shows the instruction file
+		// alone, without a .mcp.json that is beside the point here.
+		".ai-rulez/config.toml":    "version = \"5.0\"\nname = \"demo\"\npresets = [\"claude\"]\nagents_md = false\n\n[mcp]\nself_server = false\n",
 		".ai-rulez/rules/style.md": "# Style\n\nBe concise.\n",
 	}
 	for name, content := range files {
