@@ -421,6 +421,101 @@ func TestTokenReport_LeavesAnalysisDisabled(t *testing.T) {
 	assert.Nil(t, cfg.Analysis)
 }
 
+// TestTokenReport_AlwaysLoadedMatchesHeadline pins the stable key a CI budget
+// gate reads: it is the always-loaded headline under a fixed name, and both are
+// present so nothing that reads headline_always breaks.
+func TestTokenReport_AlwaysLoadedMatchesHeadline(t *testing.T) {
+	report := tokensReport(t, "full")
+	assert.Equal(t, report.HeadlineAlways, report.AlwaysLoaded)
+	assert.Positive(t, report.AlwaysLoaded)
+}
+
+// TestTokenReport_ImportedAgentsMDCountsSharedFile covers the undercount when
+// AGENTS.md is canonical: claude's CLAUDE.md is an "@AGENTS.md" shim, and Claude
+// Code follows the import, so the always-loaded total must include the shared
+// AGENTS.md content, not the shim alone.
+func TestTokenReport_ImportedAgentsMDCountsSharedFile(t *testing.T) {
+	cfg := tokensFixtureWith(t, func(original string) string {
+		return strings.Replace(original, "agents_md = false", "agents_md = true", 1)
+	})
+	report, err := NewGenerator(cfg).TokenReport(TokenReportOptions{
+		Profile: "backend",
+		Counter: tokens.CL100KBase(),
+	})
+	require.NoError(t, err)
+
+	runtime := findRuntime(t, report, "claude")
+	imported := findEntry(t, runtime, "AGENTS.md (imported)")
+	assert.Equal(t, BucketAlways, imported.Bucket)
+	assert.Equal(t, tokens.CL100KBase().Count(agentsMDPayload(t, cfg, "backend")), imported.Tokens,
+		"the imported entry is the shared AGENTS.md payload")
+
+	// Both the shim and the file it imports are paid for, so the total exceeds
+	// either part alone.
+	shim := findEntry(t, runtime, "CLAUDE.md")
+	assert.Positive(t, shim.Tokens)
+	assert.Greater(t, runtime.Always, imported.Tokens)
+
+	// agents_md off keeps the inline root file and imports nothing.
+	for _, entry := range findRuntime(t, tokensReport(t, "backend"), "claude").Entries {
+		assert.NotContains(t, entry.Label, "(imported)",
+			"without agents_md there is no import to follow")
+	}
+}
+
+// TestTokenReport_ImportedAgentsMDCountedOnceAcrossRuntimes checks the imported
+// file is not added twice within a runtime, and that two runtimes reading it are
+// not summed: each pays for the file once, and the headline stays the largest
+// single runtime.
+func TestTokenReport_ImportedAgentsMDCountedOnceAcrossRuntimes(t *testing.T) {
+	cfg := tokensFixtureWith(t, func(original string) string {
+		original = strings.Replace(original, `presets = ["claude"]`, `presets = ["claude", "codex"]`, 1)
+		return strings.Replace(original, "agents_md = false", "agents_md = true", 1)
+	})
+	report, err := NewGenerator(cfg).TokenReport(TokenReportOptions{
+		Profile: "backend",
+		Counter: tokens.CL100KBase(),
+	})
+	require.NoError(t, err)
+
+	claude := findRuntime(t, report, "claude")
+	codex := findRuntime(t, report, "codex")
+	imported := findEntry(t, claude, "AGENTS.md (imported)")
+	codexRoot := findEntry(t, codex, "AGENTS.md")
+
+	assert.Equal(t, codexRoot.Tokens, imported.Tokens,
+		"both runtimes read the same shared file")
+	assert.Equal(t, 1, countEntries(claude, "AGENTS.md (imported)"),
+		"the imported file is counted once per runtime")
+	assert.Equal(t, 1, countEntries(codex, "AGENTS.md"))
+
+	assert.Equal(t, report.HeadlineAlways, max(claude.Always, codex.Always),
+		"the headline is one runtime, not the sum of two")
+	assert.Less(t, report.HeadlineAlways, claude.Always+codex.Always)
+}
+
+// agentsMDPayload is the exact bytes the shared AGENTS.md renders for a profile.
+func agentsMDPayload(t *testing.T, cfg *config.Config, profile string) string {
+	t.Helper()
+	g := NewGenerator(cfg)
+	outputs, _, err := g.collectOutputs(profile)
+	require.NoError(t, err)
+	payload, ok := g.finalPayloadByPath(outputs)[filepath.Join(cfg.BaseDir, "AGENTS.md")]
+	require.True(t, ok, "agents_md on must render AGENTS.md")
+	return payload
+}
+
+// countEntries counts top-level entries with the given label.
+func countEntries(runtime RuntimeTokens, label string) int {
+	count := 0
+	for _, entry := range runtime.Entries {
+		if entry.Label == label {
+			count++
+		}
+	}
+	return count
+}
+
 // TestGolden_TokenReportJSON pins the whole serialized report. Any change to how
 // output is classified, split or counted shows up here as a diff.
 func TestGolden_TokenReportJSON(t *testing.T) {
