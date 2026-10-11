@@ -109,6 +109,28 @@ func TestRolesListShowResolve(t *testing.T) {
 	assert.Error(t, runRolesResolve(&out, "ghost"))
 }
 
+func TestRolesComposition(t *testing.T) {
+	rolesCmdProject(t)
+
+	// resolve unions the members: base keeps backend, dev keeps frontend.
+	var out bytes.Buffer
+	require.NoError(t, runRolesResolve(&out, "base,dev"))
+	assert.Contains(t, out.String(), "role base,dev")
+
+	out.Reset()
+	rolesFormat = formatJSON
+	require.NoError(t, runRolesShow(&out, "base,dev"))
+	var shown roleShow
+	require.NoError(t, json.Unmarshal(out.Bytes(), &shown))
+	assert.Nil(t, shown.Declared, "a composition has no single declaration")
+	require.NotNil(t, shown.Effective)
+	assert.Equal(t, []string{"backend", "frontend"}, shown.Effective.Domains)
+	assert.Equal(t, []string{"base,dev"}, shown.Chain)
+
+	assert.Error(t, runRolesShow(&out, "base,ghost"))
+	assert.Error(t, runRolesResolve(&out, "base,ghost"))
+}
+
 func TestTokensByRole(t *testing.T) {
 	rolesCmdProject(t)
 	progress.SetQuiet(true)

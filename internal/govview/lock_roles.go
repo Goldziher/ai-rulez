@@ -52,9 +52,10 @@ func (s RoleSelection) names(cfg *config.Config) (names []string, requested map[
 	// unpins the role (the check reports the pin as removed, `lock` drops it). A
 	// role that left the config is dropped either way.
 	for _, o := range s.Lock.RoleOutputs() {
-		if exists[o.Role] && o.Requested {
-			pinned[o.Role] = true
-			requested[o.Role] = !declared[o.Role]
+		canon, ok := rolePinName(exists, o.Role)
+		if ok && o.Requested {
+			pinned[canon] = true
+			requested[canon] = !declared[o.Role]
 		}
 	}
 	if err := s.applyOnly(exists, declared, pinned, requested); err != nil {
@@ -73,13 +74,14 @@ func (s RoleSelection) names(cfg *config.Config) (names []string, requested map[
 // and each must exist (and, when checking, be pinned).
 func (s RoleSelection) applyOnly(exists, declared, pinned, requested map[string]bool) error {
 	for _, r := range s.Only {
-		if !exists[r] {
+		canon, ok := rolePinName(exists, r)
+		if !ok {
 			return oops.With("role", r).Hint("`ai-rulez roles list` shows the configured roles").Errorf("unknown role %q", r)
 		}
 		if s.Write {
-			pinned[r] = true
-			requested[r] = !declared[r]
-		} else if !pinned[r] {
+			pinned[canon] = true
+			requested[canon] = !declared[canon]
+		} else if !pinned[canon] {
 			return oops.With("role", r).Hint("pin it with `ai-rulez lock --role "+r+"` or set pin = true on the role").
 				Errorf("role %q is not pinned in the lock", r)
 		}
@@ -89,7 +91,8 @@ func (s RoleSelection) applyOnly(exists, declared, pinned, requested map[string]
 	}
 	keep := map[string]bool{}
 	for _, r := range s.Only {
-		keep[r] = true
+		canon, _ := rolePinName(exists, r)
+		keep[canon] = true
 	}
 	for name := range pinned {
 		if !keep[name] {
@@ -97,6 +100,26 @@ func (s RoleSelection) applyOnly(exists, declared, pinned, requested map[string]
 		}
 	}
 	return nil
+}
+
+// rolePinName resolves the name of a role pin: a declared role name, or a
+// comma-separated composition whose every member is declared. The canonical
+// composition name is the pin key, so `lock --role a,b` pins the union of a and
+// b under "a,b".
+func rolePinName(exists map[string]bool, name string) (string, bool) {
+	if exists[name] {
+		return name, true
+	}
+	parts := config.SplitRoleNames(name)
+	if len(parts) > 1 {
+		for _, p := range parts {
+			if !exists[p] {
+				return "", false
+			}
+		}
+		return config.CanonicalRoleNames(parts), true
+	}
+	return "", false
 }
 
 // SnapshotRoles is Snapshot plus the pins of the selected roles' rendered

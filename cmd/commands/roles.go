@@ -32,6 +32,9 @@ picks a role name and runs "ai-rulez generate --role <name>".
   ai-rulez roles show <name>            the role as declared and as inherited
   ai-rulez roles resolve <name>         the items the role keeps, with sizes
 
+<name> may be a comma-separated list (a composition) that takes the union of the
+named roles; show and resolve print the composed result.
+
 Each subcommand takes --format json. "roles list --format json" prints the same
 document as roles.json (schema/roles-manifest.schema.json).`,
 }
@@ -163,11 +166,29 @@ type roleShow struct {
 	Problems  []config.RoleProblem `json:"problems"`
 }
 
-func runRolesShow(out io.Writer, name string) error {
+func runRolesShow(out io.Writer, value string) error {
 	cfg, err := loadRolesConfig()
 	if err != nil {
 		return err
 	}
+	names := config.SplitRoleNames(value)
+	if len(names) == 0 {
+		return oops.Errorf("no role named")
+	}
+	if len(names) > 1 {
+		resolved, err := cfg.ResolveRoles(names)
+		if err != nil {
+			return oops.Wrap(err)
+		}
+		flat := resolved.Flat()
+		view := roleShow{Effective: flat, Chain: []string{config.CanonicalRoleNames(names)}, Problems: []config.RoleProblem{}}
+		if rolesFormat == formatJSON {
+			return writeJSON(out, view)
+		}
+		printRole(reportWriter{out}, "effective (composed from "+strings.Join(names, ", ")+")", flat)
+		return nil
+	}
+	name := names[0]
 	declared, ok := cfg.FindRole(name)
 	if !ok {
 		return oops.With("available", cfg.RoleNames()).Hint("List the roles with `ai-rulez roles list`").Errorf("role %q is not defined", name)

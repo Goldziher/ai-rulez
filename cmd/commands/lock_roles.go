@@ -11,25 +11,30 @@ import (
 
 // verifyLockedRoleOutputs is the role half of `generate --locked --role r`: when
 // the lock pins the outputs of role (or the role declares pin = true), the
-// rendering must still match. A role without a pin behaves as before. The role is
+// rendering must still match. A role without a pin behaves as before. role may be
+// a comma-separated composition, pinned under its canonical name. The role is
 // rendered in memory, never written. It returns the differences, one line each.
 func verifyLockedRoleOutputs(cfg *config.Config, lock *lockfile.File, role string) ([]string, error) {
-	if role == "" {
+	names := config.SplitRoleNames(role)
+	if len(names) == 0 {
 		return nil, nil
 	}
-	_, locked := lock.RoleOutput(role)
+	key := config.CanonicalRoleNames(names)
+	_, locked := lock.RoleOutput(key)
 	declared := false
 	for i := range cfg.Roles {
-		declared = declared || (cfg.Roles[i].Name == role && cfg.Roles[i].Pin)
+		for _, name := range names {
+			declared = declared || (cfg.Roles[i].Name == name && cfg.Roles[i].Pin)
+		}
 	}
 	if !locked && !declared {
 		return nil, nil
 	}
-	outputs, err := generator.LockRoleOutputs(cfg, role)
+	outputs, err := generator.LockRoleOutputs(cfg, key)
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
-	changes, err := contentlock.CompareRoles(lock, map[string][]contentlock.Output{role: outputs}, []string{role})
+	changes, err := contentlock.CompareRoles(lock, map[string][]contentlock.Output{key: outputs}, []string{key})
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}
@@ -41,10 +46,12 @@ func verifyLockedRoleOutputs(cfg *config.Config, lock *lockfile.File, role strin
 }
 
 // lockRoleNames is the role --role names: the one whose outputs `lock` also pins,
-// and the only one --check and --diff compare.
+// and the only one --check and --diff compare. A comma-separated value is the
+// canonical composition name.
 func lockRoleNames() []string {
-	if lockServeRole == "" {
+	names := config.SplitRoleNames(lockServeRole)
+	if len(names) == 0 {
 		return nil
 	}
-	return []string{lockServeRole}
+	return []string{config.CanonicalRoleNames(names)}
 }
