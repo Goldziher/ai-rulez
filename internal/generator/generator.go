@@ -99,6 +99,13 @@ type Generator struct {
 	// hostOverride replaces config.Host when hostSet (see SetHost).
 	hostOverride ambient.Host
 	hostSet      bool
+
+	// gitignoreSink, when set, collects this run's managed .gitignore patterns
+	// into one block at a shared repository toplevel instead of writing a
+	// .gitignore beside the config (recursive runs; see gitignore_recursive.go).
+	// gitignorePrefix is this root's path relative to the sink's toplevel.
+	gitignoreSink   *GitignoreSink
+	gitignorePrefix string
 }
 
 type generatedManifest struct {
@@ -215,6 +222,13 @@ func (g *Generator) finishGitignore(outputs []config.OutputFile, ignoredEarly bo
 // was on, or a 4.x default) left behind. With gitignore off the generated files
 // are meant to be committed, and the block would keep ignoring them.
 func (g *Generator) removeStaleGitignoreBlock() {
+	// The toplevel root's .gitignore is the shared recursive-run block: removing
+	// it here would race the roots still adding their patterns to it, and the
+	// sink rewrites it once at the end (see GitignoreSink.Write). A nested root
+	// owns its own file, so it still cleans up a block an earlier run left there.
+	if g.gitignoreSink != nil && g.gitignorePrefix == "" {
+		return
+	}
 	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
 	if gitignore.IsSymlink(g.config.BaseDir) {
 		return

@@ -48,6 +48,12 @@ func (g *Generator) ignoreLocalInputs() error {
 	}
 	// The overlay's lock and temp files come and go: ignore them before they exist.
 	patterns = append(patterns, g.configDirName()+"/.config.local.*")
+	if g.gitignoreSink != nil {
+		if err := g.gitignoreSink.Add(g.log(), g.gitignorePrefix, patterns); err != nil {
+			return oops.Wrapf(err, "gitignore the machine-local inputs")
+		}
+		return nil
+	}
 	if err := gitignore.EnsureEntries(g.log(), g.config.BaseDir, patterns); err != nil {
 		return oops.Wrapf(err, "gitignore the machine-local inputs")
 	}
@@ -294,15 +300,17 @@ func (g *Generator) configDirName() string {
 
 // updateGitignore updates .gitignore with generated file paths using a fenced block
 func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
+	// A recursive run collects every root's patterns into one block at the
+	// repository toplevel instead of writing a .gitignore beside each config.
+	if g.gitignoreSink != nil {
+		return g.collectToGitignoreSink(outputs)
+	}
 	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
 
 	// Patterns git does not already cover: not ignored by a user rule, and not
 	// deliberately un-ignored by one.
 	paths, overridden := g.neededGitignorePatterns(outputs)
-	for _, o := range overridden {
-		g.log().Warn("A .gitignore rule un-ignores a machine-local or secret output; ai-rulez will not re-ignore it",
-			"path", o.Pattern, "rule", o.Rule, "source", o.Source)
-	}
+	g.warnUnignoredProtected(overridden)
 
 	// Read existing .gitignore content
 	existingData, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), gitignorePath)
@@ -340,6 +348,32 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	}
 
 	g.log().Debug("Updated .gitignore", "entries", len(sortedPaths))
+	return nil
+}
+
+// warnUnignoredProtected reports the protected patterns a user rule
+// deliberately un-ignores: they stay out of the block, but the user should know
+// the machine-local or secret output is now committable.
+func (g *Generator) warnUnignoredProtected(overridden []unignoredProtected) {
+	for _, o := range overridden {
+		g.log().Warn("A .gitignore rule un-ignores a machine-local or secret output; ai-rulez will not re-ignore it",
+			"path", o.Pattern, "rule", o.Rule, "source", o.Source)
+	}
+}
+
+// collectToGitignoreSink adds this root's needed patterns to the shared
+// recursive-run block. It does not write a .gitignore beside the config, so a
+// nested root that had none gains no file; the sink writes the toplevel block
+// as patterns arrive.
+func (g *Generator) collectToGitignoreSink(outputs []config.OutputFile) error {
+	paths, overridden := g.neededGitignorePatterns(outputs)
+	g.warnUnignoredProtected(overridden)
+	if len(paths) == 0 {
+		return nil
+	}
+	if err := g.gitignoreSink.Add(g.log(), g.gitignorePrefix, paths); err != nil {
+		return oops.Wrapf(err, "add patterns to the shared .gitignore block")
+	}
 	return nil
 }
 
