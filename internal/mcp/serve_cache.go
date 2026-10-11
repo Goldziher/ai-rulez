@@ -90,8 +90,8 @@ func (c *serveCache) key32() ([]byte, error) {
 // mac authenticates one entry: the version, the key and the payload.
 func macEntry(secret []byte, key string, payload []byte) []byte {
 	h := hmac.New(sha256.New, secret)
-	fmt.Fprintf(h, "%d\x00%s\x00", serveCacheVersion, key) //nolint:errcheck // hash writes never fail
-	h.Write(payload)                                       //nolint:errcheck // hash writes never fail
+	fmt.Fprintf(h, "%d\x00%s\x00", serveCacheVersion, key) //nolint:errcheck,gosec // hash writes never fail
+	h.Write(payload)                                       //nolint:errcheck,gosec // hash writes never fail
 	return h.Sum(nil)
 }
 
@@ -224,29 +224,29 @@ type serveCacheEntry struct {
 // profiles, or with a remote ref that moved, never share an entry.
 func serveCacheKey(fingerprint string, st *ServeSetup, resolved []*skillsource.Resolved) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "ai-rulez-serve-catalog\x00%d\x00", serveCacheVersion) //nolint:errcheck // hash writes never fail
-	io.WriteString(h, st.Version)                                         //nolint:errcheck // hash writes never fail
-	io.WriteString(h, "\x00")                                             //nolint:errcheck // hash writes never fail
-	io.WriteString(h, fingerprint)                                        //nolint:errcheck // hash writes never fail
-	io.WriteString(h, "\x00")                                             //nolint:errcheck // hash writes never fail
-	io.WriteString(h, st.ViewKey())                                       //nolint:errcheck // hash writes never fail
-	io.WriteString(h, "\x00")                                             //nolint:errcheck // hash writes never fail
+	fmt.Fprintf(h, "ai-rulez-serve-catalog\x00%d\x00", serveCacheVersion) //nolint:errcheck,gosec // hash writes never fail
+	io.WriteString(h, st.Version)                                         //nolint:errcheck,gosec // hash writes never fail
+	io.WriteString(h, "\x00")                                             //nolint:errcheck,gosec // hash writes never fail
+	io.WriteString(h, fingerprint)                                        //nolint:errcheck,gosec // hash writes never fail
+	io.WriteString(h, "\x00")                                             //nolint:errcheck,gosec // hash writes never fail
+	io.WriteString(h, st.ViewKey())                                       //nolint:errcheck,gosec // hash writes never fail
+	io.WriteString(h, "\x00")                                             //nolint:errcheck,gosec // hash writes never fail
 	for _, res := range resolved {
-		fmt.Fprintf(h, "%s\x00%s\x00%s\x00%s\x00%t\x01", res.Spec.Name, res.Dir, res.Commit, res.Digest, res.Pinned) //nolint:errcheck // hash writes never fail
+		fmt.Fprintf(h, "%s\x00%s\x00%s\x00%s\x00%t\x01", res.Spec.Name, res.Dir, res.Commit, res.Digest, res.Pinned) //nolint:errcheck,gosec // hash writes never fail
 	}
 	writeKeyStrings(h, st.Filter.Domains)
 	writeKeyStrings(h, st.Filter.Allow)
 	writeKeyStrings(h, st.Filter.Deny)
-	fmt.Fprintf(h, "frozen=%t\x00offline=%t\x00maxclone=%d", st.Frozen, st.Offline, st.MaxCloneBytes) //nolint:errcheck // hash writes never fail
+	fmt.Fprintf(h, "frozen=%t\x00offline=%t\x00maxclone=%d", st.Frozen, st.Offline, st.MaxCloneBytes) //nolint:errcheck,gosec // hash writes never fail
 	return hex.EncodeToString(h.Sum(nil))
 }
 
 func writeKeyStrings(h io.Writer, values []string) {
 	for _, v := range values {
-		io.WriteString(h, v) //nolint:errcheck // hash writes never fail
-		io.WriteString(h, "\x00")
+		io.WriteString(h, v)      //nolint:errcheck,gosec // hash writes never fail
+		io.WriteString(h, "\x00") //nolint:errcheck,gosec // hash writes never fail
 	}
-	io.WriteString(h, "\x01") //nolint:errcheck // hash writes never fail
+	io.WriteString(h, "\x01") //nolint:errcheck,gosec // hash writes never fail
 }
 
 // serveCacheLocation is where the cache lives and which secret authenticates it.
@@ -444,7 +444,7 @@ func catalogToDTO(c *Catalog) *catalogDTO {
 		out.Skills = append(out.Skills, skillToDTO(s))
 	}
 	for _, r := range c.Refusals() {
-		out.Refused = append(out.Refused, refusalDTO{Name: r.Name, View: r.View, Code: r.Code, Reason: r.Reason})
+		out.Refused = append(out.Refused, refusalDTO(r))
 	}
 	for i := range c.reports {
 		out.Reports = append(out.Reports, reportToDTO(&c.reports[i]))
@@ -501,7 +501,7 @@ func dtoToCatalog(d *catalogDTO) *Catalog {
 		if c.refused == nil {
 			c.refused = map[string]Refusal{}
 		}
-		c.refused[r.Name] = Refusal{Name: r.Name, View: r.View, Code: r.Code, Reason: r.Reason}
+		c.refused[r.Name] = Refusal(r)
 	}
 	for i := range d.Reports {
 		c.reports = append(c.reports, d.Reports[i].toReport())
@@ -558,7 +558,8 @@ func dtoToAuthored(items []authoredItemDTO) map[string]lockfile.Item {
 		return nil
 	}
 	out := make(map[string]lockfile.Item, len(items))
-	for _, d := range items {
+	for i := range items {
+		d := &items[i]
 		out[d.Key] = lockfile.Item{Kind: d.Kind, ID: d.ID, Domain: d.Domain, Path: d.Path, Digest: d.Digest, Owner: d.Owner, Version: d.Version}
 	}
 	return out

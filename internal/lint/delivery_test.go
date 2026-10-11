@@ -55,7 +55,7 @@ func TestStrict_ServedSkillReferencedByPointerForms(t *testing.T) {
 		{"backticked name then kind", "Run the `heavy` skill."},
 		{"kind then backticked name", "Run skill `heavy`."},
 		{"skill call", "Run Skill(heavy)."},
-		{"labelled skill pointer", "Procedure/reference: skill heavy"},
+		{"labeled skill pointer", "Procedure/reference: skill heavy"},
 		{"skills directory", "Read skills/heavy for the migration steps."},
 		{"harness skill file", "Edit .claude/skills/heavy/SKILL.md by hand."},
 	}
@@ -347,7 +347,7 @@ func TestStrict_BothDMIPointer(t *testing.T) {
 	}{
 		{"backticked name then kind", "Run the `deploy` skill.", dmi, true},
 		{"skill call", "Run Skill(deploy).", dmi, true},
-		{"labelled pointer", "Procedure/reference: skill deploy", dmi, true},
+		{"labeled pointer", "Procedure/reference: skill deploy", dmi, true},
 		{"file path pointer", "Edit .claude/skills/deploy/SKILL.md by hand.", dmi, false},
 		{"skills directory pointer", "Read skills/deploy for the steps.", dmi, false},
 		{"load_skill pointer", "Run the `deploy` skill via load_skill.", dmi, false},

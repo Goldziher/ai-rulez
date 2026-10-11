@@ -241,7 +241,7 @@ func mcpServersFor(m *Manifest, runtime string) map[string]mcpEntry {
 }
 
 // rewriteRootArgs rewrites the canonical root variable in each argument,
-// preserving a nil slice so the field keeps its omitempty behaviour.
+// preserving a nil slice so the field keeps its omitempty behavior.
 func rewriteRootArgs(args []string, runtime string) []string {
 	if args == nil {
 		return nil

@@ -81,7 +81,7 @@ baz_scoped = "root"
 }
 
 // A genuinely unknown key inside a known table is not a swallowed top-level key:
-// it keeps its existing behaviour (a schema finding, not a load error).
+// it keeps its existing behavior (a schema finding, not a load error).
 func TestLoadConfig_UnknownKeyInsideKnownTableStillLoads(t *testing.T) {
 	// Arrange
 	base := t.TempDir()

@@ -169,7 +169,7 @@ func validatePreRun() error {
 
 // runRecursiveValidate validates every discovered config, reports all failures,
 // and returns 1 if any config is invalid (0 otherwise, including when none exist).
-func runRecursiveValidate() int {
+func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting; splitting it hides the flow
 	// The same discovery `generate --recursive` counts, so the two summaries
 	// agree on how many roots the tree holds.
 	configFiles := recursiveConfigRoots()
