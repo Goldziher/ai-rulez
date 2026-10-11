@@ -47,6 +47,37 @@ func TestLoadConfig_SwallowedTopLevelKey(t *testing.T) {
 	}
 }
 
+// A top-level key written after a [[table array]] header is read as a key of the
+// last element and dropped too, so the loader refuses it as well (#344).
+func TestLoadConfig_SwallowedTopLevelKeyInTableArray(t *testing.T) {
+	tests := []struct {
+		name string
+		key  string
+		val  string
+	}{
+		{"agents_md after [[mcp_servers]]", "agents_md", "false"},
+		{"builtins after [[mcp_servers]]", "builtins", `["rust"]`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			base := t.TempDir()
+			body := "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n" +
+				"[[mcp_servers]]\nname = \"srv\"\ncommand = \"uvx\"\n" + tt.key + " = " + tt.val + "\n"
+			writeProjectFile(t, filepath.Join(base, ".ai-rulez"), "config.toml", body)
+
+			// Act
+			_, err := LoadConfig(context.Background(), base)
+
+			// Assert
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.key)
+			assert.Contains(t, err.Error(), "[[mcp_servers]]")
+			assert.Contains(t, err.Error(), "move `"+tt.key+"` above the first [table]")
+		})
+	}
+}
+
 // The same keys above the first table load normally and take effect: the fix the
 // error names is real.
 func TestLoadConfig_TopLevelKeysAboveTheFirstTable(t *testing.T) {
