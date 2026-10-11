@@ -25,7 +25,7 @@ var validateRecursive bool
 // applyValidateQuiet silences progress output when --quiet is set or the
 // output is structured: JSON must be the only thing on stdout.
 func applyValidateQuiet() {
-	progress.SetQuiet(viper.GetBool("quiet") || structuredFormat(validateFormat))
+	applyProgressMode(viper.GetBool("quiet") || structuredFormat(validateFormat))
 }
 
 var ValidateCmd = &cobra.Command{
