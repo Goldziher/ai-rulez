@@ -70,7 +70,7 @@ stdout.
 | AR302 | `frontmatter-skill-unknown` | error | Frontmatter `skills:` lists a skill that does not exist |
 | AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
 | AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist. A path that exists under a `[[scopes]]` entry's emitted directory is resolved there too. Not reported when the text does not claim the path exists: negated or historical ("there is no", "was removed", "decommissioned", "empty"), an example ("e.g.", "such as", a glob in the same paragraph), an alternative ("or under"), a date or version placeholder (`YYYY-MM-DD`), a build or runtime artifact (`target/`, `.venv/`, `vendor/`, `node_modules/`, or text saying it is gitignored), a ref of another repository (`path @ branch`, or a table row or line naming an `owner/repo` slug), a container image reference (`namespace/name` with no file extension and an image-name underscore, e.g. `armis/sra_session_vnc`), or an ADR number whose file carries a title suffix (`adrs/0065` for `adrs/0065-license.md`) |
-| AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path is found neither relative to the skill or command directory nor relative to the repo root (see `--repo-root`). The same "not a claim" exemptions as AR401 apply (negated, example, another repository's table row) |
+| AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path is found neither relative to the skill or command directory nor relative to the repo root (see `--repo-root`). A path that names a sibling skill explicitly (`skills/<other>/references/x.md`, `.claude/skills/<other>/references/x.md`) is resolved against that skill's directory too. The same "not a claim" exemptions as AR401 apply (negated, example, another repository's table row) |
 | AR501 | `hook-missing` | error | A `.claude/settings.json` hook command, or a command in the `hooks` frontmatter of an agent, skill or command, runs a `$CLAUDE_PROJECT_DIR/...` file, or passes a script to `sh`, `bash`, `zsh`, `dash`, `python`, `node`, `ruby` or `perl` (frontmatter also a `./...` script, resolved against the project directory), that does not exist |
 | AR502 | `hook-not-executable` | error | That hook file is executed directly but lacks the executable bit (fixable) |
 | AR503 | `script-not-executable` | warning | A skill `scripts/` file with a shebang lacks the executable bit |
@@ -122,9 +122,9 @@ stdout.
 | AR9A3 | `activation-policy-conflict` | warning | An eval case contradicts the skill's invocation policy (`disable-model-invocation: true` or `allow_implicit_invocation: false`): it expects a trigger (`expect_trigger: true`) and can never pass, or expects none and can never fail (see [Evals](evals.md#linting-cases-and-results)) |
 | AR9A4 | `activation-prompt-names-skill` | off | A positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill; enable it with `[lint.severity] AR9A4 = "warning"` |
 | AR9A5 | `eval-import-unmapped` | info | Fields of an imported scenario with no counterpart in the case format; reported by `ai-rulez eval import`, never by `validate` (see [Evals](evals.md#importing-scenarios)) |
-| AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent `skills:` or command names a skill whose `delivery` is `served` by the same forms AR301 reads (`` `x` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `Procedure/reference: skill X`, `skills/x`, `.claude/skills/x/SKILL.md`); the harness cannot see it until the agent calls `find_skill`. A served skill naming a sibling served skill is not reported (a skill is loaded on demand), and `both` skills are static, so naming one is fine (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent `skills:` or command names a skill whose `delivery` is `served` by the same forms AR301 reads (`` `x` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `Procedure/reference: skill X`, `skills/x`, `.claude/skills/x/SKILL.md`) and the skills MCP call forms (`load_skill x`, `load_skill(x)`, `load_skill(name: "x")`, `get_skill x`, `read_skill_file x`); the harness cannot see it until the agent calls `find_skill`. A served skill naming a sibling served skill is not reported (a skill is loaded on demand), and `both` skills are static, so naming one is fine (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR991 | `delivery-stub-missing` | error | Skills are served but a configured harness that can call MCP has no `dynamic-skills` stub in its output (a skill of that name shadows it, or the preset renders no skills), so its agent is never told to call `find_skill` |
-| AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped) |
+| AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped). Not reported for a harness that writes no skill tree of its own (it reads another preset's tree, e.g. `baz` next to `claude`) |
 | AR993 | `served-no-server` | warning | Skills are served but no `[[mcp_servers]]` entry runs `ai-rulez mcp --serve-skills` |
 | AR994 | `delivery-invalid` | error | A skill's `delivery` frontmatter is not `static`, `served` or `both` (it is ignored and the skill keeps its inherited delivery) |
 | AR995 | `served-lock-mismatch` | error | `[lock] enforce = true` and a served skill is not pinned in `ai-rulez.lock` or its digest differs; the server refuses to serve it |
@@ -1573,9 +1573,9 @@ a skill references a references/, scripts/ or assets/ file it does not ship
 
 - Default severity: `error`
 - Analyzer: `references` (scope `file`)
-- Why: A skill that refers to references/, scripts/ or assets/ files it does not ship fails the moment the model follows the reference.
+- Why: A skill that refers to references/, scripts/ or assets/ files it does not ship fails the moment the model follows the reference. A path that names a sibling skill explicitly (`skills/<other>/references/x.md`, `.claude/skills/<other>/references/x.md`) is resolved against that skill's directory too, so one skill can point at another's file.
 - Bad: `Run scripts/build.sh` with no scripts/build.sh in the skill
-- Good: Add the file to the skill directory or fix the reference
+- Good: Add the file to the skill directory, name the sibling skill that ships it, or fix the reference
 
 ### AR403 command-missing
 
@@ -2343,9 +2343,9 @@ an always-loaded rule, context, agent or command names a skill whose delivery is
 
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
-- Why: Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.
+- Why: Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. The pointer forms are the ones AR301 reads plus the skills MCP calls (`load_skill x`, `get_skill x`, `read_skill_file x`); a `load_skill` call or a file path reaches the skill at runtime, but the name still sits in always-loaded content. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.
 - Bad: A rule saying "run the `deploy` skill", or an agent `skills: [deploy]`, when `deploy` is served
-- Good: Tell the agent to call `find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree
+- Good: Tell the agent to call `load_skill`/`find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree
 
 ### AR991 delivery-stub-missing
 
@@ -2363,7 +2363,7 @@ a harness without MCP support keeps served skills as static files (nothing is dr
 
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
-- Why: A harness without MCP support cannot fetch served skills, so they stay as static files.
+- Why: A harness without MCP support cannot fetch served skills, so they stay as static files. A harness that writes no skill tree of its own (it reads another preset's tree, e.g. `baz` next to `claude`) keeps nothing, so nothing is reported for it.
 - Bad: A served skill for a harness without MCP support
 - Good: Accept the static fallback or drop that harness
 

@@ -167,6 +167,38 @@ func TestContentForPreset_NoMCPHarnessFallsBackToStatic(t *testing.T) {
 	assert.Equal(t, []string{"heavy"}, fallbacks[0].Skills)
 }
 
+// AR992 is not raised for a preset that writes no skill tree: baz next to claude
+// reads .claude/skills and writes none of its own (#342).
+func TestDeliveryFallbacks_SkipsPresetsThatWriteNoSkillTree(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		presets []string
+		want    []string
+	}{
+		{"baz next to claude writes no skills", []string{"claude", "baz"}, nil},
+		{"baz alone writes .agents/skills", []string{"baz"}, []string{"baz"}},
+		{"cline keeps its own skills directory", []string{"cline"}, []string{"cline"}},
+		{"an unknown preset keeps the warning", []string{"my-tool"}, []string{"my-tool"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := &Config{Content: treeWithSkills()}
+			for _, p := range tt.presets {
+				cfg.Presets = append(cfg.Presets, Preset{BuiltIn: p})
+			}
+
+			var got []string
+			for _, fb := range cfg.DeliveryFallbacks(cfg.Content) {
+				got = append(got, fb.Preset)
+			}
+
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestContentForPreset_NothingServedIsIdentity(t *testing.T) {
 	t.Parallel()
 	tree := &ContentTree{Skills: []ContentFile{skillWith("a", ""), skillWith("b", "both")}}

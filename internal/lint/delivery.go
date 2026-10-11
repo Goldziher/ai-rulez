@@ -176,12 +176,12 @@ func (r *runner) checkServedBody(it *item, d doc, served, reported map[string]bo
 			reported[name] = true
 			if servedPathPointer(l, name) {
 				r.add(CodeServedReferencedStatically, it.abs, l.No,
-					"%s is served (%s), so its file is not written to the harness's skill tree; this %s points at its path, and the file will not be there. The transitive fix is to set delivery: both on %s — it stays in the static tree and the path resolves — or change %s. The agent can also load it with find_skill/load_skill.",
+					"%s is served (%s), so its file is not written to the harness's skill tree; this %s points at its path, and the file will not be there. The transitive fix is to set delivery: both on %s — it stays in the static tree and the path resolves — or change %s. Reach it with a load_skill/find_skill call or its file path instead.",
 					name, r.servedSkillSource(name), it.kind, name, r.servedSkillSource(name))
 				continue
 			}
 			r.add(CodeServedReferencedStatically, it.abs, l.No,
-				"%s is served (%s), so it is not in the harness's skill tree; this %s refers to it by name. The transitive fix is to set delivery: both on %s — it stays in the static tree and every reference to it resolves — or change %s. The agent can also load it with find_skill/load_skill.",
+				"%s is served (%s), so it is not in the harness's skill tree; this %s refers to it by name. The transitive fix is to set delivery: both on %s — it stays in the static tree and every reference to it resolves — or change %s. Reach it with a load_skill/find_skill call or its file path instead.",
 				name, r.servedSkillSource(name), it.kind, name, r.servedSkillSource(name))
 		}
 	}

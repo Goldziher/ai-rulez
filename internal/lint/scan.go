@@ -38,8 +38,32 @@ var (
 		return regexp.MustCompile(`\bskills/([a-z0-9]+(?:-[a-z0-9]+)*)`)
 	})
 	skillRelRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(references|scripts|assets)/`) })
+	// siblingSkillResourceRe matches a resource path that names a sibling skill
+	// explicitly: "skills/<other>/references/x.md" or
+	// ".claude/skills/<other>/references/x.md" (any "<prefix>/skills/").
+	siblingSkillResourceRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?:^|/)skills/([a-z0-9]+(?:-[a-z0-9]+)*)/((?:references|scripts|assets)/.+)$`)
+	})
 	extRe      = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\.[A-Za-z0-9]{1,6}$`) })
 	fragLineRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^L\d+`) })
+	// mcpCallRe matches a skills MCP call that names a skill: "load_skill x"
+	// inside a code span, "load_skill(x)", "load_skill(name: \"x\")" and the bare
+	// command form "load_skill dev-cycle-procedure". A bare "load_skill word" is
+	// not read: the argument may be prose ("load_skill returns"), and only a
+	// hyphenated name or one quoted/code-spanned is unambiguously a skill.
+	// find_skill is left out: its argument is a task description, not a name.
+	mcpCallRe = sync.OnceValue(func() *regexp.Regexp {
+		const name = `([a-z][a-z0-9]*(?:-[a-z0-9]+)*)`
+		const hyphen = `([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`
+		const quote = `["'` + "`" + `]`
+		return regexp.MustCompile(`\b(?:load_skill|get_skill|read_skill_file|list_skill_resources)(?:` +
+			`\s*\(\s*name\s*[:=]\s*` + quote + `?` + name + // load_skill(name: "x")
+			`|\s*\(\s*` + quote + `?` + name + // load_skill(x)
+			`|\s+` + quote + name + // load_skill "x"
+			`|\s+` + name + quote + // `load_skill x`
+			`|\s+` + hyphen + // load_skill dev-cycle-procedure
+			`)`)
+	})
 )
 
 func looksPlaceholder(name string) bool {
@@ -174,6 +198,9 @@ func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() boo
 			return
 		}
 	}
+	if r.checkSiblingSkillResource(it, line, tok) {
+		return
+	}
 	first, _, hasSlash := strings.Cut(tok, "/")
 	if !hasSlash || first == "" || r.allowed(tok) {
 		return
@@ -228,6 +255,38 @@ func (r *runner) checkSkillRelative(it *item, line int, tok, prefix string) bool
 	r.add(CodeSkillResourceMissing, it.abs, line, "%q was not found relative to this %s's directory (%s) or relative to the repo root (%s)",
 		tok, it.kind, r.display(it.itemDir), r.display(r.tree.Top))
 	return true
+}
+
+// checkSiblingSkillResource handles a resource path that names a sibling skill
+// explicitly ("skills/<other>/references/x.md", ".claude/skills/<other>/...").
+// A SKILL.md may point at another skill's file this way (#346): AR402 accepts it
+// when the file is tracked at the written path or under the sibling's source
+// directory, and reports it otherwise. It reports whether the token was such a
+// path (a rule has no skill directory, so it never is).
+func (r *runner) checkSiblingSkillResource(it *item, line int, tok string) bool {
+	if it.itemDir == "" {
+		return false
+	}
+	m := siblingSkillResourceRe().FindStringSubmatch(tok)
+	if m == nil {
+		return false
+	}
+	r.dep(it.abs, filepath.Join(r.tree.Top, filepath.FromSlash(tok)))
+	if r.existsRepo(tok) || r.allowed(tok) || r.siblingSkillSource(it, m[1], m[2]) {
+		return true
+	}
+	r.add(CodeSkillResourceMissing, it.abs, line, "%q names the %s skill but was not found relative to the repo root (%s) or under that skill's directory",
+		tok, m[1], r.display(r.tree.Top))
+	return true
+}
+
+// siblingSkillSource reports whether the sibling skill next to it ships tail: a
+// sibling's source directory shares it.itemDir's parent.
+func (r *runner) siblingSkillSource(it *item, sibling, tail string) bool {
+	if it.itemDir == "" {
+		return false
+	}
+	return r.existsAbs(filepath.Join(filepath.Dir(it.itemDir), sibling, filepath.FromSlash(tail)))
 }
 
 // existsRepo resolves a repo-relative path from the repository top or, for a
@@ -393,7 +452,25 @@ func referenceNames(l bodyLine) []nameRef {
 			add(m[1], kindSkill)
 		}
 	}
+	addMCPCallNames(l.Text, add)
 	return out
+}
+
+// addMCPCallNames reads the skills MCP calls that name a skill ("load_skill x",
+// "get_skill(x)", "load_skill(name: \"x\")") and adds each as a skill reference,
+// so AR301 and AR990 read an MCP call like any other pointer (#343).
+func addMCPCallNames(text string, add func(name, kind string)) {
+	if !strings.Contains(text, "_skill") {
+		return
+	}
+	for _, m := range mcpCallRe().FindAllStringSubmatch(text, -1) {
+		for _, g := range m[1:] {
+			if g != "" {
+				add(g, kindSkill)
+				break
+			}
+		}
+	}
 }
 
 // kindForWord maps a kind word to the content kind it names. "subagent" and
