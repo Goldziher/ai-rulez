@@ -1,5 +1,22 @@
 package config
 
+// ClaudeMD values for the claude_md option. The empty string is the default and
+// behaves like ClaudeMDShim.
+const (
+	// ClaudeMDShim keeps the CLAUDE.md "@AGENTS.md" import shim.
+	ClaudeMDShim = "shim"
+	// ClaudeMDNone omits the shim: the claude preset writes only AGENTS.md,
+	// which Claude Code >= 2.1.277 reads directly.
+	ClaudeMDNone = "none"
+)
+
+// OmitsClaudeShim reports whether [claude] claude_md = "none" turns off the
+// CLAUDE.md shim, so the claude preset relies on the shared AGENTS.md alone.
+// Safe on a nil receiver.
+func (c *Config) OmitsClaudeShim() bool {
+	return c != nil && c.Claude.OmitsClaudeShim()
+}
+
 // SharedOutput names an output several presets can read and that the agents_md
 // flag therefore renders once instead of once per preset.
 type SharedOutput string
