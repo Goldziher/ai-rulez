@@ -34,7 +34,7 @@ Use this skill when:
 
 ```bash
 # npm (no install)
-npx ai-rulez@latest
+pnpm dlx ai-rulez@latest
 
 # Python (no install)
 uvx ai-rulez
@@ -125,8 +125,8 @@ source = "https://github.com/kreuzberg-dev/kreuzberg"
 
 [[mcp_servers]]
 name = "ai-rulez"
-command = "npx"
-args = ["-y", "ai-rulez@latest", "mcp"]
+command = "pnpm"
+args = ["dlx", "ai-rulez@latest", "mcp"]
 
 [[scopes]]
 path = "packages/web"

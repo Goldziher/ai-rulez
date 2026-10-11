@@ -24,7 +24,7 @@ x-ai-rulez:
 
 Typical setup:
 
-- Use `npx -y ai-rulez@latest mcp` (Node) or `uvx ai-rulez mcp` (Python).
+- Use `pnpm dlx ai-rulez@latest mcp` (Node) or `uvx ai-rulez mcp` (Python).
 - This repo includes a default server entry in `.ai-rulez/config.toml`.
 
 When updating MCP functionality:

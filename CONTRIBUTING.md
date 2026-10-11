@@ -180,10 +180,10 @@ cd release/npm
 # Edit name to "@yourscope/ai-rulez", adjust version if needed
 
 # 3. Publish to your private registry
-npm publish --registry=https://your-private-registry/
+pnpm publish --registry=https://your-private-registry/
 
 # 4. Install and use
-npm install @yourscope/ai-rulez --registry=https://your-private-registry/
+pnpm install @yourscope/ai-rulez --registry=https://your-private-registry/
 ai-rulez generate  # Uses local binary, no GitHub access needed
 ```
 

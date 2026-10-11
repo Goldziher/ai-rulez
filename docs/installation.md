@@ -11,7 +11,7 @@ Install `ai-rulez` using your preferred package manager.
 
 === "npm"
     ```bash
-    npm install -g ai-rulez
+    pnpm add -g ai-rulez
     ```
 
 === "pip"
@@ -52,7 +52,7 @@ You can also run `ai-rulez` directly without a permanent installation.
 
 === "Node.js"
     ```bash
-    npx ai-rulez@latest --help
+    pnpm dlx ai-rulez@latest --help
     ```
 
 ## Shell Completion (Recommended)
