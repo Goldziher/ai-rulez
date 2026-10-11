@@ -178,9 +178,15 @@ func (r *runner) securityScan(abs, raw string) {
 	}
 	raw = strings.ReplaceAll(raw, "\r\n", "\n")
 	lines := strings.Split(raw, "\n")
+	if r.opts.SecretsOnly {
+		for i, line := range lines {
+			r.scanSecrets(abs, i+1, line)
+		}
+		return
+	}
 	var st *scanText
 	if isMarkdownPath(abs) {
-		st = newScanText(r, abs, raw)
+		st = r.scanTextOf(abs, raw)
 	}
 	for i, line := range lines {
 		no := i + 1

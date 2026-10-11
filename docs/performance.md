@@ -162,6 +162,40 @@ that load and are not reliable; the allocations and the isolated sweep are.
 
 The cost of the sweep now depends on how many processes start during the command, not on how many exist.
 
+### Fourth pass: CPU of `generate` and `validate`
+
+v5.0.0 spent about four times the CPU of 4.23 in `generate` (and more in `validate`). A CPU profile (a temporary
+`pprof` hook, not committed) put about half of `generate` in the authored-content secret gate, which called
+`lint.RunWith` with `SecurityOnly` although it reads only AR001: every file went through the shell, injection,
+hidden-character, host and blob scans, and the markdown file was split into lines twice (`newScanText`, dominated by
+backtracking in `negRe`). `validate` paid the same duplicate splits plus unconditional regular expressions in the body
+scan.
+
+Measured on a 590-file, 2.6 MB project, user+sys CPU of the whole command, alternating runs of binaries built before
+and after (load average high; sys time is file I/O and did not change):
+
+| Command | user before | user after | user+sys before | user+sys after |
+| ------- | ----------- | ---------- | --------------- | -------------- |
+| `generate` | 1.40 s | 0.65 s | 3.3 to 3.6 s | 2.3 to 2.4 s |
+| `validate` | 1.9 s | 1.6 s | 3.6 s | 3.2 to 3.3 s |
+| `tokens` | 0.69 s | 0.69 s | 1.9 s | 1.9 s (unchanged) |
+
+Secret gate alone (`lint AuthoredSecretGate/medium`, 200 files): 106 to 161 ms, 13.0 MB, 115.6k allocs with the full
+security family; 33 ms, 2.9 MB, 20.4k allocs with `Options.SecretsOnly` (3 to 5x).
+
+- `Options.SecretsOnly` (with `SecurityOnly`) runs only the units that reach `securityScan` (item scan, resources,
+  imported content) and checks each line against the credential patterns alone. Inline ignores, severities,
+  `ignore`, `example_paths`, configured patterns and the imported-content level go through the same `add`, so the AR001
+  findings are identical (`TestSecretsOnlyMatchesSecurityOnly`).
+- `scanTextOf` memoizes the split text per file and content for the run (security scan, text scans, capability
+  profile); a `scanText` is never modified after it is built (`TestScanTextOfMemoizesPerFileAndText`).
+- The body scan skips link, backtick and name patterns on lines lacking a literal every match contains
+  (`TestBodyScanGatesAgreeWithThePatterns` compares gated and ungated results). `generate` output and
+  `validate`/`validate --strict`/`tokens` output on the benchmark project are byte-identical to the previous binary.
+
+`tokens` is dominated by cl100k counting and file reads, and was not changed (the token memo is the separate branch
+named below). What remains of `generate` is file I/O (loading, output safety checks, writes).
+
 ## What dominates elsewhere
 
 These were measured and not changed here.

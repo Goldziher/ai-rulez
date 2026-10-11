@@ -142,3 +142,28 @@ func BenchmarkSecretScanCustomPatterns(b *testing.B) {
 		r.securityScan("a.md", text)
 	}
 }
+
+// BenchmarkAuthoredSecretGate is the lint run `generate` makes before it
+// writes: the security family, and the credential rule alone that the gate
+// reads.
+func BenchmarkAuthoredSecretGate(b *testing.B) {
+	for _, s := range testutil.BenchSizes() {
+		cfg, tree := benchProject(b, s.Files)
+		for _, mode := range []struct {
+			name string
+			opts Options
+		}{
+			{"security-only", Options{SecurityOnly: true}},
+			{"secrets-only", Options{SecurityOnly: true, SecretsOnly: true}},
+		} {
+			b.Run(s.Name+"/"+mode.name, func(b *testing.B) {
+				b.ReportAllocs()
+				for range b.N {
+					if _, err := RunWith(cfg, tree, mode.opts); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+		}
+	}
+}

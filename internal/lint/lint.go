@@ -202,12 +202,20 @@ type runner struct {
 	// fmMCP caches the inline mcpServers of agent and skill frontmatter.
 	fmMCP     []*mcpServer
 	fmMCPDone bool
+	// scanTexts memoizes the split text of each file (see scanTextOf).
+	scanTexts map[string]cachedScanText
 }
 
 // Options selects what a run does beyond the default strict checks.
 type Options struct {
 	// SecurityOnly keeps only the security family (AR0xx).
 	SecurityOnly bool
+	// SecretsOnly narrows a SecurityOnly run to the credential rule (AR001):
+	// only the units that scan text for credentials run, and each text is
+	// checked against the credential patterns alone. The AR001 findings are
+	// those of the full security run; the others are not produced. It is for a
+	// caller that reads nothing else from the report (the `generate` gate).
+	SecretsOnly bool
 	// External also runs the scanners configured in lint.external.
 	External bool
 	// AllowEgress names the [[lint.external]] scanners with egress = true that
