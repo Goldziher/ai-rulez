@@ -105,9 +105,10 @@ func Build(cfg *config.Config, counter tokens.Counter) *Manifest {
 	return m
 }
 
-// BuildRole resolves one role.
+// BuildRole resolves one role, or a comma-separated composition (the union of
+// the named roles).
 func BuildRole(cfg *config.Config, name string, counter tokens.Counter) (*Role, error) {
-	res, err := cfg.ResolveRole(name)
+	res, err := cfg.ResolveRoles(config.SplitRoleNames(name))
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}

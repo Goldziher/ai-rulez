@@ -12,17 +12,19 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
-// SetRole makes the Generator render the named role instead of a profile. The
-// content tree is narrowed by the role's domains and selectors, and the role's
-// skill_mode entries are rendered as Claude Code skillOverrides through the same
-// merge-by-key ownership as [claude.settings.managed] (only the listed skills are
-// owned, every other key of .claude/settings.json is left alone). For the other
-// harnesses a mode is rendered where the vendor documents an equivalent, and an
-// "off" skill a harness cannot hide follows [role_manifest] skill_mode_fallback
-// (see roles.PlanSkillModes). It is an error to combine a role with a profile;
-// the caller checks that.
-func (g *Generator) SetRole(name string) error {
-	resolved, err := g.config.ResolveRole(name)
+// SetRoles makes the Generator render the composition of the named roles
+// instead of a profile. A composition is the union of what each role grants
+// (see config.ResolveRoles). The content tree is narrowed by the roles' domains
+// and selectors, and their skill_mode entries are rendered as Claude Code
+// skillOverrides through the same merge-by-key ownership as
+// [claude.settings.managed] (only the listed skills are owned, every other key of
+// .claude/settings.json is left alone). For the other harnesses a mode is
+// rendered where the vendor documents an equivalent, and an "off" skill a
+// harness cannot hide follows [role_manifest] skill_mode_fallback (see
+// roles.PlanSkillModes). It is an error to combine a role with a profile; the
+// caller checks that.
+func (g *Generator) SetRoles(names []string) error {
+	resolved, err := g.config.ResolveRoles(names)
 	if err != nil {
 		return oops.Wrap(err)
 	}
@@ -30,6 +32,7 @@ func (g *Generator) SetRole(name string) error {
 	outcomes := roles.PlanSkillModes(g.config, resolved)
 	flat = applyModeFallback(flat, outcomes)
 	g.role = flat
+	g.roleOverrides = resolved.SkillOverrides
 	// Work on a copy of the config so one Config can serve several roles in turn
 	// (tokens --by-role) without the delivery or overrides of one leaking into
 	// the next. Skills the role serves are left out of the static trees and
@@ -39,8 +42,17 @@ func (g *Generator) SetRole(name string) error {
 	cp.Content = withSkillKeys(cp.Content, outcomes)
 	g.config = &cp
 	g.applyRoleSkillOverrides(resolved, outcomes)
-	g.warnRoleSkillModeHarnesses(name, outcomes)
+	g.warnRoleSkillModeHarnesses(resolved.Name, outcomes)
 	return nil
+}
+
+// SetRole renders the role or comma-separated composition named in value.
+func (g *Generator) SetRole(name string) error {
+	names := config.SplitRoleNames(name)
+	if len(names) == 0 {
+		return nil
+	}
+	return g.SetRoles(names)
 }
 
 // Role returns the name of the role being rendered, or "".

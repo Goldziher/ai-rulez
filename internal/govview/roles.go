@@ -18,9 +18,10 @@ type RoleResolution struct {
 }
 
 // ModeOutcomes is what each skill_mode of the role comes to on the configured
-// harnesses (see roles.PlanSkillModes).
+// harnesses (see roles.PlanSkillModes). name may be a comma-separated
+// composition.
 func ModeOutcomes(cfg *config.Config, name string) ([]roles.SkillOutcome, error) {
-	res, err := cfg.ResolveRole(name)
+	res, err := cfg.ResolveRoles(config.SplitRoleNames(name))
 	if err != nil {
 		return nil, oops.Wrap(err)
 	}

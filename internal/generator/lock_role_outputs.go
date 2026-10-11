@@ -19,16 +19,21 @@ func LockRoleOutputs(cfg *config.Config, role string) ([]contentlock.Output, err
 	return LockRoleOutputsContext(context.Background(), cfg, role)
 }
 
-// LockRoleOutputsContext is LockRoleOutputs rendering under ctx.
+// LockRoleOutputsContext is LockRoleOutputs rendering under ctx. role may be a
+// comma-separated composition.
 func LockRoleOutputsContext(ctx context.Context, cfg *config.Config, role string) ([]contentlock.Output, error) {
+	names := config.SplitRoleNames(role)
+	if len(names) == 0 {
+		return nil, oops.With("role", role).Errorf("no role to render")
+	}
 	gen := NewGenerator(cfg)
 	gen.SetContext(ctx)
-	if err := gen.SetRole(role); err != nil {
-		return nil, oops.With("role", role).Wrap(err)
+	if err := gen.SetRoles(names); err != nil {
+		return nil, oops.With("role", config.CanonicalRoleNames(names)).Wrap(err)
 	}
 	outputs, err := gen.lockOutputs("", true)
 	if err != nil {
-		return nil, oops.With("role", role).Wrapf(err, "render the outputs of role %q", role)
+		return nil, oops.With("role", config.CanonicalRoleNames(names)).Wrapf(err, "render the outputs of role %q", role)
 	}
 	return outputs, nil
 }

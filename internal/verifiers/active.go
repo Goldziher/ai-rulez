@@ -24,11 +24,11 @@ func activeContent(cfg *config.Config, profile, role string) (activeSet, error) 
 		return activeSet{}, nil
 	}
 	if role != "" {
-		flat, err := cfg.FlattenRole(role)
+		resolved, err := cfg.ResolveRole(role)
 		if err != nil {
 			return activeSet{}, oops.Wrap(err)
 		}
-		tree, err := cfg.FilterTreeForRole(cfg.Content, &flat.RoleConfig)
+		tree, err := cfg.FilterTreeForRole(cfg.Content, resolved.Flat())
 		if err != nil {
 			return activeSet{}, oops.Wrap(err)
 		}
