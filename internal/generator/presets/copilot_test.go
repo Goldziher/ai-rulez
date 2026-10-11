@@ -233,6 +233,58 @@ func TestCopilotPresetGenerator_renderMCPJSON_RemoteTransports(t *testing.T) {
 	assert.NotContains(t, sseServer, "transport")
 }
 
+func TestCopilotPresetGenerator_renderMCPJSON_OAuth(t *testing.T) {
+	tests := []struct {
+		name      string
+		server    *config.MCPServer
+		wantOAuth bool
+	}{
+		{
+			name: "an http server with an oauth block renders the camelCase client",
+			server: &config.MCPServer{
+				Transport: "http",
+				URL:       "https://mcp.slack.com/mcp",
+				OAuth:     &config.MCPOAuth{ClientID: "cid", CallbackPort: 8080, Scopes: []string{"channels:read"}},
+			},
+			wantOAuth: true,
+		},
+		{
+			name:      "an sse server with an oauth block renders it",
+			server:    &config.MCPServer{Transport: "sse", URL: "https://example.com/sse", OAuth: &config.MCPOAuth{ClientID: "cid"}},
+			wantOAuth: true,
+		},
+		{
+			name:      "a remote server without an oauth block omits it",
+			server:    &config.MCPServer{Transport: "http", URL: "https://example.com/mcp"},
+			wantOAuth: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := &config.Config{MCPServers: map[string]*config.MCPServer{"srv": tt.server}}
+
+			// Act
+			rendered, err := (&CopilotPresetGenerator{}).renderMCPJSON("", cfg)
+			require.NoError(t, err)
+
+			// Assert
+			var parsed map[string]interface{}
+			require.NoError(t, json.Unmarshal([]byte(rendered.Body), &parsed))
+			entry := parsed["mcpServers"].(map[string]interface{})["srv"].(map[string]interface{})
+			if !tt.wantOAuth {
+				assert.NotContains(t, entry, "oauth")
+				return
+			}
+			oauth, ok := entry["oauth"].(map[string]interface{})
+			require.True(t, ok, "the oauth block is rendered on a remote transport")
+			assert.Equal(t, tt.server.OAuth.ClientID, oauth["clientId"])
+			assert.NotContains(t, entry, "command")
+		})
+	}
+}
+
 func copilotRuleFixture(name, body string, md *config.Metadata) config.ContentFile {
 	return config.ContentFile{Name: name, Content: body, Path: "/test/.ai-rulez/rules/" + name + ".md", Metadata: md}
 }
