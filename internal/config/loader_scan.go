@@ -178,7 +178,9 @@ func (s *contentScanner) markdownFiles(dir string) ([]ContentFile, error) {
 		}
 		contentFile, err := s.loadFile(filePath)
 		if err != nil {
-			// Log warning but continue (non-fatal)
+			// Non-fatal: one unreadable file must not fail the whole load, but dropping
+			// it without a diagnostic makes it indistinguishable from a missing one.
+			s.logger().Warn("failed to load content file", "path", filePath, "error", err)
 			continue
 		}
 
@@ -214,7 +216,9 @@ func (s *contentScanner) skills(skillsDir string, bundleExclude []string) ([]Con
 
 		contentFile, err := s.loadFile(skillPath)
 		if err != nil {
-			// Log warning but continue (non-fatal)
+			// Non-fatal: one unreadable file must not fail the whole load, but dropping
+			// it without a diagnostic makes it indistinguishable from a missing one.
+			s.logger().Warn("failed to load skill file", "path", skillPath, "error", err)
 			continue
 		}
 
@@ -345,7 +349,9 @@ func (s *contentScanner) agents(agentsPath string) ([]ContentFile, error) {
 		}
 		contentFile, err := s.loadFile(filePath)
 		if err != nil {
-			// Log warning but continue (non-fatal)
+			// Non-fatal: one unreadable file must not fail the whole load, but dropping
+			// it without a diagnostic makes it indistinguishable from a missing one.
+			s.logger().Warn("failed to load agent file", "path", filePath, "error", err)
 			continue
 		}
 
