@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
+	"github.com/Goldziher/ai-rulez/v5/internal/walkutil"
 )
 
 // DriftKind says how a generated file differs from what the sources render.
@@ -210,9 +211,10 @@ func (g *Generator) resetRunState() {
 // orphan check (#313, #333): on a fresh checkout or in CI there is no previous
 // manifest, so a file left behind by a removed source (an agent whose source was
 // deleted, a builtin pack excluded) would otherwise pass `generate --check`. It
-// walks the top-level directories the plan writes into (never the whole source
-// tree) and reads only each candidate's header. generate removes what it lists
-// (retiredFiles); --check reports it as an orphan.
+// walks the top-level directories the plan writes into and, below them, the rest
+// of the project tree (never the whole source tree blindly: the recursive
+// discovery's prune list bounds it), and reads only each candidate's header.
+// generate removes what it lists (retiredFiles); --check reports it as an orphan.
 func (g *Generator) orphanGeneratedFiles(outputs []config.OutputFile) []string {
 	planned, roots, rootLevel := g.plannedOutputIndex(outputs)
 	seen := make(map[string]bool)
@@ -237,8 +239,57 @@ func (g *Generator) orphanGeneratedFiles(outputs []config.OutputFile) []string {
 	for root := range roots {
 		g.considerRootTree(root, consider)
 	}
+	// An entire nested root can be removed (#345): its generated files then sit
+	// in a directory no current root's presets write into, so the output-root
+	// walk above never visits them. Walk the rest of the project tree for them.
+	g.considerStrayTree(roots, consider)
 	sort.Strings(orphans)
 	return orphans
+}
+
+// considerStrayTree walks the project tree below the project root for generated
+// files no output root of this plan covers (#345): after an entire nested root is
+// removed its generated files (a CLAUDE.md, a .claude/rules/*.md) sit in a
+// directory no current root emits, so the output-root walk never visits them and
+// `--recursive` would call the tree up to date.
+//
+// The walk is bounded by the recursive discovery's prune list (walkutil.SkipDirs)
+// and stops at two places: this root's own config directory, whose sources are
+// never generated files, and every nested current root (a directory holding a
+// config file), whose own run owns its generated files — so a file a current root
+// still emits, such as a shared AGENTS.md, is never reported here. A top-level
+// output root (already walked by considerRootTree) is skipped too.
+func (g *Generator) considerStrayTree(roots map[string]bool, consider func(string)) {
+	base := filepath.Clean(g.config.BaseDir)
+	configDir := filepath.Clean(g.config.ConfigDir)
+	_ = filepath.WalkDir(base, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !d.IsDir() {
+			// Root-level files are handled by considerRootFiles, under its own gate.
+			if filepath.Dir(p) != base {
+				consider(p)
+			}
+			return nil
+		}
+		if p == base {
+			return nil
+		}
+		switch {
+		case skipOrphanWalk(d.Name()):
+			return filepath.SkipDir
+		case g.config.ConfigDir != "" && filepath.Clean(p) == configDir:
+			return filepath.SkipDir
+		case config.ResolveConfigDirName(p) != "":
+			// A nested current root: its own run reports and removes its files.
+			return filepath.SkipDir
+		case roots[g.relSlash(p)]:
+			// A top-level output root, already walked by considerRootTree.
+			return filepath.SkipDir
+		}
+		return nil
+	})
 }
 
 // plannedOutputIndex maps each output's project path, the top-level directories
@@ -324,14 +375,14 @@ func (g *Generator) considerRootTree(root string, consider func(string)) {
 	})
 }
 
-// skipOrphanWalk names the directories an orphan walk never descends into: VCS
-// and dependency trees that hold no ai-rulez output.
+// skipOrphanWalk names the directories an orphan walk never descends into: the
+// same dependency, build and VCS trees the recursive discovery prunes
+// (walkutil.SkipDirs). It deliberately does not use walkutil.ShouldSkipDir: that
+// also skips hidden directories, and generated outputs live in hidden ones
+// (.claude, .cursor, .agents).
 func skipOrphanWalk(name string) bool {
-	switch name {
-	case ".git", "node_modules", "vendor":
-		return true
-	}
-	return false
+	_, skip := walkutil.SkipDirs[name]
+	return skip
 }
 
 // declaresRootLevelOutput reports whether any configured preset declares an
