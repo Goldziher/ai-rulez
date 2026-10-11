@@ -69,7 +69,7 @@ each row, and is the source of truth for test status.
 ## Quick start
 
 ```bash
-npx ai-rulez@latest init                 # author: scaffold .ai-rulez/ with config.toml
+pnpm dlx ai-rulez@latest init                 # author: scaffold .ai-rulez/ with config.toml
 ```
 
 ```toml
@@ -78,10 +78,10 @@ presets = ["claude", "cursor", "codex", "copilot", "gemini"]   # any of the 52 h
 ```
 
 ```bash
-npx ai-rulez@latest generate             # generate: write native files for each preset
-npx ai-rulez@latest validate --strict    # validate: content and security checks, warnings fail
-npx ai-rulez@latest lock                 # govern: pin includes, skills and authored content in ai-rulez.lock
-npx ai-rulez@latest export okf           # bundle: an OKF bundle of your knowledge in docs/okf
+pnpm dlx ai-rulez@latest generate             # generate: write native files for each preset
+pnpm dlx ai-rulez@latest validate --strict    # validate: content and security checks, warnings fail
+pnpm dlx ai-rulez@latest lock                 # govern: pin includes, skills and authored content in ai-rulez.lock
+pnpm dlx ai-rulez@latest export okf           # bundle: an OKF bundle of your knowledge in docs/okf
 ```
 
 Day-to-day:
@@ -151,7 +151,7 @@ Existing project on 4.x? Run `ai-rulez migrate v5 --dry-run`, then see [Migratin
 
 ## Installation
 
-No install needed — `npx ai-rulez@latest <command>` works out of the box. Pick a permanent option below:
+No install needed — `pnpm dlx ai-rulez@latest <command>` works out of the box. Pick a permanent option below:
 
 <details>
 <summary><strong>Homebrew (macOS / Linux)</strong></summary>
@@ -163,10 +163,10 @@ brew install goldziher/tap/ai-rulez
 </details>
 
 <details>
-<summary><strong>npx (no install)</strong></summary>
+<summary><strong>pnpm dlx (no install)</strong></summary>
 
 ```bash
-npx ai-rulez@latest <command>
+pnpm dlx ai-rulez@latest <command>
 ```
 
 </details>
@@ -175,7 +175,7 @@ npx ai-rulez@latest <command>
 <summary><strong>npm (global)</strong></summary>
 
 ```bash
-npm install -g ai-rulez
+pnpm add -g ai-rulez
 ```
 
 </details>
