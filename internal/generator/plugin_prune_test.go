@@ -127,6 +127,43 @@ func TestVerifyPlugin_FailsOnObsoleteGeneratedFile(t *testing.T) {
 	assert.Contains(t, err.Error(), "skills/core-s/SKILL.md")
 }
 
+func TestVerifyPlugin_FailsOnKeptObsoleteFileAfterGeneration(t *testing.T) {
+	// Arrange
+	dir, _ := pruneProject(t)
+	edited := filepath.Join(dir, "skills", "core-s", "SKILL.md")
+	require.NoError(t, os.WriteFile(edited, []byte("hand edited\n"), 0o600))
+	removeCoreSkill(t, dir)
+
+	// Act
+	beforeGeneration := loadDomainsProject(t, dir).VerifyPlugin("")
+	require.NoError(t, loadDomainsProject(t, dir).GeneratePlugin(""))
+	afterGeneration := loadDomainsProject(t, dir).VerifyPlugin("")
+
+	// Assert
+	require.Error(t, beforeGeneration)
+	require.FileExists(t, edited, "an edited generated file is never deleted")
+	require.Error(t, afterGeneration, "regeneration must keep reporting the kept obsolete file")
+	assert.Contains(t, afterGeneration.Error(), "obsolete generated plugin file")
+	assert.Contains(t, afterGeneration.Error(), "skills/core-s/SKILL.md")
+}
+
+func TestVerifyPlugin_PassesOnceKeptObsoleteFileIsRemoved(t *testing.T) {
+	// Arrange
+	dir, _ := pruneProject(t)
+	edited := filepath.Join(dir, "skills", "core-s", "SKILL.md")
+	require.NoError(t, os.WriteFile(edited, []byte("hand edited\n"), 0o600))
+	removeCoreSkill(t, dir)
+	require.NoError(t, loadDomainsProject(t, dir).GeneratePlugin(""))
+	require.Error(t, loadDomainsProject(t, dir).VerifyPlugin(""))
+
+	// Act
+	require.NoError(t, os.Remove(edited))
+	err := loadDomainsProject(t, dir).VerifyPlugin("")
+
+	// Assert
+	assert.NoError(t, err, "verify passes once the kept obsolete file is gone")
+}
+
 func TestGeneratePlugin_DoesNotPruneThroughSymlinkOutOfProject(t *testing.T) {
 	dir, _ := pruneProject(t)
 	outside := t.TempDir()

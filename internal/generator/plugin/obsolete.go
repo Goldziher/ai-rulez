@@ -17,6 +17,9 @@ type Obsolete struct {
 	Path string
 	// Rel is the bundle-relative, slash-separated path recorded in the sidecar.
 	Rel string
+	// ContentHash is the hash the sidecar recorded when the file was generated,
+	// carried into the retained record so later runs still recognize it.
+	ContentHash string
 	// Edited is true when the file is not exactly what ai-rulez wrote (changed
 	// content, or not a regular file), so it must be kept.
 	Edited bool
@@ -35,8 +38,9 @@ const (
 // ObsoleteFiles lists the files that previousSidecar records and plannedSidecar
 // does not, and that still exist under bundleDir. A file counts as unchanged
 // only when its content, minus the generated header, still hashes to the
-// recorded hash. A file the previous sidecar never listed is never reported.
-// The result is sorted by path.
+// recorded hash. A file the previous sidecar kept (its "obsolete" record) was
+// already edited, so it is always reported as kept. A file the previous sidecar
+// never listed is never reported. The result is sorted by path.
 func ObsoleteFiles(bundleDir string, previousSidecar, plannedSidecar []byte) ([]Obsolete, error) {
 	var previous provenanceDocument
 	if err := unmarshalProvenance(previousSidecar, &previous); err != nil {
@@ -59,37 +63,72 @@ func ObsoleteFiles(bundleDir string, previousSidecar, plannedSidecar []byte) ([]
 		if _, keep := planned.Outputs[rel]; keep {
 			continue
 		}
-		target, err := safeOutputPath(bundleDir, rel)
+		item, err := obsoleteFile(root, bundleDir, rel, recorded, previous.SourceHash, false)
 		if err != nil {
 			return nil, err
 		}
-		cleanRel := filepath.Clean(filepath.FromSlash(rel))
-		info, statErr := root.Lstat(cleanRel)
-		if statErr != nil {
-			if os.IsNotExist(statErr) {
-				continue
-			}
-			// A link on the way that leaves the bundle is an edit, never a candidate.
-			obsolete = append(obsolete, Obsolete{Path: target, Rel: filepath.ToSlash(rel), Edited: true, Why: WhyLinkedParent})
+		if item != nil {
+			obsolete = append(obsolete, *item)
+		}
+	}
+	// A file the previous run kept stays owned and stays kept: it was edited
+	// once, so it is never pruned automatically. Its record also keeps verify
+	// failing until it is reconciled into the sources or deleted by hand.
+	for rel, recorded := range previous.Obsolete {
+		if _, keep := planned.Outputs[rel]; keep {
 			continue
 		}
-		item := Obsolete{Path: target, Rel: filepath.ToSlash(rel), Edited: !info.Mode().IsRegular()}
-		if item.Edited {
-			item.Why = WhyNotRegular
-		} else {
-			body, readErr := readRootFile(root, cleanRel)
-			if readErr != nil {
-				return nil, oops.With("path", target).Wrapf(readErr, "read obsolete plugin file")
-			}
-			body = removeProvenanceHeader(body, target, recorded.ContentHash, previous.SourceHash)
-			if item.Edited = hashBytes(body) != recorded.ContentHash; item.Edited {
-				item.Why = WhyEdited
-			}
+		if _, inOutputs := previous.Outputs[rel]; inOutputs {
+			continue
 		}
-		obsolete = append(obsolete, item)
+		item, err := obsoleteFile(root, bundleDir, rel, recorded, previous.SourceHash, true)
+		if err != nil {
+			return nil, err
+		}
+		if item != nil {
+			obsolete = append(obsolete, *item)
+		}
 	}
 	sort.Slice(obsolete, func(i, j int) bool { return obsolete[i].Rel < obsolete[j].Rel })
 	return obsolete, nil
+}
+
+// obsoleteFile inspects one previously-recorded output. It returns nil when the
+// file is gone. kept marks a file the previous run already kept because it was
+// edited: such a file is always reported Edited so it is never pruned.
+func obsoleteFile(root *os.Root, bundleDir, rel string, recorded provenanceOutput, sourceHash string, kept bool) (*Obsolete, error) {
+	target, err := safeOutputPath(bundleDir, rel)
+	if err != nil {
+		return nil, err
+	}
+	cleanRel := filepath.Clean(filepath.FromSlash(rel))
+	info, statErr := root.Lstat(cleanRel)
+	if statErr != nil {
+		if os.IsNotExist(statErr) {
+			return nil, nil
+		}
+		// A link on the way that leaves the bundle is an edit, never a candidate.
+		item := Obsolete{Path: target, Rel: filepath.ToSlash(rel), ContentHash: recorded.ContentHash, Edited: true, Why: WhyLinkedParent}
+		return &item, nil
+	}
+	item := Obsolete{Path: target, Rel: filepath.ToSlash(rel), ContentHash: recorded.ContentHash, Edited: !info.Mode().IsRegular()}
+	switch {
+	case item.Edited:
+		item.Why = WhyNotRegular
+	case kept:
+		item.Edited = true
+		item.Why = WhyEdited
+	default:
+		body, readErr := readRootFile(root, cleanRel)
+		if readErr != nil {
+			return nil, oops.With("path", target).Wrapf(readErr, "read obsolete plugin file")
+		}
+		body = removeProvenanceHeader(body, target, recorded.ContentHash, sourceHash)
+		if item.Edited = hashBytes(body) != recorded.ContentHash; item.Edited {
+			item.Why = WhyEdited
+		}
+	}
+	return &item, nil
 }
 
 // RemoveObsolete deletes one obsolete file and then every directory it leaves
