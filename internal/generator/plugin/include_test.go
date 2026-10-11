@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -113,6 +114,9 @@ func TestIncludeOutputs(t *testing.T) {
 }
 
 func TestIncludeOutputs_PreservesExecutableBit(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows reports no POSIX executable bit")
+	}
 	root := writeIncludeTree(t, map[string]string{"scripts/mcp-launch.sh": "#!/bin/sh\n"})
 	outputs, err := includeOutputs(includeManifest(root, []string{"scripts/**"}), t.TempDir())
 	require.NoError(t, err)
