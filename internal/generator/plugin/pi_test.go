@@ -48,6 +48,36 @@ func TestGeneratePiPackage(t *testing.T) {
 	require.NoError(t, VerifyProvenance(outDir))
 }
 
+func TestRenderPiPackageManager(t *testing.T) {
+	tests := []struct {
+		name           string
+		packageManager string
+		wantSet        bool
+	}{
+		{name: "unset omits packageManager"},
+		{name: "set emits packageManager", packageManager: "pnpm@9.15.0", wantSet: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			m := &Manifest{Name: "p", Version: "1.0.0", SourceDir: t.TempDir(), PackageManager: tt.packageManager}
+
+			// Act
+			outputs, err := renderPi(m, t.TempDir())
+			require.NoError(t, err)
+
+			// Assert
+			var pkg map[string]any
+			require.NoError(t, json.Unmarshal(outputByPath(t, outputs, "package.json").RawContent, &pkg))
+			if tt.wantSet {
+				assert.Equal(t, tt.packageManager, pkg["packageManager"])
+			} else {
+				assert.NotContains(t, pkg, "packageManager")
+			}
+		})
+	}
+}
+
 func TestGeneratePiAndOpenCodeComposePackage(t *testing.T) {
 	var previous []byte
 	for _, runtimes := range [][]string{{"pi", "opencode"}, {"opencode", "pi"}} {

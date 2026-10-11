@@ -102,6 +102,15 @@ type PluginAuthoring struct {
 	// mcp.json carry the matching $schema.
 	Spec string `yaml:"spec,omitempty" json:"spec,omitempty" toml:"spec,omitempty"`
 
+	// PackageManager is written as packageManager in the OpenCode and Pi root
+	// package.json (for example "pnpm@9.15.0"), so a consumer can pin the
+	// package manager it uses. Empty omits the field.
+	PackageManager string `yaml:"package_manager,omitempty" json:"package_manager,omitempty" toml:"package_manager,omitempty"` //nolint:tagliatelle
+
+	// OpencodeDependency overrides the "@opencode/plugin" dependency version in
+	// the OpenCode root package.json. Empty uses the built-in default.
+	OpencodeDependency string `yaml:"opencode_dependency,omitempty" json:"opencode_dependency,omitempty" toml:"opencode_dependency,omitempty"` //nolint:tagliatelle
+
 	// Runtimes restricts which runtime manifests are emitted. Empty means all
 	// of AllPluginRuntimes.
 	Runtimes []string `yaml:"runtimes,omitempty" json:"runtimes,omitempty" toml:"runtimes,omitempty"`
