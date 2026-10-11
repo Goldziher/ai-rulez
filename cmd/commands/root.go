@@ -2,9 +2,11 @@ package commands
 
 import (
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -33,6 +35,9 @@ includes, dynamic generation, and MCP server integration.`,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		applyLogLevel()
+		if err := applySelectionEnv(cmd); err != nil {
+			return err
+		}
 		return normalizeFormatFlags(cmd)
 	},
 }
@@ -68,6 +73,39 @@ func applyLogLevel() {
 	case viper.GetBool("quiet"):
 		logger.SetLevel(slog.LevelWarn)
 	}
+}
+
+// Environment variables that select the active profile and role when the flag is
+// not given: `AI_RULEZ_PROFILE` and `AI_RULEZ_ROLE`.
+const (
+	envProfile = envPrefix + "_PROFILE"
+	envRole    = envPrefix + "_ROLE"
+)
+
+// applySelectionEnv fills --profile and --role from the environment when the
+// flag was not given, so a wrapper can pin the selection without rewriting the
+// command line. An explicit flag always wins. mcp's --serve-role is the role
+// flag of `mcp --serve-skills`, so AI_RULEZ_ROLE fills it too. A command that
+// does not define the flag is left alone.
+func applySelectionEnv(cmd *cobra.Command) error {
+	for _, selection := range []struct{ flag, env string }{
+		{"profile", envProfile},
+		{"role", envRole},
+		{"serve-role", envRole},
+	} {
+		flag := cmd.Flags().Lookup(selection.flag)
+		if flag == nil || flag.Changed {
+			continue
+		}
+		value := strings.TrimSpace(os.Getenv(selection.env))
+		if value == "" {
+			continue
+		}
+		if err := cmd.Flags().Set(selection.flag, value); err != nil {
+			return oops.Wrapf(err, "set --%s from %s", selection.flag, selection.env)
+		}
+	}
+	return nil
 }
 
 func init() {
