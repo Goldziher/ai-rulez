@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -17,10 +18,14 @@ const (
 
 // setHome points the user-scope lookup at a fresh directory holding the given
 // ~/.claude.json (empty means no file), so a test never reads the real home.
+// os.UserHomeDir reads USERPROFILE on Windows and HOME elsewhere.
 func setHome(t *testing.T, claudeJSON string) {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", home)
+	}
 	if claudeJSON == "" {
 		return
 	}
