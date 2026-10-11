@@ -14,8 +14,9 @@ import (
 
 func deliveryFixture(extraConfig string) map[string]string {
 	return map[string]string{
-		".ai-rulez/config.toml":           baseConfig + extraConfig,
-		".ai-rulez/skills/heavy/SKILL.md": "---\nname: heavy\ndescription: Heavy served skill for big migrations. Use when planning a schema migration.\ndelivery: served\n---\nHEAVY body.\n",
+		".ai-rulez/config.toml":             baseConfig + extraConfig,
+		".ai-rulez/skills/heavy/SKILL.md":   "---\nname: heavy\ndescription: Heavy served skill for big migrations. Use when planning a schema migration.\ndelivery: served\n---\nHEAVY body.\nSee the `sibling` skill for the client.\n",
+		".ai-rulez/skills/sibling/SKILL.md": "---\nname: sibling\ndescription: Served sibling of heavy. Use when a served skill names another served skill.\ndelivery: served\n---\nSIBLING body.\n",
 		".ai-rulez/skills/core/SKILL.md": "---\nname: core\ndescription: Core conventions kept static. Use when writing any code in this repository.\n---\n" +
 			"Before a migration run the `heavy` skill.\n",
 		".ai-rulez/skills/kept/SKILL.md": "---\nname: kept\ndescription: Both kinds of delivery. Use when checking that delivery both is static too.\ndelivery: both\n---\nKept body.\n",
@@ -30,15 +31,41 @@ func TestStrict_ServedSkillReferencedStatically(t *testing.T) {
 	gitAdd(t, root)
 	fs := lintDir(t, root)
 
-	assert.True(t, has(fs, CodeServedReferencedStatically, "skills/core/SKILL.md", 0), "a static skill naming a served skill: %v", fs)
-	assert.True(t, has(fs, CodeServedReferencedStatically, "rules/style.md", 0), "a static rule naming a served skill")
-	assert.False(t, has(fs, CodeServedReferencedStatically, "skills/heavy/SKILL.md", 0), "a served skill's own body is not static")
-	assert.Equal(t, 2, countCode(fs, CodeServedReferencedStatically), "delivery: both is static too, so naming it is fine")
+	assert.True(t, has(fs, CodeServedReferencedStatically, "rules/style.md", 0), "an always-loaded rule naming a served skill: %v", fs)
+	assert.False(t, has(fs, CodeServedReferencedStatically, "skills/core/SKILL.md", 0), "a skill is loaded on demand, so its body is not always-loaded content")
+	assert.False(t, has(fs, CodeServedReferencedStatically, "skills/heavy/SKILL.md", 0), "a served skill naming a served sibling is fine")
+	assert.Equal(t, 1, countCode(fs, CodeServedReferencedStatically), "only the rule fires; delivery: both is static too, so naming it is fine")
 	for _, f := range fs {
 		if f.Code == CodeServedReferencedStatically {
 			assert.Equal(t, SeverityWarning, f.Severity)
+			assert.Contains(t, f.Message, "transitive fix", "the message names the transitive fix: %q", f.Message)
+			assert.Contains(t, f.Message, "delivery: both")
 		}
 	}
+}
+
+// A served domain whose skills name each other must not raise AR990: the whole
+// domain stays served, and only content that is always loaded is reported
+// (#319).
+func TestStrict_ServedSiblingsDoNotFireAR990(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml":                   baseConfig + "\n[domains.api]\ndelivery = \"served\"\n",
+		".ai-rulez/domains/api/skills/a/SKILL.md": "---\nname: a\ndescription: First served skill of the domain. Use when testing a served sibling pair.\n---\nSee the `b` skill.\n",
+		".ai-rulez/domains/api/skills/b/SKILL.md": "---\nname: b\ndescription: Second served skill of the domain. Use when testing a served sibling pair.\n---\nSee the `a` skill.\n",
+	})
+	gitAdd(t, root)
+	fs := lintDir(t, root)
+	assert.False(t, has(fs, CodeServedReferencedStatically, "skills/a/SKILL.md", 0), "a served sibling does not fire: %v", fs)
+	assert.False(t, has(fs, CodeServedReferencedStatically, "skills/b/SKILL.md", 0), "a served sibling does not fire")
+
+	// The same domain's served delivery, named from an always-loaded rule, is
+	// reported and the message names the setting that made the skill served.
+	writeFiles(t, root, map[string]string{".ai-rulez/rules/use.md": "# Use\n\nRun the `a` skill.\n"})
+	gitAdd(t, root)
+	fs = lintDir(t, root)
+	assert.True(t, has(fs, CodeServedReferencedStatically, "rules/use.md", 0), "a rule naming a served skill fires: %v", fs)
+	assert.Contains(t, messages(fs, CodeServedReferencedStatically), `[domains.api] delivery = "served"`, "the message names the transitive source")
 }
 
 func TestStrict_ServedSkillPreloadedByAgent(t *testing.T) {
@@ -49,7 +76,7 @@ func TestStrict_ServedSkillPreloadedByAgent(t *testing.T) {
 	gitAdd(t, root)
 	fs := lintDir(t, root)
 	assert.True(t, has(fs, CodeServedReferencedStatically, "agents/pre.md", 5), "a preloaded served skill is not on disk: %v", fs)
-	assert.Equal(t, 3, countCode(fs, CodeServedReferencedStatically), "the skill, the rule and the agent entry; delivery: both is on disk, so preloading it is fine")
+	assert.Equal(t, 2, countCode(fs, CodeServedReferencedStatically), "the rule and the agent entry; delivery: both is on disk, so preloading it is fine")
 	assert.Zero(t, countCode(fs, CodeFrontmatterSkill))
 }
 

@@ -191,9 +191,9 @@ func registerRuledocsAdded(s *ruleSet) {
 			Good: "Regenerate with `ai-rulez generate`, then `ai-rulez lock`",
 		},
 		CodeServedReferencedStatically: {
-			Why:  "A static item that names a served skill points at a file the harness never gets.",
+			Why:  "Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.",
 			Bad:  "A rule saying \"run the `deploy` skill\", or an agent `skills: [deploy]`, when `deploy` is served",
-			Good: "Tell the agent to call `find_skill`, or make the skill static",
+			Good: "Tell the agent to call `find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree",
 		},
 		CodeDeliveryStubMissing: {
 			Why:  "Without the dynamic-skills stub, the agent of an MCP-capable harness is never told that served skills exist.",

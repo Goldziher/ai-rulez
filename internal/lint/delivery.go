@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -25,7 +26,7 @@ const (
 
 func registerDelivery(s *ruleSet) {
 	s.addRules(
-		RuleInfo{CodeServedReferencedStatically, "served-skill-referenced-statically", SeverityWarning, "a static rule, context or skill names a skill whose delivery is served, which is not in the harness's skill tree"},
+		RuleInfo{CodeServedReferencedStatically, "served-skill-referenced-statically", SeverityWarning, "an always-loaded rule, context, agent or command names a skill whose delivery is served, which is not in the harness's skill tree; a served skill naming a sibling served skill is fine"},
 		RuleInfo{CodeDeliveryStubMissing, "delivery-stub-missing", SeverityError, "skills are served but a harness that can call MCP has no dynamic-skills stub telling the agent to call find_skill"},
 		RuleInfo{CodeDeliveryStaticFallback, "delivery-static-fallback", SeverityWarning, "a harness without MCP support keeps served skills as static files (nothing is dropped)"},
 		RuleInfo{CodeServedNoServer, "served-no-server", SeverityWarning, "skills are served but no [[mcp_servers]] entry runs `ai-rulez mcp --serve-skills`"},
@@ -98,16 +99,23 @@ func (r *runner) checkDeliveryValues() {
 	}
 }
 
-// checkServedReferences warns where static content names a served skill: the
-// harness cannot see that skill in its tree, so the reference points at nothing
-// until the agent calls find_skill.
+// checkServedReferences warns where always-loaded content names a served skill:
+// the harness cannot see that skill in its tree, so the reference points at
+// nothing until the agent calls find_skill.
+//
+// Only rules, context, agents and commands are checked. A skill is loaded on
+// demand, so a served skill that names a sibling served skill is fine: the
+// agent loads it through find_skill and follows the reference there. Reporting
+// that case made every served skill name its neighbours, and silencing it by
+// forcing one skill static made the next one fire until the whole domain was
+// static (#319).
 func (r *runner) checkServedReferences(served map[string]bool) {
 	if len(served) == 0 {
 		return
 	}
 	for i := range r.items {
 		it := &r.items[i]
-		if !it.owned || r.servedSelfOrResource(it, served) {
+		if !it.owned || it.isDoc || !alwaysLoaded(it) {
 			continue
 		}
 		d, ok := r.docs[it.abs]
@@ -120,13 +128,15 @@ func (r *runner) checkServedReferences(served map[string]bool) {
 	}
 }
 
-// servedSelfOrResource reports whether the item is itself served content (or a
-// resource of one), which may refer to other served content.
-func (r *runner) servedSelfOrResource(it *item, served map[string]bool) bool {
-	if it.kind == kindSkill && !it.isDoc && served[strings.ToLower(itemID(kindSkill, it.cf))] {
+// alwaysLoaded reports whether an item's body is loaded whenever the harness
+// runs, as opposed to a skill, which is loaded on demand. AR990 concerns
+// always-loaded content only.
+func alwaysLoaded(it *item) bool {
+	switch it.kind {
+	case kindRule, kindContext, kindAgent, kindCommand:
 		return true
 	}
-	return it.kind == kindSkill && it.isDoc && it.itemDir != "" && r.resourceOfServed(it, served)
+	return false
 }
 
 func (r *runner) checkServedFrontmatter(it *item, d doc, served, reported map[string]bool) {
@@ -140,7 +150,7 @@ func (r *runner) checkServedFrontmatter(it *item, d doc, served, reported map[st
 		}
 		reported[key] = true
 		r.add(CodeServedReferencedStatically, it.abs, d.lineOf(s, 1),
-			"frontmatter skills: preloads %q, which is served and not written to the harness's skill tree. Set delivery: both on it or drop it from skills:", s)
+			"frontmatter skills: preloads %q, which is served (%s) and not written to the harness's skill tree. The transitive fix is to set delivery: both on %s, or drop it from skills:", s, r.servedSkillSource(key), s)
 	}
 }
 
@@ -152,19 +162,41 @@ func (r *runner) checkServedBody(it *item, d doc, served, reported map[string]bo
 			}
 			reported[name] = true
 			r.add(CodeServedReferencedStatically, it.abs, l.No,
-				"%s is served, not written to the harness's skill tree; this static %s refers to it by name. Load it with find_skill/load_skill, or set delivery: both on %s", name, it.kind, name)
+				"%s is served (%s), so it is not in the harness's skill tree; this %s refers to it by name. The transitive fix is to set delivery: both on %s — it stays in the static tree and every reference to it resolves — or change %s. The agent can also load it with find_skill/load_skill.",
+				name, r.servedSkillSource(name), it.kind, name, r.servedSkillSource(name))
 		}
 	}
 }
 
-func (r *runner) resourceOfServed(doc *item, served map[string]bool) bool {
+// servedSkillSource names where a skill's served delivery comes from, so the
+// AR990 message can point at the setting to change rather than only the skill.
+// A value it cannot attribute (a per-role delivery) reads as "the configured
+// delivery".
+func (r *runner) servedSkillSource(name string) string {
+	lower := strings.ToLower(strings.TrimSpace(name))
 	for i := range r.items {
-		o := &r.items[i]
-		if o.kind == kindSkill && !o.isDoc && o.itemDir == doc.itemDir && served[strings.ToLower(itemID(kindSkill, o.cf))] {
-			return true
+		it := &r.items[i]
+		if it.kind != kindSkill || it.isDoc || strings.ToLower(itemID(kindSkill, it.cf)) != lower {
+			continue
 		}
+		if v := strings.TrimSpace(config.SkillDeliveryValue(it.cf)); v != "" {
+			return fmt.Sprintf("delivery: %s in its frontmatter", v)
+		}
+		if it.domain != "" {
+			if dc, ok := r.cfg.DomainSettings[it.domain]; ok {
+				if _, valid := config.ParseDelivery(dc.Delivery); valid {
+					return fmt.Sprintf("[domains.%s] delivery = %q", it.domain, dc.Delivery)
+				}
+			}
+		}
+		if r.cfg.Skills != nil {
+			if _, valid := config.ParseDelivery(r.cfg.Skills.Delivery); valid {
+				return fmt.Sprintf("[skills] delivery = %q", r.cfg.Skills.Delivery)
+			}
+		}
+		break
 	}
-	return false
+	return "the configured delivery"
 }
 
 // referencedNames returns the served skill names a line refers to by the same
