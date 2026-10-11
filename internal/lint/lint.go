@@ -204,6 +204,14 @@ type runner struct {
 	fmMCPDone bool
 	// scanTexts memoizes the split text of each file (see scanTextOf).
 	scanTexts map[string]cachedScanText
+	// fileCache memoizes the raw text of each file read once per run (see
+	// fileContent), so the item loop, the imported scan and the parallel scan
+	// pre-pass read the same file once instead of once per caller.
+	fileCache map[string]cachedFile
+	// scanResults holds the per-file security scan precomputed by the parallel
+	// pre-pass (see prefetchScans); securityScan replays it instead of scanning
+	// the text again. Nil outside a run that prefetched.
+	scanResults map[scanKey]*scanOutcome
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -232,6 +240,10 @@ type Options struct {
 	// NeedDeps keeps the checks that build the reference graph running although
 	// their analyzer is not selected: changed-only reporting (--since) needs it.
 	NeedDeps bool
+	// noScanPrefetch disables the parallel per-file scan pre-pass. It is
+	// unexported and set only by tests, which compare the parallel and
+	// sequential scan paths.
+	noScanPrefetch bool
 }
 
 // PluginDrift describes a generated plugin whose content changed against the
@@ -328,6 +340,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.resolveSettings()
 	r.selectAnalyzers(so)
 	r.collect()
+	r.prefetchScans()
 	for i := range r.items {
 		if r.items[i].owned {
 			r.checkItem(&r.items[i])

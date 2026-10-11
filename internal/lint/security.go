@@ -172,7 +172,73 @@ func (r *runner) security() config.LintSecurity {
 
 // securityScan applies the security rules to one text. abs is the file the
 // findings point into; script marks shell-like content (resources).
+//
+// When the run prefetched the per-file scan (see prefetchScans), the outcome is
+// replayed instead of computed again: the findings and their order are those of
+// the sequential scan, produced once per file on a worker.
 func (r *runner) securityScan(abs, raw string) {
+	if out, ok := r.scanResults[scanKey{abs: abs, forceSev: r.forceSev}]; ok {
+		r.applyScanOutcome(abs, out)
+		return
+	}
+	r.securityScanDirect(abs, raw)
+}
+
+// applyScanOutcome replays a precomputed scan: it appends the findings where the
+// scan would have produced them and merges the per-file state the run reuses
+// afterwards (the split text, example regions, suppression attempts).
+func (r *runner) applyScanOutcome(abs string, out *scanOutcome) {
+	if _, ok := r.docs[abs]; !ok {
+		r.docs[abs] = out.doc
+	}
+	if out.st != nil {
+		if _, ok := r.scanTexts[abs]; !ok {
+			if r.scanTexts == nil {
+				r.scanTexts = map[string]cachedScanText{}
+			}
+			r.scanTexts[abs] = cachedScanText{raw: out.st.raw, t: out.st}
+		}
+	}
+	if out.example != nil {
+		if _, ok := r.exampleCache[abs]; !ok {
+			if r.exampleCache == nil {
+				r.exampleCache = map[string]map[int]bool{}
+			}
+			r.exampleCache[abs] = out.example
+		}
+	}
+	for route, codes := range out.attempts {
+		if r.attempts == nil {
+			r.attempts = map[string]map[string]bool{}
+		}
+		if r.attempts[route] == nil {
+			r.attempts[route] = map[string]bool{}
+		}
+		for code := range codes {
+			r.attempts[route][code] = true
+		}
+	}
+	r.findings = append(r.findings, out.findings...)
+	if !r.opts.SecretsOnly {
+		r.recordTextScanUnits()
+	}
+}
+
+// recordTextScanUnits records the text-scan units a replayed scan ran, so the
+// run's unit accounting matches a sequential scan without redoing the work. A
+// SecretsOnly scan never reaches the text scans, so its caller skips this.
+func (r *runner) recordTextScanUnits() {
+	for _, c := range ruleTables().textScans {
+		if !r.selected(c.unit) {
+			continue
+		}
+		r.unit(c.unit, func() {})
+	}
+}
+
+// securityScanDirect is the sequential per-file security scan: it reads the
+// text, applies every security rule and runs the registered text scans.
+func (r *runner) securityScanDirect(abs, raw string) {
 	if _, ok := r.docs[abs]; !ok {
 		r.docs[abs] = parseDoc(raw)
 	}
