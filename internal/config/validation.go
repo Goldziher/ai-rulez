@@ -743,7 +743,7 @@ func (c *Config) warnMissingDomainReferences() {
 	for _, domains := range c.Profiles {
 		for _, domain := range domains {
 			name := negatedDomainName(domain)
-			if name == "" || name == wildcardDomain {
+			if name == "" || name == ProfileDomainWildcard {
 				continue
 			}
 			referencedDomains[builtins.TrimRefPrefix(name)] = true
