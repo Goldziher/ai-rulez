@@ -1,7 +1,6 @@
 package lint
 
 import (
-	"os"
 	"sort"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -42,11 +41,11 @@ func FrontmatterWarnings(cfg *config.Config, tree *Tree, opts ...Option) []Findi
 		if !it.owned || it.isDoc {
 			continue
 		}
-		data, err := os.ReadFile(it.abs)
-		if err != nil {
+		raw, ok := r.fileContent(it.abs)
+		if !ok {
 			continue
 		}
-		d := parseDoc(string(data))
+		d := parseDoc(raw)
 		r.docs[it.abs] = d
 		if it.kind == kindAgent {
 			r.checkFrontmatterKeys(it, parseFrontmatterDoc(d))

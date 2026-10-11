@@ -1,7 +1,6 @@
 package lint
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -21,11 +20,11 @@ var (
 func (r *runner) checkItem(it *item) {
 	raw := it.cf.Content
 	if !it.isDoc {
-		data, err := os.ReadFile(it.abs)
-		if err != nil {
+		data, ok := r.fileContent(it.abs)
+		if !ok {
 			return
 		}
-		raw = string(data)
+		raw = data
 	}
 	d := parseDoc(raw)
 	r.docs[it.abs] = d
