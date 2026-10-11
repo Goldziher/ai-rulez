@@ -19,7 +19,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .agents/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 382 6da4d2e0f160851200b8de3c6d38aba8879f37590d91f6240485a23565c5a62b
-.ai-rulez/.generated-manifest.local.json file 0644 2005 457e62e28f579872311815cecddfba1a16d42d988b4764624638b15db37a6d4e
+.ai-rulez/.generated-manifest.local.json file 0644 2005 a8b0d7f2be7bb9fd7d4b3ee5e983157fb3a832784bc3ce3001c46cc989fab0e0
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
