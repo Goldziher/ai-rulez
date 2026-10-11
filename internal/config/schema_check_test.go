@@ -49,9 +49,13 @@ func TestSchemaFindings(t *testing.T) {
 			want: []string{"config.toml: unknown key \"compression\""},
 		},
 		{
-			name: "a top-level key after a table header is told where it landed",
-			main: "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n[header]\nhashes = \"none\"\nbuiltins = [\"rust\"]\n",
-			want: []string{"config.toml: unknown key \"header.builtins\" (builtins is a top-level key: a key after a [header] line belongs to that table, so move it above the first [table])"},
+			// A swallowed top-level key in the main config is now a load error
+			// (see TestLoadConfig_SwallowedTopLevelKey); the overlay keeps the
+			// schema finding because the overlay is not loaded through decodeConfigTOML.
+			name:  "a top-level key after a table header is told where it landed",
+			main:  "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n",
+			local: "[header]\nhashes = \"none\"\nbuiltins = [\"rust\"]\n",
+			want:  []string{"config.local.toml: unknown key \"header.builtins\" (builtins is a top-level key: a key after a [header] line belongs to that table, so move it above the first [table])"},
 		},
 		{
 			name:  "local overlay is included",
