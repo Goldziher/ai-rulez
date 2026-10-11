@@ -1308,6 +1308,9 @@ claude = "inline"
 - **`rules.mode`**: `split` (the default) writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file, moving only path-scoped rules to the folder.
 - **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
 - **`rules.baz_scoped`**: `nested` (the default) writes the path-scoped rules and context of the `baz` preset to the `AGENTS.md` of the directory their globs point into; `root` keeps them in the root `AGENTS.md`. See [Baz](baz.md).
+- **`rules.baz_default`**: `all` (the default) nests every path-scoped item into the Baz directory files; `none` nests only items whose `targets` select `baz`, leaving the rest in the root `AGENTS.md`.
+- **`rules.baz_dedupe`**: `true` writes an item whose globs point into several sibling directories under one parent once, to that parent's `AGENTS.md`, instead of one copy per directory. Default `false`.
+- **`rules.baz_budget`**: byte budget of the Baz `AGENTS.md` surface (root plus nested); `generate` warns when it is exceeded, naming the largest files. Default `0` (off).
 
 Set `mode = "inline"` to restore the pre-4.22.0 output. Per-tool output, fallbacks and caveats are in [Rules and native rules folders](rules.md).
 

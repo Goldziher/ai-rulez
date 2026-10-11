@@ -9,6 +9,9 @@ presets = ["claude", "baz"]
 
 [rules]
 baz_scoped = "nested"   # nested (default) | root
+baz_default = "all"     # all (default) | none
+baz_dedupe = false      # write a shared parent AGENTS.md when globs share one
+baz_budget = 0          # byte budget of the Baz AGENTS.md surface (0 = off)
 ```
 
 ## What Baz reads
@@ -71,6 +74,24 @@ presets write it, when:
 The root `AGENTS.md` lacks the items that moved, in every preset that writes it, so `codex`, the shared `agents_md` file
 and `baz` stay identical. The scope of a nested file is the whole directory, which can be wider than the glob (the
 `_Applies to:_` line keeps the exact globs for the reader).
+
+## Narrowing, deduping and budgeting the nested surface
+
+One rule with many globs is copied into every directory those globs point into, so a large monorepo can grow a nested
+`AGENTS.md` per service. Three `[rules]` keys keep that surface under control; all three default to today's behaviour.
+
+- **`baz_default = "none"`** nests only items whose frontmatter `targets` select `baz`; an item with no targets is not
+  nested. It stays in the root `AGENTS.md`, which is shared with `codex`, `opencode`, `amp` and `xum` and is read by
+  Baz, so nothing is dropped — it is simply not duplicated into the directory files. The default `"all"` nests every
+  path-scoped item.
+- **`baz_dedupe = true`** writes an item whose globs point into several sibling directories under one parent once, to
+  that parent's `AGENTS.md` (for example `services/AGENTS.md` instead of `services/api/AGENTS.md` and
+  `services/web/AGENTS.md`). It is off by default, so the output is unchanged.
+- **`baz_budget = <bytes>`** makes `generate` warn when the total size of the Baz `AGENTS.md` surface (the root file
+  plus the nested ones) exceeds the budget, naming the largest files and the budget. It is advisory and never fails the
+  run. `0` disables it.
+
+The Claude surface is identical in every mode: only the Baz nested `AGENTS.md` files change.
 
 ## Using it with other presets
 
