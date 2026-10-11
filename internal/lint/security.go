@@ -132,17 +132,29 @@ func isVariationSelector(c rune) bool {
 
 // variationIsLegitimate accepts the one selector that modifies the character
 // before it: after a symbol or a keycap base (emoji presentation), or after a
-// CJK ideograph. A selector after a letter, or one in a run, can carry a payload.
+// CJK ideograph. Four emoji bases are not symbols (see isEmojiBase) and count as
+// well. A selector after any other letter, or one in a run, can carry a payload.
 func variationIsLegitimate(runes []rune, i int) bool {
 	if i == 0 || (i+1 < len(runes) && isVariationSelector(runes[i+1])) || isVariationSelector(runes[i-1]) {
 		return false
 	}
 	prev := runes[i-1]
 	switch {
-	case unicode.IsSymbol(prev), unicode.Is(unicode.Han, prev):
+	case unicode.IsSymbol(prev), unicode.Is(unicode.Han, prev), isEmojiBase(prev):
 		return true
 	case prev == '#' || prev == '*' || (prev >= '0' && prev <= '9'):
 		return i+1 < len(runes) && runes[i+1] == 0x20E3
+	}
+	return false
+}
+
+// isEmojiBase reports whether r is an emoji base that is neither a symbol nor an
+// ideograph: the information source U+2139 (a lowercase letter) and the
+// punctuation emoji U+203C, U+2049, U+3030 and U+303D.
+func isEmojiBase(r rune) bool {
+	switch r {
+	case 0x2139, 0x203C, 0x2049, 0x3030, 0x303D:
+		return true
 	}
 	return false
 }
