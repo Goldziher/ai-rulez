@@ -633,6 +633,11 @@ func (c *Config) validateProfiles() error {
 		}
 	}
 
+	// A profile made only of exclusions ("!name") has nothing to subtract from.
+	if err := c.validateProfileDomainExclusions(); err != nil {
+		return err
+	}
+
 	// A "builtin:<name>" element must name a real builtin pack. A misspelled
 	// reference loads nothing and would otherwise surface only as a vague
 	// missing-domain warning.
@@ -680,6 +685,26 @@ func (c *Config) validateProfiles() error {
 	return nil
 }
 
+// validateProfileDomainExclusions rejects a profile whose domain list is made
+// only of exclusions ("!name"): with no positive entry there is nothing to
+// subtract from, so it would silently select nothing. Profiles are checked in
+// name order so the reported profile is deterministic.
+func (c *Config) validateProfileDomainExclusions() error {
+	names := make([]string, 0, len(c.Profiles))
+	for name := range c.Profiles {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if _, err := ResolveProfileDomains(c.Profiles[name], nil); err != nil {
+			return oops.
+				With("field", fmt.Sprintf("profiles.%s", name)).
+				Wrapf(err, "profile %q is invalid", name)
+		}
+	}
+	return nil
+}
+
 // defaultFromOverlay reports whether the default profile was set by the local
 // overlay, whose values must not be echoed in messages (a mistyped key can hold
 // a secret).
@@ -711,11 +736,17 @@ func (c *Config) warnMissingDomainReferences() {
 	hasIncludes := len(c.Includes) > 0
 
 	// Collect all domain names referenced in profiles. A "builtin:<name>"
-	// reference addresses the builtin's bare domain name in the content tree.
+	// reference addresses the builtin's bare domain name in the content tree,
+	// the "*" wildcard names no domain, and an exclusion ("!name") references the
+	// domain it removes just as a positive entry references the one it adds.
 	referencedDomains := make(map[string]bool)
 	for _, domains := range c.Profiles {
 		for _, domain := range domains {
-			referencedDomains[builtins.TrimRefPrefix(domain)] = true
+			name := negatedDomainName(domain)
+			if name == "" || name == wildcardDomain {
+				continue
+			}
+			referencedDomains[builtins.TrimRefPrefix(name)] = true
 		}
 	}
 
