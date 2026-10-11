@@ -35,13 +35,13 @@ ai-rulez keeps your rules, context, skills, agents and MCP servers in one `.ai-r
 **npm:**
 
 ```bash
-npm install -g ai-rulez
+pnpm add -g ai-rulez
 ```
 
 **Or use without installation:**
 
 ```bash
-npx ai-rulez@latest init "My Project"
+pnpm dlx ai-rulez@latest init "My Project"
 ```
 
 ### Offline / private registry packaging
@@ -66,13 +66,13 @@ download.
 
 ```bash
 # Initialize a new project
-npx ai-rulez@latest init "My Project"
+pnpm dlx ai-rulez@latest init "My Project"
 
 # Add a rule
-npx ai-rulez@latest add rule coding-standards --priority high
+pnpm dlx ai-rulez@latest add rule coding-standards --priority high
 
 # Generate configs for all tools
-npx ai-rulez@latest generate
+pnpm dlx ai-rulez@latest generate
 ```
 
 This creates `CLAUDE.md`, `.cursorrules`, and other native configs from your `.ai-rulez/` directory.
