@@ -60,8 +60,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 2859 854ac11bfa1fbb49e60375c9ab28ce37b4936b85c6a0f5a5c10995a1dade24ff
-.ai-rulez/.generated-manifest.local.json file 0644 19069 b50ff50bfaf9b6d3f4e57b5e6a797998faa9cf152c19c27e991c13a636609c4f
+.ai-rulez/.generated-manifest.json file 0644 3829 adac48313b0a5e1c2b69074fad1c80568729aaebe0044709f786f82504854127
+.ai-rulez/.generated-manifest.local.json file 0644 19320 1d900cedc1ffdf594a41d6709e2216165b4ca4de9eeba6ff1e9213a3e54842ee
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -417,8 +417,8 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=73
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
-~ .ai-rulez/.generated-manifest.json file 0644 2966 3771b0f4604ef7b80bc719bfca03e7870633bfb95435e812af404515ad717d6a
-~ .ai-rulez/.generated-manifest.local.json file 0644 18540 449a94f797216a55bc138d0d13c39e6d2167747872d5b9a46d14b402f61c921c
+~ .ai-rulez/.generated-manifest.json file 0644 3936 2f6a4d684df0867374b30cd4115954450287b6a4bd7791f1ed7e30fcf460a9c5
+~ .ai-rulez/.generated-manifest.local.json file 0644 18791 a51bbc6e3bd938eb5437f4d340ad9d30225534cea586a314a19b883caede5271
 ~ .gitignore file 0644 1355 dab9a0bd97bffaf4e0847a13d4f646fe18f1ad0a3e7031e99fb2b453d4add6ee
 --- home tree
 (no change)
