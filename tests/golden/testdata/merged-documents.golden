@@ -40,8 +40,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1540 658ff1138b90f90ba76c4bb6d8a69a1c83f8ecdbd8ebc3dbbbb0971643d789a5
-.ai-rulez/.generated-manifest.local.json file 0644 7558 e04ccc4a4f6bdad38b7d41fb1d4f91d070b94d0c3f6f935425317503a61a99eb
+.ai-rulez/.generated-manifest.json file 0644 2273 bcc4973cc6a0cd821beb73613abc0d072e7e78b6898f581010f8c5485a036a00
+.ai-rulez/.generated-manifest.local.json file 0644 7558 878146a5b148deab1e2e4b206e1e25d394de2aba88cca667f9c08b28a9e7536b
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -157,8 +157,8 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=27
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
-~ .ai-rulez/.generated-manifest.json file 0644 933 c05d8d99f02ef679a52a230a054bb2a5c6972c0a886010b106f693ec5dde8a82
-~ .ai-rulez/.generated-manifest.local.json file 0644 4283 616a9f08e71bc5c2535e6e2f410da91d70b5f4e73b51e938a48e5aa6777b6444
+~ .ai-rulez/.generated-manifest.json file 0644 1429 0e2fdd9e1b73ee1ed95f0c9c1d203a42bfe7e1be79f8b4fd9bb5f21e7a3a7d85
+~ .ai-rulez/.generated-manifest.local.json file 0644 4283 29dcf3b45c2c851df1e2f360de05c42a554dee94fb5dc0381db694d069eab9a1
 ~ .codex/config.toml file 0644 33 c201fc5d26d46c99e143d7abcbf7bd1f7dc14a6a4aae954ef0b24bb9804cf17b
 ~ .gemini/settings.json file 0644 15 f9cba2c667a252e9deb800964f9f1685ca778865aabd54a46ca61f37b1c70e70
 ~ .gitignore file 0644 463 7e69dd3dcb7ac7f2eb11b1c271708dd72d9d399bede17e6ff69a7bf2f57fa2a3
@@ -250,7 +250,7 @@ WARN  A hand-written rule file has the same name as a generated rule; the genera
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 933 c05d8d99f02ef679a52a230a054bb2a5c6972c0a886010b106f693ec5dde8a82
+.ai-rulez/.generated-manifest.json file 0644 1429 0e2fdd9e1b73ee1ed95f0c9c1d203a42bfe7e1be79f8b4fd9bb5f21e7a3a7d85
 >>>>
 {
   "version": "1",
@@ -279,10 +279,16 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
     ".opencode/skills/reviewer/scripts/run.sh",
     "AGENTS.md",
     "CLAUDE.md"
-  ]
+  ],
+  "assets": {
+    ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+    ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".opencode/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8"
+  }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 4283 616a9f08e71bc5c2535e6e2f410da91d70b5f4e73b51e938a48e5aa6777b6444
+.ai-rulez/.generated-manifest.local.json file 0644 4283 29dcf3b45c2c851df1e2f360de05c42a554dee94fb5dc0381db694d069eab9a1
 >>>>
 {
   "version": "1",
@@ -295,8 +301,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
           "PreToolUse"
         ],
         "elementSums": [
-          "28c4c7e9da0b8c4f225a03db20208ec78f27a82565760bf3b281a8a409ab2f10",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "d61143beef0be0739ba78e8a724d51e6af2240a49bf4e0e7c37c6d5452466f3e"
         ]
       },
       {
@@ -345,7 +351,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
           "mcpServers",
           "ai-rulez"
         ],
-        "sum": "bbdc4e1e95b90dfbb094d476faaf504198014a7fd8c5166787e30f16c80d89bd"
+        "sum": "127dd2e33ca1ccd1a336aa514700574d6c1ed37bdec9b80065eeb9ceec2de203"
       },
       {
         "path": [

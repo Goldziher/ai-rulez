@@ -33,8 +33,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1315 2c45f3ca5db8f84d7e2c10482b0dbaa2dd24d813d9e3111546e26865cb63fa53
-.ai-rulez/.generated-manifest.local.json file 0644 4567 bf511d90541097fb636328320862f04551f1ef80a28ba6056de5aa5da77e1b19
+.ai-rulez/.generated-manifest.json file 0644 1807 20321f2bf146be29210a5390d0ab741272017913a720102b06230d2ce1c82f48
+.ai-rulez/.generated-manifest.local.json file 0644 4567 00d68986bdb2b54aa5837f956306bc2a03025444f54d7325855eec19adfc11a1
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -143,8 +143,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/storybook/SKILL.md file 0644 190 8b196dcd988ed3e4bd99fc6cf307a1bc604cbdd3c9c7e4dd002f9f8e4580e269
 + .agents/skills/storybook/agents/ dir 0755
 + .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
-~ .ai-rulez/.generated-manifest.json file 0644 1478 02e21098dc50c3221b747567c7282e3884a9f90ce2537cad17d8358cb8c7fdb7
-~ .ai-rulez/.generated-manifest.local.json file 0644 4686 e9d1981d185fd5a31def9434005904274122a2ff343822d98c98f3bee2ca751f
+~ .ai-rulez/.generated-manifest.json file 0644 1970 ab7ac8de1abef97e1e1a8b4135d75c3a8acfe45b39fb43f62b0112bc77d6a991
+~ .ai-rulez/.generated-manifest.local.json file 0644 4686 7c72208220846fae8a5250899907268398e2e89554f3210c8b63418b3646366f
 + .claude/rules/react.md file 0644 253 142ac2b5ca11fe90d58acfe3ebdfea8c1385582afd9c15dc702b95f48c77585d
 ~ .claude/settings.json file 0644 1001 7d68f97de7cb92f635f3abc0f6b915b0bc276df3d6172a7776e92c32ba5917b9
 + .claude/skills/storybook/ dir 0755
@@ -169,8 +169,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 --- project tree
 + .agents/skills/deployer/ dir 0755
 + .agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
-~ .ai-rulez/.generated-manifest.json file 0644 1229 9706e46b7315bb5ab6c5becb20d062d6ee2ab3965b57cb57103b977f93e45b92
-~ .ai-rulez/.generated-manifest.local.json file 0644 4292 359eef60f296e962a9c66b0db8477ca9429409a1db129a8da26dffede9d5c056
+~ .ai-rulez/.generated-manifest.json file 0644 1721 d1478ec8f00c2615bc1b7bb1d1051167d24218e5fb3f597069a216fae7181199
+~ .ai-rulez/.generated-manifest.local.json file 0644 4292 cf240ab7744e75cc82e6d6f84f3a0d07ad25fc375b2ca0d73b600f69d9c66898
 ~ .claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
 + .claude/skills/deployer/ dir 0755
 + .claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
@@ -403,8 +403,8 @@ exit: 0
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1229 9706e46b7315bb5ab6c5becb20d062d6ee2ab3965b57cb57103b977f93e45b92
-.ai-rulez/.generated-manifest.local.json file 0644 4292 359eef60f296e962a9c66b0db8477ca9429409a1db129a8da26dffede9d5c056
+.ai-rulez/.generated-manifest.json file 0644 1721 d1478ec8f00c2615bc1b7bb1d1051167d24218e5fb3f597069a216fae7181199
+.ai-rulez/.generated-manifest.local.json file 0644 4292 cf240ab7744e75cc82e6d6f84f3a0d07ad25fc375b2ca0d73b600f69d9c66898
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a

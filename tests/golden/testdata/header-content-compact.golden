@@ -34,8 +34,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1799 43de91aaaf930565ad61b29af752b74dfd1cfccb4ef2f480add3bd77cb5f5b29
-.ai-rulez/.generated-manifest.local.json file 0644 6605 c00968a335159c1135ac71d08914d10fc060b72d9403bd432fc225954c8388f4
+.ai-rulez/.generated-manifest.json file 0644 2291 9c19c6315d4965c0f112beb3001e62a4931a40d0a29c764daffe427fc6bfd520
+.ai-rulez/.generated-manifest.local.json file 0644 6605 00936935e4907d930f908423f8ee3d17d492faf98d6bc1fd72d2ab02de67f0c7
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -231,7 +231,7 @@ policy:
   allow_implicit_invocation: false
 <<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1799 43de91aaaf930565ad61b29af752b74dfd1cfccb4ef2f480add3bd77cb5f5b29
+.ai-rulez/.generated-manifest.json file 0644 2291 9c19c6315d4965c0f112beb3001e62a4931a40d0a29c764daffe427fc6bfd520
 >>>>
 {
   "version": "1",
@@ -290,10 +290,16 @@ policy:
     ".cursor/hooks.json": [],
     ".cursor/mcp.json": [],
     ".mcp.json": []
+  },
+  "assets": {
+    ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
+    ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
+    ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8"
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 6605 c00968a335159c1135ac71d08914d10fc060b72d9403bd432fc225954c8388f4
+.ai-rulez/.generated-manifest.local.json file 0644 6605 00936935e4907d930f908423f8ee3d17d492faf98d6bc1fd72d2ab02de67f0c7
 >>>>
 {
   "version": "1",
@@ -306,8 +312,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "28c4c7e9da0b8c4f225a03db20208ec78f27a82565760bf3b281a8a409ab2f10",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "d61143beef0be0739ba78e8a724d51e6af2240a49bf4e0e7c37c6d5452466f3e"
         ]
       },
       {
@@ -375,8 +381,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "20cc6a9c472613a6d5f95b2df6b82d5bf4ecfee900af384f6869fe7bc36fea38",
-          "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa"
+          "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa",
+          "8aeb6af29a17707461575d2f719987d9d3cfbfa017da5c05157ee2db325ce5fe"
         ]
       },
       {
@@ -434,7 +440,7 @@ policy:
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "cf94b9cd148cc0db29c0753503652e3bd1f2d463be9e73fd9112301fb4afbdb4"
+          "bb2cc69b45745a36dfd33946b8031a56c6ceba497a1fb9cf94c2aa58222b0f9e"
         ]
       },
       {
@@ -469,7 +475,7 @@ policy:
           "mcpServers",
           "ai-rulez"
         ],
-        "sum": "bbdc4e1e95b90dfbb094d476faaf504198014a7fd8c5166787e30f16c80d89bd"
+        "sum": "127dd2e33ca1ccd1a336aa514700574d6c1ed37bdec9b80065eeb9ceec2de203"
       },
       {
         "path": [
@@ -492,20 +498,20 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "88158a4a48aa69ede0170f16efaad6fe82c60e94f135730b89184b14811af651",
+    ".claude/settings.json": "21e1723dfdebfa75a462e33d50e7bbbf7798cfafea52ee10e724764788e5c2e9",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
     ".codex/config.toml": "5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc",
-    ".codex/hooks.json": "9873fc0581b202be2be104c727edc002a1f1447dee19f4ee93eee0b758cfdba9",
+    ".codex/hooks.json": "957afdd2c475ff0b23d77a54aff252b1547de9701c5bf9cfd78d3c145d38fc90",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "26ebce3468ff5c1ce23a68089178c55adc1ead393c61d5a78a87a5f5a7c32101",
+    ".cursor/hooks.json": "1849f271ad8e1dedfe497a3995b827494448d3fd33aa2b73b0c02b4a247abd53",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".mcp.json": "7b2078ca5e5f2bd9896b5b7b6d802ca4bfdf66e6bf52c58b82a204a95b9e4018"
+    ".mcp.json": "133ca13006e2f09f14e6b4b8b812d33c8986a2e1321b551753d90a986d52c4a0"
   }
 }
 <<<<

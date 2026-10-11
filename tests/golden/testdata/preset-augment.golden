@@ -16,8 +16,8 @@ INFO  Generation complete files=16
 WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule typescript
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 684 f7ae6c878f491a1b77be8060a58d3c3f014c5a656e3276ff673702ffc3926333
-.ai-rulez/.generated-manifest.local.json file 0644 2488 a296d80a3bf4c2cee3fbaf414ab8c821557f6ca7843677cd948ddd883cac5ece
+.ai-rulez/.generated-manifest.json file 0644 941 4219f62928ea1fc4b5ab1f9ff2940acecbead7fa143527c2f81108c0129bfa81
+.ai-rulez/.generated-manifest.local.json file 0644 2488 6f3ac1b3b7244926b21dfe6d3a9f59c61a3e03218ea03ae55e98017d140757e7
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
