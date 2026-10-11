@@ -11,10 +11,11 @@ import (
 )
 
 var (
-	// "`name` skill", "`name` agent", "`name` rule": hyphenated names only, since
-	// a bare word in backticks before "skill" is usually prose.
+	// "`name` skill", "`name` agent", "`name` rule": the kind word is singular,
+	// because "`term` skills" is a compound noun ("disable-model-invocation
+	// skills"), not a pointer to a skill named after the backticked term.
 	nameAfterRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile("`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`\\s+(skill|subagent|agent|rule)s?\\b")
+		return regexp.MustCompile("`([a-z][a-z0-9]*(?:-[a-z0-9]+)*)`\\s+(skill|subagent|agent|rule)\\b")
 	})
 	nameBeforeRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile("\\b(skill|subagent|agent)\\s+`([a-z][a-z0-9_-]*)`") })
 	slashRe      = sync.OnceValue(func() *regexp.Regexp {
@@ -23,7 +24,18 @@ var (
 	tickSlashRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^/([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?:\s|$)`) })
 	skillCallRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`\bSkill\(\s*["']?([a-z][a-z0-9-]*)["']?\s*\)`) })
 	subagentRe  = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`\bsubagent_type["']?\s*[:=]\s*["']([a-z][a-z0-9-]*)["']`)
+		return regexp.MustCompile(`\bsubagent_type["']?\s*[:=]\s*["']?([a-z][a-z0-9-]*)`)
+	})
+	// labeledSkillRe matches a labelled, non-backticked pointer such as
+	// "Procedure/reference: skill x": a label separator, the word skill, then
+	// the name. The separator keeps prose like "the skill system" out.
+	labeledSkillRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`[:=]\s*skill\s+([a-z0-9]+(?:-[a-z0-9]+)*)`)
+	})
+	// skillDirRe matches the file-path forms "skills/x" and
+	// ".claude/skills/x/SKILL.md", capturing the skill directory name.
+	skillDirRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`\bskills/([a-z0-9]+(?:-[a-z0-9]+)*)`)
 	})
 	skillRelRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(references|scripts|assets)/`) })
 	extRe      = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^\.[A-Za-z0-9]{1,6}$`) })
@@ -318,61 +330,98 @@ func backtickMatches(text string) [][]int {
 	return backtickRe().FindAllStringSubmatchIndex(text, -1)
 }
 
-// checkNames reads the skill, rule, agent and command names a line mentions.
-// Each pattern runs only on a line holding a literal every one of its matches
-// contains.
-func (r *runner) checkNames(it *item, l bodyLine) {
-	tick := strings.IndexByte(l.Text, '`') >= 0
+// nameRef is a name a prose line mentions and the kind its wording claims it is.
+type nameRef struct {
+	name string
+	kind string
+}
+
+// referenceNames lists the name references a body line makes. It is the single
+// matcher behind AR301 (an unknown reference) and AR990 (a served skill named
+// statically), so the two rules agree on what a reference is. Each pattern runs
+// only on a line holding a literal every one of its matches contains.
+func referenceNames(l bodyLine) []nameRef {
+	var out []nameRef
+	seen := map[nameRef]bool{}
+	add := func(name, kind string) {
+		if name = strings.TrimSpace(name); name == "" {
+			return
+		}
+		ref := nameRef{name: name, kind: kind}
+		if !seen[ref] {
+			seen[ref] = true
+			out = append(out, ref)
+		}
+	}
 	agentWord := strings.Contains(l.Text, "agent") || strings.Contains(l.Text, "skill") // "subagent" holds "agent"
-	if tick && (agentWord || strings.Contains(l.Text, "rule")) {
-		r.checkNamesAfter(it, l)
-	}
-	if tick && agentWord {
-		r.checkNamesBefore(it, l)
-	}
-	if strings.IndexByte(l.Plain, '/') >= 0 && strings.IndexByte(l.Plain, '-') >= 0 {
-		r.checkSlashNames(it, l)
+	if strings.IndexByte(l.Text, '`') >= 0 {
+		if agentWord || strings.Contains(l.Text, "rule") {
+			for _, m := range nameAfterRe().FindAllStringSubmatch(l.Text, -1) {
+				add(m[1], kindForWord(m[2]))
+			}
+		}
+		if agentWord {
+			for _, m := range nameBeforeRe().FindAllStringSubmatch(l.Text, -1) {
+				add(m[2], kindForWord(m[1]))
+			}
+		}
 	}
 	if strings.Contains(l.Text, "Skill(") {
 		for _, m := range skillCallRe().FindAllStringSubmatch(l.Text, -1) {
-			r.requireName(it, l.No, m[1], "skill", r.skills, r.commands)
+			add(m[1], kindSkill)
 		}
 	}
 	if strings.Contains(l.Text, "subagent_type") {
 		for _, m := range subagentRe().FindAllStringSubmatch(l.Text, -1) {
-			r.requireName(it, l.No, m[1], "agent", r.agents)
+			add(m[1], kindAgent)
 		}
+	}
+	if strings.IndexByte(l.Plain, '/') >= 0 && strings.IndexByte(l.Plain, '-') >= 0 {
+		for _, m := range slashRe().FindAllStringSubmatchIndex(l.Plain, -1) {
+			if slashInvocation(l.Plain[:m[2]-1]) {
+				add(l.Plain[m[2]:m[3]], kindCommand)
+			}
+		}
+	}
+	if strings.Contains(l.Text, "skill") {
+		for _, m := range labeledSkillRe().FindAllStringSubmatch(l.Text, -1) {
+			add(m[1], kindSkill)
+		}
+	}
+	if strings.Contains(l.Text, "skills/") {
+		for _, m := range skillDirRe().FindAllStringSubmatch(l.Text, -1) {
+			add(m[1], kindSkill)
+		}
+	}
+	return out
+}
+
+// kindForWord maps a kind word to the content kind it names. "subagent" and
+// "agent" are both agent references.
+func kindForWord(w string) string {
+	switch w {
+	case kindSkill:
+		return kindSkill
+	case kindRule:
+		return kindRule
+	default:
+		return kindAgent
 	}
 }
 
-func (r *runner) checkNamesAfter(it *item, l bodyLine) {
-	for _, m := range nameAfterRe().FindAllStringSubmatch(l.Text, -1) {
-		switch m[2] {
-		case "skill":
-			r.requireName(it, l.No, m[1], "skill", r.skills, r.commands)
-		case "rule":
-			r.requireName(it, l.No, m[1], "rule", r.rules)
+// checkNames reads the skill, rule, agent and command names a line mentions and
+// reports each that no namespace defines.
+func (r *runner) checkNames(it *item, l bodyLine) {
+	for _, ref := range referenceNames(l) {
+		switch ref.kind {
+		case kindSkill:
+			r.requireName(it, l.No, ref.name, kindSkill, r.skills, r.commands)
+		case kindRule:
+			r.requireName(it, l.No, ref.name, kindRule, r.rules)
+		case kindCommand:
+			r.requireName(it, l.No, ref.name, kindCommand, r.commands, r.skills)
 		default:
-			r.requireName(it, l.No, m[1], "agent", r.agents)
+			r.requireName(it, l.No, ref.name, kindAgent, r.agents)
 		}
-	}
-}
-
-func (r *runner) checkNamesBefore(it *item, l bodyLine) {
-	for _, m := range nameBeforeRe().FindAllStringSubmatch(l.Text, -1) {
-		if m[1] == "skill" {
-			r.requireName(it, l.No, m[2], "skill", r.skills, r.commands)
-		} else {
-			r.requireName(it, l.No, m[2], "agent", r.agents)
-		}
-	}
-}
-
-func (r *runner) checkSlashNames(it *item, l bodyLine) {
-	for _, m := range slashRe().FindAllStringSubmatchIndex(l.Plain, -1) {
-		if !slashInvocation(l.Plain[:m[2]-1]) {
-			continue // "GET /user-profile" is a route, not a command
-		}
-		r.requireName(it, l.No, l.Plain[m[2]:m[3]], kindCommand, r.commands, r.skills)
 	}
 }

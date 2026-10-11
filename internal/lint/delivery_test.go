@@ -44,6 +44,40 @@ func TestStrict_ServedSkillReferencedStatically(t *testing.T) {
 	}
 }
 
+// AR990 detects every pointer form AR301 does, plus the file-path forms, so a
+// non-backticked pointer to a served skill is reported (#335).
+func TestStrict_ServedSkillReferencedByPointerForms(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{"backticked name then kind", "Run the `heavy` skill."},
+		{"kind then backticked name", "Run skill `heavy`."},
+		{"skill call", "Run Skill(heavy)."},
+		{"labelled skill pointer", "Procedure/reference: skill heavy"},
+		{"skills directory", "Read skills/heavy for the migration steps."},
+		{"harness skill file", "Edit .claude/skills/heavy/SKILL.md by hand."},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":           baseConfig,
+				".ai-rulez/skills/heavy/SKILL.md": "---\nname: heavy\ndescription: Heavy served skill for big migrations. Use when planning a schema migration.\ndelivery: served\n---\nHEAVY body.\n",
+				".ai-rulez/rules/use.md":          "# Use\n\n" + tt.body + "\n",
+			})
+			gitAdd(t, root)
+
+			// Act
+			fs := lintDir(t, root)
+
+			// Assert
+			assert.True(t, has(fs, CodeServedReferencedStatically, "rules/use.md", 0), "%q must raise AR990:\n%s", tt.body, dump(fs))
+		})
+	}
+}
+
 // A served domain whose skills name each other must not raise AR990: the whole
 // domain stays served, and only content that is always loaded is reported
 // (#319).

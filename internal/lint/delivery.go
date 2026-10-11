@@ -199,36 +199,20 @@ func (r *runner) servedSkillSource(name string) string {
 	return "the configured delivery"
 }
 
-// referencedNames returns the served skill names a line refers to by the same
-// forms the reference check (AR301) understands.
+// referencedNames returns the served skill names a line refers to, using the
+// same matcher as the reference check (AR301) plus the file-path forms
+// (skills/x, .claude/skills/x/SKILL.md). A served skill naming a sibling served
+// skill is not reported: only always-loaded content reaches this function.
 func referencedNames(l bodyLine, served map[string]bool) []string {
 	found := map[string]bool{}
-	for _, m := range nameAfterRe().FindAllStringSubmatch(l.Text, -1) {
-		if m[2] == kindSkill {
-			found[m[1]] = true
+	for _, ref := range referenceNames(l) {
+		if ref.kind == kindSkill && served[strings.ToLower(ref.name)] {
+			found[ref.name] = true
 		}
 	}
-	for _, m := range nameBeforeRe().FindAllStringSubmatch(l.Text, -1) {
-		if m[1] == kindSkill {
-			found[m[2]] = true
-		}
-	}
-	for _, m := range skillCallRe().FindAllStringSubmatch(l.Text, -1) {
-		found[m[1]] = true
-	}
-	for _, m := range slashRe().FindAllStringSubmatchIndex(l.Plain, -1) {
-		if slashInvocation(l.Plain[:m[2]-1]) {
-			found[l.Plain[m[2]:m[3]]] = true
-		}
-	}
-	for _, m := range backtickRe().FindAllStringSubmatch(l.Text, -1) {
-		found[strings.TrimPrefix(strings.TrimSpace(m[1]), "/")] = true
-	}
-	var out []string
+	out := make([]string, 0, len(found))
 	for name := range found {
-		if served[strings.ToLower(name)] {
-			out = append(out, name)
-		}
+		out = append(out, name)
 	}
 	sort.Strings(out)
 	return out
