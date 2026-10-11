@@ -332,10 +332,7 @@ const (
 )
 
 func applyGenerateOverrides(cfg *config.Config) error {
-	if updateGitignore {
-		enabled := true
-		cfg.Gitignore = &enabled
-	}
+	applyGitignoreOverride(cfg)
 	if noSelfMCP {
 		cfg.SetSelfServer(false)
 	}
@@ -350,6 +347,23 @@ func applyGenerateOverrides(cfg *config.Config) error {
 		cfg.MCPEnvFiles = append([]string(nil), mcpEnvFiles...)
 	}
 	return nil
+}
+
+// applyGitignoreOverride turns managed ignores on for --gitignore. On the
+// recursive path it never silently overrides an explicit `gitignore = false`:
+// the flag would otherwise rewrite every root's policy, and those roots commit
+// their outputs on purpose. Such a root is left alone, with a warning naming it.
+func applyGitignoreOverride(cfg *config.Config) {
+	if !updateGitignore {
+		return
+	}
+	if recursive && cfg.Gitignore != nil && !*cfg.Gitignore {
+		logger.Warn("--gitignore does not override this root's explicit gitignore = false; its outputs stay committed",
+			"root", cfg.BaseDir)
+		return
+	}
+	enabled := true
+	cfg.Gitignore = &enabled
 }
 
 func parseMCPEnvOverrides(values []string) (map[string]string, error) {
