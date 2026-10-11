@@ -491,14 +491,16 @@ func (g *CopilotPresetGenerator) renderMCPJSON(mcpPath string, cfg *config.Confi
 
 // renderSharedMCPJSON renders the root .mcp.json in the one shape every writer of
 // that path must agree on (the generator keeps a single copy and rejects
-// divergent content): `disabled` on every entry, `type` for remote transports,
-// the URL, headers and env as configured. It matches the mcp preset's output.
+// divergent content): `disabled` only for a server that is turned off, `type` on
+// every entry (stdio included), the URL, headers and env as configured. It
+// matches the mcp preset's output.
 func renderSharedMCPJSON(mcpPath string, cfg *config.Config) (jsonmerge.Result, error) {
 	mcpServers := make(map[string]interface{})
 
 	for name, server := range cfg.MCPServers {
-		entry := map[string]interface{}{
-			keyDisabled: !server.IsEnabled(),
+		entry := map[string]interface{}{}
+		if !server.IsEnabled() {
+			entry[keyDisabled] = true
 		}
 
 		// Remote transports are keyed on `type` (not `transport`). A stdio entry
@@ -511,6 +513,7 @@ func renderSharedMCPJSON(mcpPath string, cfg *config.Config) (jsonmerge.Result, 
 				entry[keyHeaders] = server.Headers
 			}
 		default:
+			entry["type"] = config.TransportStdio
 			entry[keyCommand] = server.Command
 			if len(server.Args) > 0 {
 				entry["args"] = server.Args

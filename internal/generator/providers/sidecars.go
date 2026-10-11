@@ -197,20 +197,24 @@ func (g *Generator) resolveGlobalEffort(cfg *config.Config) string {
 	return ""
 }
 
-// mcpJSONServerEntries builds the .mcp.json server map. Lifted verbatim from
-// the legacy MCPPresetGenerator.Generate body so the output is byte-identical.
-// `disabled` is emitted unconditionally (true or false), not only when the
-// server is disabled.
+// mcpJSONServerEntries builds the .mcp.json server map. `disabled` is written
+// only for a server that is turned off (it is not a documented Claude Code key
+// for an active server), and every entry carries the same `type` the self-server
+// entry does, so the two shapes match.
 func mcpJSONServerEntries(cfg *config.Config, literal bool) map[string]any {
 	mcpServers := make(map[string]any)
 	if cfg == nil {
 		return mcpServers
 	}
 	for name, server := range cfg.MCPServers {
-		entry := map[string]any{
-			"disabled": !server.IsEnabled(),
+		entry := map[string]any{}
+		if !server.IsEnabled() {
+			entry["disabled"] = true
 		}
 		applyMCPTransport(entry, server)
+		if _, ok := entry["type"]; !ok {
+			entry["type"] = config.TransportStdio
+		}
 		if !literal {
 			presets.ApplySharedMCPJSONRefs(entry, server, cfg)
 		}

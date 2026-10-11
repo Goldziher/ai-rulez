@@ -144,7 +144,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 7787 5396ac94906d2604f167b1ecb3adf085fc7a85ce804b4fcb6d12651ce3cd40a6
+.ai-rulez/.generated-manifest.local.json file 0644 7787 e11f05d3974c5e5212d852663d17d8e71fc3f1c8bdb74d26006d198ee57915b2
 >>>>
 {
   "version": "1",
@@ -306,14 +306,14 @@ echo review
           "mcpServers",
           "local-tool"
         ],
-        "sum": "5941345de4e3c3620e53febdc7c79be7161fa71bad6e5b2b73a9d3f1d346c7d0"
+        "sum": "0bcc35d5b1f17b0b11337107e218a0f74ac5995e178ac8b6985da18b8efd7b31"
       },
       {
         "path": [
           "mcpServers",
           "remote-tool"
         ],
-        "sum": "890460c2ae0a11f748037106fd4b6f3fc38f77abf1683795a17464ade804ae26"
+        "sum": "db8e864e4a772fdfea9095c33c06f85535e013cb42db5c8e262f9a31ef335221"
       }
     ],
     ".vscode/mcp.json": [
@@ -390,7 +390,7 @@ echo review
     ".junie/mcp/mcp.json": "aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b",
     ".junie/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".junie/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".mcp.json": "05d20c542efe76616e4be5bb5869aa40aadd016cf1462872020b606933af092c",
+    ".mcp.json": "7b2078ca5e5f2bd9896b5b7b6d802ca4bfdf66e6bf52c58b82a204a95b9e4018",
     ".vscode/mcp.json": "c649641c79d5652f3c538b3d63df468be8ca6db59ee8a5ce44b2b6ab9c2979c7",
     ".vscode/settings.json": "3647325bdf3196d9329bd5e2ad02dff938123e173119519e68920148bf703703"
   }
@@ -1368,7 +1368,7 @@ This skill bundles supporting files. Read them on demand when the task calls for
 #!/bin/sh
 echo review
 <<<<
-.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
+.mcp.json file 0644 545 c89732ccf50547d490d916ff62233d8a37ff26c0ab68c517c7b79802ec586162
 >>>>
 {
   "mcpServers": {
@@ -1387,13 +1387,12 @@ echo review
         "golden-mcp"
       ],
       "command": "npx",
-      "disabled": false,
       "env": {
         "API_TOKEN": "${GOLDEN_TOKEN}"
-      }
+      },
+      "type": "stdio"
     },
     "remote-tool": {
-      "disabled": false,
       "headers": {
         "Authorization": "Bearer ${GOLDEN_TOKEN}"
       },
