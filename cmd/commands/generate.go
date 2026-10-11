@@ -15,7 +15,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
-	"github.com/Goldziher/ai-rulez/v5/internal/progress"
 	"github.com/Goldziher/ai-rulez/v5/internal/render"
 )
 
@@ -86,7 +85,7 @@ func init() {
 }
 
 func runGenerate(cmd *cobra.Command, _ []string) error {
-	progress.SetQuiet(viper.GetBool("quiet") || outFor(cmd).JSON())
+	applyProgressMode(viper.GetBool("quiet") || outFor(cmd).JSON())
 
 	// The lock policy of every load this run makes (before any config loading).
 	applyLockFlags()

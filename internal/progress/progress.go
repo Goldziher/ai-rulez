@@ -10,21 +10,43 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-var (
-	quiet bool
-	mu    sync.RWMutex
-)
+// ui is the run's progress state. The CLI layer owns the terminal and
+// environment decision and sets it once; the constructors read it. quiet and
+// interactive are separate because a non-interactive run still prints the
+// informational lines that go through PrintIfNotQuiet and PrintlnIfNotQuiet.
+var ui struct {
+	mu          sync.RWMutex
+	quiet       bool
+	interactive bool
+}
 
 func SetQuiet(q bool) {
-	mu.Lock()
-	defer mu.Unlock()
-	quiet = q
+	ui.mu.Lock()
+	defer ui.mu.Unlock()
+	ui.quiet = q
 }
 
 func IsQuiet() bool {
-	mu.RLock()
-	defer mu.RUnlock()
-	return quiet
+	ui.mu.RLock()
+	defer ui.mu.RUnlock()
+	return ui.quiet
+}
+
+// SetInteractive records whether the animated progress bars and spinners may
+// draw. The CLI calls it once with its terminal and NO_COLOR decision; an
+// embedded run leaves it off, so no frames are written into a captured stream.
+func SetInteractive(v bool) {
+	ui.mu.Lock()
+	defer ui.mu.Unlock()
+	ui.interactive = v
+}
+
+// interactive reports whether the animated UI may draw: the CLI said the stream
+// is a terminal and the user did not ask for quiet.
+func interactive() bool {
+	ui.mu.RLock()
+	defer ui.mu.RUnlock()
+	return ui.interactive && !ui.quiet
 }
 
 type Bar struct {
@@ -59,7 +81,7 @@ func createQuietBar(description string) *Bar {
 }
 
 func New(maximum int, description string) *Bar {
-	if IsQuiet() {
+	if !interactive() {
 		return createQuietBar(description)
 	}
 
@@ -78,7 +100,7 @@ func New(maximum int, description string) *Bar {
 }
 
 func NewBytes(maxBytes int64, description string) *Bar {
-	if IsQuiet() {
+	if !interactive() {
 		return createQuietBar(description)
 	}
 
@@ -100,7 +122,7 @@ func NewBytes(maxBytes int64, description string) *Bar {
 }
 
 func NewSpinner(description string) *Bar {
-	if IsQuiet() {
+	if !interactive() {
 		return createQuietBar(description)
 	}
 
@@ -179,7 +201,7 @@ func (b *Bar) Write(p []byte) (n int, err error) {
 }
 
 func NewReader(reader io.Reader, size int64, description string) io.Reader {
-	if IsQuiet() {
+	if !interactive() {
 		return reader
 	}
 
@@ -188,7 +210,7 @@ func NewReader(reader io.Reader, size int64, description string) io.Reader {
 }
 
 func NewWriter(writer io.Writer, size int64, description string) io.Writer {
-	if IsQuiet() {
+	if !interactive() {
 		return writer
 	}
 
@@ -247,9 +269,9 @@ func (fc *FileCounter) FinishFile() {
 func (fc *FileCounter) Finish() {
 	//nolint:errcheck // Progress bar errors are non-critical
 	_ = fc.bar.Finish()
-	if !fc.bar.quiet {
-		PrintlnIfNotQuiet(fmt.Sprintf("✅ Processed %d file(s)", fc.total))
-	}
+	// The summary line is not part of the animated UI: it prints even when the
+	// bars are suppressed for a non-terminal stream.
+	PrintlnIfNotQuiet(fmt.Sprintf("✅ Processed %d file(s)", fc.total))
 }
 
 func (fc *FileCounter) Error(err error) {
