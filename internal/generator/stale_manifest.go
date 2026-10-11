@@ -78,6 +78,7 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	g.keepForRole(previous, next)
 
 	digests := g.manifestDigestSet()
+	assets := g.manifestAssetSet()
 	var matcher *outputMatcher
 	matcherFor := func() *outputMatcher {
 		if matcher == nil {
@@ -91,7 +92,7 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 			continue
 		}
 		absPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(relPath))
-		switch g.staleVerdictFor(relPath, absPath, digests, matcherFor) {
+		switch g.staleVerdictFor(relPath, absPath, digests, assets, matcherFor) {
 		case staleRemove:
 			stale = append(stale, absPath)
 		case staleUnknown:
@@ -142,7 +143,7 @@ const (
 
 // staleVerdictFor decides what to do with the manifest entry relPath at absPath.
 // matcherFor returns the output matcher, built on first use.
-func (g *Generator) staleVerdictFor(relPath, absPath string, digests map[string]string, matcherFor func() *outputMatcher) staleVerdict {
+func (g *Generator) staleVerdictFor(relPath, absPath string, digests, assets map[string]string, matcherFor func() *outputMatcher) staleVerdict {
 	if !g.withinScope(absPath) {
 		g.log().Warn("Skipping generated manifest path outside project", "path", relPath)
 		return staleKeep
@@ -160,7 +161,14 @@ func (g *Generator) staleVerdictFor(relPath, absPath string, digests map[string]
 	if !g.userMode && !matcherFor().matches(relPath) {
 		return staleUnknown
 	}
-	if !g.provablyGenerated(relPath, absPath, digests) {
+	// A bundled asset carries no Content-Hash (a header would corrupt a script
+	// or a binary), so its own bytes cannot prove it and a fresh clone has no
+	// local digest for it. The manifest records the asset's digest when it is
+	// written; recordedAsset accepts that record only for a path under a
+	// generated skills directory and only when the file still matches. This is
+	// the manifest-based half of asset tracking (#328); with no manifest at all
+	// the entry is not seen and a header-less asset is left alone.
+	if !g.provablyGenerated(relPath, absPath, digests) && !g.recordedAsset(relPath, absPath, assets) {
 		return staleUnverified
 	}
 	// A rules folder is shared with hand-written rules: delete only a file that
@@ -170,6 +178,21 @@ func (g *Generator) staleVerdictFor(relPath, absPath string, digests map[string]
 		return staleKeep
 	}
 	return staleRemove
+}
+
+// isBundledAssetPath reports whether rel names a file under a generated skills
+// directory. That is the only place ai-rulez copies a source file verbatim as a
+// header-less asset (<skills dir>/<id>/scripts|references|assets/...), so the
+// manifest's asset digest for such a path is what proves the leftover is
+// ai-rulez's (#328). The segment check keeps a forged manifest entry from
+// reaching a file outside a skills tree.
+func isBundledAssetPath(rel string) bool {
+	for _, segment := range strings.Split(filepath.ToSlash(rel), "/") {
+		if segment == skillsDirName {
+			return true
+		}
+	}
+	return false
 }
 
 // warnStaleKept explains the stale entries that were left in place. An upgrade

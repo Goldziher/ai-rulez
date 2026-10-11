@@ -176,14 +176,16 @@ func (g *Generator) previousManifestFiles() []string {
 func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 	committedMerged, localMerged := g.splitMergedClaims(outputs)
 	shared, local := g.manifestEntries(outputs)
+	sharedAssets, localAssets := g.manifestAssets(outputs)
 	if g.plan != nil {
 		// The committed manifest describes the shared baseline, not this machine.
 		shared = g.plan.sharedManifestFiles(g.skippedPaths)
+		sharedAssets = restrictAssetsToFiles(sharedAssets, shared)
 	}
 	defer func() { g.manifests = nil }()
 	// Digests, like claims, are proof only when this machine recorded them: they go
 	// to the machine-local manifest, never the committed one.
-	if err := g.writeManifest(g.manifestPath(), shared, committedMerged, nil); err != nil {
+	if err := g.writeManifest(g.manifestPath(), shared, committedMerged, nil, sharedAssets); err != nil {
 		return err
 	}
 	digests := g.manifestDigests(g.config.BaseDir, append(slices.Clone(shared), local...))
@@ -191,12 +193,12 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 	if g.localSkipped {
 		// Local files were deliberately not loaded: their manifest is not ours to
 		// drop. This run only adds what it rendered; the rest of the record stays.
-		return g.updateLocalManifest(localMerged, digests)
+		return g.updateLocalManifest(localMerged, digests, localAssets)
 	}
-	if len(local) == 0 && len(localMerged) == 0 && len(digests) == 0 {
+	if len(local) == 0 && len(localMerged) == 0 && len(digests) == 0 && len(localAssets) == 0 {
 		return g.removeLocalManifest()
 	}
-	return g.writeManifest(g.localManifestPath(), local, localMerged, digests)
+	return g.writeManifest(g.localManifestPath(), local, localMerged, digests, localAssets)
 }
 
 // manifestEntries splits the relative paths of outputs into the shared entries
@@ -224,6 +226,58 @@ func (g *Generator) manifestEntries(outputs []config.OutputFile) (shared, local 
 	return shared, local
 }
 
+// manifestAssets records the digest of each bundled asset (a raw output copied
+// verbatim from a skill source) this run wrote, split into the shared and the
+// machine-local entries like manifestEntries. A raw output carries no header, so
+// this digest is the only proof stale cleanup can check (#328). Only paths under
+// a generated skills directory are recorded: that is the shape recordedAsset
+// trusts, and other raw outputs (the OKF bundle, a plugin bundle) keep the
+// ordinary refusal.
+func (g *Generator) manifestAssets(outputs []config.OutputFile) (shared, local map[string]string) {
+	for _, output := range outputs {
+		if output.IsDir || output.PartiallyOwned || output.RawContent == nil {
+			continue
+		}
+		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+		if g.userMode && filepath.IsAbs(filepath.FromSlash(rel)) {
+			continue
+		}
+		if g.skippedPaths[rel] || !isBundledAssetPath(rel) {
+			continue
+		}
+		if output.LocalOnly {
+			local = putAsset(local, rel, fileDigest(output.RawContent))
+		} else {
+			shared = putAsset(shared, rel, fileDigest(output.RawContent))
+		}
+	}
+	return shared, local
+}
+
+func putAsset(m map[string]string, rel, sum string) map[string]string {
+	if m == nil {
+		m = map[string]string{}
+	}
+	m[rel] = sum
+	return m
+}
+
+// restrictAssetsToFiles drops the asset entries whose path the committed
+// manifest's file list does not carry, so a local run's merged assets never
+// reach the shared record.
+func restrictAssetsToFiles(assets map[string]string, files []string) map[string]string {
+	if len(assets) == 0 {
+		return assets
+	}
+	kept := map[string]string{}
+	for _, rel := range files {
+		if sum, ok := assets[rel]; ok {
+			kept[rel] = sum
+		}
+	}
+	return kept
+}
+
 // removeLocalManifest deletes the machine-local manifest once no local output
 // remains, unless it is tracked or sits behind a link that leaves the project.
 func (g *Generator) removeLocalManifest() error {
@@ -240,8 +294,8 @@ func (g *Generator) removeLocalManifest() error {
 // manifest of a run that did not load the local inputs. A document keeps the
 // earlier claims on paths this run does not render, so a server only the local
 // overlay defines is still taken back by the next full run.
-func (g *Generator) updateLocalManifest(merged map[string][]jsonmerge.Claim, digests map[string]string) error {
-	if len(merged) == 0 && len(digests) == 0 {
+func (g *Generator) updateLocalManifest(merged map[string][]jsonmerge.Claim, digests, assets map[string]string) error {
+	if len(merged) == 0 && len(digests) == 0 && len(assets) == 0 {
 		return nil
 	}
 	prev := g.readManifest(g.localManifestPath())
@@ -266,12 +320,19 @@ func (g *Generator) updateLocalManifest(merged map[string][]jsonmerge.Claim, dig
 	for rel, sum := range digests {
 		outDigests[rel] = sum
 	}
-	return g.writeManifest(g.localManifestPath(), prev.Files, outMerged, outDigests)
+	outAssets := map[string]string{}
+	for rel, sum := range prev.Assets {
+		outAssets[rel] = sum
+	}
+	for rel, sum := range assets {
+		outAssets[rel] = sum
+	}
+	return g.writeManifest(g.localManifestPath(), prev.Files, outMerged, outDigests, outAssets)
 }
 
 // writeManifest writes a manifest after refusing a symlink that leaves the project.
 func (g *Generator) writeManifest(path string, files []string, merged map[string][]jsonmerge.Claim,
-	digests map[string]string) error {
+	digests, assets map[string]string) error {
 	if path == g.localManifestPath() && g.localManifestTracked() {
 		return nil
 	}
@@ -279,21 +340,21 @@ func (g *Generator) writeManifest(path string, files []string, merged map[string
 	if err != nil {
 		return err
 	}
-	return writeManifestFileDirs(resolved, files, merged, digests, g.manifestDirs(path))
+	return writeManifestFileDirs(resolved, files, merged, digests, g.manifestDirs(path), assets)
 }
 
 func writeManifestFile(path string, files []string, merged map[string][]jsonmerge.Claim) error {
-	return writeManifestFileDirs(path, files, merged, nil, nil)
+	return writeManifestFileDirs(path, files, merged, nil, nil, nil)
 }
 
 func writeManifestFileDirs(path string, files []string, merged map[string][]jsonmerge.Claim,
-	digests map[string]string, dirs *[]string) error {
+	digests map[string]string, dirs *[]string, assets map[string]string) error {
 	sort.Strings(files)
 	files = slices.Compact(files)
 	if files == nil {
 		files = []string{}
 	}
-	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged, Digests: digests, Dirs: dirs}, "", "  ")
+	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged, Digests: digests, Dirs: dirs, Assets: assets}, "", "  ")
 	if err != nil {
 		return oops.Wrapf(err, "marshal generated manifest")
 	}
