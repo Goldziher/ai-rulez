@@ -43,7 +43,7 @@ global cmd/commands/catalog_diff.go 4
 global cmd/commands/clean.go 6
 global cmd/commands/convert.go 22
 global cmd/commands/cost.go 6
-global cmd/commands/doctor.go 4
+global cmd/commands/doctor.go 5
 global cmd/commands/domain.go 7
 global cmd/commands/eval.go 3
 global cmd/commands/eval_calibrate.go 2
@@ -109,7 +109,7 @@ global cmd/commands/validate_changed.go 4
 global cmd/commands/validate_explain.go 1
 global cmd/commands/validate_fix.go 3
 global cmd/commands/validate_sbom.go 1
-global cmd/commands/validate_strict.go 16
+global cmd/commands/validate_strict.go 17
 global cmd/commands/validate_worktree.go 1
 global cmd/commands/verifiers.go 19
 global cmd/commands/verifiers_calibrate.go 3
