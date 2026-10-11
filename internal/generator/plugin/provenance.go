@@ -29,6 +29,10 @@ type provenanceDocument struct {
 	SchemaVersion string                      `json:"schema_version"`
 	SourceHash    string                      `json:"source_hash"`
 	Outputs       map[string]provenanceOutput `json:"outputs"`
+	// Includes lists the bundle-relative paths copied verbatim by [plugin]
+	// include, sorted. The publish emitter reads it to carry those files into the
+	// Agent Plugins package without re-reading the configuration.
+	Includes []string `json:"includes,omitempty"`
 	// Obsolete records generated files a run kept because they were edited (or
 	// cannot be deleted safely) but no longer plans. They stay owned, so later
 	// verify and generate runs keep reporting them until they are reconciled or
@@ -42,6 +46,7 @@ type provenanceDocument struct {
 func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.OutputFile, error) {
 	entries := make(map[string]provenanceOutput, len(outputs))
 	paths := make([]string, 0, len(outputs))
+	var includes []string
 	for _, output := range outputs {
 		if output.IsDir {
 			continue
@@ -53,8 +58,12 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 		relativePath = filepath.ToSlash(relativePath)
 		entries[relativePath] = provenanceOutput{ContentHash: hashBytes(outputBytes(output))}
 		paths = append(paths, relativePath)
+		if output.PluginInclude {
+			includes = append(includes, relativePath)
+		}
 	}
 	sort.Strings(paths)
+	sort.Strings(includes)
 
 	var sourceInput strings.Builder
 	sourceInput.WriteString("schema=" + provenanceSchema + "\n")
@@ -70,8 +79,12 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 		if err != nil {
 			return nil, oops.With("path", output.Path).Wrapf(err, "resolve plugin provenance path")
 		}
-		if header := provenanceHeader(output.Path, entries[filepath.ToSlash(relativePath)].ContentHash, sourceHash); header != "" {
-			body = insertProvenanceHeader(body, output.Path, header)
+		// An included file is copied verbatim, so it takes no generated-file
+		// header; its hash in the sidecar is the source's own.
+		if !output.PluginInclude {
+			if header := provenanceHeader(output.Path, entries[filepath.ToSlash(relativePath)].ContentHash, sourceHash); header != "" {
+				body = insertProvenanceHeader(body, output.Path, header)
+			}
 		}
 		output.Content = ""
 		output.RawContent = body
@@ -82,6 +95,7 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 		SchemaVersion: provenanceSchema,
 		SourceHash:    sourceHash,
 		Outputs:       entries,
+		Includes:      includes,
 	})
 	if err != nil {
 		return nil, err
@@ -199,6 +213,16 @@ func ProvenanceOutputs(sidecar []byte) (hashes map[string]string, sourceHash str
 		hashes[path] = out.ContentHash
 	}
 	return hashes, document.SourceHash, nil
+}
+
+// ProvenanceIncludes returns the bundle-relative paths a provenance sidecar
+// records as copied verbatim by [plugin] include.
+func ProvenanceIncludes(sidecar []byte) ([]string, error) {
+	var document provenanceDocument
+	if err := json.Unmarshal(sidecar, &document); err != nil {
+		return nil, oops.Wrapf(err, "parse plugin provenance")
+	}
+	return document.Includes, nil
 }
 
 func unmarshalProvenance(sidecar []byte, document *provenanceDocument) error {

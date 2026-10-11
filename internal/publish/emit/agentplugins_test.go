@@ -99,6 +99,41 @@ func TestAgentPluginEntries(t *testing.T) {
 	assert.Equal(t, []AgentPluginEntry{{Name: "acme-conventions", Version: "1.4.0", Path: "acme-conventions"}}, got)
 }
 
+// TestAgentPlugins_CarriesIncludedFiles covers the publish half of [plugin]
+// include: the sidecar's includes list carries a file outside the fixed
+// component locations into the package, and without it the file is left behind.
+func TestAgentPlugins_CarriesIncludedFiles(t *testing.T) {
+	const sidecar = `{"schema_version":"v1","source_hash":"blake3:x",` +
+		`"outputs":{"scripts/mcp-launch.sh":{"content_hash":"blake3:y"}},` +
+		`"includes":["scripts/mcp-launch.sh"]}`
+
+	emit := func(withSidecar bool) []File {
+		in := fixtureFor("agent-plugins")
+		in.Plugins[0].Files = append(in.Plugins[0].Files,
+			File{Path: "scripts/mcp-launch.sh", Data: []byte("#!/bin/sh\n")})
+		if withSidecar {
+			in.Plugins[0].Files = append(in.Plugins[0].Files, File{Path: apProvenance, Data: []byte(sidecar)})
+		}
+		files, _, err := agentPlugins{}.Emit(in)
+		require.NoError(t, err)
+		return files
+	}
+
+	paths := func(files []File) []string {
+		out := make([]string, 0, len(files))
+		for _, f := range files {
+			out = append(out, f.Path)
+		}
+		return out
+	}
+
+	assert.Contains(t, paths(emit(true)), "acme-conventions/scripts/mcp-launch.sh")
+	assert.NotContains(t, paths(emit(false)), "acme-conventions/scripts/mcp-launch.sh",
+		"without the includes list the file stays out of the package")
+	assert.NotContains(t, paths(emit(true)), "acme-conventions/"+apProvenance,
+		"the sidecar is not part of the package")
+}
+
 func TestAgentPlugins_KeepsTheSpecOfTheBundle(t *testing.T) {
 	in := fixtureFor("agent-plugins")
 	files, _, err := agentplugins.Build(&agentplugins.Plugin{Metadata: agentplugins.Metadata{Name: "acme-conventions", Version: "1.4.0"}},

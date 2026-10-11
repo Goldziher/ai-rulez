@@ -63,6 +63,10 @@ type Manifest struct {
 	Commands []config.ContentFile
 	Agents   []config.ContentFile
 
+	// Include lists the [plugin] include globs (relative to the content root)
+	// whose matched files are copied verbatim into the Agent Plugins package.
+	Include []string
+
 	// IncludeEvals bundles eval cases: each skill's evals/ directory and the
 	// project-level eval tree at EvalsDir.
 	IncludeEvals bool
@@ -141,6 +145,7 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 
 		IncludeEvals: p.IncludeEvals,
 		EvalsDir:     evalsDir(cfg, p),
+		Include:      p.Include,
 	}
 
 	if content != nil {
