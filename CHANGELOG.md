@@ -15,6 +15,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **The manifest-free orphan walk leaves a committed plugin bundle alone.** `generate --plugin` writes its bundle into the project tree with the same generated header the generator writes, so `generate --check` reported every bundle file as an orphan and `generate` deleted them; the walk now honours the bundle's `.ai-rulez-generated.json` provenance sidecar ([#350](https://github.com/Goldziher/ai-rulez/issues/350)).
 - **A hosted MCP server's `oauth` block reaches `.mcp.json` for the `copilot` and `cursor` presets.** Only the `mcp` sidecar wrote it, so `generate` failed with "presets write different content to the same path" whenever `copilot` or `cursor` was active ([#334](https://github.com/Goldziher/ai-rulez/issues/334)).
 - **A top-level key written after a `[[table]]` array header is a load error.** The swallowed-key check only descended `[table]` maps, so a key after `[[mcp_servers]]` was silently read as a key of the last element and ignored ([#344](https://github.com/Goldziher/ai-rulez/issues/344)).
+- **`generate --plugin` rewrites an existing generated header instead of stacking another.** A plugin whose `content_root` overlaps its output tree (`content_root = "."`) reads its own decorated output as the source, so each run added a header block, `verify --plugin` never converged and `publish --emit agent-plugins` failed at the `AR9N0` preflight ([#351](https://github.com/Goldziher/ai-rulez/issues/351)).
 
 ## [5.0.2] - 2026-10-11
 

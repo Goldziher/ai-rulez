@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -135,4 +136,33 @@ output_dir = "mkt"
 [marketplace.from_domains]
 name_prefix = "demo-"
 ` + v
+}
+
+// #351: a plugin whose content root overlaps its output tree (content_root =
+// ".") reads its own decorated output as the source. generate --plugin must
+// rewrite the header, not stack another, so a second run leaves the tree
+// unchanged and verify converges right after generate.
+func TestGeneratePlugin_ContentRootOverlappingTheOutputIsIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	writeDomainsFile(t, filepath.Join(dir, ".ai-rulez", "config.toml"),
+		"version = \"5.0\"\nname = \"overlap\"\ngitignore = false\n\n"+
+			"[plugin]\nname = \"overlap\"\nversion = \"1.0.0\"\ndescription = \"d\"\n"+
+			"runtimes = [\"agent-plugins\"]\ncontent_root = \".\"\n")
+	writeDomainsFile(t, filepath.Join(dir, "skills", "alpha", "SKILL.md"),
+		"---\nname: alpha\ndescription: a\n---\n\n# alpha\n\nBody.\n")
+	load := func() *Generator {
+		cfg, err := config.LoadConfig(context.Background(), dir, config.WithoutLocal())
+		require.NoError(t, err)
+		return NewGenerator(cfg)
+	}
+
+	require.NoError(t, load().GeneratePlugin(""))
+	skill := filepath.Join(dir, "skills", "alpha", "SKILL.md")
+	afterFirst := readFileString(t, skill)
+	require.NoError(t, load().GeneratePlugin(""))
+
+	assert.Equal(t, 1, strings.Count(readFileString(t, skill), "AI-RULEZ :: GENERATED FILE — DO NOT EDIT"),
+		"a re-run must rewrite the header, not stack another")
+	assert.Equal(t, afterFirst, readFileString(t, skill), "the second run leaves the file unchanged")
+	require.NoError(t, load().VerifyPlugin(""), "verify --plugin converges right after generate --plugin")
 }
