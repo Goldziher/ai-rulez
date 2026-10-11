@@ -202,6 +202,10 @@ func buildCapabilities() []Capability {
 		{
 			ID: "doctor", Kind: Paired, CLI: []string{"doctor"}, Tool: "doctor",
 			Flags: []FlagPair{{Flag: "profile"}, {Flag: "strict"}, {Flag: "no-local"}},
+			CLIFlags: []Exclusion{
+				{Names: []string{"mcp-user-scope"},
+					Reason: "reads the developer's harness files outside the project; the MCP server is confined to its root"},
+			},
 		},
 		{
 			ID: "verifiers-run", Kind: Paired, CLI: []string{"verifiers run"}, Tool: "run_verifiers",
@@ -239,6 +243,10 @@ func lintCLIFlags(withFix bool) []Exclusion {
 		out = append(out, Exclusion{
 			Names:  []string{"explain", "verifiers", "offline", "show-policy", "approvals-base"},
 			Reason: "prints another report (explain a code, policy_show, run_verifiers) or compares against git history",
+		})
+		out = append(out, Exclusion{
+			Names:  []string{"mcp-user-scope"},
+			Reason: "reads the developer's harness files outside the project; the MCP server is confined to its root",
 		})
 	}
 	return out
