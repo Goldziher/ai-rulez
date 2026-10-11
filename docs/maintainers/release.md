@@ -16,7 +16,14 @@ cannot be cross-compiled from one runner. Each platform archive is built nativel
 
    The script rewrites `release/npm/package.json`, `release/pypi/__init__.py`, `release/pypi/ai_rulez/__init__.py`
    (PEP 440 form, `5.1.0rc1`) and the default of `var version` in `cmd/ai-rulez/main.go`. `check <version>` verifies
-   them without writing.
+   them without writing. Also bump `Version` in `cmd/commands/root.go` by hand.
+
+   Then regenerate the goldens: the generated manifest records the tool version, so every golden that lists
+   `.ai-rulez/.generated-manifest.local.json` changes.
+
+   ```bash
+   UPDATE_GOLDEN=1 go test ./tests/golden/
+   ```
 
 2. Optionally rehearse the packaging on your own machine (see [Dry run](#dry-run)).
 3. Tag and push: `git tag v5.1.0 && git push origin v5.1.0`.

@@ -14,7 +14,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 529 ea86500b1c0e02679e315ba1b65f930291a29addae966ff34f52a95195302de3
-.ai-rulez/.generated-manifest.local.json file 0644 3011 86dc0a504c88d2c23178542e9cf5bd700aa692121e2a1a6e92c18d2fe0203e2c
+.ai-rulez/.generated-manifest.local.json file 0644 3011 46f7403493fe2149e9b8175bb054701377c034f0b805f7fbcd7511617631a287
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
