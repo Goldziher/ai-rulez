@@ -68,6 +68,11 @@ type Generator struct {
 
 	manifests map[string]generatedManifest // manifests read this run, by path
 
+	// pluginOwned caches, per directory, the bundle-relative paths a plugin
+	// provenance sidecar declares, so the orphan walk leaves a committed bundle
+	// alone (see drift.go pluginOwnedPath).
+	pluginOwned map[string]map[string]bool
+
 	// userMode renders for the person rather than a project (see user.go);
 	// projectDir is the project the user command runs from, for overlap warnings.
 	userMode   bool
