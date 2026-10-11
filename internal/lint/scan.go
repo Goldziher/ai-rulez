@@ -26,7 +26,7 @@ var (
 	subagentRe  = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`\bsubagent_type["']?\s*[:=]\s*["']?([a-z][a-z0-9-]*)`)
 	})
-	// labeledSkillRe matches a labelled, non-backticked pointer such as
+	// labeledSkillRe matches a labeled, non-backticked pointer such as
 	// "Procedure/reference: skill x": a label separator, the word skill, then
 	// the name. The separator keeps prose like "the skill system" out.
 	labeledSkillRe = sync.OnceValue(func() *regexp.Regexp {
@@ -179,7 +179,7 @@ func (r *runner) checkAnchor(it *item, line int, file, frag, target string) {
 // checkToken checks one backtick token. notAClaim says whether the sentence around
 // it makes it prose rather than a claim about the repository; it costs a dozen
 // regular expressions, so it is only asked for a token that looks like a path.
-func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() bool) {
+func (r *runner) checkToken(it *item, line int, tok string, notAClaim func() bool) { //nolint:gocyclo // linear token checks
 	tok = strings.TrimSpace(tok)
 	if m := tickSlashRe().FindStringSubmatch(tok); m != nil {
 		r.requireName(it, line, m[1], kindCommand, r.commands, r.skills)
@@ -412,19 +412,35 @@ func referenceNames(l bodyLine) []nameRef {
 			out = append(out, ref)
 		}
 	}
+	backtickedNames(l, add)
+	plainNames(l, add)
+	addMCPCallNames(l.Text, add)
+	return out
+}
+
+// backtickedNames adds the references written with backticks: "`x` skill",
+// "skill `x`". Each pattern runs only on a line holding a literal every one of
+// its matches contains.
+func backtickedNames(l bodyLine, add func(name, kind string)) {
+	if strings.IndexByte(l.Text, '`') < 0 {
+		return
+	}
 	agentWord := strings.Contains(l.Text, "agent") || strings.Contains(l.Text, "skill") // "subagent" holds "agent"
-	if strings.IndexByte(l.Text, '`') >= 0 {
-		if agentWord || strings.Contains(l.Text, "rule") {
-			for _, m := range nameAfterRe().FindAllStringSubmatch(l.Text, -1) {
-				add(m[1], kindForWord(m[2]))
-			}
-		}
-		if agentWord {
-			for _, m := range nameBeforeRe().FindAllStringSubmatch(l.Text, -1) {
-				add(m[2], kindForWord(m[1]))
-			}
+	if agentWord || strings.Contains(l.Text, "rule") {
+		for _, m := range nameAfterRe().FindAllStringSubmatch(l.Text, -1) {
+			add(m[1], kindForWord(m[2]))
 		}
 	}
+	if agentWord {
+		for _, m := range nameBeforeRe().FindAllStringSubmatch(l.Text, -1) {
+			add(m[2], kindForWord(m[1]))
+		}
+	}
+}
+
+// plainNames adds the non-backticked references: Skill(...), subagent_type, a
+// slash command, the labeled form ("reference: skill x") and a "skills/x" path.
+func plainNames(l bodyLine, add func(name, kind string)) {
 	if strings.Contains(l.Text, "Skill(") {
 		for _, m := range skillCallRe().FindAllStringSubmatch(l.Text, -1) {
 			add(m[1], kindSkill)
@@ -452,8 +468,6 @@ func referenceNames(l bodyLine) []nameRef {
 			add(m[1], kindSkill)
 		}
 	}
-	addMCPCallNames(l.Text, add)
-	return out
 }
 
 // addMCPCallNames reads the skills MCP calls that name a skill ("load_skill x",
