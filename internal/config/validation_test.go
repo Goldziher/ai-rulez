@@ -33,6 +33,37 @@ func TestValidateEffort(t *testing.T) {
 	})
 }
 
+func TestConfigValidateClaudeMD(t *testing.T) {
+	base := func() *Config {
+		return &Config{
+			Version: "5.0",
+			Name:    "test",
+			Presets: []Preset{{BuiltIn: "claude"}},
+		}
+	}
+
+	t.Run("empty keeps the shim and is valid", func(t *testing.T) {
+		assert.NoError(t, base().Validate())
+	})
+
+	t.Run("shim and none are accepted", func(t *testing.T) {
+		for _, value := range []string{ClaudeMDShim, ClaudeMDNone, "NONE", " None "} {
+			cfg := base()
+			cfg.Claude = &ClaudeConfig{ClaudeMD: value}
+			assert.NoError(t, cfg.Validate(), "value %q should pass", value)
+		}
+	})
+
+	t.Run("unknown value is rejected", func(t *testing.T) {
+		cfg := base()
+		cfg.Claude = &ClaudeConfig{ClaudeMD: "sometimes"}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "claude_md")
+		assert.Contains(t, err.Error(), "sometimes")
+	})
+}
+
 func TestConfigValidateDefaults(t *testing.T) {
 	base := func() *Config {
 		return &Config{

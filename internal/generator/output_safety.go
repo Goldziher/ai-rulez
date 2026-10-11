@@ -110,8 +110,35 @@ func (g *Generator) retiredFiles(outputs []config.OutputFile) []string {
 			files = append(files, abs)
 		}
 	}
+	for _, abs := range g.retiredClaudeShims(outputs) {
+		if !slices.Contains(files, abs) {
+			files = append(files, abs)
+		}
+	}
 	sort.Strings(files)
 	return files
+}
+
+// claudeShimBaseName is the file the claude preset writes as an "@AGENTS.md"
+// import shim; claude_md = "none" omits it.
+const claudeShimBaseName = "CLAUDE.md"
+
+// retiredClaudeShims lists generated CLAUDE.md shims a previous run wrote that
+// this run no longer writes because claude_md = "none". It is manifest-free: the
+// shim's own Content-Hash header marks it (see orphanGeneratedFiles), so the
+// switch cleans the root shim and every scope's even when the previous manifest
+// is gone. A file with no Content-Hash is hand-authored and left alone.
+func (g *Generator) retiredClaudeShims(outputs []config.OutputFile) []string {
+	if !g.config.OmitsClaudeShim() {
+		return nil
+	}
+	var out []string
+	for _, rel := range g.orphanGeneratedFiles(outputs) {
+		if path.Base(rel) == claudeShimBaseName {
+			out = append(out, filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)))
+		}
+	}
+	return out
 }
 
 // supersededCommands lists the imported `<dir>/commands/<name>.md` files that are

@@ -21,6 +21,7 @@ func (c *Config) Validate() error {
 		c.validateContentProblems,
 		c.validatePresets,
 		c.validateCodexSkillsDir,
+		c.validateClaudeMD,
 		c.validateSelectors,
 		c.validateSkillDescriptions,
 		c.validateFrontmatter,
@@ -101,6 +102,22 @@ func (c *Config) validateCodexSkillsDir() error {
 		return nil
 	}
 	return ValidateOutputSubdir("codex_skills_dir", c.CodexSkillsDirOrDefault())
+}
+
+// validateClaudeMD accepts the two [claude] claude_md modes: "" / "shim" (the
+// default) keeps the CLAUDE.md "@AGENTS.md" shim, "none" omits it.
+func (c *Config) validateClaudeMD() error {
+	value := c.Claude.ClaudeMDOrEmpty()
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", ClaudeMDShim, ClaudeMDNone:
+		return nil
+	}
+	return oops.
+		With("field", "claude.claude_md").
+		With("actual_value", value).
+		With("valid_values", []string{ClaudeMDShim, ClaudeMDNone}).
+		Hint(`Use "shim" (the default) to keep the "@AGENTS.md" CLAUDE.md, or "none" to write only AGENTS.md.`).
+		Errorf("invalid claude_md value %q", value)
 }
 
 // validEffortValues lists the reasoning-effort values accepted by Claude Code

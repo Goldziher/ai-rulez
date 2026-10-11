@@ -530,6 +530,27 @@ type PlacementConfig struct {
 type ClaudeConfig struct {
 	Settings *ClaudeSettings `yaml:"settings,omitempty" json:"settings,omitempty" toml:"settings,omitempty"`
 	Skills   *ClaudeSkills   `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
+	// ClaudeMD controls the CLAUDE.md file the claude preset writes when
+	// agents_md is on: empty or "shim" keeps the "@AGENTS.md" import file,
+	// "none" writes only AGENTS.md (which Claude Code >= 2.1.277 reads
+	// directly) and removes a previously generated shim.
+	ClaudeMD string `yaml:"claude_md,omitempty" json:"claude_md,omitempty" toml:"claude_md,omitempty"` //nolint:tagliatelle
+}
+
+// OmitsClaudeShim reports whether claude_md = "none" turns off the CLAUDE.md
+// shim, so the claude preset relies on the shared AGENTS.md alone. Safe on a
+// nil receiver.
+func (c *ClaudeConfig) OmitsClaudeShim() bool {
+	return c != nil && strings.EqualFold(strings.TrimSpace(c.ClaudeMD), ClaudeMDNone)
+}
+
+// ClaudeMDOrEmpty returns the configured claude_md mode, or "" when the [claude]
+// table is absent. Safe on a nil receiver.
+func (c *ClaudeConfig) ClaudeMDOrEmpty() string {
+	if c == nil {
+		return ""
+	}
+	return c.ClaudeMD
 }
 
 // ClaudeSkills is the [claude.skills] block: options for the skills written to
