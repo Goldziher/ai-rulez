@@ -119,6 +119,54 @@ func TestMCPServersFor_RemoteTransport(t *testing.T) {
 	assert.Empty(t, local.Type)
 }
 
+func TestMCPServersFor_RewritesRootInCommandArgsAndEnv(t *testing.T) {
+	tests := []struct {
+		name        string
+		runtime     string
+		wantCommand string
+		wantArg     string
+		wantEnv     string
+	}{
+		{"claude", config.PluginRuntimeClaude, "${CLAUDE_PLUGIN_ROOT}/run.sh", "${CLAUDE_PLUGIN_ROOT}/lib", "${CLAUDE_PLUGIN_ROOT}/cfg"},
+		{"gemini", config.PluginRuntimeGemini, "${extensionPath}/run.sh", "${extensionPath}/lib", "${extensionPath}/cfg"},
+		{"cursor", config.PluginRuntimeCursor, "./run.sh", "./lib", "./cfg"},
+		{"kimi", config.PluginRuntimeKimi, "./run.sh", "./lib", "./cfg"},
+		{"codex", config.PluginRuntimeCodex, "./run.sh", "./lib", "./cfg"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &Manifest{MCP: []config.PluginMCPLaunch{{
+				Name:    "srv",
+				Command: "${PLUGIN_ROOT}/run.sh",
+				Args:    []string{"${PLUGIN_ROOT}/lib", "plain"},
+				Env:     map[string]string{"ROOT": "${PLUGIN_ROOT}/cfg", "MODE": "ci"},
+			}}}
+
+			srv := mcpServersFor(m, tt.runtime)["srv"]
+
+			assert.Equal(t, tt.wantCommand, srv.Command)
+			assert.Equal(t, []string{tt.wantArg, "plain"}, srv.Args)
+			assert.Equal(t, map[string]string{"ROOT": tt.wantEnv, "MODE": "ci"}, srv.Env)
+		})
+	}
+}
+
+func TestMCPServersFor_LeavesValuesWithoutPlaceholderUntouched(t *testing.T) {
+	m := &Manifest{MCP: []config.PluginMCPLaunch{{
+		Name:    "srv",
+		Command: "uvx",
+		Args:    []string{"--port", "8080"},
+		Env:     map[string]string{"MODE": "ci"},
+	}}}
+
+	srv := mcpServersFor(m, config.PluginRuntimeClaude)["srv"]
+
+	assert.Equal(t, "uvx", srv.Command)
+	assert.Equal(t, []string{"--port", "8080"}, srv.Args)
+	assert.Equal(t, map[string]string{"MODE": "ci"}, srv.Env)
+}
+
 func TestRewriteRoot(t *testing.T) {
 	const cmd = "${PLUGIN_ROOT}/scripts/mcp-launch.sh"
 	assert.Equal(t, "${CLAUDE_PLUGIN_ROOT}/scripts/mcp-launch.sh", rewriteRoot(cmd, config.PluginRuntimeClaude))
