@@ -444,10 +444,20 @@ func (st *ServeSetup) loadConfig(ctx context.Context) (*config.Config, error) {
 }
 
 func (st *ServeSetup) sourceSpecs(cfg *config.Config) ([]skillsource.Spec, error) {
+	active, err := st.activeDomainFilter(cfg)
+	if err != nil {
+		return nil, err
+	}
 	var specs []skillsource.Spec
 	seen := map[string]bool{}
 	for i := range cfg.SkillSources {
-		spec := skillsource.FromConfig(&cfg.SkillSources[i])
+		src := &cfg.SkillSources[i]
+		if !active(src.Domain) {
+			st.logger().Debug("Skill source is outside this view's active domains and is not served",
+				"source", src.Name, "domain", src.Domain)
+			continue
+		}
+		spec := skillsource.FromConfig(src)
 		// Only the user's own config may name a directory outside its project.
 		spec.AllowOutside = cfg.UserScope
 		specs = append(specs, spec)
@@ -465,6 +475,61 @@ func (st *ServeSetup) sourceSpecs(cfg *config.Config) ([]skillsource.Spec, error
 		specs = append(specs, spec)
 	}
 	return specs, nil
+}
+
+// activeDomainFilter reports whether a resource tagged with a domain belongs to
+// the view's active selection. An untagged resource (empty domain) always
+// passes; a tagged one passes only when its domain is active. The active set is
+// the domains the active role keeps, or the domains the active profile selects,
+// with the same default-profile fallback generation uses: no profiles defined
+// means every domain is active.
+func (st *ServeSetup) activeDomainFilter(cfg *config.Config) (func(string) bool, error) {
+	if len(cfg.SkillSources) == 0 {
+		return func(string) bool { return true }, nil
+	}
+	if st.Role != "" {
+		resolved, err := cfg.ResolveRole(st.Role)
+		if err != nil {
+			return nil, oops.Wrapf(err, "resolve role %q", st.Role)
+		}
+		if cfg.Content == nil {
+			return func(domain string) bool { return domain == "" }, nil
+		}
+		tree, err := cfg.FilterTreeForRole(cfg.Content, resolved.Flat())
+		if err != nil {
+			return nil, oops.Wrapf(err, "select role %q domains", st.Role)
+		}
+		names := domainNameSet(tree)
+		return func(domain string) bool { return domain == "" || names[domain] }, nil
+	}
+	name := st.Profile
+	if name == "" {
+		name = cfg.Default
+	}
+	if name == "" {
+		name = "default"
+	}
+	if name == "default" && !cfg.HasProfile("default") && len(cfg.Profiles) == 0 {
+		return func(string) bool { return true }, nil
+	}
+	if cfg.Content == nil {
+		return func(domain string) bool { return domain == "" }, nil
+	}
+	tree, err := cfg.SelectContentForProfile(cfg.Content, name)
+	if err != nil {
+		return nil, oops.Wrapf(err, "select profile %q domains", name)
+	}
+	names := domainNameSet(tree)
+	return func(domain string) bool { return domain == "" || names[domain] }, nil
+}
+
+// domainNameSet is the set of domain names a selected content tree carries.
+func domainNameSet(tree *config.ContentTree) map[string]bool {
+	names := make(map[string]bool, len(tree.Domains))
+	for name := range tree.Domains {
+		names[name] = true
+	}
+	return names
 }
 
 // selectByDelivery keeps the skills a server should serve: those with delivery

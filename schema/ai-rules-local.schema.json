@@ -1058,6 +1058,24 @@
       "items": {
         "additionalProperties": false,
         "properties": {
+          "domain": {
+            "description": "Place this installed skill in the named domain, so profile and role selection include it exactly like a local domain skill. Omit to keep it in the root content. When both domain and profiles are set, both must match.",
+            "type": "string"
+          },
+          "exclude": {
+            "description": "Drop skills whose directory name matches one of these globs; wins over include.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "include": {
+            "description": "Keep only skills whose directory name matches one of these globs, so one entry can select several skills from one repository.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "include_prerelease": {
             "description": "Allow prerelease tags (1.3.0-rc.1) that the constraint does not itself name. Default false. Needs version.",
             "type": "boolean"
@@ -1074,6 +1092,10 @@
           "name": {
             "description": "Skill name (unique identifier)",
             "minLength": 1,
+            "type": "string"
+          },
+          "name_prefix": {
+            "description": "Prepended to every resolved skill name, so two entries cannot collide.",
             "type": "string"
           },
           "path": {
@@ -1102,6 +1124,11 @@
           },
           "tag_prefix": {
             "description": "Only tags that start with this prefix are version tags, for a repository that tags several sources (deploy/v for deploy/v2.1.3). Default: a plain version or one after a single v. Needs version.",
+            "type": "string"
+          },
+          "trust": {
+            "description": "Security-scan level for this entry's imported skills. error (default) blocks on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell).",
+            "enum": ["error", "warn"],
             "type": "string"
           },
           "version": {
@@ -2030,6 +2057,10 @@
           },
           "description": {
             "description": "Optional description of the MCP server capabilities",
+            "type": "string"
+          },
+          "domain": {
+            "description": "Restrict this server to the named domain: it is emitted only when the active profile or role selects that domain. Omit to make it global. When both domain and profiles are set, both must match.",
             "type": "string"
           },
           "enabled": {
@@ -3432,6 +3463,10 @@
       "items": {
         "additionalProperties": false,
         "properties": {
+          "domain": {
+            "description": "Restrict this source to the named domain: it is served only when the active profile or role selects that domain. Omit to make it global.",
+            "type": "string"
+          },
           "exclude": {
             "description": "Drop skills whose directory name matches one of these globs; wins over include.",
             "items": {

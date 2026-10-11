@@ -80,6 +80,9 @@ type SkillSourceConfig struct {
 	NamePrefix string `yaml:"name_prefix,omitempty" json:"name_prefix,omitempty" toml:"name_prefix,omitempty"` //nolint:tagliatelle
 	// Trust is the scan level: "error" (default) or "warn". See TrustError.
 	Trust string `yaml:"trust,omitempty" json:"trust,omitempty" toml:"trust,omitempty"`
+	// Domain restricts this source to the named domain: it is served only when
+	// that domain is selected by the active profile or role. Empty means global.
+	Domain string `yaml:"domain,omitempty" json:"domain,omitempty" toml:"domain,omitempty"`
 	// MaxSkills caps how many skills the source may load (0 selects the default of 200).
 	MaxSkills int `yaml:"max_skills,omitempty" json:"max_skills,omitempty" toml:"max_skills,omitempty"` //nolint:tagliatelle
 	// MaxBytes caps the total size of the files the source loads (0 selects the default of 64 MiB).

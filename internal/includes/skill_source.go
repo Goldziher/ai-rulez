@@ -125,7 +125,7 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 
 // checkPin records what the cache holds and verifies it against the lock.
 func (s *SkillGitSource) checkPin() error {
-	dir := s.findSkillDir()
+	dir := s.cachedRoot()
 	if dir == "" {
 		return nil
 	}
@@ -140,77 +140,40 @@ func (s *SkillGitSource) checkPin() error {
 	return s.pin.check(s.state, s.baseDir, lockfile.KindSkill, s.name, commit, digest)
 }
 
+// DiscoverSkills fetches the source (or reads it from the cache when the context
+// is offline) and returns every skill the entry names: the directory the
+// configured path addresses when it holds a SKILL.md, otherwise its immediate
+// subdirectories that do, kept by include and dropped by exclude (which wins)
+// and named namePrefix + the directory name. The lock pin and its key stay keyed
+// by the entry name.
+func (s *SkillGitSource) DiscoverSkills(ctx context.Context, include, exclude []string, namePrefix string) ([]config.ContentFile, error) {
+	mu := lockForFetch(s.cacheDir)
+	mu.Lock()
+	defer mu.Unlock()
+
+	root, err := s.locate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.checkPin()
+	if retryable(ctx, err) {
+		// The cache may be damaged: fetch the pinned commit again before failing.
+		_ = os.Remove(filepath.Join(s.cacheDir, cacheMetaFile)) //nolint:errcheck // best-effort; a stale meta only skips the retry
+		if root, err = s.locate(ctx); err != nil {
+			return nil, err
+		}
+		err = s.checkPin()
+	}
+	if err != nil {
+		return nil, err
+	}
+	return scanSelectedSkills(ctx, root, namePrefix, s.name, include, exclude)
+}
+
 func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) {
-	s.logger().Debug("Fetching installed skill", "name", s.name, "repo", RedactURL(s.repoURL), "path", s.path, "ref", s.ref)
-
-	if config.OfflineIncludes(ctx) {
-		skillDir := s.findSkillDir()
-		if skillDir == "" {
-			return config.ContentFile{}, oops.
-				With("repo", RedactURL(s.repoURL)).
-				With("cache_dir", s.cacheDir).
-				Wrapf(ErrNotCached, "%s: no cached skill found for '%s'", offlineReason(ctx), s.name)
-		}
-		return ScanInstalledSkillDir(logger.WithContext(ctx, s.log), skillDir, s.name)
-	}
-
-	// A full commit SHA is already the resolved commit — ls-remote never advertises
-	// one. Use it verbatim so a pin that the remote cannot serve fails closed at
-	// clone time instead of silently degrading to cached content (#167).
-	ref := s.resolvedRef()
-	isSHA := isFullSHA(ref)
-	currentSHA := ref
-	if !isSHA {
-		var err error
-		currentSHA, err = remoteHEADSHA(ctx, s.originalURL, ref, s.accessToken)
-		if err != nil {
-			if skillDir := s.findSkillDir(); skillDir != "" {
-				s.logger().Warn("ls-remote failed, using cached skill", "name", s.name, "error", err)
-				return ScanInstalledSkillDir(logger.WithContext(ctx, s.log), skillDir, s.name)
-			}
-			return config.ContentFile{}, oops.With("repo", RedactURL(s.repoURL)).Wrapf(err, "failed to get remote HEAD for skill %q", s.name)
-		}
-	}
-
-	if isCacheHit(s.cacheDir, currentSHA) {
-		if skillDir := s.findSkillDir(); skillDir != "" {
-			return ScanInstalledSkillDir(logger.WithContext(ctx, s.log), skillDir, s.name)
-		}
-		// Meta is valid but files are gone — fall through to re-fetch.
-	}
-
-	if err := requireGit(ctx); err != nil {
+	if _, err := s.locate(ctx); err != nil {
 		return config.ContentFile{}, err
 	}
-
-	// Clone into a private temp directory and swap it in, so a fetch never
-	// deletes a directory another project may be reading.
-	if err := os.MkdirAll(filepath.Dir(s.cacheDir), cacheDirMode); err != nil {
-		return config.ContentFile{}, oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to create cache directory")
-	}
-	tmpDir, err := os.MkdirTemp(filepath.Dir(s.cacheDir), filepath.Base(s.cacheDir)+".tmp-*")
-	if err != nil {
-		return config.ContentFile{}, oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to create cache directory")
-	}
-	defer os.RemoveAll(tmpDir) //nolint:errcheck // best-effort; a no-op after a successful swap
-
-	if err := cloneFor(isSHA)(ctx, s.originalURL, ref, s.sparsePathSpec(), tmpDir, s.accessToken); err != nil {
-		return config.ContentFile{}, oops.
-			With("repo", RedactURL(s.repoURL)).
-			With("path", s.path).
-			Wrapf(err, "failed to clone skill %q", s.name)
-	}
-
-	hashes, _ := computeFileHashes(tmpDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run
-	_ = writeCacheMeta(tmpDir, &CacheMeta{ //nolint:errcheck // best-effort; failing to persist meta causes a refetch next run
-		RemoteHEADSHA: currentSHA,
-		FetchedAt:     ambient.FromContext(ctx).Now(),
-		FileHashes:    hashes,
-	})
-	if err := swapDir(tmpDir, s.cacheDir); err != nil {
-		return config.ContentFile{}, oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to install skill cache")
-	}
-
 	skillDir := s.findSkillDir()
 	if skillDir == "" {
 		if link := symlinkedMarker(filepath.Join(s.cacheDir, s.path)); link != "" {
@@ -225,6 +188,132 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 			Errorf("skill directory not found (expected SKILL.md at %s)", s.path)
 	}
 	return ScanInstalledSkillDir(logger.WithContext(ctx, s.log), skillDir, s.name)
+}
+
+// locate makes the source available (fetching it, or reading the cache when the
+// context is offline) and returns the entry root: the directory the configured
+// path names, else the .ai-rulez path, else the cache root when it is itself a
+// skill. It handles the network and cache work; discovering and scanning the
+// skills below the root is the caller's job.
+func (s *SkillGitSource) locate(ctx context.Context) (string, error) {
+	s.logger().Debug("Fetching installed skill", "name", s.name, "repo", RedactURL(s.repoURL), "path", s.path, "ref", s.ref)
+
+	if config.OfflineIncludes(ctx) {
+		if root := s.cachedRoot(); root != "" {
+			return root, nil
+		}
+		return "", oops.
+			With("repo", RedactURL(s.repoURL)).
+			With("cache_dir", s.cacheDir).
+			Wrapf(ErrNotCached, "%s: no cached skill found for '%s'", offlineReason(ctx), s.name)
+	}
+
+	// A full commit SHA is already the resolved commit — ls-remote never advertises
+	// one. Use it verbatim so a pin that the remote cannot serve fails closed at
+	// clone time instead of silently degrading to cached content (#167).
+	ref := s.resolvedRef()
+	isSHA := isFullSHA(ref)
+	currentSHA := ref
+	if !isSHA {
+		var err error
+		currentSHA, err = remoteHEADSHA(ctx, s.originalURL, ref, s.accessToken)
+		if err != nil {
+			if root := s.cachedRoot(); root != "" {
+				s.logger().Warn("ls-remote failed, using cached skill", "name", s.name, "error", err)
+				return root, nil
+			}
+			return "", oops.With("repo", RedactURL(s.repoURL)).Wrapf(err, "failed to get remote HEAD for skill %q", s.name)
+		}
+	}
+
+	if isCacheHit(s.cacheDir, currentSHA) {
+		if root := s.cachedRoot(); root != "" {
+			return root, nil
+		}
+		// Meta is valid but files are gone — fall through to re-fetch.
+	}
+
+	if err := s.refresh(ctx, ref, isSHA, currentSHA); err != nil {
+		return "", err
+	}
+
+	if root := s.cachedRoot(); root != "" {
+		return root, nil
+	}
+	if link := symlinkedMarker(filepath.Join(s.cacheDir, s.path)); link != "" {
+		return "", oops.
+			With("repo", RedactURL(s.repoURL)).
+			With("path", link).
+			Errorf("skill %q: %s is a symlink, and symlinks are not followed", s.name, link)
+	}
+	return "", oops.
+		With("repo", RedactURL(s.repoURL)).
+		With("path", s.path).
+		Errorf("skill directory not found (expected SKILL.md at %s)", s.path)
+}
+
+// refresh clones the source into a private temp directory and swaps it in, so a
+// fetch never deletes a directory another project may be reading.
+func (s *SkillGitSource) refresh(ctx context.Context, ref string, isSHA bool, currentSHA string) error {
+	if err := requireGit(ctx); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(s.cacheDir), cacheDirMode); err != nil {
+		return oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to create cache directory")
+	}
+	tmpDir, err := os.MkdirTemp(filepath.Dir(s.cacheDir), filepath.Base(s.cacheDir)+".tmp-*")
+	if err != nil {
+		return oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to create cache directory")
+	}
+	defer os.RemoveAll(tmpDir) //nolint:errcheck // best-effort; a no-op after a successful swap
+
+	if err := cloneFor(isSHA)(ctx, s.originalURL, ref, s.sparsePathSpec(), tmpDir, s.accessToken); err != nil {
+		return oops.
+			With("repo", RedactURL(s.repoURL)).
+			With("path", s.path).
+			Wrapf(err, "failed to clone skill %q", s.name)
+	}
+
+	hashes, _ := computeFileHashes(tmpDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run
+	_ = writeCacheMeta(tmpDir, &CacheMeta{ //nolint:errcheck // best-effort; failing to persist meta causes a refetch next run
+		RemoteHEADSHA: currentSHA,
+		FetchedAt:     ambient.FromContext(ctx).Now(),
+		FileHashes:    hashes,
+	})
+	if err := swapDir(tmpDir, s.cacheDir); err != nil {
+		return oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to install skill cache")
+	}
+	return nil
+}
+
+// entryDir is the directory the configured path names inside the fetched cache,
+// without following symlinks: the path directory, else the .ai-rulez path
+// directory. "" when neither exists.
+func (s *SkillGitSource) entryDir() string {
+	for _, dir := range []string{filepath.Join(s.cacheDir, s.path), filepath.Join(s.cacheDir, aiRulezDir, s.path)} {
+		if info, err := os.Lstat(dir); err == nil && info.IsDir() {
+			return dir
+		}
+	}
+	return ""
+}
+
+// cachedRoot returns the entry root when the cache holds a skill for it: a
+// SKILL.md at the root (single skill) or at least one immediate subdirectory
+// that has one (a multi-skill entry). It falls back to the cache root when that
+// is itself a skill, matching findSkillDir. "" when the cache holds nothing
+// usable for the entry.
+func (s *SkillGitSource) cachedRoot() string {
+	root := s.entryDir()
+	if root != "" && !pathHasSymlink(s.logger(), s.cacheDir, root) &&
+		(hasSkillMarker(root) || len(skillSubdirs(root)) > 0) {
+		return root
+	}
+	if hasSkillMarker(s.cacheDir) {
+		return s.cacheDir
+	}
+	return ""
 }
 
 // swapDir replaces final with tmp. The old directory is renamed aside first so

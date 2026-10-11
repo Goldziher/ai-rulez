@@ -45,6 +45,11 @@ type ContentFile struct {
 	// Profiles scopes this file to the named profiles (used by installed
 	// skills). Empty means every profile. Runtime-only; not serialized.
 	Profiles []string `yaml:"-" json:"-"`
+	// Domain and Trust carry an installed skill's entry scope onto every file a
+	// multi-skill entry resolved, so generation and the lint scan keep it
+	// per-item instead of looking it up by name. Runtime-only; not serialized.
+	Domain string `yaml:"-" json:"-"`
+	Trust  string `yaml:"-" json:"-"`
 
 	// Resources holds skill supporting files (references/, scripts/, assets/)
 	// loaded alongside SKILL.md. Always empty for non-skill content.
@@ -216,6 +221,20 @@ func (c *Config) selectContent(content *ContentTree, profileDomains []string, ac
 			continue
 		}
 		activeDomains[name] = domain
+	}
+
+	// An installed skill placed in a domain still honors its `profiles` scope,
+	// so a resource carrying both domain and profiles passes only when the active
+	// profile matches both. Untagged domain content short-circuits inside
+	// FilterContentFilesByProfile, so nothing is copied for ordinary domains.
+	for name, domain := range activeDomains {
+		filtered := FilterContentFilesByProfile(domain.Skills, activeProfile)
+		if len(filtered) == len(domain.Skills) {
+			continue
+		}
+		nd := *domain
+		nd.Skills = filtered
+		activeDomains[name] = &nd
 	}
 
 	return &ContentTree{

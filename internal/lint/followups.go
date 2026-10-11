@@ -392,7 +392,8 @@ func (r *runner) importLevel() (force Severity, on bool) {
 // scanImported runs the security rules over content that came from includes and
 // installed skills. Findings take the scan_imports level, and an inline ignore
 // comment inside imported text is not honored: the author of the import must not
-// be able to silence the check on their own content.
+// be able to silence the check on their own content. A skill whose entry set a
+// trust level is scanned at that level instead.
 func (r *runner) scanImported() {
 	force, on := r.importLevel()
 	if !on {
@@ -411,6 +412,9 @@ func (r *runner) scanImported() {
 		}
 		raw := string(data)
 		r.docs[it.abs] = parseDoc(raw)
+		// A per-entry trust level overrides the global scan level for this item;
+		// every other item keeps the global one.
+		r.forceSev = importForceFor(it.cf.Trust, force)
 		r.securityScan(it.abs, raw)
 		if !it.isDoc {
 			r.checkToolBreadth(it, parseFrontmatterDoc(r.docs[it.abs]))
@@ -418,6 +422,19 @@ func (r *runner) scanImported() {
 			imp.itemDir = filepath.Dir(it.abs)
 			r.scanResources(&imp)
 		}
+	}
+}
+
+// importForceFor returns the severity forced onto one imported item: the item's
+// own trust level when set, otherwise the global scan_imports level (force).
+func importForceFor(trust string, force Severity) Severity {
+	switch trust {
+	case config.TrustError:
+		return SeverityError
+	case config.TrustWarn:
+		return SeverityWarning
+	default:
+		return force
 	}
 }
 

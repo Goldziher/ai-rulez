@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	pathpkg "path"
 	"regexp"
 	"strings"
 
@@ -71,6 +72,18 @@ func ValidateInstalledSkillFields(skill *InstalledSkillConfig) error {
 	}
 	if reason := skillPathProblem(skill.Path); reason != "" {
 		return bad("path", reason)
+	}
+	switch skill.Trust {
+	case "", TrustError, TrustWarn:
+	default:
+		return bad("trust", fmt.Sprintf("has an invalid trust level %q (use 'error', the default, or 'warn')", skill.Trust))
+	}
+	for _, globs := range [][]string{skill.Include, skill.Exclude} {
+		for _, g := range globs {
+			if _, err := pathpkg.Match(g, ""); err != nil {
+				return bad("include/exclude", fmt.Sprintf("has an invalid glob %q", g))
+			}
+		}
 	}
 	return nil
 }

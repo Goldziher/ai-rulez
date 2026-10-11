@@ -28,11 +28,11 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 	for i := range cfg.InstalledSkills {
 		skillConf := &cfg.InstalledSkills[i]
 
-		contentFile, err := memoFor(cfg).fetchSkill(memoKey(cfg.BaseDir, skillConf, accessToken != ""),
-			func() (config.ContentFile, error) {
+		resolved, err := memoFor(cfg).fetchSkills(memoKey(cfg.BaseDir, skillConf, accessToken != ""),
+			func() ([]config.ContentFile, error) {
 				return resolveInstalledSkill(ctx, cfg, lock, skillConf, accessToken)
 			},
-			func() (config.ContentFile, error) {
+			func() ([]config.ContentFile, error) {
 				return resolveInstalledSkill(config.WithOfflineIncludes(ctx), cfg, lock, skillConf, accessToken)
 			})
 		if errors.Is(err, errSkillSkipped) {
@@ -52,8 +52,16 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 			continue
 		}
 
-		skills = append(skills, contentFile)
-		cfg.Log().Debug("Successfully resolved installed skill", "name", skillConf.Name)
+		// Stamp the entry's scope on every file it resolved, so a multi-skill
+		// entry keeps it even though the resolved names no longer match the entry
+		// name.
+		for j := range resolved {
+			resolved[j].Profiles = skillConf.Profiles
+			resolved[j].Domain = skillConf.Domain
+			resolved[j].Trust = skillConf.Trust
+		}
+		skills = append(skills, resolved...)
+		cfg.Log().Debug("Successfully resolved installed skill", "name", skillConf.Name, "resolved", len(resolved))
 	}
 
 	if len(violations) > 0 {
@@ -69,21 +77,29 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 // skipped with a notice, as an include in the same state is.
 var errSkillSkipped = errors.New("installed skill skipped")
 
-// resolveInstalledSkill resolves a single installed skill
-func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfile.File, skillConf *config.InstalledSkillConfig, accessToken string) (config.ContentFile, error) {
+// resolveInstalledSkill resolves one installed_skills entry into the skills it
+// names. An entry whose root holds a SKILL.md is one skill named after the entry
+// (with its name_prefix); otherwise the immediate subdirectories of the root
+// that hold a SKILL.md are the skills, selected by include/exclude and named
+// with name_prefix.
+func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfile.File, skillConf *config.InstalledSkillConfig, accessToken string) ([]config.ContentFile, error) {
 	baseDir := cfg.BaseDir
 	// Check for local override first
 	if skillConf.LocalOverride != "" && !refreshing(cfg, lockfile.KindSkill, skillConf.Name) {
 		if err := checkLocalOverride(cfg, "installed_skills", skillConf.Name); err != nil {
-			return config.ContentFile{}, err
+			return nil, err
 		}
 		localDir := resolveSkillLocalOverride(baseDir, skillConf)
 		if localDir != "" {
 			cfg.Log().Info("Using local override for installed skill", "name", skillConf.Name, "path", localDir)
-			return ScanInstalledSkillDir(logger.WithContext(ctx, cfg.Host.Log), localDir, skillConf.Name)
+			cf, err := ScanInstalledSkillDir(logger.WithContext(ctx, cfg.Host.Log), localDir, skillConf.NamePrefix+skillConf.Name)
+			if err != nil {
+				return nil, err
+			}
+			return []config.ContentFile{cf}, nil
 		}
 		cfg.Log().Info("Skipping installed skill (local_override path not found)", "name", skillConf.Name, "local_override", skillConf.LocalOverride)
-		return config.ContentFile{}, errSkillSkipped
+		return nil, errSkillSkipped
 	}
 
 	sourceType := DetectSourceType(skillConf.Source)
@@ -97,18 +113,18 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		}, skillConf.VersionSpec())
 		p, err := pinFor(cfg, lock, w)
 		if err != nil {
-			return config.ContentFile{}, err
+			return nil, err
 		}
 		ref, err := versionRef(ctx, cfg, lock, w, p, stripGitPlus(skillConf.Source), accessToken, baseDir)
 		if err != nil {
-			return config.ContentFile{}, err
+			return nil, err
 		}
 		source, err := NewSkillGitSourceIn(cfg.Host, skillConf.Name, skillConf.Source, skillPath, ref, accessToken)
 		if err != nil {
-			return config.ContentFile{}, oops.Wrapf(err, "failed to create git source for skill '%s'", skillConf.Name)
+			return nil, oops.Wrapf(err, "failed to create git source for skill '%s'", skillConf.Name)
 		}
 		source.pin, source.baseDir, source.state = p, baseDir, stateFor(cfg)
-		return source.Fetch(ctx)
+		return source.DiscoverSkills(ctx, skillConf.Include, skillConf.Exclude, skillConf.NamePrefix)
 
 	case SourceTypeLocal:
 		localPath := skillConf.Source
@@ -117,22 +133,22 @@ func resolveInstalledSkill(ctx context.Context, cfg *config.Config, lock *lockfi
 		}
 		localPath = filepath.Clean(localPath)
 
-		// Append the skill path within the local source
-		skillDir := filepath.Join(localPath, skillPath)
-		if !hasSkillMarker(skillDir) {
-			if link := symlinkedMarker(skillDir); link != "" {
-				return config.ContentFile{}, oops.
-					With("path", link).
-					Errorf("skill '%s': %s is a symlink, and symlinks are not followed", skillConf.Name, link)
-			}
-			return config.ContentFile{}, oops.
-				With("path", skillDir).
+		// The entry root is the skill path within the local source.
+		root := filepath.Join(localPath, skillPath)
+		if link := symlinkedMarker(root); link != "" {
+			return nil, oops.
+				With("path", link).
+				Errorf("skill '%s': %s is a symlink, and symlinks are not followed", skillConf.Name, link)
+		}
+		if !hasSkillMarker(root) && len(skillSubdirs(root)) == 0 {
+			return nil, oops.
+				With("path", root).
 				Errorf("no SKILL.md found at local path for skill '%s'", skillConf.Name)
 		}
-		return ScanInstalledSkillDir(logger.WithContext(ctx, cfg.Host.Log), skillDir, skillConf.Name)
+		return scanSelectedSkills(logger.WithContext(ctx, cfg.Host.Log), root, skillConf.NamePrefix, skillConf.Name, skillConf.Include, skillConf.Exclude)
 
 	default:
-		return config.ContentFile{}, oops.Errorf("unknown source type for skill '%s': %s", skillConf.Name, sourceType)
+		return nil, oops.Errorf("unknown source type for skill '%s': %s", skillConf.Name, sourceType)
 	}
 }
 
