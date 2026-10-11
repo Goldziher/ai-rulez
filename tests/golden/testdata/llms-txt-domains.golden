@@ -12,7 +12,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 929 65de9e56839866e0792de5e4923b97d206a019efd15d14fadf1b8b4b868db13f
-.ai-rulez/.generated-manifest.local.json file 0644 2130 14ed004ddb8157a8bc844e66fd36f250a482ed81dfd2061e9579c29a2b502d78
+.ai-rulez/.generated-manifest.local.json file 0644 2130 37ccfd99b4f395ba115f538c575908c54241ed1439e9e8da28fe3a695de22fd6
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -169,7 +169,7 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2130 14ed004ddb8157a8bc844e66fd36f250a482ed81dfd2061e9579c29a2b502d78
+.ai-rulez/.generated-manifest.local.json file 0644 2130 37ccfd99b4f395ba115f538c575908c54241ed1439e9e8da28fe3a695de22fd6
 >>>>
 {
   "version": "1",
@@ -182,8 +182,8 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
           "PreToolUse"
         ],
         "elementSums": [
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "d61143beef0be0739ba78e8a724d51e6af2240a49bf4e0e7c37c6d5452466f3e"
+          "0539714869bd7d3ae91752cfc4445925d27ab4e57f98f1a3695956c0e1141edc",
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
         ]
       },
       {
@@ -232,15 +232,15 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
           "mcpServers",
           "ai-rulez"
         ],
-        "sum": "127dd2e33ca1ccd1a336aa514700574d6c1ed37bdec9b80065eeb9ceec2de203"
+        "sum": "a44bcaea90b5c52a6d75a49e49643a5255e1e66ea1f54be89e765fd8ffd8910e"
       }
     ]
   },
   "digests": {
-    ".claude/settings.json": "21e1723dfdebfa75a462e33d50e7bbbf7798cfafea52ee10e724764788e5c2e9",
+    ".claude/settings.json": "8b4471dc488557587d3928caf9b5fb1bf5de997f4284b2613c2cea25fc43a751",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".mcp.json": "27ec870232d32d4a48535bc25149660c7b893774c95eb630b54f464844294bf6",
+    ".mcp.json": "2b6654b20fd21729261fd1cc949f53f1f55cd6a1e99f203a90582d0329265848",
     "docs/llms.txt": "238c74aefc193365fbbc2c5d2f22afe1facd86a94ea02e898df4cd482c6eee46"
   }
 }
