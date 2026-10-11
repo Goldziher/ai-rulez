@@ -11,6 +11,29 @@ a support agent get on their machine".
     `ai-rulez generate --user --role <name>`. The `match` hints on a role are inert strings that tool may read
     from `roles.json`; ai-rulez stores and republishes them and never interprets them.
 
+## Profiles vs roles
+
+Both select a slice of the same content, so it is fair to ask whether profiles are still worth having. They are,
+because they answer different questions.
+
+| | Profile | Role |
+| --- | --- | --- |
+| Question | "what does this repository ship?" | "what does this person's job need?" |
+| Scope | the project or team | a person (identity decided elsewhere) |
+| Selected by | `--profile`, `[profiles]`, the default profile | `--role` |
+| Extra knobs | — | `skill_mode`, `delivery`, `match`, `pin` |
+| Compared by | `tokens --by-profile` | `tokens --by-role` |
+
+Reach for a profile when one checkout must emit several *project* variants — a backend service, a frontend app, a
+QA bundle — and that choice belongs in the repository. Reach for a role when the same content must be tailored to
+*different people* — a backend engineer, an on-call responder, a support agent — and the choice is made at
+generation time for that person. A profile is about what the artifact contains; a role is about what one holder
+sees. Many projects keep a profile for the repository's default and layer roles for the per-person variants.
+
+Each axis will meet where it should: **domains** are the shared vocabulary, profiles group domains for a project
+and roles group domains for a person. A profile also selects [installed skills](installed-skills.md) and MCP
+servers by their `profiles` field.
+
 ## Defining roles
 
 Roles are a `[[roles]]` array in `config.toml`. The optional manifest switch lives in a separate
@@ -130,6 +153,8 @@ ai-rulez roles list [--format json]           # every role with item counts and 
 ai-rulez roles show <name> [--format json]    # as declared, and with the parent merged in
 ai-rulez roles resolve <name> [--format json] # the items the role keeps, with sizes and skill modes
 
+# <name> may be a comma-separated composition (see Composing roles below)
+
 ai-rulez generate --role engineer             # project outputs for the role
 ai-rulez generate --user --role engineer      # user-level outputs (~/.claude, ~/.codex, ...)
 ai-rulez generate --check --role engineer     # drift check against the role's outputs
@@ -144,6 +169,29 @@ are built from the full content). A role replaces profile selection: the content
 domains and selectors through the same selection path profiles use, so everything downstream in the same run (outputs, the token
 report, the usage index) sees the role's slice. Installed skills scoped to profiles are not filtered by
 a role, and the machine-local `local/` tree is not narrowed.
+
+## Composing roles
+
+`--role` takes a comma-separated list, as do `roles show`, `roles resolve`, `tokens --role` and
+`mcp --serve-skills --role`. A composition is the **union** of its members: the domains, skills, rules, agents and
+commands they keep are combined, and that union is what is rendered, served and counted.
+
+```bash
+ai-rulez generate --role engineer,oncall
+ai-rulez roles resolve engineer,oncall
+```
+
+Where two members set `skill_mode` or `delivery` for the same skill, the [within-role precedence](#skill_mode-precedence)
+applies first — a more specific key (an exact id, then a longer glob) wins — and when two keys are equally
+specific the role **listed last** wins. Order therefore matters, and a composition is named after its order:
+`engineer,oncall` and `oncall,engineer` are different, and reversing the list can change a mode.
+
+A composition is a value, not a `[[roles]]` entry: it cannot be extended, it need not be declared, and every member
+must exist (`validate` reports one that does not as `AR971`). A composition is **pinnable**:
+`ai-rulez lock --role engineer,oncall` records the union's rendered outputs under the canonical name
+`engineer,oncall`, and `generate --locked --role engineer,oncall` (or `lock --check`) compares them. Pinning one
+member with `pin = true` does not pin every composition that contains it, and pinning a composition does not pin
+its members.
 
 ## `skill_mode` becomes Claude Code `skillOverrides`
 

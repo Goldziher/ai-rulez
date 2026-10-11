@@ -94,11 +94,16 @@ Which of these a repository may set, and which only the user config file or the 
 - **`mcp_servers[].command`**: Command to execute for local `stdio` servers (npx, uvx, ai-rulez, etc.)
 - **`mcp_servers[].args`**: Command arguments for local servers
 - **`mcp_servers[].profiles`**: Restrict the server to the named profiles
+- **`mcp_servers[].domain`**: Restrict the server to a domain; it is included only when the active profile or role selects that domain
 - **`mcp_servers[].transport`**: `stdio`, `http`, or `sse` (default: `stdio`)
 - **`mcp_servers[].url`**: Remote MCP URL for `http` or `sse` transports
 - **`mcp_servers[].headers`**: HTTP headers for `http`/`sse` servers; values may contain `${VAR}` placeholders resolved by `generate`
 - **`mcp_servers[].enabled`**: Set to `false` to omit the server from generated MCP outputs
 - **`mcp_servers[].env`**: Environment variables; values may contain `${VAR}` placeholders resolved by `generate`
+- **`installed_skills[].include` / `exclude`**: Globs over skill directory names that select several skills from one repository with one entry; `exclude` wins
+- **`installed_skills[].name_prefix`**: Prefix prepended to every resolved skill name
+- **`installed_skills[].trust`**: Scan level of the imported skills, `error` (default) or `warn`
+- **`installed_skills[].domain`**: Place the skill in a domain so a profile or a role selects it by domain
 
 MCP placeholder names must match `[A-Za-z_][A-Za-z0-9_]*`. Generation resolves them from
 `--env KEY=VALUE`, process env, then dotenv files. Secret-bearing MCP outputs must be gitignored
