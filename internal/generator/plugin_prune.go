@@ -87,6 +87,62 @@ func pruneReport(items []pluginPrune) PluginPruneReport {
 	return report
 }
 
+// retainKeptObsolete carries the retained obsolete records of the previous
+// sidecars, plus the files this run keeps, into the planned sidecars before they
+// are written. Without it, writing a sidecar would forget files regeneration
+// preserved, and a later verify --plugin would pass while they still exist. It
+// must run after planPluginPrune and before writeOutputs.
+func (g *Generator) retainKeptObsolete(outputs []config.OutputFile, items []pluginPrune) error {
+	kept := make(map[string][]plugin.Obsolete)
+	for _, item := range items {
+		if item.reason == "" {
+			continue
+		}
+		bundleDir := filepath.Clean(item.bundleDir)
+		kept[bundleDir] = append(kept[bundleDir], item.Obsolete)
+	}
+	for i := range outputs {
+		if outputs[i].IsDir || filepath.Base(outputs[i].Path) != plugin.ProvenanceFileName {
+			continue
+		}
+		sidecarPath := g.absOutputPath(outputs[i].Path)
+		bundleDir := filepath.Clean(filepath.Dir(sidecarPath))
+		previous, err := os.ReadFile(sidecarPath)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return oops.With("path", sidecarPath).Wrapf(err, "read previous plugin provenance")
+		}
+		planned := outputs[i].RawContent
+		if planned == nil {
+			planned = []byte(outputs[i].Content)
+		}
+		merged, err := plugin.RetainObsolete(planned, previous, kept[bundleDir])
+		if err != nil {
+			return oops.With("path", outputs[i].Path).Wrapf(err, "retain kept obsolete plugin files")
+		}
+		outputs[i].Content = ""
+		outputs[i].RawContent = merged
+	}
+	return nil
+}
+
+// resolvePluginOutputs collects the planned plugin outputs and merges the
+// retained obsolete records of the previous sidecars into them, so the sidecars
+// a run plans agree with the ones already on disk.
+func (g *Generator) resolvePluginOutputs(profile string) ([]config.OutputFile, []pluginPrune, error) {
+	outputs, err := g.collectPluginOutputs(profile)
+	if err != nil {
+		return nil, nil, err
+	}
+	items, err := g.planPluginPrune(outputs)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := g.retainKeptObsolete(outputs, items); err != nil {
+		return nil, nil, err
+	}
+	return outputs, items, nil
+}
+
 // PluginPrunePlan reports the obsolete generated plugin files a run would
 // delete or keep, without touching the disk.
 func (g *Generator) PluginPrunePlan(profile string) (PluginPruneReport, error) {

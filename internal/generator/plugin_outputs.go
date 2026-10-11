@@ -31,15 +31,11 @@ func (g *Generator) GeneratePlugin(profile string) error {
 // directories excluded.
 func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	g.diagnostics() // the run's warnings share one collector from the start
-	outputs, err := g.collectPluginOutputs(profile)
+	outputs, obsolete, err := g.resolvePluginOutputs(profile)
 	if err != nil {
 		return 0, err
 	}
 	stale, err := g.stalePluginDirs()
-	if err != nil {
-		return 0, err
-	}
-	obsolete, err := g.planPluginPrune(outputs)
 	if err != nil {
 		return 0, err
 	}
@@ -117,15 +113,11 @@ func checkPluginGenerated(expected []config.OutputFile) error {
 // sidecars without regenerating or modifying files.
 func (g *Generator) VerifyPlugin(profile string) error {
 	g.diagnostics() // the run's warnings share one collector from the start
-	expected, err := g.collectPluginOutputs(profile)
+	expected, obsolete, err := g.resolvePluginOutputs(profile)
 	if err != nil {
 		return oops.Wrapf(err, "render expected plugin outputs")
 	}
 	if err := checkPluginGenerated(expected); err != nil {
-		return err
-	}
-	obsolete, err := g.planPluginPrune(expected)
-	if err != nil {
 		return err
 	}
 	if len(obsolete) > 0 {
