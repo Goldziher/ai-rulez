@@ -205,6 +205,16 @@ func (c *Config) validateRules() error {
 	if err := validateBazScoped(c.Rules.BazScoped); err != nil {
 		return err
 	}
+	if err := validateBazDefault(c.Rules.BazDefault); err != nil {
+		return err
+	}
+	if c.Rules.BazBudget < 0 {
+		return oops.
+			With("field", "rules.baz_budget").
+			With("actual_value", c.Rules.BazBudget).
+			Hint("Use a byte count of 0 or more; 0 disables the warning.").
+			Errorf("invalid baz_budget value %d at rules.baz_budget", c.Rules.BazBudget)
+	}
 	for preset, value := range c.Rules.ModeByPreset {
 		if !c.isKnownPreset(preset) {
 			return oops.
@@ -238,6 +248,18 @@ func validateBazScoped(value string) error {
 		With("valid_values", validBazScoped).
 		Hint("Use one of: nested, root (lowercase).").
 		Errorf("invalid baz_scoped value %q at rules.baz_scoped", value)
+}
+
+func validateBazDefault(value string) error {
+	if value == "" || value == BazDefaultAll || value == BazDefaultNone {
+		return nil
+	}
+	return oops.
+		With("field", "rules.baz_default").
+		With("actual_value", value).
+		With("valid_values", []string{BazDefaultAll, BazDefaultNone}).
+		Hint("Use one of: all, none (lowercase).").
+		Errorf("invalid baz_default value %q at rules.baz_default", value)
 }
 
 func validateRulesMode(value, fieldPath string) error {

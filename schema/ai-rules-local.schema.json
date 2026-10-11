@@ -3415,6 +3415,23 @@
       "additionalProperties": false,
       "description": "Controls how rules are written to generated outputs",
       "properties": {
+        "baz_budget": {
+          "description": "Byte budget of the AGENTS.md files the baz preset writes; generate warns when their total exceeds it. 0 (default) disables the warning.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "baz_default": {
+          "description": "Which items the baz preset selects for its path-scoped AGENTS.md files. all (default) lets every item through; none only items whose frontmatter `targets` name baz.",
+          "enum": [
+            "all",
+            "none"
+          ],
+          "type": "string"
+        },
+        "baz_dedupe": {
+          "description": "When true, a path-scoped item whose globs point into several directories under one parent is written once to the shared parent AGENTS.md instead of a copy in each. Defaults to false.",
+          "type": "boolean"
+        },
         "baz_scoped": {
           "description": "Where the baz preset puts path-scoped rules and context. nested (default) writes them to the AGENTS.md of the directory their globs point into, which Baz scopes to that directory; root keeps them in the root AGENTS.md with an Applies to line.",
           "enum": [

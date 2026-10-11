@@ -188,6 +188,9 @@ func withoutBazNested(items []config.ContentFile, cfg *config.Config) []config.C
 // or nil when it stays in the root file. The item moves only when every
 // positive glob points into an existing directory, so it never half-moves.
 func bazNestedDirs(cf config.ContentFile, cfg *config.Config) []string {
+	if !bazItemSelected(cf, cfg) {
+		return nil
+	}
 	act := cf.Metadata.ResolveActivation()
 	if act.Mode != config.ActivationGlob {
 		return nil
@@ -210,7 +213,53 @@ func bazNestedDirs(cf config.ContentFile, cfg *config.Config) []string {
 			return nil
 		}
 	}
-	return minimalDirs(dirs)
+	return bazCollapseDirs(minimalDirs(dirs), cfg)
+}
+
+// bazItemSelected reports whether an item may reach the baz preset's
+// path-scoped surface. With rules.baz_default = "none" only an item whose
+// frontmatter targets select baz qualifies (an item with no targets does not);
+// the default ("all") selects every item.
+func bazItemSelected(cf config.ContentFile, cfg *config.Config) bool {
+	if cfg.BazDefaultRules() != config.BazDefaultNone {
+		return true
+	}
+	var targets []string
+	if cf.Metadata != nil {
+		targets = cf.Metadata.Targets
+	}
+	return targetmatch.Match(targets, []string{bazPresetName}, agentsMDFile)
+}
+
+// bazCollapseDirs collapses the directories of one item to their deepest shared
+// parent when rules.baz_dedupe is on, so an item whose globs point into several
+// sibling directories is written once to the parent AGENTS.md instead of a copy
+// in each. It returns dirs unchanged when dedupe is off or the directories share
+// no usable parent (the project root, which has no nested file).
+func bazCollapseDirs(dirs []string, cfg *config.Config) []string {
+	if !cfg.BazDedupeEnabled() || len(dirs) <= 1 {
+		return dirs
+	}
+	parent := commonDir(dirs)
+	if parent == "" || !bazDirUsable(parent, cfg) {
+		return dirs
+	}
+	return []string{parent}
+}
+
+// commonDir returns the deepest directory all dirs sit under: their longest
+// common slash-separated prefix, or "" when they share none beyond the root.
+func commonDir(dirs []string) string {
+	parts := strings.Split(dirs[0], "/")
+	for _, dir := range dirs[1:] {
+		segs := strings.Split(dir, "/")
+		n := 0
+		for n < len(parts) && n < len(segs) && parts[n] == segs[n] {
+			n++
+		}
+		parts = parts[:n]
+	}
+	return strings.Join(parts, "/")
 }
 
 // globStaticDir is the directory a glob is rooted in: the leading path segments

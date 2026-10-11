@@ -457,6 +457,21 @@ type RulesConfig struct {
 	// globs point into, "root" keeps them in the root AGENTS.md with an
 	// "Applies to" line.
 	BazScoped string `yaml:"baz_scoped,omitempty" json:"baz_scoped,omitempty" toml:"baz_scoped,omitempty"` //nolint:tagliatelle
+
+	// BazDefault selects which items reach the baz preset's path-scoped
+	// AGENTS.md files: "all" (the default) lets every item through, "none"
+	// only items whose frontmatter `targets` name baz.
+	BazDefault string `yaml:"baz_default,omitempty" json:"baz_default,omitempty" toml:"baz_default,omitempty"` //nolint:tagliatelle
+
+	// BazDedupe, when true, writes a path-scoped item once into a shared parent
+	// AGENTS.md when its globs point into several directories under one parent,
+	// instead of a copy in each. Off by default so existing output is unchanged.
+	BazDedupe bool `yaml:"baz_dedupe,omitempty" json:"baz_dedupe,omitempty" toml:"baz_dedupe,omitempty"` //nolint:tagliatelle
+
+	// BazBudget is the byte budget of the AGENTS.md files the baz preset
+	// writes; generate warns when their total exceeds it. 0 (the default)
+	// disables the warning.
+	BazBudget int `yaml:"baz_budget,omitempty" json:"baz_budget,omitempty" toml:"baz_budget,omitempty"` //nolint:tagliatelle
 }
 
 // Values of rules.baz_scoped.
@@ -475,6 +490,38 @@ func (c *Config) BazScopedRules() string {
 		return c.Rules.BazScoped
 	}
 	return BazScopedNested
+}
+
+// Values of rules.baz_default.
+const (
+	BazDefaultAll  = "all"
+	BazDefaultNone = "none"
+)
+
+// BazDefaultRules returns which items the baz preset selects for its
+// path-scoped AGENTS.md files: BazDefaultAll (every item) unless rules.baz_default
+// says BazDefaultNone (only items whose targets name baz).
+func (c *Config) BazDefaultRules() string {
+	if c != nil && c.Rules != nil && c.Rules.BazDefault != "" {
+		return c.Rules.BazDefault
+	}
+	return BazDefaultAll
+}
+
+// BazDedupeEnabled reports whether a path-scoped item whose globs point into
+// several directories under one parent is written once to the shared parent
+// AGENTS.md (rules.baz_dedupe). Off by default.
+func (c *Config) BazDedupeEnabled() bool {
+	return c != nil && c.Rules != nil && c.Rules.BazDedupe
+}
+
+// BazBudgetBytes returns the byte budget of the AGENTS.md files the baz preset
+// writes (rules.baz_budget), or 0 when the warning is off.
+func (c *Config) BazBudgetBytes() int {
+	if c == nil || c.Rules == nil {
+		return 0
+	}
+	return c.Rules.BazBudget
 }
 
 // HasBuiltInPreset reports whether the built-in preset is configured.
