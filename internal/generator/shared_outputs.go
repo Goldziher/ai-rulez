@@ -48,7 +48,11 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 	owners := agentsMDOwners(cfg)
 	hash := computeSharedSourceHash(cfg, content, inlining, owners)
 	var shared []config.OutputFile
-	if wantAgentsMD {
+	// A plugin-authoring root delivers its content through the plugin, so a root
+	// with no content would write a header-only AGENTS.md. It is skipped rather
+	// than written empty; the preset's own root file reports the skip (see
+	// providers.renderRootFile).
+	if wantAgentsMD && !(content.IsEmpty() && cfg.HasPluginAuthoring()) {
 		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg, owners, inlining))
 	}
 	if wantSkills {
