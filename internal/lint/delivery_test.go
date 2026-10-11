@@ -3,6 +3,7 @@ package lint
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -195,6 +196,7 @@ func TestDeliveryRulesAreRegistered(t *testing.T) {
 	want := map[string]Severity{
 		CodeServedReferencedStatically: SeverityWarning, CodeDeliveryStubMissing: SeverityError, CodeDeliveryStaticFallback: SeverityWarning,
 		CodeServedNoServer: SeverityWarning, CodeDeliveryInvalid: SeverityError, CodeServedLockMismatch: SeverityError,
+		CodeServedBundledFiles: SeverityWarning, CodeBothDMIPointer: SeverityWarning,
 	}
 	for code, sev := range want {
 		rule, ok := lookupRule(code)
@@ -235,4 +237,107 @@ func TestWithDeliverySuppliesFindingsAtTheirSeverity(t *testing.T) {
 			assert.Contains(t, f.File, "config.toml")
 		}
 	}
+}
+
+// AR9R0: a served skill that ships scripts/ or assets/ has no file on disk for a
+// relative path into it to resolve. A static skill and a served skill that ships
+// only references/ do not warn.
+func TestStrict_ServedSkillBundledFilesWarn(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml": baseConfig,
+		".ai-rulez/skills/runner/SKILL.md": "---\nname: runner\ndescription: Runs a bundled migration script. Use when testing served bundled files.\ndelivery: served\n---\n" +
+			"Run `scripts/migrate.py`.\n",
+		".ai-rulez/skills/runner/scripts/migrate.py": "print('hi')\n",
+		".ai-rulez/skills/reader/SKILL.md": "---\nname: reader\ndescription: Serves only references, not scripts. Use when testing that references do not warn.\ndelivery: served\n---\n" +
+			"See `references/api.md`.\n",
+		".ai-rulez/skills/reader/references/api.md": "# API\n",
+		".ai-rulez/skills/static-runner/SKILL.md": "---\nname: static-runner\ndescription: A static skill with a script on disk. Use when testing that static skills do not warn.\n---\n" +
+			"Run `scripts/migrate.py`.\n",
+		".ai-rulez/skills/static-runner/scripts/migrate.py": "print('hi')\n",
+	})
+	gitAdd(t, root)
+	fs := lintDir(t, root)
+
+	assert.True(t, has(fs, CodeServedBundledFiles, "skills/runner/SKILL.md", 0), "a served skill with a script warns: %v", fs)
+	assert.Equal(t, 1, countCode(fs, CodeServedBundledFiles), "only the served skill with a script warns: %v", fs)
+	for _, f := range fs {
+		if f.Code == CodeServedBundledFiles {
+			assert.Equal(t, SeverityWarning, f.Severity)
+			assert.Contains(t, f.Message, "scripts")
+			assert.Contains(t, f.Message, "delivery: both")
+		}
+	}
+}
+
+// AR990 names the missing file when the pointer is a file path, not a bare name.
+func TestStrict_ServedSkillReferencedByFilePath(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml":           baseConfig,
+		".ai-rulez/skills/heavy/SKILL.md": "---\nname: heavy\ndescription: Heavy served skill for migrations. Use when testing a served file path.\ndelivery: served\n---\nHEAVY body.\n",
+		".ai-rulez/rules/use.md":          "# Use\n\nEdit .claude/skills/heavy/SKILL.md by hand.\n",
+	})
+	gitAdd(t, root)
+	fs := lintDir(t, root)
+
+	assert.True(t, has(fs, CodeServedReferencedStatically, "rules/use.md", 0), "a file-path pointer to a served skill warns: %v", fs)
+	assert.Contains(t, messages(fs, CodeServedReferencedStatically), "the file will not be there")
+}
+
+// AR9R1: a bare pointer to a both + disable-model-invocation skill is refused by
+// the Skill tool; a file path and a load_skill pointer still work, so neither is
+// reported.
+func TestStrict_BothDMIPointer(t *testing.T) {
+	const dmi = "---\nname: deploy\ndescription: Deploy the service. Use when shipping a release.\ndelivery: both\ndisable-model-invocation: true\n---\nDeploy body.\n"
+	tests := []struct {
+		name  string
+		body  string
+		skill string
+		want  bool
+	}{
+		{"backticked name then kind", "Run the `deploy` skill.", dmi, true},
+		{"skill call", "Run Skill(deploy).", dmi, true},
+		{"labelled pointer", "Procedure/reference: skill deploy", dmi, true},
+		{"file path pointer", "Edit .claude/skills/deploy/SKILL.md by hand.", dmi, false},
+		{"skills directory pointer", "Read skills/deploy for the steps.", dmi, false},
+		{"load_skill pointer", "Run the `deploy` skill via load_skill.", dmi, false},
+		{"underscore spelling still fires", "Run the `deploy` skill.", strings.Replace(dmi, "disable-model-invocation", "disable_model_invocation", 1), true},
+		{"a both skill without dmi does not fire", "Run the `deploy` skill.",
+			"---\nname: deploy\ndescription: Deploy the service. Use when shipping a release.\ndelivery: both\n---\nDeploy body.\n", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":            baseConfig,
+				".ai-rulez/skills/deploy/SKILL.md": tt.skill,
+				".ai-rulez/rules/use.md":           "# Use\n\n" + tt.body + "\n",
+			})
+			gitAdd(t, root)
+
+			// Act
+			fs := lintDir(t, root)
+
+			// Assert
+			assert.Equal(t, tt.want, has(fs, CodeBothDMIPointer, "rules/use.md", 0), "%q:\n%s", tt.body, dump(fs))
+		})
+	}
+}
+
+// A served + disable-model-invocation skill named statically is AR990's case, not
+// AR9R1's: it is not a both skill.
+func TestStrict_ServedDMIIsNotABothPointer(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml":            baseConfig,
+		".ai-rulez/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: Deploy the service. Use when shipping a release.\ndelivery: served\ndisable-model-invocation: true\n---\nDeploy body.\n",
+		".ai-rulez/rules/use.md":           "# Use\n\nRun the `deploy` skill.\n",
+	})
+	gitAdd(t, root)
+	fs := lintDir(t, root)
+
+	assert.Zero(t, countCode(fs, CodeBothDMIPointer), "a served skill is AR990's case: %v", fs)
+	assert.True(t, has(fs, CodeServedReferencedStatically, "rules/use.md", 0), "AR990 still fires: %v", fs)
 }

@@ -129,6 +129,8 @@ stdout.
 | AR994 | `delivery-invalid` | error | A skill's `delivery` frontmatter is not `static`, `served` or `both` (it is ignored and the skill keeps its inherited delivery) |
 | AR995 | `served-lock-mismatch` | error | `[lock] enforce = true` and a served skill is not pinned in `ai-rulez.lock` or its digest differs; the server refuses to serve it |
 | AR989 | `served-file-unscannable` | warning / error | A served skill file (authored skills included) is binary (a NUL byte, invalid UTF-8) or larger than 512 KiB, so the security scan cannot read it. For a remote source (`trust = "error"`) the file is not served; a `SKILL.md` that cannot be scanned is an error and the skill is refused |
+| AR9R0 | `served-skill-bundled-files` | warning | A served skill ships files under `scripts/` or `assets/`, which are not written to any harness's skill tree; a relative path into them (the form SKILL.md usually uses) resolves to nothing. `references/` are exempt (readable over MCP with `list_skill_resources`/`load_skill`). Set `delivery: both` to keep the files on disk (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR9R1 | `both-dmi-pointer` | warning | Always-loaded content points at a skill whose `delivery` is `both` and whose frontmatter sets `disable-model-invocation: true` (or `disable_model_invocation`), by a bare name or `Skill(...)`; the Skill tool refuses a DMI skill, so the model then declines the workflow. A file-path pointer and a `load_skill`/`find_skill` pointer are not reported (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR971 | `role-reference-unknown` | error | A `[[roles]]` entry lists a domain that does not exist, or an include, exclude or `skill_mode` entry that matches no item (or matches only in a domain the role does not select). See [Roles](roles.md) |
 | AR972 | `role-extends-invalid` | error | A role extends an unknown role, itself, or takes part in a cycle, or extends a role that itself extends another (inheritance is one level deep) |
 | AR973 | `role-unreachable-dependency` | warning | An item a role keeps lists a skill in its `skills:` frontmatter that the role drops, or hides from the model with `skill_mode` `off` or `user-invocable-only` |
@@ -281,11 +283,12 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9N0`-`AR9N9` | Publish ([#224](https://github.com/Goldziher/ai-rulez/issues/224); `AR9N0`-`AR9N9` used; never emitted by `validate`, see [Publish](publish.md)) | allocated |
 | `AR9P0`-`AR9P9` | llms.txt files ([llms.txt](llms-txt.md); `AR9P0`-`AR9P6` used) | allocated |
 | `AR9Q0`-`AR9Q9` | Harness instruction files ([#318](https://github.com/Goldziher/ai-rulez/issues/318); `AR9Q0` used, reported by `validate --strict` when `[lint] agents_md_only` is set) | allocated |
+| `AR9R0`-`AR9R9` | Served-skill on-disk traps ([#336](https://github.com/Goldziher/ai-rulez/issues/336), [#337](https://github.com/Goldziher/ai-rulez/issues/337); `AR9R0`, `AR9R1` used) | allocated |
 | `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
-Unlisted letters (`AR9I`, `AR9Q`, `AR9R`, `AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
+Unlisted letters (`AR9I`, `AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
 out of blocks that more than one design had claimed (review and catalog both asked for `AR9G`, publish for `AR9F`,
 a UI for `AR9H`).
 
@@ -529,7 +532,7 @@ about: `file` (a line of a scanned text file), `item` (one rule, skill, agent, c
 | `plugin` | `AR961`-`AR964` |
 | `roles` | `AR971`-`AR973` |
 | `lock` | `AR730`, `AR732`, `AR733`, `AR734`, `AR735`, `AR981`, `AR982`, `AR995` |
-| `delivery` | `AR989`-`AR994` |
+| `delivery` | `AR989`-`AR994`, `AR9R0`, `AR9R1` |
 | `evals` | `AR996`-`AR998`, `AR9A0`-`AR9A5` |
 | `okf` | `AR9B0`-`AR9B9` |
 | `llmstxt` | `AR9P0`-`AR9P6` |
@@ -3413,6 +3416,26 @@ AGENTS.md is canonical for Claude Code, but a tracked CLAUDE.md, .claude/CLAUDE.
 - Why: Claude Code loads the nearest CLAUDE.md in preference to AGENTS.md, so a hand-authored CLAUDE.md silently replaces the instructions ai-rulez generated; CLAUDE.local.md shadows it for one developer only.
 - Bad: A hand-written CLAUDE.md next to the generated AGENTS.md
 - Good: Keep the generated CLAUDE.md shim (whose only body is @AGENTS.md), or list an intentional island in lint.agents_md_only_allow
+
+### AR9R0 served-skill-bundled-files
+
+a served skill ships scripts/ or assets/ that are not written to disk, so a relative path into them does not resolve; set delivery: both to keep them
+
+- Default severity: `warning`
+- Analyzer: `delivery` (scope `item`)
+- Why: A served skill is delivered over MCP, so none of its files are written to a harness skill tree. A relative path into a bundled `scripts/` or `assets/` file (the form SKILL.md usually uses) then resolves to nothing, and a script the skill tells the agent to run cannot be run.
+- Bad: A `served` skill whose SKILL.md says `run scripts/migrate.py`
+- Good: Set `delivery: both` so the files stay on disk, or read them through `list_skill_resources`/`load_skill`
+
+### AR9R1 both-dmi-pointer
+
+always-loaded content points at a delivery: both skill whose frontmatter sets disable-model-invocation: true, by a bare name or Skill(...); the Skill tool refuses it and the model then declines the workflow
+
+- Default severity: `warning`
+- Analyzer: `delivery` (scope `item`)
+- Why: A `both` skill is on disk, but `disable-model-invocation: true` hides it from the Skill tool, which refuses it and tells the model not to replicate the workflow another way. A rule that points at it by name ("run the `x` skill", `Skill(x)`) leaves the model declining, even though it could read the file.
+- Bad: A rule saying "run the `deploy` skill" for a `both` skill with `disable-model-invocation: true`
+- Good: Point at the file path (`.claude/skills/deploy/SKILL.md`) or a `load_skill` call, or drop `disable-model-invocation`
 
 ### AR9S0 ard-manifest-invalid
 

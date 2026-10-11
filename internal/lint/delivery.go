@@ -13,8 +13,9 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/skillsource"
 )
 
-// Dynamic skill loading rules (AR990 to AR995). The numbers are reserved for
-// this family; the roles work uses AR971 to AR973 and AR981 to AR982.
+// Dynamic skill loading rules. AR990 to AR995 are the first delivery block; the
+// roles work uses AR971 to AR973 and AR981 to AR982. AR9R0 and AR9R1 are the
+// on-disk and invocation traps that serving a skill introduces (docs/strict-validation.md).
 const (
 	CodeServedReferencedStatically = "AR990"
 	CodeDeliveryStubMissing        = "AR991"
@@ -22,6 +23,14 @@ const (
 	CodeServedNoServer             = "AR993"
 	CodeDeliveryInvalid            = "AR994"
 	CodeServedLockMismatch         = "AR995"
+	// CodeServedBundledFiles warns that a served skill ships scripts/ or assets/
+	// that are never written to disk, so a relative path into them resolves to
+	// nothing.
+	CodeServedBundledFiles = "AR9R0"
+	// CodeBothDMIPointer warns that always-loaded content points at a delivery:
+	// both skill whose frontmatter sets disable-model-invocation: true; the Skill
+	// tool refuses it, so a bare pointer leaves the model declining the workflow.
+	CodeBothDMIPointer = "AR9R1"
 )
 
 func registerDelivery(s *ruleSet) {
@@ -32,6 +41,8 @@ func registerDelivery(s *ruleSet) {
 		RuleInfo{CodeServedNoServer, "served-no-server", SeverityWarning, "skills are served but no [[mcp_servers]] entry runs `ai-rulez mcp --serve-skills`"},
 		RuleInfo{CodeDeliveryInvalid, "delivery-invalid", SeverityError, "a skill's delivery frontmatter is not static, served or both"},
 		RuleInfo{CodeServedLockMismatch, "served-lock-mismatch", SeverityError, "[lock] enforce is on and a served skill is not pinned in ai-rulez.lock with its current digest"},
+		RuleInfo{CodeServedBundledFiles, "served-skill-bundled-files", SeverityWarning, "a served skill ships scripts/ or assets/ that are not written to disk, so a relative path into them does not resolve; set delivery: both to keep them"},
+		RuleInfo{CodeBothDMIPointer, "both-dmi-pointer", SeverityWarning, "always-loaded content points at a delivery: both skill whose frontmatter sets disable-model-invocation: true, by a bare name or Skill(...); the Skill tool refuses it and the model then declines the workflow"},
 	)
 }
 
@@ -56,6 +67,8 @@ func (r *runner) checkDelivery() {
 	served := r.servedSkillNames()
 	r.checkDeliveryValues()
 	r.checkServedReferences(served)
+	r.checkServedBundledFiles(served)
+	r.checkBothDMIPointers()
 	r.checkUnpinnedSources()
 	path := r.configFilePath()
 	if path == "" {
@@ -161,11 +174,170 @@ func (r *runner) checkServedBody(it *item, d doc, served, reported map[string]bo
 				continue
 			}
 			reported[name] = true
+			if servedPathPointer(l, name) {
+				r.add(CodeServedReferencedStatically, it.abs, l.No,
+					"%s is served (%s), so its file is not written to the harness's skill tree; this %s points at its path, and the file will not be there. The transitive fix is to set delivery: both on %s — it stays in the static tree and the path resolves — or change %s. The agent can also load it with find_skill/load_skill.",
+					name, r.servedSkillSource(name), it.kind, name, r.servedSkillSource(name))
+				continue
+			}
 			r.add(CodeServedReferencedStatically, it.abs, l.No,
 				"%s is served (%s), so it is not in the harness's skill tree; this %s refers to it by name. The transitive fix is to set delivery: both on %s — it stays in the static tree and every reference to it resolves — or change %s. The agent can also load it with find_skill/load_skill.",
 				name, r.servedSkillSource(name), it.kind, name, r.servedSkillSource(name))
 		}
 	}
+}
+
+// servedPathPointer reports whether a line names the skill by file path
+// (skills/<name>, .claude/skills/<name>/...) rather than by bare name. It reuses
+// skillDirRe, the file-path matcher referenceNames already runs, so AR990 can say
+// the file will not be there instead of only that the name points nowhere.
+func servedPathPointer(l bodyLine, name string) bool {
+	if !strings.Contains(l.Text, "skills/") {
+		return false
+	}
+	for _, m := range skillDirRe().FindAllStringSubmatch(l.Text, -1) {
+		if strings.EqualFold(m[1], name) {
+			return true
+		}
+	}
+	return false
+}
+
+// checkServedBundledFiles warns (AR9R0) when a served skill ships files under
+// scripts/ or assets/. A served skill reaches the agent over MCP, so a relative
+// path into a script or asset — the form SKILL.md usually uses — has no file on
+// disk to resolve. references are left out: they are readable over MCP through
+// list_skill_resources/load_skill, so they are not the trap this rule covers.
+func (r *runner) checkServedBundledFiles(served map[string]bool) {
+	for i := range r.items {
+		it := &r.items[i]
+		if it.kind != kindSkill || it.isDoc || !it.owned || !served[strings.ToLower(itemID(kindSkill, it.cf))] {
+			continue
+		}
+		kinds := bundledKinds(it.cf.Resources)
+		if len(kinds) == 0 {
+			continue
+		}
+		r.add(CodeServedBundledFiles, it.abs, r.deliveryLine(it),
+			"%s is served, so its bundled %s are not written to any skill tree and a relative path into them does not resolve. Set delivery: both to keep the files on disk, or reach them through list_skill_resources/load_skill",
+			itemID(kindSkill, it.cf), strings.Join(kinds, "/"))
+	}
+}
+
+// bundledKinds lists, in canonical order, the kinds of bundled file a served
+// skill ships that a relative path would need on disk: scripts and assets.
+func bundledKinds(resources []config.SkillResource) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, res := range resources {
+		switch res.Kind {
+		case config.SkillKindScripts, config.SkillKindAssets:
+			if !seen[res.Kind] {
+				seen[res.Kind] = true
+				out = append(out, res.Kind)
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// deliveryLine returns the 1-based line of the skill's `delivery` frontmatter key,
+// or 1 when it has none.
+func (r *runner) deliveryLine(it *item) int {
+	if k, found := parseFrontmatterDoc(r.docs[it.abs]).top("delivery"); found {
+		return k.Line
+	}
+	return 1
+}
+
+// checkBothDMIPointers warns (AR9R1) where always-loaded content points at a
+// skill that is delivery: both and sets disable-model-invocation: true. Such a
+// skill is on disk but hidden from the Skill tool, which refuses it; a bare
+// pointer ("run the `x` skill", Skill(x)) then leaves the model declining the
+// workflow. A file-path pointer and a load_skill/find_skill pointer still work,
+// so neither is reported.
+func (r *runner) checkBothDMIPointers() {
+	targets := r.bothDMISkillNames()
+	if len(targets) == 0 {
+		return
+	}
+	for i := range r.items {
+		it := &r.items[i]
+		if !it.owned || it.isDoc || !alwaysLoaded(it) {
+			continue
+		}
+		d, ok := r.docs[it.abs]
+		if !ok {
+			continue
+		}
+		reported := map[string]bool{}
+		for _, l := range d.body() {
+			if mcpSkillPointer(l.Text) {
+				continue
+			}
+			for _, ref := range referenceNames(l) {
+				if ref.kind != kindSkill {
+					continue
+				}
+				key := strings.ToLower(ref.name)
+				if !targets[key] || reported[key] || servedPathPointer(l, ref.name) {
+					continue
+				}
+				reported[key] = true
+				r.add(CodeBothDMIPointer, it.abs, l.No,
+					"%s is delivery: both with disable-model-invocation: true, so the Skill tool refuses it; this %s's pointer by name leaves the model declining the workflow. Point at the file path (the file is on disk) or a load_skill call, or drop disable-model-invocation",
+					ref.name, it.kind)
+			}
+		}
+	}
+}
+
+// bothDMISkillNames lists the lower-case names (id, name, aliases) of skills
+// whose delivery is both and whose frontmatter stops the model from invoking
+// them. A both skill is on disk, so AR990 does not cover it.
+func (r *runner) bothDMISkillNames() map[string]bool {
+	out := map[string]bool{}
+	for i := range r.items {
+		it := &r.items[i]
+		if it.kind != kindSkill || it.isDoc || !it.owned {
+			continue
+		}
+		if r.cfg.EffectiveDelivery(it.cf, it.domain, nil) != config.DeliveryBoth {
+			continue
+		}
+		if !modelInvocationDisabled(parseFrontmatterDoc(r.docs[it.abs])) {
+			continue
+		}
+		for _, n := range contentNames(kindSkill, it.cf) {
+			out[n] = true
+		}
+	}
+	return out
+}
+
+// modelInvocationDisabled reports whether a skill's frontmatter sets
+// disable-model-invocation (or its underscore misspelling) to true. Only this
+// Claude Code key is read: the trap is the Skill tool refusing the skill.
+func modelInvocationDisabled(fm frontmatter) bool {
+	for _, name := range []string{keyDisableModel, keyDisableModelUnderscore} {
+		if k, ok := fm.top(name); ok && isTrue(k.Value) {
+			return true
+		}
+	}
+	return false
+}
+
+// mcpSkillPointer reports whether a line already routes the agent through the
+// skills MCP server (load_skill, find_skill, list_skill_resources, ...), which
+// reaches a disable-model-invocation skill without the Skill tool.
+func mcpSkillPointer(text string) bool {
+	for _, tool := range []string{"load_skill", "find_skill", "list_skill_resources", "read_skill_file", "get_skill"} {
+		if strings.Contains(text, tool) {
+			return true
+		}
+	}
+	return false
 }
 
 // servedSkillSource names where a skill's served delivery comes from, so the

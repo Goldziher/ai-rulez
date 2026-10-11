@@ -220,6 +220,16 @@ func registerRuledocsAdded(s *ruleSet) {
 			Bad:  "A served skill edited since the last `ai-rulez lock`",
 			Good: "Review the change and re-run `ai-rulez lock`",
 		},
+		CodeServedBundledFiles: {
+			Why:  "A served skill is delivered over MCP, so none of its files are written to a harness skill tree. A relative path into a bundled `scripts/` or `assets/` file (the form SKILL.md usually uses) then resolves to nothing, and a script the skill tells the agent to run cannot be run.",
+			Bad:  "A `served` skill whose SKILL.md says `run scripts/migrate.py`",
+			Good: "Set `delivery: both` so the files stay on disk, or read them through `list_skill_resources`/`load_skill`",
+		},
+		CodeBothDMIPointer: {
+			Why:  "A `both` skill is on disk, but `disable-model-invocation: true` hides it from the Skill tool, which refuses it and tells the model not to replicate the workflow another way. A rule that points at it by name (\"run the `x` skill\", `Skill(x)`) leaves the model declining, even though it could read the file.",
+			Bad:  "A rule saying \"run the `deploy` skill\" for a `both` skill with `disable-model-invocation: true`",
+			Good: "Point at the file path (`.claude/skills/deploy/SKILL.md`) or a `load_skill` call, or drop `disable-model-invocation`",
+		},
 		CodeEvalCaseInvalid: {
 			Why:  "A malformed eval case cannot be run, so the skill it guards is effectively untested.",
 			Bad:  "An eval case with no `prompt` or `expect_trigger`",

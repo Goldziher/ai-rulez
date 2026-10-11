@@ -379,9 +379,9 @@ MCP instead, so the agent pays for them only when it asks. Three pieces work tog
 | -------------- | ---- |
 | `static` | A core convention the agent needs in nearly every session (code style, commit rules, the repository map). The listing costs a few tokens and it never depends on the model deciding to search. |
 | `served` | Domain skills used in some sessions: billing, migrations, a vendor API, incident response. The bulk of a large catalog. |
-| `both` | A skill that must always be visible to one harness but that other harnesses or roles should also find by search. |
+| `both` | A skill that ships `scripts/` or `assets/` the agent runs by relative path, or that must always be visible to one harness while other harnesses or roles find it by search. |
 
-Rules of thumb: serve domain skills, keep a handful of core convention skills static. Three caveats:
+Rules of thumb: serve domain skills, keep a handful of core convention skills static. Caveats:
 
 - **The model has to choose to call `find_skill`.** A served skill is invisible until it does. Write
   `description` and `triggers` for search (what the user is trying to do, in their words), and keep the skills
@@ -390,7 +390,17 @@ Rules of thumb: serve domain skills, keep a handful of core convention skills st
   skills as static files, with a warning (`AR992`), never silently dropped. Served skills also need an MCP
   server entry that runs `ai-rulez mcp --serve-skills` (`AR993` warns when there is none).
 - **Served skills are not in the context until loaded.** Nothing that is always loaded (a rule, a static skill)
-  can rely on them being there; `AR990` warns when static content names a served skill.
+  can rely on them being there; `AR990` warns when static content names a served skill, and says the file will
+  not be there when the pointer is a path.
+- **Bundled files need `delivery: both`.** A `served` skill's `scripts/` and `assets/` are never written to
+  disk, so a relative path into them (`scripts/foo.py`, the form SKILL.md usually uses) resolves to nothing;
+  `AR9R0` warns. Set `delivery: both` when SKILL.md tells the agent to run a bundled script, or reach the file
+  through `list_skill_resources`/`load_skill`. `references/` are readable over MCP either way.
+- **`disable-model-invocation` plus `both` is a trap.** `both` keeps the skill's file on disk, but
+  `disable-model-invocation: true` hides the skill from the Skill tool, which refuses it and tells the model not
+  to reproduce the workflow another way. A rule that points at it by name ("run the `x` skill", `Skill(x)`) then
+  leaves the model declining even though it could read the file; `AR9R1` warns. Point at the file path
+  (`.claude/skills/<id>/SKILL.md`) or a `load_skill` call, or drop `disable-model-invocation`.
 
 ### Choosing the delivery
 
