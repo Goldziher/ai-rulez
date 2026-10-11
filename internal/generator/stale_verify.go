@@ -66,6 +66,40 @@ func (g *Generator) manifestDigestSet() map[string]string {
 	return set
 }
 
+// manifestAssetSet is the bundled-asset digests the manifests recorded. Both are
+// read: the committed one carries the shared assets a fresh clone needs, and the
+// machine-local one the assets written from local inputs. An entry is only ever
+// used through recordedAsset, which constrains the path to a generated skills
+// directory and re-checks the file's digest.
+func (g *Generator) manifestAssetSet() map[string]string {
+	set := map[string]string{}
+	for rel, sum := range g.readManifest(g.manifestPath()).Assets {
+		set[rel] = sum
+	}
+	if g.localSkipped {
+		return set
+	}
+	for rel, sum := range g.readManifest(g.localManifestPath()).Assets {
+		set[rel] = sum
+	}
+	return set
+}
+
+// recordedAsset reports whether abs is a bundled asset a manifest recorded and
+// that still holds the bytes it recorded. A bundled asset (a skill's scripts/,
+// references/ or assets/ file) is copied verbatim and carries no Content-Hash, so
+// its own bytes cannot prove it; the manifest's digest is the proof (#328). The
+// path must lie under a generated skills directory, so a forged entry cannot
+// reach an arbitrary file.
+func (g *Generator) recordedAsset(rel, abs string, assets map[string]string) bool {
+	want, ok := assets[rel]
+	if !ok || !isBundledAssetPath(rel) {
+		return false
+	}
+	data, err := g.config.ReadExisting(abs)
+	return err == nil && fileDigest(data) == want
+}
+
 // provablyGenerated reports whether the file at abs, listed in a manifest as rel,
 // can be shown to be an unedited ai-rulez output.
 func (g *Generator) provablyGenerated(rel, abs string, digests map[string]string) bool {

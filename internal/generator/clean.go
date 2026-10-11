@@ -658,7 +658,7 @@ func (g *Generator) cleanStaleFiles(outputs []config.OutputFile) []string {
 		return g.userStale(outputs)
 	}
 	files := g.staleManifestFiles(outputs)
-	for _, abs := range g.retiredClaudeShims(outputs) {
+	for _, abs := range g.retiredClaudeShims(g.orphanGeneratedFiles(outputs)) {
 		if !slices.Contains(files, abs) {
 			files = append(files, abs)
 		}

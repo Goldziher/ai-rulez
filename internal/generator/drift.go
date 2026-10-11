@@ -207,14 +207,47 @@ func (g *Generator) resetRunState() {
 
 // orphanGeneratedFiles lists generated files (those carrying a Content-Hash
 // header) that no output in the plan emits. It is the manifest-free half of the
-// orphan check: on a fresh checkout or in CI there is no previous manifest, so a
-// file left behind by a removed source would otherwise pass `generate --check`.
-// It walks the top-level directories the plan writes into (never the whole
-// source tree) and reads only each candidate's header.
+// orphan check (#313, #333): on a fresh checkout or in CI there is no previous
+// manifest, so a file left behind by a removed source (an agent whose source was
+// deleted, a builtin pack excluded) would otherwise pass `generate --check`. It
+// walks the top-level directories the plan writes into (never the whole source
+// tree) and reads only each candidate's header. generate removes what it lists
+// (retiredFiles); --check reports it as an orphan.
 func (g *Generator) orphanGeneratedFiles(outputs []config.OutputFile) []string {
-	planned := make(map[string]bool, len(outputs))
-	roots := map[string]bool{}
-	rootLevel := false
+	planned, roots, rootLevel := g.plannedOutputIndex(outputs)
+	seen := make(map[string]bool)
+	var orphans []string
+	consider := func(abs string) {
+		rel := g.relSlash(abs)
+		if planned[rel] || seen[rel] {
+			return
+		}
+		seen[rel] = true
+		if g.cleanGeneratedLeftover(abs) {
+			orphans = append(orphans, rel)
+		}
+	}
+	// A root-level output (AGENTS.md, .mcp.json) means the root files are
+	// candidates. The root is also scanned when a preset declares a root file but
+	// this run emits none: a root whose content tree is empty writes no
+	// instruction file (#327), so a previously written one has to be found.
+	if rootLevel || g.declaresRootLevelOutput() {
+		g.considerRootFiles(consider)
+	}
+	for root := range roots {
+		g.considerRootTree(root, consider)
+	}
+	sort.Strings(orphans)
+	return orphans
+}
+
+// plannedOutputIndex maps each output's project path, the top-level directories
+// the plan writes into, and whether any output is at the root. It also marks the
+// files this run must not treat as orphans: those a local overlay suppresses,
+// and those the local manifest owns.
+func (g *Generator) plannedOutputIndex(outputs []config.OutputFile) (planned, roots map[string]bool, rootLevel bool) {
+	planned = make(map[string]bool, len(outputs))
+	roots = map[string]bool{}
 	for i := range outputs {
 		rel := g.relSlash(g.absOutputPath(outputs[i].Path))
 		planned[rel] = true
@@ -224,47 +257,71 @@ func (g *Generator) orphanGeneratedFiles(outputs []config.OutputFile) []string {
 			rootLevel = true
 		}
 	}
-	seen := make(map[string]bool)
-	var orphans []string
-	consider := func(abs string) {
-		rel := g.relSlash(abs)
-		if planned[rel] || seen[rel] {
-			return
-		}
-		seen[rel] = true
-		if hash, _, _ := g.scanHashes(abs); hash != "" {
-			orphans = append(orphans, rel)
+	// A file only the shared baseline produces (suppressed by a local overlay) is
+	// deliberately left alone: it is not this run's to remove.
+	if g.plan != nil {
+		for _, rel := range g.plan.suppressed {
+			planned[rel] = true
 		}
 	}
-	if rootLevel {
-		// A root-level output (AGENTS.md, .mcp.json): list the root files only.
-		entries, err := os.ReadDir(g.config.BaseDir)
-		if err == nil {
-			for _, e := range entries {
-				if !e.IsDir() {
-					consider(filepath.Join(g.config.BaseDir, e.Name()))
-				}
-			}
+	// A machine-local output is named by the local manifest, not by the orphan
+	// walk: with the local inputs skipped (a teammate's shared run) it must be
+	// left alone, and otherwise the manifest-driven stale pass owns it.
+	for _, rel := range g.readManifest(g.localManifestPath()).Files {
+		planned[rel] = true
+	}
+	return planned, roots, rootLevel
+}
+
+// cleanGeneratedLeftover reports whether abs is a generated file left behind by
+// a removed source: a regular file whose header carries a Content-Hash its body
+// still matches. A symlink is the user's, and a hand-edited body is not a clean
+// leftover.
+func (g *Generator) cleanGeneratedLeftover(abs string) bool {
+	// Read only a regular file: a symlink is the user's (removals refuse one
+	// anyway), and reading a device or FIFO planted at a root path would hang.
+	info, err := os.Lstat(abs)
+	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
+		return false
+	}
+	hash, _, _ := g.scanHashes(abs)
+	if hash == "" {
+		return false
+	}
+	data, err := g.config.ReadExisting(abs)
+	return err == nil && !g.bodyEdited(string(data), abs)
+}
+
+// considerRootFiles offers each root-level file to consider.
+func (g *Generator) considerRootFiles(consider func(string)) {
+	entries, err := os.ReadDir(g.config.BaseDir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			consider(filepath.Join(g.config.BaseDir, e.Name()))
 		}
 	}
-	for root := range roots {
-		abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(root))
-		_ = filepath.WalkDir(abs, func(p string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return nil
-			}
-			if d.IsDir() {
-				if skipOrphanWalk(d.Name()) {
-					return filepath.SkipDir
-				}
-				return nil
-			}
-			consider(p)
+}
+
+// considerRootTree offers each file under a top-level output directory to
+// consider, skipping VCS and dependency trees.
+func (g *Generator) considerRootTree(root string, consider func(string)) {
+	abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(root))
+	_ = filepath.WalkDir(abs, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
 			return nil
-		})
-	}
-	sort.Strings(orphans)
-	return orphans
+		}
+		if d.IsDir() {
+			if skipOrphanWalk(d.Name()) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		consider(p)
+		return nil
+	})
 }
 
 // skipOrphanWalk names the directories an orphan walk never descends into: VCS
@@ -275,6 +332,32 @@ func skipOrphanWalk(name string) bool {
 		return true
 	}
 	return false
+}
+
+// declaresRootLevelOutput reports whether any configured preset declares an
+// output directly under the project root (CLAUDE.md, AGENTS.md, .mcp.json), so
+// the orphan walk considers root files even when this run emits none of them.
+// A root whose selected content tree is empty writes no instruction file
+// (#327); without this the previously written root file could not be found and
+// removed as an orphan.
+func (g *Generator) declaresRootLevelOutput() bool {
+	if g.config.Registry == nil {
+		return false
+	}
+	base := filepath.Clean(g.config.BaseDir)
+	found := false
+	g.config.Registry.Each(func(_ string, gen config.PresetGenerator) {
+		if found {
+			return
+		}
+		for _, p := range gen.GetOutputPaths(base) {
+			if filepath.Clean(filepath.Dir(p)) == base {
+				found = true
+				return
+			}
+		}
+	})
+	return found
 }
 
 func (g *Generator) relSlash(abs string) string {

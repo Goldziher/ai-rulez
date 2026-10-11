@@ -100,17 +100,29 @@ func (g *Generator) adoptable(rel string, data []byte) bool {
 	return ok && want == fileDigest(data)
 }
 
-// retiredFiles is what a generate removes: the stale manifest entries, plus the
-// command files `convert` imported that a generated skill now replaces. clean
-// does not use it: it keeps every file convert imported.
+// retiredFiles is what a generate removes: the stale manifest entries, the
+// command files `convert` imported that a generated skill now replaces, and the
+// generated files (those carrying an ai-rulez header) no output in the plan
+// emits. clean does not use it: it keeps every file convert imported.
 func (g *Generator) retiredFiles(outputs []config.OutputFile) []string {
 	files := g.staleManifestFiles(outputs)
+	orphans := g.orphanGeneratedFiles(outputs)
 	for _, abs := range g.supersededCommands(outputs) {
 		if !slices.Contains(files, abs) {
 			files = append(files, abs)
 		}
 	}
-	for _, abs := range g.retiredClaudeShims(outputs) {
+	for _, abs := range g.retiredClaudeShims(orphans) {
+		if !slices.Contains(files, abs) {
+			files = append(files, abs)
+		}
+	}
+	// The manifest-free orphan half (#333): a generated file whose own header
+	// (banner + Content-Hash) marks it, left behind by a removed source or an
+	// excluded builtin pack. It is removed even when no manifest names it, so
+	// `generate` cleans what `generate --check` already reports.
+	for _, rel := range orphans {
+		abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(rel))
 		if !slices.Contains(files, abs) {
 			files = append(files, abs)
 		}
@@ -127,13 +139,14 @@ const claudeShimBaseName = "CLAUDE.md"
 // this run no longer writes because claude_md = "none". It is manifest-free: the
 // shim's own Content-Hash header marks it (see orphanGeneratedFiles), so the
 // switch cleans the root shim and every scope's even when the previous manifest
-// is gone. A file with no Content-Hash is hand-authored and left alone.
-func (g *Generator) retiredClaudeShims(outputs []config.OutputFile) []string {
+// is gone. A file with no Content-Hash is hand-authored and left alone. orphans
+// is the orphan list retiredFiles already computed, so the walk runs once.
+func (g *Generator) retiredClaudeShims(orphans []string) []string {
 	if !g.config.OmitsClaudeShim() {
 		return nil
 	}
 	var out []string
-	for _, rel := range g.orphanGeneratedFiles(outputs) {
+	for _, rel := range orphans {
 		if path.Base(rel) == claudeShimBaseName {
 			out = append(out, filepath.Join(g.config.BaseDir, filepath.FromSlash(rel)))
 		}
@@ -267,6 +280,7 @@ func (g *Generator) outputSafety(outputs []config.OutputFile) (refused []outputR
 	}
 	linked = map[string]bool{}
 	written := g.writtenTargets(outputs)
+	assetDirs := g.renderedOutputDirs(outputs)
 	for _, output := range outputs {
 		if output.IsDir {
 			continue
@@ -288,7 +302,7 @@ func (g *Generator) outputSafety(outputs []config.OutputFile) (refused []outputR
 			}
 			continue
 		}
-		if g.overwriteUnowned || !g.unowned(abs, rel, output, info) {
+		if g.overwriteUnowned || !g.unowned(abs, rel, output, info, assetDirs) {
 			continue
 		}
 		refused = append(refused, outputRefusal{rel, reasonUnowned})
@@ -313,6 +327,34 @@ func (g *Generator) writtenTargets(outputs []config.OutputFile) map[string]bool 
 		}
 	}
 	return written
+}
+
+// renderedOutputDirs is the set of directories holding a rendered (non-raw)
+// output this run writes. A raw output below one of them is a bundled asset: a
+// verbatim copy of a skill resource whose generated SKILL.md sits in the same
+// skill directory. The directory is what makes the copy provably ai-rulez's
+// (#332), independent of the skill directory's name (a tool may keep skills
+// under a folder that is not called "skills").
+func (g *Generator) renderedOutputDirs(outputs []config.OutputFile) map[string]bool {
+	dirs := map[string]bool{}
+	for i := range outputs {
+		if outputs[i].IsDir || outputs[i].RawContent != nil {
+			continue
+		}
+		dirs[path.Dir(g.relSlash(g.absOutputPath(outputs[i].Path)))] = true
+	}
+	return dirs
+}
+
+// rawAssetOwned reports whether a raw output at rel sits below a directory this
+// run renders into (renderedOutputDirs), the shape of a bundled skill asset.
+func rawAssetOwned(rel string, dirs map[string]bool) bool {
+	for dir := path.Dir(rel); dir != "." && dir != "/"; dir = path.Dir(dir) {
+		if dirs[dir] {
+			return true
+		}
+	}
+	return false
 }
 
 // symlinkedOutput judges an output whose path abs is a symlink. It reports
@@ -407,7 +449,7 @@ func (g *Generator) sameAsRendering(data []byte, output config.OutputFile) bool 
 // it wrote, so writing it would destroy someone's work. Rules folders keep their
 // own guard (isUnmanagedRuleFile), merged documents are merged into rather than
 // replaced, and an empty file holds nothing to lose.
-func (g *Generator) unowned(abs, rel string, output config.OutputFile, info os.FileInfo) bool {
+func (g *Generator) unowned(abs, rel string, output config.OutputFile, info os.FileInfo, assetDirs map[string]bool) bool {
 	if info.IsDir() || info.Size() == 0 || output.PartiallyOwned || len(output.MergeClaims) > 0 {
 		return false
 	}
@@ -415,6 +457,18 @@ func (g *Generator) unowned(abs, rel string, output config.OutputFile, info os.F
 		return false
 	}
 	if output.RawContent == nil && (g.config.InRulesDir(rel) || isNestedAgentsMD(rel)) {
+		return false
+	}
+	// A bundled asset (a raw output below a directory this run renders a skill
+	// file into) is a verbatim copy of a skill resource. The skill itself is
+	// generated, so ai-rulez owns the whole skill directory and may replace the
+	// copy even when the source changed and the bytes no longer match. A header
+	// cannot prove it (one would corrupt a script or a binary), so the rendered
+	// sibling is the proof. This is the header-less half of the overwrite proof:
+	// the committed-output workflow needs no manifest and no --force for bundled
+	// assets (#332). A raw output elsewhere (the OKF bundle, a plugin bundle) is
+	// not a skill resource and keeps the refusal.
+	if output.RawContent != nil && rawAssetOwned(rel, assetDirs) {
 		return false
 	}
 	data, err := g.config.ReadExisting(abs)
