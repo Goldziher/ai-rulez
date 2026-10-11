@@ -215,24 +215,53 @@ type mcpEntry struct {
 }
 
 // mcpServersFor builds the inline mcpServers map for a runtime. stdio servers
-// carry a command (root variable rewritten per runtime); remote servers
+// carry a command and args (root variable rewritten per runtime); remote servers
 // (http/sse) carry a type + URL instead — emitting a command-less stdio entry
-// would be an invalid manifest. Returns nil when the plugin has no MCP servers.
+// would be an invalid manifest. The root variable is rewritten in every launch
+// field a runtime resolves (command, each arg, each env value) so a launcher
+// referenced from any of them works in the generated plugin. Returns nil when
+// the plugin has no MCP servers.
 func mcpServersFor(m *Manifest, runtime string) map[string]mcpEntry {
 	if len(m.MCP) == 0 {
 		return nil
 	}
 	out := make(map[string]mcpEntry, len(m.MCP))
 	for _, s := range m.MCP {
-		entry := mcpEntry{Env: s.Env, URL: s.URL}
+		entry := mcpEntry{Env: rewriteRootEnv(s.Env, runtime), URL: s.URL}
 		switch s.Transport {
 		case config.TransportHTTP, config.TransportSSE:
 			entry.Type = s.Transport
 		default:
 			entry.Command = rewriteRoot(s.Command, runtime)
-			entry.Args = s.Args
+			entry.Args = rewriteRootArgs(s.Args, runtime)
 		}
 		out[s.Name] = entry
+	}
+	return out
+}
+
+// rewriteRootArgs rewrites the canonical root variable in each argument,
+// preserving a nil slice so the field keeps its omitempty behaviour.
+func rewriteRootArgs(args []string, runtime string) []string {
+	if args == nil {
+		return nil
+	}
+	out := make([]string, len(args))
+	for i, a := range args {
+		out[i] = rewriteRoot(a, runtime)
+	}
+	return out
+}
+
+// rewriteRootEnv rewrites the canonical root variable in each environment value
+// (keys are variable names and are never rewritten), preserving a nil map.
+func rewriteRootEnv(env map[string]string, runtime string) map[string]string {
+	if env == nil {
+		return nil
+	}
+	out := make(map[string]string, len(env))
+	for k, v := range env {
+		out[k] = rewriteRoot(v, runtime)
 	}
 	return out
 }
