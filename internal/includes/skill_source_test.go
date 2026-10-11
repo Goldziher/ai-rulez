@@ -346,3 +346,31 @@ func TestSkillGitSourceFetch_PinnedSHA_FailsClosed(t *testing.T) {
 	_, err = source.Fetch(context.Background())
 	require.Error(t, err)
 }
+
+// A git entry whose path names a directory of skills resolves every selected
+// skill below it, named with the entry's name_prefix.
+func TestSkillGitSourceDiscoverSkills_MultiSkillEntry(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, "skills/alpha/SKILL.md", "---\nname: alpha\n---\n# Alpha\n")
+	commitFile(t, repoDir, "skills/beta/SKILL.md", "---\nname: beta\n---\n# Beta\n")
+	commitFile(t, repoDir, "skills/wip/SKILL.md", "---\nname: wip\n---\n# Wip\n")
+
+	cacheDir := t.TempDir()
+	source := &SkillGitSource{
+		name:        "repo",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		path:        "skills",
+		cacheDir:    cacheDir,
+	}
+
+	// Act
+	skills, err := source.DiscoverSkills(context.Background(), []string{"*a*"}, []string{"*wip"}, "team-")
+
+	// Assert
+	require.NoError(t, err)
+	require.Len(t, skills, 2)
+	assert.Equal(t, "team-alpha", skills[0].Name)
+	assert.Equal(t, "team-beta", skills[1].Name)
+	assert.Contains(t, skills[0].Content, "# Alpha")
+}

@@ -595,6 +595,11 @@ type MCPServer struct {
 	// Profiles restricts this server to the named profiles. Empty means every
 	// profile, preserving the pre-existing behavior.
 	Profiles []string `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
+	// Domain restricts this server to the named domain: it is active only when
+	// that domain is selected by the active profile or role. Empty means global,
+	// preserving the pre-existing behavior. When both Domain and Profiles are
+	// set, both must pass.
+	Domain string `yaml:"domain,omitempty" json:"domain,omitempty" toml:"domain,omitempty"`
 	// Package is the package URL (purl) of the package a command-based server
 	// runs, for example "pkg:npm/%40scope/server@1.4.2". `ai-rulez sbom` uses it
 	// instead of guessing the package from command and args. It is never written
@@ -803,6 +808,24 @@ type InstalledSkillConfig struct {
 	Ref           string   `yaml:"ref,omitempty" json:"ref,omitempty" toml:"ref,omitempty"`
 	LocalOverride string   `yaml:"local_override,omitempty" json:"local_override,omitempty" toml:"local_override,omitempty"` //nolint:tagliatelle
 	Profiles      []string `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
+	// Domain places this installed skill in the named domain, so profile and role
+	// selection include it exactly like a local domain skill. Empty keeps it in
+	// the root content. When both Domain and Profiles are set, both must pass.
+	Domain string `yaml:"domain,omitempty" json:"domain,omitempty" toml:"domain,omitempty"`
+	// Include keeps only skills whose directory name matches one of these globs,
+	// so one entry can select several skills from one repository. Empty selects
+	// every skill below the entry's path.
+	Include []string `yaml:"include,omitempty" json:"include,omitempty" toml:"include,omitempty"`
+	// Exclude drops skills whose directory name matches one of these globs; it
+	// wins over Include.
+	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty" toml:"exclude,omitempty"`
+	// NamePrefix is prepended to every resolved skill name, so two entries
+	// cannot collide.
+	NamePrefix string `yaml:"name_prefix,omitempty" json:"name_prefix,omitempty" toml:"name_prefix,omitempty"` //nolint:tagliatelle
+	// Trust is the repository-scoped scan level of the imported skills: "error"
+	// (every finding counts, the default) or "warn" (only error-severity
+	// findings block). See TrustError and TrustWarn.
+	Trust string `yaml:"trust,omitempty" json:"trust,omitempty" toml:"trust,omitempty"`
 	// Version, TagPrefix and IncludePrerelease are as on IncludeConfig.
 	Version           string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
 	TagPrefix         string `yaml:"tag_prefix,omitempty" json:"tag_prefix,omitempty" toml:"tag_prefix,omitempty"`                         //nolint:tagliatelle

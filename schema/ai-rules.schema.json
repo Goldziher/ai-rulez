@@ -333,6 +333,10 @@
               "type": "string"
             }
           },
+          "domain": {
+            "type": "string",
+            "description": "Restrict this server to the named domain: it is emitted only when the active profile or role selects that domain. Omit to make it global. When both domain and profiles are set, both must match."
+          },
           "package": {
             "type": "string",
             "description": "Package URL (purl) of the package a command-based server runs, e.g. pkg:npm/%40scope/server@1.4.2. `ai-rulez sbom` uses it for the component's purl instead of guessing from command and args; it is not written to harness files.",
@@ -534,6 +538,29 @@
             "items": {
               "type": "string"
             }
+          },
+          "domain": {
+            "type": "string",
+            "description": "Place this installed skill in the named domain, so profile and role selection include it exactly like a local domain skill. Omit to keep it in the root content. When both domain and profiles are set, both must match."
+          },
+          "include": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Keep only skills whose directory name matches one of these globs, so one entry can select several skills from one repository."
+          },
+          "exclude": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Drop skills whose directory name matches one of these globs; wins over include."
+          },
+          "name_prefix": {
+            "type": "string",
+            "description": "Prepended to every resolved skill name, so two entries cannot collide."
+          },
+          "trust": {
+            "type": "string",
+            "enum": ["error", "warn"],
+            "description": "Security-scan level for this entry's imported skills. error (default) blocks on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell)."
           }
         },
         "additionalProperties": false
@@ -1480,6 +1507,10 @@
             "type": "string",
             "enum": ["error", "warn"],
             "description": "Security-scan level. error (default) blocks a skill on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell)."
+          },
+          "domain": {
+            "type": "string",
+            "description": "Restrict this source to the named domain: it is served only when the active profile or role selects that domain. Omit to make it global."
           }
         },
         "additionalProperties": false
