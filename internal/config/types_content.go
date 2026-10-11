@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 
+	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/builtins"
@@ -185,7 +186,13 @@ func (c *Config) SelectContentForProfile(content *ContentTree, profile string) (
 	if activeProfile == "" {
 		activeProfile = c.Default
 	}
-	return c.selectContent(content, c.GetProfileDomains(profile), activeProfile)
+	// Resolve against the tree being selected, not c.Content, so a wildcard also
+	// covers a domain only the machine-local tree defines.
+	domains, err := ResolveProfileDomains(c.profileDomainEntries(profile), knownDomainNames(content))
+	if err != nil {
+		return nil, oops.With("profile", activeProfile).Wrapf(err, "resolve profile domains")
+	}
+	return c.selectContent(content, domains, activeProfile)
 }
 
 // selectContent is the shared body of profile and role selection: the root

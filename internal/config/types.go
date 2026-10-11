@@ -652,8 +652,22 @@ func (c *Config) GetDefaultProfile() string {
 
 // GetProfileDomains returns the list of domains for a profile. A composed value
 // ("base,backend") returns the de-duplicated union of its elements' domains, in
-// the order they are first named.
+// the order they are first named. A "*" entry expands to every domain the config
+// knows and "!name" entries are removed; a profile made only of exclusions has
+// no domains (Validate reports it as an error).
 func (c *Config) GetProfileDomains(profile string) []string {
+	resolved, err := ResolveProfileDomains(c.profileDomainEntries(profile), knownDomainNames(c.Content))
+	if err != nil {
+		return nil
+	}
+	return resolved
+}
+
+// profileDomainEntries returns a profile's raw domain entries: the entries of a
+// single named profile, or the de-duplicated union of a composed value's
+// elements, in the order they are first named. Wildcards and exclusions are left
+// as written for ResolveProfileDomains to interpret.
+func (c *Config) profileDomainEntries(profile string) []string {
 	if profile == "" {
 		profile = c.Default
 	}
