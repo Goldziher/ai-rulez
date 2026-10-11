@@ -22,7 +22,7 @@ const sharedOutputsKey = "<shared>"
 // the participating generators, including declarative providers, unaware of the
 // flag; paths a preset no longer emits fall out through the generated manifest.
 // It is a no-op when the flag is off, so default output is unchanged.
-func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.Config, content *config.ContentTree) {
+func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.Config, content *config.ContentTree) { //nolint:gocyclo // linear preset walk and drop
 	if !cfg.AgentsMD {
 		return
 	}
@@ -52,7 +52,7 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 	// with no content would write a header-only AGENTS.md. It is skipped rather
 	// than written empty; the preset's own root file reports the skip (see
 	// providers.renderRootFile).
-	if wantAgentsMD && !(content.IsEmpty() && cfg.HasPluginAuthoring()) {
+	if wantAgentsMD && (!content.IsEmpty() || !cfg.HasPluginAuthoring()) {
 		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg, owners, inlining))
 	}
 	if wantSkills {

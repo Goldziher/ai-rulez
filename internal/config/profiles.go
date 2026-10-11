@@ -55,7 +55,7 @@ func hasPositiveDomainEntry(entries []string) bool {
 //
 // A list with exclusions but no positive entry is an error: there is nothing to
 // subtract from, so the author almost certainly meant to write "*" first.
-func ResolveProfileDomains(entries []string, knownDomains []string) ([]string, error) {
+func ResolveProfileDomains(entries []string, knownDomains []string) ([]string, error) { //nolint:gocyclo // linear resolution over the profile entries
 	var positives, negations []string
 	for _, entry := range entries {
 		if entry == "" {

@@ -240,14 +240,16 @@ func lintCLIFlags(withFix bool) []Exclusion {
 			Reason: "runs scanner programs, possibly with network egress, or walks other projects"},
 	}
 	if withFix {
-		out = append(out, Exclusion{
-			Names:  []string{"explain", "verifiers", "offline", "show-policy", "approvals-base"},
-			Reason: "prints another report (explain a code, policy_show, run_verifiers) or compares against git history",
-		})
-		out = append(out, Exclusion{
-			Names:  []string{"mcp-user-scope"},
-			Reason: "reads the developer's harness files outside the project; the MCP server is confined to its root",
-		})
+		out = append(out,
+			Exclusion{
+				Names:  []string{"explain", "verifiers", "offline", "show-policy", "approvals-base"},
+				Reason: "prints another report (explain a code, policy_show, run_verifiers) or compares against git history",
+			},
+			Exclusion{
+				Names:  []string{"mcp-user-scope"},
+				Reason: "reads the developer's harness files outside the project; the MCP server is confined to its root",
+			},
+		)
 	}
 	return out
 }
