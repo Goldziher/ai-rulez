@@ -283,7 +283,7 @@ By combining domain organization with thoughtful profile design, you can create 
 
 ## Scoped Rule Files
 
-For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such as `CLAUDE.md` stay in the scope directory, but native rule files are written to the **root** rules folder, because tools read rules folders at the workspace root only. Each scope's files get the scope path as a qualifier and as a glob prefix:
+For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such as `CLAUDE.md` stay in the scope directory, but native rule files are written to the **root** rules folder. Rules-folder nesting is not uniform across presets: Copilot reads its instructions at the repository root only, while Claude Code discovers `.claude/rules/*.md` recursively — a nested `<dir>/.claude/rules/` rule loads, with its `paths` resolved relative to `<dir>` — and Antigravity reads `.agents/rules/` at any directory level. Nesting in the other presets is not verified. Writing every scope's rules to the root folder gives one placement that every preset with a rules folder reads, and the scope path as a qualifier and glob prefix keeps file names unique and each rule limited to the scope's files:
 
 | Preset | Scoped rule file for `packages/api`, rule `style` |
 | --- | --- |
@@ -294,6 +294,8 @@ For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such
 | Antigravity | `.agents/rules/packages-api--style.md` |
 
 Globs in a scope's rules are relative to the scope root: a rule with `paths: ["**/*.go"]` gets `packages/api/**/*.go`, and a rule without globs applies to `packages/api/**`. A rule with only negated globs also gets `packages/api/**`. A glob that climbs out of the scope with `..` (also inside braces) skips that rule for the scope with a warning. `auto` and `manual` rules keep their mode. With `[rules] mode = "inline"` only path-scoped items move to the root folder; everything else stays in the scope's root file. Two files that map to the same path (names compare case-insensitively) do not fail: the source that sorts later is written as `<id>-<6 hex>` with a warning (see [File names](rules.md#file-names)). Generation fails only when two scopes produce the same qualifier (for example `packages/api` and `packages-api`); rename one of the scope paths.
+
+Emitting a scope's `claude` rules into the scope's own `<dir>/.claude/rules/` instead of the root folder is a possible future change; today the root placement is uniform, because not every preset reads a nested rules folder.
 
 Limitations:
 
