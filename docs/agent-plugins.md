@@ -48,13 +48,45 @@ The `copilot` runtime and the `codex` runtime with `manifest = "root"` write the
 | `headers` | `headers` (remote servers) | plugin bundles do not carry project server headers today |
 | agents, commands, hooks | not written | they belong in a client's extension namespace, see [Extensions](#extensions) |
 | rules, context | not written | the `io.github.goldziher.ai-rulez` namespace is read on import |
+| `[plugin] include` | the matched files, at their relative path | globs relative to the content root; see [Bundling files](#bundling-files) |
+
+## Bundling files
+
+The specification lets a package carry arbitrary files beside `plugin.json`, `mcp.json` and `skills/` (§4.2), and a stdio
+`command` may be a `./`-relative path into them (§7.2.1). `[plugin] include` is how ai-rulez ships such a file:
+
+```toml
+[plugin]
+name = "basemind"
+version = "0.19.2"
+description = "Code-map MCP server."
+runtimes = ["agent-plugins"]
+include = ["scripts/**"]
+
+[[plugin.mcp]]
+name = "basemind"
+command = "./scripts/mcp-launch.sh"
+args = ["serve"]
+```
+
+Each glob is matched against the plugin's content root — `[plugin] content_root` when set, otherwise the config directory
+(`.ai-rulez/`). `**` crosses directories, `*` and `?` do not, and a trailing `/` matches everything below the directory.
+A matched file is copied verbatim, keeping its relative path and its executable bit, and is recorded with its
+`Content-Hash` in `.ai-rulez-generated.json` like a skill, so `verify --plugin` reports a changed or missing included file
+as drift and `publish --emit agent-plugins` carries it. The manifest, `mcp.json`, the `skills/` tree and the provenance
+sidecar are never matched, so a broad glob cannot clobber the package. A glob that escapes the content root — absolute, a
+drive letter, or containing `..` — is refused at configuration load.
+
+Once an included file resolves a `./`-relative `command`, `validate --strict` stops reporting `AR9O2` for it; a command
+with no matching file keeps the warning.
 
 ## MCP servers
 
 The specification expands only `${PLUGIN_ROOT}` and `${PLUGIN_DATA}`, and only in `args`, `env` values and `cwd`.
 
 - `command` is one token: a bare name (`npx`) or a `./` path inside the plugin. A `${PLUGIN_ROOT}/bin/server` command is
-  rewritten to `./bin/server` (a lossless rewrite, reported as info).
+  rewritten to `./bin/server` (a lossless rewrite, reported as info). A `./` path that is not in the package is a warning
+  (`AR9O2`); ship the file with `[plugin] include` (see [Bundling files](#bundling-files)).
 - An `env` entry that only forwards a variable of the same name (`API_KEY = "${API_KEY}"`) is left out: no client
   expands it, so the client has to supply `API_KEY` itself. This is reported as `AR9O3` (warning).
 - Any other `${VAR}` (in `args`, `env`, `url`, `headers`) is rejected: the server is not packaged and the finding is an

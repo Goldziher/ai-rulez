@@ -45,6 +45,9 @@ func (c *Config) validatePluginAuthoring() error {
 	if err := validatePluginPaths(p); err != nil {
 		return err
 	}
+	if err := validatePluginIncludes(p); err != nil {
+		return err
+	}
 	if err := validateHermesDependencies(p); err != nil {
 		return err
 	}
@@ -110,6 +113,27 @@ func validatePluginPaths(p *PluginAuthoring) error {
 		return oops.With("field", "plugin.hermes.source").With("value", p.Hermes.Source).
 			Hint("Use a project-relative Python file that does not contain '..'").
 			Errorf("plugin %q has an unsafe Hermes source", p.Name)
+	}
+	return nil
+}
+
+// validatePluginIncludes checks the [plugin] include globs: each must be a
+// non-empty, well-formed glob relative to the plugin's content root. A pattern
+// that escapes the root (absolute, a drive letter, or containing '..') would let
+// the bundle copy a file from outside it, which is the same refusal the other
+// plugin paths already get.
+func validatePluginIncludes(p *PluginAuthoring) error {
+	if err := validatePatterns("plugin.include", p.Include); err != nil {
+		return err
+	}
+	for _, pattern := range p.Include {
+		if isUnsafeProjectPath(pattern) {
+			return oops.
+				With("field", "plugin.include").
+				With("value", pattern).
+				Hint("Use a glob relative to the plugin's content root that does not contain '..'").
+				Errorf("plugin %q has an include pattern that escapes the content root: %q", p.Name, pattern)
+		}
 	}
 	return nil
 }

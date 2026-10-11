@@ -60,6 +60,11 @@ type OutputFile struct {
 	// gitignore management is on: hosted reviewers (Bugbot, Kilo, Rovo Dev, ...)
 	// only read committed files, so ignoring a check output would hide it.
 	Committed bool
+	// PluginInclude marks an output copied verbatim by [plugin] include into an
+	// Agent Plugins package. The plugin provenance sidecar lists these paths so
+	// the publish emitter can carry them without re-reading the configuration,
+	// and they are not decorated with a generated-file header.
+	PluginInclude bool
 	// Sensitive marks an output that carries resolved MCP secrets (env values or
 	// headers). It is written owner-only (0600), and an existing file is
 	// tightened to that mode.

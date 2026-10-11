@@ -2511,6 +2511,13 @@
           "type": "boolean",
           "description": "Bundle eval cases: each skill's evals/ directory and the project-level evals/ tree (at <bundle>/evals/). Off by default."
         },
+        "include": {
+          "type": "array",
+          "description": "Globs relative to the plugin's content root of arbitrary files copied verbatim into the Agent Plugins package, keeping their relative path. A './'-relative MCP command can point at an included file (Agent Plugins 4.2, 7.2.1). Empty keeps the package to plugin.json, mcp.json and skills/.",
+          "items": {
+            "type": "string"
+          }
+        },
         "spec": {
           "type": "string",
           "enum": ["1.0.0", "1.1.0"],

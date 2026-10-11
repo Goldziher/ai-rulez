@@ -2,6 +2,7 @@ package emit
 
 import (
 	"cmp"
+	"encoding/json"
 	"maps"
 	"slices"
 	"strings"
@@ -19,6 +20,9 @@ const (
 	apManifest = "plugin.json"
 	apMCP      = "mcp.json"
 	apSkills   = "skills"
+	// apProvenance is the bundle's provenance sidecar; its `includes` list names
+	// the files [plugin] include copied into the package.
+	apProvenance = ".ai-rulez-generated.json"
 )
 
 // agentPlugins writes each plugin as one Agent Plugins directory
@@ -85,10 +89,36 @@ func packageFile(p string) bool {
 	return agentplugins.ValidNamespace(first)
 }
 
+// provenanceIncludes reads the bundle's provenance sidecar and returns the set
+// of paths it records as copied verbatim by [plugin] include, so those files are
+// carried into the package even though they sit outside the fixed component
+// locations. A bundle without a sidecar, or one that lists none, has an empty
+// set.
+func provenanceIncludes(files []File) map[string]bool {
+	for _, f := range files {
+		if f.Path != apProvenance {
+			continue
+		}
+		var doc struct {
+			Includes []string `json:"includes"`
+		}
+		if err := json.Unmarshal(f.Data, &doc); err != nil || len(doc.Includes) == 0 {
+			return nil
+		}
+		out := make(map[string]bool, len(doc.Includes))
+		for _, p := range doc.Includes {
+			out[p] = true
+		}
+		return out
+	}
+	return nil
+}
+
 func packagePlugin(p *Plugin, spec string) ([]File, []Finding, error) {
+	includes := provenanceIncludes(p.Files)
 	mem := fstest.MapFS{}
 	for _, f := range p.Files {
-		if packageFile(f.Path) {
+		if packageFile(f.Path) || includes[f.Path] {
 			mem[f.Path] = &fstest.MapFile{Data: f.Data}
 		}
 	}
