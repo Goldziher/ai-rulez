@@ -13,25 +13,25 @@ import (
 // "base,backend".
 const ProfileSeparator = ","
 
-// wildcardDomain is the profile domain entry that selects every domain the
+// ProfileDomainWildcard is the profile domain entry that selects every domain the
 // config knows. It is only meaningful next to the positive entries a profile
-// already has, so it can be narrowed with negationPrefix exclusions.
-const wildcardDomain = "*"
+// already has, so it can be narrowed with ProfileDomainNegation exclusions.
+const ProfileDomainWildcard = "*"
 
-// negationPrefix marks a profile domain entry as an exclusion: "!name" removes
+// ProfileDomainNegation marks a profile domain entry as an exclusion: "!name" removes
 // name from the domains the profile selects.
-const negationPrefix = "!"
+const ProfileDomainNegation = "!"
 
 // isNegatedDomain reports whether a profile domain entry excludes a domain. A
 // lone prefix with no name is not an exclusion and is ignored during resolution.
 func isNegatedDomain(entry string) bool {
-	return strings.HasPrefix(entry, negationPrefix) && entry != negationPrefix
+	return strings.HasPrefix(entry, ProfileDomainNegation) && entry != ProfileDomainNegation
 }
 
 // negatedDomainName returns the entry with its exclusion prefix removed; a
 // positive entry is returned unchanged.
 func negatedDomainName(entry string) string {
-	return strings.TrimPrefix(entry, negationPrefix)
+	return strings.TrimPrefix(entry, ProfileDomainNegation)
 }
 
 // hasPositiveDomainEntry reports whether a profile's domain list selects
@@ -90,7 +90,7 @@ func ResolveProfileDomains(entries []string, knownDomains []string) ([]string, e
 	sortedKnown := append([]string(nil), knownDomains...)
 	sort.Strings(sortedKnown)
 	for _, entry := range positives {
-		if entry == wildcardDomain {
+		if entry == ProfileDomainWildcard {
 			for _, name := range sortedKnown {
 				add(name)
 			}

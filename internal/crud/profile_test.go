@@ -73,6 +73,29 @@ func TestAddProfile(t *testing.T) {
 			shouldErr: true,
 		},
 		{
+			name: "add profile with a wildcard and an exclusion",
+			setup: func(t *testing.T, op crud.Operator) {
+				op.AddDomain(context.Background(), &crud.AddDomainRequest{Name: "backend"})
+				op.AddDomain(context.Background(), &crud.AddDomainRequest{Name: "s"})
+			},
+			profName:  "all-but-s",
+			domains:   []string{"*", "!s"},
+			shouldErr: false,
+			checkFn: func(t *testing.T, op crud.Operator) {
+				profiles, err := op.ListProfiles(context.Background())
+				require.NoError(t, err)
+				require.Len(t, profiles, 1)
+				assert.Equal(t, []string{"*", "!s"}, profiles[0].Domains)
+			},
+		},
+		{
+			name:      "reject a profile made only of exclusions",
+			setup:     func(t *testing.T, op crud.Operator) {},
+			profName:  "only-exclusions",
+			domains:   []string{"!s"},
+			shouldErr: true,
+		},
+		{
 			name:      "empty profile name",
 			setup:     func(t *testing.T, op crud.Operator) {},
 			profName:  "",
