@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -46,6 +47,9 @@ func TestStrictLintMCPUserScope(t *testing.T) {
 	_, cfg := strictProject(t, extra, nil)
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", home)
+	}
 	writeFile(t, filepath.Join(home, ".claude.json"),
 		fmt.Sprintf(`{"projects":{%q:{"mcpServers":{"nara":{"type":"http","url":%q}}}}}`, cfg.BaseDir, validateLocalNaraURL))
 
