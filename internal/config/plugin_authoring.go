@@ -90,6 +90,13 @@ type PluginAuthoring struct {
 	// shipped to consumers of the bundle.
 	IncludeEvals bool `yaml:"include_evals,omitempty" json:"include_evals,omitempty" toml:"include_evals,omitempty"` //nolint:tagliatelle
 
+	// Include lists globs (relative to the plugin's content root) of arbitrary
+	// files copied verbatim into the Agent Plugins package, keeping their
+	// relative path. It is how a `./`-relative MCP command can point at a
+	// launcher the package ships (Agent Plugins §4.2, §7.2.1). Empty keeps the
+	// package to plugin.json, mcp.json and skills/.
+	Include []string `yaml:"include,omitempty" json:"include,omitempty" toml:"include,omitempty"`
+
 	// Spec is the Agent Plugins version the agent-plugins, copilot and root-layout
 	// codex bundles follow: "1.0.0" (the default) or "1.1.0". plugin.json and
 	// mcp.json carry the matching $schema.

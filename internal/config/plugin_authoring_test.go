@@ -31,6 +31,7 @@ repository = "https://github.com/Goldziher/basemind"
 license = "MIT"
 keywords = ["mcp", "rag"]
 runtimes = ["claude", "cursor", "codex"]
+include = ["scripts/**", "assets/*.png"]
 
 [plugin.author]
 name = "Na'aman Hirschfeld"
@@ -77,6 +78,7 @@ email = "nhirschfeld@gmail.com"
 	assert.Equal(t, "0.19.2", cfg.Plugin.Version)
 	assert.Equal(t, []string{"mcp", "rag"}, cfg.Plugin.Keywords)
 	assert.Equal(t, []string{"claude", "cursor", "codex"}, cfg.Plugin.Runtimes)
+	assert.Equal(t, []string{"scripts/**", "assets/*.png"}, cfg.Plugin.Include)
 
 	require.NotNil(t, cfg.Plugin.Author)
 	assert.Equal(t, "nhirschfeld@gmail.com", cfg.Plugin.Author.Email)
@@ -194,6 +196,25 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		{name: "hook action with neither command nor script", mutate: func(p *PluginAuthoring) {
 			p.Hooks = []HookGroup{{Event: "SessionStart", Hooks: []HookAction{{Type: "command"}}}}
 		}, wantErr: "requires either 'command' or 'script'"},
+		{name: "include glob accepted", mutate: func(p *PluginAuthoring) { p.Include = []string{"scripts/**"} }},
+		{name: "include multiple globs accepted", mutate: func(p *PluginAuthoring) {
+			p.Include = []string{"scripts/**", "assets/*.png"}
+		}},
+		{name: "include escaping the content root", mutate: func(p *PluginAuthoring) {
+			p.Include = []string{"../scripts/**"}
+		}, wantErr: "escapes the content root"},
+		{name: "include absolute path", mutate: func(p *PluginAuthoring) {
+			p.Include = []string{"/scripts/**"}
+		}, wantErr: "escapes the content root"},
+		{name: "include Windows absolute path", mutate: func(p *PluginAuthoring) {
+			p.Include = []string{`C:\scripts\**`}
+		}, wantErr: "escapes the content root"},
+		{name: "include empty pattern", mutate: func(p *PluginAuthoring) {
+			p.Include = []string{"  "}
+		}, wantErr: "empty pattern"},
+		{name: "include malformed glob", mutate: func(p *PluginAuthoring) {
+			p.Include = []string{"scripts/[abc"}
+		}, wantErr: "malformed glob"},
 	}
 
 	for _, tc := range tests {
@@ -324,6 +345,24 @@ plugin:
 	assert.Equal(t, 120, action.Timeout)
 	assert.Equal(t, "!test -f CLAUDE.md", action.If)
 	assert.Equal(t, "Bootstrapping generated AI config", action.StatusMessage)
+}
+
+// TestPluginInclude_SchemaAcceptsTheField guards the plugin.include property in
+// schema/ai-rules.schema.json: a config that uses it must not be flagged as an
+// unknown key.
+func TestPluginInclude_SchemaAcceptsTheField(t *testing.T) {
+	yamlConfig := `
+version: "5.0"
+name: basemind
+description: Code-map MCP server.
+plugin:
+  name: basemind
+  description: Full AI context layer over MCP.
+  version: 1.0.0
+  runtimes: [agent-plugins]
+  include: ["scripts/**"]
+`
+	require.NoError(t, schema.ValidateWithSchema([]byte(yamlConfig)))
 }
 
 // hookProjectWithScript creates a project dir containing an executable bootstrap
