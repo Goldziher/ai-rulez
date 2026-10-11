@@ -77,6 +77,7 @@ func TestRegexAccessorsCompile(t *testing.T) {
 		"httpURLRe":          httpURLRe,
 		"httpieRe":           httpieRe,
 		"ignoredRe":          ignoredRe,
+		"imageRefRe":         imageRefRe,
 		"imageURLRe":         imageURLRe,
 		"imperativeMarkerRe": imperativeMarkerRe,
 		"imperativeRe":       imperativeRe,
