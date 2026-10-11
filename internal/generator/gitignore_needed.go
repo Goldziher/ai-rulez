@@ -68,8 +68,8 @@ func withoutManagedBlock(content string) string { return gitignore.WithoutManage
 // missing or failing), so callers fall back to adding everything.
 func (g *Generator) userIgnoreRules(probes []string) map[string]gitutil.IgnoreMatch {
 	rootRel := ".gitignore"
-	if prefix := gitutil.RepoRelative(g.git().TopLevelContext(g.ctx, g.config.BaseDir), g.config.BaseDir); prefix != "" && prefix != "." {
-		rootRel = prefix + "/.gitignore"
+	if rel := gitutil.RepoRelative(g.git().TopLevelContext(g.ctx, g.config.BaseDir), g.managedGitignorePath()); rel != "" {
+		rootRel = rel
 	}
 	begin, end := g.excludeMarkers()
 	fallbackBegin, fallbackEnd := gitignore.FallbackMarkers(g.config.BaseDir)
@@ -100,7 +100,10 @@ func (g *Generator) userIgnoreRules(probes []string) map[string]gitutil.IgnoreMa
 // hasOwnIgnoreBlock reports whether the root .gitignore or the repository
 // exclude file holds an ai-rulez block that must be left out of the evaluation.
 func (g *Generator) hasOwnIgnoreBlock(excludeBegin string) bool {
-	if data, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), filepath.Join(g.config.BaseDir, ".gitignore")); err == nil {
+	// The block lives beside the config, or at the repository toplevel for a
+	// recursive run; both must be left out of the evaluation, or this run's own
+	// entries look user-made and are never re-added.
+	if data, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), g.managedGitignorePath()); err == nil {
 		if withoutManagedBlock(string(data)) != string(data) {
 			return true
 		}

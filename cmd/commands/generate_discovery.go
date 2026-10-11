@@ -196,13 +196,14 @@ func findConfigInDir(dir string) string {
 // processConfigFiles generates from every config concurrently and returns the
 // number of files written plus the (sorted) paths of the configs that failed.
 func processConfigFiles(configFiles []string) (generated int, failed []string) {
-	generated, failed, _ = processConfigFilesCounting(configFiles)
+	generated, failed, _ = processConfigFilesCounting(configFiles, nil)
 	return generated, failed
 }
 
 // processConfigFilesCounting is processConfigFiles that also returns how many of
-// the failures were lock drift (see lockDriftError).
-func processConfigFilesCounting(configFiles []string) (generated int, failed []string, drifted int) {
+// the failures were lock drift (see lockDriftError). sink, when non-nil, is the
+// recursive run's shared .gitignore block (see GitignoreSink).
+func processConfigFilesCounting(configFiles []string, sink *generator.GitignoreSink) (generated int, failed []string, drifted int) {
 	fileCounter := progress.NewFileCounter(len(configFiles), "Processing configurations")
 
 	// Each config has its own working directory and produces independent
@@ -227,7 +228,7 @@ func processConfigFilesCounting(configFiles []string) (generated int, failed []s
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
-			written, err := processConfigFile(configPath, fileCounter)
+			written, err := processConfigFile(configPath, fileCounter, sink)
 			atomic.AddInt64(&totalGenerated, int64(written))
 			if err != nil {
 				failedMu.Lock()
@@ -247,8 +248,9 @@ func processConfigFilesCounting(configFiles []string) (generated int, failed []s
 }
 
 // processConfigFile generates from one config. A non-nil error means the config
-// failed (and was already reported through fileCounter).
-func processConfigFile(configPath string, fileCounter *progress.FileCounter) (int, error) {
+// failed (and was already reported through fileCounter). sink is the recursive
+// run's shared .gitignore block, or nil outside a recursive run.
+func processConfigFile(configPath string, fileCounter *progress.FileCounter, sink *generator.GitignoreSink) (int, error) {
 	fileCounter.StartFile(configPath)
 
 	ctx := gitutil.WithMemo(cmdContext())
@@ -294,6 +296,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetOverwriteUnowned(generateForce)
 	gen.SetContext(ctx)
+	attachRecursiveGitignoreSink(gen, cfg, sink)
 	if err := applyRole(gen); err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err
@@ -354,6 +357,34 @@ func processPluginConfig(configPath string, cfg *config.Config, gen *generator.G
 	return written, nil
 }
 
+// openRecursiveGitignoreSink returns the shared sink for a recursive run when
+// the working tree has a git toplevel, else nil.
+func openRecursiveGitignoreSink() *generator.GitignoreSink {
+	ctx := gitutil.WithMemo(cmdContext())
+	top := (gitutil.Git{}).TopLevelContext(ctx, ".")
+	if top == "" {
+		return nil
+	}
+	return generator.NewGitignoreSink(top)
+}
+
+// attachRecursiveGitignoreSink points a root's generator at the shared block,
+// with its patterns expressed relative to the toplevel. A root that is not
+// below the toplevel (a separate work tree) keeps the per-root behavior.
+func attachRecursiveGitignoreSink(gen *generator.Generator, cfg *config.Config, sink *generator.GitignoreSink) {
+	if sink == nil {
+		return
+	}
+	switch rel := gitutil.RepoRelative(sink.TopLevel(), cfg.BaseDir); rel {
+	case ".":
+		gen.SetGitignoreSink(sink, "")
+	case "":
+		// Not below the toplevel: no relative pattern exists, so leave it alone.
+	default:
+		gen.SetGitignoreSink(sink, rel)
+	}
+}
+
 // runRecursiveGenerate processes every discovered config and returns the
 // process exit code: 1 when any config failed to load, validate, or generate
 // (the remaining configs are still processed and every error is printed), else 0.
@@ -365,6 +396,7 @@ func runRecursiveGenerate() int {
 		renderError(os.Stderr, walkErr)
 		return exitFailure
 	}
+	sink := openRecursiveGitignoreSink()
 	configFiles := found.configs
 	if pluginMode {
 		var err error
@@ -383,7 +415,16 @@ func runRecursiveGenerate() int {
 	}
 
 	progress.PrintIfNotQuiet("Found %d configuration file(s)\n", len(configFiles))
-	totalGenerated, failed, drifted := processConfigFilesCounting(configFiles)
+	totalGenerated, failed, drifted := processConfigFilesCounting(configFiles, sink)
+	// Consolidate the shared block only when every root generated: a root that
+	// failed left its earlier patterns in place, and rewriting the block to this
+	// run's union would drop them. A dry run and plugin bundles write nothing, so
+	// they must not touch .gitignore either.
+	if sink != nil && !dryRun && !pluginMode && len(failed) == 0 {
+		if err := sink.Write(logger.Std()); err != nil {
+			logger.Warn("Failed to write the shared .gitignore block", "error", err)
+		}
+	}
 	progress.PrintIfNotQuiet("\n✅ Total: Generated %d file(s) from %d config(s)\n", totalGenerated, len(configFiles))
 	if len(failed) > 0 {
 		fmt.Fprintf(os.Stderr, "\n❌ %d of %d config(s) failed:\n", len(failed), len(configFiles))
