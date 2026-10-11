@@ -65,6 +65,9 @@ type ServeSetup struct {
 	LoadOptions []config.LoadOption
 	// CacheDir overrides the skill-source cache (tests).
 	CacheDir string
+	// ServeCacheDir overrides the serve catalog cache directory (tests). Empty
+	// derives it from CacheDir when that is set, else from the user cache.
+	ServeCacheDir string
 	// MaxCloneBytes is the clone size limit of git skill sources that set no
 	// max_clone_bytes (0 selects AI_RULEZ_MAX_CLONE_BYTES, then 256 MiB).
 	MaxCloneBytes int64
@@ -265,33 +268,6 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	if err := config.CheckPolicy(cfg); err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
-	profile, preset := st.Profile, st.Preset
-	gen := generator.NewGenerator(cfg)
-	roleKeeps, err := st.selectRole(cfg, gen)
-	if err != nil {
-		return nil, err
-	}
-	var served []generator.ServedSkill
-	// taken holds every project skill name, served or static: a skill source
-	// must not take the name of a project skill, even one this view does not
-	// serve, or load_skill would hand out another procedure under its name.
-	taken := map[string]bool{}
-	if cfg.Content != nil {
-		if preset, served, err = gen.ServedSkills(profile, preset); err != nil {
-			return nil, oops.Wrapf(err, "render skills")
-		}
-		switch {
-		case st.Role != "":
-			profile = "role:" + st.Role
-		case profile == "":
-			profile = cfg.Default
-		}
-		for i := range served {
-			taken[catalogName(&served[i])] = true
-		}
-		served = selectByDelivery(served, st.IncludeStatic)
-	}
-
 	specs, err := st.sourceSpecs(cfg)
 	if err != nil {
 		return nil, err
@@ -301,56 +277,144 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	if err != nil {
 		return nil, err
 	}
-	for _, res := range resolved {
-		spec := res.Spec
-		b.sources = append(b.sources, res)
-		for _, sk := range res.Skills {
-			if roleKeeps != nil && !roleKeeps(sk.Name) {
-				continue
-			}
-			if taken[sk.Name] {
-				st.logger().Warn("A skill source skill has the name of a project skill or an earlier source skill; skipping it (set name_prefix on the source)", "source", spec.Name, "skill", sk.Name)
-				continue
-			}
-			taken[sk.Name] = true
-			served = append(served, servedFromSource(res, sk))
-		}
-	}
-
+	b.sources = resolved
 	if err := st.checkDomains(cfg); err != nil {
 		return nil, err
 	}
-	catalog, err := BuildCatalogIn(st.Log, profile, preset, served, st.Filter)
+
+	// The rendered catalog is a function of the files this build fingerprints and
+	// of the view's selection options, so a restart restores it instead of
+	// rendering and scanning every skill again.
+	plan := st.cachePlan(b, bo)
+	if plan != nil {
+		if entry, ok := plan.cache.load(plan.key); ok {
+			st.restoreFromCache(b, entry, denied, bo)
+			st.logger().Debug("Restored the served catalog from the cache", "skills", len(b.catalog.Skills()))
+			return b, nil
+		}
+	}
+
+	gen := generator.NewGenerator(cfg)
+	roleKeeps, err := st.selectRole(cfg, gen)
+	if err != nil {
+		return nil, err
+	}
+	rendered, err := st.renderProjectSkills(cfg, gen)
+	if err != nil {
+		return nil, err
+	}
+	served := st.appendSourceSkills(resolved, rendered, roleKeeps)
+
+	catalog, err := BuildCatalogIn(st.Log, rendered.profile, rendered.preset, served, st.Filter)
 	if err != nil {
 		return nil, oops.Wrapf(err, "build skill catalog")
 	}
 	if len(catalog.Skills()) == 0 {
 		b.empty = noSkillsMessage(served, st.Filter)
 	}
-	if bo.admit {
-		adm := Admission{
-			Config: cfg, Enforce: enforcesLock(cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view,
-			DefaultTrust: defaultTrust(cfg), Now: st.Clock.Now, PolicyDenied: denied,
-		}
-		if adm.Authored, err = authoredSkillItems(cfg); err != nil {
-			return nil, err
-		}
-		raw := catalog
-		admit := func(log logger.Logger) *Catalog {
-			a := adm
-			a.Log = log
-			if !bo.ignoreLock {
-				a.Lock, a.Signatures = lock, newSignatureGate(cfg, skillOrigins(cfg, b.sources), a.now())
-			}
-			return raw.Admit(a)
-		}
-		catalog = admit(st.Log)
-		// Approvals expire and signing keys stop being valid with time alone,
-		// so the server judges the same build again later (serve_live.go).
-		b.readmit = func() *Catalog { return admit(logger.Discard()) }
+	admitted, raw, authored, err := st.admitCatalog(b, catalog, denied, bo)
+	if err != nil {
+		return nil, err
 	}
-	b.catalog = catalog
+	b.catalog = admitted
+	if plan != nil {
+		entry := &serveCacheEntry{Empty: b.empty, Authored: authoredToDTO(authored), Raw: catalogToDTO(raw), Admitted: catalogToDTO(admitted)}
+		if err := plan.cache.store(plan.key, entry); err != nil {
+			st.logger().Debug("Could not write the serve catalog cache", "error", err.Error())
+		}
+	}
 	return b, nil
+}
+
+// admitFunc builds the closure that admits raw for the view: the first build and
+// every later revalidation go through it, so the same catalog is judged the same
+// way.
+func (st *ServeSetup) admitFunc(b *built, raw *Catalog, denied map[string]string, authored map[string]lockfile.Item, bo buildOptions) func(logger.Logger) *Catalog {
+	adm := Admission{
+		Config: b.cfg, Enforce: enforcesLock(b.cfg) && !bo.ignoreLock, Pinning: bo.ignoreLock, View: b.view,
+		DefaultTrust: defaultTrust(b.cfg), Now: st.Clock.Now, PolicyDenied: denied, Authored: authored,
+	}
+	return func(log logger.Logger) *Catalog {
+		a := adm
+		a.Log = log
+		if !bo.ignoreLock {
+			a.Lock, a.Signatures = b.lock, newSignatureGate(b.cfg, skillOrigins(b.cfg, b.sources), a.now())
+		}
+		return raw.Admit(a)
+	}
+}
+
+// admitCatalog admits a freshly built catalog for the view and records the
+// readmit closure on b. It returns the catalog to serve and, when admission ran,
+// the pre-admission catalog and the authored-skill digests the cache stores.
+func (st *ServeSetup) admitCatalog(b *built, catalog *Catalog, denied map[string]string, bo buildOptions) (served, raw *Catalog, authored map[string]lockfile.Item, err error) {
+	if !bo.admit {
+		return catalog, nil, nil, nil
+	}
+	if authored, err = authoredSkillItems(b.cfg); err != nil {
+		return nil, nil, nil, err
+	}
+	admit := st.admitFunc(b, catalog, denied, authored, bo)
+	// Approvals expire and signing keys stop being valid with time alone, so the
+	// server judges the same build again later (serve_live.go).
+	b.readmit = func() *Catalog { return admit(logger.Discard()) }
+	return admit(st.Log), catalog, authored, nil
+}
+
+// renderedSkills is one view's project skills and the names they take.
+type renderedSkills struct {
+	profile string
+	preset  string
+	served  []generator.ServedSkill
+	taken   map[string]bool
+}
+
+// renderProjectSkills renders the project's skills for the view; empty when the
+// project has no content tree (a server of --source skills only).
+func (st *ServeSetup) renderProjectSkills(cfg *config.Config, gen *generator.Generator) (*renderedSkills, error) {
+	out := &renderedSkills{profile: st.Profile, preset: st.Preset, taken: map[string]bool{}}
+	if cfg.Content == nil {
+		return out, nil
+	}
+	preset, served, err := gen.ServedSkills(out.profile, out.preset)
+	if err != nil {
+		return nil, oops.Wrapf(err, "render skills")
+	}
+	out.preset = preset
+	switch {
+	case st.Role != "":
+		out.profile = "role:" + st.Role
+	case out.profile == "":
+		out.profile = cfg.Default
+	}
+	// taken holds every project skill name, served or static: a skill source
+	// must not take the name of a project skill, even one this view does not
+	// serve, or load_skill would hand out another procedure under its name.
+	for i := range served {
+		out.taken[catalogName(&served[i])] = true
+	}
+	out.served = selectByDelivery(served, st.IncludeStatic)
+	return out, nil
+}
+
+// appendSourceSkills adds the resolved sources' skills to the rendered project
+// skills, skipping a name a project skill or an earlier source already took.
+func (st *ServeSetup) appendSourceSkills(resolved []*skillsource.Resolved, r *renderedSkills, roleKeeps func(string) bool) []generator.ServedSkill {
+	served := r.served
+	for _, res := range resolved {
+		for _, sk := range res.Skills {
+			if roleKeeps != nil && !roleKeeps(sk.Name) {
+				continue
+			}
+			if r.taken[sk.Name] {
+				st.logger().Warn("A skill source skill has the name of a project skill or an earlier source skill; skipping it (set name_prefix on the source)", "source", res.Spec.Name, "skill", sk.Name)
+				continue
+			}
+			r.taken[sk.Name] = true
+			served = append(served, servedFromSource(res, sk))
+		}
+	}
+	return served
 }
 
 // resolveSources resolves the skill sources of a build, or hands back the ones an
