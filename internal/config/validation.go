@@ -1006,6 +1006,9 @@ func commandOutputID(command ContentFile) string {
 // self-server tuning fields are rejected when self_server is off, since they
 // would otherwise be silently inert.
 func (c *Config) validateMCP() error {
+	if err := c.validateMCPServerTypeAndOAuth(); err != nil {
+		return err
+	}
 	if err := c.validateMCPServerHeaders(); err != nil {
 		return err
 	}
@@ -1047,6 +1050,79 @@ func (c *Config) validateHeaderHashes() error {
 			Hint(`Use "full", "content" or "none".`).
 			Errorf("invalid header.hashes %q", mode)
 	}
+}
+
+// validateMCPServerTypeAndOAuth checks the explicit `type` alias and the
+// `oauth` block of each [[mcp_servers]] entry: the type must be a known
+// transport, a differing transport/type pair is a conflict, and oauth only
+// applies to a remote server with a sane callback port.
+func (c *Config) validateMCPServerTypeAndOAuth() error {
+	names := make([]string, 0, len(c.MCPServers))
+	for name := range c.MCPServers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		server := c.MCPServers[name]
+		if server == nil {
+			continue
+		}
+		if server.Type != "" {
+			switch server.Type {
+			case TransportStdio, TransportHTTP, TransportSSE:
+			default:
+				return oops.
+					With("server", name).
+					With("value", server.Type).
+					Hint(`Use "stdio", "http" or "sse", or drop type and set transport instead`).
+					Errorf("mcp_servers.%s.type %q is not a known transport", name, server.Type)
+			}
+			if server.Transport != "" && server.Transport != server.Type {
+				return oops.
+					With("server", name).
+					Hint("type and transport are the same setting; keep one, or make them agree").
+					Errorf("mcp_servers.%s sets transport %q and type %q", name, server.Transport, server.Type)
+			}
+		}
+		if err := validateMCPOAuth(name, server); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateMCPOAuth checks one server's oauth block: it only applies to a remote
+// transport, the callback port is a real port, and a client id carries no
+// control characters.
+func validateMCPOAuth(name string, server *MCPServer) error {
+	if server.OAuth.IsZero() {
+		return nil
+	}
+	if t := server.GetTransport(); t != TransportHTTP && t != TransportSSE {
+		return oops.
+			With("server", name).
+			Hint(`OAuth applies to a hosted server; set transport = "http" (or "sse") and url`).
+			Errorf("mcp_servers.%s.oauth requires transport http or sse", name)
+	}
+	if p := server.OAuth.CallbackPort; p != 0 && (p < 1 || p > 65535) {
+		return oops.
+			With("server", name).
+			With("value", p).
+			Errorf("mcp_servers.%s.oauth.callback_port must be between 1 and 65535", name)
+	}
+	if strings.ContainsAny(server.OAuth.ClientID, "\r\n\t") {
+		return oops.
+			With("server", name).
+			Errorf("mcp_servers.%s.oauth.client_id must not contain control characters", name)
+	}
+	for _, scope := range server.OAuth.Scopes {
+		if strings.TrimSpace(scope) == "" {
+			return oops.
+				With("server", name).
+				Errorf("mcp_servers.%s.oauth.scopes must not contain an empty scope", name)
+		}
+	}
+	return nil
 }
 
 // validateMCPServerHeaders checks [[mcp_servers]] headers: they only apply to
