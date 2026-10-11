@@ -648,6 +648,10 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 			Wrapf(err, "parse TOML config")
 	}
 
+	if err := swallowedTopLevelKeysTOML(path, data); err != nil {
+		return nil, err
+	}
+
 	presets, err := presetsFromTOML(raw.Presets)
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "parse presets")
