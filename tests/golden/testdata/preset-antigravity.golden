@@ -37,7 +37,7 @@ INFO  Generation complete files=16
 .agents/skills/ship/SKILL.md file 0644 184 6b822e098b5ea716fc05e66c57a0617b08a030c3f138b086712a80d7be4479d5
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 645 cdedea00837a0055fc884db636b1eac75966f4946c5da49c22fc775cf70995d6
-.ai-rulez/.generated-manifest.local.json file 0644 2006 f83a2165d7432e589dce3c3098695778190bba99580b8ae2c26eb809c0250717
+.ai-rulez/.generated-manifest.local.json file 0644 2006 15653e25e50511b298d8ef10ec91f9c5c21b0e6b56dd2261f733faabbe1ee368
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a

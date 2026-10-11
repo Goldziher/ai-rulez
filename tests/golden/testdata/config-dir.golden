@@ -49,7 +49,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .config/ dir 0755
 .config/ai-rulez/ dir 0755
 .config/ai-rulez/.generated-manifest.json file 0644 1432 aa681753644d8842f776fbda595b270e2e9b53425fd94e5b5a8426518c54dc1d
-.config/ai-rulez/.generated-manifest.local.json file 0644 5038 20d96f549bcbced76fd085c81a402c1b6f9c2f235f5ffe8536dc7aed1536d74f
+.config/ai-rulez/.generated-manifest.local.json file 0644 5038 034839621b31297683943828f8bc31b7752a7d610e88da87fe349217b7bd6cfe
 .config/ai-rulez/agents/ dir 0755
 .config/ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .config/ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -171,7 +171,7 @@ INFO  Configuration is valid path=$ROOT/.config/ai-rulez
 .config/ dir 0755
 .config/ai-rulez/ dir 0755
 .config/ai-rulez/.generated-manifest.json file 0644 1432 aa681753644d8842f776fbda595b270e2e9b53425fd94e5b5a8426518c54dc1d
-.config/ai-rulez/.generated-manifest.local.json file 0644 5038 20d96f549bcbced76fd085c81a402c1b6f9c2f235f5ffe8536dc7aed1536d74f
+.config/ai-rulez/.generated-manifest.local.json file 0644 5038 034839621b31297683943828f8bc31b7752a7d610e88da87fe349217b7bd6cfe
 .config/ai-rulez/agents/ dir 0755
 .config/ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .config/ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a

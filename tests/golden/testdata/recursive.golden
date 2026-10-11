@@ -8,7 +8,7 @@ exit: 0
 a/ dir 0755
 a/.ai-rulez/ dir 0755
 a/.ai-rulez/.generated-manifest.json file 0644 137 f3224e91c8edc264dc6f231b8e4e144f6aac41642b037baca661c1a0b7805c7c
-a/.ai-rulez/.generated-manifest.local.json file 0644 356 839b51a81c26aa328b17f6605a38e3a6ce6cc1feacdc3c541579f69358253188
+a/.ai-rulez/.generated-manifest.local.json file 0644 356 57f74d00d5fb78804ccda4a6d6ec2353e0212dbbfeab4242aed1513956aac880
 a/.ai-rulez/config.toml file 0644 66 c7900578e77e3ff47e78b5903722afcb86e593a69c9eebd9c2759e76cf9ee556
 a/.ai-rulez/rules/ dir 0755
 a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
@@ -25,7 +25,7 @@ b/c/.agents/ dir 0755
 b/c/.agents/skills/ dir 0755
 b/c/.ai-rulez/ dir 0755
 b/c/.ai-rulez/.generated-manifest.json file 0644 146 5797054f6e8198b68e782429a26fa4a82b677b0c4b49a0c7fb926f0a2143487c
-b/c/.ai-rulez/.generated-manifest.local.json file 0644 356 839b51a81c26aa328b17f6605a38e3a6ce6cc1feacdc3c541579f69358253188
+b/c/.ai-rulez/.generated-manifest.local.json file 0644 356 57f74d00d5fb78804ccda4a6d6ec2353e0212dbbfeab4242aed1513956aac880
 b/c/.ai-rulez/config.toml file 0644 75 dad294c3b507bd1c225b10c2ec97eb319b5b85e420fea2cb5a094864b20b073f
 b/c/.ai-rulez/context/ dir 0755
 b/c/.ai-rulez/context/c.md file 0644 4 75893e6adce701bd6c7f089a8f29c6692506f182e8b6c8129e5708576261fa8a
@@ -49,7 +49,7 @@ exit: 0
 a/ dir 0755
 a/.ai-rulez/ dir 0755
 a/.ai-rulez/.generated-manifest.json file 0644 137 f3224e91c8edc264dc6f231b8e4e144f6aac41642b037baca661c1a0b7805c7c
-a/.ai-rulez/.generated-manifest.local.json file 0644 356 839b51a81c26aa328b17f6605a38e3a6ce6cc1feacdc3c541579f69358253188
+a/.ai-rulez/.generated-manifest.local.json file 0644 356 57f74d00d5fb78804ccda4a6d6ec2353e0212dbbfeab4242aed1513956aac880
 a/.ai-rulez/config.toml file 0644 66 c7900578e77e3ff47e78b5903722afcb86e593a69c9eebd9c2759e76cf9ee556
 a/.ai-rulez/rules/ dir 0755
 a/.ai-rulez/rules/r.md file 0644 9 5b0e7d380975bddf60726c113cb402997bae5e2df2cfcb7698974c8f2c4de09a
@@ -66,7 +66,7 @@ b/c/.agents/ dir 0755
 b/c/.agents/skills/ dir 0755
 b/c/.ai-rulez/ dir 0755
 b/c/.ai-rulez/.generated-manifest.json file 0644 146 5797054f6e8198b68e782429a26fa4a82b677b0c4b49a0c7fb926f0a2143487c
-b/c/.ai-rulez/.generated-manifest.local.json file 0644 356 839b51a81c26aa328b17f6605a38e3a6ce6cc1feacdc3c541579f69358253188
+b/c/.ai-rulez/.generated-manifest.local.json file 0644 356 57f74d00d5fb78804ccda4a6d6ec2353e0212dbbfeab4242aed1513956aac880
 b/c/.ai-rulez/config.toml file 0644 75 dad294c3b507bd1c225b10c2ec97eb319b5b85e420fea2cb5a094864b20b073f
 b/c/.ai-rulez/context/ dir 0755
 b/c/.ai-rulez/context/c.md file 0644 4 75893e6adce701bd6c7f089a8f29c6692506f182e8b6c8129e5708576261fa8a
