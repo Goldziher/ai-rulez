@@ -587,7 +587,16 @@ type MCPServer struct {
 	Args        []string          `yaml:"args,omitempty" json:"args,omitempty" toml:"args,omitempty"`
 	Env         map[string]string `yaml:"env,omitempty" json:"env,omitempty" toml:"env,omitempty"`
 	Transport   string            `yaml:"transport,omitempty" json:"transport,omitempty" toml:"transport,omitempty"`
-	URL         string            `yaml:"url,omitempty" json:"url,omitempty" toml:"url,omitempty"`
+	// Type is the explicit transport written to a harness's `type` key
+	// (stdio, http or sse). It is an alias of Transport: when both are set they
+	// must agree, and an unset Type falls back to Transport.
+	Type string `yaml:"type,omitempty" json:"type,omitempty" toml:"type,omitempty"`
+	URL  string `yaml:"url,omitempty" json:"url,omitempty" toml:"url,omitempty"`
+	// OAuth is the pre-registered OAuth client of a hosted (http/sse) server,
+	// rendered into the harnesses whose MCP format has an `oauth` block. A
+	// harness that cannot express it skips the server with a warning rather
+	// than writing one that could not authenticate.
+	OAuth *MCPOAuth `yaml:"oauth,omitempty" json:"oauth,omitempty" toml:"oauth,omitempty"`
 	// Headers are HTTP headers sent to a remote (http/sse) server, typically for
 	// auth. Values may contain ${VAR} placeholders, resolved like Env.
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty" toml:"headers,omitempty"`
@@ -619,6 +628,21 @@ type MCPServer struct {
 	HeaderRefs map[string]string `yaml:"-" json:"-" toml:"-"`
 }
 
+// MCPOAuth is the pre-registered OAuth client a hosted (http or sse) MCP server
+// authenticates with: the client ID registered with the provider, the local
+// callback port it was registered for, and the scopes to request. A harness
+// that reads an `oauth` block renders the fields it understands.
+type MCPOAuth struct {
+	ClientID     string   `yaml:"client_id,omitempty" json:"client_id,omitempty" toml:"client_id,omitempty"`             //nolint:tagliatelle
+	CallbackPort int      `yaml:"callback_port,omitempty" json:"callback_port,omitempty" toml:"callback_port,omitempty"` //nolint:tagliatelle
+	Scopes       []string `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
+}
+
+// IsZero reports whether the block carries no OAuth configuration at all.
+func (o *MCPOAuth) IsZero() bool {
+	return o == nil || (o.ClientID == "" && o.CallbackPort == 0 && len(o.Scopes) == 0)
+}
+
 // IsEnabled returns true if the MCP server is enabled (defaults to true if not specified)
 func (m *MCPServer) IsEnabled() bool {
 	if m == nil || m.Enabled == nil {
@@ -627,12 +651,25 @@ func (m *MCPServer) IsEnabled() bool {
 	return *m.Enabled
 }
 
-// GetTransport returns the transport protocol, defaulting to "stdio"
+// GetTransport returns the transport protocol, defaulting to "stdio". An
+// explicit Type wins over Transport so a config may spell the harness's `type`
+// key directly.
 func (m *MCPServer) GetTransport() string {
-	if m == nil || m.Transport == "" {
+	if m == nil {
 		return TransportStdio
 	}
-	return m.Transport
+	if m.Type != "" {
+		return m.Type
+	}
+	if m.Transport != "" {
+		return m.Transport
+	}
+	return TransportStdio
+}
+
+// HasOAuth reports whether the server declares a pre-registered OAuth client.
+func (m *MCPServer) HasOAuth() bool {
+	return m != nil && !m.OAuth.IsZero()
 }
 
 // Helper methods for Config
