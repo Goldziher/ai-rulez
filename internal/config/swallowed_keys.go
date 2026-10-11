@@ -17,7 +17,7 @@ import (
 func swallowedTopLevelKeysTOML(path string, data []byte) error {
 	var doc map[string]any
 	if toml.Unmarshal(data, &doc) != nil {
-		return nil // not TOML: the caller's decode error stands
+		return nil //nolint:nilerr // not TOML: the caller's decode error stands
 	}
 	return swallowedTopLevelKeys(path, doc)
 }

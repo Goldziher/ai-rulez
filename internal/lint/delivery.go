@@ -119,7 +119,7 @@ func (r *runner) checkDeliveryValues() {
 // Only rules, context, agents and commands are checked. A skill is loaded on
 // demand, so a served skill that names a sibling served skill is fine: the
 // agent loads it through find_skill and follows the reference there. Reporting
-// that case made every served skill name its neighbours, and silencing it by
+// that case made every served skill name its neighbors, and silencing it by
 // forcing one skill static made the next one fire until the whole domain was
 // static (#319).
 func (r *runner) checkServedReferences(served map[string]bool) {

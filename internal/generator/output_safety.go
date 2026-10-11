@@ -449,7 +449,7 @@ func (g *Generator) sameAsRendering(data []byte, output config.OutputFile) bool 
 // it wrote, so writing it would destroy someone's work. Rules folders keep their
 // own guard (isUnmanagedRuleFile), merged documents are merged into rather than
 // replaced, and an empty file holds nothing to lose.
-func (g *Generator) unowned(abs, rel string, output config.OutputFile, info os.FileInfo, assetDirs map[string]bool) bool {
+func (g *Generator) unowned(abs, rel string, output config.OutputFile, info os.FileInfo, assetDirs map[string]bool) bool { //nolint:gocyclo // linear ownership guards
 	if info.IsDir() || info.Size() == 0 || output.PartiallyOwned || len(output.MergeClaims) > 0 {
 		return false
 	}

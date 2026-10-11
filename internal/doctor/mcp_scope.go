@@ -150,29 +150,34 @@ func entryServer(name, scope, origin string, e mcpScopeEntry) mcpScopeServer {
 	}
 }
 
+// projectMCPFile is the committed MCP document the project scope lives in.
+const projectMCPFile = ".mcp.json"
+
 // projectScopeServers is what the harness reads as project scope: the committed
 // .mcp.json (generated and hand-authored entries) plus the servers ai-rulez
 // would generate that are not in it yet.
 func projectScopeServers(cfg *config.Config) []mcpScopeServer {
 	var out []mcpScopeServer
 	seen := map[string]bool{}
-	if data, err := os.ReadFile(filepath.Join(cfg.BaseDir, ".mcp.json")); err == nil {
+	if data, err := os.ReadFile(filepath.Join(cfg.BaseDir, projectMCPFile)); err == nil {
 		var doc struct {
 			MCPServers map[string]mcpScopeEntry `json:"mcpServers"`
 		}
 		if json.Unmarshal(data, &doc) == nil {
 			for name, e := range doc.MCPServers {
-				out = append(out, entryServer(name, "project", ".mcp.json", e))
+				out = append(out, entryServer(name, "project", projectMCPFile, e))
 				seen[name] = true
 			}
 		}
 	}
-	for _, srv := range cfg.EffectiveMCPServers() {
+	servers := cfg.EffectiveMCPServers()
+	for i := range servers {
+		srv := &servers[i]
 		if !srv.IsEnabled() || seen[srv.Name] {
 			continue
 		}
 		out = append(out, mcpScopeServer{
-			Name: srv.Name, Scope: "project", Origin: ".mcp.json",
+			Name: srv.Name, Scope: "project", Origin: projectMCPFile,
 			Command: srv.Command, Args: append([]string(nil), srv.Args...),
 			URL: srv.URL, Transport: srv.Transport,
 		})
@@ -188,7 +193,7 @@ func projectScopeServers(cfg *config.Config) []mcpScopeServer {
 // selfScopeServer is the entry generation writes for ai-rulez's own MCP server.
 func selfScopeServer(cfg *config.Config) mcpScopeServer {
 	entry := cfg.SelfMCPServerEntry(schema.Version)
-	s := mcpScopeServer{Name: config.SelfMCPServerName, Scope: "project", Origin: ".mcp.json"}
+	s := mcpScopeServer{Name: config.SelfMCPServerName, Scope: "project", Origin: projectMCPFile}
 	s.Command, _ = entry["command"].(string) //nolint:errcheck // a non-string command stays empty
 	if args, ok := entry["args"].([]string); ok {
 		s.Args = append([]string(nil), args...)
@@ -224,7 +229,7 @@ func scopeConflictFindings(cfg *config.Config, project []mcpScopeServer, home st
 				continue
 			}
 			out = append(out, Finding{
-				Check: CheckMCPScope, Severity: SeverityWarning, Path: ".mcp.json",
+				Check: CheckMCPScope, Severity: SeverityWarning, Path: projectMCPFile,
 				Message: fmt.Sprintf("MCP server %q is defined in multiple scopes with different endpoints: project (%s: %s) and %s (%s: %s). OAuth tokens are stored per endpoint, so authenticating in one context will not carry over.",
 					pj.Name, pj.Origin, pj.endpoint(), other.Scope, other.Origin, other.endpoint()),
 				Hint: fmt.Sprintf("remove the %s copy: %s", other.Scope, scope.remove(other.Scope, pj.Name)),
@@ -262,7 +267,7 @@ func duplicateURLFindings(project []mcpScopeServer) []Finding {
 			continue
 		}
 		out = append(out, Finding{
-			Check: CheckMCPScope, Severity: SeverityWarning, Path: ".mcp.json",
+			Check: CheckMCPScope, Severity: SeverityWarning, Path: projectMCPFile,
 			Message: fmt.Sprintf("MCP servers %s point to the same url %s; they differ only by name and are likely duplicates", quoteNames(names), u),
 			Hint:    "keep one entry, or give each server a distinct url",
 		})

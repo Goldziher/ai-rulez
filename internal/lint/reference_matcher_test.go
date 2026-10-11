@@ -32,7 +32,7 @@ func TestReferenceUnknown_PluralKindWordAfterBacktickIsProse(t *testing.T) {
 }
 
 // Every documented pointer form still raises AR301 for a name no namespace
-// defines. The forms are the AR301 table row plus the labelled and file-path
+// defines. The forms are the AR301 table row plus the labeled and file-path
 // forms AR990 shares.
 func TestReferenceUnknown_DocumentedPointerFormsFire(t *testing.T) {
 	tests := []struct {
@@ -43,7 +43,7 @@ func TestReferenceUnknown_DocumentedPointerFormsFire(t *testing.T) {
 		{"kind then backticked name", "Run skill `ghost-skill`."},
 		{"slash command", "/ghost-skill"},
 		{"skill call", "Run Skill(ghost-skill)."},
-		{"labelled skill pointer", "Procedure/reference: skill ghost-skill"},
+		{"labeled skill pointer", "Procedure/reference: skill ghost-skill"},
 		{"skills directory", "Read skills/ghost-skill for the steps."},
 		{"harness skill file", "Edit .claude/skills/ghost-skill/SKILL.md."},
 		{"subagent type", "subagent_type: ghost-skill"},

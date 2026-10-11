@@ -262,9 +262,9 @@ func (g *Generator) orphanGeneratedFiles(outputs []config.OutputFile) []string {
 func (g *Generator) considerStrayTree(roots map[string]bool, consider func(string)) {
 	base := filepath.Clean(g.config.BaseDir)
 	configDir := filepath.Clean(g.config.ConfigDir)
-	_ = filepath.WalkDir(base, func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(base, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // unreadable entries are skipped
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // best effort
 		}
 		if !d.IsDir() {
 			// Root-level files are handled by considerRootFiles, under its own gate.
@@ -360,9 +360,9 @@ func (g *Generator) considerRootFiles(consider func(string)) {
 // consider, skipping VCS and dependency trees.
 func (g *Generator) considerRootTree(root string, consider func(string)) {
 	abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(root))
-	_ = filepath.WalkDir(abs, func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(abs, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // unreadable entries are skipped
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // best effort
 		}
 		if d.IsDir() {
 			if skipOrphanWalk(d.Name()) {
