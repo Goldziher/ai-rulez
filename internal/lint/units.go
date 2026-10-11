@@ -99,12 +99,18 @@ func ValidateAnalyzerNames(names []string) []string {
 	return bad
 }
 
-// secretUnits are the units that reach securityScan, the only code that
-// reports AR001. A SecretsOnly run keeps just these.
-var secretUnits = map[string]bool{"security-scan": true, "resources": true, "imported": true}
+// isSecretUnit reports whether name is a unit that reaches securityScan, the
+// only code that reports AR001. A SecretsOnly run keeps just these.
+func isSecretUnit(name string) bool {
+	switch name {
+	case "security-scan", "resources", "imported":
+		return true
+	}
+	return false
+}
 
 func (r *runner) selected(u unitSpec) bool {
-	if r.opts.SecretsOnly && !secretUnits[u.name] {
+	if r.opts.SecretsOnly && !isSecretUnit(u.name) {
 		return false
 	}
 	if r.sel == nil {
