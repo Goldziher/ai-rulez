@@ -56,7 +56,7 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 			return nil, oops.With("path", output.Path).With("base_dir", baseDir).Errorf("plugin output escapes bundle root")
 		}
 		relativePath = filepath.ToSlash(relativePath)
-		entries[relativePath] = provenanceOutput{ContentHash: hashBytes(outputBytes(output))}
+		entries[relativePath] = provenanceOutput{ContentHash: hashBytes(undecoratedBody(output))}
 		paths = append(paths, relativePath)
 		if output.PluginInclude {
 			includes = append(includes, relativePath)
@@ -74,7 +74,7 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 
 	decorated := make([]config.OutputFile, 0, len(outputs)+1)
 	for _, output := range outputs {
-		body := outputBytes(output)
+		body := undecoratedBody(output)
 		relativePath, err := filepath.Rel(baseDir, output.Path)
 		if err != nil {
 			return nil, oops.With("path", output.Path).Wrapf(err, "resolve plugin provenance path")
@@ -153,6 +153,20 @@ func outputBytes(output config.OutputFile) []byte {
 		return output.RawContent
 	}
 	return []byte(output.Content)
+}
+
+// undecoratedBody returns the bytes AddProvenance records and writes: an included
+// file as it is (copied verbatim, so its own bytes are the hash), and a rendered
+// file with any generated header it already carries removed. Without the strip a
+// plugin whose content root overlaps its output tree (content_root = ".", #351)
+// reads its own decorated output as the source and stacks a second header on
+// every run, so verify --plugin never converges.
+func undecoratedBody(output config.OutputFile) []byte {
+	body := outputBytes(output)
+	if output.PluginInclude {
+		return body
+	}
+	return StripProvenance(output.Path, body)
 }
 
 func hashBytes(content []byte) string {
