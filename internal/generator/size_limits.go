@@ -16,6 +16,13 @@ const agentsMDFile = "AGENTS.md"
 // maxSizeContributors is how many of the largest sections a size warning names.
 const maxSizeContributors = 5
 
+// bazPreset is the built-in preset whose AGENTS.md surface rules.baz_budget caps.
+const bazPreset = "baz"
+
+// maxBazBudgetFiles is how many of the largest AGENTS.md files the baz budget
+// warning names.
+const maxBazBudgetFiles = 3
+
 // sizeContributor is one section of an instruction file and its byte size.
 type sizeContributor struct {
 	Label string
@@ -213,4 +220,67 @@ func (g *Generator) warnInstructionSizes(outputs []config.OutputFile) {
 		}
 		g.log().Warn(f.message(), "largest", strings.Join(parts, "; "), "hint", f.Hint)
 	}
+}
+
+// bazBudgetFinding describes the baz AGENTS.md surface when it exceeds
+// rules.baz_budget: the largest files, the total, and the budget. It is nil when
+// the warning is off, baz is not configured, or the surface fits the budget.
+type bazBudgetFinding struct {
+	// Files are the largest AGENTS.md files, biggest first.
+	Files  []sizeContributor
+	Bytes  int
+	Budget int
+}
+
+// message is the one-line summary logged for the finding; it names the largest
+// files and the budget.
+func (f bazBudgetFinding) message() string {
+	names := make([]string, len(f.Files))
+	for i, c := range f.Files {
+		names[i] = fmt.Sprintf("%s (%d bytes)", c.Label, c.Bytes)
+	}
+	return fmt.Sprintf("the baz AGENTS.md surface exceeds rules.baz_budget: %d bytes, budget %d (largest: %s)",
+		f.Bytes, f.Budget, strings.Join(names, "; "))
+}
+
+// bazBudgetFinding returns the over-budget finding for the AGENTS.md files the
+// baz preset writes (the root file plus its nested ones), or nil when there is
+// none. It reads the exact bytes writeOutput would put on disk.
+func (g *Generator) bazBudgetFinding(outputs []config.OutputFile) *bazBudgetFinding {
+	budget := g.config.BazBudgetBytes()
+	if budget <= 0 || !g.config.HasBuiltInPreset(bazPreset) {
+		return nil
+	}
+	docs := g.agentsMDDocs(outputs)
+	total := 0
+	contributors := make([]sizeContributor, 0, len(docs))
+	for _, d := range docs {
+		total += len(d.content)
+		contributors = append(contributors, sizeContributor{Label: d.rel, Bytes: len(d.content)})
+	}
+	if total <= budget {
+		return nil
+	}
+	sort.SliceStable(contributors, func(i, j int) bool {
+		if contributors[i].Bytes != contributors[j].Bytes {
+			return contributors[i].Bytes > contributors[j].Bytes
+		}
+		return contributors[i].Label < contributors[j].Label
+	})
+	if len(contributors) > maxBazBudgetFiles {
+		contributors = contributors[:maxBazBudgetFiles]
+	}
+	return &bazBudgetFinding{Files: contributors, Bytes: total, Budget: budget}
+}
+
+// warnBazBudget logs one warning when the baz AGENTS.md surface exceeds
+// rules.baz_budget. It is advisory and never fails the run.
+func (g *Generator) warnBazBudget(outputs []config.OutputFile) {
+	f := g.bazBudgetFinding(outputs)
+	if f == nil {
+		return
+	}
+	g.log().Warn(f.message(),
+		"hint", "set rules.baz_default = \"none\" to nest only rules whose targets name baz, "+
+			"rules.baz_dedupe = true to share a parent AGENTS.md, or raise rules.baz_budget")
 }
