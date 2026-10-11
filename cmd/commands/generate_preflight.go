@@ -96,8 +96,12 @@ func checkConfigSchema(cfg *config.Config, strict bool) error {
 // render less than its author meant, and only validate reported it.
 // It uses the same computation as the AR971 lint rule (Config.RoleProblems).
 func warnRoleSelection(cfg *config.Config, role string) {
+	selected := map[string]bool{}
+	for _, name := range config.SplitRoleNames(role) {
+		selected[name] = true
+	}
 	for _, p := range cfg.RoleProblems() {
-		if p.Role == role && p.Kind == config.RoleProblemReference {
+		if selected[p.Role] && p.Kind == config.RoleProblemReference {
 			logger.Warn("AR971 " + p.Message)
 		}
 	}

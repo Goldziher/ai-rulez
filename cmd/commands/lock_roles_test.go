@@ -202,6 +202,39 @@ func TestLockRoles_GenerateLockedRoleComparesThePinnedRole(t *testing.T) {
 	}
 }
 
+func TestLockRoles_CompositionPinsUnderItsCanonicalName(t *testing.T) {
+	// Arrange: two unpinned roles over one shared skill, composed on the command line.
+	root := lockProject(t, `
+[[roles]]
+name = "a"
+[roles.skill_mode]
+deploy = "off"
+
+[[roles]]
+name = "b"
+[roles.skill_mode]
+deploy = "name-only"
+`)
+	t.Cleanup(func() { lockRoles, lockServeRole, generateRole = false, "", "" })
+	lockServeRole = "a,b"
+
+	// Act
+	require.Equal(t, 0, writeLockAt("", "", nil))
+
+	// Assert: one aggregate pin under the canonical composition name.
+	assert.Equal(t, []string{"a,b"}, pinnedRoles(t, root))
+
+	var code int
+	report, _ := capture(t, func() { code = checkLockAt("") })
+	require.Equal(t, 0, code, report)
+
+	// The later-listed role b decides the composed skill_mode, so changing it drifts.
+	setRoleMode(t, root, "name-only", "off")
+	report, _ = capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, exitDrift, code)
+	assert.Contains(t, report, "outputs of role a,b")
+}
+
 func TestValidateLockFlags_Roles(t *testing.T) {
 	tests := []struct {
 		name    string

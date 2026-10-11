@@ -16,12 +16,12 @@ func (g *Generator) ContentForProfile(profile string) (*config.ContentTree, erro
 // export is not written for a harness, so served skills are exported like static
 // ones.
 func (g *Generator) ContentForRole(name string) (*config.ContentTree, error) {
-	resolved, err := g.config.FlattenRole(name)
+	resolved, err := g.config.ResolveRole(name)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already contextual
 	}
 	if g.config.Content == nil {
 		return nil, config.ErrNoContent
 	}
-	return g.config.FilterTreeForRole(g.config.Content, &resolved.RoleConfig) //nolint:wrapcheck // already contextual
+	return g.config.FilterTreeForRole(g.config.Content, resolved.Flat()) //nolint:wrapcheck // already contextual
 }
