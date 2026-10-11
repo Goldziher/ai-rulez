@@ -36,6 +36,57 @@ func TestMCPConfigAR602(t *testing.T) {
 	})
 }
 
+// TestMCPOAuthAR602 covers the oauth and conflicting-definition additions to the
+// AR602 family: a hosted server whose oauth block names no client_id, and the
+// same server name resolving to a different endpoint or transport in two sources.
+func TestMCPOAuthAR602(t *testing.T) {
+	runRuleCases(t, []ruleCase{
+		{
+			name:   "oauth with a client id",
+			files:  mcpJSON(`{"a":{"type":"http","url":"https://x.test/mcp","oauth":{"clientId":"cid","callbackPort":8080}}}`),
+			absent: []string{"AR602"},
+		},
+		{
+			name:   "oauth with a snake_case client id",
+			files:  mcpJSON(`{"a":{"type":"http","url":"https://x.test/mcp","oauth":{"client_id":"cid"}}}`),
+			absent: []string{"AR602"},
+		},
+		{
+			name:  "oauth without a client id",
+			files: mcpJSON(`{"a":{"type":"http","url":"https://x.test/mcp","oauth":{"callbackPort":8080}}}`),
+			want:  []string{"AR602:.mcp.json:1"}, sev: map[string]Severity{"AR602": SeverityWarning},
+		},
+		{
+			name:   "config.toml oauth with a client id",
+			config: "\n[[mcp_servers]]\nname = \"slack\"\ntype = \"http\"\nurl = \"https://mcp.slack.com/mcp\"\n[mcp_servers.oauth]\nclient_id = \"cid\"\ncallback_port = 8080\n",
+			absent: []string{"AR602"},
+		},
+		{
+			name:   "config.toml oauth without a client id",
+			config: "\n[[mcp_servers]]\nname = \"slack\"\ntype = \"http\"\nurl = \"https://mcp.slack.com/mcp\"\n[mcp_servers.oauth]\ncallback_port = 8080\n",
+			want:   []string{"AR602:config.toml:0"}, sev: map[string]Severity{"AR602": SeverityWarning},
+		},
+		{
+			name:   "same name, different endpoint in two sources",
+			config: "\n[[mcp_servers]]\nname = \"slack\"\ntype = \"http\"\nurl = \"https://mcp.slack.com/mcp\"\n",
+			files:  mcpJSON(`{"slack":{"type":"http","url":"https://other.test/mcp"}}`),
+			want:   []string{"AR602:config.toml:0"}, sev: map[string]Severity{"AR602": SeverityWarning},
+		},
+		{
+			name:   "same name, different transport in two sources",
+			config: "\n[[mcp_servers]]\nname = \"srv\"\ncommand = \"node\"\n",
+			files:  mcpJSON(`{"srv":{"type":"http","url":"https://x.test/mcp"}}`),
+			want:   []string{"AR602:config.toml:0"}, sev: map[string]Severity{"AR602": SeverityWarning},
+		},
+		{
+			name:   "same name and endpoint in two sources is a generated copy",
+			config: "\n[[mcp_servers]]\nname = \"slack\"\ntype = \"http\"\nurl = \"https://mcp.slack.com/mcp\"\n",
+			files:  mcpJSON(`{"slack":{"type":"http","url":"https://mcp.slack.com/mcp"}}`),
+			absent: []string{"AR602"},
+		},
+	})
+}
+
 func TestMCPUnpinnedAR012(t *testing.T) {
 	runRuleCases(t, []ruleCase{
 		{name: "npx unpinned", files: mcpJSON(`{"a":{"command":"npx","args":["-y","@modelcontextprotocol/server-github"]}}`), want: []string{"AR012:.mcp.json:1"}},

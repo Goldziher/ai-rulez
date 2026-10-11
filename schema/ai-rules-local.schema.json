@@ -2301,6 +2301,32 @@
             "minLength": 1,
             "type": "string"
           },
+          "oauth": {
+            "additionalProperties": false,
+            "description": "Pre-registered OAuth client of a hosted (http or sse) server, rendered into the harnesses whose MCP format has an `oauth` block (Claude Code's .mcp.json, VS Code's mcp.json, Codex's config.toml). A harness that cannot express it skips the server with a warning rather than writing one that could not authenticate.",
+            "properties": {
+              "callback_port": {
+                "description": "Fixed local port of the OAuth callback listener, when the provider requires the redirect URI to match a pre-registered port.",
+                "maximum": 65535,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "client_id": {
+                "description": "OAuth client ID registered with the provider. Required when the provider does not support dynamic client registration.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "scopes": {
+                "description": "OAuth scopes to request during authorization.",
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
           "package": {
             "description": "Package URL (purl) of the package a command-based server runs, e.g. pkg:npm/%40scope/server@1.4.2. `ai-rulez sbom` uses it for the component's purl instead of guessing from command and args; it is not written to harness files.",
             "pattern": "^pkg:[a-z][a-z0-9.+-]*/[^\\s]+$",
@@ -2320,6 +2346,15 @@
           "transport": {
             "default": "stdio",
             "description": "Transport protocol for MCP server communication (default: stdio)",
+            "enum": [
+              "stdio",
+              "http",
+              "sse"
+            ],
+            "type": "string"
+          },
+          "type": {
+            "description": "Explicit transport written to a harness's `type` key (stdio, http or sse). An alias of `transport`; when both are set they must agree, and an unset `type` falls back to `transport`.",
             "enum": [
               "stdio",
               "http",

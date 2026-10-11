@@ -76,7 +76,23 @@ name = "remote-api"
 transport = "http"
 url = "https://mcp.example.com/mcp"
 headers = { Authorization = "Bearer ${REMOTE_API_TOKEN}" }
+
+[[mcp_servers]]
+name = "slack"
+type = "http"                      # the same setting as transport, spelled as the harness's `type`
+url = "https://mcp.slack.com/mcp"
+[mcp_servers.oauth]                # a pre-registered OAuth client (hosted servers)
+client_id = "1234567890.1234567890"
+callback_port = 8080
+scopes = ["channels:read", "chat:write"]
 ```
+
+`oauth` is translated to each harness that has an `oauth` block: Claude Code's `.mcp.json` and VS Code's
+`.vscode/mcp.json` get `{ "clientId", "callbackPort", "scopes" }`, and Codex's `.codex/config.toml` gets an
+`[mcp_servers.<name>.oauth]` table with `client_id` and `callback_port`. A harness that cannot express it
+skips the server with a warning instead of writing one that could not authenticate. `scan` reports an `oauth`
+block with no `client_id` and two same-named servers that resolve to different endpoints or transports
+(`AR602`).
 
 MCP env and header values may contain `${VAR}` placeholders. `ai-rulez generate` resolves them from repeated
 `--env KEY=VALUE` flags, process environment variables, then dotenv files. Placeholder names must

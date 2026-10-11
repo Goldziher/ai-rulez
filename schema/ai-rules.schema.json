@@ -305,6 +305,11 @@
             "description": "Transport protocol for MCP server communication (default: stdio)",
             "default": "stdio"
           },
+          "type": {
+            "type": "string",
+            "enum": ["stdio", "http", "sse"],
+            "description": "Explicit transport written to a harness's `type` key (stdio, http or sse). An alias of `transport`; when both are set they must agree, and an unset `type` falls back to `transport`."
+          },
           "url": {
             "type": "string",
             "description": "URL for remote MCP servers using http or sse transport",
@@ -320,6 +325,32 @@
               "type": "string",
               "pattern": "^[^\\r\\n]*$"
             }
+          },
+          "oauth": {
+            "type": "object",
+            "description": "Pre-registered OAuth client of a hosted (http or sse) server, rendered into the harnesses whose MCP format has an `oauth` block (Claude Code's .mcp.json, VS Code's mcp.json, Codex's config.toml). A harness that cannot express it skips the server with a warning rather than writing one that could not authenticate.",
+            "properties": {
+              "client_id": {
+                "type": "string",
+                "description": "OAuth client ID registered with the provider. Required when the provider does not support dynamic client registration.",
+                "minLength": 1
+              },
+              "callback_port": {
+                "type": "integer",
+                "description": "Fixed local port of the OAuth callback listener, when the provider requires the redirect URI to match a pre-registered port.",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "scopes": {
+                "type": "array",
+                "description": "OAuth scopes to request during authorization.",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "additionalProperties": false
           },
           "enabled": {
             "type": "boolean",

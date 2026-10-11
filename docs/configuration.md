@@ -694,8 +694,10 @@ Each entry supports:
 | `args`        | No       | Array of command arguments for local servers. Elements may contain `${PROJECT_ROOT}`. |
 | `env`         | No       | Environment variables as key-value pairs. Values may contain `${VAR}` placeholders. |
 | `transport`   | No       | `stdio`, `http`, or `sse`. Defaults to `stdio`.                                     |
+| `type`        | No       | The harness's `type` value (`stdio`, `http`, or `sse`), an alias of `transport`. When both are set they must agree; an unset `type` falls back to `transport`. |
 | `url`         | No       | Remote MCP server URL for `http` or `sse` transports.                               |
 | `headers`     | No       | HTTP headers for `http` or `sse` servers (e.g. auth). Values may contain `${VAR}` placeholders. |
+| `oauth`       | No       | Pre-registered OAuth client of a hosted (`http`/`sse`) server: `client_id`, `callback_port` (1–65535) and `scopes`. Rendered only by harnesses whose MCP format has an `oauth` block (Claude Code's `.mcp.json`, VS Code's `.vscode/mcp.json`, Codex's `.codex/config.toml`); a harness that cannot express it skips the server with a warning. |
 | `enabled`     | No       | Set to `false` to skip the server in generated MCP outputs. Defaults to `true`.     |
 | `profiles`    | No       | Restrict the server to the named profiles. Omit to include it in every profile.     |
 | `domain`      | No       | Restrict the server to a domain: it is included only when the active profile or role selects that domain. Omit to include it in every selection. |
@@ -710,6 +712,28 @@ transport = "http"
 url = "https://mcp.example.com/mcp"
 headers = { Authorization = "Bearer ${REMOTE_API_TOKEN}", X-Team = "platform" }
 ```
+
+A hosted server that needs a pre-registered OAuth client (Slack, for example) carries an `oauth` block. The
+`type` key is the same setting as `transport`, spelled the way a harness's file spells it:
+
+```toml
+[[mcp_servers]]
+name = "slack"
+type = "http"
+url = "https://mcp.slack.com/mcp"
+[mcp_servers.oauth]
+client_id = "1234567890.1234567890"
+callback_port = 8080
+scopes = ["channels:read", "chat:write"]
+```
+
+`oauth` is written as `{ "clientId": ..., "callbackPort": ..., "scopes": [...] }` in Claude Code's `.mcp.json`
+and VS Code's `.vscode/mcp.json`, and as an `[mcp_servers.<name>.oauth]` table with `client_id` and
+`callback_port` (plus a sibling `scopes` array) in Codex's `.codex/config.toml`. A harness whose MCP format
+has no `oauth` block (Gemini, OpenCode, Zed, ...) leaves the server out of its file and warns, rather than
+writing a server that could not authenticate. `oauth` requires a remote transport; a `client_id` is not
+required by `validate` (a callback-port-only block relies on dynamic client registration), but `scan` reports
+one that is missing as `AR602`.
 
 `headers` is rejected on a `stdio` server, header names must be valid HTTP tokens (and unique ignoring
 case), and values must not contain line breaks. Each preset writes them where its tool reads them

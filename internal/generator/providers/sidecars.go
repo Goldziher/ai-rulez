@@ -215,6 +215,11 @@ func mcpJSONServerEntries(cfg *config.Config, literal bool) map[string]any {
 		if _, ok := entry["type"]; !ok {
 			entry["type"] = config.TransportStdio
 		}
+		if isRemote(server) {
+			if oauth := presets.OAuthJSONEntry(server.OAuth); oauth != nil {
+				entry["oauth"] = oauth
+			}
+		}
 		if !literal {
 			presets.ApplySharedMCPJSONRefs(entry, server, cfg)
 		}

@@ -56,6 +56,10 @@ type mcpDialect struct {
 	// map: each server becomes one element carrying its name under this key
 	// ([[mcp_servers]] with name = "..."). TOML documents only.
 	arrayKey string
+	// supportsOAuth reports whether the tool reads an `oauth` block. A server
+	// that declares one is skipped (with a warning) by a dialect that does not,
+	// rather than written without the client it needs.
+	supportsOAuth bool
 }
 
 // mcpDialects is one map literal, so every dialect exists before any init() (the
@@ -66,9 +70,9 @@ var mcpDialects = map[string]mcpDialect{
 	MCPDialectClaude:       {defaultKey: []string{settingsKeyMCPServers}, build: claudeMCPEntry},
 	MCPDialectGemini:       {defaultKey: []string{settingsKeyMCPServers}, build: geminiMCPEntry},
 	MCPDialectOpencode:     {defaultKey: []string{"mcp"}, build: opencodeMCPEntry},
-	MCPDialectVSCode:       {defaultKey: []string{settingsKeyServers}, build: vscodeMCPEntry, jsoncDefault: true},
+	MCPDialectVSCode:       {defaultKey: []string{settingsKeyServers}, build: vscodeMCPEntry, jsoncDefault: true, supportsOAuth: true},
 	MCPDialectZed:          {defaultKey: []string{"context_servers"}, build: zedMCPEntry, jsoncDefault: true},
-	MCPDialectCodex:        {defaultKey: []string{settingsKeyMCPServersSnake}, build: codexMCPEntry},
+	MCPDialectCodex:        {defaultKey: []string{settingsKeyMCPServersSnake}, build: codexMCPEntry, supportsOAuth: true},
 	MCPDialectAmp:          {defaultKey: []string{"amp.mcpServers"}, build: ampMCPEntry},
 	MCPDialectYAMLStandard: {defaultKey: []string{settingsKeyMCPServersSnake}, build: yamlStandardMCPEntry},
 	MCPDialectCodewhale:    {defaultKey: []string{settingsKeyServers}, build: codewhaleMCPEntry},
@@ -141,7 +145,11 @@ func mcpDialectEntriesFor(d mcpDialect, cfg *config.Config, opts *mcpEntryOpts) 
 			continue
 		}
 		if why := incompleteMCPServer(server); why != "" {
-			cfg.Warn("skipping MCP server that cannot be written: "+why, "server", name)
+			cfg.Diag.Warn("skipping MCP server that cannot be written: "+why, "server", name)
+			continue
+		}
+		if server.HasOAuth() && !d.supportsOAuth {
+			cfg.Diag.Warn("skipping MCP server that declares an oauth block: this tool has no oauth block, so a pre-registered client cannot be written", "server", name)
 			continue
 		}
 		if entry := d.build(server); entry != nil {
