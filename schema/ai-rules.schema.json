@@ -2768,6 +2768,11 @@
       "type": "object",
       "description": "Claude Code specific output options.",
       "properties": {
+        "claude_md": {
+          "type": "string",
+          "enum": ["shim", "none"],
+          "description": "Controls the CLAUDE.md the claude preset writes when agents_md is on. 'shim' (the default) keeps the '@AGENTS.md' import file; 'none' writes only AGENTS.md, which Claude Code 2.1.277 and later reads directly, and removes a previously generated shim."
+        },
         "settings": {
           "type": "object",
           "description": "Opt-in management of the plugin keys of .claude/settings.json. Only the listed entries are owned; every other key survives.",

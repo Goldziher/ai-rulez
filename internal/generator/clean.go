@@ -657,7 +657,13 @@ func (g *Generator) cleanStaleFiles(outputs []config.OutputFile) []string {
 	if g.userMode {
 		return g.userStale(outputs)
 	}
-	return g.staleManifestFiles(outputs)
+	files := g.staleManifestFiles(outputs)
+	for _, abs := range g.retiredClaudeShims(outputs) {
+		if !slices.Contains(files, abs) {
+			files = append(files, abs)
+		}
+	}
+	return files
 }
 
 // cleanGitignore strips the managed .gitignore block and the project's block in
