@@ -1,7 +1,6 @@
 package lint
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,7 +9,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -365,8 +363,7 @@ func (r *runner) scanResources(it *item) {
 		return
 	}
 	for _, res := range it.cf.Resources {
-		if strings.HasSuffix(strings.ToLower(res.RelPath), ".md") || len(res.Content) > 512*1024 ||
-			!utf8.Valid(res.Content) || bytes.IndexByte(res.Content, 0) >= 0 {
+		if !scannableResource(res) {
 			continue
 		}
 		r.securityScan(filepath.Join(it.itemDir, filepath.FromSlash(res.RelPath)), string(res.Content))
@@ -406,11 +403,10 @@ func (r *runner) scanImported() {
 		if it.owned || !filepath.IsAbs(it.abs) {
 			continue
 		}
-		data, err := os.ReadFile(it.abs)
-		if err != nil {
+		raw, ok := r.fileContent(it.abs)
+		if !ok {
 			continue
 		}
-		raw := string(data)
 		r.docs[it.abs] = parseDoc(raw)
 		// A per-entry trust level overrides the global scan level for this item;
 		// every other item keeps the global one.

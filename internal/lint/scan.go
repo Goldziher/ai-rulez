@@ -120,8 +120,8 @@ func (r *runner) checkAnchor(it *item, line int, file, frag, target string) {
 	var raw string
 	if file == it.abs && it.isDoc {
 		raw = it.cf.Content
-	} else if data, err := os.ReadFile(file); err == nil {
-		raw = string(data)
+	} else if data, ok := r.fileContent(file); ok {
+		raw = data
 	} else {
 		return
 	}

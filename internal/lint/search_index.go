@@ -86,15 +86,15 @@ func (r *runner) skillItems() []skillsearch.Item {
 		if it.kind != kindSkill || it.isDoc || it.abs == "" {
 			continue
 		}
-		raw, err := os.ReadFile(it.abs) //nolint:gosec // a content file of the project
-		if err != nil {
+		raw, ok := r.fileContent(it.abs)
+		if !ok {
 			continue
 		}
 		id := it.cf.Name
 		if it.itemDir != "" {
 			id = filepath.Base(it.itemDir)
 		}
-		out = append(out, skillsearch.ItemFromSkill(id, it.domain, raw))
+		out = append(out, skillsearch.ItemFromSkill(id, it.domain, []byte(raw)))
 	}
 	return out
 }

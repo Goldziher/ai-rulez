@@ -143,6 +143,32 @@ func BenchmarkSecretScanCustomPatterns(b *testing.B) {
 	}
 }
 
+// BenchmarkSecurityScanParallel shows the per-file scan pre-pass against the
+// sequential scan it replaces (scanPrefetchDisabled). The two must produce the
+// same findings; the benchmark times the difference.
+func BenchmarkSecurityScanParallel(b *testing.B) {
+	for _, s := range testutil.BenchSizes() {
+		cfg, tree := benchProject(b, s.Files)
+		for _, mode := range []struct {
+			name     string
+			disabled bool
+		}{
+			{"parallel", false},
+			{"sequential", true},
+		} {
+			b.Run(s.Name+"/"+mode.name, func(b *testing.B) {
+				opts := Options{SecurityOnly: true, noScanPrefetch: mode.disabled}
+				b.ReportAllocs()
+				for range b.N {
+					if _, err := RunWith(cfg, tree, opts); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+		}
+	}
+}
+
 // BenchmarkAuthoredSecretGate is the lint run `generate` makes before it
 // writes: the security family, and the credential rule alone that the gate
 // reads.
