@@ -167,7 +167,7 @@ func TestServeCache_SymlinkedEntryIsIgnored(t *testing.T) {
 	entry := filepath.Join(dir, serveCacheFileName)
 	real := filepath.Join(dir, "real.json")
 	require.NoError(t, os.Rename(entry, real))
-	require.NoError(t, os.Symlink(real, entry))
+	testutil.SymlinkOrSkip(t, real, entry)
 	_, ok = c.load("k")
 	assert.False(t, ok, "a symlinked entry is not read")
 }
