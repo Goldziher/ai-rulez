@@ -8,3 +8,7 @@ agents_md = false
 [header]
 style = "minimal"
 hashes = "full"
+
+# Pinned by `ai-rulez migrate v5`: the 4.x default. Remove this line to take the v5 default.
+[mcp]
+self_server = false
