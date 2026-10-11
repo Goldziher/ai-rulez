@@ -1373,7 +1373,7 @@ Teams that commit generated files can gate CI on `generate --check`. It renders 
 | `missing: <path>` | A generated file is not on disk |
 | `stale: <path>` | The sources changed (or the rendering did); `generate` would rewrite it |
 | `edited: <path>` | The body no longer matches the `Content-Hash` in its own header: a hand edit; `generate` overwrites it, so the edit is lost |
-| `orphan: <path>` | Listed in the previous manifest, no longer rendered; `generate` would delete it |
+| `orphan: <path>` | Listed in the previous manifest, no longer rendered; `generate` would delete it. Without a manifest (CI, a fresh checkout) a generated file whose source was removed is still reported: a file under an output directory that carries a `Content-Hash` header and that no output emits is an orphan |
 | `blocked: <path>` | A machine-local input (overlay or `local/` tree) would change this file and `generate` refuses to write it because it is tracked or not git-ignored; the same refusal `generate` and `generate --dry-run` report. `--allow-local-drift` lifts it |
 
 With a machine-local overlay or `local/` content, `--check` classifies the outputs like `generate` does, so files that `generate` keeps for the local inputs and that are in sync are not reported. `--check` does not print the summary of rules whose activation a tool cannot express; `generate` prints it.
@@ -2728,7 +2728,7 @@ shorthand, on a flag that redeclares a global one, and on a flag without usage t
   have no effect, and `lock --refuse-findings` fails when the security scan refuses a served skill.
 - `--dry-run` / `-n` computes and reports, and writes nothing.
 
-Every command that prints a result takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--format` is the encoding of the report; `generate`, `clean`, `sign`, `export okf` and `version` take it as well as the reporting commands. `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal.
+Every command that prints a result takes `--format text|json` (some add `sarif`, `junit`, `markdown` and more; an unknown value is rejected with the allowed list). `--format` is the encoding of the report; `generate`, `clean`, `sign`, `export okf` and `version` take it as well as the reporting commands. `--json` was removed in v5 and is an unknown flag. Log colors are off when `NO_COLOR` is set, when `TERM=dumb`, or when stderr is not a terminal; the animated progress bars and spinners draw only when stderr is a terminal and `NO_COLOR` is unset, so redirected output (a log file, `$(...)`, CI) carries no frames, ANSI codes or carriage returns.
 
 The commands without `--format` print no document: `completion`, `guard`, `mcp`, `local init|path|set|unset`, `review explain`, `skill update`, `trust update` and the `telemetry` subcommands that act (`enable`, `disable`, `export`, `feedback`, `flush`, `preview`, `prune`, `record`). Some commands accept `--format` only in some modes (`lock`, `verify`, `approve`); the [command reference](cli-reference.md) lists each command's own values.
 
