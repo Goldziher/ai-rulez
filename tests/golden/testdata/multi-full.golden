@@ -210,7 +210,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 12598 b64d9e22b10f6d4b7235cb0e8192c6f8eadb0d3a769f5e37ac9dcc28b4c01d36
+.ai-rulez/.generated-manifest.local.json file 0644 12598 5b43015b03d71d550d9123c0f52a6441b82f1ddce7ba10de1683d1b87cbe4e94
 >>>>
 {
   "version": "1",
@@ -460,14 +460,14 @@ policy:
           "mcpServers",
           "local-tool"
         ],
-        "sum": "5941345de4e3c3620e53febdc7c79be7161fa71bad6e5b2b73a9d3f1d346c7d0"
+        "sum": "0bcc35d5b1f17b0b11337107e218a0f74ac5995e178ac8b6985da18b8efd7b31"
       },
       {
         "path": [
           "mcpServers",
           "remote-tool"
         ],
-        "sum": "890460c2ae0a11f748037106fd4b6f3fc38f77abf1683795a17464ade804ae26"
+        "sum": "db8e864e4a772fdfea9095c33c06f85535e013cb42db5c8e262f9a31ef335221"
       }
     ],
     ".vscode/mcp.json": [
@@ -626,7 +626,7 @@ policy:
     ".github/hooks/ai-rulez.json": "dfd67b32fc2f6490cedb5efe4a20a5374fe60aee6d2f21a3ea0d7a54f6621255",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".mcp.json": "05d20c542efe76616e4be5bb5869aa40aadd016cf1462872020b606933af092c",
+    ".mcp.json": "7b2078ca5e5f2bd9896b5b7b6d802ca4bfdf66e6bf52c58b82a204a95b9e4018",
     ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
     ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".opencode/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
@@ -1771,7 +1771,7 @@ GEMINI.md
 opencode.json
 # END ai-rulez
 <<<<
-.mcp.json file 0644 572 f7f489cbd447b2f714c7759fd1a09fd2a75f0ddb8a47ae38269bfacce38f0af6
+.mcp.json file 0644 545 c89732ccf50547d490d916ff62233d8a37ff26c0ab68c517c7b79802ec586162
 >>>>
 {
   "mcpServers": {
@@ -1790,13 +1790,12 @@ opencode.json
         "golden-mcp"
       ],
       "command": "npx",
-      "disabled": false,
       "env": {
         "API_TOKEN": "${GOLDEN_TOKEN}"
-      }
+      },
+      "type": "stdio"
     },
     "remote-tool": {
-      "disabled": false,
       "headers": {
         "Authorization": "Bearer ${GOLDEN_TOKEN}"
       },
