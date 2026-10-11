@@ -102,8 +102,11 @@ func TestGenerate_SymlinkedRootGitignoreIsNotWrittenThrough(t *testing.T) {
 
 func TestGenerate_RefusedRunStillIgnoresTheOverlay(t *testing.T) {
 	// Arrange: a shared gemini settings file would carry an overlay secret.
-	p := newDriftProject(t, driftShared+"agents_md = true\n")
-	p.writeFile(t, ".ai-rulez/config.toml", strings.Replace(driftShared, `presets = ["claude"]`, `presets = ["gemini"]`, 1)+"agents_md = true\n")
+	// agents_md is flipped above the first table: a top-level key written after a
+	// [table] header is read as a key of that table and rejected (#344).
+	agentsMD := strings.Replace(driftShared, "agents_md = false", "agents_md = true", 1)
+	p := newDriftProject(t, agentsMD)
+	p.writeFile(t, ".ai-rulez/config.toml", strings.Replace(agentsMD, `presets = ["claude"]`, `presets = ["gemini"]`, 1))
 	p.git(t, "init", "-q")
 	p.overlay(t, "[[mcp_servers]]\nname = \"loc\"\ncommand = \"x\"\n[mcp_servers.env]\nAPI_TOKEN = \"supersecretvalue123\"\n")
 
