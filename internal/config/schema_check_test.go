@@ -99,3 +99,26 @@ func TestNearestKey(t *testing.T) {
 		assert.Equal(t, tt.want, nearestKey(tt.key, keys), tt.key)
 	}
 }
+
+// Only a top-level table (or a top-level table array entry) can swallow a
+// top-level key; a key unknown to a deeper nested table is not one (#348).
+func TestTopLevelKeyOutsideItsTable(t *testing.T) {
+	tests := []struct {
+		name   string
+		parent string
+		key    string
+		want   bool
+	}{
+		{"a top-level key in a top-level table", "rules", "agents_md", true},
+		{"a top-level key in a top-level table array entry", "mcp_servers.0", "agents_md", true},
+		{"a table's own key", "rules", "mode", false},
+		{"a genuinely unknown key", "rules", "nope", false},
+		{"a nested table's unknown key is not a misplaced top-level key", "plugin.mcp.0", "description", false},
+		{"the document root", "", "agents_md", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, topLevelKeyOutsideItsTable(tt.parent, tt.key))
+		})
+	}
+}
