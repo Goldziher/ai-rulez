@@ -797,7 +797,7 @@ func SaveConfig(cfg *Config, configDir string) error {
 			Errorf("config is nil")
 	}
 
-	if cfg.LocalOverlay != nil {
+	if cfg.LocalOverlay != nil || len(cfg.ActiveLayers) > 0 {
 		return errMergedConfigWrite()
 	}
 

@@ -165,7 +165,11 @@ type Config struct {
 	ResolutionState any `yaml:"-" json:"-" toml:"-"`
 	// LocalOverlay is set when a config.local.* overlay was merged into this
 	// configuration. Such a config is a merged view and is never written back.
-	LocalOverlay  *LocalOverlay         `yaml:"-" json:"-" toml:"-"`
+	LocalOverlay *LocalOverlay `yaml:"-" json:"-" toml:"-"`
+	// ActiveLayers names the config.<name>.toml layers merged into this
+	// configuration, in merge order. A layered Config is a merged view and is never
+	// written back as config.toml.
+	ActiveLayers  []string              `yaml:"-" json:"-" toml:"-"`
 	MCPServers    map[string]*MCPServer `yaml:"-" json:"-" toml:"-"`
 	MCPServersRaw []MCPServer           `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
 

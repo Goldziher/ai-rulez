@@ -77,6 +77,8 @@ Every command in the binary, generated from the command tree (`task docs:cli`). 
 | `ai-rulez completion fish` | Generate the autocompletion script for fish |
 | `ai-rulez completion powershell` | Generate the autocompletion script for powershell |
 | `ai-rulez completion zsh` | Generate the autocompletion script for zsh |
+| `ai-rulez config` | Show how the configuration is composed (read-only) |
+| `ai-rulez config layers` | List the config.<name>.toml layers and which are active |
 | `ai-rulez convert` | Convert existing AI tool files into an .ai-rulez/ tree |
 | `ai-rulez cost` | Report which skills, rules and context cost the most prompt tokens |
 | `ai-rulez doctor` | Diagnose the project's ai-rulez setup (read-only) |
@@ -2822,6 +2824,7 @@ in these tables.
 | -------- | ---- | ------- |
 | `AI_RULEZ_DEBUG` | `--debug` | Debug logging on stderr |
 | `AI_RULEZ_QUIET` | `--quiet` | Hide progress and information lines (results, warnings, errors stay) |
+| `AI_RULEZ_LAYERS` | none | Comma-separated `config.<name>.toml` layers merged over `config.toml`, in order, falling back to `AI_RULEZ_PROFILE`; see `ai-rulez config layers` |
 | `AI_RULEZ_PROFILE` | `--profile` | Active profile (or comma-separated composition) when the flag is not given |
 | `AI_RULEZ_ROLE` | `--role`, `mcp --serve-skills --serve-role` | Active role (or comma-separated composition) when the flag is not given |
 | `AI_RULEZ_GIT_TOKEN` | `--token` / `-T` | Git access token for private includes and skill sources |

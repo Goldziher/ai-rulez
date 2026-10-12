@@ -1778,6 +1778,47 @@ What [`ai-rulez publish`](publish.md) ships and its policy gates. All optional; 
 | `[publish.marketplace.channels]` | Channel name to the git ref its pinned marketplace index points at. |
 | `[[publish.emitters]]` | `name` (`template`, `cursor-team-marketplace`, `port`, `aws-agent-registry`, `kiro-steering`), `template` and `output` for the template emitter, `options` (for example `blueprint` for `port`). |
 
+## Layered configuration
+
+Split the configuration across `config.<name>.toml` files beside `config.toml` and choose which apply. The active
+layers are merged over `config.toml` in the order they are named, so a later layer wins; `config.local.toml` is applied
+after all of them. `config.toml` always loads.
+
+```toml
+# .ai-rulez/config.ai.toml
+[[mcp_servers]]
+name = "basemind"
+command = "basemind"
+args = ["serve"]
+
+[[installed_skills]]
+name = "cloudflare"
+source = "https://github.com/cloudflare/skills"
+include = ["cloudflare", "workers-best-practices"]
+```
+
+```toml
+# .ai-rulez/config.custom.toml
+[[installed_skills]]
+name = "cloudflare"
+source = "https://github.com/cloudflare/skills"
+include = ["cloudflare*"]
+```
+
+```bash
+AI_RULEZ_LAYERS=ai,custom ai-rulez generate   # custom layers after ai, so its include wins
+ai-rulez config layers                        # list the layers and which are active
+```
+
+The layers come from `AI_RULEZ_LAYERS`, a comma-separated list, or from `AI_RULEZ_PROFILE` when that is not set, so one
+value can pick a profile and the layers named like it. The `--profile` flag does not select layers. A name with no
+file is skipped (so `default` and profile names without a layer are harmless); `local` is reserved for the overlay.
+
+Layers merge like the local overlay: tables merge per key, named lists (`mcp_servers`, `installed_skills`, `plugins`,
+`includes`, `marketplaces`, `scopes`, `roles`, `verifiers`) merge entry by entry on `name`, and any other value is
+replaced. `[governance]` and `[signing]` are shared policy and are ignored in a layer. A layered configuration is a
+merged view and is never written back by a command that edits `config.toml`.
+
 ## Local overlay
 
 A `config.local.toml` file beside `config.toml` is a machine-local, gitignored overlay
