@@ -297,17 +297,21 @@ Added a command or a tool? The first parity test failure names the row to add.
 
 ## Serving Skills (`--serve-skills`)
 
-`ai-rulez mcp --serve-skills` starts a different, **read-only** server for consumers of skills rather
-than authors of configuration. It implements the MCP [Skills extension](https://modelcontextprotocol.io/seps/2640-skills-extension)
+`ai-rulez mcp --serve-skills` serves the skills of a profile to consumers as well as the authoring
+tools, all from **one process** under the name `ai-rulez`. It implements the MCP
+[Skills extension](https://modelcontextprotocol.io/seps/2640-skills-extension)
 (`io.modelcontextprotocol/skills`, SEP-2640, status *Final*, verified 2026-10-04), so a client that
 supports MCP but not a local skills directory can discover and load the skills of a profile with no
-files on disk. The authoring tools (create, update, delete, generate, ...) are **not registered** in
-this mode. It never writes `.claude/settings.json`, so `--role` does not touch the role's `skillOverrides`
+files on disk. The authoring tools (create, update, delete, generate, ...) are registered too, so a
+project that serves skills needs one MCP entry rather than the self entry plus a separate skills
+server; pass `--read-only` to register only the read-only config and report tools. It never writes
+`.claude/settings.json`, so `--role` does not touch the role's `skillOverrides`
 (`generate --role` does, and restores the hand-written values it replaced).
 
 ```bash
 ai-rulez mcp --serve-skills --profile backend
 ai-rulez mcp --serve-skills --profile backend --targets claude --domain api --deny 'internal-*'
+ai-rulez mcp --serve-skills --read-only          # serve skills and inspect, never write
 ```
 
 | Flag | Meaning |
@@ -316,6 +320,8 @@ ai-rulez mcp --serve-skills --profile backend --targets claude --domain api --de
 | `--targets` | Preset whose rendering is served (its frontmatter dialect and placement rules). Default: the first configured preset that produces skills. |
 | `--domain` | Keep only skills of these domains (repeatable); `root` selects skills owned by no domain. A name that is not a domain of the project is an error at start. |
 | `--allow` / `--deny` | Glob patterns on the skill name. `--allow` keeps only matching skills; `--deny` always wins. |
+| `--read-only` | Register only the read-only authoring tools (validate, scan, doctor, the read/list and report tools). The server can inspect a project but never change it. |
+| `--root` / `--allow-any-dir` | Confine the authoring tools to a directory, as for plain `mcp`. |
 
 The skill set is rendered once at start-up, in memory, by the same code as `generate`, so every
 `SKILL.md` and supporting file is byte-identical to what `generate` writes for the same profile and
@@ -341,6 +347,9 @@ When the filters remove every skill, the start-up warning names each filter and 
   ranks by name, keywords (frontmatter `keywords`), description and domain, lexically and
   deterministically (an empty query lists everything); `get_skill(name)` returns `SKILL.md` plus
   provenance and per-file digests; `read_skill_file(uri)` returns a supporting file.
+- **The authoring surface**: the same tools, prompts and `ai-rulez://` resources as plain `ai-rulez mcp`
+  (create, update, delete, validate, generate, reports), so the one server both serves skills and edits
+  the project. With `--read-only` only the read-only tools are registered.
 
 ### Provenance
 
@@ -404,7 +413,8 @@ Rules of thumb: serve domain skills, keep a handful of core convention skills st
   that must not be missed `static`.
 - **An MCP-only harness is not enough for every harness.** A harness that cannot call MCP tools gets served
   skills as static files, with a warning (`AR992`), never silently dropped. Served skills also need an MCP
-  server entry that runs `ai-rulez mcp --serve-skills` (`AR993` warns when there is none).
+  server entry that runs `ai-rulez mcp --serve-skills`; the generated self entry does that whenever the
+  project serves skills, and `AR993` warns only when nothing does (`self_server = false` and no such entry).
 - **Served skills are not in the context until loaded.** Nothing that is always loaded (a rule, a static skill)
   can rely on them being there; `AR990` warns when static content names a served skill, and says the file will
   not be there when the pointer is a path.
@@ -471,10 +481,18 @@ ai-rulez mcp --serve-skills --source git+https://github.com/acme/skills@v1.2.0#s
 ai-rulez mcp --serve-skills --frozen              # lock required, no network
 ```
 
-Register it in `config.toml` so every MCP-capable harness launches it. The generated `dynamic-skills` stub names
-the `[[mcp_servers]]` entry whose `args` include `--serve-skills` (`ai-rulez-skills` when none does):
+Register it in `config.toml` so every MCP-capable harness launches it. A project that serves skills
+needs no entry of its own: the generated self entry runs `mcp --serve-skills` (see
+[Generated Self-Entry](configuration.md#mcp)), so `.mcp.json` holds one `ai-rulez` entry. The
+generated `dynamic-skills` stub names the self entry `ai-rulez`, or the `[[mcp_servers]]` entry whose
+`args` include `--serve-skills` when you declare one:
 
 ```toml
+[mcp]
+self_server = true   # default; the ai-rulez entry runs `mcp --serve-skills` when skills are served
+
+# Optional: only when self_server is off, or to serve a second view (another
+# profile, role or source) as its own server.
 [[mcp_servers]]
 name = "ai-rulez-skills"
 command = "ai-rulez"
@@ -495,9 +513,11 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); any negative value removes the cap. |
 | `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
 | `--no-watch`, `--reload-interval` | Turn live reload off, or change the two-second check interval. |
+| `--daemon` | Share one long-lived skills server per repository: proxy this session's stdin/stdout to a per-repo daemon, starting it on first use, and serve in-process when none can be reached (see [Shared daemon](#shared-daemon)). |
 
 The serve-mode flags above (and `--profile`, `--targets`, `--domain`, `--allow`, `--deny`) are rejected without
-`--serve-skills`. The authoring tools are never registered in this mode: there is no tool that writes.
+`--serve-skills`. The authoring tools are registered too, so one process serves both; `--read-only` registers
+only the read-only tools, so a project can be inspected but never changed.
 
 ### Start-up cost and the catalog cache
 
@@ -535,7 +555,7 @@ even starts, and some clients time out at 30 s. Two things help:
   ```json
   {
     "mcpServers": {
-      "ai-rulez-skills": {
+      "ai-rulez": {
         "command": "ai-rulez",
         "args": ["mcp", "--serve-skills"]
       }
@@ -550,9 +570,51 @@ even starts, and some clients time out at 30 s. Two things help:
   export MCP_TIMEOUT=60000
   ```
 
-The disk cache removes the repeated cost on every later start. A long-lived shared daemon — one
-process per repository reused by every session, which would also remove the first build — is a
-possible follow-up and is not implemented yet.
+The disk cache removes the repeated cost on every later start; the [shared daemon](#shared-daemon)
+(`--daemon`) additionally removes the first build for every session after the first.
+
+### Shared daemon
+
+`ai-rulez mcp --serve-skills --daemon` makes one long-lived process per repository render the
+catalog once and serve it to every session over a private unix socket. The first session spawns the
+daemon (the same binary, detached in a new session, its standard streams on the null device) and
+waits for the socket; every later session connects in milliseconds and is a thin proxy: it copies
+its stdin/stdout to the daemon and nothing else. All sessions share the one rendered catalog, the
+one search index and the one usage recorder, so the 6–8 s build of a large monorepo is paid once
+rather than by each session and each subagent worktree.
+
+```bash
+ai-rulez mcp --serve-skills --daemon             # the sessions that share one catalog
+```
+
+- **Socket and key.** The daemon listens on `~/.cache/ai-rulez/daemons/<hash>/daemon.sock` (mode
+  `0600`) inside a `0700` directory. The hash is a sha256 of the repository toplevel, the ai-rulez
+  version, and the command line (the view — `--profile`/`--role`/`--targets`/`--include-static`,
+  the `--domain`/`--allow`/`--deny` filters, `--source`, `--frozen`/`--offline`, the authoring
+  `--root`/`--allow-any-dir`/`--read-only`, and the usage flags). A version change or a different
+  MCP entry therefore starts and uses a different daemon, and two sessions in different
+  subdirectories of one checkout share one; a subagent worktree, a separate checkout, has its own.
+- **Content changes.** A content edit does not start a new daemon: the running one picks it up with
+  its existing [live reload](#live-reload) (within the poll interval), exactly as an in-process
+  server does. One daemon serves one repository through its edits, and exits when it is idle.
+- **Idle timeout.** With no connected client for 15 minutes the daemon exits and removes its socket.
+  A session that connects just after it leaves starts a new one; one that finds the socket gone
+  serves in-process instead.
+- **Security.** The socket lives in a `0700` directory the user owns and is `0600`. Before
+  connecting, a proxy refuses a path that is not a socket, is owned by another user, or is readable
+  or writable by group or others, and it never replaces such a socket with a daemon of its own; it
+  serves in-process. The hello carries the protocol version and the serve view, and a daemon refuses
+  a mismatched one, so a session is never served another view's skills.
+- **Fallback.** On any failure — no daemon and none can be started, a socket that is missing,
+  unsafe, stale or broken, a version or view mismatch, or a socket path over the unix limit — the
+  process serves the session in-process, byte for byte as without `--daemon`. A broken or missing
+  daemon never fails a session; the only cost is the build the daemon would have saved.
+- **Windows.** The shared daemon is not offered on Windows: there is no unix-domain-socket permission
+  model or detached-child session to reuse, so a session with `--daemon` serves in-process with a
+  warning. Nothing else changes.
+- **Limits.** The daemon is a stdio convenience: one catalog per repository, shared by the sessions
+  that agree on the command line. It is not a network service and has no authentication beyond the
+  socket's file permissions.
 
 ### Tools
 

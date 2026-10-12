@@ -1840,9 +1840,9 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 
 | Field                 | Description                                                                                                                                              |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `self_server`         | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@latest", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
+| `self_server`         | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@latest", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. When the project serves skills (a `delivery` other than `static`, a `[[skill_sources]]` entry or a role delivery) the entry runs `mcp --serve-skills` instead: one process serves the skills and the authoring tools, so no separate skills server is needed. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
 | `self_server_version` | Version (or dist-tag) to pin. Defaults to `latest`, so a project picks up new releases without regenerating. Only applies while the self server is on. |
-| `self_server_command` | Executable followed by its arguments, replacing the npx launch. Mutually exclusive with `self_server_version`. Only applies while the self server is on.  |
+| `self_server_command` | Executable followed by its arguments, replacing the npx launch. When the project serves skills, `--serve-skills` is appended unless it is already there. Mutually exclusive with `self_server_version`. Only applies while the self server is on.  |
 
 Behavior:
 
@@ -10283,6 +10283,25 @@ files under `.pi/` or `.opencode/` are not bundled or loaded as Pi resources. Fo
 GitHub repository, the generated name is `@<owner>/pi-<plugin-name>` (`@acme/pi-my-tool` above).
 Commit the generated bundle before installing it through Git; local packages also need no registry.
 
+The layout is configurable through `[plugin.pi]`:
+
+```toml
+[plugin.pi]
+skills_dir = "skills"     # default: .pi/skills
+package_json = "merge"    # default: generate
+```
+
+`skills_dir` writes each bundled skill once, into that tree, and points `pi.skills` at it. Set it to
+`skills` when the repository already ships a root `skills/` tree for Claude, Codex and OpenCode: every
+runtime then writes the same copy instead of Pi carrying a second one under `.pi/skills/`. Prompt
+templates stay under `.pi/prompts/` either way.
+
+`package_json = "merge"` updates only the root `package.json` keys ai-rulez owns — `name`, `version`,
+`description`, `author`, `repository`, `keywords`, `pi` and `files` — and keeps every other key, so a
+repository whose `package.json` also holds `devDependencies`, `scripts` or `packageManager` does not
+lose them. `ai-rulez verify --plugin` checks those owned keys only. The default, `generate`, replaces
+the whole file as before.
+
 With `runtimes = ["pi", "opencode"]`, both runtimes share one `package.json`: its name remains
 `@<owner>/opencode-<plugin-name>`, OpenCode's entry points and dependencies are retained, and Pi's
 resource metadata is added. Runtime order does not change the output.
@@ -10304,6 +10323,28 @@ pi install npm:@acme/my-tool
 Publication to npm with `pi-package` enables discovery in the [Pi package catalog](https://pi.dev/packages).
 Git installation needs no registry. No Pi marketplace JSON is generated; Pi-only multi-plugin
 publishing is not supported by the current publisher, which requires a Claude marketplace index.
+
+##### Shared resources across skills
+
+Skills in one plugin often share the same reference docs and templates. `[plugin] shared_resources`
+lists directories (relative to the plugin's content root — `[plugin] content_root` when set, otherwise
+the config directory) that are copied into **every** bundled skill, for every runtime:
+
+```toml
+[plugin]
+name = "acme.tools"
+version = "1.0.0"
+description = "Acme review tooling."
+shared_resources = ["references", "templates"]
+```
+
+Each directory lands inside the skill at `skills/<name>/references/…`, so a skill still works once it
+is installed on its own. The copies are recorded in `.ai-rulez-generated.json` like the skill's own
+files, so `verify --plugin` reports a changed or missing copy as drift. A relative link from `SKILL.md`
+that climbs out of the skill to the shared directory (`../../references/x.md`) is rewritten to the copy
+(`references/x.md`); a link that resolves inside the skill already (`references/x.md`) is left alone.
+A name clash between a shared file and a file the skill already has is an error, not a silent
+overwrite.
 
 ##### OpenCode adapter
 
@@ -10481,6 +10522,12 @@ Generated JavaScript, TypeScript, Python, and Markdown files include an ai-rulez
 deterministic BLAKE3 `Content-Hash` value (and `Source-Hash` with `[header] hashes = "full"`). Markdown headers follow
 YAML frontmatter so skill discovery remains valid.
 
+Set `[plugin] provenance_headers = false` to write those files byte-identical to their sources
+instead, the way `[plugin] include` files are already copied. The `.ai-rulez-generated.json`
+sidecar still records every output's content hash, so `verify --plugin`, obsolete pruning and
+`publish --emit agent-plugins` keep working. A header-less file ai-rulez did not record stays
+treated as hand-written.
+
 Run `ai-rulez verify --plugin` to verify every output recorded by the provenance
 sidecar without modifying or regenerating the package.
 
@@ -10608,6 +10655,17 @@ emits a single root marketplace index — `.claude-plugin/marketplace.json` (and
 index at `.agents/plugins/marketplace.json`) — listing each with `source: "./plugins/<name>"`.
 Members do not emit their own marketplace index.
 
+A single-plugin repo's bundle root is the repository root, so every path a host
+loads by default from a plugin root ships to each user who installs it. `validate
+--strict` and `verify --plugin` warn with `AR9T0 root-component-shipped` about
+each such path that exists at the root and is not part of the bundle —
+`.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, and the
+other Claude Code and Codex plugin paths — naming the host that loads it. A
+maintainer's own development `.mcp.json` or `agents/` directory would otherwise be
+installed for everyone. Set `[plugin] content_root` to keep the authored payload
+separate, or move the plugin into a monorepo member (`plugins/<name>/`) so its
+root is not the repository root.
+
 #### Domain content and per-domain plugins
 
 A project that keeps its content in `.ai-rulez/domains/<name>/` can ship it as plugins
@@ -10710,6 +10768,23 @@ is tracked by commit, and a plugin loaded in place from a local marketplace is n
 when a generated plugin's content differs from its committed provenance sidecar at `HEAD` while the
 version in its manifest is unchanged. Bump `version`, or omit it to track commits.
 
+###### Version source
+
+`version_from` takes the version from a project-relative manifest instead of a literal `version`,
+so a release bump lives in one place:
+
+```toml
+[plugin]
+name = "my-tool"
+description = "What my tool does."
+version_from = "package.json"   # version, pyproject.toml -> project.version, Cargo.toml -> package.version
+```
+
+The resolved value replaces `version` in every generated manifest, in `ai-rulez.lock`, and in the
+comparison `verify --plugin` and `PluginVersionDrift` make, so a bump in the source manifest shows
+as drift until the bundle is regenerated. `version` and `version_from` are mutually exclusive;
+`ai-rulez validate` reports a missing file, a missing version key, or both set at once.
+
 The `[plugin]` block is optional in this mode. When present it supplies defaults (author,
 license, homepage, repository, version, category, keywords, runtimes) and is not bundled on
 its own; declare a plugin for the root content with `[[marketplace.plugins]]` instead.
@@ -10795,15 +10870,21 @@ root skill with the same name wins.
 #### Field reference
 
 `[plugin]`: `name` (lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit, no `..`; it
-becomes a directory and file name in every runtime), `version` (required); `display_name`, `description`, `homepage`,
+becomes a directory and file name in every runtime), `version` (required unless `version_from` is set);
+`version_from` (project-relative manifest whose version replaces `version`: `package.json`,
+`pyproject.toml` or `Cargo.toml`), `display_name`, `description`, `homepage`,
 `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
 `tags`, `runtimes`, `spec` (Agent Plugins version, `1.0.0` or `1.1.0`), `include_domains`, `include_evals` (bundle eval cases, see [Evals](evals.md)), `content_root` (project-relative directory of plugin-only
-`skills/`, `commands/`, and `agents/`). Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
+`skills/`, `commands/`, and `agents/`), `provenance_headers` (write the generated-file header into
+bundled Markdown/JS/TS/PY outputs; default `true`), `shared_resources` (directories relative to the
+content root copied into every bundled skill, see [Shared resources across skills](#shared-resources-across-skills)).
+Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 `[[plugin.mcp]]`, `[[plugin.hooks]]` (+ `[[plugin.hooks.hooks]]`),
 `[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`
 (Codex/Kimi UI block), `[plugin.gemini]` (`context_file_name`), `[plugin.kimi]`
 (`skill_instructions`/`session_start_skill`), `[plugin.hermes]`
-(`source`/`requires_python`).
+(`source`/`requires_python`), `[plugin.pi]` (`skills_dir`, `package_json`; see
+[Pi packages](#pi-packages)).
 
 `[marketplace]`: `name` (required); `description`, `members`, `output_dir`, `[marketplace.owner]`,
 `[marketplace.from_domains]`, `[[marketplace.plugins]]` and `[marketplace.catalog_skill]` (see
@@ -10850,7 +10931,7 @@ The `copilot` runtime and the `codex` runtime with `manifest = "root"` write the
 | ai-rulez | Package | Notes |
 | --- | --- | --- |
 | `[plugin] name` | `plugin.json` `name` | 1-64 characters from `a-z0-9.-`, starting and ending alphanumeric, no `--` or `..` |
-| `[plugin] version`, `description`, `homepage`, `repository`, `license`, `keywords` | the same keys | |
+| `[plugin] version`, `description`, `homepage`, `repository`, `license`, `keywords` | the same keys | `version` may come from `version_from` (`package.json`, `pyproject.toml`, `Cargo.toml`) instead |
 | `[plugin.author]` `name`, `email`, `url` | `author` | an empty author is omitted |
 | `[plugin] spec` | `$schema` of `plugin.json` and `mcp.json` | |
 | `[plugin.interface]` (codex root layout) | `extensions["com.openai"].interface` | keys are written sorted |
@@ -10866,15 +10947,23 @@ The `copilot` runtime and the `codex` runtime with `manifest = "root"` write the
 
 #### OpenCode and Pi packages
 
-The `opencode` and `pi` runtimes write a root `package.json` that ai-rulez fully owns: `verify --plugin` compares it byte
-for byte, so a hand edit to any field is reported as drift. Two `[plugin]` keys tune the fields a consumer cannot
-otherwise change, and every other field (`name`, `version`, `description`, `repository`, `files`, `exports`, the Pi `pi`
-block, ...) is derived from the manifest.
+The `opencode` and `pi` runtimes write a root `package.json`. By default ai-rulez fully owns it:
+`verify --plugin` compares it byte for byte, so a hand edit to any field is reported as drift. Two
+`[plugin]` keys tune the fields a consumer cannot otherwise change, and every other field (`name`,
+`version`, `description`, `repository`, `files`, `exports`, the Pi `pi` block, ...) is derived from
+the manifest.
 
 | ai-rulez | `package.json` | Notes |
 | --- | --- | --- |
 | `[plugin] package_manager` | `packageManager` | e.g. `"pnpm@9.15.0"`; omitted when unset |
 | `[plugin] opencode_dependency` | `dependencies["@opencode/plugin"]` | OpenCode only; unset uses the built-in default (`^2.0.26`) |
+| `[plugin.pi] skills_dir` | the `pi.skills` paths | Pi only; default `.pi/skills`, `skills` reuses the tree the other runtimes write |
+| `[plugin.pi] package_json` | ownership of the file | Pi only; `merge` updates only the identity keys and keeps the rest |
+
+`[plugin.pi] package_json = "merge"` opts the Pi runtime out of full ownership: ai-rulez updates only
+the keys it owns (`name`, `version`, `description`, `author`, `repository`, `keywords`, `pi`, `files`)
+and keeps every other key (`devDependencies`, `scripts`, `packageManager`, ...). `verify --plugin`
+then reports drift only on those owned keys.
 
 ```toml
 [plugin]
@@ -10915,6 +11004,17 @@ drive letter, or containing `..` — is refused at configuration load.
 
 Once an included file resolves a `./`-relative `command`, `validate --strict` stops reporting `AR9O2` for it; a command
 with no matching file keeps the warning.
+
+`[plugin] shared_resources` is the per-skill variant: instead of copying a directory once at the package root, it copies
+it into **every** bundled skill, at `skills/<name>/<directory>/…`, so a skill keeps its reference docs and templates when
+installed on its own. A relative `SKILL.md` link that climbs out of the skill to the shared directory
+(`../../references/x.md`) is rewritten to the copy (`references/x.md`), the copies are recorded in `.ai-rulez-generated.json`
+like the skill's own files, and a name clash with a file the skill already has is an error rather than a silent overwrite.
+
+By default the bundled `SKILL.md` and other comment-safe files carry the ai-rulez generated-file
+header. Set `[plugin] provenance_headers = false` to write them byte-identical to their sources
+instead; the sidecar still records each file's `Content-Hash`, so `verify --plugin` and
+`publish --emit agent-plugins` behave the same.
 
 #### MCP servers
 
@@ -11534,7 +11634,7 @@ stdout.
 | AR101 | `glob-no-match` | error | A `paths`/`globs` pattern in a rule or context file matches no file tracked by git |
 | AR201 | `link-unresolved` | error | A relative markdown link (or image, or reference definition) points at a file that does not exist. A link in content a `[[scopes]]` entry renders is also resolved from that scope's directory, where the generated file is written |
 | AR202 | `anchor-unresolved` | warning | `file.md#anchor` where the target has no heading producing that anchor |
-| AR301 | `reference-unknown` | error | Prose names a skill, agent, rule or command that does not exist (`` `x-y` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `subagent_type: x`, `Procedure/reference: skill X`, `skills/X`, `.claude/skills/X/SKILL.md`). Only a name used as a pointer counts: a backticked term followed by a plural kind noun (`` `disable-model-invocation` skills ``) is prose, not a reference. The kind word is loose: a name that exists as any other kind (rule, skill, agent, command, context) is not reported. When the configuration declares `[[plugins]]` or `[[marketplaces]]`, or the file mentions a plugin, an unknown skill, agent or command may come from an installed plugin and is reported as `info` (unverifiable) instead of `error` |
+| AR301 | `reference-unknown` | error | Prose names a skill, agent, rule or command that does not exist (`` `x-y` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `subagent_type: x`, `Procedure/reference: skill X`, `skills/X`, `.claude/skills/X/SKILL.md`). Only a name used as a pointer counts: a backticked term followed by a plural kind noun (`` `disable-model-invocation` skills ``) or preceded by an indefinite article (`` a `both` skill ``) is prose, not a reference, and a `skills/` segment nested in another tree (`` src/mastra/public/skills/shared/… ``, unlike `skills/X` or `.claude/skills/X/SKILL.md`) is not a pointer to a skill of this project. The kind word is loose: a name that exists as any other kind (rule, skill, agent, command, context) is not reported. When the configuration declares `[[plugins]]` or `[[marketplaces]]`, or the file mentions a plugin, an unknown skill, agent or command may come from an installed plugin and is reported as `info` (unverifiable) instead of `error` |
 | AR302 | `frontmatter-skill-unknown` | error | Frontmatter `skills:` lists a skill that does not exist |
 | AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
 | AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist. A path that exists under a `[[scopes]]` entry's emitted directory is resolved there too. Not reported when the text does not claim the path exists: negated or historical ("there is no", "was removed", "decommissioned", "empty"), an example ("e.g.", "such as", a glob in the same paragraph), an alternative ("or under"), a date or version placeholder (`YYYY-MM-DD`), a build or runtime artifact (`target/`, `.venv/`, `vendor/`, `node_modules/`, or text saying it is gitignored), a ref of another repository (`path @ branch`, or a table row or line naming an `owner/repo` slug), a container image reference (`namespace/name` with no file extension and an image-name underscore, e.g. `armis/sra_session_vnc`), or an ADR number whose file carries a title suffix (`adrs/0065` for `adrs/0065-license.md`) |
@@ -11675,6 +11775,7 @@ stdout.
 | AR9S2 | `ard-entry-invalid` | error | An ARD entry has both or neither of `url` and `data`, or its `url` is not an absolute https URL |
 | AR9S3 | `ard-queries-out-of-range` | warning | An ARD entry has no `representativeQueries`, or fewer than 2 or more than 5; registries build their search index from them |
 | AR9S4 | `ard-not-declared` | error | The `ard` emitter is requested but the configuration has no `[ard]` table with `publisher` and `namespace` |
+| AR9T0 | `root-component-shipped` | warning | A single-plugin bundle's root is the repository root (the `"./"` source in `.claude-plugin/marketplace.json` and the Codex index), so a default host component path that exists there and is not part of the bundle — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, and the other paths Claude Code and Codex load from a plugin root — ships to every user who installs the plugin. Set `[plugin] content_root`, or move the plugin into a monorepo member (`plugins/<name>/`), so its root is not the repository root (see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) |
 | AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
 | AR9G1 | `trigger-vague` | warning | A description lacks a concrete trigger or a non-trigger (`review`; offline evidence is `AR801`-`AR803`) |
 | AR9G2 | `trigger-overlap` | warning | A description is likely confused with a sibling (`review`; offline evidence is `AR701`, `AR702`) |
@@ -11754,6 +11855,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9R0`-`AR9R9` | Served-skill on-disk traps ([#336](https://github.com/Goldziher/ai-rulez/issues/336), [#337](https://github.com/Goldziher/ai-rulez/issues/337); `AR9R0`, `AR9R1` used) | allocated |
 | `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
+| `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
 Unlisted letters (`AR9I`, `AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
@@ -13837,7 +13939,7 @@ a harness without MCP support keeps served skills as static files (nothing is dr
 
 ##### AR993 served-no-server
 
-skills are served but no [[mcp_servers]] entry runs `ai-rulez mcp --serve-skills`
+skills are served but no MCP server runs `ai-rulez mcp --serve-skills`; the generated self entry runs it when mcp.self_server is on
 
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
@@ -14954,6 +15056,16 @@ the ard emitter is requested but the configuration has no [ard] table with publi
 - Why: The identifiers need a publisher and a namespace, so the emitter cannot guess them.
 - Bad: `[[publish.emitters]] name = "ard"` without an `[ard]` table
 - Good: Add `[ard]` with `publisher` (an FQDN) and `namespace`
+
+##### AR9T0 root-component-shipped
+
+a single-plugin bundle whose root is the repository root ships a default host component path (.mcp.json, hooks/, agents/, commands/, settings.json, bin/) to every user; set [plugin] content_root or move the plugin into a monorepo member
+
+- Default severity: `warning`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A single-plugin repository lists its bundle with source "./", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin.
+- Bad: A repository with a `[plugin]` block and a committed `.mcp.json` or `agents/` directory, published with `source: "./"`
+- Good: Set `[plugin] content_root` to keep the payload out of the root, or move the plugin into a monorepo member (`plugins/<name>/`) so its root is not the repository root
 
 <!-- rules:end -->
 
@@ -18537,17 +18649,21 @@ Added a command or a tool? The first parity test failure names the row to add.
 
 #### Serving Skills (`--serve-skills`)
 
-`ai-rulez mcp --serve-skills` starts a different, **read-only** server for consumers of skills rather
-than authors of configuration. It implements the MCP [Skills extension](https://modelcontextprotocol.io/seps/2640-skills-extension)
+`ai-rulez mcp --serve-skills` serves the skills of a profile to consumers as well as the authoring
+tools, all from **one process** under the name `ai-rulez`. It implements the MCP
+[Skills extension](https://modelcontextprotocol.io/seps/2640-skills-extension)
 (`io.modelcontextprotocol/skills`, SEP-2640, status *Final*, verified 2026-10-04), so a client that
 supports MCP but not a local skills directory can discover and load the skills of a profile with no
-files on disk. The authoring tools (create, update, delete, generate, ...) are **not registered** in
-this mode. It never writes `.claude/settings.json`, so `--role` does not touch the role's `skillOverrides`
+files on disk. The authoring tools (create, update, delete, generate, ...) are registered too, so a
+project that serves skills needs one MCP entry rather than the self entry plus a separate skills
+server; pass `--read-only` to register only the read-only config and report tools. It never writes
+`.claude/settings.json`, so `--role` does not touch the role's `skillOverrides`
 (`generate --role` does, and restores the hand-written values it replaced).
 
 ```bash
 ai-rulez mcp --serve-skills --profile backend
 ai-rulez mcp --serve-skills --profile backend --targets claude --domain api --deny 'internal-*'
+ai-rulez mcp --serve-skills --read-only          # serve skills and inspect, never write
 ```
 
 | Flag | Meaning |
@@ -18556,6 +18672,8 @@ ai-rulez mcp --serve-skills --profile backend --targets claude --domain api --de
 | `--targets` | Preset whose rendering is served (its frontmatter dialect and placement rules). Default: the first configured preset that produces skills. |
 | `--domain` | Keep only skills of these domains (repeatable); `root` selects skills owned by no domain. A name that is not a domain of the project is an error at start. |
 | `--allow` / `--deny` | Glob patterns on the skill name. `--allow` keeps only matching skills; `--deny` always wins. |
+| `--read-only` | Register only the read-only authoring tools (validate, scan, doctor, the read/list and report tools). The server can inspect a project but never change it. |
+| `--root` / `--allow-any-dir` | Confine the authoring tools to a directory, as for plain `mcp`. |
 
 The skill set is rendered once at start-up, in memory, by the same code as `generate`, so every
 `SKILL.md` and supporting file is byte-identical to what `generate` writes for the same profile and
@@ -18581,6 +18699,9 @@ When the filters remove every skill, the start-up warning names each filter and 
   ranks by name, keywords (frontmatter `keywords`), description and domain, lexically and
   deterministically (an empty query lists everything); `get_skill(name)` returns `SKILL.md` plus
   provenance and per-file digests; `read_skill_file(uri)` returns a supporting file.
+- **The authoring surface**: the same tools, prompts and `ai-rulez://` resources as plain `ai-rulez mcp`
+  (create, update, delete, validate, generate, reports), so the one server both serves skills and edits
+  the project. With `--read-only` only the read-only tools are registered.
 
 ##### Provenance
 
@@ -18644,7 +18765,8 @@ Rules of thumb: serve domain skills, keep a handful of core convention skills st
   that must not be missed `static`.
 - **An MCP-only harness is not enough for every harness.** A harness that cannot call MCP tools gets served
   skills as static files, with a warning (`AR992`), never silently dropped. Served skills also need an MCP
-  server entry that runs `ai-rulez mcp --serve-skills` (`AR993` warns when there is none).
+  server entry that runs `ai-rulez mcp --serve-skills`; the generated self entry does that whenever the
+  project serves skills, and `AR993` warns only when nothing does (`self_server = false` and no such entry).
 - **Served skills are not in the context until loaded.** Nothing that is always loaded (a rule, a static skill)
   can rely on them being there; `AR990` warns when static content names a served skill, and says the file will
   not be there when the pointer is a path.
@@ -18711,10 +18833,18 @@ ai-rulez mcp --serve-skills --source git+https://github.com/acme/skills@v1.2.0#s
 ai-rulez mcp --serve-skills --frozen              # lock required, no network
 ```
 
-Register it in `config.toml` so every MCP-capable harness launches it. The generated `dynamic-skills` stub names
-the `[[mcp_servers]]` entry whose `args` include `--serve-skills` (`ai-rulez-skills` when none does):
+Register it in `config.toml` so every MCP-capable harness launches it. A project that serves skills
+needs no entry of its own: the generated self entry runs `mcp --serve-skills` (see
+[Generated Self-Entry](configuration.md#mcp)), so `.mcp.json` holds one `ai-rulez` entry. The
+generated `dynamic-skills` stub names the self entry `ai-rulez`, or the `[[mcp_servers]]` entry whose
+`args` include `--serve-skills` when you declare one:
 
 ```toml
+[mcp]
+self_server = true   # default; the ai-rulez entry runs `mcp --serve-skills` when skills are served
+
+# Optional: only when self_server is off, or to serve a second view (another
+# profile, role or source) as its own server.
 [[mcp_servers]]
 name = "ai-rulez-skills"
 command = "ai-rulez"
@@ -18735,9 +18865,11 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); any negative value removes the cap. |
 | `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
 | `--no-watch`, `--reload-interval` | Turn live reload off, or change the two-second check interval. |
+| `--daemon` | Share one long-lived skills server per repository: proxy this session's stdin/stdout to a per-repo daemon, starting it on first use, and serve in-process when none can be reached (see [Shared daemon](#shared-daemon)). |
 
 The serve-mode flags above (and `--profile`, `--targets`, `--domain`, `--allow`, `--deny`) are rejected without
-`--serve-skills`. The authoring tools are never registered in this mode: there is no tool that writes.
+`--serve-skills`. The authoring tools are registered too, so one process serves both; `--read-only` registers
+only the read-only tools, so a project can be inspected but never changed.
 
 ##### Start-up cost and the catalog cache
 
@@ -18775,7 +18907,7 @@ even starts, and some clients time out at 30 s. Two things help:
   ```json
   {
     "mcpServers": {
-      "ai-rulez-skills": {
+      "ai-rulez": {
         "command": "ai-rulez",
         "args": ["mcp", "--serve-skills"]
       }
@@ -18790,9 +18922,51 @@ even starts, and some clients time out at 30 s. Two things help:
   export MCP_TIMEOUT=60000
   ```
 
-The disk cache removes the repeated cost on every later start. A long-lived shared daemon — one
-process per repository reused by every session, which would also remove the first build — is a
-possible follow-up and is not implemented yet.
+The disk cache removes the repeated cost on every later start; the [shared daemon](#shared-daemon)
+(`--daemon`) additionally removes the first build for every session after the first.
+
+##### Shared daemon
+
+`ai-rulez mcp --serve-skills --daemon` makes one long-lived process per repository render the
+catalog once and serve it to every session over a private unix socket. The first session spawns the
+daemon (the same binary, detached in a new session, its standard streams on the null device) and
+waits for the socket; every later session connects in milliseconds and is a thin proxy: it copies
+its stdin/stdout to the daemon and nothing else. All sessions share the one rendered catalog, the
+one search index and the one usage recorder, so the 6–8 s build of a large monorepo is paid once
+rather than by each session and each subagent worktree.
+
+```bash
+ai-rulez mcp --serve-skills --daemon             # the sessions that share one catalog
+```
+
+- **Socket and key.** The daemon listens on `~/.cache/ai-rulez/daemons/<hash>/daemon.sock` (mode
+  `0600`) inside a `0700` directory. The hash is a sha256 of the repository toplevel, the ai-rulez
+  version, and the command line (the view — `--profile`/`--role`/`--targets`/`--include-static`,
+  the `--domain`/`--allow`/`--deny` filters, `--source`, `--frozen`/`--offline`, the authoring
+  `--root`/`--allow-any-dir`/`--read-only`, and the usage flags). A version change or a different
+  MCP entry therefore starts and uses a different daemon, and two sessions in different
+  subdirectories of one checkout share one; a subagent worktree, a separate checkout, has its own.
+- **Content changes.** A content edit does not start a new daemon: the running one picks it up with
+  its existing [live reload](#live-reload) (within the poll interval), exactly as an in-process
+  server does. One daemon serves one repository through its edits, and exits when it is idle.
+- **Idle timeout.** With no connected client for 15 minutes the daemon exits and removes its socket.
+  A session that connects just after it leaves starts a new one; one that finds the socket gone
+  serves in-process instead.
+- **Security.** The socket lives in a `0700` directory the user owns and is `0600`. Before
+  connecting, a proxy refuses a path that is not a socket, is owned by another user, or is readable
+  or writable by group or others, and it never replaces such a socket with a daemon of its own; it
+  serves in-process. The hello carries the protocol version and the serve view, and a daemon refuses
+  a mismatched one, so a session is never served another view's skills.
+- **Fallback.** On any failure — no daemon and none can be started, a socket that is missing,
+  unsafe, stale or broken, a version or view mismatch, or a socket path over the unix limit — the
+  process serves the session in-process, byte for byte as without `--daemon`. A broken or missing
+  daemon never fails a session; the only cost is the build the daemon would have saved.
+- **Windows.** The shared daemon is not offered on Windows: there is no unix-domain-socket permission
+  model or detached-child session to reuse, so a session with `--daemon` serves in-process with a
+  warning. Nothing else changes.
+- **Limits.** The daemon is a stdio convenience: one catalog per repository, shared by the sessions
+  that agree on the command line. It is not a network service and has no authentication beyond the
+  socket's file permissions.
 
 ##### Tools
 
@@ -28432,6 +28606,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--allow` | string list |  | Only serve skills whose name matches one of these glob patterns (requires --serve-skills) |
 | `--allow-any-dir` | bool |  | Let the authoring tools use any working_directory, not only the root |
 | `--budget-bytes` | int | `0` | Bytes of skill content a session may read (load_skill, get_skill, read_skill_file, resources/read); 0 is the default (256 KiB), -1 removes the cap (requires --serve-skills) |
+| `--daemon` | bool |  | Share one long-lived skills server per repository: proxy stdin/stdout to a per-repo daemon, starting it on first use, and fall back to serving in-process when none is reachable (requires --serve-skills) |
 | `--deny` | string list |  | Never serve skills whose name matches one of these glob patterns; wins over --allow (requires --serve-skills) |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--domain` | string list |  | Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills) |
@@ -28452,6 +28627,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
 | `--profile` | string |  | Profile whose skills to serve (default: the configured default profile; requires --serve-skills) |
+| `--read-only` | bool |  | Register only the read-only authoring tools, so the server can inspect a project but not change it (with --serve-skills, keeps the merged server read-only) |
 | `--reload-interval` | duration | `0s` | How often to check skill files for changes; default 2s (requires --serve-skills) |
 | `--role` | string |  | Serve only the skills of this role (see 'ai-rulez roles list'), with the delivery the role sets; it is also the default role of find_skill (or AI_RULEZ_ROLE; requires --serve-skills) |
 | `--root` | string |  | Directory the authoring tools may read and write; working_directory must lie inside it (default: the current directory) |
