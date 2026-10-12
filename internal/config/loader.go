@@ -281,7 +281,7 @@ func checkLegacyVersion(config *Config, configDir string) error {
 	return nil
 }
 
-func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, baseDir, configDir string, lo loadOptions) (*Config, error) {
+func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, baseDir, configDir string, lo loadOptions) (*Config, error) { //nolint:gocyclo // a flat sequence of independent load steps; splitting it scatters the order
 	if lo.frontmatterErrors {
 		lo.host.Log = quietFrontmatterLog{logger.Or(lo.host.Log)}
 	}

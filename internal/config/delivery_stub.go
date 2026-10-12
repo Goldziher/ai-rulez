@@ -13,7 +13,7 @@ import (
 // DeliveryConfig is the [delivery] table: how served skills are presented to
 // the agent.
 type DeliveryConfig struct {
-	// Stub customises the generated dynamic-skills stub skill.
+	// Stub customizes the generated dynamic-skills stub skill.
 	Stub *StubConfig `yaml:"stub,omitempty" json:"stub,omitempty" toml:"stub,omitempty"`
 }
 
@@ -94,7 +94,7 @@ func (c *Config) loadStubBodyFile(v workspace.View) error {
 	return nil
 }
 
-// DeliveryStubKey identifies a customised stub for the source hash, so editing
+// DeliveryStubKey identifies a customized stub for the source hash, so editing
 // [delivery.stub] (or the file behind body_file) rewrites the skill trees that
 // carry the stub. It is empty while the built-in stub applies.
 func (c *Config) DeliveryStubKey() string {

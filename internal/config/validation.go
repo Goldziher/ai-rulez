@@ -1090,7 +1090,7 @@ func commandOutputID(command ContentFile) string {
 // validateMCP checks [[mcp_servers]] headers and the [mcp] options. The
 // self-server tuning fields are rejected when self_server is off, since they
 // would otherwise be silently inert.
-func (c *Config) validateMCP() error {
+func (c *Config) validateMCP() error { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	if err := c.validateMCPServerTypeAndOAuth(); err != nil {
 		return err
 	}
@@ -1192,7 +1192,7 @@ func (c *Config) validateHeaderNested() error {
 // `oauth` block of each [[mcp_servers]] entry: the type must be a known
 // transport, a differing transport/type pair is a conflict, and oauth only
 // applies to a remote server with a sane callback port.
-func (c *Config) validateMCPServerTypeAndOAuth() error {
+func (c *Config) validateMCPServerTypeAndOAuth() error { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	names := make([]string, 0, len(c.MCPServers))
 	for name := range c.MCPServers {
 		names = append(names, name)
@@ -1264,7 +1264,7 @@ func validateMCPOAuth(name string, server *MCPServer) error {
 // validateMCPServerHeaders checks [[mcp_servers]] headers: they only apply to
 // remote transports, names must be RFC 9110 tokens, and values must not carry
 // CR/LF (which would let a value inject further headers).
-func (c *Config) validateMCPServerHeaders() error {
+func (c *Config) validateMCPServerHeaders() error { //nolint:gocyclo // a flat sequence of independent checks; splitting it scatters the rules
 	names := make([]string, 0, len(c.MCPServers))
 	for name := range c.MCPServers {
 		names = append(names, name)

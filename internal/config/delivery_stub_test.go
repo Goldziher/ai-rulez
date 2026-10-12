@@ -18,7 +18,7 @@ func TestDynamicSkillsStub_DefaultsAreUnchanged(t *testing.T) {
 	assert.Equal(t, dynamicSkillsDescription, stub.Metadata.Extra[keyFrontmatterDescription])
 }
 
-func TestDynamicSkillsStub_Customised(t *testing.T) {
+func TestDynamicSkillsStub_Customized(t *testing.T) {
 	cfg := &Config{
 		MCPServersRaw: []MCPServer{{Name: "skills", Command: "ai-rulez", Args: []string{"mcp", "--serve-skills"}}},
 		Delivery: &DeliveryConfig{Stub: &StubConfig{

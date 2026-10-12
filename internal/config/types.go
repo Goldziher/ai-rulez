@@ -68,7 +68,7 @@ type Config struct {
 	// Dynamic skill loading (types_dynamic.go, delivery.go).
 	Skills         *SkillsConfig           `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
 	DomainSettings map[string]DomainConfig `yaml:"domains,omitempty" json:"domains,omitempty" toml:"domains,omitempty"`
-	// Delivery is the [delivery] table; [delivery.stub] customises the generated
+	// Delivery is the [delivery] table; [delivery.stub] customizes the generated
 	// dynamic-skills stub (delivery_stub.go).
 	Delivery *DeliveryConfig `yaml:"delivery,omitempty" json:"delivery,omitempty" toml:"delivery,omitempty"`
 	// stubBodyFileText is the text of [delivery.stub] body_file, read at load.
@@ -325,7 +325,10 @@ func (c *Config) SetSelfServer(on bool) {
 const SelfMCPServerName = "ai-rulez"
 
 // mcpKeyCommand is the .mcp.json key naming the command a stdio server runs.
-const mcpKeyCommand = "command"
+const (
+	mcpKeyCommand = "command"
+	mcpKeyType    = "type"
+)
 
 // serveSkillsArg is the flag that makes the self entry serve the project's
 // skills as well as the authoring tools.
@@ -391,7 +394,7 @@ func (c *Config) SelfMCPServerEntry() map[string]any {
 		if c.servesSkills() {
 			args = withServeSkillsArg(c.MCP.SelfServerCommand, args)
 		}
-		entry := map[string]any{"type": "stdio", mcpKeyCommand: c.MCP.SelfServerCommand[0]}
+		entry := map[string]any{mcpKeyType: TransportStdio, mcpKeyCommand: c.MCP.SelfServerCommand[0]}
 		if len(args) > 0 {
 			entry["args"] = args
 		}
@@ -409,14 +412,14 @@ func (c *Config) SelfMCPServerEntry() map[string]any {
 		if c.servesSkills() {
 			args = append(args, serveSkillsArg)
 		}
-		return map[string]any{"type": "stdio", mcpKeyCommand: "sh", "args": args}
+		return map[string]any{mcpKeyType: "stdio", mcpKeyCommand: "sh", "args": args}
 	}
 	args := []string{"-y", "ai-rulez@" + version, "mcp"}
 	if c.servesSkills() {
 		args = append(args, serveSkillsArg)
 	}
 	return map[string]any{
-		"type":        "stdio",
+		mcpKeyType:    "stdio",
 		mcpKeyCommand: "npx",
 		"args":        args,
 	}

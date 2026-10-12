@@ -457,7 +457,7 @@ func backtickedNames(l bodyLine, add func(name, kind string)) {
 
 // plainNames adds the non-backticked references: Skill(...), subagent_type, a
 // slash command, the labeled form ("reference: skill x") and a "skills/x" path.
-func plainNames(l bodyLine, add func(name, kind string)) {
+func plainNames(l bodyLine, add func(name, kind string)) { //nolint:gocyclo // one scan over the alternative pointer forms; splitting it scatters the matchers
 	if strings.Contains(l.Text, "Skill(") {
 		for _, m := range skillCallRe().FindAllStringSubmatch(l.Text, -1) {
 			add(m[1], kindSkill)
