@@ -152,6 +152,9 @@ func (c *Config) validateDefaults() error {
 	if err := c.validateHeaderHashes(); err != nil {
 		return err
 	}
+	if err := c.validateHeaderNested(); err != nil {
+		return err
+	}
 	if err := c.validateRules(); err != nil {
 		return err
 	}
@@ -1071,6 +1074,22 @@ func (c *Config) validateHeaderHashes() error {
 			With("value", mode).
 			Hint(`Use "full", "content" or "none".`).
 			Errorf("invalid header.hashes %q", mode)
+	}
+}
+
+func (c *Config) validateHeaderNested() error {
+	if c.Header == nil {
+		return nil
+	}
+	switch mode := c.Header.Nested; mode {
+	case "", HeaderNestedCompact, HeaderNestedOmit, HeaderNestedInherit:
+		return nil
+	default:
+		return oops.
+			With("field", "header.nested").
+			With("value", mode).
+			Hint(`Use "compact", "omit" or "inherit".`).
+			Errorf("invalid header.nested %q", mode)
 	}
 }
 

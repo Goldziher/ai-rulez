@@ -246,6 +246,9 @@ const defaultHeaderMCPCommand = "npx -y ai-rulez@latest mcp"
 // writeHeaderInputs adds the settings that shape the generated header prose
 // beyond style and timestamp, so changing one rewrites the files it affects.
 func writeHeaderInputs(b *templates.ContentHasher, cfg *config.Config) {
+	if mode := cfg.NestedHeaderMode(); mode != config.HeaderNestedInherit || cfg.RootRel != "" {
+		b.Printf("header_nested=%s,root_rel=%s\n", mode, cfg.RootRel)
+	}
 	cmd, show := cfg.HeaderMCPCommand()
 	if show && cmd == defaultHeaderMCPCommand {
 		return // the default line is derived from inputs already hashed
