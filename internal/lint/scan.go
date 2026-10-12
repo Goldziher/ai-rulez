@@ -32,10 +32,18 @@ var (
 	labeledSkillRe = sync.OnceValue(func() *regexp.Regexp {
 		return regexp.MustCompile(`[:=]\s*skill\s+([a-z0-9]+(?:-[a-z0-9]+)*)`)
 	})
-	// skillDirRe matches the file-path forms "skills/x" and
-	// ".claude/skills/x/SKILL.md", capturing the skill directory name.
+	// indefiniteArticleRe matches a bare "a" or "an" right before a token:
+	// "a `both` skill" describes a kind of skill (the backticked word is an
+	// adjective), while "the `deploy` skill" names one (#352).
+	indefiniteArticleRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`(?i)\ban?\s+$`) })
+	// skillDirRe matches the file-path pointer forms "skills/x" and
+	// ".claude/skills/x/SKILL.md", capturing the skill directory name. The
+	// "skills/" component must start the path or sit under a harness dot
+	// directory (".claude/skills/..."): a nested "skills/" segment of some other
+	// tree ("src/mastra/public/skills/shared/<name>/SKILL.md") is not a pointer
+	// to a skill of this project (#352).
 	skillDirRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`\bskills/([a-z0-9]+(?:-[a-z0-9]+)*)`)
+		return regexp.MustCompile(`(?:^|[^\w/-])(?:\./)?(?:[.][a-z0-9_-]+/)?skills/([a-z0-9]+(?:-[a-z0-9]+)*)`)
 	})
 	skillRelRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(references|scripts|assets)/`) })
 	// siblingSkillResourceRe matches a resource path that names a sibling skill
@@ -427,8 +435,11 @@ func backtickedNames(l bodyLine, add func(name, kind string)) {
 	}
 	agentWord := strings.Contains(l.Text, "agent") || strings.Contains(l.Text, "skill") // "subagent" holds "agent"
 	if agentWord || strings.Contains(l.Text, "rule") {
-		for _, m := range nameAfterRe().FindAllStringSubmatch(l.Text, -1) {
-			add(m[1], kindForWord(m[2]))
+		for _, m := range nameAfterRe().FindAllStringSubmatchIndex(l.Text, -1) {
+			if indefiniteArticleRe().MatchString(l.Text[:m[0]]) {
+				continue // "a `both` skill" is a kind of skill, not a name (#352)
+			}
+			add(l.Text[m[2]:m[3]], kindForWord(l.Text[m[4]:m[5]]))
 		}
 	}
 	if agentWord {
