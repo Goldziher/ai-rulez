@@ -70,6 +70,20 @@ func newBundleFilterWith(ctx context.Context, git gitutil.Git, log logger.Logger
 type bundleSnapshots struct {
 	mu sync.Mutex
 	by map[snapshotKey]*parentSnapshot
+
+	// anchor, when set, is a directory (the configuration directory) whose one
+	// `git ls-files` listing answers every parent below it. A repository with a
+	// large index pays about a second per listing, and a project with dozens of
+	// domains asked once per domain's skills and commands directory.
+	anchor string
+	wide   *wideListing
+}
+
+// wideListing is one `git ls-files` run at the anchor: the slash paths, relative
+// to the anchor, that git does not ignore. ok is false when git could not list.
+type wideListing struct {
+	paths []string
+	ok    bool
 }
 
 type snapshotKey struct{ parent, marker string }
@@ -118,7 +132,7 @@ func (b *bundleSnapshots) snapshot(ctx context.Context, git gitutil.Git, log log
 	if snap, ok := b.by[key]; ok {
 		return snap
 	}
-	snap := takeSnapshot(ctx, git, log, parent, marker)
+	snap := takeSnapshot(ctx, git, log, parent, marker, b.filesBelow(ctx, git, log, parent))
 	if b.by == nil {
 		b.by = make(map[snapshotKey]*parentSnapshot)
 	}
@@ -126,7 +140,56 @@ func (b *bundleSnapshots) snapshot(ctx context.Context, git gitutil.Git, log log
 	return snap
 }
 
-func takeSnapshot(ctx context.Context, git gitutil.Git, log logger.Logger, parent, marker string) *parentSnapshot {
+// filesBelow answers `git ls-files` for parent from the anchor's single listing:
+// the git-visible slash paths below parent, relative to it. It returns nil when no
+// anchor applies (none set, parent outside it, or a nested repository between
+// them, whose files the anchor's git does not list) or git could not list.
+func (b *bundleSnapshots) filesBelow(ctx context.Context, git gitutil.Git, log logger.Logger, parent string) []string {
+	if b.anchor == "" {
+		return nil
+	}
+	rel, err := filepath.Rel(b.anchor, parent)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return nil
+	}
+	for dir := parent; dir != b.anchor && dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+		if _, err := os.Lstat(filepath.Join(dir, gitDirName)); err == nil {
+			return nil
+		}
+	}
+	if b.wide == nil {
+		b.wide = &wideListing{}
+		res := git.Exec(ctx, b.anchor, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".")
+		if err := gitutil.ResultErr(res); err != nil {
+			if res.Status != runner.StatusUnavailable {
+				log.Debug("git ls-files unavailable, bundling without .gitignore", "path", b.anchor, "error", err)
+			}
+		} else {
+			b.wide.ok = true
+			for _, p := range bytes.Split(res.Stdout, []byte{0}) {
+				if len(p) > 0 {
+					b.wide.paths = append(b.wide.paths, filepath.ToSlash(string(p)))
+				}
+			}
+		}
+	}
+	if !b.wide.ok {
+		return nil
+	}
+	prefix := ""
+	if rel != "." {
+		prefix = filepath.ToSlash(rel) + "/"
+	}
+	below := []string{}
+	for _, p := range b.wide.paths {
+		if strings.HasPrefix(p, prefix) {
+			below = append(below, strings.TrimPrefix(p, prefix))
+		}
+	}
+	return below
+}
+
+func takeSnapshot(ctx context.Context, git gitutil.Git, log logger.Logger, parent, marker string, listed []string) *parentSnapshot {
 	snap := &parentSnapshot{ignored: map[string]bool{}, files: map[string]map[string]bool{}, probed: map[string]bool{}}
 	entries, err := os.ReadDir(parent)
 	if err != nil {
@@ -153,15 +216,20 @@ func takeSnapshot(ctx context.Context, git gitutil.Git, log logger.Logger, paren
 			}
 		}
 	}
-	res := git.Exec(ctx, parent, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".")
-	if err := gitutil.ResultErr(res); err != nil {
-		if res.Status != runner.StatusUnavailable {
-			log.Debug("git ls-files unavailable, bundling without .gitignore", "path", parent, "error", err)
+	if listed == nil {
+		res := git.Exec(ctx, parent, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".")
+		if err := gitutil.ResultErr(res); err != nil {
+			if res.Status != runner.StatusUnavailable {
+				log.Debug("git ls-files unavailable, bundling without .gitignore", "path", parent, "error", err)
+			}
+			return snap
 		}
-		return snap
+		for _, p := range bytes.Split(res.Stdout, []byte{0}) {
+			listed = append(listed, filepath.ToSlash(string(p)))
+		}
 	}
-	for _, p := range bytes.Split(res.Stdout, []byte{0}) {
-		name, rel, ok := strings.Cut(filepath.ToSlash(string(p)), "/")
+	for _, p := range listed {
+		name, rel, ok := strings.Cut(p, "/")
 		if !ok || rel == "" {
 			continue
 		}
