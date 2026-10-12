@@ -43,7 +43,13 @@ var (
 	// tree ("src/mastra/public/skills/shared/<name>/SKILL.md") is not a pointer
 	// to a skill of this project (#352).
 	skillDirRe = sync.OnceValue(func() *regexp.Regexp {
-		return regexp.MustCompile(`(?:^|[^\w/-])(?:\./)?(?:[.][a-z0-9_-]+/)?skills/([a-z0-9]+(?:-[a-z0-9]+)*)`)
+		return regexp.MustCompile(`(?:^|[^\w/-])(?:\./)?(?:[.][a-z0-9_-]+/(?:domains/[a-z0-9_-]+/)?)?skills/([a-z0-9]+(?:-[a-z0-9]+)*)`)
+	})
+	// seeSkillRe matches a prose pointer by bare name: "see skill dev-cycle",
+	// "load the skill dev-cycle". Only a hyphenated name counts, so "see skill
+	// authoring" and "see skill-based design" stay prose (#363).
+	seeSkillRe = sync.OnceValue(func() *regexp.Regexp {
+		return regexp.MustCompile(`(?i:\b(?:see|load|read|use|follow|invoke|run))\s+(?:the\s+)?skill\s+([a-z0-9]+(?:-[a-z0-9]+)+)\b`)
 	})
 	skillRelRe = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^(references|scripts|assets)/`) })
 	// siblingSkillResourceRe matches a resource path that names a sibling skill
@@ -471,6 +477,11 @@ func plainNames(l bodyLine, add func(name, kind string)) {
 	}
 	if strings.Contains(l.Text, "skill") {
 		for _, m := range labeledSkillRe().FindAllStringSubmatch(l.Text, -1) {
+			add(m[1], kindSkill)
+		}
+	}
+	if strings.Contains(l.Text, "skill ") || strings.Contains(l.Text, "Skill ") {
+		for _, m := range seeSkillRe().FindAllStringSubmatch(l.Text, -1) {
 			add(m[1], kindSkill)
 		}
 	}
