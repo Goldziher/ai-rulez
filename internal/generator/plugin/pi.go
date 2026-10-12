@@ -83,7 +83,7 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 // piDirectoryEntries collapses the skills directory to one files entry and one
 // pi.skills entry (skills_entry = "directory"). A directory with no skill writes
 // neither.
-func piDirectoryEntries(files []string, skillsDir string, skills []string) ([]string, []string) {
+func piDirectoryEntries(files []string, skillsDir string, skills []string) (entries, piSkills []string) {
 	root := filepath.ToSlash(filepath.Clean(skillsDir))
 	prefix := root + "/"
 	kept := make([]string, 0, len(files))
