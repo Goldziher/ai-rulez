@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- **A nested root's generated header names its own config.** The `Source:` line and the directory hints of a root below the repository root read `products/em/webapps/.ai-rulez/config.toml`, its path from the git work tree root, instead of the repository-root `.ai-rulez/config.toml`; `generate`, `generate --recursive` and `generate --check` agree on it ([#361](https://github.com/Goldziher/ai-rulez/issues/361)).
+
 ## [5.0.3] - 2026-10-12
 
 ### Added
