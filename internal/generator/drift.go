@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/samber/oops"
 
@@ -271,13 +272,22 @@ func (g *Generator) orphanGeneratedFiles(outputs []config.OutputFile) []string {
 func (g *Generator) considerStrayTree(roots map[string]bool, consider func(string)) {
 	base := filepath.Clean(g.config.BaseDir)
 	configDir := filepath.Clean(g.config.ConfigDir)
+	mayBeOutput := g.strayCandidateFilter(base)
+	visited, opened := 0, 0
+	started := time.Now()
+	defer func() {
+		g.log().Debug("Scanned the project tree for orphaned generated files",
+			"files", visited, "candidates", opened, "elapsed", time.Since(started).Round(time.Millisecond))
+	}()
 	_ = filepath.WalkDir(base, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // unreadable entries are skipped
 		if err != nil {
 			return nil //nolint:nilerr // best effort
 		}
 		if !d.IsDir() {
+			visited++
 			// Root-level files are handled by considerRootFiles, under its own gate.
-			if filepath.Dir(p) != base {
+			if filepath.Dir(p) != base && mayBeOutput(p) {
+				opened++
 				consider(p)
 			}
 			return nil
@@ -299,6 +309,49 @@ func (g *Generator) considerStrayTree(roots map[string]bool, consider func(strin
 		}
 		return nil
 	})
+}
+
+// strayCandidateFilter returns a test for whether a file below base can be a
+// generated output, so the stray-tree walk reads the header of a few files instead
+// of every file in the work tree (an 89k-file monorepo spent over a minute there).
+// A removed nested root left the files its presets wrote, laid out as they are
+// under any root: a file named like a preset's root file (CLAUDE.md, AGENTS.md,
+// .mcp.json), or one below a directory a preset writes into (.claude, .cursor).
+// Without a registry every file stays a candidate.
+func (g *Generator) strayCandidateFilter(base string) func(string) bool {
+	if g.config.Registry == nil {
+		return func(string) bool { return true }
+	}
+	names, dirs := map[string]bool{}, map[string]bool{}
+	g.config.Registry.Each(func(_ string, gen config.PresetGenerator) {
+		for _, p := range gen.GetOutputPaths(base) {
+			rel, err := filepath.Rel(base, p)
+			if err != nil || strings.HasPrefix(rel, "..") {
+				continue
+			}
+			rel = filepath.ToSlash(rel)
+			if idx := strings.IndexByte(rel, '/'); idx > 0 {
+				dirs[rel[:idx]] = true
+			} else {
+				names[rel] = true
+			}
+		}
+	})
+	if len(names) == 0 && len(dirs) == 0 {
+		return func(string) bool { return true }
+	}
+	return func(p string) bool {
+		if names[filepath.Base(p)] {
+			return true
+		}
+		rel := filepath.ToSlash(g.relSlash(p))
+		for _, seg := range strings.Split(rel, "/") {
+			if dirs[seg] {
+				return true
+			}
+		}
+		return false
+	}
 }
 
 // plannedOutputIndex maps each output's project path, the top-level directories
