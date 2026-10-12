@@ -638,6 +638,17 @@ the project, is kept with a warning, and a file the sidecar never listed is neve
 record in the sidecar (its `obsolete` map), so later `generate` and `verify` runs still recognise
 and report it until you reconcile it into the sources or delete it by hand.
 
+#### Unrecorded files inside a generated skill directory
+
+A file inside a generated skill directory that the plan does not write (a stray `notes.md`, a
+leftover from an editor) ships to everyone who installs the bundle. The next `generate --plugin`
+removes it, the same way it removes obsolete recorded files; `--dry-run` prints
+`delete-stale: <path>`. Only directories holding a generated `SKILL.md` are searched: a
+hand-made skill directory, and the config directory and `[plugin] content_root` (your sources),
+are never touched. `verify --plugin` reports such a file as drift of kind `extra`, and a recorded
+output that is a symlink (even one whose target has the recorded content) as kind `symlink`.
+`generate --plugin` refuses to write through such a symlink; replace it with a regular file.
+
 #### Linked git worktrees
 
 With `[claude.settings] manage = true` the generated `extraKnownMarketplaces` entry defaults to a

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -185,4 +186,94 @@ func obsoleteFilesError(items []pluginPrune) error {
 	return oops.With("files", strings.Join(files, ", ")).
 		Hint("Run ai-rulez generate --plugin to remove obsolete generated files (edited ones are kept; delete them by hand)").
 		Errorf("obsolete generated plugin file: %s", strings.Join(files, ", "))
+}
+
+// unrecordedSkillFiles lists, as absolute paths, the files and symlinks inside
+// each generated skill directory that the plan does not write. Such a file ships
+// to everyone who installs the bundle, so generate removes it and verify
+// reports it. Only directories holding a planned SKILL.md are searched, so a
+// hand-made skill directory is never touched, and files the previous run
+// recorded as obsolete are left to the obsolete handling. Directories that
+// hold the plugin's own sources (the config directory and [plugin]
+// content_root) are skipped: a bundle written over its sources must not
+// delete authored files such as evals/.
+func (g *Generator) unrecordedSkillFiles(expected []config.OutputFile, obsolete []pluginPrune) ([]string, error) {
+	planned := make(map[string]bool, len(expected))
+	var skillDirs []string
+	for _, output := range expected {
+		if output.IsDir {
+			continue
+		}
+		abs := filepath.Clean(g.absOutputPath(output.Path))
+		planned[abs] = true
+		if filepath.Base(abs) == "SKILL.md" && !g.isPluginSourcePath(abs) {
+			skillDirs = append(skillDirs, filepath.Dir(abs))
+		}
+	}
+	for _, item := range obsolete {
+		planned[filepath.Clean(item.Path)] = true
+	}
+	var extras []string
+	for _, dir := range skillDirs {
+		err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				if errors.Is(walkErr, os.ErrNotExist) {
+					return nil
+				}
+				return oops.With("path", path).Wrapf(walkErr, "walk generated skill directory")
+			}
+			if !entry.IsDir() && !planned[filepath.Clean(path)] {
+				extras = append(extras, filepath.Clean(path))
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	slices.Sort(extras)
+	return slices.Compact(extras), nil
+}
+
+// isPluginSourcePath reports whether path lies in the config directory or the
+// [plugin] content_root, where authored content lives.
+func (g *Generator) isPluginSourcePath(path string) bool {
+	roots := []string{g.config.ConfigDir}
+	if g.config.Plugin != nil && g.config.Plugin.ContentRoot != "" {
+		roots = append(roots, filepath.Join(g.config.BaseDir, g.config.Plugin.ContentRoot))
+	}
+	for _, root := range roots {
+		if root == "" {
+			continue
+		}
+		rel, err := filepath.Rel(root, path)
+		if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return true
+		}
+	}
+	return false
+}
+
+// removeUnrecordedSkillFiles deletes what unrecordedSkillFiles lists. A path
+// that crosses a symlink leaving the project is kept with a warning; a failed
+// removal is reported and does not stop the run.
+func (g *Generator) removeUnrecordedSkillFiles(expected []config.OutputFile, obsolete []pluginPrune) error {
+	extras, err := g.unrecordedSkillFiles(expected, obsolete)
+	if err != nil {
+		return err
+	}
+	for _, path := range extras {
+		rel := filepath.ToSlash(g.convertToRelativePath(path))
+		if _, _, guardErr := g.guardWrite(path); guardErr != nil {
+			g.log().Warn("Kept an unrecorded file in a generated skill directory: its path crosses a symlink that leaves the project",
+				"file", rel)
+			continue
+		}
+		if err := os.Remove(path); err != nil {
+			g.log().Warn("Could not remove an unrecorded file in a generated skill directory", "file", rel, "error", err)
+			continue
+		}
+		g.log().Info("Removed unrecorded file in a generated skill directory", "file", rel)
+	}
+	return nil
 }
