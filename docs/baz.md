@@ -10,6 +10,7 @@ presets = ["claude", "baz"]
 [rules]
 baz_scoped = "nested"   # nested (default) | root
 baz_default = "all"     # all (default) | none
+# baz.include = ["db-dao"]  # with baz_default = "none", opt these rules in ([rules.baz] table)
 baz_dedupe = false      # write a shared parent AGENTS.md when globs share one
 baz_budget = 0          # byte budget of the Baz AGENTS.md surface (0 = off)
 ```
@@ -92,6 +93,23 @@ One rule with many globs is copied into every directory those globs point into, 
   run. `0` disables it.
 
 The Claude surface is identical in every mode: only the Baz nested `AGENTS.md` files change.
+
+### Per-rule opt-in and opt-out
+
+Instead of tagging every other rule with `targets`, pick the rules Baz should get:
+
+- **`targets: ["!baz"]`** excludes one rule from everything the `baz` preset writes of its own (the nested
+  `AGENTS.md` files, skills and agents). A negated target wins over any positive one, and a rule whose targets are all
+  negated is still written everywhere else. The root `AGENTS.md` is shared with `codex`, `opencode`, `amp` and `xum`
+  and must stay identical, so `!baz` does not remove a rule from it; use a target that names the other presets to
+  limit it.
+- **`[rules.baz] include = ["db-dao", ...]`** or **`baz: true`** in a rule's frontmatter opts a rule in when
+  `baz_default = "none"`; it makes no difference under the default `"all"`, which already nests every item. `include`
+  matches rule and context names (case-insensitive, with or without `.md`).
+
+The older workaround still works: a directory target such as `targets: [".claude/rules/"]` selects only the outputs
+under that folder, so the rule is not written to the Baz `AGENTS.md` files. `!baz` and `include` say the same thing
+without naming a folder.
 
 ## Using it with other presets
 

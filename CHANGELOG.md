@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- **`targets` accepts negations, and the `baz` preset has a per-rule opt-in.** `targets: ["!baz"]` excludes a rule from one preset (a negation always wins; a rule with only negations still goes everywhere else), `[rules.baz] include = [...]` and `baz: true` frontmatter opt rules in under `baz_default = "none"`, and the directory-target workaround is documented ([#366](https://github.com/Goldziher/ai-rulez/issues/366)).
+
 ## [5.0.3] - 2026-10-12
 
 ### Added
