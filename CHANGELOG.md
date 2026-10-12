@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`[plugin.pi] package_name` and `skills_entry = "directory"` for the Pi runtime.** `package_name` sets the npm name instead of `@<owner>/pi-<plugin-name>`, and under `package_json = "merge"` an authored `name` is now kept when it is unset; `skills_entry = "directory"` writes `"./skills"` to `pi.skills` and `"skills/"` to `files` instead of one entry per skill. `files` lists `README.md` and `assets/` only when they exist in the bundle ([#383](https://github.com/Goldziher/ai-rulez/issues/383)).
+
 ### Fixed
 
 - **`generate` no longer leaves empty `.claude/agents`, `.claude/skills` and `.claude/rules` directories in roots without such content.** Output directories are now created only when a file is written into them, and empty ones an earlier run created are removed; a directory holding any file is never touched ([#379](https://github.com/Goldziher/ai-rulez/issues/379)).

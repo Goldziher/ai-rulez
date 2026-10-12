@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	toml "github.com/pelletier/go-toml/v2"
@@ -422,6 +423,23 @@ const (
 	PiPackageJSONMerge = "merge"
 )
 
+// Pi skills_entry modes.
+const (
+	// PiSkillsEntryEach lists every skill directory in pi.skills and every file
+	// in files (the default).
+	PiSkillsEntryEach = "each"
+	// PiSkillsEntryDirectory lists the skills directory once in pi.skills and
+	// files, so adding a skill does not change package.json.
+	PiSkillsEntryDirectory = "directory"
+)
+
+// piPackageNamePattern is the npm package-name grammar: an optional lowercase
+// scope and a lowercase name, each from URL-safe characters.
+var piPackageNamePattern = regexp.MustCompile(`^(@[a-z0-9~-][a-z0-9._~-]*/)?[a-z0-9~-][a-z0-9._~-]*$`)
+
+// maxPiPackageNameLen is npm's package name length limit.
+const maxPiPackageNameLen = 214
+
 // DefaultPiSkillsDir is where the Pi runtime writes bundled skills when
 // [plugin.pi] skills_dir is unset.
 const DefaultPiSkillsDir = ".pi/skills"
@@ -437,6 +455,21 @@ type PiExtras struct {
 	// package.json from the plugin metadata, or PiPackageJSONMerge to update
 	// only the keys ai-rulez owns and keep every other key.
 	PackageJSON string `yaml:"package_json,omitempty" json:"package_json,omitempty" toml:"package_json,omitempty"` //nolint:tagliatelle
+	// PackageName is the npm package name. Empty derives @<owner>/pi-<plugin-name>
+	// (and, under package_json = "merge", keeps an authored name).
+	PackageName string `yaml:"package_name,omitempty" json:"package_name,omitempty" toml:"package_name,omitempty"` //nolint:tagliatelle
+	// SkillsEntry is PiSkillsEntryEach (default) to list every skill, or
+	// PiSkillsEntryDirectory to list the skills directory once.
+	SkillsEntry string `yaml:"skills_entry,omitempty" json:"skills_entry,omitempty" toml:"skills_entry,omitempty"` //nolint:tagliatelle
+}
+
+// ResolvedSkillsEntry returns the configured skills_entry mode or the default.
+// Safe on a nil receiver.
+func (e *PiExtras) ResolvedSkillsEntry() string {
+	if e == nil || e.SkillsEntry == "" {
+		return PiSkillsEntryEach
+	}
+	return e.SkillsEntry
 }
 
 // ResolvedSkillsDir returns the configured Pi skills directory or the default.
@@ -476,6 +509,22 @@ func (e *PiExtras) Validate() error {
 			With("value", e.PackageJSON).
 			Hint("Use \"generate\" (default) or \"merge\"").
 			Errorf("plugin.pi.package_json has an unknown value %q", e.PackageJSON)
+	}
+	switch e.SkillsEntry {
+	case "", PiSkillsEntryEach, PiSkillsEntryDirectory:
+	default:
+		return oops.
+			With("field", "plugin.pi.skills_entry").
+			With("value", e.SkillsEntry).
+			Hint("Use \"each\" (default) or \"directory\"").
+			Errorf("plugin.pi.skills_entry has an unknown value %q", e.SkillsEntry)
+	}
+	if e.PackageName != "" && (len(e.PackageName) > maxPiPackageNameLen || !piPackageNamePattern.MatchString(e.PackageName)) {
+		return oops.
+			With("field", "plugin.pi.package_name").
+			With("value", e.PackageName).
+			Hint("Use a lowercase npm name such as \"my-skills\" or \"@scope/my-skills\"").
+			Errorf("plugin.pi.package_name is not a valid npm package name: %q", e.PackageName)
 	}
 	if e.SkillsDir != "" && isUnsafeProjectPath(e.SkillsDir) {
 		return oops.

@@ -177,6 +177,8 @@ The layout is configurable through `[plugin.pi]`:
 [plugin.pi]
 skills_dir = "skills"     # default: .pi/skills
 package_json = "merge"    # default: generate
+package_name = "ghost-library-skills"  # default: @<owner>/pi-<plugin-name>
+skills_entry = "directory"             # default: each
 ```
 
 `skills_dir` writes each bundled skill once, into that tree, and points `pi.skills` at it. Set it to
@@ -187,8 +189,16 @@ templates stay under `.pi/prompts/` either way.
 `package_json = "merge"` updates only the root `package.json` keys ai-rulez owns — `name`, `version`,
 `description`, `author`, `repository`, `keywords`, `pi` and `files` — and keeps every other key, so a
 repository whose `package.json` also holds `devDependencies`, `scripts` or `packageManager` does not
-lose them. `ai-rulez verify --plugin` checks those owned keys only. The default, `generate`, replaces
+lose them. An authored `name` is kept unless `package_name` is set. `ai-rulez verify --plugin` checks those owned keys only. The default, `generate`, replaces
 the whole file as before.
+
+`package_name` sets the npm `name` explicitly (a lowercase npm name, scoped or not) instead of
+`@<owner>/pi-<plugin-name>`; it also wins in a combined Pi and OpenCode package.
+
+`skills_entry = "directory"` writes the skills directory once: `pi.skills` becomes `["./skills"]`
+(Pi resolves the directory to the skills inside it) and `files` gets `"skills/"` instead of every
+skill file, so adding a skill does not change `package.json`. The default, `each`, lists every skill.
+`files` lists `README.md` and `assets/` only when they exist in the bundle.
 
 With `runtimes = ["pi", "opencode"]`, both runtimes share one `package.json`: its name remains
 `@<owner>/opencode-<plugin-name>`, OpenCode's entry points and dependencies are retained, and Pi's
@@ -771,7 +781,7 @@ Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 `[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`
 (Codex/Kimi UI block), `[plugin.gemini]` (`context_file_name`), `[plugin.kimi]`
 (`skill_instructions`/`session_start_skill`), `[plugin.hermes]`
-(`source`/`requires_python`), `[plugin.pi]` (`skills_dir`, `package_json`; see
+(`source`/`requires_python`), `[plugin.pi]` (`skills_dir`, `package_json`, `package_name`, `skills_entry`; see
 [Pi packages](#pi-packages)).
 
 `[marketplace]`: `name` (required); `description`, `members`, `output_dir`, `[marketplace.owner]`,
