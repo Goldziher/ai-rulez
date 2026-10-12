@@ -636,3 +636,79 @@ func withoutPermissionClaims(claims []jsonmerge.Claim) []jsonmerge.Claim {
 		})
 	})
 }
+
+// sharedServerPaths lists, by manifest path, the MCP server entries this run
+// writes into a merged document from the shared configuration (never the local
+// overlay), as key paths such as ["mcpServers", "foo"]. The committed manifest
+// records them so a clone without the machine-local record can still tell that an
+// entry left in the document once came from a [[mcp_servers]] block.
+func (g *Generator) sharedServerPaths(outputs []config.OutputFile) map[string][][]string {
+	servers := map[string][][]string{}
+	for _, output := range outputs {
+		if output.IsDir || len(output.MergeClaims) == 0 || output.Sensitive || output.LocalOnly {
+			continue
+		}
+		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+		if g.skippedPaths[rel] {
+			continue
+		}
+		claims := output.MergeClaims
+		if g.plan.diverges(rel, claims) {
+			claims = g.plan.baselineClaims[rel] // the shared baseline, without the local overlay
+		}
+		for i := range claims {
+			claim := claims[i]
+			if len(claim.Path) == 2 && !claim.HasElements() && strings.Contains(strings.ToLower(claim.Path[0]), "mcp") {
+				servers[rel] = append(servers[rel], claim.Path)
+			}
+		}
+	}
+	if len(servers) == 0 {
+		return nil
+	}
+	return servers
+}
+
+// warnStaleServers reports an MCP server entry that an earlier run wrote from a
+// [[mcp_servers]] block, that no block renders any more, and that is still in the
+// document. Without this machine's record ai-rulez cannot tell it from a hand
+// written entry, so it never removes it; it says where the entry is.
+func (g *Generator) warnStaleServers() {
+	recorded := g.readManifest(g.manifestPath()).Servers
+	if len(recorded) == 0 {
+		return
+	}
+	current := g.renderedServers
+	rels := make([]string, 0, len(recorded))
+	for rel := range recorded {
+		rels = append(rels, rel)
+	}
+	sort.Strings(rels)
+	for _, rel := range rels {
+		if !g.trustedMergedPath(rel) {
+			continue
+		}
+		abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(rel))
+		if !g.withinScope(abs) || !g.pathIsFile(abs) {
+			continue
+		}
+		data, err := g.config.ReadExisting(abs)
+		if err != nil {
+			continue
+		}
+		tree, err := docmerge.DecodeTree(mergedDocFormat(rel), string(data))
+		if err != nil {
+			continue
+		}
+		for _, path := range recorded[rel] {
+			if len(path) != 2 || slices.ContainsFunc(current[rel], func(p []string) bool { return slices.Equal(p, path) }) {
+				continue
+			}
+			if _, present := jsonmerge.LookupTree(tree, path); present {
+				g.warnOnce("Stale MCP server "+strings.Join(path, ".")+" in "+rel+": it was generated from a [[mcp_servers]] block "+
+					"that is gone, but this machine has no record of writing it, so it is left in place",
+					"hint", "remove the entry from "+rel+" by hand")
+			}
+		}
+	}
+}

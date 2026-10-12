@@ -48,6 +48,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	}
 	flatOutputs = append(flatOutputs, scopedOutputs...)
 	g.disambiguateRuleCollisions(flatOutputs)
+	g.renderedServers = g.sharedServerPaths(flatOutputs)
 	g.markPreexistingDocuments(flatOutputs)
 	g.carryClaimAnnotations(flatOutputs)
 	g.dropUserHeldClaims(flatOutputs)

@@ -340,7 +340,11 @@ func (g *Generator) writeManifest(path string, files []string, merged map[string
 	if err != nil {
 		return err
 	}
-	return writeManifestFileDirs(resolved, files, merged, digests, g.manifestDirs(path), assets)
+	var servers map[string][][]string
+	if path == g.manifestPath() {
+		servers = g.renderedServers
+	}
+	return writeManifestFileHints(resolved, files, merged, digests, g.manifestDirs(path), assets, servers)
 }
 
 func writeManifestFile(path string, files []string, merged map[string][]jsonmerge.Claim) error {
@@ -349,12 +353,17 @@ func writeManifestFile(path string, files []string, merged map[string][]jsonmerg
 
 func writeManifestFileDirs(path string, files []string, merged map[string][]jsonmerge.Claim,
 	digests map[string]string, dirs *[]string, assets map[string]string) error {
+	return writeManifestFileHints(path, files, merged, digests, dirs, assets, nil)
+}
+
+func writeManifestFileHints(path string, files []string, merged map[string][]jsonmerge.Claim,
+	digests map[string]string, dirs *[]string, assets map[string]string, servers map[string][][]string) error {
 	sort.Strings(files)
 	files = slices.Compact(files)
 	if files == nil {
 		files = []string{}
 	}
-	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged, Digests: digests, Dirs: dirs, Assets: assets}, "", "  ")
+	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged, Servers: servers, Digests: digests, Dirs: dirs, Assets: assets}, "", "  ")
 	if err != nil {
 		return oops.Wrapf(err, "marshal generated manifest")
 	}

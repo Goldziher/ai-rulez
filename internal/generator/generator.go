@@ -112,6 +112,11 @@ type Generator struct {
 	// into one block at a shared repository toplevel instead of writing a
 	// .gitignore beside the config (recursive runs; see gitignore_recursive.go).
 	// gitignorePrefix is this root's path relative to the sink's toplevel.
+	// renderedServers is what the committed manifest records as Servers on its next
+	// write: the MCP server entries this run renders, taken before claims on values
+	// the document already holds are dropped (see sharedServerPaths).
+	renderedServers map[string][][]string
+
 	gitignoreSink   *GitignoreSink
 	gitignorePrefix string
 }
@@ -123,6 +128,12 @@ type generatedManifest struct {
 	// merged_claims.go): in the committed manifest for a document it wrote whole,
 	// in the machine-local manifest for one shared with the user.
 	Merged map[string][]jsonmerge.Claim `json:"merged,omitempty"`
+	// Servers lists, per shared merged document, the member entries ai-rulez wrote
+	// from the shared configuration ([[mcp_servers]]), as key paths. It is only a
+	// hint for a warning when one of them is still in the document after its source
+	// went away: it never licenses removing anything, because this file is
+	// committed and anyone can edit it.
+	Servers map[string][][]string `json:"servers,omitempty"`
 	// Digests holds the SHA-256 of each listed file that has no Content-Hash of
 	// its own (JSON, TOML, raw files). Deletion of such a file needs a digest
 	// match, so a forged entry cannot delete a file ai-rulez did not write.
