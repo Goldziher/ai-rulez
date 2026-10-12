@@ -26,8 +26,12 @@ func textOfResult(t *testing.T, res *sdkmcp.CallToolResult) string {
 
 func structured(t *testing.T, res *sdkmcp.CallToolResult) map[string]any {
 	t.Helper()
-	doc, ok := res.StructuredContent.(map[string]any)
-	require.True(t, ok, "structuredContent is an object, got %T", res.StructuredContent)
+	// Round-trip through encoding/json: the SDK decodes numbers as json.Number,
+	// and these tests compare them with float64 values from the text fallback.
+	raw, err := json.Marshal(res.StructuredContent)
+	require.NoError(t, err)
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal(raw, &doc), "structuredContent is an object, got %T", res.StructuredContent)
 	return doc
 }
 

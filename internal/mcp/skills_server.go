@@ -420,9 +420,9 @@ func (s *Server) WrapTransport(inner sdkmcp.Transport) sdkmcp.Transport {
 }
 
 // GuardLifecycle returns a transport that refuses a request sent before
-// initialize with -32600, except one carrying the per-request protocol version
-// of the sessionless protocol, which the SDK would still refuse. The SDK itself
-// answers -32600 for the rest since go-sdk#1393.
+// initialize with -32600. The SDK refuses it too, but with error code 0, which is
+// not a JSON-RPC code; this is the one place that rewrites it, and it can go once
+// the SDK answers with -32600 itself.
 func GuardLifecycle(inner sdkmcp.Transport) sdkmcp.Transport {
 	return &lifecycleTransport{inner: inner}
 }
