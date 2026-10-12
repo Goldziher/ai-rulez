@@ -93,6 +93,22 @@ type ServeSetup struct {
 	// Clock judges approval expiry and signing key validity; nil is the wall
 	// clock (tests set it).
 	Clock ambient.Clock
+	// Authoring, when non-nil, registers the authoring (config) tools, prompts
+	// and ai-rulez:// resources alongside the skills surface, so one process
+	// serves both (`mcp --serve-skills`). The options wire the engines, the
+	// directory confinement and, with WithReadOnly, the read-only tool set. Nil
+	// keeps the read-only skills-only server.
+	Authoring []Option
+	// Daemon opts `mcp --serve-skills` into the shared per-repo daemon: the
+	// process either runs the daemon or proxies its stdin/stdout to one, and it
+	// falls back to serving in-process when no daemon can be reached. Off is
+	// today's behaviour, byte for byte. See serve_daemon.go.
+	Daemon bool
+	// DaemonIdentity distinguishes setups that must not share a daemon (a
+	// different view, filter, usage sink or authoring root); the CLI hashes its
+	// own command line into it. Empty derives an identity from the setup's own
+	// fields, for library callers and tests.
+	DaemonIdentity string
 }
 
 // built is one build of the catalog with what produced it.
@@ -174,7 +190,11 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 	if first.empty != "" {
 		st.logger().Warn(first.empty)
 	}
-	srv = NewSkillServerWith(st.Version, first.catalog, opts)
+	if st.Authoring != nil {
+		srv = NewMergedServer(st.Version, first.catalog, opts, st.Authoring...)
+	} else {
+		srv = NewSkillServerWith(st.Version, first.catalog, opts)
+	}
 	srv.closers = append(srv.closers, func() { closeSink(usageSinkFlushWait) })
 	srv.closers = append(srv.closers, opts.Search.Close)
 	return srv, nil

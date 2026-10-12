@@ -42,7 +42,7 @@ func deliveryFindings(ctx context.Context, cfg *config.Config) []lint.DeliveryFi
 				"skills are served but preset %q has no %q stub skill, so its agent is never told to call find_skill; a skill of that name may shadow it", preset, config.DynamicSkillsName)})
 		}
 		if hasMCPPreset(cfg) && !runsSkillsServer(cfg) {
-			out = append(out, lint.DeliveryFinding{Code: lint.CodeServedNoServer, Message: "skills are served but no [[mcp_servers]] entry runs `ai-rulez mcp --serve-skills`; add one (command \"ai-rulez\", args [\"mcp\", \"--serve-skills\"])"})
+			out = append(out, lint.DeliveryFinding{Code: lint.CodeServedNoServer, Message: "skills are served but no MCP server runs `ai-rulez mcp --serve-skills`: the generated self entry does it when mcp.self_server is on (the default), otherwise add one (command \"ai-rulez\", args [\"mcp\", \"--serve-skills\"])"})
 		}
 	}
 	if cfg.LockEnforced() {
@@ -135,7 +135,9 @@ func hasMCPPreset(cfg *config.Config) bool {
 	return false
 }
 
-// runsSkillsServer reports whether some configured MCP server launches the skills server.
+// runsSkillsServer reports whether some MCP server serves skills: a configured
+// entry that runs `mcp --serve-skills`, or the generated self entry, which runs
+// it whenever the project serves skills (see Config.SelfMCPServerEntry).
 func runsSkillsServer(cfg *config.Config) bool {
 	launches := func(command string, args []string) bool {
 		return strings.Contains(command, "--serve-skills") || containsArg(args, "--serve-skills")
@@ -150,7 +152,12 @@ func runsSkillsServer(cfg *config.Config) bool {
 			return true
 		}
 	}
-	return cfg.MCP != nil && launches("", cfg.MCP.SelfServerCommand)
+	if cfg.MCP != nil && launches("", cfg.MCP.SelfServerCommand) {
+		return true
+	}
+	// The generated self entry runs `mcp --serve-skills` when the project serves
+	// skills, so it alone satisfies the check and no separate entry is needed.
+	return cfg.HasSelfServer()
 }
 
 func containsArg(args []string, want string) bool {

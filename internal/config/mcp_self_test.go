@@ -56,6 +56,50 @@ func TestSelfMCPServerEntry(t *testing.T) {
 	}
 }
 
+// A project that serves skills runs `mcp --serve-skills` from the self entry, so
+// one .mcp.json entry serves both the config tools and the skills.
+func TestSelfMCPServerEntry_ServesSkillsFromTheSameEntry(t *testing.T) {
+	serving := []SkillSourceConfig{{Name: "vendor", URL: "vendor-skills"}}
+	tests := []struct {
+		name string
+		mcp  *MCPConfig
+		want map[string]any
+	}{
+		{
+			name: "the default launch gains --serve-skills",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true)},
+			want: map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@latest", "mcp", "--serve-skills"}},
+		},
+		{
+			name: "a version pin keeps the flag",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true), SelfServerVersion: "4.1.0"},
+			want: map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@4.1.0", "mcp", "--serve-skills"}},
+		},
+		{
+			name: "a custom command gains the flag too",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true), SelfServerCommand: []string{"ai-rulez", "mcp"}},
+			want: map[string]any{"type": "stdio", "command": "ai-rulez", "args": []string{"mcp", "--serve-skills"}},
+		},
+		{
+			name: "a command that already serves is left as it is",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true), SelfServerCommand: []string{"ai-rulez", "mcp", "--serve-skills"}},
+			want: map[string]any{"type": "stdio", "command": "ai-rulez", "args": []string{"mcp", "--serve-skills"}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{MCP: tt.mcp, SkillSources: serving}
+			assert.Equal(t, tt.want, cfg.SelfMCPServerEntry())
+		})
+	}
+
+	// Without served skills the entry stays the plain authoring launch.
+	plain := &Config{MCP: &MCPConfig{SelfServer: boolPtr(true)}}
+	assert.Equal(t,
+		map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@latest", "mcp"}},
+		plain.SelfMCPServerEntry())
+}
+
 // The self server is on out of the box: only an explicit false turns it off.
 func TestHasSelfServerDefaultsOn(t *testing.T) {
 	tests := []struct {

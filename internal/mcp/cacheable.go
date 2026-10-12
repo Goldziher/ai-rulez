@@ -47,3 +47,39 @@ func (s *Server) servingCacheable(_ context.Context, req sdkmcp.Request, c *sdkm
 		}
 	}
 }
+
+// mergedCacheable sets the cache hints of the server that serves both surfaces
+// (`mcp --serve-skills`). A listing of tools or prompts is fixed when the server
+// starts; a served skill file changes only when the catalog reloads; an
+// authoring resource is the live project, which may change between two reads.
+func (s *Server) mergedCacheable(_ context.Context, req sdkmcp.Request, c *sdkmcp.Cacheable) {
+	live := s.serve != nil && (s.serve.opts.Rebuild != nil || s.serve.opts.Revalidate != nil)
+	switch r := req.(type) {
+	case *sdkmcp.ListToolsRequest, *sdkmcp.ListPromptsRequest:
+		c.TTLMs, c.CacheScope = staticTTLMs, scopePublic
+	case *sdkmcp.ListResourcesRequest, *sdkmcp.ListResourceTemplatesRequest:
+		c.CacheScope = scopePrivate // the catalog and the project belong to this project
+		c.TTLMs = servedTTLMs
+		if live {
+			c.TTLMs = 0
+		}
+	case *sdkmcp.ReadResourceRequest:
+		c.CacheScope = scopePrivate
+		if r.Params != nil && s.servedFile(r.Params.URI) {
+			c.TTLMs = servedTTLMs
+			if live {
+				c.TTLMs = 0
+			}
+		}
+	}
+}
+
+// servedFile reports whether a URI is a file of a served skill.
+func (s *Server) servedFile(uri string) bool {
+	cat := s.cat()
+	if cat == nil {
+		return false
+	}
+	_, ok := cat.File(uri)
+	return ok
+}
