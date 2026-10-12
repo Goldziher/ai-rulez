@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`AR990` flags path-style and bare pointers to served skills.** A static file that names a served skill by source path (`.ai-rulez/domains/<d>/skills/<name>/SKILL.md`, `.../skills/<name>/references/x.md`) or by a hyphenated bare name in prose (`see skill dev-cycle`) is now reported, and the diagnostic suggests `load_skill <name>`; a non-hyphenated word or another tree's `skills/` directory stays clean for `AR301` ([#363](https://github.com/Goldziher/ai-rulez/issues/363)).
+
 ### Fixed
 
 - **A non-recursive `generate` no longer deletes the outputs of a nested root.** The orphan walk of a top-level output directory (for example `packages/` from a scope) descended into a nested root below it and removed that root's committed `CLAUDE.md`/`.claude/rules` files; it now stops at any directory holding its own config, as the stray-tree walk already did ([#368](https://github.com/Goldziher/ai-rulez/issues/368)).
