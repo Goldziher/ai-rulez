@@ -130,14 +130,38 @@ The older workaround still works: a directory target such as `targets: [".claude
 under that folder, so the rule is not written to the Baz `AGENTS.md` files. `!baz` and `include` say the same thing
 without naming a folder.
 
+## Claude Code and the nested files
+
+Per Anthropic's [memory documentation](https://code.claude.com/docs/en/memory#agents-md) (read 2026-10-12), Claude Code
+reads `AGENTS.md` natively (v2.1.277 or later) **only when there is no `CLAUDE.md`, `.claude/CLAUDE.md` or
+`CLAUDE.local.md` in the working directory or any directory above it**. With any of those present it reads the
+`CLAUDE.md` files only (the default **Project instructions** value, `claude-md-or-agents-md`). What that means here:
+
+- **With the `claude` preset's root `CLAUDE.md` shim** (the default, `claude_md = "shim"`): a nested, baz-only
+  `AGENTS.md` is not loaded by Claude Code, because a `CLAUDE.md` exists above every directory. Only the shim's
+  `@AGENTS.md` import reaches Claude, and that pulls in the root file alone. A scoped rule therefore reaches Claude from
+  `.claude/rules/` only, not twice, and `targets` is not needed to avoid a double load. The root `AGENTS.md` is read by
+  Claude through the import, so rules the root file inlines (see `baz_unscoped`) are loaded in addition to their
+  `.claude/rules/` copy.
+- **Without a `CLAUDE.md` anywhere** (`claude_md = "none"`, or no `claude` preset): Claude reads the root `AGENTS.md` at
+  session start and, per the documentation, a subdirectory's `AGENTS.md` when it opens a file there with the Read
+  tool. A scoped rule can then reach Claude both from `.claude/rules/` (if the `claude` preset also writes it) and from
+  the nested file. Limit it with `targets` (`!baz` on the rule, or a target naming only the outputs you want).
+- **With `Project instructions` set to `claude-md-and-agents-md`** Claude reads both file kinds, so the shim case behaves
+  like the previous bullet.
+
+Not settled by the documentation: whether the on-demand subdirectory load is also suppressed when only a root
+`CLAUDE.md` exists (the table says "your `CLAUDE.md` files only", but the subdirectory bullet restates only the
+subdirectory's own `CLAUDE.md` files as the condition). This has not been probed against a running Claude Code, so
+treat the shim case above as the documented default rather than a verified one.
+
 ## Using it with other presets
 
 - **`claude`**: Baz already reads `.claude/skills/` and `.claude/agents/`, so `baz` writes neither skills nor agents
   and nothing is read twice. `CLAUDE.md`, `.claude/rules/` and the rest of the `claude` output are unchanged. Two
   consequences: `claude` renders commands as user-invocable skills under `.claude/skills/`, which Baz reads as
-  skills (its "ignore commands" rule names only the `commands/` directories); and Claude Code loads a nested `AGENTS.md`
-  when it works in a directory without a `CLAUDE.md`, so a scoped rule can reach Claude both from `.claude/rules/` and
-  from the nested file. Set `targets` on the rule to limit it to one of them.
+  skills (its "ignore commands" rule names only the `commands/` directories); and whether Claude Code also loads the
+  nested `AGENTS.md` files depends on `CLAUDE.md`, see [Claude Code and the nested files](#claude-code-and-the-nested-files).
 - **`codex`, `opencode`, `amp`, `xum`**: they share `AGENTS.md`, which is identical. With `agents_md` on (the default) the shared
   `AGENTS.md` and `.agents/skills/` are written once and `baz` adds only its nested files, agents and targeted skills.
 - **`cursor`** and others that write `.cursor/rules`: Baz reads those files too, so a rule can be read from both
