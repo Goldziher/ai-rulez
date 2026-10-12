@@ -39,7 +39,7 @@ func (c *Config) validatePluginAuthoring() error {
 	if p == nil {
 		return nil
 	}
-	if err := validatePluginRequiredFields(p); err != nil {
+	if err := c.validatePluginRequiredFields(); err != nil {
 		return err
 	}
 	if err := validatePluginPaths(p); err != nil {
@@ -72,26 +72,16 @@ func (c *Config) validatePluginAuthoring() error {
 	return c.validateHookGroups(p.Name, p.Hooks)
 }
 
-func validatePluginRequiredFields(p *PluginAuthoring) error {
+func (c *Config) validatePluginRequiredFields() error {
+	p := c.Plugin
 	if p.Name == "" {
 		return oops.
 			With("field", "plugin.name").
 			Hint("Add a 'name' to the [plugin] block").
 			Errorf("plugin authoring requires field 'name'")
 	}
-	if p.Version == "" {
-		return oops.
-			With("field", "plugin.version").
-			With("plugin_name", p.Name).
-			Hint("Add a 'version' to the [plugin] block, e.g. version = \"1.0.0\"").
-			Errorf("plugin %q requires field 'version'", p.Name)
-	}
-	if !semverLike.MatchString(p.Version) {
-		return oops.
-			With("field", "plugin.version").
-			With("value", p.Version).
-			Hint("Use a semantic version like 1.0.0 or 0.2.1-beta").
-			Errorf("plugin %q has an invalid version %q", p.Name, p.Version)
+	if err := c.validatePluginVersion(); err != nil {
+		return err
 	}
 	if p.Description == "" {
 		return oops.
@@ -99,6 +89,40 @@ func validatePluginRequiredFields(p *PluginAuthoring) error {
 			With("plugin_name", p.Name).
 			Hint("Add a 'description' to the [plugin] block").
 			Errorf("plugin %q requires field 'description'", p.Name)
+	}
+	return nil
+}
+
+// validatePluginVersion enforces the version/version_from pair: exactly one is
+// set, and the resolved version is a sane semantic version. A version_from that
+// names a missing file, an unsupported manifest or one without the version key
+// is reported here so `validate` fails before generation does.
+func (c *Config) validatePluginVersion() error {
+	p := c.Plugin
+	switch {
+	case p.Version != "" && p.VersionFrom != "":
+		return oops.
+			With("field", "plugin.version_from").
+			With("plugin_name", p.Name).
+			Hint("Use either 'version' or 'version_from', not both").
+			Errorf("plugin %q sets both 'version' and 'version_from'", p.Name)
+	case p.Version == "" && p.VersionFrom == "":
+		return oops.
+			With("field", "plugin.version").
+			With("plugin_name", p.Name).
+			Hint("Add a 'version' to the [plugin] block, e.g. version = \"1.0.0\", or point 'version_from' at a manifest").
+			Errorf("plugin %q requires field 'version'", p.Name)
+	}
+	version, err := p.ResolvedVersion(c.BaseDir)
+	if err != nil {
+		return err
+	}
+	if !semverLike.MatchString(version) {
+		return oops.
+			With("field", "plugin.version").
+			With("value", version).
+			Hint("Use a semantic version like 1.0.0 or 0.2.1-beta").
+			Errorf("plugin %q has an invalid version %q", p.Name, version)
 	}
 	return nil
 }

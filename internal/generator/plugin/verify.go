@@ -42,6 +42,9 @@ func VerifyProvenance(baseDir string) error {
 			return oops.With("path", path).Wrapf(err, "read generated plugin output")
 		}
 		body = removeProvenanceHeader(body, outputPath, expected.ContentHash, document.SourceHash)
+		if keys := document.Managed[path]; len(keys) > 0 {
+			body = managedSubdocument(body, keys)
+		}
 		if actual := hashBytes(body); actual != expected.ContentHash {
 			return oops.Errorf(
 				"generated plugin output %q hash mismatch: expected %s, got %s",

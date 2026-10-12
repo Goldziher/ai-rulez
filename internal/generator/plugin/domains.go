@@ -141,6 +141,11 @@ func PlanDomainPlugins(cfg *config.Config, tree *config.ContentTree) ([]PlannedP
 	}
 	byName := map[string]PlannedPlugin{}
 
+	rootVersion, err := cfg.Plugin.ResolvedVersion(cfg.BaseDir)
+	if err != nil {
+		return nil, err
+	}
+
 	if fd := mkt.FromDomains; fd.IsEnabled() {
 		for _, domain := range sortedDomainNames(tree) {
 			if len(fd.Include) > 0 && !matchesAny(fd.Include, domain) {
@@ -167,13 +172,13 @@ func PlanDomainPlugins(cfg *config.Config, tree *config.ContentTree) ([]PlannedP
 				Commands:    bundleable(d.Commands),
 				Agents:      bundleable(d.Agents),
 			}
-			applyDefaults(&p, &fd.PluginDefaults, cfg)
+			applyDefaults(&p, &fd.PluginDefaults, cfg, rootVersion)
 			byName[name] = p
 		}
 	}
 
 	for i := range mkt.Plugins {
-		p, err := planDeclared(cfg, tree, &mkt.Plugins[i])
+		p, err := planDeclared(cfg, tree, &mkt.Plugins[i], rootVersion)
 		if err != nil {
 			return nil, err
 		}
@@ -193,7 +198,7 @@ func PlanDomainPlugins(cfg *config.Config, tree *config.ContentTree) ([]PlannedP
 	return plan, nil
 }
 
-func planDeclared(cfg *config.Config, tree *config.ContentTree, decl *config.MarketplacePlugin) (PlannedPlugin, error) {
+func planDeclared(cfg *config.Config, tree *config.ContentTree, decl *config.MarketplacePlugin, rootVersion string) (PlannedPlugin, error) {
 	p := PlannedPlugin{Name: decl.Name, Description: decl.Description, Relevance: decl.Relevance}
 	seenS, seenC, seenA := map[string]bool{}, map[string]bool{}, map[string]bool{}
 	for _, domain := range sortedDomainNames(tree) {
@@ -215,7 +220,7 @@ func planDeclared(cfg *config.Config, tree *config.ContentTree, decl *config.Mar
 	if p.Description == "" {
 		p.Description = fmt.Sprintf("Skills, commands and agents for %s.", decl.Name)
 	}
-	applyDefaults(&p, &decl.PluginDefaults, cfg)
+	applyDefaults(&p, &decl.PluginDefaults, cfg, rootVersion)
 	return p, nil
 }
 
@@ -233,10 +238,11 @@ func pickByName(files []config.ContentFile, patterns []string) []config.ContentF
 }
 
 // applyDefaults fills version, category, keywords, default_enabled and runtimes
-// from the given defaults, then from the [plugin] block.
-func applyDefaults(p *PlannedPlugin, d *config.PluginDefaults, cfg *config.Config) {
+// from the given defaults, then from the [plugin] block. rootVersion is the
+// [plugin] version already resolved (version_from included).
+func applyDefaults(p *PlannedPlugin, d *config.PluginDefaults, cfg *config.Config, rootVersion string) {
 	root := cfg.Plugin
-	p.Version = firstNonEmpty(d.Version, rootString(root, func(r *config.PluginAuthoring) string { return r.Version }), defaultDomainPluginVersion)
+	p.Version = firstNonEmpty(d.Version, rootVersion, defaultDomainPluginVersion)
 	p.Category = firstNonEmpty(d.Category, rootString(root, func(r *config.PluginAuthoring) string { return r.Category }))
 	p.Keywords = d.Keywords
 	if len(p.Keywords) == 0 && root != nil {
@@ -299,6 +305,7 @@ func BuildDomainManifest(cfg *config.Config, p *PlannedPlugin) *Manifest {
 		m.Codex = root.Codex
 		m.Cursor = root.Cursor
 		m.Include = root.Include
+		m.ProvenanceHeaders = root.ProvenanceHeaders
 	}
 	if m.Market.Owner == nil {
 		m.Market.Owner = m.Author

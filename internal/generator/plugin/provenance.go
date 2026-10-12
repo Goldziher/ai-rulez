@@ -38,12 +38,32 @@ type provenanceDocument struct {
 	// verify and generate runs keep reporting them until they are reconciled or
 	// deleted by hand.
 	Obsolete map[string]provenanceOutput `json:"obsolete,omitempty"`
+	// Managed maps a bundle-relative path to the JSON keys ai-rulez owns in a
+	// partially-owned document (the Pi root package.json in package_json =
+	// "merge" mode). The recorded hash covers those keys alone, so an author's
+	// edits elsewhere do not read as drift.
+	Managed map[string][]string `json:"managed,omitempty"`
 }
 
 // AddProvenance adds deterministic generated-file headers where the target
 // format supports comments and records every output in a strict-JSON sidecar.
 // JSON and binary artifacts remain byte-identical to keep runtime schemas valid.
 func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.OutputFile, error) {
+	return addProvenance(outputs, baseDir, true, nil)
+}
+
+// addProvenance is AddProvenance with the generated-file header under the
+// caller's control. With headers false the comment-safe outputs are written
+// byte-identical to their sources, exactly like an included file; every output
+// is still recorded in the sidecar, so verify, obsolete pruning and publish
+// keep working. An optional managed map names, per bundle-relative path, the
+// keys ai-rulez owns in a partially-owned document; the recorded hash covers
+// those keys alone.
+func addProvenance(outputs []config.OutputFile, baseDir string, headers bool, managed ...map[string][]string) ([]config.OutputFile, error) {
+	var managedPaths map[string][]string
+	if len(managed) > 0 {
+		managedPaths = managed[0]
+	}
 	entries := make(map[string]provenanceOutput, len(outputs))
 	paths := make([]string, 0, len(outputs))
 	var includes []string
@@ -56,7 +76,11 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 			return nil, oops.With("path", output.Path).With("base_dir", baseDir).Errorf("plugin output escapes bundle root")
 		}
 		relativePath = filepath.ToSlash(relativePath)
-		entries[relativePath] = provenanceOutput{ContentHash: hashBytes(undecoratedBody(output))}
+		body := undecoratedBody(output)
+		if keys := managedPaths[relativePath]; len(keys) > 0 {
+			body = managedSubdocument(body, keys)
+		}
+		entries[relativePath] = provenanceOutput{ContentHash: hashBytes(body)}
 		paths = append(paths, relativePath)
 		if output.PluginInclude {
 			includes = append(includes, relativePath)
@@ -80,8 +104,9 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 			return nil, oops.With("path", output.Path).Wrapf(err, "resolve plugin provenance path")
 		}
 		// An included file is copied verbatim, so it takes no generated-file
-		// header; its hash in the sidecar is the source's own.
-		if !output.PluginInclude {
+		// header; its hash in the sidecar is the source's own. headers false
+		// extends the same treatment to every comment-safe output.
+		if headers && !output.PluginInclude {
 			if header := provenanceHeader(output.Path, entries[filepath.ToSlash(relativePath)].ContentHash, sourceHash); header != "" {
 				body = insertProvenanceHeader(body, output.Path, header)
 			}
@@ -96,6 +121,7 @@ func AddProvenance(outputs []config.OutputFile, baseDir string) ([]config.Output
 		SourceHash:    sourceHash,
 		Outputs:       entries,
 		Includes:      includes,
+		Managed:       managedPaths,
 	})
 	if err != nil {
 		return nil, err
@@ -172,6 +198,28 @@ func undecoratedBody(output config.OutputFile) []byte {
 func hashBytes(content []byte) string {
 	hash := blake3.Sum256(content)
 	return fmt.Sprintf("blake3:%x", hash)
+}
+
+// managedSubdocument returns the canonical JSON encoding of the keys a
+// partially-owned document owns, so a hash can be taken over those keys alone.
+// A body that is not a JSON object is returned unchanged, as is one whose owned
+// keys are all absent (an empty object hashes stably either way).
+func managedSubdocument(body []byte, keys []string) []byte {
+	var doc map[string]any
+	if err := json.Unmarshal(body, &doc); err != nil {
+		return body
+	}
+	subset := make(map[string]any, len(keys))
+	for _, key := range keys {
+		if value, ok := doc[key]; ok {
+			subset[key] = value
+		}
+	}
+	canonical, err := json.Marshal(subset)
+	if err != nil {
+		return body
+	}
+	return canonical
 }
 
 func provenanceHeader(path, contentHash, sourceHash string) string {

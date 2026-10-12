@@ -43,14 +43,10 @@ func includeOutputs(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 // governance content tree. It mirrors how evalsDir resolves the project-level
 // eval tree.
 func pluginContentRoot(m *Manifest) string {
-	cfg := m.Config
-	if cfg != nil && cfg.Plugin != nil && cfg.Plugin.ContentRoot != "" {
-		return filepath.Join(m.SourceDir, cfg.Plugin.ContentRoot)
+	if m.Config == nil {
+		return m.SourceDir
 	}
-	if cfg != nil && cfg.ConfigDir != "" {
-		return cfg.ConfigDir
-	}
-	return m.SourceDir
+	return m.Config.Plugin.PluginContentRootDir(m.Config, m.SourceDir)
 }
 
 // matchIncludes walks root and returns the root-relative slash paths of the
