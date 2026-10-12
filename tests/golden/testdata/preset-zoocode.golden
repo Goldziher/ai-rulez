@@ -16,7 +16,7 @@ INFO  Generation complete files=10
 WARN  1 rules/context items use an activation the target tool cannot express; they are loaded always: items=rules manual
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 671 96600ce294f52b0027882ec321b09c243cc654766feaa11cb7ffcb746bab56bb
+.ai-rulez/.generated-manifest.json file 0644 1044 bb80d0437d99e0f8273c2406c8919e1e5481ff8743d6c957c34f7fe77045243a
 .ai-rulez/.generated-manifest.local.json file 0644 1976 f0dfb1b2c344a7f40ab1ed0cbfdb37833bb43006e15beeac6b283a9ba9a7abc1
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72

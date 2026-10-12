@@ -23,8 +23,8 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/ dir 0755
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1924 f07181ece773545673eab478bf199165d4ffa10d7b6c56a84053fc0032d7c9aa
-.ai-rulez/.generated-manifest.local.json file 0644 5038 70be07b6a9a7688ae72960d0c073673450fdfd97781ca03c0963823a0e5f61fc
+.ai-rulez/.generated-manifest.json file 0644 2300 17ba699a66115b57d7345631c0d97ccf15d8f8d634cfb9a9546a5dc2db46a934
+.ai-rulez/.generated-manifest.local.json file 0644 5038 768f5d00c974d214b9cf76d10aa6c28f71da467f57635b33b978167db97fd0ae
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -120,8 +120,8 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=16
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
-~ .ai-rulez/.generated-manifest.json file 0644 908 9216bbb16a8f73c788899799b0fa0cb1027caefd094598862d6fedf6c6bbfac6
-~ .ai-rulez/.generated-manifest.local.json file 0644 2392 366944b0a5f5a1fed11b1dd09b9bff546c3b1fb6913996d65fa89afb02c1d49c
+~ .ai-rulez/.generated-manifest.json file 0644 1131 07de181dd67437c62d4207a58ade45c79dbba4d31ad6a1fe1a0d818a52da0d6d
+~ .ai-rulez/.generated-manifest.local.json file 0644 2392 c6d1630e5483c5a15245da3545652401e1afa3fae8cf41207fb33a3ad50766b0
 ~ .gitignore file 0644 359 a983b4e2feda8526693650fe1b7ed2749b355ebced4a4dc1e66f79ca6709b03a
 - .agents/ dir 0755
 - .agents/skills/ dir 0755
@@ -179,7 +179,7 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=13
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
-~ .ai-rulez/.generated-manifest.json file 0644 810 c404dad7f96b7e511460b3fb9dcf547cc433b24e6a631a95174406b78da2f8fd
+~ .ai-rulez/.generated-manifest.json file 0644 1033 a89b8afc99f04e0b0be65103122059554cd3b8ed932a2c53973d47fb729ae41a
 ~ .gitignore file 0644 335 35e9c6ccd145e8b153ab05ca7ca069b79fbb6f27c209b793f21dde8e161710ed
 - .claude/agents/ dir 0755
 - .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
@@ -217,8 +217,8 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/ dir 0755
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1727 3de8dd97b09fda2ec58792bb60b171c92223d690e3eb581f4d688e385f41b814
-.ai-rulez/.generated-manifest.local.json file 0644 5038 70be07b6a9a7688ae72960d0c073673450fdfd97781ca03c0963823a0e5f61fc
+.ai-rulez/.generated-manifest.json file 0644 2103 b312bf9e4af85e94ca8cd7d20359a547295e605bccc8e394fd318eaa399d51a1
+.ai-rulez/.generated-manifest.local.json file 0644 5038 768f5d00c974d214b9cf76d10aa6c28f71da467f57635b33b978167db97fd0ae
 .ai-rulez/checks/ dir 0755
 .ai-rulez/checks/security.md file 0644 129 6959bf66b516b9a429777aa26d8ce99f5ba2567175346573b6f50c1508ab0b50
 .ai-rulez/checks/style.md file 0644 81 29ff5b316a1736ef9f9d9f8177eb79381851f67e862b6176aad658cd8c62fa36

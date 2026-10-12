@@ -24,7 +24,7 @@ WARN  1 rules/context items use an activation the target tool cannot express; th
 .agents/skills/reviewer/scripts/ dir 0755
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 571 dc2868aecda4e2a08f05071c5be1ceb1a9251e7f396140465805187cd35383e7
+.ai-rulez/.generated-manifest.json file 0644 947 404fd5b6220e750a12b2c3d6de5f7b322fa05016e6f663f2d1bcb37c1c7ef0f0
 .ai-rulez/.generated-manifest.local.json file 0644 1465 f158e1075d6c8925c75bde1dea481c0addf8fa0a1089b0551660b532f9cbbda5
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72

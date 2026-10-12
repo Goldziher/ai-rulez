@@ -4,6 +4,7 @@
 exit: 0
 --- stdout
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
@@ -44,8 +45,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3936 2f6a4d684df0867374b30cd4115954450287b6a4bd7791f1ed7e30fcf460a9c5
-.ai-rulez/.generated-manifest.local.json file 0644 12598 a1ce7c432fe81ddc3ee8deb457c3fc22cbc22ef0509a7f2220d3e0904aef141b
+.ai-rulez/.generated-manifest.json file 0644 4821 563e5bb622d69fbb76fc46dd52cda3730a48201fb75f1cb74478d595345c94fb
+.ai-rulez/.generated-manifest.local.json file 0644 12598 3801a96a5c5bf31d38db058598b08353dd2958e6d999a2238f7347bce8243b3f
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -206,6 +207,7 @@ scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58
 exit: 0
 --- stdout
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
@@ -229,8 +231,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 --- project tree
 + .agents/skills/migrator/ dir 0755
 + .agents/skills/migrator/SKILL.md file 0644 154 6a1546ac63cdd3db287b109a15568ba5974a8d2f0adf23332346e75e2e6f0144
-~ .ai-rulez/.generated-manifest.json file 0644 4420 4b4e0e40dd01ce851000cd363672c942ed9b0220831394e3525d28edb0a962c0
-~ .ai-rulez/.generated-manifest.local.json file 0644 12696 f2b6f0fbe65bb2f23480d6c91a026f28d249e9b2ef9a708651454df343066731
+~ .ai-rulez/.generated-manifest.json file 0644 5305 3acd3de5ca5e6e64fc770e2ada70e0969563a11d35d25b31957d6a881ff92f14
+~ .ai-rulez/.generated-manifest.local.json file 0644 12696 046695f60936d9254eac411f93e49fe4c3ddcf947b9380bf2a7c816423ad2393
 + .claude/agents/dba.md file 0644 141 cb3f4ff6ceb1ecbe5b61ed8b8e45ebf8383405f90e30fe2142a0d81309476888
 + .claude/rules/go.md file 0644 233 c7a7097170b9648ceddcee6262e4eccae70e71f46c64369a924c3672295411db
 + .claude/skills/migrator/ dir 0755
@@ -259,6 +261,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 exit: 0
 --- stdout
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
@@ -284,8 +287,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/storybook/SKILL.md file 0644 190 8b196dcd988ed3e4bd99fc6cf307a1bc604cbdd3c9c7e4dd002f9f8e4580e269
 + .agents/skills/storybook/agents/ dir 0755
 + .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
-~ .ai-rulez/.generated-manifest.json file 0644 4783 e7ddb56bf4e9366955c4d89c982e77f17f74f3521ce0f16879b29d598ee792b9
-~ .ai-rulez/.generated-manifest.local.json file 0644 12920 fe8ebdcee32bbd68b92a945e24a02f334610500d38afbcc28cf6f5e57ae0929a
+~ .ai-rulez/.generated-manifest.json file 0644 5668 69a23694a2447edde9e0b5c864f826da931475ffb85f5ade59fb5eb3c570f6f0
+~ .ai-rulez/.generated-manifest.local.json file 0644 12920 2eb2a92ce8cd858a3b870404a3df6aebfcf619188dc8bdf09ad8a0ac875ad8da
 + .claude/rules/react.md file 0644 253 142ac2b5ca11fe90d58acfe3ebdfea8c1385582afd9c15dc702b95f48c77585d
 + .claude/skills/storybook/ dir 0755
 + .claude/skills/storybook/SKILL.md file 0644 178 c09f47a388c3ac12f48f7c195654342ccda0157e1bc08c88cedaf3e2203871d4
@@ -450,6 +453,7 @@ delete-stale: .github/skills/migrator/SKILL.md
 delete-stale: .opencode/agents/dba.md
 delete-stale: .opencode/skills/migrator/SKILL.md
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
@@ -476,6 +480,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 exit: 0
 --- stdout
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] ask rules are not generated for cursor: it has no ask list and prompts for whatever is not allowed
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
@@ -505,6 +510,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 exit: 1
 --- stdout
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 Error: profile not found: nope
 
@@ -582,8 +588,8 @@ Profiles:
 .agents/skills/storybook/agents/ dir 0755
 .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 4783 e7ddb56bf4e9366955c4d89c982e77f17f74f3521ce0f16879b29d598ee792b9
-.ai-rulez/.generated-manifest.local.json file 0644 12920 fe8ebdcee32bbd68b92a945e24a02f334610500d38afbcc28cf6f5e57ae0929a
+.ai-rulez/.generated-manifest.json file 0644 5668 69a23694a2447edde9e0b5c864f826da931475ffb85f5ade59fb5eb3c570f6f0
+.ai-rulez/.generated-manifest.local.json file 0644 12920 2eb2a92ce8cd858a3b870404a3df6aebfcf619188dc8bdf09ad8a0ac875ad8da
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
