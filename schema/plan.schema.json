@@ -27,8 +27,8 @@
         "properties": {
           "path": { "type": "string", "description": "Slash-separated, relative to the project root." },
           "action": {
-            "enum": ["write", "merge", "mkdir"],
-            "description": "write: ai-rulez writes the file whole; merge: a document shared with the consumer, only the keys ai-rulez owns are written; mkdir: an empty directory."
+            "enum": ["write", "merge"],
+            "description": "write: ai-rulez writes the file whole; merge: a document shared with the consumer, only the keys ai-rulez owns are written."
           },
           "mode": {
             "type": "string",

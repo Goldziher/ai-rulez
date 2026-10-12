@@ -207,10 +207,7 @@ func TestPlanMatchesWhatGenerateWrites(t *testing.T) {
 		abs := filepath.Join(dir, filepath.FromSlash(f.Path))
 		info, err := os.Stat(abs)
 		require.NoError(t, err, f.Path)
-		if f.Action == PlanMkdir {
-			assert.True(t, info.IsDir(), f.Path)
-			continue
-		}
+		assert.False(t, info.IsDir(), f.Path)
 		if f.Sensitive {
 			continue // the plan is conservative: a run may find the file holds no secret
 		}

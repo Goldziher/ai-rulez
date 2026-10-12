@@ -60,7 +60,7 @@ INFO  User-level generation complete files=25
 .claude/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 .config/ dir 0755
 .config/ai-rulez/ dir 0755
-.config/ai-rulez/.generated-manifest.json file 0644 1775 921751973e988834497e74cbfdb68633944ed4f67e77c305cc29a779d92c1054
+.config/ai-rulez/.generated-manifest.json file 0644 1751 5c04ce0e7719610f08d3600697ed37e7f8e213f711be4852a0f886a87491a457
 .config/ai-rulez/.generated-manifest.local.json file 0644 3258 96d08f4bd1d39549cdc780f2d17f95ea8e344a1ca119e10baaccd79a826332d5
 .config/ai-rulez/agents/ dir 0755
 .config/ai-rulez/agents/buddy.md file 0644 47 fcb959e7b44ff6286d5fc44a17e26a7ed98b39296c89639944f63d582b2377e2
@@ -103,7 +103,6 @@ INFO  User-level generation complete files=25
 .cursor/ dir 0755
 .cursor/agents/ dir 0755
 .cursor/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-.cursor/commands/ dir 0755
 .cursor/hooks.json file 0644 110 e9a380a5c6bdb9ce11e590ccb2dfa562fa3c7b12802d51360212e768fcf38584
 .gemini/ dir 0755
 .gemini/GEMINI.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c

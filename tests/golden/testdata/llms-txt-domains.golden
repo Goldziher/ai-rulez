@@ -13,7 +13,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1031 05bfe5ee5cfebe702010a21de8681d50ed1ce1c3662b617d5d9c72daf8bef02c
-.ai-rulez/.generated-manifest.local.json file 0644 2130 4cf38240408a71e0a921de4491ad78f8e796ed4127165e4aedea3baa147f4971
+.ai-rulez/.generated-manifest.local.json file 0644 2130 75b012385b3f22747a4bc716d2d7c246f8ecb91a7426ef672e26d0af7e9e4291
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -180,7 +180,7 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2130 4cf38240408a71e0a921de4491ad78f8e796ed4127165e4aedea3baa147f4971
+.ai-rulez/.generated-manifest.local.json file 0644 2130 75b012385b3f22747a4bc716d2d7c246f8ecb91a7426ef672e26d0af7e9e4291
 >>>>
 {
   "version": "1",
@@ -194,7 +194,7 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
         ],
         "elementSums": [
           "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "732b0e9acac41dfe79feee98b2f4e7c7e4b10137077d5281f2fa7141b15c170f"
+          "e976e4df194f94b46e9a6176c00bf24d507e287b37e6c5b5ba374ad20ea902d0"
         ]
       },
       {
@@ -248,7 +248,7 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
     ]
   },
   "digests": {
-    ".claude/settings.json": "15d01db499d0aea785955631522c54e453cbf21670f87d68108ab067f998aec5",
+    ".claude/settings.json": "6ff9e99280ece8ecdc4819dd900687b538dc262c05fe32c846fb81a77d0cab0d",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".mcp.json": "c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0",

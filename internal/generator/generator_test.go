@@ -39,9 +39,10 @@ func TestGenerator_Basic(t *testing.T) {
 	err = gen.Generate("default")
 	require.NoError(t, err)
 
-	// Verify .claude directory and files were created
-	assert.DirExists(t, filepath.Join(tempDir, ".claude"))
-	assert.DirExists(t, filepath.Join(tempDir, ".claude", "skills"))
+	// Verify the claude outputs were created; the fixture has no skills, so no
+	// empty .claude/skills directory is left behind
+	assert.FileExists(t, filepath.Join(tempDir, "CLAUDE.md"))
+	assert.NoDirExists(t, filepath.Join(tempDir, ".claude", "skills"))
 
 	// Verify main file has content
 	mainFilePath := filepath.Join(tempDir, ".claude", "main.md")
@@ -72,15 +73,10 @@ func TestGenerator_MultiPreset(t *testing.T) {
 	err = gen.Generate("default")
 	require.NoError(t, err)
 
-	// Verify output directories exist
-	// Claude preset creates .claude directory
-	assert.DirExists(t, filepath.Join(tempDir, ".claude"))
-
-	// Cursor preset creates .cursor directory
-	assert.DirExists(t, filepath.Join(tempDir, ".cursor"))
-
-	// Devin preset creates .devin directory
-	assert.DirExists(t, filepath.Join(tempDir, ".devin"))
+	// Verify each preset wrote its outputs; presets with no content to write
+	// leave no empty directory behind
+	assert.FileExists(t, filepath.Join(tempDir, "CLAUDE.md"))
+	assert.NoDirExists(t, filepath.Join(tempDir, ".devin"))
 }
 
 func TestGenerator_WithDomains_DefaultProfile(t *testing.T) {
@@ -104,7 +100,7 @@ func TestGenerator_WithDomains_DefaultProfile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify output exists
-	assert.DirExists(t, filepath.Join(tempDir, ".claude"))
+	assert.FileExists(t, filepath.Join(tempDir, "CLAUDE.md"))
 }
 
 func TestGenerator_WithDomains_FrontendProfile(t *testing.T) {
@@ -128,7 +124,7 @@ func TestGenerator_WithDomains_FrontendProfile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify output exists
-	assert.DirExists(t, filepath.Join(tempDir, ".claude"))
+	assert.FileExists(t, filepath.Join(tempDir, "CLAUDE.md"))
 }
 
 func TestGenerator_WithDomains_FullProfile(t *testing.T) {
@@ -152,7 +148,7 @@ func TestGenerator_WithDomains_FullProfile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify output exists
-	assert.DirExists(t, filepath.Join(tempDir, ".claude"))
+	assert.FileExists(t, filepath.Join(tempDir, "CLAUDE.md"))
 }
 
 func TestGenerator_InvalidProfile(t *testing.T) {

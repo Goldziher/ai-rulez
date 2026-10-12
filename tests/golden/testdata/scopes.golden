@@ -39,7 +39,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 4732 d879ffc2c7abad2636d9dda60b101fcbbb354f1303a0040def962834348aa48a
-.ai-rulez/.generated-manifest.local.json file 0644 10161 693acdd373bc7e4b26b4de9fa5eba0cee3078e57dfa0d2b3373b5eae943d6402
+.ai-rulez/.generated-manifest.local.json file 0644 10161 21edf1dbff863b722ae0a87d0ce975925343b57527eda8ff603e0c10458773dc
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -197,13 +197,11 @@ packages/web/.agents/skills/storybook/SKILL.md file 0644 190 8b196dcd988ed3e4bd9
 packages/web/.agents/skills/storybook/agents/ dir 0755
 packages/web/.agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 packages/web/.claude/ dir 0755
-packages/web/.claude/agents/ dir 0755
 packages/web/.claude/settings.json file 0644 3 ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356
 packages/web/.claude/skills/ dir 0755
 packages/web/.claude/skills/storybook/ dir 0755
 packages/web/.claude/skills/storybook/SKILL.md file 0644 178 c09f47a388c3ac12f48f7c195654342ccda0157e1bc08c88cedaf3e2203871d4
 packages/web/.codex/ dir 0755
-packages/web/.codex/agents/ dir 0755
 packages/web/.codex/config.toml file 0600 234 5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc
 packages/web/AGENTS.md file 0644 463 c2ca5936279323bbcabeba1c30c88e9456ba3ac8f888cafe4afde4b9652f2cd7
 packages/web/CLAUDE.md file 0644 399 b353ad974c23cb5a266ac75a39b93378f56a089fe1f75f444433391b0215db4b
@@ -310,11 +308,9 @@ Clean plan (profile default)
   remove file: packages/web/.codex/config.toml
   remove file: packages/web/AGENTS.md
   remove file: packages/web/CLAUDE.md
-  remove dir (if empty): packages/web/.codex/agents
   remove dir (if empty): packages/web/.codex
   remove dir (if empty): packages/web/.claude/skills/storybook
   remove dir (if empty): packages/web/.claude/skills
-  remove dir (if empty): packages/web/.claude/agents
   remove dir (if empty): packages/web/.claude
   remove dir (if empty): packages/web/.agents/skills/storybook/agents
   remove dir (if empty): packages/web/.agents/skills/storybook
@@ -373,7 +369,7 @@ Clean plan (profile default)
   remove local manifest: .ai-rulez/.generated-manifest.local.json
   strip ai-rulez block from .gitignore
 --- stderr
-Removed generated files: 74 files, 59 directories
+Removed generated files: 74 files, 57 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

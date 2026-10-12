@@ -161,7 +161,7 @@ func TestCleanDryRunPlanGoesToStdoutAndSurvivesQuiet(t *testing.T) {
 			} else {
 				assert.Contains(t, stderr, "Dry run")
 			}
-			assert.DirExists(t, ".claude")
+			assert.FileExists(t, "CLAUDE.md")
 		})
 	}
 }
@@ -200,5 +200,5 @@ func TestCleanNeedsYesWithoutTerminal(t *testing.T) {
 
 	require.ErrorIs(t, err, ErrNeedsYes)
 	assert.Equal(t, exitFailure, exitCodeFor(err))
-	assert.DirExists(t, ".claude")
+	assert.FileExists(t, "CLAUDE.md")
 }

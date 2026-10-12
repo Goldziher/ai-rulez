@@ -28,7 +28,7 @@ func setupGeneratedProject(t *testing.T) (string, *Generator) {
 	require.NoError(t, gen.Generate("default"))
 
 	// Sanity: generate produced outputs, a manifest, and a gitignore block.
-	require.DirExists(t, filepath.Join(tempDir, ".claude"))
+	require.FileExists(t, filepath.Join(tempDir, "CLAUDE.md"))
 	require.FileExists(t, filepath.Join(tempDir, ".ai-rulez", generatedManifestName))
 	require.FileExists(t, filepath.Join(tempDir, ".gitignore"))
 
@@ -70,7 +70,7 @@ func TestGenerator_Clean_DryRunDeletesNothing(t *testing.T) {
 	assert.NotEmpty(t, plan.Files)
 
 	// Nothing was actually removed.
-	assert.DirExists(t, filepath.Join(tempDir, ".claude"))
+	assert.FileExists(t, filepath.Join(tempDir, "CLAUDE.md"))
 	assert.FileExists(t, filepath.Join(tempDir, ".ai-rulez", generatedManifestName))
 	assert.FileExists(t, filepath.Join(tempDir, ".gitignore"))
 }
@@ -97,6 +97,7 @@ func TestGenerator_Clean_PreservesUserFilesInGeneratedDir(t *testing.T) {
 	// A user-authored file living inside a generated directory must survive: the
 	// directory is non-empty after clean, so it is not removed.
 	userFile := filepath.Join(tempDir, ".claude", "user-notes.md")
+	require.NoError(t, os.MkdirAll(filepath.Dir(userFile), 0o755))
 	require.NoError(t, os.WriteFile(userFile, []byte("keep me"), 0o644))
 
 	_, err := gen.Clean("default", CleanOptions{})

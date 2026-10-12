@@ -366,6 +366,9 @@ func (describeApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		doc.Profile = p.Profile
 	}
 	for i := range outputs {
+		if outputs[i].IsDir {
+			continue // a directory marker creates nothing; the files written into it do
+		}
 		doc.Files = append(doc.Files, g.planFile(&outputs[i]))
 	}
 	sort.Slice(doc.Files, func(i, j int) bool { return doc.Files[i].Path < doc.Files[j].Path })
