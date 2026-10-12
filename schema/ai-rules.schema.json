@@ -398,6 +398,15 @@
             "type": "string"
           },
           "minItems": 1
+        },
+        "skills_instructions": {
+          "type": "boolean",
+          "description": "While skills are served, write a short section into every instruction file telling the agent to call find_skill and then load_skill on the MCP server that serves them, with the on-disk fallback path. Set to false to leave the section out.",
+          "default": true
+        },
+        "skills_instructions_text": {
+          "type": "string",
+          "description": "Replace the default skills section. {{server}} is the MCP server that serves the skills and {{skills_dir}} the config directory's skills folder, relative to the instruction file. Requires skills_instructions to be on."
         }
       },
       "additionalProperties": false

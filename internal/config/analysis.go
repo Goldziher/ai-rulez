@@ -82,6 +82,9 @@ const (
 	PartKindRootRule         PartKind = "rule"
 	PartKindRootContext      PartKind = "context"
 	PartKindRootAgentsRoster PartKind = "agents_delegation"
+	// PartKindRootSkillsInstructions is the section telling an agent how to load
+	// served skills; it is written by the renderer, not declared in a spec.
+	PartKindRootSkillsInstructions PartKind = "skills_instructions"
 )
 
 // Part kinds for a per-item (skill / agent / command) file.
