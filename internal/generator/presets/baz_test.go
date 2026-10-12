@@ -299,3 +299,25 @@ func TestWithoutBazNested_SharedRootFileHelpers(t *testing.T) {
 	assert.Equal(t, "all", got[0].Name)
 	assert.Len(t, rootRules(content, cfg, "gemini", "GEMINI.md"), 2, "only AGENTS.md is filtered")
 }
+
+func TestBazGenerate_BazRestSkipsUnselectedRules(t *testing.T) {
+	notBaz := globRule("not-baz", "src/api/**")
+	notBaz.Metadata.Targets = []string{"!baz"}
+	content := bazContent(globRule("picked", "src/api/**"), globRule("rest", "src/web/**"), globRule("any", "**/*.go"), notBaz)
+	for _, tc := range []struct {
+		rest     string
+		wantRest bool
+	}{{"", true}, {config.BazRestRoot, true}, {config.BazRestSkip, false}} {
+		cfg := bazProject(t, "src/api", "src/web")
+		cfg.Rules = &config.RulesConfig{BazDefault: config.BazDefaultNone, BazRest: tc.rest, Baz: &config.BazRulesConfig{Include: []string{"picked"}}}
+		cfg.Content = content
+
+		outputs, err := (&BazPresetGenerator{}).Generate(content, cfg.BaseDir, cfg)
+		require.NoError(t, err)
+		root, ok := outputByPath(outputs, cfg.BaseDir, "AGENTS.md")
+		require.True(t, ok)
+		assert.NotContains(t, root.Content, "picked BODY", tc.rest)
+		assert.Equal(t, tc.wantRest, strings.Contains(root.Content, "rest BODY"), tc.rest)
+		assert.Equal(t, tc.wantRest, strings.Contains(root.Content, "any BODY"), tc.rest)
+	}
+}

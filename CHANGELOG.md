@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- **`[rules] baz_rest = "skip"` keeps rules baz does not select out of the root `AGENTS.md`.** Under `baz_default = "none"` the rules that do not opt in, and rules excluded by `!baz`, were still inlined into the root file (127 KB in one project); `skip` drops those path-scoped items when `baz` is the only preset writing that file. The default `"root"` is unchanged ([#371](https://github.com/Goldziher/ai-rulez/issues/371)).
+
 ## [5.0.4] - 2026-10-12
 
 ### Added

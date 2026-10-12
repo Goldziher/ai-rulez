@@ -214,6 +214,14 @@ func (c *Config) validateRules() error {
 	if err := validateBazUnscoped(c.Rules.BazUnscoped); err != nil {
 		return err
 	}
+	if v := c.Rules.BazRest; v != "" && v != BazRestRoot && v != BazRestSkip {
+		return oops.
+			With("field", "rules.baz_rest").
+			With("actual_value", v).
+			With("valid_values", []string{BazRestRoot, BazRestSkip}).
+			Hint("Use \"root\" to keep unselected path-scoped items in the root AGENTS.md or \"skip\" to leave them out.").
+			Errorf("invalid baz_rest value %q at rules.baz_rest", v)
+	}
 	if c.Rules.BazDedupeMax < 0 {
 		return oops.
 			With("field", "rules.baz_dedupe_max").

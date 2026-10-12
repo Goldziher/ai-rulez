@@ -534,6 +534,12 @@ type RulesConfig struct {
 	// out of that file when baz is its only writer.
 	BazUnscoped string `yaml:"baz_unscoped,omitempty" json:"baz_unscoped,omitempty" toml:"baz_unscoped,omitempty"` //nolint:tagliatelle
 
+	// BazRest says what the baz preset does with a glob-activated item it does not
+	// nest (not selected under baz_default = "none", or excluded by `!baz`):
+	// "root" (the default) leaves it inlined in the root AGENTS.md, "skip" leaves
+	// it out of that file when baz is its only writer.
+	BazRest string `yaml:"baz_rest,omitempty" json:"baz_rest,omitempty" toml:"baz_rest,omitempty"` //nolint:tagliatelle
+
 	// BazDedupe, when true, writes a path-scoped item once into a shared parent
 	// AGENTS.md when its globs point into several directories under one parent,
 	// instead of a copy in each. Off by default so existing output is unchanged.
@@ -606,6 +612,21 @@ func (c *Config) BazUnscopedRules() string {
 		return c.Rules.BazUnscoped
 	}
 	return BazUnscopedRoot
+}
+
+// Values of rules.baz_rest.
+const (
+	BazRestRoot = "root"
+	BazRestSkip = "skip"
+)
+
+// BazRestRules returns what the baz preset does with a path-scoped item it does
+// not nest: BazRestRoot unless rules.baz_rest says BazRestSkip.
+func (c *Config) BazRestRules() string {
+	if c != nil && c.Rules != nil && c.Rules.BazRest != "" {
+		return c.Rules.BazRest
+	}
+	return BazRestRoot
 }
 
 // Values of rules.baz_default.

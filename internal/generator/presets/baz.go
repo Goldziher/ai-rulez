@@ -172,11 +172,15 @@ func withoutBazNested(items []config.ContentFile, cfg *config.Config) []config.C
 	}
 	target := rulefiles.RootTarget(bazPresetName, agentsMDFile)
 	skipUnscoped := bazSkipsUnscoped(cfg)
+	skipRest := bazSkipsRest(cfg)
 	kept := make([]config.ContentFile, 0, len(items))
 	for idx := range items {
 		cf := items[idx]
 		// An item that baz's own target excludes is never written nested, so it
 		// stays in the root file for the presets that do select it.
+		if skipRest && bazRestItem(cf, cfg) {
+			continue
+		}
 		if !rulefiles.InlineAllowed(cf, target) {
 			kept = append(kept, cf)
 			continue
@@ -199,12 +203,26 @@ func bazUnscopedItem(cf config.ContentFile, cfg *config.Config) bool {
 	return cf.Metadata.ResolveActivation().Mode == config.ActivationGlob && len(bazNestedDirs(cf, cfg)) == 0
 }
 
-// bazSkipsUnscoped reports whether rules.baz_unscoped = "skip" applies: nesting
-// is active and baz is the only preset writing the root AGENTS.md. The file is
-// shared byte for byte with codex, opencode, amp, xum and the others, so while
-// one of them is configured it must keep the item.
-func bazSkipsUnscoped(cfg *config.Config) bool {
-	if !bazNestedActive(cfg) || cfg.BazUnscopedRules() != config.BazUnscopedSkip {
+// bazRestItem reports whether a glob-activated item is one baz does not select
+// (unselected under baz_default = "none", or excluded by `!baz`), so it has no
+// place on the baz surface.
+func bazRestItem(cf config.ContentFile, cfg *config.Config) bool {
+	if cf.Metadata == nil || bazItemSelected(cf, cfg) {
+		return false
+	}
+	return cf.Metadata.ResolveActivation().Mode == config.ActivationGlob
+}
+
+// bazSkipsRest reports whether rules.baz_rest = "skip" applies: nesting is active
+// and baz is the only preset writing the root AGENTS.md.
+func bazSkipsRest(cfg *config.Config) bool {
+	return cfg.BazRestRules() == config.BazRestSkip && bazSoleRootWriter(cfg)
+}
+
+// bazSoleRootWriter reports whether nesting is active and no other preset writes
+// the root AGENTS.md, which every writer renders byte for byte.
+func bazSoleRootWriter(cfg *config.Config) bool {
+	if !bazNestedActive(cfg) {
 		return false
 	}
 	for _, owner := range rulefiles.RootOwners(agentsMDFile) {
@@ -213,6 +231,14 @@ func bazSkipsUnscoped(cfg *config.Config) bool {
 		}
 	}
 	return true
+}
+
+// bazSkipsUnscoped reports whether rules.baz_unscoped = "skip" applies: nesting
+// is active and baz is the only preset writing the root AGENTS.md. The file is
+// shared byte for byte with codex, opencode, amp, xum and the others, so while
+// one of them is configured it must keep the item.
+func bazSkipsUnscoped(cfg *config.Config) bool {
+	return cfg.BazUnscopedRules() == config.BazUnscopedSkip && bazSoleRootWriter(cfg)
 }
 
 // BazInlinedUnscoped names the rules and context items the baz preset inlines
