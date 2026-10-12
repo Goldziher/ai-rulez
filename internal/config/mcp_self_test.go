@@ -12,53 +12,46 @@ func boolPtr(b bool) *bool { return &b }
 
 func TestSelfMCPServerEntry(t *testing.T) {
 	tests := []struct {
-		name          string
-		mcp           *MCPConfig
-		binaryVersion string
-		want          map[string]any
+		name string
+		mcp  *MCPConfig
+		want map[string]any
 	}{
 		{
-			name:          "defaults to the binary version",
-			mcp:           &MCPConfig{SelfServer: boolPtr(true)},
-			binaryVersion: "4.19.0",
-			want:          map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@4.19.0", "mcp"}},
+			name: "defaults to latest so a project picks up new releases",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true)},
+			want: map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@latest", "mcp"}},
 		},
 		{
-			name:          "dev build resolves to latest",
-			mcp:           &MCPConfig{SelfServer: boolPtr(true)},
-			binaryVersion: "dev",
-			want:          map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@latest", "mcp"}},
+			name: "no [mcp] table also defaults to latest",
+			mcp:  nil,
+			want: map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@latest", "mcp"}},
 		},
 		{
-			name:          "empty binary version resolves to latest",
-			mcp:           &MCPConfig{SelfServer: boolPtr(true)},
-			binaryVersion: "",
-			want:          map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@latest", "mcp"}},
+			name: "a dev version resolves to latest",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true), SelfServerVersion: "dev"},
+			want: map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@latest", "mcp"}},
 		},
 		{
-			name:          "configured version wins over the binary",
-			mcp:           &MCPConfig{SelfServer: boolPtr(true), SelfServerVersion: "4.1.0"},
-			binaryVersion: "4.19.0",
-			want:          map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@4.1.0", "mcp"}},
+			name: "a configured version pins it",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true), SelfServerVersion: "4.1.0"},
+			want: map[string]any{"type": "stdio", "command": "npx", "args": []string{"-y", "ai-rulez@4.1.0", "mcp"}},
 		},
 		{
-			name:          "command override replaces npx entirely",
-			mcp:           &MCPConfig{SelfServer: boolPtr(true), SelfServerCommand: []string{"ai-rulez", "mcp"}},
-			binaryVersion: "4.19.0",
-			want:          map[string]any{"type": "stdio", "command": "ai-rulez", "args": []string{"mcp"}},
+			name: "command override replaces npx entirely",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true), SelfServerCommand: []string{"ai-rulez", "mcp"}},
+			want: map[string]any{"type": "stdio", "command": "ai-rulez", "args": []string{"mcp"}},
 		},
 		{
-			name:          "command override without arguments omits args",
-			mcp:           &MCPConfig{SelfServer: boolPtr(true), SelfServerCommand: []string{"ai-rulez-mcp"}},
-			binaryVersion: "4.19.0",
-			want:          map[string]any{"type": "stdio", "command": "ai-rulez-mcp"},
+			name: "command override without arguments omits args",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true), SelfServerCommand: []string{"ai-rulez-mcp"}},
+			want: map[string]any{"type": "stdio", "command": "ai-rulez-mcp"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &Config{MCP: tt.mcp}
-			assert.Equal(t, tt.want, cfg.SelfMCPServerEntry(tt.binaryVersion))
+			assert.Equal(t, tt.want, cfg.SelfMCPServerEntry())
 		})
 	}
 }

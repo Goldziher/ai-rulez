@@ -40,7 +40,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2364 f21c097aa4f49fa4a427e670bd033a720c8d9b5999b6222b5c67f81886ef2439
-.ai-rulez/.generated-manifest.local.json file 0644 7740 f9dae033112bc7ef063104d5cdcd5bce9ca6968816848db0a5066c56f56cd861
+.ai-rulez/.generated-manifest.local.json file 0644 7740 d4505ef33464570ca545df6ddffd71a8f9e8776e65fffc64bc198f62a72c5847
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -107,7 +107,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0644 1254 3131805941dbd2899345d317fd9e153d003454ffcc05a69028d8e7fd40f7e167
 .gitignore file 0644 575 ded5b926598b8fb57938cdbb87212553be9c7377e7b608006306a52604d31bae
-.mcp.json file 0644 410 a32156bd16c601fe012cd42d8285c8ea144622ba2b8f115446d5295f7956db13
+.mcp.json file 0644 408 3bbf66951efc9c6bbc15d7d3e886eeb834ff61675b16e999912049d2a5055d72
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
 .opencode/agents/architect.md file 0644 166 9dd8bf8ffed3a1f0224ae77627d154fded814856f2c25da1adaed71065ed0691

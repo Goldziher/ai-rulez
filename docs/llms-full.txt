@@ -1834,14 +1834,14 @@ Project-level MCP generation options.
 ```toml
 [mcp]
 self_server = true                # default; add ai-rulez's own MCP server to .mcp.json
-# self_server_version = "5.0.0"   # default: the running binary's version ("latest" for a dev build)
+# self_server_version = "5.0.0"   # default: latest, so a project picks up new releases
 # self_server_command = ["ai-rulez", "mcp"]  # replace the whole launch command instead of npx
 ```
 
 | Field                 | Description                                                                                                                                              |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `self_server`         | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@<version>", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
-| `self_server_version` | Version (or dist-tag) to pin. Defaults to the version of the ai-rulez binary running `generate`, or `latest` for a dev build. Only applies while the self server is on. |
+| `self_server`         | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@latest", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
+| `self_server_version` | Version (or dist-tag) to pin. Defaults to `latest`, so a project picks up new releases without regenerating. Only applies while the self server is on. |
 | `self_server_command` | Executable followed by its arguments, replacing the npx launch. Mutually exclusive with `self_server_version`. Only applies while the self server is on.  |
 
 Behavior:

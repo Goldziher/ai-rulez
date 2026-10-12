@@ -41,7 +41,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2273 bcc4973cc6a0cd821beb73613abc0d072e7e78b6898f581010f8c5485a036a00
-.ai-rulez/.generated-manifest.local.json file 0644 7558 405780185452a742efd8da11454014c9b7da511397e2292592fac3e7a6c4eefa
+.ai-rulez/.generated-manifest.local.json file 0644 7558 428c439a156a2b14776f77478670b0db3902cd560a54cd832a91f3d16be0a0c6
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -110,7 +110,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .gemini/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .gemini/settings.json file 0644 1254 9ee3eef9a9bac3c249ff6988dc8c32f80c26c0a8d55a9186deb7e9eacf6ef9d1
 .gitignore file 0644 552 bfe256f245d2c187ecf2fafcddb33888d6e7e1c38dc18d8157dc5b1817747783
-.mcp.json file 0644 275 faeb454c6f6acef31a1377ba01e3419e9cbf86f6b532dcc26d0efb4b11ec4706
+.mcp.json file 0644 273 ca2c94a13387068c05ab32f8da58ea5d1e6639d3b66ec21429fbf7256053c37a
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
 .opencode/agents/architect.md file 0644 166 9dd8bf8ffed3a1f0224ae77627d154fded814856f2c25da1adaed71065ed0691
@@ -158,7 +158,7 @@ INFO  Generation complete files=27
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
 ~ .ai-rulez/.generated-manifest.json file 0644 1429 0e2fdd9e1b73ee1ed95f0c9c1d203a42bfe7e1be79f8b4fd9bb5f21e7a3a7d85
-~ .ai-rulez/.generated-manifest.local.json file 0644 4283 f1fac75c6c80bc8f0a4e122db52e4a3ee2a660500b5535c5dec430553debd8b7
+~ .ai-rulez/.generated-manifest.local.json file 0644 4283 a0a34b74b6f0e139331ced89349081b3e4f4b69c2a1ca48edfa0b27a80f426f1
 ~ .codex/config.toml file 0644 33 c201fc5d26d46c99e143d7abcbf7bd1f7dc14a6a4aae954ef0b24bb9804cf17b
 ~ .gemini/settings.json file 0644 15 f9cba2c667a252e9deb800964f9f1685ca778865aabd54a46ca61f37b1c70e70
 ~ .gitignore file 0644 463 7e69dd3dcb7ac7f2eb11b1c271708dd72d9d399bede17e6ff69a7bf2f57fa2a3
@@ -288,7 +288,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 4283 f1fac75c6c80bc8f0a4e122db52e4a3ee2a660500b5535c5dec430553debd8b7
+.ai-rulez/.generated-manifest.local.json file 0644 4283 a0a34b74b6f0e139331ced89349081b3e4f4b69c2a1ca48edfa0b27a80f426f1
 >>>>
 {
   "version": "1",
@@ -351,7 +351,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
           "mcpServers",
           "ai-rulez"
         ],
-        "sum": "a44bcaea90b5c52a6d75a49e49643a5255e1e66ea1f54be89e765fd8ffd8910e"
+        "sum": "64f48fb2dd70e17b7cbd49125708aaf134c52d69d17101076259f5f6389bb8e9"
       },
       {
         "path": [
@@ -915,9 +915,9 @@ AGENTS.md
 CLAUDE.md
 # END ai-rulez
 <<<<
-.mcp.json file 0644 275 faeb454c6f6acef31a1377ba01e3419e9cbf86f6b532dcc26d0efb4b11ec4706
+.mcp.json file 0644 273 ca2c94a13387068c05ab32f8da58ea5d1e6639d3b66ec21429fbf7256053c37a
 >>>>
-{"mcpServers": {"mine": {"command": "x"},"ai-rulez": {"args":["-y","ai-rulez@$VERSION","mcp"],"command":"npx","type":"stdio"},"public-remote": {"type":"http","url":"https://mcp.example.com/public"},"public-tool": {"args":["-y","public-mcp"],"command":"npx","type":"stdio"}}}
+{"mcpServers": {"mine": {"command": "x"},"ai-rulez": {"args":["-y","ai-rulez@latest","mcp"],"command":"npx","type":"stdio"},"public-remote": {"type":"http","url":"https://mcp.example.com/public"},"public-tool": {"args":["-y","public-mcp"],"command":"npx","type":"stdio"}}}
 <<<<
 .opencode/ dir 0755
 .opencode/agents/ dir 0755
