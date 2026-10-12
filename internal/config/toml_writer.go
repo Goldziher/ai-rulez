@@ -55,6 +55,7 @@ type tomlOutput struct {
 	Usage           *UsageConfig           `toml:"usage,omitempty"`
 	Skills          *SkillsConfig          `toml:"skills,omitempty"`
 	DomainSettings  DomainConfigs          `toml:"domains,omitempty"`
+	Delivery        *DeliveryConfig        `toml:"delivery,omitempty"`
 	SkillSources    []SkillSourceConfig    `toml:"skill_sources,omitempty"`
 	Roles           []RoleConfig           `toml:"roles,omitempty"`
 	RoleManifest    *RoleManifestConfig    `toml:"role_manifest,omitempty"`
@@ -158,6 +159,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Usage:           cfg.Usage,
 		Skills:          cfg.Skills,
 		DomainSettings:  cfg.DomainSettings,
+		Delivery:        cfg.Delivery,
 		SkillSources:    cfg.SkillSources,
 		Roles:           cfg.Roles,
 		RoleManifest:    cfg.RoleManifest,

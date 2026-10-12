@@ -35,8 +35,8 @@ func TestSchemaFindings(t *testing.T) {
 		{name: "claude_md none is a known key", main: "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\n[claude]\nclaude_md = \"none\"\n"},
 		{
 			name: "misspelled top-level keys suggest the nearest key",
-			main: "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\ndelivry = \"static\"\n",
-			want: []string{"config.toml: unknown key \"delivry\""},
+			main: "version = \"5.0\"\nname = \"t\"\npresets = [\"claude\"]\nxyzzy = \"static\"\n",
+			want: []string{"config.toml: unknown key \"xyzzy\""},
 		},
 		{
 			name: "nested table and array entry",

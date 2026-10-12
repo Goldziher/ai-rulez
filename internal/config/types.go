@@ -66,6 +66,11 @@ type Config struct {
 	// Dynamic skill loading (types_dynamic.go, delivery.go).
 	Skills         *SkillsConfig           `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
 	DomainSettings map[string]DomainConfig `yaml:"domains,omitempty" json:"domains,omitempty" toml:"domains,omitempty"`
+	// Delivery is the [delivery] table; [delivery.stub] customises the generated
+	// dynamic-skills stub (delivery_stub.go).
+	Delivery *DeliveryConfig `yaml:"delivery,omitempty" json:"delivery,omitempty" toml:"delivery,omitempty"`
+	// stubBodyFileText is the text of [delivery.stub] body_file, read at load.
+	stubBodyFileText string
 	SkillSources   []SkillSourceConfig     `yaml:"skill_sources,omitempty" json:"skill_sources,omitempty" toml:"skill_sources,omitempty"` //nolint:tagliatelle
 	// ServeMode is set while a skills server renders: every skill is rendered,
 	// served ones included, and no dynamic-skills stub is added.
@@ -122,6 +127,14 @@ type Config struct {
 	ContentProblems []ContentProblem `yaml:"-" json:"-" toml:"-"`
 	ConfigDir       string           `yaml:"-" json:"-" toml:"-"`
 	ConfigDirName   string           `yaml:"-" json:"-" toml:"-"`
+	// RootRel is where this project's base directory sits below the root of its
+	// git work tree (forward slashes), empty for the work tree's own root and
+	// outside a work tree. Generated headers use it to name a nested root's own
+	// config by its path from the repository root.
+	RootRel string `yaml:"-" json:"-" toml:"-"`
+	// NestedRoot is set when another ai-rulez root encloses this project inside
+	// the same git work tree; see HeaderConfig.Nested.
+	NestedRoot bool `yaml:"-" json:"-" toml:"-"`
 
 	// PolicyOutcome is what the organization policy clamped and reported at load
 	// time (docs/policy.md); nil when no policy is in force.
@@ -262,6 +275,16 @@ type MCPConfig struct {
 	// by its arguments), for installs that do not run through npx, for example
 	// ["ai-rulez", "mcp"]. SelfServerVersion is ignored when it is set.
 	SelfServerCommand []string `yaml:"self_server_command,omitempty" json:"self_server_command,omitempty" toml:"self_server_command,omitempty"`
+
+	// SkillsInstructions, when false, leaves the "Unlisted skills" section out of
+	// the instruction files. Nil means on: while skills are served, every
+	// instruction file tells the agent to call find_skill and load_skill.
+	SkillsInstructions *bool `yaml:"skills_instructions,omitempty" json:"skills_instructions,omitempty" toml:"skills_instructions,omitempty"`
+
+	// SkillsInstructionsText replaces the default section. {{server}} is the
+	// MCP server that serves the skills and {{skills_dir}} the config directory's
+	// skills folder, relative to the instruction file.
+	SkillsInstructionsText string `yaml:"skills_instructions_text,omitempty" json:"skills_instructions_text,omitempty" toml:"skills_instructions_text,omitempty"`
 }
 
 // HasSelfServer reports whether generation should add ai-rulez's own MCP server.
@@ -378,6 +401,15 @@ type HeaderConfig struct {
 	// source set, so under "full" one edit rewrites a line in every generated
 	// file; "content" and "none" keep committed output free of that churn.
 	Hashes string `yaml:"hashes,omitempty" json:"hashes,omitempty" toml:"hashes,omitempty"`
+	// MCPLine, when false, leaves the "Use MCP server: ..." line out of every
+	// generated header. Nil means on: the line is derived from [mcp] and is
+	// omitted anyway while the self server is off.
+	MCPLine *bool `yaml:"mcp_line,omitempty" json:"mcp_line,omitempty" toml:"mcp_line,omitempty"`
+	// Nested sets the header of a root that sits inside another ai-rulez root:
+	// "compact" (the default) writes one line naming the config, "omit" writes
+	// no header, "inherit" writes the same header as the outer root. A custom
+	// Text is kept unless Nested is set explicitly.
+	Nested string `yaml:"nested,omitempty" json:"nested,omitempty" toml:"nested,omitempty"`
 }
 
 // Header hash modes accepted by [header] hashes.
