@@ -92,7 +92,7 @@ func MarshalTOML(cfg *Config) ([]byte, error) {
 		return nil, oops.Hint("Provide a valid Config struct").Errorf("config is nil")
 	}
 
-	if cfg.LocalOverlay != nil {
+	if cfg.LocalOverlay != nil || len(cfg.ActiveLayers) > 0 {
 		return nil, errMergedConfigWrite()
 	}
 

@@ -99,6 +99,11 @@ func readConfigDoc(v workspace.View, path string) (map[string]any, error) {
 // withLocalOverlay applies a config.local.* overlay found beside the main
 // config, unless disabled. Without an overlay cfg is returned untouched.
 func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string, lo loadOptions) (*Config, error) {
+	layered, mainDoc, layers, err := withLayers(v, cfg, mainPath, configDir, lo)
+	if err != nil {
+		return nil, err
+	}
+	cfg = layered
 	if lo.withoutLocal {
 		return cfg, nil
 	}
@@ -110,9 +115,10 @@ func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string,
 	if err := checkConfigFileInside(v, localPath); err != nil {
 		return nil, err
 	}
-	mainDoc, err := readConfigDoc(v, mainPath)
-	if err != nil {
-		return nil, err
+	if mainDoc == nil {
+		if mainDoc, err = readConfigDoc(v, mainPath); err != nil {
+			return nil, err
+		}
 	}
 	localDoc, err := readConfigDoc(v, localPath)
 	if err != nil {
@@ -131,6 +137,7 @@ func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string,
 		return nil, err
 	}
 	out.ConfigFile = cfg.ConfigFile
+	out.ActiveLayers = layers
 	out.LocalOverlay = &LocalOverlay{
 		Path: localPath,
 		Doc:  normalizeConfigDocKeys(localDoc),

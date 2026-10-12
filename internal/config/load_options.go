@@ -17,6 +17,8 @@ import (
 // loadOptions are the resolved LoadOption settings.
 type loadOptions struct {
 	withoutLocal  bool
+	layers        []string
+	layersSet     bool
 	includeMemo   any
 	withoutRemote bool
 	runner        runner.Runner
@@ -71,6 +73,13 @@ type LoadOption func(*loadOptions)
 // teammate without local overrides sees.
 func WithoutLocal() LoadOption {
 	return func(o *loadOptions) { o.withoutLocal = true }
+}
+
+// WithLayers activates the config.<name>.toml layers, in order, instead of the
+// ones AI_RULEZ_LAYERS and AI_RULEZ_PROFILE name. Called with no names it
+// activates none.
+func WithLayers(names ...string) LoadOption {
+	return func(o *loadOptions) { o.layers, o.layersSet = names, true }
 }
 
 // WithFrontmatterErrors tells the load that the caller reports malformed

@@ -488,6 +488,44 @@ ai-rulez completion zsh > "${fpath[1]}/_ai-rulez"
 | ---- | ---- | ------- | ----------- |
 | `--no-descriptions` | bool |  | disable completion descriptions |
 
+## `ai-rulez config`
+
+Show how the configuration is composed (read-only)
+
+```text
+ai-rulez config [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez config layers
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
+
+## `ai-rulez config layers`
+
+List the config.<name>.toml layers and which are active
+
+```text
+ai-rulez config layers [flags]
+```
+
+Examples:
+
+```bash
+ai-rulez config layers
+ai-rulez config layers --format json
+```
+
+| Flag | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `--format` | string | `text` | Output format: text, json |
+| `--no-local` | bool |  | Ignore the machine-local config.local.* overlay |
+
 ## `ai-rulez convert`
 
 Convert existing AI tool files into an .ai-rulez/ tree
