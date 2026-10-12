@@ -87,7 +87,6 @@ func TestStrict_ServedSkillReferencedByMCPCall(t *testing.T) {
 		name string
 		body string
 	}{
-		{"code-spanned load_skill call", "Run `load_skill heavy` for the migration steps."},
 		{"quoted load_skill name", `Run load_skill "heavy" for the steps.`},
 		{"load_skill name argument", `Run load_skill(name: "heavy") for the steps.`},
 		{"get_skill call", "Call get_skill(heavy) first."},
@@ -112,6 +111,41 @@ func TestStrict_ServedSkillReferencedByMCPCall(t *testing.T) {
 			// Assert
 			assert.True(t, has(fs, CodeServedReferencedStatically, "rules/use.md", 0), "%q must raise AR990:\n%s", tt.body, dump(fs))
 			assert.Contains(t, messages(fs, CodeServedReferencedStatically), "load_skill", "the message names the accepted pointer form")
+		})
+	}
+}
+
+// A single code span `load_skill <name>` is the form AR990 itself recommends, so
+// it stays quiet, while a bare backticked name or a source path on the same line
+// is still reported (#377).
+func TestStrict_ServedSkillLoadSkillCodeSpanStaysQuiet(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{"single code span", "For heavy work, call `load_skill heavy`.", false},
+		{"single code span quoted name", "For heavy work, call `load_skill \"heavy\"`.", false},
+		{"two code spans", "For heavy work, call `load_skill` `heavy`.", false},
+		{"bare name beside the call", "Run `load_skill heavy`, or the `heavy` skill.", true},
+		{"source path beside the call", "Run `load_skill heavy`, not .ai-rulez/skills/heavy/SKILL.md.", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				".ai-rulez/config.toml":           baseConfig,
+				".ai-rulez/skills/heavy/SKILL.md": "---\nname: heavy\ndescription: Heavy served skill for big migrations. Use when planning a schema migration.\ndelivery: served\n---\nHEAVY body.\n",
+				".ai-rulez/rules/use.md":          "# Use\n\n" + tt.body + "\n",
+			})
+			gitAdd(t, root)
+
+			// Act
+			fs := lintDir(t, root)
+
+			// Assert
+			assert.Equal(t, tt.want, has(fs, CodeServedReferencedStatically, "rules/use.md", 0), "%q:\n%s", tt.body, dump(fs))
 		})
 	}
 }
