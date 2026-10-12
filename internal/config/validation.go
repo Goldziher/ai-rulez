@@ -208,6 +208,9 @@ func (c *Config) validateRules() error {
 	if err := validateBazDefault(c.Rules.BazDefault); err != nil {
 		return err
 	}
+	if err := validateBazUnscoped(c.Rules.BazUnscoped); err != nil {
+		return err
+	}
 	if c.Rules.BazBudget < 0 {
 		return oops.
 			With("field", "rules.baz_budget").
@@ -248,6 +251,18 @@ func validateBazScoped(value string) error {
 		With("valid_values", validBazScoped).
 		Hint("Use one of: nested, root (lowercase).").
 		Errorf("invalid baz_scoped value %q at rules.baz_scoped", value)
+}
+
+func validateBazUnscoped(value string) error {
+	if value == "" || value == BazUnscopedRoot || value == BazUnscopedSkip {
+		return nil
+	}
+	return oops.
+		With("field", "rules.baz_unscoped").
+		With("actual_value", value).
+		With("valid_values", []string{BazUnscopedRoot, BazUnscopedSkip}).
+		Hint("Use one of: root, skip (lowercase).").
+		Errorf("invalid baz_unscoped value %q at rules.baz_unscoped", value)
 }
 
 func validateBazDefault(value string) error {

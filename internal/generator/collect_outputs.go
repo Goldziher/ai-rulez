@@ -53,6 +53,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	g.dropUserHeldClaims(flatOutputs)
 	g.reclaimStaleMembers(flatOutputs)
 	g.warnInstructionSizes(flatOutputs)
+	g.renderedContent = contentTree
 	g.warnBazBudget(flatOutputs)
 
 	return flatOutputs, activeProfile, nil

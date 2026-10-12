@@ -171,16 +171,68 @@ func withoutBazNested(items []config.ContentFile, cfg *config.Config) []config.C
 		return items
 	}
 	target := rulefiles.RootTarget(bazPresetName, agentsMDFile)
+	skipUnscoped := bazSkipsUnscoped(cfg)
 	kept := make([]config.ContentFile, 0, len(items))
 	for idx := range items {
 		cf := items[idx]
 		// An item that baz's own target excludes is never written nested, so it
 		// stays in the root file for the presets that do select it.
-		if !rulefiles.InlineAllowed(cf, target) || len(bazNestedDirs(cf, cfg)) == 0 {
+		if !rulefiles.InlineAllowed(cf, target) {
 			kept = append(kept, cf)
+			continue
 		}
+		if len(bazNestedDirs(cf, cfg)) != 0 || (skipUnscoped && bazUnscopedItem(cf, cfg)) {
+			continue
+		}
+		kept = append(kept, cf)
 	}
 	return kept
+}
+
+// bazUnscopedItem reports whether baz selects a glob-activated item that has no
+// nested directory to go to (a glob without a directory, or one that points
+// outside the project), so the root AGENTS.md would inline it.
+func bazUnscopedItem(cf config.ContentFile, cfg *config.Config) bool {
+	if !bazItemSelected(cf, cfg) || cf.Metadata == nil {
+		return false
+	}
+	return cf.Metadata.ResolveActivation().Mode == config.ActivationGlob && len(bazNestedDirs(cf, cfg)) == 0
+}
+
+// bazSkipsUnscoped reports whether rules.baz_unscoped = "skip" applies: nesting
+// is active and baz is the only preset writing the root AGENTS.md. The file is
+// shared byte for byte with codex, opencode, amp, xum and the others, so while
+// one of them is configured it must keep the item.
+func bazSkipsUnscoped(cfg *config.Config) bool {
+	if !bazNestedActive(cfg) || cfg.BazUnscopedRules() != config.BazUnscopedSkip {
+		return false
+	}
+	for _, owner := range rulefiles.RootOwners(agentsMDFile) {
+		if owner != bazPresetName && cfg.HasBuiltInPreset(owner) {
+			return false
+		}
+	}
+	return true
+}
+
+// BazInlinedUnscoped names the rules and context items the baz preset inlines
+// into the root AGENTS.md although they are path-scoped, because no glob names a
+// directory to nest them under. It is empty when rules.baz_unscoped skips them
+// or nesting is off.
+func BazInlinedUnscoped(content *config.ContentTree, cfg *config.Config) []string {
+	if content == nil || !bazNestedActive(cfg) || bazSkipsUnscoped(cfg) {
+		return nil
+	}
+	target := rulefiles.RootTarget(bazPresetName, agentsMDFile)
+	var names []string
+	items := append(rulefiles.FilterInline(allInlineRules(content), target), rulefiles.FilterInline(allInlineContext(content), target)...)
+	for idx := range items {
+		if bazUnscopedItem(items[idx], cfg) {
+			names = append(names, items[idx].Name)
+		}
+	}
+	sort.Strings(names)
+	return names
 }
 
 // bazNestedDirs returns the directories (relative to the project root, slash

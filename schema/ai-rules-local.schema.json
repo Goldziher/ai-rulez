@@ -3504,6 +3504,14 @@
           ],
           "type": "string"
         },
+        "baz_unscoped": {
+          "description": "What the baz preset does with a glob-activated item that cannot be nested because no glob names a directory (`**/*.go`, `**/BUILD`). root (default) inlines it into the root AGENTS.md; skip leaves it out of that file when baz is the only preset writing it (a root file shared with codex, opencode, amp or xum keeps it). Only applies with baz_scoped = nested.",
+          "enum": [
+            "root",
+            "skip"
+          ],
+          "type": "string"
+        },
         "mode": {
           "description": "Default rules output mode. split writes one file per rule in the tool's native rules folder; inline embeds rules in the root file. Defaults to split.",
           "enum": [
