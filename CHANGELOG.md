@@ -12,6 +12,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`[rules] baz_unscoped = "skip"` keeps directory-less path-scoped rules out of the root `AGENTS.md`.** A rule scoped by `**/*.go` or `**/BUILD` cannot be nested for Baz, so it was inlined into the root file that Claude also imports; `skip` drops it when `baz` is the only preset writing that file (a file shared with `codex` and the others keeps it). The default `"root"` is unchanged, and the `baz_budget` warning now names the inlined rules ([#365](https://github.com/Goldziher/ai-rulez/issues/365)).
 - **`[rules] baz_dedupe_max = K` collapses a rule copied into more than K directories.** The rule is written once to the directory covering all its globs, up to the root `AGENTS.md` when they share only the repository root (never with `baz_unscoped = "skip"`), instead of one copy per directory ([#367](https://github.com/Goldziher/ai-rulez/issues/367)).
 
+### Fixed
+
+- **`docs/baz.md` no longer claims Claude Code loads a nested `AGENTS.md` whenever its directory has no `CLAUDE.md`.** Claude Code reads `AGENTS.md` natively only when no `CLAUDE.md` exists in the working directory or above it (v2.1.277 or later), so with the `claude` preset's root `CLAUDE.md` shim a baz-only nested file is not loaded; the page now states the three cases and what the documentation does not settle ([#369](https://github.com/Goldziher/ai-rulez/issues/369)).
+
 ## [5.0.3] - 2026-10-12
 
 ### Added
