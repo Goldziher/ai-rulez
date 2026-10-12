@@ -47,13 +47,13 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`gitignore`**: Whether to maintain the managed .gitignore block with generated output patterns (default: false)
 - **`includes`**: External content sources to merge
 - **`installed_skills`**: Skills to install from external repositories
-- **`header`**: Header style/timestamp for generated files
+- **`header`**: Header `style`, `timestamp`, `hashes`, `text`, `mcp_line` and `nested` for generated files
 - **`defaults`**: Global `effort` and per-preset `effort_by_preset` / `model_by_preset`
 - **`builtins`**: Built-in domains (`true`, `false`, or a list with `!` exclusions)
 - **`compact`**: Omit per-rule priority annotations from inline sections
 - **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `true`)
 - **`mcp_servers`**: Array of MCP server configurations
-- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_command`)
+- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_command`, `skills_instructions`, `skills_instructions_text`)
 - **`plugins`**: Array of plugin installs from a marketplace (consumer side)
 - **`marketplaces`**: Array of marketplace sources
 - **`plugin`**: Producer-side authoring block for a distributable plugin bundle
@@ -69,6 +69,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`roles`**: `[[roles]]` map a job to a slice of the shared content; see [Roles](roles.md)
 - **`role_manifest`**: `enabled` writes `roles.json`; `skill_mode_fallback` (`drop` or `serve`) decides what an `off` skill does on a harness that cannot hide it
 - **`domains`**: Per-domain settings keyed by domain name (`[domains.<name>] delivery`)
+- **`delivery`**: `[delivery.stub]` `description`, `body`, `body_file`: customises the generated `dynamic-skills` stub; see [Configuration](configuration.md#deliverystub)
 - **`skills`**: Defaults for every skill (`[skills] delivery = "static" | "served" | "both"`); see [MCP server](mcp-server.md#dynamic-skill-loading)
 - **`skill_sources`**: `[[skill_sources]]` remote or local skill sources that are served over MCP and pinned in the lock
 - **`catalog`**: `[catalog]` defaults for `ai-rulez catalog` (`title`, `include_excerpt`, `exclude_owners`, `indexable`, `max_items_per_page`, `render_markdown`); see [Catalog](catalog.md)
