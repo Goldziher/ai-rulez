@@ -8,8 +8,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Added
 
+- **`[plugin.pi] package_name` and `skills_entry = "directory"` for the Pi runtime.** `package_name` sets the npm name instead of `@<owner>/pi-<plugin-name>`, and under `package_json = "merge"` an authored `name` is now kept when it is unset; `skills_entry = "directory"` writes `"./skills"` to `pi.skills` and `"skills/"` to `files` instead of one entry per skill. `files` lists `README.md` and `assets/` only when they exist in the bundle ([#383](https://github.com/Goldziher/ai-rulez/issues/383)).
+- **`verify --plugin` names the outputs that drifted.** Text output lists each path with its kind (`changed`, `missing`, `stale-source`, `obsolete`) and `--format json` carries a `drift` array of `{path, kind}`; the existing fields are unchanged ([#381](https://github.com/Goldziher/ai-rulez/issues/381)).
+
 ### Fixed
 
+- **`generate` no longer leaves empty `.claude/agents`, `.claude/skills` and `.claude/rules` directories in roots without such content.** Output directories are now created only when a file is written into them, and empty ones an earlier run created are removed; a directory holding any file is never touched ([#379](https://github.com/Goldziher/ai-rulez/issues/379)).
+- **`AR990` no longer flags a single code span `load_skill <name>`.** That is the form its own message recommends; a bare name in backticks, a source path or another call form on the same line is still reported ([#377](https://github.com/Goldziher/ai-rulez/issues/377)).
+- **`AR9T0` looks for component paths only under the plugin's own root.** A `.mcp.json` in a parent directory of a nested plugin was reported as if the plugin shipped it ([#378](https://github.com/Goldziher/ai-rulez/issues/378)).
+- **`AR9T0` also covers a root `plugin.json` that ai-rulez does not write.** Codex prefers it as the manifest, so a stray one under the default `legacy` layout is reported; a root `CLAUDE.md` is not on the list because Claude Code does not load one from a plugin root ([#384](https://github.com/Goldziher/ai-rulez/issues/384)).
+- **`verify --plugin` reports unrecorded files and symlinks in a bundle's skills tree, and `generate --plugin` removes the files.** A file inside a generated skill directory that `.ai-rulez-generated.json` does not list is drift of kind `extra`, and a recorded output that is a symlink is kind `symlink`; `generate --plugin` deletes the unrecorded files (`--dry-run` shows `delete-stale:`) and never touches a skill directory it does not generate or your sources ([#380](https://github.com/Goldziher/ai-rulez/issues/380)).
 - **`generate --plugin`, `verify --plugin` and `validate` no longer warn that a skill's `agents/` directory is unrecognized.** `agents/openai.yaml` (Codex display metadata) is bundled by the plugin passthrough, so the warning said the opposite of what happens, and it repeated for every skill ([#382](https://github.com/Goldziher/ai-rulez/issues/382)).
 
 ## [5.0.5] - 2026-10-12
