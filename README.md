@@ -140,8 +140,9 @@ An organization [policy](docs/policy.md) sets tighten-only floors a repository c
 
 ## Operate
 
-- **MCP server.** `ai-rulez mcp` lets an assistant manage the configuration; with `--serve-skills` it serves skills on
-  demand. See [MCP server](docs/mcp-server.md).
+- **MCP server.** `ai-rulez mcp` lets an assistant manage the configuration; with `--serve-skills` one server serves
+  skills on demand and the config tools together (`--read-only` keeps only the read-only tools).
+  See [MCP server](docs/mcp-server.md).
 - **Telemetry.** Item-load records with an optional OTLP export. See [telemetry](docs/telemetry.md).
 - **Evals and improve.** `ai-rulez eval` scores skills; `improve` (experimental) optimizes them behind a held-out eval
   gate. See [evals](docs/evals.md) and [improve](docs/improve.md).
