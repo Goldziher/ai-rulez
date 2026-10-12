@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- **`generate` no longer leaves empty `.claude/agents`, `.claude/skills` and `.claude/rules` directories in roots without such content.** Output directories are now created only when a file is written into them, and empty ones an earlier run created are removed; a directory holding any file is never touched ([#379](https://github.com/Goldziher/ai-rulez/issues/379)).
+
 ## [5.0.5] - 2026-10-12
 
 ### Added

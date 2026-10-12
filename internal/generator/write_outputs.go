@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"runtime"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/samber/oops"
@@ -29,7 +30,37 @@ func (g *Generator) writeOutputs(outputs []config.OutputFile) error {
 				Wrapf(err, "write output file")
 		}
 	}
+	g.pruneEmptyDirs(outputs)
 	return nil
+}
+
+// pruneEmptyDirs removes the directories named by directory markers that hold
+// nothing, such as the empty .claude/agents an earlier release created. os.Remove
+// fails on a non-empty directory, so content is never touched; symlinks and
+// directories that resolve outside the project are left alone.
+func (g *Generator) pruneEmptyDirs(outputs []config.OutputFile) {
+	var dirs []string
+	for _, output := range outputs {
+		if output.IsDir {
+			dirs = append(dirs, g.absOutputPath(output.Path))
+		}
+	}
+	// Deepest first, so a parent emptied by removing its children goes too.
+	sort.Slice(dirs, func(i, j int) bool { return len(dirs[i]) > len(dirs[j]) })
+	for _, dir := range dirs {
+		if dir == filepath.Clean(g.config.BaseDir) || isSymlink(dir) || !g.withinScope(dir) {
+			continue
+		}
+		if g.userMode && !g.userMayTouch(dir) {
+			continue
+		}
+		if !g.removalConfined(dir) {
+			continue
+		}
+		if err := os.Remove(dir); err == nil {
+			g.log().Debug("Removed empty directory", "path", dir)
+		}
+	}
 }
 
 func (g *Generator) absOutputPath(path string) string {
@@ -70,13 +101,8 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	}
 
 	if output.IsDir {
-		if err := os.MkdirAll(target, 0o755); err != nil {
-			return oops.
-				With("dir", absPath).
-				Hint(fmt.Sprintf("Check directory permissions for: %s", absPath)).
-				Wrapf(err, "create directory")
-		}
-		g.log().Debug("Created directory", "path", output.Path)
+		// A directory marker never creates the directory: a file written into it
+		// does, and pruneEmptyDirs drops the ones left empty.
 		return nil
 	}
 
