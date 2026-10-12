@@ -338,3 +338,162 @@ func TestBaz_BudgetFinding(t *testing.T) {
 		assert.Nil(t, g.bazBudgetFinding(outputs))
 	})
 }
+
+// TestBaz_PerRuleOptIn pins the three per-rule controls: `!baz` in targets
+// (deny wins, even under baz_default = "all"), `[rules.baz] include`, and
+// `baz: true` frontmatter. The last two select an item under baz_default = "none".
+func TestBaz_PerRuleOptIn(t *testing.T) {
+	const (
+		apiRule  = "---\npaths:\n  - services/api/**/*.py\n---\n# API Style\n\nAPI_STYLE_BODY\n"
+		dbRule   = "---\npaths:\n  - services/db/**/*.py\n---\n# DB Style\n\nDB_STYLE_BODY\n"
+		webRule  = "---\npaths:\n  - services/web/**/*.py\nbaz: true\n---\n# Web Style\n\nWEB_STYLE_BODY\n"
+		skipRule = "---\npaths:\n  - services/skip/**/*.py\ntargets: [\"!baz\"]\n---\n# Skip Style\n\nSKIP_STYLE_BODY\n"
+	)
+	run := func(t *testing.T, extra string) string {
+		t.Helper()
+		root := t.TempDir()
+		writeAgentsMDProject(t, root, agentsMDConfig([]string{"baz"}, "", extra))
+		writeAgentsMDFile(t, root, ".ai-rulez/rules/api-style.md", apiRule)
+		writeAgentsMDFile(t, root, ".ai-rulez/rules/db-style.md", dbRule)
+		writeAgentsMDFile(t, root, ".ai-rulez/rules/web-style.md", webRule)
+		writeAgentsMDFile(t, root, ".ai-rulez/rules/skip-style.md", skipRule)
+		for _, d := range []string{"api", "db", "web", "skip"} {
+			require.NoError(t, os.MkdirAll(filepath.Join(root, "services", d), 0o755))
+		}
+		runAgentsMDGenerate(t, root)
+		return root
+	}
+	nested := func(root string) map[string]bool {
+		out := map[string]bool{}
+		for _, d := range []string{"api", "db", "web", "skip"} {
+			_, err := os.Stat(filepath.Join(root, "services", d, "AGENTS.md"))
+			out[d] = err == nil
+		}
+		return out
+	}
+
+	t.Run("negation excludes the rule under the default", func(t *testing.T) {
+		root := run(t, "")
+		assert.Equal(t, map[string]bool{"api": true, "db": true, "web": true, "skip": false}, nested(root))
+		assert.Contains(t, readBazFile(t, root, "AGENTS.md"), "SKIP_STYLE_BODY", "an excluded rule stays in the shared root file")
+	})
+	t.Run("include and frontmatter opt in under baz_default none", func(t *testing.T) {
+		root := run(t, "\n[rules]\nbaz_default = \"none\"\n\n[rules.baz]\ninclude = [\"db-style\"]\n")
+		assert.Equal(t, map[string]bool{"api": false, "db": true, "web": true, "skip": false}, nested(root))
+	})
+	t.Run("deny beats include", func(t *testing.T) {
+		root := run(t, "\n[rules]\nbaz_default = \"none\"\n\n[rules.baz]\ninclude = [\"skip-style\"]\n")
+		assert.False(t, nested(root)["skip"])
+	})
+}
+
+// TestBaz_UnscopedSkip pins rules.baz_unscoped. A glob-activated rule with no
+// directory (**/*.go) cannot be nested, so the baz preset inlines it into the
+// root AGENTS.md ("root", the default). "skip" drops it from that file, but only
+// when no other preset shares the file: codex and friends still need it.
+func TestBaz_UnscopedSkip(t *testing.T) {
+	const goRule = "---\npaths:\n  - \"**/*.go\"\n---\n# Go Code\n\nGO_CODE_BODY\n"
+	root := func(t *testing.T, presets []string, extra string) string {
+		t.Helper()
+		dir := t.TempDir()
+		writeAgentsMDProject(t, dir, agentsMDConfig(presets, "", extra))
+		writeAgentsMDFile(t, dir, ".ai-rulez/rules/go-code.md", goRule)
+		writeAgentsMDFile(t, dir, ".ai-rulez/rules/api-style.md", bazScopedRule)
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "services", "api"), 0o755))
+		runAgentsMDGenerate(t, dir)
+		return readBazFile(t, dir, "AGENTS.md")
+	}
+	skip := "\n[rules]\nbaz_unscoped = \"skip\"\n"
+
+	t.Run("root is the default", func(t *testing.T) {
+		assert.Contains(t, root(t, []string{"claude", "baz"}, ""), "GO_CODE_BODY")
+		assert.Contains(t, root(t, []string{"claude", "baz"}, "\n[rules]\nbaz_unscoped = \"root\"\n"), "GO_CODE_BODY")
+	})
+	t.Run("skip drops it from the baz-only root file", func(t *testing.T) {
+		md := root(t, []string{"claude", "baz"}, skip)
+		assert.NotContains(t, md, "GO_CODE_BODY")
+		assert.Contains(t, md, "ALWAYS_BODY", "unconditional rules stay")
+		assert.NotContains(t, md, "API_STYLE_BODY", "nestable rules still move to their directory")
+	})
+	t.Run("skip leaves a root file shared with codex alone", func(t *testing.T) {
+		assert.Contains(t, root(t, []string{"codex", "baz"}, skip), "GO_CODE_BODY")
+	})
+	t.Run("skip does not apply when baz_scoped is root", func(t *testing.T) {
+		md := root(t, []string{"baz"}, "\n[rules]\nbaz_scoped = \"root\"\nbaz_unscoped = \"skip\"\n")
+		assert.Contains(t, md, "GO_CODE_BODY")
+	})
+}
+
+// TestBaz_BudgetWarningNamesInlinedUnscopedRules pins that the baz_budget
+// warning names the glob-activated rules the root file inlines because they
+// cannot be nested, and that they are not reported once skipped.
+func TestBaz_BudgetWarningNamesInlinedUnscopedRules(t *testing.T) {
+	const goRule = "---\npaths:\n  - \"**/*.go\"\n---\n# Go Code\n\nGO_CODE_BODY\n"
+	names := func(t *testing.T, extra string) []string {
+		t.Helper()
+		dir := t.TempDir()
+		writeAgentsMDProject(t, dir, agentsMDConfig([]string{"claude", "baz"}, "", extra))
+		writeAgentsMDFile(t, dir, ".ai-rulez/rules/go-code.md", goRule)
+		cfg, err := config.LoadConfig(context.Background(), dir)
+		require.NoError(t, err)
+		g := NewGenerator(cfg)
+		outputs, _, err := g.collectOutputs("")
+		require.NoError(t, err)
+		f := g.bazBudgetFinding(outputs)
+		require.NotNil(t, f)
+		return f.Unscoped
+	}
+	assert.Equal(t, []string{"go-code"}, names(t, "\n[rules]\nbaz_budget = 1\n"))
+	assert.Empty(t, names(t, "\n[rules]\nbaz_budget = 1\nbaz_unscoped = \"skip\"\n"))
+}
+
+// TestBaz_DedupeMax pins rules.baz_dedupe_max: a rule that would be copied into
+// more than K directories collapses to the directory covering all of them, up to
+// the repository root (the root AGENTS.md); at or below K the copies stay.
+func TestBaz_DedupeMax(t *testing.T) {
+	const (
+		threeRule = "---\npaths:\n  - armis/**/*.proto\n  - deploy/**/*.proto\n  - dev_tools/**/*.proto\n---\n# Proto\n\nPROTO_BODY\n"
+		siblings  = "---\npaths:\n  - svc/a/**/*.py\n  - svc/b/**/*.py\n  - svc/c/**/*.py\n---\n# Sib\n\nSIB_BODY\n"
+	)
+	run := func(t *testing.T, rule, extra string) string {
+		t.Helper()
+		root := t.TempDir()
+		writeAgentsMDProject(t, root, agentsMDConfig([]string{"claude", "baz"}, "", extra))
+		writeAgentsMDFile(t, root, ".ai-rulez/rules/r.md", rule)
+		for _, d := range []string{"armis", "deploy", "dev_tools", "svc/a", "svc/b", "svc/c"} {
+			require.NoError(t, os.MkdirAll(filepath.Join(root, filepath.FromSlash(d)), 0o755))
+		}
+		runAgentsMDGenerate(t, root)
+		return root
+	}
+	exists := func(root, rel string) bool {
+		_, err := os.Stat(filepath.Join(root, filepath.FromSlash(rel)))
+		return err == nil
+	}
+
+	t.Run("off keeps one copy per directory", func(t *testing.T) {
+		root := run(t, threeRule, "")
+		assert.True(t, exists(root, "armis/AGENTS.md") && exists(root, "deploy/AGENTS.md") && exists(root, "dev_tools/AGENTS.md"))
+	})
+	t.Run("above K with no shared parent places it in the root file", func(t *testing.T) {
+		root := run(t, threeRule, "\n[rules]\nbaz_dedupe_max = 2\n")
+		assert.False(t, exists(root, "armis/AGENTS.md"))
+		assert.Contains(t, readBazFile(t, root, "AGENTS.md"), "PROTO_BODY")
+	})
+	t.Run("at K keeps the copies", func(t *testing.T) {
+		root := run(t, threeRule, "\n[rules]\nbaz_dedupe_max = 3\n")
+		assert.True(t, exists(root, "armis/AGENTS.md"))
+		assert.NotContains(t, readBazFile(t, root, "AGENTS.md"), "PROTO_BODY")
+	})
+	t.Run("above K with a shared parent uses the parent without baz_dedupe", func(t *testing.T) {
+		root := run(t, siblings, "\n[rules]\nbaz_dedupe_max = 2\n")
+		assert.True(t, exists(root, "svc/AGENTS.md"))
+		assert.False(t, exists(root, "svc/a/AGENTS.md"))
+		assert.NotContains(t, readBazFile(t, root, "AGENTS.md"), "SIB_BODY")
+	})
+	t.Run("baz_unscoped skip forbids the root fallback", func(t *testing.T) {
+		root := run(t, threeRule, "\n[rules]\nbaz_dedupe_max = 2\nbaz_unscoped = \"skip\"\n")
+		assert.True(t, exists(root, "armis/AGENTS.md"), "copies stay rather than landing in the root file")
+		assert.NotContains(t, readBazFile(t, root, "AGENTS.md"), "PROTO_BODY")
+	})
+}

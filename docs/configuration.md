@@ -1313,7 +1313,10 @@ claude = "inline"
 - **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
 - **`rules.baz_scoped`**: `nested` (the default) writes the path-scoped rules and context of the `baz` preset to the `AGENTS.md` of the directory their globs point into; `root` keeps them in the root `AGENTS.md`. See [Baz](baz.md).
 - **`rules.baz_default`**: `all` (the default) nests every path-scoped item into the Baz directory files; `none` nests only items whose `targets` select `baz`, leaving the rest in the root `AGENTS.md`.
+- **`rules.baz.include`**: with `baz_default = "none"`, the rule and context names (list) that are nested for Baz in addition to the items whose `targets` select `baz`; `baz: true` in an item's frontmatter does the same. A `!baz` entry in `targets` always keeps an item out of the Baz nested files. See [Baz](baz.md#per-rule-opt-in-and-opt-out).
+- **`rules.baz_unscoped`**: `root` (the default) inlines a glob-activated item that cannot be nested (`**/*.go`, `**/BUILD`, `.mcp.json`) into the root `AGENTS.md`; `skip` leaves it out of that file when `baz` is the only preset writing it. See [Baz](baz.md#path-scoped-rules-with-no-directory).
 - **`rules.baz_dedupe`**: `true` writes an item whose globs point into several sibling directories under one parent once, to that parent's `AGENTS.md`, instead of one copy per directory. Default `false`.
+- **`rules.baz_dedupe_max`**: when above `0`, an item that would be copied into more than that many directories is written once to the directory covering all of them, up to the repository root (the root `AGENTS.md`). Works without `baz_dedupe`; with `baz_unscoped = "skip"` the root fallback is not used and the copies stay. Default `0` (off).
 - **`rules.baz_budget`**: byte budget of the Baz `AGENTS.md` surface (root plus nested); `generate` warns when it is exceeded, naming the largest files. Default `0` (off).
 
 Set `mode = "inline"` to restore the pre-4.22.0 output. Per-tool output, fallbacks and caveats are in [Rules and native rules folders](rules.md).
