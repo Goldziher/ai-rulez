@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/includes"
@@ -371,12 +373,20 @@ func (r *runner) servedSkillSource(name string) string {
 	return "the configured delivery"
 }
 
+// loadSkillSpanRe matches a code span that is exactly a load_skill call naming a
+// skill, the form AR990 recommends, so the name inside it is not a static
+// pointer (#377).
+var loadSkillSpanRe = sync.OnceValue(func() *regexp.Regexp {
+	return regexp.MustCompile("`load_skill\\s+[\"']?[a-z][a-z0-9-]*[\"']?`")
+})
+
 // referencedNames returns the served skill names a line refers to, using the
 // same matcher as the reference check (AR301) plus the file-path forms
 // (skills/x, .claude/skills/x/SKILL.md). A served skill naming a sibling served
 // skill is not reported: only always-loaded content reaches this function.
 func referencedNames(l bodyLine, served map[string]bool) []string {
 	found := map[string]bool{}
+	l.Text = loadSkillSpanRe().ReplaceAllString(l.Text, " ")
 	for _, ref := range referenceNames(l) {
 		if ref.kind == kindSkill && served[strings.ToLower(ref.name)] {
 			found[ref.name] = true

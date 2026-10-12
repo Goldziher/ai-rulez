@@ -13,6 +13,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Fixed
 
 - **`generate` no longer leaves empty `.claude/agents`, `.claude/skills` and `.claude/rules` directories in roots without such content.** Output directories are now created only when a file is written into them, and empty ones an earlier run created are removed; a directory holding any file is never touched ([#379](https://github.com/Goldziher/ai-rulez/issues/379)).
+- **`AR990` no longer flags a single code span `load_skill <name>`.** That is the form its own message recommends; a bare name in backticks, a source path or another call form on the same line is still reported ([#377](https://github.com/Goldziher/ai-rulez/issues/377)).
 
 ## [5.0.5] - 2026-10-12
 

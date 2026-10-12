@@ -191,7 +191,7 @@ func registerRuledocsAdded(s *ruleSet) {
 			Good: "Regenerate with `ai-rulez generate`, then `ai-rulez lock`",
 		},
 		CodeServedReferencedStatically: {
-			Why:  "Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. The pointer forms are the ones AR301 reads plus the skills MCP calls (`load_skill x`, `get_skill x`, `read_skill_file x`); a `load_skill` call or a file path reaches the skill at runtime, but the name still sits in always-loaded content. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.",
+			Why:  "Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. The pointer forms are the ones AR301 reads plus the skills MCP calls (`get_skill x`, `read_skill_file x`, `load_skill(x)`). A single code span `load_skill <name>` is the recommended fix and is not reported. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.",
 			Bad:  "A rule saying \"run the `deploy` skill\", or an agent `skills: [deploy]`, when `deploy` is served",
 			Good: "Tell the agent to call `load_skill`/`find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree",
 		},
