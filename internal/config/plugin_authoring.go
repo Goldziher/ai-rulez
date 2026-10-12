@@ -1,8 +1,13 @@
 package config
 
 import (
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
+
+	toml "github.com/pelletier/go-toml/v2"
+	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/harnesslimits"
 )
@@ -61,10 +66,14 @@ type Author struct {
 // project. Skills, commands, and agents are NOT declared here: they come from
 // the existing ContentTree. This block only carries packaging metadata.
 type PluginAuthoring struct {
-	Name        string   `yaml:"name" json:"name" toml:"name"`
-	DisplayName string   `yaml:"display_name,omitempty" json:"display_name,omitempty" toml:"display_name,omitempty"` //nolint:tagliatelle
-	Description string   `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
-	Version     string   `yaml:"version" json:"version" toml:"version"`
+	Name        string `yaml:"name" json:"name" toml:"name"`
+	DisplayName string `yaml:"display_name,omitempty" json:"display_name,omitempty" toml:"display_name,omitempty"` //nolint:tagliatelle
+	Description string `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
+	Version     string `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
+	// VersionFrom is a project-relative manifest (package.json, pyproject.toml
+	// or Cargo.toml) whose declared version replaces Version. Mutually
+	// exclusive with Version.
+	VersionFrom string   `yaml:"version_from,omitempty" json:"version_from,omitempty" toml:"version_from,omitempty"` //nolint:tagliatelle
 	Author      *Author  `yaml:"author,omitempty" json:"author,omitempty" toml:"author,omitempty"`
 	Homepage    string   `yaml:"homepage,omitempty" json:"homepage,omitempty" toml:"homepage,omitempty"`
 	Repository  string   `yaml:"repository,omitempty" json:"repository,omitempty" toml:"repository,omitempty"`
@@ -90,12 +99,27 @@ type PluginAuthoring struct {
 	// shipped to consumers of the bundle.
 	IncludeEvals bool `yaml:"include_evals,omitempty" json:"include_evals,omitempty" toml:"include_evals,omitempty"` //nolint:tagliatelle
 
+	// ProvenanceHeaders writes the "AI-RULEZ :: GENERATED FILE" header into
+	// bundled Markdown/JS/TS/PY outputs. Defaults to true; set false to write
+	// those outputs byte-identical to their sources. The provenance sidecar
+	// still records every output's content hash either way.
+	ProvenanceHeaders *bool `yaml:"provenance_headers,omitempty" json:"provenance_headers,omitempty" toml:"provenance_headers,omitempty"` //nolint:tagliatelle
+
 	// Include lists globs (relative to the plugin's content root) of arbitrary
 	// files copied verbatim into the Agent Plugins package, keeping their
 	// relative path. It is how a `./`-relative MCP command can point at a
 	// launcher the package ships (Agent Plugins §4.2, §7.2.1). Empty keeps the
 	// package to plugin.json, mcp.json and skills/.
 	Include []string `yaml:"include,omitempty" json:"include,omitempty" toml:"include,omitempty"`
+
+	// SharedResources lists directories (relative to the plugin's content root)
+	// whose files are copied into every bundled skill, at
+	// <skill>/<directory>/... So a skill keeps the reference docs and templates
+	// it links to once it is installed on its own. A relative SKILL.md link that
+	// climbs to the shared directory (../../references/x.md) is rewritten to the
+	// copy (references/x.md). A name clash with a file the skill already has is
+	// an error. Empty copies nothing.
+	SharedResources []string `yaml:"shared_resources,omitempty" json:"shared_resources,omitempty" toml:"shared_resources,omitempty"` //nolint:tagliatelle
 
 	// Spec is the Agent Plugins version the agent-plugins, copilot and root-layout
 	// codex bundles follow: "1.0.0" (the default) or "1.1.0". plugin.json and
@@ -148,6 +172,9 @@ type PluginAuthoring struct {
 
 	// Hermes holds Hermes-Agent-specific packaging fields.
 	Hermes *HermesExtras `yaml:"hermes,omitempty" json:"hermes,omitempty" toml:"hermes,omitempty"`
+
+	// Pi holds Pi-package-specific packaging fields.
+	Pi *PiExtras `yaml:"pi,omitempty" json:"pi,omitempty" toml:"pi,omitempty"`
 }
 
 // PluginMCPLaunch is a bundled MCP server launch declaration for a plugin. For
@@ -383,6 +410,155 @@ type HermesExtras struct {
 	// Dependencies are PEP 508 requirements installed with the Hermes plugin.
 	// Empty leaves both the wheel and project plugin dependency-free.
 	Dependencies []string `yaml:"dependencies,omitempty" json:"dependencies,omitempty" toml:"dependencies,omitempty"`
+}
+
+// Pi package_json modes.
+const (
+	// PiPackageJSONGenerate writes the root package.json from the plugin
+	// metadata, replacing any existing file (the default).
+	PiPackageJSONGenerate = "generate"
+	// PiPackageJSONMerge updates only the keys ai-rulez owns in an existing root
+	// package.json and keeps every other key.
+	PiPackageJSONMerge = "merge"
+)
+
+// DefaultPiSkillsDir is where the Pi runtime writes bundled skills when
+// [plugin.pi] skills_dir is unset.
+const DefaultPiSkillsDir = ".pi/skills"
+
+// PiExtras holds Pi-package-specific packaging fields.
+type PiExtras struct {
+	// SkillsDir is the directory each bundled skill is written to, relative to
+	// the project root. Empty uses DefaultPiSkillsDir (".pi/skills"); set it to
+	// "skills" to reuse the tree the other runtimes write, so a skill is written
+	// once and Pi points at the same copy.
+	SkillsDir string `yaml:"skills_dir,omitempty" json:"skills_dir,omitempty" toml:"skills_dir,omitempty"` //nolint:tagliatelle
+	// PackageJSON is PiPackageJSONGenerate (default) to write the root
+	// package.json from the plugin metadata, or PiPackageJSONMerge to update
+	// only the keys ai-rulez owns and keep every other key.
+	PackageJSON string `yaml:"package_json,omitempty" json:"package_json,omitempty" toml:"package_json,omitempty"` //nolint:tagliatelle
+}
+
+// ResolvedSkillsDir returns the configured Pi skills directory or the default.
+// Safe on a nil receiver.
+func (e *PiExtras) ResolvedSkillsDir() string {
+	if e == nil || e.SkillsDir == "" {
+		return DefaultPiSkillsDir
+	}
+	return filepath.ToSlash(filepath.Clean(filepath.FromSlash(e.SkillsDir)))
+}
+
+// ResolvedPackageJSON returns the configured package_json mode or the default.
+// Safe on a nil receiver.
+func (e *PiExtras) ResolvedPackageJSON() string {
+	if e == nil || e.PackageJSON == "" {
+		return PiPackageJSONGenerate
+	}
+	return e.PackageJSON
+}
+
+// MergesPackageJSON reports whether the Pi runtime merges the root package.json
+// instead of generating it. Safe on a nil receiver.
+func (e *PiExtras) MergesPackageJSON() bool {
+	return e != nil && e.PackageJSON == PiPackageJSONMerge
+}
+
+// Validate checks the [plugin.pi] block. Safe on a nil receiver.
+func (e *PiExtras) Validate() error {
+	if e == nil {
+		return nil
+	}
+	switch e.PackageJSON {
+	case "", PiPackageJSONGenerate, PiPackageJSONMerge:
+	default:
+		return oops.
+			With("field", "plugin.pi.package_json").
+			With("value", e.PackageJSON).
+			Hint("Use \"generate\" (default) or \"merge\"").
+			Errorf("plugin.pi.package_json has an unknown value %q", e.PackageJSON)
+	}
+	if e.SkillsDir != "" && isUnsafeProjectPath(e.SkillsDir) {
+		return oops.
+			With("field", "plugin.pi.skills_dir").
+			With("value", e.SkillsDir).
+			Hint("Use a project-relative directory that does not contain '..'").
+			Errorf("plugin.pi.skills_dir is not a safe project path: %q", e.SkillsDir)
+	}
+	return nil
+}
+
+// PluginContentRootDir resolves the directory [plugin] shared_resources and
+// include globs are relative to: content_root when set (under sourceDir),
+// otherwise the config directory, otherwise sourceDir. Safe on a nil receiver.
+func (p *PluginAuthoring) PluginContentRootDir(cfg *Config, sourceDir string) string {
+	if p != nil && p.ContentRoot != "" {
+		return filepath.Join(sourceDir, p.ContentRoot)
+	}
+	if cfg != nil && cfg.ConfigDir != "" {
+		return cfg.ConfigDir
+	}
+	return sourceDir
+}
+
+// SharedResource is a resolved [plugin] shared_resources directory: its base
+// name (the subdirectory copied into every skill) and its absolute source
+// directory.
+type SharedResource struct {
+	Name string
+	Dir  string
+}
+
+// ResolveSharedResources resolves the [plugin] shared_resources directories
+// against the plugin content root. Each entry must be a safe project-relative
+// directory that exists: a missing, non-directory or escaping entry is an error,
+// because the bundle would otherwise silently ship skills with broken links. Safe
+// on a nil receiver.
+func (p *PluginAuthoring) ResolveSharedResources(cfg *Config) ([]SharedResource, error) {
+	if p == nil || len(p.SharedResources) == 0 {
+		return nil, nil
+	}
+	sourceDir := ""
+	if cfg != nil {
+		sourceDir = cfg.BaseDir
+	}
+	root := p.PluginContentRootDir(cfg, sourceDir)
+	resources := make([]SharedResource, 0, len(p.SharedResources))
+	seen := make(map[string]bool, len(p.SharedResources))
+	for _, entry := range p.SharedResources {
+		trimmed := strings.TrimSuffix(strings.TrimSpace(filepath.ToSlash(entry)), "/")
+		if trimmed == "" || trimmed == "." || isUnsafeProjectPath(trimmed) {
+			return nil, oops.
+				With("field", "plugin.shared_resources").
+				With("value", entry).
+				Hint("Use a directory relative to the plugin's content root that does not contain '..'").
+				Errorf("plugin shared_resources entry is not a safe directory: %q", entry)
+		}
+		name := filepath.Base(trimmed)
+		if seen[name] {
+			return nil, oops.
+				With("field", "plugin.shared_resources").
+				With("value", entry).
+				Errorf("plugin shared_resources lists duplicate directory name %q", name)
+		}
+		seen[name] = true
+		dir := filepath.Join(root, filepath.FromSlash(trimmed))
+		info, err := os.Stat(dir)
+		if err != nil {
+			return nil, oops.
+				With("field", "plugin.shared_resources").
+				With("path", dir).
+				Hint("Create the directory or remove it from shared_resources").
+				Wrapf(err, "plugin shared_resources directory not found: %q", entry)
+		}
+		if !info.IsDir() {
+			return nil, oops.
+				With("field", "plugin.shared_resources").
+				With("path", dir).
+				Errorf("plugin shared_resources entry is not a directory: %q", entry)
+		}
+		resources = append(resources, SharedResource{Name: name, Dir: dir})
+	}
+	return resources, nil
 }
 
 // MarketplaceAuthoring describes the marketplace index emitted for a plugin (or
@@ -657,6 +833,130 @@ func (p *PluginAuthoring) ResolvedRuntimes() []string {
 		return AllPluginRuntimes
 	}
 	return p.Runtimes
+}
+
+// WritesProvenanceHeaders reports whether bundled comment-safe outputs carry the
+// AI-RULEZ generated-file header. It defaults to true, so only an explicit false
+// turns the headers off. Safe on a nil receiver.
+func (p *PluginAuthoring) WritesProvenanceHeaders() bool {
+	return p == nil || p.ProvenanceHeaders == nil || *p.ProvenanceHeaders
+}
+
+// Supported version_from manifest file names, shared by the resolver and its
+// allowlist so the two can never drift.
+const (
+	manifestPackageJSON   = "package.json"
+	manifestPyprojectTOML = "pyproject.toml"
+	manifestCargoTOML     = "Cargo.toml"
+)
+
+// versionFromKeys returns the key path that holds the version in a supported
+// version_from manifest: package.json -> version, pyproject.toml ->
+// project.version, Cargo.toml -> package.version. The second result is false for
+// an unsupported file name. It is a function, not a package variable, so no
+// mutable table is added to the package.
+func versionFromKeys(name string) ([]string, bool) {
+	switch name {
+	case manifestPackageJSON:
+		return []string{docKeyVersion}, true
+	case manifestPyprojectTOML:
+		return []string{"project", docKeyVersion}, true
+	case manifestCargoTOML:
+		return []string{"package", docKeyVersion}, true
+	}
+	return nil, false
+}
+
+// VersionFromSources lists, sorted, the file names version_from can read. It is
+// the allowlist the resolver and its error hints share.
+func VersionFromSources() []string {
+	return []string{manifestCargoTOML, manifestPackageJSON, manifestPyprojectTOML}
+}
+
+// ResolvedVersion returns the plugin version to publish: the literal Version, or
+// the value VersionFrom names. Safe on a nil receiver.
+func (p *PluginAuthoring) ResolvedVersion(baseDir string) (string, error) {
+	if p == nil {
+		return "", nil
+	}
+	if p.VersionFrom == "" {
+		return p.Version, nil
+	}
+	return ReadVersionFrom(baseDir, p.VersionFrom)
+}
+
+// ReadVersionFrom returns the version declared by versionFrom, a project-relative
+// path to a supported manifest. It errors when the path escapes the project, the
+// file name is unsupported, the file is missing, or it carries no version key.
+func ReadVersionFrom(baseDir, versionFrom string) (string, error) {
+	if isUnsafeProjectPath(versionFrom) {
+		return "", oops.
+			With("field", "plugin.version_from").
+			With("value", versionFrom).
+			Hint("Use a project-relative path that does not contain '..'").
+			Errorf("plugin version_from is not a safe project path: %q", versionFrom)
+	}
+	keys, ok := versionFromKeys(filepath.Base(filepath.FromSlash(versionFrom)))
+	if !ok {
+		return "", oops.
+			With("field", "plugin.version_from").
+			With("value", versionFrom).
+			Hint("Supported version_from files: "+strings.Join(VersionFromSources(), ", ")).
+			Errorf("plugin version_from names an unsupported file: %q", versionFrom)
+	}
+	path := filepath.Join(baseDir, filepath.FromSlash(versionFrom))
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", oops.
+			With("field", "plugin.version_from").
+			With("path", path).
+			Hint("Point version_from at a manifest committed to the project").
+			Wrapf(err, "plugin version_from file not found: %q", versionFrom)
+	}
+	version, found, err := versionFromDocument(data, versionFrom, keys)
+	if err != nil {
+		return "", err
+	}
+	if !found || strings.TrimSpace(version) == "" {
+		return "", oops.
+			With("field", "plugin.version_from").
+			With("path", path).
+			With("key", strings.Join(keys, ".")).
+			Hint("Set the version key in the manifest, or use version = \"...\" instead").
+			Errorf("plugin version_from %q has no %s", versionFrom, strings.Join(keys, "."))
+	}
+	return version, nil
+}
+
+// versionFromDocument decodes a supported manifest and returns the string at the
+// dotted key path. A malformed document is reported; a missing key is not found.
+func versionFromDocument(data []byte, versionFrom string, keys []string) (version string, found bool, err error) {
+	document := map[string]any{}
+	if strings.EqualFold(filepath.Ext(versionFrom), ".json") {
+		err = json.Unmarshal(data, &document)
+	} else {
+		err = toml.Unmarshal(data, &document)
+	}
+	if err != nil {
+		return "", false, oops.
+			With("field", "plugin.version_from").
+			With("value", versionFrom).
+			Wrapf(err, "plugin version_from is not parseable: %q", versionFrom)
+	}
+	var current any = document
+	for _, key := range keys {
+		table, ok := current.(map[string]any)
+		if !ok {
+			return "", false, nil
+		}
+		value, present := table[key]
+		if !present {
+			return "", false, nil
+		}
+		current = value
+	}
+	str, ok := current.(string)
+	return str, ok, nil
 }
 
 // DefaultCodexProjectDocMaxBytes is Codex's default project_doc_max_bytes: the

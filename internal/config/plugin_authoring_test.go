@@ -237,6 +237,181 @@ func TestValidatePluginAuthoring(t *testing.T) {
 	}
 }
 
+// TestPluginVersionFrom_SchemaAcceptsTheField guards the plugin.version_from
+// property in schema/ai-rules.schema.json: a config that declares a version
+// source instead of a literal version must not be flagged as an unknown key.
+func TestPluginVersionFrom_SchemaAcceptsTheField(t *testing.T) {
+	yamlConfig := `
+version: "5.0"
+name: basemind
+description: Code-map MCP server.
+plugin:
+  name: basemind
+  description: Full AI context layer over MCP.
+  version_from: package.json
+`
+	require.NoError(t, schema.ValidateWithSchema([]byte(yamlConfig)))
+}
+
+// TestPluginProvenanceHeaders_SchemaAcceptsTheField guards the
+// plugin.provenance_headers property in schema/ai-rules.schema.json.
+func TestPluginProvenanceHeaders_SchemaAcceptsTheField(t *testing.T) {
+	yamlConfig := `
+version: "5.0"
+name: basemind
+description: Code-map MCP server.
+plugin:
+  name: basemind
+  description: Full AI context layer over MCP.
+  version: 1.0.0
+  provenance_headers: false
+`
+	require.NoError(t, schema.ValidateWithSchema([]byte(yamlConfig)))
+
+	var decoded Config
+	require.NoError(t, yaml.Unmarshal([]byte(yamlConfig), &decoded))
+	require.NotNil(t, decoded.Plugin)
+	require.NotNil(t, decoded.Plugin.ProvenanceHeaders)
+	assert.False(t, *decoded.Plugin.ProvenanceHeaders)
+}
+
+// writeVersionSource writes a version manifest under dir, creating parents.
+func writeVersionSource(t *testing.T, dir, rel, content string) {
+	t.Helper()
+	path := filepath.Join(dir, filepath.FromSlash(rel))
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+}
+
+func TestPluginAuthoring_ResolvedVersion(t *testing.T) {
+	dir := t.TempDir()
+	writeVersionSource(t, dir, "package.json", `{"name":"p","version":"2.3.4"}`)
+	writeVersionSource(t, dir, "frontend/package.json", `{"version":"9.9.9"}`)
+	writeVersionSource(t, dir, "pyproject.toml", "[project]\nname = \"p\"\nversion = \"2.3.4\"\n")
+	writeVersionSource(t, dir, "Cargo.toml", "[package]\nname = \"p\"\nversion = \"2.3.4\"\n")
+	writeVersionSource(t, dir, "nokey/package.json", `{"name":"p"}`)
+
+	tests := []struct {
+		name        string
+		version     string
+		versionFrom string
+		want        string
+		wantErr     string
+	}{
+		{name: "literal version", version: "1.0.0", want: "1.0.0"},
+		{name: "package.json version", versionFrom: "package.json", want: "2.3.4"},
+		{name: "nested package.json", versionFrom: "frontend/package.json", want: "9.9.9"},
+		{name: "pyproject project.version", versionFrom: "pyproject.toml", want: "2.3.4"},
+		{name: "Cargo package.version", versionFrom: "Cargo.toml", want: "2.3.4"},
+		{name: "missing file", versionFrom: "nested/package.json", wantErr: "not found"},
+		{name: "unsupported file", versionFrom: "setup.cfg", wantErr: "unsupported file"},
+		{name: "missing key", versionFrom: "nokey/package.json", wantErr: "has no version"},
+		{name: "escaping path", versionFrom: "../package.json", wantErr: "not a safe project path"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			p := &PluginAuthoring{Name: "p", Version: tc.version, VersionFrom: tc.versionFrom}
+
+			// Act
+			got, err := p.ResolvedVersion(dir)
+
+			// Assert
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+
+	t.Run("nil receiver", func(t *testing.T) {
+		var p *PluginAuthoring
+		got, err := p.ResolvedVersion(dir)
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+}
+
+func TestValidatePluginAuthoring_VersionFrom(t *testing.T) {
+	dir := t.TempDir()
+	writeVersionSource(t, dir, "package.json", `{"name":"p","version":"1.2.3"}`)
+	writeVersionSource(t, dir, "short/package.json", `{"version":"1.2"}`)
+	writeVersionSource(t, dir, "nokey/package.json", `{"name":"p"}`)
+
+	base := func() *PluginAuthoring {
+		return &PluginAuthoring{Name: "p", Description: "d", Runtimes: []string{PluginRuntimeClaude}}
+	}
+	tests := []struct {
+		name    string
+		mutate  func(*PluginAuthoring)
+		wantErr string
+	}{
+		{name: "version_from resolves", mutate: func(p *PluginAuthoring) { p.VersionFrom = "package.json" }},
+		{name: "both version and version_from", mutate: func(p *PluginAuthoring) {
+			p.Version, p.VersionFrom = "1.0.0", "package.json"
+		}, wantErr: "both 'version' and 'version_from'"},
+		{name: "neither version nor version_from", mutate: func(*PluginAuthoring) {}, wantErr: "requires field 'version'"},
+		{name: "version_from missing file", mutate: func(p *PluginAuthoring) {
+			p.VersionFrom = "nested/package.json"
+		}, wantErr: "not found"},
+		{name: "version_from missing key", mutate: func(p *PluginAuthoring) {
+			p.VersionFrom = "nokey/package.json"
+		}, wantErr: "has no version"},
+		{name: "version_from not semver", mutate: func(p *PluginAuthoring) {
+			p.VersionFrom = "short/package.json"
+		}, wantErr: "invalid version"},
+		{name: "version_from unsupported file", mutate: func(p *PluginAuthoring) {
+			p.VersionFrom = "setup.cfg"
+		}, wantErr: "unsupported file"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			p := base()
+			tc.mutate(p)
+			cfg := &Config{BaseDir: dir, Plugin: p}
+
+			// Act
+			err := cfg.validatePluginAuthoring()
+
+			// Assert
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
+func TestPluginAuthoring_WritesProvenanceHeaders(t *testing.T) {
+	off, on := false, true
+	tests := []struct {
+		name string
+		ptr  *bool
+		want bool
+	}{
+		{name: "unset defaults true", ptr: nil, want: true},
+		{name: "explicit false", ptr: &off, want: false},
+		{name: "explicit true", ptr: &on, want: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &PluginAuthoring{ProvenanceHeaders: tc.ptr}
+			assert.Equal(t, tc.want, p.WritesProvenanceHeaders())
+		})
+	}
+
+	var p *PluginAuthoring
+	assert.True(t, p.WritesProvenanceHeaders())
+}
+
 func TestValidatePluginAuthoring_CodexRequiresCanonicalMetadata(t *testing.T) {
 	plugin := &PluginAuthoring{
 		Name:        "basemind",
@@ -659,4 +834,187 @@ func TestEmptyHookGroupWarnings(t *testing.T) {
 			assert.Equal(t, tt.want, events)
 		})
 	}
+}
+
+// TestLoadConfigTOML_PiAndSharedResources guards the [plugin.pi] sub-table and
+// the [plugin] shared_resources list: both decode and resolve their defaults.
+func TestLoadConfigTOML_PiAndSharedResources(t *testing.T) {
+	configFile := filepath.Join(t.TempDir(), "config.toml")
+	content := `
+version = "5.0"
+name = "basemind"
+description = "Code-map MCP server."
+
+[plugin]
+name = "basemind"
+description = "Full AI context layer over MCP."
+version = "1.0.0"
+shared_resources = ["references", "templates"]
+
+[plugin.pi]
+skills_dir = "skills"
+package_json = "merge"
+`
+	require.NoError(t, os.WriteFile(configFile, []byte(content), 0o644))
+
+	cfg, err := loadConfigTOML(osView(filepath.Dir(configFile)), configFile)
+	require.NoError(t, err)
+
+	require.NotNil(t, cfg.Plugin)
+	assert.Equal(t, []string{"references", "templates"}, cfg.Plugin.SharedResources)
+	require.NotNil(t, cfg.Plugin.Pi)
+	assert.Equal(t, "skills", cfg.Plugin.Pi.SkillsDir)
+	assert.Equal(t, "skills", cfg.Plugin.Pi.ResolvedSkillsDir())
+	assert.Equal(t, PiPackageJSONMerge, cfg.Plugin.Pi.ResolvedPackageJSON())
+	assert.True(t, cfg.Plugin.Pi.MergesPackageJSON())
+}
+
+// TestPiExtrasDefaults covers the resolved defaults of [plugin.pi] and the
+// nil-receiver behavior the generator relies on.
+func TestPiExtrasDefaults(t *testing.T) {
+	tests := []struct {
+		name        string
+		extras      *PiExtras
+		wantSkills  string
+		wantMode    string
+		wantMerging bool
+	}{
+		{name: "nil receiver", extras: nil, wantSkills: DefaultPiSkillsDir, wantMode: PiPackageJSONGenerate},
+		{name: "empty", extras: &PiExtras{}, wantSkills: DefaultPiSkillsDir, wantMode: PiPackageJSONGenerate},
+		{name: "explicit skills dir", extras: &PiExtras{SkillsDir: "skills"}, wantSkills: "skills", wantMode: PiPackageJSONGenerate},
+		{name: "explicit merge", extras: &PiExtras{PackageJSON: PiPackageJSONMerge}, wantSkills: DefaultPiSkillsDir, wantMode: PiPackageJSONMerge, wantMerging: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.wantSkills, tc.extras.ResolvedSkillsDir())
+			assert.Equal(t, tc.wantMode, tc.extras.ResolvedPackageJSON())
+			assert.Equal(t, tc.wantMerging, tc.extras.MergesPackageJSON())
+		})
+	}
+}
+
+func TestPiExtrasValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		extras  *PiExtras
+		wantErr string
+	}{
+		{name: "nil", extras: nil},
+		{name: "unset", extras: &PiExtras{}},
+		{name: "generate", extras: &PiExtras{PackageJSON: PiPackageJSONGenerate}},
+		{name: "merge", extras: &PiExtras{PackageJSON: PiPackageJSONMerge}},
+		{name: "relative skills dir", extras: &PiExtras{SkillsDir: "skills"}},
+		{name: "nested skills dir", extras: &PiExtras{SkillsDir: "vendor/skills"}},
+		{name: "unknown package_json", extras: &PiExtras{PackageJSON: "replace"}, wantErr: "unknown value"},
+		{name: "escaping skills dir", extras: &PiExtras{SkillsDir: "../skills"}, wantErr: "not a safe project path"},
+		{name: "absolute skills dir", extras: &PiExtras{SkillsDir: "/skills"}, wantErr: "not a safe project path"},
+		{name: "windows absolute skills dir", extras: &PiExtras{SkillsDir: `C:\skills`}, wantErr: "not a safe project path"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.extras.Validate()
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
+func TestResolveSharedResources(t *testing.T) {
+	project := t.TempDir()
+	contentRoot := filepath.Join(project, "plugin")
+	writeSharedDir(t, filepath.Join(contentRoot, "references"), map[string]string{"r.md": "ref"})
+	writeSharedDir(t, filepath.Join(contentRoot, "other", "references"), map[string]string{"r.md": "ref"})
+
+	fileEntry := filepath.Join(contentRoot, "notes.md")
+	require.NoError(t, os.WriteFile(fileEntry, []byte("x"), 0o644))
+
+	base := func(entries []string, contentRootValue string) (*PluginAuthoring, *Config) {
+		return &PluginAuthoring{SharedResources: entries, ContentRoot: contentRootValue},
+			&Config{BaseDir: project, ConfigDir: filepath.Join(project, ".ai-rulez")}
+	}
+
+	tests := []struct {
+		name    string
+		entries []string
+		root    string
+		want    []SharedResource
+		wantErr string
+	}{
+		{name: "empty", entries: nil},
+		{
+			name: "resolves against the content root", entries: []string{"references"}, root: "plugin",
+			want: []SharedResource{{Name: "references", Dir: filepath.Join(contentRoot, "references")}},
+		},
+		{
+			name: "trailing slash and nested entry", entries: []string{"references/"}, root: "plugin",
+			want: []SharedResource{{Name: "references", Dir: filepath.Join(contentRoot, "references")}},
+		},
+		{name: "missing directory", entries: []string{"absent"}, root: "plugin", wantErr: "not found"},
+		{name: "file not directory", entries: []string{"notes.md"}, root: "plugin", wantErr: "not a directory"},
+		{name: "escaping entry", entries: []string{"../references"}, root: "plugin", wantErr: "not a safe directory"},
+		{name: "absolute entry", entries: []string{"/references"}, root: "plugin", wantErr: "not a safe directory"},
+		{name: "duplicate base name", entries: []string{"references", "other/references"}, root: "plugin", wantErr: "duplicate directory name"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, cfg := base(tc.entries, tc.root)
+			got, err := p.ResolveSharedResources(cfg)
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+
+	t.Run("nil receiver", func(t *testing.T) {
+		var p *PluginAuthoring
+		got, err := p.ResolveSharedResources(&Config{BaseDir: project})
+		require.NoError(t, err)
+		assert.Nil(t, got)
+	})
+}
+
+// writeSharedDir writes files under dir, creating parents.
+func writeSharedDir(t *testing.T, dir string, files map[string]string) {
+	t.Helper()
+	for name, body := range files {
+		path := filepath.Join(dir, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(body), 0o644))
+	}
+}
+
+// TestPluginPiAndSharedResources_SchemaAcceptsTheFields guards the plugin.pi and
+// plugin.shared_resources properties in schema/ai-rules.schema.json.
+func TestPluginPiAndSharedResources_SchemaAcceptsTheFields(t *testing.T) {
+	yamlConfig := `
+version: "5.0"
+name: basemind
+description: Code-map MCP server.
+plugin:
+  name: basemind
+  description: Full AI context layer over MCP.
+  version: 1.0.0
+  runtimes: [pi]
+  shared_resources: [references, templates]
+  pi:
+    skills_dir: skills
+    package_json: merge
+`
+	require.NoError(t, schema.ValidateWithSchema([]byte(yamlConfig)))
+
+	var decoded Config
+	require.NoError(t, yaml.Unmarshal([]byte(yamlConfig), &decoded))
+	require.NotNil(t, decoded.Plugin)
+	assert.Equal(t, []string{"references", "templates"}, decoded.Plugin.SharedResources)
+	require.NotNil(t, decoded.Plugin.Pi)
+	assert.Equal(t, "skills", decoded.Plugin.Pi.SkillsDir)
+	assert.Equal(t, PiPackageJSONMerge, decoded.Plugin.Pi.PackageJSON)
 }
