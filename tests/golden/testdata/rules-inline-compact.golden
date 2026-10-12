@@ -190,7 +190,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 7787 2b3505f431c36b842aa8d8095bcf1aa4fee8e9f6106ce803ca2ebcff07de7831
+.ai-rulez/.generated-manifest.local.json file 0644 7787 4487c58b58dcfa3ccc53893a8ae7b63f5fa0064a46bc6a33e3bae60011555380
 >>>>
 {
   "version": "1",
@@ -204,7 +204,7 @@ echo review
         ],
         "elementSums": [
           "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "732b0e9acac41dfe79feee98b2f4e7c7e4b10137077d5281f2fa7141b15c170f"
+          "e976e4df194f94b46e9a6176c00bf24d507e287b37e6c5b5ba374ad20ea902d0"
         ]
       },
       {
@@ -292,7 +292,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "acd2686694bf5908d435a110d554df9f838df25bf8d609b989c5f3b47238921a"
+          "e6dba04e2bd9d724b13d6ffba794ee554f707356be075ebbeb07c6b47bb41737"
         ]
       },
       {
@@ -421,16 +421,16 @@ echo review
   "digests": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".claude/settings.json": "15d01db499d0aea785955631522c54e453cbf21670f87d68108ab067f998aec5",
+    ".claude/settings.json": "6ff9e99280ece8ecdc4819dd900687b538dc262c05fe32c846fb81a77d0cab0d",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "cbdf65e63be43fb7b456140690279e5e76143f5c8fb3db2ea4ee139a9046ebaa",
+    ".cursor/hooks.json": "ce19f5f5c2add37d60402742f0d08ea3f889a15d19e8103280101bf1d8a9b10f",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".github/hooks/ai-rulez.json": "038a6bf769a6fae1b5cf64c53c7f3f174967dab5253982f39a19a0d42a36590f",
+    ".github/hooks/ai-rulez.json": "87d745c340262993222cb6f07939cb488ad3d0d0443d4b9f9cddd5a15bf0a364",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".junie/mcp/mcp.json": "aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b",
@@ -1359,7 +1359,6 @@ Cut a release.
   }
 }
 <<<<
-.junie/rules/ dir 0755
 .junie/skills/ dir 0755
 .junie/skills/deployer/ dir 0755
 .junie/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626

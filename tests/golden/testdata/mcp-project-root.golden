@@ -7,19 +7,10 @@ exit: 0
 INFO  Generating with configuration profile=default
 INFO  Generation complete files=3
 --- project tree
-.agents/ dir 0755
-.agents/skills/ dir 0755
 .ai-rulez/ dir 0755
 .ai-rulez/config.toml file 0644 204 320ee96fddcbd836e1237574ee1139e2d7c7e76e207b8f5cb316c30a2611d536
-.claude/ dir 0755
-.claude/agents/ dir 0755
-.claude/rules/ dir 0755
-.claude/skills/ dir 0755
 .cursor/ dir 0755
-.cursor/agents/ dir 0755
-.cursor/commands/ dir 0755
 .cursor/mcp.json file 0644 142 df918292789796a7bce2eedc0ee9cadc1fd4cf7a953b7b2df9421632f1a78011
-.cursor/rules/ dir 0755
 .gitignore file 0644 280 bd975c1021f03081b4dbb2030bed7022db928cbd34ce7e6683d5064ccf61587f
 .mcp.json file 0644 316 9035dfcaf4f7980520a8b2ebf25107acf011bce706f5c29d87072645f9d86d97
 CLAUDE.md file 0644 371 c5322a73a67d6e8712f346c50503f3bc3472eaca8c11f2b77ce609b7a34521ef
@@ -32,19 +23,10 @@ exit: 0
 --- stderr
 INFO  Generated files are up to date roots=1
 --- project tree
-.agents/ dir 0755
-.agents/skills/ dir 0755
 .ai-rulez/ dir 0755
 .ai-rulez/config.toml file 0644 204 320ee96fddcbd836e1237574ee1139e2d7c7e76e207b8f5cb316c30a2611d536
-.claude/ dir 0755
-.claude/agents/ dir 0755
-.claude/rules/ dir 0755
-.claude/skills/ dir 0755
 .cursor/ dir 0755
-.cursor/agents/ dir 0755
-.cursor/commands/ dir 0755
 .cursor/mcp.json file 0644 142 df918292789796a7bce2eedc0ee9cadc1fd4cf7a953b7b2df9421632f1a78011
-.cursor/rules/ dir 0755
 .gitignore file 0644 280 bd975c1021f03081b4dbb2030bed7022db928cbd34ce7e6683d5064ccf61587f
 .mcp.json file 0644 316 9035dfcaf4f7980520a8b2ebf25107acf011bce706f5c29d87072645f9d86d97
 CLAUDE.md file 0644 371 c5322a73a67d6e8712f346c50503f3bc3472eaca8c11f2b77ce609b7a34521ef

@@ -38,7 +38,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .ai-rulez/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17edc0ae4be034c249
+plan-before.json file 0644 7016 c702c81986cb4c54c12b229c2f153680c5865103ccc455884b6b67d15f4779e4
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -53,18 +53,6 @@ exit: 0
   "profile": "default",
   "files": [
     {
-      "path": ".agents",
-      "action": "mkdir"
-    },
-    {
-      "path": ".agents/skills",
-      "action": "mkdir"
-    },
-    {
-      "path": ".agents/skills/deployer",
-      "action": "mkdir"
-    },
-    {
       "path": ".agents/skills/deployer/SKILL.md",
       "action": "write",
       "mode": "0644",
@@ -72,19 +60,11 @@ exit: 0
       "sha256": "25b53067496603275ea6531b904d47416404e8cfea2bff26e4aace51bd5ec45b"
     },
     {
-      "path": ".agents/skills/reviewer",
-      "action": "mkdir"
-    },
-    {
       "path": ".agents/skills/reviewer/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 333,
       "sha256": "24ebf9fe72ee57d14a0ddffee7cd12ec1d5199abd4ebe5bf73c0e2d3c9acccf9"
-    },
-    {
-      "path": ".agents/skills/reviewer/references",
-      "action": "mkdir"
     },
     {
       "path": ".agents/skills/reviewer/references/checklist.md",
@@ -95,24 +75,12 @@ exit: 0
       "raw": true
     },
     {
-      "path": ".agents/skills/reviewer/scripts",
-      "action": "mkdir"
-    },
-    {
       "path": ".agents/skills/reviewer/scripts/run.sh",
       "action": "write",
       "mode": "0644",
       "size": 22,
       "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
       "raw": true
-    },
-    {
-      "path": ".claude",
-      "action": "mkdir"
-    },
-    {
-      "path": ".claude/agents",
-      "action": "mkdir"
     },
     {
       "path": ".claude/agents/architect.md",
@@ -127,10 +95,6 @@ exit: 0
       "mode": "0644",
       "size": 83,
       "sha256": "9d5d01c8b9c995c875b47f15df8e9505f58e3408a8ab41c5b484ad384c5f4bd8"
-    },
-    {
-      "path": ".claude/rules",
-      "action": "mkdir"
     },
     {
       "path": ".claude/rules/always.md",
@@ -174,23 +138,11 @@ exit: 0
       "sensitive": true
     },
     {
-      "path": ".claude/skills",
-      "action": "mkdir"
-    },
-    {
-      "path": ".claude/skills/build",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/build/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 108,
       "sha256": "e159941adb5fe73100ea7826fde96f524d9f4ddff483dd1b8061d45c34c23085"
-    },
-    {
-      "path": ".claude/skills/deployer",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/deployer/SKILL.md",
@@ -200,19 +152,11 @@ exit: 0
       "sha256": "506f2b8ffac00651915f14e83c48fb5bdcfea945084321420ba6e81e64218fba"
     },
     {
-      "path": ".claude/skills/reviewer",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/reviewer/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 331,
       "sha256": "eefbf7f9c3e99f5c1db38970e0502902688cc6a2ec16466b215b29169ac68675"
-    },
-    {
-      "path": ".claude/skills/reviewer/references",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/reviewer/references/checklist.md",
@@ -223,20 +167,12 @@ exit: 0
       "raw": true
     },
     {
-      "path": ".claude/skills/reviewer/scripts",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/reviewer/scripts/run.sh",
       "action": "write",
       "mode": "0644",
       "size": 22,
       "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
       "raw": true
-    },
-    {
-      "path": ".claude/skills/ship",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/ship/SKILL.md",
@@ -246,19 +182,11 @@ exit: 0
       "sha256": "4a4aa065cd55a8f160e730dfdf9a4cd67db263249c6ce84e3f5f47ac66421390"
     },
     {
-      "path": ".cursor",
-      "action": "mkdir"
-    },
-    {
       "path": ".cursor/BUGBOT.md",
       "action": "write",
       "mode": "0600",
       "sensitive": true,
       "raw": true
-    },
-    {
-      "path": ".cursor/agents",
-      "action": "mkdir"
     },
     {
       "path": ".cursor/agents/architect.md",
@@ -281,10 +209,6 @@ exit: 0
       "sensitive": true
     },
     {
-      "path": ".cursor/commands",
-      "action": "mkdir"
-    },
-    {
       "path": ".cursor/commands/build.md",
       "action": "write",
       "mode": "0644",
@@ -303,17 +227,13 @@ exit: 0
       "action": "write",
       "mode": "0644",
       "size": 372,
-      "sha256": "cbdf65e63be43fb7b456140690279e5e76143f5c8fb3db2ea4ee139a9046ebaa"
+      "sha256": "ce19f5f5c2add37d60402742f0d08ea3f889a15d19e8103280101bf1d8a9b10f"
     },
     {
       "path": ".cursor/mcp.json",
       "action": "write",
       "mode": "0600",
       "sensitive": true
-    },
-    {
-      "path": ".cursor/rules",
-      "action": "mkdir"
     },
     {
       "path": ".cursor/rules/always.mdc",
@@ -413,7 +333,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/reviewer/scripts/ dir 0755
 + .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + .ai-rulez/.generated-manifest.json file 0644 2300 17ba699a66115b57d7345631c0d97ccf15d8f8d634cfb9a9546a5dc2db46a934
-+ .ai-rulez/.generated-manifest.local.json file 0644 5038 768f5d00c974d214b9cf76d10aa6c28f71da467f57635b33b978167db97fd0ae
++ .ai-rulez/.generated-manifest.local.json file 0644 5038 313ad0ce85029176153415cc389112a53e7ef74d33c56c8f4e42a49a8537283b
 + .claude/ dir 0755
 + .claude/agents/ dir 0755
 + .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
@@ -472,7 +392,7 @@ WARN  [permissions] ask rules are not generated for cursor: it has no ask list a
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
-+ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17edc0ae4be034c249
++ plan-after.json file 0644 7016 c702c81986cb4c54c12b229c2f153680c5865103ccc455884b6b67d15f4779e4
 --- home tree
 (no change)
 
@@ -628,7 +548,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 5038 768f5d00c974d214b9cf76d10aa6c28f71da467f57635b33b978167db97fd0ae
+.ai-rulez/.generated-manifest.local.json file 0644 5038 313ad0ce85029176153415cc389112a53e7ef74d33c56c8f4e42a49a8537283b
 >>>>
 {
   "version": "1",
@@ -642,7 +562,7 @@ echo review
         ],
         "elementSums": [
           "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "732b0e9acac41dfe79feee98b2f4e7c7e4b10137077d5281f2fa7141b15c170f"
+          "e976e4df194f94b46e9a6176c00bf24d507e287b37e6c5b5ba374ad20ea902d0"
         ]
       },
       {
@@ -730,7 +650,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "acd2686694bf5908d435a110d554df9f838df25bf8d609b989c5f3b47238921a"
+          "e6dba04e2bd9d724b13d6ffba794ee554f707356be075ebbeb07c6b47bb41737"
         ]
       },
       {
@@ -786,14 +706,14 @@ echo review
   "digests": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".claude/settings.json": "15d01db499d0aea785955631522c54e453cbf21670f87d68108ab067f998aec5",
+    ".claude/settings.json": "6ff9e99280ece8ecdc4819dd900687b538dc262c05fe32c846fb81a77d0cab0d",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "cbdf65e63be43fb7b456140690279e5e76143f5c8fb3db2ea4ee139a9046ebaa",
+    ".cursor/hooks.json": "ce19f5f5c2add37d60402742f0d08ea3f889a15d19e8103280101bf1d8a9b10f",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c"
   }
@@ -1564,25 +1484,13 @@ The project overview.
 
 Layers and boundaries.
 <<<<
-plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17edc0ae4be034c249
+plan-after.json file 0644 7016 c702c81986cb4c54c12b229c2f153680c5865103ccc455884b6b67d15f4779e4
 >>>>
 {
   "schema": 1,
   "renderer": "v8",
   "profile": "default",
   "files": [
-    {
-      "path": ".agents",
-      "action": "mkdir"
-    },
-    {
-      "path": ".agents/skills",
-      "action": "mkdir"
-    },
-    {
-      "path": ".agents/skills/deployer",
-      "action": "mkdir"
-    },
     {
       "path": ".agents/skills/deployer/SKILL.md",
       "action": "write",
@@ -1591,19 +1499,11 @@ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17e
       "sha256": "25b53067496603275ea6531b904d47416404e8cfea2bff26e4aace51bd5ec45b"
     },
     {
-      "path": ".agents/skills/reviewer",
-      "action": "mkdir"
-    },
-    {
       "path": ".agents/skills/reviewer/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 333,
       "sha256": "24ebf9fe72ee57d14a0ddffee7cd12ec1d5199abd4ebe5bf73c0e2d3c9acccf9"
-    },
-    {
-      "path": ".agents/skills/reviewer/references",
-      "action": "mkdir"
     },
     {
       "path": ".agents/skills/reviewer/references/checklist.md",
@@ -1614,24 +1514,12 @@ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17e
       "raw": true
     },
     {
-      "path": ".agents/skills/reviewer/scripts",
-      "action": "mkdir"
-    },
-    {
       "path": ".agents/skills/reviewer/scripts/run.sh",
       "action": "write",
       "mode": "0644",
       "size": 22,
       "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
       "raw": true
-    },
-    {
-      "path": ".claude",
-      "action": "mkdir"
-    },
-    {
-      "path": ".claude/agents",
-      "action": "mkdir"
     },
     {
       "path": ".claude/agents/architect.md",
@@ -1646,10 +1534,6 @@ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17e
       "mode": "0644",
       "size": 83,
       "sha256": "9d5d01c8b9c995c875b47f15df8e9505f58e3408a8ab41c5b484ad384c5f4bd8"
-    },
-    {
-      "path": ".claude/rules",
-      "action": "mkdir"
     },
     {
       "path": ".claude/rules/always.md",
@@ -1693,23 +1577,11 @@ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17e
       "sensitive": true
     },
     {
-      "path": ".claude/skills",
-      "action": "mkdir"
-    },
-    {
-      "path": ".claude/skills/build",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/build/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 108,
       "sha256": "e159941adb5fe73100ea7826fde96f524d9f4ddff483dd1b8061d45c34c23085"
-    },
-    {
-      "path": ".claude/skills/deployer",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/deployer/SKILL.md",
@@ -1719,19 +1591,11 @@ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17e
       "sha256": "506f2b8ffac00651915f14e83c48fb5bdcfea945084321420ba6e81e64218fba"
     },
     {
-      "path": ".claude/skills/reviewer",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/reviewer/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 331,
       "sha256": "eefbf7f9c3e99f5c1db38970e0502902688cc6a2ec16466b215b29169ac68675"
-    },
-    {
-      "path": ".claude/skills/reviewer/references",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/reviewer/references/checklist.md",
@@ -1742,20 +1606,12 @@ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17e
       "raw": true
     },
     {
-      "path": ".claude/skills/reviewer/scripts",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/reviewer/scripts/run.sh",
       "action": "write",
       "mode": "0644",
       "size": 22,
       "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
       "raw": true
-    },
-    {
-      "path": ".claude/skills/ship",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/ship/SKILL.md",
@@ -1765,19 +1621,11 @@ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17e
       "sha256": "4a4aa065cd55a8f160e730dfdf9a4cd67db263249c6ce84e3f5f47ac66421390"
     },
     {
-      "path": ".cursor",
-      "action": "mkdir"
-    },
-    {
       "path": ".cursor/BUGBOT.md",
       "action": "write",
       "mode": "0600",
       "sensitive": true,
       "raw": true
-    },
-    {
-      "path": ".cursor/agents",
-      "action": "mkdir"
     },
     {
       "path": ".cursor/agents/architect.md",
@@ -1800,10 +1648,6 @@ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17e
       "sensitive": true
     },
     {
-      "path": ".cursor/commands",
-      "action": "mkdir"
-    },
-    {
       "path": ".cursor/commands/build.md",
       "action": "write",
       "mode": "0644",
@@ -1822,17 +1666,13 @@ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17e
       "action": "write",
       "mode": "0644",
       "size": 372,
-      "sha256": "cbdf65e63be43fb7b456140690279e5e76143f5c8fb3db2ea4ee139a9046ebaa"
+      "sha256": "ce19f5f5c2add37d60402742f0d08ea3f889a15d19e8103280101bf1d8a9b10f"
     },
     {
       "path": ".cursor/mcp.json",
       "action": "write",
       "mode": "0600",
       "sensitive": true
-    },
-    {
-      "path": ".cursor/rules",
-      "action": "mkdir"
     },
     {
       "path": ".cursor/rules/always.mdc",
@@ -1900,25 +1740,13 @@ plan-after.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17e
   "removals": []
 }
 <<<<
-plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17edc0ae4be034c249
+plan-before.json file 0644 7016 c702c81986cb4c54c12b229c2f153680c5865103ccc455884b6b67d15f4779e4
 >>>>
 {
   "schema": 1,
   "renderer": "v8",
   "profile": "default",
   "files": [
-    {
-      "path": ".agents",
-      "action": "mkdir"
-    },
-    {
-      "path": ".agents/skills",
-      "action": "mkdir"
-    },
-    {
-      "path": ".agents/skills/deployer",
-      "action": "mkdir"
-    },
     {
       "path": ".agents/skills/deployer/SKILL.md",
       "action": "write",
@@ -1927,19 +1755,11 @@ plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17
       "sha256": "25b53067496603275ea6531b904d47416404e8cfea2bff26e4aace51bd5ec45b"
     },
     {
-      "path": ".agents/skills/reviewer",
-      "action": "mkdir"
-    },
-    {
       "path": ".agents/skills/reviewer/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 333,
       "sha256": "24ebf9fe72ee57d14a0ddffee7cd12ec1d5199abd4ebe5bf73c0e2d3c9acccf9"
-    },
-    {
-      "path": ".agents/skills/reviewer/references",
-      "action": "mkdir"
     },
     {
       "path": ".agents/skills/reviewer/references/checklist.md",
@@ -1950,24 +1770,12 @@ plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17
       "raw": true
     },
     {
-      "path": ".agents/skills/reviewer/scripts",
-      "action": "mkdir"
-    },
-    {
       "path": ".agents/skills/reviewer/scripts/run.sh",
       "action": "write",
       "mode": "0644",
       "size": 22,
       "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
       "raw": true
-    },
-    {
-      "path": ".claude",
-      "action": "mkdir"
-    },
-    {
-      "path": ".claude/agents",
-      "action": "mkdir"
     },
     {
       "path": ".claude/agents/architect.md",
@@ -1982,10 +1790,6 @@ plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17
       "mode": "0644",
       "size": 83,
       "sha256": "9d5d01c8b9c995c875b47f15df8e9505f58e3408a8ab41c5b484ad384c5f4bd8"
-    },
-    {
-      "path": ".claude/rules",
-      "action": "mkdir"
     },
     {
       "path": ".claude/rules/always.md",
@@ -2029,23 +1833,11 @@ plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17
       "sensitive": true
     },
     {
-      "path": ".claude/skills",
-      "action": "mkdir"
-    },
-    {
-      "path": ".claude/skills/build",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/build/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 108,
       "sha256": "e159941adb5fe73100ea7826fde96f524d9f4ddff483dd1b8061d45c34c23085"
-    },
-    {
-      "path": ".claude/skills/deployer",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/deployer/SKILL.md",
@@ -2055,19 +1847,11 @@ plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17
       "sha256": "506f2b8ffac00651915f14e83c48fb5bdcfea945084321420ba6e81e64218fba"
     },
     {
-      "path": ".claude/skills/reviewer",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/reviewer/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 331,
       "sha256": "eefbf7f9c3e99f5c1db38970e0502902688cc6a2ec16466b215b29169ac68675"
-    },
-    {
-      "path": ".claude/skills/reviewer/references",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/reviewer/references/checklist.md",
@@ -2078,20 +1862,12 @@ plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17
       "raw": true
     },
     {
-      "path": ".claude/skills/reviewer/scripts",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/reviewer/scripts/run.sh",
       "action": "write",
       "mode": "0644",
       "size": 22,
       "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
       "raw": true
-    },
-    {
-      "path": ".claude/skills/ship",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/ship/SKILL.md",
@@ -2101,19 +1877,11 @@ plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17
       "sha256": "4a4aa065cd55a8f160e730dfdf9a4cd67db263249c6ce84e3f5f47ac66421390"
     },
     {
-      "path": ".cursor",
-      "action": "mkdir"
-    },
-    {
       "path": ".cursor/BUGBOT.md",
       "action": "write",
       "mode": "0600",
       "sensitive": true,
       "raw": true
-    },
-    {
-      "path": ".cursor/agents",
-      "action": "mkdir"
     },
     {
       "path": ".cursor/agents/architect.md",
@@ -2136,10 +1904,6 @@ plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17
       "sensitive": true
     },
     {
-      "path": ".cursor/commands",
-      "action": "mkdir"
-    },
-    {
       "path": ".cursor/commands/build.md",
       "action": "write",
       "mode": "0644",
@@ -2158,17 +1922,13 @@ plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17
       "action": "write",
       "mode": "0644",
       "size": 372,
-      "sha256": "cbdf65e63be43fb7b456140690279e5e76143f5c8fb3db2ea4ee139a9046ebaa"
+      "sha256": "ce19f5f5c2add37d60402742f0d08ea3f889a15d19e8103280101bf1d8a9b10f"
     },
     {
       "path": ".cursor/mcp.json",
       "action": "write",
       "mode": "0600",
       "sensitive": true
-    },
-    {
-      "path": ".cursor/rules",
-      "action": "mkdir"
     },
     {
       "path": ".cursor/rules/always.mdc",
@@ -2236,21 +1996,13 @@ plan-before.json file 0644 8496 dd72bb603970d90b8a55d97f8d5e693eb6e942971fa82a17
   "removals": []
 }
 <<<<
-plan-stale.json file 0644 5579 2cf326e449ec6699515280f358d74976804666e8d9d35090d88cd127c58475ef
+plan-stale.json file 0644 4831 196c9abe79b5d33f89c5cfce6883fab76acb501feaa6dcdc4f4113aedfd90852
 >>>>
 {
   "schema": 1,
   "renderer": "v8",
   "profile": "default",
   "files": [
-    {
-      "path": ".claude",
-      "action": "mkdir"
-    },
-    {
-      "path": ".claude/agents",
-      "action": "mkdir"
-    },
     {
       "path": ".claude/agents/architect.md",
       "action": "write",
@@ -2264,10 +2016,6 @@ plan-stale.json file 0644 5579 2cf326e449ec6699515280f358d74976804666e8d9d35090d
       "mode": "0644",
       "size": 83,
       "sha256": "9d5d01c8b9c995c875b47f15df8e9505f58e3408a8ab41c5b484ad384c5f4bd8"
-    },
-    {
-      "path": ".claude/rules",
-      "action": "mkdir"
     },
     {
       "path": ".claude/rules/always.md",
@@ -2311,23 +2059,11 @@ plan-stale.json file 0644 5579 2cf326e449ec6699515280f358d74976804666e8d9d35090d
       "sensitive": true
     },
     {
-      "path": ".claude/skills",
-      "action": "mkdir"
-    },
-    {
-      "path": ".claude/skills/build",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/build/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 108,
       "sha256": "e159941adb5fe73100ea7826fde96f524d9f4ddff483dd1b8061d45c34c23085"
-    },
-    {
-      "path": ".claude/skills/deployer",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/deployer/SKILL.md",
@@ -2337,19 +2073,11 @@ plan-stale.json file 0644 5579 2cf326e449ec6699515280f358d74976804666e8d9d35090d
       "sha256": "506f2b8ffac00651915f14e83c48fb5bdcfea945084321420ba6e81e64218fba"
     },
     {
-      "path": ".claude/skills/reviewer",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/reviewer/SKILL.md",
       "action": "write",
       "mode": "0644",
       "size": 331,
       "sha256": "eefbf7f9c3e99f5c1db38970e0502902688cc6a2ec16466b215b29169ac68675"
-    },
-    {
-      "path": ".claude/skills/reviewer/references",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/reviewer/references/checklist.md",
@@ -2360,20 +2088,12 @@ plan-stale.json file 0644 5579 2cf326e449ec6699515280f358d74976804666e8d9d35090d
       "raw": true
     },
     {
-      "path": ".claude/skills/reviewer/scripts",
-      "action": "mkdir"
-    },
-    {
       "path": ".claude/skills/reviewer/scripts/run.sh",
       "action": "write",
       "mode": "0644",
       "size": 22,
       "sha256": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
       "raw": true
-    },
-    {
-      "path": ".claude/skills/ship",
-      "action": "mkdir"
     },
     {
       "path": ".claude/skills/ship/SKILL.md",

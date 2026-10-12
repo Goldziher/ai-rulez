@@ -110,7 +110,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 25178 a570d047adbb8b6b5cecea31e70ecffc032bb46b56a5620420a5758221dc8318
-.ai-rulez/.generated-manifest.local.json file 0644 41969 a70e0e214d1eea566104bde0574ddfaa24546e45b070a55f4d5aed5af7fd2d6d
+.ai-rulez/.generated-manifest.local.json file 0644 41969 a5c2368e74df20150bcddd7a6515b06aaab0e77f5a68a63ca83d8a13b89ebe81
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -834,7 +834,6 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .zcode/skills/reviewer/references/checklist.md file 0644 28 02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328
 .zcode/skills/reviewer/scripts/ dir 0755
 .zcode/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
-.zed/ dir 0755
 AGENTS.md file 0644 789 625473e36c682a95e0339179c22c821d94dc78496be3b54d523b398c34217c89
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 CODEBUDDY.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
@@ -2224,7 +2223,6 @@ Clean plan (profile default)
   remove file: kilo.jsonc
   remove file: opencode.json
   remove file: replit.md
-  remove dir (if empty): .zed
   remove dir (if empty): .zcode/skills/reviewer/scripts
   remove dir (if empty): .zcode/skills/reviewer/references
   remove dir (if empty): .zcode/skills/reviewer
@@ -2557,7 +2555,7 @@ WARN  Gemini CLI does not know Claude model aliases; omitting the model so the a
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
 WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model agent=architect model=sonnet hint=set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode
-Removed generated files: 416 files, 324 directories
+Removed generated files: 416 files, 323 directories
 --- project tree
 .ai-rulez/ dir 0755
 .ai-rulez/agents/ dir 0755

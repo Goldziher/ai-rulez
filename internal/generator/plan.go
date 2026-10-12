@@ -24,8 +24,6 @@ const (
 	// PlanMerge is a document shared with the consumer: ai-rulez writes only the
 	// keys it owns and preserves the rest.
 	PlanMerge = "merge"
-	// PlanMkdir is an empty directory ai-rulez creates.
-	PlanMkdir = "mkdir"
 )
 
 // Plan removal reasons.
@@ -67,9 +65,9 @@ type Plan struct {
 type PlanFile struct {
 	// Path is slash-separated and relative to the project root.
 	Path string `json:"path"`
-	// Action is PlanWrite, PlanMerge or PlanMkdir.
+	// Action is PlanWrite or PlanMerge.
 	Action string `json:"action"`
-	// Mode is the permission bits (octal string) of a file; empty for a directory.
+	// Mode is the permission bits (octal string) of a file.
 	Mode string `json:"mode,omitempty"`
 	// Size and SHA256 describe the content ai-rulez renders for the path, as
 	// the presets produce it: the Generated stamp and the Content-Hash and
@@ -169,10 +167,6 @@ func (g *Generator) mcpMayCarrySecret() bool {
 
 func (g *Generator) planFile(o *config.OutputFile) PlanFile {
 	f := PlanFile{Path: g.relSlash(g.absOutputPath(o.Path)), LocalOnly: o.LocalOnly, Sensitive: o.Sensitive, Raw: o.RawContent != nil}
-	if o.IsDir {
-		f.Action = PlanMkdir
-		return f
-	}
 	f.Action = PlanWrite
 	if o.PartiallyOwned {
 		f.Action = PlanMerge

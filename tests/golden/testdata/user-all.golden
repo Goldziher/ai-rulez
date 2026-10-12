@@ -441,7 +441,6 @@ INFO  User-level generation complete files=162
 + .augment/ dir 0755
 + .augment/agents/ dir 0755
 + .augment/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .augment/commands/ dir 0755
 + .augment/rules/ dir 0755
 + .augment/rules/mine.md file 0644 257 e4ba1de48b09c10365cf37b362cef38a6068a8d1b1b841de6c4a9cf2b236fc8d
 + .augment/settings.json file 0644 561 0365dfacad70f38e1ffeec207c8d438816fcfe7b24419ab4a6f4040bd8885292
@@ -450,7 +449,6 @@ INFO  User-level generation complete files=162
 + .augment/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .bob/ dir 0755
 + .bob/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
-+ .bob/commands/ dir 0755
 + .bob/rules/ dir 0755
 + .bob/rules/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 + .bob/settings/ dir 0755
@@ -476,7 +474,6 @@ INFO  User-level generation complete files=162
 + .codebuddy/CODEBUDDY.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .codebuddy/agents/ dir 0755
 + .codebuddy/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .codebuddy/commands/ dir 0755
 + .codebuddy/rules/ dir 0755
 + .codebuddy/rules/mine.md file 0644 256 d8a2265c65aa7ed0ca6d6129ee00be6663cf3391fafbaf05ddf4d6adafd087e9
 + .codebuddy/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
@@ -485,7 +482,6 @@ INFO  User-level generation complete files=162
 + .codebuddy/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .codewhale/ dir 0755
 + .codewhale/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
-+ .codewhale/commands/ dir 0755
 + .codewhale/skills/ dir 0755
 + .codewhale/skills/helper/ dir 0755
 + .codewhale/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
@@ -500,7 +496,6 @@ INFO  User-level generation complete files=162
 + .commandcode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .commandcode/agents/ dir 0755
 + .commandcode/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .commandcode/commands/ dir 0755
 + .commandcode/mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 + .commandcode/settings.json file 0644 302 7a25e2ebf831ac932802e34cf13ef4e0c62f4ff1d6a237a549d0f006713dc2fc
 + .commandcode/skills/ dir 0755
@@ -510,7 +505,7 @@ INFO  User-level generation complete files=162
 + .config/agents/skills/ dir 0755
 + .config/agents/skills/helper/ dir 0755
 + .config/agents/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
-+ .config/ai-rulez/.generated-manifest.json file 0644 11962 640d0b6e8a6824ed2257ccf40bc5bf86b9487fde96855172c40837521019e4b7
++ .config/ai-rulez/.generated-manifest.json file 0644 11405 e11fa3bc9e0223ef5dec57d5bf546ed264fec1f1028788667b2b6a1bbf89a07c
 + .config/ai-rulez/.generated-manifest.local.json file 0644 20235 7e8e57d94b21e2aced2d14eb2d0a758b570879846675c7b78af922ceac17798b
 + .config/amp/ dir 0755
 + .config/amp/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
@@ -536,7 +531,6 @@ INFO  User-level generation complete files=162
 + .config/kilo/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .config/kilo/agents/ dir 0755
 + .config/kilo/agents/buddy.md file 0644 139 5ce4d18d2a0cd1963ef73413c758b4b5f3e2d10f1e8704b233562f60722f58ee
-+ .config/kilo/commands/ dir 0755
 + .config/kilo/kilo.jsonc file 0644 117 5c792fd5f36121e8add38e5fc7da94b1028b75c545e2e2a92805abcc32dea80b
 + .config/kilo/plugins/ dir 0755
 + .config/kilo/plugins/ai-rulez-hooks.js file 0644 8335 9d4f85a750e3181f1cda99170ff12192a5d19f18bb65aa179fe79986b3fc40fd
@@ -544,7 +538,6 @@ INFO  User-level generation complete files=162
 + .config/mimocode/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .config/mimocode/agents/ dir 0755
 + .config/mimocode/agents/buddy.md file 0644 139 5ce4d18d2a0cd1963ef73413c758b4b5f3e2d10f1e8704b233562f60722f58ee
-+ .config/mimocode/commands/ dir 0755
 + .config/mimocode/mimocode.jsonc file 0644 104 66b56b5fbe2846254f89a538d3afd4e58f5365d1f67cfba385f8206cb7291538
 + .config/mimocode/plugins/ dir 0755
 + .config/mimocode/plugins/ai-rulez-hooks.js file 0644 8343 0c12d22a6c48443e2b37b4eee66a9ba33f330ab51f8627d0449a17cb36bca110
@@ -588,7 +581,6 @@ INFO  User-level generation complete files=162
 + .cursor/ dir 0755
 + .cursor/agents/ dir 0755
 + .cursor/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .cursor/commands/ dir 0755
 + .cursor/hooks.json file 0644 110 e9a380a5c6bdb9ce11e590ccb2dfa562fa3c7b12802d51360212e768fcf38584
 + .deepagents/ dir 0755
 + .deepagents/agent/ dir 0755
@@ -607,7 +599,6 @@ INFO  User-level generation complete files=162
 + .dsh/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .factory/ dir 0755
 + .factory/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
-+ .factory/commands/ dir 0755
 + .factory/droids/ dir 0755
 + .factory/droids/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .factory/hooks.json file 0644 145 9961ee7e1de0d4605e8a4ad3426687c28a17336ee36b6acc04050df5bdc5fa6e
@@ -629,13 +620,11 @@ INFO  User-level generation complete files=162
 + .gitlab/ dir 0755
 + .gitlab/duo/ dir 0755
 + .gitlab/duo/chat-rules.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
-+ .gitlab/duo/commands/ dir 0755
 + .gitlab/duo/hooks.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .grok/ dir 0755
 + .grok/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .grok/agents/ dir 0755
 + .grok/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .grok/commands/ dir 0755
 + .grok/config.toml file 0644 110 568bcc840b23193cde397827caa35d7c320b8ba9b22b5e9ecfc1c82eb126b7da
 + .grok/hooks/ dir 0755
 + .grok/hooks/ai-rulez.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
@@ -653,7 +642,6 @@ INFO  User-level generation complete files=162
 + .junie/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .junie/agents/ dir 0755
 + .junie/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .junie/commands/ dir 0755
 + .junie/config.json file 0644 182 4402674604858f33f03380d1762371b5bcfee3e27a74a90ef3a7e52dec2f1924
 + .junie/skills/ dir 0755
 + .junie/skills/helper/ dir 0755
@@ -677,7 +665,6 @@ INFO  User-level generation complete files=162
 + .kiro/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .kiro/hooks/ dir 0755
 + .kiro/hooks/ai-rulez.json file 0644 208 11eb544c03951b1e960f159872deb200b73f99ca4efed6bbbc749f66bcf639a2
-+ .kiro/prompts/ dir 0755
 + .kiro/skills/ dir 0755
 + .kiro/skills/helper/ dir 0755
 + .kiro/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
@@ -687,7 +674,6 @@ INFO  User-level generation complete files=162
 + .letta/ dir 0755
 + .letta/agents/ dir 0755
 + .letta/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .letta/commands/ dir 0755
 + .letta/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
 + .letta/skills/ dir 0755
 + .letta/skills/helper/ dir 0755
@@ -697,7 +683,6 @@ INFO  User-level generation complete files=162
 + .omp/agent/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .omp/agent/agents/ dir 0755
 + .omp/agent/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .omp/agent/commands/ dir 0755
 + .omp/agent/config.yml file 0644 200 7fc55085fa9dd87cd60b15b5cb70722dcc7d5f0e1a86e2c3400aee0e44863306
 + .omp/agent/rules/ dir 0755
 + .omp/agent/rules/mine.md file 0644 258 7e1844d85e79f0fdb13a3d8a852327e5cfa6820a684acdc82aec126404f4b241
@@ -714,7 +699,6 @@ INFO  User-level generation complete files=162
 + .pi/agent/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .pi/agent/extensions/ dir 0755
 + .pi/agent/extensions/ai-rulez-hooks.ts file 0644 7925 5812828fe79fc856c8f372bbea25c620d39d6337e357990a3a7d64c52c6b2073
-+ .pi/agent/prompts/ dir 0755
 + .pi/agent/skills/ dir 0755
 + .pi/agent/skills/helper/ dir 0755
 + .pi/agent/skills/helper/SKILL.md file 0644 140 77e6dfdbe09e0e9ccd8aa08b3cd82c64c857358e9c6ca9de5405c829f4b0e4b9
@@ -722,7 +706,6 @@ INFO  User-level generation complete files=162
 + .qoder/AGENTS.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .qoder/agents/ dir 0755
 + .qoder/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .qoder/commands/ dir 0755
 + .qoder/rules/ dir 0755
 + .qoder/rules/mine.md file 0644 257 8ba5f03bd0ad69a816962c967731e40545b94bb920bef9fec8d13305fe93165e
 + .qoder/settings.json file 0644 473 d974075f0a3e2d56c0dcbd39f783d82cb17a05704b15ca2f821ffb66b84ff067
@@ -733,7 +716,6 @@ INFO  User-level generation complete files=162
 + .qwen/QWEN.md file 0644 420 444e5e55bc8a4750a7374617f67e434262a99ea0b6a8826f46f0628edc32c66a
 + .qwen/agents/ dir 0755
 + .qwen/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
-+ .qwen/commands/ dir 0755
 + .qwen/rules/ dir 0755
 + .qwen/rules/mine.md file 0644 230 5f47eedd7f90e4d974ca47e69c2b1f87f81668830180a96d5e0fe8d515a6a2f1
 + .qwen/settings.json file 0644 300 67058765bd5e153d639622ad524021007cb6aa4a5f90cf20e0b7bb1f80dc5ef7
@@ -742,7 +724,6 @@ INFO  User-level generation complete files=162
 + .qwen/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .reasonix/ dir 0755
 + .reasonix/REASONIX.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
-+ .reasonix/commands/ dir 0755
 + .reasonix/settings.json file 0644 94 9a1c39720a52146fbdaa7eb199514dcfec58f172aaa582a89e366753e9cdc4ea
 + .reasonix/skills/ dir 0755
 + .reasonix/skills/buddy/ dir 0755
@@ -750,7 +731,6 @@ INFO  User-level generation complete files=162
 + .reasonix/skills/helper/ dir 0755
 + .reasonix/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .roo/ dir 0755
-+ .roo/commands/ dir 0755
 + .roo/rules/ dir 0755
 + .roo/rules/AGENTS.md file 0644 476 634e1da92f2e9b4b9cb1a3c877438fae31058c3391b420905680994a5d256f4c
 + .roo/skills/ dir 0755
@@ -773,7 +753,6 @@ INFO  User-level generation complete files=162
 + .snowflake/cortex/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
 + .takt/ dir 0755
 + .takt/facets/ dir 0755
-+ .takt/facets/instructions/ dir 0755
 + .takt/facets/knowledge/ dir 0755
 + .takt/facets/knowledge/helper.md file 0644 9 9a384ec3eb055c11ba3d55833aa4d9e90b1fdcdcee10eee66f3d3c6516a94371
 + .takt/facets/personas/ dir 0755
@@ -801,7 +780,6 @@ INFO  User-level generation complete files=162
 + .zcode/agents/buddy.md file 0644 136 8010b520b49127d597b2fc385ac6a31f7b7d197b1272bbb1a8584e3ee509557c
 + .zcode/cli/ dir 0755
 + .zcode/cli/config.json file 0644 245 8fe1f632687ca113ba17ebbdb1209d8b773782d4d7a845eed98d16a90872287e
-+ .zcode/commands/ dir 0755
 + .zcode/skills/ dir 0755
 + .zcode/skills/helper/ dir 0755
 + .zcode/skills/helper/SKILL.md file 0644 138 2862b9655f0f308a4d85ffffc1207ae3b60a050082d82effa590f6f113231ed8
@@ -1317,7 +1295,7 @@ INFO  User-level generation complete files=215
 + .commandcode/skills/db/SKILL.md file 0644 127 79423e9f004dac1fa2246e789b7bfa8c9482e27c6ee280162cbeed577e1db430
 + .config/agents/skills/db/ dir 0755
 + .config/agents/skills/db/SKILL.md file 0644 129 1bf74ae55e5006557bc341eafa14490e3de4a9360deba3adc82c81d74f5725f7
-~ .config/ai-rulez/.generated-manifest.json file 0644 14835 5d0c9b15ce790eb34caa6de6aa24f55d63c823b5e7fb6025c33d8db910288bde
+~ .config/ai-rulez/.generated-manifest.json file 0644 14278 3762f61911b3541f9a87aa2a5d5abbaafb646059bcac86581ad04590978f9f30
 ~ .config/ai-rulez/.generated-manifest.local.json file 0644 20339 d70b81a304495faed16e2032aab803a15965ddb69d5a49e1279b67adc662272c
 ~ .config/amp/AGENTS.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
 ~ .config/crush/CRUSH.md file 0644 499 a966d175d24e030023e553b852015625cae6c6106d8600088c86839f6052c30c
@@ -1635,7 +1613,6 @@ Clean plan (profile default)
   remove dir (if empty): .zcode/skills/helper
   remove dir (if empty): .zcode/skills/db
   remove dir (if empty): .zcode/skills
-  remove dir (if empty): .zcode/commands
   remove dir (if empty): .zcode/cli
   remove dir (if empty): .zcode/agents
   remove dir (if empty): .zcode
@@ -1654,7 +1631,6 @@ Clean plan (profile default)
   remove dir (if empty): .takt/facets/policies
   remove dir (if empty): .takt/facets/personas
   remove dir (if empty): .takt/facets/knowledge
-  remove dir (if empty): .takt/facets/instructions
   remove dir (if empty): .takt/facets
   remove dir (if empty): .takt
   remove dir (if empty): .snowflake/cortex/skills/helper
@@ -1672,32 +1648,27 @@ Clean plan (profile default)
   remove dir (if empty): .roo/skills/db
   remove dir (if empty): .roo/skills
   remove dir (if empty): .roo/rules
-  remove dir (if empty): .roo/commands
   remove dir (if empty): .roo
   remove dir (if empty): .reasonix/skills/helper
   remove dir (if empty): .reasonix/skills/db
   remove dir (if empty): .reasonix/skills/buddy
   remove dir (if empty): .reasonix/skills
-  remove dir (if empty): .reasonix/commands
   remove dir (if empty): .reasonix
   remove dir (if empty): .qwen/skills/helper
   remove dir (if empty): .qwen/skills/db
   remove dir (if empty): .qwen/skills
   remove dir (if empty): .qwen/rules
-  remove dir (if empty): .qwen/commands
   remove dir (if empty): .qwen/agents
   remove dir (if empty): .qwen
   remove dir (if empty): .qoder/skills/helper
   remove dir (if empty): .qoder/skills/db
   remove dir (if empty): .qoder/skills
   remove dir (if empty): .qoder/rules
-  remove dir (if empty): .qoder/commands
   remove dir (if empty): .qoder/agents
   remove dir (if empty): .qoder
   remove dir (if empty): .pi/agent/skills/helper
   remove dir (if empty): .pi/agent/skills/db
   remove dir (if empty): .pi/agent/skills
-  remove dir (if empty): .pi/agent/prompts
   remove dir (if empty): .pi/agent/extensions
   remove dir (if empty): .pi/agent/agents
   remove dir (if empty): .pi/agent
@@ -1708,21 +1679,18 @@ Clean plan (profile default)
   remove dir (if empty): .omp/agent/skills/db
   remove dir (if empty): .omp/agent/skills
   remove dir (if empty): .omp/agent/rules
-  remove dir (if empty): .omp/agent/commands
   remove dir (if empty): .omp/agent/agents
   remove dir (if empty): .omp/agent
   remove dir (if empty): .omp
   remove dir (if empty): .letta/skills/helper
   remove dir (if empty): .letta/skills/db
   remove dir (if empty): .letta/skills
-  remove dir (if empty): .letta/commands
   remove dir (if empty): .letta/agents
   remove dir (if empty): .letta
   remove dir (if empty): .kiro/steering
   remove dir (if empty): .kiro/skills/helper
   remove dir (if empty): .kiro/skills/db
   remove dir (if empty): .kiro/skills
-  remove dir (if empty): .kiro/prompts
   remove dir (if empty): .kiro/hooks
   remove dir (if empty): .kiro/agents
   remove dir (if empty): .kiro
@@ -1739,7 +1707,6 @@ Clean plan (profile default)
   remove dir (if empty): .junie/skills/helper
   remove dir (if empty): .junie/skills/db
   remove dir (if empty): .junie/skills
-  remove dir (if empty): .junie/commands
   remove dir (if empty): .junie/agents
   remove dir (if empty): .junie
   remove dir (if empty): .hermes/skills/helper
@@ -1751,10 +1718,8 @@ Clean plan (profile default)
   remove dir (if empty): .grok/skills
   remove dir (if empty): .grok/rules
   remove dir (if empty): .grok/hooks
-  remove dir (if empty): .grok/commands
   remove dir (if empty): .grok/agents
   remove dir (if empty): .grok
-  remove dir (if empty): .gitlab/duo/commands
   remove dir (if empty): .gitlab/duo
   remove dir (if empty): .gitlab
   remove dir (if empty): .gemini/config/skills/helper
@@ -1768,7 +1733,6 @@ Clean plan (profile default)
   remove dir (if empty): .factory/skills/db
   remove dir (if empty): .factory/skills
   remove dir (if empty): .factory/droids
-  remove dir (if empty): .factory/commands
   remove dir (if empty): .factory
   remove dir (if empty): .dsh/skills/helper
   remove dir (if empty): .dsh/skills/db
@@ -1781,7 +1745,6 @@ Clean plan (profile default)
   remove dir (if empty): .deepagents/agent/agents
   remove dir (if empty): .deepagents/agent
   remove dir (if empty): .deepagents
-  remove dir (if empty): .cursor/commands
   remove dir (if empty): .cursor/agents
   remove dir (if empty): .cursor
   remove dir (if empty): .copilot/skills/helper
@@ -1810,11 +1773,9 @@ Clean plan (profile default)
   remove dir (if empty): .config/mimocode/skills/db
   remove dir (if empty): .config/mimocode/skills
   remove dir (if empty): .config/mimocode/plugins
-  remove dir (if empty): .config/mimocode/commands
   remove dir (if empty): .config/mimocode/agents
   remove dir (if empty): .config/mimocode
   remove dir (if empty): .config/kilo/plugins
-  remove dir (if empty): .config/kilo/commands
   remove dir (if empty): .config/kilo/agents
   remove dir (if empty): .config/kilo
   remove dir (if empty): .config/goose/agents
@@ -1837,7 +1798,6 @@ Clean plan (profile default)
   remove dir (if empty): .commandcode/skills/helper
   remove dir (if empty): .commandcode/skills/db
   remove dir (if empty): .commandcode/skills
-  remove dir (if empty): .commandcode/commands
   remove dir (if empty): .commandcode/agents
   remove dir (if empty): .commandcode
   remove dir (if empty): .codex/rules
@@ -1846,13 +1806,11 @@ Clean plan (profile default)
   remove dir (if empty): .codewhale/skills/helper
   remove dir (if empty): .codewhale/skills/db
   remove dir (if empty): .codewhale/skills
-  remove dir (if empty): .codewhale/commands
   remove dir (if empty): .codewhale
   remove dir (if empty): .codebuddy/skills/helper
   remove dir (if empty): .codebuddy/skills/db
   remove dir (if empty): .codebuddy/skills
   remove dir (if empty): .codebuddy/rules
-  remove dir (if empty): .codebuddy/commands
   remove dir (if empty): .codebuddy/agents
   remove dir (if empty): .codebuddy
   remove dir (if empty): .cline/skills/helper
@@ -1870,13 +1828,11 @@ Clean plan (profile default)
   remove dir (if empty): .bob/skills
   remove dir (if empty): .bob/settings
   remove dir (if empty): .bob/rules
-  remove dir (if empty): .bob/commands
   remove dir (if empty): .bob
   remove dir (if empty): .augment/skills/helper
   remove dir (if empty): .augment/skills/db
   remove dir (if empty): .augment/skills
   remove dir (if empty): .augment/rules
-  remove dir (if empty): .augment/commands
   remove dir (if empty): .augment/agents
   remove dir (if empty): .augment
   remove dir (if empty): .agents/skills/helper
@@ -2122,7 +2078,6 @@ Clean plan (profile default)
   remove dir (if empty): .zcode/skills/helper
   remove dir (if empty): .zcode/skills/db
   remove dir (if empty): .zcode/skills
-  remove dir (if empty): .zcode/commands
   remove dir (if empty): .zcode/cli
   remove dir (if empty): .zcode/agents
   remove dir (if empty): .zcode
@@ -2141,7 +2096,6 @@ Clean plan (profile default)
   remove dir (if empty): .takt/facets/policies
   remove dir (if empty): .takt/facets/personas
   remove dir (if empty): .takt/facets/knowledge
-  remove dir (if empty): .takt/facets/instructions
   remove dir (if empty): .takt/facets
   remove dir (if empty): .takt
   remove dir (if empty): .snowflake/cortex/skills/helper
@@ -2159,32 +2113,27 @@ Clean plan (profile default)
   remove dir (if empty): .roo/skills/db
   remove dir (if empty): .roo/skills
   remove dir (if empty): .roo/rules
-  remove dir (if empty): .roo/commands
   remove dir (if empty): .roo
   remove dir (if empty): .reasonix/skills/helper
   remove dir (if empty): .reasonix/skills/db
   remove dir (if empty): .reasonix/skills/buddy
   remove dir (if empty): .reasonix/skills
-  remove dir (if empty): .reasonix/commands
   remove dir (if empty): .reasonix
   remove dir (if empty): .qwen/skills/helper
   remove dir (if empty): .qwen/skills/db
   remove dir (if empty): .qwen/skills
   remove dir (if empty): .qwen/rules
-  remove dir (if empty): .qwen/commands
   remove dir (if empty): .qwen/agents
   remove dir (if empty): .qwen
   remove dir (if empty): .qoder/skills/helper
   remove dir (if empty): .qoder/skills/db
   remove dir (if empty): .qoder/skills
   remove dir (if empty): .qoder/rules
-  remove dir (if empty): .qoder/commands
   remove dir (if empty): .qoder/agents
   remove dir (if empty): .qoder
   remove dir (if empty): .pi/agent/skills/helper
   remove dir (if empty): .pi/agent/skills/db
   remove dir (if empty): .pi/agent/skills
-  remove dir (if empty): .pi/agent/prompts
   remove dir (if empty): .pi/agent/extensions
   remove dir (if empty): .pi/agent/agents
   remove dir (if empty): .pi/agent
@@ -2195,21 +2144,18 @@ Clean plan (profile default)
   remove dir (if empty): .omp/agent/skills/db
   remove dir (if empty): .omp/agent/skills
   remove dir (if empty): .omp/agent/rules
-  remove dir (if empty): .omp/agent/commands
   remove dir (if empty): .omp/agent/agents
   remove dir (if empty): .omp/agent
   remove dir (if empty): .omp
   remove dir (if empty): .letta/skills/helper
   remove dir (if empty): .letta/skills/db
   remove dir (if empty): .letta/skills
-  remove dir (if empty): .letta/commands
   remove dir (if empty): .letta/agents
   remove dir (if empty): .letta
   remove dir (if empty): .kiro/steering
   remove dir (if empty): .kiro/skills/helper
   remove dir (if empty): .kiro/skills/db
   remove dir (if empty): .kiro/skills
-  remove dir (if empty): .kiro/prompts
   remove dir (if empty): .kiro/hooks
   remove dir (if empty): .kiro/agents
   remove dir (if empty): .kiro
@@ -2226,7 +2172,6 @@ Clean plan (profile default)
   remove dir (if empty): .junie/skills/helper
   remove dir (if empty): .junie/skills/db
   remove dir (if empty): .junie/skills
-  remove dir (if empty): .junie/commands
   remove dir (if empty): .junie/agents
   remove dir (if empty): .junie
   remove dir (if empty): .hermes/skills/helper
@@ -2238,10 +2183,8 @@ Clean plan (profile default)
   remove dir (if empty): .grok/skills
   remove dir (if empty): .grok/rules
   remove dir (if empty): .grok/hooks
-  remove dir (if empty): .grok/commands
   remove dir (if empty): .grok/agents
   remove dir (if empty): .grok
-  remove dir (if empty): .gitlab/duo/commands
   remove dir (if empty): .gitlab/duo
   remove dir (if empty): .gitlab
   remove dir (if empty): .gemini/config/skills/helper
@@ -2255,7 +2198,6 @@ Clean plan (profile default)
   remove dir (if empty): .factory/skills/db
   remove dir (if empty): .factory/skills
   remove dir (if empty): .factory/droids
-  remove dir (if empty): .factory/commands
   remove dir (if empty): .factory
   remove dir (if empty): .dsh/skills/helper
   remove dir (if empty): .dsh/skills/db
@@ -2268,7 +2210,6 @@ Clean plan (profile default)
   remove dir (if empty): .deepagents/agent/agents
   remove dir (if empty): .deepagents/agent
   remove dir (if empty): .deepagents
-  remove dir (if empty): .cursor/commands
   remove dir (if empty): .cursor/agents
   remove dir (if empty): .cursor
   remove dir (if empty): .copilot/skills/helper
@@ -2297,11 +2238,9 @@ Clean plan (profile default)
   remove dir (if empty): .config/mimocode/skills/db
   remove dir (if empty): .config/mimocode/skills
   remove dir (if empty): .config/mimocode/plugins
-  remove dir (if empty): .config/mimocode/commands
   remove dir (if empty): .config/mimocode/agents
   remove dir (if empty): .config/mimocode
   remove dir (if empty): .config/kilo/plugins
-  remove dir (if empty): .config/kilo/commands
   remove dir (if empty): .config/kilo/agents
   remove dir (if empty): .config/kilo
   remove dir (if empty): .config/goose/agents
@@ -2324,7 +2263,6 @@ Clean plan (profile default)
   remove dir (if empty): .commandcode/skills/helper
   remove dir (if empty): .commandcode/skills/db
   remove dir (if empty): .commandcode/skills
-  remove dir (if empty): .commandcode/commands
   remove dir (if empty): .commandcode/agents
   remove dir (if empty): .commandcode
   remove dir (if empty): .codex/rules
@@ -2333,13 +2271,11 @@ Clean plan (profile default)
   remove dir (if empty): .codewhale/skills/helper
   remove dir (if empty): .codewhale/skills/db
   remove dir (if empty): .codewhale/skills
-  remove dir (if empty): .codewhale/commands
   remove dir (if empty): .codewhale
   remove dir (if empty): .codebuddy/skills/helper
   remove dir (if empty): .codebuddy/skills/db
   remove dir (if empty): .codebuddy/skills
   remove dir (if empty): .codebuddy/rules
-  remove dir (if empty): .codebuddy/commands
   remove dir (if empty): .codebuddy/agents
   remove dir (if empty): .codebuddy
   remove dir (if empty): .cline/skills/helper
@@ -2357,13 +2293,11 @@ Clean plan (profile default)
   remove dir (if empty): .bob/skills
   remove dir (if empty): .bob/settings
   remove dir (if empty): .bob/rules
-  remove dir (if empty): .bob/commands
   remove dir (if empty): .bob
   remove dir (if empty): .augment/skills/helper
   remove dir (if empty): .augment/skills/db
   remove dir (if empty): .augment/skills
   remove dir (if empty): .augment/rules
-  remove dir (if empty): .augment/commands
   remove dir (if empty): .augment/agents
   remove dir (if empty): .augment
   remove dir (if empty): .agents/skills/helper
@@ -2379,7 +2313,7 @@ Clean plan (profile default)
 WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 1 domain(s) and removes their outputs domains=backend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
 INFO  antigravity rule files disabled: the gemini preset also writes GEMINI.md, so all rules stay inline; set rules.mode_by_preset.antigravity to override
-Removed user-level generated files: 213 files, 258 directories
+Removed user-level generated files: 213 files, 236 directories
 --- project tree
 (no change)
 --- home tree

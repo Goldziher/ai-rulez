@@ -16,6 +16,7 @@ func TestRegexAccessorsCompile(t *testing.T) {
 		"alternativeRe":       alternativeRe,
 		"ambiguousLabelRe":    ambiguousLabelRe,
 		"ansiCSI":             ansiCSI,
+		"loadSkillSpanRe":     loadSkillSpanRe,
 		"ansiOSC":             ansiOSC,
 		"assignRe":            assignRe,
 		"atRefRe":             atRefRe,

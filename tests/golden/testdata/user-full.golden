@@ -198,7 +198,7 @@ prefix_rule(
 <<<<
 .config/ dir 0755
 .config/ai-rulez/ dir 0755
-.config/ai-rulez/.generated-manifest.json file 0644 1624 8d0d7015e9613a9e0e706962ea2274574a669a8119e3f472dc46522395fcdb68
+.config/ai-rulez/.generated-manifest.json file 0644 1600 23d58c0eaacf2c46dbe36d2627b95fc2da17f6c0abbf4d63527a2167162c4004
 >>>>
 {
   "version": "1",
@@ -257,7 +257,6 @@ prefix_rule(
     ".copilot/skills/helper",
     ".cursor",
     ".cursor/agents",
-    ".cursor/commands",
     ".gemini",
     ".gemini/agents"
   ]
@@ -902,7 +901,6 @@ name: buddy
 
 # Buddy
 <<<<
-.cursor/commands/ dir 0755
 .cursor/hooks.json file 0644 110 e9a380a5c6bdb9ce11e590ccb2dfa562fa3c7b12802d51360212e768fcf38584
 >>>>
 {
