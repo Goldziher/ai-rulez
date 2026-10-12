@@ -200,3 +200,40 @@ func TestValidateWarnsUnknownResourceDomain(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateWarnsWhenProfilesLeaveNoDefault(t *testing.T) {
+	const want = "defines no `default` profile"
+	tests := []struct {
+		name     string
+		profiles map[string][]string
+		def      string
+		domains  map[string]*Domain
+		warn     bool
+	}{
+		{name: "profiles without a default drop the domains", profiles: map[string][]string{"judge": {"review"}},
+			domains: map[string]*Domain{"billing": {Name: "billing"}}, warn: true},
+		{name: "a profile named default is honored", profiles: map[string][]string{"default": {"*"}},
+			domains: map[string]*Domain{"billing": {Name: "billing"}}},
+		{name: "a default setting is honored", profiles: map[string][]string{"judge": {"review"}}, def: "judge",
+			domains: map[string]*Domain{"billing": {Name: "billing"}}},
+		{name: "no profiles is quiet", domains: map[string]*Domain{"billing": {Name: "billing"}}},
+		{name: "only included domains is quiet", profiles: map[string][]string{"judge": {"review"}},
+			domains: map[string]*Domain{"inc": {Name: "inc", FromInclude: true}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := &testutil.LogRecorder{}
+			cfg := &Config{
+				Version: "5.0", Name: "p", Presets: []Preset{{BuiltIn: "claude"}},
+				Host: ambient.Host{Log: rec}, Profiles: tt.profiles, Default: tt.def,
+				Content: &ContentTree{Domains: tt.domains},
+			}
+			require.NoError(t, cfg.Validate())
+			if tt.warn {
+				assert.Contains(t, rec.String(), want)
+			} else {
+				assert.NotContains(t, rec.String(), want)
+			}
+		})
+	}
+}
