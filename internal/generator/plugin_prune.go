@@ -188,51 +188,95 @@ func obsoleteFilesError(items []pluginPrune) error {
 		Errorf("obsolete generated plugin file: %s", strings.Join(files, ", "))
 }
 
-// unrecordedSkillFiles lists, as absolute paths, the files and symlinks inside
-// each generated skill directory that the plan does not write. Such a file ships
+// unrecordedSkillFiles lists, as absolute paths, the files and symlinks the
+// plan does not write inside the skill trees of the bundle. Such a file ships
 // to everyone who installs the bundle, so generate removes it and verify
-// reports it. Only directories holding a planned SKILL.md are searched, so a
-// hand-made skill directory is never touched, and files the previous run
-// recorded as obsolete are left to the obsolete handling. Directories that
-// hold the plugin's own sources (the config directory and [plugin]
-// content_root) are skipped: a bundle written over its sources must not
-// delete authored files such as evals/.
+// reports it. By default only directories holding a planned SKILL.md are
+// searched, so a hand-made skill directory is never touched; with [plugin]
+// skills_dir_owned the whole skills directory (the parent of each generated
+// skill directory) is searched. Files the previous run recorded as obsolete are
+// left to the obsolete handling. Directories that hold the plugin's own sources
+// (the config directory and [plugin] content_root) are skipped: a bundle written
+// over its sources must not delete authored files such as evals/.
 func (g *Generator) unrecordedSkillFiles(expected []config.OutputFile, obsolete []pluginPrune) ([]string, error) {
-	planned := make(map[string]bool, len(expected))
-	var skillDirs []string
+	layout := g.skillLayout(expected, obsolete)
+	var extras []string
+	for _, dir := range layout.searchDirs() {
+		found, err := unplannedFiles(dir, layout.planned)
+		if err != nil {
+			return nil, err
+		}
+		extras = append(extras, found...)
+	}
+	slices.Sort(extras)
+	return slices.Compact(extras), nil
+}
+
+// skillLayout is where the generated skills of a plan live.
+type skillLayout struct {
+	planned    map[string]bool // every planned file and recorded obsolete file
+	skillDirs  []string        // directories holding a planned SKILL.md
+	ownedRoots []string        // skills directories declared owned; empty unless skills_dir_owned
+}
+
+// searchDirs lists the directories to search for unrecorded entries: the owned
+// skills directories, or else the generated skill directories.
+func (l skillLayout) searchDirs() []string {
+	if len(l.ownedRoots) > 0 {
+		return l.ownedRoots
+	}
+	return l.skillDirs
+}
+
+// keepDirs lists the directories removal of emptied directories stops at.
+func (l skillLayout) keepDirs() []string {
+	return append(slices.Clone(l.skillDirs), l.ownedRoots...)
+}
+
+func (g *Generator) skillLayout(expected []config.OutputFile, obsolete []pluginPrune) skillLayout {
+	layout := skillLayout{planned: make(map[string]bool, len(expected))}
+	owned := g.config.Plugin != nil && g.config.Plugin.SkillsDirOwned
+	base := filepath.Clean(g.config.BaseDir)
 	for _, output := range expected {
 		if output.IsDir {
 			continue
 		}
 		abs := filepath.Clean(g.absOutputPath(output.Path))
-		planned[abs] = true
-		if filepath.Base(abs) == "SKILL.md" && !g.isPluginSourcePath(abs) {
-			skillDirs = append(skillDirs, filepath.Dir(abs))
+		layout.planned[abs] = true
+		if filepath.Base(abs) != "SKILL.md" || g.isPluginSourcePath(abs) {
+			continue
+		}
+		skillDir := filepath.Dir(abs)
+		layout.skillDirs = append(layout.skillDirs, skillDir)
+		if root := filepath.Dir(skillDir); owned && root != base && isUnderBaseDir(base, root) {
+			layout.ownedRoots = append(layout.ownedRoots, root)
 		}
 	}
 	for _, item := range obsolete {
-		planned[filepath.Clean(item.Path)] = true
+		layout.planned[filepath.Clean(item.Path)] = true
 	}
-	var extras []string
-	for _, dir := range skillDirs {
-		err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				if errors.Is(walkErr, os.ErrNotExist) {
-					return nil
-				}
-				return oops.With("path", path).Wrapf(walkErr, "walk generated skill directory")
+	slices.Sort(layout.ownedRoots)
+	layout.ownedRoots = slices.Compact(layout.ownedRoots)
+	return layout
+}
+
+// unplannedFiles lists the files and symlinks under dir that planned does not
+// contain. A missing dir has none.
+func unplannedFiles(dir string, planned map[string]bool) ([]string, error) {
+	var found []string
+	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			if errors.Is(walkErr, os.ErrNotExist) {
+				return nil
 			}
-			if !entry.IsDir() && !planned[filepath.Clean(path)] {
-				extras = append(extras, filepath.Clean(path))
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
+			return oops.With("path", path).Wrapf(walkErr, "walk generated skill directory")
 		}
-	}
-	slices.Sort(extras)
-	return slices.Compact(extras), nil
+		if !entry.IsDir() && !planned[filepath.Clean(path)] {
+			found = append(found, filepath.Clean(path))
+		}
+		return nil
+	})
+	return found, err
 }
 
 // isPluginSourcePath reports whether path lies in the config directory or the
@@ -254,14 +298,16 @@ func (g *Generator) isPluginSourcePath(path string) bool {
 	return false
 }
 
-// removeUnrecordedSkillFiles deletes what unrecordedSkillFiles lists. A path
-// that crosses a symlink leaving the project is kept with a warning; a failed
-// removal is reported and does not stop the run.
+// removeUnrecordedSkillFiles deletes what unrecordedSkillFiles lists, then the
+// directories that leaves empty, deepest first. A path that crosses a symlink
+// leaving the project is kept with a warning; a failed removal is reported and
+// does not stop the run.
 func (g *Generator) removeUnrecordedSkillFiles(expected []config.OutputFile, obsolete []pluginPrune) error {
 	extras, err := g.unrecordedSkillFiles(expected, obsolete)
 	if err != nil {
 		return err
 	}
+	keep := g.skillLayout(expected, obsolete).keepDirs()
 	for _, path := range extras {
 		rel := filepath.ToSlash(g.convertToRelativePath(path))
 		if _, _, guardErr := g.guardWrite(path); guardErr != nil {
@@ -274,6 +320,20 @@ func (g *Generator) removeUnrecordedSkillFiles(expected []config.OutputFile, obs
 			continue
 		}
 		g.log().Info("Removed unrecorded file in a generated skill directory", "file", rel)
+		g.removeEmptyParents(filepath.Dir(path), keep)
 	}
 	return nil
+}
+
+// removeEmptyParents removes dir and then each parent that the removal left
+// empty, stopping at the project directory, at a keep directory, at a symlink
+// and at the first directory that still holds anything: os.Remove fails on a
+// non-empty directory, so content is never deleted.
+func (g *Generator) removeEmptyParents(dir string, keep []string) {
+	base := filepath.Clean(g.config.BaseDir)
+	for dir = filepath.Clean(dir); dir != base && isUnderBaseDir(base, dir) && !slices.Contains(keep, dir); dir = filepath.Dir(dir) {
+		if isSymlink(dir) || os.Remove(dir) != nil {
+			return
+		}
+	}
 }

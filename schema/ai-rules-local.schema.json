@@ -2604,13 +2604,13 @@
               "pattern": "^(@[a-z0-9~-][a-z0-9._~-]*/)?[a-z0-9~-][a-z0-9._~-]*$",
               "type": "string"
             },
+            "skills_dir": {
+              "description": "Directory each bundled skill is written to, relative to the project root. Default: .pi/skills. Set to \"skills\" to reuse the tree the other runtimes write and write each skill once.",
+              "type": "string"
+            },
             "skills_entry": {
               "description": "each (default) lists every skill directory in pi.skills and every file in files; directory writes the skills directory once (\"./skills\" in pi.skills, \"skills/\" in files).",
               "enum": ["each", "directory"],
-              "type": "string"
-            },
-            "skills_dir": {
-              "description": "Directory each bundled skill is written to, relative to the project root. Default: .pi/skills. Set to \"skills\" to reuse the tree the other runtimes write and write each skill once.",
               "type": "string"
             }
           },
@@ -2648,6 +2648,10 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "skills_dir_owned": {
+          "description": "Declare each skills directory the bundle writes fully owned: verify --plugin reports an entry it did not generate there as extra, and generate --plugin removes it. Default false: skill directories and files the bundle does not generate are never touched.",
+          "type": "boolean"
         },
         "spec": {
           "description": "Agent Plugins specification version of the agent-plugins, copilot and root-layout codex bundles. Default: 1.0.0.",
@@ -3284,14 +3288,14 @@
           "enum": ["all", "none"],
           "type": "string"
         },
-        "baz_scoped": {
-          "description": "Where the baz preset puts path-scoped rules and context. nested (default) writes them to the AGENTS.md of the directory their globs point into, which Baz scopes to that directory; root keeps them in the root AGENTS.md with an Applies to line.",
-          "enum": ["nested", "root"],
-          "type": "string"
-        },
         "baz_rest": {
           "description": "What the baz preset does with a glob-activated item it does not nest (unselected under baz_default = none, or excluded by `!baz`). root (default) leaves it inlined in the root AGENTS.md; skip leaves it out of that file when baz is the only preset writing it. Only applies with baz_scoped = nested.",
           "enum": ["root", "skip"],
+          "type": "string"
+        },
+        "baz_scoped": {
+          "description": "Where the baz preset puts path-scoped rules and context. nested (default) writes them to the AGENTS.md of the directory their globs point into, which Baz scopes to that directory; root keeps them in the root AGENTS.md with an Applies to line.",
+          "enum": ["nested", "root"],
           "type": "string"
         },
         "baz_unscoped": {

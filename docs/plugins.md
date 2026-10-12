@@ -652,6 +652,24 @@ or any parent directory of it is the link, and fails with an error naming the li
 never changed. `verify --plugin` reports a symlinked directory on an output path as drift of kind
 `symlink` too. Replace the link with a regular file or directory.
 
+When the bundle's skills directory (for example `skills/` or `.pi/skills`) holds nothing but the
+bundle, declare it owned:
+
+```toml
+[plugin]
+skills_dir_owned = true
+```
+
+The skills directory is then the parent of each generated skill directory, and everything in it the
+bundle does not generate is unrecorded: `verify --plugin` reports a skill directory left over from a
+rename, a hand-added one, or a stray file directly under it as drift of kind `extra`, and
+`generate --plugin` removes it. The default is `false`: a skill directory or file the bundle does
+not generate is never touched. A Pi `skills_dir` inside the config directory or `content_root` is
+rejected with `skills_dir_owned`, since that tree holds your sources.
+
+Whenever `generate --plugin` deletes an unrecorded file it also removes the directories that leaves
+empty, deepest first, and stops at the first directory that still holds anything.
+
 #### Linked git worktrees
 
 With `[claude.settings] manage = true` the generated `extraKnownMarketplaces` entry defaults to a
@@ -791,7 +809,7 @@ becomes a directory and file name in every runtime), `version` (required unless 
 `version_from` (project-relative manifest whose version replaces `version`: `package.json`,
 `pyproject.toml` or `Cargo.toml`), `display_name`, `description`, `homepage`,
 `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
-`tags`, `runtimes`, `spec` (Agent Plugins version, `1.0.0` or `1.1.0`), `include_domains`, `include_evals` (bundle eval cases, see [Evals](evals.md)), `content_root` (project-relative directory of plugin-only
+`tags`, `runtimes`, `skills_dir_owned` (declare the skills directory fully owned by the bundle), `spec` (Agent Plugins version, `1.0.0` or `1.1.0`), `include_domains`, `include_evals` (bundle eval cases, see [Evals](evals.md)), `content_root` (project-relative directory of plugin-only
 `skills/`, `commands/`, and `agents/`), `provenance_headers` (write the generated-file header into
 bundled Markdown/JS/TS/PY outputs; default `true`), `shared_resources` (directories relative to the
 content root copied into every bundled skill, see [Shared resources across skills](#shared-resources-across-skills)).

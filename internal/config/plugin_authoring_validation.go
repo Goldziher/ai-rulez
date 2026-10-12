@@ -48,6 +48,9 @@ func (c *Config) validatePluginAuthoring() error {
 	if err := validatePluginIncludes(p); err != nil {
 		return err
 	}
+	if err := validateSkillsDirOwned(p); err != nil {
+		return err
+	}
 	if err := validateHermesDependencies(p); err != nil {
 		return err
 	}
@@ -137,6 +140,29 @@ func validatePluginPaths(p *PluginAuthoring) error {
 		return oops.With("field", "plugin.hermes.source").With("value", p.Hermes.Source).
 			Hint("Use a project-relative Python file that does not contain '..'").
 			Errorf("plugin %q has an unsafe Hermes source", p.Name)
+	}
+	return nil
+}
+
+// validateSkillsDirOwned rejects skills_dir_owned when the Pi skills directory
+// is the authored source tree: the bundle would then delete the sources.
+func validateSkillsDirOwned(p *PluginAuthoring) error {
+	if !p.SkillsDirOwned || p.Pi == nil || p.Pi.SkillsDir == "" {
+		return nil
+	}
+	dir := p.Pi.ResolvedSkillsDir()
+	sources := []string{aiRulezDirName, altConfigDirName}
+	if p.ContentRoot != "" {
+		sources = append(sources, path.Clean(strings.ReplaceAll(p.ContentRoot, `\`, "/")))
+	}
+	for _, source := range sources {
+		if source == "." || dir == source || strings.HasPrefix(dir, source+"/") {
+			return oops.
+				With("field", "plugin.skills_dir_owned").
+				With("skills_dir", dir).
+				Hint("Point [plugin.pi] skills_dir at a generated directory such as \"skills\", or unset skills_dir_owned").
+				Errorf("plugin %q sets skills_dir_owned, but its Pi skills directory %q holds the authored sources", p.Name, dir)
+		}
 	}
 	return nil
 }
