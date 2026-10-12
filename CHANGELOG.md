@@ -9,6 +9,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Added
 
 - **`targets` accepts negations, and the `baz` preset has a per-rule opt-in.** `targets: ["!baz"]` excludes a rule from one preset (a negation always wins; a rule with only negations still goes everywhere else), `[rules.baz] include = [...]` and `baz: true` frontmatter opt rules in under `baz_default = "none"`, and the directory-target workaround is documented ([#366](https://github.com/Goldziher/ai-rulez/issues/366)).
+- **`[rules] baz_unscoped = "skip"` keeps directory-less path-scoped rules out of the root `AGENTS.md`.** A rule scoped by `**/*.go` or `**/BUILD` cannot be nested for Baz, so it was inlined into the root file that Claude also imports; `skip` drops it when `baz` is the only preset writing that file (a file shared with `codex` and the others keeps it). The default `"root"` is unchanged, and the `baz_budget` warning now names the inlined rules ([#365](https://github.com/Goldziher/ai-rulez/issues/365)).
 
 ## [5.0.3] - 2026-10-12
 

@@ -496,6 +496,12 @@ type RulesConfig struct {
 	// only items whose frontmatter `targets` name baz.
 	BazDefault string `yaml:"baz_default,omitempty" json:"baz_default,omitempty" toml:"baz_default,omitempty"` //nolint:tagliatelle
 
+	// BazUnscoped says what the baz preset does with a glob-activated item that
+	// cannot be nested because no glob names a directory (`**/*.go`, `**/BUILD`):
+	// "root" (the default) inlines it into the root AGENTS.md, "skip" leaves it
+	// out of that file when baz is its only writer.
+	BazUnscoped string `yaml:"baz_unscoped,omitempty" json:"baz_unscoped,omitempty" toml:"baz_unscoped,omitempty"` //nolint:tagliatelle
+
 	// BazDedupe, when true, writes a path-scoped item once into a shared parent
 	// AGENTS.md when its globs point into several directories under one parent,
 	// instead of a copy in each. Off by default so existing output is unchanged.
@@ -548,6 +554,21 @@ func (c *Config) BazScopedRules() string {
 		return c.Rules.BazScoped
 	}
 	return BazScopedNested
+}
+
+// Values of rules.baz_unscoped.
+const (
+	BazUnscopedRoot = "root"
+	BazUnscopedSkip = "skip"
+)
+
+// BazUnscopedRules returns what the baz preset does with a path-scoped item that
+// cannot be nested: BazUnscopedRoot unless rules.baz_unscoped says BazUnscopedSkip.
+func (c *Config) BazUnscopedRules() string {
+	if c != nil && c.Rules != nil && c.Rules.BazUnscoped != "" {
+		return c.Rules.BazUnscoped
+	}
+	return BazUnscopedRoot
 }
 
 // Values of rules.baz_default.
