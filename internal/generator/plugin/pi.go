@@ -38,6 +38,9 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if slices.Contains(m.Runtimes, config.PluginRuntimeOpenCode) {
 		name = openCodeName
 	}
+	if m.PiPackageName != "" {
+		name = m.PiPackageName
+	}
 	keywords := append([]string{}, m.Keywords...)
 	if !slices.Contains(keywords, "pi-package") {
 		keywords = append(keywords, "pi-package")
@@ -56,13 +59,17 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if err != nil {
 		return nil, err
 	}
+	resources := piResourcePaths(files, skillsDir)
+	if m.PiSkillsEntry == config.PiSkillsEntryDirectory {
+		files, resources.Skills = piDirectoryEntries(files, skillsDir, resources.Skills)
+	}
 	pkg, err := piPackageOutput(m, baseDir, piPackage{
 		Name: name, Version: m.Version, Description: m.Description, Author: m.Author,
 		Keywords: keywords,
 		Homepage: m.Homepage, Repository: openCodeRepository{Type: "git", URL: m.Repository},
 		License: m.License, PackageManager: m.PackageManager, Type: "module",
-		Files: append(files, "assets/", "README.md"),
-		Pi:    piResourcePaths(files, skillsDir),
+		Files: append(files, piExistingTopLevel(baseDir, payload)...),
+		Pi:    resources,
 	})
 	if err != nil {
 		return nil, err
@@ -71,6 +78,56 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		m.log().Warn("Pi packages bundle skills and prompts only; MCP servers, hooks, agents and statuslines are skipped")
 	}
 	return append([]config.OutputFile{pkg}, payload...), nil
+}
+
+// piDirectoryEntries collapses the skills directory to one files entry and one
+// pi.skills entry (skills_entry = "directory"). A directory with no skill writes
+// neither.
+func piDirectoryEntries(files []string, skillsDir string, skills []string) ([]string, []string) {
+	root := filepath.ToSlash(filepath.Clean(skillsDir))
+	prefix := root + "/"
+	kept := make([]string, 0, len(files))
+	collapsed := false
+	for _, file := range files {
+		if strings.HasPrefix(file, prefix) {
+			collapsed = true
+			continue
+		}
+		kept = append(kept, file)
+	}
+	if !collapsed {
+		return files, skills
+	}
+	kept = append(kept, prefix)
+	slices.Sort(kept)
+	return kept, []string{"./" + root}
+}
+
+// piExistingTopLevel returns the "assets/" and "README.md" files entries that
+// exist in the bundle: written by the payload or already present in baseDir.
+// A path that does not exist is left out so npm is not told to publish it.
+func piExistingTopLevel(baseDir string, payload []config.OutputFile) []string {
+	var entries []string
+	for _, name := range []string{"assets", "README.md"} {
+		exists := false
+		if _, err := os.Stat(filepath.Join(baseDir, name)); err == nil {
+			exists = true
+		}
+		for _, out := range payload {
+			rel, err := filepath.Rel(baseDir, out.Path)
+			if err == nil && (filepath.ToSlash(rel) == name || strings.HasPrefix(filepath.ToSlash(rel), name+"/")) {
+				exists = true
+			}
+		}
+		if !exists {
+			continue
+		}
+		if name == "assets" {
+			name = "assets/"
+		}
+		entries = append(entries, name)
+	}
+	return entries
 }
 
 // Root package.json keys the Pi runtime owns in package_json = "merge" mode.
@@ -116,7 +173,11 @@ func piPackageOutput(m *Manifest, baseDir string, pkg piPackage) (config.OutputF
 	case !os.IsNotExist(err):
 		return config.OutputFile{}, oops.With("path", path).Wrapf(err, "read the existing root package.json")
 	}
-	for key, value := range piOwnedFields(pkg) {
+	fields := piOwnedFields(pkg)
+	if authored, ok := merged[piKeyName].(string); ok && authored != "" && m.PiPackageName == "" {
+		delete(fields, piKeyName)
+	}
+	for key, value := range fields {
 		merged[key] = value
 	}
 	return jsonOutput(path, merged)

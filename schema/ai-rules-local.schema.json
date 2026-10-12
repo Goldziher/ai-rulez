@@ -2594,8 +2594,19 @@
           "description": "Pi package layout.",
           "properties": {
             "package_json": {
-              "description": "generate (default) writes the root package.json from the plugin metadata; merge updates only the keys ai-rulez owns (name, version, description, author, repository, keywords, pi, files) and keeps every other key.",
+              "description": "generate (default) writes the root package.json from the plugin metadata; merge updates only the keys ai-rulez owns (name, version, description, author, repository, keywords, pi, files) and keeps every other key; an authored name is kept unless package_name is set.",
               "enum": ["generate", "merge"],
+              "type": "string"
+            },
+            "package_name": {
+              "description": "npm package name written to package.json. Default: @<owner>/pi-<plugin-name>. With package_json = merge, an authored name is kept when this is unset.",
+              "maxLength": 214,
+              "pattern": "^(@[a-z0-9~-][a-z0-9._~-]*/)?[a-z0-9~-][a-z0-9._~-]*$",
+              "type": "string"
+            },
+            "skills_entry": {
+              "description": "each (default) lists every skill directory in pi.skills and every file in files; directory writes the skills directory once (\"./skills\" in pi.skills, \"skills/\" in files).",
+              "enum": ["each", "directory"],
               "type": "string"
             },
             "skills_dir": {

@@ -84,6 +84,10 @@ type Manifest struct {
 	// "merge".
 	PiSkillsDir   string
 	PiPackageJSON string
+	// PiPackageName is the explicit npm name ("" derives it); PiSkillsEntry is
+	// "each" or "directory".
+	PiPackageName string
+	PiSkillsEntry string
 
 	// ProvenanceHeaders is nil to write the AI-RULEZ generated-file header into
 	// bundled comment-safe outputs (the default), or an explicit false to write
@@ -219,6 +223,8 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 		OpencodeDependency: p.OpencodeDependency,
 		PiSkillsDir:        p.Pi.ResolvedSkillsDir(),
 		PiPackageJSON:      p.Pi.ResolvedPackageJSON(),
+		PiPackageName:      piPackageName(p.Pi),
+		PiSkillsEntry:      p.Pi.ResolvedSkillsEntry(),
 	}
 
 	if content != nil {
@@ -314,4 +320,13 @@ func evalsDir(cfg *config.Config, p *config.PluginAuthoring) string {
 		return filepath.Join(cfg.BaseDir, p.ContentRoot, config.EvalsDirName)
 	}
 	return filepath.Join(cfg.ConfigDir, config.EvalsDirName)
+}
+
+// piPackageName returns the explicit [plugin.pi] package_name, or "". Safe on a
+// nil receiver.
+func piPackageName(e *config.PiExtras) string {
+	if e == nil {
+		return ""
+	}
+	return e.PackageName
 }

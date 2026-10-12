@@ -87,9 +87,10 @@ func TestRenderPiPackageJSONMode(t *testing.T) {
 		mode       string
 		preserved  []string
 		wantAuthor bool
+		wantName   string
 	}{
-		{name: "generate replaces the file", mode: "", wantAuthor: true},
-		{name: "merge keeps unknown keys", mode: config.PiPackageJSONMerge, preserved: []string{"devDependencies", "scripts", "packageManager"}, wantAuthor: true},
+		{name: "generate replaces the file", mode: "", wantAuthor: true, wantName: "@acme/pi-basemind"},
+		{name: "merge keeps unknown keys", mode: config.PiPackageJSONMerge, preserved: []string{"devDependencies", "scripts", "packageManager"}, wantAuthor: true, wantName: "authored"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -109,7 +110,7 @@ func TestRenderPiPackageJSONMode(t *testing.T) {
 			// Assert
 			var pkg map[string]any
 			require.NoError(t, json.Unmarshal(outputByPath(t, outputs, "package.json").RawContent, &pkg))
-			assert.Equal(t, "@acme/pi-basemind", pkg["name"])
+			assert.Equal(t, tt.wantName, pkg["name"])
 			assert.Contains(t, pkg["keywords"], "pi-package")
 			assert.Contains(t, pkg, "pi")
 			for _, key := range tt.preserved {
@@ -167,4 +168,110 @@ func TestGeneratePiMergeVerifyChecksOwnedKeys(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(pkgPath, tampered, 0o644))
 	assert.Error(t, VerifyProvenance(root), "an owned key must be detected by verify --plugin")
+}
+
+func TestRenderPiPackageName(t *testing.T) {
+	tests := []struct {
+		name     string
+		mode     string
+		existing string
+		pkgName  string
+		want     string
+	}{
+		{name: "default derives from the repository", want: "@acme/pi-basemind"},
+		{name: "explicit name wins", pkgName: "ghost-library-skills", want: "ghost-library-skills"},
+		{name: "merge keeps the authored name", mode: config.PiPackageJSONMerge,
+			existing: `{"name":"authored"}`, want: "authored"},
+		{name: "merge without authored name derives it", mode: config.PiPackageJSONMerge,
+			existing: `{"private":true}`, want: "@acme/pi-basemind"},
+		{name: "merge with explicit name overrides", mode: config.PiPackageJSONMerge,
+			existing: `{"name":"authored"}`, pkgName: "chosen", want: "chosen"},
+		{name: "generate ignores the authored name", existing: `{"name":"authored"}`, want: "@acme/pi-basemind"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			if tt.existing != "" {
+				require.NoError(t, os.WriteFile(filepath.Join(root, "package.json"), []byte(tt.existing), 0o644))
+			}
+			m := &Manifest{
+				Name: "basemind", Version: "1.0.0", SourceDir: root, PiPackageJSON: tt.mode,
+				PiPackageName: tt.pkgName, Repository: "https://github.com/acme/basemind",
+			}
+
+			// Act
+			outputs, err := renderPi(m, root)
+			require.NoError(t, err)
+
+			// Assert
+			var pkg map[string]any
+			require.NoError(t, json.Unmarshal(outputByPath(t, outputs, "package.json").RawContent, &pkg))
+			assert.Equal(t, tt.want, pkg["name"])
+		})
+	}
+}
+
+func TestRenderPiSkillsEntryDirectory(t *testing.T) {
+	tests := []struct {
+		name      string
+		entry     string
+		skillsDir string
+		wantPi    []any
+		wantFiles []any
+	}{
+		{name: "each lists every skill", entry: config.PiSkillsEntryEach, skillsDir: "skills",
+			wantPi:    []any{"./skills/alpha", "./skills/beta"},
+			wantFiles: []any{".pi/prompts/go.md", "skills/alpha/SKILL.md", "skills/beta/SKILL.md"}},
+		{name: "directory lists the tree once", entry: config.PiSkillsEntryDirectory, skillsDir: "skills",
+			wantPi:    []any{"./skills"},
+			wantFiles: []any{".pi/prompts/go.md", "skills/"}},
+		{name: "directory under the default dir", entry: config.PiSkillsEntryDirectory,
+			wantPi:    []any{"./.pi/skills"},
+			wantFiles: []any{".pi/prompts/go.md", ".pi/skills/"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			alpha := writePiSkill(t, root, "alpha", "---\nname: alpha\n---\nbody\n")
+			beta := writePiSkill(t, root, "beta", "---\nname: beta\n---\nbody\n")
+			cmdPath := filepath.Join(root, ".ai-rulez", "commands", "go.md")
+			require.NoError(t, os.MkdirAll(filepath.Dir(cmdPath), 0o755))
+			require.NoError(t, os.WriteFile(cmdPath, []byte("---\ndescription: d\n---\nrun\n"), 0o644))
+			m := &Manifest{
+				Name: "basemind", Version: "1.0.0", SourceDir: root, PiSkillsDir: tt.skillsDir,
+				PiSkillsEntry: tt.entry, Skills: []config.ContentFile{alpha, beta},
+				Commands: []config.ContentFile{{Name: "go", Path: cmdPath}},
+			}
+
+			// Act
+			outputs, err := renderPi(m, t.TempDir())
+			require.NoError(t, err)
+
+			// Assert
+			var pkg map[string]any
+			require.NoError(t, json.Unmarshal(outputByPath(t, outputs, "package.json").RawContent, &pkg))
+			assert.Equal(t, tt.wantPi, pkg["pi"].(map[string]any)["skills"])
+			assert.Equal(t, tt.wantFiles, pkg["files"], "files must list only paths that exist in the bundle")
+		})
+	}
+}
+
+func TestRenderPiFilesListExistingTopLevelPaths(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "README.md"), []byte("# r\n"), 0o644))
+	skill := writePiSkill(t, root, "alpha", "---\nname: alpha\n---\nbody\n")
+	m := &Manifest{Name: "basemind", Version: "1.0.0", SourceDir: root, Skills: []config.ContentFile{skill}}
+
+	// Act
+	outputs, err := renderPi(m, root)
+	require.NoError(t, err)
+
+	// Assert
+	var pkg map[string]any
+	require.NoError(t, json.Unmarshal(outputByPath(t, outputs, "package.json").RawContent, &pkg))
+	assert.Contains(t, pkg["files"], "README.md")
+	assert.NotContains(t, pkg["files"], "assets/", "assets/ does not exist in the bundle")
 }
