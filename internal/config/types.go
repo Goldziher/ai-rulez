@@ -505,6 +505,31 @@ type RulesConfig struct {
 	// writes; generate warns when their total exceeds it. 0 (the default)
 	// disables the warning.
 	BazBudget int `yaml:"baz_budget,omitempty" json:"baz_budget,omitempty" toml:"baz_budget,omitempty"` //nolint:tagliatelle
+
+	// Baz holds per-rule controls for the baz preset ([rules.baz]).
+	Baz *BazRulesConfig `yaml:"baz,omitempty" json:"baz,omitempty" toml:"baz,omitempty"`
+}
+
+// BazRulesConfig is the [rules.baz] table.
+type BazRulesConfig struct {
+	// Include names the rules and context files the baz preset selects for its
+	// path-scoped AGENTS.md files when rules.baz_default is "none". The same
+	// opt-in is `baz: true` in an item's frontmatter.
+	Include []string `yaml:"include,omitempty" json:"include,omitempty" toml:"include,omitempty"`
+}
+
+// BazIncludes reports whether rules.baz.include names the item.
+func (c *Config) BazIncludes(name string) bool {
+	if c == nil || c.Rules == nil || c.Rules.Baz == nil {
+		return false
+	}
+	name = strings.ToLower(strings.TrimSuffix(name, ".md"))
+	for _, entry := range c.Rules.Baz.Include {
+		if strings.ToLower(strings.TrimSuffix(strings.TrimSpace(entry), ".md")) == name {
+			return true
+		}
+	}
+	return false
 }
 
 // Values of rules.baz_scoped.

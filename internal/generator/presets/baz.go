@@ -217,16 +217,27 @@ func bazNestedDirs(cf config.ContentFile, cfg *config.Config) []string {
 }
 
 // bazItemSelected reports whether an item may reach the baz preset's
-// path-scoped surface. With rules.baz_default = "none" only an item whose
-// frontmatter targets select baz qualifies (an item with no targets does not);
-// the default ("all") selects every item.
+// path-scoped surface. A `!baz` target always excludes it. With
+// rules.baz_default = "none" only an item that opts in qualifies: a target
+// selecting baz, `baz: true` in its frontmatter, or a name listed in
+// rules.baz.include (an item with no targets does not). The default ("all")
+// selects every item that is not excluded.
 func bazItemSelected(cf config.ContentFile, cfg *config.Config) bool {
-	if cfg.BazDefaultRules() != config.BazDefaultNone {
-		return true
-	}
 	var targets []string
 	if cf.Metadata != nil {
 		targets = cf.Metadata.Targets
+	}
+	if targetmatch.Denied(targets, []string{bazPresetName}, agentsMDFile) {
+		return false
+	}
+	if cfg.BazDefaultRules() != config.BazDefaultNone {
+		return true
+	}
+	if cf.Metadata != nil && strings.EqualFold(strings.TrimSpace(cf.Metadata.Extra["baz"]), "true") {
+		return true
+	}
+	if cfg.BazIncludes(cf.Name) || cfg.BazIncludes(path.Base(filepath.ToSlash(cf.Path))) {
+		return true
 	}
 	return targetmatch.Match(targets, []string{bazPresetName}, agentsMDFile)
 }
