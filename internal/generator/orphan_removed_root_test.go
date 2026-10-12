@@ -154,3 +154,28 @@ func TestGenerate_IgnoresLeftoversInsidePrunedTrees(t *testing.T) {
 	require.NoError(t, loadHashesProject(t, root).Generate(""))
 	assert.FileExists(t, planted, "a file inside a pruned tree is left alone")
 }
+
+// #376: the stray-tree walk reads a header only from files that can be a preset
+// output (a root file name or a file below an output directory), not from every
+// source file in the work tree.
+func TestStrayCandidateFilter_SkipsOrdinarySourceFiles(t *testing.T) {
+	root, _ := removedRootProject(t)
+	g := loadHashesProject(t, root)
+	base := filepath.Clean(g.config.BaseDir)
+	mayBeOutput := g.strayCandidateFilter(base)
+
+	tests := []struct {
+		rel  string
+		want bool
+	}{
+		{"nested/CLAUDE.md", true},
+		{"nested/.claude/rules/scoped.md", true},
+		{"pkg/deep/.claude/skills/x/SKILL.md", true},
+		{"src/main.go", false},
+		{"lib/guide.md", false},
+		{"a/b/c/data.json", false},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, mayBeOutput(filepath.Join(base, filepath.FromSlash(tt.rel))), tt.rel)
+	}
+}
