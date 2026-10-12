@@ -35,6 +35,9 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if err := g.refuseSymlinkedOutputs(outputs); err != nil {
+		return 0, err
+	}
 	stale, err := g.stalePluginDirs()
 	if err != nil {
 		return 0, err
@@ -160,6 +163,12 @@ func (g *Generator) VerifyPlugin(profile string) error {
 		return err
 	}
 	drift := g.verifyPluginOutputs(expected)
+	for _, link := range g.symlinkedOutputs(expected) {
+		item := PluginDrift{Path: filepath.ToSlash(g.convertToRelativePath(link)), Kind: PluginDriftSymlink}
+		if !slices.Contains(drift, item) {
+			drift = append(drift, item)
+		}
+	}
 	for _, item := range obsolete {
 		drift = append(drift, PluginDrift{Path: item.rel, Kind: PluginDriftObsolete})
 	}
@@ -289,6 +298,9 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	g.diagnostics() // the run's warnings share one collector from the start
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
+		return nil, err
+	}
+	if err := g.refuseSymlinkedOutputs(outputs); err != nil {
 		return nil, err
 	}
 	lines := make([]string, 0, len(outputs)+1)

@@ -10942,7 +10942,10 @@ removes it, the same way it removes obsolete recorded files; `--dry-run` prints
 hand-made skill directory, and the config directory and `[plugin] content_root` (your sources),
 are never touched. `verify --plugin` reports such a file as drift of kind `extra`, and a recorded
 output that is a symlink (even one whose target has the recorded content) as kind `symlink`.
-`generate --plugin` refuses to write through such a symlink; replace it with a regular file.
+`generate --plugin` (and `--dry-run`) refuses to write through a symlink, whether the output file
+or any parent directory of it is the link, and fails with an error naming the link; the target is
+never changed. `verify --plugin` reports a symlinked directory on an output path as drift of kind
+`symlink` too. Replace the link with a regular file or directory.
 
 ###### Linked git worktrees
 
