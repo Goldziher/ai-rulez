@@ -3495,7 +3495,7 @@ a single-plugin bundle whose root is the repository root ships a default host co
 
 - Default severity: `warning`
 - Analyzer: `plugin` (scope `bundle`)
-- Why: A single-plugin repository lists its bundle with source "./", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin.
+- Why: A single-plugin repository lists its bundle with source "./", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin. Paths are looked up only under the plugin's own root, never in a parent directory.
 - Bad: A repository with a `[plugin]` block and a committed `.mcp.json` or `agents/` directory, published with `source: "./"`
 - Good: Set `[plugin] content_root` to keep the payload out of the root, or move the plugin into a monorepo member (`plugins/<name>/`) so its root is not the repository root
 

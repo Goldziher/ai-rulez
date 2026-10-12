@@ -564,6 +564,8 @@ installed for everyone. Set `[plugin] content_root` to keep the authored payload
 separate, or move the plugin into a monorepo member (`plugins/<name>/`) so its
 root is not the repository root.
 
+The check looks only under the plugin's own root, never in a parent directory.
+
 ## Domain content and per-domain plugins
 
 A project that keeps its content in `.ai-rulez/domains/<name>/` can ship it as plugins

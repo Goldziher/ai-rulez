@@ -37,7 +37,7 @@ func registerRootComponents(s *ruleSet) {
 		"a single-plugin bundle whose root is the repository root ships a default host component path (.mcp.json, hooks/, agents/, commands/, settings.json, bin/) to every user; set [plugin] content_root or move the plugin into a monorepo member"})
 	s.addDocs(map[string]RuleDoc{
 		CodeRootComponentShipped: {
-			Why:  "A single-plugin repository lists its bundle with source \"./\", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin.",
+			Why:  "A single-plugin repository lists its bundle with source \"./\", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin. Paths are looked up only under the plugin's own root, never in a parent directory.",
 			Bad:  "A repository with a `[plugin]` block and a committed `.mcp.json` or `agents/` directory, published with `source: \"./\"`",
 			Good: "Set `[plugin] content_root` to keep the payload out of the root, or move the plugin into a monorepo member (`plugins/<name>/`) so its root is not the repository root",
 		},
@@ -85,7 +85,7 @@ func checkRootComponents(r *runner) {
 		if hc.bundled != nil && hc.bundled(r) {
 			continue
 		}
-		if !r.existsRepo(hc.path) {
+		if !r.existsInBundleRoot(hc.path) {
 			continue
 		}
 		r.add(CodeRootComponentShipped, filepath.Join(r.rootAbs(), filepath.FromSlash(hc.path)), 1,
@@ -169,4 +169,11 @@ func codexRootWritesMCP(r *runner) bool {
 func pluginHasMCP(r *runner) bool {
 	p := r.cfg.Plugin
 	return p != nil && (len(p.MCP) > 0 || len(r.cfg.MCPServers) > 0)
+}
+
+// existsInBundleRoot reports whether rel exists directly under the plugin's own
+// root (the directory holding the configuration), never in a parent directory
+// above it.
+func (r *runner) existsInBundleRoot(rel string) bool {
+	return r.tree.Exists(joinRel(r.baseRel, rel))
 }
