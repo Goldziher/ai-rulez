@@ -18,7 +18,7 @@ a/.claude/rules/ dir 0755
 a/.claude/rules/r.md file 0644 181 aa4fedc1c322acd66fcc805418112ba24b22af625733a4aa94c5ac418b5a51de
 a/.claude/skills/ dir 0755
 a/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
-a/CLAUDE.md file 0644 365 869f0bee912ea620930c88b8b458acf18a2feb4126f788cade17a6e37b82b4b7
+a/CLAUDE.md file 0644 369 bb9ad8979108b3fdaaf619b0e4555be8e7aa4637580fb72a0f117e4ec58deede
 b/ dir 0755
 b/c/ dir 0755
 b/c/.agents/ dir 0755
@@ -37,7 +37,7 @@ b/c/.cursor/commands/ dir 0755
 b/c/.cursor/rules/ dir 0755
 b/c/.cursor/rules/context-c.mdc file 0644 209 29b4dda6373d2a1999b3a1f60fcceedcea83e9dfb7b33c831f2462cfc6014e9c
 b/c/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
-b/c/AGENTS.md file 0644 384 516aa9950ff1a21e6eaf6ff4910b0ea16d8cd9bc3d76d02e1ee6ebe03481b815
+b/c/AGENTS.md file 0644 392 4022e4075caa2b94fdca0d8ddd4d4ac729dda5130e35bbc57d4daae58d3e33c7
 --- home tree
 (no change)
 
@@ -59,7 +59,7 @@ a/.claude/rules/ dir 0755
 a/.claude/rules/r.md file 0644 181 aa4fedc1c322acd66fcc805418112ba24b22af625733a4aa94c5ac418b5a51de
 a/.claude/skills/ dir 0755
 a/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
-a/CLAUDE.md file 0644 365 869f0bee912ea620930c88b8b458acf18a2feb4126f788cade17a6e37b82b4b7
+a/CLAUDE.md file 0644 369 bb9ad8979108b3fdaaf619b0e4555be8e7aa4637580fb72a0f117e4ec58deede
 b/ dir 0755
 b/c/ dir 0755
 b/c/.agents/ dir 0755
@@ -78,6 +78,6 @@ b/c/.cursor/commands/ dir 0755
 b/c/.cursor/rules/ dir 0755
 b/c/.cursor/rules/context-c.mdc file 0644 209 29b4dda6373d2a1999b3a1f60fcceedcea83e9dfb7b33c831f2462cfc6014e9c
 b/c/.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
-b/c/AGENTS.md file 0644 384 516aa9950ff1a21e6eaf6ff4910b0ea16d8cd9bc3d76d02e1ee6ebe03481b815
+b/c/AGENTS.md file 0644 392 4022e4075caa2b94fdca0d8ddd4d4ac729dda5130e35bbc57d4daae58d3e33c7
 --- home tree
 (no change)

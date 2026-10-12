@@ -122,12 +122,18 @@ func timestampLines(timestamp string) []string {
 // generated headers (e.g. ".ai-rulez" or ".config/ai-rulez"), defaulting to
 // ".ai-rulez" when the config carries no directory name (previews, V2 configs).
 func configDirLabel(data *TemplateData) string {
+	name := ".ai-rulez"
 	if data != nil && data.Config != nil {
-		if name := strings.TrimSpace(data.Config.ConfigDirName); name != "" {
-			return filepath.ToSlash(name)
+		if n := strings.TrimSpace(data.Config.ConfigDirName); n != "" {
+			name = filepath.ToSlash(n)
+		}
+		// A nested root's config lives below the outermost root, so the label
+		// carries that location: readers resolve it from the repository root.
+		if rel := strings.Trim(filepath.ToSlash(data.Config.RootRel), "/"); rel != "" && rel != "." {
+			name = rel + "/" + name
 		}
 	}
-	return ".ai-rulez"
+	return name
 }
 
 func buildDetailedHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
