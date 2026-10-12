@@ -89,6 +89,7 @@ func runMCP(cmd *cobra.Command) error {
 			opts = append(opts, mcp.WithReadOnly())
 		}
 		srv = NewAuthoringMCPServer(opts...)
+		transport = mcp.GuardLifecycle(transport)
 	}
 
 	closeTelemetry := wireMCPTelemetry(srv)
