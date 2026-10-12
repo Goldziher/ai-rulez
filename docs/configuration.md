@@ -1718,6 +1718,31 @@ Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-l
 | `[domains.<name>] delivery` | Default delivery of a domain's skills. A skill's `delivery` frontmatter wins. |
 | `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `domain` (served only when the active profile or role selects it), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB), `max_clone_files` (default 20000; each entry counts as at least 4 KiB toward `max_clone_bytes`; `AI_RULEZ_MAX_CLONE_FILES` sets it globally): skills served from a git repository or directory. A source over a limit is an error. |
 | `[lock] enforce` | The skills server refuses a served skill whose digest is not pinned in `ai-rulez.lock`. |
+| `[delivery.stub]` | Customises the generated `dynamic-skills` stub, see below. |
+
+#### `[delivery.stub]`
+
+The stub skill that tells an MCP-capable agent to call `find_skill` and `load_skill` is generated, and
+its description is listed in every session. Each field is optional; an unset one keeps the built-in text:
+
+```toml
+[delivery.stub]
+description = "Find and load team skills on demand."   # frontmatter description
+body_file = "stub.md"                                   # relative to .ai-rulez/, or use body = "..."
+```
+
+| Key | Meaning |
+| --- | ------- |
+| `description` | Replaces the frontmatter description. Must not be blank. |
+| `body` | Replaces the stub's text. Multi-line TOML (`"""`) works. |
+| `body_file` | Reads the text from a file relative to the config directory (`.ai-rulez/`); the path must stay inside it. A missing file is a load error. Mutually exclusive with `body`. |
+
+The body may use one variable, `{{server}}`: the MCP server that serves the skills (the `ai-rulez` self
+entry, or the `[[mcp_servers]]` entry running `--serve-skills`). Other `{{...}}` names are rejected, and the
+body must still name `find_skill` and `load_skill`, since the stub is how an agent learns to call them.
+Use it for local guidance such as which domains are served or how to rank matches. A skill you author
+named `dynamic-skills` still replaces the stub, and `AR991` is unaffected: the customised stub is the
+same skill. Editing the file behind `body_file` shows as drift in `generate --check`.
 
 ### `[ard]`
 

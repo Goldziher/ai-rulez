@@ -265,8 +265,9 @@ func (c *Config) skillsServerName() string {
 	return DefaultSkillsServerName
 }
 
-// DynamicSkillsStub builds the generated stub skill; server names the MCP
-// server that serves the skills.
+// DynamicSkillsStub builds the built-in stub skill; server names the MCP server
+// that serves the skills. A project's own stub, with [delivery.stub] applied, is
+// Config.dynamicSkillsStub.
 func DynamicSkillsStub(server string) ContentFile {
 	return ContentFile{
 		Name:     DynamicSkillsName,
@@ -302,7 +303,7 @@ func (c *Config) ContentForPreset(preset string) *ContentTree {
 	}
 	switch authored := c.authoredStubCount(&out); {
 	case authored == 0:
-		out.Skills = append(out.Skills, DynamicSkillsStub(c.skillsServerName()))
+		out.Skills = append(out.Skills, c.dynamicSkillsStub())
 	case authored > 1:
 		c.warnDuplicateStub(authored)
 	}

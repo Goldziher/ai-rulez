@@ -1420,6 +1420,32 @@
       },
       "additionalProperties": false
     },
+    "delivery": {
+      "type": "object",
+      "description": "How served skills are presented to the agent (dynamic skill loading).",
+      "properties": {
+        "stub": {
+          "type": "object",
+          "description": "Customises the generated dynamic-skills stub skill that tells an MCP-capable agent to call find_skill and load_skill. Unset fields keep the built-in text.",
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "Replaces the stub's frontmatter description, which every session lists."
+            },
+            "body": {
+              "type": "string",
+              "description": "Replaces the stub's text. {{server}} is the MCP server that serves the skills. It must still tell the agent to call find_skill and load_skill. Mutually exclusive with body_file."
+            },
+            "body_file": {
+              "type": "string",
+              "description": "Reads the stub's text from a file, relative to the config directory and inside it. Same rules as body. Mutually exclusive with body."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "llms_txt": {
       "additionalProperties": false,
       "description": "llms.txt output written by the llms-txt preset and linted by `validate --strict` (AR9P0-AR9P6).",

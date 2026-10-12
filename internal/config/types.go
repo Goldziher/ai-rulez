@@ -66,6 +66,11 @@ type Config struct {
 	// Dynamic skill loading (types_dynamic.go, delivery.go).
 	Skills         *SkillsConfig           `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
 	DomainSettings map[string]DomainConfig `yaml:"domains,omitempty" json:"domains,omitempty" toml:"domains,omitempty"`
+	// Delivery is the [delivery] table; [delivery.stub] customises the generated
+	// dynamic-skills stub (delivery_stub.go).
+	Delivery *DeliveryConfig `yaml:"delivery,omitempty" json:"delivery,omitempty" toml:"delivery,omitempty"`
+	// stubBodyFileText is the text of [delivery.stub] body_file, read at load.
+	stubBodyFileText string
 	SkillSources   []SkillSourceConfig     `yaml:"skill_sources,omitempty" json:"skill_sources,omitempty" toml:"skill_sources,omitempty"` //nolint:tagliatelle
 	// ServeMode is set while a skills server renders: every skill is rendered,
 	// served ones included, and no dynamic-skills stub is added.

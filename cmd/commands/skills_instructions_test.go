@@ -82,6 +82,25 @@ func TestSkillsInstructions_OptOutAndCustomText(t *testing.T) {
 	})
 }
 
+// [delivery.stub] customises the generated stub skill (#362), and the freshness
+// check follows an edit to the file behind body_file.
+func TestDeliveryStub_CustomStubIsGenerated(t *testing.T) {
+	root := servedSkillsRepo(t, "\n[delivery.stub]\ndescription = \"Team skills.\"\nbody_file = \"stub.md\"\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "stub.md"), "Ask {{server}}: find_skill, then load_skill.\n")
+	require.Equal(t, 0, runRecursiveGenerate())
+
+	stub := readFile(t, filepath.Join(root, ".claude", "skills", "dynamic-skills", "SKILL.md"))
+	assert.Contains(t, stub, "description: Team skills.")
+	assert.Contains(t, stub, "Ask ai-rulez: find_skill, then load_skill.")
+	assert.NotContains(t, stub, "are available on demand")
+	assert.Equal(t, 0, runDriftCheck(true))
+
+	writeFile(t, filepath.Join(root, ".ai-rulez", "stub.md"), "Ask {{server}} again: find_skill, load_skill.\n")
+	assert.Equal(t, exitDrift, runDriftCheck(true), "an edit to body_file is drift")
+	require.Equal(t, 0, runRecursiveGenerate())
+	assert.Contains(t, readFile(t, filepath.Join(root, ".claude", "skills", "dynamic-skills", "SKILL.md")), "Ask ai-rulez again")
+}
+
 func TestSkillsInstructions_AbsentWhenNothingIsServed(t *testing.T) {
 	root := servedSkillsRepo(t, "")
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"),
