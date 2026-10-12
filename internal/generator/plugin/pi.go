@@ -1,6 +1,8 @@
 package plugin
 
 import (
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -14,6 +16,7 @@ type piPackage struct {
 	Name           string             `json:"name"`
 	Version        string             `json:"version"`
 	Description    string             `json:"description,omitempty"`
+	Author         *config.Author     `json:"author,omitempty"`
 	Keywords       []string           `json:"keywords"`
 	Homepage       string             `json:"homepage,omitempty"`
 	Repository     openCodeRepository `json:"repository"`
@@ -39,7 +42,8 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if !slices.Contains(keywords, "pi-package") {
 		keywords = append(keywords, "pi-package")
 	}
-	content, err := bundleContent(m, baseDir, contentLayout{Root: ".pi", Skills: true})
+	skillsDir := m.piSkillsDir()
+	content, err := bundleContent(m, baseDir, contentLayout{Skills: true, SkillsRoot: skillsDir})
 	if err != nil {
 		return nil, err
 	}
@@ -52,12 +56,13 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := jsonOutput(filepath.Join(baseDir, "package.json"), piPackage{
-		Name: name, Version: m.Version, Description: m.Description, Keywords: keywords,
+	pkg, err := piPackageOutput(m, baseDir, piPackage{
+		Name: name, Version: m.Version, Description: m.Description, Author: m.Author,
+		Keywords: keywords,
 		Homepage: m.Homepage, Repository: openCodeRepository{Type: "git", URL: m.Repository},
 		License: m.License, PackageManager: m.PackageManager, Type: "module",
 		Files: append(files, "assets/", "README.md"),
-		Pi:    piResourcePaths(files),
+		Pi:    piResourcePaths(files, skillsDir),
 	})
 	if err != nil {
 		return nil, err
@@ -66,6 +71,76 @@ func renderPi(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		m.log().Warn("Pi packages bundle skills and prompts only; MCP servers, hooks, agents and statuslines are skipped")
 	}
 	return append([]config.OutputFile{pkg}, payload...), nil
+}
+
+// Root package.json keys the Pi runtime owns in package_json = "merge" mode.
+// Every other key belongs to the author and is preserved.
+const (
+	piKeyName        = "name"
+	piKeyVersion     = "version"
+	piKeyDescription = "description"
+	piKeyAuthor      = "author"
+	piKeyRepository  = "repository"
+	piKeyKeywords    = "keywords"
+	piKeyPi          = "pi"
+	piKeyFiles       = "files"
+)
+
+// piOwnedKeys returns the root package.json keys the Pi runtime owns in
+// package_json = "merge" mode, in a stable order. Every other key belongs to
+// the author and is preserved. It is a function, not a package variable, so no
+// mutable slice is added to the package.
+func piOwnedKeys() []string {
+	return []string{
+		piKeyName, piKeyVersion, piKeyDescription, piKeyAuthor,
+		piKeyRepository, piKeyKeywords, piKeyPi, piKeyFiles,
+	}
+}
+
+// piPackageOutput renders the root package.json. In "generate" mode it replaces
+// the file from the plugin metadata; in "merge" mode it overlays only the keys
+// ai-rulez owns (piOwnedKeys) onto the existing file, keeping every other key
+// (devDependencies, scripts, packageManager, ...).
+func piPackageOutput(m *Manifest, baseDir string, pkg piPackage) (config.OutputFile, error) {
+	path := filepath.Join(baseDir, "package.json")
+	if !m.mergesPiPackageJSON() {
+		return jsonOutput(path, pkg)
+	}
+	merged := map[string]any{}
+	data, err := os.ReadFile(path)
+	switch {
+	case err == nil:
+		if err := json.Unmarshal(data, &merged); err != nil {
+			return config.OutputFile{}, oops.With("path", path).Wrapf(err, "parse the existing root package.json")
+		}
+	case !os.IsNotExist(err):
+		return config.OutputFile{}, oops.With("path", path).Wrapf(err, "read the existing root package.json")
+	}
+	for key, value := range piOwnedFields(pkg) {
+		merged[key] = value
+	}
+	return jsonOutput(path, merged)
+}
+
+// piOwnedFields returns the owned-key subset of the Pi package metadata. An
+// empty description and an absent author are omitted, matching the generate-mode
+// struct's omitempty tags.
+func piOwnedFields(pkg piPackage) map[string]any {
+	fields := map[string]any{
+		piKeyName:       pkg.Name,
+		piKeyVersion:    pkg.Version,
+		piKeyRepository: pkg.Repository,
+		piKeyKeywords:   pkg.Keywords,
+		piKeyPi:         pkg.Pi,
+		piKeyFiles:      pkg.Files,
+	}
+	if pkg.Description != "" {
+		fields[piKeyDescription] = pkg.Description
+	}
+	if pkg.Author != nil {
+		fields[piKeyAuthor] = pkg.Author
+	}
+	return fields
 }
 
 func piPrompts(m *Manifest, baseDir string) ([]config.OutputFile, error) {
@@ -90,11 +165,12 @@ func piPrompts(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	return prompts, nil
 }
 
-func piResourcePaths(files []string) piResources {
+func piResourcePaths(files []string, skillsDir string) piResources {
 	resources := piResources{Skills: []string{}, Prompts: []string{}}
+	root := filepath.ToSlash(filepath.Clean(skillsDir))
 	for _, file := range files {
 		switch {
-		case filepath.ToSlash(filepath.Dir(filepath.Dir(file))) == ".pi/skills" && filepath.Base(file) == skillManifestName:
+		case filepath.Base(file) == skillManifestName && filepath.ToSlash(filepath.Dir(filepath.Dir(file))) == root:
 			resources.Skills = append(resources.Skills, "./"+filepath.ToSlash(filepath.Dir(file)))
 		case strings.HasPrefix(file, ".pi/prompts/") && strings.HasSuffix(file, ".md"):
 			resources.Prompts = append(resources.Prompts, "./"+file)

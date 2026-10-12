@@ -3,6 +3,7 @@ package plugin
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -16,6 +17,10 @@ type contentLayout struct {
 	// Root is the runtime's content root relative to baseDir. Empty means the
 	// project root (used by Claude/Kimi, which share top-level skills/ etc.).
 	Root string
+	// SkillsRoot, when set, is the directory (relative to baseDir) that receives
+	// each skill's <name>/ directory, overriding Root/skills. The Pi runtime uses
+	// it to write skills wherever pi.skills_dir points.
+	SkillsRoot string
 	// Skills/Commands/Agents toggle which content kinds this runtime bundles.
 	Skills   bool
 	Commands bool
@@ -30,10 +35,14 @@ type contentLayout struct {
 func bundleContent(m *Manifest, baseDir string, layout contentLayout) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
 	root := filepath.Join(baseDir, layout.Root)
+	skillsRoot := filepath.Join(root, "skills")
+	if layout.SkillsRoot != "" {
+		skillsRoot = filepath.Join(baseDir, layout.SkillsRoot)
+	}
 
 	if layout.Skills {
 		for i := range m.Skills {
-			skillOutputs, err := passthroughSkill(&m.Skills[i], filepath.Join(root, "skills", m.Skills[i].Name), m.IncludeEvals)
+			skillOutputs, err := passthroughSkill(m, &m.Skills[i], filepath.Join(skillsRoot, m.Skills[i].Name), m.IncludeEvals)
 			if err != nil {
 				return nil, err
 			}
@@ -71,13 +80,16 @@ func bundleContent(m *Manifest, baseDir string, layout contentLayout) ([]config.
 // passthroughSkill copies the complete skill directory so references, scripts,
 // and assets used by SKILL.md remain valid in the generated plugin. The skill's
 // evals/ directory is copied only when includeEvals is set: eval cases are
-// authoring material, not something consumers of the bundle need.
-func passthroughSkill(content *config.ContentFile, destinationDir string, includeEvals bool) ([]config.OutputFile, error) {
+// authoring material, not something consumers of the bundle need. Each
+// [plugin] shared_resources directory is copied in afterwards, and SKILL.md's
+// links to it are rewritten to the in-skill copy.
+func passthroughSkill(m *Manifest, content *config.ContentFile, destinationDir string, includeEvals bool) ([]config.OutputFile, error) {
 	if content.Path == "" || strings.HasPrefix(content.Path, "builtin://") {
 		return nil, nil
 	}
 	sourceDir := filepath.Dir(content.Path)
 	var outputs []config.OutputFile
+	own := map[string]bool{}
 	err := filepath.WalkDir(sourceDir, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return oops.With("path", path).Wrapf(walkErr, "walk skill directory")
@@ -97,12 +109,87 @@ func passthroughSkill(content *config.ContentFile, destinationDir string, includ
 			return err
 		}
 		outputs = append(outputs, out)
+		own[filepath.ToSlash(relativePath)] = true
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
+	if err := appendSharedResources(m, content.Name, destinationDir, own, &outputs); err != nil {
+		return nil, err
+	}
+	rewriteSharedLinks(m, filepath.Join(destinationDir, skillManifestName), outputs)
 	return outputs, nil
+}
+
+// appendSharedResources copies each [plugin] shared_resources directory into the
+// skill's bundle directory, under a subdirectory named after the shared
+// directory. A destination path the skill already owns is an error: silently
+// overwriting it would hide which copy a SKILL.md link resolves to.
+func appendSharedResources(m *Manifest, skillName, destinationDir string, own map[string]bool, outputs *[]config.OutputFile) error {
+	if len(m.SharedResources) == 0 {
+		return nil
+	}
+	for _, resource := range m.SharedResources {
+		err := filepath.WalkDir(resource.Dir, func(path string, entry os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return oops.With("path", path).Wrapf(walkErr, "walk shared resource directory")
+			}
+			if !entry.Type().IsRegular() {
+				return nil
+			}
+			relativePath, err := filepath.Rel(resource.Dir, path)
+			if err != nil {
+				return oops.With("path", path).Wrapf(err, "resolve shared resource path")
+			}
+			destRel := filepath.Join(resource.Name, relativePath)
+			if own[filepath.ToSlash(destRel)] {
+				return oops.
+					With("skill", skillName).
+					With("shared", resource.Name).
+					With("path", filepath.ToSlash(destRel)).
+					Hint("Rename the skill's own file or the shared file; the bundle must not hold two copies at one path").
+					Errorf("skill %q already has %q, which shared_resources %q also provides", skillName, filepath.ToSlash(destRel), resource.Name)
+			}
+			out, err := passthroughFile(resource.Dir, relativePath, filepath.Join(destinationDir, destRel))
+			if err != nil {
+				return err
+			}
+			*outputs = append(*outputs, out)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// rewriteSharedLinks rewrites a bundled SKILL.md's relative links that climb out
+// of the skill to a shared_resources directory (../../references/x.md) into the
+// copy inside the skill (references/x.md), so the link keeps resolving once the
+// skill is installed on its own.
+func rewriteSharedLinks(m *Manifest, skillManifestPath string, outputs []config.OutputFile) {
+	if len(m.SharedResources) == 0 {
+		return
+	}
+	for i := range outputs {
+		if outputs[i].Path != skillManifestPath {
+			continue
+		}
+		outputs[i].RawContent = []byte(rewriteSharedRefs(string(outputBytes(outputs[i])), m.SharedResources))
+		outputs[i].Content = ""
+	}
+}
+
+// rewriteSharedRefs replaces each "../<shared>/" run that points at a shared
+// directory with the in-skill copy path "<shared>/".
+func rewriteSharedRefs(body string, resources []config.SharedResource) string {
+	for _, resource := range resources {
+		pattern := regexp.MustCompile(`(?:\.\./)+` + regexp.QuoteMeta(resource.Name) + `/`)
+		body = pattern.ReplaceAllString(body, resource.Name+"/")
+	}
+	return body
 }
 
 // passthroughContent reads a content file's source bytes verbatim and returns an

@@ -3,6 +3,7 @@ package plugin
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -79,6 +80,58 @@ func TestVerifyProvenanceDetectsModifiedOutput(t *testing.T) {
 	require.NoError(t, VerifyProvenance(baseDir))
 	require.NoError(t, os.WriteFile(outputs[0].Path, []byte("modified\n"), 0o644))
 	assert.Error(t, VerifyProvenance(baseDir))
+}
+
+func TestAddProvenanceWithoutHeadersWritesCommentSafeFilesVerbatim(t *testing.T) {
+	baseDir := t.TempDir()
+	outputs := []config.OutputFile{
+		{Path: baseDir + "/plugin.json", RawContent: []byte("{\"name\":\"example\"}\n")},
+		{Path: baseDir + "/index.js", RawContent: []byte("export default async () => ({});\n")},
+		{Path: baseDir + "/skills/example/SKILL.md", RawContent: []byte("---\nname: example\n---\n\n# Example\n")},
+		{Path: baseDir + "/register.py", RawContent: []byte("def register(ctx):\n    pass\n")},
+	}
+
+	result, err := addProvenance(outputs, baseDir, false)
+	require.NoError(t, err)
+	require.Len(t, result, len(outputs)+1)
+
+	for i := range outputs {
+		assert.Equal(t, outputs[i].RawContent, result[i].RawContent,
+			"%s must be written byte-identical to its source", outputs[i].Path)
+		assert.NotContains(t, string(result[i].RawContent), "AI-RULEZ :: GENERATED FILE")
+	}
+
+	// The sidecar still records every output, so verify, obsolete pruning and
+	// publish --emit agent-plugins keep working.
+	var sidecar provenanceDocument
+	require.NoError(t, json.Unmarshal(result[len(result)-1].RawContent, &sidecar))
+	assert.Len(t, sidecar.Outputs, len(outputs))
+	for i := range outputs {
+		rel, relErr := filepath.Rel(baseDir, outputs[i].Path)
+		require.NoError(t, relErr)
+		assert.Equal(t, hashBytes(outputs[i].RawContent),
+			sidecar.Outputs[filepath.ToSlash(rel)].ContentHash,
+			"%s must keep its content hash in the sidecar", outputs[i].Path)
+	}
+}
+
+func TestVerifyProvenancePassesWithoutHeaders(t *testing.T) {
+	baseDir := t.TempDir()
+	outputs := []config.OutputFile{
+		{Path: baseDir + "/index.js", RawContent: []byte("export {};\n")},
+		{Path: baseDir + "/skills/example/SKILL.md", RawContent: []byte("---\nname: example\n---\n\n# Example\n")},
+	}
+
+	generated, err := addProvenance(outputs, baseDir, false)
+	require.NoError(t, err)
+	for _, output := range generated {
+		require.NoError(t, os.MkdirAll(filepath.Dir(output.Path), 0o755))
+		require.NoError(t, os.WriteFile(output.Path, output.RawContent, 0o644))
+	}
+
+	require.NoError(t, VerifyProvenance(baseDir))
+	require.NoError(t, os.WriteFile(outputs[0].Path, []byte("modified\n"), 0o644))
+	assert.Error(t, VerifyProvenance(baseDir), "a modified header-less output must still be detected")
 }
 
 func TestMarkdownProvenancePreservesFrontmatterWhitespace(t *testing.T) {
