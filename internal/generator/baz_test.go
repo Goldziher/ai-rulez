@@ -338,3 +338,51 @@ func TestBaz_BudgetFinding(t *testing.T) {
 		assert.Nil(t, g.bazBudgetFinding(outputs))
 	})
 }
+
+// TestBaz_PerRuleOptIn pins the three per-rule controls: `!baz` in targets
+// (deny wins, even under baz_default = "all"), `[rules.baz] include`, and
+// `baz: true` frontmatter. The last two select an item under baz_default = "none".
+func TestBaz_PerRuleOptIn(t *testing.T) {
+	const (
+		apiRule  = "---\npaths:\n  - services/api/**/*.py\n---\n# API Style\n\nAPI_STYLE_BODY\n"
+		dbRule   = "---\npaths:\n  - services/db/**/*.py\n---\n# DB Style\n\nDB_STYLE_BODY\n"
+		webRule  = "---\npaths:\n  - services/web/**/*.py\nbaz: true\n---\n# Web Style\n\nWEB_STYLE_BODY\n"
+		skipRule = "---\npaths:\n  - services/skip/**/*.py\ntargets: [\"!baz\"]\n---\n# Skip Style\n\nSKIP_STYLE_BODY\n"
+	)
+	run := func(t *testing.T, extra string) string {
+		t.Helper()
+		root := t.TempDir()
+		writeAgentsMDProject(t, root, agentsMDConfig([]string{"baz"}, "", extra))
+		writeAgentsMDFile(t, root, ".ai-rulez/rules/api-style.md", apiRule)
+		writeAgentsMDFile(t, root, ".ai-rulez/rules/db-style.md", dbRule)
+		writeAgentsMDFile(t, root, ".ai-rulez/rules/web-style.md", webRule)
+		writeAgentsMDFile(t, root, ".ai-rulez/rules/skip-style.md", skipRule)
+		for _, d := range []string{"api", "db", "web", "skip"} {
+			require.NoError(t, os.MkdirAll(filepath.Join(root, "services", d), 0o755))
+		}
+		runAgentsMDGenerate(t, root)
+		return root
+	}
+	nested := func(root string) map[string]bool {
+		out := map[string]bool{}
+		for _, d := range []string{"api", "db", "web", "skip"} {
+			_, err := os.Stat(filepath.Join(root, "services", d, "AGENTS.md"))
+			out[d] = err == nil
+		}
+		return out
+	}
+
+	t.Run("negation excludes the rule under the default", func(t *testing.T) {
+		root := run(t, "")
+		assert.Equal(t, map[string]bool{"api": true, "db": true, "web": true, "skip": false}, nested(root))
+		assert.Contains(t, readBazFile(t, root, "AGENTS.md"), "SKIP_STYLE_BODY", "an excluded rule stays in the shared root file")
+	})
+	t.Run("include and frontmatter opt in under baz_default none", func(t *testing.T) {
+		root := run(t, "\n[rules]\nbaz_default = \"none\"\n\n[rules.baz]\ninclude = [\"db-style\"]\n")
+		assert.Equal(t, map[string]bool{"api": false, "db": true, "web": true, "skip": false}, nested(root))
+	})
+	t.Run("deny beats include", func(t *testing.T) {
+		root := run(t, "\n[rules]\nbaz_default = \"none\"\n\n[rules.baz]\ninclude = [\"skip-style\"]\n")
+		assert.False(t, nested(root)["skip"])
+	})
+}
