@@ -80,7 +80,7 @@ var analyzerGroups = []analyzerGroup{
 	{AnalyzerDescriptions, ScopeItem, []string{"AR801", "AR802", "AR803", "AR804", "AR805", "AR806", "AR807"}},
 	{AnalyzerBudgets, ScopeItem, []string{"AR901", "AR902"}},
 	{AnalyzerMetadata, ScopeItem, []string{"AR951", "AR952", "AR953", "AR954"}},
-	{AnalyzerPlugin, ScopeBundle, []string{"AR961"}},
+	{AnalyzerPlugin, ScopeBundle, []string{"AR961", "AR9T0"}},
 	{AnalyzerPlugin, ScopeItem, []string{"AR962", "AR963", "AR964"}},
 	{AnalyzerRoles, ScopeItem, []string{"AR971", "AR972", "AR973"}},
 	// Drift against ai-rulez.lock, including the served-skill lock.

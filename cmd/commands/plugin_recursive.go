@@ -93,6 +93,7 @@ func runRecursivePluginVerify() pluginVerifyDoc {
 			}
 			return pluginVerifyDoc{Status: pluginVerifyDrift, Configs: len(paths), err: failWithCode(pluginVerifyExitCode(err), oops.With("config", path).Wrapf(err, "verify plugin outputs"))}
 		}
+		warnRootComponents(cfg)
 	}
 	logger.Success("Generated plugin artifacts are valid", "configs", len(paths))
 	return pluginVerifyDoc{Status: pluginVerifyOK, Configs: len(paths)}
