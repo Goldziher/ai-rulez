@@ -75,6 +75,21 @@ type Manifest struct {
 	// whose matched files are copied verbatim into the Agent Plugins package.
 	Include []string
 
+	// SharedResources lists the resolved [plugin] shared_resources directories
+	// whose files are copied into every bundled skill.
+	SharedResources []config.SharedResource
+
+	// PiSkillsDir is where the Pi runtime writes each bundled skill, relative to
+	// the project root (".pi/skills" by default). PiPackageJSON is "generate" or
+	// "merge".
+	PiSkillsDir   string
+	PiPackageJSON string
+
+	// ProvenanceHeaders is nil to write the AI-RULEZ generated-file header into
+	// bundled comment-safe outputs (the default), or an explicit false to write
+	// them byte-identical to their sources.
+	ProvenanceHeaders *bool
+
 	// IncludeEvals bundles eval cases: each skill's evals/ directory and the
 	// project-level eval tree at EvalsDir.
 	IncludeEvals bool
@@ -101,6 +116,38 @@ type Manifest struct {
 // was built from (the CLI's when it has none).
 func (m *Manifest) log() logger.Logger { return m.Config.Log() }
 
+// writesProvenanceHeaders reports whether bundled comment-safe outputs carry the
+// AI-RULEZ generated-file header. It defaults to true: only an explicit false
+// (from [plugin] provenance_headers = false) turns the headers off.
+func (m *Manifest) writesProvenanceHeaders() bool {
+	return m == nil || m.ProvenanceHeaders == nil || *m.ProvenanceHeaders
+}
+
+// piSkillsDir returns the Pi skills directory, defaulting when unset.
+func (m *Manifest) piSkillsDir() string {
+	if m == nil || m.PiSkillsDir == "" {
+		return config.DefaultPiSkillsDir
+	}
+	return m.PiSkillsDir
+}
+
+// mergesPiPackageJSON reports whether the Pi runtime merges the root
+// package.json instead of generating it.
+func (m *Manifest) mergesPiPackageJSON() bool {
+	return m != nil && m.PiPackageJSON == config.PiPackageJSONMerge
+}
+
+// managedOutputs maps a bundle-relative output path to the JSON keys ai-rulez
+// owns in it, for the provenance sidecar. Only the Pi root package.json in
+// package_json = "merge" mode is partially owned: its recorded hash covers the
+// owned keys alone, so an author's edits elsewhere do not read as drift.
+func (m *Manifest) managedOutputs() map[string][]string {
+	if !m.mergesPiPackageJSON() {
+		return nil
+	}
+	return map[string][]string{"package.json": piOwnedKeys()}
+}
+
 // MarketInfo is the resolved marketplace metadata for the emitted index.
 type MarketInfo struct {
 	Name        string
@@ -121,11 +168,23 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 			Errorf("no [plugin] block configured")
 	}
 
+	version, err := p.ResolvedVersion(cfg.BaseDir)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.Pi.Validate(); err != nil {
+		return nil, err
+	}
+	shared, err := p.ResolveSharedResources(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	m := &Manifest{
 		Name:        p.Name,
 		DisplayName: p.DisplayName,
 		Description: p.Description,
-		Version:     p.Version,
+		Version:     version,
 		Author:      p.Author,
 		Homepage:    p.Homepage,
 		Repository:  p.Repository,
@@ -154,8 +213,12 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 		IncludeEvals:       p.IncludeEvals,
 		EvalsDir:           evalsDir(cfg, p),
 		Include:            p.Include,
+		SharedResources:    shared,
+		ProvenanceHeaders:  p.ProvenanceHeaders,
 		PackageManager:     p.PackageManager,
 		OpencodeDependency: p.OpencodeDependency,
+		PiSkillsDir:        p.Pi.ResolvedSkillsDir(),
+		PiPackageJSON:      p.Pi.ResolvedPackageJSON(),
 	}
 
 	if content != nil {

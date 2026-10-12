@@ -2452,7 +2452,7 @@
     "plugin": {
       "type": "object",
       "description": "Authoring metadata for a distributable plugin bundle (producer side). Skills, commands, and agents come from the content tree; this block only carries packaging metadata.",
-      "required": ["name", "version"],
+      "required": ["name"],
       "properties": {
         "name": {
           "type": "string"
@@ -2465,7 +2465,11 @@
         },
         "version": {
           "type": "string",
-          "description": "Semantic version, e.g. 1.0.0"
+          "description": "Semantic version, e.g. 1.0.0. Mutually exclusive with version_from."
+        },
+        "version_from": {
+          "type": "string",
+          "description": "Project-relative manifest whose version replaces 'version': package.json (version), pyproject.toml (project.version) or Cargo.toml (package.version). Mutually exclusive with version."
         },
         "author": {
           "$ref": "#/$defs/authorEntity"
@@ -2511,6 +2515,10 @@
           "type": "boolean",
           "description": "Bundle eval cases: each skill's evals/ directory and the project-level evals/ tree (at <bundle>/evals/). Off by default."
         },
+        "provenance_headers": {
+          "type": "boolean",
+          "description": "Write the AI-RULEZ generated-file header into bundled Markdown/JS/TS/PY outputs. Default true; set false to write them byte-identical to their sources (the provenance sidecar still records every output's content hash)."
+        },
         "include": {
           "type": "array",
           "description": "Globs relative to the plugin's content root of arbitrary files copied verbatim into the Agent Plugins package, keeping their relative path. A './'-relative MCP command can point at an included file (Agent Plugins 4.2, 7.2.1). Empty keeps the package to plugin.json, mcp.json and skills/.",
@@ -2530,6 +2538,13 @@
         "opencode_dependency": {
           "type": "string",
           "description": "Version range for the \"@opencode/plugin\" dependency in the OpenCode root package.json. Empty uses the built-in default."
+        },
+        "shared_resources": {
+          "type": "array",
+          "description": "Directories relative to the plugin's content root whose files are copied into every bundled skill, at <skill>/<directory>/... A relative SKILL.md link to the shared directory ('../../references/x.md') is rewritten to the copy ('references/x.md'). A name clash with a file the skill already has is an error. Empty copies nothing.",
+          "items": {
+            "type": "string"
+          }
         },
         "include_domains": {
           "type": "array",
@@ -2794,6 +2809,22 @@
                 "minLength": 1,
                 "pattern": "\\S"
               }
+            }
+          },
+          "additionalProperties": false
+        },
+        "pi": {
+          "type": "object",
+          "description": "Pi package layout.",
+          "properties": {
+            "skills_dir": {
+              "type": "string",
+              "description": "Directory each bundled skill is written to, relative to the project root. Default: .pi/skills. Set to \"skills\" to reuse the tree the other runtimes write and write each skill once."
+            },
+            "package_json": {
+              "type": "string",
+              "enum": ["generate", "merge"],
+              "description": "generate (default) writes the root package.json from the plugin metadata; merge updates only the keys ai-rulez owns (name, version, description, author, repository, keywords, pi, files) and keeps every other key."
             }
           },
           "additionalProperties": false

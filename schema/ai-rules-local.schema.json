@@ -2539,6 +2539,26 @@
           "description": "Written as packageManager in the OpenCode and Pi root package.json (for example \"pnpm@9.15.0\"). Empty omits the field. The root package.json is generator-owned.",
           "type": "string"
         },
+        "pi": {
+          "additionalProperties": false,
+          "description": "Pi package layout.",
+          "properties": {
+            "package_json": {
+              "description": "generate (default) writes the root package.json from the plugin metadata; merge updates only the keys ai-rulez owns (name, version, description, author, repository, keywords, pi, files) and keeps every other key.",
+              "enum": ["generate", "merge"],
+              "type": "string"
+            },
+            "skills_dir": {
+              "description": "Directory each bundled skill is written to, relative to the project root. Default: .pi/skills. Set to \"skills\" to reuse the tree the other runtimes write and write each skill once.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "provenance_headers": {
+          "description": "Write the AI-RULEZ generated-file header into bundled Markdown/JS/TS/PY outputs. Default true; set false to write them byte-identical to their sources (the provenance sidecar still records every output's content hash).",
+          "type": "boolean"
+        },
         "repository": {
           "type": "string"
         },
@@ -2557,6 +2577,13 @@
               "copilot",
               "pi"
             ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "shared_resources": {
+          "description": "Directories relative to the plugin's content root whose files are copied into every bundled skill, at <skill>/<directory>/... A relative SKILL.md link to the shared directory ('../../references/x.md') is rewritten to the copy ('references/x.md'). A name clash with a file the skill already has is an error. Empty copies nothing.",
+          "items": {
             "type": "string"
           },
           "type": "array"
@@ -2586,7 +2613,11 @@
           "type": "array"
         },
         "version": {
-          "description": "Semantic version, e.g. 1.0.0",
+          "description": "Semantic version, e.g. 1.0.0. Mutually exclusive with version_from.",
+          "type": "string"
+        },
+        "version_from": {
+          "description": "Project-relative manifest whose version replaces 'version': package.json (version), pyproject.toml (project.version) or Cargo.toml (package.version). Mutually exclusive with version.",
           "type": "string"
         }
       },
@@ -3163,14 +3194,14 @@
           "minimum": 0,
           "type": "integer"
         },
+        "baz_dedupe": {
+          "description": "When true, a path-scoped item whose globs point into several directories under one parent is written once to the shared parent AGENTS.md instead of a copy in each. Defaults to false.",
+          "type": "boolean"
+        },
         "baz_default": {
           "description": "Which items the baz preset selects for its path-scoped AGENTS.md files. all (default) lets every item through; none only items whose frontmatter `targets` name baz.",
           "enum": ["all", "none"],
           "type": "string"
-        },
-        "baz_dedupe": {
-          "description": "When true, a path-scoped item whose globs point into several directories under one parent is written once to the shared parent AGENTS.md instead of a copy in each. Defaults to false.",
-          "type": "boolean"
         },
         "baz_scoped": {
           "description": "Where the baz preset puts path-scoped rules and context. nested (default) writes them to the AGENTS.md of the directory their globs point into, which Baz scopes to that directory; root keeps them in the root AGENTS.md with an Applies to line.",

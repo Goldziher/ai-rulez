@@ -66,7 +66,7 @@ func Generate(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		return nil, oops.Wrapf(err, "render runtime marketplaces")
 	}
 	outputs = append(outputs, extraMarkets...)
-	return AddProvenance(outputs, baseDir)
+	return addProvenance(outputs, baseDir, m.writesProvenanceHeaders(), m.managedOutputs())
 }
 
 // GenerateMember renders a monorepo member's runtime bundles rooted at baseDir
@@ -77,7 +77,7 @@ func GenerateMember(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	return AddProvenance(outputs, baseDir)
+	return addProvenance(outputs, baseDir, m.writesProvenanceHeaders(), m.managedOutputs())
 }
 
 // renderRuntimes runs every requested runtime renderer, rooted at baseDir, then
