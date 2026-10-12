@@ -36,7 +36,7 @@ The `copilot` runtime and the `codex` runtime with `manifest = "root"` write the
 | ai-rulez | Package | Notes |
 | --- | --- | --- |
 | `[plugin] name` | `plugin.json` `name` | 1-64 characters from `a-z0-9.-`, starting and ending alphanumeric, no `--` or `..` |
-| `[plugin] version`, `description`, `homepage`, `repository`, `license`, `keywords` | the same keys | |
+| `[plugin] version`, `description`, `homepage`, `repository`, `license`, `keywords` | the same keys | `version` may come from `version_from` (`package.json`, `pyproject.toml`, `Cargo.toml`) instead |
 | `[plugin.author]` `name`, `email`, `url` | `author` | an empty author is omitted |
 | `[plugin] spec` | `$schema` of `plugin.json` and `mcp.json` | |
 | `[plugin.interface]` (codex root layout) | `extensions["com.openai"].interface` | keys are written sorted |
@@ -52,15 +52,23 @@ The `copilot` runtime and the `codex` runtime with `manifest = "root"` write the
 
 ## OpenCode and Pi packages
 
-The `opencode` and `pi` runtimes write a root `package.json` that ai-rulez fully owns: `verify --plugin` compares it byte
-for byte, so a hand edit to any field is reported as drift. Two `[plugin]` keys tune the fields a consumer cannot
-otherwise change, and every other field (`name`, `version`, `description`, `repository`, `files`, `exports`, the Pi `pi`
-block, ...) is derived from the manifest.
+The `opencode` and `pi` runtimes write a root `package.json`. By default ai-rulez fully owns it:
+`verify --plugin` compares it byte for byte, so a hand edit to any field is reported as drift. Two
+`[plugin]` keys tune the fields a consumer cannot otherwise change, and every other field (`name`,
+`version`, `description`, `repository`, `files`, `exports`, the Pi `pi` block, ...) is derived from
+the manifest.
 
 | ai-rulez | `package.json` | Notes |
 | --- | --- | --- |
 | `[plugin] package_manager` | `packageManager` | e.g. `"pnpm@9.15.0"`; omitted when unset |
 | `[plugin] opencode_dependency` | `dependencies["@opencode/plugin"]` | OpenCode only; unset uses the built-in default (`^2.0.26`) |
+| `[plugin.pi] skills_dir` | the `pi.skills` paths | Pi only; default `.pi/skills`, `skills` reuses the tree the other runtimes write |
+| `[plugin.pi] package_json` | ownership of the file | Pi only; `merge` updates only the identity keys and keeps the rest |
+
+`[plugin.pi] package_json = "merge"` opts the Pi runtime out of full ownership: ai-rulez updates only
+the keys it owns (`name`, `version`, `description`, `author`, `repository`, `keywords`, `pi`, `files`)
+and keeps every other key (`devDependencies`, `scripts`, `packageManager`, ...). `verify --plugin`
+then reports drift only on those owned keys.
 
 ```toml
 [plugin]
@@ -101,6 +109,17 @@ drive letter, or containing `..` — is refused at configuration load.
 
 Once an included file resolves a `./`-relative `command`, `validate --strict` stops reporting `AR9O2` for it; a command
 with no matching file keeps the warning.
+
+`[plugin] shared_resources` is the per-skill variant: instead of copying a directory once at the package root, it copies
+it into **every** bundled skill, at `skills/<name>/<directory>/…`, so a skill keeps its reference docs and templates when
+installed on its own. A relative `SKILL.md` link that climbs out of the skill to the shared directory
+(`../../references/x.md`) is rewritten to the copy (`references/x.md`), the copies are recorded in `.ai-rulez-generated.json`
+like the skill's own files, and a name clash with a file the skill already has is an error rather than a silent overwrite.
+
+By default the bundled `SKILL.md` and other comment-safe files carry the ai-rulez generated-file
+header. Set `[plugin] provenance_headers = false` to write them byte-identical to their sources
+instead; the sidecar still records each file's `Content-Hash`, so `verify --plugin` and
+`publish --emit agent-plugins` behave the same.
 
 ## MCP servers
 

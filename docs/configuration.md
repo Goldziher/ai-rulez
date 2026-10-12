@@ -643,9 +643,9 @@ self_server = true                # default; add ai-rulez's own MCP server to .m
 
 | Field                 | Description                                                                                                                                              |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `self_server`         | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@latest", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
+| `self_server`         | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@latest", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. When the project serves skills (a `delivery` other than `static`, a `[[skill_sources]]` entry or a role delivery) the entry runs `mcp --serve-skills` instead: one process serves the skills and the authoring tools, so no separate skills server is needed. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
 | `self_server_version` | Version (or dist-tag) to pin. Defaults to `latest`, so a project picks up new releases without regenerating. Only applies while the self server is on. |
-| `self_server_command` | Executable followed by its arguments, replacing the npx launch. Mutually exclusive with `self_server_version`. Only applies while the self server is on.  |
+| `self_server_command` | Executable followed by its arguments, replacing the npx launch. When the project serves skills, `--serve-skills` is appended unless it is already there. Mutually exclusive with `self_server_version`. Only applies while the self server is on.  |
 
 Behavior:
 

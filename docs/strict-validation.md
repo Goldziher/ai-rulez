@@ -66,7 +66,7 @@ stdout.
 | AR101 | `glob-no-match` | error | A `paths`/`globs` pattern in a rule or context file matches no file tracked by git |
 | AR201 | `link-unresolved` | error | A relative markdown link (or image, or reference definition) points at a file that does not exist. A link in content a `[[scopes]]` entry renders is also resolved from that scope's directory, where the generated file is written |
 | AR202 | `anchor-unresolved` | warning | `file.md#anchor` where the target has no heading producing that anchor |
-| AR301 | `reference-unknown` | error | Prose names a skill, agent, rule or command that does not exist (`` `x-y` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `subagent_type: x`, `Procedure/reference: skill X`, `skills/X`, `.claude/skills/X/SKILL.md`). Only a name used as a pointer counts: a backticked term followed by a plural kind noun (`` `disable-model-invocation` skills ``) is prose, not a reference. The kind word is loose: a name that exists as any other kind (rule, skill, agent, command, context) is not reported. When the configuration declares `[[plugins]]` or `[[marketplaces]]`, or the file mentions a plugin, an unknown skill, agent or command may come from an installed plugin and is reported as `info` (unverifiable) instead of `error` |
+| AR301 | `reference-unknown` | error | Prose names a skill, agent, rule or command that does not exist (`` `x-y` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `subagent_type: x`, `Procedure/reference: skill X`, `skills/X`, `.claude/skills/X/SKILL.md`). Only a name used as a pointer counts: a backticked term followed by a plural kind noun (`` `disable-model-invocation` skills ``) or preceded by an indefinite article (`` a `both` skill ``) is prose, not a reference, and a `skills/` segment nested in another tree (`` src/mastra/public/skills/shared/… ``, unlike `skills/X` or `.claude/skills/X/SKILL.md`) is not a pointer to a skill of this project. The kind word is loose: a name that exists as any other kind (rule, skill, agent, command, context) is not reported. When the configuration declares `[[plugins]]` or `[[marketplaces]]`, or the file mentions a plugin, an unknown skill, agent or command may come from an installed plugin and is reported as `info` (unverifiable) instead of `error` |
 | AR302 | `frontmatter-skill-unknown` | error | Frontmatter `skills:` lists a skill that does not exist |
 | AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
 | AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist. A path that exists under a `[[scopes]]` entry's emitted directory is resolved there too. Not reported when the text does not claim the path exists: negated or historical ("there is no", "was removed", "decommissioned", "empty"), an example ("e.g.", "such as", a glob in the same paragraph), an alternative ("or under"), a date or version placeholder (`YYYY-MM-DD`), a build or runtime artifact (`target/`, `.venv/`, `vendor/`, `node_modules/`, or text saying it is gitignored), a ref of another repository (`path @ branch`, or a table row or line naming an `owner/repo` slug), a container image reference (`namespace/name` with no file extension and an image-name underscore, e.g. `armis/sra_session_vnc`), or an ADR number whose file carries a title suffix (`adrs/0065` for `adrs/0065-license.md`) |
@@ -207,6 +207,7 @@ stdout.
 | AR9S2 | `ard-entry-invalid` | error | An ARD entry has both or neither of `url` and `data`, or its `url` is not an absolute https URL |
 | AR9S3 | `ard-queries-out-of-range` | warning | An ARD entry has no `representativeQueries`, or fewer than 2 or more than 5; registries build their search index from them |
 | AR9S4 | `ard-not-declared` | error | The `ard` emitter is requested but the configuration has no `[ard]` table with `publisher` and `namespace` |
+| AR9T0 | `root-component-shipped` | warning | A single-plugin bundle's root is the repository root (the `"./"` source in `.claude-plugin/marketplace.json` and the Codex index), so a default host component path that exists there and is not part of the bundle — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, and the other paths Claude Code and Codex load from a plugin root — ships to every user who installs the plugin. Set `[plugin] content_root`, or move the plugin into a monorepo member (`plugins/<name>/`), so its root is not the repository root (see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) |
 | AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
 | AR9G1 | `trigger-vague` | warning | A description lacks a concrete trigger or a non-trigger (`review`; offline evidence is `AR801`-`AR803`) |
 | AR9G2 | `trigger-overlap` | warning | A description is likely confused with a sibling (`review`; offline evidence is `AR701`, `AR702`) |
@@ -286,6 +287,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9R0`-`AR9R9` | Served-skill on-disk traps ([#336](https://github.com/Goldziher/ai-rulez/issues/336), [#337](https://github.com/Goldziher/ai-rulez/issues/337); `AR9R0`, `AR9R1` used) | allocated |
 | `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
+| `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
 Unlisted letters (`AR9I`, `AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
@@ -2369,7 +2371,7 @@ a harness without MCP support keeps served skills as static files (nothing is dr
 
 ### AR993 served-no-server
 
-skills are served but no [[mcp_servers]] entry runs `ai-rulez mcp --serve-skills`
+skills are served but no MCP server runs `ai-rulez mcp --serve-skills`; the generated self entry runs it when mcp.self_server is on
 
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
@@ -3486,5 +3488,15 @@ the ard emitter is requested but the configuration has no [ard] table with publi
 - Why: The identifiers need a publisher and a namespace, so the emitter cannot guess them.
 - Bad: `[[publish.emitters]] name = "ard"` without an `[ard]` table
 - Good: Add `[ard]` with `publisher` (an FQDN) and `namespace`
+
+### AR9T0 root-component-shipped
+
+a single-plugin bundle whose root is the repository root ships a default host component path (.mcp.json, hooks/, agents/, commands/, settings.json, bin/) to every user; set [plugin] content_root or move the plugin into a monorepo member
+
+- Default severity: `warning`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A single-plugin repository lists its bundle with source "./", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin.
+- Bad: A repository with a `[plugin]` block and a committed `.mcp.json` or `agents/` directory, published with `source: "./"`
+- Good: Set `[plugin] content_root` to keep the payload out of the root, or move the plugin into a monorepo member (`plugins/<name>/`) so its root is not the repository root
 
 <!-- rules:end -->
