@@ -94,6 +94,9 @@ func TestValidate_RulesMode(t *testing.T) {
 		{"baz_default none", &RulesConfig{BazDefault: "none"}, ""},
 		{"baz_default unknown", &RulesConfig{BazDefault: "some"}, `invalid baz_default value "some"`},
 		{"baz_default case sensitive", &RulesConfig{BazDefault: "None"}, `invalid baz_default value "None"`},
+		{"baz_unscoped root", &RulesConfig{BazUnscoped: "root"}, ""},
+		{"baz_unscoped skip", &RulesConfig{BazUnscoped: "skip"}, ""},
+		{"baz_unscoped unknown", &RulesConfig{BazUnscoped: "drop"}, `invalid baz_unscoped value "drop"`},
 		{"baz_dedupe on", &RulesConfig{BazDedupe: true}, ""},
 		{"baz_budget positive", &RulesConfig{BazBudget: 2048}, ""},
 		{"baz_budget zero", &RulesConfig{BazBudget: 0}, ""},
@@ -278,4 +281,18 @@ func TestHasBuiltInPreset(t *testing.T) {
 	assert.True(t, cfg.HasBuiltInPreset("claude"))
 	assert.False(t, cfg.HasBuiltInPreset("baz"), "a custom preset named baz is not the built-in")
 	assert.False(t, (*Config)(nil).HasBuiltInPreset("claude"))
+}
+
+func TestBazUnscopedRules(t *testing.T) {
+	assert.Equal(t, BazUnscopedRoot, (*Config)(nil).BazUnscopedRules())
+	assert.Equal(t, BazUnscopedRoot, (&Config{Rules: &RulesConfig{}}).BazUnscopedRules())
+	assert.Equal(t, BazUnscopedSkip, (&Config{Rules: &RulesConfig{BazUnscoped: "skip"}}).BazUnscopedRules())
+}
+
+func TestBazIncludes(t *testing.T) {
+	cfg := &Config{Rules: &RulesConfig{Baz: &BazRulesConfig{Include: []string{"DB-Dao", "api.md"}}}}
+	assert.True(t, cfg.BazIncludes("db-dao"))
+	assert.True(t, cfg.BazIncludes("api"))
+	assert.False(t, cfg.BazIncludes("other"))
+	assert.False(t, (&Config{}).BazIncludes("api"))
 }

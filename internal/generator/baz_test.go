@@ -386,3 +386,63 @@ func TestBaz_PerRuleOptIn(t *testing.T) {
 		assert.False(t, nested(root)["skip"])
 	})
 }
+
+// TestBaz_UnscopedSkip pins rules.baz_unscoped. A glob-activated rule with no
+// directory (**/*.go) cannot be nested, so the baz preset inlines it into the
+// root AGENTS.md ("root", the default). "skip" drops it from that file, but only
+// when no other preset shares the file: codex and friends still need it.
+func TestBaz_UnscopedSkip(t *testing.T) {
+	const goRule = "---\npaths:\n  - \"**/*.go\"\n---\n# Go Code\n\nGO_CODE_BODY\n"
+	root := func(t *testing.T, presets []string, extra string) string {
+		t.Helper()
+		dir := t.TempDir()
+		writeAgentsMDProject(t, dir, agentsMDConfig(presets, "", extra))
+		writeAgentsMDFile(t, dir, ".ai-rulez/rules/go-code.md", goRule)
+		writeAgentsMDFile(t, dir, ".ai-rulez/rules/api-style.md", bazScopedRule)
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "services", "api"), 0o755))
+		runAgentsMDGenerate(t, dir)
+		return readBazFile(t, dir, "AGENTS.md")
+	}
+	skip := "\n[rules]\nbaz_unscoped = \"skip\"\n"
+
+	t.Run("root is the default", func(t *testing.T) {
+		assert.Contains(t, root(t, []string{"claude", "baz"}, ""), "GO_CODE_BODY")
+		assert.Contains(t, root(t, []string{"claude", "baz"}, "\n[rules]\nbaz_unscoped = \"root\"\n"), "GO_CODE_BODY")
+	})
+	t.Run("skip drops it from the baz-only root file", func(t *testing.T) {
+		md := root(t, []string{"claude", "baz"}, skip)
+		assert.NotContains(t, md, "GO_CODE_BODY")
+		assert.Contains(t, md, "ALWAYS_BODY", "unconditional rules stay")
+		assert.NotContains(t, md, "API_STYLE_BODY", "nestable rules still move to their directory")
+	})
+	t.Run("skip leaves a root file shared with codex alone", func(t *testing.T) {
+		assert.Contains(t, root(t, []string{"codex", "baz"}, skip), "GO_CODE_BODY")
+	})
+	t.Run("skip does not apply when baz_scoped is root", func(t *testing.T) {
+		md := root(t, []string{"baz"}, "\n[rules]\nbaz_scoped = \"root\"\nbaz_unscoped = \"skip\"\n")
+		assert.Contains(t, md, "GO_CODE_BODY")
+	})
+}
+
+// TestBaz_BudgetWarningNamesInlinedUnscopedRules pins that the baz_budget
+// warning names the glob-activated rules the root file inlines because they
+// cannot be nested, and that they are not reported once skipped.
+func TestBaz_BudgetWarningNamesInlinedUnscopedRules(t *testing.T) {
+	const goRule = "---\npaths:\n  - \"**/*.go\"\n---\n# Go Code\n\nGO_CODE_BODY\n"
+	names := func(t *testing.T, extra string) []string {
+		t.Helper()
+		dir := t.TempDir()
+		writeAgentsMDProject(t, dir, agentsMDConfig([]string{"claude", "baz"}, "", extra))
+		writeAgentsMDFile(t, dir, ".ai-rulez/rules/go-code.md", goRule)
+		cfg, err := config.LoadConfig(context.Background(), dir)
+		require.NoError(t, err)
+		g := NewGenerator(cfg)
+		outputs, _, err := g.collectOutputs("")
+		require.NoError(t, err)
+		f := g.bazBudgetFinding(outputs)
+		require.NotNil(t, f)
+		return f.Unscoped
+	}
+	assert.Equal(t, []string{"go-code"}, names(t, "\n[rules]\nbaz_budget = 1\n"))
+	assert.Empty(t, names(t, "\n[rules]\nbaz_budget = 1\nbaz_unscoped = \"skip\"\n"))
+}
