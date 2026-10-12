@@ -35,7 +35,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2291 9c19c6315d4965c0f112beb3001e62a4931a40d0a29c764daffe427fc6bfd520
-.ai-rulez/.generated-manifest.local.json file 0644 6605 504df9ec7c48a3e6ee5599be1e9ca2302c825924346a6efa3a2ecdc47d1961f8
+.ai-rulez/.generated-manifest.local.json file 0644 6605 fd06a7ab211f2db9e572d55941677759065fdb9d6d78fc84d38a79ea7e3a083d
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -299,7 +299,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 6605 504df9ec7c48a3e6ee5599be1e9ca2302c825924346a6efa3a2ecdc47d1961f8
+.ai-rulez/.generated-manifest.local.json file 0644 6605 fd06a7ab211f2db9e572d55941677759065fdb9d6d78fc84d38a79ea7e3a083d
 >>>>
 {
   "version": "1",
@@ -312,8 +312,8 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "0539714869bd7d3ae91752cfc4445925d27ab4e57f98f1a3695956c0e1141edc",
-          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77"
+          "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
+          "7aff8db3ff0a5325cf29362859002077ab53e7bc699485fde2464bdf37fb732f"
         ]
       },
       {
@@ -381,7 +381,7 @@ policy:
           "PreToolUse"
         ],
         "elementSums": [
-          "39d8450f93ad83d7b7c41ff16c85018b5b1215e20c1d431a034545b540de84db",
+          "5bb9ffa32f342886cc8d5de9d4a89778feef32b8d22d3490fda2e78f5e73c61b",
           "6142df9f8b8fd4aa9ef31c70b56860147ed9c4f9b7a42b2024fed63fbcc7f4aa"
         ]
       },
@@ -440,7 +440,7 @@ policy:
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "da5eb6f629a7ef6e308292007f8c3b82d2a4721036f8c5a1672e610645fec429"
+          "98802d7b3b30a968a5ba547a6da8cd1aa7f343e55cf3efa70b9890bf2cbda7ed"
         ]
       },
       {
@@ -498,18 +498,18 @@ policy:
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".agents/skills/ship/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".claude/settings.json": "8b4471dc488557587d3928caf9b5fb1bf5de997f4284b2613c2cea25fc43a751",
+    ".claude/settings.json": "1a57ccf99ba336f9ce572da1b50cbb2d4638526783df283456e52c9280086ce2",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".codex/agents/architect.toml": "100b7bc0d204d3f398585809f0f84c3b04581ea502d899f62797bafc05c53d13",
     ".codex/agents/tester.toml": "220954cc19dffd1eab6ef984b40645ae7a2380649877b4e4ed8a5b0ca54ea46c",
     ".codex/config.toml": "5b05588b7993d43069add2ed8786bca0e7a2b59112e5e887871c82e81dacd7bc",
-    ".codex/hooks.json": "1b3de1d34aac95977c29966b62f464653a18b51c021d56311a3e40e01c9334ff",
+    ".codex/hooks.json": "fd66b43003846cba3db7ae1fcc144bba62d4b2e817ff91a0a40132a16e0ed46b",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "8560817824784279c0901c445667932e190cead7d0de15ed9e34c39f838e4612",
+    ".cursor/hooks.json": "d57983b205cc3e4b388083ee43a3f9ede7126208337dd24dace795f997a3f455",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
     ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c"
   }
