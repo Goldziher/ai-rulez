@@ -4,6 +4,7 @@
 exit: 0
 --- stdout
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  skill_mode name-only of skill reviewer in role engineer is not applied on codex: no documented per-skill setting; the skill stays listed there role=engineer skill=reviewer
 WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
@@ -33,8 +34,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1807 20321f2bf146be29210a5390d0ab741272017913a720102b06230d2ce1c82f48
-.ai-rulez/.generated-manifest.local.json file 0644 4567 1790c4fd438ea9c52fbf486e5a4d9a1bdf5a8edf48cd40ad96915ba21da95474
+.ai-rulez/.generated-manifest.json file 0644 2187 6d4eb3966fef2eccc24374d7c4d299fe0313ab401b1ad612bb3f76acca865315
+.ai-rulez/.generated-manifest.local.json file 0644 4567 9c16ec4bd9388b4a9a0772cdef27f492c6730a99abd26d8ab5ad5e9c59ad632f
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -130,6 +131,7 @@ scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58
 exit: 0
 --- stdout
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
 WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
@@ -143,8 +145,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/storybook/SKILL.md file 0644 190 8b196dcd988ed3e4bd99fc6cf307a1bc604cbdd3c9c7e4dd002f9f8e4580e269
 + .agents/skills/storybook/agents/ dir 0755
 + .agents/skills/storybook/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
-~ .ai-rulez/.generated-manifest.json file 0644 1970 ab7ac8de1abef97e1e1a8b4135d75c3a8acfe45b39fb43f62b0112bc77d6a991
-~ .ai-rulez/.generated-manifest.local.json file 0644 4686 772b11cb2d574ccdf1c8e56f04254c66674b6fe938cfd9aa7215f21dfd56d6d5
+~ .ai-rulez/.generated-manifest.json file 0644 2350 af68f39be8125430017c26c66a9fa113e3eee466c0dd3a00584ea0ef14f78edf
+~ .ai-rulez/.generated-manifest.local.json file 0644 4686 875be5741e4450de4c7211026443dbe4a6d573a7338b6cdf51305a9ed33bac81
 + .claude/rules/react.md file 0644 253 142ac2b5ca11fe90d58acfe3ebdfea8c1385582afd9c15dc702b95f48c77585d
 ~ .claude/settings.json file 0644 1001 7d68f97de7cb92f635f3abc0f6b915b0bc276df3d6172a7776e92c32ba5917b9
 + .claude/skills/storybook/ dir 0755
@@ -158,6 +160,7 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 exit: 0
 --- stdout
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 WARN  [permissions] allow rule "Read(./src/**)" not generated for codex: Codex has no rule surface for Read (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
 WARN  [permissions] allow rule "WebFetch(domain:example.com)" not generated for codex: Codex has no rule surface for WebFetch (paths, domains and MCP tools need a permission profile, which replaces sandbox_mode)
@@ -169,8 +172,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 --- project tree
 + .agents/skills/deployer/ dir 0755
 + .agents/skills/deployer/SKILL.md file 0644 174 8160f075c640ee77e3685ee67a0318dfb4f03b81bebfc1cfcbc8e7945f06b41a
-~ .ai-rulez/.generated-manifest.json file 0644 1721 d1478ec8f00c2615bc1b7bb1d1051167d24218e5fb3f597069a216fae7181199
-~ .ai-rulez/.generated-manifest.local.json file 0644 4292 57af627caeca59ceb526ba9f5fae390c7f5d3540c11f0527037f50f59e70eb03
+~ .ai-rulez/.generated-manifest.json file 0644 2101 6c518c6bf0fd0d3e567b6b3b749f27e84d6dda4bb55c07b5b1bf957c56ab9270
+~ .ai-rulez/.generated-manifest.local.json file 0644 4292 5b32aa8d5e85a49d6c46ae8bb5d670f4f2eed59b2ca9cb43b1c72f5c63cb76f9
 ~ .claude/settings.json file 0644 953 42046a0a2442fce3251cbf0f234d9006d345464a7f8e2042e762f1e3d7b5fd80
 + .claude/skills/deployer/ dir 0755
 + .claude/skills/deployer/SKILL.md file 0644 172 a3ef0f4bdeef4f5a3f88437f3a88705e7dc388a42dd8523646a5db09dc2b8626
@@ -201,6 +204,7 @@ ROLE      EXTENDS   DOMAINS           ITEMS  SKILLS  TOKENS  DESCRIPTION
 engineer  -         backend           15     2       299     Writes code
 web       engineer  backend,frontend  18     2       346     Writes code
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 --- project tree
 (no change)
 --- home tree
@@ -221,6 +225,7 @@ web: effective (with engineer merged in)
   skill_mode review* = name-only
   skill_mode reviewer = on
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 --- project tree
 (no change)
 --- home tree
@@ -383,6 +388,7 @@ exit: 0
   "tokenizer": "cl100k_base"
 }
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 --- project tree
 .agents/ dir 0755
 .agents/skills/ dir 0755
@@ -403,8 +409,8 @@ exit: 0
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 1721 d1478ec8f00c2615bc1b7bb1d1051167d24218e5fb3f597069a216fae7181199
-.ai-rulez/.generated-manifest.local.json file 0644 4292 57af627caeca59ceb526ba9f5fae390c7f5d3540c11f0527037f50f59e70eb03
+.ai-rulez/.generated-manifest.json file 0644 2101 6c518c6bf0fd0d3e567b6b3b749f27e84d6dda4bb55c07b5b1bf957c56ab9270
+.ai-rulez/.generated-manifest.local.json file 0644 4292 5b32aa8d5e85a49d6c46ae8bb5d670f4f2eed59b2ca9cb43b1c72f5c63cb76f9
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a

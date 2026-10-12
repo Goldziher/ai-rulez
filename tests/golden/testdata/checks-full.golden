@@ -124,7 +124,7 @@ This skill bundles supporting files. Read them on demand when the task calls for
 echo review
 <<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 5384 8b9020e6e4a52b2e13fc4b449b10b667c685e6f174b8c55164cca5599bca8ccf
+.ai-rulez/.generated-manifest.json file 0644 6682 0ceaa76a506132fa5ce361fe89bcf3929bec38c16e8a362866e0b550ea6becd8
 >>>>
 {
   "version": "1",
@@ -241,6 +241,92 @@ echo review
     "REVIEW.md": [],
     "kilo.jsonc": []
   },
+  "servers": {
+    ".amp/settings.json": [
+      [
+        "amp.mcpServers",
+        "local-tool"
+      ],
+      [
+        "amp.mcpServers",
+        "remote-tool"
+      ]
+    ],
+    ".augment/settings.json": [
+      [
+        "mcpServers",
+        "local-tool"
+      ],
+      [
+        "mcpServers",
+        "remote-tool"
+      ]
+    ],
+    ".cursor/mcp.json": [
+      [
+        "mcpServers",
+        "local-tool"
+      ],
+      [
+        "mcpServers",
+        "remote-tool"
+      ]
+    ],
+    ".factory/mcp.json": [
+      [
+        "mcpServers",
+        "local-tool"
+      ],
+      [
+        "mcpServers",
+        "remote-tool"
+      ]
+    ],
+    ".gitlab/duo/mcp.json": [
+      [
+        "mcpServers",
+        "local-tool"
+      ],
+      [
+        "mcpServers",
+        "remote-tool"
+      ]
+    ],
+    ".mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ],
+      [
+        "mcpServers",
+        "local-tool"
+      ],
+      [
+        "mcpServers",
+        "remote-tool"
+      ]
+    ],
+    ".qwen/settings.json": [
+      [
+        "mcpServers",
+        "local-tool"
+      ],
+      [
+        "mcpServers",
+        "remote-tool"
+      ]
+    ],
+    "kilo.jsonc": [
+      [
+        "mcp",
+        "local-tool"
+      ],
+      [
+        "mcp",
+        "remote-tool"
+      ]
+    ]
+  },
   "assets": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
@@ -258,7 +344,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 14128 615ef778b2371ffad455c6a0fed5696bf638f7f66deea44b237627a4fdf77775
+.ai-rulez/.generated-manifest.local.json file 0644 14128 62292466aced310031f5d37769f32c9d7107f1a8125b61e95986f5d6c2dc72d6
 >>>>
 {
   "version": "1",
@@ -379,7 +465,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "98802d7b3b30a968a5ba547a6da8cd1aa7f343e55cf3efa70b9890bf2cbda7ed"
+          "acd2686694bf5908d435a110d554df9f838df25bf8d609b989c5f3b47238921a"
         ]
       },
       {
@@ -414,8 +500,8 @@ echo review
           "PreToolUse"
         ],
         "elementSums": [
-          "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b",
-          "cbd1a5827bdbbf19ddf6927350648a6a57a04cf95be8d9a60f49433224789719"
+          "435bddceb3151d88d1d6bb13604f5480b4c5105529604086080291a33ffd3ab2",
+          "bbf1cef865c2be723081158e7e1b3d0cee9c3a58eb86105624ec30db6112463b"
         ]
       },
       {
@@ -701,9 +787,9 @@ echo review
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "d57983b205cc3e4b388083ee43a3f9ede7126208337dd24dace795f997a3f455",
+    ".cursor/hooks.json": "cbdf65e63be43fb7b456140690279e5e76143f5c8fb3db2ea4ee139a9046ebaa",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".factory/hooks.json": "749425747af743b640771e811fdf4bdfe1cc339e938f76c842060321276097a8",
+    ".factory/hooks.json": "89028815a8423867ea5fc11fd4442ba6df37b92057438e27a6aa56b56a6d809b",
     ".factory/mcp.json": "df38b30a08918576faee0714e7d6b10f4d389e3cd9f1b7a03060de0b61564836",
     ".factory/skills/review-guidelines/SKILL.md": "490111025ca53fb35e3ff1bd282750a2dd22753c922517e8a1490bde9e1e81cc",
     ".factory/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",

@@ -18,7 +18,7 @@ const envPrefix = "AI_RULEZ"
 var (
 	cfgFile  string
 	gitToken string
-	Version  = "5.0.4"
+	Version  = "5.0.5"
 )
 
 var RootCmd = &cobra.Command{

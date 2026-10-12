@@ -4,6 +4,7 @@
 exit: 0
 --- stdout
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 INFO  Generating with configuration profile=default
 INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
@@ -11,8 +12,8 @@ INFO  Generation complete files=17
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 929 65de9e56839866e0792de5e4923b97d206a019efd15d14fadf1b8b4b868db13f
-.ai-rulez/.generated-manifest.local.json file 0644 2130 43db9a2054550de270bdefa14d9e05a707a44f998428d8172d5f600a96d838a4
+.ai-rulez/.generated-manifest.json file 0644 1031 05bfe5ee5cfebe702010a21de8681d50ed1ce1c3662b617d5d9c72daf8bef02c
+.ai-rulez/.generated-manifest.local.json file 0644 2130 4cf38240408a71e0a921de4491ad78f8e796ed4127165e4aedea3baa147f4971
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -97,6 +98,7 @@ scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58
 exit: 0
 --- stdout
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
 INFO  Generated files are up to date roots=1
 --- project tree
@@ -133,10 +135,11 @@ risk (advisory, never fails the run): critical (score 88/100)
   ... and 5 more item(s)
 --- stderr
 INFO  This configuration directory uses the pre-OKF layout, which is deprecated; run 'ai-rulez migrate okf' to convert it to an OKF bundle path=$ROOT/.ai-rulez
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 2 domain(s) and removes their outputs domains=backend, frontend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 INFO  Configuration is valid path=$ROOT/.ai-rulez
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 929 65de9e56839866e0792de5e4923b97d206a019efd15d14fadf1b8b4b868db13f
+.ai-rulez/.generated-manifest.json file 0644 1031 05bfe5ee5cfebe702010a21de8681d50ed1ce1c3662b617d5d9c72daf8bef02c
 >>>>
 {
   "version": "1",
@@ -163,13 +166,21 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
     ".claude/settings.json": [],
     ".mcp.json": []
   },
+  "servers": {
+    ".mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ]
+    ]
+  },
   "assets": {
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8"
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2130 43db9a2054550de270bdefa14d9e05a707a44f998428d8172d5f600a96d838a4
+.ai-rulez/.generated-manifest.local.json file 0644 2130 4cf38240408a71e0a921de4491ad78f8e796ed4127165e4aedea3baa147f4971
 >>>>
 {
   "version": "1",
@@ -183,7 +194,7 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
         ],
         "elementSums": [
           "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "7aff8db3ff0a5325cf29362859002077ab53e7bc699485fde2464bdf37fb732f"
+          "732b0e9acac41dfe79feee98b2f4e7c7e4b10137077d5281f2fa7141b15c170f"
         ]
       },
       {
@@ -237,7 +248,7 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
     ]
   },
   "digests": {
-    ".claude/settings.json": "1a57ccf99ba336f9ce572da1b50cbb2d4638526783df283456e52c9280086ce2",
+    ".claude/settings.json": "15d01db499d0aea785955631522c54e453cbf21670f87d68108ab067f998aec5",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".mcp.json": "c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0",

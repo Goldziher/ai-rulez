@@ -60,8 +60,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/ dir 0755
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3829 adac48313b0a5e1c2b69074fad1c80568729aaebe0044709f786f82504854127
-.ai-rulez/.generated-manifest.local.json file 0644 19320 512d4677406c7fc120d14176bf441441a2ff8fd4649fc21d95533605f188b1e1
+.ai-rulez/.generated-manifest.json file 0644 5182 8b9cba82fbd93cba23059abb2ef961dbf94420ce88e565010e5eb7caebf9a31f
+.ai-rulez/.generated-manifest.local.json file 0644 19320 99e5387941ec9fa6a04d4a398533159e807633babd7bed27adeadaab49c305f3
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -414,11 +414,19 @@ WARN  OpenCode needs a provider-qualified model (provider/model); omitting it so
 WARN  [permissions] allow rule "Read(./src/**)" not generated for opencode: it would be evaluated after the overlapping, stricter rule **/.env and override it
 INFO  Generating with configuration profile=default
 INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get it; the others are skipped harnesses=[claude codex gemini cursor factory copilot copilot-cli]
+WARN  Stale MCP server mcp_servers.personal in .codex/config.toml: it was generated from a [[mcp_servers]] block that is gone, but this machine has no record of writing it, so it is left in place hint=remove the entry from .codex/config.toml by hand
+WARN  Stale MCP server mcpServers.personal in .cursor/mcp.json: it was generated from a [[mcp_servers]] block that is gone, but this machine has no record of writing it, so it is left in place hint=remove the entry from .cursor/mcp.json by hand
+WARN  Stale MCP server mcpServers.personal in .gemini/settings.json: it was generated from a [[mcp_servers]] block that is gone, but this machine has no record of writing it, so it is left in place hint=remove the entry from .gemini/settings.json by hand
+WARN  Stale MCP server mcpServers.personal in .mcp.json: it was generated from a [[mcp_servers]] block that is gone, but this machine has no record of writing it, so it is left in place hint=remove the entry from .mcp.json by hand
+WARN  Stale MCP server mcp.local-tool in kilo.jsonc: it was generated from a [[mcp_servers]] block that is gone, but this machine has no record of writing it, so it is left in place hint=remove the entry from kilo.jsonc by hand
+WARN  Stale MCP server mcp.personal in kilo.jsonc: it was generated from a [[mcp_servers]] block that is gone, but this machine has no record of writing it, so it is left in place hint=remove the entry from kilo.jsonc by hand
+WARN  Stale MCP server mcp.remote-tool in kilo.jsonc: it was generated from a [[mcp_servers]] block that is gone, but this machine has no record of writing it, so it is left in place hint=remove the entry from kilo.jsonc by hand
+WARN  Stale MCP server mcp.personal in opencode.json: it was generated from a [[mcp_servers]] block that is gone, but this machine has no record of writing it, so it is left in place hint=remove the entry from opencode.json by hand
 INFO  Generation complete files=73
 WARN  3 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual, rules manual
 --- project tree
-~ .ai-rulez/.generated-manifest.json file 0644 3936 2f6a4d684df0867374b30cd4115954450287b6a4bd7791f1ed7e30fcf460a9c5
-~ .ai-rulez/.generated-manifest.local.json file 0644 18791 8878df3c4ee3de96f76b2afb5e32b321372334ab012403cea25493f2fde572bd
+~ .ai-rulez/.generated-manifest.json file 0644 4821 563e5bb622d69fbb76fc46dd52cda3730a48201fb75f1cb74478d595345c94fb
+~ .ai-rulez/.generated-manifest.local.json file 0644 18791 b6b62ff7e52407faa44b4a7609c2c190446360a3ea3e5995034ac86971e92e76
 ~ .gitignore file 0644 1355 dab9a0bd97bffaf4e0847a13d4f646fe18f1ad0a3e7031e99fb2b453d4add6ee
 --- home tree
 (no change)

@@ -73,7 +73,7 @@ This skill bundles supporting files. Read them on demand when the task calls for
 echo review
 <<<<
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 3173 23d9fe82f4cd565e53d6cff718e5f08618b5543aff713900f29f07f9b0761f19
+.ai-rulez/.generated-manifest.json file 0644 3705 fd018e4b9d6cdab3bea8615aa4f20b708af204eec1cdd681d9bee3ddd26191fb
 >>>>
 {
   "version": "1",
@@ -142,6 +142,42 @@ echo review
     ".mcp.json": [],
     ".vscode/settings.json": []
   },
+  "servers": {
+    ".cursor/mcp.json": [
+      [
+        "mcpServers",
+        "local-tool"
+      ],
+      [
+        "mcpServers",
+        "remote-tool"
+      ]
+    ],
+    ".junie/mcp/mcp.json": [
+      [
+        "mcpServers",
+        "local-tool"
+      ],
+      [
+        "mcpServers",
+        "remote-tool"
+      ]
+    ],
+    ".mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ],
+      [
+        "mcpServers",
+        "local-tool"
+      ],
+      [
+        "mcpServers",
+        "remote-tool"
+      ]
+    ]
+  },
   "assets": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
@@ -154,7 +190,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 7787 db37288ca69e52410b69c25d98c34df11cbdc4e7558703696f8e1532689d98b9
+.ai-rulez/.generated-manifest.local.json file 0644 7787 2b3505f431c36b842aa8d8095bcf1aa4fee8e9f6106ce803ca2ebcff07de7831
 >>>>
 {
   "version": "1",
@@ -168,7 +204,7 @@ echo review
         ],
         "elementSums": [
           "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "7aff8db3ff0a5325cf29362859002077ab53e7bc699485fde2464bdf37fb732f"
+          "732b0e9acac41dfe79feee98b2f4e7c7e4b10137077d5281f2fa7141b15c170f"
         ]
       },
       {
@@ -256,7 +292,7 @@ echo review
         ],
         "elementSums": [
           "8d551c5ad9950b88f255f9386fcf16341c14b77393544ad1a25d5910e3c3b274",
-          "98802d7b3b30a968a5ba547a6da8cd1aa7f343e55cf3efa70b9890bf2cbda7ed"
+          "acd2686694bf5908d435a110d554df9f838df25bf8d609b989c5f3b47238921a"
         ]
       },
       {
@@ -385,16 +421,16 @@ echo review
   "digests": {
     ".agents/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".agents/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".claude/settings.json": "1a57ccf99ba336f9ce572da1b50cbb2d4638526783df283456e52c9280086ce2",
+    ".claude/settings.json": "15d01db499d0aea785955631522c54e453cbf21670f87d68108ab067f998aec5",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".cursor/BUGBOT.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".cursor/cli.json": "7157bdd50749666291ee2c9c9c30fd2955eff5b882f55c09e7d6bd65ed5f6e0c",
     ".cursor/commands/build.md": "b61db5af1a87139a283467cf1784940526ce0621c1c307a2fc715b5d2d18eeef",
     ".cursor/commands/ship.md": "7c7d95d103f41bca186984662895900f18dcca846f894b2bb7ac75132b7050ff",
-    ".cursor/hooks.json": "d57983b205cc3e4b388083ee43a3f9ede7126208337dd24dace795f997a3f455",
+    ".cursor/hooks.json": "cbdf65e63be43fb7b456140690279e5e76143f5c8fb3db2ea4ee139a9046ebaa",
     ".cursor/mcp.json": "063f2222db4ab0ba0aefdd491b50ec40363ce0d9363d957dc905d0a7d3df8a73",
-    ".github/hooks/ai-rulez.json": "17f08e0f722448030388c8a2dbbd4fc94752181395d2df13b12ac91aebd24a79",
+    ".github/hooks/ai-rulez.json": "038a6bf769a6fae1b5cf64c53c7f3f174967dab5253982f39a19a0d42a36590f",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".junie/mcp/mcp.json": "aeeda633f6b73ba55f28e2ee95bb55515fc33c1bad00a6c1fee9d21ff09ba65b",

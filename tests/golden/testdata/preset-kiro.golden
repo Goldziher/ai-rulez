@@ -11,7 +11,7 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=16
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 888 3aee67ff0f3a266d67084842e30ce15648e8144f22837d469ddd1104532f7e65
+.ai-rulez/.generated-manifest.json file 0644 1271 8d5c1cb5483af1a039cda950cc40e63dac92bfc61c3c134801317a085fd9b791
 .ai-rulez/.generated-manifest.local.json file 0644 2237 ebdf1692b05033507c0b4835bd1a84737a78f5d9d73057049cb822cff719db3d
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72

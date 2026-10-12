@@ -11,8 +11,8 @@ INFO  Generation complete files=18
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 945 3733e0f098b25ab9b8eba340accc61885a8bf1875758c5d5138f8d89bc7b9dbf
-.ai-rulez/.generated-manifest.local.json file 0644 2214 7ea93e1591be4539b77d91dcd25857ee25228bac1ee1d07635271d6ba60050f7
+.ai-rulez/.generated-manifest.json file 0644 1047 65dc88f5bc08b2eefc9f449a62bde3126985c6eeec07fe63fe6f7cdb05b3da53
+.ai-rulez/.generated-manifest.local.json file 0644 2214 c0b9deffdfb0380b17fe1ad7cd8374eca1895e43c99bdee96fc640512b0d6da4
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -125,7 +125,7 @@ INFO  This configuration directory uses the pre-OKF layout, which is deprecated;
 INFO  Configuration is valid path=$ROOT/.ai-rulez
 --- project tree
 .ai-rulez/ dir 0755
-.ai-rulez/.generated-manifest.json file 0644 945 3733e0f098b25ab9b8eba340accc61885a8bf1875758c5d5138f8d89bc7b9dbf
+.ai-rulez/.generated-manifest.json file 0644 1047 65dc88f5bc08b2eefc9f449a62bde3126985c6eeec07fe63fe6f7cdb05b3da53
 >>>>
 {
   "version": "1",
@@ -153,13 +153,21 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
     ".claude/settings.json": [],
     ".mcp.json": []
   },
+  "servers": {
+    ".mcp.json": [
+      [
+        "mcpServers",
+        "ai-rulez"
+      ]
+    ]
+  },
   "assets": {
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8"
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 2214 7ea93e1591be4539b77d91dcd25857ee25228bac1ee1d07635271d6ba60050f7
+.ai-rulez/.generated-manifest.local.json file 0644 2214 c0b9deffdfb0380b17fe1ad7cd8374eca1895e43c99bdee96fc640512b0d6da4
 >>>>
 {
   "version": "1",
@@ -173,7 +181,7 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
         ],
         "elementSums": [
           "5528d0fa2a1b6c39128e8ff034de7d8c214d34fb447e0533afb1a8a3ee562e77",
-          "7aff8db3ff0a5325cf29362859002077ab53e7bc699485fde2464bdf37fb732f"
+          "732b0e9acac41dfe79feee98b2f4e7c7e4b10137077d5281f2fa7141b15c170f"
         ]
       },
       {
@@ -227,7 +235,7 @@ INFO  Configuration is valid path=$ROOT/.ai-rulez
     ]
   },
   "digests": {
-    ".claude/settings.json": "1a57ccf99ba336f9ce572da1b50cbb2d4638526783df283456e52c9280086ce2",
+    ".claude/settings.json": "15d01db499d0aea785955631522c54e453cbf21670f87d68108ab067f998aec5",
     ".claude/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".claude/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
     ".mcp.json": "c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0",

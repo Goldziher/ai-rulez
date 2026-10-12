@@ -31,6 +31,7 @@ user-level plan (profile default, home $HOME)
   skip:    $HOME/.claude/CLAUDE.md (exists and was not written by ai-rulez)
   4 project-shaped output(s) have no documented user-level location and are not written
 --- stderr
+WARN  [profiles] defines no `default` profile, so a run without --profile generates no content from 1 domain(s) and removes their outputs domains=backend hint=add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain
 WARN  [permissions] allow rule "Bash(npm run test:*)" not generated for cursor: Cursor's Shell() rules take a command name; a multi-word, exact or wildcard allow cannot be expressed without widening it
 WARN  SECURITY: [permissions] deny rule "Bash(rm -rf:*)" is NOT enforced by copilot: VS Code has no hard deny; the rule is written as 'always ask' (false), which a user can still approve severity=error hint=enforce it another way (sandbox, hook) or remove the harness from the project
 WARN  copilot reads ~/.copilot/skills, ~/.agents/skills, so these skills load twice: helper
