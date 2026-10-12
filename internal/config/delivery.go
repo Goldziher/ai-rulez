@@ -230,9 +230,11 @@ func (c *Config) writesSkillsTree(preset string) bool {
 	return consumer.Reads(SharedAgentSkills) || consumer.OwnSkillsDir != ""
 }
 
-// DefaultSkillsServerName is the server name docs register for `mcp --serve-skills`;
-// the stub names it when no [[mcp_servers]] entry runs that command.
-const DefaultSkillsServerName = "ai-rulez-skills"
+// DefaultSkillsServerName is the server name the generated self entry uses for
+// `mcp --serve-skills`; the stub names it when no [[mcp_servers]] entry runs
+// that command. It matches SelfMCPServerName, so the stub and the .mcp.json
+// entry agree.
+const DefaultSkillsServerName = SelfMCPServerName
 
 // skillsServerName is the name of the configured MCP server that runs
 // `mcp --serve-skills`, so the stub names a server the harness actually has.

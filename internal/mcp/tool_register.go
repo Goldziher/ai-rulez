@@ -39,7 +39,13 @@ type toolSpec struct {
 // arguments), and the result carries structuredContent validated against the
 // output schema next to the text the handler produced. An error result keeps
 // IsError, so a failure is never reported as success.
+//
+// A read-only server (mcp --read-only) registers only the tools annotated
+// read-only; a tool that writes is skipped.
 func addTool[In any](s *Server, spec toolSpec, handler handlerFunc) {
+	if s.readOnly && !spec.annotations.ReadOnlyHint {
+		return
+	}
 	in, err := inputSchemaFor[In](spec.enums)
 	if err != nil {
 		panic(fmt.Sprintf("tool %s: input schema: %v", spec.name, err))
