@@ -294,17 +294,31 @@ func bazItemSelected(cf config.ContentFile, cfg *config.Config) bool {
 	return targetmatch.Match(targets, []string{bazPresetName}, agentsMDFile)
 }
 
-// bazCollapseDirs collapses the directories of one item to their deepest shared
-// parent when rules.baz_dedupe is on, so an item whose globs point into several
-// sibling directories is written once to the parent AGENTS.md instead of a copy
-// in each. It returns dirs unchanged when dedupe is off or the directories share
-// no usable parent (the project root, which has no nested file).
+// bazCollapseDirs collapses the directories of one item to the directory that
+// covers all of them, so it is written once instead of a copy in each. That
+// happens when rules.baz_dedupe is on, or when the item would produce more than
+// rules.baz_dedupe_max copies. The covering directory is their deepest shared
+// parent; when they share none beyond the project root and the item exceeds
+// baz_dedupe_max, the item moves to the root AGENTS.md (nil, "not nested") unless
+// rules.baz_unscoped = "skip" keeps the root file free of path-scoped items. It
+// returns dirs unchanged when neither setting applies or no covering directory
+// is usable.
 func bazCollapseDirs(dirs []string, cfg *config.Config) []string {
-	if !cfg.BazDedupeEnabled() || len(dirs) <= 1 {
+	if len(dirs) <= 1 {
+		return dirs
+	}
+	overMax := cfg.BazDedupeMaxCopies() > 0 && len(dirs) > cfg.BazDedupeMaxCopies()
+	if !cfg.BazDedupeEnabled() && !overMax {
 		return dirs
 	}
 	parent := commonDir(dirs)
-	if parent == "" || !bazDirUsable(parent, cfg) {
+	if parent == "" {
+		if overMax && cfg.BazUnscopedRules() != config.BazUnscopedSkip {
+			return nil
+		}
+		return dirs
+	}
+	if !bazDirUsable(parent, cfg) {
 		return dirs
 	}
 	return []string{parent}

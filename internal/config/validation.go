@@ -211,6 +211,13 @@ func (c *Config) validateRules() error {
 	if err := validateBazUnscoped(c.Rules.BazUnscoped); err != nil {
 		return err
 	}
+	if c.Rules.BazDedupeMax < 0 {
+		return oops.
+			With("field", "rules.baz_dedupe_max").
+			With("actual_value", c.Rules.BazDedupeMax).
+			Hint("Use a copy count of 0 or more; 0 disables the collapse.").
+			Errorf("invalid baz_dedupe_max value %d at rules.baz_dedupe_max", c.Rules.BazDedupeMax)
+	}
 	if c.Rules.BazBudget < 0 {
 		return oops.
 			With("field", "rules.baz_budget").
