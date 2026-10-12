@@ -11,6 +11,7 @@ presets = ["claude", "baz"]
 baz_scoped = "nested"   # nested (default) | root
 baz_default = "all"     # all (default) | none
 # baz.include = ["db-dao"]  # with baz_default = "none", opt these rules in ([rules.baz] table)
+baz_unscoped = "root"   # root (default) | skip: path-scoped rules with no directory
 baz_dedupe = false      # write a shared parent AGENTS.md when globs share one
 baz_budget = 0          # byte budget of the Baz AGENTS.md surface (0 = off)
 ```
@@ -75,6 +76,18 @@ presets write it, when:
 The root `AGENTS.md` lacks the items that moved, in every preset that writes it, so `codex`, the shared `agents_md` file
 and `baz` stay identical. The scope of a nested file is the whole directory, which can be wider than the glob (the
 `_Applies to:_` line keeps the exact globs for the reader).
+
+### Path-scoped rules with no directory
+
+A rule scoped by `**/BUILD`, `**/*.go` or `.mcp.json` names no directory, so it cannot be nested and the root
+`AGENTS.md` inlines it with its `_Applies to:_` line. With `presets = ["claude", "baz"]` Claude imports that file in
+every session and also loads the same rule from `.claude/rules/`, so the rule is paid for twice. `baz_unscoped = "skip"`
+leaves such rules out of the root file. It applies only to the contribution `baz` makes: the root `AGENTS.md` is shared
+with `codex`, `opencode`, `amp`, `xum` and the other `AGENTS.md` presets, which need the rule, so while one of them is
+configured the file keeps it and `skip` has no effect. It also has no effect with `baz_scoped = "root"`, which keeps
+every path-scoped item in the root file by design. The default `"root"` leaves the output unchanged.
+
+When `baz_budget` is exceeded the warning also names the path-scoped rules the root file inlines for this reason.
 
 ## Narrowing, deduping and budgeting the nested surface
 

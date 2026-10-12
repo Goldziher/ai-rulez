@@ -126,7 +126,7 @@ What each preset writes:
 | `junie`                         | every rule in `.junie/rules/*.md`                                       | no rule files; everything in the root `AGENTS.md`          |
 | `cursor`, `devin`, `cline` | `.cursor/rules/*.mdc`, `.devin/rules`, `.clinerules`; `mode` has no effect | same |
 | `gemini`, `codex`, `opencode`, `amp`, `xum`, `pi`, `hermes` | rules inline, with `_Applies to:_` / `_When relevant:_` lines | same |
-| `baz`                           | rules inline in `AGENTS.md`; path-scoped ones in the `AGENTS.md` of their directory (`rules.baz_scoped`, `baz_default`, `baz.include`, `baz_dedupe`, `baz_budget`, see [Baz](baz.md)) | same |
+| `baz`                           | rules inline in `AGENTS.md`; path-scoped ones in the `AGENTS.md` of their directory (`rules.baz_scoped`, `baz_default`, `baz.include`, `baz_unscoped`, `baz_dedupe`, `baz_budget`, see [Baz](baz.md)) | same |
 
 Custom provider presets follow `mode` when their `outputs.rules` sets `split`.
 
