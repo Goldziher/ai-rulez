@@ -185,6 +185,12 @@ func (g *Generator) VerifyPlugin(profile string) error {
 			Hint("Run ai-rulez generate --plugin to remove the plugin directories of domains that no longer exist").
 			Errorf("stale generated plugin directory"))
 	}
+	return g.verifyPluginProvenance(expected)
+}
+
+// verifyPluginProvenance checks the provenance sidecars of the member plugins,
+// the domain plugins or the single plugin bundle at the base directory.
+func (g *Generator) verifyPluginProvenance(expected []config.OutputFile) error {
 	if marketplace := g.config.Marketplace; marketplace != nil && len(marketplace.Members) > 0 {
 		for _, member := range marketplace.Members {
 			if err := plugin.VerifyProvenance(filepath.Join(g.config.BaseDir, member)); err != nil {
