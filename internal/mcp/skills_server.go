@@ -49,6 +49,14 @@ const skillServerInstructions = "ai-rulez serves the skills of one profile read-
 	"Call find_skill with a task to get ranked matches and load_skill to read one (list_skill_resources shows its files); " +
 	"search_skills, get_skill and read_skill_file are the lexical equivalents. This server cannot modify any content."
 
+// mergedServerInstructions is surfaced when one server serves both surfaces
+// (`mcp --serve-skills`): the authoring tools, prompts and ai-rulez:// resources
+// of `mcp`, plus the skills extension and the skill:// resources.
+const mergedServerInstructions = serverInstructions + " " +
+	"This server also serves the project's skills read-only: skills are MCP resources under " +
+	"skill://<name>/SKILL.md; call find_skill with a task and load_skill to read one. " +
+	"Start it with --read-only to register the read-only tools only."
+
 // NewSkillServer builds the read-only serving surface: the Skills extension
 // (skills/list, skills/get, skill:// resources) plus search_skills, get_skill
 // and read_skill_file tools for clients that only speak tools. None of the
@@ -62,17 +70,49 @@ func NewSkillServer(version string, catalog *Catalog) *Server {
 // find_skill / load_skill / list_skill_resources tools, their session budget,
 // roles, usage telemetry and live reload.
 func NewSkillServerWith(version string, catalog *Catalog, opts ServeOptions) *Server {
+	return newServingServer(version, catalog, opts, nil)
+}
+
+// NewMergedServer builds one server that serves both the skills catalog and the
+// authoring surface, so `mcp --serve-skills` is the single MCP entry a project
+// needs. It is NewSkillServerWith plus the authoring tools, prompts and
+// ai-rulez:// resources; authoring opts wire the engines, the directory
+// confinement and, with WithReadOnly, the read-only tool set. The skills and
+// authoring tool names do not collide.
+func NewMergedServer(version string, catalog *Catalog, opts ServeOptions, authoring ...Option) *Server {
+	return newServingServer(version, catalog, opts, authoring)
+}
+
+// newServingServer builds the skills surface, and the authoring surface too when
+// authoring is not nil. The zero options keep the read-only skills-only server
+// named "ai-rulez-skills"; a merged server is named "ai-rulez" like `mcp`.
+func newServingServer(version string, catalog *Catalog, opts ServeOptions, authoring []Option) *Server {
+	merged := authoring != nil
+	name, title := "ai-rulez-skills", "AI-Rulez Skills"
+	instructions := skillServerInstructions
 	caps := &sdkmcp.ServerCapabilities{
 		Tools:     &sdkmcp.ToolCapabilities{},
 		Resources: &sdkmcp.ResourceCapabilities{ListChanged: true},
 	}
+	if merged {
+		name, title = "ai-rulez", "AI-Rulez"
+		instructions = mergedServerInstructions
+		caps.Prompts = &sdkmcp.PromptCapabilities{}
+	}
 	caps.AddExtension(SkillsExtensionID, map[string]any{"directoryRead": true})
-	srv := &Server{version: version, catalog: catalog, serve: newServeState(opts)}
+	srv := &Server{version: version, catalog: catalog, serve: newServeState(opts), authoring: merged}
+	for _, opt := range authoring {
+		opt(srv)
+	}
+	cacheable := srv.servingCacheable
+	if merged {
+		cacheable = srv.mergedCacheable
+	}
 	mcpServer := sdkmcp.NewServer(
-		&sdkmcp.Implementation{Name: "ai-rulez-skills", Title: "AI-Rulez Skills", Version: version},
+		&sdkmcp.Implementation{Name: name, Title: title, Version: version},
 		&sdkmcp.ServerOptions{
-			Capabilities: caps, Instructions: skillServerInstructions, Logger: sdkLogger(), PageSize: pageSize,
-			SetCacheable: srv.servingCacheable,
+			Capabilities: caps, Instructions: instructions, Logger: sdkLogger(), PageSize: pageSize,
+			SetCacheable: cacheable,
 		},
 	)
 	srv.mcpServer = mcpServer
@@ -83,6 +123,11 @@ func NewSkillServerWith(version string, catalog *Catalog, opts ServeOptions) *Se
 	srv.registerSkillResources()
 	srv.registerSkillTools()
 	srv.registerServeTools()
+	if merged {
+		srv.registerTools()
+		srv.registerPrompts()
+		srv.registerAuthoringResources()
+	}
 	return srv
 }
 
@@ -126,15 +171,15 @@ func resourceNotFound(uri string) error {
 	return &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "Resource not found", Data: data}
 }
 
-// unknownResourceMiddleware answers resources/read of a URI that is not a
-// served file itself. The SDK would build that error from the raw URI with %q,
+// unknownResourceMiddleware answers resources/read of a URI that names nothing
+// this server can read. The SDK would build that error from the raw URI with %q,
 // which is invalid JSON for control characters and ended the session.
 func (s *Server) unknownResourceMiddleware() sdkmcp.Middleware {
 	return func(next sdkmcp.MethodHandler) sdkmcp.MethodHandler {
 		return func(ctx context.Context, method string, request sdkmcp.Request) (sdkmcp.Result, error) {
 			if method == methodResourcesRead {
 				if req, ok := request.(*sdkmcp.ReadResourceRequest); ok && req.Params != nil {
-					if _, served := s.cat().File(req.Params.URI); !served {
+					if !s.resourceKnown(req.Params.URI) {
 						return nil, resourceNotFound(req.Params.URI)
 					}
 				}
@@ -142,6 +187,23 @@ func (s *Server) unknownResourceMiddleware() sdkmcp.Middleware {
 			return next(ctx, method, request)
 		}
 	}
+}
+
+// resourceKnown reports whether a URI names something this server can read: a
+// served skill file, or, on the authoring and merged servers, a config, catalog
+// or item URI (ai-rulez://...).
+func (s *Server) resourceKnown(uri string) bool {
+	if cat := s.cat(); cat != nil {
+		if _, served := cat.File(uri); served {
+			return true
+		}
+	}
+	if s.authoring {
+		if _, named := s.parseAuthoringURI(uri); named {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) registerSkillTools() {

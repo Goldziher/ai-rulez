@@ -38,6 +38,13 @@ type Server struct {
 	policyViewer handlers.PolicyViewer
 	// dirs confines the project directories the tools may touch.
 	dirs dirPolicy
+	// authoring reports whether the authoring surface (tools, prompts and
+	// ai-rulez:// resources) is registered; true for `mcp` and for the merged
+	// `mcp --serve-skills` server, false for the read-only skills server.
+	authoring bool
+	// readOnly restricts the authoring tools to the read-only ones (mcp
+	// --read-only); it is ignored when authoring is false.
+	readOnly bool
 }
 
 // Option configures the authoring server.
@@ -74,6 +81,14 @@ func WithRoot(dir string) Option {
 // WithAnyDirectory lifts the directory confinement (mcp --allow-any-dir).
 func WithAnyDirectory() Option {
 	return func(s *Server) { s.dirs.anyDir = true }
+}
+
+// WithReadOnly registers only the read-only authoring tools, so a client can
+// inspect and report on the configuration but cannot change it (mcp
+// --read-only). The skills and serving tools are always read-only and are
+// unaffected.
+func WithReadOnly() Option {
+	return func(s *Server) { s.readOnly = true }
 }
 
 // pageSize is how many tools, resources or prompts a list answer holds before
@@ -126,11 +141,13 @@ func NewServer(version string, opts ...Option) *Server {
 	srv := &Server{
 		mcpServer: mcpServer,
 		version:   version,
+		authoring: true,
 	}
 	for _, opt := range opts {
 		opt(srv)
 	}
 
+	mcpServer.AddReceivingMiddleware(srv.unknownResourceMiddleware())
 	srv.registerTools()
 	srv.registerPrompts()
 	srv.registerAuthoringResources()

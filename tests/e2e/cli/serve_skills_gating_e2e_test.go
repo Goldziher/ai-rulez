@@ -193,14 +193,42 @@ func TestServeSkillsGatingE2E(t *testing.T) {
 	}
 }
 
-// TestServeSkillsNeverWritesE2E: the read-only server registers no authoring
-// tool and leaves the project untouched.
-func TestServeSkillsNeverWritesE2E(t *testing.T) {
+// TestServeSkillsMergesTheAuthoringToolsE2E: one `mcp --serve-skills` process
+// registers the skills surface and the authoring tools under one name.
+func TestServeSkillsMergesTheAuthoringToolsE2E(t *testing.T) {
 	// Arrange
 	env := newIsoEnv(t)
 	root := minimalProject(t, servedConfig)
 	env.commitAll(root, "init")
 	srv, err := startSkillsServer(t, env, root)
+	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Act
+	tools, err := srv.session.ListTools(ctx, nil)
+	require.NoError(t, err)
+
+	// Assert
+	names := map[string]bool{}
+	for _, tool := range tools.Tools {
+		names[tool.Name] = true
+	}
+	assert.True(t, names["load_skill"], "the skills surface is registered")
+	assert.True(t, names["create_skill"], "the authoring surface is registered too")
+	assert.Equal(t, "ai-rulez", srv.session.InitializeResult().ServerInfo.Name,
+		"one server named ai-rulez, not ai-rulez-skills")
+}
+
+// TestServeSkillsNeverWritesE2E: with --read-only the merged server registers no
+// tool that writes and leaves the project untouched. (Without --read-only the
+// authoring tools are registered too, so one server serves skills and config.)
+func TestServeSkillsNeverWritesE2E(t *testing.T) {
+	// Arrange
+	env := newIsoEnv(t)
+	root := minimalProject(t, servedConfig)
+	env.commitAll(root, "init")
+	srv, err := startSkillsServer(t, env, root, "--read-only")
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -214,7 +242,7 @@ func TestServeSkillsNeverWritesE2E(t *testing.T) {
 	// Assert
 	for _, tool := range tools.Tools {
 		for _, verb := range []string{"create", "update", "delete", "generate", "install"} {
-			assert.False(t, strings.HasPrefix(tool.Name, verb), "authoring tool %s is registered in --serve-skills", tool.Name)
+			assert.False(t, strings.HasPrefix(tool.Name, verb), "authoring tool %s is registered in --serve-skills --read-only", tool.Name)
 		}
 	}
 	assert.Empty(t, env.git(root, "status", "--porcelain"), "serving changed the project")

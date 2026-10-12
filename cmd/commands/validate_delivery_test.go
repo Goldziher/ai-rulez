@@ -49,7 +49,8 @@ func TestDeliveryFindings_NothingServedIsSilent(t *testing.T) {
 }
 
 func TestDeliveryFindings_FallbackAndNoServer(t *testing.T) {
-	cfg := deliveryProject(t, `["claude", "rovodev"]`, "", servedSkillFiles)
+	// With the self server off and no explicit entry, nothing serves skills.
+	cfg := deliveryProject(t, `["claude", "rovodev"]`, "\n[mcp]\nself_server = false\n", servedSkillFiles)
 	got := codesOf(deliveryFindings(t.Context(), cfg))
 	assert.Contains(t, got[lint.CodeDeliveryStaticFallback], `"rovodev"`)
 	assert.Contains(t, got[lint.CodeDeliveryStaticFallback], "heavy")
@@ -59,6 +60,12 @@ func TestDeliveryFindings_FallbackAndNoServer(t *testing.T) {
 	withServer := deliveryProject(t, `["claude", "rovodev"]`,
 		"\n[[mcp_servers]]\nname = \"skills\"\ncommand = \"ai-rulez\"\nargs = [\"mcp\", \"--serve-skills\"]\n", servedSkillFiles)
 	assert.NotContains(t, codesOf(deliveryFindings(t.Context(), withServer)), lint.CodeServedNoServer)
+
+	// The generated self entry runs `mcp --serve-skills` when skills are served,
+	// so a project with the self server on needs no separate entry.
+	selfServer := deliveryProject(t, `["claude", "rovodev"]`, "", servedSkillFiles)
+	assert.NotContains(t, codesOf(deliveryFindings(t.Context(), selfServer)), lint.CodeServedNoServer,
+		"the self entry serves skills, so no separate server is required")
 }
 
 func TestDeliveryFindings_StubMissingWhenAnMCPHarnessDoesNotRenderIt(t *testing.T) {

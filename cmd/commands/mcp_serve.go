@@ -21,12 +21,18 @@ const (
 	flagServeUsageSink     = "usage-sink"
 	flagServeNoWatch       = "no-watch"
 	flagServePoll          = "reload-interval"
+	flagServeDaemon        = "daemon"
+	// flagServeDaemonServer marks the process the proxy spawned as the daemon
+	// itself. It is hidden: a user runs --daemon, and the proxy adds this flag
+	// on the child only.
+	flagServeDaemonServer = "daemon-server"
 )
 
 // dynamicServeFlagNames are the flags that only make sense with --serve-skills.
 var dynamicServeFlagNames = []string{
 	flagServeSource, flagServeRole, flagServeFrozen, flagServeOffline, flagServeIncludeStatic,
 	flagServeBudget, flagServeMaxClone, flagServeUsageLog, flagServeUsageSink, flagServeNoWatch, flagServePoll,
+	flagServeDaemon,
 }
 
 func registerDynamicServeFlags(cmd *cobra.Command) {
@@ -42,6 +48,9 @@ func registerDynamicServeFlags(cmd *cobra.Command) {
 	f.String(flagServeUsageSink, "", "Shell command that receives each load_skill usage line on stdin (requires --serve-skills)")
 	f.Bool(flagServeNoWatch, false, "Do not reload skills when their files change (requires --serve-skills)")
 	f.Duration(flagServePoll, 0, "How often to check skill files for changes; default 2s (requires --serve-skills)")
+	f.Bool(flagServeDaemon, false, "Share one long-lived skills server per repository: proxy stdin/stdout to a per-repo daemon, starting it on first use, and fall back to serving in-process when none is reachable (requires --serve-skills)")
+	f.Bool(flagServeDaemonServer, false, "Run as the shared daemon itself instead of proxying to it; set by the spawned child, not from the command line")
+	_ = f.MarkHidden(flagServeDaemonServer) //nolint:errcheck // the flag was just registered
 }
 
 // buildDynamicSkillServer loads the project (and any --source), renders the
@@ -65,6 +74,14 @@ func buildDynamicSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Serv
 func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 	flags := cmd.Flags()
 	setup := &mcp.ServeSetup{Version: Version, WorkDir: workingDir()}
+	// The merged server registers the authoring surface too, so `mcp
+	// --serve-skills` is the one MCP entry a project needs. The engines and the
+	// directory confinement come from the command line exactly as for `mcp`;
+	// --read-only narrows the authoring tools to the read-only ones.
+	setup.Authoring = append(engineOptions(), authoringOptions(cmd)...)
+	if readOnly, _ := flags.GetBool(flagMCPReadOnly); readOnly { //nolint:errcheck // the flag is registered in init
+		setup.Authoring = append(setup.Authoring, mcp.WithReadOnly())
+	}
 	var err error
 	read := func(name string, f func() error) {
 		if err == nil {
@@ -87,8 +104,15 @@ func serveSetupFromFlags(cmd *cobra.Command) (*mcp.ServeSetup, error) {
 	read(flagServeUsageSink, func() (e error) { setup.UsageSink, e = flags.GetString(flagServeUsageSink); return })
 	read(flagServeNoWatch, func() (e error) { setup.NoWatch, e = flags.GetBool(flagServeNoWatch); return })
 	read(flagServePoll, func() (e error) { setup.PollInterval, e = flags.GetDuration(flagServePoll); return })
+	read(flagServeDaemon, func() (e error) { setup.Daemon, e = flags.GetBool(flagServeDaemon); return })
 	if err != nil {
 		return nil, err //nolint:wrapcheck // wrapped above
+	}
+	if setup.Daemon {
+		// The identity is the command line itself, so two MCP entries that differ
+		// in any flag (a profile, a root, a usage sink) never share a daemon, and
+		// the spawned child, which gets the same arguments, agrees with its proxy.
+		setup.DaemonIdentity = daemonIdentity()
 	}
 	return setup, nil
 }

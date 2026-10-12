@@ -346,8 +346,8 @@ func TestDynamicSkillsStub_NamesTheServerThatServesSkills(t *testing.T) {
 		servers []MCPServer
 		want    string
 	}{
-		{"no server configured", nil, "`ai-rulez-skills`"},
-		{"an unrelated server", []MCPServer{{Name: "ai-rulez", Command: "ai-rulez", Args: []string{"mcp"}}}, "`ai-rulez-skills`"},
+		{"no server configured", nil, "`ai-rulez`"},
+		{"an unrelated server", []MCPServer{{Name: "ai-rulez", Command: "ai-rulez", Args: []string{"mcp"}}}, "`ai-rulez`"},
 		{"the entry running --serve-skills", []MCPServer{
 			{Name: "ai-rulez", Command: "ai-rulez", Args: []string{"mcp"}},
 			{Name: "skills", Command: "ai-rulez", Args: []string{"mcp", "--serve-skills"}},

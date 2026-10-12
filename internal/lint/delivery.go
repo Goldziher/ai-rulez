@@ -38,7 +38,7 @@ func registerDelivery(s *ruleSet) {
 		RuleInfo{CodeServedReferencedStatically, "served-skill-referenced-statically", SeverityWarning, "an always-loaded rule, context, agent or command names a skill whose delivery is served, which is not in the harness's skill tree; a served skill naming a sibling served skill is fine"},
 		RuleInfo{CodeDeliveryStubMissing, "delivery-stub-missing", SeverityError, "skills are served but a harness that can call MCP has no dynamic-skills stub telling the agent to call find_skill"},
 		RuleInfo{CodeDeliveryStaticFallback, "delivery-static-fallback", SeverityWarning, "a harness without MCP support keeps served skills as static files (nothing is dropped)"},
-		RuleInfo{CodeServedNoServer, "served-no-server", SeverityWarning, "skills are served but no [[mcp_servers]] entry runs `ai-rulez mcp --serve-skills`"},
+		RuleInfo{CodeServedNoServer, "served-no-server", SeverityWarning, "skills are served but no MCP server runs `ai-rulez mcp --serve-skills`; the generated self entry runs it when mcp.self_server is on"},
 		RuleInfo{CodeDeliveryInvalid, "delivery-invalid", SeverityError, "a skill's delivery frontmatter is not static, served or both"},
 		RuleInfo{CodeServedLockMismatch, "served-lock-mismatch", SeverityError, "[lock] enforce is on and a served skill is not pinned in ai-rulez.lock with its current digest"},
 		RuleInfo{CodeServedBundledFiles, "served-skill-bundled-files", SeverityWarning, "a served skill ships scripts/ or assets/ that are not written to disk, so a relative path into them does not resolve; set delivery: both to keep them"},
