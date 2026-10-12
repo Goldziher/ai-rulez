@@ -10472,6 +10472,8 @@ The layout is configurable through `[plugin.pi]`:
 [plugin.pi]
 skills_dir = "skills"     # default: .pi/skills
 package_json = "merge"    # default: generate
+package_name = "ghost-library-skills"  # default: @<owner>/pi-<plugin-name>
+skills_entry = "directory"             # default: each
 ```
 
 `skills_dir` writes each bundled skill once, into that tree, and points `pi.skills` at it. Set it to
@@ -10482,8 +10484,16 @@ templates stay under `.pi/prompts/` either way.
 `package_json = "merge"` updates only the root `package.json` keys ai-rulez owns — `name`, `version`,
 `description`, `author`, `repository`, `keywords`, `pi` and `files` — and keeps every other key, so a
 repository whose `package.json` also holds `devDependencies`, `scripts` or `packageManager` does not
-lose them. `ai-rulez verify --plugin` checks those owned keys only. The default, `generate`, replaces
+lose them. An authored `name` is kept unless `package_name` is set. `ai-rulez verify --plugin` checks those owned keys only. The default, `generate`, replaces
 the whole file as before.
+
+`package_name` sets the npm `name` explicitly (a lowercase npm name, scoped or not) instead of
+`@<owner>/pi-<plugin-name>`; it also wins in a combined Pi and OpenCode package.
+
+`skills_entry = "directory"` writes the skills directory once: `pi.skills` becomes `["./skills"]`
+(Pi resolves the directory to the skills inside it) and `files` gets `"skills/"` instead of every
+skill file, so adding a skill does not change `package.json`. The default, `each`, lists every skill.
+`files` lists `README.md` and `assets/` only when they exist in the bundle.
 
 With `runtimes = ["pi", "opencode"]`, both runtimes share one `package.json`: its name remains
 `@<owner>/opencode-<plugin-name>`, OpenCode's entry points and dependencies are retained, and Pi's
@@ -10849,6 +10859,11 @@ installed for everyone. Set `[plugin] content_root` to keep the authored payload
 separate, or move the plugin into a monorepo member (`plugins/<name>/`) so its
 root is not the repository root.
 
+The check looks only under the plugin's own root, never in a parent directory. A
+root `plugin.json` is on the list (Codex prefers it as the manifest); a root
+`CLAUDE.md` was considered and is not, because Claude Code does not load a
+`CLAUDE.md` from a plugin root as context.
+
 #### Domain content and per-domain plugins
 
 A project that keeps its content in `.ai-rulez/domains/<name>/` can ship it as plugins
@@ -11077,7 +11092,7 @@ Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 `[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`
 (Codex/Kimi UI block), `[plugin.gemini]` (`context_file_name`), `[plugin.kimi]`
 (`skill_instructions`/`session_start_skill`), `[plugin.hermes]`
-(`source`/`requires_python`), `[plugin.pi]` (`skills_dir`, `package_json`; see
+(`source`/`requires_python`), `[plugin.pi]` (`skills_dir`, `package_json`, `package_name`, `skills_entry`; see
 [Pi packages](#pi-packages)).
 
 `[marketplace]`: `name` (required); `description`, `members`, `output_dir`, `[marketplace.owner]`,
@@ -11884,7 +11899,7 @@ stdout.
 | AR9A3 | `activation-policy-conflict` | warning | An eval case contradicts the skill's invocation policy (`disable-model-invocation: true` or `allow_implicit_invocation: false`): it expects a trigger (`expect_trigger: true`) and can never pass, or expects none and can never fail (see [Evals](evals.md#linting-cases-and-results)) |
 | AR9A4 | `activation-prompt-names-skill` | off | A positive eval prompt contains the skill's name, so it tests an explicit invocation, not whether the model chooses the skill; enable it with `[lint.severity] AR9A4 = "warning"` |
 | AR9A5 | `eval-import-unmapped` | info | Fields of an imported scenario with no counterpart in the case format; reported by `ai-rulez eval import`, never by `validate` (see [Evals](evals.md#importing-scenarios)) |
-| AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent `skills:` or command names a skill whose `delivery` is `served` by the same forms AR301 reads (`` `x` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `Procedure/reference: skill X`, `skills/x`, `.claude/skills/x/SKILL.md`) and the skills MCP call forms (`load_skill x`, `load_skill(x)`, `load_skill(name: "x")`, `get_skill x`, `read_skill_file x`); the harness cannot see it until the agent calls `find_skill`. A served skill naming a sibling served skill is not reported (a skill is loaded on demand), and `both` skills are static, so naming one is fine (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
+| AR990 | `served-skill-referenced-statically` | warning | An always-loaded rule, context, agent `skills:` or command names a skill whose `delivery` is `served` by the same forms AR301 reads (`` `x` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `Procedure/reference: skill X`, `skills/x`, `.claude/skills/x/SKILL.md`) and the skills MCP call forms (`load_skill(x)`, `load_skill(name: "x")`, `get_skill x`, `read_skill_file x`; a single code span `load_skill x` is the recommended fix and is not reported); the harness cannot see it until the agent calls `find_skill`. A served skill naming a sibling served skill is not reported (a skill is loaded on demand), and `both` skills are static, so naming one is fine (see [Dynamic skill loading](mcp-server.md#dynamic-skill-loading)) |
 | AR991 | `delivery-stub-missing` | error | Skills are served but a configured harness that can call MCP has no `dynamic-skills` stub in its output (a skill of that name shadows it, or the preset renders no skills), so its agent is never told to call `find_skill` |
 | AR992 | `delivery-static-fallback` | warning | A configured harness without MCP support keeps served skills as static files (nothing is dropped). Not reported for a harness that writes no skill tree of its own (it reads another preset's tree, e.g. `baz` next to `claude`) |
 | AR993 | `served-no-server` | warning | Skills are served but no `[[mcp_servers]]` entry runs `ai-rulez mcp --serve-skills` |
@@ -11969,7 +11984,7 @@ stdout.
 | AR9S2 | `ard-entry-invalid` | error | An ARD entry has both or neither of `url` and `data`, or its `url` is not an absolute https URL |
 | AR9S3 | `ard-queries-out-of-range` | warning | An ARD entry has no `representativeQueries`, or fewer than 2 or more than 5; registries build their search index from them |
 | AR9S4 | `ard-not-declared` | error | The `ard` emitter is requested but the configuration has no `[ard]` table with `publisher` and `namespace` |
-| AR9T0 | `root-component-shipped` | warning | A single-plugin bundle's root is the repository root (the `"./"` source in `.claude-plugin/marketplace.json` and the Codex index), so a default host component path that exists there and is not part of the bundle — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, and the other paths Claude Code and Codex load from a plugin root — ships to every user who installs the plugin. Set `[plugin] content_root`, or move the plugin into a monorepo member (`plugins/<name>/`), so its root is not the repository root (see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) |
+| AR9T0 | `root-component-shipped` | warning | A single-plugin bundle's root is the repository root (the `"./"` source in `.claude-plugin/marketplace.json` and the Codex index), so a default host component path that exists there and is not part of the bundle — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, a root `plugin.json` (Codex prefers it as the manifest), and the other paths Claude Code and Codex load from a plugin root — ships to every user who installs the plugin. Set `[plugin] content_root`, or move the plugin into a monorepo member (`plugins/<name>/`), so its root is not the repository root (see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) |
 | AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
 | AR9G1 | `trigger-vague` | warning | A description lacks a concrete trigger or a non-trigger (`review`; offline evidence is `AR801`-`AR803`) |
 | AR9G2 | `trigger-overlap` | warning | A description is likely confused with a sibling (`review`; offline evidence is `AR701`, `AR702`) |
@@ -14107,7 +14122,7 @@ an always-loaded rule, context, agent or command names a skill whose delivery is
 
 - Default severity: `warning`
 - Analyzer: `delivery` (scope `item`)
-- Why: Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. The pointer forms are the ones AR301 reads plus the skills MCP calls (`load_skill x`, `get_skill x`, `read_skill_file x`); a `load_skill` call or a file path reaches the skill at runtime, but the name still sits in always-loaded content. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.
+- Why: Always-loaded content (a rule, context, agent or command) that names a served skill points at a file the harness never gets. The pointer forms are the ones AR301 reads plus the skills MCP calls (`get_skill x`, `read_skill_file x`, `load_skill(x)`). A single code span `load_skill <name>` is the recommended fix and is not reported. A served skill naming a sibling served skill is fine: the agent loads it on demand and follows the reference there.
 - Bad: A rule saying "run the `deploy` skill", or an agent `skills: [deploy]`, when `deploy` is served
 - Good: Tell the agent to call `load_skill`/`find_skill`, or set `delivery: both` on the referenced skill so it stays in the static tree
 
@@ -15253,11 +15268,11 @@ the ard emitter is requested but the configuration has no [ard] table with publi
 
 ##### AR9T0 root-component-shipped
 
-a single-plugin bundle whose root is the repository root ships a default host component path (.mcp.json, hooks/, agents/, commands/, settings.json, bin/) to every user; set [plugin] content_root or move the plugin into a monorepo member
+a single-plugin bundle whose root is the repository root ships a default host component path (.mcp.json, hooks/, agents/, commands/, settings.json, bin/, a Codex plugin.json) to every user; set [plugin] content_root or move the plugin into a monorepo member
 
 - Default severity: `warning`
 - Analyzer: `plugin` (scope `bundle`)
-- Why: A single-plugin repository lists its bundle with source "./", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin.
+- Why: A single-plugin repository lists its bundle with source "./", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin. Paths are looked up only under the plugin's own root, never in a parent directory. A root `plugin.json` is on the list because Codex prefers it as the manifest; a root `CLAUDE.md` was considered and left off, because Claude Code does not load a `CLAUDE.md` from a plugin root as context (`claude plugin validate` warns about one).
 - Bad: A repository with a `[plugin]` block and a committed `.mcp.json` or `agents/` directory, published with `source: "./"`
 - Good: Set `[plugin] content_root` to keep the payload out of the root, or move the plugin into a monorepo member (`plugins/<name>/`) so its root is not the repository root
 
@@ -15776,7 +15791,7 @@ repositories declare Git or local sources in their existing `poly.toml` and sele
 the hooks they need. Consumers do not create another `poly-hooks.toml`.
 
 The catalog exists since AI-Rulez 4.9.0 and needs Poly 0.14.0 or later. Each catalog revision runs the
-`ai-rulez` release it belongs to (revision `v5.0.0` runs `ai-rulez@5.0.0`), so pin `revision` to the
+`ai-rulez` release it belongs to (revision `v5.0.0` runs `ai-rulez@5.1.0`), so pin `revision` to the
 release you want.
 
 #### Add AI-Rulez to a repository
@@ -15787,7 +15802,7 @@ Add a Git source to `poly.toml`:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v5.0.0"
+revision = "v5.1.0"
 hooks = ["ai-rulez-validate"]
 ```
 
@@ -15889,14 +15904,14 @@ pass_filenames = false
 [[hooks.paths]]
 channel = "npx"
 check = "command -v npx"
-run = "npx -y ai-rulez@5.0.0"
-install = "npx -y ai-rulez@5.0.0 version"
+run = "npx -y ai-rulez@5.1.0"
+install = "npx -y ai-rulez@5.1.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
 check = "command -v uvx"
-run = "uvx ai-rulez==5.0.0"
-install = "uvx ai-rulez==5.0.0 version"
+run = "uvx ai-rulez==5.1.0"
+install = "uvx ai-rulez==5.1.0 version"
 
 [[hooks.paths]]
 channel = "system"
