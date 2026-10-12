@@ -13,6 +13,7 @@ baz_default = "all"     # all (default) | none
 # baz.include = ["db-dao"]  # with baz_default = "none", opt these rules in ([rules.baz] table)
 baz_unscoped = "root"   # root (default) | skip: path-scoped rules with no directory
 baz_dedupe = false      # write a shared parent AGENTS.md when globs share one
+baz_dedupe_max = 0      # collapse a rule with more than K nested copies to a covering directory (0 = off)
 baz_budget = 0          # byte budget of the Baz AGENTS.md surface (0 = off)
 ```
 
@@ -92,7 +93,7 @@ When `baz_budget` is exceeded the warning also names the path-scoped rules the r
 ## Narrowing, deduping and budgeting the nested surface
 
 One rule with many globs is copied into every directory those globs point into, so a large monorepo can grow a nested
-`AGENTS.md` per service. Three `[rules]` keys keep that surface under control; all three default to today's behaviour.
+`AGENTS.md` per service. Four `[rules]` keys keep that surface under control; all default to today's behaviour.
 
 - **`baz_default = "none"`** nests only items whose frontmatter `targets` select `baz`; an item with no targets is not
   nested. It stays in the root `AGENTS.md`, which is shared with `codex`, `opencode`, `amp` and `xum` and is read by
@@ -101,6 +102,11 @@ One rule with many globs is copied into every directory those globs point into, 
 - **`baz_dedupe = true`** writes an item whose globs point into several sibling directories under one parent once, to
   that parent's `AGENTS.md` (for example `services/AGENTS.md` instead of `services/api/AGENTS.md` and
   `services/web/AGENTS.md`). It is off by default, so the output is unchanged.
+- **`baz_dedupe_max = <K>`** collapses an item that would be copied into more than K directories to the directory
+  covering all of them, even without `baz_dedupe`. When the directories share nothing but the repository root (a rule
+  scoped to `armis/`, `deploy/` and `dev_tools/`), the item goes to the root `AGENTS.md`, the baz contribution to that
+  shared file. With `baz_unscoped = "skip"` the root is off limits for path-scoped items, so the copies stay. `0`
+  disables it.
 - **`baz_budget = <bytes>`** makes `generate` warn when the total size of the Baz `AGENTS.md` surface (the root file
   plus the nested ones) exceeds the budget, naming the largest files and the budget. It is advisory and never fails the
   run. `0` disables it.

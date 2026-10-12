@@ -507,6 +507,11 @@ type RulesConfig struct {
 	// instead of a copy in each. Off by default so existing output is unchanged.
 	BazDedupe bool `yaml:"baz_dedupe,omitempty" json:"baz_dedupe,omitempty" toml:"baz_dedupe,omitempty"` //nolint:tagliatelle
 
+	// BazDedupeMax, when above 0, collapses an item that would be copied into
+	// more than that many directories to the directory covering all of them, up
+	// to the repository root (the root AGENTS.md). 0 (the default) is off.
+	BazDedupeMax int `yaml:"baz_dedupe_max,omitempty" json:"baz_dedupe_max,omitempty" toml:"baz_dedupe_max,omitempty"` //nolint:tagliatelle
+
 	// BazBudget is the byte budget of the AGENTS.md files the baz preset
 	// writes; generate warns when their total exceeds it. 0 (the default)
 	// disables the warning.
@@ -592,6 +597,15 @@ func (c *Config) BazDefaultRules() string {
 // AGENTS.md (rules.baz_dedupe). Off by default.
 func (c *Config) BazDedupeEnabled() bool {
 	return c != nil && c.Rules != nil && c.Rules.BazDedupe
+}
+
+// BazDedupeMaxCopies returns rules.baz_dedupe_max, the most nested copies an item
+// may produce before it collapses to a covering directory, or 0 when off.
+func (c *Config) BazDedupeMaxCopies() int {
+	if c == nil || c.Rules == nil {
+		return 0
+	}
+	return c.Rules.BazDedupeMax
 }
 
 // BazBudgetBytes returns the byte budget of the AGENTS.md files the baz preset

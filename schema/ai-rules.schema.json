@@ -884,6 +884,11 @@
           "type": "boolean",
           "description": "When true, a path-scoped item whose globs point into several directories under one parent is written once to the shared parent AGENTS.md instead of a copy in each. Defaults to false."
         },
+        "baz_dedupe_max": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "When above 0, a path-scoped item that would be copied into more than this many directories is written once to the directory covering all of them, up to the repository root (the root AGENTS.md). Independent of baz_dedupe; with baz_unscoped = skip the root fallback is not used. 0 (default) disables it."
+        },
         "baz_budget": {
           "type": "integer",
           "minimum": 0,
