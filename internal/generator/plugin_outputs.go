@@ -76,17 +76,49 @@ func (pluginNotGeneratedError) Is(target error) bool {
 // to run. verify --plugin maps it to exit 2.
 var ErrPluginDrift = errors.New("plugin bundle differs from its sources")
 
-type pluginDriftError struct{ err error }
+// The kinds of PluginDrift.
+const (
+	// PluginDriftChanged: the file differs from what generate would write.
+	PluginDriftChanged = "changed"
+	// PluginDriftMissing: the file is not on disk or cannot be read.
+	PluginDriftMissing = "missing"
+	// PluginDriftStaleSource: the provenance sidecar no longer matches the bundle.
+	PluginDriftStaleSource = "stale-source"
+	// PluginDriftObsolete: a file the previous run generated that the sources no longer produce.
+	PluginDriftObsolete = "obsolete"
+)
+
+// PluginDrift is one path where a plugin bundle differs from its sources, with
+// the kind of difference. Path is project-relative with forward slashes.
+type PluginDrift struct {
+	Path string `json:"path"`
+	Kind string `json:"kind"`
+}
+
+type pluginDriftError struct {
+	err   error
+	drift []PluginDrift
+}
 
 func (e pluginDriftError) Error() string      { return e.err.Error() }
 func (e pluginDriftError) Unwrap() error      { return e.err }
 func (pluginDriftError) Is(target error) bool { return target == ErrPluginDrift }
 
-func asPluginDrift(err error) error {
+func asPluginDrift(err error, drift ...PluginDrift) error {
 	if err == nil {
 		return nil
 	}
-	return pluginDriftError{err}
+	return pluginDriftError{err: err, drift: drift}
+}
+
+// PluginDriftOf returns the drifted paths a VerifyPlugin failure carries, or nil
+// when err is not a drift failure or names no path.
+func PluginDriftOf(err error) []PluginDrift {
+	var drift pluginDriftError
+	if errors.As(err, &drift) {
+		return drift.drift
+	}
+	return nil
 }
 
 // checkPluginGenerated fails with ErrPluginNotGenerated, and the command that
@@ -120,11 +152,15 @@ func (g *Generator) VerifyPlugin(profile string) error {
 	if err := checkPluginGenerated(expected); err != nil {
 		return err
 	}
-	if len(obsolete) > 0 {
-		return asPluginDrift(obsoleteFilesError(obsolete))
+	drift := g.verifyPluginOutputs(expected)
+	for _, item := range obsolete {
+		drift = append(drift, PluginDrift{Path: item.rel, Kind: PluginDriftObsolete})
 	}
-	if err := verifyPluginOutputs(expected); err != nil {
-		return asPluginDrift(err)
+	if len(obsolete) > 0 {
+		return asPluginDrift(obsoleteFilesError(obsolete), drift...)
+	}
+	if len(drift) > 0 {
+		return asPluginDrift(pluginOutputsError(drift), drift...)
 	}
 	stale, err := g.stalePluginDirs()
 	if err != nil {
@@ -138,54 +174,82 @@ func (g *Generator) VerifyPlugin(profile string) error {
 	if marketplace := g.config.Marketplace; marketplace != nil && len(marketplace.Members) > 0 {
 		for _, member := range marketplace.Members {
 			if err := plugin.VerifyProvenance(filepath.Join(g.config.BaseDir, member)); err != nil {
-				return asPluginDrift(oops.With("member", member).Wrapf(err, "verify member plugin bundle"))
+				return asPluginDrift(oops.With("member", member).Wrapf(err, "verify member plugin bundle"),
+					g.staleSource(filepath.Join(g.config.BaseDir, member)))
 			}
 		}
 	}
 	if marketplace := g.config.Marketplace; marketplace != nil && marketplace.HasDomainPlugins() {
-		return asPluginDrift(g.verifyDomainPluginProvenance(expected))
+		return g.domainProvenanceDrift(expected)
 	}
-	return asPluginDrift(plugin.VerifyProvenance(g.config.BaseDir))
+	if err := plugin.VerifyProvenance(g.config.BaseDir); err != nil {
+		return asPluginDrift(err, g.staleSource(g.config.BaseDir))
+	}
+	return nil
 }
 
-// verifyPluginOutputs compares every expected plugin file with what is on disk.
-func verifyPluginOutputs(expected []config.OutputFile) error {
+// staleSource is the drift entry for a bundle whose provenance sidecar fails.
+func (g *Generator) staleSource(bundleDir string) PluginDrift {
+	sidecar := filepath.Join(bundleDir, plugin.ProvenanceFileName)
+	return PluginDrift{Path: filepath.ToSlash(g.convertToRelativePath(sidecar)), Kind: PluginDriftStaleSource}
+}
+
+// domainProvenanceDrift verifies the domain-plugin bundle roots and names the
+// sidecar of the first one that fails.
+func (g *Generator) domainProvenanceDrift(expected []config.OutputFile) error {
+	for _, output := range expected {
+		if filepath.Base(output.Path) != plugin.ProvenanceFileName {
+			continue
+		}
+		dir := filepath.Dir(g.absOutputPath(output.Path))
+		if err := plugin.VerifyProvenance(dir); err != nil {
+			return asPluginDrift(oops.With("bundle", dir).Wrapf(err, "verify domain plugin bundle"), g.staleSource(dir))
+		}
+	}
+	return nil
+}
+
+// verifyPluginOutputs compares every expected plugin file with what is on disk
+// and returns every path that differs, in output order.
+func (g *Generator) verifyPluginOutputs(expected []config.OutputFile) []PluginDrift {
+	var drift []PluginDrift
 	for _, output := range expected {
 		if output.IsDir {
 			continue
 		}
+		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		actual, readErr := os.ReadFile(output.Path)
 		if readErr != nil {
-			return oops.With("path", output.Path).
-				Hint("Run ai-rulez generate --plugin to restore the missing file").
-				Wrapf(readErr, "read generated plugin output")
+			drift = append(drift, PluginDrift{Path: rel, Kind: PluginDriftMissing})
+			continue
 		}
 		expectedBytes := output.RawContent
 		if expectedBytes == nil {
 			expectedBytes = []byte(output.Content)
 		}
 		if !bytes.Equal(actual, expectedBytes) {
-			return oops.With("path", output.Path).
-				Hint("Run ai-rulez generate --plugin and commit the regenerated output").
-				Errorf("generated plugin output is stale")
+			drift = append(drift, PluginDrift{Path: rel, Kind: PluginDriftChanged})
 		}
 	}
-	return nil
+	return drift
 }
 
-// verifyDomainPluginProvenance verifies every bundle root the domain-plugin
-// marketplace wrote: the marketplace root and each plugin directory.
-func (g *Generator) verifyDomainPluginProvenance(expected []config.OutputFile) error {
-	for _, output := range expected {
-		if filepath.Base(output.Path) != plugin.ProvenanceFileName {
-			continue
-		}
-		dir := filepath.Dir(output.Path)
-		if err := plugin.VerifyProvenance(dir); err != nil {
-			return oops.With("bundle", dir).Wrapf(err, "verify domain plugin bundle")
+// pluginOutputsError is the verify failure for plugin files that differ from
+// what generate would write; the paths are in the PluginDrift list.
+func pluginOutputsError(drift []PluginDrift) error {
+	paths := make([]string, 0, len(drift))
+	for _, item := range drift {
+		paths = append(paths, item.Path)
+	}
+	hint := "Run ai-rulez generate --plugin and commit the regenerated output"
+	for _, item := range drift {
+		if item.Kind == PluginDriftMissing {
+			hint = "Run ai-rulez generate --plugin to restore the missing file and commit the regenerated output"
+			break
 		}
 	}
-	return nil
+	return oops.With("files", strings.Join(paths, ", ")).Hint(hint).
+		Errorf("generated plugin output is stale")
 }
 
 // DryRunPlugin returns the plugin generation plan without writing files.

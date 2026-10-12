@@ -80,3 +80,40 @@ func TestFinishPluginVerifyTextReturnsTheOutcome(t *testing.T) {
 	assert.Equal(t, drift, finishPluginVerify(out, pluginVerifyDoc{err: drift}))
 	assert.Empty(t, stdout.String())
 }
+
+func TestFinishPluginVerifyReportsDriftedPaths(t *testing.T) {
+	// Arrange
+	drift := []generator.PluginDrift{
+		{Path: "skills/a/SKILL.md", Kind: generator.PluginDriftChanged},
+		{Path: "skills/b/SKILL.md", Kind: generator.PluginDriftMissing},
+	}
+	doc := func() pluginVerifyDoc {
+		return pluginVerifyDoc{Status: pluginVerifyDrift, Configs: 1, Drift: drift,
+			err: failWithCode(exitFindings, generator.ErrPluginDrift)}
+	}
+
+	t.Run("text lists each path with its kind", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		out := render.New(&stdout, &stderr, false)
+
+		err := finishPluginVerify(out, doc())
+
+		assert.Equal(t, exitFindings, codeOf(err))
+		assert.Contains(t, stderr.String(), "changed      skills/a/SKILL.md")
+		assert.Contains(t, stderr.String(), "missing      skills/b/SKILL.md")
+	})
+
+	t.Run("json carries a drift array", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		out := render.New(&stdout, &stderr, false).WithFormat(formatJSON)
+
+		err := finishPluginVerify(out, doc())
+
+		assert.Equal(t, exitFindings, codeOf(err))
+		var got pluginVerifyDoc
+		require.NoError(t, json.Unmarshal(stdout.Bytes(), &got), stdout.String())
+		assert.Equal(t, drift, got.Drift)
+		assert.Equal(t, "drift", got.Status)
+		assert.NotEmpty(t, got.Error)
+	})
+}
