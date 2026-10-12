@@ -331,6 +331,7 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	scanner := newProjectScanner(ctx, v)
 	scanner.git = gitutil.New(loadHost(lo).Runner)
 	scanner.log = lo.host.Log
+	scanner.snapshots.anchor = filepath.Clean(configDir)
 	contentTree, err := scanContentTree(scanner, configDir, config.BundleExclude)
 	if err != nil {
 		return nil, err

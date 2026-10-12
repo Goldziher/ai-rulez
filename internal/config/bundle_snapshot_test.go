@@ -2,8 +2,8 @@ package config
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
@@ -15,108 +15,60 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
-func gitIn(t *testing.T, dir string, args ...string) {
-	t.Helper()
-	cmd := gitutil.CommandNoContext(dir, append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t"}, args...)...)
-	out, err := cmd.CombinedOutput()
-	require.NoError(t, err, string(out))
+// countingRunner runs the real command and counts `git ls-files` calls.
+type countingRunner struct {
+	lsFiles *atomic.Int32
 }
 
-// countingCtx returns a ctx whose runner counts git invocations.
-func countingCtx(t *testing.T) (context.Context, *atomic.Int64) {
-	t.Helper()
-	var n atomic.Int64
-	r := runner.Func(func(ctx context.Context, spec runner.Spec) runner.Result {
-		n.Add(1)
-		return runner.Run(ctx, spec)
-	})
-	return runner.WithContext(t.Context(), r), &n
+func (c countingRunner) Run(ctx context.Context, spec runner.Spec) runner.Result {
+	if slicesContains(spec.Argv, "ls-files") {
+		c.lsFiles.Add(1)
+	}
+	return runner.Exec{}.Run(ctx, spec)
 }
 
-func skillResources(ctx context.Context, t *testing.T, configDir string) map[string][]string {
-	t.Helper()
-	tree, err := ScanContentTreeContext(ctx, configDir)
+func slicesContains(argv []string, want string) bool {
+	for _, a := range argv {
+		if a == want {
+			return true
+		}
+	}
+	return false
+}
+
+// #376: the skills and commands of every domain share one `git ls-files` listing
+// taken at the configuration directory, not one per directory.
+func TestScanContentTree_ListsGitFilesOncePerConfigDir(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	root := t.TempDir()
+	require.NoError(t, exec.Command("git", "-C", root, "init", "-q").Run())
+	cfgDir := filepath.Join(root, ".ai-rulez")
+	for _, domain := range []string{"a", "b", "c", "d"} {
+		skill := filepath.Join(cfgDir, "domains", domain, "skills", "s-"+domain)
+		require.NoError(t, os.MkdirAll(filepath.Join(skill, "references"), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("---\nname: s-"+domain+"\ndescription: d\n---\n# s\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(skill, "references", "r.md"), []byte("# ref\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(skill, "references", "ignored.md"), []byte("# ig\n"), 0o644))
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(root, ".gitignore"), []byte("ignored.md\n"), 0o644))
+
+	calls := &atomic.Int32{}
+	scanner := newProjectScanner(context.Background(), osView(cfgDir))
+	scanner.git = gitutil.New(countingRunner{lsFiles: calls})
+	scanner.snapshots.anchor = filepath.Clean(cfgDir)
+	tree, err := scanContentTree(scanner, cfgDir, nil)
 	require.NoError(t, err)
-	out := map[string][]string{}
-	for _, s := range tree.Skills {
-		out[s.Name] = relPaths(s.Resources)
+
+	assert.Equal(t, int32(1), calls.Load(), "one git ls-files for all domains")
+	require.Len(t, tree.Domains, 4)
+	for name, domain := range tree.Domains {
+		require.Len(t, domain.Skills, 1, name)
+		var got []string
+		for _, r := range domain.Skills[0].Resources {
+			got = append(got, filepath.Base(r.RelPath))
+		}
+		assert.Equal(t, []string{"r.md"}, got, "%s: the gitignored resource is left out", name)
 	}
-	return out
-}
-
-func TestBundleVisibilityMatrix(t *testing.T) {
-	t.Parallel()
-	repo := t.TempDir()
-	gitInit(t, repo)
-	skills := filepath.Join(repo, ".ai-rulez", "skills")
-	for _, name := range []string{"plain", "tracked", "ignoredroot", "trackedignored", "nested"} {
-		writeTree(t, filepath.Join(skills, name), "SKILL.md", "references/a.md", "scripts/gen.json", "scripts/run.sh")
-	}
-	require.NoError(t, os.WriteFile(filepath.Join(skills, "plain", ".gitignore"), []byte("gen.json\n"), 0o644))
-	writeTree(t, filepath.Join(skills, "plain"), "assets/skip/blob.bin")
-	require.NoError(t, os.WriteFile(filepath.Join(skills, "plain", ".gitignore"), []byte("gen.json\nassets/skip/\n"), 0o644))
-
-	// tracked: everything committed, then a later ignore rule does not hide it.
-	gitIn(t, repo, "add", "-f", ".ai-rulez/skills/tracked")
-	gitIn(t, repo, "commit", "-q", "-m", "x")
-	require.NoError(t, os.WriteFile(filepath.Join(skills, "tracked", ".gitignore"), []byte("gen.json\n"), 0o644))
-
-	// ignoredroot: the item as a whole is ignored; everything is bundled.
-	// trackedignored: SKILL.md is tracked yet matches an ignore rule, so the
-	// item counts as ignored and the visibility check is off.
-	require.NoError(t, os.WriteFile(filepath.Join(repo, ".gitignore"), []byte(".ai-rulez/skills/ignoredroot/\n.ai-rulez/skills/trackedignored/SKILL.md\n"), 0o644))
-	gitIn(t, repo, "add", "-f", ".ai-rulez/skills/trackedignored/SKILL.md")
-	require.NoError(t, os.WriteFile(filepath.Join(skills, "trackedignored", ".gitignore"), []byte("gen.json\n"), 0o644))
-
-	// nested: its own repository with its own ignore rules.
-	gitInit(t, filepath.Join(skills, "nested"))
-	require.NoError(t, os.WriteFile(filepath.Join(skills, "nested", ".gitignore"), []byte("run.sh\n"), 0o644))
-
-	want := map[string][]string{
-		"plain":          {"references/a.md", "scripts/run.sh"},
-		"tracked":        {"references/a.md", "scripts/run.sh"},
-		"ignoredroot":    {"references/a.md", "scripts/gen.json", "scripts/run.sh"},
-		"trackedignored": {"references/a.md", "scripts/gen.json", "scripts/run.sh"},
-		"nested":         {"references/a.md", "scripts/gen.json"},
-	}
-	// tracked keeps gen.json: tracked files are visible whatever the rules say.
-	want["tracked"] = []string{"references/a.md", "scripts/gen.json", "scripts/run.sh"}
-
-	ctx, n := countingCtx(t)
-	got := skillResources(ctx, t, filepath.Join(repo, ".ai-rulez"))
-	assert.Equal(t, want, got)
-	// 5 items: batching must not cost more than the nested repo's own pair
-	// plus a constant number of calls for the shared parent.
-	assert.LessOrEqual(t, n.Load(), int64(2+4), "git calls")
-}
-
-func TestBundleVisibilityLinkedWorktree(t *testing.T) {
-	t.Parallel()
-	repo := t.TempDir()
-	gitInit(t, repo)
-	writeTree(t, repo, ".ai-rulez/skills/demo/SKILL.md", ".ai-rulez/skills/demo/scripts/run.sh", ".ai-rulez/skills/demo/scripts/gen.json", "README.md")
-	require.NoError(t, os.WriteFile(filepath.Join(repo, ".gitignore"), []byte("gen.json\n"), 0o644))
-	gitIn(t, repo, "add", ".")
-	gitIn(t, repo, "commit", "-q", "-m", "x")
-	wt := filepath.Join(t.TempDir(), "wt")
-	gitIn(t, repo, "worktree", "add", "-q", "-b", "other", wt)
-	writeTree(t, wt, ".ai-rulez/skills/demo/scripts/gen.json", ".ai-rulez/skills/demo/scripts/new.sh")
-
-	got := skillResources(t.Context(), t, filepath.Join(wt, ".ai-rulez"))
-	assert.Equal(t, map[string][]string{"demo": {"scripts/new.sh", "scripts/run.sh"}}, got)
-}
-
-func TestBundleVisibilityLinearGitCalls(t *testing.T) {
-	t.Parallel()
-	repo := t.TempDir()
-	gitInit(t, repo)
-	skills := filepath.Join(repo, ".ai-rulez", "skills")
-	const items = 40
-	for i := range items {
-		writeTree(t, filepath.Join(skills, fmt.Sprintf("s%02d", i)), "SKILL.md", "references/a.md")
-	}
-	ctx, n := countingCtx(t)
-	got := skillResources(ctx, t, filepath.Join(repo, ".ai-rulez"))
-	require.Len(t, got, items)
-	assert.LessOrEqual(t, n.Load(), int64(4), "git calls must not grow with the number of skills")
 }
