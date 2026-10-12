@@ -13,7 +13,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
-	"github.com/Goldziher/ai-rulez/v5/schema"
 	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -2620,14 +2619,14 @@ func TestGenerator_SelfMCPServer(t *testing.T) {
 			name:        "creates .mcp.json with only the ai-rulez entry",
 			configExtra: "[mcp]\nself_server = true\n",
 			wantServers: []string{"ai-rulez"},
-			wantArgs:    "ai-rulez@" + binaryPin(),
+			wantArgs:    "ai-rulez@latest",
 		},
 		{
 			name:        "merges beside hand-authored servers",
 			configExtra: "[mcp]\nself_server = true\n",
 			existingMCP: handMCP,
 			wantServers: []string{"hand", "ai-rulez"},
-			wantArgs:    "ai-rulez@" + binaryPin(),
+			wantArgs:    "ai-rulez@latest",
 		},
 		{
 			name:        "pinned version",
@@ -2639,7 +2638,7 @@ func TestGenerator_SelfMCPServer(t *testing.T) {
 			name:         "declared servers and self server coexist",
 			configExtra:  "[mcp]\nself_server = true\n\n[[mcp_servers]]\nname = \"grafana\"\ncommand = \"uvx\"\nargs = [\"mcp-grafana\"]\n",
 			wantServers:  []string{"grafana", "ai-rulez"},
-			wantArgs:     "ai-rulez@" + binaryPin(),
+			wantArgs:     "ai-rulez@latest",
 			wantSettings: true,
 		},
 	}
@@ -2701,15 +2700,6 @@ func TestGenerator_SelfMCPServerDryRunWritesNothing(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, lines, "write-file: .mcp.json")
 	assert.NoFileExists(t, filepath.Join(dir, ".mcp.json"))
-}
-
-// binaryPin is the version the running test binary pins: schema.Version is "dev"
-// under `go test`, which resolves to "latest".
-func binaryPin() string {
-	if schema.Version == "" || schema.Version == "dev" {
-		return "latest"
-	}
-	return schema.Version
 }
 
 func writeTestFile(t *testing.T, path, content string) {

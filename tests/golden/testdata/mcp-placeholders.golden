@@ -67,7 +67,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .agents/skills/reviewer/scripts/ dir 0755
 + .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 + .ai-rulez/.generated-manifest.json file 0644 1875 ad728fc368a1c2becda182c847757513b655212de48c02f86e7202227060b2e2
-+ .ai-rulez/.generated-manifest.local.json file 0644 5153 a953fdd6874a00c7cfba286e57bd129ec8f3965a3d7dff69b25f7e77abe608a6
++ .ai-rulez/.generated-manifest.local.json file 0644 5153 d9cb88eeeb6ef9b69486ed1d06d26e31619a25fc1af2b4ef90a7770b96f829ed
 + .claude/ dir 0755
 + .claude/agents/ dir 0755
 + .claude/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
@@ -112,7 +112,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 + .cursor/rules/targeted.mdc file 0644 250 50fa175a1c5b6755414abd81d0e2276e585347488ed2db23568864146a277f88
 + .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 + .gitignore file 0644 690 73e063635efb07c5863545ee197eee7ec312877280560e9656c04b4fa1792c66
-+ .mcp.json file 0600 533 5e15758c17f4bd464c6e33126a39228fabb3b2d33b9f9aa4fcb572c4f631760a
++ .mcp.json file 0600 531 c4c43256fd084771348226f421caad769c6a6718ad9ca098175548e130b0bdf8
 + CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 --- home tree
 (no change)
@@ -129,9 +129,9 @@ INFO  Generated-file guard: only harnesses with a blocking PreToolUse hook get i
 INFO  Generation complete files=35
 WARN  2 rules/context items use an activation the target tool cannot express; they are loaded always: items=rule auto, rule manual
 --- project tree
-~ .ai-rulez/.generated-manifest.local.json file 0644 5153 d1976537092a9f16bbb419a76b3cf49a8f0b2c96753844e0abd3dcea8fab34c4
+~ .ai-rulez/.generated-manifest.local.json file 0644 5153 0ce016acf8337fc5abdaa74a50ebbb37bd197ecc32ac9f62f7aac683422984df
 ~ .cursor/mcp.json file 0600 343 6ef00d0b6bd8414858717a715a1c5f07ef9a722f90d0acb3e450025b645ccfa5
-~ .mcp.json file 0600 541 7cb99e60f4cd7fed2ff50aa4778c348c4f10ee6205466370ff8033a60389f171
+~ .mcp.json file 0600 539 1c020874e496e9dab075503b306f275288355aa9ff970a15794a8bf7b178b846
 --- home tree
 (no change)
 
@@ -200,7 +200,7 @@ info      tools    preset "cursor": cursor-agent or cursor not found on PATH; it
 .agents/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 1875 ad728fc368a1c2becda182c847757513b655212de48c02f86e7202227060b2e2
-.ai-rulez/.generated-manifest.local.json file 0644 5153 d1976537092a9f16bbb419a76b3cf49a8f0b2c96753844e0abd3dcea8fab34c4
+.ai-rulez/.generated-manifest.local.json file 0644 5153 0ce016acf8337fc5abdaa74a50ebbb37bd197ecc32ac9f62f7aac683422984df
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -274,7 +274,7 @@ info      tools    preset "cursor": cursor-agent or cursor not found on PATH; it
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 .env.golden file 0644 27 d4b549fcc2672cda5726aaf8cf7aec3e2b2d43e4799018f57326034d34c213ed
 .gitignore file 0644 690 73e063635efb07c5863545ee197eee7ec312877280560e9656c04b4fa1792c66
-.mcp.json file 0600 541 7cb99e60f4cd7fed2ff50aa4778c348c4f10ee6205466370ff8033a60389f171
+.mcp.json file 0600 539 1c020874e496e9dab075503b306f275288355aa9ff970a15794a8bf7b178b846
 CLAUDE.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb

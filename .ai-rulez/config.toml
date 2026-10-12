@@ -23,10 +23,10 @@ enabled = true
 text = """
 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
 Source: .ai-rulez/config.toml and .ai-rulez/
-Regenerate: pnpm dlx ai-rulez@5.0.1 generate
-Use MCP server: pnpm dlx ai-rulez@5.0.1 mcp
+Regenerate: pnpm dlx ai-rulez@latest generate
+Use MCP server: pnpm dlx ai-rulez@latest mcp
 """
 hashes = "full"
 
 [mcp]
-self_server_command = ["pnpm", "dlx", "ai-rulez@5.0.1", "mcp"]
+self_server_command = ["pnpm", "dlx", "ai-rulez@latest", "mcp"]

@@ -26,7 +26,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .agents/skills/tk/SKILL.md file 0644 137 42ea8f74f5128842ff368a7e6a516b4c25ce320f85c822e27140a88b6b0a1900
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2089 818ef185c1a5ce890387ea5c61ae5ae9d30c00b2db80a39b293ca1bf9e5b2fbb
-.ai-rulez/.generated-manifest.local.json file 0644 5038 b2dd34a2691a200ddd4370679fe21042e8884e8bf686c4f4d76ae4b3f853f935
+.ai-rulez/.generated-manifest.local.json file 0644 5038 94a80fb9f373b645ef53ab644827a2660823f8755af93b5a524de4d35e9c8532
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -104,7 +104,7 @@ WARN  2 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/team.mdc file 0644 229 d52fdda0a4cf1d4167e05235a5062d74d5a249374d002634f7820acf2cb14e40
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 .gitignore file 0644 741 d8ae38fc2a067cbe505e3402c57480c4aefa90775700b3dee3bc6476e48f0c4f
-.mcp.json file 0644 545 c89732ccf50547d490d916ff62233d8a37ff26c0ab68c517c7b79802ec586162
+.mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 CLAUDE.md file 0644 500 2260100b7365244003b0919088aed473b1bcbd084e948654bb610f5e3c8b39b3
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
@@ -142,7 +142,7 @@ Includes:
 .agents/skills/tk/SKILL.md file 0644 137 42ea8f74f5128842ff368a7e6a516b4c25ce320f85c822e27140a88b6b0a1900
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 2089 818ef185c1a5ce890387ea5c61ae5ae9d30c00b2db80a39b293ca1bf9e5b2fbb
-.ai-rulez/.generated-manifest.local.json file 0644 5038 b2dd34a2691a200ddd4370679fe21042e8884e8bf686c4f4d76ae4b3f853f935
+.ai-rulez/.generated-manifest.local.json file 0644 5038 94a80fb9f373b645ef53ab644827a2660823f8755af93b5a524de4d35e9c8532
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -220,7 +220,7 @@ Includes:
 .cursor/rules/team.mdc file 0644 229 d52fdda0a4cf1d4167e05235a5062d74d5a249374d002634f7820acf2cb14e40
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 .gitignore file 0644 741 d8ae38fc2a067cbe505e3402c57480c4aefa90775700b3dee3bc6476e48f0c4f
-.mcp.json file 0644 545 c89732ccf50547d490d916ff62233d8a37ff26c0ab68c517c7b79802ec586162
+.mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 CLAUDE.md file 0644 500 2260100b7365244003b0919088aed473b1bcbd084e948654bb610f5e3c8b39b3
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb

@@ -11,7 +11,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/settings"
-	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 // presetsResolveGlobalEffort is aliased so sidecar code can stay readable
@@ -238,7 +237,7 @@ func mcpJSONOwnedKeys(cfg *config.Config, literal bool) []jsonmerge.OwnedKey {
 	if cfg == nil || !cfg.HasSelfServer() {
 		return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: mcpJSONServerEntries(cfg, literal), Members: true}}
 	}
-	self := cfg.SelfMCPServerEntry(schema.Version)
+	self := cfg.SelfMCPServerEntry()
 	if len(cfg.MCPServers) == 0 {
 		return []jsonmerge.OwnedKey{{
 			Path:  []string{settingsKeyMCPServers, config.SelfMCPServerName},

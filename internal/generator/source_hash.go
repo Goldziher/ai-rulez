@@ -10,7 +10,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/safefs"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
-	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 // computeSourceHash returns a stable blake3 hash over the inputs that determine
@@ -68,7 +67,7 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	}
 
 	if cfg.HasSelfServer() {
-		entryJSON, err := json.Marshal(cfg.SelfMCPServerEntry(schema.Version))
+		entryJSON, err := json.Marshal(cfg.SelfMCPServerEntry())
 		if err != nil {
 			entryJSON = []byte("<marshal-error>")
 		}

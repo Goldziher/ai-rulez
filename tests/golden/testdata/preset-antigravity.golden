@@ -16,7 +16,7 @@ INFO  Generation complete files=16
 .agents/agents/architect.md file 0644 183 d3c986eda512af7f4ce27104cd0e1d9e54ff63f9379f238c7ba9a0acfea59994
 .agents/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .agents/hooks.json file 0644 259 e87190d141b1e0a8c1c651170ff503c064f20c50682db87c47ad11f7c19832e3
-.agents/mcp_config.json file 0600 491 51fca3269d6c36b9ed49933c1b5d9f70b2b2fa02472d6bc264e9bfa782b895df
+.agents/mcp_config.json file 0600 489 32c23d689530725ce431ed0eeb7411c7dc26d9e8a46cd284273514ce3c830ff6
 .agents/rules/ dir 0755
 .agents/rules/always.md file 0644 267 8d22ebebb39d9a32e594528873d26b3fecd70f3345de787f36bc5d7bfabc8d95
 .agents/rules/auto.md file 0644 282 cbb82d8013eb3e2fb28f34487ba0c28eea92da8a24b57226423e7e98b7e2ba21
@@ -37,7 +37,7 @@ INFO  Generation complete files=16
 .agents/skills/ship/SKILL.md file 0644 184 6b822e098b5ea716fc05e66c57a0617b08a030c3f138b086712a80d7be4479d5
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 900 33bdc8a947d713211153536f083c9d815792136d140b588e48024d27576cf435
-.ai-rulez/.generated-manifest.local.json file 0644 2006 8cb5705ea8fe948603f92e6d0cdb8576e54063dcdb714690fdcc932100b0bfc7
+.ai-rulez/.generated-manifest.local.json file 0644 2006 8a77cfe73c68c4f4f77efb3e220bc45f9e38a35d7f47ac6a8206a15394d9d878
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -67,7 +67,7 @@ INFO  Generation complete files=16
 .ai-rulez/skills/reviewer/scripts/ dir 0755
 .ai-rulez/skills/reviewer/scripts/run.sh file 0644 22 914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8
 .gitignore file 0644 379 e7c0cf6b506f63abce47f1854c70d36fa71ad6ee1e925a0202d5f44e71e4ee27
-.mcp.json file 0644 545 c89732ccf50547d490d916ff62233d8a37ff26c0ab68c517c7b79802ec586162
+.mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 GEMINI.md file 0644 490 2030a4f8705cc0aff54257189f213d313c78fad93ff1530e76d1133e1f0e4f68
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb

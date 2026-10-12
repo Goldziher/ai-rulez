@@ -86,7 +86,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .agents/commands/build.md file 0644 163 07b7e605fd3efd8df99f706b1f0a1d52dfa71006c43f3dec24c1a6ee33e26e85
 .agents/commands/ship.md file 0644 140 cae855c9d6b819934efbfdbf598d412bd7a5e09fcfabfd9785188bd3c01772f5
 .agents/hooks.json file 0644 259 e87190d141b1e0a8c1c651170ff503c064f20c50682db87c47ad11f7c19832e3
-.agents/mcp_config.json file 0644 155 e491744d31f0827668b31d10d109d1b72404c167d44e9f9bfe0dcb680ba88add
+.agents/mcp_config.json file 0644 153 55b3ed141dccc685990708b11d18779816bc27b2b8b85c375ce2f71626076f64
 .agents/plugins/ dir 0755
 .agents/plugins/ai-rulez/ dir 0755
 .agents/plugins/ai-rulez/hooks/ dir 0755
@@ -110,7 +110,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .agents/skills/ship/agents/openai.yaml file 0644 43 a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94
 .ai-rulez/ dir 0755
 .ai-rulez/.generated-manifest.json file 0644 24979 ed40a2245163c468f46611b8b138999bbb938b7e71e986d161a8cf231d11a4f8
-.ai-rulez/.generated-manifest.local.json file 0644 41969 b6cd97ae72eefd7c217a3ac1031f306453247e1f759f35fbfb30e67f143f2d07
+.ai-rulez/.generated-manifest.local.json file 0644 41969 b5dfed297e54871e4dbad31227ddc765dc7e7ac2242b377da5e84594f3b00c5f
 .ai-rulez/agents/ dir 0755
 .ai-rulez/agents/architect.md file 0644 97 fc714ad19a3a1c9348f1a954f3a7d43dfa07a8640a114d2f7c14777f23871d72
 .ai-rulez/agents/tester.md file 0644 82 72927a1eaca26accd861c5afde228c7c585007302e27d927af597b36733b831a
@@ -571,7 +571,7 @@ WARN  4 rules/context items use an activation the target tool cannot express; th
 .letta/agents/architect.md file 0644 186 d1d083ab1e94dd3d11d3ddbf9462bb0188c40eee6e4415105eac27ab685d8218
 .letta/agents/tester.md file 0644 158 7e77d681eecf3afd3d8f56bc9247b388208aa94e38703fcf25910f130a1bf4b7
 .letta/settings.json file 0644 632 f3137a7ad411777ec91c9fcaf8d4fc362b74a9470e63501aa2f319758ce0a7c1
-.mcp.json file 0644 178 f0eb854d41aaf4f67b335d410d50f4bde0cd0aa4a418eb039e97d0d41f55b27d
+.mcp.json file 0644 176 c38bed86beb7d409a360bed505ffa7d0bb2f92a72e6c75b07ebacfe0cee446b0
 .mimocode/ dir 0755
 .mimocode/agents/ dir 0755
 .mimocode/agents/architect.md file 0644 171 9f499ed05e385eabe95c1ab5dd938a3b426684117be8fd3e9e906ccec47c409c

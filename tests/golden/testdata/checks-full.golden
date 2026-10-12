@@ -258,7 +258,7 @@ echo review
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 14128 f38c51a45445e9c37d3596671dfc5270b630fd7883ed558ddedeb51ac2b2797d
+.ai-rulez/.generated-manifest.local.json file 0644 14128 1da84d238372a34d2beedd40477e5abb8576c7d3e73e45cb5c27a30cf7cba5ac
 >>>>
 {
   "version": "1",
@@ -503,7 +503,7 @@ echo review
           "mcpServers",
           "ai-rulez"
         ],
-        "sum": "a44bcaea90b5c52a6d75a49e49643a5255e1e66ea1f54be89e765fd8ffd8910e"
+        "sum": "64f48fb2dd70e17b7cbd49125708aaf134c52d69d17101076259f5f6389bb8e9"
       },
       {
         "path": [
@@ -714,7 +714,7 @@ echo review
     ".kilo/plugins/ai-rulez-hooks.js": "bb68fbfbf7ffa3c450175ddbb7968d668584e11f841be026454a06e40b29015c",
     ".kilo/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".kilo/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".mcp.json": "9a05a01d3aa10e2c2c04d0e17c7e95eaef3ec76477c6376ccf1e56bf85eaf096",
+    ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c",
     ".qwen/review-rules.md": "e27f8811597fc9462d5515790ad275947a409d8e535601f01498686437bbf180",
     ".qwen/settings.json": "f1bdabdbddcd8eb55d674a1370ff07b6ea1e433f1158e2ab67f23039449a7fe6",
     ".qwen/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
@@ -2459,14 +2459,14 @@ This skill bundles supporting files. Read them on demand when the task calls for
 #!/bin/sh
 echo review
 <<<<
-.mcp.json file 0644 545 c89732ccf50547d490d916ff62233d8a37ff26c0ab68c517c7b79802ec586162
+.mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 >>>>
 {
   "mcpServers": {
     "ai-rulez": {
       "args": [
         "-y",
-        "ai-rulez@$VERSION",
+        "ai-rulez@latest",
         "mcp"
       ],
       "command": "npx",

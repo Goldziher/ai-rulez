@@ -163,7 +163,6 @@ testing/**/.mcp.json
 .ai-rulez/.generated-manifest.json
 .ai-rulez/.generated-manifest.local.json
 .ai-rulez/local/
-.codex/agents/
 .opencode/agents/
 .opencode/commands/
 opencode.json

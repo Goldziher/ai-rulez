@@ -220,7 +220,7 @@ policy:
   }
 }
 <<<<
-.ai-rulez/.generated-manifest.local.json file 0644 12598 d47607354ac2b53534493e772bb83d81fb35bc45337ebdaccfb03ea0f7938e62
+.ai-rulez/.generated-manifest.local.json file 0644 12598 9cd3fabf1d773f7d3fb5b01d658635660a012783adb366c4c289e947d534718e
 >>>>
 {
   "version": "1",
@@ -463,7 +463,7 @@ policy:
           "mcpServers",
           "ai-rulez"
         ],
-        "sum": "a44bcaea90b5c52a6d75a49e49643a5255e1e66ea1f54be89e765fd8ffd8910e"
+        "sum": "64f48fb2dd70e17b7cbd49125708aaf134c52d69d17101076259f5f6389bb8e9"
       },
       {
         "path": [
@@ -636,7 +636,7 @@ policy:
     ".github/hooks/ai-rulez.json": "c405f324eed60bb79baf9a7ce0dac778096a2eb9983acdf1a797b61b4c49f167",
     ".github/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".github/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
-    ".mcp.json": "9a05a01d3aa10e2c2c04d0e17c7e95eaef3ec76477c6376ccf1e56bf85eaf096",
+    ".mcp.json": "3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c",
     ".opencode/plugins/ai-rulez-hooks.js": "97109c8510be424bdb6dfbe235783ea512ad61d6e02a85c6c7dc6135aa5cf8b2",
     ".opencode/skills/reviewer/references/checklist.md": "02393d1b57638cc3b06632e057556d199781a02f385c4299936253c78ecd5328",
     ".opencode/skills/reviewer/scripts/run.sh": "914c2af00a91392459c499b94b955b3334a860831f85bbf3c4cc644460f877b8",
@@ -1781,14 +1781,14 @@ GEMINI.md
 opencode.json
 # END ai-rulez
 <<<<
-.mcp.json file 0644 545 c89732ccf50547d490d916ff62233d8a37ff26c0ab68c517c7b79802ec586162
+.mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
 >>>>
 {
   "mcpServers": {
     "ai-rulez": {
       "args": [
         "-y",
-        "ai-rulez@$VERSION",
+        "ai-rulez@latest",
         "mcp"
       ],
       "command": "npx",
