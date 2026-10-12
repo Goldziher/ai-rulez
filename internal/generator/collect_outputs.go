@@ -56,6 +56,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	g.warnInstructionSizes(flatOutputs)
 	g.renderedContent = contentTree
 	g.warnBazBudget(flatOutputs)
+	g.warnBazConfigDirItems()
 
 	return flatOutputs, activeProfile, nil
 }

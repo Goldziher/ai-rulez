@@ -15,6 +15,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`validate` and `generate` warn when `[profiles]` defines no `default`.** A root config with `[profiles]` but no `default` profile or `default =` setting generates the built-in default, which sees only root content, global builtins and included domains, so every other domain's root outputs were removed with no message. The warning names the domains and suggests `default = ["*"]` ([#374](https://github.com/Goldziher/ai-rulez/issues/374)).
+- **`generate` says where a baz rule went when its glob points into `.ai-rulez/` or `.git/`.** No nested `AGENTS.md` is written there (it would be read back as a source file), so the rule was inlined into the root file or, under `baz_unscoped = "skip"`, dropped, without a word; both cases now warn and name the rule ([#375](https://github.com/Goldziher/ai-rulez/issues/375)).
 - **`generate` warns about an MCP server entry left behind after its `[[mcp_servers]]` block is removed.** An entry is taken out of `.mcp.json` only on the machine that recorded writing it (the gitignored local manifest), so a fresh clone kept it silently. The committed manifest now lists, as a hint only, the server entries written from the shared configuration, and `generate` warns once per leftover entry and names the file; it never removes an entry on that evidence ([#373](https://github.com/Goldziher/ai-rulez/issues/373)).
 - **`--serve-skills` is no longer appended to a `self_server_command` that is a `sh -c` script.** The flag landed in `$0` of the script; such a command is now left as written, and `docs/configuration.md` documents the `"$@"` plus trailing `"sh"` pattern ([#372](https://github.com/Goldziher/ai-rulez/issues/372)).
 

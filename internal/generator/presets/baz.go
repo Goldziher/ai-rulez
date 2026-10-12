@@ -261,6 +261,50 @@ func BazInlinedUnscoped(content *config.ContentTree, cfg *config.Config) []strin
 	return names
 }
 
+// BazConfigDirItems names the path-scoped rules and context items baz selects
+// whose globs point into the configuration directory or .git/, where a nested
+// AGENTS.md is never written (it would be read back as a source file). They stay
+// in the root AGENTS.md, or are left out of every AGENTS.md when
+// rules.baz_unscoped = "skip" applies. skipped reports which.
+func BazConfigDirItems(content *config.ContentTree, cfg *config.Config) (names []string, skipped bool) {
+	if content == nil || !bazNestedActive(cfg) {
+		return nil, false
+	}
+	target := rulefiles.RootTarget(bazPresetName, agentsMDFile)
+	items := append(rulefiles.FilterInline(allInlineRules(content), target), rulefiles.FilterInline(allInlineContext(content), target)...)
+	for idx := range items {
+		cf := items[idx]
+		if !bazItemSelected(cf, cfg) || cf.Metadata == nil || cf.Metadata.ResolveActivation().Mode != config.ActivationGlob {
+			continue
+		}
+		if len(bazNestedDirs(cf, cfg)) != 0 {
+			continue
+		}
+		for _, glob := range cf.Metadata.ResolveActivation().Globs {
+			if strings.HasPrefix(glob, "!") {
+				continue
+			}
+			if bazConfigDir(bazScopeDir(glob, cfg), cfg) {
+				names = append(names, cf.Name)
+				break
+			}
+		}
+	}
+	sort.Strings(names)
+	return names, bazSkipsUnscoped(cfg)
+}
+
+// bazConfigDir reports whether dir is, or is below, a directory a nested
+// AGENTS.md is never written to: .git, .ai-rulez or the configuration directory.
+func bazConfigDir(dir string, cfg *config.Config) bool {
+	for _, segment := range strings.Split(path.Clean(dir), "/") {
+		if segment == ".git" || segment == ".ai-rulez" || (cfg.ConfigDirName != "" && segment == cfg.ConfigDirName) {
+			return true
+		}
+	}
+	return false
+}
+
 // bazNestedDirs returns the directories (relative to the project root, slash
 // separated, shortest first) whose AGENTS.md should carry a path-scoped item,
 // or nil when it stays in the root file. The item moves only when every
@@ -410,10 +454,8 @@ func bazDirUsable(dir string, cfg *config.Config) bool {
 	// A nested AGENTS.md inside a configuration directory would be read back as
 	// a source file (a rule or agent named AGENTS) on the next run; .git holds
 	// no project files.
-	for _, segment := range strings.Split(path.Clean(dir), "/") {
-		if segment == ".git" || segment == ".ai-rulez" || (cfg.ConfigDirName != "" && segment == cfg.ConfigDirName) {
-			return false
-		}
+	if bazConfigDir(dir, cfg) {
+		return false
 	}
 	for _, scope := range cfg.Scopes {
 		if path.Clean(filepath.ToSlash(scope.Path)) == path.Clean(dir) {

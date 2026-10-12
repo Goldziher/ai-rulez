@@ -43,6 +43,7 @@ func (c *Config) Validate() error {
 
 	// Warn about missing domain references (non-fatal)
 	c.warnMissingDomainReferences()
+	c.warnImplicitDefaultProfile()
 	c.warnMissingResourceDomains()
 
 	return nil
@@ -777,6 +778,35 @@ func (c *Config) validateInstalledSkills() error {
 		return err
 	}
 	return ValidateInstalledSkills(c.InstalledSkills)
+}
+
+// warnImplicitDefaultProfile warns when [profiles] exists but names no `default`
+// profile and sets no `default =`: a run without --profile then uses the built-in
+// default profile, which sees only root content, global builtins and included
+// domains, so the domains of the project drop out of the root outputs and the
+// files generated from them are removed.
+func (c *Config) warnImplicitDefaultProfile() {
+	if c.Content == nil || len(c.Profiles) == 0 || c.Default != "" || c.HasProfile("default") {
+		return
+	}
+	var left []string
+	for name, domain := range c.Content.Domains {
+		if domain.FromInclude || (domain.Builtin && !domain.BuiltinScoped) {
+			continue
+		}
+		left = append(left, name)
+	}
+	if len(left) == 0 {
+		return
+	}
+	sort.Strings(left)
+	shown := left
+	if len(shown) > 5 {
+		shown = shown[:5]
+	}
+	c.Warn(fmt.Sprintf("[profiles] defines no `default` profile, so a run without --profile generates no content from %d domain(s) and removes their outputs", len(left)),
+		"domains", strings.Join(shown, ", "),
+		"hint", `add default = "<profile>" or a profile named default, for example default = ["*"] to keep every domain`)
 }
 
 // warnMissingDomainReferences logs warnings for domains referenced in profiles but not found in content.

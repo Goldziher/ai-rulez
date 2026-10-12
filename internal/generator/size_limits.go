@@ -295,3 +295,19 @@ func (g *Generator) warnBazBudget(outputs []config.OutputFile) {
 		"hint", "set rules.baz_default = \"none\" to nest only rules whose targets name baz, "+
 			"rules.baz_dedupe = true to share a parent AGENTS.md, or raise rules.baz_budget")
 }
+
+// warnBazConfigDirItems says where a baz-selected rule went when its glob points
+// into the configuration directory or .git/, where no nested AGENTS.md is written:
+// without it the rule seems to vanish.
+func (g *Generator) warnBazConfigDirItems() {
+	names, skipped := presets.BazConfigDirItems(g.renderedContent, g.config)
+	if len(names) == 0 {
+		return
+	}
+	where := "it is inlined into the root AGENTS.md"
+	if skipped {
+		where = "rules.baz_unscoped = \"skip\" leaves it out of every AGENTS.md"
+	}
+	g.log().Warn("baz cannot nest path-scoped rules whose glob points into .ai-rulez/ or .git/: "+strings.Join(names, ", ")+"; "+where,
+		"hint", "scope the rule to a directory outside the configuration directory, or load it without nesting")
+}

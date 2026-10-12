@@ -321,3 +321,25 @@ func TestBazGenerate_BazRestSkipsUnselectedRules(t *testing.T) {
 		assert.Equal(t, tc.wantRest, strings.Contains(root.Content, "any BODY"), tc.rest)
 	}
 }
+
+func TestBazConfigDirItems(t *testing.T) {
+	cfg := bazProject(t, "services/api", ".ai-rulez/rules")
+	content := bazContent(
+		globRule("hidden", ".ai-rulez/**"),
+		globRule("git", ".git/hooks/**"),
+		globRule("api", "services/api/**"),
+		globRule("anywhere", "**/*.go"),
+	)
+
+	names, skipped := BazConfigDirItems(content, cfg)
+	assert.Equal(t, []string{"git", "hidden"}, names, "only rules whose glob points into the config dir or .git")
+	assert.False(t, skipped)
+
+	cfg.Rules = &config.RulesConfig{BazUnscoped: config.BazUnscopedSkip}
+	_, skipped = BazConfigDirItems(content, cfg)
+	assert.True(t, skipped, "baz_unscoped = skip leaves them out of every AGENTS.md")
+
+	cfg.Rules = &config.RulesConfig{BazScoped: config.BazScopedRoot}
+	names, _ = BazConfigDirItems(content, cfg)
+	assert.Empty(t, names, "nothing is nested with baz_scoped = root")
+}
