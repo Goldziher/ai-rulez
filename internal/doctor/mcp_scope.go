@@ -11,7 +11,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 // checkMCPScope compares the project's MCP servers with the same-named servers
@@ -192,7 +191,7 @@ func projectScopeServers(cfg *config.Config) []mcpScopeServer {
 
 // selfScopeServer is the entry generation writes for ai-rulez's own MCP server.
 func selfScopeServer(cfg *config.Config) mcpScopeServer {
-	entry := cfg.SelfMCPServerEntry(schema.Version)
+	entry := cfg.SelfMCPServerEntry()
 	s := mcpScopeServer{Name: config.SelfMCPServerName, Scope: "project", Origin: projectMCPFile}
 	s.Command, _ = entry["command"].(string) //nolint:errcheck // a non-string command stays empty
 	if args, ok := entry["args"].([]string); ok {

@@ -6,8 +6,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/v5/schema"
-
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 
@@ -308,7 +306,7 @@ func antigravityMCPServers(cfg *config.Config) map[string]interface{} {
 	// The ai-rulez MCP server is added only when [mcp] self_server asks for it, as
 	// for every other preset (Antigravity has no `type` key, so it is dropped).
 	if cfg.HasSelfServer() {
-		self := cfg.SelfMCPServerEntry(schema.Version)
+		self := cfg.SelfMCPServerEntry()
 		delete(self, keyType)
 		if _, declared := cfg.MCPServers[config.SelfMCPServerName]; !declared {
 			mcpServers[config.SelfMCPServerName] = self
