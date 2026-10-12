@@ -69,6 +69,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`roles`**: `[[roles]]` map a job to a slice of the shared content; see [Roles](roles.md)
 - **`role_manifest`**: `enabled` writes `roles.json`; `skill_mode_fallback` (`drop` or `serve`) decides what an `off` skill does on a harness that cannot hide it
 - **`domains`**: Per-domain settings keyed by domain name (`[domains.<name>] delivery`)
+- **`delivery`**: `[delivery.stub]` `description`, `body`, `body_file`: customises the generated `dynamic-skills` stub; see [Configuration](configuration.md#deliverystub)
 - **`skills`**: Defaults for every skill (`[skills] delivery = "static" | "served" | "both"`); see [MCP server](mcp-server.md#dynamic-skill-loading)
 - **`skill_sources`**: `[[skill_sources]]` remote or local skill sources that are served over MCP and pinned in the lock
 - **`catalog`**: `[catalog]` defaults for `ai-rulez catalog` (`title`, `include_excerpt`, `exclude_owners`, `indexable`, `max_items_per_page`, `render_markdown`); see [Catalog](catalog.md)

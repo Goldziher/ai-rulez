@@ -39,6 +39,9 @@ func (c *Config) validateDynamicSkills() error {
 			}
 		}
 	}
+	if err := c.validateDeliveryStub(); err != nil {
+		return err
+	}
 	return c.validateSkillSources()
 }
 
