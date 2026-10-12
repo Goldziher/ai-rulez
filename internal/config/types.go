@@ -247,7 +247,7 @@ type ScopeConfig struct {
 // individual server definitions in [[mcp_servers]].
 type MCPConfig struct {
 	// SelfServer makes generation add ai-rulez's own MCP server
-	// (`npx -y ai-rulez@<version> mcp`) to the project .mcp.json. It defaults to
+	// (`npx -y ai-rulez@latest mcp`) to the project .mcp.json. It defaults to
 	// true in v5, so a project gets the server out of the box; set it to false
 	// (or pass generate --no-self-mcp) to turn it off. The entry is merged into
 	// the file, so hand-authored servers beside it survive, and no other MCP
@@ -255,7 +255,7 @@ type MCPConfig struct {
 	SelfServer *bool `yaml:"self_server,omitempty" json:"self_server,omitempty" toml:"self_server,omitempty"`
 
 	// SelfServerVersion pins the ai-rulez version the entry runs. Empty means
-	// the version of the running binary, or "latest" for a dev build.
+	// "latest", so a project picks up new releases without regenerating.
 	SelfServerVersion string `yaml:"self_server_version,omitempty" json:"self_server_version,omitempty" toml:"self_server_version,omitempty"`
 
 	// SelfServerCommand replaces the whole launch command (executable followed
@@ -293,9 +293,10 @@ const SelfMCPServerName = "ai-rulez"
 const mcpKeyCommand = "command"
 
 // SelfMCPServerEntry builds the .mcp.json entry for ai-rulez's own MCP server.
-// binaryVersion is the running binary's version; it is used unless the config
-// pins one, and "dev"/empty resolve to "latest".
-func (c *Config) SelfMCPServerEntry(binaryVersion string) map[string]any {
+// It runs ai-rulez@latest by default, so a project picks up new releases without
+// regenerating; pin a version with mcp.self_server_version or replace the launch
+// with mcp.self_server_command. An empty or "dev" version resolves to "latest".
+func (c *Config) SelfMCPServerEntry() map[string]any {
 	if c.MCP != nil && len(c.MCP.SelfServerCommand) > 0 {
 		entry := map[string]any{"type": "stdio", mcpKeyCommand: c.MCP.SelfServerCommand[0]}
 		if args := c.MCP.SelfServerCommand[1:]; len(args) > 0 {
@@ -306,9 +307,6 @@ func (c *Config) SelfMCPServerEntry(binaryVersion string) map[string]any {
 	version := ""
 	if c.MCP != nil {
 		version = c.MCP.SelfServerVersion
-	}
-	if version == "" {
-		version = binaryVersion
 	}
 	if version == "" || version == "dev" {
 		version = "latest"

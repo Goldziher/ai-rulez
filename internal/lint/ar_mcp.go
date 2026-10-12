@@ -14,7 +14,6 @@ import (
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 // Codes for the MCP configuration checks.
@@ -141,7 +140,7 @@ func (r *runner) isGeneratedSelfServer(srv *mcpServer) bool {
 	if srv.name != config.SelfMCPServerName || !r.cfg.HasSelfServer() {
 		return false
 	}
-	entry := r.cfg.SelfMCPServerEntry(schema.Version)
+	entry := r.cfg.SelfMCPServerEntry()
 	command, _ := asString(entry[hookTypeCommand])
 	args := asStrings(entry["args"])
 	return srv.command == command && slices.Equal(srv.args, args) && effectiveTransport(srv) == transportStdio

@@ -16,7 +16,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/v5/internal/markdown"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
-	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 const presetNameCopilot = "copilot"
@@ -538,7 +537,7 @@ func renderSharedMCPJSON(mcpPath string, cfg *config.Config) (jsonmerge.Result, 
 	// preset's mcpJSONOwnedKeys builds, so every writer of .mcp.json agrees.
 	if cfg.HasSelfServer() {
 		if _, declared := mcpServers[config.SelfMCPServerName]; !declared {
-			mcpServers[config.SelfMCPServerName] = cfg.SelfMCPServerEntry(schema.Version)
+			mcpServers[config.SelfMCPServerName] = cfg.SelfMCPServerEntry()
 		}
 	}
 
