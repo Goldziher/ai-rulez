@@ -6,8 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`[header] mcp_line = false` drops the MCP server line from generated headers.** Without it the line is derived from `[mcp]` ([#360](https://github.com/Goldziher/ai-rulez/issues/360)).
+
 ### Fixed
 
+- **The header's MCP line names the server the project launches.** It was a hardcoded `npx -y ai-rulez@latest mcp`; it now follows `self_server_command`, `self_server_version` and `--serve-skills`, and is left out when `[mcp] self_server = false` ([#360](https://github.com/Goldziher/ai-rulez/issues/360)).
 - **A nested root's generated header names its own config.** The `Source:` line and the directory hints of a root below the repository root read `products/em/webapps/.ai-rulez/config.toml`, its path from the git work tree root, instead of the repository-root `.ai-rulez/config.toml`; `generate`, `generate --recursive` and `generate --check` agree on it ([#361](https://github.com/Goldziher/ai-rulez/issues/361)).
 
 ## [5.0.3] - 2026-10-12
