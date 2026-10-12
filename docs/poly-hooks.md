@@ -5,7 +5,7 @@ repositories declare Git or local sources in their existing `poly.toml` and sele
 the hooks they need. Consumers do not create another `poly-hooks.toml`.
 
 The catalog exists since AI-Rulez 4.9.0 and needs Poly 0.14.0 or later. Each catalog revision runs the
-`ai-rulez` release it belongs to (revision `v5.0.0` runs `ai-rulez@5.0.0`), so pin `revision` to the
+`ai-rulez` release it belongs to (revision `v5.0.0` runs `ai-rulez@5.1.0`), so pin `revision` to the
 release you want.
 
 ## Add AI-Rulez to a repository
@@ -16,7 +16,7 @@ Add a Git source to `poly.toml`:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v5.0.0"
+revision = "v5.1.0"
 hooks = ["ai-rulez-validate"]
 ```
 
@@ -118,14 +118,14 @@ pass_filenames = false
 [[hooks.paths]]
 channel = "npx"
 check = "command -v npx"
-run = "npx -y ai-rulez@5.0.0"
-install = "npx -y ai-rulez@5.0.0 version"
+run = "npx -y ai-rulez@5.1.0"
+install = "npx -y ai-rulez@5.1.0 version"
 
 [[hooks.paths]]
 channel = "uvx"
 check = "command -v uvx"
-run = "uvx ai-rulez==5.0.0"
-install = "uvx ai-rulez==5.0.0 version"
+run = "uvx ai-rulez==5.1.0"
+install = "uvx ai-rulez==5.1.0 version"
 
 [[hooks.paths]]
 channel = "system"
