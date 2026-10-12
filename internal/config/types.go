@@ -383,6 +383,10 @@ type HeaderConfig struct {
 	// source set, so under "full" one edit rewrites a line in every generated
 	// file; "content" and "none" keep committed output free of that churn.
 	Hashes string `yaml:"hashes,omitempty" json:"hashes,omitempty" toml:"hashes,omitempty"`
+	// MCPLine, when false, leaves the "Use MCP server: ..." line out of every
+	// generated header. Nil means on: the line is derived from [mcp] and is
+	// omitted anyway while the self server is off.
+	MCPLine *bool `yaml:"mcp_line,omitempty" json:"mcp_line,omitempty" toml:"mcp_line,omitempty"`
 }
 
 // Header hash modes accepted by [header] hashes.
