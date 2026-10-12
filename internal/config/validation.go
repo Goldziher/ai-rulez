@@ -1061,6 +1061,31 @@ func (c *Config) validateMCP() error {
 			Hint("Use a bare version or npm dist-tag such as \"4.19.0\" or \"latest\"").
 			Errorf("mcp.self_server_version %q is not a valid version", m.SelfServerVersion)
 	}
+	return m.validateSkillsInstructions()
+}
+
+// validateSkillsInstructions checks [mcp] skills_instructions_text: it must say
+// something, use only the documented variables, and not sit beside
+// skills_instructions = false, where it would be silently inert.
+func (m *MCPConfig) validateSkillsInstructions() error {
+	if m.SkillsInstructionsText == "" {
+		return nil
+	}
+	if !m.ShowSkillsInstructions() {
+		return oops.
+			Hint("Remove `skills_instructions = false`, or remove skills_instructions_text").
+			Errorf("mcp.skills_instructions_text requires mcp.skills_instructions to be on")
+	}
+	if strings.TrimSpace(m.SkillsInstructionsText) == "" {
+		return oops.
+			Hint("Write the text, or remove the key to use the default section").
+			Errorf("mcp.skills_instructions_text must not be blank")
+	}
+	if unknown := unknownTemplateVars(m.SkillsInstructionsText, varServer, varSkillsDir); len(unknown) > 0 {
+		return oops.
+			Hint("Available variables: {{server}}, {{skills_dir}}").
+			Errorf("mcp.skills_instructions_text uses unknown variable {{%s}}", unknown[0])
+	}
 	return nil
 }
 

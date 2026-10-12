@@ -373,6 +373,8 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(cfg *config.Config, allR
 	// Add context section
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
+	WriteSkillsInstructions(&builder, cfg, presetNameCopilot, copilotInstructionsFile)
+
 	// Skills are generated to .github/skills/ directory, not inlined
 
 	return builder.String()

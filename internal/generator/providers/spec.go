@@ -327,6 +327,9 @@ const (
 	// substitutes it for the declared sections when agents_md turns the root
 	// file into an "@AGENTS.md" shim.
 	SectionRootAgentsMDImport = "agents_md_import"
+	// SectionRootSkillsInstructions is not accepted in a spec either: the
+	// renderer appends it to every root file when skills are served.
+	SectionRootSkillsInstructions = "skills_instructions"
 
 	// outputs.<type>.body.sections
 	SectionBodyFrontmatter     = "frontmatter"
