@@ -912,6 +912,7 @@ spec = "1.1.0"                 # Agent Plugins version: "1.0.0" (default) or "1.
 | `content_root` | content tree | Project-relative directory holding plugin-only `skills/`, `commands/` and `agents/` |
 | `include_domains` | none | Domains (names or globs) whose skills, commands and agents are bundled; a root item wins over a same-named domain item |
 | `include_evals` | `false` | Bundle each skill's `evals/` directory and the project-level `evals/` tree |
+| `skills_dir_owned` | `false` | Declare the bundle's skills directory fully owned: `verify --plugin` reports entries it did not generate as `extra` and `generate --plugin` removes them |
 
 Sub-tables: `[plugin.author]` (`name`, `email`, `url`), `[[plugin.mcp]]`, `[[plugin.hooks]]`, `[plugin.statusline]`,
 `[plugin.codex]` (`manifest` = `legacy`, `root` or `both`; `marketplace`), `[plugin.cursor]`, `[plugin.gemini]`,

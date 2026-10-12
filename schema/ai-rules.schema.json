@@ -2592,6 +2592,10 @@
           "type": "boolean",
           "description": "Bundle eval cases: each skill's evals/ directory and the project-level evals/ tree (at <bundle>/evals/). Off by default."
         },
+        "skills_dir_owned": {
+          "type": "boolean",
+          "description": "Declare each skills directory the bundle writes fully owned: verify --plugin reports an entry it did not generate there as extra, and generate --plugin removes it. Default false: skill directories and files the bundle does not generate are never touched."
+        },
         "provenance_headers": {
           "type": "boolean",
           "description": "Write the AI-RULEZ generated-file header into bundled Markdown/JS/TS/PY outputs. Default true; set false to write them byte-identical to their sources (the provenance sidecar still records every output's content hash)."

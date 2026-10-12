@@ -89,6 +89,13 @@ type PluginAuthoring struct {
 	// plugin-only skills/, commands/, and agents/. Empty uses governance content.
 	ContentRoot string `yaml:"content_root,omitempty" json:"content_root,omitempty" toml:"content_root,omitempty"` //nolint:tagliatelle
 
+	// SkillsDirOwned declares each skills directory the bundle writes (the
+	// parent of every generated skill directory) fully owned by the bundle:
+	// verify --plugin reports an entry it did not generate there as drift of kind
+	// extra, and generate --plugin removes it. Off by default, when a skill
+	// directory or file that the bundle does not generate is never touched.
+	SkillsDirOwned bool `yaml:"skills_dir_owned,omitempty" json:"skills_dir_owned,omitempty" toml:"skills_dir_owned,omitempty"` //nolint:tagliatelle
+
 	// IncludeDomains lists the domains (names or globs) whose skills, commands
 	// and agents are bundled next to the root content. Empty keeps the bundle
 	// root-only. On a name collision the root item wins.

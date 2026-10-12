@@ -164,6 +164,19 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		{name: "unknown runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "bogus"} }, wantErr: "unknown runtime"},
 		{name: "duplicate runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "claude"} }, wantErr: "duplicate runtime"},
 		{name: "Hermes runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"hermes"} }},
+		{name: "skills dir owned", mutate: func(p *PluginAuthoring) { p.SkillsDirOwned = true }},
+		{name: "skills dir owned with a generated Pi dir", mutate: func(p *PluginAuthoring) {
+			p.SkillsDirOwned, p.Pi = true, &PiExtras{SkillsDir: "skills"}
+		}},
+		{name: "skills dir owned over the config directory", mutate: func(p *PluginAuthoring) {
+			p.SkillsDirOwned, p.Pi = true, &PiExtras{SkillsDir: ".ai-rulez/skills"}
+		}, wantErr: "holds the authored sources"},
+		{name: "skills dir owned over the content root", mutate: func(p *PluginAuthoring) {
+			p.SkillsDirOwned, p.ContentRoot, p.Pi = true, "plugin", &PiExtras{SkillsDir: "plugin/skills"}
+		}, wantErr: "holds the authored sources"},
+		{name: "owned dir over sources is fine when not owned", mutate: func(p *PluginAuthoring) {
+			p.Pi = &PiExtras{SkillsDir: ".ai-rulez/skills"}
+		}},
 		{name: "Pi runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"pi"} }},
 		{name: "agent-plugins runtime valid name", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"agent-plugins"} }},
 		{name: "agent-plugins invalid name", mutate: func(p *PluginAuthoring) {
@@ -529,6 +542,20 @@ plugin:
 // TestPluginInclude_SchemaAcceptsTheField guards the plugin.include property in
 // schema/ai-rules.schema.json: a config that uses it must not be flagged as an
 // unknown key.
+func TestPluginSkillsDirOwned_SchemaAcceptsTheField(t *testing.T) {
+	yamlConfig := `
+version: "5.0"
+name: basemind
+description: Code-map MCP server.
+plugin:
+  name: basemind
+  description: Full AI context layer over MCP.
+  version: 1.0.0
+  skills_dir_owned: true
+`
+	require.NoError(t, schema.ValidateWithSchema([]byte(yamlConfig)))
+}
+
 func TestPluginInclude_SchemaAcceptsTheField(t *testing.T) {
 	yamlConfig := `
 version: "5.0"
