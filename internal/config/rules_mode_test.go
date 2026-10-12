@@ -97,6 +97,8 @@ func TestValidate_RulesMode(t *testing.T) {
 		{"baz_unscoped root", &RulesConfig{BazUnscoped: "root"}, ""},
 		{"baz_unscoped skip", &RulesConfig{BazUnscoped: "skip"}, ""},
 		{"baz_unscoped unknown", &RulesConfig{BazUnscoped: "drop"}, `invalid baz_unscoped value "drop"`},
+		{"baz_dedupe_max positive", &RulesConfig{BazDedupeMax: 3}, ""},
+		{"baz_dedupe_max negative", &RulesConfig{BazDedupeMax: -1}, "invalid baz_dedupe_max value -1"},
 		{"baz_dedupe on", &RulesConfig{BazDedupe: true}, ""},
 		{"baz_budget positive", &RulesConfig{BazBudget: 2048}, ""},
 		{"baz_budget zero", &RulesConfig{BazBudget: 0}, ""},
@@ -295,4 +297,10 @@ func TestBazIncludes(t *testing.T) {
 	assert.True(t, cfg.BazIncludes("api"))
 	assert.False(t, cfg.BazIncludes("other"))
 	assert.False(t, (&Config{}).BazIncludes("api"))
+}
+
+func TestBazDedupeMax(t *testing.T) {
+	assert.Equal(t, 0, (*Config)(nil).BazDedupeMaxCopies())
+	assert.Equal(t, 0, (&Config{Rules: &RulesConfig{}}).BazDedupeMaxCopies())
+	assert.Equal(t, 3, (&Config{Rules: &RulesConfig{BazDedupeMax: 3}}).BazDedupeMaxCopies())
 }
