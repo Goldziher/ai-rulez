@@ -74,6 +74,7 @@ func ruleFamilies() []func(*ruleSet) {
 		registerOkf,
 		registerPolicycodes,
 		registerPublishcodes,
+		registerRootComponents,
 		registerRuledocsAdded,
 		registerSbomcodes,
 		registerSearchcodes,
