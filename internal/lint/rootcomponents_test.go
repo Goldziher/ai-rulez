@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -152,4 +153,41 @@ func TestStrict_RootComponentShippedWithContentRoot(t *testing.T) {
 
 	assert.True(t, has(fs, CodeRootComponentShipped, ".mcp.json", 0), "%s", dump(fs))
 	assert.False(t, has(fs, CodeRootComponentShipped, "commands", 0), "content_root makes the payload ambiguous:\n%s", dump(fs))
+}
+
+// AR9T0 looks for component paths only under the plugin's own root: a .mcp.json
+// in a parent directory (the repository toplevel above a nested plugin) is not
+// shipped by it (#378), while one inside the plugin directory still is.
+func TestStrict_RootComponentIgnoresParentDirectories(t *testing.T) {
+	tests := []struct {
+		name  string
+		files map[string]string
+		want  int
+	}{
+		{"mcp only in the parent directory", map[string]string{".mcp.json": "{}\n"}, 0},
+		{"mcp inside the plugin directory", map[string]string{"pkg/.mcp.json": "{}\n"}, 1},
+		{"mcp at both levels", map[string]string{".mcp.json": "{}\n", "pkg/.mcp.json": "{}\n"}, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			files := map[string]string{}
+			for k, v := range precisionTree("", "", nil) {
+				files["pkg/"+k] = v
+			}
+			files["pkg/.ai-rulez/config.toml"] = rootComponentConfig("")
+			for k, v := range tt.files {
+				files[k] = v
+			}
+			root := t.TempDir()
+			writeFiles(t, root, files)
+			gitAdd(t, root)
+
+			// Act
+			fs := lintDir(t, filepath.Join(root, "pkg"))
+
+			// Assert
+			assert.Equal(t, tt.want, countCode(fs, CodeRootComponentShipped), "%s", dump(fs))
+		})
+	}
 }
