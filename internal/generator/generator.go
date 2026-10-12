@@ -34,6 +34,9 @@ const localSourceDirName = "local"
 // Generator handles configuration generation
 type Generator struct {
 	config *config.Config
+	// renderedContent is the content tree of the latest collectOutputs pass; the
+	// baz budget warning reads it to name the rules the root file inlines.
+	renderedContent *config.ContentTree
 	// previousFiles is the prior generated manifest as a set, read once per
 	// writeOutputs pass for the rules-folder overwrite guard.
 	previousFiles map[string]bool
