@@ -19,6 +19,24 @@
     },
     "error": {
       "type": "string"
+    },
+    "drift": {
+      "description": "Each path where the bundle differs from its sources, with the kind of difference. Present on drift when the failure names paths.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "description": "Project-relative path, forward slashes.",
+            "type": "string"
+          },
+          "kind": {
+            "enum": ["changed", "missing", "stale-source", "obsolete", "extra", "symlink"]
+          }
+        }
+      }
     }
   }
 }

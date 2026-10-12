@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"io"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
@@ -104,7 +105,7 @@ longer holds).`,
 				logger.Info("Skipping plugin verification: the plugin bundle has not been generated")
 				return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifySkipped, Configs: 1})
 			}
-			return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifyDrift, Configs: 1, err: failWithCode(pluginVerifyExitCode(err), err)})
+			return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifyDrift, Configs: 1, Drift: generator.PluginDriftOf(err), err: failWithCode(pluginVerifyExitCode(err), err)})
 		}
 		warnRootComponents(cfg)
 		logger.Success("Generated plugin artifacts are valid", "path", cfg.BaseDir)
@@ -132,7 +133,10 @@ type pluginVerifyDoc struct {
 	Status        string `json:"status"`
 	Configs       int    `json:"configs"`
 	Error         string `json:"error,omitempty"`
-	err           error
+	// Drift names each path that differs and how: changed, missing,
+	// stale-source, obsolete, extra or symlink.
+	Drift []generator.PluginDrift `json:"drift,omitempty"`
+	err   error
 }
 
 // finishPluginVerify prints the --format json document of a plugin verification
@@ -140,7 +144,11 @@ type pluginVerifyDoc struct {
 // written and the failure reported once on stderr; any other failure is for the
 // root renderer.
 func finishPluginVerify(out render.Out, doc pluginVerifyDoc) error {
-	if !out.JSON() || (doc.err != nil && exitCodeFor(doc.err) != exitFindings) {
+	if !out.JSON() {
+		printPluginDrift(out.Stderr(), doc.Drift)
+		return doc.err
+	}
+	if doc.err != nil && exitCodeFor(doc.err) != exitFindings {
 		return doc.err
 	}
 	doc.SchemaVersion = 1
@@ -155,6 +163,19 @@ func finishPluginVerify(out render.Out, doc pluginVerifyDoc) error {
 		return exitStatus(exitCodeFor(doc.err))
 	}
 	return nil
+}
+
+// printPluginDrift lists each drifted path with its kind, one per line, ahead
+// of the error the root prints.
+func printPluginDrift(w io.Writer, drift []generator.PluginDrift) {
+	if len(drift) == 0 {
+		return
+	}
+	writef(w, "Drifted plugin outputs:\n")
+	for _, item := range drift {
+		writef(w, "  %-12s %s\n", item.Kind, item.Path)
+	}
+	writef(w, "\n")
 }
 
 // pluginVerifyExitCode is 2 when the bundle differs from its sources and 1 when
