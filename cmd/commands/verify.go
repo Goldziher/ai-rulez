@@ -6,6 +6,7 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 	"github.com/Goldziher/ai-rulez/v5/internal/jsondoc"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/Goldziher/ai-rulez/v5/internal/render"
 	"github.com/samber/oops"
@@ -105,6 +106,7 @@ longer holds).`,
 			}
 			return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifyDrift, Configs: 1, err: failWithCode(pluginVerifyExitCode(err), err)})
 		}
+		warnRootComponents(cfg)
 		logger.Success("Generated plugin artifacts are valid", "path", cfg.BaseDir)
 		return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifyOK, Configs: 1})
 	},
@@ -162,6 +164,41 @@ func pluginVerifyExitCode(err error) int {
 		return exitDrift
 	}
 	return 1
+}
+
+// rootComponentWarnings returns the AR9T0 findings for cfg: the default host
+// component paths a single-plugin repository root would ship to every user. It
+// runs the plugin analyzer alone and keeps only AR9T0. A load failure yields no
+// findings; verify --plugin reports them as warnings, not drift.
+func rootComponentWarnings(cfg *config.Config) []lint.Finding {
+	if cfg.Plugin == nil {
+		return nil
+	}
+	tree, err := lint.LoadTree(cfg.BaseDir)
+	if err != nil {
+		logger.Warn("Skipped the plugin root-component check", "error", err)
+		return nil
+	}
+	report, err := lint.RunWith(cfg, tree, lint.Options{Analyzers: []string{lint.AnalyzerPlugin}})
+	if err != nil {
+		logger.Warn("Skipped the plugin root-component check", "error", err)
+		return nil
+	}
+	out := make([]lint.Finding, 0, len(report.Findings))
+	for i := range report.Findings {
+		if f := &report.Findings[i]; f.Code == lint.CodeRootComponentShipped {
+			out = append(out, *f)
+		}
+	}
+	return out
+}
+
+// warnRootComponents logs each AR9T0 finding after a successful verify --plugin.
+// The finding is advice, not drift, so it does not change the exit code.
+func warnRootComponents(cfg *config.Config) {
+	for _, f := range rootComponentWarnings(cfg) {
+		logger.Warn(f.Message, "path", f.File)
+	}
 }
 
 func init() {
