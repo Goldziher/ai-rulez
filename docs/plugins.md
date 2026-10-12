@@ -564,7 +564,10 @@ installed for everyone. Set `[plugin] content_root` to keep the authored payload
 separate, or move the plugin into a monorepo member (`plugins/<name>/`) so its
 root is not the repository root.
 
-The check looks only under the plugin's own root, never in a parent directory.
+The check looks only under the plugin's own root, never in a parent directory. A
+root `plugin.json` is on the list (Codex prefers it as the manifest); a root
+`CLAUDE.md` was considered and is not, because Claude Code does not load a
+`CLAUDE.md` from a plugin root as context.
 
 ## Domain content and per-domain plugins
 

@@ -42,6 +42,11 @@ func TestStrict_RootComponentShippedWarns(t *testing.T) {
 			files: map[string]string{"hooks/hooks.json": "{}\n", "agents/a.md": "# a\n", "commands/c.md": "# c\n", "bin/tool": "#!/bin/sh\n"},
 			want:  []string{"hooks", "agents", "commands", "bin"},
 		},
+		{
+			name:  "root plugin.json under the default codex layout",
+			files: map[string]string{"plugin.json": "{}\n"},
+			want:  []string{"plugin.json"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -97,6 +102,21 @@ func TestStrict_RootComponentShippedStaysQuiet(t *testing.T) {
 			name:   "agents the bundle ships",
 			config: rootComponentConfig(""),
 			files:  map[string]string{".ai-rulez/agents/x.md": "---\nname: x\ndescription: A bundled agent. Use when testing.\n---\nbody\n", "agents/x.md": "# x\n"},
+		},
+		{
+			name:   "codex root layout writes its own plugin.json",
+			config: rootComponentConfig("\nruntimes = [\"codex\"]\n\n[plugin.codex]\nmanifest = \"root\"\n"),
+			files:  map[string]string{"plugin.json": "{}\n"},
+		},
+		{
+			name:   "root plugin.json without a codex runtime",
+			config: rootComponentConfig("\nruntimes = [\"claude\"]\n"),
+			files:  map[string]string{"plugin.json": "{}\n"},
+		},
+		{
+			name:   "root CLAUDE.md is not a loaded component",
+			config: rootComponentConfig(""),
+			files:  map[string]string{"CLAUDE.md": "# dev notes\n"},
 		},
 		{
 			name:   "codex root writes its own mcp.json",

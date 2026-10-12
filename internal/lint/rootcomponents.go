@@ -34,10 +34,10 @@ const (
 
 func registerRootComponents(s *ruleSet) {
 	s.addRules(RuleInfo{CodeRootComponentShipped, "root-component-shipped", SeverityWarning,
-		"a single-plugin bundle whose root is the repository root ships a default host component path (.mcp.json, hooks/, agents/, commands/, settings.json, bin/) to every user; set [plugin] content_root or move the plugin into a monorepo member"})
+		"a single-plugin bundle whose root is the repository root ships a default host component path (.mcp.json, hooks/, agents/, commands/, settings.json, bin/, a Codex plugin.json) to every user; set [plugin] content_root or move the plugin into a monorepo member"})
 	s.addDocs(map[string]RuleDoc{
 		CodeRootComponentShipped: {
-			Why:  "A single-plugin repository lists its bundle with source \"./\", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin. Paths are looked up only under the plugin's own root, never in a parent directory.",
+			Why:  "A single-plugin repository lists its bundle with source \"./\", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin. Paths are looked up only under the plugin's own root, never in a parent directory. A root `plugin.json` is on the list because Codex prefers it as the manifest; a root `CLAUDE.md` was considered and left off, because Claude Code does not load a `CLAUDE.md` from a plugin root as context (`claude plugin validate` warns about one).",
 			Bad:  "A repository with a `[plugin]` block and a committed `.mcp.json` or `agents/` directory, published with `source: \"./\"`",
 			Good: "Set `[plugin] content_root` to keep the payload out of the root, or move the plugin into a monorepo member (`plugins/<name>/`) so its root is not the repository root",
 		},
@@ -66,6 +66,7 @@ func rootComponents() []hostComponent {
 		{path: "SKILL.md", host: hostClaudeCode, runtime: config.PluginRuntimeClaude},
 		{path: "mcp.json", host: hostCodex, runtime: config.PluginRuntimeCodex, bundled: codexRootWritesMCP},
 		{path: ".app.json", host: hostCodex, runtime: config.PluginRuntimeCodex},
+		{path: "plugin.json", host: hostCodex, runtime: config.PluginRuntimeCodex, bundled: codexWritesRootManifest},
 	}
 }
 
@@ -153,6 +154,16 @@ func codexLegacyWritesMCP(r *runner) bool {
 	p := r.cfg.Plugin
 	return p != nil && slices.Contains(p.ResolvedRuntimes(), config.PluginRuntimeCodex) &&
 		p.Codex.ManifestLayout() == config.CodexManifestLegacy && pluginHasMCP(r)
+}
+
+// codexWritesRootManifest reports whether ai-rulez writes the root plugin.json
+// for the bundle: the Codex runtime is targeted and uses a layout other than
+// legacy. Under the legacy layout Codex still prefers a root plugin.json, so a
+// stray one is read as the manifest.
+func codexWritesRootManifest(r *runner) bool {
+	p := r.cfg.Plugin
+	return p != nil && slices.Contains(p.ResolvedRuntimes(), config.PluginRuntimeCodex) &&
+		p.Codex.ManifestLayout() != config.CodexManifestLegacy
 }
 
 // codexRootWritesMCP reports whether ai-rulez writes mcp.json for the bundle:
