@@ -44,6 +44,9 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	}
 	g.removeStalePluginDirs(stale)
 	g.applyPluginPrune(obsolete)
+	if err := g.removeUnrecordedSkillFiles(outputs, obsolete); err != nil {
+		return 0, err
+	}
 	written := 0
 	for _, output := range outputs {
 		if !output.IsDir {
@@ -86,6 +89,10 @@ const (
 	PluginDriftStaleSource = "stale-source"
 	// PluginDriftObsolete: a file the previous run generated that the sources no longer produce.
 	PluginDriftObsolete = "obsolete"
+	// PluginDriftExtra: a file inside a generated skill directory that the sidecar does not record.
+	PluginDriftExtra = "extra"
+	// PluginDriftSymlink: a recorded output that is a symlink, not a regular file.
+	PluginDriftSymlink = "symlink"
 )
 
 // PluginDrift is one path where a plugin bundle differs from its sources, with
@@ -156,6 +163,13 @@ func (g *Generator) VerifyPlugin(profile string) error {
 	for _, item := range obsolete {
 		drift = append(drift, PluginDrift{Path: item.rel, Kind: PluginDriftObsolete})
 	}
+	extras, err := g.unrecordedSkillFiles(expected, obsolete)
+	if err != nil {
+		return err
+	}
+	for _, path := range extras {
+		drift = append(drift, PluginDrift{Path: filepath.ToSlash(g.convertToRelativePath(path)), Kind: PluginDriftExtra})
+	}
 	if len(obsolete) > 0 {
 		return asPluginDrift(obsoleteFilesError(obsolete), drift...)
 	}
@@ -218,6 +232,10 @@ func (g *Generator) verifyPluginOutputs(expected []config.OutputFile) []PluginDr
 			continue
 		}
 		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+		if info, statErr := os.Lstat(output.Path); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
+			drift = append(drift, PluginDrift{Path: rel, Kind: PluginDriftSymlink})
+			continue
+		}
 		actual, readErr := os.ReadFile(output.Path)
 		if readErr != nil {
 			drift = append(drift, PluginDrift{Path: rel, Kind: PluginDriftMissing})
@@ -242,11 +260,19 @@ func pluginOutputsError(drift []PluginDrift) error {
 		paths = append(paths, item.Path)
 	}
 	hint := "Run ai-rulez generate --plugin and commit the regenerated output"
+	onlyExtra := true
 	for _, item := range drift {
+		if item.Kind != PluginDriftExtra {
+			onlyExtra = false
+		}
 		if item.Kind == PluginDriftMissing {
 			hint = "Run ai-rulez generate --plugin to restore the missing file and commit the regenerated output"
-			break
 		}
+	}
+	if onlyExtra {
+		return oops.With("files", strings.Join(paths, ", ")).
+			Hint("Run ai-rulez generate --plugin to remove files the bundle does not record").
+			Errorf("unrecorded file in a generated plugin skill directory: %s", strings.Join(paths, ", "))
 	}
 	return oops.With("files", strings.Join(paths, ", ")).Hint(hint).
 		Errorf("generated plugin output is stale")
@@ -281,6 +307,13 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 		} else {
 			lines = append(lines, "keep-obsolete: "+item.rel+" ("+item.reason+")")
 		}
+	}
+	extras, err := g.unrecordedSkillFiles(outputs, obsolete)
+	if err != nil {
+		return nil, err
+	}
+	for _, path := range extras {
+		lines = append(lines, "delete-stale: "+filepath.ToSlash(g.convertToRelativePath(path)))
 	}
 	return lines, nil
 }
