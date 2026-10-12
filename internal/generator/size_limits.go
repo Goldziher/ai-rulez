@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
 )
 
 // agentsMDFile is the instruction file Codex concatenates from the project root
@@ -230,6 +231,9 @@ type bazBudgetFinding struct {
 	Files  []sizeContributor
 	Bytes  int
 	Budget int
+	// Unscoped names the path-scoped rules the root AGENTS.md inlines because
+	// they cannot be nested; rules.baz_unscoped = "skip" leaves them out.
+	Unscoped []string
 }
 
 // message is the one-line summary logged for the finding; it names the largest
@@ -270,7 +274,10 @@ func (g *Generator) bazBudgetFinding(outputs []config.OutputFile) *bazBudgetFind
 	if len(contributors) > maxBazBudgetFiles {
 		contributors = contributors[:maxBazBudgetFiles]
 	}
-	return &bazBudgetFinding{Files: contributors, Bytes: total, Budget: budget}
+	return &bazBudgetFinding{
+		Files: contributors, Bytes: total, Budget: budget,
+		Unscoped: presets.BazInlinedUnscoped(g.renderedContent, g.config),
+	}
 }
 
 // warnBazBudget logs one warning when the baz AGENTS.md surface exceeds
@@ -279,6 +286,10 @@ func (g *Generator) warnBazBudget(outputs []config.OutputFile) {
 	f := g.bazBudgetFinding(outputs)
 	if f == nil {
 		return
+	}
+	if len(f.Unscoped) > 0 {
+		g.log().Warn("the baz root AGENTS.md inlines path-scoped rules that cannot be nested: "+strings.Join(f.Unscoped, ", "),
+			"hint", "set rules.baz_unscoped = \"skip\" to leave them out when baz is the only writer of AGENTS.md")
 	}
 	g.log().Warn(f.message(),
 		"hint", "set rules.baz_default = \"none\" to nest only rules whose targets name baz, "+

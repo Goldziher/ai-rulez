@@ -894,14 +894,36 @@
           "enum": ["all", "none"],
           "description": "Which items the baz preset selects for its path-scoped AGENTS.md files. all (default) lets every item through; none only items whose frontmatter `targets` name baz."
         },
+        "baz_unscoped": {
+          "type": "string",
+          "enum": ["root", "skip"],
+          "description": "What the baz preset does with a glob-activated item that cannot be nested because no glob names a directory (`**/*.go`, `**/BUILD`). root (default) inlines it into the root AGENTS.md; skip leaves it out of that file when baz is the only preset writing it (a root file shared with codex, opencode, amp or xum keeps it). Only applies with baz_scoped = nested."
+        },
         "baz_dedupe": {
           "type": "boolean",
           "description": "When true, a path-scoped item whose globs point into several directories under one parent is written once to the shared parent AGENTS.md instead of a copy in each. Defaults to false."
+        },
+        "baz_dedupe_max": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "When above 0, a path-scoped item that would be copied into more than this many directories is written once to the directory covering all of them, up to the repository root (the root AGENTS.md). Independent of baz_dedupe; with baz_unscoped = skip the root fallback is not used. 0 (default) disables it."
         },
         "baz_budget": {
           "type": "integer",
           "minimum": 0,
           "description": "Byte budget of the AGENTS.md files the baz preset writes; generate warns when their total exceeds it. 0 (default) disables the warning."
+        },
+        "baz": {
+          "type": "object",
+          "description": "Per-rule controls for the baz preset.",
+          "properties": {
+            "include": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Names of the rules and context files the baz preset selects for its path-scoped AGENTS.md files when baz_default is none. The same opt-in is `baz: true` in an item's frontmatter. A `!baz` target always excludes an item."
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

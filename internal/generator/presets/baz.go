@@ -171,16 +171,68 @@ func withoutBazNested(items []config.ContentFile, cfg *config.Config) []config.C
 		return items
 	}
 	target := rulefiles.RootTarget(bazPresetName, agentsMDFile)
+	skipUnscoped := bazSkipsUnscoped(cfg)
 	kept := make([]config.ContentFile, 0, len(items))
 	for idx := range items {
 		cf := items[idx]
 		// An item that baz's own target excludes is never written nested, so it
 		// stays in the root file for the presets that do select it.
-		if !rulefiles.InlineAllowed(cf, target) || len(bazNestedDirs(cf, cfg)) == 0 {
+		if !rulefiles.InlineAllowed(cf, target) {
 			kept = append(kept, cf)
+			continue
 		}
+		if len(bazNestedDirs(cf, cfg)) != 0 || (skipUnscoped && bazUnscopedItem(cf, cfg)) {
+			continue
+		}
+		kept = append(kept, cf)
 	}
 	return kept
+}
+
+// bazUnscopedItem reports whether baz selects a glob-activated item that has no
+// nested directory to go to (a glob without a directory, or one that points
+// outside the project), so the root AGENTS.md would inline it.
+func bazUnscopedItem(cf config.ContentFile, cfg *config.Config) bool {
+	if !bazItemSelected(cf, cfg) || cf.Metadata == nil {
+		return false
+	}
+	return cf.Metadata.ResolveActivation().Mode == config.ActivationGlob && len(bazNestedDirs(cf, cfg)) == 0
+}
+
+// bazSkipsUnscoped reports whether rules.baz_unscoped = "skip" applies: nesting
+// is active and baz is the only preset writing the root AGENTS.md. The file is
+// shared byte for byte with codex, opencode, amp, xum and the others, so while
+// one of them is configured it must keep the item.
+func bazSkipsUnscoped(cfg *config.Config) bool {
+	if !bazNestedActive(cfg) || cfg.BazUnscopedRules() != config.BazUnscopedSkip {
+		return false
+	}
+	for _, owner := range rulefiles.RootOwners(agentsMDFile) {
+		if owner != bazPresetName && cfg.HasBuiltInPreset(owner) {
+			return false
+		}
+	}
+	return true
+}
+
+// BazInlinedUnscoped names the rules and context items the baz preset inlines
+// into the root AGENTS.md although they are path-scoped, because no glob names a
+// directory to nest them under. It is empty when rules.baz_unscoped skips them
+// or nesting is off.
+func BazInlinedUnscoped(content *config.ContentTree, cfg *config.Config) []string {
+	if content == nil || !bazNestedActive(cfg) || bazSkipsUnscoped(cfg) {
+		return nil
+	}
+	target := rulefiles.RootTarget(bazPresetName, agentsMDFile)
+	var names []string
+	items := append(rulefiles.FilterInline(allInlineRules(content), target), rulefiles.FilterInline(allInlineContext(content), target)...)
+	for idx := range items {
+		if bazUnscopedItem(items[idx], cfg) {
+			names = append(names, items[idx].Name)
+		}
+	}
+	sort.Strings(names)
+	return names
 }
 
 // bazNestedDirs returns the directories (relative to the project root, slash
@@ -217,31 +269,56 @@ func bazNestedDirs(cf config.ContentFile, cfg *config.Config) []string {
 }
 
 // bazItemSelected reports whether an item may reach the baz preset's
-// path-scoped surface. With rules.baz_default = "none" only an item whose
-// frontmatter targets select baz qualifies (an item with no targets does not);
-// the default ("all") selects every item.
+// path-scoped surface. A `!baz` target always excludes it. With
+// rules.baz_default = "none" only an item that opts in qualifies: a target
+// selecting baz, `baz: true` in its frontmatter, or a name listed in
+// rules.baz.include (an item with no targets does not). The default ("all")
+// selects every item that is not excluded.
 func bazItemSelected(cf config.ContentFile, cfg *config.Config) bool {
-	if cfg.BazDefaultRules() != config.BazDefaultNone {
-		return true
-	}
 	var targets []string
 	if cf.Metadata != nil {
 		targets = cf.Metadata.Targets
 	}
+	if targetmatch.Denied(targets, []string{bazPresetName}, agentsMDFile) {
+		return false
+	}
+	if cfg.BazDefaultRules() != config.BazDefaultNone {
+		return true
+	}
+	if cf.Metadata != nil && strings.EqualFold(strings.TrimSpace(cf.Metadata.Extra["baz"]), "true") {
+		return true
+	}
+	if cfg.BazIncludes(cf.Name) || cfg.BazIncludes(path.Base(filepath.ToSlash(cf.Path))) {
+		return true
+	}
 	return targetmatch.Match(targets, []string{bazPresetName}, agentsMDFile)
 }
 
-// bazCollapseDirs collapses the directories of one item to their deepest shared
-// parent when rules.baz_dedupe is on, so an item whose globs point into several
-// sibling directories is written once to the parent AGENTS.md instead of a copy
-// in each. It returns dirs unchanged when dedupe is off or the directories share
-// no usable parent (the project root, which has no nested file).
+// bazCollapseDirs collapses the directories of one item to the directory that
+// covers all of them, so it is written once instead of a copy in each. That
+// happens when rules.baz_dedupe is on, or when the item would produce more than
+// rules.baz_dedupe_max copies. The covering directory is their deepest shared
+// parent; when they share none beyond the project root and the item exceeds
+// baz_dedupe_max, the item moves to the root AGENTS.md (nil, "not nested") unless
+// rules.baz_unscoped = "skip" keeps the root file free of path-scoped items. It
+// returns dirs unchanged when neither setting applies or no covering directory
+// is usable.
 func bazCollapseDirs(dirs []string, cfg *config.Config) []string {
-	if !cfg.BazDedupeEnabled() || len(dirs) <= 1 {
+	if len(dirs) <= 1 {
+		return dirs
+	}
+	overMax := cfg.BazDedupeMaxCopies() > 0 && len(dirs) > cfg.BazDedupeMaxCopies()
+	if !cfg.BazDedupeEnabled() && !overMax {
 		return dirs
 	}
 	parent := commonDir(dirs)
-	if parent == "" || !bazDirUsable(parent, cfg) {
+	if parent == "" {
+		if overMax && cfg.BazUnscopedRules() != config.BazUnscopedSkip {
+			return nil
+		}
+		return dirs
+	}
+	if !bazDirUsable(parent, cfg) {
 		return dirs
 	}
 	return []string{parent}
