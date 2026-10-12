@@ -212,6 +212,8 @@ func (diskApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 	// run re-creates, and pruning before the write would only have it made again.
 	g.pruneDirsEmptiedBy(append(staleFiles, deletedPaths(unmerged)...))
 
+	g.warnStaleServers()
+
 	if err := g.writeGeneratedManifest(flatOutputs); err != nil {
 		if g.hasLocalOutputs(flatOutputs) {
 			// Without the local manifest a later run cannot clean these files up.

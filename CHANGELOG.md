@@ -13,6 +13,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`generate` warns about an MCP server entry left behind after its `[[mcp_servers]]` block is removed.** An entry is taken out of `.mcp.json` only on the machine that recorded writing it (the gitignored local manifest), so a fresh clone kept it silently. The committed manifest now lists, as a hint only, the server entries written from the shared configuration, and `generate` warns once per leftover entry and names the file; it never removes an entry on that evidence ([#373](https://github.com/Goldziher/ai-rulez/issues/373)).
 - **`--serve-skills` is no longer appended to a `self_server_command` that is a `sh -c` script.** The flag landed in `$0` of the script; such a command is now left as written, and `docs/configuration.md` documents the `"$@"` plus trailing `"sh"` pattern ([#372](https://github.com/Goldziher/ai-rulez/issues/372)).
 
 ## [5.0.4] - 2026-10-12
