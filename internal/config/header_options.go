@@ -17,6 +17,12 @@ func (c *Config) HeaderMCPCommand() (cmd string, show bool) {
 	if c == nil || !c.Header.ShowMCPLine() || !c.HasSelfServer() {
 		return "", false
 	}
+	if c.MCP != nil && c.MCP.SelfServerLauncher == SelfLauncherBinaryThenNPX {
+		if c.servesSkills() {
+			return "ai-rulez mcp " + serveSkillsArg, true
+		}
+		return "ai-rulez mcp", true
+	}
 	entry := c.SelfMCPServerEntry()
 	parts := []string{}
 	if command, ok := entry[mcpKeyCommand].(string); ok {

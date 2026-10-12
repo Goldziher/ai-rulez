@@ -2280,6 +2280,14 @@
           "minItems": 1,
           "type": "array"
         },
+        "self_server_launcher": {
+          "description": "How the self entry starts ai-rulez. npx (default) runs it through npx; binary-then-npx runs an installed `ai-rulez` when one is on PATH and falls back to npx (pinned by self_server_version), through a `sh -c` script that needs no hand-written wrapper. Mutually exclusive with self_server_command.",
+          "enum": [
+            "npx",
+            "binary-then-npx"
+          ],
+          "type": "string"
+        },
         "self_server_version": {
           "description": "Pin the ai-rulez version the entry runs (for example \"4.19.0\" or \"latest\"). Defaults to the version of the ai-rulez binary that runs generate, or \"latest\" for a dev build. Only applies while the self server is on (the default).",
           "pattern": "^[^\\s@/]+$",

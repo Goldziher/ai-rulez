@@ -53,7 +53,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`compact`**: Omit per-rule priority annotations from inline sections
 - **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `true`)
 - **`mcp_servers`**: Array of MCP server configurations
-- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_command`, `skills_instructions`, `skills_instructions_text`)
+- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_launcher`, `self_server_command`, `skills_instructions`, `skills_instructions_text`)
 - **`plugins`**: Array of plugin installs from a marketplace (consumer side)
 - **`marketplaces`**: Array of marketplace sources
 - **`plugin`**: Producer-side authoring block for a distributable plugin bundle

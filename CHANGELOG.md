@@ -9,6 +9,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Added
 
 - **`[rules] baz_rest = "skip"` keeps rules baz does not select out of the root `AGENTS.md`.** Under `baz_default = "none"` the rules that do not opt in, and rules excluded by `!baz`, were still inlined into the root file (127 KB in one project); `skip` drops those path-scoped items when `baz` is the only preset writing that file. The default `"root"` is unchanged ([#371](https://github.com/Goldziher/ai-rulez/issues/371)).
+- **`[mcp] self_server_launcher = "binary-then-npx"` starts an installed `ai-rulez` and falls back to npx.** The generated `.mcp.json` entry is a `sh -c` script with `--serve-skills` passed as an argument, so a project needs no hand-written shell wrapper; `self_server_version` pins the npx fallback and it excludes `self_server_command` ([#372](https://github.com/Goldziher/ai-rulez/issues/372)).
+
+### Fixed
+
+- **`--serve-skills` is no longer appended to a `self_server_command` that is a `sh -c` script.** The flag landed in `$0` of the script; such a command is now left as written, and `docs/configuration.md` documents the `"$@"` plus trailing `"sh"` pattern ([#372](https://github.com/Goldziher/ai-rulez/issues/372)).
 
 ## [5.0.4] - 2026-10-12
 

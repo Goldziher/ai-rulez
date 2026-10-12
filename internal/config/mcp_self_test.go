@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -85,6 +86,16 @@ func TestSelfMCPServerEntry_ServesSkillsFromTheSameEntry(t *testing.T) {
 			mcp:  &MCPConfig{SelfServer: boolPtr(true), SelfServerCommand: []string{"ai-rulez", "mcp", "--serve-skills"}},
 			want: map[string]any{"type": "stdio", "command": "ai-rulez", "args": []string{"mcp", "--serve-skills"}},
 		},
+		{
+			name: "a shell script launch never gets the flag appended as $0",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true), SelfServerCommand: []string{"sh", "-c", `exec ai-rulez mcp --serve-skills "$@"`, "sh"}},
+			want: map[string]any{"type": "stdio", "command": "sh", "args": []string{"-c", `exec ai-rulez mcp --serve-skills "$@"`, "sh"}},
+		},
+		{
+			name: "binary-then-npx passes the flag as a script argument",
+			mcp:  &MCPConfig{SelfServer: boolPtr(true), SelfServerLauncher: SelfLauncherBinaryThenNPX, SelfServerVersion: "4.1.0"},
+			want: map[string]any{"type": "stdio", "command": "sh", "args": []string{"-c", fmt.Sprintf(binaryThenNPXScript, "4.1.0"), "sh", "--serve-skills"}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -151,6 +162,9 @@ func TestConfigValidateMCP(t *testing.T) {
 		{name: "empty executable", mcp: &MCPConfig{SelfServer: boolPtr(true), SelfServerCommand: []string{" ", "mcp"}}, wantErr: "executable must not be empty"},
 		{name: "version and command", mcp: &MCPConfig{SelfServer: boolPtr(true), SelfServerVersion: "1.0.0", SelfServerCommand: []string{"x"}}, wantErr: "mutually exclusive"},
 		{name: "version with at sign", mcp: &MCPConfig{SelfServer: boolPtr(true), SelfServerVersion: "ai-rulez@1.0.0"}, wantErr: "not a valid version"},
+		{name: "launcher binary-then-npx", mcp: &MCPConfig{SelfServer: boolPtr(true), SelfServerLauncher: "binary-then-npx"}},
+		{name: "launcher unknown", mcp: &MCPConfig{SelfServer: boolPtr(true), SelfServerLauncher: "docker"}, wantErr: "invalid mcp.self_server_launcher"},
+		{name: "launcher and command", mcp: &MCPConfig{SelfServer: boolPtr(true), SelfServerLauncher: "binary-then-npx", SelfServerCommand: []string{"x"}}, wantErr: "mutually exclusive"},
 		{name: "version with space", mcp: &MCPConfig{SelfServer: boolPtr(true), SelfServerVersion: "1.0 0"}, wantErr: "not a valid version"},
 	}
 
