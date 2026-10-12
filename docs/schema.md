@@ -47,7 +47,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`gitignore`**: Whether to maintain the managed .gitignore block with generated output patterns (default: false)
 - **`includes`**: External content sources to merge
 - **`installed_skills`**: Skills to install from external repositories
-- **`header`**: Header style/timestamp for generated files
+- **`header`**: Header `style`, `timestamp`, `hashes`, `text` and `mcp_line` for generated files
 - **`defaults`**: Global `effort` and per-preset `effort_by_preset` / `model_by_preset`
 - **`builtins`**: Built-in domains (`true`, `false`, or a list with `!` exclusions)
 - **`compact`**: Omit per-rule priority annotations from inline sections

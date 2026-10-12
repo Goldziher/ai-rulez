@@ -691,6 +691,11 @@
           "enum": ["full", "content", "none"],
           "description": "Freshness lines in generated headers: full writes Content-Hash and Source-Hash; content (default) keeps only the per-file Content-Hash so editing one source no longer rewrites a line in every generated file; none writes neither.",
           "default": "content"
+        },
+        "mcp_line": {
+          "type": "boolean",
+          "description": "Name the ai-rulez MCP server in generated headers (\"Use MCP server: ...\"). The command is derived from [mcp] (self_server_command, self_server_version, and --serve-skills when skills are served) and is left out while mcp.self_server is false. Set to false to drop the line from every header.",
+          "default": true
         }
       },
       "additionalProperties": false
