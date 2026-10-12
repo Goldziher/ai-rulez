@@ -300,6 +300,7 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	config.frontmatterErrors = lo.frontmatterErrors
 	config.RulesDirs = &RulesDirSet{}
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
+	config.RootRel = rootRelInRepo(baseDir)
 	// Each loaded project owns its warning state: a nil collector stands for the
 	// process-wide one, which two projects in one process would share.
 	var sink diag.Sink
