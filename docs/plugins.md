@@ -171,6 +171,25 @@ files under `.pi/` or `.opencode/` are not bundled or loaded as Pi resources. Fo
 GitHub repository, the generated name is `@<owner>/pi-<plugin-name>` (`@acme/pi-my-tool` above).
 Commit the generated bundle before installing it through Git; local packages also need no registry.
 
+The layout is configurable through `[plugin.pi]`:
+
+```toml
+[plugin.pi]
+skills_dir = "skills"     # default: .pi/skills
+package_json = "merge"    # default: generate
+```
+
+`skills_dir` writes each bundled skill once, into that tree, and points `pi.skills` at it. Set it to
+`skills` when the repository already ships a root `skills/` tree for Claude, Codex and OpenCode: every
+runtime then writes the same copy instead of Pi carrying a second one under `.pi/skills/`. Prompt
+templates stay under `.pi/prompts/` either way.
+
+`package_json = "merge"` updates only the root `package.json` keys ai-rulez owns — `name`, `version`,
+`description`, `author`, `repository`, `keywords`, `pi` and `files` — and keeps every other key, so a
+repository whose `package.json` also holds `devDependencies`, `scripts` or `packageManager` does not
+lose them. `ai-rulez verify --plugin` checks those owned keys only. The default, `generate`, replaces
+the whole file as before.
+
 With `runtimes = ["pi", "opencode"]`, both runtimes share one `package.json`: its name remains
 `@<owner>/opencode-<plugin-name>`, OpenCode's entry points and dependencies are retained, and Pi's
 resource metadata is added. Runtime order does not change the output.
@@ -192,6 +211,28 @@ pi install npm:@acme/my-tool
 Publication to npm with `pi-package` enables discovery in the [Pi package catalog](https://pi.dev/packages).
 Git installation needs no registry. No Pi marketplace JSON is generated; Pi-only multi-plugin
 publishing is not supported by the current publisher, which requires a Claude marketplace index.
+
+### Shared resources across skills
+
+Skills in one plugin often share the same reference docs and templates. `[plugin] shared_resources`
+lists directories (relative to the plugin's content root — `[plugin] content_root` when set, otherwise
+the config directory) that are copied into **every** bundled skill, for every runtime:
+
+```toml
+[plugin]
+name = "acme.tools"
+version = "1.0.0"
+description = "Acme review tooling."
+shared_resources = ["references", "templates"]
+```
+
+Each directory lands inside the skill at `skills/<name>/references/…`, so a skill still works once it
+is installed on its own. The copies are recorded in `.ai-rulez-generated.json` like the skill's own
+files, so `verify --plugin` reports a changed or missing copy as drift. A relative link from `SKILL.md`
+that climbs out of the skill to the shared directory (`../../references/x.md`) is rewritten to the copy
+(`references/x.md`); a link that resolves inside the skill already (`references/x.md`) is left alone.
+A name clash between a shared file and a file the skill already has is an error, not a silent
+overwrite.
 
 ### OpenCode adapter
 
@@ -369,6 +410,12 @@ Generated JavaScript, TypeScript, Python, and Markdown files include an ai-rulez
 deterministic BLAKE3 `Content-Hash` value (and `Source-Hash` with `[header] hashes = "full"`). Markdown headers follow
 YAML frontmatter so skill discovery remains valid.
 
+Set `[plugin] provenance_headers = false` to write those files byte-identical to their sources
+instead, the way `[plugin] include` files are already copied. The `.ai-rulez-generated.json`
+sidecar still records every output's content hash, so `verify --plugin`, obsolete pruning and
+`publish --emit agent-plugins` keep working. A header-less file ai-rulez did not record stays
+treated as hand-written.
+
 Run `ai-rulez verify --plugin` to verify every output recorded by the provenance
 sidecar without modifying or regenerating the package.
 
@@ -496,6 +543,17 @@ emits a single root marketplace index — `.claude-plugin/marketplace.json` (and
 index at `.agents/plugins/marketplace.json`) — listing each with `source: "./plugins/<name>"`.
 Members do not emit their own marketplace index.
 
+A single-plugin repo's bundle root is the repository root, so every path a host
+loads by default from a plugin root ships to each user who installs it. `validate
+--strict` and `verify --plugin` warn with `AR9T0 root-component-shipped` about
+each such path that exists at the root and is not part of the bundle —
+`.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, and the
+other Claude Code and Codex plugin paths — naming the host that loads it. A
+maintainer's own development `.mcp.json` or `agents/` directory would otherwise be
+installed for everyone. Set `[plugin] content_root` to keep the authored payload
+separate, or move the plugin into a monorepo member (`plugins/<name>/`) so its
+root is not the repository root.
+
 ## Domain content and per-domain plugins
 
 A project that keeps its content in `.ai-rulez/domains/<name>/` can ship it as plugins
@@ -598,6 +656,23 @@ is tracked by commit, and a plugin loaded in place from a local marketplace is n
 when a generated plugin's content differs from its committed provenance sidecar at `HEAD` while the
 version in its manifest is unchanged. Bump `version`, or omit it to track commits.
 
+#### Version source
+
+`version_from` takes the version from a project-relative manifest instead of a literal `version`,
+so a release bump lives in one place:
+
+```toml
+[plugin]
+name = "my-tool"
+description = "What my tool does."
+version_from = "package.json"   # version, pyproject.toml -> project.version, Cargo.toml -> package.version
+```
+
+The resolved value replaces `version` in every generated manifest, in `ai-rulez.lock`, and in the
+comparison `verify --plugin` and `PluginVersionDrift` make, so a bump in the source manifest shows
+as drift until the bundle is regenerated. `version` and `version_from` are mutually exclusive;
+`ai-rulez validate` reports a missing file, a missing version key, or both set at once.
+
 The `[plugin]` block is optional in this mode. When present it supplies defaults (author,
 license, homepage, repository, version, category, keywords, runtimes) and is not bundled on
 its own; declare a plugin for the root content with `[[marketplace.plugins]]` instead.
@@ -683,15 +758,21 @@ root skill with the same name wins.
 ## Field reference
 
 `[plugin]`: `name` (lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit, no `..`; it
-becomes a directory and file name in every runtime), `version` (required); `display_name`, `description`, `homepage`,
+becomes a directory and file name in every runtime), `version` (required unless `version_from` is set);
+`version_from` (project-relative manifest whose version replaces `version`: `package.json`,
+`pyproject.toml` or `Cargo.toml`), `display_name`, `description`, `homepage`,
 `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
 `tags`, `runtimes`, `spec` (Agent Plugins version, `1.0.0` or `1.1.0`), `include_domains`, `include_evals` (bundle eval cases, see [Evals](evals.md)), `content_root` (project-relative directory of plugin-only
-`skills/`, `commands/`, and `agents/`). Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
+`skills/`, `commands/`, and `agents/`), `provenance_headers` (write the generated-file header into
+bundled Markdown/JS/TS/PY outputs; default `true`), `shared_resources` (directories relative to the
+content root copied into every bundled skill, see [Shared resources across skills](#shared-resources-across-skills)).
+Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 `[[plugin.mcp]]`, `[[plugin.hooks]]` (+ `[[plugin.hooks.hooks]]`),
 `[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`
 (Codex/Kimi UI block), `[plugin.gemini]` (`context_file_name`), `[plugin.kimi]`
 (`skill_instructions`/`session_start_skill`), `[plugin.hermes]`
-(`source`/`requires_python`).
+(`source`/`requires_python`), `[plugin.pi]` (`skills_dir`, `package_json`; see
+[Pi packages](#pi-packages)).
 
 `[marketplace]`: `name` (required); `description`, `members`, `output_dir`, `[marketplace.owner]`,
 `[marketplace.from_domains]`, `[[marketplace.plugins]]` and `[marketplace.catalog_skill]` (see

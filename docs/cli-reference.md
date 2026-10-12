@@ -1796,6 +1796,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--allow` | string list |  | Only serve skills whose name matches one of these glob patterns (requires --serve-skills) |
 | `--allow-any-dir` | bool |  | Let the authoring tools use any working_directory, not only the root |
 | `--budget-bytes` | int | `0` | Bytes of skill content a session may read (load_skill, get_skill, read_skill_file, resources/read); 0 is the default (256 KiB), -1 removes the cap (requires --serve-skills) |
+| `--daemon` | bool |  | Share one long-lived skills server per repository: proxy stdin/stdout to a per-repo daemon, starting it on first use, and fall back to serving in-process when none is reachable (requires --serve-skills) |
 | `--deny` | string list |  | Never serve skills whose name matches one of these glob patterns; wins over --allow (requires --serve-skills) |
 | `--discover-org` | bool |  | Also load the organization policy of the repository's GitHub owner (ai-rulez-policy.toml in <owner>/.github); needs a digest from [policy.digests] in the user config or --policy-trust-tofu. A convenience layer, not an anchor: see docs/policy.md |
 | `--domain` | string list |  | Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills) |
@@ -1816,6 +1817,7 @@ ai-rulez mcp --allow list_rules --allow generate_outputs
 | `--policy-trust-tofu` | bool |  | Accept the digest of an unpinned --policy URL once, in a terminal, and record it in the user cache; pin it afterwards |
 | `--policy-trusted-root` | string |  | Sigstore trusted root file for keyless policy signatures (default: the root that ai-rulez trust update cached) |
 | `--profile` | string |  | Profile whose skills to serve (default: the configured default profile; requires --serve-skills) |
+| `--read-only` | bool |  | Register only the read-only authoring tools, so the server can inspect a project but not change it (with --serve-skills, keeps the merged server read-only) |
 | `--reload-interval` | duration | `0s` | How often to check skill files for changes; default 2s (requires --serve-skills) |
 | `--role` | string |  | Serve only the skills of this role (see 'ai-rulez roles list'), with the delivery the role sets; it is also the default role of find_skill (or AI_RULEZ_ROLE; requires --serve-skills) |
 | `--root` | string |  | Directory the authoring tools may read and write; working_directory must lie inside it (default: the current directory) |
