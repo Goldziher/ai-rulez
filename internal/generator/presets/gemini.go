@@ -497,6 +497,7 @@ func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)
+	WriteSkillsInstructions(&builder, cfg, presetNameGemini, geminiRootFile)
 
 	// Skills are generated to .agents/skills/ directory, not inlined in GEMINI.md
 

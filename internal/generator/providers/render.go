@@ -1030,6 +1030,11 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 		}
 		recorder.section(partKindForRootSection(section), section, "", start, &b)
 	}
+	if !g.importsAgentsMD(cfg) {
+		start := recorder.mark(&b)
+		presets.WriteSkillsInstructions(&b, cfg, g.Spec.Name, rootRelPath)
+		recorder.section(config.PartKindRootSkillsInstructions, SectionRootSkillsInstructions, "", start, &b)
+	}
 
 	rendered := b.String()
 	recorder.flush(rendered)

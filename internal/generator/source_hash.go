@@ -244,8 +244,11 @@ func writeContentFiles(b *templates.ContentHasher, label string, files []config.
 const defaultHeaderMCPCommand = "npx -y ai-rulez@latest mcp"
 
 // writeHeaderInputs adds the settings that shape the generated header prose
-// beyond style and timestamp, so changing one rewrites the files it affects.
+// beyond style and timestamp, and the skills section of the instruction files, so changing one rewrites the files it affects.
 func writeHeaderInputs(b *templates.ContentHasher, cfg *config.Config) {
+	if text, ok := cfg.SkillsInstructions(); ok {
+		b.WriteString("skills_instructions=" + text + "\n")
+	}
 	if mode := cfg.NestedHeaderMode(); mode != config.HeaderNestedInherit || cfg.RootRel != "" {
 		b.Printf("header_nested=%s,root_rel=%s\n", mode, cfg.RootRel)
 	}
