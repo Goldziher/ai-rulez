@@ -127,6 +127,9 @@ type Config struct {
 	// outside a work tree. Generated headers use it to name a nested root's own
 	// config by its path from the repository root.
 	RootRel string `yaml:"-" json:"-" toml:"-"`
+	// NestedRoot is set when another ai-rulez root encloses this project inside
+	// the same git work tree; see HeaderConfig.Nested.
+	NestedRoot bool `yaml:"-" json:"-" toml:"-"`
 
 	// PolicyOutcome is what the organization policy clamped and reported at load
 	// time (docs/policy.md); nil when no policy is in force.
@@ -387,6 +390,11 @@ type HeaderConfig struct {
 	// generated header. Nil means on: the line is derived from [mcp] and is
 	// omitted anyway while the self server is off.
 	MCPLine *bool `yaml:"mcp_line,omitempty" json:"mcp_line,omitempty" toml:"mcp_line,omitempty"`
+	// Nested sets the header of a root that sits inside another ai-rulez root:
+	// "compact" (the default) writes one line naming the config, "omit" writes
+	// no header, "inherit" writes the same header as the outer root. A custom
+	// Text is kept unless Nested is set explicitly.
+	Nested string `yaml:"nested,omitempty" json:"nested,omitempty" toml:"nested,omitempty"`
 }
 
 // Header hash modes accepted by [header] hashes.

@@ -35,3 +35,34 @@ func TestHeaderMCPCommand(t *testing.T) {
 		})
 	}
 }
+
+func TestNestedHeaderMode(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *Config
+		want string
+	}{
+		{"root defaults to inherit", &Config{}, HeaderNestedInherit},
+		{"nested defaults to compact", &Config{NestedRoot: true}, HeaderNestedCompact},
+		{"nested omit", &Config{NestedRoot: true, Header: &HeaderConfig{Nested: HeaderNestedOmit}}, HeaderNestedOmit},
+		{"nested inherit", &Config{NestedRoot: true, Header: &HeaderConfig{Nested: HeaderNestedInherit}}, HeaderNestedInherit},
+		{"root ignores omit", &Config{Header: &HeaderConfig{Nested: HeaderNestedOmit}}, HeaderNestedInherit},
+		{"custom text keeps an unset nested mode", &Config{NestedRoot: true, Header: &HeaderConfig{Text: "mine"}}, HeaderNestedInherit},
+		{"custom text yields to an explicit mode", &Config{NestedRoot: true, Header: &HeaderConfig{Text: "mine", Nested: HeaderNestedOmit}}, HeaderNestedOmit},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.cfg.NestedHeaderMode())
+		})
+	}
+}
+
+func TestValidateHeaderNested(t *testing.T) {
+	cfg := &Config{Name: "p", Header: &HeaderConfig{Nested: "bogus"}}
+	err := cfg.validateHeaderNested()
+	assert.ErrorContains(t, err, "header.nested")
+	for _, ok := range []string{"", HeaderNestedCompact, HeaderNestedOmit, HeaderNestedInherit} {
+		cfg.Header.Nested = ok
+		assert.NoError(t, cfg.validateHeaderNested(), ok)
+	}
+}
