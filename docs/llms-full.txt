@@ -1836,13 +1836,17 @@ Project-level MCP generation options.
 self_server = true                # default; add ai-rulez's own MCP server to .mcp.json
 # self_server_version = "5.0.0"   # default: latest, so a project picks up new releases
 # self_server_command = ["ai-rulez", "mcp"]  # replace the whole launch command instead of npx
+# skills_instructions = false                # leave the "Unlisted skills" section out of instruction files
+# skills_instructions_text = "..."           # replace that section; {{server}}, {{skills_dir}}
 ```
 
-| Field                 | Description                                                                                                                                              |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `self_server`         | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@latest", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. When the project serves skills (a `delivery` other than `static`, a `[[skill_sources]]` entry or a role delivery) the entry runs `mcp --serve-skills` instead: one process serves the skills and the authoring tools, so no separate skills server is needed. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
-| `self_server_version` | Version (or dist-tag) to pin. Defaults to `latest`, so a project picks up new releases without regenerating. Only applies while the self server is on. |
-| `self_server_command` | Executable followed by its arguments, replacing the npx launch. When the project serves skills, `--serve-skills` is appended unless it is already there. Mutually exclusive with `self_server_version`. Only applies while the self server is on.  |
+| Field                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `self_server`              | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@latest", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. When the project serves skills (a `delivery` other than `static`, a `[[skill_sources]]` entry or a role delivery) the entry runs `mcp --serve-skills` instead: one process serves the skills and the authoring tools, so no separate skills server is needed. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
+| `self_server_version`      | Version (or dist-tag) to pin. Defaults to `latest`, so a project picks up new releases without regenerating. Only applies while the self server is on.                                                                                                                                                                                                                                                                                                                                                                                          |
+| `self_server_command`      | Executable followed by its arguments, replacing the npx launch. When the project serves skills, `--serve-skills` is appended unless it is already there. Mutually exclusive with `self_server_version`. Only applies while the self server is on.                                                                                                                                                                                                                                                                                               |
+| `skills_instructions`      | While skills are served, every instruction file gets a short "Unlisted skills" section telling the agent to call `find_skill`, then `load_skill`, on the MCP server that serves them, with the on-disk fallback (`.ai-rulez/skills/<name>/SKILL.md`). Default `true`; `false` leaves it out. Written when a configured preset can call MCP, and only into the root file of a harness that can; the shared `AGENTS.md` carries it once.                                                                                                          |
+| `skills_instructions_text` | Replaces the default section (write your own heading). `{{server}}` is the MCP server that serves the skills, `{{skills_dir}}` the config directory's skills folder (`.ai-rulez/skills`). Unknown variables, blank text, and text beside `skills_instructions = false` are configuration errors.                                                                                                                                                                                                                                                |
 
 Behavior:
 
@@ -18505,7 +18509,7 @@ The entry is merged into an existing `.mcp.json`, so hand-authored servers survi
 ready for Claude Code (which reads project MCP servers from `.mcp.json`). Every entry has the same
 shape: `"type": "stdio"` (or `http`/`sse`) and, only for a server turned off with `enabled = false`,
 `"disabled": true`. See [Configuration: `mcp`](configuration.md#mcp) for
-`self_server_version`, `self_server_command`, and the interaction with `[[mcp_servers]]`.
+`self_server_version`, `self_server_command`, `skills_instructions`, and the interaction with `[[mcp_servers]]`.
 
 Generated MCP config files contain resolved values. If a value came from a placeholder, or if an env
 key contains `TOKEN`, `SECRET`, `PASSWORD`, `KEY`, or `CREDENTIAL`, generation fails before writing
@@ -24557,7 +24561,7 @@ Pass secrets with `--stdin`, not as an argument, so they stay out of shell histo
 
 Every change is validated against the local schema and the merged config (offline: remote includes are read from cache only) and rolled back if it is invalid. A new MCP server must have a `command` or `url`. Edits take an advisory lock (`.config.local.lock`) so two commands cannot interleave.
 
-`local show` is default-deny: it prints values only for keys known to hold no credentials (`name`, `description`, `default`, `presets`, `gitignore`, `compact`, `builtins`, profile names, the enum and bool settings under `defaults`, `rules` and `header` (`style`, `hashes`, `timestamp`, `mcp_line`, `nested`), an entry's own `transport`, `enabled` and `remove`, `mcp.self_server`, `mcp.self_server_version`); every other key is listed by path with `<redacted>`, on both the overlay and the shared side. `--reveal` prints everything.
+`local show` is default-deny: it prints values only for keys known to hold no credentials (`name`, `description`, `default`, `presets`, `gitignore`, `compact`, `builtins`, profile names, the enum and bool settings under `defaults`, `rules` and `header` (`style`, `hashes`, `timestamp`, `mcp_line`, `nested`), an entry's own `transport`, `enabled` and `remove`, `mcp.self_server`, `mcp.self_server_version`, `mcp.skills_instructions`); every other key is listed by path with `<redacted>`, on both the overlay and the shared side. `--reveal` prints everything.
 
 `local set` stores values under `env`/`headers` and known text fields (`url`, `command`, `source`, `path`, `ref`, `description`, `name`, `transport`, `default`, `*_version`) as strings; `--string` forces a string and `--stdin` reads the value from standard input so a secret stays out of shell history.
 
@@ -30701,7 +30705,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`compact`**: Omit per-rule priority annotations from inline sections
 - **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `true`)
 - **`mcp_servers`**: Array of MCP server configurations
-- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_command`)
+- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_command`, `skills_instructions`, `skills_instructions_text`)
 - **`plugins`**: Array of plugin installs from a marketplace (consumer side)
 - **`marketplaces`**: Array of marketplace sources
 - **`plugin`**: Producer-side authoring block for a distributable plugin bundle

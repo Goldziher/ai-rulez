@@ -270,6 +270,16 @@ type MCPConfig struct {
 	// by its arguments), for installs that do not run through npx, for example
 	// ["ai-rulez", "mcp"]. SelfServerVersion is ignored when it is set.
 	SelfServerCommand []string `yaml:"self_server_command,omitempty" json:"self_server_command,omitempty" toml:"self_server_command,omitempty"`
+
+	// SkillsInstructions, when false, leaves the "Unlisted skills" section out of
+	// the instruction files. Nil means on: while skills are served, every
+	// instruction file tells the agent to call find_skill and load_skill.
+	SkillsInstructions *bool `yaml:"skills_instructions,omitempty" json:"skills_instructions,omitempty" toml:"skills_instructions,omitempty"`
+
+	// SkillsInstructionsText replaces the default section. {{server}} is the
+	// MCP server that serves the skills and {{skills_dir}} the config directory's
+	// skills folder, relative to the instruction file.
+	SkillsInstructionsText string `yaml:"skills_instructions_text,omitempty" json:"skills_instructions_text,omitempty" toml:"skills_instructions_text,omitempty"`
 }
 
 // HasSelfServer reports whether generation should add ai-rulez's own MCP server.

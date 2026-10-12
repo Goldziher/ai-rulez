@@ -2060,6 +2060,15 @@
           "description": "Pin the ai-rulez version the entry runs (for example \"4.19.0\" or \"latest\"). Defaults to the version of the ai-rulez binary that runs generate, or \"latest\" for a dev build. Only applies while the self server is on (the default).",
           "pattern": "^[^\\s@/]+$",
           "type": "string"
+        },
+        "skills_instructions": {
+          "default": true,
+          "description": "While skills are served, write a short section into every instruction file telling the agent to call find_skill and then load_skill on the MCP server that serves them, with the on-disk fallback path. Set to false to leave the section out.",
+          "type": "boolean"
+        },
+        "skills_instructions_text": {
+          "description": "Replace the default skills section. {{server}} is the MCP server that serves the skills and {{skills_dir}} the config directory's skills folder, relative to the instruction file. Requires skills_instructions to be on.",
+          "type": "string"
         }
       },
       "type": "object"

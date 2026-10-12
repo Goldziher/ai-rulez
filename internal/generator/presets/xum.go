@@ -124,6 +124,7 @@ func (g *XumPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, c
 	rulefiles.WriteInlineContext(&builder, rootContext(content, cfg, xumPresetName, agentsMDFile), rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	renderAgentsSection(&builder, content, allAgents)
+	WriteSkillsInstructions(&builder, cfg, xumPresetName, agentsMDFile)
 
 	return builder.String()
 }

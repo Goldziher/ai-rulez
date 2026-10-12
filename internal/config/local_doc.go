@@ -963,7 +963,7 @@ var showRules = map[string]func(segs []string) bool{
 		return len(s) == 2 && (s[1] == "style" || s[1] == "hashes" || s[1] == "timestamp" || s[1] == "mcp_line" || s[1] == "nested")
 	},
 	string(PresetMCP): func(s []string) bool {
-		return len(s) == 2 && (s[1] == "self_server" || s[1] == "self_server_version")
+		return len(s) == 2 && (s[1] == "self_server" || s[1] == "self_server_version" || s[1] == "skills_instructions")
 	},
 }
 
