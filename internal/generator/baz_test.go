@@ -446,3 +446,54 @@ func TestBaz_BudgetWarningNamesInlinedUnscopedRules(t *testing.T) {
 	assert.Equal(t, []string{"go-code"}, names(t, "\n[rules]\nbaz_budget = 1\n"))
 	assert.Empty(t, names(t, "\n[rules]\nbaz_budget = 1\nbaz_unscoped = \"skip\"\n"))
 }
+
+// TestBaz_DedupeMax pins rules.baz_dedupe_max: a rule that would be copied into
+// more than K directories collapses to the directory covering all of them, up to
+// the repository root (the root AGENTS.md); at or below K the copies stay.
+func TestBaz_DedupeMax(t *testing.T) {
+	const (
+		threeRule = "---\npaths:\n  - armis/**/*.proto\n  - deploy/**/*.proto\n  - dev_tools/**/*.proto\n---\n# Proto\n\nPROTO_BODY\n"
+		siblings  = "---\npaths:\n  - svc/a/**/*.py\n  - svc/b/**/*.py\n  - svc/c/**/*.py\n---\n# Sib\n\nSIB_BODY\n"
+	)
+	run := func(t *testing.T, rule, extra string) string {
+		t.Helper()
+		root := t.TempDir()
+		writeAgentsMDProject(t, root, agentsMDConfig([]string{"claude", "baz"}, "", extra))
+		writeAgentsMDFile(t, root, ".ai-rulez/rules/r.md", rule)
+		for _, d := range []string{"armis", "deploy", "dev_tools", "svc/a", "svc/b", "svc/c"} {
+			require.NoError(t, os.MkdirAll(filepath.Join(root, filepath.FromSlash(d)), 0o755))
+		}
+		runAgentsMDGenerate(t, root)
+		return root
+	}
+	exists := func(root, rel string) bool {
+		_, err := os.Stat(filepath.Join(root, filepath.FromSlash(rel)))
+		return err == nil
+	}
+
+	t.Run("off keeps one copy per directory", func(t *testing.T) {
+		root := run(t, threeRule, "")
+		assert.True(t, exists(root, "armis/AGENTS.md") && exists(root, "deploy/AGENTS.md") && exists(root, "dev_tools/AGENTS.md"))
+	})
+	t.Run("above K with no shared parent places it in the root file", func(t *testing.T) {
+		root := run(t, threeRule, "\n[rules]\nbaz_dedupe_max = 2\n")
+		assert.False(t, exists(root, "armis/AGENTS.md"))
+		assert.Contains(t, readBazFile(t, root, "AGENTS.md"), "PROTO_BODY")
+	})
+	t.Run("at K keeps the copies", func(t *testing.T) {
+		root := run(t, threeRule, "\n[rules]\nbaz_dedupe_max = 3\n")
+		assert.True(t, exists(root, "armis/AGENTS.md"))
+		assert.NotContains(t, readBazFile(t, root, "AGENTS.md"), "PROTO_BODY")
+	})
+	t.Run("above K with a shared parent uses the parent without baz_dedupe", func(t *testing.T) {
+		root := run(t, siblings, "\n[rules]\nbaz_dedupe_max = 2\n")
+		assert.True(t, exists(root, "svc/AGENTS.md"))
+		assert.False(t, exists(root, "svc/a/AGENTS.md"))
+		assert.NotContains(t, readBazFile(t, root, "AGENTS.md"), "SIB_BODY")
+	})
+	t.Run("baz_unscoped skip forbids the root fallback", func(t *testing.T) {
+		root := run(t, threeRule, "\n[rules]\nbaz_dedupe_max = 2\nbaz_unscoped = \"skip\"\n")
+		assert.True(t, exists(root, "armis/AGENTS.md"), "copies stay rather than landing in the root file")
+		assert.NotContains(t, readBazFile(t, root, "AGENTS.md"), "PROTO_BODY")
+	})
+}
