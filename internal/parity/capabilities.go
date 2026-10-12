@@ -364,6 +364,7 @@ func cliOnlyCapabilities() []Capability {
 		return Capability{ID: id, Kind: CLIOnly, CLI: cli, Reason: reason}
 	}
 	return []Capability{
+		only("config-layers", "lists the config.<name>.toml files beside config.toml and which are active; a tool client reads the merged settings through read_config", "config layers"),
 		only("lock-write", "writes the lock, the trust anchor of the project, after network pinning and scan acceptance; an agent must not mint trust",
 			"lock"),
 		only("approve-write", "approving, revoking, denying and signing are identity-bound human attestations; an agent must not make them",

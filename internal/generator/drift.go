@@ -11,6 +11,7 @@ import (
 
 	"github.com/samber/oops"
 
+	"github.com/Goldziher/ai-rulez/v5/internal/ambient"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
 	"github.com/Goldziher/ai-rulez/v5/internal/templates"
@@ -274,10 +275,11 @@ func (g *Generator) considerStrayTree(roots map[string]bool, consider func(strin
 	configDir := filepath.Clean(g.config.ConfigDir)
 	mayBeOutput := g.strayCandidateFilter(base)
 	visited, opened := 0, 0
-	started := time.Now()
+	clock := ambient.Clock(nil)
+	started := clock.Now()
 	defer func() {
 		g.log().Debug("Scanned the project tree for orphaned generated files",
-			"files", visited, "candidates", opened, "elapsed", time.Since(started).Round(time.Millisecond))
+			"files", visited, "candidates", opened, "elapsed", clock.Now().Sub(started).Round(time.Millisecond))
 	}()
 	_ = filepath.WalkDir(base, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // unreadable entries are skipped
 		if err != nil {

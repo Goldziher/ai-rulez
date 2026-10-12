@@ -68,7 +68,7 @@ func activeLayerNames(lo loadOptions) ([]string, error) {
 // and the layers that applied. Layers use the same rules as the local overlay:
 // tables merge per key, named lists such as mcp_servers and installed_skills
 // merge entry by entry, other values are replaced.
-func withLayers(v workspace.View, cfg *Config, mainPath, configDir string, lo loadOptions) (*Config, map[string]any, []string, error) {
+func withLayers(v workspace.View, cfg *Config, mainPath, configDir string, lo loadOptions) (*Config, map[string]any, []string, error) { //nolint:gocritic // mirrors the loader signature; a result struct would add a type for one caller
 	names, err := activeLayerNames(lo)
 	if err != nil || len(names) == 0 {
 		return cfg, nil, nil, err

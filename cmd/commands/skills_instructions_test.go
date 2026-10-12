@@ -82,7 +82,7 @@ func TestSkillsInstructions_OptOutAndCustomText(t *testing.T) {
 	})
 }
 
-// [delivery.stub] customises the generated stub skill (#362), and the freshness
+// [delivery.stub] customizes the generated stub skill (#362), and the freshness
 // check follows an edit to the file behind body_file.
 func TestDeliveryStub_CustomStubIsGenerated(t *testing.T) {
 	root := servedSkillsRepo(t, "\n[delivery.stub]\ndescription = \"Team skills.\"\nbody_file = \"stub.md\"\n")

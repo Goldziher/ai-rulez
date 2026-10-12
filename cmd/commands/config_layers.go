@@ -11,46 +11,43 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
-var configLayersJSON bool
-
-// ConfigCmd groups read-only commands that show how the configuration is composed.
-var ConfigCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Show how the configuration is composed (read-only)",
-	Long: `Inspect how the configuration is composed from config.toml, the config.<name>.toml layers and the
+// newConfigCmd groups read-only commands that show how the configuration is composed.
+func newConfigCmd() *cobra.Command {
+	var asJSON bool
+	configCmd := &cobra.Command{
+		Use:   "config",
+		Short: "Show how the configuration is composed (read-only)",
+		Long: `Inspect how the configuration is composed from config.toml, the config.<name>.toml layers and the
 machine-local overlay.
 
   ai-rulez config layers   list the layers and which are active`,
-	Example: `  ai-rulez config layers`,
-}
+		Example: `  ai-rulez config layers`,
+	}
+	layersCmd := &cobra.Command{
+		Use:   "layers",
+		Short: "List the config.<name>.toml layers and which are active",
+		Long: `Layers split the configuration into config.<name>.toml files beside config.toml.
+	The active layers are merged over config.toml in the order they are named, so a later
+	layer wins; config.local.toml is applied last. Name them with AI_RULEZ_LAYERS (a
+	comma-separated list), or with AI_RULEZ_PROFILE when AI_RULEZ_LAYERS is not set.
 
-var configLayersCmd = &cobra.Command{
-	Use:   "layers",
-	Short: "List the config.<name>.toml layers and which are active",
-	Long: `Layers split the configuration into config.<name>.toml files beside config.toml.
-The active layers are merged over config.toml in the order they are named, so a later
-layer wins; config.local.toml is applied last. Name them with AI_RULEZ_LAYERS (a
-comma-separated list), or with AI_RULEZ_PROFILE when AI_RULEZ_LAYERS is not set.
-
-Tables merge per key, named lists (mcp_servers, installed_skills, plugins, ...) merge entry
-by entry, and any other value is replaced. A layer with no file is skipped.`,
-	Example: `  ai-rulez config layers
+	Tables merge per key, named lists (mcp_servers, installed_skills, plugins, ...) merge entry
+	by entry, and any other value is replaced. A layer with no file is skipped.`,
+		Example: `  ai-rulez config layers
   ai-rulez config layers --format json`,
-	Args: cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		cfg, err := loadConfigForCommand(watchParentContext(cmd), config.WithoutRemote())
-		if err != nil {
-			return fail(err)
-		}
-		return fail(writeConfigLayers(cmd.OutOrStdout(), cfg.ConfigDir, cfg.ActiveLayers, configLayersJSON))
-	},
-}
-
-func init() {
-	ConfigCmd.AddCommand(configLayersCmd)
-	addJSONFormat(configLayersCmd.Flags(), &configLayersJSON, "")
-	specNoLocal.Bool(ConfigCmd.PersistentFlags(), &noLocal, "Ignore the machine-local config.local.* overlay")
-	RootCmd.AddCommand(ConfigCmd)
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := loadConfigForCommand(watchParentContext(cmd), config.WithoutRemote())
+			if err != nil {
+				return fail(err)
+			}
+			return fail(writeConfigLayers(cmd.OutOrStdout(), cfg.ConfigDir, cfg.ActiveLayers, asJSON))
+		},
+	}
+	configCmd.AddCommand(layersCmd)
+	addJSONFormat(layersCmd.Flags(), &asJSON, "")
+	specNoLocal.Bool(configCmd.PersistentFlags(), &noLocal, "Ignore the machine-local config.local.* overlay")
+	return configCmd
 }
 
 type configLayerRow struct {
@@ -72,7 +69,7 @@ func writeConfigLayers(w io.Writer, configDir string, active []string, asJSON bo
 	if asJSON {
 		data, err := json.MarshalIndent(map[string]any{"layers": rows, "active": active}, "", "  ")
 		if err != nil {
-			return err //nolint:wrapcheck // marshalling a fixed shape
+			return err //nolint:wrapcheck // marshaling a fixed shape
 		}
 		_, err = fmt.Fprintln(w, string(data))
 		return err //nolint:wrapcheck // stdout write

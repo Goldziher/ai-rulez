@@ -968,7 +968,7 @@ const agentsMDImportLine = "@AGENTS.md"
 // root that kept a preset but declares no content writes no instruction file at
 // all, and the skip is reported so the preset list can be trimmed. A root with
 // any content, and any root that is not plugin-authoring, is unchanged.
-func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, cfg *config.Config, plan *rulesPlan) (out config.OutputFile, emit bool, err error) {
+func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, cfg *config.Config, plan *rulesPlan) (out config.OutputFile, emit bool, err error) { //nolint:gocyclo // a flat sequence of independent gates; splitting it scatters the rules
 	if content.IsEmpty() && cfg.HasPluginAuthoring() {
 		g.warnEmptyRootFile(cfg)
 		return config.OutputFile{}, false, nil

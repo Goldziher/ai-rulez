@@ -144,7 +144,7 @@ func (b *bundleSnapshots) snapshot(ctx context.Context, git gitutil.Git, log log
 // the git-visible slash paths below parent, relative to it. It returns nil when no
 // anchor applies (none set, parent outside it, or a nested repository between
 // them, whose files the anchor's git does not list) or git could not list.
-func (b *bundleSnapshots) filesBelow(ctx context.Context, git gitutil.Git, log logger.Logger, parent string) []string {
+func (b *bundleSnapshots) filesBelow(ctx context.Context, git gitutil.Git, log logger.Logger, parent string) []string { //nolint:gocyclo // one guarded walk from anchor check to listing; splitting it scatters the fallbacks
 	if b.anchor == "" {
 		return nil
 	}
@@ -189,7 +189,7 @@ func (b *bundleSnapshots) filesBelow(ctx context.Context, git gitutil.Git, log l
 	return below
 }
 
-func takeSnapshot(ctx context.Context, git gitutil.Git, log logger.Logger, parent, marker string, listed []string) *parentSnapshot {
+func takeSnapshot(ctx context.Context, git gitutil.Git, log logger.Logger, parent, marker string, listed []string) *parentSnapshot { //nolint:gocyclo // one probe-then-list sequence; splitting it scatters the fallbacks
 	snap := &parentSnapshot{ignored: map[string]bool{}, files: map[string]map[string]bool{}, probed: map[string]bool{}}
 	entries, err := os.ReadDir(parent)
 	if err != nil {

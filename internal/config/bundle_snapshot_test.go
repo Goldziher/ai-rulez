@@ -43,7 +43,7 @@ func TestScanContentTree_ListsGitFilesOncePerConfigDir(t *testing.T) {
 		t.Skip("git not available")
 	}
 	root := t.TempDir()
-	require.NoError(t, exec.Command("git", "-C", root, "init", "-q").Run())
+	require.NoError(t, gitutil.CommandNoContext(root, "init", "-q").Run())
 	cfgDir := filepath.Join(root, ".ai-rulez")
 	for _, domain := range []string{"a", "b", "c", "d"} {
 		skill := filepath.Join(cfgDir, "domains", domain, "skills", "s-"+domain)
