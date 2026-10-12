@@ -894,6 +894,11 @@
           "enum": ["all", "none"],
           "description": "Which items the baz preset selects for its path-scoped AGENTS.md files. all (default) lets every item through; none only items whose frontmatter `targets` name baz."
         },
+        "baz_rest": {
+          "type": "string",
+          "enum": ["root", "skip"],
+          "description": "What the baz preset does with a glob-activated item it does not nest (unselected under baz_default = none, or excluded by `!baz`). root (default) leaves it inlined in the root AGENTS.md; skip leaves it out of that file when baz is the only preset writing it. Only applies with baz_scoped = nested."
+        },
         "baz_unscoped": {
           "type": "string",
           "enum": ["root", "skip"],

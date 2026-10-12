@@ -11,6 +11,7 @@ presets = ["claude", "baz"]
 baz_scoped = "nested"   # nested (default) | root
 baz_default = "all"     # all (default) | none
 # baz.include = ["db-dao"]  # with baz_default = "none", opt these rules in ([rules.baz] table)
+baz_rest = "root"        # root (default) | skip: path-scoped rules baz does not select (baz_default = "none", !baz)
 baz_unscoped = "root"   # root (default) | skip: path-scoped rules with no directory
 baz_dedupe = false      # write a shared parent AGENTS.md when globs share one
 baz_dedupe_max = 0      # collapse a rule with more than K nested copies to a covering directory (0 = off)
@@ -87,6 +88,13 @@ leaves such rules out of the root file. It applies only to the contribution `baz
 with `codex`, `opencode`, `amp`, `xum` and the other `AGENTS.md` presets, which need the rule, so while one of them is
 configured the file keeps it and `skip` has no effect. It also has no effect with `baz_scoped = "root"`, which keeps
 every path-scoped item in the root file by design. The default `"root"` leaves the output unchanged.
+
+### Rules baz does not select
+
+With `baz_default = "none"` the rules that do not opt in, and rules excluded by `!baz`, are not nested, so the root
+`AGENTS.md` keeps inlining them. When baz is meant as an opt-in surface, `baz_rest = "skip"` leaves every such
+path-scoped rule out of the root file. Like `baz_unscoped`, it applies only when `baz` is the only preset writing the
+root `AGENTS.md` and `baz_scoped = "nested"`. The default `"root"` leaves the output unchanged.
 
 When `baz_budget` is exceeded the warning also names the path-scoped rules the root file inlines for this reason.
 
