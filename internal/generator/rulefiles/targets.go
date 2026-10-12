@@ -3,6 +3,7 @@ package rulefiles
 import (
 	"path"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
@@ -105,13 +106,33 @@ func TargetsAllow(targets []string, t Target, relPath string) bool {
 		for _, alias := range t.RootAliases {
 			names = append(names, alias, path.Base(alias))
 		}
-		return targetmatch.Allow(targets, rootOwners(t), names...)
+		owners := rootOwners(t)
+		return targetmatch.Allow(withoutOwnerNegations(targets, owners), owners, names...)
 	}
 	var presets []string
 	if t.Preset != "" {
 		presets = []string{t.Preset}
 	}
 	return targetmatch.Allow(targets, presets, relPath, path.Base(relPath), t.RootFile, path.Base(t.RootFile))
+}
+
+// withoutOwnerNegations drops "!<preset>" targets naming one of several presets
+// that share a root file. The file renders identically for all of them, so one
+// preset's exclusion ("!baz") must not remove the item for the others; it
+// applies to that preset's own outputs (nested files, skills, agents) instead.
+func withoutOwnerNegations(targets, owners []string) []string {
+	if len(owners) < 2 {
+		return targets
+	}
+	out := make([]string, 0, len(targets))
+	for _, raw := range targets {
+		name, neg := strings.CutPrefix(strings.TrimSpace(raw), "!")
+		if neg && slices.ContainsFunc(owners, func(o string) bool { return strings.EqualFold(strings.TrimSpace(name), o) }) {
+			continue
+		}
+		out = append(out, raw)
+	}
+	return out
 }
 
 func itemTargets(cf config.ContentFile) []string {

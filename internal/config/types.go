@@ -528,15 +528,51 @@ type RulesConfig struct {
 	// only items whose frontmatter `targets` name baz.
 	BazDefault string `yaml:"baz_default,omitempty" json:"baz_default,omitempty" toml:"baz_default,omitempty"` //nolint:tagliatelle
 
+	// BazUnscoped says what the baz preset does with a glob-activated item that
+	// cannot be nested because no glob names a directory (`**/*.go`, `**/BUILD`):
+	// "root" (the default) inlines it into the root AGENTS.md, "skip" leaves it
+	// out of that file when baz is its only writer.
+	BazUnscoped string `yaml:"baz_unscoped,omitempty" json:"baz_unscoped,omitempty" toml:"baz_unscoped,omitempty"` //nolint:tagliatelle
+
 	// BazDedupe, when true, writes a path-scoped item once into a shared parent
 	// AGENTS.md when its globs point into several directories under one parent,
 	// instead of a copy in each. Off by default so existing output is unchanged.
 	BazDedupe bool `yaml:"baz_dedupe,omitempty" json:"baz_dedupe,omitempty" toml:"baz_dedupe,omitempty"` //nolint:tagliatelle
 
+	// BazDedupeMax, when above 0, collapses an item that would be copied into
+	// more than that many directories to the directory covering all of them, up
+	// to the repository root (the root AGENTS.md). 0 (the default) is off.
+	BazDedupeMax int `yaml:"baz_dedupe_max,omitempty" json:"baz_dedupe_max,omitempty" toml:"baz_dedupe_max,omitempty"` //nolint:tagliatelle
+
 	// BazBudget is the byte budget of the AGENTS.md files the baz preset
 	// writes; generate warns when their total exceeds it. 0 (the default)
 	// disables the warning.
 	BazBudget int `yaml:"baz_budget,omitempty" json:"baz_budget,omitempty" toml:"baz_budget,omitempty"` //nolint:tagliatelle
+
+	// Baz holds per-rule controls for the baz preset ([rules.baz]).
+	Baz *BazRulesConfig `yaml:"baz,omitempty" json:"baz,omitempty" toml:"baz,omitempty"`
+}
+
+// BazRulesConfig is the [rules.baz] table.
+type BazRulesConfig struct {
+	// Include names the rules and context files the baz preset selects for its
+	// path-scoped AGENTS.md files when rules.baz_default is "none". The same
+	// opt-in is `baz: true` in an item's frontmatter.
+	Include []string `yaml:"include,omitempty" json:"include,omitempty" toml:"include,omitempty"`
+}
+
+// BazIncludes reports whether rules.baz.include names the item.
+func (c *Config) BazIncludes(name string) bool {
+	if c == nil || c.Rules == nil || c.Rules.Baz == nil {
+		return false
+	}
+	name = strings.ToLower(strings.TrimSuffix(name, ".md"))
+	for _, entry := range c.Rules.Baz.Include {
+		if strings.ToLower(strings.TrimSuffix(strings.TrimSpace(entry), ".md")) == name {
+			return true
+		}
+	}
+	return false
 }
 
 // Values of rules.baz_scoped.
@@ -555,6 +591,21 @@ func (c *Config) BazScopedRules() string {
 		return c.Rules.BazScoped
 	}
 	return BazScopedNested
+}
+
+// Values of rules.baz_unscoped.
+const (
+	BazUnscopedRoot = "root"
+	BazUnscopedSkip = "skip"
+)
+
+// BazUnscopedRules returns what the baz preset does with a path-scoped item that
+// cannot be nested: BazUnscopedRoot unless rules.baz_unscoped says BazUnscopedSkip.
+func (c *Config) BazUnscopedRules() string {
+	if c != nil && c.Rules != nil && c.Rules.BazUnscoped != "" {
+		return c.Rules.BazUnscoped
+	}
+	return BazUnscopedRoot
 }
 
 // Values of rules.baz_default.
@@ -578,6 +629,15 @@ func (c *Config) BazDefaultRules() string {
 // AGENTS.md (rules.baz_dedupe). Off by default.
 func (c *Config) BazDedupeEnabled() bool {
 	return c != nil && c.Rules != nil && c.Rules.BazDedupe
+}
+
+// BazDedupeMaxCopies returns rules.baz_dedupe_max, the most nested copies an item
+// may produce before it collapses to a covering directory, or 0 when off.
+func (c *Config) BazDedupeMaxCopies() int {
+	if c == nil || c.Rules == nil {
+		return 0
+	}
+	return c.Rules.BazDedupeMax
 }
 
 // BazBudgetBytes returns the byte budget of the AGENTS.md files the baz preset
