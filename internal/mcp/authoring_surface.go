@@ -58,7 +58,6 @@ func (s *Server) registerAuthoringResources() {
 		Description: "One item of a domain: ai-rulez://domains/{domain}/{kind}/{name}",
 		Annotations: &sdkmcp.Annotations{Audience: []sdkmcp.Role{roleAssistant}, Priority: 0.7},
 	}, s.readAuthoringResource)
-	s.mcpServer.AddReceivingMiddleware(s.unknownAuthoringResourceMiddleware())
 }
 
 // authoringTarget is what an ai-rulez:// URI names.
@@ -93,24 +92,6 @@ func (s *Server) parseAuthoringURI(uri string) (authoringTarget, bool) {
 		return authoringTarget{}, false
 	}
 	return t, true
-}
-
-// unknownAuthoringResourceMiddleware answers resources/read of a URI that names
-// nothing with the well-formed resource-not-found error; the SDK would build it
-// from the raw URI with %q, which is invalid JSON for control characters.
-func (s *Server) unknownAuthoringResourceMiddleware() sdkmcp.Middleware {
-	return func(next sdkmcp.MethodHandler) sdkmcp.MethodHandler {
-		return func(ctx context.Context, method string, request sdkmcp.Request) (sdkmcp.Result, error) {
-			if method == methodResourcesRead {
-				if req, ok := request.(*sdkmcp.ReadResourceRequest); ok && req.Params != nil {
-					if _, named := s.parseAuthoringURI(req.Params.URI); !named {
-						return nil, resourceNotFound(req.Params.URI)
-					}
-				}
-			}
-			return next(ctx, method, request)
-		}
-	}
 }
 
 // resourceArgs are the arguments of the tool a resource read runs.

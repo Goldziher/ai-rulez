@@ -292,15 +292,46 @@ const SelfMCPServerName = "ai-rulez"
 // mcpKeyCommand is the .mcp.json key naming the command a stdio server runs.
 const mcpKeyCommand = "command"
 
+// serveSkillsArg is the flag that makes the self entry serve the project's
+// skills as well as the authoring tools.
+const serveSkillsArg = "--serve-skills"
+
+// servesSkills reports whether generation will serve skills, so the self entry
+// must run `mcp --serve-skills` (see SelfMCPServerEntry).
+func (c *Config) servesSkills() bool {
+	return c != nil && (c.ServesSkills(c.Content) || c.RolesServeSkills())
+}
+
+// withServeSkillsArg appends --serve-skills to a launch's arguments unless it is
+// already there, so a hand-written command that already serves skills is left as
+// it is.
+func withServeSkillsArg(args []string) []string {
+	for _, a := range args {
+		if a == serveSkillsArg {
+			return args
+		}
+	}
+	return append(args, serveSkillsArg)
+}
+
 // SelfMCPServerEntry builds the .mcp.json entry for ai-rulez's own MCP server.
 // It runs ai-rulez@latest by default, so a project picks up new releases without
 // regenerating; pin a version with mcp.self_server_version or replace the launch
 // with mcp.self_server_command. An empty or "dev" version resolves to "latest".
+//
+// When the project serves skills the entry runs `mcp --serve-skills`, the merged
+// server that serves the skills and the authoring tools from one process, so a
+// project needs one MCP entry rather than the self entry plus a separate skills
+// server.
 func (c *Config) SelfMCPServerEntry() map[string]any {
 	if c.MCP != nil && len(c.MCP.SelfServerCommand) > 0 {
+		args := append([]string(nil), c.MCP.SelfServerCommand[1:]...)
+		if c.servesSkills() {
+			args = withServeSkillsArg(args)
+		}
 		entry := map[string]any{"type": "stdio", mcpKeyCommand: c.MCP.SelfServerCommand[0]}
-		if args := c.MCP.SelfServerCommand[1:]; len(args) > 0 {
-			entry["args"] = append([]string(nil), args...)
+		if len(args) > 0 {
+			entry["args"] = args
 		}
 		return entry
 	}
@@ -311,10 +342,14 @@ func (c *Config) SelfMCPServerEntry() map[string]any {
 	if version == "" || version == "dev" {
 		version = "latest"
 	}
+	args := []string{"-y", "ai-rulez@" + version, "mcp"}
+	if c.servesSkills() {
+		args = withServeSkillsArg(args)
+	}
 	return map[string]any{
 		"type":        "stdio",
 		mcpKeyCommand: "npx",
-		"args":        []string{"-y", "ai-rulez@" + version, "mcp"},
+		"args":        args,
 	}
 }
 

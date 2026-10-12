@@ -36,3 +36,27 @@ func TestMCPCmd_ServeOnlyFlagsIncludeMaxCloneBytes(t *testing.T) {
 	assert.Contains(t, dynamicServeFlagNames, flagServeMaxClone)
 	assert.NotNil(t, MCPCmd.Flags().Lookup(flagServeMaxClone))
 }
+
+// `mcp --serve-skills` now registers the authoring surface too, so the setup
+// carries the authoring options; --read-only narrows them.
+func TestServeSetupFromFlags_MergesTheAuthoringSurface(t *testing.T) {
+	// Arrange
+	require.NoError(t, MCPCmd.Flags().Parse(nil))
+	t.Cleanup(func() { _ = MCPCmd.Flags().Set(flagMCPReadOnly, "false") })
+
+	// Act
+	setup, err := serveSetupFromFlags(MCPCmd)
+
+	// Assert
+	require.NoError(t, err)
+	assert.NotEmpty(t, setup.Authoring, "mcp --serve-skills registers the authoring tools too")
+	plain := len(setup.Authoring)
+
+	// Act: --read-only adds the narrowing option.
+	require.NoError(t, MCPCmd.Flags().Set(flagMCPReadOnly, "true"))
+	setup, err = serveSetupFromFlags(MCPCmd)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Len(t, setup.Authoring, plain+1, "--read-only adds WithReadOnly")
+}
