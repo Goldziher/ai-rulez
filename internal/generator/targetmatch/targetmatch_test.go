@@ -65,3 +65,40 @@ func TestInvalidGlob(t *testing.T) {
 		})
 	}
 }
+
+func TestNegation(t *testing.T) {
+	tests := []struct {
+		name      string
+		targets   []string
+		presets   []string
+		outputs   []string
+		wantAllow bool
+		wantMatch bool
+	}{
+		{"only negation allows others", []string{"!baz"}, []string{"claude"}, nil, true, false},
+		{"only negation denies the named preset", []string{"!baz"}, []string{"baz"}, nil, false, false},
+		{"negation is case-insensitive", []string{"!BAZ"}, []string{"baz"}, nil, false, false},
+		{"deny wins over a positive target", []string{"baz", "!baz"}, []string{"baz"}, nil, false, false},
+		{"positive plus unrelated negation", []string{"claude", "!baz"}, []string{"claude"}, nil, true, true},
+		{"positive plus negation of other preset only", []string{"claude", "!baz"}, []string{"baz"}, nil, false, false},
+		{"negated path", []string{"!services/"}, nil, []string{"services/x.md"}, false, false},
+		{"negated path elsewhere", []string{"!services/"}, nil, []string{"other/x.md"}, true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantAllow, Allow(tt.targets, tt.presets, tt.outputs...), "Allow")
+			assert.Equal(t, tt.wantMatch, Match(tt.targets, tt.presets, tt.outputs...), "Match")
+		})
+	}
+}
+
+func TestDenied(t *testing.T) {
+	assert.True(t, Denied([]string{"!baz"}, []string{"baz"}))
+	assert.False(t, Denied([]string{"baz"}, []string{"baz"}))
+	assert.False(t, Denied(nil, []string{"baz"}))
+}
+
+func TestInvalidGlob_Negation(t *testing.T) {
+	assert.False(t, InvalidGlob("!baz"))
+	assert.True(t, InvalidGlob("![x"))
+}

@@ -10,10 +10,61 @@ import (
 )
 
 // Allow reports whether an item with the given targets may appear in an
-// output. An item without targets is allowed everywhere; otherwise one target
-// must select the output (see Match).
+// output. An item without targets is allowed everywhere. A negated target
+// ("!baz") excludes the output it selects and always wins; an item whose
+// targets are all negated is allowed everywhere else. Otherwise one positive
+// target must select the output (see Match).
 func Allow(targets, presets []string, outputs ...string) bool {
-	return len(targets) == 0 || Match(targets, presets, outputs...)
+	if len(targets) == 0 {
+		return true
+	}
+	if Denied(targets, presets, outputs...) {
+		return false
+	}
+	positive := positives(targets)
+	return len(positive) == 0 || Match(positive, presets, outputs...)
+}
+
+// Denied reports whether a negated target ("!baz", "!docs/") selects the output.
+// A denial overrides every positive target.
+func Denied(targets, presets []string, outputs ...string) bool {
+	candidates := candidatesOf(outputs)
+	for _, raw := range targets {
+		if name, ok := negated(raw); ok && matchOne(name, presets, candidates) {
+			return true
+		}
+	}
+	return false
+}
+
+// negated returns the target a "!target" entry negates.
+func negated(raw string) (string, bool) {
+	raw = strings.TrimSpace(raw)
+	name, ok := strings.CutPrefix(raw, "!")
+	if !ok {
+		return "", false
+	}
+	return strings.TrimSpace(name), true
+}
+
+func positives(targets []string) []string {
+	out := make([]string, 0, len(targets))
+	for _, raw := range targets {
+		if _, neg := negated(raw); !neg {
+			out = append(out, raw)
+		}
+	}
+	return out
+}
+
+func candidatesOf(outputs []string) []string {
+	candidates := make([]string, 0, len(outputs))
+	for _, o := range outputs {
+		if n := Normalize(o); n != "" {
+			candidates = append(candidates, n)
+		}
+	}
+	return candidates
 }
 
 // Match reports whether any target selects the output. An output is described
@@ -30,14 +81,16 @@ func Allow(targets, presets []string, outputs ...string) bool {
 //
 // Paths compare case-insensitively with backslashes treated as slashes, and
 // leading "./" and "/" removed.
+//
+// A target starting with "!" negates the rest ("!baz" excludes baz). Negations
+// never select anything, and any negation that selects the output makes Match
+// false even when a positive target also does (deny wins).
 func Match(targets, presets []string, outputs ...string) bool {
-	candidates := make([]string, 0, len(outputs))
-	for _, o := range outputs {
-		if n := Normalize(o); n != "" {
-			candidates = append(candidates, n)
-		}
+	if Denied(targets, presets, outputs...) {
+		return false
 	}
-	for _, raw := range targets {
+	candidates := candidatesOf(outputs)
+	for _, raw := range positives(targets) {
 		if matchOne(raw, presets, candidates) {
 			return true
 		}
@@ -67,6 +120,9 @@ func Normalize(raw string) string {
 // InvalidGlob reports whether target contains glob characters but is not a
 // valid pattern, so it can never match anything.
 func InvalidGlob(target string) bool {
+	if name, ok := negated(target); ok {
+		target = name
+	}
 	n := Normalize(target)
 	if !strings.ContainsAny(n, "*?[") {
 		return false

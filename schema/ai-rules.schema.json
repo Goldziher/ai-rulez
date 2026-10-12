@@ -883,6 +883,18 @@
           "type": "integer",
           "minimum": 0,
           "description": "Byte budget of the AGENTS.md files the baz preset writes; generate warns when their total exceeds it. 0 (default) disables the warning."
+        },
+        "baz": {
+          "type": "object",
+          "description": "Per-rule controls for the baz preset.",
+          "properties": {
+            "include": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Names of the rules and context files the baz preset selects for its path-scoped AGENTS.md files when baz_default is none. The same opt-in is `baz: true` in an item's frontmatter. A `!baz` target always excludes an item."
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
