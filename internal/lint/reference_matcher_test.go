@@ -72,3 +72,58 @@ func TestReferenceUnknown_InlineIgnoreSilencesAR301(t *testing.T) {
 
 	assert.Zero(t, countCode(fs, CodeReferenceUnknown), "%s", dump(fs))
 }
+
+// A backticked adjective before a singular kind noun is prose, not a pointer:
+// "a `both` skill" describes a delivery kind, and "a `served` skill" is a skill
+// whose delivery is served. AR301 must stay quiet (#352).
+func TestReferenceUnknown_BacktickedAdjectiveBeforeKindIsProse(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{"article before skill", `to a ` + "`both`" + ` skill it says "read the file".`},
+		{"capitalized article", "A `served` skill is delivered over MCP."},
+		{"article before rule", "Add an `honor` rule for the reviewer."},
+		{"article before agent", "Spawn a `both` agent for the task."},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFiles(t, root, precisionTree(tt.body, "", nil))
+			gitAdd(t, root)
+
+			fs := lintDir(t, root)
+
+			assert.Zero(t, countCode(fs, CodeReferenceUnknown), "%q must not raise AR301:\n%s", tt.body, dump(fs))
+		})
+	}
+}
+
+// A "skills/" path segment nested in some other tree is not this project's skill
+// tree, so it is not a pointer to a skill; a top-level "skills/x" and a harness
+// ".claude/skills/x/SKILL.md" still are (#352).
+func TestReferenceUnknown_SkillDirectoryPointerPrecision(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want int
+	}{
+		{"top-level skills dir", "Read skills/ghost-skill for the steps.", 1},
+		{"harness skills file", "Edit .claude/skills/ghost-skill/SKILL.md.", 1},
+		{"nested other tree", "Agent skills live at `src/mastra/public/skills/shared/<name>/SKILL.md`.", 0},
+		{"nested source tree", "See `vendor/lib/skills/shared/SKILL.md`.", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFiles(t, root, precisionTree(tt.body, "", nil))
+			gitAdd(t, root)
+
+			fs := lintDir(t, root)
+
+			if got := countCode(fs, CodeReferenceUnknown); got != tt.want {
+				t.Errorf("AR301 count = %d, want %d:\n%s", got, tt.want, dump(fs))
+			}
+		})
+	}
+}
