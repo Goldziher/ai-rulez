@@ -115,7 +115,7 @@ The entry is merged into an existing `.mcp.json`, so hand-authored servers survi
 ready for Claude Code (which reads project MCP servers from `.mcp.json`). Every entry has the same
 shape: `"type": "stdio"` (or `http`/`sse`) and, only for a server turned off with `enabled = false`,
 `"disabled": true`. See [Configuration: `mcp`](configuration.md#mcp) for
-`self_server_version`, `self_server_command`, and the interaction with `[[mcp_servers]]`.
+`self_server_version`, `self_server_command`, `skills_instructions`, and the interaction with `[[mcp_servers]]`.
 
 Generated MCP config files contain resolved values. If a value came from a placeholder, or if an env
 key contains `TOKEN`, `SECRET`, `PASSWORD`, `KEY`, or `CREDENTIAL`, generation fails before writing
@@ -464,6 +464,8 @@ into generated frontmatter.
   never written), one stub skill named `dynamic-skills` is added to the root skills of
   every preset whose harness can call MCP tools. A skill you author with that name, at the root or in a domain
   that is active, is used instead of the stub; if several are authored, a warning asks you to rename all but one.
+  `[delivery.stub]` customises the generated stub's description and text, see
+  [Configuration: `[delivery.stub]`](configuration.md#deliverystub).
 - A preset whose harness cannot call MCP (for example `cline`, `rovodev`, or any custom preset) keeps every
   served skill as a static file and gets no stub. Each such preset is named in a warning (`AR992`).
   Skills of `[[skill_sources]]` are served only, by design: they never reach a preset without MCP support

@@ -374,6 +374,7 @@ func (g *AntigravityPresetGenerator) renderMarkdown(
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Diag: cfg.Diag, Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	renderAgentsSection(&builder, content, allAgents)
+	WriteSkillsInstructions(&builder, cfg, presetNameAntigravity, "GEMINI.md")
 
 	return builder.String()
 }

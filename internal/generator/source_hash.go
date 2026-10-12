@@ -36,6 +36,7 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	}
 	b.WriteString("header_style=" + cfg.GetHeaderStyle() + "\n")
 	b.Printf("header_timestamp=%t\n", cfg.ShowHeaderTimestamp())
+	writeHeaderInputs(b, cfg)
 
 	// Effective rules mode per enabled preset, sorted, so switching modes
 	// rewrites the affected files.
@@ -146,6 +147,7 @@ func computeSharedSourceHash(cfg *config.Config, content *config.ContentTree, in
 	}
 	b.WriteString("header_style=" + cfg.GetHeaderStyle() + "\n")
 	b.Printf("header_timestamp=%t\n", cfg.ShowHeaderTimestamp())
+	writeHeaderInputs(b, cfg)
 	b.Printf("compact=%t\n", cfg.IsCompact())
 	writeSourceContent(b, cfg, content)
 	return b.Sum()
@@ -236,4 +238,26 @@ func writeContentFiles(b *templates.ContentHasher, label string, files []config.
 		}
 		b.WriteString("\n")
 	}
+}
+
+// defaultHeaderMCPCommand is the MCP launch the header names with no [mcp] tuning.
+const defaultHeaderMCPCommand = "npx -y ai-rulez@latest mcp"
+
+// writeHeaderInputs adds the settings that shape the generated header prose
+// beyond style and timestamp, and the skills section of the instruction files, so changing one rewrites the files it affects.
+func writeHeaderInputs(b *templates.ContentHasher, cfg *config.Config) {
+	if key := cfg.DeliveryStubKey(); key != "" {
+		b.WriteString("delivery_stub=" + key + "\n")
+	}
+	if text, ok := cfg.SkillsInstructions(); ok {
+		b.WriteString("skills_instructions=" + text + "\n")
+	}
+	if mode := cfg.NestedHeaderMode(); mode != config.HeaderNestedInherit || cfg.RootRel != "" {
+		b.Printf("header_nested=%s,root_rel=%s\n", mode, cfg.RootRel)
+	}
+	cmd, show := cfg.HeaderMCPCommand()
+	if show && cmd == defaultHeaderMCPCommand {
+		return // the default line is derived from inputs already hashed
+	}
+	b.Printf("header_mcp=%t:%s\n", show, cmd)
 }

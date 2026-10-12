@@ -300,6 +300,11 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	config.frontmatterErrors = lo.frontmatterErrors
 	config.RulesDirs = &RulesDirSet{}
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
+	config.RootRel = rootRelInRepo(baseDir)
+	config.NestedRoot = nestedInRepo(baseDir)
+	if err := config.loadStubBodyFile(v); err != nil {
+		return nil, err
+	}
 	// Each loaded project owns its warning state: a nil collector stands for the
 	// process-wide one, which two projects in one process would share.
 	var sink diag.Sink
@@ -602,6 +607,7 @@ type tomlConfig struct {
 	Usage           *UsageConfig           `toml:"usage"`
 	Skills          *SkillsConfig          `toml:"skills"`
 	DomainSettings  DomainConfigs          `toml:"domains"`
+	Delivery        *DeliveryConfig        `toml:"delivery"`
 	SkillSources    []SkillSourceConfig    `toml:"skill_sources"`
 	Roles           []RoleConfig           `toml:"roles"`
 	RoleManifest    *RoleManifestConfig    `toml:"role_manifest"`
@@ -706,6 +712,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Usage:           raw.Usage,
 		Skills:          raw.Skills,
 		DomainSettings:  raw.DomainSettings,
+		Delivery:        raw.Delivery,
 		SkillSources:    raw.SkillSources,
 		Roles:           raw.Roles,
 		RoleManifest:    raw.RoleManifest,

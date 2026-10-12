@@ -639,13 +639,17 @@ Project-level MCP generation options.
 self_server = true                # default; add ai-rulez's own MCP server to .mcp.json
 # self_server_version = "5.0.0"   # default: latest, so a project picks up new releases
 # self_server_command = ["ai-rulez", "mcp"]  # replace the whole launch command instead of npx
+# skills_instructions = false                # leave the "Unlisted skills" section out of instruction files
+# skills_instructions_text = "..."           # replace that section; {{server}}, {{skills_dir}}
 ```
 
-| Field                 | Description                                                                                                                                              |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `self_server`         | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@latest", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. When the project serves skills (a `delivery` other than `static`, a `[[skill_sources]]` entry or a role delivery) the entry runs `mcp --serve-skills` instead: one process serves the skills and the authoring tools, so no separate skills server is needed. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
-| `self_server_version` | Version (or dist-tag) to pin. Defaults to `latest`, so a project picks up new releases without regenerating. Only applies while the self server is on. |
-| `self_server_command` | Executable followed by its arguments, replacing the npx launch. When the project serves skills, `--serve-skills` is appended unless it is already there. Mutually exclusive with `self_server_version`. Only applies while the self server is on.  |
+| Field                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `self_server`              | When `true` (the **default in v5**), `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@latest", "mcp"]}` to the project `.mcp.json`, so a project is MCP-ready out of the box. When the project serves skills (a `delivery` other than `static`, a `[[skill_sources]]` entry or a role delivery) the entry runs `mcp --serve-skills` instead: one process serves the skills and the authoring tools, so no separate skills server is needed. Set `false` (or pass `generate --no-self-mcp`) to opt out. |
+| `self_server_version`      | Version (or dist-tag) to pin. Defaults to `latest`, so a project picks up new releases without regenerating. Only applies while the self server is on.                                                                                                                                                                                                                                                                                                                                                                                          |
+| `self_server_command`      | Executable followed by its arguments, replacing the npx launch. When the project serves skills, `--serve-skills` is appended unless it is already there. Mutually exclusive with `self_server_version`. Only applies while the self server is on.                                                                                                                                                                                                                                                                                               |
+| `skills_instructions`      | While skills are served, every instruction file gets a short "Unlisted skills" section telling the agent to call `find_skill`, then `load_skill`, on the MCP server that serves them, with the on-disk fallback (`.ai-rulez/skills/<name>/SKILL.md`). Default `true`; `false` leaves it out. Written when a configured preset can call MCP, and only into the root file of a harness that can; the shared `AGENTS.md` carries it once.                                                                                                          |
+| `skills_instructions_text` | Replaces the default section (write your own heading). `{{server}}` is the MCP server that serves the skills, `{{skills_dir}}` the config directory's skills folder (`.ai-rulez/skills`). Unknown variables, blank text, and text beside `skills_instructions = false` are configuration errors.                                                                                                                                                                                                                                                |
 
 Behavior:
 
@@ -1423,6 +1427,8 @@ style = "minimal"   # Default: bare minimum header
 # timestamp = true  # Emit the "Generated:" line (default: false)
 # text = "..."      # Override the generated prose (see "Custom header")
 # hashes = "full"    # Freshness lines: "content" (default), "full", or "none"
+# mcp_line = false  # Drop the "Use MCP server: ..." line (default: true)
+# nested = "compact" # Header of a root inside another root: "compact" (default), "omit" or "inherit"
 ```
 
 The default is `minimal`. Every style — including `minimal` — carries the "DO NOT EDIT"
@@ -1455,6 +1461,16 @@ files is undone by the next `generate`, as it would be for any committed-output 
 read these lines in any mode. `verify --plugin` uses its own per-bundle provenance (the
 `.ai-rulez-generated.json` sidecar) and is independent of this setting. Switching modes rewrites every
 file once. Any other value is rejected by `validate`.
+
+#### `mcp_line`
+
+`minimal`, `compact` and `detailed` headers tell agents which MCP server to use. The command is derived
+from [`[mcp]`](#mcp), the same settings that write the `.mcp.json` entry, so it matches the server the
+project actually launches: `npx -y ai-rulez@latest mcp` by default, `npx -y ai-rulez@4.1.0 mcp` with
+`self_server_version`, the `self_server_command` as written (`ai-rulez mcp`), and `--serve-skills` appended
+whenever skills are served. The line is left out while `self_server = false`, because no ai-rulez server is
+configured to point at. Set `mcp_line = false` to drop it from every header. A custom `text` is
+never touched.
 
 #### `timestamp`
 
@@ -1530,6 +1546,32 @@ A few details worth knowing:
   yourself if you want one.
 - Surrounding blank lines are trimmed; interior line breaks are preserved. Standard TOML multi-line
   escaping applies (`"""` for a literal block).
+
+#### Nested roots
+
+A root below the repository root names its own config in the header by its path from the git work tree
+root, for example `Source: products/em/webapps/.ai-rulez/config.toml`, so "edit the source" leads to the
+right file. The path comes from the work tree (the nearest ancestor holding a `.git` entry), so
+`generate`, `generate --recursive` and `generate --check` render the same header. The repository root,
+and a project outside a git work tree, keep the bare `.ai-rulez/config.toml`.
+
+#### `nested`
+
+A root that sits inside another ai-rulez root of the same git repository (some directory between it and
+the repository root holds a config) would otherwise repeat the outer root's whole header in every
+instruction file an agent loads. `nested` chooses what the inner root writes:
+
+| Value               | Header of the nested root                                                              |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| `compact` (default) | One line: `Generated by ai-rulez from <path to its config>; do not edit`.              |
+| `omit`              | No header block.                                                                       |
+| `inherit`           | The header of the configured `style`, as for the outer root.                           |
+
+The outer root is never affected. `compact` still carries the freshness lines selected by `hashes`, so
+the file keeps its `Content-Hash`. A custom [`text`](#custom-header) is kept for nested roots unless
+`nested` is set explicitly. With `omit` the file has no `Content-Hash`: `generate --check` still compares
+the whole rendered file and `generate` recognises its own output by the recorded manifest, but a
+hand-edited file is then reported as blocked instead of edited.
 
 #### Header Example (detailed)
 
@@ -1676,6 +1718,31 @@ Dynamic skill loading (see [Dynamic skill loading](mcp-server.md#dynamic-skill-l
 | `[domains.<name>] delivery` | Default delivery of a domain's skills. A skill's `delivery` frontmatter wins. |
 | `[[skill_sources]]` | `name`, `url`, `ref`, `path`, `include`, `exclude`, `name_prefix`, `trust` (`error` or `warn`), `domain` (served only when the active profile or role selects it), `max_skills` (default 200), `max_bytes` (default 64 MiB), `max_clone_bytes` (default 256 MiB), `max_clone_files` (default 20000; each entry counts as at least 4 KiB toward `max_clone_bytes`; `AI_RULEZ_MAX_CLONE_FILES` sets it globally): skills served from a git repository or directory. A source over a limit is an error. |
 | `[lock] enforce` | The skills server refuses a served skill whose digest is not pinned in `ai-rulez.lock`. |
+| `[delivery.stub]` | Customises the generated `dynamic-skills` stub, see below. |
+
+#### `[delivery.stub]`
+
+The stub skill that tells an MCP-capable agent to call `find_skill` and `load_skill` is generated, and
+its description is listed in every session. Each field is optional; an unset one keeps the built-in text:
+
+```toml
+[delivery.stub]
+description = "Find and load team skills on demand."   # frontmatter description
+body_file = "stub.md"                                   # relative to .ai-rulez/, or use body = "..."
+```
+
+| Key | Meaning |
+| --- | ------- |
+| `description` | Replaces the frontmatter description. Must not be blank. |
+| `body` | Replaces the stub's text. Multi-line TOML (`"""`) works. |
+| `body_file` | Reads the text from a file relative to the config directory (`.ai-rulez/`); the path must stay inside it. A missing file is a load error. Mutually exclusive with `body`. |
+
+The body may use one variable, `{{server}}`: the MCP server that serves the skills (the `ai-rulez` self
+entry, or the `[[mcp_servers]]` entry running `--serve-skills`). Other `{{...}}` names are rejected, and the
+body must still name `find_skill` and `load_skill`, since the stub is how an agent learns to call them.
+Use it for local guidance such as which domains are served or how to rank matches. A skill you author
+named `dynamic-skills` still replaces the stub, and `AR991` is unaffected: the customised stub is the
+same skill. Editing the file behind `body_file` shows as drift in `generate --check`.
 
 ### `[ard]`
 
