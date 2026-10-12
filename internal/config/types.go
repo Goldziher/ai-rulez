@@ -2,6 +2,8 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -71,7 +73,7 @@ type Config struct {
 	Delivery *DeliveryConfig `yaml:"delivery,omitempty" json:"delivery,omitempty" toml:"delivery,omitempty"`
 	// stubBodyFileText is the text of [delivery.stub] body_file, read at load.
 	stubBodyFileText string
-	SkillSources   []SkillSourceConfig     `yaml:"skill_sources,omitempty" json:"skill_sources,omitempty" toml:"skill_sources,omitempty"` //nolint:tagliatelle
+	SkillSources     []SkillSourceConfig `yaml:"skill_sources,omitempty" json:"skill_sources,omitempty" toml:"skill_sources,omitempty"` //nolint:tagliatelle
 	// ServeMode is set while a skills server renders: every skill is rendered,
 	// served ones included, and no dynamic-skills stub is added.
 	ServeMode bool `yaml:"-" json:"-" toml:"-"`
@@ -276,6 +278,12 @@ type MCPConfig struct {
 	// ["ai-rulez", "mcp"]. SelfServerVersion is ignored when it is set.
 	SelfServerCommand []string `yaml:"self_server_command,omitempty" json:"self_server_command,omitempty" toml:"self_server_command,omitempty"`
 
+	// SelfServerLauncher chooses how the self entry starts ai-rulez: "npx" (the
+	// default) runs it through npx, "binary-then-npx" runs an installed `ai-rulez`
+	// when one is on PATH and falls back to npx. SelfServerVersion pins the npx
+	// fallback. It cannot be combined with SelfServerCommand.
+	SelfServerLauncher string `yaml:"self_server_launcher,omitempty" json:"self_server_launcher,omitempty" toml:"self_server_launcher,omitempty"`
+
 	// SkillsInstructions, when false, leaves the "Unlisted skills" section out of
 	// the instruction files. Nil means on: while skills are served, every
 	// instruction file tells the agent to call find_skill and load_skill.
@@ -325,10 +333,37 @@ func (c *Config) servesSkills() bool {
 	return c != nil && (c.ServesSkills(c.Content) || c.RolesServeSkills())
 }
 
+// Values of mcp.self_server_launcher.
+const (
+	SelfLauncherNPX           = "npx"
+	SelfLauncherBinaryThenNPX = "binary-then-npx"
+)
+
+// binaryThenNPXScript starts an installed ai-rulez, else the pinned npx package.
+// The arguments after the script name reach it as "$@" (the trailing "sh" fills $0).
+const binaryThenNPXScript = `if command -v ai-rulez >/dev/null 2>&1; then exec ai-rulez mcp "$@"; else exec npx -y ai-rulez@%s mcp "$@"; fi`
+
+// isShellScriptLaunch reports whether command is a shell run with -c, where an
+// appended argument lands in $0 of the script instead of reaching ai-rulez.
+func isShellScriptLaunch(command []string) bool {
+	if len(command) < 3 {
+		return false
+	}
+	switch filepath.Base(command[0]) {
+	case "sh", "bash", "zsh", "dash", "ash":
+		return command[1] == "-c"
+	}
+	return false
+}
+
 // withServeSkillsArg appends --serve-skills to a launch's arguments unless it is
 // already there, so a hand-written command that already serves skills is left as
-// it is.
-func withServeSkillsArg(args []string) []string {
+// it is. A shell script launch (`sh -c <script>`) is left alone as well: the
+// flag would become $0 of the script, so the script must carry it itself.
+func withServeSkillsArg(command, args []string) []string {
+	if isShellScriptLaunch(command) {
+		return args
+	}
 	for _, a := range args {
 		if a == serveSkillsArg {
 			return args
@@ -350,7 +385,7 @@ func (c *Config) SelfMCPServerEntry() map[string]any {
 	if c.MCP != nil && len(c.MCP.SelfServerCommand) > 0 {
 		args := append([]string(nil), c.MCP.SelfServerCommand[1:]...)
 		if c.servesSkills() {
-			args = withServeSkillsArg(args)
+			args = withServeSkillsArg(c.MCP.SelfServerCommand, args)
 		}
 		entry := map[string]any{"type": "stdio", mcpKeyCommand: c.MCP.SelfServerCommand[0]}
 		if len(args) > 0 {
@@ -365,9 +400,16 @@ func (c *Config) SelfMCPServerEntry() map[string]any {
 	if version == "" || version == "dev" {
 		version = "latest"
 	}
+	if c.MCP != nil && c.MCP.SelfServerLauncher == SelfLauncherBinaryThenNPX {
+		args := []string{"-c", fmt.Sprintf(binaryThenNPXScript, version), "sh"}
+		if c.servesSkills() {
+			args = append(args, serveSkillsArg)
+		}
+		return map[string]any{"type": "stdio", mcpKeyCommand: "sh", "args": args}
+	}
 	args := []string{"-y", "ai-rulez@" + version, "mcp"}
 	if c.servesSkills() {
-		args = withServeSkillsArg(args)
+		args = append(args, serveSkillsArg)
 	}
 	return map[string]any{
 		"type":        "stdio",

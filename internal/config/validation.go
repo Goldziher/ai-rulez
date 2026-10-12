@@ -1086,6 +1086,16 @@ func (c *Config) validateMCP() error {
 			Hint("self_server_command replaces the whole launch command, so a pinned version has no effect; remove one of them").
 			Errorf("mcp.self_server_version and mcp.self_server_command are mutually exclusive")
 	}
+	if l := m.SelfServerLauncher; l != "" && l != SelfLauncherNPX && l != SelfLauncherBinaryThenNPX {
+		return oops.
+			Hint("Use \"npx\" (the default) or \"binary-then-npx\"").
+			Errorf("invalid mcp.self_server_launcher %q", l)
+	}
+	if m.SelfServerLauncher == SelfLauncherBinaryThenNPX && len(m.SelfServerCommand) > 0 {
+		return oops.
+			Hint("self_server_command replaces the whole launch command, so a launcher has no effect; remove one of them").
+			Errorf("mcp.self_server_launcher and mcp.self_server_command are mutually exclusive")
+	}
 	if strings.ContainsAny(m.SelfServerVersion, " \t\n@/") {
 		return oops.
 			Hint("Use a bare version or npm dist-tag such as \"4.19.0\" or \"latest\"").
