@@ -37,6 +37,9 @@ const (
 // bundling them.
 const SkillKindEvals = "evals"
 
+// skillAgentsDir is the skill subdirectory for tool display metadata.
+const skillAgentsDir = "agents"
+
 // EvalsDirName is the name of the project-level eval tree under the config dir.
 const EvalsDirName = "evals"
 
@@ -194,6 +197,12 @@ func (s *contentScanner) unrecognizedSubdirectoryWarnings(root, itemKind string)
 	}
 	// evals/ is a known directory that is deliberately not emitted.
 	recognized[SkillKindEvals] = true
+	// A skill's agents/ holds tool display metadata (Codex agents/openai.yaml).
+	// It is not a resource kind, but the plugin passthrough copies the whole
+	// skill directory, so warning that it is dropped would be wrong.
+	if itemKind == ItemKindSkill {
+		recognized[skillAgentsDir] = true
+	}
 
 	var warnings []resourceWarning
 	for _, entry := range entries {

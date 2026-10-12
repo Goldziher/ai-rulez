@@ -266,6 +266,41 @@ func TestLoadSkillResources(t *testing.T) {
 	})
 }
 
+func TestUnrecognizedSubdirectoryWarningsKnownSkillDirs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		itemKind string
+		subdir   string
+		want     []string
+	}{
+		{"skill agents/ holds Codex display metadata", ItemKindSkill, "agents", nil},
+		{"skill evals/ is known", ItemKindSkill, "evals", nil},
+		{"skill hooks/ is unknown", ItemKindSkill, "hooks", []string{"hooks"}},
+		{"command agents/ is still unknown", ItemKindCommand, "agents", []string{"agents"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Arrange
+			dir := t.TempDir()
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, tt.subdir), 0o755))
+
+			// Act
+			warnings, err := newIncludeScanner(t.Context(), osView(dir)).unrecognizedSubdirectoryWarnings(dir, tt.itemKind)
+
+			// Assert
+			require.NoError(t, err)
+			var got []string
+			for _, w := range warnings {
+				got = append(got, w.Subdirectory)
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestLoadResourcesCommandKind(t *testing.T) {
 	t.Parallel()
 

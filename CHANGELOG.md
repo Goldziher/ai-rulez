@@ -16,6 +16,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`AR990` no longer flags a single code span `load_skill <name>`.** That is the form its own message recommends; a bare name in backticks, a source path or another call form on the same line is still reported ([#377](https://github.com/Goldziher/ai-rulez/issues/377)).
 - **`AR9T0` looks for component paths only under the plugin's own root.** A `.mcp.json` in a parent directory of a nested plugin was reported as if the plugin shipped it ([#378](https://github.com/Goldziher/ai-rulez/issues/378)).
 - **`AR9T0` also covers a root `plugin.json` that ai-rulez does not write.** Codex prefers it as the manifest, so a stray one under the default `legacy` layout is reported; a root `CLAUDE.md` is not on the list because Claude Code does not load one from a plugin root ([#384](https://github.com/Goldziher/ai-rulez/issues/384)).
+- **`generate --plugin`, `verify --plugin` and `validate` no longer warn that a skill's `agents/` directory is unrecognized.** `agents/openai.yaml` (Codex display metadata) is bundled by the plugin passthrough, so the warning said the opposite of what happens, and it repeated for every skill ([#382](https://github.com/Goldziher/ai-rulez/issues/382)).
 
 ## [5.0.5] - 2026-10-12
 
