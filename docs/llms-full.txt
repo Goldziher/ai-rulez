@@ -2728,6 +2728,14 @@ A few details worth knowing:
 - Surrounding blank lines are trimmed; interior line breaks are preserved. Standard TOML multi-line
   escaping applies (`"""` for a literal block).
 
+###### Nested roots
+
+A root below the repository root names its own config in the header by its path from the git work tree
+root, for example `Source: products/em/webapps/.ai-rulez/config.toml`, so "edit the source" leads to the
+right file. The path comes from the work tree (the nearest ancestor holding a `.git` entry), so
+`generate`, `generate --recursive` and `generate --check` render the same header. The repository root,
+and a project outside a git work tree, keep the bare `.ai-rulez/config.toml`.
+
 ###### Header Example (detailed)
 
 ```html

@@ -122,6 +122,11 @@ type Config struct {
 	ContentProblems []ContentProblem `yaml:"-" json:"-" toml:"-"`
 	ConfigDir       string           `yaml:"-" json:"-" toml:"-"`
 	ConfigDirName   string           `yaml:"-" json:"-" toml:"-"`
+	// RootRel is where this project's base directory sits below the root of its
+	// git work tree (forward slashes), empty for the work tree's own root and
+	// outside a work tree. Generated headers use it to name a nested root's own
+	// config by its path from the repository root.
+	RootRel string `yaml:"-" json:"-" toml:"-"`
 
 	// PolicyOutcome is what the organization policy clamped and reported at load
 	// time (docs/policy.md); nil when no policy is in force.
