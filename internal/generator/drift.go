@@ -436,6 +436,11 @@ func (g *Generator) considerRootTree(root string, consider func(string)) {
 			if skipOrphanWalk(d.Name()) {
 				return filepath.SkipDir
 			}
+			// A nested current root owns its generated files: its own run
+			// reports and removes them, never this one (#368).
+			if config.ResolveConfigDirName(p) != "" {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		consider(p)
