@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- **A non-recursive `generate` no longer deletes the outputs of a nested root.** The orphan walk of a top-level output directory (for example `packages/` from a scope) descended into a nested root below it and removed that root's committed `CLAUDE.md`/`.claude/rules` files; it now stops at any directory holding its own config, as the stray-tree walk already did ([#368](https://github.com/Goldziher/ai-rulez/issues/368)).
+
 ## [5.0.3] - 2026-10-12
 
 ### Added
