@@ -740,6 +740,11 @@
           "enum": ["full", "content", "none"],
           "type": "string"
         },
+        "mcp_line": {
+          "default": true,
+          "description": "Name the ai-rulez MCP server in generated headers (\"Use MCP server: ...\"). The command is derived from [mcp] (self_server_command, self_server_version, and --serve-skills when skills are served) and is left out while mcp.self_server is false. Set to false to drop the line from every header.",
+          "type": "boolean"
+        },
         "style": {
           "default": "minimal",
           "description": "Header style: detailed (comprehensive), compact (concise), or minimal (bare minimum)",

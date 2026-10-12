@@ -1423,6 +1423,7 @@ style = "minimal"   # Default: bare minimum header
 # timestamp = true  # Emit the "Generated:" line (default: false)
 # text = "..."      # Override the generated prose (see "Custom header")
 # hashes = "full"    # Freshness lines: "content" (default), "full", or "none"
+# mcp_line = false  # Drop the "Use MCP server: ..." line (default: true)
 ```
 
 The default is `minimal`. Every style — including `minimal` — carries the "DO NOT EDIT"
@@ -1455,6 +1456,16 @@ files is undone by the next `generate`, as it would be for any committed-output 
 read these lines in any mode. `verify --plugin` uses its own per-bundle provenance (the
 `.ai-rulez-generated.json` sidecar) and is independent of this setting. Switching modes rewrites every
 file once. Any other value is rejected by `validate`.
+
+#### `mcp_line`
+
+`minimal`, `compact` and `detailed` headers tell agents which MCP server to use. The command is derived
+from [`[mcp]`](#mcp), the same settings that write the `.mcp.json` entry, so it matches the server the
+project actually launches: `npx -y ai-rulez@latest mcp` by default, `npx -y ai-rulez@4.1.0 mcp` with
+`self_server_version`, the `self_server_command` as written (`ai-rulez mcp`), and `--serve-skills` appended
+whenever skills are served. The line is left out while `self_server = false`, because no ai-rulez server is
+configured to point at. Set `mcp_line = false` to drop it from every header. A custom `text` is
+never touched.
 
 #### `timestamp`
 

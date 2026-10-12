@@ -136,6 +136,20 @@ func configDirLabel(data *TemplateData) string {
 	return name
 }
 
+// defaultMCPCommand is what the header names when there is no configuration to
+// derive the server launch from (a preview).
+const defaultMCPCommand = "npx -y ai-rulez@latest mcp"
+
+// headerMCPCommand returns the MCP server launch the header names and whether
+// to name one at all. It follows [mcp] and [header] mcp_line (see
+// config.Config.HeaderMCPCommand).
+func headerMCPCommand(data *TemplateData) (string, bool) {
+	if data == nil || data.Config == nil {
+		return defaultMCPCommand, true
+	}
+	return data.Config.HeaderMCPCommand()
+}
+
 func buildDetailedHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
 	dir := configDirLabel(data) + "/"
 	banner := slices.Concat([]string{
@@ -176,13 +190,21 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 		"   - Update config: "+dir+"config.toml",
 		"   - Domain-specific: "+dir+"domains/{name}/rules/*.md",
 		"",
-		"3. PREFER using the MCP Server (if available):",
-		"   Command: npx -y ai-rulez@latest mcp",
-		"   Provides safe CRUD tools for reading and modifying "+dir+" content",
+	)
+	step := 3
+	if mcp, ok := headerMCPCommand(data); ok {
+		banner = append(banner,
+			fmt.Sprintf("%d. PREFER using the MCP Server (if available):", step),
+			"   Command: "+mcp,
+			"   Provides safe CRUD tools for reading and modifying "+dir+" content",
+			"",
+		)
+		step++
+	}
+	banner = append(banner,
+		fmt.Sprintf("%d. After making changes: ai-rulez generate", step),
 		"",
-		"4. After making changes: ai-rulez generate",
-		"",
-		"5. Complete workflow:",
+		fmt.Sprintf("%d. Complete workflow:", step+1),
 		"   a. Edit source files in "+dir,
 		"   b. Run: ai-rulez generate",
 		"   c. Commit both "+dir+" and generated files",
@@ -212,7 +234,11 @@ func buildCompactHeader(configPath, outputPath, timestamp string, data *Template
 		"AI AGENT INSTRUCTIONS:",
 		"✗ NEVER edit "+outputPath+" (auto-generated)",
 		"✓ EDIT "+dir+"rules/*.md, "+dir+"context/*.md, "+dir+"config.toml",
-		"✓ USE MCP server: npx -y ai-rulez@latest mcp (provides CRUD tools)",
+	)
+	if mcp, ok := headerMCPCommand(data); ok {
+		banner = append(banner, "✓ USE MCP server: "+mcp+" (provides CRUD tools)")
+	}
+	banner = append(banner,
 		"✓ REGENERATE: ai-rulez generate",
 		"✓ COMMIT: both "+dir+" and generated files",
 		"",
@@ -233,7 +259,11 @@ func buildMinimalHeader(configPath, outputPath, timestamp string, data *Template
 	banner = append(banner,
 		"",
 		"NEVER edit this file - modify "+dir+" content instead",
-		"Use MCP server: npx -y ai-rulez@latest mcp",
+	)
+	if mcp, ok := headerMCPCommand(data); ok {
+		banner = append(banner, "Use MCP server: "+mcp)
+	}
+	banner = append(banner,
 		"Regenerate: ai-rulez generate",
 		"",
 		"Docs: https://github.com/Goldziher/ai-rulez",
