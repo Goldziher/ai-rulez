@@ -306,7 +306,7 @@ func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) e
 	// The roots share one managed block at the repository toplevel; each adds its
 	// patterns here and the block is judged once, after the last root.
 	sink := openRecursiveGitignoreSink()
-	forEachRoot(paths, func(path string) driftRoot { return checkDriftRoot(ctx, path, gate, sink) },
+	forEachRoot(ctx, paths, func(path string) driftRoot { return checkDriftRoot(ctx, path, gate, sink) },
 		func(i int, path string, r driftRoot, elapsed time.Duration) {
 			r.notes.flush(logger.Std(), os.Stderr)
 			if r.configDir != "" {
@@ -328,6 +328,10 @@ func runRecursiveDrift(rep *driftReport, fix string, gate func(*config.Config) e
 			}
 			reportRootProgress(i, len(paths), path, elapsed)
 		})
+	if err := ctx.Err(); err != nil {
+		renderError(os.Stderr, oops.Wrapf(err, "check interrupted before every root was read"))
+		return 1
+	}
 	if failed > 0 {
 		return 1
 	}

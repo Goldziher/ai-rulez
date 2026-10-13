@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
@@ -22,13 +23,16 @@ type rootRun[T any] struct {
 // therefore delays printing but never reorders it, and emit needs no lock to
 // aggregate: it is never called concurrently. work must not write to the
 // terminal itself (it runs concurrently); what it wants said goes in its result.
-func forEachRoot[T any](paths []string, work func(path string) T, emit func(index int, path string, value T, elapsed time.Duration)) {
-	forEachRootBounded(runtime.GOMAXPROCS(0), paths, work, emit)
+// Once ctx is canceled no further root starts: roots already running finish and
+// are emitted, the rest are neither run nor emitted, so the caller checks
+// ctx.Err() to tell a canceled run from a complete one.
+func forEachRoot[T any](ctx context.Context, paths []string, work func(path string) T, emit func(index int, path string, value T, elapsed time.Duration)) {
+	forEachRootBounded(ctx, runtime.GOMAXPROCS(0), paths, work, emit)
 }
 
 // forEachRootBounded is forEachRoot with at most limit workers (1 runs the roots
 // one at a time, still emitting in input order).
-func forEachRootBounded[T any](limit int, paths []string, work func(path string) T, emit func(index int, path string, value T, elapsed time.Duration)) {
+func forEachRootBounded[T any](ctx context.Context, limit int, paths []string, work func(path string) T, emit func(index int, path string, value T, elapsed time.Duration)) {
 	if len(paths) == 0 {
 		return
 	}
@@ -44,6 +48,10 @@ func forEachRootBounded[T any](limit int, paths []string, work func(path string)
 		go func() {
 			defer wg.Done()
 			for i := range next {
+				if ctx.Err() != nil {
+					close(done[i]) // canceled: this root and every later one is skipped
+					continue
+				}
 				start := time.Now()
 				v := work(paths[i])
 				done[i] <- rootRun[T]{value: v, elapsed: time.Since(start)}
@@ -57,7 +65,10 @@ func forEachRootBounded[T any](limit int, paths []string, work func(path string)
 		close(next)
 	}()
 	for i, path := range paths {
-		r := <-done[i]
+		r, ok := <-done[i]
+		if !ok {
+			break // the run was canceled before this root started
+		}
 		emit(i, path, r.value, r.elapsed)
 	}
 	wg.Wait()

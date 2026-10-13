@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -53,6 +54,7 @@ func SetLevel(level slog.Level) {
 
 func New(w io.Writer, level slog.Level) *slog.Logger {
 	handler := &prettyHandler{
+		mu:    &sync.Mutex{},
 		w:     w,
 		level: level,
 		color: colorEnabled(w),
@@ -64,7 +66,7 @@ type prettyHandler struct {
 	w      io.Writer
 	color  bool
 	level  slog.Level
-	mu     sync.Mutex
+	mu     *sync.Mutex // shared with every child, which writes to the same w
 	attrs  []slog.Attr
 	groups []string
 }
@@ -145,23 +147,15 @@ func colorEnabled(w io.Writer) bool {
 }
 
 func (h *prettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &prettyHandler{
-		w:      h.w,
-		color:  h.color,
-		level:  h.level,
-		attrs:  append(h.attrs, attrs...),
-		groups: h.groups,
-	}
+	child := *h
+	child.attrs = append(slices.Clone(h.attrs), attrs...)
+	return &child
 }
 
 func (h *prettyHandler) WithGroup(name string) slog.Handler {
-	return &prettyHandler{
-		w:      h.w,
-		color:  h.color,
-		level:  h.level,
-		attrs:  h.attrs,
-		groups: append(h.groups, name),
-	}
+	child := *h
+	child.groups = append(slices.Clone(h.groups), name)
+	return &child
 }
 
 func (h *prettyHandler) formatLevel(level slog.Level) (levelStr, levelColor string) {
