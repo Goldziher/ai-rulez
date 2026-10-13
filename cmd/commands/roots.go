@@ -23,10 +23,16 @@ type rootRun[T any] struct {
 // aggregate: it is never called concurrently. work must not write to the
 // terminal itself (it runs concurrently); what it wants said goes in its result.
 func forEachRoot[T any](paths []string, work func(path string) T, emit func(index int, path string, value T, elapsed time.Duration)) {
+	forEachRootBounded(runtime.GOMAXPROCS(0), paths, work, emit)
+}
+
+// forEachRootBounded is forEachRoot with at most limit workers (1 runs the roots
+// one at a time, still emitting in input order).
+func forEachRootBounded[T any](limit int, paths []string, work func(path string) T, emit func(index int, path string, value T, elapsed time.Duration)) {
 	if len(paths) == 0 {
 		return
 	}
-	workers := min(runtime.GOMAXPROCS(0), len(paths))
+	workers := max(1, min(limit, len(paths)))
 	done := make([]chan rootRun[T], len(paths))
 	for i := range done {
 		done[i] = make(chan rootRun[T], 1)
