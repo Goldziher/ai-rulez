@@ -20,6 +20,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **A recursive `validate --strict` loads the git trees of different repositories in parallel.** The tree cache held its lock for the whole load, so roots of separate repositories queued behind each other; now only roots of one repository share a load.
 - **The shared git index listing of a recursive run no longer answers where `git ls-files -- :(literal)` would differ.** A path below a submodule now goes to git (as before the listing), which fails closed there.
 - **`validate --recursive --strict --external` checks one root at a time.** The scanners' dry-run plan went to stdout and `--write-baseline` wrote one file from several roots at once; the output could interleave and the baseline lose entries.
 - **Warnings from the roots of `validate --recursive` and `generate --check --recursive` come out in root order.** Refused symlinked content, `--gitignore` notices, policy warnings and configuration-load log lines were written from the worker goroutines, so their order changed from run to run; each root now collects them and the run prints them with that root's result.
