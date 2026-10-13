@@ -188,6 +188,12 @@ func (c *Config) validateSource() error {
 			Hint(`Use source = "ai-rulez" (the .ai-rulez content tree) or source = "agents" (AGENTS.md and .agents/).`).
 			Errorf("unknown source %q", c.Source)
 	}
+	if c.UsesAgentsSource() && c.agentsMDOptIn {
+		return oops.
+			With("field", "agents_md").
+			Hint("With the agents source every tool gets its own full file (AGENTS.md is yours and is never written); drop agents_md or set it to false.").
+			Errorf("agents_md = true cannot be combined with source = %q", SourceAgents)
+	}
 	if c.AgentsLayout && c.Source == SourceAIRulez {
 		return oops.
 			With("field", "source").

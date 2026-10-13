@@ -89,14 +89,16 @@ When both files exist, `.agents/ai-rulez.toml` is used and the other is ignored.
 `.agents/checks` and settings files some presets write), and says so in one info line. The files in those places are
 yours: a second `generate` leaves every byte of them alone, and `generate --check` stays clean.
 
-- `CLAUDE.md` is still generated: it is the shim that imports `@AGENTS.md`, so Claude Code reads your file.
-- Tools that read `AGENTS.md` and `.agents/skills` themselves (Codex, Cursor, Copilot, Gemini through
-  `context.fileName`, and the others in the [tool matrix](agents-md.md)) read the originals and need nothing written.
-- Rules, agents, commands and checks keep going to each tool's own folders (`.claude/rules`, `.cursor/rules`, ...).
-  An always-on rule or context file that exists only under `.agents/rules` or `.agents/context` has no `AGENTS.md`
-  to be inlined into, so it reaches the tools that have a rules folder only when it is scoped. Keep always-on
-  instructions in `AGENTS.md`, or set `agents_md = false` to give every tool its own full file (`AGENTS.md` and
-  `.agents` are still never written).
+- Every other tool gets its full generated files, as with `agents_md = false`: `CLAUDE.md`, `GEMINI.md`, the Cursor,
+  Copilot and other rules folders and instruction files carry your always-on rules and context, and skills, agents
+  and commands go to each tool's own folders. `agents_md` is forced off for this source, because the shared
+  `AGENTS.md` it relies on is yours and is never written; `agents_md = true` is rejected by `validate`.
+- The text of your root `AGENTS.md` is one of those context items (`agents`), so a tool without native `AGENTS.md`
+  support, such as Claude Code or Gemini, gets it inside its own file. A tool that loads `AGENTS.md` itself (Codex,
+  Cursor, Copilot and the others in the [tool matrix](agents-md.md)) is left out of that item, so it never sees the
+  text twice. Such a tool receives your rules, agents and commands only where it has a place for them: Codex has no
+  rules folder, so it reads your `AGENTS.md` and `.agents/skills` and nothing more. Put what every tool must follow
+  in `AGENTS.md`.
 - A generated header in `AGENTS.md` or a file under `.agents` marks it as output of an earlier run: it is never read
   as source, and `generate` retires it like any generated leftover.
 

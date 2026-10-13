@@ -28,6 +28,7 @@ var sourceFiles = map[string]string{
 	".agents/skills/review/SKILL.md":            handSkill,
 	".agents/skills/review/references/guide.md": "Guide\n",
 	".agents/rules/go-style.md":                 handRule,
+	".agents/rules/always.md":                   "---\ndescription: Always on\n---\n\nALWAYS_ON_BODY keep functions small.\n",
 }
 
 func presetConfig(extra string) string {
@@ -125,12 +126,51 @@ func TestGenerateTranslatesTheSourceAndLeavesItAlone(t *testing.T) {
 			}
 			// the other tools are written from the source
 			assert.Contains(t, after, "CLAUDE.md")
-			assert.Contains(t, after["CLAUDE.md"], "@AGENTS.md", "CLAUDE.md stays the AGENTS.md shim")
+			assert.Contains(t, after[".claude/rules/always.md"], "ALWAYS_ON_BODY", "an always-on rule reaches Claude (rules mode files)")
+			assert.Contains(t, after["CLAUDE.md"], "Use tabs.", "and so does the text of the project's AGENTS.md")
+			assert.NotContains(t, after["CLAUDE.md"], "@AGENTS.md", "CLAUDE.md is the full file, not the shim")
+			assert.Contains(t, after[".cursor/rules/always.mdc"], "ALWAYS_ON_BODY", "an always-on rule reaches Cursor")
+			for rel, content := range after {
+				if strings.HasPrefix(rel, ".cursor/") {
+					assert.NotContains(t, content, "Use tabs.", "%s: Cursor reads AGENTS.md itself, so it gets no copy", rel)
+				}
+			}
 			assert.Contains(t, keys(after), ".claude/rules/go-style.md", "the scoped rule reaches Claude")
 			assert.Contains(t, keys(after), ".cursor/rules/go-style.mdc", "and Cursor")
 			assert.Contains(t, after, layout.state+".generated-manifest.json")
 		})
 	}
+}
+
+func TestInlineRulesLandInTheFullClaudeFile(t *testing.T) {
+	for _, layout := range layouts {
+		t.Run(layout.name, func(t *testing.T) {
+			// Arrange
+			root := setup(t, layout.cfgPath, layout.cfgBody+"\n[rules]\nmode = \"inline\"\n")
+
+			// Act
+			generate(t, root)
+			first := snapshot(t, root)
+			generate(t, root)
+
+			// Assert
+			assert.Contains(t, first["CLAUDE.md"], "ALWAYS_ON_BODY")
+			assert.Contains(t, first["CLAUDE.md"], "Use tabs.")
+			assert.Equal(t, first, snapshot(t, root), "byte-stable")
+			assert.Equal(t, handAgentsMD, first["AGENTS.md"])
+		})
+	}
+}
+
+func TestExplicitAgentsMDOptInIsRejected(t *testing.T) {
+	// Arrange
+	root := setup(t, ".agents/ai-rulez.toml", presetConfig("agents_md = true\n"))
+
+	// Act
+	err := load(t, root).Validate()
+
+	// Assert
+	assert.ErrorContains(t, err, "agents_md = true cannot be combined")
 }
 
 func TestGenerateTwiceIsByteStableAndCheckIsClean(t *testing.T) {

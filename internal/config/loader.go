@@ -382,6 +382,9 @@ func finishLoadConfig(ctx context.Context, v workspace.View, config *Config, bas
 	var contentTree *ContentTree
 	var err error
 	if config.UsesAgentsSource() {
+		// AGENTS.md is the project's own file and is never written, so it cannot carry
+		// the always-on rules and context for the other tools: each one gets its full file.
+		config.AgentsMD = false
 		contentTree, err = loadAgentsSource(ctx, scanner, config, lo)
 	} else {
 		contentTree, err = scanContentTree(scanner, configDir, config.BundleExclude)
@@ -804,6 +807,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 	if err := renamedRatchetTable(path, raw.Lint); err != nil {
 		return nil, err
 	}
+	cfg.agentsMDOptIn = raw.AgentsMD != nil && *raw.AgentsMD
 	cfg.applyResourcePathDefaults()
 
 	return cfg, nil
