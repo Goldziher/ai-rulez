@@ -15,16 +15,16 @@ git config user.name demo
 
 case "$name" in
 quickstart)
-	ai-rulez init acme --yes >/dev/null 2>&1
-	python3 - <<'PY'
+  ai-rulez init acme --yes >/dev/null 2>&1
+  python3 - <<'PY'
 import pathlib
 
 p = pathlib.Path(".ai-rulez/config.toml")
 p.write_text(p.read_text().replace('presets = ["claude"]', 'presets = ["claude", "cursor", "codex", "zed"]', 1))
 PY
-	;;
+  ;;
 *)
-	echo "unknown fixture: $name" >&2
-	exit 2
-	;;
+  echo "unknown fixture: $name" >&2
+  exit 2
+  ;;
 esac

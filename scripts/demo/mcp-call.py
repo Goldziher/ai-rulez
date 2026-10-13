@@ -5,6 +5,7 @@ Usage: mcp-call.py <tool> <json-arguments> [max-lines]
 Starts `ai-rulez mcp --serve-skills --read-only`, completes the initialize/initialized
 handshake, calls the tool and prints the text content (first max-lines lines).
 """
+
 import json
 import subprocess
 import sys
@@ -34,7 +35,14 @@ def recv(req_id):
     raise SystemExit("server closed before answering")
 
 
-send({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "demo", "version": "1"}}})
+send(
+    {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "demo", "version": "1"}},
+    }
+)
 recv(1)
 send({"jsonrpc": "2.0", "method": "notifications/initialized"})
 send({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": tool, "arguments": args}})

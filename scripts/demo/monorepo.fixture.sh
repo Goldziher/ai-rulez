@@ -14,15 +14,15 @@ git config user.name demo
 
 # write_rule <config-dir> <id> <body>
 write_rule() {
-	local cdir="$1" id="$2" body="$3"
-	mkdir -p "$cdir/rules"
-	{
-		echo "---"
-		echo "priority: high"
-		echo "---"
-		echo
-		printf '%s\n' "$body"
-	} >"$cdir/rules/$id.md"
+  local cdir="$1" id="$2" body="$3"
+  mkdir -p "$cdir/rules"
+  {
+    echo "---"
+    echo "priority: high"
+    echo "---"
+    echo
+    printf '%s\n' "$body"
+  } >"$cdir/rules/$id.md"
 }
 
 # Root config plus one nested root per service; each root generates for its own tools.
@@ -48,10 +48,10 @@ write_rule web/.ai-rulez web-style "Components are function components with type
 
 # A long always-on rule, held back as a draft for the tape to adopt later.
 {
-	printf -- '---\npriority: high\n---\n\n# Style Guide\n\n'
-	for _ in $(seq 1 40); do
-		echo "Follow the shared style guide in every module and keep naming consistent across packages."
-	done
+  printf -- '---\npriority: high\n---\n\n# Style Guide\n\n'
+  for _ in $(seq 1 40); do
+    echo "Follow the shared style guide in every module and keep naming consistent across packages."
+  done
 } >style-guide.draft
 
 git add -A
