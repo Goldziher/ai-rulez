@@ -88,6 +88,7 @@ func (g Git) TrackedAmongContext(ctx context.Context, dir string, paths []string
 	if len(paths) == 0 || !g.IsRepoContext(ctx, dir) {
 		return tracked, nil
 	}
+	paths = g.trackedFromSharedIndex(ctx, dir, paths, tracked)
 	for start := 0; start < len(paths); start += pathChunk {
 		end := min(start+pathChunk, len(paths))
 		args := append([]string{"ls-files", "-z", "--"}, literalSpecs(paths[start:end])...)

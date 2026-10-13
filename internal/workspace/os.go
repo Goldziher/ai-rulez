@@ -4,8 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 
 	"github.com/samber/oops"
 
@@ -103,11 +101,11 @@ func tracksProject(ctx context.Context, git gitutil.Git, repo, project string) b
 		return false
 	}
 	marker := filepath.ToSlash(filepath.Join(rel, filepath.FromSlash(projectMarker)))
-	res := git.Exec(ctx, repo, nil, "ls-files", "-z", "--", ":(literal)"+marker)
-	if gitutil.ResultErr(res) != nil {
-		return false // not a repository, or git could not answer
+	tracked, err := git.TrackedAmongContext(ctx, repo, []string{marker})
+	if err != nil {
+		return false // git could not answer
 	}
-	return slices.Contains(strings.Split(string(res.Stdout), "\x00"), marker)
+	return tracked[marker] // not a repository: nothing is tracked
 }
 
 // IsDisk reports whether ws reads the real file system: only such a workspace
