@@ -25,6 +25,7 @@ func TestIsGeneratedRequiresTheMarkerAsTheHeader(t *testing.T) {
 		{"marker quoted in prose", "AGENTS.md", "# demo\n\nGenerated files start with `AI-RULEZ ::` in a comment.\n", false},
 		{"marker in a code block under a heading", "AGENTS.md", "# demo\n\n```\n<!--\nAI-RULEZ :: GENERATED FILE\n-->\n```\n", false},
 		{"freshness line in the body", "rule.md", "---\ndescription: x\n---\n# Content-Hash: blake3:abc\n", false},
+		{"html header after a UTF-8 BOM", "AGENTS.md", "\ufeff" + header, true},
 		{"plain file", "AGENTS.md", "# demo\n\nUse tabs.\n", false},
 	}
 	for _, tt := range tests {

@@ -291,7 +291,7 @@ func hasGeneratedBanner(path string, data []byte) bool {
 	if len(data) > bannerScanLimit {
 		data = data[:bannerScanLimit]
 	}
-	text := string(data)
+	text := strings.TrimPrefix(string(data), "\ufeff")
 	if end, _ := frontmatterEnd(text); end > 0 {
 		text = text[end:]
 	}
