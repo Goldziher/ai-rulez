@@ -60,7 +60,7 @@ enum  delivery         = static served both
 enum  index-style      = body frontmatter
 enum  protocol         = http/json http/protobuf grpc
 enum  outcome          = loaded used abandoned
-enum  emit             = cursor-team-marketplace agent-plugins ard port aws-agent-registry kiro-steering
+enum  emit             = cursor-team-marketplace agent-plugins ard mcp-server-card port aws-agent-registry kiro-steering
 enum  format@sbom      = cyclonedx spdx-json
 enum  from@convert     = auto native rulesync apm tessl okf skills-lock agent-plugins
 enum  from@eval import = tessl
@@ -118,7 +118,7 @@ args  builtins show    = first builtins
 args  eval run         = all content:skills
 args  improve run      = first content:skills
 args  telemetry feedback = first content:skills
-args  publish emit     = list cursor-team-marketplace agent-plugins ard port aws-agent-registry kiro-steering
+args  publish emit     = list cursor-team-marketplace agent-plugins ard mcp-server-card port aws-agent-registry kiro-steering
 args  review explain   = list AR9G0 AR9G1 AR9G2 AR9G3 AR9G4 AR9G5 AR9G6 AR9G7 AR9G8 AR9G9
 `
 

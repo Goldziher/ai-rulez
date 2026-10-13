@@ -19,6 +19,7 @@ const (
 	PublishEmitterKiro         = "kiro-steering"
 	PublishEmitterAgentPlugins = "agent-plugins"
 	PublishEmitterARD          = "ard"
+	PublishEmitterMCPCard      = "mcp-server-card"
 	PublishAccessRestricted    = "restricted"
 	PublishAccessPublic        = "public"
 )
@@ -100,7 +101,7 @@ type PublishEmitter struct {
 }
 
 // PublishEmitterNames lists every emitter a [[publish.emitters]] entry may name.
-var PublishEmitterNames = []string{PublishEmitterTemplate, PublishEmitterCursor, PublishEmitterPort, PublishEmitterAWS, PublishEmitterKiro, PublishEmitterAgentPlugins, PublishEmitterARD}
+var PublishEmitterNames = []string{PublishEmitterTemplate, PublishEmitterCursor, PublishEmitterPort, PublishEmitterAWS, PublishEmitterKiro, PublishEmitterAgentPlugins, PublishEmitterARD, PublishEmitterMCPCard}
 
 // ValidChannel reports whether name is a usable marketplace channel name.
 func ValidChannel(name string) bool { return publishChannelPattern.MatchString(name) }

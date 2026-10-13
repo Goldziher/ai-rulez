@@ -47,6 +47,8 @@ func fixtureFor(name string) Input {
 	case "ard":
 		in.ARD = ardFixture()
 		in.Plugins[0].Files = append(in.Plugins[0].Files, agentPluginFixtureFiles()...)
+	case MCPServerCardEmitter:
+		in.Servers = cardServers()
 	case "agent-plugins":
 		in.Plugins[0].Files = append(in.Plugins[0].Files, agentPluginFixtureFiles()...)
 	}
@@ -122,7 +124,7 @@ func TestEmitters_AreDeterministicAndSorted(t *testing.T) {
 
 func TestStatuses(t *testing.T) {
 	want := map[string]string{
-		"cursor-team-marketplace": StatusVerified, "agent-plugins": StatusVerified, "ard": StatusVerified, "port": StatusExperimental,
+		"cursor-team-marketplace": StatusVerified, "agent-plugins": StatusVerified, "ard": StatusVerified, "mcp-server-card": StatusVerified, "port": StatusExperimental,
 		"aws-agent-registry": StatusExperimental, "kiro-steering": StatusExperimental,
 	}
 	for name, status := range want {
