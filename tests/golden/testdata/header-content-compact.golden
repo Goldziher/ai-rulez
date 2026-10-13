@@ -117,8 +117,8 @@ WARN  3 rules/context items use an activation the target tool cannot express; th
 .cursor/rules/typescript.mdc file 0644 305 d7bb325f679451a5ae1a8330c2c5c17e344b247570c4740239e0679de4ae0c98
 .gitignore file 0644 766 0a6e490006ebdcefb34dd59bcc74da76a84e7cf73e58609d03f8262ce9dfbecd
 .mcp.json file 0644 543 3c58836c57158e851600f9a8d15fa7cf1f154da682c93432926b5b5392208c4c
-AGENTS.md file 0644 1208 cb5ae6152306c7d479b8ee45b478875524baf306a83377a9d30c4637c1b937ce
-CLAUDE.md file 0644 909 a69385ee34fe5457e3b49b7c3737060e76fa67915829e0abdac9362800c92b9b
+AGENTS.md file 0644 1218 4467f6cc39a95ab365bed912f4eaff74c34c8e984068ec30a5b06a8281633fd7
+CLAUDE.md file 0644 919 3b64dd697291aa91bfdb5c931e4ad76a9a45eecbf6a965117c39166b6f3378e0
 scripts/ dir 0755
 scripts/guard.sh file 0755 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
 --- home tree
@@ -1396,7 +1396,7 @@ CLAUDE.md
   }
 }
 <<<<
-AGENTS.md file 0644 1208 cb5ae6152306c7d479b8ee45b478875524baf306a83377a9d30c4637c1b937ce
+AGENTS.md file 0644 1218 4467f6cc39a95ab365bed912f4eaff74c34c8e984068ec30a5b06a8281633fd7
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1407,7 +1407,7 @@ Content: rules=4, sections=0, agents=2
 WHAT IS AI-RULEZ: Directory-based AI governance. Config in .ai-rulez/
 
 STRUCTURE:
-  .ai-rulez/config.toml, rules/, context/, skills/, agents/ (root)
+  .ai-rulez/config.toml, .ai-rulez/rules/, context/, skills/, agents/ (root)
   .ai-rulez/domains/{name}/ (profile-specific)
 
 AI AGENT INSTRUCTIONS:
@@ -1463,7 +1463,7 @@ The project overview.
 
 Layers and boundaries.
 <<<<
-CLAUDE.md file 0644 909 a69385ee34fe5457e3b49b7c3737060e76fa67915829e0abdac9362800c92b9b
+CLAUDE.md file 0644 919 3b64dd697291aa91bfdb5c931e4ad76a9a45eecbf6a965117c39166b6f3378e0
 >>>>
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
@@ -1474,7 +1474,7 @@ Content: rules=0, sections=0, agents=2
 WHAT IS AI-RULEZ: Directory-based AI governance. Config in .ai-rulez/
 
 STRUCTURE:
-  .ai-rulez/config.toml, rules/, context/, skills/, agents/ (root)
+  .ai-rulez/config.toml, .ai-rulez/rules/, context/, skills/, agents/ (root)
   .ai-rulez/domains/{name}/ (profile-specific)
 
 AI AGENT INSTRUCTIONS:
