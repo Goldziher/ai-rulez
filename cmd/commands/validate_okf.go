@@ -1,17 +1,11 @@
 package commands
 
 import (
-	"bytes"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/samber/oops"
-	"github.com/spf13/viper"
-
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
-	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 )
 
@@ -107,67 +101,4 @@ func okfTreePath(p string) bool {
 		}
 	}
 	return true
-}
-
-// validateOKFTree reports the OKF findings of the project and returns true when
-// they reach the --fail-on threshold (error by default). Text goes to w. A
-// structured --format gets the OKF document on stdout (or --output) only when
-// the run fails here, since a clean run goes on to print the lint report.
-func validateOKFTree(cfg *config.Config, w io.Writer) bool {
-	b, findings, ok := okfTreeFindings(cfg)
-	if !ok {
-		return false
-	}
-	failed := validateFailOn != okfFailNone && okfFails(findings, okfFailThreshold())
-	if structuredFormat(validateFormat) {
-		if failed {
-			if err := writeOKFTreeJSON(cfg.ConfigDir, b, findings); err != nil {
-				renderStderr(err)
-			}
-		}
-		return failed
-	}
-	if err := writeOKFTreeText(w, cfg.ConfigDir, b, findings, viper.GetBool("quiet")); err != nil {
-		renderStderr(err)
-		return true
-	}
-	return failed
-}
-
-func okfFailThreshold() okf.Severity {
-	switch validateFailOn {
-	case failOnWarning:
-		return okf.SeverityWarning
-	case failOnInfo:
-		return okf.SeverityInfo
-	}
-	return okf.SeverityError
-}
-
-// writeOKFTreeText prints the findings and, unless quiet, the summary line that
-// writeOKFFindings always ends with.
-func writeOKFTreeText(w io.Writer, dir string, b *okf.Bundle, findings []okf.Finding, quiet bool) error {
-	if !quiet {
-		return writeOKFFindings(w, dir, b, findings, false)
-	}
-	var buf bytes.Buffer
-	if err := writeOKFFindings(&buf, dir, b, findings, false); err != nil {
-		return err
-	}
-	lines := strings.SplitAfter(buf.String(), "\n")
-	// SplitAfter leaves an empty last element; the summary is the one before it.
-	_, err := io.WriteString(w, strings.Join(lines[:max(len(lines)-2, 0)], ""))
-	return err //nolint:wrapcheck // writer error
-}
-
-// writeOKFTreeJSON writes the OKF document to --output (atomically) or stdout.
-func writeOKFTreeJSON(dir string, b *okf.Bundle, findings []okf.Finding) error {
-	if validateOutput == "" {
-		return writeOKFFindings(os.Stdout, dir, b, findings, true)
-	}
-	var buf bytes.Buffer
-	if err := writeOKFFindings(&buf, dir, b, findings, true); err != nil {
-		return err
-	}
-	return oops.With("path", validateOutput).Wrapf(gitutil.WriteFileAtomic(validateOutput, buf.Bytes(), 0o644), "write report")
 }
