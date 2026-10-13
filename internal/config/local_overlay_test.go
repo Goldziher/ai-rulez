@@ -295,7 +295,7 @@ presets = ["claude", {name = "mine", path = "OUT.md", type = "markdown"}]
 			require.NoError(t, err)
 			merged, _, err := MergeConfigDocs(doc, map[string]any{})
 			require.NoError(t, err)
-			viaJSON, err := decodeMergedDoc(path, path, merged)
+			viaJSON, err := decodeMergedDoc(path, "x", "x", merged)
 			require.NoError(t, err)
 
 			// Assert

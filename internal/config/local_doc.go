@@ -815,7 +815,7 @@ func describeLocalOverlay(d *LocalDoc) (*LocalOverlay, []OverlayChange, error) {
 			Path: strings.Join(segs, "."), Shared: sv, Local: v, HasShared: has, Redacted: !showAllowed(segs) || !showTypeMatches(segs, v),
 		}
 		if len(segs) == 1 && segs[0] == docKeyPresets {
-			if merged, _, mergeErr := mergePresets(sv, has, v); mergeErr == nil {
+			if merged, _, mergeErr := mergePresets(sv, has, v, localSource); mergeErr == nil {
 				change.Merged, change.HasMerged = merged, true
 			}
 		}

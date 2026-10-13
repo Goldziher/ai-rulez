@@ -42,6 +42,7 @@ type tomlOutput struct {
 	Default          string                 `toml:"default,omitempty"`
 	Presets          []any                  `toml:"presets,omitempty"`
 	Header           *HeaderConfig          `toml:"header,omitempty"`
+	DefaultLayers    []string               `toml:"default_layers,omitempty"`
 	Profiles         map[string][]string    `toml:"profiles,omitempty"`
 	Builtins         interface{}            `toml:"builtins,omitempty"`
 	Includes         []IncludeConfig        `toml:"includes,omitempty"`
@@ -147,6 +148,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Default:          cfg.Default,
 		Presets:          presets,
 		Header:           cfg.Header,
+		DefaultLayers:    cfg.DefaultLayers,
 		Profiles:         cfg.Profiles,
 		Builtins:         builtinsVal,
 		Includes:         cfg.Includes,

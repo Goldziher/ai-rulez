@@ -27,57 +27,90 @@ func layerFileName(name string) string {
 	return "config." + name + ".toml"
 }
 
-// activeLayerNames resolves the layers to merge, in order: WithLayers, else
-// AI_RULEZ_LAYERS, else AI_RULEZ_PROFILE. Blank, "default" and repeated names are
-// dropped (a repeated name keeps its first position).
-func activeLayerNames(lo loadOptions) ([]string, error) {
-	raw := lo.layers
-	if !lo.layersSet {
-		value := strings.TrimSpace(lo.host.GetEnv(envLayers))
-		if value == "" {
-			value = strings.TrimSpace(lo.host.GetEnv(envLayersByProf))
-		}
-		raw = strings.Split(value, ",")
-	}
-	var names []string
+// Layer origins: how a layer became active.
+const (
+	LayerOriginDefault = "default" // named in default_layers of config.toml
+	LayerOriginEnv     = "env"     // AI_RULEZ_LAYERS or AI_RULEZ_PROFILE
+	LayerOriginOption  = "option"  // the WithLayers load option
+)
+
+// layerRef is an active layer and how it was activated.
+type layerRef struct {
+	name   string
+	origin string
+}
+
+// activeLayers resolves the layers to merge, in order: default_layers of
+// config.toml, then WithLayers, else AI_RULEZ_LAYERS, else AI_RULEZ_PROFILE.
+// Blank, "default" and repeated names are dropped (a repeated name keeps its
+// first position and origin).
+func activeLayers(lo loadOptions, defaults []string) ([]layerRef, error) {
+	var refs []layerRef
 	seen := map[string]bool{}
-	for _, name := range raw {
-		name = strings.TrimSpace(name)
-		if name == "" || name == "default" || seen[name] {
-			continue
+	add := func(names []string, origin string) error {
+		for _, name := range names {
+			name = strings.TrimSpace(name)
+			if name == "" || name == "default" || seen[name] {
+				continue
+			}
+			if name == "local" {
+				return oops.
+					Hint("config.local.toml is the machine-local overlay and is always applied last; name the layer differently").
+					Errorf("layer name %q is reserved", name)
+			}
+			if !layerNameRe.MatchString(name) {
+				return oops.
+					Hint("A layer name is letters, digits, '.', '_' or '-'").
+					Errorf("invalid layer name %q", name)
+			}
+			seen[name] = true
+			refs = append(refs, layerRef{name: name, origin: origin})
 		}
-		if name == "local" {
-			return nil, oops.
-				Hint("config.local.toml is the machine-local overlay and is always applied last; name the layer differently").
-				Errorf("layer name %q is reserved", name)
-		}
-		if !layerNameRe.MatchString(name) {
-			return nil, oops.
-				Hint("A layer name is letters, digits, '.', '_' or '-'").
-				Errorf("invalid layer name %q", name)
-		}
-		seen[name] = true
-		names = append(names, name)
+		return nil
 	}
-	return names, nil
+	if lo.noLayers {
+		return nil, nil
+	}
+	if err := add(defaults, LayerOriginDefault); err != nil {
+		return nil, err
+	}
+	if lo.layersSet {
+		return refs, add(lo.layers, LayerOriginOption)
+	}
+	value := strings.TrimSpace(lo.host.GetEnv(envLayers))
+	if value == "" {
+		value = strings.TrimSpace(lo.host.GetEnv(envLayersByProf))
+	}
+	return refs, add(strings.Split(value, ","), LayerOriginEnv)
 }
 
 // withLayers merges the config.<name>.toml files of the active layers over the
-// main config, in order, so a later layer wins. A layer with no file is skipped.
-// It returns the merged Config, the merged document (nil when no layer applied)
-// and the layers that applied. Layers use the same rules as the local overlay:
-// tables merge per key, named lists such as mcp_servers and installed_skills
-// merge entry by entry, other values are replaced.
+// main config, in order, so a later layer wins. A layer activated by
+// default_layers must have a file; one activated by the environment or an option
+// is skipped when it has none. It returns the merged Config, the merged document
+// (nil when no layer applied) and the layers that applied. Layers use the same
+// rules as the local overlay: tables merge per key, named lists such as
+// mcp_servers and installed_skills merge entry by entry, other values are
+// replaced.
 func withLayers(v workspace.View, cfg *Config, mainPath, configDir string, lo loadOptions) (*Config, map[string]any, []string, error) { //nolint:gocritic // mirrors the loader signature; a result struct would add a type for one caller
-	names, err := activeLayerNames(lo)
-	if err != nil || len(names) == 0 {
+	refs, err := activeLayers(lo, cfg.DefaultLayers)
+	if err != nil || len(refs) == 0 {
 		return cfg, nil, nil, err
 	}
 	var doc map[string]any
 	var applied []string
-	for _, name := range names {
-		path := filepath.Join(configDir, layerFileName(name))
+	var files []string
+	origins := map[string]string{}
+	for _, ref := range refs {
+		file := layerFileName(ref.name)
+		path := filepath.Join(configDir, file)
 		if !v.Exists(path) {
+			if ref.origin == LayerOriginDefault {
+				return nil, nil, nil, oops.
+					With("path", path).
+					Hint("Create "+file+" beside config.toml or remove "+ref.name+" from default_layers").
+					Errorf("default_layers names layer %q but %s does not exist", ref.name, file)
+			}
 			continue
 		}
 		if err := checkConfigFileInside(v, path); err != nil {
@@ -92,25 +125,28 @@ func withLayers(v workspace.View, cfg *Config, mainPath, configDir string, lo lo
 				return nil, nil, nil, err
 			}
 		}
-		merged, warnings, err := MergeConfigDocs(doc, layer)
+		merged, warnings, err := MergeConfigDocsFrom(doc, layer, LayerSource(file))
 		if err != nil {
-			return nil, nil, nil, oops.With("path", path).Wrapf(err, "apply layer %s", name)
+			return nil, nil, nil, oops.With("path", path).Wrapf(err, "apply layer %s", ref.name)
 		}
 		for _, w := range warnings {
 			cfg.Warn(w, "path", path)
 		}
 		doc = merged
-		applied = append(applied, name)
+		applied = append(applied, ref.name)
+		files = append(files, file)
+		origins[ref.name] = ref.origin
 	}
 	if doc == nil {
 		return cfg, nil, nil, nil
 	}
-	out, err := decodeMergedDoc(mainPath, filepath.Join(configDir, "config.<layer>.toml"), doc)
+	out, err := decodeMergedDoc(mainPath, "layers "+strings.Join(files, ", "), "the layer files ("+strings.Join(files, ", ")+")", doc)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	out.ConfigFile = cfg.ConfigFile
 	out.ActiveLayers = applied
+	out.LayerOrigins = origins
 	return out, doc, applied, nil
 }
 

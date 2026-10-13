@@ -8,7 +8,7 @@ Local configuration belongs to one checkout. Instructions and skills that should
 repository (including ones that do not use ai-rulez) go to your home directories instead; see
 [User-level configuration](user-scope.md).
 
-Local configuration has two layers. Both are gitignored unconditionally, even when `gitignore = false`.
+Local configuration has two layers (not to be confused with the committed `config.<name>.toml` layers, which `default_layers` activates for everyone; see [Layered configuration](configuration.md#layered-configuration)). Both are gitignored unconditionally, even when `gitignore = false`.
 
 | Layer | Location | Holds |
 | ----- | -------- | ----- |
