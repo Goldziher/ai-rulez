@@ -18,21 +18,71 @@ func agentsSourceFiles(cfg *config.Config) []string {
 }
 
 // isAgentsSourcePath reports whether the absolute path abs belongs to the
-// "agents" source of cfg: an AGENTS.md it reads, or anything under .agents.
-// Always false for a project with another source.
+// "agents" source of cfg: an AGENTS.md it reads, or anything under .agents,
+// whether named directly or reached through a symlinked directory
+// (.claude/rules -> ../.agents/rules). Always false for a project with another
+// source.
 func isAgentsSourcePath(cfg *config.Config, abs string) bool {
 	if !cfg.UsesAgentsSource() {
 		return false
 	}
-	if underAny(abs, []string{filepath.Join(cfg.BaseDir, config.AgentsDirName)}) {
+	if inAgentsSource(cfg, abs, false) {
+		return true
+	}
+	return isAgentsSourceViaLink(cfg, abs)
+}
+
+// isAgentsSourceViaLink reports whether abs lies in the "agents" source only
+// because a symlink on its path leads there.
+func isAgentsSourceViaLink(cfg *config.Config, abs string) bool {
+	if !cfg.UsesAgentsSource() || inAgentsSource(cfg, abs, false) {
+		return false
+	}
+	resolved := resolveThroughLinks(abs)
+	return resolved != cleanPath(abs) && inAgentsSource(cfg, resolved, true)
+}
+
+// inAgentsSource matches abs against the source's .agents directory and
+// AGENTS.md files; resolved compares against the link-free form of each.
+func inAgentsSource(cfg *config.Config, abs string, resolved bool) bool {
+	root := filepath.Join(cfg.BaseDir, config.AgentsDirName)
+	if resolved {
+		root = resolveThroughLinks(root)
+	}
+	if underAny(abs, []string{root}) {
 		return true
 	}
 	for _, file := range agentsSourceFiles(cfg) {
+		if resolved {
+			file = resolveThroughLinks(file)
+		}
 		if samePath(abs, file) {
 			return true
 		}
 	}
 	return false
+}
+
+// resolveThroughLinks returns path with every symlink on its existing part
+// resolved; the part that does not exist yet is appended as written. A new
+// output below a symlinked directory resolves to where it would really land.
+func resolveThroughLinks(path string) string {
+	path = cleanPath(path)
+	var rest []string
+	for p := path; ; {
+		if real, err := filepath.EvalSymlinks(p); err == nil {
+			for i := len(rest) - 1; i >= 0; i-- {
+				real = filepath.Join(real, rest[i])
+			}
+			return real
+		}
+		parent := filepath.Dir(p)
+		if parent == p {
+			return path
+		}
+		rest = append(rest, filepath.Base(p))
+		p = parent
+	}
 }
 
 // isAgentsSource reports whether abs is source content of an "agents" project
@@ -81,6 +131,10 @@ func (g *Generator) dropAgentsSourceOutputs(allOutputs map[string][]config.Outpu
 				path = filepath.Join(cfg.BaseDir, path)
 			}
 			if isAgentsSourcePath(cfg, path) {
+				if isAgentsSourceViaLink(cfg, path) {
+					g.warnOnce("source = agents: not writing "+g.relSlash(path)+": a symlink leads it into AGENTS.md or .agents/, which are the source",
+						"hint", "replace the symlinked directory with a real one")
+				}
 				dropped++
 				continue
 			}

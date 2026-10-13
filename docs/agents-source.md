@@ -99,6 +99,9 @@ yours: a second `generate` leaves every byte of them alone, and `generate --chec
   text twice. Gemini CLI is not one of them in this source: `agents_md` is off, so its settings list only `GEMINI.md`, and `GEMINI.md` carries the text. A root file two presets share (`.github/copilot-instructions.md` for `copilot` and `copilot-cli`) omits the text only when every configured preset writing it reads `AGENTS.md`. Such a tool receives your rules, agents and commands only where it has a place for them: Codex has no
   rules folder, so it reads your `AGENTS.md` and `.agents/skills` and nothing more. Put what every tool must follow
   in `AGENTS.md`.
+- The rule holds through symlinks: an output below a symlinked directory that leads into `.agents` (`.claude/rules ->
+  ../.agents/rules`, `.claude/skills/review -> ../../.agents/skills/review`) is dropped with a warning naming it, so
+  generate never writes through the link into the source.
 - `generate --plugin` follows the same rule: a plugin output that would land on `AGENTS.md` or under `.agents/`
   (the Codex index `.agents/plugins/marketplace.json` from `[plugin.codex] marketplace = true`, or a bundle whose
   `output_dir` is inside `.agents`) is skipped with a warning naming the path, so a hand-written file is never
