@@ -106,3 +106,50 @@ func TestReportRootProgress(t *testing.T) {
 		})
 	}
 }
+
+func TestForEachRootBounded_RunsOneRootAtATimeWithALimitOfOne(t *testing.T) {
+	// Arrange
+	var running, peak atomic.Int32
+	paths := []string{"a", "b", "c", "d", "e", "f"}
+
+	// Act
+	var order []string
+	forEachRootBounded(1, paths, func(p string) string {
+		cur := running.Add(1)
+		for {
+			old := peak.Load()
+			if cur <= old || peak.CompareAndSwap(old, cur) {
+				break
+			}
+		}
+		time.Sleep(2 * time.Millisecond)
+		running.Add(-1)
+		return p
+	}, func(_ int, _ string, v string, _ time.Duration) { order = append(order, v) })
+
+	// Assert
+	assert.Equal(t, int32(1), peak.Load())
+	assert.Equal(t, paths, order)
+}
+
+// The external scanners write to shared places (stdout in a dry run, one
+// baseline file), so a recursive run with --external checks one root at a time.
+func TestRecursiveValidateWorkers(t *testing.T) {
+	tests := []struct {
+		name   string
+		extern bool
+		want   int
+	}{
+		{"without --external the pool is GOMAXPROCS", false, runtime.GOMAXPROCS(0)},
+		{"--external serialises the roots", true, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			old := validateExtern
+			t.Cleanup(func() { validateExtern = old })
+			validateExtern = tt.extern
+
+			assert.Equal(t, tt.want, recursiveValidateWorkers())
+		})
+	}
+}

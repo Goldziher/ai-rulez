@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -202,7 +203,7 @@ func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting;
 	// The roots are checked concurrently over one shared view of the git index;
 	// everything they print is reported here, in root order.
 	ctx := gitutil.WithSharedIndex(cmdContext())
-	forEachRoot(configFiles, func(configPath string) validatedRoot { return validateRoot(ctx, configPath) },
+	forEachRootBounded(recursiveValidateWorkers(), configFiles, func(configPath string) validatedRoot { return validateRoot(ctx, configPath) },
 		func(i int, configPath string, r validatedRoot, elapsed time.Duration) {
 			defer reportRootProgress(i, len(configFiles), configPath, elapsed)
 			r.notes.flush(logger.Std(), os.Stderr)
@@ -253,6 +254,17 @@ func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting;
 	}
 	progress.PrintIfNotQuiet("\nAll %d config(s) are valid\n", len(configFiles))
 	return strictCode
+}
+
+// recursiveValidateWorkers is how many roots a recursive validate checks at once.
+// The external scanners share the terminal (a dry run prints their plan to
+// stdout) and one baseline file (--write-baseline), neither of which tolerates
+// concurrent writers, so --external checks one root at a time.
+func recursiveValidateWorkers() int {
+	if validateExtern {
+		return 1
+	}
+	return runtime.GOMAXPROCS(0)
 }
 
 // warnNestedRootsNotChecked tells a non-recursive run how many other
