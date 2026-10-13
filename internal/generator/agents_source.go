@@ -70,11 +70,11 @@ func resolveThroughLinks(path string) string {
 	path = cleanPath(path)
 	var rest []string
 	for p := path; ; {
-		if real, err := filepath.EvalSymlinks(p); err == nil {
+		if resolved, err := filepath.EvalSymlinks(p); err == nil {
 			for i := len(rest) - 1; i >= 0; i-- {
-				real = filepath.Join(real, rest[i])
+				resolved = filepath.Join(resolved, rest[i])
 			}
-			return real
+			return resolved
 		}
 		parent := filepath.Dir(p)
 		if parent == p {

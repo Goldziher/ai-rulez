@@ -14,6 +14,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const (
@@ -302,7 +303,7 @@ func TestOutputsThroughASymlinkedDirectoryNeverReachTheSource(t *testing.T) {
 				// Arrange
 				root := setup(t, layout.cfgPath, layout.cfgBody)
 				require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(root, tt.link)), 0o755))
-				require.NoError(t, os.Symlink(tt.target, filepath.Join(root, tt.link)))
+				testutil.SymlinkOrSkip(t, tt.target, filepath.Join(root, tt.link))
 				before := snapshot(t, root)
 
 				// Act

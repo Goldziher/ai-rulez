@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/agentssource"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/testutil"
 )
 
 const (
@@ -156,7 +157,7 @@ func TestSymlinkedAGENTSMDIsNeverFollowed(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, ".agents/ai-rulez.toml", "version = \"5.0\"\nname = \"x\"\npresets = [\"claude\"]\n")
 	write(t, root, "docs/agents.md", "# Real\n\nText.\n")
-	require.NoError(t, os.Symlink("docs/agents.md", filepath.Join(root, "AGENTS.md")))
+	testutil.SymlinkOrSkip(t, "docs/agents.md", filepath.Join(root, "AGENTS.md"))
 
 	// Act
 	cfg := load(t, root)
