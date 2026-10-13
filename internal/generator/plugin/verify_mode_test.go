@@ -46,8 +46,13 @@ func TestAddProvenanceRecordsTheModeOfEachOutput(t *testing.T) {
 	require.NoError(t, err)
 	var sidecar provenanceDocument
 	require.NoError(t, json.Unmarshal(result[len(result)-1].RawContent, &sidecar))
-	assert.Equal(t, "0755", sidecar.Outputs["hooks/run.sh"].Mode)
-	assert.Equal(t, "0644", sidecar.Outputs["plugin.json"].Mode, "an output without a mode is written 0644")
+	wantExec, wantPlain := "0755", "0644"
+	if runtime.GOOS == "windows" {
+		// Windows has no POSIX permission bits, so the sidecar records no mode.
+		wantExec, wantPlain = "", ""
+	}
+	assert.Equal(t, wantExec, sidecar.Outputs["hooks/run.sh"].Mode)
+	assert.Equal(t, wantPlain, sidecar.Outputs["plugin.json"].Mode, "an output without a mode is written 0644")
 }
 
 func TestVerifyProvenanceDetectsALostExecutableBit(t *testing.T) {

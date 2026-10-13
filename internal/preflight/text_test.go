@@ -1,6 +1,7 @@
 package preflight
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -87,7 +88,7 @@ func TestHeaderNamesTheConfigFileInUse(t *testing.T) {
 		cfg  config.Config
 		want string
 	}{
-		{"default tree", config.Config{ConfigDir: "/p/.ai-rulez", ConfigFile: "config.toml"}, "/p/.ai-rulez/config.toml"},
+		{"default tree", config.Config{ConfigDir: "/p/.ai-rulez", ConfigFile: "config.toml"}, filepath.Join("/p", ".ai-rulez", "config.toml")},
 		{
 			"config in .agents",
 			config.Config{AgentsLayout: true, ConfigDir: "/p/.agents/.ai-rulez", ConfigFile: "ai-rulez.toml", ConfigFilePath: "/p/.agents/ai-rulez.toml"},
