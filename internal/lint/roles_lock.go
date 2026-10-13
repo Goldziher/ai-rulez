@@ -29,6 +29,19 @@ func WithLockDrift(drift []LockDrift) Option {
 // configLine finds the line of the first config line containing needle, for
 // anchoring a finding that has no file of its own.
 func (r *runner) configLine(needle string) (path string, line int) {
+	return r.configLineWhere(func(lines []string) int {
+		for i, l := range lines {
+			if strings.Contains(l, needle) {
+				return i + 1
+			}
+		}
+		return 0
+	})
+}
+
+// configLineWhere reports the config file and the line find picks in it (1 when
+// find returns 0 or the file cannot be read).
+func (r *runner) configLineWhere(find func(lines []string) int) (path string, line int) {
 	path = r.configFilePath()
 	if path == "" {
 		path = filepath.Join(r.rootAbs(), ".ai-rulez", "config.toml")
@@ -42,10 +55,8 @@ func (r *runner) configLine(needle string) (path string, line int) {
 	if _, ok := r.docs[path]; !ok {
 		r.docs[path] = doc{lines: lines}
 	}
-	for i, l := range lines {
-		if strings.Contains(l, needle) {
-			return path, i + 1
-		}
+	if found := find(lines); found > 0 {
+		return path, found
 	}
 	return path, line
 }

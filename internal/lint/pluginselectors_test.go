@@ -1,6 +1,8 @@
 package lint
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -91,4 +93,72 @@ domains = ["ghost"]
 			}
 		})
 	}
+}
+
+// The finding points at the definition's own table or file, not at the first line
+// that happens to say name = "notify".
+func TestStrict_PluginSelectorUnmatchedLocation(t *testing.T) {
+	skill := map[string]string{".ai-rulez/skills/doc-a/SKILL.md": "---\nname: doc-a\ndescription: Use when documenting\n---\n# Doc\n"}
+	tests := []struct {
+		name     string
+		config   string
+		files    map[string]string
+		wantFile string
+		wantLine func(config string) int
+	}{
+		{
+			name: "a marketplace with the plugin's name earlier in the file",
+			config: `
+[[marketplaces_authoring]]
+name = "notify"
+plugins = ["notify"]
+
+[[plugins_authoring]]
+name = "notify"
+skills = ["nope"]
+`,
+			wantFile: ".ai-rulez/config.toml",
+			wantLine: func(c string) int { return lineOf(c, "[[plugins_authoring]]") + 1 },
+		},
+		{
+			name:     "a plugin defined in its own file",
+			config:   "\n",
+			files:    map[string]string{".ai-rulez/plugins/notify.toml": "skills = [\"nope\"]\n"},
+			wantFile: ".ai-rulez/plugins/notify.toml",
+			wantLine: func(string) int { return 1 },
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			files := precisionTree("", tt.config, skill)
+			for k, v := range tt.files {
+				files[k] = v
+			}
+			root := t.TempDir()
+			writeFiles(t, root, files)
+			gitAdd(t, root)
+
+			fs := lintDir(t, root)
+
+			var got []Finding
+			for _, f := range fs {
+				if f.Code == CodePluginSelectorUnmatched {
+					got = append(got, f)
+				}
+			}
+			require.Len(t, got, 1, "%s", dump(fs))
+			assert.True(t, strings.HasSuffix(filepath.ToSlash(got[0].File), tt.wantFile), got[0].File)
+			assert.Equal(t, tt.wantLine(files[".ai-rulez/config.toml"]), got[0].Line)
+		})
+	}
+}
+
+// lineOf is the 1-based line of the first line equal to want.
+func lineOf(text, want string) int {
+	for i, l := range strings.Split(text, "\n") {
+		if strings.TrimSpace(l) == want {
+			return i + 1
+		}
+	}
+	return 0
 }
