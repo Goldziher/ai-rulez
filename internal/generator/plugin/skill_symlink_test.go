@@ -112,3 +112,60 @@ func writeModeFile(t *testing.T, path, content string, mode os.FileMode) {
 	require.NoError(t, os.WriteFile(path, []byte(content), mode))
 	require.NoError(t, os.Chmod(path, mode))
 }
+
+// TestPassthroughSkillDirectoryLinkSkipsCredentials pins that a directory link
+// admitted by the policy does not smuggle in the credential files and .git/
+// entries behind it, whether the link names a subdirectory or the project root.
+func TestPassthroughSkillDirectoryLinkSkipsCredentials(t *testing.T) {
+	tests := []struct {
+		name   string
+		target func(project string) string
+		want   []string // bundle-relative paths expected besides SKILL.md
+	}{
+		{
+			name:   "subdirectory with a .env, a nested key and a .git directory",
+			target: func(project string) string { return filepath.Join(project, "docs") },
+			want:   []string{"references/ref/a.md"},
+		},
+		{
+			name:   "project root",
+			target: func(project string) string { return project },
+			want:   []string{"references/ref/README.md", "references/ref/docs/a.md"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Arrange
+			project := t.TempDir()
+			skillDir := filepath.Join(project, ".ai-rulez", "skills", "analyze")
+			writeModeFile(t, filepath.Join(skillDir, "SKILL.md"), "---\nname: analyze\n---\n", 0o644)
+			writeModeFile(t, filepath.Join(project, "README.md"), "# readme\n", 0o644)
+			writeModeFile(t, filepath.Join(project, ".env"), "TOKEN=TOP SECRET\n", 0o644)
+			writeModeFile(t, filepath.Join(project, ".npmrc"), "TOP SECRET\n", 0o644)
+			writeModeFile(t, filepath.Join(project, ".git", "config"), "TOP SECRET\n", 0o644)
+			writeModeFile(t, filepath.Join(project, "docs", "a.md"), "# a\n", 0o644)
+			writeModeFile(t, filepath.Join(project, "docs", ".env"), "TOKEN=TOP SECRET\n", 0o644)
+			writeModeFile(t, filepath.Join(project, "docs", "sub", "id_rsa"), "TOP SECRET\n", 0o600)
+			writeModeFile(t, filepath.Join(project, "docs", ".git", "config"), "TOP SECRET\n", 0o644)
+			require.NoError(t, os.MkdirAll(filepath.Join(skillDir, "references"), 0o755))
+			testutil.SymlinkOrSkip(t, tc.target(project), filepath.Join(skillDir, "references", "ref"))
+			m := &Manifest{Name: "p", SourceDir: project,
+				Config: &config.Config{BaseDir: project, Diag: diag.New(nil), Host: ambient.Host{Log: &testutil.LogRecorder{}}}}
+			content := &config.ContentFile{Name: "analyze", Path: filepath.Join(skillDir, "SKILL.md")}
+			dest := filepath.Join(project, "out", "analyze")
+
+			// Act
+			outs, err := passthroughSkill(m, content, dest, false)
+
+			// Assert
+			require.NoError(t, err)
+			byPath := outputsByPath(t, outs, dest)
+			for _, rel := range tc.want {
+				assert.Contains(t, byPath, rel)
+			}
+			for _, out := range outs {
+				assert.NotContains(t, string(out.RawContent), "TOP SECRET", out.Path)
+			}
+		})
+	}
+}

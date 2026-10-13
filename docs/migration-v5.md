@@ -548,6 +548,9 @@ Unknown subcommands (`telemetry bogus`) exit `1`. When a command covers several 
   refused with a warning that is shown even with `--quiet`, and `ai-rulez validate` reports it as an error. Symlinks
   in includes (git or local), installed skills, skill sources and OKF bundles are never followed and are skipped with
   a warning (an installed skill with a symlinked `SKILL.md` is refused). `init --from` never follows symlinks.
+  A credential file (`.env`, `.npmrc`, `id_rsa`, ...) or anything under `.git/` met inside a followed directory link is
+  skipped with a warning, in `generate` and `generate --plugin` alike, so a link to `docs/` or to the project root never
+  bundles one.
   Repository content read at load time is capped at 8 MiB per file; a larger file is an error.
 - **`scan` is security-only.** `ai-rulez scan` runs only the `security` analyzer's checks. Hook and config findings
   (`AR504`, `AR9K0`, ...) that used to appear in its report belong to `validate --strict`.

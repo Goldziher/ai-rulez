@@ -49,6 +49,28 @@ func TestProjectSkillResources_SymlinkPolicy(t *testing.T) {
 			wantRes: []string{"references/shared/a.md"},
 		},
 		{
+			name: "credential file behind a directory link is not bundled",
+			setup: func(t *testing.T, project, _, skill string) {
+				write(t, filepath.Join(project, "docs", "a.md"), "# a\n")
+				write(t, filepath.Join(project, "docs", ".env"), "TOKEN=SECRET\n")
+				write(t, filepath.Join(project, "docs", "sub", "id_rsa"), "SECRET")
+				write(t, filepath.Join(project, "docs", ".git", "config"), "SECRET")
+				linkAt(t, filepath.Join(project, "docs"), filepath.Join(skill, "references", "ref"))
+			},
+			wantRes: []string{"references/ref/a.md"},
+		},
+		{
+			name: "link to the project root pulls in no credentials or .git",
+			setup: func(t *testing.T, project, _, skill string) {
+				write(t, filepath.Join(project, ".env"), "SECRET")
+				write(t, filepath.Join(project, ".npmrc"), "SECRET")
+				write(t, filepath.Join(project, ".git", "config"), "SECRET")
+				write(t, filepath.Join(project, "README.md"), "# readme\n")
+				linkAt(t, project, filepath.Join(skill, "references", "root"))
+			},
+			wantRes: []string{"references/root/README.md", "references/root/.ai-rulez/skills/s/SKILL.md"},
+		},
+		{
 			name: "kind directory link outside project is refused and reported",
 			setup: func(t *testing.T, _, outside, skill string) {
 				write(t, filepath.Join(outside, "scripts", "x.sh"), "SECRET")

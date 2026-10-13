@@ -250,8 +250,11 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 	var resources []SkillResource
 	visited := map[string]bool{}
 
-	var visit func(dir string) error
-	visit = func(dir string) error {
+	// viaLink is set below a followed directory link: its entries were never
+	// named by the author, so each one gets the credential check a followed
+	// link target gets.
+	var visit func(dir string, viaLink bool) error
+	visit = func(dir string, viaLink bool) error {
 		if real, err := s.v.EvalSymlinks(dir); err == nil {
 			if visited[real] {
 				return nil // a link cycle inside the project
@@ -265,6 +268,9 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 		}
 		for _, d := range entries {
 			path := filepath.Join(dir, d.Name())
+			if viaLink && s.skipSensitiveLinked(path) {
+				continue
+			}
 			isDir, ok := s.entryInfo(path, d)
 			if !ok {
 				continue
@@ -273,7 +279,7 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 				if filter.excluded(filter.rel(skillDir, path)) {
 					continue
 				}
-				if err := visit(path); err != nil {
+				if err := visit(path, viaLink || d.Type()&os.ModeSymlink != 0); err != nil {
 					return err
 				}
 				continue
@@ -288,7 +294,7 @@ func (s *contentScanner) walkSkillResourceDir(skillDir, kindDir, kind string, fi
 		}
 		return nil
 	}
-	if err := visit(kindDir); err != nil {
+	if err := visit(kindDir, false); err != nil {
 		return nil, err
 	}
 
