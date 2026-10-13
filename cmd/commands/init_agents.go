@@ -95,7 +95,7 @@ func runInitAgents(cmd *cobra.Command, args []string) error {
 func agentsInitConflicts(base string, inAgents bool) []string {
 	var out []string
 	if inAgents {
-		for _, dir := range []string{".ai-rulez", ".config/ai-rulez"} {
+		for _, dir := range []string{defaultConfigDirName, ".config/ai-rulez"} {
 			rel := dir + "/config.toml"
 			if info, err := os.Stat(filepath.Join(base, filepath.FromSlash(rel))); err == nil && !info.IsDir() {
 				out = append(out, rel+" is ignored once "+config.AgentsDirName+"/"+config.AgentsConfigFilename+" exists: it takes precedence")
