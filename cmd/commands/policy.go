@@ -86,11 +86,13 @@ func withCLILockPolicy(opts []config.LoadOption) []config.LoadOption {
 // loadProject, loadProjectFile and loadProjectDir are the project loaders under
 // the command line's policy.
 func loadProject(ctx context.Context, dir string, opts ...config.LoadOption) (*config.Config, error) {
-	return refusalsReported(project.Load(config.WithPolicyContext(ctx, activePolicy), dir, withCLILockPolicy(opts)...))
+	cfg, err := project.Load(config.WithPolicyContext(ctx, activePolicy), dir, withCLILockPolicy(opts)...)
+	return refusalsReported(ctx, cfg, err)
 }
 
 func loadProjectFile(ctx context.Context, path string, opts ...config.LoadOption) (*config.Config, error) {
-	cfg, err := refusalsReported(project.LoadFile(config.WithPolicyContext(ctx, activePolicy), path, withCLILockPolicy(opts)...))
+	cfg, err := project.LoadFile(config.WithPolicyContext(ctx, activePolicy), path, withCLILockPolicy(opts)...)
+	cfg, err = refusalsReported(ctx, cfg, err)
 	if err != nil && errors.Is(err, fs.ErrNotExist) && strings.Contains(err.Error(), "stat config path") {
 		return nil, oops.Hint("-C/--config takes a config file or a config directory such as .ai-rulez; check the path").
 			Errorf("config path %s does not exist", path)
@@ -99,16 +101,17 @@ func loadProjectFile(ctx context.Context, path string, opts ...config.LoadOption
 }
 
 func loadProjectDir(ctx context.Context, dir, configDirName string, opts ...config.LoadOption) (*config.Config, error) {
-	return refusalsReported(project.LoadDir(config.WithPolicyContext(ctx, activePolicy), dir, configDirName, withCLILockPolicy(opts)...))
+	cfg, err := project.LoadDir(config.WithPolicyContext(ctx, activePolicy), dir, configDirName, withCLILockPolicy(opts)...)
+	return refusalsReported(ctx, cfg, err)
 }
 
 // refusalsReported prints the symlinked content of the project the loader refused
 // to stderr, which --quiet does not silence: the library records them in
 // Config.ContentProblems and prints nothing itself.
-func refusalsReported(cfg *config.Config, err error) (*config.Config, error) {
+func refusalsReported(ctx context.Context, cfg *config.Config, err error) (*config.Config, error) {
 	if err == nil && cfg != nil {
 		for _, p := range cfg.ContentProblems {
-			fmt.Fprintf(os.Stderr, "WARN  refusing symlinked content %s: %s\n", p.Path, p.Reason)
+			noteLine(ctx, os.Stderr, fmt.Sprintf("WARN  refusing symlinked content %s: %s\n", p.Path, p.Reason))
 		}
 	}
 	return cfg, err //nolint:wrapcheck // already contextual
@@ -156,9 +159,9 @@ func init() {
 
 // policyGate fails when the policy had to clamp the repository configuration:
 // generation and plain validation refuse to continue on a loosening attempt.
-func policyGate(cfg *config.Config) error {
+func policyGate(ctx context.Context, cfg *config.Config) error {
 	for _, line := range config.PolicyWarnings(cfg) {
-		logger.Warn("Organization policy violation (--policy-mode warn): " + line)
+		logger.FromContext(ctx).Warn("Organization policy violation (--policy-mode warn): " + line)
 	}
 	return config.CheckPolicy(cfg) //nolint:wrapcheck // already contextual
 }

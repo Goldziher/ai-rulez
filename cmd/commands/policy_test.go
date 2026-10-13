@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -31,7 +32,7 @@ func TestPolicyGate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Act
-			err := policyGate(tt.cfg)
+			err := policyGate(context.Background(), tt.cfg)
 			// Assert
 			if !tt.wantErr {
 				require.NoError(t, err)

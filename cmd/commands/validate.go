@@ -100,7 +100,7 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 
 		if !validateStrict {
 			// A strict run reports the same attempts as AR74x findings.
-			if err := policyGate(cfg); err != nil {
+			if err := policyGate(ctx, cfg); err != nil {
 				return fail(err)
 			}
 		}
@@ -205,6 +205,7 @@ func runRecursiveValidate() int { //nolint:gocyclo // linear per-root reporting;
 	forEachRoot(configFiles, func(configPath string) validatedRoot { return validateRoot(ctx, configPath) },
 		func(i int, configPath string, r validatedRoot, elapsed time.Duration) {
 			defer reportRootProgress(i, len(configFiles), configPath, elapsed)
+			r.notes.flush(logger.Std(), os.Stderr)
 			if r.cfg != nil {
 				warnLegacyLayout(r.cfg.ConfigDir)
 			}
@@ -300,11 +301,13 @@ type validatedRoot struct {
 	err     error
 	report  *lint.Report // strict runs only
 	lintErr error
+	notes   *rootNotes // what the root's work logged, printed in root order
 }
 
 // validateRoot checks one root, and under --strict lints it.
 func validateRoot(ctx context.Context, configPath string) validatedRoot {
 	var r validatedRoot
+	ctx, r.notes = withRootNotes(ctx)
 	r.cfg, r.err = checkConfigFile(ctx, configPath)
 	if r.err == nil && validateStrict {
 		r.report, r.lintErr = strictLint(ctx, r.cfg)
@@ -334,7 +337,7 @@ func checkConfigFile(ctx context.Context, configPath string) (*config.Config, er
 		return cfg, err
 	}
 	if !validateStrict { // a strict run reports the attempts as AR74x findings
-		if err := policyGate(cfg); err != nil {
+		if err := policyGate(ctx, cfg); err != nil {
 			return cfg, err
 		}
 	}

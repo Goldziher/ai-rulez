@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,7 +40,7 @@ func TestApplyGitignoreOverride(t *testing.T) {
 			updateGitignore, recursive = tt.flag, tt.recursive
 			cfg := &config.Config{Gitignore: tt.gitignore}
 
-			applyGitignoreOverride(cfg)
+			applyGitignoreOverride(context.Background(), cfg)
 
 			assert.Equal(t, tt.want, cfg.ShouldUpdateGitignore())
 		})
