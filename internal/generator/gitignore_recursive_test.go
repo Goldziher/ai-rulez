@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
@@ -42,7 +43,7 @@ func TestGitignoreSink_WritesOneBlockAtTheToplevel(t *testing.T) {
 	require.NoError(t, apiGen.updateGitignore(rootOutputs(api)))
 
 	// Act
-	require.NoError(t, sink.Write(logger.Discard()))
+	require.NoError(t, sink.Write(t.Context(), gitutil.Git{}.WithLog(logger.Discard())))
 
 	// Assert: one block at the toplevel, patterns relative to each root.
 	inside := gitignore.PatternsInsideFence(readGitignore(t, top))
@@ -75,7 +76,7 @@ func TestGitignoreSink_DropsPatternsOfARootThatNoLongerEmitsThem(t *testing.T) {
 	firstGen := NewGenerator(&config.Config{BaseDir: api, Gitignore: gitignoreOn()})
 	firstGen.SetGitignoreSink(first, "packages/api")
 	require.NoError(t, firstGen.updateGitignore(rootOutputs(api)))
-	require.NoError(t, first.Write(logger.Discard()))
+	require.NoError(t, first.Write(t.Context(), gitutil.Git{}.WithLog(logger.Discard())))
 	require.Contains(t, readGitignore(t, top), "packages/api/.claude/skills/")
 
 	// Act: a second run where the root emits no committed outputs.
@@ -83,7 +84,7 @@ func TestGitignoreSink_DropsPatternsOfARootThatNoLongerEmitsThem(t *testing.T) {
 	secondGen := NewGenerator(&config.Config{BaseDir: api, Gitignore: gitignoreOn()})
 	secondGen.SetGitignoreSink(second, "packages/api")
 	require.NoError(t, secondGen.updateGitignore(nil))
-	require.NoError(t, second.Write(logger.Discard()))
+	require.NoError(t, second.Write(t.Context(), gitutil.Git{}.WithLog(logger.Discard())))
 
 	// Assert: the stale patterns are gone.
 	assert.NotContains(t, readGitignore(t, top), "packages/api/.claude/skills/")
@@ -104,7 +105,7 @@ func TestGitignoreSink_CommittedOutputsStayOutOfTheBlock(t *testing.T) {
 
 	// Act
 	require.NoError(t, gen.updateGitignore(rootOutputs(api)))
-	require.NoError(t, sink.Write(logger.Discard()))
+	require.NoError(t, sink.Write(t.Context(), gitutil.Git{}.WithLog(logger.Discard())))
 
 	// Assert: nothing was listed and no file was created.
 	content := readGitignore(t, top)

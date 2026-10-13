@@ -89,7 +89,11 @@ longer holds).`,
 			return fail(errVerifyNeedsMode)
 		}
 		out := outFor(cmd)
-		if err := checkPluginSelectors(true, verifyRecursive); err != nil {
+		selection, err := pluginSelectionOf(cmd)
+		if err == nil {
+			err = selection.check(true, verifyRecursive)
+		}
+		if err != nil {
 			return fail(err)
 		}
 		if verifyRecursive {
@@ -106,7 +110,7 @@ longer holds).`,
 			logger.Info("Skipping plugin verification: no plugin authoring configuration")
 			return finishPluginVerify(out, pluginVerifyDoc{Status: pluginVerifySkipped, Configs: 0})
 		}
-		gen := limitPlugins(generator.NewGenerator(cfg))
+		gen := selection.limit(generator.NewGenerator(cfg))
 		if err := gen.VerifyPlugin(profile); err != nil {
 			if verifyIfGenerated && errors.Is(err, generator.ErrPluginNotGenerated) {
 				logger.Info("Skipping plugin verification: the plugin bundle has not been generated")

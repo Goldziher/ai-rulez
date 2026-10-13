@@ -39,10 +39,6 @@ var (
 	generateFrozen     bool
 	generateRole       string
 	generateEmitPlan   string
-	// pluginNames and marketplaceNames limit --plugin runs (generate and verify)
-	// to some plugins or marketplaces of a root that defines several.
-	pluginNames      []string
-	marketplaceNames []string
 )
 
 var GenerateCmd = &cobra.Command{
@@ -150,10 +146,14 @@ func generateLoaded(ctx context.Context, cmd *cobra.Command, cfg *config.Config)
 
 	out := outFor(cmd)
 	if pluginMode {
-		if err := checkPluginSelectors(pluginMode, recursive); err != nil {
+		selection, err := pluginSelectionOf(cmd)
+		if err == nil {
+			err = selection.check(pluginMode, recursive)
+		}
+		if err != nil {
 			return fail(err)
 		}
-		return runPluginGenerate(out, limitPlugins(gen))
+		return runPluginGenerate(out, selection.limit(gen))
 	}
 
 	if dryRun {
@@ -292,16 +292,36 @@ func printDryRun(gen *generator.Generator, indent string) error {
 // addPluginSelectorFlags registers --plugin-name and --marketplace-name, which limit
 // a --plugin run to some of the plugins or marketplaces a root defines.
 func addPluginSelectorFlags(f *pflag.FlagSet) {
-	f.StringArrayVar(&pluginNames, "plugin-name", nil,
+	f.StringArray("plugin-name", nil,
 		"With --plugin: only the plugin of this name (repeatable); the marketplace indexes are left alone")
-	f.StringArrayVar(&marketplaceNames, "marketplace-name", nil,
+	f.StringArray("marketplace-name", nil,
 		"With --plugin: only the marketplace of this name, its index and its plugins (repeatable)")
 }
 
-// checkPluginSelectors rejects --plugin-name and --marketplace-name without --plugin
+// pluginSelection is what --plugin-name and --marketplace-name picked: the
+// plugins or marketplaces of a root that defines several.
+type pluginSelection struct {
+	plugins      []string
+	marketplaces []string
+}
+
+// pluginSelectionOf reads the selector flags of cmd.
+func pluginSelectionOf(cmd *cobra.Command) (pluginSelection, error) {
+	plugins, err := cmd.Flags().GetStringArray("plugin-name")
+	if err != nil {
+		return pluginSelection{}, oops.Wrapf(err, "read --plugin-name")
+	}
+	marketplaces, err := cmd.Flags().GetStringArray("marketplace-name")
+	if err != nil {
+		return pluginSelection{}, oops.Wrapf(err, "read --marketplace-name")
+	}
+	return pluginSelection{plugins: plugins, marketplaces: marketplaces}, nil
+}
+
+// check rejects --plugin-name and --marketplace-name without --plugin
 // (or with --recursive, where each root has its own plugins).
-func checkPluginSelectors(plugin, recursive bool) error {
-	if len(pluginNames) == 0 && len(marketplaceNames) == 0 {
+func (p pluginSelection) check(plugin, recursive bool) error {
+	if len(p.plugins) == 0 && len(p.marketplaces) == 0 {
 		return nil
 	}
 	if !plugin {
@@ -313,9 +333,9 @@ func checkPluginSelectors(plugin, recursive bool) error {
 	return nil
 }
 
-// limitPlugins applies the --plugin-name and --marketplace-name selection to gen.
-func limitPlugins(gen *generator.Generator) *generator.Generator {
-	return gen.WithPluginNames(pluginNames).WithMarketplaceNames(marketplaceNames)
+// limit applies the selection to gen.
+func (p pluginSelection) limit(gen *generator.Generator) *generator.Generator {
+	return gen.WithPluginNames(p.plugins).WithMarketplaceNames(p.marketplaces)
 }
 
 // runPluginGenerate handles `generate --plugin`: it renders (or, with --dry-run,

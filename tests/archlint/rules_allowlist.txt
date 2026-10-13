@@ -10,7 +10,6 @@ background internal/config/skill_resources.go 1
 background internal/evals/changed.go 1
 background internal/evals/grade.go 1
 background internal/generator/generator.go 1
-background internal/generator/gitignore_recursive.go 1
 background internal/generator/lock_role_outputs.go 1
 background internal/gitutil/diff.go 4
 background internal/gitutil/gitutil.go 12
@@ -49,7 +48,7 @@ global cmd/commands/domain.go 7
 global cmd/commands/eval.go 3
 global cmd/commands/eval_calibrate.go 2
 global cmd/commands/eval_import.go 2
-global cmd/commands/generate.go 22
+global cmd/commands/generate.go 20
 global cmd/commands/generate_discovery.go 1
 global cmd/commands/generate_preflight.go 1
 global cmd/commands/generate_watch.go 1
