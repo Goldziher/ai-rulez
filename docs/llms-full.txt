@@ -6870,7 +6870,7 @@ found in that directory, and an error for a `default_layers` entry without a fil
 - Everything under `.agents/` in the layout above is scanned like the `.ai-rulez` tree: same file formats, same
   `bundle_exclude`, and the same symlink policy (a symlink must resolve inside the project). The one exception is
   `AGENTS.md` itself: a symlinked `AGENTS.md` is never followed and is not read.
-- A file that carries the ai-rulez generated header is output of an earlier run and is never read as source. This is
+- A file whose header (the first comment, after any frontmatter) is the ai-rulez generated banner is output of an earlier run and is never read as source. A mention of the banner further down, in prose or a code block, does not make a hand-written file output. This is
   checked on every load, so a project that switched from `source = "ai-rulez"` (whose `generate` wrote
   `AGENTS.md` and `.agents/skills`) is not fed its own output. The ignored files are named in a warning; delete them or
   replace them with hand-written files.
