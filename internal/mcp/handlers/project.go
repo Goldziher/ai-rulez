@@ -669,6 +669,7 @@ func generateDirectory(ctx context.Context, request *ToolRequest, baseDir string
 type driftItem struct {
 	Kind string `json:"kind"`
 	Path string `json:"path"`
+	Note string `json:"note,omitempty"`
 }
 
 // checkDrift is `generate --check`: it compares the generated files with what
@@ -685,7 +686,7 @@ func checkDrift(gen *generator.Generator, cfg *config.Config, profile string) (m
 		if d.Kind == generator.DriftBlocked {
 			blocked++
 		}
-		differing = append(differing, driftItem{Kind: string(d.Kind), Path: relPathList(cfg.BaseDir, []string{d.Path})[0]})
+		differing = append(differing, driftItem{Kind: string(d.Kind), Path: relPathList(cfg.BaseDir, []string{d.Path})[0], Note: d.Note})
 	}
 	status, message := statusOK, "Generated files are up to date"
 	if len(differing) > 0 {

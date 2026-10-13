@@ -371,6 +371,86 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	return nil
 }
 
+// gitignoreDriftNote names the managed block in a drift report.
+const gitignoreDriftNote = "managed block"
+
+// gitignoreDrift is updateGitignore without the write: it reports the managed
+// block as drifted when a generate run would add, change or remove it. A
+// recursive run only collects this root's patterns into the shared sink, which
+// judges the one toplevel block once every root is in (GitignoreSink.Drift).
+func (g *Generator) gitignoreDrift(outputs []config.OutputFile) (Drift, bool) {
+	if g.userMode {
+		return Drift{}, false
+	}
+	managed := g.config.ShouldUpdateGitignore() || g.hasLocalGitignoreTargets()
+	if g.gitignoreSink != nil {
+		if managed {
+			paths, _ := g.neededGitignorePatterns(outputs)
+			g.gitignoreSink.Collect(g.gitignorePrefix, paths)
+		}
+		return Drift{}, false
+	}
+	if gitignore.IsSymlink(g.config.BaseDir) {
+		return Drift{}, false // git does not read it, and generate writes the exclude file instead
+	}
+	existing, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), filepath.Join(g.config.BaseDir, ".gitignore"))
+	if err != nil && !os.IsNotExist(err) {
+		return Drift{}, false
+	}
+	var paths []string
+	if managed {
+		needed, _ := g.neededGitignorePatterns(outputs)
+		paths = dropUserPatterns(needed, string(existing))
+	}
+	return managedBlockDrift(".gitignore", string(existing), paths)
+}
+
+// managedBlockDrift compares content with the managed block holding paths. No
+// paths means the block should not be there; a block that lacks one of paths,
+// or none at all, is drift.
+func managedBlockDrift(rel, content string, paths []string) (Drift, bool) {
+	hasBlock := strings.Contains(content, gitignore.BeginMarker) || strings.Contains(content, gitignore.OldHeader)
+	if len(paths) == 0 {
+		if !hasBlock {
+			return Drift{}, false
+		}
+		return Drift{Path: rel, Kind: DriftStale, Note: gitignoreDriftNote}, true
+	}
+	if !hasBlock {
+		return Drift{Path: rel, Kind: DriftMissing, Note: gitignoreDriftNote}, true
+	}
+	if strings.Contains(content, gitignore.BeginMarker) && blockHoldsAll(content, paths) {
+		return Drift{}, false
+	}
+	return Drift{Path: rel, Kind: DriftStale, Note: gitignoreDriftNote}, true
+}
+
+// blockHoldsAll reports whether the managed block of content lists every one of
+// paths. Extra lines do not count: --check asks whether generate would add what
+// is missing, which is what lets an ignored output slip into git.
+func blockHoldsAll(content string, paths []string) bool {
+	inBlock := map[string]bool{}
+	in := false
+	for _, line := range strings.Split(content, "\n") {
+		switch trimmed := strings.TrimSpace(line); trimmed {
+		case gitignore.BeginMarker:
+			in = true
+		case gitignore.EndMarker:
+			in = false
+		default:
+			if in {
+				inBlock[trimmed] = true
+			}
+		}
+	}
+	for _, p := range paths {
+		if !inBlock[p] {
+			return false
+		}
+	}
+	return true
+}
+
 // warnUnignoredProtected reports the protected patterns a user rule
 // deliberately un-ignores: they stay out of the block, but the user should know
 // the machine-local or secret output is now committable.

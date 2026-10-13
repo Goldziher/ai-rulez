@@ -344,8 +344,30 @@ func (checkApplier) apply(g *Generator, p *RunPlan) (*ApplyResult, error) {
 		}
 		drift = append(drift, Drift{Path: edit.rel, Kind: kind})
 	}
+	if d, ok := g.checkGitignore(outputs, linked); ok {
+		drift = append(drift, d)
+	}
 	sortDrift(drift)
 	return &ApplyResult{Drift: drift}, nil
+}
+
+// checkGitignore is the managed .gitignore block as a generated output: it
+// reports the block when a generate run would rewrite or remove it. The state a
+// write would have left behind (outputs generate skips, the local manifest it
+// would record) is rebuilt first, so a checkout generate just wrote is in sync.
+func (g *Generator) checkGitignore(outputs []config.OutputFile, linked map[string]bool) (Drift, bool) {
+	g.skippedPaths = make(map[string]bool, len(linked))
+	for rel := range linked {
+		g.skippedPaths[rel] = true
+	}
+	for _, output := range outputs {
+		if _, _, ok := g.outputState(output); !ok && !output.IsDir {
+			g.skippedPaths[g.relSlash(g.absOutputPath(output.Path))] = true
+		}
+	}
+	g.markSensitiveOutputs(outputs)
+	g.planLocalManifest(outputs)
+	return g.gitignoreDrift(outputs)
 }
 
 type describeApplier struct{}

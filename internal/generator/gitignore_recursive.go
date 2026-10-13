@@ -70,6 +70,41 @@ func (s *GitignoreSink) Add(log logger.Logger, prefix string, patterns []string)
 	return nil
 }
 
+// Collect records the patterns one root would manage, like Add, but writes
+// nothing: the read-only half of a recursive `generate --check`.
+func (s *GitignoreSink) Collect(prefix string, patterns []string) {
+	if s == nil || s.toplevel == "" {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, p := range patterns {
+		if p = joinGitignorePrefix(prefix, p); p != "" {
+			s.patterns[p] = true
+		}
+	}
+}
+
+// Drift reports whether Write would change the toplevel block, given the
+// patterns Collect gathered from every root. The path is relative to the toplevel.
+func (s *GitignoreSink) Drift(log logger.Logger) (Drift, bool) {
+	if s == nil || s.toplevel == "" || gitignore.IsSymlink(s.toplevel) {
+		return Drift{}, false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	patterns := make([]string, 0, len(s.patterns))
+	for p := range s.patterns {
+		patterns = append(patterns, p)
+	}
+	sort.Strings(patterns)
+	data, err := gitutil.ReadIgnoreFileOrEmpty(log, filepath.Join(s.toplevel, ".gitignore"))
+	if err != nil && !os.IsNotExist(err) {
+		return Drift{}, false
+	}
+	return managedBlockDrift(".gitignore", string(data), dropUserPatterns(patterns, string(data)))
+}
+
 // Write rewrites the toplevel managed block to exactly the patterns this run
 // collected, dropping what an earlier run left behind (a removed root or
 // output) and removing the block when nothing is left. It runs once, after
