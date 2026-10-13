@@ -47,6 +47,9 @@ func runInitAgents(cmd *cobra.Command, args []string) error {
 	dir := agentsInitDir()
 	layout := config.LayoutOf(dir)
 	inAgents := config.IsAgentsConfigDir(dir)
+	for _, conflict := range agentsInitConflicts(".", inAgents) {
+		logger.Warn(conflict)
+	}
 
 	if fromFlag != "" {
 		return runInitAgentsImport(cmd, dir, inAgents)
@@ -84,6 +87,27 @@ func runInitAgents(cmd *cobra.Command, args []string) error {
 	return reportChange(out, out.JSON(), changeResult{
 		Status: statusCreated, Type: typeConfig, Name: projectName, Path: layout.ConfigFile,
 	}, true)
+}
+
+// agentsInitConflicts lists, as warnings, the existing configuration the one init
+// writes will shadow or be shadowed by: .agents/ai-rulez.toml takes precedence over
+// any config.toml, so only one of them is ever read. base is the project directory.
+func agentsInitConflicts(base string, inAgents bool) []string {
+	var out []string
+	if inAgents {
+		for _, dir := range []string{".ai-rulez", ".config/ai-rulez"} {
+			rel := dir + "/config.toml"
+			if info, err := os.Stat(filepath.Join(base, filepath.FromSlash(rel))); err == nil && !info.IsDir() {
+				out = append(out, rel+" is ignored once "+config.AgentsDirName+"/"+config.AgentsConfigFilename+" exists: it takes precedence")
+			}
+		}
+		return out
+	}
+	existing := filepath.Join(base, config.AgentsDirName, config.AgentsConfigFilename)
+	if info, err := os.Stat(existing); err == nil && !info.IsDir() {
+		out = append(out, config.AgentsDirName+"/"+config.AgentsConfigFilename+" takes precedence over the config.toml this writes, which will be ignored")
+	}
+	return out
 }
 
 // agentsInitDir is the directory the agents-source config goes in: --config-dir

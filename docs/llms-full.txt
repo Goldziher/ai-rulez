@@ -6895,7 +6895,7 @@ found in that directory, and an error for a `default_layers` entry without a fil
   It creates no `.ai-rulez` tree and no example content: the content directories belong to the standards. With
   `--config-dir .ai-rulez` the configuration goes to `.ai-rulez/config.toml` with `source = "agents"` instead. An
   existing configuration is only replaced with `--force`, which keeps the old file as `<file>.bak-<timestamp>`; the
-  `.agents` directory itself is never moved aside. The MCP tool `init_project` takes the same `source` argument.
+  `.agents` directory itself is never moved aside. `init` warns at once when the file it writes would be shadowed by an existing `.agents/ai-rulez.toml`, or would shadow an existing `.ai-rulez/config.toml` (`doctor` reports the same later). The MCP tool `init_project` takes the same `source` argument.
 - `ai-rulez init --source agents --from CLAUDE.md,.cursor` and `ai-rulez convert --into .agents` move other tools'
   files into the layout above. What the agents source already reads where it is (the root `AGENTS.md`, everything
   under `.agents`) is left in place and reported as such, the configuration goes to `.agents/ai-rulez.toml` and
