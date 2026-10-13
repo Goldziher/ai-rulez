@@ -6847,12 +6847,29 @@ The configuration can sit in either place:
 
 When both files exist, `.agents/ai-rulez.toml` is used and the other is ignored.
 
+##### Layers and the local overlay
+
+The `config.<name>.toml` layers (`default_layers`, `AI_RULEZ_LAYERS`, `AI_RULEZ_PROFILE`), `config.local.toml` and the
+`plugins/` and `marketplaces/` definition files are read from the directory that holds the project's state, never from
+the standard's `.agents/` folder:
+
+| Configuration in            | Layers and `config.local.toml` in |
+| --------------------------- | --------------------------------- |
+| `.agents/ai-rulez.toml`     | `.agents/.ai-rulez/`              |
+| `.ai-rulez/config.toml`     | `.ai-rulez/`                      |
+
+A `config.<name>.toml` placed beside `.agents/ai-rulez.toml` is not read. `ai-rulez config layers` lists the layers
+found in that directory, and an error for a `default_layers` entry without a file names the path to create.
+
 #### What is read
 
-- The root `AGENTS.md` becomes one context file named `agents`. Frontmatter keys no tool reads are kept under
-  `metadata`. A nested `<scope>/AGENTS.md` is not read as source.
+- The root `AGENTS.md` becomes one context file named `agents`. As for every content file, its first `# Title`
+  heading is dropped when it is rendered: the item is titled `agents` in the generated files. Frontmatter keys no tool
+  reads are kept under `metadata`. That item has no file of its own to address: `list`, `remove` and the MCP tools do
+  not see or change the `agents` context, edit `AGENTS.md` by hand. A nested `<scope>/AGENTS.md` is not read as source.
 - Everything under `.agents/` in the layout above is scanned like the `.ai-rulez` tree: same file formats, same
-  symlink policy (symlinks must resolve inside the project), same `bundle_exclude`.
+  `bundle_exclude`, and the same symlink policy (a symlink must resolve inside the project). The one exception is
+  `AGENTS.md` itself: a symlinked `AGENTS.md` is never followed and is not read.
 - A file that carries the ai-rulez generated header is output of an earlier run and is never read as source. This is
   checked on every load, so a project that switched from `source = "ai-rulez"` (whose `generate` wrote
   `AGENTS.md` and `.agents/skills`) is not fed its own output. The ignored files are named in a warning; delete them or

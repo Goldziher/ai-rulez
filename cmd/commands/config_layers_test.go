@@ -29,6 +29,8 @@ func TestWriteConfigLayers(t *testing.T) {
 	assert.Contains(t, js.String(), `"origin": "env"`)
 
 	var none bytes.Buffer
-	require.NoError(t, writeConfigLayers(&none, t.TempDir(), nil, nil, false))
+	emptyDir := t.TempDir()
+	require.NoError(t, writeConfigLayers(&none, emptyDir, nil, nil, false))
 	assert.Contains(t, none.String(), "No layers")
+	assert.Contains(t, none.String(), emptyDir, "it names the directory the layer files go in")
 }
