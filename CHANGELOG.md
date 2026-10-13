@@ -10,6 +10,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - **A root-level `action.yml` lets any workflow `uses: Goldziher/ai-rulez@<ref>` directly.** It installs a sha256-verified release binary, resolving `latest` or a pinned version, caches the download and adds `ai-rulez` to `PATH`; `scripts/pre-commit/run-ai-rulez.sh` gained `AI_RULEZ_RESOLVE_ONLY=1`, which prints the resolved binary's path instead of running it.
 
+### Fixed
+
+- **`validate` runs every analyzer in an OKF-layout project, with the OKF findings next to theirs.** A configuration directory with a root `index.md` (what `init` scaffolds) used to stop at the `AR9B*` checks: the references (AR101, AR201), security (AR001, AR004, AR005), resource (AR402) and hook analyzers never ran, `--analyzer references` was ignored, and with `--strict` any OKF warning ended the run. The OKF findings now go through the lint run, so `[lint]` severities, `--fail-on`, the baseline and `--analyzer` (including `--analyzer okf`) apply to them, and `--recursive` reports them too. Exit codes change: a project that passed only because the other analyzers were skipped now exits 2 on their findings, and an OKF error no longer hides them. (Fixes #396, #408)
+
 ## [5.1.1] - 2026-10-13
 
 ### Fixed

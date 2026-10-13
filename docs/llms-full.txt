@@ -4619,7 +4619,7 @@ source file's frontmatter (the export normalizes them), and a source file that i
 `x-ai-rulez.metadata`, `type` and `title` are added, and each directory gets an `index.md` (the root one names
 `okf_version`). The loader maps `x-ai-rulez.metadata` back onto the native fields, treats `type`, `title` and
 `x-ai-rulez` as reserved, and ignores generated `index.md`/`log.md` listings, so generated output does not change.
-`validate` runs `okf validate` on such a tree. `init`, `add`, `remove` and the MCP CRUD tools write this form: a new concept gets `type`, `title` and `x-ai-rulez`, and the `index.md` files are refreshed when the tree is a bundle (it has a root `index.md`); `export okf` of such a tree reproduces it byte for byte. A tree without a root `index.md` is the legacy layout: it still loads, with a deprecation notice from `validate`, `generate` and `list`. See [Migrating to v5](migration-v5.md#okf-is-the-format-of-ai-rulez).
+`validate` reports the `okf validate` findings (`AR9B*`) for such a tree together with every other analyzer's (references, security, resources, hooks); they never replace them, and `--analyzer okf` selects the OKF pass alone. `init`, `add`, `remove` and the MCP CRUD tools write this form: a new concept gets `type`, `title` and `x-ai-rulez`, and the `index.md` files are refreshed when the tree is a bundle (it has a root `index.md`); `export okf` of such a tree reproduces it byte for byte. A tree without a root `index.md` is the legacy layout: it still loads, with a deprecation notice from `validate`, `generate` and `list`. See [Migrating to v5](migration-v5.md#okf-is-the-format-of-ai-rulez).
 
 ##### What `migrate okf` will and will not touch
 
@@ -12749,6 +12749,13 @@ linted by `validate --strict` and `doctor`. The same checks run on any third-par
 | AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
 | AR9B8 | `okf-path-unsafe` | error | A symlink, or paths differing only in case |
 | AR9B9 | `okf-lossy-mapping` | info | Reserved for import notes: `x-ai-rulez` data that could not be mapped |
+
+A configuration directory with a root `index.md` (what `ai-rulez init` scaffolds) is a bundle too, and its
+`AR9B*` findings are reported as part of the same run. They sit next to the other analyzers, never instead of
+them: a secret (AR001), a dead link (AR201), a glob that matches nothing (AR101, read from `paths` or from
+`x-ai-rulez.metadata.paths`) or a missing skill resource (AR402) is reported whether or not the tree is OKF.
+`--fail-on`, the baseline, `--recursive` and `--analyzer` apply to them: `--analyzer references` runs only
+the references analyzer, and `--analyzer okf` runs only the OKF pass.
 
 Severities are configured like any other code (`[lint.severity]`, `[lint.ignore]`). See [OKF](okf.md).
 

@@ -106,17 +106,19 @@ Exit codes: 0 valid, 1 the configuration is invalid or could not be loaded,
 		// A non-recursive run checks one root: name the nested roots it skips so a
 		// CI that omits --recursive does not silently pass over them.
 		warnNestedRootsNotChecked(cfg)
-		// The OKF verdict comes first: "valid" is never printed for a run that exits 2.
-		if !validateConfigOnly && validateOKFTree(cfg, os.Stderr) {
-			return exitStatus(exitOKFProblems)
-		}
 		// A strict run defers malformed frontmatter to the AR306 finding below, which
 		// would contradict a success line printed here.
-		if len(cfg.MalformedFrontmatterPaths()) == 0 {
-			logger.Success("Configuration is valid", "path", cfg.ConfigDir)
-		}
+		valid := len(cfg.MalformedFrontmatterPaths()) == 0
 		if validateStrict {
-			return exitStatus(runStrictSingle(cfg))
+			// "valid" is never printed for a run that exits 2.
+			code := runStrictSingle(cfg)
+			if code == 0 && valid {
+				logger.Success("Configuration is valid", "path", cfg.ConfigDir)
+			}
+			return exitStatus(code)
+		}
+		if valid {
+			logger.Success("Configuration is valid", "path", cfg.ConfigDir)
 		}
 		presets.WarnDuplicateContent(cfg.Log(), cfg.Content)
 		warnUnpinned(cfg)

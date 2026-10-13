@@ -139,7 +139,7 @@ func TestOKFNativeTreeGeneratesTheSameOutput(t *testing.T) {
 			}
 			// The fixtures trip unrelated lint rules; only the OKF findings count.
 			out := okfRun(t, okfDir, okfHome, "validate", "--fail-on", "none")
-			if !strings.Contains(out, " 0 errors, 0 warnings, 0 info (OKF spec") {
+			if strings.Contains(out, " AR9B") {
 				t.Errorf("okf validate is not clean:\n%s", out)
 			}
 		})

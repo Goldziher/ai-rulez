@@ -938,6 +938,13 @@ linted by `validate --strict` and `doctor`. The same checks run on any third-par
 | AR9B8 | `okf-path-unsafe` | error | A symlink, or paths differing only in case |
 | AR9B9 | `okf-lossy-mapping` | info | Reserved for import notes: `x-ai-rulez` data that could not be mapped |
 
+A configuration directory with a root `index.md` (what `ai-rulez init` scaffolds) is a bundle too, and its
+`AR9B*` findings are reported as part of the same run. They sit next to the other analyzers, never instead of
+them: a secret (AR001), a dead link (AR201), a glob that matches nothing (AR101, read from `paths` or from
+`x-ai-rulez.metadata.paths`) or a missing skill resource (AR402) is reported whether or not the tree is OKF.
+`--fail-on`, the baseline, `--recursive` and `--analyzer` apply to them: `--analyzer references` runs only
+the references analyzer, and `--analyzer okf` runs only the OKF pass.
+
 Severities are configured like any other code (`[lint.severity]`, `[lint.ignore]`). See [OKF](okf.md).
 
 ## JSON output

@@ -310,11 +310,7 @@ func contentLintOptions(ctx context.Context, cfg *config.Config, sel []string) [
 		opts = append(opts, lint.WithPlanned(generator.NewPlannedFiles(cfg)))
 	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerOKF) {
-		if okfRes, okfErr := checkOKFProject(cfg); okfErr != nil {
-			logger.Warn("Skipped the OKF bundle checks", "error", okfErr)
-		} else if okfRes != nil {
-			opts = append(opts, lint.WithOKF(okfRes.Dir, okfRes.Findings))
-		}
+		opts = append(opts, okfLintOptions(cfg)...)
 	}
 	if lint.AnalyzerSelected(sel, lint.AnalyzerLLMsTxt) {
 		if files := llmsTxtLintFiles(cfg); len(files) > 0 {
@@ -325,6 +321,35 @@ func contentLintOptions(ctx context.Context, cfg *config.Config, sel []string) [
 		opts = append(opts, lint.WithVerifiers(verifierFindingsFor(config.WithPolicyContext(ctx, activePolicy), cfg)))
 	}
 	return opts
+}
+
+// okfLintOptions feeds the OKF findings into the lint run, next to the other
+// analyzers: the configured [okf] bundle, and the configuration directory itself
+// when it is a bundle (a root index.md). A directory that is both is reported once.
+func okfLintOptions(cfg *config.Config) []lint.Option {
+	var opts []lint.Option
+	projectDir := ""
+	if okfRes, okfErr := checkOKFProject(cfg); okfErr != nil {
+		logger.Warn("Skipped the OKF bundle checks", "error", okfErr)
+	} else if okfRes != nil {
+		projectDir = okfRes.Dir
+		opts = append(opts, lint.WithOKF(okfRes.Dir, okfRes.Findings))
+	}
+	if sameDir(projectDir, cfg.ConfigDir) {
+		return opts
+	}
+	if _, findings, ok := okfTreeFindings(cfg); ok {
+		opts = append(opts, lint.WithOKF(cfg.ConfigDir, findings))
+	}
+	return opts
+}
+
+// sameDir reports whether two directory paths name the same location.
+func sameDir(a, b string) bool {
+	if a == "" || b == "" {
+		return false
+	}
+	return filepath.Clean(a) == filepath.Clean(b)
 }
 
 // analyzerSelection is the analyzer allow-list of a run: --analyzer, else

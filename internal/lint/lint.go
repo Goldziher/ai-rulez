@@ -16,7 +16,6 @@ import (
 	"github.com/Goldziher/ai-rulez/v5/internal/ard"
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
-	"github.com/Goldziher/ai-rulez/v5/internal/okf"
 	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
@@ -182,8 +181,7 @@ type runner struct {
 	lockDrift      []LockDrift
 	approvals      []ApprovalFinding
 	sbom           []SBOMFinding
-	okfDir         string
-	okfFindings    []okf.Finding
+	okfBundles     []okfBundle
 	llmsTxtFiles   []LLMsTxtFile
 	// deps records which file refers to which (both absolute): links, name
 	// references, skill resources and hook scripts. --since uses it to report

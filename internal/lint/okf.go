@@ -31,18 +31,31 @@ func registerOkf(s *ruleSet) {
 	}
 }
 
-// WithOKF supplies the OKF bundle directory and its findings (see
-// okfbridge.CheckProject) to report as AR9B0-AR9B9.
+// okfBundle is one OKF bundle directory and its findings.
+type okfBundle struct {
+	dir      string
+	findings []okf.Finding
+}
+
+// WithOKF supplies an OKF bundle directory and its findings (see
+// okfbridge.CheckProject) to report as AR9B0-AR9B9. It may be passed more than
+// once: a project can have a configuration directory that is a bundle and a
+// separate exported one.
 func WithOKF(dir string, findings []okf.Finding) Option {
 	return func(r *runner) {
-		r.okfDir = dir
-		r.okfFindings = findings
+		r.okfBundles = append(r.okfBundles, okfBundle{dir: dir, findings: findings})
 	}
 }
 
 func (r *runner) checkOKF() {
-	for i := range r.okfFindings {
-		f := r.okfFindings[i]
+	for _, b := range r.okfBundles {
+		r.checkOKFBundle(b.dir, b.findings)
+	}
+}
+
+func (r *runner) checkOKFBundle(dir string, findings []okf.Finding) {
+	for i := range findings {
+		f := findings[i]
 		// A finding may be milder than its rule's default (a log heading is a
 		// warning under AR9B6). Honor that unless the config set a severity.
 		code := f.Code
@@ -50,7 +63,7 @@ func (r *runner) checkOKF() {
 		if had && saved == Severity(okf.DefaultSeverity(code)) && Severity(f.Severity) != saved {
 			r.sev[code] = Severity(f.Severity)
 		}
-		r.add(code, filepath.Join(r.okfDir, filepath.FromSlash(f.Path)), f.Line, "%s", f.Message)
+		r.add(code, filepath.Join(dir, filepath.FromSlash(f.Path)), f.Line, "%s", f.Message)
 		if had {
 			r.sev[code] = saved
 		}
