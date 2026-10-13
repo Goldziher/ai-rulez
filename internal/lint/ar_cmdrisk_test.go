@@ -21,6 +21,10 @@ func TestUnpinnedExecAR021(t *testing.T) {
 		{name: "prose mentioning uvx", skill: body("uvx is faster than pipx for one-off tools.\nUse the uvx launcher.\n"), absent: []string{"AR021"}},
 		{name: "index url is not the package", skill: body("pip install --index-url https://pypi.example/simple requests==2.0\n"), absent: []string{"AR021"}},
 		{name: "documented bad example", skill: body("Avoid `npx -y some-helper`.\n"), absent: []string{"AR021"}},
+		{name: "references dir is scanned", files: map[string]string{".ai-rulez/skills/bad/references/x.md": "# X\n\n```sh\nnpx -y some-helper\n```\n"}, skill: body("x\n"), want: []string{"AR021:references/x.md:4"}},
+		{name: "references script is scanned", files: map[string]string{".ai-rulez/skills/bad/references/b.sh": "#!/bin/sh\nnpx some-helper@latest\n"}, skill: body("x\n"), want: []string{"AR021:references/b.sh:2"}},
+		{name: "examples dir is not scanned", files: map[string]string{".ai-rulez/skills/bad/examples/x.md": "# X\n\n```sh\nnpx -y some-helper\n```\n"}, skill: body("x\n"), absent: []string{"AR021"}},
+		{name: "templates dir is not scanned", files: map[string]string{".ai-rulez/skills/bad/templates/x.md": "# X\n\n```sh\nnpx -y some-helper\n```\n"}, skill: body("x\n"), absent: []string{"AR021"}},
 		{name: "references dir via example_paths", config: "\n[lint]\nexample_paths = [\"**/references/**\"]\n", files: map[string]string{".ai-rulez/skills/bad/references/x.md": "# X\nnpx -y some-helper\n"}, skill: body("x\n"), absent: []string{"AR021"}},
 	})
 }
