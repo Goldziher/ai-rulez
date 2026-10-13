@@ -6,16 +6,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
-### Fixed
-
-- **`builtins` accepts a positive `domain/name` to load a single item of a pack, and `builtin:domain/name` works in profiles.** A positive `domain/name` was read as a pack called `domain/name` and silently ignored; it now loads only that item (still applied after `!domain`, so `["security/secrets-handling", "!security"]` keeps just that item; `domain` wins over `domain/name`). A root `!domain/name` is now honored for packs loaded through `builtin:<pack>`. Behavior change: an unknown positive entry (`builtins = ["nope"]`, a typo in an item) now fails `validate` with the valid choices instead of being ignored; unknown exclusions remain warnings. `builtins show` labels its item names as `builtins` identifiers. Fixes #399.
-
 ### Added
 
 - **A root-level `action.yml` lets any workflow `uses: Goldziher/ai-rulez@<ref>` directly.** It installs a sha256-verified release binary, resolving `latest` or a pinned version, caches the download and adds `ai-rulez` to `PATH`; `scripts/pre-commit/run-ai-rulez.sh` gained `AI_RULEZ_RESOLVE_ONLY=1`, which prints the resolved binary's path instead of running it.
 
 ### Fixed
 
+- **`builtins` accepts a positive `domain/name` to load a single item of a pack, and `builtin:domain/name` works in profiles.** A positive `domain/name` was read as a pack called `domain/name` and silently ignored; it now loads only that item (still applied after `!domain`, so `["security/secrets-handling", "!security"]` keeps just that item; `domain` wins over `domain/name`). A root `!domain/name` is now honored for packs loaded through `builtin:<pack>`. Behavior change: an unknown positive entry (`builtins = ["nope"]`, a typo in an item) now fails `validate` with the valid choices instead of being ignored; unknown exclusions remain warnings. `builtins show` labels its item names as `builtins` identifiers. Fixes #399.
+- **`AR501` and `AR502` resolve `${CLAUDE_SKILL_DIR}` in skill frontmatter hooks.** A hook command reaching a bundled script through `${CLAUDE_SKILL_DIR}/...` or `$CLAUDE_SKILL_DIR/...` is checked against the skill's own directory for existence and, when run directly, the executable bit; a missing script passed `validate --strict` before ([#406](https://github.com/Goldziher/ai-rulez/issues/406)).
 - **`validate` runs every analyzer in an OKF-layout project, with the OKF findings next to theirs.** A configuration directory with a root `index.md` (what `init` scaffolds) used to stop at the `AR9B*` checks: the references (AR101, AR201), security (AR001, AR004, AR005), resource (AR402) and hook analyzers never ran, `--analyzer references` was ignored, and with `--strict` any OKF warning ended the run. The OKF findings now go through the lint run, so `[lint]` severities, `--fail-on`, the baseline and `--analyzer` (including `--analyzer okf`) apply to them, and `--recursive` reports them too. Exit codes change: a project that passed only because the other analyzers were skipped now exits 2 on their findings, and an OKF error no longer hides them. (Fixes #396, #408)
 
 ## [5.1.1] - 2026-10-13

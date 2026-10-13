@@ -135,8 +135,8 @@ var baseRuleDocs = map[string]RuleDoc{
 		Good: "Add the file to the skill directory, name the sibling skill that ships it, or fix the reference",
 	},
 	CodeHookMissing: {
-		Why:  "A hook whose command points at a missing file fails on every event it is registered for.",
-		Bad:  "`\"command\": \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint.sh\"` with no such file",
+		Why:  "A hook whose command points at a missing file fails on every event it is registered for. In a skill's `hooks` frontmatter `${CLAUDE_SKILL_DIR}` (or `$CLAUDE_SKILL_DIR`) is the skill's own directory, and the path after it is resolved against that directory.",
+		Bad:  "`\"command\": \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint.sh\"` with no such file, or `${CLAUDE_SKILL_DIR}/scripts/check.sh` with no such file in the skill",
 		Good: "Commit the script, or correct the path",
 	},
 	CodeHookNotExecutable: {

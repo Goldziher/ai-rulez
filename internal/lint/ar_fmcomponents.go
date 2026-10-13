@@ -60,6 +60,7 @@ func checkFrontmatterHooks(r *runner, it *item, d doc, fm frontmatter) {
 		line := lineAfter(d.lines, k.Line, firstLine(h.command))
 		r.checkHookCommand(it.abs, h.event, h.command)
 		r.checkRelativeHookScript(it, h, line)
+		r.checkSkillDirHookScript(it, h, line)
 		for _, seg := range segSplitRe().Split(stripShellComment(h.command), -1) {
 			if pkg, why := pinProblem(shellWords(seg), true, false); pkg != "" {
 				r.add(CodeUnpinnedExec, it.abs, line, "%s hook runs %q without pinning it (%s); pin a version so a new release cannot change what runs", h.event, pkg, why)
@@ -129,6 +130,36 @@ func (r *runner) checkRelativeHookScript(it *item, h hookHandler, line int) {
 	r.dep(it.abs, abs)
 	if exe, known := r.tree.Executable(found); known && !exe {
 		r.addFix(chmodFix(abs), CodeHookNotExecutable, it.abs, line, "%s hook runs %q, which is not executable", h.event, words[0])
+	}
+}
+
+// checkSkillDirHookScript checks the paths a skill's hook command reaches
+// through ${CLAUDE_SKILL_DIR} (or $CLAUDE_SKILL_DIR), the variable Claude Code
+// sets to the skill's own directory: each is resolved against that directory and
+// must exist (AR501). A path run directly, with no interpreter in front, must
+// also be executable (AR502). The variable means nothing outside a skill.
+func (r *runner) checkSkillDirHookScript(it *item, h hookHandler, line int) {
+	if it.kind != kindSkill || it.itemDir == "" {
+		return
+	}
+	trimmed := strings.TrimLeft(h.command, `"' `)
+	for _, m := range skillDirVarRe().FindAllStringSubmatchIndex(h.command, -1) {
+		rel := h.command[m[2]:m[3]]
+		abs := filepath.Join(it.itemDir, filepath.FromSlash(rel))
+		fromTop := r.tree.Rel(abs)
+		if fromTop == "" {
+			continue // outside the repository: nothing to check it against
+		}
+		shown := "${CLAUDE_SKILL_DIR}/" + rel
+		if !r.tree.Exists(fromTop) {
+			r.add(CodeHookMissing, it.abs, line, "%s hook runs %q, which does not exist in the skill directory", h.event, shown)
+			continue
+		}
+		r.dep(it.abs, abs)
+		direct := m[0] == len(h.command)-len(trimmed)
+		if exe, known := r.tree.Executable(fromTop); direct && known && !exe {
+			r.addFix(chmodFix(abs), CodeHookNotExecutable, it.abs, line, "%s hook runs %q, which is not executable", h.event, shown)
+		}
 	}
 }
 
