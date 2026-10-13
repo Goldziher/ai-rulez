@@ -37,11 +37,11 @@ publish does.
 | Resource | `type` | `url` or `data` |
 | --- | --- | --- |
 | Root skill | `application/ai-skill+md` | `url`: the raw `SKILL.md` at the release tag (GitHub), or `<base_url>/skills/<name>/SKILL.md` |
-| MCP server (`[[mcp_servers]]`, `[[plugin.mcp]]`, enabled) | `application/mcp-server-card+json` | `data`: name, description and transport |
+| MCP server (`[[mcp_servers]]`, `[[plugin.mcp]]`, enabled) | `application/mcp-server-card+json` | `data`: an [MCP server card](mcp-server-card.md); stdio servers are left out, since a card describes remote servers only |
 | Plugin | `application/vnd.ai-rulez.plugin+json` (override with `plugin_type`) | `url`: the release archive |
 
-Exactly one of `url` and `data` is set. Environment values and headers of an MCP server never reach the manifest, and a
-server URL with credentials is refused. With `base_url`, the emitter also writes `skills/<name>/SKILL.md` next to
+Exactly one of `url` and `data` is set. Environment values and header values of an MCP server never reach the manifest (a card lists header names only), and a
+server URL with credentials or without https is refused. With `base_url`, the emitter also writes `skills/<name>/SKILL.md` next to
 `ard.json`, so hosting is a copy of the output directory. Only root skills are listed.
 
 The spec registers no plugin type, so the plugin type is ai-rulez's own vendor type until one exists; the conformance tool

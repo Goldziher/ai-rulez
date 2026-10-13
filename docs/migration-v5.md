@@ -17,11 +17,11 @@ status. In short:
 | AGENTS.md | supported | `generate` | `validate` |
 | llms.txt | supported | the `llms-txt` preset | `validate` |
 | MCP server config | supported | `generate` | `validate` (partial) |
-| MCP server card | planned | not generated | none |
+| MCP server card | partial (experimental extension, pinned `526201b`) | `publish --emit mcp-server-card`, `publish --emit ard` | conformance tests only |
 | CycloneDX / SPDX SBOM | supported | `sbom` | `sbom --check` |
 | in-toto / DSSE / Sigstore | supported | `sign` | `verify --attestation` |
 | OpenTelemetry (OTLP) | supported | `telemetry export --to otlp` | not applicable |
-| "Agent bundle" | planned | spec to be confirmed | spec to be confirmed |
+| "Agent bundle" | planned, no spec yet | none | none |
 
 ## Upgrade in four steps
 

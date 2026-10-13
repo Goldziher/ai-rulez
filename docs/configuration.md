@@ -1804,7 +1804,7 @@ What [`ai-rulez publish`](publish.md) ships and its policy gates. All optional; 
 | `[publish.oci] ref` | Repository `host/path` (no tag) of the OCI target. |
 | `[publish.npm]` | `scope` (`@acme`, required for the npm target), `access` (`restricted` or `public`), `registry` (https). |
 | `[publish.marketplace.channels]` | Channel name to the git ref its pinned marketplace index points at. |
-| `[[publish.emitters]]` | `name` (`template`, `cursor-team-marketplace`, `port`, `aws-agent-registry`, `kiro-steering`), `template` and `output` for the template emitter, `options` (for example `blueprint` for `port`). |
+| `[[publish.emitters]]` | `name` (`template`, `cursor-team-marketplace`, `port`, `aws-agent-registry`, `kiro-steering`, `agent-plugins`, `ard`, `mcp-server-card`), `template` and `output` for the template emitter, `options` (for example `blueprint` for `port`). |
 
 ## Layered configuration
 

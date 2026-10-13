@@ -140,11 +140,11 @@ each row, and is the source of truth for test status.
 | [AGENTS.md](docs/agents-md.md) | supported | `generate` | `validate` |
 | [llms.txt](docs/llms-txt.md) | supported | the `llms-txt` preset | `validate` |
 | MCP server config | supported | `generate` | `validate` (partial) |
-| MCP server card | planned | not generated | none |
+| MCP server card | partial (experimental extension, pinned `526201b`) | `publish --emit mcp-server-card`, `publish --emit ard` | conformance tests only |
 | [CycloneDX / SPDX SBOM](docs/sbom.md) | supported | `sbom` | `sbom --check` |
 | [in-toto / DSSE / Sigstore](docs/signing.md) | supported | `sign` | `verify --attestation` |
 | [OpenTelemetry (OTLP)](docs/telemetry.md) | supported | `telemetry export --to otlp` | not applicable |
-| "Agent bundle" | planned | spec to be confirmed | spec to be confirmed |
+| "Agent bundle" | planned, no spec yet | none | none |
 
 ## Usage
 
