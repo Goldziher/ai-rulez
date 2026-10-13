@@ -226,9 +226,20 @@ func (t *Tree) matchAny(g globMatcher, baseRel string) bool {
 // contains a mutex.
 type Loader struct {
 	// Root overrides the repository root for every tree (see LoadTreeAt).
-	Root  string
-	mu    sync.Mutex
-	cache map[string]*Tree
+	Root string
+	mu   sync.Mutex // guards cache, never held while a tree loads
+	// cache holds one entry per repository, so roots of one repository wait for
+	// its single load while roots of different repositories load side by side.
+	cache map[string]*treeEntry
+	// load builds a tree; nil means LoadTreeContext. A test replaces it.
+	load func(ctx context.Context, base, root string) (*Tree, error)
+}
+
+// treeEntry is one repository's tree. mu is held while it loads; a failed load
+// is not kept, the next asker tries again.
+type treeEntry struct {
+	mu   sync.Mutex
+	tree *Tree
 }
 
 // Load is LoadContext without a caller's context.
@@ -241,26 +252,38 @@ func (l *Loader) Load(base string) (*Tree, error) {
 func (l *Loader) LoadContext(ctx context.Context, base string) (*Tree, error) {
 	// The probes below ask the same structural questions of base twice.
 	ctx = gitutil.WithMemo(ctx)
-	// Concurrent roots of one repository queue behind the first load and then
-	// read the cached tree, so the index is still read once.
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.cache == nil {
-		l.cache = map[string]*Tree{}
-	}
 	key := gitutil.Git{}.TopLevelContext(ctx, gitutil.Resolve(base))
 	if l.Root != "" {
 		key = "root:" + gitutil.Resolve(l.Root)
 	} else if key == "" {
 		key = "fs:" + gitutil.Resolve(base)
 	}
-	if t, ok := l.cache[key]; ok {
-		return t, nil
+	l.mu.Lock()
+	if l.cache == nil {
+		l.cache = map[string]*treeEntry{}
 	}
-	t, err := LoadTreeContext(ctx, gitutil.Git{}, base, l.Root)
+	e, ok := l.cache[key]
+	if !ok {
+		e = &treeEntry{}
+		l.cache[key] = e
+	}
+	l.mu.Unlock()
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.tree != nil {
+		return e.tree, nil
+	}
+	load := l.load
+	if load == nil {
+		load = func(ctx context.Context, base, root string) (*Tree, error) {
+			return LoadTreeContext(ctx, gitutil.Git{}, base, root)
+		}
+	}
+	t, err := load(ctx, base, l.Root)
 	if err != nil {
 		return nil, err
 	}
-	l.cache[key] = t
+	e.tree = t
 	return t, nil
 }
