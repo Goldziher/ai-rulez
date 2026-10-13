@@ -20,6 +20,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **`source = "agents"` projects no longer get the legacy-layout notice, and `migrate okf` refuses them.** The notice named the unread `.ai-rulez` tree, and `migrate okf` would have rewritten it (and made `index.md` files there) instead of the `.agents` content.
 - **With `source = "agents"`, an output below a symlinked directory no longer writes into the source.** `.claude/rules -> ../.agents/rules` or `.claude/skills/foo -> ../../.agents/skills/foo` bypassed the filter that keeps `generate` off `.agents`; paths are now resolved through symlinks first and such outputs are dropped with a warning.
 - **`AR981` names the drifted file in an `.agents` project.** The path was joined to the state directory (`.agents/.ai-rulez/.agents/rules/x.md`) instead of the project root.
 - **With `source = "agents"`, `.github/copilot-instructions.md` no longer repeats the text of `AGENTS.md`.** The exclusion of tools that read `AGENTS.md` themselves was dropped for a root file several presets share, so Copilot still got a copy; the file is now negated directly when every configured preset writing it reads `AGENTS.md`. Gemini CLI is no longer treated as a reader, since `agents_md` is off and its settings load only `GEMINI.md`.

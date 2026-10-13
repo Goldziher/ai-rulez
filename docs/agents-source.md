@@ -115,6 +115,8 @@ yours: a second `generate` leaves every byte of them alone, and `generate --chec
   `--include-edited` and whatever an old manifest lists.
 - `lock` and the lock checks pin `AGENTS.md` and the `.agents` tree; `ai-rulez.lock` is written to
   `.agents/.ai-rulez/` (or beside the `.ai-rulez/config.toml`).
+- `migrate okf` refuses a project with this source (it converts the `.ai-rulez` tree, which is not read), and the
+  notice that a `.ai-rulez` tree uses the legacy layout is not shown for it.
 - `generate --watch` watches `AGENTS.md` and `.agents`.
 - `add`, `remove` and `list` (and the MCP create, update and delete tools) work on `.agents/rules`,
   `.agents/skills`, `.agents/domains/<name>` and the rest; the machine-local variants keep their files in the state

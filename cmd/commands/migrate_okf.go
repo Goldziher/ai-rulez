@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/samber/oops"
+
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 )
@@ -42,6 +44,12 @@ func runMigrateOKF(ctx context.Context, out io.Writer) int {
 	cfg, err := loadConfigForCommand(ctx, config.WithoutLocal())
 	if err != nil {
 		renderStderr(err)
+		return 1
+	}
+	if cfg.UsesAgentsSource() {
+		renderStderr(oops.
+			Hint("migrate okf converts the .ai-rulez content tree; this project reads AGENTS.md and .agents, which follow the AGENTS.md and Agent Skills standards. Set source = \"ai-rulez\" and move the files back to convert them.").
+			Errorf("migrate okf does not apply to a project with source = %q", config.SourceAgents))
 		return 1
 	}
 	write := !migrateDryRun && !migrateCheck
