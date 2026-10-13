@@ -469,7 +469,8 @@ into generated frontmatter.
 - A skill whose delivery is `served` is not written to any preset's skill tree. `static` and `both` skills are.
 - When any skill is `served` or `both`, or a `[[skill_sources]]` entry is configured (its skills are served,
   never written), one stub skill named `dynamic-skills` is added to the root skills of
-  every preset whose harness can call MCP tools. A skill you author with that name, at the root or in a domain
+  every preset whose harness can call MCP tools. With `agents_md` on, the presets that read the shared
+  `.agents/skills` tree (codex, cursor, gemini, copilot, opencode, zed, ...) get the stub in that tree. A skill you author with that name, at the root or in a domain
   that is active, is used instead of the stub; if several are authored, a warning asks you to rename all but one.
   `[delivery.stub]` customises the generated stub's description and text, see
   [Configuration: `[delivery.stub]`](configuration.md#deliverystub).

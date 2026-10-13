@@ -27,6 +27,7 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 		return
 	}
 	var wantAgentsMD, wantSkills bool
+	var skillReaders []string
 	targeted := skillTargets(presets.SkillTargets(content))
 	for _, preset := range cfg.Presets {
 		if !preset.IsBuiltIn() {
@@ -38,6 +39,9 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 		}
 		wantAgentsMD = wantAgentsMD || consumer.NeedsAgentsMD()
 		wantSkills = wantSkills || consumer.Reads(config.SharedAgentSkills)
+		if consumer.Reads(config.SharedAgentSkills) {
+			skillReaders = append(skillReaders, preset.BuiltIn)
+		}
 		allOutputs[preset.BuiltIn] = dropOwnSharedOutputs(allOutputs[preset.BuiltIn], cfg.BaseDir, preset.BuiltIn, consumer, targeted)
 	}
 	if !wantAgentsMD && !wantSkills {
@@ -56,7 +60,9 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg, owners, inlining))
 	}
 	if wantSkills {
-		shared = append(shared, presets.SharedAgentSkills(content, cfg.BaseDir)...)
+		// The tree is rendered once for all readers, so delivery is resolved for
+		// them together (served skills out and the stub in, as for claude).
+		shared = append(shared, presets.SharedAgentSkills(sharedSkillsContent(cfg, content, skillReaders), cfg.BaseDir)...)
 	}
 	for i := range shared {
 		if !shared[i].IsDir && shared[i].RawContent == nil {
@@ -65,6 +71,16 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 	}
 	dropShadowedByShared(allOutputs, cfg.BaseDir, wantAgentsMD, wantSkills, targeted)
 	allOutputs[sharedOutputsKey] = shared
+}
+
+// sharedSkillsContent is the content the shared .agents/skills tree renders:
+// content with delivery applied for the presets that read the tree. content is
+// the profile-filtered tree the presets rendered, which cfg.Content may differ
+// from in a scope.
+func sharedSkillsContent(cfg *config.Config, content *config.ContentTree, readers []string) *config.ContentTree {
+	scoped := *cfg
+	scoped.Content = content
+	return scoped.ContentForSharedSkills(readers)
 }
 
 // dropShadowedByShared removes, from every preset, the outputs that would land on

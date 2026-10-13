@@ -14,7 +14,11 @@ agents_md = true    # the default
 What changes:
 
 - Always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` per `[[scopes]]` entry).
-- Skills without `targets` go into one `.agents/skills/<name>/SKILL.md` tree.
+- Skills without `targets` go into one `.agents/skills/<name>/SKILL.md` tree. The tree follows each skill's
+  [`delivery`](skills.md#dynamic-loading-delivery) like a preset's own tree: `served` skills (and their `scripts/` and
+  `assets/`) are left out and the `dynamic-skills` stub is added, `static` and `both` skills are written. When every
+  preset reading the tree can call MCP tools the served skills are left out; when one cannot (`xum`, `hermes`, ...) the
+  tree keeps them, since that preset has no other way to see them, and still gets the stub.
 - Presets that read these files stop writing their root file (`GEMINI.md`, `.hermes.md`, ...), their copy of
   `AGENTS.md` and their own skills directory.
 - Everything the tool cannot read from the shared files stays per-preset: scoped rules folders, agents, commands,
