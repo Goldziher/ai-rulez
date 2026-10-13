@@ -46,6 +46,7 @@ nav = [
     { "Authoring Plugins" = "plugins.md" },
     { "Agent Plugins" = "agent-plugins.md" },
     { "Agentic Resource Discovery" = "ard.md" },
+    { "MCP Server Cards" = "mcp-server-card.md" },
     { "Publish" = "publish.md" },
   ] },
   { "Validate" = [
