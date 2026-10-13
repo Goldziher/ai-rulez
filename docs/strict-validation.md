@@ -212,6 +212,7 @@ stdout.
 | AR9S3 | `ard-queries-out-of-range` | warning | An ARD entry has no `representativeQueries`, or fewer than 2 or more than 5; registries build their search index from them |
 | AR9S4 | `ard-not-declared` | error | The `ard` emitter is requested but the configuration has no `[ard]` table with `publisher` and `namespace` |
 | AR9T0 | `root-component-shipped` | warning | A single-plugin bundle's root is the repository root (the `"./"` source in `.claude-plugin/marketplace.json` and the Codex index), so a default host component path that exists there and is not part of the bundle — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/`, a root `plugin.json` (Codex prefers it as the manifest), and the other paths Claude Code and Codex load from a plugin root — ships to every user who installs the plugin. Set `[plugin] content_root`, or move the plugin into a monorepo member (`plugins/<name>/`), so its root is not the repository root (see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) |
+| AR9T1 | `plugin-selector-unmatched` | warning | A `skills`, `commands`, `agents` or `domains` selector of a plugin definition (`[[plugins_authoring]]` or `[[marketplace.plugins]]`) matches nothing, so the plugin bundles less than intended and a plugin left empty is dropped; under `--strict` the warning fails the run (see [Authoring Plugins](plugins.md#several-plugins-from-one-root)) |
 | AR9G0 | `review-run-note` | info | `ai-rulez review` withheld an item (secret or hidden characters), excluded it or skipped it; never emitted by `validate` (see [Review](review.md)) |
 | AR9G1 | `trigger-vague` | warning | A description lacks a concrete trigger or a non-trigger (`review`; offline evidence is `AR801`-`AR803`) |
 | AR9G2 | `trigger-overlap` | warning | A description is likely confused with a sibling (`review`; offline evidence is `AR701`, `AR702`) |
@@ -291,7 +292,7 @@ and the codes written as literals in other packages, against it). Ranges are inc
 | `AR9R0`-`AR9R9` | Served-skill on-disk traps ([#336](https://github.com/Goldziher/ai-rulez/issues/336), [#337](https://github.com/Goldziher/ai-rulez/issues/337); `AR9R0`, `AR9R1` used) | allocated |
 | `AR9O0`-`AR9O9` | Agent Plugins packages ([#279](https://github.com/Goldziher/ai-rulez/issues/279); `AR9O0`-`AR9O5` used, `AR9O6`-`AR9O9` free; reported by `validate --strict` and `publish`, see [Agent Plugins](agent-plugins.md)) | allocated |
 | `AR9S0`-`AR9S9` | Agentic Resource Discovery manifest ([#280](https://github.com/Goldziher/ai-rulez/issues/280); `AR9S0`-`AR9S4` used, `AR9S5`-`AR9S9` free; reported by `validate --strict` and `publish`, see [Agentic Resource Discovery](ard.md)) | allocated |
-| `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
+| `AR9T0`-`AR9T9` | Plugin bundle root components ([#357](https://github.com/Goldziher/ai-rulez/issues/357); `AR9T0`, `AR9T1` used; reported by `validate --strict` and `verify --plugin`, see [Authoring Plugins](plugins.md#single-plugin-vs-monorepo)) | allocated |
 | `AR9U0`-`AR9U9` | UI ([#230](https://github.com/Goldziher/ai-rulez/issues/230); out of v5, kept free of other claims) | reserved |
 
 Unlisted letters (`AR9I`, `AR9T`, `AR9V`-`AR9Z`) are free. `AR9G`, `AR9M`, `AR9N` and `AR9U` were split
@@ -3511,5 +3512,15 @@ a single-plugin bundle whose root is the repository root ships a default host co
 - Why: A single-plugin repository lists its bundle with source "./", so the repository root becomes the installed plugin root. Claude Code and Codex then load their default component paths from the root — `.mcp.json`, `hooks/`, `agents/`, `commands/`, `settings.json`, `bin/` — even though they are a maintainer's own development files, not part of the plugin. Paths are looked up only under the plugin's own root, never in a parent directory. A root `plugin.json` is on the list because Codex prefers it as the manifest; a root `CLAUDE.md` was considered and left off, because Claude Code does not load a `CLAUDE.md` from a plugin root as context (`claude plugin validate` warns about one).
 - Bad: A repository with a `[plugin]` block and a committed `.mcp.json` or `agents/` directory, published with `source: "./"`
 - Good: Set `[plugin] content_root` to keep the payload out of the root, or move the plugin into a monorepo member (`plugins/<name>/`) so its root is not the repository root
+
+### AR9T1 plugin-selector-unmatched
+
+a skills, commands, agents or domains selector of a plugin definition matches nothing, so the plugin bundles less than intended (a plugin that ends up empty is dropped)
+
+- Default severity: `warning`
+- Analyzer: `plugin` (scope `bundle`)
+- Why: A plugin definition picks root content by name or glob and domains by name. A selector that matches nothing is almost always a typo or a skill that was renamed, and generate --plugin silently bundles less (or, when every selector misses, drops the plugin with a warning). Under --strict the warning fails the run.
+- Bad: [[plugins_authoring]] name = "notify" skills = ["notfy-*"] where no skill matches the glob
+- Good: Fix the selector, or remove it from the definition
 
 <!-- rules:end -->
