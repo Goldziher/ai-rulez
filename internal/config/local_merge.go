@@ -27,6 +27,8 @@ const (
 	docKeyDefault   = "default"
 	docKeyDefaults  = "defaults"
 	docKeyHeader    = "header"
+
+	docKeyDefaultLayers = "default_layers"
 )
 
 // namedListKeys are the top-level list keys merged entry-by-entry. The value
@@ -99,10 +101,27 @@ func DocForJSON(doc map[string]any) map[string]any {
 // result uses the TOML key "schema" for the schema reference; use DocForJSON
 // before a JSON round trip.
 func MergeConfigDocs(shared, local map[string]any) (merged map[string]any, warnings []string, err error) {
+	return MergeConfigDocsFrom(shared, local, localSource)
+}
+
+const (
+	localSource  = "local config"
+	sharedSource = "shared config"
+)
+
+// LayerSource names a committed config.<name>.toml layer in merge messages.
+func LayerSource(file string) string {
+	return "layer " + file
+}
+
+// MergeConfigDocsFrom is MergeConfigDocs with a source label ("local config",
+// "layer config.lint.toml") that its errors and warnings use to name the
+// document being merged in.
+func MergeConfigDocsFrom(shared, local map[string]any, src string) (merged map[string]any, warnings []string, err error) {
 	merged = deepCopyMap(normalizeConfigDocKeys(shared))
 	loc := deepCopyMap(normalizeConfigDocKeys(local))
 
-	if err := checkUnknownLocalKeys(loc); err != nil {
+	if err := checkUnknownLocalKeys(loc, src); err != nil {
 		return nil, nil, err
 	}
 
@@ -110,15 +129,21 @@ func MergeConfigDocs(shared, local map[string]any) (merged map[string]any, warni
 	// cannot relax it.
 	if _, ok := loc["governance"]; ok {
 		delete(loc, "governance")
-		warnings = append(warnings, "ignored [governance] in the local config: the approval policy is shared and cannot be overridden per machine")
+		warnings = append(warnings, fmt.Sprintf("ignored [governance] in the %s: the approval policy is shared and cannot be overridden", src))
 	}
 	// [signing] names who may sign the lock; a local overlay cannot add a signer.
 	if _, ok := loc["signing"]; ok {
 		delete(loc, "signing")
-		warnings = append(warnings, "ignored [signing] in the local config: the signing policy is shared and cannot be overridden per machine")
+		warnings = append(warnings, fmt.Sprintf("ignored [signing] in the %s: the signing policy is shared and cannot be overridden", src))
+	}
+	// default_layers is read from config.toml alone: a layer naming further layers
+	// would make the active set depend on files nobody reviews together.
+	if _, ok := loc[docKeyDefaultLayers]; ok {
+		delete(loc, docKeyDefaultLayers)
+		warnings = append(warnings, fmt.Sprintf("ignored default_layers in the %s: only config.toml names the default layers", src))
 	}
 	for _, key := range slices.Sorted(maps.Keys(loc)) {
-		w, err := mergeTopLevelKey(merged, loc[key], key)
+		w, err := mergeTopLevelKey(merged, loc[key], key, src)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -127,7 +152,7 @@ func MergeConfigDocs(shared, local map[string]any) (merged map[string]any, warni
 	return merged, warnings, nil
 }
 
-func checkUnknownLocalKeys(loc map[string]any) error {
+func checkUnknownLocalKeys(loc map[string]any, src string) error {
 	known := knownConfigDocKeys()
 	var unknown []string
 	for _, k := range slices.Sorted(maps.Keys(loc)) {
@@ -140,13 +165,13 @@ func checkUnknownLocalKeys(loc map[string]any) error {
 	}
 	return oops.
 		Hint("Check for typos; valid keys: "+strings.Join(slices.Sorted(maps.Keys(known)), ", ")).
-		Errorf("unknown key(s) in local config: %s", strings.Join(unknown, ", "))
+		Errorf("unknown key(s) in %s: %s", src, strings.Join(unknown, ", "))
 }
 
-func mergeTopLevelKey(merged map[string]any, lv any, key string) ([]string, error) {
+func mergeTopLevelKey(merged map[string]any, lv any, key, src string) ([]string, error) {
 	sv, hasShared := merged[key]
 	if pathFallback, named := namedListKeys[key]; named {
-		out, w, err := mergeNamedList(key, sv, hasShared, lv, pathFallback)
+		out, w, err := mergeNamedList(key, sv, hasShared, lv, pathFallback, src)
 		if err != nil {
 			return nil, err
 		}
@@ -157,9 +182,9 @@ func mergeTopLevelKey(merged map[string]any, lv any, key string) ([]string, erro
 	}
 	switch {
 	case key == docKeyVersion:
-		return nil, mergeVersion(merged, sv, hasShared, lv)
+		return nil, mergeVersion(merged, sv, hasShared, lv, src)
 	case key == docKeyPresets:
-		out, w, err := mergePresets(sv, hasShared, lv)
+		out, w, err := mergePresets(sv, hasShared, lv, src)
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +193,7 @@ func mergeTopLevelKey(merged map[string]any, lv any, key string) ([]string, erro
 	case key == docKeyBuiltins:
 		merged[key] = lv
 	case mapValuedKeys[key]:
-		out, err := mergeMapKey(key, sv, lv)
+		out, err := mergeMapKey(key, sv, lv, src)
 		if err != nil {
 			return nil, err
 		}
@@ -179,10 +204,10 @@ func mergeTopLevelKey(merged map[string]any, lv any, key string) ([]string, erro
 	return nil, nil
 }
 
-func mergeVersion(merged map[string]any, sv any, hasShared bool, lv any) error {
+func mergeVersion(merged map[string]any, sv any, hasShared bool, lv any, src string) error {
 	ls, ok := asString(lv)
 	if !ok {
-		return oops.Hint("version must be a string").Errorf("local config key version has type %T, expected string", lv)
+		return oops.Hint("version must be a string").Errorf("%s key version has type %T, expected string", src, lv)
 	}
 	if hasShared {
 		ss, ok := asString(sv)
@@ -191,8 +216,8 @@ func mergeVersion(merged map[string]any, sv any, hasShared bool, lv any) error {
 		}
 		if ss != ls {
 			return oops.
-				Hint("Remove version from the local config or make it match the shared config").
-				Errorf("local config version %q does not match shared version %q", ls, ss)
+				Hint("Remove version from the "+src+" or make it match the shared config").
+				Errorf("%s version %q does not match shared version %q", src, ls, ss)
 		}
 	}
 	merged[docKeyVersion] = ls
@@ -201,12 +226,12 @@ func mergeVersion(merged map[string]any, sv any, hasShared bool, lv any) error {
 
 // mergeMapKey merges a table-valued top-level key; type mismatches (including
 // a null local value, which would silently wipe shared settings) are errors.
-func mergeMapKey(key string, shared, local any) (any, error) {
+func mergeMapKey(key string, shared, local any, src string) (any, error) {
 	lm, ok := local.(map[string]any)
 	if !ok {
 		return nil, oops.
 			Hint("Key "+key+" must be a table").
-			Errorf("local config key %s has type %T, expected table", key, local)
+			Errorf("%s key %s has type %T, expected table", src, key, local)
 	}
 	if shared == nil {
 		return lm, nil
@@ -250,7 +275,7 @@ func listOf(side, key string, v any, present bool) ([]any, error) {
 	}
 	return nil, oops.
 		Hint("Key "+key+" must be a list").
-		Errorf("%s config key %s has type %T, expected list", side, key, v)
+		Errorf("%s key %s has type %T, expected list", side, key, v)
 }
 
 // entryDesc describes a list entry by position and key names only.
@@ -301,12 +326,12 @@ func removeFlag(m map[string]any, desc string) (bool, error) {
 	return b, nil
 }
 
-func mergePresets(shared any, hasShared bool, local any) (merged any, warnings []string, err error) {
-	out, err := listOf("shared", docKeyPresets, shared, hasShared)
+func mergePresets(shared any, hasShared bool, local any, src string) (merged any, warnings []string, err error) {
+	out, err := listOf(sharedSource, docKeyPresets, shared, hasShared)
 	if err != nil {
 		return nil, nil, err
 	}
-	localList, err := listOf("local", docKeyPresets, local, true)
+	localList, err := listOf(src, docKeyPresets, local, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -325,7 +350,7 @@ func mergePresets(shared any, hasShared bool, local any) (merged any, warnings [
 		name := strings.TrimPrefix(s, presetDropMark)
 		idx := indexOfPreset(out, name)
 		if idx < 0 {
-			warnings = append(warnings, fmt.Sprintf("local config drops preset %q which is not in the shared config", name))
+			warnings = append(warnings, fmt.Sprintf("%s drops preset %q which is not in the shared config", src, name))
 			continue
 		}
 		out = append(out[:idx], out[idx+1:]...)
@@ -435,7 +460,7 @@ func parseEntries(side, listKey string, list []any) ([]namedEntry, error) {
 		if !ok {
 			return nil, oops.
 				Hint("Every "+listKey+" entry must be a table").
-				Errorf("%s config %s is not a table", side, desc)
+				Errorf("%s %s is not a table", side, desc)
 		}
 		name, err := entryName(m, desc)
 		if err != nil {
@@ -465,25 +490,25 @@ func entryLabel(e namedEntry, pathFallback bool) string {
 }
 
 func mergeNamedList(
-	listKey string, shared any, hasShared bool, local any, pathFallback bool,
+	listKey string, shared any, hasShared bool, local any, pathFallback bool, src string,
 ) (merged []any, warnings []string, err error) {
-	sharedList, err := listOf("shared", listKey, shared, hasShared)
+	sharedList, err := listOf(sharedSource, listKey, shared, hasShared)
 	if err != nil {
 		return nil, nil, err
 	}
-	localList, err := listOf("local", listKey, local, true)
+	localList, err := listOf(src, listKey, local, true)
 	if err != nil {
 		return nil, nil, err
 	}
-	se, err := parseEntries("shared", listKey, sharedList)
+	se, err := parseEntries(sharedSource, listKey, sharedList)
 	if err != nil {
 		return nil, nil, err
 	}
-	le, err := parseEntries("local", listKey, localList)
+	le, err := parseEntries(src, listKey, localList)
 	if err != nil {
 		return nil, nil, err
 	}
-	claimed, err := matchLocalEntries(listKey, se, le, pathFallback)
+	claimed, err := matchLocalEntries(listKey, se, le, pathFallback, src)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -506,13 +531,13 @@ func mergeNamedList(
 		}
 		if drop {
 			warnings = append(warnings, fmt.Sprintf(
-				"local config removes %s entry %q which is not in the shared config", listKey, entryLabel(l, pathFallback)))
+				"%s removes %s entry %q which is not in the shared config", src, listKey, entryLabel(l, pathFallback)))
 			continue
 		}
 		out = append(out, stripRemove(l.m))
 	}
 	if pathFallback {
-		if err := checkDuplicatePaths(listKey, out); err != nil {
+		if err := checkDuplicatePaths(listKey, out, src); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -542,7 +567,7 @@ func applyClaimed(shared []namedEntry, claimed map[int]namedEntry) ([]any, error
 
 // matchLocalEntries pairs each local entry with at most one shared entry,
 // returning shared index -> local entry.
-func matchLocalEntries(listKey string, shared, local []namedEntry, pathFallback bool) (map[int]namedEntry, error) {
+func matchLocalEntries(listKey string, shared, local []namedEntry, pathFallback bool, src string) (map[int]namedEntry, error) {
 	claimed := map[int]namedEntry{}
 	seen := map[string]bool{}
 	for _, l := range local {
@@ -552,12 +577,12 @@ func matchLocalEntries(listKey string, shared, local []namedEntry, pathFallback 
 			if pathFallback {
 				hint = "Every " + listKey + " entry needs a name or path"
 			}
-			return nil, oops.Hint(hint).Errorf("local config %s has none", l.desc)
+			return nil, oops.Hint(hint).Errorf("%s %s has none", src, l.desc)
 		}
 		if seen[label] {
 			return nil, oops.
-				Hint("Merge the duplicate entries in the local config").
-				Errorf("duplicate %s entry %q in local config", listKey, label)
+				Hint("Merge the duplicate entries in the "+src).
+				Errorf("duplicate %s entry %q in %s", listKey, label, src)
 		}
 		seen[label] = true
 
@@ -577,15 +602,15 @@ func matchLocalEntries(listKey string, shared, local []namedEntry, pathFallback 
 		}
 		if _, dup := claimed[hits[0]]; dup {
 			return nil, oops.
-				Hint("Merge the duplicate entries in the local config").
-				Errorf("duplicate %s entry %q in local config targets the same shared entry", listKey, label)
+				Hint("Merge the duplicate entries in the "+src).
+				Errorf("duplicate %s entry %q in %s targets the same shared entry", listKey, label, src)
 		}
 		claimed[hits[0]] = l
 	}
 	return claimed, nil
 }
 
-func checkDuplicatePaths(listKey string, list []any) error {
+func checkDuplicatePaths(listKey string, list []any, src string) error {
 	seen := map[string]bool{}
 	for _, e := range list {
 		m, ok := e.(map[string]any)
@@ -599,7 +624,7 @@ func checkDuplicatePaths(listKey string, list []any) error {
 		if seen[p] {
 			return oops.
 				Hint("Give each "+listKey+" entry a unique path").
-				Errorf("duplicate %s path %q after merging local config", listKey, p)
+				Errorf("duplicate %s path %q after merging %s", listKey, p, src)
 		}
 		seen[p] = true
 	}

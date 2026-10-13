@@ -19,6 +19,7 @@ type loadOptions struct {
 	withoutLocal  bool
 	layers        []string
 	layersSet     bool
+	noLayers      bool
 	includeMemo   any
 	withoutRemote bool
 	runner        runner.Runner
@@ -80,6 +81,14 @@ func WithoutLocal() LoadOption {
 // activates none.
 func WithLayers(names ...string) LoadOption {
 	return func(o *loadOptions) { o.layers, o.layersSet = names, true }
+}
+
+// WithoutLayers skips every config.<name>.toml layer, the default_layers named in
+// config.toml included. Use it with WithoutLocal for anything that reads config.toml
+// in order to modify and save it: a layered Config is a merged view and is never
+// written back.
+func WithoutLayers() LoadOption {
+	return func(o *loadOptions) { o.layers, o.layersSet, o.noLayers = nil, true, true }
 }
 
 // WithFrontmatterErrors tells the load that the caller reports malformed

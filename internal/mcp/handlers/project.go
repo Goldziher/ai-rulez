@@ -32,7 +32,7 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 
 	// The editable view is the shared config; the machine-local overlay is
 	// reported separately and by key path only (it may hold secrets).
-	cfg, err := project.Load(ctx, dir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, dir, config.WithoutLocal(), config.WithoutLayers())
 	if err != nil {
 		return ToolError(err)
 	}
@@ -353,7 +353,7 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		return updateLocalConfig(ctx, request, dir)
 	}
 
-	cfg, err := project.Load(ctx, dir, config.WithoutLocal())
+	cfg, err := project.Load(ctx, dir, config.WithoutLocal(), config.WithoutLayers())
 	if err != nil {
 		return ToolError(err)
 	}

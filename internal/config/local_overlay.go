@@ -132,12 +132,13 @@ func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string,
 		cfg.Warn(w, "path", localPath)
 	}
 
-	out, err := decodeMergedDoc(mainPath, localPath, merged)
+	out, err := decodeMergedDoc(mainPath, filepath.Base(localPath), "the local overlay", merged)
 	if err != nil {
 		return nil, err
 	}
 	out.ConfigFile = cfg.ConfigFile
 	out.ActiveLayers = layers
+	out.LayerOrigins = cfg.LayerOrigins
 	out.LocalOverlay = &LocalOverlay{
 		Path: localPath,
 		Doc:  normalizeConfigDocKeys(localDoc),
@@ -150,13 +151,14 @@ func withLocalOverlay(v workspace.View, cfg *Config, mainPath, configDir string,
 }
 
 // decodeMergedDoc decodes a merged document into a Config through JSON.
-func decodeMergedDoc(mainPath, localPath string, merged map[string]any) (*Config, error) {
+// with names the merged-in file(s) in the message and where names them in the hint.
+func decodeMergedDoc(mainPath, with, where string, merged map[string]any) (*Config, error) {
 	cfg, err := decodeJSONDoc(DocForJSON(merged), mainPath) // "$schema" is the json tag
 	if err != nil {
 		return nil, oops.
-			With("path", localPath).
-			Hint("Check the value types in the local overlay").
-			Wrapf(SanitizeDecodeError(err), "decode %s merged with %s", filepath.Base(mainPath), filepath.Base(localPath))
+			With("path", mainPath).
+			Hint("Check the value types in "+where).
+			Wrapf(SanitizeDecodeError(err), "decode %s merged with %s", filepath.Base(mainPath), with)
 	}
 	return cfg, nil
 }
@@ -183,7 +185,7 @@ func decodeJSONDoc(doc map[string]any, path string) (*Config, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, oops.
 			With("path", path).
-			Hint("Check the value types in the local overlay").
+			Hint("Check the value types in config.toml and the files merged over it").
 			Wrapf(err, "decode merged config")
 	}
 	// agents_md defaults to true in v5; JSON cannot tell "absent" from false.

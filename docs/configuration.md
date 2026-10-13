@@ -1874,9 +1874,26 @@ AI_RULEZ_LAYERS=ai,custom ai-rulez generate   # custom layers after ai, so its i
 ai-rulez config layers                        # list the layers and which are active
 ```
 
-The layers come from `AI_RULEZ_LAYERS`, a comma-separated list, or from `AI_RULEZ_PROFILE` when that is not set, so one
-value can pick a profile and the layers named like it. The `--profile` flag does not select layers. A name with no
-file is skipped (so `default` and profile names without a layer are harmless); `local` is reserved for the overlay.
+Layers become active in this order, each merged over the one before:
+
+1. `default_layers` in `config.toml`: committed, always active, no environment variable needed. A layer listed there must
+   have its `config.<name>.toml`; a missing file is an error that names it. The key is read from `config.toml` only and
+   is ignored (with a warning) inside a layer or the local overlay.
+2. `AI_RULEZ_LAYERS`, a comma-separated list, or `AI_RULEZ_PROFILE` when that is not set, so one value can pick a profile
+   and the layers named like it. The `--profile` flag does not select layers. A name with no file is skipped (so
+   `default` and profile names without a layer are harmless).
+3. `config.local.toml`, the machine-local overlay, always last. `local` is a reserved layer name.
+
+A name repeated across these keeps its first position. Use `default_layers` to give a team-owned concern (lint
+allow-lists, builtin exclusions, MCP servers) its own file and CODEOWNERS entry:
+
+```toml
+# .ai-rulez/config.toml
+default_layers = ["lint", "mcp"]
+```
+
+`ai-rulez config layers` prints every layer with its position and origin (`default`, `env`), in text and with
+`--format json`. Errors for a layer name the layer file (`unknown key(s) in layer config.lint.toml: bogus`).
 
 Layers merge like the local overlay: tables merge per key, named lists (`mcp_servers`, `installed_skills`, `plugins`,
 `includes`, `marketplaces`, `scopes`, `roles`, `verifiers`) merge entry by entry on `name`, and any other value is

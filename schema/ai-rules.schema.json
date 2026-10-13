@@ -518,6 +518,14 @@
         }
       ]
     },
+    "default_layers": {
+      "type": "array",
+      "description": "Layer names (config.<name>.toml beside config.toml) that are always merged over this file, in order, before any layer AI_RULEZ_LAYERS names. A listed layer with no file is an error. Ignored inside a layer.",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+      }
+    },
     "compact": {
       "type": "boolean",
       "description": "When true, omit per-rule '**Priority:**' annotations from generated inline rule sections to reduce output size. Defaults to false."

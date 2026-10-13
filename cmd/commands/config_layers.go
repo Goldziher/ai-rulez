@@ -28,8 +28,10 @@ machine-local overlay.
 		Short: "List the config.<name>.toml layers and which are active",
 		Long: `Layers split the configuration into config.<name>.toml files beside config.toml.
 	The active layers are merged over config.toml in the order they are named, so a later
-	layer wins; config.local.toml is applied last. Name them with AI_RULEZ_LAYERS (a
-	comma-separated list), or with AI_RULEZ_PROFILE when AI_RULEZ_LAYERS is not set.
+	layer wins; config.local.toml is applied last. Layers named in default_layers of
+	config.toml are always active (origin "default", a missing file is an error); AI_RULEZ_LAYERS
+	(a comma-separated list), or AI_RULEZ_PROFILE when AI_RULEZ_LAYERS is not set, adds more
+	(origin "env", a missing file is skipped).
 
 	Tables merge per key, named lists (mcp_servers, installed_skills, plugins, ...) merge entry
 	by entry, and any other value is replaced. A layer with no file is skipped.`,
@@ -41,7 +43,7 @@ machine-local overlay.
 			if err != nil {
 				return fail(err)
 			}
-			return fail(writeConfigLayers(cmd.OutOrStdout(), cfg.ConfigDir, cfg.ActiveLayers, asJSON))
+			return fail(writeConfigLayers(cmd.OutOrStdout(), cfg.ConfigDir, cfg.ActiveLayers, cfg.LayerOrigins, asJSON))
 		},
 	}
 	configCmd.AddCommand(layersCmd)
@@ -55,14 +57,16 @@ type configLayerRow struct {
 	File   string `json:"file"`
 	Active bool   `json:"active"`
 	Order  int    `json:"order,omitempty"`
+	// Origin is how an active layer was activated: default, env or option.
+	Origin string `json:"origin,omitempty"`
 }
 
-func writeConfigLayers(w io.Writer, configDir string, active []string, asJSON bool) error {
+func writeConfigLayers(w io.Writer, configDir string, active []string, origins map[string]string, asJSON bool) error {
 	var rows []configLayerRow
 	for _, name := range config.LayerFiles(configDir) {
 		row := configLayerRow{Name: name, File: "config." + name + ".toml"}
 		if i := slices.Index(active, name); i >= 0 {
-			row.Active, row.Order = true, i+1
+			row.Active, row.Order, row.Origin = true, i+1, origins[name]
 		}
 		rows = append(rows, row)
 	}
@@ -81,7 +85,7 @@ func writeConfigLayers(w io.Writer, configDir string, active []string, asJSON bo
 	for _, row := range rows {
 		state := "inactive"
 		if row.Active {
-			state = fmt.Sprintf("active (%d)", row.Order)
+			state = fmt.Sprintf("active (%d, %s)", row.Order, row.Origin)
 		}
 		if _, err := fmt.Fprintf(w, "%-20s %-28s %s\n", row.Name, row.File, state); err != nil {
 			return err //nolint:wrapcheck // stdout write

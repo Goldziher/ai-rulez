@@ -150,6 +150,8 @@ func NewOperatorAt(configDir string) (*OperatorImpl, error) {
 // the explicit one when the operator was opened with NewOperatorAt, else the
 // discovered one under baseDir.
 func (op *OperatorImpl) load(ctx context.Context, opts ...config.LoadOption) (*config.Config, error) {
+	// The operator edits config.toml and saves it; a layered view is never written back.
+	opts = append([]config.LoadOption{config.WithoutLayers()}, opts...)
 	if op.dirName != "" {
 		return project.LoadDir(ctx, op.baseDir, op.dirName, opts...) //nolint:wrapcheck // already contextual
 	}

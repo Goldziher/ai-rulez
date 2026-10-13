@@ -17,16 +17,18 @@ func TestWriteConfigLayers(t *testing.T) {
 	}
 
 	var text bytes.Buffer
-	require.NoError(t, writeConfigLayers(&text, dir, []string{"custom"}, false))
-	assert.Contains(t, text.String(), "active (1)")
+	require.NoError(t, writeConfigLayers(&text, dir, []string{"ai", "custom"}, map[string]string{"ai": "default", "custom": "env"}, false))
+	assert.Contains(t, text.String(), "active (1, default)")
+	assert.Contains(t, text.String(), "active (2, env)")
 	assert.Contains(t, text.String(), "config.ai.toml")
 	assert.NotContains(t, text.String(), "local")
 
 	var js bytes.Buffer
-	require.NoError(t, writeConfigLayers(&js, dir, nil, true))
+	require.NoError(t, writeConfigLayers(&js, dir, []string{"custom"}, map[string]string{"custom": "env"}, true))
 	assert.Contains(t, js.String(), `"active": false`)
+	assert.Contains(t, js.String(), `"origin": "env"`)
 
 	var none bytes.Buffer
-	require.NoError(t, writeConfigLayers(&none, t.TempDir(), nil, false))
+	require.NoError(t, writeConfigLayers(&none, t.TempDir(), nil, nil, false))
 	assert.Contains(t, none.String(), "No layers")
 }

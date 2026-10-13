@@ -584,6 +584,7 @@ type tomlConfig struct {
 	Name             string                 `toml:"name"`
 	Description      string                 `toml:"description"`
 	Presets          []any                  `toml:"presets"`
+	DefaultLayers    []string               `toml:"default_layers"`
 	Default          string                 `toml:"default"`
 	Profiles         map[string][]string    `toml:"profiles"`
 	Gitignore        *bool                  `toml:"gitignore"`
@@ -689,6 +690,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Name:             raw.Name,
 		Description:      raw.Description,
 		Presets:          presets,
+		DefaultLayers:    raw.DefaultLayers,
 		Default:          raw.Default,
 		Profiles:         raw.Profiles,
 		Gitignore:        raw.Gitignore,

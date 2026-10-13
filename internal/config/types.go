@@ -17,14 +17,18 @@ import (
 
 // Config represents the configuration format
 type Config struct {
-	Schema      string              `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
-	Version     string              `yaml:"version" json:"version" toml:"version"`
-	Name        string              `yaml:"name" json:"name" toml:"name"`
-	Description string              `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
-	Presets     []Preset            `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
-	Default     string              `yaml:"default,omitempty" json:"default,omitempty" toml:"default,omitempty"`
-	Profiles    map[string][]string `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
-	Gitignore   *bool               `yaml:"gitignore,omitempty" json:"gitignore,omitempty" toml:"gitignore,omitempty"`
+	Schema      string   `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
+	Version     string   `yaml:"version" json:"version" toml:"version"`
+	Name        string   `yaml:"name" json:"name" toml:"name"`
+	Description string   `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
+	Presets     []Preset `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
+	// DefaultLayers names config.<name>.toml files beside config.toml that are always
+	// merged over it, in order, before the layers AI_RULEZ_LAYERS names. A listed layer
+	// with no file is an error. The key is ignored inside a layer.
+	DefaultLayers []string            `yaml:"default_layers,omitempty" json:"default_layers,omitempty" toml:"default_layers,omitempty"` //nolint:tagliatelle
+	Default       string              `yaml:"default,omitempty" json:"default,omitempty" toml:"default,omitempty"`
+	Profiles      map[string][]string `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
+	Gitignore     *bool               `yaml:"gitignore,omitempty" json:"gitignore,omitempty" toml:"gitignore,omitempty"`
 	// GitignoreExclude lists ignore patterns kept out of the managed .gitignore
 	// block: generated outputs the project commits on purpose. Machine-local and
 	// secret entries are never excluded.
@@ -173,7 +177,10 @@ type Config struct {
 	// ActiveLayers names the config.<name>.toml layers merged into this
 	// configuration, in merge order. A layered Config is a merged view and is never
 	// written back as config.toml.
-	ActiveLayers  []string              `yaml:"-" json:"-" toml:"-"`
+	ActiveLayers []string `yaml:"-" json:"-" toml:"-"`
+	// LayerOrigins maps each active layer to how it was activated: "default"
+	// (default_layers), "env" (AI_RULEZ_LAYERS or AI_RULEZ_PROFILE) or "option" (WithLayers).
+	LayerOrigins  map[string]string     `yaml:"-" json:"-" toml:"-"`
 	MCPServers    map[string]*MCPServer `yaml:"-" json:"-" toml:"-"`
 	MCPServersRaw []MCPServer           `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
 

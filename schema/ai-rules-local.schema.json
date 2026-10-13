@@ -459,6 +459,14 @@
       "description": "Default profile name to use when --profile is not specified",
       "type": "string"
     },
+    "default_layers": {
+      "description": "Layer names (config.<name>.toml beside config.toml) that are always merged over this file, in order, before any layer AI_RULEZ_LAYERS names. A listed layer with no file is an error. Ignored inside a layer.",
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+        "type": "string"
+      },
+      "type": "array"
+    },
     "defaults": {
       "additionalProperties": false,
       "description": "Top-level defaults that propagate into generated outputs when individual content files do not override them",
