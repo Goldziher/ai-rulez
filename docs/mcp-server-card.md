@@ -55,7 +55,7 @@ becomes `docs.json`:
   value is a `${VAR}` reference. A URL with credentials is refused.
 - **Name.** `<namespace>/<server>`, where the server part has any character outside letters, digits, `.`, `_` and `-`
   replaced by `-`. The namespace is the emitter option `namespace`, else the reversed `[ard]` publisher (`acme.example`
-  is `example.acme`), else derived from the repository (`owner/name` on GitHub is `io.github.owner`).
+  is `example.acme`), else derived from the repository (`owner/name` and `github.com/owner/name` are `io.github.owner`; `host/owner/name` on another host is the reversed host followed by the owner, such as `test.acme.git.acme`).
 - **Version.** The emitter option `version`, else the plugin version, else `0.0.0`.
 - **Description.** The server's description cut to the schema's 100 characters, or `MCP server <name>` without one.
 
