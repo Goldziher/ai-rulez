@@ -12,11 +12,22 @@ import (
 
 // Read-only inspection helpers for `ai-rulez doctor`. None of them writes.
 
+// UnignoredOutput is a generated output git does not ignore. Rule is set when a
+// rule of the user's deliberately un-ignores it (Source names the file): generate
+// leaves it alone, so running it again would change nothing.
+type UnignoredOutput struct {
+	Pattern string
+	Rule    string
+	Source  string
+}
+
 // UnignoredOutputs renders every output in memory and returns, sorted, the
 // ignore patterns generate wants in .gitignore (committed outputs when gitignore
 // is on, machine-local and secret outputs always) that git does not ignore now.
-// Outside a git repository, or when git cannot answer, it returns nil.
-func (g *Generator) UnignoredOutputs(profile string) ([]string, error) {
+// A pattern the user's own negation re-includes is left out, unless it is a
+// machine-local or secret output: that one is listed with the rule. Outside a
+// git repository, or when git cannot answer, it returns nil.
+func (g *Generator) UnignoredOutputs(profile string) ([]UnignoredOutput, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.beginRun()
@@ -36,11 +47,28 @@ func (g *Generator) UnignoredOutputs(profile string) ([]string, error) {
 	if err != nil || ignored == nil {
 		return nil, nil //nolint:nilerr // git cannot answer: report nothing rather than guess
 	}
-	var missing []string
+	// generate adds exactly these; the rest is covered, or un-ignored on purpose.
+	needed, overridden := g.neededGitignorePatterns(outputs)
+	wanted := map[string]bool{}
+	for _, p := range needed {
+		wanted[p] = true
+	}
+	deliberate := map[string]UnignoredOutput{}
+	for _, o := range overridden {
+		deliberate[o.Pattern] = UnignoredOutput{Pattern: o.Pattern, Rule: o.Rule, Source: o.Source}
+	}
+	var missing []UnignoredOutput
 	for i, pattern := range patterns {
+		if o, ok := deliberate[pattern]; ok {
+			missing = append(missing, o)
+			continue
+		}
+		if !wanted[pattern] {
+			continue
+		}
 		for _, probe := range probes[ranges[i][0]:ranges[i][1]] {
 			if !ignored[filepath.ToSlash(probe)] {
-				missing = append(missing, pattern)
+				missing = append(missing, UnignoredOutput{Pattern: pattern})
 				break
 			}
 		}

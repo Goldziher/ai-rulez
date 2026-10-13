@@ -520,6 +520,13 @@ machine-local or secret output (`*.local.*`, `config.local.*`, `.ai-rulez/local/
 secrets) is also left out of the block, with a warning; generation still refuses to write a secret-bearing MCP config
 that ends up unignored. Outside a git repository, or when git is unavailable, every entry is added.
 
+Your lines are yours. ai-rulez edits only between `# BEGIN ai-rulez` and `# END ai-rulez`; every byte outside
+the block stays as it was, blank lines included (nothing is inserted under `# END ai-rulez`). A negation of a
+directory entry (`!.claude/skills/`, `!/.claude/skills/`) is honored the same way as one of a file entry
+(`!CLAUDE.md`): the entry is left out of the block. `ai-rulez doctor` does not report an output you re-included this
+way, since `generate` leaves it alone; it still reports a machine-local or secret output a rule un-ignores, and says
+that `generate` will not re-ignore it.
+
 Machine-local outputs and sources are **always** gitignored, even when `gitignore = false`; an entry is added
 when the file or directory exists, so a project without a `config.local.*` overlay or `.ai-rulez/local/` tree gets
 no line for it: the local outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `AGENTS.override.md`,

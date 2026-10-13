@@ -175,6 +175,13 @@ func (g *Generator) neededGitignorePatterns(outputs []config.OutputFile) (needed
 	needed = make([]string, 0, len(patterns))
 	for i, pattern := range patterns {
 		match, covered := coverage(rules, probes[ranges[i][0]:ranges[i][1]])
+		if !covered && !match.Negated() {
+			// git reports no rule for a probe below a directory that "!dir/" re-includes,
+			// so a directory entry needs the user's negation read from the file.
+			if m, ok := g.userDirNegation(pattern); ok {
+				match = m
+			}
+		}
 		switch {
 		case covered:
 			g.log().Debug("Already ignored by git", "pattern", pattern, "rule", match.Pattern, "source", match.Source)
@@ -187,6 +194,34 @@ func (g *Generator) neededGitignorePatterns(outputs []config.OutputFile) (needed
 		}
 	}
 	return dropCoveredPatterns(needed), overridden
+}
+
+// userDirNegation finds the user's own "!dir/" (or "!/dir/") line for a directory
+// pattern in the .gitignore this run manages, outside the managed block. git
+// cannot be asked: the probes are children of the directory and no rule names
+// them, although the directory itself is deliberately re-included.
+func (g *Generator) userDirNegation(pattern string) (gitutil.IgnoreMatch, bool) {
+	if !strings.HasSuffix(pattern, "/") {
+		return gitutil.IgnoreMatch{}, false
+	}
+	data, err := gitutil.ReadIgnoreFileOrEmpty(g.log(), g.managedGitignorePath())
+	if err != nil {
+		return gitutil.IgnoreMatch{}, false
+	}
+	want := strings.TrimPrefix(joinGitignorePrefix(g.gitignorePrefix, pattern), "/")
+	inBlock := false
+	for i, line := range strings.Split(string(data), "\n") {
+		switch trimmed := strings.TrimSpace(line); {
+		case trimmed == gitignore.BeginMarker:
+			inBlock = true
+		case trimmed == gitignore.EndMarker:
+			inBlock = false
+		case inBlock || !strings.HasPrefix(trimmed, "!"):
+		case strings.TrimPrefix(strings.TrimPrefix(trimmed, "!"), "/") == want:
+			return gitutil.IgnoreMatch{Source: ".gitignore", Line: i + 1, Pattern: trimmed}, true
+		}
+	}
+	return gitutil.IgnoreMatch{}, false
 }
 
 // coverage combines the answers for one pattern's probes. The pattern is
