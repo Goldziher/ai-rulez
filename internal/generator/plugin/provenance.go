@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -32,9 +33,18 @@ type provenanceOutput struct {
 	Mode string `json:"mode,omitempty"`
 }
 
-// outputMode is the mode string recorded for an output.
+// outputMode is the mode string recorded for an output: "" on Windows, whose
+// file systems carry no executable bit (a sidecar written there would record
+// 0644 for a script and read as mode drift on every other system).
 func outputMode(output config.OutputFile) string {
-	if output.Mode&0o111 != 0 {
+	return modeFor(runtime.GOOS, output)
+}
+
+func modeFor(goos string, output config.OutputFile) string {
+	switch {
+	case goos == "windows":
+		return ""
+	case output.Mode&0o111 != 0:
 		return "0755"
 	}
 	return "0644"

@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -76,4 +77,32 @@ func stripSidecarModes(t *testing.T, dir string) {
 	legacy := regexp.MustCompile(`,\n\s*"mode": "[0-7]+"`).ReplaceAll(data, nil)
 	require.NotEqual(t, string(data), string(legacy), "the sidecar records modes")
 	require.NoError(t, os.WriteFile(path, legacy, 0o644))
+}
+
+// TestGeneratePlugin_SidecarRecordsExecutableBits pins what verify compares
+// against: the script is recorded 0755, everything else 0644.
+func TestGeneratePlugin_SidecarRecordsExecutableBits(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows records no modes")
+	}
+	// Arrange
+	dir := modeProject(t)
+
+	// Act
+	data, err := os.ReadFile(filepath.Join(dir, ".ai-rulez-generated.json"))
+	require.NoError(t, err)
+
+	// Assert
+	var sidecar struct {
+		Outputs map[string]struct {
+			Mode string `json:"mode"`
+		} `json:"outputs"`
+	}
+	require.NoError(t, json.Unmarshal(data, &sidecar))
+	assert.Equal(t, "0755", sidecar.Outputs["skills/core-s/scripts/analyze.py"].Mode)
+	for rel, out := range sidecar.Outputs {
+		if rel != "skills/core-s/scripts/analyze.py" {
+			assert.Equal(t, "0644", out.Mode, rel)
+		}
+	}
 }
