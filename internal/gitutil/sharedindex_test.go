@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -100,4 +101,75 @@ func TestSharedIndexIsSafeForConcurrentRoots(t *testing.T) {
 	wg.Wait()
 
 	assert.Equal(t, int64(1), c.lsFiles.Load(), "concurrent askers share one listing")
+}
+
+// lsFilesArgs records the argv of every `git ls-files` run it forwards.
+type lsFilesArgs struct {
+	mu    sync.Mutex
+	calls [][]string
+}
+
+func (c *lsFilesArgs) Run(ctx context.Context, spec runner.Spec) runner.Result {
+	for _, a := range spec.Argv {
+		if a == "ls-files" {
+			c.mu.Lock()
+			c.calls = append(c.calls, append([]string(nil), spec.Argv...))
+			c.mu.Unlock()
+			break
+		}
+	}
+	return runner.Run(ctx, spec)
+}
+
+// pathspecCalls counts the ls-files runs that carried a literal pathspec, the
+// per-question fallback, as opposed to the whole-repository listing.
+func (c *lsFilesArgs) pathspecCalls() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n := 0
+	for _, argv := range c.calls {
+		for _, a := range argv {
+			if strings.HasPrefix(a, ":(literal)") {
+				n++
+				break
+			}
+		}
+	}
+	return n
+}
+
+// #376: git's literal pathspec compares names exactly even under
+// core.ignorecase (it folds case only with the icase magic), so the shared
+// listing's exact-string lookup answers the same. This pins that equivalence:
+// a git that folded case would fail it and the lookup would need to defer.
+func TestSharedIndexMatchesThePathspecWhenGitIgnoresCase(t *testing.T) {
+	repo := sharedIndexRepo(t)
+	runGit(t, repo, "config", "core.ignorecase", "true")
+	dir := filepath.Join(repo, "a")
+	paths := []string{".ai-rulez/config.toml", ".AI-RULEZ/config.toml", ".ai-rulez/CONFIG.toml"}
+
+	plain, err := New(&lsFilesArgs{}).TrackedAmongContext(t.Context(), dir, paths)
+	require.NoError(t, err)
+	shared, err := New(&lsFilesArgs{}).TrackedAmongContext(WithSharedIndex(t.Context()), dir, paths)
+	require.NoError(t, err)
+
+	assert.Equal(t, plain, shared)
+	assert.True(t, shared[".ai-rulez/config.toml"])
+}
+
+// A path below a gitlink (a submodule) is for the pathspec call: the index
+// lists the submodule as one entry, so the listing cannot speak for what is in it.
+func TestSharedIndexDefersToThePathspecBelowAGitlink(t *testing.T) {
+	repo := sharedIndexRepo(t)
+	runGit(t, repo, "update-index", "--add", "--cacheinfo", "160000,e69de29bb2d1d6434b8b29ae775ad8c2e48c5391,sub")
+	paths := []string{"sub/inner/config.toml", "b/other.txt"}
+
+	plain, err := New(&lsFilesArgs{}).TrackedAmongContext(t.Context(), repo, paths)
+	rec := &lsFilesArgs{}
+	shared, sharedErr := New(rec).TrackedAmongContext(WithSharedIndex(t.Context()), repo, paths)
+
+	assert.Equal(t, err == nil, sharedErr == nil, "fails closed exactly when the pathspec call does")
+	assert.Equal(t, plain, shared)
+	assert.Equal(t, 1, rec.pathspecCalls(), "the path below the gitlink went to the pathspec call")
+	assert.True(t, shared["b/other.txt"] || err != nil)
 }

@@ -41,8 +41,11 @@ type Memo struct {
 type indexListing struct {
 	mu    sync.Mutex
 	files map[string]bool
-	raw   []byte // the output of a listing kept as it came (see ignoreFileListing)
-	done  bool
+	// gitlinks holds the submodule entries of the index: a path below one is not
+	// the listing's to answer (see trackedFromSharedIndex).
+	gitlinks map[string]bool
+	raw      []byte // the output of a listing kept as it came (see ignoreFileListing)
+	done     bool
 }
 
 // memoKey names a question. The runner is part of it: two Git values over
@@ -168,34 +171,58 @@ func (g Git) trackedFromSharedIndex(ctx context.Context, dir string, paths []str
 	if top == "" || err != nil {
 		return paths
 	}
-	files := memo.listing(memoKey{dir: top, args: lsFilesCmd, runner: r}).read(func() (map[string]bool, bool) {
-		out, _, err := g.run(ctx, top, nil, lsFilesCmd, "-z")
-		if err != nil {
-			return nil, false
-		}
-		set := make(map[string]bool)
-		for _, name := range strings.Split(string(out), "\x00") {
-			if name != "" {
-				set[filepath.ToSlash(name)] = true
-			}
-		}
-		return set, true
-	})
-	if files == nil {
+	l := memo.listing(memoKey{dir: top, args: lsFilesCmd, runner: r})
+	if !l.read(func() bool { return g.loadIndexListing(ctx, top, l) }) {
 		return paths
 	}
 	prefix := strings.TrimSpace(string(prefixOut))
 	var rest []string
 	for _, p := range paths {
-		if !insideDir(p) {
+		if !insideDir(p) || belowGitlink(l.gitlinks, prefix+p) {
 			rest = append(rest, p)
 			continue
 		}
-		if files[prefix+p] {
+		if l.files[prefix+p] {
 			tracked[p] = true
 		}
 	}
 	return rest
+}
+
+// gitlinkMode is the index mode of a submodule entry.
+const gitlinkMode = "160000"
+
+// loadIndexListing reads the tracked files of the repository at top into l. It
+// reports false when git failed, so the caller falls back to the pathspec call.
+func (g Git) loadIndexListing(ctx context.Context, top string, l *indexListing) bool {
+	out, _, err := g.run(ctx, top, nil, lsFilesCmd, "-s", "-z")
+	if err != nil {
+		return false
+	}
+	l.files, l.gitlinks = make(map[string]bool), make(map[string]bool)
+	for _, entry := range strings.Split(string(out), "\x00") {
+		meta, name, ok := strings.Cut(entry, "\t") // "<mode> <object> <stage>\t<path>"
+		if !ok || name == "" {
+			continue
+		}
+		name = filepath.ToSlash(name)
+		l.files[name] = true
+		if strings.HasPrefix(meta, gitlinkMode+" ") {
+			l.gitlinks[name] = true
+		}
+	}
+	return true
+}
+
+// belowGitlink reports whether a proper ancestor directory of the slash path p
+// is a submodule entry of the index.
+func belowGitlink(gitlinks map[string]bool, p string) bool {
+	for dir := path.Dir(p); dir != "." && dir != "/"; dir = path.Dir(dir) {
+		if gitlinks[dir] {
+			return true
+		}
+	}
+	return false
 }
 
 // ignoreFileListing lists the .gitignore files below top that git would read
@@ -232,16 +259,16 @@ func insideDir(p string) bool {
 	return p != "" && path.Clean(p) == p && p != "." && p != ".." && !strings.HasPrefix(p, "../") && !path.IsAbs(p)
 }
 
-// read returns the listing, taking it with load the first time; nil when load fails.
-func (l *indexListing) read(load func() (map[string]bool, bool)) map[string]bool {
+// read takes the listing with load the first time, under the listing's lock; it
+// reports false when load fails (nothing is kept, the next asker tries again).
+func (l *indexListing) read(load func() bool) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if !l.done {
-		files, ok := load()
-		if !ok {
-			return nil
+		if !load() {
+			return false
 		}
-		l.files, l.done = files, true
+		l.done = true
 	}
-	return l.files
+	return true
 }
