@@ -579,60 +579,61 @@ func loadConfigTOML(v workspace.View, path string) (*Config, error) {
 // mixed-type arrays that need a conversion step. Every toml-tagged field of
 // Config must appear here (TestTomlConfigCoversConfig).
 type tomlConfig struct {
-	Schema          string                 `toml:"schema"`
-	Version         string                 `toml:"version"`
-	Name            string                 `toml:"name"`
-	Description     string                 `toml:"description"`
-	Presets         []any                  `toml:"presets"`
-	Default         string                 `toml:"default"`
-	Profiles        map[string][]string    `toml:"profiles"`
-	Gitignore       *bool                  `toml:"gitignore"`
-	Compact         *bool                  `toml:"compact"`
-	AgentsMD        *bool                  `toml:"agents_md"`
-	BundleExclude   []string               `toml:"bundle_exclude"`
-	CodexSkillsDir  string                 `toml:"codex_skills_dir"`
-	Includes        []IncludeConfig        `toml:"includes"`
-	InstalledSkills []InstalledSkillConfig `toml:"installed_skills"`
-	MCPServers      []MCPServer            `toml:"mcp_servers"`
-	Header          *HeaderConfig          `toml:"header"`
-	Builtins        interface{}            `toml:"builtins"`
-	Plugins         []PluginConfig         `toml:"plugins"`
-	Marketplaces    []MarketplaceConfig    `toml:"marketplaces"`
-	Scopes          []ScopeConfig          `toml:"scopes"`
-	MCP             *MCPConfig             `toml:"mcp"`
-	Defaults        *DefaultsConfig        `toml:"defaults"`
-	Rules           *RulesConfig           `toml:"rules"`
-	Lint            *LintConfig            `toml:"lint"`
-	Verifiers       []VerifierConfig       `toml:"verifiers"`
-	VerifiersSet    *VerifiersSettings     `toml:"verifiers_settings"`
-	Usage           *UsageConfig           `toml:"usage"`
-	Skills          *SkillsConfig          `toml:"skills"`
-	DomainSettings  DomainConfigs          `toml:"domains"`
-	Delivery        *DeliveryConfig        `toml:"delivery"`
-	SkillSources    []SkillSourceConfig    `toml:"skill_sources"`
-	Roles           []RoleConfig           `toml:"roles"`
-	RoleManifest    *RoleManifestConfig    `toml:"role_manifest"`
-	Lock            *LockConfig            `toml:"lock"`
-	Governance      *GovernanceConfig      `toml:"governance"`
-	Catalog         *CatalogConfig         `toml:"catalog"`
-	Signing         *SigningConfig         `toml:"signing"`
-	Publish         *PublishConfig         `toml:"publish"`
-	ARD             *ARDConfig             `toml:"ard"`
-	LLM             *llm.Config            `toml:"llm"`
-	Telemetry       *TelemetryConfig       `toml:"telemetry"`
-	Review          *ReviewConfig          `toml:"review"`
-	Improve         *ImproveConfig         `toml:"improve"`
-	Search          *skillsearch.Config    `toml:"search"`
-	Plugin          *PluginAuthoring       `toml:"plugin"`
-	Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
-	Placement       *PlacementConfig       `toml:"placement"`
-	Claude          *ClaudeConfig          `toml:"claude"`
-	Codex           *CodexConfig           `toml:"codex"`
-	Hooks           []HookGroup            `toml:"hooks"`
-	Guard           *GuardConfig           `toml:"guard"`
-	Permissions     *Permissions           `toml:"permissions"`
-	OKF             *OKFConfig             `toml:"okf"`
-	LLMsTxt         *LLMsTxtConfig         `toml:"llms_txt"`
+	Schema           string                 `toml:"schema"`
+	Version          string                 `toml:"version"`
+	Name             string                 `toml:"name"`
+	Description      string                 `toml:"description"`
+	Presets          []any                  `toml:"presets"`
+	Default          string                 `toml:"default"`
+	Profiles         map[string][]string    `toml:"profiles"`
+	Gitignore        *bool                  `toml:"gitignore"`
+	GitignoreExclude []string               `toml:"gitignore_exclude"`
+	Compact          *bool                  `toml:"compact"`
+	AgentsMD         *bool                  `toml:"agents_md"`
+	BundleExclude    []string               `toml:"bundle_exclude"`
+	CodexSkillsDir   string                 `toml:"codex_skills_dir"`
+	Includes         []IncludeConfig        `toml:"includes"`
+	InstalledSkills  []InstalledSkillConfig `toml:"installed_skills"`
+	MCPServers       []MCPServer            `toml:"mcp_servers"`
+	Header           *HeaderConfig          `toml:"header"`
+	Builtins         interface{}            `toml:"builtins"`
+	Plugins          []PluginConfig         `toml:"plugins"`
+	Marketplaces     []MarketplaceConfig    `toml:"marketplaces"`
+	Scopes           []ScopeConfig          `toml:"scopes"`
+	MCP              *MCPConfig             `toml:"mcp"`
+	Defaults         *DefaultsConfig        `toml:"defaults"`
+	Rules            *RulesConfig           `toml:"rules"`
+	Lint             *LintConfig            `toml:"lint"`
+	Verifiers        []VerifierConfig       `toml:"verifiers"`
+	VerifiersSet     *VerifiersSettings     `toml:"verifiers_settings"`
+	Usage            *UsageConfig           `toml:"usage"`
+	Skills           *SkillsConfig          `toml:"skills"`
+	DomainSettings   DomainConfigs          `toml:"domains"`
+	Delivery         *DeliveryConfig        `toml:"delivery"`
+	SkillSources     []SkillSourceConfig    `toml:"skill_sources"`
+	Roles            []RoleConfig           `toml:"roles"`
+	RoleManifest     *RoleManifestConfig    `toml:"role_manifest"`
+	Lock             *LockConfig            `toml:"lock"`
+	Governance       *GovernanceConfig      `toml:"governance"`
+	Catalog          *CatalogConfig         `toml:"catalog"`
+	Signing          *SigningConfig         `toml:"signing"`
+	Publish          *PublishConfig         `toml:"publish"`
+	ARD              *ARDConfig             `toml:"ard"`
+	LLM              *llm.Config            `toml:"llm"`
+	Telemetry        *TelemetryConfig       `toml:"telemetry"`
+	Review           *ReviewConfig          `toml:"review"`
+	Improve          *ImproveConfig         `toml:"improve"`
+	Search           *skillsearch.Config    `toml:"search"`
+	Plugin           *PluginAuthoring       `toml:"plugin"`
+	Marketplace      *MarketplaceAuthoring  `toml:"marketplace"`
+	Placement        *PlacementConfig       `toml:"placement"`
+	Claude           *ClaudeConfig          `toml:"claude"`
+	Codex            *CodexConfig           `toml:"codex"`
+	Hooks            []HookGroup            `toml:"hooks"`
+	Guard            *GuardConfig           `toml:"guard"`
+	Permissions      *Permissions           `toml:"permissions"`
+	OKF              *OKFConfig             `toml:"okf"`
+	LLMsTxt          *LLMsTxtConfig         `toml:"llms_txt"`
 }
 
 // decodeConfigTOML decodes TOML bytes; path is used for error context only.
@@ -683,59 +684,60 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 	}
 
 	cfg := &Config{
-		Schema:          raw.Schema,
-		Version:         raw.Version,
-		Name:            raw.Name,
-		Description:     raw.Description,
-		Presets:         presets,
-		Default:         raw.Default,
-		Profiles:        raw.Profiles,
-		Gitignore:       raw.Gitignore,
-		Compact:         raw.Compact,
-		AgentsMD:        raw.AgentsMD == nil || *raw.AgentsMD,
-		BundleExclude:   raw.BundleExclude,
-		CodexSkillsDir:  raw.CodexSkillsDir,
-		Includes:        raw.Includes,
-		InstalledSkills: raw.InstalledSkills,
-		MCPServersRaw:   raw.MCPServers,
-		Header:          raw.Header,
-		Builtins:        builtinsCfg,
-		Plugins:         raw.Plugins,
-		Marketplaces:    raw.Marketplaces,
-		Scopes:          raw.Scopes,
-		MCP:             raw.MCP,
-		Defaults:        raw.Defaults,
-		Rules:           raw.Rules,
-		Lint:            raw.Lint,
-		OKF:             raw.OKF,
-		LLMsTxt:         raw.LLMsTxt,
-		Verifiers:       raw.Verifiers,
-		Usage:           raw.Usage,
-		Skills:          raw.Skills,
-		DomainSettings:  raw.DomainSettings,
-		Delivery:        raw.Delivery,
-		SkillSources:    raw.SkillSources,
-		Roles:           raw.Roles,
-		RoleManifest:    raw.RoleManifest,
-		Lock:            raw.Lock,
-		Governance:      raw.Governance,
-		Catalog:         raw.Catalog,
-		Signing:         raw.Signing,
-		Publish:         raw.Publish,
-		ARD:             raw.ARD,
-		LLM:             raw.LLM,
-		Telemetry:       raw.Telemetry,
-		Review:          raw.Review,
-		Improve:         raw.Improve,
-		Search:          raw.Search,
-		Plugin:          raw.Plugin,
-		Marketplace:     raw.Marketplace,
-		Placement:       raw.Placement,
-		Claude:          raw.Claude,
-		Codex:           raw.Codex,
-		Hooks:           raw.Hooks,
-		Guard:           raw.Guard,
-		Permissions:     raw.Permissions,
+		Schema:           raw.Schema,
+		Version:          raw.Version,
+		Name:             raw.Name,
+		Description:      raw.Description,
+		Presets:          presets,
+		Default:          raw.Default,
+		Profiles:         raw.Profiles,
+		Gitignore:        raw.Gitignore,
+		GitignoreExclude: raw.GitignoreExclude,
+		Compact:          raw.Compact,
+		AgentsMD:         raw.AgentsMD == nil || *raw.AgentsMD,
+		BundleExclude:    raw.BundleExclude,
+		CodexSkillsDir:   raw.CodexSkillsDir,
+		Includes:         raw.Includes,
+		InstalledSkills:  raw.InstalledSkills,
+		MCPServersRaw:    raw.MCPServers,
+		Header:           raw.Header,
+		Builtins:         builtinsCfg,
+		Plugins:          raw.Plugins,
+		Marketplaces:     raw.Marketplaces,
+		Scopes:           raw.Scopes,
+		MCP:              raw.MCP,
+		Defaults:         raw.Defaults,
+		Rules:            raw.Rules,
+		Lint:             raw.Lint,
+		OKF:              raw.OKF,
+		LLMsTxt:          raw.LLMsTxt,
+		Verifiers:        raw.Verifiers,
+		Usage:            raw.Usage,
+		Skills:           raw.Skills,
+		DomainSettings:   raw.DomainSettings,
+		Delivery:         raw.Delivery,
+		SkillSources:     raw.SkillSources,
+		Roles:            raw.Roles,
+		RoleManifest:     raw.RoleManifest,
+		Lock:             raw.Lock,
+		Governance:       raw.Governance,
+		Catalog:          raw.Catalog,
+		Signing:          raw.Signing,
+		Publish:          raw.Publish,
+		ARD:              raw.ARD,
+		LLM:              raw.LLM,
+		Telemetry:        raw.Telemetry,
+		Review:           raw.Review,
+		Improve:          raw.Improve,
+		Search:           raw.Search,
+		Plugin:           raw.Plugin,
+		Marketplace:      raw.Marketplace,
+		Placement:        raw.Placement,
+		Claude:           raw.Claude,
+		Codex:            raw.Codex,
+		Hooks:            raw.Hooks,
+		Guard:            raw.Guard,
+		Permissions:      raw.Permissions,
 	}
 	cfg.VerifiersSettings = raw.VerifiersSet
 	if err := renamedRatchetTable(path, raw.Lint); err != nil {

@@ -62,6 +62,7 @@ Add a `.vscode/settings.json` to reference the schema:
 - **`claude`**: Claude Code options: `[claude.settings]` (`manage`, `managed` entries of `.claude/settings.json`) and `[claude.skills]` (`hide_from_menu`)
 - **`codex`**: Codex options, such as `project_doc_max_bytes` for the `AGENTS.md` size warning
 - **`codex_skills_dir`**: Directory the `codex` preset writes skills to (default `.agents/skills`)
+- **`gitignore_exclude`**: Patterns kept out of the managed `.gitignore` block, for outputs you commit; see [Configuration](configuration.md#gitignore_exclude)
 - **`bundle_exclude`**: Extra patterns left out when skill and command resources are copied or listed
 - **`hooks`**: Top-level `[[hooks]]` rendered into each harness's native hook format; see [Hooks and permissions](settings.md)
 - **`permissions`**: `allow`, `ask` and `deny` rules translated for each harness with a permission surface; see [Permissions](permissions.md)

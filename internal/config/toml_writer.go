@@ -29,60 +29,61 @@ type tomlPresetDoc struct {
 // because Presets must be flattened into strings/inline-tables rather than the
 // struct's custom (YAML/JSON-only) marshalers.
 type tomlOutput struct {
-	Schema          string                 `toml:"schema,omitempty"`
-	Version         string                 `toml:"version"`
-	Name            string                 `toml:"name"`
-	Description     string                 `toml:"description,omitempty"`
-	Gitignore       *bool                  `toml:"gitignore,omitempty"`
-	Compact         *bool                  `toml:"compact,omitempty"`
-	AgentsMD        *bool                  `toml:"agents_md,omitempty"`
-	BundleExclude   []string               `toml:"bundle_exclude,omitempty"`
-	CodexSkillsDir  string                 `toml:"codex_skills_dir,omitempty"`
-	Default         string                 `toml:"default,omitempty"`
-	Presets         []any                  `toml:"presets,omitempty"`
-	Header          *HeaderConfig          `toml:"header,omitempty"`
-	Profiles        map[string][]string    `toml:"profiles,omitempty"`
-	Builtins        interface{}            `toml:"builtins,omitempty"`
-	Includes        []IncludeConfig        `toml:"includes,omitempty"`
-	InstalledSkills []InstalledSkillConfig `toml:"installed_skills,omitempty"` //nolint:tagliatelle
-	Defaults        *DefaultsConfig        `toml:"defaults,omitempty"`
-	Rules           *RulesConfig           `toml:"rules,omitempty"`
-	Lint            *LintConfig            `toml:"lint,omitempty"`
-	OKF             *OKFConfig             `toml:"okf,omitempty"`
-	LLMsTxt         *LLMsTxtConfig         `toml:"llms_txt,omitempty"`
-	Verifiers       []VerifierConfig       `toml:"verifiers,omitempty"`
-	VerifiersSet    *VerifiersSettings     `toml:"verifiers_settings,omitempty"`
-	Usage           *UsageConfig           `toml:"usage,omitempty"`
-	Skills          *SkillsConfig          `toml:"skills,omitempty"`
-	DomainSettings  DomainConfigs          `toml:"domains,omitempty"`
-	Delivery        *DeliveryConfig        `toml:"delivery,omitempty"`
-	SkillSources    []SkillSourceConfig    `toml:"skill_sources,omitempty"`
-	Roles           []RoleConfig           `toml:"roles,omitempty"`
-	RoleManifest    *RoleManifestConfig    `toml:"role_manifest,omitempty"`
-	Lock            *LockConfig            `toml:"lock,omitempty"`
-	Governance      *GovernanceConfig      `toml:"governance,omitempty"`
-	Catalog         *CatalogConfig         `toml:"catalog,omitempty"`
-	Signing         *SigningConfig         `toml:"signing,omitempty"`
-	Publish         *PublishConfig         `toml:"publish,omitempty"`
-	ARD             *ARDConfig             `toml:"ard,omitempty"`
-	LLM             *llm.Config            `toml:"llm,omitempty"`
-	Telemetry       *TelemetryConfig       `toml:"telemetry,omitempty"`
-	Review          *ReviewConfig          `toml:"review,omitempty"`
-	Improve         *ImproveConfig         `toml:"improve,omitempty"`
-	Search          *skillsearch.Config    `toml:"search,omitempty"`
-	Scopes          []ScopeConfig          `toml:"scopes,omitempty"`
-	Plugins         []PluginConfig         `toml:"plugins,omitempty"`
-	Marketplaces    []MarketplaceConfig    `toml:"marketplaces,omitempty"`
-	MCPServers      []MCPServer            `toml:"mcp_servers,omitempty"`
-	MCP             *MCPConfig             `toml:"mcp,omitempty"`
-	Plugin          *PluginAuthoring       `toml:"plugin,omitempty"`
-	Marketplace     *MarketplaceAuthoring  `toml:"marketplace,omitempty"`
-	Placement       *PlacementConfig       `toml:"placement,omitempty"`
-	Claude          *ClaudeConfig          `toml:"claude,omitempty"`
-	Codex           *CodexConfig           `toml:"codex,omitempty"`
-	Hooks           []HookGroup            `toml:"hooks,omitempty"`
-	Guard           *GuardConfig           `toml:"guard,omitempty"`
-	Permissions     *Permissions           `toml:"permissions,omitempty"`
+	Schema           string                 `toml:"schema,omitempty"`
+	Version          string                 `toml:"version"`
+	Name             string                 `toml:"name"`
+	Description      string                 `toml:"description,omitempty"`
+	Gitignore        *bool                  `toml:"gitignore,omitempty"`
+	GitignoreExclude []string               `toml:"gitignore_exclude,omitempty"`
+	Compact          *bool                  `toml:"compact,omitempty"`
+	AgentsMD         *bool                  `toml:"agents_md,omitempty"`
+	BundleExclude    []string               `toml:"bundle_exclude,omitempty"`
+	CodexSkillsDir   string                 `toml:"codex_skills_dir,omitempty"`
+	Default          string                 `toml:"default,omitempty"`
+	Presets          []any                  `toml:"presets,omitempty"`
+	Header           *HeaderConfig          `toml:"header,omitempty"`
+	Profiles         map[string][]string    `toml:"profiles,omitempty"`
+	Builtins         interface{}            `toml:"builtins,omitempty"`
+	Includes         []IncludeConfig        `toml:"includes,omitempty"`
+	InstalledSkills  []InstalledSkillConfig `toml:"installed_skills,omitempty"` //nolint:tagliatelle
+	Defaults         *DefaultsConfig        `toml:"defaults,omitempty"`
+	Rules            *RulesConfig           `toml:"rules,omitempty"`
+	Lint             *LintConfig            `toml:"lint,omitempty"`
+	OKF              *OKFConfig             `toml:"okf,omitempty"`
+	LLMsTxt          *LLMsTxtConfig         `toml:"llms_txt,omitempty"`
+	Verifiers        []VerifierConfig       `toml:"verifiers,omitempty"`
+	VerifiersSet     *VerifiersSettings     `toml:"verifiers_settings,omitempty"`
+	Usage            *UsageConfig           `toml:"usage,omitempty"`
+	Skills           *SkillsConfig          `toml:"skills,omitempty"`
+	DomainSettings   DomainConfigs          `toml:"domains,omitempty"`
+	Delivery         *DeliveryConfig        `toml:"delivery,omitempty"`
+	SkillSources     []SkillSourceConfig    `toml:"skill_sources,omitempty"`
+	Roles            []RoleConfig           `toml:"roles,omitempty"`
+	RoleManifest     *RoleManifestConfig    `toml:"role_manifest,omitempty"`
+	Lock             *LockConfig            `toml:"lock,omitempty"`
+	Governance       *GovernanceConfig      `toml:"governance,omitempty"`
+	Catalog          *CatalogConfig         `toml:"catalog,omitempty"`
+	Signing          *SigningConfig         `toml:"signing,omitempty"`
+	Publish          *PublishConfig         `toml:"publish,omitempty"`
+	ARD              *ARDConfig             `toml:"ard,omitempty"`
+	LLM              *llm.Config            `toml:"llm,omitempty"`
+	Telemetry        *TelemetryConfig       `toml:"telemetry,omitempty"`
+	Review           *ReviewConfig          `toml:"review,omitempty"`
+	Improve          *ImproveConfig         `toml:"improve,omitempty"`
+	Search           *skillsearch.Config    `toml:"search,omitempty"`
+	Scopes           []ScopeConfig          `toml:"scopes,omitempty"`
+	Plugins          []PluginConfig         `toml:"plugins,omitempty"`
+	Marketplaces     []MarketplaceConfig    `toml:"marketplaces,omitempty"`
+	MCPServers       []MCPServer            `toml:"mcp_servers,omitempty"`
+	MCP              *MCPConfig             `toml:"mcp,omitempty"`
+	Plugin           *PluginAuthoring       `toml:"plugin,omitempty"`
+	Marketplace      *MarketplaceAuthoring  `toml:"marketplace,omitempty"`
+	Placement        *PlacementConfig       `toml:"placement,omitempty"`
+	Claude           *ClaudeConfig          `toml:"claude,omitempty"`
+	Codex            *CodexConfig           `toml:"codex,omitempty"`
+	Hooks            []HookGroup            `toml:"hooks,omitempty"`
+	Guard            *GuardConfig           `toml:"guard,omitempty"`
+	Permissions      *Permissions           `toml:"permissions,omitempty"`
 }
 
 // MarshalTOML serializes a Config to a TOML document with a leading docs header.
@@ -133,60 +134,61 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 	mcpServers := cfg.EffectiveMCPServers()
 
 	return tomlOutput{
-		Schema:          cfg.Schema,
-		Version:         cfg.Version,
-		Name:            cfg.Name,
-		Description:     cfg.Description,
-		Gitignore:       cfg.Gitignore,
-		Compact:         cfg.Compact,
-		AgentsMD:        agentsMDForWrite(cfg),
-		BundleExclude:   cfg.BundleExclude,
-		CodexSkillsDir:  cfg.CodexSkillsDir,
-		Default:         cfg.Default,
-		Presets:         presets,
-		Header:          cfg.Header,
-		Profiles:        cfg.Profiles,
-		Builtins:        builtinsVal,
-		Includes:        cfg.Includes,
-		InstalledSkills: cfg.InstalledSkills,
-		Defaults:        cfg.Defaults,
-		Rules:           cfg.Rules,
-		Lint:            cfg.Lint,
-		OKF:             cfg.OKF,
-		LLMsTxt:         cfg.LLMsTxt,
-		Verifiers:       cfg.Verifiers,
-		VerifiersSet:    cfg.VerifiersSettings,
-		Usage:           cfg.Usage,
-		Skills:          cfg.Skills,
-		DomainSettings:  cfg.DomainSettings,
-		Delivery:        cfg.Delivery,
-		SkillSources:    cfg.SkillSources,
-		Roles:           cfg.Roles,
-		RoleManifest:    cfg.RoleManifest,
-		Lock:            cfg.Lock,
-		Governance:      cfg.Governance,
-		Catalog:         cfg.Catalog,
-		Signing:         cfg.Signing,
-		Publish:         cfg.Publish,
-		ARD:             cfg.ARD,
-		LLM:             cfg.LLM,
-		Telemetry:       cfg.Telemetry,
-		Review:          cfg.Review,
-		Improve:         cfg.Improve,
-		Search:          cfg.Search,
-		Scopes:          cfg.Scopes,
-		Plugins:         cfg.Plugins,
-		Marketplaces:    cfg.Marketplaces,
-		MCPServers:      mcpServers,
-		MCP:             cfg.MCP,
-		Plugin:          cfg.Plugin,
-		Marketplace:     cfg.Marketplace,
-		Placement:       cfg.Placement,
-		Claude:          cfg.Claude,
-		Codex:           cfg.Codex,
-		Hooks:           cfg.UserHooks(),
-		Guard:           cfg.Guard,
-		Permissions:     cfg.Permissions,
+		Schema:           cfg.Schema,
+		Version:          cfg.Version,
+		Name:             cfg.Name,
+		Description:      cfg.Description,
+		Gitignore:        cfg.Gitignore,
+		GitignoreExclude: cfg.GitignoreExclude,
+		Compact:          cfg.Compact,
+		AgentsMD:         agentsMDForWrite(cfg),
+		BundleExclude:    cfg.BundleExclude,
+		CodexSkillsDir:   cfg.CodexSkillsDir,
+		Default:          cfg.Default,
+		Presets:          presets,
+		Header:           cfg.Header,
+		Profiles:         cfg.Profiles,
+		Builtins:         builtinsVal,
+		Includes:         cfg.Includes,
+		InstalledSkills:  cfg.InstalledSkills,
+		Defaults:         cfg.Defaults,
+		Rules:            cfg.Rules,
+		Lint:             cfg.Lint,
+		OKF:              cfg.OKF,
+		LLMsTxt:          cfg.LLMsTxt,
+		Verifiers:        cfg.Verifiers,
+		VerifiersSet:     cfg.VerifiersSettings,
+		Usage:            cfg.Usage,
+		Skills:           cfg.Skills,
+		DomainSettings:   cfg.DomainSettings,
+		Delivery:         cfg.Delivery,
+		SkillSources:     cfg.SkillSources,
+		Roles:            cfg.Roles,
+		RoleManifest:     cfg.RoleManifest,
+		Lock:             cfg.Lock,
+		Governance:       cfg.Governance,
+		Catalog:          cfg.Catalog,
+		Signing:          cfg.Signing,
+		Publish:          cfg.Publish,
+		ARD:              cfg.ARD,
+		LLM:              cfg.LLM,
+		Telemetry:        cfg.Telemetry,
+		Review:           cfg.Review,
+		Improve:          cfg.Improve,
+		Search:           cfg.Search,
+		Scopes:           cfg.Scopes,
+		Plugins:          cfg.Plugins,
+		Marketplaces:     cfg.Marketplaces,
+		MCPServers:       mcpServers,
+		MCP:              cfg.MCP,
+		Plugin:           cfg.Plugin,
+		Marketplace:      cfg.Marketplace,
+		Placement:        cfg.Placement,
+		Claude:           cfg.Claude,
+		Codex:            cfg.Codex,
+		Hooks:            cfg.UserHooks(),
+		Guard:            cfg.Guard,
+		Permissions:      cfg.Permissions,
 	}
 }
 

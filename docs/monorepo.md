@@ -283,6 +283,18 @@ backend = ["api", "database"]
 
 By combining domain organization with thoughtful profile design, you can create scalable, maintainable configurations that grow with your project.
 
+### The shared `.gitignore` block
+
+With `gitignore = true`, a recursive run writes one managed block at the git toplevel holding every root's patterns
+(`svc/CLAUDE.md`, `svc/.claude/skills/`, ...), and `generate --recursive --check` verifies that block once after the
+last root. The root's own entries are unanchored (`AGENTS.md`, `CLAUDE.md`), so they also match the file of every nested
+root. To commit generated files instead, list them in each root's [`gitignore_exclude`](configuration.md#gitignore_exclude);
+a root applies its list to its own outputs, so a project that commits everything repeats
+`gitignore_exclude = ["**/AGENTS.md", "**/CLAUDE.md", ".claude/"]` in each config. When the block hides a file git
+tracks (a root-anchored `!.claude/rules/*.md` of yours does not reach a nested root's `svc/.claude/rules/x.md`),
+`generate` warns once for the whole recursive block and names the nested path.
+
+
 ---
 
 ## Scoped Rule Files

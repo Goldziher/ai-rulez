@@ -21,6 +21,7 @@ func (c *Config) Validate() error {
 		c.validateContentProblems,
 		c.validatePresets,
 		c.validateCodexSkillsDir,
+		c.validateGitignoreExclude,
 		c.validateClaudeMD,
 		c.validateSelectors,
 		c.validateSkillDescriptions,
@@ -97,6 +98,24 @@ func (c *Config) validateOutputCollisions() error {
 		return err
 	}
 	return c.validateOutputNamespaceCollisions()
+}
+
+// validateGitignoreExclude rejects entries that cannot name a pattern to leave
+// out of the managed block: empty ones, comments and negations (a negation is a
+// line of the user's own .gitignore, not an exclusion).
+func (c *Config) validateGitignoreExclude() error {
+	for i, entry := range c.GitignoreExclude {
+		trimmed := strings.TrimSpace(entry)
+		switch {
+		case trimmed == "":
+			return oops.With("index", i).Errorf("gitignore_exclude entry %d is empty", i)
+		case strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "!"):
+			return oops.With("entry", entry).
+				Hint("list the pattern as it appears in the managed block, for example \"AGENTS.md\" or \".claude/skills/\"").
+				Errorf("gitignore_exclude entry %q must be a plain ignore pattern, not a comment or a negation", entry)
+		}
+	}
+	return nil
 }
 
 func (c *Config) validateCodexSkillsDir() error {

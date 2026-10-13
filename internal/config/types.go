@@ -17,21 +17,25 @@ import (
 
 // Config represents the configuration format
 type Config struct {
-	Schema          string                 `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
-	Version         string                 `yaml:"version" json:"version" toml:"version"`
-	Name            string                 `yaml:"name" json:"name" toml:"name"`
-	Description     string                 `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
-	Presets         []Preset               `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
-	Default         string                 `yaml:"default,omitempty" json:"default,omitempty" toml:"default,omitempty"`
-	Profiles        map[string][]string    `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
-	Gitignore       *bool                  `yaml:"gitignore,omitempty" json:"gitignore,omitempty" toml:"gitignore,omitempty"`
-	Includes        []IncludeConfig        `yaml:"includes,omitempty" json:"includes,omitempty" toml:"includes,omitempty"`
-	InstalledSkills []InstalledSkillConfig `yaml:"installed_skills,omitempty" json:"installed_skills,omitempty" toml:"installed_skills,omitempty"` //nolint:tagliatelle
-	Header          *HeaderConfig          `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
-	Defaults        *DefaultsConfig        `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
-	Builtins        *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
-	Compact         *bool                  `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
-	AgentsMD        bool                   `yaml:"agents_md,omitempty" json:"agents_md,omitempty" toml:"agents_md,omitempty"` //nolint:tagliatelle
+	Schema      string              `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
+	Version     string              `yaml:"version" json:"version" toml:"version"`
+	Name        string              `yaml:"name" json:"name" toml:"name"`
+	Description string              `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
+	Presets     []Preset            `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
+	Default     string              `yaml:"default,omitempty" json:"default,omitempty" toml:"default,omitempty"`
+	Profiles    map[string][]string `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
+	Gitignore   *bool               `yaml:"gitignore,omitempty" json:"gitignore,omitempty" toml:"gitignore,omitempty"`
+	// GitignoreExclude lists ignore patterns kept out of the managed .gitignore
+	// block: generated outputs the project commits on purpose. Machine-local and
+	// secret entries are never excluded.
+	GitignoreExclude []string               `yaml:"gitignore_exclude,omitempty" json:"gitignore_exclude,omitempty" toml:"gitignore_exclude,omitempty"` //nolint:tagliatelle
+	Includes         []IncludeConfig        `yaml:"includes,omitempty" json:"includes,omitempty" toml:"includes,omitempty"`
+	InstalledSkills  []InstalledSkillConfig `yaml:"installed_skills,omitempty" json:"installed_skills,omitempty" toml:"installed_skills,omitempty"` //nolint:tagliatelle
+	Header           *HeaderConfig          `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
+	Defaults         *DefaultsConfig        `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
+	Builtins         *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
+	Compact          *bool                  `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
+	AgentsMD         bool                   `yaml:"agents_md,omitempty" json:"agents_md,omitempty" toml:"agents_md,omitempty"` //nolint:tagliatelle
 	// BundleExclude adds patterns to DefaultBundleExcludes: skill and command
 	// resources matching one are not listed in SKILL.md or copied.
 	BundleExclude []string `yaml:"bundle_exclude,omitempty" json:"bundle_exclude,omitempty" toml:"bundle_exclude,omitempty"` //nolint:tagliatelle

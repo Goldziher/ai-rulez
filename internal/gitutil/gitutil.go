@@ -104,6 +104,27 @@ func (g Git) TrackedAmongContext(ctx context.Context, dir string, paths []string
 	return tracked, nil
 }
 
+// TrackedIgnoredContext lists, slash-separated and relative to dir, the tracked
+// files the ignore rules in effect match (git ls-files -ci --exclude-standard):
+// git keeps tracking them, but their untracked siblings are ignored. Outside a
+// repository it returns nil.
+func (g Git) TrackedIgnoredContext(ctx context.Context, dir string) ([]string, error) {
+	if !g.IsRepoContext(ctx, dir) {
+		return nil, nil
+	}
+	out, _, err := g.run(ctx, dir, nil, "ls-files", "-z", "-c", "-i", "--exclude-standard")
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	for _, name := range strings.Split(string(out), "\x00") {
+		if name != "" {
+			files = append(files, filepath.ToSlash(name))
+		}
+	}
+	return files, nil
+}
+
 // IgnoredAmongContext returns which of paths (slash-separated, relative to dir) git
 // ignores, per .gitignore files, .git/info/exclude and the global excludes file,
 // in one call. Tracked files are judged by the patterns too (--no-index). It

@@ -538,6 +538,35 @@ excluded through `.git/info/exclude` instead. See [Local Configuration](local-ov
 `gitignore` defaults to `false`, so generated files are normally committed; set it to `true` when the team
 keeps generated output out of git and regenerates it locally.
 
+### `gitignore_exclude`
+
+Keeps generated outputs you commit on purpose out of the managed `.gitignore` block, while every other entry stays
+managed. Use it instead of a hand-written `!pattern` after the block.
+
+```toml
+gitignore = true
+gitignore_exclude = ["AGENTS.md", "**/CLAUDE.md", ".claude/skills/", ".claude/agents/", ".mcp.json"]
+```
+
+Entries use gitignore notation, matched against the patterns the block would list: an entry without `/`
+(`AGENTS.md`, `*.md`) matches at any depth, one with a `/` is anchored at the root, `**` crosses directories
+(`**/AGENTS.md` also reaches the nested `svc/AGENTS.md` of a `[[scopes]]` entry), and a trailing `/` names a directory
+and covers what is below it. An entry is a plain pattern: an empty one, a comment or a `!negation` fails validation.
+The knob has no effect unless the block is written (`gitignore = true` or `generate --gitignore`); `gitignore` itself stays a
+plain boolean. Machine-local and secret outputs (`*.local.*`, `config.local.*`, `.ai-rulez/local/`,
+`.ai-rulez/.generated-manifest.local.json`, an MCP config holding secrets) are never excluded; an entry that only
+reaches them is ignored with a warning. In a recursive run each root applies its own list to its own outputs.
+Excluded paths are not reported by `ai-rulez doctor`.
+
+`generate` warns instead of letting the block quietly win or lose:
+
+- A tracked file matches a line of the block: git keeps tracking it, but new files next to it (a new skill under
+  `.claude/skills/`) are ignored and need `git add -f`. The warning names the files and the fix, a `gitignore_exclude`
+  entry or `git rm --cached`, and calls out an unanchored `AGENTS.md`/`CLAUDE.md` line that also hides every nested
+  root's file.
+- A `!pattern` of yours un-ignores a line the block would list: it wins, as documented above, and the warning names the
+  negation's `file:line`. A `gitignore_exclude` entry for the path states the intent and silences it.
+
 ### `compact`
 
 Controls whether generated inline rule sections omit per-rule `**Priority:**` annotations.

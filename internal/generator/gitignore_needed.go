@@ -67,7 +67,7 @@ func withoutManagedBlock(content string) string { return gitignore.WithoutManage
 // modified. It returns nil when there is no answer (not a repository, git
 // missing or failing), so callers fall back to adding everything.
 func (g *Generator) userIgnoreRules(probes []string) map[string]gitutil.IgnoreMatch {
-	rootRel := ".gitignore"
+	rootRel := gitignoreFileName
 	if rel := gitutil.RepoRelative(g.git().TopLevelContext(g.ctx, g.config.BaseDir), g.managedGitignorePath()); rel != "" {
 		rootRel = rel
 	}
@@ -150,6 +150,10 @@ type unignoredProtected struct {
 	Pattern string
 	Rule    string
 	Source  string
+	Line    int
+	// Protected: a machine-local or secret output. Any other is committed on
+	// purpose, which gitignore_exclude says without a hand-written negation.
+	Protected bool
 }
 
 // neededGitignorePatterns returns, sorted, the collected patterns git does not
@@ -186,9 +190,10 @@ func (g *Generator) neededGitignorePatterns(outputs []config.OutputFile) (needed
 		case covered:
 			g.log().Debug("Already ignored by git", "pattern", pattern, "rule", match.Pattern, "source", match.Source)
 		case match.Negated():
-			if g.isProtectedPattern(pattern, protected) {
-				overridden = append(overridden, unignoredProtected{Pattern: pattern, Rule: match.Pattern, Source: match.Source})
-			}
+			overridden = append(overridden, unignoredProtected{
+				Pattern: pattern, Rule: match.Pattern, Source: match.Source, Line: match.Line,
+				Protected: g.isProtectedPattern(pattern, protected),
+			})
 		default:
 			needed = append(needed, pattern)
 		}
@@ -218,7 +223,7 @@ func (g *Generator) userDirNegation(pattern string) (gitutil.IgnoreMatch, bool) 
 			inBlock = false
 		case inBlock || !strings.HasPrefix(trimmed, "!"):
 		case strings.TrimPrefix(strings.TrimPrefix(trimmed, "!"), "/") == want:
-			return gitutil.IgnoreMatch{Source: ".gitignore", Line: i + 1, Pattern: trimmed}, true
+			return gitutil.IgnoreMatch{Source: gitignoreFileName, Line: i + 1, Pattern: trimmed}, true
 		}
 	}
 	return gitutil.IgnoreMatch{}, false
